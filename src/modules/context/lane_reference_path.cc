@@ -245,6 +245,11 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
+  if (ref_path_points.empty()) {
+    return false;
+  }
+  raw_start_point_ = ref_path_points.front();
+  raw_end_point_ = ref_path_points.back();
   // 判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
   //  calculate reference path origin total length
   double origin_reference_path_total_length = 0;
@@ -287,20 +292,23 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     const double cruise_v = ego_state_mgr->ego_v_cruise();
     const double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
     const double extend_buff = 5;
-    const double ego_projection_length_in_reference_path = 0.0;
-        // CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
+    // raw theta invalid -> projection invalid:
+    // const double ego_projection_length_in_reference_path =
+    //     CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
     // if need to extend reference path length
-    if (ego_projection_length_in_reference_path - extend_buff <
-        0) {
-      const double extend_length =
-          extend_buff -
-          ego_projection_length_in_reference_path;
-      ReferencePathPoint extend_point;
-      extend_point = CalculateExtendedReferencePathPoint(
-          ref_path_points[1], ref_path_points[0],
-          extend_length);
-      ref_path_points.emplace(ref_path_points.begin(), std::move(extend_point));
-    }
+    // backward
+    ReferencePathPoint backward_extend_point;
+    backward_extend_point = CalculateExtendedReferencePathPoint(
+        ref_path_points[1], ref_path_points[0],
+        extend_buff);
+    ref_path_points.emplace(ref_path_points.begin(), std::move(backward_extend_point));
+    // forward
+    ReferencePathPoint forward_extend_point;
+    const int point_nums = ref_path_points.size();
+    forward_extend_point = CalculateExtendedReferencePathPoint(
+        ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
+        extend_buff);
+    ref_path_points.emplace_back(std::move(forward_extend_point));
   }
   return ref_path_points.size() >= 3;
 }
@@ -361,6 +369,11 @@ bool LaneReferencePath::get_ref_points_hpp(
     // }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
+  if (ref_path_points.empty()) {
+    return false;
+  }
+  raw_start_point_ = ref_path_points.front();
+  raw_end_point_ = ref_path_points.back();
   // 判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
   //  calculate reference path origin total length
   double origin_reference_path_total_length = 0;

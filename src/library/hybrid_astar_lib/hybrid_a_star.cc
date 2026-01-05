@@ -195,7 +195,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     return false;
   }
 
-    // interpolation
+  // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -602,8 +602,8 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   if (parent_node->IsStartNode()) {
-    if (!IsPathGearSameWithRequest(gear,
-                                  request_.first_action_request.gear_request)) {
+    if (!IsPathGearSameWithRequest(
+            gear, request_.first_action_request.gear_request)) {
       return NodeShrinkType::UNEXPECTED_GEAR;
     }
   }
@@ -850,7 +850,7 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
     }
   }
 
-    // safe dist cost
+  // safe dist cost
 #if ENABLE_OBS_DIST_G_COST
   float safe_punish = 0.0;
   safe_punish = CalcSafeDistCost(next_node);
@@ -1412,7 +1412,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -1890,7 +1890,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -2110,7 +2110,7 @@ void HybridAStar::Init() {
   rs_path_h_cost_debug_.clear();
   rs_path_.Clear();
 
-  UpdateCarBoxBySafeBuffer(0.0f, 0.0f, 0.0f);
+  UpdateCarBoxBySafeBuffer(0.0f, 0.0f, 0.0f, false);
 
   ILOG_INFO << "astar init finish";
 
@@ -2370,10 +2370,11 @@ void HybridAStar::GetStraightLinePoint(Pose2f* goal_state,
 
 void HybridAStar::UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
                                            const float lat_buffer_inside,
-                                           const float lon_buffer) {
-  collision_detect_->UpdateFootPrintBySafeBuffer(lat_buffer_outside,
-                                                 lat_buffer_inside, lon_buffer,
-                                                 vehicle_param_, config_);
+                                           const float lon_buffer,
+                                           const bool fold_mirror) {
+  collision_detect_->UpdateFootPrintBySafeBuffer(
+      lat_buffer_outside, lat_buffer_inside, lon_buffer, vehicle_param_,
+      config_, fold_mirror);
 
   return;
 }

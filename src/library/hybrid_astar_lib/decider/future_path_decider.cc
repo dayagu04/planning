@@ -62,7 +62,7 @@ void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
   }
 
   Init(min_turn_radius, sampling_lon_resolution, request);
-  edt->UpdateSafeBuffer(0.01, 0.4, 0.01, 0.35);
+  edt->UpdateSafeBuffer(false, 0.01, 0.4, 0.01, 0.35);
 
   CalcDriveDistByLineModel(request.start_pose, edt, ref_line);
   // use circle model to estimate path length.

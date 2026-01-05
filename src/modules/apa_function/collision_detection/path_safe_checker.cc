@@ -57,7 +57,7 @@ void PathSafeChecker::ExcuteDistanceCheck(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_,
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false,
                             &polygon_foot_print_);
 
   // check path
@@ -128,7 +128,7 @@ void PathSafeChecker::ExcuteCollisionCheck(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_,
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false,
                             &polygon_foot_print_);
 
   // check path
@@ -307,7 +307,7 @@ bool PathSafeChecker::CalcEgoCollision(const Pose2D& ego_pose,
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer, lon_buffer, lat_buffer,
+  GenerateVehCompactPolygon(lat_buffer, lon_buffer, lat_buffer, false,
                             &polygon_foot_print_);
 
   is_collision =
@@ -472,7 +472,7 @@ const bool PathSafeChecker::IsCollisionByStaticMavableOD(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_,
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false,
                             &polygon_foot_print_);
 
   // check path

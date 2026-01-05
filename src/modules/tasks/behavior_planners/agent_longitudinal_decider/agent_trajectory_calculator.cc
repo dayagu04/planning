@@ -59,15 +59,9 @@ bool AgentTrajectoryCalculator::Process() {
     return false;
   }
 
-  // Ban cutin trajectory generate in curve
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
   const double v_ego = ego_state_mgr->ego_v();
-  const double road_curvature_radius = CalculateRoadCurvature(v_ego);
-  bool is_in_large_curv = false;
-  if (road_curvature_radius < kLargeCurvRadius) {
-    is_in_large_curv = true;
-  }
 
   std::vector<int32_t> cutin_agent_ids;
   for (const auto ptr_agent : agents) {
@@ -76,13 +70,8 @@ bool AgentTrajectoryCalculator::Process() {
     }
     const bool is_cutin_agent = ptr_agent->is_cutin();
     const bool is_reverse_agent = ptr_agent->is_reverse();
-    const bool is_large_agent = ptr_agent->type() == agent::AgentType::TRUCK ||
-                                ptr_agent->type() == agent::AgentType::BUS ||
-                                ptr_agent->length() >= kLargeAgentLength;
+
     if (is_cutin_agent && !is_reverse_agent) {
-      if (is_large_agent && !is_in_large_curv) {
-        CalculateCutinAgentTrajectory(is_in_lane_change_execution, ptr_agent);
-      }
       cutin_agent_ids.emplace_back(ptr_agent->agent_id());
     }
   }

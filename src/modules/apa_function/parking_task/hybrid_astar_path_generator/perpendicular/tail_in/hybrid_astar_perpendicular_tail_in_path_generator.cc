@@ -820,8 +820,14 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       new_node.SetPre(current_node);
       if (current_node->IsPathGearChange(car_motion.gear)) {
         new_node.SetGearSwitchNum(current_node->GetGearSwitchNum() + 1);
+        new_node.SetScurveNum(current_node->GetScurveNum());
       } else {
         new_node.SetGearSwitchNum(current_node->GetGearSwitchNum());
+        if (IsSteerOpposite(current_node->GetKappa(), new_node.GetKappa())) {
+          new_node.SetScurveNum(current_node->GetScurveNum() + 1);
+        } else {
+          new_node.SetScurveNum(current_node->GetScurveNum());
+        }
       }
       // dist_to_start is the path distance from the start node to the cur node
       new_node.SetDistToStart(new_node.GetNodePathDistance() +

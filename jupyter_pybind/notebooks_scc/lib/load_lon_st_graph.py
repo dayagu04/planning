@@ -471,12 +471,21 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   ## max decel s curve
   t_max_decel_vec = []
   s_max_decel_vec = []
+  v_max_decel_vec = []
+  a_max_decel_vec = []
+  j_max_decel_vec = []
   for item in (plan_debug_info.lon_target_s_ref.max_decel_target.max_decel_s_ref):
     t_max_decel_vec.append(item.t)
     s_max_decel_vec.append(item.s)
+    v_max_decel_vec.append(item.v)
+    a_max_decel_vec.append(item.a)
+    j_max_decel_vec.append(item.j)
   lon_plan_data['data_target_s_max_decel'].data.update({
     't_max_decel': t_max_decel_vec,
-    's_max_decel': s_max_decel_vec})
+    's_max_decel': s_max_decel_vec,
+    'v_max_decel': v_max_decel_vec,
+    'a_max_decel': a_max_decel_vec,
+    'j_max_decel': j_max_decel_vec})
 
   ## comfort target
   t_comfort_target_vec = []
@@ -800,7 +809,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   cost_vec = motion_solver_info.cost_vec
   lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
   cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", \
-               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonPosSafeCost"]
+               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonPosSafeCost", "LonEmergencyStopCost"]
   print(cost_list)
   for i, sub_list in enumerate(lists):
     if i == 0:
@@ -1432,7 +1441,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   data_target_s_neighbor = ColumnDataSource(data = {'t_neighbor_target':[], 's_neighbor_target':[]})
   data_target_s_overtake = ColumnDataSource(data = {'t_overtake_target':[], 's_overtake_target':[]})
   data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
-  data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
+  data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[], 'v_max_decel':[], 'a_max_decel':[], 'j_max_decel':[]})
   data_target_s_comfort = ColumnDataSource(data = {'t_comfort_target':[], 's_comfort_target':[], 'v_comfort_target':[], 'a_comfort_target':[],
                                                   't_upper_bound':[], 'v_upper_bound':[], 'a_upper_bound':[], 's_upper_bound':[], 'agent_id_upper_bound':[]})
   data_target_s_cross_vru = ColumnDataSource(data = {'t_cross_vru_target':[], 's_cross_vru_target':[]})
@@ -1612,9 +1621,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   # Plot joint motion planner s on fig2
   fig2.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt', visible=False)
   fig2.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_lb', visible=False)
-  fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_ub', visible=False)
+  fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_ub')
   fig2.triangle('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.7, legend_label = 's_soft_lb_point', visible=False)
-  fig2.triangle('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.5, legend_label = 's_soft_ub_point', visible=False)
+  fig2.triangle('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.5, legend_label = 's_soft_ub_point')
 
   fig2.line('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_lb')
   fig2.line('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
@@ -1734,6 +1743,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig5.line('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'v_upper_bound')
   fig5.circle('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'v_upper_bound')
   fig5.line('time_vec', 'comfort_v_target_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkgreen', line_dash = 'dashdot', legend_label = 'v_comfort_target')
+  fig5.line('t_max_decel', 'v_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'solid', legend_label = 'v_max_decel', visible=False)
   # Plot joint motion planner v on fig5
   fig5.line('time_vec', 'vel_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'solid', legend_label = 'v_joint_opt', visible=False)
 
@@ -1746,6 +1756,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig6.triangle ('time_vec', 'acc_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_lb')
   fig6.line('time_vec', 'acc_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_ub')
   fig6.inverted_triangle ('time_vec', 'acc_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_ub')
+  fig6.line('t_max_decel', 'a_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'solid', legend_label = 'a_max_decel', visible=False)
   # Plot joint motion planner a on fig6
   fig6.line('time_vec', 'acc_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkred', line_dash = 'solid', legend_label = 'a_joint_opt', visible=False)
 
@@ -1756,6 +1767,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
   fig7.line('time_vec', 'comfort_jerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkblue', line_dash = 'dashdot', legend_label = 'j_comfort_lb')
+  fig7.line('t_max_decel', 'j_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'solid', legend_label = 'j_max_decel', visible=False)
   # Plot joint motion planner j on fig7
   fig7.line('time_vec', 'jerk_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkviolet', line_dash = 'solid', legend_label = 'j_joint_opt', visible=False)
 

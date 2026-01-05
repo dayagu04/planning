@@ -43,6 +43,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
 
   virtual const double CalRealTimeBrakeDist() override;
   bool CheckFinishParallel();
+  void CheckEgoPoseWhenParkOutFaild(ParkingFailReason reason);
 
  private:
   void Log() const override;

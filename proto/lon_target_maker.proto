@@ -9,6 +9,7 @@ message TargetPoint {
   optional double s_weight = 4;
   optional double v = 5;
   optional double a = 6;
+  optional double j = 7;
 }
 
 message TargetMaker {

@@ -30,7 +30,8 @@ class NodeCollisionDetect {
                                    const float lat_buffer_inside,
                                    const float lon_buffer,
                                    const VehicleParam& vehicle_param,
-                                   const PlannerOpenSpaceConfig& config);
+                                   const PlannerOpenSpaceConfig& config,
+                                   const bool fold_mirror);
 
   // check collision and validity
   bool IsValidByConvexHull(Node3d* node);

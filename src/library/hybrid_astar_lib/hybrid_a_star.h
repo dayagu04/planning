@@ -58,7 +58,8 @@ class HybridAStar {
 
   void UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
                                 const float lat_buffer_inside,
-                                const float lon_buffer);
+                                const float lon_buffer,
+                                const bool fold_mirror);
 
   void SetRequest(const AstarRequest& request);
 

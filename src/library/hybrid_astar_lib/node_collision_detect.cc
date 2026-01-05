@@ -180,7 +180,7 @@ bool NodeCollisionDetect::RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
     return false;
   }
 
-    // collision check
+  // collision check
 #if LOG_TIME_PROFILE
   double check_start_time = IflyTime::Now_ms();
 #endif
@@ -673,7 +673,7 @@ FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrint(
 void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
     const float lat_buffer_outside, const float lat_buffer_inside,
     const float lon_buffer, const VehicleParam& vehicle_param,
-    const PlannerOpenSpaceConfig& config) {
+    const PlannerOpenSpaceConfig& config, const bool fold_mirror) {
   if (request_->direction_request == ParkingVehDirection::HEAD_IN) {
     slot_box_ = cdl::AABB2f(
         Eigen::Vector2f(0.0f, -request_->slot_width / 2),
@@ -695,9 +695,9 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
   float safe_half_width =
       (vehicle_param.max_width + lat_buffer_outside * 2) * 0.5f;
 
-  GenerateVehCompactPolygon(lat_buffer_inside,
-                            config.safe_buffer.lon_min_safe_buffer,
-                            lat_buffer_inside, &cvx_hull_foot_print_);
+  GenerateVehCompactPolygon(
+      lat_buffer_inside, config.safe_buffer.lon_min_safe_buffer,
+      lat_buffer_inside, fold_mirror, &cvx_hull_foot_print_);
 
   // PolygonDebugString(&cvx_hull_foot_print_.body, "body");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_left, "left mirror");
@@ -705,22 +705,24 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
 
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(lat_buffer_outside, lon_buffer, lat_buffer_outside);
+      .UpdateSafeBuffer(fold_mirror, lat_buffer_outside, lon_buffer,
+                        lat_buffer_outside);
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(lat_buffer_inside, lon_buffer, lat_buffer_inside);
+      .UpdateSafeBuffer(fold_mirror, lat_buffer_inside, lon_buffer,
+                        lat_buffer_inside);
 
   float lat_buffer =
       lat_buffer_outside + config.safe_buffer.circle_path_extra_buffer_outside;
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
+      .UpdateSafeBuffer(fold_mirror, lat_buffer, lon_buffer, lat_buffer);
 
   lat_buffer =
       lat_buffer_inside + config.safe_buffer.circle_path_extra_buffer_inside;
   hierachy_circle_model_
       .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(lat_buffer, lon_buffer, lat_buffer);
+      .UpdateSafeBuffer(fold_mirror, lat_buffer, lon_buffer, lat_buffer);
 
   ILOG_INFO << "outside buffer = " << lat_buffer_outside
             << ", inside buffer = " << lat_buffer_inside;

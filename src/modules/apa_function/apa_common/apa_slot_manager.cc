@@ -507,7 +507,7 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
     //   continue;
     // }
 
-    if (release_slot_count > kMaxSlotReleaseCount) {
+    if (release_slot_count >= kMaxSlotReleaseCount) {
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
       ILOG_INFO << "NOT_RELEASE reason: over max released size "

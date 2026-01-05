@@ -2043,8 +2043,8 @@ const bool ParallelParkInScenario::GenTlane() {
         }
       } else {
         const bool cat_to_curb_condition =
-            pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.5,
-                                    slot_length - 0.5) &&
+            pnc::mathlib::IsInBound(obstacle_point_slot.x(), curb_lower,
+                                    curb_upper) &&
             pnc::mathlib::IsInBound(obstacle_point_slot.y(),
                                     kCurbYMagIdentification,
                                     -half_slot_width * side_sgn);
@@ -2920,6 +2920,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   uint8_t plan_result = 0;
   if (!path_plan_success) {
     ILOG_INFO << "path plan fail!";
+    complete_path_point_global_vec_.clear();
     plan_result = PathPlannerResult::PLAN_FAILED;
     frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
     return PathPlannerResult::PLAN_FAILED;
@@ -3036,6 +3037,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
     if (!pnc::geometry_lib::IsValidGear(frame_.current_gear)) {
       ILOG_INFO << "frame_.current_gear == invalid gear!";
+      complete_path_point_global_vec_.clear();
       return PathPlannerResult::PLAN_FAILED;
     }
 
@@ -3046,6 +3048,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
       if (!pnc::geometry_lib::IsValidArcSteer(frame_.current_arc_steer)) {
         ILOG_INFO << "frame_.current_arc == invalid arc!";
+        complete_path_point_global_vec_.clear();
         return PathPlannerResult::PLAN_FAILED;
       }
     }

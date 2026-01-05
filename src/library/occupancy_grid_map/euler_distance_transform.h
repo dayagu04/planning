@@ -13,7 +13,7 @@ namespace planning {
 
 class EulerDistanceTransform : public OccupancyGridCoordinate {
  public:
-  EulerDistanceTransform(){};
+  EulerDistanceTransform() {};
 
   // use default ROI bound to generate ogm.
   void Process(const Pose2f &ogm_pose,
@@ -70,9 +70,9 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
       const uint8_t gear);
 
   void Init(const float car_body_lat_safe_buffer, const float lon_safe_buffer,
-            const float mirror_buffer);
+            const float mirror_buffer, const bool fold_mirror = false);
 
-  void UpdateSafeBuffer(const float car_body_lat_safe_buffer,
+  void UpdateSafeBuffer(const bool fold_mirror, const float car_body_lat_safe_buffer,
                         const float lon_safe_buffer, const float mirror_buffer,
                         const float big_circle_safe_buffer = 0.35);
 

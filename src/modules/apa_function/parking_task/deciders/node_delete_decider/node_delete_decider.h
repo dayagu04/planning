@@ -29,6 +29,9 @@ enum NodeDeleteReason : uint8_t {
   START_NODE = 8,
   LOOP_BACK_NODE = 9,
   SAME_GRID_NODE_CONTINUOUS = 10,
+  ZIGZAG_PATH = 11,
+  BACKTRACK_PATH = 12,
+  EXCEED_SCURVE_NUMBER = 13,
 };
 
 const std::string GetNodeDeleteReasonString(const NodeDeleteReason reason);
@@ -53,6 +56,7 @@ struct NodeDeleteInput {
   NodeGridIndex map_grid_bound;
   PlannerOpenSpaceConfig config;
   size_t max_gear_shift_number;
+  size_t max_scurve_number;
   PathColDetBuffer path_col_det_buffer;
   bool swap_start_goal = false;
   bool need_cal_obs_dist = false;
@@ -142,6 +146,12 @@ class NodeDeleteDecider final : public ParkingTask {
   const bool CheckDelByLoopBackNode();
 
   const bool CheckDelBySameGridNodeContinuous();
+
+  const bool CheckZigzagPath();
+
+  const bool CheckBacktrackPath();
+
+  const bool CheckExceedScurveNum();
 
  private:
   NodeDeleteRequest request_;

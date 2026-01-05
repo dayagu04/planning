@@ -320,21 +320,21 @@ const std::vector<Eigen::Vector2d> ApaSlot::GetCustomSlotPolygon(
   Eigen::Vector2d pt0, pt1, pt2, pt3;
   Eigen::Vector2d pt_01_unit_vec, pt_23mid_01mid_vec_unit_vec;
   if (base_on_slot) {
-    pt0 = origin_corner_coord_local_.pt_0;
-    pt1 = origin_corner_coord_local_.pt_1;
-    pt2 = origin_corner_coord_local_.pt_2;
-    pt3 = origin_corner_coord_local_.pt_3;
-    pt_01_unit_vec = origin_corner_coord_local_.pt_01_unit_vec;
+    pt0 = processed_corner_coord_local_.pt_0;
+    pt1 = processed_corner_coord_local_.pt_1;
+    pt2 = processed_corner_coord_local_.pt_2;
+    pt3 = processed_corner_coord_local_.pt_3;
+    pt_01_unit_vec = processed_corner_coord_local_.pt_01_unit_vec;
     pt_23mid_01mid_vec_unit_vec =
-        origin_corner_coord_local_.pt_23mid_01mid_unit_vec;
+        processed_corner_coord_local_.pt_23mid_01mid_unit_vec;
   } else {
-    pt0 = origin_corner_coord_global_.pt_0;
-    pt1 = origin_corner_coord_global_.pt_1;
-    pt2 = origin_corner_coord_global_.pt_2;
-    pt3 = origin_corner_coord_global_.pt_3;
-    pt_01_unit_vec = origin_corner_coord_global_.pt_01_unit_vec;
+    pt0 = processed_corner_coord_global_.pt_0;
+    pt1 = processed_corner_coord_global_.pt_1;
+    pt2 = processed_corner_coord_global_.pt_2;
+    pt3 = processed_corner_coord_global_.pt_3;
+    pt_01_unit_vec = processed_corner_coord_global_.pt_01_unit_vec;
     pt_23mid_01mid_vec_unit_vec =
-        origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
+        processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
   }
 
   std::vector<Eigen::Vector2d> pt_vec;
