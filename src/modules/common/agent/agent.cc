@@ -10,6 +10,7 @@
 #include "log.h"
 #include "math/box2d.h"
 #include "math/linear_interpolation.h"
+#include "vec2d.h"
 
 namespace planning {
 namespace agent {
@@ -26,6 +27,7 @@ Agent::Agent(const Agent& agent)
     : agent_id_(agent.agent_id()),
       box_(agent.box().center(), agent.box().heading(), agent.box().length(),
            agent.box().width()),
+      perception_polygon_(agent.perception_polygon()),
       is_static_(agent.is_static()) {
   x_ = agent.x();
   y_ = agent.y();
@@ -184,6 +186,10 @@ void Agent::set_dangerous_confidence(const float32 dangerous_confidence) {
 const planning_math::Box2d& Agent::box() const { return box_; }
 void Agent::set_box(const planning_math::Box2d& box) {
   box_.set_box(box.center(), box.heading(), box.length(), box.width());
+}
+void Agent::set_polygon(const planning_math::Polygon2d& polygon) {
+  std::vector<planning_math::Vec2d> pnts = polygon.GetAllVertices();
+  perception_polygon_.set_points(pnts);
 }
 
 const unsigned int Agent::fusion_source() const { return fusion_source_; };

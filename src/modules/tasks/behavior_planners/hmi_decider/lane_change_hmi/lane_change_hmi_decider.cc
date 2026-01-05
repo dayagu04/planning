@@ -1,7 +1,8 @@
 #include "modules/tasks/behavior_planners/hmi_decider/lane_change_hmi/lane_change_hmi_decider.h"
-#include "modules/context/planning_context.h"
+
 #include "common/ifly_time.h"
 #include "modules/context/environmental_model_manager.h"
+#include "modules/context/planning_context.h"
 namespace planning {
 namespace {
 static constexpr int kHmiSendMsgCntThreshold = 5;
@@ -253,20 +254,15 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     //   ad_info.lane_change_reason =
     //   iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     // } else
-    if (route_info_output.mlc_decider_route_info.is_process_merge) {
+    if (route_info_output.mlc_request_type_route_info.mlc_request_type ==
+        RAMP_TO_MAIN) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     } else {
       ad_info.lane_change_reason =
           iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
     }
   } else if (lc_request_source == MERGE_REQUEST) {
-    if (route_info_output.mlc_decider_route_info.is_process_merge) {
-      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
-    } else {
-      ad_info.lane_change_reason =
-          iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
-    }
-    // ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
   }
 
   // update route info

@@ -76,7 +76,7 @@ constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 65.0;
 constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
 constexpr double kDefaultSurpressSplitSelectorDistance = 5.0;
-constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
+constexpr double kDefaultSplitPointExistDistanceThd = 0.16;
 constexpr double kComputeSplitPointMoveStep = 2.0;
 constexpr double kSplitSelectEgoToExchangeAreaDistanceThd = 150.0;
 constexpr double kEnableSplitSelectionEgoLateralDistanceToBothLaneLines = 0.5;
@@ -181,19 +181,26 @@ void EgoLaneTrackManger::TrackEgoLane(
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
         double distance_to_first_road_split = NL_NMAX;
         double ego_dis_to_split_exchange_area_start = NL_NMAX;
-        const auto& split_region_info_list =
-            route_info_output.split_region_info_list;
-        const auto& merge_region_info_list =
-            route_info_output.merge_region_info_list;
+        NOASplitRegionInfo merge_region_info;
+        NOASplitRegionInfo split_region_info;
+        const auto& current_exchange_region_info =
+            mlc_decider_route_info.first_static_split_region_info;
+        if (current_exchange_region_info.is_ramp_merge ||
+            current_exchange_region_info.is_other_merge_to_road) {
+          merge_region_info = current_exchange_region_info;
+        } else {
+          split_region_info = current_exchange_region_info;
+        }
         bool enable_process_road_to_ramp = true;
-        if (!split_region_info_list.empty()) {
+        double ego_to_last_split_end_point_distance =
+            route_info_output.last_split_end_point_distance;
+        if (split_region_info.split_link_id != -1) {
           distance_to_first_road_split =
-              split_region_info_list[0].distance_to_split_point;
+              split_region_info.distance_to_split_point;
           ego_dis_to_split_exchange_area_start =
               distance_to_first_road_split +
-              split_region_info_list[0]
-                  .start_fp_point.fp_distance_to_split_point;
-          enable_process_road_to_ramp = split_region_info_list[0].is_ramp_split;
+              split_region_info.start_fp_point.fp_distance_to_split_point;
+          enable_process_road_to_ramp = split_region_info.is_ramp_split;
         }
 
         if (!is_in_lane_borrow_status && ego_in_split_region_ &&
@@ -267,37 +274,12 @@ void EgoLaneTrackManger::TrackEgoLane(
               return;
             }
           }
-
-          //处理高架快速路普通分流口
-          if (lane_keep_status) {
-            PreprocessOrdinarySplit(relative_id_lanes,
-                                    order_ids_of_same_zero_relative_id,
-                                    virtual_id_mapped_lane);
-            ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_expressway_:"
-                       << is_exist_split_on_expressway_;
-            if (is_exist_split_on_expressway_) {
-              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
-                  sum_distance_from_ego_to_both_center_lines_ < 0.5) {
-                ProcessSplitRegionInteractiveSelectEgoLane(
-                    relative_id_lanes, order_ids_of_same_zero_relative_id,
-                    lane_change_cmd);
-                if (is_exist_interactive_select_split_) {
-                  interactive_select_split_counter_ = 3;
-                  return;
-                } else {
-                  interactive_select_split_counter_--;
-                  interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
-                }
-              }
-              return;
-            }
-          }
         }
 
         if (ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
+                ego_to_last_split_end_point_distance > 20.0) {
           ProcessIntersectionSplit(relative_id_lanes,
                                    order_ids_of_same_zero_relative_id);
           ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:"
@@ -1665,7 +1647,6 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       if (relative_id_lane->get_lane_merge_split_point()
               .merge_split_point_data_size > 0) {
         split_lane_index = i;
-        find_virtual_lane_split_point = true;
         const auto& lane_merge_split_point =
             relative_id_lane->get_lane_merge_split_point();
         ego_distance_to_lane_merge_split_point =
@@ -1681,6 +1662,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
                  kDefaultSurpressSplitSelectorDistance)) {
           return;
         }
+        find_virtual_lane_split_point = true;
         virtual_lane_split_local_point.x =
             relative_id_lane->get_lane_merge_split_point()
                 .merge_split_point_data[0]
@@ -1872,8 +1854,18 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
 
   const double ego_heading_angle = ego_state->heading_angle();
   double clane_min_cost_total = std::numeric_limits<double>::infinity();
-  double split_point_front_distance = 10.0;
+  double split_point_front_distance = 25.0;
   double split_point_rear_distance = 20.0;
+  double lane_curv = 0.0;
+  if (order_ids.size() > 0) {
+    lane_curv =
+        ComputeTargetLaneSpecifiedRangeCurvature(relative_id_lanes[order_ids[0]]);
+    double road_radius = 1 / std::max(lane_curv, 0.0001);
+    if (road_radius < kDefaultRoadRadius) {
+      split_point_front_distance = 10.0;
+    }
+  }
+
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
       std::shared_ptr<VirtualLane> relative_id_lane =
@@ -2427,7 +2419,7 @@ double EgoLaneTrackManger::ComputeTargetLaneSpecifiedRangeCurvature(
                             &ego_s, &ego_l)) {
     return average_curv;
   }
-  if (ego_s > frenet_coord->Length()) {
+  if (ego_s + default_begin_length > frenet_coord->Length()) {
     return average_curv;
   }
   planning_math::PathPoint ego_s_nearest_point =

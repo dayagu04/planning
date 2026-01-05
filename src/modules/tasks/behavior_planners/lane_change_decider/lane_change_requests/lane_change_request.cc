@@ -1096,7 +1096,9 @@ bool LaneChangeRequest::ConeSituationJudgement(
         (!llane && min_right_l < pass_threshold_right && points.size() >= 3 &&
          average_l > 0.0) ||
         (!rlane && min_left_l < pass_threshold_left && points.size() >= 3 &&
-         average_l < 0.0)) {
+         average_l < 0.0) ||
+        (target_lane->get_ego_lateral_offset() > average_l && average_l > 0.0 && points.size() >= 3) ||
+        (target_lane->get_ego_lateral_offset() < average_l && average_l < 0.0 && points.size() >= 3)) {
       return false;
     }
   }
