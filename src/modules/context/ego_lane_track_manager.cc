@@ -181,19 +181,26 @@ void EgoLaneTrackManger::TrackEgoLane(
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
         double distance_to_first_road_split = NL_NMAX;
         double ego_dis_to_split_exchange_area_start = NL_NMAX;
-        const auto& split_region_info_list =
-            route_info_output.split_region_info_list;
-        const auto& merge_region_info_list =
-            route_info_output.merge_region_info_list;
+        NOASplitRegionInfo merge_region_info;
+        NOASplitRegionInfo split_region_info;
+        const auto& current_exchange_region_info =
+            mlc_decider_route_info.first_static_split_region_info;
+        if (current_exchange_region_info.is_ramp_merge ||
+            current_exchange_region_info.is_other_merge_to_road) {
+          merge_region_info = current_exchange_region_info;
+        } else {
+          split_region_info = current_exchange_region_info;
+        }
         bool enable_process_road_to_ramp = true;
-        if (!split_region_info_list.empty()) {
+        double ego_to_last_split_end_point_distance =
+            route_info_output.last_split_end_point_distance;
+        if (split_region_info.split_link_id != -1) {
           distance_to_first_road_split =
-              split_region_info_list[0].distance_to_split_point;
+              split_region_info.distance_to_split_point;
           ego_dis_to_split_exchange_area_start =
               distance_to_first_road_split +
-              split_region_info_list[0]
-                  .start_fp_point.fp_distance_to_split_point;
-          enable_process_road_to_ramp = split_region_info_list[0].is_ramp_split;
+              split_region_info.start_fp_point.fp_distance_to_split_point;
+          enable_process_road_to_ramp = split_region_info.is_ramp_split;
         }
 
         if (!is_in_lane_borrow_status && ego_in_split_region_ &&
@@ -297,7 +304,8 @@ void EgoLaneTrackManger::TrackEgoLane(
 
         if (ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
+                ego_to_last_split_end_point_distance > 20.0) {
           ProcessIntersectionSplit(relative_id_lanes,
                                    order_ids_of_same_zero_relative_id);
           ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:"
