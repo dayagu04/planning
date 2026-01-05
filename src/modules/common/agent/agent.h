@@ -6,6 +6,7 @@
 
 #include "agent_decision.h"
 #include "math/box2d.h"
+#include "math/polygon2d.h"
 #include "prediction_object.h"
 #include "trajectory/trajectory.h"
 
@@ -157,6 +158,11 @@ class Agent {
   const planning_math::Box2d& box() const;
   void set_box(const planning_math::Box2d& box);
 
+  const planning_math::Polygon2d& perception_polygon() const {
+    return perception_polygon_;
+  }
+  void set_polygon(const planning_math::Polygon2d& polygon);
+
   const std::vector<trajectory::Trajectory>& trajectories() const;
   void set_trajectories(
       const std::vector<trajectory::Trajectory>& trajectories);
@@ -280,6 +286,7 @@ class Agent {
   double accel_ = 0.0;
   double accel_fusion_ = 0.0;
   planning_math::Box2d box_;
+  planning_math::Polygon2d perception_polygon_;
 
   double d_path_ = std::numeric_limits<double>::max();
   double d_rel_ = std::numeric_limits<double>::max();
