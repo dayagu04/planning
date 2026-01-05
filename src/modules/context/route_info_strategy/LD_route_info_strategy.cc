@@ -839,6 +839,11 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
+    // 如果自车左边的车道数大于link的总车道数，则认为左侧车道数误检，直接return;
+    if (left_lane_num > real_lane_num) {
+      return;
+    }
+
     std::vector<int> lc_num_task;
 
     bool is_nearing_ramp = false;
