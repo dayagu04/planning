@@ -107,6 +107,8 @@ protected:
  bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info);
  const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
+ void Erase1Split2FeasibleLane(TopoLinkGraph& feasible_lane_graph);
+ std::vector<TopoLane> CalculateMaxDistanceLanes(const TopoLinkGraph& feasible_lane_graph) const;
  const iflymapdata::sdpro::Lane* IsEntryLanePresentOnEitherSideOfSuccessorLane(
      const iflymapdata::sdpro::Lane* cur_link_lane_info);
   // pair<left_lane, right_lane>
@@ -128,6 +130,17 @@ protected:
   iflymapdata::sdpro::Lane FindMatchingPreLaneInMainLink(
       const TopoLane& topo_lane,
       const iflymapdata::sdpro::LinkInfo_Link* next_pre_link);
+  size_t GetTargetRampIndex();
+  bool HasValidMergeBeforeRamp(const double ramp_dis);
+  bool IsDistanceToRampWithinThreshold(const double dis_to_ramp);
+  bool IsMergePriorToRamp(const double dis_to_ramp);
+  void UpdateSceneInfo(
+      const iflymapdata::sdpro::LinkInfo_Link& target_link,
+      const double dis_to_target_link);
+
+  void EraseFeasibleLaneIfNeeded(
+      uint64_t lane_id, const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
+      TopoLinkGraph& feasible_lane_graph);
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
