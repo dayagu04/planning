@@ -142,7 +142,7 @@ protected:
       uint64_t lane_id, const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
       TopoLinkGraph& feasible_lane_graph);
 
-      ad_common::sdpromap::SDProMap ld_map_;
+  ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
   bool ldmap_valid_{false};
   uint64_t ld_map_info_updated_timestamp_ = 0;
