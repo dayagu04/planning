@@ -506,11 +506,12 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   node_del_input.path_col_det_buffer = path_col_det_buffer;
   node_del_input.sample_ds = request_.sample_ds;
   node_del_input.swap_start_goal = request_.swap_start_goal;
-  node_del_input.enable_smart_fold_mirror = request_.enable_smart_fold_mirror;
   if (request_.search_mode == SearchMode::FORMAL) {
     node_del_input.need_cal_obs_dist = true;
+    node_del_input.enable_smart_fold_mirror = request_.enable_smart_fold_mirror;
   } else {
     node_del_input.need_cal_obs_dist = false;
+    node_del_input.enable_smart_fold_mirror = false;
   }
 
   node_delete_decider_.Process(node_del_input);
@@ -818,38 +819,47 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       // new_node.SetRadius(car_motion.radius);
       new_node.SetKappa(car_motion.kappa);
       new_node.SetPre(current_node);
+      // dist_to_start is the path distance from start_node to the cur_node
+      new_node.SetDistToStart(new_node.GetNodePathDistance() +
+                              current_node->GetDistToStart());
+      // GearSwitchNode only record first gear switch node
+      // NextGearSwitchNode only record second gear switch node
+      // SingleGearLength resprent every_single_gear_complete_length
+      // SingleGearMinLength only resprent min single_gear_complete_length
       if (current_node->IsPathGearChange(car_motion.gear)) {
         new_node.SetGearSwitchNum(current_node->GetGearSwitchNum() + 1);
+        if (new_node.GetGearSwitchNum() == 1) {
+          new_node.SetGearSwitchNode(current_node);
+          new_node.SetNextGearSwitchNode(nullptr);
+        } else if (new_node.GetGearSwitchNum() == 2) {
+          new_node.SetGearSwitchNode(current_node->GearSwitchNode());
+          new_node.SetNextGearSwitchNode(current_node);
+        } else {
+          new_node.SetGearSwitchNode(current_node->GearSwitchNode());
+          new_node.SetNextGearSwitchNode(current_node->NextGearSwitchNode());
+        }
         new_node.SetScurveNum(current_node->GetScurveNum());
+        new_node.SetSingleGearLength(new_node.GetNodePathDistance());
+        new_node.SetSingleGearMinLength(
+            std::min(new_node.GetSingleGearLength(),
+                     current_node->GetSingleGearMinLength()));
       } else {
         new_node.SetGearSwitchNum(current_node->GetGearSwitchNum());
+        new_node.SetGearSwitchNode(current_node->GearSwitchNode());
+        new_node.SetNextGearSwitchNode(current_node->NextGearSwitchNode());
         if (IsSteerOpposite(current_node->GetKappa(), new_node.GetKappa())) {
           new_node.SetScurveNum(current_node->GetScurveNum() + 1);
         } else {
           new_node.SetScurveNum(current_node->GetScurveNum());
         }
-      }
-      // dist_to_start is the path distance from the start node to the cur node
-      new_node.SetDistToStart(new_node.GetNodePathDistance() +
-                              current_node->GetDistToStart());
-      if (new_node.GetGearSwitchNum() == 0) {
-        new_node.SetGearSwitchNode(nullptr);
-        new_node.SetNextGearSwitchNode(nullptr);
-        new_node.SetSingleGearLength(new_node.GetDistToStart());
-      } else if (new_node.GetGearSwitchNum() == 1 &&
-                 current_node->IsPathGearChange(car_motion.gear)) {
-        new_node.SetGearSwitchNode(current_node);
-        new_node.SetNextGearSwitchNode(nullptr);
-        new_node.SetSingleGearLength(new_node.GetNodePathDistance());
-      } else {
-        new_node.SetGearSwitchNode(current_node->GearSwitchNode());
         new_node.SetSingleGearLength(new_node.GetNodePathDistance() +
                                      current_node->GetSingleGearLength());
-        if (new_node.GetGearSwitchNum() == 2 &&
-            current_node->IsPathGearChange(car_motion.gear)) {
-          new_node.SetNextGearSwitchNode(current_node);
+        if (new_node.GetGearSwitchNum() == 0) {
+          new_node.SetSingleGearMinLength(new_node.GetSingleGearLength());
         } else {
-          new_node.SetNextGearSwitchNode(current_node->NextGearSwitchNode());
+          new_node.SetSingleGearMinLength(
+              std::min(new_node.GetSingleGearLength(),
+                       current_node->GetSingleGearMinLength()));
         }
       }
 

@@ -219,6 +219,10 @@ class Node3d {
 
   const float GetSingleGearLength() const { return single_gear_length_; }
 
+  void SetSingleGearMinLength(const float length) { single_gear_min_length_ = length; }
+
+  const float GetSingleGearMinLength() const { return single_gear_min_length_; }
+
   const AstarPathType GetPathType() const { return path_type_; }
 
   void SetPathType(const AstarPathType type) { path_type_ = type; }
@@ -407,6 +411,7 @@ class Node3d {
   float radius_;
   float kappa_;
   float single_gear_length_ = 0.0f;
+  float single_gear_min_length_ = 0.0f;
 
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;
