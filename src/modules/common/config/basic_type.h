@@ -247,25 +247,29 @@ struct MLCDeciderSceneInfoBaseBaidu {
   MLCSceneType mlc_scene_type = NONE_SCENE;
   RampDirection route_lane_direction = RAMP_NONE;
   double dis_to_link_topo_change_point = 0.0;
+  uint64 topo_change_link_id = 0;
   bool is_valid = false;
 
   MLCDeciderSceneInfoBaseBaidu() = default;
 
   MLCDeciderSceneInfoBaseBaidu(MLCSceneType mlc_scene_type,
                                RampDirection route_lane_direction,
-                               double dis_to_link_topo_change_point)
+                               double dis_to_link_topo_change_point,
+                               uint64 topo_change_link_id)
       : mlc_scene_type(mlc_scene_type),
         route_lane_direction(route_lane_direction),
-        dis_to_link_topo_change_point(dis_to_link_topo_change_point) {
+        dis_to_link_topo_change_point(dis_to_link_topo_change_point),
+        topo_change_link_id(topo_change_link_id) {
     is_valid = info_valid(mlc_scene_type, route_lane_direction,
                           dis_to_link_topo_change_point);
   }
 
   void set_value(MLCSceneType scene_type, RampDirection lane_direction,
-                 double dis) {
+                 double dis, uint64 link_id) {
     mlc_scene_type = scene_type;
     route_lane_direction = lane_direction;
     dis_to_link_topo_change_point = dis;
+    topo_change_link_id = link_id;
     is_valid = info_valid(scene_type, lane_direction, dis);
   }
 
@@ -274,6 +278,7 @@ struct MLCDeciderSceneInfoBaseBaidu {
     route_lane_direction = RAMP_NONE;
     dis_to_link_topo_change_point = 0.0;
     is_valid = false;
+    topo_change_link_id = 0;
   }
 
  private:
