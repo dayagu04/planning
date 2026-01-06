@@ -85,6 +85,9 @@ void LaneChangeStateMachineManager::Update() {
 }
 
 void LaneChangeStateMachineManager::RunStateMachine() {
+  const auto& pilot_req = session_->environmental_model()
+                              .get_local_view()
+                              .function_state_machine_info.pilot_req;
   switch (transition_info_.lane_change_status) {
     case StateMachineLaneChangeStatus::kLaneKeeping: {
       // clear_lc_stage_info();
@@ -128,6 +131,17 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           enable_interactive_select_split = true;
         }
         propose_state_frame_nums_++;
+        if (config_.enable_overtake_lane_change_confirmation){
+          if (!overtake_lane_change_confirmed_ &&
+              pilot_req.is_overtake_lane_change_confirmed) {
+            overtake_lane_change_confirmed_ = true;
+          }
+          if (lc_req_mgr_->request_source() ==
+                  RequestSource::OVERTAKE_REQUEST &&
+              !overtake_lane_change_confirmed_) {
+            break;
+          }
+        }
 
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
@@ -315,6 +329,10 @@ void LaneChangeStateMachineManager::RunStateMachine() {
   }
   const int cur_state = transition_info_.lane_change_status;
   JSON_DEBUG_VALUE("cur_state", cur_state)
+  JSON_DEBUG_VALUE("overtake_lane_change_confirmed", overtake_lane_change_confirmed_)
+  JSON_DEBUG_VALUE("pilot_overtake_comfirm_siginal", pilot_req.is_overtake_lane_change_confirmed)
+  JSON_DEBUG_VALUE("enable_overtake_confirm",
+                   config_.enable_overtake_lane_change_confirmation)
   // update history
   if (target_lane_rear_node_) {
     last_target_rear_agent_id_ = target_lane_rear_node_->node_id();
@@ -1536,6 +1554,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   is_dash_not_enough_for_lc_ = false;
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
+  overtake_lane_change_confirmed_ = false;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   if (transition_info_.lane_change_status != kLaneChangePropose &&
