@@ -162,7 +162,8 @@ void SampleQuinticPolynomialCurve::CalcCost(
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
   const double& anchor_arrived_t = poly_.T();
-  const double& anchor_arrived_v = poly_.CalculateFirstDerivative(anchor_arrived_t);
+  const double& anchor_arrived_v =
+      poly_.CalculateFirstDerivative(anchor_arrived_t);
   double anchor_arrived_s = poly_.CalculatePoint(anchor_arrived_t);
   double anchor_arrived_a = poly_.CalculateSecondDerivative(anchor_arrived_t);
   arrived_s_ = anchor_arrived_s;

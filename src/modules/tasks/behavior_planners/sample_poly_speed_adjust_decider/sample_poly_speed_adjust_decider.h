@@ -14,6 +14,7 @@
 #include "sample_quintic_poly_curve.h"
 #include "sample_space_base.h"
 #include "session.h"
+#include "simple_astar_path.h"
 #include "tasks/task.h"
 #include "uniform_jerk_curve.h"
 
@@ -61,6 +62,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool IsForcedMergeScenario();
   bool GenerateForceMergeTraj();
   bool EvaluateForceMergeTraj();
+  bool GenerateAStarTraj();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -116,6 +118,9 @@ class SamplePolySpeedAdjustDecider : public Task {
   std::vector<std::vector<SampleQuarticPolynomialCurve>> sample_trajs_;
   std::vector<std::vector<SampleQuinticPolynomialCurve>> sample_quintic_trajs_;
   LonState lon_state_;
+  StateLimit state_limit_upper_;
+  StateLimit state_limit_lower_;
+  std::unique_ptr<LongitudinalAStar> astar_traj_ptr_;
 
   int count_wait_state_{0};
   int count_normal_to_hover_state_{0};
