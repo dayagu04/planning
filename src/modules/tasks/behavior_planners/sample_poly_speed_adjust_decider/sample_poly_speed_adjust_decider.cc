@@ -136,8 +136,11 @@ bool SamplePolySpeedAdjustDecider::Execute() {
              .is_gap_changeable() ||
         !min_cost_traj_ptr_->is_left_distance_enough()) {
       if (IsForcedMergeScenario()) {
-        GenerateAStarTraj();
-        kkkk = astar_traj_ptr_->count_;
+        if(GenerateAStarTraj()){
+          kkkk = astar_traj_ptr_->count_;
+        }else{
+          astar_traj_ptr_.reset();
+        }
       }
     }
   }

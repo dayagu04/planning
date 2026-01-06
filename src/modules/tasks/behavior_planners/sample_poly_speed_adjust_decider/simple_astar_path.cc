@@ -36,7 +36,7 @@ void LongitudinalAStar::PlanTrajectory() {
 
   while (!open_list_.empty()) {
     count_++;
-    if(count_ > 500) {
+    if(count_ > 250) {
       std::cout << "警告：A*搜索未收敛！" << std::endl;
       break;
     }
