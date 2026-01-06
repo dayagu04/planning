@@ -14,6 +14,7 @@ constexpr double kOffsetChangeRateMedium = 0.05;
 constexpr double kOffsetChangeRateHigh = 0.1;
 constexpr double kExtendLonDistance = 10;
 constexpr double kExtendLatDistance = 10;
+constexpr double kMaxNudgeDistance = 0.3;
 SideNudgeLateralOffsetDecider::SideNudgeLateralOffsetDecider(
     framework::Session* session,
     const EgoPlanningConfigBuilder* config_builder) {
@@ -70,6 +71,7 @@ void SideNudgeLateralOffsetDecider::RunStateMachine() {
         if (is_control_time_enough_.IsValid()) {
           is_control_.SetInvalidCount();
         }
+        
       } else {
         if (LatOffsetCalculate()) {
           is_control_.SetValidByCount();
@@ -270,16 +272,41 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
   }
 
   UpdateNudgeInfo();
+  double ego_init_l = reference_path_ptr_->get_frenet_ego_state()
+                          .planning_init_point()
+                          .frenet_state.r;
   double desire_lateral_offset =
       DesireLateralOffsetSideWay(config_.base_nudge_distance);
-  desire_lateral_offset = std::min(0.3, desire_lateral_offset);
+  desire_lateral_offset = std::min(kMaxNudgeDistance, desire_lateral_offset);
   desire_lateral_offset = nudge_info_.nudge_direction == NudgeDirection::LEFT
                               ? -desire_lateral_offset
                               : desire_lateral_offset;
+
+  // smooth
   double offset_change_rate = kOffsetChangeRateLow;
-  lateral_offset_ =
+
+  if ((desire_lateral_offset < lateral_offset_ &&
+       desire_lateral_offset > ego_init_l) ||
+      (desire_lateral_offset > lateral_offset_ &&
+       desire_lateral_offset < ego_init_l)) {
+    lateral_offset_ = desire_lateral_offset;
+  } else if ((lateral_offset_ < desire_lateral_offset &&
+       lateral_offset_ > ego_init_l) ||
+      (lateral_offset_ > desire_lateral_offset &&
+       lateral_offset_ < ego_init_l)) {
+    lateral_offset_ =
       clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
            lateral_offset_ - offset_change_rate);
+  } else {
+    if (desire_lateral_offset > ego_init_l) {
+      lateral_offset_ = std::max(clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
+           lateral_offset_ - offset_change_rate), ego_init_l);
+    } else {
+      lateral_offset_ = std::min(clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
+           lateral_offset_ - offset_change_rate), ego_init_l);
+    }
+  }
+
   return true;
 }
 
