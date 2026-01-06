@@ -90,6 +90,7 @@ constexpr int kMapSharpCurveRawCountExit = 3;  // Exit threshold count of k_raw 
 constexpr double kMapRadiusFirstEnterForDisCal = 65.0;  // Radius threshold 65m
 constexpr double kMapSharpCurveMinDistance = 20.0;  // Minimum distance between first and last point satisfying condition (m)
 constexpr double kMapSharpCurveSpeedLimitThreshold = 60.0;  // Speed limit threshold (kph) to skip counting small radius points
+constexpr double kMapSharpCurveGroupingDistanceThreshold = 40.0;
 constexpr size_t kRampCurvatureVectorReserveSize = 50;  // Expected size for ramp curvature data vectors (~50 points for 150m ramp)
 constexpr size_t kRampCurvatureIndicesReserveSize = 30;  // Expected size for turn direction indices (fewer points satisfy small radius condition)
 constexpr double kMapSharpCurveDistThresholdV70 = 125.0;  // Distance threshold to sharp curve when speed > 70kph (m)
@@ -1289,6 +1290,80 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
             }
           }
         }
+        // Group indices by S distance (gap > threshold) and select the group with most points
+        auto group_and_select = [&s_vec](const std::vector<int>& indices) -> std::vector<int> {
+          if (indices.empty() || s_vec.empty()) {
+            return indices;
+          }
+          
+          // Create pairs of (index, s_value) and sort by S value
+          std::vector<std::pair<int, double>> index_s_pairs;
+          index_s_pairs.reserve(indices.size());
+          for (int idx : indices) {
+            if (idx >= 0 && static_cast<size_t>(idx) < s_vec.size()) {
+              index_s_pairs.push_back({idx, s_vec[idx]});
+            }
+          }
+          
+          if (index_s_pairs.empty()) {
+            return indices;
+          }
+          
+          // Sort by S value
+          std::sort(index_s_pairs.begin(), index_s_pairs.end(),
+                    [](const std::pair<int, double>& a, const std::pair<int, double>& b) {
+                      return a.second < b.second;
+                    });
+          
+          // Group indices based on S distance gap > threshold
+          std::vector<std::vector<int>> groups;
+          std::vector<int> current_group;
+          current_group.push_back(index_s_pairs[0].first);
+          
+          for (size_t i = 1; i < index_s_pairs.size(); ++i) {
+            double s_diff = index_s_pairs[i].second - index_s_pairs[i-1].second;
+            if (s_diff > kMapSharpCurveGroupingDistanceThreshold) {
+              // Start a new group
+              groups.push_back(current_group);
+              current_group.clear();
+            }
+            current_group.push_back(index_s_pairs[i].first);
+          }
+          // Add the last group
+          if (!current_group.empty()) {
+            groups.push_back(current_group);
+          }
+          
+          // If no grouping occurred (all points are in one group), return original
+          if (groups.size() <= 1) {
+            return indices;
+          }
+          
+          // Find the group with most points (if equal, choose the earlier one)
+          size_t max_group_idx = 0;
+          size_t max_size = groups[0].size();
+          for (size_t i = 1; i < groups.size(); ++i) {
+            if (groups[i].size() > max_size) {
+              max_size = groups[i].size();
+              max_group_idx = i;
+            }
+          }
+          
+          return groups[max_group_idx];
+        };
+        
+        // Apply grouping to left_turn_indices
+        if (!left_turn_indices.empty()) {
+          left_turn_indices = group_and_select(left_turn_indices);
+          count_left_turn = static_cast<int>(left_turn_indices.size());
+        }
+        
+        // Apply grouping to right_turn_indices
+        if (!right_turn_indices.empty()) {
+          right_turn_indices = group_and_select(right_turn_indices);
+          count_right_turn = static_cast<int>(right_turn_indices.size());
+        }
+        
         
         // Determine curve direction based on point count
         if (count_left_turn > count_right_turn) {
