@@ -46,7 +46,7 @@ constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
 constexpr std::array<double, 3> fp_for_large_car{6.0, 12.0, 30.0};
 constexpr std::array<double, 3> buffer_for_large_car{3.0, 6, 20.0};
-constexpr double kMaxReachedTime = 100.0;
+constexpr double kMaxReachedTime = 10.0;
 
 const std::unordered_set<agent::AgentType> FacilityTypes = {
     agent::AgentType::TRAFFIC_CONE, agent::AgentType::TRAFFIC_BARREL,
@@ -2396,10 +2396,14 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
   const auto& target_lane_nodes =
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
-  double target_rear_s = -200.0; // 后车车头位置
+  double target_rear_s = - std::numeric_limits<double>::infinity(); // 后车车头位置
   int64_t target_rear_node_id = planning_data::kInvalidId;
       //横向运动信息
   const auto& obstacles_map = ref_path->get_obstacles_map();
+  double urgent_rear_gap = std::numeric_limits<double>::infinity();
+  double urgent_reached_time = kMaxReachedTime;
+  bool has_target = false;
+  bool has_near_rear = false;
   for (const auto* target_lane_node : target_lane_nodes) {
     if(target_lane_node == nullptr) {
       continue;
@@ -2484,10 +2488,66 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     if (s_end < s_start) {
       continue;
     }  // 小心太后方的车可能 frenet转化后堆在一起
-    if (agent_s_end > target_rear_s) {
-      target_rear_node_id = target_lane_node->node_id();
-      target_rear_s = agent_s;  // 选择最靠前的
-    }
+    // if (agent_s_end > target_rear_s) {
+    //   target_rear_node_id = target_lane_node->node_id();
+    //   target_rear_s = agent_s;  // 选择最靠前的
+    // }
+    double rear_risk_dis = target_lane_node->node_speed() * 0.5 + 2.0;
+    double rear_gap = std::max(0.0, ego_sl_bd.s_start - agent_s_end);
+    bool is_rear_risk = rear_gap < rear_risk_dis;
+    double rear_faster_vel =
+        target_lane_node->node_speed() - ego_sl_state.velocity_s();
+    double valid_rel_vel = std::max(rear_faster_vel, kEps);
+    double rear_reached_time =
+        rear_faster_vel > 0.0 ? rear_gap / valid_rel_vel : kMaxReachedTime;
+    rear_reached_time = rear_gap < kEps ? 0.0 : rear_reached_time;
+    rear_reached_time = std::min(rear_reached_time, kMaxReachedTime);
+    if (is_rear_risk) {
+      // ===== 近距离区：绝对最高优先级 =====
+      if (!has_near_rear || agent_s_end > target_rear_s) {
+        has_near_rear = true;
+        has_target = true;
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = rear_reached_time;
+      }
+    } else if (!has_near_rear) {
+      // ===== 非近距离区，只在尚未命中近距离时参与 =====
+      if (!has_target) {
+        // 第一个非近距离目标
+        has_target = true;
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = rear_reached_time;
+      } else if (rear_reached_time < kMaxReachedTime &&
+                 urgent_reached_time < kMaxReachedTime) {
+        // 追击时间比较
+        if (rear_reached_time < urgent_reached_time) {
+          target_rear_node_id = target_lane_node->node_id();
+          target_rear_s = agent_s_end;
+          urgent_rear_gap = rear_gap;
+          urgent_reached_time = rear_reached_time;
+        }
+      } else if (rear_reached_time < kMaxReachedTime &&
+                 urgent_reached_time >= kMaxReachedTime) {
+        // 有效追击时间优先
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = rear_reached_time;
+      } else if (rear_reached_time >= kMaxReachedTime &&
+                 urgent_reached_time >= kMaxReachedTime) {
+        // 都无追击意义，回退距离
+        if (agent_s_end > target_rear_s) {
+          target_rear_node_id = target_lane_node->node_id();
+          target_rear_s = agent_s_end;
+          urgent_rear_gap = rear_gap;
+          urgent_reached_time = rear_reached_time;
+        }
+      }
+    }    
   }
   target_lane_rear_node_ = dynamic_world->GetNode(target_rear_node_id);
 }
