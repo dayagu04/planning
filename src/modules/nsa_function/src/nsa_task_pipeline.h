@@ -7,6 +7,7 @@
 #include "ego_planning_config.h"
 #include "session.h"
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
+#include "tasks/behavior_planners/hmi_decider/nsa_hmi_decider.h"
 #include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/hpp_lateral_obstacle_decider/hpp_lateral_obstacle_decider.h"
@@ -35,6 +36,7 @@ class NsaTaskPipeline : public BaseTaskPipeline {
   std::unique_ptr<GeneralLongitudinalDecider> general_longitudinal_decider;
   std::unique_ptr<LongitudinalMotionPlanner> longitudinal_motion_planner_;
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
+  std::unique_ptr<NSAHMIDecider> hmi_decider_;
 };
 
 }  // namespace planning
