@@ -880,44 +880,6 @@ void PlanningScheduler::FillPlanningHmiInfo(
     }
   }
 
-  // HMI for nsa
-  const auto& narrow_space_decider_output =
-      session_.planning_context().narrow_space_decider_output();
-  bool is_passable_condition = narrow_space_decider_output.is_in_narrow_space;
-  auto nsa_info = &(session_.mutable_planning_context()
-                        ->mutable_planning_hmi_info()
-                        ->nsa_info);
-  if (!narrow_space_decider_output.is_in_narrow_space) {
-    nsa_info->is_avaliable = false;
-    nsa_info->nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NOT_ON_NARROW;
-  } else if (narrow_space_decider_output.is_too_narrow) {
-    nsa_info->is_avaliable = false;
-    nsa_info->nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NARROW;
-  } else if (narrow_space_decider_output.is_too_wide) {
-    nsa_info->is_avaliable = false;
-    nsa_info->nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_WIDE;
-  } else if (narrow_space_decider_output.is_relative_angle_too_large) {
-    nsa_info->is_avaliable = false;
-    nsa_info->nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_HEADING;
-  } else {
-    nsa_info->is_avaliable = true;
-    nsa_info->nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NONE;
-  }
-  if (local_view_->function_state_machine_info.current_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
-    if (!narrow_space_decider_output.is_exist_narrow_space) {
-      nsa_info->is_complete = true;
-      nsa_info->nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NO_NARROW;
-    } else if (!narrow_space_decider_output.is_passable_narrow_space) {
-      nsa_info->is_complete = true;
-      nsa_info->nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NO_SPACE;
-    } else {
-      nsa_info->is_complete = false;
-      nsa_info->nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NONE;
-    }
-  } else {
-    nsa_info->is_complete = false;
-    nsa_info->nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NONE;
-  }
   return;
 }
 

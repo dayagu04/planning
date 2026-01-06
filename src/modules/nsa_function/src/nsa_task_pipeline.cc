@@ -21,6 +21,8 @@ NsaTaskPipeline::NsaTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<LongitudinalMotionPlanner>(config_builder, session);
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
+  hmi_decider_=
+      std::make_unique<NSAHMIDecider>(config_builder, session);
 }
 
 bool NsaTaskPipeline::Run() {
@@ -88,6 +90,14 @@ bool NsaTaskPipeline::Run() {
   }
   auto time9 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("ResultTrajectoryGeneratorTime", time9 - time8);
+
+  ok = hmi_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(hmi_decider_->Name());
+    return false;
+  }
+  auto time10 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("HMIDeciderTime", time10 - time9);
 
   return true;
 }
