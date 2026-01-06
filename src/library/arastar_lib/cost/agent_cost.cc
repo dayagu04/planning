@@ -154,11 +154,11 @@ void AgentCost::GetDirectlyBehindCost(
     const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
     const double ego_front_s, const double ego_front_l, const double ego_back_l,
     double& cost, const bool left_turn, const bool right_turn) const {
-  double min_l = frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
-  double max_l = frenet_obstacle->frenet_polygon_sequence()[0].second.max_y();
+  double min_l = frenet_obstacle->frenet_obstacle_boundary().l_start;
+  double max_l = frenet_obstacle->frenet_obstacle_boundary().l_end;
   double center_l = (min_l + max_l) / 2;
   double l_half_width = (max_l - min_l) / 2.0;
-  double min_s = frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
+  double min_s = frenet_obstacle->frenet_obstacle_boundary().s_start;
 
   constexpr double kStraightLaneRange = 10;
   constexpr double kInsideBendRange = 10;
@@ -202,11 +202,11 @@ bool AgentCost::GetAreaCost(
     const bool right_turn) const {
   bool has_set_area_cost = false;
 
-  double min_l = frenet_obstacle->frenet_polygon_sequence()[0].second.min_y();
-  double max_l = frenet_obstacle->frenet_polygon_sequence()[0].second.max_y();
+  double min_l = frenet_obstacle->frenet_obstacle_boundary().l_start;
+  double max_l = frenet_obstacle->frenet_obstacle_boundary().l_end;
   double center_l = (min_l + max_l) / 2;
-  double min_s = frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
-  double max_s = frenet_obstacle->frenet_polygon_sequence()[0].second.max_x();
+  double min_s = frenet_obstacle->frenet_obstacle_boundary().s_start;
+  double max_s = frenet_obstacle->frenet_obstacle_boundary().s_end;
   double center_s = (min_s + max_s) / 2;
   double l_half_width = (max_l - min_l) / 2.0;
 
