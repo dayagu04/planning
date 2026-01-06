@@ -207,7 +207,75 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_msg']['ctrl_debug_json_msg'] = ctrl_debug_json_msg
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state = soc_state_msg.current_state
-    print("FunctionalState: ", soc_state)
+    background_state = soc_state_msg.background_state
+
+    # Mapping the enum values to their names
+    # NOTE: This mapping should be matched fsm interface once when it changes!!!
+    functional_state_mapping = {
+        0: "FunctionalState_MANUAL",
+        1: "FunctionalState_SYSTEM_ERROR",
+        2: "FunctionalState_MRC",
+        3: "FunctionalState_DRIVING_PASSIVE",
+        4: "FunctionalState_ACC_STANDBY",
+        5: "FunctionalState_ACC_ACTIVATE",
+        6: "FunctionalState_ACC_OVERRIDE",
+        7: "FunctionalState_SCC_STANDBY",
+        8: "FunctionalState_SCC_ACTIVATE",
+        9: "FunctionalState_SCC_OVERRIDE",
+        10: "FunctionalState_NOA_STANDBY",
+        11: "FunctionalState_NOA_ACTIVATE",
+        12: "FunctionalState_NOA_OVERRIDE",
+        13: "FunctionalState_PARK_STANDBY",
+        14: "FunctionalState_PARK_IN_SEARCHING",
+        15: "FunctionalState_PARK_GUIDANCE",
+        16: "FunctionalState_PARK_SUSPEND",
+        17: "FunctionalState_PARK_COMPLETED",
+        18: "FunctionalState_PARK_OUT_SEARCHING",
+        19: "FunctionalState_PARK_PRE_ACTIVE",
+        20: "FunctionalState_DRIVING_ERROR",
+        21: "FunctionalState_PARK_ERROR",
+        50: "FunctionalState_HPP_STANDBY",
+        51: "FunctionalState_HPP_PROACTIVE_MAPPING",
+        52: "FunctionalState_HPP_BACKGROUND_MAPPING",
+        53: "FunctionalState_HPP_MAP_CHECK",
+        54: "FunctionalState_HPP_PRE_ACTIVE_DRIVING",
+        55: "FunctionalState_HPP_PRE_ACTIVE_PARKING",
+        56: "FunctionalState_HPP_CRUISE_ROUTING",
+        57: "FunctionalState_HPP_CRUISE_SEARCHING",
+        58: "FunctionalState_HPP_PARKING_OUT",
+        59: "FunctionalState_HPP_PARKING_IN",
+        60: "FunctionalState_HPP_SUSPEND",
+        61: "FunctionalState_HPP_COMPLETE",
+        62: "FunctionalState_HPP_ABORT",
+        63: "FunctionalState_HPP_ERROR",
+        70: "FunctionalState_RADS_STANDBY",
+        71: "FunctionalState_RADS_PRE_ACTIVE",
+        72: "FunctionalState_RADS_TRACING",
+        73: "FunctionalState_RADS_SUSPEND",
+        74: "FunctionalState_RADS_COMPLETE",
+        75: "FunctionalState_RADS_ABORT",
+        76: "FunctionalState_RADS_ERROR",
+        80: "FunctionalState_CUSTOMER_CALIBRATION",
+    }
+
+    background_state_mapping = {
+        11: "BackgroundState_HPP_ERROR",
+        12: "BackgroundState_HPP_PASSIVE",
+        13: "BackgroundState_HPP_STANDBY",
+        14: "BackgroundState_HPP_PROACTIVE_MAPPING",
+        15: "BackgroundState_HPP_PROACTIVE_MAPPING_PAUSE",
+        16: "BackgroundState_HPP_BACKGROUND_MAPPING",
+        17: "BackgroundState_HPP_BACKGROUND_MAPPING_PAUSE",
+        18: "BackgroundState_HPP_STORE",
+        19: "BackgroundState_HPP_STORE_COMPLETE",
+        20: "BackgroundState_HPP_STORE_FAIL",
+    }
+
+    cur_state_name = functional_state_mapping.get(soc_state, "Unknown FunctionalState")
+    background_state_name = background_state_mapping.get(background_state, "Unknown BackgroundState")
+
+    print("fsm_cur_state: " + str(soc_state) + " - " + cur_state_name)
+    print("fsm_background_state: " + str(background_state) + " - " + background_state_name)
 
   ### step 2-1: 加载pp原始定位信息
   if bag_loader.origin_loc_msg['enable'] == True:
@@ -442,7 +510,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state = soc_state_msg.current_state
-    print("FunctionalState: ", soc_state)
     rads_traj_x, rads_traj_y = [], []
     try:
       rads_map = soc_state_msg.rads_map

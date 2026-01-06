@@ -303,7 +303,7 @@ bool EnvironmentalModelManager::Run() {
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
                   (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
   bool hpp_mode_cruise =
-      (fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE) ||
+      (fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE_DRIVING) ||
       (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) ||
       (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING);
   bool hpp_mode =
@@ -450,6 +450,10 @@ bool EnvironmentalModelManager::Run() {
     time_end = IflyTime::Now_ms();
     ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
+    if(parking_slot_manager_ptr_->IsExistTargetSlot()) {
+      const auto& target_slot_center = parking_slot_manager_ptr_->GetTargetSlotCenter();
+      route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(target_slot_center.x(), target_slot_center.y()));
+    }
   }
 
   time_start = IflyTime::Now_ms();

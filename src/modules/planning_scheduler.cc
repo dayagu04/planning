@@ -127,6 +127,7 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
 planning::common::SceneType PlanningScheduler::DetermineSceneType(
     const iflyauto::FuncStateMachine& func_state_machine) {
   auto scene_type = planning::common::SceneType::HIGHWAY;
+  ILOG_INFO << "wahaha current state = " << func_state_machine.current_state;
 
   if (IsUndefinedScene(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HIGHWAY;
@@ -194,8 +195,8 @@ bool PlanningScheduler::RunOnce(
     // TODO:这里有问题。会导致不运行FillPlanningTrajectory和FillPlanningHmiInfo。任何情况下都需要给输出赋值。
   }
 
-  bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
-  if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
+  is_hpp_slot_searching_ = IsHppSlotSearchingByDistance();
+  if (function_type == common::PARKING_APA || is_hpp_slot_searching_) {
     planning_success = ExcuteParkingFunction(
         function_type, start_timestamp, planning_output, planning_hmi_info);
   }
@@ -613,18 +614,34 @@ void PlanningScheduler::FillPlanningTrajectory(
   planning_status->apa_planning_status = iflyauto::APA_NONE;
   // WB end:--------临时hack以上信号--------
   const bool planning_success = planning_context.planning_success();
-  const bool planning_completed = planning_context.planning_completed();
+  const auto &running_mode = state_machine.running_mode;
   const auto scene_type = session_.get_scene_type();
-  if (scene_type == common::SceneType::HPP) {
-    if (planning_completed) {
-      planning_status->hpp_planning_status = iflyauto::HPP_COMPLETED;
+  if(running_mode == iflyauto::RunningMode::RUNNING_MODE_MEMORY_PARKING) {
+    const bool hpp_cruise_routing_completed =
+        planning_context.hpp_cruise_routing_completed();
+    const bool target_slot_allowed_to_park =
+        planning_context.target_slot_allowed_to_park();
+    const bool timeout_for_target_slot_allowed_to_park =
+        planning_context.timeout_for_target_slot_allowed_to_park();
+    // TODO(taolu10): define HPP_PARKING_COMPLETED status
+    if (hpp_cruise_routing_completed && (target_slot_allowed_to_park || timeout_for_target_slot_allowed_to_park)) {
+      if (target_slot_allowed_to_park) {
+        planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_COMPLETED;
+      } else if (timeout_for_target_slot_allowed_to_park) {
+        planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_PLANNING_FAILED;
+      }
     } else if (planning_success) {
       planning_status->hpp_planning_status = iflyauto::HPP_RUNNING;
     } else {
-      planning_status->hpp_planning_status = iflyauto::HPP_RUNNING_FAILED;
+      if (scene_type == common::SceneType::HPP) {
+        planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_PLANNING_FAILED;
+      } else {  // HPP_PARKING
+        planning_status->hpp_planning_status = iflyauto::HPP_PARKING_PLANNING_FAILED;
+      }
     }
-  } else if (scene_type == common::SceneType::RADS) {
-    if (planning_completed) {
+  } else if (running_mode == iflyauto::RunningMode::RUNNING_MODE_REVERSE_FOLLOW_TRACE) {
+    const bool rads_planning_completed = planning_context.rads_planning_completed();
+    if (rads_planning_completed) {
       planning_status->rads_planning_status = iflyauto::RADS_COMPLETED;
     } else if (planning_success) {
       planning_status->rads_planning_status = iflyauto::RADS_RUNNING;
@@ -806,6 +823,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.environmental_model().get_ego_state_manager();
   const auto& route_info_output =
       session_.environmental_model().get_route_info()->get_route_info_output();
+  const auto& planning_context = session_.planning_context();
   auto hpp_info = &(session_.mutable_planning_context()
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
@@ -821,7 +839,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   hpp_info->is_approaching_intersection = false;
   hpp_info->is_approaching_turn = false;
-  hpp_info->is_parking_space_occupied = false;
+  hpp_info->is_target_parking_space_occupied = false;
   hpp_info->is_new_parking_space_found = false;
   hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_NONE;
   auto reference_path_manager =
@@ -864,16 +882,22 @@ void PlanningScheduler::FillPlanningHmiInfo(
     const auto& parking_switch_info = session_.planning_context()
                                           .parking_switch_decider_output()
                                           .parking_switch_info;
-    if (parking_switch_info.is_memory_slot_allowed_to_park) {
+    if (parking_switch_info.is_target_slot_allowed_to_park) {
       hpp_info->hpp_state_switch =
           iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
-    } else if (parking_switch_info.is_memory_slot_occupied) {
-      hpp_info->is_parking_space_occupied = true;
+    } else if (parking_switch_info.is_target_slot_occupied) {
+      hpp_info->is_target_parking_space_occupied = true;
     } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
       hpp_info->hpp_state_switch =
           iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
     }
 
+    const bool timeout_for_target_slot_allowed_to_park = planning_context.timeout_for_target_slot_allowed_to_park();
+    const bool hpp_cruise_routing_completed = planning_context.hpp_cruise_routing_completed();
+    if(hpp_cruise_routing_completed && timeout_for_target_slot_allowed_to_park) {
+      hpp_info->hpp_planning_failed_reason = iflyauto::HPPPlanningFailedReason::
+          HPP_PLANNING_FAILED_REASON_TARGET_PARKING_SPACE_OCCUPIED;
+    }
     // todo: is_new_parking_space_found is unused.
     if (parking_switch_info.has_parking_slot_in_hpp_searching) {
       hpp_info->is_new_parking_space_found = true;
@@ -1221,9 +1245,10 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
   if (state_machine.current_state ==
       iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
     double dist = session_.environmental_model()
-                      .get_parking_slot_manager()
-                      ->GetDistanceToTargetSlot();
-    const double kdistance_thresh = 10.0;
+                      .get_route_info()
+                      ->get_route_info_output()
+                      .distance_to_target_dest;
+    const double kdistance_thresh = 20.0;
     if (dist > kdistance_thresh) {
       return false;
     }
@@ -1255,6 +1280,7 @@ const bool PlanningScheduler::ExcuteParkingFunction(
   planning_output->msg_meta = msg_meta;
   planning_output->meta = meta;
   FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  session_.mutable_planning_context()->mutable_planning_success() = planning_success;
   return planning_success;
 }
 
@@ -1264,7 +1290,9 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     iflyauto::PlanningHMIOutputInfoStr* const planning_hmi_info) {
   // 行车规划部分
   // TODO(xjli32): 功能切换时，reset
-  ClearParkingInfo(planning_output, planning_hmi_info);
+  if(is_hpp_slot_searching_ == false) {
+    ClearParkingInfo(planning_output, planning_hmi_info);
+  }
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();

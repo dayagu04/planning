@@ -369,8 +369,11 @@ struct RouteInfoOutput {
   bool is_on_hpp_lane = false;
   bool is_reached_hpp_start_point = false;
   double sum_distance_driving = -1;
-  double distance_to_target_slot = NL_NMAX;
+  double distance_to_target_slot = NL_NMAX;   // 自车当前位置到 HPP 巡航目标车位的距离
+  double distance_to_target_dest = NL_NMAX;   // 自车当前位置到 HPP 巡航目标终点的距离
   double distance_to_next_speed_bump = NL_NMAX;
+  ad_common::math::Vec2d target_dest_point;   // HPP 巡航目标终点
+  // hpp output end
   void reset() {
     is_update_segment_success = false;
     is_on_ramp = false;
@@ -438,6 +441,7 @@ struct RouteInfoOutput {
     is_reached_hpp_start_point = false;
     sum_distance_driving = -1;
     distance_to_target_slot = NL_NMAX;
+    distance_to_target_dest = NL_NMAX;
     distance_to_next_speed_bump = NL_NMAX;
     mlc_request_type_route_info.reset();
     baidu_mlc_scene = NORMAL_SCENE;

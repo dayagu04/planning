@@ -3671,6 +3671,7 @@ def generate_parking_slot(fus_parking_msg, loc_msg, release_slot_id_list):
   try:
     select_slot_id = fus_parking_msg.select_slot_id
     print("select_slot_id: ", select_slot_id)
+    print("memorized_slot_id: {}".format(fus_parking_msg.memorized_slot_id))
     parking_fusion_slot_lists_size = fus_parking_msg.parking_fusion_slot_lists_size
     for j in range(parking_fusion_slot_lists_size):
       parking_fusion_slot_lists = fus_parking_msg.parking_fusion_slot_lists[j]

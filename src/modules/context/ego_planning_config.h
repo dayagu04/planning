@@ -261,8 +261,6 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "is_ground_line_cluster");
     enable_ehr_column_box = read_json_key<bool>(json, "enable_ehr_column_box");
     hpp_min_search_range = read_json_key<double>(json, "hpp_min_search_range");
-    raw_ref_extend_buff =
-        read_json_key<double>(json, "raw_ref_extend_buff", raw_ref_extend_buff);
     enable_lane_borrow_deciderV2 =
         read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
     left_right_turn_func_fading_away_switch =
@@ -300,7 +298,6 @@ struct EgoPlanningConfig : public Config {
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
   double hpp_min_search_range = 20;
-  double raw_ref_extend_buff = 0;
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
 };
@@ -2730,10 +2727,22 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    dist_to_parking_space_thr = read_json_key<double>(
-        json, "dist_to_parking_space_thr", dist_to_parking_space_thr);
+    dist_to_target_slot_thr = read_json_key<double>(
+        json, "dist_to_target_slot_thr", dist_to_target_slot_thr);
+    dist_to_target_dest_thr =
+        read_json_key<double>(json, "dist_to_target_dest_thr",
+                              dist_to_target_dest_thr);
+    timeout_still_time_thr_for_giving_up_parking =
+        read_json_key<double>(json, "timeout_still_time_thr_for_giving_up_parking",
+                              timeout_still_time_thr_for_giving_up_parking);
+    keeping_still_time_thr_for_switch_parking =
+        read_json_key<double>(json, "keeping_still_time_thr_for_switch_parking",
+                              keeping_still_time_thr_for_switch_parking);
   }
-  double dist_to_parking_space_thr = 2.0;
+  double dist_to_target_slot_thr = 2.0;
+  double dist_to_target_dest_thr = 1.0;
+  double timeout_still_time_thr_for_giving_up_parking = 5.0;
+  double keeping_still_time_thr_for_switch_parking = 1.0;
 };
 
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {

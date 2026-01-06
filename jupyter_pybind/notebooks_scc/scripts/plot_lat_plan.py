@@ -184,7 +184,7 @@ def update_hmi_hpp_info(hmi_hpp_info):
   vars = ['is_avaliable', 'distance_to_parking_space', 'avoid_status', \
           'avoid_obstacle_type', 'aovid_id', 'is_approaching_turn', \
           'is_left_turn', 'is_approaching_intersection', 'is_approaching_speed_bumps', \
-          'emergency_level', 'is_parking_space_occupied', 'is_new_parking_space_found', \
+          'emergency_level', 'is_target_parking_space_occupied', 'is_new_parking_space_found', \
           'is_on_hpp_lane', 'is_reached_hpp_trace_start', 'accumulated_driving_distance', \
           'estimated_remaining_time', 'hpp_state_switch']
   names  = []

@@ -29,7 +29,7 @@
 #include "fusion_road.pb.h"
 #include "groundline_perception.pb.h"
 #include "hmi_mcu_inner.pb.h"
-#include "ifly_parking_map.pb.h"
+#include "parking_map.pb.h"
 #include "ifly_time.h"
 #include "parking_fusion.pb.h"
 #include "parking_slot_list.pb.h"

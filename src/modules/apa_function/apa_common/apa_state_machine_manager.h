@@ -49,6 +49,7 @@ enum class ApaRunningMode :uint8_t {
   RUNNING_NORMAL = 0,
   RUNNING_PA = 1,       //一键贴边
   RUNNING_SAPA = 2,     //自选车位
+  RUNNING_HPP = 3,      //记忆泊车
 };
 
 enum class ApaPADirection : uint8_t {
