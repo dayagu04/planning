@@ -102,7 +102,7 @@ class RouteInfo {
     return current_link_;
   }
 
-  const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
+  // const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
 
   void ResetMLCInfoDecider() { mlc_decider_route_info_.reset(); }
 
