@@ -307,7 +307,9 @@ void JointMotionObstaclesSelector::CalculateAgentSLBoundary(
   for (const auto& corner : all_corners) {
     double agent_s = 0.0;
     double agent_l = 0.0;
-    planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l);
+    if (!planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l)) {
+      continue;
+    }
     *ptr_min_s = std::fmin(*ptr_min_s, agent_s);
     *ptr_max_s = std::fmax(*ptr_max_s, agent_s);
     *ptr_min_l = std::fmin(*ptr_min_l, agent_l);
@@ -374,14 +376,15 @@ bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
     CalculateAgentSLBoundary(planned_path, ego_box, &ego_min_s, &ego_max_s,
                              &ego_min_l, &ego_max_l);
 
-    if (index >= key_obstacle.ref_x_vec.size()) {
-      index = key_obstacle.ref_x_vec.size() - 1;
+    size_t obs_index = index;
+    if (obs_index >= key_obstacle.ref_x_vec.size()) {
+      obs_index = key_obstacle.ref_x_vec.size() - 1;
     }
 
-    double obs_x = key_obstacle.ref_x_vec[index];
-    double obs_y = key_obstacle.ref_y_vec[index];
-    double obs_theta = key_obstacle.ref_theta_vec[index];
-    double obs_vel = key_obstacle.ref_vel_vec[index];
+    double obs_x = key_obstacle.ref_x_vec[obs_index];
+    double obs_y = key_obstacle.ref_y_vec[obs_index];
+    double obs_theta = key_obstacle.ref_theta_vec[obs_index];
+    double obs_vel = key_obstacle.ref_vel_vec[obs_index];
 
     planning_math::Box2d obs_box(planning_math::Vec2d(obs_x, obs_y), obs_theta,
                                  key_obstacle.length, key_obstacle.width);
