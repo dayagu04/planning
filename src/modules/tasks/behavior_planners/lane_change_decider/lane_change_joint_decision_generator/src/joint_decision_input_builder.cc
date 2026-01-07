@@ -200,11 +200,12 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   const double v0 = last_speed_limit;
   comfort_params_.v0 = v0;
 
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
+  // const auto& lane_change_decider_output =
+  //     session_->planning_context().lane_change_decider_output();
+  // const int front_agent_node_id =
+  //     lane_change_decider_output.lc_gap_info.front_node_id;
   const int front_agent_node_id =
-      lane_change_decider_output.lc_gap_info.front_node_id;
-
+      lc_info.gap_front_agent_id;
   const agent::Agent* lead_one_agent = nullptr;
   std::vector<trajectory::TrajectoryPoint> lead_trajectory;
 
