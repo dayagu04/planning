@@ -4511,15 +4511,6 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                              .split_direction = SPLIT_LEFT});
         }
       }
-
-      if (is_merge_split_same_dir && merge_before_exclnum > 0) {
-        RemoveElement(before_excr_feasible_lane, merge_before_exclnum);
-        RemoveElement(on_excr_feasible_lane, merge_before_exclnum);
-        mlc_request_info_.emplace_back(
-            MLCRequestType{.lane_num = merge_before_exclnum,
-                           .mlc_request_type = AVOIDE_MERGE,
-                           .split_direction = SPLIT_LEFT});
-      }
     }
   } else if (split_link->successor_link_ids_size() == 3) {
     const auto& left_split_link = sdpro_map_.GetLinkOnRoute(left_split_link_id);
