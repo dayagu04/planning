@@ -365,6 +365,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
     }
     return false;
   }
+  return false;
 }
 
 void DynamicAgentEmergenceAvoidRequest::GenerateLaneChangeDirection() {
