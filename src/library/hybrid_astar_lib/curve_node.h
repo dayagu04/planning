@@ -21,6 +21,7 @@ struct CurvePath {
   int segment_size = 0;
   float path_dist = 0.0f;
   float kappa_change = 0.0f;
+  float last_path_kappa_change = 0.0f;
   float single_gear_lengths[MAX_CURVE_PATH_SEG_NUM];
   float dists[MAX_CURVE_PATH_SEG_NUM];
   float kappas[MAX_CURVE_PATH_SEG_NUM];
@@ -66,6 +67,11 @@ class CurveNode : public Node3d {
 
   void SetThetaErr(const float theta_err) { theta_err_ = theta_err; }
   const float GetThetaErr() const { return theta_err_; }
+
+  void SetLastPathKappaChange(const float last_path_kappa_change) {
+    last_path_kappa_change_ = last_path_kappa_change;
+  }
+  const float GetLastPathKappaChange() const { return last_path_kappa_change_; }
 
   void SetCurGearLength(const float length) { cur_gear_length_ = length; }
   const AstarPathGear& GetCurGear() const { return cur_gear_; }
@@ -130,6 +136,7 @@ class CurveNode : public Node3d {
   float cur_kappa_;
   float lat_err_;
   float theta_err_;
+  float last_path_kappa_change_;
 #if USE_LINK_PT_LINE
   link_pt_line::LinkPtLinePath<float> lpl_path_;
   common_math::PathPt<float> gear_switch_pose_;
