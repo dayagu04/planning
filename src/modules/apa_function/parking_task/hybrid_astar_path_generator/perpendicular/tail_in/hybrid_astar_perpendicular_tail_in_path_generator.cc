@@ -1471,16 +1471,28 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     gear_switch_pose_cost += gear_switch_penalty;
   }
 
-  AstarPathGear pre_gear = AstarPathGear::DRIVE;
-  if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    pre_gear = AstarPathGear::REVERSE;
+  float drive_idel_x = target_pose.GetX() + 3.0f;
+  float reverse_idel_x = target_pose.GetX() + 1.8f;
+
+  float min_drive_x = target_pose.GetX() + 2.0f;
+  float min_reverse_x = target_pose.GetX() + 1.0f;
+
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    std::swap(drive_idel_x, reverse_idel_x);
+    std::swap(min_drive_x, min_reverse_x);
   }
 
-  if (gear == pre_gear) {
-    const float idex_x = target_pose.GetX() + 3.0f;
-    if (gear_switch_pose.GetX() < idex_x) {
-      gear_switch_pose_cost += (idex_x - gear_switch_pose.GetX()) * 2.0f;
-    }
+  const float idel_x =
+      gear == AstarPathGear::DRIVE ? drive_idel_x : reverse_idel_x;
+
+  const float min_x =
+      gear == AstarPathGear::DRIVE ? min_drive_x : min_reverse_x;
+
+  if (gear_switch_pose.GetX() < min_x) {
+    gear_switch_pose_cost += 2.0f * gear_switch_penalty;
+  } else if (gear_switch_pose.GetX() < idel_x) {
+    gear_switch_pose_cost += (idel_x - gear_switch_pose.GetX()) * 2.0f;
   }
 
   return gear_switch_pose_cost;
