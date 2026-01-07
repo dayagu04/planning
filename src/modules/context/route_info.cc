@@ -2736,6 +2736,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     // }
 
     // 根据前方交换区split的方向，改变使用的感知车道数是左侧还是右侧
+    // 总体原则就是选择非车道增加的一侧车道数来计算
     int ego_seq = 0;
     if (emergency_lane_num == 0) {
       if (merge_point_direction == SPLIT_NONE) {
@@ -2748,10 +2749,16 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                   : left_lane_num + 1;
         } else {
           if (!exchange_region_info_list.empty()) {
-            ego_seq =
-                exchange_region_info_list[0].split_direction == SPLIT_RIGHT
-                    ? map_lane_num - right_lane_num
-                    : left_lane_num + 1;
+            if (exchange_region_info_list[0].is_ramp_split &&
+                !exchange_region_info_list[0].is_other_merge_to_road &&
+                !exchange_region_info_list[0].is_ramp_merge) {
+              ego_seq = left_lane_num + 1;
+            } else {
+              ego_seq =
+                  exchange_region_info_list[0].split_direction == SPLIT_RIGHT
+                      ? map_lane_num - right_lane_num
+                      : left_lane_num + 1;
+            }
           }
         }
       } else {
