@@ -2028,6 +2028,33 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             : valid_exchange_regions[0].split_direction !=
                   valid_exchange_regions[1].split_direction;
 
+    const auto& merge_seg =
+        sdpro_map_.GetLinkOnRoute(valid_exchange_regions[0].split_link_id);
+    const auto& merge_seg_last_seg = sdpro_map_.GetPreviousLinkOnRoute(
+        valid_exchange_regions[0].split_link_id);
+    if (merge_seg != nullptr && merge_seg_last_seg != nullptr &&
+        merge_seg->predecessor_link_ids().size() == 2) {
+      const auto& merge_seg_last_other_seg_id =
+          merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
+              ? merge_seg->predecessor_link_ids()[1]
+              : merge_seg->predecessor_link_ids()[0];
+      const auto& merge_seg_last_other_seg =
+          sdpro_map_.GetLinkOnRoute(merge_seg_last_other_seg_id);
+      if (merge_seg_last_other_seg != nullptr) {
+        other_merge_lane_num = merge_seg_last_other_seg->lane_num();
+      }
+    }
+    if (is_exchange_close && is_exchange_direction_conflict) {
+      if (valid_exchange_regions[0].distance_to_split_point > 150.0) {
+        other_merge_lane_num = 0;
+      }
+      valid_exchange_regions.erase(valid_exchange_regions.begin());
+      is_remove_other_merge = true;
+    }
+  }
+
+  if (!valid_exchange_regions.empty() &&
+      valid_exchange_regions[0].is_other_merge_to_road) {
     bool is_no_need_handle_exchange = false;
     const auto& merge_seg =
         sdpro_map_.GetLinkOnRoute(valid_exchange_regions[0].split_link_id);
@@ -2051,14 +2078,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                 : false;
       }
     }
-    if (is_exchange_close && is_exchange_direction_conflict ||
-        is_no_need_handle_exchange) {
+
+    if (is_no_need_handle_exchange) {
+      if (valid_exchange_regions[0].distance_to_split_point > 150.0) {
+        other_merge_lane_num = 0;
+      }
       valid_exchange_regions.erase(valid_exchange_regions.begin());
       is_remove_other_merge = true;
-    }
-    if ((!is_exchange_close || !is_exchange_direction_conflict) &&
-        is_no_need_handle_exchange) {
-      other_merge_lane_num = 0;
     }
   }
   // 获取当前地图车道数（不含应急）
