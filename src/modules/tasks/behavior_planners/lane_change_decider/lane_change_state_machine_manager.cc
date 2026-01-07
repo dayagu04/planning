@@ -1307,7 +1307,18 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.is_ego_on_leftmost_lane = is_ego_on_leftmost_lane_;
   lane_change_decider_output.is_ego_on_rightmost_lane =
       is_ego_on_rightmost_lane_;
-
+  if (target_lane_front_node_) {
+    lane_change_stage_info_.lc_gap_info.front_node_id =
+            target_lane_front_node_->node_id();
+  } else {
+    lane_change_stage_info_.lc_gap_info.front_node_id = -1;
+  }
+  if (target_lane_rear_node_) {
+    lane_change_stage_info_.lc_gap_info.rear_node_id =
+        target_lane_rear_node_->node_id();
+  } else {
+    lane_change_stage_info_.lc_gap_info.rear_node_id = -1;
+  }
   lane_change_decider_output.lc_gap_info.front_node_id =
       lane_change_stage_info_.lc_gap_info.front_node_id;
   lane_change_decider_output.lc_gap_info.rear_node_id =
