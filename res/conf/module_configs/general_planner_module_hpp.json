@@ -133,7 +133,7 @@
   "pred_traj_blob_name": "pred_traj",
   "dump_image": false,
   "dump_image_dir": "/tmp/npp_bags/",
-  "stop_distance_to_destination": 1.0,
+  "stop_distance_to_destination": 0.5,
   "lateral_optimization_weight_end_point": 500.0,
   "safe_buffer": 0.3,
   "hpp_collision_threshold": 0.01,
