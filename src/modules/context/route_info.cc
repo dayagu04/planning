@@ -4441,26 +4441,36 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           // }
 
           // 主路上，交换区内、前、后车道都一样
-          for (int i = 0; i < successor_exclnum; ++i) {
-            on_excr_feasible_lane.emplace_back(i + 1);
-            before_excr_feasible_lane.emplace_back(i + 1);
-          }
-          for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
+          if (before_exclnum <= 2) {
+            for (int i = 0; i < successor_exclnum; ++i) {
+              on_excr_feasible_lane.emplace_back(i + 1);
+            }
+            before_excr_feasible_lane.emplace_back(1);
             mlc_request_info_.emplace_back(
-                MLCRequestType{.lane_num = successor_exclnum + i,
+                MLCRequestType{.lane_num = 2,
                                .mlc_request_type = KEEP_LEFT,
                                .split_direction = SPLIT_LEFT});
-          }
+          } else {
+            for (int i = 0; i < successor_exclnum; ++i) {
+              on_excr_feasible_lane.emplace_back(i + 1);
+              before_excr_feasible_lane.emplace_back(i + 1);
+            }
+            for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
+              mlc_request_info_.emplace_back(
+                  MLCRequestType{.lane_num = successor_exclnum + i,
+                                 .mlc_request_type = KEEP_LEFT,
+                                 .split_direction = SPLIT_LEFT});
+            }
 
-          if (is_other_split_ramp && !is_continue_lane) {
-            RemoveElement(before_excr_feasible_lane, successor_exclnum);
-            RemoveElement(on_excr_feasible_lane, successor_exclnum);
-            mlc_request_info_.emplace_back(
-                MLCRequestType{.lane_num = successor_exclnum,
-                               .mlc_request_type = AVOIDE_DIVERGE,
-                               .split_direction = SPLIT_LEFT});
+            if (is_other_split_ramp && !is_continue_lane) {
+              RemoveElement(before_excr_feasible_lane, successor_exclnum);
+              RemoveElement(on_excr_feasible_lane, successor_exclnum);
+              mlc_request_info_.emplace_back(
+                  MLCRequestType{.lane_num = successor_exclnum,
+                                 .mlc_request_type = AVOIDE_DIVERGE,
+                                 .split_direction = SPLIT_LEFT});
+            }
           }
-
         } else if (successor_exclnum <= before_exclnum) {
           for (int i = 0; i < successor_exclnum; ++i) {
             on_excr_feasible_lane.emplace_back(i + 1);
