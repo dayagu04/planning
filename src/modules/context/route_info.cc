@@ -2278,8 +2278,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           std::min(std::abs(valid_exchange_regions[i]
                                 .start_fp_point.fp_distance_to_split_point),
                    300.0);
-      max_distances[i] =
-          valid_exchange_regions[i].distance_to_split_point - start_fp_distance;
+      if (i == 0) {
+        max_distances[i] = valid_exchange_regions[i].distance_to_split_point -
+                           start_fp_distance;
+      } else {
+        max_distances[i] =
+            valid_exchange_regions[i].distance_to_split_point -
+            valid_exchange_regions[i - 1].distance_to_split_point;
+      }
     }
 
     // 从最后一个exchange region开始向前优化
@@ -4410,7 +4416,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       // 2、交换区前、交换区、交换区后的车道数都相等；
       // 3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
       if (successor_exclnum <= on_exclnum) {
-        if (successor_exclnum <= on_exclnum && on_exclnum >= before_exclnum) {
+        if (on_exclnum > before_exclnum) {
           // const auto start_link = sdpro_map_.GetLinkOnRoute(
           //     split_region_info->start_fp_point.link_id);
           // if (start_link == nullptr) {
@@ -4441,36 +4447,46 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           // }
 
           // 主路上，交换区内、前、后车道都一样
-          if (before_exclnum <= 2) {
-            for (int i = 0; i < successor_exclnum; ++i) {
-              on_excr_feasible_lane.emplace_back(i + 1);
-            }
-            before_excr_feasible_lane.emplace_back(1);
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
+          }
+          for (int i = 0; i < before_exclnum; ++i) {
+            before_excr_feasible_lane.emplace_back(i + 1);
+          }
+          for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
             mlc_request_info_.emplace_back(
-                MLCRequestType{.lane_num = 2,
+                MLCRequestType{.lane_num = successor_exclnum + i,
                                .mlc_request_type = KEEP_LEFT,
                                .split_direction = SPLIT_LEFT});
-          } else {
-            for (int i = 0; i < successor_exclnum; ++i) {
-              on_excr_feasible_lane.emplace_back(i + 1);
-              before_excr_feasible_lane.emplace_back(i + 1);
-            }
-            for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
-              mlc_request_info_.emplace_back(
-                  MLCRequestType{.lane_num = successor_exclnum + i,
-                                 .mlc_request_type = KEEP_LEFT,
-                                 .split_direction = SPLIT_LEFT});
-            }
+          }
 
-            if (is_other_split_ramp && !is_continue_lane) {
-              RemoveElement(before_excr_feasible_lane, successor_exclnum);
-              RemoveElement(on_excr_feasible_lane, successor_exclnum);
-              mlc_request_info_.emplace_back(
-                  MLCRequestType{.lane_num = successor_exclnum,
-                                 .mlc_request_type = AVOIDE_DIVERGE,
-                                 .split_direction = SPLIT_LEFT});
+          if (is_other_split_ramp && !is_continue_lane) {
+            RemoveElement(before_excr_feasible_lane, before_exclnum);
+            RemoveElement(on_excr_feasible_lane, successor_exclnum);
+            mlc_request_info_.emplace_back(
+                MLCRequestType{.lane_num = successor_exclnum,
+                               .mlc_request_type = AVOIDE_DIVERGE,
+                               .split_direction = SPLIT_LEFT});
+          }
+        } else if (on_exclnum == before_exclnum) {
+          if (successor_exclnum == 1) {
+            on_excr_feasible_lane.emplace_back(1);
+          } else {
+            for (int i = 0; i < successor_exclnum - 1; ++i) {
+              on_excr_feasible_lane.emplace_back(i + 1);
             }
           }
+          if (before_exclnum == 1) {
+            before_excr_feasible_lane.emplace_back(1);
+          } else {
+            for (int i = 0; i < before_exclnum - 1; ++i) {
+              before_excr_feasible_lane.emplace_back(i + 1);
+            }
+          }
+          mlc_request_info_.emplace_back(
+              MLCRequestType{.lane_num = successor_exclnum + 1,
+                             .mlc_request_type = KEEP_LEFT,
+                             .split_direction = SPLIT_LEFT});
         } else if (successor_exclnum <= before_exclnum) {
           for (int i = 0; i < successor_exclnum; ++i) {
             on_excr_feasible_lane.emplace_back(i + 1);
