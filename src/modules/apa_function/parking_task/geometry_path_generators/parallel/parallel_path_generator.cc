@@ -569,8 +569,8 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       (calc_params_.is_left_side ? SEG_STEER_RIGHT : SEG_STEER_LEFT);
 
   const std::vector<double> arc2_radius_vec = {
-      min_turn_radius,     min_turn_radius + 1,  min_turn_radius + 2,
-      min_turn_radius + 3, min_turn_radius + 4,  min_turn_radius + 5,
+      min_turn_radius + 3 ,     min_turn_radius + 1,  min_turn_radius + 2,
+      min_turn_radius , min_turn_radius + 4,  min_turn_radius + 5,
       min_turn_radius + 8, min_turn_radius + 10, min_turn_radius + 12};
 
   ILOG_INFO << "calc_params_.valid_target_pt_vec size = "
@@ -642,7 +642,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
         continue;
       }
 
-      if (i == 0) {
+      if (i == 3) {
         narrow_arc_2 = diverse_arc_2;
         is_arc_2_set = true;
       }
@@ -711,7 +711,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       ILOG_INFO << "diverse arc vec all collided!";
     }
 
-    if (is_arc_2_set && i > 2) {
+    if (is_arc_2_set && i > 3) {
       ILOG_INFO << "start narrow!";
       if (PlanFromTargetToLineInNarrowChannel(narrow_path_seg_vec, arc_1,
                                               narrow_arc_2)) {
@@ -7420,7 +7420,7 @@ void ParallelPathGenerator::JudgeNeedOptimize() {
         break;
       }
     }
-    break;
+    
   }
 }
 

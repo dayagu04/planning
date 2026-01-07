@@ -197,6 +197,7 @@ struct GeometryPathOutput {
 
     actual_ds = 0.0;
     cur_gear_length = 0.0;
+    is_need_optimizer = false;
   }
 };
 
