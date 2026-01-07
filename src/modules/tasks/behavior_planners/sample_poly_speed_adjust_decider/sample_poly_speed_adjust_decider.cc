@@ -147,18 +147,24 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   session_->mutable_planning_context()
       ->mutable_lane_change_decider_output()
       .s_search_status = false;
+  auto& v_search_path = session_->mutable_planning_context()
+                          ->mutable_lane_change_decider_output()
+                          .v_search_vec;
 
   if (ok && min_cost_traj_ptr_ != nullptr) {
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
         .s_search_status = true;
     search_path.clear();
+    v_search_path.clear();
     search_path.resize(kPlanningHorizions);
+    v_search_path.resize(kPlanningHorizions);
     for (size_t i = 0; i < kPlanningHorizions; i++) {
       double s =
           min_cost_traj_ptr_->CalcRef(i * kPlanningStep, config_.decay_coffi) -
           ego_s_;
       search_path[i] = std::move(s);
+      v_search_path[i] = min_cost_traj_ptr_->CalcV(i * kPlanningStep);
     }
 
     last_min_cost_traj_ = SampleQuarticPolynomialCurve(*min_cost_traj_ptr_);
