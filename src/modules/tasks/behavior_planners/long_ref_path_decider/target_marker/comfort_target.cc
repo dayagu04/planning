@@ -287,27 +287,6 @@ void ComfortTarget::GenerateUpperBoundInfo() {
         continue;
       }
 
-      const auto* st_graph_helper =
-          session_->planning_context().st_graph_helper();
-      if (st_graph_helper == nullptr) {
-        continue;
-      }
-
-      const auto& agent_st_boundary_id_map =
-          st_graph_helper->GetAgentIdSTBoundariesMap();
-
-      if (agent_st_boundary_id_map.empty()) {
-        follow_agents.push_back(
-            {agent, FollowAgentSource::kLatObstacleDecision});
-        added_agent_ids.insert(agent_id);
-        continue;
-      }
-
-      if (agent != nullptr) {
-        follow_agents.push_back(
-            {agent, FollowAgentSource::kLatObstacleDecision});
-        added_agent_ids.insert(agent_id);
-      }
       follow_agents.push_back({agent, FollowAgentSource::kLatObstacleDecision});
       added_agent_ids.insert(agent_id);
     }
