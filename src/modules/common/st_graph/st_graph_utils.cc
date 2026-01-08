@@ -310,6 +310,11 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     if (agent == nullptr) {
       continue;
     }
+
+    if(agent->is_static()) {
+      continue;
+    }
+    
     if (!agent_id_st_boundaries_map.count(agent->agent_id())) {
       continue;
     }
