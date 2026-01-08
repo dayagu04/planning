@@ -4475,10 +4475,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
 
           // 主路上，交换区内、前、后车道都一样
           for (int i = 0; i < successor_exclnum; ++i) {
-            on_excr_feasible_lane.emplace_back(i + 1);
-          }
-          for (int i = 0; i < before_exclnum; ++i) {
             before_excr_feasible_lane.emplace_back(i + 1);
+            on_excr_feasible_lane.emplace_back(i + 1);
           }
           for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
             mlc_request_info_.emplace_back(
@@ -4488,7 +4486,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           }
 
           if (is_other_split_ramp && !is_continue_lane) {
-            RemoveElement(before_excr_feasible_lane, before_exclnum);
+            RemoveElement(before_excr_feasible_lane, successor_exclnum);
             RemoveElement(on_excr_feasible_lane, successor_exclnum);
             mlc_request_info_.emplace_back(
                 MLCRequestType{.lane_num = successor_exclnum,
@@ -4497,21 +4495,16 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           }
         } else if (on_exclnum == before_exclnum) {
           if (successor_exclnum == 1) {
+            before_excr_feasible_lane.emplace_back(1);
             on_excr_feasible_lane.emplace_back(1);
           } else {
             for (int i = 0; i < successor_exclnum - 1; ++i) {
+              before_excr_feasible_lane.emplace_back(i + 1);
               on_excr_feasible_lane.emplace_back(i + 1);
             }
           }
-          if (before_exclnum == 1) {
-            before_excr_feasible_lane.emplace_back(1);
-          } else {
-            for (int i = 0; i < before_exclnum - 1; ++i) {
-              before_excr_feasible_lane.emplace_back(i + 1);
-            }
-          }
           mlc_request_info_.emplace_back(
-              MLCRequestType{.lane_num = successor_exclnum + 1,
+              MLCRequestType{.lane_num = successor_exclnum,
                              .mlc_request_type = KEEP_LEFT,
                              .split_direction = SPLIT_LEFT});
         } else if (successor_exclnum <= before_exclnum) {
