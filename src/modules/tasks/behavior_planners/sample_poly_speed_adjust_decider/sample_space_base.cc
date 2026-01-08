@@ -150,12 +150,14 @@ void STSampleSpaceBase::ConstructStPointsTable() {
                           st_point_paris[i].first.t(),
                           st_point_paris[i].first.agent_id(), -1,
                           st_point_paris[i].first.velocity(),
-                          st_point_paris[i].first.acceleration());
+                          st_point_paris[i].first.acceleration(),
+                          st_point_paris[i].first.extreme_l());
       STPoint upper_point(st_point_paris[i].second.s(),
                           st_point_paris[i].second.t(),
                           st_point_paris[i].second.agent_id(), -1,
                           st_point_paris[i].second.velocity(),
-                          st_point_paris[i].second.acceleration());
+                          st_point_paris[i].second.acceleration(),
+                          st_point_paris[i].first.extreme_l());
       std::pair<STPoint, STPoint> points_pair(std::move(lower_point),
                                               std::move(upper_point));
       st_points_table_[index].emplace_back(std::move(points_pair));
@@ -299,6 +301,7 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
                              intervals.front().first.velocity(),
                              intervals.front().first.agent_id(), -1);
     upper_st_point->set_acceleration(intervals.front().first.acceleration());
+    upper_st_point->set_extreme_l(intervals.front().first.extreme_l());
     return true;
   }
 
@@ -307,6 +310,7 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
                              intervals.back().second.velocity(),
                              intervals.back().second.agent_id(), -1);
     lower_st_point->set_acceleration(intervals.back().second.acceleration());
+    lower_st_point->set_extreme_l(intervals.back().first.extreme_l());
     upper_st_point->set_info(kMaxPathLength, t, 100.0, kNoAgentId, -1);
     return true;
   }
@@ -324,21 +328,25 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
                                interval.second.velocity(),
                                interval.second.agent_id(), -1);
       upper_st_point->set_acceleration(interval.second.acceleration());
+      upper_st_point->set_extreme_l(interval.second.extreme_l());
       lower_st_point->set_info(interval.first.s(), t, interval.first.velocity(),
                                interval.first.agent_id(), -1);
       lower_st_point->set_acceleration(interval.first.acceleration());
+      lower_st_point->set_extreme_l(interval.first.extreme_l());
       return false;
     } else if (ego_lon_area.first > interval.second.s()) {
       lower_st_point->set_info(interval.second.s(), t,
                                interval.second.velocity(),
                                interval.second.agent_id(), -1);
       lower_st_point->set_acceleration(interval.second.acceleration());
+      lower_st_point->set_extreme_l(interval.second.extreme_l());
       upper_st_point->set_info(kMaxPathLength, t, 100.0, kNoAgentId, -1);
       return true;
     } else if (s + front_edge_to_rear_axle_ < interval.first.s()) {
       upper_st_point->set_info(interval.first.s(), t, interval.first.velocity(),
                                interval.first.agent_id(), -1);
       upper_st_point->set_acceleration(interval.first.acceleration());
+      upper_st_point->set_extreme_l(interval.first.extreme_l());
       lower_st_point->set_info(-kMaxPathLength, t, 0.0, kNoAgentId, -1);
       return true;
     } else {
@@ -346,9 +354,11 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
                                interval.second.velocity(),
                                interval.second.agent_id(), -1);
       upper_st_point->set_acceleration(interval.second.acceleration());
+      upper_st_point->set_extreme_l(interval.second.extreme_l());
       lower_st_point->set_info(interval.first.s(), t, interval.first.velocity(),
                                interval.first.agent_id(), -1);
       lower_st_point->set_acceleration(interval.first.acceleration());
+      lower_st_point->set_extreme_l(interval.first.extreme_l());
       return true;
     }
   } else {
@@ -358,11 +368,12 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
                                back_interval.first.velocity(),
                                back_interval.first.agent_id(), -1);
       upper_st_point->set_acceleration(back_interval.first.acceleration());
+      upper_st_point->set_extreme_l(back_interval.first.extreme_l());
       lower_st_point->set_info(front_interval.second.s(), t,
                                front_interval.second.velocity(),
                                front_interval.second.agent_id(), -1);
       lower_st_point->set_acceleration(front_interval.second.acceleration());
-
+      lower_st_point->set_extreme_l(front_interval.second.extreme_l());
     } else {
       upper_st_point->set_info(kMaxPathLength, t, 100.0, kNoAgentId, -1);
       lower_st_point->set_info(-kMaxPathLength, t, 0.0, kNoAgentId, -1);
