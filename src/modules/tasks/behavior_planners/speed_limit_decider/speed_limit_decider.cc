@@ -77,6 +77,9 @@ constexpr double kCurvatureDecelThreshold = -1.0;  // Deceleration threshold for
 constexpr double kRoadBoundarySharpDecelThreshold = -1.2;  // Deceleration threshold for ROAD_BOUNDARY_SHARP_DECEL (m/s²)
 constexpr double kRoadBoundaryCooldownDeltaThreshold = 1.11;  // m/s threshold to treat limit change as significant
 constexpr double kRoadBoundaryDefaultLimitMps = 100.0;  // Default value meaning no road boundary limit applied
+constexpr double kCurvatureDefaultLimitMps = 100.0;  // Default value meaning no curvature limit applied
+constexpr double kConstructionDefaultLimitMps = 100.0;  // Default value meaning no construction limit applied
+constexpr double kRampDefaultLimitMps = 100.0;  // Default value meaning no ramp limit applied
 constexpr double kCurvSpeedDifference = 3 / 3.6;
 constexpr int kSharpCurveMinFrames = 5;  // Min frames to maintain sharp curve state
 constexpr double kMinRampSampleLength = 150.0;
@@ -1532,7 +1535,15 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("required_deceleration", required_deceleration);
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
+  // Set current type and clear the other type
   speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns, v_limit_type);
+  
+  // Always set the other type to default value to ensure proper clearing
+  if (v_limit_type == SpeedLimitType::CURVATURE) {
+    speed_limit_output->SetSpeedLimitIntoMap(kCurvatureDefaultLimitMps, SpeedLimitType::SHARP_CURVATURE);
+  } else if (v_limit_type == SpeedLimitType::SHARP_CURVATURE) {
+    speed_limit_output->SetSpeedLimitIntoMap(kCurvatureDefaultLimitMps, SpeedLimitType::CURVATURE);
+  }
 }
 
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
@@ -1735,8 +1746,11 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
         auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();
+        // Set current type and clear the other type
         speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
                                              SpeedLimitType::MAP_ON_RAMP);
+        // Always set the other type to default value to ensure proper clearing
+        speed_limit_output->SetSpeedLimitIntoMap(kRampDefaultLimitMps, SpeedLimitType::MAP_NEAR_RAMP);
         return;
       }
     }
@@ -1760,8 +1774,11 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
     auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();
+    // Set current type and clear the other type
     speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
                                              SpeedLimitType::MAP_ON_RAMP);
+    // Always set the other type to default value to ensure proper clearing
+    speed_limit_output->SetSpeedLimitIntoMap(kRampDefaultLimitMps, SpeedLimitType::MAP_NEAR_RAMP);
     return;
   }
   if ((dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) &&
@@ -1795,8 +1812,11 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
+  // Set current type and clear the other type
   speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
                                            SpeedLimitType::MAP_NEAR_RAMP);
+  // Always set the other type to default value to ensure proper clearing
+  speed_limit_output->SetSpeedLimitIntoMap(kRampDefaultLimitMps, SpeedLimitType::MAP_ON_RAMP);
 }
 
 void SpeedLimitDecider::CalculateStaticAgentLimit() {}
@@ -3033,8 +3053,11 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
     auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();
+    // Set current type and clear the other type
     speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
                                              SpeedLimitType::ON_CONSTRUCTION);
+    // Always set the other type to default value to ensure proper clearing
+    speed_limit_output->SetSpeedLimitIntoMap(kConstructionDefaultLimitMps, SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
   double construction_speed_threshold =
@@ -3091,8 +3114,11 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   ILOG_DEBUG << "v_target_near_construction :" << v_target_near_construction;
   auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();
+  // Set current type and clear the other type
   speed_limit_output->SetSpeedLimitIntoMap(v_target_near_construction,
                                              SpeedLimitType::NEAR_CONSTRUCTION);
+  // Always set the other type to default value to ensure proper clearing
+  speed_limit_output->SetSpeedLimitIntoMap(kConstructionDefaultLimitMps, SpeedLimitType::ON_CONSTRUCTION);
   JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
   JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
   JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
@@ -3601,7 +3627,15 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   // ========== Part 16: Regular Output ==========
   auto speed_limit_output = session_->mutable_planning_context()
                                ->mutable_speed_limit_decider_output();
+  // Set current type and clear the other type
   speed_limit_output->SetSpeedLimitIntoMap(v_limit_regular, road_boundary_type_regular);
+  
+  // Always set the other type to default value to ensure proper clearing
+  if (road_boundary_type_regular == SpeedLimitType::ROAD_BOUNDARY) {
+    speed_limit_output->SetSpeedLimitIntoMap(kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
+  } else if (road_boundary_type_regular == SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL) {
+    speed_limit_output->SetSpeedLimitIntoMap(kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY);
+  }
   
   JSON_DEBUG_VALUE("road_boundary_regular_v_limit", v_limit_regular);
   JSON_DEBUG_VALUE("road_boundary_regular_trigger_distance", trigger_distance_regular);
@@ -4241,11 +4275,24 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   }
   
   // ========== Part 18: Output and Debug for Strictest Road Boundary ==========
-  // Set strictest road boundary limit into map (if valid)
+  // Set strictest road boundary limit into map with separate clearing mechanism for ROAD_BOUNDARY and ROAD_BOUNDARY_SHARP_DECEL
+  auto speed_limit_output_strictest = session_->mutable_planning_context()
+                                      ->mutable_speed_limit_decider_output();
+  
   if (road_boundary_strictest_valid) {
-    auto speed_limit_output_strictest = session_->mutable_planning_context()
-                                            ->mutable_speed_limit_decider_output();
+    // Set current type and clear the other type
     speed_limit_output_strictest->SetSpeedLimitIntoMap(v_limit_road_boundary_strictest, road_boundary_type_strictest);
+    
+    // Always set the other type to default value to ensure proper clearing
+    if (road_boundary_type_strictest == SpeedLimitType::ROAD_BOUNDARY) {
+      speed_limit_output_strictest->SetSpeedLimitIntoMap(kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
+    } else if (road_boundary_type_strictest == SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL) {
+      speed_limit_output_strictest->SetSpeedLimitIntoMap(kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY);
+    }
+  } else {
+    // Clear both types when invalid
+    speed_limit_output_strictest->SetSpeedLimitIntoMap(kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY);
+    speed_limit_output_strictest->SetSpeedLimitIntoMap(kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
   }
   
   // Debug output for strictest road boundary limit
