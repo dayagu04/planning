@@ -560,7 +560,7 @@ const bool ApaSlotManager::IsEgoCloseToObs(const double body_lat_buffer,
              measure_data_ptr_->GetHeading());
 
   return col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
-      ego, body_lat_buffer, lon_buffer);
+      ego, body_lat_buffer, lon_buffer, false);
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(ApaSlot& slot) {
@@ -897,7 +897,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
 
       const bool is_collided =
           col_det_interface_ptr_->GetPathSafeCheckPtr()->CalcEgoCollision(
-              target_pose, lat_buffer, lon_buffer);
+              target_pose, lat_buffer, lon_buffer, false);
 
       if (!is_collided) {
         ILOG_INFO << "release slot with lat offset = " << lat_move_dist;
