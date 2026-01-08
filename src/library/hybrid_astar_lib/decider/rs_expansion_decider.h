@@ -1,6 +1,7 @@
 #pragma once
 
 #include "astar_decider.h"
+#include "hierarchy_euler_distance_transform.h"
 #include "hybrid_astar_request.h"
 #include "node3d.h"
 #include "pose2d.h"
@@ -21,7 +22,7 @@ class RSExpansionDecider : public AstarDecider {
   // round robin strategy for fallback point
   void UpdateRoundRobinStrategy(
       const Pose2f &end, const AstarRequest *request,
-      EulerDistanceTransform *edt, const VehicleParam &veh_param,
+      HierarchyEulerDistanceTransform *edt, const VehicleParam &veh_param,
       std::shared_ptr<NodeCollisionDetect> &collision_detect);
 
   const Pose2f &GetRSEndPose();
@@ -47,7 +48,7 @@ class RSExpansionDecider : public AstarDecider {
                                      const AstarRequest *request) const;
 
   Pose2f GenerateCandidatePoint(const AstarRequest *request,
-                                EulerDistanceTransform *edt,
+                                HierarchyEulerDistanceTransform *edt,
                                 const VehicleParam &veh_param,
                                 const Pose2f &end);
 

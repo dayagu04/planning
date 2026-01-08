@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <string>
 #include "astar_decider.h"
-#include "euler_distance_transform.h"
+#include "hierarchy_euler_distance_transform.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "node3d.h"
@@ -36,7 +36,7 @@ class FuturePathDecider : public AstarDecider {
    * [out]: edt, request
    */
   void Process(const ParkReferenceLine *ref_line, const float min_turn_radius,
-               const float sampling_lon_resolution, EulerDistanceTransform *edt,
+               const float sampling_lon_resolution, HierarchyEulerDistanceTransform *edt,
                AstarRequest &request);
 
   void Process(const Pose2f &start, const Pose2f &end);
@@ -51,7 +51,7 @@ class FuturePathDecider : public AstarDecider {
 
  private:
   void CalcDriveDistByLineModel(const Pose2f &ego_pose,
-                                EulerDistanceTransform *edt,
+                                HierarchyEulerDistanceTransform *edt,
                                 const ParkReferenceLine *ref_line);
 
   void UpdateFuturePathRequest(ParkFirstActionRequest *future_path_request);
@@ -78,7 +78,7 @@ class FuturePathDecider : public AstarDecider {
                               const float inverse_radius, Pose2f *pose);
 
   void CalcDriveDistByCircleModel(const Pose2f &ego_pose,
-                                  EulerDistanceTransform *edt);
+                                  HierarchyEulerDistanceTransform *edt);
 
   int32_t SearchIdByS(const float s, const std::vector<Eigen::Vector2f> &path);
 
@@ -86,7 +86,7 @@ class FuturePathDecider : public AstarDecider {
       const float safe_buffer, const std::vector<Eigen::Vector2f> &path) const;
 
   void UpdatePathDistInfo(const std::vector<Pose2f> &path,
-                          const AstarPathGear gear, EulerDistanceTransform *edt,
+                          const AstarPathGear gear, HierarchyEulerDistanceTransform *edt,
                           std::vector<Eigen::Vector2f> &path_dist_info);
 
  private:

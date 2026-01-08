@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "Eigen/Core"
+#include "hierarchy_occupancy_grid_map.h"
 #include "hybrid_a_star.h"
 #include "node3d.h"
 #include "polygon_base.h"
@@ -69,11 +70,14 @@ class HybridAStarInterface {
   // multi-thread, output
   void UpdateOutput();
 
-  const EulerDistanceTransform* GetEulerDistanceTransform() const {
-    return &edt_;
-  }
 
-  EulerDistanceTransform* GetMutableEDT() { return &edt_; }
+  HierarchyEulerDistanceTransform* GetMutableHierarchyEDT() {
+    return &hierarchy_edt_;
+  }
+  const HierarchyEulerDistanceTransform* GetHierarchyEulerDistanceTransform()
+      const {
+    return &hierarchy_edt_;
+  }
 
   // for debug
   void GetRSPathHeuristic(std::vector<std::vector<Vec2f>>& path_list);
@@ -101,7 +105,7 @@ class HybridAStarInterface {
                                  std::vector<float>& phi);
 
   // for debug
-  FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
+  MultiHeightFootPrintView* GetCircleFootPrint(const HierarchySafeBuffer buffer);
 
   const SearchTimeBenchmark& GetTimeBenchmark() const {
     return time_benchmark_;
@@ -115,7 +119,7 @@ class HybridAStarInterface {
   void GetRoundRobinTarget(std::vector<Pose2f>& candidates);
 
  private:
-  int UpdateEDT();
+  int UpdateEDT(const bool use_height_info = false);
 
   void PathClear();
 
@@ -189,8 +193,8 @@ class HybridAStarInterface {
 
   ObstacleClearZone clear_zone_;
 
-  OccupancyGridMap ogm_;
-  EulerDistanceTransform edt_;
+  HierarchyOccupancyGridMap ogm_;
+  HierarchyEulerDistanceTransform hierarchy_edt_;
   ParkReferenceLine ref_line_;
 
   int gear_switch_number_scenario_try_;

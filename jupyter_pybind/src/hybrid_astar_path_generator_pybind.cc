@@ -12,18 +12,17 @@
 #include <vector>
 
 #include "ad_common/math/linear_interpolation.h"
-
+#include "ad_common/math/math_utils.h"
 #include "apa_param_config.h"
-#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
 #include "common.h"
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_interface.h"
-#include "narrow_space_scenario.h"
 #include "log_glog.h"
 #include "math_lib.h"
+#include "narrow_space_scenario.h"
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "reeds_shepp.h"
@@ -33,11 +32,11 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/euler_distance_transform.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
+#include "src/library/reeds_shepp/reeds_shepp_interface.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "transform2d.h"
 #include "vecf32.h"
 #include "virtual_wall_decider.h"
-#include "src/library/reeds_shepp/reeds_shepp_interface.h"
-#include "transform2d.h"
-#include "ad_common/math/math_utils.h"
 
 namespace py = pybind11;
 using namespace planning::apa_planner;
@@ -45,7 +44,7 @@ using namespace planning;
 using namespace pnc::geometry_lib;
 
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
-static planning::apa_planner::ApaPlanInterface*parking_interface = nullptr;
+static planning::apa_planner::ApaPlanInterface *parking_interface = nullptr;
 
 std::vector<Eigen::Vector3d> global_path_;
 std::vector<Eigen::Vector3d> global_path_kappa_;
@@ -282,7 +281,8 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   }
 
   // ego collision check
-  EulerDistanceTransform *edt = hybrid_astar_interface_->GetMutableEDT();
+  HierarchyEulerDistanceTransform *edt =
+      hybrid_astar_interface_->GetMutableHierarchyEDT();
   Transform2f ego_local_tf;
   ego_local_tf.SetBasePose(Pose2f(ego_slot_info.cur_pose.pos[0],
                                   ego_slot_info.cur_pose.pos[1],
@@ -304,15 +304,17 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
     return;
   }
 
-  FootPrintCircleModel *model = hybrid_astar_interface_->GetCircleFootPrint(
+  MultiHeightFootPrintView *model = hybrid_astar_interface_->GetCircleFootPrint(
       HierarchySafeBuffer::INSIDE_SLOT_BUFFER);
 
   if (model == nullptr) {
     return;
   }
 
+  FootPrintCircleModel *footprint_model = &(model->height_model[0]);
+
   const FootPrintCircleList circle_footprint =
-      model->GetLocalFootPrintCircleByGear(AstarPathGear::NORMAL);
+      footprint_model->GetLocalFootPrintCircleByGear(AstarPathGear::NORMAL);
 
   footprint_circle_model_global_.clear();
   footprint_circle_model_local_.clear();
@@ -324,19 +326,19 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
 
   footprint_circle_model_global_.push_back(Eigen::Vector3d(
       global_position2d.x, global_position2d.y, circle->radius));
-  footprint_circle_model_local_.push_back(Eigen::Vector3d(
-      circle->pos.x, circle->pos.y, circle->radius));
+  footprint_circle_model_local_.push_back(
+      Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
 
   for (int i = 0; i < std::min(circle_footprint.size, FOOTPRINT_CIRCLE_NUM);
        i++) {
     circle = &circle_footprint.circles[i];
-    tf.ULFLocalPointToGlobal(&global_position2d,
-                             planning::Position2D(circle->pos.x, circle->pos.y));
+    tf.ULFLocalPointToGlobal(
+        &global_position2d, planning::Position2D(circle->pos.x, circle->pos.y));
 
     footprint_circle_model_global_.push_back(Eigen::Vector3d(
         global_position2d.x, global_position2d.y, circle->radius));
-    footprint_circle_model_local_.push_back(Eigen::Vector3d(
-        circle->pos.x, circle->pos.y, circle->radius));
+    footprint_circle_model_local_.push_back(
+        Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
   }
 
   return;
@@ -353,8 +355,8 @@ int GetParkingSpaceOccupiedRatio(const ApaParameters &parking_param,
         slot_info.slot.slot_length_ + parking_param.rear_overhanging};
 
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
-    slot_info.slot_occupied_ratio = mathlib::Interp1(
-        x_tab, occupied_ratio_tab, slot_info.cur_pose.pos.x());
+    slot_info.slot_occupied_ratio =
+        mathlib::Interp1(x_tab, occupied_ratio_tab, slot_info.cur_pose.pos.x());
   } else {
     slot_info.slot_occupied_ratio = 0.0;
   }
@@ -452,8 +454,7 @@ int GenerateObstacleByJupyter(
     const std::vector<Eigen::Vector2d> &global_park_space_points,
     const std::vector<double> &obs_params, const Eigen::Vector2d &vec_01,
     const Eigen::Vector2d &vec_02, const Eigen::Vector2d &unit_vec_02,
-    const Eigen::Vector2d &unit_vec_01,
-    EgoInfoUnderSlot &slot_info) {
+    const Eigen::Vector2d &unit_vec_01, EgoInfoUnderSlot &slot_info) {
   obs_global_points_.clear();
 
   // base point is slot right upper point
@@ -621,9 +622,9 @@ int GenerateObstacleByJupyter(
 std::vector<Eigen::Vector3d> Update(
     Eigen::Vector3d ego_global_pose,
     std::vector<Eigen::Vector2d> global_park_space_points,
-    const int plan_method,
-    std::vector<double> obs_params, const bool trigger_plan,
-    const int parking_dir, const bool swap_start_goal, const int gear_request) {
+    const int plan_method, std::vector<double> obs_params,
+    const bool trigger_plan, const int parking_dir, const bool swap_start_goal,
+    const int gear_request) {
   obs_global_points_.clear();
   planning::apa_planner::ParkingScenario::Frame frame;
   EgoInfoUnderSlot ego_slot_info;
@@ -894,10 +895,10 @@ std::vector<Eigen::Vector3d> Update(
       request.first_action_request.has_request = true;
     }
 
-    ILOG_INFO <<"planning goal";
+    ILOG_INFO << "planning goal";
     request.goal.DebugString();
 
-    ILOG_INFO <<"real goal";
+    ILOG_INFO << "real goal";
     request.real_goal.DebugString();
 
     request.space_type = ParkSpaceType::VERTICAL;
@@ -1017,11 +1018,11 @@ const std::vector<Eigen::Vector3d> &GetFootPrintModelLocal() {
 }
 
 const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
-const Eigen::Vector3d GetCurrentGearPathEnd() { return astar_current_path_end_; }
-
-const std::vector<Eigen::Vector3d> GetPathKappa() {
-  return global_path_kappa_;
+const Eigen::Vector3d GetCurrentGearPathEnd() {
+  return astar_current_path_end_;
 }
+
+const std::vector<Eigen::Vector3d> GetPathKappa() { return global_path_kappa_; }
 
 PYBIND11_MODULE(hybrid_astar_py, m) {
   m.doc() = "m";
