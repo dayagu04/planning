@@ -6300,6 +6300,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
       ReadItem<double>(json, exe_rear_speed_ratio, "lane_change_safety_check", "exe_rear_speed_ratio");
       ReadItem<double>(json, faster_rear_delay_time, "lane_change_safety_check",
                        "faster_rear_delay_time");
+      ReadItem<double>(json, rear_comfort_decel, "lane_change_safety_check",
+                       "rear_comfort_decel");
       ReadItem<double>(json, lat_offset_buffer, "lane_change_safety_check",
                        "lat_offset_buffer");
       ReadItem<double>(json, target_lane_side_cut_in_check_time, "lane_change_safety_check",
@@ -6315,6 +6317,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     double rear_close_distance_threshold = 6.0;  // 近距离后车距离阈值（米），小于此值认为是近距离尾随
     double rear_close_speed_diff_threshold = 1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
     double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
+    double rear_comfort_decel = 0.7;  // 后车舒适减速度（m/s²）
     double lat_offset_buffer = 0.35;  // 横向贴边偏移缓冲区（米）
     double target_lane_side_cut_in_check_time = 1.5;  // 目标车道侧方车切入检查时间窗口（秒）
     double hold_steer_angle_rate_limit_deg = 150.0;  // hold状态下的方向盘转速限制（度/秒）
