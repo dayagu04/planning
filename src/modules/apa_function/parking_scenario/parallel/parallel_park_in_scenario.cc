@@ -1420,6 +1420,41 @@ void ParallelParkInScenario::RecordDebugPaInfo(
   return;
 }
 
+const bool ParallelParkInScenario::CheckEgoToSlotRelation() {
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  auto& select_slot_global =
+      ego_info_under_slot.slot.origin_corner_coord_global_;
+
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+
+  // 获取自车方向向量
+  Eigen::Vector2d ego_heading_vec = measures_ptr->GetHeadingVec();
+
+  // 计算车位01边的向量
+  Eigen::Vector2d slot_edge_01 =
+      (select_slot_global.pt_0 - select_slot_global.pt_1).normalized();
+
+  // 计算两个向量之间的夹角(弧度)
+  double angle_rad =
+      std::acos(std::clamp(ego_heading_vec.dot(slot_edge_01), -1.0, 1.0));
+  angle_rad = std::fabs(angle_rad);
+
+  // 将弧度转换为角度
+  double angle_deg = angle_rad * kRad2Deg;
+
+  ILOG_INFO << "Angle between ego heading and slot edge 01: " << angle_deg
+            << " degrees";
+
+  // 判断夹角是否在指定范围之间
+  const double vertical_deg = 90.0;
+  const double threshold_deg = 20.0;
+  bool is_angle_in_range = (angle_deg > (vertical_deg - threshold_deg) &&
+                            angle_deg < (vertical_deg + threshold_deg));
+  return is_angle_in_range;
+}
+
 const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
@@ -1456,6 +1491,14 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
     select_slot_global.pt_2.swap(select_slot_global.pt_3);
   }
   select_slot_global.CalExtraCoord();
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    if (CheckEgoToSlotRelation()) {
+      ILOG_ERROR << "too big angle from ego to slot 01 edge!";
+      return false;
+    }
+  }
+
   const double heading_10 = std::atan2(v_10.y(), v_10.x());
 
   const pnc::geometry_lib::LineSegment line_01(
