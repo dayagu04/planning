@@ -47,7 +47,7 @@ class HybridAStar {
   explicit HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                        const VehicleParam& veh_param,
                        const ParkObstacleList* obstacles,
-                       EulerDistanceTransform* edt,
+                       HierarchyEulerDistanceTransform* hierarchy_edt,
                        const ObstacleClearZone* clear_zone,
                        ParkReferenceLine* ref_line,
                        std::shared_ptr<GridSearch> dp_map);
@@ -102,7 +102,7 @@ class HybridAStar {
                           const Pose2f& target, HybridAStarResult* result);
 
   // debug
-  FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
+  MultiHeightFootPrintView* GetCircleFootPrint(const HierarchySafeBuffer buffer);
 
   // todo: move sampling based method out of astar class, we can move it to
   // interface.
@@ -303,7 +303,7 @@ class HybridAStar {
   // if search node in aabb, no need to check collision;
   const ObstacleClearZone* clear_zone_;
 
-  EulerDistanceTransform* edt_;
+  HierarchyEulerDistanceTransform* hierarchy_edt_;
 
   static CompactNodePool node_pool_;
 
