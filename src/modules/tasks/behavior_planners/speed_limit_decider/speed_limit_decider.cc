@@ -3210,7 +3210,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   double dis_to_ramp = route_info_output.dis_to_ramp;
   bool is_far_from_ramp = (dis_to_ramp > speed_limit_config_.map_sharp_curve_dis_to_ramp) || 
                            (dis_to_ramp >= speed_limit_config_.dis_near_ramp_zone);
-  bool is_highway = route_info_output.is_on_highway;
+  bool is_highway = route_info_output.is_ego_on_expressway_hmi;
   bool is_city_expressway = route_info_output.is_ego_on_city_expressway_hmi;
   bool use_highway_config = (is_on_expressway && is_not_on_ramp && is_far_from_ramp && is_highway);
   bool use_city_expressway_config = (is_on_expressway && is_not_on_ramp && is_far_from_ramp && is_city_expressway && !is_highway);
