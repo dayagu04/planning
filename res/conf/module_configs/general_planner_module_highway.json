@@ -1627,6 +1627,7 @@
     "exe_rear_speed_ratio": 1.6,
     "exe_rear_distance_ratio": 0.8,
     "faster_rear_delay_time": 0.3,
+    "rear_comfort_decel": 0.9,
     "lat_offset_buffer": 0.30,
     "target_lane_side_cut_in_check_time": 1.51,
     "hold_steer_angle_rate_limit_deg": 75.0,
