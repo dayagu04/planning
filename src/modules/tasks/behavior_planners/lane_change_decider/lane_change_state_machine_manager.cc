@@ -4232,14 +4232,16 @@ bool LaneChangeStateMachineManager::
       // 后车参考安全距离
       double agent_kph = agent_traj[0].v * 3.6;
       double dis_buff = interp(agent_kph, xp, fp);
+      double rear_comfort_decel = lc_safety_check_config_.rear_comfort_decel;
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
+        rear_comfort_decel = 0.3;
       }
       double delta_v0 = std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
       if(delta_v0 > 1.0){ // 后车减速让行需要反应时间, 以及后车减速距离
         dis_buff += agent_traj[0].v *
                     lc_safety_check_config_.faster_rear_delay_time 
-                    + delta_v0 * delta_v0 / (2 * lc_safety_check_config_.rear_comfort_decel);
+                    + delta_v0 * delta_v0 / (2 * rear_comfort_decel);
       }
       // 预测轨迹点车速对应ttc
       double pred_ttc =
