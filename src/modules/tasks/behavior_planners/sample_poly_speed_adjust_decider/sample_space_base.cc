@@ -390,7 +390,7 @@ void STSampleSpaceBase::GetAvailableGap(const int index, double ego_s) {
     return;
   }
   std::vector<std::pair<STPoint, STPoint>> temp_gap_array;
-  double current_time = index * kEvaluationStep;
+  double current_time = index * kTimeResolution;
   std::pair<STPoint, STPoint> current_gap;
   const auto& intervals = st_points_table_.at(index);
   if (intervals.empty()) {
@@ -433,9 +433,13 @@ void STSampleSpaceBase::GetAvailableGap(const int index, double ego_s) {
         [](double val, const std::pair<STPoint, STPoint>& elem) {
           return val < elem.second.s();
         });
-    if (it != temp_gap_array.begin()) {
-      it--;
-      gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
+    if(it != temp_gap_array.end()){
+      if (it != temp_gap_array.begin()) {
+        it--;
+        gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
+      }else{
+        gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
+      }
     }
   }
 }
