@@ -1384,8 +1384,9 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   ILOG_INFO << "-----------tlane CD-------------";
   point_set.clear();
   tlane_obstacle_vec.clear();
+  std::vector<double> y_of_c_d_curb_y={C.y(), D.y(), t_lane_.curb_y};
   bool is_use_curb_obs = ProcessCurbPointsAndGetPoints(
-      point_set, obs_id_pt_map_, C_curb, D_curb, t_lane_.curb_y);
+      point_set, obs_id_pt_map_, C_curb, D_curb, y_of_c_d_curb_y);
   if (!is_use_curb_obs) {
     ILOG_INFO << "use origin curb obs";
     tlane_line.SetPoints(C_curb, D_curb);
