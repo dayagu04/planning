@@ -247,8 +247,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   } else {
     for (size_t i = start_index; i <= count; i++) {
       st_sample_space_base_.GetAvailableGap(
-          i * kEvaluationStep / 0.1,
-          ego_s_ + speed_adjust_range_.second * i * 0.5);
+          i * kEvaluationStep / kTimeResolution,
+          ego_s_ + speed_adjust_range_.second * i * kEvaluationStep);
       for (size_t k = 0; k < sample_trajs_.size(); k++) {
         auto& sample_traj_at_v = sample_trajs_[k];
         for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
@@ -1100,7 +1100,7 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
   float32 left_unchangeable_distance = 0.0;
   if (lane_change_request_ == 1) {
     const auto& current_lane_line = current_lane->get_left_lane_boundary();
-    float32 compare_point_s = current_lane_line.begin;
+    float32 compare_point_s = 0.0;
     for (int i = 0; i < current_lane_line.type_segments_size; i++) {
       const auto& type_segment = current_lane_line.type_segments[i];
       compare_point_s += type_segment.length;
@@ -1124,7 +1124,7 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
     }
   } else if (lane_change_request_ == 2) {
     const auto& current_lane_line = current_lane->get_right_lane_boundary();
-    float32 compare_point_s = current_lane_line.begin;
+    float32 compare_point_s = 0.0;
     for (int i = 0; i < current_lane_line.type_segments_size; i++) {
       const auto& type_segment = current_lane_line.type_segments[i];
       compare_point_s += type_segment.length;
