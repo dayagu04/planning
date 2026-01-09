@@ -2891,10 +2891,10 @@ const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
   // Eigen::Vector2d end_pt_unit_dir = global_end_pt.pos.normalized();
   Eigen::Vector2d end_pt_normal_unit_dir(-end_pt_unit_dir.y(),
                                          end_pt_unit_dir.x());
-  double x_dir_length = end_to_cur.dot(end_pt_unit_dir);
-  double y_dir_length = end_to_cur.dot(end_pt_normal_unit_dir);
-  ILOG_INFO << "y_dir_length: " << y_dir_length
-            << " x_dir_length: " << x_dir_length;
+  double lon_dir_length = end_to_cur.dot(end_pt_unit_dir);
+  double lat_dir_length = end_to_cur.dot(end_pt_normal_unit_dir);
+  ILOG_INFO << "lat_dir_length: " << lat_dir_length
+            << " lon_dir_length: " << lon_dir_length;
 
   // ILOG_INFO << "cur_pose: " << cur_pose.pos.x() << " " << cur_pose.pos.y()
   //           << " heading: " << cur_pose.GetTheta();
@@ -2910,7 +2910,7 @@ const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
   if (std::fabs(pnc::geometry_lib::NormalizeAngle(global_cur_pose.heading -
                                                   global_end_pt.heading)) <
       (1.0 * kDeg2Rad)) {
-    if (std::fabs(y_dir_length) < 0.04 && std::fabs(x_dir_length) < 0.16) {
+    if (std::fabs(lat_dir_length) < 0.04 && std::fabs(lon_dir_length) < 0.1) {
       follow_pos_condition = true;
     }
   }

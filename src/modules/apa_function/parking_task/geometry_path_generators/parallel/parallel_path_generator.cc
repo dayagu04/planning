@@ -315,13 +315,13 @@ const bool ParallelPathGenerator::OneLinePlanWhenMeetFinished(
 
   double adjust_lon_err = apa_param.GetParam().finish_parallel_lon_err;
   const bool lon_condition =
-      std::fabs(ego_info.terminal_err.pos.x()) < adjust_lon_err;
+      std::fabs(ego_info.terminal_err.pos.x()) > adjust_lon_err;
 
   const bool heading_condition =
-      std::fabs(ego_info.terminal_err.heading) <=
+      std::fabs(ego_info.terminal_err.heading) <
       apa_param.GetParam().finish_parallel_heading_err / 57.3;
 
-  const bool lat_condition = std::fabs(ego_info.terminal_err.pos.y()) < 0.15;
+  const bool lat_condition = std::fabs(ego_info.terminal_err.pos.y()) < 0.2;
 
   ILOG_INFO << "lon_condition = " << lon_condition
             << " lat_condition = " << lat_condition
@@ -7420,7 +7420,7 @@ void ParallelPathGenerator::JudgeNeedOptimize() {
         break;
       }
     }
-    
+
   }
 }
 
