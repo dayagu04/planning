@@ -210,13 +210,9 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   std::vector<trajectory::TrajectoryPoint> lead_trajectory;
 
   if (front_agent_node_id != -1) {
-    const auto front_agent_node =
-        session_->environmental_model().get_dynamic_world()->GetNode(
+    lead_one_agent =
+        session_->environmental_model().get_agent_manager()->GetAgent(
             front_agent_node_id);
-    if (front_agent_node != nullptr) {
-      lead_one_agent =
-          session_->environmental_model().get_agent_manager()->GetAgent(
-              front_agent_node->node_agent_id());
       if (lead_one_agent != nullptr) {
         const auto& primary_trajectories =
             lead_one_agent->trajectories_used_by_st_graph();
@@ -228,7 +224,6 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
             !selected_trajectories.front().empty()) {
           lead_trajectory = selected_trajectories.front();
         }
-      }
     }
   }
 
