@@ -2021,9 +2021,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     bool is_no_need_handle_exchange = false;
     const auto& merge_seg =
         sdpro_map_.GetLinkOnRoute(valid_exchange_regions[0].split_link_id);
+    const auto& next_merge_seg =
+        sdpro_map_.GetNextLinkOnRoute(valid_exchange_regions[0].split_link_id);
     const auto& merge_seg_last_seg = sdpro_map_.GetPreviousLinkOnRoute(
         valid_exchange_regions[0].split_link_id);
     if (merge_seg != nullptr && merge_seg_last_seg != nullptr &&
+        next_merge_seg != nullptr &&
         merge_seg->predecessor_link_ids().size() == 2) {
       const auto& merge_seg_last_other_seg_id =
           merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
@@ -2035,8 +2038,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         other_merge_lane_num = merge_seg_last_other_seg->lane_num();
         is_no_need_handle_exchange =
             merge_seg_last_seg->lane_num() +
-                        merge_seg_last_other_seg->lane_num() <=
-                    merge_seg->lane_num()
+                            merge_seg_last_other_seg->lane_num() <=
+                        merge_seg->lane_num() &&
+                    merge_seg_last_seg->lane_num() +
+                            merge_seg_last_other_seg->lane_num() <=
+                        next_merge_seg->lane_num()
                 ? true
                 : false;
       }
