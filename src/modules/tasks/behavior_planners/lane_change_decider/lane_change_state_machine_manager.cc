@@ -4206,9 +4206,13 @@ bool LaneChangeStateMachineManager::
     beyond_lane_time = std::max(beyond_lane_time, 0.0);
     if (is_front_agent) {
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
-      double ego_brake = 2.5;
+      //保护大差速
+      double ego_brake = 2.0;
       box_longitudinal_buff =
           (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
+      //保护高速恐慌感
+      box_longitudinal_buff = std::max(box_longitudinal_buff, 
+                              ego_trajs_future_[i].v * lc_safety_check_config_.faster_rear_delay_time);
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
@@ -4217,7 +4221,7 @@ bool LaneChangeStateMachineManager::
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
       if (is_executing) {
-        box_longitudinal_buff = std::min(2.0, box_longitudinal_buff);
+        box_longitudinal_buff = lc_safety_check_config_.exe_ttc_ratio * box_longitudinal_buff;
       }
       if(is_front_reverse){
         double reverse_check_time = 4.0; //默认基准变道时间
