@@ -115,7 +115,9 @@ class ParallelParkInScenario : public ParkingScenario {
 
   const bool CheckOneReverseToSlot();
   bool CheckReplanParallel();
-  const GeometryPathOutput& SuitablePathReplan();
+  const ParallelPathGenerator& SuitablePathReplan();
+  const bool CheckLastPathCollided();
+  const ParallelPathGenerator& UseOrNotUseLastPath();
   void CheckEgoPoseWhenPlanFaild(ParkingFailReason reason);
 
   const double UpdateRemainDistObs(const double remain_dist_path,

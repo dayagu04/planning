@@ -245,6 +245,15 @@ const std::vector<Eigen::Vector2d> ParallelPathGenerator::GetVirtualObs() {
   return obs_vec;
 }
 
+void ParallelPathGenerator::SetPathSegmentSource(
+    std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+    const PathPlanSource path_source) {
+  for (size_t i = 0; i < path_seg_vec.size(); i++) {
+    path_seg_vec[i].SetPathSource(path_source);
+  }
+  return;
+}
+
 const ParallelPathGenerator::PaPlanMethod
 ParallelPathGenerator::CheckPaParkCondition() {
   PaPlanMethod res = PaPlanMethod::PaSturnPlan;
@@ -298,6 +307,42 @@ ParallelPathGenerator::CheckPaParkCondition() {
   }
   ILOG_INFO << "second PaPlanMethod res = " << static_cast<int>(res);
   return res;
+}
+
+const bool ParallelPathGenerator::OneLinePlanWhenMeetFinished(
+    std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec) {
+  const auto& ego_info = input_.ego_info_under_slot;
+
+  double adjust_lon_err = apa_param.GetParam().finish_parallel_lon_err;
+  const bool lon_condition =
+      std::fabs(ego_info.terminal_err.pos.x()) < adjust_lon_err;
+
+  const bool heading_condition =
+      std::fabs(ego_info.terminal_err.heading) <=
+      apa_param.GetParam().finish_parallel_heading_err / 57.3;
+
+  const bool lat_condition = std::fabs(ego_info.terminal_err.pos.y()) < 0.15;
+
+  ILOG_INFO << "lon_condition = " << lon_condition
+            << " lat_condition = " << lat_condition
+            << " heading_condition = " << heading_condition;
+
+  if (lon_condition && lat_condition && heading_condition) {
+    pnc::geometry_lib::LineSegment last_line;
+    last_line.pA = ego_info.cur_pose.pos;
+    last_line.heading = ego_info.cur_pose.heading;
+    if (OneLinePlanAlongEgoHeading(last_line, calc_params_.target_pose)) {
+      ILOG_INFO << "one line plan success, when meet finished";
+      pnc::geometry_lib::PathSegment last_line_seg(
+          pnc::geometry_lib::CalLineSegGear(last_line), last_line);
+      last_line_seg.path_source = PathPlanSource::MULTI_ALIGN_INSLOT;
+      path_seg_vec.emplace_back(last_line_seg);
+      return true;
+    }
+  }
+
+  ILOG_INFO << "one line plan failed, when meet finished";
+  return false;
 }
 
 const bool ParallelPathGenerator::Update() {
@@ -397,11 +442,18 @@ const bool ParallelPathGenerator::Update() {
     // ego is in slot, search from ego pose to target pose, or just
     // correct heading
 
+    if (OneLinePlanWhenMeetFinished(path_seg_vec)) {
+      SetPathSegmentSource(path_seg_vec, PathPlanSource::MULTI_ALIGN_INSLOT);
+      AddPathSegToOutPut(path_seg_vec);
+      return true;
+    }
+
     if (MultiAlignBody(path_seg_vec)) {
       is_multi_align_success = true;
       ILOG_INFO << "Multi align body success!";
       if (CheckTargetPoseValid(path_seg_vec.back().GetEndPose())) {
         ILOG_INFO << "Multi align body better!";
+        SetPathSegmentSource(path_seg_vec, PathPlanSource::MULTI_ALIGN_INSLOT);
         AddPathSegToOutPut(path_seg_vec);
         return true;
       }
@@ -418,6 +470,7 @@ const bool ParallelPathGenerator::Update() {
       if (is_multi_align_success) {
         output_.Reset();
         ILOG_INFO << "use multi align plan res!";
+        SetPathSegmentSource(path_seg_vec, PathPlanSource::MULTI_ALIGN_INSLOT);
         AddPathSegToOutPut(path_seg_vec);
         return true;
       }
@@ -1256,6 +1309,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false, true));
     if (BackwardNormalPlan(tmp_path_seg_vec,
                            input_.ego_info_under_slot.cur_pose)) {
+      SetPathSegmentSource(tmp_path_seg_vec,
+                           PathPlanSource::PREPARELINE_TO_INSLOT);
       bool plan2line = true;
       if (!(pnc::geometry_lib::CheckTwoPoseIsSame(
               input_.ego_info_under_slot.cur_pose,
@@ -1271,6 +1326,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
                                 input_.ego_info_under_slot.cur_pose,
                                 prepare_line)) {
           ILOG_INFO << "PlanToPreparingLine success!";
+          SetPathSegmentSource(prepare_seg_vec,
+                               PathPlanSource::EGO_TO_PREPARELINE);
           plan2line = true;
           tmp_path_seg_vec.insert(tmp_path_seg_vec.begin(),
                                   prepare_seg_vec.begin(),
@@ -1392,6 +1449,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       ILOG_INFO << " PlanFromTargetToLine failed!";
       continue;
     }
+    SetPathSegmentSource(inversed_park_out_path,
+                         PathPlanSource::PREPARELINE_TO_INSLOT);
 
     if (inversed_park_out_path.size() == 0) {
       ILOG_INFO << "inversed_park_out_path size ="
@@ -1428,6 +1487,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       ILOG_INFO << "PlanToPreparingLine fail!";
       continue;
     }
+    SetPathSegmentSource(prepare_seg_vec,
+                         PathPlanSource::EGO_TO_PREPARELINE);
 
     // ILOG_INFO <<"prepare_seg_vec size == " << prepare_seg_vec.size());
     if (prepare_seg_vec.size() == 0) {
@@ -2327,6 +2388,86 @@ void ParallelPathGenerator::AddPathSegToOutPut(
     output_.gear_cmd_vec.emplace_back(seg.seg_gear);
     output_.steer_vec.emplace_back(seg.seg_steer);
   }
+}
+
+void ParallelPathGenerator::DeleteFirstSegPath() {
+  if ((output_.path_segment_vec.size() != output_.gear_cmd_vec.size()) ||
+      (output_.path_segment_vec.size() != output_.steer_vec.size())) {
+    ILOG_INFO << "size not equal";
+    return;
+  }
+  size_t delete_i = 1;
+  // output_.path_segment_vec;
+  for (size_t i = 1; i < output_.gear_cmd_vec.size(); i++) {
+    if (output_.gear_cmd_vec[i] != output_.gear_cmd_vec[i - 1]) {
+      delete_i = i;
+      break;
+    }
+  }
+
+  output_.path_segment_vec.erase(output_.path_segment_vec.begin(),
+                                 output_.path_segment_vec.begin() + delete_i);
+  output_.gear_cmd_vec.erase(output_.gear_cmd_vec.begin(),
+                             output_.gear_cmd_vec.begin() + delete_i);
+  output_.steer_vec.erase(output_.steer_vec.begin(),
+                          output_.steer_vec.begin() + delete_i);
+
+  return;
+}
+
+const bool ParallelPathGenerator::InsertLineSegToEgo2Path(
+    const pnc::geometry_lib::PathPoint& ego_pose) {
+  if (output_.path_segment_vec.size() < 1) {
+    return false;
+  }
+
+  const pnc::geometry_lib::PathPoint path_start_pt =
+      output_.path_segment_vec.front().GetStartPose();
+
+  pnc::geometry_lib::PrintPose("ego pose = ", ego_pose);
+  pnc::geometry_lib::PrintPose("path start pose = ", path_start_pt);
+
+  pnc::geometry_lib::LineSegment line(ego_pose.pos, path_start_pt.pos,
+                                      path_start_pt.heading);
+  line.length = (line.pB - line.pA).norm();
+
+  pnc::geometry_lib::PathSegment line_seg;
+
+  if (line.length > 0.02) {
+    // const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
+    uint8_t seg_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+    if (pnc::geometry_lib::CheckTwoVecSameOrOppositeDirection(
+            (line.pB - line.pA), GetUnitTangVecByHeading(line.heading))) {
+      seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+    } else {
+      seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+    }
+    if (!pnc::geometry_lib::IsValidGear(seg_gear)) {
+      ILOG_INFO << "the line gear is invalid";
+      return false;
+    }
+    pnc::geometry_lib::PathSegment line_seg(seg_gear, line);
+
+    if (output_.path_segment_vec[0].seg_gear != seg_gear) {
+      ILOG_INFO << "the line gear not equal to the first path segment";
+      return true;
+    }
+
+    line_seg.path_source = output_.path_segment_vec[0].path_source;
+
+    output_.path_segment_vec.insert(output_.path_segment_vec.begin(), line_seg);
+
+    output_.gear_cmd_vec.insert(output_.gear_cmd_vec.begin(), seg_gear);
+
+    output_.steer_vec.insert(output_.steer_vec.begin(),
+                             pnc::geometry_lib::SEG_STEER_STRAIGHT);
+
+    // output_.path_seg_index.second += 1;
+    // path_seg_vec.emplace_back(line_seg);
+    return true;
+  }
+  ILOG_INFO << "already plan to target pos";
+  return true;
 }
 
 const bool ParallelPathGenerator::CheckEgoInSlot()  {
@@ -3736,6 +3877,7 @@ const bool ParallelPathGenerator::MultiPlan() {
       break;
     }
     output_.path_available = true;
+    SetPathSegmentSource(tmp_path_seg_vec, PathPlanSource::MULTI_PLAN_INSLOT);
     AddPathSegToOutPut(tmp_path_seg_vec);
 
     current_gear = pnc::geometry_lib::ReverseGear(current_gear);
@@ -4478,8 +4620,10 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
 
   if (OneLinePlan(first_line, calc_params_.target_pose)) {
     ILOG_INFO << "firstly calc line success";
-    AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
-        pnc::geometry_lib::CalLineSegGear(first_line), first_line));
+    pnc::geometry_lib::PathSegment last_line(
+        pnc::geometry_lib::CalLineSegGear(first_line), first_line);
+    last_line.path_source = PathPlanSource::ADJUST_PLAN_INSLOT;
+    AddPathSegToOutPut(pnc::geometry_lib::PathSegment(last_line));
     return true;
   }
 
@@ -4512,6 +4656,7 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
     // ILOG_INFO << "calc one success!";
     if (!CheckPathSegCollided(tmp_path_seg_vec.back(), kColSmallBufferInSlot)) {
       ILOG_INFO << "only one arc success!";
+      SetPathSegmentSource(tmp_path_seg_vec, PathPlanSource::ADJUST_PLAN_INSLOT);
       AddPathSegVecToOutput(tmp_path_seg_vec);
       return true;
     }
@@ -4548,8 +4693,10 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
       if (OneLinePlanAlongEgoHeading(last_line, target_pose)) {
         ILOG_INFO << "calc line success";
         if (!last_line.is_ignored) {
-          AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
-              pnc::geometry_lib::CalLineSegGear(last_line), last_line));
+          pnc::geometry_lib::PathSegment last_line_seg(
+              pnc::geometry_lib::CalLineSegGear(last_line), last_line);
+          last_line_seg.path_source = PathPlanSource::ADJUST_PLAN_INSLOT;
+          AddPathSegToOutPut(last_line_seg);
           ILOG_INFO << "last line exist";
           return true;
         }
@@ -4569,8 +4716,10 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
     // }
 
     if (OneLinePlanAlongEgoHeading(last_line, calc_params_.target_pose)) {
-      AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
-          pnc::geometry_lib::CalLineSegGear(last_line), last_line));
+      pnc::geometry_lib::PathSegment last_line_seg(
+          pnc::geometry_lib::CalLineSegGear(last_line), last_line);
+      last_line_seg.path_source = PathPlanSource::ADJUST_PLAN_INSLOT;
+      AddPathSegToOutPut(last_line_seg);
       return true;
     }
   }
@@ -4670,6 +4819,8 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
   }
 
   if (loop_success) {
+    SetPathSegmentSource(parallel_shift_path_vec,
+                         PathPlanSource::ADJUST_PLAN_INSLOT);
     AddPathSegVecToOutput(parallel_shift_path_vec);
   }
   return loop_success;
@@ -5136,6 +5287,8 @@ const bool ParallelPathGenerator::StartNodeGenerator() {
     return false;
   }
 
+  SetPathSegmentSource(geo_path_vec[best_path_idx].path_segment_vec,
+                       PathPlanSource::SEARCH_SOURCE);
   ILOG_INFO << "best idx = " << best_path_idx;
   if (!CheckPathInTlane(geo_path_vec[best_path_idx].path_segment_vec,
                        input_.tlane.tlane_corner)) {
@@ -6339,6 +6492,18 @@ const bool ParallelPathGenerator::CheckPathSegVecCollided(
   return false;
 }
 
+const bool ParallelPathGenerator::CheckPreviousPathSegVecCollided(
+    const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+    const double buffer) const {
+  collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
+  for (const auto& path_seg : path_seg_vec) {
+    if (CheckPathSegCollided(path_seg, buffer)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const bool ParallelPathGenerator::CheckSTurnPathSegVecCollided(
     const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
     const double first_buffer, const double second_buffer) const {
@@ -6609,6 +6774,9 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
         AB = safe_remain_dist * AB_unit;
         new_line.line_seg.pB = AB + new_line.line_seg.pA;
       }
+
+      new_line.path_source =
+          output_.path_segment_vec[output_.path_seg_index.second].path_source;
 
       output_.path_segment_vec.insert(
           output_.path_segment_vec.begin() + output_.path_seg_index.second + 1,

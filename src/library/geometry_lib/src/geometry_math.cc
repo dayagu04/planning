@@ -3556,6 +3556,7 @@ void PrintSegmentsVecInfo(
                 << arc_seg.circle_info.center.y()
                 << "radius = " << arc_seg.circle_info.radius;
     }
+    ILOG_INFO << "path_source = " << static_cast<int>(current_seg.path_source);
   }
 }
 
