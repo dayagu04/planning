@@ -4208,11 +4208,10 @@ bool LaneChangeStateMachineManager::
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       //保护大差速
       double ego_brake = 2.0;
-      box_longitudinal_buff =
-          (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
+      double ego_faster_buff = (- rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
       //保护高速恐慌感
-      box_longitudinal_buff = std::max(box_longitudinal_buff, 
-                              ego_trajs_future_[i].v * lc_safety_check_config_.faster_rear_delay_time);
+      box_longitudinal_buff = std::max(ego_faster_buff, 
+                ego_trajs_future_[i].v * lc_safety_check_config_.faster_rear_delay_time);
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
