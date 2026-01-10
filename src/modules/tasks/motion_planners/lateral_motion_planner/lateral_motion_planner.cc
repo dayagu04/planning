@@ -49,6 +49,7 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_ref_x_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_y_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_theta_vec()->Resize(N, 0.0);
+  planning_input_.mutable_ref_vel_vec()->Resize(N, 0.0);
 
   planning_input_.mutable_last_x_vec()->Resize(N, 0.0);
   planning_input_.mutable_last_y_vec()->Resize(N, 0.0);
@@ -207,8 +208,10 @@ bool LateralMotionPlanner::HandleReferencePathData() {
       std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
   const auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   const auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
+  const auto &enu_ref_vel = general_lateral_decider_output.enu_ref_vel;
   // assert(enu_ref_path.size() == enu_ref_theta.size());
-  if (enu_ref_path.empty() || enu_ref_theta.empty() || enu_ref_path.size() != enu_ref_theta.size() ||
+  if (enu_ref_path.empty() || enu_ref_theta.empty() || enu_ref_vel.empty() ||
+      enu_ref_path.size() != enu_ref_theta.size() || enu_ref_path.size() != enu_ref_vel.size() ||
       !session_->environmental_model().location_valid()) {
     return false;
   }
@@ -226,6 +229,7 @@ bool LateralMotionPlanner::HandleReferencePathData() {
         enu_ref_theta_i += 2.0 * M_PI;
       }
       ref_theta_vec_[i] = enu_ref_theta_i;
+      planning_input_.mutable_ref_vel_vec()->Set(i, -enu_ref_vel[i]);
     }
   } else {
     // set reference velocity
@@ -235,6 +239,7 @@ bool LateralMotionPlanner::HandleReferencePathData() {
       planning_input_.mutable_ref_x_vec()->Set(i, enu_ref_path[i].first);
       planning_input_.mutable_ref_y_vec()->Set(i, enu_ref_path[i].second);
       ref_theta_vec_[i] = enu_ref_theta[i];
+      planning_input_.mutable_ref_vel_vec()->Set(i, enu_ref_vel[i]);
     }
   }
   // set front axis reference path
