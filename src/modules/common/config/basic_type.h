@@ -434,6 +434,7 @@ struct RouteInfoOutput {
     lsl_length = 0.0;
     left_lane_num = 0;
     right_lane_num = 0;
+    // ego_seq = 0;
     emergency_lane_num = 0;
     minVal_seq = 0;
     maxVal_seq = 0;

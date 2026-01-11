@@ -2449,16 +2449,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                 exchange_feasible_lane_distances[0].end()) {
           lane_distance =
               exchange_feasible_lane_distances[0][feasible_lane_sequence[i]];
-          // 如果存在ramp_split优化，要考虑其剩余距离
-          if (iteration_num > 0 &&
-              exchange_feasible_lane_distances[iteration_num].find(
-                  feasible_lane_sequence[i]) !=
-                  exchange_feasible_lane_distances[iteration_num].end()) {
-            lane_distance = std::min(
-                exchange_feasible_lane_distances[iteration_num]
-                                                [feasible_lane_sequence[i]],
-                lane_distance);
-          }
         } else {
           if (feasible_lane_sequence[i] ==
               first_exchange_region_info.avoide_lane_num) {
@@ -2481,9 +2471,19 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                               .fp_distance_to_split_point;
         }
         // 再看后一个交换区的信息
-        if (iteration_num == 0 && valid_exchange_regions.size() > 1 &&
+        if (iteration_num > 1 && valid_exchange_regions.size() > 1 &&
             !valid_exchange_regions[0].is_ramp_merge &&
             !valid_exchange_regions[0].is_ramp_split) {
+          double next_exchange_opt_distance =
+              valid_exchange_regions[1].distance_to_split_point -
+              first_exchange_region_info.distance_to_split_point +
+              valid_exchange_regions[1]
+                  .start_fp_point.fp_distance_to_split_point -
+              first_exchange_region_info.end_fp_point
+                  .fp_distance_to_split_point;
+          OptimizeFeasibleLanesByDistance(
+              valid_exchange_regions[1], exchange_feasible_lane_distances[1],
+              next_exchange_opt_distance, current_lane_vec.size());
           std::vector<int> next_feasible_lane_sequence =
               valid_exchange_regions[1]
                   .recommend_lane_num[0]
@@ -2492,10 +2492,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                         next_feasible_lane_sequence.end(),
                         feasible_lane_sequence[i]) !=
               next_feasible_lane_sequence.end()) {
-            lane_distance = lane_distance +
-                            valid_exchange_regions[1].distance_to_split_point -
-                            valid_exchange_regions[1]
-                                .start_fp_point.fp_distance_to_split_point;
+            lane_distance +=
+                exchange_feasible_lane_distances[1][feasible_lane_sequence[i]];
           }
         }
       }
@@ -2513,9 +2511,19 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                 .distance_to_split_point +
             first_exchange_region_info.end_fp_point.fp_distance_to_split_point;
         // 再看后一个交换区的信息
-        if (iteration_num == 0 && valid_exchange_regions.size() > 1 &&
+        if (iteration_num > 1 && valid_exchange_regions.size() > 1 &&
             !valid_exchange_regions[0].is_ramp_merge &&
             !valid_exchange_regions[0].is_ramp_split) {
+          double next_exchange_opt_distance =
+              valid_exchange_regions[1].distance_to_split_point -
+              first_exchange_region_info.distance_to_split_point +
+              valid_exchange_regions[1]
+                  .start_fp_point.fp_distance_to_split_point -
+              first_exchange_region_info.end_fp_point
+                  .fp_distance_to_split_point;
+          OptimizeFeasibleLanesByDistance(
+              valid_exchange_regions[1], exchange_feasible_lane_distances[1],
+              next_exchange_opt_distance, current_lane_vec.size());
           std::vector<int> next_feasible_lane_sequence =
               valid_exchange_regions[1]
                   .recommend_lane_num[0]
@@ -2524,11 +2532,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                         next_feasible_lane_sequence.end(),
                         feasible_lane_sequence[i]) !=
               next_feasible_lane_sequence.end()) {
-            feasible_lane_distance[feasible_lane_sequence[i]] =
-                feasible_lane_distance[feasible_lane_sequence[i]] +
-                valid_exchange_regions[1].distance_to_split_point -
-                valid_exchange_regions[1]
-                    .start_fp_point.fp_distance_to_split_point;
+            feasible_lane_distance[feasible_lane_sequence[i]] +=
+                exchange_feasible_lane_distances[1][feasible_lane_sequence[i]];
           }
         }
       }
@@ -2554,18 +2559,30 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                         next_feasible_lane_sequence.end(),
                         feasible_lane_sequence[i]) !=
               next_feasible_lane_sequence.end()) {
-            feasible_lane_distance[feasible_lane_sequence[i]] =
-                feasible_lane_distance[feasible_lane_sequence[i]] +
-                valid_exchange_regions[0].distance_to_split_point -
-                valid_exchange_regions[0]
-                    .start_fp_point.fp_distance_to_split_point;
+            feasible_lane_distance[feasible_lane_sequence[i]] +=
+                exchange_feasible_lane_distances[0][feasible_lane_sequence[i]];
           }
         }
       }
       break;
     }
   }
-
+  // 如果存在ramp_split优化，要考虑其剩余距离
+  for (int i = 0; i < feasible_lane_sequence.size(); i++) {
+    auto& lane_distance = feasible_lane_distance[feasible_lane_sequence[i]];
+    if (iteration_num > 0 &&
+        exchange_feasible_lane_distances[iteration_num].find(
+            feasible_lane_sequence[i]) !=
+            exchange_feasible_lane_distances[iteration_num].end()) {
+      if (exchange_feasible_lane_distances[iteration_num]
+                                          [feasible_lane_sequence[i]] <
+          feasible_lane_distance[feasible_lane_sequence[i]]) {
+        feasible_lane_distance[feasible_lane_sequence[i]] =
+            exchange_feasible_lane_distances[iteration_num]
+                                            [feasible_lane_sequence[i]];
+      }
+    }
+  }
   // 根据前方merge_fp优化feasible_lane
   std::map<int, SplitDirection> merge_lane;
   SplitDirection merge_point_direction = SPLIT_NONE;
