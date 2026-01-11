@@ -1638,6 +1638,10 @@
     "rear_vehicle_speed_min_space_map": {
       "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
       "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  7.0,   8.5]
+    },
+    "hold_state_vel_jerk_map": {
+      "vel_table":  [4.167, 8.333, 16.667, 25.0],
+      "jerk_table": [1.2, 1.5, 1.4, 1.0]
     }
   },
   "hmi_decider": {
