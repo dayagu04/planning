@@ -277,8 +277,28 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.distance_to_ramp = NL_NMAX;
   }
   ad_info.distance_to_split = dis_to_split;
-  if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-          MERGE_SCENE &&
+  bool is_ramp_merge_to_road_on_expressway = false;
+  const auto& route_info_sdpro_map =
+      session_->environmental_model().get_route_info()->get_sdpro_map();
+  if (!route_info_output.map_merge_region_info_list.empty()) {
+    const auto& merge_seg = route_info_sdpro_map.GetLinkOnRoute(
+        route_info_output.map_merge_region_info_list[0].merge_link_id);
+    const auto& merge_seg_last_seg =
+        route_info_sdpro_map.GetPreviousLinkOnRoute(
+            route_info_output.map_merge_region_info_list[0].merge_link_id);
+    if (merge_seg != nullptr && merge_seg_last_seg != nullptr) {
+      if ((route_info_sdpro_map.isRamp(merge_seg_last_seg->link_type()) ||
+           route_info_sdpro_map.isSaPa(merge_seg_last_seg->link_type())) &&
+          !route_info_sdpro_map.isRamp(merge_seg->link_type()) &&
+          (route_info_sdpro_map.isSaPa(merge_seg_last_seg->link_type()) ||
+           route_info_output.is_on_ramp)) {
+        is_ramp_merge_to_road_on_expressway = true;
+      }
+    }
+  }
+  if ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+           MERGE_SCENE ||
+       is_ramp_merge_to_road_on_expressway) &&
       route_info_output.is_on_ramp) {
     ad_info.distance_to_merge = dis_to_merge;
   } else {
