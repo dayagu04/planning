@@ -6308,6 +6308,16 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                        "target_lane_side_cut_in_check_time");
       ReadItem<double>(json, hold_steer_angle_rate_limit_deg, "lane_change_safety_check",
                        "hold_steer_angle_rate_limit_deg");
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
+                                 "vel_table"},
+                                 hold_state_vel_jerk_map.vel_table);
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
+                                 "jerk_table"},
+                                 hold_state_vel_jerk_map.jerk_table);
     }
     double exe_ttc_ratio = 0.5;
     double exe_rear_speed_ratio = 1.1;
@@ -6332,6 +6342,11 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<double> min_space_table     {0.1, 0.8,  1.2,  2.5,  3.5,  5.0,   6.5};   // 触发变道需要预留最小空间
     };
     RearVehicleSpeedMinSpaceMap rear_vehicle_speed_min_space_map;
+    struct HoldStateVelJerkMap {
+        std::vector<double> vel_table{4.167, 8.333, 16.667, 25.0};  // 速度表 (m/s)
+        std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};  // 对应的jerk值
+    };
+    HoldStateVelJerkMap hold_state_vel_jerk_map;
 };
 
 struct HmiDeciderConfig : public EgoPlanningConfig{

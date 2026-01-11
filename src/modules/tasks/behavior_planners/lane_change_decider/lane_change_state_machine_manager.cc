@@ -5045,9 +5045,9 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   double max_wheel_angle_rate_lc = max_steer_angle_rate_lc / steer_ratio;
   double steer_limit_jerk = max_wheel_angle_rate_lc * kv2;
   // 正常行驶基于横向差值
-  std::vector<double> vel_table{4.167, 8.333, 16.667, 25.0};
-  std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};
-  double jerk_bound = planning::interp(vel, vel_table, jerk_table);
+  double jerk_bound = planning::interp(vel, 
+      lc_safety_check_config_.hold_state_vel_jerk_map.vel_table, 
+      lc_safety_check_config_.hold_state_vel_jerk_map.jerk_table);
   double limit_jerk_hold = std::min(steer_limit_jerk, jerk_bound);
   //初始状态
   double vy = fix_ref_path->get_frenet_ego_state().velocity_l();
