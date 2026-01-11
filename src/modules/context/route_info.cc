@@ -248,11 +248,11 @@ void RouteInfo::UpdateRouteInfoForNOA(
       first_exchange_region_info =
           tencent_split_region_info_list_[0];
     }
-  } else {
-    first_exchange_region_info =
-        tencent_merge_region_info_list_[0];
+  } else if (!tencent_merge_region_info_list_.empty()) {
+    first_exchange_region_info = tencent_merge_region_info_list_[0];
   }
-  if (first_exchange_region_info.split_link_id !=
+  if (first_exchange_region_info.split_link_id != -1 &&
+      first_exchange_region_info.split_link_id !=
           mlc_decider_route_info_.first_static_split_region_info
               .split_link_id &&
       mlc_decider_route_info_.first_static_split_region_info.split_link_id !=
@@ -2442,12 +2442,34 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       mlc_decider_route_info_.is_process_split = false;
       mlc_decider_route_info_.static_merge_region_info =
           first_exchange_region_info;
+      if (first_exchange_region_info.split_direction == SPLIT_RIGHT) {
+        mlc_scene_type_info.set_value(
+            MERGE_SCENE, RAMP_ON_RIGHT,
+            first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id);
+      } else {
+        mlc_scene_type_info.set_value(
+            MERGE_SCENE, RAMP_ON_LEFT,
+            first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id);
+      }
     } else {
       mlc_decider_route_info_.is_process_merge = true;
       mlc_decider_route_info_.is_process_split = false;
       mlc_decider_route_info_.is_process_other_merge = false;
       mlc_decider_route_info_.static_merge_region_info =
           first_exchange_region_info;
+      if (first_exchange_region_info.split_direction == SPLIT_RIGHT) {
+        mlc_scene_type_info.set_value(
+            MERGE_SCENE, RAMP_ON_RIGHT,
+            first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id);
+      } else {
+        mlc_scene_type_info.set_value(
+            MERGE_SCENE, RAMP_ON_LEFT,
+            first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id);
+      }
     }
   } else {
     mlc_decider_route_info_.is_process_split = true;
@@ -2455,6 +2477,17 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     mlc_decider_route_info_.is_process_other_merge = false;
     mlc_decider_route_info_.static_split_region_info =
         first_exchange_region_info;
+    if (first_exchange_region_info.split_direction == SPLIT_LEFT) {
+      mlc_scene_type_info.set_value(
+          SPLIT_SCENE, RAMP_ON_LEFT,
+          first_exchange_region_info.distance_to_split_point,
+          first_exchange_region_info.split_link_id);
+    } else {
+      mlc_scene_type_info.set_value(
+          SPLIT_SCENE, RAMP_ON_RIGHT,
+          first_exchange_region_info.distance_to_split_point,
+          first_exchange_region_info.split_link_id);
+    }
   }
   // 判断当前处于的状态
   bool is_entery_exchange_region_front =
