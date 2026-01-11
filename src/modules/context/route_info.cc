@@ -2471,7 +2471,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                               .fp_distance_to_split_point;
         }
         // 再看后一个交换区的信息
-        if (iteration_num > 1 && valid_exchange_regions.size() > 1 &&
+        if (valid_exchange_regions.size() > 1 &&
             !valid_exchange_regions[0].is_ramp_merge &&
             !valid_exchange_regions[0].is_ramp_split) {
           double next_exchange_opt_distance =
@@ -2511,7 +2511,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                 .distance_to_split_point +
             first_exchange_region_info.end_fp_point.fp_distance_to_split_point;
         // 再看后一个交换区的信息
-        if (iteration_num > 1 && valid_exchange_regions.size() > 1 &&
+        if (valid_exchange_regions.size() > 1 &&
             !valid_exchange_regions[0].is_ramp_merge &&
             !valid_exchange_regions[0].is_ramp_split) {
           double next_exchange_opt_distance =
@@ -2550,7 +2550,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                 .fp_distance_to_split_point -
             dis_to_last_specific_point;
         // 再看后一个交换区的信息
-        if (iteration_num == 0 && !valid_exchange_regions.empty()) {
+        if (!valid_exchange_regions.empty()) {
           std::vector<int> next_feasible_lane_sequence =
               valid_exchange_regions[0]
                   .recommend_lane_num[0]
