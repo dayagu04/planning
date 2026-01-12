@@ -749,16 +749,6 @@ const bool ParallelParkOutScenario::GenTlane() {
         continue;
       }
 
-      // if (is_try_tlane_ && ego_info_under_slot.slot_occupied_ratio > 0.1) {
-      //   if (mathlib::IsInBound(obs_pt_local.x(), 1.0, slot_length - 0.5) &&
-      //       mathlib::IsInBound(obs_pt_local.y(),
-      //                          (0.5 * slot_width - 0.5) * side_sgn,
-      //                          (0.5 * slot_width + 0.8) * side_sgn)) {
-      //     ILOG_WARN << "out is obs, obs_pt_local = " << obs_pt_local.x();
-      //     return false;
-      //   }
-      // }
-
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs_pt_local, ego_info_under_slot.cur_pose, 0.0168)) {
         // in_ego_cnt++;
