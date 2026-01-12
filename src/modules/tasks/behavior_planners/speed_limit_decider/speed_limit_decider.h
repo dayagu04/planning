@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "agent/agent.h"
+#include "define/geometry.h"
 #include "ego_planning_config.h"
 #include "speed_limit_decider_output.h"
 #include "tasks/task.h"
@@ -30,6 +31,19 @@ struct VRURoundInfo {
   bool is_distance_exit = false;
   bool last_is_distance_exit = false;
 };
+
+struct RoadBoundaryPoint {
+  Point2D cartesian_point;
+  double s;
+  double l;
+  bool is_left;
+};
+
+struct RoadBoundaryPointWithVehicleDist {
+  RoadBoundaryPoint point;
+  double min_lateral_dist_to_vehicle;  // Minimum lateral distance to vehicle corner points (meters)
+};
+
 class SpeedLimitDecider : public Task {
  public:
   SpeedLimitDecider(const EgoPlanningConfigBuilder *config_builder,
@@ -64,6 +78,8 @@ class SpeedLimitDecider : public Task {
   void CalculateVRURoundSpeedLimit();
 
   void CalculateConstructionZoneSpeedLimit();
+
+  void CalculateRoadBoundarySpeedLimit();
 
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
@@ -162,6 +178,57 @@ class SpeedLimitDecider : public Task {
   double road_radius_origin_ = 10000.0;
   bool roundabout_quit_flag_ = false;
   int roundabout_recover_counter_ = 0;
+
+  // Road boundary speed limit confirmation state
+  int road_boundary_left_confirmed_range_idx_ = -1;   // Confirmed left side range index (-1 means not triggered)
+  int road_boundary_right_confirmed_range_idx_ = -1;  // Confirmed right side range index (-1 means not triggered)
+  int road_boundary_left_confirmation_frame_count_ = 0;   // Left side confirmation frame counter
+  int road_boundary_right_confirmation_frame_count_ = 0;  // Right side confirmation frame counter
+  int road_boundary_left_pending_confirmation_range_idx_ = -1;   // Left side range index pending confirmation (-1 means no pending)
+  int road_boundary_right_pending_confirmation_range_idx_ = -1;  // Right side range index pending confirmation (-1 means no pending)
+
+  // Road boundary speed limit cooldown state
+  double last_road_boundary_v_limit_ = 100.0;  // Last road boundary speed limit value
+  double last_road_boundary_trigger_distance_ = 0.0;  // Last road boundary trigger distance
+  int road_boundary_cooldown_count_ = 0;  // Cooldown frame counter
+  
+  // Road boundary strictest speed limit cooldown state
+  double last_road_boundary_strictest_v_limit_ = 100.0;  // Last road boundary strictest speed limit value
+  double last_road_boundary_strictest_trigger_distance_ = 0.0;  // Last road boundary strictest trigger distance
+  int road_boundary_strictest_cooldown_count_ = 0;  // Cooldown frame counter for strictest limit
+  
+  // Road boundary speed limit manual intervention detection
+  bool road_boundary_v_limit_set_ = false;
+  bool road_boundary_manual_intervention_detected_ = false;
+  double last_v_cruise_fsm_road_boundary_ = 40.0;
+  int road_boundary_manual_intervention_reset_count_ = 0;  // Frame counter for resetting manual intervention flag
+  
+  // Curve road boundary speed limit state
+  int curve_road_boundary_left_confirmed_gear_ = -1;   // Confirmed left side gear index (-1 means not triggered)
+  int curve_road_boundary_right_confirmed_gear_ = -1;  // Confirmed right side gear index (-1 means not triggered)
+  int curve_road_boundary_left_confirmation_frame_count_ = 0;   // Left side confirmation frame counter
+  int curve_road_boundary_right_confirmation_frame_count_ = 0;  // Right side confirmation frame counter
+  int curve_road_boundary_left_pending_confirmation_gear_ = -1;   // Left side gear index pending confirmation (-1 means no pending)
+  int curve_road_boundary_right_pending_confirmation_gear_ = -1;  // Right side gear index pending confirmation (-1 means no pending)
+  
+  // Collision distance confirmation state
+  double confirmed_collision_distance_ = -1.0;  // Confirmed collision distance (-1 means no confirmed collision)
+  double pending_collision_distance_ = -1.0;   // Pending collision distance for confirmation (-1 means no pending)
+  int collision_confirmation_frame_count_ = 0;  // Frame counter for collision distance confirmation
+  
+  // Lateral acceleration limit detection state
+  bool lateral_acceleration_limit_confirmed_ = false;  // Confirmed lateral acceleration limit state
+  bool lateral_acceleration_limit_pending_ = false;  // Pending lateral acceleration limit state
+  int lateral_acceleration_limit_confirmation_frame_count_ = 0;  // Frame counter for lateral acceleration limit confirmation
+  int lateral_acceleration_limit_reset_frame_count_ = 0;  // Frame counter for resetting confirmed state
+  double lateral_acceleration_limit_v_limit_ = 100.0;  // Speed limit when lateral acceleration limit is triggered
+  double lateral_acceleration_limit_trigger_distance_ = 0.0;  // Trigger distance when lateral acceleration limit is triggered
+  
+  // S-curve road boundary speed limit state
+  bool s_curve_road_boundary_confirmed_ = false;  // Confirmed S-curve road boundary limit state
+  bool s_curve_road_boundary_pending_ = false;  // Pending S-curve road boundary limit state
+  int s_curve_road_boundary_confirmation_frame_count_ = 0;  // Frame counter for S-curve confirmation
+  double s_curve_road_boundary_v_limit_ = 100.0;  // Speed limit when S-curve is detected
 };
 
 }  // namespace planning
