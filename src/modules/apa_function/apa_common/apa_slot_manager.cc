@@ -18,7 +18,7 @@
 namespace planning {
 namespace apa_planner {
 
-static const int kSlotFreeId = 0;
+static const int kSlotFreeId = 1;
 static const int kSlotInvalidId = -1000; //融合输出车位 id 不会为负
 static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
