@@ -15,11 +15,14 @@ namespace planning {
 
 const static double kLaneDropLength = 20.0;
 const static double kEgoBehindLength = -10.0;
-const static double kEgoAheadLength = 90.0;
+const static double kEgoAheadLength = 150.0;
+const static double kMinEgoAheadLength = 90.0;
 const static double kForwardSamplingGap = 5.0;
 const static double kForwardSamplingStep = 2.0;
-const static double kReverseSamplingGap = 1.0;
-const static double kReverseSamplingStep = 1.0;
+const static double kReverseEgoBehindLength = -10.0;
+const static double kReverseEgoAheadLength = 20.0;
+const static double kReverseSamplingGap = 1.5;
+const static double kReverseSamplingStep = 0.5;
 const static double kMinRefVel = 2.0;
 
 ReferencePath::ReferencePath() { init(); }
@@ -36,8 +39,14 @@ void ReferencePath::init() {
   // frenet_parameters_.max_iter = 15;
   // smooth
   is_smoothed_ = false;
+  is_enable_raw_line_extend_ = false;
   is_enable_clothoid_extend_ = false;
   valid_lane_line_length_ = 0.;
+  min_ahead_length_ = kMinEgoAheadLength;
+  sampling_behind_length_ = kEgoBehindLength;
+  sampling_ahead_length_ = kEgoAheadLength;
+  sampling_gap_ = kForwardSamplingGap;
+  sampling_step_ = kForwardSamplingStep;
   ref_path_curve_info_.Clear();
   smooth_input_.Clear();
   smooth_output_.Clear();
@@ -1126,11 +1135,12 @@ void ReferencePath::InitReferencePathSmoother() {
       ref_path_smoother_.MutableFemPosDeviationSmootherConfig();
   smoother_config = std::move(smoother_param);
   if (session_->is_rads_scene()) {
+    is_enable_raw_line_extend_ = true;
+    min_ahead_length_ = kReverseEgoAheadLength;
+    sampling_behind_length_ = kReverseEgoBehindLength;
+    sampling_ahead_length_ = kReverseEgoAheadLength;
     sampling_gap_ = kReverseSamplingGap;
     sampling_step_ = kReverseSamplingStep;
-  } else {
-    sampling_gap_ = kForwardSamplingGap;
-    sampling_step_ = kForwardSamplingStep;
   }
 }
 
@@ -1175,9 +1185,10 @@ bool ReferencePath::SmoothReferencePath(
       smooth_output_.points_x.size() == smooth_output_.points_y.size() &&
       smooth_output_.points_x.size() >= 5 &&
       smooth_output_.points_x.size() == raw_points_vec.size()) {
-    HandleOutputData(ahead_partition_length, init_point);
+    HandleOutputData(init_point);
     // 5.Postprocessing: dense smoothed path points
-    GenerateDenseRefPathPoints(behind_partition_length, x_s_spline, y_s_spline, smoothed_path_points);
+    GenerateDenseRefPathPoints(
+        behind_partition_length, ahead_partition_length, x_s_spline, y_s_spline, smoothed_path_points);
     return true;
   }
   smooth_output_.Clear();
@@ -1209,7 +1220,7 @@ bool ReferencePath::PartionedRefPoints(
   }
   // s range
   const std::pair<double, double> s_range(
-      init_s + kEgoBehindLength, init_s + kEgoAheadLength);
+      init_s + sampling_behind_length_, init_s + sampling_ahead_length_);
   // start
   auto start_iter = std::min_element(raw_points_s.begin(), raw_points_s.end(),
       [&s_range](const double a, const double b) {
@@ -1272,9 +1283,12 @@ bool ReferencePath::SamplingRefPoints(
     return false;
   }
   // sampling
-  double start_s = std::max(init_s + kEgoBehindLength, 0.0);
+  double start_s = std::max(init_s + sampling_behind_length_, 0.0);
   double end_s =
-      std::min(std::max(init_s + kEgoAheadLength, valid_lane_line_length_ - kLaneDropLength), raw_points_s.back());
+      std::min(std::max(std::min(init_s + sampling_ahead_length_,
+                                 valid_lane_line_length_ - kLaneDropLength),
+                        init_s + min_ahead_length_),
+               raw_points_s.back());
   behind_partition_length = start_s;
   ahead_partition_length = raw_points_s.back() - end_s;
   refined_x_vec.reserve(raw_points_x.size());
@@ -1404,9 +1418,7 @@ void ReferencePath::SetSmoothBounds(
 }
 
 bool ReferencePath::HandleOutputData(
-    const double ahead_partition_length,
     const std::pair<double, double> &init_point) {
-  ForwardExtendedRefPoints(ahead_partition_length);
   smooth_output_.points_s.reserve(smooth_output_.points_x.size());
   auto smooth_x_vec = ref_path_smoother_info_.mutable_smooth_x_vec();
   auto smooth_y_vec = ref_path_smoother_info_.mutable_smooth_y_vec();
@@ -1434,38 +1446,109 @@ bool ReferencePath::HandleOutputData(
   return true;
 }
 
-bool ReferencePath::ForwardExtendedRefPoints(
-    const double ahead_partition_length) {
-  if (smooth_output_.points_x.size() < 2 ||
-      smooth_output_.points_x.size() != smooth_output_.points_y.size()) {
-    return false;
-  }
-  if (ahead_partition_length > 1e-3) {
-    // 如果点数不足，回退到简单直线延长
-    if (smooth_output_.points_x.size() == 2 ||
-        !is_enable_clothoid_extend_) {
-      StraightExtendedRefPoints(ahead_partition_length);
-      return true;
+bool ReferencePath::GenerateDenseRefPathPoints(
+    const double behind_partition_length,
+    const double ahead_partition_length,
+    const pnc::mathlib::spline &x_s_spline,
+    const pnc::mathlib::spline &y_s_spline,
+    std::vector<planning_math::PathPoint> &smoothed_path_points) {
+  smoothed_path_points.reserve(refined_ref_path_points_.size() + 1);
+  BackwardExtendedRefPoints(
+      behind_partition_length, x_s_spline, y_s_spline, smoothed_path_points);
+  for (double pt_s = 0; pt_s < smooth_output_.points_s.back() + sampling_step_; pt_s += sampling_step_) {
+    if (pt_s > smooth_output_.points_s.back()) {
+      pt_s = smooth_output_.points_s.back() + 1e-2;
     }
-    ClothoidExtendedRefPoints(ahead_partition_length, 1e-6);
+    auto pt =
+        planning_math::PathPoint(smooth_output_.x_s_spline(pt_s),
+                                 smooth_output_.y_s_spline(pt_s));
+    smoothed_path_points.emplace_back(std::move(pt));
+  }
+  if (is_enable_raw_line_extend_) {
+    ForwardStitchRefPoints(
+        ahead_partition_length, x_s_spline, y_s_spline, smoothed_path_points);
+  } else {
+    ForwardExtendedRefPoints(
+        ahead_partition_length, smoothed_path_points);
   }
   return true;
 }
 
+bool ReferencePath::BackwardExtendedRefPoints(
+    const double behind_partition_length,
+    const pnc::mathlib::spline &x_s_spline,
+    const pnc::mathlib::spline &y_s_spline,
+    std::vector<planning_math::PathPoint> &smoothed_path_points) {
+  if (behind_partition_length < 1e-3) {
+    return true;
+  }
+  for (double pt_s = 0.; pt_s < behind_partition_length - 0.5 * sampling_step_; pt_s += sampling_step_) {
+    double pt_x = x_s_spline(pt_s);
+    double pt_y = y_s_spline(pt_s);
+    auto pt =
+        planning_math::PathPoint(pt_x, pt_y);
+    smoothed_path_points.emplace_back(std::move(pt));
+  }
+  return true;
+}
+
+bool ReferencePath::ForwardStitchRefPoints(
+    const double ahead_partition_length,
+    const pnc::mathlib::spline &x_s_spline,
+    const pnc::mathlib::spline &y_s_spline,
+    std::vector<planning_math::PathPoint> &smoothed_path_points) {
+  if (ahead_partition_length < 1e-3) {
+    return true;
+  }
+  const auto &raw_points_s = x_s_spline.get_x();
+  double cur_length = raw_points_s.back() - ahead_partition_length;
+  double end_s = std::min(valid_lane_line_length_, raw_points_s.back());
+  for (double pt_s = cur_length + sampling_step_; pt_s <= end_s; pt_s += sampling_step_) {
+    cur_length = pt_s;
+    double pt_x = x_s_spline(pt_s);
+    double pt_y = y_s_spline(pt_s);
+    auto pt =
+        planning_math::PathPoint(pt_x, pt_y);
+    smoothed_path_points.emplace_back(std::move(pt));
+  }
+  double remain_length = std::max(raw_points_s.back() - cur_length, 0.0);
+  ForwardExtendedRefPoints(remain_length, smoothed_path_points);
+  return true;
+}
+
+bool ReferencePath::ForwardExtendedRefPoints(
+    const double ahead_partition_length,
+    std::vector<planning_math::PathPoint> &smoothed_path_points) {
+  if (smoothed_path_points.size() < 2) {
+    return false;
+  }
+  if (ahead_partition_length < 1e-3) {
+    return true;
+  }
+  if (smoothed_path_points.size() == 2 ||
+      !is_enable_clothoid_extend_) {
+    // 如果点数不足，回退到简单直线延长
+    StraightExtendedRefPoints(ahead_partition_length, smoothed_path_points);
+    return true;
+  }
+  ClothoidExtendedRefPoints(ahead_partition_length, 1e-6, smoothed_path_points);
+  return true;
+}
+
 void ReferencePath::StraightExtendedRefPoints(
-    const double extend_length) {
-  size_t start_idx = smooth_output_.points_x.size() - 2;
-  double dx = smooth_output_.points_x[start_idx + 1] - smooth_output_.points_x[start_idx];
-  double dy = smooth_output_.points_y[start_idx + 1] - smooth_output_.points_y[start_idx];
+    const double extend_length, std::vector<planning_math::PathPoint> &smoothed_path_points) {
+  size_t start_idx = smoothed_path_points.size() - 2;
+  double dx = smoothed_path_points[start_idx + 1].x() - smoothed_path_points[start_idx].x();
+  double dy = smoothed_path_points[start_idx + 1].y() - smoothed_path_points[start_idx].y();
   double line_length = sqrt(dx * dx + dy * dy);
   dx /= line_length;
   dy /= line_length;
-  // double extend_pt_x = smooth_output_.points_x[start_idx + 1] + dx * extend_length;
-  // double extend_pt_y = smooth_output_.points_y[start_idx + 1] + dy * extend_length;
-  // smooth_output_.points_x.emplace_back(extend_pt_x);
-  // smooth_output_.points_y.emplace_back(extend_pt_y);
-  double extend_pt_x = smooth_output_.points_x[start_idx + 1];
-  double extend_pt_y = smooth_output_.points_y[start_idx + 1];
+  // double extend_pt_x = smoothed_path_points[start_idx + 1].x() + dx * extend_length;
+  // double extend_pt_y = smoothed_path_points[start_idx + 1].y() + dy * extend_length;
+  // auto pt = planning_math::PathPoint(extend_pt_x, extend_pt_y);
+  // smoothed_path_points.emplace_back(std::move(pt));
+  double extend_pt_x = smoothed_path_points[start_idx + 1].x();
+  double extend_pt_y = smoothed_path_points[start_idx + 1].y();
   for (double sum_s = 0.0; sum_s < extend_length; sum_s += sampling_step_) {
     double ds = sampling_step_;
     if (sum_s + ds >= extend_length) {
@@ -1473,20 +1556,21 @@ void ReferencePath::StraightExtendedRefPoints(
     }
     extend_pt_x += dx * ds;
     extend_pt_y += dy * ds;
-    smooth_output_.points_x.emplace_back(extend_pt_x);
-    smooth_output_.points_y.emplace_back(extend_pt_y);
+    auto pt = planning_math::PathPoint(extend_pt_x, extend_pt_y);
+    smoothed_path_points.emplace_back(std::move(pt));
   }
 }
 
 void ReferencePath::ClothoidExtendedRefPoints(
-    const double extend_length, const double target_curv) {
+    const double extend_length, const double target_curv,
+    std::vector<planning_math::PathPoint> &smoothed_path_points) {
   // 使用最后三个点计算曲率
   double curvature = 1e-4;
-  size_t start_idx = smooth_output_.points_x.size() - 3;
-  double dx1 = smooth_output_.points_x[start_idx + 1] - smooth_output_.points_x[start_idx];
-  double dy1 = smooth_output_.points_y[start_idx + 1] - smooth_output_.points_y[start_idx];
-  double dx2 = smooth_output_.points_x[start_idx + 2] - smooth_output_.points_x[start_idx + 1];
-  double dy2 = smooth_output_.points_y[start_idx + 2] - smooth_output_.points_y[start_idx + 1];
+  size_t start_idx = smoothed_path_points.size() - 3;
+  double dx1 = smoothed_path_points[start_idx + 1].x() - smoothed_path_points[start_idx].x();
+  double dy1 = smoothed_path_points[start_idx + 1].y() - smoothed_path_points[start_idx].y();
+  double dx2 = smoothed_path_points[start_idx + 2].x() - smoothed_path_points[start_idx + 1].x();
+  double dy2 = smoothed_path_points[start_idx + 2].y() - smoothed_path_points[start_idx + 1].y();
   // 计算向量长度
   double len1 = std::hypot(dx1, dy1);
   double len2 = std::hypot(dx2, dy2);
@@ -1513,8 +1597,8 @@ void ReferencePath::ClothoidExtendedRefPoints(
   // 计算曲率半径变化率
   double curv_rate = (curvature - target_curv) / extend_length;
   // 获取最后一个点的信息
-  double extend_pt_x = smooth_output_.points_x.back();
-  double extend_pt_y = smooth_output_.points_y.back();
+  double extend_pt_x = smoothed_path_points.back().x();
+  double extend_pt_y = smoothed_path_points.back().y();
   double extend_pt_theta = std::atan2(dy2, dx2);
   double extend_pt_curv = curvature;
   // 使用clothoid积分生成延长点
@@ -1532,46 +1616,9 @@ void ReferencePath::ClothoidExtendedRefPoints(
     double avg_theta = 0.5 * (last_theta + extend_pt_theta);
     extend_pt_x += std::cos(avg_theta) * ds;
     extend_pt_y += std::sin(avg_theta) * ds;
-    smooth_output_.points_x.emplace_back(extend_pt_x);
-    smooth_output_.points_y.emplace_back(extend_pt_y);
-  }
-}
-
-bool ReferencePath::GenerateDenseRefPathPoints(
-    const double behind_partition_length,
-    const pnc::mathlib::spline &x_s_spline,
-    const pnc::mathlib::spline &y_s_spline,
-    std::vector<planning_math::PathPoint> &smoothed_path_points) {
-  smoothed_path_points.reserve(refined_ref_path_points_.size() + 1);
-  BackwardExtendedRefPoints(
-      behind_partition_length, x_s_spline, y_s_spline, smoothed_path_points);
-  for (double pt_s = 0; pt_s < smooth_output_.points_s.back() + sampling_step_; pt_s += sampling_step_) {
-    if (pt_s > smooth_output_.points_s.back()) {
-      pt_s = smooth_output_.points_s.back() + 1e-2;
-    }
-    auto pt =
-        planning_math::PathPoint(smooth_output_.x_s_spline(pt_s),
-                                 smooth_output_.y_s_spline(pt_s));
+    auto pt = planning_math::PathPoint(extend_pt_x, extend_pt_y);
     smoothed_path_points.emplace_back(std::move(pt));
   }
-  return true;
-}
-
-bool ReferencePath::BackwardExtendedRefPoints(
-    const double behind_partition_length,
-    const pnc::mathlib::spline &x_s_spline,
-    const pnc::mathlib::spline &y_s_spline,
-    std::vector<planning_math::PathPoint> &smoothed_path_points) {
-  if (behind_partition_length > 1e-3) {
-    for (double pt_s = 0.; pt_s < behind_partition_length - 0.5 * sampling_step_; pt_s += sampling_step_) {
-      double pt_x = x_s_spline(pt_s);
-      double pt_y = y_s_spline(pt_s);
-      auto pt =
-          planning_math::PathPoint(pt_x, pt_y);
-      smoothed_path_points.emplace_back(std::move(pt));
-    }
-  }
-  return true;
 }
 
 bool ReferencePath::UpdateReferencePathInfo(
@@ -1584,7 +1631,7 @@ bool ReferencePath::UpdateReferencePathInfo(
   std::shared_ptr<planning_math::KDPath> smoothed_frenet_coord =
       std::make_shared<planning_math::KDPath>(std::move(smoothed_path_points));
   const auto &frenet_path_points = smoothed_frenet_coord->path_points();
-  ReferencePathPoint last_ref_pt;
+  ReferencePathPoint last_ref_pt = refined_ref_path_points_.front();
   for (const auto pt : frenet_path_points) {
     ReferencePathPoint ref_pt;
     ref_pt.path_point.set_x(pt.x());
@@ -1614,9 +1661,6 @@ bool ReferencePath::UpdateReferencePathInfo(
         ref_pt.type = raw_pt.type;
         ref_pt.is_in_intersection = raw_pt.is_in_intersection;
       } else {
-        if (smoothed_ref_path.empty()) {
-          continue;
-        }
         ref_pt.path_point.set_z(last_ref_pt.path_point.z());
         ref_pt.max_velocity = last_ref_pt.max_velocity;
         ref_pt.min_velocity = last_ref_pt.min_velocity;
@@ -1632,9 +1676,24 @@ bool ReferencePath::UpdateReferencePathInfo(
         ref_pt.type = last_ref_pt.type;
         ref_pt.is_in_intersection = last_ref_pt.is_in_intersection;
       }
-      last_ref_pt = ref_pt;
-      smoothed_ref_path.emplace_back(std::move(ref_pt));
+    } else {
+      ref_pt.path_point.set_z(last_ref_pt.path_point.z());
+      ref_pt.max_velocity = last_ref_pt.max_velocity;
+      ref_pt.min_velocity = last_ref_pt.min_velocity;
+      ref_pt.lane_width = last_ref_pt.lane_width;
+      ref_pt.distance_to_left_lane_border = last_ref_pt.distance_to_left_lane_border;
+      ref_pt.distance_to_right_lane_border = last_ref_pt.distance_to_right_lane_border;
+      ref_pt.distance_to_left_road_border = last_ref_pt.distance_to_left_road_border;
+      ref_pt.distance_to_right_road_border = last_ref_pt.distance_to_right_road_border;
+      ref_pt.left_lane_border_type = last_ref_pt.left_lane_border_type;
+      ref_pt.right_lane_border_type = last_ref_pt.right_lane_border_type;
+      ref_pt.left_road_border_type = last_ref_pt.left_road_border_type;
+      ref_pt.right_road_border_type = last_ref_pt.right_road_border_type;
+      ref_pt.type = last_ref_pt.type;
+      ref_pt.is_in_intersection = last_ref_pt.is_in_intersection;
     }
+    last_ref_pt = ref_pt;
+    smoothed_ref_path.emplace_back(std::move(ref_pt));
   }
   frenet_coord_ = std::move(smoothed_frenet_coord);
   refined_ref_path_points_.clear();
