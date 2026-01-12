@@ -132,8 +132,8 @@ void LongRefPathDecider::UpdateLonRefPath() {
         speed_planning_config_.enable_speed_adjust &&
         start_stop_decider_output.ego_start_stop_info().state() !=
             common::StartStopInfo::STOP) {
-      lon_j_bound.lower = -1.0;
-      lon_j_bound.upper = 1.0;
+      lon_j_bound.lower = -2.5;
+      lon_j_bound.upper = 3.0;
     } else {
       lon_j_bound.lower = bound_maker_->jerk_lower_bound(t);
       lon_j_bound.upper = bound_maker_->jerk_upper_bound(t);
@@ -152,6 +152,8 @@ void LongRefPathDecider::UpdateLonRefPath() {
             lane_change_info.st_search_vec[i];
         lon_behavior_output_.s_refs[i].first =
             lane_change_info.st_search_vec[i];
+        lon_behavior_output_.ds_refs[i].first =
+            lane_change_info.v_search_vec[i];
       }
       ILOG_DEBUG << "use search path in lc wait!";
     } else {
@@ -175,6 +177,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
           ego_trajs_future[i].s - ego_trajs_future_init_point_s;
       lon_behavior_output_.s_refs[i].first =
           ego_trajs_future[i].s - ego_trajs_future_init_point_s;
+      lon_behavior_output_.ds_refs[i].first = ego_trajs_future[i].v;
     }
   }
 }
