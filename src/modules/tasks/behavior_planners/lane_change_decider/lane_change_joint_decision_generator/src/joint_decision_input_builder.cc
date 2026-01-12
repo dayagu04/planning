@@ -200,22 +200,19 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   const double v0 = last_speed_limit;
   comfort_params_.v0 = v0;
 
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
+  // const auto& lane_change_decider_output =
+  //     session_->planning_context().lane_change_decider_output();
+  // const int front_agent_node_id =
+  //     lane_change_decider_output.lc_gap_info.front_node_id;
   const int front_agent_node_id =
-      lane_change_decider_output.lc_gap_info.front_node_id;
-
+      lc_info.gap_front_agent_id;
   const agent::Agent* lead_one_agent = nullptr;
   std::vector<trajectory::TrajectoryPoint> lead_trajectory;
 
   if (front_agent_node_id != -1) {
-    const auto front_agent_node =
-        session_->environmental_model().get_dynamic_world()->GetNode(
+    lead_one_agent =
+        session_->environmental_model().get_agent_manager()->GetAgent(
             front_agent_node_id);
-    if (front_agent_node != nullptr) {
-      lead_one_agent =
-          session_->environmental_model().get_agent_manager()->GetAgent(
-              front_agent_node->node_agent_id());
       if (lead_one_agent != nullptr) {
         const auto& primary_trajectories =
             lead_one_agent->trajectories_used_by_st_graph();
@@ -227,7 +224,6 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
             !selected_trajectories.front().empty()) {
           lead_trajectory = selected_trajectories.front();
         }
-      }
     }
   }
 

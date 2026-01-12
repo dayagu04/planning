@@ -118,6 +118,12 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::SHARP_CURVATURE:
       kinematic_param = config_.sharp_curvature_kinematic_param;
       break;
+    case SpeedLimitType::ROAD_BOUNDARY:
+      kinematic_param = config_.kappa_kinematic_param;
+      break;
+      case SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL:
+      kinematic_param = config_.sharp_curvature_kinematic_param;
+      break;
     case SpeedLimitType::CRUISE:
       break;
     case SpeedLimitType::NONE:
