@@ -3135,15 +3135,29 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   
   // Ego state manager
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  if (ego_state_mgr == nullptr) {
+    return;
+  }
   
   // Road boundary
-  const auto &road_boundary = environmental_model.get_virtual_lane_manager()->GetRoadboundary();
+  const auto virtual_lane_manager = environmental_model.get_virtual_lane_manager();
+  if (virtual_lane_manager == nullptr) {
+    return;
+  }
+  const auto &road_boundary = virtual_lane_manager->GetRoadboundary();
   
   // Planned path
   const auto &planned_kd_path = session_->planning_context().motion_planner_output().lateral_path_coord;
+  if (planned_kd_path == nullptr) {
+    return;
+  }
   
   // Vehicle parameter
-  const auto &vehicle_param = VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto vehicle_config_instance = VehicleConfigurationContext::Instance();
+  if (vehicle_config_instance == nullptr) {
+    return;
+  }
+  const auto &vehicle_param = vehicle_config_instance->get_vehicle_param();
   
   // Function state machine info
   const auto &function_state_machine_info =
@@ -3152,7 +3166,11 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
       function_state_machine_info.pilot_req.acc_curise_real_spd;
   
   // Route info
-  const auto &route_info_output = environmental_model.get_route_info()->get_route_info_output();
+  const auto route_info = environmental_model.get_route_info();
+  if (route_info == nullptr) {
+    return;
+  }
+  const auto &route_info_output = route_info->get_route_info_output();
   
   // Lane change decider output
   const auto &lane_change_decider_output = session_->planning_context().lane_change_decider_output();
@@ -3361,7 +3379,9 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
     right_front_corner_points.push_back(right_front_point);
   }
   
-  if (left_front_corner_points.empty() || right_front_corner_points.empty()) {
+  // Check minimum path point size requirement for KDPath construction
+  if (left_front_corner_points.size() < planning_math::KDPath::kKDPathMinPathPointSize ||
+      right_front_corner_points.size() < planning_math::KDPath::kKDPathMinPathPointSize) {
     return;
   }
   
@@ -3731,7 +3751,9 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
       curve_right_front_corner_points.push_back(right_front_point);
     }
     
-    if (curve_left_front_corner_points.empty() || curve_right_front_corner_points.empty()) {
+    // Check minimum path point size requirement for KDPath construction
+    if (curve_left_front_corner_points.size() < planning_math::KDPath::kKDPathMinPathPointSize ||
+        curve_right_front_corner_points.size() < planning_math::KDPath::kKDPathMinPathPointSize) {
       curve_road_boundary_left_confirmed_gear_ = -1;
       curve_road_boundary_right_confirmed_gear_ = -1;
       curve_road_boundary_left_confirmation_frame_count_ = 0;
