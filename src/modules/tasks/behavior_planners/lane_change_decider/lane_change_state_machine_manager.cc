@@ -46,7 +46,7 @@ constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
 constexpr std::array<double, 3> fp_for_large_car{6.0, 12.0, 30.0};
 constexpr std::array<double, 3> buffer_for_large_car{3.0, 6, 20.0};
-constexpr double kMaxReachedTime = 100.0;
+constexpr double kMaxReachedTime = 10.0;
 
 const std::unordered_set<agent::AgentType> FacilityTypes = {
     agent::AgentType::TRAFFIC_CONE, agent::AgentType::TRAFFIC_BARREL,
@@ -1307,7 +1307,18 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.is_ego_on_leftmost_lane = is_ego_on_leftmost_lane_;
   lane_change_decider_output.is_ego_on_rightmost_lane =
       is_ego_on_rightmost_lane_;
-
+  if (target_lane_front_node_) {
+    lane_change_stage_info_.lc_gap_info.front_node_id =
+            target_lane_front_node_->node_id();
+  } else {
+    lane_change_stage_info_.lc_gap_info.front_node_id = -1;
+  }
+  if (target_lane_rear_node_) {
+    lane_change_stage_info_.lc_gap_info.rear_node_id =
+        target_lane_rear_node_->node_id();
+  } else {
+    lane_change_stage_info_.lc_gap_info.rear_node_id = -1;
+  }
   lane_change_decider_output.lc_gap_info.front_node_id =
       lane_change_stage_info_.lc_gap_info.front_node_id;
   lane_change_decider_output.lc_gap_info.rear_node_id =
@@ -2385,10 +2396,14 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
   const auto& target_lane_nodes =
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
-  double target_rear_s = -200.0; // 后车车头位置
+  double target_rear_s = - std::numeric_limits<double>::infinity(); // 后车车头位置
   int64_t target_rear_node_id = planning_data::kInvalidId;
       //横向运动信息
   const auto& obstacles_map = ref_path->get_obstacles_map();
+  double urgent_rear_gap = std::numeric_limits<double>::infinity();
+  double urgent_reached_time = kMaxReachedTime;
+  bool has_target = false;
+  bool has_near_rear = false;
   for (const auto* target_lane_node : target_lane_nodes) {
     if(target_lane_node == nullptr) {
       continue;
@@ -2473,10 +2488,66 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     if (s_end < s_start) {
       continue;
     }  // 小心太后方的车可能 frenet转化后堆在一起
-    if (agent_s_end > target_rear_s) {
-      target_rear_node_id = target_lane_node->node_id();
-      target_rear_s = agent_s;  // 选择最靠前的
-    }
+    // if (agent_s_end > target_rear_s) {
+    //   target_rear_node_id = target_lane_node->node_id();
+    //   target_rear_s = agent_s;  // 选择最靠前的
+    // }
+    double rear_risk_dis = target_lane_node->node_speed() * 0.5 + 2.0;
+    double rear_gap = std::max(0.0, ego_sl_bd.s_start - agent_s_end);
+    bool is_rear_risk = rear_gap < rear_risk_dis;
+    double rear_faster_vel =
+        target_lane_node->node_speed() - ego_sl_state.velocity_s();
+    double valid_rel_vel = std::max(rear_faster_vel, kEps);
+    double rear_reached_time =
+        rear_faster_vel > 0.0 ? rear_gap / valid_rel_vel : kMaxReachedTime;
+    rear_reached_time = rear_gap < kEps ? 0.0 : rear_reached_time;
+    rear_reached_time = std::min(rear_reached_time, kMaxReachedTime);
+    if (is_rear_risk) {
+      // ===== 近距离区：绝对最高优先级 =====
+      if (!has_near_rear || agent_s_end > target_rear_s) {
+        has_near_rear = true;
+        has_target = true;
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = rear_reached_time;
+      }
+    } else if (!has_near_rear) {
+      // ===== 非近距离区，只在尚未命中近距离时参与 =====
+      if (!has_target) {
+        // 第一个非近距离目标
+        has_target = true;
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = rear_reached_time;
+      } else if (rear_reached_time < kMaxReachedTime &&
+                 urgent_reached_time < kMaxReachedTime) {
+        // 追击时间比较
+        if (rear_reached_time < urgent_reached_time) {
+          target_rear_node_id = target_lane_node->node_id();
+          target_rear_s = agent_s_end;
+          urgent_rear_gap = rear_gap;
+          urgent_reached_time = rear_reached_time;
+        }
+      } else if (rear_reached_time < kMaxReachedTime &&
+                 urgent_reached_time >= kMaxReachedTime) {
+        // 有效追击时间优先
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = rear_reached_time;
+      } else if (rear_reached_time >= kMaxReachedTime &&
+                 urgent_reached_time >= kMaxReachedTime) {
+        // 都无追击意义，回退距离
+        if (agent_s_end > target_rear_s) {
+          target_rear_node_id = target_lane_node->node_id();
+          target_rear_s = agent_s_end;
+          urgent_rear_gap = rear_gap;
+          urgent_reached_time = rear_reached_time;
+        }
+      }
+    }    
   }
   target_lane_rear_node_ = dynamic_world->GetNode(target_rear_node_id);
 }
@@ -4135,9 +4206,12 @@ bool LaneChangeStateMachineManager::
     beyond_lane_time = std::max(beyond_lane_time, 0.0);
     if (is_front_agent) {
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
-      double ego_brake = 2.5;
-      box_longitudinal_buff =
-          (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
+      //保护大差速
+      double ego_brake = 2.0;
+      double ego_faster_buff = (- rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
+      //保护高速恐慌感
+      box_longitudinal_buff = std::max(ego_faster_buff, 
+                ego_trajs_future_[i].v * lc_safety_check_config_.faster_rear_delay_time);
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
@@ -4146,7 +4220,7 @@ bool LaneChangeStateMachineManager::
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
       if (is_executing) {
-        box_longitudinal_buff = std::min(2.0, box_longitudinal_buff);
+        box_longitudinal_buff = lc_safety_check_config_.exe_ttc_ratio * box_longitudinal_buff;
       }
       if(is_front_reverse){
         double reverse_check_time = 4.0; //默认基准变道时间
@@ -4157,12 +4231,16 @@ bool LaneChangeStateMachineManager::
       // 后车参考安全距离
       double agent_kph = agent_traj[0].v * 3.6;
       double dis_buff = interp(agent_kph, xp, fp);
+      double rear_comfort_decel = lc_safety_check_config_.rear_comfort_decel;
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
+        rear_comfort_decel = 0.3;
       }
-      if(agent_traj[0].v > ego_trajs_future_[0].v + 1.0){ // 后车减速让行需要反应时间
+      double delta_v0 = std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
+      if(delta_v0 > 1.0){ // 后车减速让行需要反应时间, 以及后车减速距离
         dis_buff += agent_traj[0].v *
-                    lc_safety_check_config_.faster_rear_delay_time;
+                    lc_safety_check_config_.faster_rear_delay_time 
+                    + delta_v0 * delta_v0 / (2 * rear_comfort_decel);
       }
       // 预测轨迹点车速对应ttc
       double pred_ttc =
@@ -4953,10 +5031,40 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   //         -(lat_error + std::abs(fix_ref_path->get_frenet_ego_state().l()));
   //   }
   // }
+  //jerk约束低速基于steer rate
+  double vel = fix_ref_path->get_frenet_ego_state().velocity();
+  const auto &vehicle_param =
+  VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double curv_factor = 1 / std::max(vehicle_param.wheel_base, 1e-6);
+  const double kv2 = curv_factor * vel * vel;
+  double steer_ratio = vehicle_param.steer_ratio;
+  double max_steer_angle = vehicle_param.max_steer_angle;  // rad
+  double max_steer_angle_rate_lc = 
+    std::min(vehicle_param.max_steer_angle_rate, 
+             lc_safety_check_config_.hold_steer_angle_rate_limit_deg / 57.3);
+  double max_wheel_angle_rate_lc = max_steer_angle_rate_lc / steer_ratio;
+  double steer_limit_jerk = max_wheel_angle_rate_lc * kv2;
+  // 正常行驶基于横向差值
+  double jerk_bound = planning::interp(vel, 
+      lc_safety_check_config_.hold_state_vel_jerk_map.vel_table, 
+      lc_safety_check_config_.hold_state_vel_jerk_map.jerk_table);
+  double limit_jerk_hold = std::min(steer_limit_jerk, jerk_bound);
+  //初始状态
+  double vy = fix_ref_path->get_frenet_ego_state().velocity_l();
+  const auto& ego_state_manager = session_->environmental_model().get_ego_state_manager();
+  if (ego_state_manager == nullptr) {
+    return lc_hold_state_lat_offset;
+  }
+  double ego_steer_angle = ego_state_manager->ego_steer_angle();
+  double ego_s = fix_ref_path->get_frenet_ego_state().s();
+  double lat_acc = ego_steer_angle * kv2 / steer_ratio;
+  double inertial_distance = ComputeInertialLatOffset(vy, lat_acc, limit_jerk_hold);
+  //限幅
+  inertial_distance = std::max(std::min(inertial_distance, half_fix_lane_width), 0.0);
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() + 0.1;
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() + inertial_distance;
   } else {
-    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() - 0.1;
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() - inertial_distance;
   }
   return lc_hold_state_lat_offset;
 }
@@ -5760,7 +5868,26 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
                  SPLIT_LEFT) {
     return RAMP_ON_LEFT;
   }
-
   return RAMP_NONE;
+}
+double LaneChangeStateMachineManager::ComputeInertialLatOffset(double v_y0, double a_y0, double j_max) const {
+  v_y0 = std::fabs(v_y0);
+  a_y0 = std::fabs(a_y0);
+  j_max = std::fabs(j_max);
+
+  if (j_max < kEps) {
+      return 0.0;
+  }
+
+  v_y0 = std::max(0.0, v_y0);
+  a_y0 = std::max(0.0, a_y0);
+
+  if (v_y0 < kEps && a_y0 < kEps) {
+      return 0.0;
+  }
+
+  return
+      (v_y0 * a_y0) / j_max +
+      (a_y0 * a_y0 * a_y0) / (3.0 * j_max * j_max);
 }
 }  // namespace planning

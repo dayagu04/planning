@@ -1627,8 +1627,10 @@
     "exe_rear_speed_ratio": 1.6,
     "exe_rear_distance_ratio": 0.8,
     "faster_rear_delay_time": 0.3,
+    "rear_comfort_decel": 0.8,
     "lat_offset_buffer": 0.30,
     "target_lane_side_cut_in_check_time": 1.51,
+    "hold_steer_angle_rate_limit_deg": 75.0,
     "diff_speed_init_ttc_map": {
       "diff_kph_table": [0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0],
       "ttc_table":      [0.8, 1.8,  2.5, 4.0,  5.0,  7.0,  7.5,  8.5,  10.0]
@@ -1636,6 +1638,10 @@
     "rear_vehicle_speed_min_space_map": {
       "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
       "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  7.0,   8.5]
+    },
+    "hold_state_vel_jerk_map": {
+      "vel_table":  [4.167, 8.333, 16.667, 25.0],
+      "jerk_table": [1.2, 1.5, 1.4, 1.0]
     }
   },
   "hmi_decider": {
