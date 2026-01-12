@@ -88,8 +88,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       lane_borrow_config.enable_lane_borrow_deciderV2;
 
   hmi_decider_=
-      std::make_unique<HMIDecider>(config_builder, session);
-      
+      std::make_unique<SCCHMIDecider>(config_builder, session);
+
   lat_lon_joint_planner_decider_ =
       std::make_unique<LatLonJointPlannerDecider>(config_builder, session);
 }
