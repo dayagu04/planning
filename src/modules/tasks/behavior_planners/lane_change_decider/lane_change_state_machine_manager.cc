@@ -5051,7 +5051,11 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   double limit_jerk_hold = std::min(steer_limit_jerk, jerk_bound);
   //初始状态
   double vy = fix_ref_path->get_frenet_ego_state().velocity_l();
-  double ego_steer_angle = session_->environmental_model().get_ego_state_manager()->ego_steer_angle();
+  const auto& ego_state_manager = session_->environmental_model().get_ego_state_manager();
+  if (ego_state_manager == nullptr) {
+    return lc_hold_state_lat_offset;
+  }
+  double ego_steer_angle = ego_state_manager->ego_steer_angle();
   double ego_s = fix_ref_path->get_frenet_ego_state().s();
   double lat_acc = ego_steer_angle * kv2 / steer_ratio;
   double inertial_distance = ComputeInertialLatOffset(vy, lat_acc, limit_jerk_hold);
