@@ -9,6 +9,8 @@ NsaTaskPipeline::NsaTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<LaneChangeDecider>(config_builder, session);
   lateral_obstacle_decider_ =
       std::make_unique<HppLateralObstacleDecider>(config_builder, session);
+  narrow_space_decider_ =
+      std::make_unique<NarrowSpaceDecider>(config_builder, session);
   hpp_general_lateral_decider_ =
       std::make_unique<HppGeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
@@ -39,45 +41,53 @@ bool NsaTaskPipeline::Run() {
   auto time3 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LateralObstacleDeciderTime", time3 - time2);
 
+  ok = narrow_space_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(narrow_space_decider_->Name());
+    return false;
+  }
+  auto time4 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("LateralObstacleDeciderTime", time4 - time3);
+
   ok = hpp_general_lateral_decider_->Execute();
   if (!ok) {
     AddErrorInfo(hpp_general_lateral_decider_->Name());
     return false;
   }
-  auto time4 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("HppGeneralLateralDeciderTime", time4 - time3);
+  auto time5 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("HppGeneralLateralDeciderTime", time5 - time4);
 
   ok = lateral_motion_planner_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_motion_planner_->Name());
     return false;
   }
-  auto time5 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("LateralMotionPlannerTime", time5 - time4);
+  auto time6 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("LateralMotionPlannerTime", time6 - time5);
 
   ok = general_longitudinal_decider->Execute();
   if (!ok) {
     AddErrorInfo(general_longitudinal_decider->Name());
     return false;
   }
-  auto time6 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("GeneralLongitudinalDeciderTime", time6 - time5);
+  auto time7 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("GeneralLongitudinalDeciderTime", time7 - time6);
 
   ok = longitudinal_motion_planner_->Execute();
   if (!ok) {
     AddErrorInfo(longitudinal_motion_planner_->Name());
     return false;
   }
-  auto time7 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("LongitudinalMotionPlannerTime", time7 - time6);
+  auto time8 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("LongitudinalMotionPlannerTime", time8 - time7);
 
   ok = result_trajectory_generator_->Execute();
   if (!ok) {
     AddErrorInfo(result_trajectory_generator_->Name());
     return false;
   }
-  auto time8 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("ResultTrajectoryGeneratorTime", time8 - time7);
+  auto time9 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ResultTrajectoryGeneratorTime", time9 - time8);
 
   return true;
 }

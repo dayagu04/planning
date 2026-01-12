@@ -794,6 +794,10 @@ class LoadRosbag:
                          "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
+      # nsa
+      json_value_list += ["narrow_space_state", "narrow_space_left_rear_x","narrow_space_left_rear_y","narrow_space_right_rear_x", "narrow_space_right_rear_y", \
+                          "narrow_space_left_front_x","narrow_space_left_front_y","narrow_space_right_front_x", "narrow_space_right_front_y"]
+      #
       json_vector_list += ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
                            "road_right_line_all_dx_vec_","road_right_line_all_dy_vec_",
                            "road_left_roadedge_all_dx_vec_","road_left_roadedge_all_dy_vec_",
@@ -984,7 +988,7 @@ class LoadRosbag:
         self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
         # if msg.current_state > 13 and msg.current_state < 19:
         #   scene_type = 'PARKING_APA'
-        if msg.current_state >= 4 and msg.current_state <= 12:
+        if msg.current_state > 4 and msg.current_state <= 12:
           scene_type = 'HIGHWAY'
         elif msg.current_state >= 50 and msg.current_state <= 62:
           scene_type = 'HPP'
