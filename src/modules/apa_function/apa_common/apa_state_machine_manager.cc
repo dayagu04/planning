@@ -149,12 +149,24 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       } else {
         if (task_direction_ == ApaTaskDirection::APA_TASK_IN) {
           if (running_mode_ == ApaRunningMode::RUNNING_SAPA) {
-            if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeIdx]
-                     .is_turn_corner) {
-              state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
-            } else {
-              state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+            for (const auto &slot : parking_fusion_info.parking_fusion_slot_lists)
+            {
+              if (slot.id == FREESLOTID)
+              {
+                if (slot.is_turn_corner)
+                {
+                  state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+                }else{
+                  state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+                }
+              }
             }
+            // if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeIdx]
+            //          .is_turn_corner) {
+            //   state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+            // } else {
+            //   state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+            // }
           } else {
             if (parking_in_direction == iflyauto::BACK_END_PARKING_DIRECTION) {
               state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;

@@ -71,9 +71,12 @@ void ApaSlotManager::Update(
   for (size_t i = 0; i < slot_size; ++i) {
     const iflyauto::ParkingFusionSlot& fusion_slot =
         local_view->parking_fusion_info.parking_fusion_slot_lists[i];
-
+    if (fusion_slot.id != FREESLOTID)
+    {
+      continue;
+    }
     ApaSlot slot(fusion_slot);
-    if (is_sapa_mode && slot.GetId() == kSlotFreeId) {
+    if (is_sapa_mode && slot.GetId() == FREESLOTID) {
       slot.SetSourceType(SlotSourceType::SELF_DEFINE);
     }
 
