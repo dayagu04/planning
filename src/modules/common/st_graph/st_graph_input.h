@@ -21,7 +21,6 @@ struct LaneFrontRearAgents {
   int32_t target_front_agent_id = -1;
   int32_t target_rear_agent_id = -1;
   int32_t current_front_agent_id = -1;
-  int32_t current_rear_agent_id = -1;
 };
 
 class StGraphInput {
@@ -122,8 +121,6 @@ class StGraphInput {
 
   const agent::Agent* front_agent_of_origin() const;
 
-  const agent::Agent* rear_agent_of_origin() const;
-
   double front_agent_lower_s_safety_buffer_for_lane_change() const;
 
   double large_agent_expand_param_for_consistency() const;
@@ -184,7 +181,6 @@ class StGraphInput {
   const agent::Agent* front_agent_of_target_ = nullptr;
   const agent::Agent* rear_agent_of_target_ = nullptr;
   const agent::Agent* front_agent_of_origin_ = nullptr;
-  const agent::Agent* rear_agent_of_origin_ = nullptr;
   // The path border that is expanded by veh_width
   std::shared_ptr<PathBorderQuerier> path_border_querier_ = nullptr;
   std::unordered_map<int32_t, bool> is_parallel_lane_map_;
