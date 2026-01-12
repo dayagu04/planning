@@ -4748,6 +4748,31 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
         }
       }
     }
+    // 由于此处采用link车道数不准确，为保证能顺利通行，移除计算出的部分车道
+    if (is_split_left) {
+      if (before_excr_feasible_lane.size() > 1) {
+        before_excr_feasible_lane.pop_back();
+      }
+      if (on_excr_feasible_lane.size() > 1) {
+        on_excr_feasible_lane.pop_back();
+      }
+    }
+    if (is_split_middle) {
+      if (before_excr_feasible_lane.size() > 1) {
+        before_excr_feasible_lane.erase(before_excr_feasible_lane.begin());
+      }
+      if (on_excr_feasible_lane.size() > 1) {
+        on_excr_feasible_lane.erase(on_excr_feasible_lane.begin());
+      }
+    }
+    if (is_split_right) {
+      if (before_excr_feasible_lane.size() > 1) {
+        before_excr_feasible_lane.erase(before_excr_feasible_lane.begin());
+      }
+      if (on_excr_feasible_lane.size() > 1) {
+        on_excr_feasible_lane.erase(on_excr_feasible_lane.begin());
+      }
+    }
   }
   for (int i = 0; i < successor_exclnum; ++i) {
     succerssor_excr_feasible_lane.emplace_back(i + 1);
