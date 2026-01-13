@@ -40,6 +40,13 @@ bool SplitSelectHmiDecider::Execute() {
   if (!virtual_lane_manager->get_enable_output_split_select_classical_chinese()) {
     return true;
   }
+  // 过滤自车处于路口中的状态
+  UpdateIntersection();
+  if (ego_in_intersection_state_) {
+    ILOG_DEBUG << "SplitSelectHmiDecider::ego not in intersection!";
+    return true;
+  }
+  
   if (curr_state == kLaneKeeping || curr_state == kLaneChangePropose) {
     if (split_select_direction == SPLIT_SELECT_LEFT_LANE) {
       ad_info.split_select_direction = iflyauto::SplitSelectDirection::SPLIT_SELECT_TO_LEFT;
@@ -51,6 +58,34 @@ bool SplitSelectHmiDecider::Execute() {
   }
 
   return true;
+}
+
+void SplitSelectHmiDecider::UpdateIntersection() {
+  const auto &tfl_decider = session_->mutable_planning_context()
+                                ->mutable_traffic_light_decider_output();
+  const auto intersection_state = session_->environmental_model()
+                                      .get_virtual_lane_manager()
+                                      ->GetIntersectionState();
+  const double distance_to_stopline = session_->environmental_model()
+                                          .get_virtual_lane_manager()
+                                          ->GetEgoDistanceToStopline();
+  const double distance_to_crosswalk = session_->environmental_model()
+                                           .get_virtual_lane_manager()
+                                           ->GetEgoDistanceToCrosswalk();
+  bool current_intersection_state =
+      intersection_state == common::IntersectionState::IN_INTERSECTION ||
+      distance_to_stopline <= 15.0;
+  bool is_small_intersection = false;
+  // bool is_small_intersection = tfl_decider.is_small_front_intersection;
+  // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
+  if (current_intersection_state) {
+    intersection_count_ = 3;
+  } else {
+    intersection_count_ = std::max(intersection_count_ - 1, 0);
+  }
+
+  ego_in_intersection_state_ = intersection_count_ > 0;
+  return;
 }
 
 }

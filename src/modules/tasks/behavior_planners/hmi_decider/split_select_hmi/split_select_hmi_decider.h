@@ -16,8 +16,12 @@ class SplitSelectHmiDecider {
  private:
   void UpdateHMIInfo();
 
+  void UpdateIntersection();
+  
  private:
   framework::Session* session_ = nullptr;
+  bool ego_in_intersection_state_ = false;
+  int intersection_count_ = 0;
 };
 
 }  // namespace planning
