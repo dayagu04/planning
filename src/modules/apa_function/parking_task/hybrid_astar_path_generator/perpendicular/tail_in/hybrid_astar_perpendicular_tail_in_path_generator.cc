@@ -1097,7 +1097,9 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       cost.unexpect_gear_cost = gear_change_penalty;
     }
 
-    if (IsSteerOpposite(request_.inital_action_request.ref_steer,
+    if (IsGearSame(request_.inital_action_request.ref_gear,
+                   temp_node.GetCurGear()) &&
+        IsSteerOpposite(request_.inital_action_request.ref_steer,
                         temp_node.GetCurKappa())) {
       cost.unexpect_steer_cost = kappa_change_penalty;
     }
