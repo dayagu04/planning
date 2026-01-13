@@ -43,7 +43,8 @@ QuinticPolynomial::QuinticPolynomial(const QuinticPolyState& start,
   Eigen::Vector3d X = A.inverse() * B;
 
   coefficients_ = {start.s, start.v, 0.5 * start.a, X(0), X(1), X(2)};
-  // const double delta_s = end.s - (start.s + start.v * T + 0.5 * start.a * T2);
+  // const double delta_s = end.s - (start.s + start.v * T + 0.5 * start.a *
+  // T2);
 
   // const double delta_v = end.v - (start.v + start.a * T);
 
@@ -52,12 +53,12 @@ QuinticPolynomial::QuinticPolynomial(const QuinticPolyState& start,
   // const double c1 = start.v;
   // const double c2 = start.a / 2.0;
 
-  // const double c3 = (10.0 * delta_s) / T3 - (4.0 * delta_v) / T2 + start.a / (2.0 * T);
-  // const double c4 = (-15.0 * delta_s) / T4 + (7.0 * delta_v) / T3 - start.a / T2;
-  // const double c5 = (6.0 * delta_s) / T5 - (3.0 * delta_v) / T4 + start.a / (2.0 * T3);
-  // double numerator_c5_s = delta_s;
-  // double denominator_c5_s = (-2.5 * T * T4) + T5;
-  // double c5_val = numerator_c5_s / denominator_c5_s;
+  // const double c3 = (10.0 * delta_s) / T3 - (4.0 * delta_v) / T2 + start.a /
+  // (2.0 * T); const double c4 = (-15.0 * delta_s) / T4 + (7.0 * delta_v) / T3
+  // - start.a / T2; const double c5 = (6.0 * delta_s) / T5 - (3.0 * delta_v) /
+  // T4 + start.a / (2.0 * T3); double numerator_c5_s = delta_s; double
+  // denominator_c5_s = (-2.5 * T * T4) + T5; double c5_val = numerator_c5_s /
+  // denominator_c5_s;
 
   // // 速度约束代入后验证（用于降低浮点误差）
   // double numerator_c5_v = delta_v;

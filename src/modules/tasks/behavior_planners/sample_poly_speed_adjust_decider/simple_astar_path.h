@@ -13,7 +13,7 @@ namespace planning {
 const double MAX_VELOCITY = 30.0;  // 最大速度 (m/s)
 const double MIN_VELOCITY = 0.0;   // 最小速度 (m/s)
 const double MAX_ACCEL = 1.5;      // 最大加速度 (m/s²)
-const double MIN_ACCEL = -2.5;  // 最大减速度（负表示减速）(m/s²)
+const double MIN_ACCEL = -2.5;    // 最大减速度（负表示减速）(m/s²)
 const double TIME_STEP_NEAR = 1;  // 时间步长（分层步长）(s)
 const double TIME_STEP_FAR = 1;   // 时间步长（分层步长）(s)
 const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）(m)

@@ -5,7 +5,7 @@ LongitudinalAStar::LongitudinalAStar(
     const STSampleSpaceBase* sample_space_ptr, double merge_point_s,
     const LeadingAgentInfo& leading_agent_info,
     const StateLimit& state_limit_upper, const StateLimit& state_limit_lower,
-    double front_edge_to_rear_axle, double rear_edge_to_rear_axle,double ego_s)
+    double front_edge_to_rear_axle, double rear_edge_to_rear_axle, double ego_s)
     : start_node_(start_node),
       goal_state_(goal),
       sample_space_ptr_(sample_space_ptr),
@@ -16,12 +16,15 @@ LongitudinalAStar::LongitudinalAStar(
       front_edge_to_rear_axle_(front_edge_to_rear_axle),
       rear_edge_to_rear_axle_(rear_edge_to_rear_axle),
       ego_s_(ego_s) {
+  //       state_limit_lower_.v_max = 120 / 3.6;
+  // state_limit_upper_.v_max = 120 / 3.6;
+  // state_limit_upper_.v_end = 120/3.6;
   CalculateHCost(start_node_);
   PlanTrajectory();
 }
 
 void LongitudinalAStar::PlanTrajectory() {
-  goal_state_.target_s = std::max(goal_state_.target_s, start_node_.v * 3.0);
+  goal_state_.target_s = std::max(goal_state_.target_s, start_node_.v * 4.0);
   // goal_state_.target_s = 1000;
   astar_traj_.clear();
   std::priority_queue<STNode, std::vector<STNode>, std::greater<STNode>> empty;
@@ -36,10 +39,10 @@ void LongitudinalAStar::PlanTrajectory() {
 
   while (!open_list_.empty()) {
     count_++;
-    if(count_ > 250) {
-      std::cout << "警告：A*搜索未收敛！" << std::endl;
-      break;
-    }
+    // if (count_ > 250) {
+    //   std::cout << "警告：A*搜索未收敛！" << std::endl;
+    //   break;
+    // }
     STNode current_node = open_list_.top();
     auto current_node_ptr = std::make_shared<STNode>(current_node);
     open_list_.pop();
@@ -55,7 +58,7 @@ void LongitudinalAStar::PlanTrajectory() {
       std::string child_key = child.getKey();
 
       if (all_list_.find(child_key) != all_list_.end()) {
-        if (child.g_cost >= all_list_[child_key].g_cost) {
+        if (child.f_cost >= all_list_[child_key].f_cost) {
           continue;
         }
       }
@@ -79,7 +82,7 @@ void LongitudinalAStar::PlanTrajectory() {
 
 bool LongitudinalAStar::IsGoalReached(const STNode& node) const {
   double s_diff = node.s - goal_state_.target_s;
-  return (s_diff <= GOAL_TOLERANCE) && (node.t <= goal_state_.max_t) && (s_diff > 0.0);
+  return (s_diff > 0) && (node.t <= goal_state_.max_t);
 }
 
 std::vector<STNode> LongitudinalAStar::GenerateChildren(
@@ -93,12 +96,15 @@ std::vector<STNode> LongitudinalAStar::GenerateChildren(
 
   auto search_range = GetSearchRange(*parent_node);
   // double arrived_s = parent_node->s + parent_node->v * time_step;
-  // std::pair<double,double> search_range = {arrived_s - 0.10, arrived_s + 0.10};
+  // std::pair<double,double> search_range = {arrived_s - 0.10, arrived_s +
+  // 0.10};
   int search_range_index =
       int((search_range.second - search_range.first) / DISTANCE_STEP) + 1;
   for (int i = 0; i <= search_range_index; i++) {
-    double child_s = i != search_range_index ? search_range.first + i * DISTANCE_STEP : search_range.second;
-    if (child_s < 0.0 || child_s > goal_state_.target_s + GOAL_TOLERANCE) {
+    double child_s = i != search_range_index
+                         ? search_range.first + i * DISTANCE_STEP
+                         : search_range.second;
+    if (child_s < 0.0) {
       continue;
     }
     auto node_ptr = std::make_shared<STNode>(child_t, child_s, 0.0, 0.0);
@@ -143,26 +149,30 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
   if (node.s > merge_point_s_) {
     double frenet_node_s = node.s + ego_s_;
     for (auto& interval : state) {
-      if (frenet_node_s < interval.second.s() && frenet_node_s > interval.first.s()) {
+      if (frenet_node_s < interval.second.s() &&
+          frenet_node_s > interval.first.s()) {
         return false;
       } else if (frenet_node_s > interval.second.s()) {
         double s_buffer = 3.5 + 0.3 * interval.second.velocity();
-        double gap =
-            frenet_node_s - interval.second.s() - s_buffer - rear_edge_to_rear_axle_;
+        // double s_buffer = 3.5;
+        double gap = frenet_node_s - interval.second.s() - s_buffer -
+                     rear_edge_to_rear_axle_;
         if (gap < 0.0) {
+          std::cout << "Gap后车碰撞风险: " << node.getKey() << std::endl;
           return false;
         } else {
           double s_buffer_extra = 0.7 * interval.second.velocity();
           node.dis_to_gap_rear_cost =
               gap > s_buffer_extra
                   ? 0.0
-                  : std::exp(gap / std::fmax(s_buffer_extra, kZeroEpsilon));
+                  : std::exp(1- gap / std::fmax(s_buffer_extra, kZeroEpsilon));
         }
       } else {
         double s_buffer = 3.5 + 0.3 * node.v;
-        double gap =
-            interval.first.s() - frenet_node_s - s_buffer - front_edge_to_rear_axle_;
+        double gap = interval.first.s() - frenet_node_s - s_buffer -
+                     front_edge_to_rear_axle_;
         if (gap < 0.0) {
+          std::cout << "Gap前车碰撞风险: " << node.getKey() << std::endl;
           return false;
         } else {
           double s_buffer_extra = 0.7 * node.v;
@@ -170,7 +180,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
               gap > s_buffer_extra
                   ? 0.0
                   : 0.5 *
-                        std::exp(gap / std::fmax(s_buffer_extra, kZeroEpsilon));
+                        std::exp(1 - gap / std::fmax(s_buffer_extra, kZeroEpsilon));
         }
       }
     }
@@ -203,6 +213,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
     double gap =
         leading_agent_s + leading_agent_info_.center_s - node.s - s_buffer;
     if (gap < 0.0) {
+      std::cout << "前车碰撞风险: " << node.getKey() << std::endl;
       return false;
     }
   }
@@ -221,7 +232,15 @@ void LongitudinalAStar::CalculateGCost(const std::shared_ptr<STNode>& parent,
 }
 
 void LongitudinalAStar::CalculateHCost(STNode& node) {
-  double s_h = fabs(node.s - goal_state_.target_s);
+  const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
+  bool is_goal_range = (node.s > goal_state_.target_s) &&
+                       (node.s < goal_state_.target_s + GOAL_TOLERANCE);
+  double s_h =
+      is_goal_range
+          ? 0.0
+          : node.s < goal_state_.target_s
+                ? fabs(node.s - goal_state_.target_s)
+                : fabs(node.s - goal_state_.target_s - GOAL_TOLERANCE) / 3.0;
   double v_h = fabs(node.v - goal_state_.target_v);
   node.h_cost =
       s_h + 0.5 * v_h + node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost;

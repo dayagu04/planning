@@ -136,9 +136,10 @@ bool SamplePolySpeedAdjustDecider::Execute() {
              .is_gap_changeable() ||
         !min_cost_traj_ptr_->is_left_distance_enough()) {
       if (IsForcedMergeScenario()) {
-        if(GenerateAStarTraj()){
+        if (GenerateAStarTraj()) {
           kkkk = astar_traj_ptr_->count_;
-        }else{
+          std::cout << " kkkk : " << kkkk << std::endl;
+        } else {
           astar_traj_ptr_.reset();
         }
       }
@@ -188,7 +189,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     last_ego_cart_point_ = ego_cart_point_;
   }
   std::cout << "evaluate_cost_time : " << evaluate_cost_time.count()
-            << " kkkk : " << kkkk << std::endl;
+            << std::endl;
   LogDebugInfo(sample_cost_time.count(), evaluate_cost_time.count(),
                all_cost_time.count());
   return true;
@@ -1268,8 +1269,9 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
   if (!is_merge_change_ || left_time > 6.0) {
     return false;
   }
-  state_limit_lower_ = {0.0,  0.0, 0.0,  v_adjust_speed_limit_,
-                        -2.0, 1.2, -2.5, 2.5};
+  state_limit_lower_ = {
+      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
+      -2.0, 1.2, -2.5, 2.5};
   UniformJerkCurve jerk_curve(state_limit_lower_, lon_state_, false);
   auto arrived_s = jerk_curve.arrived_s();
   if (arrived_s > distance_to_stop_point_) {
@@ -1360,13 +1362,17 @@ bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);
   STNode start_node(0.0, 0.0, ego_v_, ego_a_);
   state_limit_upper_ = {
-      0.0, v_adjust_speed_limit_, 0.0, v_adjust_speed_limit_, -2.0, 1.2, -2.5,
-      2.5};
-  double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_ ? distance_to_stop_point_ : 0.0;
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
+      -2.0, 1.2,
+      -2.5, 2.5};
+  double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_
+                             ? distance_to_stop_point_
+                             : 0.0;
   astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
-      start_node, goal_state, &st_sample_space_base_, merge_point_s, leading_veh_,
-      state_limit_upper_, state_limit_lower_, front_edge_to_rear_axle_,
-      rear_edge_to_rear_axle_, ego_s_);
+      start_node, goal_state, &st_sample_space_base_, merge_point_s,
+      leading_veh_, state_limit_upper_, state_limit_lower_,
+      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_);
   return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
