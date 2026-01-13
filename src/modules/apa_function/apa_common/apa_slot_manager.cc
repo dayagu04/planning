@@ -20,7 +20,7 @@ namespace apa_planner {
 
 static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
-static const double kMaxEgoSlotAbsoluteDist = 8.68;
+static const double kMaxEgoSlotAbsoluteDist = 6.86;
 static const double kMaxEgoSlotRelativeDist = 3.86;
 static const int kMaxSlotObserveFrameCount = 30;
 
@@ -91,7 +91,7 @@ void ApaSlotManager::Update(
     }
 
     const double dist =
-        (car_mirror_pos - slot.GetOriginCornerCoordGlobal().pt_center).norm();
+        (car_mirror_pos - slot.GetOriginCornerCoordGlobal().pt_01_mid).norm();
 
     dist_id_map_[dist] = slot.GetId();
     slots_map_[slot.GetId()] = slot;
@@ -568,11 +568,7 @@ const bool ApaSlotManager::IsSlotCoarseRelease(ApaSlot& slot) {
   SlotReleaseVoterType release_voter_type = SlotReleaseVoterType::CLEAR;
   if ((slot.slot_type_ == SlotType::PERPENDICULAR ||
        slot.slot_type_ == SlotType::SLANT)) {
-    if (!state_machine_ptr_->IsSAPAMode()) {
-      release_voter_type = IsPerpendicularSlotAndPassageAreaOccupied(slot);
-    } else {
-      release_voter_type = SlotReleaseVoterType::MAXIMUM;
-    }
+    release_voter_type = IsPerpendicularSlotAndPassageAreaOccupied(slot);
   } else if (slot.slot_type_ == SlotType::PARALLEL) {
     release_voter_type = IsParallelSlotAndPassageAreaOccupied(slot);
   }
@@ -632,10 +628,28 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
   const Eigen::Vector2d pt_23_unit_vec =
       slot.origin_corner_coord_global_.pt_23_unit_vec;
 
+  const Eigen::Vector2d pt_01_unit_vec =
+      slot.origin_corner_coord_global_.pt_01_unit_vec;
+
   const Eigen::Vector2d pM23_ego = measure_data_ptr_->GetPos() - pM23;
+  const Eigen::Vector2d pM01_ego = measure_data_ptr_->GetPos() - pM01;
   if (geometry_lib::GetCrossFromTwoVec2d(pt_23_unit_vec, pM23_ego) > 0.0) {
-    ILOG_INFO << "pt_23_unit_vec cross pM23_ego > 0.0, slot id = " << slot.id_;
+    // area 3
+    ILOG_INFO << "Ego pos in area 3 relative to slot (id: " << slot.id_ << ")";
     return SlotReleaseVoterType::CLEAR;
+  } else if (geometry_lib::GetCrossFromTwoVec2d(pt_01_unit_vec, pM01_ego) <
+             0.0) {
+    // area 1
+  } else {
+    // area 2
+    const double heading_err_deg =
+        std::fabs(measure_data_ptr_->GetHeading() - slot.slot_heading_) *
+        kRad2Deg;
+    if (mathlib::IsInBound(heading_err_deg, 30.0, 150.0)) {
+      ILOG_INFO << "Ego pos in area 2 relative to slot (id: " << slot.id_
+                << "), heading error between 30 and 150 degrees";
+      return SlotReleaseVoterType::CLEAR;
+    }
   }
 
   const auto& slot_release_buffer = param.lat_lon_slot_release_buffer;

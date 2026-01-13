@@ -52,6 +52,10 @@ struct SlotCoord {
   Eigen::Vector2d pt_01_unit_vec = Eigen::Vector2d::Zero();
   Eigen::Vector2d pt_23_unit_vec = Eigen::Vector2d::Zero();
   Eigen::Vector2d pt_23mid_01mid_unit_vec = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_02_mid = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_13_mid = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_13mid_02mid_vec = Eigen::Vector2d::Zero();
+  Eigen::Vector2d pt_13mid_02mid_unit_vec = Eigen::Vector2d::Zero();
 
   void CalExtraCoord() {
     pt_center = 0.25 * (pt_1 + pt_0 + pt_2 + pt_3);
@@ -63,6 +67,10 @@ struct SlotCoord {
     pt_01_unit_vec = pt_01_vec.normalized();
     pt_23_unit_vec = pt_23_vec.normalized();
     pt_23mid_01mid_unit_vec = pt_23mid_01mid_vec.normalized();
+    pt_02_mid = (pt_0 + pt_2) * 0.5;
+    pt_13_mid = (pt_1 + pt_3) * 0.5;
+    pt_13mid_02mid_vec = pt_02_mid - pt_13_mid;
+    pt_13mid_02mid_unit_vec = pt_13mid_02mid_vec.normalized();
   }
 
   void Reset() {
@@ -289,6 +297,7 @@ class ApaSlot final {
 
   double slot_length_ = 0.0;
   double slot_width_ = 0.0;
+  double slot_heading_ = 0.0;
 
   SlotType slot_type_ = SlotType::INVALID;
 
@@ -297,7 +306,6 @@ class ApaSlot final {
   Limiter limiter_;
 
   Limiter front_slot_limiter_;
-
 
   SlotReleaseInfo release_info_;
 
