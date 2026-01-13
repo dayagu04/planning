@@ -147,18 +147,25 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   session_->mutable_planning_context()
       ->mutable_lane_change_decider_output()
       .s_search_status = false;
+  auto& v_search_path = session_->mutable_planning_context()
+                            ->mutable_lane_change_decider_output()
+                            .v_search_vec;
 
   if (ok && min_cost_traj_ptr_ != nullptr) {
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
         .s_search_status = true;
     search_path.clear();
+    v_search_path.clear();
     search_path.resize(kPlanningHorizions);
+    v_search_path.resize(kPlanningHorizions);
     for (size_t i = 0; i < kPlanningHorizions; i++) {
       double s =
           min_cost_traj_ptr_->CalcRef(i * kPlanningStep, config_.decay_coffi) -
           ego_s_;
       search_path[i] = std::move(s);
+      v_search_path[i] = min_cost_traj_ptr_->CalcVelRef(i * kPlanningStep,
+                                                        config_.decay_coffi);
     }
 
     last_min_cost_traj_ = SampleQuarticPolynomialCurve(*min_cost_traj_ptr_);
@@ -240,8 +247,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   } else {
     for (size_t i = start_index; i <= count; i++) {
       st_sample_space_base_.GetAvailableGap(
-          i * kEvaluationStep / 0.1,
-          ego_s_ + speed_adjust_range_.second * i * 0.5);
+          i * kEvaluationStep / kTimeResolution,
+          ego_s_ + speed_adjust_range_.second * i * kEvaluationStep);
       for (size_t k = 0; k < sample_trajs_.size(); k++) {
         auto& sample_traj_at_v = sample_trajs_[k];
         for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
@@ -653,9 +660,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       std::fmin(target_lane_objs_flow_vel_, v_adjust_speed_limit_);
   speed_adjust_range_.second =
       !is_merge_change_
-          ? (suggested_v_lower / 1.4) > ego_v_
+          ? (suggested_v_lower / 1.8) > ego_v_
                 ? ego_v_
-                : std::fmax(suggested_v_lower / 1.4,
+                : std::fmax(suggested_v_lower / 1.8,
                             ego_v_ - config_.maximum_speed_adjustment)
           : speed_adjust_range_.second;
   return !agent_info_.empty();
@@ -1093,7 +1100,7 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
   float32 left_unchangeable_distance = 0.0;
   if (lane_change_request_ == 1) {
     const auto& current_lane_line = current_lane->get_left_lane_boundary();
-    float32 compare_point_s = current_lane_line.begin;
+    float32 compare_point_s = 0.0;
     for (int i = 0; i < current_lane_line.type_segments_size; i++) {
       const auto& type_segment = current_lane_line.type_segments[i];
       compare_point_s += type_segment.length;
@@ -1106,17 +1113,18 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
           type_segment.type ==
-              iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
-      if (compare_point_s > 0.0) {
+              iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
+      if (compare_point_s > ego_s_) {
         if (!is_changeable)
-          left_unchangeable_distance = compare_point_s;
+          left_unchangeable_distance = compare_point_s - ego_s_;
         else
           break;
       }
     }
   } else if (lane_change_request_ == 2) {
     const auto& current_lane_line = current_lane->get_right_lane_boundary();
-    float32 compare_point_s = current_lane_line.begin;
+    float32 compare_point_s = 0.0;
     for (int i = 0; i < current_lane_line.type_segments_size; i++) {
       const auto& type_segment = current_lane_line.type_segments[i];
       compare_point_s += type_segment.length;
@@ -1129,10 +1137,11 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
           type_segment.type ==
-              iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
-      if (compare_point_s > 0.0) {
+              iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
+      if (compare_point_s > ego_s_) {
         if (!is_changeable)
-          left_unchangeable_distance = compare_point_s;
+          left_unchangeable_distance = compare_point_s - ego_s_;
         else
           break;
       }
@@ -1145,7 +1154,7 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
 }
 
 void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
-  if(!is_merge_change_){
+  if (!is_merge_change_) {
     return;
   }
   const auto& virtual_lane_mgr =

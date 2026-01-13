@@ -87,6 +87,26 @@ std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
     ret.append("MAP_ON_RAMP");
   } else if (SpeedLimitType::INTERSECTION == type) {
     ret.append("INTERSECTION");
+  } else if (SpeedLimitType::LANE_BORROW == type) {
+    ret.append("LANE_BORROW");
+  } else if (SpeedLimitType::NEAR_TFL == type) {
+    ret.append("NEAR_TFL");
+  } else if (SpeedLimitType::AVOID_AGENT == type) {
+    ret.append("AVOID_AGENT");
+  } else if (SpeedLimitType::DANGEROUS_OBSTACLE == type) {
+    ret.append("DANGEROUS_OBSTACLE");
+  } else if (SpeedLimitType::NEAR_POI == type) {
+    ret.append("NEAR_POI");
+  } else if (SpeedLimitType::NEAR_CONSTRUCTION == type) {
+    ret.append("NEAR_CONSTRUCTION");
+  } else if (SpeedLimitType::ON_CONSTRUCTION == type) {
+    ret.append("ON_CONSTRUCTION");
+  } else if (SpeedLimitType::SHARP_CURVATURE == type) {
+    ret.append("SHARP_CURVATURE");
+  } else if (SpeedLimitType::ROAD_BOUNDARY == type) {
+    ret.append("ROAD_BOUNDARY");
+  } else if (SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL == type) {
+    ret.append("ROAD_BOUNDARY_SHARP_DECEL");
   } else {
     ret.append("type error");
   }

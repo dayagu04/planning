@@ -9,19 +9,21 @@ namespace planning {
 
 void FootPrintCircleModel::Init(const float lat_safe_buffer,
                                 const float lon_safe_buffer,
-                                const float mirror_buffer) {
+                                const float mirror_buffer,
+                                const bool is_chassis_model) {
   UpdateSafeBuffer(mirror_buffer, lat_safe_buffer, lon_safe_buffer,
-                   mirror_buffer);
+                   mirror_buffer, is_chassis_model);
   ILOG_INFO << "footprint init success";
 
   return;
 }
 
-void FootPrintCircleModel::UpdateSafeBuffer(
-    const bool fold_mirror, const float lat_safe_buffer,
-    const float lon_safe_buffer, const float mirror_buffer,
-    const float big_circle_safe_buffer) {
-
+void FootPrintCircleModel::UpdateSafeBuffer(const bool fold_mirror,
+                                            const float lat_safe_buffer,
+                                            const float lon_safe_buffer,
+                                            const float mirror_buffer,
+                                            const float big_circle_safe_buffer,
+                                            const bool is_chassis_model) {
   const std::vector<float> &circle_x =
       fold_mirror ? apa_param.GetParam().fold_mirror_footprint_circle_x
                   : apa_param.GetParam().footprint_circle_x;
@@ -31,6 +33,13 @@ void FootPrintCircleModel::UpdateSafeBuffer(
   const std::vector<float> &circle_r =
       fold_mirror ? apa_param.GetParam().fold_mirror_footprint_circle_r
                   : apa_param.GetParam().footprint_circle_r;
+
+  float offset_x = 0.0f;
+  float offset_y = 0.0f;
+  if (is_chassis_model) {
+    offset_x = 0.25f;
+    offset_y = 0.20f;
+  }
 
   // min_lon_buffer:
   // 1. gear is reverse, car head buffer;
@@ -53,6 +62,18 @@ void FootPrintCircleModel::UpdateSafeBuffer(
 
     local_circles_.circles[local_circles_.size].pos.x = circle_x[i];
     local_circles_.circles[local_circles_.size].pos.y = circle_y[i];
+
+    if (i == 1 || i == 2) {
+      local_circles_.circles[local_circles_.size].pos.x -= offset_x;
+    } else if (i == 4 || i == 5) {
+      local_circles_.circles[local_circles_.size].pos.x += offset_x;
+    }
+
+    if (i == 3) {
+      local_circles_.circles[local_circles_.size].pos.y += offset_y;
+    } else if (i == 6) {
+      local_circles_.circles[local_circles_.size].pos.y -= offset_y;
+    }
 
     // mirror
     if (i == 3 || i == 6) {

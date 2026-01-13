@@ -44,6 +44,7 @@ struct LaneChangeDeciderOutput {
 
   bool s_search_status = false;
   std::vector<double> st_search_vec;
+  std::vector<double> v_search_vec;
 
   CoarsePlanningInfo coarse_planning_info;
   RampDirection dir_turn_signal_road_to_ramp = RAMP_NONE;

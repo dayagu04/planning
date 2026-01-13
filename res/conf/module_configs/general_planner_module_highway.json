@@ -1179,6 +1179,48 @@
     "non_express_vel_limit_kph": 60.0,
     "tunnel_vel_limit_kph": 80.0,
     "function_off_dis_before_toll_station": 250.0,
+    "enable_road_boundary_speed_limit": true,
+    "enable_road_boundary_speed_limit_in_acc_mode": false,
+    "road_boundary_headway_min": 0.5,
+    "road_boundary_headway_max": 3.0,
+    "road_boundary_max_search_distance": 80.0,
+    "road_boundary_min_points_in_range": 5,
+    "road_boundary_both_sides_coefficient": 0.8,
+    "road_boundary_both_sides_coefficient_default": 0.84,
+    "road_boundary_decel_threshold_near": 0.5,
+    "road_boundary_decel_value_near": -1.0,
+    "road_boundary_decel_value_far": -0.5,
+    "road_boundary_highway_min_speed": 19.44,
+    "road_boundary_expressway_min_speed": 13.89,
+    "road_boundary_lateral_distance_threshold": 0.5,
+    "road_boundary_confirmation_frames": 3,
+    "road_boundary_cooldown_frames": 50,
+    "road_boundary_confirmation_frames_highway": 5,
+    "road_boundary_min_points_in_range_highway": 15,
+    "road_boundary_confirmation_frames_city_expressway": 4,
+    "road_boundary_min_points_in_range_city_expressway": 10,
+    "road_boundary_manual_intervention_reset_frames": 3000,
+    "road_boundary_manual_intervention_reset_frames_highway": 9000,
+    "road_boundary_manual_intervention_reset_frames_city_expressway": 6000,
+    "enable_curve_road_boundary_speed_limit": true,
+    "road_boundary_curve_road_radius_threshold": 300.0,
+    "road_boundary_curve_min_points_in_range": 3,
+    "road_boundary_curve_confirmation_frames": 4,
+    "road_boundary_curve_max_gear_threshold": 4,
+    "road_boundary_collision_confirmation_frames": 3,
+    "enable_road_boundary_collision_speed_limit": true,
+    "road_boundary_collision_speed_limit": 4.167,
+    "road_boundary_enable_lateral_acceleration_limit": true,
+    "road_boundary_lateral_acceleration_threshold": 2.0,
+    "road_boundary_lateral_acceleration_min_points": 4,
+    "road_boundary_lateral_acceleration_confirmation_frames": 3,
+    "road_boundary_lateral_acceleration_speed_reduction": 1.39,
+    "road_boundary_lateral_acceleration_desired": 1.6,
+    "road_boundary_curve_road_boundary_cooldown_frames": 20,
+    "enable_s_curve_road_boundary_speed_limit": true,
+    "road_boundary_s_curve_min_radius_threshold": 250.0,
+    "road_boundary_s_curve_dkappa_threshold": 0.00025,
+    "road_boundary_s_curve_confirmation_frames": 2,
     "vehicle_lat_dis_rel_vel_table": {
       "lat_dis_table": [
         0.7,
@@ -1290,7 +1332,52 @@
         300,
         400
       ]
-    }
+    },
+    "road_boundary_range_mins": [
+      0.0, 0.3, 0.4, 0.6, 0.75, 0.9, 1.05, 1.4, 2.1
+    ],
+    "road_boundary_range_maxs": [
+      0.4, 0.6, 0.7, 0.85, 1.0, 1.15, 1.5, 2.2, 999.9
+    ],
+    "road_boundary_speed_limits": [
+      5.55, 8.33, 11.11, 16.67, 22.22, 27.78, 36.11, 41.67, 41.67
+    ],
+    "road_boundary_speed_limits_highway": [
+      5.55, 8.33, 11.11, 16.67, 25, 27.78, 36.11, 41.67, 41.67
+    ],
+    "road_boundary_speed_limits_both_sides_different": [
+      5.56, 8.33, 11.11, 13.89, 19.44, 22.22, 27.78, 36.11, 41.67
+    ],
+    "road_boundary_speed_limits_both_sides_same": [
+      4.17, 5.56, 8.33, 11.11, 13.89, 16.67, 22.22, 27.78, 41.67
+    ],
+    "road_boundary_curve_radius_breakpoints": [
+      0.0, 25.0, 50.0, 100.0, 150.0, 200.0
+    ],
+    "road_boundary_curve_width_expansion_values": [
+      0.40, 0.30, 0.20, 0.15, 0.10, 0.00
+    ],
+    "road_boundary_curve_dkappa_breakpoints": [
+      0.0, 0.00016, 0.0002, 0.00025, 0.0003
+    ],
+    "road_boundary_curve_dkappa_width_expansion_values": [
+      0.0, 0.0, 0.0, 0.0, 0.0
+    ],
+    "road_boundary_curve_lateral_distance_ranges": [
+      0.40, 0.55, 0.70, 0.85, 1.2, 1.6, 2.0
+    ],
+    "road_boundary_curve_speed_limits": [
+      5.56, 8.33, 11.11, 13.89, 27.78, 36.11, 41.67
+    ],
+    "road_boundary_s_curve_speed_limits": [
+      11.11, 11.11, 11.11, 11.11, 12.5, 13.89, 16.67
+    ],
+    "road_boundary_curve_front_edge_expansion_speed_breakpoints": [
+      5.56, 8.33, 11.11, 16.67, 22.22, 27.78
+    ],
+    "road_boundary_curve_front_edge_expansion_values": [
+      0.4, 0.6, 0.8, 1, 1.2, 1.5
+    ]
   },
   "result_trajectory_generator": {
     "use_dynamic_lat_jerk_thr": false,
@@ -2012,8 +2099,10 @@
     "exe_rear_speed_ratio": 1.6,
     "exe_rear_distance_ratio": 0.8,
     "faster_rear_delay_time": 0.3,
+    "rear_comfort_decel": 0.8,
     "lat_offset_buffer": 0.30,
     "target_lane_side_cut_in_check_time": 1.51,
+    "hold_steer_angle_rate_limit_deg": 75.0,
     "diff_speed_init_ttc_map": {
       "diff_kph_table": [
         0.0,
@@ -2039,24 +2128,12 @@
       ]
     },
     "rear_vehicle_speed_min_space_map": {
-      "rear_speed_kph_table": [
-        0.0,
-        10.0,
-        40.0,
-        60.0,
-        80.0,
-        100.0,
-        120.0
-      ],
-      "min_space_table": [
-        0.2,
-        1.5,
-        4.0,
-        5.5,
-        6.5,
-        7.0,
-        8.5
-      ]
+      "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
+      "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  7.0,   8.5]
+    },
+    "hold_state_vel_jerk_map": {
+      "vel_table":  [4.167, 8.333, 16.667, 25.0],
+      "jerk_table": [1.2, 1.5, 1.4, 1.0]
     }
   },
   "hmi_decider": {

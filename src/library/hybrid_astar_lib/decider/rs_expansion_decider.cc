@@ -1,4 +1,5 @@
 #include "rs_expansion_decider.h"
+
 #include <cmath>
 
 #include "astar_decider.h"
@@ -11,15 +12,14 @@ namespace planning {
 
 #define DEBUG_DECIDER (0)
 
-void RSExpansionDecider::Process(const Pose2f &start,
-                                 const Pose2f &end) {
+void RSExpansionDecider::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
   return;
 }
 
 void RSExpansionDecider::UpdateRoundRobinStrategy(
-    const Pose2f &end, const AstarRequest *request, EulerDistanceTransform *edt,
+    const Pose2f &end, const AstarRequest *request, HierarchyEulerDistanceTransform *edt,
     const VehicleParam &veh_param,
     std::shared_ptr<NodeCollisionDetect> &collision_detect) {
   if (request->swap_start_goal) {
@@ -179,10 +179,9 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForHeadIn(
   return true;
 }
 
-Pose2f RSExpansionDecider::GenerateCandidatePoint(const AstarRequest *request,
-                                                  EulerDistanceTransform *edt,
-                                                  const VehicleParam &veh_param,
-                                                  const Pose2f &end) {
+Pose2f RSExpansionDecider::GenerateCandidatePoint(
+    const AstarRequest *request, HierarchyEulerDistanceTransform *edt,
+    const VehicleParam &veh_param, const Pose2f &end) {
   // mirror is in slot upper line.
   Pose2f candidate = end;
   candidate.x = request->slot_length - veh_param.mirror_lon_dist_to_rear_axle;

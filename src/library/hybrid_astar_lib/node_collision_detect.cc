@@ -10,13 +10,13 @@
 
 namespace planning {
 
-NodeCollisionDetect::NodeCollisionDetect(const ParkObstacleList* obstacles,
-                                         EulerDistanceTransform* edt,
-                                         const ObstacleClearZone* clear_zone,
-                                         const MapBound* XYbounds,
-                                         const AstarRequest* request)
+NodeCollisionDetect::NodeCollisionDetect(
+    const ParkObstacleList* obstacles,
+    HierarchyEulerDistanceTransform* hierarchy_edt,
+    const ObstacleClearZone* clear_zone, const MapBound* XYbounds,
+    const AstarRequest* request)
     : obstacles_(obstacles),
-      edt_(edt),
+      hierarchy_edt_(hierarchy_edt),
       clear_zone_(clear_zone),
       grid_map_bound_(XYbounds),
       request_(request) {}
@@ -33,6 +33,7 @@ const bool NodeCollisionDetect::IsPointOutOfGridMapBound(const float x,
 const bool NodeCollisionDetect::IsPolygonFootPrintCollision(
     const Transform2d& tf) {
   Polygon2D veh_global_polygon;
+  Polygon2D veh_global_polygon_chassis;
   bool is_collision = false;
   ULFLocalPolygonToGlobal(&veh_global_polygon,
                           &cvx_hull_foot_print_.max_polygon, tf);
@@ -43,7 +44,10 @@ const bool NodeCollisionDetect::IsPolygonFootPrintCollision(
   }
 
   ULFLocalPolygonToGlobal(&veh_global_polygon, &cvx_hull_foot_print_.body, tf);
-  is_collision = IsPolygonCollision(&veh_global_polygon);
+  ULFLocalPolygonToGlobal(&veh_global_polygon_chassis,
+                          &cvx_hull_foot_print_.chassis, tf);
+  is_collision =
+      IsPolygonCollision(&veh_global_polygon, &veh_global_polygon_chassis);
   if (is_collision) {
     return true;
   }
@@ -51,7 +55,7 @@ const bool NodeCollisionDetect::IsPolygonFootPrintCollision(
   ULFLocalPolygonToGlobal(&veh_global_polygon,
                           &cvx_hull_foot_print_.mirror_left, tf);
   // ILOG_INFO << "left mirror check";
-  is_collision = IsPolygonCollision(&veh_global_polygon);
+  is_collision = IsMirrorPolygonCollision(&veh_global_polygon);
   if (is_collision) {
     return true;
   }
@@ -59,7 +63,7 @@ const bool NodeCollisionDetect::IsPolygonFootPrintCollision(
   ULFLocalPolygonToGlobal(&veh_global_polygon,
                           &cvx_hull_foot_print_.mirror_right, tf);
 
-  is_collision = IsPolygonCollision(&veh_global_polygon);
+  is_collision = IsMirrorPolygonCollision(&veh_global_polygon);
   if (is_collision) {
     return true;
   }
@@ -136,12 +140,89 @@ bool NodeCollisionDetect::IsValidByConvexHull(Node3d* node) {
   return true;
 }
 
+void NodeCollisionDetect::CheckObstacleCollision(
+    bool& is_collision, const PointCloudObstacle& obstacle,
+    const Polygon2D* polygon) {
+  is_collision = false;
+
+  const auto& envelop_polygon = obstacle.envelop_polygon;
+  const auto& obs_points = obstacle.points;
+
+  // envelop box check
+  gjk_interface_.PolygonCollisionByCircleCheck(&is_collision, &envelop_polygon,
+                                               polygon, 0.001);
+  if (!is_collision) {
+    return;
+  }
+
+  // internal points
+  for (const auto& point : obs_points) {
+    gjk_interface_.PolygonPointCollisionDetect(&is_collision, polygon, point);
+    if (is_collision) {
+      return;
+    }
+  }
+}
+
 const bool NodeCollisionDetect::IsPolygonCollision(const Polygon2D* polygon) {
   bool is_collision = false;
   for (const auto& obstacle : obstacles_->point_cloud_list) {
+    CheckObstacleCollision(is_collision, obstacle, polygon);
+    if (is_collision) {
+      return true;
+    }
+  }
+
+  for (const auto& obstacle : obstacles_->virtual_obs) {
+    gjk_interface_.PolygonPointCollisionDetect(&is_collision, polygon,
+                                               obstacle);
+
+    if (is_collision) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool NodeCollisionDetect::IsMirrorPolygonCollision(
+    const Polygon2D* polygon) {
+  bool is_collision = false;
+  for (const auto& obstacle : obstacles_->point_cloud_list) {
+    if (obstacle.height_type == apa_planner::ApaObsHeightType::LOW) {
+      continue;
+    }
+    CheckObstacleCollision(is_collision, obstacle, polygon);
+    if (is_collision) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool NodeCollisionDetect::IsPolygonCollision(
+    const Polygon2D* polygon_normal, const Polygon2D* polygon_chassis) {
+  if (polygon_normal == nullptr) {
+    ILOG_ERROR << "polygon_normal is null!";
+    return false;
+  }
+
+  const Polygon2D* const kDefaultChassisPolygon =
+      polygon_chassis ?: polygon_normal;
+
+  bool is_collision = false;
+  for (const auto& obstacle : obstacles_->point_cloud_list) {
+    const Polygon2D* target_polygon = polygon_normal;
+    if (obstacle.height_type == apa_planner::ApaObsHeightType::LOW) {
+      target_polygon = kDefaultChassisPolygon;
+    }
+
+    is_collision = false;
+
     // envelop box check
     gjk_interface_.PolygonCollisionByCircleCheck(
-        &is_collision, &obstacle.envelop_polygon, polygon, 0.001);
+        &is_collision, &obstacle.envelop_polygon, target_polygon, 0.001);
 
     if (!is_collision) {
       continue;
@@ -149,7 +230,7 @@ const bool NodeCollisionDetect::IsPolygonCollision(const Polygon2D* polygon) {
 
     // internal points
     for (size_t j = 0; j < obstacle.points.size(); j++) {
-      gjk_interface_.PolygonPointCollisionDetect(&is_collision, polygon,
+      gjk_interface_.PolygonPointCollisionDetect(&is_collision, target_polygon,
                                                  obstacle.points[j]);
 
       if (is_collision) {
@@ -162,7 +243,7 @@ const bool NodeCollisionDetect::IsPolygonCollision(const Polygon2D* polygon) {
   }
 
   for (const auto& obstacle : obstacles_->virtual_obs) {
-    gjk_interface_.PolygonPointCollisionDetect(&is_collision, polygon,
+    gjk_interface_.PolygonPointCollisionDetect(&is_collision, polygon_normal,
                                                obstacle);
 
     if (is_collision) {
@@ -224,7 +305,7 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
   Transform2f tf;
   AstarPathGear point_gear = node->GetGearType();
   bool is_circle_path = !(node->IsStraight());
-  FootPrintCircleModel* footprint_model =
+  MultiHeightFootPrintView* multi_height_footprint_model =
       GetCircleFootPrintModel(path.points[0], is_circle_path);
 
   float sin_theta = 0.0f;
@@ -255,7 +336,7 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
 
 // for accelerate calculation, use macro
 #if ENABLE_OBS_DIST_G_COST
-    if (edt_->DistanceCheckForPoint(&dist, &tf, point_gear)) {
+    if (hierarchy_edt_->DistanceCheckForPoint(&dist, &tf, point_gear)) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       node->SetDistToObs(dist);
       // node->SetCollisionID(i);
@@ -268,7 +349,8 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
     }
 #else
 
-    if (edt_->IsCollisionForPoint(&tf, point_gear, footprint_model)) {
+    if (hierarchy_edt_->IsCollisionForPoint(&tf, point_gear,
+                                            multi_height_footprint_model)) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       // node->SetCollisionID(i);
       node->SetDistToObs(0.0f);
@@ -289,8 +371,10 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
 
 const bool NodeCollisionDetect::IsCircleFootPrintCollision(const Pose2f& pose) {
   Transform2f tf(pose);
-  FootPrintCircleModel* footprint_model = GetCircleFootPrintModel(pose, false);
-  return edt_->IsCollisionForPoint(&tf, AstarPathGear::NONE, footprint_model);
+  MultiHeightFootPrintView* multi_height_footprint_model =
+      GetCircleFootPrintModel(pose, false);
+  return hierarchy_edt_->IsCollisionForPoint(&tf, AstarPathGear::NONE,
+                                             multi_height_footprint_model);
 }
 
 bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
@@ -418,7 +502,7 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
         tf.SetBasePose(global_pose);
       }
 
-      if (edt_->IsCollisionForPoint(
+      if (hierarchy_edt_->IsCollisionForPoint(
               &tf, point_gear,
               GetCircleFootPrintModel(global_pose, is_circle_path))) {
         // node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
@@ -465,7 +549,7 @@ const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
       point_gear = AstarPathGear::NONE;
     }
 
-    if (edt_->IsCollisionForPoint(
+    if (hierarchy_edt_->IsCollisionForPoint(
             &tf, point_gear, GetCircleFootPrintModel(global_pose, false))) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       return false;
@@ -542,7 +626,7 @@ int NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
     global_pose.theta = result->phi[i];
     tf.SetBasePose(global_pose);
 
-    if (edt_->IsCollisionForPoint(
+    if (hierarchy_edt_->IsCollisionForPoint(
             &tf, result->gear[i],
             GetCircleFootPrintModel(global_pose, false))) {
       return i;
@@ -581,7 +665,7 @@ int NodeCollisionDetect::GetPathCollisionIDByEDT(
     global_pose.theta = poly_path[i].phi;
     tf.SetBasePose(global_pose);
 
-    if (edt_->IsCollisionForPoint(
+    if (hierarchy_edt_->IsCollisionForPoint(
             &tf, poly_path[i].gear,
             GetCircleFootPrintModel(global_pose,
                                     IsCirclePathByKappa(poly_path[i].kappa)))) {
@@ -611,7 +695,7 @@ void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
     global_pose.theta = path->phi[i];
     tf.SetBasePose(global_pose);
 
-    if (edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
+    if (hierarchy_edt_->DistanceCheckForPoint(&dist, &tf, gear)) {
       ILOG_INFO << "collision";
     }
 
@@ -625,7 +709,7 @@ void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
   return;
 }
 
-FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
+MultiHeightFootPrintView* NodeCollisionDetect::GetCircleFootPrintModel(
     const Pose2f& pose, const bool is_circle_path) {
   if (is_park_in_) {
     return GetCircleFootPrintModelForParkIn(pose, is_circle_path);
@@ -634,40 +718,55 @@ FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
   return GetCircleFootPrintModelForParkOut(pose, is_circle_path);
 }
 
-FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModelForParkIn(
-    const Pose2f& pose, const bool is_circle_path) {
-  if (slot_box_.contain(pose)) {
-    return &hierachy_circle_model_.footprint_model
-                [is_circle_path
-                     ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
-                     : HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
-  }
-
-  return &hierachy_circle_model_.footprint_model
-              [is_circle_path
-                   ? HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER
-                   : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
-}
-
-FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModelForParkOut(
+MultiHeightFootPrintView* NodeCollisionDetect::GetCircleFootPrintModelForParkIn(
     const Pose2f& pose, const bool is_circle_path) {
   bool inside_slot = slot_box_.contain(pose);
-  if (inside_slot) {
-    return &hierachy_circle_model_.footprint_model
-                [is_circle_path
-                     ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
-                     : HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
+
+  HierarchySafeBuffer buffer_type =
+      inside_slot ? (is_circle_path
+                         ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
+                         : HierarchySafeBuffer::INSIDE_SLOT_BUFFER)
+                  : (is_circle_path
+                         ? HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER
+                         : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER);
+
+  for (int h = 0; h < ObstacleHeightType::HEIGHT_LAYER_NUM; ++h) {
+    multi_height_hierachy_circle_model_.height_model[h] =
+        hierachy_circle_model_.footprint_model[h][buffer_type];
   }
 
-  return &hierachy_circle_model_.footprint_model
-              [is_circle_path
-                   ? HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER
-                   : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
+  return &multi_height_hierachy_circle_model_;
 }
 
-FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrint(
+MultiHeightFootPrintView*
+NodeCollisionDetect::GetCircleFootPrintModelForParkOut(
+    const Pose2f& pose, const bool is_circle_path) {
+  bool inside_slot = slot_box_.contain(pose);
+
+  HierarchySafeBuffer buffer_type =
+      inside_slot ? (is_circle_path
+                         ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
+                         : HierarchySafeBuffer::INSIDE_SLOT_BUFFER)
+                  : (is_circle_path
+                         ? HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER
+                         : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER);
+
+  for (int h = 0; h < ObstacleHeightType::HEIGHT_LAYER_NUM; ++h) {
+    multi_height_hierachy_circle_model_.height_model[h] =
+        hierachy_circle_model_.footprint_model[h][buffer_type];
+  }
+
+  return &multi_height_hierachy_circle_model_;
+}
+
+MultiHeightFootPrintView* NodeCollisionDetect::GetCircleFootPrint(
     const HierarchySafeBuffer buffer) {
-  return &hierachy_circle_model_.footprint_model[buffer];
+  for (int h = 0; h < ObstacleHeightType::HEIGHT_LAYER_NUM; ++h) {
+    multi_height_hierachy_circle_model_.height_model[h] =
+        hierachy_circle_model_.footprint_model[h][buffer];
+  }
+
+  return &multi_height_hierachy_circle_model_;
 }
 
 void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
@@ -697,32 +796,63 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
 
   GenerateVehCompactPolygon(
       lat_buffer_inside, config.safe_buffer.lon_min_safe_buffer,
-      lat_buffer_inside, fold_mirror, &cvx_hull_foot_print_);
+      lat_buffer_inside, fold_mirror, false, &cvx_hull_foot_print_);
 
   // PolygonDebugString(&cvx_hull_foot_print_.body, "body");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_left, "left mirror");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_right, "right mirror");
 
+  constexpr float kBigCircleSafeBuffer = 0.35;
+
   hierachy_circle_model_
-      .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(fold_mirror, lat_buffer_outside, lon_buffer,
-                        lat_buffer_outside);
+      .footprint_model[ObstacleHeightType::MID_HIGH]
+                      [HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer_outside, lon_buffer,
+                        lat_buffer_outside, kBigCircleSafeBuffer, false);
   hierachy_circle_model_
-      .footprint_model[HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(fold_mirror, lat_buffer_inside, lon_buffer,
-                        lat_buffer_inside);
+      .footprint_model[ObstacleHeightType::MID_HIGH]
+                      [HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer_inside, lon_buffer,
+                        lat_buffer_inside, kBigCircleSafeBuffer, false);
+
+  hierachy_circle_model_
+      .footprint_model[ObstacleHeightType::LOW]
+                      [HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer_outside, lon_buffer,
+                        lat_buffer_outside, kBigCircleSafeBuffer, true);
+  hierachy_circle_model_
+      .footprint_model[ObstacleHeightType::LOW]
+                      [HierarchySafeBuffer::INSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer_inside, lon_buffer,
+                        lat_buffer_inside, kBigCircleSafeBuffer, true);
 
   float lat_buffer =
       lat_buffer_outside + config.safe_buffer.circle_path_extra_buffer_outside;
   hierachy_circle_model_
-      .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(fold_mirror, lat_buffer, lon_buffer, lat_buffer);
+      .footprint_model[ObstacleHeightType::MID_HIGH]
+                      [HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer, lon_buffer,
+                        lat_buffer, kBigCircleSafeBuffer, false);
+
+  hierachy_circle_model_
+      .footprint_model[ObstacleHeightType::LOW]
+                      [HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer, lon_buffer,
+                        lat_buffer, kBigCircleSafeBuffer, true);
 
   lat_buffer =
       lat_buffer_inside + config.safe_buffer.circle_path_extra_buffer_inside;
   hierachy_circle_model_
-      .footprint_model[HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER]
-      .UpdateSafeBuffer(fold_mirror, lat_buffer, lon_buffer, lat_buffer);
+      .footprint_model[ObstacleHeightType::MID_HIGH]
+                      [HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer, lon_buffer,
+                        lat_buffer, kBigCircleSafeBuffer, false);
+
+  hierachy_circle_model_
+      .footprint_model[ObstacleHeightType::LOW]
+                      [HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER]
+      .UpdateSafeBuffer(request_->fold_mirror, lat_buffer, lon_buffer,
+                        lat_buffer, kBigCircleSafeBuffer, true);
 
   ILOG_INFO << "outside buffer = " << lat_buffer_outside
             << ", inside buffer = " << lat_buffer_inside;

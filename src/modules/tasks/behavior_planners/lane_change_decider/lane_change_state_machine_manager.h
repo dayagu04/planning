@@ -277,6 +277,7 @@ class LaneChangeStateMachineManager {
 
   RampDirection CalcTurnSignalForTencentSplitRegion() const;
   RampDirection CalcTurnSignalForBaiduSplitRegion() const;
+  double ComputeInertialLatOffset(double v_y0, double a_y0, double j_max) const;
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
