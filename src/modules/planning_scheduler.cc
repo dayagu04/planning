@@ -903,6 +903,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       hpp_info->is_new_parking_space_found = true;
     }
   }
+
   return;
 }
 

@@ -22,6 +22,8 @@
 #include "tasks/behavior_planners/expand_st_boundaries_decider/expand_st_boundaries_decider.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
+#include "tasks/behavior_planners/hmi_decider/rads_hmi_decider.h"
+#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
@@ -38,8 +40,8 @@
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
-#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
+
 namespace planning {
 class TaskPipelineRADS : public BaseTaskPipeline {
  public:
@@ -96,6 +98,8 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
   bool enable_lane_borrow_deciderV2_ = false;
+
+  std::unique_ptr<RADSHMIDecider> hmi_decider_;
 };
 
 }  // namespace planning

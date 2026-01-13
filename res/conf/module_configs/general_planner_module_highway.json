@@ -2061,7 +2061,8 @@
   },
   "hmi_decider": {
     "tfl_reminder_cipv_dis": 8.0,
-    "construction_warning_hmi_speed_max": 60
+    "construction_warning_hmi_speed_max": 60,
+    "obstacle_brake_hmi_reminder_dis": 8.0
   },
   "reference_path_manager": {
     "is_enable_construction_refline": true

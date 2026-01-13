@@ -6129,9 +6129,12 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                    "tfl_reminder_cipv_dis");
     ReadItem<double>(json, construction_warning_hmi_speed_max, "hmi_decider",
                    "construction_warning_hmi_speed_max");
+    ReadItem<double>(json, obstacle_brake_hmi_reminder_dis, "hmi_decider",
+                    "obstacle_brake_hmi_reminder_dis");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
+  double obstacle_brake_hmi_reminder_dis = 8.0;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{
@@ -6142,4 +6145,12 @@ struct ReferencePathManagerConfig : public EgoPlanningConfig{
   }
   bool is_enable_construction_refline = false;
 };
+
+struct NarrowSpaceDeciderConfig : public EgoPlanningConfig{
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+  }
+
+};
+
 }  // namespace planning

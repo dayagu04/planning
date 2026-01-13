@@ -621,7 +621,7 @@ class LoadRosbag:
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
-                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state",\
+                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state", "obstacle_brake_hmi_sts",\
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'road_radius_origin',\
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
@@ -788,6 +788,10 @@ class LoadRosbag:
                          "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
+      # nsa
+      json_value_list += ["narrow_space_state", "narrow_space_left_rear_x","narrow_space_left_rear_y","narrow_space_right_rear_x", "narrow_space_right_rear_y", \
+                          "narrow_space_left_front_x","narrow_space_left_front_y","narrow_space_right_front_x", "narrow_space_right_front_y"]
+      #
       json_vector_list += ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
                            "road_right_line_all_dx_vec_","road_right_line_all_dy_vec_",
                            "road_left_roadedge_all_dx_vec_","road_left_roadedge_all_dy_vec_",
@@ -978,7 +982,7 @@ class LoadRosbag:
         self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
         # if msg.current_state > 13 and msg.current_state < 19:
         #   scene_type = 'PARKING_APA'
-        if msg.current_state >= 4 and msg.current_state <= 12:
+        if msg.current_state > 4 and msg.current_state <= 12:
           scene_type = 'HIGHWAY'
         elif msg.current_state >= 50 and msg.current_state <= 62:
           scene_type = 'HPP'
