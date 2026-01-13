@@ -864,7 +864,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       print("planning debug info:", int(plan_debug_msg.frame_info.frame_num) - bag_loader.plan_debug_msg['data'][0].frame_info.frame_num)
     except:
       pass
-    print("distance_to_target_slot: ", plan_debug_json_msg['distance_to_target_slot'])
 
     #加载planning 生成中心线的信息
     try:
@@ -886,6 +885,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     except:
       print("no generated_refline_info!")
       pass
+    if bag_scene_type == "HPP":
+      print("dist_to_target_slot: ", plan_debug_json_msg['dist_to_target_slot'])
+      print("dist_to_target_dest: ", plan_debug_json_msg['dist_to_target_dest'])
+      print("is_exist_target_slot: ", plan_debug_json_msg['is_exist_target_slot'])
+      print("is_target_slot_allowed_to_park: ", plan_debug_json_msg['is_target_slot_allowed_to_park'])
+      print("is_standstill_near_target_slot: ", plan_debug_json_msg['is_standstill_near_target_slot'])
+      print("is_timeout_for_target_slot_allowed_to_park: ", plan_debug_json_msg['is_timeout_for_target_slot_allowed_to_park'])
     lat_behavior_common = plan_debug_msg.lat_behavior_common
     environment_model_info = plan_debug_msg.environment_model_info
     current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -1443,7 +1449,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     trajectory = plan_msg.trajectory
     print("trajectory_type: ", trajectory.trajectory_type)
     hpp_planning_status = plan_msg.planning_status.hpp_planning_status
+    apa_planning_status = plan_msg.planning_status.apa_planning_status
     print("hpp_planning_status: ", hpp_planning_status)
+    print("apa_planning_status: ", apa_planning_status)
     successful_slot_info_list = plan_msg.successful_slot_info_list
     plan_traj_s = []
     for i in range(len(trajectory.trajectory_points)):
