@@ -1246,10 +1246,6 @@ void ParkingScenario::RecordDebugPath() {
 }
 
 const bool ParkingScenario::IsStopByDynamicObs() const {
-  if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    return false;
-  }
-
   if (frame_.stuck_by_dynamic_obs) {
     return true;
   }
@@ -1258,17 +1254,12 @@ const bool ParkingScenario::IsStopByDynamicObs() const {
 }
 
 const bool ParkingScenario::IsStopByStaticMovableObs() const {
-  if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    return false;
-  }
-
   if (frame_.stuck_by_dynamic_obs) {
     return false;
   }
 
   if (frame_.replan_fail_time < 1.0 &&
-      (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() ||
-       apa_world_ptr_->GetStateMachineManagerPtr()->IsParkSuspendStatus())) {
+      (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus())) {
     return false;
   }
 
