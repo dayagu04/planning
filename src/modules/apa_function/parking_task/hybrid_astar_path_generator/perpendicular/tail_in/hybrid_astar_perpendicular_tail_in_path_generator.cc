@@ -1092,6 +1092,18 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
     ObsToPathDistRelativeSlot obs_dist_relative_slot;
     const CurveNode& temp_node = curve_node_to_goal_vec[i];
 
+    if (IsGearDifferent(request_.inital_action_request.ref_gear,
+                        temp_node.GetCurGear())) {
+      cost.unexpect_gear_cost = gear_change_penalty;
+    }
+
+    if (IsGearSame(request_.inital_action_request.ref_gear,
+                   temp_node.GetCurGear()) &&
+        IsSteerOpposite(request_.inital_action_request.ref_steer,
+                        temp_node.GetCurKappa())) {
+      cost.unexpect_steer_cost = kappa_change_penalty;
+    }
+
     cost.gear_change_cost = gear_change_penalty * temp_node.GetGearSwitchNum();
 
     cost.length_cost = length_penalty * temp_node.GetDistToStart();
@@ -1166,16 +1178,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
           gear_switch_pose, cur_gear, gear_change_penalty, length_penalty);
 
-      if (cur_gear != request_.inital_action_request.ref_gear) {
-        cost.cur_gear_switch_pose_cost +=
-            (gear_change_penalty + length_penalty);
-      }
-
-      if ((temp_node.GetCurKappa() > 0.001f &&
-           request_.inital_action_request.ref_steer == AstarPathSteer::RIGHT) ||
-          (temp_node.GetCurKappa() < -0.001f &&
-           request_.inital_action_request.ref_steer == AstarPathSteer::LEFT)) {
-        cost.cur_gear_switch_pose_cost += 0.3f * length_penalty;
+      if (std::fabs(temp_node.GearSwitchNode()->GetKappa()) > 0.001f) {
+        cost.cur_gear_switch_pose_cost += 0.6f * length_penalty;
       }
 
       if (request_.adjust_pose) {
