@@ -55,7 +55,6 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
                                    double& dynamic_lon_buffer) const;
   const bool PostProcessPathPara();  void JudgeArcSlot();
-
  private:
   Tlane t_lane_;
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;

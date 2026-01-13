@@ -38,6 +38,7 @@ void ParallelParkOutScenario::Reset() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+  obs_id_pt_map_.clear();
   parallel_out_path_planner_.Reset();
   is_try_tlane_ = false;
   delay_check_finish_ = false;
@@ -203,6 +204,7 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+  obs_id_pt_map_.clear();
   is_try_tlane_ = true;
   // init simulation
   InitSimulation();
@@ -255,6 +257,7 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+  obs_id_pt_map_.clear();
   return success_ret;
 }
 
@@ -681,6 +684,7 @@ const bool ParallelParkOutScenario::GenTlane() {
 
   const Eigen::Vector2d slot_center(0.5 * slot_length, 0.0);
   obs_pt_local_vec_.clear();
+  obs_id_pt_map_.clear();
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
@@ -697,7 +701,7 @@ const bool ParallelParkOutScenario::GenTlane() {
     }
 
     const auto obs_scement = pair.second.GetObsScemanticType();
-
+    const auto obs_parent_id = pair.second.GetParentId();
     ApaObsHeightType obs_height = pair.second.GetObsHeightType();
 
     const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
@@ -716,7 +720,13 @@ const bool ParallelParkOutScenario::GenTlane() {
         // total_box_x_fail_cnt++;
         continue;
       }
-
+      bool curb_obs_condition_x =
+          pnc::mathlib::IsInBound(obs_pt_local.x(), -3.0, slot_length + 4);
+      bool curb_obs_condition_y = pnc::mathlib::IsInBound(
+          -obs_pt_local.y() * side_sgn, 0.4, 0.5 * slot_width + 2);
+      if (curb_obs_condition_x && curb_obs_condition_y) {
+        obs_id_pt_map_[obs_parent_id].emplace_back(obs_pt_local);
+      }
       if (obs_pt_local.y() * side_sgn >
               apa_param.GetParam().parallel_channel_y_mag ||
           obs_pt_local.y() * side_sgn <
@@ -737,16 +747,6 @@ const bool ParallelParkOutScenario::GenTlane() {
           obs_pt_local.y() * side_sgn < -0.3 * side_sgn) {
         // rear_box_fail_cnt++;
         continue;
-      }
-
-      if (is_try_tlane_ && ego_info_under_slot.slot_occupied_ratio > 0.1) {
-        if (mathlib::IsInBound(obs_pt_local.x(), 1.0, slot_length - 0.5) &&
-            mathlib::IsInBound(obs_pt_local.y(),
-                               (0.5 * slot_width - 0.5) * side_sgn,
-                               (0.5 * slot_width + 0.8) * side_sgn)) {
-          ILOG_WARN << "out is obs, obs_pt_local = " << obs_pt_local.x();
-          return false;
-        }
       }
 
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
@@ -1262,16 +1262,26 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   ILOG_INFO << "-----------tlane CD-------------";
   point_set.clear();
   tlane_obstacle_vec.clear();
-  tlane_line.SetPoints(C_curb, D_curb);
-  pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
-                                             kTBoundarySampleDist);
-
+  bool is_use_curb_obs = ProcessCurbPointsAndGetPoints(
+      point_set, obs_id_pt_map_, C_curb, D_curb, t_lane_.curb_y);
+  if (!is_use_curb_obs) {
+    ILOG_INFO << "use origin curb obs";
+    tlane_line.SetPoints(C_curb, D_curb);
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
+                                               kTBoundarySampleDist);
+  }
   // 记录首尾 被过滤（车内） 的点的 x
   bool filter_start = false;
   double first_filtered_x = 0.0;
   double last_filtered_x = 0.0;
 
   for (const auto& obs : point_set) {
+    if (is_use_curb_obs) {
+      if (obs.x() <= C_curb.x() - 1e-5 || obs.x() > D_curb.x() + 1e-5 ||
+          std::abs(obs.y()) < std::abs(t_lane_.curb_y) - 1e-2) {
+        continue;
+      }
+    }
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
       tlane_obstacle_vec.emplace_back(obs);

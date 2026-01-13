@@ -123,6 +123,8 @@ const bool ParallelOutPathGenerator::Update() {
     }
   }
   if (!is_in_slot) {
+    collision_detector_ptr_->SetParam(
+        CollisionDetector::Paramters(0.1, true, true));
     auto last_target_pos = input_.last_target_pose_.pos;
     auto last_target_heading = input_.last_target_pose_.heading;
     auto pose_univ = Eigen::Vector2d(std::cos(last_target_heading),
