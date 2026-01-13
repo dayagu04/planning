@@ -33,6 +33,7 @@ Max_sdmap_segment_size = 100
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # get param
+  bag_scene_type = global_var.get_value('scene_type')
   g_is_display_enu = global_var.get_value('g_is_display_enu')
   is_match_planning = global_var.get_value('is_match_planning')
   is_bag_main = global_var.get_value('is_bag_main')
@@ -207,75 +208,76 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_msg']['ctrl_debug_json_msg'] = ctrl_debug_json_msg
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state = soc_state_msg.current_state
-    background_state = soc_state_msg.background_state
+    print("FunctionalState: ", soc_state)
+    if bag_scene_type == 'HPP':
+      background_state = soc_state_msg.background_state
+      # Mapping the enum values to their names
+      # NOTE: This mapping should be matched fsm interface once when it changes!!!
+      functional_state_mapping = {
+          0: "FunctionalState_MANUAL",
+          1: "FunctionalState_SYSTEM_ERROR",
+          2: "FunctionalState_MRC",
+          3: "FunctionalState_DRIVING_PASSIVE",
+          4: "FunctionalState_ACC_STANDBY",
+          5: "FunctionalState_ACC_ACTIVATE",
+          6: "FunctionalState_ACC_OVERRIDE",
+          7: "FunctionalState_SCC_STANDBY",
+          8: "FunctionalState_SCC_ACTIVATE",
+          9: "FunctionalState_SCC_OVERRIDE",
+          10: "FunctionalState_NOA_STANDBY",
+          11: "FunctionalState_NOA_ACTIVATE",
+          12: "FunctionalState_NOA_OVERRIDE",
+          13: "FunctionalState_PARK_STANDBY",
+          14: "FunctionalState_PARK_IN_SEARCHING",
+          15: "FunctionalState_PARK_GUIDANCE",
+          16: "FunctionalState_PARK_SUSPEND",
+          17: "FunctionalState_PARK_COMPLETED",
+          18: "FunctionalState_PARK_OUT_SEARCHING",
+          19: "FunctionalState_PARK_PRE_ACTIVE",
+          20: "FunctionalState_DRIVING_ERROR",
+          21: "FunctionalState_PARK_ERROR",
+          50: "FunctionalState_HPP_STANDBY",
+          51: "FunctionalState_HPP_PROACTIVE_MAPPING",
+          52: "FunctionalState_HPP_BACKGROUND_MAPPING",
+          53: "FunctionalState_HPP_MAP_CHECK",
+          54: "FunctionalState_HPP_PRE_ACTIVE_DRIVING",
+          55: "FunctionalState_HPP_PRE_ACTIVE_PARKING",
+          56: "FunctionalState_HPP_CRUISE_ROUTING",
+          57: "FunctionalState_HPP_CRUISE_SEARCHING",
+          58: "FunctionalState_HPP_PARKING_OUT",
+          59: "FunctionalState_HPP_PARKING_IN",
+          60: "FunctionalState_HPP_SUSPEND",
+          61: "FunctionalState_HPP_COMPLETE",
+          62: "FunctionalState_HPP_ABORT",
+          63: "FunctionalState_HPP_ERROR",
+          70: "FunctionalState_RADS_STANDBY",
+          71: "FunctionalState_RADS_PRE_ACTIVE",
+          72: "FunctionalState_RADS_TRACING",
+          73: "FunctionalState_RADS_SUSPEND",
+          74: "FunctionalState_RADS_COMPLETE",
+          75: "FunctionalState_RADS_ABORT",
+          76: "FunctionalState_RADS_ERROR",
+          80: "FunctionalState_CUSTOMER_CALIBRATION",
+      }
 
-    # Mapping the enum values to their names
-    # NOTE: This mapping should be matched fsm interface once when it changes!!!
-    functional_state_mapping = {
-        0: "FunctionalState_MANUAL",
-        1: "FunctionalState_SYSTEM_ERROR",
-        2: "FunctionalState_MRC",
-        3: "FunctionalState_DRIVING_PASSIVE",
-        4: "FunctionalState_ACC_STANDBY",
-        5: "FunctionalState_ACC_ACTIVATE",
-        6: "FunctionalState_ACC_OVERRIDE",
-        7: "FunctionalState_SCC_STANDBY",
-        8: "FunctionalState_SCC_ACTIVATE",
-        9: "FunctionalState_SCC_OVERRIDE",
-        10: "FunctionalState_NOA_STANDBY",
-        11: "FunctionalState_NOA_ACTIVATE",
-        12: "FunctionalState_NOA_OVERRIDE",
-        13: "FunctionalState_PARK_STANDBY",
-        14: "FunctionalState_PARK_IN_SEARCHING",
-        15: "FunctionalState_PARK_GUIDANCE",
-        16: "FunctionalState_PARK_SUSPEND",
-        17: "FunctionalState_PARK_COMPLETED",
-        18: "FunctionalState_PARK_OUT_SEARCHING",
-        19: "FunctionalState_PARK_PRE_ACTIVE",
-        20: "FunctionalState_DRIVING_ERROR",
-        21: "FunctionalState_PARK_ERROR",
-        50: "FunctionalState_HPP_STANDBY",
-        51: "FunctionalState_HPP_PROACTIVE_MAPPING",
-        52: "FunctionalState_HPP_BACKGROUND_MAPPING",
-        53: "FunctionalState_HPP_MAP_CHECK",
-        54: "FunctionalState_HPP_PRE_ACTIVE_DRIVING",
-        55: "FunctionalState_HPP_PRE_ACTIVE_PARKING",
-        56: "FunctionalState_HPP_CRUISE_ROUTING",
-        57: "FunctionalState_HPP_CRUISE_SEARCHING",
-        58: "FunctionalState_HPP_PARKING_OUT",
-        59: "FunctionalState_HPP_PARKING_IN",
-        60: "FunctionalState_HPP_SUSPEND",
-        61: "FunctionalState_HPP_COMPLETE",
-        62: "FunctionalState_HPP_ABORT",
-        63: "FunctionalState_HPP_ERROR",
-        70: "FunctionalState_RADS_STANDBY",
-        71: "FunctionalState_RADS_PRE_ACTIVE",
-        72: "FunctionalState_RADS_TRACING",
-        73: "FunctionalState_RADS_SUSPEND",
-        74: "FunctionalState_RADS_COMPLETE",
-        75: "FunctionalState_RADS_ABORT",
-        76: "FunctionalState_RADS_ERROR",
-        80: "FunctionalState_CUSTOMER_CALIBRATION",
-    }
+      background_state_mapping = {
+          11: "BackgroundState_HPP_ERROR",
+          12: "BackgroundState_HPP_PASSIVE",
+          13: "BackgroundState_HPP_STANDBY",
+          14: "BackgroundState_HPP_PROACTIVE_MAPPING",
+          15: "BackgroundState_HPP_PROACTIVE_MAPPING_PAUSE",
+          16: "BackgroundState_HPP_BACKGROUND_MAPPING",
+          17: "BackgroundState_HPP_BACKGROUND_MAPPING_PAUSE",
+          18: "BackgroundState_HPP_STORE",
+          19: "BackgroundState_HPP_STORE_COMPLETE",
+          20: "BackgroundState_HPP_STORE_FAIL",
+      }
 
-    background_state_mapping = {
-        11: "BackgroundState_HPP_ERROR",
-        12: "BackgroundState_HPP_PASSIVE",
-        13: "BackgroundState_HPP_STANDBY",
-        14: "BackgroundState_HPP_PROACTIVE_MAPPING",
-        15: "BackgroundState_HPP_PROACTIVE_MAPPING_PAUSE",
-        16: "BackgroundState_HPP_BACKGROUND_MAPPING",
-        17: "BackgroundState_HPP_BACKGROUND_MAPPING_PAUSE",
-        18: "BackgroundState_HPP_STORE",
-        19: "BackgroundState_HPP_STORE_COMPLETE",
-        20: "BackgroundState_HPP_STORE_FAIL",
-    }
+      cur_state_name = functional_state_mapping.get(soc_state, "Unknown FunctionalState")
+      background_state_name = background_state_mapping.get(background_state, "Unknown BackgroundState")
 
-    cur_state_name = functional_state_mapping.get(soc_state, "Unknown FunctionalState")
-    background_state_name = background_state_mapping.get(background_state, "Unknown BackgroundState")
-
-    print("fsm_cur_state: " + str(soc_state) + " - " + cur_state_name)
-    print("fsm_background_state: " + str(background_state) + " - " + background_state_name)
+      print("fsm_cur_state: " + str(soc_state) + " - " + cur_state_name)
+      print("fsm_background_state: " + str(background_state) + " - " + background_state_name)
 
   ### step 2-1: 加载pp原始定位信息
   if bag_loader.origin_loc_msg['enable'] == True:
@@ -3024,21 +3026,25 @@ def load_planning_hmi_info_table():
   ad_info_data = ColumnDataSource(data={'name': [], 'data': []})
   hpp_info_data = ColumnDataSource(data={'name': [], 'data': []})
   nsa_info_data = ColumnDataSource(data={'name': [], 'data': []})
+  rads_info_data = ColumnDataSource(data={'name': [], 'data': []})
   hmi_info_data = {'ad_info_data':ad_info_data,
                    'hpp_info_data':hpp_info_data,
-                   'nsa_info_data':nsa_info_data}
+                   'nsa_info_data':nsa_info_data,
+                   'rads_info_data': rads_info_data}
   # table
   columns = [TableColumn(field="name", title="name",),
              TableColumn(field="data", title="data")]
   ad_info_table = DataTable(source=ad_info_data, columns=columns, width=400, height=600)
   hpp_info_table = DataTable(source=hpp_info_data, columns=columns, width=400, height=460)
-  nsa_info_table = DataTable(source=nsa_info_data, columns=columns, width=400, height=400)
-  return hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table
+  nsa_info_table = DataTable(source=nsa_info_data, columns=columns, width=400, height=150)
+  rads_info_table = DataTable(source=rads_info_data, columns=columns, width=400, height=150)
+  return hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table, rads_info_table
 
 def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
   ad_info_names, ad_info_datas = [], []
   hpp_info_names, hpp_info_datas = [], []
   nsa_info_names, nsa_info_datas = [], []
+  rads_info_names, rads_info_datas = [], []
   if bag_loader.planning_hmi_msg['enable'] ==True:
     # 1. update ad info
     try:
@@ -3089,9 +3095,21 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
           pass
     except Exception as e:
       print("planning_hmi_nsa_info error: ", e)
+    # 4. update rads info
+    try:
+      rads_info = local_view_data['data_msg']['planning_hmi_msg'].rads_info
+      vars = ['is_avaliable', 'rads_pause_reason', 'avoid_status', 'aovid_id']
+      for name in vars:
+        try:
+          rads_info_datas.append(getattr(rads_info, name))
+          rads_info_names.append(name)
+        except:
+          pass
+    except Exception as e:
+      print("planning_hmi_rads_info_info error: ", e)
   else:
     print("no planning_hmi_msg!")
-  # 4. update hmi info
+  # 5. update hmi info
   hmi_info_data['ad_info_data'].data.update({
     'name': ad_info_names,
     'data': ad_info_datas,
@@ -3103,4 +3121,8 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
   hmi_info_data['nsa_info_data'].data.update({
     'name': nsa_info_names,
     'data': nsa_info_datas,
+  })
+  hmi_info_data['rads_info_data'].data.update({
+    'name': rads_info_names,
+    'data': rads_info_datas,
   })
