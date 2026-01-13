@@ -187,7 +187,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
             min_cost_traj_ptr_->CalcRef(i * kPlanningStep, config_.decay_coffi) -
             ego_s_;
         search_path[i] = std::move(s);
-        v_search_path[i] = min_cost_traj_ptr_->Calc(i * kPlanningStep,
+        v_search_path[i] = min_cost_traj_ptr_->CalcVelRef(i * kPlanningStep,
                                                           config_.decay_coffi);
       }
     }
