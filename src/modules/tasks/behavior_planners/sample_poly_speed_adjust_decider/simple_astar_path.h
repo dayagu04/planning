@@ -81,6 +81,7 @@ class LongitudinalAStar {
   bool IsValid() const { return valid_; }
   std::pair<double, double> GetSearchRange(const STNode& node) const;
   double CalcS(const double t) const;
+  double CalcV(const double t) const;
   double CalcVelSafeDistance(const double ego_v, const double obj_v,
                              const double ego_a, const double obj_a,
                              bool is_front_car);

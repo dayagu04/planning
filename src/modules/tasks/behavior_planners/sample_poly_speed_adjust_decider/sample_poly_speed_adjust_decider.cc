@@ -174,15 +174,21 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     search_path.clear();
     v_search_path.clear();
     search_path.resize(kPlanningHorizions);
+    v_search_path.resize(kPlanningHorizions);
     if (astar_traj_ptr_ && astar_traj_ptr_->IsValid()) {
       for (size_t i = 0; i < kPlanningHorizions; i++) {
         double s = astar_traj_ptr_->CalcS(i * kPlanningStep);
         search_path[i] = std::move(s);
+        v_search_path[i] = astar_traj_ptr_->CalcV(i * kPlanningStep);
       }
     } else {
       for (size_t i = 0; i < kPlanningHorizions; i++) {
-        double s = min_cost_traj_ptr_->CalcS(i * kPlanningStep) - ego_s_;
+        double s =
+            min_cost_traj_ptr_->CalcRef(i * kPlanningStep, config_.decay_coffi) -
+            ego_s_;
         search_path[i] = std::move(s);
+        v_search_path[i] = min_cost_traj_ptr_->Calc(i * kPlanningStep,
+                                                          config_.decay_coffi);
       }
     }
     last_min_cost_traj_ = SampleQuarticPolynomialCurve(*min_cost_traj_ptr_);
