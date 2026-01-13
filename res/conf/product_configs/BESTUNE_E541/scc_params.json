@@ -1,8 +1,13 @@
 {
+  "enable_lane_borrow_deciderV2": true,
   "left_right_turn_func_fading_away_switch": true,
+  "traffic_light_decider": {
+    "enable_tfl_decider": false
+  },
   "speed_limit_decider": {
     "enable_map_sharp_curve_speed_limit": true,
-    "enable_map_sharp_curve_by_decel": true
+    "enable_map_sharp_curve_by_decel": true,
+    "enable_tfl_v_limit": true
   },
   "enable_overtake_lane_change_confirmation": true
 }
