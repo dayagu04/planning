@@ -47,29 +47,29 @@ namespace planning {
 HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                          const VehicleParam& veh_param,
                          const ParkObstacleList* obstacles,
-                         EulerDistanceTransform* edt,
+                         HierarchyEulerDistanceTransform* hierarchy_edt,
                          const ObstacleClearZone* clear_zone,
                          ParkReferenceLine* ref_line,
                          std::shared_ptr<GridSearch> dp_map)
     : config_(open_space_conf),
       vehicle_param_(veh_param),
       obstacles_(obstacles),
-      edt_(edt),
+      hierarchy_edt_(hierarchy_edt),
       ref_line_(ref_line),
       clear_zone_(clear_zone),
       dp_heuristic_generator_(dp_map) {
   collision_detect_ = std::make_shared<NodeCollisionDetect>(
-      obstacles_, edt_, clear_zone_, &grid_map_bound_, &request_);
+      obstacles_, hierarchy_edt_, clear_zone_, &grid_map_bound_, &request_);
 
   polynomial_sampling_ = std::make_shared<PolynomialCurveSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, hierarchy_edt_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
   rs_sampling_ = std::make_shared<RSSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, hierarchy_edt_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
   spiral_sampling_ = std::make_shared<SpiralSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, hierarchy_edt_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
 }
 
 bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
@@ -1284,7 +1284,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
                                grid_map_bound_, request_);
   rs_expansion_decider_.Process(start, target);
   rs_expansion_decider_.UpdateRoundRobinStrategy(
-      target, &request_, edt_, vehicle_param_, collision_detect_);
+      target, &request_, hierarchy_edt_, vehicle_param_, collision_detect_);
 
   SetSamplingTarget(target);
 
@@ -1724,7 +1724,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   rs_expansion_decider_.Process(start, end);
   rs_expansion_decider_.UpdateRoundRobinStrategy(
-      end, &request_, edt_, vehicle_param_, collision_detect_);
+      end, &request_, hierarchy_edt_, vehicle_param_, collision_detect_);
   SetSamplingTarget(end);
 
   PathComparator path_comparator;
@@ -2499,7 +2499,7 @@ void HybridAStar::CopyNodePath(const Node3d* node,
   return;
 }
 
-FootPrintCircleModel* HybridAStar::GetCircleFootPrint(
+MultiHeightFootPrintView* HybridAStar::GetCircleFootPrint(
     const HierarchySafeBuffer buffer) {
   if (collision_detect_ == nullptr) {
     return nullptr;

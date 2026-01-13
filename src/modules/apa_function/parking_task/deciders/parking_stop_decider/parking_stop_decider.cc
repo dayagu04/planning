@@ -241,10 +241,10 @@ void ParkingStopDecider::GeneratePathFootPrint(
   PolygonFootPrint foot_print_little_buffer;
   PolygonFootPrint foot_print_big_buffer;
   GenerateVehCompactPolygon(config_.static_obs_buffer.lat_buffer, lon_buffer,
-                            config_.static_obs_buffer.lat_buffer, false,
+                            config_.static_obs_buffer.lat_buffer, false, false,
                             &foot_print_little_buffer);
   GenerateVehCompactPolygon(config_.slow_speed_buffer.lat_buffer, lon_buffer,
-                            config_.slow_speed_buffer.lat_buffer, false,
+                            config_.slow_speed_buffer.lat_buffer, false, false,
                             &foot_print_big_buffer);
 
   small_buffer_path_polygons_.clear();

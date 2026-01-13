@@ -141,7 +141,7 @@ void TargetPoseRegulator::GenerateYboundary(const AstarRequest *request,
 
 void TargetPoseRegulator::UpdateReferenceLinePath(
     const AstarRequest *request, const VehicleParam &veh_param,
-    const ParkingVehDirection &direction_request, EulerDistanceTransform *edt) {
+    const ParkingVehDirection &direction_request, HierarchyEulerDistanceTransform *edt) {
   // x boundary
   GenerateXboundary(request, veh_param);
 
@@ -177,7 +177,7 @@ void TargetPoseRegulator::UpdateReferenceLinePath(
 }
 
 void TargetPoseRegulator::Process(
-    EulerDistanceTransform *edt, const AstarRequest *request,
+    HierarchyEulerDistanceTransform *edt, const AstarRequest *request,
     const Pose2f &ego_pose, const Pose2f &target, const VehicleParam &veh_param,
     const ParkingVehDirection &direction_request) {
   // init
@@ -234,7 +234,7 @@ const bool TargetPoseRegulator::IsParkingIn(const AstarRequest *request) {
   return false;
 }
 
-void TargetPoseRegulator::GenerateCandidates(EulerDistanceTransform *edt,
+void TargetPoseRegulator::GenerateCandidates(HierarchyEulerDistanceTransform *edt,
                                              const AstarRequest *request,
                                              const VehicleParam &veh_param) {
   Pose2f global_pose;
@@ -277,7 +277,7 @@ void TargetPoseRegulator::GenerateCandidates(EulerDistanceTransform *edt,
 }
 
 void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
-    EulerDistanceTransform *edt, const AstarRequest *request,
+    HierarchyEulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
@@ -357,7 +357,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
 }
 
 void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
-    EulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
+    HierarchyEulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
@@ -448,7 +448,7 @@ void TargetPoseRegulator::Clear() {
 }
 
 const float TargetPoseRegulator::GetCandidatePathByXRange(
-    const Pose2f &global_pose, EulerDistanceTransform *edt) {
+    const Pose2f &global_pose, HierarchyEulerDistanceTransform *edt) {
   Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
@@ -480,7 +480,7 @@ const float TargetPoseRegulator::GetCandidatePathByXRange(
 
 const float TargetPoseRegulator::GetDistToObsHeadOut(
     const Pose2f &global_pose, const ParkingVehDirection &direction_request,
-    EulerDistanceTransform *edt) {
+    HierarchyEulerDistanceTransform *edt) {
   Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;

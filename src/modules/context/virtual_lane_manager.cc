@@ -1633,6 +1633,7 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
 bool VirtualLaneManager::UpdateIntersectionState() {
   if (session_->is_hpp_scene() || session_->is_rads_scene()) {
     Intersection_state_ = planning::common::NO_INTERSECTION;
+    last_intersection_state_ = Intersection_state_;
     return true;
   }
   double ego_pos_x = 0.0;
@@ -1645,6 +1646,8 @@ bool VirtualLaneManager::UpdateIntersectionState() {
     ego_pos_x = std::max(0 - first_left_x, 0 - first_right_x);
   } else {
     Intersection_state_ = planning::common::IN_INTERSECTION;
+    last_intersection_state_ = Intersection_state_;
+    in_intersection_to_no_intersection_counter_ = 0;
     return true;
   }
   if ((distance_to_stopline_ < 35.0 && distance_to_stopline_ > 3.0) ||
@@ -1653,13 +1656,25 @@ bool VirtualLaneManager::UpdateIntersectionState() {
     Intersection_state_ = planning::common::APPROACH_INTERSECTION;
   } else if (-1.0 < distance_to_stopline_ && distance_to_stopline_ <= 3.0) {
     Intersection_state_ = planning::common::IN_INTERSECTION;
+    in_intersection_to_no_intersection_counter_ = 0;
   } else {
     if ((-1.5 < distance_to_crosswalk_ && distance_to_crosswalk_ <= 5.0) &&
         !IsPosXOnVirtualLaneType(ego_pos_x)) {
       Intersection_state_ = planning::common::IN_INTERSECTION;
+      in_intersection_to_no_intersection_counter_ = 0;
     } else if (distance_to_crosswalk_ <= -1.5 &&
                !IsPosXOnVirtualLaneType(ego_pos_x)) {
-      Intersection_state_ = planning::common::NO_INTERSECTION;
+      if (last_intersection_state_ == planning::common::IN_INTERSECTION) {
+        in_intersection_to_no_intersection_counter_++;
+        if (in_intersection_to_no_intersection_counter_ > 3) {
+          Intersection_state_ = planning::common::NO_INTERSECTION;
+        } else {
+          Intersection_state_ = last_intersection_state_;
+        }
+
+      } else {
+        Intersection_state_ = planning::common::NO_INTERSECTION;
+      }
     } else if (IsPosXOnVirtualLaneType(ego_pos_x) &&
                !IsPosXOnVirtualLaneType(ego_pos_x + 8.0)) {
       Intersection_state_ = planning::common::OFF_INTERSECTION;
@@ -1668,11 +1683,13 @@ bool VirtualLaneManager::UpdateIntersectionState() {
         Intersection_state_ = planning::common::NO_INTERSECTION;
       } else {
         Intersection_state_ = planning::common::IN_INTERSECTION;
+        in_intersection_to_no_intersection_counter_ = 0;
       }
     } else {
       Intersection_state_ = planning::common::NO_INTERSECTION;
     }
   }
+  last_intersection_state_ = Intersection_state_;
   return true;
 }
 

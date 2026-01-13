@@ -10,6 +10,7 @@
 #include "ego_state_manager.h"
 #include "st_graph/st_graph_helper.h"
 #include "tasks/task.h"
+#include "trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
 
 namespace planning {
 
@@ -47,6 +48,8 @@ class AgentHeadwayDecider : public Task {
 
   int32_t GetOriginLaneFrontAgentId();
 
+  std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve();
+
  private:
   std::unordered_map<int32_t, AgentHeadwayInfo> agents_headway_map_;
   AgentHeadwayConfig config_;
@@ -55,6 +58,7 @@ class AgentHeadwayDecider : public Task {
   double plan_time_ = 0.0;
   int32_t last_gap_front_agent_id_ = -1;
   double dt_ = 0.0;
+  bool lc_to_lk_thw_is_init_ = false;
 };
 
 }  // namespace planning

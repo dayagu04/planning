@@ -262,6 +262,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                              "road_boundary_regular_v_limit_set", "road_boundary_regular_v_limit", "road_boundary_regular_trigger_distance", "road_boundary_regular_required_decel", "road_boundary_regular_manual_intervention_detected", "road_boundary_regular_manual_intervention_reset_count",\
+                              "road_boundary_regular_is_left_triggered", "road_boundary_regular_is_right_triggered", "road_boundary_regular_left_range_idx", "road_boundary_regular_right_range_idx", "road_boundary_regular_cooldown_count", \
+                              "road_boundary_strictest_applied", "road_boundary_strictest_v_limit", "road_boundary_strictest_trigger_distance", "road_boundary_strictest_required_decel","road_boundary_strictest_cooldown_count",\
+                              "curve_road_boundary_road_radius", "curve_road_boundary_left_gear", "curve_road_boundary_right_gear", "curve_road_boundary_v_limit", "curve_road_boundary_trigger_distance", \
+                              "lateral_acceleration_limit_triggered", "lateral_acceleration_limit_v_limit","lateral_acceleration_limit_trigger_distance",\
+                              "road_boundary_collision_v_limit", "road_boundary_collision_trigger_distance", "road_boundary_collision_valid", "road_boundary_collision_distance",\
+                              "s_curve_road_boundary_triggered", "s_curve_road_boundary_v_limit", "s_curve_road_boundary_trigger_distance", "s_curve_min_radius", "s_curve_first_direction", \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ["joint_danger_agent_ids", "rule_base_cutin_agent_ids", "upper_bound_agent_ids", "comfort_follow_agent_ids", "lon_emergency_stop", "is_confluence_area", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet",
@@ -1084,6 +1091,9 @@ def load_lon_global_figure(bag_loader):
   t_loc_vec = bag_loader.loc_msg['t']
   t_vehicle_service_vec = bag_loader.vs_msg['t']
   curve_limit_velocity_vec = []
+  speed_decider_limit_velocity_vec = []
+  # road_boundary_regular_v_limit_vec = []
+  # road_boundary_strictest_v_limit_vec = []
   # for ind in range(len(bag_loader.plan_debug_msg['json'])):
     # target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
     # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
@@ -1100,6 +1110,10 @@ def load_lon_global_figure(bag_loader):
     cipv_vel_vec.append(cipv_vel)
     cipv_vel_fusion_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_vel_fusion'], 2))
     curve_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_limit_in_turns'], 2))
+    speed_decider_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_decider'], 2))
+    #road_boundary_regular_v_limit_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['road_boundary_regular_v_limit'], 2))
+    #road_boundary_strictest_v_limit_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['road_boundary_strictest_v_limit'], 2))
+
   velocity_fig.line(t_plan_vec, cipv_vel_vec, line_width=1,
                               legend_label='cipv_vel', color="green")
   velocity_fig.line(t_plan_vec, cipv_vel_fusion_vec, line_width=1,
@@ -1108,6 +1122,12 @@ def load_lon_global_figure(bag_loader):
                                 legend_label='ego_velocity',color="blue")
   velocity_fig.line(t_plan_vec, curve_limit_velocity_vec, line_width=1,
                     legend_label='v_limit_in_turns', color="teal")  # 点状虚线，青绿色
+  velocity_fig.line(t_plan_vec, speed_decider_limit_velocity_vec, line_width=1,
+                    legend_label='speed_decider_limit_velocity', color="orange") 
+  # velocity_fig.line(t_plan_vec, road_boundary_regular_v_limit_vec, line_width=1,
+  #                     legend_label='boundary_regular_v', color="purple")
+  # velocity_fig.line(t_plan_vec, road_boundary_strictest_v_limit_vec, line_width=1,
+  #                     legend_label='boundary_strictest_v', color="brown")
   # velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
   #                             legend_label='leadone_velocity', color="red")
   # velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,

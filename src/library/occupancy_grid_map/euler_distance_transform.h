@@ -74,7 +74,8 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
 
   void UpdateSafeBuffer(const bool fold_mirror, const float car_body_lat_safe_buffer,
                         const float lon_safe_buffer, const float mirror_buffer,
-                        const float big_circle_safe_buffer = 0.35);
+                        const float big_circle_safe_buffer,
+                        const bool is_chassis_model = false);
 
   const EDTData &GetConstEDTData() const { return data_; }
 

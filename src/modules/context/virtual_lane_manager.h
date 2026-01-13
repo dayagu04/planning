@@ -336,6 +336,9 @@ class VirtualLaneManager {
   std::deque<double> crosswalk_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
   planning::common::IntersectionState Intersection_state_ =
       planning::common::NO_INTERSECTION;
+  planning::common::IntersectionState last_intersection_state_ =
+      planning::common::NO_INTERSECTION;
+  int in_intersection_to_no_intersection_counter_ = 0;
 
   // ego position lane mark
   iflyauto::LaneDrivableDirection lane_mark_at_ego_front_edge_pos_current_ =

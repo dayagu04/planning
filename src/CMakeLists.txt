@@ -7,6 +7,9 @@ find_package(Eigen3 REQUIRED)
 
 if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   add_compile_options(-Werror)
+  add_compile_options(
+  -Wreturn-type
+  -Werror=return-type)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT PLATFORM STREQUAL "X86")

@@ -47,7 +47,7 @@ class FootPrintCircleModel {
   FootPrintCircleModel() = default;
 
   void Init(const float lat_safe_buffer, const float lon_safe_buffer,
-            const float mirror_buffer);
+            const float mirror_buffer, const bool is_chassis_model = false);
 
   // lat_safe_buffer: lateral buffer
   // lon_safe_buffer: lon buffer
@@ -56,7 +56,8 @@ class FootPrintCircleModel {
   // collision;
   void UpdateSafeBuffer(const bool fold_mirror, const float lat_safe_buffer,
                         const float lon_safe_buffer, const float mirror_buffer,
-                        const float big_circle_safe_buffer = 0.35);
+                        const float big_circle_safe_buffer = 0.35,
+                        const bool is_chassis_model = false);
 
   void LocalToGlobalFast(FootPrintCircleList *global_circle,
                          const Pose2f &veh_pose);
@@ -108,8 +109,19 @@ enum HierarchySafeBuffer : int8_t {
   MAX_NUMBER = 4,
 };
 
+enum ObstacleHeightType : uint8_t {
+  MID_HIGH = 0,
+  LOW = 1,
+  HEIGHT_LAYER_NUM = 2,
+  // The number of layers in MultiHeightFootPrintView must be strictly equal to
+  // the number of layers in EDT
+};
 struct HierarchyBufferCircleFootPrint {
-  FootPrintCircleModel footprint_model[HierarchySafeBuffer::MAX_NUMBER];
+  FootPrintCircleModel footprint_model[ObstacleHeightType::HEIGHT_LAYER_NUM]
+                                      [HierarchySafeBuffer::MAX_NUMBER];
+};
+struct MultiHeightFootPrintView {
+  FootPrintCircleModel height_model[ObstacleHeightType::HEIGHT_LAYER_NUM];
 };
 
 }  // namespace planning

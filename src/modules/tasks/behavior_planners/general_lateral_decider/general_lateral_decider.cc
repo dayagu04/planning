@@ -1231,6 +1231,14 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   const auto &is_in_lane_borrow_status = session_->planning_context()
                                              .lane_borrow_decider_output()
                                              .is_in_lane_borrow_status;
+  const auto& lane_change_decider_output =
+    session_->planning_context().lane_change_decider_output();
+  bool is_LC_HOLD = coarse_planning_info.target_state == kLaneChangeHold;
+  double buffer_to_lc_hold_offset = 0.2;
+  double lc_hold_offset = 0;
+  if (is_LC_HOLD) {
+    lc_hold_offset = lane_change_decider_output.lc_hold_state_lat_offset;
+  }
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
@@ -1265,6 +1273,10 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
             std::fmin(ref_path_points_[i].distance_to_left_lane_border -
                           half_ego_width - config_.soft_buffer2lane,
                       soft_bound_lane.upper);
+        if (is_LC_HOLD) {
+          soft_bound_lane.upper = std::fmax(
+              soft_bound_lane.upper, lc_hold_offset + buffer_to_lc_hold_offset);
+        }
       }
 
       if (is_valid_right_lane_border_type) {
@@ -1272,6 +1284,10 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
             std::fmax(-ref_path_points_[i].distance_to_right_lane_border +
                           half_ego_width + config_.soft_buffer2lane,
                       soft_bound_lane.lower);
+        if (is_LC_HOLD) {
+          soft_bound_lane.lower = std::fmin(
+              soft_bound_lane.lower, lc_hold_offset - buffer_to_lc_hold_offset);
+        }
       }
 
       const double ego_init_l =

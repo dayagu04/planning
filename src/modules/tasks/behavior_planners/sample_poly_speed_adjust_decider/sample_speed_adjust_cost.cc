@@ -256,6 +256,10 @@ void MatchGapCost::GetCost(
           kBasicSafeDistance + 1, kBasicSafeDistance,
           -(0.5 - proportion_gap_center_distance) * kBasicSafeDistance,
           narrow_gap_penalty_factor_coef_, weight_match_s_);
+      match_s_cost_ = std::fmax(dist_to_lower_cost, dist_to_upper_cost);
+      match_s_cost_ =
+          std::fmax(match_s_cost_,
+                    weight_match_s_ * std::exp(clip_dis_penalty_factor_coef_));
       is_gap_changeable_ = false;
       // match_s_cost_ = weight_match_s_ * std::exp()
     }
