@@ -1319,10 +1319,18 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   } else {
     lane_change_stage_info_.lc_gap_info.rear_node_id = -1;
   }
+  if (ego_lane_front_node_) {
+    lane_change_decider_output.origin_agent_id =
+        ego_lane_front_node_->node_agent_id();
+  } else {
+    lane_change_decider_output.origin_agent_id = -1;
+  }
   lane_change_decider_output.lc_gap_info.front_node_id =
       lane_change_stage_info_.lc_gap_info.front_node_id;
   lane_change_decider_output.lc_gap_info.rear_node_id =
       lane_change_stage_info_.lc_gap_info.rear_node_id;
+  lane_change_decider_output.origin_agent_id =
+      lane_change_decider_output.origin_agent_id;
 
   GenerateTurnSignalForSplitRegion();
   JSON_DEBUG_VALUE("road_to_ramp_turn_signal",

@@ -229,7 +229,7 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
   const double ego_half_width = vehicle_param.width * kHalf + 0.15;
   const auto& route_info = session_->environmental_model().get_route_info();
   const auto& ego_lane_road_right_output =
-  session_->planning_context().ego_lane_road_right_decider_output();
+      session_->planning_context().ego_lane_road_right_decider_output();
   bool is_confluence_area = false;
   if (route_info != nullptr) {
     const auto& route_info_output = route_info->get_route_info_output();
@@ -238,9 +238,9 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
         is_confluence_area = true;
     }
   }
-  
-  if(ego_lane_road_right_output.is_merge_region ||
-    ego_lane_road_right_output.is_split_region) {
+
+  if (ego_lane_road_right_output.is_merge_region ||
+      ego_lane_road_right_output.is_split_region) {
     is_confluence_area = true;
   }
 
@@ -364,8 +364,8 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
       &small_lateral_distance, &small_lateral_distance_with_ego_l,
       &large_lateral_distance);
 
-  //分类型处理
-  //大车
+  // 分类型处理
+  // 大车
   const bool is_large_agent = IsLargeAgent(agent);
   bool is_large_agent_cutin = false;
   if (is_large_agent) {
@@ -458,7 +458,8 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
 
   current_rule_base_cutin |= is_large_agent_cutin;
   // current_rule_base_cutin |= is_vru_cutin;
-  current_rule_base_cutin &= !(is_lane_change && std::fabs(agent_l) < ego_half_width + 0.2);
+  current_rule_base_cutin &=
+      !(is_lane_change && std::fabs(agent_l) < ego_half_width + 0.2);
 
   // prediction
   const bool is_prediction_cut_in = agent.is_prediction_cutin();
@@ -610,7 +611,7 @@ bool AgentLongitudinalDecider::IsLargeAgentCutIn(
     const double large_agent_lower_small_heading_diff,
     const double ego_half_length, const double ego_s, const double ego_theta,
     const double ego_speed_mps) {
-  constexpr double kSpeedThresholdKph = 15.0;  //车速阈值
+  constexpr double kSpeedThresholdKph = 15.0;  // 车速阈值
   const bool speed_meet = ego_speed_mps * kMpsToKph > kSpeedThresholdKph &&
                           agent.speed() * kMpsToKph > kSpeedThresholdKph;
 
@@ -1319,16 +1320,11 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     return;
   }
 
-  // get lane change info
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  // const auto& coarse_planning_info =
-  //     lane_change_decider_output.coarse_planning_info;
-  const auto lc_request_direction = lane_change_decider_output.lc_request;
-  const auto lane_change_state = lane_change_decider_output.curr_state;
+
   const auto is_in_lane_change_execution =
-      lane_change_state == kLaneChangeExecution;
-  const auto is_lane_change_complete = lane_change_state == kLaneChangeComplete;
+      lane_change_decider_output.curr_state == kLaneChangeExecution;
 
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -1336,14 +1332,12 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     return;
   }
   const auto& planning_init_point = ego_state_manager->planning_init_point();
-  // const double distance_thr_for_rear = 50.0;
 
-  // get ego_lane
   const auto& ego_lane = virtual_lane_manager_->get_current_lane();
   if (ego_lane == nullptr) {
     return;
   }
-  // get reference path from ego lane
+
   const auto& ego_reference_path = ego_lane->get_reference_path();
   if (ego_reference_path == nullptr) {
     return;
@@ -1360,34 +1354,19 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     return;
   }
 
-  // TODO: only insert ego_right_rear_node_id in target_lane_rear_agents
-  //       if want consider more rear agent, insert there
-  int64_t target_lane_rear_node_id = -1;
   std::unordered_set<int32_t> target_lane_rear_agents;
-  if (lc_request_direction == LEFT_CHANGE) {
-    if (lane_change_state == kLaneChangeExecution ||
-        lane_change_state == kLaneChangeComplete) {
-      target_lane_rear_node_id = dynamic_world_->ego_rear_node_id();
-    } else {
-      target_lane_rear_node_id = dynamic_world_->ego_left_rear_node_id();
-    }
-  } else if (lc_request_direction == RIGHT_CHANGE) {
-    if (lane_change_state == kLaneChangeExecution ||
-        lane_change_state == kLaneChangeComplete) {
-      target_lane_rear_node_id = dynamic_world_->ego_rear_node_id();
-    } else {
-      target_lane_rear_node_id = dynamic_world_->ego_right_rear_node_id();
-    }
-  }
-  if (target_lane_rear_node_id != -1) {
-    auto* target_lane_rear_node =
-        dynamic_world_->GetNode(target_lane_rear_node_id);
-    if (target_lane_rear_node != nullptr) {
-      target_lane_rear_agents.insert(target_lane_rear_node->node_agent_id());
+  if (is_in_lane_change_execution) {
+    const auto& lc_gap_info = lane_change_decider_output.lc_gap_info;
+    const int64_t target_lane_rear_node_id = lc_gap_info.rear_node_id;
+    if (target_lane_rear_node_id != -1) {
+      auto* target_lane_rear_node =
+          dynamic_world_->GetNode(target_lane_rear_node_id);
+      if (target_lane_rear_node != nullptr) {
+        target_lane_rear_agents.insert(target_lane_rear_node->node_agent_id());
+      }
     }
   }
 
-  // vehicle param
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double vehicle_length = vehicle_param.length;
@@ -1424,7 +1403,6 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     const double half_length = agent->length() * 0.5;
 
     bool is_no_need_expand_agent = false;
-    // update no need for expansion agents.
     if (ego_front_axle_s > agent_s + half_length) {
       is_no_need_expand_agent = true;
     }
@@ -1465,23 +1443,19 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     }
 
     const double front_edge_s_diff = front_corner_s - ego_front_axle_s;
-    // filter front agent
     if (front_edge_s_diff > kEpsilon) {
       continue;
     }
 
-    // filter consider rear agent
     if (IsConsiderBackObs(ego_lane_coord, planning_init_point, agent.get(),
                           ego_front_edge_s, front_corner_s, ego_center_s,
                           front_edge_s_diff, min_lat_l_from_ego)) {
       continue;
     }
 
-    if (is_in_lane_change_execution || is_lane_change_complete) {
-      if (target_lane_rear_agents.find(agent->agent_id()) !=
-          target_lane_rear_agents.end()) {
-        continue;
-      }
+    if (target_lane_rear_agents.find(agent->agent_id()) !=
+        target_lane_rear_agents.end()) {
+      continue;
     }
 
     auto* mutable_agent =

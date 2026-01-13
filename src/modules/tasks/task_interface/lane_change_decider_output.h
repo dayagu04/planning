@@ -61,6 +61,7 @@ struct LaneChangeDeciderOutput {
   bool is_dash_not_enough_for_lc = false;
   // idm guess
   TrajectoryPoints ego_trajs_future;
+  int origin_agent_id = -1;
 };
 
 }  // namespace planning

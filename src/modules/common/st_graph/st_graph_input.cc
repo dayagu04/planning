@@ -171,7 +171,6 @@ void StGraphInput::GetAgentOfTargetLane(
     front_agent_of_target_ = nullptr;
     rear_agent_of_target_ = nullptr;
     front_agent_of_origin_ = nullptr;
-    rear_agent_of_origin_ = nullptr;
     return;
   }
 
@@ -182,8 +181,6 @@ void StGraphInput::GetAgentOfTargetLane(
       lane_agents.target_rear_agent_id);
   front_agent_of_origin_ = dynamic_world->agent_manager()->GetAgent(
       lane_agents.current_front_agent_id);
-  rear_agent_of_origin_ = dynamic_world->agent_manager()->GetAgent(
-      lane_agents.current_rear_agent_id);
 }
 
 void StGraphInput::FilterAgentsByDecisionType(
@@ -638,10 +635,6 @@ const agent::Agent* StGraphInput::front_agent_of_origin() const {
   return front_agent_of_origin_;
 }
 
-const agent::Agent* StGraphInput::rear_agent_of_origin() const {
-  return rear_agent_of_origin_;
-}
-
 double StGraphInput::front_agent_lower_s_safety_buffer_for_lane_change() const {
   return config_.front_agent_lower_s_safety_buffer_for_lane_change;
 }
@@ -928,77 +921,24 @@ LaneFrontRearAgents StGraphInput::MakeTargetLaneFrontRearAgents(
   LaneFrontRearAgents result;
   const auto& dynamic_world =
       session->environmental_model().get_dynamic_world();
-  // get lane change status
   const auto& lane_change_decider_output =
       session->planning_context().lane_change_decider_output();
-  const auto lc_request_direction = lane_change_decider_output.lc_request;
-  const auto lane_change_state = lane_change_decider_output.curr_state;
-
-  // get front and rear agents
-  int64_t target_lane_front_node_id = -1;
-  int64_t target_lane_rear_node_id = -1;
-  int64_t current_lane_front_node_id = -1;
-  int64_t current_lane_rear_node_id = -1;
-
-  const bool is_lane_changing = (lane_change_state == kLaneChangeExecution ||
-                                 lane_change_state == kLaneChangeComplete);
-
-  if (lc_request_direction == LEFT_CHANGE) {
-    if (is_lane_changing) {
-      target_lane_front_node_id = dynamic_world->ego_front_node_id();
-      target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
-      current_lane_front_node_id = dynamic_world->ego_right_front_node_id();
-      current_lane_rear_node_id = dynamic_world->ego_right_rear_node_id();
-    } else {
-      // Target lane (left lane, not yet in it)
-      target_lane_front_node_id = dynamic_world->ego_left_front_node_id();
-      target_lane_rear_node_id = dynamic_world->ego_left_rear_node_id();
-    }
-  } else if (lc_request_direction == RIGHT_CHANGE) {
-    if (is_lane_changing) {
-      target_lane_front_node_id = dynamic_world->ego_front_node_id();
-      target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
-      current_lane_front_node_id = dynamic_world->ego_left_front_node_id();
-      current_lane_rear_node_id = dynamic_world->ego_left_rear_node_id();
-    } else {
-      target_lane_front_node_id = dynamic_world->ego_right_front_node_id();
-      target_lane_rear_node_id = dynamic_world->ego_right_rear_node_id();
-    }
+  const auto& lc_gap_info = lane_change_decider_output.lc_gap_info;
+  const auto& origin_agent_id = lane_change_decider_output.origin_agent_id;
+  if (lc_gap_info.front_node_id != -1) {
+    auto* node = dynamic_world->GetNode(lc_gap_info.front_node_id);
+    result.target_front_agent_id = node != nullptr ? node->node_agent_id() : -1;
   }
 
-  if (target_lane_front_node_id != -1) {
-    auto* target_lane_front_node =
-        dynamic_world->GetNode(target_lane_front_node_id);
-    if (target_lane_front_node != nullptr) {
-      result.target_front_agent_id = target_lane_front_node->node_agent_id();
-    }
+  if (lc_gap_info.rear_node_id != -1) {
+    auto* node = dynamic_world->GetNode(lc_gap_info.rear_node_id);
+    result.target_rear_agent_id = node != nullptr ? node->node_agent_id() : -1;
   }
 
-  if (target_lane_rear_node_id != -1) {
-    auto* target_lane_rear_node =
-        dynamic_world->GetNode(target_lane_rear_node_id);
-    if (target_lane_rear_node != nullptr) {
-      result.target_rear_agent_id = target_lane_rear_node->node_agent_id();
-    }
-  }
-
-  if (is_lane_changing) {
-    if (current_lane_front_node_id != -1) {
-      auto* current_lane_front_node =
-          dynamic_world->GetNode(current_lane_front_node_id);
-      if (current_lane_front_node != nullptr) {
-        result.current_front_agent_id =
-            current_lane_front_node->node_agent_id();
-      }
-    }
-
-    if (current_lane_rear_node_id != -1) {
-      auto* current_lane_rear_node =
-          dynamic_world->GetNode(current_lane_rear_node_id);
-      if (current_lane_rear_node != nullptr) {
-        result.current_rear_agent_id = current_lane_rear_node->node_agent_id();
-      }
-    }
+  if (origin_agent_id != -1) {
+    auto* node = dynamic_world->GetNode(origin_agent_id);
+    result.current_front_agent_id =
+        node != nullptr ? node->node_agent_id() : -1;
   }
 
   return result;
@@ -1009,7 +949,6 @@ void StGraphInput::Reset() {
   front_agent_of_target_ = nullptr;
   rear_agent_of_target_ = nullptr;
   front_agent_of_origin_ = nullptr;
-  rear_agent_of_origin_ = nullptr;
 }
 
 }  // namespace speed
