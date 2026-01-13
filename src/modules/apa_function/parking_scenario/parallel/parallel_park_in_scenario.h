@@ -115,12 +115,16 @@ class ParallelParkInScenario : public ParkingScenario {
 
   const bool CheckOneReverseToSlot();
   bool CheckReplanParallel();
-  const GeometryPathOutput& SuitablePathReplan();
+  const ParallelPathGenerator& SuitablePathReplan();
+  const bool CheckLastPathCollided();
+  const ParallelPathGenerator& UseOrNotUseLastPath();
   void CheckEgoPoseWhenPlanFaild(ParkingFailReason reason);
 
   const double UpdateRemainDistObs(const double remain_dist_path,
                                    const double remain_dist_obs);
   const bool PostProcessPathPara();
+
+  const bool CheckEgoToSlotRelation();
 
   Tlane t_lane_;
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
