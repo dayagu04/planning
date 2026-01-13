@@ -2042,7 +2042,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                         merge_seg->lane_num() &&
                     merge_seg_last_seg->lane_num() +
                             merge_seg_last_other_seg->lane_num() <=
-                        next_merge_seg->lane_num()
+                        next_merge_seg->lane_num() &&
+                    merge_seg_last_seg->lane_num() +
+                            merge_seg_last_other_seg->lane_num() <=
+                        valid_exchange_regions[0]
+                            .recommend_lane_num[2]
+                            .total_lane_num
                 ? true
                 : false;
       }
