@@ -11,6 +11,12 @@
 #include "parallel_path_generator.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "src/modules/apa_function/apa_common/relative_loc_observer_manager.h"
+#include "hybrid_astar_interface.h"
+#include "hybrid_astar_thread.h"
+#include "hybrid_astar_common.h"
+# include "apa_slot.h"
+#include "src/modules/apa_function/util/apa_utils.h"
+#include "virtual_wall_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -102,6 +108,28 @@ class ParallelParkInScenario : public ParkingScenario {
                          const SlotCoord& slot,
                          const std::vector<Eigen::Vector2d>& pa_curb_obs);
   void UpdatePARemainDistance();
+  HybridAStarThreadSolver* GetThread() { return &thread_; }
+
+  const int PublishHybridAstarDebugInfo(const HybridAStarResult& result,
+                                        Transform2d* tf);
+  const bool IsNeedClipping(const HybridAStarResult& result, const size_t i);
+  const pnc::geometry_lib::PathSegGear GetGear(const AstarPathGear gear);
+
+  const int LocalPathToGlobal(
+      const std::vector<pnc::geometry_lib::PathPoint>& local_path,
+      Transform2d* tf);
+  const int PathOptimizationByCILQR(
+      const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf);
+
+  void FillPlanningReason(AstarRequest& astar_request);
+  void FillPlanningMethod(AstarRequest& astar_request);
+  void FillGearRequest(AstarRequest& astar_request,
+                       pnc::geometry_lib::PathSegGear& last_path_gear);
+  const bool UpdateThreadPath();
+  void RecordSearchTime(const SearchTimeBenchmark& time);
+  void RecordSearchTrajectoryInfo(const SearchTrajectoryInfo& search_traj_info);
+  const int HybridAstarDebugInfoClear();
+
   SlotCoord slot_new_;
   Eigen::Vector2d line_coeffs_out_;
 
@@ -169,6 +197,17 @@ class ParallelParkInScenario : public ParkingScenario {
   std::unordered_map<int, std::vector<AngleResultHeightObs>> multi_frame_height_obs_map_;
   bool last_frame_limiter_valid_ = false;
   bool out_again_path_better_ = false;
+
+  public:
+  RequestResponseState thread_state_;
+  HybridAStarThreadSolver thread_;
+  // do not clear it every frame in cruise state.
+  AstarResponse response_;
+
+  AstarPathGear current_gear_ = AstarPathGear::PARKING;
+  ParkObstacleList obs_hastar;
+  VirtualWallDecider virtual_wall_decider_;
+  AstarSearchState astar_state_ = AstarSearchState::NONE;
 };
 
 }  // namespace apa_planner

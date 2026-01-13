@@ -67,6 +67,8 @@ struct AstarRequest {
   Eigen::Vector2d x_axis_direction_coordinate_slant;
   bool fold_mirror;
 
+  std::vector<Pose2f> parallel_target_group;
+
   void Clear() {
     path_generate_method = AstarPathGenerateType::NONE;
     plan_reason = PlanningReason::NONE;

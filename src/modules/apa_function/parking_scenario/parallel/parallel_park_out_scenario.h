@@ -16,6 +16,13 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   ParallelParkOutScenario() = default;
   ParallelParkOutScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
+    if (apa_param.GetParam().parallel_enable_hybrid_astar) {
+      VehicleParam vehicle_param;
+      UpdateVehicleParam(vehicle_param);
+      thread_.Init(vehicle_param);
+      thread_.Start();
+      response_.Clear();
+    }
   }
 
   virtual void Reset() override;
@@ -25,9 +32,30 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   virtual const uint8_t PathPlanOnce() override;
   virtual const bool UpdateEgoSlotInfo() override;
   void ScenarioTry() override;
+  bool ParkOutPlanTry();
   bool ParkOutDirectionTry();
+  bool ParkOutDirectionTryHybridAStar();
 
   void GenTBoundaryObstacles();
+
+  const PathPlannerResult PathPlanOnceGeometry();
+
+  void SetReleaseDirection(iflyauto::APAHMIData& apa_hmi_data,
+                           const AstarRequest& cur_request);
+  void SetRequestForScenarioTry(AstarRequest& cur_request,
+                                const EgoInfoUnderSlot& ego_info);
+
+  void SetTargetGroup(AstarRequest& cur_request);
+  void UpdateStartPosByInSlot(Pose2f& start_pos,
+                              pnc::geometry_lib::PathSegGear& last_path_gear);
+  void UpdatePathByGeometry();
+  const bool SetAstarRequest(AstarRequest& astar_request);
+  const PathPlannerResult PubResponseForScenarioTry(
+      const EgoInfoUnderSlot& ego_info, const ParkObstacleList& obs);
+  const PathPlannerResult PubResponseForScenarioRunning(
+      const EgoInfoUnderSlot& ego_info, const ParkObstacleList& obs);
+  const PathPlannerResult PathPlanOnceHybridAStar();
+  void UpdatePostProcessStatus(PathPlannerResult pathplan_result);
 
   const double CalcSlotOccupiedRatio(
       const pnc::geometry_lib::PathPoint start_pose) const;
@@ -42,7 +70,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   }
 
   virtual const double CalRealTimeBrakeDist() override;
-  bool CheckFinishParallel();
+
   void CheckEgoPoseWhenParkOutFaild(ParkingFailReason reason);
 
  private:
@@ -78,6 +106,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool is_arc_slot_ = false;
   bool path_end_heading_is_met_= false;
   ParallelOutPathGenerator previous_parallel_out_path_planner_;
+  double strict_channel_y = 6.5;
 };
 }  // namespace apa_planner
 }  // namespace planning

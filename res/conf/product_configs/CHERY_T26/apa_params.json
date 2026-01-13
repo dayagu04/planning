@@ -613,5 +613,6 @@
 
   "comment_30": "parallel plan params",
   "parallel_col_buffer_in_slot": 0.25,
-  "parallel_col_small_buffer_in_slot": 0.16
+  "parallel_col_small_buffer_in_slot": 0.16,
+  "parallel_enable_hybrid_astar": false
 }

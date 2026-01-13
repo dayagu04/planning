@@ -29,6 +29,7 @@
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
 #include "gjk_collision_detector.h"
+#include "hybrid_astar_common.h"
 #include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
@@ -38,6 +39,7 @@
 #include "parallel_path_generator.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "park_hmi_state.h"
+#include "src/modules/apa_function/util/apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -75,6 +77,7 @@ static double kBigWallHeightRatioThred = 0.5;
 static double kSmallWallHeightRatioThred = 0.25;
 
 using Point = Eigen::Vector2d;
+using namespace pnc::geometry_lib;
 
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
@@ -96,6 +99,11 @@ void ParallelParkInScenario::Reset() {
   parent_total_count.clear();
   parent_height_count.clear();
   multi_frame_height_obs_map_.clear();
+
+  current_gear_ = AstarPathGear::PARKING;
+  obs_hastar.Clear();
+  virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
+  astar_state_ = AstarSearchState::NONE;
 
   ParkingScenario::Reset();
 }
@@ -4831,6 +4839,359 @@ void ParallelParkInScenario::ProcessTruncationPoints(
 
     ILOG_INFO << "After truncation, points count: " << curb_points.size();
   }
+}
+
+const int ParallelParkInScenario::PublishHybridAstarDebugInfo(
+    const HybridAStarResult& result, Transform2d* tf) {
+  if (result.x.size() < 1) {
+    ILOG_INFO << "no path";
+    return 0;
+  }
+
+  Pose2D local_position;
+  Pose2D global_position;
+
+  geometry_lib::PathPoint gl_pt;
+  complete_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.reserve(result.x.size());
+
+  ILOG_INFO << "result.x.size(): " << result.x.size();
+
+  for (size_t i = 0; i < result.x.size(); i++) {
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus() &&
+        i > 0) {
+      if (IsNeedClipping(result, i)) {
+        break;
+      }
+    }
+
+    local_position.x = result.x[i];
+    local_position.y = result.y[i];
+    local_position.theta = result.phi[i];
+
+    tf->ULFLocalPoseToGlobal(&global_position, local_position);
+
+    gl_pt.pos << global_position.x, global_position.y;
+    gl_pt.heading = global_position.theta;
+    gl_pt.type = static_cast<int>(result.type[i]);
+    gl_pt.lat_buffer = 0.0;
+    gl_pt.kappa = result.kappa[i];
+    gl_pt.s = result.accumulated_s[i];
+    gl_pt.gear = GetGear(result.gear[i]);
+
+    if (IsSearchNode(result.type[i])) {
+      gl_pt.type = 0;
+    } else if (result.type[i] == AstarPathType::LINE_SEGMENT) {
+      gl_pt.type = 1;
+    } else {
+      gl_pt.type = 2;
+    }
+    complete_path_point_global_vec_.emplace_back(gl_pt);
+  }
+
+#if 0
+  RecordSearchNode(tf);
+#endif
+
+  return 0;
+}
+
+const bool ParallelParkInScenario::IsNeedClipping(
+    const HybridAStarResult& result, const size_t i) {
+  constexpr float kHeadHeadingStartDeg = 80.0f;
+  constexpr float kTailHeadingStartDeg = 95.0f;
+  constexpr float kHeadingEndDeg = 89.9f;
+  constexpr float kHeadingDiffThresh = 1e-3f;
+  constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
+
+  bool heading_flag = true;
+  bool sample_finish = false;
+  const float heading_deg = std::abs(result.phi[i] * kRad2Deg);
+
+  if (heading_deg > kHeadHeadingStartDeg && i > 0) {
+    float heading_diff = result.phi[i] - result.phi[i - 1];
+    heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
+  }
+
+  if (std::abs(result.phi[i]) * kRad2Deg <= kHeadingEndDeg && !sample_finish &&
+      heading_flag) {
+    return false;
+  } else {
+    return true;
+  }
+}
+const pnc::geometry_lib::PathSegGear ParallelParkInScenario::GetGear(
+    const AstarPathGear gear) {
+  pnc::geometry_lib::PathSegGear path_seg_gear;
+  switch (gear) {
+    case AstarPathGear::NONE:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+      break;
+    case AstarPathGear::DRIVE:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      break;
+    case AstarPathGear::REVERSE:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      break;
+    case AstarPathGear::NORMAL:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_NEUTRAL;
+      break;
+    case AstarPathGear::PARKING:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_PARK;
+      break;
+    default:
+      break;
+  }
+  return path_seg_gear;
+}
+
+const int ParallelParkInScenario::PathOptimizationByCILQR(
+    const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf) {
+  if (first_seg_path.empty()) {
+    return 0;
+  }
+
+  std::vector<pnc::geometry_lib::PathPoint> local_path;
+  local_path.reserve(first_seg_path.size());
+
+  constexpr float kFirstXDiffThresh = 0.5f;
+  constexpr double kHeadingDiffThresh = 0.01;
+  const double target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
+                                        ->GetEgoInfoUnderSlot()
+                                        .target_pose.heading;
+  const float target_x = apa_world_ptr_->GetSlotManagerPtr()
+                             ->GetEgoInfoUnderSlot()
+                             .target_pose.pos.x();
+  pnc::geometry_lib::PathPoint point;
+  float expansion_dir =
+      first_seg_path.front().gear == AstarPathGear::DRIVE ? 1.0 : -1.0;
+
+  for (size_t i = 0; i < first_seg_path.size(); ++i) {
+    const AStarPathPoint& path_pt = first_seg_path[i];
+    point = pnc::geometry_lib::PathPoint(Eigen::Vector2d(path_pt.x, path_pt.y),
+                                         path_pt.phi, path_pt.kappa);
+    point.s = path_pt.accumulated_s;
+    point.gear = GetGear(path_pt.gear);
+    local_path.emplace_back(point);
+  }
+
+  LocalPathToGlobal(local_path, tf);
+  return 0;
+}
+
+const int ParallelParkInScenario::LocalPathToGlobal(
+    const std::vector<pnc::geometry_lib::PathPoint>& local_path,
+    Transform2d* tf) {
+  // TODO: longitudinal path optimization
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.reserve(local_path.size());
+
+  pnc::geometry_lib::PathPoint global_point;
+  Pose2D global;
+  for (const auto& path_point : local_path) {
+    tf->ULFLocalPoseToGlobal(
+        &global,
+        Pose2D(path_point.pos.x(), path_point.pos.y(), path_point.heading));
+
+    global_point.Set(Eigen::Vector2d(global.x, global.y), global.theta);
+    global_point.kappa = path_point.kappa;
+    global_point.s = path_point.s;
+
+    current_path_point_global_vec_.emplace_back(global_point);
+  }
+
+  ILOG_INFO << " path point num " << current_path_point_global_vec_.size();
+  return 0;
+}
+
+void ParallelParkInScenario::FillPlanningReason(AstarRequest& astar_request) {
+  switch (frame_.replan_reason) {
+    case ReplanReason::FIRST_PLAN:
+      astar_request.plan_reason = PlanningReason::FIRST_PLAN;
+      break;
+    case ReplanReason::SEG_COMPLETED_PATH:
+      astar_request.plan_reason = PlanningReason::PATH_COMPLETED;
+      break;
+    case ReplanReason::SEG_COMPLETED_OBS:
+      astar_request.plan_reason = PlanningReason::PATH_STUCKED;
+      break;
+    case ReplanReason::STUCKED:
+      astar_request.plan_reason = PlanningReason::PATH_STUCKED;
+      break;
+    case ReplanReason::DYNAMIC:
+      astar_request.plan_reason = PlanningReason::SLOT_REFRESHED;
+      break;
+    case ReplanReason::SEG_COMPLETED_COL_DET:
+      astar_request.plan_reason = PlanningReason::PATH_STUCKED;
+      break;
+    case ReplanReason::SLOT_CRUISING:
+      astar_request.plan_reason = PlanningReason::SLOT_CRUISING;
+      break;
+    case ReplanReason::DYNAMIC_GEAR_SWITCH:
+      astar_request.plan_reason = PlanningReason::DYNAMIC_GEAR_SWITCH;
+      break;
+    default:
+      astar_request.plan_reason = PlanningReason::NONE;
+      break;
+  }
+
+  return;
+}
+
+void ParallelParkInScenario::FillPlanningMethod(AstarRequest& astar_request) {
+  astar_request.path_generate_method =
+      planning::AstarPathGenerateType::ASTAR_SEARCHING;
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    switch (astar_request.direction_request) {
+      case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+      case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
+        astar_request.path_generate_method =
+            planning::AstarPathGenerateType::ASTAR_SEARCHING;
+        break;
+      default:
+        astar_request.path_generate_method =
+            planning::AstarPathGenerateType::ASTAR_SEARCHING;
+        break;
+    }
+  }
+
+  // if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+  //   astar_request.path_generate_method =
+  //       planning::AstarPathGenerateType::TRY_SEARCHING;
+  // }
+
+  return;
+}
+
+void ParallelParkInScenario::FillGearRequest(
+    AstarRequest& astar_request,
+    pnc::geometry_lib::PathSegGear& last_path_gear) {
+  // gear need be different with history in next replanning
+  ILOG_INFO << "gear request "
+            << int(astar_request.first_action_request.gear_request);
+  ILOG_INFO << "gear request current_gear " << int(current_gear_);
+  ILOG_INFO << "gear request replan_reason " << int(frame_.replan_reason);
+  if (frame_.replan_reason != ReplanReason::FIRST_PLAN) {
+    switch (current_gear_) {
+      case AstarPathGear::REVERSE:
+        astar_request.first_action_request.gear_request = AstarPathGear::DRIVE;
+        break;
+      case AstarPathGear::DRIVE:
+        astar_request.first_action_request.gear_request =
+            AstarPathGear::REVERSE;
+        break;
+      default:
+        astar_request.first_action_request.gear_request = AstarPathGear::NONE;
+        break;
+    }
+  }
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    astar_request.first_action_request.gear_request = current_gear_;
+  }
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    astar_request.first_action_request.gear_request = AstarPathGear::NONE;
+  }
+
+  if (last_path_gear == PathSegGear::SEG_GEAR_DRIVE) {
+    astar_request.first_action_request.gear_request = AstarPathGear::DRIVE;
+  } else if (last_path_gear == PathSegGear::SEG_GEAR_REVERSE) {
+    astar_request.first_action_request.gear_request = AstarPathGear::REVERSE;
+  }
+
+  // 目前,平行车位入库使用混合A星搜索，交换起点终点
+  astar_request.swap_start_goal = false;
+
+  if (apa_world_ptr_->GetSimuParam().enable_debug_swap_start_goal) {
+    astar_request.swap_start_goal =
+        apa_world_ptr_->GetSimuParam().swap_start_goal;
+  }
+
+  if (astar_request.swap_start_goal) {
+    ClearFirstActionReqeust(&astar_request);
+  }
+
+  return;
+}
+
+const bool ParallelParkInScenario::UpdateThreadPath() {
+  thread_.GetThreadState(&thread_state_);
+
+  ILOG_INFO << "thread state " << static_cast<int>(thread_state_);
+
+  ILOG_INFO << "astar_state " << static_cast<int>(astar_state_);
+  if (astar_state_ == AstarSearchState::NONE) {
+    return false;
+  }
+
+  if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
+    return true;
+  }
+
+  return false;
+}
+
+void ParallelParkInScenario::RecordSearchTime(const SearchTimeBenchmark& time) {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug->mutable_apa_path_debug()->clear_path_time();
+  common::SearchTimeForPath* path_time_debug = debug->mutable_apa_path_debug()
+                                                   ->mutable_path_time()
+                                                   ->mutable_astar_time();
+  path_time_debug->set_total_search_time(time.total_time_ms);
+  ILOG_INFO << "total time = " << time.total_time_ms;
+
+  for (int8_t i = 0; i < time.size; i++) {
+    path_time_debug->add_search_time(time.time_ms[i]);
+    path_time_debug->add_node_pool_size(time.node_pool_size[i]);
+    ILOG_INFO << "search time = " << time.time_ms[i];
+    ILOG_INFO << "node_pool_size = " << time.node_pool_size[i];
+  }
+
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,
+                                    time.total_time_ms);
+
+  return;
+}
+
+void ParallelParkInScenario::RecordSearchTrajectoryInfo(
+    const SearchTrajectoryInfo& search_traj_info) {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug->mutable_apa_path_debug()->clear_search_traj_info();
+  common::SearchTrajectoryInfo* search_traj_info_debug =
+      debug->mutable_apa_path_debug()->mutable_search_traj_info();
+
+  search_traj_info_debug->set_first_seg_path_length(
+      search_traj_info.first_seg_path_length);
+  ILOG_INFO << "first_seg_path_length = "
+            << search_traj_info.first_seg_path_length;
+
+  for (int8_t i = 0; i < search_traj_info.size; i++) {
+    search_traj_info_debug->add_first_action_gear(
+        search_traj_info.first_action_gear[i]);
+    search_traj_info_debug->add_first_action_gear_request(
+        search_traj_info.first_action_gear_request[i]);
+    ILOG_INFO << "first_action_gear = "
+              << search_traj_info.first_action_gear[i];
+    ILOG_INFO << "first_action_gear_request = "
+              << search_traj_info.first_action_gear_request[i];
+  }
+
+  return;
+}
+
+const int ParallelParkInScenario::HybridAstarDebugInfoClear() {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::AstarNodeList* list =
+      debug->mutable_apa_path_debug()->mutable_astar_node_list();
+  list->Clear();
+
+  return 0;
 }
 
 }  // namespace apa_planner
