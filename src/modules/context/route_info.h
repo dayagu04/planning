@@ -420,5 +420,8 @@ class RouteInfo {
       std::map<int, SplitDirection>& expand_lane_sequence_vec,
       const iflymapdata::sdpro::LinkInfo_Link* link, double distance_on_link,
       double search_distance);
+  void OptimizeFeasibleLanesForRampSplit(
+      NOASplitRegionInfo& first_exchange_region_info,
+      NOASplitRegionInfo& ramp_exchange_region_info);
 };
 }  // namespace planning
