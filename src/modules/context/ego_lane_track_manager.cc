@@ -63,7 +63,7 @@ constexpr double kEgoPreviewTimeMaxThd = 5.0;
 constexpr double kExistSplitLateralDisThd = 1.5;
 constexpr double kCenterLineLateralDisThd = 0.8;
 constexpr double kExistSplitEgoRearLateralDisThd = 1.5;
-constexpr double kNearPreviewDistanceThd = 30.0;
+constexpr double kNearPreviewDistanceThd = 20.0;
 constexpr double kManualLaneChangeDisThd = 1.5;
 constexpr double kConsiderManualLength = 80.0;
 
@@ -3288,72 +3288,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     return;
   }
 
-  double clane_min_lateral_distance = std::numeric_limits<double>::max();
-  for (size_t i = 0; i < order_ids.size(); i++) {
-    if (relative_id_lanes.size() > order_ids[i]) {
-      std::shared_ptr<VirtualLane> relative_id_lane =
-          relative_id_lanes[order_ids[i]];
-      const auto& lane_points = relative_id_lane->lane_points();
-      if (lane_points.size() <= 2) {
-        continue;
-      }
-      auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
-      if (cur_lane_frenet_coord == nullptr) {
-        continue;
-      }
-      double target_ego_s = 0.0;
-      double target_ego_l = 0.0;
-      Point2D ego_cart_target_frenet;
-      if (!cur_lane_frenet_coord->XYToSL(ego_point,
-                                         ego_cart_target_frenet)) {
-        continue;
-      } else {
-        target_ego_s = ego_cart_target_frenet.x;
-        target_ego_l = ego_cart_target_frenet.y;
-      }
-      int point_nums = 0;
-      double total_lateral_offset = 0.0;
-      double cumu_lat_dis_cost = 0.0;
-      int select_lane_point_interval = 1;
-      for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
-        iflyauto::ReferencePoint point = lane_points[i];
-        if (std::isnan(point.local_point.x) ||
-            std::isnan(point.local_point.y)) {
-          ILOG_ERROR << "update_lane_points: skip NaN point";
-          continue;
-        }
-        double lateral_offset = 0.0;
-        double s = 0.0;
-        Point2D cur_point_frenet;
-        Point2D cur_point(point.local_point.x, point.local_point.y);
-        if (!last_track_ego_lane_frenet_coord->XYToSL(cur_point,
-                                                      cur_point_frenet)) {
-          lateral_offset = 10.0;
-        } else {
-          s = cur_point_frenet.x;
-          lateral_offset = cur_point_frenet.y;
-        }
-        if (s < target_ego_s) {
-          continue;
-        }
-        total_lateral_offset += std::fabs(lateral_offset);
-        point_nums += 1;
-        if (point_nums >= kDefaultPointNums ||
-            s > target_ego_s + 50.0) {
-          break;
-        }
-      }
-      point_nums = std::max(1, point_nums);
-      cumu_lat_dis_cost = std::fabs(total_lateral_offset / point_nums);
-      if (cumu_lat_dis_cost < clane_min_lateral_distance) {
-        clane_min_lateral_distance = cumu_lat_dis_cost;
-      }
-    }
-  }
-  if (clane_min_lateral_distance >= 1.5) {
-    is_split_region_include_fix_lane = false;
-  }
-
+  std::vector<int> relative_lane_order_ids;
   if (order_ids.size() > 2) {
     ego_in_split_region_ = true;
     return;
@@ -3363,9 +3298,11 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     if (order_ids.size() == 2) {
       if (order_ids[0] < relative_id_lanes.size()) {
         relative_left_lane = relative_id_lanes[order_ids[0]];
+        relative_lane_order_ids.emplace_back(relative_left_lane->get_order_id());
       }
       if (order_ids[1] < relative_id_lanes.size()) {
         relative_right_lane = relative_id_lanes[order_ids[1]];
+        relative_lane_order_ids.emplace_back(relative_right_lane->get_order_id());
       }
     } else {
       double k_right_lane_lateral_distance =
@@ -3400,11 +3337,13 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     if (relative_left_lane != nullptr) {
       if (relative_left_lane->get_lane_frenet_coord() != nullptr) {
         has_left_lane = true;
+        relative_lane_order_ids.emplace_back(relative_left_lane->get_order_id());
       }
     }
     if (relative_right_lane != nullptr) {
       if (relative_right_lane->get_lane_frenet_coord() != nullptr) {
         has_right_lane = true;
+        relative_lane_order_ids.emplace_back(relative_right_lane->get_order_id());
       }
     }
     const auto& relative_left_lane_points = relative_left_lane->lane_points();
@@ -3412,6 +3351,74 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
         relative_left_lane_points.size() < 3) {
       return;
     }
+
+  double clane_min_lateral_distance = std::numeric_limits<double>::max();
+  if (!relative_lane_order_ids.empty()) {
+    for (size_t i = 0; i < relative_lane_order_ids.size(); i++) {
+      if (relative_id_lanes.size() > relative_lane_order_ids[i]) {
+        std::shared_ptr<VirtualLane> relative_id_lane =
+            relative_id_lanes[relative_lane_order_ids[i]];
+        const auto& lane_points = relative_id_lane->lane_points();
+        if (lane_points.size() <= 2) {
+          continue;
+        }
+        auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
+        if (cur_lane_frenet_coord == nullptr) {
+          continue;
+        }
+        double target_ego_s = 0.0;
+        double target_ego_l = 0.0;
+        Point2D ego_cart_target_frenet;
+        if (!cur_lane_frenet_coord->XYToSL(ego_point,
+                                          ego_cart_target_frenet)) {
+          continue;
+        } else {
+          target_ego_s = ego_cart_target_frenet.x;
+          target_ego_l = ego_cart_target_frenet.y;
+        }
+        int point_nums = 0;
+        double total_lateral_offset = 0.0;
+        double cumu_lat_dis_cost = 0.0;
+        int select_lane_point_interval = 1;
+        for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+          iflyauto::ReferencePoint point = lane_points[i];
+          if (std::isnan(point.local_point.x) ||
+              std::isnan(point.local_point.y)) {
+            ILOG_ERROR << "update_lane_points: skip NaN point";
+            continue;
+          }
+          double lateral_offset = 0.0;
+          double s = 0.0;
+          Point2D cur_point_frenet;
+          Point2D cur_point(point.local_point.x, point.local_point.y);
+          if (!last_track_ego_lane_frenet_coord->XYToSL(cur_point,
+                                                        cur_point_frenet)) {
+            lateral_offset = 10.0;
+          } else {
+            s = cur_point_frenet.x;
+            lateral_offset = cur_point_frenet.y;
+          }
+          if (s < target_ego_s) {
+            continue;
+          }
+          total_lateral_offset += std::fabs(lateral_offset);
+          point_nums += 1;
+          if (point_nums >= kDefaultPointNums ||
+              s > target_ego_s + 50.0) {
+            break;
+          }
+        }
+        point_nums = std::max(1, point_nums);
+        cumu_lat_dis_cost = std::fabs(total_lateral_offset / point_nums);
+        if (cumu_lat_dis_cost < clane_min_lateral_distance) {
+          clane_min_lateral_distance = cumu_lat_dis_cost;
+        }
+      }
+    }
+    if (clane_min_lateral_distance >= 1.5) {
+      is_split_region_include_fix_lane = false;
+    }
+  }
 
     const auto& right_lane_frenet_crd =
         relative_right_lane->get_lane_frenet_coord();
@@ -3437,11 +3444,14 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     }
     sum_distance_from_ego_to_both_center_lines_ = std::fabs(ego_frenet_left.y);
     double near_average_l = 0.0;
+    double behind_average_l = 0.0;
     double far_average_l = 0.0;
     int32_t near_pt_count = 0;
+    int32_t behind_pt_count = 0;
     int32_t far_pt_count = 0;
     double near_pt_sum_l = 0.0;
     double far_pt_sum_l = 0.0;
+    double behind_pt_sum_l = 0.0;
     for (const auto point : relative_left_lane_points) {
       if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
         ILOG_ERROR << "update_lane_points: skip NaN point";
@@ -3460,6 +3470,10 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
         ++near_pt_count;
         near_pt_sum_l += pt_l;
       }
+      if (pt_distance_to_ego < -kNearPreviewDistanceThd) {
+        ++behind_pt_count;
+        behind_pt_sum_l += pt_l;
+      }
       if (pt_distance_to_ego > kEgoPreviewTimeMinThd * ego_vel &&
           pt_distance_to_ego < kEgoPreviewTimeMaxThd * ego_vel) {
         ++far_pt_count;
@@ -3468,13 +3482,16 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     }
     near_pt_count = std::max(near_pt_count, 1);
     far_pt_count = std::max(far_pt_count, 1);
+    behind_pt_count = std::max(behind_pt_count, 1);
 
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
-
+    behind_average_l = std::fabs(behind_pt_sum_l / behind_pt_count);
     if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
          near_average_l < kExistSplitEgoRearLateralDisThd) ||
-        near_average_l < kCenterLineLateralDisThd) {
+        near_average_l < kCenterLineLateralDisThd ||
+        ((near_average_l * 0.5 > behind_average_l) &&
+        far_average_l - 1.0 > near_average_l)) {
       if (is_split_region_include_fix_lane) {
         ego_in_split_region_ = true;
       }
