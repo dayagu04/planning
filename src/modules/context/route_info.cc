@@ -837,9 +837,11 @@ void RouteInfo::CaculateSplitInfo(
       sdpro_map.GetSplitInfoList(link.id(), nearest_s, max_search_length);
   route_info_output_.split_dir_dis_info_list.clear();
   if (!split_info.empty()) {
-    bool is_find_first_split_info = false;
     int traverse_num = 0;
     for (int i = 0; i < split_info.size(); i++) {
+      if (split_info[i].second > 3000.0) {
+        break;
+      }
       const auto split_link = split_info[i].first;
       if (split_link && split_info[i].second > 0) {
         if (!split_link) {
@@ -862,86 +864,51 @@ void RouteInfo::CaculateSplitInfo(
         if (!other_link) {
           break;
         }
-        if (!is_find_first_split_info) {
+        SplitSegInfo split_seg_info;
+        split_seg_info = MakesureSplitDirection(*split_link, sdpro_map);
+        if (i == 0) {
           route_info_output_.distance_to_first_road_split =
               split_info[i].second;
-          SplitSegInfo split_seg_info;
-          split_seg_info = MakesureSplitDirection(*split_link, sdpro_map);
           route_info_output_.first_split_direction =
               split_seg_info.split_direction;
           route_info_output_.split_seg_forward_lane_nums =
               split_seg_info.split_seg_forward_lane_nums;
           route_info_output_.split_next_seg_forward_lane_nums =
               split_seg_info.split_next_seg_forward_lane_nums;
+        }
+        auto split_region_lane_tupo_info = CalculateSplitRegionLaneTupoInfo(
+            *split_link, sdpro_map, split_info, split_info[i].second);
 
-          NOASplitRegionInfo first_split_region_lane_tupo_info;
-          const auto split_region_lane_tupo_info =
-              CalculateSplitRegionLaneTupoInfo(
-                  *split_link, sdpro_map, split_info,
-                  route_info_output_.distance_to_first_road_split);
-
-          if (split_region_lane_tupo_info.is_valid == true ||
-              (split_link != nullptr && other_link != nullptr &&
-               split_link->has_link_type() &&
-               !sdpro_map.isSaPa(split_link->link_type()) &&
-               !sdpro_map.isTollStation(split_link->link_type()) &&
-               (other_link->link_class() ==
-                    iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
-                other_link->link_class() ==
-                    iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) &&
-                  split_next_link->lane_num() <= other_link->lane_num()) {
-            first_split_region_lane_tupo_info = split_region_lane_tupo_info;
-            first_split_region_lane_tupo_info.distance_to_split_point =
-                split_info[i].second;
-            first_split_region_lane_tupo_info.split_direction =
-                static_cast<SplitDirection>(split_seg_info.split_direction);
-            route_info_output_.split_region_info_list.emplace_back(
-                first_split_region_lane_tupo_info);
-            route_info_output_.first_split_dir_dis_info =
-                std::make_pair(static_cast<SplitRelativeDirection>(
-                                   route_info_output_.first_split_direction),
-                               route_info_output_.distance_to_first_road_split);
-            route_info_output_.split_dir_dis_info_list.emplace_back(
-                std::make_pair(
-                    static_cast<SplitRelativeDirection>(
-                        route_info_output_.first_split_direction),
-                    route_info_output_.distance_to_first_road_split));
-            is_find_first_split_info = true;
-            traverse_num++;
-          }
-        } else if (is_find_first_split_info) {
-          route_info_output_.distance_to_second_road_split =
+        if (split_region_lane_tupo_info.is_valid == true ||
+            (split_link != nullptr && other_link != nullptr &&
+             split_link->has_link_type() &&
+             !sdpro_map.isSaPa(split_link->link_type()) &&
+             !sdpro_map.isTollStation(split_link->link_type()) &&
+             (other_link->link_class() ==
+                  iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+              other_link->link_class() ==
+                  iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) &&
+                split_next_link->lane_num() <= other_link->lane_num()) {
+          split_region_lane_tupo_info.distance_to_split_point =
               split_info[i].second;
-          SplitSegInfo split_seg_info;
-          split_seg_info = MakesureSplitDirection(*split_link, sdpro_map);
-          route_info_output_.second_split_direction =
-              split_seg_info.split_direction;
+          split_region_lane_tupo_info.split_direction =
+              static_cast<SplitDirection>(split_seg_info.split_direction);
+          route_info_output_.split_region_info_list.emplace_back(
+              split_region_lane_tupo_info);
+          route_info_output_.first_split_dir_dis_info =
+              std::make_pair(static_cast<SplitRelativeDirection>(
+                                 route_info_output_.first_split_direction),
+                             route_info_output_.distance_to_first_road_split);
+          route_info_output_.split_dir_dis_info_list.emplace_back(
+              std::make_pair(static_cast<SplitRelativeDirection>(
+                                 route_info_output_.first_split_direction),
+                             route_info_output_.distance_to_first_road_split));
           traverse_num++;
-
-          NOASplitRegionInfo second_split_region_lane_tupo_info;
-          const auto split_region_lane_tupo_info =
-              CalculateSplitRegionLaneTupoInfo(
-                  *split_link, sdpro_map, split_info,
-                  route_info_output_.distance_to_second_road_split);
-
-          if (split_region_lane_tupo_info.is_valid) {
-            second_split_region_lane_tupo_info = split_region_lane_tupo_info;
-            second_split_region_lane_tupo_info.distance_to_split_point =
-                split_info[i].second;
-            second_split_region_lane_tupo_info.split_direction =
-                static_cast<SplitDirection>(split_seg_info.split_direction);
-            route_info_output_.split_region_info_list.emplace_back(
-                second_split_region_lane_tupo_info);
-            route_info_output_.split_dir_dis_info_list.emplace_back(
-                std::make_pair(
-                    static_cast<SplitRelativeDirection>(
-                        route_info_output_.second_split_direction),
-                    route_info_output_.distance_to_second_road_split));
-          }
         }
         double dis_between_first_split_and_merge = 100.0;
         double dis_between_first_and_second_split = -100.0;
-        if (!route_info_output_.split_region_info_list.empty()) {
+        if (!route_info_output_.split_region_info_list.empty() &&
+            traverse_num == 1) {
           if (!route_info_output_.split_region_info_list[0].is_valid) {
             if (!route_info_output_.merge_region_info_list.empty()) {
               dis_between_first_split_and_merge =
@@ -962,8 +929,7 @@ void RouteInfo::CaculateSplitInfo(
                       .start_fp_point.isEmpty() ||
                  !route_info_output_.split_region_info_list[0]
                       .end_fp_point.isEmpty()) &&
-                !route_info_output_.split_region_info_list[0].is_valid &&
-                traverse_num == 1) {
+                !route_info_output_.split_region_info_list[0].is_valid) {
               route_info_output_.split_region_info_list[0]
                   .recommend_lane_num.emplace_back(split_last_link->lane_num(),
                                                    std::vector<int>{});
@@ -1002,9 +968,6 @@ void RouteInfo::CaculateSplitInfo(
               }
             }
           }
-        }
-        if (traverse_num >= 2) {
-          break;
         }
       }
     }
@@ -2299,19 +2262,17 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     // 计算每个exchange region的最大距离
     for (size_t i = 0; i < valid_exchange_regions.size(); ++i) {
-      if (i == 0) {
-        max_distances[i] = valid_exchange_regions[i].distance_to_split_point;
-      } else {
-        max_distances[i] =
-            valid_exchange_regions[i].distance_to_split_point -
-            valid_exchange_regions[i - 1].distance_to_split_point;
-      }
+      double start_fp_distance = std::max(
+          valid_exchange_regions[i].start_fp_point.fp_distance_to_split_point,
+          -300.0);
+      max_distances[i] =
+          valid_exchange_regions[i].distance_to_split_point + start_fp_distance;
     }
 
     // 从最后一个exchange region开始向前优化
     // 限制最多仅优化连续3个，且到3个中最后一个ramp split为止
     bool is_need_optimize = true;
-    for (int i = 0; i < std::min<int>(valid_exchange_regions.size(), 3); ++i) {
+    for (int i = 0; i < valid_exchange_regions.size(); ++i) {
       is_need_optimize =
           !IsClosingTollStationEntrance(
               current_link_, sdpro_map_,
@@ -2338,7 +2299,17 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           break;
         }
         iteration_num = i;
+        break;
       }
+    }
+    OptimizeFeasibleLanesByDistance(valid_exchange_regions[0],
+                                    exchange_feasible_lane_distances[0],
+                                    max_distances[0], current_lane_vec.size());
+    if (iteration_num > 0) {
+      OptimizeFeasibleLanesByDistance(
+          valid_exchange_regions[iteration_num],
+          exchange_feasible_lane_distances[iteration_num],
+          max_distances[iteration_num], current_lane_vec.size());
     }
     for (int i = iteration_num; i >= 0; --i) {
       // 先根据距离优化当前exchange region的可行车道
@@ -2594,8 +2565,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           exchange_feasible_lane_distances[0].find(feasible_lane_sequence[i]) !=
               exchange_feasible_lane_distances[0].end()) {
         lane_distance =
-            exchange_feasible_lane_distances[0][feasible_lane_sequence[i]] -
-            dis_to_last_specific_point;
+            exchange_feasible_lane_distances[0][feasible_lane_sequence[i]];
       }
     }
   }
@@ -4182,6 +4152,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
   // road，而且是相同方向，那么需要考虑避让other merge。
   bool is_merge_split_same_dir = false;
   int merge_before_exclnum = -1;
+  int avoide_num = -1;
 
   if (!route_info_output_.merge_region_info_list.empty()) {
     const auto& temp_merge_region_info =
@@ -4425,6 +4396,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
             MLCRequestType{.lane_num = 1,
                            .mlc_request_type = AVOIDE_MERGE,
                            .split_direction = SPLIT_RIGHT});
+        avoide_num = 1;
       }
     } else if (is_split_left) {
       // 默认左边都是主路的，后续需要对是否是主路的属性做判断
@@ -4482,6 +4454,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                 MLCRequestType{.lane_num = successor_exclnum,
                                .mlc_request_type = AVOIDE_DIVERGE,
                                .split_direction = SPLIT_LEFT});
+            avoide_num = successor_exclnum;
           }
         } else if (on_exclnum == before_exclnum &&
                    successor_exclnum == on_exclnum) {
@@ -4516,6 +4489,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                 MLCRequestType{.lane_num = successor_exclnum,
                                .mlc_request_type = AVOIDE_DIVERGE,
                                .split_direction = SPLIT_LEFT});
+            avoide_num = successor_exclnum;
           }
         } else {
           for (int i = 0; i < before_exclnum; ++i) {
@@ -4722,7 +4696,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       on_excr_feasible_lane;
   split_region_info->recommend_lane_num[2].feasible_lane_sequence =
       succerssor_excr_feasible_lane;
-
+  if (avoide_num > 0) {
+    split_region_info->avoid_lane_num = avoide_num;
+  }
   return true;
 }
 
@@ -4867,6 +4843,7 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
   std::vector<int> succerssor_excr_feasible_lane;
+    int avoide_num = -1;
   // TODO(fengwang31:目前只考虑了其他路从右边进入交汇区的case)
   if (is_other_merge_left) {
     if (on_exclnum >= successor_exclnum) {
@@ -4882,6 +4859,7 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
               MLCRequestType{.lane_num = min_lane + i,
                              .mlc_request_type = AVOIDE_MERGE,
                              .split_direction = SPLIT_LEFT});
+                             avoide_num = min_lane + i;
         }
       } else {
         for (int i = 0; i < min_lane; ++i) {
@@ -4901,6 +4879,7 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
             MLCRequestType{.lane_num = 1,
                            .mlc_request_type = AVOIDE_MERGE,
                            .split_direction = SPLIT_RIGHT});
+                           avoide_num = 1;
       } else {
         before_excr_feasible_lane.emplace_back(1);
       }
@@ -4921,6 +4900,7 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
             MLCRequestType{.lane_num = 1,
                            .mlc_request_type = AVOIDE_MERGE,
                            .split_direction = SPLIT_RIGHT});
+                           avoide_num = 1;
       } else {
         before_excr_feasible_lane.emplace_back(1);
       }
@@ -4944,7 +4924,7 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
       on_excr_feasible_lane;
   split_region_info->recommend_lane_num[2].feasible_lane_sequence =
       succerssor_excr_feasible_lane;
-
+  split_region_info->avoide_lane_num = avoide_num;
   return true;
 }
 
@@ -6291,7 +6271,7 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
     opt_distance = current_link_->link_class() ==
                            iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
                        ? 800.0
-                       : 600.0;
+                       : 500.0;
   }
 
   std::vector<int> temp_feasible_lane_seq;
