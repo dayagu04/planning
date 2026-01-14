@@ -449,7 +449,12 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
     is_high_priority_back_ = true;
     return true;
   }
-
+  // 增加路沿检查
+  if (lc_request_.IsRoadBorderSurpressDuringLaneChange(
+          lc_req_mgr_->request(), lc_lane_mgr_->origin_lane_virtual_id(),
+          lc_req_mgr_->target_lane_virtual_id())) {
+    return true;
+  }
   // check if gap is dangerous
   CheckLaneChangeBackValid(lane_change_direction);
 
@@ -492,7 +497,12 @@ bool LaneChangeStateMachineManager::CheckIfHoldToCancel(
   if (hold_time_out) {
     return true;
   }
-
+  // 增加路沿检查
+  if (lc_request_.IsRoadBorderSurpressDuringLaneChange(
+          lc_req_mgr_->request(), lc_lane_mgr_->origin_lane_virtual_id(),
+          lc_req_mgr_->target_lane_virtual_id())) {
+    return true;
+  }
   return false;
 }
 
