@@ -1411,10 +1411,13 @@ bool SccLateralObstacleDecider::CalculateCutInAndCross(
     double right_distance_to_center_line = 0.5 * lane_width_;
     double left_distance_to_center_line = 0.5 * lane_width_;
     ReferencePathPoint reference_path_point;
-    if (reference_path_ptr_->get_reference_point_by_lon(ego_head_s_,
-                                                        reference_path_point)) {
-      right_distance_to_center_line = reference_path_point.distance_to_right_lane_border;
-      left_distance_to_center_line = reference_path_point.distance_to_left_lane_border;
+    if (reference_path_ptr_->get_reference_point_by_lon(
+            reference_path_ptr_->get_frenet_ego_state().s(),
+            reference_path_point)) {
+      right_distance_to_center_line =
+          reference_path_point.distance_to_right_lane_border;
+      left_distance_to_center_line =
+          reference_path_point.distance_to_left_lane_border;
     }
     double right_l_Threshold =
         ego_width_ + lat_safety_buffer - left_distance_to_center_line;
@@ -1427,10 +1430,6 @@ bool SccLateralObstacleDecider::CalculateCutInAndCross(
     bool is_cut_in = false;
     bool is_potential_cut_in = false;
     for (auto &i : timestamps) {
-      double min_l = std::numeric_limits<double>::max();
-      double max_l = std::numeric_limits<double>::lowest();
-      double min_s = std::numeric_limits<double>::max();
-      double max_s = std::numeric_limits<double>::lowest();
       Polygon2d obstacle_sl_polygon;
       ok = reference_path_ptr_->get_polygon_at_time(
           obstacle_id, false, int(i * 10), obstacle_sl_polygon);
@@ -1449,39 +1448,40 @@ bool SccLateralObstacleDecider::CalculateCutInAndCross(
               break;
             }
           }
-          min_l = std::min(min_l, pt.y());
-          max_l = std::max(max_l, pt.y());
-          min_s = std::min(min_s, pt.x());
-          max_s = std::max(max_s, pt.x());
+          ReferencePathPoint reference_path_point;
+          if (reference_path_ptr_->get_reference_point_by_lon(
+                  pt.x(), reference_path_point)) {
+            right_distance_to_center_line =
+                reference_path_point.distance_to_right_lane_border;
+            left_distance_to_center_line =
+                reference_path_point.distance_to_left_lane_border;
+          }
+          right_l_Threshold =
+              ego_width_ + lat_safety_buffer - left_distance_to_center_line;
+          left_l_Threshold =
+              ego_width_ + lat_safety_buffer - right_distance_to_center_line;
+          if (((frenet_obstacle.frenet_l() > 0 &&
+                pt.y() < left_l_Threshold - kAdditionL) ||
+               (frenet_obstacle.frenet_l() < 0 &&
+                pt.y() > -(right_l_Threshold - kAdditionL))) &&
+              !is_cut_in) {
+            is_cut_in = true;
+            break;
+          } else if ((std::abs(frenet_obstacle.frenet_velocity_l()) <
+                          kVelLThreshold &&
+                      ((frenet_obstacle.frenet_l() > 0 &&
+                        pt.y() < left_l_Threshold) ||
+                       (frenet_obstacle.frenet_l() < 0 &&
+                        pt.y() > -right_l_Threshold))) &&
+                     !is_potential_cut_in) {
+            is_potential_cut_in = true;
+          } else {
+            continue;
+          }
         }
       }
-      ReferencePathPoint reference_path_point;
-      if (reference_path_ptr_->get_reference_point_by_lon(0.5 * (min_s + max_s),
-                                                          reference_path_point)) {
-        right_distance_to_center_line = reference_path_point.distance_to_right_lane_border;
-        left_distance_to_center_line = reference_path_point.distance_to_left_lane_border;
-      }
-      right_l_Threshold =
-          ego_width_ + lat_safety_buffer - left_distance_to_center_line;
-      left_l_Threshold =
-          ego_width_ + lat_safety_buffer - right_distance_to_center_line;
-      double extreme_l = (frenet_obstacle.frenet_l() > 0) ? min_l : max_l;
-      if (((frenet_obstacle.frenet_l() > 0 &&
-            extreme_l < left_l_Threshold - kAdditionL) ||
-           (frenet_obstacle.frenet_l() < 0 &&
-            extreme_l > -(right_l_Threshold - kAdditionL))) &&
-          !is_cut_in) {
-        is_cut_in = true;
-      } else if ((std::abs(frenet_obstacle.frenet_velocity_l()) <
-                      kVelLThreshold &&
-                  ((frenet_obstacle.frenet_l() > 0 &&
-                    extreme_l < left_l_Threshold) ||
-                   (frenet_obstacle.frenet_l() < 0 &&
-                    extreme_l > -right_l_Threshold))) &&
-                 !is_potential_cut_in) {
-        is_potential_cut_in = true;
-      } else {
-        continue;
+      if (is_cut_in) {
+        break;
       }
     }
 
