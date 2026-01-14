@@ -144,20 +144,20 @@ def update_safety_check_data(plan_debug_json_msg):
     agent_vel_vec = plan_debug_json_msg.get('agent_vel_vec', [])
     ego_vel_vec = plan_debug_json_msg.get('ego_vel_vec', [])
     rear_distance_vec = plan_debug_json_msg.get('rear_distance_vec', [])
-    
+
     # 调试输出
     print(f"安全检查数据长度: buff={len(box_longitudinal_buff_vec)}, ttc={len(box_ttc_vec)}, dist={len(distance_vec)}")
     print(f"速度数据长度: agent={len(agent_vel_vec)}, ego={len(ego_vel_vec)}, rear_dist={len(rear_distance_vec)}")
     print(f"压线率: lc_ego_press_line_ratio={plan_debug_json_msg.get('lc_ego_press_line_ratio', 'N/A')}")
     if len(box_longitudinal_buff_vec) > 0:
       print(f"box_longitudinal_buff_vec 前3个值: {box_longitudinal_buff_vec[:3]}")
-    
+
     # 创建索引
     length = max(len(box_longitudinal_buff_vec), len(box_ttc_vec), len(distance_vec),
                  len(agent_vel_vec), len(ego_vel_vec), len(rear_distance_vec))
     if length > 0:
       index = list(range(length))
-      
+
       # 更新数据源
       safety_check_data.data = {
           'index': index,
@@ -169,7 +169,7 @@ def update_safety_check_data(plan_debug_json_msg):
           'rear_distance': rear_distance_vec if len(rear_distance_vec) > 0 else [0] * length,
       }
       print(f"已更新安全检查数据，共 {length} 个点")
-      
+
       # 动态调整速度图的纵坐标范围（自车速度 ± 15 kph）
       if len(ego_vel_vec) > 0:
         avg_ego_vel = sum(ego_vel_vec) / len(ego_vel_vec)
@@ -181,17 +181,17 @@ def update_safety_check_data(plan_debug_json_msg):
         print(f"速度图纵坐标范围: [{vel_min:.2f}, {vel_max:.2f}] m/s")
     else:
       print("警告: 安全检查数据为空")
-    
+
     # 更新压线比例显示（独立于数据长度）
     lc_ego_press = plan_debug_json_msg.get('lc_ego_press_line_ratio', None)
-    
+
     if lc_ego_press is not None:
       press_line_div.text = f"<h3>压线比例: <span style='color:blue;'>{lc_ego_press:.3f}</span></h3>"
       print(f"更新压线率显示: {lc_ego_press:.3f}")
     else:
       press_line_div.text = f"<h3>压线比例: <span style='color:gray;'>N/A</span></h3>"
       print("压线率: N/A")
-      
+
   except Exception as e:
     print(f"更新安全检查数据失败: {e}")
     import traceback
@@ -199,13 +199,13 @@ def update_safety_check_data(plan_debug_json_msg):
 
 def slider_callback(bag_time):
   global plan_debug_msg_idx
-  
+
   # 将所有 print 输出重定向到日志区域
   with log_output:
     local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
     update_lc_path_figure (data_st, lat_data_vec, ori_lat_data_vec, lc_path_data_vec, bag_loader, bag_time, local_view_data,
                            ego_box_data_vec, agent_box_data_vec)
-    
+
     # 新增：更新联合规划轨迹数据
     update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_data)
 
@@ -222,7 +222,7 @@ def slider_callback(bag_time):
       except:
         pass
       update_lc_data(noa_info, plan_debug_json_msg)
-      
+
       # 更新安全检查数据
       update_safety_check_data(plan_debug_json_msg)
 
@@ -250,7 +250,7 @@ safety_check_data = ColumnDataSource(data={
 # 创建三个图表（仿照 vel 和 s 图表的样式）
 # 图1: 距离和缓冲区（合并）
 fig_safety_dist = bkp.figure(x_axis_label='Prediction Step', y_axis_label='Distance (m)',
-                             x_range=[0, 16], y_range=[-5, 30], 
+                             x_range=[0, 16], y_range=[-5, 30],
                              width=525, height=330,
                              title="距离与缓冲区")
 # 超出安全距离（>= 0 表示安全）
@@ -267,7 +267,7 @@ fig_safety_dist.circle('index', 'rear_distance', source=safety_check_data,
                        size=4, color='brown')
 # 最小安全缓冲区
 buff_renderer = fig_safety_dist.line('index', 'box_longitudinal_buff', source=safety_check_data,
-                     line_width=2, line_color='blue', line_dash='dotted', 
+                     line_width=2, line_color='blue', line_dash='dotted',
                      legend_label='mini_safety_buff')
 fig_safety_dist.circle('index', 'box_longitudinal_buff', source=safety_check_data,
                        size=4, color='blue')
@@ -275,7 +275,7 @@ fig_safety_dist.legend.click_policy = 'hide'
 
 # 图2: TTC
 fig_safety_ttc = bkp.figure(x_axis_label='Prediction Step', y_axis_label='TTC (s)',
-                            x_range=fig_safety_dist.x_range, y_range=[0, 10], 
+                            x_range=fig_safety_dist.x_range, y_range=[0, 10],
                             width=525, height=330,
                             title="时间碰撞余量")
 ttc_renderer = fig_safety_ttc.line('index', 'box_ttc', source=safety_check_data,
@@ -305,7 +305,7 @@ fig_safety_vel.circle('index', 'ego_vel', source=safety_check_data,
 fig_safety_vel.legend.click_policy = 'hide'
 
 # 压线比例显示（单个数值，使用 Div）
-press_line_div = Div(text="<h3>压线比例: <span style='color:blue;'>N/A</span></h3>", 
+press_line_div = Div(text="<h3>压线比例: <span style='color:blue;'>N/A</span></h3>",
                      width=525, height=100)
 
 # 组合安全检查图表
