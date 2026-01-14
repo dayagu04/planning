@@ -113,6 +113,8 @@ void InitGlog(const char *file) {
 
     async_logger_->Start();
 
+    pthread_setname_np(async_logger_->LogThread()->native_handle(), "Pln_PrintLog_01");
+
     FLAGS_stop_logging_if_full_disk = true;
     ILOG_INFO << "glog init, create_path = " << create_path;
     glog_flag_.is_init = true;

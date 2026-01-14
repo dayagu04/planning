@@ -299,6 +299,8 @@ void HybridAStarThreadSolver::Start() {
   thread_ =
       std::thread(&HybridAStarThreadSolver::HybridAStarThreadFunction, this);
 
+  pthread_setname_np(thread_.native_handle(), "Pln_PathPlan_02");
+
   ILOG_INFO << "HybridAStarThreadSolver start thread success";
 
   return;
