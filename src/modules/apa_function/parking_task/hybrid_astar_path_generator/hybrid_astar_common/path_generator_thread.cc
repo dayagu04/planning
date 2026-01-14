@@ -56,6 +56,8 @@ void PathGeneratorThread::Start() {
 
   thread_ = std::thread(&PathGeneratorThread::PathGenThreadFunc, this);
 
+  pthread_setname_np(thread_.native_handle(), "Pln_PathPlan_01");
+
   ILOG_INFO << "PathGenerator start thread success";
 
   return;
