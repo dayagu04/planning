@@ -2,7 +2,7 @@
   "enable_lane_borrow_deciderV2": true,
   "left_right_turn_func_fading_away_switch": true,
   "traffic_light_decider": {
-    "enable_tfl_decider": false
+    "enable_tfl_decider": true
   },
   "speed_limit_decider": {
     "enable_map_sharp_curve_speed_limit": true,
