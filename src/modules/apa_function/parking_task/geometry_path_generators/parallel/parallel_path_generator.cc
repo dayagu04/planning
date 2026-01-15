@@ -90,7 +90,7 @@ static const int kMaxSearchArcStepNum = 3;
 static const double kSamplingLineStep = 0.3;
 static const double kSamplingArcAngleStep = 3.0 * kDeg2Rad;
 static const int kMaxPathSize = 5;
-static const double kGearSwitchPenalty = 7.0;
+static const double kGearSwitchPenalty = 10.0;
 static const double kGearFirstPenalty = 0.0;
 static const double kPathLengthPenalty = 1.0;
 static const double kPathLengthFristPenalty = 0.0;
@@ -2034,9 +2034,9 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
     geometry_path.cost[COST_WEIGHT_ANGLE] = 0.0;
   }
 
-  geometry_path.cost[COST_WEIGHT_DIST_MAX_X] = max_x - input_.tlane.slot_length;
+  geometry_path.cost[COST_WEIGHT_DIST_MAX_X] = mathlib::Clamp(max_x - input_.tlane.slot_length, 0.0, 1000.0);
 
-  geometry_path.cost[COST_WEIGHT_DIST_MAX_Y] = std::min(max_y_mag - 3.5, 0.0);
+  geometry_path.cost[COST_WEIGHT_DIST_MAX_Y] = mathlib::Clamp(std::min(max_y_mag - 3.5, 0.0), 0.0, 1000.0);
   geometry_path.cost_total = 0.0;
   for (size_t i = 0; i < COST_WEIGHT::COST_WEIGHT_MAX; i++) {
     geometry_path.cost_total += geometry_path.cost[i] * calc_params_.weights[i];
