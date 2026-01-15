@@ -189,6 +189,7 @@ void ParkingScenarioManager::Reset() {
 
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
+  is_last_parking_pause_ = false;
 
   // reset all planner
   for (const auto &scene : scenario_list_) {
@@ -530,6 +531,21 @@ void ParkingScenarioManager::PubStopReason() {
   apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_NONE;
   apa_hmi_data_.is_parking_pause = false;
 
+  if (apa_world_->GetStateMachineManagerPtr()->IsParkSuspendStatus()) {
+    if (is_last_parking_pause_) {
+      // The current frame is paused actively
+    } else {
+      // The current frame is paused passively
+      return;
+    }
+  }
+
+  is_last_parking_pause_ = false;
+
+  if (!apa_world_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    return;
+  }
+
   if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
     return;
   }
@@ -545,6 +561,7 @@ void ParkingScenarioManager::PubStopReason() {
     apa_hmi_data_.is_parking_pause = true;
   }
 
+  is_last_parking_pause_ = apa_hmi_data_.is_parking_pause;
   ILOG_INFO << "stop reason = " << apa_hmi_data_.parking_pause_reason;
 
   return;
