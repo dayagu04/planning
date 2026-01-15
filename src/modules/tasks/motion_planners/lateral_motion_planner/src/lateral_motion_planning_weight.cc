@@ -907,7 +907,16 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double acc_bound = std::min(config_.acc_bound, max_acc_);
   double jerk_bound = config_.jerk_bound;  // 0.2
-  if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
+  double max_jerk = max_jerk_;
+  // special scene
+  if (is_enter_low_speed_lane_change_cooldown_) {
+    std::vector<double> xp_v_lc{4.167, 5.556};
+    std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
+    max_jerk = planning::interp(ref_vel_, xp_v_lc, fp_max_jerk);
+  } else if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
+    std::vector<double> xp_v_lc{4.167, 5.556};
+    std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
+    max_jerk = planning::interp(ref_vel_, xp_v_lc, fp_max_jerk);
     if (lc_style_ == LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
       jerk_bound += 0.6;
     } else if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
@@ -923,6 +932,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   } else if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
     jerk_bound = config_.jerk_bound_ramp;
   }
+  // recommended avoid
   if (is_bound_avoid_ || is_emergency_avoid_) {
     jerk_bound = std::max(expected_avoid_jerk_, jerk_bound);
   }
@@ -935,7 +945,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
       std::fabs(avoid_dist_) < 0.1) {
     jerk_bound = max_jerk_low_speed_;
   }
-  jerk_bound = std::min(jerk_bound, max_jerk_);
+  jerk_bound = std::min(jerk_bound, max_jerk);
   std::fill(weight_.q_acc.begin(), weight_.q_acc.end(), 0.1);
   std::fill(weight_.q_front_ref_x.begin(), weight_.q_front_ref_x.end(), 0.0);
   std::fill(weight_.q_front_ref_y.begin(), weight_.q_front_ref_y.end(), 0.0);
@@ -1052,14 +1062,15 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
         std::fabs(init_dis_to_ref_), xp_lat_dist, config_.map_q_continuity);
     planning_input.set_q_continuity(q_continuity_lk);
   }
+  // special scene
   if (is_enter_low_speed_lane_change_cooldown_) {
     std::vector<double> xp_v_lc{4.167, 5.556};
     std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
-    max_jerk = planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
+    max_jerk = planning::interp(ref_vel_, xp_v_lc, fp_max_jerk);
   } else if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
     std::vector<double> xp_v_lc{4.167, 5.556};
     std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
-    max_jerk = planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
+    max_jerk = planning::interp(ref_vel_, xp_v_lc, fp_max_jerk);
     jerk_bound =  // 0.5 0.5 0.45 0.4
         planning::interp(ref_vel_, xp_v, config_.map_jerk_bound_lc);
     if (lc_style_ == LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
@@ -1108,8 +1119,10 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
                            config_.map_jerk_bound_ramp) +
           0.5;
     }
-  } else if (is_bound_avoid_ || is_emergency_avoid_) {
-    jerk_bound = expected_avoid_jerk_;
+  }
+  // recommended avoid
+  if (is_bound_avoid_ || is_emergency_avoid_) {
+    jerk_bound = std::max(expected_avoid_jerk_, jerk_bound);
   }
   // emergency
   bool is_soft_bound_spline_valid = false;
