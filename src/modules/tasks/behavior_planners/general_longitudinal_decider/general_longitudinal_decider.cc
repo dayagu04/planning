@@ -38,6 +38,9 @@ namespace planning {
 using namespace planning_math;
 
 namespace {
+constexpr double kEps = 1e-6;
+constexpr double kNsaBrakeLonBias = 3.0;
+constexpr double kNsaLonDisThred = 50.0;
 inline bool is_point_within_range(const Point3d &point,
                                   const common::Point3d &location,
                                   double xy_range) {
@@ -517,6 +520,49 @@ bool GeneralLongitudinalDecider::Execute() {
     //     s_bound_upper > destination_s) {
     //   LOG_DEBUG("s_bound_upper > destination_s !!! \n");
     // }
+  }
+  if (session_->is_nsa_scene()) {
+    const auto& nsa_output = session_->planning_context().narrow_space_decider_output();
+    const auto& local_view = session_->environmental_model().get_local_view();
+    const auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
+    double ego_start_s = frenet_ego_state.s();
+    double nsa_dis = local_view.function_state_machine_info.nra_req.nra_distance;
+    if (local_view.function_state_machine_info.current_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
+      if ((!nsa_output.is_in_narrow_space && !nsa_output.is_exist_narrow_space) ||
+          (nsa_output.is_in_narrow_space && nsa_output.is_passable_narrow_space &&
+           nsa_dis > kNsaLonDisThred)) {
+        if (!nsa_brake_destination_set_) {
+          ReferencePathPoint refpath_pt;
+          if (reference_path_ptr_->get_reference_point_by_lon(
+            ego_start_s + kNsaBrakeLonBias, refpath_pt)) {
+                nsa_destination_point_ = refpath_pt.path_point;
+                nsa_brake_destination_set_ = true;
+          }
+        }
+        if (nsa_brake_destination_set_) {
+          Point2D frenet_point;
+          double destination_s;
+          const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+          if (frenet_coord != nullptr) {
+            if (frenet_coord->XYToSL(
+                    Point2D(nsa_destination_point_.x(), nsa_destination_point_.y()),
+                    frenet_point)) {
+                destination_s = frenet_point.x;
+                lon_ref_path.hard_bounds.back().emplace_back(
+                    WeightedBound{std::numeric_limits<double>::min(), destination_s, -1.0,
+                                  BoundInfo{0, BoundType::DESTINATION}});
+            }
+          }
+
+        }
+      
+      } else {
+        nsa_brake_destination_set_ = false;
+      }
+    } else {
+      nsa_brake_destination_set_ = false;
+    }
+
   }
 
   // Step 7) refine lon_ref_traj by obstacle

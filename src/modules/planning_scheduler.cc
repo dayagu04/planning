@@ -590,6 +590,16 @@ void PlanningScheduler::FillPlanningTrajectory(
       gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_NONE;
     }
   }
+  double nsa_ego_stop_vel_thred = 0.1;
+  const auto nsa_is_completed = session_.planning_context().nsa_planning_completed();
+  if (session_.is_nsa_scene()) {
+    if (((state_machine.current_state == iflyauto::FunctionalState_NRA_GUIDANCE &&
+         nsa_is_completed) || state_machine.current_state == iflyauto::FunctionalState_NRA_COMPLETED ) &&
+        ego_state->planning_init_point().v < nsa_ego_stop_vel_thred) {
+      gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
+    }
+
+  }
   JSON_DEBUG_VALUE("gear_command",
                    static_cast<int>(gear_command->gear_command_value))
 
