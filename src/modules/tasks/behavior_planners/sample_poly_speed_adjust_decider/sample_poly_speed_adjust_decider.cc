@@ -1278,7 +1278,10 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
   state_limit_lower_ = {
       0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
       -2.0, 1.2, -2.5, 2.5};
-  UniformJerkCurve jerk_curve(state_limit_lower_, lon_state_, false);
+  StateLimit state_limit_lower = {
+  0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
+  -1.5, 1.2, -1.5, 2.5};
+  UniformJerkCurve jerk_curve(state_limit_lower, lon_state_, false);
   auto arrived_s = jerk_curve.arrived_s();
   if (arrived_s > distance_to_stop_point_) {
     return true;

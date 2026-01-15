@@ -153,8 +153,8 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
           frenet_node_s > interval.first.s()) {
         return false;
       } else if (frenet_node_s > interval.second.s()) {
-        double s_buffer = 3.5 + 0.3 * interval.second.velocity();
-        // double s_buffer = 3.5;
+        // double s_buffer = 3.5 + 0.3 * interval.second.velocity();
+        double s_buffer = 3.5;
         double gap = frenet_node_s - interval.second.s() - s_buffer -
                      rear_edge_to_rear_axle_;
         if (gap < 0.0) {
