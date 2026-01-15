@@ -3,5 +3,6 @@
   "speed_limit_decider": {
     "enable_map_sharp_curve_speed_limit": true,
     "enable_map_sharp_curve_by_decel": true
-  }
+  },
+  "press_line_fewly_threshold": 0.3
 }

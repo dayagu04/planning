@@ -267,6 +267,7 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
     left_right_turn_func_fading_away_switch =
         read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
+    press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -303,6 +304,7 @@ struct EgoPlanningConfig : public Config {
   double raw_ref_extend_buff = 0;
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
+  double press_line_fewly_threshold = 0.3;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
