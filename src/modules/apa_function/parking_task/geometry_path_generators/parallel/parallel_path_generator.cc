@@ -5955,15 +5955,26 @@ const bool ParallelPathGenerator::TwoArcPath(
         col_res.remain_car_dist > col_res.remain_obstacle_dist - lon_buffer) {
       continue;
     }
+    // first gearchange seg or third gearchange seg is too short, delete it
+    auto arc1_gear = CalArcGear(arc1);
+    auto arc2_gear = CalArcGear(arc2);
+    auto line_gear = CalLineSegGear(preparing_line);
 
-    path_seg_vec.emplace_back(
-        PathSegment(CalArcSteer(arc1), CalArcGear(arc1), arc1));
-
+    if (arc1.length > 0.16) {
+      path_seg_vec.emplace_back(
+          PathSegment(CalArcSteer(arc1), arc1_gear, arc1));
+    } else if (arc1_gear == arc2_gear) {
+      path_seg_vec.emplace_back(
+          PathSegment(CalArcSteer(arc1), arc1_gear, arc1));
+    }
     path_seg_vec.emplace_back(
         PathSegment(CalArcSteer(arc2), CalArcGear(arc2), arc2));
 
-    path_seg_vec.emplace_back(
-        PathSegment(CalLineSegGear(preparing_line), preparing_line));
+    if (preparing_line.length > 0.16) {
+      path_seg_vec.emplace_back(PathSegment(line_gear, preparing_line));
+    } else if (line_gear == arc2_gear) {
+      path_seg_vec.emplace_back(PathSegment(line_gear, preparing_line));
+    }
     path_vec.emplace_back(path_seg_vec);
     success = true;
   }
@@ -6128,9 +6139,19 @@ const bool ParallelPathGenerator::LineArcPlan(
     ILOG_INFO << "first_line_seg:"<< first_line_seg.GetLength();
     ILOG_INFO << "arc_seg:"<< arc_seg.GetLength();
     ILOG_INFO << "last_line_seg:"<< last_line_seg.GetLength();
+    std::vector<PathSegment> path_seg_vec;
+    if (first_line_seg.GetLength() > 0.16) {
+      path_seg_vec.emplace_back(first_line_seg);
+    } else if (first_line_seg.seg_gear == arc_seg.seg_gear) {
+      path_seg_vec.emplace_back(first_line_seg);
+    }
+    path_seg_vec.emplace_back(arc_seg);
 
-    const std::vector<PathSegment> path_seg_vec = {first_line_seg, arc_seg,
-                                                   last_line_seg};
+    if (last_line_seg.GetLength() > 0.16) {
+      path_seg_vec.emplace_back(last_line_seg);
+    } else if (last_line_seg.seg_gear == arc_seg.seg_gear) {
+      path_seg_vec.emplace_back(last_line_seg);
+    }
     path_vec.emplace_back(std::move(path_seg_vec));
     success = true;
   }
