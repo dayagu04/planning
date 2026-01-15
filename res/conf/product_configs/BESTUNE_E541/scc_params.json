@@ -4,5 +4,5 @@
     "enable_map_sharp_curve_speed_limit": true,
     "enable_map_sharp_curve_by_decel": true
   },
-  "press_line_fewly_threshold": 0.3
+  "use_press_line_fewly_threshold": true
 }

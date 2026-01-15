@@ -532,7 +532,12 @@ void LaneChangeRequestManager::ProcessBlinkState(
   const int target_lane_virtual_id = lane_change_decider_output.target_lane_virtual_id;
   const double ego_press_line_ratio = int_request_.CalculatePressLineRatioByTwoLanes(
       origin_lane_virtual_id, target_lane_virtual_id, cur_req);
-  bool press_line_fewly = ego_press_line_ratio < config_.press_line_fewly_threshold;
+  bool press_line_fewly = true;
+  if (config_.use_press_line_fewly_threshold) {
+    press_line_fewly = ego_press_line_ratio < config_.press_line_fewly_threshold;
+  } else {
+    press_line_fewly = true;
+  }
   bool is_allowed_cancel_state =
       (lc_status == StateMachineLaneChangeStatus::kLaneChangePropose ||
        (lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution && press_line_fewly) ||
