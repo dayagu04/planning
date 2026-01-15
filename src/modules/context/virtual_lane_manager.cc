@@ -1107,7 +1107,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     }
   }
 
-  split_select_direction_ = NO_SPLIT;
+  split_select_direction_ = NO_SPLIT_SELECT;
   if (enable_output_split_select_classical_chinese_ && order_ids_of_same_zero_relative_id_.size() > 1) {
     if (current_lane_order_id == order_ids_of_same_zero_relative_id_[0]) {
       split_select_direction_ = SPLIT_SELECT_LEFT_LANE;

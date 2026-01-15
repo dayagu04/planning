@@ -408,7 +408,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                   lane_change_cmd);
               if (is_exist_interactive_select_split_) {
                 interactive_select_split_counter_ = 3;
-                enable_output_split_select_classical_chinese_ = true;
+                // enable_output_split_select_classical_chinese_ = true;
                 return;
               } else {
                 interactive_select_split_counter_--;
@@ -1586,6 +1586,9 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
       if (iter != order_ids.end()) {
         is_exist_interactive_select_split_ = true;
         other_split_lane_left_side_ = true;
+        if (ego_distance_to_lane_merge_split_point < 20.0) {
+          enable_output_split_select_classical_chinese_ = true;
+        }
       } else {
         return;
       }
@@ -1596,6 +1599,9 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
       if (iter != order_ids.end()) {
         is_exist_interactive_select_split_ = true;
         other_split_lane_right_side_ = true;
+        if (ego_distance_to_lane_merge_split_point < 20.0) {
+          enable_output_split_select_classical_chinese_ = true;
+        }
       } else {
         return;
       }
@@ -1716,7 +1722,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
             lane->set_relative_id(lane_relative_id);
           }
           is_exist_split_on_intersection_ = true;
-          enable_output_split_select_classical_chinese_ = true;
+          if (ego_distance_to_lane_merge_split_point < 20.0) {
+            enable_output_split_select_classical_chinese_ = true;
+          }
           return;
         } else {
           return;

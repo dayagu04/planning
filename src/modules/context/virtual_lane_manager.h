@@ -33,7 +33,7 @@ enum LaneChangeStatus {
 };
 
 enum SplitSelectDirection {
-  NO_SPLIT = 0,
+  NO_SPLIT_SELECT = 0,
   SPLIT_SELECT_LEFT_LANE = 1,
   SPLIT_SELECT_RIGHT_LANE = 2,
 };
@@ -333,7 +333,7 @@ class VirtualLaneManager {
   bool is_ego_in_split_region_ = false;
   bool is_exist_interactive_select_split_ = false;
   bool enable_output_split_select_classical_chinese_ = false;
-  SplitSelectDirection split_select_direction_ = NO_SPLIT;
+  SplitSelectDirection split_select_direction_ = NO_SPLIT_SELECT;
   bool other_split_lane_right_side_ = false;
   bool other_split_lane_left_side_ = false;
   bool split_lane_on_left_side_before_interactive_ = false;
