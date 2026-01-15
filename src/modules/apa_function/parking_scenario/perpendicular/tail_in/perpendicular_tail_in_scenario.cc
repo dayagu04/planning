@@ -2612,8 +2612,14 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
   frame_.slot_jump_lon_err = lon_err;
   frame_.slot_jump_heading_err = heading_err;
 
+  double terminal_error_y = 16.8;
+  if (ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+      std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg < 6.8) {
+    terminal_error_y = std::fabs(ego_info_under_slot.terminal_err.GetY());
+  }
+
   frame_.slot_jump_big_flag =
-      std::min(lat_err, std::fabs(ego_info_under_slot.terminal_err.GetY())) >
+      std::min(lat_err, terminal_error_y) >
           apa_param.GetParam().slot_jump_lat_big_err ||
       heading_err > apa_param.GetParam().slot_jump_heading_big_err;
 
