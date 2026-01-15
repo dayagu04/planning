@@ -7,7 +7,7 @@
 
 namespace planning {
 namespace apa_planner {
-#define FREESLOTID 1
+#define FREESLOTID 1U
 enum class ApaSlotLatPosPreference : uint8_t {
   MID,
   LEFT,

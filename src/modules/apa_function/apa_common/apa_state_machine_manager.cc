@@ -100,9 +100,9 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
                parking_fusion_info.parking_fusion_slot_lists) {
             if (slot.id == FREESLOTID) {
               if (slot.is_turn_corner) {
-                state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+                state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
               } else {
-                state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+                state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
               }
             }
           }
