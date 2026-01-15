@@ -4478,8 +4478,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       // 2、交换区前、交换区、交换区后的车道数都相等；
       // 3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
       if (successor_exclnum <= on_exclnum) {
-        if (on_exclnum > before_exclnum ||
-            on_exclnum == before_exclnum && successor_exclnum < on_exclnum) {
+        if (successor_exclnum <= on_exclnum && on_exclnum >= before_exclnum) {
           // const auto start_link = sdpro_map_.GetLinkOnRoute(
           //     split_region_info->start_fp_point.link_id);
           // if (start_link == nullptr) {
@@ -4511,8 +4510,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
 
           // 主路上，交换区内、前、后车道都一样
           for (int i = 0; i < successor_exclnum; ++i) {
-            before_excr_feasible_lane.emplace_back(i + 1);
             on_excr_feasible_lane.emplace_back(i + 1);
+            before_excr_feasible_lane.emplace_back(i + 1);
           }
           for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
             mlc_request_info_.emplace_back(
@@ -4528,23 +4527,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                 MLCRequestType{.lane_num = successor_exclnum,
                                .mlc_request_type = AVOIDE_DIVERGE,
                                .split_direction = SPLIT_LEFT});
-            avoide_num = successor_exclnum;
           }
-        } else if (on_exclnum == before_exclnum &&
-                   successor_exclnum == on_exclnum) {
-          if (successor_exclnum == 1) {
-            before_excr_feasible_lane.emplace_back(1);
-            on_excr_feasible_lane.emplace_back(1);
-          } else {
-            for (int i = 0; i < successor_exclnum - 1; ++i) {
-              before_excr_feasible_lane.emplace_back(i + 1);
-              on_excr_feasible_lane.emplace_back(i + 1);
-            }
-          }
-          mlc_request_info_.emplace_back(
-              MLCRequestType{.lane_num = successor_exclnum,
-                             .mlc_request_type = KEEP_LEFT,
-                             .split_direction = SPLIT_LEFT});
+
         } else if (successor_exclnum <= before_exclnum) {
           for (int i = 0; i < successor_exclnum; ++i) {
             on_excr_feasible_lane.emplace_back(i + 1);
@@ -4563,7 +4547,6 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                 MLCRequestType{.lane_num = successor_exclnum,
                                .mlc_request_type = AVOIDE_DIVERGE,
                                .split_direction = SPLIT_LEFT});
-            avoide_num = successor_exclnum;
           }
         } else {
           for (int i = 0; i < before_exclnum; ++i) {
