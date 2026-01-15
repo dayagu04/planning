@@ -109,10 +109,10 @@ bool LDRouteInfoStrategy::CalculateCurrentLink() {
   double temp_nearest_s = 0;
   double nearest_l = 0;
   const double ego_heading_angle = ego_state->heading_angle();
-
+  bool is_search_cur_link = true;
   current_link_ = ld_map_.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
-      temp_nearest_s, nearest_l);
+      temp_nearest_s, nearest_l, is_search_cur_link);
   if (!current_link_) {
     return false;
   }
