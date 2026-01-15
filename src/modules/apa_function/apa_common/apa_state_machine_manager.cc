@@ -96,12 +96,22 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
         state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
       } else if (running_mode_ == ApaRunningMode::RUNNING_SAPA) {
         if (sapa_status_ == ApaSAPAStatus::SAPA_STATUS_FINISHED) {
-          if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeIdx]
-                   .is_turn_corner) {
-            state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
-          } else {
-            state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
+          for (const auto& slot :
+               parking_fusion_info.parking_fusion_slot_lists) {
+            if (slot.id == FREESLOTID) {
+              if (slot.is_turn_corner) {
+                state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+              } else {
+                state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+              }
+            }
           }
+          // if (!parking_fusion_info.parking_fusion_slot_lists[FREESLOTID]
+          //          .is_turn_corner) {
+          //   state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
+          // } else {
+          //   state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
+          // }
         } else {
           state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
         }
@@ -149,14 +159,12 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       } else {
         if (task_direction_ == ApaTaskDirection::APA_TASK_IN) {
           if (running_mode_ == ApaRunningMode::RUNNING_SAPA) {
-            for (const auto &slot : parking_fusion_info.parking_fusion_slot_lists)
-            {
-              if (slot.id == FREESLOTID)
-              {
-                if (slot.is_turn_corner)
-                {
+            for (const auto& slot :
+                 parking_fusion_info.parking_fusion_slot_lists) {
+              if (slot.id == FREESLOTID) {
+                if (slot.is_turn_corner) {
                   state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
-                }else{
+                } else {
                   state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
                 }
               }
