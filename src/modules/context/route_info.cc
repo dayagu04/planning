@@ -4528,6 +4528,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                 MLCRequestType{.lane_num = successor_exclnum,
                                .mlc_request_type = AVOIDE_DIVERGE,
                                .split_direction = SPLIT_LEFT});
+            avoide_num = successor_exclnum;
           }
 
         } else if (successor_exclnum <= before_exclnum) {
@@ -4548,6 +4549,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                 MLCRequestType{.lane_num = successor_exclnum,
                                .mlc_request_type = AVOIDE_DIVERGE,
                                .split_direction = SPLIT_LEFT});
+            avoide_num = successor_exclnum;
           }
         } else {
           for (int i = 0; i < before_exclnum; ++i) {
