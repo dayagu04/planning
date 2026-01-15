@@ -211,6 +211,12 @@ void DynamicAgentEmergenceAvoidRequest::
 }
 
 bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
+  bool is_emergency_base_side_dynamic_agent = CheckEmergencyDynamicSideAgentBaseRisk();
+  bool is_emergency_base_last_emergency_avoid = CheckEmergencyBaseLastEmergencyAvoid();
+  return is_emergency_base_side_dynamic_agent || is_emergency_base_last_emergency_avoid;
+}
+
+bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk() {
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
   std::shared_ptr<ReferencePath> origin_refline =
@@ -322,7 +328,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
           std::min(frenet_obs.frenet_obstacle_boundary().s_end,
                   ego_frenet_boundary.s_end);
       if (!is_overlap_side || frenet_obs.is_static()) {
-        continue;;
+        continue;
       }
       double v_lat = frenet_obs.frenet_velocity_lateral();
       double intrusion_distance = 0;
@@ -363,7 +369,94 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
         continue;
       }
     }
+  }
+  return false;
+}
+
+bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
+  if (recommend_dynamic_agent_emergency_avoidance_direction_ != NO_CHANGE) {
     return false;
+  }
+  const auto &lat_obstacle_position = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lateral_obstacle_history_info;
+  const int current_lane_virtual_id =
+      virtual_lane_mgr_->current_lane_virtual_id();
+  std::shared_ptr<ReferencePath> origin_refline =
+      session_->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(current_lane_virtual_id, false);
+  if (origin_refline == nullptr) {
+    return false;
+  }
+  const auto& current_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(current_lane_virtual_id);
+  if (current_lane == nullptr) {
+    return false;
+  }
+  const auto& potential_dangerous_agent_decider_output =
+      session_->planning_context().potential_dangerous_agent_decider_output();
+  const auto& obstacles_map = origin_refline->get_obstacles_map();
+  const auto ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+  const auto half_lane_width = current_lane->width() * 0.5;
+  // 接受上一帧道内紧急避让释放的id
+  int emergency_avoid_num = 0;
+  for (const auto& [obs_id, obs_ptr] : obstacles_map) {
+    if (!obs_ptr) {
+      continue;
+    }
+    const auto& frenet_obs = *obs_ptr;
+    if (frenet_obs.is_static()) {
+      continue;
+    }
+    if (lat_obstacle_position.find(frenet_obs.id()) ==
+        lat_obstacle_position.end()) {
+      continue;
+    }
+    if (!lat_obstacle_position.find(frenet_obs.id())->second.emergency_avoid) {
+      continue;
+    }
+    emergency_avoid_num += 1;
+    if (emergency_avoid_num >= 2) {
+      recommend_dynamic_agent_emergency_avoidance_direction_ = NO_CHANGE;
+      break;
+    }
+    double v_lat = frenet_obs.frenet_velocity_lateral();
+    double intrusion_distance = 0;
+    double extra_lat_buffer_with_emergency_avoid = -0.1;  // 没有风险等级的障碍物，条件更加严格
+    bool is_in_lat_range = false;        // 障碍物是否侵入自车道
+    if (frenet_obs.d_max_cpath() < 0) {
+      intrusion_distance =
+          half_lane_width - std::fabs(frenet_obs.d_max_cpath());
+    } else if (frenet_obs.d_min_cpath() > 0) {
+      intrusion_distance =
+          half_lane_width - frenet_obs.d_min_cpath();
+    }
+    // 需要考虑障碍物的横向速度
+    if (v_lat < -0.5) {
+      // 障碍物具有明显靠近自车的横向速度
+      is_in_lat_range =
+          intrusion_distance >
+          kNearLateralDistanceThr + extra_lat_buffer_with_emergency_avoid;
+    } else {
+      is_in_lat_range =
+          intrusion_distance >
+          kIntrusionLateralDistanceThr + extra_lat_buffer_with_emergency_avoid;
+    }
+    if (is_in_lat_range) {
+      if (frenet_obs.frenet_l() >=
+          origin_refline->get_frenet_ego_state().l()) {
+        recommend_dynamic_agent_emergency_avoidance_direction_ = RIGHT_CHANGE;
+      } else {
+        recommend_dynamic_agent_emergency_avoidance_direction_ = LEFT_CHANGE;
+      }
+    } else {
+      continue;
+    }
+  }
+  if (emergency_avoid_num == 1 &&
+      recommend_dynamic_agent_emergency_avoidance_direction_ != NO_CHANGE) {
+    return true;
   }
   return false;
 }
