@@ -2364,14 +2364,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       std::vector<int> temp_feasible_lane;
       if (valid_exchange_regions[1].split_direction == SPLIT_RIGHT) {
         temp_feasible_lane.emplace_back(valid_exchange_regions[0]
-                                            .recommend_lane_num[0]
+                                            .recommend_lane_num[1]
                                             .feasible_lane_sequence.back());
       } else {
         temp_feasible_lane.emplace_back(valid_exchange_regions[0]
-                                            .recommend_lane_num[0]
+                                            .recommend_lane_num[1]
                                             .feasible_lane_sequence.front());
       }
-      valid_exchange_regions[0].recommend_lane_num[0].feasible_lane_sequence =
+      valid_exchange_regions[0].recommend_lane_num[1].feasible_lane_sequence =
           temp_feasible_lane;
     }
   }
