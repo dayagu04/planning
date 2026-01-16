@@ -442,6 +442,6 @@ class RouteInfo {
       NOASplitRegionInfo& ramp_exchange_region_info);
   bool CalculateLaneCurrentDirectionByFP(
       iflymapdata::sdpro::FeaturePoint feature_point,
-      std::vector<std::pair<int, std::vector<LaneDirection>>>& lane_direction_info);
+      std::unordered_map<int, std::vector<LaneDirection>>& lane_direction_info);
 };
 }  // namespace planning

@@ -4579,7 +4579,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       // 2、交换区前、交换区、交换区后的车道数都相等；
       // 3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
       if (successor_exclnum <= on_exclnum) {
-        if (successor_exclnum <= on_exclnum && on_exclnum >= before_exclnum) {
+        if (on_exclnum > before_exclnum ||
+            on_exclnum == before_exclnum && successor_exclnum < on_exclnum) {
           // const auto start_link = sdpro_map_.GetLinkOnRoute(
           //     split_region_info->start_fp_point.link_id);
           // if (start_link == nullptr) {
@@ -4611,8 +4612,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
 
           // 主路上，交换区内、前、后车道都一样
           for (int i = 0; i < successor_exclnum; ++i) {
-            on_excr_feasible_lane.emplace_back(i + 1);
             before_excr_feasible_lane.emplace_back(i + 1);
+            on_excr_feasible_lane.emplace_back(i + 1);
           }
           for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
             mlc_request_info_.emplace_back(
@@ -4632,7 +4633,49 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                                .link_id = split_link_id});
             avoide_num = successor_exclnum;
           }
-
+        } else if (on_exclnum == before_exclnum &&
+                   successor_exclnum == on_exclnum) {
+          if (successor_exclnum == 1) {
+            before_excr_feasible_lane.emplace_back(1);
+            on_excr_feasible_lane.emplace_back(1);
+          } else {
+            std::unordered_map<int, std::vector<LaneDirection>>
+                lane_direction_info;
+            if (CalculateLaneCurrentDirectionByFP(
+                    split_region_info->start_fp_point.fp,
+                    lane_direction_info)) {
+              auto it = lane_direction_info.find(successor_exclnum);
+              if (it != lane_direction_info.end()) {
+                const auto& directions = it->second;
+                if (std::find(directions.begin(), directions.end(),
+                              LaneDirection::straight_lane) !=
+                    directions.end()) {
+                  for (int i = 0; i < successor_exclnum; ++i) {
+                    before_excr_feasible_lane.emplace_back(i + 1);
+                    on_excr_feasible_lane.emplace_back(i + 1);
+                  }
+                  if (is_other_split_ramp && !is_continue_lane) {
+                    RemoveElement(before_excr_feasible_lane, successor_exclnum);
+                    RemoveElement(on_excr_feasible_lane, successor_exclnum);
+                    mlc_request_info_.emplace_back(
+                        MLCRequestType{.lane_num = successor_exclnum,
+                                       .mlc_request_type = AVOIDE_DIVERGE,
+                                       .split_direction = SPLIT_LEFT});
+                    avoide_num = successor_exclnum;
+                  }
+                } else {
+                  for (int i = 0; i < successor_exclnum - 1; ++i) {
+                    before_excr_feasible_lane.emplace_back(i + 1);
+                    on_excr_feasible_lane.emplace_back(i + 1);
+                    mlc_request_info_.emplace_back(
+                        MLCRequestType{.lane_num = successor_exclnum,
+                                       .mlc_request_type = KEEP_LEFT,
+                                       .split_direction = SPLIT_LEFT});
+                  }
+                }
+              }
+            }
+          }
         } else if (successor_exclnum <= before_exclnum) {
           for (int i = 0; i < successor_exclnum; ++i) {
             on_excr_feasible_lane.emplace_back(i + 1);
@@ -7132,8 +7175,7 @@ void RouteInfo::OptimizeFeasibleLanesForRampSplit(
 }
 bool RouteInfo::CalculateLaneCurrentDirectionByFP(
     iflymapdata::sdpro::FeaturePoint feature_point,
-    std::vector<std::pair<int, std::vector<LaneDirection>>>&
-        lane_direction_info) {
+    std::unordered_map<int, std::vector<LaneDirection>>& lane_direction_info) {
   lane_direction_info.clear();
   int lane_num = 1;
   for (const auto& id : feature_point.lane_ids()) {
@@ -7164,7 +7206,7 @@ bool RouteInfo::CalculateLaneCurrentDirectionByFP(
           iflymapdata::sdpro::TurnDirection::TURNDIR_RU_TURN) {
         lane_directions.push_back(LaneDirection::right_u_turn_lane);
       }
-      lane_direction_info.emplace_back(lane_num, lane_directions);
+      lane_direction_info.emplace(lane_num, lane_directions);
     }
     lane_num++;
   }
