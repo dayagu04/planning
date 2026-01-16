@@ -3783,13 +3783,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
 
     // 先比较交换区终点前一个点的车道数是否能对上
     const int end_last_fp_link_lane_num = end_last_fp_link.lane_num();
-    if (temp_lane_num2 != end_last_fp_link_lane_num) {
-      if (split_seg_info.split_direction == RAMP_ON_LEFT) {
-        temp_lane_num2 = std::min(temp_lane_num2, end_last_fp_link_lane_num);
-      } else if (split_seg_info.split_direction == RAMP_ON_RIGHT) {
-        temp_lane_num2 = std::max(temp_lane_num2, end_last_fp_link_lane_num);
-      }
-    }
+    temp_lane_num2 = std::max(temp_lane_num2, end_last_fp_link_lane_num);
 
     // 再与交换区起点的地图车道数比较
     const auto start_fp_link =
@@ -7134,6 +7128,50 @@ void RouteInfo::OptimizeFeasibleLanesForRampSplit(
       }
       first_feasible_sequence = temp_feasible_lane;
     }
+  }
+}
+bool RouteInfo::CalculateLaneCurrentDirectionByFP(
+    iflymapdata::sdpro::FeaturePoint feature_point,
+    std::vector<std::pair<int, std::vector<LaneDirection>>>&
+        lane_direction_info) {
+  lane_direction_info.clear();
+  int lane_num = 1;
+  for (const auto& id : feature_point.lane_ids()) {
+    std::vector<LaneDirection> lane_directions;
+    if (!IsEmergencyLane(id, sdpro_map_)) {
+      const auto& lane_info = sdpro_map_.GetLaneInfoByID(id);
+      if (lane_info == nullptr) {
+        return false;
+      }
+      // 检查每个方向标志
+      if (lane_info->current_direction() &
+          iflymapdata::sdpro::TurnDirection::TURNDIR_STRAIGHT) {
+        lane_directions.push_back(LaneDirection::straight_lane);
+      }
+      if (lane_info->current_direction() &
+          iflymapdata::sdpro::TurnDirection::TURNDIR_LEFT) {
+        lane_directions.push_back(LaneDirection::left_turn_lane);
+      }
+      if (lane_info->current_direction() &
+          iflymapdata::sdpro::TurnDirection::TURNDIR_RIGHT) {
+        lane_directions.push_back(LaneDirection::right_turn_lane);
+      }
+      if (lane_info->current_direction() &
+          iflymapdata::sdpro::TurnDirection::TURNDIR_LU_TURN) {
+        lane_directions.push_back(LaneDirection::left_u_turn_lane);
+      }
+      if (lane_info->current_direction() &
+          iflymapdata::sdpro::TurnDirection::TURNDIR_RU_TURN) {
+        lane_directions.push_back(LaneDirection::right_u_turn_lane);
+      }
+      lane_direction_info.emplace_back(lane_num, lane_directions);
+    }
+    lane_num++;
+  }
+  if (!lane_direction_info.empty()) {
+    return true;
+  } else {
+    return false;
   }
 }
 }  // namespace planning
