@@ -224,8 +224,8 @@ class ApaSlotManager final {
     slot_release_voter_.clear();
     release_slot_id_vec_.clear();
     ego_slot_min_dist_map_.clear();
-    parallel_slot_release_count_ = 0;
-    parallel_slot_not_release_count_ = 0;
+    parallel_slot_release_count_map_.clear();
+    parallel_slot_not_release_count_map_.clear();
     pre_plan_fail_slot_id_uset_.clear();
   }
 
@@ -302,8 +302,8 @@ class ApaSlotManager final {
   double ego_col_safe_lat_buffer_ = 0.268;
   double ego_col_safe_lon_buffer_ = 0.15;
   bool is_ego_col_parallel_ = false;
-  int parallel_slot_release_count_ = 0;
-  int parallel_slot_not_release_count_ = 0;
+  std::unordered_map<size_t, int> parallel_slot_release_count_map_;
+  std::unordered_map<size_t, int> parallel_slot_not_release_count_map_;
   bool recommend_park_out_ = false;
 };
 }  // namespace apa_planner
