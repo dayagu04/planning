@@ -1471,11 +1471,11 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     gear_switch_pose_cost += gear_switch_penalty;
   }
 
-  float drive_idel_x = target_pose.GetX() + 3.0f;
-  float reverse_idel_x = target_pose.GetX() + 1.8f;
+  float drive_idel_x = target_pose.GetX() + 4.2f;
+  float reverse_idel_x = target_pose.GetX() + 3.0f;
 
-  float min_drive_x = target_pose.GetX() + 2.0f;
-  float min_reverse_x = target_pose.GetX() + 1.0f;
+  float min_drive_x = target_pose.GetX() + 2.5f;
+  float min_reverse_x = target_pose.GetX() + 1.5f;
 
   if (request_.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
