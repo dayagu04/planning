@@ -924,6 +924,37 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
       break;
     }
   }
+  bool car_is_left = false;
+  const auto& ego_pos_global = measure_data_ptr_->GetPos();
+  // ego_slot : slot origin -->ego pos
+  const auto& ego_slot = ego_pos_global - slot_13_mid;
+
+  // v10 1-->0
+  const auto cross_v10_ego_slot =
+      v_10.x() * ego_slot.y() - v_10.y() * ego_slot.x();
+  car_is_left = cross_v10_ego_slot > 0;
+
+  Polygon2D polygon;
+  auto& param = apa_param.GetParam();
+  Eigen::Vector2d pt0 =
+      l2g_tf.GetPos(Eigen::Vector2d(0.8, car_is_left * (slot_width / 2 - 0.4)));
+  Eigen::Vector2d pt1 = l2g_tf.GetPos(Eigen::Vector2d(
+      0.8, car_is_left * (slot_width / 2 + param.car_width / 2 + 0.6)));
+  Eigen::Vector2d pt2 = l2g_tf.GetPos(Eigen::Vector2d(
+      slot_length - 0.4,
+      car_is_left * (slot_width / 2 + param.car_width / 2 + 0.6)));
+  Eigen::Vector2d pt3 = l2g_tf.GetPos(
+      Eigen::Vector2d(slot_length - 0.4, car_is_left * (slot_width) / 2 - 0.4));
+
+  polygon.FillTangentCircleParams(
+      std::vector<Eigen::Vector2d>{pt0, pt1, pt2, pt3});
+  auto col_req = GJKColDetRequest(false);
+  col_req.movement_type = ApaObsMovementType::STATIC;
+  is_slot_occupied =
+      is_slot_occupied ||
+      col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(polygon,
+                                                                    col_req);
+
   ILOG_INFO << "final parallel slot is occupied = " << is_slot_occupied;
   // Use sliding Windows to prevent parking slot flashing
   if (is_slot_occupied) {
