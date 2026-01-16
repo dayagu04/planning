@@ -839,7 +839,7 @@
     },
     "stop_destination_decider": {
       "stop_destination_virtual_agent_time_headway": 0.1,
-      "stop_destination_extended_s_buffer": 1.70
+      "stop_destination_extended_s_buffer": 1.30
     },
     "longitudinal_decision_decider" : {
       "ignore_agent_ttc_to_ego_thrd": 2.5,
@@ -911,7 +911,7 @@
       "distance_to_go_threshold": 6.5,
       "distance_to_go_threshold_behind_of_large_vehicle": 7.5,
       "start_to_cruise_vel_threshold": 5.5,
-      "stop_destination_to_ego_distance": 5.0
+      "stop_destination_to_ego_distance": 1.3
     },
 
     "cruise_target": {
