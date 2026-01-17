@@ -1607,14 +1607,59 @@ std::tuple<size_t, size_t> LDRouteInfoStrategy::CountAccAndEntryLanes(
 
 void LDRouteInfoStrategy::CalculateRampInfo() {
   for (const auto& split_info : split_info_vec_) {
-    uint64 split_link_id = split_info.first->id();
+    const auto& split_link = split_info.first;
+    if (split_link == nullptr) {
+      continue;
+    }
+
+    uint64 split_link_id = split_link->id();
     const auto& split_next_link = ld_map_.GetNextLinkOnRoute(split_link_id);
     if (split_next_link == nullptr) {
       continue;
     }
 
-    if (ld_map_.isRamp(split_next_link->link_type()) ||
-        (split_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0) {
+    int split_next_link_lane_num = 0;
+    int split_out_link_lane_num = 0;
+    for (const auto& lane_id: split_next_link->lane_ids()) {
+      const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
+      if (temp_lane == nullptr) {
+        continue;
+      }
+
+      if (!IsDiversionLane(temp_lane) && !IsEmergencyLane(temp_lane)) {
+        split_next_link_lane_num++;
+      }
+    }
+
+    for (const auto& suc_link_id:split_link->successor_link_ids()) {
+      if (suc_link_id == split_next_link->id()) {
+        continue;
+      }
+
+      const auto& out_link = ld_map_.GetLinkOnRoute(suc_link_id);
+      if (out_link == nullptr) {
+        continue;
+      }
+
+      for (const auto& lane_id: out_link->lane_ids()) {
+        const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
+        if (temp_lane == nullptr) {
+          continue;
+        }
+
+        if (!IsDiversionLane(temp_lane) && !IsEmergencyLane(temp_lane)) {
+          split_out_link_lane_num++;
+        }
+      }
+    }
+
+    const bool is_ramp = ld_map_.isRamp(split_next_link->link_type());
+    const bool is_SAPA =
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0;
+    const bool is_satisfy_lane_num_condition =
+        split_next_link_lane_num <= split_out_link_lane_num;
+        
+    if (is_ramp || is_SAPA || is_satisfy_lane_num_condition) {
       ramp_info_vec_.emplace_back(split_info);
     }
   }
