@@ -752,5 +752,20 @@ const double ParkingStopDecider::GetStopDistanceByOD() {
   return kDefaultRemainDist;
 }
 
+const trajectory::Trajectory& ParkingStopDecider::SelectSpeedTrajectory(
+    const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr,
+    const trajectory::Trajectory& history_trajectory,
+    const pnc::geometry_lib::PathSegGear gear_command) const {
+
+  if (history_trajectory.empty() || history_trajectory.GetGear() != gear_command) {
+    // ILOG_INFO << "speed planning use mpc predict pt";
+
+    return predict_path_ptr->GetPredictTrajectory();
+  }
+
+  // ILOG_INFO << "speed planning use history speed trajectory";
+  return history_trajectory;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

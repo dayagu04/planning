@@ -780,6 +780,9 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
+  const pnc::geometry_lib::PathSegGear gear_command =
+      pnc::geometry_lib::GetGearType(frame_.gear_command);
+
   // task: predictor
   std::shared_ptr<RuleBasedPredictor> predictor =
       std::make_shared<RuleBasedPredictor>();
@@ -799,8 +802,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(),
       current_path_point_global_vec_,
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFrontWheelAngle(),
-      ego_speed_point, 0.0, trajectory_,
-      pnc::geometry_lib::GetGearType(frame_.gear_command),
+      ego_speed_point, 0.0, trajectory_, gear_command,
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetGear());
 
   const SVPoint stitch_init_speed = traj_stitcher->GetStitchSpeed();
@@ -814,9 +816,12 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   // todo: a decision-making module is needed to determine whether to use speed
   // planning to output trajectory or control to output predicted trajectories
+  const trajectory::Trajectory& ego_trajectory =
+      stop_decider->SelectSpeedTrajectory(
+          apa_world_ptr_->GetPredictPathManagerPtr(), trajectory_,
+          gear_command);
   stop_decider->Execute(stitch_init_speed, traj_stitcher->GetConstStitchPath(),
-                        trajectory_,
-                        pnc::geometry_lib::GetGearType(frame_.gear_command));
+                        ego_trajectory, gear_command);
 
   // todo: will be retired
   if (apa_param.GetParam().speed_config.use_remain_dist) {

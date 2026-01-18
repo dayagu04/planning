@@ -156,11 +156,11 @@ const bool Trajectory::QueryNearestPointWithBuffer(
 void Trajectory::Clear() {
   clear();
   speed_type_ = common::SpeedProfileType::NONE;
-  gear_ = 0;
+  gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID;
   return;
 }
 
-void Trajectory::SetGear(const int gear) {
+void Trajectory::SetGear(const pnc::geometry_lib::PathSegGear gear) {
   gear_ = gear;
   return;
 }
@@ -174,7 +174,7 @@ void Trajectory::ExtendTraj(const double length) {
   end.set_x(back().x());
   end.set_y(back().y());
   planning_math::Vec2d unit_line_vec;
-  if (gear_ == 2) {
+  if (gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
     unit_line_vec = planning_math::Vec2d::CreateUnitVec2d(back().theta());
   } else {
     unit_line_vec =
