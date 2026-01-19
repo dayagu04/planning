@@ -5146,12 +5146,13 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::CalculateCurrentLink(
   current_point.set_y(pose.position.y);
   double temp_nearest_s = 0;
   double nearest_l = 0;
+  bool is_search_cur_link = true;
   const double ego_heading_angle = ego_state->heading_angle();
 
   const iflymapdata::sdpro::LinkInfo_Link* current_link =
       sdpro_map_.GetNearestLinkWithHeading(current_point, search_distance,
                                            ego_heading_angle, max_heading_diff,
-                                           temp_nearest_s, nearest_l);
+                                           temp_nearest_s, nearest_l, is_search_cur_link);
   if (!current_link) {
     return nullptr;
   }

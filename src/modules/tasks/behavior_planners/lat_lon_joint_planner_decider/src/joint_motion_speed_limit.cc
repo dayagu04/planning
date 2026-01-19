@@ -174,13 +174,14 @@ double JointMotionSpeedLimit::JudgeCurvBySDProMap() const {
       session_->environmental_model().get_route_info()->get_sdpro_map();
   double nearest_s = 0;
   double nearest_l = 0;
+  bool is_search_cur_link = true;
   const double search_distance = 50.0;
   const double max_heading_diff = M_PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
 
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
-      nearest_s, nearest_l);
+      nearest_s, nearest_l, is_search_cur_link);
   if (!current_segment) {
     return 300.0;
   }
@@ -352,9 +353,10 @@ void JointMotionSpeedLimit::CalculateMapSpeedLimit() {
   const double max_heading_diff = M_PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
 
+  bool is_search_cur_link = true;
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
-      nearest_s, nearest_l);
+      nearest_s, nearest_l, is_search_cur_link);
 
   if (current_segment == nullptr) {
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
@@ -521,10 +523,11 @@ void JointMotionSpeedLimit::CalculatePOISpeedLimit() {
   const double search_distance = 50.0;
   const double max_heading_diff = M_PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
+  bool is_search_cur_link = true;
 
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
-      nearest_s, nearest_l);
+      nearest_s, nearest_l, is_search_cur_link);
 
   if (current_segment == nullptr) {
     poi_v_limit_set_ = false;
