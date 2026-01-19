@@ -1107,7 +1107,13 @@ bool LaneChangeRequest::ConeSituationJudgement(
         continue;
       }
       if (front_vehicle_iter->second->type() ==
-          iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+              iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
+          (front_vehicle_iter->second->type() ==
+               iflyauto::OBJECT_TYPE_CTASH_BARREL &&
+           function_info.function_mode() == common::DrivingFunctionInfo::NOA) ||
+          (front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+           function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
         if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
             front_vehicle_iter->second->d_s_rel() >
                 base_frenet_coord->Length() - ego_frenet_point.x) {
