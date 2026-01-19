@@ -56,6 +56,11 @@ class ParkingStopDecider : public ParkingTask {
 
   const double GetStopDistanceByOD();
 
+  const trajectory::Trajectory& SelectSpeedTrajectory(
+      const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr,
+      const trajectory::Trajectory& history_trajectory,
+      const pnc::geometry_lib::PathSegGear gear_command) const;
+
  private:
   void AddStopDecisionByControlPath(
       const std::vector<pnc::geometry_lib::PathPoint>& path,
