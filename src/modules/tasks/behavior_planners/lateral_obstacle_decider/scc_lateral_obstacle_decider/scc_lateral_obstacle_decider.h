@@ -44,6 +44,10 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
     LatObstacleDecisionType lateral_avoid_direction =
         LatObstacleDecisionType::NOT_SET;
     LateralConstraintFreeSpaceMap lateral_constraint_free_space_map;
+    bool has_static_safe_v_space = false;
+    bool has_dynamic_safe_v_space = false;
+    double desire_nudge_static_safe_v = 0;
+    double desire_nudge_dynamic_safe_v = 0;
 
     double GetLateralConstraintDistance(
         LateralSpaceConstraintType type) const {
@@ -63,6 +67,10 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
       id = -1;
       lateral_avoid_direction = LatObstacleDecisionType::NOT_SET;
       lateral_constraint_free_space_map.clear();
+      has_static_safe_v_space = false;
+      has_dynamic_safe_v_space = false;
+      desire_nudge_static_safe_v = 0;
+      desire_nudge_dynamic_safe_v = 0;
     }
   };
 

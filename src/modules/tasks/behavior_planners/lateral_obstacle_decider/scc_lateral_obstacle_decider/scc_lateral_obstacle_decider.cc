@@ -1308,7 +1308,12 @@ void SccLateralObstacleDecider::
       space_hysteresis = 0.1;
     }
 
-    bool has_safe_v_space = desire_v + desire_v_hysteresis >= ego_v_;
+    bool has_safe_v_space_current = desire_v >= ego_v_;
+    bool has_safe_v_space =
+        has_safe_v_space_current ||
+        (obstacle_interaction_info.has_static_safe_v_space &&
+         ego_v_ <= obstacle_interaction_info.desire_nudge_static_safe_v);
+
     // 如果上一帧能避让，则允许加速
     bool has_enough_space =
         obstacle_interaction_info.GetLateralConstraintDistance(
@@ -1331,6 +1336,11 @@ void SccLateralObstacleDecider::
         }
       }
     }
+    if (has_safe_v_space_current) {
+      obstacle_interaction_info.desire_nudge_static_safe_v =
+          ego_v_ + desire_v_hysteresis;
+    }
+    obstacle_interaction_info.has_static_safe_v_space = has_safe_v_space;
   }
 }
 
@@ -1418,7 +1428,7 @@ void SccLateralObstacleDecider::
       // desire_v_hysteresis = 2;
       space_hysteresis = -0.1;
     } else {
-      space_hysteresis = 0.2;// 动态障碍物不确定性比静态障碍物大
+      space_hysteresis = 0.25;// 动态障碍物不确定性比静态障碍物大
     }
 
     LateralObstacleHistoryInfo& history =
@@ -1430,8 +1440,12 @@ void SccLateralObstacleDecider::
                    LateralSpaceConstraintType::DYNAMIC_OBSTACLE),
                config_.free_space_dynamic_obstacle_bp,
                config_.dynamic_obstacle_static_limit_v_free_space);
+    bool has_safe_v_space_current = dynamic_obstacle_free_space_desire_v >= ego_v_;
     bool has_safe_v_space =
-        desire_v_hysteresis * dynamic_obstacle_free_space_desire_v >= ego_v_;
+        has_safe_v_space_current ||
+        (obstacle_interaction_info.has_dynamic_safe_v_space &&
+         ego_v_ <= obstacle_interaction_info.desire_nudge_dynamic_safe_v);
+
     // 如果上一帧能避让，则当前帧速度允许加速到期望速度的两倍
     bool has_enough_space =
         obstacle_interaction_info.GetLateralConstraintDistance(
@@ -1443,6 +1457,11 @@ void SccLateralObstacleDecider::
       output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
       lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car = false;
     }
+    if (has_safe_v_space_current) {
+      obstacle_interaction_info.desire_nudge_dynamic_safe_v =
+          ego_v_ * desire_v_hysteresis;
+    }
+    obstacle_interaction_info.has_dynamic_safe_v_space = has_safe_v_space;
   }
 }
 
@@ -1603,7 +1622,7 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
   double free_space = 100;
   double distance_to_centerline = 100;
-  const double kLatOverlapBuffer = 0.5;
+  const double kLatOverlapBuffer = 0.3;
 
   if (obstacle_interaction_info.lateral_avoid_direction ==
       LatObstacleDecisionType::IGNORE) {
@@ -1623,9 +1642,9 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     }
     // 过滤正后方障碍物
     const double ego_l_start =
-        reference_path_ptr_->get_frenet_ego_state().polygon().min_y();
+        reference_path_ptr_->get_ego_frenet_boundary().l_start;
     const double ego_l_end =
-        reference_path_ptr_->get_frenet_ego_state().polygon().max_y();
+        reference_path_ptr_->get_ego_frenet_boundary().l_end;
     const double obstacle_l_start =
         frenet_obs->frenet_obstacle_boundary().l_start;
     const double obstacle_l_end =
@@ -1633,7 +1652,10 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     double start_l = std::max(ego_l_start, obstacle_l_start);
     double end_l = std::min(ego_l_end, obstacle_l_end);
     bool lat_overlap_for_rear_obs = (start_l < end_l - kLatOverlapBuffer);
-    if (lat_overlap_for_rear_obs) {
+    bool is_rear_obstacle =
+        reference_path_ptr_->get_ego_frenet_boundary().s_start >
+        frenet_obs->frenet_obstacle_boundary().s_end;
+    if (is_rear_obstacle && lat_overlap_for_rear_obs) {
       continue;
     }
 
@@ -1705,14 +1727,13 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
   // 然后计算动态障碍物与静态障碍物之间的横纵向距离
   // 后续考虑和TTC挂钩
   double front_lon_buf_dis = 1.0;
-  double rear_lon_buf_dis = 2.0;
+  double rear_lon_buf_dis = 1.0;
   double extra_lon_buf_dis_for_reverse_obstacle = 2.0;
   const auto ego_v = ego_v_s_;
   // 这里是和动态障碍物做博弈的关键点，自车的速度与静止障碍物无关
   const double a = 0.0;
   // 如果自车以a的加速度发现自车与动态障碍物没有恐慌感（overlap，说明可以避让这个障碍物）
   std::array<uint8_t, 6> timestamps{0, 1, 2, 3, 4, 5};
-  double distance_to_centerline_tmp = 100;
   bool ok = false;
   bool is_overlap_with_dynamic_agent = false;
   bool is_overtake_target_static_obstacle = false;
@@ -1730,6 +1751,7 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
     }
     double min_s = std::numeric_limits<double>::max();
     double max_s = std::numeric_limits<double>::lowest();
+    double distance_to_centerline_tmp = 100;
     for (auto& pt : obstacle_sl_polygon.points()) {
       distance_to_centerline_tmp =
           std::min(std::abs(pt.y()), distance_to_centerline_tmp);
@@ -1767,9 +1789,9 @@ void SccLateralObstacleDecider::UpdateStaticFreeSpaceBaseInteractionType(
 
 void SccLateralObstacleDecider::UpdateDynamicFreeSpaceBaseInteractionType(
     const FrenetObstacle& frenet_obstacle, double& free_space) {
-  // 动态的VRU和大车，恐慌感较强，横向距离额外减去0.2，与is_avoid_car保持一致
+  // 动态的VRU和大车，恐慌感较强，横向距离额外减去0.2
   if (frenet_obstacle.obstacle()->is_VRU() || IsTruck(frenet_obstacle)) {
-    free_space -= 0.2;
+    free_space -= 0.3;
   }
   free_space = std::max(0.0, free_space);
 }
