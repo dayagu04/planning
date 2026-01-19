@@ -177,7 +177,6 @@ class AgentLongitudinalDecider : public Task {
 
   // cut-in data
   std::unordered_map<int32_t, int32_t> cut_in_agent_count_;
-  std::unordered_map<int32_t, int32_t> pred_cut_in_agent_count_;
   std::unordered_map<int32_t, int32_t> rule_based_cut_in_agent_count_;
   std::unordered_set<int32_t> current_agent_ids_;
   // cut-out data

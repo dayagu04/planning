@@ -172,6 +172,7 @@ struct NOASplitRegionInfo {
   bool is_ramp_merge = false;                  // merge场景专用
   bool is_other_merge_to_road = false;         // merge场景专用
   MergeType merge_type = MergeType::NO_MERGE;  // merge场景专用
+  int avoide_lane_num = -1;
   uint64 split_link_id = -1;
   double distance_to_split_point = NL_NMAX;
   FPPoint end_fp_point;
@@ -436,6 +437,7 @@ struct RouteInfoOutput {
     lsl_length = 0.0;
     left_lane_num = 0;
     right_lane_num = 0;
+    // ego_seq = 0;
     emergency_lane_num = 0;
     minVal_seq = 0;
     maxVal_seq = 0;

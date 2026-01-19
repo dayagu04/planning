@@ -201,6 +201,8 @@ struct PathCompareCost {
   float obs_dist = 0.0f;
   float cur_gear_switch_pose_cost = 0.0f;
   float next_gear_switch_pose_cost = 0.0f;
+  float unexpect_gear_cost = 0.0f;
+  float unexpect_steer_cost = 0.0f;
   float total_cost = 0.0f;
 
   PathCompareCost() = default;
@@ -219,6 +221,8 @@ struct PathCompareCost {
     obs_dist = 0.0f;
     cur_gear_switch_pose_cost = 0.0f;
     next_gear_switch_pose_cost = 0.0f;
+    unexpect_gear_cost = 0.0f;
+    unexpect_steer_cost = 0.0f;
     total_cost = 0.0f;
   }
 

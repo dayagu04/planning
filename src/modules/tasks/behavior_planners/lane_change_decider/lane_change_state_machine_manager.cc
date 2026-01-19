@@ -397,9 +397,14 @@ bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
 
   // 当前规划为10hz，则每帧时间大约为0.1s，拨杆变道在等待状态满15s后，还未变道，则取消当前次的拨杆变道
   const double propose_frame_threshold = 150;
+  // 针对超车变道，变道等待过程持续超30s则取消当前得超车变道意图
+  const double overtake_propose_frame_threshold = 300;
 
   bool propose_time_out = (transition_info_.lane_change_type == INT_REQUEST &&
-                           propose_state_frame_nums_ > propose_frame_threshold);
+                           propose_state_frame_nums_ > propose_frame_threshold) ||
+                           (transition_info_.lane_change_type == OVERTAKE_REQUEST &&
+                           propose_state_frame_nums_ > overtake_propose_frame_threshold);
+
   // bool propose_time_out =
   //     lc_req_mgr_->GetReqStartTime(lc_req_mgr_->request_source()) -
   //         IflyTime::Now_s() >
@@ -1337,10 +1342,18 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   } else {
     lane_change_stage_info_.lc_gap_info.rear_node_id = -1;
   }
+  if (ego_lane_front_node_) {
+    lane_change_decider_output.origin_agent_id =
+        ego_lane_front_node_->node_agent_id();
+  } else {
+    lane_change_decider_output.origin_agent_id = -1;
+  }
   lane_change_decider_output.lc_gap_info.front_node_id =
       lane_change_stage_info_.lc_gap_info.front_node_id;
   lane_change_decider_output.lc_gap_info.rear_node_id =
       lane_change_stage_info_.lc_gap_info.rear_node_id;
+  lane_change_decider_output.origin_agent_id =
+      lane_change_decider_output.origin_agent_id;
 
   GenerateTurnSignalForSplitRegion();
   JSON_DEBUG_VALUE("road_to_ramp_turn_signal",
@@ -2566,7 +2579,7 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
           urgent_reached_time = rear_reached_time;
         }
       }
-    }    
+    }
   }
   target_lane_rear_node_ = dynamic_world->GetNode(target_rear_node_id);
 }
@@ -4229,7 +4242,7 @@ bool LaneChangeStateMachineManager::
       double ego_brake = 2.0;
       double ego_faster_buff = (- rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
       //保护高速恐慌感
-      box_longitudinal_buff = std::max(ego_faster_buff, 
+      box_longitudinal_buff = std::max(ego_faster_buff,
                 ego_trajs_future_[i].v * lc_safety_check_config_.faster_rear_delay_time);
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
@@ -4258,7 +4271,7 @@ bool LaneChangeStateMachineManager::
       double delta_v0 = std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
       if(delta_v0 > 1.0){ // 后车减速让行需要反应时间, 以及后车减速距离
         dis_buff += agent_traj[0].v *
-                    lc_safety_check_config_.faster_rear_delay_time 
+                    lc_safety_check_config_.faster_rear_delay_time
                     + delta_v0 * delta_v0 / (2 * rear_comfort_decel);
       }
       // 预测轨迹点车速对应ttc
@@ -5058,14 +5071,14 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   const double kv2 = curv_factor * vel * vel;
   double steer_ratio = vehicle_param.steer_ratio;
   double max_steer_angle = vehicle_param.max_steer_angle;  // rad
-  double max_steer_angle_rate_lc = 
-    std::min(vehicle_param.max_steer_angle_rate, 
+  double max_steer_angle_rate_lc =
+    std::min(vehicle_param.max_steer_angle_rate,
              lc_safety_check_config_.hold_steer_angle_rate_limit_deg / 57.3);
   double max_wheel_angle_rate_lc = max_steer_angle_rate_lc / steer_ratio;
   double steer_limit_jerk = max_wheel_angle_rate_lc * kv2;
   // 正常行驶基于横向差值
-  double jerk_bound = planning::interp(vel, 
-      lc_safety_check_config_.hold_state_vel_jerk_map.vel_table, 
+  double jerk_bound = planning::interp(vel,
+      lc_safety_check_config_.hold_state_vel_jerk_map.vel_table,
       lc_safety_check_config_.hold_state_vel_jerk_map.jerk_table);
   double limit_jerk_hold = std::min(steer_limit_jerk, jerk_bound);
   //初始状态
