@@ -6515,6 +6515,8 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                      "lon_jerk_thr");
     ReadItem<double>(json, lat_jerk_hysteresis_value, "hmi_decider",
                      "lat_jerk_hysteresis_value");
+    ReadItem<double>(json, lon_collision_dec_thred, "hmi_decider",
+                    "lon_collision_dec_thred");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
@@ -6525,6 +6527,7 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
   double lon_acc_thr = 3.0;
   double lon_jerk_thr = 0.3;
   double lat_jerk_hysteresis_value = 0.1;
+  double lon_collision_dec_thred = -5.0;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{

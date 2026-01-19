@@ -278,6 +278,7 @@ class LaneChangeStateMachineManager {
   RampDirection CalcTurnSignalForTencentSplitRegion() const;
   RampDirection CalcTurnSignalForBaiduSplitRegion() const;
   double ComputeInertialLatOffset(double v_y0, double a_y0, double j_max) const;
+  bool IsWarningCollisionRisk();
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
@@ -347,6 +348,7 @@ class LaneChangeStateMachineManager {
   bool is_high_priority_back_ = false;
   bool is_side_clear_{false};
   bool is_pre_move_{false};
+
 
   CongestionResult fix_lane_congestion_level_;
 

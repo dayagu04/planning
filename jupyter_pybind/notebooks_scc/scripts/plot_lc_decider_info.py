@@ -118,7 +118,7 @@ def update_lc_data (noa_info, plan_debug_json):
             'ego_status_on_route','bd_mlc_scene', 'left_lane_num', 'minVal_seq',
             'maxVal_seq', 'right_lane_num', 'emergency_lane_num', 'average_curve','lsl_length', 'lat_offset_lc_hold',
             'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose',
-            'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id','merging_rear_id']
+            'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id','merging_rear_id','merge_fail','merge_hard']
 
   for name in vars_lc:
     try:

@@ -1327,6 +1327,7 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   hard_bounds_.resize(ref_traj_points_.size());
   second_soft_bounds_.resize(ref_traj_points_.size());
   first_soft_bounds_.resize(ref_traj_points_.size());
+  double max_care_lon_area_road_border = 0;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-init_dist_to_bound, init_dist_to_bound};
     Bound hard_bound_road{-init_dist_to_bound, init_dist_to_bound};
@@ -1367,6 +1368,10 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
           std::fmax(std::min(-config_.soft_min_distance_road2center,
                              hard_bound_road.lower + right_road_extra_buffer),
                     soft_bound_road.lower);
+      max_care_lon_area_road_border =
+          std::max(map_obstacle_decision.tp.s -
+                       ego_frenet_state_.planning_init_point().frenet_state.s,
+                   max_care_lon_area_road_border);
     }
 
     hard_bounds_[i].emplace_back(WeightedBound{
@@ -1376,6 +1381,8 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
         soft_bound_road.lower, soft_bound_road.upper,
         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
   }
+  general_lateral_decider_output.care_lon_area_road_border =
+      max_care_lon_area_road_border;
 }
 
 void GeneralLateralDecider::PostProcessRoadSoftBoundary() {

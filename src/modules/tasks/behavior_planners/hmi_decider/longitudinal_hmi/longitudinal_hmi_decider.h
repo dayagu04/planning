@@ -12,6 +12,8 @@ class LongitudinalHmiDecider {
  private:
   framework::Session* session_ = nullptr;
   HmiDeciderConfig config_;
+
+  std::pair<int32_t, int32_t> lon_collision_count_{0, 0};
 };
 
 }  // namespace planning

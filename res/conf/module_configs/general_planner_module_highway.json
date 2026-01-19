@@ -2215,7 +2215,8 @@
     "ramp_lat_jerk_thr": 0.65,
     "lon_acc_thr": 2.0,
     "lon_jerk_thr": 1.5,
-    "lat_jerk_hysteresis_value": 0.2
+    "lat_jerk_hysteresis_value": 0.2,
+    "lon_collision_dec_thred": -4.5
   },
   "reference_path_manager": {
     "is_enable_construction_refline": true

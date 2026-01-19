@@ -750,14 +750,7 @@ void PlanningScheduler::FillPlanningTrajectory(
         iflyauto::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         iflyauto::REQUEST_REASON_BORROW_FAILED;
-  } else {
-    planning_output->planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
-    planning_output->planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
-  }
-
-  if (speed_limit_decider_output.is_function_fading_away() &&
+  } else if (speed_limit_decider_output.is_function_fading_away() &&
       config_.left_right_turn_func_fading_away_switch) {
     planning_output->planning_request.take_over_req_level =
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
@@ -768,11 +761,6 @@ void PlanningScheduler::FillPlanningTrajectory(
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         iflyauto::RequestReason::REQUEST_REASON_ON_ROUNDABOUT;
-  } else {
-    planning_output->planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
-    planning_output->planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
   }
   JSON_DEBUG_VALUE(
       "take_over_request",
@@ -1439,6 +1427,9 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     FillPlanningRequest(iflyauto::REQUEST_LEVEL_NO_REQ, planning_output);
     UpdateSuccessfulPlanningResult();
   }
+  // temp scc & noa
+  const auto& inner_planning_output = session_.planning_context().planning_output();
+  planning_output->planning_request = inner_planning_output.planning_request;
 
   ILOG_INFO << "The RunOnce is successed !!!!:";
   JSON_DEBUG_VALUE("planning_fault_code", FaultCode());

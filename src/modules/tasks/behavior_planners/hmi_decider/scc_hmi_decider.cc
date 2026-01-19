@@ -17,31 +17,46 @@ SCCHMIDecider::SCCHMIDecider(const EgoPlanningConfigBuilder* config_builder,
       std::make_shared<NudgeWarningHMIDecider>(session);
   enable_lcc_hmi_decider_ =
       std::make_shared<EnableLCCHMIDecider>(session, config_);
+
+  lateral_request_decider_ = std::make_shared<LateralRequestDecider>(session);
+  construction_takeover_hmi_decider_ = std::make_shared<ConstructionTakeoverHMIDecider>(session);
 }
 
 bool SCCHMIDecider::Execute() {
   if (enable_lcc_hmi_decider_) {
     enable_lcc_hmi_decider_->Execute();
   }
-
+  if (nudge_warning_hmi_decider_) {
+    nudge_warning_hmi_decider_->Execute();
+  }
+  // planning_hmi:
   if (cone_warning_hmi_decider_) {
     cone_warning_hmi_decider_->Execute();
   }
   if (construction_warning_hmi_decider_) {
     construction_warning_hmi_decider_->Execute();
   }
-  if (lane_change_hmi_decider_) {
-    lane_change_hmi_decider_->Execute();
+
+  // planning_output: takeover request
+  if (lateral_request_decider_) {
+    lateral_request_decider_->Execute();
   }
+
   if (longitudinal_hmi_decider_) {
     longitudinal_hmi_decider_->Execute();
   }
   if (split_select_hmi_decider_) {
     split_select_hmi_decider_->Execute();
   }
-  if (nudge_warning_hmi_decider_) {
-    nudge_warning_hmi_decider_->Execute();
+
+  if (construction_takeover_hmi_decider_) {
+    construction_takeover_hmi_decider_->Execute();
   }
+
+  if (lane_change_hmi_decider_) {
+    lane_change_hmi_decider_->Execute();
+  }
+
   return true;
 }
 }  // namespace planning

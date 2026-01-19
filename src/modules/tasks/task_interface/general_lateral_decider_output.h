@@ -44,6 +44,7 @@ struct GeneralLateralDeciderOutput {
   double recommended_bound_avoid_jerk = 0.4;
   RiskLevel risk_level = RiskLevel::NO_RISK;
   bool is_emergency_avoid = false;
+  double care_lon_area_road_border;
   void Clear() {
     complete_follow = true;
     lane_change_scene = false;
@@ -55,6 +56,7 @@ struct GeneralLateralDeciderOutput {
     recommended_bound_avoid_jerk = 0.4;
     risk_level = RiskLevel::NO_RISK;
     is_emergency_avoid = false;
+    care_lon_area_road_border = 75;
     init_state.Clear();
     enu_ref_path.clear();
     last_enu_ref_path.clear();
