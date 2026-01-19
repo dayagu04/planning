@@ -157,6 +157,7 @@ protected:
   std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
       ramp_info_vec_;
   MLCDeciderSceneInfoBaseBaidu mlc_decider_info_base_baidu_;
+  size_t count_continue_general_mlc_ = 0;
 
 };
 }
