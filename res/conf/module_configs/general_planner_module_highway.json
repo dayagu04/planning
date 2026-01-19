@@ -196,7 +196,8 @@
     1.2,
     1.4,
     1.7,
-    2.2
+    2.2,
+    2.5
   ],
   "static_obstacle_static_limit_v_free_space": [
     0,
@@ -204,7 +205,8 @@
     8.33,
     16.66,
     22.22,
-    33.33
+    33.33,
+    50
   ],
   "free_space_dynamic_obstacle_bp": [
     0.8,
@@ -212,7 +214,8 @@
     1.2,
     1.4,
     1.7,
-    2.2
+    2.2,
+    2.5
   ],
   "dynamic_obstacle_static_limit_v_free_space": [
     0,
@@ -220,7 +223,8 @@
     8.33,
     16.66,
     22.22,
-    33.33
+    33.33,
+    50
   ],
   "use_lat_offset_in_tracklet_maintainer": true,
   "enable_static_scene": true,
