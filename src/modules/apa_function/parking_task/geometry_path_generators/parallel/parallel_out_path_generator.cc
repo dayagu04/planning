@@ -159,6 +159,18 @@ const bool ParallelOutPathGenerator::Update() {
       ILOG_INFO << "three  prepareline out search in slot failed!";
       return false;
     }
+    // remove short path <0.16
+    if (out_path_vec.size() > 2) {
+      if (out_path_vec[0].GetLength() < 0.16 &&
+          out_path_vec[0].seg_gear != out_path_vec[1].seg_gear) {
+        out_path_vec.erase(out_path_vec.begin());
+      }
+      if (out_path_vec.back().GetLength() < 0.16 &&
+          out_path_vec[out_path_vec.size() - 2].seg_gear !=
+              out_path_vec.back().seg_gear) {
+        out_path_vec.erase(out_path_vec.end());
+      }
+    }
     pnc::geometry_lib::PrintSegmentsVecInfo(out_path_vec);
     ILOG_INFO << "three  prepareline out search in slot success! --------------------------";
     AddPathSegVecToOutput(out_path_vec);

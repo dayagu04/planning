@@ -151,6 +151,7 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   mlc_decider_info_base_baidu_.reset();
 
   if (relative_id_lanes.empty()) {
+    count_continue_general_mlc_ = 0;
     return;
   }
   MLCSceneTypeDecider();
@@ -163,18 +164,21 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   switch (mlc_scene_type) {
     case SPLIT_SCENE: {
       if (!CalculateFeasibleLaneInRampScene(feasible_lane_graph)) {
+        count_continue_general_mlc_ = 0;
         return;
       }
       break;
     }
     case NORMAL_SCENE: {
       if (!CalculateFeasibleLaneInNormalScene(feasible_lane_graph)) {
+        count_continue_general_mlc_ = 0;
         return;
       }
       break;
     }
     case MERGE_SCENE: {
       if (!CalculateFeasibleLaneInMergeScene(feasible_lane_graph)) {
+        count_continue_general_mlc_ = 0;
         return;
       }
       break;
@@ -686,12 +690,14 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const TopoLinkGraph& feasible_lane_graph) {
   if (feasible_lane_graph.lane_topo_groups.empty()) {
+    count_continue_general_mlc_ = 0;
     return;
   }
 
   const auto& cur_link_feasible_lane =
       feasible_lane_graph.lane_topo_groups.back();
   if (cur_link_feasible_lane.topo_lanes.empty()) {
+    count_continue_general_mlc_ = 0;
     return;
   }
 
@@ -703,6 +709,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
                                      topo_lane.front_feasible_distance);
   }
   if (origin_order_id_seq.empty()) {
+    count_continue_general_mlc_ = 0;
     return;
   }
 
@@ -740,6 +747,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
                                   most_left_emergency_lane_num;
 
   if (link_total_lane_num < 1) {
+    count_continue_general_mlc_ = 0;
     return;
   }
 
@@ -754,6 +762,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
   }
 
   if (feasible_lane_seq.empty()) {
+    count_continue_general_mlc_ = 0;
     return;
   }
   int minVal_seq = feasible_lane_seq[0].first;
@@ -841,6 +850,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     // 如果自车左边的车道数大于link的总车道数，则认为左侧车道数误检，直接return;
     if (left_lane_num > real_lane_num) {
+      count_continue_general_mlc_ = 0;
       return;
     }
 
@@ -861,29 +871,44 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     const bool lane_type_condition =
         !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
+
     RampDirection front_ramp_dir = route_info_output_.ramp_direction;
+
     if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
         is_nearing_ramp && lane_type_condition &&
         front_ramp_dir == RAMP_ON_RIGHT) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
-      lc_num_task.emplace_back(1);
+      count_continue_general_mlc_++;
+      if (count_continue_general_mlc_ > 3) {
+        lc_num_task.emplace_back(1);
+      }
     } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp) {
       //split场景，目标车道在最左边的情况，一直向左变道
-      lc_num_task.emplace_back(-1);
+      count_continue_general_mlc_++;
+      if (count_continue_general_mlc_ > 3) {
+        lc_num_task.emplace_back(-1);
+      }
     } else {
       int ego_seq = left_lane_num + 1;
       if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
+        count_continue_general_mlc_ = 0;
         continue;
       } else if (ego_seq > maxVal_seq) {
-        int err = ego_seq - maxVal_seq;
-        for (int i = 0; i < err; i++) {
-          lc_num_task.emplace_back(-1);
+        count_continue_general_mlc_++;
+        if (count_continue_general_mlc_ > 3) {
+          int err = ego_seq - maxVal_seq;
+          for (int i = 0; i < err; i++) {
+            lc_num_task.emplace_back(-1);
+          }
         }
       } else if (ego_seq < minVal_seq) {
-        int err = minVal_seq - ego_seq;
-        for (int i = 0; i < err; i++) {
-          lc_num_task.emplace_back(1);
+        count_continue_general_mlc_++;
+        if (count_continue_general_mlc_ > 3) {
+          int err = minVal_seq - ego_seq;
+          for (int i = 0; i < err; i++) {
+            lc_num_task.emplace_back(1);
+          }
         }
       }
     }

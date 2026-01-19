@@ -93,6 +93,7 @@ class ParkingScenarioManager final {
       scenario_list_;
 
   bool init_ = false;
+  bool is_last_parking_pause_ = false;
   std::shared_ptr<ApaWorld> apa_world_;
 };
 }  // namespace apa_planner

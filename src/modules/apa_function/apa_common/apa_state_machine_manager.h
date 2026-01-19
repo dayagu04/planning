@@ -111,10 +111,17 @@ class ApaStateMachineManager final {
     return sapa_status_;
   }
 
+  const bool IsPAMode() const {
+    return running_mode_ == ApaRunningMode::RUNNING_PA;
+  }
+
   const bool IsSAPAMode() const {
     return running_mode_ == ApaRunningMode::RUNNING_SAPA;
   }
 
+  const bool IsManualStatus() const {
+    return state_machine_ == ApaStateMachine::MANUAL_PARKING;
+  }
   const bool IsParkingStatus() const;
   const bool IsParkingInStatus() const;
   const bool IsParkingOutStatus() const;

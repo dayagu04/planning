@@ -21,6 +21,7 @@ struct CurvePath {
   int segment_size = 0;
   float path_dist = 0.0f;
   float kappa_change = 0.0f;
+  float single_gear_lengths[MAX_CURVE_PATH_SEG_NUM];
   float dists[MAX_CURVE_PATH_SEG_NUM];
   float kappas[MAX_CURVE_PATH_SEG_NUM];
   AstarPathGear gears[MAX_CURVE_PATH_SEG_NUM];
@@ -33,6 +34,7 @@ struct CurvePath {
 #endif
 
   int gear_change_number = 0;
+  int gear_number = 0;
 
   void Clear() {
     segment_size = 0;

@@ -50,7 +50,6 @@ constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;
 constexpr double kConsideredReverseVruTime = 2.0;
 constexpr double kPlanningdt = 0.1;
-constexpr double kTruncateTrajTimeForOriginFrontAgent = 3.0;
 }  // namespace
 
 bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
@@ -544,13 +543,6 @@ void STGraph::MakeDynamicAgentStBoundary(
 
   auto trajectories = agent.trajectories_used_by_st_graph();
 
-  bool is_need_truncate_traj_for_origin_front_agent = false;
-  const auto* front_agent_of_origin = st_graph_input_->front_agent_of_origin();
-  if (front_agent_of_origin != nullptr &&
-      agent.agent_id() == front_agent_of_origin->agent_id()) {
-    is_need_truncate_traj_for_origin_front_agent = true;
-  }
-
   // only consider 2s traj to reverse vru within ego_lane
   const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
   bool is_need_truncate_traj =
@@ -597,10 +589,7 @@ void STGraph::MakeDynamicAgentStBoundary(
               trajectories[i], start_absolute_time + relative_time, &point);
         }
       }
-      if (is_need_truncate_traj_for_origin_front_agent &&
-          relative_time > kTruncateTrajTimeForOriginFrontAgent) {
-        continue;
-      }
+
       double specific_lat_buffer = need_adjust_buffer_by_t
                                        ? StGraphUtils::AdjustLateralBufferByT(
                                              init_point, point, lat_buffer,

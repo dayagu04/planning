@@ -487,7 +487,31 @@ def ehr_load_center_lane_lines(lanes, x, y, yaw, Max_line_size, g_is_display_enu
 #         outlink_x.append(car_x)
 #         outlink_y.append(car_y)
 #         sdpromap_road_line_info['load_outlink_info'].append(info_str)
+def parse_link_type(link_type_value, type_map):
+    """
+    解析link_type位掩码，返回所有匹配的类型名称拼接字符串
+    :param link_type_value: 整数型的link_type值（如0x00000003）
+    :param type_map: 类型映射字典（link_type_map）
+    :return: 拼接后的类型名称字符串，如"隧道; 桥"
+    """
+    # 特殊处理：0值对应"普通"（若0是默认类型）
+    if link_type_value == 0:
+        return type_map.get(0, "普通")
 
+    # 遍历所有类型键，检查位是否匹配
+    matched_types = []
+    for mask, name in type_map.items():
+        # 跳过0值（已单独处理），避免重复匹配
+        if mask == 0:
+            continue
+        # 按位与判断是否包含该类型
+        if (link_type_value & mask) == mask:
+            matched_types.append(name)
+
+    # 无匹配项则返回"未知类型"，否则拼接所有类型
+    if not matched_types:
+        return f"未知类型({hex(link_type_value)})"
+    return "; ".join(matched_types)
 
 def load_sdpro_map_segments(links, route_links, lanes, x, y, yaw, Max_sdmap_segment_size):
     sdpromap_road_line_info = {
@@ -668,7 +692,8 @@ def load_sdpro_map_segments(links, route_links, lanes, x, y, yaw, Max_sdmap_segm
 
         # ---------------------- 3. 原有：处理link基础信息（新增车道信息嵌入） ----------------------
         link_class_name = link_class_map.get(link.link_class, f"未知类型({link.link_class})")
-        link_type_name = link_type_map.get(link.link_type, f"未知类型({link.link_type})")
+        link_type_name = parse_link_type(link.link_type, link_type_map)
+        # link_type_name = link_type_map.get(link.link_type, f"未知类型({link.link_type})")
         # 3.1 在原有link信息中添加「车道数量」和「车道列表」
         lane_count = len(current_link_lane_ids)
         lane_summary = f"车道总数: {lane_count}，车道详情: [{'; '.join(lane_info_list)}]" if lane_info_list else "无车道数据"
@@ -774,7 +799,8 @@ def load_sdpro_map_segments(links, route_links, lanes, x, y, yaw, Max_sdmap_segm
           in_link = link_dict[inlink_id]
           # 构建inlink的信息
           link_class_name = link_class_map.get(in_link.link_class, f"未知类型({in_link.link_class})")
-          link_type_name = link_type_map.get(in_link.link_type, f"未知类型({in_link.link_type})")
+          link_type_name = parse_link_type(in_link.link_type, link_type_map)
+          # link_type_name = link_type_map.get(in_link.link_type, f"未知类型({in_link.link_type})")
           info_str = (
               f"link_id: {in_link.id}, "
               f"link_type: {link_type_name}, "
@@ -797,7 +823,8 @@ def load_sdpro_map_segments(links, route_links, lanes, x, y, yaw, Max_sdmap_segm
           out_link = link_dict[outlink_id]
           # 构建当前link的信息
           link_class_name = link_class_map.get(out_link.link_class, f"未知类型({out_link.link_class})")
-          link_type_name = link_type_map.get(out_link.link_type, f"未知类型({out_link.link_type})")
+          link_type_name = parse_link_type(out_link.link_type, link_type_map)
+          # link_type_name = link_type_map.get(out_link.link_type, f"未知类型({out_link.link_type})")
           info_str = (
               f"link_id: {out_link.id}, "
               f"link_type: {link_type_name}, "

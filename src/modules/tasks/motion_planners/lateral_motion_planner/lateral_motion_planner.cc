@@ -635,7 +635,8 @@ bool LateralMotionPlanner::AssembleInput() {
       lane_change_scene) {
     if (((planning_weight_ptr_->GetLaneChangeStyle() ==
         pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE) ||
-        avoid_dist > avoid_dist_thr)) {
+        (avoid_dist > avoid_dist_thr || general_lateral_decider_output.bound_avoid ||
+         general_lateral_decider_output.is_emergency_avoid))) {
       is_low_speed_lane_change = true;
     } else {
       is_low_speed_lane_change_without_obstacle = true;

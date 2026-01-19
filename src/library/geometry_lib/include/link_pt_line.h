@@ -43,13 +43,11 @@ struct LinkPtLinePath {
 
   uint8_t seg_num;
   uint8_t gear_change_num;
-  uint8_t gear_num;
   AstarPathGear cur_gear;
   AstarPathGear last_gear;
   AstarPathSteer last_steer;
 
   T total_length;
-  T cur_gear_length;
 
   T last_line_length;
 
@@ -60,7 +58,6 @@ struct LinkPtLinePath {
   AstarPathGear gears[MAX_LPL_PATH_NUM];
   AstarPathSteer steers[MAX_LPL_PATH_NUM];
   T lengths[MAX_LPL_PATH_NUM];
-  T single_gear_lengths[MAX_LPL_PATH_NUM];
   T kappas[MAX_LPL_PATH_NUM];
 
   PathSeg<T> segs[MAX_LPL_PATH_NUM];
@@ -70,12 +67,10 @@ struct LinkPtLinePath {
   void Reset() {
     seg_num = 0;
     gear_change_num = 0;
-    gear_num = 0;
     cur_gear = AstarPathGear::NONE;
     last_gear = AstarPathGear::NONE;
     last_steer = AstarPathSteer::NONE;
     total_length = T(0.0f);
-    cur_gear_length = T(0.0f);
     kappa_change = T(0.0f);
     last_line_length = T(0.0f);
     ptss.clear();
