@@ -908,6 +908,9 @@ void EgoStateManager::UpdatePlanningInitState() {
     } else if (cur_fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
                cur_fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE) {
       set_lon_replan = true;
+    } else if (cur_fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE_DRIVING) {
+      set_lat_replan = true;
+      set_lon_replan = true;
     }
     replan_type_.clear();
     replan_status = ReplanProcess(set_lat_replan, set_lon_replan);

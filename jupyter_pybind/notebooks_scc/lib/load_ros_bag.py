@@ -792,7 +792,8 @@ class LoadRosbag:
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
                          "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
-                         "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
+                         "dist_to_target_slot", "dist_to_target_dest", "is_exist_target_slot", "is_target_slot_allowed_to_park",
+                          "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
       # nsa
@@ -991,7 +992,7 @@ class LoadRosbag:
         #   scene_type = 'PARKING_APA'
         if msg.current_state > 4 and msg.current_state <= 12:
           scene_type = 'HIGHWAY'
-        elif msg.current_state >= 50 and msg.current_state <= 62:
+        elif (msg.current_state >= 50 and msg.current_state <= 62) or (msg.background_state >= 11 and msg.background_state <= 20):
           scene_type = 'HPP'
         elif msg.current_state >= 22 and msg.current_state <= 28:
           scene_type = 'NSA'
