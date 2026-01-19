@@ -379,8 +379,8 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
         multi_parkout_path_vec[ApaParkOutDirection::LEFT_FRONT];
   }
 
-  generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontLeft);
-  generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
+  // generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontLeft);
+  // generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
   return true;
 }
 
@@ -2070,8 +2070,8 @@ const bool ParallelParkOutScenario::SetAstarRequest(
 
   ILOG_INFO << "frame_.is_park_out_left " << frame_.is_park_out_left;
   pnc::geometry_lib::SlotSide slot_side = frame_.is_park_out_left
-                                              ? geometry_lib::SLOT_SIDE_RIGHT
-                                              : geometry_lib::SLOT_SIDE_LEFT;
+                                              ? geometry_lib::SLOT_SIDE_LEFT
+                                              : geometry_lib::SLOT_SIDE_RIGHT;
   virtual_wall_decider_.Process(obs_hastar.virtual_obs, ego_info.slot, start,
                                 slot_side, dir_type, passage_height);
 
