@@ -7445,137 +7445,6 @@ void ParallelPathGenerator::JudgeNeedOptimize() {
   }
 }
 
-const bool ParallelPathGenerator::CalculateArcFromTwoPoints(
-    const pnc::geometry_lib::PathPoint& start_point,
-    const pnc::geometry_lib::PathPoint& end_point,
-    pnc::geometry_lib::Arc& result_arc) {
-  Eigen::Vector2d start_pos = start_point.pos;
-  Eigen::Vector2d end_pos = end_point.pos;
-  double start_heading = start_point.heading;
-  double end_heading = end_point.heading;
-
-  // Calculate chord length (distance between two points)
-  double chord_length = (end_pos - start_pos).norm();
-
-  // If the two points are coincident, an arc cannot be formed
-  if (chord_length < 1e-6) {
-    return false;
-  }
-
-  // Calculate tangent vectors at start and end points
-  Eigen::Vector2d start_tangent(std::cos(start_heading),
-                                std::sin(start_heading));
-  Eigen::Vector2d end_tangent(std::cos(end_heading), std::sin(end_heading));
-
-  // Calculate angle difference
-  double delta_heading =
-      pnc::geometry_lib::NormalizeAngle(end_heading - start_heading);
-
-  //  If the angle difference is very small,
-  // it's considered a straight line segment or unable to form an effective arc
-  if (std::abs(delta_heading) < 1e-6) {
-    return false;
-  }
-
-  // Use geometric relationships to calculate center and radius
-  // The center lies on the perpendicular bisectors of the start and end normals
-  Eigen::Vector2d start_normal(-start_tangent.y(), start_tangent.x());
-  Eigen::Vector2d end_normal(-end_tangent.y(), end_tangent.x());
-
-  // Calculate midpoint of chord
-  Eigen::Vector2d mid_point = (start_pos + end_pos) * 0.5;
-  Eigen::Vector2d chord_dir = (end_pos - start_pos).normalized();
-
-  // Calculate the center of the arc based on geometric relationship
-  // Let C be the center, distance from A to C equals distance from B to C
-  // Using chord's perpendicular bisector and tangent direction relationships
-
-  // Calculate central angle of arc (absolute value)
-  double abs_delta_heading = std::abs(delta_heading);
-  if (abs_delta_heading > M_PI) {
-    abs_delta_heading = 2 * M_PI - abs_delta_heading;
-  }
-
-  // Calculate distance from chord to center
-  // Using geometric relationship: For an arc, chord_length = 2 * R *
-  // sin(center_angle/2) So R = chord_length / (2 * sin(center_angle/2))
-  double center_angle = abs_delta_heading;
-
-  // If the central angle is too small, it's unsuitable for forming an arc
-  if (center_angle < 1e-3) {
-    return false;
-  }
-
-  double sin_half_angle = std::sin(center_angle / 2.0);
-  if (std::abs(sin_half_angle) < 1e-6) {
-    return false;
-  }
-
-  // Calculate radius
-  double radius = chord_length / (2.0 * sin_half_angle);
-
-  // ILOG_INFO << "result_arc radius: " << radius;
-  // Check if radius is smaller than minimum turning radius
-  const double min_turn_radius = apa_param.GetParam().min_turn_radius + 1.0;
-  // const double max_corner_radius = 26.0;
-  if (radius < min_turn_radius) {
-    return false;
-  }
-
-  // Calculate center position
-  // Center is located on chord's perpendicular bisector, at distance d = R *
-  // cos(center_angle/2) from chord midpoint
-  double distance_to_center = radius * std::cos(center_angle / 2.0);
-
-  // Determine which side of the chord the center is on, need to determine based
-  // on turning direction
-  Eigen::Vector2d chord_perp(-chord_dir.y(), chord_dir.x());
-
-  // Determine center position based on turning direction
-  double cross_product =
-      chord_dir.x() * start_tangent.y() - chord_dir.y() * start_tangent.x();
-  double center_sign = (cross_product > 0) ? 1.0 : -1.0;
-
-  // Adjust center sign to ensure correct geometric relationship
-  if (delta_heading > 0) {
-    // Left turn
-    if (cross_product < 0) center_sign *= -1.0;
-  } else {
-    //  Right turn
-    if (cross_product > 0) center_sign *= -1.0;
-  }
-
-  Eigen::Vector2d center =
-      mid_point + center_sign * distance_to_center * chord_perp;
-
-  // Set Arc structure
-  result_arc.pA = start_pos;
-  result_arc.pB = end_pos;
-  result_arc.headingA = start_heading;
-  result_arc.headingB = end_heading;
-  result_arc.circle_info.center = center;
-  result_arc.circle_info.radius = radius;
-
-  // Calculate arc length
-  result_arc.length = center_angle * radius;
-
-  // Determine rotation direction
-  result_arc.is_anti_clockwise = (delta_heading > 0);
-
-  // Set heading vectors
-  result_arc.headingA_vec = start_tangent;
-  result_arc.headingB_vec = end_tangent;
-
-  // Check if arc length is greater than 0.3 meters
-  if (result_arc.length < 0.3) {
-    return false;
-  }
-
-  ILOG_INFO << "result_arc success:";
-  result_arc.PrintInfo();
-  return true;
-}
-
 const bool ParallelPathGenerator::CheckSecondGearChangeArc(
     const std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
     pnc::geometry_lib::Arc& resulting_arc, size_t& arc_end_idx) {
@@ -7675,7 +7544,8 @@ const bool ParallelPathGenerator::CheckSecondGearChangeArc(
 
     // Calculate arc from start_point to end_point
     pnc::geometry_lib::Arc temp_arc;
-    if (CalculateArcFromTwoPoints(start_point, end_point, temp_arc)) {
+    if (CalculateArcFromTwoPoints(start_point, end_point, temp_arc,
+                                  apa_param.GetParam().min_turn_radius)) {
       resulting_arc = temp_arc;
       arc_end_idx = i;
       return true;

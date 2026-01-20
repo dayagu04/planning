@@ -946,44 +946,44 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
 
   ILOG_INFO << "final parallel slot is occupied = " << is_slot_occupied;
   // Use sliding Windows to prevent parking slot flashing
-  int parallel_slot_not_release_count_ =
+  int parallel_slot_not_release_count =
       parallel_slot_not_release_count_map_[slot.GetId()];
-  int parallel_slot_release_count_ =
+  int parallel_slot_release_count =
       parallel_slot_release_count_map_[slot.GetId()];
   if (is_slot_occupied) {
-    parallel_slot_not_release_count_++;
+    parallel_slot_not_release_count++;
   } else {
-    parallel_slot_release_count_++;
+    parallel_slot_release_count++;
   }
-  if ((parallel_slot_not_release_count_ + parallel_slot_release_count_) >=
+  if ((parallel_slot_not_release_count + parallel_slot_release_count) >=
       kMaxSlotObserveFrameCount) {
     if (is_slot_occupied) {
-      parallel_slot_release_count_--;
+      parallel_slot_release_count--;
     } else {
-      parallel_slot_not_release_count_--;
+      parallel_slot_not_release_count--;
     }
-    parallel_slot_not_release_count_ = std::clamp(
-        parallel_slot_not_release_count_, 0, kMaxSlotObserveFrameCount);
-    parallel_slot_release_count_ =
-        std::clamp(parallel_slot_release_count_, 0, kMaxSlotObserveFrameCount);
+    parallel_slot_not_release_count = std::clamp(
+        parallel_slot_not_release_count, 0, kMaxSlotObserveFrameCount);
+    parallel_slot_release_count =
+        std::clamp(parallel_slot_release_count, 0, kMaxSlotObserveFrameCount);
   }
   ILOG_INFO << "slot id: " << slot.GetId()
-            << " parallel_slot_not_release_count_ = "
-            << parallel_slot_not_release_count_
-            << " parallel_slot_release_count_ = "
-            << parallel_slot_release_count_;
+            << " parallel_slot_not_release_count = "
+            << parallel_slot_not_release_count
+            << " parallel_slot_release_count = "
+            << parallel_slot_release_count;
   if (is_slot_occupied &&
-      parallel_slot_not_release_count_ > parallel_slot_release_count_) {
-    parallel_slot_not_release_count_ = 0;
+      parallel_slot_not_release_count > parallel_slot_release_count) {
+    parallel_slot_not_release_count = 0;
     parallel_slot_not_release_count_map_[slot.GetId()] =
-        parallel_slot_not_release_count_;
+        parallel_slot_not_release_count;
     parallel_slot_release_count_map_[slot.GetId()] =
-        parallel_slot_release_count_;
+        parallel_slot_release_count;
     return SlotReleaseVoterType::CLEAR;
   }
   parallel_slot_not_release_count_map_[slot.GetId()] =
-      parallel_slot_not_release_count_;
-  parallel_slot_release_count_map_[slot.GetId()] = parallel_slot_release_count_;
+      parallel_slot_not_release_count;
+  parallel_slot_release_count_map_[slot.GetId()] = parallel_slot_release_count;
   return SlotReleaseVoterType::MAXIMUM;
 }
 
