@@ -3291,7 +3291,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   const ParallelPathGenerator& update_path_planner = SuitablePathReplan();
   plan_result = frame_.pathplan_result;
-  if (plan_result = PathPlannerResult::PLAN_UPDATE) {
+  if (plan_result == PathPlannerResult::PLAN_UPDATE) {
     parallel_path_planner_.UpdateOutputPointByZigZag();
     parallel_path_planner_.UpdateOutputPointByOverlap();
   }
