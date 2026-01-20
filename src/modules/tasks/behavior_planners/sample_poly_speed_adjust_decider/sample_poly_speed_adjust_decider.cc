@@ -470,8 +470,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   is_merge_change_ =
       (lane_change_source_ == MERGE_REQUEST) ||
       ((lane_change_source_ == MAP_REQUEST) &&
-       (route_info_output.mlc_request_type_route_info.mlc_request_type ==
-        RAMP_TO_MAIN));
+       (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE));
   const bool enable_merge_decelaration =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MERGE_REQUEST);
@@ -642,8 +642,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MAP_REQUEST &&
-       route_info_output.mlc_request_type_route_info.mlc_request_type !=
-           RAMP_TO_MAIN);
+       route_info_output.mlc_decider_scene_type_info.mlc_scene_type !=
+           MERGE_SCENE);
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
@@ -680,12 +680,10 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
 
   is_nearing_ramp_ =
       session_->planning_context().lane_change_decider_output().is_nearing_ramp;
-  // distance_to_road_merge_ =
-  //     virtual_lane_mgr->get_distance_to_first_road_merge();
-  // distance_to_road_split_ =
-  //     virtual_lane_mgr->get_distance_to_first_road_split();
+
   distance_to_ramp_ = route_info_output.dis_to_ramp;
-  const auto& merge_point_info = route_info_output.merge_point_info;
+  const auto& merge_point_info =
+      virtual_lane_mgr->get_current_lane()->get_map_merge_point_info();
   const auto& function_info = session_->environmental_model().function_info();
   distance_to_merge_point_ = NL_NMAX;
   distance_to_road_split_ = NL_NMAX;
@@ -694,34 +692,15 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   const auto& rlane = virtual_lane_mgr->get_right_lane();
   bool is_left_edge_side_lane = llane == nullptr;
   bool is_right_edge_side_lane = rlane == nullptr;
-  bool is_split_lc_to_left =
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          KEEP_LEFT &&
-      !is_left_edge_side_lane;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-    distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
-    distance_to_road_split_ = route_info_output.mlc_request_type_route_info
-                                  .distance_to_exchange_region;
-    if (lane_change_source_ == MAP_REQUEST &&
-        route_info_output.mlc_request_type_route_info.mlc_request_type !=
-            RAMP_TO_MAIN) {
-      for (const auto& split_region_info :
-           route_info_output.split_region_info_list) {
-        if (split_region_info.is_ramp_split && split_region_info.is_valid) {
-          distance_to_road_split_ +=
-              split_region_info.start_fp_point.fp_distance_to_split_point;
-          break;
-        }
-      }
-    }
-    const auto& split_region_info_list =
-        route_info_output.split_region_info_list;
-    const auto& merge_region_info_list =
-        route_info_output.merge_region_info_list;
-    if (!merge_region_info_list.empty()) {
-      if (merge_region_info_list[0].is_valid) {
-        distance_to_road_merge_ =
-            merge_region_info_list[0].distance_to_split_point;
+    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        SPLIT_SCENE) {
+      distance_to_road_split_ =
+          route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point;
+    } else if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+               MERGE_SCENE) {
+      if (merge_point_info.merge_type != NONE_MERGE) {
+        distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
       }
     }
   }
@@ -749,32 +728,29 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
                      boundary_merge_point.y - ego_cart_point_.second);
       return true;
     } else {
-      if (distance_to_merge_point_ < (distance_to_road_merge_ + kZeroEpsilon) &&
-          distance_to_merge_point_ < (distance_to_road_split_ + kZeroEpsilon) &&
-          distance_to_merge_point_ < kDistanceToMapRequestPoint &&
+      if ( distance_to_merge_point_ < kDistanceToMapRequestPoint &&
           ((is_left_edge_side_lane &&
-            merge_point_info.merge_type == LEFT_MERGE) ||
+            merge_point_info.merge_type == MERGE_TO_RIGHT) ||
            (is_right_edge_side_lane &&
-            merge_point_info.merge_type == RIGHT_MERGE))) {
+            merge_point_info.merge_type == MERGE_TO_LEFT))) {
         merge_stop_line_distance_ = distance_to_merge_point_;
         return true;
       } else if (distance_to_road_split_ < kDistanceToMapRequestPoint ||
-                 distance_to_road_merge_ < kDistanceToMapRequestPoint ||
+                 distance_to_merge_point_ < kDistanceToMapRequestPoint ||
                  is_in_merge_region_) {
         merge_stop_line_distance_ =
-            std::fmin(distance_to_road_merge_, distance_to_road_split_);
+            std::fmin(distance_to_merge_point_, distance_to_road_split_);
         return true;
       }
     }
   } else if (lane_change_source_ == MAP_REQUEST &&
-             (route_info_output.mlc_request_type_route_info.mlc_request_type ==
-                  RAMP_TO_MAIN ||
-              route_info_output.mlc_request_type_route_info.mlc_request_type ==
-                  MAIN_TO_RAMP ||
-              is_split_lc_to_left)) {
+             (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+                  MERGE_SCENE ||
+              route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+                  SPLIT_SCENE)) {
     bool is_ramp_to_main =
-        route_info_output.mlc_request_type_route_info.mlc_request_type ==
-        RAMP_TO_MAIN;
+        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE;
     if (boundary_merge_point_valid_) {
       const auto& boundary_merge_point =
           session_->planning_context()
@@ -791,21 +767,17 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
     } else {
       if (is_ramp_to_main) {
         bool is_nearing_merge_point =
-            distance_to_merge_point_ <
-                (distance_to_road_merge_ + kZeroEpsilon) &&
-            distance_to_merge_point_ <
-                (distance_to_road_split_ + kZeroEpsilon) &&
             distance_to_merge_point_ < kDistanceToMapRequestPoint &&
             ((is_left_edge_side_lane &&
-              merge_point_info.merge_type == LEFT_MERGE) ||
+              merge_point_info.merge_type == MERGE_TO_RIGHT) ||
              (is_right_edge_side_lane &&
-              merge_point_info.merge_type == RIGHT_MERGE));
+              merge_point_info.merge_type == MERGE_TO_LEFT));
         if (is_nearing_merge_point) {
           merge_stop_line_distance_ = distance_to_merge_point_;
           return true;
-        } else if (distance_to_road_merge_ < kDistanceToMapRequestPoint ||
+        } else if (distance_to_merge_point_ < kDistanceToMapRequestPoint ||
                    is_in_merge_region_) {
-          merge_stop_line_distance_ = distance_to_road_merge_;
+          merge_stop_line_distance_ = distance_to_merge_point_;
           return true;
         }
       } else {
@@ -1087,8 +1059,8 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
       session_->environmental_model().get_route_info()->get_route_info_output();
   if ((lane_change_source_ == MERGE_REQUEST) ||
       ((lane_change_source_ == MAP_REQUEST) &&
-       (route_info_output.mlc_request_type_route_info.mlc_request_type ==
-        RAMP_TO_MAIN))) {
+       (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE))) {
     return true;
   }
   const auto& virtual_lane_mgr =
@@ -1231,9 +1203,9 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
       session_->environmental_model().get_route_info()->get_route_info_output();
   if ((lane_change_source_ == MERGE_REQUEST) ||
       ((lane_change_source_ == MAP_REQUEST) &&
-       (route_info_output.mlc_request_type_route_info.mlc_request_type ==
-        RAMP_TO_MAIN)) ||
-      (merge_stop_line_distance_ <= 200.0)) {
+       ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE) ||
+      (merge_stop_line_distance_ <= 200.0)))) {
     return true;
   }
   return false;

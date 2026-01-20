@@ -495,7 +495,7 @@ double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
 // Find ramp link ID from split region info list
 uint64_t SpeedLimitDecider::FindRampLinkId(
     double dist_to_ramp,
-    const std::vector<NOASplitRegionInfo> &split_region_info_list) {
+    const std::vector<MapSplitRegionInfo> &split_region_info_list) {
   uint64_t ramp_link_id = static_cast<uint64_t>(-1);
   if (dist_to_ramp < kMaxDistanceToRamp) {
     for (size_t i = 0; i < split_region_info_list.size(); ++i) {
@@ -572,7 +572,7 @@ void SpeedLimitDecider::CollectRampPointsFromLinks(
         map_speed_limits->emplace_back(cur_link_speed_limit);
       }
     }
-    
+
     if (total_len >= kMinRampSampleLength) {
       break;
     }
@@ -696,7 +696,7 @@ void SpeedLimitDecider::CollectRampCurvatureData(
   } else {
     // Case 2: Approaching ramp, start from next link of ramp_link_id
     const auto &split_region_info_list =
-        route_info_output.split_region_info_list;
+        route_info_output.map_split_region_info_list;
     uint64_t ramp_link_id = FindRampLinkId(dis_to_ramp, split_region_info_list);
 
     if (ramp_link_id == static_cast<uint64_t>(-1)) {
@@ -767,12 +767,12 @@ void SpeedLimitDecider::CollectRampCurvatureData(
     k_raw_local.emplace_back(k);
   }
   k_raw_local.emplace_back(0.0);  // Last point not calculated
-  
+
   // Output k_raw if requested (keep sign for internal processing)
   if (k_raw != nullptr) {
     *k_raw = k_raw_local;
   }
-  
+
   // Output s_vec if requested
   // Update s_vec when is_on_ramp is false (add dis_to_ramp offset for unified distance calculation)
   if (s_vec_output != nullptr) {
@@ -786,7 +786,7 @@ void SpeedLimitDecider::CollectRampCurvatureData(
       *s_vec_output = s_vec;
     }
   }
-  
+
   // Output map_speed_limits if requested
   if (map_speed_limits != nullptr) {
     *map_speed_limits = map_speed_limits_local;
@@ -795,7 +795,7 @@ void SpeedLimitDecider::CollectRampCurvatureData(
   // Smooth curvature with sliding window (40m), optimized to O(n) with two pointers
   std::vector<double> k_smooth(k_raw_local.size(), 0.0);
   double half_window = map_curv_window_len * 0.5;
-  
+
   if (k_raw_local.empty() || s_vec.empty() || k_raw_local.size() != s_vec.size()) {
     // Handle boundary case
     return;
@@ -806,7 +806,7 @@ void SpeedLimitDecider::CollectRampCurvatureData(
   size_t right = 0;  // Right boundary of window
   double sum_k = 0.0;
   int cnt = 0;
-  
+
   for (size_t i = 0; i < k_raw_local.size(); ++i) {
     const double center_s = s_vec[i];
     const double window_left = center_s - half_window;
@@ -845,7 +845,7 @@ double SpeedLimitDecider::GetRampVelLimit() {
   uint64_t ramp_link_id = -1;
   double ramp_v_limit = 120;
   double dis_to_ramp = route_info_output.dis_to_ramp;
-  const auto &split_region_info_list = route_info_output.split_region_info_list;
+  const auto &split_region_info_list = route_info_output.map_split_region_info_list;
   if (dis_to_ramp < 2000.0) {
     for (int i = 0; i < split_region_info_list.size(); ++i) {
       if (std::fabs(split_region_info_list[i].distance_to_split_point -
@@ -873,10 +873,10 @@ bool SpeedLimitDecider::IsNearMergeCancelRampVelLimit() {
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   double dis_to_merge =
-      route_info_output.merge_region_info_list.empty()
+      route_info_output.map_merge_region_info_list.empty()
           ? NL_NMAX
-          : route_info_output.merge_region_info_list[0].distance_to_split_point;
-  if (!route_info_output.is_ramp_merge_to_road_on_expressway) {
+          : route_info_output.map_merge_region_info_list[0].distance_to_merge_point;
+  if (!route_info_output.gaode_route_info_output.is_ramp_merge_to_road_on_expressway) {
     dis_to_merge = NL_NMAX;
   }
   dis_to_merge_window_.pop_front();
@@ -1036,11 +1036,11 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 
   // Distance to max curvature point
   double dist_to_max_curv = max_curv_s;
-  
+
   // Calculate average radius in 0-80m range and conditionally use it for EWMA
   double avg_radius_0_80m = 10000.0;
   bool use_avg_radius_for_ewma = false;
-  
+
   // Collect curvature data for 0-80m range
   std::vector<double> radius_vec_0_80m;
   radius_vec_0_80m.reserve(static_cast<size_t>(kCurvaturePreviewDistance / kSamplingStep) + 1);
@@ -1054,7 +1054,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       }
     }
   }
-  
+
   // Calculate median radius and filtered average radius
   if (speed_limit_config_.enable_avg_radius_for_ewma && !radius_vec_0_80m.empty()) {
     // 1) compute median radius in 0-80m
@@ -1084,12 +1084,12 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       // Fallback: if all points are filtered out, use median radius
       avg_radius_0_80m = median_radius;
     }
-    
+
     // Check conditions: use road_radius_origin to lookup expected speed
     double acc_lat_max_origin = interp(0.5*(road_radius_origin + last_road_radius_origin_), _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     double v_expected_origin = std::sqrt(acc_lat_max_origin * road_radius_origin);
     double speed_diff = std::fabs(v_expected_origin - v_ego);
-    
+
     // Hysteresis logic: enter when speed_diff < kEWMAAvgRadiusEnterSpeedDiff && road_radius_origin > kEWMAAvgRadiusEnterRadius
     //                   exit when speed_diff >= kEWMAAvgRadiusExitSpeedDiff || road_radius_origin < kEWMAAvgRadiusExitRadius
     if (last_use_avg_radius_for_ewma_) {
@@ -1107,7 +1107,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         use_avg_radius_for_ewma = false;
       }
     }
-    
+
     // Update last state for next iteration
     last_use_avg_radius_for_ewma_ = use_avg_radius_for_ewma;
   }
@@ -1118,7 +1118,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     // Convert average radius back to curvature
     curv_for_ewma = 1.0 / std::max(avg_radius_0_80m, 0.0001);
   }
-  
+
   // Calculate dynamic EWMA alpha based on radius
   double radius_for_ewma = 1.0 / std::max(curv_for_ewma, 0.0001);
   double ewma_alpha = 0.2;  // Default value
@@ -1132,7 +1132,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     // Interpolate within bounds
     ewma_alpha = interp(radius_for_ewma, kEwmaAlphaRadiusBreakpoints, kEwmaAlphaValues);
   }
-  
+
   if (raw_curv_spline_ < kEpsilon) {
     raw_curv_spline_ = curv_for_ewma;
   } else {
@@ -1148,14 +1148,14 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     v_limit_road = v_limit_road * kSSharpBendSpeedScaleRatio;
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
-  
+
   // Apply EWMA filter to v_limit_in_turns
   if (v_limit_in_turns_filtered_ < kEpsilon) {
     v_limit_in_turns_filtered_ = v_limit_in_turns;
   } else {
     double ewma_alpha_spd = speed_limit_config_.ewma_alpha_v_limit_in_turns;
     v_limit_in_turns_filtered_ =
-        ewma_alpha_spd * v_limit_in_turns + 
+        ewma_alpha_spd * v_limit_in_turns +
         (1 - ewma_alpha_spd) * v_limit_in_turns_filtered_;
   }
   v_limit_in_turns = v_limit_in_turns_filtered_;
@@ -1245,7 +1245,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     bool condition_ramp_location = (dis_to_ramp < speed_limit_config_.map_sharp_curve_dis_to_ramp) || is_on_ramp;
     bool condition_ramp_curv = false;
     bool condition_ramp_raw_count = false;
-    
+
     if (condition_ramp_location) {
       // Pre-allocate vectors based on expected ramp sample size
       std::vector<double> k_raw_signed;
@@ -1257,7 +1257,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       std::vector<double> k_smooth;
       k_smooth.reserve(kRampCurvatureVectorReserveSize);
       CollectRampCurvatureData(&k_raw_signed, &s_vec, &map_speed_limits, &k_smooth);
-      
+
       // Step 1: Determine curve direction by counting left and right turn points separately
       int map_sharp_curve_direction = 0;  // 1 for left turn, -1 for right turn, 0 if not determined
       int count_left_turn = 0;   // Count of left turn points with small radius
@@ -1267,7 +1267,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       left_turn_indices.reserve(kRampCurvatureIndicesReserveSize);
       std::vector<int> right_turn_indices;
       right_turn_indices.reserve(kRampCurvatureIndicesReserveSize);
-      
+
       if (!k_raw_signed.empty() && k_raw_signed.size() == map_speed_limits.size()) {
         // Count left and right turn points separately
         for (size_t i = 0; i < k_raw_signed.size(); ++i) {
@@ -1392,21 +1392,21 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
           // Choose direction with larger max curvature
           map_sharp_curve_direction = (max_curv_left >= max_curv_right ? 1 : -1);
         }
-        
+
         // Step 2: Calculate distance_condition based on determined direction
         bool distance_condition = false;
         int first_small_radius_idx = -1;
         int last_small_radius_idx = -1;
-        
+
         if (map_sharp_curve_direction != 0) {
           // Get indices for the determined direction
-          const std::vector<int>& direction_indices = 
+          const std::vector<int>& direction_indices =
               (map_sharp_curve_direction > 0) ? left_turn_indices : right_turn_indices;
-          
+
           if (!direction_indices.empty()) {
             first_small_radius_idx = direction_indices.front();
             last_small_radius_idx = direction_indices.back();
-            
+
             if (first_small_radius_idx >= 0 && last_small_radius_idx >= 0 &&
                 first_small_radius_idx != last_small_radius_idx &&
                 !s_vec.empty() && last_small_radius_idx < static_cast<int>(s_vec.size()) &&
@@ -1416,10 +1416,10 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
             }
           }
         }
-        
+
         // Step 3: Calculate count_small_radius for the determined direction and check condition
         int count_small_radius = (map_sharp_curve_direction > 0) ? count_left_turn : count_right_turn;
-        
+
         // Hysteresis logic based on raw count
         if (map_sharp_curve_direction != 0) {
           if (last_condition_ramp_raw_count_) {
@@ -1437,7 +1437,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         // Keep last state if k_raw_signed is empty
         condition_ramp_raw_count = last_condition_ramp_raw_count_;
       }
-      
+
       // Step 4: Calculate max curvature in the determined curve direction and check condition_ramp_curv
       double ramp_max_curv = 0.0;
       if (!k_smooth.empty() && map_sharp_curve_direction != 0) {
@@ -1454,7 +1454,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
           }
         }
       }
-      
+
       // Check condition_ramp_curv based on ramp_max_curv
       if (ramp_max_curv > 1e-6) {
         double ramp_min_radius = 1.0 / ramp_max_curv;
@@ -1470,7 +1470,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         // Keep last state if curvature unavailable
         condition_ramp_curv = last_is_map_sharp_curve_ramp_;
       }
-      
+
       // Step 5: Calculate dist_to_ramp_max_curv in the determined curve direction
       if (!k_smooth.empty() && !s_vec.empty() &&
           k_smooth.size() == s_vec.size() &&
@@ -1478,7 +1478,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         double max_k = 0.0;
         double max_k_s = 0.0;  // Distance to max curvature point
         double first_small_radius_s = -1.0;  // First position with radius < 65m
-        
+
         // Find max curvature and first small radius point in the determined direction
         for (size_t i = 0; i < k_smooth.size(); ++i) {
           double k_signed = k_smooth[i];
@@ -1500,15 +1500,15 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
             }
           }
         }
-        
+
         // Prefer first position with radius < 65m, otherwise use max curvature position
         if (first_small_radius_s >= 0) {
           max_k_s = first_small_radius_s;
         }
-        
+
         // Update dist_to_ramp_max_curv with calculated max_k_s
         dist_to_ramp_max_curv = max_k_s;
-        
+
         JSON_DEBUG_VALUE("ramp_curv_max_k", max_k);
         if (max_k > 1e-6) {
           double min_radius = 1.0 / max_k;
@@ -1522,20 +1522,20 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       condition_ramp_curv = false;
       condition_ramp_raw_count = false;
     }
-    
+
     // Calculate base condition without distance check
     bool base_condition = condition_ramp_location && condition_ramp_curv && condition_ramp_raw_count && (!IsNearMergeCancelRampVelLimit());
-    
+
     // Check if entering state (from false to true)
     bool is_entering = !last_is_map_sharp_curve_ && base_condition;
-    
+
     // Distance condition check (only when entering)
     bool distance_condition_for_enter = true;
     if (is_entering) {
       // Get ego vehicle speed
       const auto ego_state_mgr = environmental_model.get_ego_state_manager();
       double v_ego_kph = ego_state_mgr->ego_v() * 3.6;  // Convert m/s to kph
-      
+
       // Determine distance threshold based on speed
       double dist_threshold = 0.0;
       if (v_ego_kph > 70.0) {
@@ -1550,14 +1550,14 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         // Speed <= 50kph, no distance limit
         dist_threshold = 0.0;  // Large value to pass condition
       }
-      
+
       // Check distance condition only when entering
       distance_condition_for_enter = (dist_to_ramp_max_curv < dist_threshold);
     }
-    
+
     // Final condition: base condition and (not entering or distance condition satisfied)
     is_map_sharp_curve = base_condition && distance_condition_for_enter;
-    
+
     last_is_map_sharp_curve_ramp_ = condition_ramp_curv;
     last_condition_ramp_raw_count_ = condition_ramp_raw_count;
     last_is_map_sharp_curve_ = is_map_sharp_curve;
