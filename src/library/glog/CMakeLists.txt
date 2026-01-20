@@ -10,7 +10,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   )
 
-if (NOT PLATFORM STREQUAL "X86" AND MDC_AP_LOG_FLAG)
+if ((NOT PLATFORM STREQUAL "X86" OR X86_SIMULATION) AND MDC_AP_LOG_FLAG)
   target_link_libraries(${PROJECT_NAME} PUBLIC
     iflyauto_log
   )

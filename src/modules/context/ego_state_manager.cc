@@ -50,7 +50,7 @@ void EgoStateManager::SetConfig(
   enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
   enable_ego_state_compensation_ = config_.enable_ego_state_compensation;
   enable_tiny_speed_replan_ = true;
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   if (SimulationContext::Instance()->is_close_loop()) {
     enable_ego_state_compensation_ = false;
     enable_tiny_speed_replan_ = false;
@@ -268,7 +268,7 @@ bool EgoStateManager::update(
   // printf("planning_loop_dt:%f\n", planning_loop_dt_);
   JSON_DEBUG_VALUE("planning_loop_dt", planning_loop_dt_);
 
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   planning_loop_dt_ = SimulationContext::Instance()->planning_loop_dt();
 #endif
 
@@ -521,7 +521,7 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
           : (cur_time_us - localization_timestamp_us) / US_PER_MS;  // ms
   double localization_latency_s = localization_latency_ms / 1000.0;
 
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   localization_latency_s =
       SimulationContext::Instance()->localizatoin_latency() / 1000.0;
 #endif
