@@ -65,7 +65,7 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
       hmi_info->nsa_info.is_complete = true;
       hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NO_NARROW;
       mutable_nsa_planning_completed = true;
-    } else if (!narrow_space_decider_output.is_passable_narrow_space) {
+    } else if (!narrow_space_decider_output.is_passable_narrow_space && plannig_init_point.v < kEgoStopVelThd) {
       hmi_info->nsa_info.is_complete = true;
       hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NO_SPACE;
       mutable_nsa_planning_completed = true;
