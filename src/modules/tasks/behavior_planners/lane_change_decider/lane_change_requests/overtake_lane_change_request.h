@@ -152,6 +152,8 @@ class OvertakeRequest : public LaneChangeRequest {
 
   double CalculateAttenuationCoefficient(const double& lc_duration);
 
+  bool IsTruck(const std::shared_ptr<agent::Agent>& agent);
+
   EgoPlanningConfig config_;
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
@@ -181,6 +183,7 @@ class OvertakeRequest : public LaneChangeRequest {
   int left_lane_nums_ = 0;
   double left_feasible_lane_remain_distance_ = 1500.0;
   double right_feasible_lane_remain_distance_ = 1500.0;
+  bool exist_cross_line_large_agent_ahead_ = false;
 };
 
 }  // namespace planning

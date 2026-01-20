@@ -336,16 +336,48 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  const auto& current_agents = agent_manager->GetAllCurrentAgents();
+  const auto &lateral_obstacle_decision =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .lat_obstacle_decision;
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const int32_t cipv_id = cipv_info.cipv_id();
-  const auto& agent_manager =
-      session_->environmental_model().get_dynamic_world()->agent_manager();
-  const agent::Agent* agent = agent_manager->GetAgent(cipv_id);
+  double leading_relative_dis = cipv_info.relative_s();
+  // const auto& agent_manager =
+  //     session_->environmental_model().get_dynamic_world()->agent_manager();
+  // const agent::Agent* agent = agent_manager->GetAgent(cipv_id);
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
+  agent::Agent* agent = agent_manager->mutable_agent(cipv_id);
+  exist_cross_line_large_agent_ahead_ = false;
+  for (const auto& current_agent : current_agents) {
+    if (current_agent != nullptr) {
+      if (!IsTruck(current_agent)) {
+        continue;
+      }
+      auto iter = lateral_obstacle_decision.find(current_agent->agent_id());
+      if (iter == lateral_obstacle_decision.end()) {
+        continue;
+      }
+      if (iter->second ==LatObstacleDecisionType::FOLLOW) {
+        auto track_iter = tracks_map.find(current_agent->agent_id());
+        if (track_iter == tracks_map.end()) {
+          continue;
+        }
+        if (track_iter->second->d_s_rel() <= leading_relative_dis && current_agent->agent_id() != cipv_id) {
+          agent = agent_manager->mutable_agent(current_agent->agent_id());
+          leading_relative_dis = track_iter->second->d_s_rel();
+          exist_cross_line_large_agent_ahead_ = true;
+        }
+      }
+    }
+  }
 
   // 无效的track_id暂时赋值为-1
   if ((agent != nullptr && agent->agent_id() == -1) || agent == nullptr ||
-      cipv_info.relative_s() > kDefaultLeadOneConsiderRange) {
+      leading_relative_dis > kDefaultLeadOneConsiderRange) {
     ILOG_DEBUG << "not exist stable leading vehicle";
     overtake_count_ = 0;
     leading_speed_filter_.Reset();
@@ -379,11 +411,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
 
   const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
-  const double long_diff =
-      cipv_info.relative_s() - ego_front_edge - agent->length() * 0.5;
-  const double need_overtake_distance = cipv_info.relative_s() +
-                                        agent->length() * 0.5 +
-                                        vehicle_param.rear_edge_to_rear_axle;
+  const double long_diff = leading_relative_dis;
+  const double need_overtake_distance =
+      leading_relative_dis + agent->length();
 
   const double ego_speed = ego_state->ego_v();
   const double reference_speed = ego_state->ego_v_cruise();
@@ -769,8 +799,13 @@ void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
                                           const double reference_speed,
                                           const int max_count_thres) {
   int type_value = kOvertakeUpdateCountCarTypeThreshold;
-  if (leading_agent->type() == agent::AgentType::TRUCK) {
+  if (leading_agent->type() == agent::AgentType::BUS ||
+      (leading_agent->type() == agent::AgentType::TRUCK &&
+      leading_agent->length() > 6.0)) {
     type_value = kOvertakeUpdateCountTruckTypeThreshold;
+  }
+  if (exist_cross_line_large_agent_ahead_) {
+    type_value *= 1.5;
   }
   const int curr_count = round((reference_speed - leading_agent->speed()) *
                                kOvertakeUpdateCountSpeedRatioThreshold) +
@@ -2127,6 +2162,12 @@ double OvertakeRequest::CalculateAttenuationCoefficient(
   double coefficient = 0.35 + 0.4 * exp_term;
 
   return coefficient;
+}
+
+bool OvertakeRequest::IsTruck(const std::shared_ptr<agent::Agent>& agent) {
+  return (agent->type() == agent::AgentType::BUS ||
+          (agent->type() == agent::AgentType::TRUCK &&
+           agent->length() > 6.0));
 }
 
 void OvertakeRequest::Reset() {
