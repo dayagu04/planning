@@ -821,7 +821,10 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
           apa_world_ptr_->GetPredictPathManagerPtr(), trajectory_,
           gear_command);
   stop_decider->Execute(stitch_init_speed, traj_stitcher->GetConstStitchPath(),
-                        ego_trajectory, gear_command);
+                        ego_trajectory, gear_command,
+                        apa_world_ptr_->GetSlotManagerPtr()
+                            ->GetEgoInfoUnderSlot()
+                            .slot_occupied_ratio);
 
   // todo: will be retired
   if (apa_param.GetParam().speed_config.use_remain_dist) {

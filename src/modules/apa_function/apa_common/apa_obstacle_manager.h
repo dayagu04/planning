@@ -1,12 +1,12 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <array>
 
 #include "apa_measure_data_manager.h"
 #include "apa_obstacle.h"
@@ -43,12 +43,20 @@ class ApaObstacleManager final {
     return obstacles_;
   }
 
-  std::array<float , 2> GetParallelSlotNeighbourObjsHeading() const {
+  const std::unordered_map<size_t, ApaObstacle> &GetObstaclesOD() const {
+    return obstacles_od_;
+  }
+
+  std::array<float, 2> GetParallelSlotNeighbourObjsHeading() const {
     return parallel_slot_neigbour_objs_heading_;
   }
 
   std::unordered_map<size_t, ApaObstacle> &GetMutableObstacles() {
     return obstacles_;
+  }
+
+  std::unordered_map<size_t, ApaObstacle> &GetMutableObstaclesOD() {
+    return obstacles_od_;
   }
 
   const size_t GetObsIdGenerate() const { return obs_id_generate_; }
@@ -86,10 +94,13 @@ class ApaObstacleManager final {
       const iflyauto::ParkingFusionSlot *slot,
       const std::array<double, 4> d_per_edge, Eigen::Vector3d ego_pose);
 
+  void RemoveExpiredObstacles(const std::unordered_set<size_t> &current_ids);
+
  private:
   // not allow any ptr variable
   size_t obs_id_generate_{0};
   std::unordered_map<size_t, ApaObstacle> obstacles_;
+  std::unordered_map<size_t, ApaObstacle> obstacles_od_;
   std::vector<double> uss_dis_vec_;
 
   ApaStateMachineManager state_machine_manager_;
@@ -97,7 +108,7 @@ class ApaObstacleManager final {
   // record localization pose in activate state
   LocalizationPath localization_path_;
   bool ego_slot_is_parallel_ = false;
-  const iflyauto::ParkingFusionSlot* last_ego_slot_;
+  const iflyauto::ParkingFusionSlot *last_ego_slot_;
 
   std::array<float, 2> parallel_slot_neigbour_objs_heading_ = {-100, -100};
 };

@@ -7,10 +7,10 @@
 #include <cstddef>
 #include <vector>
 
+#include "apa_lon_util.h"
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "apa_utils.h"
-#include "apa_lon_util.h"
 #include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "debug_info_log.h"
@@ -67,7 +67,7 @@ void ApaObstacleManager::Update(
       &local_view->parking_fusion_info;
 
   ego_slot_is_parallel_ = false;
-  parallel_slot_neigbour_objs_heading_ =  {-100, -100};
+  parallel_slot_neigbour_objs_heading_ = {-100, -100};
   for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
     last_ego_slot_ = &slot_list->parking_fusion_slot_lists[i];
     // For now, do not consider ego slot limiter.
@@ -88,7 +88,7 @@ void ApaObstacleManager::Update(
     const auto& uss_dis_info_buf =
         local_view->uss_percept_info.dis_from_car_to_obj;
 
-   //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
+    //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
     //  upa, fr apa
     for (const auto& front_uss_idx : param.uss_wdis_index_front) {
       uss_dis_vec_.emplace_back(
@@ -373,7 +373,8 @@ void ApaObstacleManager::Update(
   }
 
   PrintUseObsHeightMethod(param.use_obs_height_method);
-  ILOG_INFO << "enable obs height method: " << param.enable_multi_height_col_det;
+  ILOG_INFO << "enable obs height method: "
+            << param.enable_multi_height_col_det;
 
   JSON_DEBUG_VALUE("total_obs_size", obstacles_.size())
   ILOG_INFO << "obstacle size: " << obstacles_.size();
@@ -427,6 +428,7 @@ const bool ApaObstacleManager::IsOccType(const iflyauto::ObjectType type) {
 
 void ApaObstacleManager::GenerateObsByOD(
     const LocalView* local_view, const ObjectDetectObsConfig& od_config) {
+  std::unordered_set<size_t> current_frame_ids;
   const uint8 fusion_obs_size =
       std::min(local_view->fusion_objects_info.fusion_object_size,
                static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
@@ -490,8 +492,15 @@ void ApaObstacleManager::GenerateObsByOD(
     std::vector<Eigen::Vector2d> global_box;
     LocalPolygonToGlobal(local_box, center_pose, global_box);
 
-    ApaObstacle apa_obs;
-    apa_obs.Reset();
+    size_t id = obs.id;
+    current_frame_ids.insert(id);
+    auto& apa_obs = obstacles_od_[id];
+
+    if (apa_obs.GetId() != id) {
+      apa_obs.Reset();
+      apa_obs.SetId(id);
+      apa_obs.SetParentId(id);
+    }
 
     Polygon2D polygon;
     GeneratePolygonByPoints(global_box, &polygon);
@@ -528,13 +537,10 @@ void ApaObstacleManager::GenerateObsByOD(
     apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
     apa_obs.SetObsScemanticType(obs.type);
     apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
-
-    apa_obs.SetId(obs_id_generate_);
-    apa_obs.SetParentId(obs_id_generate_);
     apa_obs.ClearDecision();
-    obstacles_[obs_id_generate_] = apa_obs;
-    obs_id_generate_++;
   }
+
+  RemoveExpiredObstacles(current_frame_ids);
 
   return;
 }
@@ -632,7 +638,7 @@ void ApaObstacleManager::GenerateUss(const LocalView* local_view) {
     uss_pt_map[ApaObsHeightType::MID] = uss_pt_clout_lower_mirror;
     uss_pt_map[ApaObsHeightType::HIGH] = uss_pt_clout_higher_mirror;
 
-    size_t  obs_parent_id_generate_ = obs_id_generate_;
+    size_t obs_parent_id_generate_ = obs_id_generate_;
     for (const auto& pair : uss_pt_map) {
       if (pair.second.empty()) {
         continue;
@@ -824,6 +830,24 @@ std::pair<int, float> ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
     return std::pair<int, float>(0, delta_heading);
   }
   return std::pair<int, float>(-1, -1);
+}
+
+void ApaObstacleManager::RemoveExpiredObstacles(
+    const std::unordered_set<size_t>& current_ids) {
+  constexpr int kMaxLostFrames = 3;
+
+  for (auto it = obstacles_od_.begin(); it != obstacles_od_.end();) {
+    if (current_ids.count(it->first) == 0) {
+      it->second.IncreaseLostFrame();
+      if (it->second.LostFrameCount() > kMaxLostFrames) {
+        it = obstacles_od_.erase(it);
+        continue;
+      }
+    } else {
+      it->second.ResetLostFrame();
+    }
+    ++it;
+  }
 }
 
 }  // namespace apa_planner

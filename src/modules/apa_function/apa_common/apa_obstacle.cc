@@ -1,4 +1,5 @@
 #include "apa_obstacle.h"
+
 #include "speed/st_boundary.h"
 
 namespace planning {
@@ -17,6 +18,8 @@ void ApaObstacle::Reset() {
   height_ = 0.;
 
   predict_traj_.clear();
+  history_trajectory_.clear();
+  history_point_size_ = 10;
 
   pt_clout_2d_global_.clear();
   pt_clout_2d_local_.clear();
@@ -224,6 +227,31 @@ const bool ApaObstacle::IsMovableStaticObs() const {
   }
 
   return false;
+}
+
+void ApaObstacle::UpdateHistoryTrajectory(const Eigen::Vector2d& new_position) {
+  // if (history_trajectory_.empty()) {
+  //   history_trajectory_.push_back(new_position);
+  //   return;
+  // }
+
+  // const Eigen::Vector2d& last = history_trajectory_.back();
+
+  // constexpr double kMinMoveDist = 0.05;  // 5cm
+  // if ((new_position - last).norm() < kMinMoveDist) {
+  //   return;
+  // }
+
+  // double max_step = std::max(0.05, vel_) * 0.2;  // v * dt
+  // if ((new_position - last).norm() > max_step) {
+  //   return;
+  // }
+
+  history_trajectory_.push_back(new_position);
+
+  while (history_trajectory_.size() > history_point_size_) {
+    history_trajectory_.erase(history_trajectory_.begin());
+  }
 }
 
 }  // namespace apa_planner
