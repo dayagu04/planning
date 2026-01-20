@@ -383,6 +383,7 @@
 
   "path_generator_type": 0,
   "use_geometry_path_head_out": false,
+  "use_scenario_perpendicular_heading_in": false,
   "vertical_tail_in_end_straight_dist": 1.5,
   "vertical_head_in_end_straight_dist": 0.8,
   "parallel_slot_end_straight_dist": 0.0,

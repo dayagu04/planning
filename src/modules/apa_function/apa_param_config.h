@@ -725,6 +725,7 @@ struct ApaParameters {
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
   bool use_geometry_path_head_out = false;
+  bool use_scenario_perpendicular_heading_in = false;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
