@@ -26,7 +26,7 @@ LongitudinalAStar::LongitudinalAStar(
 void LongitudinalAStar::PlanTrajectory() {
   goal_state_.target_s = std::max(goal_state_.target_s, state_limit_upper_.v_max * 5.0);
   // goal_state_.target_s = 1000;
-  merge_point_s_ = 1000;
+  // merge_point_s_ = 1000;
   astar_traj_.clear();
   open_list_.clear();
   closed_list_.clear();
