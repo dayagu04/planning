@@ -375,6 +375,7 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
   // if (ego_trajs_future_.empty()) {
   //   return false;
   // }
+  return false;
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const bool has_target_lane =

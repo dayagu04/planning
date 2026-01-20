@@ -24,14 +24,14 @@ LongitudinalAStar::LongitudinalAStar(
 }
 
 void LongitudinalAStar::PlanTrajectory() {
-  goal_state_.target_s = std::max(goal_state_.target_s, start_node_.v * 4.0);
+  goal_state_.target_s = std::max(goal_state_.target_s, state_limit_upper_.v_max * 5.0);
   // goal_state_.target_s = 1000;
+  merge_point_s_ = 1000;
   astar_traj_.clear();
-  std::priority_queue<STNode, std::vector<STNode>, std::greater<STNode>> empty;
-  std::swap(open_list_, empty);
+  open_list_.clear();
   closed_list_.clear();
   all_list_.clear();
-  open_list_.push(start_node_);
+  open_list_.insert(start_node_);
   all_list_[start_node_.getKey()] = start_node_;
 
   std::shared_ptr<STNode> goal_node = nullptr;
@@ -43,11 +43,11 @@ void LongitudinalAStar::PlanTrajectory() {
     //   std::cout << "警告：A*搜索未收敛！" << std::endl;
     //   break;
     // }
-    STNode current_node = open_list_.top();
+    STNode current_node = *open_list_.begin();
     auto current_node_ptr = std::make_shared<STNode>(current_node);
-    open_list_.pop();
+    open_list_.erase(open_list_.begin());
     closed_list_.insert(current_node_ptr);
-    if (IsGoalReached(current_node)) {
+    if (IsGoalReached(current_node_ptr)) {
       goal_node = current_node_ptr;
       found_goal = true;
       break;
@@ -62,9 +62,9 @@ void LongitudinalAStar::PlanTrajectory() {
           continue;
         }
       }
-
+      open_list_.erase(all_list_[child_key]);
       all_list_[child_key] = child;
-      open_list_.push(child);
+      open_list_.insert(child);
     }
   }
 
@@ -80,9 +80,9 @@ void LongitudinalAStar::PlanTrajectory() {
   }
 }
 
-bool LongitudinalAStar::IsGoalReached(const STNode& node) const {
-  double s_diff = node.s - goal_state_.target_s;
-  return (s_diff > 0) && (node.t <= goal_state_.max_t);
+bool LongitudinalAStar::IsGoalReached(const std::shared_ptr<STNode>& node) const {
+  double s_diff = node->s - merge_point_s_;
+  return (s_diff > 0) && (node->t == goal_state_.max_t);
 }
 
 std::vector<STNode> LongitudinalAStar::GenerateChildren(
@@ -94,50 +94,58 @@ std::vector<STNode> LongitudinalAStar::GenerateChildren(
     return children;
   }
 
-  auto search_range = GetSearchRange(*parent_node);
+  // auto search_range = GetSearchRange(*parent_node);
   // double arrived_s = parent_node->s + parent_node->v * time_step;
   // std::pair<double,double> search_range = {arrived_s - 0.10, arrived_s +
   // 0.10};
-  int search_range_index =
-      int((search_range.second - search_range.first) / DISTANCE_STEP) + 1;
+  // int search_range_index =
+  //     int((search_range.second - search_range.first) / DISTANCE_STEP) + 1;
+  int search_range_index = (MAX_ACCEL - MIN_ACCEL) / ACC_STEP;
   for (int i = 0; i <= search_range_index; i++) {
-    double child_s = i != search_range_index
-                         ? search_range.first + i * DISTANCE_STEP
-                         : search_range.second;
-    if (child_s < 0.0) {
+    // double child_s = i != search_range_index
+    //                      ? search_range.first + i * DISTANCE_STEP
+    //                      : search_range.second;
+    // if (child_s < 0.0) {
+    //   continue;
+    // }
+    double child_acc = MIN_ACCEL + i * ACC_STEP;
+    double child_jerk = (child_acc - parent_node->a) / time_step;
+    if (child_jerk > MAX_JERK || child_jerk < MIN_JERK) {
       continue;
     }
-    auto node_ptr = std::make_shared<STNode>(child_t, child_s, 0.0, 0.0);
+    auto node_ptr = std::make_shared<STNode>(child_t, 0.0, 0.0, child_acc,child_jerk);
+    if (!CalcChildParam(parent_node, node_ptr)) {
+      continue;
+    }
     if (closed_list_.find(node_ptr) != closed_list_.end()) {
       continue;
     }
-    STNode temp_node(child_t, child_s, 0.0, 0.0);
 
-    if (!CalcChildParam(parent_node, temp_node)) {
+    // if (!CalcChildParam(parent_node, temp_node)) {
+    //   continue;
+    // }
+
+    if (!IsValidMotion(node_ptr->v, node_ptr->a)) {
       continue;
     }
 
-    if (!IsValidMotion(temp_node.v, temp_node.a)) {
+    if (!CollisionSafetyCheck(*node_ptr)) {
       continue;
     }
 
-    if (!CollisionSafetyCheck(temp_node)) {
-      continue;
-    }
-
-    CalculateGCost(parent_node, temp_node);
-    CalculateHCost(temp_node);
-    CalculateFCost(temp_node);
-    temp_node.parent = parent_node.get();
-    children.emplace_back(std::move(temp_node));
+    CalculateGCost(parent_node, *node_ptr);
+    CalculateHCost(*node_ptr);
+    CalculateFCost(*node_ptr);
+    node_ptr->parent = parent_node.get();
+    children.emplace_back(std::move(*node_ptr));
   }
 
   return children;
 }
 
 bool LongitudinalAStar::IsValidMotion(double v, double a) const {
-  return (v >= MIN_VELOCITY && v <= MAX_VELOCITY) &&
-         (a >= MIN_ACCEL && a <= MAX_ACCEL);
+  return (v > MIN_VELOCITY - kZeroEpsilon && v < MAX_VELOCITY + kZeroEpsilon) &&
+         (a > MIN_ACCEL - kZeroEpsilon && a < MAX_ACCEL + kZeroEpsilon);
 }
 
 bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
@@ -146,42 +154,40 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
     return false;
   }
   auto& state = sample_space_ptr_->st_points_table()[index];
-  if (node.s > merge_point_s_) {
-    double frenet_node_s = node.s + ego_s_;
-    for (auto& interval : state) {
-      if (frenet_node_s < interval.second.s() &&
-          frenet_node_s > interval.first.s()) {
+  double frenet_node_s = node.s + ego_s_;
+  for (auto& interval : state) {
+    if (frenet_node_s < interval.second.s() &&
+        frenet_node_s > interval.first.s()) {
+      return false;
+    } else if (frenet_node_s > interval.second.s()) {
+      // double s_buffer = 3.5 + 0.3 * interval.second.velocity();
+      double s_buffer = 3.5;
+      double gap = frenet_node_s - interval.second.s() - s_buffer -
+                    rear_edge_to_rear_axle_;
+      if (gap < 0.0 && node.s > merge_point_s_) {
+        std::cout << "Gap后车碰撞风险: " << node.getKey() << std::endl;
         return false;
-      } else if (frenet_node_s > interval.second.s()) {
-        // double s_buffer = 3.5 + 0.3 * interval.second.velocity();
-        double s_buffer = 3.5;
-        double gap = frenet_node_s - interval.second.s() - s_buffer -
-                     rear_edge_to_rear_axle_;
-        if (gap < 0.0) {
-          std::cout << "Gap后车碰撞风险: " << node.getKey() << std::endl;
-          return false;
-        } else {
-          double s_buffer_extra = 0.7 * interval.second.velocity();
-          node.dis_to_gap_rear_cost =
-              gap > s_buffer_extra
-                  ? 0.0
-                  : std::exp(1- gap / std::fmax(s_buffer_extra, kZeroEpsilon));
-        }
       } else {
-        double s_buffer = 3.5 + 0.3 * node.v;
-        double gap = interval.first.s() - frenet_node_s - s_buffer -
-                     front_edge_to_rear_axle_;
-        if (gap < 0.0) {
-          std::cout << "Gap前车碰撞风险: " << node.getKey() << std::endl;
-          return false;
-        } else {
-          double s_buffer_extra = 0.7 * node.v;
-          node.dis_to_gap_front_cost =
-              gap > s_buffer_extra
-                  ? 0.0
-                  : 0.5 *
-                        std::exp(1 - gap / std::fmax(s_buffer_extra, kZeroEpsilon));
-        }
+        double s_buffer_extra = 0.7 * interval.second.velocity();
+        node.dis_to_gap_rear_cost =
+            gap > s_buffer_extra
+                ? 0.0
+                : std::exp(2 * (1- gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
+      }
+    } else {
+      double s_buffer = 3.5 + 0.3 * node.v;
+      double gap = interval.first.s() - frenet_node_s - s_buffer -
+                    front_edge_to_rear_axle_;
+      if (gap < 0.0 && node.s > merge_point_s_) {
+        std::cout << "Gap前车碰撞风险: " << node.getKey() << std::endl;
+        return false;
+      } else {
+        double s_buffer_extra = 0.7 * node.v;
+        node.dis_to_gap_front_cost =
+            gap > s_buffer_extra
+                ? 0.0
+                : 0.5 *
+                      std::exp(2 * (1 - gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
       }
     }
   }
@@ -223,27 +229,27 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
 void LongitudinalAStar::CalculateGCost(const std::shared_ptr<STNode>& parent,
                                        STNode& child) {
   // double dist_cost = WEIGHT_DIST * fabs(child.s - goal_state_.target_s);
-  double time_cost = start_node_.v * fabs(child.t - parent->t);
+  double time_cost = start_node_.v * fabs(child.t - parent->t) / 10.0;
   double vel_cost = WEIGHT_VEL * fabs(child.v - parent->v);
   double accel_cost = WEIGHT_ACCEL * fabs(child.a - parent->a);
-  double time_step = parent->t < 1.9 ? TIME_STEP_NEAR : TIME_STEP_FAR;
-  double jerk_cost = WEIGHT_JERK * std::fabs((child.a - parent->a) / time_step);
+  // double time_step = parent->t < 1.9 ? TIME_STEP_NEAR : TIME_STEP_FAR;
+  double jerk_cost = WEIGHT_JERK * fabs(child.jerk);
   child.g_cost = parent->g_cost + vel_cost + accel_cost + jerk_cost + time_cost;
 }
 
 void LongitudinalAStar::CalculateHCost(STNode& node) {
   const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
-  bool is_goal_range = (node.s > goal_state_.target_s) &&
-                       (node.s < goal_state_.target_s + GOAL_TOLERANCE);
+  bool is_goal_range = (node.s > goal_state_.target_s - GOAL_TOLERANCE) && (node.s < goal_state_.target_s + GOAL_TOLERANCE);
   double s_h =
       is_goal_range
           ? 0.0
-          : node.s < goal_state_.target_s
-                ? fabs(node.s - goal_state_.target_s)
-                : fabs(node.s - goal_state_.target_s - GOAL_TOLERANCE) / 3.0;
+          : node.s < goal_state_.target_s - GOAL_TOLERANCE
+                ? fabs(node.s - goal_state_.target_s + GOAL_TOLERANCE) / 10.0
+                : fabs(node.s - goal_state_.target_s - GOAL_TOLERANCE) / 30.0;
   double v_h = fabs(node.v - goal_state_.target_v);
+  double acc_h = WEIGHT_ACCEL * fabs(node.a);
   node.h_cost =
-      s_h + 0.5 * v_h + node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost;
+      s_h + 0.5 * v_h + node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost + acc_h;
 }
 
 void LongitudinalAStar::CalculateFCost(STNode& node) {
@@ -340,22 +346,27 @@ double LongitudinalAStar::CalcVelSafeDistance(const double ego_v,
 }
 
 bool LongitudinalAStar::CalcChildParam(const std::shared_ptr<STNode>& parent,
-                                       STNode& node) const {
-  double delta_s = node.s - parent->s;
-  double delta_t = node.t - parent->t;
+                                       std::shared_ptr<STNode>& node) const {
+  // double delta_s = node->s - parent->s;
+  double delta_t = node->t - parent->t;
 
   if (std::fabs(delta_t) < 1e-6) {
     return false;
   }
 
-  // 解析求解 jerk
-  node.jerk =
-      6.0 *
-      (delta_s - 0.5 * parent->a * delta_t * delta_t - parent->v * delta_t) /
-      (delta_t * delta_t * delta_t);
-  node.a = parent->a + node.jerk * delta_t;
-  node.v =
-      parent->v + parent->a * delta_t + 0.5 * node.jerk * delta_t * delta_t;
+  // node.jerk =
+  //     6.0 *
+  //     (delta_s - 0.5 * parent->a * delta_t * delta_t - parent->v * delta_t) /
+  //     (delta_t * delta_t * delta_t);
+  // node.a = parent->a + node.jerk * delta_t;
+  node->v =
+      parent->v + parent->a * delta_t + 0.5 * node->jerk * delta_t * delta_t;
+  node->s =
+      parent->s + parent->v * delta_t + 0.5 * parent->a * delta_t * delta_t +
+      node->jerk * delta_t * delta_t * delta_t / 6.0;
+  if(node->s < 0.0 || node->v < MIN_VELOCITY || node->v > MAX_VELOCITY) {
+    return false;
+  }
   return true;
 }
 }  // namespace planning

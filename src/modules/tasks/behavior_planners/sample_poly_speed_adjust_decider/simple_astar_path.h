@@ -9,11 +9,12 @@
 #include "uniform_jerk_curve.h"
 
 namespace planning {
-// 车辆动力约束配置（可根据实际车型调整）
 const double MAX_VELOCITY = 30.0;  // 最大速度 (m/s)
 const double MIN_VELOCITY = 0.0;   // 最小速度 (m/s)
-const double MAX_ACCEL = 1.5;      // 最大加速度 (m/s²)
-const double MIN_ACCEL = -2.5;    // 最大减速度（负表示减速）(m/s²)
+const double MAX_ACCEL = 1.2;      // 最大加速度 (m/s²)
+const double MIN_ACCEL = -2.0;    // 最大减速度（负表示减速）(m/s²)
+const double MAX_JERK = 2.0;      // 最大jerk (m/s³)
+const double MIN_JERK = -2.0;     // 最小jerk (m/s³)
 const double TIME_STEP_NEAR = 1;  // 时间步长（分层步长）(s)
 const double TIME_STEP_FAR = 1;   // 时间步长（分层步长）(s)
 const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）(m)
@@ -22,8 +23,9 @@ const double WEIGHT_DIST = 1.0;     // 距离代价权重
 const double WEIGHT_VEL = 0.2;      // 速度代价权重
 const double WEIGHT_ACCEL = 0.2;    // 加速度代价权重（舒适性）
 const double WEIGHT_JERK = 0.2;     // jerk代价权重（舒适性）
+const int MAX_ITERATION = 10000;    // 最大迭代次数
+const double ACC_STEP = 0.4;
 
-// ST节点定义：包含纵向运动状态与A*算法所需代价
 struct STNode {
   double t;  // 时间 (s)
   double s;  // 纵向距离 (m)
@@ -51,6 +53,7 @@ struct STNode {
         parent(p_) {}
 
   bool operator>(const STNode& other) const { return f_cost > other.f_cost; }
+  bool operator<(const STNode& other) const { return f_cost < other.f_cost; }
   std::string getKey() const {
     return std::to_string(int(t * 1000)) + "_" +
            std::to_string(int(s / DISTANCE_STEP));
@@ -101,8 +104,7 @@ class LongitudinalAStar {
   };
 
  private:
-  std::priority_queue<STNode, std::vector<STNode>, std::greater<STNode>>
-      open_list_;
+  std::set<STNode> open_list_;
   std::unordered_map<std::string, STNode> all_list_;
   std::unordered_set<std::shared_ptr<STNode>, PtrHash, PtrEqual> closed_list_;
 
@@ -110,7 +112,7 @@ class LongitudinalAStar {
   GoalState goal_state_;
   const STSampleSpaceBase* sample_space_ptr_;
   std::vector<STNode> astar_traj_;
-  bool IsGoalReached(const STNode& node) const;
+  bool IsGoalReached(const std::shared_ptr<STNode>& node) const;
   std::vector<STNode> GenerateChildren(std::shared_ptr<STNode>& parent_node);
   bool IsValidMotion(double v, double a) const;
   bool CollisionSafetyCheck(STNode& node) const;
@@ -119,7 +121,7 @@ class LongitudinalAStar {
   void CalculateFCost(STNode& node);
   void BacktrackTrajectory(std::shared_ptr<STNode> goal_node);
   bool CalcChildParam(const std::shared_ptr<STNode>& parent,
-                      STNode& node) const;
+                      std::shared_ptr<STNode>& node) const;
   bool valid_ = false;
   double merge_point_s_ = 0.0;
   LeadingAgentInfo leading_agent_info_;
