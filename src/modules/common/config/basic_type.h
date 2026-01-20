@@ -74,7 +74,7 @@ struct CongestionResult {
 
 //分流的相对方向
 enum SplitRelativeDirection {
-  None = 0,
+  NO_SPLIT = 0,
   ON_LEFT = 1,
   ON_RIGHT = 2,
 };
@@ -114,7 +114,7 @@ struct LaneChangeGapInfo {
 struct FeasibleLaneInfo {
   int total_lane_num = 0;
   std::vector<int> feasible_lane_sequence;
-  FeasibleLaneInfo(int lane_num, std::vector<int> sequence)
+  FeasibleLaneInfo(int lane_num, const std::vector<int>& sequence)
       : total_lane_num(lane_num), feasible_lane_sequence(sequence) {}
 };
 
@@ -128,14 +128,14 @@ struct FPPoint {
 
   FPPoint() = default;
 
-  FPPoint(uint64 link_id, double fp_distance_to_split_point,
-          std::vector<uint64> lane_ids,
-          std::optional<iflymapdata::sdpro::FeaturePoint> FP)
-      : link_id(link_id),
-        fp_distance_to_split_point(fp_distance_to_split_point),
-        lane_ids(lane_ids) {
-    if (FP.has_value()) {
-      fp = FP;
+  FPPoint(uint64 _link_id, double _fp_distance_to_split_point,
+          const std::vector<uint64>& _lane_ids,
+          const std::optional<iflymapdata::sdpro::FeaturePoint>& _fp)
+      : link_id(_link_id),
+        fp_distance_to_split_point(_fp_distance_to_split_point),
+        lane_ids(_lane_ids) {
+    if (_fp.has_value()) {
+      fp = _fp;
     }
   }
 
@@ -175,16 +175,16 @@ struct MapMergePointInfo {
   double dis_to_merge_fp = NL_NMAX;
   MergeLaneType merge_type = NONE_MERGE;
   int merge_lane_sequence = -1;
-  uint64 merge_lane_link_id = -1;
+  uint64 merge_lane_link_id = 0;
 
   MapMergePointInfo() = default;
 
-  MapMergePointInfo(double dis_to_merge_fp, MergeLaneType merge_type,
-                    int merge_lane_sequence, uint64 merge_lane_link_id)
-      : dis_to_merge_fp(dis_to_merge_fp),
-        merge_type(merge_type),
-        merge_lane_sequence(merge_lane_sequence),
-        merge_lane_link_id(merge_lane_link_id){
+  MapMergePointInfo(double _dis_to_merge_fp, MergeLaneType _merge_type,
+                    int _merge_lane_sequence, uint64 _merge_lane_link_id)
+      : dis_to_merge_fp(_dis_to_merge_fp),
+        merge_type(_merge_type),
+        merge_lane_sequence(_merge_lane_sequence),
+        merge_lane_link_id(_merge_lane_link_id) {
 
         };
 
@@ -238,15 +238,15 @@ struct MapSplitRegionInfo {
 
   MapSplitRegionInfo() = default;
 
-  MapSplitRegionInfo(uint64 link_id, double distance_to_split_point,
-                     SplitDirection split_direction, FPPoint start_fp_point,
-                     FPPoint end_fp_point, bool is_ramp_split)
-      : split_link_id(link_id),
-        distance_to_split_point(distance_to_split_point),
-        split_direction(split_direction),
-        start_fp_point(start_fp_point),
-        end_fp_point(end_fp_point),
-        is_ramp_split(is_ramp_split) {}
+  MapSplitRegionInfo(uint64 _link_id, double _distance_to_split_point,
+                     SplitDirection _split_direction, FPPoint _start_fp_point,
+                     FPPoint _end_fp_point, bool _is_ramp_split)
+      : split_link_id(_link_id),
+        distance_to_split_point(_distance_to_split_point),
+        split_direction(_split_direction),
+        start_fp_point(_start_fp_point),
+        end_fp_point(_end_fp_point),
+        is_ramp_split(_is_ramp_split) {}
 
   void reset() {
     split_link_id = -1;

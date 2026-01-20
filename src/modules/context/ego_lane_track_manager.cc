@@ -589,7 +589,7 @@ void EgoLaneTrackManger::Reset() {
   is_leaving_ramp_ = false;
   is_on_ramp_ = false;
   is_ego_on_expressway_ = false;
-  first_split_dir_dis_info_.first = None;
+  first_split_dir_dis_info_.first = NO_SPLIT;
   first_split_dir_dis_info_.second = NL_NMAX;
   current_segment_passed_distance_ = 0.0;
   split_direction_dis_info_list_.clear();
@@ -613,7 +613,7 @@ void EgoLaneTrackManger::Update(const RouteInfoOutput& route_info_output) {
   first_split_dir_dis_info_.first =
       first_split_dir == RAMP_ON_LEFT
           ? ON_LEFT
-          : (first_split_dir == RAMP_ON_RIGHT ? ON_RIGHT : None);
+          : (first_split_dir == RAMP_ON_RIGHT ? ON_RIGHT : NO_SPLIT);
   first_split_dir_dis_info_.second =
       route_info_output.distance_to_first_road_split;
   distance_to_first_road_merge_ =
