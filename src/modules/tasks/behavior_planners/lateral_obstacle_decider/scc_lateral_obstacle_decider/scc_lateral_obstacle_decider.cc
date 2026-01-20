@@ -1163,6 +1163,9 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
 }
 
 void SccLateralObstacleDecider::UpdateObstacleInteractionInfo() {
+  if (CheckSpatioTemporalPlanner()) {
+    return;
+  }
   // 1 计算静态元素的free space
   UpdateObstacleInteractionInfoBaseStaticEnvironment();
   // 2 更新静态元素的避让标签，并取离自车最近的静态FOLLOW障碍物
@@ -1176,6 +1179,56 @@ void SccLateralObstacleDecider::UpdateObstacleInteractionInfo() {
   UpdateObstacleInteractionInfoBaseDynamicEnvironment(front_nearest_follow_obstacle);
   // 5 更新静态元素的避让标签
   UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace();
+}
+
+bool SccLateralObstacleDecider::CheckSpatioTemporalPlanner() {
+  constexpr double kDistanceThresholdApproachToStopline = 10.0;
+  constexpr int kEgoInIntersectionCount = 3;
+  const auto lc_state = session_->planning_context()
+                                .lane_change_decider_output()
+                                .coarse_planning_info.target_state;
+  const auto& construction_scene_output = session_->environmental_model()
+                                              .get_construction_scene_manager()
+                                              ->get_construction_scene_output();
+  const auto& tfl_decider = session_->mutable_planning_context()
+                                ->mutable_traffic_light_decider_output();
+  const auto intersection_state = session_->environmental_model()
+                                      .get_virtual_lane_manager()
+                                      ->GetIntersectionState();
+  const double distance_to_stopline = session_->environmental_model()
+                                          .get_virtual_lane_manager()
+                                          ->GetEgoDistanceToStopline();
+  const double distance_to_crosswalk = session_->environmental_model()
+                                           .get_virtual_lane_manager()
+                                           ->GetEgoDistanceToCrosswalk();
+  bool current_intersection_state =
+      intersection_state == common::IntersectionState::IN_INTERSECTION ||
+      distance_to_stopline <= kDistanceThresholdApproachToStopline;
+  bool is_small_intersection = false;
+  // bool is_small_intersection = tfl_decider.is_small_front_intersection;
+  // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
+  if (current_intersection_state) {
+    spatio_temporal_planner_intersection_count_ = kEgoInIntersectionCount;
+  } else {
+    spatio_temporal_planner_intersection_count_ =
+        std::max(spatio_temporal_planner_intersection_count_ - 1, 0);
+  }
+
+  if (!config_.enable_use_spatio_temporal_planning) {
+    return false;
+  }
+
+  if (lc_state != kLaneKeeping) {
+    return false;
+  }
+
+  if (!(spatio_temporal_planner_intersection_count_ > 0 &&
+        !is_small_intersection) &&
+      !construction_scene_output.enable_construction_passage) {
+    return false;
+  }
+
+  return true;
 }
 
 void SccLateralObstacleDecider::

@@ -1801,6 +1801,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
 
 struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     near_car_thr = read_json_key<double>(json, "near_car_thr", near_car_thr);
     lat_safety_buffer =
         read_json_key<double>(json, "lat_safety_buffer", lat_safety_buffer);
@@ -2072,6 +2073,7 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
     base_nudge_distance =

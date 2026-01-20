@@ -139,6 +139,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   bool IsCutInIgnore(const FrenetObstacle& frenet_obstacle,
                      bool is_lane_change);
+  bool CheckSpatioTemporalPlanner();
   void UpdateObstacleInteractionInfo();
   void UpdateObstacleInteractionInfoBaseStaticEnvironment();
   void UpdateObstacleInteractionInfoBaseDynamicEnvironment(
@@ -202,6 +203,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   LcGapInfo lc_gap_info_;
   HysteresisDecision side_nudge_release_hysteresis_;
   std::unordered_map<uint32_t, ObstacleInfo> obstacle_interaction_map_;// 用于多障碍之间的交互决策
+  int spatio_temporal_planner_intersection_count_ = 0;
 };
 
 }  // namespace planning
