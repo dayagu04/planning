@@ -1476,6 +1476,11 @@ const PolyRelation CheckTwoPolygonRelationship(
     const std::vector<Eigen::Vector2d> &polyA,
     const std::vector<Eigen::Vector2d> &polyB);
 
+const bool CalculateArcFromTwoPoints(
+    const pnc::geometry_lib::PathPoint& start_point,
+    const pnc::geometry_lib::PathPoint& end_point,
+    pnc::geometry_lib::Arc& result_arc, const double min_turn_radius);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 

@@ -326,6 +326,13 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const bool InsertLineSegToEgo2Path(const pnc::geometry_lib::PathPoint &ego_pose);
 
+  const bool CheckSecondGearChangeArc(
+      const std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
+      pnc::geometry_lib::Arc& resulting_arc, size_t& arc_end_idx);
+
+  const bool UpdateOutputPointByZigZag();
+  const bool UpdateOutputPointByOverlap();
+
  protected:
   virtual void Preprocess() override;
 
