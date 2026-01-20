@@ -1617,7 +1617,7 @@
       "lateral_acc_max": 1.1,
       "lateral_brake_min": 2.5,
       "lateral_brake_max": 1.1,
-      "lateral_miu": 0.8
+      "lateral_miu": 0.5
     }
  },
  "lane_change_safety_check": {
