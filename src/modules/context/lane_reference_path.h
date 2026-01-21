@@ -57,11 +57,19 @@ class LaneReferencePath
       const double length) const;
   double CalculateEgoProjectionDistanceInReferencePath(
       const ReferencePathPoints &ref_path_points) const;
+
   double CalculatePointProjectionDistanceInReferencePath(
       const double point_x, const double point_y,
       const ReferencePathPoints &ref_path_points) const;
+
+  int CalculateNearestDistancePathPoint(
+      const ReferencePathPoints& ref_path_points) const;
+
   bool get_ref_points(ReferencePathPoints &points);
+
   bool get_ref_points_hpp(ReferencePathPoints &points);
+
+  bool get_ref_points_rads(ReferencePathPoints &points);
 
   bool ExtendConstructionRefPathPoints(ReferencePathPoints &ref_path_points);
 

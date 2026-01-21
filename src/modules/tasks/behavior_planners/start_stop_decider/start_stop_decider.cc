@@ -200,10 +200,24 @@ bool StartStopDecider::CanTransitionToStop() {
       planning_init_state_vel_ < config_.ego_vel_begin_stop_threshold;
   const bool cipv_static_condition =
       std::fabs(cipv_vel_frenet_) < config_.cipv_static_vel_threshold;
-  const bool cipv_distance_condition =
+  bool cipv_distance_condition =
       cipv_relative_s_ <
       stop_distance_ + config_.distance_stop_between_ego_and_cipv_threshold;
+  if (session_->get_scene_type() == common::SceneType::RADS) {
+    const auto& agent_manager =
+           session_->environmental_model().get_agent_manager();
+    const auto& cipv = agent_manager->GetAgent(cipv_id_);
+    const auto cipv_is_destination_target =
+        cipv && cipv->type() == agent::AgentType::VIRTUAL &&
+        cipv->agent_id() ==
+            agent::AgentDefaultInfo::kRadsStopDestinationVirtualAgentId;
+    if (cipv_is_destination_target && cipv_relative_s_ < config_.rads_distance_stop_between_ego_and_destination_cipv_threshold) {
+      cipv_distance_condition = true;
+    } else {
+      cipv_distance_condition = false;
+    }
 
+  }
   return ego_stop_condition && cipv_static_condition && cipv_distance_condition;
 }
 
