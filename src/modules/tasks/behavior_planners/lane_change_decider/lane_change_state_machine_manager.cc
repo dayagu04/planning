@@ -381,7 +381,7 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   // check lc gap if feasible
   if (!has_target_lane) {
-    lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+    lane_change_stage_info_.lc_invalid_reason = "no target lane";
   }
   CheckLaneChangeValid(lane_change_direction);
   const bool is_suppress_LC_short_dis = IsSuppressLCShortDis();
