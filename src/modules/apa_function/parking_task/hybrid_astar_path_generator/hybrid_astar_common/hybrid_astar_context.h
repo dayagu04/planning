@@ -247,6 +247,42 @@ struct PathCompareCost {
   ~PathCompareCost() = default;
 };
 
+// For vertical slot, there is a distinction between left and right, while for
+// parallel slot, the difference lies in front and back
+enum class CulDeSacType : uint8_t {
+  NON_CUL_DE_SAC = 0,
+  LEFT = 1,
+  RIGHT = 2,
+  FRONT = 3,
+  REAR = 4,
+};
+
+struct CulDeSacInfo {
+  bool is_cul_de_sac = false;
+  CulDeSacType type = CulDeSacType::NON_CUL_DE_SAC;
+  float limit_x = 0.0f;
+  float limit_y = 0.0f;
+  float limit_phi = 0.0f;
+
+  CulDeSacInfo() = default;
+  ~CulDeSacInfo() = default;
+
+  void Reset() {
+    is_cul_de_sac = false;
+    type = CulDeSacType::NON_CUL_DE_SAC;
+    limit_x = 0.0f;
+    limit_y = 0.0f;
+    limit_phi = 0.0f;
+  }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log)
+        << "CulDeSacInfo: is_cul_de_sac = " << is_cul_de_sac
+        << ", type = " << static_cast<int>(type) << ", limit_x = " << limit_x
+        << ", limit_y = " << limit_y << ", limit_phi = " << limit_phi;
+  }
+};
+
 const std::string GetSearchModeString(const SearchMode& search_mode);
 
 }  // namespace apa_planner

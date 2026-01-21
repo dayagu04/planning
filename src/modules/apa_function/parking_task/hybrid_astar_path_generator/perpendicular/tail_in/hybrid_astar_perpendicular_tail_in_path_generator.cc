@@ -81,8 +81,8 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
 
   float length_cost = 0.0f, heading_cost = 0.0f, gear_change_cost = 0.0f,
         kappa_cost = 0.0f, kappa_change_cost = 0.0f, safe_dist_cost = 0.0f,
-        exceed_pre_search_box_cost = 0.0f, far_from_start_and_end_cost = 0.0f,
-        borrow_slot_cost = 0.0f;
+        exceed_pre_search_box_cost = 0.0f,
+        exceed_cul_de_sac_limit_pos_cost = 0.0f, borrow_slot_cost = 0.0f;
 
   // length cost
   length_cost = next_node->GetNodePathDistance() * config_.traj_forward_penalty;
@@ -154,16 +154,28 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
       exceed_pre_search_box_cost = config_.exceed_pre_search_box_penalty;
     }
 
-    if (interesting_abbox_slot_.width() > 0.01 &&
-        !interesting_abbox_slot_.contain(next_node->GetPose())) {
-      far_from_start_and_end_cost = config_.exceed_intersting_box_penalty;
+    if (cul_de_sac_info_.is_cul_de_sac) {
+      if (cul_de_sac_info_.type == CulDeSacType::RIGHT &&
+          next_node->GetPhi() < cul_de_sac_info_.limit_phi) {
+        if ((next_node->GetGearType() == AstarPathGear::DRIVE &&
+             next_node->GetKappa() < -0.001f) ||
+            (next_node->GetGearType() == AstarPathGear::REVERSE &&
+             next_node->GetKappa() > 0.001f)) {
+          exceed_cul_de_sac_limit_pos_cost =
+              config_.exceed_cul_de_sac_limit_pos_penalty;
+        }
+      } else if (cul_de_sac_info_.type == CulDeSacType::LEFT &&
+                 next_node->GetPhi() > cul_de_sac_info_.limit_phi) {
+        if ((next_node->GetGearType() == AstarPathGear::DRIVE &&
+             next_node->GetKappa() > 0.001f) ||
+            (next_node->GetGearType() == AstarPathGear::REVERSE &&
+             next_node->GetKappa() < -0.001f)) {
+          exceed_cul_de_sac_limit_pos_cost =
+              config_.exceed_cul_de_sac_limit_pos_penalty;
+        }
+      }
     }
   }
-
-  // if (next_node->GetEulerDist(start_node_) > 10.0 &&
-  //     next_node->GetEulerDist(end_node_) > 8.68) {
-  //   far_from_start_and_end_cost = config_.far_from_start_end_penalty;
-  // }
 
   if (fabs(next_node->GetPhi()) * common_math::kRad2DegF > 76.0f &&
       (next_node->GetX() - 0.5 * apa_param.GetParam().car_width) <
@@ -176,8 +188,8 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
   next_node->SetGCost(current_node->GetGCost() + length_cost +
                       gear_change_cost + kappa_cost + kappa_change_cost +
                       safe_dist_cost + heading_cost +
-                      exceed_pre_search_box_cost + far_from_start_and_end_cost +
-                      borrow_slot_cost);
+                      exceed_pre_search_box_cost +
+                      exceed_cul_de_sac_limit_pos_cost + borrow_slot_cost);
 }
 
 void HybridAStarPerpendicularTailInPathGenerator::CalcNodeHCost(
@@ -271,21 +283,36 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
   request_.analytic_expansion_type = AnalyticExpansionType::REEDS_SHEEP;
   config_.traj_kappa_change_penalty = 0.0;
 
-  if (request_.decide_cul_de_sac &&
-      ego_info_under_slot.slot_type == SlotType::PERPENDICULAR &&
-      ego_info_under_slot.slot_occupied_ratio < 1e-3 &&
-      cur_pose.GetY() * cur_pose.GetTheta() < 0.0) {
-    geometry_lib::PathPoint end_pose;
-    if (cur_pose.GetY() > 0.0) {
-      end_pose.SetY(-3.6 - bound);
-      end_pose.SetTheta(-90.0 * kDeg2Rad);
-      end_pose.SetDir(-90.0 * kDeg2Rad);
-    } else {
-      end_pose.SetY(3.6 + bound);
-      end_pose.SetTheta(90.0 * kDeg2Rad);
-      end_pose.SetDir(90.0 * kDeg2Rad);
+  cul_de_sac_info_.Reset();
+  do {
+    if (!request_.decide_cul_de_sac) {
+      break;
     }
-
+    if (ego_info_under_slot.slot_type != SlotType::PERPENDICULAR) {
+      break;
+    }
+    if (ego_info_under_slot.slot_occupied_ratio > 1e-3) {
+      break;
+    }
+    if (std::fabs(cur_pose.GetTheta()) * kRad2Deg < 36) {
+      break;
+    }
+    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0) {
+      break;
+    }
+    geometry_lib::PathPoint end_pose;
+    const float decide_cul_de_sac_y = 7.5f;
+    if (cur_pose.GetY() > 0.0) {
+      end_pose.SetY(-decide_cul_de_sac_y - bound);
+      end_pose.SetTheta(cur_pose.GetTheta());
+      end_pose.SetDir(cur_pose.GetTheta());
+      cul_de_sac_info_.type = CulDeSacType::RIGHT;
+    } else {
+      end_pose.SetY(decide_cul_de_sac_y + bound);
+      end_pose.SetTheta(cur_pose.GetTheta());
+      end_pose.SetDir(cur_pose.GetTheta());
+      cul_de_sac_info_.type = CulDeSacType::LEFT;
+    }
     const std::vector<double> x_vec{7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0};
     bool find_safe_pos = false;
     for (const double x : x_vec) {
@@ -298,27 +325,30 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
         break;
       }
     }
-    if (find_safe_pos) {
-      const geometry_lib::PathPoint real_target_pose =
-          ego_info_under_slot.target_pose;
-      request_.ego_info_under_slot.target_pose = end_pose;
-      end_pose.PrintInfo();
-      request_.search_mode = SearchMode::DECIDE_CUL_DE_SAC;
-      if (!UpdateOnce(pre_path_col_det_buffer)) {
-        ILOG_ERROR << "this is cul-de-sac";
-        if (cur_pose.GetY() > 0.0) {
-          interesting_abbox_slot_.min_[1] = -2.2 - bound;
-          interesting_abbox_slot_.max_[1] = 12.8 + bound;
-        } else {
-          interesting_abbox_slot_.min_[1] = -12.8 - bound;
-          interesting_abbox_slot_.max_[1] = 2.2 + bound;
-        }
-      } else {
-        ILOG_INFO << "this is not cul-de-sac";
-      }
-      request_.ego_info_under_slot.target_pose = real_target_pose;
+
+    if (!find_safe_pos) {
+      break;
     }
-  }
+
+    const geometry_lib::PathPoint real_target_pose =
+        ego_info_under_slot.target_pose;
+    request_.ego_info_under_slot.target_pose = end_pose;
+    end_pose.PrintInfo();
+
+    request_.search_mode = SearchMode::DECIDE_CUL_DE_SAC;
+    if (!UpdateOnce(pre_path_col_det_buffer)) {
+      ILOG_ERROR << "this is cul-de-sac";
+      cul_de_sac_info_.is_cul_de_sac = true;
+      if (cul_de_sac_info_.type == CulDeSacType::RIGHT) {
+        cul_de_sac_info_.limit_phi = -6.8f * common_math::kDeg2RadF;
+      } else if (cul_de_sac_info_.type == CulDeSacType::LEFT) {
+        cul_de_sac_info_.limit_phi = 6.8f * common_math::kDeg2RadF;
+      }
+    } else {
+      ILOG_INFO << "this is not cul-de-sac";
+    }
+    request_.ego_info_under_slot.target_pose = real_target_pose;
+  } while (false);
 
   request_.swap_start_goal = true;
   if (request_.pre_search_mode > 0) {
@@ -783,7 +813,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
     for (const CarMotion& car_motion : car_motion_vec) {
       GenerateNextNode(&new_node, current_node, car_motion);
-
       gen_child_node_num++;
 
 #if DEBUG_CHILD_NODE
@@ -808,6 +837,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
           request_.max_gear_shift_number == 0 &&
           request_.search_mode == SearchMode::FORMAL) {
         node_del_request.gear_request = request_.inital_action_request.ref_gear;
+      } else if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+        node_del_request.gear_request = AstarPathGear::DRIVE;
       } else {
         node_del_request.gear_request = gear_request;
       }
@@ -886,6 +917,16 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 #endif
         }
         continue;
+      }
+
+      if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+        if (cul_de_sac_info_.type == CulDeSacType::RIGHT) {
+          cul_de_sac_info_.limit_y =
+              std::min(cul_de_sac_info_.limit_y, new_node.GetY());
+        } else if (cul_de_sac_info_.type == CulDeSacType::LEFT) {
+          cul_de_sac_info_.limit_y =
+              std::max(cul_de_sac_info_.limit_y, new_node.GetY());
+        }
       }
 
       gen_child_node_num_success++;

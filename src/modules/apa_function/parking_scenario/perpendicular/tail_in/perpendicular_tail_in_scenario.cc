@@ -686,8 +686,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
             << "  stuck_obs_time(s) = " << frame_.stuck_obs_time
             << "  stuck_dynamic_obs_time(s) = " << frame_.stuck_dynamic_obs_time
             << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs
-            << "  "
-            << "  slot side = "
+            << "  " << "  slot side = "
             << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
@@ -1129,7 +1128,8 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   // targeted customization parameters
   config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
   config.exceed_pre_search_box_penalty = 68.0f;
-  config.exceed_intersting_box_penalty = 11.0f;
+  config.exceed_cul_de_sac_limit_pos_penalty =
+      0.68f * config.gear_switch_penalty;
   config.borrow_slot_penalty = 3.68f;
   config.expect_steer_penalty = 1.68f;
 
