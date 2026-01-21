@@ -2576,14 +2576,14 @@ def load_local_view_figure():
 
   # fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
   fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'obj',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info',visible = False)
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="12pt", legend_label = 'fus_obj_info',visible = False)
   # fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
 
   # fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd',visible = False)
   # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info',visible = False)
 
   fig1.patches('obstacles_y', 'obstacles_x', source = data_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'prediction_obj')
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_prediction_obj, text_color='text_color', text_align="center", text_font_size="5pt", legend_label = 'prediction_info')
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_prediction_obj, text_color='text_color', text_align="center", text_font_size="12pt", legend_label = 'prediction_info')
 
   if is_vis_rdg_obj:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'rdg_obj',visible = False)
