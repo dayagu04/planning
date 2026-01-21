@@ -20,8 +20,8 @@ namespace {
 constexpr double kDistanceCrossLine = 50.0;
 
 #ifdef X86
-constexpr double kSkipAppendSearchTimeLimit = 100;  // ms
-constexpr double kTotalSearchTimeLimit = 100;       // ms
+constexpr double kSkipAppendSearchTimeLimit = 50;  // ms
+constexpr double kTotalSearchTimeLimit = 50;       // ms
 #else
 constexpr double kSkipAppendSearchTimeLimit = 10;  // ms
 constexpr double kTotalSearchTimeLimit = 8;        // ms
@@ -443,14 +443,14 @@ bool HybridARAStar::ImprovePath() {
     auto current_time = (uint64_t)IflyTime::Now_ms();
     auto diff = current_time - start_search_time_;
 
-    // if (diff > kTotalSearchTimeLimit) {
-    //   std::cout << "ARA search exceed time limit: " << kTotalSearchTimeLimit
-    //             << "ms" << std::endl;
-    //   if (!has_found_new_path) {
-    //     search_find_result = false;
-    //   }
-    //   break;
-    // }
+    if (diff > kTotalSearchTimeLimit) {
+      std::cout << "ARA search exceed time limit: " << kTotalSearchTimeLimit
+                << "ms" << std::endl;
+      if (!has_found_new_path) {
+        search_find_result = false;
+      }
+      break;
+    }
 
     // auto time1 = (uint64_t)IflyTime::Now_us();
 
