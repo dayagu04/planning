@@ -147,7 +147,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
     tencent_split_region_info_list_.clear();
     return;
   }
-  is_in_tunnel_ = sdpro_map.isTunnel(link->link_type());
+  route_info_output_.is_in_tunnel = sdpro_map.isTunnel(link->link_type());
 
   if (IsMissSplitPoint(*link, nearest_l, nearest_s)) {
     route_info_output_.reset();
@@ -5442,7 +5442,7 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::CalculateCurrentLink(
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
   double search_distance = 50.0;
   double max_heading_diff = PI / 4;
-  if (is_in_tunnel_) {
+  if (route_info_output_.is_in_tunnel) {
     search_distance = 100.0;
   }
   // 获取当前的segment

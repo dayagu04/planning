@@ -159,6 +159,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   // ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
+  ad_info.is_in_tunnel = route_info_output.is_in_tunnel;
   ad_info.lane_change_direction =
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
   // update LaneChangeStatus

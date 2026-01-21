@@ -835,6 +835,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // HMI for ad_info
   const auto& ad_info = session_.planning_context().planning_hmi_info().ad_info;
   // available
+  planning_hmi_info->ad_info.is_in_tunnel = ad_info.is_in_tunnel;
   planning_hmi_info->ad_info.is_avaliable = ad_info.is_avaliable;
   planning_hmi_info->ad_info.cruise_speed = ad_info.cruise_speed;
   planning_hmi_info->ad_info.lane_change_direction =
