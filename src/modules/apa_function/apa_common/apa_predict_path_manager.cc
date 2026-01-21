@@ -271,6 +271,8 @@ void ApaPredictPathManager::Update(
     predict_traj_s_ = 0.0;
   }
 
+  ConvertPathPointsToPredictTrajectory(predict_pt_vec_);
+
   RecordDebugTraj();
 
   return;
@@ -291,6 +293,27 @@ void ApaPredictPathManager::RecordDebugTraj() {
   }
 
   return;
+}
+
+const trajectory::Trajectory& ApaPredictPathManager::ConvertPathPointsToPredictTrajectory(
+    const std::vector<pnc::geometry_lib::PathPoint>& predict_pt_vec) {
+  predict_traj_.clear();
+  predict_traj_.reserve(predict_pt_vec.size());
+  trajectory::TrajectoryPoint traj_point;
+  double absolute_time = 0.0;
+  constexpr double kTimeStep = 0.1;
+  for (const auto& pt : predict_pt_vec) {
+    traj_point.set_absolute_time(absolute_time);
+    traj_point.set_s(pt.s);
+    traj_point.set_x(pt.GetX());
+    traj_point.set_y(pt.GetY());
+    traj_point.set_theta(pt.GetTheta());
+    traj_point.set_kappa(pt.GetKappa());
+    predict_traj_.emplace_back(traj_point);
+    absolute_time += kTimeStep;
+  }
+
+  return predict_traj_;
 }
 
 }  // namespace apa_planner

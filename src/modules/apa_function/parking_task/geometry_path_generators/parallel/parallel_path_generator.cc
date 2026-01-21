@@ -7445,5 +7445,265 @@ void ParallelPathGenerator::JudgeNeedOptimize() {
   }
 }
 
+const bool ParallelPathGenerator::CheckSecondGearChangeArc(
+    const std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
+    pnc::geometry_lib::Arc& resulting_arc, size_t& arc_end_idx) {
+  if (path_point_vec.size() < 2) {
+    return false;
+  }
+
+  // Starting point A is the first point
+  const auto& start_point = path_point_vec[0];
+  uint8_t current_gear = start_point.gear;
+
+  int gear_change_count = 0;
+  size_t second_gear_change_idx = 0;
+  size_t third_gear_change_idx = path_point_vec.size();
+
+  // Traverse to find gear change points
+  const double half_slot_width = input_.tlane.slot_width * 0.5;
+  const double slot_side_sgn = input_.tlane.slot_side_sgn;
+  for (size_t i = 1; i < path_point_vec.size(); i++) {
+    bool is_in_slot = slot_side_sgn > 0.0
+                          ? path_point_vec[i].GetY() < half_slot_width
+                          : path_point_vec[i].GetY() > -half_slot_width;
+    if (is_in_slot) {
+      break;
+    }
+    if (path_point_vec[i].gear != current_gear) {
+      gear_change_count++;
+      current_gear = path_point_vec[i].gear;
+
+      if (gear_change_count == 1) {
+        // First gear change, skip
+        continue;
+      } else if (gear_change_count == 2) {
+        // Second gear change, record index
+        second_gear_change_idx = i;
+      } else if (gear_change_count == 3) {
+        // Third gear change, record index and break loop
+        third_gear_change_idx = i;
+        break;
+      }
+    }
+  }
+
+  ILOG_INFO << "gear_change_count: " << gear_change_count
+            << " second_gear_change_idx: " << second_gear_change_idx
+            << " third_gear_change_idx: " << third_gear_change_idx;
+  // If no second gear change found, return false
+  if (gear_change_count < 2) {
+    ILOG_INFO << "no second gear change, gear_change_count: "
+              << gear_change_count;
+    return false;
+  }
+
+  double max_y_diff = 0.0;
+  for (size_t i = 0; i <= second_gear_change_idx; i++) {
+    double y_diff =
+        std::fabs(path_point_vec[i].GetY() - path_point_vec[0].GetY());
+    if (y_diff > max_y_diff) {
+      max_y_diff = y_diff;
+    }
+  }
+  ILOG_INFO << "max_y_diff: " << max_y_diff;
+  if (max_y_diff > 0.2) {
+    return false;
+  }
+
+  size_t found_transition = second_gear_change_idx;
+  for (size_t i = second_gear_change_idx; i < third_gear_change_idx - 2;
+       i++) {
+    if (i + 2 >= path_point_vec.size()) {
+      break;
+    }
+
+    double angle1 = path_point_vec[i].heading;
+    double angle2 = path_point_vec[i + 1].heading;
+    double angle3 = path_point_vec[i + 2].heading;
+
+    angle1 = pnc::geometry_lib::NormalizeAngle(angle1);
+    angle2 = pnc::geometry_lib::NormalizeAngle(angle2);
+    angle3 = pnc::geometry_lib::NormalizeAngle(angle3);
+
+    bool increasing1 = (angle2 > angle1);
+    bool increasing2 = (angle3 > angle2);
+
+    if (increasing1 != increasing2) {
+      ILOG_INFO << "Transition point found at index: " << i + 1
+                << ", angles: " << angle1 << " -> " << angle2 << " -> "
+                << angle3;
+      path_point_vec[i + 1].PrintInfo();
+      found_transition = i + 1;
+      break;
+    }
+  }
+
+  for (size_t i = found_transition; i > second_gear_change_idx; i--) {
+    const auto& end_point = path_point_vec[i];
+
+    // Calculate arc from start_point to end_point
+    pnc::geometry_lib::Arc temp_arc;
+    if (CalculateArcFromTwoPoints(start_point, end_point, temp_arc,
+                                  apa_param.GetParam().min_turn_radius)) {
+      resulting_arc = temp_arc;
+      arc_end_idx = i;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const bool ParallelPathGenerator::UpdateOutputPointByZigZag() {
+  if (input_.ego_info_under_slot.slot_occupied_ratio > 0.1) {
+    ILOG_INFO << "ego_info_under_slot occupied, not need update";
+    return false;
+  }
+  pnc::geometry_lib::Arc resulting_arc;
+  size_t arc_end_idx = -1;
+  if (!CheckSecondGearChangeArc(output_.all_gear_path_point_vec, resulting_arc,
+                                arc_end_idx)) {
+    ILOG_INFO << "not found second gear change arc";
+    return false;
+  }
+
+  double sample_ds = output_.actual_ds;
+
+  uint8_t start_gear = pnc::geometry_lib::CalArcGear(resulting_arc);
+
+  uint8_t start_steer = pnc::geometry_lib::CalArcSteer(resulting_arc);
+
+  std::vector<pnc::geometry_lib::PathSegment> arc_seg_vec;
+  arc_seg_vec.emplace_back(
+      pnc::geometry_lib::PathSegment(start_steer, start_gear, resulting_arc));
+  std::vector<pnc::geometry_lib::PathPoint> seg_point =
+      pnc::geometry_lib::SamplePathSegVec(arc_seg_vec, sample_ds);
+
+  seg_point.insert(seg_point.end(),
+                   output_.all_gear_path_point_vec.begin() + arc_end_idx + 1,
+                   output_.all_gear_path_point_vec.end());
+
+  output_.all_gear_path_point_vec.clear();
+  output_.all_gear_path_point_vec = seg_point;
+
+  for (size_t i = 0; i < output_.all_gear_path_point_vec.size(); i++) {
+    output_.all_gear_path_point_vec[i].s = sample_ds * i;
+  }
+
+  output_.path_point_vec.clear();
+
+  uint8_t first_gear = output_.all_gear_path_point_vec[0].gear;
+
+  for (const auto& point : output_.all_gear_path_point_vec) {
+    if (point.gear != first_gear) {
+      break;
+    }
+    output_.path_point_vec.emplace_back(point);
+  }
+
+  for (size_t i = 0; i < output_.path_point_vec.size(); i++) {
+    output_.path_point_vec[i].s = sample_ds * i;
+  }
+  output_.cur_gear_length =
+      output_.path_point_vec[output_.path_point_vec.size() - 1].s;
+  output_.current_gear = first_gear;
+
+  return true;
+}
+
+const bool ParallelPathGenerator::UpdateOutputPointByOverlap() {
+  if (input_.ego_info_under_slot.slot_occupied_ratio > 0.1) {
+    ILOG_INFO << "ego_info_under_slot occupied, not need update";
+    return false;
+  }
+
+  if (output_.all_gear_path_point_vec.size() < 2) {
+    return false;
+  }
+
+  double min_distance = std::numeric_limits<double>::max();
+  size_t closest_idx = 0;
+  bool found_closest = false;
+  double sample_ds = output_.actual_ds;
+
+  auto& start_pt = output_.all_gear_path_point_vec[0];
+  // start_pt.PrintInfo();
+  for (size_t i = 1; i < output_.all_gear_path_point_vec.size(); i++) {
+    auto& cur_pt = output_.all_gear_path_point_vec[i];
+    double distance = (start_pt.pos - cur_pt.pos).norm();
+
+    double lon_distance = (cur_pt.pos - start_pt.pos)
+                              .dot(Eigen::Vector2d(std::cos(start_pt.heading),
+                                                   std::sin(start_pt.heading)));
+    lon_distance = std::fabs(lon_distance);
+    double lat_distance = (cur_pt.pos - start_pt.pos)
+                              .dot(Eigen::Vector2d(-std::sin(start_pt.heading),
+                                                   std::cos(start_pt.heading)));
+    lat_distance = std::fabs(lat_distance);
+    if (lon_distance < 0.11 && lat_distance < 0.05) {
+      const double heading_diff = std::fabs(
+          pnc::geometry_lib::NormalizeAngle(start_pt.heading - cur_pt.heading));
+      const bool heading_condition = std::fabs(heading_diff) < 2.0 * kDeg2Rad;
+
+      const bool gear_condition = (cur_pt.gear != start_pt.gear);
+
+      ILOG_INFO << "distance: " << (start_pt.pos - cur_pt.pos).norm()
+                << " heading_diff: " << heading_diff
+                << " gear_condition: " << gear_condition;
+      cur_pt.PrintInfo();
+
+      if (heading_condition && gear_condition) {
+        if (distance < min_distance) {
+          min_distance = distance;
+          closest_idx = i;
+          found_closest = true;
+        }
+      }
+    }
+  }
+  if (!found_closest) {
+    ILOG_INFO << "no closest point found";
+    return false;
+  }
+  if (closest_idx == 0) {
+    ILOG_INFO << "no need update point";
+    return false;
+  }
+
+  std::vector<pnc::geometry_lib::PathPoint> new_all_gear_pt =
+      std::vector<pnc::geometry_lib::PathPoint>(
+          output_.all_gear_path_point_vec.begin() + closest_idx,
+          output_.all_gear_path_point_vec.end());
+
+  if (new_all_gear_pt.size() < 2) {
+    return false;
+  }
+
+  const double start_s = new_all_gear_pt[0].s;
+  for (size_t i = 0; i < new_all_gear_pt.size(); i++) {
+    new_all_gear_pt[i].s -= start_s;
+  }
+
+  output_.all_gear_path_point_vec = new_all_gear_pt;
+
+  output_.path_point_vec.clear();
+
+  uint8_t first_gear = output_.all_gear_path_point_vec[0].gear;
+
+  for (const auto& point : output_.all_gear_path_point_vec) {
+    if (point.gear != first_gear) {
+      break;
+    }
+    output_.path_point_vec.emplace_back(point);
+  }
+
+  output_.cur_gear_length =
+      output_.path_point_vec[output_.path_point_vec.size() - 1].s;
+  output_.current_gear = first_gear;
+
+  return true;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

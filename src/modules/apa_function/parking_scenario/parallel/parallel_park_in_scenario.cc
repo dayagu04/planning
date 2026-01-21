@@ -3290,9 +3290,13 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   //     parallel_path_planner_.GetOutput().path_segment_vec);
 
   const ParallelPathGenerator& update_path_planner = SuitablePathReplan();
+  plan_result = frame_.pathplan_result;
+  if (plan_result == PathPlannerResult::PLAN_UPDATE) {
+    parallel_path_planner_.UpdateOutputPointByZigZag();
+    parallel_path_planner_.UpdateOutputPointByOverlap();
+  }
   const auto& planner_output = update_path_planner.GetOutput();//SuitablePathReplan();
   const EgoInfoUnderSlot& update_ego_info = update_path_planner.GetInput().ego_info_under_slot;
-  plan_result = frame_.pathplan_result;
 
   // reverse info for next plan
   if (frame_.is_replan_first) {
