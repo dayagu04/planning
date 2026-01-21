@@ -220,6 +220,25 @@ struct Parameters {
   double meb_hmi_vaule = 0.0;
   int meb_hmi_direction = 0;
   bool meb_call_switch = false;
+  double meb_odbox_dis_buffer = 0.35;
+  double meb_odbox_dis_buffer_r = 0.35;
+  std::vector<double> meb_odbox_dis_buffer_r_dynamic_people = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_r_dynamic_car = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_r_dynamic_motor = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_r_dynamic_default = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_dynamic_people = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_dynamic_car = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_dynamic_motor = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_dynamic_default = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_r_static_people = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_r_static_car = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_r_static_motor = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_r_static_default = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_static_people = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_static_car = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_static_motor = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_d_static_default = {0.4, 0.4, 0.4};
+  std::vector<double> meb_odbox_dis_buffer_veh_speed_kmh = {4.0, 6.0, 9.0}; 
 };
 
 struct StateInfo {
