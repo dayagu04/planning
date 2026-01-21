@@ -11,12 +11,12 @@
 #include "parallel_path_generator.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "src/modules/apa_function/apa_common/relative_loc_observer_manager.h"
-#include "hybrid_astar_interface.h"
-#include "hybrid_astar_thread.h"
-#include "hybrid_astar_common.h"
-# include "apa_slot.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_interface.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
+#include "src/modules/apa_function/apa_common/apa_slot.h"
 #include "src/modules/apa_function/util/apa_utils.h"
-#include "virtual_wall_decider.h"
+#include "src/modules/apa_function/parking_task/deciders/virtual_wall_decider/virtual_wall_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -110,7 +110,7 @@ class ParallelParkInScenario : public ParkingScenario {
   void UpdatePARemainDistance();
   HybridAStarThreadSolver* GetThread() { return &thread_; }
 
-  const int PublishHybridAstarDebugInfo(const HybridAStarResult& result,
+  const int PublishHybridAstarCompletePathInfo(const HybridAStarResult& result,
                                         Transform2d* tf);
   const bool IsNeedClipping(const HybridAStarResult& result, const size_t i);
   const pnc::geometry_lib::PathSegGear GetGear(const AstarPathGear gear);
@@ -118,7 +118,7 @@ class ParallelParkInScenario : public ParkingScenario {
   const int LocalPathToGlobal(
       const std::vector<pnc::geometry_lib::PathPoint>& local_path,
       Transform2d* tf);
-  const int PathOptimizationByCILQR(
+  const int PublishHybridAstarCurrentPathInfo(
       const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf);
 
   void FillPlanningReason(AstarRequest& astar_request);
@@ -198,7 +198,7 @@ class ParallelParkInScenario : public ParkingScenario {
   bool last_frame_limiter_valid_ = false;
   bool out_again_path_better_ = false;
 
-  public:
+  protected:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
   // do not clear it every frame in cruise state.

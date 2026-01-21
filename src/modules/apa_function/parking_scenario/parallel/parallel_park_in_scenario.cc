@@ -29,7 +29,6 @@
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
 #include "gjk_collision_detector.h"
-#include "hybrid_astar_common.h"
 #include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
@@ -39,7 +38,6 @@
 #include "parallel_path_generator.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "park_hmi_state.h"
-#include "src/modules/apa_function/util/apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -4841,7 +4839,7 @@ void ParallelParkInScenario::ProcessTruncationPoints(
   }
 }
 
-const int ParallelParkInScenario::PublishHybridAstarDebugInfo(
+const int ParallelParkInScenario::PublishHybridAstarCompletePathInfo(
     const HybridAStarResult& result, Transform2d* tf) {
   if (result.x.size() < 1) {
     ILOG_INFO << "no path";
@@ -4905,7 +4903,6 @@ const bool ParallelParkInScenario::IsNeedClipping(
   constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
 
   bool heading_flag = true;
-  bool sample_finish = false;
   const float heading_deg = std::abs(result.phi[i] * kRad2Deg);
 
   if (heading_deg > kHeadHeadingStartDeg && i > 0) {
@@ -4913,8 +4910,7 @@ const bool ParallelParkInScenario::IsNeedClipping(
     heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
   }
 
-  if (std::abs(result.phi[i]) * kRad2Deg <= kHeadingEndDeg && !sample_finish &&
-      heading_flag) {
+  if (heading_deg <= kHeadingEndDeg && heading_flag) {
     return false;
   } else {
     return true;
@@ -4945,7 +4941,7 @@ const pnc::geometry_lib::PathSegGear ParallelParkInScenario::GetGear(
   return path_seg_gear;
 }
 
-const int ParallelParkInScenario::PathOptimizationByCILQR(
+const int ParallelParkInScenario::PublishHybridAstarCurrentPathInfo(
     const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf) {
   if (first_seg_path.empty()) {
     return 0;
@@ -4954,17 +4950,7 @@ const int ParallelParkInScenario::PathOptimizationByCILQR(
   std::vector<pnc::geometry_lib::PathPoint> local_path;
   local_path.reserve(first_seg_path.size());
 
-  constexpr float kFirstXDiffThresh = 0.5f;
-  constexpr double kHeadingDiffThresh = 0.01;
-  const double target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
-                                        ->GetEgoInfoUnderSlot()
-                                        .target_pose.heading;
-  const float target_x = apa_world_ptr_->GetSlotManagerPtr()
-                             ->GetEgoInfoUnderSlot()
-                             .target_pose.pos.x();
   pnc::geometry_lib::PathPoint point;
-  float expansion_dir =
-      first_seg_path.front().gear == AstarPathGear::DRIVE ? 1.0 : -1.0;
 
   for (size_t i = 0; i < first_seg_path.size(); ++i) {
     const AStarPathPoint& path_pt = first_seg_path[i];
@@ -5076,33 +5062,35 @@ void ParallelParkInScenario::FillGearRequest(
             << int(astar_request.first_action_request.gear_request);
   ILOG_INFO << "gear request current_gear " << int(current_gear_);
   ILOG_INFO << "gear request replan_reason " << int(frame_.replan_reason);
-  if (frame_.replan_reason != ReplanReason::FIRST_PLAN) {
-    switch (current_gear_) {
-      case AstarPathGear::REVERSE:
-        astar_request.first_action_request.gear_request = AstarPathGear::DRIVE;
-        break;
-      case AstarPathGear::DRIVE:
-        astar_request.first_action_request.gear_request =
-            AstarPathGear::REVERSE;
-        break;
-      default:
-        astar_request.first_action_request.gear_request = AstarPathGear::NONE;
-        break;
-    }
-  }
-
-  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
-    astar_request.first_action_request.gear_request = current_gear_;
-  }
-
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
-    astar_request.first_action_request.gear_request = AstarPathGear::NONE;
-  }
 
   if (last_path_gear == PathSegGear::SEG_GEAR_DRIVE) {
     astar_request.first_action_request.gear_request = AstarPathGear::DRIVE;
   } else if (last_path_gear == PathSegGear::SEG_GEAR_REVERSE) {
     astar_request.first_action_request.gear_request = AstarPathGear::REVERSE;
+  } else {
+    if (frame_.replan_reason != ReplanReason::FIRST_PLAN) {
+      switch (current_gear_) {
+        case AstarPathGear::REVERSE:
+          astar_request.first_action_request.gear_request =
+              AstarPathGear::DRIVE;
+          break;
+        case AstarPathGear::DRIVE:
+          astar_request.first_action_request.gear_request =
+              AstarPathGear::REVERSE;
+          break;
+        default:
+          astar_request.first_action_request.gear_request = AstarPathGear::NONE;
+          break;
+      }
+    }
+
+    if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+      astar_request.first_action_request.gear_request = current_gear_;
+    }
+
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+      astar_request.first_action_request.gear_request = AstarPathGear::NONE;
+    }
   }
 
   // 目前,平行车位入库使用混合A星搜索，交换起点终点

@@ -2139,7 +2139,7 @@ const PathPlannerResult ParallelParkOutScenario::PubResponseForScenarioTry(
   }
   Transform2d response_tf;
   response_tf.SetBasePose(response_.request.base_pose);
-  PublishHybridAstarDebugInfo(response_.result, &response_tf);
+  PublishHybridAstarCompletePathInfo(response_.result, &response_tf);
   UpdatePathByGeometry();
   SetReleaseDirection(apa_hmi_, response_.request);
 
@@ -2178,10 +2178,9 @@ const PathPlannerResult ParallelParkOutScenario::PubResponseForScenarioRunning(
       }
 
       // if planning success, update gear
-      if (path_search_valid) {
-        current_gear_ = response_.first_seg_path[0].gear;
-        frame_.current_gear = GetGear(current_gear_);
-      }
+      current_gear_ = response_.first_seg_path[0].gear;
+      frame_.current_gear = GetGear(current_gear_);
+
       frame_.gear_command = frame_.current_gear;
 
       ILOG_INFO << "first path gear = "
@@ -2196,8 +2195,8 @@ const PathPlannerResult ParallelParkOutScenario::PubResponseForScenarioRunning(
 
       Transform2d response_tf;
       response_tf.SetBasePose(response_.request.base_pose);
-      PublishHybridAstarDebugInfo(response_.result, &response_tf);
-      PathOptimizationByCILQR(response_.first_seg_path, &response_tf);
+      PublishHybridAstarCompletePathInfo(response_.result, &response_tf);
+      PublishHybridAstarCurrentPathInfo(response_.first_seg_path, &response_tf);
       UpdatePathByGeometry();
 
       if (response_.request.plan_reason != PlanningReason::SLOT_REFRESHED) {
