@@ -42,7 +42,7 @@ struct MebParameters {
       1.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
   double disable_vehspd_display_max =
       12.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
-  double predict_t = 1.0;
+  double predict_t = 5.0;
   // double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   // double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
   // double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
@@ -88,7 +88,6 @@ enum MebInnerState {
   MEB_STATE_FAULT = 5,    // Fault
 };
 
-
 /*
 TODO:
 1.是否判断后视镜展开；
@@ -121,10 +120,17 @@ class MebCore {
   double CollisionCalculateAcc(double remain_dist);
   void CollisionOdBoxCalculate();
 
-  const MebResult LineCollisionUpdateCommon(const LineSegMent& line_seg,
-                                        const double heading_start,std::vector<Eigen::Vector2d> & obs_vec);
-  const MebResult ArcCollisionUpdateCommon(const ArcSegMent& arc,
-                                       const double heading_start,std::vector<Eigen::Vector2d> & obs_vec);
+  const MebResult LineCollisionUpdateCommon(
+      const LineSegMent& line_seg, const double dis_buffer,
+      std::vector<Eigen::Vector2d>& obs_vec);
+  const MebResult LineCollisionUpdateCommonOd(
+      const LineSegMent& line_seg, std::vector<Eigen::Vector2d>& obs_vec,std::vector<int> &obs_index_vec);
+  const MebResult ArcCollisionUpdateCommon(
+      const ArcSegMent& arc, const double dis_buffer,
+      std::vector<Eigen::Vector2d>& obs_vec);
+  const MebResult ArcCollisionUpdateCommonOd(
+      const ArcSegMent& arc, std::vector<Eigen::Vector2d>& obs_vec,
+      std::vector<int>& obs_index_vec);
   const MebResult CollisionUpdateUss();
 
   MebInnerState meb_inner_state_;
@@ -150,6 +156,7 @@ class MebCore {
   Eigen::Vector2d predict_point_;
   std::vector<Eigen::Vector2d> occ_obs_vec_;  // 自车坐标系下的障碍物
   std::vector<Eigen::Vector2d> od_obs_vec_;   // 自车坐标系下的障碍物
+  std::vector<int> od_obs_index_vec_;  // 自车坐标系下的障碍物下标
   std::vector<Eigen::Vector2d> uss_obs_vec_;  // 自车坐标系下的障碍物
   std::vector<double> uss_distance_vec_;      // 每个超声波扇形距离
   std::vector<double> uss_acc_vec_;           // 每个超声波扇形距离
@@ -159,6 +166,7 @@ class MebCore {
   double meb_zone_x2_ = 10.0;
   double meb_zone_y1_ = 10.0;
   double meb_zone_y2_ = 10.0;
+  int od_box_id_ = -1;
 };
 
 }  // namespace meb_core

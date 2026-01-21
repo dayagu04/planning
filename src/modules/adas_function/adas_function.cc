@@ -135,8 +135,8 @@ bool AdasFunction::Plan() {
     GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
         GetContext.get_param()->meb_request_status_const;
     GetContext.mutable_output_info()->meb_output_info_.meb_request_value = 0;
-    // GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
-    //     iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
+    GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+        iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
   }
 
   // run lkas_function
