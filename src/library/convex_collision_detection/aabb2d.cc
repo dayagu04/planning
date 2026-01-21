@@ -46,6 +46,16 @@ void AABB::Set(const Vector2r &center, const real length, const real width,
   max_ = p1.cwiseMax(p2).cwiseMax(p3).cwiseMax(p4);
   return;
 }
+  bool AABB::contain(const Eigen::Vector2d &p){
+  if (min_[0] > p.x() || min_[1] > p.y()) {
+    return false;
+  }
+
+  if (max_[0] < p.x() || max_[1] < p.y()) {
+    return false;
+  }
+  return true;
+  }
 
 bool AABB::contain(const AABB &other) const {
   if ((min_.array() > other.min_.array()).any()) return false;

@@ -277,6 +277,7 @@ class ApaSlotManager final {
   const bool RecommendParkOut() const;
   const bool LongitudinalConditions(const double dot_product, const ApaSlot& slot) const;
   const bool LateralConditions(double& dot_product, const ApaSlot& slot) const;
+  void RedefinePerpendicular2Parallel(const iflyauto::ParkingFusionSlot& fusion_slot,ApaSlot& slot);
 
  private:
   std::map<double, size_t> dist_id_map_;
