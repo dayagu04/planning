@@ -39,9 +39,11 @@ class SpatioTemporalPlanner : public Task {
   bool Execute() override;
 
  private:
-  void LogDebugInfo(
+  void PostProcessing(
       const TrajectoryPoints &traj_points,
       const std::vector<AgentFrenetSpatioTemporalInFo> &agents_state);
+
+  void LogDebugInfo();
 
   void UpdateIntersection();
 

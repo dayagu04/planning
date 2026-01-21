@@ -64,12 +64,13 @@ SpatioTemporalPlanner::SpatioTemporalPlanner(
 
 bool SpatioTemporalPlanner::Execute() {
   ILOG_INFO << "=======SpatioTemporalPlanner=======";
-  if (!PreCheck()) {
-    ILOG_DEBUG << "SpatioTemporalPlanner::PreCheck failed";
-    return false;
-  }
   spatio_temporal_union_plan_.Clear();
   spatio_temporal_union_plan_input_.Clear();
+  if (!PreCheck()) {
+    ILOG_DEBUG << "SpatioTemporalPlanner::PreCheck failed";
+    LogDebugInfo();
+    return false;
+  }
   // auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
   //                                .GetDebugInfoPb()
   //                                ->mutable_spatio_temporal_union_plan();
@@ -100,6 +101,7 @@ bool SpatioTemporalPlanner::Execute() {
   if (!ego_in_intersection_state_ && !construction_scene_output.enable_construction_passage) {
     ILOG_DEBUG << "SpatioTemporalPlanner::ego not in intersection!";
     last_enable_using_st_plan_ = false;
+    LogDebugInfo();
     return true;
   }
 
@@ -110,6 +112,7 @@ bool SpatioTemporalPlanner::Execute() {
   if (lc_state != kLaneKeeping) {
     ILOG_DEBUG << "SpatioTemporalPlanner::ego not in kLaneKeeping!";
     last_enable_using_st_plan_ = false;
+    LogDebugInfo();
     return true;
   }
 
@@ -117,6 +120,7 @@ bool SpatioTemporalPlanner::Execute() {
     ILOG_DEBUG
         << "SpatioTemporalPlanner::can not use spatio temporal union planning!";
     last_enable_using_st_plan_ = false;
+    LogDebugInfo();
     return true;
   }
 
@@ -146,15 +150,16 @@ bool SpatioTemporalPlanner::Execute() {
   spatio_temporal_union_plan_output.enable_using_st_plan = true;
   last_enable_using_st_plan_ = true;
 
-  LogDebugInfo(traj_points, agent_trajs_state);
+  PostProcessing(traj_points, agent_trajs_state);
+
+  LogDebugInfo();
 
   return true;
 }
 
-void SpatioTemporalPlanner::LogDebugInfo(
+void SpatioTemporalPlanner::PostProcessing(
     const TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agents_state) {
-#ifdef ENABLE_PROTO_LOG
   auto &lateral_obstacle_decision =
       session_->mutable_planning_context()
           ->mutable_lateral_obstacle_decider_output()
@@ -258,6 +263,11 @@ void SpatioTemporalPlanner::LogDebugInfo(
     }
   }
 
+  return;
+}
+
+void SpatioTemporalPlanner::LogDebugInfo() {
+#ifdef ENABLE_PROTO_LOG
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_spatio_temporal_union_plan_input()
