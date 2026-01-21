@@ -908,6 +908,8 @@ void TsrCore::RunOnce(void) {
   if (GetContext.get_param()->tsr_function_test_switch) {
     TsrTestFunction();
   }
+  //移到此处，解决flag不能清0的问题
+  ResetRealTimeTsrInfo();
 
   // output
   SetTsrOutputInfo();
@@ -939,7 +941,7 @@ void TsrCore::RunOnce(void) {
                    supp_sign_in_suppression_flag_);
 
   // reset info
-  ResetRealTimeTsrInfo();
+ // ResetRealTimeTsrInfo();
 }
 
 // 测试函数：根据不同的测试模式执行不同的测试场景
