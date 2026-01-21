@@ -1400,6 +1400,12 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
       last_state_ != kLaneKeeping) {
     ResetStateMachine();
   }
+  const double ego_press_line_ratio =
+    lc_request_.CalculatePressLineRatioByTwoLanes(
+        lc_lane_mgr_->origin_lane_virtual_id(),
+        lc_lane_mgr_->target_lane_virtual_id(),
+        transition_info_.lane_change_direction);
+  JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 更新压线率
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const planning_data::DynamicAgentNode* const agent) {
@@ -4187,7 +4193,6 @@ bool LaneChangeStateMachineManager::
           lc_lane_mgr_->origin_lane_virtual_id(),
           lc_lane_mgr_->target_lane_virtual_id(),
           transition_info_.lane_change_direction);
-  JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 压线率
   // 如果压线了， 重新映射起始ttc
   std::array<double, 3> x_press_ratio{0.0, 0.2};  // 后车 - 自车速度 kph
   std::array<double, 3> f_press_ttc{max_box_ttc_rear, 0.0};  // 起始ttc

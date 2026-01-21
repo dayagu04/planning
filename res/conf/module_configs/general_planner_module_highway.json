@@ -251,6 +251,8 @@
   "processed_trajectory_acc_thr": 0.5,
   "max_heading_diff_threshold_deg": 45.0,
   "left_right_turn_func_fading_away_switch": false,
+  "press_line_fewly_threshold": 0.3,
+  "use_press_line_fewly_threshold": false,
   "lc_short_dis_thr": 8,
   "enable_overtake_lane_change_confirmation": false,
   "general_lateral_decider": {

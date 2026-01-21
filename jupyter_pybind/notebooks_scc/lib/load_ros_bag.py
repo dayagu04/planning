@@ -991,9 +991,11 @@ class LoadRosbag:
         self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
         # if msg.current_state > 13 and msg.current_state < 19:
         #   scene_type = 'PARKING_APA'
-        if msg.current_state > 4 and msg.current_state <= 12:
-          scene_type = 'HIGHWAY'
-        elif (msg.current_state >= 50 and msg.current_state <= 62) or (msg.background_state >= 11 and msg.background_state <= 20):
+        if msg.current_state > 4 and msg.current_state < 7:
+          scene_type = 'HIGHWAY'  # ACC
+        elif msg.current_state > 7 and msg.current_state < 13:
+          scene_type = 'HIGHWAY'  # SCC NOA
+        elif msg.current_state >= 50 and msg.current_state <= 62:
           scene_type = 'HPP'
         elif msg.current_state >= 22 and msg.current_state <= 28:
           scene_type = 'NSA'

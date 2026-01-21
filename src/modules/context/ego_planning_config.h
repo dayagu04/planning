@@ -267,6 +267,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
     ReadItem<bool>(json, enable_overtake_lane_change_confirmation,
                      "enable_overtake_lane_change_confirmation");
+    press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
+    use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -303,6 +305,8 @@ struct EgoPlanningConfig : public Config {
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
   bool enable_overtake_lane_change_confirmation = false;
+  double press_line_fewly_threshold = 0.3;
+  bool use_press_line_fewly_threshold = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -4200,7 +4204,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     std::vector<double> speed_limits_highway{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 90.0/3.6, 120.0/3.6, 130.0/3.6, 150.0/3.6, 150.0/3.6};  // Speed limits for highway scenario
     std::vector<double> speed_limits_both_sides_different{20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6, 70.0/3.6, 80.0/3.6, 100.0/3.6, 130.0/3.6, 150.0/3.6};  // Speed limits when both sides triggered with different gear levels (use lower gear)
     std::vector<double> speed_limits_both_sides_same{15.0/3.6, 20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6, 150.0/3.6};  // Speed limits when both sides triggered with same gear level
-    
+
     // Curve road boundary speed limit configuration
     bool enable_curve_road_boundary_speed_limit = false;  // Enable curve road boundary speed limit feature
     double curve_road_radius_threshold = 300.0;  // Road radius threshold (m) to enable curve road boundary speed limit
@@ -4213,11 +4217,11 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     int curve_confirmation_frames = 4;  // Number of frames required to confirm curve road boundary speed limit
     int curve_max_gear_threshold = 4;  // Maximum gear threshold (gear must be < this value to be valid)
     std::vector<double> curve_speed_limits{20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6};  // Speed limits (m/s) for curve road boundary (corresponding to lateral_distance_ranges)
-    
+
     // Curve front edge expansion configuration based on speed limit
     std::vector<double> curve_front_edge_expansion_speed_breakpoints{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6};  // Speed breakpoints (m/s) for front edge expansion interpolation
     std::vector<double> curve_front_edge_expansion_values{0.30, 0.35, 0.40, 0.50, 0.60, 0.60};  // Expansion values (m) corresponding to speed breakpoints
-    
+
     // Lateral acceleration limit detection configuration
     bool enable_lateral_acceleration_limit = false;  // Enable lateral acceleration limit detection
     double lateral_acceleration_threshold = 2.0;  // Lateral acceleration threshold (m/s^2) to trigger speed limit
@@ -4226,14 +4230,14 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     double lateral_acceleration_speed_reduction = 10.0 / 3.6;  // Speed reduction (m/s) when lateral acceleration limit is triggered (default 10 kph)
     double lateral_acceleration_desired = 1.6;  // Desired lateral acceleration (m/s^2) for speed limit calculation (default 1.6)
     int curve_road_boundary_cooldown_frames = 15;  // Cooldown frames for curve road boundary speed limit (default 30)
-    
+
     // S-curve road boundary speed limit configuration
     bool enable_s_curve_road_boundary_speed_limit = false;  // Enable/disable S-curve road boundary speed limit feature
     double s_curve_min_radius_threshold = 200.0;  // Minimum curve radius threshold (m) for S-curve detection
     double s_curve_dkappa_threshold = 0.00025;  // dkappa threshold when kappa sign changes
     std::vector<double> s_curve_speed_limits{40.0/3.6, 40.0/3.6, 40.0/3.6, 40.0/3.6, 45.0/3.6, 50.0/3.6, 60.0/3.6};  // Speed limits (m/s) for S-curve based on gear (0-6)
     int s_curve_confirmation_frames = 2;  // Number of frames required to confirm S-curve
-    
+
     // Collision distance confirmation configuration
     int collision_confirmation_frames = 3;  // Minimum number of frames required to confirm collision distance (default 4)
     bool enable_road_boundary_collision_speed_limit = true;  // Enable/disable road boundary confirmed collision distance speed limit feature
@@ -5438,6 +5442,9 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, distance_stop_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
                      "distance_stop_between_ego_and_cipv_threshold");
+    ReadItem<double>(json, rads_distance_stop_between_ego_and_destination_cipv_threshold,
+                    "speed_planning", "start_stop_decider",
+                    "rads_distance_stop_between_ego_and_destination_cipv_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
     ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
@@ -5463,6 +5470,7 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_start_between_ego_and_large_cipv_threshold = 0.5;
   double distance_start_between_ego_and_cipv_threshold = 0.4;
   double distance_stop_between_ego_and_cipv_threshold = 3.0;
+  double rads_distance_stop_between_ego_and_destination_cipv_threshold = 1.2;
   double distance_to_go_threshold = 6.5;
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
@@ -6343,7 +6351,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     double lat_offset_buffer = 0.35;  // 横向贴边偏移缓冲区（米）
     double target_lane_side_cut_in_check_time = 1.5;  // 目标车道侧方车切入检查时间窗口（秒）
     double hold_steer_angle_rate_limit_deg = 150.0;  // hold状态下的方向盘转速限制（度/秒）
-    
+
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc

@@ -76,6 +76,22 @@ void EgoStateManager::set_ego_pose_and_vel(
   ego_hmi_v_ = vehicle_status.velocity().hmi_speed();
   ego_yaw_rate_ =
       vehicle_status.angular_velocity().heading_yaw_rate().value_rps();
+
+  // accumulate drive distance
+  const auto& function_info = session_->environmental_model().function_info();
+  if (session_->is_rads_scene()) {
+    if ((function_info.function_state() == common::DrivingFunctionInfo::ACTIVATE ||
+         function_info.function_state() == common::DrivingFunctionInfo::SUSPEND) &&
+        std::fabs(ego_v_) > 1e-3) {
+      double ds = std::hypot(ego_pose_raw_.x - last_ego_pose_raw_.x,
+                            ego_pose_raw_.y - last_ego_pose_raw_.y);
+      if (ds > 1e-3) {
+        ego_drive_distance_ += ds;
+      }
+    }
+  } else {
+    ego_drive_distance_ = 0.0;
+  }
 }
 
 void EgoStateManager::set_ego_position_llh(
