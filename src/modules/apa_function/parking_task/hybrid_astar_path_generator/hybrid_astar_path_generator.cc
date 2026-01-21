@@ -253,10 +253,17 @@ const bool HybridAStarPathGenerator::AnalyticExpansion(
       }
     }
 
-    if (ret && request_.scenario_type ==
-                   ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-      if (IsGearDifferent(path.gears[path.segment_size - 1],
+    if (ret) {
+      if (request_.scenario_type ==
+              ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
+          IsGearDifferent(path.gears[path.segment_size - 1],
                           AstarPathGear::REVERSE)) {
+        ret = false;
+      }
+      if (request_.scenario_type ==
+              ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN &&
+          IsGearDifferent(path.gears[path.segment_size - 1],
+                          AstarPathGear::DRIVE)) {
         ret = false;
       }
     }

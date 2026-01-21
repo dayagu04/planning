@@ -53,21 +53,29 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
         std::min(input.map_bound.x_max,
                  float(ogm_bound.max_x - rearaxle_frontoverhang_length));
 
+    double min_x = 2.68, min_curve_x = 1.68;
+    if (input.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      min_x += apa_param.GetParam().wheel_base;
+      min_curve_x += apa_param.GetParam().wheel_base;
+    }
+
     pose_bound_.x_down_bound =
         std::min({ego_info_under_slot.cur_pose.pos.x() - 0.4,
-                  ego_info_under_slot.target_pose.pos.x() + 0.4, 2.68}) -
+                  ego_info_under_slot.target_pose.pos.x() + 0.4, min_x}) -
         bound;
 
     if (input.swap_start_goal) {
       pose_bound_.x_down_bound =
           std::min({ego_info_under_slot.cur_pose.pos.x() - 0.4,
-                    ego_info_under_slot.target_pose.pos.x() - 0.1, 2.68}) -
+                    ego_info_under_slot.target_pose.pos.x() - 0.1, min_x}) -
           bound;
     }
 
     pose_bound_.curve_x_down_bound =
         std::min({ego_info_under_slot.cur_pose.pos.x() - 0.1,
-                  ego_info_under_slot.target_pose.pos.x() - 0.02, 1.68}) -
+                  ego_info_under_slot.target_pose.pos.x() - 0.02,
+                  min_curve_x}) -
         bound;
 
     pose_bound_.heading_down_bound = -1e-6;
