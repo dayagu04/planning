@@ -31,8 +31,8 @@ bool ParkingSwitchDecider::Execute() {
   const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
   const bool is_target_slot_allowed_to_park = IsTargetSlotAllowedToPark();
 
-  const double dist_to_target_slot = route_info_output.distance_to_target_slot;
-  const double dist_to_target_dest = route_info_output.distance_to_target_dest;
+  const double dist_to_target_slot = route_info_output.hpp_route_info_output.distance_to_target_slot;
+  const double dist_to_target_dest = route_info_output.hpp_route_info_output.distance_to_target_dest;
   const bool is_reached_target_slot =
       (is_exist_target_slot &&
        dist_to_target_slot < config_.dist_to_target_slot_thr);
@@ -133,8 +133,8 @@ bool ParkingSwitchDecider::UpdateTargetInfoBasedOnReferencePath(
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto &parking_slot_manager =
       session_->environmental_model().get_parking_slot_manager();
-  double dist_to_target_slot = route_info_output.distance_to_target_slot;
-  double dist_to_target_dest = route_info_output.distance_to_target_dest;
+  double dist_to_target_slot = route_info_output.hpp_route_info_output.distance_to_target_slot;
+  double dist_to_target_dest = route_info_output.hpp_route_info_output.distance_to_target_dest;
 
   if (reference_path != nullptr && parking_slot_manager->IsExistTargetSlot()) {
     const double ego_s = reference_path->get_frenet_ego_state().s();
@@ -147,7 +147,7 @@ bool ParkingSwitchDecider::UpdateTargetInfoBasedOnReferencePath(
       dist_to_target_slot = std::fabs(target_slot_frenet_pt.x - ego_s);
     }
 
-    const auto& target_dest_point = route_info_output.target_dest_point;
+    const auto& target_dest_point = route_info_output.hpp_route_info_output.target_dest_point;
     Point2D target_dest_cart_pt(target_dest_point.x(), target_dest_point.y());
     Point2D target_dest_frenet_pt{0.0, 0.0};
     if (frenet_coord->XYToSL(target_dest_cart_pt, target_dest_frenet_pt)) {

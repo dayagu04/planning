@@ -96,7 +96,7 @@ bool ParkingSlotManager::Update(
   const double distance_to_target_dest = session_->environmental_model()
                                              .get_route_info()
                                              ->get_route_info_output()
-                                             .distance_to_target_dest;
+                                              .hpp_route_info_output.distance_to_target_dest;
   if (distance_to_target_dest > 20.0) {
     return false;
   }

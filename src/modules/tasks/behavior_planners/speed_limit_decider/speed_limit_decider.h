@@ -101,7 +101,7 @@ class SpeedLimitDecider : public Task {
   // Helper functions for ramp processing
   uint64_t FindRampLinkId(
       double dist_to_ramp,
-      const std::vector<NOASplitRegionInfo> &split_region_info_list);
+      const std::vector<MapSplitRegionInfo> &split_region_info_list);
 
   bool CollectPointsFromLink(
       const iflymapdata::sdpro::LinkInfo_Link *link,

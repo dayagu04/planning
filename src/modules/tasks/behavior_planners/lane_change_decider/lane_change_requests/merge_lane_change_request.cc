@@ -259,7 +259,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto& feasible_lane_sequence =
-      route_info_output.mlc_decider_route_info.feasible_lane_sequence;
+      route_info_output.feasible_lane_sequence;
   const auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   const auto& ego_state =
@@ -363,19 +363,19 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   //   double distance_to_first_road_split = NL_NMAX;
   //   double dis_to_first_merge = NL_NMAX;
   //   const auto& split_region_info_list =
-  //       route_info_output.split_region_info_list;
-  //   const auto& merge_region_info_list =
-  //       route_info_output.merge_region_info_list;
+  //       route_info_output.map_split_region_info_list;
+  //   const auto& map_merge_region_info_list =
+  //       route_info_output.map_merge_region_info_list;
   //   if (!split_region_info_list.empty()) {
   //     if (split_region_info_list[0].is_valid) {
   //       distance_to_first_road_split =
   //           split_region_info_list[0].distance_to_split_point;
   //     }
   //   }
-  //   if (!merge_region_info_list.empty()) {
-  //     if (merge_region_info_list[0].is_valid) {
+  //   if (!map_merge_region_info_list.empty()) {
+  //     if (map_merge_region_info_list[0].is_valid) {
   //       dis_to_first_merge =
-  //       merge_region_info_list[0].distance_to_split_point;
+  //       map_merge_region_info_list[0].distance_to_split_point;
   //     }
   //   }
   //   if (distance_to_merge_point_ < max_trigger_merge_request_distance &&

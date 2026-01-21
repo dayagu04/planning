@@ -320,9 +320,6 @@ class VirtualLaneManager {
   double current_segment_passed_distance_ = 0.0;
   const double dis_threshold_to_last_merge_point_ = 600.0;
   const double dis_threshold_to_is_merged_point_ = 800.0;
-  std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
-  std::vector<std::pair<SplitRelativeDirection, double>>
-      split_dir_dis_info_list_;
   bool is_select_split_nearing_ramp_ = true;
 
   int origin_relative_id_zero_nums_ = 0;
