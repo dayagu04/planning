@@ -362,7 +362,7 @@ void SccLateralObstacleDecider::UpdateLateralObstacleDecisions() {
       HoldLatOffset(*frenet_obs);
     }
     history.last_is_avd_car = history.is_avd_car;
-    CheckLateralEmergencyAvoidObstacle(*frenet_obs);
+    // CheckLateralEmergencyAvoidObstacle(*frenet_obs);
   }
 }
 
@@ -1179,6 +1179,19 @@ void SccLateralObstacleDecider::UpdateObstacleInteractionInfo() {
   UpdateObstacleInteractionInfoBaseDynamicEnvironment(front_nearest_follow_obstacle);
   // 5 更新静态元素的避让标签
   UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace();
+
+  // 6 计算紧急变道
+  for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obs == nullptr) {
+      continue;
+    }
+    const Obstacle *obs = frenet_obs->obstacle();
+    if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
+        !frenet_obs->b_frenet_valid()) {
+      continue;
+    }
+    CheckLateralEmergencyAvoidObstacle(*frenet_obs);
+  }
 }
 
 bool SccLateralObstacleDecider::CheckSpatioTemporalPlanner() {
