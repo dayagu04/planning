@@ -270,8 +270,10 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;
   } else if (curr_state == kLaneChangeComplete) {
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-  } else if (curr_state == kLaneChangeCancel || curr_state == kLaneChangeHold) {
+  } else if (curr_state == kLaneChangeCancel) {
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
+  } else if (curr_state == kLaneChangeHold) {
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_HOLD;
   }
 
   if(is_distance_enough || last_frame_dir_turn_signal_road_to_ramp_ == RAMP_NONE ||
