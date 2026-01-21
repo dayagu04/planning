@@ -762,6 +762,8 @@ struct ApaParameters {
   // gen output params
   double max_velocity = 0.6;
 
+  bool parallel_enable_hybrid_astar = false;
+
   std::vector<float> footprint_circle_x = {1.35, 3.3, 3.3, 2.02, -0.55, -0.55,
                                            2.02, 2.7, 1.8, 0.9,  0.0};
   std::vector<float> footprint_circle_y = {0.0,  0.55, -0.55, -0.88, -0.5, 0.5,

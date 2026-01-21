@@ -3670,6 +3670,36 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
   first_arc.dis_ObsPin = center_to_obs_in - calc_params_.min_outer_front_corner_radius ; // 【新增 dis_ObsPin】
 
   ILOG_INFO << "dis_ObsPin after= " << first_arc.dis_ObsPin;
+
+  if (corner_safe && is_corner_out) {
+    std::vector<pnc::geometry_lib::PathPoint> sampled_path_pts;
+    const auto first_arc_temp = first_arc;
+    auto l2g_tf = input_.ego_info_under_slot.l2g_tf;
+    pnc::geometry_lib::SamplePointSetInArc(sampled_path_pts, first_arc_temp,
+                                           0.05);
+    for (int i = 0; i < sampled_path_pts.size(); i++) {
+      pnc::geometry_lib::LocalToGlobalTf ego_slot_tf(
+          sampled_path_pts[i].pos, sampled_path_pts[i].heading);
+      auto park_out_corner_tn = calc_params_.v_ego_farest_front_corner;
+      park_out_corner_tn.y() *= -calc_params_.slot_side_sgn;
+      auto park_out_corner_in_slot_pos = ego_slot_tf.GetPos(park_out_corner_tn);
+      const bool is_corner_out_slot =
+          park_out_corner_in_slot_pos.y() * calc_params_.slot_side_sgn >
+                  virtual_obs_y_lim * calc_params_.slot_side_sgn
+              ? true
+              : false;
+      if (is_corner_out_slot) {
+        first_arc.headingB = sampled_path_pts[i].heading;
+        first_arc.pB = sampled_path_pts[i].pos;
+        first_arc.length = (sampled_path_pts[i].heading - first_arc.headingA) *
+                           first_arc.circle_info.radius;
+        ILOG_INFO << "debug last path: ";
+        first_arc.PrintInfo();
+        break;
+      }
+    }
+  }
+
   return corner_safe && is_corner_out;
 }
 

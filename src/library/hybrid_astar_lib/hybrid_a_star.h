@@ -138,7 +138,8 @@ class HybridAStar {
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,
                              const AstarPathGear gear_request_info,
-                             Node3d* rs_node_to_goal);
+                             Node3d* rs_node_to_goal,
+                             const Pose2f& end_pose_parallel = Pose2f());
 
   void CalculateNodeFCost(Node3d* current_node, Node3d* next_node);
 
@@ -233,7 +234,8 @@ class HybridAStar {
   bool CalcRSPathToGoal(Node3d* current_node, const bool need_rs_dense_point,
                         const bool need_anchor_point,
                         const RSPathRequestType rs_request,
-                        const float rs_radius);
+                        const float rs_radius,
+                        const Pose2f& end_pose_parallel = Pose2f());
 
   float CalcSafeDistCost(Node3d* node);
 

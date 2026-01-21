@@ -1488,6 +1488,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.od_config.use_speed_bump, bool, "use_speed_bump");
   JSON_READ_VALUE(param.od_config.moving_veh_speed_thresh, double,
                   "moving_veh_speed_thresh");
+  JSON_READ_VALUE(param.parallel_enable_hybrid_astar, bool,
+                  "parallel_enable_hybrid_astar");
   return;
 }
 

@@ -55,6 +55,8 @@ enum class ParkSpaceType {
   VERTICAL,
   PARALLEL,
   SLANTING,
+  PARALLEL_IN,
+  PARALLEL_OUT,
   MAX_NUMBER,
 };
 

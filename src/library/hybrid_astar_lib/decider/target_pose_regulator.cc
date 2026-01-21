@@ -197,9 +197,11 @@ void TargetPoseRegulator::Process(
   }
 
   // park out
-  if (request_->direction_request_size > 1) {
-    GenerateCandidatesForVerticalHeadOut(edt, direction_request, veh_param);
-    return;
+  if (request_->space_type != ParkSpaceType::PARALLEL_OUT) {
+    if (request_->direction_request_size > 1) {
+      GenerateCandidatesForVerticalHeadOut(edt, direction_request, veh_param);
+      return;
+    }
   }
 
   // park out
