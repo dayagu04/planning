@@ -817,14 +817,15 @@ SlotCoord ParallelParkInScenario::AlignAndMoveSlotToLine(
 
   const double ego_to_slot = std::fabs(ego_distance - slot_distance);
 
+  const double move_min_distance = 0.03;
   if (std::fabs(ego_pos.y() - center.y()) > 0.01 &&
       ego_to_slot > apa_param.GetParam().pa_slot_move_distance) {
     line_normal *= -1.0;
     move_distance = ego_to_slot - apa_param.GetParam().pa_slot_move_distance;
     ILOG_INFO << "reverse line_normal = " << line_normal.x() << ", "
               << line_normal.y();
-  } else if (move_distance < 0.05) {
-    ILOG_INFO << "move_distance < 0.05, distance is too small";
+  } else if (move_distance < move_min_distance) {
+    ILOG_INFO << "move_distance < move_min_distance, distance is too small";
     return aligned_slot;
   }
   // If the current distance is already less than or equal to
@@ -1102,12 +1103,14 @@ const bool ParallelParkInScenario::GeneralPASlot() {
         std::atan2((mid23 - mid01).y(), (mid23 - mid01).x());
     double rect_heading = pnc::geometry_lib::NormalizeAngle(
         original_heading + M_PI / 2.0);  // 逆时针旋转90度
-    double rect_length = ego_info_under_slot.slot.slot_length_;  // 长
-    double rect_width = 1.2;                                     // 宽
+    double rect_length = apa_param.GetParam().car_length;  // 长
+    double rect_width = 1.2;                               // 宽
     ILOG_INFO << "rect_center = " << rect_center.x() << " " << rect_center.y();
     ILOG_INFO << "rect_heading = " << rect_heading;
     // Eigen::Vector2d pt_01to23_vec =
     bool is_rigid = false;
+    const double retain_distance_by_rigid = 0.45;
+    const double retain_distance_by_other = 0.15;
     std::unordered_map<size_t, std::vector<Eigen::Vector2d>> pa_curb_obs_map;
     for (const auto& pair :
          apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
@@ -1115,10 +1118,6 @@ const bool ParallelParkInScenario::GeneralPASlot() {
         continue;
       }
       const auto obs_scement = pair.second.GetObsScemanticType();
-
-      is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
-                  obs_scement == ApaObsScemanticType::COLUMN ||
-                  obs_scement == ApaObsScemanticType::CAR);
       if (obs_scement == ApaObsScemanticType::UNKNOWN ||
           obs_scement == ApaObsScemanticType::WALL) {
         for (const auto& obs_pt_local : pair.second.GetPtClout2dGlobal()) {
@@ -1127,6 +1126,9 @@ const bool ParallelParkInScenario::GeneralPASlot() {
                                          rect_width)) {
             // pa_curb_obs.emplace_back(obs_pt_local);
             pa_curb_obs_map[pair.first].emplace_back(obs_pt_local);
+            is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
+                        obs_scement == ApaObsScemanticType::COLUMN ||
+                        obs_scement == ApaObsScemanticType::CAR);
           }
         }
       }
@@ -1160,27 +1162,36 @@ const bool ParallelParkInScenario::GeneralPASlot() {
     if (pa_curb_obs_map[maximum_obs_id].size() < 3) {
       t_lane_.use_sturn_plan = true;
       ILOG_INFO << "pa curb obs size too very little";
+      slot2curb_dist_ = retain_distance_by_other;
+      Eigen::Vector2d v_10_normal(-v_10.y(), v_10.x());
+      Eigen::Vector2d move_normal =
+          v_10_normal.normalized() * (-t_lane_.slot_side_sgn) * slot2curb_dist_;
+      line_coeffs_out.x() = v_10.y() / v_10.x();
+      if (!is_line_slot) {
+        move_normal =
+            v_10_normal.normalized() * (-t_lane_.slot_side_sgn) *
+            (apa_param.GetParam().pa_slot_move_distance + slot2curb_dist_);
+      }
+      move_normal = select_slot_global.pt_2 + move_normal;
+      line_coeffs_out.y() =
+          move_normal.y() - line_coeffs_out.x() * move_normal.x();
+      ILOG_INFO << "move_normal = " << move_normal.x() << " "
+                << move_normal.y();
+    } else {
+      slot2curb_dist_ =
+          is_rigid ? retain_distance_by_rigid : retain_distance_by_other;
       if (is_line_slot) {
-        line_coeffs_out.x() = v_10.y() / v_10.x();
-        line_coeffs_out.y() = select_slot_global.pt_2.y() -
-                              line_coeffs_out.x() * select_slot_global.pt_3.x();
-      } else {
-        line_coeffs_out.x() = v_10.y() / v_10.x();
+        // line slot to pa
         Eigen::Vector2d v_10_normal(-v_10.y(), v_10.x());
-        Eigen::Vector2d move_normal =
-            v_10_normal.normalized() * t_lane_.slot_side_sgn *
-            apa_param.GetParam().pa_slot_move_distance;
+        Eigen::Vector2d move_normal = v_10_normal.normalized() *
+                                      (-t_lane_.slot_side_sgn) *
+                                      slot2curb_dist_;
+        line_coeffs_out.x() = v_10.y() / v_10.x();
         move_normal = select_slot_global.pt_2 + move_normal;
         line_coeffs_out.y() =
             move_normal.y() - line_coeffs_out.x() * move_normal.x();
-      }
-      // return false;
-    } else {
-      if (is_line_slot) {
-        // line slot to pa
-        line_coeffs_out.x() = v_10.y() / v_10.x();
-        line_coeffs_out.y() = select_slot_global.pt_2.y() -
-                              line_coeffs_out.x() * select_slot_global.pt_2.x();
+        ILOG_INFO << "move_normal = " << move_normal.x() << " "
+                  << move_normal.y();
       } else {
         // space slot to pa
         Eigen::Vector2d line_coeffs;
@@ -1211,7 +1222,6 @@ const bool ParallelParkInScenario::GeneralPASlot() {
     ILOG_INFO << "line_coeffs_out = " << line_coeffs_out.x() << " "
               << line_coeffs_out.y();
     first_line_coeffs_ = line_coeffs_out;
-    slot2curb_dist_ = is_rigid ? 0.45 : 0.15;  // TODO debug
     // calc slot side once at first
     slot_new_ = AlignAndMoveSlotToLine(
         select_slot_global, measures_ptr->GetPos(),
