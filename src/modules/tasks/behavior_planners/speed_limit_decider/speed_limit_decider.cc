@@ -496,7 +496,7 @@ double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
 // Find ramp link ID from split region info list
 uint64_t SpeedLimitDecider::FindRampLinkId(
     double dist_to_ramp,
-    const std::vector<NOASplitRegionInfo> &split_region_info_list) {
+    const std::vector<MapSplitRegionInfo> &split_region_info_list) {
   uint64_t ramp_link_id = static_cast<uint64_t>(-1);
   if (dist_to_ramp < kMaxDistanceToRamp) {
     for (size_t i = 0; i < split_region_info_list.size(); ++i) {
@@ -698,7 +698,7 @@ void SpeedLimitDecider::CollectRampCurvatureData(
   } else {
     // Case 2: Approaching ramp, start from next link of ramp_link_id
     const auto &split_region_info_list =
-        route_info_output.split_region_info_list;
+        route_info_output.map_split_region_info_list;
     uint64_t ramp_link_id = FindRampLinkId(dis_to_ramp, split_region_info_list);
 
     if (ramp_link_id == static_cast<uint64_t>(-1)) {
@@ -847,7 +847,7 @@ double SpeedLimitDecider::GetRampVelLimit() {
   uint64_t ramp_link_id = -1;
   double ramp_v_limit = 120;
   double dis_to_ramp = route_info_output.dis_to_ramp;
-  const auto &split_region_info_list = route_info_output.split_region_info_list;
+  const auto &split_region_info_list = route_info_output.map_split_region_info_list;
   if (dis_to_ramp < 2000.0) {
     for (int i = 0; i < split_region_info_list.size(); ++i) {
       if (std::fabs(split_region_info_list[i].distance_to_split_point -
@@ -875,10 +875,10 @@ bool SpeedLimitDecider::IsNearMergeCancelRampVelLimit() {
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   double dis_to_merge =
-      route_info_output.merge_region_info_list.empty()
+      route_info_output.map_merge_region_info_list.empty()
           ? NL_NMAX
-          : route_info_output.merge_region_info_list[0].distance_to_split_point;
-  if (!route_info_output.is_ramp_merge_to_road_on_expressway) {
+          : route_info_output.map_merge_region_info_list[0].distance_to_merge_point;
+  if (!route_info_output.gaode_route_info_output.is_ramp_merge_to_road_on_expressway) {
     dis_to_merge = NL_NMAX;
   }
   dis_to_merge_window_.pop_front();

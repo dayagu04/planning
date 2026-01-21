@@ -110,10 +110,8 @@ void EgoLaneTrackManger::TrackEgoLane(
       lane_change_decider_output.coarse_planning_info.int_lane_change_cmd;
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  const auto& mlc_decider_route_info = session_->environmental_model()
-                                           .get_route_info()
-                                           ->get_MLC_decider_route_info();
 
+  bool is_process_split_exchange = false;
   const bool is_in_lane_borrow_status = session_->planning_context()
                                             .lane_borrow_decider_output()
                                             .is_in_lane_borrow_status;
@@ -159,6 +157,19 @@ void EgoLaneTrackManger::TrackEgoLane(
   //判断自车是否处于分流场景
   ComputeIsSplitRegion(relative_id_lanes, order_ids_of_same_zero_relative_id, virtual_id_mapped_lane);
 
+  if (!route_info_output.map_split_region_info_list.empty()) {
+    if (!route_info_output.map_merge_region_info_list.empty()) {
+      is_process_split_exchange =
+          route_info_output.map_split_region_info_list[0]
+              .distance_to_split_point <
+          route_info_output.map_merge_region_info_list[0]
+              .distance_to_merge_point;
+    } else {
+      is_process_split_exchange = true;
+    }
+  } else {
+    is_process_split_exchange = false;
+  }
   if (zero_relative_id_nums < 2 || !ego_in_split_region_) {
     last_zero_relative_id_order_id_index_ = -1;
     last_track_ego_lane_ = nullptr;
@@ -181,26 +192,18 @@ void EgoLaneTrackManger::TrackEgoLane(
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
         double distance_to_first_road_split = NL_NMAX;
         double ego_dis_to_split_exchange_area_start = NL_NMAX;
-        NOASplitRegionInfo merge_region_info;
-        NOASplitRegionInfo split_region_info;
-        const auto& current_exchange_region_info =
-            mlc_decider_route_info.first_static_split_region_info;
-        if (current_exchange_region_info.is_ramp_merge ||
-            current_exchange_region_info.is_other_merge_to_road) {
-          merge_region_info = current_exchange_region_info;
-        } else {
-          split_region_info = current_exchange_region_info;
-        }
+        const auto& split_region_info_list =
+            route_info_output.map_split_region_info_list;
         bool enable_process_road_to_ramp = true;
         double ego_to_last_split_end_point_distance =
-            route_info_output.last_split_end_point_distance;
-        if (split_region_info.split_link_id != -1) {
+            route_info_output.sum_dis_to_last_split_exchange_area_end_point;
+        if (!split_region_info_list.empty()) {
           distance_to_first_road_split =
-              split_region_info.distance_to_split_point;
+              split_region_info_list[0].distance_to_split_point;
           ego_dis_to_split_exchange_area_start =
               distance_to_first_road_split +
-              split_region_info.start_fp_point.fp_distance_to_split_point;
-          enable_process_road_to_ramp = split_region_info.is_ramp_split;
+              split_region_info_list[0].start_fp_point.fp_distance_to_split_point;
+          enable_process_road_to_ramp = split_region_info_list[0].is_ramp_split;
         }
 
         if (!is_in_lane_borrow_status && ego_in_split_region_ &&
@@ -215,7 +218,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                      << is_on_road_select_ramp_situation_;
 
           if (is_on_road_select_ramp_situation_ &&
-              mlc_decider_route_info.is_process_split &&
+              is_process_split_exchange &&
               enable_process_road_to_ramp && lane_keep_status) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
@@ -586,7 +589,7 @@ void EgoLaneTrackManger::Reset() {
   is_leaving_ramp_ = false;
   is_on_ramp_ = false;
   is_ego_on_expressway_ = false;
-  first_split_dir_dis_info_.first = None;
+  first_split_dir_dis_info_.first = NO_SPLIT;
   first_split_dir_dis_info_.second = NL_NMAX;
   current_segment_passed_distance_ = 0.0;
   split_direction_dis_info_list_.clear();
@@ -606,22 +609,26 @@ void EgoLaneTrackManger::Update(const RouteInfoOutput& route_info_output) {
   is_on_ramp_ = route_info_output.is_on_ramp;
   dis_to_ramp_ = route_info_output.dis_to_ramp;
   is_leaving_ramp_ = false;
+  const auto first_split_dir = route_info_output.first_split_direction;
   first_split_dir_dis_info_.first =
-      route_info_output.first_split_dir_dis_info.first;
+      first_split_dir == RAMP_ON_LEFT
+          ? ON_LEFT
+          : (first_split_dir == RAMP_ON_RIGHT ? ON_RIGHT : NO_SPLIT);
   first_split_dir_dis_info_.second =
-      route_info_output.first_split_dir_dis_info.second;
+      route_info_output.distance_to_first_road_split;
   distance_to_first_road_merge_ =
       route_info_output.distance_to_first_road_merge;
   distance_to_first_road_split_ =
       route_info_output.distance_to_first_road_split;
   current_segment_passed_distance_ =
       route_info_output.current_segment_passed_distance;
-  sum_dis_to_last_split_point_ = route_info_output.sum_dis_to_last_split_point;
+  sum_dis_to_last_split_point_ = route_info_output.sum_dis_to_last_link_split_point;
   split_direction_dis_info_list_.clear();
 
-  for (int i = 0; i < route_info_output.split_dir_dis_info_list.size(); i++) {
+  for (int i = 0; i < route_info_output.map_split_region_info_list.size(); i++) {
+    const auto& split_region_info = route_info_output.map_split_region_info_list[i];
     split_direction_dis_info_list_.emplace_back(
-        route_info_output.split_dir_dis_info_list[i]);
+        static_cast<SplitRelativeDirection> (split_region_info.split_direction), split_region_info.distance_to_split_point);
   }
 }
 

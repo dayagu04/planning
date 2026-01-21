@@ -226,13 +226,13 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
 
   // update LaneChangeReason
   const double dis_to_merge =
-      route_info_output.merge_region_info_list.empty()
+      route_info_output.map_merge_region_info_list.empty()
           ? NL_NMAX
-          : route_info_output.merge_region_info_list[0].distance_to_split_point;
+          : route_info_output.map_merge_region_info_list[0].distance_to_merge_point;
   const double dis_to_split =
-      route_info_output.split_region_info_list.empty()
+      route_info_output.map_split_region_info_list.empty()
           ? NL_NMAX
-          : route_info_output.split_region_info_list[0].distance_to_split_point;
+          : route_info_output.map_split_region_info_list[0].distance_to_split_point;
   const auto lc_request_source = lane_change_decider_output.lc_request_source;
 
   if (lc_request_source == NO_REQUEST &&
@@ -245,24 +245,29 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
     const double dis_to_merge =
-        route_info_output.merge_region_info_list.empty()
+        route_info_output.map_merge_region_info_list.empty()
             ? NL_NMAX
-            : route_info_output.merge_region_info_list[0]
-                  .distance_to_split_point;
+            : route_info_output.map_merge_region_info_list[0]
+                  .distance_to_merge_point;
     // if (route_info_output.dis_to_ramp < 100.0 &&
     //     route_info_output.dis_to_ramp < dis_to_merge) {
     //   ad_info.lane_change_reason =
     //   iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     // } else
-    if (route_info_output.mlc_request_type_route_info.mlc_request_type ==
-        RAMP_TO_MAIN) {
+    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     } else {
       ad_info.lane_change_reason =
           iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
     }
   } else if (lc_request_source == MERGE_REQUEST) {
-    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE) {
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    } else {
+      ad_info.lane_change_reason =
+          iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
+    }
+    // ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
   }
 
   // update route info
@@ -272,7 +277,29 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.distance_to_ramp = NL_NMAX;
   }
   ad_info.distance_to_split = dis_to_split;
-  if (route_info_output.is_ramp_merge_to_road_on_expressway) {
+  bool is_ramp_merge_to_road_on_expressway = false;
+  const auto& route_info_sdpro_map =
+      session_->environmental_model().get_route_info()->get_sdpro_map();
+  if (!route_info_output.map_merge_region_info_list.empty()) {
+    const auto& merge_seg = route_info_sdpro_map.GetLinkOnRoute(
+        route_info_output.map_merge_region_info_list[0].merge_link_id);
+    const auto& merge_seg_last_seg =
+        route_info_sdpro_map.GetPreviousLinkOnRoute(
+            route_info_output.map_merge_region_info_list[0].merge_link_id);
+    if (merge_seg != nullptr && merge_seg_last_seg != nullptr) {
+      if ((route_info_sdpro_map.isRamp(merge_seg_last_seg->link_type()) ||
+           route_info_sdpro_map.isSaPa(merge_seg_last_seg->link_type())) &&
+          !route_info_sdpro_map.isRamp(merge_seg->link_type()) &&
+          (route_info_sdpro_map.isSaPa(merge_seg_last_seg->link_type()) ||
+           route_info_output.is_on_ramp)) {
+        is_ramp_merge_to_road_on_expressway = true;
+      }
+    }
+  }
+  if ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+           MERGE_SCENE ||
+       is_ramp_merge_to_road_on_expressway) &&
+      route_info_output.is_on_ramp) {
     ad_info.distance_to_merge = dis_to_merge;
   } else {
     ad_info.distance_to_merge = NL_NMAX;
