@@ -195,9 +195,10 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   }
 
   // 增加处理在接近匝道时，feasible lane至少有2条车道可达ramp，其中一条是1分2的lane，则从feasible lane中移除这条lane
-  // if (mlc_scene_type == SPLIT_SCENE) {
-  //   Erase1Split2FeasibleLane(feasible_lane_graph);
-  // }
+  if (mlc_scene_type == SPLIT_SCENE) {
+    Erase1Split2FeasibleLane(feasible_lane_graph);
+  }
+  
   CalculateFrontMergePointInfo();
 
   UpdateLCNumTask(relative_id_lanes, feasible_lane_graph);
