@@ -4661,20 +4661,42 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                     mlc_request_info_.emplace_back(
                         MLCRequestType{.lane_num = successor_exclnum,
                                        .mlc_request_type = AVOIDE_DIVERGE,
-                                       .split_direction = SPLIT_LEFT});
+                                       .split_direction = SPLIT_LEFT,
+                                       .link_id = split_link_id});
                     avoide_num = successor_exclnum;
                   }
                 } else {
                   for (int i = 0; i < successor_exclnum - 1; ++i) {
                     before_excr_feasible_lane.emplace_back(i + 1);
                     on_excr_feasible_lane.emplace_back(i + 1);
-                    mlc_request_info_.emplace_back(
-                        MLCRequestType{.lane_num = successor_exclnum,
-                                       .mlc_request_type = KEEP_LEFT,
-                                       .split_direction = SPLIT_LEFT});
                   }
+                  mlc_request_info_.emplace_back(
+                      MLCRequestType{.lane_num = successor_exclnum,
+                                     .mlc_request_type = KEEP_LEFT,
+                                     .split_direction = SPLIT_LEFT,
+                                     .link_id = split_link_id});
                 }
+              } else {
+                for (int i = 0; i < successor_exclnum - 1; ++i) {
+                  before_excr_feasible_lane.emplace_back(i + 1);
+                  on_excr_feasible_lane.emplace_back(i + 1);
+                }
+                mlc_request_info_.emplace_back(
+                    MLCRequestType{.lane_num = successor_exclnum,
+                                   .mlc_request_type = KEEP_LEFT,
+                                   .split_direction = SPLIT_LEFT,
+                                   .link_id = split_link_id});
               }
+            } else {
+              for (int i = 0; i < successor_exclnum - 1; ++i) {
+                before_excr_feasible_lane.emplace_back(i + 1);
+                on_excr_feasible_lane.emplace_back(i + 1);
+              }
+              mlc_request_info_.emplace_back(
+                  MLCRequestType{.lane_num = successor_exclnum,
+                                 .mlc_request_type = KEEP_LEFT,
+                                 .split_direction = SPLIT_LEFT,
+                                 .link_id = split_link_id});
             }
           }
         } else if (successor_exclnum <= before_exclnum) {
