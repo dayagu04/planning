@@ -980,7 +980,7 @@ void RouteInfo::CaculateSplitInfo(
       if (tencent_split_region_info_list_[0].is_valid) {
         continue;
       }
-      
+
       if (!tencent_merge_region_info_list_.empty()) {
         dis_between_first_split_and_merge =
             tencent_split_region_info_list_[0]
@@ -4640,8 +4640,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           } else {
             std::unordered_map<int, std::vector<LaneDirection>>
                 lane_direction_info;
-            if (CalculateLaneCurrentDirectionByFP(
-                    split_region_info->start_fp_point.fp,
+            if (split_region_info->start_fp_point.fp.has_value() &&
+                CalculateLaneCurrentDirectionByFP(
+                    split_region_info->start_fp_point.fp.value(),
                     lane_direction_info)) {
               auto it = lane_direction_info.find(successor_exclnum);
               if (it != lane_direction_info.end()) {
