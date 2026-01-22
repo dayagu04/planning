@@ -183,7 +183,7 @@ class ApaSlot final {
   ~ApaSlot() = default;
   ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot);
 
-  void Update(const iflyauto::ParkingFusionSlot& fusion_slot);
+  void Update(const iflyauto::ParkingFusionSlot& fusion_slot, bool is_redefine_slot_type = false, int ego2slot_side = 0);
 
   void Reset() {
     id_ = 0;

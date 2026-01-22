@@ -1160,6 +1160,12 @@ void ApaSlotManager::RedefinePerpendicular2Parallel(
   if (fusion_slot.type != iflyauto::PARKING_SLOT_TYPE_VERTICAL) {
     return;
   }
+  if (fusion_slot.allow_parking != iflyauto::ALLOW_PARKING)
+  {
+    return;
+  }
+
+  ApaObstacleManager obs = *obstacle_manager_ptr_.get();
   geometry_lib::GlobalToLocalTf g2l_tf;
   Eigen::Vector2d origin_pos;
   double origin_global_heading;
@@ -1169,63 +1175,68 @@ void ApaSlotManager::RedefinePerpendicular2Parallel(
        front_area_is_empty = true;
   bool is_redefine_slot_type = false;
 
-  origin_pos = slot.processed_corner_coord_global_.pt_01_mid -
-               slot.slot_length_ *
-                   slot.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
-  origin_global_heading = std::atan2(
-      slot.processed_corner_coord_global_.pt_23mid_01mid_vec.normalized().y(),
-      slot.processed_corner_coord_global_.pt_23mid_01mid_vec.normalized().x());
-  g2l_tf = geometry_lib::GlobalToLocalTf(origin_pos, origin_global_heading);
+  g2l_tf = slot.g2l_tf_;
 
   slot.TransformCoordFromGlobalToLocal(g2l_tf);
 
-  obstacle_manager_ptr_->TransformCoordFromGlobalToLocal(g2l_tf);
+  obs.TransformCoordFromGlobalToLocal(g2l_tf);
 
   ego_local_point.pos = g2l_tf.GetPos(measure_data_ptr_->GetPos());
   ego_local_point.heading = g2l_tf.GetHeading(measure_data_ptr_->GetHeading()) * 57.3;
+  if (ego_local_point.heading > 80 || ego_local_point.heading < -80)
+  {
+    return;
+  }
+  if (fabs(ego_local_point.pos.y()) > 5)
+  {
+    return;
+  }
   ILOG_INFO << "ego_local_point.pos.x = " << ego_local_point.pos.x() << "ego_local_point.pos.y = "
             << ego_local_point.pos.y() << "ego_local_point.heading = " << ego_local_point.heading;
   cdl::AABB slot_left_area, slot_right_area, slot_front_area;
   double min_x, min_y, max_x, max_y;
-  min_x = -0.35;
-  min_y = 0;
+  min_x = 1.5;
+  min_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
+                   slot.origin_corner_coord_local_.pt_3.y());
   max_x = std::max(slot.origin_corner_coord_local_.pt_0.x(),
-                   slot.origin_corner_coord_local_.pt_1.x()) +
-          0.35;
-  max_y = 1.5;
+                   slot.origin_corner_coord_local_.pt_1.x());
+  max_y = min_y + 1.5;
   slot_left_area.min_ = cdl::Vector2r(min_x, min_y);
   slot_left_area.max_ = cdl::Vector2r(max_x, max_y);
-  min_y = -1.5;
-  max_y = 0;
+  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                   slot.origin_corner_coord_local_.pt_2.y()) - 1.5;
+  max_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                   slot.origin_corner_coord_local_.pt_2.y());
   slot_right_area.min_ = cdl::Vector2r(min_x, min_y);
   slot_right_area.max_ = cdl::Vector2r(max_x, max_y);
   min_x = std::min(slot.origin_corner_coord_local_.pt_0.x(),
                    slot.origin_corner_coord_local_.pt_1.x());
-  min_y = std::min(slot.origin_corner_coord_local_.pt_1.y(),
-                   slot.origin_corner_coord_local_.pt_3.y());
-  max_x = min_x + 5.5;
-  max_y = std::max(slot.origin_corner_coord_local_.pt_0.y(),
-                   slot.origin_corner_coord_local_.pt_2.y());
+  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                   slot.origin_corner_coord_local_.pt_2.y()) + 0.3;
+  max_x = min_x + 3.5;
+  max_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
+                   slot.origin_corner_coord_local_.pt_3.y()) - 0.3;
   slot_front_area.min_ = cdl::Vector2r(min_x, min_y);
   slot_front_area.max_ = cdl::Vector2r(max_x, max_y);
-
-  for (const auto& pair : obstacle_manager_ptr_->GetObstacles()) {
-    for (const auto& pt : pair.second.GetPtClout2dGlobal()) {
+  for (const auto& pair : obs.GetObstacles()) {
+    for (const auto& pt : pair.second.GetPtClout2dLocal()) {
       if (left_area_is_empty) {
-        left_area_is_empty = slot_left_area.contain(pt);
+        left_area_is_empty = !(slot_left_area.contain(cdl::Vector2r(pt.x(), pt.y())));
       }
       if (right_area_is_empty) {
-        right_area_is_empty = slot_right_area.contain(pt);
+        right_area_is_empty = !(slot_right_area.contain(cdl::Vector2r(pt.x(), pt.y())));
       }
       if (front_area_is_empty) {
-        front_area_is_empty = slot_front_area.contain(pt);
+        front_area_is_empty = !(slot_front_area.contain(cdl::Vector2r(pt.x(), pt.y())));
       }
     }
   }
-  ILOG_INFO << "left_area_is_empty = " << static_cast<int>(left_area_is_empty) << "\n"
-            << "right_area_is_empty = " << static_cast<int>(right_area_is_empty) << "\n"
-            << "front_area_is_empty = " << static_cast<int>(front_area_is_empty);
-  if (ego_local_point.pos.y() < slot.origin_corner_coord_local_.pt_1.y()) {
+
+  ILOG_INFO << "slot origin id = " << fusion_slot.id << "  left_area_is_empty = " << static_cast<int>(left_area_is_empty) << "  right_area_is_empty = " << static_cast<int>(right_area_is_empty)
+            << "  front_area_is_empty = " << static_cast<int>(front_area_is_empty);
+
+  if (ego_local_point.pos.y() < slot.origin_corner_coord_local_.pt_0.y()) {
+    ego_side_to_slot = 1;
     if (!right_area_is_empty) {
       return;
     } else {
@@ -1237,8 +1248,8 @@ void ApaSlotManager::RedefinePerpendicular2Parallel(
             slot.origin_corner_coord_local_.pt_1.x()) {
           if (ego_local_point.heading <= 4 &&
               ego_local_point.heading > -80) {
-            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
             is_redefine_slot_type = true;
+            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
           } else {
             return;
           }
@@ -1253,7 +1264,8 @@ void ApaSlotManager::RedefinePerpendicular2Parallel(
       }
     }
   } else if (ego_local_point.pos.y() >
-             slot.origin_corner_coord_local_.pt_0.y()) {
+             slot.origin_corner_coord_local_.pt_1.y()) {
+    ego_side_to_slot = -1;
     if (!left_area_is_empty) {
       return;
     } else {
@@ -1265,8 +1277,8 @@ void ApaSlotManager::RedefinePerpendicular2Parallel(
             slot.origin_corner_coord_local_.pt_0.x()) {
           if (ego_local_point.heading >= -4 &&
               ego_local_point.heading < 80) {
-            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
             is_redefine_slot_type = true;
+            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
           } else {
             return;
           }
@@ -1274,18 +1286,19 @@ void ApaSlotManager::RedefinePerpendicular2Parallel(
           if (ego_local_point.heading < -2) {
             return;
           } else {
-            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
             is_redefine_slot_type = true;
+            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
           }
         }
       }
     }
   }
+  ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
   if (is_redefine_slot_type)
   {
     iflyauto::ParkingFusionSlot redefined_fusion_slot = fusion_slot;
     redefined_fusion_slot.type = iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL;
-    slot = ApaSlot(redefined_fusion_slot);
+    slot.Update(redefined_fusion_slot,is_redefine_slot_type,ego_side_to_slot);
   }
 
 }

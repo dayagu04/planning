@@ -15,7 +15,7 @@ ApaSlot::ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot) {
   Update(fusion_slot);
 }
 
-void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
+void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot, bool is_redefine_slot_type, int ego2slot_side) {
   id_ = fusion_slot.id;
   confidence_ = fusion_slot.confidence;
 
@@ -68,7 +68,21 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
   origin_corner_coord_global_.CalExtraCoord();
 
   CorrectSlotPointOrder();
-
+  if (is_redefine_slot_type) {
+    SlotCoord origin_corner_coord_global_tmp = origin_corner_coord_global_;
+    if (ego2slot_side == -1) {
+      origin_corner_coord_global_.pt_0 = origin_corner_coord_global_tmp.pt_1;
+      origin_corner_coord_global_.pt_1 = origin_corner_coord_global_tmp.pt_3;
+      origin_corner_coord_global_.pt_2 = origin_corner_coord_global_tmp.pt_0;
+      origin_corner_coord_global_.pt_3 = origin_corner_coord_global_tmp.pt_2;
+    } else if (ego2slot_side == 1) {
+      origin_corner_coord_global_.pt_0 = origin_corner_coord_global_tmp.pt_2;
+      origin_corner_coord_global_.pt_1 = origin_corner_coord_global_tmp.pt_0;
+      origin_corner_coord_global_.pt_2 = origin_corner_coord_global_tmp.pt_3;
+      origin_corner_coord_global_.pt_3 = origin_corner_coord_global_tmp.pt_1;
+    }
+    origin_corner_coord_global_.CalExtraCoord();
+  }
   PostProcessSlotPoint();
 
   if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
