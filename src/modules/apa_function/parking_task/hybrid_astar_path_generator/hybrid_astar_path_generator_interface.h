@@ -52,7 +52,7 @@ class HybridAstarPathGeneratorInterface final {
       std::vector<geometry_lib::PathPoint>&
           all_success_curve_path_first_gear_switch_pose_debug);
 
-  const bool GetPreSearchABBoxForDebug(cdl::AABB& pre_search_abbox);
+  const bool GetIntersetingAreaForDebug(cdl::AABB& interseting_area);
 
  private:
   std::unordered_map<ParkingScenarioType,

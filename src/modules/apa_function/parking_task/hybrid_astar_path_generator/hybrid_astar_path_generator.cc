@@ -1203,8 +1203,8 @@ HybridAStarPathGenerator::GetAllSuccessCurvePathFirstGearSwitchPoseForDebug() {
 #endif
 }
 
-const cdl::AABB& HybridAStarPathGenerator::GetPreSearchABBoxForDebug() {
-  return pre_search_abbox_;
+const cdl::AABB& HybridAStarPathGenerator::GetIntersetingAreaForDebug() {
+  return interesting_area_;
 }
 
 CompactNodePool HybridAStarPathGenerator::node_pool_;

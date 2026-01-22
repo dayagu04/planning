@@ -101,7 +101,7 @@ class PathGeneratorThread final {
       std::vector<geometry_lib::PathPoint>&
           all_success_curve_path_first_gear_switch_pose);
 
-  const bool PublishPreSearchABBox(cdl::AABB& pre_search_abbox);
+  const bool PublishIntersetingArea(cdl::AABB& interseting_area);
 
   const std::shared_ptr<CollisionDetectorInterface>& GetColDetInterfacePtr()
       const {
