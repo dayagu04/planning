@@ -1799,15 +1799,17 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
   // 这里是和动态障碍物做博弈的关键点，自车的速度与静止障碍物无关
   const double a = 0.0;
   // 如果自车以a的加速度发现自车与动态障碍物没有恐慌感（overlap，说明可以避让这个障碍物）
-  std::array<uint8_t, 6> timestamps{0, 1, 2, 3, 4, 5};
   bool ok = false;
   bool is_overlap_with_dynamic_agent = false;
   bool is_overtake_target_static_obstacle = false;
-  for (auto& i : timestamps) {
+  int start_idx = 0;     // 0.0s
+  int end_idx   = 50;    // 5.0s  (50 * 0.1)
+  int step_idx  = 2;     // 0.2s  (2 * 0.1)
+  for (int t_idx = start_idx; t_idx <= end_idx; t_idx += step_idx) {
     Polygon2d obstacle_sl_polygon;
     ok = reference_path_ptr_->get_polygon_at_time(
-        frenet_obstacle.id(), false, int(i * 10), obstacle_sl_polygon);
-    double delt_s = i * ego_v_s_ + 0.5 * a * i * i;
+        frenet_obstacle.id(), false, t_idx, obstacle_sl_polygon);
+    double delt_s = 0.1 * t_idx * ego_v_s_ + 0.5 * a * 0.01 * t_idx * t_idx;
     double ego_start_s =
         reference_path_ptr_->get_ego_frenet_boundary().s_start + delt_s;
     double ego_end_s =
