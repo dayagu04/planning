@@ -47,6 +47,14 @@ struct LSLInfo {
   double lsl_start_distance = 0.0;
   double lsl_end_distance = 0.0;
 };
+
+enum class LaneDirection {
+  straight_lane = 0,
+  left_turn_lane = 1,
+  right_turn_lane = 2,
+  left_u_turn_lane = 3,
+  right_u_turn_lane = 4,
+};
 class RouteInfo {
  public:
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
@@ -404,7 +412,8 @@ class RouteInfo {
                                    int erase_num);
   void OptimizeFeasibleLanesByDistance(
       NOASplitRegionInfo& exchange_region_info,
-      std::map<int, double>& feasible_lane_distance, double max_distance, int current_lane_num);
+      std::map<int, double>& feasible_lane_distance, double max_distance,
+      int current_lane_num);
   std::vector<int> GetIntersection(const std::vector<int>& vec1,
                                    const std::vector<int>& vec2);
   void ProcessLaneDistance(const std::shared_ptr<VirtualLane>& relative_id_lane,
@@ -431,5 +440,8 @@ class RouteInfo {
   void OptimizeFeasibleLanesForRampSplit(
       NOASplitRegionInfo& first_exchange_region_info,
       NOASplitRegionInfo& ramp_exchange_region_info);
+  bool CalculateLaneCurrentDirectionByFP(
+      iflymapdata::sdpro::FeaturePoint feature_point,
+      std::unordered_map<int, std::vector<LaneDirection>>& lane_direction_info);
 };
 }  // namespace planning
