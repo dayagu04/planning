@@ -267,6 +267,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
     ReadItem<bool>(json, enable_overtake_lane_change_confirmation,
                      "enable_overtake_lane_change_confirmation");
+    press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
+    use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -303,6 +305,8 @@ struct EgoPlanningConfig : public Config {
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
   bool enable_overtake_lane_change_confirmation = false;
+  double press_line_fewly_threshold = 0.3;
+  bool use_press_line_fewly_threshold = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -4004,6 +4008,152 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
         std::vector<std::string>{"speed_limit_decider",
                                  "tunnel_vel_limit_dis_table", "dis_table"},
         tunnel_vel_limit_dis_table.dis_table);
+
+    // Road boundary speed limit config
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_range_mins"},
+                  road_boundary_speed_limit_config.range_mins);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_range_maxs"},
+                  road_boundary_speed_limit_config.range_maxs);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_speed_limits"},
+                  road_boundary_speed_limit_config.speed_limits);
+    ReadItem<double>(json, road_boundary_speed_limit_config.headway_min,
+                     "speed_limit_decider", "road_boundary_headway_min");
+    ReadItem<double>(json, road_boundary_speed_limit_config.headway_max,
+                     "speed_limit_decider", "road_boundary_headway_max");
+    ReadItem<double>(json, road_boundary_speed_limit_config.max_search_distance,
+                     "speed_limit_decider", "road_boundary_max_search_distance");
+    ReadItem<int>(json, road_boundary_speed_limit_config.min_points_in_range,
+                  "speed_limit_decider", "road_boundary_min_points_in_range");
+    ReadItem<double>(json, road_boundary_speed_limit_config.both_sides_coefficient,
+                     "speed_limit_decider", "road_boundary_both_sides_coefficient");
+    ReadItem<double>(json, road_boundary_speed_limit_config.both_sides_coefficient_default,
+                     "speed_limit_decider", "road_boundary_both_sides_coefficient_default");
+    ReadItem<double>(json, road_boundary_speed_limit_config.decel_threshold_near,
+                     "speed_limit_decider", "road_boundary_decel_threshold_near");
+    ReadItem<double>(json, road_boundary_speed_limit_config.decel_value_near,
+                     "speed_limit_decider", "road_boundary_decel_value_near");
+    ReadItem<double>(json, road_boundary_speed_limit_config.decel_value_far,
+                     "speed_limit_decider", "road_boundary_decel_value_far");
+    ReadItem<double>(json, road_boundary_speed_limit_config.highway_min_speed,
+                     "speed_limit_decider", "road_boundary_highway_min_speed");
+    ReadItem<double>(json, road_boundary_speed_limit_config.expressway_min_speed,
+                     "speed_limit_decider", "road_boundary_expressway_min_speed");
+    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_distance_threshold,
+                     "speed_limit_decider", "road_boundary_lateral_distance_threshold");
+    ReadItem<int>(json, road_boundary_speed_limit_config.confirmation_frames,
+                  "speed_limit_decider", "road_boundary_confirmation_frames");
+    ReadItem<int>(json, road_boundary_speed_limit_config.cooldown_frames,
+                  "speed_limit_decider", "road_boundary_cooldown_frames");
+    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_road_boundary_speed_limit,
+                  "speed_limit_decider", "enable_road_boundary_speed_limit");
+    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_road_boundary_speed_limit_in_acc_mode,
+                  "speed_limit_decider", "enable_road_boundary_speed_limit_in_acc_mode");
+    ReadItem<int>(json, road_boundary_speed_limit_config.confirmation_frames_highway,
+                  "speed_limit_decider", "road_boundary_confirmation_frames_highway");
+    ReadItem<int>(json, road_boundary_speed_limit_config.min_points_in_range_highway,
+                  "speed_limit_decider", "road_boundary_min_points_in_range_highway");
+    ReadItem<int>(json, road_boundary_speed_limit_config.confirmation_frames_city_expressway,
+                  "speed_limit_decider", "road_boundary_confirmation_frames_city_expressway");
+    ReadItem<int>(json, road_boundary_speed_limit_config.min_points_in_range_city_expressway,
+                  "speed_limit_decider", "road_boundary_min_points_in_range_city_expressway");
+    ReadItem<int>(json, road_boundary_speed_limit_config.manual_intervention_reset_frames,
+                  "speed_limit_decider", "road_boundary_manual_intervention_reset_frames");
+    ReadItem<int>(json, road_boundary_speed_limit_config.manual_intervention_reset_frames_highway,
+                  "speed_limit_decider", "road_boundary_manual_intervention_reset_frames_highway");
+    ReadItem<int>(json, road_boundary_speed_limit_config.manual_intervention_reset_frames_city_expressway,
+                  "speed_limit_decider", "road_boundary_manual_intervention_reset_frames_city_expressway");
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_speed_limits_highway"},
+                  road_boundary_speed_limit_config.speed_limits_highway);
+    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_curve_road_boundary_speed_limit,
+                  "speed_limit_decider", "enable_curve_road_boundary_speed_limit");
+    ReadItem<double>(json, road_boundary_speed_limit_config.curve_road_radius_threshold,
+                     "speed_limit_decider", "road_boundary_curve_road_radius_threshold");
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_radius_breakpoints"},
+                  road_boundary_speed_limit_config.curve_radius_breakpoints);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_width_expansion_values"},
+                  road_boundary_speed_limit_config.width_expansion_values);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_dkappa_breakpoints"},
+                  road_boundary_speed_limit_config.curve_dkappa_breakpoints);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_dkappa_width_expansion_values"},
+                  road_boundary_speed_limit_config.dkappa_width_expansion_values);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_lateral_distance_ranges"},
+                  road_boundary_speed_limit_config.lateral_distance_ranges);
+    ReadItem<int>(json, road_boundary_speed_limit_config.curve_min_points_in_range,
+                  "speed_limit_decider", "road_boundary_curve_min_points_in_range");
+    ReadItem<int>(json, road_boundary_speed_limit_config.curve_confirmation_frames,
+                  "speed_limit_decider", "road_boundary_curve_confirmation_frames");
+    ReadItem<int>(json, road_boundary_speed_limit_config.curve_max_gear_threshold,
+                  "speed_limit_decider", "road_boundary_curve_max_gear_threshold");
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_speed_limits"},
+                  road_boundary_speed_limit_config.curve_speed_limits);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_front_edge_expansion_speed_breakpoints"},
+                  road_boundary_speed_limit_config.curve_front_edge_expansion_speed_breakpoints);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_curve_front_edge_expansion_values"},
+                  road_boundary_speed_limit_config.curve_front_edge_expansion_values);
+    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_lateral_acceleration_limit,
+                  "speed_limit_decider", "road_boundary_enable_lateral_acceleration_limit");
+    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_acceleration_threshold,
+                     "speed_limit_decider", "road_boundary_lateral_acceleration_threshold");
+    ReadItem<int>(json, road_boundary_speed_limit_config.lateral_acceleration_min_points,
+                  "speed_limit_decider", "road_boundary_lateral_acceleration_min_points");
+    ReadItem<int>(json, road_boundary_speed_limit_config.lateral_acceleration_confirmation_frames,
+                  "speed_limit_decider", "road_boundary_lateral_acceleration_confirmation_frames");
+    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_acceleration_speed_reduction,
+                     "speed_limit_decider", "road_boundary_lateral_acceleration_speed_reduction");
+    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_acceleration_desired,
+                     "speed_limit_decider", "road_boundary_lateral_acceleration_desired");
+    ReadItem<int>(json, road_boundary_speed_limit_config.curve_road_boundary_cooldown_frames,
+                  "speed_limit_decider", "road_boundary_curve_road_boundary_cooldown_frames");
+    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_s_curve_road_boundary_speed_limit,
+                  "speed_limit_decider", "enable_s_curve_road_boundary_speed_limit");
+    ReadItem<double>(json, road_boundary_speed_limit_config.s_curve_min_radius_threshold,
+                     "speed_limit_decider", "road_boundary_s_curve_min_radius_threshold");
+    ReadItem<double>(json, road_boundary_speed_limit_config.s_curve_dkappa_threshold,
+                     "speed_limit_decider", "road_boundary_s_curve_dkappa_threshold");
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_s_curve_speed_limits"},
+                  road_boundary_speed_limit_config.s_curve_speed_limits);
+    ReadItem<int>(json, road_boundary_speed_limit_config.s_curve_confirmation_frames,
+                  "speed_limit_decider", "road_boundary_s_curve_confirmation_frames");
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_speed_limits_both_sides_different"},
+                  road_boundary_speed_limit_config.speed_limits_both_sides_different);
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "road_boundary_speed_limits_both_sides_same"},
+                  road_boundary_speed_limit_config.speed_limits_both_sides_same);
+    ReadItem<int>(json, road_boundary_speed_limit_config.collision_confirmation_frames,
+                  "speed_limit_decider", "road_boundary_collision_confirmation_frames");
+    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_road_boundary_collision_speed_limit,
+                  "speed_limit_decider", "enable_road_boundary_collision_speed_limit");
+    ReadItem<double>(json, road_boundary_speed_limit_config.collision_speed_limit,
+                     "speed_limit_decider", "road_boundary_collision_speed_limit");
   }
   struct VehicleLatDisRelVelTable {
     std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
@@ -4022,6 +4172,76 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   struct POIVelLimitDisTable {
     std::vector<double> vel_limit_table{70, 80, 90, 100, 110, 120};
     std::vector<double> dis_table{50, 100, 170, 250, 320, 400};
+  };
+
+  struct RoadBoundarySpeedLimitConfig {
+    bool enable_road_boundary_speed_limit = true;  // Enable/disable road boundary speed limit feature
+    bool enable_road_boundary_speed_limit_in_acc_mode = false;  // Enable/disable road boundary speed limit in ACC mode
+    std::vector<double> range_mins{0.0, 0.3, 0.4, 0.6, 0.75, 0.9, 1.05, 1.4, 2.1};  // Minimum lateral distance for each range (m)
+    std::vector<double> range_maxs{0.4, 0.6, 0.7, 0.85, 1.0, 1.15, 1.5, 2.2, 999.9};  // Maximum lateral distance for each range (m)
+    std::vector<double> speed_limits{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6, 130.0/3.6, 150.0/3.6, 150.0/3.6};
+    double both_sides_coefficient = 0.75;
+    double both_sides_coefficient_default = 0.83;  // Default coefficient when both sides triggered but different gear levels
+    double decel_threshold_near = 1.2;
+    double decel_value_near = -2.0;
+    double decel_value_far = -1.0;
+    double highway_min_speed = 70.0 / 3.6;
+    double expressway_min_speed = 50.0 / 3.6;
+    double headway_min = 0.5;
+    double headway_max = 3.0;
+    double max_search_distance = 80.0;
+    double lateral_distance_threshold = 0.5;
+    int min_points_in_range = 5;
+    int confirmation_frames = 3;  // Number of frames required to confirm speed limit range change
+    int cooldown_frames = 50;  // Minimum frames to maintain speed limit value after change
+    int confirmation_frames_highway = 5;  // Confirmation frames for highway scenario
+    int min_points_in_range_highway = 10;  // Minimum points in range for highway scenario
+    int confirmation_frames_city_expressway = 4;  // Confirmation frames for elevated road scenario
+    int min_points_in_range_city_expressway = 7;  // Minimum points in range for elevated road scenario
+    int manual_intervention_reset_frames = 3000;  // Reset frames for manual intervention detection (default)
+    int manual_intervention_reset_frames_highway = 6000;  // Reset frames for highway scenario
+    int manual_intervention_reset_frames_city_expressway = 9000;  // Reset frames for city expressway scenario
+    std::vector<double> speed_limits_highway{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 90.0/3.6, 120.0/3.6, 130.0/3.6, 150.0/3.6, 150.0/3.6};  // Speed limits for highway scenario
+    std::vector<double> speed_limits_both_sides_different{20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6, 70.0/3.6, 80.0/3.6, 100.0/3.6, 130.0/3.6, 150.0/3.6};  // Speed limits when both sides triggered with different gear levels (use lower gear)
+    std::vector<double> speed_limits_both_sides_same{15.0/3.6, 20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6, 150.0/3.6};  // Speed limits when both sides triggered with same gear level
+
+    // Curve road boundary speed limit configuration
+    bool enable_curve_road_boundary_speed_limit = false;  // Enable curve road boundary speed limit feature
+    double curve_road_radius_threshold = 300.0;  // Road radius threshold (m) to enable curve road boundary speed limit
+    std::vector<double> curve_radius_breakpoints{0.0, 25.0, 50.0, 100.0, 150.0, 200.0};  // Curve radius breakpoints for width expansion interpolation (m)
+    std::vector<double> width_expansion_values{0.30, 0.20, 0.15, 0.10, 0.05, 0.0};  // Width expansion values (m) corresponding to breakpoints
+    std::vector<double> curve_dkappa_breakpoints{0.0, 0.00016, 0.0002, 0.00025, 0.0003};  // Curve dkappa breakpoints for width expansion interpolation (ascending order)
+    std::vector<double> dkappa_width_expansion_values{0.0, 0.0, 0.6, 0.8, 0.9};  // Width expansion values (m) corresponding to dkappa breakpoints
+    std::vector<double> lateral_distance_ranges{0.40, 0.55, 0.70, 0.85};  // Lateral distance ranges (m) for point counting
+    int curve_min_points_in_range = 4;  // Minimum points in lateral distance range to trigger
+    int curve_confirmation_frames = 4;  // Number of frames required to confirm curve road boundary speed limit
+    int curve_max_gear_threshold = 4;  // Maximum gear threshold (gear must be < this value to be valid)
+    std::vector<double> curve_speed_limits{20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6};  // Speed limits (m/s) for curve road boundary (corresponding to lateral_distance_ranges)
+
+    // Curve front edge expansion configuration based on speed limit
+    std::vector<double> curve_front_edge_expansion_speed_breakpoints{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6};  // Speed breakpoints (m/s) for front edge expansion interpolation
+    std::vector<double> curve_front_edge_expansion_values{0.30, 0.35, 0.40, 0.50, 0.60, 0.60};  // Expansion values (m) corresponding to speed breakpoints
+
+    // Lateral acceleration limit detection configuration
+    bool enable_lateral_acceleration_limit = false;  // Enable lateral acceleration limit detection
+    double lateral_acceleration_threshold = 2.0;  // Lateral acceleration threshold (m/s^2) to trigger speed limit
+    int lateral_acceleration_min_points = 4;  // Minimum number of points with lat_acc exceeding threshold
+    int lateral_acceleration_confirmation_frames = 3;  // Number of frames required to confirm lateral acceleration limit
+    double lateral_acceleration_speed_reduction = 10.0 / 3.6;  // Speed reduction (m/s) when lateral acceleration limit is triggered (default 10 kph)
+    double lateral_acceleration_desired = 1.6;  // Desired lateral acceleration (m/s^2) for speed limit calculation (default 1.6)
+    int curve_road_boundary_cooldown_frames = 15;  // Cooldown frames for curve road boundary speed limit (default 30)
+
+    // S-curve road boundary speed limit configuration
+    bool enable_s_curve_road_boundary_speed_limit = false;  // Enable/disable S-curve road boundary speed limit feature
+    double s_curve_min_radius_threshold = 200.0;  // Minimum curve radius threshold (m) for S-curve detection
+    double s_curve_dkappa_threshold = 0.00025;  // dkappa threshold when kappa sign changes
+    std::vector<double> s_curve_speed_limits{40.0/3.6, 40.0/3.6, 40.0/3.6, 40.0/3.6, 45.0/3.6, 50.0/3.6, 60.0/3.6};  // Speed limits (m/s) for S-curve based on gear (0-6)
+    int s_curve_confirmation_frames = 2;  // Number of frames required to confirm S-curve
+
+    // Collision distance confirmation configuration
+    int collision_confirmation_frames = 3;  // Minimum number of frames required to confirm collision distance (default 4)
+    bool enable_road_boundary_collision_speed_limit = true;  // Enable/disable road boundary confirmed collision distance speed limit feature
+    double collision_speed_limit = 15.0 / 3.6;  // Speed limit (m/s) when collision is confirmed (default 15 kph)
   };
 
   int lon_num_step = 25;
@@ -4091,6 +4311,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   POIVelLimitDisTable toll_station_vel_limit_dis_table;
   POIVelLimitDisTable non_express_vel_limit_dis_table;
   POIVelLimitDisTable tunnel_vel_limit_dis_table;
+  RoadBoundarySpeedLimitConfig road_boundary_speed_limit_config;
 };
 struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -5221,6 +5442,9 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, distance_stop_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
                      "distance_stop_between_ego_and_cipv_threshold");
+    ReadItem<double>(json, rads_distance_stop_between_ego_and_destination_cipv_threshold,
+                    "speed_planning", "start_stop_decider",
+                    "rads_distance_stop_between_ego_and_destination_cipv_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
     ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
@@ -5246,6 +5470,7 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_start_between_ego_and_large_cipv_threshold = 0.5;
   double distance_start_between_ego_and_cipv_threshold = 0.4;
   double distance_stop_between_ego_and_cipv_threshold = 3.0;
+  double rads_distance_stop_between_ego_and_destination_cipv_threshold = 1.2;
   double distance_to_go_threshold = 6.5;
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
@@ -6095,10 +6320,24 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
       ReadItem<double>(json, exe_rear_speed_ratio, "lane_change_safety_check", "exe_rear_speed_ratio");
       ReadItem<double>(json, faster_rear_delay_time, "lane_change_safety_check",
                        "faster_rear_delay_time");
+      ReadItem<double>(json, rear_comfort_decel, "lane_change_safety_check",
+                       "rear_comfort_decel");
       ReadItem<double>(json, lat_offset_buffer, "lane_change_safety_check",
                        "lat_offset_buffer");
       ReadItem<double>(json, target_lane_side_cut_in_check_time, "lane_change_safety_check",
                        "target_lane_side_cut_in_check_time");
+      ReadItem<double>(json, hold_steer_angle_rate_limit_deg, "lane_change_safety_check",
+                       "hold_steer_angle_rate_limit_deg");
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
+                                 "vel_table"},
+                                 hold_state_vel_jerk_map.vel_table);
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
+                                 "jerk_table"},
+                                 hold_state_vel_jerk_map.jerk_table);
     }
     double exe_ttc_ratio = 0.5;
     double exe_rear_speed_ratio = 1.1;
@@ -6108,8 +6347,11 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     double rear_close_distance_threshold = 6.0;  // 近距离后车距离阈值（米），小于此值认为是近距离尾随
     double rear_close_speed_diff_threshold = 1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
     double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
+    double rear_comfort_decel = 0.7;  // 后车舒适减速度（m/s²）
     double lat_offset_buffer = 0.35;  // 横向贴边偏移缓冲区（米）
     double target_lane_side_cut_in_check_time = 1.5;  // 目标车道侧方车切入检查时间窗口（秒）
+    double hold_steer_angle_rate_limit_deg = 150.0;  // hold状态下的方向盘转速限制（度/秒）
+
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
@@ -6120,6 +6362,11 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<double> min_space_table     {0.1, 0.8,  1.2,  2.5,  3.5,  5.0,   6.5};   // 触发变道需要预留最小空间
     };
     RearVehicleSpeedMinSpaceMap rear_vehicle_speed_min_space_map;
+    struct HoldStateVelJerkMap {
+        std::vector<double> vel_table{4.167, 8.333, 16.667, 25.0};  // 速度表 (m/s)
+        std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};  // 对应的jerk值
+    };
+    HoldStateVelJerkMap hold_state_vel_jerk_map;
 };
 
 struct HmiDeciderConfig : public EgoPlanningConfig{
@@ -6129,9 +6376,12 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                    "tfl_reminder_cipv_dis");
     ReadItem<double>(json, construction_warning_hmi_speed_max, "hmi_decider",
                    "construction_warning_hmi_speed_max");
+    ReadItem<double>(json, obstacle_brake_hmi_reminder_dis, "hmi_decider",
+                    "obstacle_brake_hmi_reminder_dis");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
+  double obstacle_brake_hmi_reminder_dis = 8.0;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{
@@ -6142,4 +6392,12 @@ struct ReferencePathManagerConfig : public EgoPlanningConfig{
   }
   bool is_enable_construction_refline = false;
 };
+
+struct NarrowSpaceDeciderConfig : public EgoPlanningConfig{
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+  }
+
+};
+
 }  // namespace planning

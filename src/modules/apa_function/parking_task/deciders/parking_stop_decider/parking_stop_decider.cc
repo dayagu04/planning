@@ -241,10 +241,10 @@ void ParkingStopDecider::GeneratePathFootPrint(
   PolygonFootPrint foot_print_little_buffer;
   PolygonFootPrint foot_print_big_buffer;
   GenerateVehCompactPolygon(config_.static_obs_buffer.lat_buffer, lon_buffer,
-                            config_.static_obs_buffer.lat_buffer, false,
+                            config_.static_obs_buffer.lat_buffer, false, false,
                             &foot_print_little_buffer);
   GenerateVehCompactPolygon(config_.slow_speed_buffer.lat_buffer, lon_buffer,
-                            config_.slow_speed_buffer.lat_buffer, false,
+                            config_.slow_speed_buffer.lat_buffer, false, false,
                             &foot_print_big_buffer);
 
   small_buffer_path_polygons_.clear();
@@ -750,6 +750,21 @@ const double ParkingStopDecider::GetStopDistanceByOD() {
   }
 
   return kDefaultRemainDist;
+}
+
+const trajectory::Trajectory& ParkingStopDecider::SelectSpeedTrajectory(
+    const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr,
+    const trajectory::Trajectory& history_trajectory,
+    const pnc::geometry_lib::PathSegGear gear_command) const {
+
+  if (history_trajectory.empty() || history_trajectory.GetGear() != gear_command) {
+    // ILOG_INFO << "speed planning use mpc predict pt";
+
+    return predict_path_ptr->GetPredictTrajectory();
+  }
+
+  // ILOG_INFO << "speed planning use history speed trajectory";
+  return history_trajectory;
 }
 
 }  // namespace apa_planner

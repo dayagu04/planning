@@ -25,11 +25,13 @@ struct MLCRequestType {
   int lane_num;
   EgoMLCRequestType mlc_request_type;
   SplitDirection split_direction;
+  uint64 link_id;
 
   void reset() {
     lane_num = -1;
     mlc_request_type = None_MLC;
     split_direction = SPLIT_NONE;
+    link_id = -1;
   }
 };
 
@@ -113,6 +115,8 @@ class RouteInfo {
   MLCDeciderConfig mlc_decider_config_;
   std::vector<MLCRequestType> mlc_request_info_;
   RouteInfoOutput route_info_output_;
+  std::vector<NOASplitRegionInfo> tencent_split_region_info_list_;
+  std::vector<NOASplitRegionInfo> tencent_merge_region_info_list_;
 
   // for NOA variables
   ad_common::sdmap::SDMap sd_map_;
@@ -267,7 +271,7 @@ class RouteInfo {
   bool CalculateMergeFP(MergeType* merge_type,
                         iflymapdata::sdpro::FeaturePoint* find_fp,
                         uint64* fp_link_id, double* dis_to_merge_fp,
-                        double search_distance);
+                        int* merge_lane_sequence, double search_distance);
   bool CalculateFeasibleLane(
       NOASplitRegionInfo* split_region_info,
       const ad_common::sdpromap::SDProMap& sdpro_map) const;
@@ -276,6 +280,7 @@ class RouteInfo {
   bool CalculateOtherMergeRoadFeasibleLane(
       NOASplitRegionInfo* split_region_info);
   bool IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type,
+                 int* merge_lane_sequence,
                  const iflymapdata::sdpro::FeaturePoint& fp) const;
   bool IsExpandFP(iflymapdata::sdpro::LaneChangeType* expand_type,
                   const iflymapdata::sdpro::FeaturePoint& fp) const;
@@ -425,6 +430,9 @@ class RouteInfo {
                                    const std::vector<int>& vec2);
   void ProcessLaneDistance(const std::shared_ptr<VirtualLane>& relative_id_lane,
                            const std::map<int, double>& feasible_lane_distance);
+  void ProcessLaneMapMergePoint(
+      const std::shared_ptr<VirtualLane>& relative_id_lane,
+      const std::unordered_map<int, MapMergePointInfo>& map_merge_points_info);
   bool IsClosingTollStationEntrance(
       const iflymapdata::sdpro::LinkInfo_Link* link,
       const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link,
@@ -441,5 +449,8 @@ class RouteInfo {
       std::map<int, SplitDirection>& expand_lane_sequence_vec,
       const iflymapdata::sdpro::LinkInfo_Link* link, double distance_on_link,
       double search_distance);
+  void OptimizeFeasibleLanesForRampSplit(
+      NOASplitRegionInfo& first_exchange_region_info,
+      NOASplitRegionInfo& ramp_exchange_region_info);
 };
 }  // namespace planning

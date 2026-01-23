@@ -353,13 +353,12 @@ void ObstacleManager::ProcessOccupancyWall(
   split_points(polygon_points, polygon_size, frenet_coord, points_vec);
 
   for (auto &object_points : points_vec) {
-    if (object_points.size() < 5) {
+    if (object_points.size() < 3) {
       continue;
     }
     Obstacle obstacle(kOccupancyObjectIdOffset + index_offset,
                       std::move(object_points), iflyauto::OBJECT_TYPE_OCC_WALL);
-    if (obstacle.is_vaild() &&
-        FilterObstacleByDistance(obstacle, frenet_coord, ego_point)) {
+    if (obstacle.is_vaild()) {
       add_occupancy_obstacle(obstacle);
     }
     ++index_offset;
@@ -376,14 +375,13 @@ void ObstacleManager::ProcessOccupancyObject(
   for (size_t j = 0; j < polygon_size; ++j) {
     object_points.emplace_back(polygon_points[j].x, polygon_points[j].y);
   }
-  if (object_points.size() < 5) {
+  if (object_points.size() < 3) {
     return;
   }
   Obstacle obstacle(
       kOccupancyObjectIdOffset + object.additional_occupancy_info.track_id,
       std::move(object_points), object.common_occupancy_info.type);
-  if (obstacle.is_vaild() &&
-      FilterObstacleByDistance(obstacle, frenet_coord, ego_point)) {
+  if (obstacle.is_vaild()) {
     add_occupancy_obstacle(obstacle);
   }
 }

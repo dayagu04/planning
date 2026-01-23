@@ -12,7 +12,7 @@ class PolynomialCurveSampling : public CurveSampling {
 
   explicit PolynomialCurveSampling(
       const MapBound* XYbounds, const ParkObstacleList* obstacles,
-      const AstarRequest* request, EulerDistanceTransform* edt,
+      const AstarRequest* request, HierarchyEulerDistanceTransform* hierarchy_edt,
       ParkReferenceLine* ref_line, const PlannerOpenSpaceConfig* config,
       const float min_radius,
       std::shared_ptr<NodeCollisionDetect> collision_detect);

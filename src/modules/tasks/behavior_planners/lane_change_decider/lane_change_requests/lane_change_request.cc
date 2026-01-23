@@ -542,24 +542,35 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                              .get_virtual_lane_manager()
                              ->get_current_lane();
 
-  const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
-  bool is_process_split = route_info_output.mlc_decider_route_info.is_process_split ||
-                          route_info_output.baidu_mlc_scene == SPLIT_SCENE;
+  bool is_process_split =
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+      SPLIT_SCENE;
+
   bool is_mlc_avoidance =
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_DIVERGE ||
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_MERGE;
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_SPLIT ||
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_MERGE;
+
+  int minVal_seq = 1000;
+  int maxVal_seq = -1000;
+  for (const auto& seq: route_info_output.feasible_lane_sequence) {
+    if (seq < minVal_seq) {
+      minVal_seq = seq;
+    }
+
+    if (seq > maxVal_seq) {
+      maxVal_seq = seq;
+    }
+  }
   bool is_one_lane_gap =
       lc_request == RIGHT_CHANGE
-          ? (route_info_output.minVal_seq - route_info_output.ego_seq) == 1
-          : (route_info_output.ego_seq - route_info_output.maxVal_seq) == 1;
+          ? (minVal_seq - route_info_output.ego_seq) == 1
+          : (route_info_output.ego_seq - maxVal_seq) == 1;
+
   const bool is_satisfy_dis_condition =
-      route_info_output.mlc_request_type_route_info
-                  .distance_to_exchange_region < 100.0 &&
-          is_one_lane_gap ||
-      (route_info_output.baidu_mlc_scene == SPLIT_SCENE &&
-       route_info_output.dis_to_ramp < 100.0);
+      route_info_output.mlc_decider_scene_type_info
+              .dis_to_link_topo_change_point < 100.0;
 
   if (is_process_split && lc_request_source == MAP_REQUEST &&
       !is_mlc_avoidance && is_satisfy_dis_condition) {

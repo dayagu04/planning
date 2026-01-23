@@ -57,7 +57,7 @@ void PathSafeChecker::ExcuteDistanceCheck(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false,
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false, false,
                             &polygon_foot_print_);
 
   // check path
@@ -128,7 +128,7 @@ void PathSafeChecker::ExcuteCollisionCheck(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false,
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false, false,
                             &polygon_foot_print_);
 
   // check path
@@ -215,6 +215,10 @@ const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
     if (only_check_static_movable_obs_ && !pair.second.IsMovableStaticObs()) {
       continue;
     }
+    if (!use_limiter_ && pair.second.GetObsAttributeType() ==
+                             apa_planner::ApaObsAttributeType::SLOT_LIMITER) {
+      continue;
+    }
 
     // envelop box check
     gjk_interface_.PolygonCollisionByCircleCheck(
@@ -289,7 +293,9 @@ const bool PathSafeChecker::IsVehicleCollision(
 
 bool PathSafeChecker::CalcEgoCollision(const Pose2D& ego_pose,
                                        const double lat_buffer,
-                                       const double lon_buffer) {
+                                       const double lon_buffer,
+                                       const bool use_limiter) {
+  use_limiter_ = use_limiter;
   is_path_collision_ = false;
 
   if (obs_manager_ == nullptr) {
@@ -307,7 +313,7 @@ bool PathSafeChecker::CalcEgoCollision(const Pose2D& ego_pose,
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer, lon_buffer, lat_buffer, false,
+  GenerateVehCompactPolygon(lat_buffer, lon_buffer, lat_buffer, false, false,
                             &polygon_foot_print_);
 
   is_collision =
@@ -472,7 +478,7 @@ const bool PathSafeChecker::IsCollisionByStaticMavableOD(
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false,
+  GenerateVehCompactPolygon(lat_buffer_, lon_buffer_, lat_buffer_, false, false,
                             &polygon_foot_print_);
 
   // check path

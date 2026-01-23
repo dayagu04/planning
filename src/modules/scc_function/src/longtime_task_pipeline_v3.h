@@ -18,10 +18,12 @@
 #include "tasks/behavior_planners/cipv_lost_prohibit_acceleration_decider/cipv_lost_prohibit_acceleration_decider.h"
 #include "tasks/behavior_planners/cipv_lost_prohibit_start_decider/cipv_lost_prohibit_start_decider.h"
 #include "tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider.h"
+// #include "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
 #include "tasks/behavior_planners/ego_lane_road_right_decider/ego_lane_road_right_decider.h"
 #include "tasks/behavior_planners/expand_st_boundaries_decider/expand_st_boundaries_decider.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
+#include "tasks/behavior_planners/hmi_decider/scc_hmi_decider.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
@@ -40,8 +42,6 @@
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
-// #include "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
-#include "tasks/behavior_planners/hmi_decider/hmi_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -105,7 +105,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<SccLongitudinalMotionPlannerV3>
       scc_longitudinal_motion_planner_;
-  std::unique_ptr<HMIDecider> hmi_decider_;
+  std::unique_ptr<SCCHMIDecider> hmi_decider_;
 
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
 

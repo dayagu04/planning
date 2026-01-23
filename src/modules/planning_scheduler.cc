@@ -827,15 +827,15 @@ void PlanningScheduler::FillPlanningHmiInfo(
   auto hpp_info = &(session_.mutable_planning_context()
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
-  hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
+  hpp_info->is_avaliable = route_info_output.hpp_route_info_output.is_on_hpp_lane;
   hpp_info->distance_to_parking_space =
-      is_reached_target_slot ? 0.0 : route_info_output.distance_to_target_slot;
-  hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
+      is_reached_target_slot ? 0.0 : route_info_output.hpp_route_info_output.distance_to_target_slot;
+  hpp_info->is_on_hpp_lane = route_info_output.hpp_route_info_output.is_on_hpp_lane;
   // hpp_info->is_on_hpp_lane = true;  // hack
   hpp_info->is_reached_hpp_trace_start =
-      route_info_output.is_reached_hpp_start_point;
+      route_info_output.hpp_route_info_output.is_reached_hpp_start_point;
   hpp_info->accumulated_driving_distance =
-      route_info_output.sum_distance_driving;
+      route_info_output.hpp_route_info_output.sum_distance_driving;
 
   hpp_info->is_approaching_intersection = false;
   hpp_info->is_approaching_turn = false;
@@ -903,6 +903,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       hpp_info->is_new_parking_space_found = true;
     }
   }
+
   return;
 }
 
@@ -975,8 +976,8 @@ void PlanningScheduler::FillAdasPlanningHmiInfo(
       GetContext.get_output_info()->meb_output_info_.meb_request_status;
   planning_hmi_info->meb_output_info.meb_request_value =
       GetContext.get_output_info()->meb_output_info_.meb_request_value;
-  // planning_hmi_info->meb_output_info.meb_request_direction =
-  //     GetContext.get_output_info()->meb_output_info_.meb_request_direction;
+  planning_hmi_info->meb_output_info.meb_request_direction =
+      GetContext.get_output_info()->meb_output_info_.meb_request_direction;
   // HMI for amap
   planning_hmi_info->amap_output_info.amap_state =
       GetContext.get_output_info()->amap_output_info_.amap_state;
@@ -1247,7 +1248,7 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
     double dist = session_.environmental_model()
                       .get_route_info()
                       ->get_route_info_output()
-                      .distance_to_target_dest;
+                      .hpp_route_info_output.distance_to_target_dest;
     const double kdistance_thresh = 20.0;
     if (dist > kdistance_thresh) {
       return false;
@@ -1405,7 +1406,7 @@ void PlanningScheduler::CheckTrajectory() {
       case FaultType::TRAJ_CURVATURE_RANGE: {
         if (std::any_of(traj_points.begin(), traj_points.end(),
                         [](const TrajectoryPoint& traj_point) {
-                          return std::fabs(traj_point.curvature) > 0.2;
+                          return std::fabs(traj_point.curvature) > 0.35;
                         })) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
@@ -1434,7 +1435,7 @@ void PlanningScheduler::CheckTrajectory() {
         const auto& proj_point = projection_spline.GetOutput().point_proj;
         const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
                                         init_point.y() - proj_point.y());
-        if (fabs(lon_err) > 1.5) {
+        if (fabs(lon_err) > 3.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
@@ -1473,7 +1474,7 @@ void PlanningScheduler::CheckTrajectory() {
         bool is_acc = ego_state_mgr->planning_init_point().a > 0.1;
         const auto lon_acc_err =
             ego_state_mgr->planning_init_point().a - ego_state_mgr->ego_acc();
-        if (is_acc && fabs(lon_acc_err) > 1.5) {
+        if (is_acc && fabs(lon_acc_err) > 3.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&

@@ -9,7 +9,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_52927/trigger/20251229/20251229-13-58-29/data_collection_CHERY_M32T_52927_EVENT_KEY_2025-12-29-13-58-29_no_camera.bag"
+bag_path = "/data_cold/abu_zone/project/aeb_data/aeb_real_time_data/2026011517/bestune_e541_80716/JZerlunche_9kph_19-bestune_e541_80716-2026-01-15-17-43-32.bag.1768567290.open-loop.scc.plan"
 frame_dt = 0.02
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -79,14 +79,14 @@ lka_json_value_list = [
                          "meb_occ_obs_distance","meb_radius","meb_fusion_occ_obs_size","meb_fusion_od_obs_size","meb_relative_distance_min",
                          "meb_occ_path_distance","meb_uss_obs_distance","meb_uss_collision_flag","meb_od_acc_min","meb_occ_acc_min","meb_uss_acc_min",
                          "meb_output_state","meb_output_requset_status","meb_output_requset_value","meb_od_ttc_min","meb_occ_ttc_min","meb_uss_ttc_min",
-                         "meb_fusion_uss_obs_size","meb_od_box_collision_flag",
+                         "meb_fusion_uss_obs_size","meb_od_box_collision_flag","meb_od_box_id",
                         ]
 adas_json_value_list =  [ #adas_debug info
                          "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
                          "params_ldp_c0_right_offset", "params_ldp_center_line_offset","params_ldp_ttlc_right_hack","params_ldp_tlc_thrd","params_ldw_enable_speed",
                          "state_left_turn_light_off_time","state_right_turn_light_off_time","state_driver_hand_trq","state_ego_curvature","state_fl_wheel_distance_to_line",
                          "state_fr_wheel_distance_to_line","state_vehicle_speed", "state_yaw_rate","state_left_departure_speed","state_right_departure_speed","state_steer_wheel_angle_degree",
-                         "state_yaw_rate_observer","state_brake_pedal_pressed","state_vel_acc",
+                         "state_yaw_rate_observer","state_brake_pedal_pressed","state_vel_acc","state_shift_lever",
                          "road_left_line_boundary_type", "road_left_line_line_type","road_left_line_begin","road_left_line_end","road_left_line_c0","road_left_line_c1","road_left_line_c2","road_left_line_c3","state_fl_wheel_distance_to_roadedge",
                          "road_right_line_boundary_type","road_right_line_line_type","road_right_line_begin", "road_right_line_end","road_right_line_c0","road_right_line_c1","road_right_line_c2","road_right_line_c3","state_fr_wheel_distance_to_roadedge",
                          "road_left_line_valid","road_right_line_valid","road_left_roadedge_valid","road_right_roadedge_valid","road_lane_width_valid","road_lane_width",
@@ -228,11 +228,11 @@ fig_vehicle_state.line('time', 'state_driver_hand_trq', source = adas_json_list_
 # fig_vehicle_state.line('time', 'state_ego_curvature', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_curvature')
 fig_vehicle_state.line('time', 'state_steer_wheel_angle_degree', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'steer_angle_rad')
 fig_vehicle_state.line('time', 'state_brake_pedal_pressed', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'brake_pedal_pressed')
-
+fig_vehicle_state.line('time', 'state_shift_lever', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'shift_lever')
 
 f_dynamic_state = fig_dynamic_state.line('time', 'meb_radius', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'meb_radius')
 fig_dynamic_state.line('time', 'state_ego_curvature', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'state_ego_curvature')
-# fig_dynamic_state.line('time', 'state_left_turn_light_off_time', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'left_turn_light_off_time')
+fig_dynamic_state.line('time', 'meb_od_box_id', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'od_box_id')
 # fig_dynamic_state.line('time', 'state_right_turn_light_off_time', source = adas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'right_turn_light_off_time')
 
 f_result = fig_result.line('time', 'meb_intervention_flag', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'intervention_flag')
@@ -387,7 +387,15 @@ def slider_callback(bag_time):
 
   print("state_vehicle_speed",state_vehicle_speed)
   print("acc_ttc_vec_",uss_acc_vec_)
-
+  print("od_box_dis_buffer",planning_json['od_box_dis_buffer'])
+  print("OdBox_index",planning_json['OdBox_index'])
+  print("OdBox_dis_type",planning_json['OdBox_dis_type'])
+  print("Arc_dis_type",planning_json['Arc_dis_type'])
+  print("Arc_dis_buffer",planning_json['Arc_dis_buffer'])
+  print("Arc_index",planning_json['Arc_index'])
+  print("Line_dis_type",planning_json['Line_dis_type'])
+  print("Line_dis_buffer",planning_json['Line_dis_buffer'])
+  print("Line_index",planning_json['Line_index'])
 
 #   print("meb_od_obs_x_vector",meb_od_obs_x_vector)
 #   print("meb_od_obs_y_vector",meb_od_obs_y_vector)

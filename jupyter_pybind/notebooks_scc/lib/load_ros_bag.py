@@ -621,7 +621,7 @@ class LoadRosbag:
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
-                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state",\
+                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state", "obstacle_brake_hmi_sts",\
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'road_radius_origin',\
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
@@ -644,6 +644,13 @@ class LoadRosbag:
                          "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
                          "leading_vehicle_speed", "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold", \
                          "left_overtake_speed_threshold", "right_overtake_speed_threshold", \
+                         "road_boundary_regular_v_limit_set", "road_boundary_regular_v_limit", "road_boundary_regular_trigger_distance", "road_boundary_regular_required_decel", "road_boundary_regular_manual_intervention_detected", "road_boundary_regular_manual_intervention_reset_count",\
+                         "road_boundary_regular_is_left_triggered", "road_boundary_regular_is_right_triggered", "road_boundary_regular_left_range_idx", "road_boundary_regular_right_range_idx", "road_boundary_regular_cooldown_count", \
+                         "road_boundary_strictest_applied", "road_boundary_strictest_v_limit", "road_boundary_strictest_trigger_distance", "road_boundary_strictest_required_decel","road_boundary_strictest_cooldown_count",\
+                         "s_curve_road_boundary_triggered", "s_curve_road_boundary_v_limit", "s_curve_road_boundary_trigger_distance", "s_curve_min_radius", "s_curve_first_direction", \
+                         "curve_road_boundary_road_radius", "curve_road_boundary_left_gear", "curve_road_boundary_right_gear", "curve_road_boundary_v_limit", "curve_road_boundary_trigger_distance", \
+                         "lateral_acceleration_limit_triggered", "lateral_acceleration_limit_v_limit","lateral_acceleration_limit_trigger_distance",\
+                         "road_boundary_collision_v_limit", "road_boundary_collision_trigger_distance", "road_boundary_collision_valid", "road_boundary_collision_distance",\
                          "left_lane_is_on_navigation_route", "right_lane_is_on_navigation_route", \
                          "is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_", "cone_nums_of_front_objects", "is_emergency_avoidance_situation_", "leading_vehicle_id_", \
                          "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
@@ -737,7 +744,8 @@ class LoadRosbag:
                          "meb_occ_path_distance","meb_uss_obs_distance","meb_uss_collision_flag",
                          "meb_occ_path_distance","meb_uss_obs_distance","meb_uss_collision_flag","meb_od_acc_min","meb_occ_acc_min","meb_uss_acc_min",
                          "meb_output_state","meb_output_requset_status","meb_output_requset_value","meb_od_ttc_min","meb_occ_ttc_min","meb_uss_ttc_min",
-                         "meb_fusion_uss_obs_size","meb_od_box_collision_flag",
+                         "meb_fusion_uss_obs_size","meb_od_box_collision_flag","meb_od_box_id","od_box_dis_buffer","OdBox_index","OdBox_dis_type",
+                         "Arc_dis_type","Arc_dis_buffer","Arc_index","Line_dis_type","Line_dis_buffer","Line_index",
                          #adas_debug info
                          "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
                          "params_ldp_c0_right_offset", "params_ldp_center_line_offset","params_ldp_ttlc_right_hack","params_ldp_tlc_thrd","params_ldw_enable_speed",
@@ -756,7 +764,7 @@ class LoadRosbag:
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
                          "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3",
                          "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_","sideway_relative_id_zero_nums","left_lane_samedir_exist_flag","left_sideway_near_gap_tmp",
-                         "right_lane_samedir_exist_flag","right_sideway_near_gap_tmp",]
+                         "right_lane_samedir_exist_flag","right_sideway_near_gap_tmp","state_shift_lever",]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
@@ -785,9 +793,14 @@ class LoadRosbag:
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
                          "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
-                         "distance_to_target_slot", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
+                         "dist_to_target_slot", "dist_to_target_dest", "is_exist_target_slot", "is_target_slot_allowed_to_park",
+                          "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
+      # nsa
+      json_value_list += ["narrow_space_state", "narrow_space_left_rear_x","narrow_space_left_rear_y","narrow_space_right_rear_x", "narrow_space_right_rear_y", \
+                          "narrow_space_left_front_x","narrow_space_left_front_y","narrow_space_right_front_x", "narrow_space_right_front_y"]
+      #
       json_vector_list += ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
                            "road_right_line_all_dx_vec_","road_right_line_all_dy_vec_",
                            "road_left_roadedge_all_dx_vec_","road_left_roadedge_all_dy_vec_",
@@ -978,8 +991,10 @@ class LoadRosbag:
         self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
         # if msg.current_state > 13 and msg.current_state < 19:
         #   scene_type = 'PARKING_APA'
-        if msg.current_state >= 4 and msg.current_state <= 12:
-          scene_type = 'HIGHWAY'
+        if msg.current_state > 4 and msg.current_state < 7:
+          scene_type = 'HIGHWAY'  # ACC
+        elif msg.current_state > 7 and msg.current_state < 13:
+          scene_type = 'HIGHWAY'  # SCC NOA
         elif msg.current_state >= 50 and msg.current_state <= 62:
           scene_type = 'HPP'
         elif msg.current_state >= 22 and msg.current_state <= 28:

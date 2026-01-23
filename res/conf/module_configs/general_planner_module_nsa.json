@@ -70,7 +70,7 @@
   "hpp_replan_threshold_speed": [1.0, 4.167, 11.111],
   "hpp_replan_lat_err_threshold_value": [0.2, 0.4, 0.6],
   "hpp_replan_lon_err_threshold_value": [0.6, 0.8, 1.0],
-  "nsa_cruise_speed": 1.389,
+  "nsa_cruise_speed": 1.0,
   "reference_point_velocity": 2.0,
   "approach_distance_threshold_planning": 50,
   "nudge_buffer_road_boundary": 0.6,

@@ -37,6 +37,17 @@ enum PathPlanType {
   PLAN_TYPE_COUNT,
 };
 
+enum PathPlanSource {
+  NONE_SOURCE,
+  MULTI_ALIGN_INSLOT,
+  MULTI_PLAN_INSLOT,
+  ADJUST_PLAN_INSLOT,
+  PREPARELINE_TO_INSLOT,
+  SEARCH_SOURCE,
+  EGO_TO_PREPARELINE,
+  SOURCE_COUNT,
+};
+
 enum PathSegType {
   SEG_TYPE_INVALID,
   SEG_TYPE_LINE,
@@ -664,6 +675,8 @@ struct PathSegment {
 
   double average_obs_dist = 26.8;
 
+  PathPlanSource path_source = PathPlanSource::NONE_SOURCE;
+
   LineSegment line_seg;
   Arc arc_seg;
 
@@ -834,6 +847,10 @@ struct PathSegment {
   void PrintInfo(const bool enable_log = true) const;
 
   const bool IsPtOnPathSeg(const PathPoint &pt) const;
+
+  void SetPathSource(const PathPlanSource ps) {
+    path_source = ps;
+  }
 };
 
 const bool IsSTrunPath(const PathSegment &path_seg1,
@@ -1458,6 +1475,11 @@ const bool ExtractSTurnAndStraight(
 const PolyRelation CheckTwoPolygonRelationship(
     const std::vector<Eigen::Vector2d> &polyA,
     const std::vector<Eigen::Vector2d> &polyB);
+
+const bool CalculateArcFromTwoPoints(
+    const pnc::geometry_lib::PathPoint& start_point,
+    const pnc::geometry_lib::PathPoint& end_point,
+    pnc::geometry_lib::Arc& result_arc, const double min_turn_radius);
 
 }  // namespace geometry_lib
 }  // namespace pnc

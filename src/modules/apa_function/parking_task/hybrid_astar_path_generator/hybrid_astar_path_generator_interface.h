@@ -1,6 +1,7 @@
 #pragma once
 
 #include "apa_context.h"
+#include "heading_in/hybrid_astar_perpendicular_heading_in_path_generator.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_config.h"
 #include "hybrid_astar_context.h"
@@ -54,8 +55,11 @@ class HybridAstarPathGeneratorInterface final {
   const bool GetPreSearchABBoxForDebug(cdl::AABB& pre_search_abbox);
 
  private:
-  std::shared_ptr<HybridAStarPerpendicularTailInPathGenerator>
-      hybrid_astar_perpendicular_tail_in_path_generator_ptr_;
+  std::unordered_map<ParkingScenarioType,
+                     std::shared_ptr<HybridAStarPathGenerator>>
+      path_generator_list_;
+
+  std::shared_ptr<HybridAStarPathGenerator> cur_path_generator_;
 
   ParkingScenarioType scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
 

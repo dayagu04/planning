@@ -320,8 +320,7 @@ void ApaObstacleManager::Update(
   }
 
   // limiters
-  if (param.enable_side_pass_limiter &&
-      state_machine_manager_.IsParkingStatus()) {
+  if (param.enable_side_pass_limiter) {
     const iflyauto::ParkingFusionInfo* slot_list =
         &local_view->parking_fusion_info;
 

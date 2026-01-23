@@ -14,6 +14,8 @@
 
 namespace planning {
 
+constexpr double kDefaultLaneBorderDis = 20.0;
+
 using namespace planning_math;
 
 LaneReferencePath::LaneReferencePath(int target_lane_virtual_id)
@@ -44,6 +46,8 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   bool ok = false;
   if (session_->is_hpp_scene()) {
     ok = get_ref_points_hpp(raw_reference_path_points);
+  } else if (session_->is_rads_scene()) {
+    ok = get_ref_points_rads(raw_reference_path_points);
   } else {
     ok = get_ref_points(raw_reference_path_points);
   }
@@ -204,7 +208,6 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
   ref_path_points.clear();
   ref_path_points.reserve(lane_points.size());
   for (auto &refline_pt : lane_points) {
-    constexpr double kDefaultLaneBorderDis = 20.0;
     ReferencePathPoint ref_path_pt;
     ref_path_pt.path_point.set_x(refline_pt.local_point.x);
     ref_path_pt.path_point.set_y(refline_pt.local_point.y);
@@ -285,31 +288,6 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       ref_path_points.emplace_back(std::move(extend_point));
     }
   }
-  if (ref_path_points.size() >= 2 && session_->is_rads_scene()) {
-    const std::shared_ptr<EgoStateManager> ego_state_mgr =
-        session_->mutable_environmental_model()->get_ego_state_manager();
-    const double ego_v = ego_state_mgr->ego_v();
-    const double cruise_v = ego_state_mgr->ego_v_cruise();
-    const double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
-    const double extend_buff = 5;
-    // raw theta invalid -> projection invalid:
-    // const double ego_projection_length_in_reference_path =
-    //     CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
-    // if need to extend reference path length
-    // backward
-    ReferencePathPoint backward_extend_point;
-    backward_extend_point = CalculateExtendedReferencePathPoint(
-        ref_path_points[1], ref_path_points[0],
-        extend_buff);
-    ref_path_points.emplace(ref_path_points.begin(), std::move(backward_extend_point));
-    // forward
-    ReferencePathPoint forward_extend_point;
-    const int point_nums = ref_path_points.size();
-    forward_extend_point = CalculateExtendedReferencePathPoint(
-        ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
-        extend_buff);
-    ref_path_points.emplace_back(std::move(forward_extend_point));
-  }
   return ref_path_points.size() >= 3;
 }
 
@@ -326,7 +304,6 @@ bool LaneReferencePath::get_ref_points_hpp(
   ref_path_points.reserve(lane_points.size());
   auto is_enu_valid = session_->environmental_model().location_valid();
   for (auto &refline_pt : lane_points) {
-    constexpr double kDefaultLaneBorderDis = 20.0;
     ReferencePathPoint ref_path_pt;
     if (is_enu_valid) {
       ref_path_pt.path_point.set_x(refline_pt.local_point.x);
@@ -426,6 +403,123 @@ bool LaneReferencePath::get_ref_points_hpp(
             extend_length);
         ref_path_points.emplace_back(std::move(extend_point));
       }
+    }
+  }
+  return ref_path_points.size() >= 3;
+}
+
+bool LaneReferencePath::get_ref_points_rads(ReferencePathPoints &ref_path_points) {
+  // get lane
+  auto virtual_lane_manager =
+      session_->mutable_environmental_model()->get_virtual_lane_manager();
+  auto virtual_lane =
+      virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
+  auto& reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  // get raw ref line
+  auto& lane_points = virtual_lane->lane_points();
+  if (lane_points.size() < 2) {
+    return false;
+  }
+  // std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
+  const double width = virtual_lane->width();
+  const double length = lane_points.back().s;
+  const double backward_extend_buff = 5.0;
+  const double forward_extend_buff = 16.0;
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  double start_s = std::min(ego_state_manager->ego_drive_distance(), length) - backward_extend_buff;
+  double end_s = ego_state_manager->ego_drive_distance() + forward_extend_buff;
+  ref_path_points.clear();
+  ref_path_points.reserve(lane_points.size());
+  for (auto &refline_pt : lane_points) {
+    if (refline_pt.s < start_s) {
+      continue;
+    }
+    if (refline_pt.s > end_s)  {
+      break;
+    }
+    ReferencePathPoint ref_path_pt;
+    ref_path_pt.path_point.set_x(refline_pt.local_point.x);
+    ref_path_pt.path_point.set_y(refline_pt.local_point.y);
+    ref_path_pt.path_point.set_z(refline_pt.local_point.z);
+    ref_path_pt.path_point.set_theta(refline_pt.enu_heading);
+    ref_path_pt.path_point.set_kappa(refline_pt.curvature);
+    ref_path_pt.path_point.set_s(refline_pt.s);
+    // ref_path_pt.distance_to_left_lane_border = std::fmin(
+    //     refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
+    // ref_path_pt.distance_to_right_lane_border = std::fmin(
+    //     refline_pt.distance_to_right_lane_border, kDefaultLaneBorderDis);
+    ref_path_pt.distance_to_left_road_border = std::fmin(
+        refline_pt.distance_to_left_road_border, kDefaultLaneBorderDis);
+    ref_path_pt.distance_to_right_road_border = std::fmin(
+        refline_pt.distance_to_right_road_border, kDefaultLaneBorderDis);
+    ref_path_pt.distance_to_left_lane_border = width * 0.5;
+    ref_path_pt.distance_to_right_lane_border = width * 0.5;
+    ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
+    ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
+    ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
+    ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type;
+    ref_path_pt.lane_width = width;
+    ref_path_pt.max_velocity = refline_pt.speed_limit_max;
+    ref_path_pt.min_velocity = refline_pt.speed_limit_min;
+    ref_path_pt.type = ReferencePathPointType::MAP;
+    ref_path_pt.is_in_intersection = refline_pt.is_in_intersection;
+
+    // check direction
+    if (not ref_path_points.empty()) {
+      const auto &pre_pt = ref_path_points.back();
+      Vec2d delta{ref_path_pt.path_point.x() - pre_pt.path_point.x(),
+                  ref_path_pt.path_point.y() - pre_pt.path_point.y()};
+      Vec2d cur_direction =
+          Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta());
+      if (cur_direction.InnerProd(delta) < 0) {
+        // temporaly skip direction check since input data is bad @clren
+        // continue;
+      }
+    }
+    ref_path_points.emplace_back(std::move(ref_path_pt));
+  }
+  if (ref_path_points.empty()) {
+    return false;
+  }
+  raw_start_point_ = ref_path_points.front();
+  raw_end_point_ = ref_path_points.back();
+  // calculate reference path origin total length
+  double origin_reference_path_total_length = 0;
+  for (int i = 1; i < ref_path_points.size(); i++) {
+    const auto &cur_point = ref_path_points[i].path_point;
+    const auto &pre_point = ref_path_points[i - 1].path_point;
+    origin_reference_path_total_length += std::hypotf(
+        pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
+  }
+  origin_reference_path_length_ = origin_reference_path_total_length;
+  if (ref_path_points.size() >= 2) {
+    // raw theta invalid -> projection invalid
+    const int ego_nearest_path_point_index =
+        CalculateNearestDistancePathPoint(ref_path_points);
+    double cur_path_point_s = ref_path_points[ego_nearest_path_point_index].path_point.s();
+    // backward
+    double backward_extend_length = std::max(0.0,
+        backward_extend_buff - (cur_path_point_s - ref_path_points.front().path_point.s()));
+    if (backward_extend_length > 1e-2) {
+      ReferencePathPoint backward_extend_point;
+      backward_extend_point = CalculateExtendedReferencePathPoint(
+          ref_path_points[1], ref_path_points[0], backward_extend_length);
+      backward_extend_point.path_point.set_s(ref_path_points.front().path_point.s() - backward_extend_length);
+      ref_path_points.emplace(ref_path_points.begin(), std::move(backward_extend_point));
+    }
+    // forward
+    double forward_extend_length = std::max(0.0,
+        forward_extend_buff - (ref_path_points.back().path_point.s() - cur_path_point_s));
+    if (forward_extend_length > 1e-2) {
+      ReferencePathPoint forward_extend_point;
+      const int point_nums = ref_path_points.size();
+      forward_extend_point = CalculateExtendedReferencePathPoint(
+          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
+          forward_extend_length);
+      forward_extend_point.path_point.set_s(ref_path_points.back().path_point.s() + forward_extend_length);
+      ref_path_points.emplace_back(std::move(forward_extend_point));
     }
   }
   return ref_path_points.size() >= 3;
@@ -733,6 +827,55 @@ double LaneReferencePath::CalculatePointProjectionDistanceInReferencePath(
   const double projection_distance_in_reference_path =
       projection_length + accumulate_distance_for_nearest_point;
   return projection_distance_in_reference_path;
+}
+
+int LaneReferencePath::CalculateNearestDistancePathPoint(
+    const ReferencePathPoints& ref_path_points) const {
+  const std::shared_ptr<EgoStateManager> ego_state_mgr =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  const auto& ego_pose = ego_state_mgr->ego_pose();
+  double dx = ego_pose.x - ref_path_points[0].path_point.x();
+  double dy = ego_pose.y - ref_path_points[0].path_point.y();
+  // const auto& lat_init_state =
+  //     ego_state_mgr->planning_init_point().lat_init_state;
+  // double dx = lat_init_state.x() - ref_path_points[0].path_point.x();
+  // double dy = lat_init_state.y() - ref_path_points[0].path_point.y();
+  const int point_nums = ref_path_points.size();
+  int nearest_point_index = 0;
+  double accumulate_distance_for_nearest_point = 0;
+  double accumulate_distance_reference_path = ref_path_points[0].path_point.s();
+  double min_distance_square_to_ego_point = dx * dx + dy * dy;
+  double ego_drive_distance = ego_state_mgr->ego_drive_distance();
+  // find nearest point
+  for (int i = 1; i < point_nums; i++) {
+    const auto& cur_point = ref_path_points[i].path_point;
+    const auto& pre_point = ref_path_points[i - 1].path_point;
+    accumulate_distance_reference_path += std::hypotf(
+        pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
+    if (std::fabs(accumulate_distance_reference_path - ego_drive_distance) > 12.0) {
+      continue;
+    }
+    dx = ego_pose.x - cur_point.x();
+    dy = ego_pose.y - cur_point.y();
+    double temp_min_distance_square_to_ego_point = dx * dx + dy * dy;
+    if (temp_min_distance_square_to_ego_point <
+        min_distance_square_to_ego_point) {
+      nearest_point_index = i;
+      accumulate_distance_for_nearest_point =
+          accumulate_distance_reference_path;
+      min_distance_square_to_ego_point = temp_min_distance_square_to_ego_point;
+    }
+  }
+  ego_state_mgr->set_ego_drive_distance(ref_path_points[nearest_point_index].path_point.s());
+  // calculate ego projection distance in reference path
+  // const auto& nearest_point = ref_path_points[nearest_point_index].path_point;
+  // dx = ego_pose.x() - nearest_point.x();
+  // dy = ego_pose.y() - nearest_point.y();
+  // const double projection_length = dx * std::cos(nearest_point.theta()) +
+  //                                  dy * std::sin(nearest_point.theta());
+  // const double ego_projection_distance_in_reference_path =
+  //     projection_length + accumulate_distance_for_nearest_point;
+  return nearest_point_index;
 }
 
 }  // namespace planning

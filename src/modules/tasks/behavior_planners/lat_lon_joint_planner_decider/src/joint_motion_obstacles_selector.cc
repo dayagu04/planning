@@ -96,9 +96,22 @@ void JointMotionObstaclesSelector::SelectObstacles(
   bool is_confluence_area = false;
 
   if (route_info != nullptr) {
+    const auto& ego_state =
+        session_->environmental_model().get_ego_state_manager();
+    const double ego_v = ego_state->ego_v();
+    const double dis_threshold = ego_v * 10.0;
     const auto& route_info_output = route_info->get_route_info_output();
-    if (route_info_output.is_closing_merge ||
-        route_info_output.is_closing_split) {
+    bool is_closing_split =
+        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+            SPLIT_SCENE &&
+        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
+            dis_threshold;
+    bool is_closing_merge =
+        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+            MERGE_SCENE &&
+        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
+            dis_threshold;
+    if (is_closing_merge || is_closing_split) {
       is_confluence_area = true;
     }
   }
@@ -307,7 +320,9 @@ void JointMotionObstaclesSelector::CalculateAgentSLBoundary(
   for (const auto& corner : all_corners) {
     double agent_s = 0.0;
     double agent_l = 0.0;
-    planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l);
+    if (!planned_path->XYToSL(corner.x(), corner.y(), &agent_s, &agent_l)) {
+      continue;
+    }
     *ptr_min_s = std::fmin(*ptr_min_s, agent_s);
     *ptr_max_s = std::fmax(*ptr_max_s, agent_s);
     *ptr_min_l = std::fmin(*ptr_min_l, agent_l);
@@ -374,14 +389,15 @@ bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
     CalculateAgentSLBoundary(planned_path, ego_box, &ego_min_s, &ego_max_s,
                              &ego_min_l, &ego_max_l);
 
-    if (index >= key_obstacle.ref_x_vec.size()) {
-      index = key_obstacle.ref_x_vec.size() - 1;
+    size_t obs_index = index;
+    if (obs_index >= key_obstacle.ref_x_vec.size()) {
+      obs_index = key_obstacle.ref_x_vec.size() - 1;
     }
 
-    double obs_x = key_obstacle.ref_x_vec[index];
-    double obs_y = key_obstacle.ref_y_vec[index];
-    double obs_theta = key_obstacle.ref_theta_vec[index];
-    double obs_vel = key_obstacle.ref_vel_vec[index];
+    double obs_x = key_obstacle.ref_x_vec[obs_index];
+    double obs_y = key_obstacle.ref_y_vec[obs_index];
+    double obs_theta = key_obstacle.ref_theta_vec[obs_index];
+    double obs_vel = key_obstacle.ref_vel_vec[obs_index];
 
     planning_math::Box2d obs_box(planning_math::Vec2d(obs_x, obs_y), obs_theta,
                                  key_obstacle.length, key_obstacle.width);

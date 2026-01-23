@@ -532,21 +532,41 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
       cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
     }
-    const auto& speed_limit_decider_output = session_->planning_context().speed_limit_decider_output();
-    double curve_speed_limit;
-    SpeedLimitType curve_speed_limit_type;
-    speed_limit_decider_output.GetSpeedLimit(&curve_speed_limit, &curve_speed_limit_type);
-    if (curve_speed_limit_type == SpeedLimitType::CURVATURE) {
-      cruise_v = std::min(curve_speed_limit, cruise_v);
-    }
-    double sharp_curve_speed_limit;
-    SpeedLimitType sharp_curve_speed_limit_type;
-    speed_limit_decider_output.GetSpeedLimit(&sharp_curve_speed_limit, &sharp_curve_speed_limit_type);
-    if (sharp_curve_speed_limit_type == SpeedLimitType::SHARP_CURVATURE) {
-      cruise_v = std::min(sharp_curve_speed_limit, cruise_v);
-      kMinAcc = -1.0;
-    }
   }
+  const auto& speed_limit_decider_output = session_->planning_context().speed_limit_decider_output();
+  bool is_exist_speed_limit;
+  double curve_speed_limit;
+  is_exist_speed_limit =
+      speed_limit_decider_output.GetSpeedLimitByType(SpeedLimitType::CURVATURE,
+                                                     &curve_speed_limit);
+  if (is_exist_speed_limit && curve_speed_limit < cruise_v) {
+    cruise_v = curve_speed_limit;
+    kMinAcc = -0.4;
+  }
+  // double road_border_speed_limit;
+  // is_exist_speed_limit =
+  //     speed_limit_decider_output.GetSpeedLimitByType(SpeedLimitType::ROAD_BOUNDARY,
+  //                                                    &road_border_speed_limit);
+  // if (is_exist_speed_limit && road_border_speed_limit < cruise_v) {
+  //   cruise_v = road_border_speed_limit;
+  //   kMinAcc = -0.4;
+  // }
+  double sharp_curve_speed_limit;
+  is_exist_speed_limit =
+      speed_limit_decider_output.GetSpeedLimitByType(SpeedLimitType::SHARP_CURVATURE,
+                                                     &sharp_curve_speed_limit);
+  if (is_exist_speed_limit && sharp_curve_speed_limit < cruise_v) {
+    cruise_v = sharp_curve_speed_limit;
+    kMinAcc = -1.0;
+  }
+  // double sharp_road_border_speed_limit;
+  // is_exist_speed_limit =
+  //     speed_limit_decider_output.GetSpeedLimitByType(SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL,
+  //                                                    &sharp_road_border_speed_limit);
+  // if (is_exist_speed_limit && sharp_road_border_speed_limit < cruise_v) {
+  //   cruise_v = sharp_road_border_speed_limit;
+  //   kMinAcc = -1.0;
+  // }
   if (lane_borrow_decider_output.is_in_lane_borrow_status) {
     kMaxAcc = 0.4;
   }
@@ -1231,6 +1251,14 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   const auto &is_in_lane_borrow_status = session_->planning_context()
                                              .lane_borrow_decider_output()
                                              .is_in_lane_borrow_status;
+  const auto& lane_change_decider_output =
+    session_->planning_context().lane_change_decider_output();
+  bool is_LC_HOLD = coarse_planning_info.target_state == kLaneChangeHold;
+  double buffer_to_lc_hold_offset = 0.2;
+  double lc_hold_offset = 0;
+  if (is_LC_HOLD) {
+    lc_hold_offset = lane_change_decider_output.lc_hold_state_lat_offset;
+  }
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
@@ -1265,6 +1293,10 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
             std::fmin(ref_path_points_[i].distance_to_left_lane_border -
                           half_ego_width - config_.soft_buffer2lane,
                       soft_bound_lane.upper);
+        if (is_LC_HOLD) {
+          soft_bound_lane.upper = std::fmax(
+              soft_bound_lane.upper, lc_hold_offset + buffer_to_lc_hold_offset);
+        }
       }
 
       if (is_valid_right_lane_border_type) {
@@ -1272,6 +1304,10 @@ void GeneralLateralDecider::GenerateLaneSoftBoundary() {
             std::fmax(-ref_path_points_[i].distance_to_right_lane_border +
                           half_ego_width + config_.soft_buffer2lane,
                       soft_bound_lane.lower);
+        if (is_LC_HOLD) {
+          soft_bound_lane.lower = std::fmin(
+              soft_bound_lane.lower, lc_hold_offset - buffer_to_lc_hold_offset);
+        }
       }
 
       const double ego_init_l =

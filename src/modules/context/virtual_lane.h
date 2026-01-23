@@ -173,6 +173,14 @@ class VirtualLane {
     feasible_lane_distance_ = feasible_lane_distance;
   }
 
+  void set_map_merge_point_info(const MapMergePointInfo &map_merge_point_info) {
+    map_merge_point_info_ = map_merge_point_info;
+  }
+
+  const MapMergePointInfo & get_map_merge_point_info() const {
+  return map_merge_point_info_;
+  };
+
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
   void restore_context(const VirtualLaneContext &context);
@@ -240,6 +248,7 @@ class VirtualLane {
   double max_virtual_seg_ahead_length_ = 0.0;
 
   std::pair<bool, double> feasible_lane_distance_ = {true, 1000.0};
+  MapMergePointInfo map_merge_point_info_;
 };
 }  // namespace planning
 #endif

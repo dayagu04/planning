@@ -38,16 +38,16 @@ int HybridAStarInterface::Init(const VehicleParam& veh_param) {
 
   ogm_.Init();
   if (config_.safe_buffer.lat_safe_buffer_outside.size() > 0) {
-    edt_.Init(
+    hierarchy_edt_.Init(
         static_cast<float>(config_.safe_buffer.lat_safe_buffer_outside[0]),
         static_cast<float>(config_.safe_buffer.lon_safe_buffer[0]),
         static_cast<float>(config_.safe_buffer.lat_safe_buffer_outside[0]));
   }
 
   dp_heuristic_generator_ = std::make_shared<GridSearch>(config_);
-  hybrid_astar_ = std::make_shared<HybridAStar>(config_, vehicle_param_, &obs_,
-                                                &edt_, &clear_zone_, &ref_line_,
-                                                dp_heuristic_generator_);
+  hybrid_astar_ = std::make_shared<HybridAStar>(
+      config_, vehicle_param_, &obs_, &hierarchy_edt_, &clear_zone_, &ref_line_,
+      dp_heuristic_generator_);
   hybrid_astar_->Init();
   gear_switch_number_scenario_try_ = config_.max_gear_change_num;
   time_benchmark_.Clear();
@@ -78,15 +78,15 @@ void HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
   return;
 }
 
-int HybridAStarInterface::UpdateEDT() {
+int HybridAStarInterface::UpdateEDT(const bool use_height_info) {
   Pose2f ogm_base_pose;
   UpdateEDTBasePose(ogm_base_pose);
 
   ogm_.Clear();
   ogm_.Process(ogm_base_pose);
-  ogm_.AddParkingObs(obs_);
+  ogm_.AddParkingObs(obs_, use_height_info);
 
-  edt_.Excute(ogm_, ogm_base_pose);
+  hierarchy_edt_.Excute(ogm_, ogm_base_pose);
 
   return 0;
 }
@@ -105,7 +105,9 @@ void HybridAStarInterface::UpdateOutput() {
 
   UpdateGridMapBound();
 
-  UpdateEDT();
+  //todo :: only use height information for park out
+  const bool use_height_info = IsParkingOutRequest(request_.direction_request);
+  UpdateEDT(use_height_info);
   // update clear zone. This zone not contain any obstacle.
   clear_zone_.GenerateBoundingBox(ego_state_, &obs_, config_.enable_clear_zone);
 
@@ -120,14 +122,14 @@ void HybridAStarInterface::UpdateOutput() {
   // update future path decider
   FuturePathDecider future_path_decider;
   future_path_decider.Process(&ref_line_, vehicle_param_.min_turn_radius,
-                              config_.node_step, &edt_, request_);
+                              config_.node_step, &hierarchy_edt_, request_);
 
   RSExpansionDecider::UpdateRSPathRequest(&request_);
 
   bool is_ego_overlap_with_slot = IsEgoOverlapWithSlot();
 
   TargetPoseRegulator target_pose_regulator;
-  target_pose_regulator.Process(&edt_, &request_, ego_state_,
+  target_pose_regulator.Process(&hierarchy_edt_, &request_, ego_state_,
                                 request_.real_goal, vehicle_param_,
                                 request_.direction_request);
   float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
@@ -204,7 +206,9 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   PathClear();
   search_state_ = AstarSearchState::SEARCHING;
 
-  UpdateEDT();
+  //todo :: only use height information for park out
+  const bool use_height_info = IsParkingOutRequest(request_.direction_request);
+  UpdateEDT(use_height_info);
   clear_zone_.GenerateBoundingBox(ego_state_, &obs_, config_.enable_clear_zone);
   // vertical parking center ref line
   GenerateRefLine();
@@ -212,10 +216,10 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   // update future path decider
   FuturePathDecider future_path_decider;
   future_path_decider.Process(&ref_line_, vehicle_param_.min_turn_radius,
-                              config_.node_step, &edt_, request_);
+                              config_.node_step, &hierarchy_edt_, request_);
 
   TargetPoseRegulator target_pose_regulator;
-  target_pose_regulator.Process(&edt_, &request_, ego_state_,
+  target_pose_regulator.Process(&hierarchy_edt_, &request_, ego_state_,
                                 request_.real_goal, vehicle_param_,
                                 request_.direction_request);
   hybrid_astar_->SetRequest(request_);
@@ -648,7 +652,7 @@ const Pose2f& HybridAStarInterface::GetGoalPoint() {
   return target_regulator_goal_;
 }
 
-FootPrintCircleModel* HybridAStarInterface::GetCircleFootPrint(
+MultiHeightFootPrintView* HybridAStarInterface::GetCircleFootPrint(
     const HierarchySafeBuffer buffer) {
   if (hybrid_astar_ == nullptr) {
     return nullptr;
@@ -1073,7 +1077,7 @@ void HybridAStarInterface::ParkingDirectionAttempt(
               << static_cast<int>(request_.direction_request_stack[i])
               << " ****************";
     TargetPoseRegulator target_pose_regulator;
-    target_pose_regulator.Process(&edt_, &request_, ego_state_,
+    target_pose_regulator.Process(&hierarchy_edt_, &request_, ego_state_,
                                   request_.real_goal_stack[i], vehicle_param_,
                                   request_.direction_request_stack[i]);
     float ego_obs_dist = target_pose_regulator.GetEgoObsDist();

@@ -175,13 +175,14 @@ double JointDecisionSpeedLimit::JudgeCurvBySDProMap() const {
       session_->environmental_model().get_route_info()->get_sdpro_map();
   double nearest_s = 0;
   double nearest_l = 0;
+  bool is_search_cur_link = true;
   const double search_distance = 50.0;
   const double max_heading_diff = M_PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
 
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
-      nearest_s, nearest_l);
+      nearest_s, nearest_l, is_search_cur_link);
   if (!current_segment) {
     return 300.0;
   }
@@ -318,7 +319,7 @@ void JointDecisionSpeedLimit::CalculateMapSpeedLimit() {
 
   uint64_t ramp_link_id = -1;
   double ramp_v_limit = 120;
-  const auto& split_region_info_list = route_info_output.split_region_info_list;
+  const auto& split_region_info_list = route_info_output.map_split_region_info_list;
 
   if (dis_to_ramp < 2000.0) {
     for (size_t i = 0; i < split_region_info_list.size(); ++i) {
@@ -349,13 +350,14 @@ void JointDecisionSpeedLimit::CalculateMapSpeedLimit() {
 
   double nearest_s = 0;
   double nearest_l = 0;
+  bool is_search_cur_link = true;
   const double search_distance = 50.0;
   const double max_heading_diff = M_PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
 
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
-      nearest_s, nearest_l);
+      nearest_s, nearest_l, is_search_cur_link);
 
   if (current_segment == nullptr) {
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
@@ -519,13 +521,14 @@ void JointDecisionSpeedLimit::CalculatePOISpeedLimit() {
   const auto& sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
   double nearest_s = 0;
   double nearest_l = 0;
+  bool is_search_cur_link = true;
   const double search_distance = 50.0;
   const double max_heading_diff = M_PI / 4;
   const double ego_heading_angle = ego_state->heading_angle();
 
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
-      nearest_s, nearest_l);
+      nearest_s, nearest_l, is_search_cur_link);
 
   if (current_segment == nullptr) {
     poi_v_limit_set_ = false;

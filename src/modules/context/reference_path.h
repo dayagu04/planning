@@ -248,10 +248,9 @@ class ReferencePath {
 
   void CalculateValidLaneLineLength();
 
-  bool CalculateRoadCurvature(
-      std::vector<double> &x_vec,
-      std::vector<double> &y_vec,
-      std::vector<double> &s_vec);
+  bool CalculateRoadCurvature(std::vector<double> &x_vec,
+                              std::vector<double> &y_vec,
+                              std::vector<double> &s_vec);
 
   bool HandleRoadCurvature(const double init_s);
 
@@ -286,22 +285,13 @@ class ReferencePath {
       std::vector<double> &bounds,
       std::vector<std::pair<double, double>> &raw_points_vec);
 
-  void SetSmoothBounds(
-      const double bound_val, std::vector<double> &bounds);
+  void SetSmoothBounds(const double bound_val, std::vector<double> &bounds);
 
-  bool HandleOutputData(
-      const double ahead_partition_length,
-      const std::pair<double, double> &init_point);
-
-  bool ForwardExtendedRefPoints(const double ahead_partition_length);
-
-  void StraightExtendedRefPoints(const double extend_length);
-
-  void ClothoidExtendedRefPoints(const double extend_length,
-                                 const double target_curv);
+  bool HandleOutputData(const std::pair<double, double> &init_point);
 
   bool GenerateDenseRefPathPoints(
       const double behind_partition_length,
+      const double ahead_partition_length,
       const pnc::mathlib::spline &x_s_spline,
       const pnc::mathlib::spline &y_s_spline,
       std::vector<planning_math::PathPoint> &smoothed_path_points);
@@ -310,6 +300,24 @@ class ReferencePath {
       const double behind_partition_length,
       const pnc::mathlib::spline &x_s_spline,
       const pnc::mathlib::spline &y_s_spline,
+      std::vector<planning_math::PathPoint> &smoothed_path_points);
+
+  bool ForwardStitchRefPoints(
+      const double ahead_partition_length,
+      const pnc::mathlib::spline &x_s_spline,
+      const pnc::mathlib::spline &y_s_spline,
+      std::vector<planning_math::PathPoint> &smoothed_path_points);
+
+  bool ForwardExtendedRefPoints(
+      const double ahead_partition_length,
+      std::vector<planning_math::PathPoint> &smoothed_path_points);
+
+  void StraightExtendedRefPoints(
+      const double extend_length,
+      std::vector<planning_math::PathPoint> &smoothed_path_points);
+
+  void ClothoidExtendedRefPoints(
+      const double extend_length, const double target_curv,
       std::vector<planning_math::PathPoint> &smoothed_path_points);
 
   bool UpdateReferencePathInfo(
@@ -359,8 +367,12 @@ class ReferencePath {
 
   // smooth
   bool is_smoothed_ = false;
+  bool is_enable_raw_line_extend_ = false;
   bool is_enable_clothoid_extend_ = false;
   double valid_lane_line_length_ = 0.0;
+  double min_ahead_length_ = 60.0;
+  double sampling_behind_length_ = -10.0;
+  double sampling_ahead_length_ = 90.0;
   double sampling_gap_ = 2.0;
   double sampling_step_ = 2.0;
   std::vector<double> map_bound_val_{0.03, 0.05, 0.07};

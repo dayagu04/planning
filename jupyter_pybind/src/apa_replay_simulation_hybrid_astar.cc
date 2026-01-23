@@ -161,14 +161,17 @@ void UpdateFootprintCircle(const AstarPathGear gear,
     return;
   }
 
-  FootPrintCircleModel *model = hybrid_astar_interface_->GetCircleFootPrint(
+  MultiHeightFootPrintView *model = hybrid_astar_interface_->GetCircleFootPrint(
       HierarchySafeBuffer::INSIDE_SLOT_BUFFER);
+
   if (model == nullptr) {
     return;
   }
 
+  FootPrintCircleModel *footprint_model = &(model->height_model[0]);
+
   const FootPrintCircleList circle_footprint =
-      model->GetLocalFootPrintCircleByGear(gear);
+      footprint_model->GetLocalFootPrintCircleByGear(AstarPathGear::NORMAL);
 
   footprint_circle.reserve(circle_footprint.size + 1);
   const FootPrintCircle *circle = &circle_footprint.max_circle;

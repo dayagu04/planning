@@ -318,6 +318,21 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const std::vector<pnc::geometry_lib::PathSegment>& path_vec,
       const TlaneCorner& tlane_corner) const;
 
+  void DeleteFirstSegPath();
+
+  const bool CheckPreviousPathSegVecCollided(
+      const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+      const double buffer = 0.2) const;
+
+  const bool InsertLineSegToEgo2Path(const pnc::geometry_lib::PathPoint &ego_pose);
+
+  const bool CheckSecondGearChangeArc(
+      const std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
+      pnc::geometry_lib::Arc& resulting_arc, size_t& arc_end_idx);
+
+  const bool UpdateOutputPointByZigZag();
+  const bool UpdateOutputPointByOverlap();
+
  protected:
   virtual void Preprocess() override;
 
@@ -666,6 +681,13 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   std::pair<Eigen::Vector2d, Eigen::Vector2d> ExtendLineSegAlongHeading(
       const Eigen::Vector2d &P1, const Eigen::Vector2d &P2, double heading_rad,
       double move_length);
+
+  void SetPathSegmentSource(
+      std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+      const pnc::geometry_lib::PathPlanSource path_source);
+
+  const bool OneLinePlanWhenMeetFinished(
+      std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec);
 
  public:
   double arc_slot_init_out_heading_= 0.0;

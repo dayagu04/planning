@@ -234,6 +234,7 @@ void GetVehPolygonBy8Edge(const double lat_buffer, const double lon_buffer,
 void GenerateVehCompactPolygon(const double lateral_safe_buffer,
                                const double lon_safe_buffer,
                                const double aabb_buffer, const bool fold_mirror,
+                               const bool is_chassis_model,
                                PolygonFootPrint *foot_print);
 
 void GenerateMirrorPolygon(const double x_length, const double y_length,
@@ -269,5 +270,8 @@ void GetBoundingBoxByPolygon(cdl::AABB2f *box,
 
 void GetVehPolygonBy12Edge(const double lat_buffer, const double lon_buffer,
                            Polygon2D *polygon);
+
+void GetVehChassisPolygonBy4Edge(const double lat_buffer,
+                                  const double lon_buffer, Polygon2D *polygon);
 
 }  // namespace planning

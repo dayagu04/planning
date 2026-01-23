@@ -10,6 +10,11 @@
 
 namespace planning {
 namespace apa_planner {
+
+ApaSlot::ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot) {
+  Update(fusion_slot);
+}
+
 void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
   id_ = fusion_slot.id;
   confidence_ = fusion_slot.confidence;
@@ -73,6 +78,9 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
     slot_length_ = (processed_corner_coord_global_.pt_01_mid -
                     processed_corner_coord_global_.pt_23_mid)
                        .norm();
+    slot_heading_ =
+        std::atan2(processed_corner_coord_global_.pt_23mid_01mid_unit_vec.y(),
+                   processed_corner_coord_global_.pt_23mid_01mid_unit_vec.x());
   } else if (slot_type_ == SlotType::PARALLEL) {
     slot_length_ = (processed_corner_coord_global_.pt_1 -
                     processed_corner_coord_global_.pt_0)
@@ -84,6 +92,9 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
                                processed_corner_coord_global_.pt_2, line_01),
                            pnc::geometry_lib::CalPoint2LineDist(
                                processed_corner_coord_global_.pt_3, line_01));
+    slot_heading_ =
+        std::atan2(processed_corner_coord_global_.pt_13mid_02mid_unit_vec.y(),
+                   processed_corner_coord_global_.pt_13mid_02mid_unit_vec.x());
   }
 
   if (fusion_slot.limiters_size > 0) {

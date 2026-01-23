@@ -148,6 +148,14 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
   planning_succ =False
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_succ = plan_debug_msg.frame_info.planning_succ
+    raw_refline_xn, raw_refline_yn = planning_json['raw_refline_x_vec'], planning_json['raw_refline_y_vec']
+    raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], planning_json['raw_refline_y_vec'])
+    lat_plan_data['data_refline'].data.update({
+      'raw_refline_x': raw_refline_x,
+      'raw_refline_y': raw_refline_y,
+      'raw_refline_xn': raw_refline_xn,
+      'raw_refline_yn': raw_refline_yn,
+    })
     lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
 
     lat_init_state = lat_motion_plan_input.init_state
@@ -651,6 +659,42 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       'traj_y': spatio_traj_y,
     })
 
+    narrow_space_line_x, narrow_space_line_y = [], []
+    try:
+      if g_is_display_enu:
+        narrow_space_left_rear_x = planning_json['narrow_space_left_rear_x']
+        narrow_space_left_rear_y = planning_json['narrow_space_left_rear_y']
+        narrow_space_right_rear_x = planning_json['narrow_space_right_rear_x']
+        narrow_space_right_rear_y = planning_json['narrow_space_right_rear_y']
+        narrow_space_left_front_x = planning_json['narrow_space_left_front_x']
+        narrow_space_left_front_y = planning_json['narrow_space_left_front_y']
+        narrow_space_right_front_x = planning_json['narrow_space_right_front_x']
+        narrow_space_right_front_y = planning_json['narrow_space_right_front_y']
+        narrow_space_line_x.append([narrow_space_left_rear_x, narrow_space_right_rear_x])
+        narrow_space_line_y.append([narrow_space_left_rear_y, narrow_space_right_rear_y])
+        narrow_space_line_x.append([narrow_space_left_front_x, narrow_space_right_front_x])
+        narrow_space_line_y.append([narrow_space_left_front_y, narrow_space_right_front_y])
+      else:
+        narrow_space_left_rear_x, narrow_space_left_rear_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_left_rear_x'], planning_json['narrow_space_left_rear_y'])
+        narrow_space_right_rear_x, narrow_space_right_rear_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_right_rear_x'], planning_json['narrow_space_right_rear_y'])
+        narrow_space_left_front_x, narrow_space_left_front_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_left_front_x'], planning_json['narrow_space_left_front_y'])
+        narrow_space_right_front_x, narrow_space_right_front_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_right_front_x'], planning_json['narrow_space_right_front_y'])
+        narrow_space_line_x.append([narrow_space_left_rear_x, narrow_space_right_rear_x])
+        narrow_space_line_y.append([narrow_space_left_rear_y, narrow_space_right_rear_y])
+        narrow_space_line_x.append([narrow_space_left_front_x, narrow_space_right_front_x])
+        narrow_space_line_y.append([narrow_space_left_front_y, narrow_space_right_front_y])
+      print("narrow_space_state: ", planning_json['narrow_space_state'])
+    except:
+      print("no narrow space")
+    lat_plan_data['data_narrow_space_corners'].data.update({
+      'lines_x_vec': narrow_space_line_x,
+      'lines_y_vec': narrow_space_line_y,
+    })
+
   if bag_loader.plan_msg['enable'] == True:
     trajectory = plan_msg.trajectory
     # if trajectory.trajectory_type == 0 and planning_succ: # 实时轨迹
@@ -1077,6 +1121,9 @@ def load_lat_plan_figure(fig1, local_view_data):
   data_construction_refline = ColumnDataSource(data = {'refline_x':[],
                                                        'refline_y':[]})
 
+  data_narrow_space_corners = ColumnDataSource(data = {'lines_x_vec':[],
+                                                       'lines_y_vec':[],})
+
   data_lat_motion_plan_input = ColumnDataSource(data = {'ref_x':[],
                                                         'ref_y':[],
                                                         'ref_xn':[],
@@ -1227,10 +1274,11 @@ def load_lat_plan_figure(fig1, local_view_data):
                    'data_spatio_temporal_trajs': data_spatio_temporal_trajs, \
                    'data_center_line_curvature':data_center_line_curvature, \
                    'data_refline_curvature':data_refline_curvature, \
-                   'data_construction_refline':data_construction_refline
+                   'data_construction_refline':data_construction_refline, \
+                   'data_narrow_space_corners':data_narrow_space_corners
   }
 
-
+  fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_narrow_space_corners, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 'narrow space')
   # motion planning
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
   fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'spatio ref', visible=True)
@@ -1257,6 +1305,8 @@ def load_lat_plan_figure(fig1, local_view_data):
 
   fig1.line('refline_y', 'refline_x', source = data_construction_refline, line_width = 2, line_color = 'red', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'construct ref', visible=False)
   fig_construction_refline = fig1.circle('refline_y', 'refline_x', source = data_construction_refline, size = 5, line_width = 4, line_color = "red", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'construct ref', visible=False)
+
+  fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'plan refline', visible=False)
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=800, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)

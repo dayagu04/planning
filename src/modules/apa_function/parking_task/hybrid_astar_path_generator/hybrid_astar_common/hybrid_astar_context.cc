@@ -6,7 +6,8 @@ const float PathCompareCost::GetTotalCost() {
   total_cost = length_cost + gear_change_cost + kappa_change_cost +
                unsuitable_last_line_length_cost + obs_dist_cost +
                cur_gear_switch_pose_cost + next_gear_switch_pose_cost +
-               lat_err_cost + heading_err_cost;
+               lat_err_cost + heading_err_cost + unexpect_gear_cost +
+               unexpect_steer_cost;
   return total_cost;
 }
 

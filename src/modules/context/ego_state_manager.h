@@ -61,6 +61,9 @@ class EgoStateManager {
   void set_ego_v_cruise(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_t_distance(
       const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_drive_distance(double ego_drive_distance) {
+    ego_drive_distance_ = ego_drive_distance;
+  };
   void set_ego_start_stop(
       const planning::common::VehicleStatus &vehicle_status);
   void set_throttle_override(
@@ -114,6 +117,7 @@ class EgoStateManager {
   bool driver_hands_off_state() const { return driver_hands_off_state_; }
   double jerk() const { return jerk_; };
   double t_distance() const { return ego_t_distance_; };
+  double ego_drive_distance() const { return ego_drive_distance_; };
   int start_stop() const { return ego_start_stop_; };
   bool is_auto() const { return is_auto_; };
   bool flag_is_replan() const { return flag_is_replan_; };
@@ -200,6 +204,7 @@ class EgoStateManager {
   bool driver_hands_off_state_;
   double jerk_ = 0;
   double ego_t_distance_ = 0;
+  double ego_drive_distance_ = 0;
   int ego_start_stop_ = 0;
   bool is_auto_ = false;
   bool flag_is_replan_ = false;

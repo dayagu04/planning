@@ -80,6 +80,7 @@ void ParallelParkInScenario::Reset() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+  obs_id_pt_map_.clear();
   parallel_path_planner_.Reset();
   previous_parallel_path_planner_.Reset();
   parallel_replan_again_ = 0;
@@ -402,15 +403,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   ILOG_INFO << "replan is required!";
-  previous_parallel_path_planner_.Reset();
-  previous_parallel_path_planner_ = parallel_path_planner_;
-
   // update obstacles
   GenTBoundaryObstacles();
 
   // path plan
   const auto pathplan_result = PathPlanOnce();
-  frame_.pathplan_result = pathplan_result;
+  // frame_.pathplan_result = pathplan_result;
 
   if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
     if (PostProcessPath()) {
@@ -424,6 +422,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
+    previous_parallel_path_planner_.Reset();
+    previous_parallel_path_planner_ = parallel_path_planner_;
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_PLANNING);
       delay_check_finish_ = true;
@@ -509,7 +509,9 @@ const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+  obs_id_pt_map_.clear();
   parallel_path_planner_.Reset();
+  previous_parallel_path_planner_.Reset();
 
   ILOG_INFO << "Enter ParkInTry";
 
@@ -574,7 +576,9 @@ const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+  obs_id_pt_map_.clear();
   parallel_path_planner_.Reset();
+  previous_parallel_path_planner_.Reset();
   return ret;
 }
 
@@ -1419,6 +1423,41 @@ void ParallelParkInScenario::RecordDebugPaInfo(
   return;
 }
 
+const bool ParallelParkInScenario::CheckEgoToSlotRelation() {
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  auto& select_slot_global =
+      ego_info_under_slot.slot.origin_corner_coord_global_;
+
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+
+  // 获取自车方向向量
+  Eigen::Vector2d ego_heading_vec = measures_ptr->GetHeadingVec();
+
+  // 计算车位01边的向量
+  Eigen::Vector2d slot_edge_01 =
+      (select_slot_global.pt_0 - select_slot_global.pt_1).normalized();
+
+  // 计算两个向量之间的夹角(弧度)
+  double angle_rad =
+      std::acos(std::clamp(ego_heading_vec.dot(slot_edge_01), -1.0, 1.0));
+  angle_rad = std::fabs(angle_rad);
+
+  // 将弧度转换为角度
+  double angle_deg = angle_rad * kRad2Deg;
+
+  ILOG_INFO << "Angle between ego heading and slot edge 01: " << angle_deg
+            << " degrees";
+
+  // 判断夹角是否在指定范围之间
+  const double vertical_deg = 90.0;
+  const double threshold_deg = 20.0;
+  bool is_angle_in_range = (angle_deg > (vertical_deg - threshold_deg) &&
+                            angle_deg < (vertical_deg + threshold_deg));
+  return is_angle_in_range;
+}
+
 const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
@@ -1455,6 +1494,14 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
     select_slot_global.pt_2.swap(select_slot_global.pt_3);
   }
   select_slot_global.CalExtraCoord();
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    if (CheckEgoToSlotRelation()) {
+      ILOG_ERROR << "too big angle from ego to slot 01 edge!";
+      return false;
+    }
+  }
+
   const double heading_10 = std::atan2(v_10.y(), v_10.x());
 
   const pnc::geometry_lib::LineSegment line_01(
@@ -1656,18 +1703,23 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
 
   // calc slot occupied ratio
   double slot_occupied_ratio = 0.0;
+  const double y_err_ratio = ego_info_under_slot.terminal_err.pos.y() /
+                             (0.5 * ego_info_under_slot.slot.slot_width_);
+  if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+    slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
+  } else if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
+    slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
+  }
   if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -3.0,
                               4.0)) {
-    const double y_err_ratio = ego_info_under_slot.terminal_err.pos.y() /
-                               (0.5 * ego_info_under_slot.slot.slot_width_);
-
-    if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-      slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
-    } else if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-      slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
-    }
+    ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
   }
-  ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
+  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -5.0,
+                              4.0) &&
+      slot_occupied_ratio > 0.75) {
+    ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
+  }
+
   ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
   return true;
@@ -1702,6 +1754,7 @@ const bool ParallelParkInScenario::GenTlane() {
   obs_pt_local_vec_.clear();
   parent_total_count.clear();
   parent_height_count.clear();
+  obs_id_pt_map_.clear();
   std::unordered_map<size_t, double> parent_min_y_abs;//<parent_id, min_y_abs>
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
@@ -1743,7 +1796,13 @@ const bool ParallelParkInScenario::GenTlane() {
         // total_box_x_fail_cnt++;
         continue;
       }
-
+      bool curb_obs_condition_x =
+          pnc::mathlib::IsInBound(obs_pt_local.x(), -3.0, slot_length + 4);
+      bool curb_obs_condition_y = pnc::mathlib::IsInBound(
+          -obs_pt_local.y() * side_sgn, 0.4, 0.5 * slot_width + 2);
+      if (curb_obs_condition_x && curb_obs_condition_y) {
+        obs_id_pt_map_[obs_parent_id].emplace_back(obs_pt_local);
+      }
       if (obs_pt_local.y() * side_sgn >
               apa_param.GetParam().parallel_channel_y_mag ||
           obs_pt_local.y() * side_sgn <
@@ -2652,14 +2711,24 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       tlane_obstacle_vec, CollisionDetector::TLANE_BOUNDARY_OBS);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       in_tlane_obstacle_vec, CollisionDetector::CURB_OBS);
-
   point_set.clear();
   tlane_obstacle_vec.clear();
-  tlane_line.SetPoints(C_curb, D_curb);
-  pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
-                                             kTBoundarySampleDist);
-
+  std::vector<Eigen::Vector2d> resample_obs_curb_pts;
+  bool is_use_curb_obs = ProcessCurbPointsAndGetPoints(
+      point_set, obs_id_pt_map_, C_curb, D_curb, t_lane_.curb_y);
+  if (!is_use_curb_obs) {
+    ILOG_INFO << "use origin curb obs";
+    tlane_line.SetPoints(C_curb, D_curb);
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
+                                               kTBoundarySampleDist);
+  }
   for (const auto& obs : point_set) {
+    if (is_use_curb_obs) {
+      if (obs.x() <= C_curb.x() - 1e-5 || obs.x() > D_curb.x() + 1e-5 ||
+          std::abs(obs.y()) < std::abs(t_lane_.curb_y) - 1e-2) {
+        continue;
+      }
+    }
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
       tlane_obstacle_vec.emplace_back(obs);
@@ -2779,10 +2848,201 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   }
 }
 
-const GeometryPathOutput& ParallelParkInScenario::SuitablePathReplan() {
+const bool ParallelParkInScenario::CheckLastPathCollided() {
+  const EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  std::vector<pnc::geometry_lib::PathSegment> need_check_path;
+  const auto& pre_output = previous_parallel_path_planner_.GetOutput();
+  const auto& pre_ego_info =
+      previous_parallel_path_planner_.GetInput().ego_info_under_slot;
+  for (size_t i = pre_output.path_seg_index.first;
+       i <= pre_output.path_seg_index.second; i++) {
+    pnc::geometry_lib::PathSegment cur_path = pre_output.path_segment_vec[i];
+    cur_path.LocalToGlobal(pre_ego_info.l2g_tf);
+    cur_path.GlobalToLocal(ego_info.g2l_tf);
+    need_check_path.emplace_back(cur_path);
+  }
+  if (parallel_path_planner_.CheckPreviousPathSegVecCollided(need_check_path,
+                                                             -0.3)) {
+    ILOG_INFO << "last path is collided";
+    return true;
+  }
+  return false;
+}
+
+// To use or not to use, that is the question.
+const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
+  ILOG_INFO << "Enter  UseOrNotUseLastPath";
+  if (frame_.is_replan_first) {
+    ILOG_INFO << "first replan, not using last path";
+    frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+    return parallel_path_planner_;
+  }
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const pnc::geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+
+  pnc::geometry_lib::PathPlanSource pre_path_source =
+      previous_parallel_path_planner_.GetOutput()
+          .path_segment_vec.front()
+          .path_source;
+  pnc::geometry_lib::PathPlanSource cur_path_source =
+      parallel_path_planner_.GetOutput().path_segment_vec.front().path_source;
+
+  pnc::geometry_lib::PathPoint end_pt =
+      previous_parallel_path_planner_.GetOutput()
+          .path_segment_vec[previous_parallel_path_planner_.GetOutput()
+                                .path_seg_index.second]
+          .GetEndPose();
+
+  pnc::geometry_lib::PathPoint global_end_pt(
+      previous_parallel_path_planner_.GetInput()
+          .ego_info_under_slot.l2g_tf.GetPos(end_pt.pos),
+      previous_parallel_path_planner_.GetInput()
+          .ego_info_under_slot.l2g_tf.GetHeading(end_pt.heading));
+
+  // need to set is_first_path to true
+  previous_parallel_path_planner_.GetOutputPtr()->is_first_path = true;
+
+  previous_parallel_path_planner_.DeleteFirstSegPath();
+
+  // insert line ego -> path start pt
+  pnc::geometry_lib::PathPoint line_pa_pose = cur_pose;
+  line_pa_pose.LocalToGlobal(ego_info_under_slot.l2g_tf);
+  line_pa_pose.GlobalToLocal(
+      previous_parallel_path_planner_.GetInput().ego_info_under_slot.g2l_tf);
+  previous_parallel_path_planner_.InsertLineSegToEgo2Path(line_pa_pose);
+
+  const bool res = previous_parallel_path_planner_.SetCurrentPathSegIndex();
+  if (!res) {
+    ILOG_INFO << "set current path seg index failed, use replan path";
+    frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+    return parallel_path_planner_;
+  }
+
+  ILOG_INFO << "first seg idx = "
+            << previous_parallel_path_planner_.GetOutput().path_seg_index.first;
+  ILOG_INFO
+      << "last seg idx = "
+      << previous_parallel_path_planner_.GetOutput().path_seg_index.second;
+
+  previous_parallel_path_planner_.SampleCurrentPathSeg();
+  previous_parallel_path_planner_.JudgeNeedOptimize();
+
+  pnc::geometry_lib::PathPlanSource pre_next_path_source =
+      previous_parallel_path_planner_.GetOutput()
+          .path_segment_vec.front()
+          .path_source;
+
+  bool path_source_condition = false;
+  if (pre_path_source ==
+      pnc::geometry_lib::PathPlanSource::EGO_TO_PREPARELINE) {
+    if (cur_path_source ==
+            pnc::geometry_lib::PathPlanSource::MULTI_ALIGN_INSLOT ||
+        cur_path_source ==
+            pnc::geometry_lib::PathPlanSource::MULTI_PLAN_INSLOT ||
+        cur_path_source ==
+            pnc::geometry_lib::PathPlanSource::ADJUST_PLAN_INSLOT) {
+      path_source_condition = true;
+    }
+  }
+
+  pnc::geometry_lib::PathPoint global_cur_pose(
+      ego_info_under_slot.l2g_tf.GetPos(cur_pose.pos),
+      ego_info_under_slot.l2g_tf.GetHeading(cur_pose.heading));
+
+  Eigen::Vector2d end_to_cur = global_cur_pose.pos - global_end_pt.pos;
+  Eigen::Vector2d end_pt_unit_dir(std::cos(global_end_pt.heading),
+                                  std::sin(global_end_pt.heading));
+  // Eigen::Vector2d end_pt_unit_dir = global_end_pt.pos.normalized();
+  Eigen::Vector2d end_pt_normal_unit_dir(-end_pt_unit_dir.y(),
+                                         end_pt_unit_dir.x());
+  double lon_dir_length = end_to_cur.dot(end_pt_unit_dir);
+  double lat_dir_length = end_to_cur.dot(end_pt_normal_unit_dir);
+  ILOG_INFO << "lat_dir_length: " << lat_dir_length
+            << " lon_dir_length: " << lon_dir_length;
+
+  // ILOG_INFO << "cur_pose: " << cur_pose.pos.x() << " " << cur_pose.pos.y()
+  //           << " heading: " << cur_pose.GetTheta();
+  ILOG_INFO << "global_cur_pose: " << global_cur_pose.pos.x() << " "
+            << global_cur_pose.pos.y()
+            << " heading: " << global_cur_pose.GetTheta();
+  // ILOG_INFO << "end_pt: " << end_pt.pos.x() << " " << end_pt.pos.y()
+  //           << " heading: " << end_pt.GetTheta();
+  ILOG_INFO << "global_end_pt: " << global_end_pt.pos.x() << " "
+            << global_end_pt.pos.y()
+            << " heading: " << global_end_pt.GetTheta();
+  bool follow_pos_condition = false;
+  if (std::fabs(pnc::geometry_lib::NormalizeAngle(global_cur_pose.heading -
+                                                  global_end_pt.heading)) <
+      (1.0 * kDeg2Rad)) {
+    if (std::fabs(lat_dir_length) < 0.04 && std::fabs(lon_dir_length) < 0.1) {
+      follow_pos_condition = true;
+    }
+  }
+
+  Eigen::Vector2d previous_global_target_pos =
+      previous_parallel_path_planner_.GetInput()
+          .ego_info_under_slot.l2g_tf.GetPos(
+              previous_parallel_path_planner_.GetInput()
+                  .ego_info_under_slot.target_pose.pos);
+  Eigen::Vector2d cur_global_target_pos = ego_info_under_slot.l2g_tf.GetPos(
+      parallel_path_planner_.GetInput().ego_info_under_slot.target_pose.pos);
+
+  double cur_global_target_head = ego_info_under_slot.l2g_tf.GetHeading(
+      parallel_path_planner_.GetInput()
+          .ego_info_under_slot.target_pose.heading);
+
+  Eigen::Vector2d pos_vector =
+      previous_global_target_pos - cur_global_target_pos;
+  Eigen::Vector2d unit_dir(std::cos(cur_global_target_head),
+                           std::sin(cur_global_target_head));
+  // Eigen::Vector2d unit_dir = cur_global_target_pos.normalized();
+  Eigen::Vector2d normal_unit_dir(-unit_dir.y(), unit_dir.x());
+  // double projection_length = pos_vector.dot(unit_dir);
+  double normal_length = pos_vector.dot(normal_unit_dir);
+
+  ILOG_INFO << "previous_global_target_pos: " << previous_global_target_pos.x()
+            << " " << previous_global_target_pos.y();
+  ILOG_INFO << "cur_global_target_pos: " << cur_global_target_pos.x() << " "
+            << cur_global_target_pos.y();
+  ILOG_INFO << "normal_length: " << normal_length;
+  bool target_y_condition = true;
+  const bool y_dev =
+      t_lane_.slot_side_sgn > 0
+          ? (previous_global_target_pos.y() > cur_global_target_pos.y())
+          : (previous_global_target_pos.y() < cur_global_target_pos.y());
+  if (!y_dev) {
+    target_y_condition = std::fabs(normal_length) < 0.1;
+  }
+
+  bool gear_condition =
+      (previous_parallel_path_planner_.GetOutput().gear_cmd_vec.front() !=
+       parallel_path_planner_.GetOutput().gear_cmd_vec.front());
+
+  ILOG_INFO << "follow_pos_condition: " << int(follow_pos_condition)
+            << " path_source_condition: " << int(path_source_condition)
+            << " target_y_condition: " << int(target_y_condition)
+            << " gear_condition: " << int(gear_condition);
+  if (follow_pos_condition && target_y_condition &&
+      (path_source_condition || gear_condition)) {
+    if (!CheckLastPathCollided()) {
+      ILOG_INFO << "use previous path";
+      frame_.pathplan_result = PathPlannerResult::PLAN_HOLD;
+      return previous_parallel_path_planner_;
+    }
+  }
+
+  ILOG_INFO << "use replan path";
+  frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+  return parallel_path_planner_;
+}
+
+const ParallelPathGenerator& ParallelParkInScenario::SuitablePathReplan() {
   if (parallel_replan_again_ != 1) {
-    ILOG_INFO << "use replan path";
-    return parallel_path_planner_.GetOutput();
+    return UseOrNotUseLastPath();
   }
   uint8_t cur_replan_gear =
       parallel_path_planner_.GetOutput().gear_cmd_vec.front();
@@ -2799,11 +3059,14 @@ const GeometryPathOutput& ParallelParkInScenario::SuitablePathReplan() {
   if (cur_car_gear != cur_replan_gear || cur_gear_size > pre_gear_size) {
     ILOG_INFO << "use previous path";
     parallel_path_planner_ = previous_parallel_path_planner_;
-    return previous_parallel_path_planner_.GetOutput();
+    frame_.pathplan_result = PathPlannerResult::PLAN_HOLD;
+    return previous_parallel_path_planner_;
   }
   ILOG_INFO << "use replan path";
-  return parallel_path_planner_.GetOutput();
+  frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+  return parallel_path_planner_;
 }
+
 
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
   ILOG_INFO << "start PathPlanOnce -------------";
@@ -2914,7 +3177,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       global_point.gear = path_point.gear;
       complete_path_point_global_vec_.emplace_back(global_point);
     }
-    return PathPlannerResult::PLAN_UPDATE;
+    frame_.pathplan_result = PathPlannerResult::PLAN_HOLD;
+    return PathPlannerResult::PLAN_HOLD;
   }
 
   uint8_t plan_result = 0;
@@ -2923,6 +3187,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     complete_path_point_global_vec_.clear();
     plan_result = PathPlannerResult::PLAN_FAILED;
     frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+    frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
     return PathPlannerResult::PLAN_FAILED;
   }
 
@@ -3024,10 +3289,19 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   // pnc::geometry_lib::PrintSegmentsVecInfo(
   //     parallel_path_planner_.GetOutput().path_segment_vec);
 
+  const ParallelPathGenerator& update_path_planner = SuitablePathReplan();
+  plan_result = frame_.pathplan_result;
+  if (plan_result == PathPlannerResult::PLAN_UPDATE) {
+    parallel_path_planner_.UpdateOutputPointByZigZag();
+    parallel_path_planner_.UpdateOutputPointByOverlap();
+  }
+  const auto& planner_output = update_path_planner.GetOutput();//SuitablePathReplan();
+  const EgoInfoUnderSlot& update_ego_info = update_path_planner.GetInput().ego_info_under_slot;
+
   // reverse info for next plan
   if (frame_.is_replan_first) {
-    frame_.current_gear = pnc::geometry_lib::ReverseGear(
-        parallel_path_planner_.GetOutput().gear_cmd_vec.front());
+    frame_.current_gear =
+        pnc::geometry_lib::ReverseGear(planner_output.gear_cmd_vec.front());
 
     ILOG_INFO << "next gear =" << static_cast<int>(frame_.current_gear);
   } else {
@@ -3038,6 +3312,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     if (!pnc::geometry_lib::IsValidGear(frame_.current_gear)) {
       ILOG_INFO << "frame_.current_gear == invalid gear!";
       complete_path_point_global_vec_.clear();
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
       return PathPlannerResult::PLAN_FAILED;
     }
 
@@ -3049,20 +3324,21 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       if (!pnc::geometry_lib::IsValidArcSteer(frame_.current_arc_steer)) {
         ILOG_INFO << "frame_.current_arc == invalid arc!";
         complete_path_point_global_vec_.clear();
+        frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
         return PathPlannerResult::PLAN_FAILED;
       }
     }
   }
 
-  frame_.is_replan_first = false;
-
-  const auto& planner_output = SuitablePathReplan();
   frame_.gear_command = planner_output.current_gear;
+
+  frame_.is_replan_first = false;
 
   ILOG_INFO << "start lat optimizer!";
 
   // lateral path optimization
   bool is_use_optimizer = planner_output.is_need_optimizer;
+  ILOG_INFO  << "is_use_optimizer: " << is_use_optimizer;
 
   // refuse optimizer
   if (planner_output.path_point_vec.size() < 3) {
@@ -3137,8 +3413,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     pnc::geometry_lib::PathPoint global_point;
     for (const auto& path_point : optimized_path_vec) {
       global_point.Set(
-          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+          update_ego_info.l2g_tf.GetPos(path_point.pos),
+          update_ego_info.l2g_tf.GetHeading(path_point.heading));
 
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;
@@ -3162,8 +3438,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
         planner_output.all_gear_path_point_vec.size());
     for (const auto& path_point : planner_output.all_gear_path_point_vec) {
       global_point.Set(
-          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+          update_ego_info.l2g_tf.GetPos(path_point.pos),
+          update_ego_info.l2g_tf.GetHeading(path_point.heading));
       global_point.lat_buffer = path_point.lat_buffer;
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;
@@ -3189,8 +3465,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     pnc::geometry_lib::PathPoint global_point;
     for (const auto& path_point : planner_output.path_point_vec) {
       global_point.Set(
-          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+          update_ego_info.l2g_tf.GetPos(path_point.pos),
+          update_ego_info.l2g_tf.GetHeading(path_point.heading));
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;
       global_point.gear = frame_.gear_command;
@@ -3213,8 +3489,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
         planner_output.all_gear_path_point_vec.size());
     for (const auto& path_point : planner_output.all_gear_path_point_vec) {
       global_point.Set(
-          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+          update_ego_info.l2g_tf.GetPos(path_point.pos),
+          update_ego_info.l2g_tf.GetHeading(path_point.heading));
       global_point.lat_buffer = path_point.lat_buffer;
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;
@@ -3259,15 +3535,14 @@ const bool ParallelParkInScenario::CheckOneReverseToSlot() {
   const bool is_reverse = output.gear_cmd_vec[output.path_seg_index.first] ==
                           geometry_lib::SEG_GEAR_REVERSE;
 
-  if (is_reverse && !is_start_pose_in_slot && is_end_pose_in_slot) {
-    for (size_t i = output.path_seg_index.second + 1; i < output.gear_cmd_vec.size(); i++) {
-      if (output.gear_cmd_vec[i] != output.gear_cmd_vec[output.path_seg_index.second]) {
-        ILOG_INFO << "not one reverse to slot!";
-        return false;
-      }
-    }
+  const bool is_last_path =
+      (output.path_seg_index.second == (output.gear_cmd_vec.size() - 1));
+
+  if (is_reverse && !is_start_pose_in_slot && is_end_pose_in_slot &&
+      is_last_path) {
+    return true;
   }
-  return true;
+  return false;
 }
 
 const bool ParallelParkInScenario::CheckFinished() {
@@ -3855,6 +4130,707 @@ const bool ParallelParkInScenario::GetOffsetLineCoeffsWithEgoPose(
         line_coeffs_in(0) * points[max_dist_negtive_index](0);  // b = y - ax
   }
   return true;
+}
+
+std::vector<Eigen::Vector2d>
+ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
+    double& nearest_abs_y,
+    const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
+        same_parent_id_curb_obs,
+    const double& curb_c_x, const double& curb_d_x, const double& t_lane_y) {
+  std::vector<Eigen::Vector2d> resampled_points;
+  nearest_abs_y = std::numeric_limits<double>::max();
+
+  if (same_parent_id_curb_obs.empty()) {
+    ILOG_WARN << "same_parent_id_curb_obs is empty";
+    return resampled_points;
+  }
+  double step_size = 0.2;
+  ILOG_INFO << "Processing curb points: found "
+            << same_parent_id_curb_obs.size();
+  ILOG_INFO << "Target curb segment: [" << curb_c_x << ", " << curb_d_x << "]";
+
+  // 确保 curb_c_x < curb_d_x
+  double target_start_x = curb_c_x;
+  double target_end_x = curb_d_x;
+  if (target_start_x > target_end_x) {
+    std::swap(target_start_x, target_end_x);
+    ILOG_WARN << "Swapped curb segment endpoints: [" << curb_c_x << ", "
+              << curb_d_x << "] -> [" << target_start_x << ", " << target_end_x
+              << "]";
+  }
+  double target_length = target_end_x - target_start_x;
+
+  struct ObsPointCloud {
+    size_t obs_id;
+    std::vector<Eigen::Vector2d> points;
+    double start_x;
+    double end_x;
+    double length;
+    // double avg_y = 0.0;
+    double min_abs_y = std::numeric_limits<double>::max();
+
+    double intersect_start_x = 0.0;
+    double intersect_end_x = 0.0;
+    double intersect_length = 0.0;
+
+    void UpdateIntersection(double target_start, double target_end) {
+      intersect_start_x = std::max(start_x, target_start);
+      intersect_end_x = std::min(end_x, target_end);
+      intersect_length = std::max(0.0, intersect_end_x - intersect_start_x);
+    }
+
+    bool CoversTargetEnd(double target_end) const {
+      return start_x <= target_end && end_x >= target_end;
+    }
+
+    bool IsNearTargetEnd(double target_end, double threshold) const {
+      return (target_end >= start_x - threshold &&
+              target_end <= end_x + threshold);
+    }
+
+    void CalculateStatistics() {
+      if (points.empty()) return;
+
+      // double sum_y = 0.0;
+      min_abs_y = std::numeric_limits<double>::max();
+
+      for (const auto& point : points) {
+        double y = point.y();
+        // sum_y += y;
+        double abs_y = std::abs(y);
+        if (abs_y < min_abs_y) {
+          min_abs_y = abs_y;
+        }
+      }
+
+      // avg_y = sum_y / points.size();
+    }
+
+    bool CanSafelyExtrapolateTo(double target_x,
+                                double max_extrapolation) const {
+      double distance = std::abs(target_x - end_x);
+      if (target_x < start_x) {
+        distance = std::abs(target_x - start_x);
+      }
+      if (distance > max_extrapolation) return false;
+      return true;
+    }
+  };
+
+  std::vector<ObsPointCloud> all_point_clouds;
+
+  for (const auto& [obs_id, points] : same_parent_id_curb_obs) {
+    if (points.empty() || points.size() <= 2) continue;
+
+    std::vector<Eigen::Vector2d> sorted_points = points;
+    std::sort(sorted_points.begin(), sorted_points.end(),
+              [](const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
+                return a.x() < b.x();
+              });
+    sorted_points.erase(
+        std::remove_if(
+            sorted_points.begin(), sorted_points.end(),
+            [&curb_c_x, &curb_d_x,
+             &t_lane_y](const Eigen::Vector2d& obs) -> bool {
+              return (std::abs(obs.y()) > 3.0) ||
+                     ((obs.x() > curb_c_x - 1e-2 && obs.x() < curb_c_x + 0.5) ||
+                      (obs.x() < curb_d_x + 1e-2 &&
+                       obs.x() > curb_d_x - 0.5)) &&
+                         std::abs(obs.y()) + 0.15 < std::abs(t_lane_y) ||
+                     (obs.x() < curb_c_x - 1e-2) || (obs.x() > curb_d_x + 1e-2);
+            }),
+        sorted_points.end());
+
+    if (sorted_points.size() < 2) continue;
+
+    ObsPointCloud cloud;
+    cloud.obs_id = obs_id;
+    cloud.points = std::move(sorted_points);
+    cloud.start_x = cloud.points.front().x();
+    cloud.end_x = cloud.points.back().x();
+    cloud.length = cloud.end_x - cloud.start_x;
+    cloud.CalculateStatistics();
+    cloud.UpdateIntersection(target_start_x, target_end_x);
+
+    all_point_clouds.push_back(std::move(cloud));
+  }
+
+  if (all_point_clouds.empty()) {
+    ILOG_WARN << "No valid point clouds after filtering";
+    return resampled_points;
+  }
+
+  std::vector<ObsPointCloud> filtered_point_clouds;
+  for (auto& cloud : all_point_clouds) {
+    if (cloud.points.size() > 3) {
+      filtered_point_clouds.push_back(std::move(cloud));
+    }
+  }
+
+  if (filtered_point_clouds.empty()) {
+    filtered_point_clouds = std::move(all_point_clouds);
+  }
+
+  all_point_clouds = std::move(filtered_point_clouds);
+
+  ILOG_INFO << "Processing curb points: found " << all_point_clouds.size()
+            << " obstacles";
+  ILOG_INFO << "Selection strategy: Prioritizing obstacles with smaller "
+               "y-absolute value";
+
+  std::vector<ObsPointCloud*> selected_clouds;
+  double covered_start_x = std::numeric_limits<double>::max();
+  double covered_end_x = std::numeric_limits<double>::lowest();
+
+  std::vector<ObsPointCloud*> sorted_by_min_abs_y;
+  for (auto& cloud : all_point_clouds) {
+    sorted_by_min_abs_y.push_back(&cloud);
+  }
+  std::sort(sorted_by_min_abs_y.begin(), sorted_by_min_abs_y.end(),
+            [](ObsPointCloud* a, ObsPointCloud* b) {
+              return a->min_abs_y < b->min_abs_y;
+            });
+
+  if (!sorted_by_min_abs_y.empty()) {
+    ObsPointCloud* main_obstacle = sorted_by_min_abs_y[0];
+    selected_clouds.push_back(main_obstacle);
+    covered_start_x = main_obstacle->intersect_start_x;
+    covered_end_x = main_obstacle->intersect_end_x;
+  }
+
+  double current_coverage_ratio =
+      (covered_end_x - covered_start_x) / target_length;
+  const double min_coverage_ratio = 0.8;
+
+  if (current_coverage_ratio < min_coverage_ratio) {
+    for (auto& cloud : all_point_clouds) {
+      if (std::find(selected_clouds.begin(), selected_clouds.end(), &cloud) ==
+          selected_clouds.end()) {
+        selected_clouds.push_back(&cloud);
+        covered_start_x = std::min(covered_start_x, cloud.intersect_start_x);
+        covered_end_x = std::max(covered_end_x, cloud.intersect_end_x);
+        current_coverage_ratio =
+            (covered_end_x - covered_start_x) / target_length;
+        if (current_coverage_ratio >= min_coverage_ratio) {
+          break;
+        }
+      }
+    }
+  }
+
+  ILOG_INFO << "Selected " << selected_clouds.size()
+            << " obstacles for sampling";
+
+  for (auto* cloud : selected_clouds) {
+    double sampling_start = cloud->intersect_start_x;
+    double sampling_end = cloud->intersect_end_x;
+
+    const double endpoint_threshold = 2.0;
+
+    if ((sampling_start - target_start_x) < endpoint_threshold &&
+        sampling_start > target_start_x) {
+      sampling_start = target_start_x;
+    }
+
+    bool should_extend_to_end = false;
+    if (cloud->CoversTargetEnd(target_end_x)) {
+      should_extend_to_end = true;
+    } else if (cloud->IsNearTargetEnd(target_end_x, endpoint_threshold)) {
+      should_extend_to_end = true;
+    } else if (cloud->CanSafelyExtrapolateTo(target_end_x, 3.0)) {
+      should_extend_to_end = true;
+    }
+
+    if (should_extend_to_end) {
+      sampling_end = target_end_x;
+    }
+
+    sampling_end = std::min(sampling_end, target_end_x);
+
+    if (sampling_end <= sampling_start) {
+      continue;
+    }
+
+    ILOG_INFO << "Sampling Obs " << cloud->obs_id << " in range ["
+              << sampling_start << ", " << sampling_end << "]";
+
+    for (double x = sampling_start; x <= sampling_end + step_size / 2.0;
+         x += step_size) {
+      double current_x = std::min(x, sampling_end);
+      Eigen::Vector2d best_point;
+      bool found_best_point = false;
+
+      const double search_radius = step_size * 0.5;
+      double min_abs_y_in_range = std::numeric_limits<double>::max();
+      Eigen::Vector2d best_point_in_range;
+      bool found_point_in_range = false;
+
+      for (const auto& point : cloud->points) {
+        if (std::abs(point.x() - current_x) <= search_radius) {
+          double abs_y = std::abs(point.y());
+          if (abs_y < min_abs_y_in_range) {
+            min_abs_y_in_range = abs_y;
+            best_point_in_range = point;
+            found_point_in_range = true;
+          }
+        }
+      }
+
+      if (found_point_in_range) {
+        best_point = best_point_in_range;
+        found_best_point = true;
+        ILOG_DEBUG << "Found point in range at x=" << current_x
+                   << ": using point at (" << best_point.x() << ","
+                   << best_point.y() << ") with abs_y=" << min_abs_y_in_range;
+      }
+
+      if (!found_best_point) {
+        best_point.x() = current_x;
+        bool found_interval = false;
+
+        for (size_t i = 0; i < cloud->points.size() - 1; ++i) {
+          const Eigen::Vector2d& p1 = cloud->points[i];
+          const Eigen::Vector2d& p2 = cloud->points[i + 1];
+
+          double extended_p1_x = p1.x() - search_radius;
+          double extended_p2_x = p2.x() + search_radius;
+
+          if (current_x >= extended_p1_x && current_x <= extended_p2_x) {
+            double t = (p2.x() - p1.x()) < 1e-6
+                           ? 0.0
+                           : (current_x - p1.x()) / (p2.x() - p1.x());
+            t = std::max(0.0, std::min(1.0, t));
+            best_point.y() = p1.y() + t * (p2.y() - p1.y());
+            found_interval = true;
+            break;
+          }
+        }
+
+        if (!found_interval) {
+          if (cloud->points.empty()) {
+            continue;
+          }
+
+          double front_abs_y = std::abs(cloud->points.front().y());
+          double back_abs_y = std::abs(cloud->points.back().y());
+
+          if (front_abs_y < back_abs_y) {
+            best_point.y() = cloud->points.front().y();
+          } else {
+            best_point.y() = cloud->points.back().y();
+          }
+        }
+      }
+
+      resampled_points.emplace_back(best_point);
+
+      double current_abs_y = std::abs(best_point.y());
+      if (current_abs_y < nearest_abs_y) {
+        nearest_abs_y = current_abs_y;
+      }
+    }
+  }
+
+  if (!resampled_points.empty()) {
+    std::sort(resampled_points.begin(), resampled_points.end(),
+              [](const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
+                return a.x() < b.x();
+              });
+
+    if (resampled_points.front().x() > target_start_x + step_size * 0.5) {
+      ILOG_INFO << "Missing coverage at start, forward interpolating...";
+      // if (abs(resampled_points.front().x() - target_start_x) > 5.0) {
+      //   ILOG_INFO << "too empty, use origin curb CD";
+      // }
+
+      if (!selected_clouds.empty()) {
+        ObsPointCloud* start_cloud = selected_clouds[0];
+
+        // 查找起点附近step_size范围内的点，选择y绝对值最小的点
+        double start_search_min_x = target_start_x;
+        double start_search_max_x = target_start_x + step_size;
+
+        double min_abs_y_near_start = std::numeric_limits<double>::max();
+        Eigen::Vector2d best_point_near_start;
+        bool found_point_near_start = false;
+
+        for (const auto& point : start_cloud->points) {
+          if (point.x() >= start_search_min_x &&
+              point.x() <= start_search_max_x) {
+            double abs_y = std::abs(point.y());
+            if (abs_y < min_abs_y_near_start) {
+              min_abs_y_near_start = abs_y;
+              best_point_near_start = point;
+              found_point_near_start = true;
+            }
+          }
+        }
+
+        if (found_point_near_start) {
+          ILOG_DEBUG << "Found best point near start: ("
+                     << best_point_near_start.x() << ", "
+                     << best_point_near_start.y()
+                     << "), abs_y=" << min_abs_y_near_start;
+        } else {
+          ILOG_WARN << "use front point as best point near start";
+          best_point_near_start = resampled_points.front();
+        }
+        best_point_near_start.y() =
+            t_lane_y > 0 ? std::min(t_lane_y, best_point_near_start.y())
+                         : std::max(t_lane_y, best_point_near_start.y());
+        ILOG_DEBUG << "best_point_near_start with curb y: ("
+                   << best_point_near_start.x() << ", "
+                   << best_point_near_start.y()
+                   << "), abs_y=" << min_abs_y_near_start;
+
+        double first_existing_x = resampled_points.front().x();
+        double interp_start_x = target_start_x;
+
+        for (double x = interp_start_x; x < first_existing_x - step_size;
+             x += 2 * step_size) {
+          if (x >= first_existing_x - step_size * 0.5) {
+            break;
+          }
+
+          // 使用找到的最优点的y值
+          double y = best_point_near_start.y();
+          Eigen::Vector2d new_point(x, y);
+          resampled_points.emplace_back(new_point);
+
+          double abs_y = std::abs(y);
+          if (abs_y < nearest_abs_y) {
+            nearest_abs_y = abs_y;
+          }
+
+          ILOG_DEBUG << "Added start interpolation point at x=" << x
+                     << ", y=" << y << " (using point near start)";
+        }
+      }
+    }
+
+    if (resampled_points.back().x() < target_end_x - step_size * 0.5) {
+      // if (abs(resampled_points.back().x() - target_end_x) > 5.0) {
+      //   ILOG_INFO << "too empty, use origin curb CD";
+      // }
+      ILOG_INFO << "Missing coverage at end, backward interpolating...";
+
+      // 使用最后一个障碍物在端点附近step_size范围内的点云
+      if (!selected_clouds.empty()) {
+        ObsPointCloud* end_cloud = selected_clouds.back();
+
+        double end_search_min_x = target_end_x - step_size;
+        double end_search_max_x = target_end_x;
+
+        double min_abs_y_near_end = std::numeric_limits<double>::max();
+        Eigen::Vector2d best_point_near_end;
+        bool found_point_near_end = false;
+
+        for (const auto& point : end_cloud->points) {
+          if (point.x() >= end_search_min_x && point.x() <= end_search_max_x) {
+            double abs_y = std::abs(point.y());
+            if (abs_y < min_abs_y_near_end) {
+              min_abs_y_near_end = abs_y;
+              best_point_near_end = point;
+              found_point_near_end = true;
+            }
+          }
+        }
+
+        if (found_point_near_end) {
+          ILOG_DEBUG << "Found best point near end: ("
+                     << best_point_near_end.x() << ", "
+                     << best_point_near_end.y()
+                     << "), abs_y=" << min_abs_y_near_end;
+        } else {
+          ILOG_WARN << "use back point as best point near start";
+          best_point_near_end = resampled_points.back();
+        }
+        best_point_near_end.y() =
+            t_lane_y > 0 ? std::min(t_lane_y, best_point_near_end.y())
+                         : std::max(t_lane_y, best_point_near_end.y());
+        ILOG_DEBUG << "best point near end with curb y: ("
+                   << best_point_near_end.x() << ", " << best_point_near_end.y()
+                   << "), abs_y=" << min_abs_y_near_end;
+
+        double last_existing_x = resampled_points.back().x();
+        double interp_end_x = target_end_x;
+
+        for (double x = last_existing_x + 2 * step_size;
+             x <= interp_end_x + step_size / 2.0; x += 2 * step_size) {
+          double current_x = std::min(x, interp_end_x);
+
+          if (current_x > interp_end_x + step_size * 0.5) {
+            break;
+          }
+
+          // 使用找到的最优点的y值
+          double y = best_point_near_end.y();
+          Eigen::Vector2d new_point(current_x, y);
+          resampled_points.emplace_back(new_point);
+
+          double abs_y = std::abs(y);
+          if (abs_y < nearest_abs_y) {
+            nearest_abs_y = abs_y;
+          }
+
+          ILOG_DEBUG << "Added end interpolation point at x=" << current_x
+                     << ", y=" << y << " (using point near end)";
+        }
+      }
+    }
+
+    std::sort(resampled_points.begin(), resampled_points.end(),
+              [](const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
+                return a.x() < b.x();
+              });
+
+    // 去重：当x坐标接近时，保留y绝对值更小的点
+    std::vector<Eigen::Vector2d> deduplicated;
+    deduplicated.reserve(resampled_points.size());
+
+    for (const auto& point : resampled_points) {
+      if (deduplicated.empty()) {
+        deduplicated.push_back(point);
+      } else {
+        auto& last = deduplicated.back();
+        if (std::abs(point.x() - last.x()) < step_size * 0.5) {
+          if (std::abs(point.y()) < std::abs(last.y())) {
+            last = point;
+          }
+        } else {
+          deduplicated.push_back(point);
+        }
+      }
+    }
+
+    resampled_points = std::move(deduplicated);
+  }
+
+  ILOG_INFO << "Resampling completed:";
+  ILOG_INFO << "  Total obstacles: " << all_point_clouds.size();
+  ILOG_INFO << "  Target segment: [" << target_start_x << ", " << target_end_x
+            << "] (length: " << target_length << "m)";
+  if (!resampled_points.empty()) {
+    std::sort(resampled_points.begin(), resampled_points.end(),
+              [](const Eigen::Vector2d& a, const Eigen::Vector2d& b) {
+                return a.x() < b.x();
+              });
+
+    double max_x_gap = 0.0;
+    double max_y_gap = 0.0;
+    size_t max_gap_start_idx = 0;
+    // size_t max_gap_start_idy = 0;
+
+    for (size_t i = 0; i < resampled_points.size() - 1; ++i) {
+      double x_gap =
+          std::abs(resampled_points[i + 1].x() - resampled_points[i].x());
+      if (x_gap > max_x_gap) {
+        max_x_gap = x_gap;
+        max_gap_start_idx = i;
+      }
+    }
+
+    const double MAX_ALLOWED_GAP = 6.0;  //
+
+    if (max_x_gap > MAX_ALLOWED_GAP) {
+      ILOG_WARN << "Large x gap detected in resampled points: " << max_x_gap
+                << "m between points " << max_gap_start_idx << " and "
+                << max_gap_start_idx + 1;
+      ILOG_WARN << "Gap location: [" << resampled_points[max_gap_start_idx].x()
+                << ", " << resampled_points[max_gap_start_idx + 1].x() << "]";
+      ILOG_WARN << "Returning empty result due to large gap (> "
+                << MAX_ALLOWED_GAP << "m)";
+
+      resampled_points.clear();
+      nearest_abs_y = std::numeric_limits<double>::max();
+    } else if (max_x_gap > 2 * step_size) {
+      const Eigen::Vector2d& start_point = resampled_points[max_gap_start_idx];
+      const Eigen::Vector2d& end_point =
+          resampled_points[max_gap_start_idx + 1];
+
+      double gap_length = end_point.x() - start_point.x();
+      int num_interpolated_points =
+          static_cast<int>(gap_length / (2 * step_size)) - 1;
+
+      if (num_interpolated_points > 0) {
+        ILOG_INFO << "Gap length: " << gap_length << "m, inserting "
+                  << num_interpolated_points
+                  << " interpolated points for x gap";
+
+        std::vector<Eigen::Vector2d> interpolated_points;
+        interpolated_points.reserve(resampled_points.size() +
+                                    num_interpolated_points);
+
+        for (size_t i = 0; i <= max_gap_start_idx; ++i) {
+          interpolated_points.push_back(resampled_points[i]);
+        }
+
+        for (int i = 1; i <= num_interpolated_points; ++i) {
+          double t = static_cast<double>(i) / (num_interpolated_points + 1);
+          double x = start_point.x() + t * gap_length;
+          double y = t_lane_y;
+
+          Eigen::Vector2d interpolated_point(x, y);
+          interpolated_points.push_back(interpolated_point);
+
+          ILOG_DEBUG << "Inserted interpolated point at x=" << x << ", y=" << y
+                     << " (t=" << t << ")";
+        }
+
+        for (size_t i = max_gap_start_idx + 1; i < resampled_points.size();
+             ++i) {
+          interpolated_points.push_back(resampled_points[i]);
+        }
+
+        resampled_points = std::move(interpolated_points);
+      }
+    }
+  }
+  if (nearest_abs_y == std::numeric_limits<double>::max()) {
+    ILOG_WARN << "Failed to find nearest y during resampling";
+    nearest_abs_y = 0.0;
+  }
+
+  return resampled_points;
+}
+
+bool ParallelParkInScenario::ProcessCurbPointsAndGetPoints(
+    std::vector<Eigen::Vector2d>& point_set,
+    const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
+        obs_id_pt_map,
+    const Eigen::Vector2d& C_curb, const Eigen::Vector2d& D_curb,
+    const double& curb_y) {
+  point_set.clear();
+
+  std::vector<Eigen::Vector2d> resample_obs_curb_pts;
+  double nearest_abs_y = std::numeric_limits<double>::max();
+
+  if (obs_id_pt_map.empty()) {
+    ILOG_INFO << "obs_id_pt_map_.empty, use origin curb obs";
+    return false;
+  }
+
+  resample_obs_curb_pts = ProcessCurbPointsAndGetNearestAbsY(
+      nearest_abs_y, obs_id_pt_map, C_curb.x(), D_curb.x(), curb_y);
+
+  if (resample_obs_curb_pts.empty() || resample_obs_curb_pts.size() < 2 ||
+      nearest_abs_y == std::numeric_limits<double>::max() ||
+      nearest_abs_y > std::abs(curb_y) + 0.5) {
+    ILOG_INFO << "use origin curb obs, resample_obs_curb_pts.size:"
+              << resample_obs_curb_pts.size()
+              << ",nearest_abs_y:" << nearest_abs_y
+              << ",abs curb_y: " << std::abs(curb_y);
+    return false;
+  }
+
+  bool is_need_complete_curb_start_to_c =
+      std::abs(resample_obs_curb_pts.front().y() - curb_y) >= 0.4;
+  bool is_need_complete_curb_end_to_d =
+      std::abs(resample_obs_curb_pts.back().y() - curb_y) >= 0.4;
+
+  ILOG_INFO << "resample_obs_curb_pts.front().y():"
+            << resample_obs_curb_pts.front().y() << ",curb_y:" << curb_y
+            << ",resample_obs_curb_pts.back().y():"
+            << resample_obs_curb_pts.back().y() << ",curb_y:" << curb_y;
+  pnc::geometry_lib::LineSegment tlane_line;
+
+  ProcessTruncationPoints(resample_obs_curb_pts, curb_y, tlane_line);
+
+  std::vector<Eigen::Vector2d> complete_curb_start_to_c;
+  std::vector<Eigen::Vector2d> complete_curb_end_to_d;
+
+  if (is_need_complete_curb_start_to_c) {
+    Eigen::Vector2d start_point;
+    start_point.x() = resample_obs_curb_pts.front().x();
+    start_point.y() = resample_obs_curb_pts.front().y();
+
+    tlane_line.SetPoints(C_curb, start_point);
+    pnc::geometry_lib::SamplePointSetInLineSeg(
+        complete_curb_start_to_c, tlane_line, kTBoundarySampleDist);
+  }
+
+  if (is_need_complete_curb_end_to_d) {
+    Eigen::Vector2d end_point;
+    end_point.x() = resample_obs_curb_pts.back().x();
+    end_point.y() = resample_obs_curb_pts.back().y();
+
+    tlane_line.SetPoints(D_curb, end_point);
+    pnc::geometry_lib::SamplePointSetInLineSeg(
+        complete_curb_end_to_d, tlane_line, kTBoundarySampleDist);
+  }
+
+  point_set = resample_obs_curb_pts;
+
+  if (!complete_curb_start_to_c.empty()) {
+    point_set.insert(point_set.end(), complete_curb_start_to_c.begin(),
+                     complete_curb_start_to_c.end());
+  }
+
+  if (!complete_curb_end_to_d.empty()) {
+    point_set.insert(point_set.end(), complete_curb_end_to_d.begin(),
+                     complete_curb_end_to_d.end());
+  }
+
+  ILOG_INFO << "use resample curb obs, total points: " << point_set.size();
+  return true;
+}
+
+void ParallelParkInScenario::ProcessTruncationPoints(
+    std::vector<Eigen::Vector2d>& curb_points, const double& curb_y,
+    pnc::geometry_lib::LineSegment& tlane_line) {
+  int trunc_start_idx = -1;
+  int trunc_end_idx = -1;
+
+  for (size_t i = 0; i < curb_points.size(); ++i) {
+    if (std::abs(curb_points[i].y()) - 1e-5 < std::abs(curb_y)) {
+      if (trunc_start_idx <= 1) {
+        trunc_start_idx = i;
+      }
+      trunc_end_idx = i;
+    }
+  }
+
+  ILOG_INFO << " trunc_start_idx:" << trunc_start_idx
+            << ", trunc_end_idx:" << trunc_end_idx
+            << ", curb_points.size():" << curb_points.size();
+
+  if (trunc_start_idx != -1 && trunc_end_idx != -1 && trunc_start_idx >= 0 &&
+      trunc_end_idx <= static_cast<int>(curb_points.size()) - 1 &&
+      trunc_start_idx != trunc_end_idx) {
+    Eigen::Vector2d trunc_start_point, trunc_end_point;
+    trunc_start_point.x() = curb_points[trunc_start_idx].x();
+    trunc_start_point.y() = curb_y;
+    trunc_end_point.x() = curb_points[trunc_end_idx].x();
+    trunc_end_point.y() = curb_y;
+
+    tlane_line.SetPoints(trunc_start_point, trunc_end_point);
+    std::vector<Eigen::Vector2d> C_D_line_obs_vec;
+    pnc::geometry_lib::SamplePointSetInLineSeg(C_D_line_obs_vec, tlane_line,
+                                               kTBoundarySampleDist);
+
+    std::vector<Eigen::Vector2d> new_curb_points;
+    new_curb_points.reserve(curb_points.size() + C_D_line_obs_vec.size() -
+                            (trunc_end_idx - trunc_start_idx + 1));
+
+    if (trunc_start_idx > 0) {
+      new_curb_points.insert(new_curb_points.end(), curb_points.begin(),
+                             curb_points.begin() + trunc_start_idx);
+    }
+
+    new_curb_points.insert(new_curb_points.end(), C_D_line_obs_vec.begin(),
+                           C_D_line_obs_vec.end());
+
+    if (trunc_end_idx + 1 < static_cast<int>(curb_points.size())) {
+      new_curb_points.insert(new_curb_points.end(),
+                             curb_points.begin() + trunc_end_idx + 1,
+                             curb_points.end());
+    }
+
+    curb_points = std::move(new_curb_points);
+
+    ILOG_INFO << "After truncation, points count: " << curb_points.size();
+  }
 }
 
 }  // namespace apa_planner
