@@ -867,7 +867,8 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
       reference_path_mgr->get_reference_path_by_lane(origin_lane_id, false);
   const std::shared_ptr<VirtualLane> target_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
-
+  const std::shared_ptr<VirtualLane> origin_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
   if (!reference_path_ptr) {
     ILOG_ERROR
         << "IsRoadBorderSurpressDuringLaneChange: invalid reference path";
@@ -875,6 +876,9 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
   }
   if (!target_lane) {
     ILOG_ERROR << "IsRoadBorderSurpressDuringLaneChange: invalid target lane";
+    return true;
+  }
+  if(!origin_lane){
     return true;
   }
 
@@ -899,7 +903,13 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
                                                       sample_path_point)) {
     return true;
   }
+  double half_origin_lane_width = origin_lane->width() * 0.5;
+  double half_target_lane_width = target_lane->width() * 0.5;
   double RoadBorderConsiderDistance = ego_vel * predict_time_horizon;
+  double ego_lateral_offset_to_origin_boundary = std::max(ego_lateral_offset_in_target_lane - half_target_lane_width, 0.0);
+  double lateral_ratio = ego_lateral_offset_to_origin_boundary / half_origin_lane_width;
+  //根据横向距离衰减
+  RoadBorderConsiderDistance = std::max(lateral_ratio * RoadBorderConsiderDistance, 5.0);
   for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
        s < ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle +
                RoadBorderConsiderDistance;
@@ -921,14 +931,14 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
   }
   if (lc_direction == LEFT_CHANGE) {
     if (sample_path_point.distance_to_left_road_border <
-        ego_lateral_offset_in_target_lane) {
+        ego_lateral_offset_to_origin_boundary) {
       return true;
     } else {
       return false;
     }
   } else if (lc_direction == RIGHT_CHANGE) {
     if (sample_path_point.distance_to_right_road_border <
-        ego_lateral_offset_in_target_lane) {
+        ego_lateral_offset_to_origin_boundary) {
       return true;
     } else {
       return false;
