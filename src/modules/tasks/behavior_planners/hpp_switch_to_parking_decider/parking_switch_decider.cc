@@ -27,7 +27,7 @@ bool ParkingSwitchDecider::Execute() {
   const bool is_reached_target_slot =
       parking_slot_manager->IsReachedTargetSlot();
   double distance_to_destination =
-      env.get_route_info()->get_route_info_output().distance_to_target_slot;
+      env.get_route_info()->get_route_info_output().hpp_route_info_output.distance_to_target_slot;
   double distance_to_target_slot =
       parking_slot_manager->GetDistanceToTargetSlot();
   ILOG_DEBUG << "distance_to_target_slot:" << distance_to_target_slot;

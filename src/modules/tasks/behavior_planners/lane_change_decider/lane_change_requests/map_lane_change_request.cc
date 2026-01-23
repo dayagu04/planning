@@ -100,10 +100,10 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     target_lane = virtual_lane_mgr_->get_right_lane();
   }
   const bool is_avoidance_MLC =
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_MERGE ||
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_DIVERGE;
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_MERGE ||
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_SPLIT;
   if (is_avoidance_MLC && suppression_counter > 0) {
     ILOG_INFO
         << "[MapRequest::update] Suppressing avoidance MLC due to timeout";
@@ -269,22 +269,15 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
   const double lsl_length = route_info_output.lsl_length;
   if (route_info_output.map_vendor ==
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_BAIDU_LD) {
-    // if (route_info_output.is_on_ramp ||
-    //     route_info_output.lc_nums_for_split != 0) {
-    //   lc_end_dis =
-    //       route_info_output.distance_to_first_road_split - kTmpRampLength;
-    // } else {
-    //   lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
-    // }
     lc_end_dis = 0.0;
 
   } else if (route_info_output.map_vendor ==
              iflymapdata::sdpro::MapVendorType::MAP_VENDOR_TENCENT_SD_PRO) {
     lc_end_dis =
-        !route_info_output.split_region_info_list.empty()
-            ? route_info_output.split_region_info_list[0]
+        !route_info_output.map_split_region_info_list.empty()
+            ? route_info_output.map_split_region_info_list[0]
                       .distance_to_split_point -
-                  std::abs(route_info_output.split_region_info_list[0]
+                  std::abs(route_info_output.map_split_region_info_list[0]
                                .start_fp_point.fp_distance_to_split_point) -
                   lsl_length
             : NL_NMAX;
@@ -329,10 +322,10 @@ void MapRequest::GenerateMLCRequest() {
     }
   }
   const bool is_avoidance_MLC =
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_MERGE ||
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_DIVERGE;
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_MERGE ||
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_SPLIT;
   if (is_avoidance_MLC && !is_in_avoidance_mlc) {
     is_in_avoidance_mlc = true;  // 设置状态标志
     avoidance_MLC_counter = 1;   // 启动超时计时器

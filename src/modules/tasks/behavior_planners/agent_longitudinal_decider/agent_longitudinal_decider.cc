@@ -231,9 +231,23 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
       session_->planning_context().ego_lane_road_right_decider_output();
   bool is_confluence_area = false;
   if (route_info != nullptr) {
+    const auto& ego_state =
+        session_->environmental_model().get_ego_state_manager();
+    const double ego_v = ego_state->ego_v();
+    const double dis_threshold = ego_v * 10.0;
     const auto& route_info_output = route_info->get_route_info_output();
-    if (route_info_output.is_closing_merge ||
-        route_info_output.is_closing_split) {
+    bool is_closing_split =
+        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+            SPLIT_SCENE &&
+        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
+            dis_threshold;
+    bool is_closing_merge =
+        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+            MERGE_SCENE &&
+        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
+            dis_threshold;
+
+    if (is_closing_merge || is_closing_split) {
       is_confluence_area = true;
     }
   }

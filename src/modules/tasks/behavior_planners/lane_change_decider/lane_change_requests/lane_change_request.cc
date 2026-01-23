@@ -21,7 +21,8 @@ constexpr double kLargeAgentLengthM = 8.0;
 constexpr double kInputBoundaryLenLimit = 145.;
 constexpr double kDefaultBoundaryLen = 5000.;
 // https://yf2ljykclb.xfchat.iflytek.com/wiki/MXjXwlCjni6g7nkjgKGrfwGwzPb
-constexpr double kLaneChangeSolidLineTTC = 3.5;  // todo(ldh): 从配置中读取
+constexpr double kLaneChangeSolidLineTTC = 3.0;  // todo(ldh): 从配置中读取
+constexpr double kLaneChangeFrontSolidLineTTC = 1.5;  // todo(ldh): 从配置中读取
 constexpr double kLaneChangeMinDistance = 9;
 constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
 constexpr double kStandardLaneWidth = 3.8;
@@ -470,22 +471,72 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
         left_lane_boundarys.type_segments[current_segment_count].length -
         (lane_line_length - ego_s);
 
-    for (int iter = current_segment_count;
-         iter < left_lane_boundarys.type_segments_size; iter++) {
-      if (left_lane_boundarys.type_segments[iter].type ==
-              iflyauto::LaneBoundaryType_MARKING_DASHED ||
-          left_lane_boundarys.type_segments[iter].type ==
-              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
-          left_lane_boundarys.type_segments[iter].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-        dash_length += left_lane_boundarys.type_segments[iter].length;
-      } else {
-        all_lane_boundary_types_are_dashed = false;
-        break;
+    if (left_lane_boundarys.type_segments[current_segment_count].type ==
+            iflyauto::LaneBoundaryType_MARKING_SOLID ||
+        left_lane_boundarys.type_segments[current_segment_count].type ==
+            iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+        left_lane_boundarys.type_segments[current_segment_count].type ==
+            iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED) {
+      all_lane_boundary_types_are_dashed = false;
+      // 计算前方实线的距离
+      const double front_ignore_solid_dis =
+          ego_v * kLaneChangeFrontSolidLineTTC;
+      double front_sum_solid_dis = 0.0;
+      double front_sum_dash_dis = 0.0;
+
+      bool is_continue_solid_lane = true;
+      for (int iter = current_segment_count;
+           iter < left_lane_boundarys.type_segments_size; iter++) {
+        if (left_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_SOLID ||
+            left_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+            left_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED) {
+          if (!is_continue_solid_lane) {
+            break;
+          }
+          front_sum_solid_dis = front_sum_solid_dis +
+                                left_lane_boundarys.type_segments[iter].length;
+          if (front_sum_solid_dis - current_segment_already_pass_length >
+              front_ignore_solid_dis) {
+            break;
+          }
+
+        } else if (left_lane_boundarys.type_segments[iter].type ==
+                       iflyauto::LaneBoundaryType_MARKING_DASHED ||
+                   left_lane_boundarys.type_segments[iter].type ==
+                       iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+                   left_lane_boundarys.type_segments[iter].type ==
+                       iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          is_continue_solid_lane = false;
+          front_sum_dash_dis = front_sum_dash_dis +
+                               left_lane_boundarys.type_segments[iter].length;
+          double front_need_gap_dash_len = ego_v * 2.0;
+          if (front_sum_dash_dis > front_need_gap_dash_len) {
+            return true;
+          }
+        }
       }
+    } else {
+      for (int iter = current_segment_count;
+           iter < left_lane_boundarys.type_segments_size; iter++) {
+        if (left_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_DASHED ||
+            left_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+            left_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          dash_length += left_lane_boundarys.type_segments[iter].length;
+        } else {
+          all_lane_boundary_types_are_dashed = false;
+          break;
+        }
+      }
+      dash_length -= current_segment_already_pass_length;
+      dash_length = std::max(0.0, dash_length);
     }
-    dash_length -= current_segment_already_pass_length;
-    dash_length = std::max(0.0, dash_length);
+
   } else if (lc_request == RIGHT_CHANGE) {
     const auto &right_lane_boundarys = current_lane->get_right_lane_boundary();
     target_boundary_path =
@@ -509,22 +560,72 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
         right_lane_boundarys.type_segments[current_segment_count].length -
         (lane_line_length - ego_s);
 
-    for (int iter = current_segment_count;
-         iter < right_lane_boundarys.type_segments_size; iter++) {
-      if (right_lane_boundarys.type_segments[iter].type ==
-              iflyauto::LaneBoundaryType_MARKING_DASHED ||
-          right_lane_boundarys.type_segments[iter].type ==
-              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
-          right_lane_boundarys.type_segments[iter].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-        dash_length += right_lane_boundarys.type_segments[iter].length;
-      } else {
-        all_lane_boundary_types_are_dashed = false;
-        break;
+    if (right_lane_boundarys.type_segments[current_segment_count].type ==
+            iflyauto::LaneBoundaryType_MARKING_SOLID ||
+        right_lane_boundarys.type_segments[current_segment_count].type ==
+            iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+        right_lane_boundarys.type_segments[current_segment_count].type ==
+            iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED) {
+      all_lane_boundary_types_are_dashed = false;
+      // 计算前方实线的距离
+      const double front_ignore_solid_dis =
+          ego_v * kLaneChangeFrontSolidLineTTC;
+      double front_sum_solid_dis = 0.0;
+      double front_sum_dash_dis = 0.0;
+
+      bool is_continue_solid_lane = true;
+      for (int iter = current_segment_count;
+           iter < right_lane_boundarys.type_segments_size; iter++) {
+        if (right_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_SOLID ||
+            right_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+            right_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED) {
+          if (!is_continue_solid_lane) {
+            break;
+          }
+          front_sum_solid_dis = front_sum_solid_dis +
+                                right_lane_boundarys.type_segments[iter].length;
+          if (front_sum_solid_dis - current_segment_already_pass_length >
+              front_ignore_solid_dis) {
+            break;
+          }
+
+        } else if (right_lane_boundarys.type_segments[iter].type ==
+                       iflyauto::LaneBoundaryType_MARKING_DASHED ||
+                   right_lane_boundarys.type_segments[iter].type ==
+                       iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+                   right_lane_boundarys.type_segments[iter].type ==
+                       iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          is_continue_solid_lane = false;
+          front_sum_dash_dis = front_sum_dash_dis +
+                               right_lane_boundarys.type_segments[iter].length;
+          double front_need_gap_dash_len = ego_v * 2.0;
+          if (front_sum_dash_dis > front_need_gap_dash_len) {
+            return true;
+          }
+        }
       }
+    } else {
+      for (int iter = current_segment_count;
+          iter < right_lane_boundarys.type_segments_size; iter++) {
+        if (right_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_DASHED ||
+            right_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+            right_lane_boundarys.type_segments[iter].type ==
+                iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          dash_length += right_lane_boundarys.type_segments[iter].length;
+        } else {
+          all_lane_boundary_types_are_dashed = false;
+          break;
+        }
+      }
+      dash_length -= current_segment_already_pass_length;
+      dash_length = std::max(0.0, dash_length);
     }
-    dash_length -= current_segment_already_pass_length;
-    dash_length = std::max(0.0, dash_length);
+
   }
 
   const double lc_response_dist = std::max(ego_v * kLaneChangeSolidLineTTC,
@@ -542,24 +643,35 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                              .get_virtual_lane_manager()
                              ->get_current_lane();
 
-  const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
-  bool is_process_split = route_info_output.mlc_decider_route_info.is_process_split ||
-                          route_info_output.baidu_mlc_scene == SPLIT_SCENE;
+  bool is_process_split =
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+      SPLIT_SCENE;
+
   bool is_mlc_avoidance =
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_DIVERGE ||
-      route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          AVOIDE_MERGE;
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_SPLIT ||
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_MERGE;
+
+  int minVal_seq = 1000;
+  int maxVal_seq = -1000;
+  for (const auto& seq: route_info_output.feasible_lane_sequence) {
+    if (seq < minVal_seq) {
+      minVal_seq = seq;
+    }
+
+    if (seq > maxVal_seq) {
+      maxVal_seq = seq;
+    }
+  }
   bool is_one_lane_gap =
       lc_request == RIGHT_CHANGE
-          ? (route_info_output.minVal_seq - route_info_output.ego_seq) == 1
-          : (route_info_output.ego_seq - route_info_output.maxVal_seq) == 1;
+          ? (minVal_seq - route_info_output.ego_seq) == 1
+          : (route_info_output.ego_seq - maxVal_seq) == 1;
+
   const bool is_satisfy_dis_condition =
-      route_info_output.mlc_request_type_route_info
-                  .distance_to_exchange_region < 100.0 &&
-          is_one_lane_gap ||
-      (route_info_output.baidu_mlc_scene == SPLIT_SCENE &&
-       route_info_output.dis_to_ramp < 100.0);
+      route_info_output.mlc_decider_scene_type_info
+              .dis_to_link_topo_change_point < 100.0;
 
   if (is_process_split && lc_request_source == MAP_REQUEST &&
       !is_mlc_avoidance && is_satisfy_dis_condition) {

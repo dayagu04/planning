@@ -90,7 +90,7 @@ bool ParkingSlotManager::Update(
   const double distance_to_target_slot = session_->environmental_model()
                                              .get_route_info()
                                              ->get_route_info_output()
-                                             .distance_to_target_slot;
+                                              .hpp_route_info_output.distance_to_target_slot;
   if (distance_to_target_slot > 20.0) {
     return false;
   }
@@ -134,7 +134,7 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
   const double distance_to_target_slot = session_->environmental_model()
                                              .get_route_info()
                                              ->get_route_info_output()
-                                             .distance_to_target_slot;
+                                             .hpp_route_info_output.distance_to_target_slot;
   distance_to_target_slot_ = distance_to_target_slot;
   if (reference_path != nullptr) {
     const double ego_s = reference_path->get_frenet_ego_state().s();

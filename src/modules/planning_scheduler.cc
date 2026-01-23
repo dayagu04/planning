@@ -809,15 +809,15 @@ void PlanningScheduler::FillPlanningHmiInfo(
   auto hpp_info = &(session_.mutable_planning_context()
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
-  hpp_info->is_avaliable = route_info_output.is_on_hpp_lane;
+  hpp_info->is_avaliable = route_info_output.hpp_route_info_output.is_on_hpp_lane;
   hpp_info->distance_to_parking_space =
-      is_reached_target_slot ? 0.0 : route_info_output.distance_to_target_slot;
-  hpp_info->is_on_hpp_lane = route_info_output.is_on_hpp_lane;
+      is_reached_target_slot ? 0.0 : route_info_output.hpp_route_info_output.distance_to_target_slot;
+  hpp_info->is_on_hpp_lane = route_info_output.hpp_route_info_output.is_on_hpp_lane;
   // hpp_info->is_on_hpp_lane = true;  // hack
   hpp_info->is_reached_hpp_trace_start =
-      route_info_output.is_reached_hpp_start_point;
+      route_info_output.hpp_route_info_output.is_reached_hpp_start_point;
   hpp_info->accumulated_driving_distance =
-      route_info_output.sum_distance_driving;
+      route_info_output.hpp_route_info_output.sum_distance_driving;
 
   hpp_info->is_approaching_intersection = false;
   hpp_info->is_approaching_turn = false;

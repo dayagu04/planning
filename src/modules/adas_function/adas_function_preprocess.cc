@@ -1600,11 +1600,12 @@ void Preprocess::SetNavMapInfo(void) {
     const double max_heading_diff = PI / 4;
     double temp_nearest_s = 0;
     double nearest_l = 0;
+    bool is_search_cur_link = true;
     const double ego_heading_angle = localization_info->heading_angle();
     const iflymapdata::sdpro::LinkInfo_Link *current_link =
         sd_pro_map_info_ptr.GetNearestLinkWithHeading(
             current_point, search_distance, ego_heading_angle, max_heading_diff,
-            temp_nearest_s, nearest_l);
+            temp_nearest_s, nearest_l, is_search_cur_link);
     if (!current_link) {
       sdpromap_info.valid_flag = false;
       sdpromap_info.map_source = 2;
