@@ -37,47 +37,34 @@ void ApaPredictPathManager::Update(
     return;
   }
 
-  double min_dist = std::numeric_limits<double>::infinity();
-  int min_index = -1;
-  double path_length = 0.0;
-  double proj_s = 0.0;
-  int i = 0;
+  const iflyauto::Trajectory& plan_traj = planning_output->trajectory;
+
+  const int plan_pt_size =
+      std::min(plan_traj.trajectory_points_size,
+               static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
+
   const double ego_x = measure_data_ptr->GetPos().x();
   const double ego_y = measure_data_ptr->GetPos().y();
   const double ego_phi = measure_data_ptr->GetHeading();
-  for (i = 0; i < std::min(planning_output->trajectory.trajectory_points_size,
-                           static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
-       ++i) {
-    const iflyauto::TrajectoryPoint& planning_pt =
-        planning_output->trajectory.trajectory_points[i];
 
-    if (i > 1) {
-      path_length += (std::hypot(
-          planning_pt.x -
-              planning_output->trajectory.trajectory_points[i - 1].x,
-          planning_pt.y -
-              planning_output->trajectory.trajectory_points[i - 1].y));
-    }
+  const int pro_index = CalProjIndexFromPlanningTraj(
+      plan_traj.trajectory_points, plan_pt_size, ego_x, ego_y);
 
-    const double dist =
-        std::hypot(planning_pt.x - ego_x, planning_pt.y - ego_y);
-    if (dist < min_dist) {
-      min_index = i;
-      min_dist = dist;
-      proj_s = path_length;
-    }
-  }
-
-  if (min_index == -1) {
+  if (pro_index == -1) {
     return;
   }
 
+  const double path_length =
+      plan_traj.trajectory_points[plan_pt_size - 1].distance;
+  const double proj_s = plan_traj.trajectory_points[pro_index].distance;
+  const double predict_distance = std::min(4.0, path_length - proj_s + 1.86);
+
   const double match_pt_x =
-      planning_output->trajectory.trajectory_points[min_index].x;
+      planning_output->trajectory.trajectory_points[pro_index].x;
   const double match_pt_y =
-      planning_output->trajectory.trajectory_points[min_index].y;
+      planning_output->trajectory.trajectory_points[pro_index].y;
   const double match_pt_phi =
-      planning_output->trajectory.trajectory_points[min_index].heading_yaw;
+      planning_output->trajectory.trajectory_points[pro_index].heading_yaw;
 
   phi_err_ =
       pnc::geometry_lib::NormalizeAngle(ego_phi - match_pt_phi) * kRad2Deg;
@@ -94,18 +81,20 @@ void ApaPredictPathManager::Update(
   ILOG_INFO << "lat_err: " << lat_err_ << ", phi_err: " << phi_err_
             << ", control_err_big_: " << control_err_big_;
 
-  const double predict_distance = std::min(4.0, path_length - proj_s + 1.86);
-
   bool use_steer_angle_flag = false;
 
-  const auto& control_trajectory =
+  const iflyauto::ControlTrajectory& mpc_traj =
       local_view->control_output.control_trajectory;
+
+  const int mpc_pt_size =
+      std::min(mpc_traj.control_result_points_size,
+               static_cast<uint8>(CONTROL_RESULT_POINTS_MAX_NUM));
 
   const bool splice_plan_traj =
       (planning_output->gear_command.gear_command_value ==
        local_view->control_output.gear_command_value);
 
-  if (control_trajectory.control_result_points_size < 1) {
+  if (mpc_pt_size < 1) {
     use_steer_angle_flag = true;
   }
 
@@ -115,21 +104,19 @@ void ApaPredictPathManager::Update(
         measure_data_ptr->GetPos(), measure_data_ptr->GetHeading()));
     pnc::geometry_lib::LocalToGlobalTf l2g_tf;
     l2g_tf.Init(measure_data_ptr->GetPos(), measure_data_ptr->GetHeading());
-    for (i = 0; i < std::min(control_trajectory.control_result_points_size,
-                             static_cast<uint8>(CONTROL_RESULT_POINTS_MAX_NUM));
-         ++i) {
-      const auto& pt = control_trajectory.control_result_points[i];
-      pnc::geometry_lib::PathPoint car_predict_pt;
+    pnc::geometry_lib::PathPoint car_predict_pt;
+    for (int i = 0; i < mpc_pt_size; ++i) {
+      const iflyauto::Point3d& pt = mpc_traj.control_result_points[i];
       car_predict_pt.pos = l2g_tf.GetPos(Eigen::Vector2d(pt.x, pt.y));
       car_predict_pt.heading =
           pnc::geometry_lib::NormalizeAngle(l2g_tf.GetHeading(pt.z));
 
       const double ds =
-          std::hypot(car_predict_pt.pos.x() - predict_pt_vec_.back().pos.x(),
-                     car_predict_pt.pos.y() - predict_pt_vec_.back().pos.y());
+          std::hypot(car_predict_pt.GetX() - predict_pt_vec_.back().GetX(),
+                     car_predict_pt.GetY() - predict_pt_vec_.back().GetY());
 
       const double dphi = pnc::geometry_lib::NormalizeAngle(
-          car_predict_pt.heading - predict_pt_vec_.back().heading);
+          car_predict_pt.GetTheta() - predict_pt_vec_.back().GetTheta());
 
       if (ds > 1.0 || dphi * kRad2Deg > 6.8) {
         ILOG_ERROR << "control output is err";
@@ -142,86 +129,71 @@ void ApaPredictPathManager::Update(
       }
 
       car_predict_pt.s = ds + predict_pt_vec_.back().s;
-      predict_pt_vec_.emplace_back(std::move(car_predict_pt));
+      predict_pt_vec_.emplace_back(car_predict_pt);
     }
 
-    if (predict_pt_vec_.back().s < predict_distance &&
-        predict_pt_vec_.size() > 2) {
-      pnc::geometry_lib::PathPoint car_predict_pt;
+    while (predict_pt_vec_.back().s < predict_distance &&
+           predict_pt_vec_.size() > 2) {
+      // mpc traj is vaild, extend to predict_distance
       const double step = 0.1;
+      const size_t cur_pt_size = predict_pt_vec_.size();
+      do {
+        size_t n = predict_pt_vec_.size();
+        pnc::geometry_lib::CalExtendedPointByTwoPoints(
+            predict_pt_vec_[n - 2].pos, predict_pt_vec_[n - 1].pos,
+            car_predict_pt.pos, step);
+        car_predict_pt.heading = predict_pt_vec_[n - 1].heading;
+        car_predict_pt.s = predict_pt_vec_[n - 1].s + step;
+        predict_pt_vec_.emplace_back(car_predict_pt);
+      } while (predict_pt_vec_.back().s < predict_distance);
+
       if (control_err_big_ || !splice_plan_traj) {
-        do {
-          size_t n = predict_pt_vec_.size();
-          pnc::geometry_lib::CalExtendedPointByTwoPoints(
-              predict_pt_vec_[n - 2].pos, predict_pt_vec_[n - 1].pos,
-              car_predict_pt.pos, 0.1);
-          car_predict_pt.heading = predict_pt_vec_[n - 1].heading;
-          car_predict_pt.s = predict_pt_vec_[n - 1].s + step;
-          predict_pt_vec_.emplace_back(car_predict_pt);
-        } while (predict_pt_vec_.back().s < predict_distance);
-      } else {
-        // splice plan traj
-        const pnc::geometry_lib::PathPoint& last_car_predict_pt =
-            predict_pt_vec_.back();
-        min_dist = std::numeric_limits<double>::infinity();
-        min_index = -1;
-        for (i = 0;
-             i < std::min(planning_output->trajectory.trajectory_points_size,
-                          static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM));
-             ++i) {
-          const iflyauto::TrajectoryPoint& planning_pt =
-              planning_output->trajectory.trajectory_points[i];
-          const double dist =
-              std::hypot(planning_pt.x - last_car_predict_pt.pos.x(),
-                         planning_pt.y - last_car_predict_pt.pos.y());
-          if (dist < min_dist) {
-            min_index = i;
-            min_dist = dist;
-          }
-        }
-
-        // i indicates spling index from plan traj, can not be last index
-        i = min_index + 1;
-        bool use_planning_traj_flag = false;
-        if (i < planning_output->trajectory.trajectory_points_size - 1) {
-          ILOG_INFO << "splice mpc and planning traj";
-          use_planning_traj_flag = true;
-        } else {
-          ILOG_INFO << "directly extend mpc traj";
-        }
-
-        for (; use_planning_traj_flag &&
-               i < std::min(planning_output->trajectory.trajectory_points_size,
-                            static_cast<uint8>(PLANNING_TRAJ_POINTS_MAX_NUM)) &&
-               predict_pt_vec_.back().s < predict_distance;
-             ++i) {
-          car_predict_pt.pos
-              << planning_output->trajectory.trajectory_points[i].x,
-              planning_output->trajectory.trajectory_points[i].y;
-          car_predict_pt.heading =
-              planning_output->trajectory.trajectory_points[i].heading_yaw;
-
-          const double ds = std::hypot(
-              car_predict_pt.pos.x() - predict_pt_vec_.back().pos.x(),
-              car_predict_pt.pos.y() - predict_pt_vec_.back().pos.y());
-
-          car_predict_pt.s = ds + predict_pt_vec_.back().s;
-          predict_pt_vec_.emplace_back(car_predict_pt);
-        }
-
-        if (predict_pt_vec_.back().s < predict_distance &&
-            predict_pt_vec_.size() > 2) {
-          do {
-            size_t n = predict_pt_vec_.size();
-            pnc::geometry_lib::CalExtendedPointByTwoPoints(
-                predict_pt_vec_[n - 2].pos, predict_pt_vec_[n - 1].pos,
-                car_predict_pt.pos, 0.1);
-            car_predict_pt.heading = predict_pt_vec_[n - 1].heading;
-            car_predict_pt.s = predict_pt_vec_[n - 1].s + step;
-            predict_pt_vec_.emplace_back(car_predict_pt);
-          } while (predict_pt_vec_.back().s < predict_distance);
-        }
+        // no splice plan traj, directly extend mpc traj
+        break;
       }
+
+      // need splice plan traj with smooth transition
+      const pnc::geometry_lib::PathPoint last_mpc_pt = predict_pt_vec_.back();
+      predict_pt_vec_.resize(cur_pt_size);
+
+      // 找到last_Mpc_pt在planning_traj上的投影点
+      int pro_index = CalProjIndexFromPlanningTraj(
+          plan_traj.trajectory_points, plan_pt_size, last_mpc_pt.GetX(),
+          last_mpc_pt.GetY());
+      if (pro_index == -1) {
+        predict_pt_vec_.clear();
+        return;
+      }
+
+      const double proj_x = plan_traj.trajectory_points[pro_index].x;
+      const double proj_y = plan_traj.trajectory_points[pro_index].y;
+      const double proj_heading =
+          plan_traj.trajectory_points[pro_index].heading_yaw;
+
+      pnc::mathlib::spline x_s_spline, y_s_spline, heading_s_spline;
+      std::vector<double> x_vec, y_vec, s_vec, heading_vec;
+      for (const auto& pt : predict_pt_vec_) {
+        x_vec.emplace_back(pt.GetX());
+        y_vec.emplace_back(pt.GetY());
+        s_vec.emplace_back(pt.s);
+        heading_vec.emplace_back(pt.GetTheta());
+      }
+      x_vec.emplace_back(proj_x);
+      y_vec.emplace_back(proj_y);
+      s_vec.emplace_back(last_mpc_pt.s);
+      heading_vec.emplace_back(proj_heading);
+      x_s_spline.set_points(s_vec, x_vec);
+      y_s_spline.set_points(s_vec, y_vec);
+      heading_s_spline.set_points(s_vec, heading_vec);
+      for (double s = predict_pt_vec_.back().s; s < predict_distance;
+           s += 0.1) {
+        const double x = x_s_spline(s);
+        const double y = y_s_spline(s);
+        const double heading = heading_s_spline(s);
+        predict_pt_vec_.emplace_back(
+            pnc::geometry_lib::PathPoint(Eigen::Vector2d(x, y), heading));
+      }
+      break;
     }
   }
 
@@ -295,7 +267,8 @@ void ApaPredictPathManager::RecordDebugTraj() {
   return;
 }
 
-const trajectory::Trajectory& ApaPredictPathManager::ConvertPathPointsToPredictTrajectory(
+const trajectory::Trajectory&
+ApaPredictPathManager::ConvertPathPointsToPredictTrajectory(
     const std::vector<pnc::geometry_lib::PathPoint>& predict_pt_vec) {
   predict_traj_.clear();
   predict_traj_.reserve(predict_pt_vec.size());

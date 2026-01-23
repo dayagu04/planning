@@ -20,6 +20,8 @@ class ApaPredictPathManager final {
 
   void Reset() {
     predict_pt_vec_.clear();
+    predict_traj_.clear();
+    predict_traj_s_ = 0.0;
     gear_ = pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID;
     lat_err_ = 0.0;
     phi_err_ = 0.0;
