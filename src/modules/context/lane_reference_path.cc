@@ -384,48 +384,24 @@ bool LaneReferencePath::get_ref_points_hpp(
         pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
   }
   origin_reference_path_length_ = origin_reference_path_total_length;
+  ego_projection_length_in_reference_path_ =
+      CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
   if (ref_path_points.size() >= 2) {
-    double extend_buff = 0.0;
-    ego_projection_length_in_reference_path_ =
-        CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
-    double target_slot_projection_length_in_reference_path =
-        origin_reference_path_length_;
-    const auto &parking_slot_manager =
-        session_->environmental_model().get_parking_slot_manager();
-    if (parking_slot_manager->IsExistTargetSlot()) {
-      const auto &target_slot_center =
-          parking_slot_manager->GetTargetSlotCenter();
-      const auto &target_slot_polygon =
-          parking_slot_manager->GetTargetSlotPolygon();
-      if (target_slot_polygon.is_convex()) {
-        planning_math::Box2d target_slot_box =
-            target_slot_polygon.MinAreaBoundingBox();
-        target_slot_projection_length_in_reference_path =
-            CalculatePointProjectionDistanceInReferencePath(
-                target_slot_box.center_x(), target_slot_box.center_y(),
-                ref_path_points);
-      } else {
-        target_slot_projection_length_in_reference_path =
-            CalculatePointProjectionDistanceInReferencePath(
-                target_slot_center.x(), target_slot_center.y(), ref_path_points);
-      }
-      if ((target_slot_projection_length_in_reference_path + extend_buff) >
-          origin_reference_path_total_length) {
-        if (ego_projection_length_in_reference_path_ >
-            (target_slot_projection_length_in_reference_path + extend_buff)) {
-          extend_buff = ego_projection_length_in_reference_path_ -
-                        target_slot_projection_length_in_reference_path;
-        }
-        const double extend_length =
-            target_slot_projection_length_in_reference_path + extend_buff -
-            origin_reference_path_total_length;
+    const double extended_ref_path_length =
+        CalculateExtendedReferencePathLength(
+            origin_reference_path_total_length,
+            ego_projection_length_in_reference_path_, ref_path_points);
+    if(extended_ref_path_length > origin_reference_path_total_length){
+        const double extended_length = extended_ref_path_length - origin_reference_path_total_length;
         ReferencePathPoint extend_point;
         const int point_nums = ref_path_points.size();
         extend_point = CalculateExtendedReferencePathPoint(
             ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
-            extend_length);
+            extended_length);
         ref_path_points.emplace_back(std::move(extend_point));
-      }
+      extended_reference_path_length_ = extended_ref_path_length;
+    } else {
+      extended_reference_path_length_ = origin_reference_path_total_length;
     }
   }
   return ref_path_points.size() >= 3;
@@ -699,8 +675,10 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
 }
 
 double LaneReferencePath::CalculatePointProjectionDistanceInReferencePath(
-    const double point_x, const double point_y,
+    const planning_math::Vec2d &point,
     const ReferencePathPoints &ref_path_points) const {
+  double point_x = point.x();
+  double point_y = point.y();
   double dx = point_x - ref_path_points[0].path_point.x();
   double dy = point_y - ref_path_points[0].path_point.y();
   const int point_nums = ref_path_points.size();
@@ -735,4 +713,32 @@ double LaneReferencePath::CalculatePointProjectionDistanceInReferencePath(
   return projection_distance_in_reference_path;
 }
 
+double LaneReferencePath::CalculateExtendedReferencePathLength(
+    const double curr_ref_path_length, const double curr_ego_proj_length,
+    const ReferencePathPoints &curr_ref_path_points) {
+  constexpr double kTargetSlotExtendedBuffer = 5.0;
+  constexpr double kDefaultExtendedReferencePathLength = 30.0;
+
+  double extended_ref_path_length =
+      curr_ego_proj_length + kDefaultExtendedReferencePathLength;
+  const auto &parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
+  if (parking_slot_manager->IsExistTargetSlot()) {
+    auto target_slot_point =
+        parking_slot_manager->GetTargetSlotCenter();
+    const auto &target_slot_polygon =
+        parking_slot_manager->GetTargetSlotPolygon();
+    if (target_slot_polygon.is_convex()) {
+      planning_math::Box2d target_slot_box =
+          target_slot_polygon.MinAreaBoundingBox();
+      target_slot_point = target_slot_box.center();
+    }
+    double target_slot_proj_s = CalculatePointProjectionDistanceInReferencePath(
+        target_slot_point, curr_ref_path_points);
+    extended_ref_path_length =
+        std::min(extended_ref_path_length,
+                 target_slot_proj_s + kTargetSlotExtendedBuffer);
+  }
+  return std::max(extended_ref_path_length, curr_ref_path_length);
+}
 }  // namespace planning
