@@ -3489,8 +3489,6 @@ void RouteInfo::UpdateVisionInfo() const {
       static_cast<int>(
           route_info_output_.mlc_decider_scene_type_info.mlc_scene_type));
   JSON_DEBUG_VALUE("lsl_length", route_info_output_.lsl_length);
-  // JSON_DEBUG_VALUE("bd_mlc_scene",
-  //                  static_cast<int>(route_info_output_.baidu_mlc_scene));
   JSON_DEBUG_VALUE("ego_seq", route_info_output_.ego_seq);
 
   // todo(wangzhi17):用virtual lane中的信息来更新
@@ -5266,19 +5264,29 @@ bool RouteInfo::CalculateMergeFP(MergeType* merge_type,
   const double check_merge_fp_dis = std::min(800.0, search_distance);
 
   while (itera_dis < check_merge_fp_dis) {
+    std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
     for (const auto& fp : current_link->feature_points()) {
+      fp_vec.emplace_back(fp);
+    }
+
+    // 2、按照距离排序后，由近向远判断当前link上的fp是否有TurnExpandingLane
+    std::sort(fp_vec.begin(), fp_vec.end(),
+              [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+                 const iflymapdata::sdpro::FeaturePoint& fp_b) {
+                return fp_a.projection_percent() < fp_b.projection_percent();
+              });
+    for (const auto& fp : fp_vec) {
+      itera_dis =
+          itera_dis + fp.projection_percent() * current_link->length() * 0.01;
+      if (itera_dis < kEpsilon) {
+        continue;
+      }
       for (const auto& fp_type : fp.type()) {
         if (fp_type ==
             iflymapdata::sdpro::FeaturePointType::LANE_COUNT_CHANGE) {
           iflymapdata::sdpro::LaneChangeType temp_merge_type;
           int temp_merge_lane_sequence = 0;
           if (IsMergeFP(&temp_merge_type, &temp_merge_lane_sequence, fp)) {
-            itera_dis = itera_dis +
-                        fp.projection_percent() * current_link->length() * 0.01;
-            if (itera_dis < kEpsilon) {
-              continue;
-            }
-
             *find_fp = fp;
             *fp_link_id = current_link->id();
             *dis_to_merge_fp = itera_dis;
