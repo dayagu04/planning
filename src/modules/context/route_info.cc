@@ -2521,7 +2521,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
-
+  
   // 判断当前是否接近汇入汇出
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();

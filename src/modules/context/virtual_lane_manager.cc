@@ -714,7 +714,7 @@ bool VirtualLaneManager::update(
   // 3.根据计算的超视距信息，更新需要的lane信息
   relative_id_lanes_ = UpdateLanes(roads_ptr);
 
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   int zero_order_count = 0;
   for (const auto& lane : relative_id_lanes_) {
     if (lane->get_order_id() == 0) {
@@ -974,7 +974,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 3.根据计算的超视距信息，更新需要的lane信息
   relative_id_lanes_ = UpdateLanes(roads_ptr);
 
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   int zero_order_count = 0;
   for (const auto& lane : relative_id_lanes_) {
     if (lane->get_order_id() == 0) {

@@ -1045,7 +1045,7 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
                << ", l:" << cur_point->point().l()
                << ", t:" << cur_point->point().t()
                << ", v:" << cur_point->GetOptimalSpeed();
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
     ILOG_INFO << "\n s = " << cur_point->point().s()
               << "  l = " << cur_point->point().l()
               << "  t = " << cur_point->point().t()

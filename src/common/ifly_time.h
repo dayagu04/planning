@@ -1,7 +1,7 @@
 #pragma once
 #if defined(CYBER_ENV)
 #include "autoplt/include/ADSTime.h"
-#elif defined(AP_ENV)
+#elif defined(AP_ENV) || defined(X86_SIMULATION)
 #include "iflyauto_time.h"
 #endif
 #include <stdint.h>
@@ -19,7 +19,7 @@ static inline double Now_us() {
 #if defined(CYBER_ENV)
   auto time_now = autoplt::ADSTime::Now();
   return time_now.ToSecond() * 1000000;  // 转微秒
-#elif defined(AP_ENV)
+#elif defined(AP_ENV) || defined(X86_SIMULATION)
   auto time_now = iflyauto::Time::Now();
   return time_now.ToSecond() * 1000000;  // 转微秒
 #else
@@ -38,7 +38,7 @@ static inline double Now_ms() {
   // double time_double = time_now.ToSecond() * 1000;  // 转毫秒
   // int64_t time_int = time_now.ToNanosecond() / 1000000; // 转毫秒
   return time_now.ToSecond() * 1000;  // 转毫秒
-#elif defined(AP_ENV)
+#elif defined(AP_ENV) || defined(X86_SIMULATION)
   auto time_now = iflyauto::Time::Now();
   return time_now.ToSecond() * 1000;  // 转毫秒
 #else
@@ -55,7 +55,7 @@ static inline double Now_s() {
 #if defined(CYBER_ENV)
   auto time_now = autoplt::ADSTime::Now();
   return time_now.ToSecond();
-#elif defined(AP_ENV)
+#elif defined(AP_ENV) || defined(X86_SIMULATION)
   return iflyauto::Time::Now().ToSecond();
 #else
   struct timeval tval;

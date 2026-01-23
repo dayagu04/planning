@@ -223,7 +223,7 @@ void EDTCollisionDetector::CalcObsDistArray() {
   cv::flip(car_with_mirror_map_matrix, car_with_mirror_map_matrix, 1);
   cv::flip(car_with_mirror_edt_matrix, car_with_mirror_edt_matrix, 0);
   cv::flip(car_with_mirror_edt_matrix, car_with_mirror_edt_matrix, 1);
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   std::string path_dir = "/asw/planning/glog/";
 #else
   std::string path_dir = "/opt/usr/log/app_log/planning/";
