@@ -2610,11 +2610,11 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplitForSdpro(
   const auto& pose = ego_state->location_enu();
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
-
+  bool is_search_cur_link = true;
   const iflymapdata::sdpro::LinkInfo_Link* current_link =
       sdpro_map.GetNearestLinkWithHeading(current_point, search_distance,
                                           ego_heading_angle, max_heading_diff,
-                                          temp_nearest_s, nearest_l);
+                                          temp_nearest_s, nearest_l, is_search_cur_link);
   if (current_link == nullptr) {
     return false;
   }
@@ -2651,7 +2651,7 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplitForSdpro(
           const iflymapdata::sdpro::LinkInfo_Link* target_link =
               sdpro_map.GetNearestLinkWithHeading(
                   segment_target_point, search_distance, ego_heading_angle,
-                  max_heading_diff, temp_nearest_s, nearest_l);
+                  max_heading_diff, temp_nearest_s, nearest_l, false);
           if (target_link != nullptr) {
             if (!sdpro_map.isRamp(target_link->link_type())) {
               return false;
@@ -2779,11 +2779,11 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRampForSdpro(
   current_point.set_y(pose.position.y);
   double temp_nearest_s = 0;
   double nearest_l = 0;
-
+  bool is_search_cur_link = true;
   const iflymapdata::sdpro::LinkInfo_Link* current_link =
       sdpro_map.GetNearestLinkWithHeading(current_point, search_distance,
                                           ego_heading_angle, max_heading_diff,
-                                          temp_nearest_s, nearest_l);
+                                          temp_nearest_s, nearest_l, is_search_cur_link);
   if (current_link == nullptr) {
     return false;
   }
@@ -2818,7 +2818,7 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRampForSdpro(
             const iflymapdata::sdpro::LinkInfo_Link* next_link =
                 sdpro_map.GetNearestLinkWithHeading(
                     segment_target_point, search_distance, ego_heading_angle,
-                    max_heading_diff, temp_nearest_s, nearest_l);
+                    max_heading_diff, temp_nearest_s, nearest_l, false);
             if (next_link != nullptr) {
               if (!sdpro_map.isRamp(next_link->link_type())) {
                 return true;
