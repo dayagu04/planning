@@ -1101,19 +1101,20 @@ bool LaneChangeRequest::ConeSituationJudgement(
   std::vector<std::pair<double, double>> target_lane_s_width;
   for (const auto front_obstacle : front_obstacles_array) {
     int obstacle_id = front_obstacle->id();
+    if (obstacle_id == kInvalidAgentId) {
+      continue;
+    }
     auto front_vehicle_iter = tracks_map.find(obstacle_id);
     if (front_vehicle_iter != tracks_map.end()) {
-      if (obstacle_id == kInvalidAgentId) {
+      if (front_vehicle_iter->second == nullptr) {
         continue;
       }
       if (front_vehicle_iter->second->type() ==
               iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
-          (front_vehicle_iter->second->type() ==
-               iflyauto::OBJECT_TYPE_CTASH_BARREL &&
-           function_info.function_mode() == common::DrivingFunctionInfo::NOA) ||
-          (front_vehicle_iter->second->type() ==
-              iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
-           function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
+          front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_CTASH_BARREL ||
+          front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER) {
         if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
             front_vehicle_iter->second->d_s_rel() >
                 base_frenet_coord->Length() - ego_frenet_point.x) {
