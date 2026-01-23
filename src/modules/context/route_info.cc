@@ -5048,11 +5048,16 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
         before_excr_feasible_lane.emplace_back(1);
       }
     }
-  } else if (is_merge_left && (split_region_info->merge_type == LEFT_MERGE ||
-                               split_region_info->merge_type == BOTH_MERGE)) {
+  } else if (is_merge_left) {
     if (successor_exclnum < on_exclnum) {
       before_excr_feasible_lane.emplace_back(before_exclnum);
+
+      // 把before_exclnum的车道加上
+      for (int i = 0; i < before_exclnum; ++i) {
+        on_excr_feasible_lane.emplace_back(i + 1);
+      }
       on_excr_feasible_lane.emplace_back(before_exclnum + 1);
+
       mlc_request_info_.emplace_back(
           MLCRequestType{.lane_num = on_exclnum,
                          .mlc_request_type = RAMP_TO_MAIN,
