@@ -110,6 +110,8 @@ void ProcessLaneMapMergePoint(
  bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info);
  const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
+ void Erase1Split2FeasibleLane(TopoLinkGraph& feasible_lane_graph);
+ std::vector<TopoLane> CalculateMaxDistanceLanes(const TopoLinkGraph& feasible_lane_graph) const;
  const iflymapdata::sdpro::Lane* IsEntryLanePresentOnEitherSideOfSuccessorLane(
      const iflymapdata::sdpro::Lane* cur_link_lane_info);
   // pair<left_lane, right_lane>

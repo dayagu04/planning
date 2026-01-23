@@ -338,7 +338,8 @@ struct MLCDeciderSceneTypeInfo {
 
   MLCDeciderSceneTypeInfo(MLCSceneType mlc_scene_type,
                                RampDirection route_lane_direction,
-                               double dis_to_link_topo_change_point)
+                               double dis_to_link_topo_change_point,
+                               uint64 topo_change_link_id)
       : mlc_scene_type(mlc_scene_type),
         route_lane_direction(route_lane_direction),
         dis_to_link_topo_change_point(dis_to_link_topo_change_point),
@@ -348,7 +349,7 @@ struct MLCDeciderSceneTypeInfo {
   }
 
   void set_value(MLCSceneType scene_type, RampDirection lane_direction,
-                 double dis) {
+                 double dis, uint64 link_id) {
     mlc_scene_type = scene_type;
     route_lane_direction = lane_direction;
     dis_to_link_topo_change_point = dis;

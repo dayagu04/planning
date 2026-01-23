@@ -4437,8 +4437,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
 
     // bool is_other_split_ramp =
     // sdpro_map_.isRamp(other_split_link->link_type());
-    bool is_other_split_ramp = other_split_link->link_type() !=
-                               iflymapdata::sdpro::LinkType::LT_MAIN_ROAD;
+    bool is_other_split_ramp =
+        (other_split_link->link_type() &
+         iflymapdata::sdpro::LinkType::LT_MAIN_ROAD) == 0;
 
     // TODO(fengwang31:需要考虑split的路是否未主路的情况)
     if (is_split_right) {
