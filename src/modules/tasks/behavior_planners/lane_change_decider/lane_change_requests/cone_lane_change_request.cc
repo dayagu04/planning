@@ -214,18 +214,22 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   const auto& front_obstacles_array = lateral_obstacle_->front_tracks();
   for (const auto front_obstacle : front_obstacles_array) {
     int obstacle_id = front_obstacle->id();
+    if (obstacle_id == kInvalidAgentId) {
+      continue;
+    }
     auto front_vehicle_iter = tracks_map.find(obstacle_id);
     Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                            planning_init_point_.lat_init_state.y()};
     if (front_vehicle_iter != tracks_map.end()) {
-      if (obstacle_id == kInvalidAgentId) {
+      if (front_vehicle_iter->second == nullptr) {
         continue;
       }
       if (front_vehicle_iter->second->type() ==
               iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
-          (front_vehicle_iter->second->type() ==
-               iflyauto::OBJECT_TYPE_CTASH_BARREL &&
-           function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
+          front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_CTASH_BARREL ||
+          front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER) {
         if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
             front_vehicle_iter->second->d_s_rel() >
                 base_frenet_coord_->Length() - ego_frenet_point.x) {
