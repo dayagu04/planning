@@ -795,6 +795,9 @@ struct ApaParameters {
   int max_plan_gear_shift_number_parking = 25;
   int max_real_gear_shift_number_parking = 30;
   float traj_kappa_change_penalty = 0.83;
+  bool enable_decide_cul_de_sac = true;
+  bool enable_interesting_search_area = true;
+  int pre_search_mode = 1;
 
   ParkingLatLonPathBuffer lat_lon_path_buffer;
   ParkingLatLonSpeedBuffer lat_lon_speed_buffer;
