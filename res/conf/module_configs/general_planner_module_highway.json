@@ -831,7 +831,7 @@
     "search_sdmap_curv_dis": 300.0,
     "sdmap_curv_thred": 500.0,
     "straight_ramp_v_limit": 19.44,
-    "v_intersection_min_limit": 11.11,
+    "v_intersection_min_limit": 16.67,
     "stop_dis_before_stopline": 2.0,
     "stop_dis_before_crosswalk": 3.5,
     "enable_sdmap_curv_v_adjust": true,
@@ -861,7 +861,7 @@
     "straight_ramp_v_limit_high": 22.22,
     "ramp_curv_radius_small": 350.0,
     "ramp_curv_radius_big": 500.0,
-    "v_intersection_min_limit": 11.11,
+    "v_intersection_min_limit": 16.67,
     "min_acc_function_fading_away": -0.9,
     "function_fading_away_distance_to_intersection": 50.0,
     "v_reduce_intersection": 0.0,
@@ -1188,9 +1188,9 @@
       "low_speed_follow_speed_thred_mps" : 1.0,
       "low_speed_follow_accel_release_traj_len" : 5.0,
       "comfort_kinematic_param": {
-        "acc_positive_upper": 1.35,
+        "acc_positive_upper": 1.5,
         "acc_positive_speed_lower": 4.2,
-        "acc_positive_lower": 0.5,
+        "acc_positive_lower": 0.8,
         "acc_positive_speed_upper": 12.0,
         "acc_negative_lower": -0.8,
         "acc_negative_speed_lower": 5.0,
@@ -1379,7 +1379,7 @@
           0.0, 5.56, 11.11, 16.67, 22.22, 27.78, 36.11
         ],
         "acc_table": [
-          1.35, 1.25, 1.0, 0.8, 0.6, 0.4, 0.3
+          1.5, 1.35, 1.15, 0.95, 0.65, 0.45, 0.35
         ]
       },
       "cruise_dec_bound_table": {
