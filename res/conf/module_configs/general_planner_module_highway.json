@@ -1196,7 +1196,7 @@
         "acc_negative_speed_lower": 5.0,
         "acc_negative_upper": -0.5,
         "acc_negative_speed_upper": 20.0,
-        "jerk_positive_upper": 3.0,
+        "jerk_positive_upper": 5.0,
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,

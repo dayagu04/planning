@@ -30,7 +30,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.b = 1.0;
   comfort_params_.b_hard = 4.0;
   comfort_params_.delta = 4.0;
-  comfort_params_.max_accel_jerk = 3.0;
+  comfort_params_.max_accel_jerk = 5.0;
   comfort_params_.min_decel_jerk = 1.0;
   comfort_params_.max_decel_jerk = 1.5;
   comfort_params_.emergency_decel_jerk = 5.0;
