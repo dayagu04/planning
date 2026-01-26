@@ -1657,9 +1657,11 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseStaticObstacle(
         LatObstacleDecisionType::LEFT) {
       if (frenet_obs->d_min_cpath() > 0) {
         // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
-        free_space =
-            std::fmin(frenet_obs->d_min_cpath() - frenet_obstacle.d_max_cpath(),
-                      free_space);
+        double free_space_tmp =
+            frenet_obs->d_min_cpath() - frenet_obstacle.d_max_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateStaticFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
       } else {
         continue;
       }
@@ -1667,17 +1669,17 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseStaticObstacle(
                LatObstacleDecisionType::RIGHT) {
       if (frenet_obs->d_max_cpath() < 0) {
         // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
-        free_space = std::fmin(
-            -frenet_obs->d_max_cpath() + frenet_obstacle.d_min_cpath(),
-            free_space);
+        double free_space_tmp =
+            -frenet_obs->d_max_cpath() + frenet_obstacle.d_min_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateStaticFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
       } else {
         continue;
       }
     }
   }
   free_space = std::max(0.0, free_space - ego_width_);
-  // 不同类型的障碍物交互，空间权重不一样
-  UpdateStaticFreeSpaceBaseInteractionType(frenet_obstacle, free_space);
   obstacle_interaction_info.SetLateralConstraintFreeSpace(
       LateralSpaceConstraintType::STATIC_OBSTACLE, free_space);
 }
@@ -1732,8 +1734,10 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
         // 按照自车匀速递推的轨迹，判断自车是否与动态障碍物存在overlap
         CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
                                        distance_to_centerline,front_nearest_follow_obstacle);
-        free_space = std::fmin(
-            distance_to_centerline - frenet_obstacle.d_max_cpath(), free_space);
+        double free_space_tmp = distance_to_centerline - frenet_obstacle.d_max_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
       } else {
         continue;
       }
@@ -1743,16 +1747,16 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
         // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
         CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
                                        distance_to_centerline,front_nearest_follow_obstacle);
-        free_space = std::fmin(
-            distance_to_centerline + frenet_obstacle.d_min_cpath(), free_space);
+        double free_space_tmp = distance_to_centerline + frenet_obstacle.d_min_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
       } else {
         continue;
       }
     }
   }
   free_space = std::max(0.0, free_space - ego_width_);
-  // 不同类型的障碍物交互，空间权重不一样
-  UpdateDynamicFreeSpaceBaseInteractionType(frenet_obstacle, free_space);
   obstacle_interaction_info.SetLateralConstraintFreeSpace(
       LateralSpaceConstraintType::DYNAMIC_OBSTACLE, free_space);
 }
@@ -1857,7 +1861,7 @@ void SccLateralObstacleDecider::UpdateStaticFreeSpaceBaseInteractionType(
 
 void SccLateralObstacleDecider::UpdateDynamicFreeSpaceBaseInteractionType(
     const FrenetObstacle& frenet_obstacle, double& free_space) {
-  // 动态的VRU和大车，恐慌感较强，横向距离额外减去0.2
+  // 动态的VRU和大车，恐慌感较强，横向距离额外减去0.3
   if (frenet_obstacle.obstacle()->is_VRU() || IsTruck(frenet_obstacle)) {
     free_space -= 0.3;
   }
