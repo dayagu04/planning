@@ -39,8 +39,8 @@ bool ParkingSwitchDecider::Execute() {
   
   // 获取距离信息用于日志和E541逻辑
   const auto &route_info_output = env.get_route_info()->get_route_info_output();
-  const double dist_to_target_slot = route_info_output.hpp_route_info_output.distance_to_target_slot;
-  const double dist_to_target_dest = route_info_output.hpp_route_info_output.distance_to_target_dest;
+  const double dist_to_target_slot = route_info_output.distance_to_target_slot;
+  const double dist_to_target_dest = route_info_output.distance_to_target_dest;
 
   ILOG_DEBUG << "is_reached_target_slot:" << is_reached_target_slot;
   ILOG_DEBUG << "is_reached_target_dest:" << is_reached_target_dest;
