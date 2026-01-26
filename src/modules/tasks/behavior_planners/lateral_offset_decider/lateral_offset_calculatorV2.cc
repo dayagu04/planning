@@ -4,7 +4,6 @@
 #include <utility>
 #include <vector>
 #include "common.pb.h"
-#include "common/math/filter/mean_filter.h"
 #include "common/utils/hysteresis_decision.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -53,7 +52,7 @@ LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
 bool LateralOffsetCalculatorV2::Process(
     framework::Session *session,
     const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
-    const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle, double dist_rblane,
+    const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle, LaneInfo lane_info, double dist_rblane,
     bool flag_avd) {
   // NTRACE_CALL(7);
   auto current_time = IflyTime::Now_ms();
@@ -76,6 +75,10 @@ bool LateralOffsetCalculatorV2::Process(
   flane_ = session_->environmental_model()
                .get_virtual_lane_manager()
                ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+  if (flane_ == nullptr) {
+    return false;
+  }
+
   auto reference_path_ptr = coarse_planning_info.reference_path;
   ego_frenet_state_ = reference_path_ptr->get_frenet_ego_state();
   ego_cart_state_manager_ =
@@ -88,7 +91,11 @@ bool LateralOffsetCalculatorV2::Process(
       session_->environmental_model().get_ego_state_manager()->ego_v();
   has_enough_speed_hysteresis_.SetIsValidByValue(ego_v * 3.6);
   // enable_bound_ = !has_enough_speed_hysteresis_.IsValid();
-
+  lane_width_ = lane_info.lane_width;
+  last_avoid_info_ = avoid_info_;
+  Reset();
+  avoid_info_.normal_left_avoid_threshold = lane_info.normal_left_avoid_threshold;
+  avoid_info_.normal_right_avoid_threshold = lane_info.normal_right_avoid_threshold;
   b_success = update(status, flag_avd, should_premove, dist_rblane,
                      avd_obstacle, avd_sp_obstacle);
 
@@ -104,12 +111,11 @@ bool LateralOffsetCalculatorV2::update(
     int status, bool flag_avd, bool should_premove, double dist_rblane,
     const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
-  last_avoid_info_ = avoid_info_;
+
   if (status >= kLaneKeeping && status <= kLaneChangeHold) {
     UpdateAvoidPath(status, flag_avd, should_premove, dist_rblane, avd_obstacle,
                     avd_sp_obstacle);
   } else {
-    Reset();
     auto &enough_space_hysteresis_map =
         std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
             max_opposite_offset_hysteresis_maps_
@@ -125,9 +131,6 @@ bool LateralOffsetCalculatorV2::UpdateAvoidPath(
     int status, bool flag_avd, bool should_premove, double dist_rblane,
     const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
     const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
-  Reset();
-  CalLaneWidth();
-  CalculateNormalLateralOffsetThreshold();
   PreacquireMaxOppositeOffsetIds();
 
   if (avd_obstacle[0].flag != AvoidObstacleFlag::INVALID &&
@@ -146,65 +149,6 @@ bool LateralOffsetCalculatorV2::UpdateAvoidPath(
 
   PostProcess(avd_obstacle);
   return true;
-}
-
-// Calculate max avoid threshold
-void LateralOffsetCalculatorV2::CalculateNormalLateralOffsetThreshold() {
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double ego_width = vehicle_param.max_width;
-
-  const double road_avoid_threshold = std::min(
-      lane_width_ * 0.5 - config_.nudge_buffer_road_boundary - ego_width * 0.5,
-      config_.nudge_lat_offset_threshold);
-  const double lane_avoid_threshold = std::min(
-      lane_width_ * 0.5 - config_.nudge_buffer_lane_boundary - ego_width * 0.5,
-      config_.nudge_lat_offset_threshold);
-  int right_lane_virtual_id = flane_->get_virtual_id() + 1;
-  int left_lane_virtual_id = flane_->get_virtual_id() - 1;
-  int fix_lane_virtual_id = flane_->get_virtual_id();
-  bool has_left_lane = virtual_lane_manager_->get_lane_with_virtual_id(
-                           left_lane_virtual_id) != nullptr;
-  bool has_right_lane = virtual_lane_manager_->get_lane_with_virtual_id(
-                            right_lane_virtual_id) != nullptr;
-  if (!has_left_lane && !has_right_lane) {
-    avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
-    avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-  } else if (!has_right_lane) {
-    avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.normal_right_avoid_threshold = road_avoid_threshold;
-  } else if (!has_left_lane) {
-    avoid_info_.normal_left_avoid_threshold = road_avoid_threshold;
-    avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-  } else {
-    avoid_info_.normal_left_avoid_threshold = lane_avoid_threshold;
-    avoid_info_.normal_right_avoid_threshold = lane_avoid_threshold;
-  }
-
-  auto last_fix_lane_virtual_id = session_->environmental_model()
-                                      .get_virtual_lane_manager()
-                                      ->get_last_fix_lane_id();
-
-  if (last_fix_lane_virtual_id == fix_lane_virtual_id) {
-    const double change_rate = 0.02;
-    if (last_avoid_info_.normal_left_avoid_threshold > 1e-2) {
-      avoid_info_.normal_left_avoid_threshold =
-          clip(avoid_info_.normal_left_avoid_threshold,
-               last_avoid_info_.normal_left_avoid_threshold + change_rate,
-               last_avoid_info_.normal_left_avoid_threshold - change_rate);
-    }
-    if (last_avoid_info_.normal_right_avoid_threshold > 1e-2) {
-      avoid_info_.normal_right_avoid_threshold =
-          clip(avoid_info_.normal_right_avoid_threshold,
-               last_avoid_info_.normal_right_avoid_threshold + change_rate,
-               last_avoid_info_.normal_right_avoid_threshold - change_rate);
-    }
-  }
-
-  avoid_info_.normal_left_avoid_threshold =
-      std::max(avoid_info_.normal_left_avoid_threshold, 0.0);
-  avoid_info_.normal_right_avoid_threshold =
-      std::max(avoid_info_.normal_right_avoid_threshold, 0.0);
 }
 
 void LateralOffsetCalculatorV2::LateralOffsetCalculateOneObstacle(
@@ -1285,25 +1229,6 @@ void LateralOffsetCalculatorV2::PostProcess(
   //   }
   // }
   return;
-}
-
-void LateralOffsetCalculatorV2::CalLaneWidth() {
-  if (1) {
-    double width = 0.0;
-    double preview_s = 20 + ego_frenet_state_.s();
-    double start_s = 5 + ego_frenet_state_.s();
-    double interval_s = 5;
-    int point_num = 0;
-    for (double s = start_s; s <= preview_s; s += interval_s) {
-      width += flane_->width_by_s(s);
-      point_num += 1;
-    }
-    width /= point_num;
-    static planning_math::MeanFilter width_filter(10);
-    lane_width_ = width_filter.Update(width);
-  } else {
-    lane_width_ = flane_->width();
-  }
 }
 
 void LateralOffsetCalculatorV2::Reset() {

@@ -20,6 +20,7 @@ class LateralOffsetCalculatorV2 {
   bool Process(framework::Session* session,
                const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
                const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle,
+               LaneInfo lane_info,
                double dist_rblane, bool flag_avd);
 
   double lat_offset() const { return avoid_info_.lat_offset; }
@@ -28,7 +29,6 @@ class LateralOffsetCalculatorV2 {
   void ResetOffsetHysteresisMaps();
 
  private:
-  void CalLaneWidth();
   bool UpdateBasicPath(const int& status);
   bool UpdateAvoidPath(int status, bool flag_avd, bool should_premove,
                        double dist_rblane,
@@ -43,8 +43,6 @@ class LateralOffsetCalculatorV2 {
               double dist_rblane,
               const std::array<AvoidObstacleInfo, 2>& avoid_car_info,
               const std::array<AvoidObstacleInfo, 2>& avoid_sp_car_info);
-
-  void CalculateNormalLateralOffsetThreshold();
   bool AvoidWaySelectForTwoObstacle(const AvoidObstacleInfo& avoid_obstacle_1,
                                     const AvoidObstacleInfo& avoid_obstacle_2,
                                     double* t_exceed_obstacle_1);
