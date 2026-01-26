@@ -1071,6 +1071,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
 
 bool GeneralLateralDecider::CalculateCruiseVelocity(
     double* const avg_cruise_v) {
+  constexpr double kExtendLonDistance = 0.0;
   auto& last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
                                .raw_traj_points;
@@ -1087,6 +1088,7 @@ bool GeneralLateralDecider::CalculateCruiseVelocity(
   }
   // *avg_cruise_v = (last_traj_points.back().s - last_traj_points.front().s) /
   //                 last_traj_points.back().t;
+  last_traj_length += kExtendLonDistance;
   *avg_cruise_v = last_traj_length / last_traj_points.back().t;
   return true;
 }
