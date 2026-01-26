@@ -310,6 +310,7 @@ void SccLongitudinalMotionPlannerV3::Update() {
     s_vec[i] = std::max(
         s_vec[i], s_vec[i - 1]);  // 1e-3 to avoid non-inremental spline input
   }
+  motion_planner_output.s_lon_vec = s_vec;
 
   // assemble trajectory that combines lateral and longitudinal planning_result
   auto &traj_points = session_->mutable_planning_context()

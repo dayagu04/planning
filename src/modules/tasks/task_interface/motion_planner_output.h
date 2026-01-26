@@ -41,6 +41,7 @@ struct MotionPlannerOutput {
   pnc::mathlib::spline omega_t_spline;
 
   std::vector<double> s_lat_vec;
+  std::vector<double> s_lon_vec;
 
   ilqr_solver::ControlVec u_vec;
 

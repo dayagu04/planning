@@ -166,11 +166,18 @@ void SccLateralObstacleDecider::UpdateAvdObstacles() {
   }
 
   // farthest_distance
-  auto &last_traj_points =
-      session_->planning_context().last_planning_result().traj_points;
+  // auto &last_traj_points =
+  //     session_->planning_context().last_planning_result().traj_points;
+  // double farthest_distance = DBL_MAX;
+  // if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
+  //   farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
+  // }
   double farthest_distance = DBL_MAX;
-  if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
-    farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
+  const auto& motion_planner_output =
+      session_->planning_context().motion_planner_output();
+  if (!motion_planner_output.s_lon_vec.empty()) {
+    farthest_distance = motion_planner_output.s_lon_vec.back() -
+                        motion_planner_output.s_lon_vec.front();
   }
 
   double expand_vel =
