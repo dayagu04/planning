@@ -3,7 +3,8 @@
 namespace planning {
 
 SCCHMIDecider::SCCHMIDecider(const EgoPlanningConfigBuilder* config_builder,
-    framework::Session* session) : HMIDecider(config_builder, session) {
+                             framework::Session* session)
+    : HMIDecider(config_builder, session) {
   name_ = "SCCHMIDecider";
   cone_warning_hmi_decider_ = std::make_shared<ConeWarningHMIDecider>(session);
   construction_warning_hmi_decider_ =

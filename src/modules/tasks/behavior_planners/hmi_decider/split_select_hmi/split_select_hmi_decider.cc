@@ -1,7 +1,7 @@
 #include "modules/tasks/behavior_planners/hmi_decider/split_select_hmi/split_select_hmi_decider.h"
-#include "modules/context/planning_context.h"
 #include "common/ifly_time.h"
 #include "modules/context/environmental_model_manager.h"
+#include "modules/context/planning_context.h"
 #include "modules/context/virtual_lane_manager.h"
 #include "planning_hmi_c.h"
 
@@ -25,19 +25,20 @@ bool SplitSelectHmiDecider::Execute() {
                       ->ad_info;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  const auto& virtual_lane_manager = 
+  const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const bool enable_output_split_select_classical_chinese =
       virtual_lane_manager->get_enable_output_split_select_classical_chinese();
-  const SplitSelectDirection split_select_direction = 
+  const SplitSelectDirection split_select_direction =
       virtual_lane_manager->get_split_select_direction();
   const auto curr_state = lane_change_decider_output.curr_state;
-  ad_info.split_select_direction = iflyauto::SplitSelectDirection::NO_SPLIT_SPLIT;
-  if (function_info.function_mode() !=
-      common::DrivingFunctionInfo::SCC) {
+  ad_info.split_select_direction =
+      iflyauto::SplitSelectDirection::NO_SPLIT_SPLIT;
+  if (function_info.function_mode() != common::DrivingFunctionInfo::SCC) {
     return true;
   }
-  if (!virtual_lane_manager->get_enable_output_split_select_classical_chinese()) {
+  if (!virtual_lane_manager
+           ->get_enable_output_split_select_classical_chinese()) {
     return true;
   }
   // 过滤自车处于路口中的状态
@@ -46,14 +47,17 @@ bool SplitSelectHmiDecider::Execute() {
     ILOG_DEBUG << "SplitSelectHmiDecider::ego not in intersection!";
     return true;
   }
-  
+
   if (curr_state == kLaneKeeping || curr_state == kLaneChangePropose) {
     if (split_select_direction == SPLIT_SELECT_LEFT_LANE) {
-      ad_info.split_select_direction = iflyauto::SplitSelectDirection::SPLIT_SELECT_TO_LEFT;
+      ad_info.split_select_direction =
+          iflyauto::SplitSelectDirection::SPLIT_SELECT_TO_LEFT;
     } else if (split_select_direction == SPLIT_SELECT_RIGHT_LANE) {
-      ad_info.split_select_direction = iflyauto::SplitSelectDirection::SPLIT_SELECT_TO_RIGHT;
+      ad_info.split_select_direction =
+          iflyauto::SplitSelectDirection::SPLIT_SELECT_TO_RIGHT;
     } else {
-      ad_info.split_select_direction = iflyauto::SplitSelectDirection::NO_SPLIT_SPLIT;
+      ad_info.split_select_direction =
+          iflyauto::SplitSelectDirection::NO_SPLIT_SPLIT;
     }
   }
 
@@ -61,7 +65,7 @@ bool SplitSelectHmiDecider::Execute() {
 }
 
 void SplitSelectHmiDecider::UpdateIntersection() {
-  const auto &tfl_decider = session_->mutable_planning_context()
+  const auto& tfl_decider = session_->mutable_planning_context()
                                 ->mutable_traffic_light_decider_output();
   const auto intersection_state = session_->environmental_model()
                                       .get_virtual_lane_manager()
@@ -88,4 +92,4 @@ void SplitSelectHmiDecider::UpdateIntersection() {
   return;
 }
 
-}
+}  // namespace planning

@@ -97,7 +97,7 @@ bool EgoLaneRoadRightDecider::Execute() {
     boundary_merge_point_ = merge_point_list[1];
     boundary_merge_point_valid_ = true;
     merge_point_distance_ = std::hypot(ego_point.x - boundary_merge_point_.x,
-                                          ego_point.y - boundary_merge_point_.y);
+                                       ego_point.y - boundary_merge_point_.y);
   } else {
     merge_point_ = ego_point;
     boundary_merge_point_ = ego_point;

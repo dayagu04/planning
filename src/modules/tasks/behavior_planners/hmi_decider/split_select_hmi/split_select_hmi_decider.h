@@ -17,7 +17,7 @@ class SplitSelectHmiDecider {
   void UpdateHMIInfo();
 
   void UpdateIntersection();
-  
+
  private:
   framework::Session* session_ = nullptr;
   bool ego_in_intersection_state_ = false;

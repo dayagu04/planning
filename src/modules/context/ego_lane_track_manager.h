@@ -217,8 +217,8 @@ class EgoLaneTrackManger {
   void ComputeIsSplitRegion(
       const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids,
-      const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
-        virtual_id_mapped_lane);
+      const std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane);
 
  private:
   planning::framework::Session *session_ = nullptr;
