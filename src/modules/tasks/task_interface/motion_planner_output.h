@@ -42,6 +42,8 @@ struct MotionPlannerOutput {
 
   std::vector<double> s_lat_vec;
   std::vector<double> s_lon_vec;
+  Point2D planning_end_xy_point;
+  bool is_valid_planning_end_xy_point = false;
 
   ilqr_solver::ControlVec u_vec;
 

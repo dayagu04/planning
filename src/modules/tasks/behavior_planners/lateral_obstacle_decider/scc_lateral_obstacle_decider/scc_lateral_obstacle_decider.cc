@@ -175,9 +175,12 @@ void SccLateralObstacleDecider::UpdateAvdObstacles() {
   double farthest_distance = DBL_MAX;
   const auto& motion_planner_output =
       session_->planning_context().motion_planner_output();
-  if (!motion_planner_output.s_lon_vec.empty()) {
-    farthest_distance = motion_planner_output.s_lon_vec.back() -
-                        motion_planner_output.s_lon_vec.front();
+  auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
+  Point2D frenet_pt{0.0, 0.0};
+  if (motion_planner_output.is_valid_planning_end_xy_point &&
+      frenet_coord->XYToSL(motion_planner_output.planning_end_xy_point,
+                           frenet_pt)) {
+    farthest_distance = frenet_pt.x - ego_head_s_;
   }
 
   double expand_vel =
