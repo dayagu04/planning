@@ -4224,10 +4224,12 @@ void GeneralLateralDecider::PostProcessObstacleBoundWithInterpolation(
   int right_index = -1;
   for (size_t i = 0; i < soft_bounds.size(); ++i) {
     const auto &bounds_at_i = soft_bounds[i];
+    bool hit_obstacle_at_i = false;
     for (const auto &bound_at_i : bounds_at_i) {
       if (bound_at_i.bound_info.id != obstacle_id) {
         continue;
       }
+      hit_obstacle_at_i = true;
       right_index  = i;
       if (left_index >= 0 && left_index + 1 < right_index) {
         // 在 (left, right) 之间存在默认值，需要插值
@@ -4264,6 +4266,8 @@ void GeneralLateralDecider::PostProcessObstacleBoundWithInterpolation(
           }
         }
       }
+    }
+    if (hit_obstacle_at_i) {
       left_index = right_index;
     }
   }
