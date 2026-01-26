@@ -1621,7 +1621,7 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
 
     int split_next_link_lane_num = 0;
     int split_out_link_lane_num = 0;
-    for (const auto& lane_id: split_next_link->lane_ids()) {
+    for (const auto& lane_id : split_next_link->lane_ids()) {
       const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
       if (temp_lane == nullptr) {
         continue;
@@ -1632,7 +1632,7 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
       }
     }
 
-    for (const auto& suc_link_id:split_link->successor_link_ids()) {
+    for (const auto& suc_link_id : split_link->successor_link_ids()) {
       if (suc_link_id == split_next_link->id()) {
         continue;
       }
@@ -1642,7 +1642,7 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
         continue;
       }
 
-      for (const auto& lane_id: out_link->lane_ids()) {
+      for (const auto& lane_id : out_link->lane_ids()) {
         const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
         if (temp_lane == nullptr) {
           continue;
