@@ -1080,6 +1080,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
 bool GeneralLateralDecider::CalculateCruiseVelocity(
     double* const avg_cruise_v) {
   constexpr double kExtendLonDistance = 0.0;
+  // constexpr double kExtendLonDistance = 0.0;
   auto& last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
                                .raw_traj_points;
@@ -1094,6 +1095,7 @@ bool GeneralLateralDecider::CalculateCruiseVelocity(
     }
     last_traj_length += (last_traj_point.v * dt);
   }
+
   // *avg_cruise_v = (last_traj_points.back().s - last_traj_points.front().s) /
   //                 last_traj_points.back().t;
   last_traj_length += kExtendLonDistance;
@@ -5245,6 +5247,8 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     const std::vector<std::pair<double, double>>& first_frenet_soft_bounds,
     GeneralLateralDeciderOutput& general_lateral_decider_output) {
   // bool bound_avoid = false;
+  constexpr int kExtendLonSize = 2;
+
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     // if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
     //     ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
@@ -5253,10 +5257,34 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     ref_traj_points_[i].l = std::min(
         std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
         second_frenet_soft_bounds[i].second);
+
     ref_traj_points_[i].l = std::min(
         std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
         first_frenet_soft_bounds[i].second);
+
+    // 纵向往后扩展
+    for (int j = i + 1; j < std::min(i + 1 + kExtendLonSize, ref_traj_points_.size()); j++) {
+      ref_traj_points_[j].l = std::min(
+        std::max(ref_traj_points_[j].l, second_frenet_soft_bounds[i].first),
+        second_frenet_soft_bounds[i].second);
+      ref_traj_points_[j].l = std::min(
+        std::max(ref_traj_points_[j].l, first_frenet_soft_bounds[i].first),
+        first_frenet_soft_bounds[i].second);
+    }
   }
+
+  constexpr double kExp = 1e-6;
+  constexpr double kChangeRate = 0.1;
+  for (size_t i = 1; i < ref_traj_points_.size(); i++) {
+    if ((ref_traj_points_[i].l - first_frenet_soft_bounds[i].first > kExp &&
+        ref_traj_points_[i].l - second_frenet_soft_bounds[i].first > kExp) &&
+        (first_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp &&
+        second_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp)) {
+      ref_traj_points_[i].l = clip(ref_traj_points_[i].l, ref_traj_points_[i - 1].l + kChangeRate, ref_traj_points_[i - 1].l - kChangeRate);
+    }
+  }
+
+
   // general_lateral_decider_output.bound_avoid = bound_avoid;
 }
 
