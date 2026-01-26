@@ -544,4 +544,22 @@ const ParkingVehDirection GetParkDir(const int dir) {
   return res;
 }
 
+const std::string GetAstarNodeVisitedTypeDebugString(
+    const AstarNodeVisitedType type) {
+  std::string res;
+  switch (type) {
+    case AstarNodeVisitedType::IN_OPEN:
+      res = "IN_OPEN";
+      break;
+    case AstarNodeVisitedType::IN_CLOSE:
+      res = "IN_CLOSE";
+      break;
+    default:
+      res = "NOT_VISITED";
+      break;
+  }
+
+  return res;
+}
+
 }  // namespace planning

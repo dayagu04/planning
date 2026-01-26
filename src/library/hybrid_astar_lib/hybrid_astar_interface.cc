@@ -695,10 +695,17 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
   // judge target regulator goal if collide
   const TerminalCandidatePoint target_pose =
       regulator.GetCandidatePose(GenLatBufferForCandidatePose(), 0.08f);
-  advised_lat_buffer_inside = GetLatBufferForInsideSlot(
-      target_pose.dist_to_obs, ego_obs_dist, is_ego_overlap_with_slot);
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+    advised_lat_buffer_inside = 0.01;
+  } else {
+    advised_lat_buffer_inside = GetLatBufferForInsideSlot(
+        target_pose.dist_to_obs, ego_obs_dist, is_ego_overlap_with_slot);
+  }
 
   target_regulator_goal_ = target_pose.pose;
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+    target_regulator_goal_ = request_.real_goal;
+  }
   ILOG_INFO << "dist to obs = " << target_pose.dist_to_obs
             << ", lat buffer inside = " << advised_lat_buffer_inside;
 
@@ -709,6 +716,8 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
   }
 
   double search_time = 0.0;
+
+  std::fill(feasible_directions_.begin(), feasible_directions_.end(), false);
 
   traj_candidates_size_ = 3;
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
@@ -748,10 +757,24 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
 
-      hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                                 &traj_candidates_[i]);
-
-      ExtendPathToRealParkSpacePoint(&traj_candidates_[i], request_.real_goal);
+      if (request_.direction_request_size > 0) {
+        for (size_t idx = 0; idx < request_.direction_request_size; idx++) {
+          hybrid_astar_->AstarSearch(GetStartPoint(),
+                                     request_.real_goal_stack[idx], map_bounds_,
+                                     &traj_candidates_[idx]);
+          if (traj_candidates_[idx].x.size() > 5) {
+            feasible_directions_[idx] = true;
+          }
+        }
+      } else {
+        hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
+                                   &traj_candidates_[i]);
+        if (request_.space_type != ParkSpaceType::PARALLEL_OUT &&
+            request_.space_type != ParkSpaceType::PARALLEL_IN) {
+          ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
+                                         request_.real_goal);
+        }
+      }
     }
 
     // just for debug
@@ -763,8 +786,12 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
     }
   }
 
-  constexpr int kGearNum = 2;
-  PathCandidateCompare(kGearNum);
+  if (request_.direction_request_size > 0) {
+    best_traj_ = &traj_candidates_[0];
+  } else {
+    constexpr int kGearNum = 2;
+    PathCandidateCompare(kGearNum);
+  }
 
   return;
 }
@@ -1110,6 +1137,9 @@ void HybridAStarInterface::ParkingDirectionAttempt(
     }
 
     target_regulator_goal_ = target_regulator_result.pose;
+    if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+      target_regulator_goal_ = request_.real_goal_stack[i];
+    }
 
     hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(), map_bounds_,
                                &traj_candidates_[0]);

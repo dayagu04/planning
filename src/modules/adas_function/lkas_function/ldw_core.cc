@@ -331,7 +331,7 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
 
       // bit 16
   // ESP系统处于开启状态
-  if ((vehicle_service_output_info_ptr->esp_active == false)) {
+  if ((vehicle_service_output_info_ptr->esp_active == true)) {
     enable_code += uint32_bit[25];
   } else {
     /*do nothing*/
@@ -379,12 +379,16 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
 
   // bit 2
   // 判断当前车道宽度是否满足激活条件
+  if (GetContext.get_road_info()->current_lane.lane_width_valid) {
   if (GetContext.mutable_road_info()->current_lane.lane_width < 2.5) {
     disable_code += uint32_bit[2];
   } else if (GetContext.mutable_road_info()->current_lane.lane_width > 5.5) {
     disable_code += uint32_bit[2];
   } else {
     /*do nothing*/
+  }
+  }else {
+    /*当一侧既没有路沿也没有道线时，不作道宽判断*/
   }
 
   // bit 3
@@ -653,7 +657,7 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
 
     // bit 16
   // ESP系统处于开启状态
-  if ((vehicle_service_output_info_ptr->esp_active == false)) {
+  if ((vehicle_service_output_info_ptr->esp_active == true)) {
     disable_code += uint32_bit[25];
   } else {
     /*do nothing*/

@@ -55,6 +55,8 @@ enum class ParkSpaceType {
   VERTICAL,
   PARALLEL,
   SLANTING,
+  PARALLEL_IN,
+  PARALLEL_OUT,
   MAX_NUMBER,
 };
 
@@ -608,5 +610,7 @@ const bool IsPathGearSameWithRequest(const AstarPathGear type,
                                      const AstarPathGear request);
 
 const ParkingVehDirection GetParkDir(const int dir);
+
+const std::string GetAstarNodeVisitedTypeDebugString(const AstarNodeVisitedType type);
 
 }  // namespace planning

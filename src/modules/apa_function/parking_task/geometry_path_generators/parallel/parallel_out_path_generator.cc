@@ -23,6 +23,7 @@ void ParallelOutPathGenerator::Reset() {
   output_.Reset();
   debug_info_.Reset();
   calc_params_.Reset();
+  parkout_path_by_direction_.clear();
 }
 
 void ParallelOutPathGenerator::Preprocess() {
@@ -243,6 +244,13 @@ const bool ParallelOutPathGenerator::Update() {
     ILOG_INFO << "inversed search in slot success! --------------------------";
     pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
     ILOG_INFO << "inversed search in slot success! end-----------------------";
+
+    ApaParkOutDirection out_dir = input_.tlane.slot_side_sgn > 0.0
+                                      ? ApaParkOutDirection::LEFT_FRONT
+                                      : ApaParkOutDirection::RIGHT_FRONT;
+    parkout_path_by_direction_[out_dir] = inversed_path_seg_vec;
+
+    ILOG_INFO << "out_dir: " << int(out_dir);
 
     success = false;
     std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;

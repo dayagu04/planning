@@ -19,7 +19,7 @@ namespace planning {
 namespace {
 constexpr double kDistanceCrossLine = 50.0;
 
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
 constexpr double kSkipAppendSearchTimeLimit = 50;  // ms
 constexpr double kTotalSearchTimeLimit = 50;       // ms
 #else

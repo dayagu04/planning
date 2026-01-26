@@ -930,7 +930,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
     }
     cur_predicion_obj.delay_time = prediction_relative_time;
 
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
     cur_predicion_obj.delay_time =
         SimulationContext::Instance()->prediction_relative_time();
 #endif

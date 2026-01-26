@@ -86,8 +86,8 @@ struct PlannerOpenSpaceConfig {
   float expect_dist_penalty;
   float recommend_box_penalty;
 
-  float exceed_pre_search_box_penalty;
-  float exceed_intersting_box_penalty;
+  float exceed_interseting_area_penalty;
+  float exceed_cul_de_sac_limit_pos_penalty;
   float borrow_slot_penalty;
 
   // check rs path segment min distance

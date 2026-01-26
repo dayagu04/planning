@@ -659,6 +659,15 @@ const bool HybridAStarPathGenerator::CalcRSPathToGoal(
     rs_path_.paths[rs_path_.size++] = rs_seg;
   }
 
+  if (request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
+      request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+    if (rs_path_.GetFirstGear() != AstarPathGear::DRIVE ||
+        rs_path_.gear_change_number > 1) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -1194,8 +1203,8 @@ HybridAStarPathGenerator::GetAllSuccessCurvePathFirstGearSwitchPoseForDebug() {
 #endif
 }
 
-const cdl::AABB& HybridAStarPathGenerator::GetPreSearchABBoxForDebug() {
-  return pre_search_abbox_;
+const cdl::AABB& HybridAStarPathGenerator::GetIntersetingAreaForDebug() {
+  return interesting_area_;
 }
 
 CompactNodePool HybridAStarPathGenerator::node_pool_;

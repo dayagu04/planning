@@ -36,7 +36,7 @@ bool PlanningAdapter::Init() {
       "/res/conf/engine_configs/planning_engine_config_ap.json";
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       params_["res_path"], engine_config_path);
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       engine_config_path);

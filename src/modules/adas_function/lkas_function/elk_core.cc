@@ -379,7 +379,7 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
   }
   // bit 16
   // ESP系统处于激活状态
-  if ((vehicle_service_output_info_ptr->esp_active == false)) {
+  if ((vehicle_service_output_info_ptr->esp_active == true)) {
     enable_code += uint32_bit[29];
   } else {
     /*do nothing*/
@@ -732,7 +732,7 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
   }
   // bit 16
   // ESP系统处于激活状态
-  if ((vehicle_service_output_info_ptr->esp_active == false)) {
+  if ((vehicle_service_output_info_ptr->esp_active == true)) {
     disable_code += uint32_bit[29];
   } else {
     /*do nothing*/

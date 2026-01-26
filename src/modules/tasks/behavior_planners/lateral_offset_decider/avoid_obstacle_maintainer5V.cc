@@ -1390,7 +1390,7 @@ bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
   double v_ego = ego_state->ego_v();
   lane_width_ = flane->width();
 
-#ifdef X86
+#if defined(X86) && !defined(X86_SIMULATION)
   double t_interval = 1.0 / FLAGS_planning_loop_rate;
 #else
   double t_interval = IflyTime::Now_s() - curr_time;

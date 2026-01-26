@@ -365,18 +365,18 @@ const bool PathGeneratorThread::PublishDeleteQueuePath(
   return true;
 }
 
-const bool PathGeneratorThread::PublishPreSearchABBox(
-    cdl::AABB& pre_search_abbox) {
+const bool PathGeneratorThread::PublishIntersetingArea(
+    cdl::AABB& interseting_area) {
   std::lock_guard<std::mutex> lock(mutex_);
-  pre_search_abbox.Reset();
+  interseting_area.Reset();
   if (search_state_.load(std::memory_order_acquire) !=
           AstarSearchState::SUCCESS &&
       search_state_.load(std::memory_order_acquire) !=
           AstarSearchState::FAILURE) {
     return false;
   }
-  hybrid_astar_path_generator_interface_ptr_->GetPreSearchABBoxForDebug(
-      pre_search_abbox);
+  hybrid_astar_path_generator_interface_ptr_->GetIntersetingAreaForDebug(
+      interseting_area);
   return true;
 }
 
