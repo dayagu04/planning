@@ -73,24 +73,15 @@ constexpr double kNearMergeCancelVLimitCurvRadius = 900.0;
 constexpr double kFarAwayMergeCounterNums = 50;
 constexpr double kShortDisReachMerge = 6.0;
 constexpr double kSharpCurveEnterThreshold = 100.0;  // Enter threshold (m)
-constexpr double kSharpCurveExitThreshold =
-    130.0;  // Exit threshold with hysteresis (m)
-constexpr double kMinDistanceForDecel =
-    1;  // Min distance to avoid division by zero
-constexpr double kCurvatureDecelThreshold =
-    -1.0;  // Deceleration threshold for CURVATURE (m/s²)
-constexpr double kRoadBoundarySharpDecelThreshold =
-    -1.2;  // Deceleration threshold for ROAD_BOUNDARY_SHARP_DECEL (m/s²)
-constexpr double kRoadBoundaryCooldownDeltaThreshold =
-    1.11;  // m/s threshold to treat limit change as significant
-constexpr double kRoadBoundaryDefaultLimitMps =
-    100.0;  // Default value meaning no road boundary limit applied
-constexpr double kCurvatureDefaultLimitMps =
-    100.0;  // Default value meaning no curvature limit applied
-constexpr double kConstructionDefaultLimitMps =
-    100.0;  // Default value meaning no construction limit applied
-constexpr double kRampDefaultLimitMps =
-    100.0;  // Default value meaning no ramp limit applied
+constexpr double kSharpCurveExitThreshold = 130.0;   // Exit threshold with hysteresis (m)
+constexpr double kMinDistanceForDecel = 1;  // Min distance to avoid division by zero
+constexpr double kCurvatureDecelThreshold = -1.2;  // Deceleration threshold for CURVATURE (m/s²)
+constexpr double kRoadBoundarySharpDecelThreshold = -1.2;  // Deceleration threshold for ROAD_BOUNDARY_SHARP_DECEL (m/s²)
+constexpr double kRoadBoundaryCooldownDeltaThreshold = 1.11;  // m/s threshold to treat limit change as significant
+constexpr double kRoadBoundaryDefaultLimitMps = 100.0;  // Default value meaning no road boundary limit applied
+constexpr double kCurvatureDefaultLimitMps = 100.0;  // Default value meaning no curvature limit applied
+constexpr double kConstructionDefaultLimitMps = 100.0;  // Default value meaning no construction limit applied
+constexpr double kRampDefaultLimitMps = 100.0;  // Default value meaning no ramp limit applied
 constexpr double kCurvSpeedDifference = 3 / 3.6;
 constexpr int kSharpCurveMinFrames =
     5;  // Min frames to maintain sharp curve state
@@ -159,6 +150,17 @@ constexpr double kRoadBoundaryDefaultVLimit = 40.0;
 constexpr double kLateralRatioThreshold = 0.3;
 constexpr double kAvoidAgentMinSpeed = 2.0;
 constexpr double kLateralCollisionCheckThreshold = 0.5;
+constexpr double kLateralAccPredictionAccelTime = 2.0;  // Acceleration time for lateral acc prediction when min_v_limit >= v_ego (s)
+constexpr double kLateralAccPredictionDecelTime = 1.0;  // Acceleration time for lateral acc prediction when min_v_limit < v_ego (s)
+constexpr double kLateralAccPredictionDecelRate = -1.0;  // Deceleration rate for lateral acc prediction when min_v_limit < v_ego (m/s²)
+// Unified trigger distance optimization constants for curvature and road boundary
+constexpr double kTriggerDistanceAccelTimeOffset = 0.6;  // Time offset for trigger distance optimization when acc_ego > 0 (s)
+constexpr double kTriggerDistanceMildDecelTimeOffset = 0.3;  // Time offset for trigger distance optimization when -0.3 < acc_ego <= 0 (s)
+constexpr double kTriggerDistanceModerateDecelTimeOffset = 0.1;  // Time offset for trigger distance optimization when -0.6 < acc_ego <= -0.3 (s)
+constexpr double kTriggerDistanceMildDecelThreshold = -0.3;  // Acceleration threshold for mild deceleration (m/s²)
+constexpr double kTriggerDistanceModerateDecelThreshold = -0.6;  // Acceleration threshold for moderate deceleration (m/s²)
+constexpr double kTriggerDistanceBaseOffsetMin = 6.0;  // Minimum base position offset for trigger distance optimization (m)
+constexpr double kTriggerDistanceBaseOffsetTimeRatio = 0.5;  // Time ratio for base position offset calculation (s)
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -330,6 +332,27 @@ bool CheckClustersConsecutiveDiffSlidingWindow(
     }
   }
   return false;
+}
+
+// Optimize trigger distance with unified logic considering base offset and acceleration for sharp deceleration
+// This function applies a base position offset and adjusts based on ego acceleration
+// to account for prediction delay and vehicle dynamics
+double OptimizeTriggerDistanceForSharpDecel(double trigger_distance, double v_ego, double acc_ego) {
+  // Step 1: Calculate base position offset: max(kTriggerDistanceBaseOffsetMin, v_ego * kTriggerDistanceBaseOffsetTimeRatio)
+  double base_offset = std::max(kTriggerDistanceBaseOffsetMin, v_ego * kTriggerDistanceBaseOffsetTimeRatio);
+  trigger_distance = trigger_distance - base_offset;
+  
+  // Step 2: Optimize trigger_distance based on acc_ego
+  if (acc_ego > 0.0) {
+    trigger_distance = trigger_distance - v_ego * kTriggerDistanceAccelTimeOffset;
+  } else if (acc_ego > kTriggerDistanceMildDecelThreshold) {
+    trigger_distance = trigger_distance - v_ego * kTriggerDistanceMildDecelTimeOffset;
+  } else if (acc_ego > kTriggerDistanceModerateDecelThreshold) {
+    trigger_distance = trigger_distance - v_ego * kTriggerDistanceModerateDecelTimeOffset;
+  }
+  
+  // Step 3: Ensure trigger_distance is not negative
+  return std::max(0.0, trigger_distance);
 }
 }  // namespace
 
@@ -943,6 +966,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double angle_steers = ego_state_mgr->ego_steer_angle();
   double angle_steers_deg = angle_steers * DEG_PER_RAD;
   double v_ego = ego_state_mgr->ego_v();
+  double acc_ego = ego_state_mgr->ego_acc();
   double acc_total_max = interp(v_ego, _A_TOTAL_MAX_BP, _A_TOTAL_MAX_V);
   double acc_lat =
       std::pow(v_ego, 2) * angle_steers / (steer_ratio * wheel_base);
@@ -1208,6 +1232,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     is_sharp_curve = (road_radius < kSharpCurveEnterThreshold);
   }
   last_is_sharp_curve_ = is_sharp_curve;
+
+  // Optimize dist_to_max_curv with unified logic
+  dist_to_max_curv = OptimizeTriggerDistanceForSharpDecel(dist_to_max_curv, v_ego, acc_ego);
 
   // Calculate required deceleration
   double required_deceleration = 0.0;
@@ -1627,6 +1654,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double map_sharp_curve_required_decel = 0.0;
   if (is_map_sharp_curve) {
     v_limit_map_sharp_curve = speed_limit_config_.map_sharp_curve_speed_limit;
+
+    // Optimize dist_to_ramp_max_curv with unified logic
+    dist_to_ramp_max_curv = OptimizeTriggerDistanceForSharpDecel(dist_to_ramp_max_curv, v_ego, acc_ego);
 
     // Calculate required deceleration
     if (dist_to_ramp_max_curv > kMinDistanceForDecel &&
@@ -3344,6 +3374,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
 
   // ========== Part 3: Ego State ==========
   double v_ego = ego_state_mgr->ego_v();
+  double acc_ego = ego_state_mgr->ego_acc();
   const auto init_point = ego_state_mgr->planning_init_point();
   double ego_s = 0.0, ego_l = 0.0;
   if (!planned_kd_path->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
@@ -4237,12 +4268,10 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   bool lateral_acc_valid = false;
 
   if (config.enable_lateral_acceleration_limit) {
-    // Step 1: Calculate minimum speed from v_limit_regular, v_target_, and
-    // v_ego
-    double min_speed = std::min({v_limit_regular, v_target_, v_ego});
-
-    // Step 2: Check lateral acceleration in [search_distance_min,
-    // search_distance_max]
+    // Step 1: Calculate minimum speed limit from v_limit_regular and v_target_
+    double min_v_limit = std::min(v_limit_regular, v_target_);
+    
+    // Step 2: Check lateral acceleration in [search_distance_min, search_distance_max]
     int exceed_count = 0;
     double first_exceed_distance =
         -1.0;  // First point where lat_acc exceeds threshold
@@ -4255,11 +4284,63 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
           relative_s > search_distance_max) {
         continue;
       }
-
+      
+      // Calculate predicted speed at this point based on ego speed, acceleration, and distance
+      double predicted_v = 0.0;
+      
+      if (min_v_limit >= v_ego) {
+        // Case 1: min_v_limit >= v_ego
+        // First kLateralAccPredictionAccelTime seconds: uniform acceleration with acc_ego
+        // After kLateralAccPredictionAccelTime seconds: uniform speed, not exceeding min_v_limit
+        double s_acc = v_ego * kLateralAccPredictionAccelTime + 0.5 * acc_ego * kLateralAccPredictionAccelTime * kLateralAccPredictionAccelTime;
+        double v_after_acc = v_ego + acc_ego * kLateralAccPredictionAccelTime;
+        v_after_acc = std::min(v_after_acc, min_v_limit);  // Limit to min_v_limit
+        
+        if (relative_s <= s_acc) {
+          // Within acceleration phase: v^2 = v0^2 + 2*a*s
+          double predicted_v_squared = v_ego * v_ego + 2.0 * acc_ego * relative_s;
+          predicted_v = (predicted_v_squared > 0.0) ? std::sqrt(predicted_v_squared) : 0.0;
+          predicted_v = std::min(predicted_v, min_v_limit);  // Limit to min_v_limit
+        } else {
+          // After acceleration phase: uniform speed
+          predicted_v = v_after_acc;
+        }
+      } else {
+        // Case 2: min_v_limit < v_ego
+        // First kLateralAccPredictionDecelTime second: uniform acceleration with acc_ego
+        // After kLateralAccPredictionDecelTime second: uniform deceleration with kLateralAccPredictionDecelRate until reaching min_v_limit
+        // After reaching min_v_limit: uniform speed at min_v_limit
+        double s_acc = v_ego * kLateralAccPredictionDecelTime + 0.5 * acc_ego * kLateralAccPredictionDecelTime * kLateralAccPredictionDecelTime;
+        double v_after_acc = v_ego + acc_ego * kLateralAccPredictionDecelTime;
+        
+        // Calculate distance needed to decelerate from v_after_acc to min_v_limit
+        double s_decel = 0.0;
+        if (v_after_acc > min_v_limit) {
+          s_decel = (v_after_acc * v_after_acc - min_v_limit * min_v_limit) / (2.0 * (-kLateralAccPredictionDecelRate));
+        }
+        
+        if (relative_s <= s_acc) {
+          // Within first acceleration phase: v^2 = v0^2 + 2*a*s
+          double predicted_v_squared = v_ego * v_ego + 2.0 * acc_ego * relative_s;
+          predicted_v = (predicted_v_squared > 0.0) ? std::sqrt(predicted_v_squared) : 0.0;
+        } else if (relative_s <= s_acc + s_decel) {
+          // Within deceleration phase: v^2 = v1^2 + 2*a*(s - s1)
+          double s_decel_phase = relative_s - s_acc;
+          double predicted_v_squared = v_after_acc * v_after_acc + 2.0 * kLateralAccPredictionDecelRate * s_decel_phase;
+          predicted_v = (predicted_v_squared > min_v_limit * min_v_limit) 
+                        ? std::sqrt(predicted_v_squared) 
+                        : min_v_limit;
+          predicted_v = std::max(predicted_v, min_v_limit);  // Ensure not below min_v_limit
+        } else {
+          // After deceleration phase: uniform speed at min_v_limit
+          predicted_v = min_v_limit;
+        }
+      }
+      
       // Calculate lateral acceleration: lat_acc = v^2 * kappa
       double kappa = path_point.kappa();
-      double lat_acc = min_speed * min_speed * std::fabs(kappa);
-
+      double lat_acc = predicted_v * predicted_v * std::fabs(kappa);
+      
       if (lat_acc > config.lateral_acceleration_threshold) {
         exceed_count++;
         if (first_exceed_distance < 0.0) {
@@ -4290,8 +4371,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
                 std::max(0.0, calculated_v_limit);
           } else {
             // Fallback to original method if kappa is too small
-            lateral_acceleration_limit_v_limit_ = std::max(
-                0.0, min_speed - config.lateral_acceleration_speed_reduction);
+            lateral_acceleration_limit_v_limit_ = std::max(0.0, min_v_limit - config.lateral_acceleration_speed_reduction);
           }
           lateral_acceleration_limit_trigger_distance_ = first_exceed_distance;
           lateral_acceleration_limit_pending_ = false;
@@ -4603,7 +4683,10 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
       last_road_boundary_strictest_trigger_distance_ = 0.0;
     }
   }
-
+  
+  // Optimize trigger_distance_road_boundary_strictest with unified logic
+  trigger_distance_road_boundary_strictest = OptimizeTriggerDistanceForSharpDecel(trigger_distance_road_boundary_strictest, v_ego, acc_ego);
+  
   // Calculate required deceleration for strictest road boundary limit
   double required_decel_strictest = 0.0;
   if (trigger_distance_road_boundary_strictest > kMinDistanceForDecel) {

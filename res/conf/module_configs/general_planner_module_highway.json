@@ -1309,11 +1309,11 @@
     "enable_road_boundary_collision_speed_limit": true,
     "road_boundary_collision_speed_limit": 4.167,
     "road_boundary_enable_lateral_acceleration_limit": true,
-    "road_boundary_lateral_acceleration_threshold": 2.0,
-    "road_boundary_lateral_acceleration_min_points": 4,
+    "road_boundary_lateral_acceleration_threshold": 1.75,
+    "road_boundary_lateral_acceleration_min_points": 3,
     "road_boundary_lateral_acceleration_confirmation_frames": 3,
     "road_boundary_lateral_acceleration_speed_reduction": 1.39,
-    "road_boundary_lateral_acceleration_desired": 1.6,
+    "road_boundary_lateral_acceleration_desired": 1.5,
     "road_boundary_curve_road_boundary_cooldown_frames": 20,
     "enable_s_curve_road_boundary_speed_limit": true,
     "road_boundary_s_curve_min_radius_threshold": 250.0,
@@ -1646,9 +1646,9 @@
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,
-        "jerk_negative_lower": -1.0,
+        "jerk_negative_lower": -2.0,
         "jerk_negative_speed_lower": 1.0,
-        "jerk_negative_upper": -1.0,
+        "jerk_negative_upper": -1.6,
         "jerk_negative_speed_upper": 25.0
       },
       "sharp_curvature_kinematic_param": {
@@ -1664,9 +1664,9 @@
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,
-        "jerk_negative_lower": -1.0,
+        "jerk_negative_lower": -2.5,
         "jerk_negative_speed_lower": 1.0,
-        "jerk_negative_upper": -1.0,
+        "jerk_negative_upper": -2.0,
         "jerk_negative_speed_upper": 25.0
       },
       "avoid_agent_kinematic_param": {
@@ -1736,9 +1736,9 @@
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,
-        "jerk_negative_lower": -1.0,
+        "jerk_negative_lower": -2.0,
         "jerk_negative_speed_lower": 1.0,
-        "jerk_negative_upper": -1.0,
+        "jerk_negative_upper": -1.6,
         "jerk_negative_speed_upper": 25.0
       },
       "low_speed_follow_acc_traj_table": {
