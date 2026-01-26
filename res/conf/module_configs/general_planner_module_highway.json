@@ -774,7 +774,7 @@
     "q_ref_pos": 8.0,
     "q_ref_vel": 0.0,
     "q_acc": 10.0,
-    "q_acc_start": 10.0,
+    "q_acc_start": 5.0,
     "q_jerk": 100.0,
     "q_jerk_start": 50.0,
     "q_djerk": 50.0,
