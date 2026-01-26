@@ -164,6 +164,10 @@ class EgoLaneTrackManger {
     return is_exist_interactive_select_split_;
   }
 
+  bool enable_output_split_select_classical_chinese() const {
+    return enable_output_split_select_classical_chinese_;
+  }
+
   int interactive_select_split_counter() const {
     return interactive_select_split_counter_;
   }
@@ -213,8 +217,8 @@ class EgoLaneTrackManger {
   void ComputeIsSplitRegion(
       const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids,
-      const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
-        virtual_id_mapped_lane);
+      const std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane);
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -248,6 +252,7 @@ class EgoLaneTrackManger {
   bool is_on_road_select_ramp_situation_ = false;
   bool is_interactive_select_split_situation_ = false;
   bool is_exist_interactive_select_split_ = false;
+  bool enable_output_split_select_classical_chinese_ = false;
   bool is_select_ego_lane_without_plan_ = false;
   bool is_select_ego_lane_with_plan_ = false;
   bool other_split_lane_right_side_ = false;

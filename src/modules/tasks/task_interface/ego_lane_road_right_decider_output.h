@@ -14,4 +14,5 @@ struct EgoLaneRoadRightDeciderOutput {
   planning::Point2D boundary_merge_point;
   bool cur_lane_is_continue = true;
   bool boundary_merge_point_valid = false;
+  double merge_point_distance = NL_NMAX;
 };

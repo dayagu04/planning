@@ -1074,6 +1074,11 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   ILOG_DEBUG << "is_ego_in_split_region:" << is_ego_in_split_region_;
   JSON_DEBUG_VALUE("is_ego_in_split_region", is_ego_in_split_region_);
 
+  set_enable_output_split_select_classical_chinese(
+      ego_lane_track_manager_.enable_output_split_select_classical_chinese());
+  ILOG_DEBUG << "enable_output_split_select_classical_chinese:" << enable_output_split_select_classical_chinese_;
+  JSON_DEBUG_VALUE("enable_output_split_select_classical_chinese", enable_output_split_select_classical_chinese_);
+
   if (ego_lane_track_manager_.interactive_select_split_counter() > 0) {
     set_is_exist_interactive_select_split(true);
   } else {
@@ -1085,9 +1090,9 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   other_split_lane_left_side_ = ego_lane_track_manager_.get_other_split_lane_left_side();
   split_lane_on_left_side_before_interactive_ = false;
   split_lane_on_right_side_before_interactive_ = false;
+  const double current_lane_order_id = current_lane_->get_order_id();
   if (((is_exist_intersection_split_ || is_exist_ramp_on_road_ || is_exist_split_on_ramp_ || is_exist_split_on_expressway_)) &&
       !is_exist_interactive_select_split_) {
-    const double current_lane_order_id = current_lane_->get_order_id();
     auto iter_left =
         std::find(
             order_ids_of_same_zero_relative_id_.begin(), order_ids_of_same_zero_relative_id_.end(), current_lane_order_id - 1);
@@ -1099,6 +1104,15 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     }
     if (iter_right != order_ids_of_same_zero_relative_id_.end()) {
       split_lane_on_right_side_before_interactive_ = true;
+    }
+  }
+
+  split_select_direction_ = NO_SPLIT_SELECT;
+  if (enable_output_split_select_classical_chinese_ && order_ids_of_same_zero_relative_id_.size() > 1) {
+    if (current_lane_order_id == order_ids_of_same_zero_relative_id_[0]) {
+      split_select_direction_ = SPLIT_SELECT_LEFT_LANE;
+    } else if (current_lane_order_id == order_ids_of_same_zero_relative_id_.back()) {
+      split_select_direction_ = SPLIT_SELECT_RIGHT_LANE;
     }
   }
 

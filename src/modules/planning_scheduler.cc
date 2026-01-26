@@ -784,6 +784,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.distance_to_ramp = ad_info.distance_to_ramp;
   planning_hmi_info->ad_info.distance_to_split = ad_info.distance_to_split;
   planning_hmi_info->ad_info.distance_to_merge = ad_info.distance_to_merge;
+  planning_hmi_info->ad_info.split_select_direction = ad_info.split_select_direction;
   planning_hmi_info->ad_info.distance_to_toll_station =
       ad_info.distance_to_toll_station;
   planning_hmi_info->ad_info.noa_exit_warning_level_distance =

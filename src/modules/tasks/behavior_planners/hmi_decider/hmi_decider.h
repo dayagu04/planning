@@ -4,8 +4,8 @@
 
 #include "debug_info_log.h"
 #include "planning_context.h"
-#include "tasks/task.h"
 #include "session.h"
+#include "tasks/task.h"
 
 namespace planning {
 

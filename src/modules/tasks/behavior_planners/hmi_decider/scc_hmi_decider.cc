@@ -3,7 +3,8 @@
 namespace planning {
 
 SCCHMIDecider::SCCHMIDecider(const EgoPlanningConfigBuilder* config_builder,
-    framework::Session* session) : HMIDecider(config_builder, session) {
+                             framework::Session* session)
+    : HMIDecider(config_builder, session) {
   name_ = "SCCHMIDecider";
   cone_warning_hmi_decider_ = std::make_shared<ConeWarningHMIDecider>(session);
   construction_warning_hmi_decider_ =
@@ -11,6 +12,7 @@ SCCHMIDecider::SCCHMIDecider(const EgoPlanningConfigBuilder* config_builder,
   lane_change_hmi_decider_ = std::make_shared<LaneChangeHmiDecider>(session);
   longitudinal_hmi_decider_ =
       std::make_shared<LongitudinalHmiDecider>(session, config_);
+  split_select_hmi_decider_ = std::make_shared<SplitSelectHmiDecider>(session);
 }
 
 bool SCCHMIDecider::Execute() {
@@ -25,6 +27,9 @@ bool SCCHMIDecider::Execute() {
   }
   if (longitudinal_hmi_decider_) {
     longitudinal_hmi_decider_->Execute();
+  }
+  if (split_select_hmi_decider_) {
+    split_select_hmi_decider_->Execute();
   }
   return true;
 }
