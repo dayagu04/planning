@@ -24,8 +24,8 @@ bool AdasFunction::Reset() {
 void AdasFunction::Init(void) {
   // Preprocess
   preprocess_ptr_ = std::make_shared<adas_function::preprocess::Preprocess>();
-
-#ifdef X86
+  
+#if defined(X86) && !defined(X86_SIMULATION)
   // X86 平台：仿真模式
   preprocess_ptr_->Init(true);
 #else

@@ -182,6 +182,13 @@ class Node3d {
 
   void SetHeuCost(float cost) { heuristic_cost_ = cost; }
 
+  void SetHeurCostDebug(const NodeHeuristicCost& cost) {
+    heuristic_cost_debug_ = cost;
+  }
+  const NodeHeuristicCost& GetHeuCostDebug() const {
+    return heuristic_cost_debug_;
+  }
+
   const float GetNodePathDistance() const { return path_.path_dist; }
 
   // void SetHeuCostDebug(const NodeHeuristicCost& cost) { h_cost_debug_ = cost;
@@ -396,6 +403,8 @@ class Node3d {
   float traj_cost_ = 0.0;
   // h cost
   float heuristic_cost_ = 0.0;
+
+  NodeHeuristicCost heuristic_cost_debug_;
 
   // f cost
   float f_cost_ = 0.0;

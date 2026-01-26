@@ -528,20 +528,26 @@ void LaneChangeRequestManager::ProcessBlinkState(
   static int32_t cancel_freeze_count = 11;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const int origin_lane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
-  const int target_lane_virtual_id = lane_change_decider_output.target_lane_virtual_id;
-  const double ego_press_line_ratio = int_request_.CalculatePressLineRatioByTwoLanes(
-      origin_lane_virtual_id, target_lane_virtual_id, cur_req);
+  const int origin_lane_virtual_id =
+      lane_change_decider_output.origin_lane_virtual_id;
+  const int target_lane_virtual_id =
+      lane_change_decider_output.target_lane_virtual_id;
+  const double ego_press_line_ratio =
+      int_request_.CalculatePressLineRatioByTwoLanes(
+          origin_lane_virtual_id, target_lane_virtual_id, cur_req);
   bool press_line_fewly = true;
   if (config_.use_press_line_fewly_threshold) {
-    press_line_fewly = ego_press_line_ratio < config_.press_line_fewly_threshold;
+    press_line_fewly =
+        ego_press_line_ratio < config_.press_line_fewly_threshold;
   } else {
     press_line_fewly = true;
   }
   bool is_allowed_cancel_state =
       (lc_status == StateMachineLaneChangeStatus::kLaneChangePropose ||
-       (lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution && press_line_fewly) ||
-       (lc_status == StateMachineLaneChangeStatus::kLaneChangeHold && press_line_fewly)||
+       (lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution &&
+        press_line_fewly) ||
+       (lc_status == StateMachineLaneChangeStatus::kLaneChangeHold &&
+        press_line_fewly) ||
        lc_status == StateMachineLaneChangeStatus::kLaneChangeCancel ||
        is_exist_interactive_select_split);
   bool trigger_left_lane_change =

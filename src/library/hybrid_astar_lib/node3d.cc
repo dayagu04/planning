@@ -258,18 +258,13 @@ void Node3d::DebugPoseString() const {
 
 void Node3d::DebugCost() const {
   ILOG_INFO << "g: " << traj_cost_ << " ,safe dist " << dist_to_obs_
-            << " ,h: " << heuristic_cost_ << ", f:" << f_cost_
-            << " astar dist ";
+            << " ,h: " << heuristic_cost_ << ", f:" << f_cost_ << " astar dist "
+            << "  dp_cost = " << heuristic_cost_debug_.dp_cost
+            << "  ref_line_heading_cost = "
+            << heuristic_cost_debug_.ref_line_heading_cost
+            << "  curve_path_cost = " << heuristic_cost_debug_.curve_path_cost
+            << "  euler_cost = " << heuristic_cost_debug_.euler_dist;
 
-#if DEBUG_NODE_HCOST
-  ILOG_INFO << h_cost_debug_.astar_dist << " rs_path_dist "
-            << h_cost_debug_.rs_path_dist << " rs_path_gear "
-            << h_cost_debug_.rs_path_gear << " euler_dist "
-            << h_cost_debug_.euler_dist << " ref_line_heading "
-            << h_cost_debug_.ref_line_heading_cost << " rs_path_steer "
-            << h_cost_debug_.rs_path_steer
-            << " ,gear cost: " << h_cost_debug_.expected_gear;
-#endif
   return;
 }
 

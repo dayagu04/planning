@@ -36,6 +36,7 @@
 #include "ifly_parking_map_c.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "parallel_park_out_scenario.h"
 #include "perfect_control.h"
 #include "planning_debug_info.pb.h"
 #include "planning_plan_c.h"
@@ -48,6 +49,7 @@
 #include "src/library/hybrid_astar_lib/hybrid_astar_thread.h"
 #include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "src/modules/apa_function/parking_scenario/narrow_space/narrow_space_scenario.h"
+#include "src/modules/apa_function/parking_scenario/parallel/parallel_park_out_scenario.h"
 #include "struct_convert/camera_perception_groundline_c.h"
 #include "struct_convert/common_c.h"
 #include "struct_convert/control_command_c.h"
@@ -87,7 +89,7 @@ typedef std::vector<Eigen::Vector2d> EigenPath2d;
 static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
 static PerfectControl *perfect_control_ptr;
 static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
-std::shared_ptr<apa_planner::NarrowSpaceScenario> hybrid_astar_park_;
+std::shared_ptr<apa_planner::ParallelParkOutScenario> hybrid_astar_park_;
 HybridAStarThreadSolver *thread_solver_;
 planning::apa_planner::EgoInfoUnderSlot ego_slot_info_;
 
@@ -134,9 +136,9 @@ int Init() {
 
   std::shared_ptr<apa_planner::ParkingScenario> planner =
       apa_interface_ptr->GetPlannerByType(
-          ParkingScenarioType::SCENARIO_NARROW_SPACE);
+          ParkingScenarioType::SCENARIO_PARALLEL_OUT);
   hybrid_astar_park_ =
-      std::dynamic_pointer_cast<apa_planner::NarrowSpaceScenario>(planner);
+      std::dynamic_pointer_cast<apa_planner::ParallelParkOutScenario>(planner);
 
   thread_solver_ = hybrid_astar_park_->GetThread();
   hybrid_astar_interface_ = thread_solver_->GetHybridAStarInterface();
@@ -580,7 +582,7 @@ const bool PlanOnce(
 
   const std::shared_ptr<apa_planner::ParkingScenario> scenario =
       apa_interface_ptr->GetPlannerByType(
-          ParkingScenarioType::SCENARIO_NARROW_SPACE);
+          ParkingScenarioType::SCENARIO_PARALLEL_OUT);
 
   if (scenario != nullptr) {
     const apa_planner::EgoInfoUnderSlot &ego_info =

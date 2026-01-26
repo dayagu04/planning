@@ -463,7 +463,7 @@ void Preprocess::UpdateStateInfo(void) {
                                               .vehicle_service_output_info;
 #if defined(CYBER_ENV)
   GetContext.mutable_state_info()->current_time_us = IflyTime::Now_us();
-#elif defined(AP_ENV)
+#elif defined(AP_ENV) || defined(X86_SIMULATION)
   GetContext.mutable_state_info()->current_time_us = IflyTime::Now_us();
 #else
   GetContext.mutable_state_info()->current_time_us =

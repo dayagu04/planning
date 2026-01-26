@@ -408,6 +408,6 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
 }  // namespace planning
 
-#ifndef X86
+#if !defined(X86) || defined(X86_SIMULATION)
 REG_COMPONENT(PlanningInterface, planning::PlanningAdapter);
 #endif

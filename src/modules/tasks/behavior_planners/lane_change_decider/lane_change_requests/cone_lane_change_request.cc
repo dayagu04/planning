@@ -144,7 +144,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   const auto& function_info = session_->environmental_model().function_info();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
-  const auto& ref_path_mgr = session_->environmental_model().get_reference_path_manager();
+  const auto& ref_path_mgr =
+      session_->environmental_model().get_reference_path_manager();
   const auto cur_reference_path =
       ref_path_mgr->get_reference_path_by_current_lane();
   double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
@@ -214,18 +215,22 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   const auto& front_obstacles_array = lateral_obstacle_->front_tracks();
   for (const auto front_obstacle : front_obstacles_array) {
     int obstacle_id = front_obstacle->id();
+    if (obstacle_id == kInvalidAgentId) {
+      continue;
+    }
     auto front_vehicle_iter = tracks_map.find(obstacle_id);
     Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                            planning_init_point_.lat_init_state.y()};
     if (front_vehicle_iter != tracks_map.end()) {
-      if (obstacle_id == kInvalidAgentId) {
+      if (front_vehicle_iter->second == nullptr) {
         continue;
       }
       if (front_vehicle_iter->second->type() ==
               iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
-          (front_vehicle_iter->second->type() ==
-               iflyauto::OBJECT_TYPE_CTASH_BARREL &&
-           function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
+          front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_CTASH_BARREL ||
+          front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER) {
         if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
             front_vehicle_iter->second->d_s_rel() >
                 base_frenet_coord_->Length() - ego_frenet_point.x) {
@@ -299,7 +304,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
                                  lane_width + k_left_cone_occ_lane_line_buffer);
   pass_threshold_right = std::max(
       pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
-  double all_cone_cluster_min_lateral_distance = std::numeric_limits<double>::max();
+  double all_cone_cluster_min_lateral_distance =
+      std::numeric_limits<double>::max();
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
@@ -316,7 +322,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     if (points.size() <= 0) {
       continue;
     }
-    for (const auto &p : points) {
+    for (const auto& p : points) {
       min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
       total_l += p.l;
     }
@@ -353,8 +359,10 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     // judge if to trigger cone lc
     if ((min_left_l < pass_threshold_left &&
          min_right_l < pass_threshold_right) ||
-        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 && average_l > 0.0) ||
-        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 && average_l < 0.0)) {
+        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 &&
+         average_l > 0.0) ||
+        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 &&
+         average_l < 0.0)) {
       cone_alc_trigger_counter_++;
       ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_
                  << ", cluster is " << cluster;
@@ -370,7 +378,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       break;
     }
   }
-  if (all_cone_cluster_min_lateral_distance > kConeLaneChangelateralDistancethre) {
+  if (all_cone_cluster_min_lateral_distance >
+      kConeLaneChangelateralDistancethre) {
     is_cone_must_lane_change_situation_ = false;
   }
   // if all clusters is far away from cernter line, counter--
@@ -547,7 +556,8 @@ void ConeRequest::ConeDir() {
   double dis_to_merge_point = NL_NMAX;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     if (!route_info_output.map_merge_points_info.empty()) {
-      dis_to_merge_point = route_info_output.map_merge_points_info.front().dis_to_merge_fp;
+      dis_to_merge_point =
+          route_info_output.map_merge_points_info.front().dis_to_merge_fp;
     }
     const auto& split_region_info_list =
         route_info_output.map_split_region_info_list;
@@ -558,7 +568,8 @@ void ConeRequest::ConeDir() {
           split_region_info_list[0].distance_to_split_point;
     }
     if (!map_merge_region_info_list.empty()) {
-      dis_to_first_merge = map_merge_region_info_list[0].distance_to_merge_point;
+      dis_to_first_merge =
+          map_merge_region_info_list[0].distance_to_merge_point;
     }
   }
   const auto base_lane =
@@ -568,12 +579,13 @@ void ConeRequest::ConeDir() {
   cone_lane_change_direction_ = NO_CHANGE;
   int current_left_boundary_type = 0;
   int current_right_boundary_type = 0;
-  const auto& feasible_lane_sequence =
-      route_info_output.feasible_lane_sequence;
-  const double dis_ego_to_last_split_point = route_info_output.sum_dis_to_last_link_split_point;
+  const auto& feasible_lane_sequence = route_info_output.feasible_lane_sequence;
+  const double dis_ego_to_last_split_point =
+      route_info_output.sum_dis_to_last_link_split_point;
   bool left_lane_is_on_navigation_route = true;
   bool right_lane_is_on_navigation_route = true;
-  if (distance_to_first_road_split < 300.0 || dis_to_merge_point < 200.0 || dis_ego_to_last_split_point < 100.0) {
+  if (distance_to_first_road_split < 300.0 || dis_to_merge_point < 200.0 ||
+      dis_ego_to_last_split_point < 100.0) {
     if (feasible_lane_sequence.size() > 0) {
       int current_lane_order_num = left_lane_nums_ + 1;
       int target_lane_order_num = current_lane_order_num - 1;
