@@ -110,8 +110,11 @@ class SpeedLimitDeciderOutput {
   void set_avoid_speed_limit_info(const SpeedLimitAgent speed_limit_agent_info);
   const SpeedLimitAgent avoid_speed_limit_info() const;
 
-  bool function_inhibited_near_roundabout() const { return function_inhibited_near_roundabout_; }
-  void set_function_inhibited_near_roundabout(const bool function_inhibited_near_roundabout) {
+  bool function_inhibited_near_roundabout() const {
+    return function_inhibited_near_roundabout_;
+  }
+  void set_function_inhibited_near_roundabout(
+      const bool function_inhibited_near_roundabout) {
     function_inhibited_near_roundabout_ = function_inhibited_near_roundabout;
   }
 
@@ -130,18 +133,30 @@ class SpeedLimitDeciderOutput {
   std::string not_overtake_from_right_speed_limit_debug_string_ = "";
   std::string vru_round_speed_limit_debug_string_ = "";
   std::vector<SpeedLimitType> speed_limit_types_ = {
-      SpeedLimitType::NONE,         SpeedLimitType::CURVATURE,
-      SpeedLimitType::CRUISE,       SpeedLimitType::MERGE,
-      SpeedLimitType::CIPV_LOST,    SpeedLimitType::CONE_BUCKET,
-      SpeedLimitType::ROUNDABOUT,   SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT,
-      SpeedLimitType::NORMAL_KAPPA, SpeedLimitType::VRU_ROUND,
-      SpeedLimitType::MERGE_ALC,    SpeedLimitType::MAP_NEAR_RAMP,
-      SpeedLimitType::MAP_ON_RAMP,  SpeedLimitType::INTERSECTION,
-      SpeedLimitType::LANE_BORROW,  SpeedLimitType::NEAR_TFL,
-      SpeedLimitType::AVOID_AGENT,  SpeedLimitType::DANGEROUS_OBSTACLE,
-      SpeedLimitType::NEAR_POI,     SpeedLimitType::NEAR_CONSTRUCTION,
-      SpeedLimitType::ON_CONSTRUCTION, SpeedLimitType::SHARP_CURVATURE,
-      SpeedLimitType::ROAD_BOUNDARY, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL};
+      SpeedLimitType::NONE,
+      SpeedLimitType::CURVATURE,
+      SpeedLimitType::CRUISE,
+      SpeedLimitType::MERGE,
+      SpeedLimitType::CIPV_LOST,
+      SpeedLimitType::CONE_BUCKET,
+      SpeedLimitType::ROUNDABOUT,
+      SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT,
+      SpeedLimitType::NORMAL_KAPPA,
+      SpeedLimitType::VRU_ROUND,
+      SpeedLimitType::MERGE_ALC,
+      SpeedLimitType::MAP_NEAR_RAMP,
+      SpeedLimitType::MAP_ON_RAMP,
+      SpeedLimitType::INTERSECTION,
+      SpeedLimitType::LANE_BORROW,
+      SpeedLimitType::NEAR_TFL,
+      SpeedLimitType::AVOID_AGENT,
+      SpeedLimitType::DANGEROUS_OBSTACLE,
+      SpeedLimitType::NEAR_POI,
+      SpeedLimitType::NEAR_CONSTRUCTION,
+      SpeedLimitType::ON_CONSTRUCTION,
+      SpeedLimitType::SHARP_CURVATURE,
+      SpeedLimitType::ROAD_BOUNDARY,
+      SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL};
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
