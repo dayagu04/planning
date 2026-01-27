@@ -724,17 +724,10 @@ double LaneReferencePath::CalculateExtendedReferencePathLength(
   const auto &parking_slot_manager =
       session_->environmental_model().get_parking_slot_manager();
   if (parking_slot_manager->IsExistTargetSlot()) {
-    auto target_slot_point =
-        parking_slot_manager->GetTargetSlotCenter();
-    const auto &target_slot_polygon =
-        parking_slot_manager->GetTargetSlotPolygon();
-    if (target_slot_polygon.is_convex()) {
-      planning_math::Box2d target_slot_box =
-          target_slot_polygon.MinAreaBoundingBox();
-      target_slot_point = target_slot_box.center();
-    }
-    double target_slot_proj_s = CalculatePointProjectionDistanceInReferencePath(
-        target_slot_point, curr_ref_path_points);
+    const auto target_slot_point = parking_slot_manager->GetTargetSlotCenter();
+    const auto target_slot_proj_s =
+        CalculatePointProjectionDistanceInReferencePath(target_slot_point,
+                                                        curr_ref_path_points);
     extended_ref_path_length =
         std::min(extended_ref_path_length,
                  target_slot_proj_s + kTargetSlotExtendedBuffer);

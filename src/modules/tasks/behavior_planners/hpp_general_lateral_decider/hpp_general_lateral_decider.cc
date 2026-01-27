@@ -457,11 +457,16 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const std::shared_ptr<VirtualLane> flane =
+  const auto flane =
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+  const auto &parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
   const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const auto &planning_init_point =
+      ego_cart_state_manager_->planning_init_point();
+
   Eigen::Vector2d cart_init_point(
       ego_cart_state_manager_->planning_init_point().lat_init_state.x(),
       ego_cart_state_manager_->planning_init_point().lat_init_state.y());
@@ -471,44 +476,49 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
 
   bool limit_ref_vel_on_ramp_valid = false;
   // generate traj_points based on kMaxAcc or kMinAcc
-  const auto &planning_init_point =
-      ego_cart_state_manager_->planning_init_point();
   const double kMaxAcc = 0.2;
   const double kMinAcc = -5.5;
   double cruise_v = session_->planning_context().v_ref_cruise();
-  double ego_v =
-      std::max(planning_init_point.v, std::min(config_.min_v_cruise, cruise_v));
-  // if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
-  //   limit_ref_vel_on_ramp_valid = true;
-  // }
-  double s = 0.0;
+  double ego_v = planning_init_point.v;
+  double s_ref = frenet_init_pt.x;
+
+  double ref_len_based_on_speed = 0.0;
   double span_t = config_.delta_t * config_.num_step;
   if (ego_v < cruise_v) {
     double t = (cruise_v - ego_v) / kMaxAcc;
     if (t > span_t) {
-      s = ego_v * span_t + 0.5 * kMaxAcc * span_t * span_t;
+      ref_len_based_on_speed = ego_v * span_t + 0.5 * kMaxAcc * span_t * span_t;
     } else {
-      s = ego_v * t + 0.5 * kMaxAcc * t * t;
-      s += (span_t - t) * cruise_v;
+      ref_len_based_on_speed = ego_v * t + 0.5 * kMaxAcc * t * t;
+      ref_len_based_on_speed += (span_t - t) * cruise_v;
     }
   } else {
     double t = (cruise_v - ego_v) / kMinAcc;
     if (t > span_t) {
-      s = ego_v * span_t + 0.5 * kMinAcc * span_t * span_t;
+      ref_len_based_on_speed = ego_v * span_t + 0.5 * kMinAcc * span_t * span_t;
     } else {
-      s = ego_v * t + 0.5 * kMinAcc * t * t;
-      s += (span_t - t) * cruise_v;
+      ref_len_based_on_speed = ego_v * t + 0.5 * kMinAcc * t * t;
+      ref_len_based_on_speed += (span_t - t) * cruise_v;
     }
   }
-  const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
-  double s_ref = frenet_init_pt.x;
 
-  const double max_ref_length =
-      std::max(std::min(cart_ref_info.s_vec.back(), frenet_coord->Length()) -
-                   s_ref - config_.ref_length_thr,
-               0.0);
-  double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
-  double delta_s = avg_cruise_v * config_.delta_t;
+  double ref_len_based_on_target_slot = std::numeric_limits<double>::max();
+  if (parking_slot_manager->IsExistTargetSlot()) {
+    const auto target_slot_point = parking_slot_manager->GetTargetSlotCenter();
+    double target_slot_s, target_slot_l;
+    if(frenet_coord->XYToSL(target_slot_point.x(), target_slot_point.y(), &target_slot_s, &target_slot_l)) {
+      ref_len_based_on_target_slot = target_slot_s - frenet_init_pt.x;
+    }
+  }
+
+  const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
+  const double ref_len_based_on_ref_info =
+      std::min(cart_ref_info.s_vec.back(), frenet_coord->Length()) - s_ref;
+
+  const double ref_s_len = std::min(
+      std::min(ref_len_based_on_speed, ref_len_based_on_target_slot),
+      ref_len_based_on_ref_info);
+  double delta_s = std::max(ref_s_len / span_t, 0.0) * config_.delta_t;
 
   traj_points.clear();
   TrajectoryPoint point;

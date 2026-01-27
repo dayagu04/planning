@@ -451,8 +451,10 @@ bool EnvironmentalModelManager::Run() {
     ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
     if(parking_slot_manager_ptr_->IsExistTargetSlot()) {
-      const auto& target_slot_center = parking_slot_manager_ptr_->GetTargetSlotCenter();
-      route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(target_slot_center.x(), target_slot_center.y()));
+      const auto& target_slot_center =
+          parking_slot_manager_ptr_->GetTargetSlotCenter();
+      route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(
+          target_slot_center.x(), target_slot_center.y()));
     }
   }
 
