@@ -6825,6 +6825,24 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
         AB = safe_remain_dist * AB_unit;
         new_line.line_seg.pB = AB + new_line.line_seg.pA;
       }
+      //add a reverse line in path_segment_vec
+      pnc::geometry_lib::PathSegment reverse_new_line;
+      reverse_new_line.line_seg.pA = new_line.line_seg.pB;
+      reverse_new_line.line_seg.pB = new_line.line_seg.pA;
+      reverse_new_line.line_seg.heading = -new_line.line_seg.heading;
+      if (new_line.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE){
+        reverse_new_line.seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      }else if (new_line.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE){
+        reverse_new_line.seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      }
+      pnc::geometry_lib::PathSegGear reverse_new_line_gear;
+      if(output_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE){
+        reverse_new_line_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      }else if(output_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE){
+        reverse_new_line_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      }
+
+
 
       new_line.path_source =
           output_.path_segment_vec[output_.path_seg_index.second].path_source;
@@ -6841,9 +6859,23 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
           output_.steer_vec.begin() + output_.path_seg_index.second + 1,
           pnc::geometry_lib::SEG_STEER_STRAIGHT);
 
+      output_.path_segment_vec.insert(
+          output_.path_segment_vec.begin() + output_.path_seg_index.second + 2 ,
+          reverse_new_line);
+
+      output_.gear_cmd_vec.insert(
+          output_.gear_cmd_vec.begin() + output_.path_seg_index.second + 2,
+          reverse_new_line_gear);
+
+      output_.steer_vec.insert(
+          output_.steer_vec.begin() + output_.path_seg_index.second + 2,
+          pnc::geometry_lib::SEG_STEER_STRAIGHT);
+
+
+
       output_.path_seg_index.second += 1;
 
-      ILOG_INFO << "inset line segment successful, extending length = "
+      ILOG_INFO << "insert line segment successful, extending length = "
                 << extend_distance;
 
     } else {
