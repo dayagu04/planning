@@ -245,7 +245,7 @@
   "enable_last_lat_path":true,
   "hpp_stop_dist_to_stop_dest_thr": 3.0,
   "hpp_stop_dist_to_stop_slot_thr": 2.0,
-  "hpp_stop_ego_still_velocity_thr": 0.1,
+  "hpp_stop_ego_still_velocity_thr": 0.2,
   "hpp_stop_dist_to_target_slot_thr": 2.0,
   "hpp_stop_dist_to_target_dest_thr": 3.0,
   "timeout_still_time_thr_for_giving_up_parking": 5.0,
