@@ -180,7 +180,7 @@ void SccLateralObstacleDecider::UpdateAvdObstacles() {
   if (motion_planner_output.is_valid_planning_end_xy_point &&
       frenet_coord->XYToSL(motion_planner_output.planning_end_xy_point,
                            frenet_pt)) {
-    farthest_distance = frenet_pt.x - ego_head_s_;
+    farthest_distance = frenet_pt.x - reference_path_ptr_->get_frenet_ego_state().s();
   }
 
   double expand_vel =
