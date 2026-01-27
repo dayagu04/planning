@@ -466,9 +466,9 @@ bool GeneralLongitudinalDecider::Execute() {
   // set destination bound for PNP
   if (session_->is_hpp_scene()) {
     // set destination bound
-    double distance_to_destination =
-        reference_path_ptr_->get_points().back().path_point.s() -
-        planning_init_point.frenet_state.s;
+    const auto &route_info_output =
+        session_->environmental_model().get_route_info()->get_route_info_output();
+    double distance_to_destination = route_info_output.distance_to_target_dest;
     const auto &parking_slot_manager =
         session_->environmental_model().get_parking_slot_manager();
     size_t target_slot_id = parking_slot_manager->GetTargetSlotId();

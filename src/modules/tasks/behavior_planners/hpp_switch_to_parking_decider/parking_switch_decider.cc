@@ -35,7 +35,7 @@ bool ParkingSwitchDecider::Execute() {
   const auto &parking_slot_manager = env.get_parking_slot_manager();
   const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
   const bool is_target_slot_allowed_to_park = IsTargetSlotAllowedToPark();
-  const bool is_ego_still = env.get_ego_state_manager()->ego_v() <= 1e-2;
+  const bool is_ego_still = env.get_ego_state_manager()->ego_v() <= 2e-1;
   
   // 获取距离信息用于日志和E541逻辑
   const auto &route_info_output = env.get_route_info()->get_route_info_output();
