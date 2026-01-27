@@ -156,7 +156,7 @@ void ApaPredictPathManager::Update(
       const pnc::geometry_lib::PathPoint last_mpc_pt = predict_pt_vec_.back();
       predict_pt_vec_.resize(cur_pt_size);
 
-      // 找到last_Mpc_pt在planning_traj上的投影点
+      // Find the projection point of last_mpc_pt on planning_traj
       int pro_index = CalProjIndexFromPlanningTraj(
           plan_traj.trajectory_points, plan_pt_size, last_mpc_pt.GetX(),
           last_mpc_pt.GetY());
@@ -182,14 +182,35 @@ void ApaPredictPathManager::Update(
       y_vec.emplace_back(proj_y);
       s_vec.emplace_back(last_mpc_pt.s);
       heading_vec.emplace_back(proj_heading);
+
+      // Unwrap heading angles to avoid discontinuity at ±π
+      // This is necessary for spline interpolation of periodic angles
+      double angle_offset = 0.0;
+      std::vector<double> heading_vec_unwrapped;
+      heading_vec_unwrapped.reserve(heading_vec.size());
+      heading_vec_unwrapped.emplace_back(heading_vec[0]);
+      for (size_t i = 1; i < heading_vec.size(); ++i) {
+        // Calculate raw angle difference (before normalization)
+        // If the difference is large (>1.5π or <-1.5π), it means we crossed ±π boundary
+        double delta_theta = heading_vec[i] - heading_vec[i - 1];
+        if (delta_theta > 1.5 * M_PI) {
+          angle_offset -= 2.0 * M_PI;
+        } else if (delta_theta < -1.5 * M_PI) {
+          angle_offset += 2.0 * M_PI;
+        }
+        heading_vec_unwrapped.emplace_back(heading_vec[i] + angle_offset);
+      }
+
       x_s_spline.set_points(s_vec, x_vec);
       y_s_spline.set_points(s_vec, y_vec);
-      heading_s_spline.set_points(s_vec, heading_vec);
-      for (double s = predict_pt_vec_.back().s; s < predict_distance;
+      heading_s_spline.set_points(s_vec, heading_vec_unwrapped);
+      for (double s = predict_pt_vec_.back().s + 0.1; s < predict_distance;
            s += 0.1) {
         const double x = x_s_spline(s);
         const double y = y_s_spline(s);
-        const double heading = heading_s_spline(s);
+        const double heading_unwrapped = heading_s_spline(s);
+        // Normalize the interpolated heading back to [-π, π]
+        const double heading = pnc::geometry_lib::NormalizeAngle(heading_unwrapped);
         predict_pt_vec_.emplace_back(
             pnc::geometry_lib::PathPoint(Eigen::Vector2d(x, y), heading));
       }
