@@ -67,6 +67,8 @@ class LateralMotionPlanner : public Task {
 
   bool IsLocatedInSplitArea();
 
+  double CalculateRemainingCrossLaneTime();
+
  private:
   std::string name_;
   LateralMotionPlannerConfig config_;
