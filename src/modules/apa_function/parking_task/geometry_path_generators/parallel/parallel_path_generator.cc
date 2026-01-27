@@ -1413,6 +1413,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
   size_t parallel_success_cnt = 0;
   size_t tiled_success_cnt = 0;
   size_t big_ang_tiled_success_cnt = 0;
+  size_t outpath_zero_gear_change_cnt = 0;
   std::vector<std::pair<int, pnc::geometry_lib::PathPoint>> target2line;
   std::vector<pnc::geometry_lib::PathPoint> target2prepare_line;
   std::vector<std::pair<int, pnc::geometry_lib::PathPoint>> car2line;
@@ -1495,7 +1496,9 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       ILOG_INFO << "prepare_seg_vec size == 0";
       continue;
     }
-
+    if (prepare_seg_vec.size() == 1) {
+      outpath_zero_gear_change_cnt++;
+    }
     prepare_seg_vec.insert(prepare_seg_vec.end(),
                            inversed_park_out_path.begin(),
                            inversed_park_out_path.end());
@@ -1512,14 +1515,18 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       parallel_success_cnt++;
     } else if (i < tiled_line_size) {
       tiled_success_cnt++;
+      tiled_success_cnt_map[preparing_pose_vec[i].heading]++;
     } else if (i < big_ang_tiled_line_size) {
       big_ang_tiled_success_cnt++;
     }
     ILOG_INFO << "calc success!";
     total_success_cnt++;
-    tiled_success_cnt_map[preparing_pose_vec[i].heading]++;
+
     car2line.emplace_back(std::make_pair(i, preparing_pose_vec[i]));
     geo_path_vec.emplace_back(tmp_geo_path);
+    if (outpath_zero_gear_change_cnt > 1) {
+      break;
+    }
   }
   ILOG_INFO << "aligned_success_cnt = " << aligned_success_cnt;
   ILOG_INFO << "parallel_success_cnt = " << parallel_success_cnt;
