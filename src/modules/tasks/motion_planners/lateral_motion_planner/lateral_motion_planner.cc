@@ -837,6 +837,16 @@ bool LateralMotionPlanner::AssembleInput() {
         pnc::lateral_planning::LaneChangeStyle::STANDARD_LANE_CHANGE);
   }
 
+  if (planning_weight_ptr_->GetLaneChangeStyle() ==
+          pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE &&
+      (target_state == kLaneChangeHold || target_state == kLaneChangeCancel)) {
+    // 如果处于低速变道，并在kLaneChangeHold或者kLaneChangeCancel状态下，
+    // 重置变道类型，避免下一次继续执行低速变道幅度不合理变大
+    mutable_motion_planner_output.is_limit_lon_acc_bound = false;
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::STANDARD_LANE_CHANGE);
+  }
+
   // lane borrow
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
