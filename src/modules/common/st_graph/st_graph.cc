@@ -24,10 +24,10 @@
 #include "basic_types.pb.h"
 #include "common_c.h"
 #include "config/vehicle_param.h"
+#include "geometry_math.h"
 #include "math/line_segment2d.h"
 #include "math/math_utils.h"
 #include "math/vec2d.h"
-#include "geometry_math.h"
 #include "planning_context.h"
 #include "speed/st_point.h"
 #include "st_boundary.h"
@@ -247,15 +247,15 @@ void STGraph::MakeStaticAgentStBoundary(
   if(is_rads_scene && agent.type() > agent::AgentType::OCC_EMPTY) {
     if(max_l * min_l > 0.0 && std::min(std::fabs(max_l), std::fabs(min_l)) > ego_half_width) {
       return;
-    } else if(max_l * min_l > 0.0) {
-      //polygon points min l > ego_half_width, return
+    } else if (max_l * min_l > 0.0) {
+      // polygon points min l > ego_half_width, return
       double min_polygon_abs_l = std::numeric_limits<double>::max();
       for (int i = 0; i < agent.perception_polygon().num_points(); i++) {
         double project_s = 0.0, project_l = 0.0;
         planned_kd_path->XYToSL(agent.perception_polygon().points()[i].x(),
                                 agent.perception_polygon().points()[i].y(),
                                 &project_s, &project_l);
-        if(std::fabs(project_l) < min_polygon_abs_l) {
+        if (std::fabs(project_l) < min_polygon_abs_l) {
           min_polygon_abs_l = std::fabs(project_l);
         }
       }
@@ -320,9 +320,9 @@ void STGraph::MakeStaticAgentStBoundary(
 
   }
   if (StGraphUtils::CalculateSRange(
-          planned_kd_path, *path_border_querier, agent, obs_box, type, path_range,
-          agent_sl_boundary, considered_corners, planning_init_point_box,
-          &lower_s, &upper_s, is_rads_scene)) {
+          planned_kd_path, *path_border_querier, agent, obs_box, type,
+          path_range, agent_sl_boundary, considered_corners,
+          planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
     for (double t = time_range.first; t < time_range.second;
          t += kTimeResolution) {
       min_t = std::fmin(min_t, t);
@@ -526,6 +526,7 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_virtual_lane_manager =
       st_graph_input_->ptr_virtual_lane_manager();
   const bool is_lane_keeping = st_graph_input_->is_lane_keeping();
+  const bool is_lane_change_execution = st_graph_input_->is_lane_change_execution();
   const auto is_not_in_intersection =
       ptr_virtual_lane_manager->GetIntersectionState() ==
       common::NO_INTERSECTION;
@@ -609,6 +610,16 @@ void STGraph::MakeDynamicAgentStBoundary(
 
   auto trajectories = agent.trajectories_used_by_st_graph();
 
+  const auto* rear_agent_of_target = st_graph_input_->rear_agent_of_target();
+  if (is_lane_change_execution && rear_agent_of_target != nullptr &&
+      rear_agent_of_target->agent_id() == agent.agent_id()) {
+    const auto& trajectory_optimized = agent.trajectory_optimized();
+    if (!trajectory_optimized.empty()) {
+      trajectories.clear();
+      trajectories.push_back(trajectory_optimized);
+    }
+  }
+
   // only consider 2s traj to reverse vru within ego_lane
   const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
   bool is_need_truncate_traj =
@@ -689,9 +700,9 @@ void STGraph::MakeDynamicAgentStBoundary(
       double lower_s = std::numeric_limits<double>::max();
       double upper_s = std::numeric_limits<double>::lowest();
       if (StGraphUtils::CalculateSRange(
-              planned_kd_path, *path_border_querier, agent, obs_box, type, path_range,
-              agent_sl_boundary, considered_corners, planning_init_point_box,
-              &lower_s, &upper_s, is_rads_scene)) {
+              planned_kd_path, *path_border_querier, agent, obs_box, type,
+              path_range, agent_sl_boundary, considered_corners,
+              planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
         min_t = std::fmin(min_t, relative_time);
         st_point_pairs.emplace_back(
             STPoint(lower_s, relative_time, agent.agent_id(), boundary_id,
@@ -989,9 +1000,9 @@ void STGraph::BackwardExtendSingleStBoundary(
     double lower_s = std::numeric_limits<double>::max();
     double upper_s = std::numeric_limits<double>::lowest();
     if (StGraphUtils::CalculateSRange(
-            planned_kd_path, *path_border_querier, agent, obs_box, type, path_range,
-            agent_sl_boundary, considered_corners, planning_init_point_box,
-            &lower_s, &upper_s, is_rads_scene)) {
+            planned_kd_path, *path_border_querier, agent, obs_box, type,
+            path_range, agent_sl_boundary, considered_corners,
+            planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
       constexpr double kDistThr = 1e-3;
       if (std::fabs(lower_s - upper_s) < kDistThr) {
         continue;
@@ -1347,7 +1358,7 @@ bool STGraph::CalculateNeighborCorridor() {
 
   // refresh final yield or overtake index and agent id
   if (!neighbor_corridor_yield_info_map_.empty()) {
-    const auto[closet_s_to_ego, neighbor_corridor_yield_info] =
+    const auto [closet_s_to_ego, neighbor_corridor_yield_info] =
         *neighbor_corridor_yield_info_map_.begin();
     neighbor_corridor_[neighbor_corridor_yield_info.first_yield_index].first =
         neighbor_corridor_yield_info.first_yield_st_point;
@@ -1358,7 +1369,7 @@ bool STGraph::CalculateNeighborCorridor() {
   }
 
   if (!neighbor_corridor_overtake_info_map_.empty()) {
-    const auto[closet_s_to_ego, neighbor_corridor_overtake_info] =
+    const auto [closet_s_to_ego, neighbor_corridor_overtake_info] =
         *neighbor_corridor_overtake_info_map_.begin();
     neighbor_corridor_[neighbor_corridor_overtake_info.first_overtake_index]
         .second = neighbor_corridor_overtake_info.first_overtake_st_point;

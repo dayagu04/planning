@@ -1,7 +1,9 @@
 #include "follow_target.h"
 
+#include <cmath>
 #include <cstdint>
 
+#include "behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_planning_config.h"
@@ -15,6 +17,7 @@ namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
 constexpr double min_follow_distance_gap_cut_in = 0.5;
+constexpr double kVirtualFrontS = 200.0;
 }  // namespace
 
 FollowTarget::FollowTarget(const SpeedPlannerConfig config,
@@ -66,7 +69,10 @@ void FollowTarget::GenerateUpperBoundInfo() {
           cipv_info_.is_lane_borrow_obs = agent->is_lane_borrow_virtual_obs();
         }
       }
-      upper_bound_infos_[i].s = upper_bound.s();
+      const double confidence =
+          LongRefPathDecider::CalcUpperBoundConfidence(upper_bound.s());
+      upper_bound_infos_[i].s =
+          confidence * upper_bound.s() + (1.0 - confidence) * kVirtualFrontS;
       upper_bound_infos_[i].t = t;
       upper_bound_infos_[i].v = upper_bound.velocity();
       upper_bound_infos_[i].target_type = TargetType::kFollow;
@@ -156,8 +162,7 @@ void FollowTarget::GenerateFollowTarget() {
     }
 
     double target_s_disatnce =
-        min_follow_distance_m_ +
-        std::max(0.0, vel * follow_time_gap);
+        min_follow_distance_m_ + std::max(0.0, vel * follow_time_gap);
 
     double upper_bound_s =
         std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);

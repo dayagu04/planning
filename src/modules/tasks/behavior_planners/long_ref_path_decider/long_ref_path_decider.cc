@@ -7,6 +7,21 @@
 #include "src/modules/context/planning_context.h"
 
 namespace planning {
+
+double LongRefPathDecider::CalcUpperBoundConfidence(const double distance_s) {
+  const double abs_s = std::fabs(distance_s);
+  if (abs_s <= kUpperBoundConfidenceFullDistance) {
+    return 1.0;
+  }
+  if (abs_s >= kUpperBoundConfidenceZeroDistance) {
+    return 0.0;
+  }
+  const double denom =
+      kUpperBoundConfidenceZeroDistance - kUpperBoundConfidenceFullDistance;
+  const double ratio = (kUpperBoundConfidenceZeroDistance - abs_s) / denom;
+  return std::fmax(0.0, std::fmin(1.0, ratio));
+}
+
 LongRefPathDecider::LongRefPathDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 
+#include "behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
@@ -29,7 +30,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.b = 1.0;
   comfort_params_.b_hard = 4.0;
   comfort_params_.delta = 4.0;
-  comfort_params_.max_accel_jerk = 3.0;
+  comfort_params_.max_accel_jerk = 5.0;
   comfort_params_.min_decel_jerk = 1.0;
   comfort_params_.max_decel_jerk = 1.5;
   comfort_params_.emergency_decel_jerk = 5.0;
@@ -94,6 +95,8 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   follow_agent_ids_.clear();
 
   joint_danger_agent_ids_.clear();
+  
+  joint_emergency_agent_ids_.clear();
 
   rule_base_cutin_agent_ids_.clear();
 
@@ -106,6 +109,9 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
   std::vector<double> joint_danger_agent_ids_double(
       joint_danger_agent_ids_.begin(), joint_danger_agent_ids_.end());
+  
+  std::vector<double> joint_emergency_agent_ids_double(
+      joint_emergency_agent_ids_.begin(), joint_emergency_agent_ids_.end());
 
   std::vector<double> rule_base_cutin_agent_ids_double(
       rule_base_cutin_agent_ids_.begin(), rule_base_cutin_agent_ids_.end());
@@ -116,6 +122,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   JSON_DEBUG_VECTOR("upper_bound_agent_ids", upper_bound_agent_ids_double, 0)
   JSON_DEBUG_VECTOR("comfort_follow_agent_ids", follow_agent_ids_double, 0);
   JSON_DEBUG_VECTOR("joint_danger_agent_ids", joint_danger_agent_ids_double, 0);
+  JSON_DEBUG_VECTOR("joint_emergency_agent_ids", joint_emergency_agent_ids_double, 0);
   JSON_DEBUG_VECTOR("rule_base_cutin_agent_ids",
                     rule_base_cutin_agent_ids_double, 0);
 
@@ -239,13 +246,13 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     bool is_closing_split =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             SPLIT_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
     bool is_closing_merge =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             MERGE_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
     if (is_closing_merge || is_closing_split) {
       is_confluence_area = true;
     }
@@ -332,9 +339,14 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   const auto& lat_lon_joint_planner_output =
       session_->planning_context().lat_lon_joint_planner_decider_output();
   const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
+  const auto& emergency_ids = lat_lon_joint_planner_output.GetEmergencyObstacleIds();
 
   for (const int32_t danger_id : danger_ids) {
     joint_danger_agent_ids_.push_back(danger_id);
+  }
+  
+  for (const int32_t emergency_id : emergency_ids) {
+    joint_emergency_agent_ids_.push_back(emergency_id);
   }
 
   ProcessCutinAgents(danger_ids, FollowAgentSource::kJointDangerAgentIds,
@@ -400,16 +412,21 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     if (st_graph != nullptr) {
       const auto& upper_bound = st_graph->GetPassCorridorUpperBound(t);
       if (upper_bound.agent_id() != speed::kNoAgentId) {
-        upper_bound_infos_[i] = {upper_bound.s(),
-                                 t,
-                                 upper_bound.velocity(),
-                                 TargetType::kComfort,
-                                 upper_bound.agent_id(),
-                                 upper_bound.boundary_id(),
-                                 upper_bound.acceleration(),
-                                 false,
-                                 false,
-                                 false};
+        double upper_bound_confidence =
+            LongRefPathDecider::CalcUpperBoundConfidence(upper_bound.s());
+        upper_bound_infos_[i] = {
+            upper_bound_confidence * upper_bound.s() +
+                (1.0 - upper_bound_confidence) * virtual_front_s,
+            t,
+            upper_bound_confidence * upper_bound.velocity() +
+                (1.0 - upper_bound_confidence) * virtual_front_vel,
+            TargetType::kComfort,
+            upper_bound.agent_id(),
+            upper_bound.boundary_id(),
+            upper_bound_confidence * upper_bound.acceleration(),
+            false,
+            false,
+            false};
       } else {
         upper_bound_infos_[i] = {virtual_front_s,
                                  t,
@@ -423,32 +440,42 @@ void ComfortTarget::GenerateUpperBoundInfo() {
                                  false};
       }
 
-      if (!follow_agents.empty() &&
-          follow_agent_infos[i].s <= upper_bound.s()) {
-        if (follow_agent_infos[i].source ==
-            FollowAgentSource::kLatObstacleDecision) {
-          is_lat_follow_ = true;
-        } else if (follow_agent_infos[i].source ==
-                   FollowAgentSource::kLonCutinAgentIds) {
-          is_lon_cut_in_ = true;
-        } else if (follow_agent_infos[i].source ==
-                   FollowAgentSource::kJointDangerAgentIds) {
-          is_lon_cut_in_ = true;
-        }
+      if (!follow_agents.empty()) {
+        double follow_upper_bound_confidence =
+            LongRefPathDecider::CalcUpperBoundConfidence(
+                follow_agent_infos[i].s);
+        double effective_upper_bound_s =
+            follow_upper_bound_confidence * follow_agent_infos[i].s +
+            (1.0 - follow_upper_bound_confidence) * virtual_front_s;
+        double effective_upper_bound_v =
+            follow_upper_bound_confidence * follow_agent_infos[i].v +
+            (1.0 - follow_upper_bound_confidence) * virtual_front_vel;
+        if (effective_upper_bound_s <= upper_bound_infos_[i].s) {
+          if (follow_agent_infos[i].source ==
+              FollowAgentSource::kLatObstacleDecision) {
+            is_lat_follow_ = true;
+          } else if (follow_agent_infos[i].source ==
+                     FollowAgentSource::kLonCutinAgentIds) {
+            is_lon_cut_in_ = true;
+          } else if (follow_agent_infos[i].source ==
+                     FollowAgentSource::kJointDangerAgentIds) {
+            is_lon_cut_in_ = true;
+          }
 
-        upper_bound_infos_[i] = {follow_agent_infos[i].s,
-                                 t,
-                                 follow_agent_infos[i].v,
-                                 TargetType::kComfort,
-                                 follow_agent_infos[i].agent_id,
-                                 follow_agent_infos[i].st_boundary_id,
-                                 follow_agent_infos[i].a,
-                                 follow_agent_infos[i].source ==
-                                     FollowAgentSource::kLatObstacleDecision,
-                                 follow_agent_infos[i].source ==
-                                     FollowAgentSource::kLonCutinAgentIds,
-                                 follow_agent_infos[i].source ==
-                                     FollowAgentSource::kJointDangerAgentIds};
+          upper_bound_infos_[i] = {effective_upper_bound_s,
+                                   t,
+                                   effective_upper_bound_v,
+                                   TargetType::kComfort,
+                                   follow_agent_infos[i].agent_id,
+                                   follow_agent_infos[i].st_boundary_id,
+                                   follow_agent_infos[i].a,
+                                   follow_agent_infos[i].source ==
+                                       FollowAgentSource::kLatObstacleDecision,
+                                   follow_agent_infos[i].source ==
+                                       FollowAgentSource::kLonCutinAgentIds,
+                                   follow_agent_infos[i].source ==
+                                       FollowAgentSource::kJointDangerAgentIds};
+        }
       }
 
       if (i == 0) {
@@ -459,8 +486,16 @@ void ComfortTarget::GenerateUpperBoundInfo() {
             std::find(joint_danger_agent_ids_.begin(),
                       joint_danger_agent_ids_.end(),
                       agent_id) != joint_danger_agent_ids_.end();
+        const bool is_joint_emergency =
+            std::find(joint_emergency_agent_ids_.begin(),
+                      joint_emergency_agent_ids_.end(),
+                      agent_id) != joint_emergency_agent_ids_.end();
         const bool is_in_upper_bound = upper_bound_agent_ids_.find(agent_id) !=
                                        upper_bound_agent_ids_.end();
+
+        if (is_joint_emergency && is_in_upper_bound) {
+          is_lon_emergency_stop_ = true;
+        }
 
         bool need_check_emergency = is_joint_danger && is_in_upper_bound;
 

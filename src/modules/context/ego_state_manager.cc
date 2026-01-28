@@ -411,7 +411,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   } else if (start_stop_state == common::StartStopInfo::STOP) {
     ego_acc_replan = std::min(0.0, ego_acc_replan);
   }
-  bool low_speed_replan = ego_vel_replan < config_.kEpsilon_v;
+  bool low_speed_replan = ego_vel_replan < config_.kEpsilon_v &&
+                          start_stop_state != common::StartStopInfo::START;
   // avoid dramatic acc in ACC mode
   const bool is_acc_mode =
       session_->environmental_model().function_info().function_mode() ==
