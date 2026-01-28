@@ -1072,8 +1072,9 @@ const bool ApaSlotManager::RecommendParkOut() const {
     return false;
   }
 
-  if (!dist_id_map_.empty() && slots_map_.find(ego_info_under_slot_.id) != slots_map_.end()) {
-    const ApaSlot& slot = slots_map_.at(ego_info_under_slot_.id);
+  if (!dist_id_map_.empty()) {
+    const size_t ego_slot_id = dist_id_map_.begin()->second;
+    const ApaSlot& slot = slots_map_.at(ego_slot_id);
     double dot_product = 0.0;
     const bool condition_0 = LateralConditions(dot_product, slot);
     const bool condition_1 = LongitudinalConditions(dot_product, slot);
