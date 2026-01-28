@@ -1884,18 +1884,18 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
     const bool has_trajectory = !agent->trajectories().empty() &&
                                 !agent->trajectories().front().empty();
     double end_point_heading_from_start = 0.0;
-    bool is_end_point_s_valid = false;
-    if (has_trajectory) {
-      const auto& end_point = agent->trajectories().front().back();
-      current_lane_coord->XYToSL(end_point.x(), end_point.y(),
-                                 &agent_end_point_s, &agent_end_point_l);
-      end_point_heading_from_start = Vec2d(end_point.x() - agent_box_center.x(),
-                                           end_point.y() - agent_box_center.y())
-                                         .Angle();
-      is_end_point_s_valid =
-          agent_end_point_s - planning_init_point_s - rear_axle_to_front_edge >
-          0.0;
-    }
+    // bool is_end_point_s_valid = false;
+    // if (has_trajectory) {
+    //   const auto& end_point = agent->trajectories().front().back();
+    //   current_lane_coord->XYToSL(end_point.x(), end_point.y(),
+    //                              &agent_end_point_s, &agent_end_point_l);
+    //   end_point_heading_from_start = Vec2d(end_point.x() - agent_box_center.x(),
+    //                                        end_point.y() - agent_box_center.y())
+    //                                      .Angle();
+    //   is_end_point_s_valid =
+    //       agent_end_point_s - planning_init_point_s - rear_axle_to_front_edge >
+    //       0.0;
+    // }
 
     double half_lane_width =
         0.5 * current_lane->width_by_s(agent_s_in_ego_lane);
@@ -1920,7 +1920,7 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
         std::fmax(kMinFilterDistance, planning_init_point.v * kLongitudalTtc);
 
     if (has_trajectory && agent_end_point_l * agent_l_in_ego_lane < kEpsilon &&
-        agent_s_in_ego_lane < crossing_dist_thr && is_end_point_s_valid) {
+        agent_s_in_ego_lane < crossing_dist_thr) {
       const double heading_diff = std::fabs(planning_math::NormalizeAngle(
           end_point_heading_from_start - (mathed_point_heading + M_PI)));
       // agent's trajectory cross the planned path,and the heading diff is large
