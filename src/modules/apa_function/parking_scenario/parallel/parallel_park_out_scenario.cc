@@ -166,7 +166,6 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // update obstacles
   GenTBoundaryObstacles();
-  previous_parallel_out_path_planner_.Reset();
   previous_parallel_out_path_planner_ = parallel_out_path_planner_;
 
   // path plan
@@ -295,6 +294,12 @@ bool ParallelParkOutScenario::ParkOutPlanTry() {
 
   // update obstacles
   GenTBoundaryObstacles();
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSwitchToSearch()){
+    parallel_out_path_planner_.Reset();
+    arc_slot_init_out_heading_ = 0.0;
+  }
+  previous_parallel_out_path_planner_ = parallel_out_path_planner_;
 
   // path plan
   const auto pathplan_result = PathPlanOnceGeometry();
