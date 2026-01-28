@@ -153,7 +153,6 @@ class ApaStateMachineManager final {
     free_slot_pos_dir_ = false;
     running_mode_ = ApaRunningMode::RUNNING_NORMAL;
     pa_direction_ = ApaPADirection::PA_INVALID;
-    state_machine_last_ = ApaStateMachine::INVALID;
     is_switch_to_search_ = false;
   }
 

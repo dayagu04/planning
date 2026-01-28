@@ -270,6 +270,9 @@ bool ParallelParkOutScenario::ParkOutPlanTry() {
   ILOG_INFO << "----------parallel out Scenario Try----------";
   frame_.Reset();
   t_lane_.Reset();
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSwitchToSearch()){
+    parallel_out_path_planner_.Reset();
+  }
   obs_pt_local_vec_.clear();
   obs_id_pt_map_.clear();
   is_try_tlane_ = true;
@@ -295,10 +298,6 @@ bool ParallelParkOutScenario::ParkOutPlanTry() {
   // update obstacles
   GenTBoundaryObstacles();
 
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSwitchToSearch()){
-    parallel_out_path_planner_.Reset();
-    arc_slot_init_out_heading_ = 0.0;
-  }
   previous_parallel_out_path_planner_ = parallel_out_path_planner_;
 
   // path plan

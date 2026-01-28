@@ -16,6 +16,7 @@ const int kSlotFreeCorner1 = 0;
 const int kSlotFreeCorner2 = 3;
 
 void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
+  state_machine_last_ = state_machine_;
   Reset();
   if (local_view_ptr == nullptr) {
     ILOG_ERROR << "Update ApaStateMachineManager, local_view_ptr is nullptr";
@@ -247,7 +248,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       break;
   }
   is_switch_to_search_ =IsSwitchToSearch();
-  state_machine_last_ = state_machine_;
+
 
   PrintApaStateMachine(state_machine_);
   PrintApaParkOutDirection(out_direction_);
