@@ -379,7 +379,6 @@ void SccLateralObstacleDecider::UpdateLateralObstacleDecisions() {
       continue;
     }
     LateralObstacleDecision(*frenet_obs, is_in_lane_change_scene);
-    GenerateSpatioTemporalFollowDecision(*frenet_obs);
     if (history.last_is_avd_car && !history.is_avd_car) {
       HoldLatOffset(*frenet_obs);
     }
@@ -1202,7 +1201,7 @@ void SccLateralObstacleDecider::UpdateObstacleInteractionInfo() {
   // 5 更新静态元素的避让标签
   UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace();
 
-  // 6 计算紧急变道
+  // 6 计算紧急避让和时空FOLLOW
   for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
     if (frenet_obs == nullptr) {
       continue;
@@ -1213,6 +1212,7 @@ void SccLateralObstacleDecider::UpdateObstacleInteractionInfo() {
       continue;
     }
     CheckLateralEmergencyAvoidObstacle(*frenet_obs);
+    GenerateSpatioTemporalFollowDecision(*frenet_obs);
   }
 }
 
