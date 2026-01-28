@@ -943,11 +943,13 @@ bool SpeedLimitDecider::IsNearMergeCancelRampVelLimit() {
 
 void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   ILOG_DEBUG << "----CalculateCurveSpeedLimit---";
-  const auto &vehicle_param =
+  const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
+  
   double steer_ratio = vehicle_param.steer_ratio;
   double wheel_base = vehicle_param.wheel_base;
   const auto &environmental_model = session_->environmental_model();
+  const auto &function_info = environmental_model.function_info();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double angle_steers = ego_state_mgr->ego_steer_angle();
   double angle_steers_deg = angle_steers * DEG_PER_RAD;
@@ -1271,8 +1273,11 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   // Determine map sharp curve based on ramp curvature with hysteresis
   bool is_map_sharp_curve = false;
   double dist_to_ramp_max_curv = 0.0;
-
-  if (speed_limit_config_.enable_map_sharp_curve_speed_limit) {
+  bool enable_map_sharp_curve = false;
+  enable_map_sharp_curve =
+      speed_limit_config_.enable_map_sharp_curve_speed_limit &&
+      function_info.function_mode() == common::DrivingFunctionInfo::NOA;
+  if (enable_map_sharp_curve) {
     const auto &route_info_output =
         environmental_model.get_route_info()->get_route_info_output();
     double dis_to_ramp = route_info_output.dis_to_ramp;
