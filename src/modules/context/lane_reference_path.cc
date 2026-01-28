@@ -717,10 +717,10 @@ double LaneReferencePath::CalculateExtendedReferencePathLength(
     const double curr_ref_path_length, const double curr_ego_proj_length,
     const ReferencePathPoints &curr_ref_path_points) {
   constexpr double kTargetSlotExtendedBuffer = 5.0;
-  constexpr double kDefaultExtendedReferencePathLength = 30.0;
+  //TODO(taolu): 待在感知到目标车位之前可以从地图拿到目标车位的位置，可以再把这个参数调回 30
+  constexpr double kDefaultExtendedReferencePathLength = 0.0;
 
-  double extended_ref_path_length =
-      curr_ego_proj_length + kDefaultExtendedReferencePathLength;
+  double res_ref_path_length = curr_ref_path_length;
   const auto &parking_slot_manager =
       session_->environmental_model().get_parking_slot_manager();
   if (parking_slot_manager->IsExistTargetSlot()) {
@@ -728,10 +728,13 @@ double LaneReferencePath::CalculateExtendedReferencePathLength(
     const auto target_slot_proj_s =
         CalculatePointProjectionDistanceInReferencePath(target_slot_point,
                                                         curr_ref_path_points);
-    extended_ref_path_length =
-        std::min(extended_ref_path_length,
-                 target_slot_proj_s + kTargetSlotExtendedBuffer);
+    res_ref_path_length = std::max(
+        curr_ref_path_length, target_slot_proj_s + kTargetSlotExtendedBuffer);
+  } else {
+    res_ref_path_length =
+        std::max(curr_ref_path_length,
+                 curr_ego_proj_length + kDefaultExtendedReferencePathLength);
   }
-  return std::max(extended_ref_path_length, curr_ref_path_length);
+  return res_ref_path_length;
 }
 }  // namespace planning
