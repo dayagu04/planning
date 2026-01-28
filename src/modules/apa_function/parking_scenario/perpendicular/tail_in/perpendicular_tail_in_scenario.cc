@@ -1902,7 +1902,8 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const double lat_err = cur_pose.pos.y() - target_pose.pos.y();
   const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
   const double heading_err =
-      (cur_pose.heading - target_pose.heading) * kRad2Deg;
+      geometry_lib::NormalizeAngle(cur_pose.heading - target_pose.heading) *
+      kRad2Deg;
 
   JSON_DEBUG_VALUE("terminal_error_x", lon_err)
   JSON_DEBUG_VALUE("terminal_error_y", lat_err)
@@ -3505,12 +3506,17 @@ const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
     const geometry_lib::PathPoint& cur_pose) {
   const ApaParameters& params = apa_param.GetParam();
   const CheckFinishParams& finish_params = params.check_finish_params;
-  if (std::fabs(cur_pose.heading * kRad2Deg) > finish_params.heading_err) {
-    return CarSlotRelationship::TOUCHING;
-  }
-
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const double heading_err =
+      geometry_lib::NormalizeAngle(cur_pose.heading -
+                                   ego_info_under_slot.target_pose.heading) *
+      kRad2Deg;
+
+  if (std::fabs(heading_err) > finish_params.heading_err) {
+    return CarSlotRelationship::TOUCHING;
+  }
 
   const geometry_lib::PathPoint front_pose =
       GetCarFrontPoseFromCarPose(cur_pose);
