@@ -1355,7 +1355,8 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     }
   }
 
-  if ((last_zero_relative_id_nums_ > 1 && ramp_split_select_is_finish_ &&
+  if ((last_zero_relative_id_nums_ > 1 &&
+      (ramp_split_select_is_finish_ || road_split_select_is_finish_) &&
       ego_distance_to_lane_merge_split_point < surpress_select_lane_dis_to_split) ||
       ego_distance_to_lane_merge_split_point < surpress_lane_change_dis_to_detect_split) {
     ILOG_DEBUG << "PreprocessRampSplit::last_zero_relative_id_nums_ > 1";
