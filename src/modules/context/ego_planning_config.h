@@ -1801,6 +1801,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
 
 struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     near_car_thr = read_json_key<double>(json, "near_car_thr", near_car_thr);
     lat_safety_buffer =
         read_json_key<double>(json, "lat_safety_buffer", lat_safety_buffer);
@@ -1897,6 +1898,14 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                           std::vector<std::string>{"potential_follow_obstacle",
                                                    "lane_width_factor"},
                           lane_width_factor);
+    read_json_vec<double>(json, "free_space_lane_bp", free_space_lane_bp);
+    read_json_vec<double>(json, "lane_static_limit_v_free_space", lane_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_road_bp", free_space_road_bp);
+    read_json_vec<double>(json, "road_static_limit_v_free_space", road_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_static_obstacle_bp", free_space_static_obstacle_bp);
+    read_json_vec<double>(json, "static_obstacle_static_limit_v_free_space", static_obstacle_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_dynamic_obstacle_bp", free_space_dynamic_obstacle_bp);
+    read_json_vec<double>(json, "dynamic_obstacle_static_limit_v_free_space", dynamic_obstacle_static_limit_v_free_space);
     side_2_front_count_thr = read_json_key<int>(
         json, "side_2_front_count_thr", side_2_front_count_thr);
     side_2_front_max_count = read_json_key<int>(
@@ -1960,6 +1969,14 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   bool open_side_lat_offset_nudge = false;
   double start_nudge_ttc = 3.6;
   int cross_lane_side_2_front_count_thr = 3;
+  std::vector<double> free_space_lane_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> lane_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_road_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> road_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_static_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> static_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -2056,6 +2073,7 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
     base_nudge_distance =

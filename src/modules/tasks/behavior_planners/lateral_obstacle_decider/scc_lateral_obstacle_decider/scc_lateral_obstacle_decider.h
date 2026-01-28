@@ -29,6 +29,52 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
     }
   };
 
+  enum class LateralSpaceConstraintType {
+    DEFAULT = 0,
+    LANE_BOUNDARY,
+    ROAD_BOUNDARY,
+    DYNAMIC_OBSTACLE,
+    STATIC_OBSTACLE,
+  };
+  using LateralConstraintFreeSpaceMap =
+      std::unordered_map<LateralSpaceConstraintType, double>;
+
+  struct ObstacleInfo {
+    int id = -1;
+    LatObstacleDecisionType lateral_avoid_direction =
+        LatObstacleDecisionType::NOT_SET;
+    LateralConstraintFreeSpaceMap lateral_constraint_free_space_map;
+    bool has_static_safe_v_space = false;
+    bool has_dynamic_safe_v_space = false;
+    double desire_nudge_static_safe_v = 0;
+    double desire_nudge_dynamic_safe_v = 0;
+
+    double GetLateralConstraintDistance(
+        LateralSpaceConstraintType type) const {
+      auto it = lateral_constraint_free_space_map.find(type);
+      if (it == lateral_constraint_free_space_map.end()) {
+        return std::numeric_limits<double>::infinity();
+      }
+      return it->second;
+    }
+
+    void SetLateralConstraintFreeSpace(
+        LateralSpaceConstraintType type, double free_space) {
+      lateral_constraint_free_space_map[type] = free_space;
+    }
+
+    void Reset() {
+      id = -1;
+      lateral_avoid_direction = LatObstacleDecisionType::NOT_SET;
+      lateral_constraint_free_space_map.clear();
+      has_static_safe_v_space = false;
+      has_dynamic_safe_v_space = false;
+      desire_nudge_static_safe_v = 0;
+      desire_nudge_dynamic_safe_v = 0;
+    }
+  };
+
+
  public:
   SccLateralObstacleDecider(const EgoPlanningConfigBuilder *config_builder,
                             framework::Session *session);
@@ -82,6 +128,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void ConstructUniformPlanHistoryTraj();
   void CheckLateralEmergencyAvoidObstacle(
       const FrenetObstacle &frenet_obstacle);
+  bool CheckStaticObstacleAvoidSafety(const FrenetObstacle &frenet_obstacle);
   bool CheckEgoOvertakeObstacle(const FrenetObstacle &frenet_obstacle);
   bool IsTruck(const FrenetObstacle &frenet_obstacle);
   void IsPotentialFollowingObstacle(const FrenetObstacle &frenet_obstacle,
@@ -92,6 +139,43 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   bool IsCutInIgnore(const FrenetObstacle& frenet_obstacle,
                      bool is_lane_change);
+  bool CheckSpatioTemporalPlanner();
+  void UpdateObstacleInteractionInfo();
+  void UpdateObstacleInteractionInfoBaseStaticEnvironment();
+  void UpdateObstacleInteractionInfoBaseDynamicEnvironment(
+      std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle);
+  void UpdateLateralObstacleDecisionBaseNearestFollowObstacle(
+      std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle);
+  void UpdateStaticObstacleLateralDecisionBaseStaticFreeSpace(
+      std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle);
+  void UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace();
+  void UpdateObstaclelateraFreeSpaceAndTypeBaseStaticEnvironment(
+      const FrenetObstacle& frenet_obstacle,
+      ObstacleInfo& obstacle_interaction_info);
+  void CalLateralFreeSpaceBaseLaneBoundary(
+      const FrenetObstacle& frenet_obstacle,
+      ObstacleInfo& obstacle_interaction_info);
+  void CalLateralFreeSpaceBaseRoadBoundary(
+      const FrenetObstacle& frenet_obstacle,
+      ObstacleInfo& obstacle_interaction_info);
+  void CalLateralFreeSpaceBaseStaticObstacle(
+      const FrenetObstacle& frenet_obstacle,
+      ObstacleInfo& obstacle_interaction_info);
+  void CalLateralFreeSpaceBaseDynamicObstacle(
+      const FrenetObstacle& frenet_obstacle,
+      ObstacleInfo& obstacle_interaction_info,
+      std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle);
+  void CheckEgoOverlapDynamicObstacle(
+      const FrenetObstacle& frenet_obstacle,
+      const FrenetObstacle& target_static_obstacle,
+      double& distance_to_centerline,
+      std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle);
+  void UpdateStaticFreeSpaceBaseInteractionType(
+      const FrenetObstacle& frenet_obstacle,
+      double& free_space);
+  void UpdateDynamicFreeSpaceBaseInteractionType(
+      const FrenetObstacle& frenet_obstacle,
+      double& free_space);
 
  private:
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
@@ -118,6 +202,8 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   std::unordered_map<uint32_t, double> obstacle_intrusion_distance_thr_;
   LcGapInfo lc_gap_info_;
   HysteresisDecision side_nudge_release_hysteresis_;
+  std::unordered_map<uint32_t, ObstacleInfo> obstacle_interaction_map_;// 用于多障碍之间的交互决策
+  int spatio_temporal_planner_intersection_count_ = 0;
 };
 
 }  // namespace planning

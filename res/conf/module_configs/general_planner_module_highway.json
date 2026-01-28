@@ -158,6 +158,74 @@
   "potential_near_car_thr": 0.5,
   "potential_near_car_v_ub": -0.2,
   "potential_near_car_v_lb": -0.03,
+  "free_space_lane_bp": [
+    0.6,
+    0.8,
+    1.0,
+    1.3,
+    1.7,
+    2.2
+  ],
+  "lane_static_limit_v_free_space": [
+    1.5,
+    5,
+    10,
+    15,
+    35,
+    50
+  ],
+  "free_space_road_bp": [
+    0.6,
+    0.8,
+    1.0,
+    1.3,
+    1.7,
+    2.2
+  ],
+  "road_static_limit_v_free_space": [
+    1.5,
+    5,
+    10,
+    15,
+    35,
+    50
+  ],
+  "free_space_static_obstacle_bp": [
+    0.7,
+    0.9,
+    1.2,
+    1.4,
+    1.7,
+    2.2,
+    2.5
+  ],
+  "static_obstacle_static_limit_v_free_space": [
+    0,
+    4.16,
+    8.33,
+    16.66,
+    22.22,
+    33.33,
+    50
+  ],
+  "free_space_dynamic_obstacle_bp": [
+    0.8,
+    1.0,
+    1.2,
+    1.4,
+    1.7,
+    2.2,
+    2.5
+  ],
+  "dynamic_obstacle_static_limit_v_free_space": [
+    0,
+    4.16,
+    8.33,
+    16.66,
+    22.22,
+    33.33,
+    50
+  ],
   "use_lat_offset_in_tracklet_maintainer": true,
   "enable_static_scene": true,
   "car_addition_decre_factor": 0.8,
