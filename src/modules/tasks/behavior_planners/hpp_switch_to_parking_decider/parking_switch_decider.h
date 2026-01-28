@@ -16,9 +16,6 @@ class ParkingSwitchDecider : public Task {
 
   bool Execute() override;
  private:
-  bool UpdateTargetInfoBasedOnReferencePath(
-    const std::shared_ptr<ReferencePath>& reference_path);
-
   bool IsTargetSlotAllowedToPark();
 
  private:

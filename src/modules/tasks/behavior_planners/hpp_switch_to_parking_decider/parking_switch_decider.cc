@@ -19,34 +19,43 @@ bool ParkingSwitchDecider::Execute() {
   parking_switch_info_.Clear();
   // get distance_to_target_slot
   const EnvironmentalModel &env = session_->environmental_model();
-  const auto &current_reference_path =
-      env.get_reference_path_manager()->get_reference_path_by_current_lane();
-
-  // 基于 reference path 更新到终点和目标车位的信息
-  UpdateTargetInfoBasedOnReferencePath(current_reference_path);
-
-  // 更新自车和巡航终点/目标车位的关系
-  const auto &route_info_output = env.get_route_info()->get_route_info_output();
+  // 从 hpp_stop_decider 获取输出（距离信息已在 hpp_stop_decider 中更新）
+  const auto &hpp_stop_decider_output = 
+      session_->planning_context().hpp_stop_decider_output();
+  
+  // 使用 hpp_stop_decider 的输出
+  const bool is_reached_target_slot =
+      hpp_stop_decider_output.is_reached_target_slot;
+  const bool is_reached_target_dest =
+      hpp_stop_decider_output.is_reached_target_dest;
+  
+  // 判断车辆停车满足3帧后，使用 is_stopped_at_destination 替代 is_reached_target_slot
+  const bool is_stopped_at_destination = 
+      (hpp_stop_decider_output.is_stopped_at_destination && 
+       hpp_stop_decider_output.stop_frame_count >= 3);
+  
   const auto &parking_slot_manager = env.get_parking_slot_manager();
   const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
   const bool is_target_slot_allowed_to_park = IsTargetSlotAllowedToPark();
-
+  const bool is_ego_still = env.get_ego_state_manager()->ego_v() <= 2e-1;
+  
+  // 获取距离信息用于日志和E541逻辑
+  const auto &route_info_output = env.get_route_info()->get_route_info_output();
   const double dist_to_target_slot = route_info_output.distance_to_target_slot;
   const double dist_to_target_dest = route_info_output.distance_to_target_dest;
-  const bool is_reached_target_slot =
-      (is_exist_target_slot &&
-       dist_to_target_slot < config_.dist_to_target_slot_thr);
-  const bool is_reached_target_dest =
-      dist_to_target_dest < config_.dist_to_target_dest_thr;
-  const bool is_ego_still = env.get_ego_state_manager()->ego_v() <= 1e-2;
-  session_->mutable_environmental_model()
-      ->get_parking_slot_manager()
-      ->SetIsReachedTarget(is_reached_target_slot, is_reached_target_dest);
 
+  ILOG_DEBUG << "is_reached_target_slot:" << is_reached_target_slot;
+  ILOG_DEBUG << "is_reached_target_dest:" << is_reached_target_dest;
+  ILOG_DEBUG << "is_stopped_at_destination:" << is_stopped_at_destination;
+  ILOG_DEBUG << "stop_frame_count:" << hpp_stop_decider_output.stop_frame_count;
   ILOG_DEBUG << "dist_to_target_slot:" << dist_to_target_slot;
   ILOG_DEBUG << "dist_to_target_dest:" << dist_to_target_dest;
   ILOG_DEBUG << "is_exist_target_slot:" << is_exist_target_slot;
   ILOG_DEBUG << "is_target_slot_allowed_to_park:" << is_target_slot_allowed_to_park;
+  JSON_DEBUG_VALUE("is_reached_target_slot", is_reached_target_slot);
+  JSON_DEBUG_VALUE("is_reached_target_dest", is_reached_target_dest);
+  JSON_DEBUG_VALUE("is_stopped_at_destination", is_stopped_at_destination);
+  JSON_DEBUG_VALUE("stop_frame_count", hpp_stop_decider_output.stop_frame_count);
   JSON_DEBUG_VALUE("dist_to_target_slot", dist_to_target_slot);
   JSON_DEBUG_VALUE("dist_to_target_dest", dist_to_target_dest);
   JSON_DEBUG_VALUE("is_exist_target_slot", is_exist_target_slot);
@@ -73,7 +82,8 @@ bool ParkingSwitchDecider::Execute() {
       parking_switch_info_.is_selected_slot_allowed_to_park = false;
     }
   } else if(current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
-    if(is_reached_target_slot) {
+    // 使用 is_stopped_at_destination（满足3帧停车条件）替代 is_reached_target_slot
+    if(is_stopped_at_destination) {
       if(is_target_slot_allowed_to_park) {
         parking_switch_info_.is_target_slot_allowed_to_park = true;
       } else if(is_ego_still) {
@@ -85,7 +95,8 @@ bool ParkingSwitchDecider::Execute() {
 
     //for E541
     const double curr_timestamp = IflyTime::Now_ms();
-    if (is_reached_target_slot && is_ego_still) {
+    // 使用 is_stopped_at_destination（满足3帧停车条件）替代 is_reached_target_slot
+    if (is_stopped_at_destination && is_ego_still) {
       if(last_is_standstill_near_target_slot_ == false) {
         timestamp_at_standstill_near_dest_ = curr_timestamp;
       }
@@ -124,38 +135,6 @@ bool ParkingSwitchDecider::Execute() {
   session_->mutable_planning_context()
       ->mutable_parking_switch_decider_output()
       .parking_switch_info = std::move(parking_switch_info_);
-  return true;
-}
-
-bool ParkingSwitchDecider::UpdateTargetInfoBasedOnReferencePath(
-    const std::shared_ptr<ReferencePath>& reference_path) {
-  const auto &route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
-  const auto &parking_slot_manager =
-      session_->environmental_model().get_parking_slot_manager();
-  double dist_to_target_slot = route_info_output.distance_to_target_slot;
-  double dist_to_target_dest = route_info_output.distance_to_target_dest;
-
-  if (reference_path != nullptr && parking_slot_manager->IsExistTargetSlot()) {
-    const double ego_s = reference_path->get_frenet_ego_state().s();
-    const auto& frenet_coord = reference_path->get_frenet_coord();
-
-    const auto& target_slot_center = parking_slot_manager->GetTargetSlotCenter();
-    Point2D target_slot_cart_pt(target_slot_center.x(), target_slot_center.y());
-    Point2D target_slot_frenet_pt{0.0, 0.0};
-    if (frenet_coord->XYToSL(target_slot_cart_pt, target_slot_frenet_pt)) {
-      dist_to_target_slot = std::fabs(target_slot_frenet_pt.x - ego_s);
-    }
-
-    const auto& target_dest_point = route_info_output.target_dest_point;
-    Point2D target_dest_cart_pt(target_dest_point.x(), target_dest_point.y());
-    Point2D target_dest_frenet_pt{0.0, 0.0};
-    if (frenet_coord->XYToSL(target_dest_cart_pt, target_dest_frenet_pt)) {
-      dist_to_target_dest = std::fabs(target_dest_frenet_pt.x - ego_s);
-    }
-  }
-  session_->mutable_environmental_model()->get_route_info()->UpdateTargetInfo(
-      dist_to_target_slot, dist_to_target_dest);
   return true;
 }
 
