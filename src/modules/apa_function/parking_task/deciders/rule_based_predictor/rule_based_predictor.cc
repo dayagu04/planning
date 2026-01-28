@@ -104,14 +104,12 @@ void RuleBasedPredictor::PredictByCTRV(ApaObstacle& obs) {
   Eigen::Vector2d current_pos = obs.GetCenterPose().pos;
   double current_heading = obs.GetCenterPose().heading;
 
-  obs.UpdateHistoryTrajectory(current_pos);
+  obs.UpdateObstacleHistoryPositions(current_pos);
   const auto& history = obs.GetHistoryTraejctory();
 
   // ---------- 1. estimate ω ----------
-  double last_omega = obs.GetLastOmega();  //
-
-  const double omega0 =
-      PredictApaObstacleOmega(history, config.time_resolution, speed, obs);
+  const double omega0 = PredictApaObstacleSignedOmega(
+      history, config.time_resolution, speed, obs);
 
   // ---------- 2. predict ----------
   int size = std::ceil(config.predict_time / config.time_resolution);
@@ -188,30 +186,30 @@ void RuleBasedPredictor::RecordDebugInfo(
   return;
 }
 
-const double RuleBasedPredictor::PredictApaObstacleOmega(
-    const std::vector<Eigen::Vector2d>& history, double history_dt,
-    double speed, ApaObstacle& obs) {
+const double RuleBasedPredictor::PredictApaObstacleSignedOmega(
+    const std::deque<Eigen::Vector2d>& history, double history_dt, double speed,
+    ApaObstacle& obs) {
   constexpr double kFreezeSpeed = 0.15;
   constexpr double kMinReliableOmega = 0.08;
   constexpr double kEnterTurnOmega = 0.15;
-  constexpr double kExitTurnOmega = 0.05;
+  constexpr double kExitTurnOmega = 0.01;
   constexpr double kMaxOmega = 0.5;
   constexpr double alpha = 0.35;
 
   double omega_raw_signed =
       EstimateOmegaByCurvature(history, history_dt, speed);
 
-  double omega_raw = std::fabs(omega_raw_signed);
+  double omega_raw_mag = std::fabs(omega_raw_signed);
 
   // low-pass filtering (only filtering amplitude values)
-  double omega_mag = alpha * omega_raw + (1.0 - alpha) * obs.GetLastOmega();
+  double omega_mag =
+      alpha * omega_raw_mag + (1.0 - alpha) * obs.GetLastOmegaMagnitude();
 
   // turn to evidence
   DynamicObsTurnDirection evidence = DynamicObsTurnDirection::STRAIGHT;
-  if (std::fabs(omega_raw_signed) > 0.15) {
-    evidence = (omega_raw_signed > 0.0) ? DynamicObsTurnDirection::LEFT
-                                        : DynamicObsTurnDirection::RIGHT;
-  }
+
+  evidence = (omega_raw_signed > 0.0) ? DynamicObsTurnDirection::LEFT
+                                      : DynamicObsTurnDirection::RIGHT;
 
   // direction update
   DynamicObsTurnDirection dir = obs.GetTurnDirection();
@@ -224,27 +222,30 @@ const double RuleBasedPredictor::PredictApaObstacleOmega(
       break;
 
     case DynamicObsTurnDirection::LEFT:
-      if (omega_mag < kExitTurnOmega) {
+      if (omega_mag < kExitTurnOmega ||
+          omega_raw_signed * obs.GetLastOmegaSigned() < 0.0) {
         dir = DynamicObsTurnDirection::STRAIGHT;
       }
       break;
 
     case DynamicObsTurnDirection::RIGHT:
-      if (omega_mag < kExitTurnOmega) {
+      if (omega_mag < kExitTurnOmega ||
+          omega_raw_signed * obs.GetLastOmegaSigned() < 0.0) {
         dir = DynamicObsTurnDirection::STRAIGHT;
       }
       break;
   }
   // set status
   obs.SetTurnDirection(dir);
-  obs.SetLastOmega(omega_mag);
+  obs.SetLastOmegaMagnitude(omega_mag);
+  obs.SetLastOmegaSigned(static_cast<int>(dir) * omega_mag);
 
   // weighted calculation ω
   return static_cast<int>(dir) * omega_mag;
 }
 
 const double RuleBasedPredictor::EstimateOmegaByCurvature(
-    const std::vector<Eigen::Vector2d>& history, double history_dt,
+    const std::deque<Eigen::Vector2d>& history, double history_dt,
     double speed) {
   constexpr double kFreezeSpeed = 0.15;
   if (history.size() < 3 || speed < kFreezeSpeed) return 0.0;

@@ -18,8 +18,12 @@ void ApaObstacle::Reset() {
   height_ = 0.;
 
   predict_traj_.clear();
-  history_trajectory_.clear();
-  history_point_size_ = 10;
+  obstacle_history_positions_.clear();
+  max_history_point_size_ = 10;
+  lost_frame_count_ = 0;
+  last_omega_mag_ = 0.0;
+  last_omega_signed_ = 0.0;
+  turn_dir_ = DynamicObsTurnDirection::STRAIGHT;
 
   pt_clout_2d_global_.clear();
   pt_clout_2d_local_.clear();
@@ -229,13 +233,14 @@ const bool ApaObstacle::IsMovableStaticObs() const {
   return false;
 }
 
-void ApaObstacle::UpdateHistoryTrajectory(const Eigen::Vector2d& new_position) {
-  // if (history_trajectory_.empty()) {
-  //   history_trajectory_.push_back(new_position);
+void ApaObstacle::UpdateObstacleHistoryPositions(
+    const Eigen::Vector2d& new_position) {
+  // if (obstacle_history_positions_.empty()) {
+  //   obstacle_history_positions_.push_back(new_position);
   //   return;
   // }
 
-  // const Eigen::Vector2d& last = history_trajectory_.back();
+  // const Eigen::Vector2d& last = obstacle_history_positions_.back();
 
   // constexpr double kMinMoveDist = 0.05;  // 5cm
   // if ((new_position - last).norm() < kMinMoveDist) {
@@ -247,10 +252,10 @@ void ApaObstacle::UpdateHistoryTrajectory(const Eigen::Vector2d& new_position) {
   //   return;
   // }
 
-  history_trajectory_.push_back(new_position);
+  obstacle_history_positions_.push_back(new_position);
 
-  while (history_trajectory_.size() > history_point_size_) {
-    history_trajectory_.erase(history_trajectory_.begin());
+  while (obstacle_history_positions_.size() > max_history_point_size_) {
+    obstacle_history_positions_.pop_front();
   }
 }
 

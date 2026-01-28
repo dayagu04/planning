@@ -44,7 +44,7 @@ void ApaObstacleManager::Update(
   }
   JSON_DEBUG_VALUE("locked_obs_slot_with_fold_mirror", false)
 
-  Reset();
+  ResetSingleFrameObs();
 
   state_machine_manager_ = state_machine_manager;
 
@@ -428,7 +428,8 @@ const bool ApaObstacleManager::IsOccType(const iflyauto::ObjectType type) {
 
 void ApaObstacleManager::GenerateObsByOD(
     const LocalView* local_view, const ObjectDetectObsConfig& od_config) {
-  std::unordered_set<size_t> current_frame_ids;
+  std::unordered_set<size_t> current_local_ids;
+  std::unordered_set<size_t> current_fusion_ids;
   const uint8 fusion_obs_size =
       std::min(local_view->fusion_objects_info.fusion_object_size,
                static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
@@ -492,14 +493,33 @@ void ApaObstacleManager::GenerateObsByOD(
     std::vector<Eigen::Vector2d> global_box;
     LocalPolygonToGlobal(local_box, center_pose, global_box);
 
-    size_t id = obs.id;
-    current_frame_ids.insert(id);
-    auto& apa_obs = obstacles_od_[id];
+    size_t fusion_id = obs.id;
+    current_fusion_ids.insert(fusion_id);
 
-    if (apa_obs.GetId() != id) {
+    size_t local_id;
+    auto map_it = fusion_id_to_local_id_.find(fusion_id);
+    if (map_it == fusion_id_to_local_id_.end()) {
+      local_id = obs_od_id_generate_++;
+      fusion_id_to_local_id_[fusion_id] = local_id;
+    } else {
+      local_id = map_it->second;
+    }
+
+    current_local_ids.insert(local_id);
+
+    auto it = fusion_polygon_obs_.find(local_id);
+    bool is_new = false;
+    if (it == fusion_polygon_obs_.end()) {
+      ApaObstacle new_obs;
+      new_obs.SetId(local_id);
+      new_obs.SetParentId(local_id);
+      it = fusion_polygon_obs_.emplace(local_id, std::move(new_obs)).first;
+      is_new = true;
+    }
+    ApaObstacle& apa_obs = it->second;
+
+    if (is_new) {
       apa_obs.Reset();
-      apa_obs.SetId(id);
-      apa_obs.SetParentId(id);
     }
 
     Polygon2D polygon;
@@ -540,7 +560,7 @@ void ApaObstacleManager::GenerateObsByOD(
     apa_obs.ClearDecision();
   }
 
-  RemoveExpiredObstacles(current_frame_ids);
+  UpdateObstacleODLostFrames(current_local_ids);
 
   return;
 }
@@ -832,15 +852,26 @@ std::pair<int, float> ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
   return std::pair<int, float>(-1, -1);
 }
 
-void ApaObstacleManager::RemoveExpiredObstacles(
+void ApaObstacleManager::UpdateObstacleODLostFrames(
     const std::unordered_set<size_t>& current_ids) {
   constexpr int kMaxLostFrames = 3;
 
-  for (auto it = obstacles_od_.begin(); it != obstacles_od_.end();) {
+  for (auto it = fusion_polygon_obs_.begin();
+       it != fusion_polygon_obs_.end();) {
+    size_t local_id = it->first;
+
     if (current_ids.count(it->first) == 0) {
       it->second.IncreaseLostFrame();
       if (it->second.LostFrameCount() > kMaxLostFrames) {
-        it = obstacles_od_.erase(it);
+        for (auto map_it = fusion_id_to_local_id_.begin();
+             map_it != fusion_id_to_local_id_.end();) {
+          if (map_it->second == local_id) {
+            map_it = fusion_id_to_local_id_.erase(map_it);
+          } else {
+            ++map_it;
+          }
+        }
+        it = fusion_polygon_obs_.erase(it);
         continue;
       }
     } else {

@@ -229,15 +229,15 @@ class ApaObstacle final {
     return;
   }
 
-  void UpdateHistoryTrajectory(const Eigen::Vector2d& new_position);
+  void UpdateObstacleHistoryPositions(const Eigen::Vector2d& new_position);
 
   const trajectory::Trajectory& GetPredictTraj() const { return predict_traj_; }
-  const std::vector<Eigen::Vector2d>& GetHistoryTraejctory() const {
-    return history_trajectory_;
+  const std::deque<Eigen::Vector2d>& GetHistoryTraejctory() const {
+    return obstacle_history_positions_;
   }
 
-  const std::vector<Eigen::Vector2d>& GetMutableHistoryTrajectory() {
-    return history_trajectory_;
+  const std::deque<Eigen::Vector2d>& GetMutableHistoryTrajectory() {
+    return obstacle_history_positions_;
   }
 
   void ClearPredictTraj() { predict_traj_.clear(); }
@@ -252,8 +252,10 @@ class ApaObstacle final {
   void ResetLostFrame() { lost_frame_count_ = 0; }
   int LostFrameCount() const { return lost_frame_count_; }
 
-  double GetLastOmega() const { return last_omega_; }
-  void SetLastOmega(double omega) { last_omega_ = omega; }
+  double GetLastOmegaMagnitude() const { return last_omega_mag_; }
+  void SetLastOmegaMagnitude(double omega) { last_omega_mag_ = omega; }
+  double GetLastOmegaSigned() const { return last_omega_signed_; }
+  void SetLastOmegaSigned(double omega) { last_omega_signed_ = omega; }
   DynamicObsTurnDirection GetTurnDirection() const { return turn_dir_; }
   void SetTurnDirection(DynamicObsTurnDirection d) { turn_dir_ = d; }
 
@@ -273,8 +275,8 @@ class ApaObstacle final {
   double height_{0.};
 
   trajectory::Trajectory predict_traj_;
-  std::vector<Eigen::Vector2d> history_trajectory_;
-  size_t history_point_size_{10};
+  std::deque<Eigen::Vector2d> obstacle_history_positions_;
+  size_t max_history_point_size_{10};
 
   cdl::AABB box_local_;
   cdl::AABB box_global_;
@@ -297,7 +299,8 @@ class ApaObstacle final {
 
   size_t lost_frame_count_ = 0;
 
-  double last_omega_ = 0.0;
+  double last_omega_mag_ = 0.0;
+  double last_omega_signed_ = 0.0;
 
   DynamicObsTurnDirection turn_dir_ = DynamicObsTurnDirection::STRAIGHT;
 };
