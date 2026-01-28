@@ -1047,7 +1047,7 @@ def load_avoid_hmi(bag_loader):
       hmi_ad_info = planning_hmi_msg.ad_info
       avoid_ids.append(hmi_ad_info.aovid_id)
 
-  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [0, len(avoid_ids)], width=800, height=200)
+  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='id',x_range = [0, len(avoid_ids)], width=800, height=200)
   data_fig.data.update({
     'avoid_ids':avoid_ids,
     'frame_num':range(len(avoid_ids)),
