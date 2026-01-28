@@ -154,7 +154,6 @@ void ApaPredictPathManager::Update(
 
       // need splice plan traj with smooth transition
       const pnc::geometry_lib::PathPoint last_mpc_pt = predict_pt_vec_.back();
-      predict_pt_vec_.resize(cur_pt_size);
 
       // Find the projection point of last_mpc_pt on planning_traj
       int pro_index = CalProjIndexFromPlanningTraj(
@@ -164,6 +163,24 @@ void ApaPredictPathManager::Update(
         predict_pt_vec_.clear();
         return;
       }
+
+      // Get the actual distance of the projection point on plan_traj
+      const double proj_s = plan_traj.trajectory_points[pro_index].distance;
+      const double plan_traj_last_s =
+          plan_traj.trajectory_points[plan_pt_size - 1].distance;
+
+      // Check if last_mpc_pt has exceeded plan_traj length
+      // If projection point is the last point of plan_traj and last_mpc_pt.s
+      // is greater than the last point's distance, skip splicing to avoid loop
+      if (pro_index == plan_pt_size - 1 && last_mpc_pt.s > plan_traj_last_s) {
+        // last_mpc_pt exceeds plan_traj, directly extend mpc traj
+        ILOG_INFO << "last_mpc_pt exceeds plan_traj (last_mpc_pt.s="
+                  << last_mpc_pt.s << ", plan_traj_last_s=" << plan_traj_last_s
+                  << "), skip splicing";
+        break;
+      }
+
+      predict_pt_vec_.resize(cur_pt_size);
 
       const double proj_x = plan_traj.trajectory_points[pro_index].x;
       const double proj_y = plan_traj.trajectory_points[pro_index].y;
@@ -180,7 +197,7 @@ void ApaPredictPathManager::Update(
       }
       x_vec.emplace_back(proj_x);
       y_vec.emplace_back(proj_y);
-      s_vec.emplace_back(last_mpc_pt.s);
+      s_vec.emplace_back(proj_s);
       heading_vec.emplace_back(proj_heading);
 
       // Unwrap heading angles to avoid discontinuity at ±π
@@ -210,9 +227,13 @@ void ApaPredictPathManager::Update(
         const double y = y_s_spline(s);
         const double heading_unwrapped = heading_s_spline(s);
         // Normalize the interpolated heading back to [-π, π]
-        const double heading = pnc::geometry_lib::NormalizeAngle(heading_unwrapped);
-        predict_pt_vec_.emplace_back(
-            pnc::geometry_lib::PathPoint(Eigen::Vector2d(x, y), heading));
+        const double heading =
+            pnc::geometry_lib::NormalizeAngle(heading_unwrapped);
+        car_predict_pt.SetX(x);
+        car_predict_pt.SetY(y);
+        car_predict_pt.SetTheta(heading);
+        car_predict_pt.s = s;
+        predict_pt_vec_.emplace_back(car_predict_pt);
       }
       break;
     }
