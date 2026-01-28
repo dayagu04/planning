@@ -939,6 +939,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
       std::vector<Eigen::Vector2d>{pt0, pt1, pt2, pt3});
   auto col_req = GJKColDetRequest(false);
   col_req.movement_type = ApaObsMovementType::STATIC;
+  col_req.use_limiter = false;
   is_slot_occupied =
       is_slot_occupied ||
       col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(polygon,

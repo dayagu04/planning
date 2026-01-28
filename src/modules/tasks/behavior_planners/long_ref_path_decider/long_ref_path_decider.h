@@ -17,6 +17,8 @@ class LongRefPathDecider : public Task {
 
   bool Execute() override;
 
+  static double CalcUpperBoundConfidence(const double distance_s);
+
  public:
   void Reset();
 
@@ -37,6 +39,8 @@ class LongRefPathDecider : public Task {
   double dt_ = 0.0;
   double plan_time_ = 0.0;
   int32_t plan_points_num_ = 0.0;
+  static constexpr double kUpperBoundConfidenceFullDistance = 120.0;
+  static constexpr double kUpperBoundConfidenceZeroDistance = 150.0;
 
   LongitudinalDeciderOutput lon_behavior_output_;
   planning::common::LonRefPath lon_behavior_output_pb_;

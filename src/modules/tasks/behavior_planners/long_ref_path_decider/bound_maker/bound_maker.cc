@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include "behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "debug_info_log.h"
 
 namespace planning {
@@ -245,7 +246,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
       lane_change_decider_output.curr_state == kLaneChangeComplete ||
       lane_change_decider_output.curr_state == kLaneChangePropose) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
-      acc_upper_bound_[i] = std::fmax(acc_upper_bound_[i], kLaneChangeAccUpperBound);
+      acc_upper_bound_[i] =
+          std::fmax(acc_upper_bound_[i], kLaneChangeAccUpperBound);
     }
   }
 
@@ -298,7 +300,10 @@ void BoundMaker::MakeSBound() {
     double& lower_bound = s_lower_bound_[i];
 
     if (corridor_upper_point.valid() && corridor_upper_point.agent_id() != -1) {
-      upper_bound = corridor_upper_point.s();
+      const double confidence = LongRefPathDecider::CalcUpperBoundConfidence(
+          corridor_upper_point.s());
+      upper_bound = confidence * corridor_upper_point.s() +
+                    (1.0 - confidence) * upper_bound;
     }
 
     if (corridor_lower_point.valid() && corridor_lower_point.agent_id() != -1) {
@@ -545,6 +550,7 @@ void BoundMaker::GenerateUpperBoundInfo() {
   if (agent_manager == nullptr) {
     return;
   }
+  const double virtual_front_s = plan_time_ * kPerSecondPlanLenth;
   const auto current_lane = session_->environmental_model()
                                 .get_virtual_lane_manager()
                                 ->get_current_lane();
@@ -555,7 +561,10 @@ void BoundMaker::GenerateUpperBoundInfo() {
     const auto& upper_bound = st_graph->GetPassCorridorUpperBound(t);
     const auto agent_id = upper_bound.agent_id();
     if (agent_id != speed::kNoAgentId) {
-      upper_bound_infos_[i].s = upper_bound.s();
+      const double confidence =
+          LongRefPathDecider::CalcUpperBoundConfidence(upper_bound.s());
+      upper_bound_infos_[i].s =
+          confidence * upper_bound.s() + (1.0 - confidence) * virtual_front_s;
       upper_bound_infos_[i].t = t;
       upper_bound_infos_[i].v = upper_bound.velocity();
       upper_bound_infos_[i].a = upper_bound.acceleration();
