@@ -141,9 +141,11 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
     const planning::common::JointMotionPlanningInput& planning_input, size_t N,
     double dt) {
   std::vector<int32_t> danger_obstacles;
+  std::vector<int32_t> emergency_obstacles;
 
   if (ego_trajectory.empty()) {
     lat_lon_planning_output_.SetDangerObstacleIds(danger_obstacles);
+    lat_lon_planning_output_.SetEmergencyObstacleIds(emergency_obstacles);
     return;
   }
 
@@ -154,10 +156,12 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
   const double rear_axle_to_center = vehicle_param.rear_axle_to_center;
   constexpr double kStaticVehicleLatConflictThreshold = 0.2;
   constexpr double kLatConflictThreshold = 0.3;
+  constexpr double kLatEmergencyConflictThreshold = 0.1;
   constexpr double kLargeVehicleLatConflictThreshold = 0.4;
   constexpr double kLargeVehicleLengthThreshold = 8.0;
   constexpr double kStaticVehicleVelocityThreshold = 0.3;
   constexpr double kBaseLongitudinalThreshold = 3.5;
+  constexpr int kContinuousCollisionTimesThreshold = 3;
 
   const auto& lane_change_output =
       session_->planning_context().lane_change_decider_output();
@@ -165,12 +169,14 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
       lane_change_output.coarse_planning_info.reference_path;
   if (reference_path_ptr == nullptr) {
     lat_lon_planning_output_.SetDangerObstacleIds(danger_obstacles);
+    lat_lon_planning_output_.SetEmergencyObstacleIds(emergency_obstacles);
     return;
   }
 
   const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
   if (frenet_coord == nullptr) {
     lat_lon_planning_output_.SetDangerObstacleIds(danger_obstacles);
+    lat_lon_planning_output_.SetEmergencyObstacleIds(emergency_obstacles);
     return;
   }
 
@@ -189,13 +195,13 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
     bool is_closing_split =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             SPLIT_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
     bool is_closing_merge =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             MERGE_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
     if (is_closing_merge || is_closing_split) {
       is_confluence_area = true;
     }
@@ -226,7 +232,10 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
       continue;
     }
 
-    bool has_collision = false;
+    bool has_danger_collision = false;
+    bool has_emergency_collision = false;
+    int continuous_collision_times = 0;
+    int max_continuous_collision_times = 0;
 
     const bool is_large_vehicle =
         agent->type() == agent::AgentType::BUS ||
@@ -336,18 +345,38 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
                                            obs_longitudinal_distance <
                                                obs_longitudinal_threshold);
 
+      if (std::fabs(lateral_dist) < kLatEmergencyConflictThreshold &&
+          long_collision) {
+        continuous_collision_times++;
+        if (continuous_collision_times > max_continuous_collision_times) {
+          max_continuous_collision_times = continuous_collision_times;
+        }
+      } else {
+        continuous_collision_times = 0;
+      }
+
       if (lateral_dist <= lateral_threshold && long_collision) {
-        has_collision = true;
+        has_danger_collision = true;
+      }
+
+      if (has_danger_collision && max_continuous_collision_times >=
+                                      kContinuousCollisionTimesThreshold) {
+        has_emergency_collision = true;
         break;
       }
     }
 
-    if (has_collision) {
+    if (has_danger_collision) {
       danger_obstacles.push_back(obs_id);
+    }
+
+    if (has_emergency_collision) {
+      emergency_obstacles.push_back(obs_id);
     }
   }
 
   lat_lon_planning_output_.SetDangerObstacleIds(danger_obstacles);
+  lat_lon_planning_output_.SetEmergencyObstacleIds(emergency_obstacles);
 }
 
 }  // namespace planning

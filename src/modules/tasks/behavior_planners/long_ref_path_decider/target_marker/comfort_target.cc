@@ -95,6 +95,8 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   follow_agent_ids_.clear();
 
   joint_danger_agent_ids_.clear();
+  
+  joint_emergency_agent_ids_.clear();
 
   rule_base_cutin_agent_ids_.clear();
 
@@ -107,6 +109,9 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
   std::vector<double> joint_danger_agent_ids_double(
       joint_danger_agent_ids_.begin(), joint_danger_agent_ids_.end());
+  
+  std::vector<double> joint_emergency_agent_ids_double(
+      joint_emergency_agent_ids_.begin(), joint_emergency_agent_ids_.end());
 
   std::vector<double> rule_base_cutin_agent_ids_double(
       rule_base_cutin_agent_ids_.begin(), rule_base_cutin_agent_ids_.end());
@@ -117,6 +122,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   JSON_DEBUG_VECTOR("upper_bound_agent_ids", upper_bound_agent_ids_double, 0)
   JSON_DEBUG_VECTOR("comfort_follow_agent_ids", follow_agent_ids_double, 0);
   JSON_DEBUG_VECTOR("joint_danger_agent_ids", joint_danger_agent_ids_double, 0);
+  JSON_DEBUG_VECTOR("joint_emergency_agent_ids", joint_emergency_agent_ids_double, 0);
   JSON_DEBUG_VECTOR("rule_base_cutin_agent_ids",
                     rule_base_cutin_agent_ids_double, 0);
 
@@ -333,9 +339,14 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   const auto& lat_lon_joint_planner_output =
       session_->planning_context().lat_lon_joint_planner_decider_output();
   const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
+  const auto& emergency_ids = lat_lon_joint_planner_output.GetEmergencyObstacleIds();
 
   for (const int32_t danger_id : danger_ids) {
     joint_danger_agent_ids_.push_back(danger_id);
+  }
+  
+  for (const int32_t emergency_id : emergency_ids) {
+    joint_emergency_agent_ids_.push_back(emergency_id);
   }
 
   ProcessCutinAgents(danger_ids, FollowAgentSource::kJointDangerAgentIds,
@@ -475,8 +486,16 @@ void ComfortTarget::GenerateUpperBoundInfo() {
             std::find(joint_danger_agent_ids_.begin(),
                       joint_danger_agent_ids_.end(),
                       agent_id) != joint_danger_agent_ids_.end();
+        const bool is_joint_emergency =
+            std::find(joint_emergency_agent_ids_.begin(),
+                      joint_emergency_agent_ids_.end(),
+                      agent_id) != joint_emergency_agent_ids_.end();
         const bool is_in_upper_bound = upper_bound_agent_ids_.find(agent_id) !=
                                        upper_bound_agent_ids_.end();
+
+        if (is_joint_emergency && is_in_upper_bound) {
+          is_lon_emergency_stop_ = true;
+        }
 
         bool need_check_emergency = is_joint_danger && is_in_upper_bound;
 

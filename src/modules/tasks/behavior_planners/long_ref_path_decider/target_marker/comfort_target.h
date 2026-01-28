@@ -93,6 +93,7 @@ class ComfortTarget : public Target {
   std::vector<int32_t> follow_agent_ids_;
   std::vector<double> rule_base_cutin_agent_ids_;
   std::vector<int32_t> joint_danger_agent_ids_;
+  std::vector<int32_t> joint_emergency_agent_ids_;
   std::unordered_set<int32_t> upper_bound_agent_ids_;
   bool is_lat_follow_ = false;
   bool is_lon_cut_in_ = false;
