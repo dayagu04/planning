@@ -28,6 +28,7 @@
 #include "ifly_time.h"
 #include "lateral_obstacle.h"
 #include "math/linear_interpolation.h"
+#include "modules/common/config_context.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
 #include "planning_gflags.h"
@@ -40,13 +41,12 @@
 #include "vehicle_service_c.h"
 #include "vehicle_status.pb.h"
 #include "virtual_lane_manager.h"
-#include "modules/common/config_context.h"
 
 #define TRAJ_POINT_NUM_USED 25
 
 namespace planning {
 namespace planner {
-namespace{
+namespace {
 static constexpr int kMRMStateDebounce = 5;
 }
 
@@ -116,8 +116,8 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_parking_config_builder(
       parking_config_builder);
 
-  auto highway_config_builder =
-      load_config_builder("general_planner_module_highway.json", "scc_params.json");
+  auto highway_config_builder = load_config_builder(
+      "general_planner_module_highway.json", "scc_params.json");
   session_->mutable_environmental_model()->set_highway_config_builder(
       highway_config_builder);
 
@@ -167,7 +167,8 @@ void EnvironmentalModelManager::InitContext() {
       construction_scene_manager_ptr_);
 
   reference_path_manager_ptr_ =
-      std::make_shared<planning::ReferencePathManager>(config_builder, session_);
+      std::make_shared<planning::ReferencePathManager>(config_builder,
+                                                       session_);
   session_->mutable_environmental_model()->set_reference_path_manager(
       reference_path_manager_ptr_);
 
@@ -265,9 +266,8 @@ bool EnvironmentalModelManager::Run() {
         iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_MAPLOC;
   }
   // check fusion
-  bool fusion_valid_on_road =
-      local_view.road_info.local_point_valid &&
-      local_view.fusion_objects_info.local_point_valid;
+  bool fusion_valid_on_road = local_view.road_info.local_point_valid &&
+                              local_view.fusion_objects_info.local_point_valid;
   bool location_valid_on_openspace =
       // local_view.fusion_objects_info.local_point_valid &&
       local_view.fusion_occupancy_objects_info.local_point_valid;
@@ -313,9 +313,8 @@ bool EnvironmentalModelManager::Run() {
   bool rads_mode = fsm_state >= iflyauto::FunctionalState_RADS_PASSIVE &&
                    fsm_state <= iflyauto::FunctionalState_RADS_ERROR;
 
-  bool nsa_mode =
-      (fsm_state >= iflyauto::FunctionalState_NRA_PASSIVE) &&
-      (fsm_state <= iflyauto::FunctionalState_NRA_ERROR);
+  bool nsa_mode = (fsm_state >= iflyauto::FunctionalState_NRA_PASSIVE) &&
+                  (fsm_state <= iflyauto::FunctionalState_NRA_ERROR);
   static bool is_mrc_mode_hold = false;
   static int mrm_state_hold_cnt = kMRMStateDebounce;
   if (fsm_state == iflyauto::FunctionalState_MRC) {
@@ -323,12 +322,10 @@ bool EnvironmentalModelManager::Run() {
     mrm_state_hold_cnt = 1;
   }
   if (is_mrc_mode_hold) {
-    const auto &vehicle_service_output = local_view.vehicle_service_output_info;
-     if (mrm_state_hold_cnt++ >= kMRMStateDebounce &&
-                           false ==
-                               vehicle_service_output.right_turn_light_state &&
-                           false ==
-                               vehicle_service_output.left_turn_light_state) {
+    const auto& vehicle_service_output = local_view.vehicle_service_output_info;
+    if (mrm_state_hold_cnt++ >= kMRMStateDebounce &&
+        false == vehicle_service_output.right_turn_light_state &&
+        false == vehicle_service_output.left_turn_light_state) {
       is_mrc_mode_hold = false;
       mrm_state_hold_cnt = kMRMStateDebounce;
     }
@@ -475,7 +472,8 @@ bool EnvironmentalModelManager::Run() {
     return false;
   }
   time_end = IflyTime::Now_ms();
-  ILOG_INFO << "construction_scene_manager update cost:" << time_end - time_start;
+  ILOG_INFO << "construction_scene_manager update cost:"
+            << time_end - time_start;
   JSON_DEBUG_VALUE("construction_scene_manager", time_end - time_start);
 
   // Step 6) update reference path
@@ -856,16 +854,26 @@ void EnvironmentalModelManager::truncate_prediction_info(
     const auto& fusion_obj = fusion_objects_result.fusion_object[i];
     double obj_yaw = fusion_obj.common_info.heading_angle;
     double ego_yaw = ego_state->heading_angle();
-    // double ego_yaw = ego_state->heading_angle();
     if ((int)obj_yaw == 255) {
       obj_yaw = ego_state->heading_angle();
     }
-    Eigen::Vector2f obj_heading_vec(cos(ego_yaw), sin(ego_yaw));
     Eigen::Vector2f fusion_obj_acc_vec(fusion_obj.common_info.acceleration.x,
                                        fusion_obj.common_info.acceleration.y);
-    double fusion_acc = fusion_obj_acc_vec.dot(obj_heading_vec);
     double fusion_vel = std::hypot(fusion_obj.common_info.velocity.x,
                                    fusion_obj.common_info.velocity.y);
+
+    double fusion_acc = 0.0;
+    constexpr double kMinVelocityThreshold = 0.5;  // 1.8 km/h
+    if (fusion_vel > kMinVelocityThreshold) {
+      double velocity_heading = std::atan2(fusion_obj.common_info.velocity.y,
+                                           fusion_obj.common_info.velocity.x);
+      Eigen::Vector2f velocity_heading_vec(cos(velocity_heading),
+                                           sin(velocity_heading));
+      fusion_acc = fusion_obj_acc_vec.dot(velocity_heading_vec);
+    } else {
+      Eigen::Vector2f obj_heading_vec(cos(obj_yaw), sin(obj_yaw));
+      fusion_acc = fusion_obj_acc_vec.dot(obj_heading_vec);
+    }
 
     double fusion_theta = 0.0;
     bool is_low_speed_object = fusion_vel < 2.78 ? true : false;
@@ -1023,14 +1031,20 @@ void EnvironmentalModelManager::truncate_prediction_info(
         prediction_object.fusion_obstacle.common_info.acceleration.y);
 
     // 相对信息
-    // judge direction of obj acc
-    Eigen::Vector2f obj_heading_vec(cos(cur_predicion_obj.yaw),
-                                    sin(cur_predicion_obj.yaw));
     Eigen::Vector2f prediction_obj_acc_vec(
         prediction_object.fusion_obstacle.common_info.acceleration.x,
         prediction_object.fusion_obstacle.common_info.acceleration.y);
 
-    cur_predicion_obj.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
+    constexpr double kMinVelocityThreshold = 0.5;  // 1.8 km/h
+    if (cur_predicion_obj.speed > kMinVelocityThreshold) {
+      Eigen::Vector2f velocity_heading_vec(cos(cur_predicion_obj.theta),
+                                           sin(cur_predicion_obj.theta));
+      cur_predicion_obj.acc = prediction_obj_acc_vec.dot(velocity_heading_vec);
+    } else {
+      Eigen::Vector2f obj_heading_vec(cos(cur_predicion_obj.yaw),
+                                      sin(cur_predicion_obj.yaw));
+      cur_predicion_obj.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
+    }
 
     // add relative info for highway
     cur_predicion_obj.relative_position_x =
@@ -1601,8 +1615,8 @@ bool EnvironmentalModelManager::InputReady(double current_time,
       continue;
     }
     if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
-      ILOG_DEBUG << "(" << __FUNCTION__ << ")"
-                 << "input_delay:" << i << ", " << feed_type_str;
+      ILOG_DEBUG << "(" << __FUNCTION__ << ")" << "input_delay:" << i << ", "
+                 << feed_type_str;
       (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter++;
       (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter =
           0;

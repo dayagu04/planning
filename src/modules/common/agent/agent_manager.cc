@@ -11,8 +11,8 @@
 #include "common_c.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
-#include "session.h"
 #include "obstacle_manager.h"
+#include "session.h"
 
 namespace planning {
 namespace agent {
@@ -141,7 +141,7 @@ void AgentManager::Update(const double start_timestamp_s) {
     planning::agent::Agent occ_agent;
     occ_agent.set_agent_id(occ_obs[i]->id());
     occ_agent.set_type(agent::AgentType(occ_obs[i]->type()));
-    occ_agent.set_x(occ_obs[i]->x_center());  //几何中心
+    occ_agent.set_x(occ_obs[i]->x_center());  // 几何中心
     occ_agent.set_y(occ_obs[i]->y_center());
     occ_agent.set_length(occ_obs[i]->length());
     occ_agent.set_width(occ_obs[i]->width());
@@ -322,6 +322,11 @@ void AgentManager::RecalculateDecelTrajectories(
     return;
   }
 
+  std::vector<trajectory::Trajectory> model_prediction_result;
+  model_prediction_result.reserve(1);
+  model_prediction_result.emplace_back(agent->trajectories().front());
+  agent->set_trajectories_used_by_st_graph(std::move(model_prediction_result));
+
   if (!(agent->is_vehicle_type() || agent->type() == AgentType::MOTORCYCLE ||
         agent->type() == AgentType::MOTORCYCLE_RIDING ||
         agent->type() == AgentType::TRICYCLE ||
@@ -376,58 +381,49 @@ void AgentManager::RecalculateDecelTrajectories(
   }
 
   const auto& trajectory = agent->trajectories().front();
+  const double init_position = trajectory.Evaluate(0.0).s();
+  const double init_speed = std::max(agent->speed(), 0.0);
   const double init_accel = agent->accel_fusion();
-  const double init_speed = std::max(agent->speed_fusion(), 0.0);
 
   std::vector<double> kin_positions, kin_speeds, kin_accels;
   kin_positions.reserve(kPlanPoints);
   kin_speeds.reserve(kPlanPoints);
   kin_accels.reserve(kPlanPoints);
 
-  const double stop_time = (init_accel < 0)
-                               ? -init_speed / init_accel
-                               : std::numeric_limits<double>::max();
+  kin_positions.push_back(init_position);
+  kin_speeds.push_back(init_speed);
+  kin_accels.push_back(init_accel);
 
-  for (int i = 0; i < kPlanPoints; ++i) {
+  double current_position = init_position;
+  double current_speed = init_speed;
+
+  for (int i = 1; i < kPlanPoints; ++i) {
+    if (current_speed <= 0.0) {
+      kin_positions.push_back(current_position);
+      kin_speeds.push_back(0.0);
+      kin_accels.push_back(0.0);
+      continue;
+    }
+
     const double t = i * kTimeStep;
+    const double predicted_speed = init_speed + init_accel * t;
 
-    if (init_accel < 0 && t >= stop_time) {
-      kin_positions.push_back((init_speed * init_speed) /
-                              (2 * std::fabs(init_accel)));
+    if (predicted_speed <= 0.0) {
+      const double braking_distance =
+          (current_speed * current_speed) / (2.0 * std::fabs(init_accel));
+      current_position += braking_distance;
+      current_speed = 0.0;
+      kin_positions.push_back(current_position);
       kin_speeds.push_back(0.0);
       kin_accels.push_back(0.0);
     } else {
-      kin_positions.push_back(init_speed * t + 0.5 * init_accel * t * t);
-      kin_speeds.push_back(init_speed + init_accel * t);
+      current_position =
+          init_position + init_speed * t + 0.5 * init_accel * t * t;
+      current_speed = predicted_speed;
+      kin_positions.push_back(current_position);
+      kin_speeds.push_back(current_speed);
       kin_accels.push_back(init_accel);
     }
-  }
-
-  std::vector<double> model_positions, model_speeds, model_accels;
-  model_positions.reserve(kPlanPoints);
-  model_speeds.reserve(kPlanPoints);
-  model_accels.reserve(kPlanPoints);
-
-  for (int i = 0; i < kPlanPoints; ++i) {
-    const auto& point = trajectory.Evaluate(i * kTimeStep);
-    model_positions.push_back(point.s());
-    model_speeds.push_back(point.vel());
-    model_accels.push_back(point.acc());
-  }
-
-  if (std::abs(model_positions.back() - kin_positions.back()) <
-      0.2 * init_speed) {
-    trajectory::Trajectory result;
-    std::vector<trajectory::Trajectory> result_vec;
-    result.reserve(kPlanPoints);
-
-    for (int i = 0; i < kPlanPoints; ++i) {
-      result.push_back(trajectory.Evaluate(i * kTimeStep));
-    }
-    result_vec.emplace_back(result);
-
-    agent->set_trajectories_used_by_st_graph(std::move(result_vec));
-    return;
   }
 
   std::vector<double> last_positions, last_speeds, last_accels;
@@ -504,7 +500,12 @@ void AgentManager::RecalculateDecelTrajectories(
 
     const double x = p0.x + ratio * (p1.x - p0.x);
     const double y = p0.y + ratio * (p1.y - p0.y);
-    const double theta = p0.theta + ratio * (p1.theta - p0.theta);
+    const double theta_diff = p1.theta - p0.theta;
+    const double theta_diff_norm =
+        theta_diff > M_PI
+            ? theta_diff - 2.0 * M_PI
+            : (theta_diff < -M_PI ? theta_diff + 2.0 * M_PI : theta_diff);
+    const double theta = p0.theta + ratio * theta_diff_norm;
 
     result_trajectory.emplace_back(x, y, theta, fused_speeds[i],
                                    fused_accels[i], i * kTimeStep, 0.0, 0.0, s,

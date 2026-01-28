@@ -107,7 +107,7 @@
   "finish_parallel_lon_err": 0.21,
   "finish_parallel_lon_overhaing_error": 0.22,
   "finish_parallel_heading_err": 1.70,
-  "finish_parallel_out_heading_mag": 15.0,
+  "finish_parallel_out_heading_mag": 10.0,
   "finish_parallel_out_lat_wheel_y": 0.25,
 
   "check_finish_lon_err": 0.28,
@@ -185,7 +185,7 @@
   "min_drive_dist": 0.08,
   "obs_stuck_replan_wait_time": 1.0,
   "max_replan_count": 26,
-  "parallel_replan_dist": 0.0,
+  "parallel_replan_dist": 0.2,
 
   "comment_10": "construct t_lane params",
   "vacant_pt_outside_dx": 0.5,
@@ -279,7 +279,7 @@
   "parallel_dynamic_lat_buffer": 0.5,
   "parallel_dynamic_lon_buffer": 1.78,
   "parallel_dynamic_lat_buffer_in_slot": 0.2,
-  "parallel_dynamic_lon_buffer_in_slot": 0.8,
+  "parallel_dynamic_lon_buffer_in_slot": 1.2,
 
   "comment_13": "slot update params when parking",
   "fix_slot_occupied_ratio": 0.868,
