@@ -19,7 +19,10 @@ HppStopDecider::HppStopDecider(const EgoPlanningConfigBuilder *config_builder,
     : Task(config_builder, session) {
   config_ = config_builder->cast<HppStopDeciderConfig>();
   name_ = "HppStopDecider";
-  hpp_stop_info_.Clear();
+  is_stopped_at_destination_ = false;
+  is_reached_target_slot_ = false;
+  is_reached_target_dest_ = false;
+  is_stop_condition_met_ = false;
   last_frame_stop_condition_met_ = false;
   stop_frame_count_ = 0;
 }
@@ -27,7 +30,10 @@ HppStopDecider::HppStopDecider(const EgoPlanningConfigBuilder *config_builder,
 bool HppStopDecider::Execute() {
   constexpr int kMaxStopFrameCount = 1000;  // 防止数据溢出
 
-  hpp_stop_info_.Clear();
+  is_stopped_at_destination_ = false;
+  is_reached_target_slot_ = false;
+  is_reached_target_dest_ = false;
+  is_stop_condition_met_ = false;
 
   const EnvironmentalModel &env = session_->environmental_model();
   const auto &current_reference_path =
@@ -57,51 +63,56 @@ bool HppStopDecider::Execute() {
   const auto &parking_slot_manager = env.get_parking_slot_manager();
   const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
 
-  hpp_stop_info_.is_reached_target_slot =
+  is_reached_target_slot_ =
       (is_exist_target_slot &&
        dist_to_target_slot < config_.dist_to_target_slot_thr);
-  hpp_stop_info_.is_reached_target_dest =
+  is_reached_target_dest_ =
       (dist_to_target_dest < config_.dist_to_target_dest_thr);
 
   // 判断是否满足停车条件
-  hpp_stop_info_.is_stop_condition_met = IsStopConditionMet(
+  is_stop_condition_met_ = IsStopConditionMet(
       dist_to_target_dest, dist_to_target_slot, ego_velocity);
 
   // 更新停车帧数计数
-  if (hpp_stop_info_.is_stop_condition_met) {
+  if (is_stop_condition_met_) {
     if (last_frame_stop_condition_met_) {
       stop_frame_count_ = std::min(stop_frame_count_ + 1, kMaxStopFrameCount);
     } else {
       stop_frame_count_ = 1;
     }
 
-    hpp_stop_info_.is_stopped_at_destination = true;
+    is_stopped_at_destination_ = true;
 
   } else {
     stop_frame_count_ = 0;
-    hpp_stop_info_.is_stopped_at_destination = false;
+    is_stopped_at_destination_ = false;
   }
 
-  // 将 stop_frame_count 写入输出
-  hpp_stop_info_.stop_frame_count = stop_frame_count_;
-  last_frame_stop_condition_met_ = hpp_stop_info_.is_stop_condition_met;
+  last_frame_stop_condition_met_ = is_stop_condition_met_;
 
   // 更新 parking_slot_manager 的状态
   session_->mutable_environmental_model()
       ->get_parking_slot_manager()
-      ->SetIsReachedTarget(hpp_stop_info_.is_reached_target_slot,
-                           hpp_stop_info_.is_reached_target_dest);
+      ->SetIsReachedTarget(is_reached_target_slot_, is_reached_target_dest_);
 
   ILOG_DEBUG << "HppStopDecider: dist_to_target_dest=" << dist_to_target_dest
              << ", dist_to_target_slot=" << dist_to_target_slot
              << ", ego_velocity=" << ego_velocity << ", is_stop_condition_met="
-             << hpp_stop_info_.is_stop_condition_met
-             << ", stop_frame_count=" << hpp_stop_info_.stop_frame_count;
+             << is_stop_condition_met_ << ", stop_frame_count="
+             << stop_frame_count_;
 
   // 保存输出
-  session_->mutable_planning_context()
-      ->mutable_hpp_stop_decider_output()
-      .hpp_stop_info = std::move(hpp_stop_info_);
+  auto &hpp_stop_decider_output =
+      session_->mutable_planning_context()->mutable_hpp_stop_decider_output();
+  hpp_stop_decider_output.is_stopped_at_destination =
+      is_stopped_at_destination_;
+  hpp_stop_decider_output.is_reached_target_slot =
+      is_reached_target_slot_;
+  hpp_stop_decider_output.is_reached_target_dest =
+      is_reached_target_dest_;
+  hpp_stop_decider_output.is_stop_condition_met =
+      is_stop_condition_met_;
+  hpp_stop_decider_output.stop_frame_count = stop_frame_count_;
 
   return true;
 }

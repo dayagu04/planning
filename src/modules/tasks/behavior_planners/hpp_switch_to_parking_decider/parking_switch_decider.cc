@@ -24,13 +24,15 @@ bool ParkingSwitchDecider::Execute() {
       session_->planning_context().hpp_stop_decider_output();
   
   // 使用 hpp_stop_decider 的输出
-  const bool is_reached_target_slot = hpp_stop_decider_output.hpp_stop_info.is_reached_target_slot;
-  const bool is_reached_target_dest = hpp_stop_decider_output.hpp_stop_info.is_reached_target_dest;
+  const bool is_reached_target_slot =
+      hpp_stop_decider_output.is_reached_target_slot;
+  const bool is_reached_target_dest =
+      hpp_stop_decider_output.is_reached_target_dest;
   
   // 判断车辆停车满足3帧后，使用 is_stopped_at_destination 替代 is_reached_target_slot
   const bool is_stopped_at_destination = 
-      (hpp_stop_decider_output.hpp_stop_info.is_stopped_at_destination && 
-       hpp_stop_decider_output.hpp_stop_info.stop_frame_count >= 3);
+      (hpp_stop_decider_output.is_stopped_at_destination && 
+       hpp_stop_decider_output.stop_frame_count >= 3);
   
   const auto &parking_slot_manager = env.get_parking_slot_manager();
   const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
@@ -45,7 +47,7 @@ bool ParkingSwitchDecider::Execute() {
   ILOG_DEBUG << "is_reached_target_slot:" << is_reached_target_slot;
   ILOG_DEBUG << "is_reached_target_dest:" << is_reached_target_dest;
   ILOG_DEBUG << "is_stopped_at_destination:" << is_stopped_at_destination;
-  ILOG_DEBUG << "stop_frame_count:" << hpp_stop_decider_output.hpp_stop_info.stop_frame_count;
+  ILOG_DEBUG << "stop_frame_count:" << hpp_stop_decider_output.stop_frame_count;
   ILOG_DEBUG << "dist_to_target_slot:" << dist_to_target_slot;
   ILOG_DEBUG << "dist_to_target_dest:" << dist_to_target_dest;
   ILOG_DEBUG << "is_exist_target_slot:" << is_exist_target_slot;
@@ -53,7 +55,7 @@ bool ParkingSwitchDecider::Execute() {
   JSON_DEBUG_VALUE("is_reached_target_slot", is_reached_target_slot);
   JSON_DEBUG_VALUE("is_reached_target_dest", is_reached_target_dest);
   JSON_DEBUG_VALUE("is_stopped_at_destination", is_stopped_at_destination);
-  JSON_DEBUG_VALUE("stop_frame_count", hpp_stop_decider_output.hpp_stop_info.stop_frame_count);
+  JSON_DEBUG_VALUE("stop_frame_count", hpp_stop_decider_output.stop_frame_count);
   JSON_DEBUG_VALUE("dist_to_target_slot", dist_to_target_slot);
   JSON_DEBUG_VALUE("dist_to_target_dest", dist_to_target_dest);
   JSON_DEBUG_VALUE("is_exist_target_slot", is_exist_target_slot);

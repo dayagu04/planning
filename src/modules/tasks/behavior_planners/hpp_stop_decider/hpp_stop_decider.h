@@ -1,6 +1,5 @@
 #pragma once
 
-#include "hpp_stop_info.h"
 #include "tasks/task.h"
 
 namespace planning {
@@ -24,7 +23,18 @@ class HppStopDecider : public Task {
 
  private:
   HppStopDeciderConfig config_;
-  HppStopInfo hpp_stop_info_;
+
+  // 是否到达终点并停车
+  bool is_stopped_at_destination_ = false;
+
+  // 是否到达目标停车位
+  bool is_reached_target_slot_ = false;
+
+  // 是否到达目标目的地
+  bool is_reached_target_dest_ = false;
+
+  // 是否满足停车条件（距离终点<2m，距离轨迹终点<0.5m，速度<0.1）
+  bool is_stop_condition_met_ = false;
   
   /****************** internal use ***************/
   // 内部状态：上一帧是否满足停车条件

@@ -187,12 +187,16 @@ bool GeneralLongitudinalDecider::Execute() {
       session_->planning_context().hpp_stop_decider_output();
   bool hpp_stopped_at_destination =
       session_->is_hpp_scene() &&
-      hpp_stop_decider_output.hpp_stop_info.is_stopped_at_destination;
+      hpp_stop_decider_output.is_stopped_at_destination;
 
-  bool enable_stop_flag =
-      ((lon_yield_info_.keep_stop || start_stop_result.enable_stop()) &&
-       !session_->is_hpp_scene()) ||
-      hpp_stopped_at_destination;
+  bool enable_stop_flag = false;
+  if (session_->is_hpp_scene()) {
+    enable_stop_flag =
+        hpp_stop_decider_output.is_stopped_at_destination;
+  } else {
+    enable_stop_flag =
+        (lon_yield_info_.keep_stop || start_stop_result.enable_stop());
+  }
   LOG_DEBUG(
       "HHLDEBUGDB start stop input: %d, enable stop_flag: %d, is_start: %d, "
       "is_stop: % d, enable_stop: % d \n",
