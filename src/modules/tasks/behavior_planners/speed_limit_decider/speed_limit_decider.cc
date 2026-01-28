@@ -103,29 +103,15 @@ constexpr double kMapSharpCurveMinDistance =
 constexpr double kMapSharpCurveSpeedLimitThreshold =
     60.0;  // Speed limit threshold (kph) to skip counting small radius points
 constexpr double kMapSharpCurveGroupingDistanceThreshold = 40.0;
-constexpr size_t kRampCurvatureVectorReserveSize =
-    50;  // Expected size for ramp curvature data vectors (~50 points for 150m
-         // ramp)
-constexpr size_t kRampCurvatureIndicesReserveSize =
-    30;  // Expected size for turn direction indices (fewer points satisfy small
-         // radius condition)
-constexpr double kMapSharpCurveDistThresholdV70 =
-    125.0;  // Distance threshold to sharp curve when speed > 70kph (m)
-constexpr double kMapSharpCurveDistThresholdV60 =
-    75.0;  // Distance threshold to sharp curve when speed > 60kph (m)
-constexpr double kMapSharpCurveDistThresholdV50 =
-    35.0;  // Distance threshold to sharp curve when speed > 50kph (m)
-constexpr double kMapSharpCurveDistThresholdV45 =
-    17.0;  // Distance threshold to sharp curve when speed > 45kph (m)
-constexpr double kMaxRampPointSpacing =
-    40.0;  // Maximum point spacing threshold, beyond which is considered sparse
-           // segment (m)
-constexpr double kMaxRampPointSpacingRatio =
-    2.5;  // Ratio threshold of max spacing to average spacing, beyond which
-          // abnormal sparse segment is detected
-constexpr int kMaxDensePointCountForSparseBack =
-    3;  // Maximum dense point count threshold for determining
-        // dense-front-sparse-back pattern
+constexpr size_t kRampCurvatureVectorReserveSize = 50;  // Expected size for ramp curvature data vectors (~50 points for 150m ramp)
+constexpr size_t kRampCurvatureIndicesReserveSize = 30;  // Expected size for turn direction indices (fewer points satisfy small radius condition)
+constexpr double kMapSharpCurveDistThresholdV70 = 210.0;  // Distance threshold to sharp curve when speed > 70kph (m)
+constexpr double kMapSharpCurveDistThresholdV60 = 140.0;   // Distance threshold to sharp curve when speed > 60kph (m)
+constexpr double kMapSharpCurveDistThresholdV50 = 90.0;   // Distance threshold to sharp curve when speed > 50kph (m)
+constexpr double kMapSharpCurveDistThresholdV45 = 45.0;   // Distance threshold to sharp curve when speed > 45kph (m)
+constexpr double kMaxRampPointSpacing = 40.0;  // Maximum point spacing threshold, beyond which is considered sparse segment (m)
+constexpr double kMaxRampPointSpacingRatio = 2.5;  // Ratio threshold of max spacing to average spacing, beyond which abnormal sparse segment is detected
+constexpr int kMaxDensePointCountForSparseBack = 3;  // Maximum dense point count threshold for determining dense-front-sparse-back pattern
 constexpr double kMaxDistanceToRamp = 2000.0;
 constexpr double kDistanceTolerance = 1.0;
 constexpr double kCurvaturePreviewDistance =
@@ -3278,6 +3264,59 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
 }
 
+void SpeedLimitDecider::ResetRoadBoundarySpeedLimitState() {
+  // Road boundary speed limit confirmation state
+  road_boundary_left_confirmed_range_idx_ = -1;
+  road_boundary_right_confirmed_range_idx_ = -1;
+  road_boundary_left_confirmation_frame_count_ = 0;
+  road_boundary_right_confirmation_frame_count_ = 0;
+  road_boundary_left_pending_confirmation_range_idx_ = -1;
+  road_boundary_right_pending_confirmation_range_idx_ = -1;
+
+  // Road boundary speed limit cooldown state
+  last_road_boundary_v_limit_ = 100.0;
+  last_road_boundary_trigger_distance_ = 0.0;
+  road_boundary_cooldown_count_ = 0;
+
+  // Road boundary strictest speed limit cooldown state
+  last_road_boundary_strictest_v_limit_ = 100.0;
+  last_road_boundary_strictest_trigger_distance_ = 0.0;
+  road_boundary_strictest_cooldown_count_ = 0;
+
+  // Road boundary speed limit manual intervention detection
+  road_boundary_v_limit_set_ = false;
+  road_boundary_manual_intervention_detected_ = false;
+  last_v_cruise_fsm_road_boundary_ = 40.0;
+  road_boundary_manual_intervention_reset_count_ = 0;
+
+  // Curve road boundary speed limit state
+  curve_road_boundary_left_confirmed_gear_ = -1;
+  curve_road_boundary_right_confirmed_gear_ = -1;
+  curve_road_boundary_left_confirmation_frame_count_ = 0;
+  curve_road_boundary_right_confirmation_frame_count_ = 0;
+  curve_road_boundary_left_pending_confirmation_gear_ = -1;
+  curve_road_boundary_right_pending_confirmation_gear_ = -1;
+
+  // Collision distance confirmation state
+  confirmed_collision_distance_ = -1.0;
+  pending_collision_distance_ = -1.0;
+  collision_confirmation_frame_count_ = 0;
+
+  // Lateral acceleration limit detection state
+  lateral_acceleration_limit_confirmed_ = false;
+  lateral_acceleration_limit_pending_ = false;
+  lateral_acceleration_limit_confirmation_frame_count_ = 0;
+  lateral_acceleration_limit_reset_frame_count_ = 0;
+  lateral_acceleration_limit_v_limit_ = 100.0;
+  lateral_acceleration_limit_trigger_distance_ = 0.0;
+
+  // S-curve road boundary speed limit state
+  s_curve_road_boundary_confirmed_ = false;
+  s_curve_road_boundary_pending_ = false;
+  s_curve_road_boundary_confirmation_frame_count_ = 0;
+  s_curve_road_boundary_v_limit_ = 100.0;
+}
+
 void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   // ========== Part 1: Input Preparation ==========
   // Configuration input
@@ -3336,39 +3375,18 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
 
   // ========== Part 2: Feature Check ==========
   if (!config.enable_road_boundary_speed_limit) {
-    road_boundary_manual_intervention_detected_ = false;
-    road_boundary_manual_intervention_reset_count_ = 0;
-    road_boundary_v_limit_set_ = false;
-    road_boundary_left_confirmed_range_idx_ = -1;
-    road_boundary_right_confirmed_range_idx_ = -1;
-    curve_road_boundary_left_confirmed_gear_ = -1;
-    curve_road_boundary_right_confirmed_gear_ = -1;
-    s_curve_road_boundary_confirmed_ = false;
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
   if (function_info.function_mode() == common::DrivingFunctionInfo::ACC &&
       !config.enable_road_boundary_speed_limit_in_acc_mode) {
-    road_boundary_manual_intervention_detected_ = false;
-    road_boundary_manual_intervention_reset_count_ = 0;
-    road_boundary_v_limit_set_ = false;
-    road_boundary_left_confirmed_range_idx_ = -1;
-    road_boundary_right_confirmed_range_idx_ = -1;
-    curve_road_boundary_left_confirmed_gear_ = -1;
-    curve_road_boundary_right_confirmed_gear_ = -1;
-    s_curve_road_boundary_confirmed_ = false;
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
   if (road_boundary.empty() || planned_kd_path == nullptr) {
-    road_boundary_manual_intervention_detected_ = false;
-    road_boundary_manual_intervention_reset_count_ = 0;
-    road_boundary_v_limit_set_ = false;
-    road_boundary_left_confirmed_range_idx_ = -1;
-    road_boundary_right_confirmed_range_idx_ = -1;
-    curve_road_boundary_left_confirmed_gear_ = -1;
-    curve_road_boundary_right_confirmed_gear_ = -1;
-    s_curve_road_boundary_confirmed_ = false;
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
@@ -4694,6 +4712,9 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
         (v_limit_road_boundary_strictest * v_limit_road_boundary_strictest -
          v_ego * v_ego) /
         (2.0 * trigger_distance_road_boundary_strictest);
+  } else if (trigger_distance_road_boundary_strictest <= kMinDistanceForDecel &&
+             (v_ego - v_limit_road_boundary_strictest) > kCurvSpeedDifference) {
+              required_decel_strictest = -2.0;
   }
   if (required_decel_strictest < kRoadBoundarySharpDecelThreshold) {
     road_boundary_type_strictest = SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL;
