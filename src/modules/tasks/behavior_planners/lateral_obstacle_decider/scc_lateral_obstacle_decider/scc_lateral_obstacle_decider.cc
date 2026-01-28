@@ -1768,7 +1768,6 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
     std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const auto& obstacle_map = reference_path_ptr_->get_obstacles_map();
-  // 后续使用时，要注意cipv跟frenet_obstacle不能是同一个障碍物
   if (obstacle_map.find(cipv_info.cipv_id()) != obstacle_map.end()) {
     if (!frenet_obstacle.obstacle()->is_reverse() &&
         frenet_obstacle.frenet_obstacle_boundary().s_start >
@@ -1810,13 +1809,11 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
   int start_idx = 0;     // 0.0s
   int end_idx   = 50;    // 5.0s  (50 * 0.1)
   int step_idx  = 2;     // 0.2s  (2 * 0.1)
-  const double kIndexToTimeSec = 0.1;
   for (int t_idx = start_idx; t_idx <= end_idx; t_idx += step_idx) {
     Polygon2d obstacle_sl_polygon;
     ok = reference_path_ptr_->get_polygon_at_time(
         frenet_obstacle.id(), false, t_idx, obstacle_sl_polygon);
-    double delt_s = kIndexToTimeSec * t_idx * ego_v_s_ +
-                    0.5 * a * kIndexToTimeSec * kIndexToTimeSec * t_idx * t_idx;
+    double delt_s = 0.1 * t_idx * ego_v_s_ + 0.5 * a * 0.01 * t_idx * t_idx;
     double ego_start_s =
         reference_path_ptr_->get_ego_frenet_boundary().s_start + delt_s;
     double ego_end_s =
@@ -1848,11 +1845,7 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
           std::min(max_s, ego_end_s + front_lon_buf_dis +
                               extra_lon_buf_dis_for_reverse_obstacle);
     }
-    if (is_overtake_target_static_obstacle) {
-      // 暂不考虑对向车
-      break;
-    }
-    if (!is_overlap_with_dynamic_agent) {
+    if (!is_overlap_with_dynamic_agent || is_overtake_target_static_obstacle) {
       continue;
     }
     distance_to_centerline =
