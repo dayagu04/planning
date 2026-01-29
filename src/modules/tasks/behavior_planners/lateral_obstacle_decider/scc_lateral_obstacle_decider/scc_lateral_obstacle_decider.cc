@@ -1383,15 +1383,9 @@ void SccLateralObstacleDecider::
     double desire_v = std::min(lane_boundary_free_space_desire_v,
                                road_boundary_free_space_desire_v);
     desire_v = std::min(desire_v, static_obstacle_free_space_desire_v);
-    double desire_v_hysteresis = 0;
     double space_hysteresis = 0;
     if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
         last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
-      // 低速状态下允许自车速度变化较快，但是中高速时，这个条件需要适当缩小
-      std::array<double, 5> x_v_factor{0.5, 4.17, 8.33, 16.67, 33.33};
-      std::array<double, 5> f_v_factor{5, 4.5, 4, 4, 2.7};
-      desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
-      // desire_v_hysteresis = 5;
       space_hysteresis = -0.1;
     } else {
       space_hysteresis = 0.1;
@@ -1426,6 +1420,10 @@ void SccLateralObstacleDecider::
       }
     }
     if (has_safe_v_space_current) {
+      // 低速状态下允许自车速度变化较快，但是中高速时，这个条件需要适当缩小
+      std::array<double, 5> x_v_factor{0.5, 4.17, 8.33, 16.67, 33.33};
+      std::array<double, 5> f_v_factor{5, 4.5, 4, 4, 2.7};
+      double desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
       obstacle_interaction_info.desire_nudge_static_safe_v =
           ego_v_ + desire_v_hysteresis;
     }
@@ -1507,14 +1505,9 @@ void SccLateralObstacleDecider::
       continue;
     }
 
-    double desire_v_hysteresis = 1;
     double space_hysteresis = 0;
     if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
         last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
-      std::array<double, 5> x_v_factor{1, 4.17, 8.33, 16.67,33.33};
-      std::array<double, 5> f_v_factor{2, 2, 1.5, 1.2, 1.08};
-      desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
-      // desire_v_hysteresis = 2;
       space_hysteresis = -0.1;
     } else {
       space_hysteresis = 0.25;// 动态障碍物不确定性比静态障碍物大
@@ -1547,6 +1540,9 @@ void SccLateralObstacleDecider::
       lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car = false;
     }
     if (has_safe_v_space_current) {
+      std::array<double, 5> x_v_factor{1, 4.17, 8.33, 16.67,33.33};
+      std::array<double, 5> f_v_factor{2, 2, 1.5, 1.2, 1.08};
+      double desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
       obstacle_interaction_info.desire_nudge_dynamic_safe_v =
           ego_v_ * desire_v_hysteresis;
     }
