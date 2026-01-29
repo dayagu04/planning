@@ -1310,6 +1310,11 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.traj_kappa_change_penalty, float,
                   "traj_kappa_change_penalty");
+  JSON_READ_VALUE(param.enable_decide_cul_de_sac, bool,
+                  "enable_decide_cul_de_sac");
+  JSON_READ_VALUE(param.enable_interesting_search_area, bool,
+                  "enable_interesting_search_area");
+  JSON_READ_VALUE(param.pre_search_mode, int, "pre_search_mode");
 
   // lat lon path buffer params
   JSON_READ_VALUE(param.lat_lon_path_buffer.lon_buffer, float,
@@ -1488,6 +1493,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.od_config.use_speed_bump, bool, "use_speed_bump");
   JSON_READ_VALUE(param.od_config.moving_veh_speed_thresh, double,
                   "moving_veh_speed_thresh");
+  JSON_READ_VALUE(param.parallel_enable_hybrid_astar, bool,
+                  "parallel_enable_hybrid_astar");
   return;
 }
 

@@ -197,6 +197,7 @@ struct GeometryPathOutput {
 
     actual_ds = 0.0;
     cur_gear_length = 0.0;
+    is_need_optimizer = false;
   }
 };
 
@@ -214,6 +215,9 @@ class GeometryPathGenerator : public ParkingTask {
   virtual void PrintOutputSegmentsInfo() const;
 
   void SetInput(const GeometryPathInput &input) { input_ = input; }
+
+  const GeometryPathInput& GetInput() const { return input_; }
+
   void SetColPtr(
       const std::shared_ptr<CollisionDetector> &collision_detector_ptr) {
     collision_detector_ptr_ = collision_detector_ptr;

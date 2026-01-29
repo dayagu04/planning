@@ -40,8 +40,8 @@ namespace apa_planner {
 #define PLOT_ALL_SUCCESS_CURVE_PATH_FIRST_GEAR_SWITCH_POSE (0)
 #define PLOT_ALL_BEST_CURVE_PATH (1)
 #define PLOT_ALL_BEST_CURVE_PATH_FIRST_GEAR_SWITCH_POSE (0)
-#define DEBUG_PARENT_NODE_MAX_NUM (10)
-#define DEBUG_CHILD_NODE_MAX_NUM (50000)
+#define DEBUG_PARENT_NODE_MAX_NUM (20)
+#define DEBUG_CHILD_NODE_MAX_NUM (500)
 #define DEBUG_NODE_GEAR_SWITCH_NUMBER (30)
 #define ENABLE_OBS_DIST_G_COST (0)
 #define ENABLE_HEADING_DIFF_G_COST (0)
@@ -81,8 +81,8 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
 
   float length_cost = 0.0f, heading_cost = 0.0f, gear_change_cost = 0.0f,
         kappa_cost = 0.0f, kappa_change_cost = 0.0f, safe_dist_cost = 0.0f,
-        exceed_pre_search_box_cost = 0.0f, far_from_start_and_end_cost = 0.0f,
-        borrow_slot_cost = 0.0f;
+        exceed_interseting_area_cost = 0.0f,
+        exceed_cul_de_sac_limit_pos_cost = 0.0f, borrow_slot_cost = 0.0f;
 
   // length cost
   length_cost = next_node->GetNodePathDistance() * config_.traj_forward_penalty;
@@ -149,21 +149,33 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
 #endif
 
   if (request_.search_mode == SearchMode::FORMAL) {
-    if (pre_search_abbox_.width() > 0.01 &&
-        !pre_search_abbox_.contain(next_node->GetPose())) {
-      exceed_pre_search_box_cost = config_.exceed_pre_search_box_penalty;
+    if (interesting_area_.width() > 0.01 &&
+        !interesting_area_.contain(next_node->GetPose())) {
+      exceed_interseting_area_cost = config_.exceed_interseting_area_penalty;
     }
 
-    if (interesting_abbox_slot_.width() > 0.01 &&
-        !interesting_abbox_slot_.contain(next_node->GetPose())) {
-      far_from_start_and_end_cost = config_.exceed_intersting_box_penalty;
+    if (cul_de_sac_info_.is_cul_de_sac) {
+      if (cul_de_sac_info_.type == CulDeSacType::RIGHT &&
+          next_node->GetPhi() < cul_de_sac_info_.limit_phi) {
+        if ((next_node->GetGearType() == AstarPathGear::DRIVE &&
+             next_node->GetKappa() < -0.001f) ||
+            (next_node->GetGearType() == AstarPathGear::REVERSE &&
+             next_node->GetKappa() > 0.001f)) {
+          exceed_cul_de_sac_limit_pos_cost =
+              config_.exceed_cul_de_sac_limit_pos_penalty;
+        }
+      } else if (cul_de_sac_info_.type == CulDeSacType::LEFT &&
+                 next_node->GetPhi() > cul_de_sac_info_.limit_phi) {
+        if ((next_node->GetGearType() == AstarPathGear::DRIVE &&
+             next_node->GetKappa() > 0.001f) ||
+            (next_node->GetGearType() == AstarPathGear::REVERSE &&
+             next_node->GetKappa() < -0.001f)) {
+          exceed_cul_de_sac_limit_pos_cost =
+              config_.exceed_cul_de_sac_limit_pos_penalty;
+        }
+      }
     }
   }
-
-  // if (next_node->GetEulerDist(start_node_) > 10.0 &&
-  //     next_node->GetEulerDist(end_node_) > 8.68) {
-  //   far_from_start_and_end_cost = config_.far_from_start_end_penalty;
-  // }
 
   if (fabs(next_node->GetPhi()) * common_math::kRad2DegF > 76.0f &&
       (next_node->GetX() - 0.5 * apa_param.GetParam().car_width) <
@@ -176,8 +188,8 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
   next_node->SetGCost(current_node->GetGCost() + length_cost +
                       gear_change_cost + kappa_cost + kappa_change_cost +
                       safe_dist_cost + heading_cost +
-                      exceed_pre_search_box_cost + far_from_start_and_end_cost +
-                      borrow_slot_cost);
+                      exceed_interseting_area_cost +
+                      exceed_cul_de_sac_limit_pos_cost + borrow_slot_cost);
 }
 
 void HybridAStarPerpendicularTailInPathGenerator::CalcNodeHCost(
@@ -227,36 +239,33 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
 
   double search_start_time = IflyTime::Now_ms();
 
-  pre_search_abbox_.Reset();
-  interesting_abbox_slot_.Reset();
-  interesting_abbox_ego_.Reset();
-
   const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
   const AnalyticExpansionType type = request_.analytic_expansion_type;
   const bool swap_start_goal = request_.swap_start_goal;
   const float traj_kappa_change_penalty = config_.traj_kappa_change_penalty;
 
-  const Eigen::Vector2d& interesting_pos_ego =
-      cur_pose.pos +
-      (0.5 * param.car_length - param.rear_overhanging) * cur_pose.heading_vec;
-
   const Eigen::Vector2d& interesting_pos_slot =
       ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid;
 
-  cdl::AABB car_box;
-  car_box.Set(interesting_pos_ego, param.car_length, param.max_car_width,
-              cur_pose.heading);
-  car_box.ExtendX(0.5);
-  car_box.ExtendY(0.5);
-
-  interesting_abbox_ego_.Reset(interesting_pos_ego);
-
-  interesting_abbox_slot_.Reset(interesting_pos_slot);
-  interesting_abbox_slot_.ExtendX(6.6 + bound);
-  interesting_abbox_slot_.ExtendXlower(4.168 + bound);
-  interesting_abbox_slot_.ExtendY(7.5 + bound);
-  interesting_abbox_slot_.combine(car_box);
-  interesting_abbox_slot_.DebugString();
+  interesting_area_.Reset(interesting_pos_slot);
+  interesting_area_.ExtendXupper(6.6 + bound);
+  interesting_area_.ExtendXlower(interesting_pos_slot.x() -
+                                 ego_info_under_slot.target_pose.GetX() +
+                                 bound);
+  interesting_area_.ExtendY(9.6 + bound);
+  const double extra_val = 0.368;
+  interesting_area_.max_[0] =
+      std::max(interesting_area_.max_[0],
+               ego_info_under_slot.cur_pose.GetX() + extra_val);
+  interesting_area_.max_[1] =
+      std::max(interesting_area_.max_[1],
+               ego_info_under_slot.cur_pose.GetY() + extra_val);
+  interesting_area_.min_[0] =
+      std::min(interesting_area_.min_[0],
+               ego_info_under_slot.cur_pose.GetX() - extra_val);
+  interesting_area_.min_[1] =
+      std::min(interesting_area_.min_[1],
+               ego_info_under_slot.cur_pose.GetY() - extra_val);
 
   PathColDetBuffer pre_path_col_det_buffer;
   pre_path_col_det_buffer.need_distinguish_outinslot = false;
@@ -271,21 +280,36 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
   request_.analytic_expansion_type = AnalyticExpansionType::REEDS_SHEEP;
   config_.traj_kappa_change_penalty = 0.0;
 
-  if (request_.decide_cul_de_sac &&
-      ego_info_under_slot.slot_type == SlotType::PERPENDICULAR &&
-      ego_info_under_slot.slot_occupied_ratio < 1e-3 &&
-      cur_pose.GetY() * cur_pose.GetTheta() < 0.0) {
-    geometry_lib::PathPoint end_pose;
-    if (cur_pose.GetY() > 0.0) {
-      end_pose.SetY(-3.6 - bound);
-      end_pose.SetTheta(-90.0 * kDeg2Rad);
-      end_pose.SetDir(-90.0 * kDeg2Rad);
-    } else {
-      end_pose.SetY(3.6 + bound);
-      end_pose.SetTheta(90.0 * kDeg2Rad);
-      end_pose.SetDir(90.0 * kDeg2Rad);
+  cul_de_sac_info_.Reset();
+  do {
+    if (!request_.decide_cul_de_sac) {
+      break;
     }
-
+    if (ego_info_under_slot.slot_type != SlotType::PERPENDICULAR) {
+      break;
+    }
+    if (ego_info_under_slot.slot_occupied_ratio > 1e-3) {
+      break;
+    }
+    if (std::fabs(cur_pose.GetTheta()) * kRad2Deg < 36) {
+      break;
+    }
+    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0) {
+      break;
+    }
+    geometry_lib::PathPoint end_pose;
+    const float decide_cul_de_sac_y = 7.5f;
+    if (cur_pose.GetY() > 0.0) {
+      end_pose.SetY(-decide_cul_de_sac_y - bound);
+      end_pose.SetTheta(cur_pose.GetTheta());
+      end_pose.SetDir(cur_pose.GetTheta());
+      cul_de_sac_info_.type = CulDeSacType::RIGHT;
+    } else {
+      end_pose.SetY(decide_cul_de_sac_y + bound);
+      end_pose.SetTheta(cur_pose.GetTheta());
+      end_pose.SetDir(cur_pose.GetTheta());
+      cul_de_sac_info_.type = CulDeSacType::LEFT;
+    }
     const std::vector<double> x_vec{7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0};
     bool find_safe_pos = false;
     for (const double x : x_vec) {
@@ -298,37 +322,60 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
         break;
       }
     }
-    if (find_safe_pos) {
-      const geometry_lib::PathPoint real_target_pose =
-          ego_info_under_slot.target_pose;
-      request_.ego_info_under_slot.target_pose = end_pose;
-      end_pose.PrintInfo();
-      request_.search_mode = SearchMode::DECIDE_CUL_DE_SAC;
-      if (!UpdateOnce(pre_path_col_det_buffer)) {
-        ILOG_ERROR << "this is cul-de-sac";
-        if (cur_pose.GetY() > 0.0) {
-          interesting_abbox_slot_.min_[1] = -2.2 - bound;
-          interesting_abbox_slot_.max_[1] = 12.8 + bound;
-        } else {
-          interesting_abbox_slot_.min_[1] = -12.8 - bound;
-          interesting_abbox_slot_.max_[1] = 2.2 + bound;
-        }
-      } else {
-        ILOG_INFO << "this is not cul-de-sac";
-      }
-      request_.ego_info_under_slot.target_pose = real_target_pose;
-    }
-  }
 
-  request_.swap_start_goal = true;
-  if (request_.pre_search_mode > 0) {
-    request_.search_mode = SearchMode::PRE_SEARCH;
-    bool pre_search_success = false;
+    if (!find_safe_pos) {
+      break;
+    }
+
+    const geometry_lib::PathPoint real_target_pose =
+        ego_info_under_slot.target_pose;
+    request_.ego_info_under_slot.target_pose = end_pose;
+    end_pose.PrintInfo();
+
+    request_.search_mode = SearchMode::DECIDE_CUL_DE_SAC;
     if (!UpdateOnce(pre_path_col_det_buffer)) {
+      ILOG_ERROR << "this is cul-de-sac";
+      cul_de_sac_info_.is_cul_de_sac = true;
+      if (cul_de_sac_info_.type == CulDeSacType::RIGHT) {
+        cul_de_sac_info_.limit_phi = -6.8f * common_math::kDeg2RadF;
+        interesting_area_.min_[1] = cul_de_sac_info_.limit_y -
+                                    param.wheel_base - param.front_overhanging +
+                                    0.5 * param.max_car_width;
+      } else if (cul_de_sac_info_.type == CulDeSacType::LEFT) {
+        cul_de_sac_info_.limit_phi = 6.8f * common_math::kDeg2RadF;
+        interesting_area_.max_[1] = cul_de_sac_info_.limit_y +
+                                    param.wheel_base + param.front_overhanging -
+                                    0.5 * param.max_car_width;
+      }
+    } else {
+      ILOG_INFO << "this is not cul-de-sac";
+    }
+    request_.ego_info_under_slot.target_pose = real_target_pose;
+  } while (false);
+
+  do {
+    if (request_.pre_search_mode == 0) {
+      break;
+    }
+    if (cul_de_sac_info_.is_cul_de_sac) {
+      break;
+    }
+
+    request_.search_mode = SearchMode::PRE_SEARCH;
+    request_.swap_start_goal = true;
+
+    const bool pre_search_success = UpdateOnce(pre_path_col_det_buffer);
+    if (request_.pre_search_mode == 2) {
+      ILOG_INFO << "only pre search, quit";
+      result_.search_consume_time_ms = IflyTime::Now_ms() - search_start_time;
+      return pre_search_success;
+    }
+
+    if (!pre_search_success) {
       ILOG_ERROR << "pre search failed";
+      break;
     } else {
       ILOG_INFO << "pre search success";
-      pre_search_success = true;
       float x_min = std::numeric_limits<float>::max();
       float x_max = std::numeric_limits<float>::lowest();
       float y_min = std::numeric_limits<float>::max();
@@ -346,29 +393,21 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
         }
       }
 
-      if (!interesting_abbox_slot_.contain(pre_search_abbox_)) {
-        interesting_abbox_slot_.Reset();
-        pre_search_abbox_.Reset();
-      }
-
-      const float x_extend = 1.68f, y_extend = 3.86f;
+      const float x_extend = 0.86f, y_extend = 1.86f;
       x_min -= x_extend, x_max += x_extend, y_min -= y_extend,
           y_max += y_extend;
       y_min = std::min(y_min, -3.6f);
       y_max = std::max(y_max, 3.6f);
-      pre_search_abbox_.min_ << x_min - bound, y_min - bound;
-      pre_search_abbox_.max_ << x_max + bound, y_max + bound;
+      cdl::AABB pre_search_box;
+      pre_search_box.min_ << x_min - bound, y_min - bound;
+      pre_search_box.max_ << x_max + bound, y_max + bound;
+      interesting_area_.combine(pre_search_box);
     }
-    if (request_.pre_search_mode == 2) {
-      ILOG_INFO << "only pre search, quit";
-      result_.search_consume_time_ms = IflyTime::Now_ms() - search_start_time;
-      return pre_search_success;
-    }
-  }
 
-  ILOG_INFO << "interesting_abbox_slot_, pre_search_abbox_";
-  interesting_abbox_slot_.DebugString();
-  pre_search_abbox_.DebugString();
+  } while (false);
+
+  ILOG_INFO << "interseting_area";
+  interesting_area_.DebugString();
 
   request_.search_mode = SearchMode::FORMAL;
   request_.analytic_expansion_type = type;
@@ -450,7 +489,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   //     search_map_boundary_.phi_max, &grid_index, search_map_boundary_,
   //     config_);
   // if (!CheckOutOfGridBound(grid_index)) {
-  //   ILOG_ERROR << "search boundary out of map boundary" << grid_index.x << "
+  //   ILOG_ERROR << "search boundary out of map boundary" << grid_index.x <<
+  //   "
   //   "
   //              << grid_index.y << " " << grid_index.phi;
 
@@ -506,11 +546,12 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   node_del_input.path_col_det_buffer = path_col_det_buffer;
   node_del_input.sample_ds = request_.sample_ds;
   node_del_input.swap_start_goal = request_.swap_start_goal;
-  node_del_input.enable_smart_fold_mirror = request_.enable_smart_fold_mirror;
   if (request_.search_mode == SearchMode::FORMAL) {
     node_del_input.need_cal_obs_dist = true;
+    node_del_input.enable_smart_fold_mirror = request_.enable_smart_fold_mirror;
   } else {
     node_del_input.need_cal_obs_dist = false;
+    node_del_input.enable_smart_fold_mirror = false;
   }
 
   node_delete_decider_.Process(node_del_input);
@@ -607,8 +648,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     config_.max_search_time_ms = 26;
   } else if (request_.search_mode == SearchMode::PRE_SEARCH) {
     find_success_curve_min_count = 0;
-    find_success_curve_max_time = 86;
-    config_.max_search_time_ms = 150;
+    find_success_curve_max_time = 68;
+    config_.max_search_time_ms = 86;
   } else {
     if (request_.replan_reason == ReplanReason::SLOT_CRUISING) {
       find_success_curve_min_count = 0;
@@ -659,7 +700,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     if (explored_node_num < DEBUG_PARENT_NODE_MAX_NUM) {
       ILOG_INFO << "============== main cycle =========== ";
       ILOG_INFO << "explored_node_num " << explored_node_num
-                << " open set size for now " << open_pq_.size();
+                << " open set size for now " << open_pq_.size()
+                << "  cur_node_info:";
       current_node->DebugString();
     }
 #endif
@@ -720,28 +762,19 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
                 << "  search time = " << search_continue_time << "ms";
 #endif
 
-#if PLOT_CHILD_NODE
-      // if node is gear switch point, plot it also.
-      if (curve_node_to_goal.GearSwitchNode() != nullptr) {
-        child_node_debug_.emplace_back(DebugAstarSearchPoint(
-            curve_node_to_goal.GearSwitchNode()->GetX(),
-            curve_node_to_goal.GearSwitchNode()->GetY(), true, true));
-      }
-#endif
-
 #if USE_PATH_COMPARE
       if (path_compare_decider.Compare(&request_, &best_curve_node_to_goal,
                                        &curve_node_to_goal)) {
         best_curve_node_to_goal = curve_node_to_goal;
 #if DEBUG_SUCCESS_CURVE_PATH_INFO
-        ILOG_INFO
-            << "find new best curve path to target pose, the gear switch num = "
-            << best_curve_node_to_goal.GetGearSwitchNum();
+        ILOG_INFO << "find new best curve path to target pose, the gear "
+                     "switch num = "
+                  << best_curve_node_to_goal.GetGearSwitchNum();
 #endif
 
         if (analytic_expansion_request.type ==
             AnalyticExpansionType::LINK_POSE_LINE) {
-          lpl_path_.path_pt_vec_vec.clear();
+          lpl_path_.ptss.clear();
           best_curve_node_to_goal.SetLPLPath(lpl_path_);
         }
 
@@ -782,14 +815,14 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
     for (const CarMotion& car_motion : car_motion_vec) {
       GenerateNextNode(&new_node, current_node, car_motion);
-
       gen_child_node_num++;
 
 #if DEBUG_CHILD_NODE
       if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
         ILOG_INFO << "~~~~~~~~~~ child node cycle ~~~~~~~~~";
         ILOG_INFO << "open set size " << open_pq_.size()
-                  << ", gear change num:" << current_node->GetGearSwitchNum();
+                  << ",  gear change num:" << current_node->GetGearSwitchNum()
+                  << ",  new node info:";
         new_node.DebugString();
       }
 #endif
@@ -807,6 +840,11 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
           request_.max_gear_shift_number == 0 &&
           request_.search_mode == SearchMode::FORMAL) {
         node_del_request.gear_request = request_.inital_action_request.ref_gear;
+      } else if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+        node_del_request.gear_request = AstarPathGear::DRIVE;
+      } else if (request_.search_mode == SearchMode::PRE_SEARCH &&
+                 current_node->GetDistToStart() < 3.8f) {
+        node_del_request.gear_request = AstarPathGear::DRIVE;
       } else {
         node_del_request.gear_request = gear_request;
       }
@@ -818,58 +856,74 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       // new_node.SetRadius(car_motion.radius);
       new_node.SetKappa(car_motion.kappa);
       new_node.SetPre(current_node);
-      if (current_node->IsPathGearChange(car_motion.gear)) {
-        new_node.SetGearSwitchNum(current_node->GetGearSwitchNum() + 1);
-      } else {
-        new_node.SetGearSwitchNum(current_node->GetGearSwitchNum());
-      }
-      // dist_to_start is the path distance from the start node to the cur node
+      // dist_to_start is the path distance from start_node to the cur_node
       new_node.SetDistToStart(new_node.GetNodePathDistance() +
                               current_node->GetDistToStart());
-      if (new_node.GetGearSwitchNum() == 0) {
-        new_node.SetGearSwitchNode(nullptr);
-        new_node.SetNextGearSwitchNode(nullptr);
-        new_node.SetSingleGearLength(new_node.GetDistToStart());
-      } else if (new_node.GetGearSwitchNum() == 1 &&
-                 current_node->IsPathGearChange(car_motion.gear)) {
-        new_node.SetGearSwitchNode(current_node);
-        new_node.SetNextGearSwitchNode(nullptr);
-        new_node.SetSingleGearLength(new_node.GetNodePathDistance());
-      } else {
-        new_node.SetGearSwitchNode(current_node->GearSwitchNode());
-        new_node.SetSingleGearLength(new_node.GetNodePathDistance() +
-                                     current_node->GetSingleGearLength());
-        if (new_node.GetGearSwitchNum() == 2 &&
-            current_node->IsPathGearChange(car_motion.gear)) {
+      // GearSwitchNode only record first gear switch node
+      // NextGearSwitchNode only record second gear switch node
+      // SingleGearLength resprent every_single_gear_complete_length
+      // SingleGearMinLength only resprent min single_gear_complete_length
+      if (current_node->IsPathGearChange(car_motion.gear)) {
+        new_node.SetGearSwitchNum(current_node->GetGearSwitchNum() + 1);
+        if (new_node.GetGearSwitchNum() == 1) {
+          new_node.SetGearSwitchNode(current_node);
+          new_node.SetNextGearSwitchNode(nullptr);
+        } else if (new_node.GetGearSwitchNum() == 2) {
+          new_node.SetGearSwitchNode(current_node->GearSwitchNode());
           new_node.SetNextGearSwitchNode(current_node);
         } else {
+          new_node.SetGearSwitchNode(current_node->GearSwitchNode());
           new_node.SetNextGearSwitchNode(current_node->NextGearSwitchNode());
+        }
+        new_node.SetScurveNum(current_node->GetScurveNum());
+        new_node.SetSingleGearLength(new_node.GetNodePathDistance());
+        new_node.SetSingleGearMinLength(
+            std::min(new_node.GetSingleGearLength(),
+                     current_node->GetSingleGearMinLength()));
+      } else {
+        new_node.SetGearSwitchNum(current_node->GetGearSwitchNum());
+        new_node.SetGearSwitchNode(current_node->GearSwitchNode());
+        new_node.SetNextGearSwitchNode(current_node->NextGearSwitchNode());
+        if (IsSteerOpposite(current_node->GetKappa(), new_node.GetKappa())) {
+          new_node.SetScurveNum(current_node->GetScurveNum() + 1);
+        } else {
+          new_node.SetScurveNum(current_node->GetScurveNum());
+        }
+        new_node.SetSingleGearLength(new_node.GetNodePathDistance() +
+                                     current_node->GetSingleGearLength());
+        if (new_node.GetGearSwitchNum() == 0) {
+          new_node.SetSingleGearMinLength(new_node.GetSingleGearLength());
+        } else {
+          new_node.SetSingleGearMinLength(
+              std::min(new_node.GetSingleGearLength(),
+                       current_node->GetSingleGearMinLength()));
         }
       }
 
       if (CheckNodeShouldDelete(node_del_request)) {
-        node_del_reason = node_delete_decider_.GetNodeDeleteReason();
-        // PrintNodeDeleteReason(node_del_reason, true);
+#if DEBUG_CHILD_NODE
+        if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+          PrintNodeDeleteReason(node_delete_decider_.GetNodeDeleteReason(),
+                                true);
+        }
+#endif
 
 #if PLOT_DELETE_NODE
-        if (node_del_reason != NodeDeleteReason::PARENT_NODE) {
-          delete_queue_path_debug_.emplace_back(
-              Eigen::Vector2d(new_node.GetX(), new_node.GetY()));
-        }
+        delete_queue_path_debug_.emplace_back(
+            Eigen::Vector2d(new_node.GetX(), new_node.GetY()));
 #endif
 
-        if (node_del_reason == NodeDeleteReason::COLLISION) {
-#if PLOT_CHILD_NODE
-          // if node is unsafe, plot it also.
-          int gear_switch_num = new_node.GetGearSwitchNum();
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM &&
-              gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
-            child_node_debug_.emplace_back(
-                DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), false));
-          }
-#endif
-        }
         continue;
+      }
+
+      if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+        if (cul_de_sac_info_.type == CulDeSacType::RIGHT) {
+          cul_de_sac_info_.limit_y =
+              std::min(cul_de_sac_info_.limit_y, new_node.GetY());
+        } else if (cul_de_sac_info_.type == CulDeSacType::LEFT) {
+          cul_de_sac_info_.limit_y =
+              std::max(cul_de_sac_info_.limit_y, new_node.GetY());
+        }
       }
 
       gen_child_node_num_success++;
@@ -886,12 +940,16 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
       // check null, it node pool is already full
       if (next_node_in_pool == nullptr) {
-        // ILOG_INFO << "node size = " << node_pool_.PoolSize()
-        //           << "  node_set_.find(new_node.GetGlobalID()) == "
-        //              "node_set_.end() = "
-        //           << (node_set_.find(new_node.GetGlobalID()) ==
-        //               node_set_.end());
-        // ILOG_INFO << " next node is null";
+#if DEBUG_CHILD_NODE
+        if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+          ILOG_INFO << "node size = " << node_pool_.PoolSize()
+                    << "  node_set_.find(new_node.GetGlobalID()) == "
+                       "node_set_.end() = "
+                    << (node_set_.find(new_node.GetGlobalID()) ==
+                        node_set_.end());
+          ILOG_INFO << " next node is null";
+        }
+#endif
         continue;
       }
 
@@ -916,10 +974,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
 #if DEBUG_CHILD_NODE
       if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-        ILOG_INFO << "  vis type " << static_cast<int>(vis_type)
+        ILOG_INFO << "  vis type "
+                  << GetAstarNodeVisitedTypeDebugString(vis_type)
                   << " new node g " << new_node.GetGCost() << " pool node g "
-                  << next_node_in_pool->GetGCost()
-                  << " ,safe dist: " << new_node.GetDistToObs();
+                  << next_node_in_pool->GetGCost();
       }
 #endif
 
@@ -934,13 +992,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
             std::make_pair(next_node_in_pool->GetFCost(), next_node_in_pool)));
 
         node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
-
-#if DEBUG_CHILD_NODE
-        if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-          ILOG_INFO << "old node visit type is NOT_VISITED";
-          next_node_in_pool->DebugCost();
-        }
-#endif
       }
 
       else if (vis_type == AstarNodeVisitedType::IN_OPEN) {
@@ -957,13 +1008,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
           // put node in open set again and record it.
           next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
               next_node_in_pool->GetFCost(), next_node_in_pool)));
-
-#if DEBUG_CHILD_NODE
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-            ILOG_INFO << "node has in open";
-            next_node_in_pool->DebugCost();
-          }
-#endif
         }
       }
 
@@ -975,6 +1019,13 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 #if PLOT_DELETE_NODE
             delete_queue_path_debug_.emplace_back(
                 Eigen::Vector2d(new_node.GetX(), new_node.GetY()));
+#endif
+
+#if DEBUG_CHILD_NODE
+            if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+              PrintNodeDeleteReason(node_delete_decider_.GetNodeDeleteReason(),
+                                    true);
+            }
 #endif
             continue;
           }
@@ -988,24 +1039,16 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
           // put node in open set again and record it.
           next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
               next_node_in_pool->GetFCost(), next_node_in_pool)));
-
-#if DEBUG_CHILD_NODE
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-            ILOG_INFO << "node has in close";
-            next_node_in_pool->DebugCost();
-          }
-#endif
-
-#if PLOT_CHILD_NODE
-          int gear_switch_num = new_node.GetGearSwitchNum();
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM &&
-              gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
-            child_node_debug_.emplace_back(
-                DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), true));
-          }
-#endif
         }
       }
+
+#if DEBUG_CHILD_NODE
+      if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+        ILOG_INFO << "old node visit type:"
+                  << GetAstarNodeVisitedTypeDebugString(vis_type);
+        next_node_in_pool->DebugCost();
+      }
+#endif
     }
   }
 
@@ -1076,6 +1119,18 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
     ObsToPathDistRelativeSlot obs_dist_relative_slot;
     const CurveNode& temp_node = curve_node_to_goal_vec[i];
 
+    if (IsGearDifferent(request_.inital_action_request.ref_gear,
+                        temp_node.GetCurGear())) {
+      cost.unexpect_gear_cost = gear_change_penalty;
+    }
+
+    if (IsGearSame(request_.inital_action_request.ref_gear,
+                   temp_node.GetCurGear()) &&
+        IsSteerOpposite(request_.inital_action_request.ref_steer,
+                        temp_node.GetCurKappa())) {
+      cost.unexpect_steer_cost = kappa_change_penalty;
+    }
+
     cost.gear_change_cost = gear_change_penalty * temp_node.GetGearSwitchNum();
 
     cost.length_cost = length_penalty * temp_node.GetDistToStart();
@@ -1131,16 +1186,13 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
           safe_buffer.out_slot_body_lat_buffer -
           safe_buffer.out_slot_extra_turn_lat_buffer;
 
-      const float out_slot_diff =
-          std::max(std::min(out_slot_straight_diff, out_slot_turn_diff), 0.05f);
-
       cost.obs_dist =
           std::min(obs_dist_relative_slot.obs_dist_out_slot_straight,
                    obs_dist_relative_slot.obs_dist_out_slot_turn);
 
       cost.obs_dist_cost = NodeDeleteDecider::CalcObsDistCost(
-          out_slot_diff * 100.0f, gear_change_penalty, length_penalty, 10.0f,
-          20.0f, 40.0f);
+          cost.obs_dist * 100.0f, gear_change_penalty, length_penalty, 50.0f,
+          70.0f, 100.0f);
     }
 
     if (temp_node.GearSwitchNode() != nullptr) {
@@ -1150,16 +1202,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
           gear_switch_pose, cur_gear, gear_change_penalty, length_penalty);
 
-      if (cur_gear != request_.inital_action_request.ref_gear) {
-        cost.cur_gear_switch_pose_cost +=
-            (gear_change_penalty + length_penalty);
-      }
-
-      if ((temp_node.GetCurKappa() > 0.001f &&
-           request_.inital_action_request.ref_steer == AstarPathSteer::RIGHT) ||
-          (temp_node.GetCurKappa() < -0.001f &&
-           request_.inital_action_request.ref_steer == AstarPathSteer::LEFT)) {
-        cost.cur_gear_switch_pose_cost += 0.3f * length_penalty;
+      if (std::fabs(temp_node.GearSwitchNode()->GetKappa()) > 0.001f) {
+        cost.cur_gear_switch_pose_cost += 0.6f * length_penalty;
       }
 
       if (request_.adjust_pose) {

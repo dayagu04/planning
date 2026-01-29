@@ -13,26 +13,26 @@ DPSTCost::DPSTCost(const DPSpeedGraphConfig& dp_speed_config,
               dp_speed_config_.matrix_dimension_t),
       unit_v_(unit_s_ / unit_t_) {}
 double DPSTCost::GetReferenceCost(const STPoint& point,
-                                  const STPoint& reference_point) const {}
-double DPSTCost::GetObstacleCost(const STPoint& point) const {}
+                                  const STPoint& reference_point) const { return 0.0; }
+double DPSTCost::GetObstacleCost(const STPoint& point) const { return 0.0; }
 
 double DPSTCost::GetSpeedCost(const STPoint& first, const STPoint& second,
-                              const double speed_limit) const {}
+                              const double speed_limit) const { return 0.0; }
 double DPSTCost::GetAccelCostByTwo(const double pre_speed, const STPoint& first,
-                                   const STPoint& second) const {}
+                                   const STPoint& second) const { return 0.0; }
 double DPSTCost::GetAccelCostByThree(const STPoint& first,
                                      const STPoint& second,
-                                     const STPoint& third) const {}
+                                     const STPoint& third) const {return 0.0; }
 double DPSTCost::GetJerkCostByTwo(const STPoint& pred_point,
                                   const double pre_speed, const double pre_acc,
-                                  const STPoint& cur_point) const {}
+                                  const STPoint& cur_point) const { return 0.0; }
 double DPSTCost::GetJerkCostByThree(const STPoint& first_point,
                                     const double first_speed,
                                     const STPoint& second_point,
-                                    const STPoint& third_point) const {}
+                                    const STPoint& third_point) const { return 0.0; }
 double DPSTCost::GetJerkCostByFour(const STPoint& first, const STPoint& second,
                                    const STPoint& third,
-                                   const STPoint& forth) const {}
-double DPSTCost::GetAccelCost(const double accel) const {}
-double DPSTCost::GeJerkCost(const double jerk) const {}
+                                   const STPoint& forth) const { return 0.0; }
+double DPSTCost::GetAccelCost(const double accel) const { return 0.0; }
+double DPSTCost::GeJerkCost(const double jerk) const { return 0.0; }
 }  // namespace planning

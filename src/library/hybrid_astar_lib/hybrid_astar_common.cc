@@ -188,6 +188,18 @@ bool IsSteerOpposite(const float left, const float right) {
   return false;
 }
 
+bool IsSteerOpposite(const AstarPathSteer left, const float right) {
+  if (left == AstarPathSteer::LEFT && right < -0.001f) {
+    return true;
+  }
+
+  if (left == AstarPathSteer::RIGHT && right > 0.001f) {
+    return true;
+  }
+
+  return false;
+}
+
 AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear) {
   switch (seg_gear) {
     case pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE:
@@ -526,6 +538,24 @@ const ParkingVehDirection GetParkDir(const int dir) {
       break;
     default:
       res = ParkingVehDirection::NONE;
+      break;
+  }
+
+  return res;
+}
+
+const std::string GetAstarNodeVisitedTypeDebugString(
+    const AstarNodeVisitedType type) {
+  std::string res;
+  switch (type) {
+    case AstarNodeVisitedType::IN_OPEN:
+      res = "IN_OPEN";
+      break;
+    case AstarNodeVisitedType::IN_CLOSE:
+      res = "IN_CLOSE";
+      break;
+    default:
+      res = "NOT_VISITED";
       break;
   }
 

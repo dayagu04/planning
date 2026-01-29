@@ -259,7 +259,7 @@ void VirtualWallDecider::SamplingInParallelBoundary(
     // passage left lower boundary
     SampleInLineSegment(
         Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower),
-        Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_lower),
+        Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_upper),
         &points);
 
     // passage left upper boundary
@@ -312,14 +312,18 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
 }
 
 #define PARALLEL_SLOT_EXTRA_LEN (6.0)
+const static double kParallelSlotExtraFrontLen = 5.0;
+const static double kParallelSlotExtraRearLen = 3.5;
 void VirtualWallDecider::RightSideParallelVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
     const double slot_length) {
   // slot virtual wall
   slot_boundary_.y_lower = -slot_width / 2.0 - 1.0;
-  slot_boundary_.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary_.x_upper = slot_length + kParallelSlotExtraFrontLen;
   slot_boundary_.y_upper = slot_width / 2.0;
-  slot_boundary_.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary_.x_lower = -kParallelSlotExtraRearLen;
+  slot_boundary_.Combine(veh_boundary_);
+  slot_boundary_.y_upper = slot_width / 2.0 - 0.3;
 
   // passage virtual wall
   // lower
@@ -335,11 +339,11 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
   tmp_passage_boundary.y_lower = slot_boundary_.y_upper;
   tmp_passage_boundary.y_upper =
       slot_boundary_.y_upper + config.parallel_passage_width;
-  tmp_passage_boundary.Combine(veh_boundary_);
 
   // boundary只能增长，不能缩减.
   // 否则车辆移动后，缩减后的boundary无法再生成一致的path.
   passage_bound_.Combine(tmp_passage_boundary);
+  passage_bound_.y_lower = tmp_passage_boundary.y_lower;
 
   // sampling point
   SamplingInParallelBoundary(slot_boundary_, passage_bound_, points);
@@ -351,10 +355,12 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
     const double slot_length) {
   // slot virtual wall
-  slot_boundary_.y_lower = -slot_width / 2.0;
-  slot_boundary_.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
-  slot_boundary_.y_upper = slot_width / 2.0 + 1.0;
-  slot_boundary_.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary_.y_lower = -slot_width / 2.0 - 1.0;
+  slot_boundary_.x_upper = slot_length + kParallelSlotExtraFrontLen;
+  slot_boundary_.y_upper = slot_width / 2.0;
+  slot_boundary_.x_lower = -kParallelSlotExtraRearLen;
+  slot_boundary_.Combine(veh_boundary_);
+  slot_boundary_.y_lower = -slot_width / 2.0 + 0.3;
 
   // passage virtual wall
   // lower
@@ -367,14 +373,13 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
       config.parallel_passage_length / 2 + slot_length / 2;
 
   // passage left/right bound
-  tmp_passage_boundary.y_lower =
-      slot_boundary_.y_lower - config.parallel_passage_width;
   tmp_passage_boundary.y_upper = slot_boundary_.y_lower;
-  tmp_passage_boundary.Combine(veh_boundary_);
+  tmp_passage_boundary.y_lower = slot_boundary_.y_lower - config.parallel_passage_width;
 
   // boundary只能增长，不能缩减.
   // 否则车辆移动后，缩减后的boundary无法再生成一致的path.
   passage_bound_.Combine(tmp_passage_boundary);
+  passage_bound_.y_upper = tmp_passage_boundary.y_upper;
 
   // sampling point
   SamplingInParallelBoundary(slot_boundary_, passage_bound_, points);

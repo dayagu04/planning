@@ -182,6 +182,13 @@ class Node3d {
 
   void SetHeuCost(float cost) { heuristic_cost_ = cost; }
 
+  void SetHeurCostDebug(const NodeHeuristicCost& cost) {
+    heuristic_cost_debug_ = cost;
+  }
+  const NodeHeuristicCost& GetHeuCostDebug() const {
+    return heuristic_cost_debug_;
+  }
+
   const float GetNodePathDistance() const { return path_.path_dist; }
 
   // void SetHeuCostDebug(const NodeHeuristicCost& cost) { h_cost_debug_ = cost;
@@ -218,6 +225,10 @@ class Node3d {
   void SetSingleGearLength(const float length) { single_gear_length_ = length; }
 
   const float GetSingleGearLength() const { return single_gear_length_; }
+
+  void SetSingleGearMinLength(const float length) { single_gear_min_length_ = length; }
+
+  const float GetSingleGearMinLength() const { return single_gear_min_length_; }
 
   const AstarPathType GetPathType() const { return path_type_; }
 
@@ -393,6 +404,8 @@ class Node3d {
   // h cost
   float heuristic_cost_ = 0.0;
 
+  NodeHeuristicCost heuristic_cost_debug_;
+
   // f cost
   float f_cost_ = 0.0;
   // backward pass
@@ -407,6 +420,7 @@ class Node3d {
   float radius_;
   float kappa_;
   float single_gear_length_ = 0.0f;
+  float single_gear_min_length_ = 0.0f;
 
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;

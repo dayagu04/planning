@@ -83,6 +83,12 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
   } else {
     /*do nothing*/
   }
+  //bit 5
+  //表显车速小于4kph-奔腾车型
+  if (GetContext.get_param()->car_type == "bestune_e541" &&
+      vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 3.8) {
+    disable_code += uint16_bit[5];
+  }
 
   return disable_code & GetContext.get_param()->tsr_disable_code_maskcode;
 }
@@ -589,11 +595,11 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     }
   }
 
-  // bestune_e541车型：仪表车速小于4km/h时不显示限速
-  if (GetContext.get_param()->car_type == "bestune_e541" &&
-      vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 4.0) {
-    tsr_speed_limit_ = 0;
-  }
+  // // bestune_e541车型：仪表车速小于4km/h时不显示限速
+  // if (GetContext.get_param()->car_type == "bestune_e541" &&
+  //     vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 3.8) {
+  //   tsr_speed_limit_ = 0;
+  // }
 
   return;
 }
@@ -902,6 +908,8 @@ void TsrCore::RunOnce(void) {
   if (GetContext.get_param()->tsr_function_test_switch) {
     TsrTestFunction();
   }
+  //移到此处，解决flag不能清0的问题
+  ResetRealTimeTsrInfo();
 
   // output
   SetTsrOutputInfo();
@@ -933,7 +941,7 @@ void TsrCore::RunOnce(void) {
                    supp_sign_in_suppression_flag_);
 
   // reset info
-  ResetRealTimeTsrInfo();
+ // ResetRealTimeTsrInfo();
 }
 
 // 测试函数：根据不同的测试模式执行不同的测试场景

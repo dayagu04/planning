@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "apa_debug_data.pb.h"
+#include "geometry_math.h"
 #include "trajectory_point.h"
 
 namespace planning {
@@ -39,9 +40,9 @@ class Trajectory : public std::vector<TrajectoryPoint> {
     return speed_type_;
   }
 
-  void SetGear(const int gear);
+  void SetGear(const pnc::geometry_lib::PathSegGear gear);
 
-  const int GetGear() const { return gear_; }
+  const pnc::geometry_lib::PathSegGear GetGear() const { return gear_; }
 
   void Clear();
 
@@ -69,11 +70,11 @@ class Trajectory : public std::vector<TrajectoryPoint> {
 
  private:
   common::SpeedProfileType speed_type_;
-  // 0: normal;
-  // 1: reverse;
-  // 2: drive;
+  // 0: invalid;
+  // 1: drive;
+  // 2: reverse;
   // 3: parking;
-  int gear_;
+  pnc::geometry_lib::PathSegGear gear_;
 
   double stop_decision_s_;
   double terminal_s_;

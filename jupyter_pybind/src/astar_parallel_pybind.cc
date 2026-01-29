@@ -259,10 +259,10 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   planning::Transform2d tf;
   tf.SetBasePose(ego_global_pose);
 
-  const EulerDistanceTransform *edt_ =
-      hybrid_astar_interface_->GetEulerDistanceTransform();
+  const HierarchyEulerDistanceTransform *edt_ =
+      hybrid_astar_interface_->GetHierarchyEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
+      edt_->GetHierarchyEDTData()[0].GetCircleFootPrint(AstarPathGear::NORMAL);
   footprint_circle_model_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
 

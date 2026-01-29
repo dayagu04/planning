@@ -362,7 +362,7 @@
   "limiter_update_min_occupied_ratio": 0.386,
   "limiter_update_max_occupied_ratio": 0.886,
   "limiter_update_occupied_ratio": 0.6,
-  "limiter_move_dist": 0.3,
+  "limiter_move_dist": 0.36,
   "max_slots_update_angle_dis_limit_deg": 45.0,
   "max_slot_boundary_line_angle_dif_deg": 10.0,
   "outside_lon_dist_max_slot2mirror": 2.168,
@@ -403,7 +403,7 @@
   "max_replan_number": 25,
   "max_replan_number_inside_slot": 15,
   "parallel_passage_width" : 7.0,
-  "parallel_passage_length" : 26.0,
+  "parallel_passage_length" : 22.0,
   "head_in_finish_heading_err" : 3.0,
   "vertical_min_path_length" : 0.25,
   "lat_err_for_fix_slot" : 0.35,
@@ -482,6 +482,9 @@
   "max_plan_gear_shift_number_parking": 25,
   "max_real_gear_shift_number_parking": 30,
   "traj_kappa_change_penalty": 0.8,
+  "enable_decide_cul_de_sac": true,
+  "enable_interesting_search_area": true,
+  "pre_search_mode": 1,
 
   "comment_22": "lat lon path buffer",
   "path_lon_buffer": 0.3,
@@ -613,5 +616,6 @@
 
   "comment_30": "parallel plan params",
   "parallel_col_buffer_in_slot": 0.25,
-  "parallel_col_small_buffer_in_slot": 0.16
+  "parallel_col_small_buffer_in_slot": 0.16,
+  "parallel_enable_hybrid_astar": true
 }

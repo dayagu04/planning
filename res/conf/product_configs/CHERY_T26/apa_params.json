@@ -482,6 +482,9 @@
   "max_plan_gear_shift_number_parking": 25,
   "max_real_gear_shift_number_parking": 30,
   "traj_kappa_change_penalty": 0.8,
+  "enable_decide_cul_de_sac": true,
+  "enable_interesting_search_area": true,
+  "pre_search_mode": 1,
 
   "comment_22": "lat lon path buffer",
   "path_lon_buffer": 0.3,
@@ -613,5 +616,6 @@
 
   "comment_30": "parallel plan params",
   "parallel_col_buffer_in_slot": 0.25,
-  "parallel_col_small_buffer_in_slot": 0.16
+  "parallel_col_small_buffer_in_slot": 0.16,
+  "parallel_enable_hybrid_astar": false
 }

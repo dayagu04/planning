@@ -40,8 +40,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   expect_dist_penalty = 7.0;
   recommend_box_penalty = 7.0;
 
-  exceed_pre_search_box_penalty = 0.0;
-  exceed_intersting_box_penalty = 0.0;
+  exceed_interseting_area_penalty = 0.0;
+  exceed_cul_de_sac_limit_pos_penalty = 0.0;
   borrow_slot_penalty = 0.0;
 
   enable_euler_cost_for_vertical_park = true;

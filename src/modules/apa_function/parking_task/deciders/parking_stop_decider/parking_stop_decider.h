@@ -44,7 +44,8 @@ class ParkingStopDecider : public ParkingTask {
   void Execute(const SVPoint& init_point,
                const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
                const trajectory::Trajectory& trajectory,
-               const pnc::geometry_lib::PathSegGear gear);
+               const pnc::geometry_lib::PathSegGear gear,
+               const double slot_occupied_ratio);
 
   void AddStopDecisionByDistance(
       const double stop_s, const LonDecisionReason decision_reason,
@@ -55,6 +56,11 @@ class ParkingStopDecider : public ParkingTask {
   const double GetTerminalS();
 
   const double GetStopDistanceByOD();
+
+  const trajectory::Trajectory& SelectSpeedTrajectory(
+      const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr,
+      const trajectory::Trajectory& history_trajectory,
+      const pnc::geometry_lib::PathSegGear gear_command) const;
 
  private:
   void AddStopDecisionByControlPath(

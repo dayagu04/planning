@@ -879,6 +879,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       hpp_info->is_new_parking_space_found = true;
     }
   }
+
   return;
 }
 
@@ -951,6 +952,8 @@ void PlanningScheduler::FillAdasPlanningHmiInfo(
       GetContext.get_output_info()->meb_output_info_.meb_request_status;
   planning_hmi_info->meb_output_info.meb_request_value =
       GetContext.get_output_info()->meb_output_info_.meb_request_value;
+  // planning_hmi_info->meb_output_info.meb_request_direction =
+  //     GetContext.get_output_info()->meb_output_info_.meb_request_direction;
   // HMI for amap
   planning_hmi_info->amap_output_info.amap_state =
       GetContext.get_output_info()->amap_output_info_.amap_state;

@@ -26,7 +26,8 @@ void ParkingStopDecider::Execute(
     const SVPoint& init_point,
     const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
     const trajectory::Trajectory& trajectory,
-    const pnc::geometry_lib::PathSegGear gear) {
+    const pnc::geometry_lib::PathSegGear gear,
+    const double slot_occupied_ratio) {
   // init
   stop_obstacle_ = nullptr;
   stop_decision_.Clear();
@@ -38,6 +39,14 @@ void ParkingStopDecider::Execute(
 
   double start_time = IflyTime::Now_ms();
   AddDecisionByPathTargetPoint(lateral_path);
+  constexpr double kMinSlotOccupiedRatio = 0.001;
+
+  if (gear == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE &&
+      slot_occupied_ratio > kMinSlotOccupiedRatio) {
+    // todo ::It is more appropriate to determine whether it is in the inbound
+    // state based on the combination of the state machine and the current path
+    return;
+  }
 
   // todo: use optimizer to output historical trajectories, so that the
   // calculation of trajectory overlap is relatively more realistic
@@ -241,10 +250,10 @@ void ParkingStopDecider::GeneratePathFootPrint(
   PolygonFootPrint foot_print_little_buffer;
   PolygonFootPrint foot_print_big_buffer;
   GenerateVehCompactPolygon(config_.static_obs_buffer.lat_buffer, lon_buffer,
-                            config_.static_obs_buffer.lat_buffer,
+                            config_.static_obs_buffer.lat_buffer, false, false,
                             &foot_print_little_buffer);
   GenerateVehCompactPolygon(config_.slow_speed_buffer.lat_buffer, lon_buffer,
-                            config_.slow_speed_buffer.lat_buffer,
+                            config_.slow_speed_buffer.lat_buffer, false, false,
                             &foot_print_big_buffer);
 
   small_buffer_path_polygons_.clear();
@@ -451,7 +460,7 @@ void ParkingStopDecider::AddDecisionByObstaclePrediction(
   // opposite directions or opposite directions
   double min_stop_s = tmp_deicison.path_s - tmp_deicison.lon_decision_buffer;
 
-  for (auto& obj : obs_manager_->GetMutableObstacles()) {
+  for (auto& obj : obs_manager_->GetMutableObstaclesOD()) {
     ApaObstacle& obstacle = obj.second;
 
     if (obstacle.GetPredictTraj().empty()) {
@@ -750,6 +759,21 @@ const double ParkingStopDecider::GetStopDistanceByOD() {
   }
 
   return kDefaultRemainDist;
+}
+
+const trajectory::Trajectory& ParkingStopDecider::SelectSpeedTrajectory(
+    const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr,
+    const trajectory::Trajectory& history_trajectory,
+    const pnc::geometry_lib::PathSegGear gear_command) const {
+
+  if (history_trajectory.empty() || history_trajectory.GetGear() != gear_command) {
+    // ILOG_INFO << "speed planning use mpc predict pt";
+
+    return predict_path_ptr->GetPredictTrajectory();
+  }
+
+  // ILOG_INFO << "speed planning use history speed trajectory";
+  return history_trajectory;
 }
 
 }  // namespace apa_planner

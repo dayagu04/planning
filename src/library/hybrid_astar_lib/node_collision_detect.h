@@ -1,8 +1,8 @@
 #pragma once
 
-#include "euler_distance_transform.h"
 #include "footprint_circle_model.h"
 #include "gjk2d_interface.h"
+#include "hierarchy_euler_distance_transform.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "node3d.h"
@@ -19,7 +19,7 @@ class NodeCollisionDetect {
   NodeCollisionDetect() = default;
 
   explicit NodeCollisionDetect(const ParkObstacleList* obstacles,
-                               EulerDistanceTransform* edt,
+                               HierarchyEulerDistanceTransform* hierarchy_edt,
                                const ObstacleClearZone* clear_zone,
                                const MapBound* XYbounds,
                                const AstarRequest* request);
@@ -30,7 +30,8 @@ class NodeCollisionDetect {
                                    const float lat_buffer_inside,
                                    const float lon_buffer,
                                    const VehicleParam& vehicle_param,
-                                   const PlannerOpenSpaceConfig& config);
+                                   const PlannerOpenSpaceConfig& config,
+                                   const bool fold_mirror);
 
   // check collision and validity
   bool IsValidByConvexHull(Node3d* node);
@@ -57,7 +58,16 @@ class NodeCollisionDetect {
 
   int GetPathCollisionIDByEDT(const std::vector<AStarPathPoint>& poly_path);
 
+  void CheckObstacleCollision(bool& is_collision,
+                              const PointCloudObstacle& obstacle,
+                              const Polygon2D* polygon);
+
   const bool IsPolygonCollision(const Polygon2D* polygon);
+
+  const bool IsMirrorPolygonCollision(const Polygon2D* polygon);
+
+  const bool IsPolygonCollision(const Polygon2D* polygon_normal,
+                                const Polygon2D* polygon_chassis);
 
   const bool IsPolygonFootPrintCollision(const Transform2d& tf);
 
@@ -66,13 +76,14 @@ class NodeCollisionDetect {
   const bool IsPointOutOfGridMapBound(const float x, const float y) const;
 
   // debug
-  FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
+  MultiHeightFootPrintView* GetCircleFootPrint(
+      const HierarchySafeBuffer buffer);
 
   const bool IsContainByRecommendBox(const Pose2f& global_pose);
 
  private:
-  FootPrintCircleModel* GetCircleFootPrintModel(const Pose2f& pose,
-                                                const bool is_circle_path);
+  MultiHeightFootPrintView* GetCircleFootPrintModel(const Pose2f& pose,
+                                                    const bool is_circle_path);
 
   // radius: 50 meter
   inline const bool IsCirclePathByKappa(const float kappa) {
@@ -83,10 +94,10 @@ class NodeCollisionDetect {
     return false;
   }
 
-  FootPrintCircleModel* GetCircleFootPrintModelForParkOut(
+  MultiHeightFootPrintView* GetCircleFootPrintModelForParkOut(
       const Pose2f& pose, const bool is_circle_path);
 
-  FootPrintCircleModel* GetCircleFootPrintModelForParkIn(
+  MultiHeightFootPrintView* GetCircleFootPrintModelForParkIn(
       const Pose2f& pose, const bool is_circle_path);
 
  private:
@@ -99,6 +110,7 @@ class NodeCollisionDetect {
   // If vehicle is in slot inside or slot outside, use different safe buffer;
   // If vehicle is large kappa, use different safe buffer;
   HierarchyBufferCircleFootPrint hierachy_circle_model_;
+  MultiHeightFootPrintView multi_height_hierachy_circle_model_;
 
   // 用于区分库内库外
   // todo: add template for double/float
@@ -112,7 +124,7 @@ class NodeCollisionDetect {
   // if search node in aabb, no need to check collision;
   const ObstacleClearZone* clear_zone_;
 
-  EulerDistanceTransform* edt_;
+  HierarchyEulerDistanceTransform* hierarchy_edt_;
 
   const MapBound* grid_map_bound_;
   const AstarRequest* request_;

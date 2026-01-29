@@ -101,6 +101,8 @@ const bool NodeDeleteDecider::CheckShouldBeDeleted(NodeDeleteRequest request) {
   request_ = request;
   reason_ = NodeDeleteReason::UNKNOWN;
 
+  // current_node and curve_node should not be both nullptr, but one of them
+  // should be nullptr.
   if (request.current_node == nullptr && request.curve_node == nullptr) {
     return true;
   }
@@ -139,8 +141,23 @@ const bool NodeDeleteDecider::CheckShouldBeDeletedForPerpendicularTailIn() {
       return true;
     }
 
+    if (CheckExceedScurveNum()) {
+      reason_ = NodeDeleteReason::EXCEED_SCURVE_NUMBER;
+      return true;
+    }
+
     if (CheckDelByStartNode()) {
       reason_ = NodeDeleteReason::START_NODE;
+      return true;
+    }
+
+    if (CheckZigzagPath()) {
+      reason_ = NodeDeleteReason::ZIGZAG_PATH;
+      return true;
+    }
+
+    if (CheckBacktrackPath()) {
+      reason_ = NodeDeleteReason::BACKTRACK_PATH;
       return true;
     }
 
@@ -450,22 +467,20 @@ const bool NodeDeleteDecider::CheckOutOfPoseBound() {
       }
     }
   } else {
-    if (request_.current_node != nullptr) {
-      const CurvePath& curve_path = request_.curve_node->GetCurvePath();
-      for (const auto& points : curve_path.ptss) {
-        for (size_t i = 0; i < points.size(); ++i) {
-          if (i > 0 && i < points.size() - 1) {
-            continue;
-          }
-          const auto& pose = points[i];
-          if (pose.GetX() < pose_bound_.curve_x_down_bound ||
-              pose.GetX() > pose_bound_.x_up_bound ||
-              pose.GetY() < pose_bound_.y_down_bound ||
-              pose.GetY() > pose_bound_.y_up_bound ||
-              std::fabs(pose.GetTheta()) < pose_bound_.heading_down_bound ||
-              std::fabs(pose.GetTheta()) > pose_bound_.heading_up_bound) {
-            return true;
-          }
+    const CurvePath& curve_path = request_.curve_node->GetCurvePath();
+    for (const auto& points : curve_path.ptss) {
+      for (size_t i = 0; i < points.size(); ++i) {
+        if (i > 0 && i < points.size() - 1) {
+          continue;
+        }
+        const auto& pose = points[i];
+        if (pose.GetX() < pose_bound_.curve_x_down_bound ||
+            pose.GetX() > pose_bound_.x_up_bound ||
+            pose.GetY() < pose_bound_.y_down_bound ||
+            pose.GetY() > pose_bound_.y_up_bound ||
+            std::fabs(pose.GetTheta()) < pose_bound_.heading_down_bound ||
+            std::fabs(pose.GetTheta()) > pose_bound_.heading_up_bound) {
+          return true;
         }
       }
     }
@@ -475,16 +490,10 @@ const bool NodeDeleteDecider::CheckOutOfPoseBound() {
 }
 
 const bool NodeDeleteDecider::CheckOutOfGridBound() {
-  NodeGridIndex id;
-  if (request_.curve_node != nullptr) {
+  if (request_.current_node == nullptr) {
     return false;
   }
-
-  if (request_.current_node != nullptr) {
-    id = request_.current_node->GetIndex();
-  } else {
-    return false;
-  }
+  const NodeGridIndex id = request_.current_node->GetIndex();
 
   if (id.x < 0 || id.x >= input_.map_grid_bound.x || id.y < 0 ||
       id.y >= input_.map_grid_bound.y || id.phi < 0 ||
@@ -495,10 +504,52 @@ const bool NodeDeleteDecider::CheckOutOfGridBound() {
   return false;
 }
 
-const bool NodeDeleteDecider::CheckUnexpectedGear() {
-  if (request_.curve_node != nullptr) {
+const bool NodeDeleteDecider::CheckZigzagPath() {
+  const Node3d* parent_node = request_.parent_node;
+  const Node3d* cur_node = request_.current_node;
+  if (parent_node == nullptr || cur_node == nullptr) {
     return false;
   }
+  const Node3d* grandpa_node = parent_node->GetPreNode();
+  if (grandpa_node == nullptr) {
+    return false;
+  }
+
+  if (IsGearDifferent(parent_node->GetGearType(), cur_node->GetGearType()) ||
+      IsGearDifferent(grandpa_node->GetGearType(),
+                      parent_node->GetGearType())) {
+    return false;
+  }
+
+  if (IsSteerOpposite(parent_node->GetKappa(), cur_node->GetKappa()) &&
+      IsSteerOpposite(grandpa_node->GetKappa(), parent_node->GetKappa())) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool NodeDeleteDecider::CheckBacktrackPath() {
+  const Node3d* parent_node = request_.parent_node;
+  const Node3d* cur_node = request_.current_node;
+
+  if (parent_node == nullptr || cur_node == nullptr) {
+    return false;
+  }
+
+  if (IsSteerOpposite(parent_node->GetKappa(), cur_node->GetKappa())) {
+    return false;
+  }
+
+  if (IsGearDifferent(parent_node->GetGearType(), cur_node->GetGearType()) &&
+      std::fabs(parent_node->GetKappa() - cur_node->GetKappa()) < 0.14f) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool NodeDeleteDecider::CheckUnexpectedGear() {
   if (IsGearDifferent(request_.gear_request, request_.cur_gear)) {
     return true;
   }
@@ -506,9 +557,6 @@ const bool NodeDeleteDecider::CheckUnexpectedGear() {
 }
 
 const bool NodeDeleteDecider::CheckExceedGearShiftNumber() {
-  if (request_.curve_node != nullptr) {
-    return false;
-  }
   if (request_.current_node != nullptr &&
       request_.current_node->GetGearSwitchNum() >
           input_.max_gear_shift_number) {
@@ -518,16 +566,17 @@ const bool NodeDeleteDecider::CheckExceedGearShiftNumber() {
   return false;
 }
 
+const bool NodeDeleteDecider::CheckExceedScurveNum() {
+  if (request_.current_node != nullptr &&
+      request_.current_node->GetScurveNum() > input_.max_scurve_number) {
+    return true;
+  }
+
+  return false;
+}
+
 const bool NodeDeleteDecider::CheckDelByParentNode() {
-  if (request_.curve_node != nullptr) {
-    return false;
-  }
-
-  if (request_.parent_node == nullptr) {
-    return false;
-  }
-
-  if (request_.current_node == nullptr) {
+  if (request_.current_node == nullptr || request_.parent_node == nullptr) {
     return false;
   }
 
@@ -548,7 +597,7 @@ const bool NodeDeleteDecider::CheckDelByParentNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelByStartNode() {
-  if (request_.curve_node != nullptr || request_.current_node == nullptr) {
+  if (request_.current_node == nullptr) {
     return false;
   }
 
@@ -565,8 +614,7 @@ const bool NodeDeleteDecider::CheckDelByStartNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelByLoopBackNode() {
-  if (request_.current_node == nullptr || request_.old_node == nullptr ||
-      request_.parent_node == nullptr) {
+  if (request_.current_node == nullptr || request_.parent_node == nullptr) {
     return false;
   }
 
@@ -589,7 +637,7 @@ const bool NodeDeleteDecider::CheckDelByLoopBackNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelBySameGridNodeContinuous() {
-  if (request_.current_node == nullptr || request_.old_node == nullptr) {
+  if (request_.current_node == nullptr) {
     return false;
   }
 
@@ -725,8 +773,9 @@ const bool NodeDeleteDecider::CheckPtsCollision(
     float min_obs_dist = 26.8f;
     if (is_special_node) {
       // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer;
-      mirror_lat_buffer = speed_buffer.leave_initial_place_mirror_lat_buffer;
+      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
+      mirror_lat_buffer =
+          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
       lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
     }
 
@@ -804,8 +853,9 @@ const bool NodeDeleteDecider::CheckPtsCollision(
 
     if (is_special_node) {
       // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer;
-      mirror_lat_buffer = speed_buffer.leave_initial_place_mirror_lat_buffer;
+      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
+      mirror_lat_buffer =
+          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
       lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
     }
 
@@ -877,6 +927,12 @@ const std::string GetNodeDeleteReasonString(const NodeDeleteReason reason) {
       return "OUT_OF_POSE_BOUND";
     case NodeDeleteReason::COLLISION:
       return "COLLISION";
+    case NodeDeleteReason::ZIGZAG_PATH:
+      return "ZIGZAG_PATH";
+    case NodeDeleteReason::EXCEED_SCURVE_NUMBER:
+      return "EXCEED_SCURVE_NUMBER";
+    case NodeDeleteReason::BACKTRACK_PATH:
+      return "BACKTRACK_PATH";
     default:
       return "UNKNOWN";
   }
@@ -894,37 +950,59 @@ const float NodeDeleteDecider::CalcObsDistCost(const float obs_dist,
                                                const float critical_dist,
                                                const float safe_dist,
                                                const float adsolute_safe_dist) {
-  // cm
-  float obs_dist_cost = 0.0f;
-  float double_shift_cost = 2.0f * gear_change_penalty;
-  float distance_factor = 0.0f;
-  if (obs_dist <= critical_dist) {
-    // absolute dangerous
-    distance_factor = std::min(obs_dist / critical_dist, 1.0f);
-    distance_factor = 1.0f + std::sin(M_PI_2f32 * (1.0f - distance_factor));
-    obs_dist_cost = double_shift_cost * distance_factor;
+  // four zone: very critical(z1), relative critical(z2), relative safe(z3),
+  // absolute safe(z4)
+
+  // obs_dist unit is cm
+
+  const float target_c_crit = 2.0f * gear_change_penalty + 8.0 * length_cost;
+  const float target_c_safe = 1.0f * gear_change_penalty + 4.0 * length_cost;
+
+  // zone 3  f(x) = z3_k * (adsolute_safe_dist - x)^n_z3
+  const float n_z3 = 1.05f;
+  const float dist_z3 = adsolute_safe_dist - safe_dist;
+  const float z3_k = target_c_safe / std::pow(dist_z3, n_z3);
+  const float slope_safe = -1.0f * n_z3 * z3_k * std::pow(dist_z3, n_z3 - 1.0f);
+
+  // zone 2 trapezoidal area method
+  const float dist_z2 = safe_dist - critical_dist;
+  const float cost_z2 = target_c_safe - target_c_crit;
+  const float slope_crit = 2.0f * cost_z2 / dist_z2 - slope_safe;
+
+  // zone 1
+  const float dist_z1 = critical_dist - 0.0f;
+  const float slope_0 = -8.8f;
+  const float cost_0 = target_c_crit - 0.5f * (slope_crit + slope_0) * dist_z1;
+
+  float cost = 0.0f, dk = 0.0f, dx = 0.0f;
+
+  if (obs_dist < 0.0f) {
+    // zone 0, but it is impossible to exist
+    // f(x) = y0 + k * x
+    cost = cost_0 + slope_0 * obs_dist;
+  } else if (obs_dist < critical_dist) {
+    // zone 1
+    // f(x) = y0 + v * x + 0.5 * a * x^2
+    dx = obs_dist - 0.0f;
+    dk = (slope_crit - slope_0) / dist_z1;
+    cost = cost_0 + slope_0 * dx + 0.5f * dk * std::pow(dx, 2.0f);
+  } else if (obs_dist < safe_dist) {
+    // zone 2
+    // f(x) = y0 + v * x + 0.5 * a * x^2
+    dx = obs_dist - critical_dist;
+    dk = (slope_safe - slope_crit) / dist_z2;
+    cost = target_c_crit + slope_crit * dx + 0.5f * dk * std::pow(dx, 2.0f);
+  } else if (obs_dist < adsolute_safe_dist) {
+    // zone 3
+    // f(x) = z3_k * (adsolute_safe_dist - x)^n_z3
+    dx = adsolute_safe_dist - obs_dist;
+    cost = z3_k * std::pow(dx, n_z3);
+  } else {
+    // zone 4
+    cost = 0.0f;
   }
 
-  else if (obs_dist <= safe_dist) {
-    // relative dangerous
-    distance_factor = (obs_dist - critical_dist) / (safe_dist - critical_dist);
-    distance_factor = (2.0f - std::sin(M_PI_2f32 * distance_factor));
-    obs_dist_cost = gear_change_penalty * distance_factor;
-  }
-
-  else if (obs_dist <= adsolute_safe_dist) {
-    // relative safe
-    distance_factor = (obs_dist - safe_dist) / (adsolute_safe_dist - safe_dist);
-    distance_factor = std::exp(-4 * std::pow(distance_factor, 0.75));
-    obs_dist_cost = distance_factor * gear_change_penalty;
-  }
-
-  else {
-    // absolute safe
-    obs_dist_cost = 0.0f;
-  }
-
-  return obs_dist_cost;
+  return cost;
 }
 
 }  // namespace apa_planner

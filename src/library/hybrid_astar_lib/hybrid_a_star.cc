@@ -47,42 +47,49 @@ namespace planning {
 HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                          const VehicleParam& veh_param,
                          const ParkObstacleList* obstacles,
-                         EulerDistanceTransform* edt,
+                         HierarchyEulerDistanceTransform* hierarchy_edt,
                          const ObstacleClearZone* clear_zone,
                          ParkReferenceLine* ref_line,
                          std::shared_ptr<GridSearch> dp_map)
     : config_(open_space_conf),
       vehicle_param_(veh_param),
       obstacles_(obstacles),
-      edt_(edt),
+      hierarchy_edt_(hierarchy_edt),
       ref_line_(ref_line),
       clear_zone_(clear_zone),
       dp_heuristic_generator_(dp_map) {
   collision_detect_ = std::make_shared<NodeCollisionDetect>(
-      obstacles_, edt_, clear_zone_, &grid_map_bound_, &request_);
+      obstacles_, hierarchy_edt_, clear_zone_, &grid_map_bound_, &request_);
 
   polynomial_sampling_ = std::make_shared<PolynomialCurveSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, hierarchy_edt_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
   rs_sampling_ = std::make_shared<RSSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, hierarchy_edt_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
   spiral_sampling_ = std::make_shared<SpiralSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, hierarchy_edt_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
 }
 
 bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
                                    const bool need_rs_dense_point,
                                    const bool need_anchor_point,
                                    const RSPathRequestType rs_request,
-                                   const float rs_radius) {
+                                   const float rs_radius,
+                                   const Pose2f& end_pose_parallel) {
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
 
   const Pose2f& start_pose = current_node->GetPose();
-  const Pose2f& end_pose = rs_expansion_decider_.GetRSEndPose();
+  Pose2f end_pose_opt;
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+    end_pose_opt = end_pose_parallel;
+  } else {
+    end_pose_opt = rs_expansion_decider_.GetRSEndPose();
+  }
+  const Pose2f& end_pose = end_pose_opt;
 
   bool is_connected_to_goal;
   rs_path_interface_.GeneShortestRSPath(
@@ -104,7 +111,8 @@ bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
 
 bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
                                         const AstarPathGear node_gear_request,
-                                        Node3d* rs_node_to_goal) {
+                                        Node3d* rs_node_to_goal,
+                                        const Pose2f& end_pose_parallel) {
   // check gear and steering wheel
   if (!rs_expansion_decider_.IsNeedRsExpansion(current_node, &request_)) {
     // ILOG_INFO << "no need rs path link";
@@ -115,10 +123,19 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
       vehicle_param_.min_turn_radius + config_.rs_radius_buffer;
 
   RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
-  if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius)) {
-    // ILOG_INFO << " generate rs fail";
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+    if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius,
+                          end_pose_parallel)) {
+      // ILOG_INFO << " generate rs fail";
 
-    return false;
+      return false;
+    }
+  } else {
+    if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius)) {
+      // ILOG_INFO << " generate rs fail";
+
+      return false;
+    }
   }
 
   // set node by rs path
@@ -195,7 +212,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     return false;
   }
 
-    // interpolation
+  // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -602,8 +619,8 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   if (parent_node->IsStartNode()) {
-    if (!IsPathGearSameWithRequest(gear,
-                                  request_.first_action_request.gear_request)) {
+    if (!IsPathGearSameWithRequest(
+            gear, request_.first_action_request.gear_request)) {
       return NodeShrinkType::UNEXPECTED_GEAR;
     }
   }
@@ -644,15 +661,18 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   // heading shrink limit pose
-  if (!node_shrink_decider_.IsLegalForPose(new_node->GetPose())) {
+  if (request_.space_type != ParkSpaceType::PARALLEL_OUT &&
+      request_.space_type != ParkSpaceType::PARALLEL_IN) {
+    if (!node_shrink_decider_.IsLegalForPose(new_node->GetPose())) {
 #if PLOT_DELETE_NODE
-    delete_queue_path_debug_.emplace_back(
-        Vec2f(new_node->GetX(), new_node->GetY()));
+      delete_queue_path_debug_.emplace_back(
+          Vec2f(new_node->GetX(), new_node->GetY()));
 #endif
-    // ILOG_INFO << "heading is illegal";
+      // ILOG_INFO << "heading is illegal";
 
-    new_node->ClearPath();
-    return NodeShrinkType::UNEXPECTED_HEADING;
+      new_node->ClearPath();
+      return NodeShrinkType::UNEXPECTED_HEADING;
+    }
   }
 
   new_node->SetPre(parent_node);
@@ -721,7 +741,12 @@ void HybridAStar::CalculateNodeHeuristicCost(Node3d* father_node,
 
   // heading cost
   float ref_line_heading_cost = 0.0f;
-  ref_line_heading_cost = GenerateRefLineHeuristicCost(next_node, dp_path_dist);
+  if (request_.space_type != ParkSpaceType::PARALLEL_OUT &&
+      request_.space_type != ParkSpaceType::PARALLEL_IN) {
+    ref_line_heading_cost =
+        GenerateRefLineHeuristicCost(next_node, dp_path_dist);
+  }
+
   // cost.ref_line_heading_cost = ref_line_heading_cost;
 
   optimal_path_cost = std::max(optimal_path_cost, ref_line_heading_cost);
@@ -850,7 +875,7 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
     }
   }
 
-    // safe dist cost
+  // safe dist cost
 #if ENABLE_OBS_DIST_G_COST
   float safe_punish = 0.0;
   safe_punish = CalcSafeDistCost(next_node);
@@ -1284,7 +1309,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
                                grid_map_bound_, request_);
   rs_expansion_decider_.Process(start, target);
   rs_expansion_decider_.UpdateRoundRobinStrategy(
-      target, &request_, edt_, vehicle_param_, collision_detect_);
+      target, &request_, hierarchy_edt_, vehicle_param_, collision_detect_);
 
   SetSamplingTarget(target);
 
@@ -1412,7 +1437,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -1724,7 +1749,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   rs_expansion_decider_.Process(start, end);
   rs_expansion_decider_.UpdateRoundRobinStrategy(
-      end, &request_, edt_, vehicle_param_, collision_detect_);
+      end, &request_, hierarchy_edt_, vehicle_param_, collision_detect_);
   SetSamplingTarget(end);
 
   PathComparator path_comparator;
@@ -1809,10 +1834,25 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     // check if an analystic curve could be connected from current
     // configuration to the end configuration without collision. if so,
     // search ends.
-    if (AnalyticExpansionByRS(current_node, full_path_gear_request,
-                              &rs_node_to_goal)) {
-      rs_path_success_num++;
-
+    bool expand_rs_success = false;
+    if (request_.space_type == ParkSpaceType::PARALLEL_OUT &&
+        !request_.parallel_target_group.empty()) {
+      for (auto parallel_end_pose : request_.parallel_target_group) {
+        if (AnalyticExpansionByRS(current_node, full_path_gear_request,
+                                  &rs_node_to_goal, parallel_end_pose)) {
+          rs_path_success_num++;
+          expand_rs_success = true;
+          break;
+        }
+      }
+    } else {
+      if (AnalyticExpansionByRS(current_node, full_path_gear_request,
+                                &rs_node_to_goal)) {
+        rs_path_success_num++;
+        expand_rs_success = true;
+      }
+    }
+    if (expand_rs_success) {
       if (path_comparator.Compare(&request_, &best_rs_node, &rs_node_to_goal)) {
         best_rs_node = rs_node_to_goal;
         best_rs_path = rs_path_;
@@ -1890,7 +1930,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
         continue;
       }
 
-        // collision check
+      // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -2110,7 +2150,7 @@ void HybridAStar::Init() {
   rs_path_h_cost_debug_.clear();
   rs_path_.Clear();
 
-  UpdateCarBoxBySafeBuffer(0.0f, 0.0f, 0.0f);
+  UpdateCarBoxBySafeBuffer(0.0f, 0.0f, 0.0f, false);
 
   ILOG_INFO << "astar init finish";
 
@@ -2370,10 +2410,11 @@ void HybridAStar::GetStraightLinePoint(Pose2f* goal_state,
 
 void HybridAStar::UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
                                            const float lat_buffer_inside,
-                                           const float lon_buffer) {
-  collision_detect_->UpdateFootPrintBySafeBuffer(lat_buffer_outside,
-                                                 lat_buffer_inside, lon_buffer,
-                                                 vehicle_param_, config_);
+                                           const float lon_buffer,
+                                           const bool fold_mirror) {
+  collision_detect_->UpdateFootPrintBySafeBuffer(
+      lat_buffer_outside, lat_buffer_inside, lon_buffer, vehicle_param_,
+      config_, fold_mirror);
 
   return;
 }
@@ -2390,7 +2431,8 @@ void HybridAStar::CopyFallbackPath(HybridAStarResult* path) {
 
 void HybridAStar::SetRequest(const AstarRequest& request) {
   request_ = request;
-  if (request.space_type == ParkSpaceType::PARALLEL) {
+  if (request.space_type == ParkSpaceType::PARALLEL_OUT ||
+      request.space_type == ParkSpaceType::PARALLEL_IN) {
     config_.node_step = config_.parallel_slot_node_step;
   } else {
     config_.node_step = config_.perpendicular_slot_node_step;
@@ -2498,7 +2540,7 @@ void HybridAStar::CopyNodePath(const Node3d* node,
   return;
 }
 
-FootPrintCircleModel* HybridAStar::GetCircleFootPrint(
+MultiHeightFootPrintView* HybridAStar::GetCircleFootPrint(
     const HierarchySafeBuffer buffer) {
   if (collision_detect_ == nullptr) {
     return nullptr;

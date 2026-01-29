@@ -65,6 +65,9 @@ struct AstarRequest {
   // different buffer use different time
   double search_time;
   Eigen::Vector2d x_axis_direction_coordinate_slant;
+  bool fold_mirror;
+
+  std::vector<Pose2f> parallel_target_group;
 
   void Clear() {
     path_generate_method = AstarPathGenerateType::NONE;
@@ -74,6 +77,7 @@ struct AstarRequest {
     direction_request = ParkingVehDirection::NONE;
     gear_switch_num = 0;
     x_axis_direction_coordinate_slant.setZero();
+    fold_mirror = false;
     return;
   }
 };

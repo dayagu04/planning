@@ -47,7 +47,7 @@ class HybridAStar {
   explicit HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                        const VehicleParam& veh_param,
                        const ParkObstacleList* obstacles,
-                       EulerDistanceTransform* edt,
+                       HierarchyEulerDistanceTransform* hierarchy_edt,
                        const ObstacleClearZone* clear_zone,
                        ParkReferenceLine* ref_line,
                        std::shared_ptr<GridSearch> dp_map);
@@ -58,7 +58,8 @@ class HybridAStar {
 
   void UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
                                 const float lat_buffer_inside,
-                                const float lon_buffer);
+                                const float lon_buffer,
+                                const bool fold_mirror);
 
   void SetRequest(const AstarRequest& request);
 
@@ -101,7 +102,7 @@ class HybridAStar {
                           const Pose2f& target, HybridAStarResult* result);
 
   // debug
-  FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
+  MultiHeightFootPrintView* GetCircleFootPrint(const HierarchySafeBuffer buffer);
 
   // todo: move sampling based method out of astar class, we can move it to
   // interface.
@@ -137,7 +138,8 @@ class HybridAStar {
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,
                              const AstarPathGear gear_request_info,
-                             Node3d* rs_node_to_goal);
+                             Node3d* rs_node_to_goal,
+                             const Pose2f& end_pose_parallel = Pose2f());
 
   void CalculateNodeFCost(Node3d* current_node, Node3d* next_node);
 
@@ -232,7 +234,8 @@ class HybridAStar {
   bool CalcRSPathToGoal(Node3d* current_node, const bool need_rs_dense_point,
                         const bool need_anchor_point,
                         const RSPathRequestType rs_request,
-                        const float rs_radius);
+                        const float rs_radius,
+                        const Pose2f& end_pose_parallel = Pose2f());
 
   float CalcSafeDistCost(Node3d* node);
 
@@ -302,7 +305,7 @@ class HybridAStar {
   // if search node in aabb, no need to check collision;
   const ObstacleClearZone* clear_zone_;
 
-  EulerDistanceTransform* edt_;
+  HierarchyEulerDistanceTransform* hierarchy_edt_;
 
   static CompactNodePool node_pool_;
 

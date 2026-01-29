@@ -327,8 +327,10 @@ const bool EulerDistanceTransform::IsCollisionForPoint(
 
 void EulerDistanceTransform::Init(const float car_body_lat_safe_buffer,
                                   const float lon_safe_buffer,
-                                  const float mirror_buffer) {
-  UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer, mirror_buffer);
+                                  const float mirror_buffer,
+                                  const bool fold_mirror) {
+  UpdateSafeBuffer(fold_mirror, car_body_lat_safe_buffer, lon_safe_buffer,
+                   mirror_buffer, 0.35, false);
 
   return;
 }
@@ -423,8 +425,9 @@ const bool EulerDistanceTransform::IsCollisionForPath(
 }
 
 void EulerDistanceTransform::UpdateSafeBuffer(
-    const float car_body_lat_safe_buffer, const float lon_safe_buffer,
-    const float mirror_buffer, const float big_circle_safe_buffer) {
+    const bool fold_mirror, const float car_body_lat_safe_buffer,
+    const float lon_safe_buffer, const float mirror_buffer,
+    const float big_circle_safe_buffer, const bool is_chassis_model) {
   if (std::fabs(latetal_safe_buffer_ - car_body_lat_safe_buffer) < 0.001 &&
       std::fabs(lon_safe_buffer_ - lon_safe_buffer) < 0.001 &&
       std::fabs(mirror_safe_buffer_ - mirror_buffer) < 0.001 &&
@@ -432,8 +435,9 @@ void EulerDistanceTransform::UpdateSafeBuffer(
     return;
   }
 
-  footprint_model_.UpdateSafeBuffer(car_body_lat_safe_buffer, lon_safe_buffer,
-                                    mirror_buffer, big_circle_safe_buffer);
+  footprint_model_.UpdateSafeBuffer(fold_mirror, car_body_lat_safe_buffer,
+                                    lon_safe_buffer, mirror_buffer,
+                                    big_circle_safe_buffer, is_chassis_model);
 
   latetal_safe_buffer_ = car_body_lat_safe_buffer;
   lon_safe_buffer_ = lon_safe_buffer;

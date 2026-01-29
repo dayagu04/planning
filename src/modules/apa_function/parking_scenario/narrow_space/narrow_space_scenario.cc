@@ -591,6 +591,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.x_axis_direction_coordinate_slant =
       direction_origin_corner_23_normalized_;
 
+  cur_request.fold_mirror =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag();
   SetRequestForScenarioTry(cur_request, ego_info);
 
   FillPlanningReason(cur_request);

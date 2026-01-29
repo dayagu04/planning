@@ -141,7 +141,7 @@ void TargetPoseRegulator::GenerateYboundary(const AstarRequest *request,
 
 void TargetPoseRegulator::UpdateReferenceLinePath(
     const AstarRequest *request, const VehicleParam &veh_param,
-    const ParkingVehDirection &direction_request, EulerDistanceTransform *edt) {
+    const ParkingVehDirection &direction_request, HierarchyEulerDistanceTransform *edt) {
   // x boundary
   GenerateXboundary(request, veh_param);
 
@@ -177,7 +177,7 @@ void TargetPoseRegulator::UpdateReferenceLinePath(
 }
 
 void TargetPoseRegulator::Process(
-    EulerDistanceTransform *edt, const AstarRequest *request,
+    HierarchyEulerDistanceTransform *edt, const AstarRequest *request,
     const Pose2f &ego_pose, const Pose2f &target, const VehicleParam &veh_param,
     const ParkingVehDirection &direction_request) {
   // init
@@ -188,7 +188,7 @@ void TargetPoseRegulator::Process(
   max_lat_buffer_ = 0.3f;
   low_confidence_zone_for_vertical_ = 0.3f;
   low_confidence_zone_for_slant_ = 0.4f;
-  edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
+  edt->UpdateSafeBuffer(false, 0.0, 0.0, 0.0);
 
   UpdateReferenceLinePath(request, veh_param, direction_request, edt);
 
@@ -197,9 +197,11 @@ void TargetPoseRegulator::Process(
   }
 
   // park out
-  if (request_->direction_request_size > 1) {
-    GenerateCandidatesForVerticalHeadOut(edt, direction_request, veh_param);
-    return;
+  if (request_->space_type != ParkSpaceType::PARALLEL_OUT) {
+    if (request_->direction_request_size > 1) {
+      GenerateCandidatesForVerticalHeadOut(edt, direction_request, veh_param);
+      return;
+    }
   }
 
   // park out
@@ -234,7 +236,7 @@ const bool TargetPoseRegulator::IsParkingIn(const AstarRequest *request) {
   return false;
 }
 
-void TargetPoseRegulator::GenerateCandidates(EulerDistanceTransform *edt,
+void TargetPoseRegulator::GenerateCandidates(HierarchyEulerDistanceTransform *edt,
                                              const AstarRequest *request,
                                              const VehicleParam &veh_param) {
   Pose2f global_pose;
@@ -277,14 +279,14 @@ void TargetPoseRegulator::GenerateCandidates(EulerDistanceTransform *edt,
 }
 
 void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
-    EulerDistanceTransform *edt, const AstarRequest *request,
+    HierarchyEulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
   Pose2f global_pose;
   global_pose = target_;
   constexpr size_t kNumCandidateColumns = 5;  // 列数
-  constexpr size_t kNumberRows = 10;           // 行数
+  constexpr size_t kNumberRows = 10;          // 行数
   constexpr size_t kMidCandidateNum = 8;      //
   constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
@@ -357,7 +359,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
 }
 
 void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
-    EulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
+    HierarchyEulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
@@ -369,7 +371,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   Pose2f global_pose;
   global_pose = target_;
   constexpr size_t kNumCandidateColumns = 5;  // 列数
-  constexpr size_t kNumberRows = 10;           // 行数
+  constexpr size_t kNumberRows = 10;          // 行数
   constexpr size_t kMidCandidateNum = 8;      //
   constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
@@ -448,7 +450,7 @@ void TargetPoseRegulator::Clear() {
 }
 
 const float TargetPoseRegulator::GetCandidatePathByXRange(
-    const Pose2f &global_pose, EulerDistanceTransform *edt) {
+    const Pose2f &global_pose, HierarchyEulerDistanceTransform *edt) {
   Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;
@@ -480,7 +482,7 @@ const float TargetPoseRegulator::GetCandidatePathByXRange(
 
 const float TargetPoseRegulator::GetDistToObsHeadOut(
     const Pose2f &global_pose, const ParkingVehDirection &direction_request,
-    EulerDistanceTransform *edt) {
+    HierarchyEulerDistanceTransform *edt) {
   Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   float dist;

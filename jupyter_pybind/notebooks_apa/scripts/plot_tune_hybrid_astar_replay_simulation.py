@@ -200,7 +200,7 @@ class LocalViewSlider:
     self.plot_child_node = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="plot_child_node", min=0, max=1, value=0, step=1)
     self.use_state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="use_state_machine", min=0, max=1, value=0, step=1)
     self.state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="state_machine", min=0, max=100, value=0, step=1)
-    self.path_plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="path_plan_method", min=0, max=10, value=1, step=1)
+    self.path_plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="path_plan_method", min=0, max=10, value=0, step=1)
     self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=2, value=0, step=1)
     self.dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="dir", min=0, max=12, value=0, step=1)
 

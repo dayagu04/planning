@@ -55,6 +55,8 @@ enum class ParkSpaceType {
   VERTICAL,
   PARALLEL,
   SLANTING,
+  PARALLEL_IN,
+  PARALLEL_OUT,
   MAX_NUMBER,
 };
 
@@ -557,6 +559,8 @@ bool IsSteerOpposite(const uint8_t left, const uint8_t right);
 
 bool IsSteerOpposite(const float left, const float right);
 
+bool IsSteerOpposite(const AstarPathSteer left, const float right);
+
 AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear);
 
 uint8_t GetSegGearFromAstarGear(const AstarPathGear gear);
@@ -606,5 +610,7 @@ const bool IsPathGearSameWithRequest(const AstarPathGear type,
                                      const AstarPathGear request);
 
 const ParkingVehDirection GetParkDir(const int dir);
+
+const std::string GetAstarNodeVisitedTypeDebugString(const AstarNodeVisitedType type);
 
 }  // namespace planning

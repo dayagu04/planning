@@ -241,8 +241,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   ParkingStopDecider stop_decider =
       ParkingStopDecider(col_det_interface_ptr, localization_ptr, obstacles);
   planning::trajectory::Trajectory trajectory_;
-  stop_decider.Execute(init_point, path2, path2, trajectory_,
-                       pnc::geometry_lib::SEG_GEAR_DRIVE);
+  stop_decider.Execute(init_point, path2, trajectory_,
+                       pnc::geometry_lib::SEG_GEAR_DRIVE, 0.0);
   if (dist_to_obs < 0.06) {
     planning::LonDecisionReason decision_reason =
         planning::LonDecisionReason::OCC_COLLISION;
@@ -297,9 +297,7 @@ std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
   return speed_debug_data;
 }
 
-const double GetRefCruiseSpeed() {
-  return planning::GetDebugRefCruiseSpeed();
-}
+const double GetRefCruiseSpeed() { return planning::GetDebugRefCruiseSpeed(); }
 
 std::vector<Eigen::VectorXd> GetDPSpeedOptimizationData() {
   std::vector<Eigen::VectorXd> speed_profile;

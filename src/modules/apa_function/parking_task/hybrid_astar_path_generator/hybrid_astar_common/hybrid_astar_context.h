@@ -56,6 +56,7 @@ struct HybridAStarRequest {
 
   int pre_search_mode = 1;
   bool decide_cul_de_sac = true;
+  bool enable_interesting_search_area = true;
 
   bool mirror_has_folded_flag = false;
   bool enable_smart_fold_mirror = false;
@@ -196,10 +197,13 @@ struct PathCompareCost {
   float gear_change_cost = 0.0f;
   float kappa_change_cost = 0.0f;
   float unsuitable_last_line_length_cost = 0.0f;
+  float unsuitable_single_gear_line_length_cost = 0.0f;
   float obs_dist_cost = 0.0f;
   float obs_dist = 0.0f;
   float cur_gear_switch_pose_cost = 0.0f;
   float next_gear_switch_pose_cost = 0.0f;
+  float unexpect_gear_cost = 0.0f;
+  float unexpect_steer_cost = 0.0f;
   float total_cost = 0.0f;
 
   PathCompareCost() = default;
@@ -213,10 +217,13 @@ struct PathCompareCost {
     gear_change_cost = 0.0f;
     kappa_change_cost = 0.0f;
     unsuitable_last_line_length_cost = 0.0f;
+    unsuitable_single_gear_line_length_cost = 0.0f;
     obs_dist_cost = 0.0f;
     obs_dist = 0.0f;
     cur_gear_switch_pose_cost = 0.0f;
     next_gear_switch_pose_cost = 0.0f;
+    unexpect_gear_cost = 0.0f;
+    unexpect_steer_cost = 0.0f;
     total_cost = 0.0f;
   }
 
@@ -239,6 +246,42 @@ struct PathCompareCost {
   }
 
   ~PathCompareCost() = default;
+};
+
+// For vertical slot, there is a distinction between left and right, while for
+// parallel slot, the difference lies in front and back
+enum class CulDeSacType : uint8_t {
+  NON_CUL_DE_SAC = 0,
+  LEFT = 1,
+  RIGHT = 2,
+  FRONT = 3,
+  REAR = 4,
+};
+
+struct CulDeSacInfo {
+  bool is_cul_de_sac = false;
+  CulDeSacType type = CulDeSacType::NON_CUL_DE_SAC;
+  float limit_x = 0.0f;
+  float limit_y = 0.0f;
+  float limit_phi = 0.0f;
+
+  CulDeSacInfo() = default;
+  ~CulDeSacInfo() = default;
+
+  void Reset() {
+    is_cul_de_sac = false;
+    type = CulDeSacType::NON_CUL_DE_SAC;
+    limit_x = 0.0f;
+    limit_y = 0.0f;
+    limit_phi = 0.0f;
+  }
+
+  void PrintInfo(const bool enable_log = true) const {
+    ILOG_INFO_IF(enable_log)
+        << "CulDeSacInfo: is_cul_de_sac = " << is_cul_de_sac
+        << ", type = " << static_cast<int>(type) << ", limit_x = " << limit_x
+        << ", limit_y = " << limit_y << ", limit_phi = " << limit_phi;
+  }
 };
 
 const std::string GetSearchModeString(const SearchMode& search_mode);

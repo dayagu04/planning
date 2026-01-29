@@ -1380,6 +1380,7 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   //   fp_ratio_to_theta1);
   // double q_theta_ratio2 =
   //   planning::interp(std::fabs(avoid_dist_), xp_xy, fp_ratio_to_theta2);
+
   double q_theta_ratio1 =
       planning::interp(lateral_dist, xp_xy, fp_ratio_to_theta1);
   double q_theta_ratio2 = planning::interp(std::fabs(init_ref_theta_error_),

@@ -7,6 +7,9 @@ find_package(Eigen3 REQUIRED)
 
 if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   add_compile_options(-Werror)
+  add_compile_options(
+  -Wreturn-type
+  -Werror=return-type)
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND (NOT PLATFORM STREQUAL "X86" OR X86_SIMULATION))
@@ -45,7 +48,6 @@ add_subdirectory(library/convex_collision_detection EXCLUDE_FROM_ALL)
 add_subdirectory(library/reeds_shepp EXCLUDE_FROM_ALL)
 add_subdirectory(library/occupancy_grid_map EXCLUDE_FROM_ALL)
 add_subdirectory(library/spiral EXCLUDE_FROM_ALL)
-add_subdirectory(library/arastar_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/glog EXCLUDE_FROM_ALL)
 add_subdirectory(library/lc_pure_pursuit_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/lc_idm_lib EXCLUDE_FROM_ALL)

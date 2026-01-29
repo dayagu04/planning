@@ -10,6 +10,11 @@
 
 namespace planning {
 namespace apa_planner {
+
+ApaSlot::ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot) {
+  Update(fusion_slot);
+}
+
 void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
   id_ = fusion_slot.id;
   confidence_ = fusion_slot.confidence;
@@ -73,6 +78,9 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
     slot_length_ = (processed_corner_coord_global_.pt_01_mid -
                     processed_corner_coord_global_.pt_23_mid)
                        .norm();
+    slot_heading_ =
+        std::atan2(processed_corner_coord_global_.pt_23mid_01mid_unit_vec.y(),
+                   processed_corner_coord_global_.pt_23mid_01mid_unit_vec.x());
   } else if (slot_type_ == SlotType::PARALLEL) {
     slot_length_ = (processed_corner_coord_global_.pt_1 -
                     processed_corner_coord_global_.pt_0)
@@ -84,6 +92,9 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
                                processed_corner_coord_global_.pt_2, line_01),
                            pnc::geometry_lib::CalPoint2LineDist(
                                processed_corner_coord_global_.pt_3, line_01));
+    slot_heading_ =
+        std::atan2(processed_corner_coord_global_.pt_13mid_02mid_unit_vec.y(),
+                   processed_corner_coord_global_.pt_13mid_02mid_unit_vec.x());
   }
 
   if (fusion_slot.limiters_size > 0) {
@@ -320,21 +331,21 @@ const std::vector<Eigen::Vector2d> ApaSlot::GetCustomSlotPolygon(
   Eigen::Vector2d pt0, pt1, pt2, pt3;
   Eigen::Vector2d pt_01_unit_vec, pt_23mid_01mid_vec_unit_vec;
   if (base_on_slot) {
-    pt0 = origin_corner_coord_local_.pt_0;
-    pt1 = origin_corner_coord_local_.pt_1;
-    pt2 = origin_corner_coord_local_.pt_2;
-    pt3 = origin_corner_coord_local_.pt_3;
-    pt_01_unit_vec = origin_corner_coord_local_.pt_01_unit_vec;
+    pt0 = processed_corner_coord_local_.pt_0;
+    pt1 = processed_corner_coord_local_.pt_1;
+    pt2 = processed_corner_coord_local_.pt_2;
+    pt3 = processed_corner_coord_local_.pt_3;
+    pt_01_unit_vec = processed_corner_coord_local_.pt_01_unit_vec;
     pt_23mid_01mid_vec_unit_vec =
-        origin_corner_coord_local_.pt_23mid_01mid_unit_vec;
+        processed_corner_coord_local_.pt_23mid_01mid_unit_vec;
   } else {
-    pt0 = origin_corner_coord_global_.pt_0;
-    pt1 = origin_corner_coord_global_.pt_1;
-    pt2 = origin_corner_coord_global_.pt_2;
-    pt3 = origin_corner_coord_global_.pt_3;
-    pt_01_unit_vec = origin_corner_coord_global_.pt_01_unit_vec;
+    pt0 = processed_corner_coord_global_.pt_0;
+    pt1 = processed_corner_coord_global_.pt_1;
+    pt2 = processed_corner_coord_global_.pt_2;
+    pt3 = processed_corner_coord_global_.pt_3;
+    pt_01_unit_vec = processed_corner_coord_global_.pt_01_unit_vec;
     pt_23mid_01mid_vec_unit_vec =
-        origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
+        processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
   }
 
   std::vector<Eigen::Vector2d> pt_vec;

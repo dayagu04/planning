@@ -5,6 +5,7 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "planning_plan_c.h"
+#include "trajectory/trajectory.h"
 
 namespace planning {
 namespace apa_planner {
@@ -29,18 +30,25 @@ class ApaPredictPathManager final {
     return predict_pt_vec_;
   }
 
+  const trajectory::Trajectory& GetPredictTrajectory() const {
+    return predict_traj_;
+  }
+
   const pnc::geometry_lib::PathSegGear GetPathGear() const { return gear_; }
 
   const double GetLatErr() const { return lat_err_; }
   const double GetPhiErr() const { return phi_err_; }
   const bool GetControlErrBig() const { return control_err_big_; }
   const double GetPredictTrajS() const { return predict_traj_s_; }
+  const trajectory::Trajectory& ConvertPathPointsToPredictTrajectory(
+      const std::vector<pnc::geometry_lib::PathPoint>& predict_pt_vec);
 
  private:
   void RecordDebugTraj();
 
  private:
   std::vector<pnc::geometry_lib::PathPoint> predict_pt_vec_;
+  trajectory::Trajectory predict_traj_;
   pnc::geometry_lib::PathSegGear gear_{
       pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID};
   double lat_err_{0.0};

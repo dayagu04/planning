@@ -118,7 +118,7 @@ struct RSPath {
       for (size_t j = 0; j < seg->size; j++) {
         ILOG_INFO << "rs point, id " << j << "x " << seg->points[j].x << " y "
                   << seg->points[j].y << " len" << seg->length << " ,kappa "
-                  << seg->kappa;
+                  << seg->kappa << " gear " << int(seg->gear);
       }
     }
 
