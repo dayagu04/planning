@@ -3,6 +3,7 @@
 #include "reference_path.h"
 #include "session.h"
 #include "utils/hysteresis_decision.h"
+#include "lateral_offset_decider_utils.h"
 
 namespace planning {
 constexpr int CONTROL_TIME = 30;
@@ -49,7 +50,7 @@ class SideNudgeLateralOffsetDecider {
   SideNudgeLateralOffsetDecider() = default;
   SideNudgeLateralOffsetDecider(framework::Session *session, const EgoPlanningConfigBuilder* config_builder);
   ~SideNudgeLateralOffsetDecider() = default;
-  bool Process();
+  bool Process(const LaneInfo& lane_info);
   double lat_offset() const { return lateral_offset_; }
   const NudgeInfo& nudge_info() const { return nudge_info_; }
   void Reset();
@@ -64,7 +65,7 @@ class SideNudgeLateralOffsetDecider {
   bool IsStopNudgeDirectly();
   void UpdateCurrentState();
   void ResetIdleState();
-  bool Init();
+  bool Init(const LaneInfo& lane_info);
   double DesireLateralOffsetSideWay(double base_distance);
   void Log();
   framework::Session* session_;
@@ -79,5 +80,6 @@ class SideNudgeLateralOffsetDecider {
   SideNudgeState current_state_ = SideNudgeState::IDLE;
   NudgeInfo nudge_info_;
   double lateral_offset_ = 0.0;
+  LaneInfo lane_info_;
 };
 }  // namespace planning

@@ -1317,25 +1317,6 @@ void LateralOffsetCalculatorV2::PostSmoothLateralOffset(
            lateral_offset_ - lateral_offset_change_rate);
 }
 
-void LateralOffsetCalculatorV2::CalLaneWidth() {
-  if (1) {
-    double width = 0.0;
-    double preview_s = 20 + ego_frenet_state_.s();
-    double start_s = 5 + ego_frenet_state_.s();
-    double interval_s = 5;
-    int point_num = 0;
-    for (double s = start_s; s <= preview_s; s += interval_s) {
-      width += flane_->width_by_s(s);
-      point_num += 1;
-    }
-    width /= point_num;
-    static planning_math::MeanFilter width_filter(10);
-    lane_width_ = width_filter.Update(width);
-  } else {
-    lane_width_ = flane_->width();
-  }
-}
-
 void LateralOffsetCalculatorV2::Reset() {
   avoid_info_.Reset();
   avoid_id_ = -1;

@@ -22,8 +22,8 @@ SideNudgeLateralOffsetDecider::SideNudgeLateralOffsetDecider(
   config_ = config_builder->cast<LateralOffsetDeciderConfig>();
 }
 
-bool SideNudgeLateralOffsetDecider::Process() {
-  if (!Init()) {
+bool SideNudgeLateralOffsetDecider::Process(const LaneInfo& lane_info) {
+  if (!Init(lane_info)) {
     return false;
   }
 
@@ -32,7 +32,7 @@ bool SideNudgeLateralOffsetDecider::Process() {
   return true;
 }
 
-bool SideNudgeLateralOffsetDecider::Init() {
+bool SideNudgeLateralOffsetDecider::Init(const LaneInfo& lane_info) {
   reference_path_ptr_ = session_->planning_context()
                             .lane_change_decider_output()
                             .coarse_planning_info.reference_path;
@@ -41,6 +41,7 @@ bool SideNudgeLateralOffsetDecider::Init() {
   }
   ego_cart_state_manager_ =
       session_->environmental_model().get_ego_state_manager();
+  lane_info_ = lane_info;
   return true;
 }
 
@@ -71,7 +72,7 @@ void SideNudgeLateralOffsetDecider::RunStateMachine() {
         if (is_control_time_enough_.IsValid()) {
           is_control_.SetInvalidCount();
         }
-        
+
       } else {
         if (LatOffsetCalculate()) {
           is_control_.SetValidByCount();
@@ -83,7 +84,8 @@ void SideNudgeLateralOffsetDecider::RunStateMachine() {
       break;
     }
     case SideNudgeState::COOLING_DONW: {
-      lateral_offset_ = clip(0.0, lateral_offset_ + kOffsetChangeRateLow, lateral_offset_ - kOffsetChangeRateLow);
+      lateral_offset_ = clip(0.0, lateral_offset_ + kOffsetChangeRateLow,
+                             lateral_offset_ - kOffsetChangeRateLow);
       if (fabs(lateral_offset_) < 1e-6) {
         nudge_info_.Reset();
       }
@@ -278,9 +280,12 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
   double desire_lateral_offset =
       DesireLateralOffsetSideWay(config_.base_nudge_distance);
   desire_lateral_offset = std::min(kMaxNudgeDistance, desire_lateral_offset);
-  desire_lateral_offset = nudge_info_.nudge_direction == NudgeDirection::LEFT
-                              ? -desire_lateral_offset
-                              : desire_lateral_offset;
+  desire_lateral_offset =
+      nudge_info_.nudge_direction == NudgeDirection::LEFT
+          ? -std::min(desire_lateral_offset,
+                     lane_info_.normal_right_avoid_threshold)
+          : std::min(desire_lateral_offset,
+                     lane_info_.normal_left_avoid_threshold);
 
   // smooth
   double offset_change_rate = kOffsetChangeRateLow;
@@ -291,19 +296,23 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
        desire_lateral_offset < ego_init_l)) {
     lateral_offset_ = desire_lateral_offset;
   } else if ((lateral_offset_ < desire_lateral_offset &&
-       lateral_offset_ > ego_init_l) ||
-      (lateral_offset_ > desire_lateral_offset &&
-       lateral_offset_ < ego_init_l)) {
+              lateral_offset_ > ego_init_l) ||
+             (lateral_offset_ > desire_lateral_offset &&
+              lateral_offset_ < ego_init_l)) {
     lateral_offset_ =
-      clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-           lateral_offset_ - offset_change_rate);
+        clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
+             lateral_offset_ - offset_change_rate);
   } else {
     if (desire_lateral_offset > ego_init_l) {
-      lateral_offset_ = std::max(clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-           lateral_offset_ - offset_change_rate), ego_init_l);
+      lateral_offset_ = std::max(
+          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
+               lateral_offset_ - offset_change_rate),
+          ego_init_l);
     } else {
-      lateral_offset_ = std::min(clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
-           lateral_offset_ - offset_change_rate), ego_init_l);
+      lateral_offset_ = std::min(
+          clip(desire_lateral_offset, lateral_offset_ + offset_change_rate,
+               lateral_offset_ - offset_change_rate),
+          ego_init_l);
     }
   }
 
@@ -499,8 +508,10 @@ double SideNudgeLateralOffsetDecider::DesireLateralOffsetSideWay(
 
 void SideNudgeLateralOffsetDecider::Log() {
   JSON_DEBUG_VALUE("side_nudge_info_id", nudge_info_.id);
-  JSON_DEBUG_VALUE("side_nudge_info_nudge_direction", (int)nudge_info_.nudge_direction);
-  JSON_DEBUG_VALUE("side_nudge_info_emergency_level", (int)nudge_info_.emergency_level);
+  JSON_DEBUG_VALUE("side_nudge_info_nudge_direction",
+                   (int)nudge_info_.nudge_direction);
+  JSON_DEBUG_VALUE("side_nudge_info_emergency_level",
+                   (int)nudge_info_.emergency_level);
   JSON_DEBUG_VALUE("side_nudge_current_state", (int)current_state_);
 }
 }  // namespace planning

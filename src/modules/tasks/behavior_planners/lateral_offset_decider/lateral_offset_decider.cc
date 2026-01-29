@@ -56,7 +56,7 @@ bool LateralOffsetDecider::Execute() {
       avoid_obstacle_maintainer5v_.dist_rblane(),
       avoid_obstacle_maintainer5v_.flag_avd());
 
-  side_nudge_lateral_offset_decider_.Process();
+  side_nudge_lateral_offset_decider_.Process(lane_info_);
 
   // lat_offset = lateral_offset_calculatorv2_.lat_offset();
 
