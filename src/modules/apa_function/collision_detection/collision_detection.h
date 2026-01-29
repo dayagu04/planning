@@ -251,6 +251,15 @@ class CollisionDetector {
   void ClearSkipObstacles() {
     skip_obs_types_.clear();
   }
+  void ClearSkipObstacles(ObsType target_type) {
+    auto it =
+        std::find_if(skip_obs_types_.begin(), skip_obs_types_.end(),
+                     [&](const ObsType &v) { return v == target_type; });
+    if (it != skip_obs_types_.end()) {
+      *it = std::move(skip_obs_types_.back());
+      skip_obs_types_.pop_back();
+    }
+  }
 
   void SetSkipObstaclesType(const size_t obs_type) {
     skip_obs_types_.emplace_back(ObsType(obs_type));
