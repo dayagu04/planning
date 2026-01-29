@@ -798,8 +798,10 @@ bool LateralMotionPlanner::AssembleInput() {
     mutable_motion_planner_output.is_limit_lon_acc_bound = true;
     mutable_motion_planner_output.recommended_acc_bound =
         config_.recommend_low_speed_lc_lon_acc;
-  } else if (is_low_speed_lane_change_without_obstacle) {
-    planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc_without_obstacle);
+  } else if (is_low_speed_lane_change_without_obstacle && !lane_change_back &&
+             !lane_change_hold) {
+    planning_weight_ptr_->SetMaxJerkLC(
+        limit_jerk_low_speed_lc_without_obstacle);
     mutable_motion_planner_output.is_limit_lon_acc_bound = false;
   } else {
     mutable_motion_planner_output.is_limit_lon_acc_bound = false;
@@ -839,7 +841,7 @@ bool LateralMotionPlanner::AssembleInput() {
 
   if (planning_weight_ptr_->GetLaneChangeStyle() ==
           pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE &&
-      (target_state == kLaneChangeHold || target_state == kLaneChangeCancel)) {
+      (lane_change_back || lane_change_hold)) {
     // 如果处于低速变道，并在kLaneChangeHold或者kLaneChangeCancel状态下，
     // 重置变道类型，避免下一次继续执行低速变道幅度不合理变大
     mutable_motion_planner_output.is_limit_lon_acc_bound = false;
