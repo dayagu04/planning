@@ -1,8 +1,8 @@
 #include "polygon_base.h"
 
 #include <algorithm>
-
 #include <array>
+
 #include "log_glog.h"
 #include "src/modules/apa_function/apa_param_config.h"
 #include "transform2d.h"
@@ -737,22 +737,33 @@ void GetVehPolygonBy8Edge(const double lat_buffer, const double lon_buffer,
 
 void GenerateVehCompactPolygon(const double lateral_safe_buffer,
                                const double lon_safe_buffer,
-                               const double aabb_buffer,
+                               const double aabb_buffer, const bool fold_mirror,
+                               const bool is_chassis_model,
                                PolygonFootPrint *foot_print) {
   GetVehPolygonBy12Edge(lateral_safe_buffer, lon_safe_buffer,
                         &foot_print->body);
 
-  // left mirror
+  GetVehChassisPolygonBy4Edge(lateral_safe_buffer, lon_safe_buffer,
+                              &foot_print->chassis);
+
   const apa_planner::ApaParameters &config = apa_param.GetParam();
+  const std::vector<double> &vertex_x_vec =
+      fold_mirror ? config.fold_mirror_car_vertex_x_vec
+                  : config.car_vertex_x_vec;
+  const std::vector<double> &vertex_y_vec =
+      fold_mirror ? config.fold_mirror_car_vertex_y_vec
+                  : config.car_vertex_y_vec;
+
+  // left mirror
   Position2D center;
-  center.x = 0.5 * (config.car_vertex_x_vec[19] + config.car_vertex_x_vec[16]);
-  center.y = 0.5 * (config.car_vertex_y_vec[18] + config.car_vertex_y_vec[19]);
-  double y_length = config.car_vertex_y_vec[18] - config.car_vertex_y_vec[19] +
-                    lateral_safe_buffer * 2.0;
+  center.x = 0.5 * (vertex_x_vec[19] + vertex_x_vec[16]);
+  center.y = 0.5 * (vertex_y_vec[18] + vertex_y_vec[19]);
+  double y_length =
+      vertex_y_vec[18] - vertex_y_vec[19] + lateral_safe_buffer * 2.0;
   GenerateMirrorPolygon(0.3, y_length, center, &foot_print->mirror_left);
 
   // right mirror
-  center.y = 0.5 * (config.car_vertex_y_vec[6] + config.car_vertex_y_vec[7]);
+  center.y = 0.5 * (vertex_y_vec[6] + vertex_y_vec[7]);
   GenerateMirrorPolygon(0.3, y_length, center, &foot_print->mirror_right);
 
   GetVehPolygonBy4Edge(
@@ -837,8 +848,8 @@ void GeneratePtsByBox(const double x_length, const double y_length,
   pts.reserve(2 * x_length / ds + 2 * y_length / ds + 5);
 
   for (size_t i = 0; i < vertices.size(); ++i) {
-    const Eigen::Vector2d& cur_start = vertices[i];
-    const Eigen::Vector2d& cur_end = vertices[(i + 1) % vertices.size()];
+    const Eigen::Vector2d &cur_start = vertices[i];
+    const Eigen::Vector2d &cur_end = vertices[(i + 1) % vertices.size()];
     const Eigen::Vector2d seg_vec = cur_end - cur_start;
     const double seg_length = seg_vec.norm();
     const Eigen::Vector2d unit_dir = seg_vec.normalized();
@@ -1015,6 +1026,35 @@ void GetVehPolygonBy12Edge(const double lat_buffer, const double lon_buffer,
   polygon->vertexes[11].y = config.car_vertex_y_vec[3] - lat_buffer;
 
   polygon->vertex_num = 12;
+  polygon->shape = PolygonShape::multi_edge;
+  UpdatePolygonValue(polygon, NULL, 0, false, POLYGON_MAX_RADIUS);
+  polygon->min_tangent_radius = config.car_width / 2 + lat_buffer;
+
+  return;
+}
+
+void GetVehChassisPolygonBy4Edge(const double lat_buffer,
+                                 const double lon_buffer, Polygon2D *polygon) {
+  const apa_planner::ApaParameters &config = apa_param.GetParam();
+  if (config.car_vertex_x_vec.size() != 20 ||
+      config.car_vertex_y_vec.size() != 20) {
+    polygon->vertex_num = 0;
+    return;
+  }
+
+  polygon->vertexes[0].x = config.car_vertex_x_vec[0] + lon_buffer;
+  polygon->vertexes[0].y = config.car_vertex_y_vec[0] + lat_buffer;
+
+  polygon->vertexes[1].x = config.car_vertex_x_vec[15] + lon_buffer;
+  polygon->vertexes[1].y = config.car_vertex_y_vec[15] + lat_buffer;
+
+  polygon->vertexes[2].x = config.car_vertex_x_vec[10] + lon_buffer;
+  polygon->vertexes[2].y = config.car_vertex_y_vec[10] + lat_buffer;
+
+  polygon->vertexes[3].x = config.car_vertex_x_vec[5] - lon_buffer;
+  polygon->vertexes[3].y = config.car_vertex_y_vec[5] + lat_buffer;
+
+  polygon->vertex_num = 4;
   polygon->shape = PolygonShape::multi_edge;
   UpdatePolygonValue(polygon, NULL, 0, false, POLYGON_MAX_RADIUS);
   polygon->min_tangent_radius = config.car_width / 2 + lat_buffer;

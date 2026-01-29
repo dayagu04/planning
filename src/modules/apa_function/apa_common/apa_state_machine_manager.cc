@@ -16,6 +16,7 @@ const int kSlotFreeCorner1 = 0;
 const int kSlotFreeCorner2 = 3;
 
 void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
+  state_machine_last_ = state_machine_;
   Reset();
   if (local_view_ptr == nullptr) {
     ILOG_ERROR << "Update ApaStateMachineManager, local_view_ptr is nullptr";
@@ -246,6 +247,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       parking_speed_mode_ = ParkingSpeedMode::NORMAL;
       break;
   }
+  is_switch_to_search_ =IsSwitchToSearch();
+
 
   PrintApaStateMachine(state_machine_);
   PrintApaParkOutDirection(out_direction_);
@@ -586,6 +589,26 @@ const bool ApaStateMachineManager::IsParkInvalidStatus() const {
   if (state_machine_ == ApaStateMachine::STANDBY ||
       state_machine_ == ApaStateMachine::ERROR) {
     return true;
+  }
+
+  return false;
+}
+
+const bool ApaStateMachineManager::IsSwitchToSearch() const {
+  if (state_machine_ == ApaStateMachine::SEARCH_IN_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT) {
+    if (state_machine_last_ != ApaStateMachine::SEARCH_IN_NO_SELECTED &&
+        state_machine_last_ != ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR &&
+        state_machine_last_ != ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT &&
+        state_machine_last_ != ApaStateMachine::SEARCH_OUT_NO_SELECTED &&
+        state_machine_last_ != ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR &&
+        state_machine_last_ != ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT) {
+      return true;
+    }
   }
 
   return false;

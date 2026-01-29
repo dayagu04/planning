@@ -63,10 +63,12 @@ void ApaTrajectoryStitcher::Execute(
     // evaluate speed
     if (config_.lon_stitch_type == LonStitchType::PLANNING_TRAJ) {
       bool same_traj_gear = false;
-      if (history_trajectory.GetGear() == 1 &&
+      if (history_trajectory.GetGear() ==
+              pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE &&
           traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
         same_traj_gear = true;
-      } else if (history_trajectory.GetGear() == 2 &&
+      } else if (history_trajectory.GetGear() ==
+                     pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE &&
                  traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
         same_traj_gear = true;
       }
@@ -614,11 +616,11 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
   }
 
   if (traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
-    trajectory_.SetGear(2);
+    trajectory_.SetGear(pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE);
   } else if (traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
-    trajectory_.SetGear(1);
+    trajectory_.SetGear(pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE);
   } else {
-    trajectory_.SetGear(0);
+    trajectory_.SetGear(pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID);
   }
 
   // If traj is empty, use lon stitch point.

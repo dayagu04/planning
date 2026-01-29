@@ -518,7 +518,9 @@ const bool PerpendicularTailInScenario::GenTlane() {
       ->GetGenerateObstacleDeciderPtr()
       ->GenObs(ego_info_under_slot, gen_obs_request);
 
-  CalcPtInside();
+  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    CalcPtInside();
+  }
 
   bool update_slot_move_dist = true;
   if (frame_.replan_reason == ReplanReason::NOT_REPLAN ||
@@ -686,8 +688,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
             << "  stuck_obs_time(s) = " << frame_.stuck_obs_time
             << "  stuck_dynamic_obs_time(s) = " << frame_.stuck_dynamic_obs_time
             << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs
-            << "  "
-            << "  slot side = "
+            << "  " << "  slot side = "
             << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
@@ -1128,8 +1129,9 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   config.InitConfig();
   // targeted customization parameters
   config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
-  config.exceed_pre_search_box_penalty = 68.0f;
-  config.exceed_intersting_box_penalty = 11.0f;
+  config.exceed_interseting_area_penalty = 1.2f * config.gear_switch_penalty;
+  config.exceed_cul_de_sac_limit_pos_penalty =
+      0.68f * config.gear_switch_penalty;
   config.borrow_slot_penalty = 3.68f;
   config.expect_steer_penalty = 1.68f;
 
@@ -1167,8 +1169,9 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
         GetAstarSteerFromSegSteer(apa_world_ptr_->GetSimuParam().ref_steer);
   }
 
-  request.pre_search_mode = apa_world_ptr_->GetSimuParam().pre_search_mode;
-  request.decide_cul_de_sac = apa_world_ptr_->GetSimuParam().decide_cul_de_sac;
+  request.pre_search_mode = param.pre_search_mode;
+  request.decide_cul_de_sac = param.enable_decide_cul_de_sac;
+  request.enable_interesting_search_area = param.enable_interesting_search_area;
 
   if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
     // searching_stage
@@ -2612,8 +2615,14 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
   frame_.slot_jump_lon_err = lon_err;
   frame_.slot_jump_heading_err = heading_err;
 
+  double terminal_error_y = 16.8;
+  if (ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+      std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg < 6.8) {
+    terminal_error_y = std::fabs(ego_info_under_slot.terminal_err.GetY());
+  }
+
   frame_.slot_jump_big_flag =
-      std::min(lat_err, std::fabs(ego_info_under_slot.terminal_err.GetY())) >
+      std::min(lat_err, terminal_error_y) >
           apa_param.GetParam().slot_jump_lat_big_err ||
       heading_err > apa_param.GetParam().slot_jump_heading_big_err;
 

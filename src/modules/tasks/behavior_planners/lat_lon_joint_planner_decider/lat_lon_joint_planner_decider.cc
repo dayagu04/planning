@@ -158,6 +158,7 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
   constexpr double kLargeVehicleLengthThreshold = 8.0;
   constexpr double kStaticVehicleVelocityThreshold = 0.3;
   constexpr double kBaseLongitudinalThreshold = 3.5;
+  constexpr double kMaxConsiderLonDistance = 100;
 
   const auto& lane_change_output =
       session_->planning_context().lane_change_decider_output();
@@ -248,6 +249,18 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
     bool is_directly_in_front_or_is_rear_agent = false;
     const double ego_half_width = ego_width * 0.5;
 
+    double ego_init_s = std::numeric_limits<double>::max();
+    if (!ego_trajectory.empty()) {
+      const auto& ego_init_point = ego_trajectory[0];
+      const double center_x = ego_init_point.x +
+                              std::cos(ego_init_point.theta) * rear_axle_to_center;
+      const double center_y = ego_init_point.y +
+                              std::sin(ego_init_point.theta) * rear_axle_to_center;
+      double init_s = 0.0, init_l = 0.0;
+      frenet_coord->XYToSL(center_x, center_y, &init_s, &init_l);
+      ego_init_s = init_s;
+    }
+
     for (size_t i = 0; i < N && i < ref_traj_size; ++i) {
       const auto& ego_point = ego_trajectory[i];
 
@@ -296,6 +309,10 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
         obs_max_s = std::fmax(obs_max_s, s);
         obs_min_l = std::fmin(obs_min_l, l);
         obs_max_l = std::fmax(obs_max_l, l);
+      }
+
+      if (obs_min_s - ego_init_s > kMaxConsiderLonDistance) {
+        break;
       }
 
       if (i == 0) {

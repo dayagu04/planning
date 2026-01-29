@@ -288,7 +288,8 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   }
 
   // ego collision check
-  EulerDistanceTransform *edt = hybrid_astar_interface_->GetMutableEDT();
+  HierarchyEulerDistanceTransform *edt =
+      hybrid_astar_interface_->GetMutableHierarchyEDT();
   Transform2f ego_local_tf;
   ego_local_tf.SetBasePose(Pose2f(ego_slot_info.cur_pose.pos[0],
                                   ego_slot_info.cur_pose.pos[1],
@@ -306,10 +307,10 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   planning::Transform2d tf;
   tf.SetBasePose(ego_global_pose);
 
-  const EulerDistanceTransform *edt_ =
-      hybrid_astar_interface_->GetEulerDistanceTransform();
+  const HierarchyEulerDistanceTransform *edt_ =
+      hybrid_astar_interface_->GetHierarchyEulerDistanceTransform();
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
+      edt_->GetHierarchyEDTData()[0].GetCircleFootPrint(AstarPathGear::NORMAL);
   footprint_circle_model_global_.clear();
   footprint_circle_model_local_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;

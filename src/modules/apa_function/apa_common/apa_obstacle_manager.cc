@@ -7,10 +7,10 @@
 #include <cstddef>
 #include <vector>
 
+#include "apa_lon_util.h"
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "apa_utils.h"
-#include "apa_lon_util.h"
 #include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "debug_info_log.h"
@@ -44,7 +44,7 @@ void ApaObstacleManager::Update(
   }
   JSON_DEBUG_VALUE("locked_obs_slot_with_fold_mirror", false)
 
-  Reset();
+  ResetSingleFrameObs();
 
   state_machine_manager_ = state_machine_manager;
 
@@ -67,7 +67,7 @@ void ApaObstacleManager::Update(
       &local_view->parking_fusion_info;
 
   ego_slot_is_parallel_ = false;
-  parallel_slot_neigbour_objs_heading_ =  {-100, -100};
+  parallel_slot_neigbour_objs_heading_ = {-100, -100};
   for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
     last_ego_slot_ = &slot_list->parking_fusion_slot_lists[i];
     // For now, do not consider ego slot limiter.
@@ -88,7 +88,7 @@ void ApaObstacleManager::Update(
     const auto& uss_dis_info_buf =
         local_view->uss_percept_info.dis_from_car_to_obj;
 
-   //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
+    //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
     //  upa, fr apa
     for (const auto& front_uss_idx : param.uss_wdis_index_front) {
       uss_dis_vec_.emplace_back(
@@ -320,8 +320,7 @@ void ApaObstacleManager::Update(
   }
 
   // limiters
-  if (param.enable_side_pass_limiter &&
-      state_machine_manager_.IsParkingStatus()) {
+  if (param.enable_side_pass_limiter) {
     const iflyauto::ParkingFusionInfo* slot_list =
         &local_view->parking_fusion_info;
 
@@ -374,7 +373,8 @@ void ApaObstacleManager::Update(
   }
 
   PrintUseObsHeightMethod(param.use_obs_height_method);
-  ILOG_INFO << "enable obs height method: " << param.enable_multi_height_col_det;
+  ILOG_INFO << "enable obs height method: "
+            << param.enable_multi_height_col_det;
 
   JSON_DEBUG_VALUE("total_obs_size", obstacles_.size())
   ILOG_INFO << "obstacle size: " << obstacles_.size();
@@ -428,6 +428,8 @@ const bool ApaObstacleManager::IsOccType(const iflyauto::ObjectType type) {
 
 void ApaObstacleManager::GenerateObsByOD(
     const LocalView* local_view, const ObjectDetectObsConfig& od_config) {
+  std::unordered_set<size_t> current_local_ids;
+  std::unordered_set<size_t> current_fusion_ids;
   const uint8 fusion_obs_size =
       std::min(local_view->fusion_objects_info.fusion_object_size,
                static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
@@ -491,8 +493,34 @@ void ApaObstacleManager::GenerateObsByOD(
     std::vector<Eigen::Vector2d> global_box;
     LocalPolygonToGlobal(local_box, center_pose, global_box);
 
-    ApaObstacle apa_obs;
-    apa_obs.Reset();
+    size_t fusion_id = obs.id;
+    current_fusion_ids.insert(fusion_id);
+
+    size_t local_id;
+    auto map_it = fusion_id_to_local_id_.find(fusion_id);
+    if (map_it == fusion_id_to_local_id_.end()) {
+      local_id = obs_od_id_generate_++;
+      fusion_id_to_local_id_[fusion_id] = local_id;
+    } else {
+      local_id = map_it->second;
+    }
+
+    current_local_ids.insert(local_id);
+
+    auto it = fusion_polygon_obs_.find(local_id);
+    bool is_new = false;
+    if (it == fusion_polygon_obs_.end()) {
+      ApaObstacle new_obs;
+      new_obs.SetId(local_id);
+      new_obs.SetParentId(local_id);
+      it = fusion_polygon_obs_.emplace(local_id, std::move(new_obs)).first;
+      is_new = true;
+    }
+    ApaObstacle& apa_obs = it->second;
+
+    if (is_new) {
+      apa_obs.Reset();
+    }
 
     Polygon2D polygon;
     GeneratePolygonByPoints(global_box, &polygon);
@@ -529,13 +557,10 @@ void ApaObstacleManager::GenerateObsByOD(
     apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
     apa_obs.SetObsScemanticType(obs.type);
     apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
-
-    apa_obs.SetId(obs_id_generate_);
-    apa_obs.SetParentId(obs_id_generate_);
     apa_obs.ClearDecision();
-    obstacles_[obs_id_generate_] = apa_obs;
-    obs_id_generate_++;
   }
+
+  UpdateObstacleODLostFrames(current_local_ids);
 
   return;
 }
@@ -633,7 +658,7 @@ void ApaObstacleManager::GenerateUss(const LocalView* local_view) {
     uss_pt_map[ApaObsHeightType::MID] = uss_pt_clout_lower_mirror;
     uss_pt_map[ApaObsHeightType::HIGH] = uss_pt_clout_higher_mirror;
 
-    size_t  obs_parent_id_generate_ = obs_id_generate_;
+    size_t obs_parent_id_generate_ = obs_id_generate_;
     for (const auto& pair : uss_pt_map) {
       if (pair.second.empty()) {
         continue;
@@ -825,6 +850,35 @@ std::pair<int, float> ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
     return std::pair<int, float>(0, delta_heading);
   }
   return std::pair<int, float>(-1, -1);
+}
+
+void ApaObstacleManager::UpdateObstacleODLostFrames(
+    const std::unordered_set<size_t>& current_ids) {
+  constexpr int kMaxLostFrames = 3;
+
+  for (auto it = fusion_polygon_obs_.begin();
+       it != fusion_polygon_obs_.end();) {
+    size_t local_id = it->first;
+
+    if (current_ids.count(it->first) == 0) {
+      it->second.IncreaseLostFrame();
+      if (it->second.LostFrameCount() > kMaxLostFrames) {
+        for (auto map_it = fusion_id_to_local_id_.begin();
+             map_it != fusion_id_to_local_id_.end();) {
+          if (map_it->second == local_id) {
+            map_it = fusion_id_to_local_id_.erase(map_it);
+          } else {
+            ++map_it;
+          }
+        }
+        it = fusion_polygon_obs_.erase(it);
+        continue;
+      }
+    } else {
+      it->second.ResetLostFrame();
+    }
+    ++it;
+  }
 }
 
 }  // namespace apa_planner

@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "astar_decider.h"
-#include "euler_distance_transform.h"
+#include "hierarchy_euler_distance_transform.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "node3d.h"
@@ -72,7 +72,7 @@ class TargetPoseRegulator : public AstarDecider {
  public:
   TargetPoseRegulator() = default;
 
-  void Process(EulerDistanceTransform *edt, const AstarRequest *request,
+  void Process(HierarchyEulerDistanceTransform *edt, const AstarRequest *request,
                const Pose2f &ego_pose, const Pose2f &target,
                const VehicleParam &veh_param,
                const ParkingVehDirection &direction_request);
@@ -89,32 +89,32 @@ class TargetPoseRegulator : public AstarDecider {
  private:
   const bool IsParkingIn(const AstarRequest *request);
 
-  void GenerateCandidates(EulerDistanceTransform *edt,
+  void GenerateCandidates(HierarchyEulerDistanceTransform *edt,
                           const AstarRequest *request,
                           const VehicleParam &veh_param);
 
-  void GenerateCandidatesForVerticalHeadOut(EulerDistanceTransform *edt,
+  void GenerateCandidatesForVerticalHeadOut(HierarchyEulerDistanceTransform *edt,
                                             const AstarRequest *request,
                                             const VehicleParam &veh_param);
 
   void GenerateCandidatesForVerticalHeadOut(
-      EulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
+      HierarchyEulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
       const VehicleParam &veh_param);
 
   // check min dist by x range
   const float GetCandidatePathByXRange(const Pose2f &global_pose,
-                                       EulerDistanceTransform *edt);
+                                       HierarchyEulerDistanceTransform *edt);
 
   const float GetDistToObsHeadOut(const Pose2f &global_pose,
                                   const ParkingVehDirection &direction_request,
-                                  EulerDistanceTransform *edt);
+                                  HierarchyEulerDistanceTransform *edt);
 
   void DebugString();
 
   void UpdateReferenceLinePath(const AstarRequest *request,
                                const VehicleParam &veh_param,
                                const ParkingVehDirection &direction_request,
-                               EulerDistanceTransform *edt);
+                               HierarchyEulerDistanceTransform *edt);
 
   bool IsReferenceLineSafeEnough();
 

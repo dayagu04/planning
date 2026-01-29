@@ -158,6 +158,74 @@
   "potential_near_car_thr": 0.5,
   "potential_near_car_v_ub": -0.2,
   "potential_near_car_v_lb": -0.03,
+  "free_space_lane_bp": [
+    0.6,
+    0.8,
+    1.0,
+    1.3,
+    1.7,
+    2.2
+  ],
+  "lane_static_limit_v_free_space": [
+    1.5,
+    5,
+    10,
+    15,
+    35,
+    50
+  ],
+  "free_space_road_bp": [
+    0.6,
+    0.8,
+    1.0,
+    1.3,
+    1.7,
+    2.2
+  ],
+  "road_static_limit_v_free_space": [
+    1.5,
+    5,
+    10,
+    15,
+    35,
+    50
+  ],
+  "free_space_static_obstacle_bp": [
+    0.7,
+    0.9,
+    1.2,
+    1.4,
+    1.7,
+    2.2,
+    2.5
+  ],
+  "static_obstacle_static_limit_v_free_space": [
+    0,
+    4.16,
+    8.33,
+    16.66,
+    22.22,
+    33.33,
+    50
+  ],
+  "free_space_dynamic_obstacle_bp": [
+    0.8,
+    1.0,
+    1.2,
+    1.4,
+    1.7,
+    2.2,
+    2.5
+  ],
+  "dynamic_obstacle_static_limit_v_free_space": [
+    0,
+    4.16,
+    8.33,
+    16.66,
+    22.22,
+    33.33,
+    50
+  ],
   "use_lat_offset_in_tracklet_maintainer": true,
   "enable_static_scene": true,
   "car_addition_decre_factor": 0.8,
@@ -219,7 +287,36 @@
   "processed_trajectory_acc_thr": 0.5,
   "max_heading_diff_threshold_deg": 45.0,
   "left_right_turn_func_fading_away_switch": false,
+  "press_line_fewly_threshold": 0.3,
+  "use_press_line_fewly_threshold": false,
   "lc_short_dis_thr": 8,
+  "hybrid_ara_star": {
+    "x_grid_resolution": 0.02,
+    "y_grid_resolution": 0.02,
+    "phi_grid_resolution": 0.02,
+    "next_node_num": 7,
+    "step_size": 0.2,
+    "one_shot_distance": 1,
+    "small_shot_distance": 0.5,
+    "use_percentage_of_steering": 1.8,
+    "heuristic_factor": 20,
+    "agent_cost_weight": 0.2,
+    "center_cost_weight": 0.3,
+    "motion_cost_weight": 0.0,
+    "boundary_cost_weight": 0.1,
+    "boundary_soft_extra_buffer": 0.15,
+    "crosslinebuffer": 0.5,
+    "enable_middle_final_node": false,
+    "l_limit": 3.5,
+    "collision_buffer": 0.4,
+    "rear_obs_s": -3,
+    "front_obs_s": 25,
+    "enable_parking_space": false,
+    "longitudinal_extend": 0.3,
+    "lateral_extend": 0.35,
+    "search_once": true,
+    "use_occ_s_dist": 7
+  },
   "general_lateral_decider": {
     "bound2center_line_distance_thr": 0.0,
     "lateral_ref_traj_type":false,
@@ -772,7 +869,7 @@
     "q_ref_pos": 8.0,
     "q_ref_vel": 0.0,
     "q_acc": 10.0,
-    "q_acc_start": 10.0,
+    "q_acc_start": 5.0,
     "q_jerk": 100.0,
     "q_jerk_start": 50.0,
     "q_djerk": 50.0,
@@ -829,7 +926,7 @@
     "search_sdmap_curv_dis": 300.0,
     "sdmap_curv_thred": 500.0,
     "straight_ramp_v_limit": 19.44,
-    "v_intersection_min_limit": 11.11,
+    "v_intersection_min_limit": 16.67,
     "stop_dis_before_stopline": 2.0,
     "stop_dis_before_crosswalk": 3.5,
     "enable_sdmap_curv_v_adjust": true,
@@ -859,7 +956,7 @@
     "straight_ramp_v_limit_high": 22.22,
     "ramp_curv_radius_small": 350.0,
     "ramp_curv_radius_big": 500.0,
-    "v_intersection_min_limit": 11.11,
+    "v_intersection_min_limit": 16.67,
     "min_acc_function_fading_away": -0.9,
     "function_fading_away_distance_to_intersection": 50.0,
     "v_reduce_intersection": 0.0,
@@ -1115,12 +1212,12 @@
       "mute_invade_neighbor_decision": true
     },
     "agent_headway_decider": {
-      "ego_vel_table": [0.0, 3.33, 10.0, 16.67, 26.67, 36.67],
-      "ego_normal_thw_table_level_1": [1.05, 1.05, 1.11, 1.16, 1.21, 1.3],
-      "ego_normal_thw_table_level_2": [1.1, 1.1, 1.2, 1.3, 1.44, 1.59],
-      "ego_normal_thw_table_level_3": [1.15, 1.15, 1.25, 1.39, 1.62, 1.9],
-      "ego_normal_thw_table_level_4": [1.2, 1.2, 1.35, 1.59, 1.9, 2.2],
-      "ego_normal_thw_table_level_5": [1.25, 1.25, 1.44, 1.73, 2.1, 2.5],
+      "ego_vel_table": [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0],
+      "ego_normal_thw_table_level_1": [0.6, 0.7, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0],
+      "ego_normal_thw_table_level_2": [0.8, 0.9, 1.0, 1.1, 1.2, 1.25, 1.3, 1.35, 1.4],
+      "ego_normal_thw_table_level_3": [1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.65, 1.7, 1.8],
+      "ego_normal_thw_table_level_4": [1.2, 1.4, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
+      "ego_normal_thw_table_level_5": [1.5, 1.7, 1.9, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6],
       "thw_init_value_lane_change": 0.3,
       "thw_low_rate_lane_change": 0.3,
       "thw_high_rate_lane_change": 0.65,
@@ -1186,15 +1283,15 @@
       "low_speed_follow_speed_thred_mps" : 1.0,
       "low_speed_follow_accel_release_traj_len" : 5.0,
       "comfort_kinematic_param": {
-        "acc_positive_upper": 1.35,
+        "acc_positive_upper": 1.5,
         "acc_positive_speed_lower": 4.2,
-        "acc_positive_lower": 0.5,
+        "acc_positive_lower": 0.8,
         "acc_positive_speed_upper": 12.0,
         "acc_negative_lower": -0.8,
         "acc_negative_speed_lower": 5.0,
         "acc_negative_upper": -0.5,
         "acc_negative_speed_upper": 20.0,
-        "jerk_positive_upper": 3.0,
+        "jerk_positive_upper": 5.0,
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,
@@ -1377,7 +1474,7 @@
           0.0, 5.56, 11.11, 16.67, 22.22, 27.78, 36.11
         ],
         "acc_table": [
-          1.35, 1.25, 1.0, 0.8, 0.6, 0.4, 0.3
+          1.5, 1.35, 1.15, 0.95, 0.65, 0.45, 0.35
         ]
       },
       "cruise_dec_bound_table": {
@@ -1615,7 +1712,7 @@
       "lateral_acc_max": 1.1,
       "lateral_brake_min": 2.5,
       "lateral_brake_max": 1.1,
-      "lateral_miu": 0.8
+      "lateral_miu": 0.5
     }
  },
  "lane_change_safety_check": {

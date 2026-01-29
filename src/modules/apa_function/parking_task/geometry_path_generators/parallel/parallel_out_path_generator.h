@@ -10,7 +10,14 @@ class ParallelOutPathGenerator : public ParallelPathGenerator {
   virtual const bool Update() override;
   virtual const bool Update(const std::shared_ptr<CollisionDetector>
                                 &collision_detector_ptr) override;
-  
+
+  const std::unordered_map<ApaParkOutDirection,
+                           std::vector<pnc::geometry_lib::PathSegment>>&
+  GetPathByDirection() const {
+    return parkout_path_by_direction_;
+  }
+
+  void ClearPathByDirection() { parkout_path_by_direction_.clear(); }
 
  protected:
   virtual void Preprocess() override;
@@ -22,6 +29,9 @@ class ParallelOutPathGenerator : public ParallelPathGenerator {
       const std::vector<std::vector<pnc::geometry_lib::PathSegment>>&
           park_out_path_vec);
 
+  std::unordered_map<ApaParkOutDirection,
+                     std::vector<pnc::geometry_lib::PathSegment>>
+      parkout_path_by_direction_;
 };
 
 }  // namespace apa_planner

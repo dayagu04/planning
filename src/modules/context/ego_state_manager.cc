@@ -76,6 +76,22 @@ void EgoStateManager::set_ego_pose_and_vel(
   ego_hmi_v_ = vehicle_status.velocity().hmi_speed();
   ego_yaw_rate_ =
       vehicle_status.angular_velocity().heading_yaw_rate().value_rps();
+
+  // accumulate drive distance
+  const auto& function_info = session_->environmental_model().function_info();
+  if (session_->is_rads_scene()) {
+    if ((function_info.function_state() == common::DrivingFunctionInfo::ACTIVATE ||
+         function_info.function_state() == common::DrivingFunctionInfo::SUSPEND) &&
+        std::fabs(ego_v_) > 1e-3) {
+      double ds = std::hypot(ego_pose_raw_.x - last_ego_pose_raw_.x,
+                            ego_pose_raw_.y - last_ego_pose_raw_.y);
+      if (ds > 1e-3) {
+        ego_drive_distance_ += ds;
+      }
+    }
+  } else {
+    ego_drive_distance_ = 0.0;
+  }
 }
 
 void EgoStateManager::set_ego_position_llh(
@@ -395,7 +411,8 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
   } else if (start_stop_state == common::StartStopInfo::STOP) {
     ego_acc_replan = std::min(0.0, ego_acc_replan);
   }
-  bool low_speed_replan = ego_vel_replan < config_.kEpsilon_v;
+  bool low_speed_replan = ego_vel_replan < config_.kEpsilon_v &&
+                          start_stop_state != common::StartStopInfo::START;
   // avoid dramatic acc in ACC mode
   const bool is_acc_mode =
       session_->environmental_model().function_info().function_mode() ==

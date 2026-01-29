@@ -45,7 +45,7 @@ class PathSafeChecker {
   const bool IsPathCollision() const { return is_path_collision_; }
 
   bool CalcEgoCollision(const Pose2D& ego_pose, const double lat_buffer,
-                        const double lon_buffer);
+                        const double lon_buffer, const bool use_limiter = true);
 
   const bool IsCollisionByStaticMavableOD(
       const Pose2D& ego_pose, const double lat_buffer, const double lon_buffer,
@@ -97,6 +97,7 @@ class PathSafeChecker {
   double ego_project_s_;
 
   bool only_check_static_movable_obs_ = false;
+  bool use_limiter_ = true;
 };
 
 }  // namespace planning

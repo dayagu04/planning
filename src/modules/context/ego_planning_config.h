@@ -267,6 +267,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
     left_right_turn_func_fading_away_switch =
         read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
+    press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
+    use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -303,6 +305,8 @@ struct EgoPlanningConfig : public Config {
   double raw_ref_extend_buff = 0;
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
+  double press_line_fewly_threshold = 0.3;
+  bool use_press_line_fewly_threshold = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -1797,6 +1801,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
 
 struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     near_car_thr = read_json_key<double>(json, "near_car_thr", near_car_thr);
     lat_safety_buffer =
         read_json_key<double>(json, "lat_safety_buffer", lat_safety_buffer);
@@ -1893,6 +1898,14 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                           std::vector<std::string>{"potential_follow_obstacle",
                                                    "lane_width_factor"},
                           lane_width_factor);
+    read_json_vec<double>(json, "free_space_lane_bp", free_space_lane_bp);
+    read_json_vec<double>(json, "lane_static_limit_v_free_space", lane_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_road_bp", free_space_road_bp);
+    read_json_vec<double>(json, "road_static_limit_v_free_space", road_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_static_obstacle_bp", free_space_static_obstacle_bp);
+    read_json_vec<double>(json, "static_obstacle_static_limit_v_free_space", static_obstacle_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_dynamic_obstacle_bp", free_space_dynamic_obstacle_bp);
+    read_json_vec<double>(json, "dynamic_obstacle_static_limit_v_free_space", dynamic_obstacle_static_limit_v_free_space);
     side_2_front_count_thr = read_json_key<int>(
         json, "side_2_front_count_thr", side_2_front_count_thr);
     side_2_front_max_count = read_json_key<int>(
@@ -1956,6 +1969,14 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   bool open_side_lat_offset_nudge = false;
   double start_nudge_ttc = 3.6;
   int cross_lane_side_2_front_count_thr = 3;
+  std::vector<double> free_space_lane_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> lane_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_road_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> road_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_static_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> static_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -2052,6 +2073,7 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
     base_nudge_distance =
@@ -4200,11 +4222,11 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     int curve_confirmation_frames = 4;  // Number of frames required to confirm curve road boundary speed limit
     int curve_max_gear_threshold = 4;  // Maximum gear threshold (gear must be < this value to be valid)
     std::vector<double> curve_speed_limits{20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6};  // Speed limits (m/s) for curve road boundary (corresponding to lateral_distance_ranges)
-    
+
     // Curve front edge expansion configuration based on speed limit
     std::vector<double> curve_front_edge_expansion_speed_breakpoints{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6};  // Speed breakpoints (m/s) for front edge expansion interpolation
     std::vector<double> curve_front_edge_expansion_values{0.30, 0.35, 0.40, 0.50, 0.60, 0.60};  // Expansion values (m) corresponding to speed breakpoints
-    
+
     // Lateral acceleration limit detection configuration
     bool enable_lateral_acceleration_limit = false;  // Enable lateral acceleration limit detection
     double lateral_acceleration_threshold = 2.0;  // Lateral acceleration threshold (m/s^2) to trigger speed limit
@@ -5423,6 +5445,9 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, distance_stop_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
                      "distance_stop_between_ego_and_cipv_threshold");
+    ReadItem<double>(json, rads_distance_stop_between_ego_and_destination_cipv_threshold,
+                    "speed_planning", "start_stop_decider",
+                    "rads_distance_stop_between_ego_and_destination_cipv_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
     ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
@@ -5448,6 +5473,7 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_start_between_ego_and_large_cipv_threshold = 0.5;
   double distance_start_between_ego_and_cipv_threshold = 0.4;
   double distance_stop_between_ego_and_cipv_threshold = 3.0;
+  double rads_distance_stop_between_ego_and_destination_cipv_threshold = 1.2;
   double distance_to_go_threshold = 6.5;
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
@@ -6365,4 +6391,12 @@ struct ReferencePathManagerConfig : public EgoPlanningConfig{
   }
   bool is_enable_construction_refline = false;
 };
+
+struct NarrowSpaceDeciderConfig : public EgoPlanningConfig{
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+  }
+
+};
+
 }  // namespace planning

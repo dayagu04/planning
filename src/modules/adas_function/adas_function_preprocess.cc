@@ -4,9 +4,9 @@
 #include "common_platform_type_soc.h"
 namespace adas_function {
 namespace preprocess {
-  void Preprocess::Init(const bool is_simulation) { 
-    SyncParameters(is_simulation); 
-  }
+void Preprocess::Init(const bool is_simulation) {
+  SyncParameters(is_simulation);
+}
 std::string Preprocess::ReadJsonFile(const std::string &path) {
   FILE *file = fopen(path.c_str(), "r");
   assert(file != nullptr);
@@ -31,19 +31,19 @@ void Preprocess::SyncParameters(const bool is_simulation) {
   // 仿真模式使用部署的配置文件，实车模式从引擎配置目录读取
   // 与 APA 保持一致的配置加载策略
   std::string path = "/asw/planning/res/conf/adas_params.json";
-  
+
   if (!is_simulation) {
     // 实车模式：从引擎配置的车型目录读取
     auto engine_config =
         planning::common::ConfigurationContext::Instance()->engine_config();
-    
+
     if (!engine_config.vehicle_cfg_dir.empty()) {
       path = engine_config.vehicle_cfg_dir + "/adas_params.json";
     } else {
       ILOG_WARN << "engine_config.vehicle_cfg_dir is empty, using default path";
     }
   }
-  
+
   // read json file
   read_json_file_ok_flag_ = false;
   std::string config_file = ReadJsonFile(path);
@@ -60,7 +60,7 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "car_type");
   ILOG_DEBUG << "car_type = " << GetContext.mutable_param()->car_type;
   std::string json_car_type = adas_config.get<std::string>("car_type");
-  
+
   // 获取该车型的参数块，支持所有 5 个车型
   mjson::Json json_vehicle_common_params;
   if ((int)json_car_type.find("jac_s811") != -1) {
@@ -74,7 +74,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
   } else if ((int)json_car_type.find("bestune_e541") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("bestune_e541");
   } else {
-    ILOG_WARN << "Unknown car type: " << json_car_type << ", using chery_e0x as default";
+    ILOG_WARN << "Unknown car type: " << json_car_type
+              << ", using chery_e0x as default";
     json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
   }
   auto vehicle_common_json_reader = mjson::Reader(json_vehicle_common_params);
@@ -197,7 +198,7 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "ihc_active_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_disable_code_maskcode, int,
                        "tsr_disable_code_maskcode");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code_maskcode, int,  
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code_maskcode, int,
                        "tsr_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
                        std::vector<double>, "lka_vel_vector");
@@ -337,8 +338,6 @@ void Preprocess::SyncParameters(const bool is_simulation) {
       GetContext.mutable_param()->ldw_enable_accel_pedal_pos_rate_dur, double,
       "enable_accel_pedal_pos_rate_dur");
 
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_status_const,
-                       int, "meb_request_status_const");
   ADAS_JSON_READ_VALUE(
       GetContext.mutable_param()->LDP_supp_CoolingTime_handtrq_thr, double,
       "supp_CoolingTime_handtrq_thr");
@@ -367,10 +366,52 @@ void Preprocess::SyncParameters(const bool is_simulation) {
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_tlc_near_, double,
                        "ldw_tlc_near_");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_soildline_switch, bool,
-                       "elk_soildline_switch");    
+                       "elk_soildline_switch");
   ADAS_JSON_READ_VALUE(
       GetContext.mutable_param()->elk_bicycle_motorcycle_sw, bool,
-      "elk_bicycle_motorcycle_sw");                     
+      "elk_bicycle_motorcycle_sw");
+
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_main_switch, bool,
+                       "meb_main_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_od_obs_switch, bool,
+                       "meb_od_obs_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_occ_obs_switch, bool,
+                       "meb_occ_obs_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_uss_obs_switch, bool,
+                       "meb_uss_obs_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_ttc_thrd, double,
+                       "meb_ttc_thrd");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_dis_buffer, double,
+                       "meb_dis_buffer");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_acc_collision_thrd,
+                       double, "meb_acc_collision_thrd");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_acc_collision_thrd_bak,
+                       double, "meb_acc_collision_thrd_bak");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_acc, double,
+                       "meb_request_acc");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_dynamic_buffer_switch,
+                       bool, "meb_dynamic_buffer_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_actuator_act_time,
+                       double, "meb_actuator_act_time");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_reverse_acc_gain, double,
+                       "meb_reverse_acc_gain");
+
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_hmi_test_switch, bool,
+                       "meb_hmi_test_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_hmi_state, int,
+                       "meb_hmi_state");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_hmi_status, int,
+                       "meb_hmi_status");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_hmi_vaule, double,
+                       "meb_hmi_vaule");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_hmi_direction, int,
+                       "meb_hmi_direction");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_od_box_switch, bool,
+                       "meb_od_box_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_call_switch, bool,
+                       "meb_call_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_status_const,
+                       int, "meb_request_status_const");
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }
@@ -516,6 +557,9 @@ void Preprocess::UpdateStateInfo(void) {
   } else {
     GetContext.mutable_state_info()->lat_departure_acc = 0.0;
   }
+  // long_acceleration
+  GetContext.mutable_state_info()->vel_acc =
+      vehicle_service_output_info_ptr->long_acceleration;
   // 车道线融合模块节点通讯丢失
   auto road_info_ptr = &GetContext.mutable_session()
                             ->mutable_environmental_model()
@@ -1812,14 +1856,14 @@ void Preprocess::SidewayExistJudge(void) {
   //     left_sideway_exist_flag;
   // GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
   //     right_sideway_exist_flag;
-  //新增可视化分析数据
+  // 新增可视化分析数据
   GetContext.mutable_road_info()->current_lane.left_lane_samedir_exist_flag =
       left_lane_samedir_exist_flag;
   GetContext.mutable_road_info()->current_lane.right_lane_samedir_exist_flag =
       right_lane_samedir_exist_flag;
   GetContext.mutable_road_info()->current_lane.sideway_relative_id_zero_nums =
       ptr_virtual_lane_manager->origin_relative_id_zero_nums();
-  //以下是判断是否存在origin_relative_id_zero_nums车道不同的场景，两个车道的id相同，证明有交叉
+  // 以下是判断是否存在origin_relative_id_zero_nums车道不同的场景，两个车道的id相同，证明有交叉
   bool right_cross_sideway_exist_flag = false;
   bool left_cross_sideway_exist_flag = false;
 

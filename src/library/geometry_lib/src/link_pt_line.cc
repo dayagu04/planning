@@ -802,25 +802,20 @@ void LinkPtLinePath<T>::SetPathSegs(const PathSeg<T> _segs[],
   cur_gear = _segs[0].gear;
   last_gear = _segs[_seg_num - 1].gear;
   last_steer = _segs[_seg_num - 1].steer;
-  single_gear_lengths[gear_change_num] = _segs[0].GetLength();
-  gear_num++;
 
   for (uint8_t i = 0; i < seg_num; ++i) {
     segs[i] = _segs[i];
     gears[i] = segs[i].gear;
     steers[i] = segs[i].steer;
     kappas[i] = segs[i].kappa;
+    lengths[i] = segs[i].GetLength();
     total_length += segs[i].GetLength();
 
     if (i > 0) {
       if (gears[i] == gears[i - 1]) {
-        single_gear_lengths[gear_change_num] += segs[i].GetLength();
         if (std::fabs(kappas[i]) > T(1e-3f)) {
           kappa_change += std::fabs(kappas[i] - kappas[i - 1]);
         }
-      } else {
-        single_gear_lengths[++gear_change_num] = segs[i].GetLength();
-        gear_num++;
       }
     }
 
@@ -828,7 +823,6 @@ void LinkPtLinePath<T>::SetPathSegs(const PathSeg<T> _segs[],
       last_line_length = segs[i].GetLength();
     }
   }
-  cur_gear_length = single_gear_lengths[0];
 }
 
 template <typename T>
@@ -845,10 +839,8 @@ void LinkPtLinePath<T>::PrintInfo(const bool enable_log) const {
   ILOG_INFO_IF(enable_log) << "path_count = " << static_cast<int>(seg_num)
                            << "  gear_change_count = "
                            << static_cast<int>(gear_change_num)
-                           << "  gear_count = " << static_cast<int>(gear_num)
                            << "  total_length = " << total_length
                            << "  kappa_change = " << kappa_change
-                           << "  cur_gear_length = " << cur_gear_length
                            << "  cur_gear = " << PathGearDebugString(cur_gear);
 
   for (size_t i = 0; i < seg_num; i++) {

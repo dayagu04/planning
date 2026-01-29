@@ -27,6 +27,7 @@
 #include "../tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
+#include "../tasks/task_interface/narrow_space_decider_output.h"
 #include "../tasks/task_interface/parking_switch_decider_output.h"
 #include "../tasks/task_interface/spatio_temporal_union_plan_output.h"
 #include "../tasks/task_interface/traffic_light_decider_output.h"
@@ -444,6 +445,14 @@ class PlanningContext {
     return &agent_longitudinal_decider_output_;
   }
 
+  const NarrowSpaceDeciderOutput &narrow_space_decider_output() const {
+    return narrow_space_decider_output_;
+  }
+
+  NarrowSpaceDeciderOutput &mutable_narrow_space_decider_output() {
+    return narrow_space_decider_output_;
+  }
+
   const std::shared_ptr<AdaptiveCruiseControl>
       &adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
@@ -613,6 +622,9 @@ class PlanningContext {
 
   // LatLonJointPlannerDecider
   LatLonJointPlannerDeciderOutput lat_lon_joint_planner_decider_output_;
+
+  // nsa: NarrowSpaceDeciderOutput
+  NarrowSpaceDeciderOutput narrow_space_decider_output_;
 };
 
 }  // namespace planning

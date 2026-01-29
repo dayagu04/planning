@@ -17,7 +17,7 @@ class CurveSampling {
   explicit CurveSampling(const MapBound* XYbounds,
                          const ParkObstacleList* obstacles,
                          const AstarRequest* request,
-                         EulerDistanceTransform* edt,
+                         HierarchyEulerDistanceTransform* edt,
                          ParkReferenceLine* ref_line,
                          const PlannerOpenSpaceConfig* config,
                          const float min_radius,
@@ -33,7 +33,7 @@ class CurveSampling {
 
  protected:
   const ParkObstacleList* obstacles_;
-  EulerDistanceTransform* edt_;
+  HierarchyEulerDistanceTransform* edt_;
 
   // xmin, xmax, ymin, ymax
   const MapBound* grid_map_bound_;

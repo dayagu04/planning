@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/share/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251018/20251018-15-12-31/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-10-18-15-12-31_no_camera.bag"
+bag_path = "/share//data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251226/20251226-13-05-43/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-12-26-13-05-43_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -42,6 +42,7 @@ load_measure_distance_tool(fig7)
 # fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
 fig_receive_topic_time = load_receive_topic_time(bag_loader)
+hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table = load_planning_hmi_info_table()
 fig_hmi = load_avoid_hmi(bag_loader)
 fig_curve = load_road_curve(bag_loader, lat_plan_data)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
@@ -130,73 +131,6 @@ def update_lat_behavior_data(local_view_data):
         pass
 
   behavior_data_1.data.update({
-    'name': names,
-    'data': datas,
-  })
-
-# hmi ad info
-hmi_ad_info_data = ColumnDataSource({
-  'name':[],
-  'data':[]
-})
-columns = [
-        TableColumn(field="name", title="name",),
-        TableColumn(field="data", title="data"),
-    ]
-data_hmi_ad_info_table = DataTable(source=hmi_ad_info_data, columns=columns, width=400, height=600)
-
-def update_hmi_ad_info(hmi_ad_info):
-  vars = ['is_avaliable', 'timestamp', 'lane_change_direction', \
-          'lane_change_status', 'lane_change_reason', 'status_update_reason', \
-          'noa_exit_warning_level_distance', 'avoid_status', 'aovid_id', \
-          'is_curva', 'cutin_track_id', 'cruise_speed', \
-          'avoiddirect', 'distance_to_ramp', 'distance_to_split', \
-          'distance_to_merge', 'distance_to_toll_station', 'distance_to_tunnel', \
-          'is_within_hdmap', 'ramp_direction', 'ramp_pass_sts', \
-          'dis_to_reference_line', 'angle_to_roaddirection', 'is_in_sdmaproad', \
-          'road_type']
-  names  = []
-  datas = []
-  for name in vars:
-    try:
-      datas.append(getattr(hmi_ad_info, name))
-      names.append(name)
-    except:
-      pass
-
-  hmi_ad_info_data.data.update({
-    'name': names,
-    'data': datas,
-  })
-
-# hmi hpp info
-hmi_hpp_info_data = ColumnDataSource({
-  'name':[],
-  'data':[]
-})
-columns = [
-        TableColumn(field="name", title="name",),
-        TableColumn(field="data", title="data"),
-    ]
-data_hmi_hpp_info_table = DataTable(source=hmi_hpp_info_data, columns=columns, width=400, height=460)
-
-def update_hmi_hpp_info(hmi_hpp_info):
-  vars = ['is_avaliable', 'distance_to_parking_space', 'avoid_status', \
-          'avoid_obstacle_type', 'aovid_id', 'is_approaching_turn', \
-          'is_left_turn', 'is_approaching_intersection', 'is_approaching_speed_bumps', \
-          'emergency_level', 'is_parking_space_occupied', 'is_new_parking_space_found', \
-          'is_on_hpp_lane', 'is_reached_hpp_trace_start', 'accumulated_driving_distance', \
-          'estimated_remaining_time', 'hpp_state_switch']
-  names  = []
-  datas = []
-  for name in vars:
-    try:
-      datas.append(getattr(hmi_hpp_info, name))
-      names.append(name)
-    except:
-      pass
-
-  hmi_hpp_info_data.data.update({
     'name': names,
     'data': datas,
   })
@@ -300,16 +234,13 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     update_lat_behavior_data(local_view_data)
-  if bag_loader.planning_hmi_msg['enable'] ==True:
-    hmi_ad_info = local_view_data['data_msg']['planning_hmi_msg'].ad_info
-    data_hmi_ad_info_table = update_hmi_ad_info(hmi_ad_info)
-    hmi_hpp_info = local_view_data['data_msg']['planning_hmi_msg'].hpp_info
-    data_hmi_hpp_info_table = update_hmi_hpp_info(hmi_hpp_info)
+  update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data)
+
   push_notebook()
 
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_curve)), title="CurveFigure")
 pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(column(data_behavior_table_1)))), title="BehaviorInfo")
-pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(data_hmi_ad_info_table, data_hmi_hpp_info_table)))), title="Hmi")
+pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")
 pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ])
 if global_fig_plot:
@@ -317,7 +248,3 @@ if global_fig_plot:
 else:
   bkp.show(row(fig1, column(fig2, fig9, fig3, fig4, fig5, fig6, fig_lat_offset)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
-
-print(steer_ratio)
-
-

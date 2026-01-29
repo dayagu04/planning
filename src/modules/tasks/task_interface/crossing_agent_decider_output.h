@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "config/basic_type.h"
-#include "src/library/arastar_lib/hybrid_ara_data.h"
 #include "task_basic_types.h"
 namespace planning {
 

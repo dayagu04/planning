@@ -9,6 +9,8 @@ struct NodeHeuristicCost {
   // dynamic_programing_cost: get distance for node without any collision.
   float astar_dist;
   float ref_line_heading_cost;
+  float curve_path_cost;
+  float dp_cost;
   float rs_path_dist;
   float rs_path_gear;
   float rs_path_steer;

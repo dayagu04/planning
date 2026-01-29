@@ -12,7 +12,7 @@ void CostManager::AddCost(const std::shared_ptr<BaseCost> cost_ptr) {
   }
 }
 
-double CostManager::ComputeCost(Node3D& vertex) const {
+double CostManager::ComputeCost(ara_star::Node3d& vertex) const {
   double total_cost = 0.0;
   for (auto cost_ptr : cost_ptrs_) {
     double cost = cost_ptr->MakeCost(vertex);

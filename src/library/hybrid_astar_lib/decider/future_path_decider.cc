@@ -54,7 +54,7 @@ void FuturePathDecider::Init(const float min_turn_radius,
 void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
                                 const float min_turn_radius,
                                 const float sampling_lon_resolution,
-                                EulerDistanceTransform *edt,
+                                HierarchyEulerDistanceTransform *edt,
                                 AstarRequest &request) {
   if (request.path_generate_method == AstarPathGenerateType::TRY_SEARCHING) {
     request.first_action_request.Clear();
@@ -62,7 +62,7 @@ void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
   }
 
   Init(min_turn_radius, sampling_lon_resolution, request);
-  edt->UpdateSafeBuffer(0.01, 0.4, 0.01, 0.35);
+  edt->UpdateSafeBuffer(false, 0.01, 0.4, 0.01, 0.35);
 
   CalcDriveDistByLineModel(request.start_pose, edt, ref_line);
   // use circle model to estimate path length.
@@ -80,7 +80,7 @@ void FuturePathDecider::Process(const Pose2f &start, const Pose2f &end) {
 }
 
 void FuturePathDecider::CalcDriveDistByLineModel(
-    const Pose2f &ego_pose, EulerDistanceTransform *edt,
+    const Pose2f &ego_pose, HierarchyEulerDistanceTransform *edt,
     const ParkReferenceLine *ref_line) {
   // update dist to ref line
   Vec2f ego_line_segment =
@@ -160,7 +160,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
 }
 
 void FuturePathDecider::CalcDriveDistByCircleModel(
-    const Pose2f &ego_pose, EulerDistanceTransform *edt) {
+    const Pose2f &ego_pose, HierarchyEulerDistanceTransform *edt) {
   // update path safe dist
   std::vector<Pose2f> path;
 
@@ -451,7 +451,7 @@ const float FuturePathDecider::SearchAdvisedDriveDist(
 
 void FuturePathDecider::UpdatePathDistInfo(
     const std::vector<Pose2f> &path, const AstarPathGear gear,
-    EulerDistanceTransform *edt, std::vector<Eigen::Vector2f> &path_dist_info) {
+    HierarchyEulerDistanceTransform *edt, std::vector<Eigen::Vector2f> &path_dist_info) {
   float obs_dist;
   Transform2f tf;
   for (size_t i = 0; i < path.size(); i++) {

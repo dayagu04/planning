@@ -23,6 +23,7 @@ void ParallelOutPathGenerator::Reset() {
   output_.Reset();
   debug_info_.Reset();
   calc_params_.Reset();
+  parkout_path_by_direction_.clear();
 }
 
 void ParallelOutPathGenerator::Preprocess() {
@@ -123,6 +124,8 @@ const bool ParallelOutPathGenerator::Update() {
     }
   }
   if (!is_in_slot) {
+    collision_detector_ptr_->SetParam(
+        CollisionDetector::Paramters(0.1, true, true));
     auto last_target_pos = input_.last_target_pose_.pos;
     auto last_target_heading = input_.last_target_pose_.heading;
     auto pose_univ = Eigen::Vector2d(std::cos(last_target_heading),
@@ -156,6 +159,18 @@ const bool ParallelOutPathGenerator::Update() {
     if (!success || out_path_vec.size() == 0) {
       ILOG_INFO << "three  prepareline out search in slot failed!";
       return false;
+    }
+    // remove short path <0.16
+    if (out_path_vec.size() > 2) {
+      if (out_path_vec[0].GetLength() < 0.16 &&
+          out_path_vec[0].seg_gear != out_path_vec[1].seg_gear) {
+        out_path_vec.erase(out_path_vec.begin());
+      }
+      if (out_path_vec.back().GetLength() < 0.16 &&
+          out_path_vec[out_path_vec.size() - 2].seg_gear !=
+              out_path_vec.back().seg_gear) {
+        out_path_vec.erase(out_path_vec.end());
+      }
     }
     pnc::geometry_lib::PrintSegmentsVecInfo(out_path_vec);
     ILOG_INFO << "three  prepareline out search in slot success! --------------------------";
@@ -229,6 +244,13 @@ const bool ParallelOutPathGenerator::Update() {
     ILOG_INFO << "inversed search in slot success! --------------------------";
     pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
     ILOG_INFO << "inversed search in slot success! end-----------------------";
+
+    ApaParkOutDirection out_dir = input_.tlane.slot_side_sgn > 0.0
+                                      ? ApaParkOutDirection::LEFT_FRONT
+                                      : ApaParkOutDirection::RIGHT_FRONT;
+    parkout_path_by_direction_[out_dir] = inversed_path_seg_vec;
+
+    ILOG_INFO << "out_dir: " << int(out_dir);
 
     success = false;
     std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;

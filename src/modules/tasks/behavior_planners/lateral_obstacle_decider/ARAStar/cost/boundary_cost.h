@@ -1,6 +1,6 @@
 #pragma once
 #include "base_cost.h"
-#include "src/library/arastar_lib/hybrid_ara_data.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/ARAStar/hybrid_ara_data.h"
 #include "src/modules/common/math/math_utils.h"
 #include "utils/kd_path.h"
 
@@ -13,11 +13,13 @@ class BoundaryCost : public BaseCost {
                const double ego_wheel_base, const double ego_circle_radius,
                const double lane_width,
                const std::shared_ptr<planning_math::KDPath>& target_lane,
+               const std::shared_ptr<planning::planning_math::KDPath> left_boundary_tree,
+               const std::shared_ptr<planning::planning_math::KDPath> right_boundary_tree,
                const double& hard_safe_distance,
                const double& soft_safe_distance);
   ~BoundaryCost() = default;
 
-  double MakeCost(Node3D& vertex) const;
+  double MakeCost(Node3d& vertex) const;
 
  private:
   void NormalizeCost(double& cost) const;
@@ -25,6 +27,9 @@ class BoundaryCost : public BaseCost {
  private:
   // agent list;
   std::shared_ptr<planning_math::KDPath> target_lane_;
+
+  std::shared_ptr<planning::planning_math::KDPath> left_boundary_tree_;
+  std::shared_ptr<planning::planning_math::KDPath> right_boundary_tree_;
 
   double ego_wheel_base_ = 0.0;
   double ego_circle_radius_ = 0.0;

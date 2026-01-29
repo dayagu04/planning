@@ -12,7 +12,6 @@ def init():  # 初始化
     'is_vis_map': False,
     'is_vis_sdmap': False,
     'is_vis_sdpromap': False,
-    'is_vis_hpp': False,
     'is_vis_radar': False,
     'is_vis_rdg_line': True,
     'is_vis_rdg_obj': True,
@@ -20,6 +19,13 @@ def init():  # 初始化
     'is_vis_lane_mark': True,
     'is_vis_merge_point': False,
     'is_calc_min_turn_radius': False,  # True: 计算自车前方（0-80m）真值路径点的最小转弯半径
+    'is_vis_hpp_map': False,
+    'is_vis_occ_obj': False,
+    'is_vis_ground_line': False,
+    'is_vis_parking_slot': False,
+    'is_vis_speed_bump': False,
+    'is_vis_ground_mark': False,
+    'is_vis_rads_path': False,
   }
 
 
@@ -40,25 +46,37 @@ def set_value_by_scene(scene):
   if scene == 'HPP' or scene == 'PARKING_APA':
     global_dict['scene_type'] = 'HPP'
     global_dict['g_is_display_enu'] = True
-    global_dict['is_vis_hpp'] = True
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_sdpromap'] = False
     global_dict['is_vis_rdg_line'] = False
+    global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+    global_dict['is_vis_hpp_map'] = True
+    global_dict['is_vis_occ_obj'] = True
+    global_dict['is_vis_ground_line'] = True
+    global_dict['is_vis_parking_slot'] = True
+    global_dict['is_vis_speed_bump'] = True
+    global_dict['is_vis_ground_mark'] = True
   elif scene == 'NSA':
     global_dict['scene_type'] = 'NSA'
-    global_dict['g_is_display_enu'] = False
-    global_dict['is_vis_hpp'] = True
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
     global_dict['is_vis_rdg_line'] = False
+    global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+    global_dict['is_vis_occ_obj'] = True
+    global_dict['is_vis_speed_bump'] = True
   elif scene == 'RADS':
     global_dict['scene_type'] = 'RADS'
-    global_dict['is_vis_hpp'] = True
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_rdg_line'] = False
+    global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+    global_dict['is_vis_occ_obj'] = True
+    global_dict['is_vis_speed_bump'] = True
+    global_dict['is_vis_rads_path'] = True
