@@ -862,7 +862,12 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     }
 
     // 如果自车左边的车道数大于link的总车道数，则认为左侧车道数误检，直接return;
-    if (left_lane_num > real_lane_num) {
+    bool is_per_left_lane_error = left_lane_num > real_lane_num;
+
+    // 如果当前link上只有1条车道，则不需要再触发导航变道。
+    bool is_only_one_lane_on_cur_link = real_lane_num == 1;
+
+    if (is_per_left_lane_error || is_only_one_lane_on_cur_link) {
       count_continue_general_mlc_ = 0;
       return;
     }
