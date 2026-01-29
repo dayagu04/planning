@@ -261,10 +261,10 @@ void TsrCore::UpdateTsrSuppInfo(void) {
 
     for (auto &supp_sign_info : supp_sign_info_vector) {
       // 判断是否有辅助标识牌在范围内(前15,左10)
-      if (supp_sign_info.supp_sign_y <= 0.0 &&
+      if (supp_sign_info.supp_sign_y <= 10.0 &&
           supp_sign_info.supp_sign_y >= -10.0 &&
-          supp_sign_info.supp_sign_x >= 0.0 &&
-          supp_sign_info.supp_sign_x <= 15.0) {
+          supp_sign_info.supp_sign_x >= -100.0 &&
+          supp_sign_info.supp_sign_x <= 200.0) {
         // 根据标识牌类型设置对应的位
         switch (supp_sign_info.supp_sign_type) {
           case iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN:
