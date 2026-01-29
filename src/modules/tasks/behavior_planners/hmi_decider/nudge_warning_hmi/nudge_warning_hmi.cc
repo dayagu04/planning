@@ -126,11 +126,11 @@ bool NudgeWarningHMIDecider::IsStartRunning() {
   }
 
   // bound避让
-  std::vector<std::pair<int, int>> obstacle_pairs; // id - index
+  std::vector<std::pair<int, int>> obstacle_pairs;  // id - index
   bool bound_nudge = false;
   auto check_and_add_avoid_id = [&](const BoundInfo& bound_info,
-                                    double bound_value, int index, bool is_upper) {
-
+                                    double bound_value, int index,
+                                    bool is_upper) {
     auto it = reference_path_ptr_->get_obstacles_map().find(bound_info.id);
     if (it == reference_path_ptr_->get_obstacles_map().end()) {
       return;
@@ -145,8 +145,10 @@ bool NudgeWarningHMIDecider::IsStartRunning() {
          bound_info.type == BoundType::ADJACENT_AGENT ||
          bound_info.type == BoundType::REVERSE_AGENT) &&
         bound_info.id != -100) {
-      bound_nudge = is_upper ? bound_value < -kBoundBeyondCenterlineThre
-                             : bound_value > kBoundBeyondCenterlineThre;
+      bound_nudge = is_upper ? (bound_value < -kBoundBeyondCenterlineThre &&
+                                (planning_init_point_l - bound_value) > 0.05)
+                             : (bound_value > kBoundBeyondCenterlineThre &&
+                                (bound_value - planning_init_point_l) > 0.05);
       if (bound_nudge) {
         obstacle_pairs.emplace_back(bound_info.id, index);
       }
@@ -201,6 +203,8 @@ bool NudgeWarningHMIDecider::IsStartRunning() {
       avoid_id = pair.first;
     }
   }
+
+  // 理论上计数需要针对同一个障碍物
   if (avoid_id != -1) {
     start_running_count_ =
         std::min(kStartRunningCount, start_running_count_ + 1);
