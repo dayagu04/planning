@@ -271,8 +271,10 @@ bool ConstructionSceneRefline::GeneratePassableBoundary(
       right_l_vec.emplace_back(virtual_right_l);
     }
   }
-  left_boundary_spline_.set_points(left_s_vec, left_l_vec);
-  right_boundary_spline_.set_points(right_s_vec, right_l_vec);
+  left_boundary_spline_.set_points(left_s_vec, left_l_vec,
+                                   pnc::mathlib::spline::linear);
+  right_boundary_spline_.set_points(right_s_vec, right_l_vec,
+                                    pnc::mathlib::spline::linear);
   return true;
 }
 
