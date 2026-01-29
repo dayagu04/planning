@@ -6,7 +6,7 @@
 #include "frenet_obstacle.h"
 #include "obstacle.h"
 #include "session.h"
-#include "src/library/arastar_lib/hybrid_ara_star.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/ARAStar/scc_hybrid_ara_star.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/base_lateral_obstacle_decider.h"
 #include "tasks/task.h"
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"
@@ -117,6 +117,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void UpdateLateralObstacleDecisions();
   void LateralObstacleDecision(const FrenetObstacle &frenet_obstacle,
                                bool is_in_lane_change_scene);
+  bool ARAStar();
   void LateralObstacleDeciderOutput();
   void Log();
   bool CalculateCutInAndCross(const FrenetObstacle &frenet_obstacle);
@@ -204,6 +205,8 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   HysteresisDecision side_nudge_release_hysteresis_;
   std::unordered_map<uint32_t, ObstacleInfo> obstacle_interaction_map_;// 用于多障碍之间的交互决策
   int spatio_temporal_planner_intersection_count_ = 0;
+  std::unique_ptr<SccHybridARAStar> hybrid_ara_star_ = nullptr;
+  SearchResult search_result_;
 };
 
 }  // namespace planning

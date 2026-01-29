@@ -34,6 +34,7 @@ SccLateralObstacleDecider::SccLateralObstacleDecider(
   name_ = "SccLateralObstacleDecider";
   ego_rear_edge_to_rear_axle_ = vehicle_param.rear_edge_to_rear_axle;
   side_nudge_release_hysteresis_.SetThreValue(kSpeedThr + 5, kSpeedThr - 5);
+  hybrid_ara_star_ = std::make_unique<SccHybridARAStar>(session);
 }
 
 bool SccLateralObstacleDecider::Execute() {
@@ -67,6 +68,8 @@ bool SccLateralObstacleDecider::Execute() {
   UpdateObstacleInteractionInfo();
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("UpdateObstacleInteractionInfoCostTime", end_time - start_time);
+
+  ARAStar();
 
   LateralObstacleDeciderOutput();
 
@@ -2425,6 +2428,42 @@ void SccLateralObstacleDecider::CheckObstaclesIsReverse() {
       obstacle->set_is_reverse(is_reverse);
     }
   }
+}
+
+bool SccLateralObstacleDecider::ARAStar() {
+  // 默认关闭
+  return true;
+  auto &hybrid_ara_result = session_->mutable_planning_context()
+                                ->mutable_lateral_obstacle_decider_output()
+                                .hybrid_ara_result;
+  hybrid_ara_result.Clear();
+  bool find_path = hybrid_ara_star_->Plan(output_, hybrid_ara_result, search_result_);
+
+  // log
+  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto hybrid_ara_path =
+      planning_debug_data->mutable_hybrid_ara_info()->mutable_hybrid_ara_path();
+  auto hybrid_ara_path_cost = planning_debug_data->mutable_hybrid_ara_info()
+                                  ->mutable_hybrid_ara_path_cost();
+  hybrid_ara_path->Clear();
+  hybrid_ara_path_cost->Clear();
+  for (const auto x : hybrid_ara_result.x) {
+    hybrid_ara_path->add_x(x);
+  }
+  for (const auto y : hybrid_ara_result.y) {
+    hybrid_ara_path->add_y(y);
+  }
+  for (const auto phi : hybrid_ara_result.phi) {
+    hybrid_ara_path->add_phi(phi);
+  }
+  for (const auto s : hybrid_ara_result.s) {
+    hybrid_ara_path->add_s(s);
+  }
+  for (const auto l : hybrid_ara_result.l) {
+    hybrid_ara_path->add_l(l);
+  }
+
+  return (find_path && hybrid_ara_result.Valid());
 }
 
 void SccLateralObstacleDecider::LateralObstacleDeciderOutput() {
