@@ -168,7 +168,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void CheckEgoOverlapDynamicObstacle(
       const FrenetObstacle& frenet_obstacle,
       const FrenetObstacle& target_static_obstacle,
-      double& distance_to_centerline,
+      double& boundary_l, bool is_right_boundary,
       std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle);
   void UpdateStaticFreeSpaceBaseInteractionType(
       const FrenetObstacle& frenet_obstacle,

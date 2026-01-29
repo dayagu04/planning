@@ -1708,7 +1708,6 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     ObstacleInfo& obstacle_interaction_info,
     std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
   double free_space = 100;
-  double distance_to_centerline = 100;
   const double kLatOverlapBuffer = 0.3;
 
   if (obstacle_interaction_info.lateral_avoid_direction ==
@@ -1751,9 +1750,11 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
       // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
       if (frenet_obs->d_min_cpath() > 0) {
         // 按照自车匀速递推的轨迹，判断自车是否与动态障碍物存在overlap
+        double min_right_boundary_l = 100;
         CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
-                                       distance_to_centerline,front_nearest_follow_obstacle);
-        double free_space_tmp = distance_to_centerline - frenet_obstacle.d_max_cpath();
+                                       min_right_boundary_l, true,
+                                       front_nearest_follow_obstacle);
+        double free_space_tmp = min_right_boundary_l - frenet_obstacle.d_max_cpath();
         // 不同类型的障碍物交互，空间权重不一样
         UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
         free_space = std::fmin(free_space_tmp, free_space);
@@ -1764,9 +1765,11 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
                LatObstacleDecisionType::RIGHT) {
       if (frenet_obs->d_max_cpath() < 0) {
         // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
+        double max_left_boundary_l = -100;
         CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
-                                       distance_to_centerline,front_nearest_follow_obstacle);
-        double free_space_tmp = distance_to_centerline + frenet_obstacle.d_min_cpath();
+                                       max_left_boundary_l, false,
+                                       front_nearest_follow_obstacle);
+        double free_space_tmp = frenet_obstacle.d_min_cpath() - max_left_boundary_l;
         // 不同类型的障碍物交互，空间权重不一样
         UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
         free_space = std::fmin(free_space_tmp, free_space);
@@ -1783,7 +1786,7 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
 void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
     const FrenetObstacle& frenet_obstacle,
     const FrenetObstacle& target_static_obstacle,
-    double& distance_to_centerline,
+    double& boundary_l, bool is_right_boundary,
     std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const auto& obstacle_map = reference_path_ptr_->get_obstacles_map();
@@ -1845,10 +1848,16 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
     }
     double min_s = std::numeric_limits<double>::max();
     double max_s = std::numeric_limits<double>::lowest();
-    double distance_to_centerline_tmp = 100;
+    double boundary_l_tmp = 100;
+    if (!is_right_boundary) {
+      boundary_l_tmp = -100;
+    }
     for (auto& pt : obstacle_sl_polygon.points()) {
-      distance_to_centerline_tmp =
-          std::min(std::abs(pt.y()), distance_to_centerline_tmp);
+      if (is_right_boundary) {
+        boundary_l_tmp = std::min(pt.y(), boundary_l_tmp);
+      } else {
+        boundary_l_tmp = std::max(pt.y(), boundary_l_tmp);
+      }
       min_s = std::min(min_s, pt.x());
       max_s = std::max(max_s, pt.x());
     }
@@ -1873,8 +1882,11 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
     if (!is_overlap_with_dynamic_agent) {
       continue;
     }
-    distance_to_centerline =
-        std::min(distance_to_centerline, distance_to_centerline_tmp);
+    if (is_right_boundary) {
+      boundary_l = std::min(boundary_l, boundary_l_tmp);
+    } else {
+      boundary_l = std::max(boundary_l, boundary_l_tmp);
+    }
   }
 }
 
