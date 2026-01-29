@@ -61,7 +61,6 @@ const bool ApaWorld::Update() {
     return false;
   }
   ILOG_INFO << "---- apa_world: Update() ---";
-  TimeBenchmark::Instance().Clear();
 
   measure_data_ptr_->Update(local_view_ptr_);
 

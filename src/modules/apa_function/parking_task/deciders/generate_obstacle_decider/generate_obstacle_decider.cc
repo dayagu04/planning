@@ -16,6 +16,8 @@ const bool GenerateObstacleDecider::GenObs(
     GenerateObstacleRequest request) {
   ego_info_under_slot_ = ego_info_under_slot;
   request_ = request;
+  bool success = false;
+  const double gen_obs_start_time = IflyTime::Now_ms();
   if (request_.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     return GenObsForPerpendicularTailIn();
@@ -24,7 +26,9 @@ const bool GenerateObstacleDecider::GenObs(
     return GenObsForPerpendicularHeadingIn();
   }
 
-  return false;
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_GEN_OBS_TIME,
+                                    IflyTime::Now_ms() - gen_obs_start_time);
+  return success;
 }
 
 const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {

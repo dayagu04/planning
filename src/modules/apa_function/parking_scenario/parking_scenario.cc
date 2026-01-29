@@ -780,6 +780,8 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
+  const double speed_plan_start_time = IflyTime::Now_ms();
+
   const pnc::geometry_lib::PathSegGear gear_command =
       pnc::geometry_lib::GetGearType(frame_.gear_command);
 
@@ -891,6 +893,9 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   trajectory_ = traj_stitcher->GetConstCombinedTraj();
   trajectory_.SetTerminalS(stop_decider->GetTerminalS());
+
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_SPEED_PLAN_TIME,
+                                    IflyTime::Now_ms() - speed_plan_start_time);
 
   return;
 }
