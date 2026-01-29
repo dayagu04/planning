@@ -140,6 +140,10 @@ class ApaStateMachineManager final {
   const bool IsParkSuspendStatus() const;
 
   const bool IsParkInvalidStatus() const;
+  const bool IsSwitchToSearch() const;
+  const bool IsSwitchToSearchOutput() const{
+    return is_switch_to_search_;
+  };
 
   void Reset() {
     state_machine_ = ApaStateMachine::INVALID;
@@ -149,6 +153,7 @@ class ApaStateMachineManager final {
     free_slot_pos_dir_ = false;
     running_mode_ = ApaRunningMode::RUNNING_NORMAL;
     pa_direction_ = ApaPADirection::PA_INVALID;
+    is_switch_to_search_ = false;
   }
 
   static std::string GetApaStateMachineString(
@@ -179,6 +184,7 @@ class ApaStateMachineManager final {
 
  private:
   ApaStateMachine state_machine_ = ApaStateMachine::INVALID;
+  ApaStateMachine state_machine_last_ = ApaStateMachine::INVALID;
   ApaParkOutDirection out_direction_ = ApaParkOutDirection::INVALID;
   ApaSlotLatPosPreference slot_lat_pos_preference_ =
       ApaSlotLatPosPreference::MID;
@@ -188,6 +194,7 @@ class ApaStateMachineManager final {
   ApaSAPAStatus sapa_status_ = ApaSAPAStatus::SAPA_STATUS_DEFAULT;
 
   bool free_slot_pos_dir_ = false;
+  bool is_switch_to_search_ = false;
 
   /*inernal use*/
   ApaTaskDirection task_direction_ = ApaTaskDirection::APA_TASK_IN;
