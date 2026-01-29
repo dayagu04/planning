@@ -98,6 +98,11 @@ message VersionCommit {
   optional string adcommon_commit = 3;
 }
 
+message TimeBenchmark {
+  optional double planning_time = 1;
+  optional ApaTimeBenchmark apa_planning_time = 2;
+}
+
 message PlanningDebugInfo {
   optional uint64 timestamp = 1;  // us
   // TBD: 存在多条candidates时，应该使用repeated
@@ -156,4 +161,6 @@ message PlanningDebugInfo {
   optional JointMotionPlanningOutput joint_motion_planning_output = 49;
   optional JointDecisionPlanningInput joint_decision_input = 50;
   optional JointDecisionPlanningOutput joint_decision_output = 51;
+
+  optional TimeBenchmark time_benchmark = 52;
 }

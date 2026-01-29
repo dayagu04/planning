@@ -213,6 +213,13 @@ bool PlanningScheduler::RunOnce(
   int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
   ILOG_INFO << "The time cost of RunOnce is: " << frame_duration;
 
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
+                                    frame_duration);
+
+  TimeBenchmark::Instance().DebugString();
+
+  RecordTimeBenchmarkInfo();
+
   return planning_success;
 }
 
@@ -1522,4 +1529,45 @@ void PlanningScheduler::CheckTrajectory() {
     }
   }
 }
+
+void PlanningScheduler::RecordTimeBenchmarkInfo() {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto* time_benchmark = debug->mutable_time_benchmark();
+  const auto& benchmark = TimeBenchmark::Instance();
+
+  time_benchmark->set_planning_time(
+      benchmark.times[TimeBenchmarkType::TB_PLANNING_TOTAL].time_ms_);
+
+  // set apa_planning_module_time
+  time_benchmark->mutable_apa_planning_time()->set_apa_planning_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_TOTAL_TIME].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_slot_manager_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_SLOT_MANAGER_TIME].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_jlt_optimizer_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_JLT_TIME].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_speed_qp_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_QP_TIME].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_dp_optimizer_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_DP_TIME].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_apa_stop_decider_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_STOP_DECIDER].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_speed_limit_decider_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_SPEED_LIMIT_DECIDER].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_osqp_time(
+      benchmark.times[TimeBenchmarkType::TB_OSQP].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_path_plan_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_PATH_PLAN_TIME].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_astar_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_ASTAR].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_speed_plan_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_SPEED_PLAN_TIME].time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_find_target_pose_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_FIND_TARGET_POSE_TIME]
+          .time_ms_);
+  time_benchmark->mutable_apa_planning_time()->set_gen_obs_time(
+      benchmark.times[TimeBenchmarkType::TB_APA_GEN_OBS_TIME].time_ms_);
+
+  TimeBenchmark::Instance().Clear();
+}
+
 }  // namespace planning

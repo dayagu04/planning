@@ -63,8 +63,6 @@ class ApaPlanInterface {
     return apa_world_ptr_;
   }
 
-  void RecordTimeBenchmarkInfo();
-
  private:
   void AddReleasedSlotInfo(iflyauto::PlanningOutput& planning_output);
 

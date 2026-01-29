@@ -174,8 +174,7 @@ message PaObject {
   optional string object_id = 3;
 }
 
-message TimeBenchmark {
-  optional double planning_time = 1;
+message ApaTimeBenchmark {
   optional double apa_planning_time = 2;
   optional double slot_manager_time = 3;
   optional double jlt_optimizer_time = 4;
@@ -203,5 +202,4 @@ message ApaPathDebug {
   optional ApaTerminalErr terminal_err = 10;
   optional ApaPlanningSLotInfo slot_info = 11;
   repeated PaObject pa_objects = 12;
-  optional TimeBenchmark time_benchmark = 13;
 }
