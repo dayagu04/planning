@@ -78,10 +78,7 @@ constexpr double kMinDistanceForDecel = 1;  // Min distance to avoid division by
 constexpr double kCurvatureDecelThreshold = -1.2;  // Deceleration threshold for CURVATURE (m/s²)
 constexpr double kRoadBoundarySharpDecelThreshold = -1.2;  // Deceleration threshold for ROAD_BOUNDARY_SHARP_DECEL (m/s²)
 constexpr double kRoadBoundaryCooldownDeltaThreshold = 1.11;  // m/s threshold to treat limit change as significant
-constexpr double kRoadBoundaryDefaultLimitMps = 100.0;  // Default value meaning no road boundary limit applied
-constexpr double kCurvatureDefaultLimitMps = 100.0;  // Default value meaning no curvature limit applied
-constexpr double kConstructionDefaultLimitMps = 100.0;  // Default value meaning no construction limit applied
-constexpr double kRampDefaultLimitMps = 100.0;  // Default value meaning no ramp limit applied
+constexpr double kDefaultLimitSpeedMps = 100.0;  // Default value meaning no speed limit applied
 constexpr double kCurvSpeedDifference = 3 / 3.6;
 constexpr int kSharpCurveMinFrames =
     5;  // Min frames to maintain sharp curve state
@@ -129,10 +126,7 @@ constexpr double kMapModeRoundaboutQuitDis = 50.0;
 constexpr double kNoMapModeRoundaboutQuitDis = 60.0;
 constexpr double kRoundaboutQuitCurvRadiusThr = 300.0;
 constexpr double kRoundaboutQuitRecoverCounter = 3;
-constexpr double kRoadBoundarySearchDistanceOffset =
-    25.0;  // Offset distance added to search_distance_min for road boundary
-           // search (m)
-constexpr double kRoadBoundaryDefaultVLimit = 40.0;
+constexpr double kRoadBoundarySearchDistanceOffset = 25.0;  // Offset distance added to search_distance_min for road boundary search (m)
 constexpr double kLateralRatioThreshold = 0.3;
 constexpr double kAvoidAgentMinSpeed = 2.0;
 constexpr double kLateralCollisionCheckThreshold = 0.5;
@@ -966,7 +960,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       interp(std::fabs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
   // Disable steering limit at high velocity
   bool is_high_vel = v_ego > kHighVel;
-  double v_limit_steering = 100.0;
+  double v_limit_steering = kDefaultLimitSpeedMps;
   if (!is_high_vel) {
     v_limit_steering = std::sqrt((acc_lat_max * steer_ratio * wheel_base) /
                                  std::max(std::fabs(angle_steers), 0.001));
@@ -986,6 +980,8 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                                   ->mutable_speed_limit_decider_output();
     speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns,
                                              SpeedLimitType::CURVATURE);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
+                                             SpeedLimitType::SHARP_CURVATURE);
     return;
   }
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
@@ -1041,7 +1037,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double avg_curv = curv_sum / curv_window_vec.size();
   double road_radius = 1 / std::max(avg_curv, 0.0001);*/
 
-  double v_limit_road = 40.0;
+  double v_limit_road = kDefaultLimitSpeedMps;
   double road_radius = 10000.0;
   const auto &ref_curve_info = reference_path_ptr->GetReferencePathCurveInfo();
   bool is_s_bend = (ref_curve_info.curve_type ==
@@ -1641,7 +1637,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
 
   // Apply map sharp curve speed limit
-  double v_limit_map_sharp_curve = 100.0;
+  double v_limit_map_sharp_curve = kDefaultLimitSpeedMps;
   double map_sharp_curve_required_decel = 0.0;
   if (is_map_sharp_curve) {
     v_limit_map_sharp_curve = speed_limit_config_.map_sharp_curve_speed_limit;
@@ -1693,11 +1689,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 
   // Always set the other type to default value to ensure proper clearing
   if (v_limit_type == SpeedLimitType::CURVATURE) {
-    speed_limit_output->SetSpeedLimitIntoMap(kCurvatureDefaultLimitMps,
-                                             SpeedLimitType::SHARP_CURVATURE);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::SHARP_CURVATURE);
   } else if (v_limit_type == SpeedLimitType::SHARP_CURVATURE) {
-    speed_limit_output->SetSpeedLimitIntoMap(kCurvatureDefaultLimitMps,
-                                             SpeedLimitType::CURVATURE);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::CURVATURE);
   }
 }
 
@@ -1916,8 +1910,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
                                                  SpeedLimitType::MAP_ON_RAMP);
         // Always set the other type to default value to ensure proper clearing
-        speed_limit_output->SetSpeedLimitIntoMap(kRampDefaultLimitMps,
-                                                 SpeedLimitType::MAP_NEAR_RAMP);
+        speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::MAP_NEAR_RAMP);
         return;
       }
     }
@@ -1946,8 +1939,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
                                              SpeedLimitType::MAP_ON_RAMP);
     // Always set the other type to default value to ensure proper clearing
-    speed_limit_output->SetSpeedLimitIntoMap(kRampDefaultLimitMps,
-                                             SpeedLimitType::MAP_NEAR_RAMP);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::MAP_NEAR_RAMP);
     return;
   }
   if ((dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) &&
@@ -1985,8 +1977,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
                                            SpeedLimitType::MAP_NEAR_RAMP);
   // Always set the other type to default value to ensure proper clearing
-  speed_limit_output->SetSpeedLimitIntoMap(kRampDefaultLimitMps,
-                                           SpeedLimitType::MAP_ON_RAMP);
+  speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::MAP_ON_RAMP);
 }
 
 void SpeedLimitDecider::CalculateStaticAgentLimit() {}
@@ -2978,8 +2969,8 @@ bool SpeedLimitDecider::HasTriggeredVRU(
 void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   ILOG_DEBUG << "----CalculateConstructionZoneSpeedLimit for Construction---";
 
-  double v_target_construction = 50.0;
-  double v_target_near_construction = 50.0;
+  double v_target_construction = kDefaultLimitSpeedMps;
+  double v_target_near_construction = kDefaultLimitSpeedMps;
   double dis_to_construction = std::numeric_limits<double>::max();
   int construction_strong_mode_reason = 0;
 
@@ -2995,6 +2986,11 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                      construction_strong_mode_frame_count_);
     JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag_);
+    speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
+                                             SpeedLimitType::ON_CONSTRUCTION);
+    // Always set the other type to default value to ensure proper clearing
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
+                                             SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
   // Check if the construction zone is valid
@@ -3008,7 +3004,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     construction_lat_dist_flag_ = false;
     construction_v_limit_set_ = false;
     construction_manual_intervention_detected_ = false;
-    last_v_cruise_fsm_ = 40.0;
+    last_v_cruise_fsm_ = kDefaultLimitSpeedMps;
     ILOG_DEBUG << "Construction scene is invalid or empty";
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
     JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
@@ -3020,8 +3016,12 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                      construction_strong_mode_frame_count_);
     JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag_);
-    JSON_DEBUG_VALUE("construction_manual_intervention_detected",
-                     construction_manual_intervention_detected_);
+    JSON_DEBUG_VALUE("construction_manual_intervention_detected", construction_manual_intervention_detected_);
+    speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
+                                             SpeedLimitType::ON_CONSTRUCTION);
+    // Always set the other type to default value to ensure proper clearing
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
+                                             SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
 
@@ -3048,11 +3048,19 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   const auto &planned_kd_path =
       session_->planning_context().motion_planner_output().lateral_path_coord;
   if (planned_kd_path == nullptr) {
+    speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
+                                             SpeedLimitType::ON_CONSTRUCTION);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
+                                             SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
   double ego_s = 0.0;
   double ego_l = 0.0;
   if (!planned_kd_path->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
+                                             SpeedLimitType::ON_CONSTRUCTION);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps,
+                                             SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
   double construction_s = 0.0;
@@ -3199,8 +3207,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
                                              SpeedLimitType::ON_CONSTRUCTION);
     // Always set the other type to default value to ensure proper clearing
-    speed_limit_output->SetSpeedLimitIntoMap(kConstructionDefaultLimitMps,
-                                             SpeedLimitType::NEAR_CONSTRUCTION);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::NEAR_CONSTRUCTION);
     return;
   }
   double construction_speed_threshold =
@@ -3262,8 +3269,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   speed_limit_output->SetSpeedLimitIntoMap(v_target_near_construction,
                                            SpeedLimitType::NEAR_CONSTRUCTION);
   // Always set the other type to default value to ensure proper clearing
-  speed_limit_output->SetSpeedLimitIntoMap(kConstructionDefaultLimitMps,
-                                           SpeedLimitType::ON_CONSTRUCTION);
+  speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ON_CONSTRUCTION);
   JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
   JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
   JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
@@ -3279,19 +3285,19 @@ void SpeedLimitDecider::ResetRoadBoundarySpeedLimitState() {
   road_boundary_right_pending_confirmation_range_idx_ = -1;
 
   // Road boundary speed limit cooldown state
-  last_road_boundary_v_limit_ = 100.0;
+  last_road_boundary_v_limit_ = kDefaultLimitSpeedMps;
   last_road_boundary_trigger_distance_ = 0.0;
   road_boundary_cooldown_count_ = 0;
 
   // Road boundary strictest speed limit cooldown state
-  last_road_boundary_strictest_v_limit_ = 100.0;
+  last_road_boundary_strictest_v_limit_ = kDefaultLimitSpeedMps;
   last_road_boundary_strictest_trigger_distance_ = 0.0;
   road_boundary_strictest_cooldown_count_ = 0;
 
   // Road boundary speed limit manual intervention detection
   road_boundary_v_limit_set_ = false;
   road_boundary_manual_intervention_detected_ = false;
-  last_v_cruise_fsm_road_boundary_ = 40.0;
+  last_v_cruise_fsm_road_boundary_ = kDefaultLimitSpeedMps;
   road_boundary_manual_intervention_reset_count_ = 0;
 
   // Curve road boundary speed limit state
@@ -3312,14 +3318,19 @@ void SpeedLimitDecider::ResetRoadBoundarySpeedLimitState() {
   lateral_acceleration_limit_pending_ = false;
   lateral_acceleration_limit_confirmation_frame_count_ = 0;
   lateral_acceleration_limit_reset_frame_count_ = 0;
-  lateral_acceleration_limit_v_limit_ = 100.0;
+  lateral_acceleration_limit_v_limit_ = kDefaultLimitSpeedMps;
   lateral_acceleration_limit_trigger_distance_ = 0.0;
 
   // S-curve road boundary speed limit state
   s_curve_road_boundary_confirmed_ = false;
   s_curve_road_boundary_pending_ = false;
   s_curve_road_boundary_confirmation_frame_count_ = 0;
-  s_curve_road_boundary_v_limit_ = 100.0;
+  s_curve_road_boundary_v_limit_ = kDefaultLimitSpeedMps;
+  //
+  speed_limit_output_strictest->SetSpeedLimitIntoMap(
+      kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY);
+  speed_limit_output_strictest->SetSpeedLimitIntoMap(
+      kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
 }
 
 void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
@@ -3334,6 +3345,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   // Ego state manager
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   if (ego_state_mgr == nullptr) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
@@ -3341,6 +3353,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   const auto virtual_lane_manager =
       environmental_model.get_virtual_lane_manager();
   if (virtual_lane_manager == nullptr) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
   const auto &road_boundary = virtual_lane_manager->GetRoadboundary();
@@ -3349,12 +3362,14 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   const auto &planned_kd_path =
       session_->planning_context().motion_planner_output().lateral_path_coord;
   if (planned_kd_path == nullptr) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
   // Vehicle parameter
   const auto vehicle_config_instance = VehicleConfigurationContext::Instance();
   if (vehicle_config_instance == nullptr) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
   const auto &vehicle_param = vehicle_config_instance->get_vehicle_param();
@@ -3368,6 +3383,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   // Route info
   const auto route_info = environmental_model.get_route_info();
   if (route_info == nullptr) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
   const auto &route_info_output = route_info->get_route_info_output();
@@ -3401,6 +3417,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   const auto init_point = ego_state_mgr->planning_init_point();
   double ego_s = 0.0, ego_l = 0.0;
   if (!planned_kd_path->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
@@ -3529,6 +3546,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   }
 
   if (filtered_points.empty()) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
@@ -3589,10 +3607,9 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   }
 
   // Check minimum path point size requirement for KDPath construction
-  if (left_front_corner_points.size() <
-          planning_math::KDPath::kKDPathMinPathPointSize ||
-      right_front_corner_points.size() <
-          planning_math::KDPath::kKDPathMinPathPointSize) {
+  if (left_front_corner_points.size() < planning_math::KDPath::kKDPathMinPathPointSize ||
+      right_front_corner_points.size() < planning_math::KDPath::kKDPathMinPathPointSize) {
+    ResetRoadBoundarySpeedLimitState();
     return;
   }
 
@@ -3738,8 +3755,8 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   bool is_left_triggered = (road_boundary_left_confirmed_range_idx_ != -1);
   bool is_right_triggered = (road_boundary_right_confirmed_range_idx_ != -1);
 
-  double v_limit_left = kRoadBoundaryDefaultVLimit;
-  double v_limit_right = kRoadBoundaryDefaultVLimit;
+  double v_limit_left = kDefaultLimitSpeedMps;
+  double v_limit_right = kDefaultLimitSpeedMps;
   if (is_left_triggered) {
     int idx = road_boundary_left_confirmed_range_idx_;
     v_limit_left = (idx < static_cast<int>(speed_limits_to_use.size()))
@@ -3753,7 +3770,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
                         : speed_limits_to_use.back();
   }
 
-  double v_limit_regular = kRoadBoundaryDefaultVLimit;
+  double v_limit_regular = kDefaultLimitSpeedMps;
   double trigger_distance_regular = 0.0;
   if (is_left_triggered && is_right_triggered) {
     bool is_left_last_gear = (road_boundary_left_confirmed_range_idx_ >=
@@ -3772,9 +3789,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
                 static_cast<int>(config.speed_limits_both_sides_same.size())) {
           v_limit_regular = config.speed_limits_both_sides_same[gear_idx];
         } else {
-          v_limit_regular = config.speed_limits_both_sides_same.empty()
-                                ? kRoadBoundaryDefaultVLimit
-                                : config.speed_limits_both_sides_same.back();
+          v_limit_regular = config.speed_limits_both_sides_same.empty() ? kDefaultLimitSpeedMps : config.speed_limits_both_sides_same.back();
         }
         trigger_distance_regular =
             std::min(trigger_distance_left, trigger_distance_right);
@@ -3788,10 +3803,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
           v_limit_regular =
               config.speed_limits_both_sides_different[lower_gear_idx];
         } else {
-          v_limit_regular =
-              config.speed_limits_both_sides_different.empty()
-                  ? kRoadBoundaryDefaultVLimit
-                  : config.speed_limits_both_sides_different.back();
+          v_limit_regular = config.speed_limits_both_sides_different.empty() ? kDefaultLimitSpeedMps : config.speed_limits_both_sides_different.back();
         }
         trigger_distance_regular = (road_boundary_left_confirmed_range_idx_ <
                                     road_boundary_right_confirmed_range_idx_)
@@ -3837,12 +3849,11 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   if (is_lane_change_complete) {
     // Interrupt cooldown mechanism when lane change is complete
     road_boundary_cooldown_count_ = 0;
-    last_road_boundary_v_limit_ = kRoadBoundaryDefaultLimitMps;
+    last_road_boundary_v_limit_ = kDefaultLimitSpeedMps;
     last_road_boundary_trigger_distance_ = 0.0;
     road_boundary_v_limit_set_ = false;
   } else if (will_be_applied_regular) {
-    bool is_first_time = (std::fabs(last_road_boundary_v_limit_ -
-                                    kRoadBoundaryDefaultLimitMps) < 1e-3);
+    bool is_first_time = (std::fabs(last_road_boundary_v_limit_ - kDefaultLimitSpeedMps) < 1e-3);
     if (is_first_time) {
       last_road_boundary_v_limit_ = current_v_limit_regular;
       last_road_boundary_trigger_distance_ = current_trigger_distance_regular;
@@ -3867,7 +3878,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
       trigger_distance_regular = last_road_boundary_trigger_distance_;
       road_boundary_cooldown_count_--;
     } else {
-      last_road_boundary_v_limit_ = kRoadBoundaryDefaultLimitMps;
+      last_road_boundary_v_limit_ = kDefaultLimitSpeedMps;
       last_road_boundary_trigger_distance_ = 0.0;
       road_boundary_v_limit_set_ = false;
     }
@@ -3907,13 +3918,9 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
 
   // Always set the other type to default value to ensure proper clearing
   if (road_boundary_type_regular == SpeedLimitType::ROAD_BOUNDARY) {
-    speed_limit_output->SetSpeedLimitIntoMap(
-        kRoadBoundaryDefaultLimitMps,
-        SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
-  } else if (road_boundary_type_regular ==
-             SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL) {
-    speed_limit_output->SetSpeedLimitIntoMap(kRoadBoundaryDefaultLimitMps,
-                                             SpeedLimitType::ROAD_BOUNDARY);
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
+  } else if (road_boundary_type_regular == SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL) {
+    speed_limit_output->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY);
   }
 
   JSON_DEBUG_VALUE("road_boundary_regular_v_limit", v_limit_regular);
@@ -3941,7 +3948,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
                    road_boundary_v_limit_set_);
 
   // ========== Part 17: Strictest Limit Calculation ==========
-  double curve_road_boundary_v_limit = kRoadBoundaryDefaultVLimit;
+  double curve_road_boundary_v_limit = kDefaultLimitSpeedMps;
   double curve_road_boundary_trigger_distance = 0.0;
   bool curve_road_boundary_valid = false;
 
@@ -4271,7 +4278,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
                      curve_road_boundary_trigger_distance);
   }
 
-  double collision_v_limit = kRoadBoundaryDefaultVLimit;
+  double collision_v_limit = kDefaultLimitSpeedMps;
   double collision_trigger_distance = 0.0;
   bool collision_valid = false;
   if (config.enable_road_boundary_collision_speed_limit &&
@@ -4284,9 +4291,8 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   JSON_DEBUG_VALUE("road_boundary_collision_trigger_distance",
                    collision_trigger_distance);
   JSON_DEBUG_VALUE("road_boundary_collision_valid", collision_valid);
-  JSON_DEBUG_VALUE("road_boundary_collision_distance",
-                   confirmed_collision_distance_);
-  double lateral_acc_v_limit = kRoadBoundaryDefaultVLimit;
+  JSON_DEBUG_VALUE("road_boundary_collision_distance", confirmed_collision_distance_);
+  double lateral_acc_v_limit = kDefaultLimitSpeedMps;
   double lateral_acc_trigger_distance = 0.0;
   bool lateral_acc_valid = false;
 
@@ -4449,7 +4455,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   }
 
   // ========== Part 19: S-Curve Road Boundary Speed Limit ==========
-  double s_curve_v_limit = kRoadBoundaryDefaultVLimit;
+  double s_curve_v_limit = kDefaultLimitSpeedMps;
   double s_curve_trigger_distance = 0.0;
   bool s_curve_valid = false;
 
@@ -4580,12 +4586,11 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
           if (gear >= 0 &&
               gear < static_cast<int>(config.s_curve_speed_limits.size())) {
             s_curve_road_boundary_v_limit_ = config.s_curve_speed_limits[gear];
-          } else if (gear >=
-                     static_cast<int>(config.s_curve_speed_limits.size())) {
-            s_curve_road_boundary_v_limit_ = kRoadBoundaryDefaultVLimit;
+          } else if (gear >= static_cast<int>(config.s_curve_speed_limits.size())) {
+            s_curve_road_boundary_v_limit_ = kDefaultLimitSpeedMps;
           } else {
             // Gear not available, use default (first value)
-            s_curve_road_boundary_v_limit_ = kRoadBoundaryDefaultVLimit;
+            s_curve_road_boundary_v_limit_ = kDefaultLimitSpeedMps;
           }
           s_curve_road_boundary_pending_ = false;
           s_curve_road_boundary_confirmation_frame_count_ = 0;
@@ -4627,9 +4632,9 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
     }
   }
 
-  // Select the strictest limit from confirmed collision, curve road boundary,
-  // and lateral acceleration Priority: collision > curve > lateral acc
-  double v_limit_road_boundary_strictest = kRoadBoundaryDefaultVLimit;
+  // Select the strictest limit from confirmed collision, curve road boundary, and lateral acceleration
+  // Priority: collision > curve > lateral acc
+  double v_limit_road_boundary_strictest = kDefaultLimitSpeedMps;
   double trigger_distance_road_boundary_strictest = 0.0;
   SpeedLimitType road_boundary_type_strictest = SpeedLimitType::ROAD_BOUNDARY;
   bool road_boundary_strictest_valid = false;
@@ -4669,9 +4674,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   int cooldown_frames_strictest = config.curve_road_boundary_cooldown_frames;
 
   if (will_be_applied_strictest) {
-    bool is_first_time_strictest =
-        (std::fabs(last_road_boundary_strictest_v_limit_ -
-                   kRoadBoundaryDefaultLimitMps) < 1e-3);
+    bool is_first_time_strictest = (std::fabs(last_road_boundary_strictest_v_limit_ - kDefaultLimitSpeedMps) < 1e-3);
     if (is_first_time_strictest) {
       last_road_boundary_strictest_v_limit_ = current_v_limit_strictest;
       last_road_boundary_strictest_trigger_distance_ =
@@ -4702,7 +4705,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
       road_boundary_strictest_cooldown_count_--;
       road_boundary_strictest_valid = true;  // Keep valid during cooldown
     } else {
-      last_road_boundary_strictest_v_limit_ = kRoadBoundaryDefaultLimitMps;
+      last_road_boundary_strictest_v_limit_ = kDefaultLimitSpeedMps;
       last_road_boundary_strictest_trigger_distance_ = 0.0;
     }
   }
@@ -4750,21 +4753,14 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
 
     // Always set the other type to default value to ensure proper clearing
     if (road_boundary_type_strictest == SpeedLimitType::ROAD_BOUNDARY) {
-      speed_limit_output_strictest->SetSpeedLimitIntoMap(
-          kRoadBoundaryDefaultLimitMps,
-          SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
-    } else if (road_boundary_type_strictest ==
-               SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL) {
-      speed_limit_output_strictest->SetSpeedLimitIntoMap(
-          kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY);
+      speed_limit_output_strictest->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
+    } else if (road_boundary_type_strictest == SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL) {
+      speed_limit_output_strictest->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY);
     }
   } else {
     // Clear both types when invalid
-    speed_limit_output_strictest->SetSpeedLimitIntoMap(
-        kRoadBoundaryDefaultLimitMps, SpeedLimitType::ROAD_BOUNDARY);
-    speed_limit_output_strictest->SetSpeedLimitIntoMap(
-        kRoadBoundaryDefaultLimitMps,
-        SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
+    speed_limit_output_strictest->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY);
+    speed_limit_output_strictest->SetSpeedLimitIntoMap(kDefaultLimitSpeedMps, SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL);
   }
 
   // Debug output for strictest road boundary limit
