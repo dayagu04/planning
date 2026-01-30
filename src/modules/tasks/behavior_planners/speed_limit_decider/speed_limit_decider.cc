@@ -3866,25 +3866,14 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
     last_road_boundary_trigger_distance_ = 0.0;
     road_boundary_v_limit_set_ = false;
   } else if (will_be_applied_regular) {
-    bool is_first_time = (std::fabs(last_road_boundary_v_limit_ - kDefaultLimitSpeedMps) < 1e-3);
-    if (is_first_time) {
-      last_road_boundary_v_limit_ = current_v_limit_regular;
-      last_road_boundary_trigger_distance_ = current_trigger_distance_regular;
-      road_boundary_cooldown_count_ = config.cooldown_frames;
-    } else if (road_boundary_cooldown_count_ > 0) {
-      road_boundary_cooldown_count_--;
-      v_limit_regular = last_road_boundary_v_limit_;
-      trigger_distance_regular = last_road_boundary_trigger_distance_;
-    } else {
-      bool value_changed =
-          (std::fabs(current_v_limit_regular - last_road_boundary_v_limit_) >
-           kRoadBoundaryCooldownDeltaThreshold);
-      if (value_changed) {
-        last_road_boundary_v_limit_ = current_v_limit_regular;
-        last_road_boundary_trigger_distance_ = current_trigger_distance_regular;
-        road_boundary_cooldown_count_ = config.cooldown_frames;
-      }
-    }
+    // Real-time update: always use current calculated values when limit will be applied
+    v_limit_regular = current_v_limit_regular;
+    trigger_distance_regular = current_trigger_distance_regular;
+    
+    // Update tracking state for the else branch (when limit is not applied)
+    last_road_boundary_v_limit_ = current_v_limit_regular;
+    last_road_boundary_trigger_distance_ = current_trigger_distance_regular;
+    road_boundary_cooldown_count_ = config.cooldown_frames;
   } else {
     if (road_boundary_cooldown_count_ > 0) {
       v_limit_regular = last_road_boundary_v_limit_;
@@ -4687,29 +4676,14 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   int cooldown_frames_strictest = config.curve_road_boundary_cooldown_frames;
 
   if (will_be_applied_strictest) {
-    bool is_first_time_strictest = (std::fabs(last_road_boundary_strictest_v_limit_ - kDefaultLimitSpeedMps) < 1e-3);
-    if (is_first_time_strictest) {
-      last_road_boundary_strictest_v_limit_ = current_v_limit_strictest;
-      last_road_boundary_strictest_trigger_distance_ =
-          current_trigger_distance_strictest;
-      road_boundary_strictest_cooldown_count_ = cooldown_frames_strictest;
-    } else if (road_boundary_strictest_cooldown_count_ > 0) {
-      road_boundary_strictest_cooldown_count_--;
-      v_limit_road_boundary_strictest = last_road_boundary_strictest_v_limit_;
-      trigger_distance_road_boundary_strictest =
-          last_road_boundary_strictest_trigger_distance_;
-    } else {
-      bool value_changed_strictest =
-          (std::fabs(current_v_limit_strictest -
-                     last_road_boundary_strictest_v_limit_) >
-           kRoadBoundaryCooldownDeltaThreshold);
-      if (value_changed_strictest) {
-        last_road_boundary_strictest_v_limit_ = current_v_limit_strictest;
-        last_road_boundary_strictest_trigger_distance_ =
-            current_trigger_distance_strictest;
-        road_boundary_strictest_cooldown_count_ = cooldown_frames_strictest;
-      }
-    }
+    // Real-time update: always use current calculated values when limit will be applied
+    v_limit_road_boundary_strictest = current_v_limit_strictest;
+    trigger_distance_road_boundary_strictest = current_trigger_distance_strictest;
+    
+    // Update tracking state for the else branch (when limit is not applied)
+    last_road_boundary_strictest_v_limit_ = current_v_limit_strictest;
+    last_road_boundary_strictest_trigger_distance_ = current_trigger_distance_strictest;
+    road_boundary_strictest_cooldown_count_ = cooldown_frames_strictest;
   } else {
     if (road_boundary_strictest_cooldown_count_ > 0) {
       v_limit_road_boundary_strictest = last_road_boundary_strictest_v_limit_;
