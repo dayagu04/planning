@@ -111,12 +111,15 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
 
     const float half_slot_width = slot.slot_width_ * 0.5 + 0.068;
 
-    slot_box_ = cdl::AABB2f(Eigen::Vector2f(0.0f, -half_slot_width),
-                            Eigen::Vector2f(slot_x + 1.25f, half_slot_width));
+    slot_box_ = cdl::AABB2f(
+        Eigen::Vector2f(0.0f, -half_slot_width),
+        Eigen::Vector2f(slot_x + 1.25f + +apa_param.GetParam().wheel_base,
+                        half_slot_width));
 
-    slot_entrance_box_ =
-        cdl::AABB2f(Eigen::Vector2f(slot_x - 0.68f, -half_slot_width),
-                    Eigen::Vector2f(slot_x + 1.25f, half_slot_width));
+    slot_entrance_box_ = cdl::AABB2f(
+        Eigen::Vector2f(slot_x - 0.68f, -half_slot_width),
+        Eigen::Vector2f(slot_x + 1.25f + apa_param.GetParam().wheel_base,
+                        half_slot_width));
   }
 
   slot_box_.DebugString();

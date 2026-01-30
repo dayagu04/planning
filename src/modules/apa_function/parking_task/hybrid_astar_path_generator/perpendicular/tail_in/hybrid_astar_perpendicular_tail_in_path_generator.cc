@@ -1236,10 +1236,19 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       if (last_line_length < 2e-2f) {
         cost.unsuitable_last_line_length_cost = gear_change_penalty + 1.0f;
       } else {
+        float min_last_line_length = 1.86f;
+        float max_last_line_length = 3.68f;
+        if (request_.scenario_type ==
+            ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+          min_last_line_length = 3.0f;
+          max_last_line_length = 7.0f;
+        }
         const float unsuitable_last_line_length =
-            (last_line_length < 1.86f)   ? (1.86f - last_line_length)
-            : (last_line_length > 3.68f) ? (last_line_length - 3.68f)
-                                         : 0.0f;
+            (last_line_length < min_last_line_length)
+                ? (min_last_line_length - last_line_length)
+            : (last_line_length > max_last_line_length)
+                ? (last_line_length - max_last_line_length)
+                : 0.0f;
         cost.unsuitable_last_line_length_cost =
             unsuitable_last_line_length * unsuitable_last_line_length_penalty;
       }
@@ -1273,6 +1282,12 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
 
       cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
           gear_switch_pose, cur_gear, gear_change_penalty, length_penalty);
+
+      if (request_.ego_info_under_slot.cur_pose.GetTheta() *
+              gear_switch_pose.GetTheta() <
+          -0.0001f) {
+        cost.cur_gear_switch_pose_cost += 1.0f * gear_change_penalty;
+      }
 
       if (std::fabs(temp_node.GearSwitchNode()->GetKappa()) > 0.001f) {
         cost.cur_gear_switch_pose_cost += 0.6f * length_penalty;

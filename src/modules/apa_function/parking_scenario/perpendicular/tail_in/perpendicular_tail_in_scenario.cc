@@ -307,9 +307,9 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       << ego_info_under_slot.origin_target_pose.pos.x(),
       -0.5 * ego_info_under_slot.slot.slot_width_;
 
-  if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
+  if (std::fabs(ego_info_under_slot.terminal_err.GetY()) <
           param.slot_occupied_ratio_max_lat_err &&
-      std::fabs(ego_info_under_slot.cur_pose.heading) <
+      std::fabs(ego_info_under_slot.terminal_err.GetTheta()) <
           param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     std::vector<double> x_tab = {
         ego_info_under_slot.origin_target_pose.pos.x(),
@@ -659,6 +659,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
   ego_info_under_slot.tar_line =
       geometry_lib::BuildLineSegByPose(ego_info_under_slot.target_pose.pos,
                                        ego_info_under_slot.target_pose.heading);
+
+  ego_info_under_slot.tar_line.PrintInfo();
 
   ego_info_under_slot.terminal_err.Set(
       ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
@@ -1212,8 +1214,9 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
       if (ego_info_under_slot.slot.IsPointInCustomSlot(
-              ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.6, -0.6, true) &&
-          std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 10.0) {
+              ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.4, -0.4, true) &&
+          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+              20.0) {
         request.adjust_pose = true;
       }
     }
@@ -1221,8 +1224,9 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
              ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     if (request.inital_action_request.ref_gear == AstarPathGear::REVERSE) {
       if (ego_info_under_slot.slot.IsPointInCustomSlot(
-              ego_info_under_slot.cur_pose.pos, 7.0, -3.0, -0.6, -0.6, true) &&
-          std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 10.0) {
+              ego_info_under_slot.cur_pose.pos, 7.0, -3.0, -0.4, -0.4, true) &&
+          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+              20.0) {
         request.adjust_pose = true;
       }
     }
