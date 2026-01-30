@@ -61,6 +61,7 @@ enum class ApaObsScemanticType : uint8_t {
   BARREL,
   LIMITER,
   SPECIFICATIONER,
+  CURB_INSIDE,
   COUNT,
 };
 
