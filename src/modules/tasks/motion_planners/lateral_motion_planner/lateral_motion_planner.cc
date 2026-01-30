@@ -284,29 +284,42 @@ bool LateralMotionPlanner::HandleReferencePathData() {
   // 3.set last trajectory: temporarily same as reference: TODO
   const auto &motion_planner_output =
       session_->planning_context().motion_planner_output();
-  double final_t = 5.0;  // hack now
-  double tmp_t = 0.0;
-  auto last_s_vec = motion_planner_output.s_lat_vec;
-  double last_path_length = last_s_vec.size() > 0 ? last_s_vec.back() : 0.0;
+  const auto& last_path_s_vec = motion_planner_output.s_lat_vec;
+  size_t valid_continuity_idx = 0;
+  double final_t = 5.0;
+  double last_path_length = last_path_s_vec.size() > 0 ? last_path_s_vec.back() : 0.0;
   is_ref_consistent_ = (ref_vel * final_t - last_path_length) <= 2.0;
   if (motion_planner_output.lat_init_flag) {
+    Eigen::Vector2d init_point(planning_init_point.lat_init_state.x(),
+                              planning_init_point.lat_init_state.y());
+    pnc::spline::Projection last_path_projection_spline;
+    last_path_projection_spline.CalProjectionPoint(
+        motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
+        last_path_s_vec.front(), last_path_s_vec.back(), init_point);
+    double last_start_s = last_path_projection_spline.GetOutput().s_proj;
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
-      tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
-      planning_input_.mutable_last_x_vec()->Set(
-          i, motion_planner_output.lateral_x_t_spline(tmp_t));
-      planning_input_.mutable_last_y_vec()->Set(
-          i, motion_planner_output.lateral_y_t_spline(tmp_t));
+      double last_x = motion_planner_output.x_s_spline(last_start_s);
+      double last_y = motion_planner_output.y_s_spline(last_start_s);
+      double last_theta = motion_planner_output.theta_s_spline(last_start_s);
       double lateral_ref_theta = planning_input_.ref_theta_vec(i);
-      double last_lateral_theta =
-          motion_planner_output.lateral_theta_t_spline(tmp_t);
-      double theta_err = lateral_ref_theta - last_lateral_theta;
+      double theta_err = lateral_ref_theta - last_theta;
       const double pi2 = 2.0 * M_PI;
       if (theta_err > M_PI) {
-        last_lateral_theta += pi2;
+        last_theta += pi2;
       } else if (theta_err < -M_PI) {
-        last_lateral_theta -= pi2;
+        last_theta -= pi2;
       }
-      planning_input_.mutable_last_theta_vec()->Set(i, last_lateral_theta);
+      planning_input_.mutable_last_x_vec()->Set(i, last_x);
+      planning_input_.mutable_last_y_vec()->Set(i, last_y);
+      planning_input_.mutable_last_theta_vec()->Set(i, last_theta);
+      if (last_start_s <= last_path_length) {
+        valid_continuity_idx++;
+      }
+      double ds = ref_vel * config_.delta_t;
+      if (!enu_ref_vel.empty()) {
+        ds = enu_ref_vel[i] * config_.delta_t;
+      }
+      last_start_s += ds;
     }
     planning_input_.set_q_continuity(0.0);
   } else {
