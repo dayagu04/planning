@@ -6573,10 +6573,9 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
   }
   // 判断是不是下匝道的exchange，是则需要考虑长实线
   double lsl_length = 0;
+
   if ((!is_merge_exchange_region &&
-       exchange_region_info.split_direction == SPLIT_RIGHT) ||
-      (is_merge_exchange_region &&
-       exchange_region_info.split_direction == SPLIT_LEFT)) {
+       exchange_region_info.split_direction == SPLIT_RIGHT)) {
     for (int i = 1; i < feasible_lane_sequence[0]; i++) {
       // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
       const int lc_num = feasible_lane_sequence[0] - i;
@@ -6606,10 +6605,9 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
             temp_feasible_lane_dis[i];
       }
     }
-  } else if ((!is_merge_exchange_region &&
-              exchange_region_info.split_direction == SPLIT_LEFT) ||
-             (is_merge_exchange_region &&
-              exchange_region_info.split_direction == SPLIT_RIGHT)) {
+
+  } else if (!is_merge_exchange_region &&
+             exchange_region_info.split_direction == SPLIT_LEFT) {
     for (int i = current_lane_num; i > feasible_lane_sequence.back(); i--) {
       const int lc_num = i - feasible_lane_sequence.back();
       const double lc_need_dis = opt_distance * std::fabs(lc_num);
@@ -6637,6 +6635,131 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
       for (int i = 0; i < temp_feasible_lane_seq.size(); i++) {
         feasible_lane_distance[temp_feasible_lane_seq[i]] =
             temp_feasible_lane_dis[i];
+      }
+    }
+  } else if (is_merge_exchange_region && exchange_region_info.is_ramp_merge) {
+    if (exchange_region_info.split_direction == SPLIT_RIGHT) {
+      for (int i = current_lane_num; i > feasible_lane_sequence.back(); i--) {
+        const int lc_num = i - feasible_lane_sequence.back();
+        const double lc_need_dis = opt_distance * std::fabs(lc_num);
+        std::vector<std::vector<LSLInfo>> lsl_info_vec;
+        bool is_lsl = CalculateLSLDistance(
+            current_link_, route_info_output_.current_segment_passed_distance,
+            exchange_region_info.distance_to_split_point, lsl_info_vec);
+        if (is_lsl) {
+          lsl_length = CalculateLSLTotalLength(
+              i, lsl_info_vec, exchange_region_info.split_direction);
+          route_info_output_.lsl_length = lsl_length;
+          max_distance = std::max(0.0, max_distance - lsl_length);
+        }
+        if (max_distance > lc_need_dis) {
+          temp_feasible_lane_seq.insert(temp_feasible_lane_seq.begin(), i);
+          temp_feasible_lane_dis.insert(temp_feasible_lane_dis.begin(),
+                                        (max_distance - lc_need_dis));
+        }
+      }
+
+      if (!temp_feasible_lane_seq.empty()) {
+        feasible_lane_sequence.insert(feasible_lane_sequence.end(),
+                                      temp_feasible_lane_seq.begin(),
+                                      temp_feasible_lane_seq.end());
+        for (int i = 0; i < temp_feasible_lane_seq.size(); i++) {
+          feasible_lane_distance[temp_feasible_lane_seq[i]] =
+              temp_feasible_lane_dis[i];
+        }
+      }
+    } else if (exchange_region_info.split_direction == SPLIT_LEFT) {
+      for (int i = 1; i < feasible_lane_sequence[0]; i++) {
+        // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
+        const int lc_num = feasible_lane_sequence[0] - i;
+        const double lc_need_dis = opt_distance * std::fabs(lc_num);
+        std::vector<std::vector<LSLInfo>> lsl_info_vec;
+        bool is_lsl = CalculateLSLDistance(
+            current_link_, route_info_output_.current_segment_passed_distance,
+            exchange_region_info.distance_to_split_point, lsl_info_vec);
+        if (is_lsl) {
+          lsl_length = CalculateLSLTotalLength(
+              i, lsl_info_vec, exchange_region_info.split_direction);
+          route_info_output_.lsl_length = lsl_length;
+          max_distance = std::max(0.0, max_distance - lsl_length);
+        }
+        if (max_distance > lc_need_dis) {
+          temp_feasible_lane_seq.emplace_back(i);
+          temp_feasible_lane_dis.emplace_back(max_distance - lc_need_dis);
+        }
+      }
+
+      if (!temp_feasible_lane_seq.empty()) {
+        feasible_lane_sequence.insert(feasible_lane_sequence.begin(),
+                                      temp_feasible_lane_seq.begin(),
+                                      temp_feasible_lane_seq.end());
+        for (int i = 0; i < temp_feasible_lane_seq.size(); i++) {
+          feasible_lane_distance[temp_feasible_lane_seq[i]] =
+              temp_feasible_lane_dis[i];
+        }
+      }
+    }
+  } else if (is_merge_exchange_region &&
+             exchange_region_info.is_other_merge_to_road) {
+    if (exchange_region_info.split_direction == SPLIT_LEFT) {
+      for (int i = current_lane_num; i > feasible_lane_sequence.back(); i--) {
+        const int lc_num = i - feasible_lane_sequence.back();
+        const double lc_need_dis = opt_distance * std::fabs(lc_num);
+        std::vector<std::vector<LSLInfo>> lsl_info_vec;
+        bool is_lsl = CalculateLSLDistance(
+            current_link_, route_info_output_.current_segment_passed_distance,
+            exchange_region_info.distance_to_split_point, lsl_info_vec);
+        if (is_lsl) {
+          lsl_length = CalculateLSLTotalLength(
+              i, lsl_info_vec, exchange_region_info.split_direction);
+          route_info_output_.lsl_length = lsl_length;
+          max_distance = std::max(0.0, max_distance - lsl_length);
+        }
+        if (max_distance > lc_need_dis) {
+          temp_feasible_lane_seq.insert(temp_feasible_lane_seq.begin(), i);
+          temp_feasible_lane_dis.insert(temp_feasible_lane_dis.begin(),
+                                        (max_distance - lc_need_dis));
+        }
+      }
+
+      if (!temp_feasible_lane_seq.empty()) {
+        feasible_lane_sequence.insert(feasible_lane_sequence.end(),
+                                      temp_feasible_lane_seq.begin(),
+                                      temp_feasible_lane_seq.end());
+        for (int i = 0; i < temp_feasible_lane_seq.size(); i++) {
+          feasible_lane_distance[temp_feasible_lane_seq[i]] =
+              temp_feasible_lane_dis[i];
+        }
+      }
+    } else if (exchange_region_info.split_direction == SPLIT_RIGHT) {
+      for (int i = 1; i < feasible_lane_sequence[0]; i++) {
+        // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
+        const int lc_num = feasible_lane_sequence[0] - i;
+        const double lc_need_dis = opt_distance * std::fabs(lc_num);
+        std::vector<std::vector<LSLInfo>> lsl_info_vec;
+        bool is_lsl = CalculateLSLDistance(
+            current_link_, route_info_output_.current_segment_passed_distance,
+            exchange_region_info.distance_to_split_point, lsl_info_vec);
+        if (is_lsl) {
+          lsl_length = CalculateLSLTotalLength(
+              i, lsl_info_vec, exchange_region_info.split_direction);
+          route_info_output_.lsl_length = lsl_length;
+          max_distance = std::max(0.0, max_distance - lsl_length);
+        }
+        if (max_distance > lc_need_dis) {
+          temp_feasible_lane_seq.emplace_back(i);
+          temp_feasible_lane_dis.emplace_back(max_distance - lc_need_dis);
+        }
+      }
+
+      if (!temp_feasible_lane_seq.empty()) {
+        feasible_lane_sequence.insert(feasible_lane_sequence.begin(),
+                                      temp_feasible_lane_seq.begin(),
+                                      temp_feasible_lane_seq.end());
+        for (int i = 0; i < temp_feasible_lane_seq.size(); i++) {
+          feasible_lane_distance[temp_feasible_lane_seq[i]] =
+              temp_feasible_lane_dis[i];
+        }
       }
     }
   }
