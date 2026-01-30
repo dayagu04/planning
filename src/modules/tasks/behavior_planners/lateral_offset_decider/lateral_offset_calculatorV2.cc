@@ -1,8 +1,10 @@
 #include "lateral_offset_calculatorV2.h"
+
 #include <cassert>
 #include <iomanip>
 #include <utility>
 #include <vector>
+
 #include "common.pb.h"
 #include "common/utils/hysteresis_decision.h"
 #include "config/basic_type.h"
@@ -24,7 +26,7 @@ constexpr double kLimitSlopeDefaultSpeed = 80;
 constexpr double kMaxLateralOffsetChangeRate = 0.05;
 constexpr double kMaxChangeRateEgoSpeed = 10.;
 LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
-    const EgoPlanningConfigBuilder *config_builder) {
+    const EgoPlanningConfigBuilder* config_builder) {
   config_ = config_builder->cast<LateralOffsetDeciderConfig>();
   std::map<std::pair<int, int>, HysteresisDecision> hysteresis_map;
   max_opposite_offset_hysteresis_maps_[HysteresisType::EnoughSpaceHysteresis] =
@@ -55,24 +57,24 @@ bool LateralOffsetCalculatorV2::Process(
     framework::Session* session,
     const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
     const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history,
-    const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle,
-    LaneInfo lane_info, double dist_rblane, bool flag_avd) {
+    const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle, LaneInfo lane_info,
+    double dist_rblane, bool flag_avd) {
   // NTRACE_CALL(7);
   auto current_time = IflyTime::Now_ms();
   session_ = session;
 
-  auto &planning_context = session_->planning_context();
+  auto& planning_context = session_->planning_context();
   // auto &ego_prediction_result = pipeline_context_->planning_result;
   // auto &ego_prediction_info = pipeline_context_->planning_info;
-  auto &coarse_planning_info =
+  auto& coarse_planning_info =
       planning_context.lane_change_decider_output().coarse_planning_info;
   bool b_success = false;
 
   // obtain the session information
-  const auto &lane_change_decider_output =
+  const auto& lane_change_decider_output =
       planning_context.lane_change_decider_output();
-  const auto &status = lane_change_decider_output.curr_state;
-  const auto &should_premove = lane_change_decider_output.should_premove;
+  const auto& status = lane_change_decider_output.curr_state;
+  const auto& should_premove = lane_change_decider_output.should_premove;
 
   // init info
   flane_ = session_->environmental_model()
@@ -97,8 +99,10 @@ bool LateralOffsetCalculatorV2::Process(
   lane_width_ = lane_info.lane_width;
   last_avoid_info_ = avoid_info_;
   Reset();
-  avoid_info_.normal_left_avoid_threshold = lane_info.normal_left_avoid_threshold;
-  avoid_info_.normal_right_avoid_threshold = lane_info.normal_right_avoid_threshold;
+  avoid_info_.normal_left_avoid_threshold =
+      lane_info.normal_left_avoid_threshold;
+  avoid_info_.normal_right_avoid_threshold =
+      lane_info.normal_right_avoid_threshold;
   b_success = update(status, flag_avd, should_premove, dist_rblane,
                      avd_obstacle, avd_obstacles_history, avd_sp_obstacle);
 
@@ -115,12 +119,11 @@ bool LateralOffsetCalculatorV2::update(
     const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
     const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history,
     const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle) {
-
   if (status >= kLaneKeeping && status <= kLaneChangeHold) {
     UpdateAvoidPath(status, flag_avd, should_premove, dist_rblane, avd_obstacle,
                     avd_sp_obstacle);
   } else {
-    auto &enough_space_hysteresis_map =
+    auto& enough_space_hysteresis_map =
         std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
             max_opposite_offset_hysteresis_maps_
                 [HysteresisType::EnoughSpaceHysteresis]);
@@ -1333,10 +1336,10 @@ void LateralOffsetCalculatorV2::ResetOffsetHysteresisMaps() {
       HysteresisType::EnoughSpaceHysteresis, HysteresisType::AvoidWaySelect,
       HysteresisType::IsObstacleConsideredHysteresis,
       HysteresisType::IsInConsiderLateralRangeHysteresis};
-  for (const auto &type : types_to_reset) {
+  for (const auto& type : types_to_reset) {
     auto it = max_opposite_offset_hysteresis_maps_.find(type);
     if (it != max_opposite_offset_hysteresis_maps_.end()) {
-      std::visit([](auto &map) { map.clear(); }, it->second);
+      std::visit([](auto& map) { map.clear(); }, it->second);
     }
   }
   SaveDebugInfo();
@@ -1345,8 +1348,8 @@ void LateralOffsetCalculatorV2::ResetOffsetHysteresisMaps() {
 
 void LateralOffsetCalculatorV2::SaveDebugInfo() {
 #ifdef ENABLE_PROTO_LOG
-  auto &debug_info_manager = DebugInfoManager::GetInstance();
-  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto lateral_offset_decider_info =
       planning_debug_data->mutable_lateral_offset_decider_info();
   lateral_offset_decider_info->set_lateral_offset(avoid_info_.lat_offset);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+
 #include "avoid_obstacle_maintainer5V.h"
 #include "config/basic_type.h"
 #include "define/planning_status.h"
@@ -21,11 +22,10 @@ class LateralOffsetCalculatorV2 {
                const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
                const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history,
                const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle,
-               LaneInfo lane_info,
-               double dist_rblane, bool flag_avd);
+               LaneInfo lane_info, double dist_rblane, bool flag_avd);
 
   double lat_offset() const { return lateral_offset_; }
-  const AvoidInfo &avoid_info() const { return avoid_info_; }
+  const AvoidInfo& avoid_info() const { return avoid_info_; }
   bool enable_bound() const { return enable_bound_; }
   void Reset();
   void ResetOffsetHysteresisMaps();

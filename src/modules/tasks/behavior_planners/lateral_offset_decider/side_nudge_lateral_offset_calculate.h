@@ -1,16 +1,23 @@
 #pragma once
 #include "common/task_basic_types.h"
+#include "lateral_offset_decider_utils.h"
 #include "reference_path.h"
 #include "session.h"
 #include "utils/hysteresis_decision.h"
-#include "lateral_offset_decider_utils.h"
 
 namespace planning {
 constexpr int CONTROL_TIME = 30;
 constexpr int COOLING_TIME = 40;
 constexpr int END_DEBOUNCE_TIME = 3;
 enum class EmergecyLevel { NONE, LOW, MEDIUM, HIGH };
-enum class CancelNudgeReason { NONE, NO_OVERLAP, LARGE_LAT_DISTANCE, LANE_CHANGE, ST_UNION, OTHER };
+enum class CancelNudgeReason {
+  NONE,
+  NO_OVERLAP,
+  LARGE_LAT_DISTANCE,
+  LANE_CHANGE,
+  ST_UNION,
+  OTHER
+};
 struct NudgeInfo {
   NudgeInfo() {}
   NudgeInfo(uint32 i_id, NudgeDirection i_nudge_direction,
@@ -38,17 +45,13 @@ struct NudgeInfo {
   CancelNudgeReason cancel_nudge_reason;
 };
 
-
-enum class SideNudgeState : int {
-  IDLE,
-  COOLING_DONW,
-  CONTROL
-};
+enum class SideNudgeState : int { IDLE, COOLING_DONW, CONTROL };
 
 class SideNudgeLateralOffsetDecider {
  public:
   SideNudgeLateralOffsetDecider() = default;
-  SideNudgeLateralOffsetDecider(framework::Session *session, const EgoPlanningConfigBuilder* config_builder);
+  SideNudgeLateralOffsetDecider(framework::Session* session,
+                                const EgoPlanningConfigBuilder* config_builder);
   ~SideNudgeLateralOffsetDecider() = default;
   bool Process(const LaneInfo& lane_info);
   double lat_offset() const { return lateral_offset_; }

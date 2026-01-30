@@ -1,10 +1,10 @@
 #pragma once
 #include "avoid_obstacle_maintainer5V.h"
 #include "lateral_offset_calculatorV2.h"
+#include "lateral_offset_decider_utils.h"
 #include "session.h"
 #include "side_nudge_lateral_offset_calculate.h"
 #include "tasks/task.h"
-#include "lateral_offset_decider_utils.h"
 
 namespace planning {
 
@@ -30,7 +30,8 @@ class LateralOffsetDecider : public Task {
 
  private:
   void CalLaneInfo();
-  void CalculateNormalLateralOffsetThreshold(const std::shared_ptr<VirtualLane> flane);
+  void CalculateNormalLateralOffsetThreshold(
+      const std::shared_ptr<VirtualLane> flane);
   double CalLaneWidth(const std::shared_ptr<VirtualLane> flane);
   void SmoothLateralOffset(double in_lat_offset);
   void PostProcess();

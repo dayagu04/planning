@@ -283,7 +283,7 @@ bool SideNudgeLateralOffsetDecider::LatOffsetCalculate() {
   desire_lateral_offset =
       nudge_info_.nudge_direction == NudgeDirection::LEFT
           ? -std::min(desire_lateral_offset,
-                     lane_info_.normal_right_avoid_threshold)
+                      lane_info_.normal_right_avoid_threshold)
           : std::min(desire_lateral_offset,
                      lane_info_.normal_left_avoid_threshold);
 
