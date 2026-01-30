@@ -2489,6 +2489,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           first_exchange_region_info.split_link_id);
     }
   }
+    // 为了与E541中Scene对齐，先在这把这个值更新一次，后面有新的情况再次更新
+  route_info_output_.mlc_decider_scene_type_info = mlc_scene_type_info;
   // 判断当前处于的状态
   bool is_entery_exchange_region_front =
       first_exchange_region_info.distance_to_split_point <
@@ -2521,7 +2523,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
-  
+
   // 判断当前是否接近汇入汇出
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -3013,6 +3015,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                                       distance_to_lc_exchange_region, link_id);
       }
     }
+    route_info_output_.mlc_decider_scene_type_info = mlc_scene_type_info;
   }
 
   // route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
@@ -3489,6 +3492,10 @@ void RouteInfo::UpdateVisionInfo() const {
       static_cast<int>(
           route_info_output_.mlc_decider_scene_type_info.mlc_scene_type));
   JSON_DEBUG_VALUE("lsl_length", route_info_output_.lsl_length);
+  JSON_DEBUG_VALUE(
+      "bd_mlc_scene",
+      static_cast<int>(
+          route_info_output_.mlc_decider_scene_type_info.mlc_scene_type));
   JSON_DEBUG_VALUE("ego_seq", route_info_output_.ego_seq);
 
   // todo(wangzhi17):用virtual lane中的信息来更新
