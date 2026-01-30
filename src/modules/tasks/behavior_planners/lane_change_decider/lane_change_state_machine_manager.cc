@@ -1122,7 +1122,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
   cart_ref_info.s_vec.resize(point_size);
   std::vector<double> kappa_radius_vec;
   kappa_radius_vec.resize(point_size);
-  float normal_care_spline_length = 50.;
+  double normal_care_spline_length = 50.;
   const float preview_time = 20.;
   const double min_preview_spline_length = 20.;
 
@@ -1140,7 +1140,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
     normal_care_spline_length =
         std::min(kHppMaxRearDistance, distance_to_first_point);
   }
-
+  normal_care_spline_length = std::max(planning_init_point.frenet_state.s, normal_care_spline_length);
   for (size_t i = 0; i < point_size; ++i) {
     cart_ref_info.x_vec[i] = ref_point.at(i).path_point.x();
     cart_ref_info.y_vec[i] = ref_point.at(i).path_point.y();

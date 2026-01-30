@@ -198,6 +198,58 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
   }
 }
 
+void LateralMotionPlanningWeight::SetLateralMotionWeightForHPP(
+    planning::common::LateralPlanningInput &planning_input) {
+  weight_.proximal_index = config_.motion_plan_concerned_start_index;
+  weight_.remotely_index = config_.motion_plan_concerned_end_index;
+  weight_.complete_follow = false;
+  end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
+  end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
+  end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
+  SetAccJerkBoundAndWeight(planning_input);
+  MakeDynamicPosBoundWeight(planning_input);
+  MakeDynamicWeight(planning_input);
+  if (is_search_success_) {
+    planning_input.set_q_continuity(config_.q_continuity_search);
+  }
+  planning_input.set_complete_follow(weight_.complete_follow);
+  planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
+}
+
+void LateralMotionPlanningWeight::SetLateralMotionWeightForRADS(
+    planning::common::LateralPlanningInput &planning_input) {
+  weight_.proximal_index = config_.motion_plan_concerned_start_index;
+  weight_.remotely_index = config_.motion_plan_concerned_end_index;
+  weight_.complete_follow = true;
+  end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
+  end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
+  end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
+  SetAccJerkBoundAndWeight(planning_input);
+  MakeDynamicPosBoundWeight(planning_input);
+  MakeDynamicWeight(planning_input);
+  planning_input.set_q_continuity(0.0);
+  planning_input.set_complete_follow(weight_.complete_follow);
+  planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
+}
+
+void LateralMotionPlanningWeight::SetLateralMotionWeightForNSA(
+    planning::common::LateralPlanningInput &planning_input) {
+  weight_.proximal_index = config_.motion_plan_concerned_start_index;
+  weight_.remotely_index = config_.motion_plan_concerned_end_index;
+  weight_.complete_follow = false;
+  end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
+  end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
+  end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
+  SetAccJerkBoundAndWeight(planning_input);
+  MakeDynamicPosBoundWeight(planning_input);
+  MakeDynamicWeight(planning_input);
+  if (is_search_success_) {
+    planning_input.set_q_continuity(config_.q_continuity_search);
+  }
+  planning_input.set_complete_follow(weight_.complete_follow);
+  planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
+}
+
 void LateralMotionPlanningWeight::CalculateInitInfo(
     const planning::common::LateralPlanningInput &planning_input) {
   const double a = planning_input.ref_y_vec(1) - planning_input.ref_y_vec(0);
@@ -1085,17 +1137,10 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     }
     if (is_lane_change_hold_) {
       extra_jerk_buffer = 0.1;
-      jerk_bound += 0.1;
+      jerk_bound += 0.2;
     } else if (is_lane_change_back_) {
       extra_jerk_buffer = 0.2;
-      jerk_bound += 0.3;
-    }
-    if (is_lane_change_hold_) {
-      extra_jerk_buffer = 0.1;
-      jerk_bound += 0.1;
-    } else if (is_lane_change_back_) {
-      extra_jerk_buffer = 0.2;
-      jerk_bound += 0.3;
+      jerk_bound += 0.6;
     }
     if (is_sharp_turn_ ||
         ref_curve_info.curve_type == planning::ReferencePathCurveInfo::CurveType::SHARP_CURVE) {
