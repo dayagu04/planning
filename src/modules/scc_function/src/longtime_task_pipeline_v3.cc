@@ -327,13 +327,13 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
-  hmi_decider_->Execute();
-
   ok = result_trajectory_generator_->Execute();
   if (!ok) {
     AddErrorInfo(result_trajectory_generator_->Name());
     return false;
   }
+
+  hmi_decider_->Execute();
 
   return true;
 }
