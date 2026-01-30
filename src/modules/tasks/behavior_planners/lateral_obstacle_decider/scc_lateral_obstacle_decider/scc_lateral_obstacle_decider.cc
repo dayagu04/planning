@@ -166,11 +166,22 @@ void SccLateralObstacleDecider::UpdateAvdObstacles() {
   }
 
   // farthest_distance
-  auto &last_traj_points =
-      session_->planning_context().last_planning_result().traj_points;
+  // auto &last_traj_points =
+  //     session_->planning_context().last_planning_result().traj_points;
+  // double farthest_distance = DBL_MAX;
+  // if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
+  //   farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
+  // }
   double farthest_distance = DBL_MAX;
-  if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
-    farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
+  const auto& motion_planner_output =
+      session_->planning_context().motion_planner_output();
+  auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
+  Point2D frenet_pt{0.0, 0.0};
+  if (motion_planner_output.is_valid_planning_end_xy_point &&
+      frenet_coord->XYToSL(motion_planner_output.planning_end_xy_point,
+                           frenet_pt)) {
+    farthest_distance = std::max(
+        0.0, frenet_pt.x - reference_path_ptr_->get_frenet_ego_state().s());
   }
 
   double expand_vel =
