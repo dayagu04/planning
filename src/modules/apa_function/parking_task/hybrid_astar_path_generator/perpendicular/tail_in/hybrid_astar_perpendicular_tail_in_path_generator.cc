@@ -322,16 +322,18 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     }
     geometry_lib::PathPoint end_pose;
     const float decide_cul_de_sac_y = 7.5f;
-    if (cur_pose.GetY() > 0.0) {
+    if (cur_pose.GetTheta() < -0.001f) {
       end_pose.SetY(-decide_cul_de_sac_y - bound);
       end_pose.SetTheta(cur_pose.GetTheta());
       end_pose.SetDir(cur_pose.GetTheta());
       cul_de_sac_info_.type = CulDeSacType::RIGHT;
-    } else {
+    } else if (cur_pose.GetTheta() > 0.001f) {
       end_pose.SetY(decide_cul_de_sac_y + bound);
       end_pose.SetTheta(cur_pose.GetTheta());
       end_pose.SetDir(cur_pose.GetTheta());
       cul_de_sac_info_.type = CulDeSacType::LEFT;
+    } else {
+      break;
     }
     const std::vector<double> x_vec{7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0};
     bool find_safe_pos = false;
