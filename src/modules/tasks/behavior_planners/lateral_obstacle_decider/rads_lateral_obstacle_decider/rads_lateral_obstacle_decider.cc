@@ -50,8 +50,10 @@ void RADSLateralObstacleDecider::InitInfo() {
 void RADSLateralObstacleDecider::UpdateLatDecision() {
   auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double init_s =
+      reference_path_ptr_->get_frenet_ego_state().planning_init_point().frenet_state.s;
   const double kMinCareLatThr = 0.5 * vehicle_param.max_width - 0.1;
-  const double kMaxCareLatThr = 0.5 * vehicle_param.max_width + 0.25;
+  // const double kMaxCareLatThr = 0.5 * vehicle_param.max_width + 0.25;
   const double kPosChangeBuffer = 0.05;
   for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
@@ -59,6 +61,8 @@ void RADSLateralObstacleDecider::UpdateLatDecision() {
           obstacle->frenet_obstacle_boundary().l_start;
       const double obstacle_l_end =
           obstacle->frenet_obstacle_boundary().l_end;
+      const double obstacle_s_end =
+          obstacle->frenet_obstacle_boundary().s_end;
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
         LatObstacleDecisionType last_decision = LatObstacleDecisionType::NOT_SET;
         auto last_itr = last_output_.find(obstacle->id());
@@ -72,24 +76,28 @@ void RADSLateralObstacleDecider::UpdateLatDecision() {
         } else if (last_decision == LatObstacleDecisionType::IGNORE) {
           pos_change_buffer = -kPosChangeBuffer;
         }
-        if (obstacle->frenet_l() > 0) {
-          // 左侧
-          if (obstacle_l_start >= (kMinCareLatThr - pos_change_buffer) &&
-              obstacle_l_start <= (kMaxCareLatThr + pos_change_buffer)) {
-            output_[obstacle->id()] = LatObstacleDecisionType::RIGHT;
+        if (obstacle_s_end > init_s) {
+          if (obstacle->frenet_l() > 0) {
+            // 左侧
+            if (obstacle_l_start >= (kMinCareLatThr - pos_change_buffer)) {
+                // && obstacle_l_start <= (kMaxCareLatThr + pos_change_buffer)) {
+              output_[obstacle->id()] = LatObstacleDecisionType::RIGHT;
+            } else {
+              output_[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+            }
           } else {
-            output_[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+            // 右侧
+            if (obstacle_l_end <= (-kMinCareLatThr + kPosChangeBuffer)) {
+                // && obstacle_l_end >= (-kMaxCareLatThr - kPosChangeBuffer)) {
+              output_[obstacle->id()] =
+                  LatObstacleDecisionType::LEFT;
+            } else {
+              output_[obstacle->id()] =
+                  LatObstacleDecisionType::IGNORE;
+            }
           }
         } else {
-          // 右侧
-          if (obstacle_l_end <= (-kMinCareLatThr + kPosChangeBuffer) &&
-              obstacle_l_end >= (-kMaxCareLatThr - kPosChangeBuffer)) {
-            output_[obstacle->id()] =
-                LatObstacleDecisionType::LEFT;
-          } else {
-            output_[obstacle->id()] =
-                LatObstacleDecisionType::IGNORE;
-          }
+          output_[obstacle->id()] = LatObstacleDecisionType::IGNORE;
         }
       } else {
         output_[obstacle->id()] = LatObstacleDecisionType::IGNORE;
