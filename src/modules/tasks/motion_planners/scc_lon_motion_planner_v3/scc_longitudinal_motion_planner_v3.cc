@@ -315,7 +315,8 @@ void SccLongitudinalMotionPlannerV3::Update() {
   const auto& planned_kd_path =
       session_->planning_context().st_graph_helper()->processed_path();
   Point2D planning_end_xy_point;
-  if (planned_kd_path->SLToXY(Point2D(s_vec.back(), 0),
+  if (planned_kd_path != nullptr &&
+      planned_kd_path->SLToXY(Point2D(s_vec.back(), 0),
                               planning_end_xy_point)) {
     motion_planner_output.planning_end_xy_point = planning_end_xy_point;
     motion_planner_output.is_valid_planning_end_xy_point = true;
