@@ -207,7 +207,7 @@ bool StartStopDecider::CanTransitionToStop() {
     const auto &ego_state_mgr =
           session_->environmental_model().get_ego_state_manager();
     const double ego_real_v = ego_state_mgr->ego_v();
-    ego_stop_condition = ego_stop_condition && (ego_real_v < config_.ego_vel_begin_stop_threshold);
+    ego_stop_condition = ego_stop_condition && (std::fabs(ego_real_v) < config_.ego_vel_begin_stop_threshold);
     const auto& agent_manager =
            session_->environmental_model().get_agent_manager();
     const auto& cipv = agent_manager->GetAgent(cipv_id_);
@@ -244,7 +244,7 @@ bool StartStopDecider::CanTransitionToStop() {
 
       double dis_ego_to_end = std::fabs(end_pnt_s - ego_pose_s);
       if (dis_ego_to_end < config_.rads_early_stop_distance_ego_to_end_threshold &&
-          ego_real_v < config_.rads_early_stop_vel_threshold &&
+          std::fabs(ego_real_v) < config_.rads_early_stop_vel_threshold &&
           planning_init_state_vel_ < config_.rads_early_stop_vel_threshold) {
         return true;
       } else {
