@@ -55,9 +55,9 @@ bool HppStopDecider::Execute() {
   // 获取到目标终点和目标停车位的距离（已更新）
   const auto &route_info_output = env.get_route_info()->get_route_info_output();
   const double dist_to_target_dest =
-      route_info_output.distance_to_target_dest;
+      route_info_output.hpp_route_info_output.distance_to_target_dest;
   const double dist_to_target_slot =
-      route_info_output.distance_to_target_slot;
+      route_info_output.hpp_route_info_output.distance_to_target_slot;
 
   // 判断是否到达目标停车位和目的地
   const auto &parking_slot_manager = env.get_parking_slot_manager();
@@ -139,9 +139,9 @@ bool HppStopDecider::UpdateTargetInfoBasedOnReferencePath(
   const auto &parking_slot_manager =
       session_->environmental_model().get_parking_slot_manager();
   double dist_to_target_slot =
-      route_info_output.distance_to_target_slot;
+      route_info_output.hpp_route_info_output.distance_to_target_slot;
   double dist_to_target_dest =
-      route_info_output.distance_to_target_dest;
+      route_info_output.hpp_route_info_output.distance_to_target_dest;
 
   if (reference_path != nullptr && parking_slot_manager->IsExistTargetSlot()) {
     const double ego_s = reference_path->get_frenet_ego_state().s();
@@ -156,7 +156,7 @@ bool HppStopDecider::UpdateTargetInfoBasedOnReferencePath(
     }
 
     const auto &target_dest_point =
-        route_info_output.target_dest_point;
+        route_info_output.hpp_route_info_output.target_dest_point;
     Point2D target_dest_cart_pt(target_dest_point.x(), target_dest_point.y());
     Point2D target_dest_frenet_pt{0.0, 0.0};
     if (frenet_coord->XYToSL(target_dest_cart_pt, target_dest_frenet_pt)) {
