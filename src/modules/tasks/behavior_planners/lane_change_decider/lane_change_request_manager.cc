@@ -391,7 +391,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       virtual_lane_manager->get_other_split_lane_left_side();
   const bool other_split_lane_right_side =
       virtual_lane_manager->get_other_split_lane_right_side();
-  bool is_allowed_select_split = (lc_status == kLaneKeeping || lc_status == kLaneChangePropose);
+  bool is_allowed_select_split =
+      (lc_status == kLaneKeeping || lc_status == kLaneChangePropose);
   if (((other_split_lane_left_side && request_ == LEFT_CHANGE) ||
        (other_split_lane_right_side && request_ == RIGHT_CHANGE) ||
        (split_lane_on_left_side_before_interactive &&
