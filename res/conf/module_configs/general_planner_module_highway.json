@@ -2188,8 +2188,8 @@
     "construction_warning_hmi_speed_max": 60,
     "obstacle_brake_hmi_reminder_dis": 8.0,
     "lat_acc_thr": 3.0,
-    "lat_jerk_thr": 0.8,
-    "ramp_lat_jerk_thr": 1.0,
+    "lat_jerk_thr": 0.45,
+    "ramp_lat_jerk_thr": 0.65,
     "lon_acc_thr": 2.0,
     "lon_jerk_thr": 1.5,
     "lat_jerk_hysteresis_value": 0.2

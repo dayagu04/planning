@@ -150,8 +150,10 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     traj_pt.jerk = motion_planner_output.j_t_spline(t);
     traj_pt.l = l_t_spline(t);
     traj_pt.heading_angle = motion_planner_output.theta_t_spline(t);
-    traj_pt.curvature = curvature_t_spline(t);
-    traj_pt.dkappa = dkappa_t_spline(t);
+    // traj_pt.curvature = curvature_t_spline(t);
+    traj_pt.curvature = motion_planner_output.curv_s_spline(traj_pt.s - tp_init_s);
+    traj_pt.dkappa = motion_planner_output.d_curv_s_spline(traj_pt.s - tp_init_s);
+    // traj_pt.dkappa = dkappa_t_spline(t);
     traj_pt.ddkappa = ddkappa_t_spline(t);
     traj_pt.frenet_valid = true;
     dense_traj_points.push_back(std::move(traj_pt));

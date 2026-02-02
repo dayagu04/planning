@@ -6402,7 +6402,7 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                      "lon_acc_thr");
     ReadItem<double>(json, lon_jerk_thr, "hmi_decider",
                      "lon_jerk_thr");
-    ReadItem<double>(json, lon_jerk_thr, "hmi_decider",
+    ReadItem<double>(json, lat_jerk_hysteresis_value, "hmi_decider",
                      "lat_jerk_hysteresis_value");
   }
   double tfl_reminder_cipv_dis = 8.0;

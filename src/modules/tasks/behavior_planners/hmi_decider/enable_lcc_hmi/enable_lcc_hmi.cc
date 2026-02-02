@@ -36,7 +36,8 @@ bool EnableLCCHMIDecider::Execute() {
       session_->mutable_planning_context()->mutable_motion_planner_output();
       const auto& speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
-  const auto& traj_points = ego_planning_result.traj_points;
+  // const auto& traj_points = ego_planning_result.traj_points;
+  const auto& traj_points = ego_planning_result.raw_traj_points;
   const double curv_factor = motion_planner_output.curv_factor;
   const double tp_init_s = traj_points.front().s;
 
