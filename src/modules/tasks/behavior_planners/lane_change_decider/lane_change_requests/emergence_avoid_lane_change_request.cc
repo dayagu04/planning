@@ -356,12 +356,14 @@ void EmergenceAvoidRequest::LaneChangeDirection() {
       enable_right &&
       !IsRoadBorderSurpressDuringLaneChange(
           RIGHT_CHANGE, origin_lane_virtual_id_, rlane->get_virtual_id());
-  const auto& merge_point_info = route_info_output.map_merge_points_info.front();
+  const auto& merge_points_info = route_info_output.map_merge_points_info;
   double distance_to_first_road_split = NL_NMAX;
   double dis_to_first_merge = NL_NMAX;
   double dis_to_merge_point = NL_NMAX;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-    dis_to_merge_point = merge_point_info.dis_to_merge_fp;
+    if (!merge_points_info.empty()) {
+      dis_to_merge_point = merge_points_info.front().dis_to_merge_fp;
+    }
     const auto& split_region_info_list =
         route_info_output.map_split_region_info_list;
     const auto& map_merge_region_info_list =

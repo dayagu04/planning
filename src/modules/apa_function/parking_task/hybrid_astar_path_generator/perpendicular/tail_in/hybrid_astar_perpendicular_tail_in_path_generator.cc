@@ -1186,16 +1186,13 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
           safe_buffer.out_slot_body_lat_buffer -
           safe_buffer.out_slot_extra_turn_lat_buffer;
 
-      const float out_slot_diff =
-          std::max(std::min(out_slot_straight_diff, out_slot_turn_diff), 0.05f);
-
       cost.obs_dist =
           std::min(obs_dist_relative_slot.obs_dist_out_slot_straight,
                    obs_dist_relative_slot.obs_dist_out_slot_turn);
 
       cost.obs_dist_cost = NodeDeleteDecider::CalcObsDistCost(
-          out_slot_diff * 100.0f, gear_change_penalty, length_penalty, 10.0f,
-          20.0f, 40.0f);
+          cost.obs_dist * 100.0f, gear_change_penalty, length_penalty, 50.0f,
+          70.0f, 100.0f);
     }
 
     if (temp_node.GearSwitchNode() != nullptr) {

@@ -5,7 +5,11 @@
 #include "lateral_obstacle.h"
 
 namespace planning {
-
+namespace {
+constexpr double kEgoStaticVelThred = 0.1;
+constexpr double kGreenReminderStartTime = 1.5;
+constexpr double kGreenReminderEndTime = 4.6;
+}
 TrafficLightDecider::TrafficLightDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
@@ -354,8 +358,17 @@ bool TrafficLightDecider::IsStayingStillGreenTFL() {
   const auto &environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
+  if (can_pass_ == false && v_ego < kEgoStaticVelThred) {
+    if (!is_first_car_) {
+      is_green_start_no_lead_ = false;
+    } else {
+      is_green_start_no_lead_ = true;
+    }
+
+  }
   //reminder from green light 1.5s and last 3s
-  if (v_ego < 0.1 && is_first_car_ && green_light_timer_ > 1.5 && green_light_timer_ < 4.6) {
+  if (is_green_start_no_lead_ && v_ego < kEgoStaticVelThred && green_light_timer_ > kGreenReminderStartTime && 
+      green_light_timer_ < kGreenReminderEndTime) {
     return true;
   }
   return false;

@@ -6,7 +6,7 @@
 #include "frenet_obstacle.h"
 #include "obstacle.h"
 #include "session.h"
-#include "src/library/arastar_lib/hybrid_ara_star.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/ARAStar/hybrid_ara_star.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/base_lateral_obstacle_decider.h"
 #include "tasks/task.h"
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"

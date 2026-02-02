@@ -1,6 +1,6 @@
 #include "boundary_cost.h"
 
-#include "ad_common/math/vec2d.h"
+#include "common/vec2d.h"
 #include "src/modules/context/vehicle_config_context.h"
 
 namespace planning {
@@ -10,42 +10,38 @@ BoundaryCost::BoundaryCost(
     const double weight, const double init_v, const double ego_wheel_base,
     const double ego_circle_radius, const double lane_width,
     const std::shared_ptr<planning_math::KDPath>& target_lane,
+    const std::shared_ptr<planning::planning_math::KDPath> left_boundary_tree,
+    const std::shared_ptr<planning::planning_math::KDPath> right_boundary_tree,
     const double& hard_safe_distance, const double& soft_safe_distance)
     : BaseCost(BaseCost::CostType::BOUNDARY, weight),
       target_lane_(target_lane),
       ego_wheel_base_(ego_wheel_base),
       ego_circle_radius_(ego_circle_radius),
       init_v_(init_v),
+      left_boundary_tree_(left_boundary_tree),
+      right_boundary_tree_(right_boundary_tree),
       hard_safe_distance_(hard_safe_distance),
       soft_safe_distance_(soft_safe_distance),
       lane_width_(lane_width){};
 
-double BoundaryCost::MakeCost(Node3D& vertex) const {
-  ad_common::math::Vec2d back_axis_position(vertex.GetX(), vertex.GetY());
-  ad_common::math::Vec2d front_axis_position(
+double BoundaryCost::MakeCost(Node3d& vertex) const {
+  if (left_boundary_tree_ == nullptr ||
+      right_boundary_tree_ == nullptr) {
+    return 0.0;
+  }
+  planning::planning_math::Vec2d back_axis_position(vertex.GetX(), vertex.GetY());
+  planning::planning_math::Vec2d front_axis_position(
       vertex.GetX() + ego_wheel_base_ * std::cos(vertex.GetPhi()),
       vertex.GetY() + ego_wheel_base_ * std::sin(vertex.GetPhi()));
 
-  double distance_lidarRB = 100.0;
-  double distance_cameraRB = 100.0;
-
-  // for (const auto& lineseg : Lidar_RB_list_) {
-  //   // get distance to box
-  //   double distance_back = lineseg.DistanceTo(back_axis_position) -
-  //   ego_circle_radius_; double distance_front =
-  //   lineseg.DistanceTo(front_axis_position) - ego_circle_radius_;
-  //   distance_lidarRB = std::min(std::min(distance_back, distance_front),
-  //   distance_lidarRB);
-  // }
-
-  // for (const auto& lineseg : Camera_RB_list_) {
-  //   // get distance to box
-  //   double distance_back = lineseg.DistanceTo(back_axis_position) -
-  //   ego_circle_radius_; double distance_front =
-  //   lineseg.DistanceTo(front_axis_position) - ego_circle_radius_;
-  //   distance_cameraRB = std::min(std::min(distance_back, distance_front),
-  //   distance_cameraRB);
-  // }
+  double front_dist_to_left =
+      left_boundary_tree_->DistanceTo(front_axis_position);
+  double rear_dist_to_left =
+      left_boundary_tree_->DistanceTo(back_axis_position);
+  double front_dist_to_right =
+      right_boundary_tree_->DistanceTo(front_axis_position);
+  double rear_dist_to_right =
+      right_boundary_tree_->DistanceTo(back_axis_position);
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -78,9 +74,10 @@ double BoundaryCost::MakeCost(Node3D& vertex) const {
   // distance cost
   double base_cost = is_outside_lane ? 20.0 : 1.0;
 
-  // double distance = std::min(distance_lidarRB, distance_cameraRB);
-  double distance =
-      lane_width_ / 2 - (std::fabs(vertex.GetL()) + vehicle_param.width / 2);
+  double distance = std::min(std::min(std::min(front_dist_to_left, rear_dist_to_left), front_dist_to_right), rear_dist_to_right);
+
+  // double distance =
+  //     lane_width_ / 2 - (std::fabs(vertex.GetL()) + vehicle_param.width / 2);
   double dist_cost = 0.0;
   if (distance < hard_safe_distance_) {
     dist_cost = base_cost;

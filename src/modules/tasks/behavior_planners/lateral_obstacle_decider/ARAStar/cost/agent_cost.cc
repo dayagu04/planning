@@ -49,7 +49,7 @@ AgentCost::AgentCost(
       left_turn_(left_turn),
       right_turn_(right_turn){};
 
-double AgentCost::MakeCost(Node3D& vertex) const {
+double AgentCost::MakeCost(Node3d& vertex) const {
   // distance cost，离障碍物越近，cost越大
   double dist = vertex.GetMinDist();
   double dist_cost = 0.0;

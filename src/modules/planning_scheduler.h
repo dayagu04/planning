@@ -103,7 +103,7 @@ class PlanningScheduler {
   bool IsUndefinedScene(const iflyauto::FunctionalState &current_state);
   bool IsValidHppState(const iflyauto::FunctionalState &current_state);
   bool IsValidRadsState(const iflyauto::FunctionalState &current_state);
-  bool IsValidNsaState(const iflyauto::FunctionalState &current_state); 
+  bool IsValidNsaState(const iflyauto::FunctionalState &current_state);
   void InitSccFunction();
 
   void interpolate_with_last_trajectory_points();
@@ -131,6 +131,8 @@ class PlanningScheduler {
       iflyauto::PlanningOutput *const planning_output,
       iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
   void CheckTrajectory();
+
+  void RecordTimeBenchmarkInfo();
 
  private:
   enum FeedType {

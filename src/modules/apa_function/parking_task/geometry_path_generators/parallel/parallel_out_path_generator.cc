@@ -208,6 +208,7 @@ const bool ParallelOutPathGenerator::Update() {
         }
       }
     } else {
+      collision_detector_ptr_->SetSkipObstaclesType(CollisionDetector::CURB_OBS);
       success = InversedTrialsByGivenGear(inversed_path_seg_vec,
                                           input_.ego_info_under_slot.cur_pose,
                                           input_.ref_gear);
@@ -244,6 +245,7 @@ const bool ParallelOutPathGenerator::Update() {
     ILOG_INFO << "inversed search in slot success! --------------------------";
     pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
     ILOG_INFO << "inversed search in slot success! end-----------------------";
+    collision_detector_ptr_->ClearSkipObstacles(CollisionDetector::CURB_OBS);
 
     ApaParkOutDirection out_dir = input_.tlane.slot_side_sgn > 0.0
                                       ? ApaParkOutDirection::LEFT_FRONT

@@ -16,3 +16,6 @@ target/*.tar
 bags/
 src/modules/version.h
 build.sh
+tools/bag_converter/.interface_trans_builder
+tools/bag_converter/output_*
+tools/bag_converter/.converters

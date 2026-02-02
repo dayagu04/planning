@@ -10,7 +10,7 @@ class MotionCost : public BaseCost {
              const double last_steering_angle);
   ~MotionCost() = default;
 
-  double MakeCost(Node3D& vertex) const;
+  double MakeCost(Node3d& vertex) const;
 
   void SetLastSteeringAngle(double last_steering_angle) {
     last_steering_angle_ = last_steering_angle;
