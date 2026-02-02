@@ -20,9 +20,17 @@ class RuleBasedPredictor {
   void Execute(std::shared_ptr<ApaObstacleManager>& obs_manager);
 
  private:
-  void Predict(ApaObstacle& obs);
+  void PredictByCV(ApaObstacle& obs);
+  void PredictByCTRV(ApaObstacle& obs);
 
   void RecordDebugInfo(std::shared_ptr<ApaObstacleManager>& obs_manager);
+
+  const double PredictApaObstacleSignedOmega(const std::deque<Eigen::Vector2d>& history,
+                                    double history_dt, double speed,
+                                    ApaObstacle& obs);
+
+  const double EstimateOmegaByCurvature(const std::deque<Eigen::Vector2d>& history,
+                                  double history_dt, double speed);
 
  private:
 };

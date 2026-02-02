@@ -310,6 +310,19 @@ void SccLongitudinalMotionPlannerV3::Update() {
     s_vec[i] = std::max(
         s_vec[i], s_vec[i - 1]);  // 1e-3 to avoid non-inremental spline input
   }
+  motion_planner_output.s_lon_vec = s_vec;
+
+  const auto& planned_kd_path =
+      session_->planning_context().st_graph_helper()->processed_path();
+  Point2D planning_end_xy_point;
+  if (planned_kd_path != nullptr &&
+      planned_kd_path->SLToXY(Point2D(s_vec.back(), 0),
+                              planning_end_xy_point)) {
+    motion_planner_output.planning_end_xy_point = planning_end_xy_point;
+    motion_planner_output.is_valid_planning_end_xy_point = true;
+  } else {
+    motion_planner_output.is_valid_planning_end_xy_point = false;
+  }
 
   // assemble trajectory that combines lateral and longitudinal planning_result
   auto &traj_points = session_->mutable_planning_context()

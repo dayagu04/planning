@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "config/basic_type.h"
-#include "src/library/arastar_lib/hybrid_ara_data.h"
+#include "src/modules/tasks/behavior_planners/lateral_obstacle_decider/ARAStar/hybrid_ara_data.h"
 #include "task_basic_types.h"
 
 namespace planning {
@@ -20,6 +20,7 @@ struct LateralObstacleHistoryInfo {
   bool ncar_count_in = false;
   bool is_avd_car = false;
   bool last_is_avd_car = false;
+  bool has_safe_space = false;
   double close_time = 0;
   double last_recv_time = 0;
   bool front_car = false;

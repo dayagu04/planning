@@ -12,30 +12,33 @@
 #include "modules/tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "node3d.h"
 #include "src/framework/session.h"
-#include "src/library/arastar_lib/cost/agent_cost.h"
-#include "src/library/arastar_lib/cost/boundary_cost.h"
-#include "src/library/arastar_lib/cost/center_cost.h"
-#include "src/library/arastar_lib/cost/cost_manager.h"
-#include "src/library/arastar_lib/cost/motion_cost.h"
+#include "cost/scc_agent_cost.h"
+#include "cost/boundary_cost.h"
+#include "cost/center_cost.h"
+#include "cost/cost_manager.h"
+#include "cost/motion_cost.h"
 #include "src/modules/common/utils/index_list.h"
 #include "src/modules/context/lateral_obstacle.h"
 #include "src/modules/context/virtual_lane_manager.h"
 #include "src/modules/tasks/task.h"
+#include "utils/kd_path.h"
 
+using namespace planning::ara_star;
 namespace planning {
-
-class HybridARAStar {
+class SccHybridARAStar {
  public:
-  explicit HybridARAStar(framework::Session* session);
-  HybridARAStar();
+  explicit SccHybridARAStar(framework::Session* session);
+  SccHybridARAStar();
 
-  virtual ~HybridARAStar() = default;
+  virtual ~SccHybridARAStar() = default;
 
-  bool Plan(ara_star::HybridARAStarResult& result,
+  bool Plan(const std::unordered_map<uint32_t, LatObstacleDecisionType> &obstacle_decision_map,
+            ara_star::HybridARAStarResult& result,
             const SearchResult search_result);
 
  private:
-  bool ProcessStaticAgents();
+  bool ProcessStaticAgents(const std::unordered_map<uint32_t, LatObstacleDecisionType> &obstacle_decision_map);
+  void BuildRoadKDTree();
   void BuildAgentKDTree(const std::vector<const Obstacle*>& nudge_agents);
   void BuildVirturalKDTree(
       const std::vector<planning_math::LineSegment2d>& virtual_lineseg_vec);
@@ -43,15 +46,15 @@ class HybridARAStar {
                           const std::shared_ptr<KDPath>& target_lane,
                           const std::vector<TrajectoryPoint>& plan_history_traj,
                           const double target_v);
-  bool ValidityCheck(const std::shared_ptr<Node3D> node);
+  bool ValidityCheck(const std::shared_ptr<Node3d> node);
   planning::planning_math::Box2d GetBoundingBox(const double x, const double y,
                                                 const double phi) const;
-  double CalculateBaseHeuCost(const std::shared_ptr<Node3D> current_node) const;
+  double CalculateBaseHeuCost(const std::shared_ptr<Node3d> current_node) const;
   bool ImprovePath();
   void RegisterCost(ara_star::CostManager& cost_manager) const;
-  std::shared_ptr<Node3D> NextNodeGenerator(
-      const std::shared_ptr<Node3D> current_node, const size_t next_node_index);
-  bool ReachDestination(const std::shared_ptr<Node3D> node) const;
+  std::shared_ptr<Node3d> NextNodeGenerator(
+      const std::shared_ptr<Node3d> current_node, const size_t next_node_index);
+  bool ReachDestination(const std::shared_ptr<Node3d> node) const;
   void SetMiddleFinalNode();
   bool GetResult(ara_star::HybridARAStarResult& result) const;
   void UpdateHeuristicFactor();
@@ -68,7 +71,7 @@ class HybridARAStar {
       int id, const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
       const std::shared_ptr<planning::FrenetObstacle>& another_frenet_obstacle);
   void FindClosestUncoveredInterval();
-  void LogNodeDebugInfo(const std::shared_ptr<Node3D>& current_node);
+  void LogNodeDebugInfo(const std::shared_ptr<Node3d>& current_node);
   bool DetectBend();
   bool LeftOrRightTurn();
   void CalculateSearchBounds(
@@ -141,15 +144,17 @@ class HybridARAStar {
 
   std::vector<double> XYbounds_;
   std::shared_ptr<KDPath> fix_lane_ = nullptr;
-  std::shared_ptr<Node3D> start_node_;
-  std::shared_ptr<Node3D> end_node_;
-  std::shared_ptr<Node3D> final_node_;
+  std::shared_ptr<Node3d> start_node_;
+  std::shared_ptr<Node3d> end_node_;
+  std::shared_ptr<Node3d> final_node_;
   std::vector<ara_star::SLBox2d> bounding_box_vec_;
   std::vector<std::shared_ptr<planning::FrenetObstacle>> nudge_agents_;
   std::shared_ptr<planning_math::AABoxKDTree2d<planning_math::GeometryObject>>
       agent_box_tree_;
   std::shared_ptr<planning_math::AABoxKDTree2d<planning_math::GeometryObject>>
       virtual_lineseg_tree_;
+  std::shared_ptr<planning::planning_math::KDPath> left_boundary_tree_;
+  std::shared_ptr<planning::planning_math::KDPath> right_boundary_tree_;
 
   struct cmp {
     bool operator()(const std::pair<std::string, double>& left,
@@ -160,10 +165,9 @@ class HybridARAStar {
   std::priority_queue<std::pair<std::string, double>,
                       std::vector<std::pair<std::string, double>>, cmp>
       open_pq_;
-  std::unordered_map<std::string, std::shared_ptr<Node3D>> open_set_;
-  std::unordered_map<std::string, std::shared_ptr<Node3D>> close_set_;
-  std::unordered_map<std::string, std::shared_ptr<Node3D>>
+  std::unordered_map<std::string, std::shared_ptr<Node3d>> open_set_;
+  std::unordered_map<std::string, std::shared_ptr<Node3d>> close_set_;
+  std::unordered_map<std::string, std::shared_ptr<Node3d>>
       observed_set_;  // has alaready visited
 };
-
 }  // namespace planning

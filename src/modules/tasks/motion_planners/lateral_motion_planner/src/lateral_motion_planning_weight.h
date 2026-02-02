@@ -65,9 +65,9 @@ struct PathWeight {  // temp
   void Init() {
     expected_acc.resize(point_num, 0.0);
     acc_upper_bound.resize(point_num, 3.0);
-    acc_lower_bound.resize(point_num, 3.0);
+    acc_lower_bound.resize(point_num, -3.0);
     jerk_upper_bound.resize(point_num, 0.3);
-    jerk_lower_bound.resize(point_num, 0.3);
+    jerk_lower_bound.resize(point_num, -0.3);
     q_ref_x.resize(point_num, 0);
     q_ref_y.resize(point_num, 0);
     q_ref_theta.resize(point_num, 0);
@@ -108,6 +108,24 @@ struct PathWeight {  // temp
     q_pos_first_soft_bound.clear();
     q_pos_soft_bound.clear();
     q_pos_hard_bound.clear();
+  }
+
+  void Reset() {
+    std::fill(expected_acc.begin(), expected_acc.end(), 0);
+    std::fill(acc_upper_bound.begin(), acc_upper_bound.end(), 3.0);
+    std::fill(acc_lower_bound.begin(), acc_lower_bound.end(), -3.0);
+    std::fill(jerk_upper_bound.begin(), jerk_upper_bound.end(), 0.2);
+    std::fill(jerk_lower_bound.begin(), jerk_lower_bound.end(), -0.2);
+    std::fill(q_ref_x.begin(), q_ref_x.end(), 0);
+    std::fill(q_ref_y.begin(), q_ref_y.end(), 0);
+    std::fill(q_ref_theta.begin(), q_ref_theta.end(), 0);
+    std::fill(q_continuity.begin(), q_continuity.end(), 0);
+    std::fill(q_acc.begin(), q_acc.end(), 0);
+    std::fill(q_jerk.begin(), q_jerk.end(), 0);
+    std::fill(q_acc_bound.begin(), q_acc_bound.end(), 0);
+    std::fill(q_jerk_bound.begin(), q_jerk_bound.end(), 0);
+    std::fill(q_pos_soft_bound.begin(), q_pos_soft_bound.end(), 0);
+    std::fill(q_pos_hard_bound.begin(), q_pos_hard_bound.end(), 0);
   }
 };
 
@@ -173,6 +191,15 @@ class LateralMotionPlanningWeight {
 
   void SetLateralMotionWeight(
       const LateralMotionScene scene,
+      planning::common::LateralPlanningInput &planning_input);
+
+  void SetLateralMotionWeightForHPP(
+      planning::common::LateralPlanningInput &planning_input);
+
+  void SetLateralMotionWeightForRADS(
+      planning::common::LateralPlanningInput &planning_input);
+
+  void SetLateralMotionWeightForNSA(
       planning::common::LateralPlanningInput &planning_input);
 
   void SetInitDisToRef(const double init_dis_to_ref) {
@@ -255,6 +282,8 @@ class LateralMotionPlanningWeight {
   double GetConcernedEndRatioForJerk() const { return end_ratio_for_qjerk_; }
 
   const PathWeight &GetPathWeights() const { return weight_; }
+
+  PathWeight &MutablePathWeights() { return weight_; }
 
   const EmergencyLevel &GetEmergencyLevel() const { return emergency_level_; }
 

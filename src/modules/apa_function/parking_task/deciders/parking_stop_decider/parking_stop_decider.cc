@@ -26,7 +26,8 @@ void ParkingStopDecider::Execute(
     const SVPoint& init_point,
     const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
     const trajectory::Trajectory& trajectory,
-    const pnc::geometry_lib::PathSegGear gear) {
+    const pnc::geometry_lib::PathSegGear gear,
+    const double slot_occupied_ratio) {
   // init
   stop_obstacle_ = nullptr;
   stop_decision_.Clear();
@@ -38,6 +39,14 @@ void ParkingStopDecider::Execute(
 
   double start_time = IflyTime::Now_ms();
   AddDecisionByPathTargetPoint(lateral_path);
+  constexpr double kMinSlotOccupiedRatio = 0.001;
+
+  if (gear == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE &&
+      slot_occupied_ratio > kMinSlotOccupiedRatio) {
+    // todo ::It is more appropriate to determine whether it is in the inbound
+    // state based on the combination of the state machine and the current path
+    return;
+  }
 
   // todo: use optimizer to output historical trajectories, so that the
   // calculation of trajectory overlap is relatively more realistic
@@ -451,7 +460,7 @@ void ParkingStopDecider::AddDecisionByObstaclePrediction(
   // opposite directions or opposite directions
   double min_stop_s = tmp_deicison.path_s - tmp_deicison.lon_decision_buffer;
 
-  for (auto& obj : obs_manager_->GetMutableObstacles()) {
+  for (auto& obj : obs_manager_->GetMutableObstaclesOD()) {
     ApaObstacle& obstacle = obj.second;
 
     if (obstacle.GetPredictTraj().empty()) {

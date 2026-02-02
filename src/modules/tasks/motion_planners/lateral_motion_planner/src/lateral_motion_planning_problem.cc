@@ -32,32 +32,28 @@ void LateralMotionPlanningProblem::Init() {
                        solver_config);
 
   // STEP 2: add cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<ReferenceCostTerm>());  // reference cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<ContinuityCostTerm>());  // continuity cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<VirtualReferenceCostTerm>());  // virtual reference cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LatAccCostTerm>());  // lateral acc cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LatJerkCostTerm>());  // lateral jerk cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LatAccBoundCostTerm>());  // lateral acc bound cost
-  ilqr_core_ptr_->AddCost(std::make_shared<LatJerkBoundCostTerm>());  // lateral
-                                                                      // jerk
-                                                                      // soft
-                                                                      // bound
-                                                                      // cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<PathFirstSoftCorridorCostTerm>());  // path first soft
-                                                           // corridor cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<PathHardCorridorCostTerm>());  // path hard corridor cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<FrontReferenceCostTerm>());  // path hard corridor cost
+  // 2-1: rear axle reference cost
+  ilqr_core_ptr_->AddCost(std::make_shared<ReferenceCostTerm>());
+  // 2-2: rear axle reference continuity cost
+  ilqr_core_ptr_->AddCost(std::make_shared<ContinuityCostTerm>());
+  // 2-3: front axle reference cost
+  ilqr_core_ptr_->AddCost(std::make_shared<FrontReferenceCostTerm>());
+  // 2-4: virtual rear axle reference cost
+  ilqr_core_ptr_->AddCost(std::make_shared<VirtualReferenceCostTerm>());
+  // 2-5: lateral acc cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LatAccCostTerm>());
+  // 2-6: lateral jerk cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LatJerkCostTerm>());
+  // 2-7: lateral acc bound cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LatAccBoundCostTerm>());
+  // 2-8: lateral jerk soft bound cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LatJerkBoundCostTerm>());
+  // 2-9: path first soft corridor cost
+  ilqr_core_ptr_->AddCost(std::make_shared<PathFirstSoftCorridorCostTerm>());
+  // 2-10: path second soft corridor cost
+  ilqr_core_ptr_->AddCost(std::make_shared<PathSoftCorridorCostTerm>());
+  // 2-11: path hard corridor cost
+  ilqr_core_ptr_->AddCost(std::make_shared<PathHardCorridorCostTerm>());
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();

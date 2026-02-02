@@ -31,7 +31,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules_common
   modules_adas_function
   ilqr_lib
-  arastar_lib
   lc_pure_pursuit_lib
   lc_idm_lib
 )

@@ -1,14 +1,14 @@
 #include "node3d.h"
 
 namespace planning {
-
-Node3D::Node3D(double x, double y, double phi) {
+namespace ara_star {
+Node3d::Node3d(double x, double y, double phi) {
   x_ = x;
   y_ = y;
   phi_ = phi;
 }
 
-Node3D::Node3D(double x, double y, double phi,
+Node3d::Node3d(double x, double y, double phi,
                const std::vector<double>& XYbounds, double x_grid_resolution,
                double y_grid_resolution, double phi_grid_resolution) {
   // CHECK_EQ(XYbounds.size(), 4U)
@@ -30,7 +30,7 @@ Node3D::Node3D(double x, double y, double phi,
   index_ = ComputeStringIndex(x_grid_, y_grid_, phi_grid_);
 }
 
-Node3D::Node3D(const std::vector<double>& traversed_x,
+Node3d::Node3d(const std::vector<double>& traversed_x,
                const std::vector<double>& traversed_y,
                const std::vector<double>& traversed_phi,
                const std::vector<double>& XYbounds, double x_grid_resolution,
@@ -57,11 +57,11 @@ Node3D::Node3D(const std::vector<double>& traversed_x,
   step_num_ = traversed_x.size();
 }
 
-bool Node3D::operator==(const Node3D& right) const {
+bool Node3d::operator==(const Node3d& right) const {
   return right.GetIndex() == index_;
 }
 
-std::string Node3D::ComputeStringIndex(int x_grid, int y_grid, int phi_grid) {
+std::string Node3d::ComputeStringIndex(int x_grid, int y_grid, int phi_grid) {
   std::string result;
   result.reserve(16);
   result.append(std::to_string(x_grid));
@@ -71,5 +71,5 @@ std::string Node3D::ComputeStringIndex(int x_grid, int y_grid, int phi_grid) {
   result.append(std::to_string(phi_grid));
   return result;
 }
-
+}
 }  // namespace planning

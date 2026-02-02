@@ -5,6 +5,8 @@
 #include "lateral_offset_decider_info.pb.h"
 #include "planning_context.h"
 #include "utils/pose2d_utils.h"
+#include "common/math/filter/mean_filter.h"
+#include "task_interface/lane_change_decider_output.h"
 namespace planning {
 
 const double kMaxLateralOffsetChangeRate = 0.05;
@@ -39,6 +41,8 @@ bool LateralOffsetDecider::Execute() {
     Reset();
   }
 
+  CalLaneInfo();
+
   avoid_obstacle_maintainer5v_.Process(session_);
 
   // 判断障碍物决策是否发生变化
@@ -46,7 +50,7 @@ bool LateralOffsetDecider::Execute() {
 
   lateral_offset_calculatorv2_.Process(
       session_, avoid_obstacle_maintainer5v_.avd_obstacles(),
-      avoid_obstacle_maintainer5v_.avd_sp_obstacles(),
+      avoid_obstacle_maintainer5v_.avd_sp_obstacles(), lane_info_,
       avoid_obstacle_maintainer5v_.dist_rblane(),
       avoid_obstacle_maintainer5v_.flag_avd());
 
@@ -183,7 +187,120 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
            lateral_offset_ - lateral_offset_change_rate);
 }
 
-void LateralOffsetDecider::Reset() { lateral_offset_ = 0; }
+void LateralOffsetDecider::CalLaneInfo() {
+  last_lane_info_ = lane_info_;
+  auto &coarse_planning_info =
+      session_->planning_context().lane_change_decider_output().coarse_planning_info;
+
+  const auto flane = session_->environmental_model()
+               .get_virtual_lane_manager()
+               ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+  lane_info_.lane_width = CalLaneWidth(flane);
+  CalculateNormalLateralOffsetThreshold(flane);
+}
+
+double LateralOffsetDecider::CalLaneWidth(const std::shared_ptr<VirtualLane> flane) {
+  double lane_width = kDefaultLaneWidth;
+  if (flane == nullptr) {
+    return lane_width;
+  }
+  auto &coarse_planning_info =
+      session_->planning_context().lane_change_decider_output().coarse_planning_info;
+
+  const auto &reference_path = session_->planning_context()
+                                   .lane_change_decider_output()
+                                   .coarse_planning_info.reference_path;
+  const auto ego_frenet_state = reference_path->get_frenet_ego_state();
+  if (1) {
+    double width = 0.0;
+    double preview_s = 20 + ego_frenet_state.s();
+    double start_s = 5 + ego_frenet_state.s();
+    double interval_s = 5;
+    int point_num = 0;
+    for (double s = start_s; s <= preview_s; s += interval_s) {
+      width += flane->width_by_s(s);
+      point_num += 1;
+    }
+    width /= point_num;
+    static planning_math::MeanFilter width_filter(10);
+    lane_width = width_filter.Update(width);
+  } else {
+    lane_width = flane->width();
+  }
+
+  return lane_width;
+}
+
+// Calculate max avoid threshold
+void LateralOffsetDecider::CalculateNormalLateralOffsetThreshold(const std::shared_ptr<VirtualLane> flane) {
+  if (flane == nullptr) {
+    return;
+  }
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const double ego_width = vehicle_param.max_width;
+
+  const double half_lane_width = lane_info_.lane_width * 0.5;
+  const double road_avoid_threshold = std::min(
+      half_lane_width - config_.nudge_buffer_road_boundary - ego_width * 0.5,
+      config_.nudge_lat_offset_threshold);
+  const double lane_avoid_threshold = std::min(
+      half_lane_width - config_.nudge_buffer_lane_boundary - ego_width * 0.5,
+      config_.nudge_lat_offset_threshold);
+
+  int right_lane_virtual_id = flane->get_virtual_id() + 1;
+  int left_lane_virtual_id = flane->get_virtual_id() - 1;
+  int fix_lane_virtual_id = flane->get_virtual_id();
+  bool has_left_lane = virtual_lane_manager->get_lane_with_virtual_id(
+                           left_lane_virtual_id) != nullptr;
+  bool has_right_lane = virtual_lane_manager->get_lane_with_virtual_id(
+                            right_lane_virtual_id) != nullptr;
+  if (!has_left_lane && !has_right_lane) {
+    lane_info_.normal_left_avoid_threshold = road_avoid_threshold;
+    lane_info_.normal_right_avoid_threshold = road_avoid_threshold;
+  } else if (!has_right_lane) {
+    lane_info_.normal_left_avoid_threshold = lane_avoid_threshold;
+    lane_info_.normal_right_avoid_threshold = road_avoid_threshold;
+  } else if (!has_left_lane) {
+    lane_info_.normal_left_avoid_threshold = road_avoid_threshold;
+    lane_info_.normal_right_avoid_threshold = lane_avoid_threshold;
+  } else {
+    lane_info_.normal_left_avoid_threshold = lane_avoid_threshold;
+    lane_info_.normal_right_avoid_threshold = lane_avoid_threshold;
+  }
+
+  auto last_fix_lane_virtual_id = session_->environmental_model()
+                                      .get_virtual_lane_manager()
+                                      ->get_last_fix_lane_id();
+
+  if (last_fix_lane_virtual_id == fix_lane_virtual_id) {
+    const double change_rate = 0.02;
+    if (last_lane_info_.normal_left_avoid_threshold > 1e-2) {
+      lane_info_.normal_left_avoid_threshold =
+          clip(lane_info_.normal_left_avoid_threshold,
+               last_lane_info_.normal_left_avoid_threshold + change_rate,
+               last_lane_info_.normal_left_avoid_threshold - change_rate);
+    }
+    if (last_lane_info_.normal_right_avoid_threshold > 1e-2) {
+      lane_info_.normal_right_avoid_threshold =
+          clip(lane_info_.normal_right_avoid_threshold,
+               last_lane_info_.normal_right_avoid_threshold + change_rate,
+               last_lane_info_.normal_right_avoid_threshold - change_rate);
+    }
+  }
+
+  lane_info_.normal_left_avoid_threshold =
+      std::max(lane_info_.normal_left_avoid_threshold, 0.0);
+  lane_info_.normal_right_avoid_threshold =
+      std::max(lane_info_.normal_right_avoid_threshold, 0.0);
+}
+
+void LateralOffsetDecider::Reset() {
+  lateral_offset_ = 0;
+  lane_info_.Reset();
+}
 
 void LateralOffsetDecider::SaveDebugInfo() {
 #ifdef ENABLE_PROTO_LOG

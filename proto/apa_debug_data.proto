@@ -174,6 +174,22 @@ message PaObject {
   optional string object_id = 3;
 }
 
+message ApaTimeBenchmark {
+  optional double apa_planning_time = 2;
+  optional double slot_manager_time = 3;
+  optional double jlt_optimizer_time = 4;
+  optional double speed_qp_time = 5;
+  optional double dp_optimizer_time = 6;
+  optional double apa_stop_decider_time = 7;
+  optional double speed_limit_decider_time = 8;
+  optional double osqp_time = 9;
+  optional double path_plan_time = 10;
+  optional double astar_time = 11;
+  optional double speed_plan_time = 12;
+  optional double find_target_pose_time = 13;
+  optional double gen_obs_time = 14;
+}
+
 message ApaPathDebug {
   optional AstarNodeList astar_node_list = 1;
   optional ObstacleListDebug obs_list = 2;

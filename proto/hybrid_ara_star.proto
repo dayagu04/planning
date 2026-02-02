@@ -37,6 +37,7 @@ message HybridARANode {
   optional double area_cost = 12;
   optional double directly_behind_cost = 13;
   optional double pass_interval_cost = 14;
+  optional double nearing_agent_cost = 15;
 }
 
 message HybridARAExpandNode {

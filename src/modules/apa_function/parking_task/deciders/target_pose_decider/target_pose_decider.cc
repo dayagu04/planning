@@ -25,6 +25,8 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
   is_searching_stage_ = request.is_searching_stage;
   ego_pose_local_ = request.ego_pose_local;
 
+  const double find_target_pose_start_time = IflyTime::Now_ms();
+
   if (request.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     return CalcTargetPoseForPerpendicularTailIn();
@@ -34,6 +36,10 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
   } else {
     return result_;
   }
+
+  TimeBenchmark::Instance().SetTime(
+      TimeBenchmarkType::TB_APA_FIND_TARGET_POSE_TIME,
+      IflyTime::Now_ms() - find_target_pose_start_time);
 
   return result_;
 }

@@ -773,8 +773,9 @@ const bool NodeDeleteDecider::CheckPtsCollision(
     float min_obs_dist = 26.8f;
     if (is_special_node) {
       // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer;
-      mirror_lat_buffer = speed_buffer.leave_initial_place_mirror_lat_buffer;
+      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
+      mirror_lat_buffer =
+          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
       lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
     }
 
@@ -852,8 +853,9 @@ const bool NodeDeleteDecider::CheckPtsCollision(
 
     if (is_special_node) {
       // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer;
-      mirror_lat_buffer = speed_buffer.leave_initial_place_mirror_lat_buffer;
+      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
+      mirror_lat_buffer =
+          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
       lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
     }
 
@@ -948,37 +950,59 @@ const float NodeDeleteDecider::CalcObsDistCost(const float obs_dist,
                                                const float critical_dist,
                                                const float safe_dist,
                                                const float adsolute_safe_dist) {
-  // cm
-  float obs_dist_cost = 0.0f;
-  float double_shift_cost = 2.0f * gear_change_penalty;
-  float distance_factor = 0.0f;
-  if (obs_dist <= critical_dist) {
-    // absolute dangerous
-    distance_factor = std::min(obs_dist / critical_dist, 1.0f);
-    distance_factor = 1.0f + std::sin(M_PI_2f32 * (1.0f - distance_factor));
-    obs_dist_cost = double_shift_cost * distance_factor;
+  // four zone: very critical(z1), relative critical(z2), relative safe(z3),
+  // absolute safe(z4)
+
+  // obs_dist unit is cm
+
+  const float target_c_crit = 2.0f * gear_change_penalty + 8.0 * length_cost;
+  const float target_c_safe = 1.0f * gear_change_penalty + 4.0 * length_cost;
+
+  // zone 3  f(x) = z3_k * (adsolute_safe_dist - x)^n_z3
+  const float n_z3 = 1.05f;
+  const float dist_z3 = adsolute_safe_dist - safe_dist;
+  const float z3_k = target_c_safe / std::pow(dist_z3, n_z3);
+  const float slope_safe = -1.0f * n_z3 * z3_k * std::pow(dist_z3, n_z3 - 1.0f);
+
+  // zone 2 trapezoidal area method
+  const float dist_z2 = safe_dist - critical_dist;
+  const float cost_z2 = target_c_safe - target_c_crit;
+  const float slope_crit = 2.0f * cost_z2 / dist_z2 - slope_safe;
+
+  // zone 1
+  const float dist_z1 = critical_dist - 0.0f;
+  const float slope_0 = -8.8f;
+  const float cost_0 = target_c_crit - 0.5f * (slope_crit + slope_0) * dist_z1;
+
+  float cost = 0.0f, dk = 0.0f, dx = 0.0f;
+
+  if (obs_dist < 0.0f) {
+    // zone 0, but it is impossible to exist
+    // f(x) = y0 + k * x
+    cost = cost_0 + slope_0 * obs_dist;
+  } else if (obs_dist < critical_dist) {
+    // zone 1
+    // f(x) = y0 + v * x + 0.5 * a * x^2
+    dx = obs_dist - 0.0f;
+    dk = (slope_crit - slope_0) / dist_z1;
+    cost = cost_0 + slope_0 * dx + 0.5f * dk * std::pow(dx, 2.0f);
+  } else if (obs_dist < safe_dist) {
+    // zone 2
+    // f(x) = y0 + v * x + 0.5 * a * x^2
+    dx = obs_dist - critical_dist;
+    dk = (slope_safe - slope_crit) / dist_z2;
+    cost = target_c_crit + slope_crit * dx + 0.5f * dk * std::pow(dx, 2.0f);
+  } else if (obs_dist < adsolute_safe_dist) {
+    // zone 3
+    // f(x) = z3_k * (adsolute_safe_dist - x)^n_z3
+    dx = adsolute_safe_dist - obs_dist;
+    cost = z3_k * std::pow(dx, n_z3);
+  } else {
+    // zone 4
+    cost = 0.0f;
   }
 
-  else if (obs_dist <= safe_dist) {
-    // relative dangerous
-    distance_factor = (obs_dist - critical_dist) / (safe_dist - critical_dist);
-    distance_factor = (2.0f - std::sin(M_PI_2f32 * distance_factor));
-    obs_dist_cost = gear_change_penalty * distance_factor;
-  }
-
-  else if (obs_dist <= adsolute_safe_dist) {
-    // relative safe
-    distance_factor = (obs_dist - safe_dist) / (adsolute_safe_dist - safe_dist);
-    distance_factor = std::exp(-4 * std::pow(distance_factor, 0.75));
-    obs_dist_cost = distance_factor * gear_change_penalty;
-  }
-
-  else {
-    // absolute safe
-    obs_dist_cost = 0.0f;
-  }
-
-  return obs_dist_cost;
+  return cost;
 }
 
 }  // namespace apa_planner

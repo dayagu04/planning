@@ -8,7 +8,7 @@ constexpr double kSafeDistance = 1.0;
 constexpr double kDefaultLimitLateralDistance = 10.0;
 constexpr int kDefaultLimitId = -1000;
 constexpr int kDefaultSafeDistance = -1000;
-
+constexpr int kDefaultLaneWidth = 3.8;
 namespace planning {
 enum AvoidObstacleFlag {
   INVALID = kDefaultLimitId,
@@ -16,6 +16,18 @@ enum AvoidObstacleFlag {
   NORMAL = 0,
   SIDE = 1
 };
+
+struct LaneInfo {
+  double lane_width = kDefaultLaneWidth;
+  double normal_left_avoid_threshold = kDefaultSafeDistance;
+  double normal_right_avoid_threshold = kDefaultSafeDistance;
+  void Reset() {
+    lane_width = kDefaultLaneWidth;
+    normal_left_avoid_threshold = kDefaultSafeDistance;
+    normal_right_avoid_threshold = kDefaultSafeDistance;
+  };
+};
+
 enum AvoidObstacleUpdateFlag { Update = 1, Past = 2 };
 struct AvoidObstacleInfo {
   AvoidObstacleInfo() { Reset(); }

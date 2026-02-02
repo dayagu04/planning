@@ -11,7 +11,7 @@ class CenterCost : public BaseCost {
 
   ~CenterCost() = default;
 
-  double MakeCost(Node3D& vertex) const;
+  double MakeCost(ara_star::Node3d& vertex) const;
 
  private:
   void NormalizeCost(double& cost) const;

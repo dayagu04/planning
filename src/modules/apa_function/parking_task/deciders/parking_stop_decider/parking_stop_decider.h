@@ -44,7 +44,8 @@ class ParkingStopDecider : public ParkingTask {
   void Execute(const SVPoint& init_point,
                const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
                const trajectory::Trajectory& trajectory,
-               const pnc::geometry_lib::PathSegGear gear);
+               const pnc::geometry_lib::PathSegGear gear,
+               const double slot_occupied_ratio);
 
   void AddStopDecisionByDistance(
       const double stop_s, const LonDecisionReason decision_reason,

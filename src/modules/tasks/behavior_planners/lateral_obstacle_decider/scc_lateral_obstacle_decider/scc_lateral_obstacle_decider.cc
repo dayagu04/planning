@@ -34,6 +34,7 @@ SccLateralObstacleDecider::SccLateralObstacleDecider(
   name_ = "SccLateralObstacleDecider";
   ego_rear_edge_to_rear_axle_ = vehicle_param.rear_edge_to_rear_axle;
   side_nudge_release_hysteresis_.SetThreValue(kSpeedThr + 5, kSpeedThr - 5);
+  hybrid_ara_star_ = std::make_unique<SccHybridARAStar>(session);
 }
 
 bool SccLateralObstacleDecider::Execute() {
@@ -41,6 +42,7 @@ bool SccLateralObstacleDecider::Execute() {
     output_.clear();
     follow_obstacle_info_.clear();
     lateral_obstacle_history_info_.clear();
+    obstacle_interaction_map_.clear();
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }
@@ -61,6 +63,13 @@ bool SccLateralObstacleDecider::Execute() {
   UpdateAvdObstacles();
 
   UpdateLateralObstacleDecisions();
+
+  auto start_time = IflyTime::Now_ms();
+  UpdateObstacleInteractionInfo();
+  auto end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("UpdateObstacleInteractionInfoCostTime", end_time - start_time);
+
+  ARAStar();
 
   LateralObstacleDeciderOutput();
 
@@ -157,11 +166,22 @@ void SccLateralObstacleDecider::UpdateAvdObstacles() {
   }
 
   // farthest_distance
-  auto &last_traj_points =
-      session_->planning_context().last_planning_result().traj_points;
+  // auto &last_traj_points =
+  //     session_->planning_context().last_planning_result().traj_points;
+  // double farthest_distance = DBL_MAX;
+  // if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
+  //   farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
+  // }
   double farthest_distance = DBL_MAX;
-  if (!last_traj_points.empty() && last_traj_points.back().frenet_valid) {
-    farthest_distance = last_traj_points.back().s - last_traj_points.front().s;
+  const auto& motion_planner_output =
+      session_->planning_context().motion_planner_output();
+  auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
+  Point2D frenet_pt{0.0, 0.0};
+  if (motion_planner_output.is_valid_planning_end_xy_point &&
+      frenet_coord->XYToSL(motion_planner_output.planning_end_xy_point,
+                           frenet_pt)) {
+    farthest_distance = std::max(
+        0.0, frenet_pt.x - reference_path_ptr_->get_frenet_ego_state().s());
   }
 
   double expand_vel =
@@ -356,9 +376,10 @@ void SccLateralObstacleDecider::UpdateLateralObstacleDecisions() {
       HoldLatOffset(*frenet_obs);
     }
     history.last_is_avd_car = history.is_avd_car;
-    CheckLateralEmergencyAvoidObstacle(*frenet_obs);
+    // CheckLateralEmergencyAvoidObstacle(*frenet_obs);
   }
 }
+
 void SccLateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(
     const FrenetObstacle &frenet_obstacle) {
   auto &is_emergency_avoid_release =
@@ -1016,6 +1037,13 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
 
+  // if (obstacle.is_static()) {
+  //   bool has_safe_space = CheckStaticObstacleAvoidSafety(frenet_obstacle);
+
+  //   // 避免避让过程中，自车加速
+  //   history.has_safe_space = (history.has_safe_space && frenet_obstacle.d_s_rel() < 20) || has_safe_space;
+  // }
+
   const double gap = (history.last_recv_time == 0.0)
                          ? kPlanningCycleTime
                          : (obstacle.timestamp() - history.last_recv_time);
@@ -1047,17 +1075,19 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
 
       // 默认关闭
       bool borrow_bicycle_lane = false;
-      if (!((history.is_avd_car) &&
-            (is_in_avoid_range_by_nearest_point ||
-             is_in_avoid_range_by_nearest_line_in_left ||
-             is_in_avoid_range_by_nearest_line_in_right ||
-             borrow_bicycle_lane || rightest_lane ||
-             (dist_intersect - lead_one->d_s_rel() < 50 &&
-              dist_intersect - lead_one->d_s_rel() >= -5 &&
-              lead_one->type() ==
-                  iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
-        history.ncar_count =
-            std::max(history.ncar_count - 10 * count * kPlanningCycleTime, 0.0);
+      if (!obstacle.is_static()) {
+        if (!((history.is_avd_car) &&
+              (is_in_avoid_range_by_nearest_point ||
+              is_in_avoid_range_by_nearest_line_in_left ||
+              is_in_avoid_range_by_nearest_line_in_right ||
+              borrow_bicycle_lane || rightest_lane ||
+              (dist_intersect - lead_one->d_s_rel() < 50 &&
+                dist_intersect - lead_one->d_s_rel() >= -5 &&
+                lead_one->type() ==
+                    iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
+          history.ncar_count =
+              std::max(history.ncar_count - 10 * count * kPlanningCycleTime, 0.0);
+        }
       }
     }
   }
@@ -1144,6 +1174,765 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
   }
 
   return false;
+}
+
+void SccLateralObstacleDecider::UpdateObstacleInteractionInfo() {
+  if (CheckSpatioTemporalPlanner()) {
+    return;
+  }
+  // 1 计算静态元素的free space
+  UpdateObstacleInteractionInfoBaseStaticEnvironment();
+  // 2 更新静态元素的避让标签，并取离自车最近的静态FOLLOW障碍物
+  std::shared_ptr<FrenetObstacle> front_nearest_follow_obstacle = nullptr;
+  UpdateStaticObstacleLateralDecisionBaseStaticFreeSpace(
+      front_nearest_follow_obstacle);
+  // 3 静态FOLLOW后面的静态障碍物，置为FOLLOW
+  UpdateLateralObstacleDecisionBaseNearestFollowObstacle(
+      front_nearest_follow_obstacle);
+  // 4 计算动态元素的free space
+  UpdateObstacleInteractionInfoBaseDynamicEnvironment(front_nearest_follow_obstacle);
+  // 5 更新静态元素的避让标签
+  UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace();
+
+  // 6 计算紧急变道
+  for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obs == nullptr) {
+      continue;
+    }
+    const Obstacle *obs = frenet_obs->obstacle();
+    if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
+        !frenet_obs->b_frenet_valid()) {
+      continue;
+    }
+    CheckLateralEmergencyAvoidObstacle(*frenet_obs);
+  }
+}
+
+bool SccLateralObstacleDecider::CheckSpatioTemporalPlanner() {
+  constexpr double kDistanceThresholdApproachToStopline = 10.0;
+  constexpr int kEgoInIntersectionCount = 3;
+  const auto lc_state = session_->planning_context()
+                                .lane_change_decider_output()
+                                .coarse_planning_info.target_state;
+  const auto& construction_scene_output = session_->environmental_model()
+                                              .get_construction_scene_manager()
+                                              ->get_construction_scene_output();
+  const auto& tfl_decider = session_->mutable_planning_context()
+                                ->mutable_traffic_light_decider_output();
+  const auto intersection_state = session_->environmental_model()
+                                      .get_virtual_lane_manager()
+                                      ->GetIntersectionState();
+  const double distance_to_stopline = session_->environmental_model()
+                                          .get_virtual_lane_manager()
+                                          ->GetEgoDistanceToStopline();
+  const double distance_to_crosswalk = session_->environmental_model()
+                                           .get_virtual_lane_manager()
+                                           ->GetEgoDistanceToCrosswalk();
+  bool current_intersection_state =
+      intersection_state == common::IntersectionState::IN_INTERSECTION ||
+      distance_to_stopline <= kDistanceThresholdApproachToStopline;
+  bool is_small_intersection = false;
+  // bool is_small_intersection = tfl_decider.is_small_front_intersection;
+  // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
+  if (current_intersection_state) {
+    spatio_temporal_planner_intersection_count_ = kEgoInIntersectionCount;
+  } else {
+    spatio_temporal_planner_intersection_count_ =
+        std::max(spatio_temporal_planner_intersection_count_ - 1, 0);
+  }
+
+  if (!config_.enable_use_spatio_temporal_planning) {
+    return false;
+  }
+
+  if (lc_state != kLaneKeeping) {
+    return false;
+  }
+
+  if (!(spatio_temporal_planner_intersection_count_ > 0 &&
+        !is_small_intersection) &&
+      !construction_scene_output.enable_construction_passage) {
+    return false;
+  }
+
+  return true;
+}
+
+void SccLateralObstacleDecider::
+    UpdateObstacleInteractionInfoBaseStaticEnvironment() {
+  // 静态环境的交互
+  for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obs == nullptr) {
+      continue;
+    }
+    const auto obstacle_id = frenet_obs->id();
+    ObstacleInfo& obstacle_interaction_info =
+        obstacle_interaction_map_[obstacle_id];
+    if (!frenet_obs->is_static() || frenet_obs->d_s_rel() <= 0) {
+      // 目前仅对静态障碍物处理
+      obstacle_interaction_info.Reset();
+      obstacle_interaction_info.id = obstacle_id;
+      continue;
+    }
+    UpdateObstaclelateraFreeSpaceAndTypeBaseStaticEnvironment(
+        *frenet_obs, obstacle_interaction_info);
+  }
+}
+
+void SccLateralObstacleDecider::
+    UpdateObstacleInteractionInfoBaseDynamicEnvironment(
+        std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
+  // 动态环境的交互
+  for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obs == nullptr) {
+      continue;
+    }
+    if (obstacle_interaction_map_.find(frenet_obs->id()) ==
+        obstacle_interaction_map_.end()) {
+      // 不存在静态障碍物的交互
+      continue;
+    }
+    CalLateralFreeSpaceBaseDynamicObstacle(
+        *frenet_obs, obstacle_interaction_map_[frenet_obs->id()],
+        front_nearest_follow_obstacle);
+  }
+}
+
+void SccLateralObstacleDecider::
+    UpdateStaticObstacleLateralDecisionBaseStaticFreeSpace(
+        std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
+  // 计算静态障碍物的决策标签,并输出最近的静态FOLLOW障碍物，
+  // 动态FOLLOW，选择性比较多，可以跟着动态，避让静态
+  const double kSafeLaneBoundarySpace = 0.6;
+  const double kSafeRoadBoundarySpace = 0.6;
+  const double kSafeStaticObstacleSpace = 0.7;
+  const double kDesireVEnterMargin = 0;
+  const double kDesireVExitMargin  = 3;
+
+  for (auto frenet_obstacle : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obstacle == nullptr) {
+      continue;
+    }
+
+    const Obstacle* obs = frenet_obstacle->obstacle();
+    if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
+        !frenet_obstacle->b_frenet_valid()) {
+      continue;
+    }
+
+    if (!frenet_obstacle->is_static()) {
+      continue;
+    }
+
+    if (output_.find(frenet_obstacle->id()) == output_.end()) {
+      continue;
+    }
+
+    if (output_[frenet_obstacle->id()] == LatObstacleDecisionType::FOLLOW) {
+      if (front_nearest_follow_obstacle == nullptr) {
+        front_nearest_follow_obstacle = frenet_obstacle;
+      } else {
+        if (frenet_obstacle->frenet_obstacle_boundary().s_start <
+            front_nearest_follow_obstacle->frenet_obstacle_boundary().s_start) {
+          front_nearest_follow_obstacle = frenet_obstacle;
+        }
+      }
+    }
+
+    if (!(output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT ||
+          output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT)) {
+      continue;
+    }
+
+    if (lateral_obstacle_history_info_.find(frenet_obstacle->id()) ==
+        lateral_obstacle_history_info_.end()) {
+      continue;
+    }
+
+    if (obstacle_interaction_map_.find(frenet_obstacle->id()) ==
+        obstacle_interaction_map_.end()) {
+      continue;
+    }
+
+    LateralObstacleHistoryInfo& history =
+        lateral_obstacle_history_info_[frenet_obstacle->id()];
+    ObstacleInfo& obstacle_interaction_info =
+        obstacle_interaction_map_[frenet_obstacle->id()];
+    double lane_boundary_free_space_desire_v = interp(
+        obstacle_interaction_info.GetLateralConstraintDistance(
+            LateralSpaceConstraintType::LANE_BOUNDARY),
+        config_.free_space_lane_bp, config_.lane_static_limit_v_free_space);
+    double road_boundary_free_space_desire_v = interp(
+        obstacle_interaction_info.GetLateralConstraintDistance(
+            LateralSpaceConstraintType::ROAD_BOUNDARY),
+        config_.free_space_road_bp, config_.road_static_limit_v_free_space);
+    double static_obstacle_free_space_desire_v =
+        interp(obstacle_interaction_info.GetLateralConstraintDistance(
+                   LateralSpaceConstraintType::STATIC_OBSTACLE),
+               config_.free_space_static_obstacle_bp,
+               config_.static_obstacle_static_limit_v_free_space);
+    double desire_v = std::min(lane_boundary_free_space_desire_v,
+                               road_boundary_free_space_desire_v);
+    desire_v = std::min(desire_v, static_obstacle_free_space_desire_v);
+    double desire_v_hysteresis = 0;
+    double space_hysteresis = 0;
+    if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
+        last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
+      // 低速状态下允许自车速度变化较快，但是中高速时，这个条件需要适当缩小
+      std::array<double, 5> x_v_factor{0.5, 4.17, 8.33, 16.67, 33.33};
+      std::array<double, 5> f_v_factor{5, 4.5, 4, 4, 2.7};
+      desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
+      // desire_v_hysteresis = 5;
+      space_hysteresis = -0.1;
+    } else {
+      space_hysteresis = 0.1;
+    }
+
+    bool has_safe_v_space_current = desire_v >= ego_v_;
+    bool has_safe_v_space =
+        has_safe_v_space_current ||
+        (obstacle_interaction_info.has_static_safe_v_space &&
+         ego_v_ <= obstacle_interaction_info.desire_nudge_static_safe_v);
+
+    // 如果上一帧能避让，则允许加速
+    bool has_enough_space =
+        obstacle_interaction_info.GetLateralConstraintDistance(
+            LateralSpaceConstraintType::ROAD_BOUNDARY) >
+        kSafeRoadBoundarySpace + space_hysteresis &&
+        obstacle_interaction_info.GetLateralConstraintDistance(
+            LateralSpaceConstraintType::STATIC_OBSTACLE) >
+        kSafeStaticObstacleSpace + space_hysteresis;
+    // 如果上一帧不避让，则当前帧的space_hysteresis加滞回，防止抖动
+    // 后续需要优化这个条件
+    if (!(has_safe_v_space && has_enough_space)) {
+      output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
+      lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car = false;
+      if (front_nearest_follow_obstacle == nullptr) {
+        front_nearest_follow_obstacle = frenet_obstacle;
+      } else {
+        if (frenet_obstacle->frenet_obstacle_boundary().s_start <
+            front_nearest_follow_obstacle->frenet_obstacle_boundary().s_start) {
+          front_nearest_follow_obstacle = frenet_obstacle;
+        }
+      }
+    }
+    if (has_safe_v_space_current) {
+      obstacle_interaction_info.desire_nudge_static_safe_v =
+          ego_v_ + desire_v_hysteresis;
+    }
+    obstacle_interaction_info.has_static_safe_v_space = has_safe_v_space;
+  }
+}
+
+void SccLateralObstacleDecider::
+    UpdateLateralObstacleDecisionBaseNearestFollowObstacle(
+        std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
+  if (front_nearest_follow_obstacle == nullptr) {
+    return;
+  }
+  for (auto frenet_obstacle : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obstacle == nullptr) {
+      continue;
+    }
+
+    const Obstacle* obs = frenet_obstacle->obstacle();
+    if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
+        !frenet_obstacle->b_frenet_valid()) {
+      continue;
+    }
+
+    if (!frenet_obstacle->is_static()) {
+      continue;
+    }
+
+    if (output_.find(frenet_obstacle->id()) == output_.end()) {
+      continue;
+    }
+
+    if (!(output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT ||
+          output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT)) {
+      continue;
+    }
+
+    if (frenet_obstacle->frenet_obstacle_boundary().s_start >
+        front_nearest_follow_obstacle->frenet_obstacle_boundary().s_start) {
+      output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
+    }
+  }
+}
+
+void SccLateralObstacleDecider::
+    UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace() {
+  // 计算静态障碍物的决策标签
+  const double kSafeDynamicObstacleSpace = 0.8;
+  for (auto frenet_obstacle : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obstacle == nullptr) {
+      continue;
+    }
+    const Obstacle* obs = frenet_obstacle->obstacle();
+    if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
+        !frenet_obstacle->b_frenet_valid()) {
+      continue;
+    }
+
+    if (!frenet_obstacle->is_static()) {
+      continue;
+    }
+
+    if (!(output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT ||
+          output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT)) {
+      continue;
+    }
+
+    if (output_.find(frenet_obstacle->id()) == output_.end()) {
+      continue;
+    }
+
+    if (lateral_obstacle_history_info_.find(frenet_obstacle->id()) ==
+        lateral_obstacle_history_info_.end()) {
+      continue;
+    }
+
+    if (obstacle_interaction_map_.find(frenet_obstacle->id()) ==
+        obstacle_interaction_map_.end()) {
+      continue;
+    }
+
+    double desire_v_hysteresis = 1;
+    double space_hysteresis = 0;
+    if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
+        last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
+      std::array<double, 5> x_v_factor{1, 4.17, 8.33, 16.67,33.33};
+      std::array<double, 5> f_v_factor{2, 2, 1.5, 1.2, 1.08};
+      desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
+      // desire_v_hysteresis = 2;
+      space_hysteresis = -0.1;
+    } else {
+      space_hysteresis = 0.25;// 动态障碍物不确定性比静态障碍物大
+    }
+
+    LateralObstacleHistoryInfo& history =
+        lateral_obstacle_history_info_[frenet_obstacle->id()];
+    ObstacleInfo& obstacle_interaction_info =
+        obstacle_interaction_map_[frenet_obstacle->id()];
+    double dynamic_obstacle_free_space_desire_v =
+        interp(obstacle_interaction_info.GetLateralConstraintDistance(
+                   LateralSpaceConstraintType::DYNAMIC_OBSTACLE),
+               config_.free_space_dynamic_obstacle_bp,
+               config_.dynamic_obstacle_static_limit_v_free_space);
+    bool has_safe_v_space_current = dynamic_obstacle_free_space_desire_v >= ego_v_;
+    bool has_safe_v_space =
+        has_safe_v_space_current ||
+        (obstacle_interaction_info.has_dynamic_safe_v_space &&
+         ego_v_ <= obstacle_interaction_info.desire_nudge_dynamic_safe_v);
+
+    // 如果上一帧能避让，则当前帧速度允许加速到期望速度的两倍
+    bool has_enough_space =
+        obstacle_interaction_info.GetLateralConstraintDistance(
+            LateralSpaceConstraintType::DYNAMIC_OBSTACLE) >
+        kSafeDynamicObstacleSpace + space_hysteresis;
+    // 如果上一帧不避让，则当前帧的space_hysteresis加滞回，防止抖动
+    // 后续需要优化这个条件
+    if (!(has_safe_v_space && has_enough_space)) {
+      output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
+      lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car = false;
+    }
+    if (has_safe_v_space_current) {
+      obstacle_interaction_info.desire_nudge_dynamic_safe_v =
+          ego_v_ * desire_v_hysteresis;
+    }
+    obstacle_interaction_info.has_dynamic_safe_v_space = has_safe_v_space;
+  }
+}
+
+void SccLateralObstacleDecider::
+    UpdateObstaclelateraFreeSpaceAndTypeBaseStaticEnvironment(
+        const FrenetObstacle& frenet_obstacle,
+        ObstacleInfo& obstacle_interaction_info) {
+  double d_min_cpath = frenet_obstacle.d_min_cpath();
+  double d_max_cpath = frenet_obstacle.d_max_cpath();
+  const auto obstacle_id = frenet_obstacle.id();
+  obstacle_interaction_info.id = obstacle_id;
+  if (d_max_cpath > 0 && d_min_cpath < 0) {
+    obstacle_interaction_info.lateral_avoid_direction =
+        LatObstacleDecisionType::IGNORE;
+  } else if (d_max_cpath < 0) {
+    obstacle_interaction_info.lateral_avoid_direction =
+        LatObstacleDecisionType::LEFT;
+  } else if (d_min_cpath > 0) {
+    obstacle_interaction_info.lateral_avoid_direction =
+        LatObstacleDecisionType::RIGHT;
+  }
+  // 计算障碍物不同类型的空间
+  CalLateralFreeSpaceBaseLaneBoundary(frenet_obstacle,
+                                      obstacle_interaction_info);
+  CalLateralFreeSpaceBaseRoadBoundary(frenet_obstacle,
+                                      obstacle_interaction_info);
+  CalLateralFreeSpaceBaseStaticObstacle(frenet_obstacle,
+                                        obstacle_interaction_info);
+}
+
+void SccLateralObstacleDecider::CalLateralFreeSpaceBaseLaneBoundary(
+    const FrenetObstacle& frenet_obstacle,
+    ObstacleInfo& obstacle_interaction_info) {
+  double free_space = 100;
+  double s_with_min_lat_space = 0;
+  ReferencePathPoint reference_path_point;
+  if (obstacle_interaction_info.lateral_avoid_direction ==
+      LatObstacleDecisionType::LEFT) {
+    s_with_min_lat_space = frenet_obstacle.s_max_l().y;
+    if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space,
+                                                        reference_path_point)) {
+      free_space = reference_path_point.distance_to_left_lane_border -
+                   frenet_obstacle.s_max_l().x;
+    }
+  } else if (obstacle_interaction_info.lateral_avoid_direction ==
+             LatObstacleDecisionType::RIGHT) {
+    s_with_min_lat_space = frenet_obstacle.s_min_l().y;
+    if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space,
+                                                        reference_path_point)) {
+      free_space = reference_path_point.distance_to_right_lane_border +
+                   frenet_obstacle.s_min_l().x;
+    }
+  } else {
+    free_space = 0;  // 表示不对该障碍物进行避让
+  }
+  free_space = std::max(0.0, free_space - ego_width_);
+  obstacle_interaction_info.SetLateralConstraintFreeSpace(
+      LateralSpaceConstraintType::LANE_BOUNDARY, free_space);
+}
+
+void SccLateralObstacleDecider::CalLateralFreeSpaceBaseRoadBoundary(
+    const FrenetObstacle& frenet_obstacle,
+    ObstacleInfo& obstacle_interaction_info) {
+  double free_space = 100;
+  double s_with_min_lat_space = 0;
+  ReferencePathPoint reference_path_point;
+  if (obstacle_interaction_info.lateral_avoid_direction ==
+      LatObstacleDecisionType::LEFT) {
+    s_with_min_lat_space = frenet_obstacle.s_max_l().y;
+    if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space,
+                                                        reference_path_point)) {
+      free_space = reference_path_point.distance_to_left_road_border -
+                   frenet_obstacle.s_max_l().x;
+    }
+  } else if (obstacle_interaction_info.lateral_avoid_direction ==
+             LatObstacleDecisionType::RIGHT) {
+    s_with_min_lat_space = frenet_obstacle.s_min_l().y;
+    if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space,
+                                                        reference_path_point)) {
+      free_space = reference_path_point.distance_to_right_road_border +
+                   frenet_obstacle.s_min_l().x;
+    }
+  } else {
+    free_space = 0;  // 表示不对该障碍物进行避让
+  }
+  obstacle_interaction_info.SetLateralConstraintFreeSpace(
+      LateralSpaceConstraintType::ROAD_BOUNDARY, free_space);
+}
+
+void SccLateralObstacleDecider::CalLateralFreeSpaceBaseStaticObstacle(
+    const FrenetObstacle& frenet_obstacle,
+    ObstacleInfo& obstacle_interaction_info) {
+  double free_space = 100;
+  // 膨胀buffer，与静态障碍物hard bound膨胀buffer一致
+  double front_lon_buf_dis = 1.0;
+  double rear_lon_buf_dis = 1.0;
+  double kNearEgoLongDistanceBuffer =
+      front_lon_buf_dis + rear_lon_buf_dis + ego_length_;
+  if (obstacle_interaction_info.lateral_avoid_direction ==
+      LatObstacleDecisionType::IGNORE) {
+    obstacle_interaction_info.SetLateralConstraintFreeSpace(
+        LateralSpaceConstraintType::STATIC_OBSTACLE, 0);
+    return;
+  }
+  for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obs == nullptr) {
+      continue;
+    }
+    if (!frenet_obs->is_static()) {
+      continue;
+    }
+    if (frenet_obs->id() == frenet_obstacle.id()) {
+      continue;
+    }
+    // 判断是否有overlap
+    bool is_overlap_side =
+        std::max(frenet_obstacle.frenet_obstacle_boundary().s_start,
+                 frenet_obs->frenet_obstacle_boundary().s_start -
+                     kNearEgoLongDistanceBuffer) <
+        std::min(frenet_obstacle.frenet_obstacle_boundary().s_end,
+                 frenet_obs->frenet_obstacle_boundary().s_end +
+                     kNearEgoLongDistanceBuffer);
+    if (!is_overlap_side) {
+      continue;
+    }
+    if (obstacle_interaction_info.lateral_avoid_direction ==
+        LatObstacleDecisionType::LEFT) {
+      if (frenet_obs->d_min_cpath() > 0) {
+        // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
+        double free_space_tmp =
+            frenet_obs->d_min_cpath() - frenet_obstacle.d_max_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateStaticFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
+      } else {
+        continue;
+      }
+    } else if (obstacle_interaction_info.lateral_avoid_direction ==
+               LatObstacleDecisionType::RIGHT) {
+      if (frenet_obs->d_max_cpath() < 0) {
+        // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
+        double free_space_tmp =
+            -frenet_obs->d_max_cpath() + frenet_obstacle.d_min_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateStaticFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
+      } else {
+        continue;
+      }
+    }
+  }
+  free_space = std::max(0.0, free_space - ego_width_);
+  obstacle_interaction_info.SetLateralConstraintFreeSpace(
+      LateralSpaceConstraintType::STATIC_OBSTACLE, free_space);
+}
+
+void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
+    const FrenetObstacle& frenet_obstacle,
+    ObstacleInfo& obstacle_interaction_info,
+    std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
+  double free_space = 100;
+  double distance_to_centerline = 100;
+  const double kLatOverlapBuffer = 0.3;
+
+  if (obstacle_interaction_info.lateral_avoid_direction ==
+      LatObstacleDecisionType::IGNORE) {
+    obstacle_interaction_info.SetLateralConstraintFreeSpace(
+        LateralSpaceConstraintType::DYNAMIC_OBSTACLE, 0);
+    return;
+  }
+  for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
+    if (frenet_obs == nullptr) {
+      continue;
+    }
+    if (frenet_obs->is_static()) {
+      continue;
+    }
+    if (frenet_obs->id() == frenet_obstacle.id()) {
+      continue;
+    }
+    // 过滤正后方障碍物
+    const double ego_l_start =
+        reference_path_ptr_->get_ego_frenet_boundary().l_start;
+    const double ego_l_end =
+        reference_path_ptr_->get_ego_frenet_boundary().l_end;
+    const double obstacle_l_start =
+        frenet_obs->frenet_obstacle_boundary().l_start;
+    const double obstacle_l_end =
+        frenet_obs->frenet_obstacle_boundary().l_end;
+    double start_l = std::max(ego_l_start, obstacle_l_start);
+    double end_l = std::min(ego_l_end, obstacle_l_end);
+    bool lat_overlap_for_rear_obs = (start_l < end_l - kLatOverlapBuffer);
+    bool is_rear_obstacle =
+        reference_path_ptr_->get_ego_frenet_boundary().s_start >
+        frenet_obs->frenet_obstacle_boundary().s_end;
+    if (is_rear_obstacle && lat_overlap_for_rear_obs) {
+      continue;
+    }
+
+    if (obstacle_interaction_info.lateral_avoid_direction ==
+        LatObstacleDecisionType::LEFT) {
+      // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
+      if (frenet_obs->d_min_cpath() > 0) {
+        // 按照自车匀速递推的轨迹，判断自车是否与动态障碍物存在overlap
+        CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
+                                       distance_to_centerline,front_nearest_follow_obstacle);
+        double free_space_tmp = distance_to_centerline - frenet_obstacle.d_max_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
+      } else {
+        continue;
+      }
+    } else if (obstacle_interaction_info.lateral_avoid_direction ==
+               LatObstacleDecisionType::RIGHT) {
+      if (frenet_obs->d_max_cpath() < 0) {
+        // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
+        CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
+                                       distance_to_centerline,front_nearest_follow_obstacle);
+        double free_space_tmp = distance_to_centerline + frenet_obstacle.d_min_cpath();
+        // 不同类型的障碍物交互，空间权重不一样
+        UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
+        free_space = std::fmin(free_space_tmp, free_space);
+      } else {
+        continue;
+      }
+    }
+  }
+  free_space = std::max(0.0, free_space - ego_width_);
+  obstacle_interaction_info.SetLateralConstraintFreeSpace(
+      LateralSpaceConstraintType::DYNAMIC_OBSTACLE, free_space);
+}
+
+void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
+    const FrenetObstacle& frenet_obstacle,
+    const FrenetObstacle& target_static_obstacle,
+    double& distance_to_centerline,
+    std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
+  const auto& obstacle_map = reference_path_ptr_->get_obstacles_map();
+  if (obstacle_map.find(cipv_info.cipv_id()) != obstacle_map.end()) {
+    if (!frenet_obstacle.obstacle()->is_reverse() &&
+        frenet_obstacle.frenet_obstacle_boundary().s_start >
+            obstacle_map.at(cipv_info.cipv_id())
+                ->frenet_obstacle_boundary()
+                .s_start) {
+      return;
+    }
+  }
+
+  if (front_nearest_follow_obstacle != nullptr) {
+    if (!frenet_obstacle.obstacle()->is_reverse() &&
+        frenet_obstacle.frenet_obstacle_boundary().s_start >
+            front_nearest_follow_obstacle->frenet_obstacle_boundary().s_start) {
+      return;
+    }
+  }
+
+  if (!frenet_obstacle.obstacle()->is_reverse()) {
+    if (frenet_obstacle.frenet_obstacle_boundary().s_start >
+        target_static_obstacle.frenet_obstacle_boundary().s_end + 1) {
+      return;
+    }
+  }
+
+  // 先按照自车匀速递推的方式，计算与动态障碍物overlap的时刻
+  // 然后计算动态障碍物与静态障碍物之间的横纵向距离
+  // 后续考虑和TTC挂钩
+  double front_lon_buf_dis = 1.0;
+  double rear_lon_buf_dis = 1.0;
+  double extra_lon_buf_dis_for_reverse_obstacle = 2.0;
+  const auto ego_v = ego_v_s_;
+  // 这里是和动态障碍物做博弈的关键点，自车的速度与静止障碍物无关
+  const double a = 0.0;
+  // 如果自车以a的加速度发现自车与动态障碍物没有恐慌感（overlap，说明可以避让这个障碍物）
+  bool ok = false;
+  bool is_overlap_with_dynamic_agent = false;
+  bool is_overtake_target_static_obstacle = false;
+  int start_idx = 0;     // 0.0s
+  int end_idx   = 50;    // 5.0s  (50 * 0.1)
+  int step_idx  = 2;     // 0.2s  (2 * 0.1)
+  for (int t_idx = start_idx; t_idx <= end_idx; t_idx += step_idx) {
+    Polygon2d obstacle_sl_polygon;
+    ok = reference_path_ptr_->get_polygon_at_time(
+        frenet_obstacle.id(), false, t_idx, obstacle_sl_polygon);
+    double delt_s = 0.1 * t_idx * ego_v_s_ + 0.5 * a * 0.01 * t_idx * t_idx;
+    double ego_start_s =
+        reference_path_ptr_->get_ego_frenet_boundary().s_start + delt_s;
+    double ego_end_s =
+        reference_path_ptr_->get_ego_frenet_boundary().s_end + delt_s;
+    if (!ok) {
+      continue;
+    }
+    double min_s = std::numeric_limits<double>::max();
+    double max_s = std::numeric_limits<double>::lowest();
+    double distance_to_centerline_tmp = 100;
+    for (auto& pt : obstacle_sl_polygon.points()) {
+      distance_to_centerline_tmp =
+          std::min(std::abs(pt.y()), distance_to_centerline_tmp);
+      min_s = std::min(min_s, pt.x());
+      max_s = std::max(max_s, pt.x());
+    }
+    if (!frenet_obstacle.obstacle()->is_reverse()) {
+      is_overtake_target_static_obstacle =
+          min_s > target_static_obstacle.frenet_obstacle_boundary().s_end +
+                      rear_lon_buf_dis;
+      is_overlap_with_dynamic_agent =
+          std::max(min_s, ego_start_s - rear_lon_buf_dis) <
+          std::min(max_s, ego_end_s + front_lon_buf_dis);
+    } else {
+      is_overtake_target_static_obstacle = false;
+      is_overlap_with_dynamic_agent =
+          std::max(min_s, ego_start_s - rear_lon_buf_dis -
+                              extra_lon_buf_dis_for_reverse_obstacle) <
+          std::min(max_s, ego_end_s + front_lon_buf_dis +
+                              extra_lon_buf_dis_for_reverse_obstacle);
+    }
+    if (!is_overlap_with_dynamic_agent || is_overtake_target_static_obstacle) {
+      continue;
+    }
+    distance_to_centerline =
+        std::min(distance_to_centerline, distance_to_centerline_tmp);
+  }
+}
+
+void SccLateralObstacleDecider::UpdateStaticFreeSpaceBaseInteractionType(
+    const FrenetObstacle& frenet_obstacle, double& free_space) {
+  // 静态障碍物暂默认不同类型空间恐慌感是一致的
+  free_space = std::max(0.0, free_space);
+}
+
+void SccLateralObstacleDecider::UpdateDynamicFreeSpaceBaseInteractionType(
+    const FrenetObstacle& frenet_obstacle, double& free_space) {
+  // 动态的VRU和大车，恐慌感较强，横向距离额外减去0.3
+  if (frenet_obstacle.obstacle()->is_VRU() || IsTruck(frenet_obstacle)) {
+    free_space -= 0.3;
+  }
+  free_space = std::max(0.0, free_space);
+}
+
+bool SccLateralObstacleDecider::CheckStaticObstacleAvoidSafety(
+    const FrenetObstacle& frenet_obstacle) {
+  if (!frenet_obstacle.is_static()) {
+    return true;
+  }
+
+  // || !lateral_obstacle_history_info_[frenet_obstacle.id()].is_avd_car
+  if (lateral_obstacle_history_info_.find(frenet_obstacle.id()) ==
+      lateral_obstacle_history_info_.end()) {
+    return false;
+  }
+  if (obstacle_interaction_map_.find(frenet_obstacle.id()) ==
+      obstacle_interaction_map_.end()) {
+    return false;
+  }
+  // double free_space = 100;
+  // double s_with_min_lat_space = 0;
+
+  // ReferencePathPoint reference_path_point;
+  // if (frenet_obstacle.d_max_cpath() < 0){
+  //   s_with_min_lat_space = frenet_obstacle.s_max_l().y;
+
+  //   // 后续可以考虑路沿
+  //   if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space,
+  //   reference_path_point)) {
+  //     free_space = reference_path_point.distance_to_left_lane_border -
+  //     frenet_obstacle.s_max_l().x;
+  //   }
+  // } else if(frenet_obstacle.d_min_cpath() > 0) {
+  //   s_with_min_lat_space = frenet_obstacle.s_min_l().y;
+  //   if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space,
+  //   reference_path_point)) {
+  //     free_space = reference_path_point.distance_to_right_lane_border +
+  //     frenet_obstacle.s_min_l().x;
+  //   }
+  // } else {
+  //   return false;
+  // }
+
+  // free_space = std::max(0.0, free_space - ego_width_);
+  ObstacleInfo& obstacle_interaction_info =
+      obstacle_interaction_map_[frenet_obstacle.id()];
+  double lane_boundary_free_space_desire_v = interp(
+      obstacle_interaction_info.GetLateralConstraintDistance(
+          LateralSpaceConstraintType::LANE_BOUNDARY),
+      config_.free_space_lane_bp, config_.lane_static_limit_v_free_space);
+  if (lane_boundary_free_space_desire_v >= ego_v_) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void SccLateralObstacleDecider::LateralObstacleDecision(
@@ -1652,6 +2441,42 @@ void SccLateralObstacleDecider::CheckObstaclesIsReverse() {
   }
 }
 
+bool SccLateralObstacleDecider::ARAStar() {
+  // 默认关闭
+  return true;
+  auto &hybrid_ara_result = session_->mutable_planning_context()
+                                ->mutable_lateral_obstacle_decider_output()
+                                .hybrid_ara_result;
+  hybrid_ara_result.Clear();
+  bool find_path = hybrid_ara_star_->Plan(output_, hybrid_ara_result, search_result_);
+
+  // log
+  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto hybrid_ara_path =
+      planning_debug_data->mutable_hybrid_ara_info()->mutable_hybrid_ara_path();
+  auto hybrid_ara_path_cost = planning_debug_data->mutable_hybrid_ara_info()
+                                  ->mutable_hybrid_ara_path_cost();
+  hybrid_ara_path->Clear();
+  hybrid_ara_path_cost->Clear();
+  for (const auto x : hybrid_ara_result.x) {
+    hybrid_ara_path->add_x(x);
+  }
+  for (const auto y : hybrid_ara_result.y) {
+    hybrid_ara_path->add_y(y);
+  }
+  for (const auto phi : hybrid_ara_result.phi) {
+    hybrid_ara_path->add_phi(phi);
+  }
+  for (const auto s : hybrid_ara_result.s) {
+    hybrid_ara_path->add_s(s);
+  }
+  for (const auto l : hybrid_ara_result.l) {
+    hybrid_ara_path->add_l(l);
+  }
+
+  return (find_path && hybrid_ara_result.Valid());
+}
+
 void SccLateralObstacleDecider::LateralObstacleDeciderOutput() {
   auto &lateral_obstacle_decider_output =
       session_->mutable_planning_context()
@@ -1964,6 +2789,15 @@ void SccLateralObstacleDecider::ClearHistoryInfo() {
     if (obstacle_map.find(it->first) == obstacle_map.end()) {
       // 当前帧不存在该障碍物
       it = lateral_obstacle_history_info_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  for (auto it = obstacle_interaction_map_.begin();
+       it != obstacle_interaction_map_.end();) {
+    if (obstacle_map.find(it->first) == obstacle_map.end()) {
+      // 当前帧不存在该障碍物
+      it = obstacle_interaction_map_.erase(it);
     } else {
       ++it;
     }

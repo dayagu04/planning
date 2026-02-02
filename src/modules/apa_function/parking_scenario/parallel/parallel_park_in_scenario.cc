@@ -1891,7 +1891,7 @@ const bool ParallelParkInScenario::GenTlane() {
         t_lane_.is_inside_rigid = true;
 
       }
-      if (is_limiter && is_cur_pose_in_slot) {
+      if (is_limiter && is_cur_pose_in_slot && !enable_pa_park_) {
 
         auto obs_pt_local_cp = obs_pt_local;
         ILOG_INFO << "befor limiter obs = " << obs_pt_local_cp.x()  ;
@@ -2891,6 +2891,12 @@ const bool ParallelParkInScenario::CheckLastPathCollided() {
 const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
   ILOG_INFO << "Enter  UseOrNotUseLastPath";
   if (frame_.is_replan_first) {
+    const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+    if (ego_info_under_slot.slot_occupied_ratio > 0.1) {
+      ILOG_INFO << "ego_info_under_slot occupied, not need update";
+      return parallel_path_planner_;
+    }
     ILOG_INFO << "first replan, not using last path";
     frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
     return parallel_path_planner_;

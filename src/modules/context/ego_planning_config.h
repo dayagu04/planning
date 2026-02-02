@@ -1801,6 +1801,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
 
 struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     near_car_thr = read_json_key<double>(json, "near_car_thr", near_car_thr);
     lat_safety_buffer =
         read_json_key<double>(json, "lat_safety_buffer", lat_safety_buffer);
@@ -1897,6 +1898,14 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                           std::vector<std::string>{"potential_follow_obstacle",
                                                    "lane_width_factor"},
                           lane_width_factor);
+    read_json_vec<double>(json, "free_space_lane_bp", free_space_lane_bp);
+    read_json_vec<double>(json, "lane_static_limit_v_free_space", lane_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_road_bp", free_space_road_bp);
+    read_json_vec<double>(json, "road_static_limit_v_free_space", road_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_static_obstacle_bp", free_space_static_obstacle_bp);
+    read_json_vec<double>(json, "static_obstacle_static_limit_v_free_space", static_obstacle_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_dynamic_obstacle_bp", free_space_dynamic_obstacle_bp);
+    read_json_vec<double>(json, "dynamic_obstacle_static_limit_v_free_space", dynamic_obstacle_static_limit_v_free_space);
     side_2_front_count_thr = read_json_key<int>(
         json, "side_2_front_count_thr", side_2_front_count_thr);
     side_2_front_max_count = read_json_key<int>(
@@ -1960,6 +1969,14 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   bool open_side_lat_offset_nudge = false;
   double start_nudge_ttc = 3.6;
   int cross_lane_side_2_front_count_thr = 3;
+  std::vector<double> free_space_lane_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> lane_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_road_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> road_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_static_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> static_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -2056,6 +2073,7 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
     is_valid_lateral_offset = read_json_key<bool>(
         json, "is_valid_lateral_offset", is_valid_lateral_offset);
     base_nudge_distance =
@@ -2757,6 +2775,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     ReadItem<bool>(json, pass_acc_mode, "lat_motion_ilqr", "pass_acc_mode");
+    ReadItem<bool>(json, enable_straight_rtk, "lat_motion_ilqr",
+                   "enable_straight_rtk");
     ReadItem<bool>(json, warm_start_enable, "lat_motion_ilqr",
                    "warm_start_enable");
     ReadItem<bool>(json, use_index_clip, "lat_motion_ilqr", "use_index_clip");
@@ -3016,6 +3036,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   }
 
   bool pass_acc_mode = false;
+  bool enable_straight_rtk = false;
   bool warm_start_enable = true;
   bool use_index_clip = true;
   bool use_acc_compensation = true;
@@ -3041,7 +3062,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 20000.0;
   double q_jerk_bound = 500000.0;
 
-  double first_qsoft_bound_ratio = 1.0;
+  double first_qsoft_bound_ratio = 0.0;
   double second_qsoft_bound_ratio = 1.0;
   std::vector<double> map_qsoft_bound{200, 500, 1500.0, 3000.0, 4000.0, 5000.0};
   std::vector<double> map_qhard_bound{500,    1000,   3000.0,

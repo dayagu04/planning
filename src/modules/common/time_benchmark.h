@@ -13,6 +13,10 @@ enum TimeBenchmarkType : int32_t {
   TB_APA_ASTAR = 7,
   TB_PLANNING_TOTAL = 8,
   TB_OSQP = 9,
+  TB_APA_PATH_PLAN_TIME = 10,
+  TB_APA_SPEED_PLAN_TIME = 11,
+  TB_APA_FIND_TARGET_POSE_TIME = 12,
+  TB_APA_GEN_OBS_TIME = 13,
   TB_MAX,
 };
 
@@ -70,6 +74,11 @@ class TimeBenchmark {
     times[TimeBenchmarkType::TB_APA_ASTAR].name_ = "astar_time";
     times[TimeBenchmarkType::TB_PLANNING_TOTAL].name_ = "planning_total_time";
     times[TimeBenchmarkType::TB_OSQP].name_ = "osqp_time";
+    times[TimeBenchmarkType::TB_APA_PATH_PLAN_TIME].name_ = "path_plan_time";
+    times[TimeBenchmarkType::TB_APA_SPEED_PLAN_TIME].name_ = "speed_plan_time";
+    times[TimeBenchmarkType::TB_APA_FIND_TARGET_POSE_TIME].name_ = "find_target_pose_time";
+    times[TimeBenchmarkType::TB_APA_GEN_OBS_TIME].name_ = "gen_obs_time";
+
     return;
   }
 

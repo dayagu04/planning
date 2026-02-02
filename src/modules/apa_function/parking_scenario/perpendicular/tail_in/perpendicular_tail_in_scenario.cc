@@ -518,7 +518,9 @@ const bool PerpendicularTailInScenario::GenTlane() {
       ->GetGenerateObstacleDeciderPtr()
       ->GenObs(ego_info_under_slot, gen_obs_request);
 
-  CalcPtInside();
+  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    CalcPtInside();
+  }
 
   bool update_slot_move_dist = true;
   if (frame_.replan_reason == ReplanReason::NOT_REPLAN ||
@@ -1030,6 +1032,9 @@ void PerpendicularTailInScenario::PathPlan() {
   JSON_DEBUG_VALUE("process_obs_method",
                    static_cast<int>(frame_.process_obs_method))
 
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_PATH_PLAN_TIME,
+                                    IflyTime::Now_ms() - start_time);
+
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
@@ -1245,6 +1250,9 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
   JSON_DEBUG_VALUE("search_consume_time",
                    hybrid_astar_result.search_consume_time_ms)
 
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,
+                                    hybrid_astar_result.search_consume_time_ms);
+
   JSON_DEBUG_VALUE("solve_number", hybrid_astar_result.solve_number)
   JSON_DEBUG_VALUE("search_node_num", hybrid_astar_result.search_node_num)
 
@@ -1319,6 +1327,9 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
   if (frame_.has_response) {
     ILOG_INFO << "path gen thread has response, update responsse";
     path_generator_thread_ptr->PublishResponseData(hybrid_astar_response_);
+    TimeBenchmark::Instance().SetTime(
+        TimeBenchmarkType::TB_APA_ASTAR,
+        hybrid_astar_response_.result.search_consume_time_ms);
   }
   response = hybrid_astar_response_;
 
@@ -1464,6 +1475,9 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
 
     JSON_DEBUG_VALUE("search_consume_time",
                      response.result.search_consume_time_ms)
+
+    TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,
+                                      response.result.search_consume_time_ms);
 
     JSON_DEBUG_VALUE("solve_number", response.result.solve_number)
     JSON_DEBUG_VALUE("search_node_num", response.result.search_node_num)
