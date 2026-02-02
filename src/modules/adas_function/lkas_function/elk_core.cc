@@ -499,7 +499,7 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
     steering_wheel_angle_speed_supp_thrd =
         (150.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3;
   } else {
-    steering_wheel_angle_speed_supp_thrd = 100.0;
+    steering_wheel_angle_speed_supp_thrd = 100.0/57.3;
   }
   if ((fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
        steering_wheel_angle_speed_supp_thrd) &&

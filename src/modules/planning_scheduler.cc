@@ -400,11 +400,81 @@ void PlanningScheduler::FillPlanningTrajectory(
         lkas_intervention_flag &&
         function_state_machine_info_ptr.current_state ==
             iflyauto::
-                FunctionalState_ACC_ACTIVATE) {  // 以下新增acc和ldp共同开启的工况
+                FunctionalState_ACC_ACTIVATE) {
+      // 以下新增acc和ldp共同开启的工况
+
+      //======将lkas目标轨迹线转到自车坐标系下,构建x_vec、y_vec、s_vec======//
+      // 存储lkas的目标轨迹线散点(自车坐标系下) x坐标值
+      std::vector<double> lkas_traj_dx_vec_;
+      // 存储lkas的目标轨迹线散点(自车坐标系下) y坐标值
+      std::vector<double> lkas_traj_dy_vec_;
+      // 存储lkas的目标轨迹线散点(自车坐标系下) 起始点s值为0
+      std::vector<double> lkas_traj_s_vec_;
+      uint32 lkas_traj_enu_points_num = lkas_trajectory->trajectory_points_size;
+      lkas_traj_dx_vec_.resize(lkas_traj_enu_points_num, 0);
+      lkas_traj_dx_vec_.clear();
+      lkas_traj_dx_vec_.reserve(lkas_traj_enu_points_num);
+      lkas_traj_dy_vec_.resize(lkas_traj_enu_points_num, 0);
+      lkas_traj_dy_vec_.clear();
+      lkas_traj_dy_vec_.reserve(lkas_traj_enu_points_num);
+      lkas_traj_s_vec_.resize(lkas_traj_enu_points_num, 0);
+      lkas_traj_s_vec_.clear();
+      lkas_traj_s_vec_.reserve(lkas_traj_enu_points_num);
+      double s = 0.0;
+      const auto rotm2d = GetContext.get_state_info()->rotm2d;
+      for (uint32 i = 0; i < lkas_traj_enu_points_num; i++) {
+        Eigen::Vector2d enu_pos_i(lkas_trajectory->trajectory_points[i].x,
+                                  lkas_trajectory->trajectory_points[i].y);
+        auto transformed_point =
+            rotm2d.transpose() *
+            (enu_pos_i - GetContext.get_state_info()->current_pos_i);
+        lkas_traj_dx_vec_.emplace_back(transformed_point.x());
+        lkas_traj_dy_vec_.emplace_back(transformed_point.y());
+
+        if (i == 0) {
+          lkas_traj_s_vec_.emplace_back(0.0);
+        } else {
+          const double ds =
+              std::hypot(lkas_traj_dx_vec_[i] - lkas_traj_dx_vec_[i - 1],
+                         lkas_traj_dy_vec_[i] - lkas_traj_dy_vec_[i - 1]);
+          s += std::max(ds, 1e-3);
+          lkas_traj_s_vec_.emplace_back(s);
+        }
+      }
+      //======将lkas目标轨迹线转到自车坐标系下,构建dx_s_spline_dy_s_spline_======//
+      pnc::mathlib::spline lkas_traj_dx_s_spline_;
+      pnc::mathlib::spline lkas_traj_dy_s_spline_;
+      lkas_traj_dx_s_spline_.set_points(lkas_traj_s_vec_, lkas_traj_dx_vec_);
+      lkas_traj_dy_s_spline_.set_points(lkas_traj_s_vec_, lkas_traj_dy_vec_);
+      //======根据ACC原始轨迹的v-t曲线,重新生成目标轨迹======//
+      double s_proj = 0.0;
+      Eigen::Vector2d current_pos = Eigen::Vector2d::Zero();
+      adas_function::CalProjectionPointForLong(lkas_traj_dx_s_spline_,
+                                               lkas_traj_dy_s_spline_, 0, s,
+                                               current_pos, s_proj);
+      double s_ref = s_proj;
+      auto& car2local = GetContext.get_session()
+                            ->environmental_model()
+                            .get_ego_state_manager()
+                            ->get_car2enu();
       for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
+        double plan_traj_dt = 0.025;
+
+        if (i > 0) {
+          s_ref +=
+              std::max(1.0, planning_result.traj_points[i].v) * plan_traj_dt;
+        }
+        Eigen::Vector3d car_point, local_point;
+        // 根据s查找位置
+        car_point.x() = lkas_traj_dx_s_spline_(s_ref);
+        car_point.y() = lkas_traj_dy_s_spline_(s_ref);
+        car_point.z() = 0.0;
+        //转到local坐标系下
+        local_point = car2local * car_point;
+
         auto path_point = &trajectory->trajectory_points[i];
-        path_point->x = planning_result.traj_points[i].x;
-        path_point->y = lkas_trajectory->trajectory_points[i].y;
+        path_point->x = local_point.x();  // 设定轨迹
+        path_point->y = local_point.y();  // 设定轨迹
         path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
         path_point->curvature = planning_result.traj_points[i].curvature;
         path_point->t = planning_result.traj_points[i].t;
