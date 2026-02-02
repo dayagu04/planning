@@ -92,6 +92,7 @@ void LateralMotionPlanner::Init() {
   //
   is_divide_lane_into_two_ = false;
   is_last_low_speed_lane_change_ = false;
+  valid_continuity_idx_ = 0;
   low_speed_lane_change_cd_timer_ = 0;
   avoid_back_time_ = 0.0;
   enter_split_time_ = 0.0;
@@ -163,6 +164,7 @@ bool LateralMotionPlanner::HandleInputData() {
 }
 
 void LateralMotionPlanner::ResetInput() {
+  valid_continuity_idx_ = 0;
   std::fill(ref_theta_vec_.begin(), ref_theta_vec_.end(), 0.0);
   std::fill(x_vec_.begin(), x_vec_.end(), 0.0);
   std::fill(y_vec_.begin(), y_vec_.end(), 0.0);
@@ -285,7 +287,6 @@ bool LateralMotionPlanner::HandleReferencePathData() {
   const auto &motion_planner_output =
       session_->planning_context().motion_planner_output();
   const auto& last_path_s_vec = motion_planner_output.s_lat_vec;
-  size_t valid_continuity_idx = 0;
   double final_t = 5.0;
   double last_path_length = last_path_s_vec.size() > 0 ? last_path_s_vec.back() : 0.0;
   is_ref_consistent_ = (ref_vel * final_t - last_path_length) <= 2.0;
@@ -313,7 +314,7 @@ bool LateralMotionPlanner::HandleReferencePathData() {
       planning_input_.mutable_last_y_vec()->Set(i, last_y);
       planning_input_.mutable_last_theta_vec()->Set(i, last_theta);
       if (last_start_s <= last_path_length) {
-        valid_continuity_idx++;
+        valid_continuity_idx_++;
       }
       double ds = ref_vel * config_.delta_t;
       if (!enu_ref_vel.empty()) {
@@ -936,6 +937,8 @@ bool LateralMotionPlanner::AssembleInput() {
   if (!motion_planner_output.lat_init_flag || !is_ref_consistent_) {
     planning_input_.set_q_continuity(0.0);
   }
+  planning_weight_ptr_->SetContinuityWeightByLastPath(
+      valid_continuity_idx_, planning_input_);
   // spatio
   if (is_use_spatio_planner_result) {
     planning_input_.set_complete_follow(complete_follow);
@@ -1040,7 +1043,6 @@ bool LateralMotionPlanner::Update() {
   theta_vec_[0] = theta_vec_[1];
   delta_vec_[0] = delta_vec_[1];
   omega_vec_[0] = omega_vec_[1];
-  theta_vec_[0] = theta_vec_[1];
   curv_vec_[0] = curv_vec_[1];
   d_curv_vec_[0] = d_curv_vec_[1];
   t_vec_[0] = -0.2;

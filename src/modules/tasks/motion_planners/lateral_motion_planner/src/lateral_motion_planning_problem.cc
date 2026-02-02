@@ -255,11 +255,11 @@ uint8_t LateralMotionPlanningProblem::Update(
     }
 
     cost_config_vec.at(i)[W_CONTINUITY_X] =
-        cost_config_vec.at(i)[W_REF_X] * planning_input.q_continuity();
+        cost_config_vec.at(i)[W_REF_X] * path_weights.q_continuity[i];
     cost_config_vec.at(i)[W_CONTINUITY_Y] =
-        cost_config_vec.at(i)[W_REF_Y] * planning_input.q_continuity();
+        cost_config_vec.at(i)[W_REF_Y] * path_weights.q_continuity[i];
     cost_config_vec.at(i)[W_CONTINUITY_THETA] =
-        cost_config_vec.at(i)[W_REF_THETA] * planning_input.q_continuity();
+        cost_config_vec.at(i)[W_REF_THETA] * path_weights.q_continuity[i];
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
