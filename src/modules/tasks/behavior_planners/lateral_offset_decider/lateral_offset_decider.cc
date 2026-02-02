@@ -1,9 +1,5 @@
 #include "lateral_offset_decider.h"
 
-<<<<<<< HEAD
-#include "common/math/filter/mean_filter.h"
-=======
->>>>>>> 523f7848f0... opt avoid hmi
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "environmental_model_manager.h"
