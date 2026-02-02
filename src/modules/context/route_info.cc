@@ -1615,7 +1615,7 @@ bool RouteInfo::UpdateStaticMap(const Map::StaticMap& static_map_info) {
 
   if (static_map_info_current_timestamp != static_map_info_updated_timestamp_) {
     ad_common::hdmap::HDMap hd_map_tmp;
-    const int res = hd_map_tmp.LoadMapFromProto(static_map_info.road_map());
+    const int res = hd_map_tmp.LoadMapFromProto(static_map_info);
     if (res == 0) {
       hd_map_ = std::move(hd_map_tmp);
       hdmap_valid_ = true;
@@ -3067,54 +3067,50 @@ bool RouteInfo::CalculateCurrentPoseInfo(const Map::StaticMap& static_map_info) 
   double nearest_s = 0.0;
   double nearest_l = 0.0;
   double sum_s = 0.0;
-  // [hack](bsniu): for two floors, the first is current lane
-  const auto& lines = static_map_info.road_map().lanes();
-  if (!lines.empty()) {
-    size_t lane_id = lines[0].lane_id();
-    for (const auto& line : lines) {
-      if (line.predecessor_lane_id_size() == 0) {
-        lane_id = line.lane_id();
+  for(const auto& parking_floor_info: static_map_info.parking_floor_infos()) {
+    for (const auto& line : parking_floor_info.road_map().lanes()) {
+      size_t lane_id = line.lane_id();
+      const auto lane_ptr = hd_map_.GetLaneById(lane_id);
+      if(lane_ptr == nullptr) {
+        continue;
+      }
+      if(lane_ptr->IsOnLane(point, &nearest_s, &nearest_l)) {
+        nearest_lane = lane_ptr;
+        sum_s = nearest_s;
+        if (!nearest_lane->lane().predecessor_lane_id().empty()) {
+          sum_s = CalculatePointAccumulateS(
+              nearest_lane->lane().predecessor_lane_id(0));
+        }
         break;
       }
     }
-    nearest_lane = hd_map_.GetLaneById(lane_id);
-    if (nearest_lane == nullptr) {
-      ILOG_DEBUG << "get nearest lane failed!!";
-      return false;
+    if(nearest_lane != nullptr) {
+      break;
     }
-    if (!nearest_lane->lane().predecessor_lane_id().empty()) {
-      sum_s = CalculatePointAccumulateS(
-          nearest_lane->lane().predecessor_lane_id(0));
-    }
-    if (nearest_lane->GetProjection(point, &nearest_s, &nearest_l)) {
-      sum_s += nearest_s;
-    } else {
-      ILOG_DEBUG << "current pose get projection fail!!";
-      return false;
-    }
-  } else {
-    ILOG_DEBUG << "no get nearest lane!!!";
+  }
+
+  if(nearest_lane == nullptr) {
+    ILOG_ERROR << "get nearest lane failed!!";
     return false;
   }
 
-  const auto trace_start = static_map_info.parking_assist_info().trace_start();
+  const auto trace_start = static_map_info.common_parking_info().trace_start();
   const ad_common::math::Vec2d trace_start_point_2d = {trace_start.x(),
                                                        trace_start.y()};
   // get trace_start point projection s
   double trace_start_point_accumulate_s;
   double trace_start_point_lateral;
-  if (nearest_lane->GetProjection(trace_start_point_2d,
-                                       &trace_start_point_accumulate_s,
-                                       &trace_start_point_lateral)) {
+  if (nearest_lane->IsOnLane(trace_start_point_2d,
+                             &trace_start_point_accumulate_s,
+                             &trace_start_point_lateral)) {
     ILOG_DEBUG << "trace_start point s:" << trace_start_point_accumulate_s
                << ",lateral:" << trace_start_point_lateral;
-  } else {
-    ILOG_DEBUG << " trace_start point get projection fail!! ";
-    return false;
+    if(nearest_s >= trace_start_point_accumulate_s) {
+      route_info_output_.hpp_route_info_output.is_reached_hpp_start_point = true;
+    }
   }
-  if (nearest_s >= trace_start_point_accumulate_s) {
+  if (route_info_output_.hpp_route_info_output.is_reached_hpp_start_point) {
     ILOG_DEBUG << "reached trace start point!!";
-    route_info_output_.hpp_route_info_output.is_reached_hpp_start_point = true;
     if (last_point_hpp_.x() != NL_NMAX && last_point_hpp_.y() != NL_NMAX) {
       sum_driving_distance_ += point.DistanceTo(last_point_hpp_);
     } else {
@@ -3145,7 +3141,13 @@ void RouteInfo::ResetHpp() {
 
 bool RouteInfo::CalculateTraceEndInfo(const Map::StaticMap& static_map_info) {
   // get trace end projection point on line
-  const auto& lines = static_map_info.road_map().lanes();
+  const auto& parking_floor_infos = static_map_info.parking_floor_infos();
+  if(parking_floor_infos.empty()) {
+    return false;
+  }
+  const auto& last_parking_floor_info = parking_floor_infos[parking_floor_infos.size() - 1];
+  const auto& lines = last_parking_floor_info.road_map().lanes();
+  const auto& common_parking_info = static_map_info.common_parking_info();
   if (!lines.empty()) {
     size_t lane_id = lines[lines.size() - 1].lane_id();
     for (const auto& line : lines) {
@@ -3155,7 +3157,7 @@ bool RouteInfo::CalculateTraceEndInfo(const Map::StaticMap& static_map_info) {
       }
     }
 
-    const auto trace_end = static_map_info.parking_assist_info().trace_end();
+    const auto trace_end = common_parking_info.trace_end();
     sum_s_to_target_dest_hpp_ = CalculatePointAccumulateS(lane_id);
     route_info_output_.hpp_route_info_output.distance_to_target_dest = sum_s_to_target_dest_hpp_ - sum_s_to_curr_pose_hpp_;
     route_info_output_.hpp_route_info_output.target_dest_point = ad_common::math::Vec2d(trace_end.x(), trace_end.y());
@@ -3168,43 +3170,45 @@ bool RouteInfo::CalculateTraceEndInfo(const Map::StaticMap& static_map_info) {
 
 bool RouteInfo::CalculateNextSpeedBumpInfo(const Map::StaticMap& static_map_info) {
   // ehr speed bump
-  const auto& lane_groups = static_map_info.road_map().lane_groups();
   std::vector<SpeedBumpInfo> speed_bump_infos;
-  for (auto& lane_group : lane_groups) {
-    const auto& road_marks = lane_group.road_marks();
-    for (auto& road_mark : road_marks) {
-      if (road_mark.type() == IFLYParkingMap::RoadMark::SPEED_BUMP &&
-          road_mark.shape_size() == 4) {
-        ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
-        double speed_bump_nearest_s = 0.0;
-        double speed_bump_nearest_l = 0.0;
-        double speed_bump_sum_s = 0.0;
+  const auto& parking_floor_infos = static_map_info.parking_floor_infos();
+  for(const auto& parking_floor_info : parking_floor_infos) {
+    const auto& lane_groups = parking_floor_info.road_map().lane_groups();
+    for (auto& lane_group : lane_groups) {
+      const auto& road_marks = lane_group.road_marks();
+      for (auto& road_mark : road_marks) {
+        if (road_mark.type() == IFLYParkingMap::RoadMark::SPEED_BUMP &&
+            road_mark.shape_size() == 4) {
+          ad_common::hdmap::LaneInfoConstPtr speed_bump_nearest_lane;
+          double speed_bump_nearest_s = 0.0;
+          double speed_bump_nearest_l = 0.0;
+          double speed_bump_sum_s = 0.0;
 
-        ad_common::math::Vec2d speed_bump_center_point(
-            (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
-            (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
-        const int speed_bump_res = hd_map_.GetNearestLane(
-            speed_bump_center_point, &speed_bump_nearest_lane,
-            &speed_bump_nearest_s, &speed_bump_nearest_l);
-        if (speed_bump_res != 0) {
-          ILOG_DEBUG << "not get speed_bump projection point on line!!!";
-          continue;
-        } else {
-          ILOG_DEBUG << "get s for speed_bump projection point on line:"
-                     << speed_bump_nearest_s;
+          ad_common::math::Vec2d speed_bump_center_point(
+              (road_mark.shape(0).x() + road_mark.shape(3).x()) * 0.5,
+              (road_mark.shape(0).y() + road_mark.shape(3).y()) * 0.5);
+          const int speed_bump_res = hd_map_.GetNearestLane(
+              speed_bump_center_point, &speed_bump_nearest_lane,
+              &speed_bump_nearest_s, &speed_bump_nearest_l);
+          if (speed_bump_res != 0) {
+            ILOG_DEBUG << "not get speed_bump projection point on line!!!";
+            continue;
+          } else {
+            ILOG_DEBUG << "get s for speed_bump projection point on line:"
+                      << speed_bump_nearest_s;
+          }
+          speed_bump_sum_s = speed_bump_nearest_s;
+          if (!speed_bump_nearest_lane->lane().predecessor_lane_id().empty()) {
+            speed_bump_sum_s += CalculatePointAccumulateS(
+                speed_bump_nearest_lane->lane().predecessor_lane_id(0));
+          }
+          speed_bump_infos.emplace_back(speed_bump_sum_s, road_mark.id(),
+                                        speed_bump_center_point.x(),
+                                        speed_bump_center_point.y());
         }
-        speed_bump_sum_s = speed_bump_nearest_s;
-        if (!speed_bump_nearest_lane->lane().predecessor_lane_id().empty()) {
-          speed_bump_sum_s += CalculatePointAccumulateS(
-              speed_bump_nearest_lane->lane().predecessor_lane_id(0));
-        }
-        speed_bump_infos.emplace_back(speed_bump_sum_s, road_mark.id(),
-                                      speed_bump_center_point.x(),
-                                      speed_bump_center_point.y());
       }
     }
   }
-
   std::sort(speed_bump_infos.begin(), speed_bump_infos.end(),
             [](const SpeedBumpInfo& a, const SpeedBumpInfo& b) {
               return a.dist_to_start < b.dist_to_start;

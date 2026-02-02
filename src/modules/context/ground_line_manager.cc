@@ -14,31 +14,37 @@ void GroundLineManager::Init() {
 
 bool GroundLineManager::Update(const Map::StaticMap &static_map_info) {
   points_.clear();
-  const Map::ParkingAssistInfo &groundline_data =
-      static_map_info.parking_assist_info();
-  if (groundline_data.road_obstacles_size() > 0) {
-    if (is_cluster_) {
-      std::vector<GroundLinePoint> ground_line_point;
-      for (auto &groundline : groundline_data.road_obstacles()) {
-        for (size_t i = 0; i < groundline.shape_size(); ++i) {
-          GroundLinePoint point;
-          point.point = planning_math::Vec2d(groundline.shape(i).x(),
-                                             groundline.shape(i).y());
-          point.status = GroundLinePoint::Status::UNCLASSIFIED;
-          ground_line_point.emplace_back(point);
-        }
-      }
-      points_ = Execute(ground_line_point);
-    } else {
-      std::vector<GroundLinePoints> ground_line_points;
-      for (auto &groundline : groundline_data.road_obstacles()) {
-        if (groundline.shape_size() >= 3) {
-          GroundLinePoints point;
-          for (size_t i = 0; i < groundline.shape_size(); ++i) {
-            point.emplace_back(planning_math::Vec2d(groundline.shape(i).x(),
-                                                    groundline.shape(i).y()));
+  const auto& common_parking_info  = static_map_info.common_parking_info ();
+  const auto& parking_floor_infos  = static_map_info.parking_floor_infos ();
+  for(const auto& parking_floor_info : parking_floor_infos) {
+    if(parking_floor_info.car_at_curr_floor()) { // add road obstacles for curr floor
+      const Map::ParkingAssistInfo &groundline_data =
+          parking_floor_info.parking_assist_info();
+      if (groundline_data.road_obstacles_size() > 0) {
+        if (is_cluster_) {
+          std::vector<GroundLinePoint> ground_line_point;
+          for (auto &groundline : groundline_data.road_obstacles()) {
+            for (size_t i = 0; i < groundline.shape_size(); ++i) {
+              GroundLinePoint point;
+              point.point = planning_math::Vec2d(groundline.shape(i).x(),
+                                                groundline.shape(i).y());
+              point.status = GroundLinePoint::Status::UNCLASSIFIED;
+              ground_line_point.emplace_back(point);
+            }
           }
-          points_.emplace_back(point);
+          points_ = Execute(ground_line_point);
+        } else {
+          std::vector<GroundLinePoints> ground_line_points;
+          for (auto &groundline : groundline_data.road_obstacles()) {
+            if (groundline.shape_size() >= 3) {
+              GroundLinePoints point;
+              for (size_t i = 0; i < groundline.shape_size(); ++i) {
+                point.emplace_back(planning_math::Vec2d(groundline.shape(i).x(),
+                                                        groundline.shape(i).y()));
+              }
+              points_.emplace_back(point);
+            }
+          }
         }
       }
     }

@@ -42,43 +42,47 @@ bool ParkingSlotManager::Update(const Map::StaticMap& static_map) {
   points_.clear();
   const auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  const auto park_spaces = static_map.parking_assist_info().parking_spaces();
-  const size_t park_spaces_size = park_spaces.size();
   const auto& enu2car_matrix = ego_state_manager->get_enu2car();
-  Eigen::Vector3d v;
-  double min_x, min_y, max_x, max_y;
-  for (uint8 i = 0; i < park_spaces_size; i++) {
-    ParkingSlotPoints slot_point;
-    auto park_space = park_spaces[i];
-    // TBD: 这里没有判断其size的成员量
-    // if (park_space.shape.size != 4) {
-    //   LOG_NOTICE("park_space point size is not 4");
-    //   continue;
-    // }
+  for(const auto& parking_floor_info: static_map.parking_floor_infos()) {
+    const auto park_spaces =
+        parking_floor_info.parking_assist_info().parking_spaces();
+    const size_t park_spaces_size = park_spaces.size();
+    Eigen::Vector3d v;
+    double min_x, min_y, max_x, max_y;
+    for (uint8 i = 0; i < park_spaces_size; i++) {
+      ParkingSlotPoints slot_point;
+      auto park_space = park_spaces[i];
+      // TBD: 这里没有判断其size的成员量
+      // if (park_space.shape.size != 4) {
+      //   LOG_NOTICE("park_space point size is not 4");
+      //   continue;
+      // }
 
-    min_x = std::numeric_limits<double>::max();
-    min_y = std::numeric_limits<double>::max();
-    max_x = std::numeric_limits<double>::lowest();
-    max_y = std::numeric_limits<double>::lowest();
-    for (uint j = 0; j < park_space.shape().size(); j++) {
-      // WB: c结构体没有设置size，默认4
-      auto lot_point = park_space.shape(j);
-      // for (const auto &lot_point : park_space.shape()) {
-      v.x() = lot_point.x();
-      v.y() = lot_point.y();
-      v.z() = lot_point.z();
-      auto park_space_point_car = enu2car_matrix(v);
-      min_x = std::fmin(min_x, park_space_point_car.x());
-      min_y = std::fmin(min_y, park_space_point_car.y());
-      max_x = std::fmax(max_x, park_space_point_car.x());
-      max_y = std::fmax(max_y, park_space_point_car.y());
-      slot_point.emplace_back(
-          planning_math::Vec2d(lot_point.x(), lot_point.y()));
-    }
-    if (((min_y > 0 && min_y < kMaxDistanceY) ||
-         (max_y < 0 && max_y > -kMaxDistanceY) || (min_y <= 0 && max_y >= 0)) &&
-        min_x < kMaxDistanceFrontX && max_x > -kMaxDistanceBackX) {
-      points_.emplace_back(std::move(slot_point));
+      min_x = std::numeric_limits<double>::max();
+      min_y = std::numeric_limits<double>::max();
+      max_x = std::numeric_limits<double>::lowest();
+      max_y = std::numeric_limits<double>::lowest();
+      for (uint j = 0; j < park_space.shape().size(); j++) {
+        // WB: c结构体没有设置size，默认4
+        auto lot_point = park_space.shape(j);
+        // for (const auto &lot_point : park_space.shape()) {
+        v.x() = lot_point.x();
+        v.y() = lot_point.y();
+        v.z() = lot_point.z();
+        auto park_space_point_car = enu2car_matrix(v);
+        min_x = std::fmin(min_x, park_space_point_car.x());
+        min_y = std::fmin(min_y, park_space_point_car.y());
+        max_x = std::fmax(max_x, park_space_point_car.x());
+        max_y = std::fmax(max_y, park_space_point_car.y());
+        slot_point.emplace_back(
+            planning_math::Vec2d(lot_point.x(), lot_point.y()));
+      }
+      if (((min_y > 0 && min_y < kMaxDistanceY) ||
+           (max_y < 0 && max_y > -kMaxDistanceY) ||
+           (min_y <= 0 && max_y >= 0)) &&
+          min_x < kMaxDistanceFrontX && max_x > -kMaxDistanceBackX) {
+        points_.emplace_back(std::move(slot_point));
+      }
     }
   }
   return true;
