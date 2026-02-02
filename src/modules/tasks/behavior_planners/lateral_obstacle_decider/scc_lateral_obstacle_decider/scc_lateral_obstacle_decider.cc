@@ -2180,7 +2180,12 @@ void SccLateralObstacleDecider::GenerateSpatioTemporalFollowDecision(
   double lane_width_actor =
       interp(lane_width_, config_.lane_width_bp, config_.lane_width_factor);
   lead_d_path_thr = lead_d_path_thr * lane_width_actor;
-  lead_d_path_thr = lead_d_path_thr * config_.extra_ratio_for_cut_out;// cut_out 相对保守
+  double lat_safety_buffer = CalDynamicLatBuffer(frenet_obstacle);
+  lead_d_path_thr = std::max(
+      0.0,
+      std::min(lane_width_ - lat_safety_buffer - ego_width_, lead_d_path_thr));
+  lead_d_path_thr =
+      lead_d_path_thr * config_.extra_ratio_for_cut_out;  // cut_out 相对保守
   bool is_vru =
       obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
       obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_BICYCLE ||
