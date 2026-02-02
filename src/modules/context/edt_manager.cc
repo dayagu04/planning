@@ -221,10 +221,14 @@ bool EdtManager::FilterObstacleForAra(
 }
 
 void EdtManager::update() {
-  if (!session_->is_hpp_scene() || !session_->is_rads_scene() ||
+  if (!(session_->is_hpp_scene() || session_->is_rads_scene()) ||
       !session_->planning_context().last_planning_success()) {
     return;
   }
+  // if (!session_->is_hpp_scene() ||
+  //     !session_->planning_context().last_planning_success()) {
+  //   return;
+  // }
   is_edt_valid_ = false;
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();

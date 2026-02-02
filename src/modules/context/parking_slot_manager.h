@@ -43,10 +43,6 @@ class ParkingSlotManager {
     return target_slot_center_;
   }
 
-  const planning_math::Polygon2d &GetTargetSlotPolygon() const {
-    return target_slot_polygon_;
-  }
-
   void SetIsReachedTarget(const bool is_reached_target_slot, const bool is_reached_target_dest) {
     is_reached_target_slot_ = is_reached_target_slot;
     is_reached_target_dest_ = is_reached_target_dest;
@@ -75,7 +71,6 @@ class ParkingSlotManager {
 
   planning_math::Vec2d target_slot_center_;
   ParkingSlotPoints target_slot_;
-  planning_math::Polygon2d target_slot_polygon_;
   std::vector<ParkingSlotPoints> points_;
   ParkingLimiters limiters_;
 };
