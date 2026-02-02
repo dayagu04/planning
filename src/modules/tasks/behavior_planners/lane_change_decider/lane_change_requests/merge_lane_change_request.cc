@@ -502,7 +502,9 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
 
     if (is_right_edge_side_lane && !is_split_region &&
         function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-      if (exist_left_direction_merge && left_lane_is_on_navigation_route) {
+      if (exist_left_direction_merge &&
+          (left_lane_is_on_navigation_route ||
+          (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
         is_exist_left_merge_direction_ = true;
         merge_lane_change_direction_ = LEFT_CHANGE;
         return;
@@ -510,7 +512,9 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     }
     if (is_left_edge_side_lane && !is_split_region &&
         function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-      if (exist_right_direction_merge && right_lane_is_on_navigation_route) {
+      if (exist_right_direction_merge &&
+          (right_lane_is_on_navigation_route ||
+          (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
         is_exist_right_merge_direction_ = true;
         merge_lane_change_direction_ = RIGHT_CHANGE;
         return;
@@ -527,11 +531,13 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     both_lane_line_exist_virtual_or_not_ = true;
   } else if (left_boundary_exist_virtual_type &&
              !target_right_boundary_exist_virtual_type && is_merge_region &&
-             left_lane_is_on_navigation_route) {
+             (left_lane_is_on_navigation_route ||
+             (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
     merge_lane_change_direction_ = LEFT_CHANGE;
   } else if (right_boundary_exist_virtual_type &&
              !target_left_boundary_exist_virtual_type && is_merge_region &&
-             right_lane_is_on_navigation_route) {
+             (right_lane_is_on_navigation_route ||
+             (!left_lane_is_on_navigation_route && !right_lane_is_on_navigation_route))) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
   } else if (!right_boundary_exist_virtual_type &&
              !left_boundary_exist_virtual_type) {
