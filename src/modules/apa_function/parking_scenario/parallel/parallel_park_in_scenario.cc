@@ -2890,19 +2890,18 @@ const bool ParallelParkInScenario::CheckLastPathCollided() {
 // To use or not to use, that is the question.
 const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
   ILOG_INFO << "Enter  UseOrNotUseLastPath";
-  if (frame_.is_replan_first) {
-    const EgoInfoUnderSlot& ego_info_under_slot =
+  const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-    if (ego_info_under_slot.slot_occupied_ratio > 0.1) {
-      ILOG_INFO << "ego_info_under_slot occupied, not need update";
-      return parallel_path_planner_;
-    }
+  if (ego_info_under_slot.slot_occupied_ratio > 0.1) {
+    ILOG_INFO << "ego_info_under_slot occupied, not need update";
+    frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+    return parallel_path_planner_;
+  }
+  if (frame_.is_replan_first) {
     ILOG_INFO << "first replan, not using last path";
     frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
     return parallel_path_planner_;
   }
-  const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   const pnc::geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
 
