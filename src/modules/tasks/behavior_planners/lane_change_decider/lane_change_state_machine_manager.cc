@@ -4244,7 +4244,7 @@ bool LaneChangeStateMachineManager::
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
       }
-      if (ego_press_line_ratio > 0.01 && is_side_clear_) {//对侧方车保持返回能力
+      if (ego_press_line_ratio > 0.01 && is_side_clear_  && is_executing) {//对侧方车保持返回能力
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
       if (is_executing) {
@@ -4296,8 +4296,8 @@ bool LaneChangeStateMachineManager::
         box_longitudinal_buff =
             box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio;
       }
-      if (ego_press_line_ratio > 0.3 && is_side_clear_) {
-        break;  // 已经压线过多，侧方无车 不返回
+      if (ego_press_line_ratio > 0.3 && is_side_clear_ && is_executing) {
+        break;  // 已经压线过多，侧方无车 不返回 //只允许在executing状态下到达
       }
       // 记录 ttc
       // 记录预测轨迹上的纵向buff
