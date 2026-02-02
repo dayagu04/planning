@@ -30,12 +30,15 @@ max_time = bag_loader.load_all_data()
 # global_var.set_value('g_is_display_enu', False)
 # global_var.set_value('is_vis_map', True)
 car_type = global_var.get_value('car_type')
+scene_type = global_var.get_value('scene_type')
 steer_ratio = load_steer_ratio(car_type)
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
 fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_plan_figure(fig1, local_view_data)
-fig1.height = 1500
+if scene_type == 'HPP':
+  fig1.width = 1200
+  fig1.height = 1300
 
 load_measure_distance_tool(fig1)
 load_measure_distance_tool(fig7)
@@ -242,7 +245,10 @@ pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, 
 pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(column(data_behavior_table_1)))), title="BehaviorInfo")
 pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")
-pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ])
+if scene_type == "HPP":
+  pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ], height = 1200)
+else:
+  pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ])
 if global_fig_plot:
   bkp.show(row(fig1, pans), notebook_handle=True)
 else:

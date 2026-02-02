@@ -109,27 +109,31 @@ bool ParkingSlotManager::Update(
     const auto& parking_slot = parking_slot_lists[i];
     size_t slot_id = parking_slot.id;
     auto resource_type = parking_slot.resource_type;
+    for (const auto& corner_point : parking_slot.corner_points) {
+      slot_point.emplace_back(
+          planning_math::Vec2d(corner_point.x, corner_point.y));
+    }
+    points_.push_back(slot_point);
+
+    bool curr_slot_is_selected_slot = false;
+    bool curr_slot_is_memorized_slot = false;
     if (slot_id == parking_fusion_info.select_slot_id) {
       select_slot_id_ = parking_fusion_info.select_slot_id;
       is_exist_select_slot_ = true;
+      curr_slot_is_selected_slot = true;
     } else if(slot_id == parking_fusion_info.memorized_slot_id) {
       memory_slot_id_ = parking_fusion_info.memorized_slot_id;
       is_exist_memory_slot_ = true;
+      curr_slot_is_memorized_slot = true;
     }
-    if(is_exist_select_slot_ || is_exist_memory_slot_) {
+    if((curr_slot_is_memorized_slot && !is_exist_target_slot_) || curr_slot_is_selected_slot) {
       is_exist_target_slot_ = true;
       target_slot_id_ = slot_id;
-      for (const auto& corner_point : parking_slot.corner_points) {
-        target_slot_.emplace_back(
-            planning_math::Vec2d(corner_point.x, corner_point.y));
-      }
       // 0 和 1 为车位入口点
       double target_x = (parking_slot.corner_points[0].x + parking_slot.corner_points[1].x) / 2.0;
       double target_y = (parking_slot.corner_points[0].y + parking_slot.corner_points[1].y) / 2.0;
       target_slot_center_ = planning_math::Vec2d(target_x, target_y);
-      planning_math::Polygon2d::ComputeConvexHull(target_slot_,
-                                                  &target_slot_polygon_);
-      break;
+      target_slot_ = slot_point;
     }
   }
   return true;
