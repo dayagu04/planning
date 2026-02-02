@@ -70,7 +70,6 @@ class HybridAStarInterface {
   // multi-thread, output
   void UpdateOutput();
 
-
   HierarchyEulerDistanceTransform* GetMutableHierarchyEDT() {
     return &hierarchy_edt_;
   }
@@ -105,7 +104,8 @@ class HybridAStarInterface {
                                  std::vector<float>& phi);
 
   // for debug
-  MultiHeightFootPrintView* GetCircleFootPrint(const HierarchySafeBuffer buffer);
+  MultiHeightFootPrintView* GetCircleFootPrint(
+      const HierarchySafeBuffer buffer);
 
   const SearchTimeBenchmark& GetTimeBenchmark() const {
     return time_benchmark_;
@@ -113,6 +113,10 @@ class HybridAStarInterface {
 
   const SearchTrajectoryInfo& GetSearchTrajInfo() const {
     return search_traj_info_;
+  }
+
+  const std::array<HybridAStarResult, 9>& GetTarjCandidates() const {
+    return traj_candidates_;
   }
 
   // for debug
@@ -161,7 +165,8 @@ class HybridAStarInterface {
   void ParkingDirectionAttempt(const float& advised_lat_buffer_inside);
   const float GenLatBufferForCandidatePose();
   void DebugSearchTraj(const size_t path_index);
-  const bool ShouldStopSearchEarly(double& search_time, const size_t path_index);
+  const bool ShouldStopSearchEarly(double& search_time,
+                                   const size_t path_index);
 
  private:
   // read vehicle param from file

@@ -35,6 +35,7 @@ struct AstarRequest {
 
   int8_t direction_request_size = 0;
   std::array<ParkingVehDirection, 6> direction_request_stack;
+  ParkingVehDirection direction_pre_planning;
 
   RSPathRequestType rs_request;
   PlanningReason plan_reason;

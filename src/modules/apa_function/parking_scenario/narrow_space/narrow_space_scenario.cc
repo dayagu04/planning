@@ -616,8 +616,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   // publish result
   if (is_scenario_try) {
     res = PubResponseForScenarioTry(ego_info, cur_request, obs);
-
-    apa_hmi_ = PubDirectionForScenarioTry(cur_request);
   } else {
     res = PubResponseForScenarioRunning(ego_info, cur_request, obs);
   }
@@ -630,7 +628,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     const HybridAStarResult& result, Transform2d* tf) {
   if (result.x.size() < 1) {
-    ILOG_INFO << "no path";
+    ILOG_INFO << "try plan no path";
     return 0;
   }
 
@@ -670,6 +668,8 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     } else {
       gl_pt.type = 2;
     }
+    ILOG_INFO << "try-plan point : " << gl_pt.GetX() << ", " << gl_pt.GetY()
+              << ", " << gl_pt.GetTheta();
     complete_path_point_global_vec_.emplace_back(gl_pt);
   }
 
@@ -2306,7 +2306,10 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   // publish astar path in cruise state.
   Transform2d response_tf;
   response_tf.SetBasePose(response_.request.base_pose);
-  PublishHybridAstarDebugInfo(response_.result, &response_tf);
+  apa_hmi_ = PubDirectionForScenarioTry(cur_request);
+
+  PublishHybridAstarDebugInfo(GetPrePlanningParkingTraj(cur_request),
+                              &response_tf);
 
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // success
@@ -2845,6 +2848,60 @@ const bool NarrowSpaceScenario::FillParkOutPath(
   }
 
   return true;
+}
+
+ParkingVehDirection NarrowSpaceScenario::TranslatePlanningRecommendDir(
+    uint16_t dir_mask) {
+  if ((dir_mask & 0x1u) == 0) {
+    return ParkingVehDirection::NONE;
+  }
+
+  // return early according to the priority of directions or usage frequency
+  if (HasBit(dir_mask, 3)) {
+    return ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
+  }
+  if (HasBit(dir_mask, 6)) {
+    return ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
+  }
+
+  if (HasBit(dir_mask, 4)) {
+    return ParkingVehDirection::HEAD_OUT_TO_RIGHT;
+  }
+  if (HasBit(dir_mask, 1)) {
+    return ParkingVehDirection::HEAD_OUT_TO_LEFT;
+  }
+
+  if (HasBit(dir_mask, 8)) {
+    return ParkingVehDirection::TAIL_OUT_TO_RIGHT;
+  }
+  if (HasBit(dir_mask, 7)) {
+    return ParkingVehDirection::TAIL_OUT_TO_LEFT;
+  }
+
+  return ParkingVehDirection::NONE;
+}
+
+const HybridAStarResult& NarrowSpaceScenario::GetPrePlanningParkingTraj(
+    const AstarRequest& cur_request) {
+  if (cur_request.direction_request == ParkingVehDirection::HEAD_IN ||
+      cur_request.direction_request == ParkingVehDirection::TAIL_IN) {
+    return response_.result;
+  }
+
+  ParkingVehDirection direction_pre_planning =
+      cur_request.direction_request != ParkingVehDirection::NONE
+          ? cur_request.direction_request
+          : TranslatePlanningRecommendDir(apa_hmi_.planning_recommend_park_dir);
+
+  for (size_t i = 0; i < cur_request.direction_request_size; i++) {
+    // The current setting is that the non-parking-out function
+    // cur_request.direction_request_size == 0.
+    if (direction_pre_planning == cur_request.direction_request_stack[i]) {
+      return response_.traj_candidates_[i];
+    }
+  }
+
+  return response_.result;
 }
 
 }  // namespace apa_planner
