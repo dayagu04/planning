@@ -376,12 +376,16 @@ void LateralOffsetDecider::GenerateOutput() {
   LateralOffsetDeciderOutput& lateral_offset_decider_output =
       session_->mutable_planning_context()
           ->mutable_lateral_offset_decider_output();
+  const std::array<AvoidObstacleInfo, 2> avd_obstacles =
+      avoid_obstacle_maintainer5v_.avd_obstacles();
+
   lateral_offset_decider_output.is_valid =
       config_.is_valid_lateral_offset && fabs(lateral_offset_) > 1e-2;
   lateral_offset_decider_output.lateral_offset = lateral_offset_;
   lateral_offset_decider_output.enable_bound =
       lateral_offset_calculatorv2_.enable_bound();
   lateral_offset_decider_output.avoid_ids.clear();
+  lateral_offset_decider_output.avd_obstacles = avd_obstacles;
 }
 
 }  // namespace planning
