@@ -200,37 +200,66 @@ void HppLateralObstacleDecider::UpdateLatDecision(
   lat_obstacle_decision.clear();
   constexpr double kNearFrontThreshold = 7;
   constexpr double kHeadLBuffer = 0.5;
+
+  constexpr double kMaxHysteresisBuffer = 0.6; // 最大迟滞缓冲 (米)
+  constexpr double kMaxSideLockDist = 0.6;     // 最大侧向锁定距离 (米)
+
+  std::unordered_set<uint32_t> current_frame_obstacle_ids;
+
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
-      const double obstacle_l_start =
-          obstacle->frenet_obstacle_boundary().l_start;
-      const double obstacle_l_end = obstacle->frenet_obstacle_boundary().l_end;
-      const double obstacle_s_start =
-          obstacle->frenet_obstacle_boundary().s_start;
-      const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
+      current_frame_obstacle_ids.insert(obstacle->id());
+      auto& info = obstacle_consistency_map_[obstacle->id()];
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
-        double l_buffer = 0;
+        double l_base = 0.0;
         if (obstacle->obstacle()->type() ==
                 iflyauto::ObjectType::OBJECT_TYPE_COLUMN ||
             obstacle->obstacle()->type() ==
                 iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE) {
-          l_buffer = config_.column_l_buffer_for_decision;
+          l_base = config_.column_l_buffer_for_decision;
         } else {
-          l_buffer = config_.l_buffer_for_lat_decision;
+          l_base = config_.l_buffer_for_lat_decision;
         }
+
+        double growth_factor = 0.0;
+        if (info.last_decision == LatObstacleDecisionType::LEFT ||
+            info.last_decision == LatObstacleDecisionType::RIGHT) {
+            growth_factor = (info.count <= 1) ? 0.0 : (info.count == 2) ? 0.5 : 1.0;
+        }
+
+        double l_bonus = growth_factor * kMaxHysteresisBuffer;
+        double l_total = l_base + l_bonus;
+        double current_side_lock_threshold = growth_factor * kMaxSideLockDist;
+
+        bool treat_as_left_obstacle = (obstacle->frenet_l() > 0);
+
+        if (info.count >= 2) {
+            if (info.last_decision == LatObstacleDecisionType::RIGHT) {
+                if (obstacle->frenet_l() > -current_side_lock_threshold) {
+                    treat_as_left_obstacle = true;
+                }
+            } else if (info.last_decision == LatObstacleDecisionType::LEFT) {
+                if (obstacle->frenet_l() < current_side_lock_threshold) {
+                    treat_as_left_obstacle = false;
+                }
+            }
+        }
+        const double obstacle_l_start = obstacle->frenet_obstacle_boundary().l_start;
+        const double obstacle_l_end = obstacle->frenet_obstacle_boundary().l_end;
+        const double obstacle_s_start = obstacle->frenet_obstacle_boundary().s_start;
+        const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
 
         const double ego_head_l_start = ego_head_l - half_ego_width;
         const double ego_head_l_end = ego_head_l + half_ego_width;
-        const double ego_s_start =
-            reference_path_ptr->get_frenet_ego_state().boundary().s_start;
-        const double ego_s_end =
-            reference_path_ptr->get_frenet_ego_state().boundary().s_end;
+        const double ego_s_start = reference_path_ptr->get_frenet_ego_state().boundary().s_start;
+        const double ego_s_end = reference_path_ptr->get_frenet_ego_state().boundary().s_end;
+
         double start_s = std::max(ego_s_start, obstacle_s_start);
         double end_s = std::min(ego_s_end, obstacle_s_end);
         bool lon_overlap = start_s < end_s;
 
-        // 平行车辆
         if (lon_overlap) {
+          // 平行车辆逻辑
           ego_head_l = reference_path_ptr->get_frenet_ego_state().head_l();
           double ego_l = reference_path_ptr->get_frenet_ego_state().l();
           const double ego_l_start = ego_l - half_ego_width;
@@ -242,7 +271,6 @@ void HppLateralObstacleDecider::UpdateLatDecision(
           constexpr double kLatOverlapBuffer = 0.25;
           bool lat_overlap = (start_l < end_l - kLatOverlapBuffer) &&
                              (start_head_l < end_head_l - kLatOverlapBuffer);
-
           if (ego_s_end > obstacle_s_end) {
             if (ego_l < obstacle->frenet_l()) {
               lat_obstacle_decision[obstacle->id()] =
@@ -260,14 +288,14 @@ void HppLateralObstacleDecider::UpdateLatDecision(
                   LatObstacleDecisionType::LEFT;
             }
           }
-          // 防止感知误检，同时有横向和纵向overlap
           if (lat_overlap) {
             lat_obstacle_decision[obstacle->id()] =
                 LatObstacleDecisionType::IGNORE;
           }
         } else {
-          if (obstacle->frenet_l() > 0) {
-            if (obstacle_l_start > -l_buffer) {
+          if (treat_as_left_obstacle) {
+            // 左侧障碍物
+            if (obstacle_l_start > -l_total) {
               lat_obstacle_decision[obstacle->id()] =
                   LatObstacleDecisionType::RIGHT;
             } else {
@@ -275,7 +303,8 @@ void HppLateralObstacleDecider::UpdateLatDecision(
                   LatObstacleDecisionType::IGNORE;
             }
           } else {
-            if (obstacle_l_end < l_buffer) {
+            // 右侧障碍物
+            if (obstacle_l_end < l_total) {
               lat_obstacle_decision[obstacle->id()] =
                   LatObstacleDecisionType::LEFT;
             } else {
@@ -297,9 +326,29 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       } else {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
       }
+      // 在本帧决策全部做完后，与上一帧决策进行对比
+      LatObstacleDecisionType current_decision = lat_obstacle_decision[obstacle->id()];
+      if (current_decision == info.last_decision) {
+          // 决策一致：累加帧数 (上限3)
+          if (info.count < 3) {
+              info.count++;
+          }
+      } else {
+          // 决策跳变：重置帧数为1，更新LastDecision
+          info.count = 1;
+          info.last_decision = current_decision;
+      }
+
     } else {
       lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
     }
+  }
+  for (auto it = obstacle_consistency_map_.begin(); it != obstacle_consistency_map_.end(); ) {
+      if (current_frame_obstacle_ids.find(it->first) == current_frame_obstacle_ids.end()) {
+          it = obstacle_consistency_map_.erase(it);
+      } else {
+          ++it;
+      }
   }
 }
 
