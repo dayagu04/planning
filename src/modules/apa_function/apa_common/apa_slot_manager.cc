@@ -1153,154 +1153,167 @@ const bool ApaSlotManager::LateralConditions(double& dot_product,
 
 void ApaSlotManager::RedefinePerpendicular2Parallel(
     const iflyauto::ParkingFusionSlot& fusion_slot, ApaSlot& slot) {
-  if (fusion_slot.fusion_source != iflyauto::SLOT_SOURCE_TYPE_ONLY_CAMERA)
-  {
+  if (fusion_slot.fusion_source != iflyauto::SLOT_SOURCE_TYPE_ONLY_CAMERA) {
     return;
   }
   if (fusion_slot.type != iflyauto::PARKING_SLOT_TYPE_VERTICAL) {
     return;
   }
-  if (fusion_slot.allow_parking != iflyauto::ALLOW_PARKING)
-  {
+  if (fusion_slot.allow_parking != iflyauto::ALLOW_PARKING) {
     return;
   }
+  if (state_machine_ptr_->IsSearchingInStatus()) {
+    ApaObstacleManager obs = *obstacle_manager_ptr_.get();
+    geometry_lib::GlobalToLocalTf g2l_tf;
+    Eigen::Vector2d origin_pos;
+    double origin_global_heading;
+    geometry_lib::PathPoint ego_local_point;
 
-  ApaObstacleManager obs = *obstacle_manager_ptr_.get();
-  geometry_lib::GlobalToLocalTf g2l_tf;
-  Eigen::Vector2d origin_pos;
-  double origin_global_heading;
-  geometry_lib::PathPoint ego_local_point;
-  int ego_side_to_slot = 0;  //-1:left 1:right
-  bool left_area_is_empty = true, right_area_is_empty = true,
-       front_area_is_empty = true;
-  bool is_redefine_slot_type = false;
+    bool left_area_is_empty = true, right_area_is_empty = true,
+         front_area_is_empty = true;
 
-  g2l_tf = slot.g2l_tf_;
+    g2l_tf = slot.g2l_tf_;
 
-  slot.TransformCoordFromGlobalToLocal(g2l_tf);
+    slot.TransformCoordFromGlobalToLocal(g2l_tf);
 
-  obs.TransformCoordFromGlobalToLocal(g2l_tf);
+    obs.TransformCoordFromGlobalToLocal(g2l_tf);
 
-  ego_local_point.pos = g2l_tf.GetPos(measure_data_ptr_->GetPos());
-  ego_local_point.heading = g2l_tf.GetHeading(measure_data_ptr_->GetHeading()) * 57.3;
-  if (ego_local_point.heading > 80 || ego_local_point.heading < -80)
-  {
-    return;
-  }
-  if (fabs(ego_local_point.pos.y()) > 5)
-  {
-    return;
-  }
-  ILOG_INFO << "ego_local_point.pos.x = " << ego_local_point.pos.x() << "ego_local_point.pos.y = "
-            << ego_local_point.pos.y() << "ego_local_point.heading = " << ego_local_point.heading;
-  cdl::AABB slot_left_area, slot_right_area, slot_front_area;
-  double min_x, min_y, max_x, max_y;
-  min_x = 1.5;
-  min_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
-                   slot.origin_corner_coord_local_.pt_3.y());
-  max_x = std::max(slot.origin_corner_coord_local_.pt_0.x(),
-                   slot.origin_corner_coord_local_.pt_1.x());
-  max_y = min_y + 1.5;
-  slot_left_area.min_ = cdl::Vector2r(min_x, min_y);
-  slot_left_area.max_ = cdl::Vector2r(max_x, max_y);
-  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
-                   slot.origin_corner_coord_local_.pt_2.y()) - 1.5;
-  max_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
-                   slot.origin_corner_coord_local_.pt_2.y());
-  slot_right_area.min_ = cdl::Vector2r(min_x, min_y);
-  slot_right_area.max_ = cdl::Vector2r(max_x, max_y);
-  min_x = std::min(slot.origin_corner_coord_local_.pt_0.x(),
-                   slot.origin_corner_coord_local_.pt_1.x());
-  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
-                   slot.origin_corner_coord_local_.pt_2.y()) + 0.3;
-  max_x = min_x + 3.5;
-  max_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
-                   slot.origin_corner_coord_local_.pt_3.y()) - 0.3;
-  slot_front_area.min_ = cdl::Vector2r(min_x, min_y);
-  slot_front_area.max_ = cdl::Vector2r(max_x, max_y);
-  for (const auto& pair : obs.GetObstacles()) {
-    for (const auto& pt : pair.second.GetPtClout2dLocal()) {
-      if (left_area_is_empty) {
-        left_area_is_empty = !(slot_left_area.contain(cdl::Vector2r(pt.x(), pt.y())));
-      }
-      if (right_area_is_empty) {
-        right_area_is_empty = !(slot_right_area.contain(cdl::Vector2r(pt.x(), pt.y())));
-      }
-      if (front_area_is_empty) {
-        front_area_is_empty = !(slot_front_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+    ego_local_point.pos = g2l_tf.GetPos(measure_data_ptr_->GetPos());
+    ego_local_point.heading =
+        g2l_tf.GetHeading(measure_data_ptr_->GetHeading()) * 57.3;
+    if (ego_local_point.heading > 80 || ego_local_point.heading < -80) {
+      return;
+    }
+    if (fabs(ego_local_point.pos.y()) > 5) {
+      return;
+    }
+    ILOG_INFO << "ego_local_point.pos.x = " << ego_local_point.pos.x()
+              << "ego_local_point.pos.y = " << ego_local_point.pos.y()
+              << "ego_local_point.heading = " << ego_local_point.heading;
+    cdl::AABB slot_left_area, slot_right_area, slot_front_area;
+    double min_x, min_y, max_x, max_y;
+    min_x = 1.5;
+    min_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
+                     slot.origin_corner_coord_local_.pt_3.y());
+    max_x = std::max(slot.origin_corner_coord_local_.pt_0.x(),
+                     slot.origin_corner_coord_local_.pt_1.x());
+    max_y = min_y + 1.5;
+    slot_left_area.min_ = cdl::Vector2r(min_x, min_y);
+    slot_left_area.max_ = cdl::Vector2r(max_x, max_y);
+    min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                     slot.origin_corner_coord_local_.pt_2.y()) -
+            1.5;
+    max_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                     slot.origin_corner_coord_local_.pt_2.y());
+    slot_right_area.min_ = cdl::Vector2r(min_x, min_y);
+    slot_right_area.max_ = cdl::Vector2r(max_x, max_y);
+    min_x = std::min(slot.origin_corner_coord_local_.pt_0.x(),
+                     slot.origin_corner_coord_local_.pt_1.x());
+    min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                     slot.origin_corner_coord_local_.pt_2.y()) +
+            0.3;
+    max_x = min_x + 3.5;
+    max_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
+                     slot.origin_corner_coord_local_.pt_3.y()) -
+            0.3;
+    slot_front_area.min_ = cdl::Vector2r(min_x, min_y);
+    slot_front_area.max_ = cdl::Vector2r(max_x, max_y);
+    for (const auto& pair : obs.GetObstacles()) {
+      for (const auto& pt : pair.second.GetPtClout2dLocal()) {
+        if (left_area_is_empty) {
+          left_area_is_empty =
+              !(slot_left_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+        }
+        if (right_area_is_empty) {
+          right_area_is_empty =
+              !(slot_right_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+        }
+        if (front_area_is_empty) {
+          front_area_is_empty =
+              !(slot_front_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+        }
       }
     }
-  }
 
-  ILOG_INFO << "slot origin id = " << fusion_slot.id << "  left_area_is_empty = " << static_cast<int>(left_area_is_empty) << "  right_area_is_empty = " << static_cast<int>(right_area_is_empty)
-            << "  front_area_is_empty = " << static_cast<int>(front_area_is_empty);
+    ILOG_INFO << "slot origin id = " << fusion_slot.id
+              << "  left_area_is_empty = "
+              << static_cast<int>(left_area_is_empty)
+              << "  right_area_is_empty = "
+              << static_cast<int>(right_area_is_empty)
+              << "  front_area_is_empty = "
+              << static_cast<int>(front_area_is_empty);
 
-  if (ego_local_point.pos.y() < slot.origin_corner_coord_local_.pt_0.y()) {
-    ego_side_to_slot = 1;
-    if (!right_area_is_empty) {
-      return;
-    } else {
-      if (!front_area_is_empty) {
-        is_redefine_slot_type = true;
+    if (ego_local_point.pos.y() < slot.origin_corner_coord_local_.pt_0.y()) {
+      ego_side_to_slot_ = 1;
+      if (!right_area_is_empty) {
+        return;
       } else {
-        if (ego_local_point.pos.x() +
-                apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
-            slot.origin_corner_coord_local_.pt_1.x()) {
-          if (ego_local_point.heading <= 4 &&
-              ego_local_point.heading > -80) {
-            is_redefine_slot_type = true;
-            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
-          } else {
-            return;
-          }
+        if (!front_area_is_empty) {
+          is_redefine_slot_type_ = true;
         } else {
-          if (ego_local_point.heading > 2) {
-            return;
+          if (ego_local_point.pos.x() +
+                  apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
+              slot.origin_corner_coord_local_.pt_1.x()) {
+            if (ego_local_point.heading <= 4 && ego_local_point.heading > -80) {
+              is_redefine_slot_type_ = true;
+              ILOG_INFO << "is_redefine_slot_type_ = "
+                        << static_cast<int>(is_redefine_slot_type_);
+            } else {
+              return;
+            }
           } else {
-            is_redefine_slot_type = true;
-            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
+            if (ego_local_point.heading > 2) {
+              return;
+            } else {
+              is_redefine_slot_type_ = true;
+              ILOG_INFO << "is_redefine_slot_type_ = "
+                        << static_cast<int>(is_redefine_slot_type_);
+            }
+          }
+        }
+      }
+    } else if (ego_local_point.pos.y() >
+               slot.origin_corner_coord_local_.pt_1.y()) {
+      ego_side_to_slot_ = -1;
+      if (!left_area_is_empty) {
+        return;
+      } else {
+        if (!front_area_is_empty) {
+          is_redefine_slot_type_ = true;
+        } else {
+          if (ego_local_point.pos.x() +
+                  apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
+              slot.origin_corner_coord_local_.pt_0.x()) {
+            if (ego_local_point.heading >= -4 && ego_local_point.heading < 80) {
+              is_redefine_slot_type_ = true;
+              ILOG_INFO << "is_redefine_slot_type_ = "
+                        << static_cast<int>(is_redefine_slot_type_);
+            } else {
+              return;
+            }
+          } else {
+            if (ego_local_point.heading < -2) {
+              return;
+            } else {
+              is_redefine_slot_type_ = true;
+              ILOG_INFO << "is_redefine_slot_type_ = "
+                        << static_cast<int>(is_redefine_slot_type_);
+            }
           }
         }
       }
     }
-  } else if (ego_local_point.pos.y() >
-             slot.origin_corner_coord_local_.pt_1.y()) {
-    ego_side_to_slot = -1;
-    if (!left_area_is_empty) {
-      return;
-    } else {
-      if (!front_area_is_empty) {
-        is_redefine_slot_type = true;
-      } else {
-        if (ego_local_point.pos.x() +
-                apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
-            slot.origin_corner_coord_local_.pt_0.x()) {
-          if (ego_local_point.heading >= -4 &&
-              ego_local_point.heading < 80) {
-            is_redefine_slot_type = true;
-            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
-          } else {
-            return;
-          }
-        } else {
-          if (ego_local_point.heading < -2) {
-            return;
-          } else {
-            is_redefine_slot_type = true;
-            ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
-          }
-        }
-      }
-    }
+    ILOG_INFO << "is_redefine_slot_type_ = "
+              << static_cast<int>(is_redefine_slot_type_);
   }
-  ILOG_INFO << "is_redefine_slot_type = " << static_cast<int>(is_redefine_slot_type);
-  if (is_redefine_slot_type)
-  {
+
+  if (is_redefine_slot_type_) {
     iflyauto::ParkingFusionSlot redefined_fusion_slot = fusion_slot;
-    redefined_fusion_slot.type = iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL;
-    slot.Update(redefined_fusion_slot,is_redefine_slot_type,ego_side_to_slot);
+    redefined_fusion_slot.type =
+        iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL;
+    slot.Update(redefined_fusion_slot, is_redefine_slot_type_,
+                ego_side_to_slot_);
   }
-
 }
 
 }  // namespace apa_planner

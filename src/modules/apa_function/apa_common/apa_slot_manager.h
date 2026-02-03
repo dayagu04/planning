@@ -227,6 +227,8 @@ class ApaSlotManager final {
     parallel_slot_release_count_map_.clear();
     parallel_slot_not_release_count_map_.clear();
     pre_plan_fail_slot_id_uset_.clear();
+    is_redefine_slot_type_ = false;
+    ego_side_to_slot_ = 0;
   }
 
   void GenerateReleaseSlotIdVec();
@@ -306,6 +308,8 @@ class ApaSlotManager final {
   std::unordered_map<size_t, int> parallel_slot_release_count_map_;
   std::unordered_map<size_t, int> parallel_slot_not_release_count_map_;
   bool recommend_park_out_ = false;
+  bool is_redefine_slot_type_ = false;
+  int ego_side_to_slot_ = 0;//-1:left 1:right
 };
 }  // namespace apa_planner
 }  // namespace planning
