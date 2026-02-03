@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+
 #include "avoid_obstacle_maintainer5V.h"
 #include "config/basic_type.h"
 #include "define/planning_status.h"
@@ -19,11 +20,12 @@ class LateralOffsetCalculatorV2 {
 
   bool Process(framework::Session* session,
                const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
+               const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history,
                const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle,
-               LaneInfo lane_info,
-               double dist_rblane, bool flag_avd);
+               LaneInfo lane_info, double dist_rblane, bool flag_avd);
 
-  double lat_offset() const { return avoid_info_.lat_offset; }
+  double lat_offset() const { return lateral_offset_; }
+  const AvoidInfo& avoid_info() const { return avoid_info_; }
   bool enable_bound() const { return enable_bound_; }
   void Reset();
   void ResetOffsetHysteresisMaps();
@@ -41,7 +43,8 @@ class LateralOffsetCalculatorV2 {
 
   bool update(int lane_status, bool flag_avoid, bool execute_premove,
               double dist_rblane,
-              const std::array<AvoidObstacleInfo, 2>& avoid_car_info,
+              const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
+              const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history,
               const std::array<AvoidObstacleInfo, 2>& avoid_sp_car_info);
   bool AvoidWaySelectForTwoObstacle(const AvoidObstacleInfo& avoid_obstacle_1,
                                     const AvoidObstacleInfo& avoid_obstacle_2,
@@ -86,6 +89,10 @@ class LateralOffsetCalculatorV2 {
   double SmoothLateralOffset(const AvoidObstacleInfo& avoid_obstacle,
                              double lat_offset, const AvoidWay* avoid_way);
   void PostProcess(const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
+  void PostSmoothLateralOffset(
+      double in_lat_offset,
+      const std::array<AvoidObstacleInfo, 2> avoid_obstacles,
+      const std::array<AvoidObstacleInfo, 2> avd_obstacles_history);
   void SaveDebugInfo();
 
  private:
@@ -117,6 +124,7 @@ class LateralOffsetCalculatorV2 {
   AvoidInfo avoid_info_;
   AvoidInfo last_avoid_info_;
   int avoid_id_ = -1;
+  double lateral_offset_ = 0.0;
   std::vector<int> front_left_max_opposite_offset_ids_;
   std::vector<int> front_right_max_opposite_offset_ids_;
   std::vector<int> side_left_max_opposite_offset_ids_;

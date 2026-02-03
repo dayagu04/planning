@@ -1,5 +1,6 @@
 #pragma once
 #include <variant>
+
 #include "lateral_obstacle.h"
 #include "utils/hysteresis_decision.h"
 
@@ -107,7 +108,7 @@ struct AvoidObstacleInfo {
     vs_lat_relative = 0;
     min_l_to_ref = 0;
     max_l_to_ref = 0;
-    first_s_to_ego = 0;  //第一次识别成avoid_car的时候的距离
+    first_s_to_ego = 0;  // 第一次识别成avoid_car的时候的距离
     curr_time = 0;
     t_exceed_avd_obstacle = MAX_T_EXCEED_AVD_CAR;
     allow_max_opposite_offset = 0;
@@ -122,21 +123,21 @@ struct AvoidObstacleInfo {
   double intersection_index;
   double vs;
   double vs_lon_relative;
-  double predict_vs_lon_relative;  //根据自车的速度变化，预测障碍物相对速度
+  double predict_vs_lon_relative;  // 根据自车的速度变化，预测障碍物相对速度
   double s_to_ego;
   double tail_s_to_ego;
   double vs_lat_relative;
   double min_l_to_ref;
   double max_l_to_ref;
-  double first_s_to_ego;         //第一次识别成avoid_car的时候的距离
-  double curr_time;              //单位s
-  double t_exceed_avd_obstacle;  //单位s
+  double first_s_to_ego;  // 第一次识别成avoid_car的时候的距离
+  double curr_time;       // 单位s
+  double t_exceed_avd_obstacle;  // 单位s
   double allow_max_opposite_offset;
   uint track_id = 0;
   int type;
   int update_flag = AvoidObstacleUpdateFlag::Update;
   double length;
-  int num_out_avd_area;  //出避让区域的次数
+  int num_out_avd_area;  // 出避让区域的次数
   bool is_passive = false;
 };
 
@@ -163,7 +164,7 @@ struct AvoidInfo {
     allow_side_max_opposite_offset_id = kDefaultLimitId;
     is_use_ego_position = false;
   }
-  void operator=(const AvoidInfo &avoid_info) {
+  void operator=(const AvoidInfo& avoid_info) {
     normal_left_avoid_threshold = avoid_info.normal_left_avoid_threshold;
     normal_right_avoid_threshold = avoid_info.normal_right_avoid_threshold;
     desire_lat_offset = avoid_info.desire_lat_offset;
@@ -194,33 +195,33 @@ struct AvoidInfo {
 namespace lateral_offset_decider {
 const double kTruckMinLength = 6.5;
 bool IsCameraObstacle(const std::shared_ptr<FrenetObstacle> tr);
-bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle);
+bool IsStaticObstacle(const AvoidObstacleInfo& avoid_obstacle);
 bool IsInConsiderLateralRange();
 bool IsFrontObstacleConsider(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
-    bool is_left, const AvoidInfo &avoid_info,
+    const framework::Session* session, const std::shared_ptr<FrenetObstacle> tr,
+    bool is_left, const AvoidInfo& avoid_info,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
-                          std::map<std::pair<int, int>, HysteresisDecision>>>
-        &hysteresis_maps);
+                          std::map<std::pair<int, int>, HysteresisDecision>>>&
+        hysteresis_maps);
 bool IsSideObstacleConsider(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
+    const framework::Session* session, const std::shared_ptr<FrenetObstacle> tr,
     bool is_left,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
-                          std::map<std::pair<int, int>, HysteresisDecision>>>
-        &hysteresis_maps);
-bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
-                                    const AvoidObstacleInfo &avoid_obstacle,
+                          std::map<std::pair<int, int>, HysteresisDecision>>>&
+        hysteresis_maps);
+bool AvoidWaySelectForTwoObstaclev2(const framework::Session* session,
+                                    const AvoidObstacleInfo& avoid_obstacle,
                                     const std::shared_ptr<FrenetObstacle> tr);
-bool IsTruck(const AvoidObstacleInfo &avoid_obstacle);
-bool IsVRU(const AvoidObstacleInfo &avoid_obstacle);
-bool IsCone(const AvoidObstacleInfo &avoid_obstacle);
-bool IsPassive(const AvoidObstacleInfo &avoid_obstacle);
-bool HasEnoughSpace(const AvoidObstacleInfo &avoid_obstacle_1,
-                    const AvoidObstacleInfo &avoid_obstacle_2);
-bool HasOverlap(const framework::Session *session,
-                const AvoidObstacleInfo &avoid_obstacle, double front_lon_buf,
+bool IsTruck(const AvoidObstacleInfo& avoid_obstacle);
+bool IsVRU(const AvoidObstacleInfo& avoid_obstacle);
+bool IsCone(const AvoidObstacleInfo& avoid_obstacle);
+bool IsPassive(const AvoidObstacleInfo& avoid_obstacle);
+bool HasEnoughSpace(const AvoidObstacleInfo& avoid_obstacle_1,
+                    const AvoidObstacleInfo& avoid_obstacle_2);
+bool HasOverlap(const framework::Session* session,
+                const AvoidObstacleInfo& avoid_obstacle, double front_lon_buf,
                 double rear_lon_buf);
 }  // namespace lateral_offset_decider
 }  // namespace planning

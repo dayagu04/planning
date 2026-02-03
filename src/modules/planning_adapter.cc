@@ -96,8 +96,9 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
 bool PlanningAdapter::Proc() {
   ILOG_INFO << "PlanningAdapter::Proc()";
   start_time_ = IflyTime::Now_us();
-  
+
   SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_start);
+  // 1.1 receive prediction
   // 1.1 receive prediction
   if (is_prediction_result_msg_updated_) {
     std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
@@ -393,6 +394,8 @@ bool PlanningAdapter::Proc() {
   SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_end);
 
   double planning_cost_time = (IflyTime::Now_us() - start_time_) / 1000;
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
+                                    planning_cost_time);
 
   return true;
 }
