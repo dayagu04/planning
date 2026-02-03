@@ -474,7 +474,7 @@ double SideNudgeLateralOffsetDecider::DesireLateralOffsetSideWay(
   const auto& obstacles_map = reference_path_ptr_->get_obstacles_map();
   // const auto &ego_boundary = ego_frenet_state.boundary();
   if (obstacles_map.find(nudge_info_.id) == obstacles_map.end()) {
-    return true;
+    return lat_offset;
   }
   const auto frenet_obstacle = obstacles_map.at(nudge_info_.id);
   double nearest_l_to_ref =
