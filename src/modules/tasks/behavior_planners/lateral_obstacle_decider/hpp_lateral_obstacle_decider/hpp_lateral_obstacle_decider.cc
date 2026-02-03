@@ -181,6 +181,29 @@ bool HppLateralObstacleDecider::ARAStar() {
   return (find_path && hybrid_ara_result.Valid());
 }
 
+void HppLateralObstacleDecider::ClearOldConsistencyInfo(
+    const std::unordered_set<uint32_t>& current_frame_ids,
+    double current_timestamp) {
+
+    const double kMaxIdleTimeMs = 1000.0;
+
+    for (auto it = obstacle_consistency_map_.begin(); it != obstacle_consistency_map_.end(); ) {
+        uint32_t obs_id = it->first;
+
+        if (current_frame_ids.find(obs_id) != current_frame_ids.end()) {
+            it->second.last_seen_timestamp = current_timestamp;
+            ++it;
+        } else {
+            double idle_time = current_timestamp - it->second.last_seen_timestamp;
+            if (idle_time > kMaxIdleTimeMs) {
+                it = obstacle_consistency_map_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+}
+
 void HppLateralObstacleDecider::UpdateLatDecision(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
   const auto &reference_path = session_->planning_context()
@@ -192,24 +215,36 @@ void HppLateralObstacleDecider::UpdateLatDecision(
   auto ego_head_s_ = reference_path_ptr->get_frenet_ego_state().head_s();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto ego_width = vehicle_param.width;
   const auto half_ego_width = vehicle_param.width * 0.5;
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
   lat_obstacle_decision.clear();
+
+  double current_timestamp = IflyTime::Now_ms();
+
+  std::unordered_set<uint32_t> current_frame_obstacle_ids;
+  for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
+    if (obstacle->b_frenet_valid()) {
+      current_frame_obstacle_ids.insert(static_cast<uint32_t>(obstacle->id()));
+    }
+  }
+
+  // 执行延时清理
+  ClearOldConsistencyInfo(current_frame_obstacle_ids, current_timestamp);
+
   constexpr double kNearFrontThreshold = 7;
   constexpr double kHeadLBuffer = 0.5;
-
   constexpr double kMaxHysteresisBuffer = 0.6; // 最大迟滞缓冲 (米)
   constexpr double kMaxSideLockDist = 0.6;     // 最大侧向锁定距离 (米)
 
-  std::unordered_set<uint32_t> current_frame_obstacle_ids;
-
+  // 主循环：进行决策计算
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
-      current_frame_obstacle_ids.insert(obstacle->id());
-      auto& info = obstacle_consistency_map_[obstacle->id()];
+      uint32_t obs_id = static_cast<uint32_t>(obstacle->id());
+      auto& info = obstacle_consistency_map_[obs_id];
+      info.last_seen_timestamp = current_timestamp;
+
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
         double l_base = 0.0;
         if (obstacle->obstacle()->type() ==
@@ -224,7 +259,7 @@ void HppLateralObstacleDecider::UpdateLatDecision(
         double growth_factor = 0.0;
         if (info.last_decision == LatObstacleDecisionType::LEFT ||
             info.last_decision == LatObstacleDecisionType::RIGHT) {
-            growth_factor = (info.count <= 1) ? 0.0 : (info.count == 2) ? 0.5 : 1.0;
+            growth_factor = (info.count <= 1) ? 0.0 : (info.count >= 3) ? 1.0 : 0.5;
         }
 
         double l_bonus = growth_factor * kMaxHysteresisBuffer;
@@ -326,29 +361,20 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       } else {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
       }
-      // 在本帧决策全部做完后，与上一帧决策进行对比
+      // 更新历史一致性状态
       LatObstacleDecisionType current_decision = lat_obstacle_decision[obstacle->id()];
       if (current_decision == info.last_decision) {
-          // 决策一致：累加帧数 (上限3)
-          if (info.count < 3) {
+          if (info.count < 100) { // 防止溢出
               info.count++;
           }
       } else {
-          // 决策跳变：重置帧数为1，更新LastDecision
           info.count = 1;
           info.last_decision = current_decision;
       }
 
     } else {
-      lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+      lat_obstacle_decision[static_cast<uint32_t>(obstacle->id())] = LatObstacleDecisionType::IGNORE;
     }
-  }
-  for (auto it = obstacle_consistency_map_.begin(); it != obstacle_consistency_map_.end(); ) {
-      if (current_frame_obstacle_ids.find(it->first) == current_frame_obstacle_ids.end()) {
-          it = obstacle_consistency_map_.erase(it);
-      } else {
-          ++it;
-      }
   }
 }
 

@@ -13,6 +13,11 @@
 #include "utils/kd_path.h"
 
 namespace planning {
+  struct ObstacleConsistencyInfo {
+    int count = 0;
+    LatObstacleDecisionType last_decision = LatObstacleDecisionType::IGNORE;
+    double last_seen_timestamp = 0.0;
+  };
 
 class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
  public:
@@ -30,13 +35,12 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   bool ARAStar();
   void UpdateLatDecision(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  void ClearOldConsistencyInfo(
+      const std::unordered_set<uint32_t>& current_frame_ids,
+      double current_timestamp);
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
-  struct ObstacleConsistencyInfo {
-      int count = 0;
-      LatObstacleDecisionType last_decision = LatObstacleDecisionType::IGNORE;
-  };
 
  private:
   std::unordered_map<uint32_t, LatObstacleDecisionType> output_;
