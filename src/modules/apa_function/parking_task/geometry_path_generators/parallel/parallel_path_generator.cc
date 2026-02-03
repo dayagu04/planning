@@ -3698,8 +3698,9 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
       if (is_corner_out_slot) {
         first_arc.headingB = sampled_path_pts[i].heading;
         first_arc.pB = sampled_path_pts[i].pos;
-        first_arc.length = (sampled_path_pts[i].heading - first_arc.headingA) *
-                           first_arc.circle_info.radius;
+        first_arc.length =
+            std::fabs(sampled_path_pts[i].heading - first_arc.headingA) *
+            first_arc.circle_info.radius;
         ILOG_INFO << "debug last path: ";
         first_arc.PrintInfo();
         break;

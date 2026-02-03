@@ -1196,7 +1196,6 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
-
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
       // add obs near channel
@@ -1244,13 +1243,8 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
               kStrictChannelYMagIdentification * slot_side_sgn,
               channel_point_1.y());
       if (strict_channel_y_condition) {
-        if (slot_side_sgn > 0.0) {
-          strict_channel_y =
-              std::min(obstacle_point_slot.y(), strict_channel_y);
-        } else {
-          strict_channel_y =
-              std::max(obstacle_point_slot.y(), strict_channel_y);
-        }
+        strict_channel_y =
+            std::min(std::fabs(obstacle_point_slot.y()), strict_channel_y);
       }
     }
   }
@@ -1665,7 +1659,7 @@ void ParallelParkOutScenario::SetRequestForScenarioTry(
     const double slot_width = ego_info.slot.GetWidth();
     const double slot_length = ego_info.slot.GetLength();
 
-    const double park_out_offset_y = slot_width + 0.3;
+    const double park_out_offset_y = apa_param.GetParam().car_width + 0.2;
     const double park_out_offset_x = 0.0;  // 2.49;
 
     cur_request.direction_request_size = 2;
@@ -1762,31 +1756,46 @@ void ParallelParkOutScenario::SetTargetGroup(AstarRequest& cur_request) {
     target_heading = arc_slot_init_out_heading_;
     ILOG_INFO << "update astar target heading: " << target_heading;
   }
+
+  const double min_strict_channel_y = 4.0;
   ILOG_INFO << "strict_channel_y: " << strict_channel_y;
-  if (strict_channel_y < kMinChannelYMagIdentification) {
+  if (strict_channel_y < min_strict_channel_y) {
     target_y = strict_channel_y - (apa_param.GetParam().car_width * 0.5) - 0.3;
   }
 
   float sign = frame_.is_park_out_left ? 1.0 : -1.0;
-  const size_t x_nums = 6;
-  const size_t y_nums = 3;
+  size_t x_nums = 6;
+  size_t y_nums = 3;
   const double step_x = 1.0;
   const double step_y = 0.3;
+  const bool is_searchout_state =
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus();
+  if (is_searchout_state) {
+    x_nums = 4;
+    y_nums = 2;
+  }
   for (size_t i = 0; i < x_nums; i++) {
     float x = target_x - step_x * i;
     for (size_t j = 0; j < y_nums; j++) {
       float y = (target_y + step_y * j) * sign;
-      if (strict_channel_y < kMinChannelYMagIdentification) {
-        y = target_y - (step_y * j * sign);
+      if (strict_channel_y < min_strict_channel_y) {
+        y = (target_y - step_y * j) * sign;
       }
       cur_request.parallel_target_group.emplace_back(
           Pose2f(x, y, target_heading));
+      if (is_searchout_state) {
+        float y_flipp = y * -1.0;
+        cur_request.parallel_target_group.emplace_back(
+            Pose2f(x, y_flipp, target_heading));
+      }
     }
   }
+
   // for (size_t i = 0; i < cur_request.parallel_target_group.size(); i++) {
   //   ILOG_INFO << "parallel_target_group: " << i << " "
   //             << cur_request.parallel_target_group[i].x << " "
-  //             << cur_request.parallel_target_group[i].y;
+  //             << cur_request.parallel_target_group[i].y << " heading: "
+  //             << cur_request.parallel_target_group[i].GetPhi() * kRad2Deg;
   // }
   return;
 }
