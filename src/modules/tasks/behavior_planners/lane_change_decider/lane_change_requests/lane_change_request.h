@@ -145,6 +145,13 @@ class LaneChangeRequest {
                           const double cone_s, const double cone_l,
                           bool is_left, double* dist,
                           std::vector<std::pair<double, double>>& lane_s_width);
+  bool IsCurveSurpressLaneChange() const;
+
+  bool CollectPointsFromLink(const iflymapdata::sdpro::LinkInfo_Link* link,
+                             const double front_judge_dis,
+                             std::vector<ad_common::math::Vec2d>& enu_points,
+                             double& total_len, size_t start_idx) const;
+  bool CollectConsiderPoints(std::vector<ad_common::math::Vec2d>& enu_points) const;
 
  protected:
   TrackInfo lc_invalid_track_;
