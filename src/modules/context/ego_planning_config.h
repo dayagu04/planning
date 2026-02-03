@@ -3362,6 +3362,18 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
                   curv_speed_limits_ms);
     hpp_avoid_velocity_limit_kph =
         read_json_key<double>(json, "hpp_avoid_velocity_limit_kph");
+    speed_bump_front_buffer =
+        read_json_key<double>(json, "speed_bump_front_buffer");
+    speed_bump_rear_buffer =
+        read_json_key<double>(json, "speed_bump_rear_buffer");
+    speed_bump_approach_distance =
+        read_json_key<double>(json, "speed_bump_approach_distance");
+    speed_bump_zone_speed_limit_kph =
+        read_json_key<double>(json, "speed_bump_zone_speed_limit_kph");
+    speed_bump_deceleration =
+        read_json_key<double>(json, "speed_bump_deceleration");
+    speed_bump_collision_buffer =
+        read_json_key<double>(json, "speed_bump_collision_buffer");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3403,6 +3415,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   std::vector<double> curv_speed_limits_ms = {5.0 / 3.6, 6.0 / 3.6, 8.0 / 3.6,
                                          10.0 / 3.6, 20.0 / 3.6};
   double hpp_avoid_velocity_limit_kph = 10.0;
+  double speed_bump_front_buffer = 10.0;           // m
+  double speed_bump_rear_buffer = 5.0;             // m
+  double speed_bump_approach_distance = 20.0;      // m
+  double speed_bump_zone_speed_limit_kph = 8.0;    // kph
+  double speed_bump_deceleration = -1.0;           // m/s^2
+  double speed_bump_collision_buffer = 0.0;        // m
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {

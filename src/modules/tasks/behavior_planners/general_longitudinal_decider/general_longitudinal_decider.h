@@ -40,6 +40,12 @@ struct VelocityLimitInfo {
   double v_limit_final;
 };
 
+struct SpeedBumpZoneInfo {
+  bool in_speed_bump_zone = false;       // 是否在减速带区域内
+  bool approaching_speed_bump = false;   // 是否接近减速带区域
+  double distance_to_zone = 1000.0;      // 距离减速带区域的最小距离
+};
+
 class GeneralLongitudinalDecider : public Task {
  public:
   explicit GeneralLongitudinalDecider(
@@ -140,6 +146,24 @@ class GeneralLongitudinalDecider : public Task {
   void GetHppCollisionCheckResult(
       const TrajectoryPoints &traj_points,
       std::vector<planning_math::CollisionCheckStatus> &collision_results);
+
+  /**
+   * @brief 检测自车是否在减速带区域或接近减速带区域
+   * @param traj_points 自车路径点
+   * @param ego_s 自车在参考线上的s坐标
+   * @return SpeedBumpZoneInfo 减速带区域信息
+   */
+  SpeedBumpZoneInfo CheckSpeedBumpZone(const TrajectoryPoints &traj_points,
+                                       double ego_s);
+
+  /**
+   * @brief 根据减速带区域信息计算速度限制
+   * @param zone_info 减速带区域信息
+   * @param ego_velocity 自车当前速度
+   * @return 减速带限速值（m/s）
+   */
+  double GetSpeedBumpVelocityLimit(const SpeedBumpZoneInfo &zone_info,
+                                   double ego_velocity);
 
  private:
   LongitudinalDeciderV3Config config_;

@@ -744,6 +744,32 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
                     // narrow_area_velocity   // 4. 窄路限速（暂不应用）
   });
 
+  // 减速带限速
+  if (session_->is_hpp_scene()) {
+    const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+    const auto &motion_planner_output =
+        session_->planning_context().motion_planner_output();
+
+    // 检查减速带区域
+    SpeedBumpZoneInfo speed_bump_zone_info = CheckSpeedBumpZone(
+        motion_planner_output.traj_points, frenet_ego_state.s());
+
+    // 获取减速带限速
+    double speed_bump_velocity_limit =
+        GetSpeedBumpVelocityLimit(speed_bump_zone_info, ego_v);
+
+    // 应用减速带限速
+
+    final_velocity_limit =
+        std::min(final_velocity_limit, speed_bump_velocity_limit);
+    LOG_DEBUG(
+        "Speed bump velocity limit applied: %f m/s, in_zone: %d, "
+        "approaching: %d, distance: %f m",
+        speed_bump_velocity_limit, speed_bump_zone_info.in_speed_bump_zone,
+        speed_bump_zone_info.approaching_speed_bump,
+        speed_bump_zone_info.distance_to_zone);
+  }
+
   vel_limit_info_.v_limit_final = final_velocity_limit;
 
   LOG_DEBUG(
@@ -2678,6 +2704,160 @@ void GeneralLongitudinalDecider::GetHppCollisionCheckResult(
   }
   // double end_time = MTIME()->timestamp().ms();
   // NLOGI("pnp_collision_check_debug, total time: %f", end_time - start_time);
+}
+
+SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
+    const TrajectoryPoints &traj_points, double ego_s) {
+  SpeedBumpZoneInfo zone_info;
+  
+  // 减速带区域参数
+  const double kSpeedBumpFrontBuffer = config_.speed_bump_front_buffer;
+  const double kSpeedBumpRearBuffer = config_.speed_bump_rear_buffer;
+  const double kApproachingDistance = config_.speed_bump_approach_distance;
+  const double kCollisionBuffer = config_.speed_bump_collision_buffer;
+  
+  // 获取减速带障碍物
+  const auto &obstacle_manager =
+      session_->environmental_model().get_obstacle_manager();
+  const auto &speed_bump_obstacles = obstacle_manager->get_speed_bump_obstacles();
+  
+  if (speed_bump_obstacles.Items().empty() || reference_path_ptr_ == nullptr) {
+    return zone_info;
+  }
+  
+  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return zone_info;
+  }
+  
+  // 使用纵向重叠路径（SL坐标）进行碰撞检测
+  std::vector<planning_math::Polygon2d> overlap_path;
+  make_longitudinal_overlap_path(traj_points, overlap_path);
+  
+  double min_distance = std::numeric_limits<double>::max();
+  bool has_collision = false;
+  double nearest_bump_s = 0.0;
+  double nearest_bump_s_min = 0.0;
+  double nearest_bump_s_max = 0.0;
+  
+  // 遍历所有减速带，检查是否与路径有碰撞
+  for (const Obstacle *speed_bump : speed_bump_obstacles.Items()) {
+    if (speed_bump == nullptr) {
+      continue;
+    }
+    
+    // 将减速带多边形投影到SL坐标
+    const auto &bump_polygon = speed_bump->perception_polygon();
+    std::vector<planning_math::Vec2d> bump_sl_points;
+    double bump_s_min = std::numeric_limits<double>::max();
+    double bump_s_max = std::numeric_limits<double>::lowest();
+    for (const auto &point : bump_polygon.points()) {
+      Point2D sl_point;
+      if (frenet_coord->XYToSL({point.x(), point.y()}, sl_point)) {
+        bump_sl_points.emplace_back(sl_point.x, sl_point.y);
+        bump_s_min = std::min(bump_s_min, sl_point.x);
+        bump_s_max = std::max(bump_s_max, sl_point.x);
+      }
+    }
+
+    if (bump_sl_points.size() < 3) {
+      continue;
+    }
+
+    if (kCollisionBuffer > 0.0) {
+      bump_s_min -= kCollisionBuffer;
+      bump_s_max += kCollisionBuffer;
+    }
+
+    planning_math::Polygon2d bump_sl_polygon(bump_sl_points);
+
+    // 检查轨迹是否与减速带有碰撞（SL坐标）
+    bool collision_detected = false;
+    auto bump_aabox = bump_sl_polygon.AABoundingBox();
+    for (const auto &overlap_path_polygon : overlap_path) {
+      auto overlap_aabox = overlap_path_polygon.AABoundingBox();
+      if (!bump_aabox.HasOverlap(overlap_aabox)) {
+        continue;
+      }
+      planning_math::Polygon2d overlap_polygon;
+      if (bump_sl_polygon.ComputeOverlap(overlap_path_polygon,
+                                         &overlap_polygon)) {
+        collision_detected = true;
+        break;
+      }
+    }
+    
+    if (collision_detected) {
+      has_collision = true;
+      // 计算自车到减速带的距离（基于投影边界）
+      double bump_center_s = (bump_s_min + bump_s_max) / 2.0;
+      double distance = bump_center_s - ego_s;
+
+      if (distance < min_distance) {
+        min_distance = distance;
+        nearest_bump_s = bump_center_s;
+        nearest_bump_s_min = bump_s_min;
+        nearest_bump_s_max = bump_s_max;
+        zone_info.distance_to_zone = std::max(0.0, bump_s_min - ego_s);
+      }
+    }
+  }
+  
+  if (has_collision && min_distance < std::numeric_limits<double>::max()) {
+    // 定义减速带区域：前10m到后5m（基于减速带边界）
+    double zone_start_s = nearest_bump_s_min - kSpeedBumpFrontBuffer;
+    double zone_end_s = nearest_bump_s_max + kSpeedBumpRearBuffer;
+    
+    // 判断自车是否在减速带区域内
+    if (ego_s >= zone_start_s && ego_s <= zone_end_s) {
+      zone_info.in_speed_bump_zone = true;
+      zone_info.distance_to_zone = 0.0;
+    } else if (ego_s < zone_start_s) {
+      // 自车在减速带区域之前
+      double distance_to_zone_start = zone_start_s - ego_s;
+      zone_info.distance_to_zone = distance_to_zone_start;
+      
+      if (distance_to_zone_start < kApproachingDistance) {
+        zone_info.approaching_speed_bump = true;
+      }
+    }
+  }
+  
+  return zone_info;
+}
+
+double GeneralLongitudinalDecider::GetSpeedBumpVelocityLimit(
+    const SpeedBumpZoneInfo &zone_info, double ego_velocity) {
+  // 减速带区域内限速
+  const double kSpeedBumpZoneVelocityLimit =
+      config_.speed_bump_zone_speed_limit_kph / 3.6;
+  // 减速度
+  const double kDecelerationRate = config_.speed_bump_deceleration;
+  
+  if (zone_info.in_speed_bump_zone) {
+    // 在减速带区域内，限速8 km/h
+    return kSpeedBumpZoneVelocityLimit;
+  } else if (zone_info.approaching_speed_bump) {
+    // 接近减速带区域，根据距离和减速度计算限速
+    // 使用运动学公式: v² = v0² + 2*a*s
+    // 其中 v = kSpeedBumpZoneVelocityLimit, a = kDecelerationRate, s = distance_to_zone
+    // 求解 v0 = sqrt(v² - 2*a*s)
+    double target_velocity_squared = kSpeedBumpZoneVelocityLimit * kSpeedBumpZoneVelocityLimit;
+    double velocity_squared_at_distance = 0 - 
+        2.0 * kDecelerationRate * zone_info.distance_to_zone;
+    
+    if (velocity_squared_at_distance < 0) {
+      // 如果计算结果为负，说明距离太近，使用最小限速
+      return kSpeedBumpZoneVelocityLimit;
+    }
+    
+    double calculated_limit = std::sqrt(velocity_squared_at_distance);
+    // 返回计算的限速和当前速度的较小值
+    return std::max(calculated_limit, kSpeedBumpZoneVelocityLimit);
+  }
+  
+  // 不在减速带相关区域，返回一个很大的值，表示不限速
+  return std::numeric_limits<double>::max();
 }
 
 }  // namespace planning

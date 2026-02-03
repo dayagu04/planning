@@ -25,6 +25,7 @@ enum class SourceType {
   OCC,
   ParkingSlot,
   MAP,
+  SpeedBump,
 };
 
 class Obstacle {

@@ -400,7 +400,12 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   acc_ = 0.0;
   fusion_source_ = 1;
 
-  if (id_ > 8000000) {  // ehr column box
+  if (id_ > 9000000) {  // speed bump
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_DECELER;
+    source_type_ = SourceType::SpeedBump;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  } else if (id_ > 8000000) {  // ehr column box
     type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_COLUMN;
     source_type_ = SourceType::MAP;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,

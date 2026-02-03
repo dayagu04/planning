@@ -197,16 +197,21 @@ void ObstacleManager::update() {
     JSON_DEBUG_VALUE(" UpdateMapStaticObstacleCost", time_end - time_start);
 
     if(session_->is_hpp_scene()) {
-      if(config_.enable_fusion_speed_bump_objects) {
-        UpdateSpeedBumpObstacle();
+      time_start = IflyTime::Now_ms();
+      if (config_.enable_fusion_speed_bump_objects) {
+          UpdateSpeedBumpObstacle();
       }
 
-      if(config_.enable_fusion_turnstile_objects) {
-        UpdateTurnStileObstacle();
+      if (config_.enable_fusion_turnstile_objects) {
+          UpdateTurnStileObstacle();
       }
 
       UpdateSemanticSignObstacle();
+      time_end = IflyTime::Now_ms();
+      ILOG_DEBUG << "UpdateHPPObstacle cost:" << time_end - time_start;
+      JSON_DEBUG_VALUE("UpdateHPPObstacleCost", time_end - time_start);
     }
+
     // update uss
     uss_obstacle_.SetLocalView(
         &session_->environmental_model().get_local_view());
@@ -824,6 +829,7 @@ void ObstacleManager::UpdateSpeedBumpObstacle() {
   for(int i = 0; i < speed_bump_info.decelers_size; ++i) {
     const auto& deceler = speed_bump_info.decelers[i];
     std::vector<planning_math::Vec2d> points;
+    points.reserve(FUSION_DECELER_POINTS_NUM);
     for(int j = 0; j < FUSION_DECELER_POINTS_NUM; ++j) {
       points.emplace_back(planning_math::Vec2d(deceler.deceler_points[j].x,
                                                deceler.deceler_points[j].y));
@@ -896,6 +902,7 @@ void ObstacleManager::clear() {
   road_edge_obstacles_ = IndexedList<int, Obstacle>();
   gs_care_obstacles_ = IndexedList<int, Obstacle>();
   occupancy_obstacles_ = IndexedList<int, Obstacle>();
+  speed_bump_obstacles_ = IndexedList<int, Obstacle>();
 }
 
 Obstacle *ObstacleManager::add_obstacle(const Obstacle &obstacle) {
@@ -932,7 +939,8 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     frenet_obstacles.reserve(obstacles_.Items().size() +
                              groundline_obstacles_.Items().size() +
                              occupancy_obstacles_.Items().size() +
-                             map_static_obstacles_.Items().size());
+                             map_static_obstacles_.Items().size() +
+                             speed_bump_obstacles_.Items().size());
     // obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
     //                                   groundline_obstacles_.Items().size() +
     //                                   occupancy_obstacles_.Items().size() +
@@ -944,6 +952,8 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     add_frenet_obstacle(occupancy_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
     add_frenet_obstacle(map_static_obstacles_, reference_path, frenet_obstacles,
+                        frenet_obstacles_map);
+    add_frenet_obstacle(speed_bump_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
   } else {
     frenet_obstacles.reserve(obstacles_.Items().size());
