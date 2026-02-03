@@ -1180,6 +1180,12 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
 
   result_.solve_number = curve_node_to_goal_vec.size();
 
+  const float cur_theta = request_.ego_info_under_slot.cur_pose.GetTheta();
+  const float end_theta = end_node_->GetPhi();
+  const float cur_theta_err =
+      std::fabs(geometry_lib::NormalizeAngle(cur_theta - end_theta)) *
+      common_math::kRad2DegF;
+
   // std::map<PathCompareCost, size_t, decltype(ComparePath)*> cost_index_map(
   //     ComparePath);
   std::map<PathCompareCost, size_t> cost_index_map;
@@ -1285,10 +1291,20 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
           gear_switch_pose, cur_gear, gear_change_penalty, length_penalty);
 
-      if (request_.ego_info_under_slot.cur_pose.GetTheta() *
-              gear_switch_pose.GetTheta() <
-          -0.0001f) {
+      const float gear_change_theta = gear_switch_pose.GetTheta();
+
+      const float gear_change_theta_err =
+          std::fabs(
+              geometry_lib::NormalizeAngle(gear_change_theta - end_theta)) *
+          common_math::kRad2DegF;
+
+      if (cur_theta_err > 20.0f && cur_theta * gear_change_theta < -0.0001f) {
         cost.cur_gear_switch_pose_cost += 1.0f * gear_change_penalty;
+      }
+
+      if (gear_change_theta_err > cur_theta_err) {
+        cost.cur_gear_switch_pose_cost +=
+            (gear_change_theta_err - cur_theta_err) * 1.68f * length_penalty;
       }
 
       if (std::fabs(temp_node.GearSwitchNode()->GetKappa()) > 0.001f) {
