@@ -33,11 +33,16 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  struct ObstacleConsistencyInfo {
+      int count = 0;
+      LatObstacleDecisionType last_decision = LatObstacleDecisionType::IGNORE;
+  };
 
  private:
   std::unordered_map<uint32_t, LatObstacleDecisionType> output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
   SearchResult search_result_;
+  std::unordered_map<uint32_t, ObstacleConsistencyInfo> obstacle_consistency_map_;
 };
 
 }  // namespace planning
