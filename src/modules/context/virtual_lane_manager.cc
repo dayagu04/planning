@@ -1934,7 +1934,8 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   return relative_id_lanes;
 }
 
-void VirtualLaneManager::EraseOverlappingLanesId(std::vector<std::shared_ptr<VirtualLane>>& lanes) {
+void VirtualLaneManager::EraseOverlappingLanesId(
+    std::vector<std::shared_ptr<VirtualLane>>& lanes) {
   //只有1条
   if (lanes.size() <= 1) {
     return;
@@ -1943,18 +1944,19 @@ void VirtualLaneManager::EraseOverlappingLanesId(std::vector<std::shared_ptr<Vir
   int current_order_id = current_lane_->get_order_id();
 
   // N(N>2)条, 已按递增顺序排列， 需要逐对对比横向偏差，决定id是否重合
-  for (size_t i = 0; i < lanes.size() -1; i++) {
+  for (size_t i = 0; i < lanes.size() - 1; i++) {
     size_t j = i + 1;
-    bool is_overlap_left = IsLaneOverLappedLeft(lanes[i], lanes[j], overlap_threshold);
+    bool is_overlap_left =
+        IsLaneOverLappedLeft(lanes[i], lanes[j], overlap_threshold);
     if (is_overlap_left) {
       //方法1： 删除非current车道
-      if(current_order_id > lanes.size() -1 || current_order_id < 0){
-        return ;
+      if (current_order_id > lanes.size() - 1 || current_order_id < 0) {
+        return;
       }
       // 判断 i, j谁与current order 更远则删除
-      if(std::fabs(i - current_order_id) > std::fabs(j - current_order_id)){
+      if (std::fabs(i - current_order_id) > std::fabs(j - current_order_id)) {
         lanes.erase(lanes.begin() + i);
-      }else{
+      } else {
         lanes.erase(lanes.begin() + j);
       }
       //方法2： 重复id 包含j在内右侧id需要重新排列
@@ -1968,21 +1970,21 @@ void VirtualLaneManager::EraseOverlappingLanesId(std::vector<std::shared_ptr<Vir
   //基于当前车道重新设置 连续order id
   ReassignLaneRelativeId(lanes, current_order_id);
 }
-bool VirtualLaneManager::ReassignLaneRelativeId(std::vector<std::shared_ptr<VirtualLane>>& lanes,
-                            int current_id) {
+bool VirtualLaneManager::ReassignLaneRelativeId(
+    std::vector<std::shared_ptr<VirtualLane>>& lanes, int current_id) {
   int k = -1;
   // 找到 current_id 对应的 lane 下标
   for (int i = 0; i < lanes.size(); ++i) {
     if (lanes[i]->get_order_id() == current_id) {
-        k = i;
-        break;
+      k = i;
+      break;
     }
   }
   if (k < 0) return false;  // 理论不会发生
   // 按拓扑顺序重排为连续 id
   for (int j = 0; j < lanes.size(); ++j) {
-      int new_id = current_id + (j - k);
-      lanes[j]->set_order_id(new_id);
+    int new_id = current_id + (j - k);
+    lanes[j]->set_order_id(new_id);
   }
   //更新relative_id
   for (auto& lane : lanes) {
@@ -1993,41 +1995,42 @@ bool VirtualLaneManager::ReassignLaneRelativeId(std::vector<std::shared_ptr<Virt
   return true;
 }
 
-bool VirtualLaneManager::IsLaneOverLappedLeft(const std::shared_ptr<VirtualLane> &left_lane,
-                                              const std::shared_ptr<VirtualLane> &right_lane,
-                                              const double overlap_threshold) {
+bool VirtualLaneManager::IsLaneOverLappedLeft(
+    const std::shared_ptr<VirtualLane>& left_lane,
+    const std::shared_ptr<VirtualLane>& right_lane,
+    const double overlap_threshold) {
   // 基于左侧构建参考系 track ego 之后执行
   const auto& left_lane_frenet_coord = left_lane->get_lane_frenet_coord();
-  if(left_lane_frenet_coord == nullptr){
+  if (left_lane_frenet_coord == nullptr) {
     return false;
   }
   // 右侧车道投影， 直到到达自车前方 80m
   const auto& right_lane_points = right_lane->lane_points();
-  if(right_lane_points.size() < 3){
+  if (right_lane_points.size() < 3) {
     return false;
   }
   const double compare_s = left_lane->get_ego_longit_s() + 80.0;
   int compare_num = 0;
   double average_lat_error = 0.0;
   double sum_lat_error = 0.0;
-  for(const auto& lane_point : right_lane_points){
+  for (const auto& lane_point : right_lane_points) {
     double x = lane_point.local_point.x;
     double y = lane_point.local_point.y;
     double s = 0.0;
     double l = 0.0;
-    if(!left_lane_frenet_coord->XYToSL(x, y, &s, &l)){
+    if (!left_lane_frenet_coord->XYToSL(x, y, &s, &l)) {
       continue;
     }
     compare_num += 1;
     sum_lat_error = sum_lat_error + std::fabs(l);
-    if(s > compare_s){
+    if (s > compare_s) {
       break;
     }
   }
   average_lat_error = sum_lat_error / compare_num;
-  if(average_lat_error > 0. && average_lat_error < overlap_threshold){
+  if (average_lat_error > 0. && average_lat_error < overlap_threshold) {
     return true;
-  }else{
+  } else {
     return false;
   }
 }
