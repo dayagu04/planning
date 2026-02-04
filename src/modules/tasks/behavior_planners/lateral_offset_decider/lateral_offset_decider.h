@@ -1,9 +1,10 @@
 #pragma once
 #include "avoid_obstacle_maintainer5V.h"
 #include "lateral_offset_calculatorV2.h"
-#include "session.h"
-#include "tasks/task.h"
 #include "lateral_offset_decider_utils.h"
+#include "session.h"
+#include "side_nudge_lateral_offset_calculate.h"
+#include "tasks/task.h"
 
 namespace planning {
 
@@ -18,8 +19,8 @@ struct HMIAvoidParam {
 
 class LateralOffsetDecider : public Task {
  public:
-  explicit LateralOffsetDecider(const EgoPlanningConfigBuilder *config_builder,
-                                framework::Session *session);
+  explicit LateralOffsetDecider(const EgoPlanningConfigBuilder* config_builder,
+                                framework::Session* session);
 
   virtual ~LateralOffsetDecider() = default;
 
@@ -29,9 +30,11 @@ class LateralOffsetDecider : public Task {
 
  private:
   void CalLaneInfo();
-  void CalculateNormalLateralOffsetThreshold(const std::shared_ptr<VirtualLane> flane);
+  void CalculateNormalLateralOffsetThreshold(
+      const std::shared_ptr<VirtualLane> flane);
   double CalLaneWidth(const std::shared_ptr<VirtualLane> flane);
   void SmoothLateralOffset(double in_lat_offset);
+  void PostProcess();
   void SaveDebugInfo();
   void CheckAvoidObstaclesDecision();
   bool IsObstacleDecisionSwitch(LatObstacleDecisionType last_decision,
@@ -43,7 +46,7 @@ class LateralOffsetDecider : public Task {
   LateralOffsetDeciderConfig config_;
   AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
   LateralOffsetCalculatorV2 lateral_offset_calculatorv2_;
-
+  SideNudgeLateralOffsetDecider side_nudge_lateral_offset_decider_;
   LatObstacleDecisionType last_first_obstacle_decision_ =
       LatObstacleDecisionType::IGNORE;
   LatObstacleDecisionType last_second_obstacle_decision_ =

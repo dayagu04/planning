@@ -3698,8 +3698,9 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
       if (is_corner_out_slot) {
         first_arc.headingB = sampled_path_pts[i].heading;
         first_arc.pB = sampled_path_pts[i].pos;
-        first_arc.length = (sampled_path_pts[i].heading - first_arc.headingA) *
-                           first_arc.circle_info.radius;
+        first_arc.length =
+            std::fabs(sampled_path_pts[i].heading - first_arc.headingA) *
+            first_arc.circle_info.radius;
         ILOG_INFO << "debug last path: ";
         first_arc.PrintInfo();
         break;
@@ -6836,7 +6837,7 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
       pnc::geometry_lib::PathSegment reverse_new_line;
       reverse_new_line.line_seg.pA = new_line.line_seg.pB;
       reverse_new_line.line_seg.pB = new_line.line_seg.pA;
-      reverse_new_line.line_seg.heading = -new_line.line_seg.heading;
+      reverse_new_line.line_seg.heading = new_line.line_seg.heading;
       if (new_line.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE){
         reverse_new_line.seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
       }else if (new_line.seg_gear == pnc::geometry_lib::SEG_GEAR_DRIVE){
@@ -6880,7 +6881,7 @@ void ParallelPathGenerator::InsertLineSegAfterCurrentFollowLastPath(
 
 
 
-      output_.path_seg_index.second += 1;
+      output_.path_seg_index.second += 2;
 
       ILOG_INFO << "insert line segment successful, extending length = "
                 << extend_distance;

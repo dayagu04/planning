@@ -128,7 +128,6 @@ class SpeedLimitDecider : public Task {
   SpeedLimitConfig speed_limit_config_;  // all configs
   double v_target_;                      // final v target
   SpeedLimitType v_target_type_;         // final v target type
-  double v_avoid_hold_ = 0.0;
   pnc::filters::SlopeFilter vel_slope_filter_function_fading_away_;
   double last_vel_function_fading_away_;
   double v_cruise_limit_;  // kph

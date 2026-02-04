@@ -768,10 +768,9 @@ void STGraph::MakeStPointsTable() {
   for (auto it = boundary_id_st_boundaries_map_.begin();
        it != boundary_id_st_boundaries_map_.end(); ++it) {
     auto st_boundary = it->second.get();
+    // 只忽略 CAUTION_YIELD，不再忽略 RELIEVE_JERK（让其正常参与搜索）
     if (st_boundary->decision_type() ==
-            STBoundary::DecisionType::CAUTION_YIELD ||
-        st_boundary->decision_type() ==
-            STBoundary::DecisionType::RELIEVE_JERK) {
+            STBoundary::DecisionType::CAUTION_YIELD) {
       continue;
     }
     const auto& lower_points = st_boundary->lower_points();
@@ -1073,15 +1072,20 @@ bool STGraph::CalculateStPassCorridor() {
         continue;
       }
       if (st_boundary->decision_type() ==
-              STBoundary::DecisionType::CAUTION_YIELD ||
-          st_boundary->decision_type() ==
-              STBoundary::DecisionType::RELIEVE_JERK) {
+              STBoundary::DecisionType::CAUTION_YIELD) {
         continue;
       }
       const auto& decision_type = st_boundary->decision_type();
       if (decision_type == STBoundary::DecisionType::YIELD) {
         STPoint cur_upper_pt, cur_lower_pt;
         if (!st_boundary->GetBoundaryBounds(t, &cur_lower_pt, &cur_upper_pt)) {
+          continue;
+        }
+        const int32_t boundary_agent_id = cur_lower_pt.agent_id();
+        const bool is_relieve_jerk = std::find(relieve_jerk_agent_ids_.begin(),
+                                               relieve_jerk_agent_ids_.end(),
+                                               boundary_agent_id) != relieve_jerk_agent_ids_.end();
+        if (is_relieve_jerk) {
           continue;
         }
         if (cur_lower_pt.s() < upper_point.s()) {
