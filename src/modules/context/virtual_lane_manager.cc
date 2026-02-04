@@ -1044,7 +1044,12 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     ego_lane_track_manager_.Reset();
     return false;
   }
-  EraseOverlappingLanesId(relative_id_lanes_);
+  
+  set_is_exist_intersection_split( ego_lane_track_manager_.is_exist_intersection_split());
+  set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
+  set_is_exist_split_on_expressway(ego_lane_track_manager_.is_exist_split_on_expressway());
+
+  EraseOverlappingLanesId(relative_id_lanes_);// 删除 lane reset split
 
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == -1) {
@@ -1063,19 +1068,14 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   ILOG_DEBUG << "is_exist_ramp_on_road:" << is_exist_ramp_on_road_;
   JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
-  set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
   ILOG_DEBUG << "is_exist_split_on_ramp:" << is_exist_split_on_ramp_;
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
 
-  set_is_exist_split_on_expressway(
-      ego_lane_track_manager_.is_exist_split_on_expressway());
   ILOG_DEBUG << "is_exist_split_on_expressway:"
              << is_exist_split_on_expressway_;
   JSON_DEBUG_VALUE("is_exist_split_on_expressway",
                    is_exist_split_on_expressway_);
 
-  set_is_exist_intersection_split(
-      ego_lane_track_manager_.is_exist_intersection_split());
   ILOG_DEBUG << "is_exist_intersection_split:" << is_exist_intersection_split_;
   JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
@@ -1963,6 +1963,10 @@ void VirtualLaneManager::EraseOverlappingLanesId(
       // for (size_t k = j ; k < lanes.size(); k++) {
       //   lanes[k]->set_order_id(lanes[k]->get_order_id() - 1);
       //}
+      //确认删除则清空split标志
+      set_is_exist_intersection_split(false);
+      set_is_exist_split_on_expressway(false);
+      set_is_exist_split_on_ramp(false);
     }
   }
 
