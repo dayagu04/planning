@@ -31,6 +31,7 @@ constexpr double kAccMaxLowerBound = -5.0;
 constexpr double kJerkMaxLowerBound = -4.0;
 
 constexpr double kLaneChangeAccUpperBound = 1.2;
+constexpr double kLaneChangeFrontAgentHeadway = 0.8;
 
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -203,7 +204,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double desire_distance = std::max(
         vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
     const double desire_velocity = CalcDesiredVelocity(
-        upper_bound_info.d_rel, desire_distance, upper_bound_info.v, v_ego);
+        upper_bound_info.s, desire_distance, upper_bound_info.v, v_ego);
     const double upper_bound_a = std::fmin(upper_bound_info.a + 0.5, 0.0);
     CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, v_ego,
                   upper_bound_a, &acc_target_with_upper_bound);
@@ -429,6 +430,25 @@ void BoundMaker::MakeComfortBound() {
   double a_max = 2.0;
   double b_max = 3.0;
 
+  int32_t gap_front_agent_id = -1;
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto curr_state = lane_change_decider_output.curr_state;
+  if (curr_state == StateMachineLaneChangeStatus::kLaneChangeExecution ||
+      curr_state == StateMachineLaneChangeStatus::kLaneChangeHold ||
+      curr_state == StateMachineLaneChangeStatus::kLaneChangeComplete) {
+    const auto front_node_id =
+        lane_change_decider_output.lc_gap_info.front_node_id;
+    const auto dynamic_world =
+        session_->environmental_model().get_dynamic_world();
+    if (dynamic_world != nullptr) {
+      const auto node_ptr = dynamic_world->GetNode(front_node_id);
+      if (node_ptr != nullptr) {
+        gap_front_agent_id = node_ptr->node_agent_id();
+      }
+    }
+  }
+
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     double t = i * dt_;
     const double v_ego = virtual_acc_curve->Evaluate(1, t);
@@ -445,6 +465,10 @@ void BoundMaker::MakeComfortBound() {
     double tau = max_tau;
     if (iter != agents_headway_Info.end()) {
       tau = std::min(tau, iter->second.current_headway);
+    }
+
+    if (upper_bound_id == gap_front_agent_id) {
+      tau = kLaneChangeFrontAgentHeadway;
     }
 
     double delta_v = v_ego - v_upper_bound;
@@ -624,7 +648,7 @@ void BoundMaker::CalcAccLimits(const UpperBoundInfo& upper_bound_info,
     double decel_offset =
         interp(upper_bound_info.v, _DECEL_OFFSET_BP, _DECEL_OFFSET_V);
 
-    double critical_decel = CalcCriticalDecel(upper_bound_info.d_rel,
+    double critical_decel = CalcCriticalDecel(upper_bound_info.s,
                                               agent_v_rel, d_offset, v_offset);
     acc_target->first = std::min(decel_offset + critical_decel + a_lead_contr,
                                  acc_target->first);
