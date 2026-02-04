@@ -27,6 +27,19 @@ s3_url = data["s3_url"]
 s3_access_key = data["s3_access_key"]
 s3_secret_key = data["s3_secret_key"]
 
+enable_ground_truth_simulation = False
+try:
+    task_type = data["task_type"]
+    print("task_type: ", task_type)
+    if (task_type == 'Specimal'):
+        enable_ground_truth_simulation = True
+    ground_truth_url = data["ground_truth_url"]
+    ground_truth_path = data["ground_truth_path"]
+    ground_truth_file_name = data["ground_truth_file_name"]
+except Exception as e:
+    enable_ground_truth_simulation = False
+    print(f"Get task_type error: {e}")
+
 # 默认 CHERY_E0X
 car_type = "CHERY_E0X"
 if "CHERY_E0Y" in file_name:
@@ -45,6 +58,16 @@ client = boto3.client(
     aws_secret_access_key=s3_secret_key,  # 密钥
     use_ssl=False
 )
+
+# 生成结果文件目录
+shm_path = "/dev/shm"
+out_root_path = "/out"
+out_dir = f"{out_root_path}/{task_id}/{scene_lib_id}/{case_id}"
+try:
+    os.makedirs(out_dir, exist_ok=True)
+except Exception as e:
+    print(f"Creating out_dir error: {e}")
+print("Creat out_dir successfully !")
 
 # 获取bag文件，分为下载链接和路径两种
 start_time = time.time()
@@ -69,15 +92,29 @@ print("Get bag successfully !")
 end_time = time.time()
 print(f"Get bag 耗时：{end_time - start_time}秒")
 
-# 生成结果文件目录
-shm_path = "/dev/shm"
-out_root_path = "/out"
-out_dir = f"{out_root_path}/{task_id}/{scene_lib_id}/{case_id}"
-try:
-    os.makedirs(out_dir, exist_ok=True)
-except Exception as e:
-    print(f"Creating out_dir error: {e}")
-print("Creat out_dir successfully !")
+# 获取真值文件，分为下载链接和路径两种 xlsx文件
+if (enable_ground_truth_simulation):
+    start_time = time.time()
+    if "http" in ground_truth_url:
+        ground_truth_file_path = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.ground_truth.bag"
+        command = 'curl ' + '"' + ground_truth_url + '"' + ' -o ' + ground_truth_file_path
+        try:
+            result = subprocess.run(command, shell=True, text=True, check=True)
+        except Exception as e:
+            print(f"Downloading bag error: {e}")
+            sys.exit(1)
+        if (result.returncode != 0):
+            print(f"Downloading bag error")
+            sys.exit(1)
+    else:
+        if os.path.exists(ground_truth_url):
+            ground_truth_file_path = ground_truth_url
+        else:
+            print(f"The file '{ground_truth_url}' does not exist.")
+            sys.exit(1)
+    print("Get ground truth file successfully !")
+    end_time = time.time()
+    print(f"Get ground truth file 耗时：{end_time - start_time}秒")
 
 # 运行前置模块
 if (enable_static_fusion == "1"):
@@ -138,10 +175,13 @@ print(f"Run PP 耗时：{end_time - start_time}秒")
 with open(result_path, 'r', encoding='utf-8') as file:
     result_data = json.load(file)
 scene_type = result_data["scene_type"]
-if (scene_type == "apa"):
-    json_path = f"/root/common_tools/checker_apa/task/checker_task.json"
+if (enable_ground_truth_simulation):
+    json_path = f"/root/common_tools/checker_ground_truth/task/ground_truth_checker_task.json"
 else:
-    json_path = f"/root/common_tools/checker_scc/task/scc_checker_task.json"
+    if (scene_type == "apa"):
+        json_path = f"/root/common_tools/checker_apa/task/checker_task.json"
+    else:
+        json_path = f"/root/common_tools/checker_scc/task/scc_checker_task.json"
 # 修改JSON文件
 start_time = time.time()
 with open(json_path, 'r', encoding='utf-8') as file:
@@ -157,34 +197,49 @@ print("Update json successfully !")
 end_time = time.time()
 print(f"Update json 耗时：{end_time - start_time}秒")
 
+# 调用checker task
 start_time = time.time()
-if (scene_type == "apa"):
-    os.chdir('/root/common_tools/checker_apa/task')
-    sys.path.append('/root/common_tools/checker_apa/task')
-    import checker_task_for_simu
+if (enable_ground_truth_simulation):
+    os.chdir('/root/common_tools/checker_ground_truth/task')
+    sys.path.append('/root/common_tools/checker_ground_truth/task')
+    import ground_truth_checker_task
     try:
-        t1 = Process(target=checker_task_for_simu.main, args=("checker_task.json",))
+        t1 = Process(target=ground_truth_checker_task.main, args=("ground_truth_checker_task.json",))
         t1.start()
     except Exception as e:
         print(f"Runing checker error: {e}")
         sys.exit(1)
 else:
-    os.chdir('/root/common_tools/checker_scc/task')
-    sys.path.append('/root/common_tools/checker_scc/task')
-    import scc_checker_task_for_simu
-    try:
-        t1 = Process(target=scc_checker_task_for_simu.main, args=("scc_checker_task.json",))
-        t1.start()
-    except Exception as e:
-        print(f"Runing checker error: {e}")
-        sys.exit(1)
+    if (scene_type == "apa"):
+        os.chdir('/root/common_tools/checker_apa/task')
+        sys.path.append('/root/common_tools/checker_apa/task')
+        import checker_task_for_simu
+        try:
+            t1 = Process(target=checker_task_for_simu.main, args=("checker_task.json",))
+            t1.start()
+        except Exception as e:
+            print(f"Runing checker error: {e}")
+            sys.exit(1)
+    else:
+        os.chdir('/root/common_tools/checker_scc/task')
+        sys.path.append('/root/common_tools/checker_scc/task')
+        import scc_checker_task_for_simu
+        try:
+            t1 = Process(target=scc_checker_task_for_simu.main, args=("scc_checker_task.json",))
+            t1.start()
+        except Exception as e:
+            print(f"Runing checker error: {e}")
+            sys.exit(1)
 end_time = time.time()
 print(f"Run checker 耗时：{end_time - start_time}秒")
 
-# 生成html
+# 文件上传函数
 def upload_and_remove_file(suffix, result_data, key):
     object_name = f"{object_prefix}/{file_name}{suffix}"
     file_path = PP_bag + suffix
+    # for item_name in os.listdir(shm_path):
+    #     item_path = os.path.join(shm_path, item_name)
+    #     print("files name: ", item_path)
     try:
         client.upload_file(file_path, s3_bucket, object_name)
         result_data[key] = object_name
@@ -196,8 +251,8 @@ def upload_and_remove_file(suffix, result_data, key):
     #     except Exception as e:
     #         print(f"Error removing {key} file: {e}")
 
+# 生成html & 上传html
 start_time = time.time()
-
 if (scene_type == "apa"):
     script_path = "/root/common_tools/jupyter/notebooks_apa/scripts/"
     command_proto = f"cd {script_path} && /root/miniconda3/bin/python proto_gen.py"
@@ -235,7 +290,7 @@ else:
     if (result0.returncode != 0 or result1.returncode != 0):
         print(f"Creating html error")
         sys.exit(1)
-print("Creat html successfully !")
+print("Creat html successfully!")
 end_time = time.time()
 print(f"Creat and upload html 耗时：{end_time - start_time}秒")
 
@@ -249,6 +304,21 @@ except Exception as e:
     print(f"Error uploading PP bag: {e}")
 end_time = time.time()
 print(f"Upload PP bag 耗时：{end_time - start_time}秒")
+
+# 上传excel
+if (enable_ground_truth_simulation):
+    start_time = time.time()
+    try:
+        excel_start_time = time.time()
+        upload_and_remove_file('.ground_truth.xlsx', result_data, "ground_truth_file_url")
+        excel_end_time = time.time()
+        print(f"Upload excel file 耗时：{excel_end_time - excel_start_time}秒")
+    except Exception as e:
+        print(f"Creating excel error: {e}")
+        sys.exit(1)
+    print("Creat excel successfully!")
+    end_time = time.time()
+    print(f"Creat and upload excel 耗时：{end_time - start_time}秒")
 
 print("结果信息：")
 for key, value in result_data.items():

@@ -1,22 +1,25 @@
 #include "lateral_offset_decider.h"
+
+#include "common/math/filter/mean_filter.h"
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "environmental_model_manager.h"
 #include "lateral_offset_decider_info.pb.h"
 #include "planning_context.h"
-#include "utils/pose2d_utils.h"
-#include "common/math/filter/mean_filter.h"
 #include "task_interface/lane_change_decider_output.h"
+#include "utils/pose2d_utils.h"
 namespace planning {
 
 const double kMaxLateralOffsetChangeRate = 0.05;
 const double kMaxChangeRateEgoSpeed = 10.;
 const int kCoolDownCount = 5;
 LateralOffsetDecider::LateralOffsetDecider(
-    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : Task(config_builder, session) {
   config_ = config_builder->cast<LateralOffsetDeciderConfig>();
   lateral_offset_calculatorv2_ = LateralOffsetCalculatorV2(config_builder);
+  side_nudge_lateral_offset_decider_ =
+      SideNudgeLateralOffsetDecider(session, config_builder);
 }
 
 bool LateralOffsetDecider::Execute() {
@@ -50,33 +53,80 @@ bool LateralOffsetDecider::Execute() {
 
   lateral_offset_calculatorv2_.Process(
       session_, avoid_obstacle_maintainer5v_.avd_obstacles(),
+      avoid_obstacle_maintainer5v_.avd_obstacles_history(),
       avoid_obstacle_maintainer5v_.avd_sp_obstacles(), lane_info_,
       avoid_obstacle_maintainer5v_.dist_rblane(),
       avoid_obstacle_maintainer5v_.flag_avd());
 
-  lat_offset = lateral_offset_calculatorv2_.lat_offset();
-  SmoothLateralOffset(lat_offset);
+  side_nudge_lateral_offset_decider_.Process(lane_info_);
+
+  // lat_offset = lateral_offset_calculatorv2_.lat_offset();
+
+  // SmoothLateralOffset(lat_offset);
+
+  PostProcess();
   GenerateOutput();
 
   SaveDebugInfo();
   return true;
 }
 
+void LateralOffsetDecider::PostProcess() {
+  const auto& front_avoid_info = lateral_offset_calculatorv2_.avoid_info();
+  const auto& side_nudge_info = side_nudge_lateral_offset_decider_.nudge_info();
+  double front_lat_offset = lateral_offset_calculatorv2_.lat_offset();
+  double side_lat_offset = side_nudge_lateral_offset_decider_.lat_offset();
+  const auto side_nudge_state =
+      side_nudge_lateral_offset_decider_.nudge_state();
+
+  double lateral_offset_tmp = front_lat_offset;
+  NudgeDirection front_direction = NudgeDirection::NONE;
+  if (front_avoid_info.avoid_way != AvoidWay::None) {
+    if (front_avoid_info.avoid_way == AvoidWay::Left) {
+      front_direction = NudgeDirection::LEFT;
+    } else if (front_avoid_info.avoid_way == AvoidWay::Right) {
+      front_direction = NudgeDirection::RIGHT;
+    } else if (lateral_offset_ > 0) {
+      front_direction = NudgeDirection::RIGHT;
+    } else if (lateral_offset_ < 0) {
+      front_direction = NudgeDirection::LEFT;
+    }
+  }
+
+  NudgeDirection side_direction = side_nudge_info.nudge_direction;
+  if (side_nudge_info.nudge_direction != NudgeDirection::NONE) {
+    if (front_direction == side_nudge_info.nudge_direction) {
+      lateral_offset_tmp = front_direction == NudgeDirection::LEFT
+                               ? std::min(side_lat_offset, front_lat_offset)
+                               : std::max(side_lat_offset, front_lat_offset);
+    } else if (side_nudge_state != SideNudgeState::CONTROL) {
+      lateral_offset_tmp = front_lat_offset;
+    } else {
+      lateral_offset_tmp = side_lat_offset;
+    }
+  }
+
+  constexpr double lateral_offset_change_rate = 0.05;
+  lateral_offset_ =
+      clip(lateral_offset_tmp, lateral_offset_ + lateral_offset_change_rate,
+           lateral_offset_ - lateral_offset_change_rate);
+}
+
 void LateralOffsetDecider::CheckAvoidObstaclesDecision() {
-  const auto &lat_obstacle_decision = session_->planning_context()
+  const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
   auto check_and_update = [&](int index) {
     if (index >= avoid_obstacle_maintainer5v_.avd_obstacles().size()) {
       return;
     }
-    const auto &obs = avoid_obstacle_maintainer5v_.avd_obstacles()[index];
+    const auto& obs = avoid_obstacle_maintainer5v_.avd_obstacles()[index];
     auto iter = lat_obstacle_decision.find(obs.track_id);
     if (iter == lat_obstacle_decision.end()) {
       return;
     }
     int track_id = obs.track_id;
-    const auto &decision = iter->second;
+    const auto& decision = iter->second;
     if (track_id == last_first_obstacle_id_) {
       if (IsObstacleDecisionSwitch(last_first_obstacle_decision_, decision)) {
         Reset();
@@ -163,9 +213,9 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
     }
   }
 
-  const auto &avd_obstacles_history =
+  const auto& avd_obstacles_history =
       avoid_obstacle_maintainer5v_.avd_obstacles_history();
-  const auto &avd_obstacles = avoid_obstacle_maintainer5v_.avd_obstacles();
+  const auto& avd_obstacles = avoid_obstacle_maintainer5v_.avd_obstacles();
   if (avd_obstacles[0].flag == AvoidObstacleFlag::INVALID) {
     if (avd_obstacles_history[0].flag != AvoidObstacleFlag::INVALID &&
         avd_obstacles_history[0].s_to_ego >= 0) {
@@ -175,7 +225,7 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
 
   const double speed_ratio =
       kMaxLateralOffsetChangeRate / kMaxChangeRateEgoSpeed;
-  const auto &ego_state_manager =
+  const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   double lateral_offset_change_rate =
       clip(speed_ratio * ego_state_manager->ego_v(),
@@ -189,25 +239,29 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
 
 void LateralOffsetDecider::CalLaneInfo() {
   last_lane_info_ = lane_info_;
-  auto &coarse_planning_info =
-      session_->planning_context().lane_change_decider_output().coarse_planning_info;
+  auto& coarse_planning_info = session_->planning_context()
+                                   .lane_change_decider_output()
+                                   .coarse_planning_info;
 
-  const auto flane = session_->environmental_model()
-               .get_virtual_lane_manager()
-               ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
+  const auto flane =
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
   lane_info_.lane_width = CalLaneWidth(flane);
   CalculateNormalLateralOffsetThreshold(flane);
 }
 
-double LateralOffsetDecider::CalLaneWidth(const std::shared_ptr<VirtualLane> flane) {
+double LateralOffsetDecider::CalLaneWidth(
+    const std::shared_ptr<VirtualLane> flane) {
   double lane_width = kDefaultLaneWidth;
   if (flane == nullptr) {
     return lane_width;
   }
-  auto &coarse_planning_info =
-      session_->planning_context().lane_change_decider_output().coarse_planning_info;
+  auto& coarse_planning_info = session_->planning_context()
+                                   .lane_change_decider_output()
+                                   .coarse_planning_info;
 
-  const auto &reference_path = session_->planning_context()
+  const auto& reference_path = session_->planning_context()
                                    .lane_change_decider_output()
                                    .coarse_planning_info.reference_path;
   const auto ego_frenet_state = reference_path->get_frenet_ego_state();
@@ -232,11 +286,12 @@ double LateralOffsetDecider::CalLaneWidth(const std::shared_ptr<VirtualLane> fla
 }
 
 // Calculate max avoid threshold
-void LateralOffsetDecider::CalculateNormalLateralOffsetThreshold(const std::shared_ptr<VirtualLane> flane) {
+void LateralOffsetDecider::CalculateNormalLateralOffsetThreshold(
+    const std::shared_ptr<VirtualLane> flane) {
   if (flane == nullptr) {
     return;
   }
-  const auto &vehicle_param =
+  const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -304,8 +359,8 @@ void LateralOffsetDecider::Reset() {
 
 void LateralOffsetDecider::SaveDebugInfo() {
 #ifdef ENABLE_PROTO_LOG
-  auto &debug_info_manager = DebugInfoManager::GetInstance();
-  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto lateral_offset_decider_info =
       planning_debug_data->mutable_lateral_offset_decider_info();
   lateral_offset_decider_info->set_smooth_lateral_offset(lateral_offset_);
@@ -315,7 +370,7 @@ void LateralOffsetDecider::SaveDebugInfo() {
 }
 
 void LateralOffsetDecider::GenerateOutput() {
-  LateralOffsetDeciderOutput &lateral_offset_decider_output =
+  LateralOffsetDeciderOutput& lateral_offset_decider_output =
       session_->mutable_planning_context()
           ->mutable_lateral_offset_decider_output();
   lateral_offset_decider_output.is_valid =
@@ -409,7 +464,7 @@ bool LateralOffsetDecider::IsStartRunning() {
 }
 
 bool LateralOffsetDecider::IsStopRunning() {
-  LateralOffsetDeciderOutput &lateral_offset_decider_output =
+  LateralOffsetDeciderOutput& lateral_offset_decider_output =
       session_->mutable_planning_context()
           ->mutable_lateral_offset_decider_output();
   const std::array<AvoidObstacleInfo, 2> avd_obstacles =

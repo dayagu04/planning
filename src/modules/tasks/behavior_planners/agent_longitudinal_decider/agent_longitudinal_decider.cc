@@ -239,13 +239,13 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
     bool is_closing_split =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             SPLIT_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
     bool is_closing_merge =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             MERGE_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
 
     if (is_closing_merge || is_closing_split) {
       is_confluence_area = true;
@@ -317,10 +317,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
     return;
   }
 
-  if (agent.is_static()) {
-    return;
-  }
-
   const auto& ego_lane = virtual_lane_manager_->get_current_lane();
   if (ego_lane == nullptr) {
     return;
@@ -363,6 +359,25 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   CalculateAgentSLBoundary(ego_lane_coord, agent, &min_s, &max_s, &min_l,
                            &max_l);
 
+  double small_lateral_distance = std::numeric_limits<double>::max();
+  double small_lateral_distance_with_ego_l = std::numeric_limits<double>::max();
+  double large_lateral_distance = std::numeric_limits<double>::max();
+  CalculateAgentLateralDistance(
+      object_l_speed_mps, min_l, max_l, max_s, ego_speed_mps, ego_s, ego_l,
+      &small_lateral_distance, &small_lateral_distance_with_ego_l,
+      &large_lateral_distance);
+
+  auto* mutable_agent = mutable_agent_manager->mutable_agent(agent.agent_id());
+  if (mutable_agent != nullptr) {
+    mutable_agent->set_d_path(
+        std::fmax(std::fabs(small_lateral_distance) - ego_half_width, 0.0));
+    mutable_agent->set_d_rel(std::fmax(min_s - ego_s - ego_half_length, 0.0));
+  }
+
+  if (agent.is_static()) {
+    return;
+  }
+
   const bool is_agent_closer_to_ego =
       object_l_speed_mps * (agent_l - ego_l) < 0.0;
   if (!is_agent_closer_to_ego) {
@@ -389,14 +404,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   if (std::fabs(current_kappa) >= current_kappa_threshold) {
     return;
   }
-
-  double small_lateral_distance = std::numeric_limits<double>::max();
-  double small_lateral_distance_with_ego_l = std::numeric_limits<double>::max();
-  double large_lateral_distance = std::numeric_limits<double>::max();
-  CalculateAgentLateralDistance(
-      object_l_speed_mps, min_l, max_l, max_s, ego_speed_mps, ego_s, ego_l,
-      &small_lateral_distance, &small_lateral_distance_with_ego_l,
-      &large_lateral_distance);
 
   double small_lateral_ttc = std::numeric_limits<double>::max();
   if (object_l_speed_mps * small_lateral_distance < 0.0) {
@@ -516,15 +523,10 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   double min_dis_to_front_bump = std::max(min_s - ego_s - ego_half_length, 0.0);
   double rule_base_cut_in_count = interp(min_dis_to_front_bump, xp, fp);
 
-  auto* mutable_agent = mutable_agent_manager->mutable_agent(agent_id);
   if (nullptr == mutable_agent) {
     return;
   }
   mutable_agent->set_is_rule_base_cutin(current_rule_base_cutin);
-
-  mutable_agent->set_d_path(
-      std::fmax(std::fabs(small_lateral_distance) - ego_half_width, 0.0));
-  mutable_agent->set_d_rel(std::fmax(min_s - ego_s - ego_half_length, 0.0));
 
   bool current_cut_in_rule = false;
   if ((kFtpCutInDeactivationSpeedMps > ego_speed_mps) &&
@@ -1889,12 +1891,14 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
     //   const auto& end_point = agent->trajectories().front().back();
     //   current_lane_coord->XYToSL(end_point.x(), end_point.y(),
     //                              &agent_end_point_s, &agent_end_point_l);
-    //   end_point_heading_from_start = Vec2d(end_point.x() - agent_box_center.x(),
-    //                                        end_point.y() - agent_box_center.y())
+    //   end_point_heading_from_start = Vec2d(end_point.x() -
+    //   agent_box_center.x(),
+    //                                        end_point.y() -
+    //                                        agent_box_center.y())
     //                                      .Angle();
     //   is_end_point_s_valid =
-    //       agent_end_point_s - planning_init_point_s - rear_axle_to_front_edge >
-    //       0.0;
+    //       agent_end_point_s - planning_init_point_s - rear_axle_to_front_edge
+    //       > 0.0;
     // }
 
     double half_lane_width =

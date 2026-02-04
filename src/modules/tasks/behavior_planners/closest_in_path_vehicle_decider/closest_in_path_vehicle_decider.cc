@@ -179,6 +179,9 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
   *relative_s = min_s - ego_vehi_param.front_edge_to_rear_axle;
   if (session_->is_rads_scene()) {
     *relative_s = min_s - ego_vehi_param.rear_edge_to_rear_axle;
+    if (agent->is_stop_destination_virtual_obs() == true && *relative_s < 0.0) {
+      *relative_s = 0.001;
+    }
   }
 
   double center_s = 0.0;
