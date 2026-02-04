@@ -82,7 +82,6 @@ void ParallelParkInScenario::Reset() {
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
   obs_id_pt_map_.clear();
-  obs_id_pt_map_.clear();
   parallel_path_planner_.Reset();
   previous_parallel_path_planner_.Reset();
   parallel_replan_again_ = 0;
@@ -583,7 +582,6 @@ const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
-  obs_id_pt_map_.clear();
   obs_id_pt_map_.clear();
   parallel_path_planner_.Reset();
   previous_parallel_path_planner_.Reset();
