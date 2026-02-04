@@ -70,7 +70,8 @@ void HybridAStarPerpendicularTailInPathGenerator::UpdatePoseBoundary() {
                 config_.xy_grid_resolution_inv);
   search_map_grid_boundary_.phi =
       std::ceil((search_map_boundary_.phi_max - search_map_boundary_.phi_min) *
-                config_.phi_grid_resolution_inv);
+                config_.phi_grid_resolution_inv) +
+      1;
 }
 
 void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
