@@ -1140,6 +1140,21 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'obs_lat_decision' : plan_obstacle_info['lat_decision'],
         'obs_is_static' : plan_obstacle_info['is_static'],
       })
+    end_point_x = []
+    end_point_y = []
+    try:
+      if g_is_display_enu:
+        end_point_x = plan_debug_json_msg['narrow_space_end_point_x']
+        end_point_y = plan_debug_json_msg['narrow_space_end_point_y']
+      else:
+        end_point_x, end_point_y = coord_tf.global_to_local(plan_debug_json_msg['narrow_space_end_point_x'], plan_debug_json_msg['narrow_space_end_point_y'])
+      print("end_point(x, y): ", plan_debug_json_msg['narrow_space_end_point_x'], plan_debug_json_msg['narrow_space_end_point_y'])
+    except:
+      print("no narrow space!")
+    local_view_data['data_nsa_end_point'].data.update({
+      'end_point_y' : [end_point_y],
+      'end_point_x' : [end_point_x]
+    })
 
   ### step 4: 加载障碍物信息
   # load fus_obj
@@ -2275,7 +2290,6 @@ def load_local_view_figure():
   lane_mark_data_8 = ColumnDataSource(data = {'lane_mark_8':[], 'text_xn_8': [],  'text_yn_8': [] , 'lane_mark_loc_x_8': [], 'lane_mark_loc_y_8': []})
   lane_mark_data_9 = ColumnDataSource(data = {'lane_mark_9':[], 'text_xn_9': [],  'text_yn_9': [] , 'lane_mark_loc_x_9': [], 'lane_mark_loc_y_9': []})
 
-
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
   data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
@@ -2470,6 +2484,9 @@ def load_local_view_figure():
                                             'traj_x':[]})
   data_ego_motion_sim_ref_traj = ColumnDataSource(data = {'ego_ref_sim_y_vec':[],
                                                           'ego_ref_sim_x_vec':[]})
+
+  data_nsa_end_point = ColumnDataSource(data = {'end_point_y':[],
+                                                'end_point_x':[]})
 
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -2688,7 +2705,7 @@ def load_local_view_figure():
                      'sampled_points_data_source_xy':sampled_points_data_source_xy,
                      'fined_path_xy':fined_path_xy,
                      'data_ego_motion_sim_ref_traj' : data_ego_motion_sim_ref_traj,
-                    #  'data_pure_pursuit' : data_pure_pursuit,
+                     'data_nsa_end_point': data_nsa_end_point
                      }
 
   if is_vis_map:
@@ -2855,6 +2872,7 @@ def load_local_view_figure():
     fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   if is_vis_nsa_line:
     fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
+    fig1.circle('end_point_y', 'end_point_x', source = data_nsa_end_point, radius = 0.3, fill_color="red", line_color='red', legend_label = 'nsa end_pt')
 
   fig1.line('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'smooth refline', visible=False)
   fig1.circle('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, size = 6, line_width = 5, line_color = 'green', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'smooth refline', visible=False)
