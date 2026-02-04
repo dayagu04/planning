@@ -42,19 +42,19 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
   bool is_block_by_obstacle = false;
   bool is_passable_condition = narrow_space_decider_output.is_in_narrow_space;
   if (!narrow_space_decider_output.is_in_narrow_space) {
-    // hmi_info->nsa_info.is_avaliable = false;
+    hmi_info->nsa_info.is_avaliable = false;
     hmi_info->nsa_info.nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NOT_ON_NARROW;
   } else if (narrow_space_decider_output.is_too_narrow) {
-    // hmi_info->nsa_info.is_avaliable = false;
+    hmi_info->nsa_info.is_avaliable = false;
     hmi_info->nsa_info.nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NARROW;
   } else if (narrow_space_decider_output.is_too_wide) {
-    // hmi_info->nsa_info.is_avaliable = false;
+    hmi_info->nsa_info.is_avaliable = false;
     hmi_info->nsa_info.nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_WIDE;
   } else if (narrow_space_decider_output.is_relative_angle_too_large) {
-    // hmi_info->nsa_info.is_avaliable = false;
+    hmi_info->nsa_info.is_avaliable = false;
     hmi_info->nsa_info.nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_HEADING;
   } else {
-    // hmi_info->nsa_info.is_avaliable = true;
+    hmi_info->nsa_info.is_avaliable = true;
     hmi_info->nsa_info.nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NONE;
   }
   const auto& local_view = session_->environmental_model().get_local_view();
