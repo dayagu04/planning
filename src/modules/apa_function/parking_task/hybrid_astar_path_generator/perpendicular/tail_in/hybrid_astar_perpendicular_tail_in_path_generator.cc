@@ -1298,7 +1298,11 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
               geometry_lib::NormalizeAngle(gear_change_theta - end_theta)) *
           common_math::kRad2DegF;
 
-      if (cur_theta_err > 20.0f && cur_theta * gear_change_theta < -0.0001f) {
+      if (cur_theta_err > 6.8f && cur_theta * gear_change_theta < -0.0001f &&
+          std::fabs(
+              geometry_lib::NormalizeAngle(cur_theta - gear_change_theta)) *
+                  common_math::kRad2DegF >
+              16.8f) {
         cost.cur_gear_switch_pose_cost += 1.0f * gear_change_penalty;
       }
 
