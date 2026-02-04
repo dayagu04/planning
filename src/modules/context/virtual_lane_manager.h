@@ -297,7 +297,7 @@ class VirtualLaneManager {
   bool IsLaneOverLappedLeft(const std::shared_ptr<VirtualLane> &left_lane,
                             const std::shared_ptr<VirtualLane> &right_lane,
                             const double overlap_threshold);
-  bool ReassignLaneRelativeId(std::vector<std::shared_ptr<VirtualLane>>& lanes,
+  void ReassignLaneRelativeId(std::vector<std::shared_ptr<VirtualLane>>& lanes,
                               int current_id);
   bool UpdateEgoDistanceToStopline();
   bool UpdateEgoDistanceToCrosswalk(const iflyauto::RoadInfo *roads_ptr);

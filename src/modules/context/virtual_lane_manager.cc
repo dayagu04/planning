@@ -1974,7 +1974,7 @@ void VirtualLaneManager::EraseOverlappingLanesId(
   //基于当前车道重新设置 连续order id
   ReassignLaneRelativeId(lanes, current_order_id);
 }
-bool VirtualLaneManager::ReassignLaneRelativeId(
+void VirtualLaneManager::ReassignLaneRelativeId(
     std::vector<std::shared_ptr<VirtualLane>>& lanes, int current_id) {
   int k = -1;
   // 找到 current_id 对应的 lane 下标
@@ -1984,7 +1984,7 @@ bool VirtualLaneManager::ReassignLaneRelativeId(
       break;
     }
   }
-  if (k < 0) return false;  // 理论不会发生
+  if (k < 0) return;  // 理论不会发生
   // 按拓扑顺序重排为连续 id
   for (int j = 0; j < lanes.size(); ++j) {
     int new_id = current_id + (j - k);
@@ -1996,7 +1996,7 @@ bool VirtualLaneManager::ReassignLaneRelativeId(
     int lane_relative_id = lane_order_id - current_id;
     lane->set_relative_id(lane_relative_id);
   }
-  return true;
+  return;
 }
 
 bool VirtualLaneManager::IsLaneOverLappedLeft(
