@@ -1476,7 +1476,23 @@
     ],
     "road_boundary_curve_front_edge_expansion_values": [
       0.4, 0.6, 0.8, 1, 1.2, 1.5
-    ]
+    ],
+    "tunnel_vel_limit_dis_table_mid": {
+      "vel_limit_table": [
+        80, 90, 100, 110, 120, 130
+      ],
+      "dis_table": [
+        60, 120, 200, 270, 350, 450
+      ]
+    },
+    "tunnel_vel_limit_dis_table_low": {
+      "vel_limit_table": [
+        70, 80, 90, 100, 110, 120, 130
+      ],
+      "dis_table": [
+        50, 100, 170, 250, 320, 400, 500
+      ]
+    }
   },
   "result_trajectory_generator": {
     "use_dynamic_lat_jerk_thr": false,
