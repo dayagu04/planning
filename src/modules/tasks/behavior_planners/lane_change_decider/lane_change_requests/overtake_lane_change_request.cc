@@ -334,6 +334,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     return;
   }
 
+  const bool enable_overtake_cross_line_large_agent =
+      config_.enable_overtake_cross_line_large_agent;
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto& agent_manager =
@@ -352,8 +354,11 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& tracks_map = lateral_obstacle_->tracks_map();
   agent::Agent* agent = agent_manager->mutable_agent(cipv_id);
   exist_cross_line_large_agent_ahead_ = false;
-  for (const auto& current_agent : current_agents) {
-    if (current_agent != nullptr) {
+  if (enable_overtake_cross_line_large_agent) {
+    for (const auto& current_agent : current_agents) {
+      if (current_agent == nullptr) {
+        continue;
+      }
       if (!IsTruck(current_agent)) {
         continue;
       }
@@ -805,7 +810,7 @@ void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
     type_value = kOvertakeUpdateCountTruckTypeThreshold;
   }
   if (exist_cross_line_large_agent_ahead_) {
-    type_value *= 1.5;
+    type_value *= 2.0;
   }
   const int curr_count = round((reference_speed - leading_agent->speed()) *
                                kOvertakeUpdateCountSpeedRatioThreshold) +
