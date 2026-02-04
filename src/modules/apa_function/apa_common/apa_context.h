@@ -1,7 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <string>
+
 #include "Eigen/Core"
+#include "planning_plan_c.h"
 
 namespace planning {
 namespace apa_planner {
@@ -90,7 +92,8 @@ struct RealTimeBrakeInfo {
   RealTimeBrakeInfo(const RealTimeBrakeType _brake_type,
                     const double _body_lat_buffer,
                     const double _mirror_lat_buffer, const double _min_lon_dist,
-                    const double _lon_buffer, const double _dynamic_body_lat_buffer,
+                    const double _lon_buffer,
+                    const double _dynamic_body_lat_buffer,
                     const double _dynamic_mirror_lat_buffer,
                     const double _dynamic_lon_buffer)
       : brake_type(_brake_type),
@@ -228,6 +231,10 @@ const std::string GetApaScenarioStatusString(
     const ParkingScenarioStatus scenario_status);
 
 const std::string GetRePlanReasonString(const uint8_t type);
+
+const int CalProjIndexFromPlanningTraj(
+    const iflyauto::TrajectoryPoint *trajectory_points, const int n,
+    const int x, const int y);
 
 }  // namespace apa_planner
 }  // namespace planning
