@@ -52,7 +52,10 @@ namespace planning {
 namespace lane_borrow_deciderV2 {
 
 bool LaneBorrowDecider::Execute() {
-  if (session_->environmental_model().is_mrc_mode()) {
+  const auto& state_machine = session_->environmental_model()
+                                  .get_local_view()
+                                  .function_state_machine_info;
+  if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
     return true;
   }
   UpdateToDP();

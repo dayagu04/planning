@@ -317,6 +317,8 @@ bool EnvironmentalModelManager::Run() {
                   (fsm_state <= iflyauto::FunctionalState_NRA_ERROR);
   static bool is_mrc_mode_hold = false;
   static int mrm_state_hold_cnt = kMRMStateDebounce;
+  bool mrc_mode_from_state_machine = fsm_state == iflyauto::FunctionalState_MRC;
+
   if (fsm_state == iflyauto::FunctionalState_MRC) {
     is_mrc_mode_hold = true;
     mrm_state_hold_cnt = 1;
@@ -333,7 +335,7 @@ bool EnvironmentalModelManager::Run() {
   }
   bool mrc_mode = is_mrc_mode_hold;
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise ||
-                    rads_mode || nsa_mode || mrc_mode;
+                    rads_mode || nsa_mode || mrc_mode_from_state_machine;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
   JSON_DEBUG_VALUE("fsm_state", static_cast<int>(fsm_state))
