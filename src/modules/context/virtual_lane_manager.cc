@@ -1942,34 +1942,46 @@ void VirtualLaneManager::EraseOverlappingLanesId(
   }
   const double overlap_threshold = config_.overlap_threshold;
   int current_order_id = current_lane_->get_order_id();
+  int origin_size = lanes.size();
 
   // N(N>2)条, 已按递增顺序排列， 需要逐对对比横向偏差，决定id是否重合
-  for (size_t i = 0; i < lanes.size() - 1; i++) {
-    size_t j = i + 1;
+  std::vector<int> order_ids_vec_to_remove;
+  order_ids_vec_to_remove.clear();
+  for (int i = 0; i < origin_size - 1; i++) {
+    int j = i + 1;
     bool is_overlap_left =
         IsLaneOverLappedLeft(lanes[i], lanes[j], overlap_threshold);
     if (is_overlap_left) {
       //方法1： 删除非current车道
-      if (current_order_id > lanes.size() - 1 || current_order_id < 0) {
-        return;
-      }
       // 判断 i, j谁与current order 更远则删除
-      if (std::fabs(i - current_order_id) > std::fabs(j - current_order_id)) {
-        lanes.erase(lanes.begin() + i);
+      int di = i - current_order_id;
+      int dj = j - current_order_id;
+      if (std::abs(di) > std::abs(dj)) {
+        order_ids_vec_to_remove.emplace_back(i);
       } else {
-        lanes.erase(lanes.begin() + j);
+        order_ids_vec_to_remove.emplace_back(j);
+      }
+      //如果涉及到当前车道的相似，需要后续重置标志位
+      if( di == 0 || dj == 0){
+        //确认删除则清空split标志
+        set_is_exist_intersection_split(false);
+        set_is_exist_split_on_expressway(false);
+        set_is_exist_split_on_ramp(false);
       }
       //方法2： 重复id 包含j在内右侧id需要重新排列
       // for (size_t k = j ; k < lanes.size(); k++) {
       //   lanes[k]->set_order_id(lanes[k]->get_order_id() - 1);
       //}
-      //确认删除则清空split标志
-      set_is_exist_intersection_split(false);
-      set_is_exist_split_on_expressway(false);
-      set_is_exist_split_on_ramp(false);
     }
   }
-
+  // 统一删除
+  for(const auto& order_id : order_ids_vec_to_remove){
+    //不能删除当前车道
+    if(order_id == current_order_id){
+      continue;
+    }
+    lanes.erase(lanes.begin() + order_id);
+  }
   lane_num_ = lanes.size();
   //基于当前车道重新设置 连续order id
   ReassignLaneRelativeId(lanes, current_order_id);
@@ -1984,7 +1996,7 @@ void VirtualLaneManager::ReassignLaneRelativeId(
       break;
     }
   }
-  if (k < 0) return;  // 理论不会发生
+  if (k < 0) return;
   // 按拓扑顺序重排为连续 id
   for (int j = 0; j < lanes.size(); ++j) {
     int new_id = current_id + (j - k);
