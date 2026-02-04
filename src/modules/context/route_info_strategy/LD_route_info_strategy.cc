@@ -46,6 +46,7 @@ bool LDRouteInfoStrategy::UpdateLDMap() {
       ld_map_info_updated_timestamp_ = ld_map_info_current_timestamp;
     }
   }
+  
   if (ld_map_info_current_timestamp - ld_map_info_updated_timestamp_ >
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
@@ -1491,11 +1492,13 @@ bool LDRouteInfoStrategy::IsIgnoreMerge(
     return false;
   } else {
     // TODO:后续补充根据收窄车道的判断条件
-    return true;
+     return !IsSucMergeLink(merge_link);
   }
 
   return true;
 }
+
+
 
 void LDRouteInfoStrategy::CalculateMergeInfo() {
   merge_info_vec_ = ld_map_.GetMergeInfoList(
@@ -2160,7 +2163,7 @@ bool LDRouteInfoStrategy::IsLaneSuccessorInPlannedRoute(
 }
 
 bool LDRouteInfoStrategy::IsLaneSuccessorIsMergeLane(
-    const iflymapdata::sdpro::Lane* lane_info) {
+    const iflymapdata::sdpro::Lane* lane_info) const {
   if (lane_info == nullptr) {
     return false;
   }
@@ -2172,6 +2175,15 @@ bool LDRouteInfoStrategy::IsLaneSuccessorIsMergeLane(
   while (iterator_lane) {
     if (IsMergeLane(iterator_lane)) {
       return true;
+    }
+
+    const auto& lane_link = ld_map_.GetLinkOnRoute(iterator_lane->link_id());
+    if (lane_link == nullptr) {
+      return false;
+    }
+
+    if (lane_link->successor_link_ids_size() != 1) {
+      return false;
     }
 
     if (iterator_lane->successor_lane_ids_size() != 1) {
@@ -2801,5 +2813,25 @@ double LDRouteInfoStrategy::CalculateDisToLastLinkMergePoint(
   }
 
   return std::numeric_limits<double>::max();
+}
+
+bool LDRouteInfoStrategy::IsSucMergeLink(
+    const iflymapdata::sdpro::LinkInfo_Link* link_info) const {
+  if (link_info == nullptr) {
+    return false;
+  }
+
+  for (const auto& temp_lane_id : link_info->lane_ids()) {
+    const auto* temp_lane = ld_map_.GetLaneInfoByID(temp_lane_id);
+    if (temp_lane == nullptr) {
+      continue;
+    }
+
+    if (IsLaneSuccessorIsMergeLane(temp_lane)) {
+      return true;
+    }
+
+  }
+  return false;
 }
 }
