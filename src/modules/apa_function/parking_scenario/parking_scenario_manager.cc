@@ -169,18 +169,19 @@ void ParkingScenarioManager::UpdateScenarioType() {
   PrintApaScenarioStatus(scenario_status_);
 }
 
-void ParkingScenarioManager::Process() {
+bool ParkingScenarioManager::Process() {
+  bool planning_success = false;
   if (scenario_status_ == ParkingScenarioStatus::STATUS_RUNNING) {
-    ScenarioRunning();
+    planning_success = ScenarioRunning();
   } else if (scenario_status_ == ParkingScenarioStatus::STATUS_TRY) {
-    ScenarioTry();
+    planning_success = ScenarioTry();
   } else if (scenario_status_ == ParkingScenarioStatus::STATUS_SUSPEND) {
-    ScenarioSuspend();
+    planning_success = ScenarioSuspend();
   } else if (scenario_status_ == ParkingScenarioStatus::STATUS_MANUAL) {
-    SetFunctionRecommendPark();
+    planning_success = SetFunctionRecommendPark();
   }
 
-  return;
+  return planning_success;
 }
 
 void ParkingScenarioManager::Reset() {
@@ -216,11 +217,11 @@ std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
   return nullptr;
 }
 
-void ParkingScenarioManager::ScenarioRunning() {
+bool ParkingScenarioManager::ScenarioRunning() {
   if (current_scenario_ == nullptr) {
     Reset();
     planning_output_.planning_status.apa_planning_status = iflyauto::APA_FAILED;
-    return;
+    return false;
   }
   current_scenario_->ScenarioRunning();
 
@@ -236,13 +237,14 @@ void ParkingScenarioManager::ScenarioRunning() {
     JSON_DEBUG_VALUE("geometry_path_release", true);
   }
 
+  const auto& parking_frame = current_scenario_->GetFrame();
   ILOG_INFO << "scenario running";
-  return;
+  return parking_frame.plan_stm.path_plan_success;
 }
 
-void ParkingScenarioManager::ScenarioTry() {
+bool ParkingScenarioManager::ScenarioTry() {
   if (current_scenario_ == nullptr) {
-    return;
+    return false;
   }
 
   if (!apa_world_->GetSlotManagerPtr()->IsTargetSlotReleaseByRule()) {
@@ -251,7 +253,7 @@ void ParkingScenarioManager::ScenarioTry() {
     if (apa_world_->GetStateMachineManagerPtr()->IsSAPAMode()) {
       PubPreparePlanStateFreeSlot();
     }
-    return;
+    return false;
   }
 
   const ApaStateMachine &cur_state =
@@ -327,7 +329,7 @@ void ParkingScenarioManager::ScenarioTry() {
             << GetSlotReleaseStateString(
                    ego_info_under_slot.slot.release_info_
                        .release_state[ASTAR_PLANNING_RELEASE]);
-  return;
+  return true;
 }
 
 const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
@@ -567,20 +569,21 @@ void ParkingScenarioManager::PubStopReason() {
   return;
 }
 
-void ParkingScenarioManager::ScenarioSuspend() {
+bool ParkingScenarioManager::ScenarioSuspend() {
   if (current_scenario_ == nullptr) {
-    return;
+    return false;
   }
   current_scenario_->ScenarioSuspend();
 
   PubStopReason();
 
-  return;
+  return true;
 }
 
-void ParkingScenarioManager::SetFunctionRecommendPark() {
+bool ParkingScenarioManager::SetFunctionRecommendPark() {
   apa_hmi_data_.recommend_park_out =
       apa_world_->GetSlotManagerPtr()->GetRecommendParkOut() ? TRUE : FALSE;
+  return true;
 }
 
 }  // namespace apa_planner

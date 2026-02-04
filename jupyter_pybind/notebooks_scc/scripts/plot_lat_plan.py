@@ -42,7 +42,7 @@ load_measure_distance_tool(fig7)
 # fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
 fig_receive_topic_time = load_receive_topic_time(bag_loader)
-hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table = load_planning_hmi_info_table()
+hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table, rads_info_table = load_planning_hmi_info_table()
 fig_hmi = load_avoid_hmi(bag_loader)
 fig_curve = load_road_curve(bag_loader, lat_plan_data)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
@@ -240,7 +240,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
 
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_curve)), title="CurveFigure")
 pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(column(data_behavior_table_1)))), title="BehaviorInfo")
-pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table))))), title="Hmi")
+pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")
 pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ])
 if global_fig_plot:

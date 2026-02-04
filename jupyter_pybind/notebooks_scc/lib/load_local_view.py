@@ -33,6 +33,7 @@ Max_sdmap_segment_size = 100
 
 def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # get param
+  bag_scene_type = global_var.get_value('scene_type')
   g_is_display_enu = global_var.get_value('g_is_display_enu')
   is_match_planning = global_var.get_value('is_match_planning')
   is_bag_main = global_var.get_value('is_bag_main')
@@ -208,6 +209,75 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state = soc_state_msg.current_state
     print("FunctionalState: ", soc_state)
+    if bag_scene_type == 'HPP':
+      background_state = soc_state_msg.background_state
+      # Mapping the enum values to their names
+      # NOTE: This mapping should be matched fsm interface once when it changes!!!
+      functional_state_mapping = {
+          0: "FunctionalState_MANUAL",
+          1: "FunctionalState_SYSTEM_ERROR",
+          2: "FunctionalState_MRC",
+          3: "FunctionalState_DRIVING_PASSIVE",
+          4: "FunctionalState_ACC_STANDBY",
+          5: "FunctionalState_ACC_ACTIVATE",
+          6: "FunctionalState_ACC_OVERRIDE",
+          7: "FunctionalState_SCC_STANDBY",
+          8: "FunctionalState_SCC_ACTIVATE",
+          9: "FunctionalState_SCC_OVERRIDE",
+          10: "FunctionalState_NOA_STANDBY",
+          11: "FunctionalState_NOA_ACTIVATE",
+          12: "FunctionalState_NOA_OVERRIDE",
+          13: "FunctionalState_PARK_STANDBY",
+          14: "FunctionalState_PARK_IN_SEARCHING",
+          15: "FunctionalState_PARK_GUIDANCE",
+          16: "FunctionalState_PARK_SUSPEND",
+          17: "FunctionalState_PARK_COMPLETED",
+          18: "FunctionalState_PARK_OUT_SEARCHING",
+          19: "FunctionalState_PARK_PRE_ACTIVE",
+          20: "FunctionalState_DRIVING_ERROR",
+          21: "FunctionalState_PARK_ERROR",
+          50: "FunctionalState_HPP_STANDBY",
+          51: "FunctionalState_HPP_PROACTIVE_MAPPING",
+          52: "FunctionalState_HPP_BACKGROUND_MAPPING",
+          53: "FunctionalState_HPP_MAP_CHECK",
+          54: "FunctionalState_HPP_PRE_ACTIVE_DRIVING",
+          55: "FunctionalState_HPP_PRE_ACTIVE_PARKING",
+          56: "FunctionalState_HPP_CRUISE_ROUTING",
+          57: "FunctionalState_HPP_CRUISE_SEARCHING",
+          58: "FunctionalState_HPP_PARKING_OUT",
+          59: "FunctionalState_HPP_PARKING_IN",
+          60: "FunctionalState_HPP_SUSPEND",
+          61: "FunctionalState_HPP_COMPLETE",
+          62: "FunctionalState_HPP_ABORT",
+          63: "FunctionalState_HPP_ERROR",
+          70: "FunctionalState_RADS_STANDBY",
+          71: "FunctionalState_RADS_PRE_ACTIVE",
+          72: "FunctionalState_RADS_TRACING",
+          73: "FunctionalState_RADS_SUSPEND",
+          74: "FunctionalState_RADS_COMPLETE",
+          75: "FunctionalState_RADS_ABORT",
+          76: "FunctionalState_RADS_ERROR",
+          80: "FunctionalState_CUSTOMER_CALIBRATION",
+      }
+
+      background_state_mapping = {
+          11: "BackgroundState_HPP_ERROR",
+          12: "BackgroundState_HPP_PASSIVE",
+          13: "BackgroundState_HPP_STANDBY",
+          14: "BackgroundState_HPP_PROACTIVE_MAPPING",
+          15: "BackgroundState_HPP_PROACTIVE_MAPPING_PAUSE",
+          16: "BackgroundState_HPP_BACKGROUND_MAPPING",
+          17: "BackgroundState_HPP_BACKGROUND_MAPPING_PAUSE",
+          18: "BackgroundState_HPP_STORE",
+          19: "BackgroundState_HPP_STORE_COMPLETE",
+          20: "BackgroundState_HPP_STORE_FAIL",
+      }
+
+      cur_state_name = functional_state_mapping.get(soc_state, "Unknown FunctionalState")
+      background_state_name = background_state_mapping.get(background_state, "Unknown BackgroundState")
+
+      print("fsm_cur_state: " + str(soc_state) + " - " + cur_state_name)
+      print("fsm_background_state: " + str(background_state) + " - " + background_state_name)
 
   ### step 2-1: 加载pp原始定位信息
   if bag_loader.origin_loc_msg['enable'] == True:
@@ -442,7 +512,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state = soc_state_msg.current_state
-    print("FunctionalState: ", soc_state)
     rads_traj_x, rads_traj_y = [], []
     try:
       rads_map = soc_state_msg.rads_map
@@ -795,7 +864,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       print("planning debug info:", int(plan_debug_msg.frame_info.frame_num) - bag_loader.plan_debug_msg['data'][0].frame_info.frame_num)
     except:
       pass
-    print("distance_to_target_slot: ", plan_debug_json_msg['distance_to_target_slot'])
 
     #加载planning 生成中心线的信息
     try:
@@ -817,6 +885,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     except:
       print("no generated_refline_info!")
       pass
+    if bag_scene_type == "HPP":
+      print("dist_to_target_slot: ", plan_debug_json_msg['dist_to_target_slot'])
+      print("dist_to_target_dest: ", plan_debug_json_msg['dist_to_target_dest'])
+      print("is_exist_target_slot: ", plan_debug_json_msg['is_exist_target_slot'])
+      print("is_target_slot_allowed_to_park: ", plan_debug_json_msg['is_target_slot_allowed_to_park'])
+      print("is_standstill_near_target_slot: ", plan_debug_json_msg['is_standstill_near_target_slot'])
+      print("is_timeout_for_target_slot_allowed_to_park: ", plan_debug_json_msg['is_timeout_for_target_slot_allowed_to_park'])
     lat_behavior_common = plan_debug_msg.lat_behavior_common
     environment_model_info = plan_debug_msg.environment_model_info
     current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -873,10 +948,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     init_pos_point_y = []
     init_pos_line_x = []
     init_pos_line_y = []
-    pp_ld_x_vec = []
-    pp_ld_y_vec = []
-    pp_ld_x_vec_ = []
-    pp_ld_y_vec_ = []
+    # pp_ld_x_vec = []
+    # pp_ld_y_vec = []
+    # pp_ld_x_vec_ = []
+    # pp_ld_y_vec_ = []
     ego_pos_compensation_x_ = []
     ego_pos_compensation_y_ = []
     init_pos_point_theta = []
@@ -885,13 +960,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     ego_motion_ref_sim_x_vec_ = []
     ego_motion_ref_sim_y_vec_ = []
 
-    pp_ld_length_vec = plan_debug_json_msg['ld_actual_length_vec']
-    print("pp_ld_length_vec: ", pp_ld_length_vec)
+    # pp_ld_length_vec = plan_debug_json_msg['ld_actual_length_vec']
+    # print("pp_ld_length_vec: ", pp_ld_length_vec)
 
-    pp_ld_x_vec.append(pp_goal_point_x)
-    pp_ld_y_vec.append(pp_goal_point_y)
-    pp_ld_x_vec.append(pp_init_point_x)
-    pp_ld_y_vec.append(pp_init_point_y)
+    # pp_ld_x_vec.append(pp_goal_point_x)
+    # pp_ld_y_vec.append(pp_goal_point_y)
+    # pp_ld_x_vec.append(pp_init_point_x)
+    # pp_ld_y_vec.append(pp_init_point_y)
     if g_is_display_enu:
       init_pos_point_x.append(init_state_x)
       init_pos_point_y.append(init_state_y)
@@ -902,13 +977,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       lon_collision_object_position_y_vec_ = lon_collision_object_position_y_vec
       ego_motion_ref_sim_x_vec_ = ego_motion_ref_sim_x_vec
       ego_motion_ref_sim_y_vec_ = ego_motion_ref_sim_y_vec
-      pp_ld_x_vec_ = pp_ld_x_vec
-      pp_ld_y_vec_ = pp_ld_y_vec
+      # pp_ld_x_vec_ = pp_ld_x_vec
+      # pp_ld_y_vec_ = pp_ld_y_vec
     else:
       init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
       ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
       ego_motion_ref_sim_x_vec_, ego_motion_ref_sim_y_vec_ = coord_tf.global_to_local(ego_motion_ref_sim_x_vec, ego_motion_ref_sim_y_vec)
-      pp_ld_x_vec_, pp_ld_y_vec_ = coord_tf.global_to_local(pp_ld_x_vec, pp_ld_y_vec)
+      # pp_ld_x_vec_, pp_ld_y_vec_ = coord_tf.global_to_local(pp_ld_x_vec, pp_ld_y_vec)
       lon_collision_object_position_x_vec_, lon_collision_object_position_y_vec_ = coord_tf.global_to_local(lon_collision_object_position_x_vec, lon_collision_object_position_y_vec)
       temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
       init_pos_point_theta.append(temp_theta)
@@ -952,9 +1027,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_merge_point'].data.update({
       'merge_point_x': [merge_point_x],
       'merge_point_y': [merge_point_y]})
-    local_view_data['data_pure_pursuit'].data.update({
-      'ld_x_vec': pp_ld_x_vec_,
-      'ld_y_vec': pp_ld_y_vec_})
+    # local_view_data['data_pure_pursuit'].data.update({
+    #   'ld_x_vec': pp_ld_x_vec_,
+    #   'ld_y_vec': pp_ld_y_vec_})
     local_view_data["data_lon_collision_object_position"].data.update({
       'lon_collision_object_position_x': lon_collision_object_position_x_vec_,
       'lon_collision_object_position_y': lon_collision_object_position_y_vec_,
@@ -1065,6 +1140,21 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'obs_lat_decision' : plan_obstacle_info['lat_decision'],
         'obs_is_static' : plan_obstacle_info['is_static'],
       })
+    end_point_x = []
+    end_point_y = []
+    try:
+      if g_is_display_enu:
+        end_point_x = plan_debug_json_msg['narrow_space_end_point_x']
+        end_point_y = plan_debug_json_msg['narrow_space_end_point_y']
+      else:
+        end_point_x, end_point_y = coord_tf.global_to_local(plan_debug_json_msg['narrow_space_end_point_x'], plan_debug_json_msg['narrow_space_end_point_y'])
+      print("end_point(x, y): ", plan_debug_json_msg['narrow_space_end_point_x'], plan_debug_json_msg['narrow_space_end_point_y'])
+    except:
+      print("no narrow space!")
+    local_view_data['data_nsa_end_point'].data.update({
+      'end_point_y' : [end_point_y],
+      'end_point_x' : [end_point_x]
+    })
 
   ### step 4: 加载障碍物信息
   # load fus_obj
@@ -1374,7 +1464,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     trajectory = plan_msg.trajectory
     print("trajectory_type: ", trajectory.trajectory_type)
     hpp_planning_status = plan_msg.planning_status.hpp_planning_status
+    apa_planning_status = plan_msg.planning_status.apa_planning_status
     print("hpp_planning_status: ", hpp_planning_status)
+    print("apa_planning_status: ", apa_planning_status)
     successful_slot_info_list = plan_msg.successful_slot_info_list
     plan_traj_s = []
     for i in range(len(trajectory.trajectory_points)):
@@ -1610,6 +1702,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     if bag_loader.plan_debug_msg['enable'] == False:
       environment_model_info = None
     parking_space_boxes_x, parking_space_boxes_y, \
+    target_parking_space_box_x, target_parking_space_box_y, \
     road_mark_boxes_x, road_mark_boxes_y, \
     ehr_ground_line_x_vec, ehr_ground_line_y_vec, \
     polygon_obstacle_x_vec, polygon_obstacle_y_vec, polygon_obstacle_label_vec, \
@@ -1617,6 +1710,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_parking_space'].data.update({
       'parking_space_x' : parking_space_boxes_x,
       'parking_space_y' : parking_space_boxes_y,
+    })
+    local_view_data['data_target_parking_space'].data.update({
+      'target_parking_space_x' : target_parking_space_box_x,
+      'target_parking_space_y' : target_parking_space_box_y,
     })
     local_view_data['data_road_mark'].data.update({
       'road_mark_x' : road_mark_boxes_x,
@@ -1993,7 +2090,9 @@ def load_local_view_figure():
   is_vis_speed_bump = global_var.get_value('is_vis_speed_bump')
   is_vis_ground_mark = global_var.get_value('is_vis_ground_mark')
   is_vis_rads_path = global_var.get_value('is_vis_rads_path')
+  is_vis_nsa_line = global_var.get_value('is_vis_nsa_line')
   is_vis_radar = global_var.get_value('is_vis_radar')
+  is_vis_fus_line = global_var.get_value('is_vis_fus_line')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
   is_vis_rdg_obj = global_var.get_value('is_vis_rdg_obj')
   is_vis_me_obj = global_var.get_value('is_vis_me_obj')
@@ -2025,8 +2124,8 @@ def load_local_view_figure():
   data_init_line = ColumnDataSource(data = {'init_pos_line_x':[], 'init_pos_line_y':[]})
   data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
                                               'merge_point_y':[]})
-  data_pure_pursuit = ColumnDataSource(data = {'ld_x_vec':[],
-                                               'ld_y_vec':[]})
+  # data_pure_pursuit = ColumnDataSource(data = {'ld_x_vec':[],
+  #                                              'ld_y_vec':[]})
   data_ego_motion_sim_ref_traj = ColumnDataSource(data = {'ego_ref_sim_x_vec':[],
                                                           'ego_ref_sim_y_vec':[]})
   data_lon_collision_object_position = ColumnDataSource(data = {'lon_collision_object_position_x':[],
@@ -2191,7 +2290,6 @@ def load_local_view_figure():
   lane_mark_data_8 = ColumnDataSource(data = {'lane_mark_8':[], 'text_xn_8': [],  'text_yn_8': [] , 'lane_mark_loc_x_8': [], 'lane_mark_loc_y_8': []})
   lane_mark_data_9 = ColumnDataSource(data = {'lane_mark_9':[], 'text_xn_9': [],  'text_yn_9': [] , 'lane_mark_loc_x_9': [], 'lane_mark_loc_y_9': []})
 
-
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
   data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
@@ -2276,6 +2374,8 @@ def load_local_view_figure():
                                                'prediction_obs_x':[],})
   data_parking_space = ColumnDataSource(data = {'parking_space_y':[],
                                              'parking_space_x':[],})
+  data_target_parking_space = ColumnDataSource(data = {'target_parking_space_y':[],
+                                                       'target_parking_space_x':[],})
   data_parking_space_text = ColumnDataSource(data = {'parking_space_center_y':[],
                                                      'parking_space_center_x':[],
                                                      'parking_space_id_vec':[],})
@@ -2384,6 +2484,9 @@ def load_local_view_figure():
                                             'traj_x':[]})
   data_ego_motion_sim_ref_traj = ColumnDataSource(data = {'ego_ref_sim_y_vec':[],
                                                           'ego_ref_sim_x_vec':[]})
+
+  data_nsa_end_point = ColumnDataSource(data = {'end_point_y':[],
+                                                'end_point_x':[]})
 
   data_index = {'loc_msg_idx': 0,
                 'road_msg_idx': 0,
@@ -2498,6 +2601,7 @@ def load_local_view_figure():
                      'data_prediction_3' : data_prediction_3 ,\
                      'data_prediction_4' : data_prediction_4 ,\
                      'data_parking_space' : data_parking_space , \
+                     'data_target_parking_space' : data_target_parking_space , \
                      'data_parking_space_text' : data_parking_space_text , \
                      'data_road_mark' : data_road_mark , \
                      'data_ehr_ground_line': data_ehr_ground_line, \
@@ -2601,7 +2705,7 @@ def load_local_view_figure():
                      'sampled_points_data_source_xy':sampled_points_data_source_xy,
                      'fined_path_xy':fined_path_xy,
                      'data_ego_motion_sim_ref_traj' : data_ego_motion_sim_ref_traj,
-                     'data_pure_pursuit' : data_pure_pursuit,
+                     'data_nsa_end_point': data_nsa_end_point
                      }
 
   if is_vis_map:
@@ -2705,11 +2809,12 @@ def load_local_view_figure():
     fig1.patch('zebra_crossing_line_10_y', 'zebra_crossing_line_10_x', source = zebra_crossing_line_10, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
     fig1.patch('zebra_crossing_line_11_y', 'zebra_crossing_line_11_x', source = zebra_crossing_line_11, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
 
-  fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
-  fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
-  fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
-  fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
-  fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
+  #fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
+  if is_vis_fus_line:
+    fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
+    fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
+    fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
+    fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
 
   f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
@@ -2759,14 +2864,18 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-  fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  if is_vis_fus_line:
+    fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+    fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+    fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+    fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+    fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  if is_vis_nsa_line:
+    fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
+    fig1.circle('end_point_y', 'end_point_x', source = data_nsa_end_point, radius = 0.3, fill_color="red", line_color='red', legend_label = 'nsa end_pt')
+
   fig1.line('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'smooth refline', visible=False)
   fig1.circle('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, size = 6, line_width = 5, line_color = 'green', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'smooth refline', visible=False)
-  fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
 
   if is_vis_lane_mark:
     fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
@@ -2799,8 +2908,8 @@ def load_local_view_figure():
     fig1.patches('obstacles_y', 'obstacles_x', source = data_me_obj, fill_color = "maroon", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_me_obj, text_color="maroon", text_align="center", text_font_size="10pt", legend_label = 'me_info',visible = False)
   if is_vis_rads_path:
-    fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path', visible = False)
-    fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path', visible=False)
+    fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path')
+    fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path')
   fig1.line('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source = data_ego_motion_sim_ref_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ego_motion_sim_ref', visible = False)
   fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
@@ -2838,6 +2947,7 @@ def load_local_view_figure():
     fig1.circle('trace_start_y', 'trace_start_x', source = data_map_key_point, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_color = "green", fill_alpha = 1, legend_label = 'ehr_start')
     fig1.circle('trace_end_y', 'trace_end_x', source = data_map_key_point, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_color = "red", fill_alpha = 1, legend_label = 'ehr_end')
     fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'parking_space')
+    fig1.patch('target_parking_space_y', 'target_parking_space_x', source = data_target_parking_space, fill_color = "red", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_target_slot')
     # fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec', source = data_parking_space_text, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'parking_space_id', visible = False)
     fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
     fig1.text('pos_y', 'pos_x', text = 'polygon_obstacle_label' ,source = data_polygon_obstacle, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ehr_obs_info', visible = False)
@@ -2883,14 +2993,27 @@ def load_local_view_figure():
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
   hover1_2 = HoverTool(renderers=[fig_ego_point], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  hover1_3 = HoverTool(renderers=[fig_cline0], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_0_dist_to_lborder'), ('dist_to_right_border', '@center_line_0_dist_to_rborder')])
-  hover1_4 = HoverTool(renderers=[fig_cline1], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_1_dist_to_lborder'), ('dist_to_right_border', '@center_line_1_dist_to_rborder')])
-  hover1_5 = HoverTool(renderers=[fig_cline2], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_2_dist_to_lborder'), ('dist_to_right_border', '@center_line_2_dist_to_rborder')])
-  hover1_6 = HoverTool(renderers=[fig_cline3], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_3_dist_to_lborder'), ('dist_to_right_border', '@center_line_3_dist_to_rborder')])
-  hover1_7 = HoverTool(renderers=[fig_cline4], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_4_dist_to_lborder'), ('dist_to_right_border', '@center_line_4_dist_to_rborder')])
-  hover1_9 = HoverTool(renderers=[fig_dashed_line], tooltips=[('relative_id', '@relative_id_vec')])
-  hover1_10 = HoverTool(renderers=[fig_solid_line], tooltips=[('relative_id', '@relative_id_vec')])
-  hover1_11 = HoverTool(renderers=[fig_virtual_line], tooltips=[('relative_id', '@relative_id_vec')])
+  fig1.add_tools(hover1_1)
+  fig1.add_tools(hover1_2)
+
+  if is_vis_fus_line:
+    hover1_3 = HoverTool(renderers=[fig_cline0], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_0_dist_to_lborder'), ('dist_to_right_border', '@center_line_0_dist_to_rborder')])
+    hover1_4 = HoverTool(renderers=[fig_cline1], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_1_dist_to_lborder'), ('dist_to_right_border', '@center_line_1_dist_to_rborder')])
+    hover1_5 = HoverTool(renderers=[fig_cline2], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_2_dist_to_lborder'), ('dist_to_right_border', '@center_line_2_dist_to_rborder')])
+    hover1_6 = HoverTool(renderers=[fig_cline3], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_3_dist_to_lborder'), ('dist_to_right_border', '@center_line_3_dist_to_rborder')])
+    hover1_7 = HoverTool(renderers=[fig_cline4], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_4_dist_to_lborder'), ('dist_to_right_border', '@center_line_4_dist_to_rborder')])
+    hover1_9 = HoverTool(renderers=[fig_dashed_line], tooltips=[('relative_id', '@relative_id_vec')])
+    hover1_10 = HoverTool(renderers=[fig_solid_line], tooltips=[('relative_id', '@relative_id_vec')])
+    hover1_11 = HoverTool(renderers=[fig_virtual_line], tooltips=[('relative_id', '@relative_id_vec')])
+    fig1.add_tools(hover1_3)
+    fig1.add_tools(hover1_4)
+    fig1.add_tools(hover1_5)
+    fig1.add_tools(hover1_6)
+    fig1.add_tools(hover1_7)
+    fig1.add_tools(hover1_9)
+    fig1.add_tools(hover1_10)
+    fig1.add_tools(hover1_11)
+
   if is_vis_sdpromap:
     hover1_12 = HoverTool(renderers=[sdpromap_line_info], tooltips=[('sdpromap_road_info', '@sdpromap_road_info_vec')])
     fig1.add_tools(hover1_12)
@@ -2901,16 +3024,6 @@ def load_local_view_figure():
     hover1_15 = HoverTool(renderers=[outlink_info], tooltips=[('load_outlink_info', '@outlink_info')])
     fig1.add_tools(hover1_15)
 
-  fig1.add_tools(hover1_1)
-  fig1.add_tools(hover1_2)
-  fig1.add_tools(hover1_3)
-  fig1.add_tools(hover1_4)
-  fig1.add_tools(hover1_5)
-  fig1.add_tools(hover1_6)
-  fig1.add_tools(hover1_7)
-  fig1.add_tools(hover1_9)
-  fig1.add_tools(hover1_10)
-  fig1.add_tools(hover1_11)
   if is_vis_occ_obj:
     # hover1_12 = HoverTool(renderers=[fig_ground_line], tooltips=[('id', '@ground_line_id')])
     # hover1_13 = HoverTool(renderers=[fig_ground_line_cluster], tooltips=[('id', '@ground_line_id')])
@@ -2948,21 +3061,25 @@ def load_planning_hmi_info_table():
   ad_info_data = ColumnDataSource(data={'name': [], 'data': []})
   hpp_info_data = ColumnDataSource(data={'name': [], 'data': []})
   nsa_info_data = ColumnDataSource(data={'name': [], 'data': []})
+  rads_info_data = ColumnDataSource(data={'name': [], 'data': []})
   hmi_info_data = {'ad_info_data':ad_info_data,
                    'hpp_info_data':hpp_info_data,
-                   'nsa_info_data':nsa_info_data}
+                   'nsa_info_data':nsa_info_data,
+                   'rads_info_data': rads_info_data}
   # table
   columns = [TableColumn(field="name", title="name",),
              TableColumn(field="data", title="data")]
   ad_info_table = DataTable(source=ad_info_data, columns=columns, width=400, height=600)
   hpp_info_table = DataTable(source=hpp_info_data, columns=columns, width=400, height=460)
-  nsa_info_table = DataTable(source=nsa_info_data, columns=columns, width=400, height=400)
-  return hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table
+  nsa_info_table = DataTable(source=nsa_info_data, columns=columns, width=400, height=150)
+  rads_info_table = DataTable(source=rads_info_data, columns=columns, width=400, height=150)
+  return hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table, rads_info_table
 
 def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
   ad_info_names, ad_info_datas = [], []
   hpp_info_names, hpp_info_datas = [], []
   nsa_info_names, nsa_info_datas = [], []
+  rads_info_names, rads_info_datas = [], []
   if bag_loader.planning_hmi_msg['enable'] ==True:
     # 1. update ad info
     try:
@@ -2990,7 +3107,7 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
       vars = ['is_avaliable', 'distance_to_parking_space', 'avoid_status', \
               'avoid_obstacle_type', 'aovid_id', 'is_approaching_turn', \
               'is_left_turn', 'is_approaching_intersection', 'is_approaching_speed_bumps', \
-              'emergency_level', 'is_parking_space_occupied', 'is_new_parking_space_found', \
+              'emergency_level', 'is_target_parking_space_occupied', 'is_new_parking_space_found', \
               'is_on_hpp_lane', 'is_reached_hpp_trace_start', 'accumulated_driving_distance', \
               'estimated_remaining_time', 'hpp_state_switch']
       for name in vars:
@@ -3013,9 +3130,21 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
           pass
     except Exception as e:
       print("planning_hmi_nsa_info error: ", e)
+    # 4. update rads info
+    try:
+      rads_info = local_view_data['data_msg']['planning_hmi_msg'].rads_info
+      vars = ['is_avaliable', 'rads_pause_reason', 'avoid_status', 'aovid_id']
+      for name in vars:
+        try:
+          rads_info_datas.append(getattr(rads_info, name))
+          rads_info_names.append(name)
+        except:
+          pass
+    except Exception as e:
+      print("planning_hmi_rads_info_info error: ", e)
   else:
     print("no planning_hmi_msg!")
-  # 4. update hmi info
+  # 5. update hmi info
   hmi_info_data['ad_info_data'].data.update({
     'name': ad_info_names,
     'data': ad_info_datas,
@@ -3027,4 +3156,8 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
   hmi_info_data['nsa_info_data'].data.update({
     'name': nsa_info_names,
     'data': nsa_info_datas,
+  })
+  hmi_info_data['rads_info_data'].data.update({
+    'name': rads_info_names,
+    'data': rads_info_datas,
   })

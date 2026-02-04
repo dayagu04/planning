@@ -1023,6 +1023,9 @@ bool LDRouteInfoStrategy::CalculateMergePreFeasibleLane(
       feasible_lane_graph.lane_topo_groups.back();
 
   for (const auto& feasible_lane : merge_link_feasible_lane.topo_lanes) {
+    if (feasible_lane.predecessor_lane_ids.empty()) {
+      continue;
+    }
     const auto lane_info =
         ld_map_.GetLaneInfoByID(*feasible_lane.predecessor_lane_ids.begin());
     if (lane_info == nullptr) {

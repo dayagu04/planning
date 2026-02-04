@@ -157,6 +157,7 @@ class PlanningScheduler {
   bool hdmap_valid_ = false;
   bool last_can_run_{false};
   int hdmap_valid_count_;
+  bool is_hpp_slot_searching_ = false;
 
   std::unique_ptr<BaseFunction> hpp_function_ = nullptr;
   std::unique_ptr<BaseFunction> noa_function_ = nullptr;

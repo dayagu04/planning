@@ -24,11 +24,13 @@ def proto_gen_py():
         os.chdir("../../interface/src/proto/")
         command = f"protoc --python_out={new_dir} {'ehr_sdmap.proto'}"
         os.system(command)
+        command = f"protoc --python_out={new_dir} {'common3.proto'}"
+        os.system(command)
         command = f"protoc --python_out={new_dir} {'common.proto'}"
         os.system(command)
         command = f"protoc --python_out={new_dir} {'ehr.proto'}"
         os.system(command)
-        command = f"protoc --python_out={new_dir} {'ifly_parking_map.proto'}"
+        command = f"protoc --python_out={new_dir} {'parking_map.proto'}"
         os.system(command)
         command = f"protoc --python_out={new_dir} {'map_data.proto'}"
         os.system(command)

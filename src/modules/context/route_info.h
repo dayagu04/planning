@@ -4,6 +4,7 @@
 #include "config/basic_type.h"
 #include "ego_lane_track_manager.h"
 #include "ego_planning_config.h"
+#include "ehr.pb.h"
 #include "hdmap/hdmap.h"
 #include "local_view.h"
 #include "modules/context/route_info_strategy/route_info_strategy.h"
@@ -48,6 +49,17 @@ struct LSLInfo {
   double lsl_end_distance = 0.0;
 };
 
+struct SpeedBumpInfo {
+  double dist_to_start = 0.0;
+  uint64_t id = 0;
+  ad_common::math::Vec2d center;
+  SpeedBumpInfo() = default;
+  SpeedBumpInfo(double dist_to_start_, uint64_t id_, double x, double y) {
+    dist_to_start = dist_to_start_;
+    id = id_;
+    center = ad_common::math::Vec2d(x, y);
+  }
+};
 enum class LaneDirection {
   straight_lane = 0,
   left_turn_lane = 1,
@@ -76,6 +88,10 @@ class RouteInfo {
   void UpdateMLCInfoDeciderBaseTencent(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
 
+  void UpdateTargetSlotInfo(const ad_common::math::Vec2d& center);
+
+  void UpdateTargetInfo(const double& dist_to_target_slot, const double& dist_to_target_dest);
+
   void UpdateVisionInfo() const;
   const RouteInfoOutput& get_route_info_output() { return route_info_output_; }
   const MLCDeciderRouteInfo& get_MLC_decider_route_info() {
@@ -95,7 +111,7 @@ class RouteInfo {
     return current_link_;
   }
 
-  const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
+  // const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
 
   void ResetMLCInfoDecider() { mlc_decider_route_info_.reset(); }
 
@@ -138,14 +154,15 @@ class RouteInfo {
   uint64_t current_lane_id_ = 0;
   Pose2D current_pose_{0.0, 0.0, 0.0};
   ad_common::hdmap::LaneInfoConstPtr nearest_lane_hpp_;
-  double nearest_s_hpp_{0.0};
-  double sum_s_hpp_{0.0};
-  ad_common::math::Box2d ego_box_hpp_;
+  double nearest_s_hpp_{0.0};                        // 自车当前位置，在当前 lane 的纵向距离
+  double sum_s_to_target_dest_hpp_{0.0};             // 从起点到地图终点位置，沿道路的距离
+  double sum_s_to_target_slot_hpp_{0.0};             // 从起点到目标车位终点，沿道路的距离
+  double sum_s_to_curr_pose_hpp_{0.0};               // 从起点到自车当前位置，沿道路的距离
+  SpeedBumpInfo front_nearest_speed_bump_info_;      // 前方最近的减速带信息
   ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
-  double sum_distance_driving_ = -1;
-  double distance_to_target_slot_ = NL_NMAX;
-  double distance_to_next_speed_bump_ = NL_NMAX;
-  double virtual_extend_buff_ = 0.0;
+  double sum_driving_distance_ = -1;  // 自车实际已经行驶的距离
+  // HPP variables end
+
   LastExchangeRegionInfo last_exchange_region_info_;
   struct RayInfo {
     char name;
@@ -397,16 +414,19 @@ class RouteInfo {
       std::vector<iflymapdata::sdpro::FeaturePoint>& specific_fp,
       double max_search_distance);
   // for HPP function
-  void UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hdmap);
-  bool UpdateStaticMap(const LocalView& local_view);
-  bool GetCurrentNearestLane();
-  void CalculateHPPInfo();
-  void ConstructBox();
+  bool UpdateStaticMap(const Map::StaticMap& static_map_info);
+  bool UpdateRouteInfoForHPP(const Map::StaticMap& static_map_info);
   void ResetHpp();
-  void CalculateDistanceToTraceEnd();
+
+  bool CalculateCurrentPoseInfo(const Map::StaticMap& static_map_info);
+  bool CalculateTraceEndInfo(const Map::StaticMap& static_map_info);
+  bool CalculateNextSpeedBumpInfo(const Map::StaticMap& static_map_info);
+  bool CalculateIsHPPReady();
+  double CalculateAccumulateSFromStartToLaneEnd(size_t lane_id);
+
   void CalculateDistanceToNextSpeedBump();
-  bool IsOnHPPLane();
   double CalculatePointAccumulateS(size_t lane_id);
+
   void EraseSplitSplitFeasibleLane(NOASplitRegionInfo& first_split_region_info,
                                    NOASplitRegionInfo& second_split_region_info,
                                    int erase_num);

@@ -85,28 +85,25 @@ bool BoxCollisonLib::GetCollisionResultBySimEgoDec(
   int sim_count_max = time_max / sim_step_time;
 
   float32 sim_step_ego_v = ego_v_x_t0;  // 当前仿真时刻本车速度
-  bool update_ego_move_flag = true;
   for (int i = 0; i < sim_count_max; i++) {
     // 本车所处的位置(time时刻)
     if (time < time_before_aeb_dec) {
+      ego_move += 0.5F * ego_a_x_t0 * sim_step_time * sim_step_time +
+                  sim_step_ego_v * sim_step_time;
       sim_step_ego_v += ego_a_x_t0 * sim_step_time;
     } else {
+      if (std::fabs(sim_step_ego_v) < 0.1) {
+        ego_move += 0.0;
+        sim_step_ego_v = 0.0;
+      } else {
+        ego_move += 0.5F * aeb_dec_acc * sim_step_time * sim_step_time +
+                    sim_step_ego_v * sim_step_time;
       sim_step_ego_v += aeb_dec_acc * sim_step_time;
+      }
     }
     // 修正本车车速
     if (sim_step_ego_v * ego_v_x_t0 < 0.0) {
-      update_ego_move_flag = false;
-    }
-    if (time < time_before_aeb_dec) {
-      ego_move += 0.5F * ego_a_x_t0 * sim_step_time * sim_step_time +
-                  sim_step_ego_v * sim_step_time;
-    } else {
-      if (update_ego_move_flag == true) {
-        ego_move += 0.5F * aeb_dec_acc * sim_step_time * sim_step_time +
-                    sim_step_ego_v * sim_step_time;
-      } else {
-        ego_move = 0.0;
-      }
+      sim_step_ego_v = 0.0;
     }
     ego_box.input.heading_angle =
         ego_move /

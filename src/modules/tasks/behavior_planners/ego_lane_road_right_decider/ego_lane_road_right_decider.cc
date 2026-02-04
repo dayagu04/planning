@@ -53,6 +53,7 @@ void EgoLaneRoadRightDecider::Init() {
   split_lane_virtual_id_ = 0;
   cur_lane_is_continue_ = true;
   boundary_merge_point_valid_ = false;
+  merge_point_distance_ = NL_NMAX;
   merge_direction_ = NONE_LANE_MERGE;
 }
 
@@ -72,6 +73,7 @@ bool EgoLaneRoadRightDecider::Execute() {
   boundary_merge_point_valid_ = false;
   merge_point_ = ego_point;
   boundary_merge_point_ = ego_point;
+  merge_point_distance_ = NL_NMAX;
 
   ComputeIsSplitRegion();
 
@@ -94,6 +96,8 @@ bool EgoLaneRoadRightDecider::Execute() {
     merge_point_ = merge_point_list[0];
     boundary_merge_point_ = merge_point_list[1];
     boundary_merge_point_valid_ = true;
+    merge_point_distance_ = std::hypot(ego_point.x - boundary_merge_point_.x,
+                                       ego_point.y - boundary_merge_point_.y);
   } else {
     merge_point_ = ego_point;
     boundary_merge_point_ = ego_point;
@@ -118,6 +122,7 @@ bool EgoLaneRoadRightDecider::Execute() {
   road_right_decider.is_split_region = is_split_region_;
   road_right_decider.boundary_merge_point.x = boundary_merge_point_.x;
   road_right_decider.boundary_merge_point.y = boundary_merge_point_.y;
+  road_right_decider.merge_point_distance = merge_point_distance_;
   return true;
 }
 

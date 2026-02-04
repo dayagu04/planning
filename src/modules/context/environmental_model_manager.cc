@@ -303,7 +303,7 @@ bool EnvironmentalModelManager::Run() {
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
                   (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
   bool hpp_mode_cruise =
-      (fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE) ||
+      (fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE_DRIVING) ||
       (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) ||
       (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING);
   bool hpp_mode =
@@ -447,6 +447,10 @@ bool EnvironmentalModelManager::Run() {
     time_end = IflyTime::Now_ms();
     ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
+    if(parking_slot_manager_ptr_->IsExistTargetSlot()) {
+      const auto& target_slot_center = parking_slot_manager_ptr_->GetTargetSlotCenter();
+      route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(target_slot_center.x(), target_slot_center.y()));
+    }
   }
 
   time_start = IflyTime::Now_ms();
@@ -550,12 +554,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
     auto timestamp = local_view.localization.meta.timestamp;
-    if (!session_->is_hpp_scene() && !session_->is_rads_scene()) {
+    if (!session_->is_hpp_scene() && !session_->is_rads_scene() && !session_->is_nsa_scene()) {
       truncate_prediction_info(local_view.prediction_result,
                                local_view.fusion_objects_info, timestamp,
                                prediction_obj_id_set);
     } else {
-      // hack:hpp 、rads暂时只用融合障碍物
+      // hack:hpp 、rads 、nsa 暂时只用融合障碍物
       for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
            i++) {
         const auto& obj = local_view.fusion_objects_info.fusion_object[i];

@@ -412,6 +412,44 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "meb_call_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_status_const,
                        int, "meb_request_status_const");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer, double,
+                       "meb_odbox_dis_buffer");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r, double,
+                       "meb_odbox_dis_buffer_r");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_people,  std::vector<double>,
+                       "meb_odbox_dis_buffer_r_dynamic_people");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_car,  std::vector<double>,
+                       "meb_odbox_dis_buffer_r_dynamic_car");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_motor,  std::vector<double>,
+                       "meb_odbox_dis_buffer_r_dynamic_motor");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_default, std::vector<double>,
+                       "meb_odbox_dis_buffer_r_dynamic_default");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_people, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_dynamic_people");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_car, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_dynamic_car");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_motor, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_dynamic_motor");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_default, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_dynamic_default");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_people, std::vector<double>,
+                       "meb_odbox_dis_buffer_r_static_people");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_car, std::vector<double>,
+                       "meb_odbox_dis_buffer_r_static_car");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_motor, std::vector<double>,
+                       "meb_odbox_dis_buffer_r_static_motor");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_default, std::vector<double>,
+                       "meb_odbox_dis_buffer_r_static_default");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_people, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_static_people");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_car, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_static_car");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_motor, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_static_motor");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_default, std::vector<double>,
+                       "meb_odbox_dis_buffer_d_static_default");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_veh_speed_kmh, std::vector<double>,
+                       "meb_odbox_dis_buffer_veh_speed_kmh");
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }

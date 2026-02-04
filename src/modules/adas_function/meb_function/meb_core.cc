@@ -7,6 +7,87 @@
 #include "geometry_math.h"
 #include "polygon_base.h"
 
+namespace {
+enum class OdObjGroup { kPeople, kCar, kMotor, kDefault };
+
+inline OdObjGroup GetOdObjGroup(const iflyauto::ObjectType type) {
+  switch (type) {
+    case iflyauto::ObjectType::OBJECT_TYPE_ADULT:
+    case iflyauto::ObjectType::OBJECT_TYPE_CHILD:
+    case iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_POLICE:
+      return OdObjGroup::kPeople;
+    case iflyauto::ObjectType::OBJECT_TYPE_COUPE:
+    case iflyauto::ObjectType::OBJECT_TYPE_MINIBUS:
+    case iflyauto::ObjectType::OBJECT_TYPE_VAN:
+    case iflyauto::ObjectType::OBJECT_TYPE_BUS:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRUCK:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRAILER:
+      return OdObjGroup::kCar;
+    case iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING:
+    case iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING:
+    case iflyauto::ObjectType::OBJECT_TYPE_BICYCLE:
+    case iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE:
+      return OdObjGroup::kMotor;
+    default:
+      return OdObjGroup::kDefault;
+  }
+}
+
+inline const std::vector<double> &GetOdBufferTable(
+    const adas_function::context::Parameters &param, const OdObjGroup group,
+    const bool is_reverse, const bool is_static) {
+  if (is_reverse) {
+    if (is_static) {
+      switch (group) {
+        case OdObjGroup::kPeople:
+          return param.meb_odbox_dis_buffer_r_static_people;
+        case OdObjGroup::kCar:
+          return param.meb_odbox_dis_buffer_r_static_car;
+        case OdObjGroup::kMotor:
+          return param.meb_odbox_dis_buffer_r_static_motor;
+        default:
+          return param.meb_odbox_dis_buffer_r_static_default;
+      }
+    }
+    switch (group) {
+      case OdObjGroup::kPeople:
+        return param.meb_odbox_dis_buffer_r_dynamic_people;
+      case OdObjGroup::kCar:
+        return param.meb_odbox_dis_buffer_r_dynamic_car;
+      case OdObjGroup::kMotor:
+        return param.meb_odbox_dis_buffer_r_dynamic_motor;
+      default:
+        return param.meb_odbox_dis_buffer_r_dynamic_default;
+    }
+  }
+  if (is_static) {
+    switch (group) {
+      case OdObjGroup::kPeople:
+        return param.meb_odbox_dis_buffer_d_static_people;
+      case OdObjGroup::kCar:
+        return param.meb_odbox_dis_buffer_d_static_car;
+      case OdObjGroup::kMotor:
+        return param.meb_odbox_dis_buffer_d_static_motor;
+      default:
+        return param.meb_odbox_dis_buffer_d_static_default;
+    }
+  }
+  switch (group) {
+    case OdObjGroup::kPeople:
+      return param.meb_odbox_dis_buffer_d_dynamic_people;
+    case OdObjGroup::kCar:
+      return param.meb_odbox_dis_buffer_d_dynamic_car;
+    case OdObjGroup::kMotor:
+      return param.meb_odbox_dis_buffer_d_dynamic_motor;
+    default:
+      return param.meb_odbox_dis_buffer_d_dynamic_default;
+  }
+}
+}  // namespace
+
 namespace adas_function {
 namespace meb_core {
 
@@ -415,9 +496,9 @@ void adas_function::meb_core::MebCore::SetMebOutputInfo() {
         GetContext.get_param()->meb_hmi_status;
     GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
         GetContext.get_param()->meb_hmi_vaule;
-    // GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
-    //     (iflyauto::MEBInterventionDirection)GetContext.get_param()
-    //         ->meb_hmi_direction;
+    GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+        (iflyauto::MEBInterventionDirection)GetContext.get_param()
+            ->meb_hmi_direction;
   } else {
     GetContext.mutable_output_info()->meb_output_info_.meb_state = meb_state_;
     if (GetContext.get_output_info()->meb_output_info_.meb_state ==
@@ -428,22 +509,22 @@ void adas_function::meb_core::MebCore::SetMebOutputInfo() {
         GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
             GetContext.get_param()->meb_request_acc *
             GetContext.get_param()->meb_reverse_acc_gain;
-        // GetContext.mutable_output_info()
-        //     ->meb_output_info_.meb_request_direction =
-        //     iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_REAR;
+        GetContext.mutable_output_info()
+            ->meb_output_info_.meb_request_direction =
+            iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_REAR;
       } else {
         GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
             GetContext.get_param()->meb_request_acc;
-        // GetContext.mutable_output_info()
-        //     ->meb_output_info_.meb_request_direction = iflyauto::
-        //     MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_FRONT;
+        GetContext.mutable_output_info()
+            ->meb_output_info_.meb_request_direction = iflyauto::
+            MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_FRONT;
       }
     } else {
       GetContext.mutable_output_info()->meb_output_info_.meb_request_status = 0;
       GetContext.mutable_output_info()->meb_output_info_.meb_request_value =
           0.0;
-      // GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
-      //     iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+          iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
     }
   }
 
@@ -456,9 +537,9 @@ void adas_function::meb_core::MebCore::SetMebOutputInfo() {
   JSON_DEBUG_VALUE(
       "meb_output_value",
       GetContext.get_output_info()->meb_output_info_.meb_request_value);
-  // JSON_DEBUG_VALUE("meb_output_direction",
-  //                  (int)GetContext.get_output_info()
-  //                      ->meb_output_info_.meb_request_direction);
+  JSON_DEBUG_VALUE("meb_output_direction",
+                   (int)GetContext.get_output_info()
+                       ->meb_output_info_.meb_request_direction);
 }
 
 void adas_function::meb_core::MebCore::CollisionCalculate(void) {
@@ -503,17 +584,20 @@ void adas_function::meb_core::MebCore::CollisionCalculate(void) {
     line_seg.length =
         std::max(GetContext.get_state_info()->vehicle_speed * predict_t, 0.5);
     if (GetContext.get_param()->meb_od_obs_switch == true) {
-      od_meb_result_ = LineCollisionUpdateCommon(line_seg, 0.0, od_obs_vec_);
+      od_meb_result_ =
+          LineCollisionUpdateCommonOd(line_seg, od_obs_vec_, od_obs_index_vec_);
     } else {
       od_meb_result_.collision_flag = false;
     }
     if (GetContext.get_param()->meb_occ_obs_switch == true) {
-      occ_meb_result_ = LineCollisionUpdateCommon(line_seg, 0.0, occ_obs_vec_);
+      occ_meb_result_ = LineCollisionUpdateCommon(
+          line_seg, GetContext.get_param()->meb_dis_buffer, occ_obs_vec_);
     } else {
       occ_meb_result_.collision_flag = false;
     }
     if (GetContext.get_param()->meb_uss_obs_switch == true) {
-      uss_meb_result_ = LineCollisionUpdateCommon(line_seg, 0.0, uss_obs_vec_);
+      uss_meb_result_ = LineCollisionUpdateCommon(
+          line_seg, GetContext.get_param()->meb_dis_buffer, uss_obs_vec_);
     } else {
       uss_meb_result_.collision_flag = false;
     }
@@ -547,17 +631,20 @@ void adas_function::meb_core::MebCore::CollisionCalculate(void) {
     arc.circle_center = {0.0, pCenter_y};
     arc.circle_radius = meb_radius_;
     if (GetContext.get_param()->meb_od_obs_switch == true) {
-      od_meb_result_ = ArcCollisionUpdateCommon(arc, 0.0, od_obs_vec_);
+      od_meb_result_ =
+          ArcCollisionUpdateCommonOd(arc, od_obs_vec_, od_obs_index_vec_);
     } else {
       od_meb_result_.collision_flag = false;
     }
     if (GetContext.get_param()->meb_occ_obs_switch == true) {
-      occ_meb_result_ = ArcCollisionUpdateCommon(arc, 0.0, occ_obs_vec_);
+      occ_meb_result_ = ArcCollisionUpdateCommon(
+          arc, GetContext.get_param()->meb_dis_buffer, occ_obs_vec_);
     } else {
       occ_meb_result_.collision_flag = false;
     }
     if (GetContext.get_param()->meb_uss_obs_switch == true) {
-      uss_meb_result_ = ArcCollisionUpdateCommon(arc, 0.0, uss_obs_vec_);
+      uss_meb_result_ = ArcCollisionUpdateCommon(
+          arc, GetContext.get_param()->meb_dis_buffer, uss_obs_vec_);
     } else {
       uss_meb_result_.collision_flag = false;
     }
@@ -566,6 +653,7 @@ void adas_function::meb_core::MebCore::CollisionCalculate(void) {
 
   // od boc collision calculate
   od_box_collision_flag_ = false;
+  od_box_id_ = -1;
   if (GetContext.get_param()->meb_od_box_switch == true) {
     CollisionOdBoxCalculate();
   }
@@ -597,12 +685,12 @@ void MebCore::UpdateUssDistanceFunction() {
 
 double MebCore::CollisionCalculateAcc(double remain_dist) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  double actuator_dis_buffer = GetContext.get_param()->meb_dis_buffer;
+  double actuator_dis_buffer = 0.0;
   if (GetContext.get_param()->meb_dynamic_buffer_switch) {
     actuator_dis_buffer = GetContext.get_param()->meb_actuator_act_time *
                           GetContext.get_state_info()->vehicle_speed;
-    actuator_dis_buffer =
-        actuator_dis_buffer + GetContext.get_param()->meb_dis_buffer;
+    // actuator_dis_buffer =
+    //     actuator_dis_buffer + GetContext.get_param()->meb_dis_buffer;
   }
   double vel_fabs = std::fabs(GetContext.get_state_info()->vehicle_speed);
   double acc = vel_fabs * vel_fabs /
@@ -639,10 +727,7 @@ void MebCore::CollisionOdBoxCalculate() {
   box_collision_.t_start = 0.0;
   box_collision_.t_end = 2.0;
   box_collision_.time_step = 0.1;
-  box_collision_.time_dealy =
-      GetContext.get_param()->meb_actuator_act_time +
-      GetContext.get_param()->meb_dis_buffer /
-          std::max(0.5, GetContext.get_state_info()->vehicle_speed);
+
   box_collision_.dec_request =
       GetContext.get_param()->meb_acc_collision_thrd * shift_direction_index;
   // 2.车辆信息
@@ -658,10 +743,23 @@ void MebCore::CollisionOdBoxCalculate() {
   // shift_direction_index * GetContext.get_state_info()->vehicle_speed;
   // vel_speed_preprocess;
   box_collision_.boxs_info_.ego_width = GetContext.get_param()->ego_width;
+  const auto &param = *GetContext.get_param();
+  double od_box_dis_buffer = 0.0;
   for (uint8 i = 0; i < fusion_od_obs_size; ++i) {
     const iflyauto::Obstacle &obs =
         fusion_objects_info.fusion_object[i].common_info;
 
+    double temp_buffer = 0.0;
+    const bool is_reverse = GetContext.get_state_info()->shift_lever_state ==
+                            iflyauto::ShiftLeverStateEnum::ShiftLeverState_R;
+    const auto &speed_kmh = param.meb_odbox_dis_buffer_veh_speed_kmh;
+    const auto group = GetOdObjGroup(obs.type);
+    const auto &table = GetOdBufferTable(param, group, is_reverse, false);
+    temp_buffer = pnc::mathlib::Interp1(speed_kmh, table,
+                                        std::fabs(vel_speed_preprocess) * 3.6);
+    box_collision_.time_dealy =
+        GetContext.get_param()->meb_actuator_act_time +
+        temp_buffer / std::max(0.5, GetContext.get_state_info()->vehicle_speed);
     // Pose2D center_pose(obs.relative_center_position.x,
     //                    obs.relative_center_position.y,
     //                    obs.relative_heading_angle);
@@ -670,8 +768,20 @@ void MebCore::CollisionOdBoxCalculate() {
     Eigen::Vector2d car_origin_pos;
     car_origin_pos << 0.0, 0.0;
     double car_point_distance = (car_origin_pos - obs_pos).norm();
+    bool zone_in_flag = true;
+    if (GetContext.get_state_info()->shift_lever_state ==
+        iflyauto::ShiftLeverState_R) {
+      if (obs.relative_center_position.x > meb_zone_x1_ + 0.5) {
+        zone_in_flag = false;
+      }
+    } else {
+      if (obs.relative_center_position.x < meb_zone_x2_ - 0.5) {
+        zone_in_flag = false;
+      }
+    }
     if ((car_point_distance > 15.0) || (obs.type < 3) ||
-        (obs.velocity.x < 0.1 && obs.velocity.y < 0.1)) {
+        (std::fabs(obs.velocity.x) < 0.1 && std::fabs(obs.velocity.y) < 0.1) ||
+        (zone_in_flag == false)) {
       continue;
     }
     // 只处理动态障碍物属性
@@ -680,9 +790,8 @@ void MebCore::CollisionOdBoxCalculate() {
     box_collision_.boxs_info_.obj_heading_angle = obs.relative_heading_angle;
     box_collision_.boxs_info_.obj_length = obs.shape.length;
     box_collision_.boxs_info_.obj_v_x =
-        obs.velocity.x;  // obs.relative_velocity.x;
-    box_collision_.boxs_info_.obj_v_y =
-        obs.velocity.y;  // obs.relative_velocity.y;
+        obs.relative_velocity.x + vel_speed_preprocess;
+    box_collision_.boxs_info_.obj_v_y = obs.relative_velocity.y;
     box_collision_.boxs_info_.obj_width = obs.shape.width;
     box_collision_.boxs_info_.obj_x = obs.relative_center_position.x;
     box_collision_.boxs_info_.obj_y = obs.relative_center_position.y;
@@ -692,14 +801,26 @@ void MebCore::CollisionOdBoxCalculate() {
         box_collision_.time_step, box_collision_.time_dealy,
         box_collision_.dec_request);
     if (od_box_collision_flag_ == true) {
+      od_box_id_ = obs.id;
+      od_box_dis_buffer = temp_buffer;
       break;
     }
   }
+
+  JSON_DEBUG_VALUE("od_box_dis_buffer", od_box_dis_buffer);
+  JSON_DEBUG_VALUE("OdBox_index", od_box_id_);
+  if ((od_box_id_ >= 0) &&
+      (od_box_id_ < fusion_objects_info.fusion_object_size)) {
+    JSON_DEBUG_VALUE(
+        "OdBox_dis_type",
+        (int)(fusion_objects_info.fusion_object[od_box_id_].common_info.type));
+  } else {
+    JSON_DEBUG_VALUE("OdBox_dis_type", (int)(-1));
+  }
 }
 
-/*ccccccccccccccccc*/
 const MebResult adas_function::meb_core::MebCore::ArcCollisionUpdateCommon(
-    const ArcSegMent &arc, const double heading_start,
+    const ArcSegMent &arc, const double dis_buffer,
     std::vector<Eigen::Vector2d> &obs_vec) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   if (obs_vec.size() < 1) {
@@ -783,6 +904,139 @@ const MebResult adas_function::meb_core::MebCore::ArcCollisionUpdateCommon(
     j++;
   }
 
+  result.remain_path_distance = fabs(car_rot_angle) * arc.circle_radius;
+  result.remain_obstacle_dist =
+      fabs(min_obs_rot_limit_angle) * arc.circle_radius;
+
+  result.remain_dist =
+      std::min(result.remain_obstacle_dist, result.remain_path_distance);
+  result.ttc_min = result.remain_dist /
+                   std::max(GetContext.get_state_info()->vehicle_speed, 0.5);
+
+  result.acc_min = CollisionCalculateAcc(result.remain_dist - dis_buffer);
+  if (result.acc_min < GetContext.get_param()->meb_acc_collision_thrd) {
+    result.collision_flag = true;
+  } else {
+    result.collision_flag = false;
+  }
+  return result;
+}
+
+/*ccccccccccccccccc*/
+const MebResult adas_function::meb_core::MebCore::ArcCollisionUpdateCommonOd(
+    const ArcSegMent &arc, std::vector<Eigen::Vector2d> &obs_vec,
+    std::vector<int> &obs_index_vec) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  if (obs_vec.size() < 1) {
+    MebResult tmp_result;
+    tmp_result.remain_path_distance = arc.length;
+    tmp_result.remain_dist = arc.length;
+    return tmp_result;
+  }
+
+  // obstacle arc segment
+  const auto v_OA = arc.pA - arc.circle_center;
+  const auto v_OB = arc.pB - arc.circle_center;
+  const auto car_rot_angle = pnc::geometry_lib::GetAngleFromTwoVec(v_OA, v_OB);
+
+  // obstacle rotates around the the car rotation center to form a circle
+  // The minimum angle allowed for obstacle rotation
+  auto min_obs_rot_limit_angle = 5.0;
+  pnc::geometry_lib::Circle obs_rot_circle;
+  // the cross points of obstacle circle and single car polygon line seg
+  std::vector<Eigen::Vector2d> cross_points;
+  // collision points between car movement along trajectory and obstacles
+  Eigen::Vector2d col_pt_ego_global;
+  col_pt_ego_global.setZero();
+  size_t i = 0;
+  size_t j = 0;
+  MebResult result;
+  result.relative_distance_min = 10.0;
+  Eigen::Vector2d car_origin_pos;
+  car_origin_pos << 0.0, 0.0;
+  const auto &param = *GetContext.get_param();
+  const bool is_reverse = GetContext.get_state_info()->shift_lever_state ==
+                          iflyauto::ShiftLeverStateEnum::ShiftLeverState_R;
+  const auto &speed_kmh = param.meb_odbox_dis_buffer_veh_speed_kmh;
+  const auto &fusion_objects_info = GetContext.mutable_session()
+                                        ->mutable_environmental_model()
+                                        ->get_local_view()
+                                        .fusion_objects_info;
+  double selected_dis_buffer = 0.4;
+  for (const auto &obs_pt_global : obs_vec) {
+    double realtive_distancec = (car_origin_pos - obs_pt_global).norm();
+    if (realtive_distancec < result.relative_distance_min) {
+      result.relative_distance_min = realtive_distancec;
+    }
+    for (const auto &car_line_loc : car_line_local_vec_) {
+      obs_rot_circle.center = arc.circle_center;
+      obs_rot_circle.radius = (obs_pt_global - obs_rot_circle.center).norm();
+
+      const auto num = pnc::geometry_lib::CalcCrossPointsOfLineSegAndCircle(
+          car_line_loc, obs_rot_circle, cross_points);
+
+      if (num == 0) {
+        // if num == 0, no cross points, contiue
+        continue;
+      }
+
+      const auto v_OC = obs_pt_global - arc.circle_center;
+      Eigen::Vector2d D;
+      if (num == 1) {
+        D = cross_points.front();
+      } else if (num == 2) {
+        const auto v_OD1 = cross_points.front() - arc.circle_center;
+        const auto v_OD2 = cross_points.back() - arc.circle_center;
+
+        const auto obs_rot_angle1 =
+            pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD1);
+
+        const auto obs_rot_angle2 =
+            pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD2);
+
+        if (std::fabs(obs_rot_angle1) < std::fabs(obs_rot_angle2)) {
+          D = cross_points.front();
+        } else {
+          D = cross_points.back();
+        }
+      }
+      const auto v_OD = cross_points.front() - arc.circle_center;
+
+      const auto obs_rot_angle =
+          pnc::geometry_lib::GetAngleFromTwoVec(v_OC, v_OD);
+
+      if (obs_rot_angle * car_rot_angle < 0.0 &&
+          fabs(obs_rot_angle) < fabs(min_obs_rot_limit_angle)) {
+        // the rotation direction of obstacles and car must be opposite
+        min_obs_rot_limit_angle = obs_rot_angle;
+        col_pt_ego_global = cross_points.front();
+        result.nearest_point = obs_pt_global;
+        if (j < obs_index_vec.size()) {
+          const int obj_index = obs_index_vec[j];
+          if (obj_index >= 0 &&
+              obj_index <
+                  static_cast<int>(fusion_objects_info.fusion_object_size)) {
+            const auto obj_type =
+                fusion_objects_info.fusion_object[obj_index].common_info.type;
+            const auto group = GetOdObjGroup(obj_type);
+            const auto &table =
+                GetOdBufferTable(param, group, is_reverse, true);
+            selected_dis_buffer = pnc::mathlib::Interp1(
+                speed_kmh, table,
+                std::fabs(GetContext.get_state_info()->vehicle_speed) * 3.6);
+          }
+        }
+        i = j;
+      }
+    }
+    j++;
+  }
+  JSON_DEBUG_VALUE("Arc_dis_type",
+                   (int)(fusion_objects_info.fusion_object[obs_index_vec[i]]
+                             .common_info.type));
+  JSON_DEBUG_VALUE("Arc_dis_buffer", selected_dis_buffer);
+  JSON_DEBUG_VALUE("Arc_index", obs_index_vec[i]);
+
   // MebResult result;
 
   result.remain_path_distance = fabs(car_rot_angle) * arc.circle_radius;
@@ -799,7 +1053,8 @@ const MebResult adas_function::meb_core::MebCore::ArcCollisionUpdateCommon(
   result.ttc_min = result.remain_dist /
                    std::max(GetContext.get_state_info()->vehicle_speed, 0.5);
 
-  result.acc_min = CollisionCalculateAcc(result.remain_obstacle_dist);
+  result.acc_min =
+      CollisionCalculateAcc(result.remain_dist - selected_dis_buffer);
   if (result.acc_min < GetContext.get_param()->meb_acc_collision_thrd) {
     result.collision_flag = true;
   } else {
@@ -809,7 +1064,7 @@ const MebResult adas_function::meb_core::MebCore::ArcCollisionUpdateCommon(
 }
 
 const MebResult adas_function::meb_core::MebCore::LineCollisionUpdateCommon(
-    const LineSegMent &line_seg, const double heading_start,
+    const LineSegMent &line_seg, const double dis_buffer,
     std::vector<Eigen::Vector2d> &obs_vec) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   // 只需要碰撞距离,碰撞风险标志位
@@ -871,7 +1126,114 @@ const MebResult adas_function::meb_core::MebCore::LineCollisionUpdateCommon(
   result.ttc_min = result.remain_dist /
                    std::max(GetContext.get_state_info()->vehicle_speed, 0.5);
 
-  result.acc_min = CollisionCalculateAcc(result.remain_obstacle_dist);
+  result.acc_min = CollisionCalculateAcc(result.remain_dist - dis_buffer);
+  if (result.acc_min < GetContext.get_param()->meb_acc_collision_thrd) {
+    result.collision_flag = true;
+  } else {
+    result.collision_flag = false;
+  }
+
+  return result;
+}
+
+const MebResult adas_function::meb_core::MebCore::LineCollisionUpdateCommonOd(
+    const LineSegMent &line_seg, std::vector<Eigen::Vector2d> &obs_vec,
+    std::vector<int> &obs_index_vec) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  // 只需要碰撞距离,碰撞风险标志位
+  if (obs_vec.size() < 1) {
+    MebResult tmp_result;
+    tmp_result.remain_path_distance = line_seg.length;
+    tmp_result.remain_dist = line_seg.length;
+    return tmp_result;
+  }
+
+  // segment
+  double min_obs_move_dist = 33.3;
+  pnc::geometry_lib::LineSegment obs_move_line;
+  // the cross points of obstacle lin seg and single car polygon line seg
+  Eigen::Vector2d cross_point;
+  // collision points between car movement along trajectory and obstacles
+  Eigen::Vector2d col_pt_ego_global(0.0, 0.0);
+
+  const Eigen::Vector2d AB = line_seg.pB - line_seg.pA;
+  const Eigen::Vector2d unit_obs_move_line = -AB.normalized();
+  size_t i = 0;
+  size_t j = 0;
+
+  MebResult result;
+  result.relative_distance_min = 10.0;
+  Eigen::Vector2d car_origin_pos;
+  car_origin_pos << 0.0, 0.0;
+  const auto &param = *GetContext.get_param();
+  const bool is_reverse = GetContext.get_state_info()->shift_lever_state ==
+                          iflyauto::ShiftLeverStateEnum::ShiftLeverState_R;
+  const auto &speed_kmh = param.meb_odbox_dis_buffer_veh_speed_kmh;
+  const auto &fusion_objects_info = GetContext.mutable_session()
+                                        ->mutable_environmental_model()
+                                        ->get_local_view()
+                                        .fusion_objects_info;
+
+  double selected_dis_buffer = 0.4;
+
+  for (const auto &obs_pt_global : obs_vec) {
+    double realtive_distancec = (car_origin_pos - obs_pt_global).norm();
+    if (realtive_distancec < result.relative_distance_min) {
+      result.relative_distance_min = realtive_distancec;
+    }
+    for (auto &car_line_loc : car_line_local_vec_) {
+      obs_move_line.pA = obs_pt_global;
+      // obs_move_line.pB = obs_move_line.pA - AB;
+      obs_move_line.pB =
+          obs_move_line.pA + min_obs_move_dist * unit_obs_move_line;
+      if (GetIntersectionFromTwoLineSeg(cross_point, car_line_loc,
+                                        obs_move_line)) {
+        const auto dist_CP = (cross_point - obs_move_line.pA).norm();
+        if (dist_CP < min_obs_move_dist) {
+          col_pt_ego_global = cross_point;
+          min_obs_move_dist = dist_CP;
+          result.nearest_point = obs_pt_global;
+
+          if (j < obs_index_vec.size()) {
+            const int obj_index = obs_index_vec[j];
+            if (obj_index >= 0 &&
+                obj_index <
+                    static_cast<int>(fusion_objects_info.fusion_object_size)) {
+              const auto obj_type =
+                  fusion_objects_info.fusion_object[obj_index].common_info.type;
+              const auto group = GetOdObjGroup(obj_type);
+              const auto &table =
+                  GetOdBufferTable(param, group, is_reverse, true);
+              selected_dis_buffer = pnc::mathlib::Interp1(
+                  speed_kmh, table,
+                  std::fabs(GetContext.get_state_info()->vehicle_speed) * 3.6);
+            }
+          }
+          i = j;
+        }
+      }
+    }
+    j++;
+  }
+
+  JSON_DEBUG_VALUE("Line_dis_type",
+                   (int)(fusion_objects_info.fusion_object[obs_index_vec[i]]
+                             .common_info.type));
+  JSON_DEBUG_VALUE("Line_dis_buffer", selected_dis_buffer);
+  JSON_DEBUG_VALUE("Line_index", (int)(obs_index_vec[i]));
+
+  result.remain_path_distance = AB.norm();
+  result.remain_obstacle_dist = min_obs_move_dist;
+  result.remain_dist =
+      std::min(result.remain_obstacle_dist, result.remain_path_distance);
+
+  // result.collision_flag =
+  //     (result.remain_obstacle_dist <= result.remain_path_distance);
+  result.ttc_min = result.remain_dist /
+                   std::max(GetContext.get_state_info()->vehicle_speed, 0.5);
+
+  result.acc_min =
+      CollisionCalculateAcc(result.remain_dist - selected_dis_buffer);
   if (result.acc_min < GetContext.get_param()->meb_acc_collision_thrd) {
     result.collision_flag = true;
   } else {
@@ -1030,16 +1392,17 @@ x2-|----------|--
       meb_radius_vector, meb_radius_vector_gain, meb_radius_);
   double x_range =
       std::max(10.0, GetContext.get_state_info()->vehicle_speed * 2.0);
-  x_range = std::min(5.0, x_range);
+  // x_range = std::min(5.0, x_range);
   if (vel_reverse_flag == false) {
     meb_zone_x1_ = GetContext.get_param()->origin_2_front_bumper + x_range;
-    meb_zone_x2_ = -1.0 * GetContext.get_param()->origin_2_rear_bumper - 0.5;
+    meb_zone_x2_ = GetContext.get_param()->origin_2_front_bumper -
+                   GetContext.get_param()->wheel_base - 0.2;
     meb_zone_y1_ =
         0.6 * GetContext.get_param()->ego_width + 1.0 * y_traj_radius_gain;
     meb_zone_y2_ =
         -0.6 * GetContext.get_param()->ego_width - 1.0 * y_traj_radius_gain;
   } else {
-    meb_zone_x1_ = GetContext.get_param()->origin_2_front_bumper + 0.5;
+    meb_zone_x1_ = 0.2;
     meb_zone_x2_ =
         -1.0 * GetContext.get_param()->origin_2_rear_bumper - x_range;
     meb_zone_y1_ =
@@ -1092,6 +1455,7 @@ x2-|----------|--
       std::min(fusion_objects_info.fusion_object_size,
                static_cast<uint8>(FUSION_OCCUPANCY_OBJECTS_MAX_NUM));
   od_obs_vec_.clear();
+  od_obs_index_vec_.clear();
   for (uint8 i = 0; i < fusion_od_obs_size; ++i) {
     const iflyauto::Obstacle &obs =
         fusion_objects_info.fusion_object[i].common_info;
@@ -1106,7 +1470,7 @@ x2-|----------|--
     car_origin_pos << 0.0, 0.0;
     car_point_distance = (car_origin_pos - obs_pos).norm();
     if ((car_point_distance > 15.0) || (obs.type < 3) ||
-        (obs.velocity.x > 0.1 || obs.velocity.y > 0.1)) {
+        (std::fabs(obs.velocity.x > 0.1) || std::fabs(obs.velocity.y) > 0.1)) {
       continue;
     }
     // 只保留静态属性障碍物
@@ -1123,6 +1487,7 @@ x2-|----------|--
     point0.y() = obs.relative_center_position.y + dy1 + dy2;
     if (IsPointInZone(point0)) {
       od_obs_vec_.emplace_back(point0);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
     // 获取前右角点坐标
     Eigen::Vector2d point1;
@@ -1130,6 +1495,7 @@ x2-|----------|--
     point1.y() = obs.relative_center_position.y + dy1 - dy2;
     if (IsPointInZone(point1)) {
       od_obs_vec_.emplace_back(point1);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
     // 获取后左角点坐标
     Eigen::Vector2d point2;
@@ -1137,6 +1503,7 @@ x2-|----------|--
     point2.y() = obs.relative_center_position.y - dy1 + dy2;
     if (IsPointInZone(point2)) {
       od_obs_vec_.emplace_back(point2);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
     // 获取后右角点坐标
     Eigen::Vector2d point3;
@@ -1144,27 +1511,32 @@ x2-|----------|--
     point3.y() = obs.relative_center_position.y - dy1 - dy2;
     if (IsPointInZone(point3)) {
       od_obs_vec_.emplace_back(point3);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
     Eigen::Vector2d point4;
     point4.x() = (point0.x() + point1.x()) * 0.5;
     point4.y() = (point0.y() + point1.y()) * 0.5;
     if (IsPointInZone(point4)) {
       od_obs_vec_.emplace_back(point4);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
     point4.x() = (point3.x() + point1.x()) * 0.5;
     point4.y() = (point3.y() + point1.y()) * 0.5;
     if (IsPointInZone(point4)) {
       od_obs_vec_.emplace_back(point4);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
     point4.x() = (point0.x() + point2.x()) * 0.5;
     point4.y() = (point0.y() + point2.y()) * 0.5;
     if (IsPointInZone(point4)) {
       od_obs_vec_.emplace_back(point4);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
     point4.x() = (point2.x() + point3.x()) * 0.5;
     point4.y() = (point2.y() + point3.y()) * 0.5;
     if (IsPointInZone(point4)) {
       od_obs_vec_.emplace_back(point4);
+      od_obs_index_vec_.emplace_back(static_cast<int>(i));
     }
   }
   // usssssssssssss
@@ -1271,6 +1643,7 @@ void adas_function::meb_core::MebCore::Log(void) {
   JSON_DEBUG_VALUE("meb_occ_ttc_min", occ_meb_result_.ttc_min);
   JSON_DEBUG_VALUE("meb_uss_ttc_min", uss_meb_result_.ttc_min);
   JSON_DEBUG_VALUE("meb_od_box_collision_flag", od_box_collision_flag_);
+  JSON_DEBUG_VALUE("meb_od_box_id", od_box_id_);
 
   bool switch_for_sim = true;
   std::vector<double> meb_od_obs_x_vector;

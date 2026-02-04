@@ -32,7 +32,7 @@ bool ApaFunction::Reset() {
 }
 
 bool ApaFunction::Plan() {
-  (void)apa_plan_interface_->Update(
+  bool planning_success = apa_plan_interface_->Update(
       &(session_->environmental_model().get_local_view()),
       &(session_->planning_context().last_planning_result()));
   // set planning output
@@ -83,7 +83,7 @@ bool ApaFunction::Plan() {
       ->mutable_planning_hmi_info()
       ->apa_info.planning_recommend_pa_dir =
       apa_plan_interface_->GetAPAHmi().planning_recommend_pa_dir;
-  return true;
+  return planning_success;
 }
 
 }  // namespace planning

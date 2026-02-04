@@ -8,6 +8,8 @@
 #include "hmi_decider.h"
 #include "lane_change_hmi/lane_change_hmi_decider.h"
 #include "longitudinal_hmi/longitudinal_hmi_decider.h"
+#include "split_select_hmi/split_select_hmi_decider.h"
+
 #include "planning_context.h"
 #include "session.h"
 #include "tasks/task.h"
@@ -29,5 +31,6 @@ class SCCHMIDecider : public HMIDecider {
       construction_warning_hmi_decider_;
   std::shared_ptr<LaneChangeHmiDecider> lane_change_hmi_decider_ = nullptr;
   std::shared_ptr<LongitudinalHmiDecider> longitudinal_hmi_decider_ = nullptr;
+  std::shared_ptr<SplitSelectHmiDecider> split_select_hmi_decider_ = nullptr;
 };
 }  // namespace planning

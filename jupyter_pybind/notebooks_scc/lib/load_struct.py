@@ -2919,6 +2919,8 @@ def generate_planning_trajectory(trajectory, loc_msg = None, g_is_display_enu = 
 def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_model_info = None, g_is_display_enu = False):
   parking_space_boxes_x = []
   parking_space_boxes_y = []
+  target_parking_space_box_x = []
+  target_parking_space_box_y = []
   road_mark_boxes_x = []
   road_mark_boxes_y = []
   road_obstacle_x_vec = []
@@ -2934,6 +2936,8 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
     parking_assist_info = ehr_static_map_msg.parking_assist_info
     # print("parking_assist_info:", parking_assist_info)
     parking_spaces = parking_assist_info.parking_spaces
+    target_parking_space = parking_assist_info.target_parking_space
+    # print("ehr tar space: ", target_parking_space)
     road_obstacles = parking_assist_info.road_obstacles
     polygon_obstacles = []
     try:
@@ -2957,6 +2961,12 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
           parking_space_box_y.append(y)
         parking_space_boxes_x.append(parking_space_box_x)
         parking_space_boxes_y.append(parking_space_box_y)
+
+      for shape in target_parking_space.shape:
+        x = shape.x
+        y = shape.y
+        target_parking_space_box_x.append(x)
+        target_parking_space_box_y.append(y)
 
       for lane in lane_groups:
         for road_mark in lane.road_marks:
@@ -3040,6 +3050,13 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
           parking_space_boxes_x.append(parking_space_box_x)
           parking_space_boxes_y.append(parking_space_box_y)
 
+        for shape in target_parking_space.shape:
+          x = shape.x
+          y = shape.y
+          local_x, local_y = coord_tf.global_to_local([x], [y])
+          target_parking_space_box_x.append(local_x)
+          target_parking_space_box_y.append(local_y)
+
         for lane in lane_groups:
           for road_mark in lane.road_marks:
             road_mark_box_x = []
@@ -3112,6 +3129,7 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
   road_obstacle_x_vec = list(itertools.chain.from_iterable(road_obstacle_x_vec))
   road_obstacle_y_vec = list(itertools.chain.from_iterable(road_obstacle_y_vec))
   return parking_space_boxes_x, parking_space_boxes_y, \
+         target_parking_space_box_x, target_parking_space_box_y, \
          road_mark_boxes_x, road_mark_boxes_y, \
          road_obstacle_x_vec, road_obstacle_y_vec, \
          polygon_obstacle_x_vec, polygon_obstacle_y_vec, polygon_obstacle_label_vec, \
@@ -3698,6 +3716,7 @@ def generate_parking_slot(fus_parking_msg, loc_msg, release_slot_id_list):
   try:
     select_slot_id = fus_parking_msg.select_slot_id
     print("select_slot_id: ", select_slot_id)
+    print("memorized_slot_id: {}".format(fus_parking_msg.memorized_slot_id))
     parking_fusion_slot_lists_size = fus_parking_msg.parking_fusion_slot_lists_size
     for j in range(parking_fusion_slot_lists_size):
       parking_fusion_slot_lists = fus_parking_msg.parking_fusion_slot_lists[j]

@@ -148,6 +148,9 @@ class GeneralLongitudinalDecider : public Task {
   std::shared_ptr<ReferencePath> reference_path_ptr_;
 
   double max_curvature_ = 0.0;
+
+  bool nsa_brake_destination_set_ = false;
+  planning_math::PathPoint nsa_destination_point_;
 };
 
 }  // namespace planning

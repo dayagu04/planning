@@ -17,7 +17,7 @@ class ParkingScenarioManager final {
 
   void UpdateScenarioType();
 
-  void Process();
+  bool Process();
 
   // slot cruise state: reset.
   void Reset();
@@ -65,9 +65,9 @@ class ParkingScenarioManager final {
 
  private:
   // if user select a slot id, autonomous system will call this to try plan.
-  void ScenarioTry();
+  bool ScenarioTry();
 
-  void ScenarioRunning();
+  bool ScenarioRunning();
 
   const bool IsSlotReleaseByHybridAstar();
   void ClearPlanningOutput();
@@ -76,8 +76,8 @@ class ParkingScenarioManager final {
   // If path is changed too much, publish it.
   const bool PubPreparePathByStableStrategy();
 
-  void ScenarioSuspend();
-  void SetFunctionRecommendPark();
+  bool ScenarioSuspend();
+  bool SetFunctionRecommendPark();
 
  private:
   // reset if scenario is null or slot is not release.

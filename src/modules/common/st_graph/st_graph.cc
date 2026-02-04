@@ -209,7 +209,7 @@ void STGraph::MakeStaticAgentStBoundary(
   lat_buffer = reuse_for_close_pass
                    ? lat_buffer + extra_lateral_buffer_for_close_pass
                    : lat_buffer;
-  if (is_rads_scene && agent.type() > agent::AgentType::OCC_EMPTY) {
+  if (is_rads_scene) {
     lat_buffer = 0.0;
     lon_buffer = 0.0;
   }

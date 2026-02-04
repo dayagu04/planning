@@ -74,6 +74,14 @@ void ObstacleManager::update() {
                  << prediction_object.id << "]";
       continue;
     }
+    // TODO(taolu10): 临时在 HPP 功能中过滤 OD
+    // 中的减速带避免刹停，合理的方式不应该在这里过滤，而应该在纵向不做刹停逻辑（需要做减速逻辑）
+    if(session_->is_hpp_scene()) {
+      if(prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_DECELER) {
+        continue;
+      }
+    }
+
     bool is_in_fov =
         prediction_object.relative_position_x > 0 &&
         (tan(HALF_FOV) > fabs(prediction_object.relative_position_y /
@@ -345,13 +353,12 @@ void ObstacleManager::ProcessOccupancyWall(
   split_points(polygon_points, polygon_size, frenet_coord, points_vec);
 
   for (auto &object_points : points_vec) {
-    if (object_points.size() < 5) {
+    if (object_points.size() < 3) {
       continue;
     }
     Obstacle obstacle(kOccupancyObjectIdOffset + index_offset,
                       std::move(object_points), iflyauto::OBJECT_TYPE_OCC_WALL);
-    if (obstacle.is_vaild() &&
-        FilterObstacleByDistance(obstacle, frenet_coord, ego_point)) {
+    if (obstacle.is_vaild()) {
       add_occupancy_obstacle(obstacle);
     }
     ++index_offset;
@@ -368,14 +375,13 @@ void ObstacleManager::ProcessOccupancyObject(
   for (size_t j = 0; j < polygon_size; ++j) {
     object_points.emplace_back(polygon_points[j].x, polygon_points[j].y);
   }
-  if (object_points.size() < 5) {
+  if (object_points.size() < 3) {
     return;
   }
   Obstacle obstacle(
       kOccupancyObjectIdOffset + object.additional_occupancy_info.track_id,
       std::move(object_points), object.common_occupancy_info.type);
-  if (obstacle.is_vaild() &&
-      FilterObstacleByDistance(obstacle, frenet_coord, ego_point)) {
+  if (obstacle.is_vaild()) {
     add_occupancy_obstacle(obstacle);
   }
 }

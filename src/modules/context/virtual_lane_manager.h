@@ -31,6 +31,13 @@ enum LaneChangeStatus {
   ON_LEFT_LANE = 1,
   ON_RIGHT_LANE = 2,
 };
+
+enum SplitSelectDirection {
+  NO_SPLIT_SELECT = 0,
+  SPLIT_SELECT_LEFT_LANE = 1,
+  SPLIT_SELECT_RIGHT_LANE = 2,
+};
+
 class VirtualLaneManager {
  public:
   VirtualLaneManager(const EgoPlanningConfigBuilder *config_builder,
@@ -175,6 +182,18 @@ class VirtualLaneManager {
     return is_exist_interactive_select_split_;
   }
 
+  void set_enable_output_split_select_classical_chinese(const bool enable_output_split_select_classical_chinese) {
+    enable_output_split_select_classical_chinese_ = enable_output_split_select_classical_chinese;
+  }
+
+  bool get_enable_output_split_select_classical_chinese() const {
+    return enable_output_split_select_classical_chinese_;
+  }
+
+  SplitSelectDirection get_split_select_direction() const {
+    return split_select_direction_;
+  }
+
   bool get_other_split_lane_right_side() const {
     return other_split_lane_right_side_;
   }
@@ -313,6 +332,8 @@ class VirtualLaneManager {
   bool is_exist_intersection_split_ = false;
   bool is_ego_in_split_region_ = false;
   bool is_exist_interactive_select_split_ = false;
+  bool enable_output_split_select_classical_chinese_ = false;
+  SplitSelectDirection split_select_direction_ = NO_SPLIT_SELECT;
   bool other_split_lane_right_side_ = false;
   bool other_split_lane_left_side_ = false;
   bool split_lane_on_left_side_before_interactive_ = false;

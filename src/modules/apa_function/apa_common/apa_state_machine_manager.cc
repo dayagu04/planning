@@ -58,6 +58,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     } else {
       pa_direction_ = ApaPADirection::PA_INVALID;
     }
+  } else if(fun_state_machine_info.running_mode == iflyauto::RunningMode::RUNNING_MODE_MEMORY_PARKING) {
+    running_mode_ = ApaRunningMode::RUNNING_HPP;
   } else if (fun_state_machine_info.parking_req.apa_free_slot_info
                  .free_slot_activate) {
     running_mode_ = ApaRunningMode::RUNNING_SAPA;
@@ -141,6 +143,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     case iflyauto::FunctionalState_PARK_GUIDANCE:
     case iflyauto::FunctionalState_PARK_PRE_ACTIVE:
     case iflyauto::FunctionalState_HPP_PARKING_IN:
+    case iflyauto::FunctionalState_HPP_PRE_ACTIVE_PARKING:
       if (running_mode_ == ApaRunningMode::RUNNING_PA) {
         state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
       } else {

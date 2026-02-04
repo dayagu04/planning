@@ -79,9 +79,23 @@ class PlanningContext {
 
   bool &mutable_planning_success() { return planning_success_; }
 
-  const bool planning_completed() const { return planning_completed_; }
+  const bool rads_planning_completed() const { return rads_planning_completed_; }
 
-  bool &mutable_planning_completed() { return planning_completed_; }
+  bool &mutable_rads_planning_completed() { return rads_planning_completed_; }
+
+  const bool nsa_planning_completed() const { return nsa_planning_completed_; }
+
+  bool &mutable_nsa_planning_completed() { return nsa_planning_completed_; }
+
+  const bool hpp_cruise_routing_completed() const {
+    return parking_switch_decider_output_.parking_switch_info.is_standstill_near_target_slot;
+  }
+  const bool target_slot_allowed_to_park() const {
+    return parking_switch_decider_output_.parking_switch_info.is_target_slot_allowed_to_park;
+  }
+  const bool timeout_for_target_slot_allowed_to_park() const {
+    return parking_switch_decider_output_.parking_switch_info.is_timeout_for_target_slot_allowed_to_park;
+  }
 
   const bool last_planning_success() const { return last_planning_success_; }
 
@@ -505,7 +519,8 @@ class PlanningContext {
 
   void Clear() {
     planning_success_ = false;
-    planning_completed_ = false;
+    rads_planning_completed_ = false;
+    nsa_planning_completed_ = false;
     planning_result_.Clear();
     // planning_output_.Clear();
     memset(&planning_output_, 0, sizeof(planning_output_));
@@ -520,7 +535,8 @@ class PlanningContext {
   void reset() {
     planning_success_ = false;
     last_planning_success_ = false;
-    planning_completed_ = false;
+    rads_planning_completed_ = false;
+    nsa_planning_completed_ = false;
     planning_result_ = PlanningResult();
     last_planning_result_ = PlanningResult();
     // planning_output_.Clear();
@@ -534,7 +550,8 @@ class PlanningContext {
  private:
   bool planning_success_{false};
   bool last_planning_success_{false};
-  bool planning_completed_{false};
+  bool rads_planning_completed_{false};
+  bool nsa_planning_completed_{false};
   double v_ref_cruise_;
   double v_limit_;
   std::vector<TargetType> lon_s_ref_target_types_;
