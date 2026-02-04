@@ -17,6 +17,7 @@ NudgeWarningHMIDecider::NudgeWarningHMIDecider(framework::Session* session) {
 bool NudgeWarningHMIDecider::Execute() {
   if (session_ == nullptr) {
     Reset();
+    GenerateHmiOutput();
     return false;
   }
   reference_path_ptr_ = session_->planning_context()
@@ -25,6 +26,20 @@ bool NudgeWarningHMIDecider::Execute() {
   if (reference_path_ptr_ == nullptr) {
     return false;
   }
+
+  auto last_fix_lane_id = session_->environmental_model()
+                              .get_virtual_lane_manager()
+                              ->get_last_fix_lane_id();
+  auto current_fix_lane_id = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .fix_lane_virtual_id;
+  const bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
+  if (last_fix_lane_id != current_fix_lane_id || !dbw_status) {
+    Reset();
+    GenerateHmiOutput();
+    return true;
+  }
+
   switch (current_state_) {
     case NudgeWarningState::IDLE:
       if (IsStartRunning()) {
@@ -313,6 +328,8 @@ void NudgeWarningHMIDecider::Reset() {
   stop_running_count_ = 0;
   cooldown_count_ = 0;
   current_state_ = NudgeWarningState::IDLE;
+  avoid_id_ = -1;
+  avoid_direction_ = 0;
 }
 
 void NudgeWarningHMIDecider::GenerateHmiOutput() {
