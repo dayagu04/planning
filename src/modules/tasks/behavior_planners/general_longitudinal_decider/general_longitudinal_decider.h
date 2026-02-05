@@ -57,6 +57,11 @@ class GeneralLongitudinalDecider : public Task {
 
   const double compute_max_lat_acceleration() const;
 
+  double compute_curvature_speed_limit(
+      const TrajectoryPoints& traj_points, double ego_velocity,
+      double max_lat_acceleration, double& vlimit_jerk, double& time_to_brake,
+      double& out_max_curvature) const;
+
   void set_velocity_acceleration_bound(LongitudinalDeciderOutput &lon_ref_path);
 
   // TBD(binwang33): refpath_points 入参没有被使用，需要去除
