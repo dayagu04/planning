@@ -1945,43 +1945,36 @@ void VirtualLaneManager::EraseOverlappingLanesId(
   int origin_size = lanes.size();
 
   // N(N>2)条, 已按递增顺序排列， 需要逐对对比横向偏差，决定id是否重合
-  std::vector<int> order_ids_vec_to_remove;
-  order_ids_vec_to_remove.clear();
+  std::unordered_set<int> remove_set;
   for (int i = 0; i < origin_size - 1; i++) {
     int j = i + 1;
-    bool is_overlap_left =
-        IsLaneOverLappedLeft(lanes[i], lanes[j], overlap_threshold);
-    if (is_overlap_left) {
-      //方法1： 删除非current车道
-      // 判断 i, j谁与current order 更远则删除
-      int di = i - current_order_id;
-      int dj = j - current_order_id;
+    if (IsLaneOverLappedLeft(lanes[i], lanes[j], overlap_threshold)) {
+      int order_id_i = lanes[i]->get_order_id();
+      int order_id_j = lanes[j]->get_order_id();
+
+      int di = order_id_i - current_order_id;
+      int dj = order_id_j - current_order_id;
+
       if (std::abs(di) > std::abs(dj)) {
-        order_ids_vec_to_remove.emplace_back(i);
+          remove_set.insert(order_id_i);
       } else {
-        order_ids_vec_to_remove.emplace_back(j);
+          remove_set.insert(order_id_j);
       }
-      //如果涉及到当前车道的相似，需要后续重置标志位
-      if( di == 0 || dj == 0){
-        //确认删除则清空split标志
-        set_is_exist_intersection_split(false);
-        set_is_exist_split_on_expressway(false);
-        set_is_exist_split_on_ramp(false);
+      if (di == 0 || dj == 0) {
+          set_is_exist_intersection_split(false);
+          set_is_exist_split_on_expressway(false);
+          set_is_exist_split_on_ramp(false);
       }
-      //方法2： 重复id 包含j在内右侧id需要重新排列
-      // for (size_t k = j ; k < lanes.size(); k++) {
-      //   lanes[k]->set_order_id(lanes[k]->get_order_id() - 1);
-      //}
     }
   }
-  // 统一删除
-  for(const auto& order_id : order_ids_vec_to_remove){
-    //不能删除当前车道
-    if(order_id == current_order_id){
-      continue;
-    }
-    lanes.erase(lanes.begin() + order_id);
-  }
+  lanes.erase(
+    std::remove_if(lanes.begin(), lanes.end(),
+        [&](const auto& lane) {
+            int id = lane->get_order_id();
+            return id != current_order_id &&
+                   remove_set.count(id);
+        }),
+    lanes.end());
   lane_num_ = lanes.size();
   //基于当前车道重新设置 连续order id
   ReassignLaneRelativeId(lanes, current_order_id);
@@ -2025,7 +2018,8 @@ bool VirtualLaneManager::IsLaneOverLappedLeft(
   if (right_lane_points.size() < 3) {
     return false;
   }
-  const double compare_s = left_lane->get_ego_longit_s() + 80.0;
+  const double compare_s_start = left_lane->get_ego_longit_s();
+  const double compare_s_end  = left_lane->get_ego_longit_s() + 80.0;
   int compare_num = 0;
   double average_lat_error = 0.0;
   double sum_lat_error = 0.0;
@@ -2037,9 +2031,12 @@ bool VirtualLaneManager::IsLaneOverLappedLeft(
     if (!left_lane_frenet_coord->XYToSL(x, y, &s, &l)) {
       continue;
     }
+    if(s < compare_s_start){
+      continue;
+    }
     compare_num += 1;
     sum_lat_error = sum_lat_error + std::fabs(l);
-    if (s > compare_s) {
+    if (s > compare_s_end) {
       break;
     }
   }
