@@ -29,13 +29,12 @@ bool EnableLCCHMIDecider::Execute() {
     return false;
   }
 
-
   const auto& ego_planning_result =
       session_->mutable_planning_context()->mutable_planning_result();
   const auto& motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
-      const auto& speed_limit_output = session_->mutable_planning_context()
-                                ->mutable_speed_limit_decider_output();
+  const auto& speed_limit_output = session_->mutable_planning_context()
+                                       ->mutable_speed_limit_decider_output();
   // const auto& traj_points = ego_planning_result.traj_points;
   const auto& traj_points = ego_planning_result.raw_traj_points;
   const double curv_factor = motion_planner_output.curv_factor;
@@ -87,12 +86,14 @@ bool EnableLCCHMIDecider::Execute() {
 
   // judge condition
 
-
   if (last_enable_lcc_) {
     lat_jerk_thr += config_.lat_jerk_hysteresis_value;
   }
 
-  if (traj_max_lon_acc > config_.lon_acc_thr || traj_max_lon_jerk > config_.lon_jerk_thr || traj_max_lat_acc > config_.lat_acc_thr || traj_max_lat_jerk > lat_jerk_thr) {
+  if (traj_max_lon_acc > config_.lon_acc_thr ||
+      traj_max_lon_jerk > config_.lon_jerk_thr ||
+      traj_max_lat_acc > config_.lat_acc_thr ||
+      traj_max_lat_jerk > lat_jerk_thr) {
     ad_info.is_avaliable = false;
   }
 
@@ -103,8 +104,6 @@ bool EnableLCCHMIDecider::Execute() {
   return true;
 }
 
-void EnableLCCHMIDecider::Reset() {
-  last_enable_lcc_ = false;
-}
+void EnableLCCHMIDecider::Reset() { last_enable_lcc_ = false; }
 
 }  // namespace planning

@@ -13,6 +13,7 @@ class NudgeWarningHMIDecider {
   bool Execute();
   int avoid_id() { return avoid_id_; }
   int avoid_direction() { return avoid_direction_; }
+
  private:
   bool IsStartRunning();
   bool IsStopRunning();
