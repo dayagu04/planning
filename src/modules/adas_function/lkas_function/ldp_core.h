@@ -39,6 +39,7 @@ class LdpCore {
   bool UpdateLdpMainSwitch(void);
 
   uint32 ldp_enable_code_ = 255;
+  uint32 mask_enable_code_e541 = 255;
   // 车身YawRate满足取消抑制阈值持续时间 单位:s
   double yaw_rate_supp_recover_duration_ = 0.0;
   // 制动踏板表现满足取消抑制阈值持续时间 单位:s

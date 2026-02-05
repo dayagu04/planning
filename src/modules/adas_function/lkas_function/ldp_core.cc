@@ -1829,6 +1829,21 @@ void LdpCore::SetLdpOutputInfo() {
     GetContext.mutable_output_info()
         ->ldp_output_info_.ldp_right_intervention_flag_ = false;
   }
+
+  uint32 mask_enable_E541 = 33574927;
+  mask_enable_code_e541 = ldp_enable_code_ & mask_enable_E541;
+  if(GetContext.get_param()->car_type == "bestune_e541") {
+    if (ldp_state_ == iflyauto::LDPFunctionFSMWorkState::
+                        LDP_FUNCTION_FSM_WORK_STATE_STANDBY &&
+      mask_enable_code_e541 == 0) {
+    GetContext.mutable_output_info()->ldp_output_info_.ldp_state_ =
+        iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION ;
+  } else {
+    GetContext.mutable_output_info()->ldp_output_info_.ldp_state_ = ldp_state_;
+  } 
+    }
+  else { GetContext.mutable_output_info()->ldp_output_info_.ldp_state_ = ldp_state_;}
+
   return;
 }
 
