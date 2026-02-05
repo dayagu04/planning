@@ -15,7 +15,7 @@
 #include "math/math_utils.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
-#include "src/modules/tasks/behavior_planners/general_lateral_decider/general_lateral_decider_utils.h"
+#include "modules/tasks/behavior_planners/general_lateral_decider/general_lateral_decider_utils.h"
 #include "task_interface/lateral_obstacle_decider_output.h"
 
 #include <algorithm>
@@ -111,6 +111,14 @@ bool HppLateralObstacleDecider::Execute() {
   return true;
 }
 
+bool HppLateralObstacleDecider::PreProcessObstacle(
+    ConstObstacleManagerPtr obstacle_manager_ptr,
+    ConstReferencePathPtr reference_path_ptr,
+    MergedObstacleContainer &merged_obs_constainer,
+    const ObstacleClassificationResult &obs_classification_result) {
+  return true;
+}
+
 bool HppLateralObstacleDecider::CheckEnableSearch(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
     const SearchResult search_result) {
@@ -180,6 +188,11 @@ bool HppLateralObstacleDecider::ARAStar() {
 
   return (find_path && hybrid_ara_result.Valid());
 }
+
+
+  bool CheckARAStarPath() {
+    return true;
+  }
 
 void HppLateralObstacleDecider::ClearOldConsistencyInfo(
     const std::unordered_set<uint32_t>& current_frame_ids,

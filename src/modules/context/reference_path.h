@@ -387,4 +387,7 @@ class ReferencePath {
   ReferencePathSource ref_path_source_ = ReferencePathSource::FUSION_ROAD;
 };
 
+using ReferencePathPtr = std::shared_ptr<ReferencePath>;
+using ConstReferencePathPtr = std::shared_ptr<const ReferencePath>;
+
 }  // namespace planning
