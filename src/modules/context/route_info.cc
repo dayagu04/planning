@@ -2928,6 +2928,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     // 总体原则就是选择非车道增加的一侧车道数来计算
     int ego_seq = 0;
     if (emergency_lane_num == 0) {
+      if (left_lane_num >= map_lane_num && right_lane_num == 0) {
+        // 在无应急车道的时候，当左侧的观测数量大于总车道数时，观察右侧观测车辆数量如果没有，此时认为我们在地图的最右侧车道。
+        ego_seq = map_lane_num;
+      }
+
       if (merge_point_direction == SPLIT_NONE) {
         if (mlc_decider_route_info_.ego_status_on_route ==
             IN_EXCHANGE_AREA_REAR) {
@@ -2957,6 +2962,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
     } else {
       ego_seq = left_lane_num + 1;
+      if (left_lane_num >= map_lane_num && right_lane_num <= 1) {
+        // 在有应急车道的时候，当左侧的观测数量大于总车道数时，观察右侧观测车辆数量如果小于2条，此时认为我们在地图的最右侧车道。
+        ego_seq = map_lane_num;
+      }
     }
     if (ego_seq <= 0) {
       ego_seq = left_lane_num + 1;
