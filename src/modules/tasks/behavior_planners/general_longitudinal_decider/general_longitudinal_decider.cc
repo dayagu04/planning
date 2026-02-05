@@ -69,6 +69,26 @@ inline bool is_point_within_range(const Pose2D& point,
   return (fabs(location.x() - point.x) < xy_range) &&
          (fabs(location.y() - point.y) < xy_range);
 }
+
+double compute_hpp_avoid_velocity_limit(
+    const framework::Session& session, const LongitudinalDeciderV3Config& config) {
+  double v_limit_avoid = config.velocity_upper_bound;
+  if (!session.is_hpp_scene()) {
+    return v_limit_avoid;
+  }
+
+  const auto& hpp_general_lateral_decider_output =
+      session.planning_context().hpp_general_lateral_decider_output();
+  if (hpp_general_lateral_decider_output.avoid_ids.empty()) {
+    return v_limit_avoid;
+  }
+
+  // 触发避让限速，使用可配置的 config.hpp_avoid_velocity_limit_kph
+  v_limit_avoid = config.hpp_avoid_velocity_limit_kph / 3.6;  // 转换为 m/s
+  LOG_DEBUG("[get_velocity_limit] HPP avoid speed limit triggered: %f kph",
+            config.hpp_avoid_velocity_limit_kph);
+  return v_limit_avoid;
+}
 }  // namespace
 
 GeneralLongitudinalDecider::GeneralLongitudinalDecider(
@@ -706,12 +726,20 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   vel_limit_info_.v_limit_narrow_area = config_.velocity_upper_bound;
 
   // ============================================================
+  // 5. 避让限速 (Avoid velocity limit) - HPP模式下触发
+  // ============================================================
+  const double v_limit_avoid =
+      compute_hpp_avoid_velocity_limit(*session_, config_);
+  vel_limit_info_.v_limit_avoid = v_limit_avoid;
+
+  // ============================================================
   // 综合限速：取各项限速的最小值
   // ============================================================
   double final_velocity_limit = std::min({
       user_velocity_limit,  // 1. 用户限速
       // map_velocity_limit,    // 2. 地图限速（暂不应用）
-      v_limit_curv  // 3. 弯道限速
+      v_limit_curv,        // 3. 弯道限速
+      v_limit_avoid,      // 5. 避让限速
                     // narrow_area_velocity   // 4. 窄路限速（暂不应用）
   });
 
@@ -719,9 +747,11 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
 
   LOG_DEBUG(
       "[get_velocity_limit] v_limit_usr: %f, v_limit_map: %f (disabled), "
-      "v_limit_curv: %f, v_limit_narrow: %f (disabled), v_limit_final: %f",
+      "v_limit_curv: %f, v_limit_narrow: %f (disabled), v_limit_avoid: %f, "
+      "v_limit_final: %f",
       vel_limit_info_.v_limit_usr, vel_limit_info_.v_limit_map,
       vel_limit_info_.v_limit_curv, vel_limit_info_.v_limit_narrow_area,
+      vel_limit_info_.v_limit_avoid,
       vel_limit_info_.v_limit_final);
 
   // ============================================================
@@ -762,6 +792,8 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   JSON_DEBUG_VALUE("LonBehavior_v_limit_curv", vel_limit_info_.v_limit_curv);
   JSON_DEBUG_VALUE("LonBehavior_v_limit_narrow",
                    vel_limit_info_.v_limit_narrow_area);
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_avoid",
+                   vel_limit_info_.v_limit_avoid);
 
   return brake_traj;
 }

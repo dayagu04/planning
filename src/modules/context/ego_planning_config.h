@@ -3344,6 +3344,8 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
                   curv_radius_breakpoints);
     read_json_vec(json, std::vector<std::string>{"hpp_curv_speed_limits_ms"},
                   curv_speed_limits_ms);
+    hpp_avoid_velocity_limit_kph =
+        read_json_key<double>(json, "hpp_avoid_velocity_limit_kph");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3384,6 +3386,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   std::vector<double> curv_radius_breakpoints = {5.0, 10.0, 15.0, 20.0, 50.0};
   std::vector<double> curv_speed_limits_ms = {5.0 / 3.6, 6.0 / 3.6, 8.0 / 3.6,
                                          10.0 / 3.6, 20.0 / 3.6};
+  double hpp_avoid_velocity_limit_kph = 10.0;
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {

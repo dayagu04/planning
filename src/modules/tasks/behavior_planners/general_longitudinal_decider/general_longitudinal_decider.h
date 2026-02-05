@@ -36,6 +36,7 @@ struct VelocityLimitInfo {
   double v_limit_usr;
   double v_limit_curv;
   double v_limit_narrow_area;
+  double v_limit_avoid;
   double v_limit_final;
 };
 

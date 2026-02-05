@@ -173,6 +173,7 @@
   "hpp_curv_trigger_distances": [0.0, 10.0, 15.0, 25.0, 40.0],
   "hpp_curv_radius_breakpoints": [5.0, 10.0, 15.0, 20.0, 50.0],
   "hpp_curv_speed_limits_ms": [1.39, 1.67, 2.22, 2.78, 5.55],
+  "hpp_avoid_velocity_limit_kph": 10.0,
   "lon_care_length": 120.0,
   "lon_max_ignore_relative_time": 2.0,
   "urban_max_lat_acceleration": 1.8,
