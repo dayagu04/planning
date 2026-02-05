@@ -76,6 +76,8 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
       hmi_info->nsa_info.is_complete = true;
       hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_DISTANCE_SATISFY;
       mutable_nsa_planning_completed = true;
+    } else if (plannig_init_point.v < kEgoStopVelThd) {
+      hmi_info->nsa_info.nsa_pause_reason = iflyauto::NSA_PAUSE_REASON_BLOCK;
     } else {
       hmi_info->nsa_info.is_complete = false;
       hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NONE;
