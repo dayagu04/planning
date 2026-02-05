@@ -2643,7 +2643,8 @@ iflymapdata::sdpro::Lane LDRouteInfoStrategy::FindMatchingPreLaneInMainLink(
       }
 
       // 计算序号差，更新最优匹配车道
-      const int order_error = temp_suc_lane->sequence() - topo_lane.order_id;
+      const int order_error = std::abs(
+          static_cast<int>(temp_suc_lane->sequence() - topo_lane.order_id));
       if (order_error < min_order_error) {
         min_order_error = order_error;
         best_matching_lane = *temp_lane;
