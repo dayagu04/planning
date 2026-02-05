@@ -40,7 +40,7 @@ using namespace planning_math;
 namespace {
 constexpr double kEps = 1e-6;
 constexpr double kNsaBrakeLonBias = 2.5;
-constexpr double kNsaBrakeDisToEnd = 1.0;
+constexpr double kNsaBrakeDisToEnd = 0.2;
 constexpr double kNsaLonDisThred = 50.0;
 inline bool is_point_within_range(const Point3d &point,
                                   const common::Point3d &location,
