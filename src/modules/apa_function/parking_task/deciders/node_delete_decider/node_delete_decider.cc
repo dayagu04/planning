@@ -53,7 +53,7 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
         std::min(input.map_bound.x_max,
                  float(ogm_bound.max_x - rearaxle_frontoverhang_length));
 
-    double min_x = 2.68, min_curve_x = 1.68;
+    double min_x = 2.68, min_curve_x = 2.68;
     if (input.scenario_type ==
         ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
       min_x += apa_param.GetParam().wheel_base;
