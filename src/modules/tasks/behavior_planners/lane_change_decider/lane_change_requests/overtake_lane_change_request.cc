@@ -366,15 +366,21 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       if (iter == lateral_obstacle_decision.end()) {
         continue;
       }
-      if (iter->second ==LatObstacleDecisionType::FOLLOW) {
-        auto track_iter = tracks_map.find(current_agent->agent_id());
-        if (track_iter == tracks_map.end()) {
-          continue;
-        }
-        if (track_iter->second->d_s_rel() <= leading_relative_dis && current_agent->agent_id() != cipv_id) {
-          agent = agent_manager->mutable_agent(current_agent->agent_id());
-          leading_relative_dis = track_iter->second->d_s_rel();
-          exist_cross_line_large_agent_ahead_ = true;
+      if (iter->second != LatObstacleDecisionType::FOLLOW) {
+        continue;
+      }
+      auto track_iter = tracks_map.find(current_agent->agent_id());
+      if (track_iter == tracks_map.end()) {
+        continue;
+      }
+      if (track_iter->second->d_s_rel() <= leading_relative_dis && current_agent->agent_id() != cipv_id) {
+        agent = agent_manager->mutable_agent(current_agent->agent_id());
+        leading_relative_dis = track_iter->second->d_s_rel();
+        exist_cross_line_large_agent_ahead_ = true;
+        if (track_iter->second->frenet_l() > 1.0) {
+          enable_l_ = false;
+        } else if(track_iter->second->frenet_l() < -1.0) {
+          enable_r_ = false;
         }
       }
     }
