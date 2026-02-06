@@ -789,42 +789,89 @@ bool ReferencePath::HandleRoadCurvature(
   // 7. 虚拟区域判断阈值
   static const double kVirtualRangeVelCoeff = 5.0;           // 虚拟范围与车速的系数(5.0*v)
   static const double kVirtualRangeOffset = 5.0;             // 虚拟范围偏移量(m)
-  static const double kMinIntersectionVirtualLength = 15.0;  // 路口虚拟区域最小长度(m)
-  static const double kMinVirtualLength = 50.0;              // 非路口虚拟区域最小长度(m)
-  const auto &planning_init_point =
+  static const double kMinIntersectionVirtualLength = 16.0;  // 路口虚拟区域最小长度(m)
+  static const double kMinVirtualLength = 40.0;              // 非路口虚拟区域最小长度(m)
+  static const double kScanVirtualRange = 70.0;              // 虚拟区域向前扫描范围(m)
+  static const double kScanVirtualStep = 5.0;               // 虚拟区域向前扫描步长(m)
+
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& planning_init_point =
       session_->environmental_model()
               .get_ego_state_manager()
               ->planning_init_point();
   double init_v =
       std::max(planning_init_point.v, kMinRefVel);
-  const auto &virtual_lane_manager =
+  const auto& virtual_lane_manager =
       session_->environmental_model()
               .get_virtual_lane_manager();
-  const auto &current_lane =
-      virtual_lane_manager->get_current_lane();
-  double max_virtual_seg_ahead_x =
-      current_lane->get_max_virtual_seg_ahead_x();
-  double max_virtual_seg_ahead_length =
-      current_lane->get_max_virtual_seg_ahead_length();
-  bool is_intersection_scene = false;
+  // const auto& current_lane =
+  //     virtual_lane_manager->get_current_lane();
+  // double max_virtual_seg_ahead_x =
+  //     current_lane->get_max_virtual_seg_ahead_x();
+  // double max_virtual_seg_ahead_length =
+  //     current_lane->get_max_virtual_seg_ahead_length();
+  Point2D init_frenet_pt;
+  bool is_in_virtual_area = false;
+  double virtual_length = 0.;
+  double dist_to_virtual_start = 100.;
+  if (frenet_coord_->XYToSL(planning_init_point.x, planning_init_point.y,
+                            &init_frenet_pt.x, &init_frenet_pt.y)) {
+    bool is_find_valid_virtual_area = false;
+    double virtual_area_start_s = 100.;
+    double virtual_area_end_s = 0.;
+    for (double ref_pt_s = init_frenet_pt.x; ref_pt_s < init_frenet_pt.x + kScanVirtualRange; ref_pt_s += kScanVirtualStep) {
+      ReferencePathPoint ego_ahead_ref_pt;
+      if (get_reference_point_by_lon(ref_pt_s, ego_ahead_ref_pt)) {
+        if (ego_ahead_ref_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL &&
+            ego_ahead_ref_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          if (!is_find_valid_virtual_area) {
+            virtual_area_start_s = ref_pt_s;
+            is_find_valid_virtual_area = true;
+          }
+        } else {
+          if (is_find_valid_virtual_area) {
+            virtual_area_end_s = ref_pt_s;
+            virtual_length = virtual_area_end_s - virtual_area_start_s;
+            if (virtual_length > kMinIntersectionVirtualLength) {
+              is_in_virtual_area = true;
+              dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
+              break;
+            } else {
+              is_find_valid_virtual_area = false;
+            }
+          }
+        }
+      }
+    }
+    if (is_find_valid_virtual_area && !is_in_virtual_area) {
+      virtual_area_end_s = init_frenet_pt.x + kScanVirtualRange;
+      virtual_length = virtual_area_end_s - virtual_area_start_s;
+      if (virtual_length > kMinIntersectionVirtualLength) {
+        is_in_virtual_area = true;
+        dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
+      } else {
+        is_find_valid_virtual_area = false;
+      }
+    }
+  }
   if ((virtual_lane_manager
            ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
        virtual_lane_manager
            ->GetIntersectionState() <= common::OFF_INTERSECTION &&
-       (max_virtual_seg_ahead_x > 0.0 &&
-        max_virtual_seg_ahead_x < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
-        max_virtual_seg_ahead_length > kMinIntersectionVirtualLength)) ||
-      (max_virtual_seg_ahead_x >= 0.0 &&
-       max_virtual_seg_ahead_x < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
-       max_virtual_seg_ahead_length > std::min(0.5 * init_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
-    is_intersection_scene = true;
+      (is_in_virtual_area &&
+       dist_to_virtual_start < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset))) ||
+      (is_in_virtual_area &&
+       dist_to_virtual_start < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
+       virtual_length > std::max(0.5 * init_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
+    is_in_virtual_area = true;
   }
   // 1.average curvature filter. sliding window
   std::vector<double> xp_vel{4.167, 8.333, 10.0};          // 20.0
   std::vector<double> fp_radius_thr{200.0, 400.0, 600.0};  // 1000.0
   double curve_radius_thr = interp(init_v, xp_vel, fp_radius_thr);
   double straight_radius_thr = kStraightRadiusDefault;
-  if (is_intersection_scene) {
+  if (is_in_virtual_area) {
     curve_radius_thr = kIntersectionRadiusThreshold;
     straight_radius_thr = kIntersectionRadiusThreshold;
   }
