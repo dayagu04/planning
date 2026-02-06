@@ -377,8 +377,8 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
     ldp_intervention_duration_ += GetContext.get_param()->dt;
     if (ldp_intervention_duration_ > 180.0 ||
         ((ldp_warning_audio_flag_ == true &&
-          (vehicle_service_output_info_ptr->driver_hands_off_state == false) &&
-          GetContext.get_param()->ldp_handoff_state_switch_test_ == true) && lkas_handsoff_trq_flag)
+          ((vehicle_service_output_info_ptr->driver_hands_off_state == false) || lkas_handsoff_trq_flag == true)&&
+          GetContext.get_param()->ldp_handoff_state_switch_test_ == true)  )
 
     ) {
       ldp_intervention_duration_ = 0.0;
