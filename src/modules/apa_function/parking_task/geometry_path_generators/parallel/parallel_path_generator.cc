@@ -4221,13 +4221,18 @@ const bool ParallelPathGenerator::MultiAlignBody(
                                              calc_params_.target_pose.heading);
     pnc::geometry_lib::PathSegment last_line_path(
         pnc::geometry_lib::CalLineSegGear(last_line), last_line);
-
-    if (last_line_path.seg_gear == path_seg_vec.back().seg_gear ||
+    auto col_res = TrimPathByCollisionDetection(last_line_path,
+                                                0.15);
+    if (col_res == PATH_COL_SHORTEN || col_res == PATH_COL_NORMAL) {
+      if (last_line_path.seg_gear == path_seg_vec.back().seg_gear ||
         (last_line_path.seg_gear != path_seg_vec.back().seg_gear &&
          last_line_path.GetLineSeg().length >=
              apa_param.GetParam().min_line_length)) {
       path_seg_vec.emplace_back(last_line_path);
     }
+    }
+
+
 
     // output_.Reset();
     // AddPathSegToOutPut(path_res);
