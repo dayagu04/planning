@@ -52,6 +52,7 @@ class AdasFunction : public BaseFunction {
   std::shared_ptr<adas_function::ihc_core::IhcCore> ihc_core_ptr_;
 
   void LdpDriverhandsoffWarning();
+  bool lkas_handsoff_trq_flag = false;
   bool lkas_intervention = false;
   int ldp_intervention_count = 0;
   double ldp_intervention_count_2_dur = 0.0;
