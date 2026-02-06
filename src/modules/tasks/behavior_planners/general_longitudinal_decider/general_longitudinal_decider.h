@@ -36,6 +36,7 @@ struct VelocityLimitInfo {
   double v_limit_usr;
   double v_limit_curv;
   double v_limit_narrow_area;
+  double v_limit_avoid;
   double v_limit_final;
 };
 
@@ -56,6 +57,11 @@ class GeneralLongitudinalDecider : public Task {
       const LongitudinalDeciderOutput &lon_ref_path);
 
   const double compute_max_lat_acceleration() const;
+
+  double compute_curvature_speed_limit(
+      const TrajectoryPoints& traj_points, double ego_velocity,
+      double max_lat_acceleration, double& vlimit_jerk, double& time_to_brake,
+      double& out_max_curvature) const;
 
   void set_velocity_acceleration_bound(LongitudinalDeciderOutput &lon_ref_path);
 

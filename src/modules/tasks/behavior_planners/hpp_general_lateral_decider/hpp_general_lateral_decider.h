@@ -174,7 +174,12 @@ class HppGeneralLateralDecider : public Task {
   bool IsAgentPredLonOverlapWithPlanPath(
       const std::shared_ptr<FrenetObstacle> obstacle);
   bool HandleAraPath(TrajectoryPoints &traj_points);
-
+  void CalculateAvoidObstacles(
+        const std::vector<std::pair<double, double>> first_frenet_soft_bounds,
+        std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info,
+        const std::vector<std::pair<double, double>> second_frenet_soft_bounds,
+        std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info);
+        
  private:
   HppGeneralLateralDeciderConfig config_;
   bool is_ego_reverse_;

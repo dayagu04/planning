@@ -2680,6 +2680,9 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, static_other_max_extra_lateral_buffer,
                      "general_lateral_decider",
                      "static_other_max_extra_lateral_buffer");
+    ReadItem<double>(json, bound2center_line_distance_thr,
+                     "general_lateral_decider",
+                     "bound2center_line_distance_thr");
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -2745,6 +2748,8 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double static_vru_max_extra_lateral_buffer = 0.65;
   double static_cone_max_extra_lateral_buffer = 0.15;
   double static_other_max_extra_lateral_buffer = 0.45;
+  double bound2center_line_distance_thr = 0.1;
+
 };
 
 struct HppStopDeciderConfig : public EgoPlanningConfig {
@@ -3326,6 +3331,21 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
     narrow_v_limit_warn = read_json_key<double>(json, "narrow_v_limit_warn");
     narrow_v_limit_danger =
         read_json_key<double>(json, "narrow_v_limit_danger");
+    urban_max_lat_acceleration =
+        read_json_key<double>(json, "urban_max_lat_acceleration", 1.8);
+    highway_max_lat_acceleration =
+        read_json_key<double>(json, "highway_max_lat_acceleration", 2.5);
+    read_json_vec(
+        json, std::vector<std::string>{"hpp_curv_trigger_velocity_breakpoints"},
+        curv_trigger_velocity_breakpoints);
+    read_json_vec(json, std::vector<std::string>{"hpp_curv_trigger_distances"},
+                  curv_trigger_distances);
+    read_json_vec(json, std::vector<std::string>{"hpp_curv_radius_breakpoints"},
+                  curv_radius_breakpoints);
+    read_json_vec(json, std::vector<std::string>{"hpp_curv_speed_limits_ms"},
+                  curv_speed_limits_ms);
+    hpp_avoid_velocity_limit_kph =
+        read_json_key<double>(json, "hpp_avoid_velocity_limit_kph");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3346,7 +3366,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double delta_jerk_thld = 1.5;
   double delta_acc_thld = 2.0;
   size_t num_jerk_bound = 3;
-  double urban_max_lat_acceleration = 2.0;
+  double urban_max_lat_acceleration = 1.8;
   double highway_max_lat_acceleration = 2.5;
   double stop_distance_to_destination = 3.0;
   double velocity_limit_parking = 15.0;
@@ -3360,6 +3380,13 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double narrow_v_limit_attention = 2.5;  // 9kph
   double narrow_v_limit_warn = 1.67;      // 6kph
   double narrow_v_limit_danger = 0.83;    // 3kph
+  std::vector<double> curv_trigger_velocity_breakpoints = {
+      5.0 / 3.6, 10.0 / 3.6, 15.0 / 3.6, 20.0 / 3.6, 25.0 / 3.6};
+  std::vector<double> curv_trigger_distances = {0.0, 10.0, 15.0, 25.0, 40.0};
+  std::vector<double> curv_radius_breakpoints = {5.0, 10.0, 15.0, 20.0, 50.0};
+  std::vector<double> curv_speed_limits_ms = {5.0 / 3.6, 6.0 / 3.6, 8.0 / 3.6,
+                                         10.0 / 3.6, 20.0 / 3.6};
+  double hpp_avoid_velocity_limit_kph = 10.0;
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {
