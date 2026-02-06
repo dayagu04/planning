@@ -203,7 +203,8 @@ void ParkingScenario::PublishPlanningTraj() {
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
   } else if (frame_.plan_stm.planning_status == PARKING_FAILED) {
-    SetFailedPlanningOutput(planning_output_, current_ego_pose);
+    SetFailedPlanningOutput(planning_output_, current_ego_pose,
+                            frame_.plan_fail_reason);
   } else if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
              frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
              frame_.plan_stm.planning_status == PARKING_RUNNING ||
@@ -296,13 +297,18 @@ void ParkingScenario::GenPlanningHmiOutput() {
 void ParkingScenario::SetPlanningPath() {
   // planning_output_.Clear();
   memset(&planning_output_, 0, sizeof(planning_output_));
-  planning_output_.planning_status.hpp_planning_status = iflyauto::HPP_RUNNING;
-  planning_output_.planning_status.apa_planning_status =
-      iflyauto::APA_IN_PROGRESS;
+  iflyauto::PlanningStatus& planning_status = planning_output_.planning_status;
+  planning_status.hpp_planning_status = iflyauto::HPP_RUNNING;
+  planning_status.apa_planning_status = iflyauto::APA_IN_PROGRESS;
 
   if (current_path_point_global_vec_.empty()) {
     return;
   }
+
+  planning_status.apa_planning_gear_change_status.remaining_gear_change_count =
+      frame_.cur_path_gear_change_count;
+  planning_status.apa_planning_gear_change_status.has_request_continue_parking =
+      frame_.ref_max_gear_change_count_already_update;
 
   // record last frame remain dist path
   frame_.remain_dist_path_last = frame_.remain_dist_path;
@@ -433,8 +439,45 @@ const bool ParkingScenario::CheckStuckFailed() {
 }
 
 const bool ParkingScenario::CheckGearChangeCountTooMuch(
-    const int max_gear_change_count) {
-  return frame_.gear_change_count > max_gear_change_count;
+    const GearChangeDecideParams& gear_change_decide_params) {
+  if (frame_.last_gear_command == geometry_lib::SEG_GEAR_INVALID &&
+      frame_.gear_command != geometry_lib::SEG_GEAR_INVALID) {
+    frame_.ref_max_gear_change_count = std::max<uint8_t>(
+        gear_change_decide_params.normal_max_gear_change_count,
+        frame_.cur_path_gear_change_count +
+            gear_change_decide_params.redunant_gear_change_count);
+  }
+
+  UpdateGearChangeCount();
+
+  if (frame_.cur_path_gear_change_count >
+      gear_change_decide_params.all_max_gear_change_count_parking) {
+    return true;
+  }
+
+  if (frame_.actual_gear_change_count >
+      gear_change_decide_params.all_max_gear_change_count_parking) {
+    return true;
+  }
+
+  if (frame_.actual_gear_change_count > frame_.ref_max_gear_change_count) {
+    if (frame_.ref_max_gear_change_count_already_update) {
+      return true;
+    }
+    if (frame_.cur_path_gear_change_count >
+        gear_change_decide_params.extra_gear_change_count) {
+      return true;
+    }
+    frame_.ref_max_gear_change_count =
+        frame_.actual_gear_change_count + frame_.cur_path_gear_change_count +
+        gear_change_decide_params.redunant_gear_change_count;
+    frame_.ref_max_gear_change_count_already_update = true;
+  }
+
+  JSON_DEBUG_VALUE("ref_max_gear_change_count", frame_.ref_max_gear_change_count)
+  JSON_DEBUG_VALUE("actual_gear_change_count", frame_.actual_gear_change_count)
+
+  return false;
 }
 
 const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
@@ -1330,6 +1373,15 @@ void ParkingScenario::UpdatePlanFailTime() {
     frame_.replan_fail_time = 0.0;
   }
 
+  return;
+}
+
+void ParkingScenario::UpdateGearChangeCount() {
+  if (IsGearDifferent(frame_.gear_command, frame_.last_gear_command)) {
+    frame_.actual_gear_change_count++;
+  }
+
+  frame_.last_gear_command = frame_.gear_command;
   return;
 }
 
