@@ -20,7 +20,7 @@ namespace apa_planner {
 
 void RuleBasedPredictor::Execute(
     std::shared_ptr<ApaObstacleManager>& obs_manager) {
-  for (auto& obj : obs_manager->GetMutableObstaclesOD()) {
+  for (auto& obj : obs_manager->GetMutableObstaclesODTracking()) {
     ApaObstacle& obstacle = obj.second;
 
     if (obstacle.GetObsAttributeType() != ApaObsAttributeType::FUSION_POLYGON) {
@@ -158,7 +158,7 @@ void RuleBasedPredictor::RecordDebugInfo(
 
   common::ParkPredictTraj* debug_traj;
   common::TrajectoryPoint point;
-  for (auto& obj : obs_manager->GetObstaclesOD()) {
+  for (auto& obj : obs_manager->GetObstaclesODTracking()) {
     const ApaObstacle& obstacle = obj.second;
 
     if (obstacle.GetPredictTraj().size() <= 0) {
