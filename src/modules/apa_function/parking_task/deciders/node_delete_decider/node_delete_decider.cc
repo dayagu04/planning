@@ -34,10 +34,22 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
                             ? SLANT_SLOT_EXTEND_BOUND
                             : 0.0f;
 
-    pose_bound_.y_down_bound = input.map_bound.y_min;
-    pose_bound_.y_up_bound = input.map_bound.y_max;
+    const double rearaxle_frontoverhang_length =
+        apa_param.GetParam().car_length -
+        apa_param.GetParam().rear_overhanging - 0.1;
 
-    pose_bound_.x_up_bound = input.map_bound.x_max;
+    const geometry_lib::RectangleBound& ogm_bound =
+        col_det_interface_ptr_->GetEDTColDetPtr()->GetOgmBound();
+
+    pose_bound_.y_down_bound =
+        std::max(input.map_bound.y_min,
+                 float(ogm_bound.min_y + rearaxle_frontoverhang_length));
+    pose_bound_.y_up_bound =
+        std::min(input.map_bound.y_max,
+                 float(ogm_bound.max_y - rearaxle_frontoverhang_length));
+    pose_bound_.x_up_bound =
+        std::min(input.map_bound.x_max,
+                 float(ogm_bound.max_x - rearaxle_frontoverhang_length));
 
     pose_bound_.x_down_bound =
         std::min({ego_info_under_slot.cur_pose.pos.x() - 0.4,
@@ -53,7 +65,7 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
 
     pose_bound_.curve_x_down_bound =
         std::min({ego_info_under_slot.cur_pose.pos.x() - 0.1,
-                  ego_info_under_slot.target_pose.pos.x() - 0.1, 1.68}) -
+                  ego_info_under_slot.target_pose.pos.x() - 0.02, 1.68}) -
         bound;
 
     pose_bound_.heading_down_bound = -1e-6;
