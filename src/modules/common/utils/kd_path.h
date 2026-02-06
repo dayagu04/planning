@@ -285,5 +285,7 @@ class KDPath {
   double max_y_ = 0.;
 };
 
+using KDPathPtr = std::shared_ptr<KDPath>;
+using ConstKDPathPtr = std::shared_ptr<const KDPath>;
 }  // namespace planning_math
 }  // namespace planning

@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "modules/context/lane_reference_path.h"
+#include "modules/context/reference_path.h"
 
 namespace planning {
 
@@ -199,4 +199,7 @@ private:
   static std::vector<RLatType> turn_type_list;
   static std::vector<RHeightType> ramp_type_list;
 };
+
+using RoadTypeStoragePtr = std::shared_ptr<RoadTypeStorage>;
+using ConstRoadTypeStoragePtr = std::shared_ptr<const RoadTypeStorage>;
 } // namespace planning

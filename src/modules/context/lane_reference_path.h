@@ -1,5 +1,6 @@
 #pragma once
 #include "reference_path.h"
+#include "modules/context/road_type/road_type_storage.h"
 
 namespace planning {
 
@@ -49,6 +50,11 @@ class LaneReferencePath
     return origin_reference_path_length_;
   }
 
+  ConstRoadTypeStoragePtr get_road_type_storage() const {
+    return road_type_storage_;
+  }
+  RoadTypeStoragePtr mutable_road_type_storage() { return road_type_storage_; }
+
  private:
   void update_refined_lane_points();
   virtual void update_obstacles() override;
@@ -87,6 +93,8 @@ class LaneReferencePath
   double origin_reference_path_length_ = -1;
   double extended_reference_path_length_ = -1;
   double ego_projection_length_in_reference_path_ = 0;
+
+  RoadTypeStoragePtr road_type_storage_;
 };
 
 }  // namespace planning
