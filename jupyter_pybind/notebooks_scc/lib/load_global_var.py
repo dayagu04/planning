@@ -51,8 +51,9 @@ def set_value_by_scene(scene):
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
     global_dict['is_vis_sdpromap'] = False
+    global_dict['is_vis_fus_line'] = False
     global_dict['is_vis_rdg_line'] = False
-    global_dict['is_vis_rdg_obj'] = True
+    global_dict['is_vis_rdg_obj'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
     global_dict['is_vis_hpp_map'] = True
@@ -60,7 +61,8 @@ def set_value_by_scene(scene):
     global_dict['is_vis_ground_line'] = True
     global_dict['is_vis_parking_slot'] = True
     global_dict['is_vis_speed_bump'] = True
-    global_dict['is_vis_ground_mark'] = True
+    global_dict['is_vis_ground_mark'] = False
+    global_dict['is_vis_prediction'] = False
   elif scene == 'NSA':
     global_dict['scene_type'] = 'NSA'
     global_dict['is_vis_map'] = False
@@ -73,6 +75,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_occ_obj'] = True
     global_dict['is_vis_speed_bump'] = True
     global_dict['is_vis_nsa_line'] = True
+    global_dict['is_vis_prediction'] = True
   elif scene == 'RADS':
     global_dict['scene_type'] = 'RADS'
     global_dict['is_vis_map'] = False
@@ -85,3 +88,4 @@ def set_value_by_scene(scene):
     global_dict['is_vis_occ_obj'] = True
     global_dict['is_vis_speed_bump'] = True
     global_dict['is_vis_rads_path'] = True
+    global_dict['is_vis_prediction'] = True

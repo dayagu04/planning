@@ -59,7 +59,7 @@ class LaneReferencePath
       const ReferencePathPoints &ref_path_points) const;
 
   double CalculatePointProjectionDistanceInReferencePath(
-      const double point_x, const double point_y,
+      const planning_math::Vec2d &point,
       const ReferencePathPoints &ref_path_points) const;
 
   int CalculateNearestDistancePathPoint(
@@ -68,6 +68,10 @@ class LaneReferencePath
   bool get_ref_points(ReferencePathPoints &points);
 
   bool get_ref_points_hpp(ReferencePathPoints &points);
+  double CalculateExtendedReferencePathLength(
+      const double curr_ref_path_length,
+      const double curr_ego_proj_length,
+      const ReferencePathPoints &curr_ref_path_points);
 
   bool get_ref_points_rads(ReferencePathPoints &points);
 
@@ -81,6 +85,7 @@ class LaneReferencePath
   int current_leadone_obstacle_to_ego_{-1};
   int current_leadtwo_obstacle_to_ego_{-1};
   double origin_reference_path_length_ = -1;
+  double extended_reference_path_length_ = -1;
   double ego_projection_length_in_reference_path_ = 0;
 };
 

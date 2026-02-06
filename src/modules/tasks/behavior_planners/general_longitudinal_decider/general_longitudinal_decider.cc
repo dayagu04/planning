@@ -136,7 +136,8 @@ bool GeneralLongitudinalDecider::Execute() {
             IflyTime::Now_ms() - time_1);
   double time_2 = IflyTime::Now_ms();
   std::vector<planning_math::CollisionCheckStatus> hpp_collision_results;
-  if (session_->is_hpp_scene() || session_->is_rads_scene() || session_->is_nsa_scene()) {
+  if (session_->is_hpp_scene() || session_->is_rads_scene() ||
+      session_->is_nsa_scene()) {
     GetHppCollisionCheckResult(ego_planning_result.traj_points,
                                hpp_collision_results);
   }
@@ -184,9 +185,21 @@ bool GeneralLongitudinalDecider::Execute() {
                                        start_stop_info, start_stop_result);
   }
 
-  bool enable_stop_flag =
-      ((lon_yield_info_.keep_stop || start_stop_result.enable_stop()) &&
-       !session_->is_hpp_scene());
+  // 获取 HPP stop decider 输出
+  const auto &hpp_stop_decider_output =
+      session_->planning_context().hpp_stop_decider_output();
+  bool hpp_stopped_at_destination =
+      session_->is_hpp_scene() &&
+      hpp_stop_decider_output.is_stopped_at_destination;
+
+  bool enable_stop_flag = false;
+  if (session_->is_hpp_scene()) {
+    enable_stop_flag =
+        hpp_stop_decider_output.is_stopped_at_destination;
+  } else {
+    enable_stop_flag =
+        (lon_yield_info_.keep_stop || start_stop_result.enable_stop());
+  }
   LOG_DEBUG(
       "HHLDEBUGDB start stop input: %d, enable stop_flag: %d, is_start: %d, "
       "is_stop: % d, enable_stop: % d \n",
@@ -460,9 +473,9 @@ bool GeneralLongitudinalDecider::Execute() {
   // set destination bound for PNP
   if (session_->is_hpp_scene()) {
     // set destination bound
-    double distance_to_destination =
-        reference_path_ptr_->get_points().back().path_point.s() -
-        planning_init_point.frenet_state.s;
+    const auto &route_info_output =
+        session_->environmental_model().get_route_info()->get_route_info_output();
+    double distance_to_destination = route_info_output.hpp_route_info_output.distance_to_target_dest;
     const auto &parking_slot_manager =
         session_->environmental_model().get_parking_slot_manager();
     size_t target_slot_id = parking_slot_manager->GetTargetSlotId();
@@ -555,7 +568,7 @@ bool GeneralLongitudinalDecider::Execute() {
           }
 
         }
-      
+
       } else {
         nsa_brake_destination_set_ = false;
       }
