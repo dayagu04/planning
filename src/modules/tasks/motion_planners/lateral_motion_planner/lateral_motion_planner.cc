@@ -519,7 +519,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
   const auto &general_lateral_decider_output =
       session_->planning_context().general_lateral_decider_output();
   const auto &soft_bounds_frenet_point =
-      general_lateral_decider_output.second_soft_bounds_frenet_point;
+      general_lateral_decider_output.first_soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
@@ -548,7 +548,7 @@ bool LateralMotionPlanner::AssembleInputForRADS() {
   const auto &general_lateral_decider_output =
       session_->planning_context().general_lateral_decider_output();
   const auto &soft_bounds_frenet_point =
-      general_lateral_decider_output.second_soft_bounds_frenet_point;
+      general_lateral_decider_output.first_soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
@@ -575,7 +575,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
   const auto &general_lateral_decider_output =
       session_->planning_context().general_lateral_decider_output();
   const auto &soft_bounds_frenet_point =
-      general_lateral_decider_output.second_soft_bounds_frenet_point;
+      general_lateral_decider_output.first_soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
