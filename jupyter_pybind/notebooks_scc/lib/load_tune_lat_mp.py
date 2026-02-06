@@ -500,6 +500,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
     # ref
     ref_x, ref_y = lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec
     ref_xn, ref_yn = lat_motion_plan_input.ref_x_vec, lat_motion_plan_input.ref_y_vec
+    front_ref_x, front_ref_y = lat_motion_plan_input.front_axis_ref_x_vec, lat_motion_plan_input.front_axis_ref_y_vec
     tmp_ref_x = []
     tmp_ref_y = []
     last_x_vec = []
@@ -521,6 +522,7 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
     else:
       ref_x, ref_y = coord_tf.global_to_local(tmp_ref_x, tmp_ref_y)
       ref_xn, ref_yn = tmp_ref_x, tmp_ref_y
+      front_ref_x, front_ref_y = coord_tf.global_to_local(lat_motion_plan_input.front_axis_ref_x_vec, lat_motion_plan_input.front_axis_ref_y_vec)
       try:
         last_x_vec, last_y_vec = coord_tf.global_to_local(lat_motion_plan_input.last_x_vec, lat_motion_plan_input.last_y_vec)
       except:
@@ -609,6 +611,8 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'ref_yn': ref_yn,
       'last_x_vec': last_x_vec,
       'last_y_vec': last_y_vec,
+      'front_ref_x': front_ref_x,
+      'front_ref_y': front_ref_y
     })
 
     if is_enable_first_and_second_soft_bound:
@@ -1097,6 +1101,8 @@ def load_lat_plan_figure(fig1):
                                                         'ref_yn':[],
                                                         'last_x_vec': [],
                                                         'last_y_vec': [],
+                                                        'front_ref_x': [],
+                                                        'front_ref_y':[]
                                                         })
 
   data_lat_motion_plan_output = ColumnDataSource(data = {'time_vec':[],
@@ -1237,6 +1243,7 @@ def load_lat_plan_figure(fig1):
 
   # motion planning
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
+  fig1.line('front_ref_y', 'front_ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'front ref', visible=False)
   fig1.line('first_soft_upper_bound_y_vec', 'first_soft_upper_bound_x_vec', source = data_first_soft_bound, line_width = 4, line_color = "green", line_dash = 'solid', line_alpha = 0.7, legend_label = 'first soft upper bound')
   fig1.line('first_soft_lower_bound_y_vec', 'first_soft_lower_bound_x_vec', source = data_first_soft_bound, line_width = 4, line_color = "green", line_dash = 'solid', line_alpha = 0.7, legend_label = 'first soft lower bound')
   fig1.line('second_soft_upper_bound_y_vec', 'second_soft_upper_bound_x_vec', source = data_second_soft_bound, line_width = 4, line_color = "darkorange", line_dash = 'solid', line_alpha = 0.7, legend_label = 'second soft upper bound')
