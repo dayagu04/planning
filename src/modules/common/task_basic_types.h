@@ -28,6 +28,12 @@ enum class LatIngoreType {
   IGNORE_NONE
 };
 
+enum class NudgeDirection {
+  NONE,
+  LEFT,
+  RIGHT
+};
+
 enum class AgentPosType {
   FRONT,
   REAR,

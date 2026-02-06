@@ -48,7 +48,7 @@ class NarrowSpaceDecider : public Task {
       const std::vector<double>& left_s_vec, const std::vector<double>& left_l_vec,
       const std::vector<double>& right_s_vec, const std::vector<double>& right_l_vec);
 
-  void IsExistObstacleInNarrowSpace(
+  bool IsExistObstacleInNarrowSpace(
       const std::map<LatObstacleDecisionType, std::map<double, double>>& outline);
 
   void UpdateNarrowSpaceState();
@@ -69,6 +69,8 @@ class NarrowSpaceDecider : public Task {
   bool is_exist_narrow_space_;
   bool is_passable_;
   bool is_in_function_;
+  bool is_out_of_narrow_space_;
+  double distance_to_end_;
   double distance_to_narrow_space_;
   double rotate_narrow_space_width_;
   double narrow_space_width_;
@@ -80,11 +82,13 @@ class NarrowSpaceDecider : public Task {
   double min_narrow_space_width_;
   double width_slack_factor_;
   double angle_slack_factor_;
+  double narrow_spaces_lon_gap_;
   std::pair<double, double> vehicle_s_range_;
   std::pair<double, double> narrow_space_s_range_;
   pnc::mathlib::spline left_boundary_spline_;   // s, l
   pnc::mathlib::spline right_boundary_spline_;  // s, l
   Point2D last_ego_cart_;
+  Point2D end_point_;
 };
 
 }  // namespace planning

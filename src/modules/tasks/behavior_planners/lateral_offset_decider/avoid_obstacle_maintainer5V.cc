@@ -1,8 +1,10 @@
 #include "avoid_obstacle_maintainer5V.h"
+
 #include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
 #include "../../common/planning_gflags.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -21,11 +23,11 @@ static const double keep_time_level_3 = 0.3;
 namespace planning {
 
 bool AvoidObstacleMaintainer5V::UpdateLFrontAvdsInfo(
-    bool no_near_car, AvoidObstacleInfo &avd_obstacle1,
-    AvoidObstacleInfo &avd_obstacle2) {
-  auto &lateral_obstacle =
+    bool no_near_car, AvoidObstacleInfo& avd_obstacle1,
+    AvoidObstacleInfo& avd_obstacle2) {
+  auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
-  auto &ego_state =
+  auto& ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
   double v_ego = ego_state->ego_v();
   if (no_near_car == false ||
@@ -34,7 +36,7 @@ bool AvoidObstacleMaintainer5V::UpdateLFrontAvdsInfo(
   }
 
   // TODO: 考虑加视觉障碍物的过滤
-  for (auto &tr : lateral_obstacle->front_tracks_copy()) {
+  for (auto& tr : lateral_obstacle->front_tracks_copy()) {
     if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
@@ -78,11 +80,11 @@ bool AvoidObstacleMaintainer5V::UpdateLFrontAvdsInfo(
 }
 
 bool AvoidObstacleMaintainer5V::UpdateRFrontAvdsInfo(
-    bool no_near_car, AvoidObstacleInfo &avd_obstacle1,
-    AvoidObstacleInfo &avd_obstacle2) {
-  auto &lateral_obstacle =
+    bool no_near_car, AvoidObstacleInfo& avd_obstacle1,
+    AvoidObstacleInfo& avd_obstacle2) {
+  auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
-  auto &ego_state =
+  auto& ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
   double v_ego = ego_state->ego_v();
   if (no_near_car == false ||
@@ -90,7 +92,7 @@ bool AvoidObstacleMaintainer5V::UpdateRFrontAvdsInfo(
     return no_near_car;
   }
 
-  for (auto &tr : lateral_obstacle->front_tracks_copy()) {
+  for (auto& tr : lateral_obstacle->front_tracks_copy()) {
     if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
@@ -135,18 +137,18 @@ bool AvoidObstacleMaintainer5V::UpdateRFrontAvdsInfo(
 }
 
 bool AvoidObstacleMaintainer5V::UpdateLSideAvdsInfo(
-    bool no_near_car, AvoidObstacleInfo &avd_obstacle1,
-    AvoidObstacleInfo &avd_obstacle2) {
+    bool no_near_car, AvoidObstacleInfo& avd_obstacle1,
+    AvoidObstacleInfo& avd_obstacle2) {
   if (no_near_car == false) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle =
+  auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
-  auto &ego_state =
+  auto& ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
   double v_ego = ego_state->ego_v();
-  for (auto &tr : lateral_obstacle->side_tracks_l()) {
+  for (auto& tr : lateral_obstacle->side_tracks_l()) {
     if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
@@ -190,18 +192,18 @@ bool AvoidObstacleMaintainer5V::UpdateLSideAvdsInfo(
 }
 
 bool AvoidObstacleMaintainer5V::UpdateRSideAvdsInfo(
-    bool no_near_car, AvoidObstacleInfo &avd_obstacle1,
-    AvoidObstacleInfo &avd_obstacle2) {
+    bool no_near_car, AvoidObstacleInfo& avd_obstacle1,
+    AvoidObstacleInfo& avd_obstacle2) {
   if (no_near_car == false) {
     return no_near_car;
   }
 
-  auto &lateral_obstacle =
+  auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
-  auto &ego_state =
+  auto& ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
   double v_ego = ego_state->ego_v();
-  for (auto &tr : lateral_obstacle->side_tracks_r()) {
+  for (auto& tr : lateral_obstacle->side_tracks_r()) {
     if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
@@ -269,10 +271,10 @@ void AvoidObstacleMaintainer5V::Reset() {
 
 bool AvoidObstacleMaintainer5V::IsOutAvoidArea(
     const std::shared_ptr<LateralObstacle> lateral_obstacle,
-    AvoidObstacleInfo &avd_obstacle1) {
+    AvoidObstacleInfo& avd_obstacle1) {
   int history_num_out_avd_area = avd_obstacle1.num_out_avd_area;
   avd_obstacle1.num_out_avd_area = 0;
-  for (auto &tr : lateral_obstacle->side_tracks()) {
+  for (auto& tr : lateral_obstacle->side_tracks()) {
     if (tr->id() == avd_obstacle1.track_id) {
       if (tr->d_s_rel() + ego_length_ <= -safety_dist_level_1) {
         avd_obstacle1.num_out_avd_area = history_num_out_avd_area + 1;
@@ -290,7 +292,7 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
   // check avd_obstacles_ is deleted according to front_tracks' info
   // found it ,but is_avd_obstacle is false
   // keep_time_level: keep stability
-  const auto &lateral_obstacle_history_info =
+  const auto& lateral_obstacle_history_info =
       session_->mutable_planning_context()
           ->lateral_obstacle_decider_output()
           .lateral_obstacle_history_info;
@@ -353,19 +355,19 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
 
 void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
     const std::shared_ptr<LateralObstacle> lateral_obstacle, double v_ego,
-    std::vector<AvoidObstacleInfo> &avd_obstacles) {
+    std::vector<AvoidObstacleInfo>& avd_obstacles) {
   int ncar_cnt = 0;
   int enter0 = 0;
   int enter1 = 0;
   int enter2 = 0;
   double half_width = lane_width_ * 0.5;
   std::vector<AvoidObstacleInfo> avd_temp_cars;
-  const auto &lateral_obstacle_history_info =
+  const auto& lateral_obstacle_history_info =
       session_->mutable_planning_context()
           ->lateral_obstacle_decider_output()
           .lateral_obstacle_history_info;
   if (lateral_obstacle->front_tracks_copy().size() > 0) {
-    for (auto &tr : lateral_obstacle->front_tracks_copy()) {
+    for (auto& tr : lateral_obstacle->front_tracks_copy()) {
       if (tr->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
         continue;
       }
@@ -583,7 +585,7 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
           }
         } else if (avd_temp_cars.size() == 2 && avd_obstacles.size() == 1) {
           if (avd_temp_cars[0].s_to_ego <=
-              avd_obstacles[0].s_to_ego) {  //似乎必然满足？？？？？
+              avd_obstacles[0].s_to_ego) {  // 似乎必然满足？？？？？
             avd_obstacles.push_back(avd_temp_cars[1]);
             avd_obstacles[0] = avd_temp_cars[0];
             enter2 = 1;
@@ -785,11 +787,11 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
 }
 
 void AvoidObstacleMaintainer5V::SelectAvoidObstacle(
-    const std::vector<AvoidObstacleInfo> &avd_obstacles) {
+    const std::vector<AvoidObstacleInfo>& avd_obstacles) {
   std::vector<AvoidObstacleInfo> avd_obstacle_left;
   std::vector<AvoidObstacleInfo> avd_obstacle_right;
   std::unordered_map<uint, AvoidObstacleInfo> avd_obstacle_map;
-  for (auto &avd_obstacle : avd_obstacles) {
+  for (auto& avd_obstacle : avd_obstacles) {
     avd_obstacle_map.insert(
         std::make_pair(avd_obstacle.track_id, avd_obstacle));
   }
@@ -804,7 +806,7 @@ void AvoidObstacleMaintainer5V::SelectAvoidObstacle(
   }
 
   if (avd_obstacle_map.size() == 4 || avd_obstacle_map.size() == 3) {
-    for (auto &avd_obstacle : avd_obstacle_map) {
+    for (auto& avd_obstacle : avd_obstacle_map) {
       if (fabs(avd_obstacle.second.max_l_to_ref) >
           fabs(avd_obstacle.second.min_l_to_ref)) {
         avd_obstacle_left.emplace_back(avd_obstacle.second);
@@ -814,11 +816,11 @@ void AvoidObstacleMaintainer5V::SelectAvoidObstacle(
     }
 
     std::sort(avd_obstacle_left.begin(), avd_obstacle_left.end(),
-              [&](AvoidObstacleInfo &o1, AvoidObstacleInfo &o2) {
+              [&](AvoidObstacleInfo& o1, AvoidObstacleInfo& o2) {
                 return CampareDistance(o1, o2);
               });
     std::sort(avd_obstacle_right.begin(), avd_obstacle_right.end(),
-              [&](const AvoidObstacleInfo &o1, const AvoidObstacleInfo &o2) {
+              [&](const AvoidObstacleInfo& o1, const AvoidObstacleInfo& o2) {
                 return CampareDistance(o1, o2);
               });
 
@@ -830,7 +832,7 @@ void AvoidObstacleMaintainer5V::SelectAvoidObstacle(
         if (avd_obstacle_left[0].s_to_ego < avd_obstacle_right[0].s_to_ego) {
           avd_obstacles_[0] = avd_obstacle_left[0];
           if (avd_obstacle_right[0].s_to_ego - avd_obstacle_left[1].s_to_ego >
-              15) {  //修改
+              15) {  // 修改
             avd_obstacles_[1] = avd_obstacle_left[1];
           } else {
             avd_obstacles_[1] = avd_obstacle_right[0];
@@ -852,7 +854,7 @@ void AvoidObstacleMaintainer5V::SelectAvoidObstacle(
                     .s_to_ego) {  // ignore avd_obstacle_right[1]
               if (avd_obstacle_right[0].s_to_ego -
                       avd_obstacle_left[1].s_to_ego >
-                  15) {  //修改
+                  15) {  // 修改
                 avd_obstacles_[1] = avd_obstacle_left[1];
               } else {
                 avd_obstacles_[1] = avd_obstacle_right[0];
@@ -870,7 +872,7 @@ void AvoidObstacleMaintainer5V::SelectAvoidObstacle(
                 avd_obstacle_left[1].s_to_ego) {  // ignore avd_obstacle_left[1]
               if (avd_obstacle_left[0].s_to_ego -
                       avd_obstacle_right[1].s_to_ego >
-                  15) {  //修改
+                  15) {  // 修改
                 avd_obstacles_[1] = avd_obstacle_right[1];
               } else {
                 avd_obstacles_[1] = avd_obstacle_left[0];
@@ -950,13 +952,13 @@ void AvoidObstacleMaintainer5V::SelectAvoidObstacle(
 }
 
 void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
-    std::vector<AvoidObstacleInfo> &avd_obstacles) {
+    std::vector<AvoidObstacleInfo>& avd_obstacles) {
   // update avd_obstacles_ info according to avd_obstacles
   // TODO(clren): 为了避让更平滑， 对avd_obstacles_的横向信息更新做调整
-  auto TempHack = [](const planning::framework::Session *session,
-                     const AvoidObstacleInfo &avd_obstacle_past,
-                     AvoidObstacleInfo &avd_obstacles) {
-    const CoarsePlanningInfo &coarse_planning_info =
+  auto TempHack = [](const planning::framework::Session* session,
+                     const AvoidObstacleInfo& avd_obstacle_past,
+                     AvoidObstacleInfo& avd_obstacles) {
+    const CoarsePlanningInfo& coarse_planning_info =
         session->planning_context()
             .lane_change_decider_output()
             .coarse_planning_info;
@@ -964,8 +966,8 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
         session->environmental_model()
             .get_reference_path_manager()
             ->get_reference_path_by_lane(coarse_planning_info.target_lane_id);
-    const auto &obstacles_map = fix_ref->get_obstacles_map();
-    const auto &lateral_obstacle_history_info =
+    const auto& obstacles_map = fix_ref->get_obstacles_map();
+    const auto& lateral_obstacle_history_info =
         session->planning_context()
             .lateral_obstacle_decider_output()
             .lateral_obstacle_history_info;
@@ -1062,11 +1064,11 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo1(
 void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo2(
     const std::shared_ptr<LateralObstacle> lateral_obstacle,
     double t_interval) {
-  const auto &reference_path_ptr = session_->planning_context()
+  const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   auto ego_vs = reference_path_ptr->get_frenet_ego_state().velocity_s();
-  auto &ego_state =
+  auto& ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
   double v_ego = ego_state->ego_v();
   double update_predict_vs_lon_relative_1, update_predict_vs_lon_relative_2;
@@ -1329,8 +1331,8 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo3() {
 
 // avd_obstacle1 < avd_obstacle2 : return true
 bool AvoidObstacleMaintainer5V::CampareDistance(
-    const AvoidObstacleInfo &avd_obstacle1,
-    const AvoidObstacleInfo &avd_obstacle2) {
+    const AvoidObstacleInfo& avd_obstacle1,
+    const AvoidObstacleInfo& avd_obstacle2) {
   if (avd_obstacle1.tail_s_to_ego > 0) {
     if (avd_obstacle2.tail_s_to_ego > 0) {
       return avd_obstacle1.tail_s_to_ego < avd_obstacle2.tail_s_to_ego;
@@ -1367,16 +1369,16 @@ bool AvoidObstacleMaintainer5V::CampareDistance(
   }
 }
 
-bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
+bool AvoidObstacleMaintainer5V::Process(planning::framework::Session* session) {
   session_ = session;
   avd_obstacles_cur_.clear();
   is_ncar_ = false;
 
-  auto &lateral_obstacle =
+  auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
-  auto &ego_state =
+  auto& ego_state =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  const CoarsePlanningInfo &coarse_planning_info =
+  const CoarsePlanningInfo& coarse_planning_info =
       session_->planning_context()
           .lane_change_decider_output()
           .coarse_planning_info;
@@ -1384,7 +1386,7 @@ bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
-  const auto &vehicle_param =
+  const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_length_ = vehicle_param.length;
   double v_ego = ego_state->ego_v();
@@ -1450,19 +1452,19 @@ bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
 
 void AvoidObstacleMaintainer5V::SaveDebugInfo() {
 #ifdef ENABLE_PROTO_LOG
-  auto &debug_info_manager = DebugInfoManager::GetInstance();
-  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto& debug_info_manager = DebugInfoManager::GetInstance();
+  auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto lateral_offset_decider_info =
       planning_debug_data->mutable_lateral_offset_decider_info();
 
   lateral_offset_decider_info->mutable_avoid_car_ids()->Clear();
-  for (auto &item : avd_obstacles_cur_) {
+  for (auto& item : avd_obstacles_cur_) {
     if (item.flag != AvoidObstacleFlag::INVALID) {
       lateral_offset_decider_info->add_avoid_car_ids(item.track_id);
     }
   }
   lateral_offset_decider_info->mutable_select_avoid_car_ids()->Clear();
-  for (auto &item : avd_obstacles_) {
+  for (auto& item : avd_obstacles_) {
     lateral_offset_decider_info->add_select_avoid_car_ids(item.track_id);
   }
 #endif
