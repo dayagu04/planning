@@ -460,7 +460,7 @@ void ParkingStopDecider::AddDecisionByObstaclePrediction(
   // opposite directions or opposite directions
   double min_stop_s = tmp_deicison.path_s - tmp_deicison.lon_decision_buffer;
 
-  for (auto& obj : obs_manager_->GetMutableObstaclesOD()) {
+  for (auto& obj : obs_manager_->GetMutableObstaclesODTracking()) {
     ApaObstacle& obstacle = obj.second;
 
     if (obstacle.GetPredictTraj().empty()) {

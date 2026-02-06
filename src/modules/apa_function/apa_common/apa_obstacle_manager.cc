@@ -223,6 +223,7 @@ void ApaObstacleManager::Update(
 
   if (param.use_object_detect) {
     GenerateObsByOD(local_view, apa_param.GetParam().od_config);
+    GenerateObsByODTracking(local_view, apa_param.GetParam().od_config);
   }
 
   // gl pt cloud
@@ -426,10 +427,21 @@ const bool ApaObstacleManager::IsOccType(const iflyauto::ObjectType type) {
   return false;
 }
 
+const bool ApaObstacleManager::NeedTrackingObjectType(
+    const iflyauto::ObjectType type) {
+  bool is_in_first_range = (type >= iflyauto::OBJECT_TYPE_UNKNOWN &&
+                            type <= iflyauto::OBJECT_TYPE_ANIMAL);  // 0-13
+  bool is_in_second_range =
+      (type >= iflyauto::OBJECT_TYPE_CYCLE_RIDING &&
+       type <= iflyauto::OBJECT_TYPE_TRICYCLE_RIDING);  // 18-20
+  bool is_in_third_range = (type >= iflyauto::OBJECT_TYPE_SPECIAL_VEHICLE &&
+                            type <= iflyauto::OBJECT_TYPE_CHILD);  // 39-49
+
+  return is_in_first_range || is_in_second_range || is_in_third_range;
+}
+
 void ApaObstacleManager::GenerateObsByOD(
     const LocalView* local_view, const ObjectDetectObsConfig& od_config) {
-  std::unordered_set<size_t> current_local_ids;
-  std::unordered_set<size_t> current_fusion_ids;
   const uint8 fusion_obs_size =
       std::min(local_view->fusion_objects_info.fusion_object_size,
                static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
@@ -493,13 +505,121 @@ void ApaObstacleManager::GenerateObsByOD(
     std::vector<Eigen::Vector2d> global_box;
     LocalPolygonToGlobal(local_box, center_pose, global_box);
 
+    ApaObstacle apa_obs;
+    apa_obs.Reset();
+
+    Polygon2D polygon;
+    GeneratePolygonByPoints(global_box, &polygon);
+    apa_obs.SetPolygonGlobal(polygon);
+
+    // Sometimes OCC won't send specificationer now, sample od.
+    if (IsODSpecificationer(obs.type)) {
+      std::vector<Eigen::Vector2d> local_pts, global_pts;
+      GeneratePtsByBox(obs.shape.length, obs.shape.width,
+                       Eigen::Vector2d(0.0f, 0.0f), local_pts, 0.2);
+      LocalPolygonToGlobal(local_pts, center_pose, global_pts);
+      apa_obs.SetPtClout2dGlobal(global_pts);
+    }
+
+    cdl::AABB box = cdl::AABB();
+    GetBoundingBoxByPolygon(&box, &polygon);
+    apa_obs.SetBoxGlobal(box);
+
+    pnc::geometry_lib::PathPoint pose(
+        Eigen::Vector2d(obs.center_position.x, obs.center_position.y),
+        obs.heading_angle);
+    apa_obs.SetPose(pose);
+    apa_obs.SetSpeed(speed);
+
+    if (IsDynamicODVeh(od_config.moving_veh_speed_thresh, speed, obs.type) ||
+        IsDynamicLivingThings(speed, obs.type)) {
+      Eigen::Vector2d speed_dir(obs.velocity.x, obs.velocity.y);
+      apa_obs.SetSpeedHeading(speed_dir.normalized());
+      apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
+    } else {
+      apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
+    }
+
+    apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
+    apa_obs.SetObsScemanticType(obs.type);
+    apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+
+    apa_obs.SetId(obs_id_generate_);
+    apa_obs.SetParentId(obs_id_generate_);
+    apa_obs.ClearDecision();
+    obstacles_[obs_id_generate_] = apa_obs;
+    obs_id_generate_++;
+  }
+
+  return;
+}
+
+void ApaObstacleManager::GenerateObsByODTracking(
+    const LocalView* local_view, const ObjectDetectObsConfig& od_config) {
+  std::unordered_set<size_t> current_local_ids;
+  std::unordered_set<size_t> current_fusion_ids;
+  const uint8 fusion_obs_size =
+      std::min(local_view->fusion_objects_info.fusion_object_size,
+               static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
+  for (uint8 i = 0; i < fusion_obs_size; ++i) {
+    const iflyauto::Obstacle& obs =
+        local_view->fusion_objects_info.fusion_object[i].common_info;
+    if (!NeedTrackingObjectType(obs.type)) {
+      continue;
+    }
+
+    double speed = std::sqrt(obs.velocity.x * obs.velocity.x +
+                             obs.velocity.y * obs.velocity.y);
+    if (IsDynamicODVeh(od_config.moving_veh_speed_thresh, speed, obs.type)) {
+      if (!od_config.use_dynamic_od_car) {
+        continue;
+      }
+    } else if (IsODLivingThings(obs.type)) {
+      if (!od_config.use_living_things) {
+        continue;
+      }
+    } else {
+      if (ego_slot_is_parallel_ && obs.type >= iflyauto::OBJECT_TYPE_COUPE &&
+          obs.type <= iflyauto::OBJECT_TYPE_TRAILER) {
+        const iflyauto::IFLYLocalization& localization_info =
+            local_view->localization;
+        Eigen::Vector3d ego_pose;
+        ego_pose[0] = localization_info.position.position_boot.x;
+        ego_pose[1] = localization_info.position.position_boot.y;
+        ego_pose[2] = localization_info.orientation.euler_boot.yaw;
+        auto obs_ego_line_heading =
+            std::atan2(obs.center_position.y - ego_pose[1],
+                       obs.center_position.x - ego_pose[0]);
+        bool is_front_car =
+            std::abs(obs_ego_line_heading - ego_pose[2]) < M_PI / 2;
+        if (is_front_car) {
+          auto res =
+              CheckParaSlotObsAreNeighbour(obs, last_ego_slot_, ego_pose);
+          if (res.first == 0) {
+            parallel_slot_neigbour_objs_heading_[0] = res.second;
+          }
+        }
+      }
+      continue;
+    }
+
+    Pose2D center_pose(obs.center_position.x, obs.center_position.y,
+                       obs.heading_angle);
+
+    std::vector<Eigen::Vector2d> local_box;
+    GenerateBoundingBox(obs.shape.length, obs.shape.width,
+                        Eigen::Vector2d(0.0f, 0.0f), local_box);
+
+    std::vector<Eigen::Vector2d> global_box;
+    LocalPolygonToGlobal(local_box, center_pose, global_box);
+
     size_t fusion_id = obs.id;
     current_fusion_ids.insert(fusion_id);
 
     size_t local_id;
     auto map_it = fusion_id_to_local_id_.find(fusion_id);
     if (map_it == fusion_id_to_local_id_.end()) {
-      local_id = obs_od_id_generate_++;
+      local_id = obs_tracking_id_generate_++;
       fusion_id_to_local_id_[fusion_id] = local_id;
     } else {
       local_id = map_it->second;
@@ -507,13 +627,13 @@ void ApaObstacleManager::GenerateObsByOD(
 
     current_local_ids.insert(local_id);
 
-    auto it = fusion_polygon_obs_.find(local_id);
+    auto it = obstacles_od_tracking_.find(local_id);
     bool is_new = false;
-    if (it == fusion_polygon_obs_.end()) {
+    if (it == obstacles_od_tracking_.end()) {
       ApaObstacle new_obs;
       new_obs.SetId(local_id);
       new_obs.SetParentId(local_id);
-      it = fusion_polygon_obs_.emplace(local_id, std::move(new_obs)).first;
+      it = obstacles_od_tracking_.emplace(local_id, std::move(new_obs)).first;
       is_new = true;
     }
     ApaObstacle& apa_obs = it->second;
@@ -856,8 +976,8 @@ void ApaObstacleManager::UpdateObstacleODLostFrames(
     const std::unordered_set<size_t>& current_ids) {
   constexpr int kMaxLostFrames = 3;
 
-  for (auto it = fusion_polygon_obs_.begin();
-       it != fusion_polygon_obs_.end();) {
+  for (auto it = obstacles_od_tracking_.begin();
+       it != obstacles_od_tracking_.end();) {
     size_t local_id = it->first;
 
     if (current_ids.count(it->first) == 0) {
@@ -871,7 +991,7 @@ void ApaObstacleManager::UpdateObstacleODLostFrames(
             ++map_it;
           }
         }
-        it = fusion_polygon_obs_.erase(it);
+        it = obstacles_od_tracking_.erase(it);
         continue;
       }
     } else {
