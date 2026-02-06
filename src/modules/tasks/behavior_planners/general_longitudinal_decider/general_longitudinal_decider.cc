@@ -23,6 +23,7 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "obstacle_manager.h"
 #include "func_state_machine_c.h"
 #include "ifly_time.h"
 #include "log.h"
@@ -747,12 +748,12 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   // 减速带限速
   if (session_->is_hpp_scene()) {
     const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-    const auto &motion_planner_output =
-        session_->planning_context().motion_planner_output();
-
+    const auto &traj_points = session_->mutable_planning_context()
+                                  ->mutable_planning_result()
+                                  .traj_points;
     // 检查减速带区域
-    SpeedBumpZoneInfo speed_bump_zone_info = CheckSpeedBumpZone(
-        motion_planner_output.traj_points, frenet_ego_state.s());
+    SpeedBumpZoneInfo speed_bump_zone_info =
+        CheckSpeedBumpZone(traj_points, frenet_ego_state.s());
 
     // 获取减速带限速
     double speed_bump_velocity_limit =
@@ -2842,8 +2843,10 @@ double GeneralLongitudinalDecider::GetSpeedBumpVelocityLimit(
     // 使用运动学公式: v² = v0² + 2*a*s
     // 其中 v = kSpeedBumpZoneVelocityLimit, a = kDecelerationRate, s = distance_to_zone
     // 求解 v0 = sqrt(v² - 2*a*s)
-    double target_velocity_squared = kSpeedBumpZoneVelocityLimit * kSpeedBumpZoneVelocityLimit;
-    double velocity_squared_at_distance = 0 - 
+    double target_velocity_squared =
+        kSpeedBumpZoneVelocityLimit * kSpeedBumpZoneVelocityLimit;
+    double velocity_squared_at_distance =
+        target_velocity_squared -
         2.0 * kDecelerationRate * zone_info.distance_to_zone;
     
     if (velocity_squared_at_distance < 0) {
