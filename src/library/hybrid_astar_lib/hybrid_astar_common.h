@@ -345,7 +345,7 @@ struct HybridAStarResult {
 
   bool path_plan_success = false;
 
-  int gear_change_num = -1;
+  int gear_change_num = 0;
 
   // slot pose
   Pose2D base_pose;
@@ -371,7 +371,7 @@ struct HybridAStarResult {
     length_vec.clear();
     time_ms = 0;
     fail_type = AstarFailType::NONE;
-    gear_change_num = -1;
+    gear_change_num = 0;
 
     path_plan_success = false;
 

@@ -152,13 +152,6 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  if (CheckGearChangeCountTooMuch()) {
-    ILOG_INFO << "check gear change count too much!";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
-    return;
-  }
-
   PrintParkPathPlanType(apa_param.GetParam().park_path_plan_type);
   PrintAnalyticExpansionType(apa_param.GetParam().analytic_expansion_type);
   if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY ||
@@ -191,6 +184,14 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
           apa_param.GetParam().smart_fold_mirror_params.max_stuck_wait_time) {
     SetParkingStatus(PARKING_FAILED);
     frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
+    return;
+  }
+
+  if (CheckGearChangeCountTooMuch(
+          apa_param.GetParam().gear_change_decide_params)) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
     return;
   }
 
@@ -887,6 +888,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   }
 
   frame_.gear_command = planner_output.current_gear;
+  frame_.cur_path_gear_change_count = planner_output.gear_change_count;
 
   current_path_point_global_vec_.clear();
   current_path_point_global_vec_.reserve(planner_output.path_point_vec.size() +
@@ -1178,12 +1180,11 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
 
   if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
     // searching_stage
-    request.max_gear_shift_number = param.max_plan_gear_shift_number_searching;
+    request.max_gear_shift_number =
+        param.gear_change_decide_params.all_max_gear_change_count_searching;
   } else {
     request.max_gear_shift_number =
-        std::max(0, std::min(param.max_plan_gear_shift_number_parking,
-                             param.max_real_gear_shift_number_parking -
-                                 frame_.gear_change_count));
+        param.gear_change_decide_params.all_max_gear_change_count_parking;
   }
 
   request.max_scurve_number = 2;
@@ -1756,9 +1757,7 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
 
   frame_.is_last_path = (result.gear_change_num < 1);
 
-  if (IsGearDifferent(result.cur_gear, frame_.gear_command)) {
-    frame_.gear_change_count++;
-  }
+  frame_.cur_path_gear_change_count = result.gear_change_num;
 
   frame_.gear_command = GetSegGearFromAstarGear(result.cur_gear);
   frame_.current_gear = geometry_lib::ReverseGear(frame_.gear_command);

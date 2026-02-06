@@ -217,6 +217,7 @@ class ParkingScenario {
       correct_path_for_limiter = false;
       dynamic_plan_fail_flag = false;
       gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
+      last_gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
       is_left_empty = false;
       is_right_empty = false;
@@ -245,7 +246,10 @@ class ParkingScenario {
 
       has_response = false;
 
-      gear_change_count = 0;
+      actual_gear_change_count = 0;
+      ref_max_gear_change_count = 0;
+      cur_path_gear_change_count = 0;
+      ref_max_gear_change_count_already_update = false;
 
       mirror_command = MirrorCommand::NONE;
     }
@@ -326,6 +330,7 @@ class ParkingScenario {
 
     // cur traj gear
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
+    uint8_t last_gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
     // closed obs in path is a dynamic obs.
     bool stuck_by_dynamic_obs = false;
@@ -339,7 +344,10 @@ class ParkingScenario {
     double slot_jump_heading_err = 0.0;
     bool slot_jump_big_flag = false;
 
-    int gear_change_count = 0;
+    uint8_t actual_gear_change_count = 0;
+    uint8_t ref_max_gear_change_count = 0;
+    uint8_t cur_path_gear_change_count = 0;
+    bool ref_max_gear_change_count_already_update = false;
   };
 
   struct CalObsRemainDistParams {
@@ -571,8 +579,7 @@ class ParkingScenario {
 
   virtual const bool CheckPathDangerous();
   virtual const bool CheckGearChangeCountTooMuch(
-      const int max_gear_change_count =
-          apa_param.GetParam().max_real_gear_shift_number_parking);
+      const GearChangeDecideParams &gear_change_decide_params);
 
   virtual const bool CheckEgoPoseInBelieveObsArea(
       const double lat_expand, const double lon_expand,
@@ -606,6 +613,8 @@ class ParkingScenario {
   void SetParkInFeasibleDirection();
 
   void UpdatePlanFailTime();
+
+  void UpdateGearChangeCount();
 
   const bool IsPathCollision(
       const std::vector<pnc::geometry_lib::PathPoint> &path,

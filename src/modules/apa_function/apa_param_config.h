@@ -351,6 +351,14 @@ struct ObjectDetectObsConfig {
   double moving_veh_speed_thresh;
 };
 
+struct GearChangeDecideParams {
+  int all_max_gear_change_count_searching = 20;
+  int all_max_gear_change_count_parking = 25;
+  int normal_max_gear_change_count = 15;
+  int extra_gear_change_count = 4;
+  int redunant_gear_change_count = 2;
+};
+
 // todo
 // 1. system should use same vehicle configuration file for on lane driving and
 // parking.
@@ -805,6 +813,8 @@ struct ApaParameters {
   ParkingLatLonTargetPoseBuffer lat_lon_target_pose_buffer;
 
   ObjectDetectObsConfig od_config;
+
+  GearChangeDecideParams gear_change_decide_params;
 };
 
 class ApaParametersSetting {
