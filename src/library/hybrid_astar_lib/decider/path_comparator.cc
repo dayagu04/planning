@@ -70,6 +70,15 @@ bool PathComparator::Compare(const AstarRequest *request,
         return true;
       }
       break;
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      if (CheckVerticalSlotParkOut(best_node, node_challenger)) {
+        return true;
+      }
     default:
       break;
   }
@@ -130,8 +139,7 @@ bool PathComparator::CheckVerticalSlotTailIn(const Node3d *best_node,
   return false;
 }
 
-bool PathComparator::CheckVerticalSlotHeadOut(const AstarRequest *request,
-                                              const Node3d *best_node,
+bool PathComparator::CheckVerticalSlotParkOut(const Node3d *best_node,
                                               const Node3d *node_challenger) {
   // 为了耗时考虑，暂时只会比较第一个换挡点的cost.
   // 相同换档点，不需要比较
@@ -150,7 +158,7 @@ bool PathComparator::CheckVerticalSlotHeadOut(const AstarRequest *request,
     gear_switch_pose_best = best_node->GetPose();
   }
   float heading_error_best =
-      std::fabs(gear_switch_pose_best.theta - request->real_goal.theta);
+      std::fabs(gear_switch_pose_best.theta - request_->real_goal.theta);
 
   Pose2f gear_switch_pose_challenger;
   if (node_challenger->GearSwitchNode() != nullptr) {
@@ -160,7 +168,7 @@ bool PathComparator::CheckVerticalSlotHeadOut(const AstarRequest *request,
   }
 
   float heading_error_challenger =
-      std::fabs(gear_switch_pose_challenger.theta - request->real_goal.theta);
+      std::fabs(gear_switch_pose_challenger.theta - request_->real_goal.theta);
 
 #if DEBUG_DECIDER
   ILOG_INFO << "head 1 = " << heading_error_best * 57.4
@@ -379,8 +387,8 @@ bool PathComparator::IsGearSwitchNodeNice(const Node3d *node) {
   return true;
 }
 
-const bool PathComparator::IsStraightDistBigger(
-    const Node3d *best_node, const Node3d *node_challenger) {
+const bool PathComparator::IsStraightDistBigger(const Node3d *best_node,
+                                                const Node3d *node_challenger) {
   if (node_challenger->GetStraightDistToGoal() >
       best_node->GetStraightDistToGoal()) {
     return true;

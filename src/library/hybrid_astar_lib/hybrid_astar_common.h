@@ -612,5 +612,8 @@ const bool IsPathGearSameWithRequest(const AstarPathGear type,
 const ParkingVehDirection GetParkDir(const int dir);
 
 const std::string GetAstarNodeVisitedTypeDebugString(const AstarNodeVisitedType type);
+bool GenerateStraightLinePath(std::vector<AStarPathPoint>* path,
+                              const Pose2f& start, const Pose2f& end,
+                              const AstarPathGear gear);
 
 }  // namespace planning

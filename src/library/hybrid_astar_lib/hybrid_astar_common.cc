@@ -1,6 +1,8 @@
 
 #include "hybrid_astar_common.h"
+
 #include <cmath>
+
 #include "geometry_math.h"
 #include "point_cloud_obstacle.h"
 #include "vecf32.h"
@@ -560,6 +562,47 @@ const std::string GetAstarNodeVisitedTypeDebugString(
   }
 
   return res;
+}
+
+bool GenerateStraightLinePath(std::vector<AStarPathPoint>* path,
+                              const Pose2f& start, const Pose2f& end,
+                              const AstarPathGear gear) {
+  if (!path) {
+    return false;
+  }
+  path->clear();
+
+  constexpr double kStep = 0.1;
+  const double dx = end.x - start.x;
+  const double dy = end.y - start.y;
+  const double dist = std::hypot(dx, dy);
+
+  if (dist < 1e-4) {
+    path->emplace_back(start.x, start.y, start.theta, gear, 0.0,
+                       AstarPathType::LINE_SEGMENT, 0.0);
+    return true;
+  }
+
+  const size_t n = std::max<size_t>(1, static_cast<size_t>(dist / kStep));
+  const double yaw = std::atan2(dy, dx);
+
+  double s = 0.0;
+  for (size_t i = 0; i <= n; ++i) {
+    const double ratio = static_cast<double>(i) / n;
+    const double x = start.x + ratio * dx;
+    const double y = start.y + ratio * dy;
+    const double phi = yaw;
+
+    if (i > 0) {
+      const double px = path->back().x;
+      const double py = path->back().y;
+      s += std::hypot(x - px, y - py);
+    }
+
+    path->emplace_back(x, y, phi, gear, s, AstarPathType::LINE_SEGMENT, 0.0);
+  }
+
+  return true;
 }
 
 }  // namespace planning

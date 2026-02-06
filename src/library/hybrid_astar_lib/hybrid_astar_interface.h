@@ -160,6 +160,9 @@ class HybridAStarInterface {
                                         const bool is_ego_overlap_with_slot);
 
   void PathCandidateCompare(const int gear_change_num_buffer);
+  void PrependPolynomialPathToHybridAStar(
+      const std::vector<AStarPathPoint>& polynomial_path,
+      HybridAStarResult* hybrid_path);
 
   void GenerateRefLine();
   void ParkingDirectionAttempt(const float& advised_lat_buffer_inside);
