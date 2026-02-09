@@ -58,6 +58,7 @@ void ApaSlotManager::Update(
   const size_t slot_size =
       local_view->parking_fusion_info.parking_fusion_slot_lists_size;
   size_t select_slot_id = local_view->parking_fusion_info.select_slot_id;
+  size_t ego_slot_id = local_view->parking_fusion_info.ego_slot_id;
 
   const auto is_sapa_mode = state_machine_ptr->IsSAPAMode();
   const auto sapa_status = state_machine_ptr->GetSAPAStatus();
@@ -87,12 +88,7 @@ void ApaSlotManager::Update(
     }
 
     const SlotCoord& slot_global_coord = slot.GetOriginCornerCoordGlobal();
-    const Eigen::Vector2d ego_solt_center_point =
-        state_machine_ptr_->IsSeachingOutStatus()
-            ? (slot_global_coord.pt_01_mid + slot_global_coord.pt_23_mid) / 2.0
-            : slot_global_coord.pt_01_mid;
-
-    const double dist = (car_mirror_pos - ego_solt_center_point).norm();
+    const double dist = (car_mirror_pos - slot_global_coord.pt_01_mid).norm();
 
     dist_id_map_[dist] = slot.GetId();
     slots_map_[slot.GetId()] = slot;
@@ -128,11 +124,7 @@ void ApaSlotManager::Update(
     }
   } else {
     if (state_machine_ptr_->IsParkOutStatus()) {
-      if (dist_id_map_.empty()) {
-        select_slot_id = kSlotInvalidId;
-      } else {
-        select_slot_id = dist_id_map_.begin()->second;
-      }
+      select_slot_id = ego_slot_id;
     }
   }
 
@@ -163,7 +155,8 @@ void ApaSlotManager::Update(
   }
 
   // 更新基于规则的车位释放
-  if (state_machine_ptr_->IsSeachingStatus()) {
+  if (state_machine_ptr_->IsSeachingStatus() ||
+      state_machine_ptr_->IsManualStatus()) {
     if (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
       // TODO(taolu10): 确认这部分逻辑的合理性
       for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
@@ -188,28 +181,14 @@ void ApaSlotManager::Update(
         select_slot_id != kSlotInvalidId) {
       // forced release of self slot. TODO(taolu10): 确认这部分逻辑的合理性
       ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
-      ego_info_under_slot_.relative_direction_between_ego_and_slot =
-          measure_data_ptr_->GetHeadingVec().dot(
-              slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
-      if (slot.slot_type_ == SlotType::PERPENDICULAR &&
-          state_machine_ptr_->IsHeadOutStatus()) {
-        if (ego_info_under_slot_.relative_direction_between_ego_and_slot >
-            0.0) {
-          slot.release_info_.release_state[RULE_BASED_RELEASE] =
-              SlotReleaseState::RELEASE;
-        } else {
-          slot.release_info_.release_state[RULE_BASED_RELEASE] =
-              SlotReleaseState::NOT_RELEASE;
-        }
-      } else {
-        slot.release_info_.release_state[RULE_BASED_RELEASE] =
-            SlotReleaseState::RELEASE;
-      }
+      slot.release_info_.release_state[RULE_BASED_RELEASE] =
+          SlotReleaseState::RELEASE;
     }
   }
 
   // 更新泊出推荐
-  recommend_park_out_ = RecommendParkOut();
+  recommend_park_out_ =
+      GetRecommendApaParkingOperationType(local_view->parking_fusion_info);
 
   if (ego_info_under_slot_.slot.GetType() == SlotType::PARALLEL) {
     const iflyauto::ParkingFusionSlot* fusion_slot;
@@ -401,7 +380,8 @@ void ApaSlotManager::Update(
 }
 
 void ApaSlotManager::GenerateReleaseSlotIdVec() {
-  if (!state_machine_ptr_->IsSeachingStatus()) {
+  if (!state_machine_ptr_->IsSeachingStatus() &&
+      !state_machine_ptr_->IsManualStatus()) {
     return;
   }
   release_slot_id_vec_.clear();
@@ -1079,7 +1059,8 @@ const size_t ApaSlotManager::GetEgoSlotInfoID() const {
   return ego_info_under_slot_.id;
 }
 
-const bool ApaSlotManager::RecommendParkOut() const {
+const bool ApaSlotManager::GetRecommendApaParkingOperationType(
+    const iflyauto::ParkingFusionInfo& parking_fusion_info) {
   const bool is_e541_car = apa_param.GetParam().car_type == 4;
   const bool is_curr_manual_status = state_machine_ptr_->IsManualStatus();
   const bool is_curr_static = measure_data_ptr_->GetStaticFlag();
@@ -1087,20 +1068,30 @@ const bool ApaSlotManager::RecommendParkOut() const {
     return false;
   }
 
-  if (!dist_id_map_.empty()) {
-    const size_t ego_slot_id = dist_id_map_.begin()->second;
-    const ApaSlot& slot = slots_map_.at(ego_slot_id);
-    double dot_product = 0.0;
-    const bool condition_0 = LateralConditions(dot_product, slot);
-    const bool condition_1 = LongitudinalConditions(dot_product, slot);
+  if (parking_fusion_info.is_in_parking_slot) {
+    ILOG_INFO << "at this moment, the self-driving car is in the parking space";
+    auto it = slots_map_.find(ego_info_under_slot_.id);
+    if (it != slots_map_.end()) {
+      ego_info_under_slot_.slot_type = it->second.slot_type_;
+      // forced release of self slot
+      const ApaSlot& slot = it->second;
+      double dot_product = 0.0;
 
-    if (condition_0 && condition_1 &&
-        slot.slot_type_ == SlotType::PERPENDICULAR) {
-      return true;
-    } else {
-      return false;
+      const bool condition_0 = LateralConditions(dot_product, slot);
+      const bool condition_1 = LongitudinalConditions(dot_product, slot);
+
+      if (condition_0 && condition_1 &&
+          slot.slot_type_ == SlotType::PERPENDICULAR) {
+        return true;
+      } else {
+        return false;
+      }
     }
+  } else {
+    ILOG_INFO
+        << "at this moment, the self-driving car is not in the parking space";
   }
+
   return false;
 }
 
