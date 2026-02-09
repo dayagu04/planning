@@ -55,6 +55,8 @@ struct MotionPlannerOutput {
 
   bool is_limit_lon_acc_bound;
   double recommended_acc_bound;
+
+  size_t lat_valid_end_idx;
 };
 
 }  // namespace planning

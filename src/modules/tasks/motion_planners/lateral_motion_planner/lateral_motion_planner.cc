@@ -1107,6 +1107,7 @@ bool LateralMotionPlanner::Update() {
   motion_planner_output.s_lat_vec = s_vec_;
   motion_planner_output.lat_init_flag = true;
   motion_planner_output.curv_factor = curv_factor_;
+  motion_planner_output.lat_valid_end_idx = planning_input_.motion_plan_concerned_index();
   ilqr_solver::ControlVec u_vec;
   u_vec.resize(N);
 
