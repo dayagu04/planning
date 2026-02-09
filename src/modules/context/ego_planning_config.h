@@ -1917,6 +1917,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
     cross_lane_side_2_front_count_thr =
         read_json_key<int>(json, "cross_lane_side_2_front_count_thr",
                            cross_lane_side_2_front_count_thr);
+    ReadItem<double>(json, extra_ratio_for_cut_out, "potential_follow_obstacle",
+                     "extra_ratio_for_cut_out");
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -1977,6 +1979,7 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   std::vector<double> static_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
   std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
   std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  double extra_ratio_for_cut_out = 0.6;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
