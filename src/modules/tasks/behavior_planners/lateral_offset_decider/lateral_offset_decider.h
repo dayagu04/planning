@@ -8,15 +8,6 @@
 
 namespace planning {
 
-enum class HMIAvoidState : int { RUNNING, EXITING, COOLDOWN, IDLE };
-
-struct HMIAvoidParam {
-  int cooldown_count = 0;
-  int exit_count = 0;
-  int avoid_id = -1;
-  int avoid_direction = 0;
-};
-
 class LateralOffsetDecider : public Task {
  public:
   explicit LateralOffsetDecider(const EgoPlanningConfigBuilder* config_builder,
@@ -41,8 +32,6 @@ class LateralOffsetDecider : public Task {
                                 LatObstacleDecisionType current_decision);
   void Reset();
   void GenerateOutput();
-  bool IsStartRunning();
-  bool IsStopRunning();
   LateralOffsetDeciderConfig config_;
   AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
   LateralOffsetCalculatorV2 lateral_offset_calculatorv2_;
@@ -58,8 +47,6 @@ class LateralOffsetDecider : public Task {
   double lane_width_ = 3.8;
   LaneInfo lane_info_;
   LaneInfo last_lane_info_;
-  HMIAvoidState current_state_ = HMIAvoidState::IDLE;
-  HMIAvoidParam hmi_avoid_param_;
 };
 
 }  // namespace planning

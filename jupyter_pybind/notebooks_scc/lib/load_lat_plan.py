@@ -626,6 +626,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       'refline_y': construction_refline_y,
     })
 
+    print("curve_type = ", planning_json['curve_type'])
     print("trust_prediction_t_threshold = ", planning_json['trust_prediction_t_threshold'])
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
@@ -729,6 +730,9 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
             dt = 0.2
           plan_omega = (plan_next_delta - plan_delta) / dt
         plan_lat_jerk.append(plan_omega * plan_v2)
+        # print('delta:',plan_delta)
+        # print('v:',plan_v)
+        # print('lat_jerk:',plan_omega * plan_v2)
     lat_plan_data['data_lat_motion_plan_output'].data.update({
       'final_acc_vec': plan_lat_acc,
       'final_jerk_vec': plan_lat_jerk,
@@ -1047,7 +1051,7 @@ def load_avoid_hmi(bag_loader):
       hmi_ad_info = planning_hmi_msg.ad_info
       avoid_ids.append(hmi_ad_info.aovid_id)
 
-  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [0, len(avoid_ids)], width=800, height=200)
+  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='id',x_range = [0, len(avoid_ids)], width=800, height=200)
   data_fig.data.update({
     'avoid_ids':avoid_ids,
     'frame_num':range(len(avoid_ids)),
@@ -1088,6 +1092,28 @@ def load_receive_topic_time(bag_loader):
   })
   f1 = fig.line('frame_num_y', 'receive_topic_time', source = data_fig, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'receive_topic_time')
   fig.line('frame_num_y', 'receive_sd_time', source = data_fig, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'receive_sd_time')
+  fig.legend.click_policy = 'hide'
+  fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
+  return fig
+
+def load_enter_fuction_hmi(fig, bag_loader):
+  data_fig = ColumnDataSource(data ={
+    'is_avaliable': [],
+    'frame_num': [],
+  })
+
+  is_avaliables = []
+  if bag_loader.plan_debug_msg['enable'] == True:
+    for i, planning_hmi_msg in enumerate(bag_loader.planning_hmi_msg['data']):
+      hmi_ad_info = planning_hmi_msg.ad_info
+      is_avaliables.append(hmi_ad_info.is_avaliable)
+
+  # fig = bkp.figure(x_axis_label='frame_num', y_axis_label='id',x_range = [0, len(is_avaliables)], width=800, height=200)
+  data_fig.data.update({
+    'is_avaliable':is_avaliables,
+    'frame_num':range(len(is_avaliables)),
+  })
+  f1 = fig.line('frame_num', 'is_avaliable', source = data_fig, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'is_avaliables')
   fig.legend.click_policy = 'hide'
   fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
   return fig

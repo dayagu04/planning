@@ -4720,26 +4720,11 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                    "result_trajectory_generator", "use_dynamic_lat_jerk_thr");
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
-    ReadItem<double>(json, lat_acc_thr, "result_trajectory_generator",
-                     "lat_acc_thr");
-    ReadItem<double>(json, lat_jerk_thr, "result_trajectory_generator",
-                     "lat_jerk_thr");
-    ReadItem<double>(json, ramp_lat_jerk_thr, "result_trajectory_generator",
-                     "ramp_lat_jerk_thr");
-    ReadItem<double>(json, lon_acc_thr, "result_trajectory_generator",
-                     "lon_acc_thr");
-    ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
-                     "lon_jerk_thr");
   }
   bool use_dynamic_lat_jerk_thr = false;
   double planning_result_delta_time = 0.025;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
-  double lat_acc_thr = 3.0;
-  double lat_jerk_thr = 0.3;
-  double ramp_lat_jerk_thr = 0.65;
-  double lon_acc_thr = 3.0;
-  double lon_jerk_thr = 0.3;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {
@@ -6407,10 +6392,28 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                    "construction_warning_hmi_speed_max");
     ReadItem<double>(json, obstacle_brake_hmi_reminder_dis, "hmi_decider",
                     "obstacle_brake_hmi_reminder_dis");
+    ReadItem<double>(json, lat_acc_thr, "hmi_decider",
+                     "lat_acc_thr");
+    ReadItem<double>(json, lat_jerk_thr, "hmi_decider",
+                     "lat_jerk_thr");
+    ReadItem<double>(json, ramp_lat_jerk_thr, "hmi_decider",
+                     "ramp_lat_jerk_thr");
+    ReadItem<double>(json, lon_acc_thr, "hmi_decider",
+                     "lon_acc_thr");
+    ReadItem<double>(json, lon_jerk_thr, "hmi_decider",
+                     "lon_jerk_thr");
+    ReadItem<double>(json, lat_jerk_hysteresis_value, "hmi_decider",
+                     "lat_jerk_hysteresis_value");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
   double obstacle_brake_hmi_reminder_dis = 8.0;
+  double lat_acc_thr = 3.0;
+  double lat_jerk_thr = 0.3;
+  double ramp_lat_jerk_thr = 0.65;
+  double lon_acc_thr = 3.0;
+  double lon_jerk_thr = 0.3;
+  double lat_jerk_hysteresis_value = 0.1;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{
