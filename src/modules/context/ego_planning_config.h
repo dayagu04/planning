@@ -4923,8 +4923,10 @@ struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
     /* read config from json */
     is_select_split_nearing_ramp = read_json_key<bool>(
         json, "is_select_split_nearing_ramp", is_select_split_nearing_ramp);
+    overlap_threshold = read_json_key<double>(json, "overlap_threshold", overlap_threshold);
   }
   bool is_select_split_nearing_ramp = true;
+  double overlap_threshold = 0.35;
 };
 
 struct EgoPlanningTrafficLightDecisionManagerConfig : public EgoPlanningConfig {
