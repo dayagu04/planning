@@ -624,6 +624,10 @@ void LaneChangeRequestManager::ProcessBlinkState(
     lane_change_cancel_freeze_cnt = 40;
     trigger_lane_change_cancel_ = false;
   }
+  // 长时冷静期间 cmd 不发出
+  if (trigger_lane_change_cancel_) {
+    lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
+  }
 }
 
 }  // namespace planning
