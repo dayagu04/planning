@@ -2263,25 +2263,51 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     double cur_road_map_v_limit = current_segment->speed_limit();
     double cur_link_v_limit = std::max(cur_road_map_v_limit, v_cruise_fsm_kph);
     double v_limit_dis = 10000.0;
-    v_limit_dis =
-        interp(cur_link_v_limit,
-               speed_limit_config_.tunnel_vel_limit_dis_table.vel_limit_table,
-               speed_limit_config_.tunnel_vel_limit_dis_table.dis_table) +
-        kTunnelVelLimitDisOffset;
 
     auto tunnel_info =
         sdpro_map.GetTunnelInfo(current_segment->id(), nearest_s, 700.0);
-    if (tunnel_info.first != nullptr && tunnel_info.second > 0 &&
-        tunnel_info.second < v_limit_dis) {
+    //if (tunnel_info.first != nullptr && tunnel_info.second > 0 &&
+    //    tunnel_info.second < v_limit_dis) {
+    if (tunnel_info.first != nullptr && tunnel_info.second > 0) {
+      double tunnel_v_limit = tunnel_info.first->speed_limit();
+      if (tunnel_v_limit + kEpsilon > speed_limit_config_.tunnel_vel_limit_kph) {
+        tunnel_v_limit = speed_limit_config_.tunnel_vel_limit_kph;
+        v_limit_dis =
+            interp(cur_link_v_limit,
+                    speed_limit_config_.tunnel_vel_limit_dis_table.vel_limit_table,
+                    speed_limit_config_.tunnel_vel_limit_dis_table.dis_table) +
+            kTunnelVelLimitDisOffset;
+      } else if (std::fabs(tunnel_v_limit - 70.0) < kEpsilon) {
+        v_limit_dis =
+            interp(cur_link_v_limit,
+                    speed_limit_config_.tunnel_vel_limit_dis_table_mid.vel_limit_table,
+                    speed_limit_config_.tunnel_vel_limit_dis_table_mid.dis_table) +
+            kTunnelVelLimitDisOffset;
+
+      } else if (tunnel_v_limit < 70.0) {
+        tunnel_v_limit = std::max(tunnel_v_limit, 60.0);
+        v_limit_dis =
+            interp(cur_link_v_limit,
+                    speed_limit_config_.tunnel_vel_limit_dis_table_low.vel_limit_table,
+                    speed_limit_config_.tunnel_vel_limit_dis_table_low.dis_table) +
+            kTunnelVelLimitDisOffset;
+      }
+
       // less than calibration distance before entering tunnel speed limit works
-      v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
-      poi_v_limit_set_ = true;
+      if (tunnel_info.second < v_limit_dis && (tunnel_v_limit < v_cruise_fsm_kph + kEpsilon)) {
+        v_cruise_limit_ = tunnel_v_limit;
+        poi_v_limit_set_ = true;
+      }
     } else if (tunnel_info.second < kEpsilon &&
-               current_segment->link_type() ==
+               current_segment->link_type() &
                    iflymapdata::sdpro::LinkType::LT_TUNNEL) {
       // inside tunnel speed limit works
-      v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
-      poi_v_limit_set_ = true;
+      double tunnel_v_limit = current_segment->speed_limit();
+      tunnel_v_limit = std::max(60.0, std::min(tunnel_v_limit, 80.0));
+      if (tunnel_v_limit < v_cruise_fsm_kph + kEpsilon) {
+        v_cruise_limit_ = tunnel_v_limit;
+        poi_v_limit_set_ = true;
+      }
     } else {
       v_limit_dis = interp(
           cur_link_v_limit,
@@ -2379,12 +2405,13 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
         }
       }
     }
-
-    JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
-    auto speed_limit_output = session_->mutable_planning_context()
-                                  ->mutable_speed_limit_decider_output();
-    speed_limit_output->SetSpeedLimitIntoMap(v_cruise_limit_ / 3.6,
-                                             SpeedLimitType::NEAR_POI);
+    if (poi_v_limit_set_) {
+      JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
+      auto speed_limit_output = session_->mutable_planning_context()
+                                    ->mutable_speed_limit_decider_output();
+      speed_limit_output->SetSpeedLimitIntoMap(v_cruise_limit_ / 3.6,
+                                              SpeedLimitType::NEAR_POI);
+    }
   }
 }
 

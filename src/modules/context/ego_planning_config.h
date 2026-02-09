@@ -4178,6 +4178,28 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                   "speed_limit_decider", "enable_road_boundary_collision_speed_limit");
     ReadItem<double>(json, road_boundary_speed_limit_config.collision_speed_limit,
                      "speed_limit_decider", "road_boundary_collision_speed_limit");
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                     "tunnel_vel_limit_dis_table_mid",
+                                     "vel_limit_table"},
+            tunnel_vel_limit_dis_table_mid.vel_limit_table);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                "tunnel_vel_limit_dis_table_mid", "dis_table"},
+        tunnel_vel_limit_dis_table_mid.dis_table);
+
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                     "tunnel_vel_limit_dis_table_low",
+                                     "vel_limit_table"},
+            tunnel_vel_limit_dis_table_low.vel_limit_table);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                "tunnel_vel_limit_dis_table_low", "dis_table"},
+        tunnel_vel_limit_dis_table_low.dis_table);
+
   }
   struct VehicleLatDisRelVelTable {
     std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
@@ -4333,6 +4355,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   POIVelLimitDisTable non_express_vel_limit_dis_table;
   POIVelLimitDisTable tunnel_vel_limit_dis_table;
   RoadBoundarySpeedLimitConfig road_boundary_speed_limit_config;
+  POIVelLimitDisTable tunnel_vel_limit_dis_table_mid;
+  POIVelLimitDisTable tunnel_vel_limit_dis_table_low;
 };
 struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
