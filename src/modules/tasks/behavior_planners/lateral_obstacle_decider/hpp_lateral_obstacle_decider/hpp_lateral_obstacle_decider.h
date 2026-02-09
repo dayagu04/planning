@@ -30,11 +30,6 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   bool ExecuteTest(bool pipeline_test);
 
  private:
-  bool PreProcessObstacle(
-      ConstObstacleManagerPtr obstacle_manager_ptr,
-      ConstReferencePathPtr reference_path_ptr,
-      MergedObstacleContainer &merged_obs_constainer,
-      const ObstacleClassificationResult &obs_classification_result);
 
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,

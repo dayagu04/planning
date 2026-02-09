@@ -1,5 +1,6 @@
 #include "hpp_lateral_obstacle_utils.h"
 #include "edt_manager.h"
+#include "utils/cartesian_coordinate_system.h"
 
 namespace planning {
 
@@ -18,237 +19,180 @@ bool HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
   return !obs_item_map.empty();
 }
 
-bool HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
+std::unordered_map<int, ObstacleTypeBeforeCluster> HppLateralObstacleUtils::ClassifyObstacles(
     const ObstacleItemMap& obs_item_map,
-    MergedObstacleContainer& merged_obs_container) {
-
-  merged_obs_container.obs_id_to_merged_id.clear();
-  merged_obs_container.merged_obstacles.clear();
-
-  if (obs_item_map.empty()) return false;
-
-  std::vector<MergedObstacleInfo> temp_clusters;
-  int temp_id_counter = 0; // 从 0 开始的迭代编号
-
-  // 初始化
-  for (const auto& entry : obs_item_map) {
-      const auto& obs = entry.second;
-      MergedObstacleInfo info;
-      info.merged_id = temp_id_counter++;
-      info.original_ids.push_back(obs->id());
-      info.is_static = obs->is_static();
-      info.v_s = obs->frenet_velocity_s();
-      info.v_l = obs->frenet_velocity_l();
-
-      const auto& b = obs->frenet_obstacle_boundary();
-      info.s_start = b.s_start;
-      info.s_end = b.s_end;
-      info.l_start = std::min(b.l_start, b.l_end);
-      info.l_end = std::max(b.l_start, b.l_end);
-
-      temp_clusters.push_back(info);
-  }
-
-  // 聚类迭代
-  bool changed = true;
-  while (changed) {
-    changed = false;
-    for (auto it = temp_clusters.begin(); it != temp_clusters.end(); ++it) {
-      for (auto it2 = it + 1; it2 != temp_clusters.end(); ) {
-
-        double l_1 = it->center_l();
-        double s_1 = it->center_s();
-        double l_2 = it2->center_l();
-        double s_2 = it2->center_s();
-
-        double dist_sq = std::pow(l_1 - l_2 , 2) + std::pow(s_1 - s_2 , 2);
-        double l_gap = abs(l_1 - l_2);
-        double s_gap = abs(s_1 - s_2);
-
-        // 规则
-        bool cond1 = (dist_sq <= 1.0 * 1.0);
-        bool cond_lat_cluster = (l_gap < 2.0 && s_gap < 0.5);
-        bool cond_lon_cluster = (l_gap < 1.5 && s_gap < 3.0);
-
-        if (cond1 || cond_lat_cluster || cond_lon_cluster) {
-            // 合并
-            it->original_ids.insert(it->original_ids.end(), it2->original_ids.begin(), it2->original_ids.end());
-            it->s_start = std::min(it->s_start, it2->s_start);
-            it->s_end = std::max(it->s_end, it2->s_end);
-            it->l_start = std::min(it->l_start, it2->l_start);
-            it->l_end = std::max(it->l_end, it2->l_end);
-            if (!it2->is_static) it->is_static = false;
-
-            it2 = temp_clusters.erase(it2);
-            changed = true;
-        } else {
-            ++it2;
-        }
-      }
-    }
-  }
-
-  int final_id = 0;
-  for (auto& cluster : temp_clusters) {
-      cluster.merged_id = final_id++;
-      cluster.consistency_group_id = cluster.merged_id; // 初始状态：一致性组ID = 自身ID
-      merged_obs_container.merged_obstacles.push_back(cluster);
-
-      for (int orig_id : cluster.original_ids) {
-          merged_obs_container.obs_id_to_merged_id[orig_id] = cluster.merged_id;
-      }
-  }
-
-  return true;
-}
-
-// 按s排序
-bool HppLateralObstacleUtils::SortMergedObstacles(
-    MergedObstacleContainer& merged_obs_container) {
-    auto& obs_list = merged_obs_container.merged_obstacles;
-    std::sort(obs_list.begin(), obs_list.end(),
-        [](const MergedObstacleInfo& a, const MergedObstacleInfo& b){
-            return a.s_start < b.s_start;
-        });
-    return true;
-}
-
-bool HppLateralObstacleUtils::ClassifyObstacles(
-    const MergedObstacleContainer& merged_obs_container,
     const double ego_s,
-    const double ego_v,
-    ObstacleClassificationResult& obs_classification_result) {
+    const double ego_v) {
 
-    obs_classification_result.Clear();
+    std::unordered_map<int, ObstacleTypeBeforeCluster> type_map;
 
-    for (const auto& obs : merged_obs_container.merged_obstacles) {
+    // 阈值配置
+    const double kHighSpeedDiff = 3.0;  // 同向前方：如果比我快太多，忽略
+    const double kLowSpeedThresh = 2.0; // 同向后方：如果比我慢太多(被甩开)，忽略
 
-        if (obs.is_static) {
-            if (obs.center_s() > ego_s) {
-                obs_classification_result.front_static_obs.push_back(&obs);
+    for (const auto& entry : obs_item_map) {
+        const auto& obs = entry.second;
+        int id = entry.first;
+        ObstacleTypeBeforeCluster type = ObstacleTypeBeforeCluster::IGNORE;
+
+        if (obs->is_static()) {
+            if (obs->frenet_s() > ego_s) {
+                type = ObstacleTypeBeforeCluster::FRONT_STATIC;
             } else {
-                obs_classification_result.side_static_obs.push_back(&obs);
+                type = ObstacleTypeBeforeCluster::SIDE_REAR_STATIC;
             }
         } else {
-            if (obs.v_s < -0.1) {
-                if (obs.center_s() > ego_s) {
-                    obs_classification_result.opposite_moving_obs.push_back(&obs);
+            double v_s = obs->frenet_velocity_s();
+            double heading_angle = obs->frenet_relative_velocity_angle();   //这里默认angle是[-pi,pi]
+            if ((heading_angle > - PI && heading_angle < -2*PI/3) || (heading_angle > 2*PI/3 && heading_angle < PI)) {
+                if (obs->frenet_s() > ego_s) {
+                    type = ObstacleTypeBeforeCluster::OPPOSITE_MOVING;
+                } else {
+                    type = ObstacleTypeBeforeCluster::IGNORE;
                 }
-            } else {
-                if (obs.center_s() > ego_s) {
-                    if (obs.v_s <= ego_v) {
-                        obs_classification_result.front_same_moving_obs.push_back(&obs);
+            }
+            else if(heading_angle > -PI/3 && heading_angle < PI/3) {
+                if (obs->frenet_s() > ego_s) {
+                    if (v_s > ego_v + kHighSpeedDiff) {
+                         type = ObstacleTypeBeforeCluster::IGNORE;
+                    } else {
+                         type = ObstacleTypeBeforeCluster::FRONT_SAME_MOVING;
                     }
                 } else {
-                    if (obs.v_s >= ego_v) {
-                        obs_classification_result.back_same_moving_obs.push_back(&obs);
+                    if (v_s < ego_v - kLowSpeedThresh && v_s > 0.1) {
+                         type = ObstacleTypeBeforeCluster::IGNORE;
+                    } else {
+                         type = ObstacleTypeBeforeCluster::BACK_SAME_MOVING;
                     }
+                }
+            }else{
+                type = ObstacleTypeBeforeCluster::IGNORE;
+                //TODO : 侧向移动的障碍物暂时不考虑，后续可以根据实际情况调整
+            }
+        }
+        type_map[id] = type;
+    }
+    return type_map;
+}
+
+bool HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
+    const ObstacleItemMap& obs_item_map,
+    const std::unordered_map<int, ObstacleTypeBeforeCluster>& classification_map,
+    MergedObstacleContainer& merged_obs_container) {
+
+    merged_obs_container.obs_id_to_merged_id.clear();
+    merged_obs_container.merged_obstacles.clear();
+
+    if (obs_item_map.empty()) return false;
+
+    std::vector<MergedObstacleInfo> static_candidates;
+    std::vector<MergedObstacleInfo> dynamic_candidates;
+
+    int temp_idx = 0;
+
+    for (const auto& entry : obs_item_map) {
+        int id = entry.first;
+        if (classification_map.find(id) == classification_map.end()) {
+            continue;
+        }
+        ObstacleTypeBeforeCluster type = classification_map.at(id);
+        if (type == ObstacleTypeBeforeCluster::IGNORE) {
+            continue;
+        }
+
+        const auto& obs = entry.second;
+        MergedObstacleInfo info;
+        info.original_ids.push_back(id);
+        info.type = type;
+        const auto& b = obs->frenet_obstacle_boundary();
+        info.s_start = b.s_start;
+        info.s_end = b.s_end;
+        info.l_start = std::min(b.l_start, b.l_end);
+        info.l_end = std::max(b.l_start, b.l_end);
+
+        if (obs->obstacle() && !obs->obstacle()->perception_polygon().points().empty()) {
+             const auto& pts = obs->obstacle()->perception_polygon().points();
+             info.raw_points.insert(info.raw_points.end(), pts.begin(), pts.end());
+        } else {
+             info.raw_points.emplace_back(b.s_start, b.l_start);
+             info.raw_points.emplace_back(b.s_start, b.l_end);
+             info.raw_points.emplace_back(b.s_end, b.l_end);
+             info.raw_points.emplace_back(b.s_end, b.l_start);
+        }
+
+        if (type == ObstacleTypeBeforeCluster::FRONT_STATIC || type == ObstacleTypeBeforeCluster::SIDE_REAR_STATIC) {
+            static_candidates.push_back(info);
+        } else {
+            dynamic_candidates.push_back(info); // 动态障碍物不参与聚类
+        }
+    }
+
+    bool changed = true;
+    while (changed) {
+        changed = false;
+        for (auto it = static_candidates.begin(); it != static_candidates.end(); ++it) {
+            for (auto it2 = it + 1; it2 != static_candidates.end(); ) {
+
+                double dist_sq = std::pow(it->center_s() - it2->center_s(), 2) +
+                                 std::pow(it->center_l() - it2->center_l(), 2);
+                double l_gap = std::max(0.0, std::abs(it->center_l() - it2->center_l()));
+                double s_gap = std::max(0.0, std::abs(it->center_s() - it2->center_s()));
+                bool cond1 = (dist_sq <= 1.0 * 1.0);
+                bool cond2 = (l_gap <= 0.2 && s_gap <= 3.0);
+                bool cond3 = (s_gap <= 2.0 && l_gap <= 2.0);
+
+                if (cond1 || cond2 || cond3) {
+                    it->original_ids.insert(it->original_ids.end(), it2->original_ids.begin(), it2->original_ids.end());
+                    it->s_start = std::min(it->s_start, it2->s_start);
+                    it->s_end = std::max(it->s_end, it2->s_end);
+                    it->l_start = std::min(it->l_start, it2->l_start);
+                    it->l_end = std::max(it->l_end, it2->l_end);
+
+                    it->raw_points.insert(it->raw_points.end(), it2->raw_points.begin(), it2->raw_points.end());
+
+                    if (it2->type == ObstacleTypeBeforeCluster::FRONT_STATIC) it->type = ObstacleTypeBeforeCluster::FRONT_STATIC;
+
+                    it2 = static_candidates.erase(it2);
+                    changed = true;
+                } else {
+                    ++it2;
                 }
             }
         }
     }
+
+    int final_id = 0;
+    auto process_and_add = [&](std::vector<MergedObstacleInfo>& list) {
+        for (auto& cluster : list) {
+            cluster.merged_id = final_id++;
+            BuildConvexHull(cluster);
+            merged_obs_container.merged_obstacles.push_back(cluster);
+
+            for (int orig_id : cluster.original_ids) {
+                merged_obs_container.obs_id_to_merged_id[orig_id] = cluster.merged_id;
+            }
+        }
+    };
+
+    process_and_add(static_candidates);
+    process_and_add(dynamic_candidates);
+
     return true;
 }
 
-void HppLateralObstacleUtils::UpdateStaticObsConsistency(
-    MergedObstacleContainer& merged_obs_container,
-    const ObstacleClassificationResult& classification_result,
-    const double ego_head_l) {
-
-    std::unordered_map<int, MergedObstacleInfo*> mutable_map;
-    for (auto& obs : merged_obs_container.merged_obstacles) {
-        mutable_map[obs.merged_id] = &obs;
+void HppLateralObstacleUtils::BuildConvexHull(MergedObstacleInfo& cluster) {
+    if (cluster.raw_points.size() >= 3) {
+        planning_math::Polygon2d::ComputeConvexHull(cluster.raw_points, &cluster.polygon);
+    } else {
+        // 点不够，用 AABB 框代替
+        std::vector<planning_math::Vec2d> pts;
+        pts.emplace_back(cluster.s_start, cluster.l_start);
+        pts.emplace_back(cluster.s_start, cluster.l_end);
+        pts.emplace_back(cluster.s_end, cluster.l_end);
+        pts.emplace_back(cluster.s_end, cluster.l_start);
+        cluster.polygon = planning_math::Polygon2d(pts);
     }
-
-    if (!classification_result.front_static_obs.empty()) {
-
-        // 1. 提取可变指针列表
-        std::vector<MergedObstacleInfo*> target_clusters;
-        target_clusters.reserve(classification_result.front_static_obs.size());
-
-        for (const auto* const_ptr : classification_result.front_static_obs) {
-            if (mutable_map.count(const_ptr->merged_id)) {
-                target_clusters.push_back(mutable_map[const_ptr->merged_id]);
-            }
-        }
-
-        // 2. 按横向位置 L 从小到大排序 (从右到左)
-        // c1(右, 小L), c2(左, 大L)
-        std::sort(target_clusters.begin(), target_clusters.end(),
-            [](const MergedObstacleInfo* a, const MergedObstacleInfo* b){
-                return a->center_l() < b->center_l();
-            });
-
-        // 3. 参数配置
-        const auto &vehicle_param =
-                VehicleConfigurationContext::Instance()->get_vehicle_param();
-        const double kRoiHalfWidth = 4.0;
-        const double kMinLatPass = vehicle_param.width + 1.0;
-        const double kKinematicRatio = 3.5;
-
-        // 4. 遍历相邻 Cluster 进行 Gap 判断
-        for (size_t i = 0; i < target_clusters.size(); ++i) {
-            if (i == target_clusters.size() - 1) break;
-
-            MergedObstacleInfo* c1 = target_clusters[i];   // 右侧障碍物 (L较小)
-            MergedObstacleInfo* c2 = target_clusters[i+1]; // 左侧障碍物 (L较大)
-
-            // 4.1 ROI 检查: 只要有一个在 ROI 内，就需要处理
-            bool in_roi = false;
-            if ((c1->center_l() > ego_head_l - kRoiHalfWidth && c1->center_l() < ego_head_l + kRoiHalfWidth) ||
-                (c2->center_l() > ego_head_l - kRoiHalfWidth && c2->center_l() < ego_head_l + kRoiHalfWidth)) {
-                in_roi = true;
-            }
-            if (!in_roi) continue;
-
-            double raw_gap = c2->l_start - c1->l_end;
-            double l_gap = std::max(0.0, raw_gap);
-
-            // 4.3 纵向绕行条件 (中心距)
-            double s_dist = std::abs(c1->center_s() - c2->center_s());
-            double needed_s = l_gap * kKinematicRatio;
-
-            // 4.4 判断通行条件
-            bool lat_ok = (l_gap >= kMinLatPass);
-            bool lon_ok = (s_dist >= needed_s);
-
-            if (!lat_ok || !lon_ok) {
-                int root1 = c1->consistency_group_id;
-                int root2 = c2->consistency_group_id;
-
-                if (root1 != root2) {
-                    for (auto& obs : merged_obs_container.merged_obstacles) {
-                        if (obs.consistency_group_id == root2) {
-                            obs.consistency_group_id = root1;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-}
-
-bool HppLateralObstacleUtils::MakeDecisionForMovingObstacles(
-    const MergedObstacleContainer& merged_obs_container,
-    const ObstacleClassificationResult& obs_classification_result) {
-
-    // 1. 对向行驶障碍物
-    if (!obs_classification_result.opposite_moving_obs.empty()) {
-        // TODO: 处理对向会车逻辑
-    }
-
-    // 2. 同向前方障碍物
-    if (!obs_classification_result.front_same_moving_obs.empty()) {
-        // TODO: 处理同向超车/跟车逻辑
-    }
-
-    // 3. 同向后方障碍物
-    if (!obs_classification_result.back_same_moving_obs.empty()) {
-        // TODO: 处理被超车/避让逻辑
-    }
-
-    return true;
+    std::vector<planning_math::Vec2d>().swap(cluster.raw_points);
 }
 
 } // namespace planning
