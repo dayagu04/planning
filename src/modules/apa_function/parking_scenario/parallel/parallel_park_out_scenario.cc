@@ -2095,8 +2095,8 @@ const bool ParallelParkOutScenario::SetAstarRequest(
 
   ILOG_INFO << "frame_.is_park_out_left " << frame_.is_park_out_left;
   pnc::geometry_lib::SlotSide slot_side = frame_.is_park_out_left
-                                              ? geometry_lib::SLOT_SIDE_LEFT
-                                              : geometry_lib::SLOT_SIDE_RIGHT;
+                                              ? geometry_lib::SLOT_SIDE_RIGHT
+                                              : geometry_lib::SLOT_SIDE_LEFT;
   virtual_wall_decider_.Process(obs_hastar.virtual_obs, ego_info.slot, start,
                                 slot_side, dir_type, passage_height);
 
