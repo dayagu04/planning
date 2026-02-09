@@ -39,7 +39,8 @@ using namespace planning_math;
 
 namespace {
 constexpr double kEps = 1e-6;
-constexpr double kNsaBrakeLonBias = 3.0;
+constexpr double kNsaBrakeLonBias = 2.5;
+constexpr double kNsaBrakeDisToEnd = 0.2;
 constexpr double kNsaLonDisThred = 50.0;
 inline bool is_point_within_range(const Point3d &point,
                                   const common::Point3d &location,
@@ -528,7 +529,7 @@ bool GeneralLongitudinalDecider::Execute() {
     double ego_start_s = frenet_ego_state.s();
     double nsa_dis = local_view.function_state_machine_info.nra_req.nra_distance;
     if (local_view.function_state_machine_info.current_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
-      if ((!nsa_output.is_in_narrow_space && !nsa_output.is_exist_narrow_space) ||
+      if ((nsa_output.is_exiting_narrow_space && nsa_output.distance_to_end < kNsaBrakeDisToEnd) ||
           (nsa_output.is_in_narrow_space && nsa_output.is_passable_narrow_space &&
            nsa_dis > kNsaLonDisThred)) {
         if (!nsa_brake_destination_set_) {
@@ -555,7 +556,7 @@ bool GeneralLongitudinalDecider::Execute() {
           }
 
         }
-      
+
       } else {
         nsa_brake_destination_set_ = false;
       }
