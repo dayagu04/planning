@@ -750,14 +750,22 @@ bool LateralMotionPlanner::AssembleInput() {
                                             .distance_to_first_road_merge;
   dist_to_merge_point =
       std::min(dist_to_merge_point, distance_to_first_road_merge);
+  double lc_time_for_merge_point = std::fabs(dist_to_merge_point) / std::max(planning_input_.ref_vel(), 1e-6);
   bool is_prevent_solid_line_lc =
       lane_change_decider_output.is_dash_not_enough_for_lc;
+  double lc_remain_time = 10.0;
+  // if (lane_change_scene && !lane_change_back && !lane_change_hold) {
+  if (target_state == kLaneChangeExecution) {
+    lc_remain_time = CalculateRemainingCrossLaneTime();
+  }
+  // lc_remain_time = std::min(lc_remain_time, lc_time_for_merge_point);
+  planning_weight_ptr_->SetLCRemainTime(std::max(lc_remain_time, 0.0));
   bool is_emergency_lc = false;
   // lane_change_decider_output.is_emergency_avoidance_situation;
   if (is_emergency_lc) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
-  } else if (is_prevent_solid_line_lc || is_cone_lc ||
+  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 ||
              (is_merge_lc && std::fabs(dist_to_merge_point) < planning_input_.ref_vel() * 5.0)) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
@@ -1246,6 +1254,52 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
     is_divide_lane_into_two_ = false;
   }
   return is_arrived_split_point;
+}
+
+double LateralMotionPlanner::CalculateRemainingCrossLaneTime() {
+  double lc_remain_time = 10.0;
+  double lc_remain_lon_distance = 1000.0;
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto& lc_request_direction = lane_change_decider_output.lc_request;
+  const auto& reference_path =
+      lane_change_decider_output.coarse_planning_info.reference_path;
+  const auto N =
+      planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
+      1;
+  const double init_s = reference_path->get_frenet_ego_state().s();
+  double d_s = planning_input_.ref_vel() * config_.delta_t;
+  bool is_exist_dash_line = false;
+  bool is_exist_solid_line = false;
+  for (size_t i = 0; i < N; ++i) {
+    double s = init_s + d_s * i;
+    ReferencePathPoint refpath_pt{};
+    if (reference_path->get_reference_point_by_lon(s, refpath_pt)) {
+      bool is_left_solid = refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                           refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                           refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+      bool is_right_solid = refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                           refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                           refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
+      if (lc_request_direction == LEFT_CHANGE && is_right_solid) {
+        if (is_exist_dash_line) {
+          is_exist_solid_line = true;
+        }
+      } else if (lc_request_direction == RIGHT_CHANGE && is_left_solid) {
+        if (is_exist_dash_line) {
+          is_exist_solid_line = true;
+        }
+      } else {
+        is_exist_dash_line = true;
+      }
+    }
+    if (is_exist_solid_line) {
+      break;
+    }
+    lc_remain_time = config_.delta_t * i;
+    lc_remain_lon_distance = d_s * i;
+  }
+  return lc_remain_time;
 }
 
 void LateralMotionPlanner::SaveDebugInfo() {
