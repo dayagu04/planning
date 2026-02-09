@@ -1134,12 +1134,17 @@ void GeneralLongitudinalDecider::make_longitudinal_overlap_path(
                                            care_width));
   }
 
-  auto s_end = traj_points.front().s + config_.lon_care_length;
-  if (traj_points.back().s < s_end) {
-    auto &last_point = traj_points.back();
-    overlap_path.emplace_back(make_polygon(Vec2d(last_point.s, last_point.l),
-                                           Vec2d(s_end, last_point.l),
-                                           care_width));
+  // 使用最后一个点到倒数第二个点的距离作为延长距离，替代固定 lon_care_length
+  if (traj_points.size() >= 2) {
+    double extension_length =
+        traj_points.back().s - traj_points[traj_points.size() - 2].s;
+    if (extension_length > 0) {
+      auto s_end = traj_points.back().s + extension_length;
+      auto &last_point = traj_points.back();
+      overlap_path.emplace_back(make_polygon(Vec2d(last_point.s, last_point.l),
+                                             Vec2d(s_end, last_point.l),
+                                             care_width));
+    }
   }
 }
 

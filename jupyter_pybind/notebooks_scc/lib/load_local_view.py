@@ -2096,10 +2096,17 @@ def load_local_view_figure():
   is_vis_fus_line = global_var.get_value('is_vis_fus_line')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
   is_vis_rdg_obj = global_var.get_value('is_vis_rdg_obj')
+  is_vis_rdg_occ = global_var.get_value('is_vis_rdg_occ')
+  is_vis_rdg_groundline = global_var.get_value('is_vis_rdg_groundline')
   is_vis_me_obj = global_var.get_value('is_vis_me_obj')
   is_vis_lane_mark = global_var.get_value('is_vis_lane_mark')
   is_vis_merge_point = global_var.get_value('is_vis_merge_point')
   is_vis_prediction = global_var.get_value('is_vis_prediction')
+  is_vis_ego_motion_sim = global_var.get_value('is_vis_ego_motion_sim')
+  is_vis_snrd = global_var.get_value('is_vis_snrd')
+  is_vis_fus_center_line = global_var.get_value('is_vis_fus_center_line')
+  is_vis_lane_topo = global_var.get_value('is_vis_lane_topo')
+  is_vis_smooth_refline = global_var.get_value('is_vis_smooth_refline')
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
@@ -2748,7 +2755,7 @@ def load_local_view_figure():
 
   fig1.x_range.flipped = True
 
-  if scene_type not in ("HPP", "PARKING_APA"):
+  if is_vis_lane_topo:
     f0= fig1.line('line_topo_0_y', 'line_topo_0_x', source = data_lane_topo_0, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False,name="lane_topo_0")
     fig1.line('line_topo_1_y', 'line_topo_1_x', source = data_lane_topo_1, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False,name="lane_topo_1")
     fig1.line('line_topo_2_y', 'line_topo_2_x', source = data_lane_topo_2, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'lane_topo',visible = False,name="lane_topo_2")
@@ -2818,6 +2825,7 @@ def load_local_view_figure():
     fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
     fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
     fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
+    fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
 
   f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
@@ -2867,7 +2875,7 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-  if is_vis_fus_line or scene_type == "HPP":
+  if is_vis_fus_center_line:
     fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -2877,7 +2885,7 @@ def load_local_view_figure():
     fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
     fig1.circle('end_point_y', 'end_point_x', source = data_nsa_end_point, radius = 0.3, fill_color="red", line_color='red', legend_label = 'nsa end_pt')
 
-  if scene_type not in ("HPP", "PARKING_APA"):
+  if is_vis_smooth_refline:
     fig1.line('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'smooth refline', visible=False)
     fig1.circle('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, size = 6, line_width = 5, line_color = 'green', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'smooth refline', visible=False)
 
@@ -2893,13 +2901,7 @@ def load_local_view_figure():
     fig1.text('lane_mark_loc_y_3', 'lane_mark_loc_x_3', text = 'lane_mark_3' ,source = lane_mark_data_3, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
     fig1.text('lane_mark_loc_y_4', 'lane_mark_loc_x_4', text = 'lane_mark_4' ,source = lane_mark_data_4, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
 
-  if scene_type not in ("HPP", "PARKING_APA"):
-    fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'obj',visible = False)
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info',visible = False)
-  fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
-
-  if scene_type not in ("HPP", "PARKING_APA"):
+  if is_vis_snrd:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info',visible = False)
 
@@ -2910,6 +2912,13 @@ def load_local_view_figure():
   if is_vis_rdg_obj:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'rdg_obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_obj, text_color="orange", text_align="center", text_font_size="10pt", legend_label = 'rdg_info',visible = False)
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_general_obj, fill_color = "yellow", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg gobj', visible = False)
+    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_general_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg_gobj_info', visible = False)
+  if is_vis_rdg_groundline:
+    fig1.scatter('ground_line_y', 'ground_line_x', source = data_rdg_ground_line, size = 2,color='black', legend_label = 'rdg_ground_line', visible = False)
+  if is_vis_rdg_occ:
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_occ_obj, fill_color = "blue", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg occ', visible = False)
+    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg_occ_info', visible = False)
 
   if is_vis_me_obj:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_me_obj, fill_color = "maroon", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj',visible = False)
@@ -2917,10 +2926,11 @@ def load_local_view_figure():
   if is_vis_rads_path:
     fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path')
     fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path')
-  if scene_type not in ("HPP", "PARKING_APA"):
+  if is_vis_ego_motion_sim:
     fig1.line('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source = data_ego_motion_sim_ref_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ego_motion_sim_ref', visible = False)
     fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
     fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
@@ -2982,20 +2992,17 @@ def load_local_view_figure():
     fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 2,color='red', fill_alpha = 0.15, legend_label = 'occ obj')
     fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs in plan')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info', visible = False)
-    if scene_type not in ("HPP", "PARKING_APA"):
-      fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_occ_obj, fill_color = "blue", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg occ', visible = False)
-    # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg_occ_info', visible = False)
-      fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_general_obj, fill_color = "yellow", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg gobj', visible = False)
-    # fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_general_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg_gobj_info', visible = False)
+
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'obj',visible = False)
+    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info',visible = False)
+    fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
   if is_vis_speed_bump:
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'speed bump')
     # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
   if is_vis_ground_line:
     # fig_ground_line_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_ground_line, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
     fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ground_line_info', visible = False)
-    fig_ground_line = fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
-    if scene_type not in ("HPP", "PARKING_APA"):
-      fig1.scatter('ground_line_y', 'ground_line_x', source = data_rdg_ground_line, size = 2,color='black', legend_label = 'rdg_ground_line', visible = False)
+    fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
   if is_vis_ground_mark:
     fig1.patches('ground_mark_y', 'ground_mark_x', source = data_rdg_ground_mark, fill_color = "white", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg ground mark', visible = False)
     fig1.text('pos_y', 'pos_x', text = 'ground_mark_label' ,source = data_rdg_ground_mark, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg ground mark', visible = False)
