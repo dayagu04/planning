@@ -48,6 +48,7 @@
 #include "src/modules/tasks/behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "st_graph/st_graph.h"
 #include "st_graph/st_graph_helper.h"
+#include "../tasks/task_interface/lateral_offset_decider_output.h"
 
 namespace planning {
 

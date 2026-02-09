@@ -303,6 +303,10 @@ class LateralMotionPlanningWeight {
     is_emergency_avoid_ = is_emergency_avoid;
   }
 
+  void SetLCRemainTime(const double lc_remain_time) {
+    lc_remain_time_ = lc_remain_time;
+  }
+
  private:
   void SetAccJerkBoundAndWeight(
       planning::common::LateralPlanningInput &planning_input);
@@ -374,6 +378,7 @@ class LateralMotionPlanningWeight {
   double last_jerk_bound_limit_;
   double last_max_omega_;
   double last_lc_end_ratio_for_qrefxy_buffer_;
+  double lc_remain_time_;
   size_t last_remotely_index_;
   size_t avoid_end_index_;
   bool is_lane_change_hold_;

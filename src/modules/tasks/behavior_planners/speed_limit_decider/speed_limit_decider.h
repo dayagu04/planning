@@ -82,6 +82,8 @@ class SpeedLimitDecider : public Task {
 
   void CalculateRoadBoundarySpeedLimit();
 
+  void ResetRoadBoundarySpeedLimitState();
+
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
   bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo> &vru_round_map);

@@ -282,6 +282,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
 
   cul_de_sac_info_.Reset();
   do {
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      break;
+    }
     if (!request_.decide_cul_de_sac) {
       break;
     }
@@ -294,7 +298,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     if (std::fabs(cur_pose.GetTheta()) * kRad2Deg < 36) {
       break;
     }
-    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0) {
+    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0 &&
+        std::fabs(cur_pose.GetY()) > 2.168) {
       break;
     }
     geometry_lib::PathPoint end_pose;
@@ -664,6 +669,15 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       find_success_curve_min_count = 68;
       find_success_curve_max_time = param.max_dynamic_plan_proj_dt * 1000 * 0.8;
       config_.max_search_time_ms = param.max_dynamic_plan_proj_dt * 1000;
+    } else if (request_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
+      const DynamicGearSwitchConfig& gear_switch_param =
+          param.gear_switch_config;
+      find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
+      find_success_curve_max_time =
+          (gear_switch_param.dist_thresh_for_gear_switch_point /
+           gear_switch_param.vel_thresh_for_gear_switch_point) *
+          1000;
+      config_.max_search_time_ms = find_success_curve_max_time + 100;
     } else {
       // static plan
       find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
@@ -1053,6 +1067,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   }
 
   ILOG_INFO << "node in pool num = " << node_pool_.PoolSize()
+            << "  open pq size = " << open_pq_.size()
             << " curve_path_success_num = " << curve_path_success_num
             << "  curve_node_to_goal_vec size = "
             << curve_node_to_goal_vec.size()

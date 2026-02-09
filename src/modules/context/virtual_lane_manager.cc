@@ -1044,6 +1044,20 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     ego_lane_track_manager_.Reset();
     return false;
   }
+  
+  set_is_exist_intersection_split( ego_lane_track_manager_.is_exist_intersection_split());
+  set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
+  set_is_exist_split_on_expressway(ego_lane_track_manager_.is_exist_split_on_expressway());
+
+  EraseOverlappingLanesId(relative_id_lanes_);// 删除 lane reset split
+
+  for (const auto& relative_id_lane : relative_id_lanes_) {
+    if (relative_id_lane->get_relative_id() == -1) {
+      left_lane_ = relative_id_lane;
+    } else if (relative_id_lane->get_relative_id() == 1) {
+      right_lane_ = relative_id_lane;
+    }
+  }
 
   // 8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
   ego_lane_track_manager_.UpdateLaneVirtualId(
@@ -1054,19 +1068,14 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   ILOG_DEBUG << "is_exist_ramp_on_road:" << is_exist_ramp_on_road_;
   JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
-  set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
   ILOG_DEBUG << "is_exist_split_on_ramp:" << is_exist_split_on_ramp_;
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
 
-  set_is_exist_split_on_expressway(
-      ego_lane_track_manager_.is_exist_split_on_expressway());
   ILOG_DEBUG << "is_exist_split_on_expressway:"
              << is_exist_split_on_expressway_;
   JSON_DEBUG_VALUE("is_exist_split_on_expressway",
                    is_exist_split_on_expressway_);
 
-  set_is_exist_intersection_split(
-      ego_lane_track_manager_.is_exist_intersection_split());
   ILOG_DEBUG << "is_exist_intersection_split:" << is_exist_intersection_split_;
   JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
@@ -1925,6 +1934,120 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   return relative_id_lanes;
 }
 
+void VirtualLaneManager::EraseOverlappingLanesId(
+    std::vector<std::shared_ptr<VirtualLane>>& lanes) {
+  //只有1条
+  if (lanes.size() <= 1) {
+    return;
+  }
+  const double overlap_threshold = config_.overlap_threshold;
+  int current_order_id = current_lane_->get_order_id();
+  int origin_size = lanes.size();
+
+  // N(N>2)条, 已按递增顺序排列， 需要逐对对比横向偏差，决定id是否重合
+  std::unordered_set<int> remove_set;
+  for (int i = 0; i < origin_size - 1; i++) {
+    int j = i + 1;
+    if (IsLaneOverLappedLeft(lanes[i], lanes[j], overlap_threshold)) {
+      int order_id_i = lanes[i]->get_order_id();
+      int order_id_j = lanes[j]->get_order_id();
+
+      int di = order_id_i - current_order_id;
+      int dj = order_id_j - current_order_id;
+
+      if (std::abs(di) > std::abs(dj)) {
+          remove_set.insert(order_id_i);
+      } else {
+          remove_set.insert(order_id_j);
+      }
+      if (di == 0 || dj == 0) {
+          set_is_exist_intersection_split(false);
+          set_is_exist_split_on_expressway(false);
+          set_is_exist_split_on_ramp(false);
+      }
+    }
+  }
+  lanes.erase(
+    std::remove_if(lanes.begin(), lanes.end(),
+        [&](const auto& lane) {
+            int id = lane->get_order_id();
+            return id != current_order_id &&
+                   remove_set.count(id);
+        }),
+    lanes.end());
+  lane_num_ = lanes.size();
+  //基于当前车道重新设置 连续order id
+  ReassignLaneRelativeId(lanes, current_order_id);
+}
+void VirtualLaneManager::ReassignLaneRelativeId(
+    std::vector<std::shared_ptr<VirtualLane>>& lanes, int current_id) {
+  int k = -1;
+  // 找到 current_id 对应的 lane 下标
+  for (int i = 0; i < lanes.size(); ++i) {
+    if (lanes[i]->get_order_id() == current_id) {
+      k = i;
+      break;
+    }
+  }
+  if (k < 0) return;
+  // 按拓扑顺序重排为连续 id
+  for (int j = 0; j < lanes.size(); ++j) {
+    int new_id = current_id + (j - k);
+    lanes[j]->set_order_id(new_id);
+  }
+  //更新relative_id
+  for (auto& lane : lanes) {
+    int lane_order_id = lane->get_order_id();
+    int lane_relative_id = lane_order_id - current_id;
+    lane->set_relative_id(lane_relative_id);
+  }
+  return;
+}
+
+bool VirtualLaneManager::IsLaneOverLappedLeft(
+    const std::shared_ptr<VirtualLane>& left_lane,
+    const std::shared_ptr<VirtualLane>& right_lane,
+    const double overlap_threshold) {
+  // 基于左侧构建参考系 track ego 之后执行
+  const auto& left_lane_frenet_coord = left_lane->get_lane_frenet_coord();
+  if (left_lane_frenet_coord == nullptr) {
+    return false;
+  }
+  // 右侧车道投影， 直到到达自车前方 80m
+  const auto& right_lane_points = right_lane->lane_points();
+  if (right_lane_points.size() < 3) {
+    return false;
+  }
+  const double compare_s_start = left_lane->get_ego_longit_s();
+  const double compare_s_end  = left_lane->get_ego_longit_s() + 80.0;
+  int compare_num = 0;
+  double average_lat_error = 0.0;
+  double sum_lat_error = 0.0;
+  for (const auto& lane_point : right_lane_points) {
+    double x = lane_point.local_point.x;
+    double y = lane_point.local_point.y;
+    double s = 0.0;
+    double l = 0.0;
+    if (!left_lane_frenet_coord->XYToSL(x, y, &s, &l)) {
+      continue;
+    }
+    if(s < compare_s_start){
+      continue;
+    }
+    compare_num += 1;
+    sum_lat_error = sum_lat_error + std::fabs(l);
+    if (s > compare_s_end) {
+      break;
+    }
+  }
+  average_lat_error = sum_lat_error / compare_num;
+  if (average_lat_error > 0. && average_lat_error < overlap_threshold) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
   auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
                                  std::shared_ptr<VirtualLane> lane2) {
@@ -1937,10 +2060,6 @@ void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
     if (relative_id_lane->get_relative_id() == 0) {
       current_lane_ = relative_id_lane;
       ILOG_DEBUG << "create current_lane";
-    } else if (relative_id_lane->get_relative_id() == -1) {
-      left_lane_ = relative_id_lane;
-    } else if (relative_id_lane->get_relative_id() == 1) {
-      right_lane_ = relative_id_lane;
     }
   }
 }

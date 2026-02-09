@@ -42,8 +42,6 @@ void ResultTrajectoryGenerator::Init() {
   curvature_vec_.resize(N + 1);
   dkappa_vec_.resize(N + 1);
   ddkappa_vec_.resize(N + 1);
-  lat_acc_vec_.resize(N + 1);
-  lat_jerk_vec_.resize(N + 1);
 }
 
 bool ResultTrajectoryGenerator::Execute() {
@@ -59,8 +57,6 @@ bool ResultTrajectoryGenerator::Execute() {
   std::fill(curvature_vec_.begin(), curvature_vec_.end(), 0);
   std::fill(dkappa_vec_.begin(), dkappa_vec_.end(), 0);
   std::fill(ddkappa_vec_.begin(), ddkappa_vec_.end(), 0);
-  std::fill(lat_acc_vec_.begin(), lat_acc_vec_.end(), 0);
-  std::fill(lat_jerk_vec_.begin(), lat_jerk_vec_.end(), 0);
 
   auto start_time = IflyTime::Now_ms();
 
@@ -77,8 +73,7 @@ bool ResultTrajectoryGenerator::Execute() {
 bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   auto& ego_planning_result =
       session_->mutable_planning_context()->mutable_planning_result();
-  auto speed_limit_output = session_->mutable_planning_context()
-                                ->mutable_speed_limit_decider_output();
+
 
   // Step 1) get x,y of trajectory points
   auto& traj_points = ego_planning_result.traj_points;
@@ -97,10 +92,6 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   pnc::mathlib::spline ddkappa_t_spline;
 
   auto const N = traj_points.size();
-  double traj_max_lat_acc = 0.0;
-  double traj_max_lat_jerk = 0.0;
-  double traj_max_lon_acc = 0.0;
-  double traj_max_lon_jerk = 0.0;
 
   const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
@@ -126,28 +117,9 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     t_vec_[i] = traj_points[i].t;
     s_vec_[i] = traj_points[i].s;
     l_vec_[i] = traj_points[i].l;
-    double tp_curvature =
-        motion_planner_output.curv_s_spline(traj_points[i].s - tp_init_s);
-    curvature_vec_[i] = tp_curvature;
-    double tp_dcurvature =
-        motion_planner_output.d_curv_s_spline(traj_points[i].s - tp_init_s);
-    dkappa_vec_[i] = tp_dcurvature;
+    curvature_vec_[i] = motion_planner_output.curv_s_spline(traj_points[i].s - tp_init_s);
+    dkappa_vec_[i] = motion_planner_output.d_curv_s_spline(traj_points[i].s - tp_init_s);
     ddkappa_vec_[i] = traj_points[i].ddkappa;
-    double tp_delta =
-        motion_planner_output.delta_s_spline(traj_points[i].s - tp_init_s);
-    double tp_lat_acc =
-        curv_factor * traj_points[i].v * traj_points[i].v * tp_delta;
-    lat_acc_vec_[i] = tp_lat_acc;
-    traj_max_lat_acc = std::max(std::fabs(tp_lat_acc), traj_max_lat_acc);
-    double tp_omega =
-        motion_planner_output.omega_s_spline(traj_points[i].s - tp_init_s);
-    double tp_lat_jerk =
-        curv_factor * traj_points[i].v * traj_points[i].v * tp_omega;
-    lat_jerk_vec_[i] = tp_lat_jerk;
-    traj_max_lat_jerk = std::max(std::fabs(tp_lat_jerk), traj_max_lat_jerk);
-    traj_max_lon_acc = std::max(std::fabs(traj_points[i].a), traj_max_lon_acc);
-    traj_max_lon_jerk =
-        std::max(std::fabs(traj_points[i].jerk), traj_max_lon_jerk);
   }
   // JSON_DEBUG_VECTOR("traj_s_vec", s_vec, 3)
   s_t_spline.set_points(t_vec_, s_vec_);
@@ -156,29 +128,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   curvature_t_spline.set_points(t_vec_, curvature_vec_);
   dkappa_t_spline.set_points(t_vec_, dkappa_vec_);
   ddkappa_t_spline.set_points(t_vec_, ddkappa_vec_);
-  double lat_jerk_thr = config_.lat_jerk_thr;
-  const bool& ramp_scene =
-      session_->planning_context().general_lateral_decider_output().ramp_scene;
-  if (ramp_scene) {
-    lat_jerk_thr = config_.ramp_lat_jerk_thr;
-  }
-  // judge condition
-  auto& ad_info = session_->mutable_planning_context()
-                      ->mutable_planning_hmi_info()
-                      ->ad_info;
-  if ((traj_max_lat_acc > config_.lat_acc_thr) ||
-      (traj_max_lat_jerk > lat_jerk_thr) ||
-      (traj_max_lon_acc > config_.lon_acc_thr) ||
-      (traj_max_lon_jerk > config_.lon_jerk_thr)) {
-    ad_info.is_avaliable = false;
-  } else {
-    ad_info.is_avaliable = true;
-  }
 
-  if (ad_info.is_avaliable &&
-      speed_limit_output->function_inhibited_near_roundabout()) {
-    ad_info.is_avaliable = false;
-  }
 
   // Step 2) get dense trajectory points
 
@@ -200,8 +150,10 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     traj_pt.jerk = motion_planner_output.j_t_spline(t);
     traj_pt.l = l_t_spline(t);
     traj_pt.heading_angle = motion_planner_output.theta_t_spline(t);
-    traj_pt.curvature = curvature_t_spline(t);
-    traj_pt.dkappa = dkappa_t_spline(t);
+    // traj_pt.curvature = curvature_t_spline(t);
+    traj_pt.curvature = motion_planner_output.curv_s_spline(traj_pt.s - tp_init_s);
+    traj_pt.dkappa = motion_planner_output.d_curv_s_spline(traj_pt.s - tp_init_s);
+    // traj_pt.dkappa = dkappa_t_spline(t);
     traj_pt.ddkappa = ddkappa_t_spline(t);
     traj_pt.frenet_valid = true;
     dense_traj_points.push_back(std::move(traj_pt));

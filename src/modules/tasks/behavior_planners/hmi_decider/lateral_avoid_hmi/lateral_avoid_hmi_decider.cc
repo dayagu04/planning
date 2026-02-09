@@ -32,15 +32,7 @@ bool LateralAvoidHMIDecider::Execute() {
 bool LateralAvoidHMIDecider::GenerateHMIInfoForRADS() {
   auto hmi_info =
       session_->mutable_planning_context()->mutable_planning_hmi_info();
-  // offset avoid
-  // TODO(bsniu): maybe delete offset result
-  const auto& lat_offset_decider_output =
-      session_->planning_context().lateral_offset_decider_output();
-  if (lat_offset_decider_output.avoid_id > 0) {
-    hmi_info->rads_info.avoid_status = iflyauto::AvoidObstacle::AVOID_HIDING;
-    hmi_info->rads_info.aovid_id = lat_offset_decider_output.avoid_id;
-    return true;
-  }
+
   // bound avoid
   const auto& general_lateral_decider_output =
       session_->planning_context().general_lateral_decider_output();

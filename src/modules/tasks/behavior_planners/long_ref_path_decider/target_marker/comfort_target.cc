@@ -40,7 +40,6 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.eps = 1e-6;
   comfort_params_.static_speed_threshold = 0.2;
   comfort_params_.emergency_ttc_threshold = 1.5;
-  comfort_params_.follow_max_st_boundary_t = 3.0;
 
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -288,35 +287,6 @@ void ComfortTarget::GenerateUpperBoundInfo() {
         continue;
       }
 
-      const auto* st_graph_helper =
-          session_->planning_context().st_graph_helper();
-      if (st_graph_helper == nullptr) {
-        continue;
-      }
-
-      const auto& agent_st_boundary_id_map =
-          st_graph_helper->GetAgentIdSTBoundariesMap();
-
-      if (agent_st_boundary_id_map.empty()) {
-        follow_agents.push_back(
-            {agent, FollowAgentSource::kLatObstacleDecision});
-        added_agent_ids.insert(agent_id);
-        continue;
-      }
-
-      if (upper_bound_agent_ids_.find(agent_id) !=
-              upper_bound_agent_ids_.end() &&
-          agent_st_boundary_id_map.find(agent_id) !=
-              agent_st_boundary_id_map.end()) {
-        const auto& st_boundary_id = agent_st_boundary_id_map.at(agent_id);
-        speed::STBoundary st_boundary;
-        if (st_graph_helper->GetStBoundary(st_boundary_id.front(),
-                                           &st_boundary)) {
-          if (st_boundary.max_t() < comfort_params_.follow_max_st_boundary_t) {
-            continue;
-          }
-        }
-      }
       follow_agents.push_back({agent, FollowAgentSource::kLatObstacleDecision});
       added_agent_ids.insert(agent_id);
     }
@@ -349,8 +319,14 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   std::vector<FollowAgentInfo> follow_agent_infos(plan_points_num_);
   std::unordered_set<int32_t> valid_agent_ids;
 
+  const auto& spatio_temporal_follow_info =
+      session_->planning_context()
+          .lateral_obstacle_decider_output()
+          .spatio_temporal_follow_obstacle_info;
+
   if (!follow_agents.empty()) {
     for (size_t i = 0; i < plan_points_num_; i++) {
+      const double t = i * dt_;
       double min_agent_s = std::numeric_limits<double>::max();
       FollowAgentInfo best_agent_info = {
           899999, 210.0,  comfort_params_.v0,
@@ -359,6 +335,24 @@ void ComfortTarget::GenerateUpperBoundInfo() {
 
       for (const auto& agent_with_source : follow_agents) {
         const auto& agent = agent_with_source.agent;
+        const int32_t agent_id = agent->agent_id();
+
+        if (agent_with_source.source ==
+            FollowAgentSource::kLatObstacleDecision) {
+          auto it =
+              spatio_temporal_follow_info.find(static_cast<uint32_t>(agent_id));
+          if (it != spatio_temporal_follow_info.end()) {
+            const auto* follow_window = it->second.QueryByTime(t);
+            if (follow_window == nullptr ||
+                follow_window->lateral_decision !=
+                    LatObstacleDecisionType::FOLLOW) {
+              continue;
+            }
+          } else {
+            continue;
+          }
+        }
+
         const auto& agent_trajectories = agent->trajectories_used_by_st_graph();
         if (agent_trajectories.empty()) continue;
 
