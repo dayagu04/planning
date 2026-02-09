@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <thread>
 #include <vector>
 
 #include "aabb2d.h"
@@ -697,6 +698,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
   std::vector<CurveNode> curve_node_to_goal_vec;
 
+  const size_t yield_interval =
+      apa_param.GetParam().yield_interval_explored_node_num;
+  const bool enable_yield_cpu = apa_param.GetParam().enable_yield_cpu;
+
   while (!open_pq_.empty()) {
     // take out the lowest cost neighboring node
     current_node = open_pq_.begin()->second;
@@ -707,6 +712,13 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     }
 
     explored_node_num++;
+
+#ifndef X86
+    // 定期让出CPU，降低CPU占用率
+    if (enable_yield_cpu && explored_node_num % yield_interval == 0) {
+      std::this_thread::yield();
+    }
+#endif
 
     current_node->SetVisitedType(AstarNodeVisitedType::IN_CLOSE);
 
