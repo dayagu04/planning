@@ -748,14 +748,21 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   // 减速带限速
   if (session_->is_hpp_scene()) {
     const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-    const auto &traj_points = session_->mutable_planning_context()
-                                  ->mutable_planning_result()
-                                  .traj_points;
-    // 检查减速带区域
+    auto *planning_result =
+        session_->mutable_planning_context()->mutable_planning_result();
+    const auto &traj_points = planning_result->traj_points;
+    // 检查减速带区域（含与路径有碰撞的减速带 s 区间）
     SpeedBumpZoneInfo speed_bump_zone_info =
         CheckSpeedBumpZone(traj_points, frenet_ego_state.s());
 
-    // 获取减速带限速
+    // 写入与路径有碰撞的减速带区间，供 ResultTrajectoryGenerator 按 s 打标
+    planning_result->speed_bump_path_segments.clear();
+    for (const auto &seg : speed_bump_zone_info.collision_s_segments) {
+      planning_result->speed_bump_path_segments.push_back(
+          {seg.first, seg.second});
+    }
+
+    // 获取减速带限速并应用
     double speed_bump_velocity_limit =
         GetSpeedBumpVelocityLimit(speed_bump_zone_info, ego_v);
 
@@ -2710,7 +2717,8 @@ void GeneralLongitudinalDecider::GetHppCollisionCheckResult(
 SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
     const TrajectoryPoints &traj_points, double ego_s) {
   SpeedBumpZoneInfo zone_info;
-  
+  zone_info.collision_s_segments.clear();
+
   // 减速带区域参数
   const double kSpeedBumpFrontBuffer = config_.speed_bump_front_buffer;
   const double kSpeedBumpRearBuffer = config_.speed_bump_rear_buffer;
@@ -2790,6 +2798,7 @@ SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
     
     if (collision_detected) {
       has_collision = true;
+      zone_info.collision_s_segments.emplace_back(bump_s_min, bump_s_max);
       // 计算自车到减速带的距离（基于投影边界）
       double bump_center_s = (bump_s_min + bump_s_max) / 2.0;
       double distance = bump_center_s - ego_s;

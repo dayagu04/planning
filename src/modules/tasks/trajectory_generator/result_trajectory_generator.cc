@@ -17,6 +17,7 @@
 #include "math/math_utils.h"
 #include "math_lib.h"
 #include "planning_context.h"
+#include "vehicle_config_context.h"
 namespace planning {
 
 using namespace std;
@@ -114,6 +115,8 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
                  << ", l=" << traj_points[i].l << ", x=" << traj_points[i].x
                  << ", y=" << traj_points[i].y;
     }
+    // 默认高度类型：NORMAL，后续可在特定场景中覆盖
+    traj_points[i].height_type = TrajectoryHeightType::NORMAL;
     t_vec_[i] = traj_points[i].t;
     s_vec_[i] = traj_points[i].s;
     l_vec_[i] = traj_points[i].l;
@@ -132,9 +135,41 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 
   // Step 2) get dense trajectory points
 
+  // HPP：轨迹点为后轴中心，精度要求高，后轴/前轴压过减速带分开算，不合并区间
+  // - 后轴压过减速带：后轴 s in [s_min, s_max]，前后各扩 margin
+  // - 前轴压过减速带：前轴在 [s_min,s_max] 时后轴 s = 前轴s - wheel_base，前后各扩 margin
+  static constexpr double kSpeedBumpExpandMargin = 0.1;
+  std::vector<std::pair<double, double>> speed_bump_expanded_segments;
+  if (session_->is_hpp_scene()) {
+    const double wheel_base =
+        VehicleConfigurationContext::Instance()->get_vehicle_param().wheel_base;
+    const auto &segments =
+        session_->planning_context().planning_result().speed_bump_path_segments;
+    speed_bump_expanded_segments.reserve(segments.size() * 2);
+    for (const auto &seg : segments) {
+      // 后轴压过减速带：[s_min - margin, s_max + margin]
+      speed_bump_expanded_segments.emplace_back(
+          seg.s_min - kSpeedBumpExpandMargin,
+          seg.s_max + kSpeedBumpExpandMargin);
+      // 前轴压过减速带：后轴 s in [s_min - wheel_base - margin, s_max - wheel_base + margin]
+      speed_bump_expanded_segments.emplace_back(
+          seg.s_min - wheel_base - kSpeedBumpExpandMargin,
+          seg.s_max - wheel_base + kSpeedBumpExpandMargin);
+    }
+  }
+
   std::vector<TrajectoryPoint> dense_traj_points;
   int dense_num_points =
       int(traj_points.back().t / config_.planning_result_delta_time) + 1;
+
+  auto is_in_speed_bump_range = [&speed_bump_expanded_segments](double s) {
+    for (const auto &range : speed_bump_expanded_segments) {
+      if (s >= range.first && s <= range.second) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   for (int j = 0; j < dense_num_points; ++j) {
     TrajectoryPoint traj_pt;
@@ -156,6 +191,11 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     // traj_pt.dkappa = dkappa_t_spline(t);
     traj_pt.ddkappa = ddkappa_t_spline(t);
     traj_pt.frenet_valid = true;
+    // 默认 NORMAL；HPP 下若 s 落在减速带扩展区间内则标为 SPEED_BUMP
+    traj_pt.height_type = TrajectoryHeightType::NORMAL;
+    if (session_->is_hpp_scene() && is_in_speed_bump_range(traj_pt.s)) {
+      traj_pt.height_type = TrajectoryHeightType::SPEED_BUMP;
+    }
     dense_traj_points.push_back(std::move(traj_pt));
   }
 
