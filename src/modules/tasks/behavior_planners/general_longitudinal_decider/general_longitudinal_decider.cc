@@ -748,17 +748,17 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   // 减速带限速
   if (session_->is_hpp_scene()) {
     const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-    auto *planning_result =
+    auto &planning_result =
         session_->mutable_planning_context()->mutable_planning_result();
-    const auto &traj_points = planning_result->traj_points;
+    const auto &traj_points = planning_result.traj_points;
     // 检查减速带区域（含与路径有碰撞的减速带 s 区间）
     SpeedBumpZoneInfo speed_bump_zone_info =
         CheckSpeedBumpZone(traj_points, frenet_ego_state.s());
 
     // 写入与路径有碰撞的减速带区间，供 ResultTrajectoryGenerator 按 s 打标
-    planning_result->speed_bump_path_segments.clear();
+    planning_result.speed_bump_path_segments.clear();
     for (const auto &seg : speed_bump_zone_info.collision_s_segments) {
-      planning_result->speed_bump_path_segments.push_back(
+      planning_result.speed_bump_path_segments.push_back(
           {seg.first, seg.second});
     }
 
