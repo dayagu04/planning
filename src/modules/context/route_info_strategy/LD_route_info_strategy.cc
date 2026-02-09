@@ -1492,7 +1492,7 @@ bool LDRouteInfoStrategy::IsIgnoreMerge(
     return false;
   } else {
     // TODO:后续补充根据收窄车道的判断条件
-     return !IsSucMergeLink(merge_link);
+     return !IsSucMergeLink(merge_pre_link);
   }
 
   return true;
