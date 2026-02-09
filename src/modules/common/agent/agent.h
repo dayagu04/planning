@@ -96,7 +96,7 @@ class Agent {
   Agent() = default;
   Agent(const Agent& agent);
   Agent(const PredictionObject& prediction_object, bool is_static,
-        double start_relative_timestamp);
+        double start_relative_timestamp, bool is_truck);
 
   const int32_t agent_id() const;
   void set_agent_id(const int32_t agent_id);
@@ -154,6 +154,7 @@ class Agent {
 
   bool is_static() const;
   void set_is_static(const bool is_static);
+  bool is_truck() const;
 
   const planning_math::Box2d& box() const;
   void set_box(const planning_math::Box2d& box);
@@ -327,6 +328,7 @@ class Agent {
 
   bool is_cone_bucket_cipv_ = false;
   bool is_static_ = false;
+  bool is_truck_ = false;
   // info for st graph
   std::pair<double, double> time_range_ = {-1.0, -1.0};
 

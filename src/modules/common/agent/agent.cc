@@ -61,12 +61,13 @@ Agent::Agent(const Agent& agent)
 }
 
 Agent::Agent(const PredictionObject& prediction_object, bool is_static,
-             double start_relative_timestamp)
+             double start_relative_timestamp, bool is_truck)
     : agent_id_(prediction_object.id),
       box_({prediction_object.position_x, prediction_object.position_y},
            prediction_object.yaw, prediction_object.length,
            prediction_object.width),
-      is_static_(is_static) {
+      is_static_(is_static),
+      is_truck_(is_truck){
   x_ = prediction_object.position_x;
   y_ = prediction_object.position_y;
   // theta定义
@@ -246,6 +247,8 @@ bool Agent::is_vehicle_type() const {
 }
 
 bool Agent::is_static() const { return is_static_; }
+bool Agent::is_truck() const { return is_truck_; }
+
 void Agent::set_is_static(const bool is_static) { is_static_ = is_static; }
 
 void Agent::set_b_backup_freemove(const bool b_backup_freemove) {
