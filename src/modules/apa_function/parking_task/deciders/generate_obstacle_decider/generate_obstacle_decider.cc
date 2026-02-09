@@ -19,11 +19,10 @@ const bool GenerateObstacleDecider::GenObs(
   bool success = false;
   const double gen_obs_start_time = IflyTime::Now_ms();
   if (request_.scenario_type ==
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-    return GenObsForPerpendicularTailIn();
-  } else if (request_.scenario_type ==
-             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    return GenObsForPerpendicularHeadingIn();
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+      request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    return GenObsForPerpendicularParkingIn();
   }
 
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_GEN_OBS_TIME,
@@ -31,7 +30,7 @@ const bool GenerateObstacleDecider::GenObs(
   return success;
 }
 
-const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
+const bool GenerateObstacleDecider::GenObsForPerpendicularParkingIn() {
   const ApaParameters& param = apa_param.GetParam();
   const ApaSlot& slot = ego_info_under_slot_.slot;
   const geometry_lib::PathPoint& ego_pose = ego_info_under_slot_.cur_pose;
@@ -289,8 +288,5 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
   return true;
 }
 
-const bool GenerateObstacleDecider::GenObsForPerpendicularHeadingIn() {
-  return false;
-}
 }  // namespace apa_planner
 }  // namespace planning
