@@ -84,9 +84,7 @@ class TargetPoseDecider final : public ParkingTask {
       const ApaSlot& slot, const TargetPoseDeciderRequest& request);
 
  private:
-  const TargetPoseDeciderResult CalcTargetPoseForPerpendicularTailIn();
-
-  const TargetPoseDeciderResult CalcTargetPoseForPerpendicularHeadIn();
+  const TargetPoseDeciderResult CalcTargetPoseForPerpendicularParkingIn();
 
   const TargetPoseDeciderResult CalcTargetPoseForPerpendicularTailOut();
 
@@ -108,6 +106,7 @@ class TargetPoseDecider final : public ParkingTask {
   bool consider_obs_ = false;
   bool base_on_slot_ = false;
   bool is_searching_stage_ = false;
+  ParkingScenarioType scenario_type_;
   geometry_lib::PathPoint ego_pose_local_;
   TargetPoseDeciderResult result_;
 };

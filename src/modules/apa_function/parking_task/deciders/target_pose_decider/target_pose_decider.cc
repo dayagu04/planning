@@ -8,6 +8,7 @@
 #include "collision_detection/gjk_collision_detector.h"
 #include "geometry_math.h"
 #include "log_glog.h"
+#include "math_lib.h"
 #include "parking_scenario_manager.h"
 
 namespace planning {
@@ -24,15 +25,13 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
   slot_lat_pos_preference_ = request.slot_lat_pos_preference;
   is_searching_stage_ = request.is_searching_stage;
   ego_pose_local_ = request.ego_pose_local;
+  scenario_type_ = request.scenario_type;
 
   const double find_target_pose_start_time = IflyTime::Now_ms();
 
-  if (request.scenario_type ==
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-    return CalcTargetPoseForPerpendicularTailIn();
-  } else if (request.scenario_type ==
-             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    return CalcTargetPoseForPerpendicularHeadIn();
+  if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+      scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    return CalcTargetPoseForPerpendicularParkingIn();
   } else {
     return result_;
   }
@@ -45,9 +44,13 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
 }
 
 const TargetPoseDeciderResult
-TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
-  ILOG_INFO << "CalcTargetPoseForPerpendicularTailIn with fold mirror = "
-            << col_det_interface_ptr_->GetFoldMirrorFlag();
+TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
+  const bool heading_in =
+      !is_searching_stage_ &&
+      (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN);
+  ILOG_INFO << "CalcTargetPoseForPerpendicularParkingIn with fold mirror = "
+            << col_det_interface_ptr_->GetFoldMirrorFlag()
+            << "  heading in = " << heading_in;
   const ApaParameters& param = apa_param.GetParam();
   const geometry_lib::GlobalToLocalTf g2l_tf = slot_.g2l_tf_;
   const geometry_lib::LocalToGlobalTf l2g_tf = slot_.l2g_tf_;
@@ -60,48 +63,44 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
     virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
 
+    if (heading_in) {
+      virtual_tar_x += param.wheel_base;
+    }
+
     // avoid limit error
-    if (virtual_tar_x >
-        slot_.processed_corner_coord_local_.pt_01_mid.x() - 0.68) {
-      slot_.limiter_.valid = false;
-    } else if (virtual_tar_x <
-               slot_.processed_corner_coord_local_.pt_23_mid.x() + 0.18) {
+    double max_tar_x = slot_.processed_corner_coord_local_.pt_01_mid.x() - 0.68;
+    if (heading_in) {
+      max_tar_x = slot_.processed_corner_coord_local_.pt_01_mid.x() + 1.68;
+    }
+    double min_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() + 0.18;
+    if (!mathlib::IsInBound(virtual_tar_x, min_tar_x, max_tar_x)) {
       slot_.limiter_.valid = false;
     }
   }
-  if (!slot_.limiter_.valid) {
-    virtual_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() +
-                    param.rear_overhanging + param.terminal_target_x_to_line;
 
-    if (slot_.slot_type_ == SlotType::SLANT) {
-      virtual_tar_x = slot_.origin_corner_coord_local_.pt_23_mid.x() +
-                      param.rear_overhanging + param.terminal_target_x_to_line;
+  if (!slot_.limiter_.valid) {
+    virtual_tar_x = slot_.origin_corner_coord_local_.pt_23_mid.x() +
+                    param.terminal_target_x_to_line;
+
+    if (heading_in) {
+      virtual_tar_x += (param.front_overhanging + param.wheel_base);
+    } else {
+      virtual_tar_x += param.rear_overhanging;
     }
 
     // park in the middle of the slot
-    double mid_x = (slot_.processed_corner_coord_local_.pt_01_mid.x() +
-                    slot_.processed_corner_coord_local_.pt_23_mid.x()) *
-                   0.5;
+    const double mid_x = (slot_.origin_corner_coord_local_.pt_01_mid.x() +
+                          slot_.origin_corner_coord_local_.pt_23_mid.x()) *
+                         0.5;
 
-    if (slot_.slot_type_ == SlotType::SLANT) {
-      mid_x = (slot_.origin_corner_coord_local_.pt_01_mid.x() +
-               slot_.origin_corner_coord_local_.pt_23_mid.x()) *
-              0.5;
-    }
-
-    const double mid_ego_x =
+    double mid_ego_x =
         mid_x - (0.5 * param.car_length - param.rear_overhanging);
+    if (heading_in) {
+      mid_ego_x = mid_x + (0.5 * param.car_length - param.rear_overhanging);
+    }
 
     virtual_tar_x = std::max(virtual_tar_x, mid_ego_x);
   }
-
-  // If the limiter is too far back or the slot is too long,  can combine the
-  // front corner information of slot
-  // virtual_tar_x = std::max(virtual_tar_x,
-  //                          slot_.processed_corner_coord_local_.pt_01_mid.x()
-  //                          -
-  //                              param.limiter_length - param.wheel_base -
-  //                              param.front_overhanging);
 
   double redundant_y = (slot_.slot_width_ - param.car_width) * 0.5;
   double offset_y = 0.0;
@@ -120,6 +119,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   geometry_lib::PathPoint tar_pose_global;
   tar_pose_local.pos << virtual_tar_x, offset_y;
   tar_pose_local.heading = param.terminal_target_heading * kDeg2Rad;
+  if (heading_in) {
+    tar_pose_local.heading += M_PI;
+  }
 
   tar_pose_global =
       geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
@@ -147,19 +149,27 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
   ApaObsMovementType consider_obs_movement_type;
   bool use_limiter = true;
+  CarBodyType car_body_type;
   if (is_searching_stage_) {
-    consider_obs_movement_type = ApaObsMovementType::ALL;
     if (slot_.is_selected_) {
       consider_obs_movement_type = ApaObsMovementType::STATIC;
+    } else {
+      consider_obs_movement_type = ApaObsMovementType::ALL;
     }
     use_limiter = false;
+    car_body_type = CarBodyType::ONLY_MAX_POLYGAN;
   } else {
     consider_obs_movement_type = ApaObsMovementType::STATIC;
+    if (heading_in) {
+      car_body_type = CarBodyType::EXPAND_MIRROR_TO_END;
+    } else {
+      car_body_type = CarBodyType::EXPAND_MIRROR_TO_FRONT;
+    }
   }
 
   const GJKColDetRequest gjk_col_det_request(
       base_on_slot_, param.uss_config.use_uss_pt_cloud,
-      CarBodyType::EXPAND_MIRROR_TO_FRONT, consider_obs_movement_type,
+      car_body_type, consider_obs_movement_type,
       param.use_obs_height_method, use_limiter);
 
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
@@ -189,6 +199,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
       offset_y = 0.0;
       tar_pose_local.pos << virtual_tar_x, offset_y;
       tar_pose_local.heading = param.terminal_target_heading * kDeg2Rad;
+      if (heading_in) {
+        tar_pose_local.heading += M_PI;
+      }
       tar_pose_global =
           geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
 
@@ -211,6 +224,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   double max_lon_move_dist{0.};
   double dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
               (virtual_tar_x + param.wheel_base + param.front_overhanging);
+  if (heading_in) {
+    dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
+         (virtual_tar_x + param.rear_overhanging);
+  }
   double front_exceed_line_dx = apa_param.GetParam().max_front_exceed_line_dx;
   if (slot_.slot_type_ == SlotType::SLANT) {
     front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
@@ -371,9 +388,14 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   }
 
   if (exist_target_pose) {
-    dx = result_.target_pose_local.pos.x() + param.wheel_base +
-         param.front_overhanging -
-         slot_.origin_corner_coord_local_.pt_01_mid.x();
+    if (heading_in) {
+      dx = result_.target_pose_local.GetX() + param.rear_overhanging -
+           slot_.origin_corner_coord_local_.pt_01_mid.x();
+    } else {
+      dx = result_.target_pose_local.GetX() + param.wheel_base +
+           param.front_overhanging -
+           slot_.origin_corner_coord_local_.pt_01_mid.x();
+    }
     result_.exceed_allow_max_dx = dx - front_exceed_line_dx;
     ILOG_INFO << "exceed_allow_max_dx = " << result_.exceed_allow_max_dx
               << "  front_exceed_line_dx = " << front_exceed_line_dx
@@ -391,11 +413,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     result_.target_pose_type = TargetPoseType::NORMAL;
   }
 
-  return result_;
-}
-
-const TargetPoseDeciderResult
-TargetPoseDecider::CalcTargetPoseForPerpendicularHeadIn() {
   return result_;
 }
 
