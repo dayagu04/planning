@@ -42,6 +42,7 @@
   "lon_safe_buffer": 0.1,
   "mirror_buffer": 0.1,
   "is_select_split_nearing_ramp": false,
+  "overlap_threshold": 0.35,
   "bound_return_speed": 0.5,
   "physical_road_bound_buffer": 0.5,
   "solid_line_bound_buffer": 0.5,
@@ -1312,11 +1313,11 @@
     "enable_road_boundary_collision_speed_limit": true,
     "road_boundary_collision_speed_limit": 4.167,
     "road_boundary_enable_lateral_acceleration_limit": true,
-    "road_boundary_lateral_acceleration_threshold": 2.0,
-    "road_boundary_lateral_acceleration_min_points": 4,
+    "road_boundary_lateral_acceleration_threshold": 1.75,
+    "road_boundary_lateral_acceleration_min_points": 3,
     "road_boundary_lateral_acceleration_confirmation_frames": 3,
     "road_boundary_lateral_acceleration_speed_reduction": 1.39,
-    "road_boundary_lateral_acceleration_desired": 1.6,
+    "road_boundary_lateral_acceleration_desired": 1.5,
     "road_boundary_curve_road_boundary_cooldown_frames": 20,
     "enable_s_curve_road_boundary_speed_limit": true,
     "road_boundary_s_curve_min_radius_threshold": 250.0,
@@ -1441,10 +1442,10 @@
       0.4, 0.6, 0.7, 0.85, 1.0, 1.15, 1.5, 2.2, 999.9
     ],
     "road_boundary_speed_limits": [
-      5.55, 8.33, 11.11, 16.67, 22.22, 27.78, 36.11, 41.67, 41.67
+      8.33, 11.11, 16.67, 22.22, 27.78, 33.33, 36.11, 41.67, 41.67
     ],
     "road_boundary_speed_limits_highway": [
-      5.55, 8.33, 11.11, 16.67, 25, 27.78, 36.11, 41.67, 41.67
+      11.11, 16.67, 22.22, 27.78, 33.33, 36.11, 41.67, 41.67, 41.67
     ],
     "road_boundary_speed_limits_both_sides_different": [
       5.56, 8.33, 11.11, 13.89, 19.44, 22.22, 27.78, 36.11, 41.67
@@ -1478,16 +1479,27 @@
     ],
     "road_boundary_curve_front_edge_expansion_values": [
       0.4, 0.6, 0.8, 1, 1.2, 1.5
-    ]
+    ],
+    "tunnel_vel_limit_dis_table_mid": {
+      "vel_limit_table": [
+        80, 90, 100, 110, 120, 130
+      ],
+      "dis_table": [
+        60, 120, 200, 270, 350, 450
+      ]
+    },
+    "tunnel_vel_limit_dis_table_low": {
+      "vel_limit_table": [
+        70, 80, 90, 100, 110, 120, 130
+      ],
+      "dis_table": [
+        50, 100, 170, 250, 320, 400, 500
+      ]
+    }
   },
   "result_trajectory_generator": {
     "use_dynamic_lat_jerk_thr": false,
-    "enable_lat_traj": false,
-    "lat_acc_thr": 3.0,
-    "lat_jerk_thr": 0.45,
-    "ramp_lat_jerk_thr": 0.65,
-    "lon_acc_thr": 2.0,
-    "lon_jerk_thr": 1.5
+    "enable_lat_traj": false
   },
   "traffic_light_decider": {
     "enable_tfl_decider": false,
@@ -1649,9 +1661,9 @@
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,
-        "jerk_negative_lower": -1.0,
+        "jerk_negative_lower": -2.0,
         "jerk_negative_speed_lower": 1.0,
-        "jerk_negative_upper": -1.0,
+        "jerk_negative_upper": -1.6,
         "jerk_negative_speed_upper": 25.0
       },
       "sharp_curvature_kinematic_param": {
@@ -1667,9 +1679,9 @@
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,
-        "jerk_negative_lower": -1.0,
+        "jerk_negative_lower": -2.5,
         "jerk_negative_speed_lower": 1.0,
-        "jerk_negative_upper": -1.0,
+        "jerk_negative_upper": -2.0,
         "jerk_negative_speed_upper": 25.0
       },
       "avoid_agent_kinematic_param": {
@@ -1739,9 +1751,9 @@
         "jerk_positive_speed_lower": 5.0,
         "jerk_positive_lower": 2.0,
         "jerk_positive_speed_upper": 25.0,
-        "jerk_negative_lower": -1.0,
+        "jerk_negative_lower": -2.0,
         "jerk_negative_speed_lower": 1.0,
-        "jerk_negative_upper": -1.0,
+        "jerk_negative_upper": -1.6,
         "jerk_negative_speed_upper": 25.0
       },
       "low_speed_follow_acc_traj_table": {
@@ -2056,7 +2068,8 @@
       1,
       1,
       1.2
-    ]
+    ],
+    "extra_ratio_for_cut_out":0.4
   },
   "potential_dangerous_agent": {
     "risk_free_lateral_distance": 8.0,
@@ -2192,7 +2205,13 @@
   "hmi_decider": {
     "tfl_reminder_cipv_dis": 8.0,
     "construction_warning_hmi_speed_max": 60,
-    "obstacle_brake_hmi_reminder_dis": 8.0
+    "obstacle_brake_hmi_reminder_dis": 8.0,
+    "lat_acc_thr": 3.0,
+    "lat_jerk_thr": 0.45,
+    "ramp_lat_jerk_thr": 0.65,
+    "lon_acc_thr": 2.0,
+    "lon_jerk_thr": 1.5,
+    "lat_jerk_hysteresis_value": 0.2
   },
   "reference_path_manager": {
     "is_enable_construction_refline": true

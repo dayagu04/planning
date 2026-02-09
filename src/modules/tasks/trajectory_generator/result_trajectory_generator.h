@@ -35,8 +35,6 @@ class ResultTrajectoryGenerator : public Task {
   std::vector<double> curvature_vec_;
   std::vector<double> dkappa_vec_;
   std::vector<double> ddkappa_vec_;
-  std::vector<double> lat_acc_vec_;
-  std::vector<double> lat_jerk_vec_;
 
   iflyauto::LandingPoint CalculateLandingPoint(
       bool is_lane_keeping,

@@ -73,9 +73,12 @@ void ApaSlotManager::Update(
   for (size_t i = 0; i < slot_size; ++i) {
     const iflyauto::ParkingFusionSlot& fusion_slot =
         local_view->parking_fusion_info.parking_fusion_slot_lists[i];
-
+    if (fusion_slot.id != ApaStateMachineManager::kSlotFreeIdx_ &&
+        is_sapa_mode) {
+      continue;
+    }
     ApaSlot slot(fusion_slot);
-    if (is_sapa_mode && slot.GetId() == kSlotFreeId) {
+    if (is_sapa_mode && slot.GetId() == ApaStateMachineManager::kSlotFreeIdx_) {
       slot.SetSourceType(SlotSourceType::SELF_DEFINE);
     }
 
@@ -108,11 +111,12 @@ void ApaSlotManager::Update(
   if (is_sapa_mode) {
     if (sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
       select_slot_id = kSlotInvalidId;
-    } else if (slots_map_.find(kSlotFreeId) == slots_map_.end()) {
+    } else if (slots_map_.find(ApaStateMachineManager::kSlotFreeIdx_) ==
+               slots_map_.end()) {
       ILOG_ERROR << "SAPA mode, but free slot id is not in slot map";
       select_slot_id = kSlotInvalidId;
     } else {
-      select_slot_id = kSlotFreeId;
+      select_slot_id = ApaStateMachineManager::kSlotFreeIdx_;
     }
   } else if (state_machine_ptr_->IsPAMode()) {
     // TODO(taolu10):

@@ -46,16 +46,16 @@ class ApaObstacleManager final {
 
   void ResetObstacleODTracking() {
     fusion_id_to_local_id_.clear();
-    obs_od_id_generate_ = 1;
-    fusion_polygon_obs_.clear();
+    obs_tracking_id_generate_ = 1;
+    obstacles_od_tracking_.clear();
   }
 
   const std::unordered_map<size_t, ApaObstacle> &GetObstacles() const {
     return obstacles_;
   }
 
-  const std::unordered_map<size_t, ApaObstacle> &GetObstaclesOD() const {
-    return fusion_polygon_obs_;
+  const std::unordered_map<size_t, ApaObstacle> &GetObstaclesODTracking() const {
+    return obstacles_od_tracking_;
   }
 
   std::array<float, 2> GetParallelSlotNeighbourObjsHeading() const {
@@ -66,8 +66,8 @@ class ApaObstacleManager final {
     return obstacles_;
   }
 
-  std::unordered_map<size_t, ApaObstacle> &GetMutableObstaclesOD() {
-    return fusion_polygon_obs_;
+  std::unordered_map<size_t, ApaObstacle> &GetMutableObstaclesODTracking() {
+    return obstacles_od_tracking_;
   }
 
   const size_t GetObsIdGenerate() const { return obs_id_generate_; }
@@ -90,8 +90,11 @@ class ApaObstacleManager final {
       const pnc::geometry_lib::GlobalToLocalTf &g2l_tf);
 
   const bool IsOccType(const iflyauto::ObjectType type);
+  const bool NeedTrackingObjectType(const iflyauto::ObjectType type);
 
   void GenerateObsByOD(const LocalView *local_view,
+                       const ObjectDetectObsConfig &od_config);
+  void GenerateObsByODTracking(const LocalView *local_view,
                        const ObjectDetectObsConfig &od_config);
 
   const size_t GetObstacleSize() const { return obstacles_.size(); }
@@ -113,11 +116,10 @@ class ApaObstacleManager final {
   size_t obs_id_generate_{0};
   std::unordered_map<size_t, ApaObstacle> obstacles_;
   std::vector<double> uss_dis_vec_;
-  // todo :: in the follow-up, only the od obstacles in motion will be
-  // considered ?
+
   std::unordered_map<size_t, size_t> fusion_id_to_local_id_;
-  size_t obs_od_id_generate_{0};
-  std::unordered_map<size_t, ApaObstacle> fusion_polygon_obs_;
+  size_t obs_tracking_id_generate_{0};
+  std::unordered_map<size_t, ApaObstacle> obstacles_od_tracking_;
 
   ApaStateMachineManager state_machine_manager_;
 

@@ -5,6 +5,7 @@ import json
 import time
 from multiprocessing import Process
 import boto3
+import zipfile
 
 begin_time = time.time()
 
@@ -59,6 +60,13 @@ client = boto3.client(
     use_ssl=False
 )
 
+# 文件输入地址  包含所有bag和excel文件
+in_root_path = "/yr-nvme/planning"
+in_dir = f"{in_root_path}/{task_id}"
+# for item_name in os.listdir(in_dir):
+#     item_path = os.path.join(in_dir, item_name)
+#     print("input files name: ", item_path)
+
 # 生成结果文件目录
 shm_path = "/dev/shm"
 out_root_path = "/out"
@@ -95,23 +103,34 @@ print(f"Get bag 耗时：{end_time - start_time}秒")
 # 获取真值文件，分为下载链接和路径两种 xlsx文件
 if (enable_ground_truth_simulation):
     start_time = time.time()
-    if "http" in ground_truth_url:
-        ground_truth_file_path = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.ground_truth.bag"
-        command = 'curl ' + '"' + ground_truth_url + '"' + ' -o ' + ground_truth_file_path
-        try:
-            result = subprocess.run(command, shell=True, text=True, check=True)
-        except Exception as e:
-            print(f"Downloading bag error: {e}")
-            sys.exit(1)
-        if (result.returncode != 0):
-            print(f"Downloading bag error")
-            sys.exit(1)
+    ground_truth_input_file = f"{in_dir}/{ground_truth_file_name}"
+    if os.path.exists(ground_truth_input_file):
+        ground_truth_file_path = ground_truth_input_file
     else:
-        if os.path.exists(ground_truth_url):
-            ground_truth_file_path = ground_truth_url
+        if "http" in ground_truth_url:   # 太慢了 ! ! !
+            ground_truth_file_path = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}_ground_truth_input.xlsx"
+            command = 'curl ' + ' -L ' + '"' + ground_truth_url + '"' + ' -o ' + ground_truth_file_path
+            try:
+                result = subprocess.run(command, shell=True, text=True, check=True)
+                # 检测3个核心点
+                # print(f"1. 文件大小：{os.path.getsize(ground_truth_file_path)} 字节(合法xlsx至少≥100字节)")
+                # print(f"2. 是否是合法ZIP包: {zipfile.is_zipfile(ground_truth_file_path)}(必须返回True)")
+                # 检测魔术头（xlsx的魔术头必须是b'PK\x03\x04'）
+                # with open(ground_truth_file_path, 'rb') as f:
+                #     print(f"3. 文件魔术头：{f.read(4)}(合法xlsx必须是b'PK\\x03\\x04')")
+            except Exception as e:
+                print(f"Downloading xlsx error: {e}")
+                sys.exit(1)
+            if (result.returncode != 0):
+                print(f"Downloading xlsx error")
+                sys.exit(1)
         else:
-            print(f"The file '{ground_truth_url}' does not exist.")
-            sys.exit(1)
+            if os.path.exists(ground_truth_path):
+                ground_truth_file_path = ground_truth_path
+                print("Get ground truth file path")
+            else:
+                print(f"The file '{ground_truth_path}' does not exist.")
+                sys.exit(1)
     print("Get ground truth file successfully !")
     end_time = time.time()
     print(f"Get ground truth file 耗时：{end_time - start_time}秒")
@@ -190,6 +209,8 @@ data['checker_list'] = checker_list
 data['plotter_list'] = []
 data['bag_path_list'] = [shm_path]
 data['output_path'] = out_dir
+if (enable_ground_truth_simulation):
+    data['input_file_path'] = ground_truth_file_path
 
 with open(json_path, 'w', encoding='utf-8') as file:
     json.dump(data, file, ensure_ascii=False, indent=2)
@@ -310,7 +331,7 @@ if (enable_ground_truth_simulation):
     start_time = time.time()
     try:
         excel_start_time = time.time()
-        upload_and_remove_file('.ground_truth.xlsx', result_data, "ground_truth_file_url")
+        upload_and_remove_file('.ground_truth_output.xlsx', result_data, "ground_truth_file_url")
         excel_end_time = time.time()
         print(f"Upload excel file 耗时：{excel_end_time - excel_start_time}秒")
     except Exception as e:

@@ -182,7 +182,8 @@ class ApaStateMachineManager final {
 
   static std::string GetParkingSAPAStatusString(const ApaSAPAStatus sapa_status);
   static void PrintParkingSAPAStatus(const ApaSAPAStatus sapa_status);
-
+ public:
+  static constexpr int kSlotFreeIdx_ = 1;
  private:
   ApaStateMachine state_machine_ = ApaStateMachine::INVALID;
   ApaStateMachine state_machine_last_ = ApaStateMachine::INVALID;

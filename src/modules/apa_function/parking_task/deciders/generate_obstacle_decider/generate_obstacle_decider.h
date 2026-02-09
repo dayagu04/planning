@@ -56,9 +56,7 @@ class GenerateObstacleDecider final : public ParkingTask {
   }
 
  private:
-  const bool GenObsForPerpendicularTailIn();
-
-  const bool GenObsForPerpendicularHeadingIn();
+  const bool GenObsForPerpendicularParkingIn();
 
   const bool CalcVirtualTLane();
 

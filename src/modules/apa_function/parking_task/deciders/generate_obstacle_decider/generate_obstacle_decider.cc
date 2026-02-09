@@ -19,11 +19,10 @@ const bool GenerateObstacleDecider::GenObs(
   bool success = false;
   const double gen_obs_start_time = IflyTime::Now_ms();
   if (request_.scenario_type ==
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-    return GenObsForPerpendicularTailIn();
-  } else if (request_.scenario_type ==
-             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    return GenObsForPerpendicularHeadingIn();
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+      request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    return GenObsForPerpendicularParkingIn();
   }
 
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_GEN_OBS_TIME,
@@ -31,7 +30,7 @@ const bool GenerateObstacleDecider::GenObs(
   return success;
 }
 
-const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
+const bool GenerateObstacleDecider::GenObsForPerpendicularParkingIn() {
   const ApaParameters& param = apa_param.GetParam();
   const ApaSlot& slot = ego_info_under_slot_.slot;
   const geometry_lib::PathPoint& ego_pose = ego_info_under_slot_.cur_pose;
@@ -228,21 +227,33 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
   virtual_tlane_.B = virtual_left_obs;
   virtual_tlane_.E = virtual_right_obs;
 
+  const double rearaxle_frontoverhang_length =
+      param.car_length - param.rear_overhanging;
+
+  const double ego_max_x =
+      ego_info_under_slot_.cur_pose.GetX() + rearaxle_frontoverhang_length;
+
+  const double ego_max_y =
+      ego_info_under_slot_.cur_pose.GetY() + rearaxle_frontoverhang_length;
+
+  const double ego_min_y =
+      ego_info_under_slot_.cur_pose.GetY() - rearaxle_frontoverhang_length;
+
   // area_length and area length can be dynamic by ego pose
-  geometry_lib::RectangleBound bound =
-      col_det_interface_ptr_->GetGJKColDetPtr()->CalCarRectangleBound(
-          ego_info_under_slot_.cur_pose);
+  // geometry_lib::RectangleBound bound =
+  //     col_det_interface_ptr_->GetGJKColDetPtr()->CalCarRectangleBound(
+  //         ego_info_under_slot_.cur_pose);
 
   virtual_tlane_.channel_width =
       std::max({virtual_tlane_.channel_width, param.channel_width,
-                bound.max_x -
+                ego_max_x -
                     ego_info_under_slot_.slot.processed_corner_coord_local_
                         .pt_01_mid.x() +
                     0.68});
 
-  const double ego_y =
-      std::max(std::fabs(bound.min_y), std::fabs(bound.max_y)) + 1.08 -
-      param.virtual_obs_left_y_pos - slot.slot_width_ / slot.sin_angle_ * 0.5;
+  const double ego_y = std::max(std::fabs(ego_min_y), std::fabs(ego_max_y)) +
+                       1.08 - param.virtual_obs_left_y_pos -
+                       slot.slot_width_ / slot.sin_angle_ * 0.5;
 
   virtual_tlane_.channel_length =
       std::max({virtual_tlane_.channel_length,
@@ -277,8 +288,5 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
   return true;
 }
 
-const bool GenerateObstacleDecider::GenObsForPerpendicularHeadingIn() {
-  return false;
-}
 }  // namespace apa_planner
 }  // namespace planning

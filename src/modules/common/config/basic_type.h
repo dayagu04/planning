@@ -1159,28 +1159,6 @@ struct LatBehaviorStateMachineOutput {
 };
 
 enum class LatObstacleType { LANE, ROAD, CAR };
-
-struct LateralOffsetDeciderOutput {
-  bool is_valid = false;
-  double lateral_offset = 0.0;
-  bool enable_bound = false;
-  std::vector<uint32_t> avoid_ids;
-
-  // hmi
-  int avoid_id = -1;
-  int avoid_direction = 0;
-
-  void Reset() {
-    bool is_valid = false;
-    double lateral_offset = 0.0;
-    bool enable_bound = false;
-
-    // hmi
-    int avoid_id = -1;
-    int avoid_direction = 0;
-  }
-};
-
 struct LatDeciderOutput {
   planning::common::LateralInitState init_state;
 
