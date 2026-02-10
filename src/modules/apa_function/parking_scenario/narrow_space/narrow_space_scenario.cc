@@ -2308,8 +2308,8 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   response_tf.SetBasePose(response_.request.base_pose);
   apa_hmi_ = PubDirectionForScenarioTry(cur_request);
 
-  PublishHybridAstarDebugInfo(GetPrePlanningParkingTraj(cur_request),
-                              &response_tf);
+  const HybridAStarResult& pre_traj = GetPrePlanningParkingTraj(cur_request);
+  PublishHybridAstarDebugInfo(pre_traj, &response_tf);
 
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // success
@@ -2896,7 +2896,10 @@ const HybridAStarResult& NarrowSpaceScenario::GetPrePlanningParkingTraj(
   for (size_t i = 0; i < cur_request.direction_request_size; i++) {
     // The current setting is that the non-parking-out function
     // cur_request.direction_request_size == 0.
-    if (direction_pre_planning == cur_request.direction_request_stack[i]) {
+    if (direction_pre_planning == cur_request.direction_request_stack[i] &&
+        response_.feasible_directions[i] == true) {
+      // theoretically, if the parking direction is valid, the trajectory must
+      // also be valid.
       return response_.traj_candidates_[i];
     }
   }

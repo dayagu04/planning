@@ -1146,12 +1146,6 @@ void HybridAStarInterface::ParkingDirectionAttempt(
     if (traj_candidates_[i].x.size() > 5 && i < feasible_directions_.size()) {
       feasible_directions_[i] = true;
     }
-
-    // if (request_.direction_pre_planning ==
-    //     request_.direction_request_stack[i]) {
-    //   best_traj_ = &traj_candidates_[i];
-    //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
-    // }
   }
 }
 
