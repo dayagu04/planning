@@ -2348,15 +2348,34 @@ void LDRouteInfoStrategy::EraseFeasibleLaneIfNeeded(
     }
 
     if (itera_lane->successor_lane_ids_size() > 1) {
-      for (auto it = topo_lanes.begin(); it != topo_lanes.end();) {
-        if (it->id == lane_id) {
-          topo_lanes.erase(it);  // erase returns the next iterator
-          return;
-        } else {
-          ++it;
+      // 如果suc_lane不在route_link上，则从feasible lane中移除这个lane
+      bool is_exist_suc_lane_not_in_route_link = false;
+      for (const auto& temp_lane_id : itera_lane->successor_lane_ids()) {
+        const auto& temp_lane = ld_map_.GetLaneInfoByID(temp_lane_id);
+        if (temp_lane == nullptr) {
+          continue;
+        }
+
+        is_exist_suc_lane_not_in_route_link =
+            !ld_map_.isOnRouteLinks(temp_lane->link_id());
+
+        if (is_exist_suc_lane_not_in_route_link) {
+          break;
+        }
+      }
+
+      if (is_exist_suc_lane_not_in_route_link) {
+        for (auto it = topo_lanes.begin(); it != topo_lanes.end();) {
+          if (it->id == lane_id) {
+            topo_lanes.erase(it);  // erase returns the next iterator
+            return;
+          } else {
+            ++it;
+          }
         }
       }
     }
+
     itera_lane = ld_map_.GetLaneInfoByID(itera_lane->successor_lane_ids()[0]);
   }
 }
