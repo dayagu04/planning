@@ -22,6 +22,7 @@ namespace apa_planner {
 
 static const int kSlotFreeId = 1;
 static const int kSlotInvalidId = -1000;  // 融合输出车位 id 不会为负
+static const int kEgoSlotInvalidId = 0;   // 自车车位id无效时，融合会发 0.
 static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
 static const double kMaxEgoSlotAbsoluteDist = 6.86;
@@ -178,9 +179,11 @@ void ApaSlotManager::Update(
       ParkingLotCruiseProcess();
     }
     if (state_machine_ptr_->IsSeachingOutStatus() &&
-        select_slot_id != kSlotInvalidId) {
-      // forced release of self slot. TODO(taolu10): 确认这部分逻辑的合理性
+        select_slot_id != kEgoSlotInvalidId) {
       ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
+      ego_info_under_slot_.relative_direction_between_ego_and_slot =
+          measure_data_ptr_->GetHeadingVec().dot(
+              slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::RELEASE;
     }
