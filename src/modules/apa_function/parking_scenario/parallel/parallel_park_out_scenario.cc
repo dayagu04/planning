@@ -1,6 +1,7 @@
 #include "parallel_park_out_scenario.h"
 
 #include <cstddef>
+#include <unordered_map>
 
 #include "apa_param_config.h"
 #include "apa_state_machine_manager.h"
@@ -779,10 +780,12 @@ const bool ParallelParkOutScenario::GenTlane() {
   double is_low_curb = false;
   int curb_obs_num = 0;
   int low_curb_obs_num = 0;
+  std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_pin_front;
 
   const Eigen::Vector2d slot_center(0.5 * slot_length, 0.0);
   obs_pt_local_vec_.clear();
   obs_id_pt_map_.clear();
+  obs_pt_pin_front.clear();
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
@@ -824,6 +827,15 @@ const bool ParallelParkOutScenario::GenTlane() {
           -obs_pt_local.y() * side_sgn, 0.4, 0.5 * slot_width + 2);
       if (curb_obs_condition_x && curb_obs_condition_y) {
         obs_id_pt_map_[obs_parent_id].emplace_back(obs_pt_local);
+      }
+      bool pin_front_condition_x = pnc::mathlib::IsInBound(
+          obs_pt_local.x(), slot_length,
+          slot_length + apa_param.GetParam().car_length + 0.5);
+      bool pin_front_condition_y = pnc::mathlib::IsInBound(
+          obs_pt_local.y() * side_sgn, 0.0,
+          0.5 * slot_width + apa_param.GetParam().car_width);
+      if (pin_front_condition_x && pin_front_condition_y) {
+        obs_pt_pin_front[obs_parent_id].emplace_back(obs_pt_local);
       }
       if (obs_pt_local.y() * side_sgn >
               apa_param.GetParam().parallel_channel_y_mag ||
@@ -887,6 +899,48 @@ const bool ParallelParkOutScenario::GenTlane() {
       obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
           std::move(obs_pt_local));
     }
+  }
+
+  double max_abs_y = -std::numeric_limits<double>::max();
+  Eigen::Vector2d max_abs_y_point;
+  bool found_max_y = false;
+  size_t max_count_parent_id = 0;
+  size_t max_point_count = 0;
+  if (!obs_pt_pin_front.empty()) {
+    for (const auto& pair : obs_pt_pin_front) {
+      if (pair.second.size() > max_point_count) {
+        max_point_count = pair.second.size();
+        max_count_parent_id = pair.first;
+      }
+    }
+    // ILOG_INFO << "Parent ID with max point count: " << max_count_parent_id
+    //           << ", count: " << max_point_count;
+    auto max_count_it = obs_pt_pin_front.find(max_count_parent_id);
+    if (max_count_it != obs_pt_pin_front.end() &&
+        !max_count_it->second.empty()) {
+      const auto& points = max_count_it->second;
+      for (const auto& point : points) {
+        double abs_y = std::abs(point.y());
+        if (abs_y > max_abs_y) {
+          max_abs_y = abs_y;
+          max_abs_y_point = point;
+          found_max_y = true;
+        }
+      }
+    }
+  } else {
+    t_lane_.pin_obs_far_y = 0.5 * slot_width;
+    // ILOG_INFO << "No points found for parent ID " ;
+  }
+  if (found_max_y) {
+    t_lane_.pin_obs_far_y = max_abs_y_point.y() > 0 ? max_abs_y : -max_abs_y;
+    // ILOG_INFO << "Max absolute y point in parent ID " << max_count_parent_id
+    //           << ": x = " << max_abs_y_point.x()
+    //           << ", y = " << max_abs_y_point.y()
+    //           << ", abs(y) = " << max_abs_y;
+  } else {
+    t_lane_.pin_obs_far_y = 0.5 * slot_width;
+    // ILOG_INFO << "No points found for parent ID " << max_count_parent_id;
   }
 
   ILOG_INFO << "curb_obs_num = " << curb_obs_num
@@ -1384,8 +1438,9 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   ILOG_INFO << "-----------tlane CD-------------";
   point_set.clear();
   tlane_obstacle_vec.clear();
+  std::vector<double> y_of_c_d_curb_y={C.y(), D.y(), t_lane_.curb_y};
   bool is_use_curb_obs = ProcessCurbPointsAndGetPoints(
-      point_set, obs_id_pt_map_, C_curb, D_curb, t_lane_.curb_y);
+      point_set, obs_id_pt_map_, C_curb, D_curb, y_of_c_d_curb_y);
   if (!is_use_curb_obs) {
     ILOG_INFO << "use origin curb obs";
     tlane_line.SetPoints(C_curb, D_curb);
