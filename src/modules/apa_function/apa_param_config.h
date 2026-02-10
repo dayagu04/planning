@@ -800,6 +800,7 @@ struct ApaParameters {
   int pre_search_mode = 1;
   int yield_interval_explored_node_num = 2000;
   bool enable_yield_cpu = true;
+  int yield_interval_ms = 20;
 
   ParkingLatLonPathBuffer lat_lon_path_buffer;
   ParkingLatLonSpeedBuffer lat_lon_speed_buffer;

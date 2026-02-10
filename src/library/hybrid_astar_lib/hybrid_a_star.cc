@@ -1789,8 +1789,9 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   size_t explored_cur_node_num = 0;
   const bool enable_yield_cpu = apa_param.GetParam().enable_yield_cpu;
-  const size_t yield_interval =
+  const int yield_interval =
       apa_param.GetParam().yield_interval_explored_node_num;
+  const int yield_interval_ms = apa_param.GetParam().yield_interval_ms;
 
   std::vector<AStarPathPoint> poly_path;
 
@@ -1808,7 +1809,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
 #ifndef X86
     if (enable_yield_cpu && explored_cur_node_num % yield_interval == 0) {
-      std::this_thread::yield();
+      std::this_thread::sleep_for(std::chrono::milliseconds(yield_interval_ms));
     }
 #endif
 
