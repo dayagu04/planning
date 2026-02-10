@@ -192,6 +192,10 @@ class NarrowSpaceScenario : public ParkingScenario {
       const double heading_diff_thresh, const double target_heading_rad,
       const float expansion_dir);
 
+  ParkingVehDirection TranslatePlanningRecommendDir(uint16_t dir_mask);
+  const HybridAStarResult& GetPrePlanningParkingTraj(
+      const AstarRequest& cur_request);
+
  private:
   int replan_number_inside_slot_;
   // If path connected with goal, and no gear switch, True.

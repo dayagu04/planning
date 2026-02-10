@@ -105,7 +105,7 @@ void HybridAStarInterface::UpdateOutput() {
 
   UpdateGridMapBound();
 
-  //todo :: only use height information for park out
+  // todo :: only use height information for park out
   const bool use_height_info = IsParkingOutRequest(request_.direction_request);
   UpdateEDT(use_height_info);
   // update clear zone. This zone not contain any obstacle.
@@ -206,7 +206,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   PathClear();
   search_state_ = AstarSearchState::SEARCHING;
 
-  //todo :: only use height information for park out
+  // todo :: only use height information for park out
   const bool use_height_info = IsParkingOutRequest(request_.direction_request);
   UpdateEDT(use_height_info);
   clear_zone_.GenerateBoundingBox(ego_state_, &obs_, config_.enable_clear_zone);
@@ -1142,16 +1142,10 @@ void HybridAStarInterface::ParkingDirectionAttempt(
     }
 
     hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(), map_bounds_,
-                               &traj_candidates_[0]);
-    if (traj_candidates_[0].x.size() > 5 && i < feasible_directions_.size()) {
+                               &traj_candidates_[i]);
+    if (traj_candidates_[i].x.size() > 5 && i < feasible_directions_.size()) {
       feasible_directions_[i] = true;
     }
-
-    // if (request_.direction_request == request_.direction_request_stack[i])
-    // {
-    //   best_traj_ = &traj_candidates_[0];
-    //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
-    // }
   }
 }
 

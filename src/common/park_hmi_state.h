@@ -21,10 +21,10 @@ enum ApaRecommendationDirection {
   VerticalTailIn = 12,
 };
 
-enum APAPaRecommendedDirection{
+enum APAPaRecommendedDirection {
   PaParitybit = 0,
-  PaLeft = 1,    // 向左贴边
-  PaRight = 2,   // 向右贴边
+  PaLeft = 1,   // 向左贴边
+  PaRight = 2,  // 向右贴边
 };
 
 class ApaDirectionGenerator {
@@ -87,12 +87,16 @@ class ApaPAStateGeneral {
                                      float32 percentage) {
     state.remain_distance_percentage = percentage;
   }
-  void SetRecommendPADirectionFlag(iflyauto::APAHMIData& state,
-                             const uint16_t state_bit) {
+  void SetRecommendPADirectionFlag(iflyauto::APAHMIData &state,
+                                   const uint16_t state_bit) {
     state.planning_recommend_pa_dir |= PADirectionMask(state_bit);
   }
   void ClearRecommendPADirectionFlag(iflyauto::APAHMIData &state) {
     state.planning_recommend_pa_dir = 0;
   }
 };
+
+inline bool HasBit(uint16_t mask, uint16_t bit) {
+  return (mask & (1u << bit)) != 0;
 }
+}  // namespace planning
