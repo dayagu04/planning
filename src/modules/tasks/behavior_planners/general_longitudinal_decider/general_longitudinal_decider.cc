@@ -735,25 +735,15 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   vel_limit_info_.v_limit_avoid = v_limit_avoid;
 
   // ============================================================
-  // 综合限速：取各项限速的最小值
+  // 6. 减速带限速 (Speed bump velocity limit) - 仅 HPP 模式下触发
   // ============================================================
-  double final_velocity_limit = std::min({
-      user_velocity_limit,  // 1. 用户限速
-      // map_velocity_limit,    // 2. 地图限速（暂不应用）
-      v_limit_curv,        // 3. 弯道限速
-      v_limit_avoid,      // 5. 避让限速
-                    // narrow_area_velocity   // 4. 窄路限速（暂不应用）
-  });
-
-  // 减速带限速
+  double v_limit_speed_bump = config_.velocity_upper_bound;
   if (session_->is_hpp_scene()) {
-    const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
     auto &planning_result =
         session_->mutable_planning_context()->mutable_planning_result();
-    const auto &traj_points = planning_result.traj_points;
-    // 检查减速带区域（含与路径有碰撞的减速带 s 区间）
+    const auto &planning_traj_points = planning_result.traj_points;
     SpeedBumpZoneInfo speed_bump_zone_info =
-        CheckSpeedBumpZone(traj_points, frenet_ego_state.s());
+        CheckSpeedBumpZone(planning_traj_points, frenet_ego_state.s());
 
     // 写入与路径有碰撞的减速带区间，供 ResultTrajectoryGenerator 按 s 打标
     planning_result.speed_bump_path_segments.clear();
@@ -762,31 +752,36 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
           {seg.first, seg.second});
     }
 
-    // 获取减速带限速并应用
-    double speed_bump_velocity_limit =
-        GetSpeedBumpVelocityLimit(speed_bump_zone_info, ego_v);
-
-    // 应用减速带限速
-
-    final_velocity_limit =
-        std::min(final_velocity_limit, speed_bump_velocity_limit);
+    v_limit_speed_bump = GetSpeedBumpVelocityLimit(speed_bump_zone_info, ego_v);
     LOG_DEBUG(
-        "Speed bump velocity limit applied: %f m/s, in_zone: %d, "
-        "approaching: %d, distance: %f m",
-        speed_bump_velocity_limit, speed_bump_zone_info.in_speed_bump_zone,
+        "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
+        v_limit_speed_bump, speed_bump_zone_info.in_speed_bump_zone,
         speed_bump_zone_info.approaching_speed_bump,
         speed_bump_zone_info.distance_to_zone);
   }
+  vel_limit_info_.v_limit_speed_bump = v_limit_speed_bump;
+
+  // ============================================================
+  // 综合限速：取各项限速的最小值
+  // ============================================================
+  double final_velocity_limit = std::min({
+      user_velocity_limit,   // 1. 用户限速
+      v_limit_curv,         // 3. 弯道限速
+      v_limit_avoid,        // 5. 避让限速
+      v_limit_speed_bump,   // 6. 减速带限速（非 HPP 时为上限，不约束）
+      // map_velocity_limit,    // 2. 地图限速（暂不应用）
+      // narrow_area_velocity   // 4. 窄路限速（暂不应用）
+  });
 
   vel_limit_info_.v_limit_final = final_velocity_limit;
 
   LOG_DEBUG(
       "[get_velocity_limit] v_limit_usr: %f, v_limit_map: %f (disabled), "
       "v_limit_curv: %f, v_limit_narrow: %f (disabled), v_limit_avoid: %f, "
-      "v_limit_final: %f",
+      "v_limit_speed_bump: %f, v_limit_final: %f",
       vel_limit_info_.v_limit_usr, vel_limit_info_.v_limit_map,
       vel_limit_info_.v_limit_curv, vel_limit_info_.v_limit_narrow_area,
-      vel_limit_info_.v_limit_avoid,
+      vel_limit_info_.v_limit_avoid, vel_limit_info_.v_limit_speed_bump,
       vel_limit_info_.v_limit_final);
 
   // ============================================================
@@ -829,6 +824,8 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
                    vel_limit_info_.v_limit_narrow_area);
   JSON_DEBUG_VALUE("LonBehavior_v_limit_avoid",
                    vel_limit_info_.v_limit_avoid);
+  JSON_DEBUG_VALUE("LonBehavior_v_limit_speed_bump",
+                   vel_limit_info_.v_limit_speed_bump);
 
   return brake_traj;
 }

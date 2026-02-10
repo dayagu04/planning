@@ -37,6 +37,7 @@ struct VelocityLimitInfo {
   double v_limit_curv;
   double v_limit_narrow_area;
   double v_limit_avoid;
+  double v_limit_speed_bump;  // 减速带限速，仅 HPP 有效
   double v_limit_final;
 };
 
