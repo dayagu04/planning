@@ -910,10 +910,24 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       const auto& first_split = split_info_vec_[0].first;
 
       if (first_ramp && first_split) {
-        is_nearing_ramp =
-            (route_info_output_.mlc_decider_scene_type_info.mlc_scene_type ==
-             SPLIT_SCENE) &&
-            (first_ramp->id() == first_split->id());
+        const auto& ego_velocity =
+            session_->environmental_model().get_ego_state_manager()->ego_v();
+        const auto& ramp_distance =
+            route_info_output_.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point;
+        const int kPredictTimeHorizon = 4;
+        const double kMinFrontJudgeDis = 50.0;
+
+        bool type_flag =
+            route_info_output_.mlc_decider_scene_type_info.mlc_scene_type ==
+            SPLIT_SCENE;
+        bool ramp_split_flag = first_ramp->id() == first_split->id();
+        bool distance_flag =
+            ramp_distance <
+            std::max(kMinFrontJudgeDis, ego_velocity * kPredictTimeHorizon);
+
+        is_nearing_ramp = type_flag && ramp_split_flag && distance_flag;
+        
       }
     }
     // 1. 识别当前Relative==0的可变车道，是不是在导航路线上，如果在，那么就不需要进行变道。
