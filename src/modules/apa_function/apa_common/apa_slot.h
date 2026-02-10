@@ -275,6 +275,7 @@ class ApaSlot final {
   const SlotReleaseInfo& GetReleaseInfo() const { return release_info_; }
 
   const geometry_lib::LineSegment& GetMidLine() const { return mid_line_; }
+  void ResetAsParallel(const iflyauto::ParkingFusionSlot& fusion_slot, const bool is_redefine_slot_type, const int ego_side_to_slot);
 
  private:
   void CorrectSlotPointOrder();

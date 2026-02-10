@@ -227,8 +227,6 @@ class ApaSlotManager final {
     parallel_slot_release_count_map_.clear();
     parallel_slot_not_release_count_map_.clear();
     pre_plan_fail_slot_id_uset_.clear();
-    is_redefine_slot_type_ = false;
-    ego_side_to_slot_ = 0;
   }
 
   void GenerateReleaseSlotIdVec();
@@ -279,7 +277,7 @@ class ApaSlotManager final {
   const bool RecommendParkOut() const;
   const bool LongitudinalConditions(const double dot_product, const ApaSlot& slot) const;
   const bool LateralConditions(double& dot_product, const ApaSlot& slot) const;
-  void RedefinePerpendicular2Parallel(const iflyauto::ParkingFusionSlot& fusion_slot,ApaSlot& slot);
+  bool IsSideParkingPerpendicularSlot(ApaSlot slot);
 
  private:
   std::map<double, size_t> dist_id_map_;
@@ -307,9 +305,8 @@ class ApaSlotManager final {
   bool is_ego_col_parallel_ = false;
   std::unordered_map<size_t, int> parallel_slot_release_count_map_;
   std::unordered_map<size_t, int> parallel_slot_not_release_count_map_;
+  std::unordered_map<size_t, std::pair<bool,int>> perpendicular_redefine_info_map_;
   bool recommend_park_out_ = false;
-  bool is_redefine_slot_type_ = false;
-  int ego_side_to_slot_ = 0;//-1:left 1:right
 };
 }  // namespace apa_planner
 }  // namespace planning

@@ -69,6 +69,7 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot, bool is_red
 
   CorrectSlotPointOrder();
   if (is_redefine_slot_type) {
+    slot_type_ = SlotType::PARALLEL;
     SlotCoord origin_corner_coord_global_tmp = origin_corner_coord_global_;
     if (ego2slot_side == -1) {
       origin_corner_coord_global_.pt_0 = origin_corner_coord_global_tmp.pt_1;
@@ -191,6 +192,12 @@ void ApaSlot::TransformCoordFromGlobalToLocal(
       origin_corner_coord_global_.GlobalToLocal(g2l_tf);
   processed_corner_coord_local_ =
       processed_corner_coord_global_.GlobalToLocal(g2l_tf);
+}
+
+void ApaSlot::ResetAsParallel(const iflyauto::ParkingFusionSlot& fusion_slot,
+                         const bool is_redefine_slot_type,
+                         const int ego_side_to_slot) {
+  Update(fusion_slot, is_redefine_slot_type, ego_side_to_slot);
 }
 
 void ApaSlot::CorrectSlotPointOrder() {
