@@ -1131,8 +1131,7 @@ bool StGraphUtils::CalculateSRange(
                               ->get_vehicle_param()
                               .front_edge_to_rear_axle;
     if (agent.is_stop_destination_virtual_obs() == true ||
-        agent.type() > agent::AgentType::OCC_EMPTY ||
-        agent.type() < agent::AgentType::OCC_EMPTY) {
+        agent.type() > agent::AgentType::OCC_EMPTY) {
       *lower_s = min_s - front_edge_to_center;
       *upper_s = max_s + back_edge_to_center;
       if (agent.is_stop_destination_virtual_obs() == true && *lower_s < 0.0) {
