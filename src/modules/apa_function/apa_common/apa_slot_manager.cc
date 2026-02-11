@@ -86,7 +86,7 @@ void ApaSlotManager::Update(
             perpendicular_redefine_info_map_.at(slot.GetId()).first,
             perpendicular_redefine_info_map_.at(slot.GetId()).second);
       }
-    } else if (state_machine_ptr_->IsParkingStatus() &&
+    } else if (state_machine_ptr_->IsParkingInStatus() &&
                select_slot_id == slot.GetId()) {
       if (perpendicular_redefine_info_map_.find(slot.GetId()) !=
           perpendicular_redefine_info_map_.end() && perpendicular_redefine_info_map_.at(slot.GetId()).first)
