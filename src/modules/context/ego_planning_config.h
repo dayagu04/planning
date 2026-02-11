@@ -4874,6 +4874,10 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
     hpp_max_replan_dist_err = read_json_key<double>(
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+
+    rads_max_replan_lon_err = read_json_key<double>(
+        json, "rads_max_replan_lon_err", rads_max_replan_lon_err);
+
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
     enable_constanct_velocity_in_predicted_vehicle_state = read_json_key<bool>(
@@ -4916,6 +4920,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;
   double hpp_max_replan_dist_err = 0.8;
+
+  double rads_max_replan_lon_err = 0.50;
 
   double kEpsilon_v = 0.0;
   double kEpsilon_vel_stop = 0.01;
@@ -6148,6 +6154,22 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
       ReadItem<double>(json, traffic_light_min_follow_distance_gap,
                        "speed_planning", "follow_target",
                        "traffic_light_min_follow_distance_gap");
+      ReadItem<double>(json, rads_follow_distance_buffer_static,
+                        "speed_planning", "follow_target",
+                        "rads_follow_distance_buffer_static");
+      ReadItem<double>(json, rads_follow_distance_buffer_dynamic,
+                            "speed_planning", "follow_target",
+                            "rads_follow_distance_buffer_dynamic");
+    }
+
+    //comfort target
+    {
+      ReadItem<double>(json, rads_comfort_param_static_s0,
+            "speed_planning", "comfort_target",
+            "rads_comfort_param_static_s0");
+      ReadItem<double>(json, rads_comfort_param_dynamic_s0,
+                "speed_planning", "comfort_target",
+                "rads_comfort_param_dynamic_s0");
     }
   }
 
@@ -6179,6 +6201,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double cone_min_follow_distance_gap = 5.0;
   double traffic_light_min_follow_distance_gap = 2.0;
   double acc_cipv = -1.0;
+  double rads_follow_distance_buffer_dynamic = 1.0;
+  double rads_follow_distance_buffer_static = 0.3;
 
   // neighbor target
   double neighbor_target_min_jerk = -1.0;
@@ -6200,6 +6224,10 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double low_speed_follow_speed_thred_mps = 1.0;
   double low_speed_follow_accel_release_traj_len = 5.0;
   double lane_keeping_non_cipv_start_acc_bound = 1.5;
+
+  // comfort target
+  double rads_comfort_param_static_s0 = 0.2;
+  double rads_comfort_param_dynamic_s0 = 0.8;
   struct KinematicParam {
     double acc_positive_upper = 1.35;
     double acc_positive_speed_lower = 4.2;

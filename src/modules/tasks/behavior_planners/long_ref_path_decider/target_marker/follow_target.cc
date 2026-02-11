@@ -203,6 +203,8 @@ void FollowTarget::GenerateRadsFollowTarget() {
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const auto& stop_destination_decider_output =
       session_->planning_context().stop_destination_decider_output();
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
 
   for (int32_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
@@ -226,11 +228,16 @@ void FollowTarget::GenerateRadsFollowTarget() {
     if (iter != agents_headway_map.end()) {
       follow_time_gap = iter->second.current_headway;
     }
+    const auto* agent = agent_manager->GetAgent(agent_id);
+    double rads_obs_follow_distance_buffer = config_.rads_follow_distance_buffer_dynamic;
+    if (agent != nullptr && agent->is_static()) {
+      rads_obs_follow_distance_buffer = config_.rads_follow_distance_buffer_static;
+    }
     double target_s_disatnce = std::max(
-        vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
+        vel * follow_time_gap + rads_obs_follow_distance_buffer, rads_obs_follow_distance_buffer);
 
     double upper_bound_s =
-        std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
+        std::max(upper_bound_infos_[i].s - rads_obs_follow_distance_buffer, 0.0);
     double target_s =
         std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
     double s_target_value = std::min(upper_bound_s, target_s);

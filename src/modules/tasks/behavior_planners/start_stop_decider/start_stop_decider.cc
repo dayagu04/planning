@@ -217,6 +217,9 @@ bool StartStopDecider::CanTransitionToStop() {
             agent::AgentDefaultInfo::kRadsStopDestinationVirtualAgentId;
     if (cipv_is_destination_target && cipv_relative_s_ < config_.rads_distance_stop_between_ego_and_destination_cipv_threshold) {
       cipv_distance_condition = true;
+    } else if (cipv && cipv->type() != agent::AgentType::VIRTUAL && cipv_relative_s_ <
+               config_.rads_distance_stop_between_ego_and_destination_cipv_threshold) {
+      cipv_distance_condition = true;
     } else {
       cipv_distance_condition = false;
     }
