@@ -889,8 +889,7 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
     if (spiral_success) {
       ILOG_INFO << "spiral_success " << spiral_success;
     } else {
-      GenerateStraightLinePath(&polynomial_path, start_point,
-                               search_start_point,
+      GenerateStraightLinePath(polynomial_path, start_point, search_start_point,
                                request_.first_action_request.gear_request);
     }
 
@@ -1243,7 +1242,6 @@ void HybridAStarInterface::PrependPolynomialPathToHybridAStar(
     return;
   }
 
-  // ---------- 1. 判断是否需要跳过 HybridA* 第一个点（防止重复） ----------
   size_t hybrid_start_idx = 0;
   if (!hybrid_path->x.empty()) {
     const auto& p = polynomial_path.back();
@@ -1261,7 +1259,6 @@ void HybridAStarInterface::PrependPolynomialPathToHybridAStar(
   const size_t suffix_size = old.x.size() - hybrid_start_idx;
   const size_t total_size = prefix_size + suffix_size;
 
-  // ---------- 2. 预分配容量（避免多次 realloc） ----------
   hybrid_path->x.reserve(total_size);
   hybrid_path->y.reserve(total_size);
   hybrid_path->phi.reserve(total_size);
@@ -1270,7 +1267,6 @@ void HybridAStarInterface::PrependPolynomialPathToHybridAStar(
   hybrid_path->kappa.reserve(total_size);
   hybrid_path->accumulated_s.reserve(total_size);
 
-  // ---------- 3. 插入 polynomial 前缀段 ----------
   for (const auto& pt : polynomial_path) {
     hybrid_path->x.push_back(pt.x);
     hybrid_path->y.push_back(pt.y);
@@ -1278,9 +1274,9 @@ void HybridAStarInterface::PrependPolynomialPathToHybridAStar(
     hybrid_path->gear.push_back(pt.gear);
     hybrid_path->type.push_back(pt.type);
     hybrid_path->kappa.push_back(pt.kappa);
+    hybrid_path->accumulated_s.push_back(pt.accumulated_s);
   }
 
-  // ---------- 4. 插入 HybridA* 后缀段 ----------
   hybrid_path->x.insert(hybrid_path->x.end(), old.x.begin() + hybrid_start_idx,
                         old.x.end());
   hybrid_path->y.insert(hybrid_path->y.end(), old.y.begin() + hybrid_start_idx,
@@ -1295,17 +1291,12 @@ void HybridAStarInterface::PrependPolynomialPathToHybridAStar(
                             old.kappa.begin() + hybrid_start_idx,
                             old.kappa.end());
 
-  // ---------- 5. 重算 accumulated_s（APA 关键字段） ----------
-  hybrid_path->accumulated_s.resize(total_size);
-  hybrid_path->accumulated_s[0] = 0.0;
-  for (size_t i = 1; i < total_size; ++i) {
-    const double dx = hybrid_path->x[i] - hybrid_path->x[i - 1];
-    const double dy = hybrid_path->y[i] - hybrid_path->y[i - 1];
-    hybrid_path->accumulated_s[i] =
-        hybrid_path->accumulated_s[i - 1] + std::hypot(dx, dy);
+  const float polynomial_path_end_s = polynomial_path.back().accumulated_s;
+  for (size_t i = 0; i < suffix_size; ++i) {
+    hybrid_path->accumulated_s[i + prefix_size] =
+        old.accumulated_s[i + hybrid_start_idx] + polynomial_path_end_s;
   }
 
-  // ---------- 6. 状态字段继承 HybridA* 语义 ----------
   hybrid_path->cur_gear = old.cur_gear;
   hybrid_path->cur_steer = old.cur_steer;
   hybrid_path->path_plan_success = old.path_plan_success;

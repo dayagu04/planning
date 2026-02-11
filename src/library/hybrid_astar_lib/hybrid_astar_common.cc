@@ -564,13 +564,13 @@ const std::string GetAstarNodeVisitedTypeDebugString(
   return res;
 }
 
-bool GenerateStraightLinePath(std::vector<AStarPathPoint>* path,
+bool GenerateStraightLinePath(std::vector<AStarPathPoint>&path,
                               const Pose2f& start, const Pose2f& end,
                               const AstarPathGear gear) {
-  if (!path) {
+  if (path.empty()) {
     return false;
   }
-  path->clear();
+  path.clear();
 
   constexpr double kStep = 0.1;
   const double dx = end.x - start.x;
@@ -578,7 +578,7 @@ bool GenerateStraightLinePath(std::vector<AStarPathPoint>* path,
   const double dist = std::hypot(dx, dy);
 
   if (dist < 1e-4) {
-    path->emplace_back(start.x, start.y, start.theta, gear, 0.0,
+    path.emplace_back(start.x, start.y, start.theta, gear, 0.0,
                        AstarPathType::LINE_SEGMENT, 0.0);
     return true;
   }
@@ -594,12 +594,12 @@ bool GenerateStraightLinePath(std::vector<AStarPathPoint>* path,
     const double phi = yaw;
 
     if (i > 0) {
-      const double px = path->back().x;
-      const double py = path->back().y;
-      s += std::hypot(x - px, y - py);
+      const double px = path.back().x;
+      const double py = path.back().y;
+      s= static_cast<double>(i) / n * dist;
     }
 
-    path->emplace_back(x, y, phi, gear, s, AstarPathType::LINE_SEGMENT, 0.0);
+    path.emplace_back(x, y, phi, gear, s, AstarPathType::LINE_SEGMENT, 0.0);
   }
 
   return true;
