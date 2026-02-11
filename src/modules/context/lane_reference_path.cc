@@ -11,7 +11,7 @@
 #include "obstacle_manager.h"
 #include "session.h"
 #include "virtual_lane_manager.h"
-#include "modules/context/road_type/road_type_utils.h"
+#include "modules/context/static_analysis_storage/static_analysis_utils.h"
 
 namespace planning {
 
@@ -25,7 +25,7 @@ LaneReferencePath::LaneReferencePath(int target_lane_virtual_id)
   // update();
   ILOG_DEBUG << "construct lane_reference_path: target_lane_virtual_id:"
              << target_lane_virtual_id;
-  road_type_storage_ = std::make_shared<RoadTypeStorage>();
+  static_analysis_storage_ = std::make_shared<StaticAnalysisStorage>();
 }
 
 void LaneReferencePath::update(planning::framework::Session *session) {
@@ -94,8 +94,8 @@ void LaneReferencePath::update(planning::framework::Session *session) {
 
   // Step 4) update road_type for hpp
   if(session_->is_hpp_scene()) {
-    RoadTypeUtils::RoadLatTypeAnalysis(refined_ref_path_points_, frenet_coord_,
-                                       road_type_storage_);
+    StaticAnalysisUtils::RoadTypeAnalysis(
+        refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
   }
 }
 

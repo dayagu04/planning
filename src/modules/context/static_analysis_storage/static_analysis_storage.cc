@@ -1,98 +1,98 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include "road_type_storage.h"
+#include "static_analysis_storage.h"
 
 namespace planning {
 
-std::vector<RLatType> RoadTypeStorage::turn_type_list = {
-    RLatType::NormalTurn, RLatType::SharpTurn, RLatType::WideTurn,
-    RLatType::UTurn, RLatType::CurveTurn};
-std::vector<RHeightType> RoadTypeStorage::ramp_type_list = {
-    RHeightType::UpRampRoad, RHeightType::DownRampRoad,
-    RHeightType::UnknownRampRoad};
+std::vector<CRoadType> StaticAnalysisStorage::turn_type_list = {
+    CRoadType::NormalTurn, CRoadType::SharpTurn, CRoadType::WideTurn,
+    CRoadType::UTurn, CRoadType::CurveTurn};
+std::vector<CElemType> StaticAnalysisStorage::ramp_type_list = {
+    CElemType::UpRampRoad, CElemType::DownRampRoad,
+    CElemType::UnknownRampRoad};
 
-void RoadTypeStorage::Clear() {
-  lat_type_storage_.clear();
-  width_type_storage_.clear();
-  height_type_storage_.clear();
+void StaticAnalysisStorage::Clear() {
+  road_type_storage_.clear();
+  passage_type_storage_.clear();
+  elem_type_storage_.clear();
 }
 
-template <typename T>
-void RoadTypeStorage::SetTypeList(const RTypeEnum type_enum, T type,
-                 const SRangeList& s_range_list) {
-  switch (type_enum) {
-    case RTypeEnum::RLatType:
-      lat_type_storage_[type].s_range_list = s_range_list;
-      break;
-    case RTypeEnum::RWidthType:
-      width_type_storage_[type].s_range_list = s_range_list;
-      break;
-    case RTypeEnum::RHeightType:
-      height_type_storage_[type].s_range_list = s_range_list;
-      break;
-    default:
-      break;
-  }
+template <>
+void StaticAnalysisStorage::SetTypeList(CRoadType type,
+                                  const SRangeList& s_range_list) {
+  road_type_storage_[type].s_range_list = s_range_list;
 }
 
-RoadTypeInfo RoadTypeStorage::GetRoadTypeInfo(const double cur_s) const {
-  RoadTypeInfo road_type_info;
-  road_type_info.lat_type = GetRoadType(lat_type_storage_, cur_s);
-  road_type_info.width_type = GetRoadType(width_type_storage_, cur_s);
-  road_type_info.height_type = GetRoadType(height_type_storage_, cur_s);
+template <>
+void StaticAnalysisStorage::SetTypeList(CPassageType type,
+                                  const SRangeList& s_range_list) {
+  passage_type_storage_[type].s_range_list = s_range_list;
+}
+
+template <>
+void StaticAnalysisStorage::SetTypeList(CElemType type,
+                                  const SRangeList& s_range_list) {
+  elem_type_storage_[type].s_range_list = s_range_list;
+}
+
+ResultTypeInfo StaticAnalysisStorage::GetTypeInfo(const double cur_s) const {
+  ResultTypeInfo road_type_info;
+  road_type_info.road_type = GetTypeInfo(road_type_storage_, cur_s);
+  road_type_info.passage_type = GetTypeInfo(passage_type_storage_, cur_s);
+  road_type_info.elem_types = GetTypeInfos(elem_type_storage_, cur_s);
   return road_type_info;
 }
 
-SRangeList RoadTypeStorage::GetSRangeList(const RoadTypeInfo& road_type) const {
+SRangeList StaticAnalysisStorage::GetSRangeList(const QueryTypeInfo& road_type) const {
   std::vector<SRangeList> source_range_lists;
-  if (road_type.lat_type == RLatType::Turn) {
+  if (road_type.road_type == CRoadType::Turn) {
     SRangeList turn_range_list;
     for(const auto& turn_type : turn_type_list) {
-      if (lat_type_storage_.find(turn_type) != lat_type_storage_.end()) {
-        const auto& s_range_list = lat_type_storage_.at(turn_type).s_range_list;
+      if (road_type_storage_.find(turn_type) != road_type_storage_.end()) {
+        const auto& s_range_list = road_type_storage_.at(turn_type).s_range_list;
         turn_range_list.insert(turn_range_list.end(), s_range_list.begin(),
                                s_range_list.end());
       }
     }
     source_range_lists.push_back(CalcIntervalUnion(turn_range_list));
   } else {
-    if (road_type.lat_type != RLatType::Ignore) {
-      if (lat_type_storage_.find(road_type.lat_type) !=
-          lat_type_storage_.end()) {
+    if (road_type.road_type != CRoadType::Ignore) {
+      if (road_type_storage_.find(road_type.road_type) !=
+          road_type_storage_.end()) {
         source_range_lists.push_back(
-            lat_type_storage_.at(road_type.lat_type).s_range_list);
+            road_type_storage_.at(road_type.road_type).s_range_list);
       } else {
         source_range_lists.emplace_back();
       }
     }
   }
 
-  if (road_type.width_type != RWidthType::Ignore) {
-    if (width_type_storage_.find(road_type.width_type) != width_type_storage_.end()) {
+  if (road_type.passage_type != CPassageType::Ignore) {
+    if (passage_type_storage_.find(road_type.passage_type) != passage_type_storage_.end()) {
       source_range_lists.push_back(
-          width_type_storage_.at(road_type.width_type).s_range_list);
+          passage_type_storage_.at(road_type.passage_type).s_range_list);
     } else {
       source_range_lists.emplace_back();
     }
   }
 
-  if (road_type.height_type == RHeightType::RampRoad) {
+  if (road_type.elem_type == CElemType::RampRoad) {
     SRangeList ramp_range_list;
     for(const auto& ramp_type : ramp_type_list) {
-      if (height_type_storage_.find(ramp_type) != height_type_storage_.end()) {
-        const auto& s_range_list = height_type_storage_.at(ramp_type).s_range_list;
+      if (elem_type_storage_.find(ramp_type) != elem_type_storage_.end()) {
+        const auto& s_range_list = elem_type_storage_.at(ramp_type).s_range_list;
         ramp_range_list.insert(ramp_range_list.end(), s_range_list.begin(),
                                s_range_list.end());
       }
     }
     source_range_lists.push_back(CalcIntervalUnion(ramp_range_list));
   } else {
-    if (road_type.height_type != RHeightType::Ignore) {
-      if (height_type_storage_.find(road_type.height_type) !=
-          height_type_storage_.end()) {
+    if (road_type.elem_type != CElemType::Ignore) {
+      if (elem_type_storage_.find(road_type.elem_type) !=
+          elem_type_storage_.end()) {
         source_range_lists.push_back(
-            height_type_storage_.at(road_type.height_type).s_range_list);
+            elem_type_storage_.at(road_type.elem_type).s_range_list);
       } else {
         source_range_lists.emplace_back();
       }
@@ -102,8 +102,8 @@ SRangeList RoadTypeStorage::GetSRangeList(const RoadTypeInfo& road_type) const {
   return CalcIntervalIntersection(source_range_lists);
 }
 
-std::pair<double, double> RoadTypeStorage::GetFrontSRangeByRoadType(
-    const RoadTypeInfo& type_list, const double cur_s) const {
+std::pair<double, double> StaticAnalysisStorage::GetFrontSRange(
+    const QueryTypeInfo& type_list, const double cur_s) const {
   const auto& target_s_range_list = GetSRangeList(type_list);
 
   if (target_s_range_list.empty()) {
@@ -117,8 +117,8 @@ std::pair<double, double> RoadTypeStorage::GetFrontSRangeByRoadType(
   return std::pair<double, double>(0.0, -1.0);
 }
 
-std::pair<double, double> RoadTypeStorage::GetBackSRangeByRoadType(
-    const RoadTypeInfo& type_list, const double cur_s) const {
+std::pair<double, double> StaticAnalysisStorage::GetBackSRange(
+    const QueryTypeInfo& type_list, const double cur_s) const {
   const auto& target_s_range_list = GetSRangeList(type_list);
   if (target_s_range_list.empty()) {
     return std::pair<double, double>(0.0, -1.0);
@@ -132,8 +132,8 @@ std::pair<double, double> RoadTypeStorage::GetBackSRangeByRoadType(
   return std::pair<double, double>(0.0, -1.0);
 }
 
-SRangeList RoadTypeStorage::GetUnionSRangeList(
-    const std::vector<RoadTypeInfo>& type_lists) const {
+SRangeList StaticAnalysisStorage::GetUnionSRangeList(
+    const std::vector<QueryTypeInfo>& type_lists) const {
   SRangeList source_range_list;
   for (const auto& type_list : type_lists) {
     const auto& cur_type_range_list = GetSRangeList(type_list);
@@ -144,8 +144,8 @@ SRangeList RoadTypeStorage::GetUnionSRangeList(
   return CalcIntervalUnion(source_range_list);
 }
 
-std::pair<double, double> RoadTypeStorage::GetBackUnionSRangeByRoadType(
-    const std::vector<RoadTypeInfo>& type_list, const double cur_s) const {
+std::pair<double, double> StaticAnalysisStorage::GetBackUnionSRange(
+    const std::vector<QueryTypeInfo>& type_list, const double cur_s) const {
   const auto& target_s_range_list = GetUnionSRangeList(type_list);
   if (target_s_range_list.empty()) {
     return std::pair<double, double>(0.0, -1.0);
@@ -159,8 +159,8 @@ std::pair<double, double> RoadTypeStorage::GetBackUnionSRangeByRoadType(
   return std::pair<double, double>(0.0, -1.0);
 }
 
-std::pair<double, double> RoadTypeStorage::GetFrontUnionSRangeByRoadType(
-    const std::vector<RoadTypeInfo>& type_list, const double cur_s) const {
+std::pair<double, double> StaticAnalysisStorage::GetFrontUnionSRange(
+    const std::vector<QueryTypeInfo>& type_list, const double cur_s) const {
   const auto& target_s_range_list = GetUnionSRangeList(type_list);
   if (target_s_range_list.empty()) {
     return std::pair<double, double>(0.0, -1.0);
@@ -175,7 +175,7 @@ std::pair<double, double> RoadTypeStorage::GetFrontUnionSRangeByRoadType(
 
 /******************** private funcion **************** */
 template <typename T>
-std::vector<std::pair<T, T>> RoadTypeStorage::CalcIntervalIntersection(
+std::vector<std::pair<T, T>> StaticAnalysisStorage::CalcIntervalIntersection(
     std::vector<std::vector<std::pair<T, T>>>& range_lists) const {
   if (range_lists.empty()) {
     return {};
@@ -228,7 +228,7 @@ std::vector<std::pair<T, T>> RoadTypeStorage::CalcIntervalIntersection(
 }
 
 template <typename T>
-std::vector<std::pair<T, T>> RoadTypeStorage::CalcIntervalUnion(
+std::vector<std::pair<T, T>> StaticAnalysisStorage::CalcIntervalUnion(
     std::vector<std::pair<T, T>>& range_lists) const {
   if (range_lists.size() == 0) {
     return {};
@@ -256,8 +256,8 @@ std::vector<std::pair<T, T>> RoadTypeStorage::CalcIntervalUnion(
 }
 
 template <typename T1>
-T1 RoadTypeStorage::GetRoadType(
-    const std::unordered_map<T1, RTypeStorageItem>& type_2_storage_item,
+T1 StaticAnalysisStorage::GetTypeInfo(
+    const std::unordered_map<T1, StorageItem>& type_2_storage_item,
     const double s) const {
   constexpr double kEpsilon = 0.001;
   for (const auto& item : type_2_storage_item) {
@@ -272,5 +272,25 @@ T1 RoadTypeStorage::GetRoadType(
     }
   }
   return T1::Unknown;
+}
+
+template <typename T1>
+std::vector<T1> StaticAnalysisStorage::GetTypeInfos(
+    const std::unordered_map<T1, StorageItem>& type_2_storage_item,
+    const double s) const {
+  constexpr double kEpsilon = 0.001;
+  std::vector<T1> res;
+  for (const auto& item : type_2_storage_item) {
+    const auto& s_range_list = item.second.s_range_list;
+    if (s_range_list.empty()) {
+      continue;
+    }
+    for (const auto& interval : s_range_list) {
+      if (s > interval.first - kEpsilon && s < interval.second + kEpsilon) {
+        res.push_back(item.first);
+      }
+    }
+  }
+  return res;
 }
 }  // namespace planning
