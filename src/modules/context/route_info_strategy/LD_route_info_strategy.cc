@@ -453,31 +453,32 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
         // 处理合流车道：判断是否有效，无效则跳过 + 前继存在道路合流
         uint64_t link_id = lane.link_id();
         auto* link = ld_map_.GetLinkOnRoute(link_id);
-        // 300m 范围内的前继link是否存在道路级合流
-        double merge_pre_distance = 300.0;
-        double check_distance = 0.0;
-        bool is_exist_link_merge = false;
-        while (check_distance < merge_pre_distance) {
-          if(link == nullptr) {
+        // 向前首个拓扑变化是否为合流
+        bool pre_topo_change_is_merge = false;
+        while (link != nullptr) {
+          link_id = link->id();
+          // 是否来自合流道路
+          if (link->predecessor_link_ids_size() > 1){
+            pre_topo_change_is_merge = true;
             break;
           }
-          link_id = link->id();//获取link的id
-          if (link->predecessor_link_ids_size() > 1) {
-            is_exist_link_merge = true;
+          auto* pre_link = ld_map_.GetPreviousLinkOnRoute(link_id);
+          if(pre_link == nullptr){
             break;
-          }else {
-            check_distance = check_distance + link->length() * 0.01;
-            link = ld_map_.GetPreviousLinkOnRoute(link_id);
           }
+          if(pre_link->successor_link_ids_size() > 1){
+            pre_topo_change_is_merge = false;
+            break;
+          }
+          link = pre_link;
         }
-
         for (const auto& pre_lane_id : lane.predecessor_lane_ids()) {
           const auto* pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
           if (pre_lane == nullptr) {
             continue;
           }
 
-          if (IsMergeLane(pre_lane) && is_exist_link_merge) {
+          if (IsMergeLane(pre_lane) && pre_topo_change_is_merge) {
             if (IsInvalidLaneMergeLaneOppositeSide(pre_lane)) {
               continue;
               // merge lane的反方向是无效车道，既这条merge lane不应该在feasible lane中，continue掉，不加入到feasible lane中
