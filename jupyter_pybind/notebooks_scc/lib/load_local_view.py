@@ -1738,9 +1738,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #   'parking_space_id_vec' : parking_space_id_vec,
     # })
 
-    parking_assist_info = ehr_static_map_msg.parking_assist_info
-    trace_start_x, trace_start_y = [parking_assist_info.trace_start.x], [parking_assist_info.trace_start.y]
-    trace_end_x, trace_end_y = [parking_assist_info.trace_end.x], [parking_assist_info.trace_end.y]
+    common_parking_info = ehr_static_map_msg.common_parking_info
+    trace_start_x, trace_start_y = [common_parking_info.trace_start.x], [common_parking_info.trace_start.y]
+    trace_end_x, trace_end_y = [common_parking_info.trace_end.x], [common_parking_info.trace_end.y]
     if not g_is_display_enu:
       if loc_msg != None:
         trace_start_x, trace_start_y = coord_tf.global_to_local(trace_start_x, trace_start_y)
@@ -2858,7 +2858,7 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-  if is_vis_fus_center_line:
+  if is_vis_fus_center_line or is_vis_fus_line:
     fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
