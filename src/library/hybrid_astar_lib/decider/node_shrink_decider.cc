@@ -170,7 +170,8 @@ bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
     return false;
   }
 
-  constexpr float ANGLE_THRESHOLD_DEG = 15.0f;
+  constexpr float ANGLE_THRESHOLD_DEG0 = 15.0f;
+  constexpr float ANGLE_THRESHOLD_DEG1 = 175.0f;
 
   // 计算角度并转换为度数
   const float heading_deg = child->GetPhi() * 180.0 / M_PIf32;
@@ -180,10 +181,18 @@ bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
 
   switch (request.direction_request) {
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-      return is_forward && heading_deg < -ANGLE_THRESHOLD_DEG;
+      return is_forward && heading_deg < -ANGLE_THRESHOLD_DEG0;
 
     case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-      return is_forward && heading_deg > ANGLE_THRESHOLD_DEG;
+      return is_forward && heading_deg > ANGLE_THRESHOLD_DEG0;
+
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      return !is_forward &&
+             (heading_deg < ANGLE_THRESHOLD_DEG1 && heading_deg > 0.0f);
+
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      return !is_forward &&
+             (heading_deg < 0.0f && heading_deg > -ANGLE_THRESHOLD_DEG1);
 
     default:
       return false;
