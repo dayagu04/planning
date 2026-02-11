@@ -177,9 +177,14 @@ void DynamicAgentEmergenceAvoidRequest::
   }
 
   // 是否存在需要紧急变道的动态障碍物
-  bool is_exit_emergency_dynamic_agent = CheckEmergencyDynamicAgent();
+  bool is_emergency_base_side_dynamic_agent =
+      CheckEmergencyDynamicSideAgentBaseRisk();
+  bool is_emergency_base_last_emergency_avoid =
+      CheckEmergencyBaseLastEmergencyAvoid();
+  bool is_exit_emergency_dynamic_agent = is_emergency_base_side_dynamic_agent ||
+                                         is_emergency_base_last_emergency_avoid;
   auto kEmergencySituationDurationCountThr = kLowRiskEmergencySituationDurationCountThr;
-  if (risk_level_ == RiskLevel::HIGH_RISK) {
+  if (risk_level_ == RiskLevel::HIGH_RISK || is_emergency_base_last_emergency_avoid) {
     kEmergencySituationDurationCountThr = kHighRiskEmergencySituationDurationCountThr;
   }
   if (is_exit_emergency_dynamic_agent) {
@@ -208,12 +213,6 @@ void DynamicAgentEmergenceAvoidRequest::
   JSON_DEBUG_VALUE("risk_level", static_cast<uint32_t>(risk_level_));
   JSON_DEBUG_VALUE("dynamic_agent_emergency_situation_timetstamp",
                    dynamic_agent_emergency_situation_timetstamp_);
-}
-
-bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
-  bool is_emergency_base_side_dynamic_agent = CheckEmergencyDynamicSideAgentBaseRisk();
-  bool is_emergency_base_last_emergency_avoid = CheckEmergencyBaseLastEmergencyAvoid();
-  return is_emergency_base_side_dynamic_agent || is_emergency_base_last_emergency_avoid;
 }
 
 bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk() {

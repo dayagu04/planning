@@ -37,8 +37,6 @@ class DynamicAgentEmergenceAvoidRequest : public LaneChangeRequest {
 
   void CheckLaneChangeDirection(int lc_status);
 
-  bool CheckEmergencyDynamicAgent();
-
   bool CheckEmergencyBaseLastEmergencyAvoid();
 
   bool CheckEmergencyDynamicSideAgentBaseRisk();
