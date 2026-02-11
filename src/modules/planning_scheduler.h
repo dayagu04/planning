@@ -90,6 +90,10 @@ class PlanningScheduler {
       double start_timestamp,
       iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
 
+  void FillHPPPlanningHmiInfo(
+      double start_timestamp,
+      iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
+
   void FillAdasPlanningHmiInfo(
       double start_timestamp,
       iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
