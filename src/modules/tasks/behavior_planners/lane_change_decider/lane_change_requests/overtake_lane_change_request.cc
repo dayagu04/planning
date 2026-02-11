@@ -586,7 +586,6 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
   };
 
-#ifdef X86
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
   bool left_lane_exist_slow_cross_lane_truck =
@@ -596,6 +595,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       exist_cross_line_large_agent_ahead_ &&
       right_lane_exist_cross_line_truck_ && right_lane_exist_truck_speed_ <= agent->speed();
 
+#ifdef X86
   // const bool is_trigger_left = (is_left_overtake &&
   // is_left_lane_change_safe_);
   const bool is_trigger_left =
@@ -631,12 +631,22 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     trigger_right_overtake = true;
   }
 #else
+  const bool is_trigger_left =
+      is_left_overtake && left_lane_is_on_navigation_route && !left_lane_exist_slow_cross_lane_truck &&
+      FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
+                                         leading_vehicle_speed, llane, true,
+                                         need_overtake_distance);
   const bool trigger_left_overtake = checkOvertakeTrigger(
-      current_time, is_left_overtake && left_lane_is_on_navigation_route,
+      current_time, is_trigger_left,
       &left_overtake_valid_timestamp_);
 
+  const bool is_trigger_right =
+      is_right_overtake && right_lane_is_on_navigation_route && !right_lane_exist_slow_cross_lane_truck &&
+      FeasibleLaneDistanceEnoughJudgment(right_route_traffic_speed,
+                                         leading_vehicle_speed, rlane, false,
+                                         need_overtake_distance);
   const bool trigger_right_overtake = checkOvertakeTrigger(
-      current_time, is_right_overtake && right_lane_is_on_navigation_route,
+      current_time, is_trigger_right,
       &right_overtake_valid_timestamp_);
 #endif
 
