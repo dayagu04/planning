@@ -99,6 +99,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
 void ApaPlanInterface::AddReleasedSlotInfo(
     iflyauto::PlanningOutput &planning_output) {
   planning_output.successful_slot_info_list_size = 0;
+  planning_output.pos_parkable_slot_info_list_size = 0;
 
   apa_world_ptr_->GetSlotManagerPtr()->GenerateReleaseSlotIdVec();
 
@@ -107,6 +108,16 @@ void ApaPlanInterface::AddReleasedSlotInfo(
 
   const std::vector<bool> &release_slot_narrow_flag_vec =
       apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotNarrowFlagVec();
+
+  const std::vector<size_t> &release_slot_id_no_consider_obs_vec =
+      apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotNoConsiderObsVec();
+
+  for (size_t i = 0; i < release_slot_id_no_consider_obs_vec.size(); ++i) {
+    iflyauto::PosParkableSlotInfo slot_info;
+    slot_info.id = static_cast<uint32>(release_slot_id_no_consider_obs_vec[i]);
+    planning_output.pos_parkable_slot_info_list[i] = slot_info;
+    planning_output.pos_parkable_slot_info_list_size++;
+  }
 
   std::string release_slot_id;
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
