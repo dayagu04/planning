@@ -259,28 +259,16 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       info.last_seen_timestamp = current_timestamp;
 
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
-        double l_base = 0.0;
-        if (obstacle->obstacle()->type() ==
-                iflyauto::ObjectType::OBJECT_TYPE_COLUMN ||
-            obstacle->obstacle()->type() ==
-                iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE) {
-          l_base = config_.column_l_buffer_for_decision;
-        } else {
-          l_base = config_.l_buffer_for_lat_decision;
-        }
-
+        double left_l_base = config_.left_l_buffer_for_lat_decision;
+        double right_l_base = config_.right_l_buffer_for_lat_decision;
         double growth_factor = 0.0;
         if (info.last_decision == LatObstacleDecisionType::LEFT ||
             info.last_decision == LatObstacleDecisionType::RIGHT) {
             growth_factor = (info.count <= 1) ? 0.0 : (info.count >= 3) ? 1.0 : 0.5;
         }
 
-        double l_bonus = growth_factor * kMaxHysteresisBuffer;
-        double l_total = l_base + l_bonus;
         double current_side_lock_threshold = growth_factor * kMaxSideLockDist;
-
         bool treat_as_left_obstacle = (obstacle->frenet_l() > 0);
-
         if (info.count >= 2) {
             if (info.last_decision == LatObstacleDecisionType::RIGHT) {
                 if (obstacle->frenet_l() > -current_side_lock_threshold) {
@@ -292,6 +280,9 @@ void HppLateralObstacleDecider::UpdateLatDecision(
                 }
             }
         }
+
+        double l_bonus = growth_factor * kMaxHysteresisBuffer;
+        double l_total = (treat_as_left_obstacle ? right_l_base : left_l_base) + l_bonus;
         const double obstacle_l_start = obstacle->frenet_obstacle_boundary().l_start;
         const double obstacle_l_end = obstacle->frenet_obstacle_boundary().l_end;
         const double obstacle_s_start = obstacle->frenet_obstacle_boundary().s_start;

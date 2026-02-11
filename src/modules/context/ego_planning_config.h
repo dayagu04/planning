@@ -1852,10 +1852,10 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         read_json_key<bool>(json, "enable_hybrid_ara", enable_hybrid_ara);
     hybrid_ara_s_range =
         read_json_key<double>(json, "hybrid_ara_s_range", hybrid_ara_s_range);
-    l_buffer_for_lat_decision = read_json_key<double>(
-        json, "l_buffer_for_lat_decision", l_buffer_for_lat_decision);
-    column_l_buffer_for_decision = read_json_key<double>(
-        json, "column_l_buffer_for_decision", column_l_buffer_for_decision);
+    left_l_buffer_for_lat_decision = read_json_key<double>(
+        json, "left_l_buffer_for_lat_decision", left_l_buffer_for_lat_decision);
+    right_l_buffer_for_lat_decision = read_json_key<double>(
+        json, "right_l_buffer_for_lat_decision", right_l_buffer_for_lat_decision);
     emegency_avoid_ttc_lower = read_json_key<double>(
         json, "emegency_avoid_ttc_lower", emegency_avoid_ttc_lower);
     emegency_avoid_ttc_upper = read_json_key<double>(
@@ -1944,8 +1944,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double column_static_buffer_for_search = 2;
   bool enable_hybrid_ara = false;
   double hybrid_ara_s_range = 20;
-  double l_buffer_for_lat_decision = 2;
-  double column_l_buffer_for_decision = 2;
+  double left_l_buffer_for_lat_decision = 1.0;
+  double right_l_buffer_for_lat_decision = 0.6;
   double delta_t = 0.2;
   double num_step = 25;
   double emegency_avoid_ttc_lower = 0;
