@@ -183,6 +183,20 @@ bool StartStopDecider::CanTransitionFromStopToStart() {
   double distance_to_go_threshold =
       cipv_is_large_ ? config_.distance_to_go_threshold_behind_of_large_vehicle
                      : config_.distance_to_go_threshold;
+  if (session_->get_scene_type() == common::SceneType::RADS) {
+    const auto& agent_manager =
+           session_->environmental_model().get_agent_manager();
+    const auto& cipv = agent_manager->GetAgent(cipv_id_);
+    const auto cipv_is_destination_target =
+        cipv && cipv->type() == agent::AgentType::VIRTUAL &&
+        cipv->agent_id() ==
+            agent::AgentDefaultInfo::kRadsStopDestinationVirtualAgentId;
+    if (cipv_is_destination_target) {
+      distance_to_go_threshold = config_.rads_distance_stop_between_ego_and_destination_cipv_threshold;
+    } else if (cipv && cipv->type() != agent::AgentType::VIRTUAL) {
+      distance_to_go_threshold = config_.rads_distance_stop_between_ego_and_cipv_threshold;
+    }
+  }
 
   const bool is_distance_enough = cipv_relative_s_ > distance_to_go_threshold;
 
@@ -218,7 +232,7 @@ bool StartStopDecider::CanTransitionToStop() {
     if (cipv_is_destination_target && cipv_relative_s_ < config_.rads_distance_stop_between_ego_and_destination_cipv_threshold) {
       cipv_distance_condition = true;
     } else if (cipv && cipv->type() != agent::AgentType::VIRTUAL && cipv_relative_s_ <
-               config_.rads_distance_stop_between_ego_and_destination_cipv_threshold) {
+               config_.rads_distance_stop_between_ego_and_cipv_threshold) {
       cipv_distance_condition = true;
     } else {
       cipv_distance_condition = false;
