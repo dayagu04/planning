@@ -1193,6 +1193,17 @@ bool StGraphUtils::CalculateSRange(
   StGraphUtils::GetIntersectiveLineSegments(kd_path, false /*is_left*/, obs_box,
                                             agent_sl_boundary,
                                             &right_intersective_edges);
+
+  if (is_rads_scene) {
+    if (!left_intersective_edges.empty() || !right_intersective_edges.empty()) {
+      *lower_s = min_s - front_edge_to_center;
+      *upper_s = max_s + back_edge_to_center;
+      *lower_s = std::fmax(0.0, *lower_s);
+      *upper_s = std::fmax(0.0, std::fmin(*upper_s, path_range.second));
+      return true;
+    }
+  }
+
   for (int index = start_index; index <= end_index; ++index) {
     PathBorderSegment path_border_segment =
         path_border_querier.GetPathBorderSegmentByIndex(index);
