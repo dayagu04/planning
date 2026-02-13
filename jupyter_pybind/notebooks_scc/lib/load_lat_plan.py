@@ -753,9 +753,6 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     # 加载车道线信息
     if plan_msg.trajectory.trajectory_type == 0: # 实时轨迹
       is_enu_to_car = False
-
-
-
   not_g_is_display_enu = g_is_display_enu
   if g_is_display_enu :
     not_g_is_display_enu = False

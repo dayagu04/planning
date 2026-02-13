@@ -101,6 +101,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     fusion_ground_line_timestamp = input_topic_timestamp.ground_line
     ehr_static_map_timestamp = input_topic_timestamp.map
     soc_state_timestamp = input_topic_timestamp.function_state_machine
+    print("planning_frame_num : {}".format(plan_debug_msg.frame_info.frame_num))
 
     if is_new_loc:
       localization_timestamp = input_topic_timestamp.localization
@@ -208,7 +209,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_msg']['ctrl_debug_json_msg'] = ctrl_debug_json_msg
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state = soc_state_msg.current_state
-    print("FunctionalState: ", soc_state)
     if bag_scene_type == 'HPP':
       background_state = soc_state_msg.background_state
       # Mapping the enum values to their names
@@ -278,6 +278,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
       print("fsm_cur_state: " + str(soc_state) + " - " + cur_state_name)
       print("fsm_background_state: " + str(background_state) + " - " + background_state_name)
+    else:
+      print("FunctionalState: ", soc_state)
+
 
   ### step 2-1: 加载pp原始定位信息
   if bag_loader.origin_loc_msg['enable'] == True:
@@ -1141,6 +1144,20 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         'obs_is_static' : plan_obstacle_info['is_static'],
       })
 
+  if bag_loader.plan_debug_msg['enable'] == True:
+    try:
+      static_analysis_result = plan_debug_msg.static_analysis_result
+      road_types = static_analysis_result.road_types
+      for road_type in road_types:
+        type = int(road_type.type)
+        x_vec = [elem.x for elem in road_type.points]
+        y_vec = [elem.y for elem in road_type.points]
+        local_view_data['road_type_analysis_result_' + str(type)].data.update({
+          'ref_path_y' : y_vec,
+          'ref_path_x' : x_vec,
+        })
+    except Exception as e:
+      print("load static analysis result failed, err msg = {}".format(e))
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
@@ -2092,6 +2109,7 @@ def load_local_view_figure():
   is_vis_fus_center_line = global_var.get_value('is_vis_fus_center_line')
   is_vis_lane_topo = global_var.get_value('is_vis_lane_topo')
   is_vis_smooth_refline = global_var.get_value('is_vis_smooth_refline')
+  is_vis_road_type_line = global_var.get_value('is_vis_road_type_line')
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
@@ -2284,6 +2302,30 @@ def load_local_view_figure():
   lane_mark_data_8 = ColumnDataSource(data = {'lane_mark_8':[], 'text_xn_8': [],  'text_yn_8': [] , 'lane_mark_loc_x_8': [], 'lane_mark_loc_y_8': []})
   lane_mark_data_9 = ColumnDataSource(data = {'lane_mark_9':[], 'text_xn_9': [],  'text_yn_9': [] , 'lane_mark_loc_x_9': [], 'lane_mark_loc_y_9': []})
 
+  road_type_analysis_result_1 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_2 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_3 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_10 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_11 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_12 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_13 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_14 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
 
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
@@ -2637,6 +2679,14 @@ def load_local_view_figure():
                      'data_control':data_control,\
                      'data_index': data_index, \
                      'data_msg': data_msg,\
+                     'road_type_analysis_result_1' : road_type_analysis_result_1,
+                     'road_type_analysis_result_2' : road_type_analysis_result_2,
+                     'road_type_analysis_result_3' : road_type_analysis_result_3,
+                     'road_type_analysis_result_10' : road_type_analysis_result_10,
+                     'road_type_analysis_result_11' : road_type_analysis_result_11,
+                     'road_type_analysis_result_12' : road_type_analysis_result_12,
+                     'road_type_analysis_result_13' : road_type_analysis_result_13,
+                     'road_type_analysis_result_14' : road_type_analysis_result_14,
                      'data_center_line_topo_0':data_center_line_topo_0, \
                      'data_center_line_topo_1':data_center_line_topo_1, \
                      'data_center_line_topo_2':data_center_line_topo_2, \
@@ -2912,6 +2962,16 @@ def load_local_view_figure():
     fig1.line('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source = data_ego_motion_sim_ref_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ego_motion_sim_ref', visible = False)
     fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
     fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+
+  if is_vis_road_type_line:
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_1,  radius = 0.1, line_width = 2, line_color = 'red'   , fill_color = 'red'   , legend_label = 'road_type_analysis') #正常直道
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_2,  radius = 0.1, line_width = 2, line_color = 'blue'  , fill_color = 'blue'  , legend_label = 'road_type_analysis') #绕障直道
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_3,  radius = 0.1, line_width = 2, line_color = 'orange', fill_color = 'orange', legend_label = 'road_type_analysis') #S 直道
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_10, radius = 0.1, line_width = 2, line_color = 'black' , fill_color = 'black' , legend_label = 'road_type_analysis') #直角弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_11, radius = 0.1, line_width = 2, line_color = 'green' , fill_color = 'green' , legend_label = 'road_type_analysis') #锐角弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_12, radius = 0.1, line_width = 2, line_color = 'purple', fill_color = 'purple', legend_label = 'road_type_analysis') #钝角弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_13, radius = 0.1, line_width = 2, line_color = 'yellow', fill_color = 'yellow', legend_label = 'road_type_analysis') #U 型弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_14, radius = 0.1, line_width = 2, line_color = 'brown' , fill_color = 'brown' , legend_label = 'road_type_analysis') #环形弯
 
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')

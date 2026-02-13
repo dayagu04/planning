@@ -28,6 +28,7 @@ def init():  # 初始化
     'is_vis_ground_mark': False,
     'is_vis_rads_path': False,
     'is_vis_nsa_line': False,
+    'is_vis_road_type_line': False,
   }
 
 
@@ -71,6 +72,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_snrd'] = False
     global_dict['is_vis_snrd'] = False
     global_dict['is_vis_smooth_refline'] = False
+    global_dict['is_vis_road_type_line'] = True
   elif scene == 'NSA':
     global_dict['scene_type'] = 'NSA'
     global_dict['is_vis_map'] = False
