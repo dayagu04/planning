@@ -127,7 +127,6 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
 planning::common::SceneType PlanningScheduler::DetermineSceneType(
     const iflyauto::FuncStateMachine& func_state_machine) {
   auto scene_type = planning::common::SceneType::HIGHWAY;
-  ILOG_INFO << "wahaha current state = " << func_state_machine.current_state;
 
   if (IsUndefinedScene(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HIGHWAY;

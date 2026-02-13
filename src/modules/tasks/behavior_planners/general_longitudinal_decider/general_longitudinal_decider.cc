@@ -655,7 +655,6 @@ bool GeneralLongitudinalDecider::Execute() {
     }
 
     s_ref = std::max(s_ref, 0.0);
-    LOG_DEBUG("s_ref: = %f, index = %d \n", s_ref, i);
   }
   // 转存纵向决策信息至debuginfo
   GenerateLonRefPathPB(lon_ref_path);
@@ -845,7 +844,7 @@ double GeneralLongitudinalDecider::compute_curvature_speed_limit(
     const TrajectoryPoints& traj_points, double ego_velocity,
     double max_lat_acceleration, double& vlimit_jerk, double& time_to_brake,
     double& out_max_curvature) const {
- 
+
   const double trigger_distance =
       interp(ego_velocity, config_.curv_trigger_velocity_breakpoints,
              config_.curv_trigger_distances);
@@ -880,10 +879,6 @@ double GeneralLongitudinalDecider::compute_curvature_speed_limit(
   // 输出最大曲率
   out_max_curvature = max_curvature;
 
-  LOG_DEBUG(
-      "[compute_curvature_speed_limit] max_curvature: %f, max_curv_s: %f, "
-      "trigger_distance: %f, ego_velocity: %f",
-      max_curvature, max_curv_s, trigger_distance, ego_velocity);
 
   // b. 计算弯道限速
   double v_limit_curv;
@@ -897,10 +892,6 @@ double GeneralLongitudinalDecider::compute_curvature_speed_limit(
     v_limit_curv = interp(radius, config_.curv_radius_breakpoints,
                           config_.curv_speed_limits_ms);
 
-    LOG_DEBUG(
-        "[compute_curvature_speed_limit] HPP mode: radius=%f, v_limit_curv=%f "
-        "kph",
-        radius, v_limit_curv * 3.6);
   } else {
     // 非HPP模式下使用原有的基于横向加速度的计算方式
     // v = sqrt(a_lat / kappa)
@@ -929,10 +920,6 @@ double GeneralLongitudinalDecider::compute_curvature_speed_limit(
       vlimit_jerk = 2 * (v_limit_curv - ego_velocity - ego_a * time_to_brake) /
                     std::pow(time_to_brake, 2);
     }
-    LOG_DEBUG(
-        "[compute_curvature_speed_limit] Curvature limit triggered: "
-        "v_limit_curv=%f, time_to_brake=%f, vlimit_jerk=%f",
-        v_limit_curv, time_to_brake, vlimit_jerk);
 
     return v_limit_curv;
   }
@@ -1040,7 +1027,7 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
 
   // LPNP: obstacle's frenet is wrong when it out of route
   if (distance_to_destination < 10.0 && (obstacle->b_frenet_valid() == false)) {
-    ILOG_ERROR << "The obstacle's frenet is invalid but it is needed to be "
+    ILOG_DEBUG << "The obstacle's frenet is invalid but it is needed to be "
                   "cared by LPNP "
                << "whose id :" << obstacle->id();
     return false;
@@ -1049,7 +1036,7 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
   if ((obstacle->obstacle()->fusion_source() != OBSTACLE_SOURCE_CAMERA) &&
       (obstacle->obstacle()->fusion_source() !=
        OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-    ILOG_ERROR << "The obstacle's fusion source is no camera whose id :"
+    ILOG_DEBUG << "The obstacle's fusion source is no camera whose id :"
                << obstacle->id();
     return true;
   }
@@ -1135,17 +1122,12 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decisions(
     auto obstacle_id = obstacle->id();
     if (obstacle->b_frenet_valid()) {
       double time_obj = IflyTime::Now_ms();
-      LOG_DEBUG(
-          "construct_longitudinal_obstacle_decision== obstacle_id: [%d]:\n",
-          obstacle_id);
 
       construct_longitudinal_obstacle_decision(
           traj_points, refpath_points, lon_overlap_path, obstacle,
           obstacle_decisions[obstacle_id], lon_ref_path);
 
       double time_obj_end = IflyTime::Now_ms();
-      LOG_DEBUG("construct_longitudinal_obstacle_decision== cost is %f]ms:\n",
-                time_obj_end - time_obj);
     }
   }
   double construct_longitudinal_obstacle_decision_time_end = IflyTime::Now_ms();
@@ -1511,11 +1493,6 @@ void GeneralLongitudinalDecider::construct_longitudinal_obstacle_decision(
           min_radius * min_radius;
   const bool too_close_to_nudge =
       unable_to_nudge_from_left && unable_to_nudge_from_right;
-  LOG_DEBUG(
-      "[GeneralLongitudinalDecider]: too close to nudge: %d  unable from left: "
-      "% d unable from right: % d \n ",
-      too_close_to_nudge, unable_to_nudge_from_left,
-      unable_to_nudge_from_right);
   const auto& coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
@@ -2003,8 +1980,6 @@ void GeneralLongitudinalDecider::get_lon_decision_info(
           }
         }
       }
-      LOG_DEBUG("nearby_obstacle: %d \n",
-                lon_decision_information.nearby_obstacle());
 
       if (!obstacle_decision.second.position_decisions.empty()) {
         has_lon_decision_overtake =

@@ -1216,6 +1216,8 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
     vehi_svc_header_time_us_ =
         planning_debug_info->input_topic_timestamp().vehicle_service();
     if (!early_stop_) {
+      std::cout << "************************************** bag frame " << planning_dubug_info_frame_num_
+            << " **************************************" << std::endl;
       PlayOneFrame(frame_num_++, planning_debug_info->input_topic_timestamp(),
                    is_close_loop);
     } else {
@@ -2142,7 +2144,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
     }
-    
+
     struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
     uint8_t functional_state = func_state_machine_ros_msg.current_state;
     if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
