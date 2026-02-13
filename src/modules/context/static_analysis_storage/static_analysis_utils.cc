@@ -7,19 +7,15 @@
 
 namespace planning {
 
-constexpr double kPeakKappaThreshold = 0.1;
-constexpr double kTurnKappaThreshold = 0.05;
-
 struct LatTypeRangeInfo {
 public:
-  LatTypeRangeInfo(size_t index) {
+  LatTypeRangeInfo(size_t index = 0) {
     idx = index;
   }
 public:
   size_t idx;
   size_t s_idx;
   size_t e_idx;
-  double avg_kappa;
   double max_kappa;
   CRoadType type;
 };
@@ -27,13 +23,15 @@ public:
 bool GenerateTurnRanges(const ReferencePathPoints& refer_path_points,
                         std::vector<LatTypeRangeInfo>& turn_range_infos) {
   turn_range_infos.clear();
+  constexpr double kPeakKappaThr = 0.1;
+  constexpr double kTurnKappaThr = 0.04;
 
   // S1: check peak
   for (size_t i = 1; i < refer_path_points.size() - 1; ++i) {
-    const auto prev_kappa = refer_path_points[i - 1].path_point.kappa();
-    const auto curr_kappa = refer_path_points[i].path_point.kappa();
-    const auto next_kappa = refer_path_points[i + 1].path_point.kappa();
-    if (curr_kappa > kPeakKappaThreshold && curr_kappa > prev_kappa &&
+    const auto prev_kappa = std::fabs(refer_path_points[i - 1].path_point.kappa());
+    const auto curr_kappa = std::fabs(refer_path_points[i].path_point.kappa());
+    const auto next_kappa = std::fabs(refer_path_points[i + 1].path_point.kappa());
+    if (curr_kappa > kPeakKappaThr && curr_kappa > prev_kappa &&
         curr_kappa > next_kappa) {
       turn_range_infos.push_back(LatTypeRangeInfo(i));
     }
@@ -43,21 +41,18 @@ bool GenerateTurnRanges(const ReferencePathPoints& refer_path_points,
   for (auto& peak_kappa_range_info : turn_range_infos) {
     int index = peak_kappa_range_info.idx;
     int start_idx = index - 1, end_idx = index + 1;
-    double sum_kappa = refer_path_points[index].path_point.kappa();
-    while (start_idx >= 0 && refer_path_points[start_idx].path_point.kappa() >
-                                 kTurnKappaThreshold) {
+    while (start_idx >= 0 &&
+           std::fabs(refer_path_points[start_idx].path_point.kappa()) >
+               kTurnKappaThr) {
       --start_idx;
-      sum_kappa += refer_path_points[start_idx].path_point.kappa();
     }
     while (end_idx <= refer_path_points.size() - 1 &&
-           refer_path_points[end_idx].path_point.kappa() >
-               kTurnKappaThreshold) {
+           std::fabs(refer_path_points[end_idx].path_point.kappa()) >
+               kTurnKappaThr) {
       ++end_idx;
-      sum_kappa += refer_path_points[end_idx].path_point.kappa();
     }
     peak_kappa_range_info.s_idx = start_idx + 1;
     peak_kappa_range_info.e_idx = end_idx - 1;
-    peak_kappa_range_info.avg_kappa = sum_kappa / (end_idx - start_idx + 1);
     peak_kappa_range_info.max_kappa =
         refer_path_points[index].path_point.kappa();
   }
@@ -72,11 +67,15 @@ bool GenerateTurnRanges(const ReferencePathPoints& refer_path_points,
     const auto& cur_info = turn_range_infos[cur_idx];
     const auto& res_info = turn_range_infos[res_idx];
     if (cur_info.s_idx > res_info.e_idx) {
-      turn_range_infos[res_idx++] = res_info;
+      turn_range_infos[++res_idx] = cur_info;
     } else {
-      turn_range_infos[res_idx].e_idx = cur_info.s_idx;
+      if(std::fabs(cur_info.max_kappa) > std::fabs(res_info.max_kappa)) {
+        turn_range_infos[res_idx].max_kappa = cur_info.max_kappa;
+      }
+      turn_range_infos[res_idx].e_idx = cur_info.e_idx;
     }
   }
+  turn_range_infos.resize(res_idx + 1);
 
   // S4: check turn type
   auto is_curve_turn = [&refer_path_points](const LatTypeRangeInfo& turn_range_info) {
@@ -115,19 +114,22 @@ bool GenerateStraightRanges(
     std::vector<LatTypeRangeInfo>& straight_range_infos) {
   size_t s_idx = 0;
   for (const auto& turn_range_info : turn_range_infos) {
-    straight_range_infos.push_back(LatTypeRangeInfo(s_idx));
-    straight_range_infos.back().s_idx = s_idx;
-    straight_range_infos.back().e_idx = turn_range_info.s_idx - 1;
-    straight_range_infos.back().type = CRoadType::NormalTurn;
-    s_idx = turn_range_info.e_idx + 1;
+    if(turn_range_info.s_idx > s_idx) {
+      straight_range_infos.push_back(LatTypeRangeInfo(s_idx));
+      straight_range_infos.back().s_idx = s_idx;
+      straight_range_infos.back().e_idx = turn_range_info.s_idx;
+      straight_range_infos.back().type = CRoadType::NormalStraight;
+      s_idx = turn_range_info.e_idx;
+    }
   }
-  if (turn_range_infos.empty() &&
+  if (!turn_range_infos.empty() &&
       turn_range_infos.back().e_idx < refer_path_points.size() - 1) {
-    straight_range_infos.push_back(
-        LatTypeRangeInfo(turn_range_infos.back().e_idx + 1));
-    straight_range_infos.back().s_idx = turn_range_infos.back().e_idx + 1;
-    straight_range_infos.back().e_idx = refer_path_points.size() - 1;
-    straight_range_infos.back().type = CRoadType::NormalTurn;
+    if (refer_path_points.size() - 1 > turn_range_infos.back().e_idx) {
+      straight_range_infos.push_back(LatTypeRangeInfo(s_idx));
+      straight_range_infos.back().s_idx = turn_range_infos.back().e_idx;
+      straight_range_infos.back().e_idx = refer_path_points.size() - 1;
+      straight_range_infos.back().type = CRoadType::NormalStraight;
+    }
   }
   return true;
 }
@@ -166,12 +168,24 @@ bool StaticAnalysisUtils::RoadTypeAnalysis(
   }
   for (auto& item : lat_type_to_s_range_list) {
     sort(item.second.begin(), item.second.end(),
-         [](const std::pair<double, double>& a,
-            const std::pair<double, double>& b) { return a.first < b.first; });
+         [](const auto& a, const auto& b) { return a.first < b.first; });
 
     static_analysis_storage->SetTypeList(item.first, item.second);
   }
+#ifdef ENABLE_IDX_RANGE_LIST_STORAGE
+  std::unordered_map<CRoadType, IdxRangeList> lat_type_to_idx_range_list;
+  for (const auto& range_info : final_range_info) {
+    auto& idx_range_list = lat_type_to_idx_range_list[range_info.type];
+    idx_range_list.push_back(
+        std::make_pair(range_info.s_idx, range_info.e_idx));
+  }
+  for (auto& item : lat_type_to_idx_range_list) {
+    sort(item.second.begin(), item.second.end(),
+         [](const auto& a, const auto& b) { return a.first < b.first; });
 
+    static_analysis_storage->SetTypeList(item.first, item.second);
+  }
+#endif
   return true;
 }
 

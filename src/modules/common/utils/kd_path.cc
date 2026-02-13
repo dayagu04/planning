@@ -121,6 +121,20 @@ PathPoint KDPath::GetPathPointByS(const double path_s) const {
   return point;
 }
 
+int KDPath::GetPathPointIdxByS(const double path_s) const {
+  if (path_points_.empty()) {
+    return -1;
+  }
+  if (path_s <= path_points_.front().s()) {
+    return 0;
+  }
+  if (path_s >= path_points_.back().s()) {
+    return path_points_.size() - 1;
+  }
+  auto it_lower = QueryLowerBound(path_points_, path_s);
+  return it_lower - path_points_.begin();
+}
+
 std::vector<PathPoint>::const_iterator KDPath::QueryLowerBound(
     const std::vector<PathPoint>& path_points, const double path_s) const {
   auto func = [](const PathPoint& tp, const double path_s) {

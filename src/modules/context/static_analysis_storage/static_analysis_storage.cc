@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -36,6 +37,25 @@ void StaticAnalysisStorage::SetTypeList(CElemType type,
   elem_type_storage_[type].s_range_list = s_range_list;
 }
 
+#ifdef ENABLE_IDX_RANGE_LIST_STORAGE
+template <>
+void StaticAnalysisStorage::SetTypeList(CRoadType type,
+                                        const IdxRangeList& idx_range_list) {
+  road_type_storage_[type].idx_range_list = idx_range_list;
+}
+
+template <>
+void StaticAnalysisStorage::SetTypeList(CPassageType type,
+                                        const IdxRangeList& idx_range_list) {
+  passage_type_storage_[type].idx_range_list = idx_range_list;
+}
+
+template <>
+void StaticAnalysisStorage::SetTypeList(CElemType type,
+                                        const IdxRangeList& idx_range_list) {
+  elem_type_storage_[type].idx_range_list = idx_range_list;
+}
+#endif
 ResultTypeInfo StaticAnalysisStorage::GetTypeInfo(const double cur_s) const {
   ResultTypeInfo road_type_info;
   road_type_info.road_type = GetTypeInfo(road_type_storage_, cur_s);
@@ -99,7 +119,10 @@ SRangeList StaticAnalysisStorage::GetSRangeList(const QueryTypeInfo& road_type) 
     }
   }
 
-  return CalcIntervalIntersection(source_range_lists);
+  auto res_range_list = CalcIntervalIntersection(source_range_lists);
+  std::sort(res_range_list.begin(), res_range_list.end(),
+            [](const auto& a, const auto& b) { return a.first < b.first; });
+  return res_range_list;
 }
 
 std::pair<double, double> StaticAnalysisStorage::GetFrontSRange(
@@ -141,7 +164,10 @@ SRangeList StaticAnalysisStorage::GetUnionSRangeList(
                              cur_type_range_list.begin(),
                              cur_type_range_list.end());
   }
-  return CalcIntervalUnion(source_range_list);
+  auto res_range_list = CalcIntervalUnion(source_range_list);
+  std::sort(res_range_list.begin(), res_range_list.end(),
+            [](const auto& a, const auto& b) { return a.first < b.first; });
+  return res_range_list;
 }
 
 std::pair<double, double> StaticAnalysisStorage::GetBackUnionSRange(
@@ -171,6 +197,53 @@ std::pair<double, double> StaticAnalysisStorage::GetFrontUnionSRange(
     }
   }
   return std::pair<double, double>(0.0, -1.0);
+}
+
+bool StaticAnalysisStorage::SerializeToDebugInfo(
+    planning_math::ConstKDPathPtr kd_path,
+    common::StaticAnalysisResult& static_analysis_result) const {
+  const auto& path_points = kd_path->path_points();
+
+  auto serialize_storage_item = [&](const auto& storage_item, auto* result_item) {
+#ifdef ENABLE_IDX_RANGE_LIST_STORAGE
+    for(const auto& range : storage_item.idx_range_list) {
+      for(int i = range.first; i <= range.second; ++i) {
+        auto* point = result_item->add_points();
+        point->set_x(path_points[i].x());
+        point->set_y(path_points[i].y());
+      }
+    }
+#else
+    for(const auto& range : storage_item.s_range_list) {
+      int start_idx = kd_path->GetPathPointIdxByS(range.first);
+      int end_idx = kd_path->GetPathPointIdxByS(range.second);
+      for(int i = start_idx; i <= end_idx; ++i) {
+        auto* point = result_item->add_points();
+        point->set_x(path_points[i].x());
+        point->set_y(path_points[i].y());
+      }
+    }
+#endif
+  };
+
+  for(const auto& item : road_type_storage_) {
+    auto* road_type_item = static_analysis_result.add_road_types();
+    road_type_item->set_type(static_cast<common::RoadTypeItem_RoadTypeEnum>(item.first));
+    serialize_storage_item(item.second, road_type_item);
+  }
+
+  for(const auto& item : passage_type_storage_) {
+    auto* passage_type_item = static_analysis_result.add_passage_types();
+    passage_type_item->set_type(static_cast<common::PassageTypeItem_PassageTypeEnum>(item.first));
+    serialize_storage_item(item.second, passage_type_item);
+  }
+
+  for(const auto& item : elem_type_storage_) {
+    auto* elem_type_item = static_analysis_result.add_elem_types();
+    elem_type_item->set_type(static_cast<common::ElemTypeItem_ElemTypeEnum>(item.first));
+    serialize_storage_item(item.second, elem_type_item);
+  }
+  return true;
 }
 
 /******************** private funcion **************** */

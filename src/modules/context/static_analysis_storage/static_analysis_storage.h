@@ -8,13 +8,21 @@
 #include <cmath>
 
 #include "log_glog.h"
+#include "utils/kd_path.h"
+#include "static_analysis_result.pb.h"
+
+#define ENABLE_IDX_RANGE_LIST_STORAGE
+
+#ifndef ENABLE_IDX_RANGE_LIST_STORAGE
+#undef ENABLE_IDX_RANGE_LIST_QUERY
+#endif
 
 namespace planning {
 
 // 道路趋势类型，每个位置类型唯一
 enum class CRoadType {
   Unknown = 0,         // 不确定类型
-  NornalStraight = 1,  // 正常直道
+  NormalStraight = 1,  // 正常直道
   NudgeStraight = 2,   // 绕障直道
   SCurveStaight = 3,   // S型直道
 
@@ -57,8 +65,8 @@ using SRangeList = std::vector<std::pair<double, double>>;
 using IdxRangeList = std::vector<std::pair<size_t, size_t>>;
 struct StorageItem {
   SRangeList s_range_list;
-#ifdef ENABLE_IDX_RANGE_LIST
-  IdxRanIdxRangeList idx_range_list;
+#ifdef ENABLE_IDX_RANGE_LIST_STORAGE
+  IdxRangeList idx_range_list;
 #endif
 };
 
@@ -106,11 +114,7 @@ class StaticAnalysisStorage {
 
   void Clear();
 
-#ifdef ENABLE_IDX_RANGE_LIST
-  template <typename T>
-  void SetTypeList(T type, const SRangeList& s_range_list,
-                   const IdxRangeList& idx_range_list);
-
+#ifdef ENABLE_IDX_RANGE_LIST_STORAGE
   template <typename T>
   void SetTypeList(T type, const IdxRangeList& idx_range_list);
 #endif
@@ -160,7 +164,7 @@ class StaticAnalysisStorage {
   std::pair<double, double> GetBackUnionSRange(
       const std::vector<QueryTypeInfo>& road_types, const double cur_s) const;
 
-#ifdef ENABLE_IDX_RANGE_LIST
+#ifdef ENABLE_IDX_RANGE_LIST_QUERY
   ResultTypeInfo GetTypeInfo(const size_t cur_idx) const;
 
   IdxRangeList GetIdxRangeList(const QueryTypeInfo& road_type) const;
@@ -183,6 +187,10 @@ class StaticAnalysisStorage {
       const size_t cur_index) const;
 #endif
 
+  bool SerializeToDebugInfo(
+      planning_math::ConstKDPathPtr kd_path,
+      common::StaticAnalysisResult& static_analysis_result) const;
+
  private:
   template <typename T>
   std::vector<std::pair<T, T>> CalcIntervalIntersection(
@@ -192,7 +200,7 @@ class StaticAnalysisStorage {
   std::vector<std::pair<T, T>> CalcIntervalUnion(
       std::vector<std::pair<T, T>>& range_lists) const;
 
-#ifdef ENABLE_IDX_RANGE_LIST
+#ifdef ENABLE_IDX_RANGE_LIST_QUERY
   template <typename T1>
   T1 GetRoadType(
       const std::unordered_map<T1, RTypeStorageItem>& road_type_2_range_list,

@@ -36,6 +36,8 @@ class KDPath {
 
   PathPoint GetPathPointByS(const double path_s) const;
 
+  int GetPathPointIdxByS(const double path_s) const;
+
   const std::vector<PathPoint>& path_points() const;
 
   /**
