@@ -362,10 +362,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   if (enable_overtake_cross_line_large_agent) {
     // 1. 收集当前帧所有有效agent的ID（用于后续初始化和清理）
     std::unordered_set<int32_t> current_frame_agent_ids;
+    current_frame_agent_ids.reserve(current_agents.size());
     for (const auto& agt : current_agents) {
       if (agt != nullptr) {
         current_frame_agent_ids.insert(agt->agent_id());
-        truck_confirm_frame_count_map_[agt->agent_id()];
       }
     }
 
@@ -391,7 +391,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       }
       if (rlane != nullptr) {
         right_lane_exist_cross_line_truck_ =
-            IsTargetLaneExistTruck(current_agent, rlane, false, left_lane_exist_truck_speed_);
+            IsTargetLaneExistTruck(current_agent, rlane, false, right_lane_exist_truck_speed_);
       }
 
       auto iter = lateral_obstacle_decision.find(current_agent->agent_id());
