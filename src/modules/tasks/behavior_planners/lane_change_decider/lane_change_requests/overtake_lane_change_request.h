@@ -152,7 +152,7 @@ class OvertakeRequest : public LaneChangeRequest {
 
   double CalculateAttenuationCoefficient(const double& lc_duration);
 
-  bool IsTargetLaneExistTruck(
+  void IsTargetLaneExistTruck(
     const std::shared_ptr<agent::Agent>& agent, const std::shared_ptr<VirtualLane>& target_lane,
     bool is_left, double& target_lane_exist_truck_speed);
 
@@ -192,8 +192,8 @@ class OvertakeRequest : public LaneChangeRequest {
   const std::vector<double>  lane_width_factor_{0.8, 1, 1, 1.2};
   bool left_lane_exist_cross_line_truck_ = false;
   bool right_lane_exist_cross_line_truck_ = false;
-  double left_lane_exist_truck_speed_ = 33.33;
-  double right_lane_exist_truck_speed_ = 33.33;
+  double left_lane_exist_cross_line_truck_speed_ = 33.33;
+  double right_lane_exist_cross_line_truck_speed_ = 33.33;
 };
 
 }  // namespace planning

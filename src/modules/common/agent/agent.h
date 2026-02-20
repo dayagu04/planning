@@ -155,6 +155,7 @@ class Agent {
   bool is_static() const;
   void set_is_static(const bool is_static);
   bool is_truck() const;
+  void set_is_truck(const bool is_truck);
 
   const planning_math::Box2d& box() const;
   void set_box(const planning_math::Box2d& box);

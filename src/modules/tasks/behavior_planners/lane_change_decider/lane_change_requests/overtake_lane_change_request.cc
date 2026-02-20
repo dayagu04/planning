@@ -357,8 +357,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   exist_cross_line_large_agent_ahead_ = false;
   left_lane_exist_cross_line_truck_ = false;
   right_lane_exist_cross_line_truck_ = false;
-  left_lane_exist_truck_speed_ = 33.33;
-  right_lane_exist_truck_speed_ = 33.33;
+  left_lane_exist_cross_line_truck_speed_ = 33.33;
+  right_lane_exist_cross_line_truck_speed_ = 33.33;
   if (enable_overtake_cross_line_large_agent) {
     // 1. 收集当前帧所有有效agent的ID（用于后续初始化和清理）
     std::unordered_set<int32_t> current_frame_agent_ids;
@@ -386,12 +386,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       }
 
       if (llane != nullptr) {
-        left_lane_exist_cross_line_truck_ =
-            IsTargetLaneExistTruck(current_agent, llane, true, left_lane_exist_truck_speed_);
+        IsTargetLaneExistTruck(current_agent, llane, true, left_lane_exist_cross_line_truck_speed_);
       }
       if (rlane != nullptr) {
-        right_lane_exist_cross_line_truck_ =
-            IsTargetLaneExistTruck(current_agent, rlane, false, right_lane_exist_truck_speed_);
+        IsTargetLaneExistTruck(current_agent, rlane, false, right_lane_exist_cross_line_truck_speed_);
       }
 
       auto iter = lateral_obstacle_decision.find(current_agent->agent_id());
@@ -589,13 +587,11 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
   bool left_lane_exist_slow_cross_lane_truck =
-      exist_cross_line_large_agent_ahead_ &&
-      left_lane_exist_cross_line_truck_ && left_lane_exist_truck_speed_ <= agent->speed();
+      exist_cross_line_large_agent_ahead_ && left_lane_exist_cross_line_truck_speed_ <= agent->speed();
   bool right_lane_exist_slow_cross_lane_truck =
-      exist_cross_line_large_agent_ahead_ &&
-      right_lane_exist_cross_line_truck_ && right_lane_exist_truck_speed_ <= agent->speed();
+      exist_cross_line_large_agent_ahead_ && right_lane_exist_cross_line_truck_speed_ <= agent->speed();
 
-#ifdef X86
+// #ifdef X86
   // const bool is_trigger_left = (is_left_overtake &&
   // is_left_lane_change_safe_);
   const bool is_trigger_left =
@@ -630,25 +626,25 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   if (counter_right >= 5) {
     trigger_right_overtake = true;
   }
-#else
-  const bool is_trigger_left =
-      is_left_overtake && left_lane_is_on_navigation_route && !left_lane_exist_slow_cross_lane_truck &&
-      FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
-                                         leading_vehicle_speed, llane, true,
-                                         need_overtake_distance);
-  const bool trigger_left_overtake = checkOvertakeTrigger(
-      current_time, is_trigger_left,
-      &left_overtake_valid_timestamp_);
+// #else
+//   const bool is_trigger_left =
+//       is_left_overtake && left_lane_is_on_navigation_route && !left_lane_exist_slow_cross_lane_truck &&
+//       FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
+//                                          leading_vehicle_speed, llane, true,
+//                                          need_overtake_distance);
+//   const bool trigger_left_overtake = checkOvertakeTrigger(
+//       current_time, is_trigger_left,
+//       &left_overtake_valid_timestamp_);
 
-  const bool is_trigger_right =
-      is_right_overtake && right_lane_is_on_navigation_route && !right_lane_exist_slow_cross_lane_truck &&
-      FeasibleLaneDistanceEnoughJudgment(right_route_traffic_speed,
-                                         leading_vehicle_speed, rlane, false,
-                                         need_overtake_distance);
-  const bool trigger_right_overtake = checkOvertakeTrigger(
-      current_time, is_trigger_right,
-      &right_overtake_valid_timestamp_);
-#endif
+//   const bool is_trigger_right =
+//       is_right_overtake && right_lane_is_on_navigation_route && !right_lane_exist_slow_cross_lane_truck &&
+//       FeasibleLaneDistanceEnoughJudgment(right_route_traffic_speed,
+//                                          leading_vehicle_speed, rlane, false,
+//                                          need_overtake_distance);
+//   const bool trigger_right_overtake = checkOvertakeTrigger(
+//       current_time, is_trigger_right,
+//       &right_overtake_valid_timestamp_);
+// #endif
 
   JSON_DEBUG_VALUE("left_lane_is_on_navigation_route",
                    left_lane_is_on_navigation_route);
@@ -2229,27 +2225,25 @@ double OvertakeRequest::CalculateAttenuationCoefficient(
   return coefficient;
 }
 
-bool OvertakeRequest::IsTargetLaneExistTruck(
+void OvertakeRequest::IsTargetLaneExistTruck(
     const std::shared_ptr<agent::Agent>& agent, const std::shared_ptr<VirtualLane>& target_lane,
     bool is_left, double& target_lane_exist_truck_speed) {
-  if (is_left && left_lane_exist_cross_line_truck_) {
-    return true;
+  if (!agent->is_truck()) {
+    return;
   }
-  if (!is_left && right_lane_exist_cross_line_truck_) {
-    return true;
-  }
+
   // 根据侵入距离，计算潜在的跟车目标
   std::shared_ptr<ReferencePath> target_ref_line =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(target_lane->get_virtual_id(), false);
   if (!target_ref_line) {
-    return false;
+    return;
   }
 
   const auto& target_lane_coord_ptr = target_ref_line->get_frenet_coord();
   if (!target_lane_coord_ptr) {
-    return false;
+    return;
   }
   Point2D agent_point{agent->x(), agent->y()};
   Point2D agent_frenet_point;
@@ -2259,22 +2253,22 @@ bool OvertakeRequest::IsTargetLaneExistTruck(
   if (!target_lane_coord_ptr->XYToSL(agent_point,
                                      agent_frenet_point)) {
     ILOG_DEBUG << "ego on ref lane failed!";
-    return false;
+    return;
   }
 
   // 与自车的纵向距离
   double d_s_rel =
       agent_frenet_point.x - target_ref_line->get_frenet_ego_state().s() - 0.5 * vehicle_param.length - 0.5 * agent->length();
-  if (d_s_rel < 0.0 && d_s_rel > 100.0) {
-    return false;
+  if (d_s_rel < 0.0 || d_s_rel > 100.0) {
+    return;
   }
   if (is_left) {
-    if (agent_frenet_point.y < 0.0) {
-      return false;
+    if (agent_frenet_point.y < 0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+      return;
     }
   } else {
-    if (agent_frenet_point.y > 0.0) {
-      return false;
+    if (agent_frenet_point.y > -0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+      return;
     }
   }
 
@@ -2305,7 +2299,7 @@ bool OvertakeRequest::IsTargetLaneExistTruck(
     // 先过滤静态障碍物，因为静态障碍物的不确定性较低
     follow_confidence = 0;
     is_need_folow = false;
-    return false;
+    return;
   }
   double base_safe_intrusoin_for_dynamic = 0.4;
   double base_safe_intrusoin_for_static = 0.7;
@@ -2339,7 +2333,7 @@ bool OvertakeRequest::IsTargetLaneExistTruck(
     //     follow_confidence - cut_factor * kPlanningCycleTime, 0.0);
     is_need_folow = false;
   }
-  return is_need_folow;
+  return;
 }
 
 void OvertakeRequest::Reset() {

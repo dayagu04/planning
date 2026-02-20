@@ -28,7 +28,8 @@ Agent::Agent(const Agent& agent)
       box_(agent.box().center(), agent.box().heading(), agent.box().length(),
            agent.box().width()),
       perception_polygon_(agent.perception_polygon()),
-      is_static_(agent.is_static()) {
+      is_static_(agent.is_static()),
+      is_truck_(agent.is_truck()){
   x_ = agent.x();
   y_ = agent.y();
   theta_ = agent.theta();
@@ -250,6 +251,8 @@ bool Agent::is_static() const { return is_static_; }
 bool Agent::is_truck() const { return is_truck_; }
 
 void Agent::set_is_static(const bool is_static) { is_static_ = is_static; }
+
+void Agent::set_is_truck(const bool is_truck) { is_truck_ = is_truck; }
 
 void Agent::set_b_backup_freemove(const bool b_backup_freemove) {
   b_backup_freemove_ = b_backup_freemove;
