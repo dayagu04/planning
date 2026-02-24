@@ -55,8 +55,7 @@ class PathComparator : public AstarDecider {
 
   const bool CheckDistanceRequest(const float &best_node_s,
                                   const float &node_challenger_s);
-  bool CheckVerticalSlotHeadOut(const AstarRequest *request,
-                                const Node3d *best_node,
+  bool CheckVerticalSlotParkOut(const Node3d *best_node,
                                 const Node3d *node_challenger);
 
   bool IsGearSwitchNodeNice(const Node3d *node);

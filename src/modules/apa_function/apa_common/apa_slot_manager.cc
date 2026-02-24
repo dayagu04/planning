@@ -13,6 +13,7 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
+#include "library/convex_collision_detection/aabb2d.h"
 #include "log_glog.h"
 #include "target_pose_decider/target_pose_decider.h"
 #include "time_benchmark.h"
@@ -53,6 +54,9 @@ void ApaSlotManager::Update(
 
   slots_map_.clear();
   dist_id_map_.clear();
+  if (!perpendicular_redefine_info_map_.empty() && state_machine_ptr_->IsSearchingInStatus()) {
+    perpendicular_redefine_info_map_.clear();
+  }
 
   ApaRunningMode running_mode = state_machine_ptr->GetParkRunningMode();
 
@@ -80,6 +84,22 @@ void ApaSlotManager::Update(
       continue;
     }
     ApaSlot slot(fusion_slot);
+    if (state_machine_ptr_->IsSearchingInStatus()) {
+      if (IsSideParkingPerpendicularSlot(slot)) {
+        slot.ResetAsParallel(
+            fusion_slot,
+            perpendicular_redefine_info_map_.at(slot.GetId()).first,
+            perpendicular_redefine_info_map_.at(slot.GetId()).second);
+      }
+    } else if (state_machine_ptr_->IsParkingInStatus() &&
+               select_slot_id == slot.GetId()) {
+      if (perpendicular_redefine_info_map_.find(slot.GetId()) !=
+          perpendicular_redefine_info_map_.end() && perpendicular_redefine_info_map_.at(slot.GetId()).first)
+        slot.ResetAsParallel(
+            fusion_slot,
+            perpendicular_redefine_info_map_.at(slot.GetId()).first,
+            perpendicular_redefine_info_map_.at(slot.GetId()).second);
+    }
     if (is_sapa_mode && slot.GetId() == ApaStateMachineManager::kSlotFreeIdx_) {
       slot.SetSourceType(SlotSourceType::SELF_DEFINE);
     }
@@ -1151,6 +1171,169 @@ const bool ApaSlotManager::LateralConditions(double& dot_product,
   constexpr double kCosineValueMaximumAngle = 0.9962;  // cos(5°)
 
   return cos_theta > kCosineValueMaximumAngle;
+}
+
+bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
+  bool is_redefine_slot_type = false;
+  int ego_side_to_slot = 0;
+  if (slot.slot_source_type_ != SlotSourceType::CAMERA) {
+    return false;
+  }
+  if (slot.slot_type_ != SlotType::PERPENDICULAR) {
+    return false;
+  }
+  if (slot.release_info_.release_state[FUSION_RELEASE] !=
+      SlotReleaseState::RELEASE) {
+    return false;
+  }
+  if (!state_machine_ptr_->IsSearchingInStatus()) {
+    return false;
+  }
+
+  std::unordered_map<size_t, ApaObstacle> obs =
+      obstacle_manager_ptr_->GetObstacles();
+  geometry_lib::GlobalToLocalTf g2l_tf;
+  Eigen::Vector2d origin_pos;
+  double origin_global_heading;
+  geometry_lib::PathPoint ego_local_point;
+  bool left_area_is_empty = true, right_area_is_empty = true,
+       front_area_is_empty = true;
+  auto TransformCoordFromGlobalToLocal =
+      [&](const pnc::geometry_lib::GlobalToLocalTf& g2l_tf) {
+        for (auto& pair : obs) {
+          if (pair.second.GetObsAttributeType() !=
+              ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
+            pair.second.TransformCoordFromGlobalToLocal(g2l_tf);
+          }
+        }
+      };
+
+  g2l_tf = slot.g2l_tf_;
+  TransformCoordFromGlobalToLocal(g2l_tf);
+  slot.TransformCoordFromGlobalToLocal(g2l_tf);
+
+  ego_local_point.pos = g2l_tf.GetPos(measure_data_ptr_->GetPos());
+  ego_local_point.heading =
+      g2l_tf.GetHeading(measure_data_ptr_->GetHeading()) * 57.3;
+  if (ego_local_point.heading > 80 || ego_local_point.heading < -80) {
+    return false;
+  }
+  if (fabs(ego_local_point.pos.y()) > 5) {
+    return false;
+  }
+  ILOG_INFO << "ego_local_point.pos.x = " << ego_local_point.pos.x()
+            << "ego_local_point.pos.y = " << ego_local_point.pos.y()
+            << "ego_local_point.heading = " << ego_local_point.heading;
+  cdl::AABB slot_left_area, slot_right_area, slot_front_area;
+  double min_x, min_y, max_x, max_y;
+  min_x = 1.5;
+  min_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
+                   slot.origin_corner_coord_local_.pt_3.y());
+  max_x = std::max(slot.origin_corner_coord_local_.pt_0.x(),
+                   slot.origin_corner_coord_local_.pt_1.x());
+  max_y = min_y + 1.5;
+  slot_left_area.min_ = cdl::Vector2r(min_x, min_y);
+  slot_left_area.max_ = cdl::Vector2r(max_x, max_y);
+  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                   slot.origin_corner_coord_local_.pt_2.y()) -
+          1.5;
+  max_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                   slot.origin_corner_coord_local_.pt_2.y());
+  slot_right_area.min_ = cdl::Vector2r(min_x, min_y);
+  slot_right_area.max_ = cdl::Vector2r(max_x, max_y);
+  min_x = std::min(slot.origin_corner_coord_local_.pt_0.x(),
+                   slot.origin_corner_coord_local_.pt_1.x());
+  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
+                   slot.origin_corner_coord_local_.pt_2.y()) +
+          0.3;
+  max_x = min_x + 3.5;
+  max_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
+                   slot.origin_corner_coord_local_.pt_3.y()) -
+          0.3;
+  slot_front_area.min_ = cdl::Vector2r(min_x, min_y);
+  slot_front_area.max_ = cdl::Vector2r(max_x, max_y);
+  for (const auto& pair : obs) {
+    for (const auto& pt : pair.second.GetPtClout2dLocal()) {
+      if (left_area_is_empty) {
+        left_area_is_empty =
+            !(slot_left_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+      }
+      if (right_area_is_empty) {
+        right_area_is_empty =
+            !(slot_right_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+      }
+      if (front_area_is_empty) {
+        front_area_is_empty =
+            !(slot_front_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+      }
+    }
+  }
+
+  ILOG_INFO << "slot origin id = " << slot.GetId()
+            << "  left_area_is_empty = " << static_cast<int>(left_area_is_empty)
+            << "  right_area_is_empty = "
+            << static_cast<int>(right_area_is_empty)
+            << "  front_area_is_empty = "
+            << static_cast<int>(front_area_is_empty);
+
+  if (ego_local_point.pos.y() < slot.origin_corner_coord_local_.pt_0.y()) {
+    ego_side_to_slot = 1;
+    if (!right_area_is_empty) {
+      is_redefine_slot_type = false;
+    } else {
+      if (!front_area_is_empty) {
+        is_redefine_slot_type = true;
+      } else {
+        if (ego_local_point.pos.x() +
+                apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
+            slot.origin_corner_coord_local_.pt_1.x()) {
+          if (ego_local_point.heading <= 4 && ego_local_point.heading > -80) {
+            is_redefine_slot_type = true;
+          } else {
+            is_redefine_slot_type = false;
+          }
+        } else {
+          if (ego_local_point.heading > 2) {
+            is_redefine_slot_type = false;
+          } else {
+            is_redefine_slot_type = true;
+          }
+        }
+      }
+    }
+  } else if (ego_local_point.pos.y() >
+             slot.origin_corner_coord_local_.pt_1.y()) {
+    ego_side_to_slot = -1;
+    if (!left_area_is_empty) {
+      is_redefine_slot_type = false;
+    } else {
+      if (!front_area_is_empty) {
+        is_redefine_slot_type = true;
+      } else {
+        if (ego_local_point.pos.x() +
+                apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
+            slot.origin_corner_coord_local_.pt_0.x()) {
+          if (ego_local_point.heading >= -4 && ego_local_point.heading < 80) {
+            is_redefine_slot_type = true;
+          } else {
+            is_redefine_slot_type = false;
+          }
+        } else {
+          if (ego_local_point.heading < -2) {
+            is_redefine_slot_type = false;
+          } else {
+            is_redefine_slot_type = true;
+          }
+        }
+      }
+    }
+  }
+  ILOG_INFO << "is_redefine_slot_type = "
+            << static_cast<int>(is_redefine_slot_type);
+  perpendicular_redefine_info_map_.insert(
+      perpendicular_redefine_info_map_.end(),
+      {slot.GetId(), {is_redefine_slot_type, ego_side_to_slot}});
+  return is_redefine_slot_type;
 }
 
 }  // namespace apa_planner

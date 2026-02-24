@@ -33,7 +33,7 @@ void HybridAStarThreadSolver::HybridAStarThreadFunction() {
   return;
 }
 
-int HybridAStarThreadSolver::Init(const VehicleParam &veh_param) {
+int HybridAStarThreadSolver::Init(const VehicleParam& veh_param) {
   solver_interface_ = std::make_shared<HybridAStarInterface>();
 
   request_response_state_.store(RequestResponseState::NONE);
@@ -96,7 +96,8 @@ void HybridAStarThreadSolver::SetResponse() {
 
   thread_response_data_.request = thread_request_data_;
   thread_response_data_.time = solver_interface_->GetTimeBenchmark();
-  thread_response_data_.search_traj_info = solver_interface_->GetSearchTrajInfo();
+  thread_response_data_.search_traj_info =
+      solver_interface_->GetSearchTrajInfo();
 
   // child node
   all_child_node_list_.clear();
@@ -110,6 +111,8 @@ void HybridAStarThreadSolver::SetResponse() {
 
   thread_response_data_.feasible_directions =
       solver_interface_->GetFeasibleDirections();
+  thread_response_data_.traj_candidates_ =
+      solver_interface_->GetTarjCandidates();
 
   ILOG_INFO << "set output finish in thread";
 

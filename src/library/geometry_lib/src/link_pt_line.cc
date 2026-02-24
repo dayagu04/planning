@@ -816,6 +816,8 @@ void LinkPtLinePath<T>::SetPathSegs(const PathSeg<T> _segs[],
         if (std::fabs(kappas[i]) > T(1e-3f)) {
           kappa_change += std::fabs(kappas[i] - kappas[i - 1]);
         }
+      } else {
+        gear_change_num++;
       }
     }
 

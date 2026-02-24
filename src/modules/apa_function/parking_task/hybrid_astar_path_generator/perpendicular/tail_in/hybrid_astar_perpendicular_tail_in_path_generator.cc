@@ -812,7 +812,9 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       }
 
       if (curve_node_to_goal.GetGearSwitchNum() < 1 &&
-          curve_node_to_goal.GetLatErr() < 0.02) {
+          curve_node_to_goal.GetLatErr() < 0.02 &&
+          curve_node_to_goal.GetLastPathKappaChange() <
+              max_kappa_change_ + 1e-2) {
         ILOG_INFO << "find a path that can no shift gear to enter slot";
         break;
       }
@@ -1119,6 +1121,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
   const float length_penalty = 1.0f;
   const float unsuitable_last_line_length_penalty = 1.68f;
   const float kappa_change_penalty = 1.5f * length_penalty / max_kappa_change_;
+  const float last_path_kappa_change_penalty =
+      1.0f * gear_change_penalty / max_kappa_change_;
   const float lat_err_penalty = 16.8f;
   const float heading_err_penalty = 0.0f * common_math::kRad2DegF;
 
@@ -1171,6 +1175,9 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       }
 
       cost.kappa_change_cost += lpl_path.kappa_change * kappa_change_penalty;
+
+      cost.kappa_change_cost +=
+          temp_node.GetLastPathKappaChange() * last_path_kappa_change_penalty;
 
       const auto last_steer = lpl_path.last_steer;
 

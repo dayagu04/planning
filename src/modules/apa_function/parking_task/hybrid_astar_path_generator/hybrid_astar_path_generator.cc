@@ -331,6 +331,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
   path.ptss.resize(rs_path_.size);
   path.gear_change_number = rs_path_.gear_change_number;
   path.kappa_change = 0.0f;
+  path.last_path_kappa_change = 0.0f;
   path.gear_number = 1;
   path.single_gear_lengths[path.gear_number - 1] =
       std::fabs(rs_path_.paths[0].length);
@@ -350,9 +351,12 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
     if (i > 0) {
       if (IsGearDifferent(path.gears[i], path.gears[i - 1])) {
         path.single_gear_lengths[(++path.gear_number) - 1] = path.dists[i];
+        path.last_path_kappa_change = 0.0f;
       } else {
         path.single_gear_lengths[path.gear_number - 1] += path.dists[i];
         path.kappa_change += std::fabs(path.kappas[i] - path.kappas[i - 1]);
+        path.last_path_kappa_change +=
+            std::fabs(path.kappas[i] - path.kappas[i - 1]);
       }
     }
   }

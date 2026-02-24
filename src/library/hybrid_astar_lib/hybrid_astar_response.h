@@ -14,6 +14,7 @@ struct AstarResponse {
 
   // local frame
   HybridAStarResult result;
+  std::array<HybridAStarResult, 9> traj_candidates_{};
   // local frame
   std::vector<AStarPathPoint> first_seg_path;
 

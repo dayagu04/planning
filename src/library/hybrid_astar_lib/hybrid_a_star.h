@@ -129,6 +129,13 @@ class HybridAStar {
         result, start, target, lon_min_sampling_length);
   }
 
+  bool SamplingByCubicSpiral(std::vector<AStarPathPoint>& path,
+                             const Pose2f& start, const Pose2f& target,
+                             const AstarPathGear ref_gear) {
+    return spiral_sampling_->CallGetCubicSpiralPath(path, start, target,
+                                                    ref_gear);
+  }
+
   const size_t NodePoolSize() const { return node_pool_.PoolSize(); }
 
   // for debug
