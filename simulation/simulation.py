@@ -61,8 +61,10 @@ client = boto3.client(
 )
 
 # 文件输入地址  包含所有bag和excel文件
-in_root_path = "/yr-nvme/planning"
-in_dir = f"{in_root_path}/{task_id}"
+# in_root_path = "/yr-nvme/planning"
+# in_dir = f"{in_root_path}/{task_id}"
+# docker运行默认将所有输入映射到/in目录下
+in_dir = f"/in"
 # for item_name in os.listdir(in_dir):
 #     item_path = os.path.join(in_dir, item_name)
 #     print("input files name: ", item_path)
@@ -157,7 +159,11 @@ if (enable_static_fusion == "1"):
 start_time = time.time()
 PP_bag = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 result_path = f"{out_dir}/case_result.json"
+# close loop
 command = f"/root/planning/install/bin/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
+if (enable_ground_truth_simulation):
+    # no debug + close loop
+    command = f"/root/planning/install/bin/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --no-debug --close-loop --interface-check --no-version-check"
 try:
     result = subprocess.run(command, shell=True, text=False, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     # print("标准输出：")
