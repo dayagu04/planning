@@ -103,7 +103,7 @@ bool ParkingSwitchDecider::Execute() {
       const double duration_time_since_standstill_near_dest =
           (curr_timestamp - timestamp_at_standstill_near_dest_) / 1000.0;
 
-      if (dist_to_target_slot < 1.0 ||
+      if (std::fabs(dist_to_target_slot) < 1.0 ||
           duration_time_since_standstill_near_dest >
               config_.keeping_still_time_thr_for_switch_parking) {
         parking_switch_info_.is_standstill_near_target_slot = true;

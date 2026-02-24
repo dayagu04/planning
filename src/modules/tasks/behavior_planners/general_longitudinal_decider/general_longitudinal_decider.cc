@@ -2132,7 +2132,8 @@ double GeneralLongitudinalDecider::get_distance_to_destination() {
   double distance_to_destination = 2000.0;
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  distance_to_destination = route_info_output.hpp_route_info_output.distance_to_target_slot;
+  distance_to_destination =
+      std::fabs(route_info_output.hpp_route_info_output.distance_to_target_slot);
   // auto distance_to_destination = std::numeric_limits<double>::max();
   // if (dest.isValid()) {
   //   distance_to_destination = dest.hasLanePathOffset()

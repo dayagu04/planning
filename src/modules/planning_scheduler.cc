@@ -933,8 +933,8 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
 
   hpp_info->is_avaliable = hpp_route_info_output.is_on_hpp_lane;
   hpp_info->distance_to_parking_space =
-      is_exist_target_slot ? hpp_route_info_output.distance_to_target_slot
-                           : hpp_route_info_output.distance_to_target_dest;
+      is_exist_target_slot ? std::fabs(hpp_route_info_output.distance_to_target_slot)
+                           : std::fabs(hpp_route_info_output.distance_to_target_dest);
   hpp_info->is_on_hpp_lane = hpp_route_info_output.is_on_hpp_lane;
   hpp_info->is_reached_hpp_trace_start =
       hpp_route_info_output.is_reached_hpp_start_point;
