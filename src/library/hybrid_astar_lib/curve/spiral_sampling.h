@@ -25,6 +25,12 @@ class SpiralSampling : public CurveSampling {
       HybridAStarResult* result, const Pose2f& start, const Pose2f& target,
       const float lon_min_sampling_length);
 
+  bool CallGetCubicSpiralPath(std::vector<AStarPathPoint>& path,
+                              const Pose2f& start, const Pose2f& end,
+                              AstarPathGear ref_gear) {
+    return GetCubicSpiralPath(path, start, end, ref_gear);
+  }
+
  private:
   const bool GetCubicSpiralPath(std::vector<AStarPathPoint>& path,
                                 const Pose2f& start, const Pose2f& end,

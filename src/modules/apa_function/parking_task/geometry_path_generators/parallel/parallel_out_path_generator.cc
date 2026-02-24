@@ -355,8 +355,10 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   const double half_slot_width = 0.5 * input_.tlane.slot_width;
   const double slot_side_sgn = input_.tlane.slot_side_sgn;
 
-  const double obs_pt_inside_y = input_.tlane.obs_pt_inside.y();
-
+  const double obs_pt_inside_y =
+      std::max(slot_side_sgn * input_.tlane.obs_pt_inside.y(),
+               slot_side_sgn * input_.tlane.pin_obs_far_y);
+  // ILOG_INFO<<"obs_pt_inside_y:"<<obs_pt_inside_y<<",pt_inside.y:"<<input_.tlane.obs_pt_inside.y()<<",pin_obs_far_y:"<<input_.tlane.pin_obs_far_y;
   bool narrow_front_vacant = false;
   if (obs_pt_inside_y > half_slot_width * 0.5 - kEps &&
       obs_pt_inside_y < half_slot_width * 0.5 + kEps &&
@@ -379,7 +381,7 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
 
   const double rac_tlane_bound =
       tlane_outer_y +
-      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
+      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.5);
 
   double tlane_outer_y_ref_line =
       std::max(input_.tlane.obs_pt_inside.y() * slot_side_sgn,
@@ -398,6 +400,9 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
             << " half_slot_width = " << half_slot_width
             << " input_.tlane.slot_side_sgn = " << input_.tlane.slot_side_sgn
             << "calc_params_.slot_side_sgn" << calc_params_.slot_side_sgn;
+  // ILOG_INFO << "prepare_line_starty_from_slot:" << prepare_line_starty_from_slot
+  //           << ",rac_tlane_bound_ref_line:" << rac_tlane_bound_ref_line
+  //           << ",narrow_front_vacant:" << narrow_front_vacant;
 
   const double rac_tlane_bound_near =
       std::fabs(rac_tlane_bound) > std::fabs(rac_tlane_bound_ref_line)
@@ -423,7 +428,23 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
     rac_channel_bound = 10.0 * slot_side_sgn;
   }
 
-  const double y_bound = std::fabs(rac_channel_bound - rac_tlane_bound_near);
+  double narrow_prepare_line_bound =
+      std::fabs(rac_channel_bound - rac_tlane_bound_near);
+  bool is_narrow_channel = false;
+  if (std::abs(input_.tlane.channel_y - obs_pt_inside_y) <
+      apa_param.GetParam().max_car_width + 1) {
+    is_narrow_channel = true;
+  }
+  double narrow_prepare_start = obs_pt_inside_y;
+  if (is_narrow_channel) {
+    ILOG_INFO << "narrow channel, prepare_line start from 0.35";
+    narrow_prepare_start =
+        obs_pt_inside_y +
+        slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.35);
+    narrow_prepare_line_bound = std::fabs(rac_channel_bound - narrow_prepare_start);
+  }
+  const double y_bound = is_narrow_channel ? narrow_prepare_line_bound : std::fabs(rac_channel_bound - rac_tlane_bound_near);
+
   ILOG_INFO << "input_.tlane.channel_y" << input_.tlane.channel_y;
   const double channel_width =
       std::fabs(input_.tlane.channel_y) - half_slot_width;
@@ -454,10 +475,10 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
 
   pnc::geometry_lib::PathPoint prepare_pose(prepare_pose_start, arc_slot_init_out_heading_);
   ILOG_INFO << "park out prepare line front_heading = " << arc_slot_init_out_heading_;
-  prepare_pose.pos.y() = rac_tlane_bound_near;
+  prepare_pose.pos.y() = is_narrow_channel ? narrow_prepare_start : rac_tlane_bound_near;
 
   const auto y_vec =
-      pnc::geometry_lib::Linspace(rac_tlane_bound_near, rac_channel_bound, dy);
+      pnc::geometry_lib::Linspace(is_narrow_channel ? narrow_prepare_start : rac_tlane_bound_near, rac_channel_bound, dy);
 
   const double start_y =
       slot_side_sgn *

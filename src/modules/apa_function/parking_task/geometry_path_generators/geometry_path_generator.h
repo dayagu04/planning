@@ -91,6 +91,7 @@ struct Tlane {
   double car_to_curb_dis = 0.0;
   double first_occupied_ratio = 0.0;
   bool use_sturn_plan = false;
+  double pin_obs_far_y = 0.5*slot_width;
 
   void Reset() {
     corner_outside_slot.setZero();
@@ -118,6 +119,7 @@ struct Tlane {
     car_to_curb_dis = 0.0;
     first_occupied_ratio = 0.0;
     use_sturn_plan = false;
+    pin_obs_far_y = 0.5*slot_width;
   }
 };
 
