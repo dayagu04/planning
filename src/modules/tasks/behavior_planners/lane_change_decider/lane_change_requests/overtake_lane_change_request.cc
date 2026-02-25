@@ -522,7 +522,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   bool left_lane_is_on_navigation_route = true;
   if (feasible_lane_sequence.size() > 0) {
-    int current_lane_order_num = left_lane_nums_ + 1;
+    int current_lane_order_num = route_info_output.ego_seq;
     int target_lane_order_num = current_lane_order_num - 1;
     if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
                   target_lane_order_num) == feasible_lane_sequence.end()) {
@@ -532,7 +532,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   bool right_lane_is_on_navigation_route = true;
   if (feasible_lane_sequence.size() > 0) {
-    int current_lane_order_num = left_lane_nums_ + 1;
+    int current_lane_order_num = route_info_output.ego_seq;
     int target_lane_order_num = current_lane_order_num + 1;
     if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
                   target_lane_order_num) == feasible_lane_sequence.end()) {

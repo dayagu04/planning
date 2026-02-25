@@ -332,7 +332,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   bool right_lane_is_on_navigation_route = rlane ? true : false;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     if (feasible_lane_sequence.size() > 0) {
-      int current_lane_order_num = left_lane_nums + 1;
+      int current_lane_order_num = route_info_output.ego_seq;
       int target_lane_order_num = current_lane_order_num - 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
@@ -343,7 +343,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     }
 
     if (feasible_lane_sequence.size() > 0) {
-      int current_lane_order_num = left_lane_nums + 1;
+      int current_lane_order_num = route_info_output.ego_seq;
       int target_lane_order_num = current_lane_order_num + 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
