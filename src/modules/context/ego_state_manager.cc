@@ -400,6 +400,10 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     max_replan_dist_err = hpp_max_replan_dist_err_;
   }
 
+  if (session_->is_rads_scene()) {
+    max_replan_lon_err = config_.rads_max_replan_lon_err;
+  }
+
   double ego_acc_replan = session_->is_rads_scene() ? -(ego_state->ego_acc())
                                                     : ego_state->ego_acc();
   double ego_vel_replan =
