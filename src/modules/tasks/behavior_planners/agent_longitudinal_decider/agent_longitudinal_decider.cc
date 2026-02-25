@@ -1418,6 +1418,7 @@ void AgentLongitudinalDecider::FilterRearAgents() {
     ego_rear_edge_s = ego_s - rear_axle_to_front_edge;
     ego_front_edge_s = ego_s + rear_axle_to_rear_edge;
     ego_center_s = ego_s - rear_axle_to_center;
+    ego_front_axle_s = ego_s;
   }
 
   for (const auto agent : agents) {

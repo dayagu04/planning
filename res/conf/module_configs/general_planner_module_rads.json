@@ -77,6 +77,7 @@
   "hpp_replan_threshold_speed": [1.0, 4.167, 11.111],
   "hpp_replan_lat_err_threshold_value": [0.2, 0.4, 0.6],
   "hpp_replan_lon_err_threshold_value": [0.1, 0.5, 1.0],
+  "rads_max_replan_lon_err" : 0.5,
   "reference_point_velocity": 2.0,
   "approach_distance_threshold_planning": 50,
   "nudge_buffer_road_boundary": 0.4,
@@ -913,7 +914,8 @@
       "distance_start_between_ego_and_large_cipv_threshold": 0.5,
       "distance_start_between_ego_and_cipv_threshold": 0.4,
       "distance_stop_between_ego_and_cipv_threshold": 3.0,
-      "rads_distance_stop_between_ego_and_destination_cipv_threshold": 1.2,
+      "rads_distance_stop_between_ego_and_destination_cipv_threshold": 0.7,
+      "rads_distance_stop_between_ego_and_cipv_threshold": 1.0,
       "rads_early_stop_distance_ego_to_end_threshold": 0.30,
       "rads_early_stop_vel_threshold": 0.25,
       "distance_to_go_threshold": 6.5,
@@ -1096,7 +1098,13 @@
       "high_speed_threshold_kmph" : 30.0,
       "large_vehicle_min_follow_distance_gap" : 6.0,
       "cone_min_follow_distance_gap" : 5.0,
-      "traffic_light_min_follow_distance_gap" : 2.0
+      "traffic_light_min_follow_distance_gap" : 2.0,
+      "rads_follow_distance_buffer_dynamic" : 1.0,
+      "rads_follow_distance_buffer_static" : 0.3
+    },
+    "comfort_target": {
+      "rads_comfort_param_static_s0": 0.2,
+      "rads_comfort_param_dynamic_s0" : 0.8
     }
 },
 
