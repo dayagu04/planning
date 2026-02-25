@@ -108,8 +108,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_acc(config_.q_acc);
       planning_input.set_q_jerk(config_.q_jerk);
       concerned_start_q_jerk_ = config_.q_jerk;
-      MakeDynamicWeight(planning_input);
-
+      //MakeDynamicWeight(planning_input);
+      MakeDynamicWeight_Rads(planning_input);
       if (is_in_intersection_) {
         planning_input.set_q_continuity(config_.q_continuity_intersection);
         planning_input.set_q_acc(config_.q_acc_intersection);
@@ -1443,6 +1443,96 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   double q_theta_ratio = std::max(q_theta_ratio1, q_theta_ratio2);
   planning_input.set_q_ref_theta(q_theta_ratio * q_theta);
 
+  std::vector<double> xp_high_v{20.833, 25.0, 27.778, 30.556};
+  double q_acc = planning::interp(ref_vel_, xp_high_v, config_.map_q_acc);
+  if (lateral_dist < 0.15) {
+    planning_input.set_q_acc(q_acc);
+  }
+
+  double q_jerk1 = planning::interp(lateral_dist, xp_xy, config_.map_qjerk1);
+  double q_jerk2 = planning::interp(lateral_dist, xp_xy, config_.map_qjerk2);
+  std::vector<double> fp_ratio_to_jerk1{1.5, 1.2, 1.0};
+  std::vector<double> fp_ratio_to_jerk2{1.5, 2.0, 4.0};
+  std::vector<double> fp_ratio_to_jerk3{0.5, 0.5, 0.5, 0.2, 0.2, 0.2};
+  double q_jerk_ratio1 = planning::interp(std::fabs(init_ref_theta_error_),
+                                          xp_theta, fp_ratio_to_jerk1);
+  double q_jerk_ratio2 = planning::interp(std::fabs(init_ref_theta_error_),
+                                          xp_theta, fp_ratio_to_jerk2);
+  double q_jerk_ratio = q_jerk_ratio1;
+  if ((init_l_ - lat_offset_) * (init_ref_theta_error_) > 1e-6) {
+    q_jerk_ratio = q_jerk_ratio2;
+  }
+  std::vector<double> fp_decay_jerk_ratio{0.3, 0.3, 0.8, 1.0, 1.0, 1.0};
+  double decay_jerk_ratio =
+      planning::interp(lateral_dist, xp_xy, fp_decay_jerk_ratio);
+  q_jerk_ratio = std::max(q_jerk_ratio * decay_jerk_ratio, 1.0);
+  if (lateral_dist < 0.1) {
+    q_jerk2 = q_jerk1;
+  }
+  if (!is_bound_avoid_ || std::fabs(lat_offset_) > 1e-2) {
+    q_jerk_ratio =
+        planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_ratio_to_jerk3);
+  }
+  concerned_start_q_jerk_ = q_jerk_ratio * q_jerk1;
+  planning_input.set_q_jerk(q_jerk_ratio * q_jerk2);
+
+  // if ((std::fabs(init_ref_theta_error_) >= config_.big_theta_thr) &&
+  //     // (std::fabs(init_ref_theta_error_) <= 2.0) &&
+  //     // (std::fabs(init_dis_to_ref_) < 0.4) &&
+  //     (std::fabs(avoid_dist_) <= 0.1) &&
+  //     (ref_vel_ < 15.0)) {
+  //   weight_.complete_follow = true;
+  // }
+
+  if (lateral_dist > 0.2) {
+    std::vector<double> xp_v{8.333, 12.5};
+    std::vector<double> fp_end_ratio_for_qrefxy{
+        config_.lc_end_ratio_for_second_qrefxy, config_.end_ratio_for_qrefxy};
+    end_ratio_for_qrefxy_ =
+        planning::interp(ref_vel_, xp_v, fp_end_ratio_for_qrefxy);
+  }
+}
+
+void LateralMotionPlanningWeight::MakeDynamicWeight_Rads(
+    planning::common::LateralPlanningInput &planning_input) {
+  std::vector<double> xp_v{1.0, 4.167, 8.333, 12.5, 16.667, 20.833, 25.0};
+  double q_xy = planning::interp(ref_vel_, xp_v, config_.map_qxy);
+  std::vector<double> xp_xy{0.1, 0.2, 0.3, 0.6, 1.2, 2.5};
+
+  std::vector<double> fp_ratio_to_xy1{1.0, 1.0, 1.5, 2.0, 3.0, 5.0};
+  //std::vector<double> fp_ratio_to_xy1{0.25, 0.5, 0.75, 1.0, 1.5, 2.0};
+
+  std::vector<double> xp_theta{0.5, 2.0, 5.0};
+  std::vector<double> fp_ratio_to_xy2{1.0, 0.5, 0.3};
+  std::vector<double> fp_ratio_to_xy3{1.0, 1.2, 1.5, 1.0, 0.6, 0.3};
+  double lateral_dist =
+      std::max(std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_)), std::fabs(last_path_max_dist2ref_));
+  double q_xy_ratio1 = planning::interp(lateral_dist, xp_xy, fp_ratio_to_xy1);
+  // double q_xy_ratio2 =
+  // planning::interp(std::fabs(init_ref_theta_error_), xp_theta,
+  // fp_ratio_to_xy2);
+  if (is_bound_avoid_ || std::fabs(lat_offset_) > 1e-2) {
+    q_xy_ratio1 =
+        planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_ratio_to_xy3);
+  }
+  planning_input.set_q_ref_x(q_xy_ratio1 * q_xy);
+  planning_input.set_q_ref_y(q_xy_ratio1 * q_xy);
+
+  std::vector<double> fp_ratio_to_theta1{5.0, 3.0, 2.0, 1.5, 1.0, 1.0};
+  std::vector<double> fp_ratio_to_theta2{3.0, 1.5, 1.0};
+  //std::vector<double> fp_ratio_to_theta1{1.0, 1.0, 1.5, 2.0, 3.0, 5.0};
+  //std::vector<double> fp_ratio_to_theta2{1.0, 1.5, 3.0};
+  double q_theta = planning::interp(ref_vel_, xp_v, config_.map_qtheta);
+  // double q_theta_ratio1 =
+  //   planning::interp(std::fabs(init_l_ - lat_offset_), xp_xy,
+  //   fp_ratio_to_theta1);
+  // double q_theta_ratio2 =
+  //   planning::interp(std::fabs(avoid_dist_), xp_xy, fp_ratio_to_theta2);
+  double q_theta_ratio1 =
+      planning::interp(lateral_dist, xp_xy, fp_ratio_to_theta1);
+  //double q_theta_ratio2 = planning::interp(std::fabs(init_ref_theta_error_),xp_theta, fp_ratio_to_theta2);
+  //double q_theta_ratio = std::max(q_theta_ratio1, q_theta_ratio2);
+  planning_input.set_q_ref_theta(q_theta_ratio1 * q_theta);
   std::vector<double> xp_high_v{20.833, 25.0, 27.778, 30.556};
   double q_acc = planning::interp(ref_vel_, xp_high_v, config_.map_q_acc);
   if (lateral_dist < 0.15) {
