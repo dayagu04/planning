@@ -82,10 +82,21 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const auto& stop_destination_decider_output =
       session_->planning_context().stop_destination_decider_output();
-  if (session_->is_rads_scene() &&
-      cipv_info.cipv_id() ==
-          stop_destination_decider_output.stop_destination_virtual_agent_id()) {
-    comfort_params_.s0 = 0.0;
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (session_->is_rads_scene()) {
+    int32_t cipv_id = cipv_info.cipv_id();
+    if (cipv_id == stop_destination_decider_output.stop_destination_virtual_agent_id()) {
+      comfort_params_.s0 = 0.0;
+    } else {
+      auto agent = agent_manager->GetAgent(cipv_id);
+      if (agent != nullptr && agent->is_static()) {
+        comfort_params_.s0 = config_.rads_comfort_param_static_s0;
+      } else if (agent != nullptr && !agent->is_static()) {
+        comfort_params_.s0 = config_.rads_comfort_param_dynamic_s0;
+      }
+    }
+
   }
 
   upper_bound_infos_ =
