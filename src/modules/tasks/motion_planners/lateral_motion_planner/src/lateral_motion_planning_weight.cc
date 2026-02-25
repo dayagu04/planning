@@ -108,8 +108,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
       planning_input.set_q_acc(config_.q_acc);
       planning_input.set_q_jerk(config_.q_jerk);
       concerned_start_q_jerk_ = config_.q_jerk;
-      //MakeDynamicWeight(planning_input);
-      MakeDynamicWeight_Rads(planning_input);
+      MakeDynamicWeight(planning_input);
       if (is_in_intersection_) {
         planning_input.set_q_continuity(config_.q_continuity_intersection);
         planning_input.set_q_acc(config_.q_acc_intersection);
@@ -227,7 +226,8 @@ void LateralMotionPlanningWeight::SetLateralMotionWeightForRADS(
   end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
   SetAccJerkBoundAndWeight(planning_input);
   MakeDynamicPosBoundWeight(planning_input);
-  MakeDynamicWeight(planning_input);
+  //MakeDynamicWeight(planning_input);
+  MakeDynamicWeight_Rads(planning_input);
   planning_input.set_q_continuity(0.0);
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
