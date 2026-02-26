@@ -522,6 +522,7 @@ bool ReferencePath::get_polygon_at_time(
     auto enu_polygon =
         obstacle_ptr->get_polygon_at_point(obstacle_ptr->get_point_at_time(0));
     std::vector<planning_math::Vec2d> frenet_points;
+    frenet_points.reserve(enu_polygon.points().size());
     for (auto &pt : enu_polygon.points()) {
       Point2D frenet_point, carte_point;
       carte_point.x = pt.x();
@@ -531,8 +532,8 @@ bool ReferencePath::get_polygon_at_time(
                   << " Frenet_coord failed!!";
         continue;
       }
-      frenet_points.push_back(planning_math::Vec2d(
-          frenet_point.x + prediction_frenet_s, frenet_point.y));
+      frenet_points.emplace_back(std::move(planning_math::Vec2d(
+          frenet_point.x + prediction_frenet_s, frenet_point.y)));
     }
     bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
                                                           &obstacle_polygon);
@@ -550,8 +551,11 @@ bool ReferencePath::get_polygon_at_time(
     }
     const auto &enu_polygon = obstacle_ptr->get_bounding_box(
         obstacle_ptr->get_point_at_time(relative_time * 0.1));
-    std::vector<planning_math::Vec2d> frenet_points;
+
     const auto &corners = enu_polygon.GetAllCorners();
+
+    std::vector<planning_math::Vec2d> frenet_points;
+    frenet_points.reserve(corners.size());
     for (auto &pt : corners) {
       Point2D frenet_point, carte_point;
       carte_point.x = pt.x();
@@ -561,8 +565,8 @@ bool ReferencePath::get_polygon_at_time(
                   << " Frenet_coord failed!!!!";
         continue;
       }
-      frenet_points.push_back(
-          planning_math::Vec2d(frenet_point.x, frenet_point.y));
+      frenet_points.emplace_back(std::move(
+          planning_math::Vec2d(frenet_point.x, frenet_point.y)));
     }
     bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
                                                           &obstacle_polygon);
