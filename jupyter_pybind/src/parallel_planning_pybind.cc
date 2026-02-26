@@ -211,7 +211,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
 
   ego_info_under_slot.slot.origin_corner_coord_global_.CalExtraCoord();
   parallel_park_planner.EnablePAPark();
-  if (!parallel_park_planner.GeneralPASlot()) {
+  if (!parallel_park_planner.GeneralPASlot(ApaPADirection::PA_RIGHT)) {
     ILOG_ERROR << "GeneralPASlot failed!";
     return false;
   }
