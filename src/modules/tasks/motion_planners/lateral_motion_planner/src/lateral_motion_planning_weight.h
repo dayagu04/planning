@@ -320,6 +320,9 @@ class LateralMotionPlanningWeight {
   void MakeDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
+  void MakeDynamicWeight_Rads(
+      planning::common::LateralPlanningInput &planning_input);
+
   void MakeLateralOffsetAvoidDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
