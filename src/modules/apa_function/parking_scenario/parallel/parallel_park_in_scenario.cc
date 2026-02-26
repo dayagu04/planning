@@ -2056,7 +2056,7 @@ const bool ParallelParkInScenario::GenTlane() {
           obstacle_point_set.first ==
               static_cast<size_t>(ApaObsScemanticType::COLUMN)) {
           front_obs_y_condition = pnc::mathlib::IsInBound(
-              obstacle_point_slot.y(), -1.0 * side_sgn,
+              obstacle_point_slot.y(), -0.8 * side_sgn,
               (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
       } else {
           front_obs_y_condition = pnc::mathlib::IsInBound(

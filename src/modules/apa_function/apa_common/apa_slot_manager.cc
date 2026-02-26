@@ -436,7 +436,8 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
       continue;
     }
 
-    if (pre_plan_fail_slot_id_uset_.count(slot.id_) != 0) {
+    if (!state_machine_ptr_->IsSAPAMode() &&
+        pre_plan_fail_slot_id_uset_.count(slot.id_) != 0) {
       continue;
     }
 
@@ -537,7 +538,8 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
       continue;
     }
 
-    if (dist_id.first > kMaxEgoSlotAbsoluteDist) {
+    if (dist_id.first > kMaxEgoSlotAbsoluteDist &&
+        slot.GetType() != SlotType::PARALLEL) {
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
       ILOG_INFO << "NOT_RELEASE reason: nearest slot dist over "
