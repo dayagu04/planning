@@ -151,6 +151,11 @@ void ProcessLaneMapMergePoint(
   double CalculateDisToLastLinkSplitPoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   double CalculateDisToLastLinkMergePoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   bool IsSucMergeLink(const iflymapdata::sdpro::LinkInfo_Link* link_info) const;
+  bool CalculateSplitLinkExitLane(
+      const iflymapdata::sdpro::LinkInfo_Link* split_link,
+      const iflymapdata::sdpro::LinkInfo_Link* out_link,
+      std::vector<iflymapdata::sdpro::Lane>& exit_lane_vec) const;
+  bool IsNeedFilterSplit(const iflymapdata::sdpro::Lane* lane) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;

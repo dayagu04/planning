@@ -47,7 +47,7 @@ bool LDRouteInfoStrategy::UpdateLDMap() {
       ld_map_info_updated_timestamp_ = ld_map_info_current_timestamp;
     }
   }
-  
+
   if (ld_map_info_current_timestamp - ld_map_info_updated_timestamp_ >
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
@@ -1069,7 +1069,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
         if (ego_seq == avoid_link_merge_lane_seq) {
           mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
         }
-        
+
         lc_num_task.emplace_back(1);
       }
     } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp && !current_on_route) {
@@ -1816,43 +1816,48 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
       continue;
     }
 
-    bool is_all_lane_arrive_next_link = true;
-
-    // Check if all lanes in the current split link have at least one successor
-    // lane in the next link.
-    for (const auto& lane_id : split_link->lane_ids()) {
-      const auto* temp_lane = ld_map_.GetLaneInfoByID(lane_id);
-
-      // filter empty lane and emergency lanes
-      if (temp_lane == nullptr || IsEmergencyLane(temp_lane)) {
-        continue;
-      }
-
-      bool suc_lane_in_next_link = false;
-      for (auto suc_lane : temp_lane->successor_lane_ids()) {
-        const auto* tmp_suc_lane = ld_map_.GetLaneInfoByID(suc_lane);
-        if (tmp_suc_lane == nullptr) {
-          continue;
-        }
-        if (tmp_suc_lane->link_id() == split_next_link->id()) {
-          suc_lane_in_next_link = true;
-          break;
-        }
-      }
-
-      if (!suc_lane_in_next_link) {
-        is_all_lane_arrive_next_link = false;
-        break;
-      }
-    }
-
     const bool is_ramp = ld_map_.isRamp(split_next_link->link_type());
     const bool is_SAPA =
         (split_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0;
 
-    if (is_ramp || is_SAPA || !is_all_lane_arrive_next_link) {
+    if (is_ramp || is_SAPA) {
+      ramp_info_vec_.emplace_back(split_info);
+      continue;
+    }
+
+    bool is_filter_split = true;
+    for (const auto& suc_link_id: split_link->successor_link_ids()) {
+      if (suc_link_id == split_next_link->id()) {
+        continue;
+      }
+
+      const auto& out_link = ld_map_.GetLinkOnRoute(suc_link_id);
+      if (out_link == nullptr) {
+        continue;
+      }
+
+      std::vector<iflymapdata::sdpro::Lane> exit_lane_vec;
+      if (!CalculateSplitLinkExitLane(split_link, out_link, exit_lane_vec)) {
+        continue;
+      }
+
+      for (const auto& lane: exit_lane_vec) {
+        if (!IsNeedFilterSplit(&lane)) {
+          is_filter_split = false;
+          break;
+        }
+      }
+
+      if (!is_filter_split) {
+        break;
+      }
+
+    }
+
+    if (!is_filter_split) {
       ramp_info_vec_.emplace_back(split_info);
     }
+
   }
 
   if (ramp_info_vec_.empty()) {
@@ -2885,6 +2890,75 @@ bool LDRouteInfoStrategy::IsSucMergeLink(
     }
 
   }
+
+  return false;
+}
+
+bool LDRouteInfoStrategy::CalculateSplitLinkExitLane(
+    const iflymapdata::sdpro::LinkInfo_Link* split_link,
+    const iflymapdata::sdpro::LinkInfo_Link* out_link,
+    std::vector<iflymapdata::sdpro::Lane>& exit_lane_vec) const {
+  if (split_link == nullptr || out_link == nullptr) {
+    return false;
+  }
+
+  exit_lane_vec.clear();
+
+  for (const auto& lane_id : out_link->lane_ids()) {
+    const auto& lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (lane == nullptr) {
+      continue;
+    }
+
+    if (IsDiversionLane(lane) || IsEmergencyLane(lane)) {
+      continue;
+    }
+
+    for (const auto& pre_lane_id: lane->predecessor_lane_ids()) {
+      const auto& pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
+      if (pre_lane == nullptr) {
+        continue;
+      }
+
+      if (IsDiversionLane(pre_lane) || IsEmergencyLane(pre_lane)) {
+        continue;
+      }
+
+      if (pre_lane->link_id() == split_link->id() && IsExitLane(pre_lane) &&
+          !HasLaneId(exit_lane_vec, pre_lane->id())) {
+        exit_lane_vec.emplace_back(*pre_lane);
+      }
+    }
+  }
+
+  return !exit_lane_vec.empty();
+}
+
+bool LDRouteInfoStrategy::IsNeedFilterSplit(
+    const iflymapdata::sdpro::Lane* lane) const {
+  if (lane == nullptr) {
+    return false;
+  }
+
+  const iflymapdata::sdpro::Lane* iter_lane = lane;
+
+  while (iter_lane) {
+    if (!IsDecelerateLane(iter_lane) && !IsExitLane(iter_lane)) {
+      return false;
+    }
+
+    if (iter_lane->lane_transiton() == iflymapdata::sdpro::LTS_LANE_ADD_RIGHT ||
+        iter_lane->lane_transiton() == iflymapdata::sdpro::LTS_LANE_ADD_LEFT) {
+      return true;
+    }
+
+    if (iter_lane->predecessor_lane_ids_size() != 1) {
+      return false;
+    }
+
+    iter_lane = ld_map_.GetLaneInfoByID(iter_lane->predecessor_lane_ids()[0]);
+  }
+
   return false;
 }
 }
