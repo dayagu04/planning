@@ -8,7 +8,7 @@
 #include "session.h"
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
 #include "tasks/behavior_planners/hmi_decider/nsa_hmi_decider.h"
-#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
+#include "tasks/behavior_planners/hpp_general_lateral_decider/nsa_general_lateral_decider/nsa_general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/hpp_lateral_obstacle_decider/hpp_lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/narrow_space_decider/narrow_space_decider.h"
@@ -31,7 +31,7 @@ class NsaTaskPipeline : public BaseTaskPipeline {
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<HppLateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<NarrowSpaceDecider> narrow_space_decider_;
-  std::unique_ptr<HppGeneralLateralDecider> hpp_general_lateral_decider_;
+  std::unique_ptr<NSAGeneralLateralDecider> nsa_general_lateral_decider_;
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<GeneralLongitudinalDecider> general_longitudinal_decider;
   std::unique_ptr<LongitudinalMotionPlanner> longitudinal_motion_planner_;

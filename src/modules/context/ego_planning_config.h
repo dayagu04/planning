@@ -2742,6 +2742,7 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
                                                            0.1, 0.15, 0.23};
   double truck_decrease_extra_buffer = 0.05;
   bool enable_ara_ref = false;
+  double ref_length_thr = 0.01;
   double ref_curvature_factor = 0.0;
   bool enable_last_lat_path = false;
 
