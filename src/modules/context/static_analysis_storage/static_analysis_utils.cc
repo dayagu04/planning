@@ -56,6 +56,10 @@ bool GenerateTurnRanges(const ReferencePathPoints& refer_path_points,
     peak_kappa_range_info.max_kappa =
         refer_path_points[index].path_point.kappa();
   }
+  // no turn range
+  if(turn_range_infos.empty()) {
+    return true;
+  }
 
   // S3: sort and merge duplicated range
   sort(turn_range_infos.begin(), turn_range_infos.end(),
@@ -112,23 +116,29 @@ bool GenerateStraightRanges(
     const ReferencePathPoints& refer_path_points,
     const std::vector<LatTypeRangeInfo>& turn_range_infos,
     std::vector<LatTypeRangeInfo>& straight_range_infos) {
-  size_t s_idx = 0;
-  for (const auto& turn_range_info : turn_range_infos) {
-    if(turn_range_info.s_idx > s_idx) {
-      straight_range_infos.push_back(LatTypeRangeInfo(s_idx));
-      straight_range_infos.back().s_idx = s_idx;
-      straight_range_infos.back().e_idx = turn_range_info.s_idx;
-      straight_range_infos.back().type = CRoadType::NormalStraight;
-      s_idx = turn_range_info.e_idx;
+  if(turn_range_infos.empty()) {
+    straight_range_infos.push_back(LatTypeRangeInfo(0));
+    straight_range_infos.back().s_idx = 0;
+    straight_range_infos.back().e_idx = refer_path_points.size() - 1;
+    straight_range_infos.back().type = CRoadType::NormalStraight;
+  } else {
+    size_t s_idx = 0;
+    for (const auto& turn_range_info : turn_range_infos) {
+      if (turn_range_info.s_idx > s_idx) {
+        straight_range_infos.push_back(LatTypeRangeInfo(s_idx));
+        straight_range_infos.back().s_idx = s_idx;
+        straight_range_infos.back().e_idx = turn_range_info.s_idx;
+        straight_range_infos.back().type = CRoadType::NormalStraight;
+        s_idx = turn_range_info.e_idx;
+      }
     }
-  }
-  if (!turn_range_infos.empty() &&
-      turn_range_infos.back().e_idx < refer_path_points.size() - 1) {
-    if (refer_path_points.size() - 1 > turn_range_infos.back().e_idx) {
-      straight_range_infos.push_back(LatTypeRangeInfo(s_idx));
-      straight_range_infos.back().s_idx = turn_range_infos.back().e_idx;
-      straight_range_infos.back().e_idx = refer_path_points.size() - 1;
-      straight_range_infos.back().type = CRoadType::NormalStraight;
+    if (turn_range_infos.back().e_idx < refer_path_points.size() - 1) {
+      if (refer_path_points.size() - 1 > turn_range_infos.back().e_idx) {
+        straight_range_infos.push_back(LatTypeRangeInfo(s_idx));
+        straight_range_infos.back().s_idx = turn_range_infos.back().e_idx;
+        straight_range_infos.back().e_idx = refer_path_points.size() - 1;
+        straight_range_infos.back().type = CRoadType::NormalStraight;
+      }
     }
   }
   return true;
