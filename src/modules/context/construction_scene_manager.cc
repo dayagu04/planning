@@ -105,7 +105,7 @@ void ConstructionSceneManager::UpdateConstructionAgentClusters() {
   const std::unordered_map<int, Obstacle> &obstacles =
       obstacle_manager->get_obstacles().Dict();
   for (const auto &pair : obstacles) {
-    const auto obstacle = pair.second;
+    const auto& obstacle = pair.second;
     if (!obstacle.is_vaild()) {
       continue;
     }
@@ -137,7 +137,7 @@ void ConstructionSceneManager::UpdateConstructionAgentClusters() {
           obs_car_point.x, obs_car_point.y, construction_agent_s,
           construction_agent_l, dist_to_left_boundary,
           dist_to_right_boundary, obstacle.length(), obstacle.width());
-      construction_agent_points_.push_back(point);
+      construction_agent_points_.emplace_back(std::move(point));
     }
   }
   if (!construction_agent_points_.empty()) {
@@ -187,7 +187,7 @@ bool ConstructionSceneManager::ConstructionAgentDistance(
 void ConstructionSceneManager::ExpandCluster(
     ConstructionAgentPoints& cone_points, int index, int c, double eps_x,
     double eps_y, int minPts) {
-  std::vector<int> neighborPts;
+  std::vector<int> neighborPts; // 考虑效率
 
   for (size_t i = 0; i < cone_points.size(); ++i) {
     if (ConstructionAgentDistance(cone_points[index], cone_points[i], eps_x,
@@ -749,7 +749,7 @@ void ConstructionSceneManager::UpdateDriveArea() {
           .get_virtual_lane_manager()
           ->get_virtual_lanes();
 
-  std::map<int, std::map<int, std::vector<int>>> cone_results;
+  std::map<int, std::map<int, std::vector<int>>> cone_results; // 考虑效率
   std::map<int, std::map<int, std::vector<int>>> road_boundary_results;
   for (const auto& lane : lanes) {
     if (lane == nullptr) {
