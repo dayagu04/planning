@@ -18,6 +18,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # endif()
 add_definitions(-DENABLE_PROTO_LOG)
 add_definitions(-DENABLE_JSON_LOG)
+add_definitions(-DPlanTimeBenchmark)
 
 if(PP_ENABLE OR PYBIND_TOOL_ENABLE OR THIRDPARTY_ENABLE OR INTERFACE_ENABLE OR AD_ENABLE)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/install")

@@ -97,7 +97,9 @@ bool PlanningAdapter::Proc() {
   ILOG_INFO << "PlanningAdapter::Proc()";
   start_time_ = IflyTime::Now_us();
 
+
   SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_start);
+  // 1.1 receive prediction
   // 1.1 receive prediction
   // 1.1 receive prediction
   if (is_prediction_result_msg_updated_) {
