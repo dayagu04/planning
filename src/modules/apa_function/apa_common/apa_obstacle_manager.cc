@@ -73,7 +73,8 @@ void ApaObstacleManager::Update(
     // For now, do not consider ego slot limiter.
     // Todo: consider all limiters.
     if (last_ego_slot_->type ==
-        iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+            iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
+        state_machine_manager_.IsParkOutStatus() && last_ego_slot_->id != 0) {
       if (slot_list->select_slot_id == last_ego_slot_->id ||
           static_cast<uint32>(ego_slot_id) == last_ego_slot_->id) {
         ego_slot_is_parallel_ = true;
