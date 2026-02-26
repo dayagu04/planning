@@ -1793,16 +1793,18 @@ double SpatioTemporalUnionDp::ComputeSecondDerivative(
   double b0 = lateral_curve_coef[0], b1 = lateral_curve_coef[1],
          b2 = lateral_curve_coef[2], b3 = lateral_curve_coef[3];
 
+  double b2_twice = 2.0 * b2;
+  double b3_param = b3 * param;
   // Derivative of s with respect to t
   double dsdt = v0 + acc * param;
   dsdt = std::max(dsdt, 1e-6);
   // Derivative of l with respect to t
-  double dldt = 3.0 * b3 * param * param + 2.0 * b2 * param + b1;
+  double dldt = 3.0 * b3_param * param + b2_twice * param + b1;
   // First derivative of l with respect to s
-  double dlds = dldt / dsdt;
+  // double dlds = dldt / dsdt;
 
   // Second derivative of l with respect to s using the product rule
-  double d2lds2 = ((6.0 * b3 * param + 2.0 * b2) * dsdt - acc * dldt) /
+  double d2lds2 = ((6.0 * b3_param + b2_twice) * dsdt - acc * dldt) /
                   (dsdt * dsdt * dsdt);
 
   return d2lds2;
