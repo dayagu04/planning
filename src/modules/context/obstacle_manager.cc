@@ -531,8 +531,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
       ground_line_manager_ptr_->Update(local_view.ground_line_perception);
       const std::vector<GroundLinePoints> &ground_line_points =
           ground_line_manager_ptr_->GetPoints();
-      std::cout << "ground_line_points.size = " << ground_line_points.size()
-                << std::endl;
+      ILOG_DEBUG << "ground_line_points.size = " << ground_line_points.size();
       for (const auto &ground_line_point : ground_line_points) {
         index_offset += 1;
         if (ground_line_point.size() >= 3) {

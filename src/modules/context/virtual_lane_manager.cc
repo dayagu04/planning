@@ -1044,7 +1044,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     ego_lane_track_manager_.Reset();
     return false;
   }
-  
+
   set_is_exist_intersection_split( ego_lane_track_manager_.is_exist_intersection_split());
   set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
   set_is_exist_split_on_expressway(ego_lane_track_manager_.is_exist_split_on_expressway());
@@ -1858,8 +1858,7 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
   bool current_lane_exist = false;
   bool y_interval_valid = true;
   std::vector<int> y_interval_invalid_idx_vec;
-  std::cout << "roads.reference_line_msg_size:" << roads.reference_line_msg_size
-            << std::endl;
+  ILOG_DEBUG << "roads.reference_line_msg_size:" << roads.reference_line_msg_size;
   if (roads.reference_line_msg_size == 0) {
     lane_valid = false;
     return lane_valid;

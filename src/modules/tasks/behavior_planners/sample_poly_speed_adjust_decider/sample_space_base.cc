@@ -377,7 +377,7 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
     } else {
       upper_st_point->set_info(kMaxPathLength, t, 100.0, kNoAgentId, -1);
       lower_st_point->set_info(-kMaxPathLength, t, 0.0, kNoAgentId, -1);
-      std::cout << "find no boundary pair!" << std::endl;
+      // std::cout << "find no boundary pair!" << std::endl;
     }
   }
 

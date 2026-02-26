@@ -54,8 +54,7 @@ ConeRequest::ConeRequest(
 }
 
 void ConeRequest::Update(int lc_status) {
-  std::cout << "ConeRequest::Update::coming cone lane change request"
-            << std::endl;
+  ILOG_DEBUG << "ConeRequest::Update::coming cone lane change request";
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   // trigger EA lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
@@ -842,7 +841,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
   }
 
   double max_l = CalcClusterToBoundaryDist(serach_cone_points, NO_CHANGE);
-  // std::cout << "max_l: " << max_l << " pass_thre: " << pass_thre <<
+  // ILOG_DEBUG << "max_l: " << max_l << " pass_thre: " << pass_thre <<
   // std::endl; judge if to trigger cone lc
   if (max_l <= pass_thre) {
     ILOG_DEBUG << " target lane is blocked";
@@ -977,7 +976,7 @@ double ConeRequest::ConeComputeSlope(std::vector<ConePoint> points) {
 
   // 数据标准化
   if (ConeStandardize(points)) {
-    // std::cout << "s_mean" << s_mean << "l_mean" << l_mean << std::endl;
+    // ILOG_DEBUG << "s_mean" << s_mean << "l_mean" << l_mean << std::endl;
     double numerator = 0.0, denominator = 0.0;
     s_mean = 0.0;
     l_mean = 0.0;
@@ -986,7 +985,7 @@ double ConeRequest::ConeComputeSlope(std::vector<ConePoint> points) {
     for (const auto& point : points) {
       numerator += (point.s - s_mean) * (point.l - l_mean);
       denominator += std::pow(point.s - s_mean, 2);
-      // std::cout << "numerator" << numerator << "denominator" << denominator
+      // ILOG_DEBUG << "numerator" << numerator << "denominator" << denominator
       // << std::endl;
     }
     denominator = std::max(denominator, 0.001);

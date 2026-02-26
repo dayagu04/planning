@@ -285,9 +285,8 @@ bool LaneChangeRequest::IsDashedLineEnough(
       LEFT_CHANGE, origin_lane_virtual_id_);
   ILOG_DEBUG << "dashed_enough: right_dash_line_len:" << right_dash_line_len;
   ILOG_DEBUG << "dashed_enough: left_dash_line_len:" << left_dash_line_len;
-  std::cout << "origin_lane_virtual_id_: " << origin_lane_virtual_id_
-            << "origin_lane_order_id_: " << origin_lane_virtual_id_
-            << std::endl;
+  ILOG_DEBUG << "origin_lane_virtual_id_: " << origin_lane_virtual_id_
+            << "origin_lane_order_id_: " << origin_lane_virtual_id_;
   const auto &route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
   double press_line_ratio =
@@ -633,8 +632,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   const double lc_response_dist = std::max(ego_v * kLaneChangeSolidLineTTC,
                                            kLaneChangeMinDistance);  // hack
   JSON_DEBUG_VALUE("dash_line_len", dash_length);
-  std::cout << "dash_length:" << dash_length
-            << ",lc_response_dist:" << lc_response_dist << std::endl;
+  ILOG_DEBUG << "dash_length:" << dash_length
+            << ",lc_response_dist:" << lc_response_dist;
 
   if (dash_length > default_lc_boundary_length ||
       all_lane_boundary_types_are_dashed || dash_length > lc_response_dist) {
@@ -721,7 +720,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       return true;
     }
   }
-  // std::cout << "dash lengh less than lc response dist!!!!" << std::endl;
+  // ILOG_DEBUG << "dash lengh less than lc response dist!!!!" << std::endl;
   return false;
 }
 

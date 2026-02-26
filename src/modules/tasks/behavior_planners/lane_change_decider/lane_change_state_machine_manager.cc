@@ -574,7 +574,7 @@ bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() {
   }
 
   if (perfect_in_lane || is_high_priority_complete_mlc || is_time_out) {
-    std::cout << "perfect_in_lane!!!" << std::endl;
+    ILOG_DEBUG << "perfect_in_lane!!!";
     return true;
   }
 
@@ -2957,7 +2957,7 @@ bool LaneChangeStateMachineManager::CheckFrontRiskAgentTrajs(
     //  if (std::abs(agent_traj[i].s - ego_trajs_future_[i].s) - two_car_length
     //  <
     //      safety_dist) {
-    //    std::cout << "not safety !!!" << std::endl;
+    //    ILOG_DEBUG << "not safety !!!" << std::endl;
     //    return false;
     //  }
     double two_car_length = 0;
@@ -3010,7 +3010,7 @@ bool LaneChangeStateMachineManager::CheckFrontRiskAgentTrajs(
     }
   }
   if (distance < 0.01) {
-    std::cout << "box-box not safety !!!" << std::endl;
+    ILOG_DEBUG << "box-box not safety !!!";
     return false;
   }
   return true;
@@ -3185,7 +3185,7 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
     }
   }
   if (distance < 0.01) {
-    std::cout << "box-box not safety !!!" << std::endl;
+    ILOG_DEBUG << "box-box not safety !!!";
     return false;
   }
   return true;
@@ -3642,7 +3642,7 @@ RequestType LaneChangeStateMachineManager::CalculaTurnSignalForHPP() {
   ReferencePathPoint front_reference_path_point;
   if (!cur_reference_path->get_reference_point_by_lon(
           ego_s + pre_dis, front_reference_path_point)) {
-    std::cout << "get front_reference_path_point failed!!!" << std::endl;
+    ILOG_DEBUG << "get front_reference_path_point failed!!!";
     return NO_CHANGE;
   }
   // 以0.5m为间隔，判断前方2.5m的距离内，是否车道线半径小于defuault_road_radius
@@ -3653,13 +3653,13 @@ RequestType LaneChangeStateMachineManager::CalculaTurnSignalForHPP() {
     ReferencePathPoint temp_ref_path_point;
     if (!cur_reference_path->get_reference_point_by_lon(s,
                                                         temp_ref_path_point)) {
-      std::cout << "get front_reference_path_point failed!!!" << std::endl;
+      ILOG_DEBUG << "get front_reference_path_point failed!!!";
       return NO_CHANGE;
     }
 
     if (std::abs(temp_ref_path_point.path_point.kappa()) <
         1 / defuault_road_radius) {
-      std::cout << "front no turn" << std::endl;
+      ILOG_DEBUG << "front no turn";
       return NO_CHANGE;
     }
   }
@@ -4397,7 +4397,7 @@ bool LaneChangeStateMachineManager::
     //  if (std::abs(agent_traj[i].s - ego_trajs_future_[i].s) - two_car_length
     //  <
     //      safety_dist) {
-    //    std::cout << "not safety !!!" << std::endl;
+    //    ILOG_DEBUG << "not safety !!!" << std::endl;
     //    return false;
     //  }
     //  横向新安全检查：
@@ -4445,7 +4445,7 @@ bool LaneChangeStateMachineManager::
     distance = std::min(distance, distance_i);
     // 记录box
     if (distance < 0.01) {
-      std::cout << i << "box-box not safety !!!" << std::endl;
+      ILOG_DEBUG << i << "box-box not safety !!!";
       const auto& agent_corners = agent_box.GetAllCorners();
       for (const auto& corner_point : agent_corners) {
         agent_box_corners_x_.push_back(corner_point.x());

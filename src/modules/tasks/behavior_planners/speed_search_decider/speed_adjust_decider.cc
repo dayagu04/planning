@@ -167,8 +167,8 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
   }
 
   if (count_wait_state_ < 5) {
-    std::cout << " pass lc wait state, count is: " << count_wait_state_
-              << std::endl;
+    // std::cout << " pass lc wait state, count is: " << count_wait_state_
+    //           << std::endl;
     last_request_ = lc_request;
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
@@ -385,9 +385,9 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     // 1. filter too tight gap
     if (calc_slot_length(slot, 0.0) <= 2 * safety_distance ||
         calc_slot_length(slot, kObjLinearInferTime) <= 2 * safety_distance) {
-      std::cout << "The slot front id: " << slot.front_veh_info().id
-                << ", slot rear id: " << slot.back_veh_info().id
-                << " has been filtered!" << std::endl;
+      // std::cout << "The slot front id: " << slot.front_veh_info().id
+      //           << ", slot rear id: " << slot.back_veh_info().id
+      //           << " has been filtered!" << std::endl;
       continue;
     }
 
@@ -447,8 +447,8 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     if (deceleration_priority_scene_) {
       if (filter_in_deceleration_priority_scene(slot,
                                                 safe_distacne_pair.second)) {
-        std::cout << " The slot: <<" << idx
-                  << " is filter by deceleration priority scene " << std::endl;
+        // std::cout << " The slot: <<" << idx
+        //           << " is filter by deceleration priority scene " << std::endl;
         continue;
       }
     }
@@ -481,20 +481,20 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
             min_ego_speed_in_speed_adjust_ - min_dec_filter_speed / 3.6 ||
         slot.aligned_v() > max_ego_speed_in_speed_adjust_ +
                                config_.max_acc_filter_speed / 3.6) {
-      std::cout << " The slot: <<" << idx << " is too slow" << std::endl;
+      // std::cout << " The slot: <<" << idx << " is too slow" << std::endl;
       continue;
     }
 
     if (leading_veh_.id > 0) {
       if (tailgating_leading_car(leading_veh_, slot)) {
-        std::cout << " The slot: " << idx << " is tailgating leading car!"
-                  << " front car id: " << slot.front_veh_info().id << std::endl;
+        // std::cout << " The slot: " << idx << " is tailgating leading car!"
+        //           << " front car id: " << slot.front_veh_info().id << std::endl;
         continue;
       }
     }
     if (static_slot_car(slot)) {
-      std::cout << " The slot is static, continue, front id: "
-                << slot.front_veh_info().id << std::endl;
+      // std::cout << " The slot is static, continue, front id: "
+      //           << slot.front_veh_info().id << std::endl;
       continue;
     }
     slot_point_info_.emplace_back(std::move(slot));
@@ -555,7 +555,7 @@ bool SpeedAdjustDecider::Execute() {
                                    ->mutable_st_search_decider_info();
   speed_decider_pb_info->Clear();
   if (!ProcessLaneChangeStatus()) {
-    std::cout << " No speed adjust status!" << std::endl;
+    // std::cout << " No speed adjust status!" << std::endl;
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
         .s_search_status = false;
@@ -566,7 +566,7 @@ bool SpeedAdjustDecider::Execute() {
   ProcessEnvInfos();
 
   if (!GenerateCandidateSlotInfo()) {
-    std::cout << " The slot is empty!" << std::endl;
+    // std::cout << " The slot is empty!" << std::endl;
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
         .s_search_status = false;
@@ -743,9 +743,9 @@ int SpeedAdjustDecider::SelectBestSlot() {
   }
 
   if (!is_same_slot(slot_point_info_[best_slot_id], last_best_slot_)) {
-    std::cout
-        << "origin ego speed has been register again, beacuse slot changed!"
-        << std::endl;
+    // std::cout
+    //     << "origin ego speed has been register again, beacuse slot changed!"
+    //     << std::endl;
     retriggered_ego_speed_ = init_va_.first;
     max_ego_speed_in_speed_adjust_ =
         std::fmax(max_ego_speed_in_speed_adjust_, init_va_.first);

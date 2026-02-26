@@ -319,7 +319,7 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
        start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
       lane_end_satisfied_merge_condition) {
-    std::cout << "is merge region!!!" << std::endl;
+    ILOG_DEBUG << "is merge region!!!";
     return true;
   }
   // 遍历自车向前的点，是否有overlap情况
@@ -347,7 +347,7 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
        start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
       lane_end_satisfied_merge_condition) {
-    std::cout << "is merge region!!!" << std::endl;
+    ILOG_DEBUG << "is merge region!!!";
     return true;
   }
   return false;

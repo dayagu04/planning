@@ -41,9 +41,8 @@ EmergenceAvoidRequest::EmergenceAvoidRequest(
 }
 
 void EmergenceAvoidRequest::Update(int lc_status) {
-  std::cout << "EmergenceAvoidRequest::Update::coming emergence avoid lane "
-               "change request"
-            << std::endl;
+  ILOG_DEBUG << "EmergenceAvoidRequest::Update::coming emergence avoid lane "
+               "change request";
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
 
   // trigger EA lane change when lane keep status.

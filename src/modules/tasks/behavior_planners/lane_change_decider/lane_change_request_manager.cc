@@ -297,8 +297,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     ILOG_DEBUG << "[LaneChangeRequestManager::update] manual cancel finish dd "
                   "or map request!";
   }
-  std::cout << "\n int request type is: " << int_request_.request_type()
-            << std::endl;
+  ILOG_DEBUG << "\n int request type is: " << int_request_.request_type();
 
   if (int_request_.request_type() != NO_CHANGE) {
     if (emergence_avoid_request_.request_type() != NO_CHANGE) {
