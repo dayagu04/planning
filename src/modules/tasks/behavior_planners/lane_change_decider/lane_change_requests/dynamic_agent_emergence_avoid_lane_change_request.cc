@@ -531,7 +531,7 @@ void DynamicAgentEmergenceAvoidRequest::GenerateLaneChangeDirection() {
   if (distance_to_first_road_split < 500.0 || dis_to_first_merge < 500.0 ||
       dis_to_merge_point < 200.0) {
     if (feasible_lane_sequence.size() > 0) {
-      int current_lane_order_num = left_lane_nums_ + 1;
+      int current_lane_order_num = route_info_output.ego_seq;
       int target_lane_order_num = current_lane_order_num - 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
@@ -541,7 +541,7 @@ void DynamicAgentEmergenceAvoidRequest::GenerateLaneChangeDirection() {
     }
 
     if (feasible_lane_sequence.size() > 0) {
-      int current_lane_order_num = left_lane_nums_ + 1;
+      int current_lane_order_num = route_info_output.ego_seq;
       int target_lane_order_num = current_lane_order_num + 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
