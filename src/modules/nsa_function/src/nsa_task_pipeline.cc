@@ -11,8 +11,8 @@ NsaTaskPipeline::NsaTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<HppLateralObstacleDecider>(config_builder, session);
   narrow_space_decider_ =
       std::make_unique<NarrowSpaceDecider>(config_builder, session);
-  hpp_general_lateral_decider_ =
-      std::make_unique<HppGeneralLateralDecider>(config_builder, session);
+  nsa_general_lateral_decider_ =
+      std::make_unique<NSAGeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
       std::make_unique<LateralMotionPlanner>(config_builder, session);
   general_longitudinal_decider =
@@ -51,13 +51,13 @@ bool NsaTaskPipeline::Run() {
   auto time4 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LateralObstacleDeciderTime", time4 - time3);
 
-  ok = hpp_general_lateral_decider_->Execute();
+  ok = nsa_general_lateral_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(hpp_general_lateral_decider_->Name());
+    AddErrorInfo(nsa_general_lateral_decider_->Name());
     return false;
   }
   auto time5 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("HppGeneralLateralDeciderTime", time5 - time4);
+  JSON_DEBUG_VALUE("NSAGeneralLateralDeciderTime", time5 - time4);
 
   ok = lateral_motion_planner_->Execute();
   if (!ok) {
