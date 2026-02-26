@@ -587,9 +587,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
   bool left_lane_exist_slow_cross_lane_truck =
-      exist_cross_line_large_agent_ahead_ && left_lane_exist_cross_line_truck_speed_ <= agent->speed();
+      left_lane_exist_cross_line_truck_speed_ <= agent->speed();
   bool right_lane_exist_slow_cross_lane_truck =
-      exist_cross_line_large_agent_ahead_ && right_lane_exist_cross_line_truck_speed_ <= agent->speed();
+      right_lane_exist_cross_line_truck_speed_ <= agent->speed();
 
 // #ifdef X86
   // const bool is_trigger_left = (is_left_overtake &&
