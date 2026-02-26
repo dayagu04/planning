@@ -168,6 +168,7 @@ void ProcessLaneMapMergePoint(
       ramp_info_vec_;
   MLCDeciderSceneTypeInfo mlc_decider_scene_type_info_;
   size_t count_continue_general_mlc_ = 0;
+  std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
 };
 }

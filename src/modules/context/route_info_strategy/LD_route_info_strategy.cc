@@ -24,6 +24,7 @@ LDRouteInfoStrategy::LDRouteInfoStrategy(
 void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
   local_view_ = &session_->environmental_model().get_local_view();
   route_info_output_.reset();
+  avoid_link_merge_lane_id_vec_.clear();
 
   if (!UpdateLDMap()) {
     return;
@@ -191,9 +192,7 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
       break;
   }
 
-  if (route_info_output_.is_ego_on_expressway_hmi) {
-    CalculateAvoidMergeFeasibleLane(feasible_lane_graph);
-  }
+  CalculateAvoidMergeFeasibleLane(feasible_lane_graph);
 
   // 增加处理在接近匝道时，feasible lane至少有2条车道可达ramp，其中一条是1分2的lane，则从feasible lane中移除这条lane
   if (mlc_scene_type == SPLIT_SCENE) {
@@ -204,6 +203,8 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
 
   UpdateLCNumTask(relative_id_lanes, feasible_lane_graph);
 
+  // 如果有躲避前方link_merge的mlc，会更新mlc_decider_scene_type_info_.mlc_type，所以在这再次更新这个值
+  route_info_output_.mlc_decider_scene_type_info = mlc_decider_scene_type_info_;
   route_info_output = route_info_output_;
 }
 
@@ -786,6 +787,18 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       feasible_lane_seq.emplace_back(seq, order_id.second);
     }
   }
+  // 更新躲避link_merge车道的从左向右序列
+  bool is_exist_need_avoid_link_merge_lane =
+      !avoid_link_merge_lane_id_vec_.empty() &&
+      avoid_link_merge_lane_id_vec_.front().link_id ==
+          cur_link_feasible_lane.link_id;
+
+  int avoid_link_merge_lane_seq = -1;
+  if (is_exist_need_avoid_link_merge_lane) {
+    avoid_link_merge_lane_seq = link_total_lane_num -
+                                avoid_link_merge_lane_id_vec_.front().order_id +
+                                1;
+  }
 
   std::unordered_map<int, MapMergePointInfo> map_merge_point_info;
   for (const auto& merge_info: route_info_output_.map_merge_points_info) {
@@ -1052,12 +1065,22 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       // 右边有加速车道或入口车道则需要至少留一个车道
       count_continue_general_mlc_++;
       if (count_continue_general_mlc_ > 3) {
+        // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+        if (ego_seq == avoid_link_merge_lane_seq) {
+          mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
+        }
+        
         lc_num_task.emplace_back(1);
       }
     } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp && !current_on_route) {
       //split场景，目标车道在最左边的情况，一直向左变道
       count_continue_general_mlc_++;
       if (count_continue_general_mlc_ > 3) {
+        // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+        if (ego_seq == avoid_link_merge_lane_seq) {
+          mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
+        }
+
         lc_num_task.emplace_back(-1);
       }
     } else if (current_on_route) {
@@ -1070,6 +1093,11 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       } else if (ego_seq > maxVal_seq) {
         count_continue_general_mlc_++;
         if (count_continue_general_mlc_ > 3) {
+          // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+          if (ego_seq == avoid_link_merge_lane_seq) {
+            mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
+          }
+          // 更新lc_num_task
           int err = ego_seq - maxVal_seq;
           for (int i = 0; i < err; i++) {
             lc_num_task.emplace_back(-1);
@@ -1078,6 +1106,11 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       } else if (ego_seq < minVal_seq) {
         count_continue_general_mlc_++;
         if (count_continue_general_mlc_ > 3) {
+          // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+          if (ego_seq == avoid_link_merge_lane_seq) {
+            mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
+          }
+          // 更新lc_num_task
           int err = minVal_seq - ego_seq;
           for (int i = 0; i < err; i++) {
             lc_num_task.emplace_back(1);
@@ -2303,19 +2336,24 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
 
     // 增加判断入口车道是否已经存在feasible lane中，比如匝道进主路的场景
     bool is_entry_lane_in_feasible_lane = false;
+    // 增加判断，在入口车道处，feasible lane至少要有2条，否则自车前面躲避了，到入口车道处，自车又行驶到原车道上，产生了不合理变道
+    int feasible_lane_num = 0;
     for (const auto& lane_topo_group: feasible_lane_graph.lane_topo_groups) {
       if (lane_topo_group.link_id != entry_lane_info->link_id()) {
         continue;
       }
 
+      feasible_lane_num = lane_topo_group.topo_lanes.size();
       for (const auto& lane_topo : lane_topo_group.topo_lanes) {
         if (lane_topo.id == entry_lane_info->id()) {
           is_entry_lane_in_feasible_lane = true;
         }
       }
+
+      break;
     }
 
-    if (is_entry_lane_in_feasible_lane) {
+    if (is_entry_lane_in_feasible_lane || feasible_lane_num == 1) {
       ++it;
       continue;
     }
@@ -2327,6 +2365,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     }
 
     if (IsLinkInMergeInfoVec(entry_lane_belong_link)) {
+      avoid_link_merge_lane_id_vec_.emplace_back(*it);
       it = topo_lanes.erase(it);
     } else {
       ++it;
