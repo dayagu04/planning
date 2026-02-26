@@ -29,7 +29,7 @@ Agent::Agent(const Agent& agent)
            agent.box().width()),
       perception_polygon_(agent.perception_polygon()),
       is_static_(agent.is_static()),
-      is_truck_(agent.is_truck()){
+      is_truck_(agent.is_truck()) {
   x_ = agent.x();
   y_ = agent.y();
   theta_ = agent.theta();
@@ -68,7 +68,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
            prediction_object.yaw, prediction_object.length,
            prediction_object.width),
       is_static_(is_static),
-      is_truck_(is_truck){
+      is_truck_(is_truck) {
   x_ = prediction_object.position_x;
   y_ = prediction_object.position_y;
   // theta定义

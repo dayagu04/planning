@@ -116,21 +116,23 @@ void AgentManager::Update(const double start_timestamp_s) {
         prediction_object.motion_pattern_current ==
             iflyauto::OBJECT_MOTION_TYPE_STATIC;
     bool is_truck =
-        (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_BUS && prediction_object.length > 6.0) ||
-        (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK && prediction_object.length > 6.0);
+        (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_BUS &&
+         prediction_object.length > 6.0) ||
+        (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
+         prediction_object.length > 6.0);
 
     double prediction_relative_time = prediction_object.delay_time - init_time;
     std::unordered_map<int32_t, Agent> agent_table;
     if (prediction_object.trajectory_array.size() == 0) {
-      auto agent =
-          Agent(prediction_object, is_static, prediction_relative_time, is_truck);
+      auto agent = Agent(prediction_object, is_static, prediction_relative_time,
+                         is_truck);
       agent_table.insert({agent.agent_id(), agent});
       Append(agent_table);
       continue;
     }
     for (int i = 0; i < prediction_object.trajectory_array.size(); ++i) {
-      auto agent =
-          Agent(prediction_object, is_static, prediction_relative_time, is_truck);
+      auto agent = Agent(prediction_object, is_static, prediction_relative_time,
+                         is_truck);
       agent_table.insert({agent.agent_id(), agent});
       Append(agent_table);
       break;
