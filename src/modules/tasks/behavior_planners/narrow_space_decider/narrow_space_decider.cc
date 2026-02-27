@@ -178,25 +178,81 @@ bool NarrowSpaceDecider::ExtractNarrowSpaceOutline(
     const auto& lat_decision = lat_obstacle_decision.at(obs->id());
     planning_math::Polygon2d frenet_obs_polygon;
     if (obs->get_polygon_at_time(0, reference_path, frenet_obs_polygon)) {
-      for (const auto& polygon_point : frenet_obs_polygon.points()) {
-        if ((polygon_point.x() < vehicle_s_range_.second + kSamplingNarrowSpaceLonGap &&
-             std::fabs(polygon_point.y() - frenet_ego_state.l()) > max_lat_dist) ||
-            (std::fabs(polygon_point.y() - frenet_ego_state.l()) > kMaxCareNarrowSpaceWidth)) {
+      for (const auto& line_segment : frenet_obs_polygon.line_segments()) {
+        if (line_segment.length() < 1e-6) {
           continue;
         }
-        auto last_point_iter = outline[lat_decision].find(polygon_point.x());
+        double line_seg_start_s = line_segment.start().x();
+        double line_seg_start_l = line_segment.start().y();
+        double line_seg_end_s = line_segment.end().x();
+        double line_seg_end_l = line_segment.end().y();
+        if (line_seg_start_s > line_seg_end_s) {
+          line_seg_start_s = line_segment.end().x();
+          line_seg_start_l = line_segment.end().y();
+          line_seg_end_s = line_segment.start().x();
+          line_seg_end_l = line_segment.start().y();
+        }
+        double lon_diff = line_seg_end_s - line_seg_start_s;
+        double lat_diff = line_seg_end_l - line_seg_start_l;
+        double delta_l_s = lat_diff / std::max(lon_diff, 1e-6);
+        for (double line_seg_s = line_seg_start_s; line_seg_s < line_seg_end_s; line_seg_s += kSamplingNarrowSpaceLonGap) {
+          double line_seg_l = line_seg_start_l + (line_seg_s - line_seg_start_s) * delta_l_s;
+          if ((line_seg_s < vehicle_s_range_.second + kSamplingNarrowSpaceLonGap &&
+              std::fabs(line_seg_l - frenet_ego_state.l()) > max_lat_dist) ||
+              (std::fabs(line_seg_l - frenet_ego_state.l()) > kMaxCareNarrowSpaceWidth)) {
+            continue;
+          }
+          auto last_point_iter = outline[lat_decision].find(line_seg_s);
+          if (last_point_iter != outline[lat_decision].end()) {
+            if (lat_decision == LatObstacleDecisionType::LEFT) {
+              outline[lat_decision][line_seg_s] = std::max(last_point_iter->second, line_seg_l);
+            } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
+              outline[lat_decision][line_seg_s] = std::min(last_point_iter->second, line_seg_l);
+            } else {
+              outline[lat_decision][line_seg_s] = std::min(std::fabs(last_point_iter->second), std::fabs(line_seg_l));
+            }
+          } else {
+            outline[lat_decision][line_seg_s] = line_seg_l;
+          }
+        }
+        //
+        if ((line_seg_end_s < vehicle_s_range_.second + kSamplingNarrowSpaceLonGap &&
+            std::fabs(line_seg_end_l - frenet_ego_state.l()) > max_lat_dist) ||
+            (std::fabs(line_seg_end_l - frenet_ego_state.l()) > kMaxCareNarrowSpaceWidth)) {
+          continue;
+        }
+        auto last_point_iter = outline[lat_decision].find(line_seg_end_s);
         if (last_point_iter != outline[lat_decision].end()) {
           if (lat_decision == LatObstacleDecisionType::LEFT) {
-            outline[lat_decision][polygon_point.x()] = std::max(last_point_iter->second, polygon_point.y());
+            outline[lat_decision][line_seg_end_s] = std::max(last_point_iter->second, line_seg_end_l);
           } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
-            outline[lat_decision][polygon_point.x()] = std::min(last_point_iter->second, polygon_point.y());
+            outline[lat_decision][line_seg_end_s] = std::min(last_point_iter->second, line_seg_end_l);
           } else {
-            outline[lat_decision][polygon_point.x()] = std::min(std::fabs(last_point_iter->second), std::fabs(polygon_point.y()));
+            outline[lat_decision][line_seg_end_s] = std::min(std::fabs(last_point_iter->second), std::fabs(line_seg_end_l));
           }
         } else {
-          outline[lat_decision][polygon_point.x()] = polygon_point.y();
+          outline[lat_decision][line_seg_end_s] = line_seg_end_l;
         }
       }
+      // for (const auto& polygon_point : frenet_obs_polygon.points()) {
+      //   if ((polygon_point.x() < vehicle_s_range_.second + kSamplingNarrowSpaceLonGap &&
+      //        std::fabs(polygon_point.y() - frenet_ego_state.l()) > max_lat_dist) ||
+      //       (std::fabs(polygon_point.y() - frenet_ego_state.l()) > kMaxCareNarrowSpaceWidth)) {
+      //     continue;
+      //   }
+      //   auto last_point_iter = outline[lat_decision].find(polygon_point.x());
+      //   if (last_point_iter != outline[lat_decision].end()) {
+      //     if (lat_decision == LatObstacleDecisionType::LEFT) {
+      //       outline[lat_decision][polygon_point.x()] = std::max(last_point_iter->second, polygon_point.y());
+      //     } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
+      //       outline[lat_decision][polygon_point.x()] = std::min(last_point_iter->second, polygon_point.y());
+      //     } else {
+      //       outline[lat_decision][polygon_point.x()] = std::min(std::fabs(last_point_iter->second), std::fabs(polygon_point.y()));
+      //     }
+      //   } else {
+      //     outline[lat_decision][polygon_point.x()] = polygon_point.y();
+      //   }
+      // }
     } else {
       const auto& frenet_obs_corner_points = obs->corner_points();
       for (const auto& corner_point : frenet_obs_corner_points) {
