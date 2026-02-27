@@ -10,5 +10,6 @@
     "enable_tfl_v_limit": true
   },
   "enable_overtake_lane_change_confirmation": true,
-  "use_press_line_fewly_threshold": true
+  "use_press_line_fewly_threshold": true,
+  "enable_overtake_cross_line_large_agent": true
 }
