@@ -142,7 +142,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             break;
           }
         }
-
+        const auto& lane_change_output = session_->planning_context().lane_change_decider_output();
+        is_aggressive_lane_change_ = lane_change_output.is_emergency_scene;// 是否进行激进变道
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
@@ -1599,6 +1600,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
   overtake_lane_change_confirmed_ = false;
+  is_aggressive_lane_change_ = false;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   if (transition_info_.lane_change_status != kLaneChangePropose &&
@@ -4201,7 +4203,8 @@ bool LaneChangeStateMachineManager::
   const auto& diff_speed_init_ttc_map =
       lc_safety_check_config_.diff_speed_init_ttc_map;
   const auto& xpv = diff_speed_init_ttc_map.diff_kph_table;
-  const auto& fpv = diff_speed_init_ttc_map.ttc_table;
+  const auto& ttc_table = diff_speed_init_ttc_map.ttc_table;
+  const auto& aggressive_ttc_table = lc_safety_check_config_.aggressive_ttc_table;
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   double init_diff_speed_ttc = interp(delta_kph, xpv, fpv);
@@ -4293,7 +4296,9 @@ bool LaneChangeStateMachineManager::
       // 后车参考安全距离
       double agent_kph = agent_traj[0].v * 3.6;
       double dis_buff = interp(agent_kph, xp, fp);
-      double rear_comfort_decel = lc_safety_check_config_.rear_comfort_decel;
+      double rear_relative_decel = is_aggressive_lane_change_
+                                ? lc_safety_check_config_.rear_comfort_decel : 
+                                lc_safety_check_config_.rear_comfort_decel + 0.7;// 激进变道 自车加速度假设
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
         rear_comfort_decel = 0.3;
@@ -4302,12 +4307,13 @@ bool LaneChangeStateMachineManager::
       if(delta_v0 > 1.0){ // 后车减速让行需要反应时间, 以及后车减速距离
         dis_buff += agent_traj[0].v *
                     lc_safety_check_config_.faster_rear_delay_time
-                    + delta_v0 * delta_v0 / (2 * rear_comfort_decel);
+                    + delta_v0 * delta_v0 / (2 * rear_relative_decel);
       }
       // 预测轨迹点车速对应ttc
-      double pred_ttc =
-          interp(3.6 * std::max(0., agent_traj[i].v - ego_trajs_future_[i].v),
-                 xpv, fpv);  // 后车轨迹差速<->ttc
+      double diffspeed_kph = 3.6 * std::max(0., agent_traj[i].v - ego_trajs_future_[i].v);
+      double pred_ttc = is_aggressive_lane_change_ 
+                    ? interp(diffspeed_kph, xpv, aggressive_ttc_table) 
+                    : interp(diffspeed_kph, xpv, ttc_table);  // 后车轨迹差速<->ttc
       //记录优化轨迹上的自车速度和后车速度
 
       pred_ttc = pred_ttc * check_time_ratio;

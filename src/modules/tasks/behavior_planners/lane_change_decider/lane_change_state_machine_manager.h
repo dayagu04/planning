@@ -249,7 +249,7 @@ class LaneChangeStateMachineManager {
                   const RequestType direction);
   bool CheckFrontRiskAgentTrajs(
       const planning_data::DynamicAgentNode* agent_node, bool is_large_car);
-  void CalculateCongestionLatOffsetValue();
+      void CalculateCongestionLatOffsetValue();
   bool IfFrenetCollision(std::pair<double, double> l1, double v1,
                         std::pair<double, double> l2, double v2,
                         double max_time = 4.0, double dt = 0.5);
@@ -360,7 +360,7 @@ class LaneChangeStateMachineManager {
   StateMachineLaneChangeStatus last_state_{
       StateMachineLaneChangeStatus::kLaneKeeping};
   bool overtake_lane_change_confirmed_{false};
-  bool is_aggressive_lane_change_{true}; // 强变道需求
+  bool is_aggressive_lane_change_{false}; // 强变道需求
 
 };
 }  // namespace planning

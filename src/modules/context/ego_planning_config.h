@@ -6491,6 +6491,11 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                                  diff_speed_init_ttc_map.ttc_table);
       read_json_vec(
         json,
+        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
+                                 "aggressive_ttc_table"},
+                                 diff_speed_init_ttc_map.aggressive_ttc_table);
+      read_json_vec(
+        json,
         std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
                                  "rear_speed_kph_table"},
                                  rear_vehicle_speed_min_space_map.rear_speed_kph_table);
@@ -6539,6 +6544,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
+        std::vector<double> aggressive_ttc_table{0.8, 1.8, 2.0, 2.5, 3.5, 4.5, 6.5, 8.5, 10.0};  // 激进模式起始ttc
     };
     DiffSpeedInitTTCable diff_speed_init_ttc_map;
     struct RearVehicleSpeedMinSpaceMap {
