@@ -231,6 +231,12 @@ void EgoStateManager::set_has_stand_wait_request(
       vehicle_status.stand_wait_request().has_stand_wait_request();
 }
 
+void EgoStateManager::set_has_efficient_pass_request(
+    const planning::common::VehicleStatus &vehicle_status) {
+  has_efficient_pass_request_ =
+      vehicle_status.efficient_pass_request().has_efficient_pass_request();
+}
+
 void EgoStateManager::update_transform() {
   Eigen::Vector4d q;
   q.x() = location_enu_.orientation.x;
@@ -274,6 +280,7 @@ bool EgoStateManager::update(
   set_time_headway_level(vehicle_status);
   set_has_time_headway_scale_up_request(vehicle_status);
   set_has_stand_wait_request(vehicle_status);
+  set_has_efficient_pass_request(vehicle_status);
   const auto &planning_result = session_->planning_context().planning_result();
   const auto &last_planning_result =
       session_->planning_context().last_planning_result();

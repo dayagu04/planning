@@ -533,6 +533,8 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
                                 ->time_headway_level();
   const auto has_time_headway_scale_up_request =
       ego_state_manager->has_time_headway_scale_up_request();
+  const auto has_efficient_pass_request =
+      ego_state_manager->has_efficient_pass_request();
 
   if (time_headway_level < 1) {
     time_headway_level = 1;
@@ -578,9 +580,14 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
       has_time_headway_scale_up_request
           ? matched_desired_headway * config_.thw_scale_up_factor
           : matched_desired_headway;
+  matched_desired_headway =
+      has_efficient_pass_request
+          ? matched_desired_headway * config_.thw_scale_down_factor
+          : matched_desired_headway;
   JSON_DEBUG_VALUE("time_headway_level", time_headway_level);
   JSON_DEBUG_VALUE("THW", matched_desired_headway);
   JSON_DEBUG_VALUE("thw_scale_up_request", has_time_headway_scale_up_request)
+  JSON_DEBUG_VALUE("thw_efficient_pass_request", has_efficient_pass_request)
   return;
 }
 

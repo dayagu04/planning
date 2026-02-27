@@ -86,6 +86,9 @@ class EgoStateManager {
   void set_has_stand_wait_request(
       const planning::common::VehicleStatus &vehicle_status);
 
+  void set_has_efficient_pass_request(
+      const planning::common::VehicleStatus &vehicle_status);
+
   void set_ego_gear(const planning::common::VehicleStatus &vehicle_status);
 
   // const planning::VehicleParam &get_vehicle_param() const {
@@ -128,6 +131,7 @@ class EgoStateManager {
     return has_time_headway_scale_up_request_;
   }
   bool has_stand_wait_request() const { return has_stand_wait_request_; }
+  bool has_efficient_pass_request() const { return has_efficient_pass_request_; }
 
   const PlanningInitPoint &planning_init_point() const {
     return planning_init_point_;
@@ -215,6 +219,7 @@ class EgoStateManager {
   uint32_t time_headway_level_ = 4;
   bool has_time_headway_scale_up_request_ = false;
   bool has_stand_wait_request_ = false;
+  bool has_efficient_pass_request_ = false;
   planning_math::Polygon2d polygon_;
   PlanningInitPoint planning_init_point_;
   bool planning_init_point_valid_ = false;

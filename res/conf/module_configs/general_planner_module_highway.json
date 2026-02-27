@@ -1577,7 +1577,8 @@
       "thw_high_rate_lane_change": 0.65,
       "thw_low_rate_lane_change_to_lane_keep": 0.15,
       "thw_target_low_value_lane_change": 0.8,
-      "thw_scale_up_factor": 1.2
+      "thw_scale_up_factor": 1.2,
+      "thw_scale_down_factor": 0.8
     },
     "st_graph_searcher": {
       "enable_only_s_t_hash": true,
