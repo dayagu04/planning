@@ -141,6 +141,11 @@ bool LongTimeTaskPipelineV3::Run() {
   //   return false;
   // }
 
+  ok = sample_poly_speed_adjust_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(sample_poly_speed_adjust_decider_->Name());
+    return false;
+  }
 
   ok = lane_change_decider_->Execute();
   if (!ok) {
@@ -170,6 +175,11 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(sample_poly_speed_adjust_decider_->Name());
     return false;
   }
+  // ok = sample_poly_speed_adjust_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(sample_poly_speed_adjust_decider_->Name());
+  //   return false;
+  // }
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
