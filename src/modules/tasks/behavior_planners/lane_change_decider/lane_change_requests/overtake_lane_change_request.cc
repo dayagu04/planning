@@ -423,9 +423,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         agent = agent_manager->mutable_agent(current_agent->agent_id());
         leading_relative_dis = track_iter->second->d_s_rel();
         exist_cross_line_large_agent_ahead_ = true;
-        if (track_iter->second->frenet_l() > 1.0) {
+        if (track_iter->second->frenet_l() > 1.5 && rlane && llane) {
           enable_l_ = false;
-        } else if (track_iter->second->frenet_l() < -1.0) {
+        } else if(track_iter->second->frenet_l() < -1.5 && rlane && llane) {
           enable_r_ = false;
         }
       }
