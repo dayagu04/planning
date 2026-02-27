@@ -1864,9 +1864,29 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
     return;
   }
 
-  route_info_output_.dis_to_ramp = ramp_info_vec_[0].second;
-  route_info_output_.ramp_direction =
-      CalculateSplitDirection(*ramp_info_vec_[0].first, ld_map_);
+  for (const auto& ramp_info : ramp_info_vec_) {
+    const auto& ramp_link = ramp_info.first;
+    if (ramp_link == nullptr) {
+      continue;
+    }
+
+    uint64 ramp_link_id = ramp_link->id();
+    const auto& ramp_next_link = ld_map_.GetNextLinkOnRoute(ramp_link_id);
+    if (ramp_next_link == nullptr) {
+      continue;
+    }
+
+    const bool is_ramp = ld_map_.isRamp(ramp_next_link->link_type());
+    const bool is_SAPA =
+        (ramp_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0;
+    
+    if (is_ramp || is_SAPA) {
+      route_info_output_.dis_to_ramp = ramp_info.second;
+      route_info_output_.ramp_direction =
+          CalculateSplitDirection(*ramp_info.first, ld_map_);
+      break;
+    }
+  }
 }
 
 bool LDRouteInfoStrategy::get_sdpromap_valid() { return ldmap_valid_; }
