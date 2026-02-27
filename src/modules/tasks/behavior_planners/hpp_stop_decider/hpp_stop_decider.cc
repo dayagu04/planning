@@ -45,7 +45,10 @@ bool HppStopDecider::Execute() {
   }
 
   // 基于 reference path 更新到终点和目标车位的信息
-  UpdateTargetInfoBasedOnReferencePath(current_reference_path);
+  if (!UpdateTargetInfoBasedOnReferencePath(current_reference_path)) {
+    ILOG_WARN << "HppStopDecider: Failed to update target info";
+    return false;
+  }
 
   // 获取自车状态
   const auto &ego_state_manager = env.get_ego_state_manager();
@@ -152,7 +155,7 @@ bool HppStopDecider::UpdateTargetInfoBasedOnReferencePath(
     Point2D target_slot_cart_pt(target_slot_center.x(), target_slot_center.y());
     Point2D target_slot_frenet_pt{0.0, 0.0};
     if (frenet_coord->XYToSL(target_slot_cart_pt, target_slot_frenet_pt)) {
-      dist_to_target_slot = std::fabs(target_slot_frenet_pt.x - ego_s);
+      dist_to_target_slot = target_slot_frenet_pt.x - ego_s;
     }
 
     const auto &target_dest_point =
@@ -160,7 +163,7 @@ bool HppStopDecider::UpdateTargetInfoBasedOnReferencePath(
     Point2D target_dest_cart_pt(target_dest_point.x(), target_dest_point.y());
     Point2D target_dest_frenet_pt{0.0, 0.0};
     if (frenet_coord->XYToSL(target_dest_cart_pt, target_dest_frenet_pt)) {
-      dist_to_target_dest = std::fabs(target_dest_frenet_pt.x - ego_s);
+      dist_to_target_dest = target_dest_frenet_pt.x - ego_s;
     }
   }
   session_->mutable_environmental_model()->get_route_info()->UpdateTargetInfo(
