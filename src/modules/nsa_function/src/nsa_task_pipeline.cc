@@ -8,7 +8,7 @@ NsaTaskPipeline::NsaTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
   lateral_obstacle_decider_ =
-      std::make_unique<HppLateralObstacleDecider>(config_builder, session);
+      std::make_unique<NSALateralObstacleDecider>(config_builder, session);
   narrow_space_decider_ =
       std::make_unique<NarrowSpaceDecider>(config_builder, session);
   nsa_general_lateral_decider_ =
