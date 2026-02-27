@@ -40,6 +40,9 @@ bool TrafficLightDecider::Execute() {
   } else {
     is_first_car_ = true;
   }
+
+  const auto& function_info = environmental_model.function_info();
+  bool in_acc_func = function_info.function_mode() == common::DrivingFunctionInfo::ACC;
   const auto tfl_manager =
       environmental_model.get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
@@ -157,7 +160,7 @@ bool TrafficLightDecider::Execute() {
     can_pass_ = true;
   }
 
-  if (config_.enable_tfl_decider && !can_pass_) {
+  if (config_.enable_tfl_decider && !can_pass_ && !in_acc_func) {
     AddVirtualObstacle();
   }
   //此外认为已经进入路口
@@ -367,7 +370,7 @@ bool TrafficLightDecider::IsStayingStillGreenTFL() {
 
   }
   //reminder from green light 1.5s and last 3s
-  if (is_green_start_no_lead_ && v_ego < kEgoStaticVelThred && green_light_timer_ > kGreenReminderStartTime && 
+  if (is_green_start_no_lead_ && v_ego < kEgoStaticVelThred && green_light_timer_ > kGreenReminderStartTime &&
       green_light_timer_ < kGreenReminderEndTime) {
     return true;
   }
