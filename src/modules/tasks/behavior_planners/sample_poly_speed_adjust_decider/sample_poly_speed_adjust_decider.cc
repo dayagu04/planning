@@ -102,7 +102,6 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   ok = ProcessEnvInfos();
-
   if (ok) {
     planning::speed::STPoint current_matched_upper_st_point;
     planning::speed::STPoint current_matched_lower_st_point;
@@ -264,7 +263,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                              v_suggestted_, merge_stop_line_distance_,
                              leading_veh_, is_not_use_gap_select,
                              speed_differ_gain, distance_to_stop_point_,
-                             lc_safety_distance_config_, 3.0, is_merge_change_);
+                             lc_safety_distance_config_, 3.0, is_merge_change_,
+                             is_emergency_scene_);
       }
     }
   } else {
@@ -282,7 +282,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                                  leading_veh_, is_not_use_gap_select,
                                  speed_differ_gain, distance_to_stop_point_,
                                  lc_safety_distance_config_,
-                                 i * kEvaluationStep, is_merge_change_);
+                                 i * kEvaluationStep, is_merge_change_,
+                                 is_emergency_scene_);
           }
         }
       }
@@ -461,6 +462,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   leading_veh_.prediction_path_valid = false;
   sample_status_ = OK;
   distance_to_stop_point_ = kMaxDistanceToStopPoint;
+  is_emergency_scene_ = true;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()

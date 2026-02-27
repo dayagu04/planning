@@ -187,7 +187,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     const LeadingAgentInfo& leading_veh, bool is_not_use_gap_select,
     double speed_differ_gain, double distance_to_stop_point,
     const LanChangeSafetyCheckConfig& lc_safety_distance_config,
-    const double cur_time, bool is_mergr_change) {
+    const double cur_time, bool is_mergr_change, bool is_emergency_scene) {
   // anchor points cost
   double last_cost = cost_sum_;
   double last_arrived_s = arrived_s_;
@@ -245,7 +245,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
       anchor_arrived_s, anchor_arrived_t, anchor_arrived_v, anchor_arrived_a,
       safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
-      is_not_use_gap_select, lc_safety_distance_config);
+      is_not_use_gap_select, lc_safety_distance_config, is_emergency_scene);
   arrived_s_ = anchor_arrived_s;
   arrived_v_ = anchor_arrived_v;
   arrived_a_ = anchor_arrived_a;

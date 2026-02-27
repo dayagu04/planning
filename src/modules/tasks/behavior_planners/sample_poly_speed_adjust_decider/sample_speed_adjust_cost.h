@@ -14,7 +14,8 @@ class MatchGapCost : public CurveCost {
                const double reliable_safe_distance_to_gap_front_obj,
                const double reliable_safe_distance_to_gap_back_obj,
                const double ego_current_vel, const bool is_merge_change,
-               const LanChangeSafetyCheckConfig& lc_safety_distance_config);
+               const LanChangeSafetyCheckConfig& lc_safety_distance_config,
+               const bool is_emergency_scene);
   void SetWeightMatchS(const double weight_s) { weight_match_s_ = weight_s; }
   void SetWeightMatchVel(const double weight_vel) {
     weight_match_v_ = weight_vel;

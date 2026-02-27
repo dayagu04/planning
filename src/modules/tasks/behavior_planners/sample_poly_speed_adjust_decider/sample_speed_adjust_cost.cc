@@ -16,7 +16,8 @@ void MatchGapCost::GetCost(
     const double reliable_safe_distance_to_gap_front_obj,
     const double reliable_safe_distance_to_gap_back_obj,
     const double ego_current_vel, const bool is_merge_change,
-    const LanChangeSafetyCheckConfig& lc_safety_distance_config) {
+    const LanChangeSafetyCheckConfig& lc_safety_distance_config,
+    const bool is_emergency_scene) {
   // Helper function to calculate the cost for distance and velocity
   const double ttc_safe_limit = is_merge_change ? 0.0 : 0.0;
   const double gap_vel_gain = is_merge_change ? 1.0 : 1.0;
@@ -123,6 +124,8 @@ void MatchGapCost::GetCost(
       double rel_v = poly_end_v - upper_st_point.velocity();
       double front_ttc_buffer = (poly_end_v * rel_v) / (2.0 * 2.5);
       min_safe_distance_front = std::max(front_ttc_buffer, 3.8);
+    }else if(is_emergency_scene || upper_st_point.velocity() > (poly_end_v + 2.0)){
+      min_safe_distance_front = 0.0;
     }
     double large_car_buffer = upper_st_point.extreme_l() > 8.0 ? 3.0 : 0.0;
     safe_border_distance_to_gap_front_obj =
@@ -135,7 +138,11 @@ void MatchGapCost::GetCost(
     double abs_buffer = interp(lower_st_point.velocity() * 3.6, xp, fp);
     double dist_rel_vel =
         (rel_vel > 0) ? rel_vel * interp(rel_vel * 3.6, xpv, fpv) : 0.0;
-    min_safe_distance_rear = std::fmax(abs_buffer, dist_rel_vel);
+    if(is_emergency_scene){
+      min_safe_distance_rear = abs_buffer;
+    }else{
+      min_safe_distance_rear = std::fmax(abs_buffer, dist_rel_vel);
+    }
     min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1) +
                              linear_expand_extra_gap_distance_by_ego_vel(
                                  poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
