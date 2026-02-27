@@ -3381,11 +3381,11 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
     return false;
   }
   //当前车道半宽度
-  double hald_origin_lane = 1.75;
+  double half_origin_lane = 1.75;
   const auto origin_lane = session_->environmental_model().get_virtual_lane_manager()
                           ->get_lane_with_virtual_id(lc_lane_mgr_->origin_lane_virtual_id());
   if (origin_lane != nullptr) {
-    hald_origin_lane = origin_lane->width() * 0.5;
+    half_origin_lane = origin_lane->width() * 0.5;
   }
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -3409,7 +3409,7 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
   } else {
     // TODO(fengwang31):暂时把traffic_cone的横向距离限制距离中心线在1m以外则认为安全
     // 后续根据自车的轨迹点是否与锥桶有overlap来判断是否安全
-    double approx_lat_offset = std::min(ego_to_cone_distacne / ego_need_dis, 1.0) * hald_origin_lane;
+    double approx_lat_offset = std::min(ego_to_cone_distacne / ego_need_dis, 1.0) * half_origin_lane;
     //原方案假设 3V 纵向距离对应自车横向运动半个车道
     if (transition_info_.lane_change_direction == RIGHT_CHANGE &&
         frenet_point.y > 1.0 - approx_lat_offset) {
