@@ -4204,10 +4204,12 @@ bool LaneChangeStateMachineManager::
       lc_safety_check_config_.diff_speed_init_ttc_map;
   const auto& xpv = diff_speed_init_ttc_map.diff_kph_table;
   const auto& ttc_table = diff_speed_init_ttc_map.ttc_table;
-  const auto& aggressive_ttc_table = lc_safety_check_config_.aggressive_ttc_table;
+  const auto& aggressive_ttc_table = diff_speed_init_ttc_map.aggressive_ttc_table;
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
-  double init_diff_speed_ttc = interp(delta_kph, xpv, fpv);
+  double init_diff_speed_ttc = is_aggressive_lane_change_
+                                ? interp(delta_kph, xpv, aggressive_ttc_table) 
+                                : interp(delta_kph, xpv, ttc_table);
   // init_diff_speed_ttc -> 递减
   // double max_box_ttc_rear =
   // CalculateLCSafetyCheckTimeByDiffSpeed(init_diff_speed_ttc);
@@ -4301,7 +4303,7 @@ bool LaneChangeStateMachineManager::
                                 lc_safety_check_config_.rear_comfort_decel + 0.7;// 激进变道 自车加速度假设
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
-        rear_comfort_decel = 0.3;
+        rear_relative_decel = 0.3;
       }
       double delta_v0 = std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
       if(delta_v0 > 1.0){ // 后车减速让行需要反应时间, 以及后车减速距离
