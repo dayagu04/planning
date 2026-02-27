@@ -449,14 +449,36 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
       } else if (pre_lane_count == 1) {
         topo_lane.predecessor_lane_ids.emplace(lane.predecessor_lane_ids()[0]);
       } else {
+
+        // 处理合流车道：判断是否有效，无效则跳过 + 前继存在道路合流
+        uint64_t link_id = lane.link_id();
+        auto* link = ld_map_.GetLinkOnRoute(link_id);
+        // 向前首个拓扑变化是否为合流
+        bool pre_topo_change_is_merge = false;
+        while (link != nullptr) {
+          link_id = link->id();
+          // 是否来自合流道路
+          if (link->predecessor_link_ids_size() > 1){
+            pre_topo_change_is_merge = true;
+            break;
+          }
+          auto* pre_link = ld_map_.GetPreviousLinkOnRoute(link_id);
+          if(pre_link == nullptr){
+            break;
+          }
+          if(pre_link->successor_link_ids_size() > 1){
+            pre_topo_change_is_merge = false;
+            break;
+          }
+          link = pre_link;
+        }
         for (const auto& pre_lane_id : lane.predecessor_lane_ids()) {
           const auto* pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
           if (pre_lane == nullptr) {
             continue;
           }
 
-          // 处理合流车道：判断是否有效，无效则跳过
-          if (IsMergeLane(pre_lane)) {
+          if (IsMergeLane(pre_lane) && pre_topo_change_is_merge) {
             if (IsInvalidLaneMergeLaneOppositeSide(pre_lane)) {
               continue;
               // merge lane的反方向是无效车道，既这条merge lane不应该在feasible lane中，continue掉，不加入到feasible lane中
@@ -467,7 +489,6 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
         }
       }
 
-      // 更新当前topo lane的后继车道
       topo_lane.successor_lane_ids.clear();
       for (int i = 0; i < lane.successor_lane_ids_size(); ++i) {
         topo_lane.successor_lane_ids.emplace(lane.successor_lane_ids()[i]);
@@ -507,23 +528,22 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
       if (topo_lane.predecessor_lane_ids.empty()) {
         continue;
       }
-
-      const uint64_t pre_lane_id = *topo_lane.predecessor_lane_ids.begin();
-      const auto* pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
-      if (!pre_lane) {
-        return false;
-      }
-
-      // 校验前继车道是否属于routelink的pre link
-      if (pre_lane->link_id() == next_pre_link->id()) {
-        HandleMainLinkPreLane(pre_lane, next_lane_vec);
-      } else {
-        // 需要处理前继lane不是在route link上的场景
-        HandleOtherMergeLinkPreLane(topo_lane, next_pre_link, current_link,
-                                    pre_lane, next_lane_vec);
+      //考虑到有多个前继车道，需要遍历所有前继车道
+      for (const auto& pre_lane_id : topo_lane.predecessor_lane_ids) {
+        const auto* pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
+        if (!pre_lane) {
+          return false;
+        }
+        // 校验前继车道是否属于routelink的pre link
+        if (pre_lane->link_id() == next_pre_link->id()) {
+          HandleMainLinkPreLane(pre_lane, next_lane_vec);
+        } else {
+          // 需要处理前继lane不是在route link上的场景
+          HandleOtherMergeLinkPreLane(topo_lane, next_pre_link, current_link,
+                                      pre_lane, next_lane_vec);
+        }
       }
     }
-
     if (next_lane_vec.empty()) {
       return false;
     }
