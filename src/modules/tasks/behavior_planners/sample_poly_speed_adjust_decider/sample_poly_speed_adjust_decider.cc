@@ -462,7 +462,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   leading_veh_.prediction_path_valid = false;
   sample_status_ = OK;
   distance_to_stop_point_ = kMaxDistanceToStopPoint;
-  is_emergency_scene_ = config_.is_forced_emergency_scene;
+  is_emergency_scene_ = false;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()
@@ -668,6 +668,13 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   CalcTargetLaneVehDensity();
 
   RunSampleSceneStateMachine();
+
+  if (config_.is_forced_emergency_scene)
+  {
+    is_emergency_scene_ = true;
+  }else{
+    is_emergency_scene_ = IsNotUseGapSelect();
+  }
 
   // sample v upper and lower
   bool is_split_map_change =
