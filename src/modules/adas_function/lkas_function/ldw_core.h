@@ -50,6 +50,7 @@ class LdwCore {
   iflyauto::ShiftLeverStateEnum shift_lever_state_ =
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_P;
   uint32 ldw_enable_code_ = 255;
+  uint32 mask_enable_code_e541_ldw = 255;
   uint32 UpdateLdwEnableCode(void);
 
   // 油门踏板变化率满足抑制阈值持续时间 单位:s
