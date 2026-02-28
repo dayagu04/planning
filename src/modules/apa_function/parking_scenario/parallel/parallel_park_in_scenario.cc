@@ -972,10 +972,10 @@ const bool ParallelParkInScenario::CheckPAFinished() {
   const bool min_lat_move_condition = std::fabs(terminal_err.pos.y()) > 0.02;
   ILOG_INFO << "lat_err_y_condition = " << ego_slot_info.terminal_err.pos.y()
             << "is_replan_first" << int(frame_.is_replan_first)
-            << " gear_change_count = " << frame_.cur_path_gear_change_count;
+            << " gear_change_count = " << frame_.gear_change_count;
   const bool lat_condition =
       lat_move_condition || (lat_err_y_condition && min_lat_move_condition) ||
-      (!(frame_.is_replan_first) && frame_.cur_path_gear_change_count == 0);
+      (!(frame_.is_replan_first) && frame_.gear_change_count == 0);
 
   if (frame_.total_plan_count > kMaxReplanTimes) {
     ILOG_INFO << "replan times too much, only check heading and x axis";
@@ -3488,7 +3488,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   frame_.is_replan_first = false;
 
-  frame_.cur_path_gear_change_count = planner_output.gear_change_count;
+  frame_.gear_change_count = planner_output.gear_change_count;
   ILOG_INFO << "start lat optimizer!";
 
   // lateral path optimization
