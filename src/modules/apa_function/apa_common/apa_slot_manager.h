@@ -229,6 +229,7 @@ class ApaSlotManager final {
     parallel_slot_release_count_map_.clear();
     parallel_slot_not_release_count_map_.clear();
     pre_plan_fail_slot_id_uset_.clear();
+    perpendicular_redefine_info_map_.clear();
   }
 
   void GenerateReleaseSlotIdVec();
@@ -264,6 +265,11 @@ class ApaSlotManager final {
     return slots_map_;
   }
   const bool GetRecommendParkOut() const { return recommend_park_out_; }
+
+  const std::unordered_map<size_t, std::pair<bool, int>>&
+  GetPerpendicularRedefineInfoMap() {
+    return perpendicular_redefine_info_map_;
+  }
 
  private:
   void ParkingLotCruiseProcess();
