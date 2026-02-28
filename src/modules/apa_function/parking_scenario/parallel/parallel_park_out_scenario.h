@@ -41,7 +41,8 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   const PathPlannerResult PathPlanOnceGeometry();
 
   void SetReleaseDirection(iflyauto::APAHMIData& apa_hmi_data,
-                           const AstarRequest& cur_request);
+                           const AstarRequest& cur_request,
+                           const HybridAStarResult& result);
   void SetRequestForScenarioTry(AstarRequest& cur_request,
                                 const EgoInfoUnderSlot& ego_info);
 
@@ -72,6 +73,8 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   virtual const double CalRealTimeBrakeDist() override;
 
   void CheckEgoPoseWhenParkOutFaild(ParkingFailReason reason);
+
+  void SelectParkOutDirByCurb();
 
  private:
   void Log() const override;
@@ -108,6 +111,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool path_end_heading_is_met_= false;
   ParallelOutPathGenerator previous_parallel_out_path_planner_;
   double strict_channel_y = 6.5;
+  ApaParkOutDirection pre_selected_direction_ = ApaParkOutDirection::INVALID;
 };
 }  // namespace apa_planner
 }  // namespace planning

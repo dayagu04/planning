@@ -15,6 +15,8 @@
 namespace planning {
 namespace apa_planner {
 
+#define DEBUG_PARALLEL_DIRECTION (0)
+
 static double kFrontDetaXMagWhenFrontVacant = 3.0;
 static double kFrontMaxDetaXMagWhenFrontOccupied = 0.5;
 static double kRearDetaXMagWhenFrontVacant = 0.4;
@@ -56,6 +58,7 @@ void ParallelParkOutScenario::Reset() {
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
   astar_state_ = AstarSearchState::NONE;
   strict_channel_y = 6.5;
+  pre_selected_direction_ = ApaParkOutDirection::INVALID;
 
   ParkingScenario::Reset();
 }
@@ -218,6 +221,13 @@ bool ParallelParkOutScenario::ParkOutDirectionTryHybridAStar() {
 
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  if (pre_selected_direction_ == ApaParkOutDirection::INVALID) {
+    ILOG_INFO << "pre_selected_direction_ = INVALID";
+    return false;
+  }
+  apa_world_ptr_->GetStateMachineManagerPtr()->SetParkOutDirection(
+      pre_selected_direction_);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -771,6 +781,48 @@ const bool ParallelParkOutScenario::CheckFinished() {
          is_lat_or_path_end_met;
 }
 
+void ParallelParkOutScenario::SelectParkOutDirByCurb() {
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+  const double slot_length = ego_info_under_slot.slot.GetLength();
+  const double slot_width = ego_info_under_slot.slot.GetWidth();
+  const double half_slot_width = 0.5 * slot_width;
+  // const double side_sgn = frame_.is_park_out_left ? 1.0 : -1.0;
+
+  int left_num = 0;
+  int right_num = 0;
+  const double slot_x_offset = 0.8;
+  const double slot_y_left_offset = 0.5;
+  const double slot_y_right_offset = 0.8;
+  for (const auto& obstacle_point_set : obs_pt_local_vec_) {
+    for (const auto& obstacle_point_slot : obstacle_point_set.second) {
+      const bool is_left_side_obs =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_x_offset,
+                                  slot_length - slot_x_offset) &&
+          pnc::mathlib::IsInBound(obstacle_point_slot.y(),
+                                  half_slot_width - slot_y_left_offset,
+                                  (half_slot_width + slot_y_right_offset));
+      const bool is_right_side_obs =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_x_offset,
+                                  slot_length - slot_x_offset) &&
+          pnc::mathlib::IsInBound(obstacle_point_slot.y(),
+                                  -(half_slot_width - slot_y_left_offset),
+                                  -(half_slot_width + slot_y_right_offset));
+      if (is_left_side_obs) {
+        left_num++;
+      } else if (is_right_side_obs) {
+        right_num++;
+      }
+    }
+  }
+  pre_selected_direction_ = left_num > right_num
+                                ? ApaParkOutDirection::RIGHT_FRONT
+                                : ApaParkOutDirection::LEFT_FRONT;
+  ILOG_INFO << "pre_selected_direction_ = " << int(pre_selected_direction_)
+            << " left_num = " << left_num << " right_num = " << right_num;
+  return;
+}
+
 const bool ParallelParkOutScenario::GenTlane() {
   ILOG_INFO << "--------------- GenTlane ------------------------";
   // Todo: generate t-lane according to nearby obstacles
@@ -962,6 +1014,7 @@ const bool ParallelParkOutScenario::GenTlane() {
     // ILOG_INFO << "No points found for parent ID " << max_count_parent_id;
   }
 
+  SelectParkOutDirByCurb();
   ILOG_INFO << "curb_obs_num = " << curb_obs_num
             << " low_curb_obs_num = " << low_curb_obs_num;
   const double low_height_curb_ratio = 0.25;
@@ -1767,15 +1820,25 @@ void ParallelParkOutScenario::SetRequestForScenarioTry(
 }
 
 void ParallelParkOutScenario::SetReleaseDirection(
-    iflyauto::APAHMIData& apa_hmi_data, const AstarRequest& cur_request) {
+    iflyauto::APAHMIData& apa_hmi_data, const AstarRequest& cur_request,
+    const HybridAStarResult& result) {
   ApaDirectionGenerator generator;
   generator.ClearReleaseDirectionFlag(apa_hmi_data);
   generator.ClearRecommendationDirectionFlag(apa_hmi_data);
-  generator.SetReleaseDirectionFlag(apa_hmi_data, ParityBit);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
 
   ApaRecommendationDirection dir = ParityBit;
-
+  if (result.x.size() > 1) {
+    generator.SetReleaseDirectionFlag(apa_hmi_data, ParityBit);
+    generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
+    if (frame_.is_park_out_left) {
+      dir = ApaRecommendationDirection::ParallelFrontLeft;
+    } else {
+      dir = ApaRecommendationDirection::ParallelFrontRight;
+    }
+    generator.SetReleaseDirectionFlag(apa_hmi_data, dir);
+    generator.SetRecommendationDirectionFlag(apa_hmi_data, dir);
+  }
+#if DEBUG_PARALLEL_DIRECTION
   bool is_left_dir = false;
   bool is_right_dir = false;
   for (int8_t i = 0; i < response_.feasible_directions.size(); i++) {
@@ -1814,6 +1877,8 @@ void ParallelParkOutScenario::SetReleaseDirection(
   }
   generator.SetRecommendationDirectionFlag(apa_hmi_data,
                                            planning_recommend_park_dir);
+#endif
+  return;
 }
 
 void ParallelParkOutScenario::SetTargetGroup(AstarRequest& cur_request) {
@@ -1846,12 +1911,12 @@ void ParallelParkOutScenario::SetTargetGroup(AstarRequest& cur_request) {
   size_t y_nums = 3;
   const double step_x = 1.0;
   const double step_y = 0.3;
-  const bool is_searchout_state =
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus();
-  if (is_searchout_state) {
-    x_nums = 4;
-    y_nums = 2;
-  }
+  // const bool is_searchout_state =
+  //     apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus();
+  // if (is_searchout_state) {
+  //   x_nums = 4;
+  //   y_nums = 2;
+  // }
   for (size_t i = 0; i < x_nums; i++) {
     float x = target_x - step_x * i;
     for (size_t j = 0; j < y_nums; j++) {
@@ -1861,11 +1926,11 @@ void ParallelParkOutScenario::SetTargetGroup(AstarRequest& cur_request) {
       }
       cur_request.parallel_target_group.emplace_back(
           Pose2f(x, y, target_heading));
-      if (is_searchout_state) {
-        float y_flipp = y * -1.0;
-        cur_request.parallel_target_group.emplace_back(
-            Pose2f(x, y_flipp, target_heading));
-      }
+      // if (is_searchout_state) {
+      //   float y_flipp = y * -1.0;
+      //   cur_request.parallel_target_group.emplace_back(
+      //       Pose2f(x, y_flipp, target_heading));
+      // }
     }
   }
 
@@ -2160,7 +2225,7 @@ const bool ParallelParkOutScenario::SetAstarRequest(
             << " history_gear = " << int(astar_request.history_gear)
             << " current_gear = " << int(current_gear_);
 
-  SetRequestForScenarioTry(astar_request, ego_info);
+  // SetRequestForScenarioTry(astar_request, ego_info);
 
   ParkingVehDirection dir_type = ParkingVehDirection::NONE;
   const double passage_height = 0.0;
@@ -2209,16 +2274,16 @@ const PathPlannerResult ParallelParkOutScenario::PubResponseForScenarioTry(
 
     // success, get first gear path length
     bool path_search_valid = false;
-    const bool park_out_directions_valid =
-        std::any_of(response_.feasible_directions.begin(),
-                    response_.feasible_directions.end(),
-                    [](bool feasible) { return feasible; });
+    // const bool park_out_directions_valid =
+    //     std::any_of(response_.feasible_directions.begin(),
+    //                 response_.feasible_directions.end(),
+    //                 [](bool feasible) { return feasible; });
     if (response_.GetFirstPathLength() > 0.25) {
       path_search_valid = true;
     }
-    ILOG_INFO << "path_search_valid = " << path_search_valid
-             << ",park_out_directions_valid = " << park_out_directions_valid;
-    if (path_search_valid && park_out_directions_valid) {
+    ILOG_INFO << "path_search_valid = " << path_search_valid;
+            //  << ",park_out_directions_valid = " << park_out_directions_valid;
+    if (path_search_valid) {
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
       res = PathPlannerResult::PLAN_FAILED;
@@ -2244,7 +2309,7 @@ const PathPlannerResult ParallelParkOutScenario::PubResponseForScenarioTry(
   response_tf.SetBasePose(response_.request.base_pose);
   PublishHybridAstarCompletePathInfo(response_.result, &response_tf);
   UpdatePathByGeometry();
-  SetReleaseDirection(apa_hmi_, response_.request);
+  SetReleaseDirection(apa_hmi_, response_.request, response_.result);
 
   return res;
 }
