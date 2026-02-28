@@ -1072,6 +1072,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     leading_safe_overstep_buffer = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "leading_safe_overstep_buffer"});
+    is_forced_emergency_scene = read_json_keys<bool>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "is_forced_emergency_scene"});
   }
 
   int sample_v_nums = 15;
@@ -1131,6 +1134,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double leading_safe_max_dec = 2.0;
   double leading_safe_overstep_gain = 4.0;
   double leading_safe_overstep_buffer = 3.0;
+  bool is_forced_emergency_scene = false;
 };
 
 struct SampleAstarTrajConfig : public EgoPlanningConfig {

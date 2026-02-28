@@ -1994,7 +1994,8 @@
     "leading_safe_delay_time":0.5,
     "leading_safe_max_dec":2.0,
     "leading_safe_overstep_gain":4.0,
-    "leading_safe_overstep_buffer":3.0
+    "leading_safe_overstep_buffer":3.0,
+    "is_forced_emergency_scene": false
   },
   "sample_astar_traj":{
     "time_step_near": 1,

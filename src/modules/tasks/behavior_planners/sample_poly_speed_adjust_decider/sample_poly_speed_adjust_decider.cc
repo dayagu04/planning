@@ -462,7 +462,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   leading_veh_.prediction_path_valid = false;
   sample_status_ = OK;
   distance_to_stop_point_ = kMaxDistanceToStopPoint;
-  is_emergency_scene_ = true;
+  is_emergency_scene_ = config_.is_forced_emergency_scene;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()
