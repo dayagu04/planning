@@ -170,6 +170,11 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   is_VRU_ = prediction_object.is_VRU;
   is_traffic_facilities_ = prediction_object.is_traffic_facilities;
   is_car_ = prediction_object.is_car;
+  is_pedestrain_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) ||
+                   (type_ == iflyauto::OBJECT_TYPE_PEDESTRIAN) ||
+                   (type_ == iflyauto::OBJECT_TYPE_ADULT) ||
+                   (type_ == iflyauto::OBJECT_TYPE_CHILD) ||
+                   (type_ == iflyauto::OBJECT_TYPE_CHILD);
 
   std::vector<planning_math::Vec2d> polygon_points;
   if (prediction_object.bottom_polygon_points.size() < 3) {
@@ -501,6 +506,11 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   is_VRU_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) ||
             (type_ == iflyauto::OBJECT_TYPE_OCC_CYCLIST);
   is_car_ = (type_ == iflyauto::OBJECT_TYPE_OCC_CAR);
+  is_pedestrain_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) ||
+                   (type_ == iflyauto::OBJECT_TYPE_PEDESTRIAN) ||
+                   (type_ == iflyauto::OBJECT_TYPE_ADULT) ||
+                   (type_ == iflyauto::OBJECT_TYPE_CHILD) ||
+                   (type_ == iflyauto::OBJECT_TYPE_CHILD);
 
   std::vector<planning_math::Vec2d> ego_polygon_points;
   for (const auto &point : perception_polygon_.points()) {

@@ -99,6 +99,7 @@ class Obstacle {
   bool is_VRU() const { return is_VRU_; }
   bool is_traffic_facilities() const { return is_traffic_facilities_; }
   bool is_car() const { return is_car_; }
+  bool is_pedestrain() const { return is_pedestrain_; }
   bool trajectory_valid() const { return trajectory_valid_; }
   void set_cutin_prob(double cutin_prob) { cutin_prob_ = cutin_prob; }
   double cutin_prob() const { return cutin_prob_; }  // hack:clren,暂时不要用
@@ -176,6 +177,7 @@ class Obstacle {
   double length_;
   bool is_oversize_vehicle_ = false;
   bool is_VRU_ = false;
+  bool is_pedestrain_ = false;
   bool is_traffic_facilities_ = false;
   bool is_car_ = false;
   bool trajectory_valid_ = false;

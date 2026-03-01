@@ -86,6 +86,11 @@ bool HppLateralObstacleDecider::Execute() {
       ->mutable_hybrid_ara_info()
       ->Clear();
 
+  MergedObstacleContainer merged_obs_constainer;
+  ObstacleClassificationResult obs_classification_result;
+  PreProcessObstacle( reference_path_ptr,
+                     merged_obs_constainer, obs_classification_result);
+
   bool enable_search = CheckEnableSearch(reference_path_ptr, search_result_);
 
   auto time1 = IflyTime::Now_ms();
@@ -101,13 +106,12 @@ bool HppLateralObstacleDecider::Execute() {
   auto time2 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("ARAStarTime", time2 - time1);
 
-  // if (search_result_ != SearchResult::SUCCESS) {
-  //   UpdateLatDecision(reference_path_ptr);
-  // } else {
-  //   UpdateLatDecisionWithARAStar(reference_path_ptr);
-  // }
-  UpdateLatDecision(reference_path_ptr);
-  Log(reference_path_ptr);
+  if (search_result_ != SearchResult::SUCCESS) {
+    UpdateLatDecision(reference_path_ptr);
+    Log(reference_path_ptr);
+  } else {
+    UpdateLatDecisionWithARAStar(reference_path_ptr);
+  }
 
   return true;
 }
@@ -395,6 +399,32 @@ void HppLateralObstacleDecider::ClearOldConsistencyInfo(
     }
 }
 
+bool HppLateralObstacleDecider::PreProcessObstacle(
+    ConstReferencePathPtr reference_path_ptr,
+    MergedObstacleContainer &merged_obs_constainer,
+    ObstacleClassificationResult &obs_classification_result) {
+    // 1. 障碍物过滤
+    ObstacleItemMap obs_item_map;
+    // TODO: 未考虑 obstacle_manager_ptr 中的障碍物
+    if (!HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
+            reference_path_ptr, obs_item_map)) {
+        return false;
+    }
+
+    // 2. 障碍物分类
+    const auto &ego_state = reference_path_ptr->get_frenet_ego_state();
+    if (!HppLateralObstacleDecider::ClassifyObstacles(
+            obs_item_map, ego_state, obs_classification_result)) {
+        return false;
+    }
+
+    // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
+    if (!HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
+            obs_item_map, obs_classification_result, merged_obs_constainer)) {
+        return false;
+    }
+    return true;
+}
 void HppLateralObstacleDecider::Log(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
 #ifdef ENABLE_PROTO_LOG
