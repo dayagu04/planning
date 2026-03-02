@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <limits>
 #include <ostream>
 #include <utility>
 #include <vector>
@@ -24,6 +25,7 @@ constexpr double kMaxLateralRange = 5.0;
 constexpr double kMaxLongitRange = 70.0;
 constexpr double kMinLongitRange = 25.0;
 constexpr double kMaxNudgingSpeed = 4.2;  // 15 kph
+constexpr double kMinSDelta = 1e-4;       // 路径点 s 值的最小增量阈值
 };                                        // namespace
 
 namespace planning {
@@ -452,12 +454,24 @@ bool DPRoadGraph::CartSpline(
   last_frame_paths_ =
       refined_paths_;  // last paths is not  updated until CartSpline
 
+  // s 的增量必须不小于最小阈值
+  // 如果当前 s 值增量小于阈值，则调整为 last_s + kMinSDelta
+  double last_s = std::numeric_limits<double>::lowest();
   for (const auto& path_point : refined_paths_) {
     double cur_s = path_point.s();
-    s_vec.emplace_back(cur_s);
+    // 取当前 s 和 (上一个 s + 最小增量) 的较大值，确保严格递增且增量不小于阈值
+    double adjusted_s = std::max(cur_s, last_s + kMinSDelta);
+    s_vec.emplace_back(adjusted_s);
     x_vec.emplace_back(path_point.x());
     y_vec.emplace_back(path_point.y());
+    last_s = adjusted_s;
   }
+  
+  // 检查过滤后的点数是否足够（spline 至少需要 3 个点）
+  if (s_vec.size() < 3) {
+    return false;
+  }
+  
   ref_path_curve_.x_vec = x_vec;
   ref_path_curve_.y_vec = y_vec;
   ref_path_curve_.s_vec = s_vec;
