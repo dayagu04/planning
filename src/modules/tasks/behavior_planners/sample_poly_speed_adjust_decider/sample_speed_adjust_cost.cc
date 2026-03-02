@@ -369,18 +369,19 @@ void LeadingVehSafeCost::GetCost(const double poly_end_s,
   cost_ = 0.0;
   auto calculate_poly_dis_to_lead_cost = [](double dist, double safe_distance,
                                             double weight) {
-    return (dist < 1.2 * safe_distance)
+    return (dist < 1.5 * safe_distance)
                ? (dist < safe_distance)
                      ? weight * std::exp(4.0 * (safe_distance - dist) /
-                                         safe_distance)
-                     : weight * std::exp(10.0 * (safe_distance - dist) /
+                                         safe_distance + 5.0)
+                     : weight * std::exp(4.0 * (safe_distance - dist) /
                                          safe_distance)
                : 0.0;
   };
-  double follow_distance =
-      poly_end_v * std::fmax(poly_end_v - leading_veh_v, 0.0) / (2.0 * 2.0);
-  double thw = 0.3 * poly_end_v;
-  double safe_distance = std::fmax(thw + follow_distance, 3.5);
+  double delta_v = std::fmax(poly_end_v - leading_veh_v, 0.0);
+  double follow_distance = poly_end_v * delta_v / (2.0 * 2.0);
+  double thw = 0.5 * poly_end_v;
+  double min_follow_distance = 3.0;
+  double safe_distance = std::fmax(min_follow_distance + thw + follow_distance, min_follow_distance);
   cost_ = calculate_poly_dis_to_lead_cost(leading_veh_pred_s - poly_end_s,
                                           safe_distance, weight_);
 }
