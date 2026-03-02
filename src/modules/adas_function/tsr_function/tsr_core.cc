@@ -40,6 +40,10 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+  auto function_state_machine_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .function_state_machine_info;
 
   uint16 disable_code = 0;
 
@@ -83,11 +87,23 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
   } else {
     /*do nothing*/
   }
-  //bit 5
+  // bit 5
   //表显车速小于4kph-奔腾车型
   if (GetContext.get_param()->car_type == "bestune_e541" &&
       vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 3.8) {
     disable_code += uint16_bit[5];
+  }
+  // bit 6
+  //在APA及HPP状态下，抑制tsr
+  if (((function_state_machine_info_ptr->current_state >=
+        iflyauto::FunctionalState_PARK_STANDBY) &&
+       (function_state_machine_info_ptr->current_state <=
+        iflyauto::FunctionalState_PARK_PRE_ACTIVE)) ||
+      ((function_state_machine_info_ptr->current_state >=
+        iflyauto::FunctionalState_HPP_STANDBY) &&
+       (function_state_machine_info_ptr->current_state <=
+        iflyauto::FunctionalState_HPP_ERROR))) {
+    disable_code += uint16_bit[6];
   }
 
   return disable_code & GetContext.get_param()->tsr_disable_code_maskcode;
@@ -581,7 +597,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   }
 
   // 只要有有效的sdmap限速信息就采用sdmap的限速信息
-  if (sd_map_speed_limit_valid) {
+  if (sd_map_speed_limit_valid && GetContext.get_param()->sd_map_speed_sw) {
     // sd_map限速有效时，直接采用sd_map限速，忽略视觉限速
     tsr_speed_limit_ = current_map_speed_limit_;
   } else if (speed_limit_out_flag_ == false &&

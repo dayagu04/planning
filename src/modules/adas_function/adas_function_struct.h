@@ -92,6 +92,7 @@ struct Parameters {
   double tsr_speed_limit_offset = 1.0;
   double tsr_out_flag_need_last_time = 1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
   double tsr_warning_max_duration = 5.0;  // 声音报警最大时长，单位：s
+  bool sd_map_speed_sw=false;
   double lane_boundary_vaild_length_set = 15.0;
   double sideway_exist_gap_thrd = 0.5;
   double lane_line_width = 0.15;

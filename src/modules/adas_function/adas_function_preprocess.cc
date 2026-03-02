@@ -450,6 +450,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "meb_odbox_dis_buffer_d_static_default");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_veh_speed_kmh, std::vector<double>,
                        "meb_odbox_dis_buffer_veh_speed_kmh");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->sd_map_speed_sw, bool,
+                       "sd_map_speed_sw");
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }
