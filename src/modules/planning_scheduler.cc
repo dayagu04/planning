@@ -730,7 +730,7 @@ void PlanningScheduler::FillPlanningTrajectory(
     const auto nsa_is_completed = session_.planning_context().nsa_planning_completed();
     if (((state_machine.current_state == iflyauto::FunctionalState_NRA_GUIDANCE &&
          nsa_is_completed) || state_machine.current_state == iflyauto::FunctionalState_NRA_COMPLETED ) &&
-        ego_state->planning_init_point().v < nsa_ego_stop_vel_thred) {
+        ego_state->ego_v() < nsa_ego_stop_vel_thred) {
       gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
     }
     if (nsa_is_completed) {
@@ -741,7 +741,9 @@ void PlanningScheduler::FillPlanningTrajectory(
       planning_status->nsa_planning_status = iflyauto::NSA_RUNNING_FAILED;
     }
   }
-
+  JSON_DEBUG_VALUE(
+    "gear_command",
+    static_cast<int>(gear_command->gear_command_value));
   // planning request
   // 绕行接管
   if (lane_borrow_decider_output.takeover_prompt) {
@@ -885,7 +887,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.borrow_lane_type = ad_info.borrow_lane_type;
   planning_hmi_info->ad_info.borrow_direction = ad_info.borrow_direction;
 
- 
+
   planning_hmi_info->ad_info.reference_line_msg =
       session_.planning_context()
           .planning_hmi_info()
