@@ -664,7 +664,9 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/objects" << std::endl;
-    return;
+    if (scene_type_ != "nsa") {
+      return;
+    }
   }
 
   auto fusion_occ_object_ros_msg = find_ros_msg_with_header_time_upper_bound<
@@ -695,7 +697,9 @@ void PlanningPlayer::PlayOneFrame(
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/road_fusion" << std::endl;
-      return;
+      if (scene_type_ != "nsa") {
+        return;
+      }
     }
   }
 
