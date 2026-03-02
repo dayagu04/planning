@@ -505,7 +505,8 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
   const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
   const auto half_lane_width = current_lane->width() * 0.5;
   // 接受上一帧道内紧急避让释放的id
-  int emergency_avoid_num = 0;
+  int recommend_left_change_cnt = 0;
+  int recommend_right_change_cnt = 0;
   for (const auto& [obs_id, obs_ptr] : obstacles_map) {
     if (!obs_ptr) {
       continue;
@@ -528,18 +529,10 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
                   frenet_obs.id()) != lane_borrow_output.blocked_obs_id.end()) {
       continue;
     }
-    emergency_avoid_num += 1;
-    if (emergency_avoid_num >= 2) {
-      // 结合障碍物位置，同一侧的也可以触发变道（huwang5)
-      recommend_dynamic_agent_emergency_avoidance_direction_ = NO_CHANGE;
-      break;
-    }
     double v_lat = frenet_obs.frenet_velocity_lateral();
     double intrusion_distance = 0;
     double extra_lat_buffer_with_emergency_avoid = -0.1;  // 没有风险等级的障碍物，条件更加严格
     bool is_in_lat_range = false;        // 障碍物是否侵入自车道
-    if (frenet_obs.d_max_cpath() < 0) {
-      intrusion_distance =
           half_lane_width - std::fabs(frenet_obs.d_max_cpath());
     } else if (frenet_obs.d_min_cpath() > 0) {
       intrusion_distance =
@@ -559,18 +552,29 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
     if (is_in_lat_range) {
       if (frenet_obs.frenet_l() >=
           origin_refline->get_frenet_ego_state().l()) {
-        recommend_dynamic_agent_emergency_avoidance_direction_ = RIGHT_CHANGE;
+        recommend_right_change_cnt++;
       } else {
-        recommend_dynamic_agent_emergency_avoidance_direction_ = LEFT_CHANGE;
+        recommend_left_change_cnt++;
       }
     } else {
       continue;
     }
+    if (recommend_left_change_cnt > 0 && recommend_right_change_cnt > 0) {
+      // 提前结束，不变道
+      break;
+    }
   }
-  if (emergency_avoid_num == 1 &&
-      recommend_dynamic_agent_emergency_avoidance_direction_ != NO_CHANGE) {
+
+  if (recommend_left_change_cnt > 0 && recommend_right_change_cnt == 0) {
+    recommend_dynamic_agent_emergency_avoidance_direction_ = LEFT_CHANGE;
     return true;
   }
+
+  if (recommend_right_change_cnt > 0 && recommend_left_change_cnt == 0) {
+    recommend_dynamic_agent_emergency_avoidance_direction_ = RIGHT_CHANGE;
+    return true;
+  }
+
   return false;
 }
 
