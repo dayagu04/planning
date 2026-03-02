@@ -335,6 +335,9 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   }
   // lc_remain_time = std::min(lc_remain_time, lc_time_for_merge_point);
   planning_weight_ptr_->SetLCRemainTime(std::max(lc_remain_time, 0.0));
+  bool is_dynamic_agent_emergency_lane_change =
+      lane_change_decider_output.lc_request_source ==
+      DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST;
   bool is_risk_lc = general_lateral_decider_output.risk_level > RiskLevel::NO_RISK;
   bool is_emergency_lc = false;
   // lane_change_decider_output.is_emergency_avoidance_situation;
@@ -361,8 +364,10 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   if (is_emergency_lc) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
-  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 || is_risk_lc ||
-             (is_merge_lc && std::fabs(dist_to_merge_point) < planning_input_.ref_vel() * 5.0)) {
+  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 ||
+             is_risk_lc || is_dynamic_agent_emergency_lane_change ||
+             (is_merge_lc && std::fabs(dist_to_merge_point) <
+                                 planning_input_.ref_vel() * 5.0)) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
   }
