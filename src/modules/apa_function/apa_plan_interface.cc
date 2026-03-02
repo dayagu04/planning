@@ -112,7 +112,10 @@ void ApaPlanInterface::AddReleasedSlotInfo(
   const std::vector<size_t> &release_slot_id_no_consider_obs_vec =
       apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotNoConsiderObsVec();
 
-  for (size_t i = 0; i < release_slot_id_no_consider_obs_vec.size(); ++i) {
+  for (size_t i = 0;
+       i < std::min(release_slot_id_no_consider_obs_vec.size(),
+                    static_cast<size_t>(PLANNING_POS_PARKING_SLOT_MAX_NUM));
+       ++i) {
     iflyauto::PosParkableSlotInfo slot_info;
     slot_info.id = static_cast<uint32>(release_slot_id_no_consider_obs_vec[i]);
     planning_output.pos_parkable_slot_info_list[i] = slot_info;
@@ -120,7 +123,10 @@ void ApaPlanInterface::AddReleasedSlotInfo(
   }
 
   std::string release_slot_id;
-  for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
+  for (size_t i = 0;
+       i < std::min(release_slot_id_vec.size(),
+                    static_cast<size_t>(PLANNING_PARKING_SLOT_MAX_NUM));
+       ++i) {
     iflyauto::SuccessfulSlotsInfo slot_info;
     slot_info.id = static_cast<uint32>(release_slot_id_vec[i]);
     slot_info.is_narrow_slot = release_slot_narrow_flag_vec[i];

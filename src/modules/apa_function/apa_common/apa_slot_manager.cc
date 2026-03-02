@@ -483,28 +483,8 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 
   for (const auto& dist_id : dist_id_map_) {
     ApaSlot& slot = slots_map_[dist_id.second];
-    ILOG_INFO << "slot id = " << slot.GetId()
-              << "  type = " << GetSlotTypeString(slot.GetType())
-              << "  fusion_release = "
-              << GetSlotReleaseStateString(
-                     slot.release_info_.release_state[FUSION_RELEASE]);
-
-    slot.release_info_.release_state[RULE_BASED_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
     slot.release_info_.release_state[RELATIVE_LOC_RELEASE] =
         SlotReleaseState::NOT_RELEASE;
-
-    if (slot.release_info_.release_state[FUSION_RELEASE] ==
-        SlotReleaseState::NOT_RELEASE) {
-      ILOG_INFO << "NOT_RELEASE reason: fusion not release";
-      continue;
-    }
-
-    if (release_slot_count >= kMaxSlotReleaseCount) {
-      ILOG_INFO << "NOT_RELEASE reason: over max released size "
-                << static_cast<int>(kMaxSlotReleaseCount);
-      continue;
-    }
 
     if (ego_slot_min_dist_map_.count(slot.GetId()) != 0 &&
         slot.GetType() != SlotType::PARALLEL &&
@@ -527,6 +507,35 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 
     slot.release_info_.release_state[RELATIVE_LOC_RELEASE] =
         SlotReleaseState::RELEASE;
+  }
+
+  for (const auto& dist_id : dist_id_map_) {
+    ApaSlot& slot = slots_map_[dist_id.second];
+
+    ILOG_INFO << "slot id = " << slot.GetId()
+              << "  type = " << GetSlotTypeString(slot.GetType())
+              << "  fusion_release = "
+              << GetSlotReleaseStateString(
+                     slot.release_info_.release_state[FUSION_RELEASE]);
+
+    slot.release_info_.release_state[RULE_BASED_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+
+    if (slot.release_info_.release_state[FUSION_RELEASE] ==
+        SlotReleaseState::NOT_RELEASE) {
+      continue;
+    }
+
+    if (slot.release_info_.release_state[RELATIVE_LOC_RELEASE] ==
+        SlotReleaseState::NOT_RELEASE) {
+      continue;
+    }
+
+    if (release_slot_count >= kMaxSlotReleaseCount) {
+      ILOG_INFO << "NOT_RELEASE reason: over max released size "
+                << static_cast<int>(kMaxSlotReleaseCount);
+      continue;
+    }
 
     if (!IsSlotCoarseRelease(slot)) {
       ILOG_INFO << "slot coarse release is false";
