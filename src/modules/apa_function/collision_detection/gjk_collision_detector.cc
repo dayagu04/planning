@@ -90,8 +90,16 @@ const ColResult GJKCollisionDetector::Update(
 
   if (gjk_col_det_request.car_body_type == CarBodyType::ONLY_MAX_POLYGAN) {
     high_polygon_vec = {&polygon_foot_print_global_.max_polygon};
-    mid_polygon_vec = high_polygon_vec;
-    low_polygon_vec = high_polygon_vec;
+    if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+      mid_polygon_vec = high_polygon_vec;
+      low_polygon_vec = high_polygon_vec;
+    } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+      mid_polygon_vec = high_polygon_vec;
+      low_polygon_vec = {&polygon_foot_print_global_.body_rectangle};
+    } else {
+      mid_polygon_vec = {&polygon_foot_print_global_.body_rectangle};
+      low_polygon_vec = {&polygon_foot_print_global_.body_rectangle};
+    }
   } else if (gjk_col_det_request.car_body_type == CarBodyType::ONLY_MIRROR) {
     high_polygon_vec = {&polygon_foot_print_global_.max_polygon,
                         &polygon_foot_print_global_.mirror_left,
@@ -119,11 +127,10 @@ const ColResult GJKCollisionDetector::Update(
           &polygon_foot_print_global_.mirror_to_rear_overhang};
     } else if (gjk_col_det_request.car_body_type ==
                CarBodyType::EXPAND_MIRROR_TO_END) {
-      // todo: should use right polygon for end expansion
       high_polygon_vec = {
           &polygon_foot_print_global_.max_polygon,
-          &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
-          &polygon_foot_print_global_.mirror_to_rear_overhang};
+          &polygon_foot_print_global_.mirror_to_rear_overhang_expand_rear,
+          &polygon_foot_print_global_.mirror_to_front_overhang};
     }
 
     if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
@@ -336,6 +343,17 @@ void GJKCollisionDetector::TransformPolygonFootPrintLocalToGlobal(
   ULFLocalPolygonToGlobal(&polygon_foot_print_global_.mirror_to_rear_overhang,
                           &polygon_foot_print_local_.mirror_to_rear_overhang,
                           tf);
+
+  ULFLocalPolygonToGlobal(
+      &polygon_foot_print_global_.mirror_to_rear_overhang_expand_rear,
+      &polygon_foot_print_local_.mirror_to_rear_overhang_expand_rear, tf);
+
+  ULFLocalPolygonToGlobal(&polygon_foot_print_global_.mirror_to_front_overhang,
+                          &polygon_foot_print_local_.mirror_to_front_overhang,
+                          tf);
+
+  ULFLocalPolygonToGlobal(&polygon_foot_print_global_.body_rectangle,
+                          &polygon_foot_print_local_.body_rectangle, tf);
 }
 
 void GJKCollisionDetector::GenCarPolygon() {
@@ -360,6 +378,16 @@ void GJKCollisionDetector::GenCarPolygon() {
 
   polygon_foot_print_local_.mirror_to_rear_overhang.FillTangentCircleParams(
       mirror_to_rear_overhanging_polygon_vertex_with_buffer_);
+
+  polygon_foot_print_local_.body_rectangle.FillTangentCircleParams(
+      car_without_mirror_rectangle_vertex_with_buffer_);
+
+  polygon_foot_print_local_.mirror_to_rear_overhang_expand_rear
+      .FillTangentCircleParams(
+          mirror_to_rear_overhanging_rectangle_vertex_expand_rear_with_buffer_);
+
+  polygon_foot_print_local_.mirror_to_front_overhang.FillTangentCircleParams(
+      mirror_to_front_overhanging_polygon_vertex_with_buffer_);
 }
 
 void GJKCollisionDetector::Reset() {}

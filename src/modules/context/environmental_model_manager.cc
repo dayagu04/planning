@@ -556,12 +556,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
     auto timestamp = local_view.localization.meta.timestamp;
-    if (!session_->is_hpp_scene() && !session_->is_rads_scene()) {
+    if (!session_->is_hpp_scene() && !session_->is_rads_scene() && !session_->is_nsa_scene()) {
       truncate_prediction_info(local_view.prediction_result,
                                local_view.fusion_objects_info, timestamp,
                                prediction_obj_id_set);
     } else {
-      // hack:hpp 、rads暂时只用融合障碍物
+      // hack:hpp 、rads 、nsa 暂时只用融合障碍物
       for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
            i++) {
         const auto& obj = local_view.fusion_objects_info.fusion_object[i];

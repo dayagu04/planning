@@ -492,11 +492,11 @@
   "mirror_lat_buffer": 0.08,
   "extra_lat_buffer": 0.0,
 
-  "out_slot_body_lat_buffer": 0.17,
-  "out_slot_mirror_lat_buffer": 0.15,
-  "out_slot_extra_turn_lat_buffer": 0.03,
+  "out_slot_body_lat_buffer": 0.20,
+  "out_slot_mirror_lat_buffer": 0.16,
+  "out_slot_extra_turn_lat_buffer": 0.05,
 
-  "entrance_slot_body_lat_buffer": 0.15,
+  "entrance_slot_body_lat_buffer": 0.16,
   "entrance_slot_mirror_lat_buffer": 0.13,
   "entrance_slot_extra_turn_lat_buffer": 0.03,
 
@@ -617,5 +617,12 @@
   "comment_30": "parallel plan params",
   "parallel_col_buffer_in_slot": 0.25,
   "parallel_col_small_buffer_in_slot": 0.16,
-  "parallel_enable_hybrid_astar": false
+  "parallel_enable_hybrid_astar": false,
+
+  "comment_31": "gear change decider params",
+  "all_max_gear_change_count_searching": 20,
+  "all_max_gear_change_count_parking": 25,
+  "normal_max_gear_change_count": 15,
+  "extra_gear_change_count": 4,
+  "redunant_gear_change_count": 2
 }

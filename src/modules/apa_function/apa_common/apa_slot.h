@@ -184,7 +184,7 @@ class ApaSlot final {
   ~ApaSlot() = default;
   ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot);
 
-  void Update(const iflyauto::ParkingFusionSlot& fusion_slot);
+  void Update(const iflyauto::ParkingFusionSlot& fusion_slot, bool is_redefine_slot_type = false, int ego2slot_side = 0);
 
   void Reset() {
     id_ = 0;
@@ -276,6 +276,7 @@ class ApaSlot final {
   const SlotReleaseInfo& GetReleaseInfo() const { return release_info_; }
 
   const geometry_lib::LineSegment& GetMidLine() const { return mid_line_; }
+  void ResetAsParallel(const iflyauto::ParkingFusionSlot& fusion_slot, const bool is_redefine_slot_type, const int ego_side_to_slot);
 
  private:
   void CorrectSlotPointOrder();

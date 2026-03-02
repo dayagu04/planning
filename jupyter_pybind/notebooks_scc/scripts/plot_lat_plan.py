@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/share//data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251226/20251226-13-05-43/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-12-26-13-05-43_no_camera.bag"
+bag_path = "/share/data/clren/code/planning6/tools/bag_converter/output_c8118e0/data_collection_BESTUNE_E541_20406_EVENT_KEY_2026-01-12-15-42-17_no_camera.bag.1770038299.open-loop.scc.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -47,6 +47,7 @@ fig_lat_offset = load_lateral_offset(bag_loader)
 fig_receive_topic_time = load_receive_topic_time(bag_loader)
 hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table, rads_info_table = load_planning_hmi_info_table()
 fig_hmi = load_avoid_hmi(bag_loader)
+fig_hmi = load_enter_fuction_hmi(fig_hmi, bag_loader)
 fig_curve = load_road_curve(bag_loader, lat_plan_data)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 

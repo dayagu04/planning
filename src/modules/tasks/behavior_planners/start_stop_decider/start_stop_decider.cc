@@ -183,6 +183,20 @@ bool StartStopDecider::CanTransitionFromStopToStart() {
   double distance_to_go_threshold =
       cipv_is_large_ ? config_.distance_to_go_threshold_behind_of_large_vehicle
                      : config_.distance_to_go_threshold;
+  if (session_->get_scene_type() == common::SceneType::RADS) {
+    const auto& agent_manager =
+           session_->environmental_model().get_agent_manager();
+    const auto& cipv = agent_manager->GetAgent(cipv_id_);
+    const auto cipv_is_destination_target =
+        cipv && cipv->type() == agent::AgentType::VIRTUAL &&
+        cipv->agent_id() ==
+            agent::AgentDefaultInfo::kRadsStopDestinationVirtualAgentId;
+    if (cipv_is_destination_target) {
+      distance_to_go_threshold = config_.rads_distance_stop_between_ego_and_destination_cipv_threshold;
+    } else if (cipv && cipv->type() != agent::AgentType::VIRTUAL) {
+      distance_to_go_threshold = config_.rads_distance_stop_between_ego_and_cipv_threshold;
+    }
+  }
 
   const bool is_distance_enough = cipv_relative_s_ > distance_to_go_threshold;
 
@@ -196,7 +210,7 @@ bool StartStopDecider::CanTransitionFromStartToCruise() {
 }
 
 bool StartStopDecider::CanTransitionToStop() {
-  const bool ego_stop_condition =
+  bool ego_stop_condition =
       planning_init_state_vel_ < config_.ego_vel_begin_stop_threshold;
   const bool cipv_static_condition =
       std::fabs(cipv_vel_frenet_) < config_.cipv_static_vel_threshold;
@@ -204,6 +218,10 @@ bool StartStopDecider::CanTransitionToStop() {
       cipv_relative_s_ <
       stop_distance_ + config_.distance_stop_between_ego_and_cipv_threshold;
   if (session_->get_scene_type() == common::SceneType::RADS) {
+    const auto &ego_state_mgr =
+          session_->environmental_model().get_ego_state_manager();
+    const double ego_real_v = ego_state_mgr->ego_v();
+    ego_stop_condition = ego_stop_condition && (std::fabs(ego_real_v) < config_.ego_vel_begin_stop_threshold);
     const auto& agent_manager =
            session_->environmental_model().get_agent_manager();
     const auto& cipv = agent_manager->GetAgent(cipv_id_);
@@ -213,8 +231,42 @@ bool StartStopDecider::CanTransitionToStop() {
             agent::AgentDefaultInfo::kRadsStopDestinationVirtualAgentId;
     if (cipv_is_destination_target && cipv_relative_s_ < config_.rads_distance_stop_between_ego_and_destination_cipv_threshold) {
       cipv_distance_condition = true;
+    } else if (cipv && cipv->type() != agent::AgentType::VIRTUAL && cipv_relative_s_ <
+               config_.rads_distance_stop_between_ego_and_cipv_threshold) {
+      cipv_distance_condition = true;
     } else {
       cipv_distance_condition = false;
+    }
+    if (ego_stop_condition && cipv_static_condition && cipv_distance_condition) {
+      return true;
+    } else {
+      const auto &virtual_lane_manager =
+          session_->environmental_model().get_virtual_lane_manager();
+      const auto ego_pose = ego_state_mgr->ego_pose();
+      const auto& planned_kd_path =
+              session_->planning_context().motion_planner_output().lateral_path_coord;
+      const auto current_lane = virtual_lane_manager->get_current_lane();
+      const auto &current_reference_path = current_lane->get_reference_path();
+      const auto& current_raw_end_point =
+          current_reference_path->GetRawEndRefPathPoint();
+      double end_pnt_s = 0.0;
+      double end_pnt_l = 0.0;
+      planned_kd_path->XYToSL(current_raw_end_point.path_point.x(), current_raw_end_point.path_point.y(), &end_pnt_s,
+                      &end_pnt_l);
+
+      double ego_pose_s = 0.0;
+      double ego_pose_l = 0.0;
+      planned_kd_path->XYToSL(ego_pose.x, ego_pose.y, &ego_pose_s,
+                      &ego_pose_l);
+
+      double dis_ego_to_end = std::fabs(end_pnt_s - ego_pose_s);
+      if (dis_ego_to_end < config_.rads_early_stop_distance_ego_to_end_threshold &&
+          std::fabs(ego_real_v) < config_.rads_early_stop_vel_threshold &&
+          planning_init_state_vel_ < config_.rads_early_stop_vel_threshold) {
+        return true;
+      } else {
+        return false;
+      }
     }
 
   }

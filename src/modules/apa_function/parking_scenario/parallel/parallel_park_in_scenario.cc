@@ -446,6 +446,14 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
   }
 
+  if (CheckGearChangeCountTooMuch(
+          apa_param.GetParam().gear_change_decide_params)) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return;
+  }
+
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
   UpdatePARemainDistance();
 }
@@ -2496,7 +2504,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   //            A -----------B pout        E---------F
   //                         |             |  pin
   //                         c-------------D
-
+  ILOG_INFO << "-------GenTBoundaryObstacles---------";
   apa_world_ptr_->GetCollisionDetectorPtr()->Reset();
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
@@ -2660,6 +2668,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   const Eigen::Vector2d C_curb(C.x(), t_lane_.curb_y);
   const Eigen::Vector2d D_curb(D.x(), t_lane_.curb_y);
+  ILOG_INFO<<"C.y() = "<<C.y()<<",D.y() = "<<D.y()<< ",t_lane_.curb_y = "<<t_lane_.curb_y;
 
   tlane_line.SetPoints(B, C_curb);
   tlane_line_vec.emplace_back(tlane_line);
@@ -2730,14 +2739,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   point_set.clear();
   tlane_obstacle_vec.clear();
   std::vector<Eigen::Vector2d> resample_obs_curb_pts;
+  std::vector<double> y_of_c_d_curb_y={C.y(), D.y(), t_lane_.curb_y};
   bool is_use_curb_obs = ProcessCurbPointsAndGetPoints(
-      point_set, obs_id_pt_map_, C_curb, D_curb, t_lane_.curb_y);
+      point_set, obs_id_pt_map_, C_curb, D_curb, y_of_c_d_curb_y);
   if (!is_use_curb_obs) {
     ILOG_INFO << "use origin curb obs";
     tlane_line.SetPoints(C_curb, D_curb);
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
                                                kTBoundarySampleDist);
   }
+  ILOG_INFO << "use true curb obs";
   for (const auto& obs : point_set) {
     if (is_use_curb_obs) {
       if (obs.x() <= C_curb.x() - 1e-5 || obs.x() > D_curb.x() + 1e-5 ||
@@ -2890,19 +2901,18 @@ const bool ParallelParkInScenario::CheckLastPathCollided() {
 // To use or not to use, that is the question.
 const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
   ILOG_INFO << "Enter  UseOrNotUseLastPath";
-  if (frame_.is_replan_first) {
-    const EgoInfoUnderSlot& ego_info_under_slot =
+  const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-    if (ego_info_under_slot.slot_occupied_ratio > 0.1) {
-      ILOG_INFO << "ego_info_under_slot occupied, not need update";
-      return parallel_path_planner_;
-    }
+  if (ego_info_under_slot.slot_occupied_ratio > 0.1) {
+    ILOG_INFO << "ego_info_under_slot occupied, not need update";
+    frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+    return parallel_path_planner_;
+  }
+  if (frame_.is_replan_first) {
     ILOG_INFO << "first replan, not using last path";
     frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
     return parallel_path_planner_;
   }
-  const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   const pnc::geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
 
@@ -3222,6 +3232,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   const auto path_planner_output = parallel_path_planner_.GetOutput();
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
+
+  frame_.cur_path_gear_change_count = path_planner_output.gear_change_count;
 
   const auto& cur_path_end_pose =
       path_planner_output
@@ -4159,7 +4171,7 @@ ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
     double& nearest_abs_y,
     const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
         same_parent_id_curb_obs,
-    const double& curb_c_x, const double& curb_d_x, const double& t_lane_y) {
+    const double& curb_c_x, const double& curb_d_x, const std::vector<double>& y_of_c_d_curb_y) {
   std::vector<Eigen::Vector2d> resampled_points;
   nearest_abs_y = std::numeric_limits<double>::max();
 
@@ -4182,6 +4194,7 @@ ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
               << "]";
   }
   double target_length = target_end_x - target_start_x;
+  double t_lane_y = y_of_c_d_curb_y.back();
 
   struct ObsPointCloud {
     size_t obs_id;
@@ -4465,6 +4478,9 @@ ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
       // if (abs(resampled_points.front().x() - target_start_x) > 5.0) {
       //   ILOG_INFO << "too empty, use origin curb CD";
       // }
+      double uncovered_distance_start = resampled_points.front().x() - target_start_x;
+      double half_CD_distance = (target_end_x - target_start_x) * 0.5;
+      bool use_c_point_y = (uncovered_distance_start > half_CD_distance);
 
       if (!selected_clouds.empty()) {
         ObsPointCloud* start_cloud = selected_clouds[0];
@@ -4517,6 +4533,11 @@ ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
 
           // 使用找到的最优点的y值
           double y = best_point_near_start.y();
+          if(use_c_point_y && x < target_start_x + half_CD_distance ){
+            y = y_of_c_d_curb_y[0];
+          ILOG_INFO<<"use_c_point_y, y="<<y_of_c_d_curb_y[0];
+        }
+
           Eigen::Vector2d new_point(x, y);
           resampled_points.emplace_back(new_point);
 
@@ -4536,6 +4557,10 @@ ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
       //   ILOG_INFO << "too empty, use origin curb CD";
       // }
       ILOG_INFO << "Missing coverage at end, backward interpolating...";
+      double uncovered_distance_end = target_end_x - resampled_points.back().x();
+      double half_CD_distance = (target_end_x - target_start_x) * 0.5;
+
+      bool use_d_point_y = (uncovered_distance_end > half_CD_distance);
 
       // 使用最后一个障碍物在端点附近step_size范围内的点云
       if (!selected_clouds.empty()) {
@@ -4588,6 +4613,10 @@ ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
 
           // 使用找到的最优点的y值
           double y = best_point_near_end.y();
+          if(use_d_point_y && x > target_end_x - half_CD_distance){
+            y = y_of_c_d_curb_y[1];
+            ILOG_INFO<<"use_d_point_y, y="<<y_of_c_d_curb_y[1];
+          }
           Eigen::Vector2d new_point(current_x, y);
           resampled_points.emplace_back(new_point);
 
@@ -4722,7 +4751,7 @@ bool ParallelParkInScenario::ProcessCurbPointsAndGetPoints(
     const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
         obs_id_pt_map,
     const Eigen::Vector2d& C_curb, const Eigen::Vector2d& D_curb,
-    const double& curb_y) {
+    const std::vector<double>& y_of_c_d_curb_y) {
   point_set.clear();
 
   std::vector<Eigen::Vector2d> resample_obs_curb_pts;
@@ -4732,9 +4761,9 @@ bool ParallelParkInScenario::ProcessCurbPointsAndGetPoints(
     ILOG_INFO << "obs_id_pt_map_.empty, use origin curb obs";
     return false;
   }
-
+  double curb_y = y_of_c_d_curb_y.back();
   resample_obs_curb_pts = ProcessCurbPointsAndGetNearestAbsY(
-      nearest_abs_y, obs_id_pt_map, C_curb.x(), D_curb.x(), curb_y);
+      nearest_abs_y, obs_id_pt_map, C_curb.x(), D_curb.x(), y_of_c_d_curb_y);
 
   if (resample_obs_curb_pts.empty() || resample_obs_curb_pts.size() < 2 ||
       nearest_abs_y == std::numeric_limits<double>::max() ||

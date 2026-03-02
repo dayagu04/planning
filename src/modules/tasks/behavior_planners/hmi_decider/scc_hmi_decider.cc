@@ -13,9 +13,17 @@ SCCHMIDecider::SCCHMIDecider(const EgoPlanningConfigBuilder* config_builder,
   longitudinal_hmi_decider_ =
       std::make_shared<LongitudinalHmiDecider>(session, config_);
   split_select_hmi_decider_ = std::make_shared<SplitSelectHmiDecider>(session);
+  nudge_warning_hmi_decider_ =
+      std::make_shared<NudgeWarningHMIDecider>(session);
+  enable_lcc_hmi_decider_ =
+      std::make_shared<EnableLCCHMIDecider>(session, config_);
 }
 
 bool SCCHMIDecider::Execute() {
+  if (enable_lcc_hmi_decider_) {
+    enable_lcc_hmi_decider_->Execute();
+  }
+
   if (cone_warning_hmi_decider_) {
     cone_warning_hmi_decider_->Execute();
   }
@@ -30,6 +38,9 @@ bool SCCHMIDecider::Execute() {
   }
   if (split_select_hmi_decider_) {
     split_select_hmi_decider_->Execute();
+  }
+  if (nudge_warning_hmi_decider_) {
+    nudge_warning_hmi_decider_->Execute();
   }
   return true;
 }

@@ -105,7 +105,7 @@ void HybridAStarInterface::UpdateOutput() {
 
   UpdateGridMapBound();
 
-  //todo :: only use height information for park out
+  // todo :: only use height information for park out
   const bool use_height_info = IsParkingOutRequest(request_.direction_request);
   UpdateEDT(use_height_info);
   // update clear zone. This zone not contain any obstacle.
@@ -206,7 +206,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   PathClear();
   search_state_ = AstarSearchState::SEARCHING;
 
-  //todo :: only use height information for park out
+  // todo :: only use height information for park out
   const bool use_height_info = IsParkingOutRequest(request_.direction_request);
   UpdateEDT(use_height_info);
   clear_zone_.GenerateBoundingBox(ego_state_, &obs_, config_.enable_clear_zone);
@@ -819,6 +819,19 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
     search_state_ = AstarSearchState::FAILURE;
     return;
   }
+  const bool is_first_plan_tail_out =
+      IsTailOutRequest(request_.direction_request) &&
+      request_.plan_reason == PlanningReason::FIRST_PLAN;
+  // todo:: The wheelbase of the vehicle is approximately 2.8m, and the
+  // subsequent measurement is the vertical distance from the front suspension
+  // to the top of the slot? Additionally, if there are no obstacles on both
+  // sides, should we consider setting kTailOutFirstPlanExtendDist to 0?
+  constexpr float kTailOutFirstPlanExtendDist = 2.5f;
+  const auto& start_point = GetStartPoint();
+  Pose2f search_start_point(
+      start_point.GetX() +
+          (is_first_plan_tail_out ? kTailOutFirstPlanExtendDist : 0.0f),
+      start_point.GetY(), start_point.GetPhi());
 
   double search_time = 0.0;
   size_t path_index = 0;
@@ -846,7 +859,7 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
         Pose2f current_goal_point(GetGoalPoint().GetX() + pos_index * kOffsetX,
                                   GetGoalPoint().GetY(),
                                   GetGoalPoint().GetPhi());
-        hybrid_astar_->AstarSearch(GetStartPoint(), current_goal_point,
+        hybrid_astar_->AstarSearch(search_start_point, current_goal_point,
                                    map_bounds_, &traj_candidates_[path_index]);
 
         // just for debug
@@ -866,6 +879,22 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
 
   constexpr int kGearNum = 1;
   PathCandidateCompare(kGearNum);
+
+  if (is_first_plan_tail_out) {
+    std::vector<AStarPathPoint> polynomial_path;
+    polynomial_path.clear();
+    const bool spiral_success = hybrid_astar_->SamplingByCubicSpiral(
+        polynomial_path, start_point, search_start_point,
+        request_.first_action_request.gear_request);
+    if (spiral_success) {
+      ILOG_INFO << "spiral_success " << spiral_success;
+    } else {
+      GenerateStraightLinePath(polynomial_path, start_point, search_start_point,
+                               request_.first_action_request.gear_request);
+    }
+
+    PrependPolynomialPathToHybridAStar(polynomial_path, best_traj_);
+  }
 
   return;
 }
@@ -1142,16 +1171,10 @@ void HybridAStarInterface::ParkingDirectionAttempt(
     }
 
     hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(), map_bounds_,
-                               &traj_candidates_[0]);
-    if (traj_candidates_[0].x.size() > 5 && i < feasible_directions_.size()) {
+                               &traj_candidates_[i]);
+    if (traj_candidates_[i].x.size() > 5 && i < feasible_directions_.size()) {
       feasible_directions_[i] = true;
     }
-
-    // if (request_.direction_request == request_.direction_request_stack[i])
-    // {
-    //   best_traj_ = &traj_candidates_[0];
-    //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
-    // }
   }
 }
 
@@ -1210,6 +1233,79 @@ void HybridAStarInterface::GetRoundRobinTarget(
     std::vector<Pose2f>& candidates) {
   hybrid_astar_->GetRoundRobinTarget(candidates);
   return;
+}
+
+void HybridAStarInterface::PrependPolynomialPathToHybridAStar(
+    const std::vector<AStarPathPoint>& polynomial_path,
+    HybridAStarResult* hybrid_path) {
+  if (!hybrid_path || polynomial_path.empty()) {
+    return;
+  }
+
+  size_t hybrid_start_idx = 0;
+  if (!hybrid_path->x.empty()) {
+    const auto& p = polynomial_path.back();
+    const double dx = p.x - hybrid_path->x.front();
+    const double dy = p.y - hybrid_path->y.front();
+    if (std::hypot(dx, dy) < 1e-3) {
+      hybrid_start_idx = 1;
+    }
+  }
+
+  HybridAStarResult old = *hybrid_path;
+  hybrid_path->Clear();
+
+  const size_t prefix_size = polynomial_path.size();
+  const size_t suffix_size = old.x.size() - hybrid_start_idx;
+  const size_t total_size = prefix_size + suffix_size;
+
+  hybrid_path->x.reserve(total_size);
+  hybrid_path->y.reserve(total_size);
+  hybrid_path->phi.reserve(total_size);
+  hybrid_path->gear.reserve(total_size);
+  hybrid_path->type.reserve(total_size);
+  hybrid_path->kappa.reserve(total_size);
+  hybrid_path->accumulated_s.reserve(total_size);
+
+  for (const auto& pt : polynomial_path) {
+    hybrid_path->x.push_back(pt.x);
+    hybrid_path->y.push_back(pt.y);
+    hybrid_path->phi.push_back(pt.phi);
+    hybrid_path->gear.push_back(pt.gear);
+    hybrid_path->type.push_back(pt.type);
+    hybrid_path->kappa.push_back(pt.kappa);
+    hybrid_path->accumulated_s.push_back(pt.accumulated_s);
+  }
+
+  hybrid_path->x.insert(hybrid_path->x.end(), old.x.begin() + hybrid_start_idx,
+                        old.x.end());
+  hybrid_path->y.insert(hybrid_path->y.end(), old.y.begin() + hybrid_start_idx,
+                        old.y.end());
+  hybrid_path->phi.insert(hybrid_path->phi.end(),
+                          old.phi.begin() + hybrid_start_idx, old.phi.end());
+  hybrid_path->gear.insert(hybrid_path->gear.end(),
+                           old.gear.begin() + hybrid_start_idx, old.gear.end());
+  hybrid_path->type.insert(hybrid_path->type.end(),
+                           old.type.begin() + hybrid_start_idx, old.type.end());
+  hybrid_path->kappa.insert(hybrid_path->kappa.end(),
+                            old.kappa.begin() + hybrid_start_idx,
+                            old.kappa.end());
+
+  const float polynomial_path_end_s = polynomial_path.back().accumulated_s;
+  for (size_t i = 0; i < suffix_size; ++i) {
+    hybrid_path->accumulated_s[i + prefix_size] =
+        old.accumulated_s[i + hybrid_start_idx] + polynomial_path_end_s;
+  }
+
+  hybrid_path->cur_gear = old.cur_gear;
+  hybrid_path->cur_steer = old.cur_steer;
+  hybrid_path->path_plan_success = old.path_plan_success;
+  hybrid_path->gear_change_num = old.gear_change_num;
+  hybrid_path->time_ms = old.time_ms;
+  hybrid_path->fail_type = old.fail_type;
+  hybrid_path->search_consume_time_ms = old.search_consume_time_ms;
+  hybrid_path->solve_number = old.solve_number;
+  hybrid_path->search_node_num = old.search_node_num;
 }
 
 }  // namespace planning

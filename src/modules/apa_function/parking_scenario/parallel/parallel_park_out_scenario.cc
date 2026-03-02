@@ -1,6 +1,7 @@
 #include "parallel_park_out_scenario.h"
 
 #include <cstddef>
+#include <unordered_map>
 
 #include "apa_param_config.h"
 #include "apa_state_machine_manager.h"
@@ -263,6 +264,19 @@ bool ParallelParkOutScenario::ParkOutDirectionTryHybridAStar() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+
+  if (CheckGearChangeCountTooMuch(
+          apa_param.GetParam().gear_change_decide_params)) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return false;
+  }
+
+  // print planning status
+  ILOG_INFO << "parking status = "
+            << static_cast<int>(GetPlannerStates().planning_status);
+
   return true;
 }
 
@@ -779,10 +793,12 @@ const bool ParallelParkOutScenario::GenTlane() {
   double is_low_curb = false;
   int curb_obs_num = 0;
   int low_curb_obs_num = 0;
+  std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_pin_front;
 
   const Eigen::Vector2d slot_center(0.5 * slot_length, 0.0);
   obs_pt_local_vec_.clear();
   obs_id_pt_map_.clear();
+  obs_pt_pin_front.clear();
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
@@ -824,6 +840,15 @@ const bool ParallelParkOutScenario::GenTlane() {
           -obs_pt_local.y() * side_sgn, 0.4, 0.5 * slot_width + 2);
       if (curb_obs_condition_x && curb_obs_condition_y) {
         obs_id_pt_map_[obs_parent_id].emplace_back(obs_pt_local);
+      }
+      bool pin_front_condition_x = pnc::mathlib::IsInBound(
+          obs_pt_local.x(), slot_length,
+          slot_length + apa_param.GetParam().car_length + 0.5);
+      bool pin_front_condition_y = pnc::mathlib::IsInBound(
+          obs_pt_local.y() * side_sgn, 0.0,
+          0.5 * slot_width + apa_param.GetParam().car_width);
+      if (pin_front_condition_x && pin_front_condition_y) {
+        obs_pt_pin_front[obs_parent_id].emplace_back(obs_pt_local);
       }
       if (obs_pt_local.y() * side_sgn >
               apa_param.GetParam().parallel_channel_y_mag ||
@@ -887,6 +912,48 @@ const bool ParallelParkOutScenario::GenTlane() {
       obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
           std::move(obs_pt_local));
     }
+  }
+
+  double max_abs_y = -std::numeric_limits<double>::max();
+  Eigen::Vector2d max_abs_y_point;
+  bool found_max_y = false;
+  size_t max_count_parent_id = 0;
+  size_t max_point_count = 0;
+  if (!obs_pt_pin_front.empty()) {
+    for (const auto& pair : obs_pt_pin_front) {
+      if (pair.second.size() > max_point_count) {
+        max_point_count = pair.second.size();
+        max_count_parent_id = pair.first;
+      }
+    }
+    // ILOG_INFO << "Parent ID with max point count: " << max_count_parent_id
+    //           << ", count: " << max_point_count;
+    auto max_count_it = obs_pt_pin_front.find(max_count_parent_id);
+    if (max_count_it != obs_pt_pin_front.end() &&
+        !max_count_it->second.empty()) {
+      const auto& points = max_count_it->second;
+      for (const auto& point : points) {
+        double abs_y = std::abs(point.y());
+        if (abs_y > max_abs_y) {
+          max_abs_y = abs_y;
+          max_abs_y_point = point;
+          found_max_y = true;
+        }
+      }
+    }
+  } else {
+    t_lane_.pin_obs_far_y = 0.5 * slot_width;
+    // ILOG_INFO << "No points found for parent ID " ;
+  }
+  if (found_max_y) {
+    t_lane_.pin_obs_far_y = max_abs_y_point.y() > 0 ? max_abs_y : -max_abs_y;
+    // ILOG_INFO << "Max absolute y point in parent ID " << max_count_parent_id
+    //           << ": x = " << max_abs_y_point.x()
+    //           << ", y = " << max_abs_y_point.y()
+    //           << ", abs(y) = " << max_abs_y;
+  } else {
+    t_lane_.pin_obs_far_y = 0.5 * slot_width;
+    // ILOG_INFO << "No points found for parent ID " << max_count_parent_id;
   }
 
   ILOG_INFO << "curb_obs_num = " << curb_obs_num
@@ -1196,7 +1263,6 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
-
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
       // add obs near channel
@@ -1244,13 +1310,8 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
               kStrictChannelYMagIdentification * slot_side_sgn,
               channel_point_1.y());
       if (strict_channel_y_condition) {
-        if (slot_side_sgn > 0.0) {
-          strict_channel_y =
-              std::min(obstacle_point_slot.y(), strict_channel_y);
-        } else {
-          strict_channel_y =
-              std::max(obstacle_point_slot.y(), strict_channel_y);
-        }
+        strict_channel_y =
+            std::min(std::fabs(obstacle_point_slot.y()), strict_channel_y);
       }
     }
   }
@@ -1390,8 +1451,9 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   ILOG_INFO << "-----------tlane CD-------------";
   point_set.clear();
   tlane_obstacle_vec.clear();
+  std::vector<double> y_of_c_d_curb_y={C.y(), D.y(), t_lane_.curb_y};
   bool is_use_curb_obs = ProcessCurbPointsAndGetPoints(
-      point_set, obs_id_pt_map_, C_curb, D_curb, t_lane_.curb_y);
+      point_set, obs_id_pt_map_, C_curb, D_curb, y_of_c_d_curb_y);
   if (!is_use_curb_obs) {
     ILOG_INFO << "use origin curb obs";
     tlane_line.SetPoints(C_curb, D_curb);
@@ -1573,6 +1635,8 @@ const PathPlannerResult ParallelParkOutScenario::PathPlanOnceGeometry() {
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
 
+  frame_.cur_path_gear_change_count = path_planner_output.gear_change_count;
+
   frame_.gear_command =
       path_planner_output
           .gear_cmd_vec[path_planner_output.path_seg_index.first];
@@ -1665,7 +1729,7 @@ void ParallelParkOutScenario::SetRequestForScenarioTry(
     const double slot_width = ego_info.slot.GetWidth();
     const double slot_length = ego_info.slot.GetLength();
 
-    const double park_out_offset_y = slot_width + 0.3;
+    const double park_out_offset_y = apa_param.GetParam().car_width + 0.2;
     const double park_out_offset_x = 0.0;  // 2.49;
 
     cur_request.direction_request_size = 2;
@@ -1762,31 +1826,46 @@ void ParallelParkOutScenario::SetTargetGroup(AstarRequest& cur_request) {
     target_heading = arc_slot_init_out_heading_;
     ILOG_INFO << "update astar target heading: " << target_heading;
   }
+
+  const double min_strict_channel_y = 4.0;
   ILOG_INFO << "strict_channel_y: " << strict_channel_y;
-  if (strict_channel_y < kMinChannelYMagIdentification) {
+  if (strict_channel_y < min_strict_channel_y) {
     target_y = strict_channel_y - (apa_param.GetParam().car_width * 0.5) - 0.3;
   }
 
   float sign = frame_.is_park_out_left ? 1.0 : -1.0;
-  const size_t x_nums = 6;
-  const size_t y_nums = 3;
+  size_t x_nums = 6;
+  size_t y_nums = 3;
   const double step_x = 1.0;
   const double step_y = 0.3;
+  const bool is_searchout_state =
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus();
+  if (is_searchout_state) {
+    x_nums = 4;
+    y_nums = 2;
+  }
   for (size_t i = 0; i < x_nums; i++) {
     float x = target_x - step_x * i;
     for (size_t j = 0; j < y_nums; j++) {
       float y = (target_y + step_y * j) * sign;
-      if (strict_channel_y < kMinChannelYMagIdentification) {
-        y = target_y - (step_y * j * sign);
+      if (strict_channel_y < min_strict_channel_y) {
+        y = (target_y - step_y * j) * sign;
       }
       cur_request.parallel_target_group.emplace_back(
           Pose2f(x, y, target_heading));
+      if (is_searchout_state) {
+        float y_flipp = y * -1.0;
+        cur_request.parallel_target_group.emplace_back(
+            Pose2f(x, y_flipp, target_heading));
+      }
     }
   }
+
   // for (size_t i = 0; i < cur_request.parallel_target_group.size(); i++) {
   //   ILOG_INFO << "parallel_target_group: " << i << " "
   //             << cur_request.parallel_target_group[i].x << " "
-  //             << cur_request.parallel_target_group[i].y;
+  //             << cur_request.parallel_target_group[i].y << " heading: "
+  //             << cur_request.parallel_target_group[i].GetPhi() * kRad2Deg;
   // }
   return;
 }
@@ -2086,8 +2165,8 @@ const bool ParallelParkOutScenario::SetAstarRequest(
 
   ILOG_INFO << "frame_.is_park_out_left " << frame_.is_park_out_left;
   pnc::geometry_lib::SlotSide slot_side = frame_.is_park_out_left
-                                              ? geometry_lib::SLOT_SIDE_LEFT
-                                              : geometry_lib::SLOT_SIDE_RIGHT;
+                                              ? geometry_lib::SLOT_SIDE_RIGHT
+                                              : geometry_lib::SLOT_SIDE_LEFT;
   virtual_wall_decider_.Process(obs_hastar.virtual_obs, ego_info.slot, start,
                                 slot_side, dir_type, passage_height);
 

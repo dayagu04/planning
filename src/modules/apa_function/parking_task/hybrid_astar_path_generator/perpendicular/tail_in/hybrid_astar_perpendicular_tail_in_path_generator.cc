@@ -282,6 +282,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
 
   cul_de_sac_info_.Reset();
   do {
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      break;
+    }
     if (!request_.decide_cul_de_sac) {
       break;
     }
@@ -294,7 +298,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     if (std::fabs(cur_pose.GetTheta()) * kRad2Deg < 36) {
       break;
     }
-    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0) {
+    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0 &&
+        std::fabs(cur_pose.GetY()) > 2.168) {
       break;
     }
     geometry_lib::PathPoint end_pose;
@@ -664,6 +669,15 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       find_success_curve_min_count = 68;
       find_success_curve_max_time = param.max_dynamic_plan_proj_dt * 1000 * 0.8;
       config_.max_search_time_ms = param.max_dynamic_plan_proj_dt * 1000;
+    } else if (request_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
+      const DynamicGearSwitchConfig& gear_switch_param =
+          param.gear_switch_config;
+      find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
+      find_success_curve_max_time =
+          (gear_switch_param.dist_thresh_for_gear_switch_point /
+           gear_switch_param.vel_thresh_for_gear_switch_point) *
+          1000;
+      config_.max_search_time_ms = find_success_curve_max_time + 100;
     } else {
       // static plan
       find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
@@ -798,7 +812,9 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       }
 
       if (curve_node_to_goal.GetGearSwitchNum() < 1 &&
-          curve_node_to_goal.GetLatErr() < 0.02) {
+          curve_node_to_goal.GetLatErr() < 0.02 &&
+          curve_node_to_goal.GetLastPathKappaChange() <
+              max_kappa_change_ + 1e-2) {
         ILOG_INFO << "find a path that can no shift gear to enter slot";
         break;
       }
@@ -1053,6 +1069,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   }
 
   ILOG_INFO << "node in pool num = " << node_pool_.PoolSize()
+            << "  open pq size = " << open_pq_.size()
             << " curve_path_success_num = " << curve_path_success_num
             << "  curve_node_to_goal_vec size = "
             << curve_node_to_goal_vec.size()
@@ -1104,6 +1121,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
   const float length_penalty = 1.0f;
   const float unsuitable_last_line_length_penalty = 1.68f;
   const float kappa_change_penalty = 1.5f * length_penalty / max_kappa_change_;
+  const float last_path_kappa_change_penalty =
+      1.0f * gear_change_penalty / max_kappa_change_;
   const float lat_err_penalty = 16.8f;
   const float heading_err_penalty = 0.0f * common_math::kRad2DegF;
 
@@ -1156,6 +1175,9 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       }
 
       cost.kappa_change_cost += lpl_path.kappa_change * kappa_change_penalty;
+
+      cost.kappa_change_cost +=
+          temp_node.GetLastPathKappaChange() * last_path_kappa_change_penalty;
 
       const auto last_steer = lpl_path.last_steer;
 

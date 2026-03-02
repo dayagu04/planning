@@ -26,7 +26,8 @@ void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
                                const pnc::geometry_lib::PathPoint& ego_pose);
 
 void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
-                             const pnc::geometry_lib::PathPoint& ego_pose);
+                             const pnc::geometry_lib::PathPoint& ego_pose,
+                             uint8_t plan_fail_reason);
 
 void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
                            const pnc::geometry_lib::PathPoint& ego_pose);

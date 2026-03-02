@@ -861,10 +861,22 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    // 如果自车左边的车道数大于link的总车道数，则认为左侧车道数误检，直接return;
-    if (left_lane_num > real_lane_num) {
-      count_continue_general_mlc_ = 0;
-      return;
+    // 如果自车左边的车道数大于等于link的总车道数，则认为左侧车道数误检，直接return;
+    bool is_per_left_lane_error = left_lane_num >= real_lane_num;
+
+    // 如果当前link上只有1条车道，则不需要再触发导航变道。
+    bool is_only_one_lane_on_cur_link = real_lane_num == 1;
+
+    if (is_per_left_lane_error || is_only_one_lane_on_cur_link) {
+      if ((cur_link_is_exist_emergency_lane && right_lane_num <= 1) ||
+          (cur_link_is_exist_emergency_lane && right_lane_num == 0)) {
+        // 当左侧的观测数量大于总车道数时，若右侧车道数量小于一定值时，此时认为我们在地图的最右侧车道。
+        ego_seq = real_lane_num;
+        route_info_output_.ego_seq = ego_seq;
+      } else {
+        count_continue_general_mlc_ = 0;
+        return;
+      }
     }
 
     std::vector<int> lc_num_task;

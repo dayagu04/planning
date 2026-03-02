@@ -707,7 +707,8 @@ class LoadRosbag:
                           "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene',
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
-                          'UpdateObstacleInteractionInfoCostTime']
+                          'UpdateObstacleInteractionInfoCostTime',
+                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state']
 
 
       json_value_list += [#new_ldw debug info:
@@ -800,7 +801,7 @@ class LoadRosbag:
                            "lon_collision_object_position_y_vec",'expand_num_vec']
       # nsa
       json_value_list += ["narrow_space_state", "narrow_space_left_rear_x","narrow_space_left_rear_y","narrow_space_right_rear_x", "narrow_space_right_rear_y", \
-                          "narrow_space_left_front_x","narrow_space_left_front_y","narrow_space_right_front_x", "narrow_space_right_front_y"]
+                          "narrow_space_left_front_x","narrow_space_left_front_y","narrow_space_right_front_x", "narrow_space_right_front_y", "narrow_space_end_point_x", "narrow_space_end_point_y"]
       #
       json_vector_list += ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
                            "road_right_line_all_dx_vec_","road_right_line_all_dy_vec_",

@@ -58,6 +58,7 @@ void LateralMotionPlanningWeight::Init() {
   last_path_max_dist2ref_ = 0.0;
   last_max_omega_ = 0.0;
   last_lc_end_ratio_for_qrefxy_buffer_ = 0.0;
+  lc_remain_time_ = 10.0;
   last_remotely_index_ = 20;
   avoid_end_index_ = 20;
   is_lane_change_hold_ = false;
@@ -957,6 +958,7 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
 
 void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     planning::common::LateralPlanningInput &planning_input) {
+  std::vector<double> xp_v{4.167, 8.333, 16.667, 25.0};
   double acc_bound = std::min(config_.acc_bound, max_acc_);
   double jerk_bound = config_.jerk_bound;  // 0.2
   double max_jerk = max_jerk_;
@@ -969,6 +971,10 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     std::vector<double> xp_v_lc{4.167, 5.556};
     std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
     max_jerk = planning::interp(ref_vel_, xp_v_lc, fp_max_jerk);
+    if (lc_remain_time_ < 4.5) {
+      jerk_bound =  // 0.45 0.45 0.4 0.35
+          planning::interp(ref_vel_, xp_v, config_.map_jerk_bound_lc);
+    }
     if (lc_style_ == LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
       jerk_bound += 0.6;
     } else if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
@@ -1131,6 +1137,10 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     } else if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
       extra_jerk_buffer = 0.1;
       jerk_bound += 0.3;
+      if (lc_remain_time_ <= 4.0) {
+        extra_jerk_buffer += 0.2;
+        jerk_bound += 0.1;
+      }
     } else if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
       extra_jerk_buffer = 0.5;
       jerk_bound += 1.0;
@@ -1536,6 +1546,7 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
   std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
   std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
   std::vector<double> xp_xy3{0.5, 1.5, 2.5, 3.0};
+  std::vector<double> xp_time{4.0, 5.0};
 
   double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
                                    config_.map_qjerk_lc_high_vel);
@@ -1548,6 +1559,9 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
   double q_xy_ratio = planning::interp(std::fabs(target_road_radius_),
                                        xp_road_radius, fp_qxy_ratio);
   q_ref_xy *= q_xy_ratio;
+  std::vector<double> fp_qxy_ratio2{3.0, 1.0};
+  double q_xy_ratio2 = planning::interp(lc_remain_time_, xp_time, fp_qxy_ratio2);
+  q_ref_xy *= q_xy_ratio2;
   q_ref_xy = std::max(q_ref_xy, config_.q_ref_x_lane_change);
   planning_input.set_q_ref_x(q_ref_xy);
   planning_input.set_q_ref_y(q_ref_xy);
@@ -1560,8 +1574,14 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
       planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta);
   std::vector<double> fp_qtheta_raito{0.05, 0.1, 0.5, 1.0, 2.25, 4.0, 9.0};
   double q_ref_theta_ratio = planning::interp(ref_vel_, xp_v, fp_qtheta_raito);
-  q_ref_theta = q_ref_theta * q_ref_theta_ratio;
+  std::vector<double> fp_qtheta_raito2{0.8, 1.0};
+  double q_ref_theta_ratio2 = planning::interp(lc_remain_time_, xp_time, fp_qtheta_raito2);
+  q_ref_theta = q_ref_theta * q_ref_theta_ratio * q_ref_theta_ratio2;
   planning_input.set_q_ref_theta(q_ref_theta);
+
+  std::vector<double> fp_end_qtheta{config_.end_ratio_for_second_qreftheta,
+                                    config_.lc_end_ratio_for_first_qreftheta};
+  end_ratio_for_qreftheta_ = planning::interp(lc_remain_time_, xp_time, fp_end_qtheta);
 }
 
 void LateralMotionPlanningWeight::MakeLaneChangeBackDynamicWeight(

@@ -280,13 +280,13 @@ void HppLateralObstacleDecider::UpdateLatDecision(
                 }
             }
         }
-
-        double l_bonus = growth_factor * kMaxHysteresisBuffer;
-        double l_total = (treat_as_left_obstacle ? right_l_base : left_l_base) + l_bonus;
         const double obstacle_l_start = obstacle->frenet_obstacle_boundary().l_start;
         const double obstacle_l_end = obstacle->frenet_obstacle_boundary().l_end;
         const double obstacle_s_start = obstacle->frenet_obstacle_boundary().s_start;
         const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
+
+        double l_bonus = growth_factor * kMaxHysteresisBuffer;
+        double l_total = (treat_as_left_obstacle ? right_l_base : left_l_base) + l_bonus;
 
         const double ego_head_l_start = ego_head_l - half_ego_width;
         const double ego_head_l_end = ego_head_l + half_ego_width;

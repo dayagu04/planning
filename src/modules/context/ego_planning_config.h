@@ -1917,6 +1917,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
     cross_lane_side_2_front_count_thr =
         read_json_key<int>(json, "cross_lane_side_2_front_count_thr",
                            cross_lane_side_2_front_count_thr);
+    ReadItem<double>(json, extra_ratio_for_cut_out, "potential_follow_obstacle",
+                     "extra_ratio_for_cut_out");
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -1977,6 +1979,7 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   std::vector<double> static_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
   std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
   std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  double extra_ratio_for_cut_out = 0.6;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -4217,6 +4220,28 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                   "speed_limit_decider", "enable_road_boundary_collision_speed_limit");
     ReadItem<double>(json, road_boundary_speed_limit_config.collision_speed_limit,
                      "speed_limit_decider", "road_boundary_collision_speed_limit");
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                     "tunnel_vel_limit_dis_table_mid",
+                                     "vel_limit_table"},
+            tunnel_vel_limit_dis_table_mid.vel_limit_table);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                "tunnel_vel_limit_dis_table_mid", "dis_table"},
+        tunnel_vel_limit_dis_table_mid.dis_table);
+
+    read_json_vec(json,
+            std::vector<std::string>{"speed_limit_decider",
+                                     "tunnel_vel_limit_dis_table_low",
+                                     "vel_limit_table"},
+            tunnel_vel_limit_dis_table_low.vel_limit_table);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                "tunnel_vel_limit_dis_table_low", "dis_table"},
+        tunnel_vel_limit_dis_table_low.dis_table);
+
   }
   struct VehicleLatDisRelVelTable {
     std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
@@ -4372,6 +4397,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   POIVelLimitDisTable non_express_vel_limit_dis_table;
   POIVelLimitDisTable tunnel_vel_limit_dis_table;
   RoadBoundarySpeedLimitConfig road_boundary_speed_limit_config;
+  POIVelLimitDisTable tunnel_vel_limit_dis_table_mid;
+  POIVelLimitDisTable tunnel_vel_limit_dis_table_low;
 };
 struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -4759,26 +4786,11 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                    "result_trajectory_generator", "use_dynamic_lat_jerk_thr");
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
-    ReadItem<double>(json, lat_acc_thr, "result_trajectory_generator",
-                     "lat_acc_thr");
-    ReadItem<double>(json, lat_jerk_thr, "result_trajectory_generator",
-                     "lat_jerk_thr");
-    ReadItem<double>(json, ramp_lat_jerk_thr, "result_trajectory_generator",
-                     "ramp_lat_jerk_thr");
-    ReadItem<double>(json, lon_acc_thr, "result_trajectory_generator",
-                     "lon_acc_thr");
-    ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
-                     "lon_jerk_thr");
   }
   bool use_dynamic_lat_jerk_thr = false;
   double planning_result_delta_time = 0.025;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
-  double lat_acc_thr = 3.0;
-  double lat_jerk_thr = 0.3;
-  double ramp_lat_jerk_thr = 0.65;
-  double lon_acc_thr = 3.0;
-  double lon_jerk_thr = 0.3;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {
@@ -4904,6 +4916,10 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
     hpp_max_replan_dist_err = read_json_key<double>(
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+
+    rads_max_replan_lon_err = read_json_key<double>(
+        json, "rads_max_replan_lon_err", rads_max_replan_lon_err);
+
     kEpsilon_v = read_json_key<double>(json, "kEpsilon_v", kEpsilon_v);
     kEpsilon_a = read_json_key<double>(json, "kEpsilon_a", kEpsilon_a);
     enable_constanct_velocity_in_predicted_vehicle_state = read_json_key<bool>(
@@ -4947,6 +4963,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_lon_err = 0.55;
   double hpp_max_replan_dist_err = 0.8;
 
+  double rads_max_replan_lon_err = 0.50;
+
   double kEpsilon_v = 0.0;
   double kEpsilon_vel_stop = 0.01;
   double kEpsilon_a = 0.0;
@@ -4962,8 +4980,10 @@ struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
     /* read config from json */
     is_select_split_nearing_ramp = read_json_key<bool>(
         json, "is_select_split_nearing_ramp", is_select_split_nearing_ramp);
+    overlap_threshold = read_json_key<double>(json, "overlap_threshold", overlap_threshold);
   }
   bool is_select_split_nearing_ramp = true;
+  double overlap_threshold = 0.35;
 };
 
 struct EgoPlanningTrafficLightDecisionManagerConfig : public EgoPlanningConfig {
@@ -5505,6 +5525,14 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, rads_distance_stop_between_ego_and_destination_cipv_threshold,
                     "speed_planning", "start_stop_decider",
                     "rads_distance_stop_between_ego_and_destination_cipv_threshold");
+    ReadItem<double>(json, rads_distance_stop_between_ego_and_cipv_threshold,
+                    "speed_planning", "start_stop_decider",
+                    "rads_distance_stop_between_ego_and_cipv_threshold");
+    ReadItem<double>(json, rads_early_stop_distance_ego_to_end_threshold,
+                    "speed_planning", "start_stop_decider",
+                    "rads_early_stop_distance_ego_to_end_threshold");
+    ReadItem<double>(json, rads_early_stop_vel_threshold,
+                    "speed_planning", "start_stop_decider", "rads_early_stop_vel_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
     ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
@@ -5530,7 +5558,10 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_start_between_ego_and_large_cipv_threshold = 0.5;
   double distance_start_between_ego_and_cipv_threshold = 0.4;
   double distance_stop_between_ego_and_cipv_threshold = 3.0;
-  double rads_distance_stop_between_ego_and_destination_cipv_threshold = 1.2;
+  double rads_distance_stop_between_ego_and_destination_cipv_threshold = 0.7;
+  double rads_distance_stop_between_ego_and_cipv_threshold = 1.0;
+  double rads_early_stop_distance_ego_to_end_threshold = 0.1;
+  double rads_early_stop_vel_threshold = 0.2;
   double distance_to_go_threshold = 6.5;
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
@@ -6169,6 +6200,22 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
       ReadItem<double>(json, traffic_light_min_follow_distance_gap,
                        "speed_planning", "follow_target",
                        "traffic_light_min_follow_distance_gap");
+      ReadItem<double>(json, rads_follow_distance_buffer_static,
+                        "speed_planning", "follow_target",
+                        "rads_follow_distance_buffer_static");
+      ReadItem<double>(json, rads_follow_distance_buffer_dynamic,
+                            "speed_planning", "follow_target",
+                            "rads_follow_distance_buffer_dynamic");
+    }
+
+    //comfort target
+    {
+      ReadItem<double>(json, rads_comfort_param_static_s0,
+            "speed_planning", "comfort_target",
+            "rads_comfort_param_static_s0");
+      ReadItem<double>(json, rads_comfort_param_dynamic_s0,
+                "speed_planning", "comfort_target",
+                "rads_comfort_param_dynamic_s0");
     }
   }
 
@@ -6200,6 +6247,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double cone_min_follow_distance_gap = 5.0;
   double traffic_light_min_follow_distance_gap = 2.0;
   double acc_cipv = -1.0;
+  double rads_follow_distance_buffer_dynamic = 1.0;
+  double rads_follow_distance_buffer_static = 0.3;
 
   // neighbor target
   double neighbor_target_min_jerk = -1.0;
@@ -6221,6 +6270,10 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double low_speed_follow_speed_thred_mps = 1.0;
   double low_speed_follow_accel_release_traj_len = 5.0;
   double lane_keeping_non_cipv_start_acc_bound = 1.5;
+
+  // comfort target
+  double rads_comfort_param_static_s0 = 0.2;
+  double rads_comfort_param_dynamic_s0 = 0.8;
   struct KinematicParam {
     double acc_positive_upper = 1.35;
     double acc_positive_speed_lower = 4.2;
@@ -6437,10 +6490,28 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                    "construction_warning_hmi_speed_max");
     ReadItem<double>(json, obstacle_brake_hmi_reminder_dis, "hmi_decider",
                     "obstacle_brake_hmi_reminder_dis");
+    ReadItem<double>(json, lat_acc_thr, "hmi_decider",
+                     "lat_acc_thr");
+    ReadItem<double>(json, lat_jerk_thr, "hmi_decider",
+                     "lat_jerk_thr");
+    ReadItem<double>(json, ramp_lat_jerk_thr, "hmi_decider",
+                     "ramp_lat_jerk_thr");
+    ReadItem<double>(json, lon_acc_thr, "hmi_decider",
+                     "lon_acc_thr");
+    ReadItem<double>(json, lon_jerk_thr, "hmi_decider",
+                     "lon_jerk_thr");
+    ReadItem<double>(json, lat_jerk_hysteresis_value, "hmi_decider",
+                     "lat_jerk_hysteresis_value");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
   double obstacle_brake_hmi_reminder_dis = 8.0;
+  double lat_acc_thr = 3.0;
+  double lat_jerk_thr = 0.3;
+  double ramp_lat_jerk_thr = 0.65;
+  double lon_acc_thr = 3.0;
+  double lon_jerk_thr = 0.3;
+  double lat_jerk_hysteresis_value = 0.1;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{
