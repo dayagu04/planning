@@ -61,6 +61,8 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
   auto& mutable_nsa_planning_completed =
         session_->mutable_planning_context()->mutable_nsa_planning_completed();
   double nsa_dis = local_view.function_state_machine_info.nra_req.nra_distance;
+
+  hmi_info->nsa_info.nsa_pause_reason = iflyauto::NSA_PAUSE_REASON_UNKNOWN;
   if (local_view.function_state_machine_info.current_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
     hmi_info->nsa_info.is_avaliable = true;
     hmi_info->nsa_info.nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NONE;
