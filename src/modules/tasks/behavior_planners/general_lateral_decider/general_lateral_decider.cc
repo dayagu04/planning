@@ -673,20 +673,23 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
     }
   }
 
-  // std::vector<double> xp_last_ref_len{1.0, 10.0};
-  // std::vector<double> fp_ref_len_diff{1.0, 0.5};
-  // double ref_length_change =
-  //     planning::interp(last_ref_length_, xp_last_ref_len, fp_ref_len_diff);
-  // double limit_s = s;
-  // if (last_ref_length_ >= 1.0 &&
-  //     session_->environmental_model().GetVehicleDbwStatus() &&
-  //     session_->environmental_model().function_info().function_mode() !=
-  //         common::DrivingFunctionInfo::ACC) {
-  //   limit_s = std::min(limit_s, last_ref_length_ + ref_length_change);
-  // }
+  std::vector<double> xp_last_ref_len{1.0, 10.0};
+  std::vector<double> fp_ref_len_diff{1.0, 0.5};
+  double ref_length_change =  // 可以和当前方向盘转角关联
+      planning::interp(last_ref_length_, xp_last_ref_len, fp_ref_len_diff);
+  double limit_s = s;
+  if (last_ref_length_ >= 1.0 &&
+      session_->environmental_model().GetVehicleDbwStatus() &&
+      session_->environmental_model().function_info().function_mode() !=
+          common::DrivingFunctionInfo::ACC) {
+    limit_s = std::min(limit_s, last_ref_length_ + ref_length_change);
+  }
 
-  const double max_ref_length = std::max(
+  double max_ref_length = std::max(
       std::min(s_vec.back(), frenet_coord->Length()) - s_ref - 0.01, 0.0);
+  if (is_use_spatio_planner_result) {
+    max_ref_length = std::min(max_ref_length, limit_s);
+  }
   // if (limit_s < max_ref_length - 1e-1) {
   //   double avg_s = ego_v * span_t;
   //   double avg_cruise_s = cruise_v * span_t;
@@ -740,6 +743,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
   // } else {
 
   // }
+  // 还可以通过上一帧方向盘转角速率，预估速度增量上限
   constexpr double kMinV = 1.0;
   if (s < max_ref_length) {
     if (ego_v < cruise_v) {
@@ -763,6 +767,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
     }
   } else {
     // 匀速规划
+    // 或匀减速规划?
     double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
     std::fill(target_v_vec.begin(), target_v_vec.end(), avg_cruise_v);
     std::fill(target_a_vec.begin(), target_a_vec.end(), 0.0);
