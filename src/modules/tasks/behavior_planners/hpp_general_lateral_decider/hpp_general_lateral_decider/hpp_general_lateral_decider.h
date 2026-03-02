@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "tasks/behavior_planners/hpp_general_lateral_decider/base_general_lateral_decider.h"
 #include "environmental_model.h"
 #include "frenet_ego_state.h"
 #include "lateral_behavior_planner.pb.h"
@@ -24,7 +25,7 @@
 using namespace planning::planning_math;
 namespace planning {
 
-class HppGeneralLateralDecider : public Task {
+class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
  public:
   explicit HppGeneralLateralDecider(
       const EgoPlanningConfigBuilder *config_builder,
@@ -176,7 +177,6 @@ class HppGeneralLateralDecider : public Task {
   bool HandleAraPath(TrajectoryPoints &traj_points);
 
  private:
-  HppGeneralLateralDeciderConfig config_;
   bool is_ego_reverse_;
   double min_road_radius_;
   // VelocityLimitInfo vel_limit_info_;
