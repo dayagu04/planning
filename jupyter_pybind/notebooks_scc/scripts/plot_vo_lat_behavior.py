@@ -223,7 +223,7 @@ def update_lc_data (noa_info, plan_debug_json):
              'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'forward_lane_num',
              'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
              'ramp_pass_sts', 'HPP turn signal', 'lane_change_reason',
-             'status_update_reason', 'lane_change_status', 'lane_change_direction']
+             'status_update_reason', 'lane_change_status', 'lane_change_direction', 'dbw_status', 'fsm_state']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))

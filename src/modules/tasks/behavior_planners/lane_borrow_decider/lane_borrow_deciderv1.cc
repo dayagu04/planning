@@ -14,6 +14,7 @@
 #include "define/geometry.h"
 #include "environmental_model.h"
 #include "frenet_obstacle.h"
+#include "func_state_machine_c.h"
 #include "lane_borrow_decider.pb.h"
 #include "lateral_obstacle.h"
 #include "log.h"
@@ -54,7 +55,10 @@ constexpr double kBackNeededDistance = 5.0;
 namespace planning {
 namespace lane_borrow_deciderV1 {
 bool LaneBorrowDecider::Execute() {
-  if (session_->environmental_model().is_mrc_mode()) {
+  const auto& state_machine = session_->environmental_model()
+                                  .get_local_view()
+                                  .function_state_machine_info;
+  if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
     return true;
   }
   Update();
