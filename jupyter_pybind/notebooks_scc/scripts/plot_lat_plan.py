@@ -12,6 +12,7 @@ sys.path.append('../../../')
 # bag path and frame dt
 bag_path = "/share/data/clren/code/planning6/tools/bag_converter/output_c8118e0/data_collection_BESTUNE_E541_20406_EVENT_KEY_2026-01-12-15-42-17_no_camera.bag.1770038299.open-loop.scc.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/common_frame/20260301/20260301-15-13-06/data_collection_BESTUNE_E541_36718_ALL_MANUAL_2026-03-01-15-13-06_no_camera.bag"
 
 # frame dt
 frame_dt = 0.05 # sec

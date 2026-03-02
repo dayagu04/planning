@@ -1473,6 +1473,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   #  加载fix_lane, target_lane信息
   ### step 3: 加载planning轨迹信息
   successful_slot_info_list = []
+  pos_parkable_slot_info_list = []
   # if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
   if bag_loader.plan_msg['enable'] == True and loc_mode > 0:
     trajectory = plan_msg.trajectory
@@ -1482,6 +1483,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     print("hpp_planning_status: ", hpp_planning_status)
     print("apa_planning_status: ", apa_planning_status)
     successful_slot_info_list = plan_msg.successful_slot_info_list
+    pos_parkable_slot_info_list = plan_msg.pos_parkable_slot_info_list
     plan_traj_s = []
     for i in range(len(trajectory.trajectory_points)):
       plan_traj_s.append(trajectory.trajectory_points[i].distance)
@@ -1809,6 +1811,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # 加载fusion parking slot
   if bag_loader.fus_parking_msg['enable'] == True:
     print("plan release slot id = ", successful_slot_info_list)
+    print("plan pos release slot id = ", pos_parkable_slot_info_list)
     parking_slot_info, release_slot_info, plan_release_slot_info, select_parking_slot_info = generate_parking_slot(fus_parking_msg, loc_msg, successful_slot_info_list)
     # print("fusion parking slot size:", len(parking_slot_info) + len(release_slot_info) + len(plan_release_slot_info) + len(select_parking_slot_info))
     if g_is_display_enu:
@@ -2314,7 +2317,6 @@ def load_local_view_figure():
   lane_mark_data_8 = ColumnDataSource(data = {'lane_mark_8':[], 'text_xn_8': [],  'text_yn_8': [] , 'lane_mark_loc_x_8': [], 'lane_mark_loc_y_8': []})
   lane_mark_data_9 = ColumnDataSource(data = {'lane_mark_9':[], 'text_xn_9': [],  'text_yn_9': [] , 'lane_mark_loc_x_9': [], 'lane_mark_loc_y_9': []})
 
-<<<<<<< HEAD
   road_type_analysis_result_1 = ColumnDataSource(data = {'ref_path_x': [],
                                                        'ref_path_y': [],
                                                        })
@@ -2340,8 +2342,6 @@ def load_local_view_figure():
                                                        'ref_path_y': [],
                                                        })
 
-=======
->>>>>>> release/BESTUNE_E541_MDC510
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
   data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
@@ -2926,11 +2926,7 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-<<<<<<< HEAD
   if is_vis_fus_center_line or is_vis_fus_line:
-=======
-  if is_vis_fus_center_line:
->>>>>>> release/BESTUNE_E541_MDC510
     fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -2986,7 +2982,6 @@ def load_local_view_figure():
     fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
     fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
 
-<<<<<<< HEAD
   if is_vis_road_type_line:
     fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_1,  radius = 0.1, line_width = 2, line_color = 'red'   , fill_color = 'red'   , legend_label = 'road_type_analysis') #正常直道
     fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_2,  radius = 0.1, line_width = 2, line_color = 'blue'  , fill_color = 'blue'  , legend_label = 'road_type_analysis') #绕障直道
@@ -2997,8 +2992,6 @@ def load_local_view_figure():
     fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_13, radius = 0.1, line_width = 2, line_color = 'yellow', fill_color = 'yellow', legend_label = 'road_type_analysis') #U 型弯
     fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_14, radius = 0.1, line_width = 2, line_color = 'brown' , fill_color = 'brown' , legend_label = 'road_type_analysis') #环形弯
 
-=======
->>>>>>> release/BESTUNE_E541_MDC510
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
   fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
