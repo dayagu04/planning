@@ -874,6 +874,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       } else if (request_.search_mode == SearchMode::PRE_SEARCH &&
                  current_node->GetDistToStart() < 3.8f) {
         node_del_request.gear_request = AstarPathGear::DRIVE;
+        if (request_.scenario_type ==
+            ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+          node_del_request.gear_request = AstarPathGear::REVERSE;
+        }
       } else {
         node_del_request.gear_request = gear_request;
       }

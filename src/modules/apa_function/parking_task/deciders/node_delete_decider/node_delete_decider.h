@@ -102,7 +102,7 @@ class NodeDeleteDecider final : public ParkingTask {
                                      const float adsolute_safe_dist);
 
  private:
-  const bool CheckShouldBeDeletedForPerpendicularTailIn();
+  const bool CheckShouldBeDeletedForPerpendicularIn();
 
   const bool CheckPtsCollision(
 #if USE_LINK_PT_LINE
