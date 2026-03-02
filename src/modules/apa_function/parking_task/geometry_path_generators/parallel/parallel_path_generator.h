@@ -52,6 +52,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   };
 
   enum PaPlanMethod {
+    PaPlanInvalid,
     PaSturnPlan,
     ApaInSlotPlan,
     ApaOutSlotPlan,
@@ -455,8 +456,9 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       std::vector<GeometryPath> &sorted_path_vec);
 
   const bool AdvancedInversedTrialsInSlot(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &target_pose);
+      std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+      const pnc::geometry_lib::PathPoint& target_pose,
+      const bool is_use_calc = true);
 
   const size_t CalPathGearChangeCounts(
       const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
@@ -690,6 +692,16 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool OneLinePlanWhenMeetFinished(
       std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec);
 
+  int GetIntervalIndex(double value, const double* intervals, int size);
+
+  const PaPlanMethod GetPaPlanMethodByTableFlexible(
+      const double slot_len, const double car_to_curb_dis,
+      const PaPlanMethod default_method = PaPlanMethod::PaSturnPlan);
+
+  const bool CalParkOutPathInSlot(
+      std::vector<pnc::geometry_lib::PathSegment>& out_path_vec,
+      const pnc::geometry_lib::PathPoint& in_pose);
+
  public:
   double arc_slot_init_out_heading_= 0.0;
   const double GetArcSlotParkOutHeading(){
@@ -700,6 +712,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   DebugInfo debug_info_;
   bool enable_pa_park_ = false;
   PaPlanMethod first_pa_plan_method_;
+  PaPlanMethod last_pa_plan_method_;
   bool had_park_out = false;
   bool better_out_path_again_lastframe_ =false;
 

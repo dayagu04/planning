@@ -44,11 +44,23 @@ struct AngleResultHeightObs {
 
   bool operator<(const AngleResult& other) const { return ang < other.ang; }
 };
+
+struct PaTryResult {
+  std::vector<pnc::geometry_lib::PathPoint> all_path_point;
+  double to_curb_dis;
+
+  PaTryResult() = default;
+  PaTryResult(const std::vector<pnc::geometry_lib::PathPoint>& path_points,
+              double curb_dis)
+      : all_path_point(path_points), to_curb_dis(curb_dis) {}
+};
+
 class ParallelParkInScenario : public ParkingScenario {
  public:
   ParallelParkInScenario() = default;
   ParallelParkInScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
+    memset(&last_apa_hmi_, 0, sizeof(last_apa_hmi_));
   }
 
   virtual void Reset() override;
@@ -78,11 +90,11 @@ class ParallelParkInScenario : public ParkingScenario {
                                         const double rect_heading,
                                         const double rect_length,
                                         const double rect_width);
-  SlotCoord AlignAndMoveSlotToLine(const SlotCoord& slot,
-                                   const Eigen::Vector2d& ego_pos,
-                                   const Eigen::Vector2d& ego_head, double k,
-                                   double b, double slot_width,
-                                   double distance = 0.2);
+  SlotCoord AlignAndMoveSlotToLine(
+      const SlotCoord& slot, const Eigen::Vector2d& ego_pos,
+      const Eigen::Vector2d& ego_head, double k, double b, double slot_width,
+      double distance = 0.2,
+      const ApaPADirection direction = ApaPADirection::PA_INVALID);
   const bool LineFittingWithRansac(Eigen::Vector2d& line_coeffs,
                                    const std::vector<Eigen::Vector2d>& points,
                                    std::vector<bool>& inliers);
@@ -91,8 +103,9 @@ class ParallelParkInScenario : public ParkingScenario {
       const std::vector<Eigen::Vector2d>& points,
       const std::vector<bool>& inliers, const Eigen::Vector2d& ego_pose);
 
-  const bool GeneralPASlot();
-  const bool ParkInTry(const ApaSlot& slot);
+  const bool GeneralPASlot(const ApaPADirection direction);
+  const bool ParkInTry(const ApaSlot& slot, const ApaPADirection direction =
+                                                ApaPADirection::PA_INVALID);
   const bool CheckPAFinished();
 
   const bool UpdatePASlotInfo();
@@ -163,6 +176,9 @@ class ParallelParkInScenario : public ParkingScenario {
   bool CheckReplanParallel();
   const ParallelPathGenerator& SuitablePathReplan();
   const bool CheckLastPathCollided();
+  const int CalGearChangeNumForOutPath(
+      const std::vector<pnc::geometry_lib::PathSegment>& in_path_seg_vec,
+      const std::vector<uint8_t>& in_gear_vec);
   const ParallelPathGenerator& UseOrNotUseLastPath();
   void CheckEgoPoseWhenPlanFaild(ParkingFailReason reason);
 
@@ -171,6 +187,8 @@ class ParallelParkInScenario : public ParkingScenario {
   const bool PostProcessPathPara();
 
   const bool CheckEgoToSlotRelation();
+
+  void UpdatePADirection();
 
   Tlane t_lane_;
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
@@ -185,8 +203,12 @@ class ParallelParkInScenario : public ParkingScenario {
   Eigen::Vector2d first_line_coeffs_;
   double slot2curb_dist_;
   pnc::geometry_lib::PathPoint first_plan_cur_pos;
-  std::unordered_map<size_t, std::vector<pnc::geometry_lib::PathPoint>>
-      multi_parkin_path_vec_;
+  std::unordered_map<size_t, PaTryResult> multi_parkin_path_vec_;
+  std::unordered_map<ApaPADirection, std::vector<double>>
+      pa_mean_move_dist_map_;
+  iflyauto::APAHMIData last_apa_hmi_;
+  // success to failed nums
+  int pa_try_s2f_count_ = 0;
 
   RelativeLocObserverManager relative_loc_observer_manager_;
   std::unordered_map<size_t, std::set<AngleResult>> try_bound_map_;

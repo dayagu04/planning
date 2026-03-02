@@ -617,7 +617,7 @@ class LoadRosbag:
     try:
       json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                          "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
-                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
+                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "fsm_state", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
@@ -708,7 +708,7 @@ class LoadRosbag:
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
                           'UpdateObstacleInteractionInfoCostTime',
-                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state']
+                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve']
 
 
       json_value_list += [#new_ldw debug info:

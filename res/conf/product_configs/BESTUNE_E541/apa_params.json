@@ -485,6 +485,9 @@
   "enable_decide_cul_de_sac": true,
   "enable_interesting_search_area": true,
   "pre_search_mode": 1,
+  "yield_interval_explored_node_num": 800,
+  "enable_yield_cpu": true,
+  "yield_interval_ms": 20,
 
   "comment_22": "lat lon path buffer",
   "path_lon_buffer": 0.3,
@@ -604,7 +607,7 @@
   "comment_29": "parallel pa plan params",
   "finish_parallel_pa_lat_err": 0.14,
   "finish_parallel_pa_lon_err": 0.26,
-  "finish_parallel_pa_heading_err": 5.0,
+  "finish_parallel_pa_heading_err": 3.0,
   "debug_parallel_angle_threshold": 3.6,
   "s_turn_plan_pa_buffer_1": 0.10,
   "s_turn_plan_pa_buffer_2": 0.30,

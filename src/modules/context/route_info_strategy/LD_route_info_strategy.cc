@@ -46,6 +46,7 @@ bool LDRouteInfoStrategy::UpdateLDMap() {
       ld_map_info_updated_timestamp_ = ld_map_info_current_timestamp;
     }
   }
+  
   if (ld_map_info_current_timestamp - ld_map_info_updated_timestamp_ >
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
@@ -449,14 +450,36 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
       } else if (pre_lane_count == 1) {
         topo_lane.predecessor_lane_ids.emplace(lane.predecessor_lane_ids()[0]);
       } else {
+
+        // 处理合流车道：判断是否有效，无效则跳过 + 前继存在道路合流
+        uint64_t link_id = lane.link_id();
+        auto* link = ld_map_.GetLinkOnRoute(link_id);
+        // 向前首个拓扑变化是否为合流
+        bool pre_topo_change_is_merge = false;
+        while (link != nullptr) {
+          link_id = link->id();
+          // 是否来自合流道路
+          if (link->predecessor_link_ids_size() > 1){
+            pre_topo_change_is_merge = true;
+            break;
+          }
+          auto* pre_link = ld_map_.GetPreviousLinkOnRoute(link_id);
+          if(pre_link == nullptr){
+            break;
+          }
+          if(pre_link->successor_link_ids_size() > 1){
+            pre_topo_change_is_merge = false;
+            break;
+          }
+          link = pre_link;
+        }
         for (const auto& pre_lane_id : lane.predecessor_lane_ids()) {
           const auto* pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
           if (pre_lane == nullptr) {
             continue;
           }
 
-          // 处理合流车道：判断是否有效，无效则跳过
-          if (IsMergeLane(pre_lane)) {
+          if (IsMergeLane(pre_lane) && pre_topo_change_is_merge) {
             if (IsInvalidLaneMergeLaneOppositeSide(pre_lane)) {
               continue;
               // merge lane的反方向是无效车道，既这条merge lane不应该在feasible lane中，continue掉，不加入到feasible lane中
@@ -467,7 +490,6 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
         }
       }
 
-      // 更新当前topo lane的后继车道
       topo_lane.successor_lane_ids.clear();
       for (int i = 0; i < lane.successor_lane_ids_size(); ++i) {
         topo_lane.successor_lane_ids.emplace(lane.successor_lane_ids()[i]);
@@ -507,23 +529,22 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
       if (topo_lane.predecessor_lane_ids.empty()) {
         continue;
       }
-
-      const uint64_t pre_lane_id = *topo_lane.predecessor_lane_ids.begin();
-      const auto* pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
-      if (!pre_lane) {
-        return false;
-      }
-
-      // 校验前继车道是否属于routelink的pre link
-      if (pre_lane->link_id() == next_pre_link->id()) {
-        HandleMainLinkPreLane(pre_lane, next_lane_vec);
-      } else {
-        // 需要处理前继lane不是在route link上的场景
-        HandleOtherMergeLinkPreLane(topo_lane, next_pre_link, current_link,
-                                    pre_lane, next_lane_vec);
+      //考虑到有多个前继车道，需要遍历所有前继车道
+      for (const auto& pre_lane_id : topo_lane.predecessor_lane_ids) {
+        const auto* pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
+        if (!pre_lane) {
+          return false;
+        }
+        // 校验前继车道是否属于routelink的pre link
+        if (pre_lane->link_id() == next_pre_link->id()) {
+          HandleMainLinkPreLane(pre_lane, next_lane_vec);
+        } else {
+          // 需要处理前继lane不是在route link上的场景
+          HandleOtherMergeLinkPreLane(topo_lane, next_pre_link, current_link,
+                                      pre_lane, next_lane_vec);
+        }
       }
     }
-
     if (next_lane_vec.empty()) {
       return false;
     }
@@ -869,7 +890,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     if (is_per_left_lane_error || is_only_one_lane_on_cur_link) {
       if ((cur_link_is_exist_emergency_lane && right_lane_num <= 1) ||
-          (cur_link_is_exist_emergency_lane && right_lane_num == 0)) {
+          (!cur_link_is_exist_emergency_lane && right_lane_num == 0)) {
         // 当左侧的观测数量大于总车道数时，若右侧车道数量小于一定值时，此时认为我们在地图的最右侧车道。
         ego_seq = real_lane_num;
         route_info_output_.ego_seq = ego_seq;
@@ -895,6 +916,115 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
             (first_ramp->id() == first_split->id());
       }
     }
+    // 1. 识别当前Relative==0的可变车道，是不是在导航路线上，如果在，那么就不需要进行变道。
+    // 2. 取感知前方S米的车道数量，和地图位置进行对比，如果Total、左、右数量均一致，保持当前车道。
+    bool current_on_route = false;
+
+    // 用感知车道数量变化点来检查。
+    std::vector<float> check_dist_vec;
+    for (size_t i = 0; i < lane_nums.size(); ++i) {
+      if (lane_nums[i].end < 10.0 || lane_nums[i].begin < 0.0) {
+        continue;  // 避开近距离的检查
+      }
+      if (lane_nums[i].begin > 60.0) {
+        break;  // 距离太远的也不检查
+      }
+
+      check_dist_vec.push_back(lane_nums[i].begin + 1e-3);
+    }
+
+    for (float const check_dist : check_dist_vec) {
+      auto find_it = std::find_if(lane_nums.begin(), lane_nums.end(),
+                                  [check_dist](const auto& lane_num) {
+                                    return lane_num.end > check_dist;
+                                  });
+      // 感知给出的前方车道数量
+      int per_forward_left_num = 0;
+      int per_forward_right_num = 0;
+      if (find_it != lane_nums.end()) {
+        per_forward_left_num = find_it->left_lane_num;
+        per_forward_right_num = find_it->right_lane_num;
+      } else {
+        // 该距离找不到感知的车道数
+        current_on_route = false;
+        break;
+      }
+
+      // 该位置的FeasibleLane
+      std::vector<planning::LaneTopoGroup> const& feasible_lane_topo =
+          feasible_lane_graph.lane_topo_groups;
+
+      if (feasible_lane_topo.back().link_id != current_link_->id()) {
+        // 先不处理前后不一致的情况
+        current_on_route = false;
+        break;
+      }
+
+      double total_length = 0.0;
+      // 我们考虑目标位置前后误差距离的所有车道
+      double const error_dist = 10.0;
+
+      // std::pair<TotalLaneNum , FeasibleOrder List>
+      std::vector<std::pair<int,std::vector<uint32>>> feasible_order;
+      for (auto it = feasible_lane_topo.crbegin();
+           it != feasible_lane_topo.crend(); ++it) {
+
+        auto link_ptr = ld_map_.GetLinkOnRoute(it->link_id);
+
+        total_length += link_ptr->length() *0.01;
+
+        if (feasible_lane_topo.crbegin() == it) {
+          total_length -= ego_on_cur_link_s_;
+        }
+
+        if (check_dist - error_dist <= total_length) {
+          std::pair<int,std::vector<uint32>> tmp_pair;
+
+          std::vector<uint32> invalid_order;
+          for (uint64 const lane_id : link_ptr->lane_ids())
+          {
+            auto const* lane_ptr = ld_map_.GetLaneInfoByID(lane_id);
+            if (IsDiversionLane(lane_ptr))
+            {
+              invalid_order.emplace_back(lane_ptr->sequence());
+            }
+          }
+
+          tmp_pair.first = it->lane_nums - invalid_order.size();
+          for (auto const& tmp_lane : it->topo_lanes) {
+            size_t const invalid_num =
+                std::count_if(invalid_order.begin(), invalid_order.end(),
+                              [&](int order_id) {
+                                return  tmp_lane.order_id > order_id;
+                              });
+            tmp_pair.second.emplace_back(tmp_lane.order_id - invalid_num);
+          }
+          feasible_order.emplace_back(tmp_pair);
+
+          if (check_dist + error_dist <= total_length) {
+            break;
+          }
+        }
+      }
+
+      // 用check_dist位置的感知车道数量，和目标车道order进行比较
+      // 如果检查到数据一致，那么认为自车在导航目标车道上，无需进行变道
+      current_on_route = false;
+      for (std::pair<int, std::vector<uint32>> const& tmp_order : feasible_order) {
+        if (per_forward_left_num + per_forward_right_num + 1 ==
+                tmp_order.first &&
+            tmp_order.second.end() != std::find(tmp_order.second.begin(),
+                                                tmp_order.second.end(),
+                                                per_forward_right_num + 1)) {
+          current_on_route = true;
+          break;
+        }
+      }
+      // 若任一检查不通过时，不再检查。
+      if (!current_on_route) {
+        break;
+      }
+    }
 
     const bool lane_type_condition =
         !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
@@ -903,19 +1033,22 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
         is_nearing_ramp && lane_type_condition &&
-        front_ramp_dir == RAMP_ON_RIGHT) {
+        front_ramp_dir == RAMP_ON_RIGHT && !current_on_route) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
       count_continue_general_mlc_++;
       if (count_continue_general_mlc_ > 3) {
         lc_num_task.emplace_back(1);
       }
-    } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp) {
+    } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp && !current_on_route) {
       //split场景，目标车道在最左边的情况，一直向左变道
       count_continue_general_mlc_++;
       if (count_continue_general_mlc_ > 3) {
         lc_num_task.emplace_back(-1);
       }
+    } else if (current_on_route) {
+      count_continue_general_mlc_ = 0;
+      continue;
     } else {
       if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
         count_continue_general_mlc_ = 0;
@@ -1359,11 +1492,13 @@ bool LDRouteInfoStrategy::IsIgnoreMerge(
     return false;
   } else {
     // TODO:后续补充根据收窄车道的判断条件
-    return true;
+     return !IsSucMergeLink(merge_pre_link);
   }
 
   return true;
 }
+
+
 
 void LDRouteInfoStrategy::CalculateMergeInfo() {
   merge_info_vec_ = ld_map_.GetMergeInfoList(
@@ -2028,7 +2163,7 @@ bool LDRouteInfoStrategy::IsLaneSuccessorInPlannedRoute(
 }
 
 bool LDRouteInfoStrategy::IsLaneSuccessorIsMergeLane(
-    const iflymapdata::sdpro::Lane* lane_info) {
+    const iflymapdata::sdpro::Lane* lane_info) const {
   if (lane_info == nullptr) {
     return false;
   }
@@ -2040,6 +2175,15 @@ bool LDRouteInfoStrategy::IsLaneSuccessorIsMergeLane(
   while (iterator_lane) {
     if (IsMergeLane(iterator_lane)) {
       return true;
+    }
+
+    const auto& lane_link = ld_map_.GetLinkOnRoute(iterator_lane->link_id());
+    if (lane_link == nullptr) {
+      return false;
+    }
+
+    if (lane_link->successor_link_ids_size() != 1) {
+      return false;
     }
 
     if (iterator_lane->successor_lane_ids_size() != 1) {
@@ -2236,15 +2380,34 @@ void LDRouteInfoStrategy::EraseFeasibleLaneIfNeeded(
     }
 
     if (itera_lane->successor_lane_ids_size() > 1) {
-      for (auto it = topo_lanes.begin(); it != topo_lanes.end();) {
-        if (it->id == lane_id) {
-          topo_lanes.erase(it);  // erase returns the next iterator
-          return;
-        } else {
-          ++it;
+      // 如果suc_lane不在route_link上，则从feasible lane中移除这个lane
+      bool is_exist_suc_lane_not_in_route_link = false;
+      for (const auto& temp_lane_id : itera_lane->successor_lane_ids()) {
+        const auto& temp_lane = ld_map_.GetLaneInfoByID(temp_lane_id);
+        if (temp_lane == nullptr) {
+          continue;
+        }
+
+        is_exist_suc_lane_not_in_route_link =
+            !ld_map_.isOnRouteLinks(temp_lane->link_id());
+
+        if (is_exist_suc_lane_not_in_route_link) {
+          break;
+        }
+      }
+
+      if (is_exist_suc_lane_not_in_route_link) {
+        for (auto it = topo_lanes.begin(); it != topo_lanes.end();) {
+          if (it->id == lane_id) {
+            topo_lanes.erase(it);  // erase returns the next iterator
+            return;
+          } else {
+            ++it;
+          }
         }
       }
     }
+
     itera_lane = ld_map_.GetLaneInfoByID(itera_lane->successor_lane_ids()[0]);
   }
 }
@@ -2512,7 +2675,8 @@ iflymapdata::sdpro::Lane LDRouteInfoStrategy::FindMatchingPreLaneInMainLink(
       }
 
       // 计算序号差，更新最优匹配车道
-      const int order_error = temp_suc_lane->sequence() - topo_lane.order_id;
+      const int order_error = std::abs(
+          static_cast<int>(temp_suc_lane->sequence() - topo_lane.order_id));
       if (order_error < min_order_error) {
         min_order_error = order_error;
         best_matching_lane = *temp_lane;
@@ -2649,5 +2813,25 @@ double LDRouteInfoStrategy::CalculateDisToLastLinkMergePoint(
   }
 
   return std::numeric_limits<double>::max();
+}
+
+bool LDRouteInfoStrategy::IsSucMergeLink(
+    const iflymapdata::sdpro::LinkInfo_Link* link_info) const {
+  if (link_info == nullptr) {
+    return false;
+  }
+
+  for (const auto& temp_lane_id : link_info->lane_ids()) {
+    const auto* temp_lane = ld_map_.GetLaneInfoByID(temp_lane_id);
+    if (temp_lane == nullptr) {
+      continue;
+    }
+
+    if (IsLaneSuccessorIsMergeLane(temp_lane)) {
+      return true;
+    }
+
+  }
+  return false;
 }
 }

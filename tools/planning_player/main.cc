@@ -150,10 +150,14 @@ int main(int argc, char **argv) {
                 .time_since_epoch()
                 .count();
   if (out_bag.empty()) {
-    if (is_close_loop) {
+    if (no_debug) {
+      if (is_close_loop) {
+        out_bag = bag_path + "." + std::to_string(tp) + ".no-debug.close-loop.plan";
+      } else {
+        out_bag = bag_path + "." + std::to_string(tp) + ".no-debug.open-loop.plan";
+      }
+    } else if (is_close_loop) {
       out_bag = bag_path + "." + std::to_string(tp) + ".close-loop.plan";
-    } else if (no_debug) {
-      out_bag = bag_path + "." + std::to_string(tp) + ".no-debug.plan";
     } else {
       out_bag = bag_path + "." + std::to_string(tp) + ".open-loop.plan";
     }

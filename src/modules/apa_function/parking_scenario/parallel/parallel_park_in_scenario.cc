@@ -108,6 +108,10 @@ void ParallelParkInScenario::Reset() {
 
 bool ParallelParkInScenario::CheckReplanParallel() {
   ILOG_INFO << "Enter CheckReplanParallel";
+  if (enable_pa_park_) {
+    ILOG_INFO << "pa module close dynamic replan";
+    return false;
+  }
   if (parallel_replan_again_ != 0) {
     return false;
   }
@@ -143,12 +147,8 @@ void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild(ParkingFailReason reason)
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   if (enable_pa_park_) {
-    const double finish_pa_heading = 3.0;
-    const bool pa_heading_condition =
-        std::fabs(ego_slot_info.terminal_err.heading) <=
-        finish_pa_heading * kDeg2Rad;
     if ((reason == ParkingFailReason::PATH_PLAN_FAILED) &&
-        pa_heading_condition) {
+        CheckPAFinished()) {
       ILOG_INFO << "parallel parking finish!";
       SetParkingStatus(PARKING_FINISHED);
     } else {
@@ -422,8 +422,6 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
-      // SetParkingStatus(PARKING_FAILED);
-      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
       CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
@@ -435,14 +433,10 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
-      // SetParkingStatus(PARKING_FAILED);
-      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
       CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    // SetParkingStatus(PARKING_FAILED);
-    // frame_.plan_fail_reason = PATH_PLAN_FAILED;
     CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
   }
 
@@ -481,12 +475,12 @@ void ParallelParkInScenario::UpdatePARemainDistance() {
 const bool ParallelParkInScenario::UpdatePASlotInfo() {
   ILOG_INFO << "Enter update pa slot info!";
   ApaSlot need_move_slot;
+  ApaPADirection pa_direction =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetPADirection();
   if (frame_.is_replan_first) {
     std::unordered_map<size_t, ApaSlot> slots_map =
         apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
 
-    ApaPADirection pa_direction =
-        apa_world_ptr_->GetStateMachineManagerPtr()->GetPADirection();
     if (pa_direction == ApaPADirection::PA_INVALID) {
       ILOG_ERROR << "No PA direction found";
       return false;
@@ -512,14 +506,15 @@ const bool ParallelParkInScenario::UpdatePASlotInfo() {
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   ego_info_under_slot.slot.origin_corner_coord_global_ =
       need_move_slot.origin_corner_coord_global_;
-  if (!GeneralPASlot()) {
+  if (!GeneralPASlot(pa_direction)) {
     ILOG_ERROR << "GeneralPASlot failed!";
     return false;
   }
   return true;
 }
 
-const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
+const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot,
+                                             const ApaPADirection direction) {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
@@ -536,7 +531,7 @@ const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
   if (enable_pa_park_) {
     ego_info_under_slot.slot.origin_corner_coord_global_ =
         slot.origin_corner_coord_global_;
-    if (!GeneralPASlot()) {
+    if (!GeneralPASlot(direction)) {
       ILOG_ERROR << "GeneralPASlot failed!";
       return false;
     }
@@ -571,6 +566,10 @@ const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
       ret = true;
       ILOG_INFO << "geometry path try success";
+      if (enable_pa_park_) {
+        multi_parkin_path_vec_[int(direction)] = PaTryResult(
+            complete_path_point_global_vec_, t_lane_.car_to_curb_dis);
+      }
     } else {
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
@@ -579,6 +578,10 @@ const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
       ILOG_INFO << "replan from PARKING_PLANNING!";
       ret = true;
       ILOG_INFO << "geometry path try success";
+      if (enable_pa_park_) {
+        multi_parkin_path_vec_[int(direction)] = PaTryResult(
+            complete_path_point_global_vec_, t_lane_.car_to_curb_dis);
+      }
     } else {
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
@@ -628,49 +631,24 @@ void ParallelParkInScenario::ScenarioTry() {
     std::unordered_map<size_t, ApaSlot> slots_map =
         apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
     for (auto iter = slots_map.begin(); iter != slots_map.end(); iter++) {
-      ILOG_INFO << "slot id = " << iter->first << " try begin";
-      if (ParkInTry(iter->second)) {
-        ILOG_INFO << "slot id = " << iter->first << " try success";
-        pa_state.SetPADirectionFlag(apa_hmi_,
-                                    APAPaRecommendedDirection::PaParitybit);
-        if (iter->first == int(ApaPADirection::PA_LEFT)) {
-          pa_state.SetPADirectionFlag(apa_hmi_,
-                                      APAPaRecommendedDirection::PaLeft);
-          multi_parkin_path_vec_[int(ApaPADirection::PA_LEFT)] =
-              complete_path_point_global_vec_;
-        } else if (iter->first == int(ApaPADirection::PA_RIGHT)) {
-          pa_state.SetPADirectionFlag(apa_hmi_,
-                                      APAPaRecommendedDirection::PaRight);
-          multi_parkin_path_vec_[int(ApaPADirection::PA_RIGHT)] =
-              complete_path_point_global_vec_;
+      int direction_int = iter->first;
+      if (direction_int == static_cast<int>(ApaPADirection::PA_LEFT) ||
+          direction_int == static_cast<int>(ApaPADirection::PA_RIGHT)) {
+        ApaPADirection pa_direction =
+            static_cast<ApaPADirection>(direction_int);
+        ILOG_INFO << "slot id = " << direction_int << " try begin";
+        if (ParkInTry(iter->second, pa_direction)) {
+          ILOG_INFO << "slot id = " << direction_int << " try success";
+          ego_info_under_slot.slot.release_info_
+              .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+              SlotReleaseState::RELEASE;
         }
+      } else {
+        ILOG_INFO << "slot id is wrong";
       }
     }
-    ILOG_INFO << "planning_park_pa_dir = " << apa_hmi_.planning_park_pa_dir;
-    pa_state.ClearRecommendPADirectionFlag(apa_hmi_);
-    if (apa_hmi_.planning_park_pa_dir) {
-      complete_path_point_global_vec_.clear();
-      if (multi_parkin_path_vec_.find(int(ApaPADirection::PA_RIGHT)) !=
-          multi_parkin_path_vec_.end()) {
-        complete_path_point_global_vec_ =
-            multi_parkin_path_vec_[int(ApaPADirection::PA_RIGHT)];
-        pa_state.SetRecommendPADirectionFlag(
-            apa_hmi_, APAPaRecommendedDirection::PaRight);
-        ILOG_INFO << "complete path is PA_RIGHT";
-      } else if (multi_parkin_path_vec_.find(int(ApaPADirection::PA_LEFT)) !=
-                 multi_parkin_path_vec_.end()) {
-        complete_path_point_global_vec_ =
-            multi_parkin_path_vec_[int(ApaPADirection::PA_LEFT)];
-        pa_state.SetRecommendPADirectionFlag(
-            apa_hmi_, APAPaRecommendedDirection::PaLeft);
-        ILOG_INFO << "complete path is PA_LEFT";
-      } else {
-        ILOG_INFO << "multi_parkin_path_vec_ is empty";
-      }
-      ego_info_under_slot.slot.release_info_
-          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
-    } else {
+    UpdatePADirection();
+    if (multi_parkin_path_vec_.empty() || apa_hmi_.planning_park_pa_dir == 0) {
       ego_info_under_slot.slot.release_info_
           .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
@@ -697,6 +675,70 @@ void ParallelParkInScenario::ScenarioTry() {
     }
   }
   TansformPreparePlanningTraj();
+  return;
+}
+
+void ParallelParkInScenario::UpdatePADirection() {
+  ApaPAStateGeneral pa_state;
+  pa_state.ClearPADirectionFlag(apa_hmi_);
+  double min_to_curb_dis = 2.0;
+  ApaPADirection min_pa_dir = ApaPADirection::PA_INVALID;
+  for (const auto& pair : multi_parkin_path_vec_) {
+    ApaPADirection pa_direction = static_cast<ApaPADirection>(pair.first);
+    const PaTryResult& try_result = pair.second;
+    pa_state.SetPADirectionFlag(apa_hmi_,
+                                APAPaRecommendedDirection::PaParitybit);
+    if (pa_direction == ApaPADirection::PA_LEFT) {
+      pa_state.SetPADirectionFlag(apa_hmi_, APAPaRecommendedDirection::PaLeft);
+    } else if (pa_direction == ApaPADirection::PA_RIGHT) {
+      pa_state.SetPADirectionFlag(apa_hmi_, APAPaRecommendedDirection::PaRight);
+    }
+    if (try_result.to_curb_dis < min_to_curb_dis) {
+      min_to_curb_dis = try_result.to_curb_dis;
+      min_pa_dir = pa_direction;
+    }
+  }
+  pa_state.ClearRecommendPADirectionFlag(apa_hmi_);
+  if (min_pa_dir != ApaPADirection::PA_INVALID) {
+    pa_state.SetRecommendPADirectionFlag(
+        apa_hmi_, APAPaRecommendedDirection::PaParitybit);
+    auto it = multi_parkin_path_vec_.find(int(min_pa_dir));
+    if (it != multi_parkin_path_vec_.end()) {
+      complete_path_point_global_vec_.clear();
+      complete_path_point_global_vec_ = it->second.all_path_point;
+    }
+    APAPaRecommendedDirection pa_recommend_dir =
+        APAPaRecommendedDirection::PaParitybit;
+    switch (min_pa_dir) {
+      case ApaPADirection::PA_LEFT:
+        pa_recommend_dir = APAPaRecommendedDirection::PaLeft;
+        break;
+      case ApaPADirection::PA_RIGHT:
+        pa_recommend_dir = APAPaRecommendedDirection::PaRight;
+        break;
+      default:
+        pa_recommend_dir = APAPaRecommendedDirection::PaRight;
+        break;
+    }
+    pa_state.SetRecommendPADirectionFlag(apa_hmi_, pa_recommend_dir);
+  }
+  ILOG_INFO << "current park_pa_dir: " << apa_hmi_.planning_park_pa_dir
+            << " recommend_pa_dir: " << apa_hmi_.planning_recommend_pa_dir
+            << " last park_pa_dir: " << last_apa_hmi_.planning_park_pa_dir
+            << " recommend_pa_dir: " << last_apa_hmi_.planning_recommend_pa_dir
+            << " pa_try_s2f_count_: " << pa_try_s2f_count_;
+  if (pa_try_s2f_count_ > 3) {
+    complete_path_point_global_vec_.clear();
+    pa_state.ClearPADirectionFlag(apa_hmi_);
+    pa_state.ClearRecommendPADirectionFlag(apa_hmi_);
+  } else {
+    if (last_apa_hmi_.planning_park_pa_dir > 1 &&
+        apa_hmi_.planning_recommend_pa_dir !=
+            last_apa_hmi_.planning_recommend_pa_dir) {
+      pa_try_s2f_count_++;
+    }
+    last_apa_hmi_ = apa_hmi_;
+  }
   return;
 }
 
@@ -743,7 +785,7 @@ const bool ParallelParkInScenario::IsPointInOrientedRectangle(
 SlotCoord ParallelParkInScenario::AlignAndMoveSlotToLine(
     const SlotCoord& slot, const Eigen::Vector2d& ego_pos,
     const Eigen::Vector2d& ego_head, double k, double b, double slot_width,
-    double distance) {
+    double distance, const ApaPADirection direction) {
   SlotCoord aligned_slot;
 
   // 1. Calculate the center point of the original parking space
@@ -817,33 +859,55 @@ SlotCoord ParallelParkInScenario::AlignAndMoveSlotToLine(
     move_distance =
         std::min(move_distance, apa_param.GetParam().pa_slot_move_distance);
   }
-
-  const double ego_distance =
-      std::fabs((k * ego_pos.x() - ego_pos.y() + b) / std::sqrt(k * k + 1));
-  const double slot_distance =
-      std::fabs((k * center.x() - center.y() + b) / std::sqrt(k * k + 1));
-
-  const double ego_to_slot = std::fabs(ego_distance - slot_distance);
-
-  const double move_min_distance = 0.03;
-  if (std::fabs(ego_pos.y() - center.y()) > 0.01 &&
-      ego_to_slot > apa_param.GetParam().pa_slot_move_distance) {
-    line_normal *= -1.0;
-    move_distance = ego_to_slot - apa_param.GetParam().pa_slot_move_distance;
-    ILOG_INFO << "reverse line_normal = " << line_normal.x() << ", "
-              << line_normal.y();
-  } else if (move_distance < move_min_distance) {
-    ILOG_INFO << "move_distance < move_min_distance, distance is too small";
-    return aligned_slot;
-  }
-  // If the current distance is already less than or equal to
-  // the target distance, there is no need to move (move_distance remains at 0)
   ILOG_INFO << "current_distance = " << current_distance
             << " move_distance = " << move_distance;
 
+  const int min_frame_num = 6;
+  while (pa_mean_move_dist_map_[direction].size() > min_frame_num) {
+    pa_mean_move_dist_map_[direction].erase(
+        pa_mean_move_dist_map_[direction].begin());
+  }
+  if (!pa_mean_move_dist_map_[direction].empty()) {
+    const double last_value = pa_mean_move_dist_map_[direction].back();
+    if (std::fabs(last_value - move_distance) > 0.15) {
+      ILOG_INFO << "move_distance has changed abruptly (" << last_value
+                << " -> " << move_distance << "). Clearing history.";
+      pa_mean_move_dist_map_[direction].clear();
+    }
+  }
+  pa_mean_move_dist_map_[direction].emplace_back(move_distance);
+  if (pa_mean_move_dist_map_[direction].size() < min_frame_num) {
+    ILOG_INFO << "need more frame to calculate mean move distance";
+    return aligned_slot;
+  }
+  double mean_move_distance = 0.0;
+  for (size_t i = 0; i < pa_mean_move_dist_map_[direction].size(); i++) {
+    mean_move_distance += pa_mean_move_dist_map_[direction][i];
+  }
+  mean_move_distance /= pa_mean_move_dist_map_[direction].size();
+  ILOG_INFO << "mean_move_distance = " << mean_move_distance;
+
+  const double stable_threshold = 0.06;
+  const double max_variance = 0.01;
+
+  if (mean_move_distance < stable_threshold) {
+    double max_deviation = 0.0;
+    for (size_t i = 0; i < pa_mean_move_dist_map_[direction].size(); i++) {
+      double deviation =
+          std::fabs(pa_mean_move_dist_map_[direction][i] - mean_move_distance);
+      max_deviation = std::max(max_deviation, deviation);
+    }
+    if (!(mean_move_distance > (stable_threshold - max_variance) &&
+          max_deviation < max_variance)) {
+      ILOG_INFO << "distance is too small and stable (mean="
+                << mean_move_distance << ", max_dev=" << max_deviation << ")";
+      return aligned_slot;
+    }
+  }
+
   // 7. Calculate the position of the target center point
   Eigen::Vector2d target_center =
-      center - move_distance * line_normal * t_lane_.slot_side_sgn;
+      center - mean_move_distance * line_normal * t_lane_.slot_side_sgn;
   ILOG_INFO << "target_center = " << target_center.x() << ", "
             << target_center.y();
 
@@ -873,6 +937,18 @@ const bool ParallelParkInScenario::CheckPAFinished() {
   const EgoInfoUnderSlot& ego_slot_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
+  const bool static_condition =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  ILOG_INFO << "static_condition = " << static_condition;
+  if (!static_condition) {
+    delay_check_finish_ = false;
+  }
+  if (delay_check_finish_) {
+    ILOG_INFO << "delay_check_finish_ = " << delay_check_finish_;
+    return false;
+  }
+
   pnc::geometry_lib::PathPoint terminal_err(
       first_plan_cur_pos.pos - ego_slot_info.cur_pose.pos,
       pnc::geometry_lib::NormalizeAngle(
@@ -900,13 +976,14 @@ const bool ParallelParkInScenario::CheckPAFinished() {
       std::fabs(terminal_err.pos.y()) >
       apa_param.GetParam().finish_parallel_pa_lat_err;
   const bool lat_err_y_condition =
-      std::fabs(ego_slot_info.terminal_err.pos.y()) <= 0.05;
-  const bool lat_condition = lat_move_condition || lat_err_y_condition;
-
-  const bool static_condition =
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
-
-  ILOG_INFO << "static_condition = " << static_condition;
+      std::fabs(ego_slot_info.terminal_err.pos.y()) < 0.05;
+  const bool min_lat_move_condition = std::fabs(terminal_err.pos.y()) > 0.02;
+  ILOG_INFO << "lat_err_y_condition = " << ego_slot_info.terminal_err.pos.y()
+            << "is_replan_first" << int(frame_.is_replan_first)
+            << " gear_change_count = " << frame_.gear_change_count;
+  const bool lat_condition =
+      lat_move_condition || (lat_err_y_condition && min_lat_move_condition) ||
+      (!(frame_.is_replan_first) && frame_.gear_change_count == 0);
 
   if (frame_.total_plan_count > kMaxReplanTimes) {
     ILOG_INFO << "replan times too much, only check heading and x axis";
@@ -1015,7 +1092,7 @@ void ParallelParkInScenario::ExtractLongestLineSegmentPointsPCA(
   return;
 }
 
-const bool ParallelParkInScenario::GeneralPASlot() {
+const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction) {
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
@@ -1167,6 +1244,7 @@ const bool ParallelParkInScenario::GeneralPASlot() {
         std::fabs(measures_ptr->GetHeading() - heading_10) > eps ||
         c2s_dis > eps;
     t_lane_.use_sturn_plan = false;
+    t_lane_.car_to_curb_dis = 1.0;
     if (pa_curb_obs_map[maximum_obs_id].size() < 3) {
       t_lane_.use_sturn_plan = true;
       ILOG_INFO << "pa curb obs size too very little";
@@ -1176,9 +1254,9 @@ const bool ParallelParkInScenario::GeneralPASlot() {
           v_10_normal.normalized() * (-t_lane_.slot_side_sgn) * slot2curb_dist_;
       line_coeffs_out.x() = v_10.y() / v_10.x();
       if (!is_line_slot) {
-        move_normal =
-            v_10_normal.normalized() * (-t_lane_.slot_side_sgn) *
-            (apa_param.GetParam().pa_slot_move_distance + slot2curb_dist_);
+        move_normal = v_10_normal.normalized() * (-t_lane_.slot_side_sgn) *
+                      (apa_param.GetParam().pa_slot_move_distance +
+                       slot2curb_dist_ + t_lane_.car_to_curb_dis);
       }
       move_normal = select_slot_global.pt_2 + move_normal;
       line_coeffs_out.y() =
@@ -1235,7 +1313,7 @@ const bool ParallelParkInScenario::GeneralPASlot() {
         select_slot_global, measures_ptr->GetPos(),
         measures_ptr->GetHeadingVec(), first_line_coeffs_.x(),
         first_line_coeffs_.y(), ego_info_under_slot.slot.slot_width_,
-        slot2curb_dist_);
+        slot2curb_dist_, direction);
     if ((slot_new_.pt_0 - slot_new_.pt_1).norm() <=
         apa_param.GetParam().static_pos_eps) {
       ILOG_INFO << "first plan move slot failed";
@@ -2050,11 +2128,8 @@ const bool ParallelParkInScenario::GenTlane() {
   size_t curb_count = 0;
   double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
 
-  const double pa_x_limit_min = ego_info_under_slot.cur_pose.GetX() -
-                                apa_param.GetParam().rear_overhanging - 0.2;
-  const double pa_x_limit_max = ego_info_under_slot.cur_pose.GetX() +
-                                apa_param.GetParam().front_overhanging +
-                                apa_param.GetParam().wheel_base + 0.2;
+  const double pa_x_limit_min = 1.0;
+  const double pa_x_limit_max = slot_length - 1.0;
 
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
@@ -2064,7 +2139,7 @@ const bool ParallelParkInScenario::GenTlane() {
           obstacle_point_set.first ==
               static_cast<size_t>(ApaObsScemanticType::COLUMN)) {
           front_obs_y_condition = pnc::mathlib::IsInBound(
-              obstacle_point_slot.y(), -1.0 * side_sgn,
+              obstacle_point_slot.y(), -0.8 * side_sgn,
               (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
       } else {
           front_obs_y_condition = pnc::mathlib::IsInBound(
@@ -2113,11 +2188,8 @@ const bool ParallelParkInScenario::GenTlane() {
         const bool cat_to_curb_condition =
             pnc::mathlib::IsInBound(obstacle_point_slot.x(), pa_x_limit_min,
                                     pa_x_limit_max) &&
-            pnc::mathlib::IsInBound(obstacle_point_slot.y(),
-                                    kCurbYMagIdentification,
-                                    -half_slot_width * side_sgn);
-        if (curb_condition &&
-            cat_to_curb_condition) {
+            (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
+        if (cat_to_curb_condition) {
           if (side_sgn > 0.0) {
             curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
           } else {
@@ -2898,6 +2970,34 @@ const bool ParallelParkInScenario::CheckLastPathCollided() {
   return false;
 }
 
+const int ParallelParkInScenario::CalGearChangeNumForOutPath(
+    const std::vector<pnc::geometry_lib::PathSegment>& in_path_seg_vec,
+    const std::vector<uint8_t>& in_gear_vec) {
+  if (in_path_seg_vec.empty() || in_gear_vec.empty()) {
+    ILOG_INFO << "in_path_seg_vec.empty() || in_gear_vec.empty()";
+    return -1;
+  }
+  if (in_path_seg_vec.size() != in_gear_vec.size()) {
+    ILOG_INFO << "in_path_seg_vec.size() != in_gear_vec.size()";
+    return -1;
+  }
+  int gear_change_num = 0;
+  size_t previous_idx = 0;
+  for (size_t i = 0; i < in_path_seg_vec.size(); i++) {
+    if (CalcSlotOccupiedRatio(in_path_seg_vec[i].GetEndPose()) >
+        kEnterMultiPlanSlotRatio) {
+      previous_idx = i;
+      break;
+    }
+  }
+  for (size_t i = 1; i <= previous_idx; i++) {
+    if (in_gear_vec[i] != in_gear_vec[i - 1]) {
+      gear_change_num++;
+    }
+  }
+  return gear_change_num;
+}
+
 // To use or not to use, that is the question.
 const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
   ILOG_INFO << "Enter  UseOrNotUseLastPath";
@@ -3050,16 +3150,31 @@ const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
     target_y_condition = std::fabs(normal_length) < 0.1;
   }
 
-  bool gear_condition =
-      (previous_parallel_path_planner_.GetOutput().gear_cmd_vec.front() !=
-       parallel_path_planner_.GetOutput().gear_cmd_vec.front());
+  bool gear_change_condition = false;
+  const auto& previous_output = previous_parallel_path_planner_.GetOutput();
+  const auto& cur_output = parallel_path_planner_.GetOutput();
+  int previous_gear_change_num = CalGearChangeNumForOutPath(
+      previous_output.path_segment_vec, previous_output.gear_cmd_vec);
+  int cur_gear_change_num = CalGearChangeNumForOutPath(
+      cur_output.path_segment_vec, cur_output.gear_cmd_vec);
+  ILOG_INFO << "previous_gear_change_num: " << previous_gear_change_num
+            << " cur_gear_change_num: " << cur_gear_change_num;
+  if (previous_gear_change_num >= 0 && cur_gear_change_num >= 0 &&
+      cur_gear_change_num > previous_gear_change_num) {
+    gear_change_condition = true;
+  }
+
+  bool gear_reverse_condition =
+      (previous_output.gear_cmd_vec.front() != cur_output.gear_cmd_vec.front());
 
   ILOG_INFO << "follow_pos_condition: " << int(follow_pos_condition)
-            << " path_source_condition: " << int(path_source_condition)
             << " target_y_condition: " << int(target_y_condition)
-            << " gear_condition: " << int(gear_condition);
+            << " path_source_condition: " << int(path_source_condition)
+            << " gear_reverse_condition: " << int(gear_reverse_condition)
+            << " gear_change_condition: " << int(gear_change_condition);
   if (follow_pos_condition && target_y_condition &&
-      (path_source_condition || gear_condition)) {
+      (path_source_condition || gear_reverse_condition ||
+       gear_change_condition)) {
     if (!CheckLastPathCollided()) {
       ILOG_INFO << "use previous path";
       frame_.pathplan_result = PathPlannerResult::PLAN_HOLD;
@@ -3116,26 +3231,35 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
   path_planner_input.out_again_path_better = out_again_path_better_;
 
+  if (enable_pa_park_) {
+    if (frame_.is_replan_first) {
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
 
-  if (frame_.is_replan_first) {
-    // temprarily give driving gear
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      frame_.current_arc_steer =
+          t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT
+              ? pnc::geometry_lib::SEG_STEER_RIGHT
+              : pnc::geometry_lib::SEG_STEER_LEFT;
+    }
+  } else {
+    if (frame_.is_replan_first) {
+      // temprarily give driving gear
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
 
-    frame_.current_arc_steer =
-        t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT
-            ? pnc::geometry_lib::SEG_STEER_LEFT
-            : pnc::geometry_lib::SEG_STEER_RIGHT;
-
-    path_planner_input.path_planner_state =
-        ParallelPathGenerator::PrepareStepPlan;
-  } else if (path_planner_input.ego_info_under_slot.slot_occupied_ratio >
-                 kEnterMultiPlanSlotRatio &&
-             frame_.in_slot_plan_count == 0) {
-    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    frame_.current_arc_steer =
-        t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT
-            ? pnc::geometry_lib::SEG_STEER_RIGHT
-            : pnc::geometry_lib::SEG_STEER_LEFT;
+      frame_.current_arc_steer =
+          t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT
+              ? pnc::geometry_lib::SEG_STEER_LEFT
+              : pnc::geometry_lib::SEG_STEER_RIGHT;
+      path_planner_input.path_planner_state =
+          ParallelPathGenerator::PrepareStepPlan;
+    } else if (path_planner_input.ego_info_under_slot.slot_occupied_ratio >
+                   kEnterMultiPlanSlotRatio &&
+               frame_.in_slot_plan_count == 0) {
+      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      frame_.current_arc_steer =
+          t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT
+              ? pnc::geometry_lib::SEG_STEER_RIGHT
+              : pnc::geometry_lib::SEG_STEER_LEFT;
+    }
   }
 
   ILOG_INFO << "slot_occupied_ratio = "
@@ -3262,21 +3386,27 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
         heading_deg_diff_mag <
             apa_param.GetParam().finish_parallel_heading_err * kRad2Deg;
 
-    if (is_final_path) {
-      if (current_path_length < 0.15) {
-        extend_lenth = 0.3;
-      } else {
-        extend_lenth = 0.0;
+    if (enable_pa_park_) {
+      if (current_path_length < 0.2) {
+        extend_lenth = extend_lenth = std::max(0.2 - current_path_length, 0.1);
       }
     } else {
-      if (current_path_length < 0.5) {
-        extend_lenth = std::max(0.5 - current_path_length, 0.1);
-      } else {
-        if (heading_deg_diff_mag > 10.0 &&
-            frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-          extend_lenth = 0.2;
-        } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+      if (is_final_path) {
+        if (current_path_length < 0.15) {
+          extend_lenth = 0.3;
+        } else {
           extend_lenth = 0.0;
+        }
+      } else {
+        if (current_path_length < 0.5) {
+          extend_lenth = std::max(0.5 - current_path_length, 0.1);
+        } else {
+          if (heading_deg_diff_mag > 10.0 &&
+              frame_.current_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+            extend_lenth = 0.2;
+          } else if (frame_.current_gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
+            extend_lenth = 0.0;
+          }
         }
       }
     }
@@ -3368,6 +3498,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   frame_.is_replan_first = false;
 
+  frame_.gear_change_count = planner_output.gear_change_count;
   ILOG_INFO << "start lat optimizer!";
 
   // lateral path optimization

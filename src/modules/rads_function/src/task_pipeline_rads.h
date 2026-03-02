@@ -23,7 +23,7 @@
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/hmi_decider/rads_hmi_decider.h"
-#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
+#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"

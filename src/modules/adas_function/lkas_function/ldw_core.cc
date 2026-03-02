@@ -1445,6 +1445,22 @@ void LdwCore::SetLdwOutputInfo() {
     GetContext.mutable_output_info()->ldw_output_info_.ldw_right_warning_ =
         false;
   }
+  uint32 mask_enable_E541 = 4103;
+  mask_enable_code_e541_ldw = ldw_enable_code_ & mask_enable_E541;
+  if(GetContext.get_param()->car_type == "bestune_e541") {
+    if (ldw_state_ == iflyauto::LDWFunctionFSMWorkState::
+                        LDW_FUNCTION_FSM_WORK_STATE_STANDBY &&
+      mask_enable_code_e541_ldw == 0) {
+    GetContext.mutable_output_info()->ldw_output_info_.ldw_state_ =
+        iflyauto::LDWFunctionFSMWorkState::
+            LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
+  } else {
+    GetContext.mutable_output_info()->ldw_output_info_.ldw_state_ = ldw_state_;
+  } 
+    }
+  else { GetContext.mutable_output_info()->ldw_output_info_.ldw_state_ = ldw_state_;}
+
+
   return;
 }
 

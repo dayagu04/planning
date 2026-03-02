@@ -229,6 +229,9 @@ struct EgoPlanningConfig : public Config {
     overtake_speed_threshold_adjust_params = read_json_key<double>(
         json, "overtake_speed_threshold_adjust_params");
 
+    enable_overtake_cross_line_large_agent =
+        read_json_key<bool>(
+            json, "enable_overtake_cross_line_large_agent");
     enable_use_speed_limit_to_suppress_interactive_lane_change =
         read_json_key<bool>(
             json, "enable_use_speed_limit_to_suppress_interactive_lane_change");
@@ -269,6 +272,8 @@ struct EgoPlanningConfig : public Config {
                      "enable_overtake_lane_change_confirmation");
     press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
     use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
+    enable_use_dynamic_agent_emergency_avoidence_lane_change_request = read_json_key<bool>(
+        json, "enable_use_dynamic_agent_emergency_avoidence_lane_change_request");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -287,6 +292,7 @@ struct EgoPlanningConfig : public Config {
   double overtake_radical_lane_change_speed_threshold = 2.78;
   double overtake_soft_lane_change_speed_threshold = 5.56;
   double overtake_speed_threshold_adjust_params = 0.6;
+  bool enable_overtake_cross_line_large_agent = false;
   bool enable_use_speed_limit_to_suppress_interactive_lane_change = true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 500;
   double minimum_distance_nearby_split_to_surpress_specific_direction_overtake =
@@ -307,6 +313,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_overtake_lane_change_confirmation = false;
   double press_line_fewly_threshold = 0.3;
   bool use_press_line_fewly_threshold = false;
+  bool enable_use_dynamic_agent_emergency_avoidence_lane_change_request = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {

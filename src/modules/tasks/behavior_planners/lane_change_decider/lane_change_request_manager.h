@@ -11,6 +11,8 @@
 #include "lane_change_requests/map_lane_change_request.h"
 #include "lane_change_requests/merge_lane_change_request.h"
 #include "lane_change_requests/overtake_lane_change_request.h"
+#include "lane_change_requests/dynamic_agent_emergence_avoid_lane_change_request.h"
+
 #include "session.h"
 
 namespace planning {
@@ -80,6 +82,8 @@ class LaneChangeRequestManager {
       return cone_change_request_.AggressiveChange();
     } else if (request_source_ == MERGE_REQUEST) {
       return merge_change_request_.AggressiveChange();
+    } else if (request_source_ == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
+      return dynamic_agent_emergence_avoid_request_.AggressiveChange();
     }
     return false;
   }
@@ -110,6 +114,7 @@ class LaneChangeRequestManager {
   MapRequest map_request_;
   OvertakeRequest overtake_request_;
   EmergenceAvoidRequest emergence_avoid_request_;
+  DynamicAgentEmergenceAvoidRequest dynamic_agent_emergence_avoid_request_;
   ConeRequest cone_change_request_;
   MergeRequest merge_change_request_;
   bool is_near_merge_region_{false};

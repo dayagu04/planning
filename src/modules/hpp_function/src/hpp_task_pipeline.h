@@ -9,7 +9,7 @@
 #include "ego_planning_config.h"
 #include "session.h"
 #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
-#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
+#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/hpp_lateral_obstacle_decider/hpp_lateral_obstacle_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"

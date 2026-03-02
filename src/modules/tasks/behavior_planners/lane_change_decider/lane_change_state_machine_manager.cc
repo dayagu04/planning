@@ -708,7 +708,8 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
       transition_info_.lane_change_type == CONE_REQUEST) {
     lc_valid_thre = 1;
     is_dash_enough = true;  // 避让请求和锥桶请求不需要dash足够
-  } else if (transition_info_.lane_change_type == MERGE_REQUEST) {
+  } else if (transition_info_.lane_change_type == MERGE_REQUEST || 
+    transition_info_.lane_change_type == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
     lc_valid_thre = 1;
   }
   // can lc if more than continue 4 frame gap_insertable
@@ -3380,7 +3381,13 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
   if (!current_lane_coord) {
     return false;
   }
-
+  //当前车道半宽度
+  double half_origin_lane = 1.75;
+  const auto origin_lane = session_->environmental_model().get_virtual_lane_manager()
+                          ->get_lane_with_virtual_id(lc_lane_mgr_->origin_lane_virtual_id());
+  if (origin_lane != nullptr) {
+    half_origin_lane = origin_lane->width() * 0.5;
+  }
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const double ego_need_dis = ego_state->ego_v() * kEgoReachBoundaryTime;
@@ -3396,18 +3403,20 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
     return false;  // 更换xytosl
   }
   Point2D frenet_point(s, l);
-  if (frenet_point.x - current_lane->get_frenet_ego_state().s() >
-      ego_need_dis) {
+  double ego_to_cone_distacne = frenet_point.x - current_lane->get_frenet_ego_state().s();
+  if (ego_to_cone_distacne > ego_need_dis || ego_to_cone_distacne < 0.0) {
     // 在变道所需的纵向距离之外，可以不用考虑，可以直接变道
     return true;
   } else {
     // TODO(fengwang31):暂时把traffic_cone的横向距离限制距离中心线在1m以外则认为安全
     // 后续根据自车的轨迹点是否与锥桶有overlap来判断是否安全
+    double approx_lat_offset = std::min(ego_to_cone_distacne / ego_need_dis, 1.0) * half_origin_lane;
+    //原方案假设 3V 纵向距离对应自车横向运动半个车道
     if (transition_info_.lane_change_direction == RIGHT_CHANGE &&
-        frenet_point.y > 1.0) {
+        frenet_point.y > 1.0 - approx_lat_offset) {
       return true;
     } else if (transition_info_.lane_change_direction == LEFT_CHANGE &&
-               frenet_point.y < -1.0) {
+               frenet_point.y < -1.0 + approx_lat_offset) {
       return true;
     }
   }

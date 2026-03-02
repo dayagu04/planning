@@ -186,7 +186,7 @@ bool AgentLongitudinalDecider::Update() {
 
   // crossing agent decider
   // 横穿障碍物依赖障碍物预测轨迹
-  if (crossing_agent_decider_ != nullptr) {
+  if (crossing_agent_decider_ != nullptr && !session_->is_rads_scene()) {
     crossing_agent_decider_->Execute();
   }
 

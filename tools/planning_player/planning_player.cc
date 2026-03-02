@@ -664,7 +664,9 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     std::cerr << "frame_num " << frame_num_
               << " missing /iflytek/fusion/objects" << std::endl;
-    return;
+    if (scene_type_ != "nsa") {
+      return;
+    }
   }
 
   auto fusion_occ_object_ros_msg = find_ros_msg_with_header_time_upper_bound<
@@ -695,7 +697,9 @@ void PlanningPlayer::PlayOneFrame(
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/fusion/road_fusion" << std::endl;
-      return;
+      if (scene_type_ != "nsa") {
+        return;
+      }
     }
   }
 
@@ -1923,6 +1927,14 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
               << " **************************************" << std::endl;
     frame_num_++;
     start_time += 1E5;  // 0.1s
+    uint64_t next_time = start_time + 1E6;
+    next_loc_header_time_us_ = next_time;
+    next_vehi_svc_header_time_us_ = next_time;
+    if (next_time >= end_time - 1E5) {
+      next_loc_header_time_us_ = UINT64_MAX;
+      next_vehi_svc_header_time_us_ = UINT64_MAX;
+    }
+
     auto fusion_object_ros_msg = find_ros_msg_with_header_time_upper_bound<
         struct_msgs::FusionObjectsInfo>(TOPIC_FUSION_OBJECTS, start_time);
     if (fusion_object_ros_msg) {
@@ -1987,6 +1999,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       convert(localization_msg, *localization_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
       planning_adapter_->Feed_IflytekLocalizationEgomotion(localization_msg);
+      loc_header_time_us_ = localization_msg.msg_header.stamp;
     } else {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing /iflytek/localization/egomotion" << std::endl;
@@ -2012,6 +2025,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       convert(vehicle_service_msg, *vehicle_service_ros_msg,
               ConvertTypeInfo::TO_STRUCT);
       planning_adapter_->Feed_IflytekVehicleService(vehicle_service_msg);
+      vehi_svc_header_time_us_ = vehicle_service_msg.msg_header.stamp;
     } else {
       std::cerr << "frame_num " << frame_num_
                 << " missing /iflytek/vehicle_service" << std::endl;
@@ -2106,6 +2120,23 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       }
     }
 
+    for (auto it = msg_cache_[TOPIC_SDPro_MAP].begin();
+         it != msg_cache_[TOPIC_SDPro_MAP].end(); it++) {
+      auto sdpro_map_msg_i =
+          boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
+      std::string sdpro_map_str(sdpro_map_msg_i->debug_info.begin(),
+                                sdpro_map_msg_i->debug_info.end());
+      const auto struct_ptr = std::make_shared<iflyauto::StructContainer>();
+      auto sdpro_map = std::make_shared<iflymapdata::sdpro::MapData>();
+      struct_ptr->mutable_payload()->assign(sdpro_map_str.c_str(),
+                                            sdpro_map_str.size());
+      sdpro_map->ParseFromString(sdpro_map_str);
+      if (sdpro_map->header().timestamp() >= start_time) {
+        planning_adapter_->Feed_IflytekEhrSdpromapInfo(*struct_ptr);
+        break;
+      }
+    }
+
     for (auto it = msg_cache_[TOPIC_HD_MAP].begin();
          it != msg_cache_[TOPIC_HD_MAP].end(); it++) {
       auto static_map_msg_i =
@@ -2142,13 +2173,13 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
     }
-    
+
     struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
     uint8_t functional_state = func_state_machine_ros_msg.current_state;
     if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
       bool find_function_state_machine = false;
       if (is_close_loop) {
-        functional_state = iflyauto::FunctionalState_MANUAL_PARKING;
+        functional_state = iflyauto::FunctionalState_MANUAL_DRIVING;
       }
       auto cached_func_state_machine_ros_msg =
           find_ros_msg_with_header_time_upper_bound<
@@ -2215,11 +2246,23 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
             functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
           }
         } else if (scene_type_ == "hpp") {
-          functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
+          if (is_close_loop) {
+            functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
+          } else {
+            functional_state = func_state_machine_ros_msg.current_state;
+          }
         } else if (scene_type_ == "rads") {
-          functional_state = iflyauto::FunctionalState_RADS_TRACING;
+          if (is_close_loop) {
+            functional_state = iflyauto::FunctionalState_RADS_TRACING;
+          } else {
+            functional_state = func_state_machine_ros_msg.current_state;
+          }
         } else if (scene_type_ == "nsa") {
-          functional_state = iflyauto::FunctionalState_NRA_GUIDANCE;
+          if (is_close_loop) {
+            functional_state = iflyauto::FunctionalState_NRA_GUIDANCE;
+          } else {
+            functional_state = func_state_machine_ros_msg.current_state;
+          }
         }
       }
 

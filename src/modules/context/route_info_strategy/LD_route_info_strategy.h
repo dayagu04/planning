@@ -107,7 +107,7 @@ void ProcessLaneMapMergePoint(
  void CaculateDistanceToTollStation(
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
  bool IsLaneSuccessorInPlannedRoute(const iflymapdata::sdpro::Lane* lane_info);
- bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info);
+ bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info) const;
  const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
  void Erase1Split2FeasibleLane(TopoLinkGraph& feasible_lane_graph);
@@ -150,6 +150,7 @@ void ProcessLaneMapMergePoint(
   void CalculateFrontMergePointInfo();
   double CalculateDisToLastLinkSplitPoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   double CalculateDisToLastLinkMergePoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
+  bool IsSucMergeLink(const iflymapdata::sdpro::LinkInfo_Link* link_info) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
