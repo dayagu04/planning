@@ -181,23 +181,24 @@ void DynamicAgentEmergenceAvoidRequest::
       CheckEmergencyDynamicSideAgentBaseRisk();
   bool is_emergency_base_last_emergency_avoid =
       CheckEmergencyBaseLastEmergencyAvoid();
-  bool is_exit_emergency_dynamic_agent = is_emergency_base_side_dynamic_agent ||
+  bool is_exist_emergency_dynamic_agent = is_emergency_base_side_dynamic_agent ||
                                          is_emergency_base_last_emergency_avoid;
-  auto kEmergencySituationDurationCountThr = kLowRiskEmergencySituationDurationCountThr;
+  auto emergency_situation_duration_count_thr = kLowRiskEmergencySituationDurationCountThr;
   if (risk_level_ == RiskLevel::HIGH_RISK || is_emergency_base_last_emergency_avoid) {
-    kEmergencySituationDurationCountThr = kHighRiskEmergencySituationDurationCountThr;
+    emergency_situation_duration_count_thr = kHighRiskEmergencySituationDurationCountThr;
   }
-  if (is_exit_emergency_dynamic_agent) {
+  if (is_exist_emergency_dynamic_agent) {
     // 存在危险障碍物
+    // 这个计数应该绑定障碍物的id，不应该所有的计数使用同一个id（huwang5）
     dynamic_agent_emergency_situation_timetstamp_ =
         std::min(dynamic_agent_emergency_situation_timetstamp_ + 1,
-                 kEmergencySituationDurationCountThr + 5);
+                 emergency_situation_duration_count_thr + 2);
   } else {
     dynamic_agent_emergency_situation_timetstamp_ =
         std::max(dynamic_agent_emergency_situation_timetstamp_ - 1, 0);
   }
   if (dynamic_agent_emergency_situation_timetstamp_ >=
-      kEmergencySituationDurationCountThr) {
+      emergency_situation_duration_count_thr) {
     is_dynamic_agent_emergency_avoidance_situation_ = true;
   } else {
     is_dynamic_agent_emergency_avoidance_situation_ = false;
@@ -417,6 +418,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
     }
     emergency_avoid_num += 1;
     if (emergency_avoid_num >= 2) {
+      // 结合障碍物位置，同一侧的也可以触发变道（huwang5)
       recommend_dynamic_agent_emergency_avoidance_direction_ = NO_CHANGE;
       break;
     }
