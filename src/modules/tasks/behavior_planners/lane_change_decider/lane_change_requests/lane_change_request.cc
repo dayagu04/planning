@@ -38,6 +38,8 @@ constexpr double kMinDefaultLaneWidth = 2.65;
 constexpr int kInvalidAgentId = -1;
 constexpr double kHysteresisCoefficient = 1.5;
 constexpr double kConeLaneChangelateralDistancethre = 2.25;
+constexpr double kMinRampSampleLength = 150.0;
+constexpr double kCurveRadiusThreshold = 150.0;
 
 }  // namespace
 LaneChangeRequest::LaneChangeRequest(
@@ -1397,6 +1399,146 @@ double LaneChangeRequest::CalcClusterToBoundaryDist(
   } else {
     return std::max(left_l, right_l);
   }
+}
+
+bool LaneChangeRequest::IsCurveSurpressLaneChange() const {
+  std::vector<ad_common::math::Vec2d> consider_points;
+  if (!CollectConsiderPoints(consider_points)) {
+    return false;
+  }
+
+  const double kWindowLen = 30.0; //平滑曲率的滑窗宽度
+  const auto &curve_vec = CalculateAndSmoothCurvature(consider_points, kWindowLen);
+  if (curve_vec.empty()) {
+    return false;
+  }
+
+  double total_curve = 0.0;
+  for (const auto& curve : curve_vec) {
+    total_curve = total_curve + std::abs(curve);
+  }
+
+  double average_curve = total_curve / curve_vec.size();
+  JSON_DEBUG_VALUE("average_curve", average_curve);
+
+  // 道路的半径小于70m可以抑制变道
+  const double curve_condition = (1.0 / kCurveRadiusThreshold);
+  return average_curve > curve_condition;
+}
+
+bool LaneChangeRequest::CollectConsiderPoints(std::vector<ad_common::math::Vec2d>& consider_points) const {
+  if (session_ == nullptr) {
+    return false;
+  }
+
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return false;
+  }
+
+  const auto &start_link = route_info->get_current_link();
+  if (start_link == nullptr) {
+    return false;
+  }
+
+  const iflymapdata::sdpro::LinkInfo_Link* cur_link = start_link;
+  const auto& pts = cur_link->points().boot().points();
+  if (pts.size() < 2) {
+    return false;
+  }
+
+  // Find nearest point to vehicle
+  double min_dist = std::numeric_limits<double>::max();
+  size_t nearest_idx = 0;
+
+  ad_common::math::Vec2d current_point;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+
+  for (size_t i = 0; i < pts.size(); ++i) {
+    double dist = std::hypot(pts[i].x() - current_point.x(),
+                              pts[i].y() - current_point.y());
+    if (dist < min_dist) {
+      min_dist = dist;
+      nearest_idx = i;
+    }
+  }
+
+  // Collect ENU points on ramp until total length >= 150m or leaving ramp
+  consider_points.reserve(50);
+  double total_len = 0.0;
+
+  // Collect from nearest point (inclusive)
+  const double front_judge_dis = std::max(ego_state->ego_v() * 8, 50.0);
+  double cur_link_speed_limit = cur_link->speed_limit();
+  size_t points_before = consider_points.size();
+  for (size_t i = nearest_idx; i < pts.size(); ++i) {
+    ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+    if (!consider_points.empty()) {
+      const auto &last = consider_points.back();
+      double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+      if (ds < 0.1) continue;
+      total_len += ds;
+    }
+    consider_points.emplace_back(p);
+    if (total_len >= front_judge_dis) {
+      return true;
+    }
+  }
+
+  // Continue collecting points from subsequent links
+  const auto &sdpro_map = route_info->get_sdpro_map();
+  const iflymapdata::sdpro::LinkInfo_Link *next_link =
+      sdpro_map.GetNextLinkOnRoute(cur_link->id());
+  while (total_len < front_judge_dis) {
+    if (next_link == nullptr) {
+      return false;
+    }
+
+    if (CollectPointsFromLink(next_link, front_judge_dis, consider_points, total_len,
+                              0)) {
+      return true;
+    }
+
+    next_link =
+        sdpro_map.GetNextLinkOnRoute(next_link->id());
+  }
+  return false;
+}
+
+bool LaneChangeRequest::CollectPointsFromLink(
+    const iflymapdata::sdpro::LinkInfo_Link *link, const double front_judge_dis,
+    std::vector<ad_common::math::Vec2d> &enu_points, double &total_len,
+    size_t start_idx) const {
+  if (link == nullptr) {
+    return false;
+  }
+
+  const auto &pts = link->points().boot().points();
+  if (pts.size() < 2 || start_idx >= pts.size()) {
+    return false;
+  }
+
+  constexpr double kMinPointSpacing = 0.1;
+  for (size_t i = start_idx; i < pts.size(); ++i) {
+    ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+    if (!enu_points.empty()) {
+      const auto &last = enu_points.back();
+      double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+      if (ds < kMinPointSpacing) {
+        continue;
+      }
+      total_len += ds;
+    }
+    enu_points.emplace_back(p);
+    if (total_len >= front_judge_dis) {
+      return true;  // Reached target length
+    }
+  }
+  return false;  // Not reached target length
 }
 
 }  // namespace planning

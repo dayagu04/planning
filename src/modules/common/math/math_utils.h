@@ -5,6 +5,7 @@
 #include <vector>
 // #include "Eigen/Dense"
 #include "Eigen/Dense"
+#include "math/vec2d.h"
 #include "vec2d.h"
 
 #define HYPOT_MIN 1000.0
@@ -305,6 +306,9 @@ double Interpolate(double y1, double y2, double ratio);
 double InterpolateAngle(double x1, double y1, double x2, double y2, double x);
 
 double InterpolateAngle(double y1, double y2, double ratio);
+
+std::vector<double> CalculateAndSmoothCurvature(
+    const std::vector<ad_common::math::Vec2d>& enu_points, double map_curv_window_len);
 
 inline double fast_hypot(double a, double b) {
   if (a <= HYPOT_MIN && b <= HYPOT_MIN) {

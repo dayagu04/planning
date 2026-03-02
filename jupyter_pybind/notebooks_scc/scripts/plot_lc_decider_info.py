@@ -15,7 +15,7 @@ from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_81748/trigger/20251024/20251024-09-41-52/data_collection_CHERY_M32T_81748_EVENT_MANUAL_2025-10-24-09-41-52_no_camera.bag.1762241683.close-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_20406/trigger/20260124/20260124-10-37-52/data_collection_BESTUNE_E541_20406_EVENT_FUNEXIT_2026-01-24-10-37-52_no_camera.bag.1770123900.open-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -116,7 +116,7 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_split_region', 'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split',
             'current_segment_passed_distance', 'forward_lane_num', 'is_ego_on_split_region',
             'ego_status_on_route','bd_mlc_scene', 'left_lane_num', 'minVal_seq',
-            'maxVal_seq', 'right_lane_num', 'emergency_lane_num', 'lsl_length', 'lat_offset_lc_hold',
+            'maxVal_seq', 'right_lane_num', 'emergency_lane_num', 'average_curve','lsl_length', 'lat_offset_lc_hold',
             'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose',
             'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id','merging_rear_id']
 
