@@ -53,12 +53,37 @@ behavior_data_1 = ColumnDataSource({
   'name':[],
   'data':[]
 })
+behavior_data_dynamic_lane_change = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
 
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
+data_behavior_table_dynamic_lane_change = DataTable(source=behavior_data_dynamic_lane_change, columns=columns, width=400, height=1000)
+
+def update_dynamic_agent_emergency_lane_change_behavior_data(local_view_data):
+  planning_json = local_view_data['data_msg']['plan_debug_json_msg']
+  vars = ['recommend_dynamic_agent_emergency_avoidance_direction', 'risk_level',
+          'dynamic_agent_emergency_situation_timetstamp', 'dynamic_agent_emergency_lane_change_direction']
+  names  = []
+  datas = []
+  for name in vars:
+    try:
+      # print(getattr(vo_lat_behavior_plan,name))
+      print(name)
+      datas.append(planning_json[name])
+      names.append(name)
+    except:
+      pass
+
+  behavior_data_dynamic_lane_change.data.update({
+    'name': names,
+    'data': datas,
+  })
 
 def update_lat_behavior_data(local_view_data):
   lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
@@ -235,12 +260,11 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     update_lat_behavior_data(local_view_data)
+    update_dynamic_agent_emergency_lane_change_behavior_data(local_view_data)
   update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data)
-
   push_notebook()
-
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_curve)), title="CurveFigure")
-pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(column(data_behavior_table_1)))), title="BehaviorInfo")
+pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(row(data_behavior_table_1, data_behavior_table_dynamic_lane_change)))), title="BehaviorInfo")
 pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")
 pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ])

@@ -708,7 +708,8 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
       transition_info_.lane_change_type == CONE_REQUEST) {
     lc_valid_thre = 1;
     is_dash_enough = true;  // 避让请求和锥桶请求不需要dash足够
-  } else if (transition_info_.lane_change_type == MERGE_REQUEST) {
+  } else if (transition_info_.lane_change_type == MERGE_REQUEST || 
+    transition_info_.lane_change_type == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
     lc_valid_thre = 1;
   }
   // can lc if more than continue 4 frame gap_insertable
