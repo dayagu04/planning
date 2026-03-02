@@ -2421,7 +2421,7 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
                                 ego_info.slot.GetOriginCornerCoordLocal().pt_2)
                                    .norm();
 
-    double kInitialTargetX = slot_length + 1.5;
+    double kInitialTargetX = slot_length + 2.0; //todo : temp fix;
     constexpr double kSlantInitialTargetX = 7.0;
     constexpr double kInitialTargetY = 5.0;
     constexpr double kSlantInitialTargetY = 3.0;
