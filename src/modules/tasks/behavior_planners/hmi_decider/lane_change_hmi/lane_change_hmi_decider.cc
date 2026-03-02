@@ -43,8 +43,10 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
   bool turn_signal_from_lane_change =
       lane_change_decider_output.lc_request != 0;
   bool is_dynamic_agent_emergency_lane_change =
-      lane_change_decider_output.lc_request_source ==
-      DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST;
+      (lane_change_decider_output.lc_request_source ==
+          DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) ||
+      (lane_change_decider_output.lc_request_source ==
+          OVERTAKE_REQUEST);
   const auto curr_state = lane_change_decider_output.curr_state;
   if ((turn_signal_from_lane_change &&
        !is_dynamic_agent_emergency_lane_change) ||
@@ -52,7 +54,7 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
        (curr_state == kLaneChangeExecution ||
         curr_state == kLaneChangeComplete || curr_state == kLaneChangeHold ||
         curr_state == kLaneChangeCancel))) {
-    // 针对紧急变道，只有触发了才会打灯，其余不变
+    // 针对紧急变道和超车变道，只有触发了才会打灯，其余不变
     planning_result.turn_signal = lane_change_decider_output.lc_request == 1
                                       ? RequestType::LEFT_CHANGE
                                       : RequestType::RIGHT_CHANGE;
