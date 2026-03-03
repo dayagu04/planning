@@ -511,7 +511,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       leading_veh_.id = lead_one->id();
       leading_veh_.v = lead_one->velocity();
       leading_veh_.center_s = lead_one->d_s_rel();
-      const auto& lead_one_agent = dynamic_world->GetNode(leading_veh_.id);
+      const auto& lead_one_agent = dynamic_world->GetNodeByAgentID(leading_veh_.id);
       if (lead_one_agent != nullptr) {
         const auto& primary_trajectories =
             lead_one_agent->node_trajectories_used_by_st_graph();
