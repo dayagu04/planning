@@ -4300,7 +4300,7 @@ bool LaneChangeStateMachineManager::
       double dis_buff = interp(agent_kph, xp, fp);
       double rear_relative_decel = is_aggressive_lane_change_
                                 ? lc_safety_check_config_.rear_comfort_decel : 
-                                lc_safety_check_config_.rear_comfort_decel + 0.7;// 激进变道 自车加速度假设
+                                lc_safety_check_config_.rear_comfort_decel + lc_safety_check_config_.aggressive_decel_part;// 激进变道
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
         rear_relative_decel = 0.3;
