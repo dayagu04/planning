@@ -26,7 +26,7 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+  planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', 'prohibit_acc_',\
                               'merge_target_one_id', 'merge_target_two_id', 'v_target_merge', 'rear_agent_merge_time', 'merge_orintation', 'merge_direction_plan',
                               'merge_exist','is_merge_region_plan', 'merge_point_distance', 'current_lane_is_continue', 'ego_has_rightof_tar_lane',
