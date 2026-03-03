@@ -627,7 +627,8 @@ void DynamicAgentEmergenceAvoidRequest::GenerateLaneChangeDirection() {
   lane_change_direction_ = NO_CHANGE;
 
   // 如果检测到0.5g刹停失败，使用新的变道逻辑
-  if (is_brake_failure_detected_) {
+  if (is_brake_failure_detected_ &&
+      !is_dynamic_agent_emergency_avoidance_situation_) {
     GenerateLaneChangeDirectionByBrakeFailure(is_left_lane_change_safe,
                                               is_right_lane_change_safe);
     return;
