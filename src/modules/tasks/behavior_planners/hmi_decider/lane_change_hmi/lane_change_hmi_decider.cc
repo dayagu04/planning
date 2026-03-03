@@ -303,9 +303,12 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_LANE_UNAVAILABLE;
   } else if (lc_back_reason == "dash line length not satisfy" ||
-           lane_change_decider_output.lc_invalid_reason == "dash not enough") {
+             lane_change_decider_output.lc_invalid_reason == "dash not enough") {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+  } else if (lane_change_decider_output.lc_invalid_reason == "target lane too large curve") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_HIGH_CURVATURE;
   } else if (lc_invalid_reason == "side view invalid" ||
              lc_invalid_reason == "front view invalid" ||
              lc_back_reason == "side view back" ||

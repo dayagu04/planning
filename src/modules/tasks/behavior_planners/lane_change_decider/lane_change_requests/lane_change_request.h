@@ -155,6 +155,7 @@ class LaneChangeRequest {
   bool IsLargeCurvatureByQuantile(const std::vector<double>& curvature_list,
                                   double large_curv_thresh,
                                   int min_continuous_points) const;
+  bool IsCurveSurpressLaneChange(int target_lane_virtual_id) const;
 
  protected:
   TrackInfo lc_invalid_track_;
