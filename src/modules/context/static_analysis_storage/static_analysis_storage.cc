@@ -202,6 +202,7 @@ std::pair<double, double> StaticAnalysisStorage::GetFrontUnionSRange(
 bool StaticAnalysisStorage::SerializeToDebugInfo(
     planning_math::ConstKDPathPtr kd_path,
     common::StaticAnalysisResult& static_analysis_result) const {
+  static_analysis_result.Clear();
   const auto& path_points = kd_path->path_points();
 
   auto serialize_storage_item = [&](const auto& storage_item, auto* result_item) {
