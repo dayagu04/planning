@@ -92,7 +92,7 @@ void BaseWeight::SetLateralMotionWeight(
   end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
   end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
   SetAccJerkBoundAndWeight(planning_input);
-  MakeDynamicPosBoundWeight(planning_input);
+  // MakeDynamicPosBoundWeight(planning_input);
   if (lateral_motion_scene_ != LateralMotionScene::RAMP) {
     std::fill(weight_.expected_acc.begin(), weight_.expected_acc.end(), 0.0);
   }
@@ -1403,6 +1403,8 @@ void BaseWeight::CalculateJerkBoundByLastJerk(
       }
     }
   }
+  //
+  MakeDynamicPosBoundWeight(planning_input);
 }
 
 void BaseWeight::MakeDynamicWeight(
