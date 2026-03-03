@@ -197,11 +197,65 @@ void LaneReferencePath::update_obstacles() {
   auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
   obstacle_manager->generate_frenet_obstacles(*this);
+  if(session_->is_hpp_scene()) {
+    const auto &speed_bump_obstacles =
+        obstacle_manager->get_speed_bump_obstacles();
+    generate_frenet_obstacles(speed_bump_obstacles,
+                              speed_bump_frenet_obstacles_,
+                              speed_bump_frenet_obstacles_map_);
+
+    const auto &turnstile_frenet_obstacles =
+        obstacle_manager->get_turnstile_obstacles();
+    generate_frenet_obstacles(turnstile_frenet_obstacles,
+                              turnstile_frenet_obstacles_,
+                              turnstile_frenet_obstacles_map_);
+
+    const auto &semantic_sign_obstacles =
+        obstacle_manager->get_semantic_sign_obstacles();
+    generate_frenet_obstacles(semantic_sign_obstacles,
+                              semantic_sign_frenet_obstacles_,
+                              semantic_sign_frenet_obstacles_map_);
+  }
+
   assign_obstacles_to_lane();
   parking_spaces_ = obstacle_manager->get_parking_space().Items();
   free_space_ground_lines_ =
       obstacle_manager->get_groundline_obstacles().Items();
   road_edges_ = obstacle_manager->get_road_edge_obstacles().Items();
+}
+
+void LaneReferencePath::generate_frenet_obstacles(
+    const IndexedList<int, Obstacle> &obstacles,
+    std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
+    std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+        &frenet_obstacles_map) {
+  auto is_location_valid = session_->environmental_model().location_valid();
+  for (const Obstacle *obstacle_ptr : obstacles.Items()) {
+    Point2D frenet_point, cart_point;
+    if (is_location_valid) {
+      cart_point.x = obstacle_ptr->x_center();
+      cart_point.y = obstacle_ptr->y_center();
+    } else {
+      cart_point.x = obstacle_ptr->x_relative_center();
+      cart_point.y = obstacle_ptr->y_relative_center();
+    }
+
+    if (!frenet_coord_->XYToSL(cart_point, frenet_point) ||
+        std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+      ILOG_DEBUG << "cart_point to frenet_point failed, obstacle_id: "
+                 << obstacle_ptr->id();
+      continue;
+    }
+
+    // construct frenet_obstacle
+    std::shared_ptr<FrenetObstacle> frenet_obstacle =
+        std::make_shared<FrenetObstacle>(
+            obstacle_ptr, *this,
+            session_->environmental_model().get_ego_state_manager(),
+            is_location_valid);
+    frenet_obstacles.emplace_back(frenet_obstacle);
+    frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
+  }
 }
 
 bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
@@ -343,6 +397,9 @@ bool LaneReferencePath::get_ref_points_hpp(
     ref_path_pt.min_velocity = refline_pt.speed_limit_min;
     ref_path_pt.type = ReferencePathPointType::MAP;
     ref_path_pt.is_in_intersection = refline_pt.is_in_intersection;
+    ref_path_pt.is_ramp =
+        (refline_pt.lane_type == iflyauto::LaneType::LANETYPE_RAMP);
+    ref_path_pt.ramp_slope = refline_pt.slope;
 
     // check direction
     // if (not ref_path_points.empty()) {

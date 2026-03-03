@@ -103,6 +103,9 @@ struct PredictionObject {
   bool trajectory_valid{false};
   bool is_dangerous{false};
   float32 dangerous_confidence{0.0};
+  /******* for hpp start ******/
+  double turnstile_open_ratio = 0.0;                // 闸机打开比例
+  /******* for hpp start ******/
 
   std::vector<PredictionTrajectory> trajectory_array;
 };

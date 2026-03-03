@@ -40,6 +40,10 @@ struct ReferencePathPoint {
   double min_velocity;
   ReferencePathPointType type;
   bool is_in_intersection;
+  /******** for hpp start *********/
+  bool is_ramp;       // 是否在坡道上
+  bool ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
+  /******** for hpp  end  *********/
 };
 using ReferencePathPoints = std::vector<ReferencePathPoint>;
 
@@ -355,6 +359,21 @@ class ReferencePath {
 
   std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
       frenet_obstacles_map_;
+
+  /********* for hpp start **********/
+  std::vector<std::shared_ptr<FrenetObstacle>> speed_bump_frenet_obstacles_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      speed_bump_frenet_obstacles_map_;
+
+  std::vector<std::shared_ptr<FrenetObstacle>> turnstile_frenet_obstacles_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      turnstile_frenet_obstacles_map_;
+
+  std::vector<std::shared_ptr<FrenetObstacle>> semantic_sign_frenet_obstacles_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      semantic_sign_frenet_obstacles_map_;
+
+  /********* for hpp  end  **********/
 
   std::vector<int> obstacles_in_lane_map_;
 

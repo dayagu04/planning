@@ -1,5 +1,6 @@
 #pragma once
 #include "reference_path.h"
+#include "utils/index_list.h"
 
 namespace planning {
 
@@ -52,6 +53,12 @@ class LaneReferencePath
  private:
   void update_refined_lane_points();
   virtual void update_obstacles() override;
+  void generate_frenet_obstacles(
+      const IndexedList<int, Obstacle> &obstacles,
+      std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
+      std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+          &frenet_obstacles_map);
+
   ReferencePathPoint CalculateExtendedReferencePathPoint(
       const ReferencePathPoint &p1, const ReferencePathPoint &p2,
       const double length) const;

@@ -241,6 +241,7 @@ message Location {
   optional uint32 available = 1;
   optional LocationGeographic location_geographic = 2;
   optional LocationENU location_enu = 3;
+  optional int32 floor_id = 4;   // for hpp
 
   enum Type {
     NONE = 0;

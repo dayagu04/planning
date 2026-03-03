@@ -253,6 +253,12 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_use_ground_mark_process_split");
     enable_fusion_occupancy_objects =
         read_json_key<bool>(json, "enable_fusion_occupancy_objects");
+    enable_fusion_speed_bump_objects =
+        read_json_key<bool>(json, "enable_fusion_speed_bump_objects");
+    enable_fusion_turnstile_objects =
+        read_json_key<bool>(json, "enable_fusion_turn_stile_objects");
+    enable_fusion_intersection_objects =
+        read_json_key<bool>(json, "enable_fusion_intersection_objects");
     enable_fusion_parking_slot =
         read_json_key<bool>(json, "enable_fusion_parking_slot");
     enable_fusion_ground_line =
@@ -297,6 +303,9 @@ struct EgoPlanningConfig : public Config {
   bool enable_use_cone_change_request = false;
   bool enable_use_merge_change_request = false;
   bool enable_fusion_occupancy_objects = false;
+  bool enable_fusion_speed_bump_objects = false;
+  bool enable_fusion_turnstile_objects = false;
+  bool enable_fusion_intersection_objects = false;
   bool enable_fusion_parking_slot = false;
   bool enable_fusion_ground_line = true;
   bool is_ground_line_cluster = false;

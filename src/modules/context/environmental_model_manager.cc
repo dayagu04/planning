@@ -612,6 +612,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         ->set_value_rad(localization.orientation.euler_boot.yaw);
     // ->set_value_rad(localization_estimate.pose.euler_angles.yaw);
     vehicle_status.mutable_location()->set_available(true);
+    vehicle_status.mutable_location()->set_floor_id(
+        localization.pose_detail.pose_detail_info.map_floor_id);
     // auto llh_position = localization_estimate.pose.llh_position;
     // auto llh_position = localization.position.position_llh;
     vehicle_status.mutable_location()
@@ -659,6 +661,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
         ->mutable_heading_yaw_data()
         ->set_value_rad(0.);
     vehicle_status.mutable_location()->set_available(true);
+    vehicle_status.mutable_location()->set_floor_id(-1000); // set invalid floor id
     auto location_enu =
         vehicle_status.mutable_location()->mutable_location_enu();
     // Todo
@@ -1309,6 +1312,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   tra.trajectory.emplace_back(std::move(trajectory_point));
   prediction_object.trajectory_array.emplace_back(std::move(tra));
   prediction_object.is_static = IsStatic(prediction_object);
+  prediction_object.turnstile_open_ratio =
+      fusion_object.common_info.other.open_ratio;
   objects_infos.emplace_back(std::move(prediction_object));
   return true;
 }
@@ -1458,6 +1463,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   // }
   prediction_object.trajectory_array.emplace_back(std::move(tra));
   prediction_object.is_static = IsStatic(prediction_object);
+  prediction_object.turnstile_open_ratio =
+      fusion_object.common_info.other.open_ratio;
   objects_infos.emplace_back(std::move(prediction_object));
   return true;
 }
