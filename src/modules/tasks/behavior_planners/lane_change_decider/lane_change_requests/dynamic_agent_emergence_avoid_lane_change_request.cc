@@ -40,7 +40,7 @@ constexpr double kNearLateralDistanceThr = -0.15;
 constexpr double kNearLaneLateralDistanceThr = 0.1;
 constexpr double kNearEgoLongDistanceBuffer = 1;
 // 0.5g减速度刹停检测相关常量
-constexpr double kBrakeDeceleration = 4.9;  // 0.5g = 4.9 m/s^2
+constexpr double kBrakeDeceleration = 3.92;  // 0.5g = 4.9 m/s^2  0.4g = 3.92 m/s^2
 constexpr double kMinFollowingDistance = 2.0;  // 最小跟车距离 (m)
 constexpr double kMinIntrusionDistanceDynamic = 0.6;  // 动态障碍物侵入车道的最小距离 (m)
 constexpr double kMinIntrusionDistanceStatic = 1.0;  // 静态障碍物侵入车道的最小距离 (m)
