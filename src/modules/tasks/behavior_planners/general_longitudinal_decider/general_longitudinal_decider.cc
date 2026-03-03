@@ -682,6 +682,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   auto planning_init_point = frenet_ego_state.planning_init_point();
   const double ego_v = planning_init_point.v;
+  const double ego_a = planning_init_point.a;
   const double ego_jerk = planning_init_point.jerk;
 
   // ============================================================
@@ -713,7 +714,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
   double time_to_brake = 1e-2;
   double out_max_curvature = 0.0;
   double v_limit_curv = compute_curvature_speed_limit(
-      traj_points, ego_v, max_lat_acceleration, vlimit_jerk, time_to_brake,
+      traj_points, ego_v, ego_a, max_lat_acceleration, vlimit_jerk, time_to_brake,
       out_max_curvature);
   vel_limit_info_.v_limit_curv = v_limit_curv;
   max_curvature_ = out_max_curvature;
@@ -842,9 +843,9 @@ const double GeneralLongitudinalDecider::compute_max_lat_acceleration() const {
 }
 
 double GeneralLongitudinalDecider::compute_curvature_speed_limit(
-    const TrajectoryPoints& traj_points, double ego_velocity,
+    const TrajectoryPoints& traj_points, double ego_velocity, double ego_a,
     double max_lat_acceleration, double& vlimit_jerk, double& time_to_brake,
-    double& out_max_curvature) const {
+    double& out_max_curvature) {
 
   const double trigger_distance =
       interp(ego_velocity, config_.curv_trigger_velocity_breakpoints,
@@ -907,22 +908,50 @@ double GeneralLongitudinalDecider::compute_curvature_speed_limit(
   vlimit_jerk = 0.0;
   time_to_brake = 1e-2;
 
-  if (v_limit_curv < ego_velocity && max_curv_s > trigger_distance) {
-    // 需要减速以满足弯道限速
-    const double ego_a = -2.0;  // 假设减速加速度 -2 m/s²
-    const double b_square_minus_4ac =
-        std::pow((2 * ego_velocity + v_limit_curv), 2) + 6 * ego_a * max_curv_s;
+  if (v_limit_curv < ego_velocity && max_curv_s < trigger_distance + max_curvature_slow_down_triger_buffer_) {
+    /* 以恒定的 jerk 减速，保证在最大曲率处速度减到 v_limit_curv：
+      s = v0 * t + a * t * t / 2 + j * t * t * t / 6
+      v1 = v0 + a * t + j * t * t / 2
+      s = max_curv_s
+      v0 = ego_velocity
+      v1 = v_limit_curv
+      a = ego_a
+      求解上述方程得到 t = time_to_brake, j = vlimit_jerk
+    */
+    double internal_val = 2 * ego_velocity + v_limit_curv;
+    if (std::fabs(ego_a) < 1e-6) {
+      if (std::fabs(max_curv_s) < 1e-6 || std::fabs(internal_val) < 1e-6) {
+        time_to_brake = 0.01;
+        vlimit_jerk = 0.0;
+      } else {
+        time_to_brake = 3 * max_curv_s / internal_val;
+        vlimit_jerk = 2 * (v_limit_curv - ego_velocity) * internal_val *
+                      internal_val / (9 * max_curv_s * max_curv_s);
+      }
+    } else {
+      const double b_square_minus_4ac =
+          std::pow(internal_val, 2) + 6 * ego_a * max_curv_s;
 
-    if (b_square_minus_4ac > 0.0) {
-      double time_to_brake =
-          (-(2 * ego_velocity + v_limit_curv) + std::sqrt(b_square_minus_4ac)) /
-          ego_a;
-      time_to_brake = std::max(time_to_brake, 0.01);
-      vlimit_jerk = 2 * (v_limit_curv - ego_velocity - ego_a * time_to_brake) /
-                    std::pow(time_to_brake, 2);
+      if (b_square_minus_4ac > 0.0) {
+        if (ego_a > 0) {
+          time_to_brake =
+              (-internal_val + std::sqrt(b_square_minus_4ac)) / ego_a;
+        } else {
+          time_to_brake =
+              (-internal_val - std::sqrt(b_square_minus_4ac)) / ego_a;
+        }
+        vlimit_jerk = 2 *
+                      (v_limit_curv - ego_velocity - ego_a * time_to_brake) /
+                      std::pow(time_to_brake, 2);
+      } else {
+        time_to_brake = 0.01;
+        vlimit_jerk = 0.0;
+      }
     }
-
+    max_curvature_slow_down_triger_buffer_ = 1.0; // 缓冲 buffer，避免触发与不触发跳变
     return v_limit_curv;
+  } else {
+    max_curvature_slow_down_triger_buffer_ = -1.0;
   }
 
   // 不触发弯道限速，返回一个较大值
