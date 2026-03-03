@@ -203,7 +203,6 @@ class HybridAStarPathGenerator : public ParkingTask {
   std::vector<Eigen::Vector2d> delete_queue_path_debug_;
   std::vector<std::vector<Eigen::Vector2d>> all_search_node_list_;
   std::vector<std::vector<Eigen::Vector2d>> all_curve_node_list_;
-  std::vector<RSPath> rs_path_h_cost_debug_;
   std::vector<CurvePath> all_success_curve_path_debug_;
 #if USE_LINK_PT_LINE
   std::vector<common_math::PathPt<float>>
