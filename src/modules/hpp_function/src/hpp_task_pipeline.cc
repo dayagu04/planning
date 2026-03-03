@@ -14,11 +14,11 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<HppGeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
       std::make_unique<LateralMotionPlanner>(config_builder, session);
-  
+
   // HPP Specific
   hpp_stop_decider_ =
       std::make_unique<HppStopDecider>(config_builder, session);
-  hpp_obstacle_preprocess_decider_ = 
+  hpp_obstacle_preprocess_decider_ =
       std::make_unique<HppObstaclePreprocessDecider>(config_builder, session);
 
   // V3 Longitudinal Pipeline
@@ -37,13 +37,13 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
   cipv_lost_prohibit_acceleration_decider_ =
       std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
                                                             session);
-  
+
   // ST Graph Init
   st_graph_input_ =
       std::make_shared<speed::StGraphInput>(config_builder, session);
   st_graph_ = std::make_shared<speed::STGraph>();
   st_graph_helper_ = std::make_shared<speed::StGraphHelper>(*st_graph_);
-  
+
   st_graph_searcher_ =
       std::make_unique<StGraphSearcher>(config_builder, session);
   parallel_longitudinal_avoid_decider_ =
@@ -53,17 +53,17 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<AgentHeadwayDecider>(config_builder, session);
   longitudinal_decision_decider_ =
       std::make_unique<LongitudinalDecisionDecider>(config_builder, session);
-  speed_limit_decider_ =
-      std::make_unique<SpeedLimitDecider>(config_builder, session);
+  hpp_speed_limit_decider_ =
+      std::make_unique<HPPSpeedLimitDecider>(config_builder, session);
   start_stop_decider_ =
       std::make_unique<StartStopDecider>(config_builder, session);
   long_ref_path_decider_ =
       std::make_unique<LongRefPathDecider>(config_builder, session);
-  
+
   // V3 Motion Planner
   scc_longitudinal_motion_planner_ =
       std::make_unique<SccLongitudinalMotionPlannerV3>(config_builder, session);
-  
+
   // Post Processing
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
@@ -206,9 +206,9 @@ bool HppTaskPipeline::Run() {
     return false;
   }
 
-  ok = speed_limit_decider_->Execute();
+  ok = hpp_speed_limit_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(speed_limit_decider_->Name());
+    AddErrorInfo(hpp_speed_limit_decider_->Name());
     return false;
   }
 

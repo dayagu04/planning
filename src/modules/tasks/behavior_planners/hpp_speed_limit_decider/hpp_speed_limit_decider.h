@@ -37,9 +37,9 @@ class HPPSpeedLimitDecider : public Task {
 
  private:
   LongitudinalDeciderV3Config
-      hpp_speed_limit_config_;       // Temporarily use the original version of
-                                     // config
-  double v_target_;                  // final v target
+      hpp_speed_limit_config_;    // Temporarily use the original version of
+                                  // config
+  double v_target_;               // final v target
   SpeedLimitType v_target_type_;  // final v target type
 
   double max_curvature_;
