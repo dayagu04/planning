@@ -45,6 +45,9 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
   bool is_dynamic_agent_emergency_lane_change =
       lane_change_decider_output.lc_request_source ==
       DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST;
+  bool is_overtake_lane_change =
+      lane_change_decider_output.lc_request_source ==
+      OVERTAKE_REQUEST;
   bool is_pre_avoid_link_merge_mlc = false;
   const auto& route_info = session_->environmental_model().get_route_info();
   if (route_info != nullptr) {
@@ -54,16 +57,21 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
         lane_change_decider_output.lc_request_source == MAP_REQUEST;
   }
   const auto curr_state = lane_change_decider_output.curr_state;
-  if ((turn_signal_from_lane_change &&
-       !is_dynamic_agent_emergency_lane_change &&
-       !is_pre_avoid_link_merge_mlc) ||
-      ((is_dynamic_agent_emergency_lane_change ||
-        is_pre_avoid_link_merge_mlc) &&
-       turn_signal_from_lane_change &&
-       (curr_state == kLaneChangeExecution ||
-        curr_state == kLaneChangeComplete || curr_state == kLaneChangeHold ||
-        curr_state == kLaneChangeCancel))) {
-    // 针对紧急变道、躲避merge的mlc、，只有触发了才会打灯，其余不变
+
+  const bool is_normal_lane_change_scenario =
+      turn_signal_from_lane_change && !is_dynamic_agent_emergency_lane_change &&
+      !is_pre_avoid_link_merge_mlc && !is_overtake_lane_change;
+
+  // 针对紧急变道、躲避link_merge的mlc、超车变道，只有进入到execution了才会打灯，其余不变
+  const bool is_special_lane_change_scenario =
+      (is_dynamic_agent_emergency_lane_change || is_pre_avoid_link_merge_mlc ||
+       is_overtake_lane_change) &&
+      turn_signal_from_lane_change &&
+      (curr_state == kLaneChangeExecution ||
+       curr_state == kLaneChangeComplete || curr_state == kLaneChangeHold ||
+       curr_state == kLaneChangeCancel);
+
+  if (is_normal_lane_change_scenario || is_special_lane_change_scenario) {
     planning_result.turn_signal = lane_change_decider_output.lc_request == 1
                                       ? RequestType::LEFT_CHANGE
                                       : RequestType::RIGHT_CHANGE;
