@@ -915,11 +915,12 @@ double GeneralLongitudinalDecider::compute_curvature_speed_limit(
       s = max_curv_s
       v0 = ego_velocity
       v1 = v_limit_curv
-      a = ego_a
+      a = expected_acc
       求解上述方程得到 t = time_to_brake, j = vlimit_jerk
     */
+    double expected_acc = (ego_a + -2.0) / 2.0;
     double internal_val = 2 * ego_velocity + v_limit_curv;
-    if (std::fabs(ego_a) < 1e-6) {
+    if (std::fabs(expected_acc) < 1e-6) {
       if (std::fabs(max_curv_s) < 1e-6 || std::fabs(internal_val) < 1e-6) {
         time_to_brake = 0.01;
         vlimit_jerk = 0.0;
@@ -930,18 +931,18 @@ double GeneralLongitudinalDecider::compute_curvature_speed_limit(
       }
     } else {
       const double b_square_minus_4ac =
-          std::pow(internal_val, 2) + 6 * ego_a * max_curv_s;
+          std::pow(internal_val, 2) + 6 * expected_acc * max_curv_s;
 
       if (b_square_minus_4ac > 0.0) {
-        if (ego_a > 0) {
+        if (expected_acc > 0) {
           time_to_brake =
-              (-internal_val + std::sqrt(b_square_minus_4ac)) / ego_a;
+              (-internal_val + std::sqrt(b_square_minus_4ac)) / expected_acc;
         } else {
           time_to_brake =
-              (-internal_val - std::sqrt(b_square_minus_4ac)) / ego_a;
+              (-internal_val - std::sqrt(b_square_minus_4ac)) / expected_acc;
         }
         vlimit_jerk = 2 *
-                      (v_limit_curv - ego_velocity - ego_a * time_to_brake) /
+                      (v_limit_curv - ego_velocity - expected_acc * time_to_brake) /
                       std::pow(time_to_brake, 2);
       } else {
         time_to_brake = 0.01;
