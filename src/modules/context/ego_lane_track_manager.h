@@ -13,6 +13,11 @@
 #include "virtual_lane.h"
 
 namespace planning {
+struct LaneCurvInfo {
+  int curv_sign;
+  double curv;
+  double curv_radius;
+};
 
 class EgoLaneTrackManger {
  public:
@@ -223,6 +228,15 @@ class EgoLaneTrackManger {
   void CheckIfConsiderSecondSplit(
       std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       bool& is_consider_second_split);
+  void ComputeEgoDistanceToRoadBorder(
+    const std::shared_ptr<VirtualLane>& base_lane,
+    double& dis_to_left_road_border, double& dis_to_right_road_border);
+
+  double CalculateLinearCost(double ttc);
+
+  double Normalize(double value, double max_value);
+
+  double NormalizeCurvatureRadius(double radius);
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -271,6 +285,8 @@ class EgoLaneTrackManger {
   std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
   const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
+  const std::vector<double> collision_cost_weight_{100.0, 50.0, 5.0};
+  const std::vector<double>  road_curv_radius_{200.0, 400.0, 1000.0};
 };
 
 }  // namespace planning
