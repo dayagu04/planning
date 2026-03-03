@@ -260,6 +260,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_fusion_parking_slot");
     enable_fusion_ground_line =
         read_json_key<bool>(json, "enable_fusion_ground_line");
+    enable_uss =
+        read_json_key<bool>(json, "enable_uss");
     is_ground_line_cluster =
         read_json_key<bool>(json, "is_ground_line_cluster");
     enable_ehr_column_box = read_json_key<bool>(json, "enable_ehr_column_box");
@@ -307,6 +309,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_fusion_ground_line = true;
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
+  bool enable_uss = false;
   double hpp_min_search_range = 20;
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;

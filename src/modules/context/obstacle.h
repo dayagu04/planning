@@ -24,7 +24,16 @@ enum class SourceType {
   OCC,
   ParkingSlot,
   MAP,
+  USS,
 };
+
+namespace {
+static constexpr int kEHRColumnIdOffset = 8000000;
+static constexpr int kOccupancyObjectIdOffset = 7000000;
+static constexpr int kParkingSlotIdOffset = 6000000;
+static constexpr int kGroundLineIdOffset = 5000000;
+static constexpr int kUssObjectIdOffset = 9000000;
+}  // namespace
 
 class Obstacle {
  public:

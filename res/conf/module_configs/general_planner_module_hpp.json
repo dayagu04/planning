@@ -27,6 +27,7 @@
   "enable_fusion_occupancy_objects": true,
   "enable_fusion_parking_slot": true,
   "enable_fusion_ground_line": true,
+  "enable_uss":false,
   "is_ground_line_cluster": false,
   "enable_ehr_column_box": true,
   "enable_bbox_mode": true,
