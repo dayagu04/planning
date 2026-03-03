@@ -1810,8 +1810,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # 加载fusion parking slot
   if bag_loader.fus_parking_msg['enable'] == True:
-    print("plan release slot id = ", successful_slot_info_list)
-    print("plan pos release slot id = ", pos_parkable_slot_info_list)
+    print("plan release slot id = ", [x.id for x in successful_slot_info_list])
+    print("plan pos release slot id = ", [x.id for x in pos_parkable_slot_info_list])
     parking_slot_info, release_slot_info, plan_release_slot_info, select_parking_slot_info = generate_parking_slot(fus_parking_msg, loc_msg, successful_slot_info_list)
     # print("fusion parking slot size:", len(parking_slot_info) + len(release_slot_info) + len(plan_release_slot_info) + len(select_parking_slot_info))
     if g_is_display_enu:
