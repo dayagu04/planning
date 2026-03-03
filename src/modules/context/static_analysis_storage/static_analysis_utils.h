@@ -3,9 +3,10 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+
+#include "modules/context/reference_path.h"
 #include "static_analysis_storage.h"
 #include "utils/kd_path.h"
-#include "modules/context/reference_path.h"
 
 namespace planning {
 
@@ -31,6 +32,5 @@ class StaticAnalysisUtils {
       StaticAnalysisStoragePtr static_analysis_storage);
 
  private:
-
 };
 }  // namespace planning

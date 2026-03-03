@@ -84,6 +84,9 @@ class LaneReferencePath
 
   bool ExtendConstructionRefPathPoints(ReferencePathPoints &ref_path_points);
 
+  bool RoadBorderWidthCalByObs(ReferencePathPoints& refer_path_points,
+   const std::vector<std::shared_ptr<FrenetObstacle>>& frenet_obstacles);
+
  private:
   int lane_virtual_id_ = 0;
   std::vector<int> lane_obstacles_id_;
