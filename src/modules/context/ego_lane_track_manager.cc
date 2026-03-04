@@ -1310,6 +1310,253 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
   road_split_select_is_finish_ = true;
   return;
 }
+static bool IsDiversionLane(const iflymapdata::sdpro::Lane* lane_info) {
+  if (lane_info == nullptr) {
+    return false;
+  }
+
+  for (const auto& lane_type : lane_info->lane_type()) {
+    if (lane_type == iflymapdata::sdpro::LAT_DIVERSION) {
+      return true;
+    }
+  }
+
+  return false;
+}
+static bool IsEmergencyLane(const iflymapdata::sdpro::Lane* lane_info) {
+  if (lane_info == nullptr) {
+    return false;
+  }
+
+  for (const auto& lane_type : lane_info->lane_type()) {
+    if (lane_type == iflymapdata::sdpro::LAT_EMERGENCY) {
+      return true;
+    }
+  }
+
+  return false;
+}
+void EgoLaneTrackManger::CheckIfConsiderSecondSplit(
+    std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    bool& is_consider_second_split) {
+  is_consider_second_split = false;
+
+  // step1: Check if there are consecutive splits in different directions
+  bool is_cons_diff_dir_split = false;
+  if (split_direction_dis_info_list_.size() > 1) {
+    auto const& first_split = split_direction_dis_info_list_[0];
+    auto const& second_split = split_direction_dis_info_list_[1];
+
+    if (second_split.second < 120.0 &&
+        SplitRelativeDirection::NO_SPLIT != first_split.first &&
+        SplitRelativeDirection::NO_SPLIT != second_split.first &&
+        first_split.first != second_split.first) {
+      is_cons_diff_dir_split = true;
+    }
+  }
+
+  if (!is_cons_diff_dir_split || nullptr == current_link_) {
+    is_consider_second_split = false;
+    return;
+  }
+
+  auto const& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto& ld_map =
+      session_->environmental_model().get_route_info()->get_sdpro_map();
+
+
+  auto const& split_region_info_list =
+      route_info_output.map_split_region_info_list;
+  double const ego_on_cur_link_s = current_segment_passed_distance_;
+
+  auto* first_split_link = ld_map.GetLinkOnRoute(
+      split_region_info_list.front().end_fp_point.link_id);
+
+  if (first_split_link == nullptr) {
+    is_consider_second_split = false;
+    return;
+  }
+
+  if (first_split_link->id() == current_link_->id()) {
+    is_consider_second_split = true;
+    return;
+  }
+
+  // All lanes that can directly lead to the split link
+  std::vector<uint64_t> lanes_to_split_link =
+      split_region_info_list.front().end_fp_point.lane_ids;
+  uint64_t link_id = first_split_link->id();
+
+  /**
+   * step2:
+   * Trace backward through lane topology to determine if the current lane can
+   * directly lead to the target link of the first split.
+   *
+   * All predecessor lanes in the tracing process must be able to lead to the
+   * split target link
+   */
+
+  size_t loop_num = 0;
+  do {
+    // Prevent falling into an infinite loop
+    loop_num++;
+
+    // 1. 记录通过第一个分流的车道，反向推导出来的所有Lane
+    // 2. 如果不在导航路线上的Lane需要被舍弃
+    auto* pre_link = ld_map.GetPreviousLinkOnRoute(link_id);
+    if (pre_link == nullptr) {
+      break;
+    }
+
+    link_id = pre_link->id();
+    auto const& all_pre_lanes = pre_link->lane_ids();
+
+    std::set<uint64_t> tmp_lanes_on_route;
+
+    for (uint64 lane_id : lanes_to_split_link) {
+      auto* lane_ptr = ld_map.GetLaneInfoByID(lane_id);
+      if (nullptr == lane_ptr)
+      {
+        is_consider_second_split = false;
+        return;
+      }
+
+      // save preceeding lanes on route
+      for (uint64 pre_lane_id : lane_ptr->predecessor_lane_ids()) {
+        if (all_pre_lanes.end() != std::find(all_pre_lanes.begin(),
+                                             all_pre_lanes.end(),
+                                             pre_lane_id)) {
+          tmp_lanes_on_route.emplace(pre_lane_id);
+        }
+      }
+    }
+
+    bool all_pre_lane_lead_to_split_link = !tmp_lanes_on_route.empty();
+    for (uint64 lane_id : tmp_lanes_on_route) {
+      auto* lane_ptr = ld_map.GetLaneInfoByID(lane_id);
+
+      if (nullptr == lane_ptr)
+      {
+        is_consider_second_split = false;
+        return;
+      }
+
+      for (uint64 suc_lane_id : lane_ptr->successor_lane_ids())
+      {
+        if (lanes_to_split_link.end() == std::find(lanes_to_split_link.begin(),
+                                             lanes_to_split_link.end(),
+                                             suc_lane_id)) {
+          all_pre_lane_lead_to_split_link = false;
+          break;
+        }
+      }
+    }
+
+    if (!all_pre_lane_lead_to_split_link)
+    {
+      lanes_to_split_link.clear();
+      break;
+    }
+    lanes_to_split_link.clear();
+    lanes_to_split_link.assign(tmp_lanes_on_route.begin(), tmp_lanes_on_route.end());
+
+  } while (!lanes_to_split_link.empty() && link_id != current_link_->id() &&
+           loop_num < 100);
+
+  if (lanes_to_split_link.empty() || loop_num >= 100) {
+    is_consider_second_split = false;
+    return;
+  }
+
+  /**
+   * step3:
+   * If the lane the ego vehicle is in can directly lead to the target road of
+   * the first split, then the direction of the second split needs to be
+   * considered.
+   *
+   * lanes saved in lanes_to_split_link
+   */
+  if (link_id != current_link_->id()) {
+    is_consider_second_split = false;
+    return;
+  }
+
+  // Get lane sequence from left to right
+  std::set<uint32> lanes_seq_to_split_link;
+
+  // Need filter some invalid lanes
+  bool cur_link_is_exist_emergency_lane = false;
+  std::vector<uint32> invalid_seq;
+  for (uint64 const lane_id : current_link_->lane_ids()) {
+    auto const* lane_ptr = ld_map.GetLaneInfoByID(lane_id);
+    if (IsDiversionLane(lane_ptr)) {
+      invalid_seq.emplace_back(lane_ptr->sequence());
+    }
+    if (IsEmergencyLane(lane_ptr)) {
+      cur_link_is_exist_emergency_lane = true;
+    }
+  }
+
+  int const total_lane_nums = current_link_->lane_ids_size() - invalid_seq.size();
+
+  for (uint64 const lane_id : lanes_to_split_link)
+  {
+    auto const* lane_ptr = ld_map.GetLaneInfoByID(lane_id);
+
+    size_t const invalid_num = std::count_if(
+        invalid_seq.begin(), invalid_seq.end(),
+        [&](int sequence_id) { return lane_ptr->sequence() > sequence_id; });
+
+    lanes_seq_to_split_link.emplace(1 + total_lane_nums -
+                                    (lane_ptr->sequence() - invalid_num));
+  }
+
+  // Calculate ego sequence
+  auto find_relative_lanes = std::find_if(
+      relative_id_lanes.begin(), relative_id_lanes.end(),
+      [](std::shared_ptr<planning::VirtualLane> const virtual_lane) {
+        return nullptr != virtual_lane && 0 == virtual_lane->get_relative_id();
+      });
+
+  if (relative_id_lanes.end() == find_relative_lanes)
+  {
+    is_consider_second_split = false;
+    return;
+  }
+
+  std::vector<iflyauto::LaneNumMsg> const& per_lane_nums =
+      (*find_relative_lanes)->get_lane_nums();
+
+  int left_lane_num = 0;
+  int right_lane_num = 0;
+  for (const auto& lane_num : per_lane_nums) {
+    if (lane_num.end > 1e-4) {
+      left_lane_num = lane_num.left_lane_num;
+      right_lane_num = lane_num.right_lane_num;
+      break;
+    }
+  }
+
+  int ego_seq = left_lane_num + 1;
+
+  // 如果自车左边的车道数大于等于link的总车道数，则认为左侧车道数误检，直接return;
+  bool is_per_left_lane_error = left_lane_num >= total_lane_nums;
+
+  if (is_per_left_lane_error) {
+    // 当左侧的观测数量大于总车道数时，若右侧车道数量小于一定值时，此时认为我们在地图的最右侧车道。
+    if (cur_link_is_exist_emergency_lane && right_lane_num <= 1) {
+      // 假设自车不会在应急车道上行驶
+      ego_seq = total_lane_nums - 1;
+    } else if (!cur_link_is_exist_emergency_lane && right_lane_num == 0) {
+      ego_seq = total_lane_nums;
+    }
+  }
+
+  // 如果ego_seq在可以通往第一个分流车道的seq，那么开始考虑第二个分流
+  is_consider_second_split = lanes_seq_to_split_link.count(ego_seq) > 0;
+  return;
+}
 
 void EgoLaneTrackManger::PreprocessRampSplit(
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
@@ -1328,6 +1575,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   double surpress_select_lane_dis_to_split = ego_state->ego_v() * 2.5;
   double surpress_lane_change_dis_to_detect_split = std::max(10.0, ego_state->ego_v() * 1.25);
   double dis_to_lane_split_point_threshold = std::numeric_limits<double>::infinity();
+
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
       std::shared_ptr<VirtualLane> relative_id_lane =
@@ -1357,7 +1605,15 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     }
   }
 
-  if ((last_zero_relative_id_nums_ > 1 &&
+  // 尝试这里识别第一个分流已经不用考虑，可以考虑第二个分流场景了。
+  // 仅针对连续分流、且方向相反的场景进行判断。
+
+  // Check whether to consider the second split. That is: the current lane the
+  // ego vehicle is in will definitely not miss the first split.
+  bool need_consider_second_split = false;
+  CheckIfConsiderSecondSplit(relative_id_lanes, need_consider_second_split);
+
+  if ((!need_consider_second_split && last_zero_relative_id_nums_ > 1 &&
       (ramp_split_select_is_finish_ || road_split_select_is_finish_) &&
       ego_distance_to_lane_merge_split_point < surpress_select_lane_dis_to_split) ||
       ego_distance_to_lane_merge_split_point < surpress_lane_change_dis_to_detect_split) {
@@ -1413,14 +1669,20 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   //     return;
   //   }
   // } else {
+
+  // 这里识别需要判断的split，此处直接用first不太合理。
   if (distance_to_first_road_merge_ > distance_to_first_road_split_) {
     is_exist_split_on_ramp_ = true;
-    if (first_split_dir_dis_info_.first == ON_RIGHT) {
+    std::pair<SplitRelativeDirection, double> const& split_dir_dis =
+        need_consider_second_split ? split_direction_dis_info_list_[1]
+                                   : first_split_dir_dis_info_;
+
+    if (split_dir_dis.first == ON_RIGHT) {
       relative_id_lanes[order_ids[1]]->set_relative_id(0);
       origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
       last_zero_relative_id_order_id_index_ = 1;
       last_track_ego_lane_ = relative_id_lanes[order_ids[1]];
-    } else if (first_split_dir_dis_info_.first == ON_LEFT) {
+    } else if (split_dir_dis.first == ON_LEFT) {
       relative_id_lanes[order_ids[0]]->set_relative_id(0);
       origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
       last_zero_relative_id_order_id_index_ = 0;
@@ -2696,14 +2958,14 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplitForSdpro(
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
   bool is_search_cur_link = true;
-  const iflymapdata::sdpro::LinkInfo_Link* current_link =
+  current_link_ =
       sdpro_map.GetNearestLinkWithHeading(current_point, search_distance,
                                           ego_heading_angle, max_heading_diff,
                                           temp_nearest_s, nearest_l, is_search_cur_link);
-  if (current_link == nullptr) {
+  if (current_link_ == nullptr) {
     return false;
   }
-  const bool current_is_on_ramp = sdpro_map.isRamp(current_link->link_type());
+  const bool current_is_on_ramp = sdpro_map.isRamp(current_link_->link_type());
   if (current_is_on_ramp) {
     return true;
   }
@@ -3587,3 +3849,4 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
 }
 
 }  // namespace planning
+
