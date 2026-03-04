@@ -187,7 +187,8 @@ class Obstacle {
   /************* for hpp start *************/
   int floor_id_ = 0;                                // 楼层 id
   double turnstile_open_ratio_ = 0.0;                // 闸机打开比例
-  iflyauto::IntersectionType intersection_type_;    // 路口类型
+  iflyauto::IntersectionType intersection_type_ =
+      iflyauto::IntersectionType::INTERSECTION_UNKNOWN;  // 路口类型
   /************* for hpp end   *************/
 };
 

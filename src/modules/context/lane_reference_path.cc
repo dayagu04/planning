@@ -97,6 +97,10 @@ void LaneReferencePath::update(planning::framework::Session *session) {
     StaticAnalysisUtils::RoadTypeAnalysis(
         refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
 
+    StaticAnalysisUtils::ElemTypeAnalysis(
+        static_cast<ConstReferencePathPtr>(this), refined_ref_path_points_,
+        frenet_coord_, static_analysis_storage_);
+
     auto& planning_debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
     static_analysis_storage_->SerializeToDebugInfo(
         frenet_coord_, *planning_debug_info->mutable_static_analysis_result());

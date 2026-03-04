@@ -25,6 +25,7 @@ class StaticAnalysisUtils {
       StaticAnalysisStoragePtr static_analysis_storage);
 
   static bool ElemTypeAnalysis(
+      ConstReferencePathPtr refer_path_ptr,
       const ReferencePathPoints& refer_path_points,
       planning_math::ConstKDPathPtr kd_path,
       StaticAnalysisStoragePtr static_analysis_storage);

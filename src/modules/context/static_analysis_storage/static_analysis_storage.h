@@ -56,6 +56,7 @@ enum class CElemType {
   UnknownRampRoad = 4,   // 不确定的坡道
   SpeedBumpRoad = 5,     // 减速带
   IntersectionRoad = 6,  // 路口
+  TurnStileRoad = 7,     // 闸机
 
   Ignore = 30,  // 任意类型道路（该类型用于检索，类型判断中不会使用）
   RampRoad = 31,  // 任意类型坡道（该类型用于检索，类型判断中不会使用）

@@ -206,10 +206,148 @@ bool StaticAnalysisUtils::PassageTypeAnalysis(
   return true;
 }
 
+bool GenerateObstacleRangeList(
+    const std::vector<FrenetObstaclePtr>& frenet_obstacles,
+    const ReferencePathPoints& refer_path_points,
+    planning_math::ConstKDPathPtr kd_path, const double lat_valid_thr,
+    const double lon_expand_thr, const double lon_merge_thr,
+    StaticAnalysisStoragePtr static_analysis_storage) {
+  const double refer_start_s = refer_path_points.front().path_point.s();
+  const double refer_end_s = refer_path_points.back().path_point.s();
+  SRangeList s_range_list;
+  for (const auto& obj : frenet_obstacles) {
+    const auto& frenet_boundary = obj->frenet_obstacle_boundary();
+    if (frenet_boundary.s_start > refer_end_s ||
+        frenet_boundary.s_end < refer_start_s) {
+      continue;
+    }
+    if (frenet_boundary.l_start > lat_valid_thr ||
+        frenet_boundary.l_end < -lat_valid_thr) {
+      continue;
+    }
+    s_range_list.push_back(
+        std::make_pair(frenet_boundary.s_start - lon_expand_thr,
+                       frenet_boundary.s_end + lon_expand_thr));
+  }
+  if (s_range_list.empty() == false) {
+    // 排序合并重复
+    sort(s_range_list.begin(), s_range_list.end(),
+         [](const auto& a, const auto& b) { return a.first < b.first; });
+    size_t res_idx = 0;
+    for (size_t curr_idx = 1; curr_idx < s_range_list.size(); ++curr_idx) {
+      if (s_range_list[curr_idx].first <=
+          s_range_list[res_idx].second + lon_merge_thr) {
+        s_range_list[res_idx].second = s_range_list[curr_idx].second;
+      } else {
+        s_range_list[++res_idx] = s_range_list[curr_idx];
+      }
+    }
+    s_range_list.resize(res_idx + 1);
+  }
+  static_analysis_storage->SetTypeList(CElemType::SpeedBumpRoad, s_range_list);
+#ifdef ENABLE_IDX_RANGE_LIST_STORAGE
+  IdxRangeList idx_range_list;
+  for (const auto& s_range : s_range_list) {
+    idx_range_list.push_back(
+        std::make_pair(kd_path->GetPathPointIdxByS(s_range.first),
+                       kd_path->GetPathPointIdxByS(s_range.second)));
+  }
+  static_analysis_storage->SetTypeList(CElemType::SpeedBumpRoad,
+                                       idx_range_list);
+#endif
+  return true;
+}
+
 bool StaticAnalysisUtils::ElemTypeAnalysis(
+    ConstReferencePathPtr refer_path_ptr,
     const ReferencePathPoints& refer_path_points,
     planning_math::ConstKDPathPtr kd_path,
     StaticAnalysisStoragePtr static_analysis_storage) {
+  if (refer_path_points.empty()) {
+    return true;
+  }
+  //S1: 坡道区域
+  std::unordered_map<CElemType, IdxRangeList> ramp_idx_range_list;
+  std::unordered_map<CElemType, SRangeList> ramp_s_range_list;
+  CElemType last_ramp_type = CElemType::Unknown;
+  std::pair<double, double> last_ramp_s_range;
+  std::pair<size_t, size_t> last_ramp_idx_range;
+  for(size_t i = 0; i < refer_path_points.size(); ++i) {
+    if(refer_path_points[i].is_ramp) {
+      CElemType curr_ramp = refer_path_points[i].ramp_slope > 0.0
+                                ? CElemType::UpRampRoad
+                                : CElemType::DownRampRoad;
+      if(curr_ramp != last_ramp_type) {
+        if (last_ramp_type == CElemType::UpRampRoad ||
+            last_ramp_type == CElemType::DownRampRoad) {
+          ramp_idx_range_list[last_ramp_type].push_back(last_ramp_idx_range);
+          ramp_s_range_list[last_ramp_type].push_back(last_ramp_s_range);
+        }
+        last_ramp_type = curr_ramp;
+        last_ramp_s_range = std::make_pair(refer_path_points[i].path_point.s(),
+                                           refer_path_points[i].path_point.s());
+        last_ramp_idx_range = std::make_pair(i, i);
+      } else {
+        last_ramp_s_range.second = refer_path_points[i].path_point.s();
+        last_ramp_idx_range.second = i;
+      }
+    } else {
+      last_ramp_type = CElemType::Unknown;
+    }
+  }
+  if (last_ramp_type == CElemType::UpRampRoad ||
+      last_ramp_type == CElemType::DownRampRoad) {
+    ramp_idx_range_list[last_ramp_type].push_back(last_ramp_idx_range);
+    ramp_s_range_list[last_ramp_type].push_back(last_ramp_s_range);
+  }
+  for (const auto& elem : ramp_s_range_list) {
+    static_analysis_storage->SetTypeList(elem.first, elem.second);
+#ifdef ENABLE_IDX_RANGE_LIST_STORAGE
+    if (ramp_idx_range_list.find(elem.first) != ramp_idx_range_list.end()) {
+      static_analysis_storage->SetTypeList(elem.first,
+                                           ramp_idx_range_list.at(elem.first));
+    }
+#endif
+  }
+
+  //S2：减速带区域
+  const auto& speed_bump_frenet_obstacles = refer_path_ptr->get_speed_bump_obstacles();
+  constexpr double kValidSpeedBumpLatThr = 2.0;
+  constexpr double kSpeedBumpLonExpandThr = 1.0;
+  constexpr double kSpeedBumpLonMergeThr = 1.0;
+  GenerateObstacleRangeList(speed_bump_frenet_obstacles, refer_path_points,
+                            kd_path, kValidSpeedBumpLatThr,
+                            kSpeedBumpLonExpandThr, kSpeedBumpLonMergeThr,
+                            static_analysis_storage);
+
+  //S3：路口区域
+  const auto& semantic_sign_frenet_obstacles =
+      refer_path_ptr->get_semantic_sign_obstacles();
+  std::vector<FrenetObstaclePtr> intersection_frenet_obstacles;
+  for (const auto& frenet_obstacle : semantic_sign_frenet_obstacles) {
+    if (frenet_obstacle->obstacle()->intersection_type() !=
+        iflyauto::IntersectionType::INTERSECTION_UNKNOWN) {
+      intersection_frenet_obstacles.push_back(frenet_obstacle);
+    }
+  }
+  constexpr double kValidIntersectionLatThr = 2.0;
+  constexpr double kIntersectionLonExpandThr = 1.0;
+  constexpr double kIntersectionLonMergeThr = 1.0;
+  GenerateObstacleRangeList(intersection_frenet_obstacles, refer_path_points,
+                            kd_path, kValidIntersectionLatThr,
+                            kIntersectionLonExpandThr, kIntersectionLonMergeThr,
+                            static_analysis_storage);
+
+  //S4：闸机区域
+  const auto& turnstile_frenet_obstacles =
+      refer_path_ptr->get_turnstile_obstacles();
+  constexpr double kValidTurnstileLatThr = 2.0;
+  constexpr double kTurnstileLonExpandThr = 1.0;
+  constexpr double kTurnstileLonMergeThr = 1.0;
+  GenerateObstacleRangeList(turnstile_frenet_obstacles, refer_path_points,
+                            kd_path, kValidTurnstileLatThr,
+                            kTurnstileLonExpandThr, kTurnstileLonMergeThr,
+                            static_analysis_storage);
   return true;
 }
 
