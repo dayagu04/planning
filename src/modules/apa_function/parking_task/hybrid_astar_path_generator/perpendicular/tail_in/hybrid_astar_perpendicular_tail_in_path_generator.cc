@@ -249,7 +249,14 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
       ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid;
 
   interesting_area_.Reset(interesting_pos_slot);
-  interesting_area_.ExtendXupper(6.6 + bound);
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+    interesting_area_.ExtendXupper(6.6 + bound);
+  } else if (request_.scenario_type ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    interesting_area_.ExtendXupper(9.6 + bound);
+  }
+
   interesting_area_.ExtendXlower(interesting_pos_slot.x() -
                                  ego_info_under_slot.target_pose.GetX() +
                                  bound);
@@ -473,7 +480,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   all_success_path_first_gear_switch_pose_debug_.clear();
   all_search_node_list_.clear();
   all_curve_node_list_.clear();
-  rs_path_h_cost_debug_.clear();
   collision_check_time_ms_ = 0.0;
   rs_try_num_ = 0;
   rs_interpolate_time_ms_ = 0.0;
@@ -624,13 +630,13 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   ILOG_INFO << "USE LINK PT LINE";
   link_pt_line::LinkPtLineInput<float> lpl_input;
   lpl_input.ref_line.Set(
-      common_math::Pos<float>(request_.ego_info_under_slot.tar_line.pA.x(),
-                              request_.ego_info_under_slot.tar_line.pA.y()),
-      1.0f, float(request_.ego_info_under_slot.tar_line.heading));
+      common_math::Pos<float>(end_pose.GetX(), end_pose.GetY()), 1.0f,
+      float(end_pose.GetTheta()));
 #else
   ILOG_INFO << "USE LINK POSE LINE";
   LinkPoseLineInput lpl_input;
-  lpl_input.ref_line = request_.ego_info_under_slot.tar_line;
+  lpl_input.ref_line.Set(end_pose.GetPos(), end_pose.GetTheta(), 1.0,
+                         geometry_lib::SEG_GEAR_DRIVE);
 #endif
 
   lpl_input.min_radius = min_radius_ + 0.068;
@@ -640,6 +646,11 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   lpl_input.link_line_start_pt = true;
   lpl_input.reverse_last_line_min_length = 0.45;
   lpl_input.drive_last_line_min_length = 1.68;
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    std::swap(lpl_input.reverse_last_line_min_length,
+              lpl_input.drive_last_line_min_length);
+  }
 
   AnalyticExpansionRequest analytic_expansion_request;
   analytic_expansion_request.type = request_.analytic_expansion_type;
@@ -750,11 +761,22 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     // search ends.
     if (analytic_expansion_request.type ==
         AnalyticExpansionType::LINK_POSE_LINE) {
+      if (request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
 #if USE_LINK_PT_LINE
-      lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
+        lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
 #else
-      lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_REVERSE;
+        lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_REVERSE;
 #endif
+      } else if (request_.scenario_type ==
+                 ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+#if USE_LINK_PT_LINE
+        lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
+#else
+        lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_DRIVE;
+#endif
+      }
+
       lpl_input.pose.SetPos(current_node->GetX(), current_node->GetY());
       lpl_input.pose.SetTheta(current_node->GetPhi());
       lpl_input.pose.SetDir(current_node->GetPhi());
@@ -1356,6 +1378,16 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
   lpl_input.has_length_require = true;
   lpl_input.use_bigger_radius = true;
 
+  if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    std::swap(lpl_input.reverse_last_line_min_length,
+              lpl_input.drive_last_line_min_length);
+#if USE_LINK_PT_LINE
+    lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
+#else
+    lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_DRIVE;
+#endif
+  }
+
   float max_heu_dist = 2.0f * gear_switch_penalty, heu_dist = 0.0f;
   if (lpl_interface_.CalLPLPath(lpl_input)) {
     const auto& lpl_output = lpl_interface_.GetLPLOutput();
@@ -1385,10 +1417,15 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     const float kappa_change = lpl_path_.kappa_change;
 
     Eigen::Vector2d heu_pos(target_pose.GetX(), target_pose.GetY());
+    double drive_heu_pos_x = target_pose.GetX() + 2.2;
+    double reverse_heu_pos_x = target_pose.GetX() + 3.8;
+    if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN)  {
+      std::swap(drive_heu_pos_x, reverse_heu_pos_x);
+    }
     if (gear == AstarPathGear::DRIVE) {
-      heu_pos.x() = target_pose.GetX() + 2.2;
+      heu_pos.x() = drive_heu_pos_x;
     } else {
-      heu_pos.x() = target_pose.GetX() + 3.8;
+      heu_pos.x() = reverse_heu_pos_x;
     }
 
     const float heu_pt_dist = PathCompareDecider::CalcHeuristicPointDistance(
@@ -1434,7 +1471,12 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     gear_switch_pose_cost += gear_switch_penalty;
   }
 
-  if (gear == AstarPathGear::DRIVE) {
+  AstarPathGear pre_gear = AstarPathGear::DRIVE;
+  if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    pre_gear = AstarPathGear::REVERSE;
+  }
+
+  if (gear == pre_gear) {
     const float idex_x = target_pose.GetX() + 3.0f;
     if (gear_switch_pose.GetX() < idex_x) {
       gear_switch_pose_cost += (idex_x - gear_switch_pose.GetX()) * 2.0f;
