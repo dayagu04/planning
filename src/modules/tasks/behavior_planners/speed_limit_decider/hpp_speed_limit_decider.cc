@@ -40,7 +40,7 @@ bool HPPSpeedLimitDecider::Execute() {
   CalculateAvoidLimit();
 
   auto hpp_speed_limit_output = session_->mutable_planning_context()
-                                    ->mutable_hpp_speed_limit_decider_output();
+                                    ->mutable_speed_limit_decider_output();
   hpp_speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
   JSON_DEBUG_VALUE("v_target_decider", v_target_);
   JSON_DEBUG_VALUE("v_target_type_code",

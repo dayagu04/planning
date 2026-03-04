@@ -32,7 +32,7 @@
 #include "tasks/behavior_planners/parallel_longitudinal_avoid_decider/parallel_longitudinal_avoid_decider.h"
 #include "tasks/behavior_planners/agent_headway_decider/agent_headway_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
-#include "tasks/behavior_planners/hpp_speed_limit_decider/hpp_speed_limit_decider.h"
+#include "tasks/behavior_planners/speed_limit_decider/hpp_speed_limit_decider.h"
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"

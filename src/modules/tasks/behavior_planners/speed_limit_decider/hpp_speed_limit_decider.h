@@ -5,7 +5,7 @@
 #include "agent/agent.h"
 #include "define/geometry.h"
 #include "ego_planning_config.h"
-#include "hpp_speed_limit_decider_output.h"
+#include "speed_limit_decider_output.h"
 #include "tasks/task.h"
 #include "tasks/task_interface/crossing_agent_decider_output.h"
 #include "traffic_light_decision_manager.h"
