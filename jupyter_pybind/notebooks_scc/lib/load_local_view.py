@@ -1161,10 +1161,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       static_analysis_result = plan_debug_msg.static_analysis_result
       road_types = static_analysis_result.road_types
       for road_type in road_types:
-        type = int(road_type.type)
+        int_type = int(road_type.type)
         x_vec = [elem.x for elem in road_type.points]
         y_vec = [elem.y for elem in road_type.points]
-        local_view_data['road_type_analysis_result_' + str(type)].data.update({
+        local_view_data['road_type_analysis_result_' + str(int_type)].data.update({
           'ref_path_y' : y_vec,
           'ref_path_x' : x_vec,
         })
@@ -1483,7 +1483,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     print("hpp_planning_status: ", hpp_planning_status)
     print("apa_planning_status: ", apa_planning_status)
     successful_slot_info_list = plan_msg.successful_slot_info_list
-    pos_parkable_slot_info_list = plan_msg.pos_parkable_slot_info_list
+    if hasattr(plan_msg, 'pos_parkable_slot_info_list'):
+      pos_parkable_slot_info_list = plan_msg.pos_parkable_slot_info_list
     plan_traj_s = []
     for i in range(len(trajectory.trajectory_points)):
       plan_traj_s.append(trajectory.trajectory_points[i].distance)
