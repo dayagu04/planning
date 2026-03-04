@@ -573,7 +573,8 @@ bool NarrowSpaceDecider::IsExistObstacleInNarrowSpace(
     planning_math::Polygon2d frenet_obs_polygon;
     if (obs->get_polygon_at_time(0, reference_path, frenet_obs_polygon)) {
       for (const auto& polygon_point : frenet_obs_polygon.points()) {
-        if (polygon_point.x() < vehicle_s_range_.second) {
+        if (polygon_point.x() < vehicle_s_range_.second ||
+            polygon_point.x() > narrow_space_s_range_.second) {
           continue;
         }
         double left_boundary_l = left_boundary_spline_(polygon_point.x());
@@ -596,7 +597,8 @@ bool NarrowSpaceDecider::IsExistObstacleInNarrowSpace(
     } else {
       const auto& frenet_obs_corner_points = obs->corner_points();
       for (const auto& corner_point : frenet_obs_corner_points) {
-        if (corner_point.x() < vehicle_s_range_.second) {
+        if (corner_point.x() < vehicle_s_range_.second ||
+            corner_point.x() > narrow_space_s_range_.second) {
           continue;
         }
         double left_boundary_l = left_boundary_spline_(corner_point.x());
@@ -608,7 +610,7 @@ bool NarrowSpaceDecider::IsExistObstacleInNarrowSpace(
           continue;
         }
         min_l = std::min(min_l, corner_point.y());
-        max_l = std::min(max_l, corner_point.y());
+        max_l = std::max(max_l, corner_point.y());
         double rel_left_dist = left_boundary_l - corner_point.y();
         double rel_right_dist = corner_point.y() - right_boundary_l;
         if (rel_left_dist < vehicle_param.max_width + kBlockedNarrowSpaceWidth &&
@@ -617,7 +619,7 @@ bool NarrowSpaceDecider::IsExistObstacleInNarrowSpace(
         }
       }
     }
-    if (barrier_num > 1 || (max_l - min_l) >= (narrow_space_width_ - vehicle_param.max_width - kBlockedNarrowSpaceWidth)) {
+    if (barrier_num > 1 && (max_l - min_l) >= (narrow_space_width_ - vehicle_param.max_width - kBlockedNarrowSpaceWidth)) {
       is_passable_ = false;
       return true;
     }
