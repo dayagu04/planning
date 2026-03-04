@@ -147,7 +147,7 @@ void ProcessLaneMapMergePoint(
   std::pair<FPPoint, FPPoint> CalculateSplitExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* split_link, const SplitDirection& split_dir);
   std::pair<FPPoint, FPPoint> CalculateMergeExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* merge_link, const SplitDirection& merge_dir);
   std::tuple<size_t, size_t> CountAccAndEntryLanes(const iflymapdata::sdpro::LinkInfo_Link* link) const;
-  void CalculateFrontMergePointInfo();
+  void CalculateFrontMergePointInfo(double search_dis);
   double CalculateDisToLastLinkSplitPoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   double CalculateDisToLastLinkMergePoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   bool IsSucMergeLink(const iflymapdata::sdpro::LinkInfo_Link* link_info) const;
