@@ -3212,10 +3212,12 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
   double limit_overlap_max_y = 1000;
   Polygon2d trusted_predicted_sl_polygon;
   bool has_trusted_predicted_polygon = false;
+  double care_t =
+      std::min(trust_prediction_t_threshold_,
+               config_.trust_emergency_avoid_prediction_t_threshold);
+  care_t = std::max(0.0, care_t);
   has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(
-      obstacle_id, false,
-      int(config_.trust_emergency_avoid_prediction_t_threshold * 10),
-      trusted_predicted_sl_polygon);
+      obstacle_id, false, int(care_t * 10), trusted_predicted_sl_polygon);
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -3246,7 +3248,7 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
       // TBD add log
       return;
     }
-    if (t <= config_.trust_emergency_avoid_prediction_t_threshold ||
+    if (t <= care_t ||
         !has_trusted_predicted_polygon) {
       obstacle_sl_polygon = obstacle_sl_polygon_t;
       pred_ts = t;
@@ -3257,7 +3259,7 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
       obstacle_sl_polygon_tmp.RotateAndTranslate(
           Vec2d(0, 0), 0, 1, Vec2d(s_center_t - s_center_target, 0));
       obstacle_sl_polygon = obstacle_sl_polygon_tmp;
-      pred_ts = config_.trust_emergency_avoid_prediction_t_threshold;
+      pred_ts = care_t;
     }
     Polygon2d care_overlap_polygon;
     bool b_overlap_with_care = false;
