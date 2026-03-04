@@ -644,6 +644,393 @@
   "pnp_lat_precise_bound_extend_dis ": 0.2,
   "lat_collision_check_filter_parking_slot": true,
   "pnp_lower_speed_filter_threshold": 1.0,
+  "speed_adjust": {
+    "max_acc_limit_lower": 0.5,
+    "max_acc_limit_upper": 0.8,
+    "min_acc_limit_lower": -1.0,
+    "min_acc_limit_upper": -0.5,
+    "min_jerk_limit_upper": -1.0,
+    "min_jerk_limit_lower": -1.2,
+    "min_acc_limit": -1.5,
+    "max_jerk_limit_lower": 1.0,
+    "max_jerk_limit_upper": 1.5,
+    "min_jerk_limit": -3.0,
+    "min_dec_adjust_limit": 9.0,
+    "max_acc_adjust_ratio_lower": 1.09,
+    "max_acc_adjust_ratio_upper": 1.15,
+    "min_dec_filter_speed": 10.0,
+    "max_acc_filter_speed": 10.0,
+    "min_dec_filter_speed_in_deceleration_scene": 30.0,
+    "enable_speed_adjust": true
+  },
+  "speed_planning": {
+    "mrc_brake_decider": {
+      "mrc_brake_deceleration": -1.2
+    },
+    "stop_destination_decider": {
+      "stop_destination_virtual_agent_time_headway": 0.1
+    },
+    "longitudinal_decision_decider": {
+      "ignore_agent_ttc_to_ego_thrd": 2.5,
+      "ignore_ego_ttc_to_agent_thrd": 3.3,
+      "lat_distance_close_enough_to_planned_path_thrd": 0.61,
+      "mute_invade_neighbor_decision": true
+    },
+    "agent_headway_decider": {
+      "ego_vel_table": [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0],
+      "ego_normal_thw_table_level_1": [0.6, 0.7, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0],
+      "ego_normal_thw_table_level_2": [0.8, 0.9, 1.0, 1.1, 1.2, 1.25, 1.3, 1.35, 1.4],
+      "ego_normal_thw_table_level_3": [1.0, 1.1, 1.2, 1.3, 1.5, 1.6, 1.65, 1.7, 1.8],
+      "ego_normal_thw_table_level_4": [1.2, 1.4, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2],
+      "ego_normal_thw_table_level_5": [1.5, 1.7, 1.9, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6],
+      "thw_init_value_lane_change": 0.3,
+      "thw_low_rate_lane_change": 0.3,
+      "thw_high_rate_lane_change": 0.65,
+      "thw_low_rate_lane_change_to_lane_keep": 0.15,
+      "thw_target_low_value_lane_change": 0.8,
+      "thw_scale_up_factor": 1.2
+    },
+    "st_graph_searcher": {
+      "enable_only_s_t_hash": true,
+      "upper_collision_dist": 1.0,
+      "lower_collision_dist": 5.0,
+      "max_accel_limit": 2.5,
+      "min_accel_limit": -6.0,
+      "max_jerk_limit": 10.0,
+      "min_jerk_limit": -10.0,
+      "accel_sample_num": 20.0,
+      "s_step": 0.5,
+      "t_step": 0.5,
+      "vel_step": 0.4,
+      "radical_search_style": {
+        "max_accel_limit_radical_style": 5.0,
+        "min_accel_limit_radical_style": -6.0,
+        "max_jerk_limit_radical_style": 10.0,
+        "min_jerk_limit_radical_style": -10.0,
+        "accel_sample_num_radical_style": 10.0,
+        "s_step_radical_style": 0.5,
+        "t_step_radical_style": 0.5,
+        "vel_step_radical_style": 0.4
+      },
+      "distance_ego_rear_edge_to_lower_bound_when_overtake": 5.0,
+      "cost_ego_overtake_has_collision_with_lower_bound": 10.0,
+      "search_weight": {
+        "weight_accel_sign_overtake": 5.0
+      },
+      "cutin_time_st_graph_threshold": 2.0,
+      "weight_hcost_lane_change": 10.0
+    },
+    "start_stop_decider": {
+      "large_vehicle_length": 8.0,
+      "lower_speed_min_follow_distance_gap": 2.5,
+      "lower_speed_large_vehicle_min_follow_distance_gap": 3.5,
+      "high_speed_min_follow_distance_gap": 3.5,
+      "low_speed_threshold_kmph": 0.0,
+      "high_speed_threshold_kmph": 20.0,
+      "large_vehicle_min_follow_distance_gap": 5.5,
+      "cone_min_follow_distance_gap": 5.0,
+      "traffic_light_min_follow_distance_gap": 2.5,
+      "cipv_static_vel_threshold": 0.2,
+      "cipv_vel_begin_start_threshold": 0.4,
+      "ego_vel_begin_stop_threshold": 0.1,
+      "distance_start_between_ego_and_large_cipv_threshold": 0.5,
+      "distance_start_between_ego_and_cipv_threshold": 0.4,
+      "distance_stop_between_ego_and_cipv_threshold": 3.0,
+      "distance_to_go_threshold": 6.5,
+      "distance_to_go_threshold_behind_of_large_vehicle": 7.5,
+      "start_to_cruise_vel_threshold": 5.5,
+      "stop_destination_to_ego_distance": 3.0
+    },
+    "cruise_target": {
+      "lane_change_upper_speed_limit_kph": 120.0,
+      "low_speed_follow_speed_thred_mps": 1.0,
+      "low_speed_follow_accel_release_traj_len": 5.0,
+      "comfort_kinematic_param": {
+        "acc_positive_upper": 1.5,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.8,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -0.8,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -0.5,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 5.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "kappa_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -1.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -1.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "sharp_curvature_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -2.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -2.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "avoid_agent_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -1.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -1.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "near_poi_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -1.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -1.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "map_near_ramp_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -0.7,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -0.7,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "construction_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -1.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -1.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "low_speed_follow_acc_traj_table": {
+        "traj_table": [
+          10.0,
+          21.0,
+          35.0
+        ],
+        "acc_table": [
+          0.50,
+          0.80,
+          1.35
+        ]
+      },
+      "low_speed_follow_jerk_traj_table": {
+        "traj_table": [
+          15.0,
+          25.0,
+          35.0
+        ],
+        "jerk_table": [
+          2.50,
+          2.20,
+          2.00
+        ]
+      },
+      "normal_kappa_speed_limit_table": {
+        "kappa_table": [
+          0.0005,
+          0.00074,
+          0.00142,
+          0.00167,
+          0.0018,
+          0.002,
+          0.0025,
+          0.0033,
+          0.005,
+          0.01,
+          0.02,
+          0.0333,
+          0.04,
+          0.069,
+          0.15,
+          0.2
+        ],
+        "speed_table": [
+          150.0,
+          130.0,
+          105.0,
+          95.0,
+          90.0,
+          85.0,
+          80.0,
+          70.0,
+          55.0,
+          47.0,
+          27.0,
+          23.0,
+          20.0,
+          15.0,
+          10.0,
+          7.0
+        ]
+      },
+      "lane_change_kappa_speed_limit_table": {
+        "kappa_table": [
+          0.0005,
+          0.00074,
+          0.00142,
+          0.00167,
+          0.0018,
+          0.002,
+          0.0025,
+          0.0033,
+          0.005,
+          0.01,
+          0.0167,
+          0.02,
+          0.0333,
+          0.04,
+          0.069,
+          0.15,
+          0.2
+        ],
+        "speed_table": [
+          150.0,
+          130.0,
+          110.0,
+          100.0,
+          95.0,
+          90.0,
+          85.0,
+          75.0,
+          55.0,
+          47.0,
+          35.0,
+          27.0,
+          23.0,
+          20.0,
+          15.0,
+          10.0,
+          7.0
+        ]
+      }
+    },
+    "neighbor_target": {
+      "neighbor_target_min_jerk": -1.0,
+      "neighbor_target_max_jerk": 2.0,
+      "neighbor_target_min_acc": -1.5,
+      "neighbor_target_max_acc_lower": 0.8,
+      "neighbor_target_max_acc_upper": 2.0,
+      "neighbor_target_vel_lower_bound": 5.0,
+      "neighbor_target_vel_upper_bound": 30.0,
+      "neighbor_target_vel_buffer": 3.0,
+      "neighbor_target_p_precision": 0.3,
+      "neighbor_target_kEpsilon": 1e-6,
+      "neighbor_target_neighbor_yield_distance": 8.0,
+      "neighbor_target_neighbor_overtake_distance": 10.0,
+      "neighbor_target_neighbor_limit_velocity": 5.0
+    },
+    "bound_maker": {
+      "lane_keeping_non_cipv_start_acc_bound": 1.5,
+      "cruise_acc_bound_table": {
+        "vel_table": [
+          0.0, 5.0, 10.0, 20.0, 40.0
+        ],
+        "acc_table": [
+          1.0, 0.85, 0.6, 0.5, 0.3
+        ]
+      },
+      "cruise_dec_bound_table": {
+        "vel_table": [
+          0.0, 5.0, 10.0, 20.0, 40.0
+        ],
+        "acc_table": [
+          -2.0, -2.0, -2.0, -2.0, -0.3
+        ]
+      }
+    },
+    "weight_maker": {
+      "s_weight": 1.0,
+      "start_s_weight": 5.0,
+      "follow_s_weight": 1.0,
+      "overtake_s_weight": 1.0,
+      "neighbor_s_weight": 1.0,
+      "end_s_weight": 40.0,
+      "max_s_weight_time": 3.0,
+      "front_lower_weight": 0.5,
+      "back_upper_weight": 1.5,
+      "max_s_weight": 2.0
+    },
+    "follow_target": {
+      "acc_cipv": -1.0,
+      "lower_speed_min_follow_distance_gap": 3.0,
+      "high_speed_min_follow_distance_gap": 4.0,
+      "low_speed_threshold_kmph": 18.0,
+      "high_speed_threshold_kmph": 30.0,
+      "large_vehicle_min_follow_distance_gap": 5.0,
+      "cone_min_follow_distance_gap": 5.0,
+      "traffic_light_min_follow_distance_gap": 2.0
+    }
+  },
   "hybrid_ara_star": {
     "x_grid_resolution": 0.02,
     "y_grid_resolution": 0.02,

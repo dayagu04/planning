@@ -14,8 +14,8 @@
 
 namespace planning {
 HPPSpeedLimitDecider::HPPSpeedLimitDecider(
-    const EgoPlanningConfigBuilder* config_builder,
-    framework::Session* session) {
+    const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
+    : Task(config_builder, session) {
   hpp_speed_limit_config_ = config_builder->cast<LongitudinalDeciderV3Config>();
   name_ = "HPPSpeedLimitDecider";
 }
