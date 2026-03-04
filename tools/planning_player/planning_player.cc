@@ -1252,6 +1252,9 @@ void PlanningPlayer::RunCloseLoop(
     }
 
     PerpareTrajectory(planning_output);
+    if (early_stop_) {
+      return;
+    }
     if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
       for (auto it = msg_cache_[TOPIC_LOCALIZATION].begin();
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {

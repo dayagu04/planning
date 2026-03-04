@@ -103,6 +103,14 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
     planning_input.mutable_ref_x_vec()->Set(i, origin_planning_input.ref_x_vec(i) + ref_unit_vector.x() * ref_xy);
     planning_input.mutable_ref_y_vec()->Set(i, origin_planning_input.ref_y_vec(i) + ref_unit_vector.y() * ref_xy);
   }
+  planning_input.mutable_ref_vel_vec()->Resize(N, origin_planning_input.ref_vel());
+  if (origin_planning_input.ref_vel_vec_size() == N) {
+    for (size_t i = 0; i < N; i++) {
+      planning_input.mutable_ref_vel_vec()->Set(i, origin_planning_input.ref_vel_vec(i));
+    }
+  } else {
+    //
+  }
   // virtual ref
   // bool is_virtual_empty =
   //     virtual_ref_x.size() != N ||
