@@ -83,6 +83,7 @@ bool HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
     if(!BuildMergedObstacleConvexHull(obs_item_map, merged_result)) {
       continue;
     }
+    merged_obs_container.merged_obstacles.push_back(merged_result);
   }
 
   return true;
@@ -114,10 +115,8 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
   ObstacleRelPosType type = ObstacleRelPosType::FAR_AWAY;
   bool is_lon_far_away = (obs_start_s > ego_end_s + kFarAwayLonFrontThr ||
                           obs_end_s < ego_start_s - kFarAwayLonBackThr);
-  bool is_lat_far_away = (obs_start_l > std::fmax(ego_end_l + kFarAwayLatRelThr,
-                                                  kFarAwayLatAbsThr) ||
-                          obs_end_l < std::fmin(ego_start_l - kFarAwayLatRelThr,
-                                                -kFarAwayLatAbsThr));
+  bool is_lat_far_away = (obs_start_l > std::fmax(ego_end_l + kFarAwayLatRelThr, kFarAwayLatAbsThr) ||
+                          obs_end_l < std::fmin(ego_start_l - kFarAwayLatRelThr, -kFarAwayLatAbsThr));
 
   if (is_lon_far_away && is_lat_far_away) {
     type = ObstacleRelPosType::FAR_AWAY;
@@ -151,16 +150,15 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
 
 ObstacleMotionType HppLateralObstacleUtils::ClassifyObstaclesByMotion(
     const FrenetObstaclePtr& obs_ptr) {
-  const double obs_relative_v_angle = std::fabs(
-      obs_ptr->frenet_relative_velocity_angle());  // 这里默认angle是[-pi,pi]
+  const double obs_relative_v_angle = std::fabs(obs_ptr->frenet_relative_velocity_angle());
 
   ObstacleMotionType type = ObstacleMotionType::STATIC;
   if (obs_ptr->is_static()) {
     type = ObstacleMotionType::STATIC;
   } else {
-    if (obs_relative_v_angle > 3 * PI / 4) {  // 对向行驶
+    if (obs_relative_v_angle > 3 * PI / 4) {
       type = ObstacleMotionType::OPPOSITE_DIR_MOVING;
-    } else if (obs_relative_v_angle < PI / 4) {  // 同向行驶
+    } else if (obs_relative_v_angle < PI / 4) {
       type = ObstacleMotionType::SAME_DIR_MOVING;
     } else {
       type = ObstacleMotionType::CROSSING_MOVING;
@@ -182,22 +180,16 @@ bool HppLateralObstacleUtils::GenerateMergeCandicates(
   for (const auto& entry : obs_item_map) {
     const auto& obs_id = entry.first;
     const auto& obs = entry.second;
-    if(id_to_motion_type.find(obs_id) == id_to_motion_type.end()) {
-      continue;
-    }
-    if(id_to_rel_pos_type.find(obs_id) == id_to_rel_pos_type.end()) {
-      continue;
-    }
+
+    if(id_to_motion_type.find(obs_id) == id_to_motion_type.end()) continue;
+    if(id_to_rel_pos_type.find(obs_id) == id_to_rel_pos_type.end()) continue;
+
     const auto& rel_pos_type = id_to_rel_pos_type.at(obs_id);
     const auto& motion_type = id_to_motion_type.at(obs_id);
     if(motion_type == ObstacleMotionType::STATIC) {
-      if (rel_pos_type == ObstacleRelPosType::FAR_AWAY) {
-        continue;
-      }
+      if (rel_pos_type == ObstacleRelPosType::FAR_AWAY) continue;
     } else {
-      if(rel_pos_type == ObstacleRelPosType::FAR_AWAY) {
-        continue;
-      }
+      if(rel_pos_type == ObstacleRelPosType::FAR_AWAY) continue;
       if(!obs->obstacle()->is_pedestrain() || obs->velocity() > kLowSpeedPedestrainThr) {
         continue;
       }
@@ -236,10 +228,11 @@ bool HppLateralObstacleUtils::CalculateCandidateMergeGraph(
       const auto& obs_j_id = merge_candidates[j].origin_id;
       const auto& obs_j = obs_item_map.at(obs_j_id);
       const auto& obs_j_boundary = obs_j->frenet_obstacle_boundary();
-      const double obs_j_start_s = obs_i_boundary.s_start;
-      const double obs_j_end_s = obs_i_boundary.s_end;
-      const double obs_j_start_l = obs_i_boundary.l_start;
-      const double obs_j_end_l = obs_i_boundary.l_end;
+      const double obs_j_start_s = obs_j_boundary.s_start;
+      const double obs_j_end_s = obs_j_boundary.s_end;
+      const double obs_j_start_l = obs_j_boundary.l_start;
+      const double obs_j_end_l = obs_j_boundary.l_end;
+
       double s_gap = std::fmax(obs_i_start_s - obs_j_end_s, obs_j_start_s - obs_i_end_s);
       double l_gap = std::fmax(obs_i_start_l - obs_j_end_l, obs_j_start_l - obs_i_end_l);
 
@@ -304,16 +297,20 @@ bool HppLateralObstacleUtils::DFSGenerateMergedObstacles(
         }
       };
 
-  const auto& neighbors = merge_graph[curr_idx];
-  for (const auto& neighbors : neighbors) {
-    const auto& merge_idx = neighbors.first;
-    const auto& merge_type = neighbors.second;
-    if (visited_candidate_idxs.find(merge_idx) ==
-        visited_candidate_idxs.end()) {
-      if (is_valid_merge_type(curr_merge_type, merge_type)) {
-        DFSGenerateMergedObstacles(merge_candidates, merge_graph, merge_idx,
-                                   merge_type, visited_candidate_idxs,
-                                   merged_result);
+  auto it = merge_graph.find(curr_idx);
+  if (it != merge_graph.end()) {
+    const auto& neighbors_map = it->second;
+    for (const auto& neighbor : neighbors_map) {
+      const auto& merge_idx = neighbor.first;
+      const auto& merge_type = neighbor.second;
+
+      if (visited_candidate_idxs.find(merge_idx) == visited_candidate_idxs.end()) {
+        // 【已修复】传入 merged_result 中已记录的全局合并状态集合
+        if (is_valid_merge_type(merge_type, merged_result.merge_types)) {
+          DFSGenerateMergedObstacles(merge_candidates, merge_graph, merge_idx,
+                                    merge_type, visited_candidate_idxs,
+                                    merged_result);
+        }
       }
     }
   }
@@ -325,6 +322,13 @@ bool HppLateralObstacleUtils::BuildMergedObstacleConvexHull(
 
   auto& new_points = merged_result.perception_points;
   auto& new_sl_boundary = merged_result.frenet_boundary;
+
+  // 初始化边界为极大极小值，防止边界融合错误
+  new_sl_boundary.l_start = std::numeric_limits<double>::max();
+  new_sl_boundary.l_end = std::numeric_limits<double>::lowest();
+  new_sl_boundary.s_start = std::numeric_limits<double>::max();
+  new_sl_boundary.s_end = std::numeric_limits<double>::lowest();
+
   for (const auto& origin_id : merged_result.original_ids) {
     if (obs_item_map.find(origin_id) == obs_item_map.end()) {
       continue;
@@ -341,9 +345,9 @@ bool HppLateralObstacleUtils::BuildMergedObstacleConvexHull(
   }
 
   double min_x = std::numeric_limits<double>::max();
-  double max_x = std::numeric_limits<double>::min();
+  double max_x = std::numeric_limits<double>::lowest();
   double min_y = std::numeric_limits<double>::max();
-  double max_y = std::numeric_limits<double>::min();
+  double max_y = std::numeric_limits<double>::lowest();
   std::for_each(new_points.begin(), new_points.end(), [&](const auto& point) {
     min_x = std::min(min_x, point.x());
     max_x = std::max(max_x, point.x());

@@ -131,7 +131,7 @@ void HppLateralObstacleDecider::UpdateLatDecision(
   double current_timestamp = IflyTime::Now_ms();
 
   ObstacleItemMap obs_item_map;
-  bool has_obs = HppLateralObstacleUtils::GenerateObstaclesToBeConsidered( reference_path_ptr, obs_item_map);
+  bool has_obs = HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(reference_path_ptr, obs_item_map);
 
   std::unordered_set<uint32_t> current_frame_ids;
   for (const auto& pair : obs_item_map) current_frame_ids.insert(pair.first);
@@ -139,14 +139,15 @@ void HppLateralObstacleDecider::UpdateLatDecision(
 
   if (!has_obs) return;
 
-  auto classification_map = HppLateralObstacleUtils::ClassifyObstacles( obs_item_map, ego_s, ego_v);
+  ObstacleClassificationResult classification_map;
+  HppLateralObstacleUtils::ClassifyObstacles(obs_item_map, ego_state, classification_map);
 
   MergedObstacleContainer merged_container;
-  HppLateralObstacleUtils::MergeObstaclesBaseOnPos( obs_item_map, classification_map, merged_container);
+  HppLateralObstacleUtils::MergeObstaclesBaseOnPos(obs_item_map, classification_map, merged_container);
 
   std::sort(merged_container.merged_obstacles.begin(), merged_container.merged_obstacles.end(),
-      [](const MergedObstacleInfo& a, const MergedObstacleInfo& b){
-          return a.s_start < b.s_start;
+      [](const MergedObstacleResult& a, const MergedObstacleResult& b){
+          return a.frenet_boundary.s_start < b.frenet_boundary.s_start;
       });
 
   // 迟滞参数配置
@@ -155,15 +156,30 @@ void HppLateralObstacleDecider::UpdateLatDecision(
   const double kMaxCenterBuffer = 0.6;              // 中心线穿越迟滞
 
   for (const auto& cluster : merged_container.merged_obstacles) {
-      if (cluster.type == ObstacleTypeBeforeCluster::IGNORE) continue;
+      if (cluster.motion_types.empty() || cluster.rel_pos_types.empty()) continue;
 
       LatObstacleDecisionType decision = LatObstacleDecisionType::IGNORE;
 
-      if (cluster.type == ObstacleTypeBeforeCluster::FRONT_STATIC) {
-          double current_l = cluster.center_l();
-          double right_side = cluster.l_start; // 左障碍物的右边缘 (min_l)
-          double left_side = cluster.l_end;  // 右障碍物的左边缘 (max_l)
+      // 解析新架构下的障碍物属性
+      bool is_static = cluster.motion_types.count(ObstacleMotionType::STATIC) > 0;
+      bool is_opposite_moving = cluster.motion_types.count(ObstacleMotionType::OPPOSITE_DIR_MOVING) > 0;
+      bool is_same_moving = cluster.motion_types.count(ObstacleMotionType::SAME_DIR_MOVING) > 0;
 
+      bool is_front = cluster.rel_pos_types.count(ObstacleRelPosType::MID_FRONT) > 0 ||
+                      cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_FRONT) > 0 ||
+                      cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_FRONT) > 0;
+
+      bool is_side_rear = cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_SIDE) > 0 ||
+                          cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_SIDE) > 0 ||
+                          cluster.rel_pos_types.count(ObstacleRelPosType::MID_BACK) > 0 ||
+                          cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_BACK) > 0 ||
+                          cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_BACK) > 0;
+
+      double current_l = (cluster.frenet_boundary.l_start + cluster.frenet_boundary.l_end) / 2.0;
+      double right_side = cluster.frenet_boundary.l_start;
+      double left_side = cluster.frenet_boundary.l_end;
+
+      if (is_static && is_front) {
           // 1. 提取 Cluster 中最有说服力的历史信息 (Max Count)
           ObstacleConsistencyInfo best_history;
           int max_count = -1;
@@ -191,57 +207,30 @@ void HppLateralObstacleDecider::UpdateLatDecision(
 
           if (best_history.count >= 2) {
               if (best_history.last_decision == LatObstacleDecisionType::RIGHT) {
-                  if (current_l > -dyn_center_buffer) {
-                    treat_as_left = true;
-                  }
+                  if (current_l > -dyn_center_buffer) treat_as_left = true;
               } else if (best_history.last_decision == LatObstacleDecisionType::LEFT) {
-                  if (current_l < dyn_center_buffer) {
-                    treat_as_left = false;
-                  }
+                  if (current_l < dyn_center_buffer) treat_as_left = false;
               }
           }
+
           if (treat_as_left) {
-              if (right_side> -dyn_side_threshold) {
-                decision = LatObstacleDecisionType::RIGHT;
-              }
-              else {
-                decision = LatObstacleDecisionType::IGNORE;
-              }
+              if (right_side > -dyn_side_threshold) decision = LatObstacleDecisionType::RIGHT;
+              else decision = LatObstacleDecisionType::IGNORE;
           } else {
-              if (left_side < dyn_side_threshold) {
-                decision = LatObstacleDecisionType::LEFT;
-              }
-              else {
-                decision = LatObstacleDecisionType::IGNORE;
-              }
+              if (left_side < dyn_side_threshold) decision = LatObstacleDecisionType::LEFT;
+              else decision = LatObstacleDecisionType::IGNORE;
           }
-      }else if (cluster.type == ObstacleTypeBeforeCluster::SIDE_REAR_STATIC) {
-          if (cluster.center_l() > 0) {
-              decision = LatObstacleDecisionType::RIGHT;
-          } else {
-              decision = LatObstacleDecisionType::LEFT;
-          }
-      }else if (cluster.type == ObstacleTypeBeforeCluster::OPPOSITE_MOVING){
-        //TODO: 目前先忽略对向行驶的障碍物，后续可以根据实际情况调整
-          if (cluster.center_l() > 0) {
-              decision = LatObstacleDecisionType::RIGHT;
-          } else {
-              decision = LatObstacleDecisionType::LEFT;
-          }
-      }else if (cluster.type == ObstacleTypeBeforeCluster::BACK_SAME_MOVING){
-        //TODO: 目前先忽略同向后方的障碍物，后续可以根据实际情况调整
-          if (cluster.center_l() > 0) {
-              decision = LatObstacleDecisionType::RIGHT;
-          } else {
-              decision = LatObstacleDecisionType::LEFT;
-          }
-      }else if(cluster.type == ObstacleTypeBeforeCluster::FRONT_SAME_MOVING){
-        //TODO: 目前先忽略同向前方的障碍物，后续可以根据实际情况调整
-          if (cluster.center_l() > 0) {
-              decision = LatObstacleDecisionType::RIGHT;
-          } else {
-              decision = LatObstacleDecisionType::LEFT;
-          }
+      } else if (is_static && is_side_rear) {
+          if (current_l > 0) decision = LatObstacleDecisionType::RIGHT;
+          else decision = LatObstacleDecisionType::LEFT;
+      } else if (is_opposite_moving) {
+          // TODO: 目前先忽略对向行驶的障碍物，后续可以根据实际情况调整
+          if (current_l > 0) decision = LatObstacleDecisionType::RIGHT;
+          else decision = LatObstacleDecisionType::LEFT;
+      } else if (is_same_moving) {
+          // TODO: 同向车辆决策
+          if (current_l > 0) decision = LatObstacleDecisionType::RIGHT;
+          else decision = LatObstacleDecisionType::LEFT;
       }
 
       for (int obs_id : cluster.original_ids) {
@@ -381,10 +370,8 @@ void HppLateralObstacleDecider::ClearOldConsistencyInfo(
     double current_timestamp) {
 
     const double kMaxIdleTimeMs = 1000.0;
-
     for (auto it = obstacle_consistency_map_.begin(); it != obstacle_consistency_map_.end(); ) {
         uint32_t obs_id = it->first;
-
         if (current_frame_ids.find(obs_id) != current_frame_ids.end()) {
             it->second.last_seen_timestamp = current_timestamp;
             ++it;
@@ -413,7 +400,7 @@ bool HppLateralObstacleDecider::PreProcessObstacle(
 
     // 2. 障碍物分类
     const auto &ego_state = reference_path_ptr->get_frenet_ego_state();
-    if (!HppLateralObstacleDecider::ClassifyObstacles(
+    if (!HppLateralObstacleUtils::ClassifyObstacles(
             obs_item_map, ego_state, obs_classification_result)) {
         return false;
     }
@@ -425,6 +412,7 @@ bool HppLateralObstacleDecider::PreProcessObstacle(
     }
     return true;
 }
+
 void HppLateralObstacleDecider::Log(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
 #ifdef ENABLE_PROTO_LOG
@@ -432,9 +420,11 @@ void HppLateralObstacleDecider::Log(
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->clear_obstacle();
+
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
+
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     // log
     planning::common::Obstacle *obstacle_log =
@@ -446,6 +436,7 @@ void HppLateralObstacleDecider::Log(
         static_cast<uint32_t>(lat_obstacle_decision[obstacle->id()]));
     obstacle_log->set_vs_lat_relative(obstacle->frenet_velocity_l());
     obstacle_log->set_vs_lon_relative(obstacle->frenet_velocity_s());
+
     if (obstacle->source_type() == SourceType::GroundLine ||
         obstacle->source_type() == SourceType::OCC ||
         obstacle->source_type() == SourceType::OD ||
