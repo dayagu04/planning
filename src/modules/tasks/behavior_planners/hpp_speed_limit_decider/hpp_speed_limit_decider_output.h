@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "/root/code/planning/src/modules/tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
+#include "../speed_limit_decider/speed_limit_decider_output.h"
 #include "planning_plan_c.h"
 
 namespace planning {
