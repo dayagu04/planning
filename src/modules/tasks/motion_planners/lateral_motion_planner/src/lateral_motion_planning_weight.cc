@@ -2089,5 +2089,14 @@ void LateralMotionPlanningWeight::ConstructVirtualRef(
   }
 }
 
+void LateralMotionPlanningWeight::SetContinuityWeightByLastPath(
+    size_t valid_continuity_idx,
+    planning::common::LateralPlanningInput &planning_input) {
+  std::fill(weight_.q_continuity.begin(), weight_.q_continuity.end(), 0.0);
+  for (size_t i = 0; i < valid_continuity_idx; ++i) {
+    weight_.q_continuity[i] = planning_input.q_continuity();
+  }
+}
+
 }  // namespace lateral_planning
 }  // namespace pnc

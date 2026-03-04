@@ -169,6 +169,7 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
+  bool CalculateCruiseVelocity(double * const avg_cruise_v);
   void HandleRefPathOffset(
       TrajectoryPoints &traj_points,
       std::vector<std::pair<double, double>> &front_axis_ref_path,

@@ -85,13 +85,16 @@ uint8_t LateralMotionPlanningProblem::Update(
   cost_config_vec.resize(N);
 
   const auto &path_weights = planning_weight->GetPathWeights();
-  const double ref_vel = planning_input.ref_vel();
-  const double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
 
   bool is_virtual_empty = virtual_ref_x.size() != N ||
                           virtual_ref_y.size() != N ||
                           virtual_ref_theta.size() != N;
   for (size_t i = 0; i < N; ++i) {
+    double ref_vel = planning_input.ref_vel_vec(i);
+    if (i < N - 1) {
+      ref_vel = (ref_vel + planning_input.ref_vel_vec(i + 1)) * 0.5;
+    }
+    double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
     double expected_delta = path_weights.expected_acc[i] / kv2;
     // calculate delta_bound and omega_bound
     double delta_upper_bound = path_weights.acc_upper_bound[i] / kv2;
@@ -252,11 +255,11 @@ uint8_t LateralMotionPlanningProblem::Update(
     }
 
     cost_config_vec.at(i)[W_CONTINUITY_X] =
-        cost_config_vec.at(i)[W_REF_X] * planning_input.q_continuity();
+        cost_config_vec.at(i)[W_REF_X] * path_weights.q_continuity[i];
     cost_config_vec.at(i)[W_CONTINUITY_Y] =
-        cost_config_vec.at(i)[W_REF_Y] * planning_input.q_continuity();
+        cost_config_vec.at(i)[W_REF_Y] * path_weights.q_continuity[i];
     cost_config_vec.at(i)[W_CONTINUITY_THETA] =
-        cost_config_vec.at(i)[W_REF_THETA] * planning_input.q_continuity();
+        cost_config_vec.at(i)[W_REF_THETA] * path_weights.q_continuity[i];
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
@@ -302,6 +305,11 @@ uint8_t LateralMotionPlanningProblem::Update(
 
   double t = 0.0;
   for (size_t i = 0; i < N; ++i) {
+    double ref_vel = planning_input.ref_vel_vec(i);
+    if (i < N - 1) {
+      ref_vel = (ref_vel + planning_input.ref_vel_vec(i + 1)) * 0.5;
+    }
+    double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
     planning_output_.mutable_time_vec()->Set(i, t);
     t += dt;
 
@@ -384,9 +392,6 @@ uint8_t LateralMotionPlanningProblem::Update(
   std::vector<ilqr_solver::IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
 
-  const double ref_vel = planning_input.ref_vel();
-  const double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
-
   bool is_enable_first_and_second_soft_bound =
       planning_input.soft_upper_bound_x0_vec_size() != N ||
       planning_input.soft_upper_bound_y0_vec_size() != N ||
@@ -398,6 +403,11 @@ uint8_t LateralMotionPlanningProblem::Update(
                           virtual_ref_theta.size() != N;
 
   for (size_t i = 0; i < N; ++i) {
+    double ref_vel = planning_input.ref_vel_vec(i);
+    if (i < N - 1) {
+      ref_vel = (ref_vel + planning_input.ref_vel_vec(i + 1)) * 0.5;
+    }
+    double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
     double expected_delta = expected_acc / kv2;
     // calculate delta_bound and omega_bound
     double delta_bound = planning_input.acc_bound() / kv2;
@@ -645,6 +655,11 @@ uint8_t LateralMotionPlanningProblem::Update(
 
   double t = 0.0;
   for (size_t i = 0; i < N; ++i) {
+    double ref_vel = planning_input.ref_vel_vec(i);
+    if (i < N - 1) {
+      ref_vel = (ref_vel + planning_input.ref_vel_vec(i + 1)) * 0.5;
+    }
+    double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
     planning_output_.mutable_time_vec()->Set(i, t);
     t += dt;
 

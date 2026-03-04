@@ -30,6 +30,7 @@ struct GeneralLateralDeciderOutput {
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info;
   std::vector<double> enu_ref_theta;
   std::vector<double> last_enu_ref_theta;
+  std::vector<double> enu_ref_vel;
   pnc::mathlib::spline curve_s_spline;
   bool complete_follow = true;
   std::string lc_status;
@@ -71,6 +72,7 @@ struct GeneralLateralDeciderOutput {
     hard_bounds_info.clear();
     enu_ref_theta.clear();
     last_enu_ref_theta.clear();
+    enu_ref_vel.clear();
     lc_status.clear();
     curve_s_spline.get_x().clear();
     curve_s_spline.get_y().clear();
