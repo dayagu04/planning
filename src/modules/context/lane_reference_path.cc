@@ -229,16 +229,10 @@ void LaneReferencePath::generate_frenet_obstacles(
     std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
     std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
         &frenet_obstacles_map) {
-  auto is_location_valid = session_->environmental_model().location_valid();
   for (const Obstacle *obstacle_ptr : obstacles.Items()) {
     Point2D frenet_point, cart_point;
-    if (is_location_valid) {
-      cart_point.x = obstacle_ptr->x_center();
-      cart_point.y = obstacle_ptr->y_center();
-    } else {
-      cart_point.x = obstacle_ptr->x_relative_center();
-      cart_point.y = obstacle_ptr->y_relative_center();
-    }
+    cart_point.x = obstacle_ptr->x_center();
+    cart_point.y = obstacle_ptr->y_center();
 
     if (!frenet_coord_->XYToSL(cart_point, frenet_point) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
@@ -251,8 +245,7 @@ void LaneReferencePath::generate_frenet_obstacles(
     std::shared_ptr<FrenetObstacle> frenet_obstacle =
         std::make_shared<FrenetObstacle>(
             obstacle_ptr, *this,
-            session_->environmental_model().get_ego_state_manager(),
-            is_location_valid);
+            session_->environmental_model().get_ego_state_manager(), true);
     frenet_obstacles.emplace_back(frenet_obstacle);
     frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
   }
