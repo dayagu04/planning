@@ -14,9 +14,9 @@
 
 namespace planning {
 struct LaneCurvInfo {
-  int curv_sign;
-  double curv;
-  double curv_radius;
+  int curv_sign = 0;
+  double curv = 0.0001;
+  double curv_radius = 10000.0;
 };
 
 class EgoLaneTrackManger {
