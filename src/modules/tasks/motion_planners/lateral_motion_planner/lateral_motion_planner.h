@@ -82,6 +82,7 @@ class LateralMotionPlanner : public Task {
   bool is_need_reverse_;
   bool is_use_second_bound_;
   bool is_ref_consistent_;
+  bool is_uniform_motion_;
   size_t valid_continuity_idx_;
   double avoid_back_time_;
   double enter_split_time_;

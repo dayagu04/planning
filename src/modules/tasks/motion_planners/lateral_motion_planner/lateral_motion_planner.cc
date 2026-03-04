@@ -90,6 +90,7 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_front_axis_ref_x_vec()->Resize(N, 0.0);
   planning_input_.mutable_front_axis_ref_y_vec()->Resize(N, 0.0);
   //
+  is_uniform_motion_ = true;
   is_divide_lane_into_two_ = false;
   is_last_low_speed_lane_change_ = false;
   valid_continuity_idx_ = 0;
@@ -210,7 +211,10 @@ bool LateralMotionPlanner::HandleReferencePathData() {
       std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
   const auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   const auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
-  const auto &enu_ref_vel = general_lateral_decider_output.enu_ref_vel;
+  std::vector<double> enu_ref_vel = general_lateral_decider_output.enu_ref_vel;
+  if (is_uniform_motion_) {
+    enu_ref_vel.resize(enu_ref_path.size(), ref_vel);
+  }
   // assert(enu_ref_path.size() == enu_ref_theta.size());
   if (enu_ref_path.empty() || enu_ref_theta.empty() || enu_ref_vel.empty() ||
       enu_ref_path.size() != enu_ref_theta.size() || enu_ref_path.size() != enu_ref_vel.size() ||
@@ -521,6 +525,7 @@ void LateralMotionPlanner::StraightPathTest() {
 }
 
 bool LateralMotionPlanner::AssembleInputForHPP() {
+  is_uniform_motion_ = true;
   is_need_reverse_ = false;
   is_use_second_bound_ = false;
   if (!HandleReferencePathData()) {
@@ -553,6 +558,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
 }
 
 bool LateralMotionPlanner::AssembleInputForRADS() {
+  is_uniform_motion_ = true;
   is_need_reverse_ = true;
   is_use_second_bound_ = false;
   if (!HandleReferencePathData()) {
@@ -577,6 +583,7 @@ bool LateralMotionPlanner::AssembleInputForRADS() {
 }
 
 bool LateralMotionPlanner::AssembleInputForNSA() {
+  is_uniform_motion_ = true;
   is_need_reverse_ = false;
   is_use_second_bound_ = false;
   if (!HandleReferencePathData()) {
@@ -609,6 +616,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
 }
 
 bool LateralMotionPlanner::AssembleInput() {
+  is_uniform_motion_ = false;
   is_need_reverse_ = false;
   is_use_second_bound_ = true;
   if (!HandleReferencePathData()) {
