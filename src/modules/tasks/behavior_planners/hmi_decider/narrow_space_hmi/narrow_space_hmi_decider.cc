@@ -37,7 +37,6 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
   const auto& narrow_space_decider_output =
       session_->planning_context().narrow_space_decider_output();
   const auto &ego_state = session_->environmental_model().get_ego_state_manager();
-  const auto &plannig_init_point = ego_state->planning_init_point();
 
   bool is_block_by_obstacle = false;
   bool is_passable_condition = narrow_space_decider_output.is_in_narrow_space;
@@ -67,24 +66,24 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
     hmi_info->nsa_info.is_avaliable = true;
     hmi_info->nsa_info.nsa_disable_reason = iflyauto::NSADisableReason::NSA_DISABLE_REASON_NONE;
     if (!narrow_space_decider_output.is_exist_narrow_space && !narrow_space_decider_output.is_in_narrow_space &&
-        plannig_init_point.v < kEgoStopVelThd) {
+         ego_state->ego_v() < kEgoStopVelThd) {
       // 不存在窄路 && 自车不在窄路上 && 自车停止
       // hmi_info->nsa_info.is_complete = true;
       hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NO_NARROW;
       mutable_nsa_planning_completed = true;
-    } else if (!narrow_space_decider_output.is_passable_narrow_space && plannig_init_point.v < kEgoStopVelThd) {
+    } else if (!narrow_space_decider_output.is_passable_narrow_space && ego_state->ego_v() < kEgoStopVelThd) {
       // 窄路空间过窄 && 自车停止
       // hmi_info->nsa_info.is_complete = true;
       hmi_info->nsa_info.nsa_pause_reason = iflyauto::NSA_PAUSE_REASON_BLOCK;
       // hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_NO_SPACE;
       // mutable_nsa_planning_completed = true;
     } else if (narrow_space_decider_output.is_passable_narrow_space && narrow_space_decider_output.is_in_narrow_space &&
-               plannig_init_point.v < kEgoStopVelThd && nsa_dis > kNsaLonDisThred) {
+               ego_state->ego_v() < kEgoStopVelThd && nsa_dis > kNsaLonDisThred) {
       // 窄路可通过 && 自车在窄路上 && 自车停止 && 自车行驶距离 > 50
       // hmi_info->nsa_info.is_complete = true;
       hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_DISTANCE_SATISFY;
       mutable_nsa_planning_completed = true;
-    } else if (plannig_init_point.v < kEgoStopVelThd) {
+    } else if (ego_state->ego_v() < kEgoStopVelThd) {
       hmi_info->nsa_info.nsa_pause_reason = iflyauto::NSA_PAUSE_REASON_BLOCK;
     } else {
       // hmi_info->nsa_info.is_complete = false;

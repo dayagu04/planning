@@ -537,10 +537,15 @@ bool GeneralLongitudinalDecider::Execute() {
   }
   if (session_->is_nsa_scene()) {
     const auto& nsa_output = session_->planning_context().narrow_space_decider_output();
+    JSON_DEBUG_VALUE("distance_to_end", nsa_output.distance_to_end);
+    JSON_DEBUG_VALUE("is_exiting_narrow_space", static_cast<int>(nsa_output.is_exiting_narrow_space));
+    JSON_DEBUG_VALUE("is_in_narrow_space", static_cast<int>(nsa_output.is_in_narrow_space));
+    JSON_DEBUG_VALUE("is_passable_narrow_space", static_cast<int>(nsa_output.is_passable_narrow_space));
     const auto& local_view = session_->environmental_model().get_local_view();
     const auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
     double ego_start_s = frenet_ego_state.s();
     double nsa_dis = local_view.function_state_machine_info.nra_req.nra_distance;
+    JSON_DEBUG_VALUE("nsa_drived_distance", nsa_dis);
     if (local_view.function_state_machine_info.current_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
       if ((nsa_output.is_exiting_narrow_space && nsa_output.distance_to_end < kNsaBrakeDisToEnd) ||
           (nsa_output.is_in_narrow_space && nsa_output.is_passable_narrow_space &&
