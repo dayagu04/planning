@@ -682,8 +682,11 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       session_->planning_context().lane_change_decider_output().is_nearing_ramp;
 
   distance_to_ramp_ = route_info_output.dis_to_ramp;
+
   const auto& merge_point_info =
-      virtual_lane_mgr->get_current_lane()->get_map_merge_point_info();
+      route_info_output.map_merge_points_info.empty()
+          ? virtual_lane_mgr->get_current_lane()->get_map_merge_point_info()
+          : route_info_output.map_merge_points_info.front();
   const auto& function_info = session_->environmental_model().function_info();
   distance_to_merge_point_ = NL_NMAX;
   distance_to_road_split_ = NL_NMAX;
