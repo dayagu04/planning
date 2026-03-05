@@ -149,6 +149,8 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     }
   }
 
+  JSON_DEBUG_VALUE("is_emergency_scene",
+                   is_emergency_scene_);
   std::chrono::time_point<std::chrono::high_resolution_clock>
       evaluate_end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> evaluate_cost_time =
