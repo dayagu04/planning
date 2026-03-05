@@ -13,6 +13,8 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<HppGeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
       std::make_unique<LateralMotionPlanner>(config_builder, session);
+  hpp_stop_decider_ =
+      std::make_unique<HppStopDecider>(config_builder, session);
   general_longitudinal_decider =
       std::make_unique<GeneralLongitudinalDecider>(config_builder, session);
   longitudinal_motion_planner_ =
@@ -57,13 +59,21 @@ bool HppTaskPipeline::Run() {
   auto time5 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LateralMotionPlannerTime", time5 - time4);
 
+  ok = hpp_stop_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(hpp_stop_decider_->Name());
+    return false;
+  }
+  auto time5_5 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("HppStopDeciderTime", time5_5 - time5);
+
   ok = general_longitudinal_decider->Execute();
   if (!ok) {
     AddErrorInfo(general_longitudinal_decider->Name());
     return false;
   }
   auto time6 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("GeneralLongitudinalDeciderTime", time6 - time5);
+  JSON_DEBUG_VALUE("GeneralLongitudinalDeciderTime", time6 - time5_5);
 
   ok = longitudinal_motion_planner_->Execute();
   if (!ok) {

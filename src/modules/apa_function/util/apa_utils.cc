@@ -71,18 +71,50 @@ void SetStoppingPlanningOutput(iflyauto::PlanningOutput& planning_output,
 
 void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
                                const pnc::geometry_lib::PathPoint& ego_pose) {
-  planning_output.planning_status.hpp_planning_status = iflyauto::HPP_PARKING_COMPLETED;
-  planning_output.planning_status.apa_planning_status = iflyauto::APA_FINISHED;
+  iflyauto::PlanningStatus& planning_status = planning_output.planning_status;
+  planning_status.hpp_planning_status = iflyauto::HPP_PARKING_COMPLETED;
+  planning_status.apa_planning_status = iflyauto::APA_FINISHED;
+  planning_status.apa_planning_failed_reason = iflyauto::NOT_FAIL;
+  planning_status.apa_planning_gear_change_status.has_request_continue_parking =
+      false;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
   // std::cout << "set finished planning output" << std::endl;
 }
 
 void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
-                             const pnc::geometry_lib::PathPoint& ego_pose) {
-  planning_output.planning_status.hpp_planning_status =
-      iflyauto::HPP_PARKING_PLANNING_FAILED;
-  planning_output.planning_status.apa_planning_status = iflyauto::APA_FAILED;
+                             const pnc::geometry_lib::PathPoint& ego_pose,
+                             uint8_t plan_fail_reason) {
+  iflyauto::PlanningStatus& planning_status = planning_output.planning_status;
+  planning_status.hpp_planning_status = iflyauto::HPP_PARKING_PLANNING_FAILED;
+  planning_status.apa_planning_status = iflyauto::APA_FAILED;
+  iflyauto::ApaPlanningFailedReason fail_reason = iflyauto::NOT_FAIL;
+  switch (plan_fail_reason) {
+    case 0:
+      fail_reason = iflyauto::NOT_FAIL;
+      break;
+    case 2:
+      fail_reason = iflyauto::STUCK_FAILED_TIME;
+      break;
+    case 8:
+      fail_reason = iflyauto::PATH_PLAN_FAIL;
+      break;
+    case 11:
+      fail_reason = iflyauto::NO_TARGET_POSE;
+      break;
+    case 12:
+      fail_reason = iflyauto::FOLD_MIRROR_FAILED;
+      break;
+    case 15:
+      fail_reason = iflyauto::GEAR_CHANGE_COUNT_TOO_MUCH;
+      break;
+    default:
+      fail_reason = iflyauto::PATH_PLAN_FAIL;
+      break;
+  }
+  planning_status.apa_planning_failed_reason = fail_reason;
+  planning_status.apa_planning_gear_change_status.has_request_continue_parking =
+      false;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
   // std::cout << "set failed planning output" << std::endl;
@@ -90,8 +122,12 @@ void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
 
 void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
                            const pnc::geometry_lib::PathPoint& ego_pose) {
-  planning_output.planning_status.hpp_planning_status = iflyauto::HPP_UNKNOWN;
-  planning_output.planning_status.apa_planning_status = iflyauto::APA_NONE;
+  iflyauto::PlanningStatus& planning_status = planning_output.planning_status;
+  planning_status.hpp_planning_status = iflyauto::HPP_UNKNOWN;
+  planning_status.apa_planning_status = iflyauto::APA_NONE;
+  planning_status.apa_planning_failed_reason = iflyauto::NOT_FAIL;
+  planning_status.apa_planning_gear_change_status.has_request_continue_parking =
+      false;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
   // std::cout << "set idle planning output" << std::endl;
@@ -179,8 +215,9 @@ void UpdateVehicleParam(VehicleParam& vehicle_param) {
   vehicle_param.rear_edge_to_rear_axle = params.rear_overhanging;
   vehicle_param.front_edge_to_rear_axle =
       params.car_length - params.rear_overhanging;
-  double front_wheel = std::atan(vehicle_param.wheel_base /
-                                std::max(0.001, vehicle_param.min_turn_radius));
+  double front_wheel =
+      std::atan(vehicle_param.wheel_base /
+                std::max(0.001, vehicle_param.min_turn_radius));
   vehicle_param.max_steer_angle =
       std::fabs(front_wheel * vehicle_param.steer_ratio);
 

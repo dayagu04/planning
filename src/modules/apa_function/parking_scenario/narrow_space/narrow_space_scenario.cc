@@ -334,6 +334,14 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     frame_.remain_dist_obs = CalRealTimeBrakeDist();
   }
 
+  if (CheckGearChangeCountTooMuch(
+          apa_param.GetParam().gear_change_decide_params)) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return;
+  }
+
 #if DEBUG_SCENARIO
   ILOG_INFO << "plan reason = " << GetRePlanReasonString(frame_.replan_reason)
             << ",force replan = " << apa_world_ptr_->GetSimuParam().force_plan
@@ -2211,6 +2219,8 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
       ILOG_INFO << "first path gear = "
                 << PathGearDebugString(response_.first_seg_path[0].gear)
                 << ",gear_change_num=" << response_.result.gear_change_num;
+
+      frame_.cur_path_gear_change_count = response_.result.gear_change_num;
 
       lateral_offset_ = response_.result.y.back();
 

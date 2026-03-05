@@ -620,5 +620,12 @@
   "comment_30": "parallel plan params",
   "parallel_col_buffer_in_slot": 0.25,
   "parallel_col_small_buffer_in_slot": 0.16,
-  "parallel_enable_hybrid_astar": false
+  "parallel_enable_hybrid_astar": false,
+
+  "comment_31": "gear change decider params",
+  "all_max_gear_change_count_searching": 20,
+  "all_max_gear_change_count_parking": 25,
+  "normal_max_gear_change_count": 15,
+  "extra_gear_change_count": 4,
+  "redunant_gear_change_count": 2
 }

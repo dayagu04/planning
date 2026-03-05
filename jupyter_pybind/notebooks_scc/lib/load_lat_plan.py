@@ -1330,10 +1330,12 @@ def load_lat_plan_figure(fig1, local_view_data):
   hover1 = HoverTool(renderers=[f1], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec')])
   fig1.add_tools(hover1)
 
-  fig1.line('refline_y', 'refline_x', source = data_construction_refline, line_width = 2, line_color = 'red', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'construct ref', visible=False)
-  fig_construction_refline = fig1.circle('refline_y', 'refline_x', source = data_construction_refline, size = 5, line_width = 4, line_color = "red", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'construct ref', visible=False)
+  scene_type = global_var.get_value("scene_type")
+  if scene_type not in ("HPP", "PARKING_APA"):
+    fig1.line('refline_y', 'refline_x', source = data_construction_refline, line_width = 2, line_color = 'red', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'construct ref', visible=False)
+    fig_construction_refline = fig1.circle('refline_y', 'refline_x', source = data_construction_refline, size = 5, line_width = 4, line_color = "red", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'construct ref', visible=False)
 
-  fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'plan refline', visible=False)
+    fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'plan refline', visible=False)
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=800, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)

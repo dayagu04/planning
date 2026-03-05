@@ -274,7 +274,7 @@ class ApaSlotManager final {
   const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(
       ApaSlot& slot);
 
-  const bool RecommendParkOut() const;
+  const bool GetRecommendApaParkingOperationType(const iflyauto::ParkingFusionInfo& parking_fusion_info);
   const bool LongitudinalConditions(const double dot_product, const ApaSlot& slot) const;
   const bool LateralConditions(double& dot_product, const ApaSlot& slot) const;
   bool IsSideParkingPerpendicularSlot(ApaSlot slot);

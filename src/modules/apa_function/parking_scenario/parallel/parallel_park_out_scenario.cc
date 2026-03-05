@@ -264,6 +264,19 @@ bool ParallelParkOutScenario::ParkOutDirectionTryHybridAStar() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+
+  if (CheckGearChangeCountTooMuch(
+          apa_param.GetParam().gear_change_decide_params)) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return false;
+  }
+
+  // print planning status
+  ILOG_INFO << "parking status = "
+            << static_cast<int>(GetPlannerStates().planning_status);
+
   return true;
 }
 
@@ -1621,6 +1634,8 @@ const PathPlannerResult ParallelParkOutScenario::PathPlanOnceGeometry() {
   const auto& path_planner_output = parallel_out_path_planner_.GetOutput();
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
+
+  frame_.cur_path_gear_change_count = path_planner_output.gear_change_count;
 
   frame_.gear_command =
       path_planner_output

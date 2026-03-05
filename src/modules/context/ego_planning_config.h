@@ -2758,15 +2758,32 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double static_other_max_extra_lateral_buffer = 0.45;
 };
 
+struct HppStopDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    dist_to_stop_dest_thr = read_json_key<double>(
+        json, "hpp_stop_dist_to_stop_dest_thr", dist_to_stop_dest_thr);
+    dist_to_stop_slot_thr = read_json_key<double>(
+        json, "hpp_stop_dist_to_stop_slot_thr", dist_to_stop_slot_thr);
+    ego_still_velocity_thr = read_json_key<double>(
+        json, "hpp_stop_ego_still_velocity_thr", ego_still_velocity_thr);
+    dist_to_target_slot_thr = read_json_key<double>(
+        json, "hpp_stop_dist_to_target_slot_thr", dist_to_target_slot_thr);
+    dist_to_target_dest_thr = read_json_key<double>(
+        json, "hpp_stop_dist_to_target_dest_thr", dist_to_target_dest_thr);
+  }
+  double dist_to_stop_dest_thr = 3.0;  // 距离目标目的地的纵向距离阈值（米）
+  double dist_to_stop_slot_thr = 2.0;  // 距离目标停车位的纵向距离阈值（米）
+  double ego_still_velocity_thr = 0.1;  // 自车静止速度阈值（米/秒）
+  double dist_to_target_slot_thr = 2.0;  // 距离目标停车位阈值（米）
+  double dist_to_target_dest_thr = 3.0;  // 距离目标目的地阈值（米）
+};
+
 struct HppParkingSwitchConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    dist_to_target_slot_thr = read_json_key<double>(
-        json, "dist_to_target_slot_thr", dist_to_target_slot_thr);
-    dist_to_target_dest_thr =
-        read_json_key<double>(json, "dist_to_target_dest_thr",
-                              dist_to_target_dest_thr);
     timeout_still_time_thr_for_giving_up_parking =
         read_json_key<double>(json, "timeout_still_time_thr_for_giving_up_parking",
                               timeout_still_time_thr_for_giving_up_parking);
@@ -2774,8 +2791,6 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "keeping_still_time_thr_for_switch_parking",
                               keeping_still_time_thr_for_switch_parking);
   }
-  double dist_to_target_slot_thr = 2.0;
-  double dist_to_target_dest_thr = 1.0;
   double timeout_still_time_thr_for_giving_up_parking = 5.0;
   double keeping_still_time_thr_for_switch_parking = 1.0;
 };

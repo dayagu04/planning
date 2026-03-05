@@ -440,6 +440,14 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
   }
 
+  if (CheckGearChangeCountTooMuch(
+          apa_param.GetParam().gear_change_decide_params)) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return;
+  }
+
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
   UpdatePARemainDistance();
 }
@@ -3348,6 +3356,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   const auto path_planner_output = parallel_path_planner_.GetOutput();
   ILOG_INFO << "first seg idx = " << path_planner_output.path_seg_index.first;
   ILOG_INFO << "last seg idx = " << path_planner_output.path_seg_index.second;
+
+  frame_.cur_path_gear_change_count = path_planner_output.gear_change_count;
 
   const auto& cur_path_end_pose =
       path_planner_output

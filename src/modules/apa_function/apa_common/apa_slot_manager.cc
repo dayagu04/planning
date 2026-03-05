@@ -1,9 +1,11 @@
 #include "apa_slot_manager.h"
+
 #include <cmath>
 #include <cstddef>
 #include <map>
 #include <unordered_map>
 #include <vector>
+
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
@@ -19,7 +21,9 @@
 namespace planning {
 namespace apa_planner {
 
+static const int kSlotFreeId = 1;
 static const int kSlotInvalidId = -1000;  // 融合输出车位 id 不会为负
+static const int kEgoSlotInvalidId = 0;   // 自车车位id无效时，融合会发 0.
 static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
 static const double kMaxEgoSlotAbsoluteDist = 6.86;
@@ -59,11 +63,12 @@ void ApaSlotManager::Update(
   const size_t slot_size =
       local_view->parking_fusion_info.parking_fusion_slot_lists_size;
   size_t select_slot_id = local_view->parking_fusion_info.select_slot_id;
+  size_t ego_slot_id = local_view->parking_fusion_info.ego_slot_id;
 
   const auto is_sapa_mode = state_machine_ptr->IsSAPAMode();
   const auto sapa_status = state_machine_ptr->GetSAPAStatus();
-  ILOG_INFO << "is_sapa_mode_ : " << is_sapa_mode
-            << " sapa_status : " << ApaStateMachineManager::GetParkingSAPAStatusString(sapa_status);
+  ILOG_INFO << "is_sapa_mode_ : " << is_sapa_mode << " sapa_status : "
+            << ApaStateMachineManager::GetParkingSAPAStatusString(sapa_status);
   ILOG_INFO << "parking_fusion slot size = " << slot_size
             << "  select slot id = " << select_slot_id;
 
@@ -103,8 +108,8 @@ void ApaSlotManager::Update(
       slot.is_selected_ = true;
     }
 
-    const double dist =
-        (car_mirror_pos - slot.GetOriginCornerCoordGlobal().pt_01_mid).norm();
+    const SlotCoord& slot_global_coord = slot.GetOriginCornerCoordGlobal();
+    const double dist = (car_mirror_pos - slot_global_coord.pt_01_mid).norm();
 
     dist_id_map_[dist] = slot.GetId();
     slots_map_[slot.GetId()] = slot;
@@ -119,9 +124,9 @@ void ApaSlotManager::Update(
     }
   }
 
-  //确定待泊入/泊出目标车位的 id
-  if(is_sapa_mode) {
-    if(sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
+  // 确定待泊入/泊出目标车位的 id
+  if (is_sapa_mode) {
+    if (sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
       select_slot_id = kSlotInvalidId;
     } else if (slots_map_.find(ApaStateMachineManager::kSlotFreeIdx_) ==
                slots_map_.end()) {
@@ -130,26 +135,24 @@ void ApaSlotManager::Update(
     } else {
       select_slot_id = ApaStateMachineManager::kSlotFreeIdx_;
     }
-  } else if(state_machine_ptr_->IsPAMode()) {
-    // TODO(taolu10): 一件贴边：需要区分状态，对于确定贴边方向后，需要基于方向确认 id
-    if(slots_map_.empty()) {
+  } else if (state_machine_ptr_->IsPAMode()) {
+    // TODO(taolu10):
+    // 一件贴边：需要区分状态，对于确定贴边方向后，需要基于方向确认 id
+    if (slots_map_.empty()) {
       select_slot_id = kSlotInvalidId;
     } else {
       select_slot_id = slots_map_.begin()->second.GetId();
     }
   } else {
-    if(state_machine_ptr_->IsParkOutStatus()) {
-      if(dist_id_map_.empty()) {
-        select_slot_id = kSlotInvalidId;
-      } else {
-        select_slot_id = dist_id_map_.begin()->second;
-      }
+    if (state_machine_ptr_->IsParkOutStatus()) {
+      select_slot_id = ego_slot_id;
     }
   }
 
   // 更新 ego_info_under_slot
-  if(state_machine_ptr_->IsSeachingStatus()) {
-    if (select_slot_id == kSlotInvalidId || slots_map_.find(select_slot_id) == slots_map_.end()) {
+  if (state_machine_ptr_->IsSeachingStatus()) {
+    if (select_slot_id == kSlotInvalidId ||
+        slots_map_.find(select_slot_id) == slots_map_.end()) {
       ego_info_under_slot_.Reset();
     } else {
       auto& slot = slots_map_.at(select_slot_id);
@@ -158,7 +161,7 @@ void ApaSlotManager::Update(
       ego_info_under_slot_.id = select_slot_id;
       ego_info_under_slot_.slot_type = slot.slot_type_;
     }
-  } else if(state_machine_ptr->IsParkingInStatus()) {
+  } else if (state_machine_ptr->IsParkingInStatus()) {
     if (slots_map_.count(ego_info_under_slot_.id) == 0) {
       ILOG_INFO << "the selected slot disappear when parking";
       ego_info_under_slot_.slot_disappear_flag = true;
@@ -169,23 +172,25 @@ void ApaSlotManager::Update(
     } else {
       ego_info_under_slot_.slot_disappear_flag = false;
     }
-  } else { // ParkingOutStatus
+  } else {  // ParkingOutStatus
   }
 
   // 更新基于规则的车位释放
-  if(state_machine_ptr_->IsSeachingStatus()) {
+  if (state_machine_ptr_->IsSeachingStatus() ||
+      state_machine_ptr_->IsManualStatus()) {
     if (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
-      //TODO(taolu10): 确认这部分逻辑的合理性
+      // TODO(taolu10): 确认这部分逻辑的合理性
       for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
         ego_info_under_slot_.slot.release_info_.release_state[i] =
             SlotReleaseState::NOT_RELEASE;
       }
     }
-    if(state_machine_ptr_->IsSearchingInStatus()) {
+    if (state_machine_ptr_->IsSearchingInStatus()) {
       if (measure_data_ptr->GetFoldMirrorFlag()) {
         col_det_interface_ptr_->Init(true);
       } else {
-        if (apa_param.GetParam().smart_fold_mirror_params.has_smart_fold_mirror) {
+        if (apa_param.GetParam()
+                .smart_fold_mirror_params.has_smart_fold_mirror) {
           col_det_interface_ptr_->Init(true);
         } else {
           col_det_interface_ptr_->Init(false);
@@ -193,31 +198,20 @@ void ApaSlotManager::Update(
       }
       ParkingLotCruiseProcess();
     }
-    if (state_machine_ptr_->IsSeachingOutStatus() && select_slot_id != kSlotInvalidId) {
-      // forced release of self slot. TODO(taolu10): 确认这部分逻辑的合理性
+    if (state_machine_ptr_->IsSeachingOutStatus() &&
+        select_slot_id != kEgoSlotInvalidId) {
       ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
       ego_info_under_slot_.relative_direction_between_ego_and_slot =
           measure_data_ptr_->GetHeadingVec().dot(
               slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
-      if (slot.slot_type_ == SlotType::PERPENDICULAR &&
-          state_machine_ptr_->IsHeadOutStatus()) {
-        if (ego_info_under_slot_.relative_direction_between_ego_and_slot >
-            0.0) {
-          slot.release_info_.release_state[RULE_BASED_RELEASE] =
-              SlotReleaseState::RELEASE;
-        } else {
-          slot.release_info_.release_state[RULE_BASED_RELEASE] =
-              SlotReleaseState::NOT_RELEASE;
-        }
-      } else {
-        slot.release_info_.release_state[RULE_BASED_RELEASE] =
-            SlotReleaseState::RELEASE;
-      }
+      slot.release_info_.release_state[RULE_BASED_RELEASE] =
+          SlotReleaseState::RELEASE;
     }
   }
 
   // 更新泊出推荐
-  recommend_park_out_ = RecommendParkOut();
+  recommend_park_out_ =
+      GetRecommendApaParkingOperationType(local_view->parking_fusion_info);
 
   if (ego_info_under_slot_.slot.GetType() == SlotType::PARALLEL) {
     const iflyauto::ParkingFusionSlot* fusion_slot;
@@ -270,10 +264,9 @@ void ApaSlotManager::Update(
       auto res = ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
           slot_vertexs, fusion_slot, d_per_edge, ego_pose);
       if (is_front_slot && res.first == 0) {
-
         neigbor_front_heading_slot = res.second;
-        ILOG_INFO << "neigbor_front_heading_slot first" <<
-              neigbor_front_heading_slot;
+        ILOG_INFO << "neigbor_front_heading_slot first"
+                  << neigbor_front_heading_slot;
         if (neigbor_front_heading_slot > 2 * M_PI ||
             neigbor_front_heading_slot < -2 * M_PI) {
           neigbor_front_heading_slot = 0.0;
@@ -296,8 +289,8 @@ void ApaSlotManager::Update(
     auto its = obstacle_manager_ptr_->GetParallelSlotNeighbourObjsHeading();
     if (its[0] != -100.0) {
       neigbor_front_heading_obs = its[0];
-      ILOG_INFO << "neigbor_front_heading_obs first" <<
-              neigbor_front_heading_obs;
+      ILOG_INFO << "neigbor_front_heading_obs first"
+                << neigbor_front_heading_obs;
 
       if (neigbor_front_heading_obs > 2 * M_PI ||
           neigbor_front_heading_obs < -2 * M_PI) {
@@ -311,33 +304,33 @@ void ApaSlotManager::Update(
           std::abs(neigbor_front_heading_obs) > pnc::mathlib::Deg2Rad(45.0)) {
         neigbor_front_heading_obs = 0.0;
       }
-
     }
     if (its[1] != -100.0) {
       ego_info_under_slot_.neigbor_rear_heading = its[1];
     }
     if (neigbor_front_heading_obs > 2 * M_PI ||
-          neigbor_front_heading_obs < -2 * M_PI) {
-            ILOG_INFO << "neigbor_front_heading_obs before" <<
-              neigbor_front_heading_obs;
-        neigbor_front_heading_obs = 0.0;
-      }
-      if (neigbor_front_heading_slot > 2 * M_PI ||
-          neigbor_front_heading_slot < -2 * M_PI) {
-        neigbor_front_heading_slot = 0.0;
-        ILOG_INFO << "neigbor_front_heading_slot before" <<
-              neigbor_front_heading_slot;
-      }
-    if(std::abs(neigbor_front_heading_obs) > std::abs(neigbor_front_heading_slot)){
+        neigbor_front_heading_obs < -2 * M_PI) {
+      ILOG_INFO << "neigbor_front_heading_obs before"
+                << neigbor_front_heading_obs;
+      neigbor_front_heading_obs = 0.0;
+    }
+    if (neigbor_front_heading_slot > 2 * M_PI ||
+        neigbor_front_heading_slot < -2 * M_PI) {
+      neigbor_front_heading_slot = 0.0;
+      ILOG_INFO << "neigbor_front_heading_slot before"
+                << neigbor_front_heading_slot;
+    }
+    if (std::abs(neigbor_front_heading_obs) >
+        std::abs(neigbor_front_heading_slot)) {
       ego_info_under_slot_.neigbor_front_heading = neigbor_front_heading_obs;
       ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front "
-                     "obs heading"
-                  << ego_info_under_slot_.neigbor_front_heading;
-    }else{
+                   "obs heading"
+                << ego_info_under_slot_.neigbor_front_heading;
+    } else {
       ego_info_under_slot_.neigbor_front_heading = neigbor_front_heading_slot;
       ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front "
-                     "slot heading"
-                  << ego_info_under_slot_.neigbor_front_heading;
+                   "slot heading"
+                << ego_info_under_slot_.neigbor_front_heading;
     }
 
     ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading = "
@@ -364,8 +357,7 @@ void ApaSlotManager::Update(
           .release_state[ASTAR_PLANNING_RELEASE];
 
   if (!measure_data_ptr_->GetStaticFlag() ||
-      (is_sapa_mode &&
-       sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) ||
+      (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) ||
       running_mode == ApaRunningMode::RUNNING_PA) {
     pre_plan_fail_slot_id_uset_.clear();
   } else if (state_machine_ptr->IsSearchingInStatus() &&
@@ -411,7 +403,8 @@ void ApaSlotManager::Update(
 }
 
 void ApaSlotManager::GenerateReleaseSlotIdVec() {
-  if (!state_machine_ptr_->IsSeachingStatus()) {
+  if (!state_machine_ptr_->IsSeachingStatus() &&
+      !state_machine_ptr_->IsManualStatus()) {
     return;
   }
   release_slot_id_vec_.clear();
@@ -999,8 +992,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   ILOG_INFO << "slot id: " << slot.GetId()
             << " parallel_slot_not_release_count = "
             << parallel_slot_not_release_count
-            << " parallel_slot_release_count = "
-            << parallel_slot_release_count;
+            << " parallel_slot_release_count = " << parallel_slot_release_count;
   if (is_slot_occupied &&
       parallel_slot_not_release_count > parallel_slot_release_count) {
     parallel_slot_not_release_count = 0;
@@ -1092,28 +1084,39 @@ const size_t ApaSlotManager::GetEgoSlotInfoID() const {
   return ego_info_under_slot_.id;
 }
 
-const bool ApaSlotManager::RecommendParkOut() const {
+const bool ApaSlotManager::GetRecommendApaParkingOperationType(
+    const iflyauto::ParkingFusionInfo& parking_fusion_info) {
   const bool is_e541_car = apa_param.GetParam().car_type == 4;
   const bool is_curr_manual_status = state_machine_ptr_->IsManualStatus();
   const bool is_curr_static = measure_data_ptr_->GetStaticFlag();
-  if(!is_e541_car || !is_curr_manual_status || !is_curr_static) {
+  if (!is_e541_car || !is_curr_manual_status || !is_curr_static) {
     return false;
   }
 
-  if (!dist_id_map_.empty()) {
-    const size_t ego_slot_id = dist_id_map_.begin()->second;
-    const ApaSlot& slot = slots_map_.at(ego_slot_id);
-    double dot_product = 0.0;
-    const bool condition_0 = LateralConditions(dot_product, slot);
-    const bool condition_1 = LongitudinalConditions(dot_product, slot);
+  if (parking_fusion_info.is_in_parking_slot) {
+    ILOG_INFO << "at this moment, the self-driving car is in the parking space";
+    auto it = slots_map_.find(ego_info_under_slot_.id);
+    if (it != slots_map_.end()) {
+      ego_info_under_slot_.slot_type = it->second.slot_type_;
+      // forced release of self slot
+      const ApaSlot& slot = it->second;
+      double dot_product = 0.0;
 
-    if (condition_0 && condition_1 &&
-        slot.slot_type_ == SlotType::PERPENDICULAR) {
-      return true;
-    } else {
-      return false;
+      const bool condition_0 = LateralConditions(dot_product, slot);
+      const bool condition_1 = LongitudinalConditions(dot_product, slot);
+
+      if (condition_0 && condition_1 &&
+          slot.slot_type_ == SlotType::PERPENDICULAR) {
+        return true;
+      } else {
+        return false;
+      }
     }
+  } else {
+    ILOG_INFO
+        << "at this moment, the self-driving car is not in the parking space";
   }
+
   return false;
 }
 
@@ -1129,8 +1132,8 @@ const bool ApaSlotManager::LongitudinalConditions(const double dot_produc,
       slot.processed_corner_coord_global_.pt_01_mid -
       slot.slot_length_ * global_pt_23mid_01mid_heading_vec;
 
-  const auto g2l_tf = geometry_lib::GlobalToLocalTf(
-      origin_pose_global_pos, origin_pose_global_heading);
+  const auto g2l_tf = geometry_lib::GlobalToLocalTf(origin_pose_global_pos,
+                                                    origin_pose_global_heading);
   const auto local_pt_0 = g2l_tf.GetPos(slot.origin_corner_coord_global_.pt_0);
   const auto local_pt_2 = g2l_tf.GetPos(slot.origin_corner_coord_global_.pt_2);
   const double solt_length = (local_pt_0 - local_pt_2).norm();

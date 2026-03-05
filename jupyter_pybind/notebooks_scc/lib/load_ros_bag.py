@@ -631,7 +631,7 @@ class LoadRosbag:
                          'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
-                         'virtual_lane_relative_id_switch_flag', \
+                         'virtual_lane_relative_id_switch_flag', "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
                          'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', 'current_segment_passed_distance', \
                          'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', 'is_exist_interactive_select_split',\
                          'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'origin_relative_id_zero_nums', \

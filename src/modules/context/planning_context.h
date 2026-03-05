@@ -28,6 +28,7 @@
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
 #include "../tasks/task_interface/narrow_space_decider_output.h"
+#include "../tasks/task_interface/hpp_stop_decider_output.h"
 #include "../tasks/task_interface/parking_switch_decider_output.h"
 #include "../tasks/task_interface/spatio_temporal_union_plan_output.h"
 #include "../tasks/task_interface/traffic_light_decider_output.h"
@@ -256,6 +257,14 @@ class PlanningContext {
 
   ParkingSwitchDeciderOutput &mutable_parking_switch_decider_output() {
     return parking_switch_decider_output_;
+  }
+
+  const HppStopDeciderOutput &hpp_stop_decider_output() const {
+    return hpp_stop_decider_output_;
+  }
+
+  HppStopDeciderOutput &mutable_hpp_stop_decider_output() {
+    return hpp_stop_decider_output_;
   }
 
   const VisionLongitudinalBehaviorPlannerOutput &
@@ -586,6 +595,7 @@ class PlanningContext {
   GeneralLateralDeciderOutput general_lateral_decider_output_;
   HppGeneralLateralDeciderOutput hpp_general_lateral_decider_output_;
   ParkingSwitchDeciderOutput parking_switch_decider_output_;
+  HppStopDeciderOutput hpp_stop_decider_output_;
 
   // longitudinal task pipeline
   VisionLongitudinalBehaviorPlannerOutput

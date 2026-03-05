@@ -260,9 +260,11 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.debug_parallel_angle_threshold, double,
                   "debug_parallel_angle_threshold");
 
-  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_1, double, "s_turn_plan_pa_buffer_1");
+  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_1, double,
+                  "s_turn_plan_pa_buffer_1");
 
-  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_2, double, "s_turn_plan_pa_buffer_2");
+  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_2, double,
+                  "s_turn_plan_pa_buffer_2");
 
   JSON_READ_VALUE(param.line_plan_pa_buffer, double, "line_plan_pa_buffer");
 
@@ -1498,6 +1500,19 @@ void SyncParkingParameters(const bool is_simulation) {
                   "moving_veh_speed_thresh");
   JSON_READ_VALUE(param.parallel_enable_hybrid_astar, bool,
                   "parallel_enable_hybrid_astar");
+
+  JSON_READ_VALUE(
+      param.gear_change_decide_params.all_max_gear_change_count_searching, int,
+      "all_max_gear_change_count_searching");
+  JSON_READ_VALUE(
+      param.gear_change_decide_params.all_max_gear_change_count_parking, int,
+      "all_max_gear_change_count_parking");
+  JSON_READ_VALUE(param.gear_change_decide_params.normal_max_gear_change_count,
+                  int, "normal_max_gear_change_count");
+  JSON_READ_VALUE(param.gear_change_decide_params.extra_gear_change_count, int,
+                  "extra_gear_change_count");
+  JSON_READ_VALUE(param.gear_change_decide_params.redunant_gear_change_count,
+                  int, "redunant_gear_change_count");
   return;
 }
 

@@ -137,7 +137,8 @@ bool GeneralLongitudinalDecider::Execute() {
             IflyTime::Now_ms() - time_1);
   double time_2 = IflyTime::Now_ms();
   std::vector<planning_math::CollisionCheckStatus> hpp_collision_results;
-  if (session_->is_hpp_scene() || session_->is_rads_scene() || session_->is_nsa_scene()) {
+  if (session_->is_hpp_scene() || session_->is_rads_scene() ||
+      session_->is_nsa_scene()) {
     GetHppCollisionCheckResult(ego_planning_result.traj_points,
                                hpp_collision_results);
   }
@@ -185,9 +186,21 @@ bool GeneralLongitudinalDecider::Execute() {
                                        start_stop_info, start_stop_result);
   }
 
-  bool enable_stop_flag =
-      ((lon_yield_info_.keep_stop || start_stop_result.enable_stop()) &&
-       !session_->is_hpp_scene());
+  // 获取 HPP stop decider 输出
+  const auto &hpp_stop_decider_output =
+      session_->planning_context().hpp_stop_decider_output();
+  bool hpp_stopped_at_destination =
+      session_->is_hpp_scene() &&
+      hpp_stop_decider_output.is_stopped_at_destination;
+
+  bool enable_stop_flag = false;
+  if (session_->is_hpp_scene()) {
+    enable_stop_flag =
+        hpp_stop_decider_output.is_stopped_at_destination;
+  } else {
+    enable_stop_flag =
+        (lon_yield_info_.keep_stop || start_stop_result.enable_stop());
+  }
   LOG_DEBUG(
       "HHLDEBUGDB start stop input: %d, enable stop_flag: %d, is_start: %d, "
       "is_stop: % d, enable_stop: % d \n",
@@ -461,9 +474,9 @@ bool GeneralLongitudinalDecider::Execute() {
   // set destination bound for PNP
   if (session_->is_hpp_scene()) {
     // set destination bound
-    double distance_to_destination =
-        reference_path_ptr_->get_points().back().path_point.s() -
-        planning_init_point.frenet_state.s;
+    const auto &route_info_output =
+        session_->environmental_model().get_route_info()->get_route_info_output();
+    double distance_to_destination = route_info_output.hpp_route_info_output.distance_to_target_dest;
     const auto &parking_slot_manager =
         session_->environmental_model().get_parking_slot_manager();
     size_t target_slot_id = parking_slot_manager->GetTargetSlotId();
@@ -524,10 +537,15 @@ bool GeneralLongitudinalDecider::Execute() {
   }
   if (session_->is_nsa_scene()) {
     const auto& nsa_output = session_->planning_context().narrow_space_decider_output();
+    JSON_DEBUG_VALUE("distance_to_end", nsa_output.distance_to_end);
+    JSON_DEBUG_VALUE("is_exiting_narrow_space", static_cast<int>(nsa_output.is_exiting_narrow_space));
+    JSON_DEBUG_VALUE("is_in_narrow_space", static_cast<int>(nsa_output.is_in_narrow_space));
+    JSON_DEBUG_VALUE("is_passable_narrow_space", static_cast<int>(nsa_output.is_passable_narrow_space));
     const auto& local_view = session_->environmental_model().get_local_view();
     const auto &frenet_ego_state = reference_path_ptr_->get_frenet_ego_state();
     double ego_start_s = frenet_ego_state.s();
     double nsa_dis = local_view.function_state_machine_info.nra_req.nra_distance;
+    JSON_DEBUG_VALUE("nsa_drived_distance", nsa_dis);
     if (local_view.function_state_machine_info.current_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
       if ((nsa_output.is_exiting_narrow_space && nsa_output.distance_to_end < kNsaBrakeDisToEnd) ||
           (nsa_output.is_in_narrow_space && nsa_output.is_passable_narrow_space &&
@@ -1122,12 +1140,17 @@ void GeneralLongitudinalDecider::make_longitudinal_overlap_path(
                                            care_width));
   }
 
-  auto s_end = traj_points.front().s + config_.lon_care_length;
-  if (traj_points.back().s < s_end) {
-    auto &last_point = traj_points.back();
-    overlap_path.emplace_back(make_polygon(Vec2d(last_point.s, last_point.l),
-                                           Vec2d(s_end, last_point.l),
-                                           care_width));
+  // 使用最后一个点到倒数第二个点的距离作为延长距离，替代固定 lon_care_length
+  if (traj_points.size() >= 2) {
+    double extension_length =
+        traj_points.back().s - traj_points[traj_points.size() - 2].s;
+    if (extension_length > 0) {
+      auto s_end = traj_points.back().s + extension_length;
+      auto &last_point = traj_points.back();
+      overlap_path.emplace_back(make_polygon(Vec2d(last_point.s, last_point.l),
+                                             Vec2d(s_end, last_point.l),
+                                             care_width));
+    }
   }
 }
 

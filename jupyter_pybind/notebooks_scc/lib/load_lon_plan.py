@@ -1,4 +1,5 @@
 from lib.load_rotate import *
+import lib.load_global_var as global_var
 import numpy as np
 import time
 import ipywidgets
@@ -25,7 +26,7 @@ from lib.load_struct import *
 coord_tf = coord_transformer()
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
-  planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
+  planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
                               'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', 'prohibit_acc_',\
                               'merge_target_one_id', 'merge_target_two_id', 'v_target_merge', 'rear_agent_merge_time', 'merge_orintation', 'merge_direction_plan',
                               'merge_exist','is_merge_region_plan', 'merge_point_distance', 'current_lane_is_continue', 'ego_has_rightof_tar_lane',
@@ -924,6 +925,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
+  scene_type = global_var.get_value('scene_type')
 
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
@@ -1126,6 +1128,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, lead_fig, fig_fsm_state, tfl_status_fig), column(cost_time_fig, cutin_fig, fig_replan_status,topic_latency_fig)), title="Realtime")
 
-  pans = Tabs(tabs=[ pan1, pan2 ])
+  if scene_type == "HPP":
+    pans = Tabs(tabs=[ pan1, pan2 ], height = 1200)
+  else:
+    pans = Tabs(tabs=[ pan1, pan2 ])
 
   return pans, lon_plan_data
