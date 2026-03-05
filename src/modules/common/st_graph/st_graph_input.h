@@ -153,6 +153,8 @@ class StGraphInput {
 
   const bool is_rads_scene() const;
 
+  const bool is_hpp_scene() const;
+
   std::shared_ptr<SecondOrderTimeOptimalTrajectory>
   GenerateMaxAccelerationCurve(
       const trajectory::TrajectoryPoint& planning_init_point,

@@ -11,6 +11,8 @@
 #include "context/obstacle.h"
 #include "context/reference_path.h"
 #include "context/reference_path_manager.h"
+#include "math/line_segment2d.h"
+#include "vehicle_config_context.h"
 #include "trajectory/trajectory.h"
 #include "trajectory/trajectory_point.h"
 
@@ -45,6 +47,9 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
 
   const auto &frenet_coord = reference_path->get_frenet_coord();
   const double ego_s = reference_path->get_frenet_ego_state().s();
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_half_width = vehicle_param.width * 0.5;
 
   // 使用较大的ID段来避免与其他障碍物ID冲突
   int virtual_agent_id = 5500000;
@@ -59,15 +64,23 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
     double collision_l = 0.0;
     bool collision_found = false;
 
-    // 横向检测范围（约半车道宽度）
-    const double kLateralCheckRange = 1.5;
+    // 对齐 GetHppCollisionCheckResult 风格：
+    // 1) 只检查前向有限距离内点
+    // 2) 碰撞点计数超过阈值才认定有效碰撞
+    constexpr double kCollisionCheckRange = 20.0;
+    constexpr int32_t kCollisionPointThreshold = 3;
+    int32_t collision_point_count = 0;
+    const double lateral_check_range =
+        std::fmax(ego_half_width, kGroundLineVirtualAgentWidth * 0.5);
 
     for (const auto &point : obstacle->perception_points()) {
       Point2D cart_point(point.x(), point.y());
       Point2D frenet_point;
       if (frenet_coord->XYToSL(cart_point, frenet_point)) {
-        if (std::abs(frenet_point.y) < kLateralCheckRange &&
-            frenet_point.x > ego_s) {
+        if (std::abs(frenet_point.y) < lateral_check_range &&
+            frenet_point.x > ego_s &&
+            frenet_point.x < ego_s + kCollisionCheckRange) {
+          ++collision_point_count;
           if (frenet_point.x < min_s) {
             min_s = frenet_point.x;
             collision_l = frenet_point.y;
@@ -77,7 +90,7 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
       }
     }
 
-    if (collision_found) {
+    if (collision_found && collision_point_count > kCollisionPointThreshold) {
       CreateVirtualAgentFromGroundLine(obstacle, min_s, collision_l,
                                        virtual_agent_id++);
     }
@@ -119,14 +132,34 @@ void HppObstaclePreprocessDecider::CreateVirtualAgentFromGroundLine(
   // 必须设置fusion_source为OBSTACLE_SOURCE_CAMERA，否则StGraphInput会过滤掉该agent
   virtual_agent.set_fusion_source(OBSTACLE_SOURCE_CAMERA);
 
-  // 设置包围盒
+  // 参考 Obstacle 的构造逻辑：点集 -> 凸包 -> MinAreaBoundingBox；
+  // 若失败则回退到线段退化 box。
+  planning_math::Polygon2d polygon;
   planning_math::Box2d box({cart_point.x, cart_point.y}, heading,
-                            kGroundLineVirtualAgentLength,
-                            kGroundLineVirtualAgentWidth);
+                           kGroundLineVirtualAgentLength,
+                           kGroundLineVirtualAgentWidth);
+  std::vector<planning_math::Vec2d> hull_points = obstacle->perception_points();
+  bool hull_ok =
+      hull_points.size() >= 3 &&
+      planning_math::Polygon2d::ComputeConvexHull(hull_points, &polygon) &&
+      polygon.is_convex() && polygon.points().size() >= 3;
+  if (hull_ok) {
+    box = polygon.MinAreaBoundingBox();
+  } else if (obstacle->perception_points().size() >= 2) {
+    const auto &points = obstacle->perception_points();
+    planning_math::LineSegment2d axis(points.front(), points.back());
+    box = planning_math::Box2d(axis, 0.01);
+    polygon = planning_math::Polygon2d(box);
+  } else {
+    polygon = planning_math::Polygon2d(box);
+  }
   virtual_agent.set_box(box);
-
-  planning_math::Polygon2d polygon(box);
   virtual_agent.set_polygon(polygon);
+  virtual_agent.set_x(box.center_x());
+  virtual_agent.set_y(box.center_y());
+  virtual_agent.set_theta(box.heading());
+  virtual_agent.set_length(box.length());
+  virtual_agent.set_width(box.width());
 
   // 时间范围从0开始（与StGraphInput的相对时间域对齐）
   virtual_agent.set_time_range({0.0, kPredictionHorizon});
@@ -152,39 +185,32 @@ void HppObstaclePreprocessDecider::ProcessDynamicObstacles() {
     auto *agent = agent_manager->mutable_agent(id);
     if (agent == nullptr) continue;
 
-    // 对于被AgentManager错误标记为静态、但实际速度较大、且无预测轨迹的障碍物，
-    // 修正is_static标志并补充匀速预测轨迹，使ST图能正确处理
-    if (agent->is_static() && agent->speed() > kDynamicObstacleSpeedThreshold &&
-        agent->trajectories_used_by_st_graph().empty()) {
-      agent->set_is_static(false);
-      GenerateConstantVelocityTrajectory(agent);
-      ILOG_INFO << "Fixed dynamic agent id=" << id
-                << " speed=" << agent->speed()
-                << " as dynamic with CV trajectory";
+    // 对于无预测轨迹的障碍物，统一强制按静态障碍物处理，并补齐时域轨迹。
+    // 轨迹点直接使用当前位姿，等效于每个时刻都赋予障碍物当前位置。
+    if (agent->trajectories_used_by_st_graph().empty()) {
+      agent->set_is_static(true);
+      GenerateCurrentPoseTrajectory(agent);
+      ILOG_INFO << "Force static agent id=" << id
+                << " with current-pose trajectory";
     }
   }
 }
 
-void HppObstaclePreprocessDecider::GenerateConstantVelocityTrajectory(
+void HppObstaclePreprocessDecider::GenerateCurrentPoseTrajectory(
     agent::Agent *agent) {
   double x = agent->x();
   double y = agent->y();
   double theta = agent->theta();
-  double v = agent->speed();
 
   trajectory::Trajectory traj;
   for (double t = 0.0; t <= kPredictionHorizon + 1e-6; t += kTimeResolution) {
-    double dist = v * t;
-    double nx = x + dist * std::cos(theta);
-    double ny = y + dist * std::sin(theta);
-
     trajectory::TrajectoryPoint tp;
-    tp.set_x(nx);
-    tp.set_y(ny);
+    tp.set_x(x);
+    tp.set_y(y);
     tp.set_theta(theta);
-    tp.set_vel(v);
+    tp.set_vel(0.0);
     tp.set_acc(0.0);
-    tp.set_s(dist);
+    tp.set_s(0.0);
     // absolute_time在Agent轨迹中存储的是相对时间（与Agent构造逻辑保持一致），
     // StGraphInput将planning_init_point_.absolute_time设为0，因此从0开始
     tp.set_absolute_time(t);

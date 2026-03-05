@@ -29,11 +29,10 @@ class HppObstaclePreprocessDecider : public Task {
 
   void CreateVirtualAgentFromGroundLine(const Obstacle *obstacle, double s,
                                         double l, int id);
-  void GenerateConstantVelocityTrajectory(agent::Agent *agent);
+  void GenerateCurrentPoseTrajectory(agent::Agent *agent);
 
   const double kGroundLineVirtualAgentLength = 0.5;
   const double kGroundLineVirtualAgentWidth = 2.0;
-  const double kDynamicObstacleSpeedThreshold = 1.0;  // m/s
   const double kPredictionHorizon = 5.0;              // s
   const double kTimeResolution = 0.2;                 // s
 };

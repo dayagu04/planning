@@ -166,6 +166,9 @@ void STGraph::MakeStaticAgentStBoundary(
   const auto& planning_init_point_box =
       st_graph_input_->planning_init_point_box();
   const bool is_rads_scene = st_graph_input_->is_rads_scene();
+  const bool is_hpp_scene = st_graph_input_->is_hpp_scene();
+  // HPP uses same static obstacle (OCC polygon) handling as RADS
+  const bool use_occ_polygon_style = is_rads_scene || is_hpp_scene;
   if (nullptr == planned_kd_path || reserve_num <= 0 ||
       nullptr == mutable_agent_manager || nullptr == ptr_ego_lane ||
       nullptr == path_border_querier || nullptr == ptr_virtual_lane_manager ||
@@ -209,7 +212,7 @@ void STGraph::MakeStaticAgentStBoundary(
   lat_buffer = reuse_for_close_pass
                    ? lat_buffer + extra_lateral_buffer_for_close_pass
                    : lat_buffer;
-  if (is_rads_scene) {
+  if (use_occ_polygon_style) {
     lat_buffer = 0.0;
     lon_buffer = 0.0;
   }
@@ -244,8 +247,9 @@ void STGraph::MakeStaticAgentStBoundary(
       {left_begin_point, left_end_point, right_end_point, right_begin_point});
   };
 
-  if(is_rads_scene && agent.type() > agent::AgentType::OCC_EMPTY) {
-    if(max_l * min_l > 0.0 && std::min(std::fabs(max_l), std::fabs(min_l)) > ego_half_width) {
+  if (use_occ_polygon_style && agent.type() > agent::AgentType::OCC_EMPTY) {
+    if (max_l * min_l > 0.0 &&
+        std::min(std::fabs(max_l), std::fabs(min_l)) > ego_half_width) {
       return;
     } else if (max_l * min_l > 0.0) {
       // polygon points min l > ego_half_width, return
