@@ -68,7 +68,7 @@ void ObstacleManager::update() {
 
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
-    auto prediction_object = prediction_objects[i];
+    auto& prediction_object = prediction_objects[i];
     if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       ILOG_DEBUG << "[ObstacleManager Update] ignore unknown obstacle : ["
                  << prediction_object.id << "]";
