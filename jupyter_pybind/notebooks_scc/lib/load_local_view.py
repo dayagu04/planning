@@ -1158,6 +1158,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   if bag_loader.plan_debug_msg['enable'] == True:
     try:
+      for key, value in local_view_data.items():
+        if key.find('road_type_analysis_result') != -1:
+          value.data.update({
+            'ref_path_y' : [],
+            'ref_path_x' : [],
+          })
       static_analysis_result = plan_debug_msg.static_analysis_result
       road_types = static_analysis_result.road_types
       for road_type in road_types:
