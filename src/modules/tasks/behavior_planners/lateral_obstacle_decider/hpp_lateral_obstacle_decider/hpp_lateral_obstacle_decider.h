@@ -46,6 +46,17 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       const MergedObstacleContainer &merged_container);
 
+  //辅助函数1：处理单个 Cluster 的决策逻辑
+  LatObstacleDecisionType MakeDecisionForSingleCluster(
+      const MergedObstacleResult& cluster);
+
+  //辅助函数2：更新历史记录状态机
+  void UpdateClusterHistory(
+      const MergedObstacleResult& cluster,
+      LatObstacleDecisionType decision,
+      double current_timestamp,
+      std::unordered_map<uint32_t, LatObstacleDecisionType>& lat_obstacle_decision);
+
   void ClearOldConsistencyInfo(
       const std::unordered_set<uint32_t>& current_frame_ids,
       double current_timestamp);
