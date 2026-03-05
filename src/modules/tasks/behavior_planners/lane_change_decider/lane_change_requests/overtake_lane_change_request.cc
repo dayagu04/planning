@@ -1163,6 +1163,7 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
   speed_threshold = speed_threshold * attenuation_coefficient;
   speed_threshold *= traget_lane_overtake_speed_threshold_weight;
   JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
+  speed_threshold_for_cancel_ = speed_threshold;
   const double speed_diff = lane_traffic_speed - leading_vehicle_speed;
   const bool is_overtake_maintain = (speed_diff > speed_threshold);
   return is_overtake_maintain;
@@ -1987,6 +1988,8 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         leading_vehicle_iter->second->frenet_velocity_l();
     double leading_vehicle_lateral_dis =
         leading_vehicle_iter->second->frenet_l();
+    double leading_vehicle_long_distance =
+        leading_vehicle_iter->second->d_s_rel();
 
     if (ego_front_vehicle_id_array.size() >= 1) {
       int ego_front_vehicle_id = ego_front_vehicle_id_array.at(0)->id();
@@ -2085,27 +2088,59 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
       }
     }
     if (request_type_ == LEFT_CHANGE) {
-      double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
-      if (ego_left_front_leading_vehivle_long_distance >=
-          kCancelOverTakeLnChgTargetLaneVehHighDst) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
-      } else if (ego_left_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                          leading_vehicle_iter->second->d_s_rel())) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // if (ego_left_front_leading_vehivle_long_distance >=
+      //     kCancelOverTakeLnChgTargetLaneVehHighDst) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
+      // } else if (ego_left_front_leading_vehivle_long_distance <=
+      //            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                     leading_vehicle_iter->second->d_s_rel())) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // } else {
+      //   speed_threshold = planning_math::lerp(
+      //       kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
+      //       std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                leading_vehicle_iter->second->d_s_rel()),
+      //       kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
+      //       kCancelOverTakeLnChgTargetLaneVehHighDst,
+      //       ego_left_front_leading_vehivle_long_distance);
+      // }
+      // if ((ego_left_front_leading_vehicle_min_speed <
+      //      overtake_lane_change_vehicle_speed + speed_threshold) &&
+      //     ego_left_front_leading_vehivle_long_distance <=
+      //         kCancelOverTakeLnChgTargetLaneVehDstThold) {
+      //   target_lane_exist_slow_front_veh_frame_num_ += 1;
+      // } else {
+      //   target_lane_exist_slow_front_veh_frame_num_ = 0;
+      // }
+      double speed_diff_upper_limit =
+          speed_threshold_for_cancel_;  //滞回的速度差作为插值上限
+      double speed_diff_thresh_during_parallel = planning_math::lerp(
+          speed_diff_upper_limit, 0.0, 0.0, 180.0,
+          leading_vehicle_long_distance);  //插值计算出目标车道前车与当前车道前车的并行时的速度差阈值要求
+      double distance_diff = ego_left_front_leading_vehivle_long_distance -
+                             leading_vehicle_long_distance;
+      double cancel_overtake_speed_diff_threshold = 0.0;
+      //分段插值
+      if (distance_diff <= 0) {
+        cancel_overtake_speed_diff_threshold = planning_math::lerp(
+            speed_diff_upper_limit, -leading_vehicle_long_distance,
+            speed_diff_thresh_during_parallel, 0.0,
+            distance_diff);  //自变量为目标车道前车与当前车道前车的距离差，得到分段插值第一段的取消超车速度差阈值
       } else {
-        speed_threshold = planning_math::lerp(
-            kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                     leading_vehicle_iter->second->d_s_rel()),
-            kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
-            kCancelOverTakeLnChgTargetLaneVehHighDst,
-            ego_left_front_leading_vehivle_long_distance);
+        // cancel_overtake_speed_diff_threshold = planning_math::lerp(
+        //   speed_diff_thresh_during_parallel,
+        //   0.0,
+        //   0.0,
+        //   50.0,
+        //   distance_diff);//自变量为目标车道前车与当前车道前车的距离差，得到分段插值第二段的取消超车速度差阈值
+        cancel_overtake_speed_diff_threshold =
+            -0.1 * distance_diff + speed_diff_thresh_during_parallel;
       }
-      if ((ego_left_front_leading_vehicle_min_speed <
-           overtake_lane_change_vehicle_speed + speed_threshold) &&
-          ego_left_front_leading_vehivle_long_distance <=
-              kCancelOverTakeLnChgTargetLaneVehDstThold) {
+
+      if (ego_left_front_leading_vehicle_min_speed -
+              overtake_lane_change_vehicle_speed <
+          cancel_overtake_speed_diff_threshold) {
         target_lane_exist_slow_front_veh_frame_num_ += 1;
       } else {
         target_lane_exist_slow_front_veh_frame_num_ = 0;
@@ -2149,27 +2184,60 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
       }
     }
     if (request_type_ == RIGHT_CHANGE) {
-      double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
-      if (ego_right_front_leading_vehivle_long_distance >=
-          kCancelOverTakeLnChgTargetLaneVehHighDst) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
-      } else if (ego_right_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                          leading_vehicle_iter->second->d_s_rel())) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // if (ego_right_front_leading_vehivle_long_distance >=
+      //     kCancelOverTakeLnChgTargetLaneVehHighDst) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
+      // } else if (ego_right_front_leading_vehivle_long_distance <=
+      //            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                     leading_vehicle_iter->second->d_s_rel())) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // } else {
+      //   speed_threshold = planning_math::lerp(
+      //       kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
+      //       std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                leading_vehicle_iter->second->d_s_rel()),
+      //       kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
+      //       kCancelOverTakeLnChgTargetLaneVehHighDst,
+      //       ego_right_front_leading_vehivle_long_distance);
+      // }
+      // if ((ego_right_front_leading_vehicle_min_speed <
+      //      overtake_lane_change_vehicle_speed + speed_threshold) &&
+      //     ego_right_front_leading_vehivle_long_distance <=
+      //         kCancelOverTakeLnChgTargetLaneVehDstThold) {
+      //   target_lane_exist_slow_front_veh_frame_num_ += 1;
+      // } else {
+      //   target_lane_exist_slow_front_veh_frame_num_ = 0;
+      // }
+
+      double speed_diff_upper_limit =
+          speed_threshold_for_cancel_;  //滞回的速度差作为插值上限
+      double speed_diff_thresh_during_parallel = planning_math::lerp(
+          speed_diff_upper_limit, 0.0, 0.0, 180.0,
+          leading_vehicle_long_distance);  //插值计算出目标车道前车与当前车道前车的并行时的速度差阈值要求
+      double distance_diff = ego_right_front_leading_vehivle_long_distance -
+                             leading_vehicle_long_distance;
+      double cancel_overtake_speed_diff_threshold = 0.0;
+      //分段插值
+      if (distance_diff <= 0) {
+        cancel_overtake_speed_diff_threshold = planning_math::lerp(
+            speed_diff_upper_limit, -leading_vehicle_long_distance,
+            speed_diff_thresh_during_parallel, 0.0,
+            distance_diff);  //自变量为目标车道前车与当前车道前车的距离差，得到分段插值第一段的取消超车速度差阈值
       } else {
-        speed_threshold = planning_math::lerp(
-            kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                     leading_vehicle_iter->second->d_s_rel()),
-            kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
-            kCancelOverTakeLnChgTargetLaneVehHighDst,
-            ego_right_front_leading_vehivle_long_distance);
+        // cancel_overtake_speed_diff_threshold = planning_math::lerp(
+        //   speed_diff_thresh_during_parallel,
+        //   0.0,
+        //   0.0,
+        //   50.0,
+        //   distance_diff);//自变量为目标车道前车与当前车道前车的距离差，得到分段插值第二段的取消超车速度差阈值
+        cancel_overtake_speed_diff_threshold =
+            -0.1 * distance_diff + speed_diff_thresh_during_parallel;
       }
-      if ((ego_right_front_leading_vehicle_min_speed <
-           overtake_lane_change_vehicle_speed + speed_threshold) &&
-          ego_right_front_leading_vehivle_long_distance <=
-              kCancelOverTakeLnChgTargetLaneVehDstThold) {
+
+      if (ego_right_front_leading_vehicle_min_speed -
+              overtake_lane_change_vehicle_speed <
+          cancel_overtake_speed_diff_threshold) {
         target_lane_exist_slow_front_veh_frame_num_ += 1;
       } else {
         target_lane_exist_slow_front_veh_frame_num_ = 0;
@@ -2181,10 +2249,10 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
                  << "LaneChangeProgress:" << lc_state
                  << "OverTake Vehicle LonSpd:"
                  << overtake_lane_change_vehicle_speed
-                 << "Left Lane Target Speed:"
-                 << ego_left_front_leading_vehicle_min_speed
+                 << "right Lane Target Speed:"
+                 << ego_right_front_leading_vehicle_min_speed
                  << "Ego Lat Distance:" << lateral_distance
-                 << "left lane exist slow front veh frame num:"
+                 << "right lane exist slow front veh frame num:"
                  << target_lane_exist_slow_front_veh_frame_num_;
       return true;
     }
@@ -2363,6 +2431,7 @@ void OvertakeRequest::Reset() {
   left_lane_nums_ = 0;
   truck_confirm_frame_count_ = 0;
   truck_confirm_frame_count_map_.clear();
+  speed_threshold_for_cancel_ = 15;
 }
 
 }  // namespace planning

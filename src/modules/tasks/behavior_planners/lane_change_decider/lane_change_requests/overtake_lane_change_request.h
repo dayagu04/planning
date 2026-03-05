@@ -195,6 +195,7 @@ class OvertakeRequest : public LaneChangeRequest {
   bool right_lane_exist_cross_line_truck_ = false;
   double left_lane_exist_cross_line_truck_speed_ = 33.33;
   double right_lane_exist_cross_line_truck_speed_ = 33.33;
+  double speed_threshold_for_cancel_ = 15.0;
 };
 
 }  // namespace planning
