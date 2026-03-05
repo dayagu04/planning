@@ -32,7 +32,12 @@ enum class SpeedLimitType {
   ON_CONSTRUCTION = 20,
   SHARP_CURVATURE = 21,
   ROAD_BOUNDARY = 22,
-  ROAD_BOUNDARY_SHARP_DECEL = 23
+  ROAD_BOUNDARY_SHARP_DECEL = 23,
+  // hpp
+  MAP = 24,
+  USER = 25,
+  NARROW_AREA = 26,
+  AVOID = 27,
 };
 
 struct SpeedLimitAgent {
