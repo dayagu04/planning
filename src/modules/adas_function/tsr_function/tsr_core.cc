@@ -523,6 +523,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
            (ego_speed_kph >= 40.0 && ego_speed_kph <= 80.0 && hightest_perception_speed_limit > 10) ||
            (ego_speed_kph > 80.0 && hightest_perception_speed_limit > 40)) {
           tsr_speed_limit_ = hightest_perception_speed_limit;
+          accumulated_path_length_ = 0.0;   // 本帧起按新限速重新累积距离
           speed_limit_out_flag_ = true;
           speed_limit_renew_flag_ = true;
         }
@@ -541,6 +542,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
           end_of_speed_sign_value_ = hightest_perception_end_of_speed_limit;
           end_of_speed_limit_out_flag_ = true;
           tsr_speed_limit_ = 0;
+          accumulated_path_length_ = 0.0;   // 解除限速后距离从 0 开始
           speed_limit_out_flag_ = false;
           speed_limit_renew_flag_ = true;
           speed_limit_set_.clear();
@@ -551,37 +553,37 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   }
 
-  // 根据当前感知限速速度，更改tsr_reset_path_length
+  // 根据当前感知限速速度，更改tsr_reset_path_length（每帧都按当前限速设阈值）
+if (tsr_speed_limit_ == 0) {
   tsr_reset_path_length_ = GetContext.get_param()->tsr_reset_path_length;
-  if (speed_limit_renew_flag_ == true) {
-    // bestune_e541
-    if (GetContext.get_param()->car_type == "bestune_e541") {
-      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ < 20.0) {
-        tsr_reset_path_length_ = 150.0;
-      } else if (tsr_speed_limit_ >= 20.0 && tsr_speed_limit_ < 30.0) {
-        tsr_reset_path_length_ = 200.0;
-      } else if (tsr_speed_limit_ >= 30.0 && tsr_speed_limit_ < 40.0) {
-        tsr_reset_path_length_ = 350.0;
-      } else if (tsr_speed_limit_ >= 40.0 && tsr_speed_limit_ < 50.0) {
-        tsr_reset_path_length_ = 400.0;
-      } else if (tsr_speed_limit_ >= 50.0 && tsr_speed_limit_ < 70.0) {
-        tsr_reset_path_length_ = 700.0;
-      } else if (tsr_speed_limit_ >= 70.0 && tsr_speed_limit_ < 80.0) {
-        tsr_reset_path_length_ = 900.0;
-      } else {
-        tsr_reset_path_length_ = 1100.0;
-      }
+} else {
+  // 每帧按当前 tsr_speed_limit_ 选择阈值
+  if (GetContext.get_param()->car_type == "bestune_e541") {
+    if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ < 20.0) {
+      tsr_reset_path_length_ = 150.0;
+    } else if (tsr_speed_limit_ >= 20.0 && tsr_speed_limit_ < 30.0) {
+      tsr_reset_path_length_ = 200.0;
+    } else if (tsr_speed_limit_ >= 30.0 && tsr_speed_limit_ < 40.0) {
+      tsr_reset_path_length_ = 350.0;
+    } else if (tsr_speed_limit_ >= 40.0 && tsr_speed_limit_ < 50.0) {
+      tsr_reset_path_length_ = 400.0;
+    } else if (tsr_speed_limit_ >= 50.0 && tsr_speed_limit_ < 70.0) {
+      tsr_reset_path_length_ = 700.0;
+    } else if (tsr_speed_limit_ >= 70.0 && tsr_speed_limit_ < 80.0) {
+      tsr_reset_path_length_ = 900.0;
+    } else {
+      tsr_reset_path_length_ = 1100.0;
     }
-    else {
-      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ <= 50.0) {
-        tsr_reset_path_length_ = 1500.0;
-      } else if (tsr_speed_limit_ >= 51.0 && tsr_speed_limit_ <= 80.0) {
-        tsr_reset_path_length_ = 2000.0;
-      } else {
-        tsr_reset_path_length_ = 4000.0;
-      }
+  } else {
+    if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ <= 50.0) {
+      tsr_reset_path_length_ = 1500.0;
+    } else if (tsr_speed_limit_ >= 51.0 && tsr_speed_limit_ <= 80.0) {
+      tsr_reset_path_length_ = 2000.0;
+    } else {
+      tsr_reset_path_length_ = 4000.0;
     }
   }
+}
   // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
   if (accumulated_path_length_ > tsr_reset_path_length_) {
     // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
