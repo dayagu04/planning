@@ -197,7 +197,7 @@ void ReferencePath::update_refpath_points_in_hpp(
         end_index = i;
         break;
       }
-      if (raw_ref_path_points[i].path_point.kappa > 0.75) { // 最大曲率？
+      if (raw_ref_path_points[i].path_point.kappa() > 0.75) { // 最大曲率？
         end_index = i;
         break;
       }
