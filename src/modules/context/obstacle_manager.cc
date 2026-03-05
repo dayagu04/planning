@@ -94,8 +94,8 @@ void ObstacleManager::update() {
 
     // hpp中过滤近处的OD
     if (session_->is_hpp_scene() || session_->is_nsa_scene() || session_->is_rads_scene()) {
-      if (reference_path != nullptr) {
-        if (frenet_coord != nullptr) {
+      if (reference_path != nullptr && frenet_coord != nullptr) {
+        if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_SPECIFICATIONER) {
           bool in_range = true;
           Box2d bounding_box(
               {prediction_object.position_x, prediction_object.position_y},
