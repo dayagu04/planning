@@ -63,7 +63,7 @@ tsr_json_value_list = [
                          "tsr_main_switch_","tsr_disable_code_","tsr_fault_code_","tsr_state_","tsr_speed_limit_",
                          "has_perception_speed_limit_","has_perception_end_of_speed_limit_","end_of_speed_limit_out_flag_","speed_limit_out_flag_","speed_limit_renew_flag_",
                          "current_map_speed_limit_", "current_map_speed_limit_valid_", "current_map_type_", "current_road_type_", "speed_limit_suppression_flag_",
-                         "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_",
+                         "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_","tsr_navi_flag_",
                         ]
 
 adas_json_value_list =  [ #adas_debug info
@@ -206,6 +206,7 @@ f_end_of_speed_sign = fig_speed_info.line('time', 'end_of_speed_sign_value_', so
 f_display_info = fig_display_info.line('time', 'tsr_output_supp_sign_info_', source = tsr_json_list_dict, line_width = 1, line_color = 'gray', line_dash = 'solid', legend_label = 'output_supp_sign_info')
 fig_display_info.line('time', 'tsr_overspeed_status_', source = tsr_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'overspeed_status')
 fig_display_info.line('time', 'tsr_warning_flag_', source = tsr_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'warning_flag')
+fig_display_info.line('time', 'tsr_navi_flag_', source = tsr_json_list_dict, line_width = 1, line_color = 'yellow', line_dash = 'solid', legend_label = 'tsr_navi_flag_')
 
 # 动态状态
 f_dynamic_state = fig_dynamic_state.line('time', 'has_perception_speed_limit_', source = tsr_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'has_perception_speed_limit')
@@ -224,7 +225,7 @@ hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('
 hover_speed_info_vehicle = HoverTool(renderers=[f_speed_info], tooltips=[('time', '@time'), ('state_dispaly_vehicle_speed', '@state_dispaly_vehicle_speed')], mode='vline')
 hover_speed_info_tsr = HoverTool(renderers=[f_tsr_speed_limit, f_map_speed_limit, f_map_type, f_road_type, f_end_of_speed_sign], tooltips=[('time', '@time'), ('tsr_speed_limit_', '@tsr_speed_limit_'), ('current_map_speed_limit_', '@current_map_speed_limit_'), ('current_map_type_', '@current_map_type_'), ('current_road_type_', '@current_road_type_'), ('end_of_speed_sign_value_', '@end_of_speed_sign_value_')], mode='vline')
 hover_display_info = HoverTool(renderers=[f_display_info], tooltips=[('time', '@time'), ('tsr_output_supp_sign_info_', '@tsr_output_supp_sign_info_'),
-                                                                     ('tsr_overspeed_status_', '@tsr_overspeed_status_'), ('tsr_warning_flag_', '@tsr_warning_flag_')], mode='vline')
+                                                                     ('tsr_overspeed_status_', '@tsr_overspeed_status_'), ('tsr_warning_flag_', '@tsr_warning_flag_'), ('tsr_navi_flag_', '@tsr_navi_flag_')], mode='vline')
 hover_dynamic_state = HoverTool(renderers=[f_dynamic_state], tooltips=[('time', '@time'), ('has_perception_speed_limit_', '@has_perception_speed_limit_'), ('has_perception_end_of_speed_limit_', '@has_perception_end_of_speed_limit_'),
                                                                      ('current_map_speed_limit_valid_', '@current_map_speed_limit_valid_'), ('speed_limit_suppression_flag_', '@speed_limit_suppression_flag_'),
                                                                      ('supp_sign_in_suppression_flag_', '@supp_sign_in_suppression_flag_'), ('end_of_speed_limit_out_flag_', '@end_of_speed_limit_out_flag_'),

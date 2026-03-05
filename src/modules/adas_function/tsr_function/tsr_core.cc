@@ -596,8 +596,16 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     speed_limit_renew_flag_ = true;
   }
 
+  if (road_info->sdpromap_info.NaviMode == 1) {
+    tsr_navi_flag_ = true;
+  } else {
+    tsr_navi_flag_ = false;
+  }
+
   // 只要有有效的sdmap限速信息就采用sdmap的限速信息
-  if (sd_map_speed_limit_valid && GetContext.get_param()->sd_map_speed_sw) {
+  if (sd_map_speed_limit_valid && 
+      GetContext.get_param()->sd_map_speed_sw && 
+      tsr_navi_flag_) {
     // sd_map限速有效时，直接采用sd_map限速，忽略视觉限速
     tsr_speed_limit_ = current_map_speed_limit_;
   } else if (speed_limit_out_flag_ == false &&
@@ -899,11 +907,19 @@ void TsrCore::RunOnce(void) {
                                               ->get_local_view()
                                               .function_state_machine_info;
 
+  auto road_info = GetContext.get_road_info();
+  if (road_info->sdpromap_info.NaviMode == 1) {
+    tsr_navi_flag_ = true;
+  } else {
+    tsr_navi_flag_ = false;
+  }
+
   // NOA激活模式下，只使用地图限速信息，避免感知干扰
   if (function_state_machine_info_ptr->current_state ==
           iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE ||
       function_state_machine_info_ptr->current_state ==
-          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE) {
+          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE || 
+          tsr_navi_flag_) {
     UpdateTsrSpeedLimitOnlyByMap();
   } else {
     // 非NOA模式下，使用感知+地图的综合限速信息
@@ -952,9 +968,11 @@ void TsrCore::RunOnce(void) {
   JSON_DEBUG_VALUE("tsr_warning_flag_", tsr_warning_flag_);
   JSON_DEBUG_VALUE("tsr_overspeed_status_", overspeed_status_);
   JSON_DEBUG_VALUE("tsr_accumulated_path_length_", accumulated_path_length_);
-  JSON_DEBUG_VALUE("tsr_output_supp_sign_info_", (int)output_supp_sign_info_);
+  JSON_DEBUG_VALUE("tsr_output_supp_sign_info_", (int)output_supp_sign_info_);  
   JSON_DEBUG_VALUE("supp_sign_in_suppression_flag_",
                    supp_sign_in_suppression_flag_);
+  JSON_DEBUG_VALUE("tsr_navi_flag_",
+                   tsr_navi_flag_);
 
   // reset info
  // ResetRealTimeTsrInfo();
