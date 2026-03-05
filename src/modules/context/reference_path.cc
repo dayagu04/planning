@@ -193,6 +193,14 @@ void ReferencePath::update_refpath_points_in_hpp(
       if (diff_s < 1e-2) {
         continue;
       }
+      if (diff_s > std::max(v_ref_cruise * 0.5, 5.0)) { // 最大间隔？
+        end_index = i;
+        break;
+      }
+      if (raw_ref_path_points[i].path_point.kappa > 0.75) { // 最大曲率？
+        end_index = i;
+        break;
+      }
       // check direction
       planning_math::Vec2d last_direction =
           planning_math::Vec2d::CreateUnitVec2d(last_pt.theta());
