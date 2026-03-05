@@ -12,11 +12,11 @@ struct LdwParameters {
   double enable_vehspd_display_min =
       65.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
   double enable_vehspd_display_max =
-      150.0 / 3.6;  // 激活的最大仪表车速，单位：m/s
+      155.0 / 3.6;  // 激活的最大仪表车速，单位：m/s
   double disable_vehspd_display_min =
       60.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
   double disable_vehspd_display_max =
-      155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
+      160.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
 
   double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
