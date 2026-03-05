@@ -130,6 +130,8 @@ bool HppGeneralLateralDecider::Execute() {
                   frenet_hard_bounds_, second_soft_bounds_info_,
                   first_soft_bounds_info_, hard_bounds_info_);
 
+  PostProcessBoundary();
+
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
@@ -2134,6 +2136,48 @@ void HppGeneralLateralDecider::ExtractBoundary(
   assert(second_frenet_soft_bounds.size() == ref_traj_points_.size());
 }
 
+
+void HppGeneralLateralDecider::PostProcessBoundary() {
+  LimitFrenetLateralSlope(first_frenet_soft_bounds_);
+  LimitFrenetLateralSlope(second_frenet_soft_bounds_);
+  LimitFrenetLateralSlope(frenet_hard_bounds_);
+}
+
+void HppGeneralLateralDecider::LimitFrenetLateralSlope(
+    std::vector<std::pair<double, double>> &frenet_bounds) {
+  // 避免dl ds 差值过大
+  const int boundsize = frenet_bounds.size();
+  const double dl_ds_ratio = 1.0;
+  double ds = 0;
+  double dl = 0;
+  if (boundsize > 1) {
+    for (int i = 1; i <= boundsize - 1; i++) {
+      ds = ref_traj_points_[i].s - ref_traj_points_[i - 1].s;
+      dl = frenet_bounds[i].second - frenet_bounds[i - 1].second;
+      if (std::fabs(dl) > std::fabs(dl_ds_ratio * ds)) {
+        if (dl > 0) {
+          frenet_bounds[i].second =
+              frenet_bounds[i - 1].second + dl_ds_ratio * ds;
+        } else {
+          frenet_bounds[i - 1].second =
+              frenet_bounds[i].second + dl_ds_ratio * ds;
+        }
+      }
+      dl = frenet_bounds[i].first - frenet_bounds[i - 1].first;
+      if (std::fabs(dl) > std::fabs(dl_ds_ratio * ds)) {
+        if (dl > 0) {
+          frenet_bounds[i - 1].first =
+              frenet_bounds[i].first - dl_ds_ratio * ds;
+        } else {
+          frenet_bounds[i].first =
+              frenet_bounds[i - 1].first - dl_ds_ratio * ds;
+        }
+      }
+    }
+  }
+}
+
+
 void HppGeneralLateralDecider::ProtectBoundByInitPoint(
     std::pair<double, double> &bound,
     std::pair<BoundInfo, BoundInfo> &bound_info) {
@@ -2663,6 +2707,47 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
         tmp_hard_lower_point, tmp_hard_upper_point));
   }
 
+  const auto check_point =
+      [](const auto& refer_path_point,
+         auto &prev_point, auto &curr_point, auto &next_point) {
+        const auto prev_2_curr = planning_math::Vec2d(curr_point.x - prev_point.x,
+                                                curr_point.y - prev_point.y);
+        const auto curr_2_next = planning_math::Vec2d(next_point.x - curr_point.x,
+                                                next_point.y - curr_point.y);
+        const auto prev_2_curr_heading = prev_2_curr.Angle();
+        const auto curr_2_next_heading = curr_2_next.Angle();
+        const auto mid_heading = planning_math::NormalizeAngle(
+            (prev_2_curr_heading + curr_2_next_heading) / 2.0);
+        const auto refer_path_heading = refer_path_point.theta();
+
+        const auto heading_diff1 =
+            planning_math::AngleDiff(prev_2_curr_heading, curr_2_next_heading);
+        const auto heading_diff2 =
+            planning_math::AngleDiff(refer_path_heading, mid_heading);
+        if (std::fabs(heading_diff1) > 3.0 * M_PI / 4.0 &&
+            (std::fabs(heading_diff2) > M_PI / 3.0 &&
+             std::fabs(heading_diff2) < 2.0 * M_PI / 3.0)) {
+          const auto temp = curr_point;
+          curr_point = next_point;
+          next_point = temp;
+        }
+      };
+
+  // 临时 hack（taolu10）：避免折返约束
+  for(size_t idx = 1; idx < hard_bounds_output.size() - 1; ++idx) {
+    const auto refer_path_point = frenet_coord->GetPathPointByS(ref_traj_points_[idx].s);
+    size_t prev_idx = idx - 1;
+    size_t next_idx = idx + 1;
+    auto& curr_point_lower = hard_bounds_output[idx].first;
+    auto& prev_point_lower = hard_bounds_output[prev_idx].first;
+    auto& next_point_lower = hard_bounds_output[next_idx].first;
+    check_point(refer_path_point, prev_point_lower, curr_point_lower, next_point_lower);
+
+    auto& curr_point_upper = hard_bounds_output[idx].second;
+    auto& prev_point_upper = hard_bounds_output[prev_idx].second;
+    auto& next_point_upper = hard_bounds_output[next_idx].second;
+    check_point(refer_path_point, prev_point_upper, curr_point_upper, next_point_upper);
+  }
   // 临时 hack
   general_lateral_decider_output.first_soft_bounds_cart_point = general_lateral_decider_output.second_soft_bounds_cart_point;
 };
