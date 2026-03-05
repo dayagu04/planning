@@ -32,6 +32,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
  private:
   bool PreProcessObstacle(
       ConstReferencePathPtr reference_path_ptr,
+      ObstacleItemMap &obs_item_map,
       MergedObstacleContainer &merged_obs_constainer,
       ObstacleClassificationResult &obs_classification_result);
 
@@ -39,14 +40,16 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
   bool ARAStar();
-
   bool CheckARAStarPath(const ara_star::HybridARAStarResult& result);
 
   void UpdateLatDecision(
-      const std::shared_ptr<ReferencePath> &reference_path_ptr);
+      const std::shared_ptr<ReferencePath> &reference_path_ptr,
+      const MergedObstacleContainer &merged_container);
+
   void ClearOldConsistencyInfo(
       const std::unordered_set<uint32_t>& current_frame_ids,
       double current_timestamp);
+
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);

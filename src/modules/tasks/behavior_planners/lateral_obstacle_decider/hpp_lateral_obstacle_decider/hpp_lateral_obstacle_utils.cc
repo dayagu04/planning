@@ -1,4 +1,5 @@
 #include <list>
+#include <algorithm>
 #include "hpp_lateral_obstacle_utils.h"
 #include "edt_manager.h"
 #include "utils/cartesian_coordinate_system.h"
@@ -16,7 +17,6 @@ bool HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
     if (!obstacle->b_frenet_valid()) {
       continue;
     }
-    // TODO: 这里可以添加更多过滤条件
     obs_item_map[obstacle->id()] = obstacle;
   }
   return true;
@@ -50,7 +50,6 @@ bool HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
   merged_obs_container.obs_id_to_merged_id.clear();
   merged_obs_container.merged_obstacles.clear();
 
-  // S1：生成候选合并障碍物
   std::vector<MergedObstacleCandicate> merge_candidates;
   if (!GenerateMergeCandicates(obs_item_map, classification_result,
                                merge_candidates)) {
@@ -58,13 +57,11 @@ bool HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
   }
 
   ObstacleMergeGraph obstacle_merge_graph;
-  // S2：计算障碍物之间的关系（构造障碍物合并关系的无向图）
   if (!CalculateCandidateMergeGraph(obs_item_map, merge_candidates,
                                     obstacle_merge_graph)) {
     return false;
   }
 
-  // S3：确定哪些障碍物可以合并（查找无向图的所有连通分量）
   std::vector<MergedObstacleResult> merged_result_list;
   std::unordered_set<int> visited_candidate_idxs;
   for (int idx = 0; idx < merge_candidates.size(); ++idx) {
@@ -78,7 +75,6 @@ bool HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
     }
   }
 
-  // S4：生成合并后的障碍物
   for(auto& merged_result : merged_result_list) {
     if(!BuildMergedObstacleConvexHull(obs_item_map, merged_result)) {
       continue;
@@ -123,8 +119,7 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
   } else if (obs_start_s > ego_end_s + kSideObsFrontThr) {
     if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
       type = ObstacleRelPosType::LEFT_FRONT;
-    } else if (obs_end_l <
-               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
+    } else if (obs_end_l < std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
       type = ObstacleRelPosType::RIGHT_FRONT;
     } else {
       type = ObstacleRelPosType::MID_FRONT;
@@ -138,8 +133,7 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
   } else {
     if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
       type = ObstacleRelPosType::LEFT_BACK;
-    } else if (obs_end_l <
-               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
+    } else if (obs_end_l < std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
       type = ObstacleRelPosType::RIGHT_BACK;
     } else {
       type = ObstacleRelPosType::MID_BACK;
@@ -172,7 +166,6 @@ bool HppLateralObstacleUtils::GenerateMergeCandicates(
     const ObstacleClassificationResult& classification_result,
     std::vector<MergedObstacleCandicate>& merge_candidates) {
   merge_candidates.clear();
-
   constexpr double kLowSpeedPedestrainThr = 0.5;
   const auto& id_to_rel_pos_type = classification_result.id_to_rel_pos_type;
   const auto& id_to_motion_type = classification_result.id_to_motion_type;
@@ -275,7 +268,6 @@ bool HppLateralObstacleUtils::DFSGenerateMergedObstacles(
     std::unordered_set<int>& visited_candidate_idxs,
     MergedObstacleResult& merged_result) {
   visited_candidate_idxs.insert(curr_idx);
-
   merged_result.original_ids.push_back(merge_candidates[curr_idx].origin_id);
   merged_result.motion_types.insert(merge_candidates[curr_idx].motion_type);
   merged_result.rel_pos_types.insert(merge_candidates[curr_idx].rel_pos_types);
@@ -305,7 +297,6 @@ bool HppLateralObstacleUtils::DFSGenerateMergedObstacles(
       const auto& merge_type = neighbor.second;
 
       if (visited_candidate_idxs.find(merge_idx) == visited_candidate_idxs.end()) {
-        // 【已修复】传入 merged_result 中已记录的全局合并状态集合
         if (is_valid_merge_type(merge_type, merged_result.merge_types)) {
           DFSGenerateMergedObstacles(merge_candidates, merge_graph, merge_idx,
                                     merge_type, visited_candidate_idxs,
@@ -322,12 +313,6 @@ bool HppLateralObstacleUtils::BuildMergedObstacleConvexHull(
 
   auto& new_points = merged_result.perception_points;
   auto& new_sl_boundary = merged_result.frenet_boundary;
-
-  // 初始化边界为极大极小值，防止边界融合错误
-  new_sl_boundary.l_start = std::numeric_limits<double>::max();
-  new_sl_boundary.l_end = std::numeric_limits<double>::lowest();
-  new_sl_boundary.s_start = std::numeric_limits<double>::max();
-  new_sl_boundary.s_end = std::numeric_limits<double>::lowest();
 
   for (const auto& origin_id : merged_result.original_ids) {
     if (obs_item_map.find(origin_id) == obs_item_map.end()) {

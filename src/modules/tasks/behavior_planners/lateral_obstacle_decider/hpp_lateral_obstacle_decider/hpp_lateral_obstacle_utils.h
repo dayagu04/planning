@@ -3,13 +3,15 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <unordered_set>
+#include <limits>
 #include "modules/context/obstacle.h"
 #include "modules/context/frenet_obstacle.h"
 #include "modules/context/reference_path.h"
 #include "modules/context/obstacle_manager.h"
 
 namespace planning {
-  // FrenetObstacle 中包含 Obstacle 的指针
+// FrenetObstacle 中包含 Obstacle 的指针
 using ObstacleItemMap = std::unordered_map<int, FrenetObstaclePtr>;
 
 /************** 障碍物分类相关定义 ************ */
@@ -26,7 +28,6 @@ enum class ObstacleRelPosType : uint8_t {
   RIGHT_BACK,    // 自车右后方
 };
 
-// 障碍物当前时刻运动关系
 enum class ObstacleMotionType : uint8_t {
   STATIC = 0,           // 静止车辆
   OPPOSITE_DIR_MOVING,  // 对向运动
@@ -65,15 +66,23 @@ struct MergedObstacleCandicate {
 };
 
 struct MergedObstacleResult {
-  int merged_id;                                  // 聚类Cluster的ID
-  std::vector<int> original_ids;                  // 原始障碍物 ID 列表
-  std::unordered_set<ObstacleRelPosType> rel_pos_types;  // 合并后的障碍物位置类型
-  std::unordered_set<ObstacleMotionType> motion_types;   // 合并后的障碍物运动类型
-  std::unordered_set<ObstacleMergeType> merge_types;   // 合并后的障碍物运动类型
-  FrenetObstacleBoundary frenet_boundary;     // SL boundary
-  planning_math::Box2d bounding_box;         // XY Box
-  planning_math::Polygon2d polygon;           // XY Polygon
-  std::vector<planning_math::Vec2d> perception_points; // XY Point
+  // 【结构体初始化规范】：在此统一初始化极大极小值防合并错误
+  MergedObstacleResult() {
+    frenet_boundary.l_start = std::numeric_limits<double>::max();
+    frenet_boundary.l_end = std::numeric_limits<double>::lowest();
+    frenet_boundary.s_start = std::numeric_limits<double>::max();
+    frenet_boundary.s_end = std::numeric_limits<double>::lowest();
+  }
+
+  int merged_id;
+  std::vector<int> original_ids;
+  std::unordered_set<ObstacleRelPosType> rel_pos_types;
+  std::unordered_set<ObstacleMotionType> motion_types;
+  std::unordered_set<ObstacleMergeType> merge_types;
+  FrenetObstacleBoundary frenet_boundary;
+  planning_math::Box2d bounding_box;
+  planning_math::Polygon2d polygon;
+  std::vector<planning_math::Vec2d> perception_points;
 };
 
 struct MergedObstacleContainer {
