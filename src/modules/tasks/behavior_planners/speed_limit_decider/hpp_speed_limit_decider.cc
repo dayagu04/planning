@@ -232,7 +232,7 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
   vlimit_jerk = 0.0;
   time_to_brake = 1e-2;
 
-  if (v_limit_curv < ego_velocity && max_curv_s > trigger_distance) {
+  if (v_limit_curv < ego_velocity && max_curv_s < trigger_distance) {
     // 需要减速以满足弯道限速
     const double ego_a = -2.0;  // 假设减速加速度 -2 m/s²
     const double b_square_minus_4ac =
