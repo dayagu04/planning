@@ -106,6 +106,9 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
+  void PostProcessBoundary();
+  void LimitFrenetLateralSlope(
+      std::vector<std::pair<double, double>> &frenet_bounds);
   void ProtectBoundByInitPoint(std::pair<double, double> &bound,
                                std::pair<BoundInfo, BoundInfo> &bound_info);
   void ExtractDynamicObstacleBound(const ObstacleDecision &obstacle_decision);
