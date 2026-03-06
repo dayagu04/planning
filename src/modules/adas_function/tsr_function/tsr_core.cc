@@ -597,16 +597,20 @@ if (tsr_speed_limit_ == 0) {
     end_of_speed_limit_ever_appeared_ = false;  // 重置曾经出现标志
     speed_limit_renew_flag_ = true;
   }
+  auto tsr_sdpro_map_ptr = &GetContext.mutable_session()
+                                ->mutable_environmental_model()
+                                ->get_local_view()
+                                .sdpro_map_info;
 
-  if (road_info->sdpromap_info.NaviMode == 1) {
+  if (tsr_sdpro_map_ptr->navi_status().mode() ==
+      iflymapdata::sdpro::NaviStatus_NaviMode::NaviStatus_NaviMode_NAVI) {
     tsr_navi_flag_ = true;
   } else {
     tsr_navi_flag_ = false;
   }
 
   // 只要有有效的sdmap限速信息就采用sdmap的限速信息
-  if (sd_map_speed_limit_valid && 
-      GetContext.get_param()->sd_map_speed_sw && 
+  if (sd_map_speed_limit_valid && GetContext.get_param()->sd_map_speed_sw &&
       tsr_navi_flag_) {
     // sd_map限速有效时，直接采用sd_map限速，忽略视觉限速
     tsr_speed_limit_ = current_map_speed_limit_;
@@ -908,9 +912,13 @@ void TsrCore::RunOnce(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .function_state_machine_info;
+  auto tsr_sdpro_map_ptr = &GetContext.mutable_session()
+                                ->mutable_environmental_model()
+                                ->get_local_view()
+                                .sdpro_map_info;
 
-  auto road_info = GetContext.get_road_info();
-  if (road_info->sdpromap_info.NaviMode == 1) {
+  if (tsr_sdpro_map_ptr->navi_status().mode() ==
+      iflymapdata::sdpro::NaviStatus_NaviMode::NaviStatus_NaviMode_NAVI) {
     tsr_navi_flag_ = true;
   } else {
     tsr_navi_flag_ = false;
@@ -920,8 +928,8 @@ void TsrCore::RunOnce(void) {
   if (function_state_machine_info_ptr->current_state ==
           iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE ||
       function_state_machine_info_ptr->current_state ==
-          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE || 
-          tsr_navi_flag_) {
+          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE ||
+      tsr_navi_flag_) {
     UpdateTsrSpeedLimitOnlyByMap();
   } else {
     // 非NOA模式下，使用感知+地图的综合限速信息

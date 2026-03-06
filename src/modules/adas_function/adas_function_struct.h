@@ -411,7 +411,6 @@ struct NavMapInfo {
   iflyauto::DrivingRoadType road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   uint8 map_source = 0; // 0: invalid, 1:sd_map, 2:sdpromap
   bool valid_flag = false;
-  uint8 NaviMode =0;
 };
 
 struct RoadInfo {
