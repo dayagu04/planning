@@ -326,7 +326,8 @@ void STGraph::MakeStaticAgentStBoundary(
   if (StGraphUtils::CalculateSRange(
           planned_kd_path, *path_border_querier, agent, obs_box, type,
           path_range, agent_sl_boundary, considered_corners,
-          planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
+          planning_init_point_box, &lower_s, &upper_s, is_rads_scene,
+          is_hpp_scene)) {
     for (double t = time_range.first; t < time_range.second;
          t += kTimeResolution) {
       min_t = std::fmin(min_t, t);
@@ -548,6 +549,7 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto& planning_init_point_box =
       st_graph_input_->planning_init_point_box();
   const bool is_rads_scene = st_graph_input_->is_rads_scene();
+  const bool is_hpp_scene = st_graph_input_->is_hpp_scene();
   if (nullptr == planned_kd_path || nullptr == path_border_querier ||
       reserve_num <= 0 || nullptr == mutable_agent_manager ||
       nullptr == ptr_virtual_lane_manager || nullptr == ptr_ego_lane ||
@@ -706,7 +708,8 @@ void STGraph::MakeDynamicAgentStBoundary(
       if (StGraphUtils::CalculateSRange(
               planned_kd_path, *path_border_querier, agent, obs_box, type,
               path_range, agent_sl_boundary, considered_corners,
-              planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
+              planning_init_point_box, &lower_s, &upper_s, is_rads_scene,
+              is_hpp_scene)) {
         min_t = std::fmin(min_t, relative_time);
         st_point_pairs.emplace_back(
             STPoint(lower_s, relative_time, agent.agent_id(), boundary_id,
@@ -947,6 +950,7 @@ void STGraph::BackwardExtendSingleStBoundary(
   const auto& planning_init_point_box =
       st_graph_input_->planning_init_point_box();
   const bool is_rads_scene = st_graph_input_->is_rads_scene();
+  const bool is_hpp_scene = st_graph_input_->is_hpp_scene();
   const double start_time = std::fmax(st_boundary.max_t(), time_range.first);
   const double end_time =
       std::fmin(start_time + backward_extend_time_s, time_range.second);
@@ -1005,7 +1009,8 @@ void STGraph::BackwardExtendSingleStBoundary(
     if (StGraphUtils::CalculateSRange(
             planned_kd_path, *path_border_querier, agent, obs_box, type,
             path_range, agent_sl_boundary, considered_corners,
-            planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
+            planning_init_point_box, &lower_s, &upper_s, is_rads_scene,
+            is_hpp_scene)) {
       constexpr double kDistThr = 1e-3;
       if (std::fabs(lower_s - upper_s) < kDistThr) {
         continue;

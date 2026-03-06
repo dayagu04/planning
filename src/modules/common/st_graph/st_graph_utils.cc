@@ -1106,7 +1106,7 @@ bool StGraphUtils::CalculateSRange(
     const std::vector<double>& agent_sl_boundary,
     std::vector<std::pair<int32_t, planning_math::Vec2d>>& considered_corners,
     const planning_math::Box2d& planning_init_point_box, double* const lower_s,
-    double* const upper_s, const bool is_rads_scene) {
+    double* const upper_s, const bool is_rads_scene, const bool is_hpp_scene) {
   // const auto& obs_corners = obs_box.GetAllCorners();
   // max_s min_s max_l min_l
   const double max_s = agent_sl_boundary[0];
@@ -1124,6 +1124,7 @@ bool StGraphUtils::CalculateSRange(
                                    ->get_vehicle_param()
                                    .rear_edge_to_rear_axle;
   if (is_rads_scene) {
+    // RADS（倒车）场景：前后边缘互换，并对终点虚拟障碍物绕过路径范围检查
     front_edge_to_center = VehicleConfigurationContext::Instance()
                                ->get_vehicle_param()
                                .rear_edge_to_rear_axle;
@@ -1139,6 +1140,12 @@ bool StGraphUtils::CalculateSRange(
       }
       return true;
     }
+  } else if (is_hpp_scene && agent.is_stop_destination_virtual_obs()) {
+    // HPP（前进）场景：终点虚拟障碍物不受path_range限制，确保能投影到ST图
+    // 当目标终点超出规划路径范围时，投影到路径终点附近仍有效
+    *lower_s = min_s - front_edge_to_center;
+    *upper_s = max_s + back_edge_to_center;
+    return true;
   }
 
   if (type == StBoundaryType::NEIGHBOR) {

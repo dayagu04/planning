@@ -221,7 +221,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_acc_start(0.0);
     planning_input_.set_q_emergency_stop(config_.q_emergency_stop);
   }
-  if (session_->is_rads_scene()) {
+  if (session_->is_rads_scene() || session_->is_hpp_scene()) {
     planning_input_.set_safe_distance(0.0);
   }
 

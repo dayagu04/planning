@@ -32,6 +32,8 @@ class StopDestinationDecider : public Task {
   double stop_destination_virtual_agent_time_headway_ = 1.0;
   int32_t stop_destination_virtual_agent_id_ =
       agent::AgentDefaultInfo::kNoAgentId;
+  // HPP 场景下终点前停车距离（来自 LongitudinalDeciderV3Config）
+  double hpp_stop_distance_to_destination_ = 0.0;
 };
 
 }  // namespace planning
