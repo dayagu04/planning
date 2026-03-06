@@ -188,8 +188,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   double last_arrived_t = arrived_t_;
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
-  const double& anchor_arrived_t = cur_time;
-  const double& anchor_arrived_v =
+  const double anchor_arrived_t = cur_time;
+  const double anchor_arrived_v =
       anchor_arrived_t - poly_.T() > 0
           ? poly_.CalculateFirstDerivative(poly_.T())
           : poly_.CalculateFirstDerivative(anchor_arrived_t);

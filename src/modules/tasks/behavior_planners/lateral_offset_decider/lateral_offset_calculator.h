@@ -66,7 +66,7 @@
 
 //   double calc_lane_width_by_dist(const std::vector<double> &left_poly,
 //                                  const std::vector<double> &right_poly,
-//                                  const double &dist_x);
+//                                  const double dist_x);
 
 //   bool update(int lane_status, bool flag_avoid, bool execute_premove,
 //               double dist_rblane,

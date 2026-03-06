@@ -96,8 +96,8 @@ class AgentNodeManager {
 
   //------------------- simulate ----------------------
 
-  void RefineObjInitState(const int64_t &obj_id, const double &obj_add_vel,
-                          const double &obj_add_s);
+  void RefineObjInitState(const int64_t& obj_id, const double obj_add_vel,
+                          const double obj_add_s);
   bool InferObjTrajByLane(
       ObstaclePredicatedInfo &obstacle_predicated_info, const Obstacle &obj,
       const int obj_in_which_lane = 0);  // 0 --origin lane; 1-- target lane

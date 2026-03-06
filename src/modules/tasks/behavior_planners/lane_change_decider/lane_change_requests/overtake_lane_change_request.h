@@ -57,20 +57,20 @@ class OvertakeRequest : public LaneChangeRequest {
   bool isCouldOvertakeByRoute(
       const std::shared_ptr<ReferencePath>& base_ref_line,
       const std::shared_ptr<VirtualLane>& target_lane,
-      const double& lane_traffic_speed, const agent::Agent* agent,
+      const double lane_traffic_speed, const agent::Agent* agent,
       const bool& is_left, const bool& left_and_right_both_on_navigation_route,
-      const double& total_feasible_lane_remain_distance,
+      const double total_feasible_lane_remain_distance,
       double& left_overtake_speed_threshold,
       double& right_overtake_speed_threshold);
 
   bool isCouldOvertakeMaintainByRoute(
       const double lane_traffic_speed, const agent::Agent* agent,
       const bool is_left, const std::shared_ptr<VirtualLane>& target_lane,
-      const double& total_feasible_lane_remain_distance,
+      const double total_feasible_lane_remain_distance,
       const bool& both_lane_is_on_navigation_route);
 
   bool FeasibleLaneDistanceEnoughJudgment(
-      const double& lane_traffic_speed, const double& leading_speed,
+      const double lane_traffic_speed, const double leading_speed,
       const std::shared_ptr<VirtualLane>& target_lane, bool is_left,
       const double need_s);
 
@@ -150,7 +150,7 @@ class OvertakeRequest : public LaneChangeRequest {
   double getDrivingDistance(const double v, const double a, const double t,
                             double* v_out);
 
-  double CalculateAttenuationCoefficient(const double& lc_duration);
+  double CalculateAttenuationCoefficient(const double lc_duration);
 
   void IsTargetLaneExistTruck(const std::shared_ptr<agent::Agent>& agent,
                               const std::shared_ptr<VirtualLane>& target_lane,

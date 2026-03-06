@@ -149,7 +149,7 @@ class LaneChangeStateMachineManager {
       const planning_data::DynamicAgentNode* const agent);
   void CalculateFrontAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
   bool TimeOut(const bool& trigger, bool* is_start_count, double* time_count,
-               const double& threshold);
+               const double threshold);
   void UpdateCoarsePlanningInfo();
   void UpdateStateMachineDebugInfo();
   void GenerateTurnSignalForSplitRegion();

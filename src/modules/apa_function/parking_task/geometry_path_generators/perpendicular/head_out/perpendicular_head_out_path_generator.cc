@@ -184,7 +184,7 @@ const bool PerpendicularPathOutPlanner::PreparePlan() {
 
 const bool PerpendicularPathOutPlanner::PreparePlanOnce(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
-    const double& x_offset, const double& radius, const uint8_t current_gear,
+    const double x_offset, const double radius, const uint8_t current_gear,
     const uint8_t current_arc_steer,
     pnc::geometry_lib::PathPoint current_pose) {
   std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
@@ -644,7 +644,7 @@ const bool PerpendicularPathOutPlanner::STurnParallelPlan() {
   path_seg_vec.reserve(3);
 
   for (size_t j = 0; j < offset_y_vec.size() && !flag; ++j) {
-    const double& offset_y = offset_y_vec[j];
+    const double offset_y = offset_y_vec[j];
     path_seg_vec.clear();
     if (STurnParallelPlanOnce(path_seg_vec, offset_y, calc_params_.turn_radius,
                               current_pose, current_gear, input_.ref_arc_steer,

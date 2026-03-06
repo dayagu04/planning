@@ -809,9 +809,9 @@ bool AgentNodeManager::Update() {
   return true;
 }
 
-void AgentNodeManager::RefineObjInitState(const int64_t &obj_id,
-                                          const double &obj_add_vel,
-                                          const double &obj_add_s) {
+void AgentNodeManager::RefineObjInitState(const int64_t& obj_id,
+                                          const double obj_add_vel,
+                                          const double obj_add_s) {
   auto iter = map_gs_care_obstacles_.find(obj_id);
   ObstaclePredicatedInfo obj_infos;
   if (iter != map_gs_care_obstacles_.end()) {

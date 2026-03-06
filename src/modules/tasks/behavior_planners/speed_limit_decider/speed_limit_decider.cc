@@ -180,7 +180,7 @@ bool CalculateAgentSLBoundary(
 }
 
 bool LateralCollisionCheck(
-    const double &start_s, const double &end_s, const double &agent_min_l,
+    const double start_s, const double end_s, const double agent_min_l,
     const double ego_length, const double ego_width,
     const std::shared_ptr<planning_math::KDPath> lat_path_coord) {
   const double sampling_interval_s = 1.0;
@@ -321,7 +321,7 @@ double OptimizeTriggerDistanceForSharpDecel(double trigger_distance, double v_eg
   // Step 1: Calculate base position offset: max(kTriggerDistanceBaseOffsetMin, v_ego * kTriggerDistanceBaseOffsetTimeRatio)
   double base_offset = std::max(kTriggerDistanceBaseOffsetMin, v_ego * kTriggerDistanceBaseOffsetTimeRatio);
   trigger_distance = trigger_distance - base_offset;
-  
+
   // Step 2: Optimize trigger_distance based on acc_ego
   if (acc_ego > 0.0) {
     trigger_distance = trigger_distance - v_ego * kTriggerDistanceAccelTimeOffset;
@@ -330,7 +330,7 @@ double OptimizeTriggerDistanceForSharpDecel(double trigger_distance, double v_eg
   } else if (acc_ego > kTriggerDistanceModerateDecelThreshold) {
     trigger_distance = trigger_distance - v_ego * kTriggerDistanceModerateDecelTimeOffset;
   }
-  
+
   // Step 3: Ensure trigger_distance is not negative
   return std::max(0.0, trigger_distance);
 }
@@ -939,7 +939,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   ILOG_DEBUG << "----CalculateCurveSpeedLimit---";
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  
+
   double steer_ratio = vehicle_param.steer_ratio;
   double wheel_base = vehicle_param.wheel_base;
   const auto &environmental_model = session_->environmental_model();
@@ -3508,11 +3508,12 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   double search_distance_min = v_ego * config.headway_min;
   double search_distance_max = std::min(v_ego * config.headway_max, config.max_search_distance);
   search_distance_max = std::max(search_distance_max, search_distance_min + kRoadBoundarySearchDistanceOffset);
-  
+
   // Use lat_valid_end_idx to get the effective path length
   const auto &motion_planner_output = session_->planning_context().motion_planner_output();
-  if (!motion_planner_output.s_lat_vec.empty() && 
-      motion_planner_output.lat_valid_end_idx < motion_planner_output.s_lat_vec.size()) {
+  if (!motion_planner_output.s_lat_vec.empty() &&
+      motion_planner_output.lat_valid_end_idx <
+          motion_planner_output.s_lat_vec.size()) {
     double valid_path_end_s = motion_planner_output.s_lat_vec[motion_planner_output.lat_valid_end_idx];
     double valid_path_length = valid_path_end_s - ego_s;
     if (valid_path_length > 0) {
@@ -3896,7 +3897,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
     // Real-time update: always use current calculated values when limit will be applied
     v_limit_regular = current_v_limit_regular;
     trigger_distance_regular = current_trigger_distance_regular;
-    
+
     // Update tracking state for the else branch (when limit is not applied)
     last_road_boundary_v_limit_ = current_v_limit_regular;
     last_road_boundary_trigger_distance_ = current_trigger_distance_regular;
@@ -4328,7 +4329,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   if (config.enable_lateral_acceleration_limit) {
     // Step 1: Calculate minimum speed limit from v_limit_regular and v_target_
     double min_v_limit = std::min(v_limit_regular, v_target_);
-    
+
     // Step 2: Check lateral acceleration in [search_distance_min, search_distance_max]
     int exceed_count = 0;
     double first_exceed_distance =
@@ -4342,10 +4343,10 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
           relative_s > search_distance_max) {
         continue;
       }
-      
+
       // Calculate predicted speed at this point based on ego speed, acceleration, and distance
       double predicted_v = 0.0;
-      
+
       if (min_v_limit >= v_ego) {
         // Case 1: min_v_limit >= v_ego
         // First kLateralAccPredictionAccelTime seconds: uniform acceleration with acc_ego
@@ -4353,7 +4354,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
         double s_acc = v_ego * kLateralAccPredictionAccelTime + 0.5 * acc_ego * kLateralAccPredictionAccelTime * kLateralAccPredictionAccelTime;
         double v_after_acc = v_ego + acc_ego * kLateralAccPredictionAccelTime;
         v_after_acc = std::min(v_after_acc, min_v_limit);  // Limit to min_v_limit
-        
+
         if (relative_s <= s_acc) {
           // Within acceleration phase: v^2 = v0^2 + 2*a*s
           double predicted_v_squared = v_ego * v_ego + 2.0 * acc_ego * relative_s;
@@ -4370,13 +4371,13 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
         // After reaching min_v_limit: uniform speed at min_v_limit
         double s_acc = v_ego * kLateralAccPredictionDecelTime + 0.5 * acc_ego * kLateralAccPredictionDecelTime * kLateralAccPredictionDecelTime;
         double v_after_acc = v_ego + acc_ego * kLateralAccPredictionDecelTime;
-        
+
         // Calculate distance needed to decelerate from v_after_acc to min_v_limit
         double s_decel = 0.0;
         if (v_after_acc > min_v_limit) {
           s_decel = (v_after_acc * v_after_acc - min_v_limit * min_v_limit) / (2.0 * (-kLateralAccPredictionDecelRate));
         }
-        
+
         if (relative_s <= s_acc) {
           // Within first acceleration phase: v^2 = v0^2 + 2*a*s
           double predicted_v_squared = v_ego * v_ego + 2.0 * acc_ego * relative_s;
@@ -4385,20 +4386,20 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
           // Within deceleration phase: v^2 = v1^2 + 2*a*(s - s1)
           double s_decel_phase = relative_s - s_acc;
           double predicted_v_squared = v_after_acc * v_after_acc + 2.0 * kLateralAccPredictionDecelRate * s_decel_phase;
-          predicted_v = (predicted_v_squared > min_v_limit * min_v_limit) 
-                        ? std::sqrt(predicted_v_squared) 
-                        : min_v_limit;
+          predicted_v = (predicted_v_squared > min_v_limit * min_v_limit)
+                            ? std::sqrt(predicted_v_squared)
+                            : min_v_limit;
           predicted_v = std::max(predicted_v, min_v_limit);  // Ensure not below min_v_limit
         } else {
           // After deceleration phase: uniform speed at min_v_limit
           predicted_v = min_v_limit;
         }
       }
-      
+
       // Calculate lateral acceleration: lat_acc = v^2 * kappa
       double kappa = path_point.kappa();
       double lat_acc = predicted_v * predicted_v * std::fabs(kappa);
-      
+
       if (lat_acc > config.lateral_acceleration_threshold) {
         exceed_count++;
         if (first_exceed_distance < 0.0) {
@@ -4706,7 +4707,7 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
     // Real-time update: always use current calculated values when limit will be applied
     v_limit_road_boundary_strictest = current_v_limit_strictest;
     trigger_distance_road_boundary_strictest = current_trigger_distance_strictest;
-    
+
     // Update tracking state for the else branch (when limit is not applied)
     last_road_boundary_strictest_v_limit_ = current_v_limit_strictest;
     last_road_boundary_strictest_trigger_distance_ = current_trigger_distance_strictest;
@@ -4723,10 +4724,10 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
       last_road_boundary_strictest_trigger_distance_ = 0.0;
     }
   }
-  
+
   // Optimize trigger_distance_road_boundary_strictest with unified logic
   trigger_distance_road_boundary_strictest = OptimizeTriggerDistanceForSharpDecel(trigger_distance_road_boundary_strictest, v_ego, acc_ego);
-  
+
   // Calculate required deceleration for strictest road boundary limit
   double required_decel_strictest = 0.0;
   if (trigger_distance_road_boundary_strictest > kMinDistanceForDecel) {
@@ -4757,7 +4758,6 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   // Set strictest road boundary limit into map with separate clearing mechanism for ROAD_BOUNDARY and ROAD_BOUNDARY_SHARP_DECEL
   //auto speed_limit_output = session_->mutable_planning_context()
   //                                    ->mutable_speed_limit_decider_output();
-                                      
 
   if (road_boundary_strictest_valid) {
     // Set current type and clear the other type

@@ -27,18 +27,18 @@ int Init() {
   return 0;
 }
 
-void SetParam(const double& detection_distance, const double& lat_inflation) {
+void SetParam(const double detection_distance, const double lat_inflation) {
   UssObstacleAvoidance::Paramters param;
   param.detection_distance = detection_distance;
   param.lat_inflation = lat_inflation;
   pBaseUssOaAir->SetParam(param);
 }
 
-void SetUssRawDist(const double& uss_raw_dist) {
+void SetUssRawDist(const double uss_raw_dist) {
   pBaseUssOaAir->SetUssRawDist(uss_raw_dist);
 }
 
-void SetCarMotionInfo(const double& steer_angle, const int forward_back) {
+void SetCarMotionInfo(const double steer_angle, const int forward_back) {
   UssObstacleAvoidance::CarMotionInfo car_motion_info;
   car_motion_info.steer_angle = steer_angle;
   car_motion_info.reverse_flag = (forward_back == 0) ? false : true;

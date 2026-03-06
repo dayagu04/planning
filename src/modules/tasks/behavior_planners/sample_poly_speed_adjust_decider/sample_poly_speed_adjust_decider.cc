@@ -971,7 +971,7 @@ void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
-    const double& headway_v, const double ego_v,
+    const double headway_v, const double ego_v,
     const std::vector<double>& t_gap_ego_v_bp,
     const std::vector<double>& t_gap_ego_v) {
   double v_lead_clip = std::max(headway_v, 0.0);

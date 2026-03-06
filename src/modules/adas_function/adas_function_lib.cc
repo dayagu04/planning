@@ -610,7 +610,7 @@ std::vector<double> ObjCornersCalculate(
 }
 
 // 定义最小二乘法确定车道线参数
-double integer_power(const double &x, int order) {
+double integer_power(const double x, int order) {
   double ret = 1.0;
   while (order > 0) {
     ret *= x;

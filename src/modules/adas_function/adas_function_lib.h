@@ -73,7 +73,7 @@ extern void CalProjectionPointForLong(const pnc::mathlib::spline &x_s_spline,
 extern std::vector<double> ObjCornersCalculate(
     const context::FusionObjExtractInfo &obj);
 
-extern double integer_power(const double &x, int order);
+extern double integer_power(const double x, int order);
 
 extern void leastSquareFitting(const std::vector<double>& points_x_vec,
                                const std::vector<double>& points_y_vec,

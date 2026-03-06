@@ -134,7 +134,7 @@ void GridMapND<T, N_DIM>::GetGlobalPositionUsingCoordinate(
 
 template <typename T, int N_DIM>
 void GridMapND<T, N_DIM>::GetCoordUsingGlobalMetricOnSingleDim(
-    const double& metric, const int i, int* idx) const {
+    const double metric, const int i, int* idx) const {
   *idx = std::round((metric - origin_[i]) / dims_resolution_[i]);
   return;
 }

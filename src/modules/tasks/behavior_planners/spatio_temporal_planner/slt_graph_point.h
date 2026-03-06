@@ -65,7 +65,7 @@ class SLTGraphPoint {
 
   double GetAcc() const;
 
-  void SetAcc(const double& acc);
+  void SetAcc(const double acc);
 
  private:
   SLTPoint point_;

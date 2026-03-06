@@ -75,11 +75,11 @@ class SlotInfo {
 
   const LaneChangeVehInfo& front_veh_info() const { return front_veh_info_; }
   const LaneChangeVehInfo& back_veh_info() const { return back_veh_info_; }
-  const double& aligned_s() const { return aligned_s_; }
-  const double& aligned_v() const { return aligned_v_; }
+  const double aligned_s() const { return aligned_s_; }
+  const double aligned_v() const { return aligned_v_; }
   const bool& is_align_front() const { return is_align_front_; }
-  const double& slot_v() const { return slot_v_; }
-  const double& cost() const { return cost_; };
+  const double slot_v() const { return slot_v_; }
+  const double cost() const { return cost_; };
 
  private:
   LaneChangeVehInfo front_veh_info_;
@@ -103,7 +103,7 @@ class SpeedAdjustDecider : public Task {
   bool ProcessLaneChangeStatus();
   void ClearStatus();
   void ProcessEnvInfos();
-  std::pair<double, double> GetSafeAlignedDistance(const double& ego_v,
+  std::pair<double, double> GetSafeAlignedDistance(const double ego_v,
                                                    const SlotInfo& slot);
   bool GenerateCandidateSlotInfo();
   void GenerateTimeOptimalAdjustProfile();

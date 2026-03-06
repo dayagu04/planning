@@ -668,7 +668,7 @@ void EgoStateManager::LongitudinalInitStateReset(
 //   // motion_planner_output.s_lat_vec.back(),
 //   //                                      init_point);
 //   // const auto s_init = projection_spline.GetOutput().s_proj;
-//   // const double &lon_err = s_init - s_proj;
+//   // const double lon_err = s_init - s_proj;
 //   const double lat_init_theta = lat_init_state.theta();
 //   double theta_err = lat_init_theta - ego_state->ego_pose_raw().theta;
 //   const double pi2 = 2.0 * M_PI;

@@ -52,7 +52,7 @@ class BoundMaker {
  private:
   void MakeAccBound();
 
-  void MakeAccBound(const double& v_ego, const std::string& lc_request);
+  void MakeAccBound(const double v_ego, const std::string& lc_request);
 
   void MakeSBound();
 

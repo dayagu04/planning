@@ -45,11 +45,11 @@ bool AccCurveMaker::MakeDvComfortable(double* const dv_curve) {
   double ds_follow_offset = MakeFollowDist();
   // acc curve is designed with 3-segment piecewise function
   // seg1 is linear, seg3 is const decel, seg2 is a blending linear function
-  // const double &seg1_start_dv = -4.0;
-  const double& seg1_start_dv = -std::fmin(8.0, std::fmax(cipv_vel_ * 0.5, 4));
-  // const double &seg1_end_dv = 0.4;
-  const double& seg1_end_dv = -0.1 * seg1_start_dv;
-  const double& seg2_end_dv = 1.4;
+  // const double seg1_start_dv = -4.0;
+  const double seg1_start_dv = -std::fmin(8.0, std::fmax(cipv_vel_ * 0.5, 4));
+  // const double seg1_end_dv = 0.4;
+  const double seg1_end_dv = -0.1 * seg1_start_dv;
+  const double seg2_end_dv = 1.4;
   // TODO: design seg2 slope 0.3 at 0mps, slope 0.8 at 30mps
   const double seg2_slope = 0.5;
   const double seg1_end_s = 1.1 * ds_follow_offset;

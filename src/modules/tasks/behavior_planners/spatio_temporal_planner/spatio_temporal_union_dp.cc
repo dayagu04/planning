@@ -86,7 +86,7 @@ bool SpatioTemporalUnionDp::Update(
     const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
     const planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
-    const double& target_s, planning_math::KDPath& current_lane_coord,
+    const double target_s, planning_math::KDPath& current_lane_coord,
     const int half_lateral_sample_nums, const bool& last_enable_using_st_plan) {
   dp_st_cost_.Init(spatio_temporal_union_plan_input.long_weight_params());
   enable_use_ego_cart_point_ = true;
@@ -131,7 +131,7 @@ bool SpatioTemporalUnionDp::Update(
 bool SpatioTemporalUnionDp::InitCostTable(
     const planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
-    const int half_lateral_sample_nums, const double& target_s) {
+    const int half_lateral_sample_nums, const double target_s) {
   // Time dimension is homogeneous while Spatial dimension has two resolutions,
   // dense and sparse with dense resolution coming first in the spatial horizon
 
@@ -274,10 +274,10 @@ bool SpatioTemporalUnionDp::InitSpeedLimitLookUp(
 }
 
 bool SpatioTemporalUnionDp::CalculateTotalCost(
-    const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const double &target_s,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input) {
+    const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+    const double target_s,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input) {
   // x y and z are for SLTGraph
   // l corresponding to y
   // s corresponding to x
@@ -487,11 +487,11 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
   return true;
 }
 
-void SpatioTemporalUnionDp::GetRowRange(const SLTGraphPoint &point,
-                                        int *next_highest_row,
-                                        int *next_lowest_row,
-                                        const double &init_v,
-                                        const double &v_cruise) {
+void SpatioTemporalUnionDp::GetRowRange(const SLTGraphPoint& point,
+                                        int* next_highest_row,
+                                        int* next_lowest_row,
+                                        const double init_v,
+                                        const double v_cruise) {
   double v0 = 0.0;
   // TODO(all): Record speed information in StGraphPoint and deprecate this.
   // A scaling parameter for DP range search due to the lack of accurate
@@ -586,11 +586,11 @@ void SpatioTemporalUnionDp::GetColumnRange(const SLTGraphPoint &point,
 }
 
 void SpatioTemporalUnionDp::CalculateCostAt(
-    const SLTGraphMessage *msg,
-    const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const double &target_s,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input) {
+    const SLTGraphMessage* msg,
+    const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+    const double target_s,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input) {
   const uint32_t c = msg->c;
   const uint32_t r = msg->r;
   const uint32_t k = msg->k;
@@ -1244,9 +1244,9 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
 }
 
 double SpatioTemporalUnionDp::CalculateStitchingCost(
-    const Point2D &current, const double &current_time,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input) {
+    const Point2D& current, const double current_time,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input) {
   double stitching_cost = 0.0;
   const auto &stitching_cost_params =
       spatio_temporal_union_plan_input.stitching_cost_params();
@@ -1305,12 +1305,12 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   return stitching_cost;
 }
 
-double SpatioTemporalUnionDp::CalculateEdgeCost(const SLTGraphPoint &first,
-                                                const SLTGraphPoint &second,
-                                                const SLTGraphPoint &third,
-                                                const SLTGraphPoint &forth,
-                                                const double &speed_limit,
-                                                const double &cruise_speed) {
+double SpatioTemporalUnionDp::CalculateEdgeCost(const SLTGraphPoint& first,
+                                                const SLTGraphPoint& second,
+                                                const SLTGraphPoint& third,
+                                                const SLTGraphPoint& forth,
+                                                const double speed_limit,
+                                                const double cruise_speed) {
   return dp_st_cost_.GetSpeedCost(third, forth, speed_limit,
                                   inv_speed_limit_table_[forth.index_s()],
                                   cruise_speed) +
@@ -1319,9 +1319,9 @@ double SpatioTemporalUnionDp::CalculateEdgeCost(const SLTGraphPoint &first,
 }
 
 double SpatioTemporalUnionDp::CalculateEdgeCostForSecondCol(
-    const uint32_t row, const uint32_t col, const double &speed_limit,
-    const double &cruise_speed,
-    const planning::common::EgoInitInfo &init_state) {
+    const uint32_t row, const uint32_t col, const double speed_limit,
+    const double cruise_speed,
+    const planning::common::EgoInitInfo& init_state) {
   double init_speed = init_state.v0();
   double init_acc = init_state.a();
   const auto &pre_point = cost_table_[0][0][0];
@@ -1336,9 +1336,8 @@ double SpatioTemporalUnionDp::CalculateEdgeCostForSecondCol(
 
 double SpatioTemporalUnionDp::CalculateEdgeCostForThirdCol(
     const uint32_t curr_row, const uint32_t curr_col, const uint32_t pre_row,
-    const uint32_t pre_col, const double &speed_limit,
-    const double &cruise_speed,
-    const planning::common::EgoInitInfo &init_state) {
+    const uint32_t pre_col, const double speed_limit, const double cruise_speed,
+    const planning::common::EgoInitInfo& init_state) {
   double init_speed = init_state.v0();
   const auto &first = cost_table_[0][0][0];
   const auto &second = cost_table_[1][pre_row][pre_col];
@@ -1351,10 +1350,10 @@ double SpatioTemporalUnionDp::CalculateEdgeCostForThirdCol(
 }
 
 double SpatioTemporalUnionDp::CalculatePathCost(
-    const SLTGraphPoint &start, const SLTGraphPoint &end,
-    const CubicPolynomialCurve1d &lateral_curve, const double &acc,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input) {
+    const SLTGraphPoint& start, const SLTGraphPoint& end,
+    const CubicPolynomialCurve1d& lateral_curve, const double acc,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input) {
   double path_cost = 0.0;
   double v0 = start.GetOptimalSpeed();
 
@@ -1412,12 +1411,12 @@ double SpatioTemporalUnionDp::CalculatePathCost(
 }
 
 double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
-    const SLTGraphPoint &pre_point, const SLTGraphPoint &cur_point,
-    const CubicPolynomialCurve1d &lateral_curve, const double &acc,
-    const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input,
-    double *distance_to_point, int *agent_id) {
+    const SLTGraphPoint& pre_point, const SLTGraphPoint& cur_point,
+    const CubicPolynomialCurve1d& lateral_curve, const double acc,
+    const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input,
+    double* distance_to_point, int* agent_id) {
   double obstacle_cost = 0.0;
   double v0 = pre_point.GetOptimalSpeed();
   const double total_t = cur_point.point().t() - pre_point.point().t();
@@ -1566,9 +1565,9 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
 
 // Simple version: calculate obstacle cost by distance
 double SpatioTemporalUnionDp::GetLongitCostBetweenObsBoxes(
-    const double &longit_dis_to_ego,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input) {
+    const double longit_dis_to_ego,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input) {
   const auto &dp_dynamic_agent_weight_params =
       spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params();
   double obstacle_cost = 0.0;
@@ -1596,9 +1595,9 @@ double SpatioTemporalUnionDp::GetLongitCostBetweenObsBoxes(
 }
 
 double SpatioTemporalUnionDp::GetLateralCostBetweenObsBoxes(
-    const double &lateral_dis_to_ego,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input) {
+    const double lateral_dis_to_ego,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input) {
   const auto &dp_dynamic_agent_weight_params =
       spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params();
   double obstacle_cost = 0.0;
@@ -1733,8 +1732,8 @@ bool SpatioTemporalUnionDp::CheckOverlapOnDpSltGraph(
 }
 
 void SpatioTemporalUnionDp::GetVehicleBoxSLVertices(
-    const planning_math::Vec2d &ego_point, const double &cos_theta,
-    const double &sin_theta, std::array<planning_math::Vec2d, 8> &vertices) {
+    const planning_math::Vec2d& ego_point, const double cos_theta,
+    const double sin_theta, std::array<planning_math::Vec2d, 8>& vertices) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
@@ -1787,8 +1786,8 @@ double SpatioTemporalUnionDp::ComputeFirstDerivative(
 }
 
 double SpatioTemporalUnionDp::ComputeSecondDerivative(
-    const std::array<double, 4> &lateral_curve_coef, const double &acc,
-    const double &v0, const double &param) {
+    const std::array<double, 4>& lateral_curve_coef, const double acc,
+    const double v0, const double param) {
   // double a0 = longit_curve_coef[0], a1 = longit_curve_coef[1], a2 =
   // longit_curve_coef[2], a3 = longit_curve_coef[3];
   double b0 = lateral_curve_coef[0], b1 = lateral_curve_coef[1],

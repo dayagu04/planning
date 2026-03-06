@@ -153,7 +153,7 @@ class GridMapND {
   void GetGlobalPositionUsingCoordinate(const std::array<int, N_DIM> &coord,
                                         std::array<double, N_DIM> *p_w) const;
 
-  void GetCoordUsingGlobalMetricOnSingleDim(const double& metric, const int i,
+  void GetCoordUsingGlobalMetricOnSingleDim(const double metric, const int i,
                                             int* idx) const;
 
   void GetGlobalMetricUsingCoordOnSingleDim(const int idx, const int i,
