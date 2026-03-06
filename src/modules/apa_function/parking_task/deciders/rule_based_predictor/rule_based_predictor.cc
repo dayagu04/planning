@@ -28,6 +28,7 @@ void RuleBasedPredictor::Execute(
     }
 
     if (obstacle.GetObsMovementType() != ApaObsMovementType::MOTION) {
+      obstacle.ClearPredictTraj();
       continue;
     }
 
