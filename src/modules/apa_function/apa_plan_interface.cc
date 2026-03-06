@@ -79,10 +79,14 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // run planner
-  scenario_manager_.UpdateScenarioType();
-  bool planning_success = scenario_manager_.Process();
-  planning_output_ = scenario_manager_.GetPlanningOutput();
-  apa_hmi_ = scenario_manager_.GetAPAHmiData();
+  const auto& apa_state_machine = apa_world_ptr_->GetStateMachineManagerPtr();
+  bool planning_success = true;
+  if (!apa_state_machine->IsHppCruise()) {
+    scenario_manager_.UpdateScenarioType();
+    planning_success = scenario_manager_.Process();
+    planning_output_ = scenario_manager_.GetPlanningOutput();
+    apa_hmi_ = scenario_manager_.GetAPAHmiData();
+  }
 
   AddReleasedSlotInfo(planning_output_);
 

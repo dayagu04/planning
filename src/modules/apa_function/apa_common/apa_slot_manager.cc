@@ -357,6 +357,7 @@ void ApaSlotManager::Update(
           .release_state[ASTAR_PLANNING_RELEASE];
 
   if (!measure_data_ptr_->GetStaticFlag() ||
+      state_machine_ptr_->IsHppCruise() ||
       (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) ||
       running_mode == ApaRunningMode::RUNNING_PA) {
     pre_plan_fail_slot_id_uset_.clear();
@@ -420,6 +421,8 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
     return;
   }
 
+  bool is_hpp_cruise = state_machine_ptr_->IsHppCruise();
+
   for (const auto& pair : dist_id_map_) {
     if (slots_map_.count(pair.second) == 0) {
       continue;
@@ -442,7 +445,7 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
 
     bool is_slot_release = false;
 
-    if (slot.id_ != ego_info_under_slot_.id) {
+    if (is_hpp_cruise || slot.id_ != ego_info_under_slot_.id) {
       is_slot_release = true;
     } else {
       const SlotReleaseInfo& ego_release_info =
