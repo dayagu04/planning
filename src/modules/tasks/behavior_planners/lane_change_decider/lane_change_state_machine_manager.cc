@@ -1628,7 +1628,7 @@ void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   hold_state_dash_cnt = 0;
 }
 
-bool LaneChangeStateMachineManager::TimeOut(const bool& trigger,
+bool LaneChangeStateMachineManager::TimeOut(const bool trigger,
                                             bool* is_start_count,
                                             double* time_count,
                                             const double threshold) {

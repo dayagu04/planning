@@ -537,7 +537,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
   if (!HandleFeedbackInfoData()) {
     return false;
   }
-  // const bool &search_success = session_->mutable_planning_context()
+  // const bool search_success = session_->mutable_planning_context()
   //                                ->mutable_lateral_obstacle_decider_output()
   //                                .search_success;
   const auto &general_lateral_decider_output =
@@ -547,7 +547,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
-  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+  const bool search_success = general_lateral_decider_output.enable_ara_ref;
   if (is_ref_consistent_) {
     planning_weight_ptr_->SetIsSearchSuccess(search_success);
   } else {
@@ -595,7 +595,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
   if (!HandleFeedbackInfoData()) {
     return false;
   }
-  // const bool &search_success = session_->mutable_planning_context()
+  // const bool search_success = session_->mutable_planning_context()
   //                                ->mutable_lateral_obstacle_decider_output()
   //                                .search_success;
   const auto &general_lateral_decider_output =
@@ -605,7 +605,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
-  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+  const bool search_success = general_lateral_decider_output.enable_ara_ref;
   if (is_ref_consistent_) {
     planning_weight_ptr_->SetIsSearchSuccess(search_success);
   } else {
@@ -656,9 +656,9 @@ bool LateralMotionPlanner::AssembleInput() {
   const auto &general_lateral_decider_output =  // result from lat decision
       session_->planning_context().general_lateral_decider_output();
   bool complete_follow = general_lateral_decider_output.complete_follow;
-  const bool &lane_change_scene =
+  const bool lane_change_scene =
       general_lateral_decider_output.lane_change_scene;
-  const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
+  const bool ramp_scene = general_lateral_decider_output.ramp_scene;
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &coarse_planning_info = lane_change_decider_output.coarse_planning_info;

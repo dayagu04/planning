@@ -148,9 +148,9 @@ class EgoStateManager {
   void update_transform();
   void UpdatePlanningInitState();
   void RealtimeUpdatePlanningInitState();
-  // uint8_t ReplanProcess(const bool &lat_reset_flag, const bool
+  // uint8_t ReplanProcess(const bool lat_reset_flag, const bool
   // &lon_reset_flag); new replan
-  uint8_t ReplanProcess(const bool &set_lat_replan, const bool &set_lon_replan);
+  uint8_t ReplanProcess(const bool set_lat_replan, const bool set_lon_replan);
   void LateralInitStateReset(const PncTrajectoryPoint &point);
   void LongitudinalInitStateReset(const PncTrajectoryPoint &point);
   void CompensateEgoStateForLocalizationLatency();

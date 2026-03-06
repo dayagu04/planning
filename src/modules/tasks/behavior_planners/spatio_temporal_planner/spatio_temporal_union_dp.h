@@ -50,7 +50,7 @@ class SpatioTemporalUnionDp {
                   spatio_temporal_union_plan_input,
               const double target_s, planning_math::KDPath& current_lane_coord,
               const int half_lateral_sample_nums,
-              const bool& last_enable_using_st_plan);
+              const bool last_enable_using_st_plan);
 
   planning::common::TrajectoryPoints &GetOutput() { return trajectory_points_; }
 
@@ -176,10 +176,10 @@ class SpatioTemporalUnionDp {
 
   void PrecomputeInvSpeedLimit();
 
-  void FallbackFunction(const planning::common::SpationTemporalUnionDpInput
-                            &spatio_temporal_union_plan_input,
-                        TrajectoryPoints &traj_points,
-                        const bool &last_enable_using_st_plan);
+  void FallbackFunction(const planning::common::SpationTemporalUnionDpInput&
+                            spatio_temporal_union_plan_input,
+                        TrajectoryPoints& traj_points,
+                        const bool last_enable_using_st_plan);
 
   planning::common::TrajectoryPoints trajectory_points_;
   std::vector<double> speed_limit_by_index_;

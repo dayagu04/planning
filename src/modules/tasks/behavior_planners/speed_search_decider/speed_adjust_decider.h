@@ -77,7 +77,7 @@ class SlotInfo {
   const LaneChangeVehInfo& back_veh_info() const { return back_veh_info_; }
   const double aligned_s() const { return aligned_s_; }
   const double aligned_v() const { return aligned_v_; }
-  const bool& is_align_front() const { return is_align_front_; }
+  const bool is_align_front() const { return is_align_front_; }
   const double slot_v() const { return slot_v_; }
   const double cost() const { return cost_; };
 

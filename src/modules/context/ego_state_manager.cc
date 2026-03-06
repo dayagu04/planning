@@ -331,8 +331,8 @@ bool EgoStateManager::update(
   return true;
 }
 
-uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
-                                       const bool &set_lon_replan) {
+uint8_t EgoStateManager::ReplanProcess(const bool set_lat_replan,
+                                       const bool set_lon_replan) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
   const auto &ego_state =
@@ -627,8 +627,8 @@ void EgoStateManager::LongitudinalInitStateReset(
 //   }
 // }
 
-// uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
-//                                        const bool &lon_reset_flag) {
+// uint8_t EgoStateManager::ReplanProcess(const bool lat_reset_flag,
+//                                        const bool lon_reset_flag) {
 //   // note that lon_reset_flag and lat_reset_flag reserved for acc and
 //   override
 

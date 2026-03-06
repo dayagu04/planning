@@ -19,7 +19,7 @@ class TrafficLightDecider : public Task {
   // 1. if
   bool Execute();
 
-  const bool &GetIsSmallFrontIntersection() {
+  const bool GetIsSmallFrontIntersection() {
     return is_small_front_intersection_;
   }
 

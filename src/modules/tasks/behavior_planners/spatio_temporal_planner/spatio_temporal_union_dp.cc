@@ -87,7 +87,7 @@ bool SpatioTemporalUnionDp::Update(
     const planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
     const double target_s, planning_math::KDPath& current_lane_coord,
-    const int half_lateral_sample_nums, const bool& last_enable_using_st_plan) {
+    const int half_lateral_sample_nums, const bool last_enable_using_st_plan) {
   dp_st_cost_.Init(spatio_temporal_union_plan_input.long_weight_params());
   enable_use_ego_cart_point_ = true;
   current_lane_coord_ = current_lane_coord;
@@ -2031,9 +2031,9 @@ void SpatioTemporalUnionDp::PrecomputeInvSpeedLimit() {
 }
 
 void SpatioTemporalUnionDp::FallbackFunction(
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input,
-    TrajectoryPoints &traj_points, const bool &last_enable_using_st_plan) {
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input,
+    TrajectoryPoints& traj_points, const bool last_enable_using_st_plan) {
   const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
   double ego_v = ego_init_state.v0();
   const double acc_coeff = 0.5;
