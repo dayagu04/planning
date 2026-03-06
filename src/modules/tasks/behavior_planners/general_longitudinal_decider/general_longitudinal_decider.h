@@ -59,9 +59,9 @@ class GeneralLongitudinalDecider : public Task {
   const double compute_max_lat_acceleration() const;
 
   double compute_curvature_speed_limit(
-      const TrajectoryPoints& traj_points, double ego_velocity,
+      const TrajectoryPoints& traj_points, double ego_velocity, double ego_a,
       double max_lat_acceleration, double& vlimit_jerk, double& time_to_brake,
-      double& out_max_curvature) const;
+      double& out_max_curvature);
 
   void set_velocity_acceleration_bound(LongitudinalDeciderOutput &lon_ref_path);
 
@@ -154,6 +154,7 @@ class GeneralLongitudinalDecider : public Task {
   std::shared_ptr<ReferencePath> reference_path_ptr_;
 
   double max_curvature_ = 0.0;
+  double max_curvature_slow_down_triger_buffer_ = 0.0;
 
   bool nsa_brake_destination_set_ = false;
   planning_math::PathPoint nsa_destination_point_;
