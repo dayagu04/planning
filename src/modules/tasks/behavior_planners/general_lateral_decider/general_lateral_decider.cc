@@ -1145,7 +1145,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
                                                          refpath_pt)) {
       // add logs
-      ILOG_ERROR << "Get reference point by lon failed!";
+      ILOG_INFO << "Get reference point by lon failed!";
     }
     ref_path_points_.emplace_back(refpath_pt);
   }

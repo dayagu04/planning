@@ -341,7 +341,7 @@ bool LaneChangeRequest::IsDashedLineEnough(
   if (!must_change_lane &&
       cal_lat_offset(ego_vel, dash_length, max_front_wheel_angle, wheel_base) <
           3.6) {
-    ILOG_ERROR << "!dashed_enough";
+    ILOG_INFO << "!dashed_enough";
     return false;
   }
 

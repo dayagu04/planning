@@ -704,7 +704,7 @@ void ObstacleManager::UpdateMapStaticObstacle() {
     for (const Map::PolygonObject &polygon_object : polygon_obstacles) {
       ehr_column_id += 1;
       if (polygon_object.shape_size() != 4U) {
-        ILOG_ERROR << "invalid polygon_object.shape_size = ",
+        ILOG_INFO << "invalid polygon_object.shape_size = ",
             polygon_object.shape_size();
         continue;
       }

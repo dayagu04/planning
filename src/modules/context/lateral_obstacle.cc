@@ -75,18 +75,18 @@ bool LateralObstacle::update_sensors(
     fvf_dead_ = true;
     svf_dead_ = true;
 
-    ILOG_ERROR << "[LateralObstacle::update_sensors] Fusion lagging too large";
+    // ILOG_ERROR << "[LateralObstacle::update_sensors] Fusion lagging too large";
 
     double abs_time = IflyTime::Now_ms();
     if (abs_time - warning_timer_[2] > 5.0) {
-      ILOG_ERROR
-          << "[LateralObstacle::update_sensors] frontview fusion unavailable";
+      // ILOG_ERROR
+      //     << "[LateralObstacle::update_sensors] frontview fusion unavailable";
       warning_timer_[2] = abs_time;
     }
 
     if (abs_time - warning_timer_[1] > 5.0) {
-      ILOG_ERROR
-          << "[LateralObstacle::update_sensors] sideview fusion unavailable";
+      // ILOG_ERROR
+      //     << "[LateralObstacle::update_sensors] sideview fusion unavailable";
       warning_timer_[1] = abs_time;
     }
   }
@@ -128,13 +128,12 @@ void LateralObstacle::update_lead_info() {
       extra_obstacle_info.oncoming = item->frenet_velocity_s() < -3.0;
     }
 
-    LOG_DEBUG("----is_potential_lead_one-----\n");
+    ILOG_DEBUG << "----is_potential_lead_one-----";
     double gap = (extra_obstacle_info.last_recv_time == 0.0)
                      ? planning_cycle_time
                      : std::max((extra_obstacle_info.timestamp -
                                  extra_obstacle_info.last_recv_time),
                                 planning_cycle_time);
-    LOG_DEBUG("the gap is : [%f]ms \n", gap);
     std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
     std::array<double, 5> fp1{0.3, 0.4, 0.3, 0.25, 0.0};
     double t_lookahead = interp(item->d_s_rel(), xp1, fp1);
@@ -156,8 +155,7 @@ void LateralObstacle::update_lead_info() {
         std::max(max_d_offset,
                  std::min(0.0, t_lookahead * item->frenet_velocity_l())) *
         extra_obstacle_info.lat_coeff;
-    LOG_DEBUG("max_d_offset is: [%f], t_lookahead: [%f], lat_corr is: [%f]\n",
-              max_d_offset, t_lookahead, lat_corr);
+
     if (extra_obstacle_info.oncoming && item->d_s_rel() >= 0) {
       lat_corr = 0.0;
     }
@@ -192,22 +190,22 @@ void LateralObstacle::update_lead_info() {
     if (extra_obstacle_info.oncoming && item->d_s_rel() > 50) {
       lead_d_path_thr = 0.3;
     }
-    LOG_DEBUG("lead_d_path_thr is: [%f]\n", lead_d_path_thr);
-    LOG_DEBUG("the gap is : [%f]ms \n", gap);
+    // LOG_DEBUG("lead_d_path_thr is: [%f]\n", lead_d_path_thr);
+    // LOG_DEBUG("the gap is : [%f]ms \n", gap);
 
     if (d_path < lead_d_path_thr && item->d_s_rel() > 0.0) {
       extra_obstacle_info.leadone_confidence_cnt =
           std::min(extra_obstacle_info.leadone_confidence_cnt + gap,
                    10 * planning_cycle_time);
     } else {
-      LOG_DEBUG("gap is : [%f] \n", gap);
+      // LOG_DEBUG("gap is : [%f] \n", gap);
       int count = (int)((gap + 0.01) / planning_cycle_time);
       extra_obstacle_info.leadone_confidence_cnt =
           std::max(extra_obstacle_info.leadone_confidence_cnt -
                        2 * count * planning_cycle_time,
                    0.0);
-      LOG_DEBUG("leadone_confidence_cnt is : [%f] \n",
-                extra_obstacle_info.leadone_confidence_cnt);
+      // LOG_DEBUG("leadone_confidence_cnt is : [%f] \n",
+                // extra_obstacle_info.leadone_confidence_cnt);
     }
 
     std::array<double, 5> xp4{0, 30, 60, 90, 120};
@@ -223,13 +221,13 @@ void LateralObstacle::update_lead_info() {
         item->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
       lead_confidence_thrshld = 1.0;
     }
-    LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
+    // LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
     extra_obstacle_info.is_lead = extra_obstacle_info.leadone_confidence_cnt >=
                                   lead_confidence_thrshld * planning_cycle_time;
-    LOG_DEBUG("item.is_lead: [%d]\n", extra_obstacle_info.is_lead);
+    // LOG_DEBUG("item.is_lead: [%d]\n", extra_obstacle_info.is_lead);
 
     {
-      LOG_DEBUG("----fill_possibility_of_cutin-----\n");
+      // LOG_DEBUG("----fill_possibility_of_cutin-----\n");
       double ttc = std::max(item->d_path() - 1.5, 0.0) /
                    std::max(-item->frenet_velocity_l(), 0.01);
       ttc = std::min(15.0, ttc);
@@ -276,8 +274,8 @@ void LateralObstacle::update_lead_info() {
             std::max(extra_obstacle_info.cutin_confidence_cnt -
                          10 * count * planning_cycle_time,
                      0.0);
-        LOG_DEBUG("!!!!!!!cutin_confidence_cnt is : [%f] \n",
-                  extra_obstacle_info.cutin_confidence_cnt);
+        // LOG_DEBUG("!!!!!!!cutin_confidence_cnt is : [%f] \n",
+        //           extra_obstacle_info.cutin_confidence_cnt);
       }
 
       std::array<double, 5> xp4{0, 30, 60, 90, 120};
@@ -289,7 +287,7 @@ void LateralObstacle::update_lead_info() {
       } else {
         cutin_confidence_cnt = interp(item->d_s_rel(), xp4, fp4);
       }
-      LOG_DEBUG("cutin_confidence_cnt is : [%f]\n", cutin_confidence_cnt);
+      // LOG_DEBUG("cutin_confidence_cnt is : [%f]\n", cutin_confidence_cnt);
       if (is_need_consider && is_in_range) {
         if (extra_obstacle_info.cutin_confidence_cnt >=
             cutin_confidence_cnt * planning_cycle_time) {

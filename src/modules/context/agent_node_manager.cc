@@ -827,7 +827,7 @@ void AgentNodeManager::RefineObjInitState(const int64_t& obj_id,
               refine_update_pos)) {
         refine_update_pos.x = node_iter->second.cur_s;
         refine_update_pos.y = node_iter->second.cur_l;
-        ILOG_ERROR << "Refine obj state cart -> frenet false";
+        ILOG_INFO << "Refine obj state cart -> frenet false";
       }
       obj_infos.cur_s = refine_update_pos.x;
       obj_infos.cur_l = refine_update_pos.y;

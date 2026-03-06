@@ -723,7 +723,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
     double point_s = std::min(traj_point.s, reference_path_ptr_->get_points().back().path_point.s());
     if (!reference_path_ptr_->get_reference_point_by_lon(point_s, refpath_pt)) {
       // add logs
-      ILOG_ERROR
+      ILOG_INFO
           << "ConstructReferencePathPoints: Get reference point by lon failed!";
     }
     double road_radius =
@@ -917,7 +917,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
       }
     }
   } else {
-    ILOG_ERROR << "no ref_traj_points!";
+    ILOG_INFO << "no ref_traj_points!";
     return false;
   }
   // extend s
@@ -1394,7 +1394,7 @@ void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
 
   if (plan_history_traj_.empty()) {
     // add logs
-    ILOG_ERROR << "lan history traj is null!";
+    ILOG_INFO << "lan history traj is null!";
     return;
   }
   GenerateDynamicObstaclesBoundary(dynamic_obstacles,
