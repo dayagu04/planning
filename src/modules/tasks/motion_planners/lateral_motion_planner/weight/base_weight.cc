@@ -92,6 +92,7 @@ void BaseWeight::SetLateralMotionWeight(
   end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
   end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
   end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
+  planning_input.set_q_edt_distance(0.0);
   SetAccJerkBoundAndWeight(planning_input);
   // MakeDynamicPosBoundWeight(planning_input);
   if (lateral_motion_scene_ != LateralMotionScene::RAMP) {
@@ -216,23 +217,27 @@ void BaseWeight::SetLateralMotionWeightForHPP(
   }
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
+  planning_input.set_q_edt_distance(0.0);
 }
 
 void BaseWeight::SetLateralMotionWeightForRADS(
     planning::common::LateralPlanningInput &planning_input) {
   weight_.proximal_index = config_.motion_plan_concerned_start_index;
   weight_.remotely_index = config_.motion_plan_concerned_end_index;
-  weight_.complete_follow = true;
-  end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
-  end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
-  end_ratio_for_qjerk_ = config_.end_ratio_for_qjerk;
+  weight_.complete_follow = false;
+  end_ratio_for_qrefxy_ = 1.0; //config_.end_ratio_for_qrefxy;
+  end_ratio_for_qreftheta_ = 1.0; //config_.end_ratio_for_qreftheta;
+  end_ratio_for_qjerk_ = 1.0; //config_.end_ratio_for_qjerk;
   SetAccJerkBoundAndWeight(planning_input);
   MakeDynamicPosBoundWeight(planning_input);
+  // planning_input.set_q_soft_corridor(0.0);
+  // planning_input.set_q_hard_corridor(0.0);
   //MakeDynamicWeight(planning_input);
   MakeDynamicWeight_Rads(planning_input);
   planning_input.set_q_continuity(0.0);
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
+  planning_input.set_q_edt_distance(2000.0);
 }
 
 void BaseWeight::SetLateralMotionWeightForNSA(
@@ -251,6 +256,7 @@ void BaseWeight::SetLateralMotionWeightForNSA(
   }
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
+  planning_input.set_q_edt_distance(0.0);
 }
 
 void BaseWeight::CalculateInitInfo(
@@ -1543,6 +1549,7 @@ void BaseWeight::MakeDynamicWeight_Rads(
     q_xy_ratio1 =
         planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_ratio_to_xy3);
   }
+  q_xy_ratio1 = 0.5;
   planning_input.set_q_ref_x(q_xy_ratio1 * q_xy);
   planning_input.set_q_ref_y(q_xy_ratio1 * q_xy);
 
@@ -1602,13 +1609,13 @@ void BaseWeight::MakeDynamicWeight_Rads(
   //   weight_.complete_follow = true;
   // }
 
-  if (lateral_dist > 0.2) {
-    std::vector<double> xp_v{8.333, 12.5};
-    std::vector<double> fp_end_ratio_for_qrefxy{
-        config_.lc_end_ratio_for_second_qrefxy, config_.end_ratio_for_qrefxy};
-    end_ratio_for_qrefxy_ =
-        planning::interp(ref_vel_, xp_v, fp_end_ratio_for_qrefxy);
-  }
+  // if (lateral_dist > 0.2) {
+  //   std::vector<double> xp_v{8.333, 12.5};
+  //   std::vector<double> fp_end_ratio_for_qrefxy{
+  //       config_.lc_end_ratio_for_second_qrefxy, config_.end_ratio_for_qrefxy};
+  //   end_ratio_for_qrefxy_ =
+  //       planning::interp(ref_vel_, xp_v, fp_end_ratio_for_qrefxy);
+  // }
 }
 
 void BaseWeight::MakeLateralOffsetAvoidDynamicWeight(
