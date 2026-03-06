@@ -104,9 +104,9 @@ void WeightMaker::MakeVWeight(const TargetMaker& target_maker) {
       ++kCruiseSpeedCount;
     }
   }
-  if(kCruiseSpeedCount == plan_points_num_) {
-    for(size_t i = 0; i < plan_points_num_; ++i) {
-      v_weight_[i] = cruise_v_weight + DefaultVWeightIncrement_;
+  if (kCruiseSpeedCount == plan_points_num_) {
+    for (size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = cruise_v_weight + KDefaultVWeightIncrement;
     }
   }
 }
@@ -118,7 +118,7 @@ bool WeightMaker::IsNeedAWeight(const TargetMaker& target_maker) {
     auto target_value = target_maker.target_value(relative_t);
     if (target_value.target_type() == TargetType::kCruiseSpeed) {
       ++kCruiseSpeedCount;
-      if(kCruiseSpeedCount == plan_points_num_) {
+      if (kCruiseSpeedCount == plan_points_num_) {
         return true;
       }
     }
@@ -130,9 +130,10 @@ void WeightMaker::MakeAccWeight(const TargetMaker& target_maker) {
   const double default_a_weight =
       speed_planning_config_.weight_maker_config.a_weight;
   acc_weight_ = std::vector<double>(plan_points_num_, default_a_weight);
-  if(IsNeedAWeight(target_maker)) {
-    a_weight_ = std::vector<double>(plan_points_num_, default_a_weight + DefaultAWeightIncrement_);
-  }else {
+  if (IsNeedAWeight(target_maker)) {
+    a_weight_ = std::vector<double>(
+        plan_points_num_, default_a_weight + KDefaultAWeightIncrement);
+  } else {
     a_weight_ = std::vector<double>(plan_points_num_, 0.0);
   }
 }
