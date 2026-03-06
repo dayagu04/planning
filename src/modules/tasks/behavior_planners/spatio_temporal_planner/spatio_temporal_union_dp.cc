@@ -319,7 +319,7 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
     int count = static_cast<int>(next_highest_row) -
                 static_cast<int>(next_lowest_row) + 1;
 
-    auto& cur_point = cost_table_[0][0][0];
+    auto& cur_point = cost_table_[c][0][0];
 
     // 预计算障碍物信息，减少循环内计算
     std::vector<int> valid_agent_indices;
@@ -691,7 +691,6 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     double path_cost_c1 =
         CalculatePathCost(cost_init, cost_cr, lateral_cubic_curve_c1, acc,
                           spatio_temporal_union_plan_input);
-    cost_cr.SetPathCost(path_cost_c1);
     // auto pathcost = IflyTime::Now_us();
     // ILOG_DEBUG << "c1 CalculatePathCost:" << pathcost - overlap;
 
@@ -858,7 +857,6 @@ void SpatioTemporalUnionDp::CalculateCostAt(
           cost_cr.SetDynamicObstacleCost(dynamic_obstacle_cost_c2);
           cost_cr.SetMinObsDistance(distance_c2);
           cost_cr.SetMinDistanceAgentId(agent_id_c2);
-          cost_cr.SetPathCost(path_cost_c2);
           cost_cr.SetLongitinalCost(long_cost_c2);
           cost_cr.SetTotalCost(cost);
           cost_cr.SetPathCost(path_cost_c2);
@@ -997,7 +995,6 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         cost_cr.SetDynamicObstacleCost(dynamic_obstacle_cost);
         cost_cr.SetMinObsDistance(distance_c3);
         cost_cr.SetMinDistanceAgentId(agent_id_c3);
-        cost_cr.SetPathCost(path_cost_c);
         cost_cr.SetLongitinalCost(long_cost);
         cost_cr.SetTotalCost(cost);
         cost_cr.SetPathCost(path_cost_c);
@@ -1388,9 +1385,17 @@ double SpatioTemporalUnionDp::CalculatePathCost(
   lateral_curve_coef[2] = lateral_curve.Coef(2);
   lateral_curve_coef[3] = lateral_curve.Coef(3);
 
-  const auto &lat_path_weight_params =
+  // 预提取权重参数,避免循环内重复getter调用
+  const auto& lat_path_weight_params =
       spatio_temporal_union_plan_input.lat_path_weight_params();
-  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
+  const double path_l_cost = lat_path_weight_params.path_l_cost();
+  const double path_dl_cost = lat_path_weight_params.path_dl_cost();
+  const double path_ddl_cost = lat_path_weight_params.path_ddl_cost();
+
+  const double start_t = start.point().t();
+  const double end_t = end.point().t();
+  const double start_s = start.point().s();
+  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
 
   // std::function<double(const double)> quasi_softmax = [this](const double x)
   // {
@@ -1399,26 +1404,25 @@ double SpatioTemporalUnionDp::CalculatePathCost(
   // };
 
   Point2D current_point;
-  double current_t = start.point().t();
+  double current_t = start_t;
   for (double curve_t = kPathCostComputeSampleTime;
-       curve_t <= (end.point().t() - start.point().t());
+       curve_t <= (end_t - start_t);
        curve_t += kPathCostComputeSampleTime) {
-    current_t = start.point().t() + curve_t;
+    current_t = start_t + curve_t;
     current_point.x =
-        v0 * curve_t + 0.5 * acc * curve_t * curve_t + start.point().s();
+        v0 * curve_t + 0.5 * acc * curve_t * curve_t + start_s;
     current_point.y = lateral_curve.Evaluate(0, curve_t);
     // Vec2d curve_point(cur_s, cur_l);
-    path_cost += current_point.y * current_point.y *
-                 lat_path_weight_params.path_l_cost();
+    path_cost += current_point.y * current_point.y * path_l_cost;
     double ds = v0 + acc * curve_t;
     ds = std::max(ds, 1e-6);
     double dl = lateral_curve.Evaluate(1, curve_t);
     double dl_ds = dl / ds;
-    path_cost += dl_ds * dl_ds * lat_path_weight_params.path_dl_cost();
+    path_cost += dl_ds * dl_ds * path_dl_cost;
 
     const double ddl =
         ComputeSecondDerivative(lateral_curve_coef, acc, v0, curve_t);
-    path_cost += ddl * ddl * lat_path_weight_params.path_ddl_cost();
+    path_cost += ddl * ddl * path_ddl_cost;
     path_cost += CalculateStitchingCost(current_point, current_t,
                                         spatio_temporal_union_plan_input);
   }
@@ -1449,6 +1453,19 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
   if (valid_agent_indices.empty()) {
     return obstacle_cost;
   }
+
+  // 预提取参数避免重复getter调用
+  const auto& dp_params = spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params();
+  const double longit_risk_dist = dp_params.obstacle_longit_risk_distance();
+  const double lateral_risk_dist = dp_params.obstacle_lateral_risk_distance();
+  const double longit_collision_dist = dp_params.obstacle_longit_collision_distance();
+  const double lateral_collision_dist = dp_params.obstacle_lateral_collision_distance();
+  const double collision_cost_without_overlap = dp_params.obstacle_collision_cost_without_lateral_overlap();
+  const double default_obs_weight = dp_params.default_obstacle_cost_weight();
+  const double obs_collision_cost = dp_params.obstacle_collision_cost();
+  const double dynamic_obs_weight = dp_params.dynamic_obstacle_weight();
+  const double cur_time = cur_point.point().t();
+
   // if (pre_point.point().t() > kDefaultConsiderObstacleTajsTime) {
   //   return obstacle_cost;
   // }
@@ -1473,7 +1490,7 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
 
   // auto t_begin = IflyTime::Now_us();
   double time_gap = kDynamicObstacleCostSampleTime;
-  if (cur_point.point().t() > kDynamicObsConsiderTime) {
+  if (cur_time > kDynamicObsConsiderTime) {
     time_gap = kDynamicObstacleCostLaterSampleTime;
   }
 
@@ -2227,7 +2244,7 @@ void SpatioTemporalUnionDp::FallbackFunction(
 
       Point2D cart_point;
       if (!current_lane_coord_.SLToXY(cur_frenet_point, cart_point)) {
-        ILOG_ERROR << "FallbackFunction()::ERROR! Frenet Point -> Cart Point "
+        ILOG_INFO << "FallbackFunction()::ERROR! Frenet Point -> Cart Point "
                       "Failed!!!";
       }
       point.s = cur_frenet_point.x;
