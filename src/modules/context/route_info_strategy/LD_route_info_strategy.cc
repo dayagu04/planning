@@ -47,6 +47,7 @@ bool LDRouteInfoStrategy::UpdateLDMap() {
       ld_map_info_updated_timestamp_ = ld_map_info_current_timestamp;
     }
   }
+
   if (ld_map_info_current_timestamp - ld_map_info_updated_timestamp_ >
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
@@ -929,7 +930,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
             std::max(kMinFrontJudgeDis, ego_velocity * kPredictTimeHorizon);
 
         is_nearing_ramp = type_flag && ramp_split_flag && distance_flag;
-        
+
       }
     }
     // 1. 识别当前Relative==0的可变车道，是不是在导航路线上，如果在，那么就不需要进行变道。
@@ -2387,21 +2388,32 @@ void LDRouteInfoStrategy::Erase1Split2FeasibleLane(
             [](const TopoLane& a, const TopoLane& b) {
               return a.order_id < b.order_id;  // 按 order_id 升序排列
             });
-  const auto& split_next_link = ld_map_.GetNextLinkOnRoute(
-      mlc_decider_scene_type_info_.topo_change_link_id);
+
+  // 判断ramp方向的次车道上是否有1分2的lane，如果有从feasible lane中拿掉
+  if (ramp_info_vec_.empty()) {
+    return;
+  }
+
+  const auto front_first_ramp_info = ramp_info_vec_[0].first;
+  if (front_first_ramp_info == nullptr) {
+    return;
+  }
+
+  const auto& front_first_ramp_dir =
+      CalculateSplitDirection(*front_first_ramp_info, ld_map_);
+  const auto& split_next_link =
+      ld_map_.GetNextLinkOnRoute(front_first_ramp_info->id());
   if (split_next_link == nullptr) {
     return;
   }
 
-  // 判断ramp方向的次车道上是否有1分2的lane，如果有从feasible lane中拿掉
-  if (mlc_decider_scene_type_info_.route_lane_direction == RAMP_ON_RIGHT) {
+  if (front_first_ramp_dir == RAMP_ON_RIGHT) {
     for (size_t idx = 1; idx < max_distance_lanes.size(); ++idx) {
       EraseFeasibleLaneIfNeeded(max_distance_lanes[idx].id, split_next_link,
                                 feasible_lane_graph);
     }
-  } else if (mlc_decider_scene_type_info_.route_lane_direction ==
-             RAMP_ON_LEFT) {
-    for (size_t idx = max_distance_lanes.size() - 1; idx > 0; --idx) {
+  } else if (front_first_ramp_dir == RAMP_ON_LEFT) {
+    for (size_t idx = max_distance_lanes.size() - 2; idx >= 0; --idx) {
       EraseFeasibleLaneIfNeeded(max_distance_lanes[idx].id, split_next_link,
                                 feasible_lane_graph);
     }
@@ -2442,10 +2454,9 @@ void LDRouteInfoStrategy::EraseFeasibleLaneIfNeeded(
           continue;
         }
 
-        is_exist_suc_lane_not_in_route_link =
-            !ld_map_.isOnRouteLinks(temp_lane->link_id());
-
-        if (is_exist_suc_lane_not_in_route_link) {
+        // suc_lane都不在split_next_link上认为存在后继车道不在route_link上
+        if (split_next_link->id() != temp_lane->link_id()) {
+          is_exist_suc_lane_not_in_route_link = true;
           break;
         }
       }
@@ -2477,25 +2488,26 @@ std::vector<TopoLane> LDRouteInfoStrategy::CalculateMaxDistanceLanes(
   }
 
   // 用int类型，便于后面获取距离相同的lane
-  std::multimap<int, TopoLane> topo_lanes_map;
+  // std::multimap<int, TopoLane> topo_lanes_map;
+
+  // 把当前位置上的所有lane都判断后继是否存在1分2的车道
   for (const auto& topo_lane :
        feasible_lane_graph.lane_topo_groups.back().topo_lanes) {
-    topo_lanes_map.emplace(static_cast<int>(topo_lane.front_feasible_distance),
-                           topo_lane);
+    max_distance_lanes.push_back(topo_lane);
   }
 
-  if (topo_lanes_map.empty()) {
-    return max_distance_lanes;
-  }
+  // if (topo_lanes_map.empty()) {
+  //   return max_distance_lanes;
+  // }
 
-  auto max_key = topo_lanes_map.rbegin()->first;
+  // auto max_key = topo_lanes_map.rbegin()->first;
 
-  // 使用equal_range获取所有具有最大键值的元素
-  auto range = topo_lanes_map.equal_range(max_key);
+  // // 使用equal_range获取所有具有最大键值的元素
+  // auto range = topo_lanes_map.equal_range(max_key);
 
-  for (auto it = range.first; it != range.second; ++it) {
-    max_distance_lanes.push_back(it->second);
-  }
+  // for (auto it = range.first; it != range.second; ++it) {
+  //   max_distance_lanes.push_back(it->second);
+  // }
 
   return max_distance_lanes;
 }
