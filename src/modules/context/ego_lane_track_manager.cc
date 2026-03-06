@@ -91,7 +91,7 @@ constexpr double kMaxCurvatureRadius = 1000.0; // 最大曲率半径（视为纯
 constexpr double kAverageKappaCostWeight = 0.2;
 constexpr double kAverageThetaDiffCostWeight = 0.2;
 constexpr double kEgoLateralDistanceCostWeight = 0.1;
-constexpr double kUseVirtualLaneProcessSplitCostThd = 0.01; // 归一化后阈值缩小
+constexpr double kUseVirtualLaneProcessSplitCostThd = 0.25; // 归一化后阈值缩小
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(
