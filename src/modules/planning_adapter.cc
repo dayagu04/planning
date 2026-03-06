@@ -99,6 +99,15 @@ bool PlanningAdapter::Proc() {
 
   SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_start);
   // 1.1 receive prediction
+  if(is_parking_prediction_result_msg_updated_) {
+    std::lock_guard<std::mutex> lock(parking_prediction_result_msg_mutex_);
+    local_view_ptr_->parking_prediction_result = parking_prediction_result_msg_;
+    local_view_ptr_->parking_prediction_result_recv_time =
+        parking_prediction_result_msg_recv_time_;
+    is_parking_prediction_result_msg_updated_.store(false);
+    ILOG_INFO << "receive parking_prediction";
+  }
+
   // 1.1 receive prediction
   if (is_prediction_result_msg_updated_) {
     std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);

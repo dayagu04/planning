@@ -849,6 +849,7 @@ void ObstacleManager::UpdateTurnStileObstacle() {
                  prediction_object.is_static, prediction_relative_time);
     obstacle.set_floor_id(ego_state.ego_floor_id());
     obstacle.set_turnstile_open_ratio(prediction_object.turnstile_open_ratio);
+    obstacle.set_turnstile_status(prediction_object.turnstile_status);
     add_turnstile_obstacle(obstacle);
   }
 }

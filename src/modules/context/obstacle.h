@@ -124,12 +124,18 @@ class Obstacle {
   iflyauto::IntersectionType intersection_type() const {
     return intersection_type_;
   }
+  iflyauto::GateBarrierStatus turnstile_status() const {
+    return turnstile_status_;
+  }
   void set_floor_id(int floor_id) { floor_id_ = floor_id; }
   void set_turnstile_open_ratio(double turnstile_open_ratio) {
     turnstile_open_ratio_ = turnstile_open_ratio;
   }
   void set_intersection_type(iflyauto::IntersectionType intersection_type) {
     intersection_type_ = intersection_type;
+  }
+  void set_turnstile_status(iflyauto::GateBarrierStatus turnstile_status) {
+    turnstile_status_ = turnstile_status;
   }
 
   /******** for hpp  end ********/
@@ -185,8 +191,10 @@ class Obstacle {
   SourceType source_type_;
 
   /************* for hpp start *************/
-  int floor_id_ = 0;                                // 楼层 id
-  double turnstile_open_ratio_ = 0.0;                // 闸机打开比例
+  int floor_id_ = 0;                                        // 楼层 id
+  double turnstile_open_ratio_ = 0.0;                       // 闸机打开比例
+  iflyauto::GateBarrierStatus turnstile_status_ =
+      iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN;      // 闸机运动状态
   iflyauto::IntersectionType intersection_type_ =
       iflyauto::IntersectionType::INTERSECTION_UNKNOWN;  // 路口类型
   /************* for hpp end   *************/

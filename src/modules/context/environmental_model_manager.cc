@@ -560,6 +560,11 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       truncate_prediction_info(local_view.prediction_result,
                                local_view.fusion_objects_info, timestamp,
                                prediction_obj_id_set);
+    } else if (session_->is_hpp_scene() &&
+               ego_config_.enable_parking_prediction) {
+      truncate_prediction_info(local_view.parking_prediction_result,
+                               local_view.fusion_objects_info, timestamp,
+                               prediction_obj_id_set);
     } else {
       // hack:hpp 、rads 、nsa 暂时只用融合障碍物
       for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
@@ -855,6 +860,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
   std::unordered_map<int32_t, double> fusion_objects_vel_map;
   // <key: Perception id, value: fusion obj theta>
   std::unordered_map<int32_t, double> fusion_objects_theta_map;
+  std::unordered_map<int32_t, iflyauto::GateBarrierStatus>
+      fusion_objects_gate_barrier_status_map;
   for (int i = 0; i < fusion_objects_result.fusion_object_size; i++) {
     const auto& fusion_obj = fusion_objects_result.fusion_object[i];
     double obj_yaw = fusion_obj.common_info.heading_angle;
@@ -896,6 +903,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
           {fusion_obj.additional_info.sensor_source_id[0], fusion_vel});
       fusion_objects_theta_map.insert(
           {fusion_obj.additional_info.sensor_source_id[0], fusion_theta});
+      fusion_objects_gate_barrier_status_map.insert(
+          {fusion_obj.additional_info.sensor_source_id[0],
+           fusion_obj.additional_info.gate_barrier_status});
     }
   }
 
@@ -1174,6 +1184,13 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.trajectory_array.emplace_back(
         std::move(cur_prediction_trajectory));
     cur_predicion_obj.is_static = IsStatic(cur_predicion_obj);
+    cur_predicion_obj.turnstile_open_ratio =
+        prediction_object.fusion_obstacle.common_info.other.open_ratio;
+    if (fusion_objects_gate_barrier_status_map.find(cur_predicion_obj.id) !=
+        fusion_objects_gate_barrier_status_map.end()) {
+      cur_predicion_obj.turnstile_status =
+          fusion_objects_gate_barrier_status_map[cur_predicion_obj.id];
+    }
     prediction_info.emplace_back(std::move(cur_predicion_obj));
   }
 }
@@ -1314,6 +1331,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   prediction_object.is_static = IsStatic(prediction_object);
   prediction_object.turnstile_open_ratio =
       fusion_object.common_info.other.open_ratio;
+  prediction_object.turnstile_status =
+      fusion_object.additional_info.gate_barrier_status;
   objects_infos.emplace_back(std::move(prediction_object));
   return true;
 }
@@ -1465,6 +1484,8 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   prediction_object.is_static = IsStatic(prediction_object);
   prediction_object.turnstile_open_ratio =
       fusion_object.common_info.other.open_ratio;
+  prediction_object.turnstile_status =
+      fusion_object.additional_info.gate_barrier_status;
   objects_infos.emplace_back(std::move(prediction_object));
   return true;
 }
