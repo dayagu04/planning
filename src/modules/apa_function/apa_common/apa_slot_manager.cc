@@ -357,6 +357,7 @@ void ApaSlotManager::Update(
           .release_state[ASTAR_PLANNING_RELEASE];
 
   if (!measure_data_ptr_->GetStaticFlag() ||
+      state_machine_ptr_->IsHppCruise() ||
       (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) ||
       running_mode == ApaRunningMode::RUNNING_PA) {
     pre_plan_fail_slot_id_uset_.clear();
