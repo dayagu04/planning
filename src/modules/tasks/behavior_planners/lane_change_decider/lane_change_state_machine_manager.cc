@@ -2542,6 +2542,9 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     //   target_rear_node_id = target_lane_node->node_id();
     //   target_rear_s = agent_s;  // 选择最靠前的
     // }
+    if (target_lane_node->is_static_type() || target_lane_node->node_speed() <0.3 ) {
+      continue;
+    }
     double rear_risk_dis = target_lane_node->node_speed() * 0.5 + 2.0;
     double rear_gap = std::max(0.0, ego_sl_bd.s_start - agent_s_end);
     bool is_rear_risk = rear_gap < rear_risk_dis;
