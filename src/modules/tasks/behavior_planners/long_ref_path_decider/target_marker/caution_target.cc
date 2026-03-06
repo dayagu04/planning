@@ -47,10 +47,11 @@ void CautionTarget::GenerateCautionTarget() {
   const bool default_has_target = false;
   const double default_s_target = 0.0;
   const double default_v_target = 0.0;
+  const double default_a_target = 0.0;
   const TargetType default_target_type = TargetType::kNotSet;
   auto default_target_value =
       TargetValue(default_t, default_has_target, default_s_target,
-                  default_v_target, default_target_type);
+                  default_v_target,default_a_target, default_target_type);
   target_values_ =
       std::vector<TargetValue>(plan_points_num_, default_target_value);
 

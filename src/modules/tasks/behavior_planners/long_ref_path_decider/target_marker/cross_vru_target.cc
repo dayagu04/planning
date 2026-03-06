@@ -92,7 +92,7 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
   is_pre_handle_cross_vru_ = false;
 
   target_values_ = std::vector<TargetValue>(
-      plan_points_num_, TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet));
+      plan_points_num_, TargetValue(0.0, false, 0.0, 0.0,0.0, TargetType::kNotSet));
 
   const auto* st_graph = session_->planning_context().st_graph_helper();
   if (st_graph == nullptr) return;
@@ -139,10 +139,8 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
         session_->environmental_model().get_agent_manager()->GetAgent(agent_id);
     if (agent == nullptr || agent->is_vru_crossing_virtual_obs()) continue;
 
-    const auto& agent_st_boundary_id_map =
-        st_graph->GetAgentIdSTBoundariesMap();
-    if (agent_st_boundary_id_map.find(agent_id) ==
-        agent_st_boundary_id_map.end()) {
+    const auto& agent_st_boundary_id_map = st_graph->GetAgentIdSTBoundariesMap();
+    if (agent_st_boundary_id_map.find(agent_id) == agent_st_boundary_id_map.end()) {
       continue;
     }
 
@@ -290,6 +288,7 @@ void CrossVRUTarget::GenerateCrossVRUTarget() {
   target_values_[0].set_has_target(true);
   target_values_[0].set_s_target_val(current_s);
   target_values_[0].set_v_target_val(current_v);
+  target_values_[0].set_a_target_val(current_a);
   target_values_[0].set_target_type(TargetType::kCrossVRU);
 
   for (int32_t i = 1; i < plan_points_num_; i++) {
@@ -303,10 +302,10 @@ void CrossVRUTarget::GenerateCrossVRUTarget() {
         current_s + current_v * dt_ + 0.5 * cross_vru_acc * dt_ * dt_;
     double next_v = std::max(0.0, current_v + cross_vru_acc * dt_);
     next_s = std::max(0.0, std::max(current_s, next_s));
-
     target_value.set_has_target(true);
     target_value.set_s_target_val(next_s);
     target_value.set_v_target_val(next_v);
+    target_value.set_a_target_val(cross_vru_acc);
     target_value.set_target_type(TargetType::kCrossVRU);
 
     current_s = next_s;

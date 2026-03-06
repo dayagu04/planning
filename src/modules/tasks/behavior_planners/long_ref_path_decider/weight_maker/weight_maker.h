@@ -27,6 +27,8 @@ class WeightMaker {
 
   double a_weight(const double t) const;
 
+  double a_new_weight(const double t) const;
+
   double jerk_weight(const double t) const;
 
  private:
@@ -35,7 +37,9 @@ class WeightMaker {
 
   void MakeVWeight(const TargetMaker& target_maker);
 
-  void MakeAccWeight();
+  bool IsNeedAWeight(const TargetMaker& target_maker);
+
+  void MakeAccWeight(const TargetMaker& target_maker);
 
   void MakeJerkWeight();
 
@@ -51,12 +55,15 @@ class WeightMaker {
   static constexpr double kDefaultSWeight = 1.0;
   static constexpr double kBaseSafeDistance = 2.5;
   static constexpr double kEmergencySWeight = 5.0;
+  static constexpr double KDefaultVWeightIncrement = 0.0;
+  static constexpr double KDefaultAWeightIncrement = 400.0;
 
   double dt_ = 0.0;
   double plan_time_ = 0.0;
   int32_t plan_points_num_ = 0.0;
   std::vector<double> s_weight_;
   std::vector<double> v_weight_;
+  std::vector<double> a_weight_;
   std::vector<double> acc_weight_;
   std::vector<double> jerk_weight_;
   bool is_urgent_ = false;

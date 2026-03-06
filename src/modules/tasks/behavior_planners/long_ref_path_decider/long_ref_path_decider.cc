@@ -138,6 +138,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
   lon_behavior_output_.t_list.resize(plan_points_num_);
   lon_behavior_output_.s_refs.resize(plan_points_num_);
   lon_behavior_output_.ds_refs.resize(plan_points_num_);
+  lon_behavior_output_.dds_refs.resize(plan_points_num_);
   lon_behavior_output_.hard_bounds_v3.resize(plan_points_num_);
   lon_behavior_output_.soft_bounds_v3.resize(plan_points_num_);
   lon_behavior_output_.lead_bounds.resize(plan_points_num_);
@@ -162,6 +163,9 @@ void LongRefPathDecider::UpdateLonRefPath() {
     // 3.update ds_refs & weights
     lon_behavior_output_.ds_refs[i] = {target_maker_->v_target(t),
                                        weight_maker_->v_weight(t)};
+    // 4.update dds_refs & weights
+    lon_behavior_output_.dds_refs[i] = {target_maker_->a_target(t),
+                                        weight_maker_->a_new_weight(t)};
 
     // 4.update s bounds
     WeightedBound s_hard_bound;
@@ -227,6 +231,14 @@ void LongRefPathDecider::UpdateLonRefPath() {
             lane_change_info.st_search_vec[i];
         lon_behavior_output_.ds_refs[i].first =
             lane_change_info.v_search_vec[i];
+        if (i > 0) {
+            double dv = lane_change_info.v_search_vec[i] -
+                       lane_change_info.v_search_vec[i-1];
+            lon_behavior_output_.dds_refs[i].first = dv / dt_;
+        } else {
+            lon_behavior_output_.dds_refs[i].first = 0.0;
+        }
+
       }
       ILOG_DEBUG << "use search path in lc wait!";
     } else {
@@ -251,6 +263,12 @@ void LongRefPathDecider::UpdateLonRefPath() {
       lon_behavior_output_.s_refs[i].first =
           ego_trajs_future[i].s - ego_trajs_future_init_point_s;
       lon_behavior_output_.ds_refs[i].first = ego_trajs_future[i].v;
+      if (i > 0) {
+            double dv = ego_trajs_future[i].v - ego_trajs_future[i-1].v;
+            lon_behavior_output_.dds_refs[i].first = dv / dt_;
+        } else {
+            lon_behavior_output_.dds_refs[i].first = 0.0;
+        }
     }
   }
 }
@@ -269,8 +287,8 @@ void LongRefPathDecider::SaveToSession() {
   lon_ref_path = lon_behavior_output_;
 }
 
-void LongRefPathDecider::SaveToDebugInfo() {
 // 转存纵向决策信息至debuginfo
+void LongRefPathDecider::SaveToDebugInfo() {
 // 1.update t_list
 #ifdef ENABLE_PROTO_LOG
   lon_behavior_output_pb_.mutable_t_list()->Reserve(
@@ -295,6 +313,13 @@ void LongRefPathDecider::SaveToDebugInfo() {
     add_ds_ref->set_second(ds_ref.second);  // weight
   }
 
+  lon_behavior_output_pb_.mutable_dds_refs()->Reserve(
+      lon_behavior_output_.dds_refs.size());
+  for (const auto &dds_ref : lon_behavior_output_.dds_refs) {
+    auto add_dds_ref = lon_behavior_output_pb_.add_dds_refs();
+    add_dds_ref->set_first(dds_ref.first);    // offset
+    add_dds_ref->set_second(dds_ref.second);  // weight
+  }
   // 4.update hard bounds
   lon_behavior_output_pb_.mutable_bounds()->Reserve(
       lon_behavior_output_.hard_bounds.size());
@@ -382,6 +407,7 @@ void LongRefPathDecider::ClearOutput() {
   lon_behavior_output_.t_list.clear();
   lon_behavior_output_.s_refs.clear();
   lon_behavior_output_.ds_refs.clear();
+  lon_behavior_output_.dds_refs.clear();
   lon_behavior_output_.hard_bounds.clear();
   lon_behavior_output_.soft_bounds.clear();
   lon_behavior_output_.lon_lead_bounds.clear();

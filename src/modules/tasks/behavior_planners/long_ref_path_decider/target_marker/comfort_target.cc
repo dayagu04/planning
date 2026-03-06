@@ -591,7 +591,7 @@ void ComfortTarget::ProcessCutinAgents(
 
 void ComfortTarget::GenerateComfortTarget() {
   target_values_.resize(plan_points_num_,
-                        TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet));
+                        TargetValue(0.0, false, 0.0, 0.0, 0.0,TargetType::kNotSet));
   comfort_jerk_min_vec_.resize(plan_points_num_,
                                comfort_params_.min_decel_jerk);
   comfort_v_target_vec_.resize(plan_points_num_, comfort_params_.v0);
@@ -601,7 +601,7 @@ void ComfortTarget::GenerateComfortTarget() {
   double current_a = init_lon_state_[2];
 
   target_values_[0] =
-      TargetValue(0.0, true, current_s, current_v, TargetType::kComfort);
+      TargetValue(0.0, true, current_s, current_v, current_a, TargetType::kComfort);
   acc_values_[0] = current_a;
 
   const auto* st_graph = session_->planning_context().st_graph_helper();
@@ -666,9 +666,12 @@ void ComfortTarget::GenerateComfortTarget() {
                                    comfort_acc * dt_ * dt_);
     double next_s = current_s + ds;
     double next_v = std::max(0.0, current_v + comfort_acc * dt_);
+    double next_a = comfort_acc;
+    next_v = std::max(0.0, next_v);
 
     target_values_[i] =
-        TargetValue(t, true, next_s, next_v, TargetType::kComfort);
+        TargetValue(t, true, next_s, next_v, next_a,TargetType::kComfort);
+
     current_s = next_s;
     current_v = next_v;
     current_a = comfort_acc;
