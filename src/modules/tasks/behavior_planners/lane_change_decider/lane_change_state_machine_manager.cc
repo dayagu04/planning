@@ -244,7 +244,9 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
 
         bool is_hold_to_cancel =
-            hold_state_frame_nums_ > 80 || (hold_state_dash_cnt >= 2);
+            hold_state_frame_nums_ > 80
+            || (hold_state_dash_cnt >= 2)
+            || lc_request_.request_type() == NO_CHANGE;
 
         bool is_hold_to_execution =
             CheckIfHoldToExecution(transition_info_.lane_change_direction,
