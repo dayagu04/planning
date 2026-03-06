@@ -82,13 +82,12 @@ void SpatioTemporalUnionDp::Reset() {
 }
 
 bool SpatioTemporalUnionDp::Update(
-    TrajectoryPoints &traj_points,
-    const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input,
-    const double &target_s, planning_math::KDPath &current_lane_coord,
-    const int &half_lateral_sample_nums,
-    const bool &last_enable_using_st_plan) {
+    TrajectoryPoints& traj_points,
+    const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input,
+    const double& target_s, planning_math::KDPath& current_lane_coord,
+    const int half_lateral_sample_nums, const bool& last_enable_using_st_plan) {
   dp_st_cost_.Init(spatio_temporal_union_plan_input.long_weight_params());
   enable_use_ego_cart_point_ = true;
   current_lane_coord_ = current_lane_coord;
@@ -130,9 +129,9 @@ bool SpatioTemporalUnionDp::Update(
 }
 
 bool SpatioTemporalUnionDp::InitCostTable(
-    const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input,
-    const int &half_lateral_sample_nums, const double &target_s) {
+    const planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input,
+    const int half_lateral_sample_nums, const double& target_s) {
   // Time dimension is homogeneous while Spatial dimension has two resolutions,
   // dense and sparse with dense resolution coming first in the spatial horizon
 

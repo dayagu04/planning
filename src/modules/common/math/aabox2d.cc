@@ -44,8 +44,8 @@ AABox2d::AABox2d(const std::vector<Vec2d> &points) {
   half_width_ = width_ / 2.0;
 }
 
-AABox2d::AABox2d(const std::array<planning_math::Vec2d, 8> &points,
-                 const int &valid_count) {
+AABox2d::AABox2d(const std::array<planning_math::Vec2d, 8>& points,
+                 const int valid_count) {
   assert(!points.empty());
   assert(valid_count <= points.size());
   double min_x = points[0].x();

@@ -619,10 +619,10 @@ double integer_power(const double &x, int order) {
   return ret;
 }
 
-void leastSquareFitting(const std::vector<double> &points_x_vec,
-                        const std::vector<double> &points_y_vec,
-                        const int &order,
-                        adas_function::context::LineInfo *line_info_ptr) {
+void leastSquareFitting(const std::vector<double>& points_x_vec,
+                        const std::vector<double>& points_y_vec,
+                        const int order,
+                        adas_function::context::LineInfo* line_info_ptr) {
   std::vector<double> ret(order + 1, 0.0);
   if (points_x_vec.empty() || points_x_vec.size() < order + 1) {
     line_info_ptr->c0 = ret[0];
@@ -657,9 +657,9 @@ void leastSquareFitting(const std::vector<double> &points_x_vec,
 }
 
 void leastSquareFittingForRoadedge(
-    const std::vector<double> &points_x_vec,
-    const std::vector<double> &points_y_vec, const int &order,
-    adas_function::context::RoadedgeInfo *line_info_ptr) {
+    const std::vector<double>& points_x_vec,
+    const std::vector<double>& points_y_vec, const int order,
+    adas_function::context::RoadedgeInfo* line_info_ptr) {
   std::vector<double> ret(order + 1, 0.0);
   if (points_x_vec.empty() || points_x_vec.size() < order + 1) {
     line_info_ptr->c0 = ret[0];

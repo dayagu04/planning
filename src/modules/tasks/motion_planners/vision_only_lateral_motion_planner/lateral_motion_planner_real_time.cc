@@ -139,7 +139,7 @@
 //   return true;
 // }
 
-// bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
+// bool VisionLateralMotionPlanner::update_basic_path(const int status) {
 //   double short_reject_length = 15;
 
 //   reject_reason_ = NO_REJECTION;

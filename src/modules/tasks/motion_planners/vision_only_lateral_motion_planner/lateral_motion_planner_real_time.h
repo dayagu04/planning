@@ -25,7 +25,7 @@
 
 //   bool Execute() override;
 
-//   bool update_basic_path(const int &status);
+//   bool update_basic_path(const int status);
 
 //   void update_premove_path(
 //       int status, bool should_premove,

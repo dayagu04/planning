@@ -44,23 +44,23 @@ class SpatioTemporalUnionDp {
  public:
   void Init();
 
-  bool Update(TrajectoryPoints &traj_points,
-              const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-              const planning::common::SpationTemporalUnionDpInput
-                  &spatio_temporal_union_plan_input,
-              const double &target_s, planning_math::KDPath &current_lane_coord,
-              const int &half_lateral_sample_nums,
-              const bool &last_enable_using_st_plan);
+  bool Update(TrajectoryPoints& traj_points,
+              const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+              const planning::common::SpationTemporalUnionDpInput&
+                  spatio_temporal_union_plan_input,
+              const double& target_s, planning_math::KDPath& current_lane_coord,
+              const int half_lateral_sample_nums,
+              const bool& last_enable_using_st_plan);
 
   planning::common::TrajectoryPoints &GetOutput() { return trajectory_points_; }
 
   void Reset();
 
  private:
-  bool InitCostTable(const planning::common::SpationTemporalUnionDpInput
-                         &spatio_temporal_union_plan_input,
-                     const int &half_lateral_sample_nums,
-                     const double &target_s);
+  bool InitCostTable(const planning::common::SpationTemporalUnionDpInput&
+                         spatio_temporal_union_plan_input,
+                     const int half_lateral_sample_nums,
+                     const double& target_s);
 
   bool InitSpeedLimitLookUp(const planning::common::SpationTemporalUnionDpInput
                                 &spatio_temporal_union_plan_input);

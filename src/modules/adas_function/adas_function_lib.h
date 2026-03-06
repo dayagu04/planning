@@ -75,15 +75,15 @@ extern std::vector<double> ObjCornersCalculate(
 
 extern double integer_power(const double &x, int order);
 
-extern void leastSquareFitting(const std::vector<double> &points_x_vec,
-                               const std::vector<double> &points_y_vec,
-                               const int &order,
-                               adas_function::context::LineInfo *line_info_ptr);
+extern void leastSquareFitting(const std::vector<double>& points_x_vec,
+                               const std::vector<double>& points_y_vec,
+                               const int order,
+                               adas_function::context::LineInfo* line_info_ptr);
 
 extern void leastSquareFittingForRoadedge(
-    const std::vector<double> &points_x_vec,
-    const std::vector<double> &points_y_vec, const int &order,
-    adas_function::context::RoadedgeInfo *line_info_ptr);
+    const std::vector<double>& points_x_vec,
+    const std::vector<double>& points_y_vec, const int order,
+    adas_function::context::RoadedgeInfo* line_info_ptr);
 
 }  // namespace adas_function
 

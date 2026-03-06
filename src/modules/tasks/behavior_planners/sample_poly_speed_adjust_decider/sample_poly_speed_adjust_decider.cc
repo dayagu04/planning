@@ -1182,7 +1182,7 @@ void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
 }
 
 bool SamplePolySpeedAdjustDecider::CheckTrajAvailable(
-    const SampleQuarticPolynomialCurve& current_traj, const int& index) {
+    const SampleQuarticPolynomialCurve& current_traj, const int index) {
   double cur_s = current_traj.CalcS(index * kEvaluationStep);
   if (st_sample_space_base_.get_gap_array().empty()) {
     return false;

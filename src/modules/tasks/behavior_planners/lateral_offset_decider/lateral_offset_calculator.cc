@@ -129,7 +129,7 @@
 //   // TODO(clren)
 // }
 
-// bool LateralOffsetCalculator::update_basic_path(const int &status) {
+// bool LateralOffsetCalculator::update_basic_path(const int status) {
 //   const auto &lane_change_decider_output =
 //       session_->planning_context().lane_change_decider_output();
 //   const auto state = lane_change_decider_output.curr_state;

@@ -114,8 +114,8 @@ class AgentNodeManager {
   bool InferAllObjNormalInfoByKDPath();
 
   // -------------------new code -----------------------
-  int FindNearestIndex(const std::vector<double> &inputVector,
-                       const int &monotonic_status, double target);
+  int FindNearestIndex(const std::vector<double>& inputVector,
+                       const int monotonic_status, double target);
 
   std::pair<std::vector<std::vector<double>>,
             std::vector<std::pair<size_t, size_t>>>
@@ -144,11 +144,11 @@ class AgentNodeManager {
                                   const std::vector<Point2D> &curvePoints);
   // ----------------------------------------------------
 
-  void StitchLaneValidInfo(const int &monotonic_status,
+  void StitchLaneValidInfo(const int monotonic_status,
                            const double obj_traj_length,
-                           std::vector<double> &filtered_x_values,
-                           std::vector<double> &filtered_y_values,
-                           std::vector<double> &s_vec);
+                           std::vector<double>& filtered_x_values,
+                           std::vector<double>& filtered_y_values,
+                           std::vector<double>& s_vec);
 
   void PrepareLaneCubicInfo();
   void PrePareLaneCubicInfo(std::vector<double> &x_target_vec,
