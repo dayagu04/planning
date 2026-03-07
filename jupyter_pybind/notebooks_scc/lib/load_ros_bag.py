@@ -150,6 +150,9 @@ class LoadRosbag:
     # perception parking lane line msg
     self.rdg_parking_lane_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
 
+    # perception traffic sign msg
+    self.rdg_traffic_sign_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
+
     # time offset
     t0 = 0
 
@@ -405,6 +408,27 @@ class LoadRosbag:
     except Exception as e:
       self.lane_topo_msg['enable'] = False
       print('missing /iflytek/camera_perception/lane_topo topic !!!')
+
+    #load perception traffic sign info
+    try:
+      rdg_traffic_sign_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/traffic_sign_recognition"):
+        rdg_traffic_sign_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      sorted_rdg_traffic_sign_msg_dict = OrderedDict(sorted(rdg_traffic_sign_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_rdg_traffic_sign_msg_dict.items():
+        self.rdg_traffic_sign_msg['t'].append(t)
+        self.rdg_traffic_sign_msg['timestamp'].append(msg.msg_header.stamp)
+        self.rdg_traffic_sign_msg['data'].append(msg)
+      self.rdg_traffic_sign_msg['t'] = [tmp - t0  for tmp in self.rdg_traffic_sign_msg['t']]
+      print('rdg_traffic_sign_msg time:',self.rdg_traffic_sign_msg['t'][-1])
+      if len(self.rdg_traffic_sign_msg['t']) > 0:
+        self.rdg_traffic_sign_msg['enable'] = True
+      else:
+        self.rdg_traffic_sign_msg['enable'] = False
+    except Exception as e:
+      self.rdg_traffic_sign_msg['enable'] = False
+      print('missing /iflytek/camera_perception/traffic_sign_recognition !!!')
+
     # load fusion objects msg
     try:
       fus_msg_dict = {}
