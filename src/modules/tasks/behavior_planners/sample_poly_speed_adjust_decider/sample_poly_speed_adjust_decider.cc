@@ -203,7 +203,7 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
           weight_speed_change_, weight_leading_veh_follow_s_,
           weight_jerk_limit_, front_edge_to_rear_axle_,
-          rear_edge_to_rear_axle_);
+          rear_edge_to_rear_axle_, config_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -844,7 +844,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
             weight_speed_change_, weight_leading_veh_follow_s_,
             weight_jerk_limit_, front_edge_to_rear_axle_,
-            rear_edge_to_rear_axle_);
+            rear_edge_to_rear_axle_,config_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
     planning::speed::STPoint stitched_poly_checked_lower_st_point,
@@ -981,9 +981,9 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double t_gap = interp(ego_v, t_gap_ego_v_bp, t_gap_ego_v);
   t_gap = t_gap * (0.6 * ego_v * 0.01);  // why?
   double v_rel = std::fmax(ego_v - v_lead_clip, 0.0);
-  double distance_hysteresis = ego_v * 0.5;
+  double distance_hysteresis = ego_v * config_.leading_safe_delay_time;
   double min_follow_distance = 3.0;
-  double fix_safe_distance = v_rel * ego_v / (2.0 * 2.0);
+  double fix_safe_distance = v_rel * ego_v / (2.0 * config_.leading_safe_max_dec);
   return std::max(min_follow_distance + fix_safe_distance + distance_hysteresis, min_follow_distance);
 }
 

@@ -81,12 +81,27 @@ class LeadingVehSafeCost : public CurveCost {
   LeadingVehSafeCost() = default;
   void GetCost(const double poly_end_s, const double poly_end_v,
                const double leading_veh_pred_s, const double leading_veh_v);
-  void SetRearAxleToBumpDis(const double front_edge_to_rear_axle) {
+  void SetUpParam(const double front_edge_to_rear_axle,
+                  const double leading_safe_distance_gain,
+                  const double leading_safe_delay_time,
+                  const double leading_safe_max_dec,
+                  const double leading_safe_overstep_gain,
+                  const double leading_safe_overstep_buffer) {
     front_edge_to_rear_axle_ = front_edge_to_rear_axle;
+    leading_safe_distance_gain_ = leading_safe_distance_gain;
+    leading_safe_delay_time_ = leading_safe_delay_time;
+    leading_safe_max_dec_ = leading_safe_max_dec;
+    leading_safe_overstep_gain_ = leading_safe_overstep_gain;
+    leading_safe_overstep_buffer_ = leading_safe_overstep_buffer;
   }
 
  private:
   double front_edge_to_rear_axle_;
+  double leading_safe_distance_gain_;
+  double leading_safe_delay_time_;
+  double leading_safe_max_dec_;
+  double leading_safe_overstep_gain_;
+  double leading_safe_overstep_buffer_;
 };
 
 class SpeedVariableCost : public CurveCost {
