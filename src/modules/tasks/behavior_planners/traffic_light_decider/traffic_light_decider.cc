@@ -31,6 +31,7 @@ bool TrafficLightDecider::Execute() {
   double v_ego = ego_state_mgr->ego_v();
   is_small_front_intersection_ = false;
   IsSmallFrontIntersection();
+  JSON_DEBUG_VALUE("is_small_front_intersection", int(is_small_front_intersection_));
   IsIntersectionMatchTFL();
 
   planning::common::IntersectionState intersection_state =
@@ -366,7 +367,7 @@ bool TrafficLightDecider::IsIntersectionMatchTFL() {
       dis_to_tfl = all_tfls[i].traffic_light_x;
     }
   }
-
+  JSON_DEBUG_VALUE("dis_to_tfl", dis_to_tfl);
   double dis_to_stopline = environmental_model.get_virtual_lane_manager()
                                ->GetEgoDistanceToStopline();
   bool is_match = false;

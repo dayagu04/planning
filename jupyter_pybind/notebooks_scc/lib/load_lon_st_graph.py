@@ -242,7 +242,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   planning_json_value_list = ["EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", \
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
-                              'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", \
+                              'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", "is_small_front_intersection", "dis_to_tfl", \
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
                               'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "tla_reminder_state", "obstacle_brake_hmi_sts",\
                               'new_cutin_id', 'new_cutin_id_count', \
