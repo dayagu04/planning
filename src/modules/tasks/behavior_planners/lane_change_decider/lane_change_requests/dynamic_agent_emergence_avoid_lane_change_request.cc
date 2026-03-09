@@ -305,7 +305,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk()
   const auto& potential_dangerous_agent_decider_output =
       session_->planning_context().potential_dangerous_agent_decider_output();
   const auto& obstacles_map = origin_refline->get_obstacles_map();
-  const auto ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+  const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
   const auto half_lane_width = current_lane->width() * 0.5;
 
   if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
@@ -468,7 +468,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
   const auto& potential_dangerous_agent_decider_output =
       session_->planning_context().potential_dangerous_agent_decider_output();
   const auto& obstacles_map = origin_refline->get_obstacles_map();
-  const auto ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+  const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
   const auto half_lane_width = current_lane->width() * 0.5;
   // 接受上一帧道内紧急避让释放的id
   int emergency_avoid_num = 0;
@@ -754,7 +754,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBrakeFailureObstacle(
     return false;
   }
   const auto& obstacles_map = origin_refline->get_obstacles_map();
-  const auto ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+  const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
   const double ego_v = planning_init_point_.v;
   // 目前仅针对CIPV
   const int32_t cipv_id =
@@ -944,8 +944,8 @@ bool DynamicAgentEmergenceAvoidRequest::CheckTargetLaneSafety(
   }
 
   const auto& obstacles_map = target_refline->get_obstacles_map();
-  const auto ego_frenet_state = target_refline->get_frenet_ego_state();
-  const auto ego_frenet_boundary = target_refline->get_ego_frenet_boundary();
+  const auto& ego_frenet_state = target_refline->get_frenet_ego_state();
+  const auto& ego_frenet_boundary = target_refline->get_ego_frenet_boundary();
   const double ego_s = ego_frenet_state.s();
   const double ego_v = planning_init_point_.v;
   const double half_lane_width = target_lane->width() * 0.5;
