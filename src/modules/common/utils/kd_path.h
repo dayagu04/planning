@@ -36,6 +36,8 @@ class KDPath {
 
   PathPoint GetPathPointByS(const double path_s) const;
 
+  int GetPathPointIdxByS(const double path_s) const;
+
   const std::vector<PathPoint>& path_points() const;
 
   /**
@@ -285,5 +287,7 @@ class KDPath {
   double max_y_ = 0.;
 };
 
+using KDPathPtr = std::shared_ptr<KDPath>;
+using ConstKDPathPtr = std::shared_ptr<const KDPath>;
 }  // namespace planning_math
 }  // namespace planning

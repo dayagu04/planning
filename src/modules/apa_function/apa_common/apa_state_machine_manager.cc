@@ -44,7 +44,12 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
 
   free_slot_pos_dir_ = free_slot_info.corner_points[kSlotFreeCorner1].x >
                        free_slot_info.corner_points[kSlotFreeCorner2].x;
+  is_hpp_cruise_ = (fun_state_machine_info.current_state ==
+                        iflyauto::FunctionalState_HPP_CRUISE_ROUTING ||
+                    fun_state_machine_info.current_state ==
+                        iflyauto::FunctionalState_HPP_CRUISE_SEARCHING);
   bool is_turn_corner = false;
+
   if (fun_state_machine_info.running_mode ==
       iflyauto::RunningMode::RUNNING_MODE_PA) {
     running_mode_ = ApaRunningMode::RUNNING_PA;

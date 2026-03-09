@@ -127,7 +127,6 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
 planning::common::SceneType PlanningScheduler::DetermineSceneType(
     const iflyauto::FuncStateMachine& func_state_machine) {
   auto scene_type = planning::common::SceneType::HIGHWAY;
-  ILOG_INFO << "wahaha current state = " << func_state_machine.current_state;
 
   if (IsUndefinedScene(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::HIGHWAY;
@@ -901,95 +900,110 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.cutin_track_id = cutin_ttc_info.agent_id;
   planning_hmi_info->ad_info.cutin_ttc = static_cast<float>(cutin_ttc_info.ttc);
 
+  return;
+}
+
+void PlanningScheduler::FillHPPPlanningHmiInfo(
+    double start_timestamp,
+    iflyauto::PlanningHMIOutputInfoStr* const planning_hmi_info) {
+
+  if (!session_.is_hpp_scene()) {
+    return;
+  }
   // HMI for hpp
-  const bool is_reached_target_slot = session_.environmental_model()
-                                          .get_parking_slot_manager()
-                                          ->IsReachedTargetSlot();
-  const auto& ego_state_manager =
-      session_.environmental_model().get_ego_state_manager();
-  const auto& route_info_output =
-      session_.environmental_model().get_route_info()->get_route_info_output();
+  auto* hpp_info = &(planning_hmi_info->hpp_info);
+
+  const auto& environmental_model = session_.environmental_model();
   const auto& planning_context = session_.planning_context();
-  auto hpp_info = &(session_.mutable_planning_context()
-                        ->mutable_planning_hmi_info()
-                        ->hpp_info);
-  hpp_info->is_avaliable = route_info_output.hpp_route_info_output.is_on_hpp_lane;
-  hpp_info->distance_to_parking_space =
-      is_reached_target_slot ? 0.0 : route_info_output.hpp_route_info_output.distance_to_target_slot;
-  hpp_info->is_on_hpp_lane = route_info_output.hpp_route_info_output.is_on_hpp_lane;
-  // hpp_info->is_on_hpp_lane = true;  // hack
-  hpp_info->is_reached_hpp_trace_start =
-      route_info_output.hpp_route_info_output.is_reached_hpp_start_point;
-  hpp_info->accumulated_driving_distance =
-      route_info_output.hpp_route_info_output.sum_distance_driving;
-
-  hpp_info->is_approaching_intersection = false;
-  hpp_info->is_approaching_turn = false;
-  hpp_info->is_target_parking_space_occupied = false;
-  hpp_info->is_new_parking_space_found = false;
-  hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_NONE;
-  auto reference_path_manager =
-      session_.environmental_model().get_reference_path_manager();
-  auto current_reference_path =
+  const auto& parking_slot_manager =
+      session_.environmental_model().get_parking_slot_manager();
+  const auto& ego_state_manager = environmental_model.get_ego_state_manager();
+  const auto& route_info_output =
+      environmental_model.get_route_info()->get_route_info_output();
+  const auto& hpp_route_info_output = route_info_output.hpp_route_info_output;
+  const auto& reference_path_manager =
+      environmental_model.get_reference_path_manager();
+  const auto& current_reference_path =
       reference_path_manager->get_reference_path_by_current_lane();
-  const double kCheckTurnDistance = 15.0;
-  const double kEgoIsOnTurnDistance1 = -3.0;
-  const double kEgoIsOnTurnDistance2 = 5.0;
-  auto& frenet_ego_state = current_reference_path->get_frenet_ego_state();
-  auto& points = current_reference_path->get_points();
-  double ego_s = frenet_ego_state.s();
-  if (current_reference_path != nullptr) {
-    for (auto& point : points) {
-      double distance = point.path_point.s() - ego_s;
-      if (distance > kEgoIsOnTurnDistance1 &&
-          distance < kEgoIsOnTurnDistance2 &&
-          point.path_point.kappa() > 0.08) {  // ego is on the curve
-        break;
-      }
-      if (distance > kEgoIsOnTurnDistance2 && distance <= kCheckTurnDistance) {
-        if (point.path_point.kappa() >
-            0.1) {  // 关注实际曲率的连续性，考虑多点还是单点
-          // hpp_info->set_is_approaching_intersection(true);
-          hpp_info->is_approaching_turn = true;
-          break;
-        }
-      } else if (distance > kCheckTurnDistance) {
-        break;
-      }
-    }
-  }
-  // if (route_info_output.distance_to_target_slot < 10.0) {
-  //   hpp_info->distance_to_parking_space =
-  //       std::min(std::fabs(points.back().path_point.s() - ego_s),
-  //                route_info_output.distance_to_target_slot);
-  // }
-  // hpp状态切park_in状态
-  if (session_.is_hpp_scene()) {
-    const auto& parking_switch_info = session_.planning_context()
-                                          .parking_switch_decider_output()
-                                          .parking_switch_info;
-    if (parking_switch_info.is_target_slot_allowed_to_park) {
-      hpp_info->hpp_state_switch =
-          iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
-    } else if (parking_switch_info.is_target_slot_occupied) {
-      hpp_info->is_target_parking_space_occupied = true;
-    } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
-      hpp_info->hpp_state_switch =
-          iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
-    }
 
-    const bool timeout_for_target_slot_allowed_to_park = planning_context.timeout_for_target_slot_allowed_to_park();
-    const bool hpp_cruise_routing_completed = planning_context.hpp_cruise_routing_completed();
-    if(hpp_cruise_routing_completed && timeout_for_target_slot_allowed_to_park) {
-      hpp_info->hpp_planning_failed_reason = iflyauto::HPPPlanningFailedReason::
-          HPP_PLANNING_FAILED_REASON_TARGET_PARKING_SPACE_OCCUPIED;
-    }
-    // todo: is_new_parking_space_found is unused.
-    if (parking_switch_info.has_parking_slot_in_hpp_searching) {
-      hpp_info->is_new_parking_space_found = true;
-    }
+  const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
+  const auto& frenet_ego_state = current_reference_path->get_frenet_ego_state();
+
+  hpp_info->is_avaliable = hpp_route_info_output.is_on_hpp_lane;
+  hpp_info->distance_to_parking_space =
+      is_exist_target_slot ? std::fabs(hpp_route_info_output.distance_to_target_slot)
+                           : std::fabs(hpp_route_info_output.distance_to_target_dest);
+  hpp_info->is_on_hpp_lane = hpp_route_info_output.is_on_hpp_lane;
+  hpp_info->is_reached_hpp_trace_start =
+      hpp_route_info_output.is_reached_hpp_start_point;
+  hpp_info->accumulated_driving_distance =
+      hpp_route_info_output.sum_distance_driving;
+
+  const auto static_analysis_storage =
+      current_reference_path->get_static_analysis_storage();
+  const auto ego_s = frenet_ego_state.s();
+  const auto ego_head_s = frenet_ego_state.head_s();
+
+  const double kEgoIsApproachingIntersectionThs = 10.0;
+  QueryTypeInfo intersection_type_info = {
+      CRoadType::Ignore, CPassageType::Ignore, CElemType::IntersectionRoad};
+  const auto front_intersection = static_analysis_storage->GetFrontSRange(
+      intersection_type_info, ego_head_s);
+  if (front_intersection.first < front_intersection.second &&
+      ego_head_s >
+          front_intersection.first - kEgoIsApproachingIntersectionThs &&
+      ego_s < front_intersection.second) {
+    hpp_info->is_approaching_intersection = true;
+  } else {
+    hpp_info->is_approaching_intersection = false;
   }
 
+  const double kEgoIsInTurnThr = 3.0;
+  const double kEgoIsOutTurnThr = 1.0;
+  QueryTypeInfo turn_type_info = {CRoadType::Turn, CPassageType::Ignore,
+                                  CElemType::Ignore};
+  const auto front_turn_range =
+      static_analysis_storage->GetFrontSRange(turn_type_info, ego_s);
+  if (front_turn_range.first < front_turn_range.second &&
+      ego_head_s > front_turn_range.first - kEgoIsInTurnThr &&
+      ego_s < front_turn_range.second + kEgoIsOutTurnThr) {
+    hpp_info->is_approaching_turn = true;
+    const auto mid_s = (front_turn_range.first + front_turn_range.second) / 2.0;
+    ReferencePathPoint mid_ref_point;
+    if (current_reference_path->get_reference_point_by_lon(mid_s,
+                                                           mid_ref_point)) {
+      hpp_info->is_left_turn = mid_ref_point.path_point.kappa() > 0.0;
+    } else {
+      ILOG_ERROR << "LaneReferencePath::get turn range mid refer point failed";
+    }
+  } else {
+    hpp_info->is_approaching_turn = false;
+  }
+
+  const auto& parking_switch_info =
+      planning_context.parking_switch_decider_output().parking_switch_info;
+  hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_NONE;
+  hpp_info->is_target_parking_space_occupied = false;
+  if (parking_switch_info.is_target_slot_allowed_to_park) {
+    hpp_info->hpp_state_switch =
+        iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+  } else if (parking_switch_info.is_target_slot_occupied) {
+    hpp_info->is_target_parking_space_occupied = true;
+  } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
+    hpp_info->hpp_state_switch =
+        iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
+  }
+
+  const bool timeout_for_target_slot_allowed_to_park =
+      planning_context.timeout_for_target_slot_allowed_to_park();
+  const bool hpp_cruise_routing_completed =
+      planning_context.hpp_cruise_routing_completed();
+  if (hpp_cruise_routing_completed && timeout_for_target_slot_allowed_to_park) {
+    hpp_info->hpp_planning_failed_reason = iflyauto::HPPPlanningFailedReason::
+        HPP_PLANNING_FAILED_REASON_TARGET_PARKING_SPACE_OCCUPIED;
+  }
+
+  hpp_info->is_new_parking_space_found = parking_switch_info.has_parking_slot_in_hpp_searching;
   return;
 }
 
@@ -1439,6 +1453,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  FillHPPPlanningHmiInfo(start_timestamp, planning_hmi_info);
   FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
   // can not active lcc/noa function if current planning failed
   if (!planning_success) {

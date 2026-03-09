@@ -144,4 +144,6 @@ class FrenetObstacle {
   SourceType source_type_;
 };
 
+using FrenetObstaclePtr = std::shared_ptr<FrenetObstacle>;
+using ConstFrenetObstaclePtr = std::shared_ptr<const FrenetObstacle>;
 }  // namespace planning

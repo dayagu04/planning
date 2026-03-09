@@ -135,6 +135,10 @@ bool HppGeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
+
+  CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_,
+                          second_frenet_soft_bounds_, second_soft_bounds_info_);
+
   PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                                       general_lateral_decider_output);
 
@@ -2589,6 +2593,66 @@ void HppGeneralLateralDecider::SaveLatDebugInfo(
       ->mutable_lateral_behavior_debug_info()
       ->CopyFrom(lat_debug_info_);
 #endif
+}
+
+void HppGeneralLateralDecider::CalculateAvoidObstacles(
+    const std::vector<std::pair<double, double>> first_frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info,
+    const std::vector<std::pair<double, double>> second_frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info) {
+  auto &hpp_general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_hpp_general_lateral_decider_output();
+  hpp_general_lateral_decider_output.avoid_ids.clear();
+  const double planning_init_point_l =
+      ego_frenet_state_.planning_init_point().frenet_state.r;
+  auto check_and_add_avoid_id = [&](const BoundInfo &bound_info,
+                                    double bound_value, bool is_upper) {
+    auto it = reference_path_ptr_->get_obstacles_map().find(bound_info.id);
+    if (it == reference_path_ptr_->get_obstacles_map().end()) {
+      return;
+    }
+    auto obs = it->second;
+    if (reference_path_ptr_->get_ego_frenet_boundary().s_start >
+        obs->frenet_obstacle_boundary().s_end) {
+      return;
+    }
+    if ((bound_info.type == BoundType::DYNAMIC_AGENT ||
+         bound_info.type == BoundType::AGENT ||
+         bound_info.type == BoundType::ADJACENT_AGENT ||
+         bound_info.type == BoundType::REVERSE_AGENT) &&
+        bound_info.id != -100) {
+      bool is_avoid_car =
+          is_upper ? (bound_value < planning_init_point_l ||
+                      bound_value < -config_.bound2center_line_distance_thr)
+                   : (bound_value > planning_init_point_l ||
+                      bound_value > config_.bound2center_line_distance_thr);
+      if (is_avoid_car &&
+          std::find(hpp_general_lateral_decider_output.avoid_ids.begin(),
+                    hpp_general_lateral_decider_output.avoid_ids.end(),
+                    bound_info.id) ==
+              hpp_general_lateral_decider_output.avoid_ids.end()) {
+        hpp_general_lateral_decider_output.avoid_ids.emplace_back(bound_info.id);
+      }
+    }
+  };
+  //(huwang5)TODO:左右bound重叠时，障碍物的释放需要进一步考虑
+  for (int i = 0; i < first_frenet_soft_bounds.size(); ++i) {
+    check_and_add_avoid_id(first_soft_bounds_info[i].first,
+                           first_frenet_soft_bounds[i].first, false);  // lower
+    check_and_add_avoid_id(first_soft_bounds_info[i].second,
+                           first_frenet_soft_bounds[i].second, true);  // upper
+  }
+  for (int i = 0; i < second_frenet_soft_bounds.size(); ++i) {
+    check_and_add_avoid_id(second_soft_bounds_info[i].first,
+                           second_frenet_soft_bounds[i].first, false);  // lower
+    check_and_add_avoid_id(second_soft_bounds_info[i].second,
+                           second_frenet_soft_bounds[i].second, true);  // upper
+  }
+  std::vector<double> avoid_ids_double(
+      hpp_general_lateral_decider_output.avoid_ids.begin(),
+      hpp_general_lateral_decider_output.avoid_ids.end());
+  JSON_DEBUG_VECTOR("hpp_lateral_avoid_ids", avoid_ids_double, 0);
 }
 
 void HppGeneralLateralDecider::PostProcessReferenceTrajBySoftBound(

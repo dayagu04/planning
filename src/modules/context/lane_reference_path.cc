@@ -11,6 +11,7 @@
 #include "obstacle_manager.h"
 #include "session.h"
 #include "virtual_lane_manager.h"
+#include "modules/context/static_analysis_storage/static_analysis_utils.h"
 
 namespace planning {
 
@@ -24,6 +25,7 @@ LaneReferencePath::LaneReferencePath(int target_lane_virtual_id)
   // update();
   ILOG_DEBUG << "construct lane_reference_path: target_lane_virtual_id:"
              << target_lane_virtual_id;
+  static_analysis_storage_ = std::make_shared<StaticAnalysisStorage>();
 }
 
 void LaneReferencePath::update(planning::framework::Session *session) {
@@ -88,6 +90,16 @@ void LaneReferencePath::update(planning::framework::Session *session) {
         session->environmental_model().get_ego_state_manager()->ego_v_cruise());
   } else {
     ILOG_ERROR << "LaneReferencePath::update failed";
+  }
+
+  // Step 4) update road_type for hpp
+  if(session_->is_hpp_scene()) {
+    StaticAnalysisUtils::RoadTypeAnalysis(
+        refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
+
+    auto& planning_debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+    static_analysis_storage_->SerializeToDebugInfo(
+        frenet_coord_, *planning_debug_info->mutable_static_analysis_result());
   }
 }
 

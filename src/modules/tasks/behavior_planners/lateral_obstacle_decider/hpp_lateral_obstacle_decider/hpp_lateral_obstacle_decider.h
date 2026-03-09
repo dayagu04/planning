@@ -10,6 +10,7 @@
 #include "tasks/behavior_planners/lateral_obstacle_decider/base_lateral_obstacle_decider.h"
 #include "tasks/task.h"
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"
+#include "modules/tasks/behavior_planners/lateral_obstacle_decider/hpp_lateral_obstacle_decider/hpp_lateral_obstacle_utils.h"
 #include "utils/kd_path.h"
 
 namespace planning {
@@ -29,10 +30,19 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   bool ExecuteTest(bool pipeline_test);
 
  private:
+  bool PreProcessObstacle(
+      ConstObstacleManagerPtr obstacle_manager_ptr,
+      ConstReferencePathPtr reference_path_ptr,
+      MergedObstacleContainer &merged_obs_constainer,
+      const ObstacleClassificationResult &obs_classification_result);
+
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
   bool ARAStar();
+
+  bool CheckARAStarPath(const ara_star::HybridARAStarResult& result);
+
   void UpdateLatDecision(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void ClearOldConsistencyInfo(

@@ -40,6 +40,7 @@ import "simlulation_param.proto";
 import "potential_dangerous_agent_decider_info.proto";
 import "reference_path_smooth.proto";
 import "joint_decision_planner.proto";
+import "static_analysis_result.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -163,4 +164,7 @@ message PlanningDebugInfo {
   optional JointDecisionPlanningOutput joint_decision_output = 51;
 
   optional TimeBenchmark time_benchmark = 52;
+
+  //HPP debug info
+  optional StaticAnalysisResult static_analysis_result = 60;
 }

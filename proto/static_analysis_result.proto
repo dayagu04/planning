@@ -1,0 +1,54 @@
+syntax = "proto2";
+
+package planning.common;
+
+import "basic_types.proto";
+
+message RoadTypeItem {
+  enum RoadTypeEnum {
+    UNKNOWN = 0; // 不确定类型
+    NORNAL_STRAIGHT = 1; // 正常直道
+    NUDGE_STRAIGHT = 2; // 绕障直道
+    S_CURVE_STAIGHT = 3; // S型直道
+
+    NORMAL_TURN = 10; // 直角弯
+    SHARP_TURN = 11; // 锐角弯
+    WIDE_TURN = 12; // 钝角弯
+    U_TURN = 13; // 掉头弯
+    CURVE_TURN = 14; // 圆弧弯（比如扎道、螺旋坡道）
+  };
+  optional RoadTypeEnum type = 1;
+  repeated Point points = 2;
+}
+
+message PassageTypeItem {
+  enum PassageTypeEnum {
+    UNKNOWN = 0; // 不确定类型
+    NORMAL_PASSAGE = 1; // 正常宽度
+    NARROW_PASSAGE = 2; // 狭窄道路
+    WIDED_PASSAGE = 3; // 宽敞道路
+    SHORT_WIDEN_PASSAGE = 4; // 短暂拓宽道路
+  }
+  optional PassageTypeEnum type = 1;
+  repeated Point points = 2;
+}
+
+message ElemTypeItem {
+  enum ElemTypeEnum {
+    UNKNOWN = 0; // 不确定类型
+    NORMAL_ROAD = 1; // 平坦路段
+    UP_RAMP_ROAD = 2; // 上坡
+    DOWN_RAMP_ROAD = 3; // 下坡
+    UNKNOWN_RAMP_ROAD = 4; // 不确定的坡道
+    SPEED_BUMP_ROAD = 5; // 减速带
+    INTERSECTION_ROAD = 6; // 路口
+  }
+  optional ElemTypeEnum type = 1;
+  repeated Point points = 2;
+}
+
+message StaticAnalysisResult {
+  repeated RoadTypeItem road_types = 1;
+  repeated PassageTypeItem passage_types = 2;
+  repeated ElemTypeItem elem_types = 3;
+}

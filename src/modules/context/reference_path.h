@@ -11,6 +11,7 @@
 #include "session.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
+#include "modules/context/static_analysis_storage/static_analysis_storage.h"
 
 // class ObstacleManager;
 namespace planning {
@@ -206,6 +207,13 @@ class ReferencePath {
     return ref_path_source_;
   }
 
+  ConstStaticAnalysisStoragePtr get_static_analysis_storage() const {
+    return static_analysis_storage_;
+  }
+  StaticAnalysisStoragePtr mutable_static_analysis_storage() {
+    return static_analysis_storage_;
+  }
+
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
   inline static bool compare_obstacle_s_descend(
@@ -385,6 +393,11 @@ class ReferencePath {
   planning::common::ReferencePathSmoothInfo ref_path_smoother_info_;
 
   ReferencePathSource ref_path_source_ = ReferencePathSource::FUSION_ROAD;
+
+  StaticAnalysisStoragePtr static_analysis_storage_;
 };
+
+using ReferencePathPtr = std::shared_ptr<ReferencePath>;
+using ConstReferencePathPtr = std::shared_ptr<const ReferencePath>;
 
 }  // namespace planning

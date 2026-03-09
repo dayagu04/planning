@@ -169,5 +169,7 @@ class Obstacle {
   SourceType source_type_;
 };
 
+using ObstaclePtr = std::shared_ptr<Obstacle>;
+using ConstObstaclePtr = std::shared_ptr<const Obstacle>;
 // typedef IndexedList<int, Obstacle> IndexedObstacles;
 }  // namespace planning

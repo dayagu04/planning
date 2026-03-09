@@ -101,6 +101,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     fusion_ground_line_timestamp = input_topic_timestamp.ground_line
     ehr_static_map_timestamp = input_topic_timestamp.map
     soc_state_timestamp = input_topic_timestamp.function_state_machine
+    print("planning_frame_num : {}".format(plan_debug_msg.frame_info.frame_num))
 
     if is_new_loc:
       localization_timestamp = input_topic_timestamp.localization
@@ -208,76 +209,75 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   local_view_data['data_msg']['ctrl_debug_json_msg'] = ctrl_debug_json_msg
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state = soc_state_msg.current_state
-    print("FunctionalState: ", soc_state)
-    if bag_scene_type == 'HPP':
-      background_state = soc_state_msg.background_state
-      # Mapping the enum values to their names
-      # NOTE: This mapping should be matched fsm interface once when it changes!!!
-      functional_state_mapping = {
-          0: "FunctionalState_MANUAL",
-          1: "FunctionalState_SYSTEM_ERROR",
-          2: "FunctionalState_MRC",
-          3: "FunctionalState_DRIVING_PASSIVE",
-          4: "FunctionalState_ACC_STANDBY",
-          5: "FunctionalState_ACC_ACTIVATE",
-          6: "FunctionalState_ACC_OVERRIDE",
-          7: "FunctionalState_SCC_STANDBY",
-          8: "FunctionalState_SCC_ACTIVATE",
-          9: "FunctionalState_SCC_OVERRIDE",
-          10: "FunctionalState_NOA_STANDBY",
-          11: "FunctionalState_NOA_ACTIVATE",
-          12: "FunctionalState_NOA_OVERRIDE",
-          13: "FunctionalState_PARK_STANDBY",
-          14: "FunctionalState_PARK_IN_SEARCHING",
-          15: "FunctionalState_PARK_GUIDANCE",
-          16: "FunctionalState_PARK_SUSPEND",
-          17: "FunctionalState_PARK_COMPLETED",
-          18: "FunctionalState_PARK_OUT_SEARCHING",
-          19: "FunctionalState_PARK_PRE_ACTIVE",
-          20: "FunctionalState_DRIVING_ERROR",
-          21: "FunctionalState_PARK_ERROR",
-          50: "FunctionalState_HPP_STANDBY",
-          51: "FunctionalState_HPP_PROACTIVE_MAPPING",
-          52: "FunctionalState_HPP_BACKGROUND_MAPPING",
-          53: "FunctionalState_HPP_MAP_CHECK",
-          54: "FunctionalState_HPP_PRE_ACTIVE_DRIVING",
-          55: "FunctionalState_HPP_PRE_ACTIVE_PARKING",
-          56: "FunctionalState_HPP_CRUISE_ROUTING",
-          57: "FunctionalState_HPP_CRUISE_SEARCHING",
-          58: "FunctionalState_HPP_PARKING_OUT",
-          59: "FunctionalState_HPP_PARKING_IN",
-          60: "FunctionalState_HPP_SUSPEND",
-          61: "FunctionalState_HPP_COMPLETE",
-          62: "FunctionalState_HPP_ABORT",
-          63: "FunctionalState_HPP_ERROR",
-          70: "FunctionalState_RADS_STANDBY",
-          71: "FunctionalState_RADS_PRE_ACTIVE",
-          72: "FunctionalState_RADS_TRACING",
-          73: "FunctionalState_RADS_SUSPEND",
-          74: "FunctionalState_RADS_COMPLETE",
-          75: "FunctionalState_RADS_ABORT",
-          76: "FunctionalState_RADS_ERROR",
-          80: "FunctionalState_CUSTOMER_CALIBRATION",
-      }
+    background_state = soc_state_msg.background_state
+    # Mapping the enum values to their names
+    # NOTE: This mapping should be matched fsm interface once when it changes!!!
+    functional_state_mapping = {
+        0: "FunctionalState_MANUAL",
+        1: "FunctionalState_SYSTEM_ERROR",
+        2: "FunctionalState_MRC",
+        3: "FunctionalState_DRIVING_PASSIVE",
+        4: "FunctionalState_ACC_STANDBY",
+        5: "FunctionalState_ACC_ACTIVATE",
+        6: "FunctionalState_ACC_OVERRIDE",
+        7: "FunctionalState_SCC_STANDBY",
+        8: "FunctionalState_SCC_ACTIVATE",
+        9: "FunctionalState_SCC_OVERRIDE",
+        10: "FunctionalState_NOA_STANDBY",
+        11: "FunctionalState_NOA_ACTIVATE",
+        12: "FunctionalState_NOA_OVERRIDE",
+        13: "FunctionalState_PARK_STANDBY",
+        14: "FunctionalState_PARK_IN_SEARCHING",
+        15: "FunctionalState_PARK_GUIDANCE",
+        16: "FunctionalState_PARK_SUSPEND",
+        17: "FunctionalState_PARK_COMPLETED",
+        18: "FunctionalState_PARK_OUT_SEARCHING",
+        19: "FunctionalState_PARK_PRE_ACTIVE",
+        20: "FunctionalState_DRIVING_ERROR",
+        21: "FunctionalState_PARK_ERROR",
+        50: "FunctionalState_HPP_STANDBY",
+        51: "FunctionalState_HPP_PROACTIVE_MAPPING",
+        52: "FunctionalState_HPP_BACKGROUND_MAPPING",
+        53: "FunctionalState_HPP_MAP_CHECK",
+        54: "FunctionalState_HPP_PRE_ACTIVE_DRIVING",
+        55: "FunctionalState_HPP_PRE_ACTIVE_PARKING",
+        56: "FunctionalState_HPP_CRUISE_ROUTING",
+        57: "FunctionalState_HPP_CRUISE_SEARCHING",
+        58: "FunctionalState_HPP_PARKING_OUT",
+        59: "FunctionalState_HPP_PARKING_IN",
+        60: "FunctionalState_HPP_SUSPEND",
+        61: "FunctionalState_HPP_COMPLETE",
+        62: "FunctionalState_HPP_ABORT",
+        63: "FunctionalState_HPP_ERROR",
+        70: "FunctionalState_RADS_STANDBY",
+        71: "FunctionalState_RADS_PRE_ACTIVE",
+        72: "FunctionalState_RADS_TRACING",
+        73: "FunctionalState_RADS_SUSPEND",
+        74: "FunctionalState_RADS_COMPLETE",
+        75: "FunctionalState_RADS_ABORT",
+        76: "FunctionalState_RADS_ERROR",
+        80: "FunctionalState_CUSTOMER_CALIBRATION",
+    }
 
-      background_state_mapping = {
-          11: "BackgroundState_HPP_ERROR",
-          12: "BackgroundState_HPP_PASSIVE",
-          13: "BackgroundState_HPP_STANDBY",
-          14: "BackgroundState_HPP_PROACTIVE_MAPPING",
-          15: "BackgroundState_HPP_PROACTIVE_MAPPING_PAUSE",
-          16: "BackgroundState_HPP_BACKGROUND_MAPPING",
-          17: "BackgroundState_HPP_BACKGROUND_MAPPING_PAUSE",
-          18: "BackgroundState_HPP_STORE",
-          19: "BackgroundState_HPP_STORE_COMPLETE",
-          20: "BackgroundState_HPP_STORE_FAIL",
-      }
+    background_state_mapping = {
+        11: "BackgroundState_HPP_ERROR",
+        12: "BackgroundState_HPP_PASSIVE",
+        13: "BackgroundState_HPP_STANDBY",
+        14: "BackgroundState_HPP_PROACTIVE_MAPPING",
+        15: "BackgroundState_HPP_PROACTIVE_MAPPING_PAUSE",
+        16: "BackgroundState_HPP_BACKGROUND_MAPPING",
+        17: "BackgroundState_HPP_BACKGROUND_MAPPING_PAUSE",
+        18: "BackgroundState_HPP_STORE",
+        19: "BackgroundState_HPP_STORE_COMPLETE",
+        20: "BackgroundState_HPP_STORE_FAIL",
+    }
 
-      cur_state_name = functional_state_mapping.get(soc_state, "Unknown FunctionalState")
-      background_state_name = background_state_mapping.get(background_state, "Unknown BackgroundState")
+    cur_state_name = functional_state_mapping.get(soc_state, "Unknown FunctionalState")
+    background_state_name = background_state_mapping.get(background_state, "Unknown BackgroundState")
 
-      print("fsm_cur_state: " + str(soc_state) + " - " + cur_state_name)
-      print("fsm_background_state: " + str(background_state) + " - " + background_state_name)
+    print("fsm_cur_state: " + str(soc_state) + " - " + cur_state_name)
+    print("fsm_background_state: " + str(background_state) + " - " + background_state_name)
+
 
   ### step 2-1: 加载pp原始定位信息
   if bag_loader.origin_loc_msg['enable'] == True:
@@ -1156,6 +1156,26 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'end_point_x' : [end_point_x]
     })
 
+  if bag_loader.plan_debug_msg['enable'] == True:
+    try:
+      for key, value in local_view_data.items():
+        if key.find('road_type_analysis_result') != -1:
+          value.data.update({
+            'ref_path_y' : [],
+            'ref_path_x' : [],
+          })
+      static_analysis_result = plan_debug_msg.static_analysis_result
+      road_types = static_analysis_result.road_types
+      for road_type in road_types:
+        int_type = int(road_type.type)
+        x_vec = [elem.x for elem in road_type.points]
+        y_vec = [elem.y for elem in road_type.points]
+        local_view_data['road_type_analysis_result_' + str(int_type)].data.update({
+          'ref_path_y' : y_vec,
+          'ref_path_x' : x_vec,
+        })
+    except Exception as e:
+      print("load static analysis result failed, err msg = {}".format(e))
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
@@ -1459,6 +1479,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   #  加载fix_lane, target_lane信息
   ### step 3: 加载planning轨迹信息
   successful_slot_info_list = []
+  pos_parkable_slot_info_list = []
   # if bag_loader.plan_msg['enable'] == True and loc_mode == 2:
   if bag_loader.plan_msg['enable'] == True and loc_mode > 0:
     trajectory = plan_msg.trajectory
@@ -1468,6 +1489,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     print("hpp_planning_status: ", hpp_planning_status)
     print("apa_planning_status: ", apa_planning_status)
     successful_slot_info_list = plan_msg.successful_slot_info_list
+    if hasattr(plan_msg, 'pos_parkable_slot_info_list'):
+      pos_parkable_slot_info_list = plan_msg.pos_parkable_slot_info_list
     plan_traj_s = []
     for i in range(len(trajectory.trajectory_points)):
       plan_traj_s.append(trajectory.trajectory_points[i].distance)
@@ -1753,9 +1776,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #   'parking_space_id_vec' : parking_space_id_vec,
     # })
 
-    parking_assist_info = ehr_static_map_msg.parking_assist_info
-    trace_start_x, trace_start_y = [parking_assist_info.trace_start.x], [parking_assist_info.trace_start.y]
-    trace_end_x, trace_end_y = [parking_assist_info.trace_end.x], [parking_assist_info.trace_end.y]
+    common_parking_info = ehr_static_map_msg.common_parking_info
+    trace_start_x, trace_start_y = [common_parking_info.trace_start.x], [common_parking_info.trace_start.y]
+    trace_end_x, trace_end_y = [common_parking_info.trace_end.x], [common_parking_info.trace_end.y]
     if not g_is_display_enu:
       if loc_msg != None:
         trace_start_x, trace_start_y = coord_tf.global_to_local(trace_start_x, trace_start_y)
@@ -1794,7 +1817,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # 加载fusion parking slot
   if bag_loader.fus_parking_msg['enable'] == True:
-    print("plan release slot id = ", successful_slot_info_list)
+    print("plan release slot id = ", [x.id for x in successful_slot_info_list])
+    print("plan pos release slot id = ", [x.id for x in pos_parkable_slot_info_list])
     parking_slot_info, release_slot_info, plan_release_slot_info, select_parking_slot_info = generate_parking_slot(fus_parking_msg, loc_msg, successful_slot_info_list)
     # print("fusion parking slot size:", len(parking_slot_info) + len(release_slot_info) + len(plan_release_slot_info) + len(select_parking_slot_info))
     if g_is_display_enu:
@@ -2107,6 +2131,7 @@ def load_local_view_figure():
   is_vis_fus_center_line = global_var.get_value('is_vis_fus_center_line')
   is_vis_lane_topo = global_var.get_value('is_vis_lane_topo')
   is_vis_smooth_refline = global_var.get_value('is_vis_smooth_refline')
+  is_vis_road_type_line = global_var.get_value('is_vis_road_type_line')
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
@@ -2298,6 +2323,31 @@ def load_local_view_figure():
   lane_mark_data_7 = ColumnDataSource(data = {'lane_mark_7':[], 'text_xn_7': [],  'text_yn_7': [] , 'lane_mark_loc_x_7': [], 'lane_mark_loc_y_7': []})
   lane_mark_data_8 = ColumnDataSource(data = {'lane_mark_8':[], 'text_xn_8': [],  'text_yn_8': [] , 'lane_mark_loc_x_8': [], 'lane_mark_loc_y_8': []})
   lane_mark_data_9 = ColumnDataSource(data = {'lane_mark_9':[], 'text_xn_9': [],  'text_yn_9': [] , 'lane_mark_loc_x_9': [], 'lane_mark_loc_y_9': []})
+
+  road_type_analysis_result_1 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_2 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_3 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_10 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_11 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_12 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_13 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  road_type_analysis_result_14 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
 
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
@@ -2654,6 +2704,14 @@ def load_local_view_figure():
                      'data_control':data_control,\
                      'data_index': data_index, \
                      'data_msg': data_msg,\
+                     'road_type_analysis_result_1' : road_type_analysis_result_1,
+                     'road_type_analysis_result_2' : road_type_analysis_result_2,
+                     'road_type_analysis_result_3' : road_type_analysis_result_3,
+                     'road_type_analysis_result_10' : road_type_analysis_result_10,
+                     'road_type_analysis_result_11' : road_type_analysis_result_11,
+                     'road_type_analysis_result_12' : road_type_analysis_result_12,
+                     'road_type_analysis_result_13' : road_type_analysis_result_13,
+                     'road_type_analysis_result_14' : road_type_analysis_result_14,
                      'data_center_line_topo_0':data_center_line_topo_0, \
                      'data_center_line_topo_1':data_center_line_topo_1, \
                      'data_center_line_topo_2':data_center_line_topo_2, \
@@ -2875,7 +2933,7 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-  if is_vis_fus_center_line:
+  if is_vis_fus_center_line or is_vis_fus_line:
     fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -2930,6 +2988,16 @@ def load_local_view_figure():
     fig1.line('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source = data_ego_motion_sim_ref_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ego_motion_sim_ref', visible = False)
     fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
     fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+
+  if is_vis_road_type_line:
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_1,  radius = 0.1, line_width = 2, line_color = 'red'   , fill_color = 'red'   , legend_label = 'road_type_analysis') #正常直道
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_2,  radius = 0.1, line_width = 2, line_color = 'blue'  , fill_color = 'blue'  , legend_label = 'road_type_analysis') #绕障直道
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_3,  radius = 0.1, line_width = 2, line_color = 'orange', fill_color = 'orange', legend_label = 'road_type_analysis') #S 直道
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_10, radius = 0.1, line_width = 2, line_color = 'black' , fill_color = 'black' , legend_label = 'road_type_analysis') #直角弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_11, radius = 0.1, line_width = 2, line_color = 'green' , fill_color = 'green' , legend_label = 'road_type_analysis') #锐角弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_12, radius = 0.1, line_width = 2, line_color = 'purple', fill_color = 'purple', legend_label = 'road_type_analysis') #钝角弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_13, radius = 0.1, line_width = 2, line_color = 'yellow', fill_color = 'yellow', legend_label = 'road_type_analysis') #U 型弯
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_14, radius = 0.1, line_width = 2, line_color = 'brown' , fill_color = 'brown' , legend_label = 'road_type_analysis') #环形弯
 
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')

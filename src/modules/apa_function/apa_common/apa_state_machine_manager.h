@@ -145,6 +145,9 @@ class ApaStateMachineManager final {
   const bool IsSwitchToSearchOutput() const{
     return is_switch_to_search_;
   };
+  const bool IsHppCruise() const {
+    return running_mode_ == ApaRunningMode::RUNNING_HPP && is_hpp_cruise_;
+  }
 
   void Reset() {
     state_machine_ = ApaStateMachine::INVALID;
@@ -155,6 +158,7 @@ class ApaStateMachineManager final {
     running_mode_ = ApaRunningMode::RUNNING_NORMAL;
     pa_direction_ = ApaPADirection::PA_INVALID;
     is_switch_to_search_ = false;
+    is_hpp_cruise_ = false;
   }
 
   static std::string GetApaStateMachineString(
@@ -197,6 +201,8 @@ class ApaStateMachineManager final {
 
   bool free_slot_pos_dir_ = false;
   bool is_switch_to_search_ = false;
+
+  bool is_hpp_cruise_ = false;
 
   /*inernal use*/
   ApaTaskDirection task_direction_ = ApaTaskDirection::APA_TASK_IN;

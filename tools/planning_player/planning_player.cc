@@ -1220,6 +1220,8 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
     vehi_svc_header_time_us_ =
         planning_debug_info->input_topic_timestamp().vehicle_service();
     if (!early_stop_) {
+      std::cout << "************************************** bag frame " << planning_dubug_info_frame_num_
+            << " **************************************" << std::endl;
       PlayOneFrame(frame_num_++, planning_debug_info->input_topic_timestamp(),
                    is_close_loop);
     } else {

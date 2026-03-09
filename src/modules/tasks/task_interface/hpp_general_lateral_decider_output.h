@@ -29,6 +29,7 @@ struct HppGeneralLateralDeciderOutput {
   double v_cruise;
   bool ramp_scene = false;
   bool enable_ara_ref = false;
+  std::vector<uint32_t> avoid_ids;
   void Clear() {
     complete_follow = true;
     lane_change_scene = false;
@@ -48,6 +49,7 @@ struct HppGeneralLateralDeciderOutput {
     enu_ref_theta.clear();
     last_enu_ref_theta.clear();
     lc_status.clear();
+    avoid_ids.clear();
   }
 };
 }  // namespace planning
