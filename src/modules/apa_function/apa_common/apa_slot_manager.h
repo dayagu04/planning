@@ -229,7 +229,6 @@ class ApaSlotManager final {
     parallel_slot_release_count_map_.clear();
     parallel_slot_not_release_count_map_.clear();
     pre_plan_fail_slot_id_uset_.clear();
-    perpendicular_redefine_info_map_.clear();
   }
 
   void GenerateReleaseSlotIdVec();
