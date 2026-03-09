@@ -679,6 +679,16 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   bool is_manual_lane_change = false;  // 是否发生了手动接管导致的变道
 
+  const double kACCLeftOffsetThreshold = 0.8; // ACC模式下左偏移阈值（米），可根据需求调整
+  const double kACCRightOffsetThreshold = 0.8; // ACC模式下左偏移阈值（米），可根据需求调整
+  const double kACCHeadingLeftThreshold = M_PI / 36.0; // 航向角向左偏差阈值（5°），可调整
+  const double kACCHeadingRightThreshold = M_PI / 36.0; // 航向角向左偏差阈值（5°），可调整
+  const double kLeftRightRatioThreshold = 0.7;          // 偏左/偏右点占比阈值（70%）
+  const double kNormalizeAnglePI = M_PI;
+
+  const auto& function_info = session_->environmental_model().function_info();
+
+
   for (auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane != nullptr) {
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
@@ -730,6 +740,102 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
       }
     }
   }
+
+  if (function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
+  // 1. 找到选中的base lane
+  std::shared_ptr<VirtualLane> original_base_lane = nullptr;
+  double original_base_lane_ego_l = 0.0;
+  double original_base_lane_ego_s = 0.0;
+  for (auto& lane : relative_id_lanes) {
+    if (lane->get_order_id() == origin_order_id) {
+      original_base_lane = lane;
+      if (lane_cost_list.count(origin_order_id)) {
+        original_base_lane_ego_l = lane_cost_list[origin_order_id][1]; // ego_l
+
+        // 计算自车在base lane的s
+        std::shared_ptr<KDPath> frenet_coord = lane->get_lane_frenet_coord();
+        Point2D ego_frenet_point;
+        if (frenet_coord && frenet_coord->XYToSL(ego_cart, ego_frenet_point)) {
+          original_base_lane_ego_s = ego_frenet_point.x;
+        }
+      }
+      break;
+    }
+  }
+
+  // 2. 检查条件：base lane存在 + 航向明显指向左/右 + 横向偏移超阈值
+  if (original_base_lane != nullptr) {
+    bool is_heading_to_left = false;  // 航向指向左车道
+    bool is_heading_to_right = false; // 航向指向右车道
+    std::shared_ptr<KDPath> base_lane_frenet = original_base_lane->get_lane_frenet_coord();
+
+    if (base_lane_frenet != nullptr && original_base_lane_ego_s < base_lane_frenet->Length()) {
+      int left_count = 0;    // 满足“偏左”的采样点数量
+      int right_count = 0;    // 满足“偏右”的采样点数量
+      int valid_count = 0;   // 有效采样点总数
+
+
+      for (double s = original_base_lane_ego_s; s < base_lane_frenet->Length();
+           s += kLaneLineSegmentLength) {
+        // 超出10m停止遍历
+        if (s > 10 + original_base_lane_ego_s) {
+          break;
+        }
+
+        // 获取采样点的车道航向角（全局）
+        double lane_heading = base_lane_frenet->GetPathCurveHeading(s);
+        // 计算航向偏差（归一化）
+        double theta_err = NormalizeAngle(ego_heading_angle - lane_heading);
+
+        // 分别统计偏左/偏右的采样点
+        if (theta_err > kACCHeadingLeftThreshold) {  // 偏左
+          left_count++;
+        } else if (theta_err < -kACCHeadingRightThreshold) { // 偏右
+          right_count++;
+        }
+        valid_count++;
+      }
+
+      // 综合判断：有效采样点>0 且 偏左/偏右点占比≥阈值
+      if (valid_count > 0) {
+        double left_ratio = static_cast<double>(left_count) / valid_count;
+        double right_ratio = static_cast<double>(right_count) / valid_count;
+
+        is_heading_to_left = (left_ratio >= kLeftRightRatioThreshold);
+        is_heading_to_right = (right_ratio >= kLeftRightRatioThreshold);
+      }
+    }
+
+    // 横向偏移判断（左/右）
+    bool is_left_offset_exceed = (original_base_lane_ego_l > kACCLeftOffsetThreshold);  // 左偏移
+    bool is_right_offset_exceed = (original_base_lane_ego_l < -kACCRightOffsetThreshold); // 右偏移
+
+    if (is_heading_to_left && is_left_offset_exceed) {
+      std::shared_ptr<VirtualLane> left_lane = nullptr;
+      for (auto& lane : relative_id_lanes) {
+        if (lane->get_order_id() == origin_order_id - 1) {
+          left_lane = lane;
+          break;
+        }
+      }
+      if (left_lane != nullptr) {
+        origin_order_id = left_lane->get_order_id();
+      }
+    }
+    else if (is_heading_to_right && is_right_offset_exceed) {
+      std::shared_ptr<VirtualLane> right_lane = nullptr;
+      for (auto& lane : relative_id_lanes) {
+        if (lane->get_order_id() == origin_order_id + 1) {
+          right_lane = lane;
+          break;
+        }
+      }
+      if (right_lane != nullptr) {
+        origin_order_id = right_lane->get_order_id();
+      }
+    }
+  }
+}
 
   for (auto& lane : relative_id_lanes) {
     int lane_order_id = lane->get_order_id();
