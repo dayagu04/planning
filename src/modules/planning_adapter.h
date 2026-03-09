@@ -101,6 +101,14 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_localization_msg_updated_.store(true);
   }
 
+  void Feed_IflytekPredictionAroundPredictionResult(
+      const iflyauto::PredictionResult& prediction_result_msg) override {
+    std::lock_guard<std::mutex> lock(parking_prediction_result_msg_mutex_);
+    parking_prediction_result_msg_ = prediction_result_msg;
+    parking_prediction_result_msg_recv_time_ = IflyTime::Now_ms();
+    is_parking_prediction_result_msg_updated_.store(true);
+  }
+
   void Feed_IflytekPredictionPredictionResult(
       const iflyauto::PredictionResult& prediction_result_msg) override {
     std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
@@ -281,6 +289,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::mutex fusion_speed_bump_msg_mutex_;
   std::mutex localization_msg_mutex_;
   std::mutex localization_estimate_msg_mutex_;
+  std::mutex parking_prediction_result_msg_mutex_;
   std::mutex prediction_result_msg_mutex_;
   std::mutex vehicle_service_output_msg_mutex_;
   std::mutex control_output_msg_mutex_;
@@ -301,6 +310,10 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   iflyauto::PredictionResult prediction_result_msg_;
   int64_t prediction_result_msg_recv_time_;
   std::atomic<bool> is_prediction_result_msg_updated_{false};
+
+  iflyauto::PredictionResult parking_prediction_result_msg_;
+  int64_t parking_prediction_result_msg_recv_time_;
+  std::atomic<bool> is_parking_prediction_result_msg_updated_{false};
 
   iflyauto::RoadInfo road_info_msg_;
   int64_t road_info_msg_recv_time_;

@@ -166,4 +166,7 @@ class ObstacleManager {
       nullptr;
 };
 
+using ObstacleManagerPtr = std::shared_ptr<ObstacleManager>;
+using ConstObstacleManagerPtr = std::shared_ptr<const ObstacleManager>;
+
 }  // namespace planning

@@ -357,6 +357,7 @@ void ApaSlotManager::Update(
           .release_state[ASTAR_PLANNING_RELEASE];
 
   if (!measure_data_ptr_->GetStaticFlag() ||
+      state_machine_ptr_->IsHppCruise() ||
       (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) ||
       running_mode == ApaRunningMode::RUNNING_PA) {
     pre_plan_fail_slot_id_uset_.clear();
@@ -409,8 +410,10 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
   }
   release_slot_id_vec_.clear();
   release_slot_narrow_flag_vec_.clear();
+  release_slot_id_no_consider_obs_vec_.clear();
   release_slot_id_vec_.reserve(slots_map_.size());
   release_slot_narrow_flag_vec_.reserve(slots_map_.size());
+  release_slot_id_no_consider_obs_vec_.reserve(slots_map_.size());
 
   if (state_machine_ptr_->IsSAPAMode() &&
       state_machine_ptr_->GetSAPAStatus() !=
@@ -418,11 +421,18 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
     return;
   }
 
+  bool is_hpp_cruise = state_machine_ptr_->IsHppCruise();
+
   for (const auto& pair : dist_id_map_) {
     if (slots_map_.count(pair.second) == 0) {
       continue;
     }
     const ApaSlot& slot = slots_map_[pair.second];
+
+    if (slot.release_info_.release_state[RELATIVE_LOC_RELEASE] ==
+        SlotReleaseState::RELEASE) {
+      release_slot_id_no_consider_obs_vec_.emplace_back(slot.id_);
+    }
 
     if (slot.release_info_.release_state[RULE_BASED_RELEASE] !=
         SlotReleaseState::RELEASE) {
@@ -436,7 +446,7 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
 
     bool is_slot_release = false;
 
-    if (slot.id_ != ego_info_under_slot_.id) {
+    if (is_hpp_cruise || slot.id_ != ego_info_under_slot_.id) {
       is_slot_release = true;
     } else {
       const SlotReleaseInfo& ego_release_info =
@@ -462,8 +472,6 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
 
 void ApaSlotManager::ParkingLotCruiseProcess() {
   const double time_start = IflyTime::Now_ms();
-
-  // const bool is_ego_collision = IsEgoCloseToObs();
 
   is_ego_col_vertical_ = true;
   ego_col_safe_lat_buffer_ = 0.268;
@@ -495,27 +503,55 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 
   for (const auto& dist_id : dist_id_map_) {
     ApaSlot& slot = slots_map_[dist_id.second];
+    slot.release_info_.release_state[RELATIVE_LOC_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+
+    if (ego_slot_min_dist_map_.count(slot.GetId()) != 0 &&
+        slot.GetType() != SlotType::PARALLEL &&
+        ego_slot_min_dist_map_[slot.GetId()] > kMaxEgoSlotRelativeDist) {
+      ILOG_INFO << "NOT_RELEASE reason: ego slot dist over "
+                << kMaxEgoSlotRelativeDist << " m!";
+      continue;
+    }
+
+    if (dist_id.first > kMaxEgoSlotAbsoluteDist) {
+      ILOG_INFO << "NOT_RELEASE reason: nearest slot dist over "
+                << kMaxEgoSlotAbsoluteDist << " m!";
+      continue;
+    }
+
+    if (!IsSlotRelativeLocSuitable(slot)) {
+      ILOG_INFO << "slot relative loc is not suitable";
+      continue;
+    }
+
+    slot.release_info_.release_state[RELATIVE_LOC_RELEASE] =
+        SlotReleaseState::RELEASE;
+  }
+
+  for (const auto& dist_id : dist_id_map_) {
+    ApaSlot& slot = slots_map_[dist_id.second];
+
     ILOG_INFO << "slot id = " << slot.GetId()
               << "  type = " << GetSlotTypeString(slot.GetType())
               << "  fusion_release = "
               << GetSlotReleaseStateString(
                      slot.release_info_.release_state[FUSION_RELEASE]);
 
+    slot.release_info_.release_state[RULE_BASED_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+
     if (slot.release_info_.release_state[FUSION_RELEASE] ==
         SlotReleaseState::NOT_RELEASE) {
-      ILOG_INFO << "NOT_RELEASE reason: fusion not release";
       continue;
     }
 
-    // if (is_ego_collision) {
-    //   slot.release_info_.release_state[RULE_BASED_RELEASE] =
-    //       SlotReleaseState::NOT_RELEASE;
-    //   continue;
-    // }
+    if (slot.release_info_.release_state[RELATIVE_LOC_RELEASE] ==
+        SlotReleaseState::NOT_RELEASE) {
+      continue;
+    }
 
     if (release_slot_count >= kMaxSlotReleaseCount) {
-      slot.release_info_.release_state[RULE_BASED_RELEASE] =
-          SlotReleaseState::NOT_RELEASE;
       ILOG_INFO << "NOT_RELEASE reason: over max released size "
                 << static_cast<int>(kMaxSlotReleaseCount);
       continue;
@@ -541,9 +577,7 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
     }
 
     if (!IsSlotCoarseRelease(slot)) {
-      ILOG_INFO << "slot coarse release is false, slot id = " << slot.id_;
-      slot.release_info_.release_state[RULE_BASED_RELEASE] =
-          SlotReleaseState::NOT_RELEASE;
+      ILOG_INFO << "slot coarse release is false";
       continue;
     }
 
@@ -627,37 +661,9 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
 
   const ApaParameters& param = apa_param.GetParam();
   const Eigen::Vector2d pM01 = slot.origin_corner_coord_global_.pt_01_mid;
-  const Eigen::Vector2d pM23 = slot.origin_corner_coord_global_.pt_23_mid;
   const Eigen::Vector2d t = slot.origin_corner_coord_global_.pt_01_unit_vec;
   const Eigen::Vector2d n =
       slot.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
-
-  const Eigen::Vector2d pt_23_unit_vec =
-      slot.origin_corner_coord_global_.pt_23_unit_vec;
-
-  const Eigen::Vector2d pt_01_unit_vec =
-      slot.origin_corner_coord_global_.pt_01_unit_vec;
-
-  const Eigen::Vector2d pM23_ego = measure_data_ptr_->GetPos() - pM23;
-  const Eigen::Vector2d pM01_ego = measure_data_ptr_->GetPos() - pM01;
-  if (geometry_lib::GetCrossFromTwoVec2d(pt_23_unit_vec, pM23_ego) > 0.0) {
-    // area 3
-    ILOG_INFO << "Ego pos in area 3 relative to slot (id: " << slot.id_ << ")";
-    return SlotReleaseVoterType::CLEAR;
-  } else if (geometry_lib::GetCrossFromTwoVec2d(pt_01_unit_vec, pM01_ego) <
-             0.0) {
-    // area 1
-  } else {
-    // area 2
-    const double heading_err_deg =
-        std::fabs(measure_data_ptr_->GetHeading() - slot.slot_heading_) *
-        kRad2Deg;
-    if (mathlib::IsInBound(heading_err_deg, 30.0, 150.0)) {
-      ILOG_INFO << "Ego pos in area 2 relative to slot (id: " << slot.id_
-                << "), heading error between 30 and 150 degrees";
-      return SlotReleaseVoterType::CLEAR;
-    }
-  }
 
   const auto& slot_release_buffer = param.lat_lon_slot_release_buffer;
 
@@ -871,7 +877,6 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
           min_limiter_x - apa_param.GetParam().wheel_base -
               apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
       ILOG_INFO << "limiter in front, not release!";
-      return SlotReleaseVoterType::CLEAR;
     }
   }
 
@@ -1006,6 +1011,122 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
       parallel_slot_not_release_count;
   parallel_slot_release_count_map_[slot.GetId()] = parallel_slot_release_count;
   return SlotReleaseVoterType::MAXIMUM;
+}
+
+const bool ApaSlotManager::IsSlotRelativeLocSuitable(ApaSlot& slot) {
+  if (slot.slot_type_ == SlotType::PERPENDICULAR ||
+      slot.slot_type_ == SlotType::SLANT) {
+    return IsPerpendicularSlotRelativeLocSuitable(slot);
+  } else if (slot.slot_type_ == SlotType::PARALLEL) {
+    return IsParallelSlotRelativeLocSuitable(slot);
+  }
+  return false;
+}
+
+const bool ApaSlotManager::IsPerpendicularSlotRelativeLocSuitable(
+    const ApaSlot& slot) {
+  const ApaParameters& param = apa_param.GetParam();
+  const Eigen::Vector2d pM01 = slot.origin_corner_coord_global_.pt_01_mid;
+  const Eigen::Vector2d pM23 = slot.origin_corner_coord_global_.pt_23_mid;
+
+  const Eigen::Vector2d pt_23_unit_vec =
+      slot.origin_corner_coord_global_.pt_23_unit_vec;
+
+  const Eigen::Vector2d pt_01_unit_vec =
+      slot.origin_corner_coord_global_.pt_01_unit_vec;
+
+  const Eigen::Vector2d pM23_ego = measure_data_ptr_->GetPos() - pM23;
+  const Eigen::Vector2d pM01_ego = measure_data_ptr_->GetPos() - pM01;
+  if (geometry_lib::GetCrossFromTwoVec2d(pt_23_unit_vec, pM23_ego) > 0.0) {
+    // area 3
+    ILOG_INFO << "Ego pos in area 3 relative to slot (id: " << slot.id_ << ")";
+    return false;
+  } else if (geometry_lib::GetCrossFromTwoVec2d(pt_01_unit_vec, pM01_ego) <
+             0.0) {
+    // area 1
+  } else {
+    // area 2
+    const double heading_err_deg =
+        std::fabs(measure_data_ptr_->GetHeading() - slot.slot_heading_) *
+        kRad2Deg;
+    if (mathlib::IsInBound(heading_err_deg, 30.0, 150.0)) {
+      ILOG_INFO << "Ego pos in area 2 relative to slot (id: " << slot.id_
+                << "), heading error between 30 and 150 degrees";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+const bool ApaSlotManager::IsParallelSlotRelativeLocSuitable(
+    const ApaSlot& slot) {
+  const auto& v_ego_heading = measure_data_ptr_->GetHeadingVec();
+
+  SlotCoord corrected_global_slot = slot.processed_corner_coord_global_;
+
+  Eigen::Vector2d v_10 =
+      (corrected_global_slot.pt_0 - corrected_global_slot.pt_1).normalized();
+
+  if (v_10.dot(v_ego_heading) < 1e-9) {
+    v_10 *= -1.0;
+    corrected_global_slot.pt_0.swap(corrected_global_slot.pt_1);
+    corrected_global_slot.pt_2.swap(corrected_global_slot.pt_3);
+  }
+  corrected_global_slot.CalExtraCoord();
+  const double slot_heading = std::atan2(v_10.y(), v_10.x());
+
+  const double slot_length =
+      (corrected_global_slot.pt_0 - corrected_global_slot.pt_1).norm();
+
+  const Eigen::Vector2d slot_13_mid =
+      0.5 * (corrected_global_slot.pt_1 + corrected_global_slot.pt_3);
+
+  geometry_lib::GlobalToLocalTf g2l_tf(slot_13_mid, slot_heading);
+
+  // cacl loc
+  double target_x = 0.5 * (slot_length - apa_param.GetParam().car_length) +
+                    apa_param.GetParam().rear_overhanging;
+
+  bool is_limiter_rear = true;
+  const auto& limiter = slot.GetLimiter();
+  ILOG_INFO << "limiter.valid = " << limiter.valid;
+  if (limiter.valid) {
+    // transfer limiter in slot coordination
+    const auto limiter_start_pt_local = g2l_tf.GetPos(limiter.start_pt);
+    const auto limiter_end_pt_local = g2l_tf.GetPos(limiter.end_pt);
+    ILOG_INFO << "limiter_start_pt_local start pos = "
+              << limiter_start_pt_local.x() << " "
+              << limiter_start_pt_local.y();
+    ILOG_INFO << "limiter_end_pt_local end pos = " << limiter_end_pt_local.x()
+              << " " << limiter_end_pt_local.y();
+
+    const double max_limiter_x =
+        std::max(limiter_start_pt_local.x(), limiter_end_pt_local.x());
+
+    const double min_limiter_x =
+        std::min(limiter_start_pt_local.x(), limiter_end_pt_local.x());
+
+    // limiter behind
+    if (max_limiter_x < 0.5 * slot_length) {
+      is_limiter_rear = true;
+      target_x = std::max(
+          target_x,
+          max_limiter_x +
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+      ILOG_INFO << "limiter in rear!";
+    } else {
+      // limiter front
+      is_limiter_rear = false;
+      target_x = std::min(
+          target_x,
+          min_limiter_x - apa_param.GetParam().wheel_base -
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+      ILOG_INFO << "limiter in front, not release!";
+      return false;
+    }
+  }
+  return true;
 }
 
 const std::string GetSlotReleaseVoterTypeString(

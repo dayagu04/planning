@@ -286,6 +286,8 @@
   "narrow_space_distance_stop_thrshld": 10.0,
   "lon_care_length": 120.0,
   "lon_max_ignore_relative_time": 2.0,
+  "urban_max_lat_acceleration": 1.8,
+  "highway_max_lat_acceleration": 2.5,
   "care_area_s_len": 0.0,
   "min_desired_target_s": 4.5,
   "enable_hnp_functions": true,

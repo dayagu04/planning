@@ -223,6 +223,8 @@ class ApaSlotManager final {
     slots_map_.clear();
     slot_release_voter_.clear();
     release_slot_id_vec_.clear();
+    release_slot_narrow_flag_vec_.clear();
+    release_slot_id_no_consider_obs_vec_.clear();
     ego_slot_min_dist_map_.clear();
     parallel_slot_release_count_map_.clear();
     parallel_slot_not_release_count_map_.clear();
@@ -237,6 +239,10 @@ class ApaSlotManager final {
 
   const std::vector<bool>& GetReleaseSlotNarrowFlagVec() const {
     return release_slot_narrow_flag_vec_;
+  }
+
+  const std::vector<size_t> GetReleaseSlotNoConsiderObsVec() const {
+    return release_slot_id_no_consider_obs_vec_;
   }
 
   const bool IsTargetSlotReleaseByRule() const;
@@ -268,6 +274,12 @@ class ApaSlotManager final {
 
   const bool IsSlotCoarseRelease(ApaSlot& slot);
 
+  const bool IsSlotRelativeLocSuitable(ApaSlot& slot);
+
+  const bool IsPerpendicularSlotRelativeLocSuitable(const ApaSlot& slot);
+
+  const bool IsParallelSlotRelativeLocSuitable(const ApaSlot& slot);
+
   const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(
       ApaSlot& slot);
 
@@ -290,6 +302,8 @@ class ApaSlotManager final {
 
   std::vector<size_t> release_slot_id_vec_;
   std::vector<bool> release_slot_narrow_flag_vec_;
+
+  std::vector<size_t> release_slot_id_no_consider_obs_vec_;
 
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;

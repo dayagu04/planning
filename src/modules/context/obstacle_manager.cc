@@ -689,8 +689,6 @@ void ObstacleManager::UpdateMapStaticObstacle() {
   const double kMaxFrontDistance = 50;
   const double kMaxSideDistance = 5;
   const auto &local_view = session_->environmental_model().get_local_view();
-  const size_t polygon_obstacles_size =
-      local_view.static_map_info.parking_assist_info().polygon_obstacles_size();
   bool has_target_lane =
       session_->planning_context().lane_change_decider_output().has_target_lane;
   const auto &ref_path_ptr = session_->planning_context()
@@ -698,63 +696,68 @@ void ObstacleManager::UpdateMapStaticObstacle() {
                                  .coarse_planning_info.reference_path;
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
-  if (polygon_obstacles_size > 0) {
-    const auto &polygon_obstacles =
-        local_view.static_map_info.parking_assist_info().polygon_obstacles();
-    int ehr_column_id = kEHRColumnIdOffset;
-    for (const Map::PolygonObject &polygon_object : polygon_obstacles) {
-      ehr_column_id += 1;
-      if (polygon_object.shape_size() != 4U) {
-        ILOG_ERROR << "invalid polygon_object.shape_size = ",
-            polygon_object.shape_size();
-        continue;
-      }
-      bool in_range = true;
-      bool is_lat_valid = false;
-      double min_dist_to_ref = NL_NMAX;
-      std::vector<planning::planning_math::Vec2d> column_box;
-      column_box.reserve(polygon_object.shape_size());
-      for (const auto &shape : polygon_object.shape()) {
-        // filter
-        if (has_target_lane) {
-          if (ref_path_ptr != nullptr) {
-            const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
-            if (frenet_coord != nullptr) {
-              // 自车sl
-              Point2D ego_point;
-              if (!frenet_coord->XYToSL(Point2D(ego_state->ego_carte().x,
-                                                ego_state->ego_carte().y),
-                                        ego_point) ||
-                  std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
-                continue;
-              }
-              Point2D sl_point;
-              if (!frenet_coord->XYToSL(Point2D(shape.x(), shape.y()),
-                                        sl_point) ||
-                  std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
-                  sl_point.x < ego_point.x + kMinFrontDistance ||
-                  sl_point.x > ego_point.x + kMaxFrontDistance) {
-                in_range = false;
-                break;
-              } else {
-                min_dist_to_ref =
-                    std::min(std::fabs(sl_point.y), min_dist_to_ref);
-                is_lat_valid = true;
+  for (const auto &parking_floor_info :
+       local_view.static_map_info.parking_floor_infos()) {
+    const size_t polygon_obstacles_size =
+        parking_floor_info.parking_assist_info().polygon_obstacles_size();
+    if (polygon_obstacles_size > 0) {
+      const auto &polygon_obstacles =
+          parking_floor_info.parking_assist_info().polygon_obstacles();
+      int ehr_column_id = kEHRColumnIdOffset;
+      for (const Map::PolygonObject &polygon_object : polygon_obstacles) {
+        ehr_column_id += 1;
+        if (polygon_object.shape_size() != 4U) {
+          ILOG_ERROR << "invalid polygon_object.shape_size = ",
+              polygon_object.shape_size();
+          continue;
+        }
+        bool in_range = true;
+        bool is_lat_valid = false;
+        double min_dist_to_ref = NL_NMAX;
+        std::vector<planning::planning_math::Vec2d> column_box;
+        column_box.reserve(polygon_object.shape_size());
+        for (const auto &shape : polygon_object.shape()) {
+          // filter
+          if (has_target_lane) {
+            if (ref_path_ptr != nullptr) {
+              const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
+              if (frenet_coord != nullptr) {
+                // 自车sl
+                Point2D ego_point;
+                if (!frenet_coord->XYToSL(Point2D(ego_state->ego_carte().x,
+                                                  ego_state->ego_carte().y),
+                                          ego_point) ||
+                    std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+                  continue;
+                }
+                Point2D sl_point;
+                if (!frenet_coord->XYToSL(Point2D(shape.x(), shape.y()),
+                                          sl_point) ||
+                    std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
+                    sl_point.x < ego_point.x + kMinFrontDistance ||
+                    sl_point.x > ego_point.x + kMaxFrontDistance) {
+                  in_range = false;
+                  break;
+                } else {
+                  min_dist_to_ref =
+                      std::min(std::fabs(sl_point.y), min_dist_to_ref);
+                  is_lat_valid = true;
+                }
               }
             }
           }
+          column_box.emplace_back(
+              planning::planning_math::Vec2d(shape.x(), shape.y()));
         }
-        column_box.emplace_back(
-            planning::planning_math::Vec2d(shape.x(), shape.y()));
-      }
-      if (!in_range) {
-        continue;
-      } else if (is_lat_valid && min_dist_to_ref > kMaxSideDistance) {
-        continue;
-      }
-      if (column_box.size() >= 3) {
-        Obstacle obstacle(ehr_column_id, column_box);
-        add_map_static_obstacle(obstacle);
+        if (!in_range) {
+          continue;
+        } else if (is_lat_valid && min_dist_to_ref > kMaxSideDistance) {
+          continue;
+        }
+        if (column_box.size() >= 3) {
+          Obstacle obstacle(ehr_column_id, column_box);
+          add_map_static_obstacle(obstacle);
+        }
       }
     }
   }

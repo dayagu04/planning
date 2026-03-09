@@ -1869,6 +1869,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       names.append("plan_release_slots_id")
       datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].successful_slot_info_list))
 
+      if hasattr(bag_loader.plan_msg['data'][plan_msg_idx], 'pos_parkable_slot_info_list'):
+        names.append("plan_pos_release_slots_id")
+        datas.append(str(bag_loader.plan_msg['data'][plan_msg_idx].pos_parkable_slot_info_list))
+
       names.append("fusion_release_slots_id")
       datas.append(str(fus_release_solts_id))
 
@@ -4427,6 +4431,10 @@ def apa_draw_local_view(dataLoader, layer_manager, max_time, time_step, vehicle_
 
             names.append("plan_release_slots_id")
             datas.append(str(plan_msg.successful_slot_info_list))
+
+            if hasattr(plan_msg, 'pos_parkable_slot_info_list'):
+              names.append("plan_pos_release_slots_id")
+              datas.append(str(plan_msg.pos_parkable_slot_info_list))
 
             if dataLoader.fus_parking_msg['enable'] == True:
               flag, fusion_msg = findt(dataLoader.fus_parking_msg, fusion_slot_timestamps[plan_i])

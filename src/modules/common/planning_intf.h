@@ -80,6 +80,8 @@ class PlanningInterface : public ComponentInterface {
       const iflyauto::ControlOutput &data) = 0;
   virtual void Feed_IflytekFmADegradeFunciton(
       const iflyauto::DegradedDrivingFunction &data) = 0;
+  virtual void Feed_IflytekPredictionAroundPredictionResult(
+    const iflyauto::PredictionResult &data) = 0;
 
   virtual void RegWriter_IflytekPlanningPlan(
       const std::function<void(const iflyauto::PlanningOutput &)> &writer) = 0;
