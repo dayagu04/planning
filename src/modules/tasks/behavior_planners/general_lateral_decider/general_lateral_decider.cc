@@ -1308,8 +1308,8 @@ void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
 }
 
 void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
-  const auto& general_lateral_decider_output =
-      session_->mutable_planning_context()->general_lateral_decider_output();
+  auto& general_lateral_decider_output =
+      session_->mutable_planning_context()->mutable_general_lateral_decider_output();
   const auto& coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
