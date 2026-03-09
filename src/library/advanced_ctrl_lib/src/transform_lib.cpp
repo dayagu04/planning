@@ -62,7 +62,7 @@ Eigen::Matrix3d EulerZYX2Rotm(Eigen::Vector3d &euler_zyx) {
   return q.toRotationMatrix();
 }
 
-Eigen::Matrix2d Angle2Rotm2d(const double &angle) {
+Eigen::Matrix2d Angle2Rotm2d(const double angle) {
   Eigen::Vector3d euler_zyx(angle, 0.0, 0.0);
   Eigen::Matrix3d R = EulerZYX2Rotm(euler_zyx);
   return R.block(0, 0, 2, 2);

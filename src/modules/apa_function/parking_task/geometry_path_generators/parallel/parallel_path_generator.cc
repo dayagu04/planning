@@ -2153,7 +2153,7 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
   geometry_path.first_path_length = geometry_path.path_length_vec.front();
 
   double min_path_length = 100.0;
-  for (const double& path_length : geometry_path.path_length_vec) {
+  for (const double path_length : geometry_path.path_length_vec) {
     if (min_path_length < path_length) {
       min_path_length = path_length;
     }

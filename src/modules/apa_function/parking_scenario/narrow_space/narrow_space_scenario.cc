@@ -176,9 +176,9 @@ const bool NarrowSpaceScenario::CheckHeadOutFinished() {
   const EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
-  const double& target_heading_head_out = apa_world_ptr_->GetSlotManagerPtr()
-                                              ->GetEgoInfoUnderSlot()
-                                              .target_pose.heading;
+  const double target_heading_head_out = apa_world_ptr_->GetSlotManagerPtr()
+                                             ->GetEgoInfoUnderSlot()
+                                             .target_pose.heading;
 
   constexpr double kTargetHeadingThreshold = 0.087;
 
@@ -2798,8 +2798,8 @@ void NarrowSpaceScenario::SetReleaseDirection(
 
 void NarrowSpaceScenario::SetRecommendationDirection(
     iflyauto::APAHMIData& apa_hmi_data, ApaDirectionGenerator& generator,
-    const bool& is_there_middle_direction, const bool& is_there_left_direction,
-    const bool& is_there_right_direction) {
+    const bool is_there_middle_direction, const bool is_there_left_direction,
+    const bool is_there_right_direction) {
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 

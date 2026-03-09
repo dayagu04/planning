@@ -151,6 +151,11 @@ void ProcessLaneMapMergePoint(
   double CalculateDisToLastLinkSplitPoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   double CalculateDisToLastLinkMergePoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   bool IsSucMergeLink(const iflymapdata::sdpro::LinkInfo_Link* link_info) const;
+  bool CalculateSplitLinkExitLane(
+      const iflymapdata::sdpro::LinkInfo_Link* split_link,
+      const iflymapdata::sdpro::LinkInfo_Link* out_link,
+      std::vector<iflymapdata::sdpro::Lane>& exit_lane_vec) const;
+  bool IsNeedFilterSplit(const iflymapdata::sdpro::Lane* lane) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
@@ -167,7 +172,7 @@ void ProcessLaneMapMergePoint(
   std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
       ramp_info_vec_;
   MLCDeciderSceneTypeInfo mlc_decider_scene_type_info_;
-  size_t count_continue_general_mlc_ = 0;
+  std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
 };
 }

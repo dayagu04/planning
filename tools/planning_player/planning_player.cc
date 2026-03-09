@@ -1130,6 +1130,7 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
 
     double planning_loop_dt = 0.1;
     double prediction_relative_time = 0.0;
+    double fusion_relative_time = 0.0;
     uint64 localizatoin_latency = 0.0;
     if (planning_debug_info->has_simulation_core_param() and
         planning_debug_info->simulation_core_param().planning_loop_dt() != 0) {
@@ -1137,6 +1138,8 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
           planning_debug_info->simulation_core_param().planning_loop_dt();
       prediction_relative_time = planning_debug_info->simulation_core_param()
                                      .prediction_relative_time();
+      fusion_relative_time =
+          planning_debug_info->simulation_core_param().fusion_relative_time();
       localizatoin_latency =
           planning_debug_info->simulation_core_param().localizatoin_latency();
     } else {
@@ -1161,6 +1164,18 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
                                    prediction_relative_time_end -
                                        prediction_relative_time_start - 28));
       }
+
+      auto fusion_relative_time_start =
+          debug_data_json.find("fusion_relative_time");
+      if (fusion_relative_time_start != std::string::npos) {
+        auto fusion_relative_time_end =
+            debug_data_json.find(',', fusion_relative_time_start);
+        fusion_relative_time = stod(
+            debug_data_json.substr(fusion_relative_time_start + 23,
+                                   fusion_relative_time_end -
+                                       fusion_relative_time_start - 23));
+      }
+
       auto localizatoin_latency_start =
           debug_data_json.find("localizatoin_latency_inEgoStateManager");
       if (localizatoin_latency_start != std::string::npos) {
@@ -1174,6 +1189,8 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
 
     SimulationContext::Instance()->set_prediction_relative_time(
         prediction_relative_time);
+    SimulationContext::Instance()->set_fusion_relative_time(
+        fusion_relative_time);
     SimulationContext::Instance()->set_localizatoin_latency(
         localizatoin_latency);
     SimulationContext::Instance()->set_planning_loop_dt(planning_loop_dt);

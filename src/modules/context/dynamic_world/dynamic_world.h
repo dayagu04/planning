@@ -31,6 +31,7 @@ class DynamicWorld {
   bool ConstructDynamicWorld();
 
   const DynamicAgentNode* GetNode(const int64_t& node_id) const;
+  const DynamicAgentNode* GetNodeByAgentID(const int64_t& agent_id) const;
 
   std::vector<const DynamicAgentNode*> GetNodesByLaneId(
       const int32_t lane_id) const;

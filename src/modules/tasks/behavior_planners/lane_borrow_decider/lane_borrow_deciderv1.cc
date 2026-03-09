@@ -884,8 +884,8 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
   return true;
 }
 
-bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
-                                      const double& right_bounds_l) {
+bool LaneBorrowDecider::IsSafeForPath(const double left_bounds_l,
+                                      const double right_bounds_l) {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   if (left_bounds_l - right_bounds_l <
@@ -1101,8 +1101,8 @@ bool LaneBorrowDecider::IsSafeForTurn() {
 
 // Turning center point
 const Point2D LaneBorrowDecider::CalTurningCenter(const Point2D& ego_pos,
-                                                  const double& theta,
-                                                  const double& radius) const {
+                                                  const double theta,
+                                                  const double radius) const {
   Eigen::Vector2d ego_heading_vec(std::cos(theta), std::sin(theta));
   Eigen::Vector2d rear_pos(ego_pos.x, ego_pos.y);
   Eigen::Vector2d ego_n_vec(-ego_heading_vec.y(), ego_heading_vec.x());

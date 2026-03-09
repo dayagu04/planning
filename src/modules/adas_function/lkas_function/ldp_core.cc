@@ -796,6 +796,14 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
       /*do nothing*/
     }
   }
+  if(left_suppress_repeat_warning_flag_ == false){
+    left_not_suppress_repeat_warning_flag_duration_ +=GetContext.get_param()->dt;
+    if(left_not_suppress_repeat_warning_flag_duration_ > 60.0){
+      left_not_suppress_repeat_warning_flag_duration_ = 60.0;
+    }
+  } else {
+    left_not_suppress_repeat_warning_flag_duration_ = 0.0;
+  }
 
   // bit 0
   // 判断左转向灯处于关闭时长是否满足
@@ -838,8 +846,8 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
 
   // bit 2
   // 距上次触发报警后,越过了重置线
-  if (left_suppress_repeat_warning_flag_ == true) {
-    ldp_left_suppression_code += uint16_bit[2];
+  if(left_not_suppress_repeat_warning_flag_duration_ < 0.5){
+      ldp_left_suppression_code += uint16_bit[2];
   } else {
     /*do nothing*/
   }
@@ -1269,6 +1277,14 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
       /*do nothing*/
     }
   }
+  if(right_suppress_repeat_warning_flag_ == false){
+    right_not_suppress_repeat_warning_flag_duration_ +=GetContext.get_param()->dt;
+    if(right_not_suppress_repeat_warning_flag_duration_ > 60.0){
+      right_not_suppress_repeat_warning_flag_duration_ = 60.0;
+    }
+  } else {
+    right_not_suppress_repeat_warning_flag_duration_ = 0.0;
+  }
 
   // bit 0
   // 判断右转向灯处于关闭时长是否满足
@@ -1309,8 +1325,8 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
 
   // bit 2
   // 距上次触发报警后,未越过了重置线
-  if (right_suppress_repeat_warning_flag_ == true) {
-    ldp_right_suppression_code += uint16_bit[2];
+  if(right_not_suppress_repeat_warning_flag_duration_ < 0.5){
+      ldp_right_suppression_code += uint16_bit[2];
   } else {
     /*do nothing*/
   }

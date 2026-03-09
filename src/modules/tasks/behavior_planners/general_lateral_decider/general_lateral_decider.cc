@@ -4209,7 +4209,7 @@ void GeneralLateralDecider::LimitBoundary(
 }
 
 void GeneralLateralDecider::RefineConflictLatDecisions(
-    const double& ego_l, ObstacleDecision& obstacle_decision) {
+    const double ego_l, ObstacleDecision& obstacle_decision) {
   for (size_t n_pd = 0; n_pd < obstacle_decision.position_decisions.size();
        ++n_pd) {
     if (obstacle_decision.position_decisions[n_pd].lat_decision !=
@@ -5371,7 +5371,7 @@ void GeneralLateralDecider::GenerateEnuReferenceTheta(
 }
 
 void GeneralLateralDecider::SampleRoadDistanceInfo(
-    const double& s_target, ReferencePathPoint& sample_path_point) {
+    const double s_target, ReferencePathPoint& sample_path_point) {
   const double cut_length = config_.sample_step;
   ReferencePathPoint refpath_pt{};
   const auto& vehicle_param =

@@ -12,7 +12,7 @@ namespace lane_change_joint_decision {
 ilqr_solver::State JointDecisionPlanningModel::UpdateDynamicsOneStep(
     const ilqr_solver::State &x0, const ilqr_solver::Control &u,
     const size_t &step) const {
-  const double &dt = solver_config_ptr_->model_dt;
+  const double dt = solver_config_ptr_->model_dt;
   const ilqr_solver::IlqrCostConfig &cost_config =
       cost_config_vec_ptr_->at(step);
   ilqr_solver::State x1 = x0;
@@ -81,7 +81,7 @@ ilqr_solver::State JointDecisionPlanningModel::UpdateDynamicsOneStep(
 void JointDecisionPlanningModel::GetDynamicsDerivatives(
     const ilqr_solver::State &x0, const ilqr_solver::Control &u,
     ilqr_solver::FxMT &f_x, ilqr_solver::FuMT &f_u, const size_t &step) const {
-  const double &dt = solver_config_ptr_->model_dt;
+  const double dt = solver_config_ptr_->model_dt;
   const ilqr_solver::IlqrCostConfig &cost_config =
       cost_config_vec_ptr_->at(step);
   const int obs_num = static_cast<int>(cost_config[OBS_NUM]);
@@ -97,7 +97,7 @@ void JointDecisionPlanningModel::GetDynamicsDerivatives(
   const auto &x0_delta = x0[EGO_DELTA];
   const auto &x0_vel = x0[EGO_VEL];
   const auto &x0_acc = x0[EGO_ACC];
-  const double &k = cost_config[CURV_FACTOR];
+  const double k = cost_config[CURV_FACTOR];
   const auto &u_omega = u[EGO_OMEGA];
   const auto &u_jerk = u[EGO_JERK];
   const double theta_mid = x0_theta + kHalf * k * x0_delta * x0_vel * dt +

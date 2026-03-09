@@ -259,8 +259,8 @@
 //       const agent::Agent *merge_target,
 //       const MergeAgentsInfo::MergeTargetName merge_target_name);
 
-//   bool LateralCollisionCheck(const double &start_s, const double &end_s,
-//                              const double &agent_min_l);
+//   bool LateralCollisionCheck(const double start_s, const double end_s,
+//                              const double agent_min_l);
 //   // TODO: need to remove when apply prediction from upstream
 //   // get prediction info from agent node manager
 //   void EgoNearByAgentsPredictionTrajProcess(

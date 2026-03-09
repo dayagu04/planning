@@ -81,9 +81,9 @@ double DpStCost::GetSpatialPotentialCost(const SLTGraphPoint& point) {
 
 double DpStCost::GetSpeedCost(const SLTGraphPoint& first,
                               const SLTGraphPoint& second,
-                              const double& speed_limit,
-                              const double& inv_speed_limit,
-                              const double& cruise_speed) const {
+                              const double speed_limit,
+                              const double inv_speed_limit,
+                              const double cruise_speed) const {
   const bool enable_dp_reference_speed = true;
   double cost = 0.0;
   const double speed = (second.point().s() - first.point().s()) * inv_unit_t_;

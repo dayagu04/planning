@@ -68,6 +68,7 @@ struct PredictionObject {
   uint fusion_source;
   double timestamp_us;
   double delay_time{0.0};
+  double fusion_delay_time{0.0};
   ObstacleIntentType intention;
   bool b_backup_freemove{false};
   double cutin_score;

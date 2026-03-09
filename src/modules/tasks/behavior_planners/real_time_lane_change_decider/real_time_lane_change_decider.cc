@@ -354,7 +354,7 @@ double RealTimeLaneChangeDecider::clip(const double x, const double lo,
 }
 
 double RealTimeLaneChangeDecider::calc_lane_width(
-    const double &s, const std::vector<RefPointFrenet> &ref_line) {
+    const double s, const std::vector<RefPointFrenet>& ref_line) {
   double lane_width = 3.8;
   if (ref_line.size() == 0) {
     return lane_width;

@@ -1080,9 +1080,9 @@ const bool CalCrossPtOfTwoLines(const LineSegment &line1,
 }
 
 const bool CalProjFromSplineByBisection(
-    const double &s_start, const double &s_end, double &s_proj,
-    const Eigen::Vector2d &current_pos, const pnc::mathlib::spline &x_s_spline,
-    const pnc::mathlib::spline &y_s_spline) {
+    const double s_start, const double s_end, double& s_proj,
+    const Eigen::Vector2d& current_pos, const pnc::mathlib::spline& x_s_spline,
+    const pnc::mathlib::spline& y_s_spline) {
   static const size_t max_iter = 20;
   static const double min_err = 1e-3;
 
@@ -2415,12 +2415,12 @@ const bool MinimumBoundingBox(
   return true;
 }
 
-const Eigen::Vector2d GetUnitTangVecByHeading(const double &heading) {
+const Eigen::Vector2d GetUnitTangVecByHeading(const double heading) {
   return Eigen::Vector2d(std::cos(heading), std::sin(heading));
 }
 
-const LineSegment BuildLineSegByPose(const Eigen::Vector2d &current_pos,
-                                     const double &current_heading) {
+const LineSegment BuildLineSegByPose(const Eigen::Vector2d& current_pos,
+                                     const double current_heading) {
   const Eigen::Vector2d next_pos =
       current_pos + GetUnitTangVecByHeading(current_heading);
 

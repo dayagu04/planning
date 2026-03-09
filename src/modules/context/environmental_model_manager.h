@@ -1,8 +1,13 @@
 #pragma once
 
+#include <deque>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
+
 #include "agent/agent_manager.h"
 #include "agent_node_manager.h"
+#include "construction_scene_manager.h"
 #include "dynamic_world/dynamic_world.h"
 #include "edt_manager.h"
 #include "ego_planning_config.h"
@@ -16,7 +21,6 @@
 #include "route_info.h"
 #include "session.h"
 #include "vehicle_status.pb.h"
-#include "construction_scene_manager.h"
 
 namespace planning {
 namespace planner {
@@ -35,6 +39,12 @@ enum FeedType {
   FEED_FUSION_LANES_INFO,
   FEED_TYPE_MAX,
 };
+
+struct TmpPathPoint {
+    double x;
+    double y;
+    double theta;
+  };
 
 // enum TurnSwitchState {
 //   NONE = 0,
@@ -68,7 +78,8 @@ class EnvironmentalModelManager {
   void truncate_prediction_info(
       const iflyauto::PredictionResult& prediction_result,
       const iflyauto::FusionObjectsInfo& fusion_objects_result,
-      double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set);
+      double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set,
+      double fusion_delay_time);
   bool transform_fusion_to_prediction(
       const iflyauto::FusionObject& fusion_object, double timestamp,
       std::vector<PredictionObject>& objects_infos);
@@ -95,6 +106,9 @@ class EnvironmentalModelManager {
   bool IsStatic(const PredictionObject& prediction_object);
 
  private:
+  void ProcessPredictionTrajectory(PredictionObject& prediction_object);
+  void DeleteOlderPredictionObjects();
+
   planning::framework::Session* session_ = nullptr;
   //   std::shared_ptr<PlanningResultManager> planning_result_manager_ =
   //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
@@ -106,8 +120,8 @@ class EnvironmentalModelManager {
       nullptr;
   std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =
       nullptr;
-  std::shared_ptr<planning::ConstructionSceneManager> construction_scene_manager_ptr_ =
-      nullptr;
+  std::shared_ptr<planning::ConstructionSceneManager>
+      construction_scene_manager_ptr_ = nullptr;
   std::shared_ptr<planning::TrafficLightDecisionManager>
       traffic_light_decision_manager_ptr_ = nullptr;
   std::shared_ptr<planning::LateralObstacle> lateral_obstacle_ptr_ = nullptr;
@@ -129,6 +143,10 @@ class EnvironmentalModelManager {
   // bool is_right_firmly_touch_ = false;
   // int num_right_firmly_touch_ = 0;
   std::vector<int> history_lc_source_ = {0, 0};  // 0表示none，1表示ilc.
+
+  std::unordered_map<int32_t, std::deque<PredictionObject>>
+      historical_prediction_objects_;
+  std::unordered_set<int32_t> current_prediction_ids_;
 };
 
 }  // namespace planner

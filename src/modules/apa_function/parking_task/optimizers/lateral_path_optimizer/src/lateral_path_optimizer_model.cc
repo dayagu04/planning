@@ -24,10 +24,10 @@ ilqr_solver::State LateralPathOptimizerModel::UpdateDynamicsOneStep(
       model_sgin_gain = cost_config_vec_ptr_->at(0)[MODEL_SIGN_GAIN];
     }
   }
-  const double &ds = solver_config_ptr_->model_dt;
-  const double &theta = x[StateId::THETA];
-  const double &k = x[StateId::K];
-  const double &u_ = u[ControlId::U];
+  const double ds = solver_config_ptr_->model_dt;
+  const double theta = x[StateId::THETA];
+  const double k = x[StateId::K];
+  const double u_ = u[ControlId::U];
 
   // ds * k
   const double ds_k = ds * k;
@@ -78,8 +78,8 @@ void LateralPathOptimizerModel::GetDynamicsDerivatives(
       model_sgin_gain = cost_config_vec_ptr_->at(0)[MODEL_SIGN_GAIN];
     }
   }
-  const double &ds = solver_config_ptr_->model_dt;
-  const double &theta = x[StateId::THETA];
+  const double ds = solver_config_ptr_->model_dt;
+  const double theta = x[StateId::THETA];
   const double sin_theta = std::sin(theta);
   const double cos_theta = std::cos(theta);
   const double ds2 = ds * ds;

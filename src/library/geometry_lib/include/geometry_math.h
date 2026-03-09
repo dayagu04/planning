@@ -971,11 +971,11 @@ const bool CalCrossPtOfTwoLines(const LineSegment &line1,
                                 const LineSegment &line2,
                                 Eigen::Vector2d &cross_pt);
 
-const bool CalProjFromSplineByBisection(const double &s_start,
-                                        const double &s_end, double &s_proj,
-                                        const Eigen::Vector2d &current_pos,
-                                        const pnc::mathlib::spline &x_s_spline,
-                                        const pnc::mathlib::spline &y_s_spline);
+const bool CalProjFromSplineByBisection(const double s_start,
+                                        const double s_end, double& s_proj,
+                                        const Eigen::Vector2d& current_pos,
+                                        const pnc::mathlib::spline& x_s_spline,
+                                        const pnc::mathlib::spline& y_s_spline);
 
 const bool CalExtendedPointByTwoPoints(const Eigen::Vector2d &start_point,
                                        const Eigen::Vector2d &end_point,
@@ -1078,10 +1078,10 @@ const bool CalTwoSameGearArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
 const bool IsPoseOnLine(const PathPoint &pose, LineSegment &line,
                         const double lat_err, const double heading_err);
 
-const Eigen::Vector2d GetUnitTangVecByHeading(const double &heading);
+const Eigen::Vector2d GetUnitTangVecByHeading(const double heading);
 
-const LineSegment BuildLineSegByPose(const Eigen::Vector2d &current_pos,
-                                     const double &current_heading);
+const LineSegment BuildLineSegByPose(const Eigen::Vector2d& current_pos,
+                                     const double current_heading);
 
 const bool CalCommonTangentCircleOfTwoLine(
     LineSegment &line1, LineSegment &line2, const double radius,

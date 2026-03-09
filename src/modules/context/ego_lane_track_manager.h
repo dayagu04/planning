@@ -61,8 +61,8 @@ class EgoLaneTrackManger {
       const std::vector<int> &order_ids);
 
   void ProcessSplitRegionInteractiveSelectEgoLane(
-      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-      const std::vector<int> &order_ids, const int &lane_change_cmd);
+      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<int>& order_ids, const int lane_change_cmd);
 
   void ProcessSplitWithGroundMark(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,

@@ -509,15 +509,15 @@ class PlanningContext {
 
   common::LaneStatus &mutable_lane_status() { return lane_status_; }
 
-  const double &v_ref_cruise() const { return v_ref_cruise_; }
+  const double v_ref_cruise() const { return v_ref_cruise_; }
 
-  void set_v_ref_cruise(const double &v_ref_cruise) {
+  void set_v_ref_cruise(const double v_ref_cruise) {
     v_ref_cruise_ = v_ref_cruise;
   }
 
-  const double &v_limit() const { return v_limit_; }
+  const double v_limit() const { return v_limit_; }
 
-  void set_v_limit(const double &v_limit) { v_limit_ = v_limit; }
+  void set_v_limit(const double v_limit) { v_limit_ = v_limit; }
 
   const std::vector<TargetType> &lon_s_ref_target_types() const {
     return lon_s_ref_target_types_;

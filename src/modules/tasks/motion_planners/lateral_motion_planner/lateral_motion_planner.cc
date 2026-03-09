@@ -537,7 +537,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
   if (!HandleFeedbackInfoData()) {
     return false;
   }
-  // const bool &search_success = session_->mutable_planning_context()
+  // const bool search_success = session_->mutable_planning_context()
   //                                ->mutable_lateral_obstacle_decider_output()
   //                                .search_success;
   const auto &general_lateral_decider_output =
@@ -547,7 +547,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
-  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+  const bool search_success = general_lateral_decider_output.enable_ara_ref;
   if (is_ref_consistent_) {
     planning_weight_ptr_->SetIsSearchSuccess(search_success);
   } else {
@@ -595,7 +595,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
   if (!HandleFeedbackInfoData()) {
     return false;
   }
-  // const bool &search_success = session_->mutable_planning_context()
+  // const bool search_success = session_->mutable_planning_context()
   //                                ->mutable_lateral_obstacle_decider_output()
   //                                .search_success;
   const auto &general_lateral_decider_output =
@@ -605,7 +605,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
-  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+  const bool search_success = general_lateral_decider_output.enable_ara_ref;
   if (is_ref_consistent_) {
     planning_weight_ptr_->SetIsSearchSuccess(search_success);
   } else {
@@ -656,9 +656,9 @@ bool LateralMotionPlanner::AssembleInput() {
   const auto &general_lateral_decider_output =  // result from lat decision
       session_->planning_context().general_lateral_decider_output();
   bool complete_follow = general_lateral_decider_output.complete_follow;
-  const bool &lane_change_scene =
+  const bool lane_change_scene =
       general_lateral_decider_output.lane_change_scene;
-  const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
+  const bool ramp_scene = general_lateral_decider_output.ramp_scene;
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &coarse_planning_info = lane_change_decider_output.coarse_planning_info;
@@ -1289,11 +1289,22 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
 double LateralMotionPlanner::CalculateRemainingCrossLaneTime() {
   double lc_remain_time = 10.0;
   double lc_remain_lon_distance = 1000.0;
+  // const auto& reference_path =
+  //     session_->environmental_model()
+  //             .get_virtual_lane_manager()
+  //             ->get_current_lane()->get_reference_path();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& lc_request_direction = lane_change_decider_output.lc_request;
+  // const auto& reference_path =
+  //     lane_change_decider_output.coarse_planning_info.reference_path;
   const auto& reference_path =
-      lane_change_decider_output.coarse_planning_info.reference_path;
+      session_->environmental_model()
+              .get_reference_path_manager()
+              ->get_reference_path_by_lane(lane_change_decider_output.origin_lane_virtual_id, false);
+  if (reference_path == nullptr) {
+    return lc_remain_time;
+  }
   const auto N =
       planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
       1;
@@ -1301,25 +1312,29 @@ double LateralMotionPlanner::CalculateRemainingCrossLaneTime() {
   double d_s = planning_input_.ref_vel() * config_.delta_t;
   bool is_exist_dash_line = false;
   bool is_exist_solid_line = false;
+  bool is_all_solid_line = false;
   for (size_t i = 0; i < N; ++i) {
     double s = init_s + d_s * i;
     ReferencePathPoint refpath_pt{};
     if (reference_path->get_reference_point_by_lon(s, refpath_pt)) {
       bool is_left_solid = refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
                            refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                           refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+                           refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
       bool is_right_solid = refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
                            refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                           refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
-      if (lc_request_direction == LEFT_CHANGE && is_right_solid) {
+                           refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+      if (lc_request_direction == LEFT_CHANGE && is_left_solid) {
+        is_all_solid_line = true;
         if (is_exist_dash_line) {
           is_exist_solid_line = true;
         }
-      } else if (lc_request_direction == RIGHT_CHANGE && is_left_solid) {
+      } else if (lc_request_direction == RIGHT_CHANGE && is_right_solid) {
+        is_all_solid_line = true;
         if (is_exist_dash_line) {
           is_exist_solid_line = true;
         }
       } else {
+        is_all_solid_line = false;
         is_exist_dash_line = true;
       }
     }
@@ -1328,6 +1343,9 @@ double LateralMotionPlanner::CalculateRemainingCrossLaneTime() {
     }
     lc_remain_time = config_.delta_t * i;
     lc_remain_lon_distance = d_s * i;
+  }
+  if (is_all_solid_line && !is_exist_dash_line) {
+    lc_remain_time = 0.0;
   }
   return lc_remain_time;
 }

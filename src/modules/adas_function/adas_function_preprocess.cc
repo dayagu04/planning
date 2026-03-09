@@ -854,9 +854,32 @@ void Preprocess::UpdateStateInfo(void) {
   } else {
     right_line_changed_flag = false;
   }
+  double excessive_line_crossing_dist_thrd = 0.5; // 判断车轮是否大幅压线的距离判断阈值 单位:m
+  bool left_has_excessive_line_crossing_flag = false;// 车辆左轮大幅压线
+  if(GetContext.get_road_info()->current_lane.left_line.valid &&
+     (GetContext.get_state_info()->fl_wheel_distance_to_line < (-1.0*excessive_line_crossing_dist_thrd))){
+    left_has_excessive_line_crossing_flag = true;
+  } else {
+    left_has_excessive_line_crossing_flag = false;
+  }
+  bool right_has_excessive_line_crossing_flag = false;// 车辆右轮大幅压线
+  if(GetContext.get_road_info()->current_lane.right_line.valid &&
+     (GetContext.get_state_info()->fr_wheel_distance_to_line > excessive_line_crossing_dist_thrd)){
+    right_has_excessive_line_crossing_flag = true;
+  } else {
+    right_has_excessive_line_crossing_flag = false;
+  }
+
   if (left_line_changed_flag && right_line_changed_flag) {
     GetContext.mutable_road_info()->current_lane.lane_changed_flag = true;
-  } else {
+  } 
+  else if(left_has_excessive_line_crossing_flag){
+    GetContext.mutable_road_info()->current_lane.lane_changed_flag = true;
+  }
+  else if(right_has_excessive_line_crossing_flag){
+    GetContext.mutable_road_info()->current_lane.lane_changed_flag = true;
+  }
+  else {
     GetContext.mutable_road_info()->current_lane.lane_changed_flag = false;
   }
   last_left_line_valid_flag_ =

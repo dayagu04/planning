@@ -1261,10 +1261,14 @@ double LdwCore::UpdateTlcThreshold(void) {
   }
 
   // 定义根据车速确定基础tlc
-  //  tlc_calculate_base = pnc::mathlib::Interp1(
-  //      GetContext.get_param()->lka_vel_vector,
-  //      GetContext.get_param()->lka_tlc_vector,
-  //      (GetContext.get_state_info()->display_vehicle_speed * 3.6));
+  double ldp_tlc_calculate_base = pnc::mathlib::Interp1(
+       GetContext.get_param()->lka_vel_vector,
+       GetContext.get_param()->lka_tlc_vector,
+       (GetContext.get_state_info()->display_vehicle_speed * 3.6));
+  
+  // 确保LDW的触发阈值一定比LDP的小
+  tlc_calculate_base =
+      std::min(tlc_calculate_base, ldp_tlc_calculate_base - 0.2);
 
   // 定义弯道tlc减少
   double tlc_dec_by_curv = 0.0;
@@ -1465,13 +1469,63 @@ void LdwCore::SetLdwOutputInfo() {
 }
 
 void LdwCore::RunOnce(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+
   // 更新tlc_to_line_threshold_
   ldw_tlc_threshold_ = UpdateTlcThreshold();
+
+  // 若压线行驶，触发线外移
+  double preview_y_gap_Vy_offset = 0.0;
+  if (GetContext.get_road_info()->close_to_right_line_flag ||
+      GetContext.get_road_info()->close_to_left_line_flag) {
+    preview_y_gap_Vy_offset = 0.2;
+  } else {
+    preview_y_gap_Vy_offset = 0.0;
+  }
+  // 弯道场景触发线外移
+  //  定义弯道tlc减少
+  double y_gap_dec_by_curv = 0.0;
+  double C2_temp_thr = 0.0;
+  double R_temp_thr = 0.0;
+  if (GetContext.get_road_info()->current_lane.left_line.valid == true) {
+    C2_temp_thr = GetContext.get_road_info()->current_lane.left_line.c2;
+  } else if (GetContext.get_road_info()->current_lane.right_line.valid ==
+             true) {
+    C2_temp_thr = GetContext.get_road_info()->current_lane.right_line.c2;
+  } else {
+    C2_temp_thr = 0.00005;
+  }
+
+  if (fabs(C2_temp_thr) < 0.00005) {
+    R_temp_thr = 10000.0;
+  } else {
+    R_temp_thr = 0.5 / fabs(C2_temp_thr);
+  }
+  y_gap_dec_by_curv = pnc::mathlib::Interp1(
+      GetContext.get_param()->lka_r_vector,
+      GetContext.get_param()->lka_dec_y_gap_by_c2_vector, R_temp_thr);
+  
+  // 根据横向速度场景触发线调整
+  double left_y_gap_dec_by_vy = 0.0;
+  double right_y_gap_dec_by_vy = 0.0;
+  double left_vy_temp_thr = 0.0;
+  double right_vy_temp_thr = 0.0;
+
+  left_vy_temp_thr =
+      fabs(GetContext.mutable_state_info()->veh_left_departure_speed);
+  right_vy_temp_thr =
+      fabs(GetContext.mutable_state_info()->veh_right_departure_speed);
+  left_y_gap_dec_by_vy = pnc::mathlib::Interp1(
+      GetContext.get_param()->y_gap_vy_vector,
+      GetContext.get_param()->dec_y_gap_by_vy_vector, left_vy_temp_thr);
+  right_y_gap_dec_by_vy = pnc::mathlib::Interp1(
+      GetContext.get_param()->y_gap_vy_vector,
+      GetContext.get_param()->dec_y_gap_by_vy_vector, right_vy_temp_thr);
 
   // 更新ldw_left_intervention_
   double preview_left_y_gap =
       adas_function::LkasLineLeftIntervention(ldw_tlc_threshold_);
-  if (preview_left_y_gap < 0.0) {
+  if ((preview_left_y_gap + y_gap_dec_by_curv + left_y_gap_dec_by_vy) < 0.0) {
     ldw_left_intervention_ = true;
   } else {
     ldw_left_intervention_ = false;
@@ -1480,7 +1534,7 @@ void LdwCore::RunOnce(void) {
   // 更新ldw_right_intervention_
   double preview_right_y_gap =
       adas_function::LkasLineRightIntervention(ldw_tlc_threshold_);
-  if (preview_right_y_gap > 0.0) {
+  if ((preview_right_y_gap - preview_y_gap_Vy_offset - right_y_gap_dec_by_vy) > 0.0) {
     ldw_right_intervention_ = true;
   } else {
     ldw_right_intervention_ = false;

@@ -49,8 +49,8 @@ class RealTimeLaneChangeDecider {
                           const TargetObstacle &front_car);
   static bool compare_distance_asc(const TargetObstacle &obs1,
                                    const TargetObstacle &obs2);
-  double calc_lane_width(const double &s,
-                         const std::vector<RefPointFrenet> &ref_line);
+  double calc_lane_width(const double s,
+                         const std::vector<RefPointFrenet>& ref_line);
   double clip(const double x, const double lo, const double hi);
   double calc_time_for_lane_change(TargetObstacle base_car,
                                    TargetObstacle front_car, GapInfo gap_info,

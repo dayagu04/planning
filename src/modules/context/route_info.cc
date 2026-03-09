@@ -3129,8 +3129,8 @@ void RouteInfo::UpdateTargetSlotInfo(const ad_common::math::Vec2d& center) {
   route_info_output_.hpp_route_info_output.distance_to_target_slot= sum_s - sum_s_to_curr_pose_hpp_;
 }
 
-void RouteInfo::UpdateTargetInfo(const double& dist_to_target_slot,
-                                 const double& dist_to_target_dest) {
+void RouteInfo::UpdateTargetInfo(const double dist_to_target_slot,
+                                 const double dist_to_target_dest) {
   route_info_output_.hpp_route_info_output.distance_to_target_slot = dist_to_target_slot;
   route_info_output_.hpp_route_info_output.distance_to_target_dest = dist_to_target_dest;
 }
@@ -3293,7 +3293,7 @@ bool RouteInfo::CalculateNextSpeedBumpInfo(const Map::StaticMap& static_map_info
             });
   auto it = std::lower_bound(speed_bump_infos.begin(), speed_bump_infos.end(),
                              sum_s_to_curr_pose_hpp_,
-                             [](const SpeedBumpInfo& a, const double& b) {
+                             [](const SpeedBumpInfo& a, const double b) {
                                return a.dist_to_start < b;
                              });
   if (it == speed_bump_infos.end()) {

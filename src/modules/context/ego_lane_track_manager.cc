@@ -1593,7 +1593,7 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
 }
 void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
     std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-    const std::vector<int>& order_ids, const int& lane_change_cmd) {
+    const std::vector<int>& order_ids, const int lane_change_cmd) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   int origin_order_id = -1;

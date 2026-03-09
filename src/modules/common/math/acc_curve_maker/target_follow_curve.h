@@ -8,12 +8,12 @@
 namespace planning {
 class TargetFollowCurve {
  public:
-  TargetFollowCurve(DvPoint target_pt, const double& ego_s,
-                    const double& cipv_s, const double& cipv_v);
+  TargetFollowCurve(DvPoint target_pt, const double ego_s, const double cipv_s,
+                    const double cipv_v);
   ~TargetFollowCurve() = default;
   void generate_target_dv_curve();
-  void update_target_st_curve(const double dist, const double& cipv_v,
-                              const double& cipv_s);
+  void update_target_st_curve(const double dist, const double cipv_v,
+                              const double cipv_s);
   const DvSpline& get_target_dv_curve() { return target_dv_curve_; }
   const StSpline& get_target_st_curve() { return target_st_curve_; }
 

@@ -73,6 +73,6 @@ void SLTGraphPoint::SetOptimalSpeed(const double optimal_speed) {
   optimal_speed_ = optimal_speed;
 }
 
-void SLTGraphPoint::SetAcc(const double& acc) { a_ = acc; }
+void SLTGraphPoint::SetAcc(const double acc) { a_ = acc; }
 
 }  // namespace planning

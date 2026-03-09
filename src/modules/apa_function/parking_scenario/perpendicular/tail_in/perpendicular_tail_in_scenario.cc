@@ -557,7 +557,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
     }
     bool find_target_pose = false;
     const double start_time = IflyTime::Now_ms();
-    for (const bool& fold_mirror_flag : fold_mirror_flag_vec) {
+    for (const bool fold_mirror_flag : fold_mirror_flag_vec) {
       apa_world_ptr_->GetColDetInterfacePtr()->Init(fold_mirror_flag);
       TargetPoseDecider target_pose_decider(
           apa_world_ptr_->GetColDetInterfacePtr());

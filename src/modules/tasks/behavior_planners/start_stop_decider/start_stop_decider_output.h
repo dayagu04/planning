@@ -15,7 +15,7 @@ class StartStopDeciderOutPut {
     return ego_start_stop_info_;
   }
 
-  const bool& rads_scene_is_completed() const {
+  const bool rads_scene_is_completed() const {
     return rads_scene_is_completed_;
   }
 

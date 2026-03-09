@@ -19,7 +19,8 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_gap_avaliable, const double weight_acc_limit,
     const double weight_stop_penalty, const double weight_speed_change,
     const double weight_leading_veh_follow_s, const double weight_jerk_limit,
-    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle) {
+    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle,
+    const SamplePolySpeedAdjustDeciderConfig& config) {
   poly_ = poly;
   arrived_t_ = arrived_t;
   arrived_v_ = poly_.CalculateFirstDerivative(poly_.T());
@@ -40,7 +41,12 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   follow_vel_cost_.SetWeight(weight_follow_vel);
   stop_line_cost_.SetWeight(weight_stop_line);
   leading_veh_safe_cost_.SetWeight(weight_leading_veh_safe_s);
-  leading_veh_safe_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
+  leading_veh_safe_cost_.SetUpParam(front_edge_to_rear_axle,
+                                    config.leading_safe_distance_gain,
+                                    config.leading_safe_delay_time,
+                                    config.leading_safe_max_dec,
+                                    config.leading_safe_overstep_gain,
+                                    config.leading_safe_overstep_buffer);
   speed_variable_cost_.SetWeight(weight_speed_variable);
   gap_avaliable_cost_.SetWeight(weight_gap_avaliable);
   acc_limit_cost_.SetWeight(weight_acc_limit);
@@ -188,8 +194,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   double last_arrived_t = arrived_t_;
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
-  const double& anchor_arrived_t = cur_time;
-  const double& anchor_arrived_v =
+  const double anchor_arrived_t = cur_time;
+  const double anchor_arrived_v =
       anchor_arrived_t - poly_.T() > 0
           ? poly_.CalculateFirstDerivative(poly_.T())
           : poly_.CalculateFirstDerivative(anchor_arrived_t);

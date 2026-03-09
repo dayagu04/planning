@@ -24,6 +24,7 @@ LDRouteInfoStrategy::LDRouteInfoStrategy(
 void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
   local_view_ = &session_->environmental_model().get_local_view();
   route_info_output_.reset();
+  avoid_link_merge_lane_id_vec_.clear();
 
   if (!UpdateLDMap()) {
     return;
@@ -46,7 +47,6 @@ bool LDRouteInfoStrategy::UpdateLDMap() {
       ld_map_info_updated_timestamp_ = ld_map_info_current_timestamp;
     }
   }
-  
   if (ld_map_info_current_timestamp - ld_map_info_updated_timestamp_ >
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
@@ -152,7 +152,6 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   mlc_decider_scene_type_info_.reset();
 
   if (relative_id_lanes.empty()) {
-    count_continue_general_mlc_ = 0;
     return;
   }
   MLCSceneTypeDecider();
@@ -165,21 +164,18 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   switch (mlc_scene_type) {
     case SPLIT_SCENE: {
       if (!CalculateFeasibleLaneInRampScene(feasible_lane_graph)) {
-        count_continue_general_mlc_ = 0;
         return;
       }
       break;
     }
     case NORMAL_SCENE: {
       if (!CalculateFeasibleLaneInNormalScene(feasible_lane_graph)) {
-        count_continue_general_mlc_ = 0;
         return;
       }
       break;
     }
     case MERGE_SCENE: {
       if (!CalculateFeasibleLaneInMergeScene(feasible_lane_graph)) {
-        count_continue_general_mlc_ = 0;
         return;
       }
       break;
@@ -191,9 +187,7 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
       break;
   }
 
-  if (route_info_output_.is_ego_on_expressway_hmi) {
-    CalculateAvoidMergeFeasibleLane(feasible_lane_graph);
-  }
+  CalculateAvoidMergeFeasibleLane(feasible_lane_graph);
 
   // 增加处理在接近匝道时，feasible lane至少有2条车道可达ramp，其中一条是1分2的lane，则从feasible lane中移除这条lane
   if (mlc_scene_type == SPLIT_SCENE) {
@@ -204,6 +198,8 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
 
   UpdateLCNumTask(relative_id_lanes, feasible_lane_graph);
 
+  // 如果有躲避前方link_merge的mlc，会更新mlc_decider_scene_type_info_.mlc_type，所以在这再次更新这个值
+  route_info_output_.mlc_decider_scene_type_info = mlc_decider_scene_type_info_;
   route_info_output = route_info_output_;
 }
 
@@ -716,14 +712,12 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const TopoLinkGraph& feasible_lane_graph) {
   if (feasible_lane_graph.lane_topo_groups.empty()) {
-    count_continue_general_mlc_ = 0;
     return;
   }
 
   const auto& cur_link_feasible_lane =
       feasible_lane_graph.lane_topo_groups.back();
   if (cur_link_feasible_lane.topo_lanes.empty()) {
-    count_continue_general_mlc_ = 0;
     return;
   }
 
@@ -735,7 +729,6 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
                                      topo_lane.front_feasible_distance);
   }
   if (origin_order_id_seq.empty()) {
-    count_continue_general_mlc_ = 0;
     return;
   }
 
@@ -773,7 +766,6 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
                                   most_left_emergency_lane_num;
 
   if (link_total_lane_num < 1) {
-    count_continue_general_mlc_ = 0;
     return;
   }
 
@@ -786,6 +778,18 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       feasible_lane_seq.emplace_back(seq, order_id.second);
     }
   }
+  // 更新躲避link_merge车道的从左向右序列
+  bool is_exist_need_avoid_link_merge_lane =
+      !avoid_link_merge_lane_id_vec_.empty() &&
+      avoid_link_merge_lane_id_vec_.front().link_id ==
+          cur_link_feasible_lane.link_id;
+
+  int avoid_link_merge_lane_seq = -1;
+  if (is_exist_need_avoid_link_merge_lane) {
+    avoid_link_merge_lane_seq = link_total_lane_num -
+                                avoid_link_merge_lane_id_vec_.front().order_id +
+                                1;
+  }
 
   std::unordered_map<int, MapMergePointInfo> map_merge_point_info;
   for (const auto& merge_info: route_info_output_.map_merge_points_info) {
@@ -795,7 +799,6 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
   }
 
   if (feasible_lane_seq.empty()) {
-    count_continue_general_mlc_ = 0;
     return;
   }
   int minVal_seq = feasible_lane_seq[0].first;
@@ -895,7 +898,6 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
         ego_seq = real_lane_num;
         route_info_output_.ego_seq = ego_seq;
       } else {
-        count_continue_general_mlc_ = 0;
         return;
       }
     }
@@ -910,10 +912,24 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       const auto& first_split = split_info_vec_[0].first;
 
       if (first_ramp && first_split) {
-        is_nearing_ramp =
-            (route_info_output_.mlc_decider_scene_type_info.mlc_scene_type ==
-             SPLIT_SCENE) &&
-            (first_ramp->id() == first_split->id());
+        const auto& ego_velocity =
+            session_->environmental_model().get_ego_state_manager()->ego_v();
+        const auto& ramp_distance =
+            route_info_output_.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point;
+        const int kPredictTimeHorizon = 4;
+        const double kMinFrontJudgeDis = 50.0;
+
+        bool type_flag =
+            route_info_output_.mlc_decider_scene_type_info.mlc_scene_type ==
+            SPLIT_SCENE;
+        bool ramp_split_flag = first_ramp->id() == first_split->id();
+        bool distance_flag =
+            ramp_distance <
+            std::max(kMinFrontJudgeDis, ego_velocity * kPredictTimeHorizon);
+
+        is_nearing_ramp = type_flag && ramp_split_flag && distance_flag;
+        
       }
     }
     // 1. 识别当前Relative==0的可变车道，是不是在导航路线上，如果在，那么就不需要进行变道。
@@ -1036,38 +1052,45 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
         front_ramp_dir == RAMP_ON_RIGHT && !current_on_route) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
-      count_continue_general_mlc_++;
-      if (count_continue_general_mlc_ > 3) {
-        lc_num_task.emplace_back(1);
+        // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+      if (ego_seq == avoid_link_merge_lane_seq) {
+        mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
       }
-    } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp && !current_on_route) {
+
+      lc_num_task.emplace_back(1);
+    } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp &&
+               !current_on_route) {
       //split场景，目标车道在最左边的情况，一直向左变道
-      count_continue_general_mlc_++;
-      if (count_continue_general_mlc_ > 3) {
-        lc_num_task.emplace_back(-1);
+        // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+      if (ego_seq == avoid_link_merge_lane_seq) {
+        mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
       }
+
+      lc_num_task.emplace_back(-1);
     } else if (current_on_route) {
-      count_continue_general_mlc_ = 0;
       continue;
     } else {
       if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
-        count_continue_general_mlc_ = 0;
         continue;
       } else if (ego_seq > maxVal_seq) {
-        count_continue_general_mlc_++;
-        if (count_continue_general_mlc_ > 3) {
-          int err = ego_seq - maxVal_seq;
-          for (int i = 0; i < err; i++) {
-            lc_num_task.emplace_back(-1);
-          }
+        // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+        if (ego_seq == avoid_link_merge_lane_seq) {
+          mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
+        }
+        // 更新lc_num_task
+        int err = ego_seq - maxVal_seq;
+        for (int i = 0; i < err; i++) {
+          lc_num_task.emplace_back(-1);
         }
       } else if (ego_seq < minVal_seq) {
-        count_continue_general_mlc_++;
-        if (count_continue_general_mlc_ > 3) {
-          int err = minVal_seq - ego_seq;
-          for (int i = 0; i < err; i++) {
-            lc_num_task.emplace_back(1);
-          }
+        // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
+        if (ego_seq == avoid_link_merge_lane_seq) {
+          mlc_decider_scene_type_info_.mlc_scene_type = AVOID_MERGE;
+        }
+        // 更新lc_num_task
+        int err = minVal_seq - ego_seq;
+        for (int i = 0; i < err; i++) {
+          lc_num_task.emplace_back(1);
         }
       }
     }
@@ -1769,52 +1792,77 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
       continue;
     }
 
-    bool is_all_lane_arrive_next_link = true;
-
-    // Check if all lanes in the current split link have at least one successor
-    // lane in the next link.
-    for (const auto& lane_id : split_link->lane_ids()) {
-      const auto* temp_lane = ld_map_.GetLaneInfoByID(lane_id);
-
-      // filter empty lane and emergency lanes
-      if (temp_lane == nullptr || IsEmergencyLane(temp_lane)) {
-        continue;
-      }
-
-      bool suc_lane_in_next_link = false;
-      for (auto suc_lane : temp_lane->successor_lane_ids()) {
-        const auto* tmp_suc_lane = ld_map_.GetLaneInfoByID(suc_lane);
-        if (tmp_suc_lane == nullptr) {
-          continue;
-        }
-        if (tmp_suc_lane->link_id() == split_next_link->id()) {
-          suc_lane_in_next_link = true;
-          break;
-        }
-      }
-
-      if (!suc_lane_in_next_link) {
-        is_all_lane_arrive_next_link = false;
-        break;
-      }
-    }
-
     const bool is_ramp = ld_map_.isRamp(split_next_link->link_type());
     const bool is_SAPA =
         (split_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0;
 
-    if (is_ramp || is_SAPA || !is_all_lane_arrive_next_link) {
+    if (is_ramp || is_SAPA) {
+      ramp_info_vec_.emplace_back(split_info);
+      continue;
+    }
+
+    bool is_filter_split = true;
+    for (const auto& suc_link_id: split_link->successor_link_ids()) {
+      if (suc_link_id == split_next_link->id()) {
+        continue;
+      }
+
+      const auto& out_link = ld_map_.GetLinkOnRoute(suc_link_id);
+      if (out_link == nullptr) {
+        continue;
+      }
+
+      std::vector<iflymapdata::sdpro::Lane> exit_lane_vec;
+      if (!CalculateSplitLinkExitLane(split_link, out_link, exit_lane_vec)) {
+        continue;
+      }
+
+      for (const auto& lane: exit_lane_vec) {
+        if (!IsNeedFilterSplit(&lane)) {
+          is_filter_split = false;
+          break;
+        }
+      }
+
+      if (!is_filter_split) {
+        break;
+      }
+
+    }
+
+    if (!is_filter_split) {
       ramp_info_vec_.emplace_back(split_info);
     }
+
   }
 
   if (ramp_info_vec_.empty()) {
     return;
   }
 
-  route_info_output_.dis_to_ramp = ramp_info_vec_[0].second;
-  route_info_output_.ramp_direction =
-      CalculateSplitDirection(*ramp_info_vec_[0].first, ld_map_);
+  for (const auto& ramp_info : ramp_info_vec_) {
+    const auto& ramp_link = ramp_info.first;
+    if (ramp_link == nullptr) {
+      continue;
+    }
+
+    uint64 ramp_link_id = ramp_link->id();
+    const auto& ramp_next_link = ld_map_.GetNextLinkOnRoute(ramp_link_id);
+    if (ramp_next_link == nullptr) {
+      continue;
+    }
+
+    const bool is_ramp = ld_map_.isRamp(ramp_next_link->link_type());
+    const bool is_SAPA =
+        (ramp_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0;
+
+    if (is_ramp || is_SAPA) {
+      route_info_output_.dis_to_ramp = ramp_info.second;
+      route_info_output_.ramp_direction =
+          CalculateSplitDirection(*ramp_info.first, ld_map_);
+      break;
+    }
+  }
 }
 
 bool LDRouteInfoStrategy::get_sdpromap_valid() { return ldmap_valid_; }
@@ -2289,19 +2337,24 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
 
     // 增加判断入口车道是否已经存在feasible lane中，比如匝道进主路的场景
     bool is_entry_lane_in_feasible_lane = false;
+    // 增加判断，在入口车道处，feasible lane至少要有2条，否则自车前面躲避了，到入口车道处，自车又行驶到原车道上，产生了不合理变道
+    int feasible_lane_num = 0;
     for (const auto& lane_topo_group: feasible_lane_graph.lane_topo_groups) {
       if (lane_topo_group.link_id != entry_lane_info->link_id()) {
         continue;
       }
 
+      feasible_lane_num = lane_topo_group.topo_lanes.size();
       for (const auto& lane_topo : lane_topo_group.topo_lanes) {
         if (lane_topo.id == entry_lane_info->id()) {
           is_entry_lane_in_feasible_lane = true;
         }
       }
+
+      break;
     }
 
-    if (is_entry_lane_in_feasible_lane) {
+    if (is_entry_lane_in_feasible_lane || feasible_lane_num == 1) {
       ++it;
       continue;
     }
@@ -2313,6 +2366,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     }
 
     if (IsLinkInMergeInfoVec(entry_lane_belong_link)) {
+      avoid_link_merge_lane_id_vec_.emplace_back(*it);
       it = topo_lanes.erase(it);
     } else {
       ++it;
@@ -2832,6 +2886,75 @@ bool LDRouteInfoStrategy::IsSucMergeLink(
     }
 
   }
+
+  return false;
+}
+
+bool LDRouteInfoStrategy::CalculateSplitLinkExitLane(
+    const iflymapdata::sdpro::LinkInfo_Link* split_link,
+    const iflymapdata::sdpro::LinkInfo_Link* out_link,
+    std::vector<iflymapdata::sdpro::Lane>& exit_lane_vec) const {
+  if (split_link == nullptr || out_link == nullptr) {
+    return false;
+  }
+
+  exit_lane_vec.clear();
+
+  for (const auto& lane_id : out_link->lane_ids()) {
+    const auto& lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (lane == nullptr) {
+      continue;
+    }
+
+    if (IsDiversionLane(lane) || IsEmergencyLane(lane)) {
+      continue;
+    }
+
+    for (const auto& pre_lane_id: lane->predecessor_lane_ids()) {
+      const auto& pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
+      if (pre_lane == nullptr) {
+        continue;
+      }
+
+      if (IsDiversionLane(pre_lane) || IsEmergencyLane(pre_lane)) {
+        continue;
+      }
+
+      if (pre_lane->link_id() == split_link->id() && IsExitLane(pre_lane) &&
+          !HasLaneId(exit_lane_vec, pre_lane->id())) {
+        exit_lane_vec.emplace_back(*pre_lane);
+      }
+    }
+  }
+
+  return !exit_lane_vec.empty();
+}
+
+bool LDRouteInfoStrategy::IsNeedFilterSplit(
+    const iflymapdata::sdpro::Lane* lane) const {
+  if (lane == nullptr) {
+    return false;
+  }
+
+  const iflymapdata::sdpro::Lane* iter_lane = lane;
+
+  while (iter_lane) {
+    if (!IsDecelerateLane(iter_lane) && !IsExitLane(iter_lane)) {
+      return false;
+    }
+
+    if (iter_lane->lane_transiton() == iflymapdata::sdpro::LTS_LANE_ADD_RIGHT ||
+        iter_lane->lane_transiton() == iflymapdata::sdpro::LTS_LANE_ADD_LEFT) {
+      return true;
+    }
+
+    if (iter_lane->predecessor_lane_ids_size() != 1) {
+      return false;
+    }
+
+    iter_lane = ld_map_.GetLaneInfoByID(iter_lane->predecessor_lane_ids()[0]);
+  }
+
   return false;
 }
 }
