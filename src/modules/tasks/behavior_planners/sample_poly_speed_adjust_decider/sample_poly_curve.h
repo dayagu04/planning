@@ -55,7 +55,8 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
       const double weight_speed_change,
       const double weight_leading_veh_follow_s, const double weight_jerk_limit,
       const double front_edge_to_rear_axle,
-      const double back_edge_to_rear_axle);
+      const double back_edge_to_rear_axle,
+      const SamplePolySpeedAdjustDeciderConfig& config);
 
   double CalcS(const double t) const override;
   double CalcV(const double t) const override;

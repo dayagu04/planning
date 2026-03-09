@@ -203,7 +203,7 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
           weight_speed_change_, weight_leading_veh_follow_s_,
           weight_jerk_limit_, front_edge_to_rear_axle_,
-          rear_edge_to_rear_axle_);
+          rear_edge_to_rear_axle_, config_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -226,7 +226,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
     leading_veh_s = ego_s_ + leading_veh_.center_s;
     leading_veh_v = leading_veh_.v;
   }
-  double speed_differ_gain = GetStoplineSpdDifferGain();
+  double speed_differ_gain = 1.0;
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
   if (traffic_density_status_ == Congested || is_not_use_gap_select) {
     count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
@@ -511,7 +511,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       leading_veh_.id = lead_one->id();
       leading_veh_.v = lead_one->velocity();
       leading_veh_.center_s = lead_one->d_s_rel();
-      const auto& lead_one_agent = dynamic_world->GetNode(leading_veh_.id);
+      const auto& lead_one_agent = dynamic_world->GetNodeByAgentID(leading_veh_.id);
       if (lead_one_agent != nullptr) {
         const auto& primary_trajectories =
             lead_one_agent->node_trajectories_used_by_st_graph();
@@ -682,8 +682,11 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       session_->planning_context().lane_change_decider_output().is_nearing_ramp;
 
   distance_to_ramp_ = route_info_output.dis_to_ramp;
+
   const auto& merge_point_info =
-      virtual_lane_mgr->get_current_lane()->get_map_merge_point_info();
+      route_info_output.map_merge_points_info.empty()
+          ? virtual_lane_mgr->get_current_lane()->get_map_merge_point_info()
+          : route_info_output.map_merge_points_info.front();
   const auto& function_info = session_->environmental_model().function_info();
   distance_to_merge_point_ = NL_NMAX;
   distance_to_road_split_ = NL_NMAX;
@@ -841,7 +844,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
             weight_speed_change_, weight_leading_veh_follow_s_,
             weight_jerk_limit_, front_edge_to_rear_axle_,
-            rear_edge_to_rear_axle_);
+            rear_edge_to_rear_axle_,config_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
     planning::speed::STPoint stitched_poly_checked_lower_st_point,
@@ -977,27 +980,32 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double v_lead_clip = std::max(headway_v, 0.0);
   double t_gap = interp(ego_v, t_gap_ego_v_bp, t_gap_ego_v);
   t_gap = t_gap * (0.6 * ego_v * 0.01);  // why?
-  double v_rel = std::max(ego_v - v_lead_clip, 0.0);
-  double distance_hysteresis = ego_v * 0.3;
-  double fix_safe_distance = v_rel * ego_v / (2.0 * 2.0);
-  return std::max(fix_safe_distance + distance_hysteresis, 3.0);
+  double v_rel = std::fmax(ego_v - v_lead_clip, 0.0);
+  double distance_hysteresis = ego_v * config_.leading_safe_delay_time;
+  double min_follow_distance = 3.0;
+  double fix_safe_distance = v_rel * ego_v / (2.0 * config_.leading_safe_max_dec);
+  return std::max(min_follow_distance + fix_safe_distance + distance_hysteresis, min_follow_distance);
 }
 
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
   if (leading_veh_.id != kNoAgentId && leading_veh_.id != -1) {
     double poly_arrived_t = min_cost_traj_ptr_->arrived_t();
+    int dex = static_cast<int>(poly_arrived_t / kTimeResolution + 0.51);
+    double traveled_distance = 0.0;
+    double leading_arrived_v = 0.0;
+    if (dex < leading_veh_.prediction_path.size()) {
+      traveled_distance = leading_veh_.prediction_path[dex].first;
+      leading_arrived_v = leading_veh_.prediction_path[dex].second;
+    } else {
+      traveled_distance = leading_veh_.v * poly_arrived_t;
+      leading_arrived_v = leading_veh_.v;
+    }
     const double ego_pred_end_s = min_cost_traj_ptr_->CalcS(poly_arrived_t);
-    double buffer_distance = CalcHeadwayDistance(leading_veh_.v, ego_v_,
+    double ego_pred_end_v = min_cost_traj_ptr_->arrived_v();
+    double buffer_distance = CalcHeadwayDistance(leading_arrived_v, ego_pred_end_v,
                                                  t_gap_ego_v_bp_, t_gap_ego_v_);
     if (leading_veh_.half_length > 4.0) {
       buffer_distance += 3.0;
-    }
-    int dex = static_cast<int>(poly_arrived_t / kTimeResolution + 0.51);
-    double traveled_distance = 0.0;
-    if (dex < leading_veh_.prediction_path.size()) {
-      traveled_distance = leading_veh_.prediction_path[dex].first;
-    } else {
-      traveled_distance = leading_veh_.v * poly_arrived_t;
     }
     if (ego_pred_end_s >
         leading_veh_.center_s + ego_s_ + traveled_distance - buffer_distance) {

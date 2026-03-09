@@ -1057,6 +1057,21 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     decleration_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_jerk_limit"});
+    leading_safe_distance_gain = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_distance_gain"});
+    leading_safe_delay_time = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_delay_time"});
+    leading_safe_max_dec = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_max_dec"});
+    leading_safe_overstep_gain = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_overstep_gain"});
+    leading_safe_overstep_buffer = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_overstep_buffer"});
   }
 
   int sample_v_nums = 15;
@@ -1110,6 +1125,12 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double decleration_scene_weight_speed_change = 0.0;
   double decleration_scene_weight_leading_veh_follow_s = 1.0;
   double decleration_scene_weight_jerk_limit = 2.0;
+
+  double leading_safe_distance_gain = 1.3;
+  double leading_safe_delay_time = 0.5;
+  double leading_safe_max_dec = 2.0;
+  double leading_safe_overstep_gain = 4.0;
+  double leading_safe_overstep_buffer = 3.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
