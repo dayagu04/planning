@@ -884,6 +884,23 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
             MERGE_SCENE;
       }
     }
+
+    // 当自车位于加速车道时，认为是汇入主路
+    route_info_output_.is_ego_on_accelerate_lane = false;
+    for (const auto& lane_id : current_link_->lane_ids()) {
+      const auto& lane = ld_map_.GetLaneInfoByID(lane_id);
+      if (lane == nullptr) {
+        continue;
+      }
+      bool is_ego_on_this_lane =
+          route_info_output_.ego_seq ==
+          current_link_->lane_num() - lane->sequence() + 1;
+      if (IsAccelerateLane(lane) && is_ego_on_this_lane) {
+        route_info_output_.is_ego_on_accelerate_lane = true;
+        break;
+      }
+    }
+    
     int real_lane_num = link_total_lane_num;
     // 判断是否有应急车道、加速车道、入口车道
     bool cur_link_is_exist_emergency_lane = false;
