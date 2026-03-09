@@ -191,7 +191,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
     planning_input_.set_q_acc_start(config_.q_acc_start);
     planning_input_.set_q_jerk_start(config_.q_jerk_start);
-    planning_input_.set_q_pos_safe_cost(config_.q_pos_safe_cost);
+    planning_input_.set_q_pos_safe(config_.q_pos_safe);
     planning_input_.set_safe_distance(config_.safe_distance);
     planning_input_.set_q_emergency_stop(0.0);
   } else {
@@ -209,17 +209,24 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
     planning_input_.set_q_acc_start(config_.q_acc_start);
     planning_input_.set_q_jerk_start(config_.q_jerk_start);
-    planning_input_.set_q_pos_safe_cost(config_.q_pos_safe_cost);
+    planning_input_.set_q_pos_safe(config_.q_pos_safe);
     planning_input_.set_safe_distance(config_.safe_distance);
     planning_input_.set_q_emergency_stop(0.0);
+    planning_input_.set_is_lon_cipv_emergency_stop(false);
+    planning_input_.set_is_joint_danger_emergency_stop(false);
   }
 
-  const auto& lon_ref_path_decider_output =
+  const auto &lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_comfort_target_lon_emergency_stop){
+  if (lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
+      lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
     planning_input_.set_q_acc(1.0);
     planning_input_.set_q_acc_start(0.0);
     planning_input_.set_q_emergency_stop(config_.q_emergency_stop);
+    planning_input_.set_is_lon_cipv_emergency_stop(
+        lon_ref_path_decider_output.is_lon_cipv_emergency_stop);
+    planning_input_.set_is_joint_danger_emergency_stop(
+        lon_ref_path_decider_output.is_joint_danger_emergency_stop);
   }
   if (session_->is_rads_scene()) {
     planning_input_.set_safe_distance(0.0);
@@ -275,7 +282,7 @@ void SccLongitudinalMotionPlannerV3::Update() {
     a_vec[i] = planning_output.acc_vec(i);
     j_vec[i] = planning_output.jerk_vec(i);
 
-    if(start_stop_info == common::StartStopInfo::STOP) {
+    if (start_stop_info == common::StartStopInfo::STOP) {
       s_vec[i] = 0.0;
       v_vec[i] = 0.0;
       a_vec[i] = 0.0;
@@ -312,7 +319,7 @@ void SccLongitudinalMotionPlannerV3::Update() {
   }
   motion_planner_output.s_lon_vec = s_vec;
 
-  const auto& planned_kd_path =
+  const auto &planned_kd_path =
       session_->planning_context().st_graph_helper()->processed_path();
   Point2D planning_end_xy_point;
   if (planned_kd_path != nullptr &&
