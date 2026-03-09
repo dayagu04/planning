@@ -895,12 +895,12 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       bool is_ego_on_this_lane =
           route_info_output_.ego_seq ==
           current_link_->lane_num() - lane->sequence() + 1;
-      if (IsAccelerateLane(lane) && is_ego_on_this_lane) {
+      if (IsAccelerateLane(lane) || IsEntryLane(lane) && is_ego_on_this_lane) {
         route_info_output_.is_ego_on_accelerate_lane = true;
         break;
       }
     }
-    
+
     int real_lane_num = link_total_lane_num;
     // 判断是否有应急车道、加速车道、入口车道
     bool cur_link_is_exist_emergency_lane = false;
