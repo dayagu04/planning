@@ -46,11 +46,6 @@ class AgentManager {
 
   void DeleteOlderAgentInfo();
 
-  void RecalculateDecelTrajectories(
-      const std::shared_ptr<Agent>& agent,
-      const std::unordered_map<int32_t, std::list<std::shared_ptr<Agent>>>&
-          historical_agents_info);
-
  private:
   planning::framework::Session* session_ = nullptr;
   EgoPlanningObstacleManagerConfig config_;
