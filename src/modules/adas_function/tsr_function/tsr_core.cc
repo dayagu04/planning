@@ -375,6 +375,18 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
                                               ->get_local_view()
                                               .vehicle_service_output_info;
   
+  auto tsr_sdpro_map_ptr = &GetContext.mutable_session()
+                                ->mutable_environmental_model()
+                                ->get_local_view()
+                                .sdpro_map_info;
+
+  if (tsr_sdpro_map_ptr->navi_status().mode() ==
+      iflymapdata::sdpro::NaviStatus_NaviMode::NaviStatus_NaviMode_NAVI) {
+    tsr_navi_flag_ = true;
+  } else {
+    tsr_navi_flag_ = false;
+  }
+  
   // 道路信息
   auto road_info = GetContext.get_road_info();
 
@@ -384,6 +396,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
 
   // 先尝试获取sd_map限速信息
+  //0309新增策略，只有开启车机导航才使用地图限速。否则使用感知限速
   if (road_info->sdmap_info.valid_flag) {
     sd_map_speed_limit_valid = true;
     sd_map_speed_limit = road_info->sdmap_info.speed_limit;
@@ -391,13 +404,13 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   }
 
   // 如果sd_map限速有效且大于0，则使用sd_map限速
-  if (sd_map_speed_limit_valid) {
+  if (sd_map_speed_limit_valid  && tsr_navi_flag_) {
     current_map_speed_limit_valid_ = true;
     current_map_speed_limit_ = sd_map_speed_limit;
     current_map_type_ = 1;  // sd_map
   }
   // 否则尝试获取sd_pro_map限速信息
-  else if (road_info->sdpromap_info.valid_flag) {
+  else if (road_info->sdpromap_info.valid_flag && tsr_navi_flag_) {
     current_map_speed_limit_valid_ = true;
     current_map_speed_limit_ = road_info->sdpromap_info.speed_limit;
     current_map_type_ = 2;  // sd_pro_map
@@ -597,17 +610,7 @@ if (tsr_speed_limit_ == 0) {
     end_of_speed_limit_ever_appeared_ = false;  // 重置曾经出现标志
     speed_limit_renew_flag_ = true;
   }
-  auto tsr_sdpro_map_ptr = &GetContext.mutable_session()
-                                ->mutable_environmental_model()
-                                ->get_local_view()
-                                .sdpro_map_info;
 
-  if (tsr_sdpro_map_ptr->navi_status().mode() ==
-      iflymapdata::sdpro::NaviStatus_NaviMode::NaviStatus_NaviMode_NAVI) {
-    tsr_navi_flag_ = true;
-  } else {
-    tsr_navi_flag_ = false;
-  }
 
   // 只要有有效的sdmap限速信息就采用sdmap的限速信息
   if (sd_map_speed_limit_valid && GetContext.get_param()->sd_map_speed_sw &&
