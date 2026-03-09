@@ -3248,3 +3248,31 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
     'name': rads_info_names,
     'data': rads_info_datas,
   })
+
+def load_planning_request_table():
+  # data
+  request_data = ColumnDataSource(data={'name': [], 'data': []})
+  planning_request_data = {'request_data': request_data}
+  # table
+  columns = [TableColumn(field="name", title="name",),
+             TableColumn(field="data", title="data")]
+  planning_request_table = DataTable(source=request_data, columns=columns, width=400, height=100)
+  return planning_request_data, planning_request_table
+
+def update_planning_request_data(bag_loader, local_view_data, planning_request_data):
+  request_names, request_datas = [], []
+  if bag_loader.plan_msg['enable'] == True:
+    try:
+      planning_request = local_view_data['data_msg']['plan_msg'].planning_request
+      take_over_req_level = planning_request.take_over_req_level
+      request_reason = planning_request.request_reason
+      request_names.append('req_level')
+      request_names.append('req_reason')
+      request_datas.append(take_over_req_level)
+      request_datas.append(request_reason)
+    except Exception as e:
+      print("planning_request error: ", e)
+  planning_request_data['request_data'].data.update({
+    'name': request_names,
+    'data': request_datas,
+  })

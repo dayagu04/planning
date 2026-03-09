@@ -57,6 +57,7 @@ struct MotionPlannerOutput {
   double recommended_acc_bound;
 
   size_t lat_valid_end_idx;
+  size_t concerned_index;
 };
 
 }  // namespace planning

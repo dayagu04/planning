@@ -413,6 +413,31 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     landing_point.is_avaliable = false;
   }
   ad_info.landing_point = landing_point;
+  //接管请求
+  auto& planning_output = session_->mutable_planning_context()->mutable_planning_output();
+  if(lane_change_decider_output.is_collision_risk &&
+     (curr_state == kLaneChangeHold ||
+      curr_state == kLaneChangeExecution ||
+      curr_state == kLaneChangeCancel)) {
+    planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_WARRING;
+    planning_output.planning_request.request_reason = iflyauto::REQUEST_REASON_LANE_CHANGE_RISK;
+  }
+  if (lane_change_decider_output.is_hard_to_merge &&
+     (curr_state == kLaneChangeHold ||
+      curr_state == kLaneChangePropose)) {
+    planning_output.planning_request.take_over_req_level =
+        iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
+    planning_output.planning_request.request_reason =
+        iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_UNABLE;
+  }
+  if (lane_change_decider_output.is_fail_to_merge &&
+     (curr_state == kLaneChangeHold ||
+      curr_state == kLaneChangePropose)) {
+    planning_output.planning_request.take_over_req_level =
+        iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
+    planning_output.planning_request.request_reason =
+        iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_FAILED;
+  }
   JSON_DEBUG_VALUE("lane_change_reason",
                    static_cast<int>(ad_info.lane_change_reason))
   JSON_DEBUG_VALUE("status_update_reason",

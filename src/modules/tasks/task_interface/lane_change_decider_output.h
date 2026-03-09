@@ -62,6 +62,10 @@ struct LaneChangeDeciderOutput {
   // idm guess
   TrajectoryPoints ego_trajs_future;
   int origin_agent_id = -1;
+  bool is_collision_risk = false;
+  double ego_press_line_ratio = 0.0;
+  bool is_hard_to_merge = false;
+  bool is_fail_to_merge = false;
 };
 
 }  // namespace planning

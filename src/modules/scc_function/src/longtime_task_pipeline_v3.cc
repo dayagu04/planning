@@ -334,7 +334,6 @@ bool LongTimeTaskPipelineV3::Run() {
   }
 
   hmi_decider_->Execute();
-
   return true;
 }
 

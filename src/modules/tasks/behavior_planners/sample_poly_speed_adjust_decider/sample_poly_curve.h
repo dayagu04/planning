@@ -76,50 +76,52 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
                                 const double ego_a, const double obj_a,
                                 bool is_front_car);
   void CostInit();
-  // interface:
-  const QuarticPolynomial& poly() const { return poly_; };
+
+ public:
+  const QuarticPolynomial& poly() const { return poly_; }
   int32_t end_point_matched_gap_front_id() const {
     return end_point_matched_gap_front_id_;
-  };
+  }
   int32_t end_point_matched_gap_back_id() const {
     return end_point_matched_gap_back_id_;
-  };
+  }
 
   void set_end_point_matched_gap_front_id(
       const int32_t end_point_matched_gap_front_id) {
     end_point_matched_gap_front_id_ = end_point_matched_gap_front_id;
-  };
+  }
 
   void set_end_point_matched_gap_back_id(
       const int32_t end_point_matched_gap_back_id) {
     end_point_matched_gap_back_id_ = end_point_matched_gap_back_id;
-  };
+  }
 
-  const FollowVelCost& follow_vel_cost() const { return follow_vel_cost_; };
+  const FollowVelCost& follow_vel_cost() const { return follow_vel_cost_; }
 
-  const StopLineCost& stop_line_cost() const { return stop_line_cost_; };
+  const StopLineCost& stop_line_cost() const { return stop_line_cost_; }
 
   const LeadingVehSafeCost& leading_veh_safe_cost() const {
     return leading_veh_safe_cost_;
-  };
+  }
 
   const SpeedVariableCost& speed_variable_cost() const {
     return speed_variable_cost_;
-  };
+  }
 
   const GapAvaliableCost& gap_avaliable_cost() const {
     return gap_avaliable_cost_;
-  };
+  }
 
   const StopPenaltyCost& stop_penalty_cost() const {
     return stop_penalty_cost_;
-  };
+  }
 
   const MatchGapCost& anchor_points_match_gap_cost() const {
     return anchor_points_match_gap_cost_;
-  };
+  }
 
   const AccLimitCost& acc_limit_cost() const { return acc_limit_cost_; }
+  bool is_left_distance_enough() const { return is_left_distance_enough_; }
 
  private:
   QuarticPolynomial poly_;
@@ -141,6 +143,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   double safe_border_distance_to_gap_back_obj_ = 0.0;
   double safe_border_distance_to_gap_front_obj_ = 0.0;
   double rest_changeable_distance_ = 0.0;
+  bool is_left_distance_enough_ = true;
 
   // std::vector<double> anchor_points_checked_t_vec_;
   MatchGapCost anchor_points_match_gap_cost_;

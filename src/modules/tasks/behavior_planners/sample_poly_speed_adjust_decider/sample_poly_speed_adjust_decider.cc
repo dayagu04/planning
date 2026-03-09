@@ -150,7 +150,35 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   auto& v_search_path = session_->mutable_planning_context()
                             ->mutable_lane_change_decider_output()
                             .v_search_vec;
-
+  auto& ad_info = session_->mutable_planning_context()
+                      ->mutable_planning_hmi_info()
+                      ->ad_info;
+  auto& merge_hard = session_->mutable_planning_context()
+                         ->mutable_lane_change_decider_output()
+                         .is_hard_to_merge;
+  auto& merge_fail = session_->mutable_planning_context()
+                         ->mutable_lane_change_decider_output()
+                         .is_fail_to_merge;
+  merge_hard = false;
+  merge_fail = false;
+  if (is_merge_change_ && ok) {
+    if (min_cost_traj_ptr_ != nullptr &&
+        !min_cost_traj_ptr_->is_left_distance_enough()) {
+      if (distance_to_stop_point_ < 5.0) {
+        merge_fail = true;
+      } else {
+        merge_hard = true;
+      }
+    } else if (min_cost_traj_ptr_ == nullptr) {
+      if (distance_to_stop_point_ < 5.0) {
+        merge_fail = true;
+      } else if (distance_to_stop_point_ < ego_v_ * 1.5) {
+        merge_hard = true;
+      }
+    }
+  }
+  JSON_DEBUG_VALUE("merge_fail",merge_fail);
+  JSON_DEBUG_VALUE("merge_hard",merge_hard);
   if (ok && min_cost_traj_ptr_ != nullptr) {
     session_->mutable_planning_context()
         ->mutable_lane_change_decider_output()
