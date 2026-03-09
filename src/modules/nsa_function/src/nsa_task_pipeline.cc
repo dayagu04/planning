@@ -14,7 +14,7 @@ NsaTaskPipeline::NsaTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
   nsa_general_lateral_decider_ =
       std::make_unique<NSAGeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
-      std::make_unique<LateralMotionPlanner>(config_builder, session);
+      std::make_unique<NSALateralMotionPlanner>(config_builder, session);
   general_longitudinal_decider =
       std::make_unique<GeneralLongitudinalDecider>(config_builder, session);
   longitudinal_motion_planner_ =

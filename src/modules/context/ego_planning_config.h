@@ -2864,14 +2864,19 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     ReadItem<bool>(json, pass_acc_mode, "lat_motion_ilqr", "pass_acc_mode");
-    ReadItem<bool>(json, enable_straight_rtk, "lat_motion_ilqr",
-                   "enable_straight_rtk");
+    ReadItem<bool>(json, enable_straight_path, "lat_motion_ilqr",
+                   "enable_straight_path");
     ReadItem<bool>(json, warm_start_enable, "lat_motion_ilqr",
                    "warm_start_enable");
     ReadItem<bool>(json, use_index_clip, "lat_motion_ilqr", "use_index_clip");
     ReadItem<bool>(json, use_acc_compensation, "lat_motion_ilqr",
                    "use_acc_compensation");
+    ReadItem<bool>(json, use_al_ilqr, "lat_motion_ilqr",
+                   "use_al_ilqr");
+    ReadItem<size_t>(json, horizon, "lat_motion_ilqr", "horizon");
+    ReadItem<size_t>(json, max_iter, "lat_motion_ilqr", "max_iter");
     ReadItem<double>(json, delta_t, "lat_motion_ilqr", "delta_t");
+    ReadItem<double>(json, du_tol, "lat_motion_ilqr", "du_tol");
     ReadItem<double>(json, min_v_cruise, "lat_motion_ilqr", "min_v_cruise");
     ReadItem<double>(json, min_ego_vel, "lat_motion_ilqr", "min_ego_vel");
     ReadItem<double>(json, acc_bound, "lat_motion_ilqr", "acc_bound");
@@ -3125,11 +3130,15 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   }
 
   bool pass_acc_mode = false;
-  bool enable_straight_rtk = false;
-  bool warm_start_enable = true;
+  bool enable_straight_path = false;
+  bool warm_start_enable = false;
   bool use_index_clip = true;
   bool use_acc_compensation = true;
+  bool use_al_ilqr  = false;
+  size_t horizon = 25;
+  size_t max_iter = 15;
   double delta_t = 0.2;
+  double du_tol = 0.01;
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;
   double max_steer_angle_dot = 200.0;

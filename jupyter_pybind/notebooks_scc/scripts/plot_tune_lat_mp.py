@@ -14,18 +14,9 @@ sys.path.append('../../python_proto')
 from python_proto import lateral_motion_planner_pb2
 from jupyter_pybind import lateral_motion_planning_py
 from bokeh.resources import INLINE
+from bokeh.models import DataTable, TableColumn, Panel, Tabs
 # bag path and frame dt
-bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758024572.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758028762.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758258645.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758263693.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758271167.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758345307.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758367706.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250904/20250904-16-41-39/data_collection_CHERY_M32T_50813_EVENT_KEY_2025-09-04-16-41-39_no_camera.bag.1758512506.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50815/trigger/20250904/20250904-15-19-39/data_collection_CHERY_M32T_50815_EVENT_KEY_2025-09-04-15-19-39_no_camera.bag.1758512781.open-loop.noa.plan"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250920/20250920-14-51-01/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-09-20-14-51-01_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_20406/fcw_trigger/20260304/20260304-14-22-38/fcw_in_data_collection_BESTUNE_E541_20406_EVENT_FILTER_2026-03-04-14-22-38_no_camera.bag"
 
 frame_dt = 0.1 # sec
 
@@ -40,14 +31,14 @@ max_time = bag_loader.load_all_data()
 steer_ratio = load_steer_ratio(global_var.get_value('car_type'))
 wheel_base = load_wheel_base(global_var.get_value('car_type'))
 fig1, local_view_data = load_local_view_figure()
-fig1.height = 1500
+fig1.height = 1300
 # init pybind
 lateral_motion_planning_py.Init()
 
 lat_motion_plan_input0 = bag_loader.plan_debug_msg['data'][-1].lateral_motion_planning_input
 
 # load lateral planning (behavior and motion)
-fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data = load_lat_plan_figure(fig1)
+fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, lat_plan_data = load_lat_plan_figure(fig1)
 load_measure_distance_tool(fig1)
 load_measure_distance_tool(fig7)
 
@@ -66,7 +57,7 @@ param_columns = [
         TableColumn(field="origin param", title="origin param"),
         TableColumn(field="new param", title="current param"),
       ]
-tab3 = DataTable(source = param, columns = param_columns, width = 450, height = 500)
+tab3 = DataTable(source = param, columns = param_columns, width = 450, height = 300)
 
 def get_plan_debug_msg_idx(bag_loader, bag_time):
   plan_debug_msg_idx = 0
@@ -84,9 +75,9 @@ def get_vs_msg_idx(bag_loader, bag_time):
     vs_msg = bag_loader.vs_msg['data'][vs_msg_idx]
   return vs_msg_idx
 
-fig8 = bkp.figure(x_axis_label='time', y_axis_label='steer deg', width=600, height=160)
-fig9 = bkp.figure(x_axis_label='time', y_axis_label='steer dot deg', width=600, height=160)
-fig10 = bkp.figure(x_axis_label='s', y_axis_label='k_radius', width=600, height=160)
+fig11 = bkp.figure(x_axis_label='time', y_axis_label='steer deg', width=800, height=160)
+fig12 = bkp.figure(x_axis_label='time', y_axis_label='steer dot deg', width=800, height=160)
+fig13 = bkp.figure(x_axis_label='s', y_axis_label='k_radius', width=800, height=160)
 data_steer = ColumnDataSource(data ={
   'time': [],
   'plan_steer_deg':[],
@@ -126,30 +117,30 @@ data_steer.data.update({
   'ego_steer_dot_deg': ego_steer_dot_deg,
   'ego_yaw_rate_to_steer_deg': ego_yaw_rate_to_steer_deg
 })
-f8 = fig8.line('time', 'plan_steer_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_deg')
-fig8.line('time', 'ego_steer_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_deg')
-fig8.line('time', 'ego_yaw_rate_to_steer_deg', source = data_steer, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'ego_real_steer_deg')
-f9 = fig9.line('time', 'plan_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_dot_deg')
-fig9.line('time', 'ego_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_dot_deg')
-f10_1 = fig10.line('center_line_s', 'center_line_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'kappa radius')
-fig10.line('center_line_s', 'center_line_d_poly_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'road radius')
+f11 = fig11.line('time', 'plan_steer_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_deg')
+fig11.line('time', 'ego_steer_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_deg')
+fig11.line('time', 'ego_yaw_rate_to_steer_deg', source = data_steer, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'ego_real_steer_deg')
+f12 = fig12.line('time', 'plan_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'plan_steer_dot_deg')
+fig12.line('time', 'ego_steer_dot_deg', source = data_steer, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ego_steer_dot_deg')
+f13_1 = fig13.line('center_line_s', 'center_line_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'kappa radius')
+fig13.line('center_line_s', 'center_line_d_poly_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'road radius')
 refline_kappa_radius = ColumnDataSource(data = {'refline_s':[], 'refline_curvature':[]})
-f10_2 = fig10.line('refline_s', 'refline_curvature', source = refline_kappa_radius, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
-fig10.line('center_line_s', 'center_line_confidence', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'road confidence')
-hover8 = HoverTool(renderers=[f8], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg'), ('ego_real_steer_deg', '@ego_yaw_rate_to_steer_deg')], mode='vline')
-hover9 = HoverTool(renderers=[f9], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
-hover10_1 = HoverTool(renderers=[f10_1], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
-hover10_2 = HoverTool(renderers=[f10_2], tooltips=[('s', '@refline_s'), ('radius', '@refline_curvature')], mode='vline')
-fig8.add_tools(hover8)
-fig9.add_tools(hover9)
-fig10.add_tools(hover10_1)
-fig10.add_tools(hover10_2)
-fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
-fig9.toolbar.active_scroll = fig9.select_one(WheelZoomTool)
-fig10.toolbar.active_scroll = fig10.select_one(WheelZoomTool)
-fig8.legend.click_policy = 'hide'
-fig9.legend.click_policy = 'hide'
-fig10.legend.click_policy = 'hide'
+f13_2 = fig13.line('refline_s', 'refline_curvature', source = refline_kappa_radius, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
+fig13.line('center_line_s', 'center_line_confidence', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'road confidence')
+hover11 = HoverTool(renderers=[f11], tooltips=[('time', '@time'), ('plan_steer_deg', '@plan_steer_deg'), ('ego_steer_deg', '@ego_steer_deg'), ('ego_real_steer_deg', '@ego_yaw_rate_to_steer_deg')], mode='vline')
+hover9 = HoverTool(renderers=[f12], tooltips=[('time', '@time'), ('plan_steer_dot_deg', '@plan_steer_dot_deg'), ('ego_steer_dot_deg', '@ego_steer_dot_deg')], mode='vline')
+hover10_1 = HoverTool(renderers=[f13_1], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
+hover10_2 = HoverTool(renderers=[f13_2], tooltips=[('s', '@refline_s'), ('radius', '@refline_curvature')], mode='vline')
+fig11.add_tools(hover11)
+fig12.add_tools(hover9)
+fig13.add_tools(hover10_1)
+fig13.add_tools(hover10_2)
+fig11.toolbar.active_scroll = fig11.select_one(WheelZoomTool)
+fig12.toolbar.active_scroll = fig12.select_one(WheelZoomTool)
+fig13.toolbar.active_scroll = fig13.select_one(WheelZoomTool)
+fig11.legend.click_policy = 'hide'
+fig12.legend.click_policy = 'hide'
+fig13.legend.click_policy = 'hide'
 
 coord_tf = coord_transformer()
 
@@ -192,7 +183,7 @@ class LocalViewSlider:
     self.end_ratio1_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio1",min=0.0, max=10.0, value=0.3, step=0.1)
     self.end_ratio2_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio2",min=0.0, max=10.0, value=0.3, step=0.1)
     self.end_ratio3_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio3",min=0.0, max=10.0, value=1.5, step=0.1)
-    self.max_iter_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "max_iter",min=0, max=10, value=10, step=1)
+    self.max_iter_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "max_iter",min=0, max=20, value=10, step=1)
 
     self.first_soft_ub_start_idx = ipywidgets.IntText(value=0, description='1soft_ub_start_idx:')
     self.first_soft_ub_end_idx = ipywidgets.IntText(value=26, description='1soft_ub_end_idx:')
@@ -527,7 +518,11 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
 
   push_notebook()
 
-bkp.show(row(fig1, column(fig7, row(tab2, tab3)), column(fig2, fig3, fig4, fig5, fig6, fig8, fig9, fig10)), notebook_handle=True)
+pan1 = Panel(child=row(column(fig2, fig3, fig4, fig5, fig6, row(tab2, tab3))), title="PathInfo")
+pan2 = Panel(child=row(column(fig8, fig11, fig12, fig13)), title="IterInfo")
+pan3 = Panel(child=row(column(fig7)), title="!Figure")
+pans = Tabs(tabs=[ pan1, pan2, pan3 ])
+bkp.show(row(fig1, pans), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
 
 
