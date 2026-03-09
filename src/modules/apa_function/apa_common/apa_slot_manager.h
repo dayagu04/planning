@@ -265,6 +265,11 @@ class ApaSlotManager final {
   }
   const bool GetRecommendParkOut() const { return recommend_park_out_; }
 
+  const std::unordered_map<size_t, std::pair<bool, int>>&
+  GetPerpendicularRedefineInfoMap() {
+    return perpendicular_redefine_info_map_;
+  }
+
  private:
   void ParkingLotCruiseProcess();
 
