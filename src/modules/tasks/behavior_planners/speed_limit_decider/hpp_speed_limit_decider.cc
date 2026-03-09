@@ -75,20 +75,13 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
                                 ->mutable_planning_result()
                                 .traj_points;
 
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-
-  const double ego_v =
-      reference_path_ptr->get_frenet_ego_state().planning_init_point().v;
-
   const double max_lat_acceleration = ComputeMaxLatAcceleration();
   double vlimit_jerk = 0.0;
   double time_to_brake = 1e-2;
   double out_max_curvature = 0.0;
 
   double v_limit_curv =
-      ComputeCurvatureSpeedLimit(traj_points, ego_v, max_lat_acceleration,
+      ComputeCurvatureSpeedLimit(traj_points, max_lat_acceleration,
                                  vlimit_jerk, time_to_brake, out_max_curvature);
 
   if (v_limit_curv < v_target_) {
@@ -166,9 +159,10 @@ const double HPPSpeedLimitDecider::ComputeMaxLatAcceleration() {
 }
 
 const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
-    const TrajectoryPoints& traj_points, double ego_velocity,
-    double max_lat_acceleration, double& vlimit_jerk, double& time_to_brake,
-    double& out_max_curvature) {
+    const TrajectoryPoints& traj_points, double max_lat_acceleration,
+    double& vlimit_jerk, double& time_to_brake, double& out_max_curvature) {
+  const double ego_velocity =
+      session_->environmental_model().get_ego_state_manager()->planning_init_point().v;
   const double trigger_distance = interp(
       ego_velocity, hpp_speed_limit_config_.curv_trigger_velocity_breakpoints,
       hpp_speed_limit_config_.curv_trigger_distances);
@@ -232,7 +226,8 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
   vlimit_jerk = 0.0;
   time_to_brake = 1e-2;
 
-  if (v_limit_curv < ego_velocity && max_curv_s < trigger_distance) {
+  if (max_curv_s <
+      trigger_distance + max_curvature_slow_down_triger_buffer_) {
     // 需要减速以满足弯道限速
     const double ego_a = -2.0;  // 假设减速加速度 -2 m/s²
     const double b_square_minus_4ac =
@@ -247,8 +242,10 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
                     std::pow(time_to_brake, 2);
     }
 
+    max_curvature_slow_down_triger_buffer_ = 1.0;
     return v_limit_curv;
   }
+  max_curvature_slow_down_triger_buffer_ = -1.0;
   return hpp_speed_limit_config_.velocity_upper_bound;
 }
 

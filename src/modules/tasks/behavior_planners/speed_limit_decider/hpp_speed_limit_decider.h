@@ -27,7 +27,6 @@ class HPPSpeedLimitDecider : public Task {
 
   const double ComputeMaxLatAcceleration();
   const double ComputeCurvatureSpeedLimit(const TrajectoryPoints& traj_points,
-                                          double ego_velocity,
                                           double max_lat_acceleration,
                                           double& vlimit_jerk,
                                           double& time_to_brake,
@@ -43,5 +42,6 @@ class HPPSpeedLimitDecider : public Task {
   SpeedLimitType v_target_type_;  // final v target type
 
   double max_curvature_;
+  double max_curvature_slow_down_triger_buffer_ = -1.0;
 };
 }  // namespace planning
