@@ -66,6 +66,8 @@ class LdpCore {
 
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool left_suppress_repeat_warning_flag_ = false;
+  // 左侧不处于抑制重复报警状态的持续时长 单位:s
+  double left_not_suppress_repeat_warning_flag_duration_ = 0.0;
   // LDP纠偏冷却时间阈值 单位:s
   double ldp_right_coolingtime_duration_ = 0.0;
   double ldp_left_coolingtime_duration_ = 0.0;
@@ -91,6 +93,8 @@ class LdpCore {
 
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool right_suppress_repeat_warning_flag_ = false;
+  // 右侧不处于抑制重复报警状态的持续时长 单位:s
+  double right_not_suppress_repeat_warning_flag_duration_ = 0.0;
   uint32 ldp_right_suppression_code_ = 255;
   uint32 UpdateLdpRightSuppressionCode(void);
 
