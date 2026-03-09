@@ -25,7 +25,7 @@
 
 //   bool Execute() override;
 
-//   bool update_basic_path(const int &status);
+//   bool update_basic_path(const int status);
 
 //   void update_premove_path(
 //       int status, bool should_premove,
@@ -43,7 +43,7 @@
 
 //   double calc_lane_width_by_dist(const std::vector<double> &left_poly,
 //                                  const std::vector<double> &right_poly,
-//                                  const double &dist_x);
+//                                  const double dist_x);
 
 //   bool update(int lane_status, bool flag_avoid, bool execute_premove,
 //               double dist_rblane,

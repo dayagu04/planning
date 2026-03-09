@@ -439,13 +439,13 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     if (!ref_frenet_coor->XYToSL(new_state.x_, new_state.y_, &s, &l)) {
       return false;  // 更换xytosl
     }
-    
+
     // 确保s值单调递增，避免坐标转换误差导致的非单调问题
     if (s <= last_s) {
       s = last_s + min_s_increment;
     }
     last_s = s;
-    
+
     Point2D sl_point(s, l);
     TrajectoryPoint ego_traj_point;
     if (ego_future_trajectory_.empty()) {
@@ -540,12 +540,12 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
 LaneChangePathGenerateManager::State_Sim
 LaneChangePathGenerateManager::UpdateDynamicsOneStep(State_Sim state,
                                                      double dt) {
-  const double& theta = state.theta;
-  const double& delta = state.delta;
-  const double& omega = state.omega;
+  const double theta = state.theta;
+  const double delta = state.delta;
+  const double omega = state.omega;
 
-  const double& v = state.v;
-  const double& k = 0.33;
+  const double v = state.v;
+  const double k = 0.33;
 
   const double dt2 = dt * dt;
   const double dtv = dt * v;

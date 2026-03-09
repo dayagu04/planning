@@ -83,8 +83,8 @@ void AgentNodeManager::set_input_info(
   return;
 }
 
-int AgentNodeManager::FindNearestIndex(const std::vector<double> &input_vector,
-                                       const int &monotonic_status,
+int AgentNodeManager::FindNearestIndex(const std::vector<double>& input_vector,
+                                       const int monotonic_status,
                                        double target) {
   int low = 0;
   int high = input_vector.size() - 1;
@@ -369,9 +369,9 @@ AgentNodeManager::GetLaneMonoIntervalIndex(
 }
 
 void AgentNodeManager::StitchLaneValidInfo(
-    const int &monotonic_status, const double obj_traj_length,
-    std::vector<double> &filtered_x_values,
-    std::vector<double> &filtered_y_values, std::vector<double> &s_vec) {
+    const int monotonic_status, const double obj_traj_length,
+    std::vector<double>& filtered_x_values,
+    std::vector<double>& filtered_y_values, std::vector<double>& s_vec) {
   s_vec.reserve(filtered_x_values.size());
   s_vec.emplace_back(0.);
 
@@ -809,9 +809,9 @@ bool AgentNodeManager::Update() {
   return true;
 }
 
-void AgentNodeManager::RefineObjInitState(const int64_t &obj_id,
-                                          const double &obj_add_vel,
-                                          const double &obj_add_s) {
+void AgentNodeManager::RefineObjInitState(const int64_t& obj_id,
+                                          const double obj_add_vel,
+                                          const double obj_add_s) {
   auto iter = map_gs_care_obstacles_.find(obj_id);
   ObstaclePredicatedInfo obj_infos;
   if (iter != map_gs_care_obstacles_.end()) {

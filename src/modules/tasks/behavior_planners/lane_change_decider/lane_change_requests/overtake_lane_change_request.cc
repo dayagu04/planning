@@ -962,9 +962,9 @@ void OvertakeRequest::updateRouteTrafficSpeed(
 bool OvertakeRequest::isCouldOvertakeByRoute(
     const std::shared_ptr<ReferencePath>& base_ref_line,
     const std::shared_ptr<VirtualLane>& target_lane,
-    const double& lane_traffic_speed, const agent::Agent* agent,
-    const bool& is_left, const bool& left_and_right_both_on_navigation_route,
-    const double& total_feasible_lane_remain_distance,
+    const double lane_traffic_speed, const agent::Agent* agent,
+    const bool is_left, const bool left_and_right_both_on_navigation_route,
+    const double total_feasible_lane_remain_distance,
     double& left_overtake_speed_threshold,
     double& right_overtake_speed_threshold) {
   std::shared_ptr<ReferencePath> target_ref_line =
@@ -1068,8 +1068,8 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
 bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
     const double lane_traffic_speed, const agent::Agent* agent,
     const bool is_left, const std::shared_ptr<VirtualLane>& target_lane,
-    const double& total_feasible_lane_remain_distance,
-    const bool& both_lane_is_on_navigation_route) {
+    const double total_feasible_lane_remain_distance,
+    const bool both_lane_is_on_navigation_route) {
   if (target_lane == nullptr) {
     return false;
   }
@@ -2193,7 +2193,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
 }
 
 bool OvertakeRequest::FeasibleLaneDistanceEnoughJudgment(
-    const double& lane_traffic_speed, const double& leading_speed,
+    const double lane_traffic_speed, const double leading_speed,
     const std::shared_ptr<VirtualLane>& target_lane, bool is_left,
     const double need_s) {
   const auto& ego_state =
@@ -2222,7 +2222,7 @@ bool OvertakeRequest::FeasibleLaneDistanceEnoughJudgment(
 }
 
 double OvertakeRequest::CalculateAttenuationCoefficient(
-    const double& lc_duration) {
+    const double lc_duration) {
   // 1. 参数合法性校验
   if (lc_duration <= 0) {
     return kCouldOvertakeMaintainSpeedDiffThresholdPercentage;  // 非法输入返回初始值

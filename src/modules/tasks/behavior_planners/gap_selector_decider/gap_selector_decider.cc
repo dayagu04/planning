@@ -2030,7 +2030,7 @@ void GapSelectorDecider::CalcLatOffset(double &expected_s, double &expected_l,
       planning_init_point_.frenet_state.s +
           planning_init_point_.v * refine_lc_time,
       base_frenet_coord_->Length() - planning_init_point_.frenet_state.s - 0.5);
-  const double &cur_l = planning_init_point_.frenet_state.r;
+  const double cur_l = planning_init_point_.frenet_state.r;
 
   if (gap_selector_state_machine_info_.lane_cross) {
     expected_l = 0.;
@@ -2178,9 +2178,9 @@ pnc::spline::QuinticPolynominalPath GapSelectorDecider::ConstructQuinticPath(
 }
 
 void GapSelectorDecider::StitchQuinticPath(
-    const double &truancation_end_s, const double expected_lc_time,
-    const double expected_l, pnc::spline::QuinticPolynominalPath &quintic_path,
-    GapSelectorPathSpline &path_spline) {
+    const double truancation_end_s, const double expected_lc_time,
+    const double expected_l, pnc::spline::QuinticPolynominalPath& quintic_path,
+    GapSelectorPathSpline& path_spline) {
   double path_length =
       base_frenet_coord_->Length() - 0.5 - planning_init_point_.frenet_state.s;
 

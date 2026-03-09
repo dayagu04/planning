@@ -37,11 +37,11 @@ class QuinticPoly2d {
       : QuinticPoly2d(start[0], start[1], start[2], start[3], start[4], end[0],
                       end[1], end[2], end[3], end[4], end_t) {}
 
-  QuinticPoly2d(const double &start_x, const double &start_y,
-                const double &start_yaw, const double &start_v,
-                const double &start_a, const double &end_x, const double &end_y,
-                const double &end_yaw, const double &end_v, const double &end_a,
-                const double &end_t) {
+  QuinticPoly2d(const double start_x, const double start_y,
+                const double start_yaw, const double start_v,
+                const double start_a, const double end_x, const double end_y,
+                const double end_yaw, const double end_v, const double end_a,
+                const double end_t) {
     double start_v_x = start_v * std::cos(start_yaw);
     double start_a_x = start_a * std::cos(start_yaw);
     double end_v_x = end_v * std::cos(end_yaw);

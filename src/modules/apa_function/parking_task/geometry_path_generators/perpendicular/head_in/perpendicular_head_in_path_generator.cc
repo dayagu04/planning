@@ -445,9 +445,9 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlan() {
     calc_params_.prepare_point_condition = 1;  // drive
   }
   for (size_t i = 0; i < x_offset_vec.size() && !flag; ++i) {
-    const double& x_offset = x_offset_vec[i];
+    const double x_offset = x_offset_vec[i];
     for (size_t j = 0; j < heading_offset_vec.size() && !flag; ++j) {
-      const double& heading_offset = heading_offset_vec[j];
+      const double heading_offset = heading_offset_vec[j];
       if (PreparePlanOnce(x_offset, heading_offset, calc_params_.turn_radius)) {
         prepare_success = true;
         ILOG_INFO << "x_offset = " << x_offset
@@ -778,8 +778,7 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
 }
 
 const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
-    const double& x_offset, const double& heading_offset,
-    const double& radius) {
+    const double x_offset, const double heading_offset, const double radius) {
   const double start_heading =
       calc_params_.slot_side_sgn *
       (input_.ego_info_under_slot.slot.angle_ * kDeg2Rad - heading_offset);
@@ -1020,7 +1019,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
 // multiplan
 const bool PerpendicularPathHeadingInPlanner::CheckMultiPlanSuitable(
     const pnc::geometry_lib::PathPoint& current_pose,
-    const double& slot_occupied_ratio) {
+    const double slot_occupied_ratio) {
   const double heading_error = pnc::geometry_lib::NormalizeAngle(
       current_pose.heading - calc_params_.target_line.heading);
 
@@ -2547,8 +2546,8 @@ const bool PerpendicularPathHeadingInPlanner::STurnParallelPlan(
 const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
     const pnc::geometry_lib::PathPoint& current_pose,
-    const uint8_t& current_gear, const double& steer_change_ratio,
-    const double& steer_change_radius, const size_t& i) {
+    const uint8_t& current_gear, const double steer_change_ratio,
+    const double steer_change_radius, const size_t& i) {
   ILOG_INFO << "-----CalSinglePathInAdjust-----";
   ILOG_INFO << "current_gear = " << static_cast<int>(current_gear)
             << ",  current_pos = " << current_pose.pos.x()

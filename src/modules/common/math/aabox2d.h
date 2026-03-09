@@ -44,8 +44,8 @@ class AABox2d {
    */
   explicit AABox2d(const std::vector<Vec2d> &points);
 
-  explicit AABox2d(const std::array<planning_math::Vec2d, 8> &points,
-                   const int &valid_count);
+  explicit AABox2d(const std::array<planning_math::Vec2d, 8>& points,
+                   const int valid_count);
 
   /**
    * @brief Getter of center_

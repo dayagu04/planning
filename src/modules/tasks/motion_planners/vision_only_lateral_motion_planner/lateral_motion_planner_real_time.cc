@@ -139,7 +139,7 @@
 //   return true;
 // }
 
-// bool VisionLateralMotionPlanner::update_basic_path(const int &status) {
+// bool VisionLateralMotionPlanner::update_basic_path(const int status) {
 //   double short_reject_length = 15;
 
 //   reject_reason_ = NO_REJECTION;
@@ -3300,7 +3300,7 @@
 
 // double VisionLateralMotionPlanner::calc_lane_width_by_dist(
 //     const std::vector<double> &left_poly, const std::vector<double>
-//     &right_poly, const double &dist_x) {
+//     &right_poly, const double dist_x) {
 //   std::vector<double> left_poly_yx, r_poly_yx;
 //   left_poly_yx.resize(left_poly.size());
 //   r_poly_yx.resize(right_poly.size());

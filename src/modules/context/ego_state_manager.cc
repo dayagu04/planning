@@ -331,8 +331,8 @@ bool EgoStateManager::update(
   return true;
 }
 
-uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
-                                       const bool &set_lon_replan) {
+uint8_t EgoStateManager::ReplanProcess(const bool set_lat_replan,
+                                       const bool set_lon_replan) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
   const auto &ego_state =
@@ -627,8 +627,8 @@ void EgoStateManager::LongitudinalInitStateReset(
 //   }
 // }
 
-// uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
-//                                        const bool &lon_reset_flag) {
+// uint8_t EgoStateManager::ReplanProcess(const bool lat_reset_flag,
+//                                        const bool lon_reset_flag) {
 //   // note that lon_reset_flag and lat_reset_flag reserved for acc and
 //   override
 
@@ -668,7 +668,7 @@ void EgoStateManager::LongitudinalInitStateReset(
 //   // motion_planner_output.s_lat_vec.back(),
 //   //                                      init_point);
 //   // const auto s_init = projection_spline.GetOutput().s_proj;
-//   // const double &lon_err = s_init - s_proj;
+//   // const double lon_err = s_init - s_proj;
 //   const double lat_init_theta = lat_init_state.theta();
 //   double theta_err = lat_init_theta - ego_state->ego_pose_raw().theta;
 //   const double pi2 = 2.0 * M_PI;

@@ -120,7 +120,7 @@ void BoundMaker::MakeAccBound() {
       plan_points_num_, std::fmin(init_lon_state_[2], config_acc_lower_bound));
 }
 
-void BoundMaker::MakeAccBound(const double& v_ego,
+void BoundMaker::MakeAccBound(const double v_ego,
                               const std::string& lc_request) {
   std::pair<double, double> acc_target;
   acc_upper_bound_.resize(plan_points_num_);

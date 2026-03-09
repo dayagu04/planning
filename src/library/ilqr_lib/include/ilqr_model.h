@@ -50,7 +50,7 @@ class iLqrModel {
   // init control u and u_vec
   void InitControlVar();
 
-  void UpdateWarmStart(const bool &solver_success, const ControlVec &uk) {
+  void UpdateWarmStart(const bool solver_success, const ControlVec& uk) {
     solver_success_ = solver_success;
     uk_vec_ = uk;
   }

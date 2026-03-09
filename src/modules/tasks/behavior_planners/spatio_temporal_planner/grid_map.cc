@@ -134,14 +134,14 @@ void GridMapND<T, N_DIM>::GetGlobalPositionUsingCoordinate(
 
 template <typename T, int N_DIM>
 void GridMapND<T, N_DIM>::GetCoordUsingGlobalMetricOnSingleDim(
-    const double &metric, const int &i, int *idx) const {
+    const double metric, const int i, int* idx) const {
   *idx = std::round((metric - origin_[i]) / dims_resolution_[i]);
   return;
 }
 
 template <typename T, int N_DIM>
 void GridMapND<T, N_DIM>::GetGlobalMetricUsingCoordOnSingleDim(
-    const int &idx, const int &i, double *metric) const {
+    const int idx, const int i, double* metric) const {
   *metric = idx * dims_resolution_[i] + origin_[i];
   return;
 }
@@ -158,8 +158,8 @@ bool GridMapND<T, N_DIM>::CheckCoordInRange(
 }
 
 template <typename T, int N_DIM>
-bool GridMapND<T, N_DIM>::CheckCoordInRangeOnSingleDim(const int &idx,
-                                                       const int &i) const {
+bool GridMapND<T, N_DIM>::CheckCoordInRangeOnSingleDim(const int idx,
+                                                       const int i) const {
   return (idx >= 0) && (idx < dims_size_[i]);
 }
 
@@ -175,7 +175,7 @@ int GridMapND<T, N_DIM>::GetMonoIdxUsingNDimIdx(
 
 template <typename T, int N_DIM>
 std::array<int, N_DIM> GridMapND<T, N_DIM>::GetNDimIdxUsingMonoIdx(
-    const int &idx) const {
+    const int idx) const {
   std::array<int, N_DIM> idx_nd = {};
   int tmp = idx;
   for (int i = N_DIM - 1; i >= 0; --i) {

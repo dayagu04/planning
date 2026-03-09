@@ -149,9 +149,9 @@ bool SpeedAdjustDecider::ProcessLaneChangeStatus() {
     merge_emegency_distance_ = std::hypot(ego_point.x - boundary_merge_point.x,
                                           ego_point.y - boundary_merge_point.y);
   } else if (lc_request_source == MAP_REQUEST) {
-    const double& distance_to_road_merge =
+    const double distance_to_road_merge =
         virtual_lane_mgr->get_distance_to_first_road_merge();
-    const double& distance_to_road_split =
+    const double distance_to_road_split =
         virtual_lane_mgr->get_distance_to_first_road_split();
     if (distance_to_road_split < kDistanceToMapRequestPoint ||
         distance_to_road_merge < kDistanceToMapRequestPoint ||
@@ -283,11 +283,11 @@ void SpeedAdjustDecider::ProcessEnvInfos() {
 }
 
 std::pair<double, double> SpeedAdjustDecider::GetSafeAlignedDistance(
-    const double& ego_v, const SlotInfo& slot) {
+    const double ego_v, const SlotInfo& slot) {
   const auto& front_car = slot.front_veh_info();
   const auto& rear_car = slot.back_veh_info();
 
-  auto headway_distace = [](const double& headway_v, const double ego_v,
+  auto headway_distace = [](const double headway_v, const double ego_v,
                             const std::vector<double>& t_gap_ego_v_bp,
                             const std::vector<double>& t_gap_ego_v) -> double {
     double v_lead_clip = std::max(headway_v, 0.0);
@@ -336,8 +336,7 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
   };
 
   auto filter_in_deceleration_priority_scene =
-      [this](const SlotInfo& slot,
-             const double& aligned_back_safe_dis) -> bool {
+      [this](const SlotInfo& slot, const double aligned_back_safe_dis) -> bool {
     return slot.aligned_s() > init_sl_.first;
   };
 
@@ -396,12 +395,12 @@ bool SpeedAdjustDecider::GenerateCandidateSlotInfo() {
     std::pair<double, double> safe_distacne_pair =
         GetSafeAlignedDistance(init_va_.first, slot);
 
-    const double& aligned_front_s = slot.front_veh_info().center_s -
-                                    safe_distacne_pair.first -
-                                    kAlignedDistanceBuffer;
-    const double& aligned_back_s = slot.back_veh_info().center_s +
-                                   safe_distacne_pair.second +
+    const double aligned_front_s = slot.front_veh_info().center_s -
+                                   safe_distacne_pair.first -
                                    kAlignedDistanceBuffer;
+    const double aligned_back_s = slot.back_veh_info().center_s +
+                                  safe_distacne_pair.second +
+                                  kAlignedDistanceBuffer;
     if (slot.back_veh_info().center_s > 0.) {
       slot.SetAlignedFront(false);
       slot.SetAlignedS(aligned_back_s + init_sl_.first);

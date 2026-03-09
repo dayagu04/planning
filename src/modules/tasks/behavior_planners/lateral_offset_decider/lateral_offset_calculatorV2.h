@@ -31,7 +31,7 @@ class LateralOffsetCalculatorV2 {
   void ResetOffsetHysteresisMaps();
 
  private:
-  bool UpdateBasicPath(const int& status);
+  bool UpdateBasicPath(const int status);
   bool UpdateAvoidPath(int status, bool flag_avd, bool should_premove,
                        double dist_rblane,
                        const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
