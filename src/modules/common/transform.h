@@ -34,17 +34,17 @@ class Transform {
   inline Transform(const Transform &other)
       : m_basis(other.m_basis), m_origin(other.m_origin) {}
 
-  void setMatrix(const double &xx, const double &xy, const double &xz,
-                 const double &yx, const double &yy, const double &yz,
-                 const double &zx, const double &zy, const double &zz) {
+  void setMatrix(const double xx, const double xy, const double xz,
+                 const double yx, const double yy, const double yz,
+                 const double zx, const double zy, const double zz) {
     setValue(xx, xy, xz, yx, yy, yz, zx, zy, zz);
   }
 
   void setOrigin(const Eigen::Vector3d &origin) { m_origin = origin; }
 
-  void setValue(const double &xx, const double &xy, const double &xz,
-                const double &yx, const double &yy, const double &yz,
-                const double &zx, const double &zy, const double &zz) {
+  void setValue(const double xx, const double xy, const double xz,
+                const double yx, const double yy, const double yz,
+                const double zx, const double zy, const double zz) {
     m_basis << xx, xy, xz, yx, yy, yz, zx, zy, zz;
   }
 

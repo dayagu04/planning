@@ -9,14 +9,14 @@ namespace ara_star {
 
 class BoundaryCost : public BaseCost {
  public:
-  BoundaryCost(const double weight, const double init_v,
-               const double ego_wheel_base, const double ego_circle_radius,
-               const double lane_width,
-               const std::shared_ptr<planning_math::KDPath>& target_lane,
-               const std::shared_ptr<planning::planning_math::KDPath> left_boundary_tree,
-               const std::shared_ptr<planning::planning_math::KDPath> right_boundary_tree,
-               const double& hard_safe_distance,
-               const double& soft_safe_distance);
+  BoundaryCost(
+      const double weight, const double init_v, const double ego_wheel_base,
+      const double ego_circle_radius, const double lane_width,
+      const std::shared_ptr<planning_math::KDPath>& target_lane,
+      const std::shared_ptr<planning::planning_math::KDPath> left_boundary_tree,
+      const std::shared_ptr<planning::planning_math::KDPath>
+          right_boundary_tree,
+      const double hard_safe_distance, const double soft_safe_distance);
   ~BoundaryCost() = default;
 
   double MakeCost(Node3d& vertex) const;

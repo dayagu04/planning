@@ -39,7 +39,7 @@ class SamplePolySpeedAdjustDecider : public Task {
                     const double all_cost_time);
   bool CheckInitVelTraj();
   bool CheckLanelineChangeable();
-  double CalcHeadwayDistance(const double& headway_v, const double ego_v,
+  double CalcHeadwayDistance(const double headway_v, const double ego_v,
                              const std::vector<double>& t_gap_ego_v_bp,
                              const std::vector<double>& t_gap_ego_v);
   void StitchLastBestPoly();
@@ -54,7 +54,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double GetStoplineSpdDifferGain();
   void CalcDistanceToStopPoint();
   bool CheckTrajAvailable(const SampleQuarticPolynomialCurve& current_traj,
-                          const int& index);
+                          const int index);
   bool IsNotUseGapSelect();
 
  private:

@@ -52,7 +52,7 @@ void NeighborTarget::GenerateNeighborTarget() {
     s_target_value =
         std::min(s_target_value, max_speed_limit_curve_->Evaluate(0, t));
     v_target_value =
-        std::min(v_target_value, max_speed_limit_curve_->Evaluate(0, t));
+        std::min(v_target_value, max_speed_limit_curve_->Evaluate(1, t));
     target_value.set_s_target_val(s_target_value);
     target_value.set_v_target_val(v_target_value);
     target_value.set_target_type(neighbor_target_type_);

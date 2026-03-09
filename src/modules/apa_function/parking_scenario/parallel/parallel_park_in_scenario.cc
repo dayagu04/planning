@@ -4302,7 +4302,8 @@ ParallelParkInScenario::ProcessCurbPointsAndGetNearestAbsY(
     double& nearest_abs_y,
     const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
         same_parent_id_curb_obs,
-    const double& curb_c_x, const double& curb_d_x, const std::vector<double>& y_of_c_d_curb_y) {
+    const double curb_c_x, const double curb_d_x,
+    const std::vector<double>& y_of_c_d_curb_y) {
   std::vector<Eigen::Vector2d> resampled_points;
   nearest_abs_y = std::numeric_limits<double>::max();
 
@@ -4959,7 +4960,7 @@ bool ParallelParkInScenario::ProcessCurbPointsAndGetPoints(
 }
 
 void ParallelParkInScenario::ProcessTruncationPoints(
-    std::vector<Eigen::Vector2d>& curb_points, const double& curb_y,
+    std::vector<Eigen::Vector2d>& curb_points, const double curb_y,
     pnc::geometry_lib::LineSegment& tlane_line) {
   int trunc_start_idx = -1;
   int trunc_end_idx = -1;

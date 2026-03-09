@@ -41,7 +41,7 @@ void CollisionDetector::Init() {
   car_local_vertex_vec_.reserve(param.car_vertex_x_vec.size());
 
   double max_y_abs = 0.0;
-  for (const double &y : param.car_vertex_y_vec) {
+  for (const double y : param.car_vertex_y_vec) {
     if (std::fabs(y) > max_y_abs) {
       max_y_abs = std::fabs(y);
     }

@@ -121,7 +121,7 @@ class UssObstacleAvoidance {
   void SetLatInflation();
 
   // for simulation by pybind
-  void SetUssRawDist(const double& uss_raw_dist);
+  void SetUssRawDist(const double uss_raw_dist);
 
   void SetCarMotionInfo(const CarMotionInfo& car_motion_info) {
     car_motion_info_ = car_motion_info;

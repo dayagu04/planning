@@ -40,13 +40,13 @@ class GriddedPathTimeGraph {
   ~GriddedPathTimeGraph() = default;
 
   bool Search(
-      TrajectoryPoints &traj_points,
-      const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-      const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-      const bool &last_enable_using_st_plan,
-      planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input,
-      bool &ego_in_intersection_state);
+      TrajectoryPoints& traj_points,
+      const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+      const std::vector<VirtualAgentSpatioTemporalInFo>& virtual_agents_info,
+      const bool last_enable_using_st_plan,
+      planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input,
+      bool& ego_in_intersection_state);
 
  private:
   planning::framework::Session *session_;

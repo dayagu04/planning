@@ -12,7 +12,7 @@ BoundaryCost::BoundaryCost(
     const std::shared_ptr<planning_math::KDPath>& target_lane,
     const std::shared_ptr<planning::planning_math::KDPath> left_boundary_tree,
     const std::shared_ptr<planning::planning_math::KDPath> right_boundary_tree,
-    const double& hard_safe_distance, const double& soft_safe_distance)
+    const double hard_safe_distance, const double soft_safe_distance)
     : BaseCost(BaseCost::CostType::BOUNDARY, weight),
       target_lane_(target_lane),
       ego_wheel_base_(ego_wheel_base),
@@ -22,7 +22,7 @@ BoundaryCost::BoundaryCost(
       right_boundary_tree_(right_boundary_tree),
       hard_safe_distance_(hard_safe_distance),
       soft_safe_distance_(soft_safe_distance),
-      lane_width_(lane_width){};
+      lane_width_(lane_width) {};
 
 double BoundaryCost::MakeCost(Node3d& vertex) const {
   if (left_boundary_tree_ == nullptr ||

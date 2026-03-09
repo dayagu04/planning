@@ -63,7 +63,7 @@ class SscMap {
 
   Config config() const { return config_; }
 
-  void UpdateMapOrigin(const FrenetEgoState& ego_state, const double& time);
+  void UpdateMapOrigin(const FrenetEgoState& ego_state, const double time);
 
   void ConstructSscMap(
       const AgentFrenetSpatioTemporalInFo& surround_trajs_state_info);
@@ -74,7 +74,7 @@ class SscMap {
 
   void GetFinalGlobalMetricCubesList();
 
-  void ResetSscMap(const FrenetEgoState& ego_frenet_state, const double& time);
+  void ResetSscMap(const FrenetEgoState& ego_frenet_state, const double time);
 
  private:
   // 填充静态障碍物

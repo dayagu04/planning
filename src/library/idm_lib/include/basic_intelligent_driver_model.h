@@ -13,8 +13,8 @@ class BasicIntelligentDriverModel {
     double vel_front{0.0};
 
     ModelState() {}
-    ModelState(const double &s, const double &vel, const double &s_front,
-               const double &v_front)
+    ModelState(const double s, const double vel, const double s_front,
+               const double v_front)
         : s(s), vel(vel), s_front(s_front), vel_front(v_front) {}
   };
 

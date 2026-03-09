@@ -77,28 +77,28 @@ class GridMapND {
 
   std::array<int, N_DIM> dims_size() const { return dims_size_; }
 
-  int dims_size(const int &dim) const { return dims_size_.at(dim); }
+  int dims_size(const int dim) const { return dims_size_.at(dim); }
 
   std::array<int, N_DIM> dims_step() const { return dims_step_; }
 
-  int dims_step(const int &dim) const { return dims_step_.at(dim); }
+  int dims_step(const int dim) const { return dims_step_.at(dim); }
 
   std::array<double, N_DIM> dims_resolution() const { return dims_resolution_; }
 
-  double dims_resolution(const int &dim) const {
+  double dims_resolution(const int dim) const {
     return dims_resolution_.at(dim);
   }
 
   std::array<std::string, N_DIM> dims_name() const { return dims_name_; }
 
-  std::string dims_name(const int &dim) const { return dims_name_.at(dim); }
+  std::string dims_name(const int dim) const { return dims_name_.at(dim); }
   std::array<double, N_DIM> origin() const { return origin_; }
 
   int data_size() const { return data_size_; }
 
   const std::vector<T> *data() const { return &data_; }
 
-  T data(const int &i) const { return data_[i]; };
+  T data(const int i) const { return data_[i]; };
 
   T *get_data_ptr() { return data_.data(); }
 
@@ -153,19 +153,19 @@ class GridMapND {
   void GetGlobalPositionUsingCoordinate(const std::array<int, N_DIM> &coord,
                                         std::array<double, N_DIM> *p_w) const;
 
-  void GetCoordUsingGlobalMetricOnSingleDim(const double &metric, const int &i,
-                                            int *idx) const;
+  void GetCoordUsingGlobalMetricOnSingleDim(const double metric, const int i,
+                                            int* idx) const;
 
-  void GetGlobalMetricUsingCoordOnSingleDim(const int &idx, const int &i,
-                                            double *metric) const;
+  void GetGlobalMetricUsingCoordOnSingleDim(const int idx, const int i,
+                                            double* metric) const;
 
   bool CheckCoordInRange(const std::array<int, N_DIM> &coord) const;
 
-  bool CheckCoordInRangeOnSingleDim(const int &idx, const int &i) const;
+  bool CheckCoordInRangeOnSingleDim(const int idx, const int i) const;
 
   int GetMonoIdxUsingNDimIdx(const std::array<int, N_DIM> &idx) const;
 
-  std::array<int, N_DIM> GetNDimIdxUsingMonoIdx(const int &idx) const;
+  std::array<int, N_DIM> GetNDimIdxUsingMonoIdx(const int idx) const;
 
  private:
   void SetNDimSteps(const std::array<int, N_DIM> &dims_size);

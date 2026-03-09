@@ -499,6 +499,15 @@ DynamicAgentNode* DynamicWorld::GetMutableNode(const int64_t& node_id) const {
   return iter == dynamic_agent_node_table_.end() ? nullptr : iter->second.get();
 }
 
+const DynamicAgentNode* DynamicWorld::GetNodeByAgentID(const int64_t& agent_id) const {
+  auto iter = std::find_if(dynamic_agent_node_table_.begin(),
+                           dynamic_agent_node_table_.end(),
+                           [agent_id](const std::pair<const int64_t, std::unique_ptr<DynamicAgentNode>>& pair) {
+                             return pair.second->node_agent_id() == agent_id;
+                           });
+  return iter == dynamic_agent_node_table_.end() ? nullptr : iter->second.get();
+}
+
 std::vector<const DynamicAgentNode*> DynamicWorld::GetNodesByLaneId(
     const int32_t lane_id) const {
   std::vector<const DynamicAgentNode*> nodes_on_lane;

@@ -11,9 +11,8 @@ const int num_of_knots = 26;
 const double t_cycle = 0.2;
 }  // namespace
 
-TargetFollowCurve::TargetFollowCurve(DvPoint target_pt, const double& ego_s,
-                                     const double& cipv_s,
-                                     const double& cipv_v) {
+TargetFollowCurve::TargetFollowCurve(DvPoint target_pt, const double ego_s,
+                                     const double cipv_s, const double cipv_v) {
   target_point_ = target_pt;
   if (target_point_.v < obj_stop_v_thr_) {
     target_point_.v = 0.0;
@@ -50,8 +49,8 @@ void TargetFollowCurve::generate_target_dv_curve() {
 }
 
 void TargetFollowCurve::update_target_st_curve(const double dist,
-                                               const double& cipv_v,
-                                               const double& cipv_s) {
+                                               const double cipv_v,
+                                               const double cipv_s) {
   auto* st_points = target_st_curve_.get_mutable_st_points();
   const auto& dv_points = target_dv_curve_.get_dv_points();
   StPoint pst;

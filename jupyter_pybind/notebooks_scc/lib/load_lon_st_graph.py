@@ -1615,6 +1615,19 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
     fig1.line(y_vec, x_vec, source = source, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'processed agent traj', visible=False)
     fig1.circle(y_vec, x_vec, source=source, size=3, color='yellow', legend_label='processed agent traj', visible=False)
 
+  # obs_ref_trajectory in fig1: one legend label, different colors per obstacle
+  obs_ref_traj_colors = [
+    'coral', 'orange', 'gold', 'lime', 'cyan',
+    'magenta', 'pink', 'brown', 'navy', 'purple'
+  ]
+  for i in range(10):
+    src = data_key_obs_trajectories[i]
+    fig1.line(
+      'obs_traj_y', 'obs_traj_x', source=src,
+      line_width=3, line_color=obs_ref_traj_colors[i], line_dash='solid',
+      line_alpha=0.8, legend_label='key_obs_ref_traj', visible=False
+    )
+
   # fig2 S-T
   fig2 = bkp.figure(x_axis_label='t', y_axis_label='s', x_range = [-0.1, 7.0], width=600, height=450, tools=[hover,'pan,wheel_zoom,box_zoom,reset'], match_aspect = True, aspect_scale=1)
   # fig3 S-V

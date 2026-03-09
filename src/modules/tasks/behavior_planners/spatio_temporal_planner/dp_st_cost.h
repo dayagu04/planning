@@ -46,8 +46,8 @@ class DpStCost {
   double GetSpatialPotentialCost(const SLTGraphPoint& point);
 
   double GetSpeedCost(const SLTGraphPoint& first, const SLTGraphPoint& second,
-                      const double& speed_limit, const double& inv_speed_limit,
-                      const double& cruise_speed) const;
+                      const double speed_limit, const double inv_speed_limit,
+                      const double cruise_speed) const;
 
   double GetAccelCostByTwoPoints(const double pre_speed,
                                  const SLTGraphPoint& first,
