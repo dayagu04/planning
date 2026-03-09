@@ -23,28 +23,33 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish,
   // 检查是否有拨杆信息
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
 
-  if (suppression_counter > 0) {
-    suppression_counter++;
+  if (suppression_counter_ > 0) {
+    suppression_counter_++;
   }
-  if (is_in_avoidance_mlc) {
-    avoidance_MLC_counter++;
+  if (is_in_avoidance_mlc_) {
+    avoidance_MLC_counter_++;
   }
-  if (suppression_counter > 30) {
-    suppression_counter = 0;
+  if (suppression_counter_ > 30) {
+    suppression_counter_ = 0;
   }
 
   // 检查是否满足变道请求
-  const bool is_mlc_enable = CheckMLCEnable(lc_status);
+  if (CheckMLCEnable(lc_status)) {
+    mlc_continue_frame_++;
+  } else  {
+    mlc_continue_frame_ = 0;
+  }
+  const bool is_mlc_enable = mlc_continue_frame_ > 3;
 
   // 这里判断条件要不要加上此时为propose状态
-  if (is_in_avoidance_mlc && avoidance_MLC_counter >= 150 &&
+  if (is_in_avoidance_mlc_ && avoidance_MLC_counter_ >= 150 &&
       lc_status <= kLaneChangePropose) {
     Finish();
     set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
     ILOG_DEBUG << "[MapRequest::update] avoide MLC time out, cancel";
-    is_in_avoidance_mlc = false;
-    avoidance_MLC_counter = 0;
-    suppression_counter = 1;  // 启动抑制
+    is_in_avoidance_mlc_ = false;
+    avoidance_MLC_counter_ = 0;
+    suppression_counter_ = 1;  // 启动抑制
     return;
   }
 
@@ -56,16 +61,16 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish,
       Finish();
       set_target_lane_virtual_id(
           lane_change_lane_mgr_->origin_lane_virtual_id());
-      is_in_avoidance_mlc = false;
-      avoidance_MLC_counter = 0;
+      is_in_avoidance_mlc_ = false;
+      avoidance_MLC_counter_ = 0;
     }
   }
   if (trigger_lane_change_cancel_) {
     lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
     Finish();
     set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
-    is_in_avoidance_mlc = false;
-    avoidance_MLC_counter = 0;
+    is_in_avoidance_mlc_ = false;
+    avoidance_MLC_counter_ = 0;
   }
   is_last_mlc_enable_ = is_mlc_enable;
   ILOG_DEBUG << "MapRequest::update: finished";
@@ -121,7 +126,7 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
           AVOID_MERGE ||
       route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
           AVOID_SPLIT;
-  if (is_avoidance_MLC && suppression_counter > 0) {
+  if (is_avoidance_MLC && suppression_counter_ > 0) {
     ILOG_INFO
         << "[MapRequest::update] Suppressing avoidance MLC due to timeout";
     return false;
@@ -129,14 +134,14 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
 
   if (lc_status == kLaneChangePropose || lc_status == kLaneChangeExecution ||
       lc_status == kLaneChangeHold || lc_status == kLaneChangeComplete) {
-    congestion_detection_config.heavy_density = 45.0;
+    congestion_detection_config_.heavy_density = 45.0;
   } else {
-    congestion_detection_config.heavy_density = 30.0;
+    congestion_detection_config_.heavy_density = 30.0;
   }
-  congestion_detection_config.jam_speed = 15.0;
+  congestion_detection_config_.jam_speed = 15.0;
   if (target_lane && is_avoidance_MLC) {
     const int target_lane_id = target_lane->get_virtual_id();
-    CongestionDetector detector(&congestion_detection_config, session_,
+    CongestionDetector detector(&congestion_detection_config_, session_,
                                 target_lane_id);
     CongestionResult result = detector.DetectLaneCongestion();
     if (result.level == CongestionLevel::CONGESTION) {
@@ -343,12 +348,12 @@ void MapRequest::GenerateMLCRequest() {
           AVOID_MERGE ||
       route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
           AVOID_SPLIT;
-  if (is_avoidance_MLC && !is_in_avoidance_mlc) {
-    is_in_avoidance_mlc = true;  // 设置状态标志
-    avoidance_MLC_counter = 1;   // 启动超时计时器
+  if (is_avoidance_MLC && !is_in_avoidance_mlc_) {
+    is_in_avoidance_mlc_ = true;  // 设置状态标志
+    avoidance_MLC_counter_ = 1;   // 启动超时计时器
   } else if (!is_avoidance_MLC) {
-    is_in_avoidance_mlc = false;
-    avoidance_MLC_counter = 0;
+    is_in_avoidance_mlc_ = false;
+    avoidance_MLC_counter_ = 0;
   }
 }
 

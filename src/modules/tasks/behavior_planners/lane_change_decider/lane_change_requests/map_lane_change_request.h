@@ -32,10 +32,11 @@ class MapRequest : public LaneChangeRequest {
   bool CheckTargetLaneLaneMarks(RequestType request_type);
   bool CheckTargetLaneMergeDirection(RequestType request_type);
 
-  CongestionDetectionConfig congestion_detection_config;
-  int avoidance_MLC_counter = 0;
-  int suppression_counter = 0;
-  bool is_in_avoidance_mlc = false;
+  CongestionDetectionConfig congestion_detection_config_;
+  int avoidance_MLC_counter_ = 0;
+  int suppression_counter_ = 0;
+  int mlc_continue_frame_ = 0;
+  bool is_in_avoidance_mlc_ = false;
   bool is_last_mlc_enable_ = false;
 };
 
