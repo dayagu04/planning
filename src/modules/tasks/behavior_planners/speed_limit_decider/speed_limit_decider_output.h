@@ -161,7 +161,11 @@ class SpeedLimitDeciderOutput {
       SpeedLimitType::ON_CONSTRUCTION,
       SpeedLimitType::SHARP_CURVATURE,
       SpeedLimitType::ROAD_BOUNDARY,
-      SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL};
+      SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL,
+      SpeedLimitType::MAP,
+      SpeedLimitType::USER,
+      SpeedLimitType::NARROW_AREA,
+      SpeedLimitType::AVOID};
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;

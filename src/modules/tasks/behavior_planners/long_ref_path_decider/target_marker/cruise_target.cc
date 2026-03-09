@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <limits>
 #include <memory>
 
@@ -121,7 +122,7 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::ROAD_BOUNDARY:
       kinematic_param = config_.kappa_kinematic_param;
       break;
-      case SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL:
+    case SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL:
       kinematic_param = config_.sharp_curvature_kinematic_param;
       break;
     case SpeedLimitType::CRUISE:
@@ -135,6 +136,9 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::VRU_ROUND:
     case SpeedLimitType::MERGE_ALC:
     case SpeedLimitType::MAP_NEAR_RAMP:
+    case SpeedLimitType::USER:
+    case SpeedLimitType::NARROW_AREA:
+    case SpeedLimitType::MAP:
       kinematic_param = config_.map_near_ramp_kinematic_param;
       break;
     case SpeedLimitType::MAP_ON_RAMP:
@@ -145,6 +149,7 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::LANE_BORROW:
       break;
     case SpeedLimitType::AVOID_AGENT:
+    case SpeedLimitType::AVOID:
       kinematic_param = config_.avoid_agent_kinematic_param;
       break;
     case SpeedLimitType::DANGEROUS_OBSTACLE:
@@ -164,16 +169,17 @@ bool CruiseTarget::MakeKinematicsBound(
   }
   // make acc_positive_mps2
   const double determined_cruise_acc_bound =
-         session_->planning_context()
-             .longitudinal_decision_decider_output()
-             .determined_cruise_bound().acc_positive_mps2;
+      session_->planning_context()
+          .longitudinal_decision_decider_output()
+          .determined_cruise_bound()
+          .acc_positive_mps2;
   bool can_increase_acc = false;
-  can_increase_acc = determined_cruise_acc_bound > (1.0 - kEpsilon) ? true : false;
+  can_increase_acc =
+      determined_cruise_acc_bound > (1.0 - kEpsilon) ? true : false;
   if (can_increase_acc) {
     kinematic_bound->acc_positive_mps2 = planning_math::LerpWithLimit(
-      kinematic_param.acc_positive_upper,
-      kinematic_param.acc_positive_speed_lower,
-      0.3, 27.8, ego_speed);
+        kinematic_param.acc_positive_upper,
+        kinematic_param.acc_positive_speed_lower, 0.3, 27.8, ego_speed);
 
   } else {
     kinematic_bound->acc_positive_mps2 = planning_math::LerpWithLimit(
