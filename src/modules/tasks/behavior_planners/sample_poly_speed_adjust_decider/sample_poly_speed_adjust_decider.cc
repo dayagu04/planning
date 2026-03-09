@@ -252,7 +252,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   }
   double speed_differ_gain = 1.0;
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
-  if (traffic_density_status_ == Congested || is_not_use_gap_select) {
+  if (traffic_density_status_ == Congested) {
     count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
   }
   size_t start_index = traffic_density_status_ == Congested ? 1 : 3;
