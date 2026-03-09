@@ -55,6 +55,9 @@ class DynamicAgentEmergenceAvoidRequest : public LaneChangeRequest {
       const bool is_left_lane_change_safe,
       const bool is_right_lane_change_safe);
 
+  bool IsCrossingObstacle(const int32_t obstacle_id,
+                          const std::shared_ptr<ReferencePath>& reference_path);
+
   bool is_dynamic_agent_emergency_avoidance_situation_ = false;
   RequestType recommend_dynamic_agent_emergency_avoidance_direction_ = NO_CHANGE;
   int dynamic_agent_emergency_situation_timetstamp_ = 0;

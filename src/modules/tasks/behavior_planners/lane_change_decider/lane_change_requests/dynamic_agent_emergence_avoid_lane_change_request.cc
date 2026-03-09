@@ -52,7 +52,9 @@ constexpr double kRearStaticVehicleDistanceThreshold = 15.0;  // 后方静态障
 constexpr double kFrontVehicleTTCThreshold = 10;  // 前方车TTC阈值 (s)
 constexpr double kFrontVehicleDistanceThreshold = 50.0;  // 前方车距离阈值 (m)
 constexpr int kBrakeFailureHysteresisCount = 2;  // 刹停失败滞回帧数
-
+// 横穿判断相关参数
+constexpr double kCrossingHeadingMinThreshold = 45 / 57.3;
+constexpr double kCrossingHeadingMaxThreshold = 135 / 57.3;
 }  // namespace
 // class: DynamicAgentEmergenceAvoidRequest
 DynamicAgentEmergenceAvoidRequest::DynamicAgentEmergenceAvoidRequest(
@@ -759,6 +761,10 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBrakeFailureObstacle(
   // 目前仅针对CIPV
   const int32_t cipv_id =
       session_->planning_context().cipv_decider_output().cipv_id();
+  if (IsCrossingObstacle(cipv_id, origin_refline)) {
+    // 过滤横穿障碍物
+    return false;
+  }
   if (obstacles_map.find(cipv_id) != obstacles_map.end()) {
     double v_s_rel = obstacles_map.at(cipv_id)->frenet_relative_velocity_s();
     if (v_s_rel >= 0) {
@@ -921,6 +927,46 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBrakeFailureObstacle(
   //   return true;
   // }
   // return false;
+}
+
+bool DynamicAgentEmergenceAvoidRequest::IsCrossingObstacle(
+    const int32_t obstacle_id,
+    const std::shared_ptr<ReferencePath>& reference_path) {
+  if (reference_path == nullptr) {
+    return false;
+  }
+  const auto& is_crossing_map = session_->planning_context()
+                                    .crossing_agent_decider_output()
+                                    .is_crossing_map;
+  const auto cossing_map_iter = is_crossing_map.find(obstacle_id);
+  bool is_crossing =
+      (cossing_map_iter != is_crossing_map.end() && cossing_map_iter->second);
+  if (is_crossing) {
+    // 过滤横穿障碍物
+    return true;
+  }
+  const auto& obstacles_map = reference_path->get_obstacles_map();
+  const auto& ego_frenet_boundary = reference_path->get_ego_frenet_boundary();
+  if (obstacles_map.find(obstacle_id) != obstacles_map.end()) {
+    std::shared_ptr<FrenetObstacle> frenet_obstacle =
+        obstacles_map.at(obstacle_id);
+    const auto& obs_boundary = frenet_obstacle->frenet_obstacle_boundary();
+    if (frenet_obstacle->is_static()) {
+      return false;
+    } else {
+      double heading_diff = std::fabs(planning_math::NormalizeAngle(
+          frenet_obstacle->obstacle()->velocity_angle() -
+          reference_path->get_frenet_coord()
+              ->GetPathPointByS(frenet_obstacle->frenet_s())
+              .theta()));
+      bool is_heading_satisfied_for_cross =
+          heading_diff > kCrossingHeadingMinThreshold &&
+          heading_diff < kCrossingHeadingMaxThreshold;
+      // 目前仅针对CIPV，可以作此简化
+      return is_heading_satisfied_for_cross;
+    }
+  }
+  return false;
 }
 
 bool DynamicAgentEmergenceAvoidRequest::CheckTargetLaneSafety(
