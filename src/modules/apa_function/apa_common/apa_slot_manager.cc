@@ -1175,9 +1175,7 @@ const bool ApaSlotManager::LateralConditions(double& dot_product,
   return cos_theta > kCosineValueMaximumAngle;
 }
 
-bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
-  bool is_redefine_slot_type = false;
-  int ego_side_to_slot = 0;
+bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
   if (slot.slot_source_type_ != SlotSourceType::CAMERA) {
     return false;
   }
@@ -1188,85 +1186,104 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
       SlotReleaseState::RELEASE) {
     return false;
   }
-  if (!state_machine_ptr_->IsSearchingInStatus()) {
-    return false;
-  }
 
-  std::unordered_map<size_t, ApaObstacle> obs =
+  const std::unordered_map<size_t, ApaObstacle>& obs =
       obstacle_manager_ptr_->GetObstacles();
   geometry_lib::GlobalToLocalTf g2l_tf;
-  Eigen::Vector2d origin_pos;
-  double origin_global_heading;
+  Eigen::Vector2d ego_global_point, left_mirror_global_point,
+      right_mirror_global_point;
   geometry_lib::PathPoint ego_local_point;
   bool left_area_is_empty = true, right_area_is_empty = true,
        front_area_is_empty = true;
-  auto TransformCoordFromGlobalToLocal =
-      [&](const pnc::geometry_lib::GlobalToLocalTf& g2l_tf) {
-        for (auto& pair : obs) {
-          if (pair.second.GetObsAttributeType() !=
-              ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
-            pair.second.TransformCoordFromGlobalToLocal(g2l_tf);
-          }
-        }
-      };
+  bool is_redefine_slot_type = false;
+  int ego_side_to_slot = 0;  // 1:车在车位右侧 -1：车在车位左侧
+
+  ego_global_point = measure_data_ptr_->GetPos();
+  left_mirror_global_point = measure_data_ptr_->GetLeftMirrorPos();
+  right_mirror_global_point = measure_data_ptr_->GetRightMirrorPos();
 
   g2l_tf = slot.g2l_tf_;
-  TransformCoordFromGlobalToLocal(g2l_tf);
-  slot.TransformCoordFromGlobalToLocal(g2l_tf);
-
-  ego_local_point.pos = g2l_tf.GetPos(measure_data_ptr_->GetPos());
+  ego_local_point.pos = g2l_tf.GetPos(ego_global_point);
   ego_local_point.heading =
       g2l_tf.GetHeading(measure_data_ptr_->GetHeading()) * 57.3;
+
   if (ego_local_point.heading > 80 || ego_local_point.heading < -80) {
     return false;
   }
+
   if (fabs(ego_local_point.pos.y()) > 5) {
     return false;
   }
   ILOG_INFO << "ego_local_point.pos.x = " << ego_local_point.pos.x()
             << "ego_local_point.pos.y = " << ego_local_point.pos.y()
             << "ego_local_point.heading = " << ego_local_point.heading;
-  cdl::AABB slot_left_area, slot_right_area, slot_front_area;
-  double min_x, min_y, max_x, max_y;
-  min_x = 1.5;
-  min_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
-                   slot.origin_corner_coord_local_.pt_3.y());
-  max_x = std::max(slot.origin_corner_coord_local_.pt_0.x(),
-                   slot.origin_corner_coord_local_.pt_1.x());
-  max_y = min_y + 1.5;
-  slot_left_area.min_ = cdl::Vector2r(min_x, min_y);
-  slot_left_area.max_ = cdl::Vector2r(max_x, max_y);
-  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
-                   slot.origin_corner_coord_local_.pt_2.y()) -
-          1.5;
-  max_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
-                   slot.origin_corner_coord_local_.pt_2.y());
-  slot_right_area.min_ = cdl::Vector2r(min_x, min_y);
-  slot_right_area.max_ = cdl::Vector2r(max_x, max_y);
-  min_x = std::min(slot.origin_corner_coord_local_.pt_0.x(),
-                   slot.origin_corner_coord_local_.pt_1.x());
-  min_y = std::min(slot.origin_corner_coord_local_.pt_0.y(),
-                   slot.origin_corner_coord_local_.pt_2.y()) +
-          0.3;
-  max_x = min_x + 3.5;
-  max_y = std::max(slot.origin_corner_coord_local_.pt_1.y(),
-                   slot.origin_corner_coord_local_.pt_3.y()) -
-          0.3;
-  slot_front_area.min_ = cdl::Vector2r(min_x, min_y);
-  slot_front_area.max_ = cdl::Vector2r(max_x, max_y);
+  planning_math::Box2d slot_left_area, slot_right_area, slot_front_area;
+  planning_math::Vec2d center;
+  Eigen::Vector2d P0, P1, P2, P3, pt13_unit_normal_vec, pt13_unit_vec, pt13_vec,
+      pt02_unit_normal_vec, pt02_unit_vec, pt02_vec, pt01_unit_normal_vec;
+  double length, width, heading;
+  pt02_vec = slot.origin_corner_coord_global_.pt_0 -
+             slot.origin_corner_coord_global_.pt_2;
+  pt13_vec = slot.origin_corner_coord_global_.pt_1 -
+             slot.origin_corner_coord_global_.pt_3;
+  pt13_unit_vec = pt13_vec.normalized();
+  pt13_unit_normal_vec.x() = -pt13_unit_vec.y();  // counterclockwise
+  pt13_unit_normal_vec.y() = pt13_unit_vec.x();
+  length = pt13_vec.norm();
+  width = 1.5;
+  heading = std::atan2(pt13_unit_vec.y(), pt13_unit_vec.x());
+  P0 = slot.origin_corner_coord_global_.pt_3 + pt13_unit_vec * 1.5;
+  P1 = slot.origin_corner_coord_global_.pt_1;
+  P2 = slot.origin_corner_coord_global_.pt_1 + pt13_unit_normal_vec * 1.5;
+  P3 = P0 + pt13_unit_normal_vec * 1.5;
+  center.set_x((P0.x() + P1.x() + P2.x() + P3.x()) * 0.25);
+  center.set_y((P0.y() + P1.y() + P2.y() + P3.y()) * 0.25);
+  slot_left_area = planning_math::Box2d(center, heading, length, width);
+
+  pt02_unit_vec = pt02_vec.normalized();
+  pt02_unit_normal_vec.x() = pt02_unit_vec.y();  // clockwise
+  pt02_unit_normal_vec.y() = -pt02_unit_vec.x();
+  length = pt02_vec.norm();
+  width = 1.5;
+  heading = std::atan2(pt02_unit_vec.y(), pt02_unit_vec.x());
+  P0 = slot.origin_corner_coord_global_.pt_2 + pt02_unit_vec * 1.5;
+  P1 = P0 + pt02_unit_normal_vec * 1.5;
+  P2 = slot.origin_corner_coord_global_.pt_0 + pt02_unit_normal_vec * 1.5;
+  P3 = slot.origin_corner_coord_global_.pt_0;
+  center.set_x((P0.x() + P1.x() + P2.x() + P3.x()) * 0.25);
+  center.set_y((P0.y() + P1.y() + P2.y() + P3.y()) * 0.25);
+  slot_right_area = planning_math::Box2d(center, heading, length, width);
+
+  pt01_unit_normal_vec.x() =
+      slot.origin_corner_coord_global_.pt_01_unit_vec.y();
+  pt01_unit_normal_vec.y() =
+      -slot.origin_corner_coord_global_.pt_01_unit_vec.x();
+  length = 3.5;
+  width = slot.origin_corner_coord_global_.pt_01_vec.norm();
+  heading = std::atan2(pt01_unit_normal_vec.y(), pt01_unit_normal_vec.x());
+  P0 = slot.origin_corner_coord_global_.pt_0 +
+       slot.origin_corner_coord_global_.pt_01_unit_vec * 0.3;
+  P1 = P0 + pt01_unit_normal_vec * 3.5;
+  P3 = slot.origin_corner_coord_global_.pt_1 +
+       slot.origin_corner_coord_global_.pt_01_unit_vec * (-0.3);
+  P2 = P3 + pt01_unit_normal_vec * 3.5;
+  center.set_x((P0.x() + P1.x() + P2.x() + P3.x()) * 0.25);
+  center.set_y((P0.y() + P1.y() + P2.y() + P3.y()) * 0.25);
+  slot_front_area = planning_math::Box2d(center, heading, length, width);
+
   for (const auto& pair : obs) {
-    for (const auto& pt : pair.second.GetPtClout2dLocal()) {
+    for (const auto& pt : pair.second.GetPtClout2dGlobal()) {
       if (left_area_is_empty) {
         left_area_is_empty =
-            !(slot_left_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+            !(slot_left_area.IsPointIn(planning_math::Vec2d(pt.x(), pt.y())));
       }
       if (right_area_is_empty) {
         right_area_is_empty =
-            !(slot_right_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+            !(slot_right_area.IsPointIn(planning_math::Vec2d(pt.x(), pt.y())));
       }
       if (front_area_is_empty) {
         front_area_is_empty =
-            !(slot_front_area.contain(cdl::Vector2r(pt.x(), pt.y())));
+            !(slot_front_area.IsPointIn(planning_math::Vec2d(pt.x(), pt.y())));
       }
     }
   }
@@ -1277,8 +1294,26 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
             << static_cast<int>(right_area_is_empty)
             << "  front_area_is_empty = "
             << static_cast<int>(front_area_is_empty);
+  Eigen::Vector2d ego2pt2_vec, ego2pt3_vec, left_mirror2pt2_vec,
+      right_mirror2pt3_vec;
+  double ego2pt2_vec_dot, ego2pt3_vec_dot, left_mirror2pt2_vec_dot,
+      right_mirror2pt3_vec_dot;
 
-  if (ego_local_point.pos.y() < slot.origin_corner_coord_local_.pt_0.y()) {
+  ego2pt2_vec = ego_global_point - slot.origin_corner_coord_global_.pt_2;
+  ego2pt3_vec = ego_global_point - slot.origin_corner_coord_global_.pt_3;
+
+  ego2pt2_vec_dot =
+      ego2pt2_vec.dot(slot.origin_corner_coord_global_.pt_23_unit_vec);
+  ego2pt3_vec_dot =
+      ego2pt3_vec.dot(slot.origin_corner_coord_global_.pt_23_unit_vec);
+
+  left_mirror2pt2_vec =
+      left_mirror_global_point - slot.origin_corner_coord_global_.pt_2;
+  right_mirror2pt3_vec =
+      right_mirror_global_point - slot.origin_corner_coord_global_.pt_3;
+  left_mirror2pt2_vec_dot = left_mirror2pt2_vec.dot(pt02_unit_vec);
+  right_mirror2pt3_vec_dot = right_mirror2pt3_vec.dot(pt13_unit_vec);
+  if (ego2pt2_vec_dot < 0) {
     ego_side_to_slot = 1;
     if (!right_area_is_empty) {
       is_redefine_slot_type = false;
@@ -1286,9 +1321,7 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
       if (!front_area_is_empty) {
         is_redefine_slot_type = true;
       } else {
-        if (ego_local_point.pos.x() +
-                apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
-            slot.origin_corner_coord_local_.pt_1.x()) {
+        if (left_mirror2pt2_vec_dot <= pt02_vec.norm()) {
           if (ego_local_point.heading <= 4 && ego_local_point.heading > -80) {
             is_redefine_slot_type = true;
           } else {
@@ -1303,8 +1336,7 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
         }
       }
     }
-  } else if (ego_local_point.pos.y() >
-             slot.origin_corner_coord_local_.pt_1.y()) {
+  } else if (ego2pt3_vec_dot > 0) {
     ego_side_to_slot = -1;
     if (!left_area_is_empty) {
       is_redefine_slot_type = false;
@@ -1312,9 +1344,7 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
       if (!front_area_is_empty) {
         is_redefine_slot_type = true;
       } else {
-        if (ego_local_point.pos.x() +
-                apa_param.GetParam().lon_dist_mirror_to_rear_axle <=
-            slot.origin_corner_coord_local_.pt_0.x()) {
+        if (right_mirror2pt3_vec_dot <= pt13_vec.norm()) {
           if (ego_local_point.heading >= -4 && ego_local_point.heading < 80) {
             is_redefine_slot_type = true;
           } else {
@@ -1332,9 +1362,10 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(ApaSlot slot) {
   }
   ILOG_INFO << "is_redefine_slot_type = "
             << static_cast<int>(is_redefine_slot_type);
-  perpendicular_redefine_info_map_.insert(
-      perpendicular_redefine_info_map_.end(),
-      {slot.GetId(), {is_redefine_slot_type, ego_side_to_slot}});
+  if (is_redefine_slot_type)
+    perpendicular_redefine_info_map_.insert(
+        perpendicular_redefine_info_map_.end(),
+        {slot.GetId(), {is_redefine_slot_type, ego_side_to_slot}});
   return is_redefine_slot_type;
 }
 
