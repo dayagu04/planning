@@ -69,7 +69,6 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider() {  // for pybind
       STSampleSpaceBase(front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
   sample_trajs_ = std::vector<std::vector<SampleQuarticPolynomialCurve>>();
   min_cost_traj_ptr_ = nullptr;
-  min_cost_quintic_traj_ = nullptr;
   evaulation_t_ = 5.0;
 }
 
@@ -93,7 +92,6 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
       STSampleSpaceBase(front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
   sample_trajs_ = std::vector<std::vector<SampleQuarticPolynomialCurve>>();
   min_cost_traj_ptr_ = nullptr;
-  min_cost_quintic_traj_ = nullptr;
   SetNormalSceneWeight();
   evaulation_t_ = 5.0;
 }
@@ -519,17 +517,17 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
     return false;
   }
 
-  if (coarse_planning_info.target_state == kLaneChangePropose ||
-      enable_hold_adjust_speed) {
-    count_wait_state_++;
-  }
+  // if (coarse_planning_info.target_state == kLaneChangePropose ||
+  //     enable_hold_adjust_speed) {
+  //   count_wait_state_++;
+  // }
 
-  const int count_wait_limit = enable_merge_decelaration ? 1 : 3;
+  // const int count_wait_limit = enable_merge_decelaration ? 1 : 3;
 
-  if (count_wait_state_ <= count_wait_limit) {
-    ClearStitchedPolyPtr();
-    return false;
-  }
+  // if (count_wait_state_ <= count_wait_limit) {
+  //   ClearStitchedPolyPtr();
+  //   return false;
+  // }
 
   if (lead_one != nullptr) {
     if (lead_one->id() > 0) {
@@ -662,9 +660,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   // calc flow vel
   StitchLastBestPoly();
   min_cost_traj_ptr_ = nullptr;      // clear last ptr;
-  min_cost_quintic_traj_ = nullptr;  // clear last quintic ptr;
   sample_trajs_.clear();
-  sample_quintic_trajs_.clear();
 
   CalcTargetLaneObjsFlowVel();
   CalcTargetLaneVehDensity();
@@ -1289,83 +1285,83 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
   return false;
 }
 
-bool SamplePolySpeedAdjustDecider::GenerateForceMergeTraj() {
-  const double delta_a = (adjust_speed_max_acc_ - adjust_speed_min_acc_) /
-                         (config_.sample_v_nums - 1);
-  double time_to_stop_point =
-      distance_to_stop_point_ / std::fmax(ego_v_, kZeroEpsilon);
-  double time_to_stop_line =
-      merge_stop_line_distance_ / std::fmax(ego_v_, kZeroEpsilon);
-  double left_distance =
-      time_to_stop_point < 1.0
-          ? time_to_stop_line < 1.0 ? ego_v_ * 1.5 : merge_stop_line_distance_
-          : distance_to_stop_point_;
-  auto compare_t_upper =
-      left_distance / std::fmax(speed_adjust_range_.second, kZeroEpsilon);
-  compare_t_upper = std::fmin(5.0, compare_t_upper);
-  int t_count = 1.0 + (compare_t_upper - 0.5) / 0.1;
-  for (int i = 0; i < config_.sample_v_nums; i++) {
-    double a = adjust_speed_min_acc_ + i * delta_a;
-    std::vector<SampleQuinticPolynomialCurve> sample_traj_at_t;
-    for (int j = 0; j <= t_count; j++) {
-      const double t = 0.5 + j * 0.1;
-      double v = ego_v_ + a * t;
-      if ((a - ego_a_) / t > 3.0 || (a - ego_a_) / t < -3.0) {
-        continue;
-      }
-      a = (v < speed_adjust_range_.first && v > speed_adjust_range_.second)
-              ? a
-              : 0.0;
-      v = std::fmin(v, speed_adjust_range_.first);
-      v = std::fmax(v, speed_adjust_range_.second);
-      QuinticPolyState quintic_start{ego_s_, ego_v_, ego_a_,
-                                     0.0};  // bind p0, v0, a0, ve, ae
-      QuinticPolyState quintic_end{ego_s_ + left_distance, v, a, t};
-      QuinticPolynomial quintic_sample_polynomial(quintic_start, quintic_end);
-      if (quintic_sample_polynomial.jerk_extrema().first > 3.0 ||
-          quintic_sample_polynomial.jerk_extrema().second < -2.5 ||
-          !quintic_sample_polynomial.valid()) {
-        continue;
-      }
-      // if(quintic_sample_polynomial.end_a() > 1.5 ||
-      // quintic_sample_polynomial.end_a() < -2.5 ||
-      // !quintic_sample_polynomial.valid()){
-      //   continue;
-      // }
-      SampleQuinticPolynomialCurve quintic_sample_traj(
-          quintic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
-          weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
-          weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-          weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
-          weight_speed_change_, weight_leading_veh_follow_s_,
-          weight_jerk_limit_, front_edge_to_rear_axle_,
-          rear_edge_to_rear_axle_);
+// bool SamplePolySpeedAdjustDecider::GenerateForceMergeTraj() {
+//   const double delta_a = (adjust_speed_max_acc_ - adjust_speed_min_acc_) /
+//                          (config_.sample_v_nums - 1);
+//   double time_to_stop_point =
+//       distance_to_stop_point_ / std::fmax(ego_v_, kZeroEpsilon);
+//   double time_to_stop_line =
+//       merge_stop_line_distance_ / std::fmax(ego_v_, kZeroEpsilon);
+//   double left_distance =
+//       time_to_stop_point < 1.0
+//           ? time_to_stop_line < 1.0 ? ego_v_ * 1.5 : merge_stop_line_distance_
+//           : distance_to_stop_point_;
+//   auto compare_t_upper =
+//       left_distance / std::fmax(speed_adjust_range_.second, kZeroEpsilon);
+//   compare_t_upper = std::fmin(5.0, compare_t_upper);
+//   int t_count = 1.0 + (compare_t_upper - 0.5) / 0.1;
+//   for (int i = 0; i < config_.sample_v_nums; i++) {
+//     double a = adjust_speed_min_acc_ + i * delta_a;
+//     std::vector<SampleQuinticPolynomialCurve> sample_traj_at_t;
+//     for (int j = 0; j <= t_count; j++) {
+//       const double t = 0.5 + j * 0.1;
+//       double v = ego_v_ + a * t;
+//       if ((a - ego_a_) / t > 3.0 || (a - ego_a_) / t < -3.0) {
+//         continue;
+//       }
+//       a = (v < speed_adjust_range_.first && v > speed_adjust_range_.second)
+//               ? a
+//               : 0.0;
+//       v = std::fmin(v, speed_adjust_range_.first);
+//       v = std::fmax(v, speed_adjust_range_.second);
+//       QuinticPolyState quintic_start{ego_s_, ego_v_, ego_a_,
+//                                      0.0};  // bind p0, v0, a0, ve, ae
+//       QuinticPolyState quintic_end{ego_s_ + left_distance, v, a, t};
+//       QuinticPolynomial quintic_sample_polynomial(quintic_start, quintic_end);
+//       if (quintic_sample_polynomial.jerk_extrema().first > 3.0 ||
+//           quintic_sample_polynomial.jerk_extrema().second < -2.5 ||
+//           !quintic_sample_polynomial.valid()) {
+//         continue;
+//       }
+//       // if(quintic_sample_polynomial.end_a() > 1.5 ||
+//       // quintic_sample_polynomial.end_a() < -2.5 ||
+//       // !quintic_sample_polynomial.valid()){
+//       //   continue;
+//       // }
+//       SampleQuinticPolynomialCurve quintic_sample_traj(
+//           quintic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
+//           weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
+//           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
+//           weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+//           weight_speed_change_, weight_leading_veh_follow_s_,
+//           weight_jerk_limit_, front_edge_to_rear_axle_,
+//           rear_edge_to_rear_axle_);
 
-      sample_traj_at_t.emplace_back(std::move(quintic_sample_traj));
-    }
-    if (!sample_traj_at_t.empty()) {
-      sample_quintic_trajs_.emplace_back(std::move(sample_traj_at_t));
-    }
-  }
-  return true;
-}
+//       sample_traj_at_t.emplace_back(std::move(quintic_sample_traj));
+//     }
+//     if (!sample_traj_at_t.empty()) {
+//       sample_quintic_trajs_.emplace_back(std::move(sample_traj_at_t));
+//     }
+//   }
+//   return true;
+// }
 
-bool SamplePolySpeedAdjustDecider::EvaluateForceMergeTraj() {
-  double min_cost = std::numeric_limits<double>::max();
-  for (size_t k = 0; k < sample_quintic_trajs_.size(); k++) {
-    auto& sample_traj_at_v = sample_quintic_trajs_[k];
-    for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
-      auto& sample_traj = sample_traj_at_v[j];
-      sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
-                           leading_veh_);
-      if (sample_traj.cost_sum_ < min_cost) {
-        min_cost_quintic_traj_ = &sample_traj;
-        min_cost = sample_traj.cost_sum_;
-      }
-    }
-  }
-  return true;
-}
+// bool SamplePolySpeedAdjustDecider::EvaluateForceMergeTraj() {
+//   double min_cost = std::numeric_limits<double>::max();
+//   for (size_t k = 0; k < sample_quintic_trajs_.size(); k++) {
+//     auto& sample_traj_at_v = sample_quintic_trajs_[k];
+//     for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
+//       auto& sample_traj = sample_traj_at_v[j];
+//       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
+//                            leading_veh_);
+//       if (sample_traj.cost_sum_ < min_cost) {
+//         min_cost_quintic_traj_ = &sample_traj;
+//         min_cost = sample_traj.cost_sum_;
+//       }
+//     }
+//   }
+//   return true;
+// }
 
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);

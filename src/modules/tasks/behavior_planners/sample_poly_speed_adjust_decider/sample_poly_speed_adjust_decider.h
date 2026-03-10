@@ -11,7 +11,6 @@
 #include "environmental_model.h"
 #include "reference_path.h"
 #include "sample_quartic_poly_curve.h"
-#include "sample_quintic_poly_curve.h"
 #include "sample_space_base.h"
 #include "session.h"
 #include "simple_astar_path.h"
@@ -108,7 +107,6 @@ class SamplePolySpeedAdjustDecider : public Task {
   double evaluation_congest_t_{3.0};
 
   SampleQuarticPolynomialCurve* min_cost_traj_ptr_;
-  SampleQuinticPolynomialCurve* min_cost_quintic_traj_;
   SampleQuarticPolynomialCurve last_min_cost_traj_;
   std::unique_ptr<UniformJerkCurve> jerk_curve_upper_;
   std::unique_ptr<UniformJerkCurve> jerk_curve_lower_;
@@ -116,7 +114,6 @@ class SamplePolySpeedAdjustDecider : public Task {
       stitched_last_best_quartic_poly_ptr_;
 
   std::vector<std::vector<SampleQuarticPolynomialCurve>> sample_trajs_;
-  std::vector<std::vector<SampleQuinticPolynomialCurve>> sample_quintic_trajs_;
   LonState lon_state_;
   StateLimit state_limit_upper_;
   StateLimit state_limit_lower_;
