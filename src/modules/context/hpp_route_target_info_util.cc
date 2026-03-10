@@ -16,21 +16,19 @@ bool UpdateHppRouteTargetInfoFromReferencePath(
     return false;
   }
 
+  const auto& parking_slot_manager =
+      session->environmental_model().get_parking_slot_manager();
+  if (reference_path == nullptr || !reference_path->valid() ||
+      !parking_slot_manager->IsExistTargetSlot()) {
+    return true;
+  }
+
   const auto& route_info_output =
       session->environmental_model().get_route_info()->get_route_info_output();
   double dist_to_target_dest =
       route_info_output.hpp_route_info_output.distance_to_target_dest;
   double dist_to_target_slot =
       route_info_output.hpp_route_info_output.distance_to_target_slot;
-
-  const auto& parking_slot_manager =
-      session->environmental_model().get_parking_slot_manager();
-  if (reference_path == nullptr || !reference_path->valid() ||
-      !parking_slot_manager->IsExistTargetSlot()) {
-    session->mutable_environmental_model()->get_route_info()->UpdateTargetInfo(
-        dist_to_target_slot, dist_to_target_dest);
-    return true;
-  }
 
   const double ego_s = reference_path->get_frenet_ego_state().s();
   const auto& frenet_coord = reference_path->get_frenet_coord();

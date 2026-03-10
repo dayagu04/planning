@@ -88,8 +88,7 @@ bool StopDestinationDecider::Execute() {
   }
   const auto function_mode =
       session_->environmental_model().function_info().function_mode();
-  if (function_mode == common::DrivingFunctionInfo::RADS ||
-      session_->is_hpp_scene()) {
+  if (session_->is_rads_scene() || session_->is_hpp_scene()) {
     StopDestinationProcess();
   }
   return true;
@@ -126,7 +125,7 @@ bool StopDestinationDecider::AddVirtualObstacle() {
     virtual_agent.set_agent_id(agent::AgentDefaultInfo::kNoAgentId);
     return false;
   }
-  
+
   const auto& current_raw_end_point =
       current_reference_path->GetRawEndRefPathPoint();
   static double stop_destination_extended_s_buffer =
