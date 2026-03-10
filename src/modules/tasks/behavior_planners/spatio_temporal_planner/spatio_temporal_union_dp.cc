@@ -223,7 +223,7 @@ bool SpatioTemporalUnionDp::InitCostTable(
   }
   auto &cost_init = cost_table_[0][0][0];
   SLTPoint init_point(ego_init_state.s(), ego_init_state.l(), 0.0);
-  cost_init.Init(0, 0, 0, init_point);
+  cost_init.Init(0, 0, dimension_l_ / 2, init_point);
 
   const auto &cost_table_0 = cost_table_[0];
   const auto &cost_table_0_0 = cost_table_[0][0];
@@ -243,7 +243,23 @@ bool SpatioTemporalUnionDp::InitCostTable(
            .path_l_cost_param_b();
   k_ = spatio_temporal_union_plan_input.lat_path_weight_params()
            .path_l_cost_param_k();
+
+  // TODO： 如果参数未发生变化，可以不用重新生成
+  PreGenerateCubic();
   return true;
+}
+
+void SpatioTemporalUnionDp::PreGenerateCubic() {
+  CubicPolynomialMap_.clear();
+  for (int i = 0; i < lateral_distance_by_index_.size(); i++) {
+    std::array<double, 2> later_start_state{lateral_distance_by_index_[i], 0.0};
+    for (int j = 0; j < lateral_distance_by_index_.size(); j++) {
+      std::array<double, 2> later_end_state{lateral_distance_by_index_[j], 0.0};
+      CubicPolynomialCurve1d lateral_cubic_curve(later_start_state,
+                                                    later_end_state, unit_t_);
+      CubicPolynomialMap_[{i, j}] = std::move(lateral_cubic_curve);
+    }
+  }
 }
 
 bool SpatioTemporalUnionDp::InitSpeedLimitLookUp(
@@ -673,12 +689,12 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     // }
 
     // 生成L方向三次多项式
-    std::array<double, 2> later_start_state{cost_init.point().l(), 0.0};
-    std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
-    double remain_time = cost_cr.point().t() - cost_init.point().t();
-    CubicPolynomialCurve1d lateral_cubic_curve_c1(later_start_state,
-                                                  later_end_state, remain_time);
-
+    // std::array<double, 2> later_start_state{cost_init.point().l(), 0.0};
+    // std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
+    // double remain_time = cost_cr.point().t() - cost_init.point().t();
+    // CubicPolynomialCurve1d lateral_cubic_curve_c1(later_start_state,
+    //                                               later_end_state, remain_time);
+    const CubicPolynomialCurve1d& lateral_cubic_curve_c1 = CubicPolynomialMap_.at({cost_init.index_l(), cost_cr.index_l()});
     // auto c1 = IflyTime::Now_us();
     // frenet系下检测是否发生碰撞
     if (CheckOverlapOnDpSltGraph(cost_cr, agent_trajs)) {
@@ -806,12 +822,12 @@ void SpatioTemporalUnionDp::CalculateCostAt(
 
         const auto &pre_cost = pre_node;
         // 生成L方向三次多项式
-        std::array<double, 2> later_start_state{pre_cost.point().l(), 0.0};
-        std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
-        double remain_time = cost_cr.point().t() - pre_cost.point().t();
-        CubicPolynomialCurve1d lateral_cubic_curve_c2(
-            later_start_state, later_end_state, remain_time);
-
+        // std::array<double, 2> later_start_state{pre_cost.point().l(), 0.0};
+        // std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
+        // double remain_time = cost_cr.point().t() - pre_cost.point().t();
+        // CubicPolynomialCurve1d lateral_cubic_curve_c2(
+        //     later_start_state, later_end_state, remain_time);
+        const CubicPolynomialCurve1d& lateral_cubic_curve_c2 = CubicPolynomialMap_.at({pre_cost.index_l(), cost_cr.index_l()});
         // 计算相邻两节点之间路径的cost
         // auto overlap_2 = IflyTime::Now_us();
         double path_cost_c2 =
@@ -936,9 +952,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       std::array<double, 2> later_start_state{pre_cost.point().l(), 0.0};
       std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
       double remain_time = cost_cr.point().t() - pre_cost.point().t();
-      CubicPolynomialCurve1d lateral_cubic_curve(later_start_state,
-                                                 later_end_state, remain_time);
-
+      // std::cout << pre_cost.point().l() << " " << cost_cr.point().l() << std::endl;
+      const CubicPolynomialCurve1d& lateral_cubic_curve = CubicPolynomialMap_.at({pre_cost.index_l(), cost_cr.index_l()});
       // 计算相邻两节点之间路径的cost
       double path_cost_c =
           CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve, curr_a,

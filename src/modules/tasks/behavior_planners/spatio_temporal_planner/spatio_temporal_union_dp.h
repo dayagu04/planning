@@ -40,6 +40,15 @@ struct SLTGraphMessage {
   uint32_t k;
 };
 
+struct PairHash {
+    std::size_t operator()(const std::pair<double, double>& p) const noexcept {
+        // 使用位拼接组合两个 double 的哈希值
+        auto h1 = std::hash<double>{}(p.first);
+        auto h2 = std::hash<double>{}(p.second);
+        return h1 ^ (h2 << 1);  // 简单的组合方式
+    }
+};
+
 class SpatioTemporalUnionDp {
  public:
   void Init();
@@ -57,12 +66,13 @@ class SpatioTemporalUnionDp {
   void Reset();
 
  private:
+
   bool InitCostTable(const planning::common::SpationTemporalUnionDpInput&
                          spatio_temporal_union_plan_input,
                      const int half_lateral_sample_nums, const double target_s);
-
-  bool InitSpeedLimitLookUp(const planning::common::SpationTemporalUnionDpInput
-                                &spatio_temporal_union_plan_input);
+  void PreGenerateCubic();
+  bool InitSpeedLimitLookUp(const planning::common::SpationTemporalUnionDpInput&
+                                spatio_temporal_union_plan_input);
 
   bool RetrieveSpeedProfile(TrajectoryPoints &traj_points,
                             const planning::common::SpationTemporalUnionDpInput
@@ -183,7 +193,7 @@ class SpatioTemporalUnionDp {
     const CubicPolynomialCurve1d& lateral_curve, const double& acc,
     const double& v0, double time_gap, std::vector<AABox2d>& ego_boxes,
     std::vector<double>& times);
-    
+
   void FallbackFunction(const planning::common::SpationTemporalUnionDpInput&
                             spatio_temporal_union_plan_input,
                         TrajectoryPoints& traj_points,
@@ -267,6 +277,8 @@ class SpatioTemporalUnionDp {
   double b_ = 0.40;
   double k_ = 1.5;
   double min_s_consider_speed_ = 0.0;
+  std::unordered_map<std::pair<int, int>, CubicPolynomialCurve1d,
+                 PairHash> CubicPolynomialMap_;
 };
 
 }  // namespace planning
