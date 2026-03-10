@@ -1402,28 +1402,189 @@ double LaneChangeRequest::CalcClusterToBoundaryDist(
 }
 
 bool LaneChangeRequest::IsCurveSurpressLaneChange() const {
-  std::vector<ad_common::math::Vec2d> consider_points;
-  if (!CollectConsiderPoints(consider_points)) {
+  if (session_ == nullptr) {
     return false;
   }
 
-  const double kWindowLen = 30.0; //平滑曲率的滑窗宽度
-  const auto &curve_vec = CalculateAndSmoothCurvature(consider_points, kWindowLen);
-  if (curve_vec.empty()) {
+  const auto &route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return false;
+  }
+
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto &pose = ego_state->location_enu();
+
+  // 核心配置：向前搜索范围150m，曲率半径阈值70m
+  const double kSearchDistanceAhead = ego_state->ego_v() * 6;
+  const double kWindowLen = 20.0;
+
+  // 获取当前link
+  const auto *start_link = route_info->get_current_link();
+  if (start_link == nullptr) {
+    return false;
+  }
+
+  // 查找自车在当前link上的位置（最近点）和累计s值（从link起点到自车的距离）
+  const auto &cur_pts = start_link->points().boot().points();
+  if (cur_pts.size() < 2) {
+    return false;
+  }
+
+  double min_dist = std::numeric_limits<double>::max();
+  size_t nearest_idx = 0;
+  ad_common::math::Vec2d current_point(pose.position.x, pose.position.y);
+  // 步骤1：找到自车在当前link上的最近点索引
+  for (size_t i = 0; i < cur_pts.size(); ++i) {
+    double dist = std::hypot(cur_pts[i].x() - current_point.x(),
+                             cur_pts[i].y() - current_point.y());
+    if (dist < min_dist) {
+      min_dist = dist;
+      nearest_idx = i;
+    }
+  }
+
+  // 步骤2：计算自车在当前link上的s坐标（link起点→自车位置的距离）
+  double ego_s_on_cur_link = 0.0;
+  for (size_t i = 1; i <= nearest_idx; ++i) {
+    ego_s_on_cur_link += std::hypot(cur_pts[i].x() - cur_pts[i - 1].x(),
+                                    cur_pts[i].y() - cur_pts[i - 1].y());
+  }
+  // 自车向前150m的边界s值（核心：仅处理≤该值的点）
+  const double kMaxSForSearch = ego_s_on_cur_link + kSearchDistanceAhead;
+
+  // 步骤3：遍历link，收集向前150m内的曲率（仅向前，排除后方点）
+  std::vector<double> valid_curves;  // 仅存储150m内的有效曲率
+  double accumulated_s_from_ego = 0.0;  // 从自车位置开始的累计距离（向前为正）
+
+  const iflymapdata::sdpro::LinkInfo_Link *search_link = start_link;
+  const auto &sdpro_map = route_info->get_sdpro_map();
+
+  while (search_link != nullptr) {
+    const auto &pts = search_link->points().boot().points();
+    if (pts.size() < 2) {
+      continue;
+    }
+
+    std::vector<ad_common::math::Vec2d> pts_vec;
+    pts_vec.reserve(pts.size());
+    for (const auto &p : pts) {
+      pts_vec.emplace_back(p.x(), p.y());
+    }
+
+    // 1. 预计算当前link每个点的绝对s值（从link起点开始）
+    std::vector<double> link_point_abs_s(pts.size(), 0.0);
+    for (size_t i = 1; i < pts.size(); ++i) {
+      link_point_abs_s[i] =
+          link_point_abs_s[i - 1] +
+          std::hypot(pts[i].x() - pts[i - 1].x(), pts[i].y() - pts[i - 1].y());
+    }
+    double link_total_length = link_point_abs_s.back();
+
+    // 2. 计算当前link的曲率（保留原逻辑，假设能处理完整link）
+    const auto &curve_vec = CalculateAndSmoothCurvature(pts_vec, kWindowLen);
+    if (curve_vec.empty() || curve_vec.size() != pts.size()) {
+      // ... 日志逻辑不变 ...
+    } else {
+      // 3. 遍历点，但增加【提前终止】逻辑
+      for (size_t i = 0; i < pts.size(); ++i) {
+        double point_abs_s = link_point_abs_s[i];
+        double point_s_from_ego = 0.0;
+
+        if (search_link->id() == start_link->id()) {
+          point_s_from_ego = point_abs_s - ego_s_on_cur_link;
+        } else {
+          // 注意：这里直接用累加距离 + 点的绝对s，逻辑正确
+          point_s_from_ego = accumulated_s_from_ego + point_abs_s;
+        }
+
+        // ===== 核心修复 1：严格过滤范围 =====
+        if (point_s_from_ego < 0) {
+          continue;  // 跳过自车后方
+        }
+        if (point_s_from_ego > kSearchDistanceAhead) {
+          // 【关键】一旦超过150m，直接break掉点的循环，不再处理后续点
+          break;
+        }
+
+        // 此时的点一定在 [0, 150m] 范围内
+        valid_curves.push_back(std::abs(curve_vec[i]));
+      }
+    }
+
+    // 4. 计算当前link实际贡献的有效长度（用于判断是否继续下一个link）
+    double effective_length = 0.0;
+    if (search_link->id() == start_link->id()) {
+      // 当前link：有效长度是自车到link终点的距离
+      effective_length = link_total_length - ego_s_on_cur_link;
+    } else {
+      // 后续link：有效长度是整个link，或者剩余的搜索距离
+      effective_length = std::min(
+          link_total_length, kSearchDistanceAhead - accumulated_s_from_ego);
+    }
+
+    // 5. 更新累计距离（使用有效长度，而非全量长度）
+    accumulated_s_from_ego += effective_length;
+
+    // ===== 核心修复 2：基于有效长度判断是否终止 =====
+    // 如果累计距离已经达到或超过150m，彻底终止，不再处理下一个link
+    if (accumulated_s_from_ego >=
+        kSearchDistanceAhead - 1e-6) {  // 浮点精度容错
+      break;
+    }
+
+    // 6. 获取下一个link（如果还没到150m）
+    search_link = sdpro_map.GetNextLinkOnRoute(search_link->id());
+  }
+
+  // 步骤4：计算有效曲率的平均值（仅150m内的点）
+  if (valid_curves.empty()) {
     return false;
   }
 
   double total_curve = 0.0;
-  for (const auto& curve : curve_vec) {
-    total_curve = total_curve + std::abs(curve);
+  for (const auto &curve : valid_curves) {
+    total_curve += curve;
+  }
+  double average_curve = total_curve / valid_curves.size();
+  JSON_DEBUG_VALUE("average_curve_150m_ahead", average_curve);
+
+  // 步骤5：判断是否抑制变道
+  const double curve_threshold = 1.0 / kCurveRadiusThreshold;
+  const int min_continuous_points = 4;
+  return IsLargeCurvatureByQuantile(valid_curves, curve_threshold,
+                                    min_continuous_points);
+}
+
+// 输入：150m内的曲率列表（已平滑）、大曲率阈值、最小连续点数
+bool LaneChangeRequest::IsLargeCurvatureByQuantile(
+    const std::vector<double> &curvature_list, double large_curv_thresh,
+    int min_continuous_points) const {
+  if (curvature_list.empty()) return false;
+
+  // 步骤1：计算90分位数（先排序）
+  std::vector<double> curv_sorted = curvature_list;
+  std::sort(curv_sorted.begin(), curv_sorted.end());
+  size_t quantile_idx = static_cast<size_t>(curv_sorted.size() * 0.9);
+  double curv_90 = curv_sorted[quantile_idx];
+
+  // 步骤2：90分位数未超阈值，直接返回false
+  if (curv_90 < large_curv_thresh) return false;
+
+  // 步骤3：验证是否有连续段超阈值（避免单点高曲率）
+  int continuous_count = 0;
+  for (double curv : curvature_list) {
+    if (std::abs(curv) > large_curv_thresh) {
+      continuous_count++;
+      if (continuous_count >= min_continuous_points) {
+        return true;
+      }
+    } else {
+      continuous_count = 0;
+    }
   }
 
-  double average_curve = total_curve / curve_vec.size();
-  JSON_DEBUG_VALUE("average_curve", average_curve);
-
-  // 道路的半径小于70m可以抑制变道
-  const double curve_condition = (1.0 / kCurveRadiusThreshold);
-  return average_curve > curve_condition;
+  return false;
 }
 
 bool LaneChangeRequest::CollectConsiderPoints(std::vector<ad_common::math::Vec2d>& consider_points) const {
