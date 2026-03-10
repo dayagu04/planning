@@ -23,7 +23,7 @@ const double WEIGHT_DIST = 1.0;     // 距离代价权重
 const double WEIGHT_VEL = 0.2;      // 速度代价权重
 const double WEIGHT_ACCEL = 0.2;    // 加速度代价权重（舒适性）
 const double WEIGHT_JERK = 0.2;     // jerk代价权重（舒适性）
-const int MAX_ITERATION = 10000;    // 最大迭代次数
+const int MAX_ITERATION = 200;    // 最大迭代次数
 const double ACC_STEP = 0.4;
 
 struct STNode {

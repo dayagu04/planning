@@ -39,10 +39,10 @@ void LongitudinalAStar::PlanTrajectory() {
 
   while (!open_list_.empty()) {
     count_++;
-    // if (count_ > 250) {
-    //   std::cout << "警告：A*搜索未收敛！" << std::endl;
-    //   break;
-    // }
+    if (count_ > MAX_ITERATION) {
+      std::cout << "警告：A*搜索未收敛！" << std::endl;
+      break;
+    }
     STNode current_node = *open_list_.begin();
     auto current_node_ptr = std::make_shared<STNode>(current_node);
     open_list_.erase(open_list_.begin());
