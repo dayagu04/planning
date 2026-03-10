@@ -154,7 +154,9 @@ void ObstacleManager::update() {
     // hack(taolu10): HPP 场景下，假设 OD 障碍物和自车同楼层
     for(const auto* c_obstacle : obstacles_.Items()) {
       auto* obstacle = obstacles_.Find(c_obstacle->id());
-      obstacle->set_floor_id(ego_state.ego_floor_id());
+       if (obstacle) {
+          obstacle->set_floor_id(ego_state.ego_floor_id());
+        }
     }
   }
 
@@ -370,7 +372,9 @@ void ObstacleManager::UpdateOccObstacle() {
     // hack(taolu10): HPP 场景下，假设 OD 障碍物和自车同楼层
     for (const auto *c_obstacle : occupancy_obstacles_.Items()) {
       auto *obstacle = obstacles_.Find(c_obstacle->id());
-      obstacle->set_floor_id(ego_state.ego_floor_id());
+       if (obstacle) {
+          obstacle->set_floor_id(ego_state.ego_floor_id());
+        }
     }
   }
 }
@@ -686,7 +690,9 @@ void ObstacleManager::UpdateGroundLineObstacle() {
       const auto& ego_state = session_->environmental_model().get_ego_state_manager();
       for (const auto *c_obstacle : groundline_obstacles_.Items()) {
         auto *obstacle = obstacles_.Find(c_obstacle->id());
-        obstacle->set_floor_id(ego_state->ego_floor_id());
+         if (obstacle) {
+          obstacle->set_floor_id(ego_state->ego_floor_id());
+        }
       }
     }
   }
@@ -805,7 +811,9 @@ void ObstacleManager::UpdateMapStaticObstacle() {
     // hack(taolu10): HPP 场景下，假设 OD 障碍物和自车同楼层
     for (const auto *c_obstacle : map_static_obstacles_.Items()) {
       auto *obstacle = obstacles_.Find(c_obstacle->id());
-      obstacle->set_floor_id(ego_state->ego_floor_id());
+       if (obstacle) {
+          obstacle->set_floor_id(ego_state->ego_floor_id());
+        }
     }
   }
 }

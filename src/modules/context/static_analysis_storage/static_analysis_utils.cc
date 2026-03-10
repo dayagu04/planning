@@ -45,8 +45,8 @@ bool GenerateLatTypeRanges(
     return false;
   }
   // s1: generate turn_range_infos
-  constexpr double kPeakKappaThr = 0.1;
-  constexpr double kTurnKappaThr = 0.04;
+  constexpr double kPeakKappaThr = 0.05;
+  constexpr double kTurnKappaThr = 0.01;
   // s1-1: check peak
   for (size_t i = 1; i < path_size - 1; ++i) {
     const auto prev_kappa =
@@ -185,33 +185,37 @@ bool DetermineTurnTypeAndRange(
     const ReferencePathPoints& refer_path_points,
     std::vector<LatTypeRangeInfo>& turn_range_infos) {
   constexpr double kDegToRad = M_PI / 180.0;
-  // 螺旋弯：大转角 + 长弧长
-  auto is_curve_turn = [&refer_path_points](
+
+
+  const auto get_delta_heading =
+      [&refer_path_points](const LatTypeRangeInfo& info) {
+        if (info.e_idx <= info.s_idx ||
+            info.e_idx >= refer_path_points.size()) {
+          return 0.0;
+        }
+        double sum_abs_delta = 0.0;
+        double prev_theta = refer_path_points[info.s_idx].path_point.theta();
+        for (size_t i = info.s_idx + 1; i <= info.e_idx; ++i) {
+          const double curr_theta = refer_path_points[i].path_point.theta();
+          sum_abs_delta +=
+              std::fabs(ad_common::math::AngleDiff(prev_theta, curr_theta));
+          prev_theta = curr_theta;
+        }
+        return sum_abs_delta;
+      };
+
+   // 螺旋弯：大转角 + 长弧长
+  auto is_curve_turn = [&get_delta_heading,&refer_path_points](
                            const LatTypeRangeInfo& turn_range_info) {
     const double s_start =
         refer_path_points[turn_range_info.s_idx].path_point.theta();
-    double heading_min = 10.0;
-    double heading_max = -10.0;
-    for (int j = turn_range_info.s_idx; j <= turn_range_info.e_idx; ++j) {
-      double gap = refer_path_points[j].path_point.theta() - s_start;
-      if (gap > heading_max) heading_max = gap;
-      if (gap < heading_min) heading_min = gap;
-    }
-    const double abs_max = std::fabs(heading_max) + std::fabs(heading_min);
+
     constexpr double kCurveTurnAngleMax = 200.0 * kDegToRad;
     constexpr double kCurveTurnLengthMax = 16.0;
     double seg_len = refer_path_points[turn_range_info.e_idx].path_point.s() -
                      refer_path_points[turn_range_info.s_idx].path_point.s();
-    return (abs_max > kCurveTurnAngleMax) && (seg_len > kCurveTurnLengthMax) &&
-           (heading_max * heading_min < -1e-5);
+    return (get_delta_heading(turn_range_info) > kCurveTurnAngleMax) && (seg_len > kCurveTurnLengthMax);
   };
-
-  const auto get_delta_heading =
-      [&refer_path_points](const LatTypeRangeInfo& info) {
-        const auto& sp = refer_path_points[info.s_idx].path_point;
-        const auto& ep = refer_path_points[info.e_idx].path_point;
-        return std::fabs(ad_common::math::AngleDiff(ep.theta(), sp.theta()));
-      };
 
   // U型弯：转角 > 160°
   auto is_u_turn = [&get_delta_heading,
@@ -224,17 +228,17 @@ bool DetermineTurnTypeAndRange(
     double d = get_delta_heading(info);
     return d > 100.0 * kDegToRad && d < 160.0 * kDegToRad;
   };
-  // 直角：80° < 转角 < 100°
+  // 直角：70° < 转角 < 100°
   auto is_normal_turn = [&get_delta_heading,
                          kDegToRad](const LatTypeRangeInfo& info) {
     double d = get_delta_heading(info);
-    return d > 80.0 * kDegToRad && d < 100.0 * kDegToRad;
+    return d > 70.0 * kDegToRad && d < 100.0 * kDegToRad;
   };
-  // 锐角弯：10° < 转角 < 80°
+  // 锐角弯：20° < 转角 < 70°
   auto is_sharp_turn = [&get_delta_heading,
                         kDegToRad](const LatTypeRangeInfo& info) {
     double d = get_delta_heading(info);
-    return d > 10.0 * kDegToRad && d < 60.0 * kDegToRad;
+    return d > 20.0 * kDegToRad && d < 70.0 * kDegToRad;
   };
   // 绕障：转角 < 10°
   auto is_nudge_turn = [&get_delta_heading,
@@ -373,6 +377,7 @@ bool GenerateWidthRanges(
           PassageTypeRangeInfo info(wide_s_idx);
           info.s_idx = wide_s_idx;
           info.e_idx = e_idx;
+          info.type = CPassageType::WidedPassage;
           wide_passage_range_infos.push_back(info);
         }
         in_wide = false;
@@ -392,6 +397,7 @@ bool GenerateWidthRanges(
       PassageTypeRangeInfo info(wide_s_idx);
       info.s_idx = wide_s_idx;
       info.e_idx = e_idx;
+      info.type = CPassageType::WidedPassage;
       wide_passage_range_infos.push_back(info);
     }
   }
@@ -414,6 +420,7 @@ bool GenerateWidthRanges(
           PassageTypeRangeInfo info(narrow_s_idx);
           info.s_idx = narrow_s_idx;
           info.e_idx = e_idx;
+          info.type = CPassageType::NarrowPassage;
           narrow_passage_range_infos.push_back(info);
         }
         in_narrow = false;
@@ -433,6 +440,7 @@ bool GenerateWidthRanges(
       PassageTypeRangeInfo info(narrow_s_idx);
       info.s_idx = narrow_s_idx;
       info.e_idx = e_idx;
+      info.type = CPassageType::NarrowPassage;
       narrow_passage_range_infos.push_back(info);
     }
   }
@@ -461,6 +469,7 @@ bool GenerateWidthRanges(
     PassageTypeRangeInfo info(0);
     info.s_idx = 0;
     info.e_idx = refer_path_points_num - 1;
+    info.type = CPassageType::NormalPassage;
     normal_passage_range_infos.push_back(info);
   } else {
     size_t last_end = 0;
@@ -469,6 +478,7 @@ bool GenerateWidthRanges(
         PassageTypeRangeInfo info(last_end);
         info.s_idx = last_end;
         info.e_idx = covered_merged.first - 1;
+        info.type = CPassageType::NormalPassage;
         normal_passage_range_infos.push_back(info);
       }
       if (covered_merged.second + 1 > last_end) {
@@ -479,6 +489,7 @@ bool GenerateWidthRanges(
       PassageTypeRangeInfo info(last_end);
       info.s_idx = last_end;
       info.e_idx = refer_path_points_num - 1;
+      info.type = CPassageType::NormalPassage;
       normal_passage_range_infos.push_back(info);
     }
   }

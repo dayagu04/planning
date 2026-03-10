@@ -41,8 +41,8 @@ enum class CPassageType {
   Unknown = 0,            // 不确定类型
   NormalPassage = 1,      // 正常宽度
   NarrowPassage = 2,      // 狭窄道路
-  WidedPassage = 2,       // 宽敞道路
-  ShortWidenPassage = 3,  // 短暂拓宽道路
+  WidedPassage = 3,       // 宽敞道路
+  ShortWidenPassage = 4,  // 短暂拓宽道路
 
   Ignore = 30  // 任意类型道路（该类型用于检索，类型判断中不会使用）
 };

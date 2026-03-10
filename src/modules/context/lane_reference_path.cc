@@ -101,9 +101,12 @@ void LaneReferencePath::update(planning::framework::Session *session) {
     StaticAnalysisUtils::RoadTypeAnalysis(
         refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
 
+    StaticAnalysisUtils::PassageTypeAnalysis(
+        refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
+
     StaticAnalysisUtils::ElemTypeAnalysis(
-        static_cast<ConstReferencePathPtr>(this), refined_ref_path_points_,
-        frenet_coord_, static_analysis_storage_);
+        std::static_pointer_cast<const ReferencePath>(shared_from_this()),
+        refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
 
     auto &planning_debug_info =
         DebugInfoManager::GetInstance().GetDebugInfoPb();
