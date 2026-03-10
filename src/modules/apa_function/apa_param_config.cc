@@ -939,6 +939,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.use_geometry_path_head_out, bool,
                   "use_geometry_path_head_out");
 
+  JSON_READ_VALUE(param.use_scenario_perpendicular_heading_in, bool,
+                  "use_scenario_perpendicular_heading_in");
+
   // slot managent params
   JSON_READ_VALUE(param.move_slot_with_little_buffer, bool,
                   "move_slot_with_little_buffer");
