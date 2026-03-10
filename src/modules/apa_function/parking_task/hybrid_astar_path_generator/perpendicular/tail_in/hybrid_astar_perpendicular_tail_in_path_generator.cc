@@ -636,18 +636,11 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   const double search_start_time = IflyTime::Now_ms();
   double search_continue_time = 0.0;
 
-#if USE_LINK_PT_LINE
   ILOG_INFO << "USE LINK PT LINE";
   link_pt_line::LinkPtLineInput<float> lpl_input;
   lpl_input.ref_line.Set(
       common_math::Pos<float>(end_pose.GetX(), end_pose.GetY()), 1.0f,
       float(end_pose.GetTheta()));
-#else
-  ILOG_INFO << "USE LINK POSE LINE";
-  LinkPoseLineInput lpl_input;
-  lpl_input.ref_line.Set(end_pose.GetPos(), end_pose.GetTheta(), 1.0,
-                         geometry_lib::SEG_GEAR_DRIVE);
-#endif
 
   lpl_input.min_radius = min_radius_ + 0.068;
   lpl_input.bigger_radius_asssign = min_radius_ + 2.0;
@@ -773,18 +766,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
         AnalyticExpansionType::LINK_POSE_LINE) {
       if (request_.scenario_type ==
           ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-#if USE_LINK_PT_LINE
         lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
-#else
-        lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_REVERSE;
-#endif
       } else if (request_.scenario_type ==
                  ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-#if USE_LINK_PT_LINE
         lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
-#else
-        lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_DRIVE;
-#endif
       }
 
       lpl_input.pose.SetPos(current_node->GetX(), current_node->GetY());
@@ -1000,11 +985,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       // update lpl input pose, and make it easier to successfully link
       if (analytic_expansion_request.type ==
           AnalyticExpansionType::LINK_POSE_LINE) {
-#if USE_LINK_PT_LINE
         lpl_input.ref_last_line_gear = AstarPathGear::NONE;
-#else
-        lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_INVALID;
-#endif
         lpl_input.pose.SetPos(new_node.GetX(), new_node.GetY());
         lpl_input.pose.SetTheta(new_node.GetPhi());
         lpl_input.pose.SetDir(new_node.GetPhi());
@@ -1359,27 +1340,17 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
 }
 
 const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
-#if USE_LINK_PT_LINE
     const common_math::PathPt<float>& gear_switch_pose,
-#else
-    const geometry_lib::PathPoint& gear_switch_pose,
-#endif
     AstarPathGear gear, const float gear_switch_penalty,
     const float length_penalty) {
 
   const auto& target_pose = request_.ego_info_under_slot.target_pose;
 
-#if USE_LINK_PT_LINE
   link_pt_line::LinkPtLineInput<float> lpl_input;
   lpl_input.ref_line.Set(
       common_math::Pos<float>(request_.ego_info_under_slot.tar_line.pA.x(),
                               request_.ego_info_under_slot.tar_line.pA.y()),
       1.0f, float(request_.ego_info_under_slot.tar_line.heading));
-#else
-  ILOG_INFO << "USE LINK POSE LINE";
-  LinkPoseLineInput lpl_input;
-  lpl_input.ref_line = request_.ego_info_under_slot.tar_line;
-#endif
 
   lpl_input.min_radius = min_radius_ + 0.068;
   lpl_input.bigger_radius_asssign = min_radius_ + 2.0;
@@ -1389,11 +1360,7 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
   lpl_input.reverse_last_line_min_length = 0.45;
   lpl_input.drive_last_line_min_length = 1.68;
 
-#if USE_LINK_PT_LINE
   lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
-#else
-  lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_REVERSE;
-#endif
   lpl_input.pose.SetPos(gear_switch_pose.GetX(), gear_switch_pose.GetY());
   lpl_input.pose.SetTheta(gear_switch_pose.GetTheta());
   lpl_input.pose.SetDir(gear_switch_pose.GetTheta());
@@ -1406,11 +1373,7 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
       ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     std::swap(lpl_input.reverse_last_line_min_length,
               lpl_input.drive_last_line_min_length);
-#if USE_LINK_PT_LINE
     lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
-#else
-    lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_DRIVE;
-#endif
   }
 
   float max_heu_dist = 2.0f * gear_switch_penalty, heu_dist = 0.0f;
@@ -1477,13 +1440,8 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
 
   if (col_det_interface_ptr_->GetEDTColDetPtr()
           ->Update
-#if USE_LINK_PT_LINE
       (std::vector<common_math::PathPt<float>>{gear_switch_pose}, 0.4f, 0.1f,
        0.1f, gear)
-#else
-      (std::vector<geometry_lib::PathPoint>{gear_switch_pose}, 0.1, 0.4, false,
-       0.5, true, 0.1, temp_node.GetCurGear())
-#endif
           .col_flag) {
     gear_switch_pose_cost += 0.5f * length_penalty;
   }
