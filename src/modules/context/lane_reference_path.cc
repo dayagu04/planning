@@ -281,23 +281,30 @@ bool LaneReferencePath::is_obstacle_ignorable(
 void LaneReferencePath::update_obstacles() {
   auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  obstacle_manager->generate_frenet_obstacles(*this);
+  if(obstacle_manager == nullptr) {
+    return;
+  }
   if (session_->is_hpp_scene()) {
-    const auto &speed_bump_obstacles =
-        obstacle_manager->get_speed_bump_obstacles();
-    generate_frenet_obstacles(speed_bump_obstacles,
+    frenet_obstacles_.clear();
+    speed_bump_frenet_obstacles_.clear();
+    turnstile_frenet_obstacles_.clear();
+    semantic_sign_frenet_obstacles_.clear();
+    generate_frenet_obstacles(obstacle_manager->get_obstacles(),
+                              frenet_obstacles_, frenet_obstacles_map_);
+    generate_frenet_obstacles(obstacle_manager->get_groundline_obstacles(),
+                              frenet_obstacles_, frenet_obstacles_map_);
+    generate_frenet_obstacles(obstacle_manager->get_occupancy_obstacles(),
+                              frenet_obstacles_, frenet_obstacles_map_);
+    generate_frenet_obstacles(obstacle_manager->get_map_static_obstacles(),
+                              frenet_obstacles_, frenet_obstacles_map_);
+    generate_frenet_obstacles(obstacle_manager->get_speed_bump_obstacles(),
                               speed_bump_frenet_obstacles_,
                               speed_bump_frenet_obstacles_map_);
-
-    const auto &turnstile_frenet_obstacles =
-        obstacle_manager->get_turnstile_obstacles();
-    generate_frenet_obstacles(turnstile_frenet_obstacles,
+    generate_frenet_obstacles(obstacle_manager->get_turnstile_obstacles(),
                               turnstile_frenet_obstacles_,
                               turnstile_frenet_obstacles_map_);
 
-    const auto &semantic_sign_obstacles =
-        obstacle_manager->get_semantic_sign_obstacles();
-    generate_frenet_obstacles(semantic_sign_obstacles,
+    generate_frenet_obstacles(obstacle_manager->get_semantic_sign_obstacles(),
                               semantic_sign_frenet_obstacles_,
                               semantic_sign_frenet_obstacles_map_);
 
@@ -309,6 +316,8 @@ void LaneReferencePath::update_obstacles() {
                 return a->frenet_obstacle_boundary().s_end <
                        b->frenet_obstacle_boundary().s_end;
               });
+  } else {
+    obstacle_manager->generate_frenet_obstacles(*this);
   }
 
   assign_obstacles_to_lane();
@@ -323,6 +332,8 @@ void LaneReferencePath::generate_frenet_obstacles(
     std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
     std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
         &frenet_obstacles_map) {
+  frenet_obstacles_.reserve(frenet_obstacles_.size() +
+                            obstacles.Items().size());
   for (const Obstacle *obstacle_ptr : obstacles.Items()) {
     Point2D frenet_point, cart_point;
     cart_point.x = obstacle_ptr->x_center();

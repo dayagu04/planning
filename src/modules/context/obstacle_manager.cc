@@ -941,8 +941,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     frenet_obstacles.reserve(obstacles_.Items().size() +
                              groundline_obstacles_.Items().size() +
                              occupancy_obstacles_.Items().size() +
-                             map_static_obstacles_.Items().size() +
-                             speed_bump_obstacles_.Items().size());
+                             map_static_obstacles_.Items().size());
     // obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
     //                                   groundline_obstacles_.Items().size() +
     //                                   occupancy_obstacles_.Items().size() +
@@ -954,8 +953,6 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
     add_frenet_obstacle(occupancy_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
     add_frenet_obstacle(map_static_obstacles_, reference_path, frenet_obstacles,
-                        frenet_obstacles_map);
-    add_frenet_obstacle(speed_bump_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
   } else {
     frenet_obstacles.reserve(obstacles_.Items().size());
