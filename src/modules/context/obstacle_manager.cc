@@ -903,6 +903,8 @@ void ObstacleManager::clear() {
   gs_care_obstacles_ = IndexedList<int, Obstacle>();
   occupancy_obstacles_ = IndexedList<int, Obstacle>();
   speed_bump_obstacles_ = IndexedList<int, Obstacle>();
+  turnstile_obstacles_ = IndexedList<int, Obstacle>();
+  semantic_sign_obstacles_ = IndexedList<int, Obstacle>();
 }
 
 Obstacle *ObstacleManager::add_obstacle(const Obstacle &obstacle) {

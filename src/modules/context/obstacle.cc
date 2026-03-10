@@ -399,8 +399,12 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   velocity_ = 0.0;
   acc_ = 0.0;
   fusion_source_ = 1;
-
-  if (id_ > 9000000) {  // speed bump
+  if (id_ > 10000000) {  // intersection
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;
+    source_type_ = SourceType::RoadFusion;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  } else if (id_ > 9000000) {  // speed bump
     type_ = iflyauto::ObjectType::OBJECT_TYPE_DECELER;
     source_type_ = SourceType::SpeedBump;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,

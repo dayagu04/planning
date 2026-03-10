@@ -110,14 +110,6 @@ class ObstacleManager {
     return occupancy_obstacles_;
   }
 
-  Obstacle *add_speed_bump_obstacle(const Obstacle &obstacle) {
-    return speed_bump_obstacles_.Add(obstacle.id(), obstacle);
-  }
-
-  const IndexedList<int, Obstacle> &get_speed_bump_obstacles() const {
-    return speed_bump_obstacles_;
-  }
-
   double GetUssRemainDistance() {
     double remain_dist_uss = 5.01;
     const double kSafeUssRemainDist = 0.35;
