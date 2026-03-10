@@ -93,7 +93,6 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(agent::Agent* agent) {
   if (agent == nullptr) {
     return false;
   }
-  is_crossing_map[agent->agent_id()] = false;
 
   if (agent->type() != agent::AgentType::PEDESTRIAN &&
       agent->type() != agent::AgentType::CYCLE_RIDING &&
@@ -101,6 +100,8 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(agent::Agent* agent) {
       agent->type() != agent::AgentType::TRICYCLE_RIDING) {
     return false;
   }
+
+  is_crossing_map[agent->agent_id()] = false;
 
   const auto& veh_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -430,7 +431,6 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
   if (agent == nullptr) {
     return false;
   }
-  is_crossing_map[agent->agent_id()] = false;
 
   if (agent->type() == agent::AgentType::PEDESTRIAN ||
       agent->type() == agent::AgentType::CYCLE_RIDING ||
@@ -438,6 +438,8 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
       agent->type() == agent::AgentType::TRICYCLE_RIDING) {
     return false;
   }
+
+  is_crossing_map[agent->agent_id()] = false;
 
   /* if (agent->speed() > kVehicleInverseCrossingSpeedThd) {
     return false;
