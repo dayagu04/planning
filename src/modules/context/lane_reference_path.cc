@@ -8,10 +8,10 @@
 
 #include "environmental_model.h"
 #include "ifly_time.h"
+#include "modules/context/static_analysis_storage/static_analysis_utils.h"
 #include "obstacle_manager.h"
 #include "session.h"
 #include "virtual_lane_manager.h"
-#include "modules/context/static_analysis_storage/static_analysis_utils.h"
 
 namespace planning {
 
@@ -63,10 +63,9 @@ void LaneReferencePath::update(planning::framework::Session *session) {
                                    raw_reference_path_points);
     } else {
       bool is_need_smooth = false;
-      int current_lane_virtual_id =
-          session_->environmental_model()
-                  .get_virtual_lane_manager()
-                  ->current_lane_virtual_id();
+      int current_lane_virtual_id = session_->environmental_model()
+                                        .get_virtual_lane_manager()
+                                        ->current_lane_virtual_id();
       if (current_lane_virtual_id == lane_virtual_id_) {
         is_need_smooth = true;
       }
@@ -92,24 +91,111 @@ void LaneReferencePath::update(planning::framework::Session *session) {
     ILOG_ERROR << "LaneReferencePath::update failed";
   }
 
-  // Step 4) update road_type for hpp
-  if(session_->is_hpp_scene()) {
+  if (session_->is_hpp_scene()) {
+    // Step 4) update road_wideh base obs for hpp
+    RoadBorderWidthCalByObs(refined_ref_path_points_, frenet_obstacles_);
+  }
+
+  // Step 5) update road_type for hpp
+  if (session_->is_hpp_scene()) {
     StaticAnalysisUtils::RoadTypeAnalysis(
         refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
 
-    auto& planning_debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+    StaticAnalysisUtils::PassageTypeAnalysis(
+        refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
+
+    StaticAnalysisUtils::ElemTypeAnalysis(
+        std::static_pointer_cast<const ReferencePath>(shared_from_this()),
+        refined_ref_path_points_, frenet_coord_, static_analysis_storage_);
+
+    auto &planning_debug_info =
+        DebugInfoManager::GetInstance().GetDebugInfoPb();
     static_analysis_storage_->SerializeToDebugInfo(
         frenet_coord_, *planning_debug_info->mutable_static_analysis_result());
   }
 }
 
-void LaneReferencePath::Update(planning::framework::Session *session, ReferencePathPoints &raw_reference_path_points) {
+bool LaneReferencePath::RoadBorderWidthCalByObs(
+    ReferencePathPoints &refer_path_points,
+    const std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles) {
+  if (refer_path_points.size() <= 2) {
+    ILOG_ERROR << "RoadBorderWidthCalByObs: refer_path_points size <= 2";
+    return false;
+  }
+
+  constexpr double kDistanceBorderDefault = 3.5;
+  constexpr double kLonBuffer = 0.5;
+  constexpr double kThresholdBak = 0.2;
+  constexpr double kRightFarThreshold = -kDistanceBorderDefault + kThresholdBak;
+  constexpr double kLeftFarThreshold = kDistanceBorderDefault - kThresholdBak;
+
+  size_t obs_idx = 0;  // 双指针：障碍物指针，随 s 单调前进
+  for (size_t i = 0; i < refer_path_points.size(); ++i) {
+    if (std::isnan(refer_path_points[i].path_point.x()) ||
+        std::isnan(refer_path_points[i].path_point.y())) {
+      ILOG_ERROR << "RoadBorderWidthCalByObs: skip NaN point at index " << i;
+      continue;
+    }
+
+    double left_border = kDistanceBorderDefault;
+    double right_border = -kDistanceBorderDefault;
+
+    const double s_start =
+        std::max(refer_path_points[i].path_point.s() - kLonBuffer, 0.0);
+    const double s_end = (i + 1 < refer_path_points.size())
+                             ? refer_path_points[i + 1].path_point.s()
+                             : s_start + 3.0;
+
+    // 推进 obs_idx，跳过 s_end < s_start 的障碍物（已完全落在当前段之前）
+    while (obs_idx < frenet_obstacles.size()) {
+      const auto &obs = frenet_obstacles[obs_idx];
+      if (!obs) {
+        ++obs_idx;
+        continue;
+      }
+      const auto &bnd = obs->frenet_obstacle_boundary();
+      if (bnd.s_end >= s_start) break;
+      ++obs_idx;
+    }
+
+    // 从 obs_idx 起遍历与 [s_start, s_end] 重叠的障碍物，遇 s_start > s_end
+    // 即停
+    for (size_t j = obs_idx; j < frenet_obstacles.size(); ++j) {
+      const auto &obs = frenet_obstacles[j];
+      if (!obs) continue;
+
+      const auto &bnd = obs->frenet_obstacle_boundary();
+      if (bnd.s_start > s_end) break;
+      if (bnd.l_start * bnd.l_end < 0.0) continue;  // 横跨车道中线，忽略
+
+      if (bnd.l_start > 0.0) {
+        if (bnd.l_end >= kLeftFarThreshold &&
+            bnd.l_start <= kDistanceBorderDefault) {
+          left_border = std::min(left_border, bnd.l_start);
+        }
+      } else {
+        if (bnd.l_start <= kRightFarThreshold &&
+            bnd.l_end >= -kDistanceBorderDefault) {
+          right_border = std::max(right_border, bnd.l_end);
+        }
+      }
+    }
+    refer_path_points[i].distance_to_left_road_border = left_border;
+    refer_path_points[i].distance_to_right_road_border =
+        std::fabs(right_border);
+    refer_path_points[i].lane_width = left_border + std::fabs(right_border);
+  }
+  return true;
+}
+
+void LaneReferencePath::Update(planning::framework::Session *session,
+                               ReferencePathPoints &raw_reference_path_points) {
   ILOG_DEBUG << "update LaneReferencePath";
   session_ = session;
   // Step 1) import reference_path pointer to virtual_lane
   auto virtual_lane = session->mutable_environmental_model()
-                             ->mutable_virtual_lane_manager()
-                             ->mutable_lane_with_virtual_id(lane_virtual_id_);
+                          ->mutable_virtual_lane_manager()
+                          ->mutable_lane_with_virtual_id(lane_virtual_id_);
   if (virtual_lane == nullptr) {
     std::cout << "virtual_lane == nullptr!!!:" << lane_virtual_id_ << std::endl;
     return;
@@ -126,10 +212,9 @@ void LaneReferencePath::Update(planning::framework::Session *session, ReferenceP
     // Step 3-1) update ref path
     auto current_time = IflyTime::Now_ms();
     bool is_need_smooth = false;
-    int current_lane_virtual_id =
-        session_->environmental_model()
-                .get_virtual_lane_manager()
-                ->current_lane_virtual_id();
+    int current_lane_virtual_id = session_->environmental_model()
+                                      .get_virtual_lane_manager()
+                                      ->current_lane_virtual_id();
     if (current_lane_virtual_id == lane_virtual_id_) {
       is_need_smooth = true;
     }
@@ -197,11 +282,67 @@ void LaneReferencePath::update_obstacles() {
   auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
   obstacle_manager->generate_frenet_obstacles(*this);
+  if (session_->is_hpp_scene()) {
+    const auto &speed_bump_obstacles =
+        obstacle_manager->get_speed_bump_obstacles();
+    generate_frenet_obstacles(speed_bump_obstacles,
+                              speed_bump_frenet_obstacles_,
+                              speed_bump_frenet_obstacles_map_);
+
+    const auto &turnstile_frenet_obstacles =
+        obstacle_manager->get_turnstile_obstacles();
+    generate_frenet_obstacles(turnstile_frenet_obstacles,
+                              turnstile_frenet_obstacles_,
+                              turnstile_frenet_obstacles_map_);
+
+    const auto &semantic_sign_obstacles =
+        obstacle_manager->get_semantic_sign_obstacles();
+    generate_frenet_obstacles(semantic_sign_obstacles,
+                              semantic_sign_frenet_obstacles_,
+                              semantic_sign_frenet_obstacles_map_);
+
+    // sort obs by s
+    std::sort(frenet_obstacles_.begin(), frenet_obstacles_.end(),
+              [](const auto &a, const auto &b) {
+                if (!a) return false;
+                if (!b) return true;
+                return a->frenet_obstacle_boundary().s_end <
+                       b->frenet_obstacle_boundary().s_end;
+              });
+  }
+
   assign_obstacles_to_lane();
   parking_spaces_ = obstacle_manager->get_parking_space().Items();
   free_space_ground_lines_ =
       obstacle_manager->get_groundline_obstacles().Items();
   road_edges_ = obstacle_manager->get_road_edge_obstacles().Items();
+}
+
+void LaneReferencePath::generate_frenet_obstacles(
+    const IndexedList<int, Obstacle> &obstacles,
+    std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
+    std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+        &frenet_obstacles_map) {
+  for (const Obstacle *obstacle_ptr : obstacles.Items()) {
+    Point2D frenet_point, cart_point;
+    cart_point.x = obstacle_ptr->x_center();
+    cart_point.y = obstacle_ptr->y_center();
+
+    if (!frenet_coord_->XYToSL(cart_point, frenet_point) ||
+        std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+      ILOG_DEBUG << "cart_point to frenet_point failed, obstacle_id: "
+                 << obstacle_ptr->id();
+      continue;
+    }
+
+    // construct frenet_obstacle
+    std::shared_ptr<FrenetObstacle> frenet_obstacle =
+        std::make_shared<FrenetObstacle>(
+            obstacle_ptr, *this,
+            session_->environmental_model().get_ego_state_manager(), true);
+    frenet_obstacles.emplace_back(frenet_obstacle);
+    frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
+  }
 }
 
 bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
@@ -211,8 +352,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
   auto virtual_lane =
       virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
   auto &reference_path_manager =
-      session_->environmental_model()
-              .get_reference_path_manager();
+      session_->environmental_model().get_reference_path_manager();
   // get raw ref line
   auto &lane_points = virtual_lane->lane_points();
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
@@ -343,6 +483,9 @@ bool LaneReferencePath::get_ref_points_hpp(
     ref_path_pt.min_velocity = refline_pt.speed_limit_min;
     ref_path_pt.type = ReferencePathPointType::MAP;
     ref_path_pt.is_in_intersection = refline_pt.is_in_intersection;
+    ref_path_pt.is_ramp =
+        (refline_pt.lane_type == iflyauto::LaneType::LANETYPE_RAMP);
+    ref_path_pt.ramp_slope = refline_pt.slope;
 
     // check direction
     // if (not ref_path_points.empty()) {
@@ -380,14 +523,15 @@ bool LaneReferencePath::get_ref_points_hpp(
         CalculateExtendedReferencePathLength(
             origin_reference_path_total_length,
             ego_projection_length_in_reference_path_, ref_path_points);
-    if(extended_ref_path_length > origin_reference_path_total_length){
-        const double extended_length = extended_ref_path_length - origin_reference_path_total_length;
-        ReferencePathPoint extend_point;
-        const int point_nums = ref_path_points.size();
-        extend_point = CalculateExtendedReferencePathPoint(
-            ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
-            extended_length);
-        ref_path_points.emplace_back(std::move(extend_point));
+    if (extended_ref_path_length > origin_reference_path_total_length) {
+      const double extended_length =
+          extended_ref_path_length - origin_reference_path_total_length;
+      ReferencePathPoint extend_point;
+      const int point_nums = ref_path_points.size();
+      extend_point = CalculateExtendedReferencePathPoint(
+          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
+          extended_length);
+      ref_path_points.emplace_back(std::move(extend_point));
       extended_reference_path_length_ = extended_ref_path_length;
     } else {
       extended_reference_path_length_ = origin_reference_path_total_length;
@@ -396,16 +540,17 @@ bool LaneReferencePath::get_ref_points_hpp(
   return ref_path_points.size() >= 3;
 }
 
-bool LaneReferencePath::get_ref_points_rads(ReferencePathPoints &ref_path_points) {
+bool LaneReferencePath::get_ref_points_rads(
+    ReferencePathPoints &ref_path_points) {
   // get lane
   auto virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto virtual_lane =
       virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
-  auto& reference_path_manager =
+  auto &reference_path_manager =
       session_->environmental_model().get_reference_path_manager();
   // get raw ref line
-  auto& lane_points = virtual_lane->lane_points();
+  auto &lane_points = virtual_lane->lane_points();
   if (lane_points.size() < 2) {
     return false;
   }
@@ -414,9 +559,10 @@ bool LaneReferencePath::get_ref_points_rads(ReferencePathPoints &ref_path_points
   const double length = lane_points.back().s;
   const double backward_extend_buff = 5.0;
   const double forward_extend_buff = 16.0;
-  const auto& ego_state_manager =
+  const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  double start_s = std::min(ego_state_manager->ego_drive_distance(), length) - backward_extend_buff;
+  double start_s = std::min(ego_state_manager->ego_drive_distance(), length) -
+                   backward_extend_buff;
   double end_s = ego_state_manager->ego_drive_distance() + forward_extend_buff;
   ref_path_points.clear();
   ref_path_points.reserve(lane_points.size());
@@ -424,7 +570,7 @@ bool LaneReferencePath::get_ref_points_rads(ReferencePathPoints &ref_path_points
     if (refline_pt.s < start_s) {
       continue;
     }
-    if (refline_pt.s > end_s)  {
+    if (refline_pt.s > end_s) {
       break;
     }
     ReferencePathPoint ref_path_pt;
@@ -486,34 +632,41 @@ bool LaneReferencePath::get_ref_points_rads(ReferencePathPoints &ref_path_points
     // raw theta invalid -> projection invalid
     const int ego_nearest_path_point_index =
         CalculateNearestDistancePathPoint(ref_path_points);
-    double cur_path_point_s = ref_path_points[ego_nearest_path_point_index].path_point.s();
+    double cur_path_point_s =
+        ref_path_points[ego_nearest_path_point_index].path_point.s();
     // backward
-    double backward_extend_length = std::max(0.0,
-        backward_extend_buff - (cur_path_point_s - ref_path_points.front().path_point.s()));
+    double backward_extend_length = std::max(
+        0.0, backward_extend_buff -
+                 (cur_path_point_s - ref_path_points.front().path_point.s()));
     if (backward_extend_length > 1e-2) {
       ReferencePathPoint backward_extend_point;
       backward_extend_point = CalculateExtendedReferencePathPoint(
           ref_path_points[1], ref_path_points[0], backward_extend_length);
-      backward_extend_point.path_point.set_s(ref_path_points.front().path_point.s() - backward_extend_length);
-      ref_path_points.emplace(ref_path_points.begin(), std::move(backward_extend_point));
+      backward_extend_point.path_point.set_s(
+          ref_path_points.front().path_point.s() - backward_extend_length);
+      ref_path_points.emplace(ref_path_points.begin(),
+                              std::move(backward_extend_point));
     }
     // forward
-    double forward_extend_length = std::max(0.0,
-        forward_extend_buff - (ref_path_points.back().path_point.s() - cur_path_point_s));
+    double forward_extend_length = std::max(
+        0.0, forward_extend_buff -
+                 (ref_path_points.back().path_point.s() - cur_path_point_s));
     if (forward_extend_length > 1e-2) {
       ReferencePathPoint forward_extend_point;
       const int point_nums = ref_path_points.size();
       forward_extend_point = CalculateExtendedReferencePathPoint(
           ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
           forward_extend_length);
-      forward_extend_point.path_point.set_s(ref_path_points.back().path_point.s() + forward_extend_length);
+      forward_extend_point.path_point.set_s(
+          ref_path_points.back().path_point.s() + forward_extend_length);
       ref_path_points.emplace_back(std::move(forward_extend_point));
     }
   }
   return ref_path_points.size() >= 3;
 }
 
-bool LaneReferencePath::ExtendConstructionRefPathPoints(ReferencePathPoints &ref_path_points) {
+bool LaneReferencePath::ExtendConstructionRefPathPoints(
+    ReferencePathPoints &ref_path_points) {
   // 判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
   //  calculate reference path origin total length
   double origin_reference_path_total_length = 0;
@@ -820,10 +973,10 @@ double LaneReferencePath::CalculatePointProjectionDistanceInReferencePath(
 }
 
 int LaneReferencePath::CalculateNearestDistancePathPoint(
-    const ReferencePathPoints& ref_path_points) const {
+    const ReferencePathPoints &ref_path_points) const {
   const std::shared_ptr<EgoStateManager> ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  const auto& ego_pose = ego_state_mgr->ego_pose();
+  const auto &ego_pose = ego_state_mgr->ego_pose();
   double dx = ego_pose.x - ref_path_points[0].path_point.x();
   double dy = ego_pose.y - ref_path_points[0].path_point.y();
   // const auto& lat_init_state =
@@ -838,11 +991,12 @@ int LaneReferencePath::CalculateNearestDistancePathPoint(
   double ego_drive_distance = ego_state_mgr->ego_drive_distance();
   // find nearest point
   for (int i = 1; i < point_nums; i++) {
-    const auto& cur_point = ref_path_points[i].path_point;
-    const auto& pre_point = ref_path_points[i - 1].path_point;
+    const auto &cur_point = ref_path_points[i].path_point;
+    const auto &pre_point = ref_path_points[i - 1].path_point;
     accumulate_distance_reference_path += std::hypotf(
         pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
-    if (std::fabs(accumulate_distance_reference_path - ego_drive_distance) > 12.0) {
+    if (std::fabs(accumulate_distance_reference_path - ego_drive_distance) >
+        12.0) {
       continue;
     }
     dx = ego_pose.x - cur_point.x();
@@ -856,12 +1010,13 @@ int LaneReferencePath::CalculateNearestDistancePathPoint(
       min_distance_square_to_ego_point = temp_min_distance_square_to_ego_point;
     }
   }
-  ego_state_mgr->set_ego_drive_distance(ref_path_points[nearest_point_index].path_point.s());
+  ego_state_mgr->set_ego_drive_distance(
+      ref_path_points[nearest_point_index].path_point.s());
   // calculate ego projection distance in reference path
-  // const auto& nearest_point = ref_path_points[nearest_point_index].path_point;
-  // dx = ego_pose.x() - nearest_point.x();
-  // dy = ego_pose.y() - nearest_point.y();
-  // const double projection_length = dx * std::cos(nearest_point.theta()) +
+  // const auto& nearest_point =
+  // ref_path_points[nearest_point_index].path_point; dx = ego_pose.x() -
+  // nearest_point.x(); dy = ego_pose.y() - nearest_point.y(); const double
+  // projection_length = dx * std::cos(nearest_point.theta()) +
   //                                  dy * std::sin(nearest_point.theta());
   // const double ego_projection_distance_in_reference_path =
   //     projection_length + accumulate_distance_for_nearest_point;
@@ -872,7 +1027,8 @@ double LaneReferencePath::CalculateExtendedReferencePathLength(
     const double curr_ref_path_length, const double curr_ego_proj_length,
     const ReferencePathPoints &curr_ref_path_points) {
   constexpr double kTargetSlotExtendedBuffer = 5.0;
-  //TODO(taolu): 待在感知到目标车位之前可以从地图拿到目标车位的位置，可以再把这个参数调回 30
+  // TODO(taolu):
+  // 待在感知到目标车位之前可以从地图拿到目标车位的位置，可以再把这个参数调回 30
   constexpr double kDefaultExtendedReferencePathLength = 0.0;
 
   double res_ref_path_length = curr_ref_path_length;

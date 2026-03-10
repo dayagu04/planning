@@ -56,6 +56,7 @@ class VirtualLane {
   uint get_order_id() const { return order_id_; };
   int get_virtual_id() const { return virtual_id_; };
   int get_relative_id() const { return relative_id_; };
+  int get_floor_id() const {return floor_id_;};
   double width_by_s(double s);
   double width(double x);
   double width() { return width_; };
@@ -211,6 +212,7 @@ class VirtualLane {
 
   int virtual_id_ = 0;
   int relative_id_ = 0;
+  int floor_id_ = 0;
   float ego_lateral_offset_ = 0.0;
   float ego_longit_s_ = 0.0;
   double width_ = 2.8;

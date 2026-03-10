@@ -25,6 +25,7 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   order_id_ = lane.order_id;
   // virtual_id_ = lane.virtual_id();
   relative_id_ = lane.relative_id;
+  floor_id_ = lane.floor_id;
   // ego_lateral_offset_ = lane.ego_lateral_offset();
 
   lane_types_.reserve(lane.lane_types_size);

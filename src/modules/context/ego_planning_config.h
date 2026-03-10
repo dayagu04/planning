@@ -253,10 +253,18 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_use_ground_mark_process_split");
     enable_fusion_occupancy_objects =
         read_json_key<bool>(json, "enable_fusion_occupancy_objects");
+    enable_fusion_speed_bump_objects =
+        read_json_key<bool>(json, "enable_fusion_speed_bump_objects");
+    enable_fusion_turnstile_objects =
+        read_json_key<bool>(json, "enable_fusion_turn_stile_objects");
+    enable_fusion_intersection_objects =
+        read_json_key<bool>(json, "enable_fusion_intersection_objects");
     enable_fusion_parking_slot =
         read_json_key<bool>(json, "enable_fusion_parking_slot");
     enable_fusion_ground_line =
         read_json_key<bool>(json, "enable_fusion_ground_line");
+    enable_parking_prediction =
+        read_json_key<bool>(json, "enable_parking_prediction");
     is_ground_line_cluster =
         read_json_key<bool>(json, "is_ground_line_cluster");
     enable_ehr_column_box = read_json_key<bool>(json, "enable_ehr_column_box");
@@ -297,8 +305,12 @@ struct EgoPlanningConfig : public Config {
   bool enable_use_cone_change_request = false;
   bool enable_use_merge_change_request = false;
   bool enable_fusion_occupancy_objects = false;
+  bool enable_fusion_speed_bump_objects = false;
+  bool enable_fusion_turnstile_objects = false;
+  bool enable_fusion_intersection_objects = false;
   bool enable_fusion_parking_slot = false;
   bool enable_fusion_ground_line = true;
+  bool enable_parking_prediction = false;
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
   double hpp_min_search_range = 20;

@@ -41,8 +41,8 @@ enum class CPassageType {
   Unknown = 0,            // 不确定类型
   NormalPassage = 1,      // 正常宽度
   NarrowPassage = 2,      // 狭窄道路
-  WidedPassage = 2,       // 宽敞道路
-  ShortWidenPassage = 3,  // 短暂拓宽道路
+  WidedPassage = 3,       // 宽敞道路
+  ShortWidenPassage = 4,  // 短暂拓宽道路
 
   Ignore = 30  // 任意类型道路（该类型用于检索，类型判断中不会使用）
 };
@@ -56,6 +56,7 @@ enum class CElemType {
   UnknownRampRoad = 4,   // 不确定的坡道
   SpeedBumpRoad = 5,     // 减速带
   IntersectionRoad = 6,  // 路口
+  TurnStileRoad = 7,     // 闸机
 
   Ignore = 30,  // 任意类型道路（该类型用于检索，类型判断中不会使用）
   RampRoad = 31,  // 任意类型坡道（该类型用于检索，类型判断中不会使用）

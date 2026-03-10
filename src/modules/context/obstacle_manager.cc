@@ -21,6 +21,8 @@ static constexpr int kEHRColumnIdOffset = 8000000;
 static constexpr int kOccupancyObjectIdOffset = 7000000;
 static constexpr int kParkingSlotIdOffset = 6000000;
 static constexpr int kGroundLineIdOffset = 5000000;
+static constexpr int kSpeedBumpIdOffset = 9000000;
+static constexpr int kIntersectionIdOffset = 10000000;
 
 }  // namespace
 
@@ -74,10 +76,12 @@ void ObstacleManager::update() {
                  << prediction_object.id << "]";
       continue;
     }
-    // TODO(taolu10): 临时在 HPP 功能中过滤 OD
-    // 中的减速带避免刹停，合理的方式不应该在这里过滤，而应该在纵向不做刹停逻辑（需要做减速逻辑）
     if(session_->is_hpp_scene()) {
+      // HPP 场景下，减速带和闸机单独处理
       if(prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_DECELER) {
+        continue;
+      }
+      if(prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_TURNSTILE) {
         continue;
       }
     }
@@ -146,6 +150,16 @@ void ObstacleManager::update() {
     }
   }
 
+  if(session_->is_hpp_scene()) {
+    // hack(taolu10): HPP 场景下，假设 OD 障碍物和自车同楼层
+    for(const auto* c_obstacle : obstacles_.Items()) {
+      auto* obstacle = obstacles_.Find(c_obstacle->id());
+       if (obstacle) {
+          obstacle->set_floor_id(ego_state.ego_floor_id());
+        }
+    }
+  }
+
   if (session_->is_hpp_scene() || session_->is_nsa_scene() || session_->is_rads_scene()) {
     // ground line
     double time_start = IflyTime::Now_ms();
@@ -182,6 +196,17 @@ void ObstacleManager::update() {
     ILOG_DEBUG << "UpdateMapStaticObstacle cost:" << time_end - time_start;
     JSON_DEBUG_VALUE(" UpdateMapStaticObstacleCost", time_end - time_start);
 
+    if(session_->is_hpp_scene()) {
+      if(config_.enable_fusion_speed_bump_objects) {
+        UpdateSpeedBumpObstacle();
+      }
+
+      if(config_.enable_fusion_turnstile_objects) {
+        UpdateTurnStileObstacle();
+      }
+
+      UpdateSemanticSignObstacle();
+    }
     // update uss
     uss_obstacle_.SetLocalView(
         &session_->environmental_model().get_local_view());
@@ -274,6 +299,7 @@ void ObstacleManager::UpdateParkingSpaceObstacle() {
          (max_y < 0 && max_y > -kMaxDistanceY) || (min_y <= 0 && max_y >= 0)) &&
         min_x < kMaxDistanceFrontX && max_x > -kMaxDistanceBackX) {
       Obstacle obstacle(kParkingSlotIdOffset + slot_id, std::move(slot_point));
+      obstacle.set_floor_id(parking_slot.floor_id.id);
       add_parking_space(obstacle);
     }
   }
@@ -340,6 +366,15 @@ void ObstacleManager::UpdateOccObstacle() {
         ProcessOccupancyObject(occupancy_objects[i], polygon_points_2d,
                                polygon_points_size, frenet_coord, ego_point);
       }
+    }
+  }
+  if (session_->is_hpp_scene()) {
+    // hack(taolu10): HPP 场景下，假设 OD 障碍物和自车同楼层
+    for (const auto *c_obstacle : occupancy_obstacles_.Items()) {
+      auto *obstacle = occupancy_obstacles_.Find(c_obstacle->id());
+       if (obstacle) {
+          obstacle->set_floor_id(ego_state.ego_floor_id());
+        }
     }
   }
 }
@@ -649,6 +684,17 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         }
       }
     }
+
+    if (session_->is_hpp_scene()) {
+      // hack(taolu10): HPP 场景下，假设 OD 障碍物和自车同楼层
+      const auto& ego_state = session_->environmental_model().get_ego_state_manager();
+      for (const auto *c_obstacle : groundline_obstacles_.Items()) {
+        auto *obstacle = groundline_obstacles_.Find(c_obstacle->id());
+         if (obstacle) {
+          obstacle->set_floor_id(ego_state->ego_floor_id());
+        }
+      }
+    }
   }
 }
 
@@ -757,6 +803,85 @@ void ObstacleManager::UpdateMapStaticObstacle() {
         if (column_box.size() >= 3) {
           Obstacle obstacle(ehr_column_id, column_box);
           add_map_static_obstacle(obstacle);
+        }
+      }
+    }
+  }
+  if (session_->is_hpp_scene()) {
+    // hack(taolu10): HPP 场景下，假设 OD 障碍物和自车同楼层
+    for (const auto *c_obstacle : map_static_obstacles_.Items()) {
+      auto *obstacle = map_static_obstacles_.Find(c_obstacle->id());
+       if (obstacle) {
+          obstacle->set_floor_id(ego_state->ego_floor_id());
+        }
+    }
+  }
+}
+
+void ObstacleManager::UpdateSpeedBumpObstacle() {
+  const auto &local_view = session_->environmental_model().get_local_view();
+  const auto &speed_bump_info = local_view.fusion_speed_bump_info;
+  for(int i = 0; i < speed_bump_info.decelers_size; ++i) {
+    const auto& deceler = speed_bump_info.decelers[i];
+    std::vector<planning_math::Vec2d> points;
+    for(int j = 0; j < FUSION_DECELER_POINTS_NUM; ++j) {
+      points.emplace_back(planning_math::Vec2d(deceler.deceler_points[j].x,
+                                               deceler.deceler_points[j].y));
+    }
+
+    if (points.size() >= 3) {
+      Obstacle obstacle(deceler.id + kSpeedBumpIdOffset, std::move(points));
+      if (obstacle.is_vaild()) {
+        obstacle.set_floor_id(deceler.floor_id.id);
+        add_speed_bump_obstacle(obstacle);
+      }
+    }
+  }
+}
+
+void ObstacleManager::UpdateTurnStileObstacle() {
+  const auto &ego_state =
+      *session_->mutable_environmental_model()->get_ego_state_manager();
+  double ego_init_relative_time = ego_state.planning_init_point().relative_time;
+  const auto &prediction_objects =
+      session_->environmental_model().get_prediction_info();
+  for (int i = 0; i < prediction_objects.size(); i++) {
+    const auto &prediction_object = prediction_objects[i];
+    if (prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TURNSTILE) {
+      continue;
+    }
+    double prediction_relative_time =
+        prediction_object.delay_time - ego_init_relative_time;
+    auto obstacle =
+        Obstacle(prediction_object.id, prediction_object,
+                 prediction_object.is_static, prediction_relative_time);
+    obstacle.set_floor_id(ego_state.ego_floor_id());
+    obstacle.set_turnstile_open_ratio(prediction_object.turnstile_open_ratio);
+    obstacle.set_turnstile_status(prediction_object.turnstile_status);
+    add_turnstile_obstacle(obstacle);
+  }
+}
+
+void ObstacleManager::UpdateSemanticSignObstacle() {
+  const auto &local_view = session_->environmental_model().get_local_view();
+  if (config_.enable_fusion_intersection_objects) {
+    const auto &road_info = local_view.road_info;
+    for (size_t i = 0; i < road_info.intersection_size; i++) {
+      const auto &intersection = road_info.intersections[i];
+      std::vector<planning_math::Vec2d> points;
+      for (int j = 0; j < intersection.local_intersection_points_size; ++j) {
+        points.emplace_back(planning_math::Vec2d(
+            intersection.local_intersection_points_points[j].x,
+            intersection.local_intersection_points_points[j].y));
+      }
+
+      if (points.size() >= 3) {
+        Obstacle obstacle(intersection.id + kIntersectionIdOffset,
+                          std::move(points));
+        if (obstacle.is_vaild()) {
+          obstacle.set_floor_id(intersection.floor_id);
+          obstacle.set_intersection_type(intersection.type);
+          add_semantic_sign_obstacle(obstacle);
         }
       }
     }
