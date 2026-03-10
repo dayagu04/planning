@@ -34,8 +34,8 @@ bool LongitudinalHmiDecider::Execute() {
   constexpr uint8 kIntersectionStatusNone = 8;
   ad_info.intersection_pass_sts =
       iflyauto::IntersectionPassSts(kIntersectionStatusNone);
-  if ((traffic_status.go_straight != 3 && traffic_status.go_straight != 43) &&
-      intersection_state == planning::common::APPROACH_INTERSECTION &&
+  if (!tfl_decider.can_pass && intersection_state ==
+       planning::common::APPROACH_INTERSECTION &&
       (!tfl_decider.is_small_front_intersection ||
        tfl_decider.is_tfl_match_intersection) &&
       (cipv_info.cipv_id() == -1 ||
