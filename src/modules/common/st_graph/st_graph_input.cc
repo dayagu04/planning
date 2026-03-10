@@ -142,13 +142,20 @@ void StGraphInput::Update() {
       session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow = lane_borrow_output.is_in_lane_borrow_status;
   const auto lane_borrow_kd_path = lane_borrow_output.dp_path_coord;
-  ExtendProcessedPath(is_lane_keeping_, is_in_lane_borrow, lane_borrow_kd_path,
-                      ego_center_line_coord, planned_kd_path);
+  if (session_->is_hpp_scene()) {
+    // HPP directly uses lateral planner path, without forward/backward extension.
+    processed_path_ = planned_kd_path;
+    path_range_.second = planned_kd_path->Length();
+  } else {
+    ExtendProcessedPath(is_lane_keeping_, is_in_lane_borrow, lane_borrow_kd_path,
+                        ego_center_line_coord, planned_kd_path);
+  }
   JSON_DEBUG_VALUE("lat_path_length", planned_kd_path->Length());
   JSON_DEBUG_VALUE("extend_path_length", processed_path_->Length());
 
   // update for the forward extend path
-  if (nullptr != processed_path_ && !processed_path_->path_points().empty()) {
+  if (!session_->is_hpp_scene() && nullptr != processed_path_ &&
+      !processed_path_->path_points().empty()) {
     path_range_.second =
         processed_path_->path_points().back().s() + path_extend_distance;
   }
@@ -646,6 +653,10 @@ const planning_math::Box2d& StGraphInput::planning_init_point_box() const {
 
 const bool StGraphInput::is_rads_scene() const {
   return session_->is_rads_scene();
+}
+
+const bool StGraphInput::is_hpp_scene() const {
+  return session_->is_hpp_scene();
 }
 
 void StGraphInput::MakeBuffer(const bool is_lane_keeping,
