@@ -44,8 +44,6 @@ namespace apa_planner {
 #define DEBUG_PARENT_NODE_MAX_NUM (20)
 #define DEBUG_CHILD_NODE_MAX_NUM (500)
 #define DEBUG_NODE_GEAR_SWITCH_NUMBER (30)
-#define ENABLE_OBS_DIST_G_COST (0)
-#define ENABLE_HEADING_DIFF_G_COST (0)
 #define DEBUG_SUCCESS_CURVE_PATH_INFO (0)
 #define DEBUG_ALL_BEST_CURVE_PATH_INFO (0)
 
@@ -124,30 +122,6 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
           request_.inital_action_request.ref_length) {
     length_cost += config_.expect_dist_penalty;
   }
-
-  // safe dist cost
-  // weight: 15
-  // [0-0.15], cost: 1000;
-  // [0.15-0.5],cost: (1/dist -2) * weight;
-  // [0.5-1000], cost:0;
-#if ENABLE_OBS_DIST_G_COST
-  const float dist = next_node->GetDistToObs();
-  const float weight = 10.0f;
-
-  if (dist > 0.4f) {
-    safe_dist_cost = 0.0;
-  } else if (dist > 0.15f) {
-    safe_dist_cost = (1.0f / dist - 2.5f) * weight;
-  } else {
-    safe_dist_cost = 100.0;
-  }
-#endif
-
-// heading cost
-#if ENABLE_HEADING_DIFF_G_COST
-  heading_cost =
-      std::fabs(next_node->GetPhi()) * config_.ref_line_heading_penalty;
-#endif
 
   if (request_.search_mode == SearchMode::FORMAL) {
     if (interesting_area_.width() > 0.01 &&
