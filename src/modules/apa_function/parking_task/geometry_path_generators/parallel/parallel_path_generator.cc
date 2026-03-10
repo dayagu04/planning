@@ -3503,7 +3503,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
   for (const auto& gear : gear_vec) {
     if (!CalcLineStepLimitPose(first_line, gear,
                                calc_params_.lon_buffer_rev_trials)) {
-      ILOG_INFO << "gear = " << gear << " failed!";
+      ILOG_INFO << "gear = " << int(gear) << " failed!";
       continue;
     }
 
@@ -3614,14 +3614,23 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
   std::vector<pnc::geometry_lib::PathSegment> search_out_res;
   search_out_res.reserve(kMaxParallelParkInSegmentNums);
 
+  const double need_extend_rad = 16 * kDeg2Rad;
   bool success = false;
   for (size_t i = 0; i <= kMaxPathNumsInSlot + 1; i += 1) {
-    if (!CalcArcStepLimitPose(arc, ref_gear, ref_steer,
-                              calc_params_.lon_buffer_rev_trials)) {
-      ILOG_INFO << "calc arc limit error!";
+    double lon_buffer_rev_trials = calc_params_.lon_buffer_rev_trials;
+    bool cal_arc_res =
+        CalcArcStepLimitPose(arc, ref_gear, ref_steer, lon_buffer_rev_trials);
+    bool cal_arc_extend_res = false;
+    if (ref_gear == SEG_GEAR_DRIVE &&
+        std::fabs(arc.headingB) > need_extend_rad) {
+      lon_buffer_rev_trials += 0.1;
+      cal_arc_extend_res =
+          CalcArcStepLimitPose(arc, ref_gear, ref_steer, lon_buffer_rev_trials);
+    }
+    if (!cal_arc_res && !cal_arc_extend_res) {
+      ILOG_INFO << "add lon buffer, calc arc limit error!";
       break;
     }
-
 
     if (ref_gear == SEG_GEAR_DRIVE && CheckParkOutCornerSafeWithObsPin(arc)) {
       // ILOG_INFO << "is_dirve_out_safe success";
