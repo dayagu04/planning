@@ -73,7 +73,6 @@ struct LinkPtLinePath {
     total_length = T(0.0f);
     kappa_change = T(0.0f);
     last_line_length = T(0.0f);
-    ptss.clear();
   }
 
   void SetPathSegs(const PathSeg<T> _segs[], const uint8_t _seg_num);

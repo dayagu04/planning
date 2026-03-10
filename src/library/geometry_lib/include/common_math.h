@@ -12,8 +12,6 @@ namespace common_math {
 extern const float kDeg2RadF;
 extern const float kRad2DegF;
 
-#define square(x) ((x) * (x))
-
 // template <typename T>
 // struct EigenVector {
 //   using type = Eigen::Matrix<T, 2, 1>;
@@ -21,6 +19,11 @@ extern const float kRad2DegF;
 
 template <typename T>
 using Pos = Eigen::Matrix<T, 2, 1>;
+
+template <typename T>
+inline const T Square(const T x) {
+  return x * x;
+}
 
 template <typename T>
 const T UnifyAngle(const T angle);

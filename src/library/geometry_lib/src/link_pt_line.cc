@@ -25,43 +25,49 @@ const bool LinkPtLine<T>::CalLPLPath(const LinkPtLineInput<T>& input) {
   const T max_lat_err = std::fabs(input_.lat_err);
   const T step = T(1e-2f);
 
-  T lar_errs[MAX_REF_LINE_NUM];
-  lar_errs[ref_line_num_++] = 0.0;
-  for (T lat_err = step;
-       lat_err < max_lat_err && ref_line_num_ < MAX_REF_LINE_NUM;
-       lat_err += step) {
-    lar_errs[ref_line_num_++] = lat_err;
-    lar_errs[ref_line_num_++] = -lat_err;
-  }
-
-  if (ref_line_num_ + 2 <= MAX_REF_LINE_NUM &&
-      std::fabs(lar_errs[ref_line_num_ - 1]) < max_lat_err &&
-      max_lat_err > step) {
-    lar_errs[ref_line_num_++] = max_lat_err;
-    lar_errs[ref_line_num_++] = -max_lat_err;
-  }
-
   const Pos<T> tang_vec = input.ref_line.dir;
-
   const Pos<T> move_vec(-tang_vec.y(), tang_vec.x());
 
-  for (uint8_t i = 0; i < ref_line_num_; ++i) {
-    LineSeg<T> ref_line = input_.ref_line;
-    if (std::fabs(lar_errs[i]) > 1e-4) {
-      ref_line.pA += move_vec * lar_errs[i];
-      ref_line.pB += move_vec * lar_errs[i];
+  ref_lines_[ref_line_num_++] = input_.ref_line;
+
+  const auto AppendRefLine = [&](const T lat_err) {
+    if (ref_line_num_ >= MAX_REF_LINE_NUM) {
+      return;
     }
-    ref_lines_[i] = ref_line;
+    LineSeg<T> ref_line = input_.ref_line;
+    const Pos<T> offset = move_vec * lat_err;
+    ref_line.pA += offset;
+    ref_line.pB += offset;
+    ref_lines_[ref_line_num_++] = ref_line;
+  };
+
+  const int regular_step_num =
+      static_cast<int>(std::ceil(max_lat_err / step)) - 1;
+  for (int i = 1; i <= regular_step_num && ref_line_num_ + 1 < MAX_REF_LINE_NUM;
+       ++i) {
+    const T lat_err = step * static_cast<T>(i);
+    AppendRefLine(lat_err);
+    AppendRefLine(-lat_err);
+  }
+
+  const T last_regular_err =
+      regular_step_num > 0 ? step * static_cast<T>(regular_step_num) : T(0.0f);
+  if (max_lat_err > step && ref_line_num_ + 1 < MAX_REF_LINE_NUM &&
+      std::fabs(last_regular_err - max_lat_err) > T(1e-4f)) {
+    AppendRefLine(max_lat_err);
+    AppendRefLine(-max_lat_err);
   }
 
   const Pos<T> t = input_.pose.dir;
-  Pos<T> n(-t.y(), t.x());
-  Pos<T> center = input_.pose.pos + n * input_.min_radius;
-  virtual_circle1_dist_pow_2_ = CalPt2LineDistSquare(center, input_.ref_line);
-  n *= -1.0;
-  center = input_.pose.pos + n * input_.min_radius;
-  virtual_circle2_dist_pow_2_ = CalPt2LineDistSquare(center, input_.ref_line);
-  lat_err_pow_2_ = input_.lat_err * input_.lat_err;
+  const Pos<T> normal(-t.y(), t.x());
+  const Pos<T>& pos = input_.pose.pos;
+  const LineSeg<T>& ref_line = input_.ref_line;
+  const Pos<T> radius_vec = normal * input_.min_radius;
+  const Pos<T> center1 = pos + radius_vec;
+  const Pos<T> center2 = pos - radius_vec;
+  virtual_circle1_dist_pow_2_ = CalPt2LineDistSquare(center1, ref_line);
+  virtual_circle2_dist_pow_2_ = CalPt2LineDistSquare(center2, ref_line);
+  lat_err_pow_2_ = Square(max_lat_err);
 
   LinkPtLinePath<T> lpl_path;
   for (uint8_t i = 0; i < MAX_GEAR_NUM; ++i) {
@@ -89,7 +95,7 @@ const bool LinkPtLine<T>::OneArcPath(LinkPtLinePath<T>& lpl_path,
   T radius = input_.min_radius;
 
   if (std::max(virtual_circle1_dist_pow_2_, virtual_circle2_dist_pow_2_) <
-      square(radius - input_.lat_err)) {
+      Square(radius - input_.lat_err)) {
     return false;
   }
 
@@ -128,11 +134,12 @@ const bool LinkPtLine<T>::OneArcPath(LinkPtLinePath<T>& lpl_path,
     }
 
     const AstarPathGear gear = CalArcSegGear(arc);
-    const AstarPathSteer steer = CalArcSegSteer(arc);
 
     if (!IsGearSame(gear, ref_gear)) {
       continue;
     }
+
+    const AstarPathSteer steer = CalArcSegSteer(arc);
 
     PathSeg<T> arc_seg(arc, gear, steer);
 
@@ -216,7 +223,7 @@ const bool LinkPtLine<T>::TwoArcPath(LinkPtLinePath<T>& lpl_path,
   }
   if (!same_gear &&
       std::min(virtual_circle1_dist_pow_2_, virtual_circle2_dist_pow_2_) >
-          square(input_.min_radius + input_.lat_err)) {
+          Square(input_.min_radius + input_.lat_err)) {
     return false;
   }
 
@@ -257,14 +264,12 @@ const bool LinkPtLine<T>::TwoArcPath(LinkPtLinePath<T>& lpl_path,
       }
 
       const AstarPathGear gear1 = CalArcSegGear(arc1);
-      const AstarPathSteer steer1 = CalArcSegSteer(arc1);
 
       if (!IsGearSame(gear1, ref_gear)) {
         continue;
       }
 
       const AstarPathGear gear2 = CalArcSegGear(arc2);
-      const AstarPathSteer steer2 = CalArcSegSteer(arc2);
 
       if (same_gear) {
         if (!IsGearSame(gear2, ref_gear)) {
@@ -275,6 +280,9 @@ const bool LinkPtLine<T>::TwoArcPath(LinkPtLinePath<T>& lpl_path,
           continue;
         }
       }
+
+      const AstarPathSteer steer1 = CalArcSegSteer(arc1);
+      const AstarPathSteer steer2 = CalArcSegSteer(arc2);
 
       PathSeg<T> arc_seg1(arc1, gear1, steer1);
       PathSeg<T> arc_seg2(arc2, gear2, steer2);
@@ -365,7 +373,7 @@ const bool LinkPtLine<T>::LineArcPath(LinkPtLinePath<T>& lpl_path,
 
   if (same_gear &&
       std::max(virtual_circle1_dist_pow_2_, virtual_circle2_dist_pow_2_) <
-          square(radius - input_.lat_err)) {
+          Square(radius - input_.lat_err)) {
     return false;
   }
 
@@ -591,12 +599,12 @@ const bool LinkPtLine<T>::AlignBodySTurnPath(LinkPtLinePath<T>& lpl_path,
       CalPt2LineDistSquare(arc_s_1.pA, input_.ref_line);
 
   // if lat_dist is too big, arc1 and arc2 cannot be tangent
-  if (align_lat_err_pow_2 > square(T(2.0f) * sturn_radius + input_.lat_err)) {
+  if (align_lat_err_pow_2 > Square(T(2.0f) * sturn_radius + input_.lat_err)) {
     return false;
   }
 
   // if lat err is small, no need to sturn path
-  if (align_lat_err_pow_2 < square(T(0.0168f))) {
+  if (align_lat_err_pow_2 < Square(T(0.0168f))) {
     PathSeg<T> segs[MAX_LPL_PATH_NUM];
     uint8_t seg_num = 0;
     if (align_arc_valid) {
@@ -607,11 +615,11 @@ const bool LinkPtLine<T>::AlignBodySTurnPath(LinkPtLinePath<T>& lpl_path,
     // if park in, link arc pB to line pA
     if (input_.link_line_start_pt) {
       // max lon err: 3cm, but it hardly causes any errors.
-      if ((arc_s_1.pA - input_.ref_line.pA).norm() < T(0.01f)) {
-        input_.ref_line.pA += T(0.021f) * input_.ref_line.dir;
-      }
       LineSeg<T> end_line = input_.ref_line;
-      end_line.SetEndPt(arc_s_1.pA, input_.ref_line.pA);
+      if ((arc_s_1.pA - input_.ref_line.pA).squaredNorm() < T(1e-4f)) {
+        end_line.pA += T(0.021f) * end_line.dir;
+      }
+      end_line.SetEndPt(arc_s_1.pA, end_line.pA);
 
       const AstarPathGear end_gear = CalLineSegGear(end_line);
 
@@ -710,15 +718,15 @@ const bool LinkPtLine<T>::AlignBodySTurnPath(LinkPtLinePath<T>& lpl_path,
       continue;
     }
 
-    const AstarPathSteer steer1 = CalArcSegSteer(arc_s_1);
     const AstarPathGear gear1 = CalArcSegGear(arc_s_1);
-
-    const AstarPathSteer steer2 = CalArcSegSteer(arc_s_2);
     const AstarPathGear gear2 = CalArcSegGear(arc_s_2);
 
     if (gear1 != s_turn_ref_gear || gear2 != s_turn_ref_gear) {
       continue;
     }
+
+    const AstarPathSteer steer1 = CalArcSegSteer(arc_s_1);
+    const AstarPathSteer steer2 = CalArcSegSteer(arc_s_2);
 
     PathSeg<T> arc_seg_1(arc_s_1, gear1, steer1);
     PathSeg<T> arc_seg_2(arc_s_2, gear2, steer2);
