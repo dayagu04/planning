@@ -498,6 +498,24 @@ void PlanningScheduler::FillPlanningTrajectory(
         path_point->a = planning_result.traj_points[i].a;
         path_point->distance = planning_result.traj_points[i].s;
         path_point->jerk = planning_result.traj_points[i].jerk;
+        // 高度类型：优先采用 ResultTrajectoryGenerator 在
+        // planning_result.traj_points 中设置的 TrajectoryHeightType，
+        // 再映射到接口层的 TrajectoryPointHeightType。
+        switch (planning_result.traj_points[i].height_type) {
+          case TrajectoryHeightType::SPEED_BUMP:
+            path_point->info.type =
+                iflyauto::TRAJECTORY_POINT_HEIGHT_TYPE_SPEED_BUMP;
+            break;
+          case TrajectoryHeightType::STEP:
+            path_point->info.type =
+                iflyauto::TRAJECTORY_POINT_HEIGHT_TYPE_STEP;
+            break;
+          case TrajectoryHeightType::NORMAL:
+          default:
+            path_point->info.type =
+                iflyauto::TRAJECTORY_POINT_HEIGHT_TYPE_NORMAL;
+            break;
+        }
         ++(trajectory->trajectory_points_size);
       }
     }
