@@ -48,7 +48,6 @@ namespace apa_planner {
 #define ENABLE_HEADING_DIFF_G_COST (0)
 #define DEBUG_SUCCESS_CURVE_PATH_INFO (0)
 #define DEBUG_ALL_BEST_CURVE_PATH_INFO (0)
-#define USE_PATH_COMPARE (0)
 
 const bool ComparePath(const PathCompareCost& cost1,
                        const PathCompareCost& cost2) {
@@ -631,8 +630,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
   AstarNodeVisitedType vis_type = AstarNodeVisitedType::NOT_VISITED;
 
-  PathCompareDecider path_compare_decider;
-
   ILOG_INFO << "before main cycle, consume time = "
             << IflyTime::Now_ms() - start_time << "  ms";
 
@@ -824,26 +821,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
                 << "  search time = " << search_continue_time << "ms";
 #endif
 
-#if USE_PATH_COMPARE
-      if (path_compare_decider.Compare(&request_, &best_curve_node_to_goal,
-                                       &curve_node_to_goal)) {
-        best_curve_node_to_goal = curve_node_to_goal;
-#if DEBUG_SUCCESS_CURVE_PATH_INFO
-        ILOG_INFO << "find new best curve path to target pose, the gear "
-                     "switch num = "
-                  << best_curve_node_to_goal.GetGearSwitchNum();
-#endif
-
-        if (analytic_expansion_request.type ==
-            AnalyticExpansionType::LINK_POSE_LINE) {
-          lpl_path_.ptss.clear();
-          best_curve_node_to_goal.SetLPLPath(lpl_path_);
-        }
-
-        curve_node_to_goal_vec.emplace_back(best_curve_node_to_goal);
-        memory_usage += curve_node_memory_usage;
-      }
-#else
       if (analytic_expansion_request.type ==
           AnalyticExpansionType::LINK_POSE_LINE) {
         lpl_path_.ptss.clear();
@@ -852,7 +829,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
       curve_node_to_goal_vec.emplace_back(curve_node_to_goal);
       memory_usage += curve_node_memory_usage;
-#endif
 
       if (memory_usage > max_memory_usage) {
         ILOG_INFO << "curve_node_to_goal_vec occupied memory is enough";
