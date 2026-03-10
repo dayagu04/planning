@@ -23,7 +23,7 @@ const bool LinkPtLine<T>::CalLPLPath(const LinkPtLineInput<T>& input) {
   output_.Reset();
 
   const T max_lat_err = std::fabs(input_.lat_err);
-  const T step = 1e-2;
+  const T step = T(1e-2f);
 
   T lar_errs[MAX_REF_LINE_NUM];
   lar_errs[ref_line_num_++] = 0.0;
@@ -57,10 +57,11 @@ const bool LinkPtLine<T>::CalLPLPath(const LinkPtLineInput<T>& input) {
   const Pos<T> t = input_.pose.dir;
   Pos<T> n(-t.y(), t.x());
   Pos<T> center = input_.pose.pos + n * input_.min_radius;
-  virtual_circle1_dist_ = CalPt2LineDist(center, input_.ref_line);
+  virtual_circle1_dist_pow_2_ = CalPt2LineDistSquare(center, input_.ref_line);
   n *= -1.0;
   center = input_.pose.pos + n * input_.min_radius;
-  virtual_circle2_dist_ = CalPt2LineDist(center, input_.ref_line);
+  virtual_circle2_dist_pow_2_ = CalPt2LineDistSquare(center, input_.ref_line);
+  lat_err_pow_2_ = input_.lat_err * input_.lat_err;
 
   LinkPtLinePath<T> lpl_path;
   for (uint8_t i = 0; i < MAX_GEAR_NUM; ++i) {
@@ -87,8 +88,8 @@ const bool LinkPtLine<T>::OneArcPath(LinkPtLinePath<T>& lpl_path,
   lpl_path.Clear();
   T radius = input_.min_radius;
 
-  if (std::max(virtual_circle1_dist_, virtual_circle2_dist_) <
-      radius - input_.lat_err) {
+  if (std::max(virtual_circle1_dist_pow_2_, virtual_circle2_dist_pow_2_) <
+      square(radius - input_.lat_err)) {
     return false;
   }
 
@@ -122,7 +123,7 @@ const bool LinkPtLine<T>::OneArcPath(LinkPtLinePath<T>& lpl_path,
       continue;
     }
 
-    if (CalPt2LineDist(arc.pB, ref_line) > input_.lat_err) {
+    if (CalPt2LineDistSquare(arc.pB, ref_line) > lat_err_pow_2_) {
       continue;
     }
 
@@ -213,8 +214,9 @@ const bool LinkPtLine<T>::TwoArcPath(LinkPtLinePath<T>& lpl_path,
   if (same_gear) {
     return false;
   }
-  if (!same_gear && std::min(virtual_circle1_dist_, virtual_circle2_dist_) >
-                        input_.min_radius + input_.lat_err) {
+  if (!same_gear &&
+      std::min(virtual_circle1_dist_pow_2_, virtual_circle2_dist_pow_2_) >
+          square(input_.min_radius + input_.lat_err)) {
     return false;
   }
 
@@ -250,7 +252,7 @@ const bool LinkPtLine<T>::TwoArcPath(LinkPtLinePath<T>& lpl_path,
         continue;
       }
 
-      if (CalPt2LineDist(arc2.pB, ref_line) > input_.lat_err) {
+      if (CalPt2LineDistSquare(arc2.pB, ref_line) > lat_err_pow_2_) {
         continue;
       }
 
@@ -361,8 +363,9 @@ const bool LinkPtLine<T>::LineArcPath(LinkPtLinePath<T>& lpl_path,
 
   T radius = input_.min_radius;
 
-  if (same_gear && std::max(virtual_circle1_dist_, virtual_circle2_dist_) <
-                       radius - input_.lat_err) {
+  if (same_gear &&
+      std::max(virtual_circle1_dist_pow_2_, virtual_circle2_dist_pow_2_) <
+          square(radius - input_.lat_err)) {
     return false;
   }
 
@@ -377,7 +380,6 @@ const bool LinkPtLine<T>::LineArcPath(LinkPtLinePath<T>& lpl_path,
   LineSeg<T> line1(input_.pose.pos, input_.pose.dir, input_.pose.theta, 1.0);
 
   if (same_gear) {
-    // 计算
     Pos<T> intersection = Pos<T>(0.0f, 0.0f);
     if (!CalIntersectionOfTwoLines(intersection, line1, input_.ref_line)) {
       return false;
@@ -423,7 +425,7 @@ const bool LinkPtLine<T>::LineArcPath(LinkPtLinePath<T>& lpl_path,
         continue;
       }
 
-      if (CalPt2LineDist(arc.pB, ref_line) > input_.lat_err) {
+      if (CalPt2LineDistSquare(arc.pB, ref_line) > lat_err_pow_2_) {
         continue;
       }
 
@@ -585,15 +587,16 @@ const bool LinkPtLine<T>::AlignBodySTurnPath(LinkPtLinePath<T>& lpl_path,
     arc_s_1.pA = pose.pos;
   }
 
-  const T align_lat_err = CalPt2LineDist(arc_s_1.pA, input_.ref_line);
+  const T align_lat_err_pow_2 =
+      CalPt2LineDistSquare(arc_s_1.pA, input_.ref_line);
 
   // if lat_dist is too big, arc1 and arc2 cannot be tangent
-  if (align_lat_err > T(2.0f) * sturn_radius + input_.lat_err) {
+  if (align_lat_err_pow_2 > square(T(2.0f) * sturn_radius + input_.lat_err)) {
     return false;
   }
 
   // if lat err is small, no need to sturn path
-  if (align_lat_err < T(0.0168f)) {
+  if (align_lat_err_pow_2 < square(T(0.0168f))) {
     PathSeg<T> segs[MAX_LPL_PATH_NUM];
     uint8_t seg_num = 0;
     if (align_arc_valid) {

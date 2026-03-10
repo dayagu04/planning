@@ -122,8 +122,9 @@ class LinkPtLine {
   LineSeg<T> ref_lines_[MAX_REF_LINE_NUM];
   uint8_t ref_line_num_ = 0;
 
-  T virtual_circle1_dist_ = 0.0;
-  T virtual_circle2_dist_ = 0.0;
+  T virtual_circle1_dist_pow_2_ = T(0.0f);
+  T virtual_circle2_dist_pow_2_ = T(0.0f);
+  T lat_err_pow_2_ = T(0.0f);
 
   const AstarPathGear gears_[MAX_GEAR_NUM] = {AstarPathGear::DRIVE,
                                               AstarPathGear::REVERSE};

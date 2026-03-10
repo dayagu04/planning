@@ -12,6 +12,8 @@ namespace common_math {
 extern const float kDeg2RadF;
 extern const float kRad2DegF;
 
+#define square(x) ((x) * (x))
+
 // template <typename T>
 // struct EigenVector {
 //   using type = Eigen::Matrix<T, 2, 1>;
