@@ -7,9 +7,10 @@
 #include <vector>
 #include "sample_space_base.h"
 #include "uniform_jerk_curve.h"
+#include "ego_planning_config.h"
 
 namespace planning {
-const double MAX_VELOCITY = 30.0;  // 最大速度 (m/s)
+const double MAX_VELOCITY = 120 / 3.6;  // 最大速度 (m/s)
 const double MIN_VELOCITY = 0.0;   // 最小速度 (m/s)
 const double MAX_ACCEL = 1.2;      // 最大加速度 (m/s²)
 const double MIN_ACCEL = -2.0;    // 最大减速度（负表示减速）(m/s²)
@@ -19,11 +20,7 @@ const double TIME_STEP_NEAR = 1;  // 时间步长（分层步长）(s)
 const double TIME_STEP_FAR = 1;   // 时间步长（分层步长）(s)
 const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）(m)
 const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
-const double WEIGHT_DIST = 1.0;     // 距离代价权重
-const double WEIGHT_VEL = 0.2;      // 速度代价权重
-const double WEIGHT_ACCEL = 0.2;    // 加速度代价权重（舒适性）
-const double WEIGHT_JERK = 0.2;     // jerk代价权重（舒适性）
-const int MAX_ITERATION = 200;    // 最大迭代次数
+const int MAX_ITERATION = 60;    // 最大迭代次数
 const double ACC_STEP = 0.4;
 
 struct STNode {
@@ -77,7 +74,8 @@ class LongitudinalAStar {
                     const StateLimit& state_limit_upper,
                     const StateLimit& state_limit_lower,
                     double front_edge_to_rear_axle,
-                    double rear_edge_to_rear_axle, double ego_s);
+                    double rear_edge_to_rear_axle, double ego_s,
+                    SampleAstarTrajConfig* config);
 
   void PlanTrajectory();
   std::vector<STNode> GetAStarTraj() const { return astar_traj_; }
@@ -131,5 +129,6 @@ class LongitudinalAStar {
   double rear_edge_to_rear_axle_ = 0.0;
   double prediction_time_ = 2.0;
   double ego_s_ = 0.0;
+  SampleAstarTrajConfig* config_ = nullptr;
 };
 }  // namespace planning

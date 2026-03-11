@@ -1133,6 +1133,49 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double leading_safe_overstep_buffer = 3.0;
 };
 
+struct SampleAstarTrajConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    time_step_near = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "time_step_near"});
+    time_step_far = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "time_step_far"});
+    distance_step = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "distance_step"});
+    goal_tolerance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "goal_tolerance"});
+    weight_dist = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_dist"});
+    weight_time = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_time"});
+    weight_vel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_vel"});
+    weight_accel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_accel"});
+    weight_jerk = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_jerk"});
+    weight_front_ttc = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_front_ttc"});
+    weight_back_ttc = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
+    weight_lead_safe_distance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_lead_safe_distance"});
+  }
+  double time_step_near = 1.0;
+  double time_step_far = 1.0;
+  double distance_step = 0.1;
+  double goal_tolerance = 5.0;
+  double weight_dist = 1.0;
+  double weight_time = 1.0;
+  double weight_vel = 0.2;
+  double weight_accel = 0.2;
+  double weight_jerk = 0.2;
+  double weight_front_ttc = 1.0;
+  double weight_back_ttc = 1.0;
+  double weight_lead_safe_distance = 1.0;
+};
+
 struct ActRequestConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

@@ -5,7 +5,8 @@ LongitudinalAStar::LongitudinalAStar(
     const STSampleSpaceBase* sample_space_ptr, double merge_point_s,
     const LeadingAgentInfo& leading_agent_info,
     const StateLimit& state_limit_upper, const StateLimit& state_limit_lower,
-    double front_edge_to_rear_axle, double rear_edge_to_rear_axle, double ego_s)
+    double front_edge_to_rear_axle, double rear_edge_to_rear_axle, double ego_s,
+    SampleAstarTrajConfig* config)
     : start_node_(start_node),
       goal_state_(goal),
       sample_space_ptr_(sample_space_ptr),
@@ -15,7 +16,8 @@ LongitudinalAStar::LongitudinalAStar(
       state_limit_lower_(state_limit_lower),
       front_edge_to_rear_axle_(front_edge_to_rear_axle),
       rear_edge_to_rear_axle_(rear_edge_to_rear_axle),
-      ego_s_(ego_s) {
+      ego_s_(ego_s),
+      config_(config) {
   //       state_limit_lower_.v_max = 120 / 3.6;
   // state_limit_upper_.v_max = 120 / 3.6;
   // state_limit_upper_.v_end = 120/3.6;
@@ -230,10 +232,10 @@ void LongitudinalAStar::CalculateGCost(const std::shared_ptr<STNode>& parent,
                                        STNode& child) {
   // double dist_cost = WEIGHT_DIST * fabs(child.s - goal_state_.target_s);
   double time_cost = start_node_.v * fabs(child.t - parent->t) / 10.0;
-  double vel_cost = WEIGHT_VEL * fabs(child.v - parent->v);
-  double accel_cost = WEIGHT_ACCEL * fabs(child.a - parent->a);
+  double vel_cost = config_->weight_vel * fabs(child.v - parent->v);
+  double accel_cost = config_->weight_accel * fabs(child.a - parent->a);
   // double time_step = parent->t < 1.9 ? TIME_STEP_NEAR : TIME_STEP_FAR;
-  double jerk_cost = WEIGHT_JERK * fabs(child.jerk);
+  double jerk_cost = config_->weight_jerk * fabs(child.jerk);
   child.g_cost = parent->g_cost + vel_cost + accel_cost + jerk_cost + time_cost;
 }
 
@@ -246,8 +248,8 @@ void LongitudinalAStar::CalculateHCost(STNode& node) {
           : node.s < goal_state_.target_s - GOAL_TOLERANCE
                 ? fabs(node.s - goal_state_.target_s + GOAL_TOLERANCE) / 10.0
                 : fabs(node.s - goal_state_.target_s - GOAL_TOLERANCE) / 30.0;
-  double v_h = fabs(node.v - goal_state_.target_v);
-  double acc_h = WEIGHT_ACCEL * fabs(node.a);
+  double v_h = config_->weight_vel * fabs(node.v - goal_state_.target_v);
+  double acc_h = config_->weight_accel * fabs(node.a);
   node.h_cost =
       s_h + 0.5 * v_h + node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost + acc_h;
 }

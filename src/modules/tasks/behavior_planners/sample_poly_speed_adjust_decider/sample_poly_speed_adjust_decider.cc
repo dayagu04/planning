@@ -77,6 +77,7 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
     : Task(config_builder, session) {
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
+  astar_config_ = config_builder->cast<SampleAstarTrajConfig>();
   lc_safety_distance_config_ =
       config_builder->cast<LanChangeSafetyCheckConfig>();
 
@@ -1377,7 +1378,7 @@ bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
       start_node, goal_state, &st_sample_space_base_, merge_point_s,
       leading_veh_, state_limit_upper_, state_limit_lower_,
-      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_);
+      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_);
   return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
