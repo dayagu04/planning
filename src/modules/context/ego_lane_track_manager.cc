@@ -91,7 +91,7 @@ constexpr double kMaxCurvatureRadius = 1000.0; // 最大曲率半径（视为纯
 constexpr double kAverageKappaCostWeight = 0.2;
 constexpr double kAverageThetaDiffCostWeight = 0.2;
 constexpr double kEgoLateralDistanceCostWeight = 0.1;
-constexpr double kUseVirtualLaneProcessSplitCostThd = 0.25; // 归一化后阈值缩小
+constexpr double kUseVirtualLaneProcessSplitCostThd = 0.3; // 归一化后阈值缩小
 }  // namespace
 
 EgoLaneTrackManger::EgoLaneTrackManger(
@@ -1996,6 +1996,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   int other_split_lane_index = -1;
   int split_lane_index = -1;
   double road_radius_origin = 10000;
+  double max_road_radius = 100.0;
   std::vector<std::pair<int, double>> lane_curv_info_set;
   std::unordered_map<int, LaneCurvInfo> lanes_curv_info;
   for (size_t i = 0; i < order_ids.size(); i++) {
@@ -2067,8 +2068,8 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         lane_curv_info.curv = lane_curv;
         lane_curv_info.curv_sign = curv_sign;
       }
-      if (lane_curv_info.curv_radius < road_radius_origin) {
-        road_radius_origin = lane_curv_info.curv_radius;
+      if (lane_curv_info.curv_radius > max_road_radius) {
+        max_road_radius = lane_curv_info.curv_radius;
       }
       lanes_curv_info.insert(std::make_pair(order_ids[i], lane_curv_info));
 
@@ -2109,6 +2110,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         other_split_lane_index_set.emplace_back(i);
       }
     }
+  }
+  if (max_road_radius < road_radius_origin) {
+    road_radius_origin = max_road_radius;
   }
 
   if (last_zero_relative_id_nums_ > 1 &&
