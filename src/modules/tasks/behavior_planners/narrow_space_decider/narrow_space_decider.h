@@ -61,6 +61,10 @@ class NarrowSpaceDecider : public Task {
 
   void LogNarrowSpaceCorners();
 
+  bool UpdateLateralObstacleDeicision();
+
+  void Log();
+
  private:
   NarrowSpaceDeciderConfig config_;
   NarrowSpaceState narrow_space_state_;
