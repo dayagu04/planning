@@ -38,6 +38,7 @@ enum class SpeedLimitType {
   USER = 25,
   NARROW_AREA = 26,
   AVOID = 27,
+  SpeedBumpRoad = 28,
 };
 
 struct SpeedLimitAgent {
@@ -165,7 +166,8 @@ class SpeedLimitDeciderOutput {
       SpeedLimitType::MAP,
       SpeedLimitType::USER,
       SpeedLimitType::NARROW_AREA,
-      SpeedLimitType::AVOID};
+      SpeedLimitType::AVOID,
+      SpeedLimitType::SpeedBumpRoad};
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
