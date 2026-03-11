@@ -5925,13 +5925,13 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
       route_info_output.map_split_region_info_list.front()
           .split_direction == SPLIT_RIGHT &&
       route_info_output.map_split_region_info_list.front()
-          .distance_to_split_point < 500.0) {
+          .distance_to_split_point < 200.0) {
     return RAMP_ON_RIGHT;
   } else if (is_leftest_extend_lane &&
              route_info_output.map_split_region_info_list.front()
                 .split_direction == SPLIT_LEFT &&
              route_info_output.map_split_region_info_list.front()
-                .distance_to_split_point < 500.0) {
+                .distance_to_split_point < 200.0) {
     return RAMP_ON_LEFT;
   }
   return RAMP_NONE;
