@@ -5,7 +5,6 @@
 // #include "apa_function/apa_plan_interface.h"
 #include "base_task_pipeline.h"
 #include "behavior_planners/hpp_switch_to_parking_decider/parking_switch_decider.h"
-#include "behavior_planners/hpp_stop_decider/hpp_stop_decider.h"
 #include "ego_planning_config.h"
 #include "session.h"
 // #include "tasks/behavior_planners/general_longitudinal_decider/general_longitudinal_decider.h"
@@ -55,7 +54,6 @@ class HppTaskPipeline : public BaseTaskPipeline {
   std::unique_ptr<HppLateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<HppGeneralLateralDecider> hpp_general_lateral_decider_;
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
-  std::unique_ptr<HppStopDecider> hpp_stop_decider_;
   std::unique_ptr<ParkingSwitchDecider> parking_switch_decider_;
   std::unique_ptr<HppObstaclePreprocessDecider> hpp_obstacle_preprocess_decider_;
 
