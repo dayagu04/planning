@@ -295,11 +295,15 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
           iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
     }
   } else if (lc_request_source == MERGE_REQUEST) {
-    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE) {
-      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    if(function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+      if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE) {
+        ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+      } else {
+        ad_info.lane_change_reason =
+            iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
+      }
     } else {
-      ad_info.lane_change_reason =
-          iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     }
     // ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
   }
