@@ -391,7 +391,7 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
   HPPSpeedLimitZoneInfo zone_info;
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
                                    CPassageType::Ignore,
-                                   CElemType::UnknownRampRoad)) {
+                                   CElemType::RampRoad)) {
     return;
   }
 
