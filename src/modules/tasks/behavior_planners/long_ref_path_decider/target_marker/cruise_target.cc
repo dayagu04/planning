@@ -137,14 +137,17 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::MERGE_ALC:
     case SpeedLimitType::MAP_NEAR_RAMP:
     case SpeedLimitType::USER:
-    case SpeedLimitType::NARROW_AREA:
+    case SpeedLimitType::NARROW_PASSAGE:
     case SpeedLimitType::MAP:
+    case SpeedLimitType::RAMP_ROAD:
+    case SpeedLimitType::BUMP_ROAD:
       kinematic_param = config_.map_near_ramp_kinematic_param;
       break;
     case SpeedLimitType::MAP_ON_RAMP:
       kinematic_param = config_.map_near_ramp_kinematic_param;
       break;
     case SpeedLimitType::INTERSECTION:
+    case SpeedLimitType::INTERSECTION_ROAD:
     case SpeedLimitType::NEAR_TFL:
     case SpeedLimitType::LANE_BORROW:
       break;

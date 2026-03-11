@@ -41,6 +41,10 @@ bool HPPSpeedLimitDecider::Execute() {
 
   CalculateBumpLimit();
 
+  CalculateRampLimit();
+
+  CalculateIntersectionRoadLimit();
+
   auto hpp_speed_limit_output = session_->mutable_planning_context()
                                     ->mutable_speed_limit_decider_output();
   hpp_speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
@@ -264,8 +268,10 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
     return;
   }
 
-  HPPSpeedBumpZoneInfo zone_info;
-  if (!BuildSpeedBumpZoneInfo(zone_info)) {
+  HPPSpeedLimitZoneInfo zone_info;
+  if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
+                                   CPassageType::Ignore,
+                                   CElemType::SpeedBumpRoad)) {
     auto& planning_result =
         session_->mutable_planning_context()->mutable_planning_result();
     planning_result.speed_bump_path_segments.clear();
@@ -280,31 +286,31 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
     planning_result.speed_bump_path_segments.push_back({seg.first, seg.second});
   }
 
-  v_limit_speed_bump = GetSpeedBumpVelocityLimit(zone_info);
+  v_limit_speed_bump = GetSpeedLimitInObjectiveZone(zone_info);
 
   if (v_limit_speed_bump < v_target_) {
     v_target_ = v_limit_speed_bump;
-    v_target_type_ = SpeedLimitType::SpeedBumpRoad;
+    v_target_type_ = SpeedLimitType::BUMP_ROAD;
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_bump, zone_info.in_speed_bump_zone,
-      zone_info.approaching_speed_bump, zone_info.distance_to_zone);
+      v_limit_speed_bump, zone_info.in_speed_limit_zone,
+      zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
   JSON_DEBUG_VALUE("v_limit_speed_bump", v_limit_speed_bump);
-  JSON_DEBUG_VALUE("in_speed_bump_zone", zone_info.in_speed_bump_zone);
-  JSON_DEBUG_VALUE("approaching_speed_bump", zone_info.approaching_speed_bump);
-  JSON_DEBUG_VALUE("distance_to_zone", zone_info.distance_to_zone);
+  JSON_DEBUG_VALUE("in_speed_bump_zone", zone_info.in_speed_limit_zone);
+  JSON_DEBUG_VALUE("approaching_speed_bump",
+                   zone_info.approaching_speed_limit_zone);
+  JSON_DEBUG_VALUE("distance_to_bump_zone", zone_info.distance_to_zone);
 }
 
-bool HPPSpeedLimitDecider::BuildSpeedBumpZoneInfo(
-    HPPSpeedBumpZoneInfo& zone_info) {
-  const auto& planning_context = session_->planning_context();
-  const auto& lane_change_output =
-      planning_context.lane_change_decider_output();
-  const auto& coarse_planning_info = lane_change_output.coarse_planning_info;
-  const auto& reference_path_ptr = coarse_planning_info.reference_path;
+bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
+    HPPSpeedLimitZoneInfo& zone_info, const CRoadType& road_type,
+    const CPassageType& passage_type, const CElemType& elem_type) {
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
 
   if (!reference_path_ptr) {
     return false;
@@ -320,8 +326,7 @@ bool HPPSpeedLimitDecider::BuildSpeedBumpZoneInfo(
     return false;
   }
 
-  QueryTypeInfo query_info = {CRoadType::Ignore, CPassageType::Ignore,
-                              CElemType::SpeedBumpRoad};
+  QueryTypeInfo query_info = {road_type, passage_type, elem_type};
 
   const SRangeList speed_bump_near_ignore_range_list =
       static_analysis_storage->GetSRangeList(query_info);
@@ -336,31 +341,31 @@ bool HPPSpeedLimitDecider::BuildSpeedBumpZoneInfo(
       hpp_speed_limit_config_.speed_bump_approach_distance;
 
   zone_info.s_segments = speed_bump_near_ignore_range_list;
-  zone_info.in_speed_bump_zone =
+  zone_info.in_speed_limit_zone =
       speed_bump_near_ignore_range.first <= ego_head_s &&
       speed_bump_near_ignore_range.second >= ego_s;
 
   zone_info.distance_to_zone = speed_bump_near_ignore_range.first - ego_head_s;
-  zone_info.approaching_speed_bump =
+  zone_info.approaching_speed_limit_zone =
       zone_info.distance_to_zone > 0 &&
       zone_info.distance_to_zone < kApproachingDistance;
 
   return true;
 }
 
-double HPPSpeedLimitDecider::GetSpeedBumpVelocityLimit(
-    const HPPSpeedBumpZoneInfo& zone_info) {
+double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
+    const HPPSpeedLimitZoneInfo& zone_info) {
   // 减速带区域内限速
   const double kSpeedBumpZoneVelocityLimit =
-      hpp_speed_limit_config_.speed_bump_zone_speed_limit_kph / 3.6;
+      hpp_speed_limit_config_.speed_bump_zone_speed_limit;
   // 减速度
   const double kDecelerationRate =
       hpp_speed_limit_config_.speed_bump_deceleration;
 
-  if (zone_info.in_speed_bump_zone) {
+  if (zone_info.in_speed_limit_zone) {
     // 在减速带区域内，限速8 km/h
     return kSpeedBumpZoneVelocityLimit;
-  } else if (zone_info.approaching_speed_bump) {
+  } else if (zone_info.approaching_speed_limit_zone) {
     // 接近减速带区域，根据距离和减速度计算限速
     // 使用运动学公式: v² = v0² + 2*a*s
     // 其中 v = kSpeedBumpZoneVelocityLimit, a = kDecelerationRate, s =
@@ -375,5 +380,71 @@ double HPPSpeedLimitDecider::GetSpeedBumpVelocityLimit(
   }
 
   return std::numeric_limits<double>::max();
+}
+
+void HPPSpeedLimitDecider::CalculateRampLimit() {
+  double v_limit_speed_ramp = hpp_speed_limit_config_.velocity_upper_bound;
+  if (!session_->is_hpp_scene()) {
+    return;
+  }
+
+  HPPSpeedLimitZoneInfo zone_info;
+  if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
+                                   CPassageType::Ignore,
+                                   CElemType::UnknownRampRoad)) {
+    return;
+  }
+
+  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(zone_info);
+
+  if (v_limit_speed_ramp < v_target_) {
+    v_target_ = v_limit_speed_ramp;
+    v_target_type_ = SpeedLimitType::RAMP_ROAD;
+  }
+
+  LOG_DEBUG(
+      "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
+      v_limit_speed_ramp, zone_info.in_speed_limit_zone,
+      zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
+
+  JSON_DEBUG_VALUE("v_limit_speed_ramp", v_limit_speed_ramp);
+  JSON_DEBUG_VALUE("in_speed_limit_ramp", zone_info.in_speed_limit_zone);
+  JSON_DEBUG_VALUE("approaching_speed_limit_zone_ramp", zone_info.approaching_speed_limit_zone);
+  JSON_DEBUG_VALUE("distance_to_zone_ramp", zone_info.distance_to_zone);
+
+  return;
+}
+
+void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
+  double v_limit_speed_intersection_road = hpp_speed_limit_config_.velocity_upper_bound;
+  if (!session_->is_hpp_scene()) {
+    return;
+  }
+
+  HPPSpeedLimitZoneInfo zone_info;
+  if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
+                                   CPassageType::Ignore,
+                                   CElemType::IntersectionRoad)) {
+    return;
+  }
+
+  v_limit_speed_intersection_road = GetSpeedLimitInObjectiveZone(zone_info);
+
+  if (v_limit_speed_intersection_road < v_target_) {
+    v_target_ = v_limit_speed_intersection_road;
+    v_target_type_ = SpeedLimitType::INTERSECTION_ROAD;
+  }
+
+  LOG_DEBUG(
+      "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
+      v_limit_speed_intersection_road, zone_info.in_speed_limit_zone,
+      zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
+
+  JSON_DEBUG_VALUE("v_limit_speed_intersection_road", v_limit_speed_intersection_road);
+  JSON_DEBUG_VALUE("in_speed_limit_intersection", zone_info.in_speed_limit_zone);
+  JSON_DEBUG_VALUE("approaching_speed_limit_zone_intersection", zone_info.approaching_speed_limit_zone);
+  JSON_DEBUG_VALUE("distance_to_zone_intersection", zone_info.distance_to_zone);
+
+  return;
 }
 }  // namespace planning
