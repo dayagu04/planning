@@ -260,6 +260,16 @@ bool StGraphSearcher::Execute() {
 
   std::vector<StSearchNode> st_path;
 
+  const auto& last_output =
+      session_->planning_context().st_graph_searcher_output();
+  prev_is_overtake_front_vehicle_on_target_lane_ =
+      last_output.raw_is_search_overtake_front_vehicle();
+  prev_is_yield_back_vehicle_ =
+      last_output.raw_is_search_yield_back_vehicle();
+  has_prev_strategy_ =
+      prev_is_overtake_front_vehicle_on_target_lane_ ||
+      prev_is_yield_back_vehicle_;
+
   // search success
   bool search_success = false;
   for (auto search_style : search_style_context_) {
@@ -712,6 +722,18 @@ void StGraphSearcher::GenerateSuccessorNodes(
           break;
         }
       }
+
+      if (!is_decision_conflict && upper_bound.boundary_id() != speed::kNoAgentId &&
+          upper_bound.agent_id() != speed::kNoAgentId) {
+        const int32_t yield_agent_id = upper_bound.agent_id();
+        for (const auto& entry : parent_decision_table) {
+          if (entry.second == speed::STBoundary::DecisionType::OVERTAKE &&
+              static_cast<int32_t>(entry.first >> 8) == yield_agent_id) {
+            is_decision_conflict = true;
+            break;
+          }
+        }
+      }
     }
     if (is_decision_conflict) {
       // succ node decision conflict with parent node, means collision with
@@ -787,12 +809,27 @@ void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
       cost_overtake == config_.cost_ego_overtake_has_collision_with_lower_bound
           ? cost_accel_sign_changed * weight_accel_sign_overtake
           : cost_accel_sign_changed * weight_accel_sign;
+  // decision switch penalty
+  double cost_decision_switch = 0.0;
+  if (has_prev_strategy_) {
+    const auto& decision_table = succ_node->decision_table();
+    const bool curr_is_yield_back = CheckYieldBackVehicle(decision_table);
+    const bool curr_is_overtake_front =
+        CheckOvertakeFrontVehicleOnTargetLane(decision_table);
+    if (curr_is_yield_back != prev_is_yield_back_vehicle_) {
+      cost_decision_switch += config_.decision_switch_penalty;
+    }
+    if (curr_is_overtake_front !=
+        prev_is_overtake_front_vehicle_on_target_lane_) {
+      cost_decision_switch += config_.decision_switch_penalty;
+    }
+  }
 
   double edge_cost =
       cost_yield * weight_yield + cost_overtake * weight_overtake +
       cost_vel * weight_vel + cost_accel * weight_accel +
       weighted_cost_accel_sign_changed + cost_jerk * weight_jerk +
-      cost_length /* + cost_virtual_yield * weight_virtual_yield8 */;
+      cost_length + cost_decision_switch;
   StSearchNode::EdgeSubCost edge_sub_cost{
       .fathernode_to_childnode_cost_yield = cost_yield * weight_yield,
       .fathernode_to_childnode_edge_cost_overtake =
@@ -1281,22 +1318,60 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
   }
 }
 
+int32_t StGraphSearcher::GetStabilizedTargetLaneRearAgentId() const {
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  if (lane_change_decider_output.lc_request == NO_CHANGE) {
+    return -1;
+  }
+  const auto target_lane_front_rear_agents =
+      MakeTargetLaneFrontRearAgents(session_);
+  const auto& target_lane_rear_agents = target_lane_front_rear_agents.second;
+  int32_t current_rear = -1;
+  if (!target_lane_rear_agents.empty()) {
+    current_rear = *target_lane_rear_agents.begin();
+  }
+  if (current_rear == -1) {
+    last_target_lane_rear_agent_id_ = -1;
+    candidate_rear_agent_id_ = -1;
+    rear_agent_consecutive_cnt_ = 0;
+    return -1;
+  }
+  if (current_rear == last_target_lane_rear_agent_id_) {
+    candidate_rear_agent_id_ = -1;
+    rear_agent_consecutive_cnt_ = 0;
+    return last_target_lane_rear_agent_id_;
+  }
+  if (last_target_lane_rear_agent_id_ == -1) {
+    last_target_lane_rear_agent_id_ = current_rear;
+    return current_rear;
+  }
+  if (current_rear == candidate_rear_agent_id_) {
+    rear_agent_consecutive_cnt_++;
+    if (rear_agent_consecutive_cnt_ >= kRearAgentHysteresisFrames) {
+      last_target_lane_rear_agent_id_ = candidate_rear_agent_id_;
+      candidate_rear_agent_id_ = -1;
+      rear_agent_consecutive_cnt_ = 0;
+      return last_target_lane_rear_agent_id_;
+    }
+    return last_target_lane_rear_agent_id_;
+  }
+  candidate_rear_agent_id_ = current_rear;
+  rear_agent_consecutive_cnt_ = 1;
+  return last_target_lane_rear_agent_id_;
+}
+
 bool StGraphSearcher::CheckYieldBackVehicle(
     const std::unordered_map<int64_t, speed::STBoundary::DecisionType>&
         decision_table) const {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto lc_request_direction = lane_change_decider_output.lc_request;
-  if (lc_request_direction == NO_CHANGE) {
+  if (lane_change_decider_output.lc_request == NO_CHANGE) {
     return false;
   }
-  const auto target_lane_front_rear_agents =
-      MakeTargetLaneFrontRearAgents(session_);
-  const auto target_lane_rear_agents = target_lane_front_rear_agents.second;
-  int64_t agent_id = -1;
-  if (!target_lane_rear_agents.empty()) {
-    auto it = target_lane_rear_agents.begin();
-    agent_id = *it;
+  const int32_t agent_id = GetStabilizedTargetLaneRearAgentId();
+  if (agent_id == -1) {
+    return false;
   }
 
   std::vector<int64_t> st_boundaries;
@@ -1336,17 +1411,12 @@ bool StGraphSearcher::CheckOvertakeFrontVehicleOnTargetLane(
         decision_table) const {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto lc_request_direction = lane_change_decider_output.lc_request;
-  if (lc_request_direction == NO_CHANGE) {
+  if (lane_change_decider_output.lc_request == NO_CHANGE) {
     return false;
   }
-  const auto target_lane_front_rear_agents =
-      MakeTargetLaneFrontRearAgents(session_);
-  const auto target_lane_rear_agents = target_lane_front_rear_agents.second;
-  int64_t agent_id = -1;
-  if (!target_lane_rear_agents.empty()) {
-    auto it = target_lane_rear_agents.begin();
-    agent_id = *it;
+  const int32_t agent_id = GetStabilizedTargetLaneRearAgentId();
+  if (agent_id == -1) {
+    return false;
   }
 
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();

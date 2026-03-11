@@ -1605,7 +1605,8 @@
         "weight_accel_sign_overtake": 5.0
       },
       "cutin_time_st_graph_threshold": 2.0,
-      "weight_hcost_lane_change": 10.0
+      "weight_hcost_lane_change": 10.0,
+      "decision_switch_penalty": 2.0
     },
     "start_stop_decider": {
       "large_vehicle_length": 8.0,
