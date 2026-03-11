@@ -972,7 +972,7 @@ void STGraph::BackwardExtendSingleStBoundary(
   constexpr int32_t KBackwardExtendStboundaryStartIdx = 100;
   const int64_t target_boundary_id =
       (agent.agent_id() << 8) + KBackwardExtendStboundaryStartIdx + idx;
-  for (double relative_time = start_time; relative_time < end_time;
+  for (double relative_time = std::max(0.0, start_time - kTimeResolution); relative_time < end_time;
        relative_time += kTimeResolution) {
     trajectory::TrajectoryPoint point;
     if (start_absolute_time + relative_time < agent_pred_end_time) {
@@ -1085,7 +1085,19 @@ bool STGraph::CalculateStPassCorridor() {
         const bool is_relieve_jerk = std::find(relieve_jerk_agent_ids_.begin(),
                                                relieve_jerk_agent_ids_.end(),
                                                boundary_agent_id) != relieve_jerk_agent_ids_.end();
+        
+        bool is_reverse = false;
         if (is_relieve_jerk) {
+          auto agent_manager = st_graph_input_->mutable_agent_manager();
+          if (agent_manager) {
+            const auto* agent = agent_manager->GetAgent(boundary_agent_id);
+            if (agent && agent->is_reverse()) {
+              is_reverse = true;
+            }
+          }
+        }
+        
+        if (is_relieve_jerk && is_reverse) {
           continue;
         }
         if (cur_lower_pt.s() < upper_point.s()) {

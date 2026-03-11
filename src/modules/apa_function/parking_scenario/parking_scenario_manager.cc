@@ -54,6 +54,9 @@ bool ParkingScenarioManager::Init(
   scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN] =
       std::make_shared<PerpendicularHeadInScenario>(apa_world);
 
+  scenario_list_[ParkingScenarioType::SCENARIO_SLANT_HEAD_IN] =
+      std::make_shared<PerpendicularHeadInScenario>(apa_world);
+
   scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE] =
       std::make_shared<NarrowSpaceScenario>(apa_world);
 
@@ -122,6 +125,12 @@ void ParkingScenarioManager::UpdateScenarioType() {
              cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
     if (slot_type == SlotType::PERPENDICULAR || slot_type == SlotType::SLANT) {
       scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      if (param.use_scenario_perpendicular_heading_in) {
+        scenario_type_ =
+            (slot_type == SlotType::PERPENDICULAR)
+                ? ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN
+                : ParkingScenarioType::SCENARIO_SLANT_HEAD_IN;
+      }
     } else if (slot_type == SlotType::PARALLEL) {
       if (param.path_generator_type == ParkPathGenerationType::GEOMETRY_BASED) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_IN;

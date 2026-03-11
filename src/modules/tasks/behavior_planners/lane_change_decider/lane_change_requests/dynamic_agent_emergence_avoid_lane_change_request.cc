@@ -20,6 +20,9 @@
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_request.h"
 #include "tracked_object.h"
 #include "virtual_lane_manager.h"
+#include "agent/agent_manager.h"
+#include "agent/agent.h"
+#include "math/polygon2d.h"
 
 namespace planning {
 
@@ -36,7 +39,22 @@ constexpr double kIntrusionLateralDistanceThr = 0.25;
 constexpr double kNearLateralDistanceThr = -0.15;
 constexpr double kNearLaneLateralDistanceThr = 0.1;
 constexpr double kNearEgoLongDistanceBuffer = 1;
-
+// 0.5g减速度刹停检测相关常量
+constexpr double kBrakeDeceleration = 3.92;  // 0.5g = 4.9 m/s^2  0.4g = 3.92 m/s^2
+constexpr double kMinFollowingDistance = 2.0;  // 最小跟车距离 (m)
+constexpr double kMinIntrusionDistanceDynamic = 0.6;  // 动态障碍物侵入车道的最小距离 (m)
+constexpr double kMinIntrusionDistanceStatic = 1.0;  // 静态障碍物侵入车道的最小距离 (m)
+constexpr double kLaneChangeDistance = 90.0;  // 障碍物距离阈值 (m)
+// 目标车道安全检查相关常量
+constexpr double kRearVehicleTTCThreshold = 10;  // 后方车TTC阈值 (s)
+constexpr double kRearVehicleDistanceThreshold = 25.0;  // 后方车距离阈值 (m)
+constexpr double kRearStaticVehicleDistanceThreshold = 15.0;  // 后方静态障碍物距离阈值 (m)
+constexpr double kFrontVehicleTTCThreshold = 10;  // 前方车TTC阈值 (s)
+constexpr double kFrontVehicleDistanceThreshold = 50.0;  // 前方车距离阈值 (m)
+constexpr int kBrakeFailureHysteresisCount = 2;  // 刹停失败滞回帧数
+// 横穿判断相关参数
+constexpr double kCrossingHeadingMinThreshold = 45 / 57.3;
+constexpr double kCrossingHeadingMaxThreshold = 135 / 57.3;
 }  // namespace
 // class: DynamicAgentEmergenceAvoidRequest
 DynamicAgentEmergenceAvoidRequest::DynamicAgentEmergenceAvoidRequest(
@@ -74,7 +92,14 @@ void DynamicAgentEmergenceAvoidRequest::Update(int lc_status) {
 
   UpdateDynamicAgentEmergencyAvoidanceSituation();
 
-  if (!is_dynamic_agent_emergency_avoidance_situation_) {
+  UpdateBrakeFailureEmergencySituation();
+
+  // 检查是否有任何紧急情况（动态障碍物或刹停失败）
+  bool has_emergency_situation =
+      is_dynamic_agent_emergency_avoidance_situation_ ||
+      is_brake_failure_detected_;
+
+  if (!has_emergency_situation) {
     if (request_type_ != NO_CHANGE) {
       Finish();
       set_target_lane_virtual_id(origin_lane_virtual_id_);
@@ -216,6 +241,54 @@ void DynamicAgentEmergenceAvoidRequest::
                    dynamic_agent_emergency_situation_timetstamp_);
 }
 
+void DynamicAgentEmergenceAvoidRequest::UpdateBrakeFailureEmergencySituation() {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const int current_lane_virtual_id =
+      virtual_lane_mgr_->current_lane_virtual_id();
+  auto base_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(current_lane_virtual_id);
+  if (base_lane == nullptr) {
+    ILOG_DEBUG << "UpdateBrakeFailureEmergencySituation: base lane not exist";
+    is_brake_failure_detected_ = false;
+    brake_failure_obstacle_id_ = kInvalidAgentId;
+    brake_failure_situation_timestamp_ = 0;
+    return;
+  }
+
+  // 步骤1：检测0.5g减速度无法刹停的障碍物
+  int current_obstacle_id = kInvalidAgentId;
+  bool current_brake_failure = CheckEmergencyBrakeFailureObstacle(current_obstacle_id);
+
+  // 两帧滞回机制
+  if (current_brake_failure) {
+    // 检测到刹停失败，增加计数器
+    brake_failure_situation_timestamp_ =
+        std::min(brake_failure_situation_timestamp_ + 1,
+                 kBrakeFailureHysteresisCount + 2);
+  } else {
+    // 未检测到刹停失败，减少计数器
+    brake_failure_situation_timestamp_ =
+        std::max(brake_failure_situation_timestamp_ - 1, 0);
+  }
+
+  // 只有当连续检测到2帧时才触发
+  if (brake_failure_situation_timestamp_ >= kBrakeFailureHysteresisCount) {
+    is_brake_failure_detected_ = true;
+    brake_failure_obstacle_id_ = current_obstacle_id;
+    ILOG_DEBUG << "UpdateBrakeFailureEmergencySituation: brake failure "
+                  "confirmed, obstacle id="
+               << brake_failure_obstacle_id_
+               << ", timestamp=" << brake_failure_situation_timestamp_;
+  } else {
+    is_brake_failure_detected_ = false;
+  }
+  JSON_DEBUG_VALUE("brake_failure_obstacle_id", brake_failure_obstacle_id_);
+  JSON_DEBUG_VALUE("is_brake_failure_detected", is_brake_failure_detected_);
+  JSON_DEBUG_VALUE("brake_failure_situation_timestamp",
+                   brake_failure_situation_timestamp_);
+}
+
 bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk() {
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
@@ -234,7 +307,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk()
   const auto& potential_dangerous_agent_decider_output =
       session_->planning_context().potential_dangerous_agent_decider_output();
   const auto& obstacles_map = origin_refline->get_obstacles_map();
-  const auto ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+  const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
   const auto half_lane_width = current_lane->width() * 0.5;
 
   if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
@@ -397,7 +470,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
   const auto& potential_dangerous_agent_decider_output =
       session_->planning_context().potential_dangerous_agent_decider_output();
   const auto& obstacles_map = origin_refline->get_obstacles_map();
-  const auto ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+  const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
   const auto half_lane_width = current_lane->width() * 0.5;
   // 接受上一帧道内紧急避让释放的id
   int emergency_avoid_num = 0;
@@ -554,6 +627,16 @@ void DynamicAgentEmergenceAvoidRequest::GenerateLaneChangeDirection() {
   }
 
   lane_change_direction_ = NO_CHANGE;
+
+  // 如果检测到0.5g刹停失败，使用新的变道逻辑
+  if (is_brake_failure_detected_ &&
+      !is_dynamic_agent_emergency_avoidance_situation_) {
+    GenerateLaneChangeDirectionByBrakeFailure(is_left_lane_change_safe,
+                                              is_right_lane_change_safe);
+    return;
+  }
+
+  // 原有的变道逻辑
   if (is_left_lane_change_safe && left_lane_is_on_navigation_route &&
       recommend_dynamic_agent_emergency_avoidance_direction_ == LEFT_CHANGE) {
     ILOG_DEBUG << "emergency avoidence alc left!!!";
@@ -562,7 +645,7 @@ void DynamicAgentEmergenceAvoidRequest::GenerateLaneChangeDirection() {
   } else if (is_right_lane_change_safe && right_lane_is_on_navigation_route &&
              recommend_dynamic_agent_emergency_avoidance_direction_ ==
                  RIGHT_CHANGE) {
-    ILOG_DEBUG << "emergency avoidence alc left!!!";
+    ILOG_DEBUG << "emergency avoidence alc right!!!";
     lane_change_direction_ = RIGHT_CHANGE;
     return;
   } else {
@@ -649,6 +732,381 @@ void DynamicAgentEmergenceAvoidRequest::Reset() {
   lane_change_direction_ = NO_CHANGE;
   right_lane_nums_ = 0;
   left_lane_nums_ = 0;
+  is_brake_failure_detected_ = false;
+  brake_failure_obstacle_id_ = kInvalidAgentId;
+  brake_failure_situation_timestamp_ = 0;
+}
+
+// 步骤1：检测0.5g减速度无法刹停的障碍物
+bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBrakeFailureObstacle(
+    int& obstacle_id) {
+  obstacle_id = kInvalidAgentId;
+  const int current_lane_virtual_id =
+      virtual_lane_mgr_->current_lane_virtual_id();
+  std::shared_ptr<ReferencePath> origin_refline =
+      session_->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(current_lane_virtual_id, false);
+  if (origin_refline == nullptr) {
+    return false;
+  }
+  const auto& current_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(current_lane_virtual_id);
+  if (current_lane == nullptr) {
+    return false;
+  }
+  const auto& obstacles_map = origin_refline->get_obstacles_map();
+  const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+  const double ego_v = planning_init_point_.v;
+  // 目前仅针对CIPV
+  const int32_t cipv_id =
+      session_->planning_context().cipv_decider_output().cipv_id();
+  if (IsCrossingObstacle(cipv_id, origin_refline)) {
+    // 过滤横穿障碍物
+    return false;
+  }
+  if (obstacles_map.find(cipv_id) != obstacles_map.end()) {
+    double v_s_rel = obstacles_map.at(cipv_id)->frenet_relative_velocity_s();
+    if (v_s_rel >= 0) {
+      return false;
+    }
+    const auto& obs_boundary = obstacles_map.at(cipv_id)->frenet_obstacle_boundary();
+    double current_distance = obs_boundary.s_start - ego_frenet_boundary.s_end;
+    bool is_static = obstacles_map.at(cipv_id)->is_static();
+    // 纵向以一定的制动力减速还来不及的障碍物
+    if (is_static) {
+      // 静态障碍物不考虑预测轨迹
+      double brake_distance = (ego_v * ego_v) / (2.0 * kBrakeDeceleration);
+      if (current_distance <= brake_distance + kMinFollowingDistance &&
+          current_distance < kLaneChangeDistance) {
+        obstacle_id = cipv_id;
+        return true;
+      }
+    } else {
+      double ego_end_s = 0;
+      double obstacle_start_s = 0.0;
+      bool is_lon_over_obstacle = false;
+      std::array<double, 6> timestamps{0, 1, 2, 3, 4, 5};
+      for (auto& i : timestamps) {
+        planning_math::Polygon2d obstacle_sl_polygon;
+        bool ok = origin_refline->get_polygon_at_time(
+            obstacles_map.at(cipv_id)->id(), false, int(i * 10),
+            obstacle_sl_polygon);
+        if (!ok) {
+          continue;
+        }
+        obstacle_start_s = obstacle_sl_polygon.min_x();
+        double brake_time = std::fabs(ego_v) / kBrakeDeceleration;
+        if (brake_time < i) {
+          // 在i秒内已经刹停
+          ego_end_s = (ego_v * ego_v) / (2.0 * kBrakeDeceleration);
+        } else {
+          // 在i秒内还在减速
+          ego_end_s = ego_v * i - 0.5 * kBrakeDeceleration * i * i;
+        }
+        // 检查是否会碰撞
+        is_lon_over_obstacle =
+            (ego_frenet_boundary.s_end + ego_end_s) >
+            (obstacle_start_s - kMinFollowingDistance);
+        if (is_lon_over_obstacle) {
+          break;
+        }
+      }
+      if (is_lon_over_obstacle) {
+        obstacle_id = cipv_id;
+        return true;
+      }
+    }
+  }
+  return false;
+
+  // const auto ego_frenet_state = origin_refline->get_frenet_ego_state();
+  // const double half_lane_width = current_lane->width() * 0.5;
+  // // 找到自车道内纵向最近的障碍物
+  // double min_distance = std::numeric_limits<double>::max();
+  // std::shared_ptr<FrenetObstacle> closest_obstacle = nullptr;
+  // for (const auto& [obs_id, obs_ptr] : obstacles_map) {
+  //   if (!obs_ptr || !obs_ptr->b_frenet_valid()) {
+  //     continue;
+  //   }
+  //   const auto& frenet_obs = *obs_ptr;
+  //   const auto& obs_boundary = frenet_obs.frenet_obstacle_boundary();
+  //   // 只考虑前方的障碍物
+  //   if (obs_boundary.s_start <= ego_frenet_boundary.s_end) {
+  //     continue;
+  //   }
+  //   double v_s_rel = frenet_obs.frenet_relative_velocity_s();
+  //   if (v_s_rel >= 0) {
+  //     // 过滤比自车速度高的障碍物
+  //     continue;
+  //   }
+  //   // 计算当前距离，如果已经大于当前最小距离，跳过（优化：只检查更近的障碍物）
+  //   double current_distance = obs_boundary.s_start - ego_frenet_boundary.s_end;
+  //   if (current_distance >= min_distance) {
+  //     continue;
+  //   }
+  //   bool is_intruding_lane = false;
+  //   bool is_static = frenet_obs.is_static();
+  //   // 检查障碍物当前时刻是否侵入自车道一定距离（动态0.6米，静态1.0米）
+  //   // 首先检查障碍物是否与车道有重叠
+  //   if (obs_boundary.l_end <= -half_lane_width ||
+  //       obs_boundary.l_start >= half_lane_width) {
+  //     // 障碍物完全在车道外，无重叠
+  //     continue;
+  //   }
+  //   // 当前时刻有重叠，计算侵入距离
+  //   double intrusion_distance = 0.0;
+  //   if (obs_boundary.l_end < 0) {
+  //     // 障碍物在车道右侧侵入（从右侧边界侵入）
+  //     intrusion_distance = obs_boundary.l_end + half_lane_width;
+  //   } else if (obs_boundary.l_start > 0) {
+  //     // 障碍物在车道左侧侵入（从左侧边界侵入）
+  //     intrusion_distance = half_lane_width - obs_boundary.l_start;
+  //   } else {
+  //     // 障碍物跨越中心线
+  //     is_intruding_lane = true;
+  //   }
+  //   // 根据动静态选择不同的侵入距离阈值
+  //   double min_intrusion_distance =
+  //       is_static ? kMinIntrusionDistanceStatic : kMinIntrusionDistanceDynamic;
+  //   is_intruding_lane =
+  //       is_intruding_lane || intrusion_distance >= min_intrusion_distance;
+  //   if (!is_intruding_lane) {
+  //     continue;
+  //   }
+  //   // 纵向以一定的制动力减速还来不及的障碍物
+  //   if (is_static) {
+  //     // 静态障碍物不考虑预测轨迹
+  //     double brake_distance = (ego_v * ego_v) / (2.0 * kBrakeDeceleration);
+  //     if (current_distance <= brake_distance + kMinFollowingDistance &&
+  //         current_distance < kLaneChangeDistance) {
+  //       min_distance = current_distance;
+  //       closest_obstacle = obs_ptr;
+  //       obstacle_id = obs_id;
+  //     }
+  //   } else {
+  //     double ego_end_s = 0;
+  //     double obstacle_start_s = 0.0;
+  //     bool is_lon_over_obstacle = false;
+  //     std::array<double, 6> timestamps{0, 1, 2, 3, 4, 5};
+  //     for (auto &i : timestamps) {
+  //       planning_math::Polygon2d obstacle_sl_polygon;
+  //       bool ok = origin_refline->get_polygon_at_time(
+  //           obs_id, false, int(i * 10), obstacle_sl_polygon);
+  //       if (!ok) {
+  //         continue;
+  //       }
+  //       obstacle_start_s = obstacle_sl_polygon.min_x();
+  //       double brake_time = std::fabs(ego_v) / kBrakeDeceleration;
+  //       if (brake_time < i) {
+  //         // 在i秒内已经刹停
+  //         ego_end_s = (ego_v * ego_v) / (2.0 * kBrakeDeceleration);
+  //       } else {
+  //         // 在i秒内还在减速
+  //         ego_end_s = ego_v * i - 0.5 * kBrakeDeceleration * i * i;
+  //       }
+  //       // 检查是否会碰撞
+  //       is_lon_over_obstacle =
+  //           (ego_frenet_boundary.s_end + ego_end_s) >
+  //           (obstacle_start_s - kMinFollowingDistance);
+  //       if (is_lon_over_obstacle) {
+  //         break;
+  //       }
+  //     }
+  //     if (is_lon_over_obstacle) {
+  //       min_distance = current_distance;
+  //       closest_obstacle = obs_ptr;
+  //       obstacle_id = obs_id;
+  //     }
+  //   }
+  // }
+
+  // if (closest_obstacle != nullptr) {
+  //   ILOG_DEBUG << "CheckEmergencyBrakeFailureObstacle: found obstacle id="
+  //              << obstacle_id << ", distance=" << min_distance;
+  //   return true;
+  // }
+  // return false;
+}
+
+bool DynamicAgentEmergenceAvoidRequest::IsCrossingObstacle(
+    const int32_t obstacle_id,
+    const std::shared_ptr<ReferencePath>& reference_path) {
+  if (reference_path == nullptr) {
+    return false;
+  }
+  const auto& is_crossing_map = session_->planning_context()
+                                    .crossing_agent_decider_output()
+                                    .is_crossing_map;
+  const auto cossing_map_iter = is_crossing_map.find(obstacle_id);
+  bool is_crossing =
+      (cossing_map_iter != is_crossing_map.end() && cossing_map_iter->second);
+  if (is_crossing) {
+    // 过滤横穿障碍物
+    return true;
+  }
+  const auto& obstacles_map = reference_path->get_obstacles_map();
+  const auto& ego_frenet_boundary = reference_path->get_ego_frenet_boundary();
+  if (obstacles_map.find(obstacle_id) != obstacles_map.end()) {
+    std::shared_ptr<FrenetObstacle> frenet_obstacle =
+        obstacles_map.at(obstacle_id);
+    const auto& obs_boundary = frenet_obstacle->frenet_obstacle_boundary();
+    if (frenet_obstacle->is_static()) {
+      return false;
+    } else {
+      double heading_diff = std::fabs(planning_math::NormalizeAngle(
+          frenet_obstacle->obstacle()->velocity_angle() -
+          reference_path->get_frenet_coord()
+              ->GetPathPointByS(frenet_obstacle->frenet_s())
+              .theta()));
+      bool is_heading_satisfied_for_cross =
+          heading_diff > kCrossingHeadingMinThreshold &&
+          heading_diff < kCrossingHeadingMaxThreshold;
+      // 目前仅针对CIPV，可以作此简化
+      return is_heading_satisfied_for_cross;
+    }
+  }
+  return false;
+}
+
+bool DynamicAgentEmergenceAvoidRequest::CheckTargetLaneSafety(
+    RequestType direction, int target_lane_virtual_id) {
+  if (direction == NO_CHANGE) {
+    return false;
+  }
+
+  const auto& target_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
+  if (target_lane == nullptr) {
+    return false;
+  }
+
+  std::shared_ptr<ReferencePath> target_refline =
+      session_->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(target_lane_virtual_id, false);
+  if (target_refline == nullptr) {
+    return false;
+  }
+
+  const auto& obstacles_map = target_refline->get_obstacles_map();
+  const auto& ego_frenet_state = target_refline->get_frenet_ego_state();
+  const auto& ego_frenet_boundary = target_refline->get_ego_frenet_boundary();
+  const double ego_s = ego_frenet_state.s();
+  const double ego_v = planning_init_point_.v;
+  const double half_lane_width = target_lane->width() * 0.5;
+
+  // 条件1：检查后方车
+  bool rear_vehicle_safe = true;
+  for (const auto& [obs_id, obs_ptr] : obstacles_map) {
+    if (!obs_ptr || !obs_ptr->b_frenet_valid()) {
+      continue;
+    }
+    const auto& frenet_obs = *obs_ptr;
+    const auto& obs_boundary = frenet_obs.frenet_obstacle_boundary();
+    // 检查是否在车道内
+    if (obs_boundary.l_end < -half_lane_width ||
+        obs_boundary.l_start > half_lane_width) {
+      continue;
+    }
+    // 检查是否在自车后方
+    if (obs_boundary.s_start >= ego_frenet_boundary.s_end) {
+      continue;
+    }
+    double distance = ego_frenet_boundary.s_end - obs_boundary.s_start;
+    bool is_static = frenet_obs.is_static();
+    if (is_static) {
+      // 静态障碍物：只检查距离
+      if (distance <= kRearStaticVehicleDistanceThreshold) {
+        ILOG_DEBUG << "CheckTargetLaneSafety: rear static obstacle too close, "
+                      "distance="
+                   << distance;
+        rear_vehicle_safe = false;
+        break;
+      }
+    } else {
+      // 动态障碍物：检查TTC和距离
+      double v_s_rel = frenet_obs.frenet_relative_velocity_s();
+      double ttc = v_s_rel > 0 ? (distance / v_s_rel) : std::numeric_limits<double>::max();
+      if (ttc <= kRearVehicleTTCThreshold || distance <= kRearVehicleDistanceThreshold) {
+        ILOG_DEBUG << "CheckTargetLaneSafety: rear vehicle unsafe, ttc=" << ttc
+                   << ", distance=" << distance;
+        rear_vehicle_safe = false;
+        break;
+      }
+    }
+  }
+
+  if (!rear_vehicle_safe) {
+    return false;
+  }
+
+  // 条件2：检查前方车
+  bool front_vehicle_safe = true;
+  for (const auto& [obs_id, obs_ptr] : obstacles_map) {
+    if (!obs_ptr || !obs_ptr->b_frenet_valid()) {
+      continue;
+    }
+    const auto& frenet_obs = *obs_ptr;
+    const auto& obs_boundary = frenet_obs.frenet_obstacle_boundary();
+    // 检查是否在车道内
+    if (obs_boundary.l_end < -half_lane_width ||
+        obs_boundary.l_start > half_lane_width) {
+      continue;
+    }
+    // 检查是否在自车前方
+    if (obs_boundary.s_start <= ego_frenet_boundary.s_end) {
+      continue;
+    }
+    double distance = obs_boundary.s_start - ego_frenet_boundary.s_end;
+    // 检查TTC和距离
+    double v_s_rel = frenet_obs.frenet_relative_velocity_s();
+    double ttc = v_s_rel < 0 ? (distance / (-v_s_rel)) : std::numeric_limits<double>::max();
+    if (ttc <= kFrontVehicleTTCThreshold || distance <= kFrontVehicleDistanceThreshold) {
+      ILOG_DEBUG << "CheckTargetLaneSafety: front vehicle unsafe, ttc=" << ttc
+                  << ", distance=" << distance;
+      front_vehicle_safe = false;
+      break;
+    }
+  }
+  return front_vehicle_safe;
+}
+
+void DynamicAgentEmergenceAvoidRequest::
+    GenerateLaneChangeDirectionByBrakeFailure(const bool is_left_lane_change_safe,
+                                              const bool is_right_lane_change_safe) {
+  const auto& llane = virtual_lane_mgr_->get_left_lane();
+  const auto& rlane = virtual_lane_mgr_->get_right_lane();
+  bool left_lane_available = false;
+  bool right_lane_available = false;
+  // 检查左车道
+  if (llane != nullptr && is_left_lane_change_safe) {
+    int left_lane_virtual_id = llane->get_virtual_id();
+    left_lane_available = CheckTargetLaneSafety(LEFT_CHANGE, left_lane_virtual_id);
+  }
+  // 检查右车道
+  if (rlane != nullptr && is_right_lane_change_safe) {
+    int right_lane_virtual_id = rlane->get_virtual_id();
+    right_lane_available = CheckTargetLaneSafety(RIGHT_CHANGE, right_lane_virtual_id);
+  }
+  if (left_lane_available && right_lane_available) {
+    // 左车道和右车道都可用，优先左车道
+    lane_change_direction_ = LEFT_CHANGE;
+    ILOG_DEBUG << "GenerateLaneChangeDirectionByBrakeFailure: both lanes available, "
+                  "choose LEFT_CHANGE";
+  } else if (left_lane_available) {
+    // 仅左车道可用
+    lane_change_direction_ = LEFT_CHANGE;
+    ILOG_DEBUG << "GenerateLaneChangeDirectionByBrakeFailure: only left lane available";
+  } else if (right_lane_available) {
+    // 仅右车道可用
+    lane_change_direction_ = RIGHT_CHANGE;
+    ILOG_DEBUG << "GenerateLaneChangeDirectionByBrakeFailure: only right lane available";
+  } else {
+    // 都不可用，不变道
+    lane_change_direction_ = NO_CHANGE;
+    ILOG_DEBUG << "GenerateLaneChangeDirectionByBrakeFailure: no lane available";
+  }
 }
 
 }  // namespace planning

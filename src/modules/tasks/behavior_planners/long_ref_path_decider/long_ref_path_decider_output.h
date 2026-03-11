@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <unordered_set>
-#include <vector>  // Added for std::vector
+#include <vector>
 
 struct FollowTargetInfo {
   int32_t enable_far_slow_jlt_count;
@@ -29,11 +29,14 @@ struct ComfortTargetUpperBoundInfo {
 struct LonRefPathDeciderOutput {
   TargetMakerInfo target_maker_info;
   DangerAgentInfo danger_agent_info;
-  bool is_cross_vru_target_pre_handle = false;
-  bool is_comfort_target_lat_follow = false;
-  bool is_comfort_target_lon_cutin = false;
-  bool is_comfort_target_lon_emergency_stop = false;
-  std::vector<int32_t> follow_agent_ids;
+  bool is_cross_vru_pre_handle = false;
+  bool is_lat_follow = false;
+  bool is_lon_cutin = false;
+  bool is_joint_danger = false;
+  bool is_lon_cipv_emergency_stop = false;
+  bool is_joint_danger_emergency_stop = false;
+  std::vector<int32_t> st_overtake_agent_ids;
+  int32_t parallel_overtake_agent_id;
   std::vector<ComfortTargetUpperBoundInfo> comfort_target_upper_bound_infos;
-  std::vector<std::pair<double, double>> comfort_target; // s, v
+  std::vector<std::pair<double, double>> comfort_target;  // s, v
 };

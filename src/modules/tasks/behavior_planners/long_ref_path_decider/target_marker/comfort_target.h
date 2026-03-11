@@ -8,29 +8,13 @@
 namespace planning {
 
 class ComfortTarget : public Target {
+ public:
   enum class FollowAgentSource {
     kLatObstacleDecision = 0,
     kLonCutinAgentIds = 1,
     kJointDangerAgentIds = 2
   };
-  struct UpperBoundInfo {
-    double s = 0.0;
-    double t = 0.0;
-    double v = 0.0;
-    TargetType target_type = TargetType::kNotSet;
-    int32_t agent_id = -1;
-    int64_t st_boundary_id = -1;
-    double a = 0;
-    bool is_lat_follow = false;
-    bool is_lon_cut_in = false;
-    bool is_joint_danger = false;
-  };
-  struct FollowAgentWithSource {
-    const agent::Agent* agent;
-    FollowAgentSource source;
-  };
 
- public:
   ComfortTarget(const SpeedPlannerConfig& config, framework::Session* session);
   ~ComfortTarget() = default;
 
@@ -53,6 +37,15 @@ class ComfortTarget : public Target {
     double static_speed_threshold;
     double eps;
     double emergency_ttc_threshold;
+    double confluence_headway;
+    double cipv_decel_threshold;
+    double min_speed_diff_for_emergency;
+    double default_follow_agent_s;
+    double kinematic_half_coefficient;
+    double agent_length_half_coefficient;
+    int32_t virtual_front_agent_id;
+    int32_t default_follow_agent_id;
+    int32_t default_follow_st_boundary_id;
   };
 
   struct FollowAgentInfo {
@@ -64,27 +57,43 @@ class ComfortTarget : public Target {
     FollowAgentSource source = FollowAgentSource::kLatObstacleDecision;
   };
 
- private:
-  void GenerateUpperBoundInfo();
+  struct FollowAgentWithSource {
+    const agent::Agent* agent;
+    FollowAgentSource source;
+  };
 
+ private:
+  struct UpperBoundInfo {
+    double s = 0.0;
+    double v = 0.0;
+    double a = 0;
+    double t = 0.0;
+    TargetType target_type = TargetType::kNotSet;
+    int32_t agent_id = -1;
+    int64_t st_boundary_id = -1;
+    bool is_lat_follow = false;
+    bool is_lon_cut_in = false;
+    bool is_joint_danger = false;
+  };
+
+  void GenerateUpperBoundInfo();
   void ProcessCutinAgents(const std::vector<int32_t>& agent_ids,
                           FollowAgentSource source,
                           const std::unordered_set<int32_t>& forbidden_ids,
                           std::unordered_set<int32_t>& added_agent_ids,
-                          int32_t parallel_overtake_agent_id,
-                          bool is_confluence_area,
                           std::vector<FollowAgentWithSource>& follow_agents);
-
   void GenerateComfortTarget();
-
-  double CalculateComfortAcceleration(
-      const double current_acc, const double current_vel,
-      const double current_s, const double front_vel, const double front_s,
-      const double tau, const double decel_jerk, double& v_target) const;
-
+  double CalculateComfortAcceleration(double current_acc, double current_vel,
+                                      double current_s, double front_vel,
+                                      double front_s, double tau,
+                                      double decel_jerk,
+                                      double& v_target) const;
   void AddComfortTargetDataToProto();
+  bool CheckEmergencyCondition(double ego_v, double obs_s, double obs_v,
+                               double obs_a) const;
+  bool CheckCipvEmergencyBraking(double ego_v);
+  bool CheckJointDangerEmergencyBraking(double ego_v, int32_t agent_id);
 
- private:
   ComfortParameters comfort_params_;
   std::vector<UpperBoundInfo> upper_bound_infos_;
   common::ComfortTarget comfort_target_pb_;
@@ -93,11 +102,15 @@ class ComfortTarget : public Target {
   std::vector<double> rule_base_cutin_agent_ids_;
   std::vector<int32_t> joint_danger_agent_ids_;
   std::unordered_set<int32_t> upper_bound_agent_ids_;
+  std::vector<int32_t> lower_bound_agent_ids_;
+  int32_t parallel_overtake_agent_id_ = -1;
   bool is_lat_follow_ = false;
   bool is_lon_cut_in_ = false;
-  bool is_lon_emergency_stop_ = false;
+  bool is_joint_danger_ = false;
+  bool is_lon_cipv_emergency_stop_ = false;
+  bool is_joint_danger_emergency_stop_ = false;
+  bool is_confluence_area_ = false;
   std::vector<double> comfort_jerk_min_vec_;
   std::vector<double> comfort_v_target_vec_;
 };
-
 }  // namespace planning

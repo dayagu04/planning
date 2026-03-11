@@ -156,9 +156,7 @@ void SccLateralObstacleDecider::UpdateAvdObstacles() {
   const auto target_state = session_->planning_context()
                                 .lane_change_decider_output()
                                 .coarse_planning_info.target_state;
-  bool is_in_lane_change_scene =
-      (target_state == kLaneChangeExecution ||
-       target_state == kLaneChangeHold || target_state == kLaneChangeCancel);
+  bool is_in_lane_change_execution_scene = target_state == kLaneChangeExecution;
 
   bool rightest_lane = CheckIsRightestLane();
 
@@ -195,7 +193,7 @@ void SccLateralObstacleDecider::UpdateAvdObstacles() {
 
   for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
     UpdateAvdObstacle(*frenet_obs, expand_vel, farthest_distance, rightest_lane,
-                      is_in_lane_change_scene);
+                      is_in_lane_change_execution_scene);
   }
 }
 
@@ -212,7 +210,7 @@ bool SccLateralObstacleDecider::IsChangeLanes() {
 void SccLateralObstacleDecider::UpdateAvdObstacle(
     const FrenetObstacle &frenet_obs, double expand_vel,
     double farthest_distance, bool rightest_lane,
-    bool is_in_lane_change_scene) {
+    bool is_in_lane_change_execution_scene) {
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obs.id()];
   FollowObstacleInfo &follow_info = follow_obstacle_info_[frenet_obs.id()];
@@ -247,9 +245,9 @@ void SccLateralObstacleDecider::UpdateAvdObstacle(
 
   history.is_avd_car = IsPotentialAvoidingCar(
       frenet_obs, rightest_lane, farthest_distance, left_borrow_, right_borrow_,
-      is_in_lane_change_scene);
+      is_in_lane_change_execution_scene);
 
-  IsPotentialFollowingObstacle(frenet_obs, is_in_lane_change_scene);
+  IsPotentialFollowingObstacle(frenet_obs, is_in_lane_change_execution_scene);
 
   history.last_recv_time = frenet_obs.obstacle()->timestamp();
 }
@@ -361,9 +359,7 @@ void SccLateralObstacleDecider::UpdateLateralObstacleDecisions() {
   const auto target_state = session_->planning_context()
                                 .lane_change_decider_output()
                                 .coarse_planning_info.target_state;
-  bool is_in_lane_change_scene =
-      (target_state == kLaneChangeExecution ||
-       target_state == kLaneChangeHold || target_state == kLaneChangeCancel);
+  bool is_in_lane_change_execution_scene = target_state == kLaneChangeExecution;
 
   for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
     const Obstacle *obs = frenet_obs->obstacle();
@@ -378,7 +374,7 @@ void SccLateralObstacleDecider::UpdateLateralObstacleDecisions() {
       output_[obs->id()] = LatObstacleDecisionType::NOT_SET;
       continue;
     }
-    LateralObstacleDecision(*frenet_obs, is_in_lane_change_scene);
+    LateralObstacleDecision(*frenet_obs, is_in_lane_change_execution_scene);
     if (history.last_is_avd_car && !history.is_avd_car) {
       HoldLatOffset(*frenet_obs);
     }
@@ -637,7 +633,7 @@ bool SccLateralObstacleDecider::CheckEgoOvertakeObstacle(
 bool SccLateralObstacleDecider::IsPotentialAvoidingCar(
     const FrenetObstacle &frenet_obstacle, bool rightest_lane,
     double farthest_distance, bool can_left_borrow, bool can_right_borrow,
-    bool is_in_lane_change_scene) {
+    bool is_in_lane_change_execution_scene) {
   ILOG_DEBUG << "----is_potential_avoiding_car-----";
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
@@ -672,9 +668,9 @@ bool SccLateralObstacleDecider::IsPotentialAvoidingCar(
   if (is_in_range || is_about_to_enter_range) {
     history.is_not_set = false;
     is_avoidable =
-        IsAvoidable(frenet_obstacle, lat_safety_buffer, is_lane_change);
+        IsAvoidable(frenet_obstacle, lat_safety_buffer, is_in_lane_change_execution_scene);
     history.can_avoid = HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer,
-                                            is_lane_change, true);
+                                            is_in_lane_change_execution_scene, true);
   } else {
     history.can_avoid = false;
     history.can_avoid_count = 0;
@@ -754,7 +750,7 @@ bool SccLateralObstacleDecider::IsAboutToEnterRange(
 
 bool SccLateralObstacleDecider::IsAvoidable(
     const FrenetObstacle &frenet_obstacle, double lat_safety_buffer,
-    bool is_lane_change) {
+    bool is_in_lane_change_execution_scene) {
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
 
@@ -793,7 +789,7 @@ bool SccLateralObstacleDecider::IsAvoidable(
 
   // can avoid flag
   bool can_avoid =
-      HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_lane_change);
+      HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_in_lane_change_execution_scene);
 
   // if (is_lane_change &&
   //         frenet_obstacle.frenet_obstacle_boundary().s_start <
@@ -812,7 +808,7 @@ bool SccLateralObstacleDecider::IsAvoidable(
 
 bool SccLateralObstacleDecider::HasEnoughNudgeSpace(
     const FrenetObstacle &frenet_obstacle, double lat_safety_buffer,
-    bool is_lane_change, bool is_filter) {
+    bool is_in_lane_change_execution_scene, bool is_filter) {
   // 命名可进一步区分
   constexpr int kMaxCanAvoidCount = 6;
   constexpr int kEnoughNudgeSpaceCountThr = 2;
@@ -851,7 +847,7 @@ bool SccLateralObstacleDecider::HasEnoughNudgeSpace(
       (d_max_cpath_prediction <
        std::max(lane_width_ / 2 - (ego_width_ + lat_safety_buffer), -1.8));
 
-  if (is_lane_change && frenet_obstacle.frenet_obstacle_boundary().s_start <
+  if (is_in_lane_change_execution_scene && frenet_obstacle.frenet_obstacle_boundary().s_start <
                             lc_gap_info_.gap_front_s) {
     has_enough_nudge_space = true;
   }
@@ -1944,7 +1940,7 @@ bool SccLateralObstacleDecider::CheckStaticObstacleAvoidSafety(
 }
 
 void SccLateralObstacleDecider::LateralObstacleDecision(
-    const FrenetObstacle &frenet_obstacle, bool is_in_lane_change_scene) {
+    const FrenetObstacle &frenet_obstacle, bool is_in_lane_change_execution_scene) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
@@ -1990,7 +1986,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::RIGHT;
     }
     // cut_in 或 横穿
-    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_execution_scene)) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -2022,7 +2018,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // cut_in 或 横穿
-    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_execution_scene)) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -2078,7 +2074,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       }
     }
     // cut_in 或 横穿
-    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_execution_scene)) {
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // 后方车辆
@@ -2137,7 +2133,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
     }
   }
 
-  if (is_in_lane_change_scene && d_s_rel > history.front_expand_len &&
+  if (is_in_lane_change_execution_scene && d_s_rel > history.front_expand_len &&
       frenet_obstacle.frenet_obstacle_boundary().s_start <
           lc_gap_info_.gap_front_s) {
     // 在变道状态，依据gap计算
@@ -2150,7 +2146,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
     }
   }
   // cut_in 或 横穿
-  if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
+  if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_execution_scene)) {
     history.is_avd_car = false;
     history.ncar_count = 0;
     history.ncar_count_in = false;
@@ -2726,7 +2722,7 @@ bool SccLateralObstacleDecider::IsTruck(const FrenetObstacle &frenet_obstacle) {
 }
 
 void SccLateralObstacleDecider::IsPotentialFollowingObstacle(
-    const FrenetObstacle &frenet_obstacle, bool is_in_lane_change_scene) {
+    const FrenetObstacle &frenet_obstacle, bool is_in_lane_change_execution_scene) {
   // 根据侵入距离，计算潜在的跟车目标
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
@@ -2756,7 +2752,7 @@ void SccLateralObstacleDecider::IsPotentialFollowingObstacle(
     follow_info.is_need_folow = false;
     return;
   }
-  if (is_in_lane_change_scene &&
+  if (is_in_lane_change_execution_scene &&
       frenet_obstacle.frenet_obstacle_boundary().s_start <
           lc_gap_info_.gap_front_s) {
     // 在变道状态，依据gap计算follow
@@ -2839,10 +2835,8 @@ void SccLateralObstacleDecider::CalLaneChangeGapInfo(LcGapInfo &lc_gap_info) {
   const auto &dynamic_world =
       session_->environmental_model().get_dynamic_world();
 
-  bool is_in_lane_change_scene =
-      (target_state == kLaneChangeExecution ||
-       target_state == kLaneChangeHold || target_state == kLaneChangeCancel);
-  if (!is_in_lane_change_scene) {
+  bool is_in_lane_change_execution_scene = target_state == kLaneChangeExecution;
+  if (!is_in_lane_change_execution_scene) {
     return;
   }
 
@@ -2908,11 +2902,11 @@ void SccLateralObstacleDecider::ClearHistoryInfo() {
 }
 
 bool SccLateralObstacleDecider::IsCutInIgnore(
-    const FrenetObstacle& frenet_obstacle, bool is_lane_change) {
+    const FrenetObstacle& frenet_obstacle, bool is_in_lane_change_execution_scene) {
   LateralObstacleHistoryInfo& history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
   bool is_in_lane_change_gap =
-      is_lane_change && frenet_obstacle.frenet_obstacle_boundary().s_start <
+      is_in_lane_change_execution_scene && frenet_obstacle.frenet_obstacle_boundary().s_start <
                             lc_gap_info_.gap_front_s;
   if (!is_in_lane_change_gap && history.cut_in_or_cross &&
       !frenet_obstacle.obstacle()->is_static()) {

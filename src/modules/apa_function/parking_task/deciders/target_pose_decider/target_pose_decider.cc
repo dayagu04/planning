@@ -168,9 +168,8 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   }
 
   const GJKColDetRequest gjk_col_det_request(
-      base_on_slot_, param.uss_config.use_uss_pt_cloud,
-      car_body_type, consider_obs_movement_type,
-      param.use_obs_height_method, use_limiter);
+      base_on_slot_, param.uss_config.use_uss_pt_cloud, car_body_type,
+      consider_obs_movement_type, param.use_obs_height_method, use_limiter);
 
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
       col_det_interface_ptr_->GetGJKColDetPtr();

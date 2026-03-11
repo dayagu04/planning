@@ -80,7 +80,7 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
       session_->mutable_planning_context()
           ->mutable_lon_ref_path_decider_output();
 
-  mutable_lon_ref_path_decider_output->is_cross_vru_target_pre_handle =
+  mutable_lon_ref_path_decider_output->is_cross_vru_pre_handle =
       is_pre_handle_cross_vru_;
 
   AddCrossVRUTargetDataToProto();
@@ -138,24 +138,27 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
     const auto* agent =
         session_->environmental_model().get_agent_manager()->GetAgent(agent_id);
     if (agent == nullptr || agent->is_vru_crossing_virtual_obs()) continue;
-    
-    const auto& agent_st_boundary_id_map = st_graph->GetAgentIdSTBoundariesMap();
-    if (agent_st_boundary_id_map.find(agent_id) == agent_st_boundary_id_map.end()) {
+
+    const auto& agent_st_boundary_id_map =
+        st_graph->GetAgentIdSTBoundariesMap();
+    if (agent_st_boundary_id_map.find(agent_id) ==
+        agent_st_boundary_id_map.end()) {
       continue;
     }
-    
+
     const auto& st_boundary_ids = agent_st_boundary_id_map.at(agent_id);
     bool is_yield = false;
     for (const auto& boundary_id : st_boundary_ids) {
       speed::STBoundary st_boundary;
       if (st_graph->GetStBoundary(boundary_id, &st_boundary)) {
-        if (st_boundary.decision_type() == speed::STBoundary::DecisionType::YIELD) {
+        if (st_boundary.decision_type() ==
+            speed::STBoundary::DecisionType::YIELD) {
           is_yield = true;
           break;
         }
       }
     }
-    
+
     if (is_yield) {
       valid_agents.push_back(agent);
     }
