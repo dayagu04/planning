@@ -90,19 +90,19 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void UpdateAvdObstacles();
   void UpdateAvdObstacle(const FrenetObstacle &frenet_obs, double expand_vel,
                          double farthest_distance, bool rightest_lane,
-                         bool is_in_lane_change_scene);
+                         bool is_in_lane_change_execution_scene);
   bool IsPotentialAvoidingCar(const FrenetObstacle &frenet_obstacle,
                               bool rightest_lane, double farthest_distance,
                               bool can_left_borrow, bool can_right_borrow,
-                              bool is_in_lane_change_scene);
+                              bool is_in_lane_change_execution_scene);
   double CalDynamicLatBuffer(const FrenetObstacle &frenet_obstacle);
   bool IsInRange(const FrenetObstacle &frenet_obstacle);
   bool IsAboutToEnterRange(const FrenetObstacle &frenet_obstacle);
   double CalDistanceThre2LaneLine(const FrenetObstacle &frenet_obstacle);
   bool IsAvoidable(const FrenetObstacle &frenet_obstacle,
-                   double lat_safety_buffer, bool is_lane_change);
+                   double lat_safety_buffer, bool is_in_lane_change_execution_scene);
   bool HasEnoughNudgeSpace(const FrenetObstacle &frenet_obstacle,
-                           double lat_safety_buffer, bool is_lane_change,
+                           double lat_safety_buffer, bool is_in_lane_change_execution_scene,
                            bool is_filter = false);
   double GetAvoidCountThre(const FrenetObstacle &frenet_obstacle);
   bool UpdateObstacleAvoidCount(const FrenetObstacle &frenet_obstacle,
@@ -116,7 +116,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
                        int& side_2_front_count_thr);
   void UpdateLateralObstacleDecisions();
   void LateralObstacleDecision(const FrenetObstacle &frenet_obstacle,
-                               bool is_in_lane_change_scene);
+                               bool is_in_lane_change_execution_scene);
   bool ARAStar();
   void LateralObstacleDeciderOutput();
   void Log();
@@ -133,12 +133,12 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   bool CheckEgoOvertakeObstacle(const FrenetObstacle &frenet_obstacle);
   bool IsTruck(const FrenetObstacle &frenet_obstacle);
   void IsPotentialFollowingObstacle(const FrenetObstacle &frenet_obstacle,
-                                    bool is_in_lane_change_scene);
+                                    bool is_in_lane_change_execution_scene);
   void CalLaneChangeGapInfo(LcGapInfo &lc_gap_info);
   void ResetObstaclesHistory(bool is_change_lanes);
   void ClearHistoryInfo();
   bool IsCutInIgnore(const FrenetObstacle& frenet_obstacle,
-                     bool is_lane_change);
+                     bool is_in_lane_change_execution_scene);
   bool CheckSpatioTemporalPlanner();
   void UpdateObstacleInteractionInfo();
   void UpdateObstacleInteractionInfoBaseStaticEnvironment();
