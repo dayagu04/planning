@@ -178,6 +178,8 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
       double& free_space);
   void GenerateSpatioTemporalFollowDecision(
       const FrenetObstacle& frenet_obstacle);
+  double CalDesireStaticLateralDistance(
+      const FrenetObstacle& frenet_obstacle);
 
  private:
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>

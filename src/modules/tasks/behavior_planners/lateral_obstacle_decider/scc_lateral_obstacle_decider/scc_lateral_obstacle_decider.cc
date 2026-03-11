@@ -21,6 +21,8 @@
 namespace planning {
 const double kPlanningCycleTime = 1.0 / FLAGS_planning_loop_rate;
 const double kSpeedThr = 100;
+const double kRearVehicleTTCThreshold = 2.5;  // 交互时后方车TTC阈值 (s)
+const double kNudgeDistanceToCenterLineThreshold = 0.1;  // 避让静态障碍物超越中心线的距离
 
 SccLateralObstacleDecider::SccLateralObstacleDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -1472,6 +1474,9 @@ void SccLateralObstacleDecider::
     UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace() {
   // 计算静态障碍物的决策标签
   const double kSafeDynamicObstacleSpace = 0.8;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double half_ego_width = 0.5 * vehicle_param.width;
   for (auto frenet_obstacle : reference_path_ptr_->get_obstacles()) {
     if (frenet_obstacle == nullptr) {
       continue;
@@ -1536,8 +1541,28 @@ void SccLateralObstacleDecider::
     // 如果上一帧不避让，则当前帧的space_hysteresis加滞回，防止抖动
     // 后续需要优化这个条件
     if (!(has_safe_v_space && has_enough_space)) {
-      output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
-      lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car = false;
+      double nudge_buffer_hysteresis = 0;
+      if (last_output_[frenet_obstacle->id()] ==
+          LatObstacleDecisionType::FOLLOW) {
+        // 0.1的距离滞回
+        nudge_buffer_hysteresis = 0.1;
+      }
+      bool is_pre_nudge_over_center_lane = false;
+      double nudge_buffer = CalDesireStaticLateralDistance(*frenet_obstacle);
+      if (frenet_obstacle->d_min_cpath() > 0) {
+        is_pre_nudge_over_center_lane =
+            frenet_obstacle->d_min_cpath() - nudge_buffer - half_ego_width <
+            -kNudgeDistanceToCenterLineThreshold + nudge_buffer_hysteresis;
+      } else if (frenet_obstacle->d_max_cpath() < 0) {
+        is_pre_nudge_over_center_lane =
+            frenet_obstacle->d_max_cpath() + nudge_buffer + half_ego_width >
+            kNudgeDistanceToCenterLineThreshold - nudge_buffer_hysteresis;
+      }
+      if (is_pre_nudge_over_center_lane) {
+        output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
+        lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car =
+            false;
+      }
     }
     if (has_safe_v_space_current) {
       std::array<double, 5> x_v_factor{1, 4.17, 8.33, 16.67,33.33};
@@ -1548,6 +1573,33 @@ void SccLateralObstacleDecider::
     }
     obstacle_interaction_info.has_dynamic_safe_v_space = has_safe_v_space;
   }
+}
+
+double SccLateralObstacleDecider::CalDesireStaticLateralDistance(
+    const FrenetObstacle& frenet_obstacle) {
+  const double kStaticVRUMaxExtraLateralBuffer = 0.7;
+  const double kConeMaxExtraLateralBuffer = 0.15;
+  const double kBarrelMaxExtraLateralBuffer = 0.25;
+  const double kStaticOtherMaxExtraLateralBuffer = 0.35;
+  const double kExtraTruckNudgeBuffer = 0.2;
+  const double kNudgeBaseDistance = 0.4;
+
+  double max_extra_lateral_buffer = 0;
+  if (frenet_obstacle.obstacle()->is_VRU()) {
+    max_extra_lateral_buffer = kStaticVRUMaxExtraLateralBuffer;
+  } else if (frenet_obstacle.obstacle()->type() ==
+             iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE) {
+    max_extra_lateral_buffer = kConeMaxExtraLateralBuffer;
+  } else if (frenet_obstacle.obstacle()->type() ==
+             iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL) {
+    max_extra_lateral_buffer = kBarrelMaxExtraLateralBuffer;
+  } else {
+    max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
+  }
+  if (IsTruck(frenet_obstacle)) {
+    max_extra_lateral_buffer += kExtraTruckNudgeBuffer;
+  }
+  return kNudgeBaseDistance + max_extra_lateral_buffer;
 }
 
 void SccLateralObstacleDecider::
@@ -1738,11 +1790,20 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     double start_l = std::max(ego_l_start, obstacle_l_start);
     double end_l = std::min(ego_l_end, obstacle_l_end);
     bool lat_overlap_for_rear_obs = (start_l < end_l - kLatOverlapBuffer);
-    bool is_rear_obstacle =
-        reference_path_ptr_->get_ego_frenet_boundary().s_start >
-        frenet_obs->frenet_obstacle_boundary().s_end;
-    if (is_rear_obstacle && lat_overlap_for_rear_obs) {
-      continue;
+    if (reference_path_ptr_->get_ego_frenet_boundary().s_start >
+        frenet_obs->frenet_obstacle_boundary().s_end) {
+      // 计算后方车ttc
+      double ttc =
+          frenet_obs->frenet_relative_velocity_s() > 0
+              ? ((reference_path_ptr_->get_ego_frenet_boundary().s_start -
+                  frenet_obs->frenet_obstacle_boundary().s_end) /
+                 frenet_obs->frenet_relative_velocity_s())
+              : std::numeric_limits<double>::max();
+      bool is_care_rear_obstacle =
+          ttc < kRearVehicleTTCThreshold && !lat_overlap_for_rear_obs;
+      if (!is_care_rear_obstacle) {
+        continue;
+      }
     }
 
     if (obstacle_interaction_info.lateral_avoid_direction ==
