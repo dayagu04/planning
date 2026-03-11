@@ -769,11 +769,11 @@ bool ReferencePath::HandleRoadCurvature(
   static const double kPreviewRangeOffset = 20.0;   // 预览范围偏移量(m)
   // 4. 弯道长度判断阈值
   static const double kMinContinuousCurveLength = 21.0;      // 持续弯道判断的最小长度(m)
-  static const double kAverageContinuousCurveLength = 41.0;  // 持续弯道判断的平均长度(m)
+  static const double kAverageContinuousCurveLength = 40.0;  // 持续弯道判断的平均长度(m)
   static const double kMinCurveGapLength = 31.0;                 // 最小连续弯道间隔长度(m)
   static const double kMinCurveLength = 6.0;                 // 最小有效弯道长度(m)
   static const double kMinMidCurveLength = 11.0;             // 中等弯道的最小长度(m)
-  static const double kMinBigCurveContinuousLength = 31.0;   // 大弯道的最小持续长度(m)
+  static const double kMinBigCurveContinuousLength = 30.0;   // 大弯道的最小持续长度(m)
   static const double kMinConnectionLength = 21.0;           // 连续弯道段的最大间隔(m)
   // 5. 近/远距范围参数
   static const double kNearRangeStartOffset = -1.0;  // 近距范围起始偏移(自车位置向后，m)
@@ -789,7 +789,7 @@ bool ReferencePath::HandleRoadCurvature(
   // 7. 虚拟区域判断阈值
   static const double kVirtualRangeVelCoeff = 5.0;           // 虚拟范围与车速的系数(5.0*v)
   static const double kVirtualRangeOffset = 5.0;             // 虚拟范围偏移量(m)
-  static const double kMinIntersectionVirtualLength = 16.0;  // 路口虚拟区域最小长度(m)
+  static const double kMinIntersectionVirtualLength = 30.0;  // 路口虚拟区域最小长度(m)
   static const double kMinVirtualLength = 40.0;              // 非路口虚拟区域最小长度(m)
   static const double kScanVirtualRange = 70.0;              // 虚拟区域向前扫描范围(m)
   static const double kScanVirtualStep = 5.0;               // 虚拟区域向前扫描步长(m)
@@ -833,7 +833,7 @@ bool ReferencePath::HandleRoadCurvature(
           if (is_find_valid_virtual_area) {
             virtual_area_end_s = ref_pt_s;
             virtual_length = virtual_area_end_s - virtual_area_start_s;
-            if (virtual_length > kMinIntersectionVirtualLength) {
+            if (virtual_length >= kMinIntersectionVirtualLength) {
               is_in_virtual_area = true;
               dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
               break;
@@ -847,7 +847,7 @@ bool ReferencePath::HandleRoadCurvature(
     if (is_find_valid_virtual_area && !is_in_virtual_area) {
       virtual_area_end_s = init_frenet_pt.x + kScanVirtualRange;
       virtual_length = virtual_area_end_s - virtual_area_start_s;
-      if (virtual_length > kMinIntersectionVirtualLength) {
+      if (virtual_length >= kMinIntersectionVirtualLength) {
         is_in_virtual_area = true;
         dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
       } else {
@@ -855,6 +855,11 @@ bool ReferencePath::HandleRoadCurvature(
       }
     }
   }
+  // 1.average curvature filter. sliding window
+  std::vector<double> xp_vel{4.167, 8.333, 10.0};          // 20.0
+  std::vector<double> fp_radius_thr{200.0, 400.0, 600.0};  // 1000.0
+  double curve_radius_thr = interp(init_v, xp_vel, fp_radius_thr);
+  double straight_radius_thr = kStraightRadiusDefault;
   if ((virtual_lane_manager
            ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
        virtual_lane_manager
@@ -863,17 +868,10 @@ bool ReferencePath::HandleRoadCurvature(
        dist_to_virtual_start < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset))) ||
       (is_in_virtual_area &&
        dist_to_virtual_start < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
-       virtual_length > std::max(0.5 * init_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
-    is_in_virtual_area = true;
-  }
-  // 1.average curvature filter. sliding window
-  std::vector<double> xp_vel{4.167, 8.333, 10.0};          // 20.0
-  std::vector<double> fp_radius_thr{200.0, 400.0, 600.0};  // 1000.0
-  double curve_radius_thr = interp(init_v, xp_vel, fp_radius_thr);
-  double straight_radius_thr = kStraightRadiusDefault;
-  if (is_in_virtual_area) {
+       virtual_length >= std::max(0.5 * init_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
+
+    straight_radius_thr = curve_radius_thr;
     curve_radius_thr = kIntersectionRadiusThreshold;
-    straight_radius_thr = kIntersectionRadiusThreshold;
   }
   double big_curve_thr = 1.0 / curve_radius_thr;
   double straight_curv_thr = 1.0 / straight_radius_thr;
@@ -881,7 +879,9 @@ bool ReferencePath::HandleRoadCurvature(
   ref_path_curve_info_.s_vec.reserve(kMaxSamplingSize);
   std::vector<std::pair<double, double>> large_curvature_segments;
   large_curvature_segments.reserve(kMaxSamplingSize);
-  double sampling_range = init_s + kMaxSamplingRange;
+  double valid_range = std::max(valid_lane_line_length_ - init_s, 0.0);
+  double min_valid_continuous_length = std::max(valid_range, kMinCurveLength);
+  double sampling_range = init_s + std::min(kMaxSamplingRange, valid_range);
   double preview_range =
       std::min(std::max(init_s + init_v * kPreviewRangeVelCoeff + kPreviewRangeOffset, init_s + kPreviewRangeMin), sampling_range);
   double segment_start = init_s;
@@ -1051,11 +1051,11 @@ bool ReferencePath::HandleRoadCurvature(
     if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
     } else if ((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
-                kAverageContinuousCurveLength) ||
+                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length)) ||
                (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
-                kAverageContinuousCurveLength)) {
+                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length))) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
     } else {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
@@ -1097,11 +1097,11 @@ bool ReferencePath::HandleRoadCurvature(
     if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
     } else if ((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
-                kAverageContinuousCurveLength) ||
+                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length)) ||
                (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
-                kAverageContinuousCurveLength)) {
+                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length))) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
     } else {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
@@ -1135,8 +1135,9 @@ bool ReferencePath::HandleRoadCurvature(
     }
   } else {
     if ((init_dist_to_seg < kMinMidCurveLength ||
-         seg_length > kMinConnectionLength) &&
-        (init_dist_to_seg + seg_length) > kMinBigCurveContinuousLength) {
+         seg_length > std::min(kMinConnectionLength, min_valid_continuous_length)) &&
+        (std::fabs(init_dist_to_seg) + seg_length) >=
+         std::min(kMinBigCurveContinuousLength, min_valid_continuous_length)) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::BIG_CURVE;
     } else {
       if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
@@ -1149,11 +1150,11 @@ bool ReferencePath::HandleRoadCurvature(
           ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
         }
       } else if (((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
-                   ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
-                   kAverageContinuousCurveLength) ||
+                   ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >=
+                   std::min(kAverageContinuousCurveLength, min_valid_continuous_length)) ||
                   (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
-                   ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
-                   kAverageContinuousCurveLength))) {
+                   ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >=
+                   std::min(kAverageContinuousCurveLength, min_valid_continuous_length)))) {
         ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
       } else {
         ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
