@@ -33,6 +33,9 @@ class DynamicAgentEmergenceAvoidRequest : public LaneChangeRequest {
  private:
   void UpdateDynamicAgentEmergencyAvoidanceSituation();
 
+  // 0.5g刹停检测紧急情况更新函数
+  void UpdateBrakeFailureEmergencySituation();
+
   void GenerateLaneChangeDirection();
 
   void CheckLaneChangeDirection(int lc_status);
@@ -40,6 +43,20 @@ class DynamicAgentEmergenceAvoidRequest : public LaneChangeRequest {
   bool CheckEmergencyBaseLastEmergencyAvoid();
 
   bool CheckEmergencyDynamicSideAgentBaseRisk();
+
+  // 步骤1：检测0.5g减速度无法刹停的障碍物
+  bool CheckEmergencyBrakeFailureObstacle(int& obstacle_id);
+
+  // 步骤2：检查目标车道安全性
+  bool CheckTargetLaneSafety(RequestType direction, int target_lane_virtual_id);
+
+  // 步骤3：确定变道方向（基于0.5g刹停检测）
+  void GenerateLaneChangeDirectionByBrakeFailure(
+      const bool is_left_lane_change_safe,
+      const bool is_right_lane_change_safe);
+
+  bool IsCrossingObstacle(const int32_t obstacle_id,
+                          const std::shared_ptr<ReferencePath>& reference_path);
 
   bool is_dynamic_agent_emergency_avoidance_situation_ = false;
   RequestType recommend_dynamic_agent_emergency_avoidance_direction_ = NO_CHANGE;
@@ -55,6 +72,9 @@ class DynamicAgentEmergenceAvoidRequest : public LaneChangeRequest {
   int left_lane_nums_ = 0;
   HysteresisDecision emergency_lane_change_avoid_speed_ysteresis_;
   RiskLevel risk_level_ = RiskLevel::NO_RISK;
+  bool is_brake_failure_detected_ = false;  // 0.5g刹停失败标志
+  int brake_failure_obstacle_id_ = -1;  // 刹停失败的障碍物ID
+  int brake_failure_situation_timestamp_ = 0;  // 刹停失败情况时间戳（用于两帧滞回）
 };
 
 }  // namespace planning
