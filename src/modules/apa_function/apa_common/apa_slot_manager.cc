@@ -94,7 +94,7 @@ void ApaSlotManager::Update(
     } else if (state_machine_ptr_->IsParkingInStatus() &&
                select_slot_id == slot.GetId()) {
       if (perpendicular_redefine_info_map_.find(slot.GetId()) !=
-          perpendicular_redefine_info_map_.end() && perpendicular_redefine_info_map_.at(slot.GetId()).first)
+          perpendicular_redefine_info_map_.end())
         slot.ResetAsParallel(
             fusion_slot,
             perpendicular_redefine_info_map_.at(slot.GetId()).first,
@@ -1189,46 +1189,43 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
 
   const std::unordered_map<size_t, ApaObstacle>& obs =
       obstacle_manager_ptr_->GetObstacles();
-  geometry_lib::GlobalToLocalTf g2l_tf;
-  Eigen::Vector2d ego_global_point, left_mirror_global_point,
-      right_mirror_global_point;
   geometry_lib::PathPoint ego_local_point;
   bool left_area_is_empty = true, right_area_is_empty = true,
        front_area_is_empty = true;
   bool is_redefine_slot_type = false;
   int ego_side_to_slot = 0;  // 1:车在车位右侧 -1：车在车位左侧
 
-  ego_global_point = measure_data_ptr_->GetPos();
-  left_mirror_global_point = measure_data_ptr_->GetLeftMirrorPos();
-  right_mirror_global_point = measure_data_ptr_->GetRightMirrorPos();
-
-  g2l_tf = slot.g2l_tf_;
-  ego_local_point.pos = g2l_tf.GetPos(ego_global_point);
+  const Eigen::Vector2d ego_global_point = measure_data_ptr_->GetPos();
+  const Eigen::Vector2d left_mirror_global_point =
+      measure_data_ptr_->GetLeftMirrorPos();
+  const Eigen::Vector2d right_mirror_global_point =
+      measure_data_ptr_->GetRightMirrorPos();
+  ego_local_point.pos = slot.g2l_tf_.GetPos(ego_global_point);
   ego_local_point.heading =
-      g2l_tf.GetHeading(measure_data_ptr_->GetHeading()) * 57.3;
+      slot.g2l_tf_.GetHeading(measure_data_ptr_->GetHeading()) * 57.3;
 
-  if (ego_local_point.heading > 80 || ego_local_point.heading < -80) {
+  if (ego_local_point.heading > 80.0 || ego_local_point.heading < -80.0) {
     return false;
   }
 
-  if (fabs(ego_local_point.pos.y()) > 5) {
+  if (fabs(ego_local_point.pos.y()) > 5.0) {
     return false;
   }
   ILOG_INFO << "ego_local_point.pos.x = " << ego_local_point.pos.x()
             << "ego_local_point.pos.y = " << ego_local_point.pos.y()
             << "ego_local_point.heading = " << ego_local_point.heading;
-  planning_math::Box2d slot_left_area, slot_right_area, slot_front_area;
+
   planning_math::Vec2d center;
-  Eigen::Vector2d P0, P1, P2, P3, pt13_unit_normal_vec, pt13_unit_vec, pt13_vec,
-      pt02_unit_normal_vec, pt02_unit_vec, pt02_vec, pt01_unit_normal_vec;
+  Eigen::Vector2d P0, P1, P2, P3;
   double length, width, heading;
-  pt02_vec = slot.origin_corner_coord_global_.pt_0 -
-             slot.origin_corner_coord_global_.pt_2;
-  pt13_vec = slot.origin_corner_coord_global_.pt_1 -
-             slot.origin_corner_coord_global_.pt_3;
-  pt13_unit_vec = pt13_vec.normalized();
-  pt13_unit_normal_vec.x() = -pt13_unit_vec.y();  // counterclockwise
-  pt13_unit_normal_vec.y() = pt13_unit_vec.x();
+  const Eigen::Vector2d pt02_vec = slot.origin_corner_coord_global_.pt_0 -
+                                   slot.origin_corner_coord_global_.pt_2;
+  const Eigen::Vector2d pt13_vec = slot.origin_corner_coord_global_.pt_1 -
+                                   slot.origin_corner_coord_global_.pt_3;
+  const Eigen::Vector2d pt13_unit_vec = pt13_vec.normalized();
+  const Eigen::Vector2d pt13_unit_normal_vec = Eigen::Vector2d(
+      -pt13_unit_vec.y(), pt13_unit_vec.x());  // counterclockwise
+
   length = pt13_vec.norm();
   width = 1.5;
   heading = std::atan2(pt13_unit_vec.y(), pt13_unit_vec.x());
@@ -1238,11 +1235,13 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
   P3 = P0 + pt13_unit_normal_vec * 1.5;
   center.set_x((P0.x() + P1.x() + P2.x() + P3.x()) * 0.25);
   center.set_y((P0.y() + P1.y() + P2.y() + P3.y()) * 0.25);
-  slot_left_area = planning_math::Box2d(center, heading, length, width);
+  const planning_math::Box2d& slot_left_area =
+      planning_math::Box2d(center, heading, length, width);
 
-  pt02_unit_vec = pt02_vec.normalized();
-  pt02_unit_normal_vec.x() = pt02_unit_vec.y();  // clockwise
-  pt02_unit_normal_vec.y() = -pt02_unit_vec.x();
+  const Eigen::Vector2d pt02_unit_vec = pt02_vec.normalized();
+  const Eigen::Vector2d pt02_unit_normal_vec =
+      Eigen::Vector2d(pt02_unit_vec.y(), -pt02_unit_vec.x());  // clockwise
+
   length = pt02_vec.norm();
   width = 1.5;
   heading = std::atan2(pt02_unit_vec.y(), pt02_unit_vec.x());
@@ -1252,12 +1251,11 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
   P3 = slot.origin_corner_coord_global_.pt_0;
   center.set_x((P0.x() + P1.x() + P2.x() + P3.x()) * 0.25);
   center.set_y((P0.y() + P1.y() + P2.y() + P3.y()) * 0.25);
-  slot_right_area = planning_math::Box2d(center, heading, length, width);
-
-  pt01_unit_normal_vec.x() =
-      slot.origin_corner_coord_global_.pt_01_unit_vec.y();
-  pt01_unit_normal_vec.y() =
-      -slot.origin_corner_coord_global_.pt_01_unit_vec.x();
+  const planning_math::Box2d& slot_right_area =
+      planning_math::Box2d(center, heading, length, width);
+  const Eigen::Vector2d pt01_unit_normal_vec =
+      Eigen::Vector2d(slot.origin_corner_coord_global_.pt_01_unit_vec.y(),
+                      -slot.origin_corner_coord_global_.pt_01_unit_vec.x());
   length = 3.5;
   width = slot.origin_corner_coord_global_.pt_01_vec.norm();
   heading = std::atan2(pt01_unit_normal_vec.y(), pt01_unit_normal_vec.x());
@@ -1269,7 +1267,8 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
   P2 = P3 + pt01_unit_normal_vec * 3.5;
   center.set_x((P0.x() + P1.x() + P2.x() + P3.x()) * 0.25);
   center.set_y((P0.y() + P1.y() + P2.y() + P3.y()) * 0.25);
-  slot_front_area = planning_math::Box2d(center, heading, length, width);
+  const planning_math::Box2d& slot_front_area =
+      planning_math::Box2d(center, heading, length, width);
 
   for (const auto& pair : obs) {
     for (const auto& pt : pair.second.GetPtClout2dGlobal()) {
@@ -1294,26 +1293,25 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
             << static_cast<int>(right_area_is_empty)
             << "  front_area_is_empty = "
             << static_cast<int>(front_area_is_empty);
-  Eigen::Vector2d ego2pt2_vec, ego2pt3_vec, left_mirror2pt2_vec,
-      right_mirror2pt3_vec;
-  double ego2pt2_vec_dot, ego2pt3_vec_dot, left_mirror2pt2_vec_dot,
-      right_mirror2pt3_vec_dot;
 
-  ego2pt2_vec = ego_global_point - slot.origin_corner_coord_global_.pt_2;
-  ego2pt3_vec = ego_global_point - slot.origin_corner_coord_global_.pt_3;
+  const Eigen::Vector2d ego2pt2_vec =
+      ego_global_point - slot.origin_corner_coord_global_.pt_2;
+  const Eigen::Vector2d ego2pt3_vec =
+      ego_global_point - slot.origin_corner_coord_global_.pt_3;
 
-  ego2pt2_vec_dot =
+  const double ego2pt2_vec_dot =
       ego2pt2_vec.dot(slot.origin_corner_coord_global_.pt_23_unit_vec);
-  ego2pt3_vec_dot =
+  const double ego2pt3_vec_dot =
       ego2pt3_vec.dot(slot.origin_corner_coord_global_.pt_23_unit_vec);
 
-  left_mirror2pt2_vec =
+  const Eigen::Vector2d left_mirror2pt2_vec =
       left_mirror_global_point - slot.origin_corner_coord_global_.pt_2;
-  right_mirror2pt3_vec =
+  const Eigen::Vector2d right_mirror2pt3_vec =
       right_mirror_global_point - slot.origin_corner_coord_global_.pt_3;
-  left_mirror2pt2_vec_dot = left_mirror2pt2_vec.dot(pt02_unit_vec);
-  right_mirror2pt3_vec_dot = right_mirror2pt3_vec.dot(pt13_unit_vec);
-  if (ego2pt2_vec_dot < 0) {
+  const double left_mirror2pt2_vec_dot = left_mirror2pt2_vec.dot(pt02_unit_vec);
+  const double right_mirror2pt3_vec_dot =
+      right_mirror2pt3_vec.dot(pt13_unit_vec);
+  if (ego2pt2_vec_dot < 0.0) {
     ego_side_to_slot = 1;
     if (!right_area_is_empty) {
       is_redefine_slot_type = false;
@@ -1322,13 +1320,14 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
         is_redefine_slot_type = true;
       } else {
         if (left_mirror2pt2_vec_dot <= pt02_vec.norm()) {
-          if (ego_local_point.heading <= 4 && ego_local_point.heading > -80) {
+          if (ego_local_point.heading <= 4.0 &&
+              ego_local_point.heading > -80.0) {
             is_redefine_slot_type = true;
           } else {
             is_redefine_slot_type = false;
           }
         } else {
-          if (ego_local_point.heading > 2) {
+          if (ego_local_point.heading > 2.0) {
             is_redefine_slot_type = false;
           } else {
             is_redefine_slot_type = true;
@@ -1336,7 +1335,7 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
         }
       }
     }
-  } else if (ego2pt3_vec_dot > 0) {
+  } else if (ego2pt3_vec_dot > 0.0) {
     ego_side_to_slot = -1;
     if (!left_area_is_empty) {
       is_redefine_slot_type = false;
@@ -1345,13 +1344,14 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
         is_redefine_slot_type = true;
       } else {
         if (right_mirror2pt3_vec_dot <= pt13_vec.norm()) {
-          if (ego_local_point.heading >= -4 && ego_local_point.heading < 80) {
+          if (ego_local_point.heading >= -4.0 &&
+              ego_local_point.heading < 80.0) {
             is_redefine_slot_type = true;
           } else {
             is_redefine_slot_type = false;
           }
         } else {
-          if (ego_local_point.heading < -2) {
+          if (ego_local_point.heading < -2.0) {
             is_redefine_slot_type = false;
           } else {
             is_redefine_slot_type = true;
