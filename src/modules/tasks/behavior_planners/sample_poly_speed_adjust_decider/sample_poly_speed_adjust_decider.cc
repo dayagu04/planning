@@ -517,17 +517,17 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
     return false;
   }
 
-  // if (coarse_planning_info.target_state == kLaneChangePropose ||
-  //     enable_hold_adjust_speed) {
-  //   count_wait_state_++;
-  // }
+  if (coarse_planning_info.target_state == kLaneChangePropose ||
+      enable_hold_adjust_speed) {
+    count_wait_state_++;
+  }
 
-  // const int count_wait_limit = enable_merge_decelaration ? 1 : 3;
+  const int count_wait_limit = enable_merge_decelaration ? 1 : 3;
 
-  // if (count_wait_state_ <= count_wait_limit) {
-  //   ClearStitchedPolyPtr();
-  //   return false;
-  // }
+  if (count_wait_state_ <= count_wait_limit) {
+    ClearStitchedPolyPtr();
+    return false;
+  }
 
   if (lead_one != nullptr) {
     if (lead_one->id() > 0) {
