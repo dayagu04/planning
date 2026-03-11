@@ -51,6 +51,8 @@ struct ReferencePathPoint {
   /******** for hpp start *********/
   bool is_ramp;       // 是否在坡道上
   bool ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
+  planning_math::PathPoint left_bound_point;
+  planning_math::PathPoint right_bound_point;
   /******** for hpp  end  *********/
 };
 using ReferencePathPoints = std::vector<ReferencePathPoint>;
@@ -389,6 +391,7 @@ class ReferencePath {
   ReferencePathPoint raw_start_point_;
   ReferencePathPoint raw_end_point_;
   ReferencePathPoints refined_ref_path_points_;
+
   // frenet coord system
   // FrenetCoordinateSystemParameters frenet_parameters_;
   // std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;

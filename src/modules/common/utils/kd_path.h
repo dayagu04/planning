@@ -99,6 +99,10 @@ class KDPath {
 
   const LineSegment2d* GetNearestLineSegment(const Vec2d& point) const;
 
+  const LineSegment2d* GetNearestLineSegment(const Vec2d& point,
+                                             Vec2d& foot_point,
+                                             double& distance) const;
+
   static double LimitAngle(double angle) {
     const double pi2 = 2.0 * M_PI;
     while (angle > M_PI) {

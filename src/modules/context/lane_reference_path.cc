@@ -466,6 +466,21 @@ bool LaneReferencePath::get_ref_points_hpp(
   ref_path_points.clear();
   ref_path_points.reserve(lane_points.size());
   auto is_enu_valid = session_->environmental_model().location_valid();
+
+  auto construct_boundary_kd_path = [&](const iflyauto::LaneBoundary& boundary) {
+    std::vector<planning_math::PathPoint> coord_path_points;
+    coord_path_points.reserve(boundary.local_points_size);
+    for (size_t i = 0; i < boundary.local_points_size; ++i) {
+      coord_path_points.emplace_back(boundary.local_point[i].x,
+                                     boundary.local_point[i].y);
+    }
+    return std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
+  };
+  auto left_boundary_kd_path =
+      construct_boundary_kd_path(virtual_lane->get_left_lane_boundary());
+  auto right_boundary_kd_path =
+      construct_boundary_kd_path(virtual_lane->get_right_lane_boundary());
+
   for (auto &refline_pt : lane_points) {
     ReferencePathPoint ref_path_pt;
     if (is_enu_valid) {
@@ -481,10 +496,10 @@ bool LaneReferencePath::get_ref_points_hpp(
       ref_path_pt.path_point.set_theta(refline_pt.car_heading);
     }
     ref_path_pt.path_point.set_kappa(refline_pt.curvature);
-    ref_path_pt.distance_to_left_road_border = 5.0;
-    ref_path_pt.distance_to_right_road_border = 5.0;
-    ref_path_pt.distance_to_left_lane_border = 5.0;
-    ref_path_pt.distance_to_right_lane_border = 5.0;
+    ref_path_pt.distance_to_left_road_border = refline_pt.distance_to_left_road_border;
+    ref_path_pt.distance_to_right_road_border = refline_pt.distance_to_right_road_border;
+    ref_path_pt.distance_to_left_lane_border = refline_pt.distance_to_left_lane_border;
+    ref_path_pt.distance_to_right_lane_border = refline_pt.distance_to_right_lane_border;
     ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
@@ -498,18 +513,40 @@ bool LaneReferencePath::get_ref_points_hpp(
         (refline_pt.lane_type == iflyauto::LaneType::LANETYPE_RAMP);
     ref_path_pt.ramp_slope = refline_pt.slope;
 
-    // check direction
-    // if (not ref_path_points.empty()) {
-    //   const auto &pre_pt = ref_path_points.back();
-    //   Vec2d delta{ref_path_pt.path_point.x - pre_pt.path_point.x,
-    //               ref_path_pt.path_point.y - pre_pt.path_point.y};
-    //   Vec2d cur_direction =
-    //       Vec2d::CreateUnitVec2d(ref_path_pt.path_point.theta());
-    //   if (cur_direction.InnerProd(delta) < 0) {
-    // temporaly skip direction check since input data is bad @clren
-    // continue;
-    //   }
-    // }
+    Vec2d left_foot_point, right_foot_point;
+    double left_distance, right_distance;
+    if (left_boundary_kd_path &&
+        left_boundary_kd_path->GetNearestLineSegment(
+            Vec2d(ref_path_pt.path_point.x(), ref_path_pt.path_point.y()),
+            left_foot_point, left_distance)) {
+      ref_path_pt.left_bound_point =
+          planning_math::PathPoint(left_foot_point.x(), left_foot_point.y());
+    } else {
+      ref_path_pt.left_bound_point.set_x(
+          ref_path_pt.path_point.x() -
+          ref_path_pt.distance_to_left_road_border *
+              std::sin(ref_path_pt.path_point.theta()));
+      ref_path_pt.left_bound_point.set_y(
+          ref_path_pt.path_point.y() +
+          ref_path_pt.distance_to_left_road_border *
+              std::cos(ref_path_pt.path_point.theta()));
+    }
+    if (right_boundary_kd_path &&
+        right_boundary_kd_path->GetNearestLineSegment(
+            Vec2d(ref_path_pt.path_point.x(), ref_path_pt.path_point.y()),
+            right_foot_point, right_distance)) {
+      ref_path_pt.right_bound_point =
+          planning_math::PathPoint(right_foot_point.x(), right_foot_point.y());
+    } else {
+      ref_path_pt.left_bound_point.set_x(
+          ref_path_pt.path_point.x() +
+          ref_path_pt.distance_to_right_road_border *
+              std::sin(ref_path_pt.path_point.theta()));
+      ref_path_pt.left_bound_point.set_y(
+          ref_path_pt.path_point.y() -
+          ref_path_pt.distance_to_right_road_border *
+              std::cos(ref_path_pt.path_point.theta()));
+    }
     ref_path_points.emplace_back(std::move(ref_path_pt));
   }
   if (ref_path_points.empty()) {
