@@ -145,11 +145,11 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
 
     cost_config_vec.at(i)[W_NON_NEGATIVE_VEL] = 2000.0;
 
-    double k = 0.6127;  
+    double k = 0.6127;
     double i0 = 17.5;
     double safe_cost_factor = 1.0 / (1.0 + std::exp(-k * (i - i0)));
-    cost_config_vec.at(i)[W_POS_SAFE_COST] =
-        planning_input.q_pos_safe_cost() * safe_cost_factor;
+    cost_config_vec.at(i)[W_POS_SAFE] =
+        planning_input.q_pos_safe() * safe_cost_factor;
 
     cost_config_vec.at(i)[SAFE_DISTANCE] = planning_input.safe_distance();
     double emergency_stop_decay_rate = 0.15;

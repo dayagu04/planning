@@ -272,7 +272,7 @@ double LonPosSafeCostTerm::GetCost(const ilqr_solver::State &x,
       cost_config_ptr_->at(HARD_POS_MAX) - cost_config_ptr_->at(SAFE_DISTANCE);
 
   if (x[POS] > safe_threshold) {
-    cost = 0.5 * cost_config_ptr_->at(W_POS_SAFE_COST) *
+    cost = 0.5 * cost_config_ptr_->at(W_POS_SAFE) *
            Square(x[POS] - safe_threshold);
   }
 
@@ -287,9 +287,8 @@ void LonPosSafeCostTerm::GetGradientHessian(
       cost_config_ptr_->at(HARD_POS_MAX) - cost_config_ptr_->at(SAFE_DISTANCE);
 
   if (x[POS] > safe_threshold) {
-    lx(POS) +=
-        cost_config_ptr_->at(W_POS_SAFE_COST) * (x[POS] - safe_threshold);
-    lxx(POS, POS) += cost_config_ptr_->at(W_POS_SAFE_COST);
+    lx(POS) += cost_config_ptr_->at(W_POS_SAFE) * (x[POS] - safe_threshold);
+    lxx(POS, POS) += cost_config_ptr_->at(W_POS_SAFE);
   }
 }
 

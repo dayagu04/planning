@@ -692,7 +692,7 @@ class LoadRosbag:
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
-                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_emergency_stop", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
+                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
                           "joint_target_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_cruise_speed", "is_confluence_area",
                           "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
                           "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
@@ -708,7 +708,8 @@ class LoadRosbag:
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
                           'UpdateObstacleInteractionInfoCostTime',
-                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','merge_hard','merge_fail', 'average_curve']
+                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
+                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp']
 
 
       json_value_list += [#new_ldw debug info:

@@ -45,8 +45,9 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker,
       session_->planning_context().lon_ref_path_decider_output();
 
   const bool is_emergency_scenario =
-      lon_ref_path_decider_output.is_cross_vru_target_pre_handle ||
-      lon_ref_path_decider_output.is_comfort_target_lon_emergency_stop;
+      lon_ref_path_decider_output.is_cross_vru_pre_handle ||
+      lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
+      lon_ref_path_decider_output.is_joint_danger_emergency_stop;
 
   s_weight_ = std::vector<double>(plan_points_num_, kDefaultSWeight);
 

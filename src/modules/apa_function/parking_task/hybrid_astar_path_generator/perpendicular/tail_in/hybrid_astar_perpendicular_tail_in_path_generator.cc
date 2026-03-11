@@ -178,12 +178,21 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
     }
   }
 
-  if (fabs(next_node->GetPhi()) * common_math::kRad2DegF > 76.0f &&
-      (next_node->GetX() - 0.5 * apa_param.GetParam().car_width) <
-          float(request_.ego_info_under_slot.slot.processed_corner_coord_local_
-                    .pt_01_mid.x()) -
-              0.5) {
-    borrow_slot_cost = config_.borrow_slot_penalty;
+  if ((next_node->GetX() - 0.5 * apa_param.GetParam().car_width) <
+      float(request_.ego_info_under_slot.slot.processed_corner_coord_local_
+                .pt_01_mid.x()) -
+          0.5f) {
+    const bool case1 =
+        request_.scenario_type ==
+            ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
+        fabs(next_node->GetPhi()) * common_math::kRad2DegF > 76.0f;
+    const bool case2 =
+        request_.scenario_type ==
+            ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN &&
+        fabs(next_node->GetPhi()) * common_math::kRad2DegF < 132.0f;
+    if (case1 || case2) {
+      borrow_slot_cost = config_.borrow_slot_penalty;
+    }
   }
 
   next_node->SetGCost(current_node->GetGCost() + length_cost +
@@ -252,15 +261,16 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
   if (request_.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     interesting_area_.ExtendXupper(6.6 + bound);
+    interesting_area_.ExtendY(9.6 + bound);
   } else if (request_.scenario_type ==
              ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     interesting_area_.ExtendXupper(9.6 + bound);
+    interesting_area_.ExtendY(5.6 + bound);
   }
 
   interesting_area_.ExtendXlower(interesting_pos_slot.x() -
                                  ego_info_under_slot.target_pose.GetX() +
                                  bound);
-  interesting_area_.ExtendY(9.6 + bound);
   const double extra_val = 0.368;
   interesting_area_.max_[0] =
       std::max(interesting_area_.max_[0],
@@ -312,16 +322,18 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     }
     geometry_lib::PathPoint end_pose;
     const float decide_cul_de_sac_y = 7.5f;
-    if (cur_pose.GetY() > 0.0) {
+    if (cur_pose.GetTheta() < -0.001f) {
       end_pose.SetY(-decide_cul_de_sac_y - bound);
       end_pose.SetTheta(cur_pose.GetTheta());
       end_pose.SetDir(cur_pose.GetTheta());
       cul_de_sac_info_.type = CulDeSacType::RIGHT;
-    } else {
+    } else if (cur_pose.GetTheta() > 0.001f) {
       end_pose.SetY(decide_cul_de_sac_y + bound);
       end_pose.SetTheta(cur_pose.GetTheta());
       end_pose.SetDir(cur_pose.GetTheta());
       cul_de_sac_info_.type = CulDeSacType::LEFT;
+    } else {
+      break;
     }
     const std::vector<double> x_vec{7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0};
     bool find_safe_pos = false;
@@ -1109,6 +1121,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
   ILOG_INFO << "node in pool num = " << node_pool_.PoolSize()
             << "  open pq size = " << open_pq_.size()
+            << "  gen_child_node_num = " << gen_child_node_num
             << " curve_path_success_num = " << curve_path_success_num
             << "  curve_node_to_goal_vec size = "
             << curve_node_to_goal_vec.size()
@@ -1225,10 +1238,19 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       if (last_line_length < 2e-2f) {
         cost.unsuitable_last_line_length_cost = gear_change_penalty + 1.0f;
       } else {
+        float min_last_line_length = 1.86f;
+        float max_last_line_length = 3.68f;
+        if (request_.scenario_type ==
+            ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+          min_last_line_length = 3.0f;
+          max_last_line_length = 7.0f;
+        }
         const float unsuitable_last_line_length =
-            (last_line_length < 1.86f)   ? (1.86f - last_line_length)
-            : (last_line_length > 3.68f) ? (last_line_length - 3.68f)
-                                         : 0.0f;
+            (last_line_length < min_last_line_length)
+                ? (min_last_line_length - last_line_length)
+            : (last_line_length > max_last_line_length)
+                ? (last_line_length - max_last_line_length)
+                : 0.0f;
         cost.unsuitable_last_line_length_cost =
             unsuitable_last_line_length * unsuitable_last_line_length_penalty;
       }
@@ -1262,6 +1284,12 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
 
       cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
           gear_switch_pose, cur_gear, gear_change_penalty, length_penalty);
+
+      if (request_.ego_info_under_slot.cur_pose.GetTheta() *
+              gear_switch_pose.GetTheta() <
+          -0.0001f) {
+        cost.cur_gear_switch_pose_cost += 1.0f * gear_change_penalty;
+      }
 
       if (std::fabs(temp_node.GearSwitchNode()->GetKappa()) > 0.001f) {
         cost.cur_gear_switch_pose_cost += 0.6f * length_penalty;
@@ -1378,7 +1406,8 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
   lpl_input.has_length_require = true;
   lpl_input.use_bigger_radius = true;
 
-  if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     std::swap(lpl_input.reverse_last_line_min_length,
               lpl_input.drive_last_line_min_length);
 #if USE_LINK_PT_LINE
@@ -1419,7 +1448,8 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     Eigen::Vector2d heu_pos(target_pose.GetX(), target_pose.GetY());
     double drive_heu_pos_x = target_pose.GetX() + 2.2;
     double reverse_heu_pos_x = target_pose.GetX() + 3.8;
-    if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN)  {
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
       std::swap(drive_heu_pos_x, reverse_heu_pos_x);
     }
     if (gear == AstarPathGear::DRIVE) {
@@ -1471,16 +1501,28 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     gear_switch_pose_cost += gear_switch_penalty;
   }
 
-  AstarPathGear pre_gear = AstarPathGear::DRIVE;
-  if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    pre_gear = AstarPathGear::REVERSE;
+  float drive_idel_x = target_pose.GetX() + 4.2f;
+  float reverse_idel_x = target_pose.GetX() + 3.0f;
+
+  float min_drive_x = target_pose.GetX() + 2.5f;
+  float min_reverse_x = target_pose.GetX() + 1.5f;
+
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    std::swap(drive_idel_x, reverse_idel_x);
+    std::swap(min_drive_x, min_reverse_x);
   }
 
-  if (gear == pre_gear) {
-    const float idex_x = target_pose.GetX() + 3.0f;
-    if (gear_switch_pose.GetX() < idex_x) {
-      gear_switch_pose_cost += (idex_x - gear_switch_pose.GetX()) * 2.0f;
-    }
+  const float idel_x =
+      gear == AstarPathGear::DRIVE ? drive_idel_x : reverse_idel_x;
+
+  const float min_x =
+      gear == AstarPathGear::DRIVE ? min_drive_x : min_reverse_x;
+
+  if (gear_switch_pose.GetX() < min_x) {
+    gear_switch_pose_cost += 2.0f * gear_switch_penalty;
+  } else if (gear_switch_pose.GetX() < idel_x) {
+    gear_switch_pose_cost += (idel_x - gear_switch_pose.GetX()) * 2.0f;
   }
 
   return gear_switch_pose_cost;

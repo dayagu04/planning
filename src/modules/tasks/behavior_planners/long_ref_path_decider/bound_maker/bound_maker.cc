@@ -230,7 +230,7 @@ void BoundMaker::MakeAccBound(const double v_ego,
       acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
     }
   }
-  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
+  if (lon_ref_path_decider_output.is_cross_vru_pre_handle) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
       acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
     }
@@ -315,7 +315,8 @@ void BoundMaker::MakeSBound() {
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
 
-  if (lon_ref_path_decider_output.is_comfort_target_lon_emergency_stop &&
+  if ((lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
+      lon_ref_path_decider_output.is_joint_danger_emergency_stop) &&
       lon_ref_path_decider_output.comfort_target_upper_bound_infos.size() ==
           plan_points_num_) {
     for (int32_t i = 0; i < plan_points_num_; ++i) {
@@ -409,8 +410,9 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   }
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle ||
-      lon_ref_path_decider_output.is_comfort_target_lon_emergency_stop) {
+  if (lon_ref_path_decider_output.is_cross_vru_pre_handle ||
+      lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
+      lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
     jerk_lower_bound_ = std::vector<double>(plan_points_num_, jerk_lower_bound);
   }
 }
@@ -602,8 +604,9 @@ void BoundMaker::GenerateUpperBoundInfo() {
   }
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_comfort_target_lat_follow ||
-      lon_ref_path_decider_output.is_comfort_target_lon_cutin) {
+  if (lon_ref_path_decider_output.is_lat_follow ||
+      lon_ref_path_decider_output.is_lon_cutin ||
+      lon_ref_path_decider_output.is_joint_danger) {
     for (size_t i = 0; i < plan_points_num_ &&
                        i < lon_ref_path_decider_output
                                .comfort_target_upper_bound_infos.size();
@@ -648,8 +651,8 @@ void BoundMaker::CalcAccLimits(const UpperBoundInfo& upper_bound_info,
     double decel_offset =
         interp(upper_bound_info.v, _DECEL_OFFSET_BP, _DECEL_OFFSET_V);
 
-    double critical_decel = CalcCriticalDecel(upper_bound_info.s,
-                                              agent_v_rel, d_offset, v_offset);
+    double critical_decel =
+        CalcCriticalDecel(upper_bound_info.s, agent_v_rel, d_offset, v_offset);
     acc_target->first = std::min(decel_offset + critical_decel + a_lead_contr,
                                  acc_target->first);
   }
