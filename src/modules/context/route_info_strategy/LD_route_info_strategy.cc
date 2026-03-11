@@ -1525,14 +1525,37 @@ bool LDRouteInfoStrategy::IsIgnoreMerge(
 
 
 void LDRouteInfoStrategy::CalculateMergeInfo() {
-  merge_info_vec_ = ld_map_.GetMergeInfoList(
-      current_link_->id(), ego_on_cur_link_s_, kMaxSearchLength);
+  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
+      merge_info_vec = ld_map_.GetMergeInfoList(
+          current_link_->id(), ego_on_cur_link_s_, kMaxSearchLength);
   // 筛选掉距离为负的merge信息
-  while (!merge_info_vec_.empty()) {
-    if (merge_info_vec_.front().second > kEpsilon) {
+  while (!merge_info_vec.empty()) {
+    if (merge_info_vec.front().second > kEpsilon) {
       break;
     } else {
-      merge_info_vec_.erase(merge_info_vec_.begin());
+      merge_info_vec.erase(merge_info_vec.begin());
+    }
+  }
+
+  for (const auto& merge_info: merge_info_vec) {
+    if (merge_info.first == nullptr) {
+      continue;
+    }
+
+    const auto& merge_next_link =
+        ld_map_.GetNextLinkOnRoute(merge_info.first->id());
+    if (merge_next_link == nullptr) {
+      continue;
+    }
+
+    if (merge_next_link->link_class() ==
+            iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+        merge_next_link->link_class() ==
+            iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+        (merge_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+      merge_info_vec_.emplace_back(merge_info);
+    } else {
+      break;
     }
   }
 
@@ -1565,14 +1588,37 @@ void LDRouteInfoStrategy::CalculateMergeInfo() {
 }
 
 void LDRouteInfoStrategy::CalculateSplitInfo() {
-  split_info_vec_ = ld_map_.GetSplitInfoList(
-      current_link_->id(), ego_on_cur_link_s_, kMaxSearchLength);
+  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
+      split_info_vec = ld_map_.GetSplitInfoList(
+          current_link_->id(), ego_on_cur_link_s_, kMaxSearchLength);
   // 筛选掉距离为负的merge信息
-  while (!split_info_vec_.empty()) {
-    if (split_info_vec_.front().second > kEpsilon) {
+  while (!split_info_vec.empty()) {
+    if (split_info_vec.front().second > kEpsilon) {
       break;
     } else {
-      split_info_vec_.erase(split_info_vec_.begin());
+      split_info_vec.erase(split_info_vec.begin());
+    }
+  }
+
+  for (const auto& split_info : split_info_vec) {
+    if (split_info.first == nullptr) {
+      continue;
+    }
+
+    const auto& split_next_link =
+        ld_map_.GetNextLinkOnRoute(split_info.first->id());
+    if (split_next_link == nullptr) {
+      continue;
+    }
+
+    if (split_next_link->link_class() ==
+            iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+        split_next_link->link_class() ==
+            iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+      split_info_vec_.emplace_back(split_info);
+    } else {
+      break;
     }
   }
 
