@@ -286,7 +286,7 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
     planning_result.speed_bump_path_segments.push_back({seg.first, seg.second});
   }
 
-  v_limit_speed_bump = GetSpeedLimitInObjectiveZone(zone_info);
+  v_limit_speed_bump = GetSpeedLimitInObjectiveZone(zone_info, 2.22);
 
   if (v_limit_speed_bump < v_target_) {
     v_target_ = v_limit_speed_bump;
@@ -354,24 +354,23 @@ bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
 }
 
 double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
-    const HPPSpeedLimitZoneInfo& zone_info) {
+    const HPPSpeedLimitZoneInfo& zone_info, const double target_v) {
   // 减速带区域内限速
-  const double kSpeedBumpZoneVelocityLimit =
-      hpp_speed_limit_config_.speed_bump_zone_speed_limit;
+  const double kSpeedObjectiveZoneLimit = target_v;
   // 减速度
   const double kDecelerationRate =
       hpp_speed_limit_config_.speed_bump_deceleration;
 
   if (zone_info.in_speed_limit_zone) {
     // 在减速带区域内，限速8 km/h
-    return kSpeedBumpZoneVelocityLimit;
+    return kSpeedObjectiveZoneLimit;
   } else if (zone_info.approaching_speed_limit_zone) {
     // 接近减速带区域，根据距离和减速度计算限速
     // 使用运动学公式: v² = v0² + 2*a*s
-    // 其中 v = kSpeedBumpZoneVelocityLimit, a = kDecelerationRate, s =
+    // 其中 v = kSpeedObjectiveZoneLimit, a = kDecelerationRate, s =
     // distance_to_zone 求解 v0 = sqrt(v² - 2*a*s)
     double target_velocity_squared =
-        kSpeedBumpZoneVelocityLimit * kSpeedBumpZoneVelocityLimit;
+        kSpeedObjectiveZoneLimit * kSpeedObjectiveZoneLimit;
     double velocity_squared_at_distance =
         target_velocity_squared -
         2.0 * kDecelerationRate * zone_info.distance_to_zone;
@@ -390,12 +389,11 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
 
   HPPSpeedLimitZoneInfo zone_info;
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
-                                   CPassageType::Ignore,
-                                   CElemType::RampRoad)) {
+                                   CPassageType::Ignore, CElemType::RampRoad)) {
     return;
   }
 
-  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(zone_info);
+  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(zone_info, 2.78);
 
   if (v_limit_speed_ramp < v_target_) {
     v_target_ = v_limit_speed_ramp;
@@ -409,14 +407,16 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
 
   JSON_DEBUG_VALUE("v_limit_speed_ramp", v_limit_speed_ramp);
   JSON_DEBUG_VALUE("in_speed_limit_ramp", zone_info.in_speed_limit_zone);
-  JSON_DEBUG_VALUE("approaching_speed_limit_zone_ramp", zone_info.approaching_speed_limit_zone);
+  JSON_DEBUG_VALUE("approaching_speed_limit_zone_ramp",
+                   zone_info.approaching_speed_limit_zone);
   JSON_DEBUG_VALUE("distance_to_zone_ramp", zone_info.distance_to_zone);
 
   return;
 }
 
 void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
-  double v_limit_speed_intersection_road = hpp_speed_limit_config_.velocity_upper_bound;
+  double v_limit_speed_intersection_road =
+      hpp_speed_limit_config_.velocity_upper_bound;
   if (!session_->is_hpp_scene()) {
     return;
   }
@@ -428,7 +428,8 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
     return;
   }
 
-  v_limit_speed_intersection_road = GetSpeedLimitInObjectiveZone(zone_info);
+  v_limit_speed_intersection_road =
+      GetSpeedLimitInObjectiveZone(zone_info, 1.67);
 
   if (v_limit_speed_intersection_road < v_target_) {
     v_target_ = v_limit_speed_intersection_road;
@@ -440,9 +441,12 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
       v_limit_speed_intersection_road, zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
-  JSON_DEBUG_VALUE("v_limit_speed_intersection_road", v_limit_speed_intersection_road);
-  JSON_DEBUG_VALUE("in_speed_limit_intersection", zone_info.in_speed_limit_zone);
-  JSON_DEBUG_VALUE("approaching_speed_limit_zone_intersection", zone_info.approaching_speed_limit_zone);
+  JSON_DEBUG_VALUE("v_limit_speed_intersection_road",
+                   v_limit_speed_intersection_road);
+  JSON_DEBUG_VALUE("in_speed_limit_intersection",
+                   zone_info.in_speed_limit_zone);
+  JSON_DEBUG_VALUE("approaching_speed_limit_zone_intersection",
+                   zone_info.approaching_speed_limit_zone);
   JSON_DEBUG_VALUE("distance_to_zone_intersection", zone_info.distance_to_zone);
 
   return;
