@@ -12,6 +12,7 @@ enum LaneBorrowStatus {
   kLaneBorrowDriving,
   kLaneBorrowCrossing,
   kLaneBorrowBackOriginLane,
+  kLaneBorrowWaitting, // 车道借用等待中,由于前方、侧方、后方动态缓解导致借道暂缓
 };
 
 enum LaneBorrowFailedReason {

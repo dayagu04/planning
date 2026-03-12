@@ -317,6 +317,7 @@ void LaneBorrowDecider::UpdateToDP() {
             BACKWARD_OBSTACLE_TOO_CLOSE ||
         lane_borrow_decider_output_.lane_borrow_failed_reason ==
             AHEAD_COMING_OBS) {
+      lane_borrow_decider_output_.lane_borrow_state = kLaneBorrowWaitting;
       const auto& vehicle_param =
           VehicleConfigurationContext::Instance()->get_vehicle_param();
       double virtual_v = static_blocked_obstacles_[0]->velocity();

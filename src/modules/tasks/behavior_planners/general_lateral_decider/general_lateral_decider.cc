@@ -5799,8 +5799,10 @@ bool GeneralLateralDecider::IsBlockedObstacleInLaneBorrow(
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   if ((is_in_lane_borrow_status) &&
+      (lane_borrow_decider_output.lane_borrow_state != kLaneBorrowWaitting) &&
       (std::find(blocked_obstacles.begin(), blocked_obstacles.end(),
                  obstacle->id()) != blocked_obstacles.end())) {
+    // 借道等待状态不需要产生bound
     return true;
   } else {
     return false;
