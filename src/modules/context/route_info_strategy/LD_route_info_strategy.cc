@@ -2039,6 +2039,21 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
     return false;
   }
 
+  double sum_dis = 0.0;
+  while (target_link) {
+    if (target_link->successor_link_ids_size() != 1 ||
+        target_link->predecessor_link_ids_size() != 1) {
+      break;
+    }
+
+    target_link = ld_map_.GetNextLinkOnRoute(target_link->id());
+
+    sum_dis = sum_dis + target_link->length() * 0.01;
+    if (sum_dis > 200) {
+      break;
+    }
+  }
+
   for (const auto& lane_id : target_link->lane_ids()) {
     const iflymapdata::sdpro::Lane* lane_info =
         ld_map_.GetLaneInfoByID(lane_id);
