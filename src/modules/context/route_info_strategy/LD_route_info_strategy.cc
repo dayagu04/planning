@@ -1043,8 +1043,9 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    const bool lane_type_condition =
-        !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
+    // const bool lane_type_condition =
+    //     !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
+    const bool lane_type_condition = true;
 
     RampDirection front_ramp_dir = route_info_output_.ramp_direction;
 
