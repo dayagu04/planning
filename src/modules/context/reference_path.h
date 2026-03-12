@@ -25,6 +25,14 @@ enum class ReferencePathSource {
 
 enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
 
+enum class TurnstileSceneType {
+  TURNSTILE_SCENE_NONE = 0,
+  TURNSTILE_SCENE_LEFT_SINGLE = 1,    // 左侧单闸机
+  TURNSTILE_SCENE_RIGHT_SINGLE = 2,   // 右侧单闸机
+  TURNSTILE_SCENE_MID_DOUBLE = 3,         // 中间双闸机
+  TURNSTILE_SCENE_SIDE_DOUBLE = 4,        // 两侧双闸机
+};
+
 struct ReferencePathPoint {
   planning_math::PathPoint path_point;
   double distance_to_left_road_border;
@@ -238,6 +246,7 @@ class ReferencePath {
     return ref_path_source_;
   }
 
+  /********* for hpp start **********/
   ConstStaticAnalysisStoragePtr get_static_analysis_storage() const {
     return static_analysis_storage_;
   }
@@ -245,6 +254,16 @@ class ReferencePath {
     return static_analysis_storage_;
   }
 
+  TurnstileSceneType get_turnstile_scene_type() const {
+    return turnstile_scene_type_;
+  }
+  int get_target_turnstile_obs_id() const {
+    return target_turnstile_obs_id_;
+  }
+  int get_side_turnstile_obs_id() const {
+    return side_turnstile_obs_id_;
+  }
+  /********* for hpp  end  **********/
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
   inline static bool compare_obstacle_s_descend(
@@ -400,6 +419,9 @@ class ReferencePath {
   std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
       semantic_sign_frenet_obstacles_map_;
 
+  TurnstileSceneType turnstile_scene_type_ = TurnstileSceneType::TURNSTILE_SCENE_NONE;
+  int target_turnstile_obs_id_ = -1;     // 需要通过的闸机障碍物 id
+  int side_turnstile_obs_id_ = -1;      // 双闸机场景下，另一个闸机障碍物 id
   /********* for hpp  end  **********/
 
   std::vector<int> obstacles_in_lane_map_;
