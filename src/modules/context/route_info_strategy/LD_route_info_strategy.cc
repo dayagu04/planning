@@ -2413,7 +2413,7 @@ void LDRouteInfoStrategy::Erase1Split2FeasibleLane(
                                 feasible_lane_graph);
     }
   } else if (front_first_ramp_dir == RAMP_ON_LEFT) {
-    for (size_t idx = max_distance_lanes.size() - 2; idx >= 0; --idx) {
+    for (int idx = static_cast<int>(max_distance_lanes.size()) - 2; idx >= 0; --idx) {
       EraseFeasibleLaneIfNeeded(max_distance_lanes[idx].id, split_next_link,
                                 feasible_lane_graph);
     }
