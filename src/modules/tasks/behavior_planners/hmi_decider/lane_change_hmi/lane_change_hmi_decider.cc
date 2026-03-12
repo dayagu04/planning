@@ -362,7 +362,8 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     //   ad_info.lane_change_reason =
     //   iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     // } else
-    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE) {
+    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE ||
+        route_info_output.is_ego_on_accelerate_lane) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     } else {
       ad_info.lane_change_reason =
