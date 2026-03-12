@@ -367,6 +367,7 @@ void SLTGridMapAdapter::StateTransformForInputData(
     agent_time_corner->set_is_static(agent_iter->is_static());
     const auto& fs_point = fs_iter->second;
     int index = 0;
+    bool is_consider_spatio = false;
     for (int i = 0; i < state_iter->second.size(); ++i) {
       const auto& state = state_iter->second[i];
 
@@ -394,6 +395,7 @@ void SLTGridMapAdapter::StateTransformForInputData(
       offset++;
       agent_state.agent_box_set[i] = std::move(agent_box);
       const AABox2d& box_ref = agent_state.agent_box_set[i];
+      agent_state.agent_boxs_set.insert(std::make_pair(index, box_ref));
       if ((box_ref.max_y() < min_target_l) ||
           (box_ref.min_y() > max_target_l) ||
           (box_ref.min_x() >
@@ -401,11 +403,12 @@ void SLTGridMapAdapter::StateTransformForInputData(
           (box_ref.max_x() < ego_box.min_x() - kLongitReservedBuffer)) {
         time_and_corners->set_enable_use(false);
         index++;
+        is_consider_spatio = is_consider_spatio || false;
         continue;
       } else {
-        agent_state.agent_boxs_set.insert(std::make_pair(index, box_ref));
         time_and_corners->set_enable_use(true);
         index++;
+        is_consider_spatio = true;
       }
       // agent_state.frenet_vertices.emplace_back(agent_state_vertices);
       if (state.time_stamp <= kDefaultConsiderDynamicObstacleTajsTime) {
@@ -461,9 +464,9 @@ void SLTGridMapAdapter::StateTransformForInputData(
     //       }
     //     }
     // #endif
-    if (agent_state.agent_boxs_set.empty()) {
-      continue;
-    }
+    // if (agent_state.agent_boxs_set.empty()) {
+    //   continue;
+    // }
     max_box_corners.emplace_back(Vec2d(min_x, max_y));
     max_box_corners.emplace_back(Vec2d(max_x, max_y));
     max_box_corners.emplace_back(Vec2d(max_x, min_y));
@@ -479,6 +482,7 @@ void SLTGridMapAdapter::StateTransformForInputData(
 
     AABox2d max_AABBbox(max_box_corners);
     agent_state.max_agent_box = std::move(max_AABBbox);
+    agent_state.is_consider_spatio = is_consider_spatio;
     surround_forward_trajs_state_.emplace_back(std::move(agent_state));
   }
 

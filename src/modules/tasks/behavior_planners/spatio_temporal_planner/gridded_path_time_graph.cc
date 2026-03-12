@@ -122,6 +122,9 @@ bool GriddedPathTimeGraph::Search(
         (ego_state_manager->ego_v() - lead_agent->speed()) * kDefaultTtc;
     if (lead_agent->is_static()) {
       for (const auto& agent : agent_trajs) {
+        if (!agent.is_consider_spatio) {
+          continue;
+        }
         if (agent.agent_id == lead_agent->agent_id() &&
             (agent.max_agent_box.min_y() < kDefaultStaticObstacleLateralDis &&
              agent.max_agent_box.max_y() > -kDefaultStaticObstacleLateralDis)) {

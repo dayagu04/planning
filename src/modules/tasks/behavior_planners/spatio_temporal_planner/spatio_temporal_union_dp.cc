@@ -309,7 +309,7 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
   const double init_v = spatio_temporal_union_plan_input.init_state().v0();
   const double v_cruise =
       spatio_temporal_union_plan_input.init_state().v_cruise();
-  enable_use_last_planning_result_compute_stitching_ = 
+  enable_use_last_planning_result_compute_stitching_ =
     PrebuildLastFrameToCurrentSpline();
 
 #ifdef OPENMP_DEBUG
@@ -1343,7 +1343,7 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   if (!enable_use_last_planning_result_compute_stitching_) {
     return stitching_cost;
   }
-  if (current.x < spline_s_min_ - 1e-3 || 
+  if (current.x < spline_s_min_ - 1e-3 ||
       current.x > spline_s_max_ + 1e-3) {
     return stitching_cost;
   }
@@ -1860,6 +1860,9 @@ bool SpatioTemporalUnionDp::CheckOverlapOnDpSltGraph(
       continue;
     }
 
+    if (!agent_traj.is_consider_spatio) {
+      continue;
+    }
     auto it = agent_traj.agent_boxs_set.find(index);
 
     if (it != agent_traj.agent_boxs_set.end()) {
