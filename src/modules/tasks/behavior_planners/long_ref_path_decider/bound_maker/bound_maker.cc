@@ -8,23 +8,16 @@
 namespace planning {
 namespace {
 constexpr double kEpsilon = 1e-6;
-constexpr double IsoAccLimitUpper = -2.0;
-constexpr double IsoAccLimitLower = -3.0;
-constexpr double IsoAccLimitSpeedUpper = 20.0;
-constexpr double IsoAccLimitSpeedLower = 3.0;
-
-constexpr double IsoJerkLimitUpper = -2.0;
-constexpr double IsoJerkLimitLower = -3.0;
-constexpr double IsoJerkLimitSpeedUpper = 20.0;
-constexpr double IsoJerkLimitSpeedLower = 3.0;
-
 constexpr double kFollowBuffer = 0.2;
 constexpr double kOvertakeBuffer = 2.0;
 
 constexpr double kSpeedBoundFactor = 1.1;
-constexpr double kPerSecondPlanLenth = 40.0;
+constexpr double kPerSecondPlanLenth = 50.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
+constexpr double kDecelJeck = -1.2;
+constexpr double kAccLowerComfortableBound = -3.0;
+constexpr double kAccJeck = 3.0;
 constexpr double kBrakeDelayTimeBuffer = 0.3;
 
 constexpr double kAccMaxLowerBound = -5.0;
@@ -33,7 +26,15 @@ constexpr double kJerkMaxLowerBound = -4.0;
 constexpr double kLaneChangeAccUpperBound = 1.2;
 constexpr double kLaneChangeFrontAgentHeadway = 0.8;
 
+constexpr double kDecelMax = 5.0;
+constexpr double kVirtualUpperBound = 250.0;
+constexpr double kMaxTau = 1.0;
+constexpr double s0 = 3.5;
+constexpr double max_tau = 1.35;
+constexpr double a_max = 2.0;
+constexpr double b_max = 3.0;
 }  // namespace
+
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
                        framework::Session* session)
     : speed_planning_config_(speed_planning_config), session_(session) {
@@ -66,13 +67,13 @@ common::Status BoundMaker::Run(const TargetMaker& target_maker) {
   MakeVBound();
 
   // 4. jerk bound
-  MakeJerkBound(target_maker);
+  MakeJerkBound();
 
   // 5. Judge danger agent by max decel curve
   JudgeDangerAgentByMaxDecelCurve(target_maker);
 
-  // 6. comfort bound (IDM + CAH)
-  MakeComfortBound();
+  // 6. soft bound (IDM + CAH)
+  MakeSoftBound();
 
   return common::Status::OK();
 }
@@ -316,7 +317,7 @@ void BoundMaker::MakeSBound() {
       session_->planning_context().lon_ref_path_decider_output();
 
   if ((lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
-      lon_ref_path_decider_output.is_joint_danger_emergency_stop) &&
+       lon_ref_path_decider_output.is_joint_danger_emergency_stop) &&
       lon_ref_path_decider_output.comfort_target_upper_bound_infos.size() ==
           plan_points_num_) {
     for (int32_t i = 0; i < plan_points_num_; ++i) {
@@ -341,8 +342,7 @@ void BoundMaker::MakeVBound() {
   v_upper_bound_ = std::vector<double>(plan_points_num_, max_speed);
 }
 
-void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
-  // @gpxu 待补充
+void BoundMaker::MakeJerkBound() {
   double jerk_upper_bound =
       speed_planning_config_.speed_planning_bound.jerk_upper_bound;
   if (init_lon_state_[2] > 0.0) {
@@ -353,71 +353,43 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   jerk_upper_bound_ = std::vector<double>(plan_points_num_, jerk_upper_bound);
   jerk_lower_bound_ = std::vector<double>(plan_points_num_, jerk_lower_bound);
 
-  const auto& st_graph = session_->planning_context().st_graph_helper();
-  if (!st_graph) {
-    return;
-  }
+  auto max_decel_trajectory = GenerateMaxDecelerationCurve();
+  AddMaxDecelCurveDataToProto(max_decel_trajectory);
 
-  auto max_deceleration_curve = GenerateMaxDecelerationCurve();
-  AddMaxDecelCurveDataToProto(max_deceleration_curve);
-
-  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
-  const auto start_stop_decider_output =
-      session_->planning_context().start_stop_decider_output();
-  const auto& cipv_info = session_->planning_context().cipv_decider_output();
-
-  // Hack: add jerk bound if s_target is comfort
-  auto virtual_acc_curve = MakeVirtualZeroAccCurve();
-  bool is_need_comfortable_decel = true;
-  bool is_cipv_has_sharp_decel = false;
-  for (int32_t i = plan_points_num_ - 1; i >= 0; --i) {
-    const double t = i * dt_;
-    const double s_safe = max_deceleration_curve.Evaluate(0, t);
-    const auto corridor_upper_point = st_graph->GetPassCorridorUpperBound(t);
-    const double agent_s = corridor_upper_point.s();
-    const int32_t agent_id = corridor_upper_point.agent_id();
-    double agent_acc = corridor_upper_point.acceleration();
-    const auto agent = agent_mgr->GetAgent(agent_id);
-    if (agent != nullptr) {
-      agent_acc = agent->accel_fusion();
-    }
-    const double vel = virtual_acc_curve->Evaluate(1, t);
-    const double brake_buffer = vel * kBrakeDelayTimeBuffer;
-    auto target_value = target_maker.target_value(t);
-    if (target_value.target_type() == TargetType::kFollow ||
-        target_value.target_type() == TargetType::kNeighborYield ||
-        target_value.target_type() == TargetType::kCautionYield ||
-        target_value.target_type() == TargetType::kComfort) {
-      // check s_target by s_safe
-      if (agent_s - brake_buffer < s_safe) {
-        is_need_comfortable_decel = false;
-        break;
-      }
-    }
-
-    if (agent_id == -1) {
-      continue;
-    }
-  }
-
-  if (cipv_info.acceleration_fusion() < -2.0) {
-    is_cipv_has_sharp_decel = true;
-  }
-
-  if (is_need_comfortable_decel && !is_cipv_has_sharp_decel) {
-    jerk_lower_bound_ =
-        std::vector<double>(plan_points_num_, kJerkLowerComfortableBound);
-  }
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
   if (lon_ref_path_decider_output.is_cross_vru_pre_handle ||
       lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
       lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
-    jerk_lower_bound_ = std::vector<double>(plan_points_num_, jerk_lower_bound);
+    return;
+  }
+
+  const auto& st_graph = session_->planning_context().st_graph_helper();
+  if (!st_graph) {
+    return;
+  }
+
+  bool is_need_comfortable_decel = true;
+  for (int32_t i = plan_points_num_ - 1; i >= 0; --i) {
+    const double t = i * dt_;
+    const auto corridor_upper_point = st_graph->GetPassCorridorUpperBound(t);
+    const auto upper_s = corridor_upper_point.s();
+    const double ego_s = max_decel_trajectory.Evaluate(0, t);
+    const double ego_vel = max_decel_trajectory.Evaluate(1, t);
+    const double brake_buffer = ego_vel * kBrakeDelayTimeBuffer;
+    if (upper_s - brake_buffer < ego_s) {
+      is_need_comfortable_decel = false;
+      break;
+    }
+  }
+
+  if (is_need_comfortable_decel) {
+    jerk_lower_bound_ =
+        std::vector<double>(plan_points_num_, kJerkLowerComfortableBound);
   }
 }
 
-void BoundMaker::MakeComfortBound() {
+void BoundMaker::MakeSoftBound() {
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
@@ -425,12 +397,7 @@ void BoundMaker::MakeComfortBound() {
                                         .agent_headway_decider_output()
                                         .agents_headway_Info();
 
-  std::vector<double> comfort_upper_bound(plan_points_num_, 200.0);
-
-  constexpr double s0 = 3.5;
-  constexpr double max_tau = 1.35;
-  double a_max = 2.0;
-  double b_max = 3.0;
+  std::vector<double> s_soft_bound(plan_points_num_, kVirtualUpperBound);
 
   int32_t gap_front_agent_id = -1;
   const auto& lane_change_decider_output =
@@ -457,7 +424,7 @@ void BoundMaker::MakeComfortBound() {
     const auto& upper_bound_info = upper_bound_infos_[i];
 
     if (upper_bound_info.agent_id == -1) {
-      comfort_upper_bound[i] = s_upper_bound_[i];
+      s_soft_bound[i] = s_upper_bound_[i];
       continue;
     }
 
@@ -478,12 +445,10 @@ void BoundMaker::MakeComfortBound() {
     double s_safety =
         s0 + std::max(0.0, tau * v_ego + v_ego * delta_v /
                                              (2.0 * std::sqrt(a_max * b_max)));
-    comfort_upper_bound[i] = std::max(0.0, s_upper_bound_[i] - s_safety);
+    s_soft_bound[i] = std::max(0.0, s_upper_bound_[i] - s_safety);
   }
-
-  comfort_upper_bound_ = comfort_upper_bound;
-  JSON_DEBUG_VALUE("soft_bound_distance",
-                   s_upper_bound_[0] - comfort_upper_bound_[0]);
+  s_soft_bound_ = s_soft_bound;
+  JSON_DEBUG_VALUE("soft_bound_distance", s_upper_bound_[0] - s_soft_bound_[0]);
 }
 
 SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve()
@@ -515,19 +480,20 @@ SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxDecelerationCurve()
   init_state.a = init_lon_state_[2];
   StateLimit state_limit;
 
-  const double acc_lower_bound = planning_math::LerpWithLimit(
-      IsoAccLimitLower, IsoAccLimitSpeedLower, IsoAccLimitUpper,
-      IsoAccLimitSpeedUpper, init_lon_state_[1]);
+  double min_acc_bound = acc_lower_bound_[0];
+  double max_acc_bound = acc_upper_bound_[0];
+  for (int32_t i = 0; i < plan_points_num_; ++i) {
+    min_acc_bound = std::min(min_acc_bound, acc_lower_bound_[i]);
+    max_acc_bound = std::max(max_acc_bound, acc_upper_bound_[i]);
+  }
 
-  const double jerk_lower_bound = planning_math::LerpWithLimit(
-      IsoJerkLimitLower, IsoJerkLimitSpeedLower, IsoJerkLimitUpper,
-      IsoJerkLimitSpeedUpper, init_lon_state_[1]);
+  min_acc_bound = std::max(kAccLowerComfortableBound, min_acc_bound);
 
-  constexpr double kSlowAccLowerBound = -3.0;
-  state_limit.a_max = acc_upper_bound_with_speed_;
-  state_limit.a_min = acc_lower_bound;
-  state_limit.j_max = 3.0;
-  state_limit.j_min = jerk_lower_bound;
+  state_limit.a_max = max_acc_bound;
+  state_limit.a_min = min_acc_bound;
+  state_limit.j_max = kAccJeck;
+  state_limit.j_min = kDecelJeck;
+
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
 
@@ -854,9 +820,9 @@ double BoundMaker::jerk_upper_bound(const double t) const {
   return jerk_upper_bound_[index];
 }
 
-double BoundMaker::comfort_bound(const double t) const {
+double BoundMaker::s_soft_bound(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
-  return comfort_upper_bound_[index];
+  return s_soft_bound_[index];
 }
 
 }  // namespace planning

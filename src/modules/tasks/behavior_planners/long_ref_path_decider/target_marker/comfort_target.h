@@ -50,7 +50,7 @@ class ComfortTarget : public Target {
 
   struct FollowAgentInfo {
     int32_t agent_id = 899999;
-    double s = 210.0;
+    double s = 255.0;
     double v = 33.5;
     double a = 0.0;
     int64_t st_boundary_id = 899999;

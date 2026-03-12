@@ -29,7 +29,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.min_decel_jerk = 1.0;
   comfort_params_.max_decel_jerk = 1.5;
   comfort_params_.emergency_decel_jerk = 5.0;
-  comfort_params_.virtual_front_s = 200.0;
+  comfort_params_.virtual_front_s = 250.0;
   comfort_params_.cool_factor = 0.99;
   comfort_params_.delay_time_buffer = 0.3;
   comfort_params_.eps = 1e-3;
@@ -41,7 +41,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.virtual_front_agent_id = 799999;
   comfort_params_.default_follow_agent_id = 899999;
   comfort_params_.default_follow_st_boundary_id = 899999;
-  comfort_params_.default_follow_agent_s = 210.0;
+  comfort_params_.default_follow_agent_s = 255.0;
   comfort_params_.kinematic_half_coefficient = 0.5;
   comfort_params_.agent_length_half_coefficient = 0.5;
 
