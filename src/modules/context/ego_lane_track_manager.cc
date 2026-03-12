@@ -1999,6 +1999,15 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   double max_road_radius = 100.0;
   std::vector<std::pair<int, double>> lane_curv_info_set;
   std::unordered_map<int, LaneCurvInfo> lanes_curv_info;
+  double k_ego_look_ahead_time = kEgoLookAheadTime;
+  double k_sampling_step_i = kSamplingStepI;
+  double k_sampling_step_j = kSamplingStepJ;
+  // 自车车速小于30kph
+  if (ego_state->ego_v() < 8.34) {
+    k_ego_look_ahead_time = kEgoLookAheadTime * 0.5;
+    k_sampling_step_i = 5.0;
+    k_sampling_step_j = 2.5;
+  }
   for (size_t i = 0; i < order_ids.size(); i++) {
     // double road_radius = 10000;
     LaneCurvInfo lane_curv_info;
@@ -2019,18 +2028,21 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
           continue;
         }
         // 初始前瞻位置：自车当前s + 3秒内行驶的距离
-        const double initial_start_s = ego_frenet_point.x + ego_state->ego_v() * kEgoLookAheadTime;
+        const double initial_start_s = ego_frenet_point.x + ego_state->ego_v() * k_ego_look_ahead_time;
         double lane_curv = 0.0;
         int curv_sign = 0;
+        double curv_sign_total = 0.0;
 
         // 采样4个区域
         for (double i = 0; i <= 3; ++i) {
-          const double start_s = initial_start_s + i * kSamplingStepI;
+          const double start_s = initial_start_s + i * k_sampling_step_i;
           std::vector<double> curv_window_vec;
+          std::vector<double> sign_window_vec;
           int current_lane_curv_sign = 0;
+          double curv_sign_degree = 0.0;
 
           for (int j = -kSamplingRangeJ; j <= kSamplingRangeJ; ++j) {
-            const double sample_s = start_s + j * kSamplingStepJ;
+            const double sample_s = start_s + j * k_sampling_step_j;
             ReferencePathPoint refpath_pt;
             double curv = kDefaultCurvature; // 默认曲率
 
@@ -2038,9 +2050,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
             if (!lane_frenet_coord->GetKappaByS(sample_s, &curv)) {
               continue;
             }
-            if (j == 0) {
-              current_lane_curv_sign = curv > 0 ? 1 : -1;
-            }
+            current_lane_curv_sign = curv > 0 ? 1 : -1;
+            curv_sign_degree = NormalizeCurvatureSign(sample_s - ego_frenet_point.x);
+            curv_sign_total += current_lane_curv_sign * curv_sign_degree;
             curv_window_vec.emplace_back(std::fabs(curv));
           }
 
@@ -2052,12 +2064,12 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
               std::accumulate(curv_window_vec.begin(), curv_window_vec.end(), 0.0);
           const double avg_curv = curv_sum / curv_window_vec.size();
 
-          // 更新最大平均曲率和对应符号
+          // 更新最大平均曲率
           if (avg_curv > lane_curv) {
             lane_curv = avg_curv;
-            curv_sign = current_lane_curv_sign;
           }
         }
+        curv_sign = curv_sign_total > 0 ? 1 : -1;
 
         // 存储车道曲率信息（确保relative_id_lane有效）
         lane_curv_info_set.emplace_back(std::make_pair(relative_id_lane->get_order_id(), lane_curv));
@@ -3996,18 +4008,29 @@ double EgoLaneTrackManger::CalculateLinearCost(double ttc) {
 }
 
 double EgoLaneTrackManger::Normalize(double value, double max_value) {
-    if (max_value <= 0) return 0.0;
-    double norm = value / max_value;
-    // 限制在[0,1]，避免超出范围
-    return std::clamp(norm, 0.0, 1.0);
+  if (max_value <= 0) return 0.0;
+  double norm = value / max_value;
+  // 限制在[0,1]，避免超出范围
+  return std::clamp(norm, 0.0, 1.0);
 }
 
 double EgoLaneTrackManger::NormalizeCurvatureRadius(double radius) {
-    // 限制半径范围：小于最小半径按最小算，大于最大半径按最大算
-    double clamped_radius = std::clamp(radius, kMinCurvatureRadius, kMaxCurvatureRadius);
-    // 转换为曲率程度（直道=0，最大曲率=1）
-    double curv_degree = (kMaxCurvatureRadius - clamped_radius) / (kMaxCurvatureRadius - kMinCurvatureRadius);
-    return curv_degree;
+  // 限制半径范围：小于最小半径按最小算，大于最大半径按最大算
+  double clamped_radius = std::clamp(radius, kMinCurvatureRadius, kMaxCurvatureRadius);
+  // 转换为曲率程度（直道=0，最大曲率=1）
+  double curv_degree = (kMaxCurvatureRadius - clamped_radius) / (kMaxCurvatureRadius - kMinCurvatureRadius);
+  return curv_degree;
+}
+
+double EgoLaneTrackManger::NormalizeCurvatureSign(double dis_to_ego) {
+  const auto& ego_state =
+    session_->environmental_model().get_ego_state_manager();
+  double min_consider_dis = std::max(ego_state->ego_v(), 1.0) * 1.0;
+  double max_consider_dis = std::max(ego_state->ego_v(), 1.0) * 4.0;
+  double clamped_dis = std::clamp(dis_to_ego, min_consider_dis, max_consider_dis);
+  // 转换为曲率符号程度（离自车距离越近 权重越大）
+  double sign_degree = (max_consider_dis - dis_to_ego) / (max_consider_dis - min_consider_dis);
+  return sign_degree;
 }
 
 void EgoLaneTrackManger::ComputeEgoDistanceToRoadBorder(

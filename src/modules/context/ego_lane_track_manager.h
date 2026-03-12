@@ -238,6 +238,8 @@ class EgoLaneTrackManger {
 
   double NormalizeCurvatureRadius(double radius);
 
+  double NormalizeCurvatureSign(double dis_to_ego);
+
  private:
   planning::framework::Session *session_ = nullptr;
   EgoPlanningConfig config_;
