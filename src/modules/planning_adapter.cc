@@ -396,7 +396,7 @@ bool PlanningAdapter::Proc() {
   double planning_cost_time = (IflyTime::Now_us() - start_time_) / 1000;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
                                     planning_cost_time);
-
+  JSON_DEBUG_VALUE("planning_cost_time", planning_cost_time);
   return true;
 }
 
