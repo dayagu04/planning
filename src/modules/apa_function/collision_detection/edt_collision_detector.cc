@@ -50,7 +50,7 @@ void EDTCollisionDetector::GenOccupancyGridMap(
 
 void EDTCollisionDetector::GenOccupancyGridMap(
     const Eigen::Vector2d &ogm_origin) {
-  ogm_origin_ << ogm_origin.x(), ogm_origin_.y();
+  ogm_origin_ << ogm_origin.x(), ogm_origin.y();
   ogm_bound_.Set(ogm_origin_.x(), ogm_origin_.y(),
                  ogm_origin_.x() + edt_ogm_grid_x_max * resolution_ + 1.0,
                  ogm_origin_.y() + edt_ogm_grid_y_max * resolution_ + 1.0);
@@ -97,7 +97,7 @@ void EDTCollisionDetector::AddObsToOGM() {
   // add pt cloud
   bool(*obs_ogm)[edt_ogm_grid_y_max] = nullptr;
   for (const auto &obs_pair : obs_map) {
-    const ApaObstacle obs = obs_pair.second;
+    const ApaObstacle& obs = obs_pair.second;
     ApaObsHeightType obs_height_type = obs.GetObsHeightType();
     if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
       obs_height_type = ApaObsHeightType::HIGH;
