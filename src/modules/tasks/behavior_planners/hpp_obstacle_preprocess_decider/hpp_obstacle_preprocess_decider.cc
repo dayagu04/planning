@@ -286,7 +286,6 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
   std::vector<double> generated_virtual_agent_s;
   generated_virtual_agent_s.reserve(ground_lines.size());
 
-  int virtual_agent_id = 5500000;
   for (const auto &frenet_obstacle : frenet_obstacles) {
     // 1. 仅处理有效的 groundline frenet 障碍物。
     if (!IsGroundLineFrenetObstacleValid(frenet_obstacle)) {
@@ -314,10 +313,11 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
       continue;
     }
 
-    // 5. 基于碰撞点生成 virtual agent。
+    // 5. 基于碰撞点生成 virtual agent，直接复用对应 groundline 的 obstacle id。
     CreateVirtualAgentFromGroundLine(
         earliest_collision.collision_points,
-        traj_points[earliest_collision.traj_point_index], virtual_agent_id++);
+        traj_points[earliest_collision.traj_point_index],
+        frenet_obstacle->id());
     generated_virtual_agent_s.push_back(earliest_collision.collision_s_on_traj);
   }
 }
