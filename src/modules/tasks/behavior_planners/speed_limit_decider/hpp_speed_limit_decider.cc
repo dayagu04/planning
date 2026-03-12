@@ -286,7 +286,8 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
     planning_result.speed_bump_path_segments.push_back({seg.first, seg.second});
   }
 
-  v_limit_speed_bump = GetSpeedLimitInObjectiveZone(zone_info, 2.22);
+  v_limit_speed_bump = GetSpeedLimitInObjectiveZone(
+      zone_info, hpp_speed_limit_config_.speed_bump_zone_speed_limit);
 
   if (v_limit_speed_bump < v_target_) {
     v_target_ = v_limit_speed_bump;
@@ -393,7 +394,8 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
     return;
   }
 
-  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(zone_info, 2.78);
+  constexpr double kRampTargetV = 2.78;
+  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(zone_info, kRampTargetV);
 
   if (v_limit_speed_ramp < v_target_) {
     v_target_ = v_limit_speed_ramp;
@@ -428,8 +430,9 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
     return;
   }
 
+  constexpr double kIntersectionRoadTargetV = 2.22;
   v_limit_speed_intersection_road =
-      GetSpeedLimitInObjectiveZone(zone_info, 1.67);
+      GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
 
   if (v_limit_speed_intersection_road < v_target_) {
     v_target_ = v_limit_speed_intersection_road;
