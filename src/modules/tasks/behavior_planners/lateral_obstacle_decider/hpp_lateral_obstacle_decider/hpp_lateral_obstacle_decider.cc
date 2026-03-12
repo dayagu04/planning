@@ -88,9 +88,9 @@ bool HppLateralObstacleDecider::Execute() {
 
   // 1.在 A* 搜索前完成所有障碍物过滤与聚类预处理
   ObstacleItemMap obs_item_map;
-  MergedObstacleContainer merged_obs_container;
+  ObstacleClusterContainer obs_cluster_container;
   ObstacleClassificationResult obs_classification_result;
-  PreProcessObstacle(reference_path_ptr, obs_item_map, merged_obs_container, obs_classification_result);
+  PreProcessObstacle(reference_path_ptr, obs_item_map, obs_cluster_container, obs_classification_result);
 
   // 2. 清理过期历史记录
   double current_timestamp = IflyTime::Now_ms();
@@ -118,7 +118,7 @@ bool HppLateralObstacleDecider::Execute() {
   JSON_DEBUG_VALUE("ARAStarTime", time2 - time1);
 
   if (search_result_ != SearchResult::SUCCESS) {
-    UpdateLatDecision(reference_path_ptr, merged_obs_container);
+    UpdateLatDecision(reference_path_ptr, obs_cluster_container);
     Log(reference_path_ptr);
   } else {
     UpdateLatDecisionWithARAStar(reference_path_ptr);
@@ -129,7 +129,7 @@ bool HppLateralObstacleDecider::Execute() {
 
 void HppLateralObstacleDecider::UpdateLatDecision(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
-    const MergedObstacleContainer &merged_container) {
+    const ObstacleClusterContainer &merged_container) {
 
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
@@ -137,9 +137,9 @@ void HppLateralObstacleDecider::UpdateLatDecision(
   lat_obstacle_decision.clear();
   double current_timestamp = IflyTime::Now_ms();
 
-  if (merged_container.merged_obstacles.empty()) return;
+  if (merged_container.obstacle_clusters.empty()) return;
 
-  for (const auto& cluster : merged_container.merged_obstacles) {
+  for (const auto& cluster : merged_container.obstacle_clusters) {
       if (cluster.motion_types.empty() || cluster.rel_pos_types.empty()) continue;
 
       LatObstacleDecisionType decision = MakeDecisionForSingleCluster(cluster);
@@ -149,7 +149,7 @@ void HppLateralObstacleDecider::UpdateLatDecision(
 }
 
 LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
-    const MergedObstacleResult& cluster) {
+    const ObstacleCluster& cluster) {
 
     LatObstacleDecisionType decision = LatObstacleDecisionType::IGNORE;
 
@@ -230,7 +230,7 @@ LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
 }
 
 void HppLateralObstacleDecider::UpdateClusterHistory(
-    const MergedObstacleResult& cluster,
+    const ObstacleCluster& cluster,
     LatObstacleDecisionType decision,
     double current_timestamp,
     std::unordered_map<uint32_t, LatObstacleDecisionType>& lat_obstacle_decision) {
@@ -388,7 +388,7 @@ void HppLateralObstacleDecider::ClearOldConsistencyInfo(
 bool HppLateralObstacleDecider::PreProcessObstacle(
     ConstReferencePathPtr reference_path_ptr,
     ObstacleItemMap &obs_item_map,
-    MergedObstacleContainer &merged_obs_container,
+    ObstacleClusterContainer &obs_cluster_container,
     ObstacleClassificationResult &obs_classification_result) {
     // 1. 障碍物过滤
     if (!HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
@@ -404,16 +404,17 @@ bool HppLateralObstacleDecider::PreProcessObstacle(
     }
 
     // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
-    if (!HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
-            obs_item_map, obs_classification_result, merged_obs_container)) {
+    if (!HppLateralObstacleUtils::ClusterObstacles(
+            obs_item_map, obs_classification_result, obs_cluster_container)) {
         return false;
     }
 
     // 对聚类结果进行排序
-    std::sort(merged_obs_container.merged_obstacles.begin(), merged_obs_container.merged_obstacles.end(),
-        [](const MergedObstacleResult& a, const MergedObstacleResult& b){
-            return a.frenet_boundary.s_start < b.frenet_boundary.s_start;
-        });
+    std::sort(obs_cluster_container.obstacle_clusters.begin(),
+              obs_cluster_container.obstacle_clusters.end(),
+              [](const ObstacleCluster &a, const ObstacleCluster &b) {
+                return a.frenet_boundary.s_start < b.frenet_boundary.s_start;
+              });
 
     return true;
 }

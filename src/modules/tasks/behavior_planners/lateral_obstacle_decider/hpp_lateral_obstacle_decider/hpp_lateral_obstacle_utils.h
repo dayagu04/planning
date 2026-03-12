@@ -50,44 +50,44 @@ struct ObstacleClassificationResult {
 };
 
 /************** 障碍物合并相关定义 ************ */
-enum class ObstacleMergeType : uint8_t {
+enum class ObstacleClusterType : uint8_t {
   NO_MERGE = 0,   // 不合并
   ABS_MERGE = 1,  // 绝对距离太近合并
   LAT_MERGE = 2,  // 横向距离太近合并
   LON_MERGE = 3   // 纵向距离太近合并
 };
-using ObstacleMergeMap = std::unordered_map<int, ObstacleMergeType>;
-using ObstacleMergeGraph = std::unordered_map<int, ObstacleMergeMap>;
+using ObstacleClusterMap = std::unordered_map<int, ObstacleClusterType>;
+using ObstacleClusterGraph = std::unordered_map<int, ObstacleClusterMap>;
 
-struct MergedObstacleCandicate {
+struct ObstacleClusterCandicate {
   int origin_id;
   ObstacleRelPosType rel_pos_types;  // 合并后的障碍物位置类型
-  ObstacleMotionType motion_type;    // 合并后的障碍物运动类型(默认只合并静止障碍物)
+  ObstacleMotionType motion_type;  // 合并后的障碍物运动类型
 };
 
-struct MergedObstacleResult {
+struct ObstacleCluster {
   // 【结构体初始化规范】：在此统一初始化极大极小值防合并错误
-  MergedObstacleResult() {
+  ObstacleCluster() {
     frenet_boundary.l_start = std::numeric_limits<double>::max();
     frenet_boundary.l_end = std::numeric_limits<double>::lowest();
     frenet_boundary.s_start = std::numeric_limits<double>::max();
     frenet_boundary.s_end = std::numeric_limits<double>::lowest();
   }
 
-  int merged_id;
+  int cluster_id;
   std::vector<int> original_ids;
   std::unordered_set<ObstacleRelPosType> rel_pos_types;
   std::unordered_set<ObstacleMotionType> motion_types;
-  std::unordered_set<ObstacleMergeType> merge_types;
+  std::unordered_set<ObstacleClusterType> cluster_types;
   FrenetObstacleBoundary frenet_boundary;
   planning_math::Box2d bounding_box;
   planning_math::Polygon2d polygon;
   std::vector<planning_math::Vec2d> perception_points;
 };
 
-struct MergedObstacleContainer {
-  std::unordered_map<int, int> obs_id_to_merged_id;  // 原始ID -> 聚类ID
-  std::vector<MergedObstacleResult> merged_obstacles;  // 聚类列表
+struct ObstacleClusterContainer {
+  std::unordered_map<int, int> obs_id_to_cluster_id;  // 原始ID -> 聚类ID
+  std::vector<ObstacleCluster> obstacle_clusters;     // 聚类列表
 };
 
 /************** 障碍物处理操作类定义 ************ */
@@ -105,10 +105,10 @@ class HppLateralObstacleUtils {
       ObstacleClassificationResult& classification_result);
 
   // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
-  static bool MergeObstaclesBaseOnPos(
+  static bool ClusterObstacles(
       const ObstacleItemMap& obs_item_map,
       const ObstacleClassificationResult& classification_result,
-      MergedObstacleContainer& merged_obs_container);
+      ObstacleClusterContainer& obstacle_cluster_constainer);
 
  private:
   /************** 障碍物分类相关私有函数定义 ************ */
@@ -119,25 +119,24 @@ class HppLateralObstacleUtils {
       const FrenetObstaclePtr& obs_ptr);
 
   /************** 障碍物合并相关私有函数定义 ************ */
-  static bool GenerateMergeCandicates(
+  static bool GenerateClusterCandicates(
       const ObstacleItemMap& obs_item_map,
       const ObstacleClassificationResult& classification_result,
-      std::vector<MergedObstacleCandicate>& merge_candidates);
-  static bool CalculateCandidateMergeGraph(
+      std::vector<ObstacleClusterCandicate>& cluster_candidates);
+  static bool CalculateCandidateClusterGraph(
       const ObstacleItemMap& obs_item_map,
-      const std::vector<MergedObstacleCandicate>& merge_candidates,
-      ObstacleMergeGraph& merge_graph);
+      const std::vector<ObstacleClusterCandicate>& cluster_candidates,
+      ObstacleClusterGraph& cluster_graph);
 
-  static bool DFSGenerateMergedObstacles(
-      const std::vector<MergedObstacleCandicate>& merge_candidates,
-      const ObstacleMergeGraph& merge_graph,
-      const int curr_idx,
-      const ObstacleMergeType merge_type,
+  static bool DFSGenerateObstacleClusters(
+      const std::vector<ObstacleClusterCandicate>& cluster_candidates,
+      const ObstacleClusterGraph& cluster_graph, const int curr_idx,
+      const ObstacleClusterType cluster_type,
       std::unordered_set<int>& visited_candidate_idxs,
-      MergedObstacleResult& merged_result);
+      ObstacleCluster& obstacle_cluster);
 
-  static bool BuildMergedObstacleConvexHull(
-      const ObstacleItemMap& obs_item_map, MergedObstacleResult& merged_result);
+  static bool BuildObstacleClusterConvexHull(
+      const ObstacleItemMap& obs_item_map, ObstacleCluster& obstacle_cluster);
 };
 
 }  // namespace planning

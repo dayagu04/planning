@@ -43,43 +43,43 @@ bool HppLateralObstacleUtils::ClassifyObstacles(
   return true;
 }
 
-bool HppLateralObstacleUtils::MergeObstaclesBaseOnPos(
+bool HppLateralObstacleUtils::ClusterObstacles(
     const ObstacleItemMap& obs_item_map,
     const ObstacleClassificationResult& classification_result,
-    MergedObstacleContainer& merged_obs_container) {
-  merged_obs_container.obs_id_to_merged_id.clear();
-  merged_obs_container.merged_obstacles.clear();
+    ObstacleClusterContainer& obstacle_cluster_container) {
+  obstacle_cluster_container.obs_id_to_cluster_id.clear();
+  obstacle_cluster_container.obstacle_clusters.clear();
 
-  std::vector<MergedObstacleCandicate> merge_candidates;
-  if (!GenerateMergeCandicates(obs_item_map, classification_result,
-                               merge_candidates)) {
+  std::vector<ObstacleClusterCandicate> cluster_candidates;
+  if (!GenerateClusterCandicates(obs_item_map, classification_result,
+                                 cluster_candidates)) {
     return false;
   }
 
-  ObstacleMergeGraph obstacle_merge_graph;
-  if (!CalculateCandidateMergeGraph(obs_item_map, merge_candidates,
-                                    obstacle_merge_graph)) {
+  ObstacleClusterGraph obstacle_cluster_graph;
+  if (!CalculateCandidateClusterGraph(obs_item_map, cluster_candidates,
+                                      obstacle_cluster_graph)) {
     return false;
   }
 
-  std::vector<MergedObstacleResult> merged_result_list;
+  std::vector<ObstacleCluster> obstacle_clusters;
   std::unordered_set<int> visited_candidate_idxs;
-  for (int idx = 0; idx < merge_candidates.size(); ++idx) {
+  for (int idx = 0; idx < cluster_candidates.size(); ++idx) {
     if (visited_candidate_idxs.count(idx) == 0) {
-      MergedObstacleResult merged_result;
-      merged_result.merged_id = merge_candidates[idx].origin_id;
-      DFSGenerateMergedObstacles(merge_candidates, obstacle_merge_graph, idx,
-                                 ObstacleMergeType::NO_MERGE,
-                                 visited_candidate_idxs, merged_result);
-      merged_result_list.push_back(std::move(merged_result));
+      ObstacleCluster obstacle_cluster;
+      obstacle_cluster.cluster_id = cluster_candidates[idx].origin_id;
+      DFSGenerateObstacleClusters(cluster_candidates, obstacle_cluster_graph,
+                                  idx, ObstacleClusterType::NO_MERGE,
+                                  visited_candidate_idxs, obstacle_cluster);
+      obstacle_clusters.push_back(std::move(obstacle_cluster));
     }
   }
 
-  for(auto& merged_result : merged_result_list) {
-    if(!BuildMergedObstacleConvexHull(obs_item_map, merged_result)) {
+  for (auto& obstacle_cluster : obstacle_clusters) {
+    if (!BuildObstacleClusterConvexHull(obs_item_map, obstacle_cluster)) {
       continue;
     }
-    merged_obs_container.merged_obstacles.push_back(merged_result);
+    obstacle_cluster_container.obstacle_clusters.push_back(obstacle_cluster);
   }
 
   return true;
@@ -111,15 +111,18 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
   ObstacleRelPosType type = ObstacleRelPosType::FAR_AWAY;
   bool is_lon_far_away = (obs_start_s > ego_end_s + kFarAwayLonFrontThr ||
                           obs_end_s < ego_start_s - kFarAwayLonBackThr);
-  bool is_lat_far_away = (obs_start_l > std::fmax(ego_end_l + kFarAwayLatRelThr, kFarAwayLatAbsThr) ||
-                          obs_end_l < std::fmin(ego_start_l - kFarAwayLatRelThr, -kFarAwayLatAbsThr));
+  bool is_lat_far_away = (obs_start_l > std::fmax(ego_end_l + kFarAwayLatRelThr,
+                                                  kFarAwayLatAbsThr) ||
+                          obs_end_l < std::fmin(ego_start_l - kFarAwayLatRelThr,
+                                                -kFarAwayLatAbsThr));
 
   if (is_lon_far_away && is_lat_far_away) {
     type = ObstacleRelPosType::FAR_AWAY;
   } else if (obs_start_s > ego_end_s + kSideObsFrontThr) {
     if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
       type = ObstacleRelPosType::LEFT_FRONT;
-    } else if (obs_end_l < std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
+    } else if (obs_end_l <
+               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
       type = ObstacleRelPosType::RIGHT_FRONT;
     } else {
       type = ObstacleRelPosType::MID_FRONT;
@@ -133,7 +136,8 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
   } else {
     if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
       type = ObstacleRelPosType::LEFT_BACK;
-    } else if (obs_end_l < std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
+    } else if (obs_end_l <
+               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
       type = ObstacleRelPosType::RIGHT_BACK;
     } else {
       type = ObstacleRelPosType::MID_BACK;
@@ -144,7 +148,8 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
 
 ObstacleMotionType HppLateralObstacleUtils::ClassifyObstaclesByMotion(
     const FrenetObstaclePtr& obs_ptr) {
-  const double obs_relative_v_angle = std::fabs(obs_ptr->frenet_relative_velocity_angle());
+  const double obs_relative_v_angle =
+      std::fabs(obs_ptr->frenet_relative_velocity_angle());
 
   ObstacleMotionType type = ObstacleMotionType::STATIC;
   if (obs_ptr->is_static()) {
@@ -161,11 +166,11 @@ ObstacleMotionType HppLateralObstacleUtils::ClassifyObstaclesByMotion(
   return type;
 }
 
-bool HppLateralObstacleUtils::GenerateMergeCandicates(
+bool HppLateralObstacleUtils::GenerateClusterCandicates(
     const ObstacleItemMap& obs_item_map,
     const ObstacleClassificationResult& classification_result,
-    std::vector<MergedObstacleCandicate>& merge_candidates) {
-  merge_candidates.clear();
+    std::vector<ObstacleClusterCandicate>& cluster_candidates) {
+  cluster_candidates.clear();
   constexpr double kLowSpeedPedestrainThr = 0.5;
   const auto& id_to_rel_pos_type = classification_result.id_to_rel_pos_type;
   const auto& id_to_motion_type = classification_result.id_to_motion_type;
@@ -174,41 +179,42 @@ bool HppLateralObstacleUtils::GenerateMergeCandicates(
     const auto& obs_id = entry.first;
     const auto& obs = entry.second;
 
-    if(id_to_motion_type.find(obs_id) == id_to_motion_type.end()) continue;
-    if(id_to_rel_pos_type.find(obs_id) == id_to_rel_pos_type.end()) continue;
+    if (id_to_motion_type.find(obs_id) == id_to_motion_type.end()) continue;
+    if (id_to_rel_pos_type.find(obs_id) == id_to_rel_pos_type.end()) continue;
 
     const auto& rel_pos_type = id_to_rel_pos_type.at(obs_id);
     const auto& motion_type = id_to_motion_type.at(obs_id);
-    if(motion_type == ObstacleMotionType::STATIC) {
+    if (motion_type == ObstacleMotionType::STATIC) {
       if (rel_pos_type == ObstacleRelPosType::FAR_AWAY) continue;
     } else {
-      if(rel_pos_type == ObstacleRelPosType::FAR_AWAY) continue;
-      if(!obs->obstacle()->is_pedestrain() || obs->velocity() > kLowSpeedPedestrainThr) {
+      if (rel_pos_type == ObstacleRelPosType::FAR_AWAY) continue;
+      if (!obs->obstacle()->is_pedestrain() ||
+          obs->velocity() > kLowSpeedPedestrainThr) {
         continue;
       }
     }
 
-    MergedObstacleCandicate candidate;
+    ObstacleClusterCandicate candidate;
     candidate.origin_id = obs_id;
     candidate.rel_pos_types = rel_pos_type;
     candidate.motion_type = motion_type;
-    merge_candidates.push_back(candidate);
+    cluster_candidates.push_back(candidate);
   }
   return true;
 }
 
-bool HppLateralObstacleUtils::CalculateCandidateMergeGraph(
+bool HppLateralObstacleUtils::CalculateCandidateClusterGraph(
     const ObstacleItemMap& obs_item_map,
-    const std::vector<MergedObstacleCandicate>& merge_candidates,
-    ObstacleMergeGraph& merge_graph) {
+    const std::vector<ObstacleClusterCandicate>& cluster_candidates,
+    ObstacleClusterGraph& cluster_graph) {
   constexpr double kMergeLonLargeThr = 3.0;
   constexpr double kMergeLatLargeThr = 2.0;
   constexpr double kMergeLonSmallThr = 0.5;
   constexpr double kMergeLatSmallThr = 0.2;
   constexpr double kMergeAbsDisThr = 2.0;
 
-  for (int i = 0; i < merge_candidates.size(); ++i) {
-    const auto& obs_i_id = merge_candidates[i].origin_id;
+  for (int i = 0; i < cluster_candidates.size(); ++i) {
+    const auto& obs_i_id = cluster_candidates[i].origin_id;
     const auto& obs_i = obs_item_map.at(obs_i_id);
     const auto& obs_i_boundary = obs_i->frenet_obstacle_boundary();
     const double obs_i_start_s = obs_i_boundary.s_start;
@@ -216,9 +222,9 @@ bool HppLateralObstacleUtils::CalculateCandidateMergeGraph(
     const double obs_i_start_l = obs_i_boundary.l_start;
     const double obs_i_end_l = obs_i_boundary.l_end;
 
-    auto& merge_map_i = merge_graph[i];
-    for (int j = i + 1; j < merge_candidates.size(); ++j) {
-      const auto& obs_j_id = merge_candidates[j].origin_id;
+    auto& cluster_map_i = cluster_graph[i];
+    for (int j = i + 1; j < cluster_candidates.size(); ++j) {
+      const auto& obs_j_id = cluster_candidates[j].origin_id;
       const auto& obs_j = obs_item_map.at(obs_j_id);
       const auto& obs_j_boundary = obs_j->frenet_obstacle_boundary();
       const double obs_j_start_s = obs_j_boundary.s_start;
@@ -226,81 +232,84 @@ bool HppLateralObstacleUtils::CalculateCandidateMergeGraph(
       const double obs_j_start_l = obs_j_boundary.l_start;
       const double obs_j_end_l = obs_j_boundary.l_end;
 
-      double s_gap = std::fmax(obs_i_start_s - obs_j_end_s, obs_j_start_s - obs_i_end_s);
-      double l_gap = std::fmax(obs_i_start_l - obs_j_end_l, obs_j_start_l - obs_i_end_l);
+      double s_gap =
+          std::fmax(obs_i_start_s - obs_j_end_s, obs_j_start_s - obs_i_end_s);
+      double l_gap =
+          std::fmax(obs_i_start_l - obs_j_end_l, obs_j_start_l - obs_i_end_l);
 
       bool lon_meet_cond1 = s_gap < kMergeLonLargeThr;
       bool lon_meet_cond2 = s_gap < kMergeLonSmallThr;
       bool lat_meet_cond1 = l_gap < kMergeLatLargeThr;
       bool lat_meet_cond2 = l_gap < kMergeLatSmallThr;
 
-      auto& merge_map_j = merge_graph[j];
-      if(lon_meet_cond1 && lat_meet_cond1) {
+      auto& cluster_map_j = cluster_graph[j];
+      if (lon_meet_cond1 && lat_meet_cond1) {
         double dist = obs_i->obstacle()->perception_polygon().DistanceTo(
             obs_j->obstacle()->perception_polygon());
-        if(dist < kMergeAbsDisThr) {
-          merge_map_i[j] = ObstacleMergeType::ABS_MERGE;
-          merge_map_j[i] = ObstacleMergeType::ABS_MERGE;
+        if (dist < kMergeAbsDisThr) {
+          cluster_map_i[j] = ObstacleClusterType::ABS_MERGE;
+          cluster_map_j[i] = ObstacleClusterType::ABS_MERGE;
           continue;
         }
       }
-      if(lon_meet_cond1 && lat_meet_cond2) {
-        merge_map_i[j] = ObstacleMergeType::LON_MERGE;
-        merge_map_j[i] = ObstacleMergeType::LON_MERGE;
+      if (lon_meet_cond1 && lat_meet_cond2) {
+        cluster_map_i[j] = ObstacleClusterType::LON_MERGE;
+        cluster_map_j[i] = ObstacleClusterType::LON_MERGE;
         continue;
       }
-      if(lon_meet_cond2 && lat_meet_cond1) {
-        merge_map_i[j] = ObstacleMergeType::LAT_MERGE;
-        merge_map_j[i] = ObstacleMergeType::LAT_MERGE;
+      if (lon_meet_cond2 && lat_meet_cond1) {
+        cluster_map_i[j] = ObstacleClusterType::LAT_MERGE;
+        cluster_map_j[i] = ObstacleClusterType::LAT_MERGE;
         continue;
       }
-      merge_map_i[j] = ObstacleMergeType::NO_MERGE;
-      merge_map_j[i] = ObstacleMergeType::NO_MERGE;
+      cluster_map_i[j] = ObstacleClusterType::NO_MERGE;
+      cluster_map_j[i] = ObstacleClusterType::NO_MERGE;
     }
   }
   return true;
 }
 
-bool HppLateralObstacleUtils::DFSGenerateMergedObstacles(
-    const std::vector<MergedObstacleCandicate>& merge_candidates,
-    const ObstacleMergeGraph& merge_graph, const int curr_idx,
-    const ObstacleMergeType curr_merge_type,
+bool HppLateralObstacleUtils::DFSGenerateObstacleClusters(
+    const std::vector<ObstacleClusterCandicate>& cluster_candidates,
+    const ObstacleClusterGraph& cluster_graph, const int curr_idx,
+    const ObstacleClusterType curr_cluster_type,
     std::unordered_set<int>& visited_candidate_idxs,
-    MergedObstacleResult& merged_result) {
+    ObstacleCluster& obstacle_cluster) {
   visited_candidate_idxs.insert(curr_idx);
-  merged_result.original_ids.push_back(merge_candidates[curr_idx].origin_id);
-  merged_result.motion_types.insert(merge_candidates[curr_idx].motion_type);
-  merged_result.rel_pos_types.insert(merge_candidates[curr_idx].rel_pos_types);
-  merged_result.merge_types.insert(curr_merge_type);
+  obstacle_cluster.original_ids.push_back(cluster_candidates[curr_idx].origin_id);
+  obstacle_cluster.motion_types.insert(cluster_candidates[curr_idx].motion_type);
+  obstacle_cluster.rel_pos_types.insert(cluster_candidates[curr_idx].rel_pos_types);
+  obstacle_cluster.cluster_types.insert(curr_cluster_type);
 
-  static auto is_valid_merge_type =
-      [](const ObstacleMergeType& new_type,
-         const std::unordered_set<ObstacleMergeType>& merged_types) {
-        if (new_type == ObstacleMergeType::NO_MERGE) {
+  static auto is_valid_cluster_type =
+      [](const ObstacleClusterType& new_type,
+         const std::unordered_set<ObstacleClusterType>& cluster_types) {
+        if (new_type == ObstacleClusterType::NO_MERGE) {
           return false;
-        } else if (new_type == ObstacleMergeType::LAT_MERGE) {
-          return merged_types.find(ObstacleMergeType::LON_MERGE) ==
-                 merged_types.end();
-        } else if (new_type == ObstacleMergeType::LON_MERGE) {
-          return merged_types.find(ObstacleMergeType::LAT_MERGE) ==
-                 merged_types.end();
+        } else if (new_type == ObstacleClusterType::LAT_MERGE) {
+          return cluster_types.find(ObstacleClusterType::LON_MERGE) ==
+                 cluster_types.end();
+        } else if (new_type == ObstacleClusterType::LON_MERGE) {
+          return cluster_types.find(ObstacleClusterType::LAT_MERGE) ==
+                 cluster_types.end();
         } else {
           return true;
         }
       };
 
-  auto it = merge_graph.find(curr_idx);
-  if (it != merge_graph.end()) {
+  auto it = cluster_graph.find(curr_idx);
+  if (it != cluster_graph.end()) {
     const auto& neighbors_map = it->second;
     for (const auto& neighbor : neighbors_map) {
-      const auto& merge_idx = neighbor.first;
-      const auto& merge_type = neighbor.second;
+      const auto& cluster_idx = neighbor.first;
+      const auto& cluster_type = neighbor.second;
 
-      if (visited_candidate_idxs.find(merge_idx) == visited_candidate_idxs.end()) {
-        if (is_valid_merge_type(merge_type, merged_result.merge_types)) {
-          DFSGenerateMergedObstacles(merge_candidates, merge_graph, merge_idx,
-                                    merge_type, visited_candidate_idxs,
-                                    merged_result);
+      if (visited_candidate_idxs.find(cluster_idx) ==
+          visited_candidate_idxs.end()) {
+        if (is_valid_cluster_type(cluster_type, obstacle_cluster.cluster_types)) {
+          DFSGenerateObstacleClusters(cluster_candidates, cluster_graph, cluster_idx,
+                                      cluster_type, visited_candidate_idxs,
+                                      obstacle_cluster);
         }
       }
     }
@@ -308,13 +317,12 @@ bool HppLateralObstacleUtils::DFSGenerateMergedObstacles(
   return true;
 }
 
-bool HppLateralObstacleUtils::BuildMergedObstacleConvexHull(
-    const ObstacleItemMap& obs_item_map, MergedObstacleResult& merged_result) {
+bool HppLateralObstacleUtils::BuildObstacleClusterConvexHull(
+    const ObstacleItemMap& obs_item_map, ObstacleCluster& obstacle_cluster) {
+  auto& new_points = obstacle_cluster.perception_points;
+  auto& new_sl_boundary = obstacle_cluster.frenet_boundary;
 
-  auto& new_points = merged_result.perception_points;
-  auto& new_sl_boundary = merged_result.frenet_boundary;
-
-  for (const auto& origin_id : merged_result.original_ids) {
+  for (const auto& origin_id : obstacle_cluster.original_ids) {
     if (obs_item_map.find(origin_id) == obs_item_map.end()) {
       continue;
     }
@@ -323,10 +331,14 @@ bool HppLateralObstacleUtils::BuildMergedObstacleConvexHull(
     const auto& frenet_boundary = obs_ptr->frenet_obstacle_boundary();
     new_points.insert(new_points.end(), perception_points.begin(),
                       perception_points.end());
-    new_sl_boundary.l_end = std::fmax(new_sl_boundary.l_end, frenet_boundary.l_end);
-    new_sl_boundary.l_start = std::fmin(new_sl_boundary.l_start, frenet_boundary.l_start);
-    new_sl_boundary.s_end = std::fmax(new_sl_boundary.s_end, frenet_boundary.s_end);
-    new_sl_boundary.s_start = std::fmin(new_sl_boundary.s_start, frenet_boundary.s_start);
+    new_sl_boundary.l_end =
+        std::fmax(new_sl_boundary.l_end, frenet_boundary.l_end);
+    new_sl_boundary.l_start =
+        std::fmin(new_sl_boundary.l_start, frenet_boundary.l_start);
+    new_sl_boundary.s_end =
+        std::fmax(new_sl_boundary.s_end, frenet_boundary.s_end);
+    new_sl_boundary.s_start =
+        std::fmin(new_sl_boundary.s_start, frenet_boundary.s_start);
   }
 
   double min_x = std::numeric_limits<double>::max();
@@ -340,7 +352,7 @@ bool HppLateralObstacleUtils::BuildMergedObstacleConvexHull(
     max_y = std::max(max_y, point.y());
   });
 
-  auto& new_polygon = merged_result.polygon;
+  auto& new_polygon = obstacle_cluster.polygon;
   if (new_points.size() < 3) {
     new_points.clear();
     new_points.emplace_back(min_x, min_y);
@@ -352,7 +364,7 @@ bool HppLateralObstacleUtils::BuildMergedObstacleConvexHull(
     return false;
   }
 
-  merged_result.bounding_box = new_polygon.MinAreaBoundingBox();
+  obstacle_cluster.bounding_box = new_polygon.MinAreaBoundingBox();
   return true;
 }
 }  // namespace planning

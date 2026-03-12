@@ -33,7 +33,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   bool PreProcessObstacle(
       ConstReferencePathPtr reference_path_ptr,
       ObstacleItemMap &obs_item_map,
-      MergedObstacleContainer &merged_obs_constainer,
+      ObstacleClusterContainer &obs_cluster_container,
       ObstacleClassificationResult &obs_classification_result);
 
   bool CheckEnableSearch(
@@ -44,15 +44,15 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   void UpdateLatDecision(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
-      const MergedObstacleContainer &merged_container);
+      const ObstacleClusterContainer &merged_container);
 
   //辅助函数1：处理单个 Cluster 的决策逻辑
   LatObstacleDecisionType MakeDecisionForSingleCluster(
-      const MergedObstacleResult& cluster);
+      const ObstacleCluster& cluster);
 
   //辅助函数2：更新历史记录状态机
   void UpdateClusterHistory(
-      const MergedObstacleResult& cluster,
+      const ObstacleCluster& cluster,
       LatObstacleDecisionType decision,
       double current_timestamp,
       std::unordered_map<uint32_t, LatObstacleDecisionType>& lat_obstacle_decision);

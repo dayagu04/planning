@@ -18,6 +18,11 @@ enum class LatObstacleDecisionType {
   PRE_NUDGE,
   NOT_SET
 };
+enum class LatObstacleNudgeLevel {
+  FORBIDDEN_NUDGE = 0,      // 不可绕行
+  RELATIVE_NUDGE = 1,       // 相对安全可绕行
+  ABSOLUTE_NUDGE = 2,       // 绝对安全可绕行
+};
 
 enum class LonObstacleDecisionType { OVERTAKE, YIELD, IGNORE };
 
