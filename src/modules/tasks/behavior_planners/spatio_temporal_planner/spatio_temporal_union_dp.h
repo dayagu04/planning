@@ -199,6 +199,16 @@ class SpatioTemporalUnionDp {
                         TrajectoryPoints& traj_points,
                         const bool last_enable_using_st_plan);
 
+  // 预构建上一帧→当前帧的s-l spline（仅执行一次）
+  bool PrebuildLastFrameToCurrentSpline();
+
+  // 新增：预构建的s-l spline及边界
+  pnc::mathlib::spline last2cur_stitching_spline_;
+  double spline_s_min_ = 0.0;  // spline的s最小值（当前帧Frenet系）
+  double spline_s_max_ = 0.0;  // spline的s最大值（当前帧Frenet系）
+
+  bool enable_use_last_planning_result_compute_stitching_ = false;
+
   planning::common::TrajectoryPoints trajectory_points_;
   std::vector<double> speed_limit_by_index_;
   std::vector<double> inv_speed_limit_table_;

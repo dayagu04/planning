@@ -309,6 +309,8 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
   const double init_v = spatio_temporal_union_plan_input.init_state().v0();
   const double v_cruise =
       spatio_temporal_union_plan_input.init_state().v_cruise();
+  enable_use_last_planning_result_compute_stitching_ = 
+    PrebuildLastFrameToCurrentSpline();
 
 #ifdef OPENMP_DEBUG
 // 添加线程数量探测
@@ -1287,31 +1289,31 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   double stitching_cost = 0.0;
   const auto &stitching_cost_params =
       spatio_temporal_union_plan_input.stitching_cost_params();
-  Point2D current_point;
-  Point2D current_frenet_point;
-  if (!current_lane_coord_.SLToXY(current, current_point)) {
-    // ILOG_DEBUG << "CalculateStitchingCost find sl to current lane failed!";
-    return stitching_cost;
-  }
+  // Point2D current_point;
+  // Point2D current_frenet_point;
+  // if (!current_lane_coord_.SLToXY(current, current_point)) {
+  //   // ILOG_DEBUG << "CalculateStitchingCost find sl to current lane failed!";
+  //   return stitching_cost;
+  // }
 
-  if (last_planning_result_coord_) {
-    if (!last_planning_result_coord_->XYToSL(current_point,
-                                             current_frenet_point)) {
-      // ILOG_DEBUG << "CalculateStitchingCost find xy to
-      // last_planning_result_coord failed!";
-      return stitching_cost;
-    }
+  // if (last_planning_result_coord_) {
+  //   if (!last_planning_result_coord_->XYToSL(current_point,
+  //                                            current_frenet_point)) {
+  //     // ILOG_DEBUG << "CalculateStitchingCost find xy to
+  //     // last_planning_result_coord failed!";
+  //     return stitching_cost;
+  //   }
 
-    stitching_cost =
-        std::fabs(current_frenet_point.y) *
-        stitching_cost_params.path_l_stitching_cost_param() *
-        (1.0 - (current_time *
-                stitching_cost_params.stitching_cost_time_decay_factor()) *
-                   (current_time *
-                    stitching_cost_params.stitching_cost_time_decay_factor()));
-  } else {
-    return stitching_cost;
-  }
+  //   stitching_cost =
+  //       std::fabs(current_frenet_point.y) *
+  //       stitching_cost_params.path_l_stitching_cost_param() *
+  //       (1.0 - (current_time *
+  //               stitching_cost_params.stitching_cost_time_decay_factor()) *
+  //                  (current_time *
+  //                   stitching_cost_params.stitching_cost_time_decay_factor()));
+  // } else {
+  //   return stitching_cost;
+  // }
 
   // double square_adjacent_frame_distance = 0.0;
   // if (trajectory_points_.point_size() > 0) {
@@ -1338,6 +1340,22 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   //       (current_time *
   //       stitching_cost_params.stitching_cost_time_decay_factor()));
   // }
+  if (!enable_use_last_planning_result_compute_stitching_) {
+    return stitching_cost;
+  }
+  if (current.x < spline_s_min_ - 1e-3 || 
+      current.x > spline_s_max_ + 1e-3) {
+    return stitching_cost;
+  }
+
+  double later_error =  last2cur_stitching_spline_(current.x) - current.y;
+  stitching_cost =
+      std::fabs(later_error) *
+      stitching_cost_params.path_l_stitching_cost_param() *
+      (1.0 - (current_time *
+              stitching_cost_params.stitching_cost_time_decay_factor()) *
+                  (current_time *
+                  stitching_cost_params.stitching_cost_time_decay_factor()));
 
   return stitching_cost;
 }
@@ -2277,6 +2295,76 @@ void SpatioTemporalUnionDp::FallbackFunction(
   }
 
   return;
+}
+
+bool SpatioTemporalUnionDp::PrebuildLastFrameToCurrentSpline() {
+  const double last_frame_sample_interval = 2.0;
+  const int last_frame_max_sample_num = 50;
+  spline_s_min_ = 0.0;
+  spline_s_max_ = 0.0;
+
+  // 1. 校验上一帧/当前帧KDPath有效性
+  if (!last_planning_result_coord_) {
+    return false;
+  }
+
+  // 2. 上一帧参考线s范围
+  double last_s_min = 0.0;
+  double last_s_max = last_planning_result_coord_->Length();
+  if (last_s_max - last_s_min < 1e-6) { // 参考线过短，无需采样
+    return false;
+  }
+
+  // 3. 沿上一帧s方向等间隔采样（l=0，参考线横向偏移恒为0）
+  std::vector<double> last_s_list;    // 上一帧Frenet系s
+  std::vector<Point2D> global_xy_list; // 采样点全局坐标
+  int sample_num = std::min(
+      static_cast<int>((last_s_max - last_s_min) / last_frame_sample_interval),
+      last_frame_max_sample_num);
+  if (sample_num < 2) { // 至少2个点才能构建spline
+    return false;
+  }
+
+  for (int i = 0; i <= sample_num; ++i) {
+    // 生成上一帧采样点的s（等间隔）
+    double s_last = last_s_min + i * last_frame_sample_interval;
+    s_last = std::min(s_last, last_s_max); // 防止超出上一帧s范围
+
+    // 上一帧Frenet系→全局坐标（l=0）
+    Point2D last_frenet{s_last, 0.0};
+    Point2D global_xy;
+    if (last_planning_result_coord_->SLToXY(last_frenet, global_xy)) {
+      last_s_list.push_back(s_last);
+      global_xy_list.push_back(global_xy);
+    }
+  }
+
+  if (global_xy_list.empty()) {
+    return false;
+  }
+
+  // 4. 全局坐标→当前帧Frenet系（得到s_cur, l_cur）
+  std::vector<double> cur_s_list; // 当前帧Frenet系s
+  std::vector<double> cur_l_list; // 当前帧Frenet系l（上一帧参考线在当前帧的l值）
+  for (const auto& xy : global_xy_list) {
+    Point2D cur_frenet;
+    if (current_lane_coord_.XYToSL(xy, cur_frenet)) {
+      cur_s_list.push_back(cur_frenet.x);
+      cur_l_list.push_back(cur_frenet.y);
+    }
+  }
+
+  if (cur_s_list.size() < 2) { // 有效转换点不足，无法构建spline
+    return false;
+  }
+
+  // 5. 构建s-l cubic spline（s为当前帧s，l为上一帧参考线在当前帧的l）
+  last2cur_stitching_spline_.set_points(cur_s_list, cur_l_list);
+
+  // 记录spline的s范围（用于插值边界判断）
+  spline_s_min_ = last2cur_stitching_spline_.get_x_min();
+  spline_s_max_ = last2cur_stitching_spline_.get_x_max();
+  return true;
 }
 
 }  // namespace planning
