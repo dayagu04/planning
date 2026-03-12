@@ -1,18 +1,16 @@
 #pragma once
 
-#include <memory>
+#include <string>
 #include <unordered_map>
-#include <vector>
 #include <unordered_set>
-#include <limits>
-#include "modules/context/obstacle.h"
-#include "modules/context/frenet_obstacle.h"
-#include "modules/context/reference_path.h"
-#include "modules/context/obstacle_manager.h"
+#include <vector>
+
+#include "modules/common/config/basic_type.h"
+#include "modules/common/math/box2d.h"
+#include "modules/common/math/polygon2d.h"
+#include "common/vec2d.h"
 
 namespace planning {
-// FrenetObstacle 中包含 Obstacle 的指针
-using ObstacleItemMap = std::unordered_map<int, FrenetObstaclePtr>;
 
 /************** 障碍物分类相关定义 ************ */
 // 障碍物当前时刻相对于自车的位置关系
@@ -90,53 +88,9 @@ struct ObstacleClusterContainer {
   std::vector<ObstacleCluster> obstacle_clusters;     // 聚类列表
 };
 
-/************** 障碍物处理操作类定义 ************ */
-class HppLateralObstacleUtils {
- public:
-  HppLateralObstacleUtils() = delete;
-
-  // 1. 障碍物过滤
-  static bool GenerateObstaclesToBeConsidered(
-      ConstReferencePathPtr reference_path_ptr, ObstacleItemMap& obs_item_map);
-
-  // 2. 障碍物分类
-  static bool ClassifyObstacles(
-      const ObstacleItemMap& obs_item_map, const FrenetEgoState& ego_state,
-      ObstacleClassificationResult& classification_result);
-
-  // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
-  static bool ClusterObstacles(
-      const ObstacleItemMap& obs_item_map,
-      const ObstacleClassificationResult& classification_result,
-      ObstacleClusterContainer& obstacle_cluster_constainer);
-
- private:
-  /************** 障碍物分类相关私有函数定义 ************ */
-  static ObstacleRelPosType ClassifyObstaclesByRelPos(
-      const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr);
-
-  static ObstacleMotionType ClassifyObstaclesByMotion(
-      const FrenetObstaclePtr& obs_ptr);
-
-  /************** 障碍物合并相关私有函数定义 ************ */
-  static bool GenerateClusterCandicates(
-      const ObstacleItemMap& obs_item_map,
-      const ObstacleClassificationResult& classification_result,
-      std::vector<ObstacleClusterCandicate>& cluster_candidates);
-  static bool CalculateCandidateClusterGraph(
-      const ObstacleItemMap& obs_item_map,
-      const std::vector<ObstacleClusterCandicate>& cluster_candidates,
-      ObstacleClusterGraph& cluster_graph);
-
-  static bool DFSGenerateObstacleClusters(
-      const std::vector<ObstacleClusterCandicate>& cluster_candidates,
-      const ObstacleClusterGraph& cluster_graph, const int curr_idx,
-      const ObstacleClusterType cluster_type,
-      std::unordered_set<int>& visited_candidate_idxs,
-      ObstacleCluster& obstacle_cluster);
-
-  static bool BuildObstacleClusterConvexHull(
-      const ObstacleItemMap& obs_item_map, ObstacleCluster& obstacle_cluster);
+struct HppObstacleLateralPreprocessDeciderOutput {
+  ObstacleClassificationResult obs_classification_result;
+  ObstacleClusterContainer obs_cluster_container;
 };
 
 }  // namespace planning

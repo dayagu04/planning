@@ -1,5 +1,4 @@
 #include "hpp_lateral_obstacle_decider.h"
-#include "hpp_lateral_obstacle_utils.h"
 
 #include <algorithm>
 #include <array>
@@ -86,23 +85,22 @@ bool HppLateralObstacleDecider::Execute() {
       ->mutable_hybrid_ara_info()
       ->Clear();
 
-  // 1.在 A* 搜索前完成所有障碍物过滤与聚类预处理
-  ObstacleItemMap obs_item_map;
-  ObstacleClusterContainer obs_cluster_container;
-  ObstacleClassificationResult obs_classification_result;
-  PreProcessObstacle(reference_path_ptr, obs_item_map, obs_cluster_container, obs_classification_result);
+  // 1. 获取障碍物预处理结果
+  const auto &hpp_obstacle_lateral_preprocess_output =
+      session_->planning_context().hpp_obstacle_lat_preprocess_output();
+  const auto &obs_cluster_container =
+      hpp_obstacle_lateral_preprocess_output.obs_cluster_container;
+  const auto &obs_classification_result =
+      hpp_obstacle_lateral_preprocess_output.obs_classification_result;
 
   // 2. 清理过期历史记录
-  double current_timestamp = IflyTime::Now_ms();
-  std::unordered_set<uint32_t> current_frame_ids;
-  for (const auto& pair : obs_item_map) current_frame_ids.insert(pair.first);
-  ClearOldConsistencyInfo(current_frame_ids, current_timestamp);
+  //double current_timestamp = IflyTime::Now_ms();
+  //std::unordered_set<uint32_t> current_frame_ids;
+  //for (const auto& pair : obs_item_map) current_frame_ids.insert(pair.first);
+  //ClearOldConsistencyInfo(current_frame_ids, current_timestamp);
 
-  // 3. 检查是否需要启动 A* 搜索
-  bool enable_search = false;
-  if (!obs_item_map.empty()) {
-      enable_search = CheckEnableSearch(reference_path_ptr, search_result_);
-  }
+  // 2. 检查是否需要启动 A* 搜索
+  bool enable_search = CheckEnableSearch(reference_path_ptr, search_result_);
 
   auto time1 = IflyTime::Now_ms();
   if (enable_search) {
@@ -118,13 +116,16 @@ bool HppLateralObstacleDecider::Execute() {
   JSON_DEBUG_VALUE("ARAStarTime", time2 - time1);
 
   if (search_result_ != SearchResult::SUCCESS) {
+    // 3. 没有搜索结果，进行规则决策
     UpdateLatDecision(reference_path_ptr, obstacle_consistency_map_,
                       obs_cluster_container, obs_classification_result);
     Log(reference_path_ptr);
   } else {
+    // 4. 存在搜索结果，进行规则后决策
     UpdateLatDecisionWithARAStar(reference_path_ptr);
   }
 
+  // 5. 缓存决策结果，用于下一帧连续性保障
   return true;
 }
 
@@ -386,40 +387,6 @@ void HppLateralObstacleDecider::ClearOldConsistencyInfo(
             }
         }
     }
-}
-
-bool HppLateralObstacleDecider::PreProcessObstacle(
-    ConstReferencePathPtr reference_path_ptr,
-    ObstacleItemMap &obs_item_map,
-    ObstacleClusterContainer &obs_cluster_container,
-    ObstacleClassificationResult &obs_classification_result) {
-    // 1. 障碍物过滤
-    if (!HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
-            reference_path_ptr, obs_item_map)) {
-        return false;
-    }
-
-    // 2. 障碍物分类
-    const auto &ego_state = reference_path_ptr->get_frenet_ego_state();
-    if (!HppLateralObstacleUtils::ClassifyObstacles(
-            obs_item_map, ego_state, obs_classification_result)) {
-        return false;
-    }
-
-    // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
-    if (!HppLateralObstacleUtils::ClusterObstacles(
-            obs_item_map, obs_classification_result, obs_cluster_container)) {
-        return false;
-    }
-
-    // 对聚类结果进行排序
-    std::sort(obs_cluster_container.obstacle_clusters.begin(),
-              obs_cluster_container.obstacle_clusters.end(),
-              [](const ObstacleCluster &a, const ObstacleCluster &b) {
-                return a.frenet_boundary.s_start < b.frenet_boundary.s_start;
-              });
-
-    return true;
 }
 
 void HppLateralObstacleDecider::Log(

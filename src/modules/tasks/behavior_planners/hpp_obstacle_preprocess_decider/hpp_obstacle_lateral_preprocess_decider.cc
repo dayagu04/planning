@@ -1,12 +1,72 @@
 #include <list>
 #include <algorithm>
-#include "hpp_lateral_obstacle_utils.h"
+#include "hpp_obstacle_lateral_preprocess_decider.h"
 #include "edt_manager.h"
+#include "planning_context.h"
 #include "utils/cartesian_coordinate_system.h"
 
 namespace planning {
 
-bool HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
+HppObstacleLateralPreprocessDecider::HppObstacleLateralPreprocessDecider(
+    const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
+    : Task(config_builder, session) {
+  name_ = "HppObstacleLateralPreprocessDecider";
+  config_ = config_builder->cast<HppObstacleLateralPreprocessDeciderConfig>();
+}
+bool HppObstacleLateralPreprocessDecider::Execute() {
+  if (!PreCheck()) {
+    ILOG_DEBUG << "PreCheck failed";
+    return false;
+  }
+
+  const auto fix_lane_virtual_id = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .fix_lane_virtual_id;
+  auto reference_path_ptr =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(fix_lane_virtual_id, false);
+  if (reference_path_ptr == nullptr) {
+    return false;
+  }
+
+  auto& hpp_obs_lat_preprocess_output =
+      session_->mutable_planning_context()
+          ->mutable_hpp_obstacle_lat_preprocess_output();
+  auto& obs_cluster_container =
+      hpp_obs_lat_preprocess_output.obs_cluster_container;
+  auto& obs_classification_result =
+      hpp_obs_lat_preprocess_output.obs_classification_result;
+
+  ObstacleItemMap obs_item_map;
+  // 1. 障碍物过滤
+  if (!GenerateObstaclesToBeConsidered(reference_path_ptr, obs_item_map)) {
+    return false;
+  }
+
+  // 2. 障碍物分类
+  const auto& ego_state = reference_path_ptr->get_frenet_ego_state();
+  if (!ClassifyObstacles(obs_item_map, ego_state, obs_classification_result)) {
+    return false;
+  }
+
+  // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
+  if (!ClusterObstacles(obs_item_map, obs_classification_result,
+                        obs_cluster_container)) {
+    return false;
+  }
+
+  // 对聚类结果进行排序
+  std::sort(obs_cluster_container.obstacle_clusters.begin(),
+            obs_cluster_container.obstacle_clusters.end(),
+            [](const ObstacleCluster& a, const ObstacleCluster& b) {
+              return a.frenet_boundary.s_start < b.frenet_boundary.s_start;
+            });
+
+  return true;
+}
+
+bool HppObstacleLateralPreprocessDecider::GenerateObstaclesToBeConsidered(
     ConstReferencePathPtr reference_path_ptr, ObstacleItemMap& obs_item_map) {
   if (!reference_path_ptr) {
     return false;
@@ -22,7 +82,7 @@ bool HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
   return true;
 }
 
-bool HppLateralObstacleUtils::ClassifyObstacles(
+bool HppObstacleLateralPreprocessDecider::ClassifyObstacles(
     const ObstacleItemMap& obs_item_map, const FrenetEgoState& ego_state,
     ObstacleClassificationResult& classification_result) {
   classification_result.Clear();
@@ -43,7 +103,7 @@ bool HppLateralObstacleUtils::ClassifyObstacles(
   return true;
 }
 
-bool HppLateralObstacleUtils::ClusterObstacles(
+bool HppObstacleLateralPreprocessDecider::ClusterObstacles(
     const ObstacleItemMap& obs_item_map,
     const ObstacleClassificationResult& classification_result,
     ObstacleClusterContainer& obstacle_cluster_container) {
@@ -85,7 +145,8 @@ bool HppLateralObstacleUtils::ClusterObstacles(
   return true;
 }
 
-ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
+ObstacleRelPosType
+HppObstacleLateralPreprocessDecider::ClassifyObstaclesByRelPos(
     const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr) {
   const double kFarAwayLonFrontThr = 50.0;  // 判断障碍物在自车前方远处
   const double kFarAwayLonBackThr = 5.0;  // 判断障碍物在自车后方远处
@@ -146,7 +207,8 @@ ObstacleRelPosType HppLateralObstacleUtils::ClassifyObstaclesByRelPos(
   return type;
 }
 
-ObstacleMotionType HppLateralObstacleUtils::ClassifyObstaclesByMotion(
+ObstacleMotionType
+HppObstacleLateralPreprocessDecider::ClassifyObstaclesByMotion(
     const FrenetObstaclePtr& obs_ptr) {
   const double obs_relative_v_angle =
       std::fabs(obs_ptr->frenet_relative_velocity_angle());
@@ -166,7 +228,7 @@ ObstacleMotionType HppLateralObstacleUtils::ClassifyObstaclesByMotion(
   return type;
 }
 
-bool HppLateralObstacleUtils::GenerateClusterCandicates(
+bool HppObstacleLateralPreprocessDecider::GenerateClusterCandicates(
     const ObstacleItemMap& obs_item_map,
     const ObstacleClassificationResult& classification_result,
     std::vector<ObstacleClusterCandicate>& cluster_candidates) {
@@ -203,7 +265,7 @@ bool HppLateralObstacleUtils::GenerateClusterCandicates(
   return true;
 }
 
-bool HppLateralObstacleUtils::CalculateCandidateClusterGraph(
+bool HppObstacleLateralPreprocessDecider::CalculateCandidateClusterGraph(
     const ObstacleItemMap& obs_item_map,
     const std::vector<ObstacleClusterCandicate>& cluster_candidates,
     ObstacleClusterGraph& cluster_graph) {
@@ -269,16 +331,19 @@ bool HppLateralObstacleUtils::CalculateCandidateClusterGraph(
   return true;
 }
 
-bool HppLateralObstacleUtils::DFSGenerateObstacleClusters(
+bool HppObstacleLateralPreprocessDecider::DFSGenerateObstacleClusters(
     const std::vector<ObstacleClusterCandicate>& cluster_candidates,
     const ObstacleClusterGraph& cluster_graph, const int curr_idx,
     const ObstacleClusterType curr_cluster_type,
     std::unordered_set<int>& visited_candidate_idxs,
     ObstacleCluster& obstacle_cluster) {
   visited_candidate_idxs.insert(curr_idx);
-  obstacle_cluster.original_ids.push_back(cluster_candidates[curr_idx].origin_id);
-  obstacle_cluster.motion_types.insert(cluster_candidates[curr_idx].motion_type);
-  obstacle_cluster.rel_pos_types.insert(cluster_candidates[curr_idx].rel_pos_types);
+  obstacle_cluster.original_ids.push_back(
+      cluster_candidates[curr_idx].origin_id);
+  obstacle_cluster.motion_types.insert(
+      cluster_candidates[curr_idx].motion_type);
+  obstacle_cluster.rel_pos_types.insert(
+      cluster_candidates[curr_idx].rel_pos_types);
   obstacle_cluster.cluster_types.insert(curr_cluster_type);
 
   static auto is_valid_cluster_type =
@@ -306,10 +371,11 @@ bool HppLateralObstacleUtils::DFSGenerateObstacleClusters(
 
       if (visited_candidate_idxs.find(cluster_idx) ==
           visited_candidate_idxs.end()) {
-        if (is_valid_cluster_type(cluster_type, obstacle_cluster.cluster_types)) {
-          DFSGenerateObstacleClusters(cluster_candidates, cluster_graph, cluster_idx,
-                                      cluster_type, visited_candidate_idxs,
-                                      obstacle_cluster);
+        if (is_valid_cluster_type(cluster_type,
+                                  obstacle_cluster.cluster_types)) {
+          DFSGenerateObstacleClusters(cluster_candidates, cluster_graph,
+                                      cluster_idx, cluster_type,
+                                      visited_candidate_idxs, obstacle_cluster);
         }
       }
     }
@@ -317,7 +383,7 @@ bool HppLateralObstacleUtils::DFSGenerateObstacleClusters(
   return true;
 }
 
-bool HppLateralObstacleUtils::BuildObstacleClusterConvexHull(
+bool HppObstacleLateralPreprocessDecider::BuildObstacleClusterConvexHull(
     const ObstacleItemMap& obs_item_map, ObstacleCluster& obstacle_cluster) {
   auto& new_points = obstacle_cluster.perception_points;
   auto& new_sl_boundary = obstacle_cluster.frenet_boundary;
