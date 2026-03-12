@@ -10,6 +10,7 @@ class LongitudinalHmiDecider {
   bool Execute();
 
  private:
+  void IntersectionLeftRightLaneTakeOverProc();
   framework::Session* session_ = nullptr;
   HmiDeciderConfig config_;
 };

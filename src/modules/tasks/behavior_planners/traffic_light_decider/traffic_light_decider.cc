@@ -245,6 +245,7 @@ bool TrafficLightDecider::Execute() {
   tfl_decider.can_pass = can_pass_;
   tfl_decider.is_small_front_intersection = is_small_front_intersection_;
   tfl_decider.is_tfl_match_intersection = is_tfl_match_intersection_;
+  tfl_decider.is_in_straight_lane = is_in_straight_lane_;
   return true;
 }
 
