@@ -47,7 +47,8 @@ bool IsPointWithinRange(const Pose2D &traj_check_point,
   return dx * dx + dy * dy <= check_range * check_range;
 }
 
-bool IsGroundLineFrenetObstacleValid(const Obstacle *frenet_obstacle) {
+bool IsGroundLineFrenetObstacleValid(
+    const std::shared_ptr<FrenetObstacle> &frenet_obstacle) {
   return frenet_obstacle != nullptr && frenet_obstacle->b_frenet_valid() &&
          frenet_obstacle->source_type() == SourceType::GroundLine;
 }
@@ -286,7 +287,7 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
   generated_virtual_agent_s.reserve(ground_lines.size());
 
   int virtual_agent_id = 5500000;
-  for (const auto *frenet_obstacle : frenet_obstacles) {
+  for (const auto &frenet_obstacle : frenet_obstacles) {
     // 1. 仅处理有效的 groundline frenet 障碍物。
     if (!IsGroundLineFrenetObstacleValid(frenet_obstacle)) {
       continue;
