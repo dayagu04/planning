@@ -47,11 +47,6 @@ namespace apa_planner {
 #define DEBUG_SUCCESS_CURVE_PATH_INFO (0)
 #define DEBUG_ALL_BEST_CURVE_PATH_INFO (0)
 
-const bool ComparePath(const PathCompareCost& cost1,
-                       const PathCompareCost& cost2) {
-  return cost1.total_cost < cost2.total_cost;
-}
-
 void HybridAStarPerpendicularTailInPathGenerator::UpdatePoseBoundary() {
   const float bound = request_.ego_info_under_slot.slot_type == SlotType::SLANT
                           ? SLANT_SLOT_EXTEND_BOUND
@@ -309,12 +304,14 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     } else {
       break;
     }
-    const std::vector<double> x_vec{7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0};
+    constexpr double kCandidateXs[] = {7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0};
     bool find_safe_pos = false;
-    for (const double x : x_vec) {
+    std::vector<geometry_lib::PathPoint> collision_check_path(1);
+    for (const double x : kCandidateXs) {
       end_pose.SetX(x);
+      collision_check_path[0] = end_pose;
       if (!col_det_interface_ptr_->GetEDTColDetPtr()
-               ->Update(std::vector<geometry_lib::PathPoint>{end_pose},
+               ->Update(collision_check_path,
                         param.lat_lon_path_buffer.body_lat_buffer, 0.0)
                .col_flag) {
         find_safe_pos = true;
@@ -458,6 +455,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   ResetNodePool();
   open_pq_.clear();
   node_set_.clear();
+  node_set_.reserve(NODE_POOL_MAX_NUM);
   result_.Clear();
   child_node_debug_.clear();
   queue_path_debug_.clear();
@@ -932,13 +930,16 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
       gen_child_node_num_success++;
 
-      if (node_set_.find(new_node.GetGlobalID()) == node_set_.end()) {
+      const size_t new_node_global_id = new_node.GetGlobalID();
+      const auto node_it = node_set_.find(new_node_global_id);
+      const bool node_exists = node_it != node_set_.end();
+      if (!node_exists) {
         // if the new node id is not in node set, directly allow node
         next_node_in_pool = node_pool_.AllocateNode();
         vis_type = AstarNodeVisitedType::NOT_VISITED;
       } else {
         // if the new node id is already in node set, get node from pool first
-        next_node_in_pool = node_set_[new_node.GetGlobalID()];
+        next_node_in_pool = node_it->second;
         vis_type = next_node_in_pool->GetVisitedType();
       }
 
@@ -947,10 +948,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 #if DEBUG_CHILD_NODE
         if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
           ILOG_INFO << "node size = " << node_pool_.PoolSize()
-                    << "  node_set_.find(new_node.GetGlobalID()) == "
-                       "node_set_.end() = "
-                    << (node_set_.find(new_node.GetGlobalID()) ==
-                        node_set_.end());
+                    << "  node_exists = " << node_exists;
           ILOG_INFO << " next node is null";
         }
 #endif
@@ -1119,9 +1117,12 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       std::fabs(geometry_lib::NormalizeAngle(cur_theta - end_theta)) *
       common_math::kRad2DegF;
 
-  // std::map<PathCompareCost, size_t, decltype(ComparePath)*> cost_index_map(
-  //     ComparePath);
-  std::map<PathCompareCost, size_t> cost_index_map;
+  bool has_best_curve_node = false;
+  PathCompareCost best_cost;
+#if PLOT_ALL_BEST_CURVE_PATH
+  std::vector<std::pair<PathCompareCost, size_t>> ranked_costs;
+  ranked_costs.reserve(curve_node_to_goal_vec.size());
+#endif
 
   for (size_t i = 0; i < curve_node_to_goal_vec.size(); ++i) {
     PathCompareCost cost;
@@ -1170,8 +1171,6 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       cost.kappa_change_cost +=
           temp_node.GetLastPathKappaChange() * last_path_kappa_change_penalty;
 
-      const auto last_steer = lpl_path.last_steer;
-
       const auto last_line_length = lpl_path.last_line_length;
 
       if (last_line_length < 2e-2f) {
@@ -1199,15 +1198,6 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
 
     if (consider_obs_dist) {
       CalcObsDistRelativeSlot(temp_node, obs_dist_relative_slot);
-      const float out_slot_straight_diff =
-          obs_dist_relative_slot.obs_dist_out_slot_straight -
-          safe_buffer.out_slot_body_lat_buffer;
-
-      const float out_slot_turn_diff =
-          obs_dist_relative_slot.obs_dist_out_slot_turn -
-          safe_buffer.out_slot_body_lat_buffer -
-          safe_buffer.out_slot_extra_turn_lat_buffer;
-
       cost.obs_dist =
           std::min(obs_dist_relative_slot.obs_dist_out_slot_straight,
                    obs_dist_relative_slot.obs_dist_out_slot_turn);
@@ -1284,18 +1274,24 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
     }
 
     cost.GetTotalCost();
-    cost_index_map.emplace(cost, i);
-  }
-
-  if (cost_index_map.size() > 0) {
-    best_curve_node_to_goal =
-        curve_node_to_goal_vec[cost_index_map.begin()->second];
+#if PLOT_ALL_BEST_CURVE_PATH
+    ranked_costs.emplace_back(cost, i);
+#endif
+    if (!has_best_curve_node || cost < best_cost) {
+      best_cost = cost;
+      best_curve_node_to_goal = temp_node;
+      has_best_curve_node = true;
+    }
   }
 
 #if PLOT_ALL_BEST_CURVE_PATH
+  std::sort(ranked_costs.begin(), ranked_costs.end(),
+            [](const auto& lhs, const auto& rhs) {
+              return lhs.first < rhs.first;
+            });
   all_success_curve_path_debug_.clear();
   all_success_path_first_gear_switch_pose_debug_.clear();
-  for (const auto& pair : cost_index_map) {
+  for (const auto& pair : ranked_costs) {
     if (all_success_curve_path_debug_.size() > 20) {
       break;
     }
