@@ -1775,6 +1775,9 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     if (frenet_obs->is_static()) {
       continue;
     }
+    if (!frenet_obs->obstacle()->is_normal()) {
+      continue;
+    }
     if (frenet_obs->id() == frenet_obstacle.id()) {
       continue;
     }
