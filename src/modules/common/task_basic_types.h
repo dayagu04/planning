@@ -24,6 +24,12 @@ enum class LatObstacleNudgeLevel {
   ABSOLUTE_NUDGE = 2,       // 绝对安全可绕行
 };
 
+struct LatObstacleDecisionInfo {
+  LatObstacleDecisionType decision;
+  LatObstacleNudgeLevel left_nudge_level;
+  LatObstacleNudgeLevel right_nudge_level;
+};
+
 enum class LonObstacleDecisionType { OVERTAKE, YIELD, IGNORE };
 
 enum class LatIngoreType {

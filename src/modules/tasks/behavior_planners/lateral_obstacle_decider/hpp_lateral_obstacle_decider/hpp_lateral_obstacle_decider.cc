@@ -118,7 +118,8 @@ bool HppLateralObstacleDecider::Execute() {
   JSON_DEBUG_VALUE("ARAStarTime", time2 - time1);
 
   if (search_result_ != SearchResult::SUCCESS) {
-    UpdateLatDecision(reference_path_ptr, obs_cluster_container);
+    UpdateLatDecision(reference_path_ptr, obstacle_consistency_map_,
+                      obs_cluster_container, obs_classification_result);
     Log(reference_path_ptr);
   } else {
     UpdateLatDecisionWithARAStar(reference_path_ptr);
@@ -129,22 +130,24 @@ bool HppLateralObstacleDecider::Execute() {
 
 void HppLateralObstacleDecider::UpdateLatDecision(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
-    const ObstacleClusterContainer &merged_container) {
-
+    const ObstacleConsistencyMap& obstacle_consistency_map,
+    const ObstacleClusterContainer &obs_cluster_container,
+    const ObstacleClassificationResult &obs_classification_result) {
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
   lat_obstacle_decision.clear();
   double current_timestamp = IflyTime::Now_ms();
 
-  if (merged_container.obstacle_clusters.empty()) return;
+  if (obs_cluster_container.obstacle_clusters.empty()) return;
 
-  for (const auto& cluster : merged_container.obstacle_clusters) {
-      if (cluster.motion_types.empty() || cluster.rel_pos_types.empty()) continue;
+  for (const auto &cluster : obs_cluster_container.obstacle_clusters) {
+    if (cluster.motion_types.empty() || cluster.rel_pos_types.empty()) continue;
 
-      LatObstacleDecisionType decision = MakeDecisionForSingleCluster(cluster);
+    LatObstacleDecisionType decision = MakeDecisionForSingleCluster(cluster);
 
-      UpdateClusterHistory(cluster, decision, current_timestamp, lat_obstacle_decision);
+    UpdateClusterHistory(cluster, decision, current_timestamp,
+                         lat_obstacle_decision);
   }
 }
 
