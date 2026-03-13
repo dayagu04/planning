@@ -2342,12 +2342,12 @@ void OvertakeRequest::IsTargetLaneExistTruck(
     return;
   }
   if (is_left) {
-    if (agent_frenet_point.y <
+    if (agent_frenet_point.y >
         0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
       return;
     }
   } else {
-    if (agent_frenet_point.y >
+    if (agent_frenet_point.y <
         -0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
       return;
     }
@@ -2367,7 +2367,7 @@ void OvertakeRequest::IsTargetLaneExistTruck(
             0.5 * target_lane->width() - box_frenet_point.y;
       } else {
         point_intrusion_distance =
-            -0.5 * target_lane->width() - box_frenet_point.y;
+            box_frenet_point.y - (-0.5 * target_lane->width());
       }
     }
     if (point_intrusion_distance > intrusion_distance) {
