@@ -252,6 +252,75 @@ LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
   return decision;
 }
 
+void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
+    const ObstacleCluster &cluster,
+    const ObstacleConsistencyMap &obstacle_consistency_map,
+    LatObstacleDecisionType &decision) {}
+
+void HppLateralObstacleDecider::MakeDecisionForDynamicCluster(
+    const ObstacleCluster &cluster,
+    const ObstacleConsistencyMap &obstacle_consistency_map,
+    LatObstacleDecisionType &decision) {
+  MakeDecisionForStaticCluster(cluster, obstacle_consistency_map, decision);
+}
+
+void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
+    const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {
+  const double krelativenudgebuffer = 0.6;
+  const double kabsolutenudgebuffer = 2.0;
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const double obs_s_start = cluster.frenet_boundary.s_start;
+  const double obs_s_end = cluster.frenet_boundary.s_end;
+  const double obs_l_start = cluster.frenet_boundary.l_start;
+  const double obs_l_end = cluster.frenet_boundary.l_end;
+  const double obs_center_l = (obs_l_start + obs_l_end) * 0.5;
+
+  ReferencePathPoint refpath_pt;
+
+  reference_path_ptr->get_reference_point_by_lon(obs_s_start, refpath_pt);
+  const double obs_start2left_road_boundary_dis = refpath_pt.distance_to_left_road_border - obs_l_start;
+  const double obs_start2right_road_boundary_dis = refpath_pt.distance_to_right_road_border + obs_l_start;
+
+  reference_path_ptr->get_reference_point_by_lon(obs_s_end, refpath_pt);
+  const double obs_end2left_road_boundary_dis = refpath_pt.distance_to_left_road_border - obs_l_end;
+  const double obs_end2right_road_boundary_dis = refpath_pt.distance_to_right_road_border + obs_l_end;
+
+  const double obs_2left_road_boundary_dis = std::max(obs_start2left_road_boundary_dis,obs_end2left_road_boundary_dis);//距离带正负
+  const double obs_2right_road_boundary_dis = std::min(obs_start2right_road_boundary_dis,obs_end2right_road_boundary_dis);
+
+  if (obs_2left_road_boundary_dis == obs_2right_road_boundary_dis)
+  {
+    if (obs_center_l > 0)
+    {
+      /* code */
+    }
+
+  }else if(obs_2left_road_boundary_dis > obs_2right_road_boundary_dis){
+
+  }else{
+
+  }
+
+
+
+}
+
+void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
+    const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {}
+
+void HppLateralObstacleDecider::MakeDecisionBasedLastPath(
+    const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {}
+
+void HppLateralObstacleDecider::MakeFinalDecision(
+    const ObstacleCluster &cluster,
+    const ObstacleConsistencyMap &obstacle_consistency_map,
+    LatObstacleDecisionInfo &passage_width_info,
+    LatObstacleDecisionInfo &relative_pos_info,
+    LatObstacleDecisionInfo &last_path_info,
+    LatObstacleDecisionType &decision) {}
+
 void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
     const ObstacleLateralDecisionMap &lat_obstacle_decision,
     ObstacleConsistencyMap &obs_consistency_map) {
@@ -283,6 +352,7 @@ void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
     }
   }
 }
+
 
 bool HppLateralObstacleDecider::CheckEnableSearch(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
@@ -352,6 +422,11 @@ bool HppLateralObstacleDecider::ARAStar() {
   }
 
   return (find_path && hybrid_ara_result.Valid());
+}
+
+bool HppLateralObstacleDecider::CheckARAStarPath(
+    const ara_star::HybridARAStarResult& result) {
+  return false;
 }
 
 void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
