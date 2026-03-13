@@ -177,7 +177,8 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         node.dis_to_gap_rear_cost =
             gap > s_buffer_extra
                 ? 0.0
-                : std::exp(2 * (1- gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
+                : config_->weight_back_ttc *
+                      std::exp(2 * (1- gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
       }
     } else {
       double s_buffer = 3.5 + 0.3 * node.v;
@@ -191,7 +192,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         node.dis_to_gap_front_cost =
             gap > s_buffer_extra
                 ? 0.0
-                : 0.5 *
+                : config_->weight_front_ttc *
                       std::exp(2 * (1 - gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
       }
     }
