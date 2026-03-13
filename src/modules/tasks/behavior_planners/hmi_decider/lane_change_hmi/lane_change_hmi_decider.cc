@@ -96,21 +96,20 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
 }
 bool LaneChangeHmiDecider::IsDistanceToOriginLineEnough(RampDirection ramp_direction) {
   if(ramp_direction == RampDirection::RAMP_NONE) {
-    return false;
+    return true;
   }
   const auto& virtual_lane_mgr =
       session_->environmental_model().get_virtual_lane_manager();
-  const auto& current_lane = virtual_lane_mgr->get_current_lane();
   const auto& virtual_target_lane = ramp_direction == RampDirection::RAMP_ON_LEFT
                                         ? virtual_lane_mgr->get_right_lane()
                                         : virtual_lane_mgr->get_left_lane();
-  if (!current_lane || !virtual_target_lane) {
-    return false;
+  const auto& current_ref_path = session_->environmental_model()
+                                  .get_reference_path_manager()
+                                  ->get_reference_path_by_current_lane();
+  if (!current_ref_path || !virtual_target_lane) {
+    return true;
   }
-  const auto& ego_frenet_state = session_->environmental_model()
-                                    .get_reference_path_manager()
-                                    ->get_reference_path_by_current_lane()
-                                    ->get_frenet_ego_state();
+  const auto& ego_frenet_state = current_ref_path->get_frenet_ego_state();
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const double ego_s = ego_frenet_state.s();
@@ -141,9 +140,8 @@ bool LaneChangeHmiDecider::IsDistanceToOriginLineEnough(RampDirection ramp_direc
     double ego_width  =
       VehicleConfigurationContext::Instance()->get_vehicle_param().width;
     return ref_distance > ego_width / 2.0;
-  }else{
-    return false;
   }
+  return true;
 }
 void LaneChangeHmiDecider::UpdateHMIInfo() {
   const auto& lane_change_decider_output =
@@ -167,7 +165,9 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   const auto dir_turn_signal_road_to_ramp =
       lane_change_decider_output.dir_turn_signal_road_to_ramp;
   static int lane_change_complete_cnt = kHmiSendMsgCntThreshold;
-  bool is_distance_enough = IsDistanceToOriginLineEnough(dir_turn_signal_road_to_ramp);
+  bool is_distance_enough = dir_turn_signal_road_to_ramp == RampDirection::RAMP_NONE ?
+                             IsDistanceToOriginLineEnough(last_frame_dir_turn_signal_road_to_ramp_) :
+                             true;
   if (curr_state == kLaneKeeping) {
     if (lane_change_complete_cnt < kHmiSendMsgCntThreshold) {
       ad_info.lane_change_status =
@@ -220,7 +220,6 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
                   iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
               lc_state_complete_frame_nums_ = 31;
             }
-            last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;//更新最后一帧结果
           }else{
             if(last_frame_dir_turn_signal_road_to_ramp_ == RAMP_ON_LEFT){
               lc_state_complete_frame_nums_ = 31;
@@ -272,7 +271,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   if(is_distance_enough || last_frame_dir_turn_signal_road_to_ramp_ == RAMP_NONE ||
       dir_turn_signal_road_to_ramp == RAMP_NONE){
     last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;//更新最后一帧结果
-  };
+  }
 
   // update StatusUpdateReason
   const auto int_request_cancel_reason =
