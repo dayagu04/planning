@@ -66,8 +66,8 @@ class EgoLaneTrackManger {
       const std::vector<int> &order_ids);
 
   void ProcessSplitRegionInteractiveSelectEgoLane(
-      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-      const std::vector<int>& order_ids, const int lane_change_cmd);
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids, const int lane_change_cmd);
 
   void ProcessSplitWithGroundMark(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
@@ -229,8 +229,8 @@ class EgoLaneTrackManger {
       std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       bool& is_consider_second_split);
   void ComputeEgoDistanceToRoadBorder(
-    const std::shared_ptr<VirtualLane>& base_lane,
-    double& dis_to_left_road_border, double& dis_to_right_road_border);
+      const std::shared_ptr<VirtualLane> &base_lane,
+      double &dis_to_left_road_border, double &dis_to_right_road_border);
 
   double CalculateLinearCost(double ttc);
 
@@ -288,7 +288,7 @@ class EgoLaneTrackManger {
   std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
   const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
   const std::vector<double> collision_cost_weight_{100.0, 50.0, 5.0};
-  const std::vector<double>  road_curv_radius_{200.0, 400.0, 1000.0};
+  const std::vector<double> road_curv_radius_{200.0, 400.0, 1000.0};
 };
 
 }  // namespace planning
