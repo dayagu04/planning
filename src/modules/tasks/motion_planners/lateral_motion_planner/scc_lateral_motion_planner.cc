@@ -196,7 +196,7 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
       planning_init_point.frenet_state.s, planning_input_.ref_vel(),
       vehicle_param.wheel_base, vehicle_param.steer_ratio, curv_factor_,
-      general_lateral_decider_output.curve_s_spline, expected_steer_vec_);
+      reference_path_ptr, expected_steer_vec_);
   JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec_, 2)
   const auto& second_soft_bounds_frenet_point =
       general_lateral_decider_output.second_soft_bounds_frenet_point;

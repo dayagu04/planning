@@ -162,7 +162,7 @@ class BaseWeight {
 
   void CalculateExpectedLatAccAndSteerAngle(
       double init_s, double ref_vel, double wheel_base, double steer_ratio,
-      double curv_factor, const pnc::mathlib::spline &k_s_spline,
+      double curv_factor, const std::shared_ptr<planning::ReferencePath>& reference_path,
       std::vector<double> &expected_steer_vec);
 
   void CalculateLatAccAndSteerAngleByHistoryPath(

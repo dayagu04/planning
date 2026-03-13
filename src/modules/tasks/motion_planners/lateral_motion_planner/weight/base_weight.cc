@@ -515,7 +515,7 @@ void BaseWeight::CalculateLastPathDistToRef(
 
 void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
     double init_s, double ref_vel, double wheel_base, double steer_ratio,
-    double curv_factor, const pnc::mathlib::spline &k_s_spline,
+    double curv_factor, const std::shared_ptr<planning::ReferencePath>& reference_path,
     std::vector<double> &expected_steer_vec) {
   expected_average_acc_ = 0.0;
   expected_max_acc_ = -10.0;
@@ -525,10 +525,7 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   target_road_radius_ = 10000.0;
   is_s_bend_ = false;
   is_sharp_turn_ = false;
-  bool is_k_s_spline_valid = false;
-  if (!k_s_spline.get_x().empty() && !k_s_spline.get_y().empty()) {
-    is_k_s_spline_valid = true;
-  }
+  const auto& frenet_coord = reference_path->get_frenet_coord();
   bool is_left_bend = false;
   bool is_right_bend = false;
   size_t time = 0;
@@ -537,6 +534,7 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   size_t right_count = 0;
   min_road_radius_ = 10000.0;
   double max_road_radius = 1.0;
+  double current_road_radius = 10000.0;
   double preview_road_radius = 10000.0;
   double sum_kappa = 0;
   double left_bend_s = 0;
@@ -552,9 +550,86 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   double last_acc = 0;
   planning::ReferencePathPoint ref_point;
   for (size_t i = 0; i < weight_.point_num; ++i) {
-    if (is_k_s_spline_valid) {
-      init_s = std::max(std::min(k_s_spline.get_x().back(), init_s), k_s_spline.get_x().front());
-      pt_kappa = k_s_spline(init_s);
+    if (frenet_coord->GetKappaByS(init_s, &pt_kappa)) {
+      if (pt_kappa > kCurvatureThreshold) {
+        left_count++;
+        right_count = 0;
+      } else if (pt_kappa < -kCurvatureThreshold) {
+        left_count = 0;
+        right_count++;
+      } else {
+        left_count = 0;
+        right_count = 0;
+      }
+      if (pt_kappa > kBigCurvatureThreshold) {
+        left_bend_s += ds;
+      } else {
+        left_bend_s = 0;
+      }
+      if (left_bend_s > (ds + 10.0)) {
+        is_left_bend = true;
+      }
+      if (pt_kappa < -kBigCurvatureThreshold) {
+        right_bend_s += ds;
+      } else {
+        right_bend_s = 0;
+      }
+      if (right_bend_s > (ds + 10.0)) {
+        is_right_bend = true;
+      }
+      kappa_gap += 1;
+      sum_kappa += std::fabs(pt_kappa);
+      double expected_delta = std::atan(wheel_base * pt_kappa);         // rad
+      double expected_steer = steer_ratio * expected_delta * kRad2Deg;  // deg
+      double expected_lat_acc = kv2 * expected_delta;
+      expected_steer_vec[i] = expected_steer;
+      weight_.expected_acc[i] = expected_lat_acc;
+      if (i < 16) {
+        expected_average_acc_ += expected_lat_acc;
+      }
+      if (i < 21) {
+        expected_max_acc_ = std::max(expected_lat_acc, expected_max_acc_);
+        expected_min_acc_ = std::min(expected_lat_acc, expected_min_acc_);
+        if (i > 0) {
+          double d_jerk = (expected_lat_acc - last_acc) / config_.delta_t;
+          expected_max_jerk_ = std::max(d_jerk, expected_max_jerk_);
+          expected_min_jerk_ = std::min(d_jerk, expected_min_jerk_);
+        }
+        last_acc = expected_lat_acc;
+      }
+      if (i % 5 == 0) {  // 0 1 2 3 4 5
+        double average_kappa = sum_kappa / kappa_gap;
+        if (std::fabs(average_kappa) > 1e-6) {
+          double average_radius = 1 / average_kappa;
+          curvature_radius_vec_[time] = average_radius;
+          if (time < 5) {
+            min_road_radius_ = std::min(std::fabs(curvature_radius_vec_[time]),
+                                        min_road_radius_);
+            max_road_radius =
+                std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
+          }
+          if (time == 1) {
+            current_road_radius = average_radius;
+            if (right_count > 2) {
+              current_road_radius *= -1.0;
+            }
+          }
+          if (time == 3 || time == 4) {
+            if (right_count > 2) {
+              average_radius *= -1.0;
+            }
+            if (std::fabs(average_radius) < std::fabs(preview_road_radius)) {
+              preview_road_radius = average_radius;
+            }
+          }
+        }
+        time += 1;
+        sum_kappa = 0;
+        kappa_gap = 0;
+        left_count = 0;
+        right_count = 0;
+      }
+      init_s += ds;
     } else {
       if (i > 0) {
         expected_steer_vec[i] = expected_steer_vec[i - 1];
@@ -566,77 +641,6 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
       init_s += ds;
       continue;
     }
-    if (pt_kappa > kCurvatureThreshold) {
-      left_count++;
-      right_count = 0;
-    } else if (pt_kappa < -kCurvatureThreshold) {
-      left_count = 0;
-      right_count++;
-    } else {
-      left_count = 0;
-      right_count = 0;
-    }
-    if (pt_kappa > kBigCurvatureThreshold) {
-      left_bend_s += ds;
-    } else {
-      left_bend_s = 0;
-    }
-    if (left_bend_s > (ds + 10.0)) {
-      is_left_bend = true;
-    }
-    if (pt_kappa < -kBigCurvatureThreshold) {
-      right_bend_s += ds;
-    } else {
-      right_bend_s = 0;
-    }
-    if (right_bend_s > (ds + 10.0)) {
-      is_right_bend = true;
-    }
-    kappa_gap += 1;
-    sum_kappa += std::fabs(pt_kappa);
-    double expected_delta = std::atan(wheel_base * pt_kappa);         // rad
-    double expected_steer = steer_ratio * expected_delta * kRad2Deg;  // deg
-    double expected_lat_acc = kv2 * expected_delta;
-    expected_steer_vec[i] = expected_steer;
-    weight_.expected_acc[i] = expected_lat_acc;
-    if (i < 16) {
-      expected_average_acc_ += expected_lat_acc;
-    }
-    if (i < 21) {
-      expected_max_acc_ = std::max(expected_lat_acc, expected_max_acc_);
-      expected_min_acc_ = std::min(expected_lat_acc, expected_min_acc_);
-      if (i > 0) {
-        double d_jerk = (expected_lat_acc - last_acc) / config_.delta_t;
-        expected_max_jerk_ = std::max(d_jerk, expected_max_jerk_);
-        expected_min_jerk_ = std::min(d_jerk, expected_min_jerk_);
-      }
-      last_acc = expected_lat_acc;
-    }
-    if (i % 5 == 0) {  // 0 1 2 3 4 5
-      double average_kappa = sum_kappa / kappa_gap;
-      if (std::fabs(average_kappa) > 1e-6) {
-        double average_radius = 1 / average_kappa;
-        curvature_radius_vec_[time] = average_radius;
-        if (time < 5) {
-          min_road_radius_ = std::min(std::fabs(curvature_radius_vec_[time]),
-                                      min_road_radius_);
-          max_road_radius =
-              std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
-        }
-        if (time == 4) {
-          preview_road_radius = average_radius;
-          if (right_count > 2) {
-            preview_road_radius *= -1.0;
-          }
-        }
-      }
-      time += 1;
-      sum_kappa = 0;
-      kappa_gap = 0;
-      left_count = 0;
-      right_count = 0;
-    }
-    init_s += ds;
   }
   expected_average_acc_ = expected_average_acc_ / 16;
   // if (std::fabs(expected_max_acc_) > std::fabs(expected_min_acc_)) {
@@ -656,7 +660,8 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   last_expected_average_acc_ = expected_average_acc_;
   // S bend
   if ((is_left_bend && is_right_bend) ||
-      (expected_average_acc_ * preview_road_radius < -1e-6 &&
+      (current_road_radius * preview_road_radius < -1e-6 &&
+       std::fabs(current_road_radius) < 2000.0 &&
        std::fabs(preview_road_radius) < 2000.0)) {
     is_s_bend_ = true;
   }
