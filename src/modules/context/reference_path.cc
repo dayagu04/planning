@@ -789,7 +789,7 @@ bool ReferencePath::HandleRoadCurvature(
   // 7. 虚拟区域判断阈值
   static const double kVirtualRangeVelCoeff = 5.0;           // 虚拟范围与车速的系数(5.0*v)
   static const double kVirtualRangeOffset = 5.0;             // 虚拟范围偏移量(m)
-  static const double kMinIntersectionVirtualLength = 30.0;  // 路口虚拟区域最小长度(m)
+  static const double kMinIntersectionVirtualLength = 20.0;  // 路口虚拟区域最小长度(m)
   static const double kMinVirtualLength = 40.0;              // 非路口虚拟区域最小长度(m)
   static const double kScanVirtualRange = 70.0;              // 虚拟区域向前扫描范围(m)
   static const double kScanVirtualStep = 5.0;               // 虚拟区域向前扫描步长(m)
@@ -863,13 +863,10 @@ bool ReferencePath::HandleRoadCurvature(
   if ((virtual_lane_manager
            ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
        virtual_lane_manager
-           ->GetIntersectionState() <= common::OFF_INTERSECTION &&
-      (is_in_virtual_area &&
-       dist_to_virtual_start < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset))) ||
+           ->GetIntersectionState() < common::OFF_INTERSECTION) ||
       (is_in_virtual_area &&
        dist_to_virtual_start < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
        virtual_length >= std::max(0.5 * init_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
-
     straight_radius_thr = curve_radius_thr;
     curve_radius_thr = kIntersectionRadiusThreshold;
   }
