@@ -18,7 +18,10 @@ struct ObstacleConsistencyInfo {
   LatObstacleDecisionType last_decision = LatObstacleDecisionType::IGNORE;
   double last_seen_timestamp = 0.0;
 };
-using ObstacleConsistencyMap = std::unordered_map<uint32_t, ObstacleConsistencyInfo>;
+using ObstacleConsistencyMap =
+    std::unordered_map<uint32_t, ObstacleConsistencyInfo>;
+using ObstacleLateralDecisionMap =
+    std::unordered_map<uint32_t, LatObstacleDecisionType>;
 
 class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
  public:
@@ -74,22 +77,15 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
                          LatObstacleDecisionType& decision);
 
   //辅助函数2：更新历史记录状态机
-  void UpdateClusterHistory(
-      const ObstacleCluster& cluster,
-      LatObstacleDecisionType decision,
-      double current_timestamp,
-      std::unordered_map<uint32_t, LatObstacleDecisionType>& lat_obstacle_decision);
-
-  void ClearOldConsistencyInfo(
-      const std::unordered_set<uint32_t>& current_frame_ids,
-      double current_timestamp);
+  void UpdateObstacleConsistencyMap(
+      const ObstacleLateralDecisionMap& obs_lat_decision_map,
+      ObstacleConsistencyMap& obs_consistency_map);
 
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
 
  private:
-  std::unordered_map<uint32_t, LatObstacleDecisionType> output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
   SearchResult search_result_;
   ObstacleConsistencyMap obstacle_consistency_map_;
