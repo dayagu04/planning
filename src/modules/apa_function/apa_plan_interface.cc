@@ -79,7 +79,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // run planner
-  const auto& apa_state_machine = apa_world_ptr_->GetStateMachineManagerPtr();
+  const auto &apa_state_machine = apa_world_ptr_->GetStateMachineManagerPtr();
   bool planning_success = true;
   if (!apa_state_machine->IsHppCruise()) {
     scenario_manager_.UpdateScenarioType();
@@ -112,13 +112,16 @@ void ApaPlanInterface::AddReleasedSlotInfo(
 
   const std::vector<bool> &release_slot_narrow_flag_vec =
       apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotNarrowFlagVec();
-  const std::unordered_map<
-      size_t, std::pair<bool, int>> &perpendicular_redefine_info_map =
+
+  const std::unordered_map<size_t, int> &perpendicular_redefine_info_map =
       apa_world_ptr_->GetSlotManagerPtr()->GetPerpendicularRedefineInfoMap();
+
   const std::unordered_map<size_t, ApaSlot> &slots_map =
       apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
+
   std::string release_slot_id;
-  auto MappingSlotType = [](const ApaSlot &slot) -> iflyauto::ParkingSlotType {
+  const auto MappingSlotType =
+      [](const ApaSlot &slot) -> iflyauto::ParkingSlotType {
     switch (slot.GetType()) {
       case SlotType::PERPENDICULAR:
         return iflyauto::PARKING_SLOT_TYPE_VERTICAL;
@@ -132,22 +135,28 @@ void ApaPlanInterface::AddReleasedSlotInfo(
         return iflyauto::PARKING_SLOT_TYPE_INVALID;
     }
   };
+
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
     iflyauto::SuccessfulSlotsInfo slot_info;
     slot_info.id = static_cast<uint32>(release_slot_id_vec[i]);
     slot_info.is_narrow_slot = release_slot_narrow_flag_vec[i];
-    slot_info.slot_type = MappingSlotType(slots_map.at(slot_info.id));
+    if (slots_map.count(slot_info.id) == 0) {
+      continue;
+    }
+    const auto &slot = slots_map.at(slot_info.id);
+    slot_info.slot_type = MappingSlotType(slot);
     slot_info.target_slot_opening_line_midpoint.x =
-        slots_map.at(slot_info.id).origin_corner_coord_global_.pt_01_mid.x();
+        slot.origin_corner_coord_global_.pt_01_mid.x();
+
     slot_info.target_slot_opening_line_midpoint.y =
-        slots_map.at(slot_info.id).origin_corner_coord_global_.pt_01_mid.y();
-    if (perpendicular_redefine_info_map.find(slot_info.id) !=
-        perpendicular_redefine_info_map.end()) {
-      slot_info.is_redefine_slot_type =
-          perpendicular_redefine_info_map.at(slot_info.id).first;
+        slot.origin_corner_coord_global_.pt_01_mid.y();
+
+    if (perpendicular_redefine_info_map.count(slot_info.id) != 0) {
+      slot_info.is_redefine_slot_type = true;
     } else {
       slot_info.is_redefine_slot_type = false;
     }
+
     planning_output.successful_slot_info_list[i] = slot_info;
     planning_output.successful_slot_info_list_size++;
     release_slot_id.append(std::string("[") + std::to_string(slot_info.id) +
