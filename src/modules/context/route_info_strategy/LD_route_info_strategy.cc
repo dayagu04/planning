@@ -2855,7 +2855,13 @@ void LDRouteInfoStrategy::CalculateFrontMergePointInfo(double search_dis) {
     }
     const iflymapdata::sdpro::Lane* itera_lane = lane;
     double sum_dis = 0.0;
-    while(itera_lane) {
+    while (itera_lane) {
+      if (itera_lane->link_id() == current_link_->id()) {
+        sum_dis = sum_dis + itera_lane->length() * 0.01 - ego_on_cur_link_s_;
+      } else {
+        sum_dis = sum_dis + itera_lane->length() * 0.01;
+      }
+
       if (itera_lane->successor_lane_ids_size() > 1) {
         // 如果后继车道数大于1，说明道路拓扑有变化，不再考虑merge point的情况
         break;
@@ -2872,11 +2878,6 @@ void LDRouteInfoStrategy::CalculateFrontMergePointInfo(double search_dis) {
             itera_lane->link_id());
       }
 
-      if (itera_lane->link_id() == current_link_->id()) {
-        sum_dis = sum_dis + itera_lane->length() * 0.01 - ego_on_cur_link_s_;
-      } else {
-        sum_dis = sum_dis + itera_lane->length() * 0.01;
-      }
       if (sum_dis > search_dis) {
         break;
       }
