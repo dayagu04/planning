@@ -320,8 +320,6 @@ class LaneChangeStateMachineManager {
   const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
   const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
-  int next_target_front_agent_id_ = -1;
-  int next_target_rear_agent_id_ = -1; //调速选择的未来前车后车
   int last_target_rear_agent_id_ = -1;
   int last_merging_rear_agent_id_ = -1;
   int merging_rear_agent_id_ = -1;
