@@ -16,6 +16,7 @@
 #include "context/planning_context.h"
 #include "context/reference_path_manager.h"
 #include "math/line_segment2d.h"
+#include "utils/point_segment_utils.h"
 #include "trajectory/trajectory.h"
 #include "trajectory/trajectory_point.h"
 #include "vehicle_config_context.h"
@@ -153,77 +154,6 @@ planning_math::CollisionChecker CreateGroundLineCollisionChecker() {
   ego_model->set_expansion(0.0, 0.0);
   collision_checker.set_params(vehicle_param.rear_axle_to_center);
   return collision_checker;
-}
-
-std::vector<planning_math::Vec2d> DeduplicateHitPoints(
-    const std::vector<planning_math::Vec2d> &input) {
-  std::vector<planning_math::Vec2d> dedup_points;
-  dedup_points.reserve(input.size());
-  for (const auto &point : input) {
-    bool exists = false;
-    for (const auto &saved_point : dedup_points) {
-      const double dx = point.x() - saved_point.x();
-      const double dy = point.y() - saved_point.y();
-      if (dx * dx + dy * dy <=
-          kHitPointDedupDistance * kHitPointDedupDistance) {
-        exists = true;
-        break;
-      }
-    }
-    if (!exists) {
-      dedup_points.push_back(point);
-    }
-  }
-  return dedup_points;
-}
-
-std::vector<std::vector<planning_math::Vec2d>> SplitHitPointsToSegments(
-    const std::vector<planning_math::Vec2d> &ordered_points) {
-  std::vector<std::vector<planning_math::Vec2d>> segments;
-  if (ordered_points.empty()) {
-    return segments;
-  }
-  std::vector<planning_math::Vec2d> current_segment;
-  current_segment.push_back(ordered_points.front());
-  for (size_t i = 1; i < ordered_points.size(); ++i) {
-    const double dx = ordered_points[i].x() - ordered_points[i - 1].x();
-    const double dy = ordered_points[i].y() - ordered_points[i - 1].y();
-    const double dist = std::hypot(dx, dy);
-    if (dist > kHitSegmentSplitDistance && !current_segment.empty()) {
-      segments.push_back(current_segment);
-      current_segment.clear();
-    }
-    current_segment.push_back(ordered_points[i]);
-  }
-  if (!current_segment.empty()) {
-    segments.push_back(current_segment);
-  }
-  return segments;
-}
-
-std::vector<planning_math::Vec2d> SelectMainHitSegment(
-    const std::vector<std::vector<planning_math::Vec2d>> &segments,
-    const TrajectoryPoint &anchor_traj_point) {
-  if (segments.empty()) {
-    return {};
-  }
-  double best_dist_sq = std::numeric_limits<double>::max();
-  size_t best_index = 0;
-  for (size_t i = 0; i < segments.size(); ++i) {
-    if (segments[i].empty()) {
-      continue;
-    }
-    for (const auto &point : segments[i]) {
-      const double dx = point.x() - anchor_traj_point.x;
-      const double dy = point.y() - anchor_traj_point.y;
-      const double dist_sq = dx * dx + dy * dy;
-      if (dist_sq < best_dist_sq) {
-        best_dist_sq = dist_sq;
-        best_index = i;
-      }
-    }
-  }
-  return segments[best_index];
 }
 
 std::pair<planning_math::Vec2d, planning_math::Vec2d> FindFarthestPoints(
@@ -375,11 +305,12 @@ void HppObstaclePreprocessDecider::CreateVirtualAgentFromGroundLine(
   virtual_agent.set_fusion_source(OBSTACLE_SOURCE_CAMERA);
 
   // 1. 对碰撞点做去重和分段，优先保留离锚点轨迹最近的主碰撞段。
-  const auto unique_collision_points = DeduplicateHitPoints(hit_points);
-  const auto collision_segments =
-      SplitHitPointsToSegments(unique_collision_points);
+  const auto unique_collision_points =
+      DeduplicatePointsByDistance(hit_points, kHitPointDedupDistance);
+  const auto collision_segments = SplitPointsIntoSegmentsByGap(
+      unique_collision_points, kHitSegmentSplitDistance);
   const auto main_collision_segment =
-      SelectMainHitSegment(collision_segments, anchor_traj_point);
+      SelectClosestSegmentToAnchorPoint(collision_segments, anchor_traj_point);
   const auto &shape_points =
       main_collision_segment.empty() ? unique_collision_points
                                      : main_collision_segment;
