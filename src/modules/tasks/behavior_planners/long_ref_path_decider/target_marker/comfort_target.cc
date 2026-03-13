@@ -144,6 +144,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   auto mutable_lon_ref_path_decider_output =
       session_->mutable_planning_context()
           ->mutable_lon_ref_path_decider_output();
+  mutable_lon_ref_path_decider_output->is_follow_cipv = is_follow_cipv_;
   mutable_lon_ref_path_decider_output->is_lat_follow = is_lat_follow_;
   mutable_lon_ref_path_decider_output->is_lon_cutin = is_lon_cut_in_;
   mutable_lon_ref_path_decider_output->is_joint_danger = is_joint_danger_;
@@ -287,13 +288,20 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           ? parallel_longitudinal_avoid_output.parallel_target_agent_id()
           : -1;
 
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
+  int32_t cipv_id = cipv_info.cipv_id();
+  is_follow_cipv_ = (cipv_id != speed::kNoAgentId);
   if (st_graph) {
     for (size_t i = 0; i < plan_points_num_; i++) {
       const auto& upper_bound = st_graph->GetPassCorridorUpperBound(i * dt_);
       if (upper_bound.agent_id() != speed::kNoAgentId) {
         upper_bound_agent_ids_.insert(upper_bound.agent_id());
+        if (upper_bound.agent_id() != cipv_id) {
+          is_follow_cipv_ = false;
+        }
+      } else {
+        is_follow_cipv_ = false;
       }
-
       const auto& lower_bound = st_graph->GetPassCorridorLowerBound(i * dt_);
       if (lower_bound.agent_id() != speed::kNoAgentId) {
         lower_bound_agent_ids_.push_back(lower_bound.agent_id());

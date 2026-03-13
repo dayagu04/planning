@@ -112,5 +112,6 @@ class ComfortTarget : public Target {
   bool is_confluence_area_ = false;
   std::vector<double> comfort_jerk_min_vec_;
   std::vector<double> comfort_v_target_vec_;
+  bool is_follow_cipv_ = false;
 };
 }  // namespace planning

@@ -81,6 +81,21 @@ void FollowTarget::GenerateUpperBoundInfo() {
       upper_bound_infos_[i].st_boundary_id = upper_bound.boundary_id();
     }
   }
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+  if (lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
+      lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
+    for (size_t i = 0; i < plan_points_num_ &&
+                       i < lon_ref_path_decider_output
+                               .comfort_target_upper_bound_infos.size();
+         i++) {
+      const auto& comfort_upper_bound_info =
+          lon_ref_path_decider_output.comfort_target_upper_bound_infos[i];
+      upper_bound_infos_[i].s = comfort_upper_bound_info.s;
+      upper_bound_infos_[i].v = comfort_upper_bound_info.v;
+      upper_bound_infos_[i].agent_id = comfort_upper_bound_info.agent_id;
+    }
+  }
 }
 
 void FollowTarget::MakeMinFollowDistance() {
