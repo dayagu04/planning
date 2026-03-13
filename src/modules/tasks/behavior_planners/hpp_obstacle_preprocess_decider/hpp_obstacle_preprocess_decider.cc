@@ -12,8 +12,8 @@
 #include "common/tracked_object.h"
 #include "context/environmental_model.h"
 #include "context/obstacle.h"
+#include "context/obstacle_manager.h"
 #include "context/planning_context.h"
-#include "context/reference_path.h"
 #include "context/reference_path_manager.h"
 #include "math/line_segment2d.h"
 #include "trajectory/trajectory.h"
@@ -37,6 +37,11 @@ struct GroundLineFirstCollision {
   bool IsValid() const {
     return traj_point_index >= 0 && !collision_points.empty();
   }
+};
+
+struct GroundLineAgentCandidate {
+  int obstacle_id = -1;
+  GroundLineFirstCollision collision;
 };
 
 bool IsPointWithinRange(const Pose2D &traj_check_point,
@@ -77,6 +82,9 @@ GroundLineFirstCollision FindEarliestGroundLineCollisionOnTrajectory(
     if (!traj_pt.frenet_valid) {
       continue;
     }
+    if (traj_pt.s >= earliest_collision.collision_s_on_traj) {
+      break;
+    }
 
     // 1. 将当前轨迹点设置为碰撞检测时的自车位姿。
     Pose2D ego_pose;
@@ -107,8 +115,7 @@ GroundLineFirstCollision FindEarliestGroundLineCollisionOnTrajectory(
     }
 
     // 3. 只保留沿轨迹最早出现的有效碰撞结果。
-    if (collision_point_count <= kCollisionPointThreshold ||
-        traj_pt.s >= earliest_collision.collision_s_on_traj) {
+    if (collision_point_count <= kCollisionPointThreshold) {
       continue;
     }
 
@@ -128,6 +135,12 @@ bool HasNearbyGeneratedAgent(const std::vector<double> &generated_agent_s,
     }
   }
   return false;
+}
+
+bool CompareGroundLineAgentCandidateByCollisionS(
+    const GroundLineAgentCandidate &lhs,
+    const GroundLineAgentCandidate &rhs) {
+  return lhs.collision.collision_s_on_traj < rhs.collision.collision_s_on_traj;
 }
 
 planning_math::CollisionChecker CreateGroundLineCollisionChecker() {
@@ -259,7 +272,12 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
     return;
   }
 
-  const auto &ground_lines = reference_path->get_free_space_ground_lines();
+  const auto &obstacle_manager =
+      session_->environmental_model().get_obstacle_manager();
+  if (obstacle_manager == nullptr) {
+    return;
+  }
+  const auto &ground_lines = obstacle_manager->get_groundline_obstacles().Items();
   if (ground_lines.empty()) {
     return;
   }
@@ -283,8 +301,8 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
   const double collision_threshold = lon_config_.hpp_collision_threshold;
   auto collision_checker = CreateGroundLineCollisionChecker();
 
-  std::vector<double> generated_virtual_agent_s;
-  generated_virtual_agent_s.reserve(ground_lines.size());
+  std::vector<GroundLineAgentCandidate> ground_line_agent_candidates;
+  ground_line_agent_candidates.reserve(ground_lines.size());
 
   for (const auto &frenet_obstacle : frenet_obstacles) {
     // 1. 仅处理有效的 groundline frenet 障碍物。
@@ -307,18 +325,31 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
       continue;
     }
 
+    ground_line_agent_candidates.push_back(
+        {frenet_obstacle->id(), std::move(earliest_collision)});
+  }
+
+  std::sort(ground_line_agent_candidates.begin(),
+            ground_line_agent_candidates.end(),
+            CompareGroundLineAgentCandidateByCollisionS);
+
+  std::vector<double> generated_virtual_agent_s;
+  generated_virtual_agent_s.reserve(ground_line_agent_candidates.size());
+  for (const auto &ground_line_agent_candidate : ground_line_agent_candidates) {
     // 4. 避免在相近 s 位置重复生成 virtual agent。
-    if (HasNearbyGeneratedAgent(generated_virtual_agent_s,
-                                earliest_collision.collision_s_on_traj)) {
+    if (HasNearbyGeneratedAgent(
+            generated_virtual_agent_s,
+            ground_line_agent_candidate.collision.collision_s_on_traj)) {
       continue;
     }
 
     // 5. 基于碰撞点生成 virtual agent，直接复用对应 groundline 的 obstacle id。
     CreateVirtualAgentFromGroundLine(
-        earliest_collision.collision_points,
-        traj_points[earliest_collision.traj_point_index],
-        frenet_obstacle->id());
-    generated_virtual_agent_s.push_back(earliest_collision.collision_s_on_traj);
+        ground_line_agent_candidate.collision.collision_points,
+        traj_points[ground_line_agent_candidate.collision.traj_point_index],
+        ground_line_agent_candidate.obstacle_id);
+    generated_virtual_agent_s.push_back(
+        ground_line_agent_candidate.collision.collision_s_on_traj);
   }
 }
 
