@@ -122,7 +122,20 @@ double Interpolate(double x1, double y1, double x2, double y2, double x) {
   return y;
 }
 
+double ClampInterpolate(double x1, double y1, double x2, double y2, double x) {
+  auto ratio = (x2 - x) / (x2 - x1);
+  ratio = Clamp(ratio, 0.0, 1.0);
+  auto y = ratio * y1 + (1 - ratio) * y2;
+  return y;
+}
+
 double Interpolate(double y1, double y2, double ratio) {
+  auto y = ratio * y1 + (1 - ratio) * y2;
+  return y;
+}
+
+double ClampInterpolate(double y1, double y2, double ratio) {
+  ratio = Clamp(ratio, 0.0, 1.0);
   auto y = ratio * y1 + (1 - ratio) * y2;
   return y;
 }

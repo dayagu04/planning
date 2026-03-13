@@ -14,11 +14,12 @@
 #include "utils/kd_path.h"
 
 namespace planning {
-  struct ObstacleConsistencyInfo {
-    int count = 0;
-    LatObstacleDecisionType last_decision = LatObstacleDecisionType::IGNORE;
-    double last_seen_timestamp = 0.0;
-  };
+struct ObstacleConsistencyInfo {
+  int count = 0;
+  LatObstacleDecisionType last_decision = LatObstacleDecisionType::IGNORE;
+  double last_seen_timestamp = 0.0;
+};
+using ObstacleConsistencyMap = std::unordered_map<uint32_t, ObstacleConsistencyInfo>;
 
 class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
  public:
@@ -31,23 +32,65 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
  private:
   bool PreProcessObstacle(
-      ConstObstacleManagerPtr obstacle_manager_ptr,
       ConstReferencePathPtr reference_path_ptr,
-      MergedObstacleContainer &merged_obs_constainer,
-      const ObstacleClassificationResult &obs_classification_result);
+      ObstacleItemMap &obs_item_map,
+      ObstacleClusterContainer &obs_cluster_container,
+      ObstacleClassificationResult &obs_classification_result);
 
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
   bool ARAStar();
-
   bool CheckARAStarPath(const ara_star::HybridARAStarResult& result);
 
   void UpdateLatDecision(
-      const std::shared_ptr<ReferencePath> &reference_path_ptr);
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      const ObstacleConsistencyMap& obstacle_consistency_map,
+      const ObstacleClusterContainer& obs_cluster_container,
+      const ObstacleClassificationResult& obs_classification_result);
+
+  //辅助函数1：处理单个 Cluster 的决策逻辑
+  // 该函数被下面的函数替代
+  LatObstacleDecisionType MakeDecisionForSingleCluster(
+      const ObstacleCluster& cluster) ;
+
+  void MakeDecisionForStaticCluster(
+      const ObstacleCluster& cluster,
+      const ObstacleConsistencyMap& obstacle_consistency_map,
+      LatObstacleDecisionType& decision);
+
+  void MakeDecisionForDynamicCluster(
+      const ObstacleCluster& cluster,
+      const ObstacleConsistencyMap& obstacle_consistency_map,
+      LatObstacleDecisionType& decision);
+
+  void MakeDecisionBasedPassageWidth(const ObstacleCluster& cluster,
+                                     LatObstacleDecisionInfo& decision_info);
+
+  void MakeDecisionBasedRelativePos(const ObstacleCluster& cluster,
+                                    LatObstacleDecisionInfo& decision_info);
+
+  void MakeDecisionBasedLastPath(const ObstacleCluster& cluster,
+                                 LatObstacleDecisionInfo& decision_info);
+
+  void MakeFinalDecision(const ObstacleCluster& cluster,
+                         const ObstacleConsistencyMap& obstacle_consistency_map,
+                         LatObstacleDecisionInfo& passage_width_info,
+                         LatObstacleDecisionInfo& relative_pos_info,
+                         LatObstacleDecisionInfo& last_path_info,
+                         LatObstacleDecisionType& decision);
+
+  //辅助函数2：更新历史记录状态机
+  void UpdateClusterHistory(
+      const ObstacleCluster& cluster,
+      LatObstacleDecisionType decision,
+      double current_timestamp,
+      std::unordered_map<uint32_t, LatObstacleDecisionType>& lat_obstacle_decision);
+
   void ClearOldConsistencyInfo(
       const std::unordered_set<uint32_t>& current_frame_ids,
       double current_timestamp);
+
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
@@ -56,7 +99,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   std::unordered_map<uint32_t, LatObstacleDecisionType> output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
   SearchResult search_result_;
-  std::unordered_map<uint32_t, ObstacleConsistencyInfo> obstacle_consistency_map_;
+  ObstacleConsistencyMap obstacle_consistency_map_;
 };
 
 }  // namespace planning

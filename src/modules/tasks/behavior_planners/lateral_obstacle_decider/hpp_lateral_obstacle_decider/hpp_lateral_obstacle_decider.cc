@@ -1,4 +1,5 @@
 #include "hpp_lateral_obstacle_decider.h"
+#include "hpp_lateral_obstacle_utils.h"
 
 #include <algorithm>
 #include <array>
@@ -85,7 +86,23 @@ bool HppLateralObstacleDecider::Execute() {
       ->mutable_hybrid_ara_info()
       ->Clear();
 
-  bool enable_search = CheckEnableSearch(reference_path_ptr, search_result_);
+  // 1.在 A* 搜索前完成所有障碍物过滤与聚类预处理
+  ObstacleItemMap obs_item_map;
+  ObstacleClusterContainer obs_cluster_container;
+  ObstacleClassificationResult obs_classification_result;
+  PreProcessObstacle(reference_path_ptr, obs_item_map, obs_cluster_container, obs_classification_result);
+
+  // 2. 清理过期历史记录
+  double current_timestamp = IflyTime::Now_ms();
+  std::unordered_set<uint32_t> current_frame_ids;
+  for (const auto& pair : obs_item_map) current_frame_ids.insert(pair.first);
+  ClearOldConsistencyInfo(current_frame_ids, current_timestamp);
+
+  // 3. 检查是否需要启动 A* 搜索
+  bool enable_search = false;
+  if (!obs_item_map.empty()) {
+      enable_search = CheckEnableSearch(reference_path_ptr, search_result_);
+  }
 
   auto time1 = IflyTime::Now_ms();
   if (enable_search) {
@@ -101,24 +118,139 @@ bool HppLateralObstacleDecider::Execute() {
   JSON_DEBUG_VALUE("ARAStarTime", time2 - time1);
 
   if (search_result_ != SearchResult::SUCCESS) {
-    UpdateLatDecision(reference_path_ptr);
+    UpdateLatDecision(reference_path_ptr, obstacle_consistency_map_,
+                      obs_cluster_container, obs_classification_result);
+    Log(reference_path_ptr);
   } else {
     UpdateLatDecisionWithARAStar(reference_path_ptr);
   }
 
-  Log(reference_path_ptr);
-
   return true;
 }
 
-bool HppLateralObstacleDecider::PreProcessObstacle(
-    ConstObstacleManagerPtr obstacle_manager_ptr,
-    ConstReferencePathPtr reference_path_ptr,
-    MergedObstacleContainer &merged_obs_constainer,
+void HppLateralObstacleDecider::UpdateLatDecision(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr,
+    const ObstacleConsistencyMap& obstacle_consistency_map,
+    const ObstacleClusterContainer &obs_cluster_container,
     const ObstacleClassificationResult &obs_classification_result) {
-  return true;
+  auto &lat_obstacle_decision = session_->mutable_planning_context()
+                                    ->mutable_lateral_obstacle_decider_output()
+                                    .lat_obstacle_decision;
+  lat_obstacle_decision.clear();
+  double current_timestamp = IflyTime::Now_ms();
+
+  if (obs_cluster_container.obstacle_clusters.empty()) return;
+
+  for (const auto &cluster : obs_cluster_container.obstacle_clusters) {
+    if (cluster.motion_types.empty() || cluster.rel_pos_types.empty()) continue;
+
+    LatObstacleDecisionType decision = MakeDecisionForSingleCluster(cluster);
+
+    UpdateClusterHistory(cluster, decision, current_timestamp,
+                         lat_obstacle_decision);
+  }
 }
 
+LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
+    const ObstacleCluster& cluster) {
+
+    LatObstacleDecisionType decision = LatObstacleDecisionType::IGNORE;
+
+    // 迟滞参数配置
+    const double kBaseSideLock = 0.6;
+    const double kMaxHysteresisBuffer = 0.6;
+    const double kMaxCenterBuffer = 0.6;
+
+    bool is_static = cluster.motion_types.count(ObstacleMotionType::STATIC) > 0;
+    bool is_opposite_moving = cluster.motion_types.count(ObstacleMotionType::OPPOSITE_DIR_MOVING) > 0;
+    bool is_same_moving = cluster.motion_types.count(ObstacleMotionType::SAME_DIR_MOVING) > 0;
+
+    bool is_front = cluster.rel_pos_types.count(ObstacleRelPosType::MID_FRONT) > 0 ||
+                    cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_FRONT) > 0 ||
+                    cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_FRONT) > 0;
+
+    bool is_side_rear = cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_SIDE) > 0 ||
+                        cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_SIDE) > 0 ||
+                        cluster.rel_pos_types.count(ObstacleRelPosType::MID_BACK) > 0 ||
+                        cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_BACK) > 0 ||
+                        cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_BACK) > 0;
+
+    double current_l = (cluster.frenet_boundary.l_start + cluster.frenet_boundary.l_end) / 2.0;
+    double right_side = cluster.frenet_boundary.l_start;
+    double left_side = cluster.frenet_boundary.l_end;
+
+    if (is_static && is_front) {
+        ObstacleConsistencyInfo best_history;
+        int max_count = -1;
+        for (int obs_id : cluster.original_ids) {
+            auto it = obstacle_consistency_map_.find(obs_id);
+            if (it != obstacle_consistency_map_.end()) {
+                if (it->second.count > max_count) {
+                    max_count = it->second.count;
+                    best_history = it->second;
+                }
+            }
+        }
+
+        double growth_factor = 0.0;
+        if (best_history.last_decision == LatObstacleDecisionType::LEFT ||
+            best_history.last_decision == LatObstacleDecisionType::RIGHT) {
+            growth_factor = planning_math::ClampInterpolate(1.0, 3.0, 0.0, 1.0, static_cast<double>(best_history.count));
+        }
+
+        double dyn_side_threshold = kBaseSideLock + growth_factor * kMaxHysteresisBuffer;
+        double dyn_center_buffer = kMaxCenterBuffer * growth_factor;
+
+        bool treat_as_left = (current_l > 0.0);
+
+        if (best_history.count >= 2) {
+            if (best_history.last_decision == LatObstacleDecisionType::RIGHT) {
+                if (current_l > -dyn_center_buffer) treat_as_left = true;
+            } else if (best_history.last_decision == LatObstacleDecisionType::LEFT) {
+                if (current_l < dyn_center_buffer) treat_as_left = false;
+            }
+        }
+
+        if (treat_as_left) {
+            if (right_side > -dyn_side_threshold) decision = LatObstacleDecisionType::RIGHT;
+            else decision = LatObstacleDecisionType::IGNORE;
+        } else {
+            if (left_side < dyn_side_threshold) decision = LatObstacleDecisionType::LEFT;
+            else decision = LatObstacleDecisionType::IGNORE;
+        }
+    } else if (is_static && is_side_rear) {
+        if (current_l > 0) decision = LatObstacleDecisionType::RIGHT;
+        else decision = LatObstacleDecisionType::LEFT;
+    } else if (is_opposite_moving) {
+        if (current_l > 0) decision = LatObstacleDecisionType::RIGHT;
+        else decision = LatObstacleDecisionType::LEFT;
+    } else if (is_same_moving) {
+        if (current_l > 0) decision = LatObstacleDecisionType::RIGHT;
+        else decision = LatObstacleDecisionType::LEFT;
+    }
+
+    return decision;
+}
+
+void HppLateralObstacleDecider::UpdateClusterHistory(
+    const ObstacleCluster& cluster,
+    LatObstacleDecisionType decision,
+    double current_timestamp,
+    std::unordered_map<uint32_t, LatObstacleDecisionType>& lat_obstacle_decision) {
+
+    for (int obs_id : cluster.original_ids) {
+        auto& info = obstacle_consistency_map_[obs_id];
+        info.last_seen_timestamp = current_timestamp;
+
+        if (decision == info.last_decision) {
+            if (info.count < 100) info.count++;
+        } else {
+            info.count = 1;
+            info.last_decision = decision;
+        }
+        lat_obstacle_decision[obs_id] = info.last_decision;
+    }
+}
 bool HppLateralObstacleDecider::CheckEnableSearch(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
     const SearchResult search_result) {
@@ -189,199 +321,6 @@ bool HppLateralObstacleDecider::ARAStar() {
   return (find_path && hybrid_ara_result.Valid());
 }
 
-
-  bool CheckARAStarPath() {
-    return true;
-  }
-
-void HppLateralObstacleDecider::ClearOldConsistencyInfo(
-    const std::unordered_set<uint32_t>& current_frame_ids,
-    double current_timestamp) {
-
-    const double kMaxIdleTimeMs = 1000.0;
-
-    for (auto it = obstacle_consistency_map_.begin(); it != obstacle_consistency_map_.end(); ) {
-        uint32_t obs_id = it->first;
-
-        if (current_frame_ids.find(obs_id) != current_frame_ids.end()) {
-            it->second.last_seen_timestamp = current_timestamp;
-            ++it;
-        } else {
-            double idle_time = current_timestamp - it->second.last_seen_timestamp;
-            if (idle_time > kMaxIdleTimeMs) {
-                it = obstacle_consistency_map_.erase(it);
-            } else {
-                ++it;
-            }
-        }
-    }
-}
-
-void HppLateralObstacleDecider::UpdateLatDecision(
-    const std::shared_ptr<ReferencePath> &reference_path_ptr) {
-  const auto &reference_path = session_->planning_context()
-                                   .lane_change_decider_output()
-                                   .coarse_planning_info.reference_path;
-  auto ego_l_max = reference_path->get_frenet_ego_state().boundary().l_end;
-  auto ego_l_min = reference_path->get_frenet_ego_state().boundary().l_start;
-  auto ego_head_l = reference_path_ptr->get_frenet_ego_state().head_l();
-  auto ego_head_s_ = reference_path_ptr->get_frenet_ego_state().head_s();
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto half_ego_width = vehicle_param.width * 0.5;
-  auto &lat_obstacle_decision = session_->mutable_planning_context()
-                                    ->mutable_lateral_obstacle_decider_output()
-                                    .lat_obstacle_decision;
-  lat_obstacle_decision.clear();
-
-  double current_timestamp = IflyTime::Now_ms();
-
-  std::unordered_set<uint32_t> current_frame_obstacle_ids;
-  for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
-    if (obstacle->b_frenet_valid()) {
-      current_frame_obstacle_ids.insert(static_cast<uint32_t>(obstacle->id()));
-    }
-  }
-
-  // 执行延时清理
-  ClearOldConsistencyInfo(current_frame_obstacle_ids, current_timestamp);
-
-  constexpr double kNearFrontThreshold = 7;
-  constexpr double kHeadLBuffer = 0.5;
-  constexpr double kMaxHysteresisBuffer = 0.6; // 最大迟滞缓冲 (米)
-  constexpr double kMaxSideLockDist = 0.6;     // 最大侧向锁定距离 (米)
-
-  // 主循环：进行决策计算
-  for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-    if (obstacle->b_frenet_valid()) {
-      uint32_t obs_id = static_cast<uint32_t>(obstacle->id());
-      auto& info = obstacle_consistency_map_[obs_id];
-      info.last_seen_timestamp = current_timestamp;
-
-      if (EdtManager::FilterObstacleForAra(*obstacle)) {
-        double left_l_base = config_.left_l_buffer_for_lat_decision;
-        double right_l_base = config_.right_l_buffer_for_lat_decision;
-        double growth_factor = 0.0;
-        if (info.last_decision == LatObstacleDecisionType::LEFT ||
-            info.last_decision == LatObstacleDecisionType::RIGHT) {
-            growth_factor = (info.count <= 1) ? 0.0 : (info.count >= 3) ? 1.0 : 0.5;
-        }
-
-        double current_side_lock_threshold = growth_factor * kMaxSideLockDist;
-        bool treat_as_left_obstacle = (obstacle->frenet_l() > 0);
-        if (info.count >= 2) {
-            if (info.last_decision == LatObstacleDecisionType::RIGHT) {
-                if (obstacle->frenet_l() > -current_side_lock_threshold) {
-                    treat_as_left_obstacle = true;
-                }
-            } else if (info.last_decision == LatObstacleDecisionType::LEFT) {
-                if (obstacle->frenet_l() < current_side_lock_threshold) {
-                    treat_as_left_obstacle = false;
-                }
-            }
-        }
-        const double obstacle_l_start = obstacle->frenet_obstacle_boundary().l_start;
-        const double obstacle_l_end = obstacle->frenet_obstacle_boundary().l_end;
-        const double obstacle_s_start = obstacle->frenet_obstacle_boundary().s_start;
-        const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
-
-        double l_bonus = growth_factor * kMaxHysteresisBuffer;
-        double l_total = (treat_as_left_obstacle ? right_l_base : left_l_base) + l_bonus;
-
-        const double ego_head_l_start = ego_head_l - half_ego_width;
-        const double ego_head_l_end = ego_head_l + half_ego_width;
-        const double ego_s_start = reference_path_ptr->get_frenet_ego_state().boundary().s_start;
-        const double ego_s_end = reference_path_ptr->get_frenet_ego_state().boundary().s_end;
-
-        double start_s = std::max(ego_s_start, obstacle_s_start);
-        double end_s = std::min(ego_s_end, obstacle_s_end);
-        bool lon_overlap = start_s < end_s;
-
-        if (lon_overlap) {
-          // 平行车辆逻辑
-          ego_head_l = reference_path_ptr->get_frenet_ego_state().head_l();
-          double ego_l = reference_path_ptr->get_frenet_ego_state().l();
-          const double ego_l_start = ego_l - half_ego_width;
-          const double ego_l_end = ego_l + half_ego_width;
-          double start_l = std::max(ego_l_start, obstacle_l_start);
-          double end_l = std::min(ego_l_end, obstacle_l_end);
-          double start_head_l = std::max(ego_head_l_start, obstacle_l_start);
-          double end_head_l = std::min(ego_head_l_end, obstacle_l_end);
-          constexpr double kLatOverlapBuffer = 0.25;
-          bool lat_overlap = (start_l < end_l - kLatOverlapBuffer) &&
-                             (start_head_l < end_head_l - kLatOverlapBuffer);
-          if (ego_s_end > obstacle_s_end) {
-            if (ego_l < obstacle->frenet_l()) {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::RIGHT;
-            } else {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::LEFT;
-            }
-          } else {
-            if (ego_head_l < obstacle->frenet_l()) {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::RIGHT;
-            } else {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::LEFT;
-            }
-          }
-          if (lat_overlap) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::IGNORE;
-          }
-        } else {
-          if (treat_as_left_obstacle) {
-            // 左侧障碍物
-            if (obstacle_l_start > -l_total) {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::RIGHT;
-            } else {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::IGNORE;
-            }
-          } else {
-            // 右侧障碍物
-            if (obstacle_l_end < l_total) {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::LEFT;
-            } else {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::IGNORE;
-            }
-          }
-          if (obstacle_s_start > ego_head_s_ &&
-              obstacle_s_start < ego_head_s_ + kNearFrontThreshold) {
-            if (ego_head_l_start > obstacle_l_end - kHeadLBuffer) {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::LEFT;
-            } else if (ego_head_l_end < obstacle_l_start + kHeadLBuffer) {
-              lat_obstacle_decision[obstacle->id()] =
-                  LatObstacleDecisionType::RIGHT;
-            }
-          }
-        }
-      } else {
-        lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
-      }
-      // 更新历史一致性状态
-      LatObstacleDecisionType current_decision = lat_obstacle_decision[obstacle->id()];
-      if (current_decision == info.last_decision) {
-          if (info.count < 100) { // 防止溢出
-              info.count++;
-          }
-      } else {
-          info.count = 1;
-          info.last_decision = current_decision;
-      }
-
-    } else {
-      lat_obstacle_decision[static_cast<uint32_t>(obstacle->id())] = LatObstacleDecisionType::IGNORE;
-    }
-  }
-}
-
 void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
   auto &hybrid_ara_result = session_->mutable_planning_context()
@@ -415,8 +354,7 @@ void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
           l_ara = l_s_spline(obstacle->frenet_s());
         }
         if (obstacle->frenet_l() > l_ara) {
-          lat_obstacle_decision[obstacle->id()] =
-              LatObstacleDecisionType::RIGHT;
+          lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::RIGHT;
         } else {
           lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::LEFT;
         }
@@ -429,6 +367,61 @@ void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
   }
 }
 
+void HppLateralObstacleDecider::ClearOldConsistencyInfo(
+    const std::unordered_set<uint32_t>& current_frame_ids,
+    double current_timestamp) {
+
+    const double kMaxIdleTimeMs = 1000.0;
+    for (auto it = obstacle_consistency_map_.begin(); it != obstacle_consistency_map_.end(); ) {
+        uint32_t obs_id = it->first;
+        if (current_frame_ids.find(obs_id) != current_frame_ids.end()) {
+            it->second.last_seen_timestamp = current_timestamp;
+            ++it;
+        } else {
+            double idle_time = current_timestamp - it->second.last_seen_timestamp;
+            if (idle_time > kMaxIdleTimeMs) {
+                it = obstacle_consistency_map_.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+}
+
+bool HppLateralObstacleDecider::PreProcessObstacle(
+    ConstReferencePathPtr reference_path_ptr,
+    ObstacleItemMap &obs_item_map,
+    ObstacleClusterContainer &obs_cluster_container,
+    ObstacleClassificationResult &obs_classification_result) {
+    // 1. 障碍物过滤
+    if (!HppLateralObstacleUtils::GenerateObstaclesToBeConsidered(
+            reference_path_ptr, obs_item_map)) {
+        return false;
+    }
+
+    // 2. 障碍物分类
+    const auto &ego_state = reference_path_ptr->get_frenet_ego_state();
+    if (!HppLateralObstacleUtils::ClassifyObstacles(
+            obs_item_map, ego_state, obs_classification_result)) {
+        return false;
+    }
+
+    // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
+    if (!HppLateralObstacleUtils::ClusterObstacles(
+            obs_item_map, obs_classification_result, obs_cluster_container)) {
+        return false;
+    }
+
+    // 对聚类结果进行排序
+    std::sort(obs_cluster_container.obstacle_clusters.begin(),
+              obs_cluster_container.obstacle_clusters.end(),
+              [](const ObstacleCluster &a, const ObstacleCluster &b) {
+                return a.frenet_boundary.s_start < b.frenet_boundary.s_start;
+              });
+
+    return true;
+}
+
 void HppLateralObstacleDecider::Log(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
 #ifdef ENABLE_PROTO_LOG
@@ -436,9 +429,11 @@ void HppLateralObstacleDecider::Log(
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->clear_obstacle();
+
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
+
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     // log
     planning::common::Obstacle *obstacle_log =
@@ -450,6 +445,7 @@ void HppLateralObstacleDecider::Log(
         static_cast<uint32_t>(lat_obstacle_decision[obstacle->id()]));
     obstacle_log->set_vs_lat_relative(obstacle->frenet_velocity_l());
     obstacle_log->set_vs_lon_relative(obstacle->frenet_velocity_s());
+
     if (obstacle->source_type() == SourceType::GroundLine ||
         obstacle->source_type() == SourceType::OCC ||
         obstacle->source_type() == SourceType::OD ||

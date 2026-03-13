@@ -3,69 +3,140 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <unordered_set>
+#include <limits>
 #include "modules/context/obstacle.h"
 #include "modules/context/frenet_obstacle.h"
 #include "modules/context/reference_path.h"
 #include "modules/context/obstacle_manager.h"
 
 namespace planning {
-  // FrenetObstacle 中包含 Obstacle 的指针
-  using ObstacleItemMap = std::unordered_map<int, FrenetObstaclePtr>;
+// FrenetObstacle 中包含 Obstacle 的指针
+using ObstacleItemMap = std::unordered_map<int, FrenetObstaclePtr>;
 
-  struct MergedObstacleInfo {
-    int merged_obs_id;
-    std::vector<int> obstacle_ids;
-    planning_math::Box2d box;
-    planning_math::Polygon2d polygon;
-    FrenetObstacleBoundary sl_boundary;
-    std::vector<planning_math::Vec2d> sl_corner_points;
-  };
+/************** 障碍物分类相关定义 ************ */
+// 障碍物当前时刻相对于自车的位置关系
+enum class ObstacleRelPosType : uint8_t {
+  FAR_AWAY = 0,  // 远离自车障碍物
+  MID_FRONT,     // 自车正前方
+  LEFT_FRONT,    // 自车左前方
+  RIGHT_FRONT,   // 自车右前方
+  LEFT_SIDE,     // 自车左侧并排
+  RIGHT_SIDE,    // 自车右侧并排
+  MID_BACK,      // 自车正后方
+  LEFT_BACK,     // 自车左后方
+  RIGHT_BACK,    // 自车右后方
+};
 
-  enum class ObstacleClassificationType:uint8_t {
-    FRONT_STATIC_OBS = 0,       //前方静止障碍物
-    SIDE_STATIC_OBS = 1,        //侧方静止障碍物
-    OPPOSITE_MOVING_OBS = 2,    //对向行驶障碍物
-    FRONT_SAME_MOVING_OBS = 3,  //前方同向行驶障碍物
-    BACK_SAME_MOVING_OBS = 4,   //后方同向行驶障碍物
-  };
+enum class ObstacleMotionType : uint8_t {
+  STATIC = 0,           // 静止车辆
+  OPPOSITE_DIR_MOVING,  // 对向运动
+  SAME_DIR_MOVING,      // 同向运动
+  CROSSING_MOVING,      // 横穿运动
+};
 
-  struct MergedObstacleContainer {
-    std::unordered_map<int, int> obs_id_to_merged_obs_id;
-    std::vector<MergedObstacleInfo> merged_obstacles;     // 合并后的障碍物尺寸信息
+struct ObstacleClassificationResult {
+  void Clear() {
+    rel_pos_type_to_ids.clear();
+    motion_type_to_ids.clear();
+    id_to_rel_pos_type.clear();
+    id_to_motion_type.clear();
+  }
 
-  };
+  std::unordered_map<ObstacleRelPosType, std::vector<int>> rel_pos_type_to_ids;
+  std::unordered_map<ObstacleMotionType, std::vector<int>> motion_type_to_ids;
+  std::unordered_map<int, ObstacleRelPosType> id_to_rel_pos_type;
+  std::unordered_map<int, ObstacleMotionType> id_to_motion_type;
+};
 
-  struct ObstacleClassificationResult {
-    std::unordered_map<ObstacleClassificationType, std::vector<int>> type_to_merged_obs_list;
-    std::unordered_map<int, ObstacleClassificationType> merged_obs_id_to_type;
-  };
+/************** 障碍物合并相关定义 ************ */
+enum class ObstacleClusterType : uint8_t {
+  NO_MERGE = 0,   // 不合并
+  ABS_MERGE = 1,  // 绝对距离太近合并
+  LAT_MERGE = 2,  // 横向距离太近合并
+  LON_MERGE = 3   // 纵向距离太近合并
+};
+using ObstacleClusterMap = std::unordered_map<int, ObstacleClusterType>;
+using ObstacleClusterGraph = std::unordered_map<int, ObstacleClusterMap>;
 
-  class HppLateralObstacleUtils {
-   public:
-    // 障碍物过滤，并转换成 ObstacleItemMap 格式
-    static bool GenerateObstaclesToBeConsidered(
-        ConstObstacleManagerPtr obstacle_manager_ptr,
-        ConstReferencePathPtr reference_path_ptr,
-        ObstacleItemMap& obs_item_map);
+struct ObstacleClusterCandicate {
+  int origin_id;
+  ObstacleRelPosType rel_pos_types;  // 合并后的障碍物位置类型
+  ObstacleMotionType motion_type;  // 合并后的障碍物运动类型
+};
 
-    // 基于障碍物位置关系合并障碍物
-    static bool MergeObstaclesBaseOnPos(
-        const ObstacleItemMap& obs_item_map,
-        MergedObstacleContainer& merged_obs_constainer);
+struct ObstacleCluster {
+  // 【结构体初始化规范】：在此统一初始化极大极小值防合并错误
+  ObstacleCluster() {
+    frenet_boundary.l_start = std::numeric_limits<double>::max();
+    frenet_boundary.l_end = std::numeric_limits<double>::lowest();
+    frenet_boundary.s_start = std::numeric_limits<double>::max();
+    frenet_boundary.s_end = std::numeric_limits<double>::lowest();
+  }
 
-    // 基于障碍物位置和运动属性，对障碍物分类
-    static bool ClassifyObstacles(
-        const MergedObstacleContainer& merged_obs_constainer,
-        ObstacleClassificationResult& obs_classification_result);
+  int cluster_id;
+  std::vector<int> original_ids;
+  std::unordered_set<ObstacleRelPosType> rel_pos_types;
+  std::unordered_set<ObstacleMotionType> motion_types;
+  std::unordered_set<ObstacleClusterType> cluster_types;
+  FrenetObstacleBoundary frenet_boundary;
+  planning_math::Box2d bounding_box;
+  planning_math::Polygon2d polygon;
+  std::vector<planning_math::Vec2d> perception_points;
+};
 
-    // 对运动障碍物进行避让（会车/被超车）、跟车、超车
-    static bool MakeDecisionForMovingObstacles(
-        const MergedObstacleContainer& merged_obs_constainer,
-        const ObstacleClassificationResult&
-            obs_classification_result /*TODO: 输出数据结构待定*/);
+struct ObstacleClusterContainer {
+  std::unordered_map<int, int> obs_id_to_cluster_id;  // 原始ID -> 聚类ID
+  std::vector<ObstacleCluster> obstacle_clusters;     // 聚类列表
+};
 
-    // 基于障碍物在 frenet 坐标系下的 start_s 进行增序排序
-    static bool SortMergedObstacles(
-        MergedObstacleContainer& merged_obs_contanier);
-  };
+/************** 障碍物处理操作类定义 ************ */
+class HppLateralObstacleUtils {
+ public:
+  HppLateralObstacleUtils() = delete;
+
+  // 1. 障碍物过滤
+  static bool GenerateObstaclesToBeConsidered(
+      ConstReferencePathPtr reference_path_ptr, ObstacleItemMap& obs_item_map);
+
+  // 2. 障碍物分类
+  static bool ClassifyObstacles(
+      const ObstacleItemMap& obs_item_map, const FrenetEgoState& ego_state,
+      ObstacleClassificationResult& classification_result);
+
+  // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
+  static bool ClusterObstacles(
+      const ObstacleItemMap& obs_item_map,
+      const ObstacleClassificationResult& classification_result,
+      ObstacleClusterContainer& obstacle_cluster_constainer);
+
+ private:
+  /************** 障碍物分类相关私有函数定义 ************ */
+  static ObstacleRelPosType ClassifyObstaclesByRelPos(
+      const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr);
+
+  static ObstacleMotionType ClassifyObstaclesByMotion(
+      const FrenetObstaclePtr& obs_ptr);
+
+  /************** 障碍物合并相关私有函数定义 ************ */
+  static bool GenerateClusterCandicates(
+      const ObstacleItemMap& obs_item_map,
+      const ObstacleClassificationResult& classification_result,
+      std::vector<ObstacleClusterCandicate>& cluster_candidates);
+  static bool CalculateCandidateClusterGraph(
+      const ObstacleItemMap& obs_item_map,
+      const std::vector<ObstacleClusterCandicate>& cluster_candidates,
+      ObstacleClusterGraph& cluster_graph);
+
+  static bool DFSGenerateObstacleClusters(
+      const std::vector<ObstacleClusterCandicate>& cluster_candidates,
+      const ObstacleClusterGraph& cluster_graph, const int curr_idx,
+      const ObstacleClusterType cluster_type,
+      std::unordered_set<int>& visited_candidate_idxs,
+      ObstacleCluster& obstacle_cluster);
+
+  static bool BuildObstacleClusterConvexHull(
+      const ObstacleItemMap& obs_item_map, ObstacleCluster& obstacle_cluster);
+};
+
 }  // namespace planning
