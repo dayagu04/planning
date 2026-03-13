@@ -220,6 +220,10 @@ class EgoLaneTrackManger {
       const std::unordered_map<int, std::shared_ptr<VirtualLane>>
           &virtual_id_mapped_lane);
 
+  void CheckIfConsiderSecondSplit(
+      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      bool& is_consider_second_split);
+
  private:
   planning::framework::Session *session_ = nullptr;
   EgoPlanningConfig config_;
@@ -266,6 +270,7 @@ class EgoLaneTrackManger {
   bool ego_in_split_region_ = false;
   std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
+  const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
 };
 
 }  // namespace planning
