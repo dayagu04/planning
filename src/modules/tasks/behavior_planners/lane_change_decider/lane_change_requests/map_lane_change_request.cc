@@ -94,15 +94,21 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     return false;
   }
 
-  if (route_info_output.is_on_ramp) {
+  bool is_baidu_map = session_->environmental_model()
+                          .get_local_view()
+                          .sdpro_map_info.data_source() ==
+                      iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD;
+
+  if (route_info_output.is_on_ramp && is_baidu_map) {
     bool is_triggle_mlc_for_merge_split =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             MERGE_SCENE ||
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             SPLIT_SCENE;
 
-    if (IsCurveSurpressLaneChange() && is_triggle_mlc_for_merge_split) {
-      const double dis_to_last_lc_point = 16.7 * 6; //一次换道时间
+    if (IsCurveSurpressLaneChange() && is_triggle_mlc_for_merge_split &&
+        is_baidu_map) {
+      const double dis_to_last_lc_point = 16.7 * 6;  // 一次换道时间
       if (route_info_output.mlc_decider_scene_type_info
               .dis_to_link_topo_change_point > dis_to_last_lc_point) {
         return false;
