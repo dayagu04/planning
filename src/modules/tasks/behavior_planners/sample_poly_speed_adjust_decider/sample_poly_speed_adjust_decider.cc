@@ -1273,10 +1273,10 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
     return false;
   }
   state_limit_lower_ = {
-      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
+      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
       -2.0, 1.2, -2.5, 2.5};
   StateLimit state_limit_lower = {
-  0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
+  0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
   -1.5, 1.2, -1.5, 2.5};
   UniformJerkCurve jerk_curve(state_limit_lower, lon_state_, false);
   auto arrived_s = jerk_curve.arrived_s();
@@ -1368,8 +1368,8 @@ bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);
   STNode start_node(0.0, 0.0, ego_v_, ego_a_);
   state_limit_upper_ = {
-      0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
-      0.0,  std::fmin(v_adjust_speed_limit_ * 1.1, 120.0 / 3.6),
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
       -2.0, 1.2,
       -2.5, 2.5};
   double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_

@@ -18,9 +18,12 @@ LongitudinalAStar::LongitudinalAStar(
       rear_edge_to_rear_axle_(rear_edge_to_rear_axle),
       ego_s_(ego_s),
       config_(config) {
-  //       state_limit_lower_.v_max = 120 / 3.6;
-  // state_limit_upper_.v_max = 120 / 3.6;
-  // state_limit_upper_.v_end = 120/3.6;
+  max_velocity_ = state_limit_upper_.v_max;
+  min_velocity_ = state_limit_upper_.v_min;
+  max_accel_ = state_limit_upper_.a_max;
+  min_accel_ = state_limit_upper_.a_min;
+  max_jerk_ = state_limit_upper_.j_max;
+  min_jerk_ = state_limit_upper_.j_min;
   CalculateHCost(start_node_);
   PlanTrajectory();
 }
@@ -102,7 +105,7 @@ std::vector<STNode> LongitudinalAStar::GenerateChildren(
   // 0.10};
   // int search_range_index =
   //     int((search_range.second - search_range.first) / DISTANCE_STEP) + 1;
-  int search_range_index = (MAX_ACCEL - MIN_ACCEL) / ACC_STEP;
+  int search_range_index = (max_accel_ - min_accel_) / ACC_STEP;
   for (int i = 0; i <= search_range_index; i++) {
     // double child_s = i != search_range_index
     //                      ? search_range.first + i * DISTANCE_STEP
@@ -110,9 +113,9 @@ std::vector<STNode> LongitudinalAStar::GenerateChildren(
     // if (child_s < 0.0) {
     //   continue;
     // }
-    double child_acc = MIN_ACCEL + i * ACC_STEP;
+    double child_acc = min_accel_ + i * ACC_STEP;
     double child_jerk = (child_acc - parent_node->a) / time_step;
-    if (child_jerk > MAX_JERK || child_jerk < MIN_JERK) {
+    if (child_jerk > max_jerk_ || child_jerk < min_jerk_) {
       continue;
     }
     auto node_ptr = std::make_shared<STNode>(child_t, 0.0, 0.0, child_acc,child_jerk);
@@ -146,8 +149,8 @@ std::vector<STNode> LongitudinalAStar::GenerateChildren(
 }
 
 bool LongitudinalAStar::IsValidMotion(double v, double a) const {
-  return (v > MIN_VELOCITY - kZeroEpsilon && v < MAX_VELOCITY + kZeroEpsilon) &&
-         (a > MIN_ACCEL - kZeroEpsilon && a < MAX_ACCEL + kZeroEpsilon);
+  return (v > min_velocity_ - kZeroEpsilon && v < max_velocity_ + kZeroEpsilon) &&
+         (a > min_accel_ - kZeroEpsilon && a < max_accel_ + kZeroEpsilon);
 }
 
 bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
@@ -366,7 +369,7 @@ bool LongitudinalAStar::CalcChildParam(const std::shared_ptr<STNode>& parent,
   node->s =
       parent->s + parent->v * delta_t + 0.5 * parent->a * delta_t * delta_t +
       node->jerk * delta_t * delta_t * delta_t / 6.0;
-  if(node->s < 0.0 || node->v < MIN_VELOCITY || node->v > MAX_VELOCITY) {
+  if(node->s < 0.0 || node->v < min_velocity_ || node->v > max_velocity_) {
     return false;
   }
   return true;
