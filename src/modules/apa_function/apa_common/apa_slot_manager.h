@@ -305,7 +305,7 @@ class ApaSlotManager final {
   bool is_ego_col_parallel_ = false;
   std::unordered_map<size_t, int> parallel_slot_release_count_map_;
   std::unordered_map<size_t, int> parallel_slot_not_release_count_map_;
-  std::unordered_map<size_t, std::pair<bool,int>> perpendicular_redefine_info_map_;
+  std::unordered_map<size_t, int> perpendicular_redefine_info_map_;
   bool recommend_park_out_ = false;
 };
 }  // namespace apa_planner
