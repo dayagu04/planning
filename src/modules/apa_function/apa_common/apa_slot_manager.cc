@@ -185,7 +185,8 @@ void ApaSlotManager::Update(
             SlotReleaseState::NOT_RELEASE;
       }
     }
-    if (state_machine_ptr_->IsSearchingInStatus()) {
+    if (state_machine_ptr_->IsSearchingInStatus() ||
+        state_machine_ptr_->IsManualStatus()) {
       if (measure_data_ptr->GetFoldMirrorFlag()) {
         col_det_interface_ptr_->Init(true);
       } else {
