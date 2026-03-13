@@ -1365,7 +1365,6 @@ void EgoLaneTrackManger::CheckIfConsiderSecondSplit(
   const auto& ld_map =
       session_->environmental_model().get_route_info()->get_sdpro_map();
 
-
   auto const& split_region_info_list =
       route_info_output.map_split_region_info_list;
   double const ego_on_cur_link_s = current_segment_passed_distance_;
@@ -1416,8 +1415,7 @@ void EgoLaneTrackManger::CheckIfConsiderSecondSplit(
 
     for (uint64 lane_id : lanes_to_split_link) {
       auto* lane_ptr = ld_map.GetLaneInfoByID(lane_id);
-      if (nullptr == lane_ptr)
-      {
+      if (nullptr == lane_ptr) {
         is_consider_second_split = false;
         return;
       }
@@ -1436,30 +1434,28 @@ void EgoLaneTrackManger::CheckIfConsiderSecondSplit(
     for (uint64 lane_id : tmp_lanes_on_route) {
       auto* lane_ptr = ld_map.GetLaneInfoByID(lane_id);
 
-      if (nullptr == lane_ptr)
-      {
+      if (nullptr == lane_ptr) {
         is_consider_second_split = false;
         return;
       }
 
-      for (uint64 suc_lane_id : lane_ptr->successor_lane_ids())
-      {
+      for (uint64 suc_lane_id : lane_ptr->successor_lane_ids()) {
         if (lanes_to_split_link.end() == std::find(lanes_to_split_link.begin(),
-                                             lanes_to_split_link.end(),
-                                             suc_lane_id)) {
+                                                   lanes_to_split_link.end(),
+                                                   suc_lane_id)) {
           all_pre_lane_lead_to_split_link = false;
           break;
         }
       }
     }
 
-    if (!all_pre_lane_lead_to_split_link)
-    {
+    if (!all_pre_lane_lead_to_split_link) {
       lanes_to_split_link.clear();
       break;
     }
     lanes_to_split_link.clear();
-    lanes_to_split_link.assign(tmp_lanes_on_route.begin(), tmp_lanes_on_route.end());
+    lanes_to_split_link.assign(tmp_lanes_on_route.begin(),
+                               tmp_lanes_on_route.end());
 
   } while (!lanes_to_split_link.empty() && link_id != current_link_->id() &&
            loop_num < 100);
@@ -1498,10 +1494,10 @@ void EgoLaneTrackManger::CheckIfConsiderSecondSplit(
     }
   }
 
-  int const total_lane_nums = current_link_->lane_ids_size() - invalid_seq.size();
+  int const total_lane_nums =
+      current_link_->lane_ids_size() - invalid_seq.size();
 
-  for (uint64 const lane_id : lanes_to_split_link)
-  {
+  for (uint64 const lane_id : lanes_to_split_link) {
     auto const* lane_ptr = ld_map.GetLaneInfoByID(lane_id);
 
     size_t const invalid_num = std::count_if(
@@ -1519,8 +1515,7 @@ void EgoLaneTrackManger::CheckIfConsiderSecondSplit(
         return nullptr != virtual_lane && 0 == virtual_lane->get_relative_id();
       });
 
-  if (relative_id_lanes.end() == find_relative_lanes)
-  {
+  if (relative_id_lanes.end() == find_relative_lanes) {
     is_consider_second_split = false;
     return;
   }
@@ -1614,9 +1609,11 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   CheckIfConsiderSecondSplit(relative_id_lanes, need_consider_second_split);
 
   if ((!need_consider_second_split && last_zero_relative_id_nums_ > 1 &&
-      (ramp_split_select_is_finish_ || road_split_select_is_finish_) &&
-      ego_distance_to_lane_merge_split_point < surpress_select_lane_dis_to_split) ||
-      ego_distance_to_lane_merge_split_point < surpress_lane_change_dis_to_detect_split) {
+       (ramp_split_select_is_finish_ || road_split_select_is_finish_) &&
+       ego_distance_to_lane_merge_split_point <
+           surpress_select_lane_dis_to_split) ||
+      ego_distance_to_lane_merge_split_point <
+          surpress_lane_change_dis_to_detect_split) {
     ILOG_DEBUG << "PreprocessRampSplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
