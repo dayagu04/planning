@@ -2370,17 +2370,49 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     }
   }
 
-  const bool increase_lat_err_flag =
-      (frame_.mirror_command == MirrorCommand::NONE) &&
-      ((frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
-        ego_info_under_slot.cur_pose.pos.x() >
-            ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
-                2.168) ||
-       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-        frame_.slot_jump_big_flag) ||
-       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()));
+  bool increase_lat_err_flag = false;
+  do {
+    if (frame_.mirror_command == MirrorCommand::NONE) {
+      break;
+    }
+
+    uint8_t ref_gear =
+        scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN
+            ? geometry_lib::SEG_GEAR_REVERSE
+            : geometry_lib::SEG_GEAR_DRIVE;
+
+    if (frame_.gear_command == ref_gear &
+            ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+        frame_.slot_jump_big_flag) {
+      increase_lat_err_flag = true;
+      break;
+    }
+
+    if (frame_.gear_command == ref_gear &&
+        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
+      increase_lat_err_flag = true;
+      break;
+    }
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+      if (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
+          ego_info_under_slot.cur_pose.pos.x() >
+              ego_info_under_slot.slot.GetOriginCornerCoordLocal()
+                      .pt_01_mid.x() +
+                  2.168) {
+        increase_lat_err_flag = true;
+        break;
+      }
+    }
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      if (ego_info_under_slot.slot_occupied_ratio < 1e-4) {
+        increase_lat_err_flag = true;
+        break;
+      }
+    }
+
+  } while (false);
 
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
