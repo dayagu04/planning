@@ -404,27 +404,27 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   velocity_ = 0.0;
   acc_ = 0.0;
   fusion_source_ = 1;
-  if (id_ > 10000000) {  // intersection
+  if (id_ >= 10000000) {  // intersection
     type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;
     source_type_ = SourceType::RoadFusion;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
-  } else if (id_ > 9000000) {  // speed bump
+  } else if (id_ >= 9000000) {  // speed bump
     type_ = iflyauto::ObjectType::OBJECT_TYPE_DECELER;
     source_type_ = SourceType::SpeedBump;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
-  } else if (id_ > 8000000) {  // ehr column box
+  } else if (id_ >= 8000000) {  // ehr column box
     type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_COLUMN;
     source_type_ = SourceType::MAP;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
-  } else if (id_ > 6000000) {  // parking space
+  } else if (id_ >= 6000000) {  // parking space
     type_ = iflyauto::ObjectType::OBJECT_TYPE_SOLT;
     source_type_ = SourceType::ParkingSlot;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
                                                 &perception_polygon_);
-  } else if (id_ > 5000000) {  // ground line
+  } else if (id_ >= 5000000) {  // ground line
     type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE;
     source_type_ = SourceType::GroundLine;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,
