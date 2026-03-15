@@ -8,6 +8,9 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
   // Lateral
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
+  hpp_obstacle_lateral_preprocess_decider_ =
+      std::make_unique<HppObstacleLateralPreprocessDecider>(config_builder,
+                                                            session);
   lateral_obstacle_decider_ =
       std::make_unique<HppLateralObstacleDecider>(config_builder, session);
   hpp_general_lateral_decider_ =
@@ -80,6 +83,12 @@ bool HppTaskPipeline::Run() {
   }
   auto time2 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LaneChangeDeciderTime", time2 - time1);
+
+  ok = hpp_obstacle_lateral_preprocess_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(hpp_obstacle_lateral_preprocess_decider_->Name());
+    return false;
+  }
 
   ok = lateral_obstacle_decider_->Execute();
   if (!ok) {
