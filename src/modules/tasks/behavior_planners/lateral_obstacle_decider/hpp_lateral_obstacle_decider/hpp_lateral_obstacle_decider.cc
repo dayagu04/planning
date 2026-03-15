@@ -373,6 +373,10 @@ void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
   lat_obstacle_decision.clear();
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
+      if (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_DECELER) {
+        lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+        continue;
+      }
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
         double l_ara = 0;
         if (obstacle->frenet_s() < s_vec.front()) {
