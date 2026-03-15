@@ -52,6 +52,7 @@ void LongitudinalAStar::PlanTrajectory() {
     auto current_node_ptr = std::make_shared<STNode>(current_node);
     open_list_.erase(open_list_.begin());
     closed_list_.insert(current_node_ptr);
+    all_list_.erase(current_node_ptr->getKey());
     if (IsGoalReached(current_node_ptr)) {
       goal_node = current_node_ptr;
       found_goal = true;
@@ -67,7 +68,10 @@ void LongitudinalAStar::PlanTrajectory() {
           continue;
         }
       }
-      open_list_.erase(all_list_[child_key]);
+      auto it = open_list_.find(all_list_[child_key]);
+      if (it != open_list_.end()) {
+        open_list_.erase(it);
+      }
       all_list_[child_key] = child;
       open_list_.insert(child);
     }
@@ -87,7 +91,7 @@ void LongitudinalAStar::PlanTrajectory() {
 
 bool LongitudinalAStar::IsGoalReached(const std::shared_ptr<STNode>& node) const {
   double s_diff = node->s - merge_point_s_;
-  return (s_diff > 0) && (node->t == goal_state_.max_t);
+  return (s_diff > 0) && (node->t > LIMIT_TIME);
 }
 
 std::vector<STNode> LongitudinalAStar::GenerateChildren(
@@ -217,13 +221,12 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         leading_agent_s = leading_agent_info_.v * node.t;
       }
     }
-    double s_buffer = 3.5 + 0.3 * leading_agent_v;
     double follow_distance =
-        node.v * std::fmax(node.v - leading_agent_v, 0.0) / (2.0 * 2.0);
-    double thw = 0.3 * node.v;
-    double safe_distance = std::fmax(thw + follow_distance, 3.5);
+        node.v * (node.v - leading_agent_v) / (2.0 * 2.0);
+    double thw = 0.5 * node.v;
+    double safe_distance = std::fmax(thw + follow_distance + 3.0, 3.0);
     double gap =
-        leading_agent_s + leading_agent_info_.center_s - node.s - s_buffer;
+        leading_agent_s + leading_agent_info_.center_s - node.s - safe_distance;
     if (gap < 0.0) {
       std::cout << "前车碰撞风险: " << node.getKey() << std::endl;
       return false;

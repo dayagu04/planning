@@ -1007,7 +1007,7 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double v_lead_clip = std::max(headway_v, 0.0);
   double t_gap = interp(ego_v, t_gap_ego_v_bp, t_gap_ego_v);
   t_gap = t_gap * (0.6 * ego_v * 0.01);  // why?
-  double v_rel = std::fmax(ego_v - v_lead_clip, 0.0);
+  double v_rel = ego_v - v_lead_clip;
   double distance_hysteresis = ego_v * config_.leading_safe_delay_time;
   double min_follow_distance = 3.0;
   double fix_safe_distance = v_rel * ego_v / (2.0 * config_.leading_safe_max_dec);
@@ -1272,6 +1272,10 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
   if (!is_merge_change_ || left_time > 6.0) {
     return false;
   }
+  double press_line_ratio = CalcPressLineRatio();
+  if(press_line_ratio > 0.2){
+    return true;
+  }
   state_limit_lower_ = {
       0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
       -2.0, 1.2, -2.5, 2.5};
@@ -1286,83 +1290,47 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
   return false;
 }
 
-// bool SamplePolySpeedAdjustDecider::GenerateForceMergeTraj() {
-//   const double delta_a = (adjust_speed_max_acc_ - adjust_speed_min_acc_) /
-//                          (config_.sample_v_nums - 1);
-//   double time_to_stop_point =
-//       distance_to_stop_point_ / std::fmax(ego_v_, kZeroEpsilon);
-//   double time_to_stop_line =
-//       merge_stop_line_distance_ / std::fmax(ego_v_, kZeroEpsilon);
-//   double left_distance =
-//       time_to_stop_point < 1.0
-//           ? time_to_stop_line < 1.0 ? ego_v_ * 1.5 : merge_stop_line_distance_
-//           : distance_to_stop_point_;
-//   auto compare_t_upper =
-//       left_distance / std::fmax(speed_adjust_range_.second, kZeroEpsilon);
-//   compare_t_upper = std::fmin(5.0, compare_t_upper);
-//   int t_count = 1.0 + (compare_t_upper - 0.5) / 0.1;
-//   for (int i = 0; i < config_.sample_v_nums; i++) {
-//     double a = adjust_speed_min_acc_ + i * delta_a;
-//     std::vector<SampleQuinticPolynomialCurve> sample_traj_at_t;
-//     for (int j = 0; j <= t_count; j++) {
-//       const double t = 0.5 + j * 0.1;
-//       double v = ego_v_ + a * t;
-//       if ((a - ego_a_) / t > 3.0 || (a - ego_a_) / t < -3.0) {
-//         continue;
-//       }
-//       a = (v < speed_adjust_range_.first && v > speed_adjust_range_.second)
-//               ? a
-//               : 0.0;
-//       v = std::fmin(v, speed_adjust_range_.first);
-//       v = std::fmax(v, speed_adjust_range_.second);
-//       QuinticPolyState quintic_start{ego_s_, ego_v_, ego_a_,
-//                                      0.0};  // bind p0, v0, a0, ve, ae
-//       QuinticPolyState quintic_end{ego_s_ + left_distance, v, a, t};
-//       QuinticPolynomial quintic_sample_polynomial(quintic_start, quintic_end);
-//       if (quintic_sample_polynomial.jerk_extrema().first > 3.0 ||
-//           quintic_sample_polynomial.jerk_extrema().second < -2.5 ||
-//           !quintic_sample_polynomial.valid()) {
-//         continue;
-//       }
-//       // if(quintic_sample_polynomial.end_a() > 1.5 ||
-//       // quintic_sample_polynomial.end_a() < -2.5 ||
-//       // !quintic_sample_polynomial.valid()){
-//       //   continue;
-//       // }
-//       SampleQuinticPolynomialCurve quintic_sample_traj(
-//           quintic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
-//           weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
-//           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-//           weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
-//           weight_speed_change_, weight_leading_veh_follow_s_,
-//           weight_jerk_limit_, front_edge_to_rear_axle_,
-//           rear_edge_to_rear_axle_);
-
-//       sample_traj_at_t.emplace_back(std::move(quintic_sample_traj));
-//     }
-//     if (!sample_traj_at_t.empty()) {
-//       sample_quintic_trajs_.emplace_back(std::move(sample_traj_at_t));
-//     }
-//   }
-//   return true;
-// }
-
-// bool SamplePolySpeedAdjustDecider::EvaluateForceMergeTraj() {
-//   double min_cost = std::numeric_limits<double>::max();
-//   for (size_t k = 0; k < sample_quintic_trajs_.size(); k++) {
-//     auto& sample_traj_at_v = sample_quintic_trajs_[k];
-//     for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
-//       auto& sample_traj = sample_traj_at_v[j];
-//       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
-//                            leading_veh_);
-//       if (sample_traj.cost_sum_ < min_cost) {
-//         min_cost_quintic_traj_ = &sample_traj;
-//         min_cost = sample_traj.cost_sum_;
-//       }
-//     }
-//   }
-//   return true;
-// }
+double SamplePolySpeedAdjustDecider::CalcPressLineRatio() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& virtual_target_lane = lane_change_request_ == 1
+                                        ? virtual_lane_mgr->get_left_lane()
+                                        : virtual_lane_mgr->get_right_lane();
+  if (!virtual_target_lane) {
+    return 0.0;
+  }
+  const auto& target_reference_points =
+      virtual_target_lane->get_reference_path()->get_points();
+  if (!target_reference_points.empty()) {
+    auto comp = [](const ReferencePathPoint& p, const double s) {
+      return p.path_point.s() < s;
+    };
+    auto p_first_point =
+        std::lower_bound(target_reference_points.begin(),
+                         target_reference_points.end(), ego_s_, comp);
+    if (p_first_point == target_reference_points.end()) {
+      p_first_point--;
+    }
+    double ref_y = ego_cart_point_.second - p_first_point->path_point.y();
+    double ref_x = ego_cart_point_.first - p_first_point->path_point.x();
+    double target_heading = p_first_point->path_point.theta();
+    double ref_distance =
+        std::abs(ref_x * sin(target_heading) - ref_y * cos(target_heading));
+    double target_lane_to_border =
+        lane_change_request_ == 1
+            ? p_first_point->distance_to_right_lane_border
+            : p_first_point->distance_to_left_lane_border;
+    double lane_width = ref_distance - target_lane_to_border;
+    if(lane_width > ego_width_ / 2.0){
+      return 0.0;
+    }else if(lane_width < -ego_width_ / 2.0){
+      return 1.0;
+    }else{
+      return (0.5 - lane_width / ego_width_);
+    }
+  }
+  return 0.0;
+}
 
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);

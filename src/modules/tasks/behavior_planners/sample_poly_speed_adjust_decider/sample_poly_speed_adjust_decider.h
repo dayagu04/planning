@@ -62,6 +62,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool GenerateForceMergeTraj();
   bool EvaluateForceMergeTraj();
   bool GenerateAStarTraj();
+  double CalcPressLineRatio();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;

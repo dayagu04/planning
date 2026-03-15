@@ -16,6 +16,7 @@ const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）
 const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
 const int MAX_ITERATION = 100;    // 最大迭代次数
 const double ACC_STEP = 0.4;
+const double LIMIT_TIME = 3.5;    // 最小规划时域
 
 struct STNode {
   double t;  // 时间 (s)
