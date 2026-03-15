@@ -145,7 +145,9 @@ class DPRoadGraph : public Task {
   bool SetSampleParams(LaneBorrowStatus lane_borrow_status);
   bool SetDPCostParams(LaneBorrowStatus lane_borrow_status);
   bool SampleLanes(LaneBorrowDeciderOutput* lane_borrow_decider_output);
-  bool ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_output);
+  bool ProcessEnvInfos(const LaneBorrowDeciderOutput* lane_borrow_output,
+                       const LaneBorrowStatus lane_borrow_status,
+                       const std::vector<int>& static_blocked_obj_id_vec);
   bool GenerateMinCostPath(std::vector<DPRoadGraphNode>* min_cost_path);
   bool DPSearchPath(const LaneBorrowStatus lane_borrow_status);
   bool FinedReferencePath();
@@ -162,6 +164,12 @@ class DPRoadGraph : public Task {
   Point2D CarRotattion(const Point2D& Cartesian_point, double heading_angle,
                        double ego_x, double ego_y);
   void SetPullOverPath(double end_s, double end_l);
+  BorrowDirection GetPredBypassDirection(
+      const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id,
+      const LaneBorrowStatus lane_borrow_status);
+  bool CheckBlockedBorrowObstacles(
+      const std::vector<planning_math::Box2d>& lead_obstacles_box,
+      const std::vector<planning_math::Box2d>& need_borrow_obstacles_box);
 
   // inputs methods
   // Setters

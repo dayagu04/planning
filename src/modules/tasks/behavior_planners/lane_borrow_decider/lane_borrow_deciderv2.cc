@@ -6,6 +6,7 @@
 #include "planning_hmi_c.h"
 
 #include "agent/agent_manager.h"
+#include "library/lc_idm_lib/include/basic_intelligent_driver_model.h"
 #include "basic_types.pb.h"
 #include "behavior_planners/dp_path_decider/dp_road_graph.h"
 #include "behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
@@ -46,6 +47,15 @@ constexpr double kBackNeededDistance = 5.0;
 constexpr double kPreCentricOffsetHigh = 0.75;  // CUTIN 标准仍然保守
 constexpr double kPreCentricOffsetLow = 0.45;
 constexpr double kStaticEdgeDistance = 0.25;
+constexpr double kMaxLateralRange = 5.0;
+constexpr double kTotalLaneBorrowTime =
+    8;  // 借道的时间阈值，如果借道时间过长，不触发借道
+constexpr double kMaxLongitRange = 70.0;
+constexpr double kMinLongitRange = 25.0;
+constexpr double kTimeStep = 0.2;
+constexpr double kOverTakeLonDisBuffer = 1.0;
+constexpr double kOverTakeHysteresis = 3.0;
+
 };  // namespace
 
 namespace planning {
@@ -364,7 +374,15 @@ void LaneBorrowDecider::UpdateToDP() {
 
 bool LaneBorrowDecider::RunDP() {
   // dp_path_decider_->Execute();
-  if (!dp_path_decider_->ProcessEnvInfos(&lane_borrow_decider_output_)) {
+  // dp 前决策，解决不合理借道问题
+  if (CheckBlockedBorrowObstaclesByTrajectory()) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason = NO_LON_SPACE_TO_OVERTAKE_OBSTACLE;
+    lane_borrow_decider_output_.is_in_lane_borrow_status = false;
+    return false;
+  }
+  if (!dp_path_decider_->ProcessEnvInfos(&lane_borrow_decider_output_,
+                                         lane_borrow_status_,
+                                         static_blocked_obj_id_vec_)) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = CURRENT_LANE_LOSS;
     lane_borrow_decider_output_.is_in_lane_borrow_status = false;
     return false;
@@ -397,6 +415,214 @@ bool LaneBorrowDecider::RunDP() {
   }
   dp_path_decider_->CartSpline(&lane_borrow_decider_output_);
   return true;
+}
+
+
+bool LaneBorrowDecider::CheckBlockedBorrowObstaclesByTrajectory() {
+  const auto& obstacles = current_reference_path_ptr_->get_obstacles();
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  std::shared_ptr<FrenetObstacle> lead_nearest_follow_obstacle = nullptr;
+  double lead_nearest_s_start = std::numeric_limits<double>::max();
+  // 记录离纵向距离最近的不可能借道障碍物（pre_bypass_direction == no_borrow）
+  for (const auto& obstacle : obstacles) {
+    const auto& id = obstacle->obstacle()->id();
+    const auto& agent = agent_mgr->GetAgent(id);
+    //  continue
+    if (agent == nullptr) {
+      continue;
+    }
+    if (agent->agent_decision().agent_decision_type() ==
+        agent::AgentDecisionType::IGNORE) {  // ignore 忽略
+      continue;
+    }
+    if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {  // 非视觉忽略
+      continue;
+    }
+    if (obstacle->frenet_obstacle_boundary().s_start <=
+        ego_frenet_boundary_.s_end) {
+      // 在自车车头后面的障碍物过滤
+      continue;
+    }
+    const bool is_borrow_obstacle =
+        std::find(static_blocked_obj_id_vec_.begin(),
+                  static_blocked_obj_id_vec_.end(),
+                  id) != static_blocked_obj_id_vec_.end();
+    if (is_borrow_obstacle) {
+      // 如果已经在借道障碍物中，则过滤
+      continue;
+    }
+    BorrowDirection pre_bypass_direction = GetPredBypassDirection(
+        obstacle->frenet_obstacle_boundary(), id);
+    if (pre_bypass_direction != NO_BORROW) {
+      // 确定是不能借道的障碍物
+      continue;
+    }
+    if (obstacle->frenet_obstacle_boundary().s_start < lead_nearest_s_start) {
+      lead_nearest_s_start = obstacle->frenet_obstacle_boundary().s_start;
+      lead_nearest_follow_obstacle = obstacle;
+    }
+  }
+
+  if (lead_nearest_follow_obstacle == nullptr) {
+    return false;
+  }
+  const auto& agent =
+      agent_mgr->GetAgent(lead_nearest_follow_obstacle->obstacle()->id());
+  if (agent == nullptr) {
+    return false;
+  }
+  const auto& lead_trajectories = agent->trajectories();
+  if (lead_trajectories.empty()) {
+    return false;
+  }
+  const auto& lead_trajectory = lead_trajectories[0];
+  if (lead_trajectory.empty()) {
+    return false;
+  }
+
+  // 依据lead_trajectory 和 kTotalLaneBorrowTime 以及idm生成自车轨迹，时间间隔是0.2s
+  const int total_steps = static_cast<int>(kTotalLaneBorrowTime / kTimeStep);
+  const auto& frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+
+  // IDM 参数
+  BasicIntelligentDriverModel idm;
+  BasicIntelligentDriverModel::ModelParam idm_param;
+  idm_param.kDesiredVelocity =
+      session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+  idm_param.kVehicleLength =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().length;
+
+  // 自车初始状态（Frenet）
+  double ego_s = ego_frenet_boundary_.s_end;  // 自车车头 s
+  double ego_vel = ego_speed_;
+
+  // lead 轨迹时间范围
+  const double lead_t0 = lead_trajectory.front().absolute_time();
+  const double lead_t_end = lead_trajectory.back().absolute_time();
+
+  // lead 末端状态，用于超出预测范围时外推
+  double last_lead_s = 0.0, last_lead_l = 0.0;
+  frenet_coord->XYToSL(lead_trajectory.back().x(),
+                        lead_trajectory.back().y(), &last_lead_s,
+                        &last_lead_l);
+  const double last_lead_vel = lead_trajectory.back().vel();
+
+  // IDM 递推生成自车轨迹
+  struct EgoTrajectoryPoint {
+    double time;
+    double s;
+    double vel;
+  };
+  std::vector<EgoTrajectoryPoint> ego_trajectory;
+  ego_trajectory.reserve(total_steps + 1);
+  ego_trajectory.push_back({0.0, ego_s, ego_vel});
+
+  for (int i = 1; i <= total_steps; ++i) {
+    const double t = i * kTimeStep;
+    const double query_time = lead_t0 + t;
+
+    // 获取 lead 在当前时刻的 Frenet s 和速度
+    double lead_s = 0.0;
+    double lead_vel = 0.0;
+    if (query_time <= lead_t_end) {
+      const auto lead_point = lead_trajectory.Evaluate(query_time);
+      double lead_l = 0.0;
+      frenet_coord->XYToSL(lead_point.x(), lead_point.y(), &lead_s, &lead_l);
+      lead_vel = lead_point.vel();
+    } else {
+      // 超出预测范围，按末端速度匀速外推
+      const double extra_time = query_time - lead_t_end;
+      lead_s = last_lead_s + last_lead_vel * extra_time;
+      lead_vel = last_lead_vel;
+    }
+
+    // IDM 计算期望加速度
+    BasicIntelligentDriverModel::ModelState state(ego_s, ego_vel, lead_s,
+                                                  lead_vel);
+    double acc = 0.0;
+    idm.GetIIdmDesiredAcceleration(idm_param, state, &acc);
+
+    // 更新自车状态
+    ego_s += ego_vel * kTimeStep + 0.5 * acc * kTimeStep * kTimeStep;
+    ego_vel = std::max(0.0, ego_vel + acc * kTimeStep);
+
+    ego_trajectory.push_back({t, ego_s, ego_vel});
+  }
+
+  // 检查ego_trajectory和static_blocked_obj_id_vec_中的预测轨迹，判断自车能否在kTotalLaneBorrowTime内超越借道障碍物
+  // static_blocked_obj_id_vec_中轨迹时间如果小于kTotalLaneBorrowTime，则后端补充轨迹时间到kTotalLaneBorrowTime
+  std::vector<int> not_overtaken_obs_ids;
+  for (const auto& obs_id : static_blocked_obj_id_vec_) {
+    const auto& agent = agent_mgr->GetAgent(obs_id);
+    if (agent == nullptr) {
+      continue;
+    }
+    const double obs_half_length = agent->length() / 2.0;
+    const auto& obs_trajectories = agent->trajectories();
+    const bool has_traj =
+        !obs_trajectories.empty() && !obs_trajectories[0].empty();
+
+    double obs_t0 = 0.0, obs_t_end = 0.0;
+    double last_obs_s = 0.0, last_obs_vel = 0.0;
+
+    if (has_traj) {
+      const auto& obs_traj = obs_trajectories[0];
+      obs_t0 = obs_traj.front().absolute_time();
+      obs_t_end = obs_traj.back().absolute_time();
+      double tmp_l = 0.0;
+      frenet_coord->XYToSL(obs_traj.back().x(), obs_traj.back().y(),
+                            &last_obs_s, &tmp_l);
+      last_obs_vel = obs_traj.back().vel();
+    } else {
+      // 无轨迹，使用当前位置，视为静止
+      double tmp_l = 0.0;
+      frenet_coord->XYToSL(agent->x(), agent->y(), &last_obs_s, &tmp_l);
+      last_obs_vel = 0.0;
+    }
+
+    // 比较末端时刻的s，判断是否超越
+    const auto& ego_end = ego_trajectory.back();
+    double obs_s = 0.0;
+    if (has_traj) {
+      const auto& obs_traj = obs_trajectories[0];
+      const double query_time = obs_t0 + ego_end.time;
+      if (query_time <= obs_t_end) {
+        const auto obs_point = obs_traj.Evaluate(query_time);
+        double tmp_l = 0.0;
+        frenet_coord->XYToSL(obs_point.x(), obs_point.y(), &obs_s, &tmp_l);
+      } else {
+        // 超出预测范围，按末端速度匀速外推
+        const double extra_time = query_time - obs_t_end;
+        obs_s = last_obs_s + last_obs_vel * extra_time;
+      }
+    } else {
+      obs_s = last_obs_s;
+    }
+
+    // 末端时刻自车后端未超越障碍物前端 + 冗余距离，上一帧成功则加滞回
+    const bool was_successful =
+        std::find(last_static_blocked_obj_id_vec_.begin(),
+                  last_static_blocked_obj_id_vec_.end(),
+                  obs_id) != last_static_blocked_obj_id_vec_.end();
+    const double hysteresis = was_successful ? kOverTakeHysteresis : 0.0;
+    if (ego_end.s - idm_param.kVehicleLength <
+        obs_s + obs_half_length + kOverTakeLonDisBuffer - hysteresis) {
+      not_overtaken_obs_ids.emplace_back(obs_id);
+    }
+  }
+
+  // 从static_blocked_obj_id_vec_中移除不能借道的障碍物
+  for (const auto& id : not_overtaken_obs_ids) {
+    static_blocked_obj_id_vec_.erase(
+        std::remove(static_blocked_obj_id_vec_.begin(),
+                    static_blocked_obj_id_vec_.end(), id),
+        static_blocked_obj_id_vec_.end());
+  }
+
+  if (static_blocked_obj_id_vec_.empty()) {
+    return true;
+  }
+  return false;
 }
 
 // v2   0-1

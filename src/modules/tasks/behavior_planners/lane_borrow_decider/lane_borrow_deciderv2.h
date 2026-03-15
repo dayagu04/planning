@@ -81,7 +81,8 @@ class LaneBorrowDecider : public Task {
   FrenetObstacleBoundary GetSLboundaryFromAgent(const Box2d& obs_box);
   void SendObserveToLatFlag();
   void SendHMIData();
-
+  bool CheckBlockedBorrowObstaclesByTrajectory();
+  
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double forward_solid_start_dis_{1000.0};
