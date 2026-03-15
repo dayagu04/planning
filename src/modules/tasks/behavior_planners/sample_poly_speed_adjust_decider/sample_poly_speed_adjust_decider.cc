@@ -681,8 +681,11 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           ? std::fmin(v_adjust_speed_limit_ * 1.05, speed_adjust_range_.first)
           : ego_v_;
   speed_adjust_range_.first = std::fmin(speed_adjust_range_.first, 130.0 / 3.6);
-  speed_adjust_range_.second = std::fmax(
-      config_.sample_v_lower, ego_v_ - config_.maximum_speed_adjustment);
+  speed_adjust_range_.second =
+      is_merge_change_ && merge_stop_line_distance_ <= 20.0
+          ? 0.0
+          : std::fmax(config_.sample_v_lower,
+                      ego_v_ - config_.maximum_speed_adjustment);
   double suggested_v_lower =
       std::fmin(target_lane_objs_flow_vel_, v_adjust_speed_limit_);
   speed_adjust_range_.second =
