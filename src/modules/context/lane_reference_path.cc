@@ -11,6 +11,7 @@
 #include "modules/context/static_analysis_storage/static_analysis_utils.h"
 #include "obstacle_manager.h"
 #include "session.h"
+#include "utils/kd_path.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -466,8 +467,14 @@ bool LaneReferencePath::get_ref_points_hpp(
   ref_path_points.clear();
   ref_path_points.reserve(lane_points.size());
   auto is_enu_valid = session_->environmental_model().location_valid();
+  bool has_boundary =
+      virtual_lane->get_left_lane_boundary().local_points_size > 0 &&
+      virtual_lane->get_right_lane_boundary().local_points_size > 0;
 
   auto construct_boundary_kd_path = [&](const iflyauto::LaneBoundary& boundary) {
+    if(has_boundary == false) {
+      return KDPathPtr(nullptr);
+    }
     std::vector<planning_math::PathPoint> coord_path_points;
     coord_path_points.reserve(boundary.local_points_size);
     for (size_t i = 0; i < boundary.local_points_size; ++i) {
@@ -496,10 +503,17 @@ bool LaneReferencePath::get_ref_points_hpp(
       ref_path_pt.path_point.set_theta(refline_pt.car_heading);
     }
     ref_path_pt.path_point.set_kappa(refline_pt.curvature);
-    ref_path_pt.distance_to_left_road_border = refline_pt.distance_to_left_road_border;
-    ref_path_pt.distance_to_right_road_border = refline_pt.distance_to_right_road_border;
-    ref_path_pt.distance_to_left_lane_border = refline_pt.distance_to_left_lane_border;
-    ref_path_pt.distance_to_right_lane_border = refline_pt.distance_to_right_lane_border;
+    if(has_boundary) {
+      ref_path_pt.distance_to_left_road_border = refline_pt.distance_to_left_road_border;
+      ref_path_pt.distance_to_right_road_border = refline_pt.distance_to_right_road_border;
+      ref_path_pt.distance_to_left_lane_border = refline_pt.distance_to_left_lane_border;
+      ref_path_pt.distance_to_right_lane_border = refline_pt.distance_to_right_lane_border;
+    } else {
+      ref_path_pt.distance_to_left_road_border = 5.0;
+      ref_path_pt.distance_to_right_road_border = 5.0;
+      ref_path_pt.distance_to_left_lane_border = 5.0;
+      ref_path_pt.distance_to_right_lane_border = 5.0;
+    }
     ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
