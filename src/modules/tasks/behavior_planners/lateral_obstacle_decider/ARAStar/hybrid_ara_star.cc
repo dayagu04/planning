@@ -1048,9 +1048,7 @@ bool HybridARAStar::ProcessStaticAgents() {
       if (min_s < end_s_ + vehicle_param_.front_edge_to_rear_axle &&
           max_s > ego_s_ + rear_obs_s_ &&
           (std::abs(min_l) < kLBuffer || std::abs(max_l) < kLBuffer) &&
-          EdtManager::FilterObstacleForAra(*frenet_obstacle) &&
-          frenet_obstacle->type() !=
-              iflyauto::ObjectType::OBJECT_TYPE_DECELER) {
+          EdtManager::FilterObstacleForAra(*frenet_obstacle)) {
         if (std::abs(min_l) < kCareLBuffer || std::abs(max_l) < kCareLBuffer) {
           obs_max_s_ = std::max(obs_max_s_, max_s);
           obs_min_s_ = std::min(obs_min_s_, min_s);
