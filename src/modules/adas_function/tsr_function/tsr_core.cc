@@ -142,7 +142,8 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
     /*do nothing*/
   }
 
-  return fault_code & GetContext.get_param()->tsr_fault_code_maskcode;
+  return fault_code & GetContext.get_param()->tsr_fault_code_maskcode
+  & GetContext.get_param()->adas_fault_sw_code;
 }
 
 iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {

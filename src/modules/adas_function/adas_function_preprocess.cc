@@ -266,6 +266,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
       "ldw_right_kickdown_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_fault_code_maskcode, int,
                        "elk_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->adas_fault_sw_code, int,
+                       "adas_fault_sw_code");                     
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_enable_code_maskcode,
                        int, "elk_enable_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_disable_code_maskcode,
@@ -482,6 +484,8 @@ void Preprocess::UpdateStateInfo(void) {
       vehicle_service_output_info_ptr->vehicle_speed;
   GetContext.mutable_state_info()->display_vehicle_speed =
       vehicle_service_output_info_ptr->vehicle_speed_display;
+  GetContext.mutable_state_info()->vehicle_speed_display_kph =
+      vehicle_service_output_info_ptr->vehicle_speed_display * 3.6F + 0.5f;
   // enu2car 变换矩阵
   Eigen::Vector2d current_pos_i(GetContext.mutable_session()
                                     ->environmental_model()

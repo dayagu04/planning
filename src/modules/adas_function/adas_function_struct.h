@@ -129,6 +129,7 @@ struct Parameters {
   uint32 elk_left_kickdown_code_maskcode = 0;
   uint32 elk_right_suppression_code_maskcode = 0;
   uint32 elk_right_kickdown_code_maskcode = 0;
+  uint32 adas_fault_sw_code = 1;
   // 打断纠偏的横向速度持续时间，单位：S
   double ldp_kickdown_lat_v_dur = 3.0;
   // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
@@ -247,6 +248,7 @@ struct StateInfo {
 
   double vehicle_speed = 0.0;          // 本车实际车速 单位:m/s
   double display_vehicle_speed = 0.0;  // 本车实际车速 单位:m/s
+  uint8 vehicle_speed_display_kph = 0; // 自车仪表车速 单位:kph
   double yaw_rate = 0.0;               // 本车横摆角速度 单位:rad/s
   double yaw_rate_observer = 0.0;      // 本车横摆角速度 单位:rad/s
   double yaw_rate_loc = 0.0;

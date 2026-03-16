@@ -460,7 +460,8 @@ uint16 IhcCore::UpdateIhcFaultCode() {
     /*do nothing*/
   }
 
-  return fault_code & GetContext.get_param()->ihc_fault_code_maskcode;
+  return fault_code & GetContext.get_param()->ihc_fault_code_maskcode 
+  & GetContext.get_param()->adas_fault_sw_code;
 }
 
 iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
