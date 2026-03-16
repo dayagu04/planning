@@ -152,6 +152,9 @@ class LaneChangeRequest {
                              std::vector<ad_common::math::Vec2d>& enu_points,
                              double& total_len, size_t start_idx) const;
   bool CollectConsiderPoints(std::vector<ad_common::math::Vec2d>& enu_points) const;
+  bool IsLargeCurvatureByQuantile(const std::vector<double>& curvature_list,
+                                  double large_curv_thresh,
+                                  int min_continuous_points) const;
 
  protected:
   TrackInfo lc_invalid_track_;
