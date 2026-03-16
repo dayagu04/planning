@@ -258,7 +258,7 @@ void STGraph::MakeStaticAgentStBoundary(
   st_point_pairs.reserve(reserve_num);
   double lower_s = std::numeric_limits<double>::max();
   double upper_s = std::numeric_limits<double>::lowest();
-  const int64_t boundary_id = (agent.agent_id() << 8) + 0;
+  const int64_t boundary_id = (int64_t(agent.agent_id()) << 8) + 0;
   double min_t = std::numeric_limits<double>::max();
   const double max_l = agent_sl_boundary[2];
   const double min_l = agent_sl_boundary[3];
