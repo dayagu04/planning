@@ -1636,7 +1636,9 @@ bool ReferencePath::UpdateReferencePathInfo(
       std::make_shared<planning_math::KDPath>(std::move(smoothed_path_points));
   const auto &frenet_path_points = smoothed_frenet_coord->path_points();
   ReferencePathPoint last_ref_pt = refined_ref_path_points_.front();
-  for (const auto pt : frenet_path_points) {
+
+  Point2D frenet_point;
+  for (const auto& pt : frenet_path_points) {
     ReferencePathPoint ref_pt;
     ref_pt.path_point.set_x(pt.x());
     ref_pt.path_point.set_y(pt.y());
@@ -1645,7 +1647,6 @@ bool ReferencePath::UpdateReferencePathInfo(
     ref_pt.path_point.set_kappa(pt.kappa());
     ref_pt.path_point.set_dkappa(pt.dkappa());
     ref_pt.path_point.set_ddkappa(pt.ddkappa());
-    Point2D frenet_point;
     if (frenet_coord_->XYToSL(
             pt.x(), pt.y(), &frenet_point.x, &frenet_point.y)) {
       ReferencePathPoint raw_pt;

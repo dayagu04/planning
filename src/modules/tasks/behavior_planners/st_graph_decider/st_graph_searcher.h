@@ -86,7 +86,7 @@ class StGraphSearcher : public Task {
   double GetAgentMinPredictionSpeed(const int64_t agent_id) const;
 
   void AddStGraphSearcherDataToProto(
-      const std::vector<StSearchNode> st_search_path);
+      const std::vector<StSearchNode>& st_search_path);
 
   // compute cost and h_cost
   void ComputeNodeCost(const StSearchInput& input_info,

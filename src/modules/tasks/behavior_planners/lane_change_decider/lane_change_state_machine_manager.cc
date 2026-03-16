@@ -4868,7 +4868,7 @@ double LaneChangeStateMachineManager::CalculateCheckTimeRatio() const {
 }
 std::unique_ptr<Trajectory1d>
 LaneChangeStateMachineManager::MakeVirtualZeroAccCurve(
-    const std::array<double, 3> init_lon_state) const {
+    const std::array<double, 3>& init_lon_state) const {
   auto virtual_zero_acc_curve =
       std::make_unique<PiecewiseJerkAccelerationTrajectory1d>(
           init_lon_state[0], init_lon_state[1]);

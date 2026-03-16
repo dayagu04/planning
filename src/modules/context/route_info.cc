@@ -1653,7 +1653,7 @@ bool RouteInfo::UpdateStaticMap(const Map::StaticMap& static_map_info) {
 }
 
 void RouteInfo::UpdateMLCInfoDecider(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes) {
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
   route_info_output_.gaode_route_info_output.lane_num_except_emergency = relative_id_lanes.size();
   if (!route_info_output_.is_update_segment_success ||
       route_info_output_.gaode_route_info_output.lane_num_except_emergency < 1) {
@@ -1868,7 +1868,7 @@ void RouteInfo::UpdateMLCInfoDecider(
 }
 
 void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes) {
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
   mlc_decider_route_info_.feasible_lane_sequence.clear();
 
   if (relative_id_lanes.empty()) {

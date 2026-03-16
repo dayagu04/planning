@@ -1402,7 +1402,7 @@ void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
 }
 
 void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions &obstacle_decisions) {
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForStaticObstacle(obstacle)) {
@@ -1636,7 +1636,7 @@ double HppGeneralLateralDecider::CalculateExtraDecreaseBuffer(
 }
 
 void HppGeneralLateralDecider::GenerateDynamicObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions &obstacle_decisions) {
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForDynamicObstacle(obstacle)) {

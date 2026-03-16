@@ -44,19 +44,19 @@ class VehicleConfigurationContext {
     }
   }
 
-  void reset_which_car(const std::string which_car) {
+  void reset_which_car(const std::string& which_car) {
     this->which_car_ = which_car;
   }
 
   const VehicleParam &get_vehicle_param() const { return vehicle_param_; }
 
-  void set_vehicle_param(std::string vehicle_param_config_path) {
+  void set_vehicle_param(const std::string& vehicle_param_config_path) {
     std::string path = vehicle_param_config_path + "/vehicle_params.json";
     VehicleParam vehicle_param(path);
-    vehicle_param_ = vehicle_param;
+    vehicle_param_ = std::move(vehicle_param);
   }
 
-  void write_params(std::string path) {}
+  void write_params(const std::string& path) {}
 
  private:
   VehicleParam vehicle_param_;

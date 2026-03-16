@@ -475,7 +475,7 @@ void ConeRequest::setLaneChangeRequestByCone() {
 }
 
 void ConeRequest::GetTargetLaneWidthByCone(
-    const std::vector<std::pair<double, double>> lane_s_width,
+    const std::vector<std::pair<double, double>>& lane_s_width,
     const std::shared_ptr<VirtualLane> base_lane, const double cone_s,
     const double cone_l, bool is_left, double* dist) {
   double target_lane_width = kDefaultLaneWidth;
@@ -935,7 +935,7 @@ std::vector<double> ConeRequest::ConeRankify(std::vector<double>& arr) {
 }
 
 double ConeRequest::ConeSpearmanRankCorrelation(
-    const std::vector<ConePoint> points) {
+    const std::vector<ConePoint>& points) {
   int n = points.size();
 
   std::vector<double> s(n);
@@ -959,7 +959,7 @@ double ConeRequest::ConeSpearmanRankCorrelation(
   return 1 - (6 * d_square_sum) / (n * (std::pow(n, 2) - 1));
 }
 
-double ConeRequest::ConeComputeSlope(std::vector<ConePoint> points) {
+double ConeRequest::ConeComputeSlope(std::vector<ConePoint>& points) {
   double s_mean, l_mean;
   double s_stddev, l_stddev;
   // 计算cone的s、l的平均值

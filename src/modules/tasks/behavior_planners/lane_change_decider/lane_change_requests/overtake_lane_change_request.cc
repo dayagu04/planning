@@ -1739,7 +1739,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
 
 void OvertakeRequest::selectTargetObstacleIds(
     const std::shared_ptr<KDPath>& ref_line, const Point2D ego_cart_point,
-    const std::vector<std::shared_ptr<FrenetObstacle>> candidate_obs_info,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& candidate_obs_info,
     const double search_range, const int max_target_num,
     const double ego_half_width, const double l_buffer,
     const double max_l_buffer, const bool order_reverse,

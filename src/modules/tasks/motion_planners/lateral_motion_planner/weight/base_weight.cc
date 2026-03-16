@@ -814,8 +814,8 @@ void BaseWeight::CalculateLatAvoidDistance(
 void BaseWeight::CalculateLatAvoidBoundPriority(
     const std::vector<std::pair<double, double>> &second_soft_bounds,
     const std::vector<std::pair<double, double>> &hard_bounds,
-    const std::vector<planning::WeightedBounds> soft_bounds_vec,
-    const std::vector<planning::WeightedBounds> hard_bounds_vec,
+    const std::vector<planning::WeightedBounds>& soft_bounds_vec,
+    const std::vector<planning::WeightedBounds>& hard_bounds_vec,
     const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
         &second_soft_bounds_info,
     const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>

@@ -88,19 +88,19 @@ class EgoLaneTrackManger {
       bool &is_manual_lane_change);
 
   bool CheckIfInRampSelectSplit(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRampSelectSplitForSdpro(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRamp(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRampForSdpro(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   double ComputeTargetLaneSpecifiedRangeCurvature(
