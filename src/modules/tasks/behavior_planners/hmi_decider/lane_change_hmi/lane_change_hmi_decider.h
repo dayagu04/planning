@@ -16,6 +16,7 @@ class LaneChangeHmiDecider {
  private:
   void UpdateHMIInfo();
   void UpdateTurnSignal();
+  bool IsDistanceToOriginLineEnough(RampDirection ramp_direction);
   iflyauto::LandingPoint CalculateLandingPoint(
       bool is_lane_keeping,
       const LaneChangeDeciderOutput& lane_change_decider_output);

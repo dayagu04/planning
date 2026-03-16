@@ -194,8 +194,15 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   if (mlc_scene_type == SPLIT_SCENE) {
     Erase1Split2FeasibleLane(feasible_lane_graph);
   }
-
-  CalculateFrontMergePointInfo();
+  // 计算车道减少信息
+  double search_distance = 500.0;
+  if (!merge_info_vec_.empty()) {
+    search_distance = std::min(search_distance, merge_info_vec_[0].second);
+  }
+  if (!split_info_vec_.empty()) {
+    search_distance = std::min(search_distance, split_info_vec_[0].second);
+  }
+  CalculateFrontMergePointInfo(search_distance);
 
   UpdateLCNumTask(relative_id_lanes, feasible_lane_graph);
 
@@ -857,6 +864,42 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     route_info_output_.left_lane_num = left_lane_num;
     route_info_output_.right_lane_num = right_lane_num;
     route_info_output_.ego_seq = ego_seq;
+
+    // 当自车位于消亡车道上时，当前处理的场景修改成merge_sence
+    for (const auto& merge_point_info :
+         route_info_output_.map_merge_points_info) {
+      const auto& merge_point_link = ld_map_.GetLinkOnRoute(merge_point_info.merge_lane_link_id);
+      if (merge_point_link == nullptr) {
+        break;
+      }
+      if (merge_point_info.merge_type == MERGE_TO_LEFT &&
+              route_info_output_.ego_seq ==
+                  merge_point_link->lane_num() -
+                      merge_point_info.merge_lane_sequence + 1 ||
+          merge_point_info.merge_type == MERGE_TO_RIGHT &&
+              route_info_output_.ego_seq ==
+                  merge_point_link->lane_num() -
+                      merge_point_info.merge_lane_sequence) {
+        route_info_output_.mlc_decider_scene_type_info.mlc_scene_type =
+            MERGE_SCENE;
+      }
+    }
+
+    // 当自车位于加速车道时，认为是汇入主路
+    route_info_output_.is_ego_on_accelerate_lane = false;
+    for (const auto& lane_id : current_link_->lane_ids()) {
+      const auto& lane = ld_map_.GetLaneInfoByID(lane_id);
+      if (lane == nullptr) {
+        continue;
+      }
+      bool is_ego_on_this_lane =
+          route_info_output_.ego_seq ==
+          current_link_->lane_num() - lane->sequence() + 1;
+      if (IsAccelerateLane(lane) || IsEntryLane(lane) && is_ego_on_this_lane) {
+        route_info_output_.is_ego_on_accelerate_lane = true;
+        break;
+      }
+    }
 
     int real_lane_num = link_total_lane_num;
     // 判断是否有应急车道、加速车道、入口车道
@@ -2800,7 +2843,7 @@ iflymapdata::sdpro::Lane LDRouteInfoStrategy::FindMatchingPreLaneInMainLink(
   return best_matching_lane;
 }
 
-void LDRouteInfoStrategy::CalculateFrontMergePointInfo() {
+void LDRouteInfoStrategy::CalculateFrontMergePointInfo(double search_dis) {
   if (current_link_ == nullptr) {
     return;
   }
@@ -2812,7 +2855,7 @@ void LDRouteInfoStrategy::CalculateFrontMergePointInfo() {
     }
     const iflymapdata::sdpro::Lane* itera_lane = lane;
     double sum_dis = 0.0;
-    while(itera_lane) {
+    while (itera_lane) {
       if (itera_lane->link_id() == current_link_->id()) {
         sum_dis = sum_dis + itera_lane->length() * 0.01 - ego_on_cur_link_s_;
       } else {
@@ -2835,7 +2878,7 @@ void LDRouteInfoStrategy::CalculateFrontMergePointInfo() {
             itera_lane->link_id());
       }
 
-      if (sum_dis > 500.0) {
+      if (sum_dis > search_dis) {
         break;
       }
 
