@@ -55,6 +55,7 @@ constexpr double kMinLongitRange = 25.0;
 constexpr double kTimeStep = 0.2;
 constexpr double kOverTakeLonDisBuffer = 1.0;
 constexpr double kOverTakeHysteresis = 3.0;
+constexpr double kLaneLineSegmentLength = 3.0;
 
 };  // namespace
 
@@ -938,6 +939,14 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   } else {
     lane_borrow_decider_output_.borrow_direction = bypass_direction_;
   }
+
+  // 虚拟车道抑制借道检查
+  if (!CheckVirtualLaneSuppressBorrow()) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+    VIRTUAL_LANE_SUPPRESS;
+    return false;
+  }
+
   // get blocking obs
   SendObserveToLatFlag();
   observe_frame_num_++;
@@ -2248,6 +2257,54 @@ void LaneBorrowDecider::LogDebugInfo() {
 
   lane_borrow_pb_info->set_intersection_state(intersection_state_);
 }
+
+bool LaneBorrowDecider::CheckVirtualLaneSuppressBorrow() {
+  // 借道已经触发（非kNoLaneBorrow），则不抑制
+  if (lane_borrow_status_ != kNoLaneBorrow) {
+    return true;
+  }
+  // 借道方向为NO_BORROW时无需检查
+  if (lane_borrow_decider_output_.borrow_direction == NO_BORROW) {
+    return true;
+  }
+  // 获取借道车道指针
+  std::shared_ptr<VirtualLane> borrow_lane_ptr = nullptr;
+  if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW) {
+    borrow_lane_ptr = left_lane_ptr_;
+  } else if (lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW) {
+    borrow_lane_ptr = right_lane_ptr_;
+  }
+  if (borrow_lane_ptr == nullptr) {
+    return true;
+  }
+  // 模仿left_lane_boundary_type_的计算方式，获取借道车道在借道方向侧的边界线类型
+  const auto& borrow_lane_points = borrow_lane_ptr->lane_points();
+  for (size_t i = 0; i < borrow_lane_points.size(); ++i) {
+    const auto& lane_point = borrow_lane_points[i];
+    if (lane_point.s < ego_sl_state_.s() + kLaneLineSegmentLength) {
+      continue;
+    }
+    if (lane_point.s > obs_end_s_ + kBackNeededDistance) {
+      break;
+    }
+    iflyauto::LaneBoundaryType borrow_side_boundary_type =
+        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+    if (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW) {
+      // 向左借道，看借道车道的右边界线（即与自车车道相邻的边界）
+      borrow_side_boundary_type = lane_point.right_lane_border_type;
+    } else if (lane_borrow_decider_output_.borrow_direction ==
+               RIGHT_BORROW) {
+      // 向右借道，看借道车道的左边界线（即与自车车道相邻的边界）
+      borrow_side_boundary_type = lane_point.left_lane_border_type;
+    }
+    if (borrow_side_boundary_type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void LaneBorrowDecider::SendHMIData() {
   auto ad_info = &(session_->mutable_planning_context()
                        ->mutable_planning_hmi_info()
