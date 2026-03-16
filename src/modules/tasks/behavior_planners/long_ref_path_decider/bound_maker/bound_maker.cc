@@ -26,9 +26,7 @@ constexpr double kJerkMaxLowerBound = -4.0;
 constexpr double kLaneChangeAccUpperBound = 1.2;
 constexpr double kLaneChangeFrontAgentHeadway = 0.8;
 
-constexpr double kDecelMax = 5.0;
 constexpr double kVirtualUpperBound = 250.0;
-constexpr double kMaxTau = 1.0;
 constexpr double s0 = 3.5;
 constexpr double max_tau = 1.35;
 constexpr double a_max = 2.0;
