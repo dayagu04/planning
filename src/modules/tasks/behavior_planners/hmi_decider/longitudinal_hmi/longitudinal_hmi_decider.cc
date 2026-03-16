@@ -39,10 +39,10 @@ bool LongitudinalHmiDecider::Execute() {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->GetIntersectionState();
-  
+
   ad_info.intersection_state = iflyauto::IntersectionState(intersection_state);
-  
-  const auto cipv_info = session_->planning_context().cipv_decider_output();
+
+  const auto lateral_obstacles = session_->environmental_model().get_lateral_obstacle();
 
   // update intersection traffic lights reminder hmi info
   constexpr uint8 kIntersectionStatusNone = 8;
@@ -50,9 +50,9 @@ bool LongitudinalHmiDecider::Execute() {
       iflyauto::IntersectionPassSts(kIntersectionStatusNone);
   if (is_red_tfl && !tfl_decider.can_pass && intersection_state ==
       planning::common::APPROACH_INTERSECTION && (!tfl_decider.is_small_front_intersection ||
-      tfl_decider.is_tfl_match_intersection) && (cipv_info.cipv_id() == -1 ||
-      (cipv_info.relative_s() + ego_rear_axle_to_front_edge > dis_to_stopline + config_.tfl_reminder_cipv_dis ||
-       cipv_info.relative_s() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
+      tfl_decider.is_tfl_match_intersection) && (lateral_obstacles->leadone() == nullptr ||
+      (lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_stopline + config_.tfl_reminder_cipv_dis ||
+      lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
     ad_info.intersection_pass_sts =
         iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
   }
