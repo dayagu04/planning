@@ -58,6 +58,7 @@ struct LaneBorrowDeciderOutput {
   double area_start_l{0.};
   double area_end_l{0.};
   BorrowDirection borrow_direction = NO_BORROW;  // 0--None, 1--left, 2--right
+  std::unordered_map<int32_t, BorrowDirection> borrow_direction_map;//存储每个障碍物的借道方向
   bool is_in_lane_borrow_status = false;
   bool is_change_target_lane = false;
   std::vector<int> blocked_obs_id;  // block objs and failed

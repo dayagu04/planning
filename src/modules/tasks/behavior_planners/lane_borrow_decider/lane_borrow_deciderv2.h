@@ -82,7 +82,8 @@ class LaneBorrowDecider : public Task {
   void SendObserveToLatFlag();
   void SendHMIData();
   bool CheckBlockedBorrowObstaclesByTrajectory();
-  
+  void UpdateBorrowDirectionMap();
+
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
   double forward_solid_start_dis_{1000.0};

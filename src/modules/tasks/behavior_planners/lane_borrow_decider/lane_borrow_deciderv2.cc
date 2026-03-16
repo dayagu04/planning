@@ -267,6 +267,7 @@ void LaneBorrowDecider::UpdateToDP() {
     static_blocked_obj_id_vec_.clear();
     lane_borrow_decider_output_.blocked_obs_id = static_blocked_obj_id_vec_;
     lane_borrow_decider_output_.borrow_direction = NO_BORROW;
+    lane_borrow_decider_output_.borrow_direction_map.clear();
     lane_borrow_status_ = LaneBorrowStatus::kNoLaneBorrow;
     lane_borrow_decider_output_.lane_borrow_state = lane_borrow_status_;
     session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
@@ -366,10 +367,71 @@ void LaneBorrowDecider::UpdateToDP() {
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto& agents = dynamic_world->agent_manager()->GetAllCurrentAgents();
+  UpdateBorrowDirectionMap();
   session_->mutable_planning_context()->mutable_lane_borrow_decider_output() =
       lane_borrow_decider_output_;  // 输出赋值
 
   return;
+}
+
+void LaneBorrowDecider::UpdateBorrowDirectionMap() {
+  lane_borrow_decider_output_.borrow_direction_map.clear();
+  if (lane_borrow_decider_output_.borrow_direction == NO_BORROW) {
+    return;
+  }
+  const auto& dp_path = dp_path_decider_->refined_paths();
+  if (dp_path.empty()) {
+    return;
+  }
+  for (const auto& obs_id : static_blocked_obj_id_vec_) {
+    // 找到对应障碍物的frenet boundary
+    const FrenetObstacleBoundary* obs_sl_ptr = nullptr;
+    for (const auto& obstacle : static_blocked_obstacles_) {
+      if (obstacle->obstacle()->id() == obs_id) {
+        obs_sl_ptr = &obstacle->frenet_obstacle_boundary();
+        break;
+      }
+    }
+    if (obs_sl_ptr == nullptr) {
+      continue;
+    }
+    double obs_center_l = (obs_sl_ptr->l_start + obs_sl_ptr->l_end) / 2;
+    double obs_center_s = (obs_sl_ptr->s_start + obs_sl_ptr->s_end) / 2;
+
+    auto obs_it = std::lower_bound(
+        dp_path.begin(), dp_path.end(), obs_center_s,
+        [](const PathPoint& point, double s) { return point.s() < s; });
+
+    double obs_dp_path_l = 0.0;
+    bool obs_is_endpoint = false;
+    if (obs_it == dp_path.begin()) {
+      obs_is_endpoint = true;
+      obs_dp_path_l = dp_path.front().l();
+    } else if (obs_it == dp_path.end() ||
+               obs_it == std::prev(dp_path.end())) {
+      obs_is_endpoint = true;
+      obs_dp_path_l = dp_path.back().l();
+    }
+
+    if (!obs_is_endpoint) {
+      const auto& obs_prev_pt = *(obs_it - 1);
+      const auto& obs_next_pt = *obs_it;
+      if (std::abs(obs_prev_pt.s() - obs_center_s) <
+          std::abs(obs_next_pt.s() - obs_center_s)) {
+        obs_dp_path_l = obs_prev_pt.l();
+      } else {
+        obs_dp_path_l = obs_next_pt.l();
+      }
+    }
+
+    if (obs_dp_path_l > obs_center_l) {
+      lane_borrow_decider_output_.borrow_direction_map[obs_id] = LEFT_BORROW;
+    } else if (obs_dp_path_l < obs_center_l) {
+      lane_borrow_decider_output_.borrow_direction_map[obs_id] = RIGHT_BORROW;
+    } else {
+      lane_borrow_decider_output_.borrow_direction_map[obs_id] = NO_BORROW;
+    }
+  }
 }
 
 bool LaneBorrowDecider::RunDP() {

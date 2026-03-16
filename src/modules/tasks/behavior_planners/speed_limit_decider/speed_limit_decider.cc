@@ -2447,7 +2447,8 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
-  const auto borrow_direction = lane_borrow_output.borrow_direction;
+  // const auto borrow_direction = lane_borrow_output.borrow_direction;
+  const auto borrow_direction_map = lane_borrow_output.borrow_direction_map;
 
   // get lane borrow agent
   const auto agent_manager =
@@ -2491,6 +2492,11 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
       continue;
     }
     double min_lat_l_by_lat_path = 0.0;
+    auto dir_it = borrow_direction_map.find(agent->agent_id());
+    double borrow_direction = NO_BORROW;
+    if (dir_it != borrow_direction_map.end()) {
+      borrow_direction = dir_it->second;
+    }
     if (borrow_direction == LEFT_BORROW) {
       min_lat_l_by_lat_path = max_l_by_lat_path;
       // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
