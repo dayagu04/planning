@@ -10,16 +10,21 @@
 namespace planning {
 
 class Obstacle;
+struct TrajectoryPoint;
+
+namespace planning_math {
+class Vec2d;
+}  // namespace planning_math
 
 namespace agent {
 class Agent;
 }  // namespace agent
 
-class HppObstaclePreprocessDecider : public Task {
+class HppLonObstaclePreprocessDecider : public Task {
  public:
-  HppObstaclePreprocessDecider(const EgoPlanningConfigBuilder *config_builder,
-                               framework::Session *session);
-  virtual ~HppObstaclePreprocessDecider() = default;
+  HppLonObstaclePreprocessDecider(const EgoPlanningConfigBuilder *config_builder,
+                                  framework::Session *session);
+  virtual ~HppLonObstaclePreprocessDecider() = default;
 
   bool Execute() override;
 
@@ -27,14 +32,16 @@ class HppObstaclePreprocessDecider : public Task {
   void ProcessGroundLines();
   void ProcessDynamicObstacles();
 
-  void CreateVirtualAgentFromGroundLine(const Obstacle *obstacle, double s,
-                                        double l, int id);
+  void CreateVirtualAgentFromGroundLine(
+      const std::vector<planning_math::Vec2d> &hit_points,
+      const TrajectoryPoint &anchor_traj_point, int id);
   void GenerateCurrentPoseTrajectory(agent::Agent *agent);
 
   const double kGroundLineVirtualAgentLength = 0.5;
   const double kGroundLineVirtualAgentWidth = 2.0;
   const double kPredictionHorizon = 5.0;              // s
   const double kTimeResolution = 0.2;                 // s
+  LongitudinalDeciderV3Config lon_config_;
 };
 
 }  // namespace planning
