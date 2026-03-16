@@ -77,6 +77,7 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
     : Task(config_builder, session) {
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
+  astar_config_ = config_builder->cast<SampleAstarTrajConfig>();
   lc_safety_distance_config_ =
       config_builder->cast<LanChangeSafetyCheckConfig>();
 
@@ -90,10 +91,8 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
       VehicleConfigurationContext::Instance()->get_vehicle_param().width;
   st_sample_space_base_ =
       STSampleSpaceBase(front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
-
   sample_trajs_ = std::vector<std::vector<SampleQuarticPolynomialCurve>>();
   min_cost_traj_ptr_ = nullptr;
-
   SetNormalSceneWeight();
   evaulation_t_ = 5.0;
 }
@@ -129,6 +128,21 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   if (ok) {
     ok = Evaluate();
   }
+  int astar_iteration_count = 0;
+  if (ok) {
+    if (min_cost_traj_ptr_ == nullptr ||
+        !min_cost_traj_ptr_->anchor_points_match_gap_cost()
+             .is_gap_changeable() ||
+        !min_cost_traj_ptr_->is_left_distance_enough()) {
+      if (IsForcedMergeScenario()) {
+        if (GenerateAStarTraj()) {
+          astar_iteration_count = astar_traj_ptr_->count_;
+        } else {
+          astar_traj_ptr_.reset();
+        }
+      }
+    }
+  }
 
   if (ok) {
     if (min_cost_traj_ptr_ != nullptr) {
@@ -159,20 +173,29 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     v_search_path.clear();
     search_path.resize(kPlanningHorizions);
     v_search_path.resize(kPlanningHorizions);
-    for (size_t i = 0; i < kPlanningHorizions; i++) {
-      double s =
-          min_cost_traj_ptr_->CalcRef(i * kPlanningStep, config_.decay_coffi) -
-          ego_s_;
-      search_path[i] = std::move(s);
-      v_search_path[i] = min_cost_traj_ptr_->CalcVelRef(i * kPlanningStep,
-                                                        config_.decay_coffi);
+    if (astar_traj_ptr_ && astar_traj_ptr_->IsValid()) {
+      for (size_t i = 0; i < kPlanningHorizions; i++) {
+        double s = astar_traj_ptr_->CalcS(i * kPlanningStep);
+        search_path[i] = std::move(s);
+        v_search_path[i] = astar_traj_ptr_->CalcV(i * kPlanningStep);
+      }
+    } else {
+      for (size_t i = 0; i < kPlanningHorizions; i++) {
+        double s =
+            min_cost_traj_ptr_->CalcRef(i * kPlanningStep, config_.decay_coffi) -
+            ego_s_;
+        search_path[i] = std::move(s);
+        v_search_path[i] = min_cost_traj_ptr_->CalcVelRef(i * kPlanningStep,
+                                                          config_.decay_coffi);
+      }
     }
-
     last_min_cost_traj_ = SampleQuarticPolynomialCurve(*min_cost_traj_ptr_);
     last_ego_cart_point_ = ego_cart_point_;
   }
+  std::cout << "evaluate_cost_time : " << evaluate_cost_time.count()
+            << std::endl;
   LogDebugInfo(sample_cost_time.count(), evaluate_cost_time.count(),
-               all_cost_time.count());
+               all_cost_time.count(), astar_iteration_count);
   return true;
 };
 
@@ -432,6 +455,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       ->mutable_sample_poly_speed_info()
       ->Clear();
   agent_info_.clear();
+  astar_traj_ptr_.reset(nullptr);
   leading_veh_ = LeadingAgentInfo();
   leading_veh_.prediction_path.clear();
   leading_veh_.prediction_path_valid = false;
@@ -590,6 +614,11 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   const auto& init_point = ego_state_manager->planning_init_point();
   ego_v_ = init_point.v;
   ego_a_ = init_point.a;
+  lon_state_.p = 0.0;
+  lon_state_.v = ego_v_;
+  lon_state_.a = ego_a_;
+  lon_state_.j = 0.0;
+  lon_state_.t = 0.0;
 
   ego_cart_point_.first = ego_state_manager->ego_pose().x;
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
@@ -630,7 +659,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
 
   // calc flow vel
   StitchLastBestPoly();
-  min_cost_traj_ptr_ = nullptr;  // clear last ptr;
+  min_cost_traj_ptr_ = nullptr;      // clear last ptr;
   sample_trajs_.clear();
 
   CalcTargetLaneObjsFlowVel();
@@ -980,42 +1009,63 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double v_lead_clip = std::max(headway_v, 0.0);
   double t_gap = interp(ego_v, t_gap_ego_v_bp, t_gap_ego_v);
   t_gap = t_gap * (0.6 * ego_v * 0.01);  // why?
-  double v_rel = std::fmax(ego_v - v_lead_clip, 0.0);
+  double v_rel = ego_v - v_lead_clip;
   double distance_hysteresis = ego_v * config_.leading_safe_delay_time;
   double min_follow_distance = 3.0;
   double fix_safe_distance = v_rel * ego_v / (2.0 * config_.leading_safe_max_dec);
   return std::max(min_follow_distance + fix_safe_distance + distance_hysteresis, min_follow_distance);
 }
-
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
   if (leading_veh_.id != kNoAgentId && leading_veh_.id != -1) {
-    double poly_arrived_t = min_cost_traj_ptr_->arrived_t();
+    bool is_forced_merge_check = false;
+    double poly_arrived_t = 0.0;
+    double ego_pred_end_s = 0.0;
+    double ego_pred_end_v = 0.0;
+    if (astar_traj_ptr_) {
+      poly_arrived_t = astar_traj_ptr_->GetAStarTraj().back().t;
+      ego_pred_end_s = astar_traj_ptr_->GetAStarTraj().back().s + ego_s_;
+      ego_pred_end_v = astar_traj_ptr_->GetAStarTraj().back().v;
+      is_forced_merge_check = true;
+    } else {
+      poly_arrived_t = min_cost_traj_ptr_->arrived_t();
+      ego_pred_end_s = min_cost_traj_ptr_->CalcS(poly_arrived_t);
+      ego_pred_end_v = min_cost_traj_ptr_->CalcV(poly_arrived_t);
+    }
     int dex = static_cast<int>(poly_arrived_t / kTimeResolution + 0.51);
     double traveled_distance = 0.0;
-    double leading_arrived_v = 0.0;
+    double leading_veh_v = 0.0;
     if (dex < leading_veh_.prediction_path.size()) {
       traveled_distance = leading_veh_.prediction_path[dex].first;
-      leading_arrived_v = leading_veh_.prediction_path[dex].second;
+      leading_veh_v = leading_veh_.prediction_path[dex].second;
     } else {
-      traveled_distance = leading_veh_.v * poly_arrived_t;
-      leading_arrived_v = leading_veh_.v;
+      if (leading_veh_.prediction_path_valid) {
+        leading_veh_v = leading_veh_.prediction_path.back().second;
+        traveled_distance = leading_veh_.prediction_path.back().first +
+                            leading_veh_v *
+                                (dex - leading_veh_.prediction_path.size()) *
+                                kTimeResolution;
+      } else {
+        leading_veh_v = leading_veh_.v;
+        traveled_distance = leading_veh_.v * poly_arrived_t;
+      }
     }
-    const double ego_pred_end_s = min_cost_traj_ptr_->CalcS(poly_arrived_t);
-    double ego_pred_end_v = min_cost_traj_ptr_->arrived_v();
-    double buffer_distance = CalcHeadwayDistance(leading_arrived_v, ego_pred_end_v,
+    double buffer_distance = CalcHeadwayDistance(leading_veh_v, ego_pred_end_v,
                                                  t_gap_ego_v_bp_, t_gap_ego_v_);
     if (leading_veh_.half_length > 4.0) {
       buffer_distance += 3.0;
     }
     if (ego_pred_end_s >
         leading_veh_.center_s + ego_s_ + traveled_distance - buffer_distance) {
-      ILOG_DEBUG << "ego pred s is exceed upper";
+      if (is_forced_merge_check) {
+        astar_traj_ptr_.reset();
+        return BestTrajCheck();
+      }
+      std::cout << "ego pred s is exceed upper" << std::endl;
       min_cost_traj_ptr_ = nullptr;
       sample_status_ = kEgoPredSExceedLeadOne;
       return false;
     }
   }
-
   return true;
 }
 
@@ -1217,6 +1267,89 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
     return true;
   }
   return false;
+}
+
+bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
+  double left_time = distance_to_stop_point_ / std::fmax(ego_v_, kZeroEpsilon);
+  if (!is_merge_change_ || left_time > 6.0) {
+    return false;
+  }
+  double press_line_ratio = CalcPressLineRatio();
+  if(press_line_ratio > 0.2){
+    return true;
+  }
+  state_limit_lower_ = {
+      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      -2.0, 1.2, -2.5, 2.5};
+  StateLimit state_limit_lower = {
+  0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+  -1.5, 1.2, -1.5, 2.5};
+  UniformJerkCurve jerk_curve(state_limit_lower, lon_state_, false);
+  auto arrived_s = jerk_curve.arrived_s();
+  if (arrived_s > distance_to_stop_point_) {
+    return true;
+  }
+  return false;
+}
+
+double SamplePolySpeedAdjustDecider::CalcPressLineRatio() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& virtual_target_lane = lane_change_request_ == 1
+                                        ? virtual_lane_mgr->get_left_lane()
+                                        : virtual_lane_mgr->get_right_lane();
+  if (!virtual_target_lane) {
+    return 0.0;
+  }
+  const auto& target_reference_points =
+      virtual_target_lane->get_reference_path()->get_points();
+  if (!target_reference_points.empty()) {
+    auto comp = [](const ReferencePathPoint& p, const double s) {
+      return p.path_point.s() < s;
+    };
+    auto p_first_point =
+        std::lower_bound(target_reference_points.begin(),
+                         target_reference_points.end(), ego_s_, comp);
+    if (p_first_point == target_reference_points.end()) {
+      p_first_point--;
+    }
+    double ref_y = ego_cart_point_.second - p_first_point->path_point.y();
+    double ref_x = ego_cart_point_.first - p_first_point->path_point.x();
+    double target_heading = p_first_point->path_point.theta();
+    double ref_distance =
+        std::abs(ref_x * sin(target_heading) - ref_y * cos(target_heading));
+    double target_lane_to_border =
+        lane_change_request_ == 1
+            ? p_first_point->distance_to_right_lane_border
+            : p_first_point->distance_to_left_lane_border;
+    double lane_width = ref_distance - target_lane_to_border;
+    if(lane_width > ego_width_ / 2.0){
+      return 0.0;
+    }else if(lane_width < -ego_width_ / 2.0){
+      return 1.0;
+    }else{
+      return (0.5 - lane_width / ego_width_);
+    }
+  }
+  return 0.0;
+}
+
+bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
+  GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);
+  STNode start_node(0.0, 0.0, ego_v_, ego_a_);
+  state_limit_upper_ = {
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      -2.0, 1.2,
+      -2.5, 2.5};
+  double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_
+                             ? distance_to_stop_point_
+                             : 0.0;
+  astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
+      start_node, goal_state, &st_sample_space_base_, merge_point_s,
+      leading_veh_, state_limit_upper_, state_limit_lower_,
+      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_);
+  return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
                                                 const double evaluate_cost_time,

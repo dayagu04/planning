@@ -1995,6 +1995,20 @@
     "leading_safe_overstep_gain":4.0,
     "leading_safe_overstep_buffer":3.0
   },
+  "sample_astar_traj":{
+    "time_step_near": 1,
+    "time_step_far": 1,
+    "distance_step": 0.1,
+    "goal_tolerance": 5.0,
+    "weight_dist": 1.0,
+    "weight_time": 1.0,
+    "weight_vel": 0.2,
+    "weight_accel": 0.2,
+    "weight_jerk": 0.2,
+    "weight_front_ttc": 1.0,
+    "weight_back_ttc": 1.0,
+    "weight_lead_safe_distance": 1.0
+  },
   "dp_path_decider": {
     "coeff_l_cost": 10.0,
     "coeff_dl_cost": 20.0,
