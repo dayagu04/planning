@@ -29,6 +29,7 @@
   "enable_fusion_ground_line": true,
   "is_ground_line_cluster": false,
   "enable_ehr_column_box": true,
+  "enable_fusion_speed_bump_objects": true,
   "enable_bbox_mode": true,
   "max_speed_static_obstacle": 0.5,
   "car_body_lat_safe_buffer": 0.1,

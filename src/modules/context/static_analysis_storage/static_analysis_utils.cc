@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "reference_path.h"
+#include "static_analysis_storage/static_analysis_storage.h"
 
 namespace planning {
 
@@ -694,6 +695,7 @@ bool GenerateObstacleRangeList(
     const ReferencePathPoints& refer_path_points,
     planning_math::ConstKDPathPtr kd_path, const double lat_valid_thr,
     const double lon_expand_thr, const double lon_merge_thr,
+    const CElemType elem_type,
     StaticAnalysisStoragePtr static_analysis_storage) {
   const double refer_start_s = refer_path_points.front().path_point.s();
   const double refer_end_s = refer_path_points.back().path_point.s();
@@ -727,7 +729,7 @@ bool GenerateObstacleRangeList(
     }
     s_range_list.resize(res_idx + 1);
   }
-  static_analysis_storage->SetTypeList(CElemType::SpeedBumpRoad, s_range_list);
+  static_analysis_storage->SetTypeList(elem_type, s_range_list);
 #ifdef ENABLE_IDX_RANGE_LIST_STORAGE
   IdxRangeList idx_range_list;
   for (const auto& s_range : s_range_list) {
@@ -735,8 +737,7 @@ bool GenerateObstacleRangeList(
         std::make_pair(kd_path->GetPathPointIdxByS(s_range.first),
                        kd_path->GetPathPointIdxByS(s_range.second)));
   }
-  static_analysis_storage->SetTypeList(CElemType::SpeedBumpRoad,
-                                       idx_range_list);
+  static_analysis_storage->SetTypeList(elem_type, idx_range_list);
 #endif
   return true;
 }
@@ -802,7 +803,7 @@ bool StaticAnalysisUtils::ElemTypeAnalysis(
   GenerateObstacleRangeList(speed_bump_frenet_obstacles, refer_path_points,
                             kd_path, kValidSpeedBumpLatThr,
                             kSpeedBumpLonExpandThr, kSpeedBumpLonMergeThr,
-                            static_analysis_storage);
+                            CElemType::SpeedBumpRoad, static_analysis_storage);
 
   // S3：路口区域
   const auto& semantic_sign_frenet_obstacles =
@@ -820,6 +821,7 @@ bool StaticAnalysisUtils::ElemTypeAnalysis(
   GenerateObstacleRangeList(intersection_frenet_obstacles, refer_path_points,
                             kd_path, kValidIntersectionLatThr,
                             kIntersectionLonExpandThr, kIntersectionLonMergeThr,
+                            CElemType::IntersectionRoad,
                             static_analysis_storage);
 
   // S4：闸机区域
@@ -831,7 +833,7 @@ bool StaticAnalysisUtils::ElemTypeAnalysis(
   GenerateObstacleRangeList(turnstile_frenet_obstacles, refer_path_points,
                             kd_path, kValidTurnstileLatThr,
                             kTurnstileLonExpandThr, kTurnstileLonMergeThr,
-                            static_analysis_storage);
+                            CElemType::TurnStileRoad, static_analysis_storage);
   return true;
 }
 
