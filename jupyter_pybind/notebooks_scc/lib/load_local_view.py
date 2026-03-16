@@ -2126,9 +2126,9 @@ def load_local_view_figure():
   is_vis_lane_mark = global_var.get_value('is_vis_lane_mark')
   is_vis_merge_point = global_var.get_value('is_vis_merge_point')
   is_vis_prediction = global_var.get_value('is_vis_prediction')
+  is_vis_fus_obj = global_var.get_value('is_vis_fus_obj')
   is_vis_ego_motion_sim = global_var.get_value('is_vis_ego_motion_sim')
   is_vis_snrd = global_var.get_value('is_vis_snrd')
-  is_vis_fus_center_line = global_var.get_value('is_vis_fus_center_line')
   is_vis_lane_topo = global_var.get_value('is_vis_lane_topo')
   is_vis_smooth_refline = global_var.get_value('is_vis_smooth_refline')
   is_vis_road_type_line = global_var.get_value('is_vis_road_type_line')
@@ -2933,7 +2933,7 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-  if is_vis_fus_center_line or is_vis_fus_line:
+  if is_vis_fus_line:
     fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -3060,10 +3060,10 @@ def load_local_view_figure():
     fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 2,color='red', fill_alpha = 0.15, legend_label = 'occ obj')
     fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs in plan')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info', visible = False)
-
+  if is_vis_fus_obj:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info',visible = False)
-    fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
+  fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
   if is_vis_speed_bump:
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'speed bump')
     # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)

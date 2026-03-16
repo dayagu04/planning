@@ -111,6 +111,8 @@ class TsrCore {
   bool supp_sign_in_suppression_flag_ = false;
   // 辅助标识牌保持时间
   double supp_sign_hold_time_ = 0.0;
+  //sdmappro_导航模式 =1导航中 =0 非导航中
+  bool tsr_navi_flag_ = false; 
 
   // 更新辅助标识牌信息
   void UpdateTsrSuppInfo(void);
@@ -140,6 +142,7 @@ class TsrCore {
   // 模式3: 输出解除限速80
   // 模式4: 辅助标识依次以2s为周期显示所有种类
   void TsrTestFunction(void);
+
 };
 
 }  // namespace tsr_core

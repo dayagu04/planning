@@ -40,6 +40,10 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+  auto function_state_machine_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .function_state_machine_info;
 
   uint16 disable_code = 0;
 
@@ -83,11 +87,23 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
   } else {
     /*do nothing*/
   }
-  //bit 5
+  // bit 5
   //表显车速小于4kph-奔腾车型
   if (GetContext.get_param()->car_type == "bestune_e541" &&
       vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 3.8) {
     disable_code += uint16_bit[5];
+  }
+  // bit 6
+  //在APA及HPP状态下，抑制tsr
+  if (((function_state_machine_info_ptr->current_state >=
+        iflyauto::FunctionalState_PARK_STANDBY) &&
+       (function_state_machine_info_ptr->current_state <=
+        iflyauto::FunctionalState_PARK_PRE_ACTIVE)) ||
+      ((function_state_machine_info_ptr->current_state >=
+        iflyauto::FunctionalState_HPP_STANDBY) &&
+       (function_state_machine_info_ptr->current_state <=
+        iflyauto::FunctionalState_HPP_ERROR))) {
+    disable_code += uint16_bit[6];
   }
 
   return disable_code & GetContext.get_param()->tsr_disable_code_maskcode;
@@ -126,7 +142,8 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
     /*do nothing*/
   }
 
-  return fault_code & GetContext.get_param()->tsr_fault_code_maskcode;
+  return fault_code & GetContext.get_param()->tsr_fault_code_maskcode
+  & GetContext.get_param()->adas_fault_sw_code;
 }
 
 iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
@@ -359,6 +376,18 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
                                               ->get_local_view()
                                               .vehicle_service_output_info;
   
+  auto tsr_sdpro_map_ptr = &GetContext.mutable_session()
+                                ->mutable_environmental_model()
+                                ->get_local_view()
+                                .sdpro_map_info;
+
+  if (tsr_sdpro_map_ptr->navi_status().mode() ==
+      iflymapdata::sdpro::NaviStatus_NaviMode::NaviStatus_NaviMode_NAVI) {
+    tsr_navi_flag_ = true;
+  } else {
+    tsr_navi_flag_ = false;
+  }
+  
   // 道路信息
   auto road_info = GetContext.get_road_info();
 
@@ -368,6 +397,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
 
   // 先尝试获取sd_map限速信息
+  //0309新增策略，只有开启车机导航才使用地图限速。否则使用感知限速
   if (road_info->sdmap_info.valid_flag) {
     sd_map_speed_limit_valid = true;
     sd_map_speed_limit = road_info->sdmap_info.speed_limit;
@@ -375,13 +405,13 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   }
 
   // 如果sd_map限速有效且大于0，则使用sd_map限速
-  if (sd_map_speed_limit_valid) {
+  if (sd_map_speed_limit_valid  && tsr_navi_flag_) {
     current_map_speed_limit_valid_ = true;
     current_map_speed_limit_ = sd_map_speed_limit;
     current_map_type_ = 1;  // sd_map
   }
   // 否则尝试获取sd_pro_map限速信息
-  else if (road_info->sdpromap_info.valid_flag) {
+  else if (road_info->sdpromap_info.valid_flag && tsr_navi_flag_) {
     current_map_speed_limit_valid_ = true;
     current_map_speed_limit_ = road_info->sdpromap_info.speed_limit;
     current_map_type_ = 2;  // sd_pro_map
@@ -507,6 +537,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
            (ego_speed_kph >= 40.0 && ego_speed_kph <= 80.0 && hightest_perception_speed_limit > 10) ||
            (ego_speed_kph > 80.0 && hightest_perception_speed_limit > 40)) {
           tsr_speed_limit_ = hightest_perception_speed_limit;
+          accumulated_path_length_ = 0.0;   // 本帧起按新限速重新累积距离
           speed_limit_out_flag_ = true;
           speed_limit_renew_flag_ = true;
         }
@@ -525,6 +556,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
           end_of_speed_sign_value_ = hightest_perception_end_of_speed_limit;
           end_of_speed_limit_out_flag_ = true;
           tsr_speed_limit_ = 0;
+          accumulated_path_length_ = 0.0;   // 解除限速后距离从 0 开始
           speed_limit_out_flag_ = false;
           speed_limit_renew_flag_ = true;
           speed_limit_set_.clear();
@@ -535,37 +567,37 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   }
 
-  // 根据当前感知限速速度，更改tsr_reset_path_length
+  // 根据当前感知限速速度，更改tsr_reset_path_length（每帧都按当前限速设阈值）
+if (tsr_speed_limit_ == 0) {
   tsr_reset_path_length_ = GetContext.get_param()->tsr_reset_path_length;
-  if (speed_limit_renew_flag_ == true) {
-    // bestune_e541
-    if (GetContext.get_param()->car_type == "bestune_e541") {
-      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ < 20.0) {
-        tsr_reset_path_length_ = 150.0;
-      } else if (tsr_speed_limit_ >= 20.0 && tsr_speed_limit_ < 30.0) {
-        tsr_reset_path_length_ = 200.0;
-      } else if (tsr_speed_limit_ >= 30.0 && tsr_speed_limit_ < 40.0) {
-        tsr_reset_path_length_ = 350.0;
-      } else if (tsr_speed_limit_ >= 40.0 && tsr_speed_limit_ < 50.0) {
-        tsr_reset_path_length_ = 400.0;
-      } else if (tsr_speed_limit_ >= 50.0 && tsr_speed_limit_ < 70.0) {
-        tsr_reset_path_length_ = 700.0;
-      } else if (tsr_speed_limit_ >= 70.0 && tsr_speed_limit_ < 80.0) {
-        tsr_reset_path_length_ = 900.0;
-      } else {
-        tsr_reset_path_length_ = 1100.0;
-      }
+} else {
+  // 每帧按当前 tsr_speed_limit_ 选择阈值
+  if (GetContext.get_param()->car_type == "bestune_e541") {
+    if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ < 20.0) {
+      tsr_reset_path_length_ = 150.0;
+    } else if (tsr_speed_limit_ >= 20.0 && tsr_speed_limit_ < 30.0) {
+      tsr_reset_path_length_ = 200.0;
+    } else if (tsr_speed_limit_ >= 30.0 && tsr_speed_limit_ < 40.0) {
+      tsr_reset_path_length_ = 350.0;
+    } else if (tsr_speed_limit_ >= 40.0 && tsr_speed_limit_ < 50.0) {
+      tsr_reset_path_length_ = 400.0;
+    } else if (tsr_speed_limit_ >= 50.0 && tsr_speed_limit_ < 70.0) {
+      tsr_reset_path_length_ = 700.0;
+    } else if (tsr_speed_limit_ >= 70.0 && tsr_speed_limit_ < 80.0) {
+      tsr_reset_path_length_ = 900.0;
+    } else {
+      tsr_reset_path_length_ = 1100.0;
     }
-    else {
-      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ <= 50.0) {
-        tsr_reset_path_length_ = 1500.0;
-      } else if (tsr_speed_limit_ >= 51.0 && tsr_speed_limit_ <= 80.0) {
-        tsr_reset_path_length_ = 2000.0;
-      } else {
-        tsr_reset_path_length_ = 4000.0;
-      }
+  } else {
+    if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ <= 50.0) {
+      tsr_reset_path_length_ = 1500.0;
+    } else if (tsr_speed_limit_ >= 51.0 && tsr_speed_limit_ <= 80.0) {
+      tsr_reset_path_length_ = 2000.0;
+    } else {
+      tsr_reset_path_length_ = 4000.0;
     }
   }
+}
   // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
   if (accumulated_path_length_ > tsr_reset_path_length_) {
     // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
@@ -580,8 +612,10 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     speed_limit_renew_flag_ = true;
   }
 
+
   // 只要有有效的sdmap限速信息就采用sdmap的限速信息
-  if (sd_map_speed_limit_valid) {
+  if (sd_map_speed_limit_valid && GetContext.get_param()->sd_map_speed_sw &&
+      tsr_navi_flag_) {
     // sd_map限速有效时，直接采用sd_map限速，忽略视觉限速
     tsr_speed_limit_ = current_map_speed_limit_;
   } else if (speed_limit_out_flag_ == false &&
@@ -882,12 +916,24 @@ void TsrCore::RunOnce(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .function_state_machine_info;
+  auto tsr_sdpro_map_ptr = &GetContext.mutable_session()
+                                ->mutable_environmental_model()
+                                ->get_local_view()
+                                .sdpro_map_info;
+
+  if (tsr_sdpro_map_ptr->navi_status().mode() ==
+      iflymapdata::sdpro::NaviStatus_NaviMode::NaviStatus_NaviMode_NAVI) {
+    tsr_navi_flag_ = true;
+  } else {
+    tsr_navi_flag_ = false;
+  }
 
   // NOA激活模式下，只使用地图限速信息，避免感知干扰
   if (function_state_machine_info_ptr->current_state ==
           iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE ||
       function_state_machine_info_ptr->current_state ==
-          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE) {
+          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE ||
+      tsr_navi_flag_) {
     UpdateTsrSpeedLimitOnlyByMap();
   } else {
     // 非NOA模式下，使用感知+地图的综合限速信息
@@ -936,9 +982,11 @@ void TsrCore::RunOnce(void) {
   JSON_DEBUG_VALUE("tsr_warning_flag_", tsr_warning_flag_);
   JSON_DEBUG_VALUE("tsr_overspeed_status_", overspeed_status_);
   JSON_DEBUG_VALUE("tsr_accumulated_path_length_", accumulated_path_length_);
-  JSON_DEBUG_VALUE("tsr_output_supp_sign_info_", (int)output_supp_sign_info_);
+  JSON_DEBUG_VALUE("tsr_output_supp_sign_info_", (int)output_supp_sign_info_);  
   JSON_DEBUG_VALUE("supp_sign_in_suppression_flag_",
                    supp_sign_in_suppression_flag_);
+  JSON_DEBUG_VALUE("tsr_navi_flag_",
+                   tsr_navi_flag_);
 
   // reset info
  // ResetRealTimeTsrInfo();

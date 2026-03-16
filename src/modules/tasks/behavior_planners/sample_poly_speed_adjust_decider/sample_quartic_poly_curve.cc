@@ -1,4 +1,4 @@
-#include "sample_poly_curve.h"
+#include "sample_quartic_poly_curve.h"
 
 #include <cmath>
 #include <cstddef>
@@ -23,7 +23,9 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const SamplePolySpeedAdjustDeciderConfig& config) {
   poly_ = poly;
   arrived_t_ = arrived_t;
-  arrived_v_ = poly_.CalculateFirstDerivative(poly_.T());
+  arrived_v_ = arrived_t_ - poly_.T() > 0
+                   ? poly_.CalculateFirstDerivative(poly_.T())
+                   : poly_.CalculateFirstDerivative(arrived_t_);
   arrived_s_ = arrived_t_ - poly_.T() > 0
                    ? poly_.CalculatePoint(poly_.T()) +
                          arrived_v_ * (arrived_t_ - poly_.T())
@@ -253,10 +255,13 @@ void SampleQuarticPolynomialCurve::CalcCost(
     is_mergr_change
         ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
         : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
-  if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon && is_left_distance_enough_) {
-    speed_differ_gain = 0.0;
-    distance_to_stop_point = kMaxDistanceToStopPoint;
-    time_cost = 3.0 * std::exp(arrived_t_ / 2.5);
+
+  if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
+    if (is_left_distance_enough_) {
+      speed_differ_gain = 0.0;
+      distance_to_stop_point = kMaxDistanceToStopPoint;
+      time_cost = 3.0 * std::exp(arrived_t_ / 2.5);
+    }
   }
 
   int temp_index = static_cast<int>(arrived_t_ / kTimeResolution + 0.51);

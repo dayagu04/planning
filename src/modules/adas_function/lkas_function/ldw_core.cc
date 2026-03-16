@@ -32,10 +32,10 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
 
   // bit 0
   // 判断车速是否处于工作车速范围内
-  if (vehicle_service_output_info_ptr->vehicle_speed_display <
+  if (GetContext.get_state_info()->vehicle_speed_display_kph <
       ldw_param_.enable_vehspd_display_min) {
     enable_code += uint32_bit[0];
-  } else if (vehicle_service_output_info_ptr->vehicle_speed_display >
+  } else if (GetContext.get_state_info()->vehicle_speed_display_kph >
              ldw_param_.enable_vehspd_display_max) {
     enable_code += uint32_bit[0];
   } else {
@@ -358,10 +358,10 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
 
   // bit 0
   // 判断车速是否处于工作车速范围内
-  if (vehicle_service_output_info_ptr->vehicle_speed_display <
+  if (GetContext.get_state_info()->vehicle_speed_display_kph <
       ldw_param_.disable_vehspd_display_min) {
     disable_code += uint32_bit[0];
-  } else if (vehicle_service_output_info_ptr->vehicle_speed_display >
+  } else if (GetContext.get_state_info()->vehicle_speed_display_kph >
              ldw_param_.disable_vehspd_display_max) {
     disable_code += uint32_bit[0];
   } else {
@@ -695,7 +695,8 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   } else {
     /*do nothing*/
   }
-  return ldw_fault_code & GetContext.get_param()->ldw_fault_code_maskcode;
+  return ldw_fault_code & GetContext.get_param()->ldw_fault_code_maskcode
+  & GetContext.get_param()->adas_fault_sw_code;
 }
 
 uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
@@ -705,6 +706,10 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .function_state_machine_info;
+  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .vehicle_service_output_info;
 
   uint32 ldw_left_suppression_code = 0;
 
@@ -860,6 +865,96 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
   } else {
     /*do nothing*/
   }
+  // bit 6
+  // 判断横摆角速度是否超限,12deg/s对应0.2094rad/s.横摆角速度绝对值<12deg/s，持续1s
+  if (fabs(vehicle_service_output_info_ptr->yaw_rate) < 12.0 / 57.3) {
+    yaw_rate_supp_recover_duration_ += GetContext.get_param()->dt;
+    if (yaw_rate_supp_recover_duration_ > 60.0) {
+      yaw_rate_supp_recover_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    yaw_rate_supp_recover_duration_ = 0.0;
+  }
+  if (yaw_rate_supp_recover_duration_ < 1.0) {
+    ldw_left_suppression_code += uint32_bit[10];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 7
+  // 方向盘转速(deg/s)和车速(km/h)满足如下公式,持续1s:方向盘转速≥145-0.5*v，0<v≤100
+  // 方向盘转速≥95，v＞100.
+  // PS1:1.8：mps转换为kph   PS2:使用实际车速.持续1秒的算法未完成
+  if ((vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) &&
+      (fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
+       (145.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3)) {
+    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
+    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
+      str_wheel_ang_speed_recover_duration_ = 60.0;
+    };
+  } else if ((vehicle_service_output_info_ptr->vehicle_speed > 100.0 / 3.6) &&
+             (fabs(
+                  vehicle_service_output_info_ptr->steering_wheel_angle_speed) >
+              95.0 / 57.3)) {
+    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
+    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
+      str_wheel_ang_speed_recover_duration_ = 60.0;
+    }
+  } else {
+    str_wheel_ang_speed_recover_duration_ = 0.0;
+  }
+  if (str_wheel_ang_speed_recover_duration_ > 1.0) {
+    ldw_left_suppression_code += uint32_bit[11];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 8
+  // 驾驶员未踩下制动踏板:制动力<3bar，持续2s.后续再讨论
+  if (vehicle_service_output_info_ptr->esp_pressure < 3.0) {
+    brake_pedal_pressed_supp_recover_duration_ += GetContext.get_param()->dt;
+    if (brake_pedal_pressed_supp_recover_duration_ > 60.0) {
+      brake_pedal_pressed_supp_recover_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    brake_pedal_pressed_supp_recover_duration_ = 0.0;
+  }
+  if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
+    ldw_left_suppression_code += uint32_bit[12];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 9
+  // 油门踏板变化率<30%/s，持续1s，未完成
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
+      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate) {
+    acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
+    if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
+      acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
+  }
+  if (acc_pedal_pos_rate_supp_recover_duration_ <
+      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate_dur) {
+    ldw_left_suppression_code += uint32_bit[13];
+  } else {
+    /*do nothing*/
+  }
+
+  // // bit 10
+  // // AEB未激活，未完成
+  if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
+    ldw_left_suppression_code += uint32_bit[14];
+  } else { /*do nothing*/
+  }
 
   return ldw_left_suppression_code &
          GetContext.get_param()->ldw_left_suppression_code_maskcode;
@@ -966,7 +1061,83 @@ uint32 LdwCore::UpdateLdwLeftKickDownCode(void) {
   } else {
     /*do nothing*/
   }
+  // bit 6
+  // 判断横摆角速度是否超限,15deg/s对应0.2094rad/s
+  if (fabs(vehicle_service_output_info_ptr->yaw_rate) > 15.0 / 57.3) {
+    yaw_rate_supp_duration_ += GetContext.get_param()->dt;
+    if (yaw_rate_supp_duration_ > 60.0) {
+      yaw_rate_supp_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    yaw_rate_supp_duration_ = 0.0;
+  }
+  if (yaw_rate_supp_duration_ > 5.0) {
+    ldw_left_kickdown_code += uint32_bit[7];
+  } else {
+    /*do nothing*/
+  }
 
+  // bit 7
+  // 方向盘转速过大，方向盘转速(deg/s)和车速(km/h)满足如下公式:
+  // 方向盘转速≥150-0.5*v，0<v≤100
+  // 方向盘转速≥100，v＞100
+  // PS1:1.8：mps转换为kph   PS2:使用实际车速 PS:滞回区间
+  double steering_wheel_angle_speed_supp_thrd = 0.0;
+  if (vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) {
+    steering_wheel_angle_speed_supp_thrd =
+        (150.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3;
+  } else {
+    steering_wheel_angle_speed_supp_thrd = 100.0/57.3;
+  }
+  if ((fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
+       steering_wheel_angle_speed_supp_thrd) &&
+      (ldw_state_ !=
+       iflyauto::LDWFunctionFSMWorkState::
+           LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) &&
+      (ldw_state_ != iflyauto::LDWFunctionFSMWorkState::
+                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION)
+
+  ) {
+    ldw_left_kickdown_code += uint32_bit[8];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 8
+  // 驾驶员未踩下制动踏板:制动力>3bar，持续0.2s
+  if (vehicle_service_output_info_ptr->esp_pressure > 10.0) {
+    brake_pedal_pressed_supp_duration_ += GetContext.get_param()->dt;
+    if (brake_pedal_pressed_supp_duration_ > 60.0) {
+      brake_pedal_pressed_supp_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    brake_pedal_pressed_supp_duration_ = 0.0;
+  }
+  if (brake_pedal_pressed_supp_duration_ > 0.2) {
+    ldw_left_kickdown_code += uint32_bit[9];
+  } else {
+    /*do nothing*/
+  }
+  // bit 9
+  // 油门踏板变化率>70%/s
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate >
+      GetContext.get_param()->ldw_disable_accel_pedal_pos_rate) {
+    ldw_left_kickdown_code += uint32_bit[10];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 10
+  // AEB未激活
+  // 0:Not Ready 1:Ready 2:Active 3:Temporary Failed 4:Permanently Failed
+  if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
+    ldw_left_kickdown_code += uint32_bit[11];
+  } else { /*do nothing*/
+  }
   return ldw_left_kickdown_code &
          GetContext.get_param()->ldw_left_kickdown_code_maskcode;
 }
@@ -978,6 +1149,10 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .function_state_machine_info;
+  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .vehicle_service_output_info;
 
   uint32 ldw_right_suppression_code = 0;
 
@@ -1129,7 +1304,96 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
   } else {
     /*do nothing*/
   }
+  // bit 6
+  // 判断横摆角速度是否超限,12deg/s对应0.2094rad/s.横摆角速度绝对值<12deg/s，持续1s
+  if (fabs(vehicle_service_output_info_ptr->yaw_rate) < 12.0 / 57.3) {
+    yaw_rate_supp_recover_duration_ += GetContext.get_param()->dt;
+    if (yaw_rate_supp_recover_duration_ > 60.0) {
+      yaw_rate_supp_recover_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    yaw_rate_supp_recover_duration_ = 0.0;
+  }
+  if (yaw_rate_supp_recover_duration_ < 1.0) {
+    ldw_right_suppression_code += uint32_bit[10];
+  } else {
+    /*do nothing*/
+  }
 
+  // bit 7
+  // 方向盘转速(deg/s)和车速(km/h)满足如下公式,持续1s:方向盘转速≥145-0.5*v，0<v≤100
+  // 方向盘转速≥95，v＞100.
+  // PS1:1.8：mps转换为kph   PS2:使用实际车速.持续1秒的算法未完成
+  if ((vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) &&
+      (fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
+       (145.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3)) {
+    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
+    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
+      str_wheel_ang_speed_recover_duration_ = 60.0;
+    };
+  } else if ((vehicle_service_output_info_ptr->vehicle_speed > 100.0 / 3.6) &&
+             (fabs(
+                  vehicle_service_output_info_ptr->steering_wheel_angle_speed) >
+              95.0 / 57.3)) {
+    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
+    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
+      str_wheel_ang_speed_recover_duration_ = 60.0;
+    }
+  } else {
+    str_wheel_ang_speed_recover_duration_ = 0.0;
+  }
+  if (str_wheel_ang_speed_recover_duration_ > 1.0) {
+    ldw_right_suppression_code += uint32_bit[11];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 8
+  // 驾驶员未踩下制动踏板:制动力<3bar，持续2s.后续再讨论
+  if (vehicle_service_output_info_ptr->esp_pressure < 3.0) {
+    brake_pedal_pressed_supp_recover_duration_ += GetContext.get_param()->dt;
+    if (brake_pedal_pressed_supp_recover_duration_ > 60.0) {
+      brake_pedal_pressed_supp_recover_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    brake_pedal_pressed_supp_recover_duration_ = 0.0;
+  }
+  if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
+    ldw_right_suppression_code += uint32_bit[12];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 9
+  // 油门踏板变化率<30%/s，持续1s，未完成
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
+      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate) {
+    acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
+    if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
+      acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
+  }
+  if (acc_pedal_pos_rate_supp_recover_duration_ <
+      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate_dur) {
+    ldw_right_suppression_code += uint32_bit[13];
+  } else {
+    /*do nothing*/
+  }
+
+  // // bit 10
+  // // AEB未激活，未完成
+  if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
+    ldw_right_suppression_code += uint32_bit[14];
+  } else { /*do nothing*/
+  }
   return ldw_right_suppression_code &
          GetContext.get_param()->ldw_right_suppression_code_maskcode;
 }
@@ -1226,7 +1490,83 @@ uint32 LdwCore::UpdateLdwRightKickDownCode(void) {
   } else {
     /*do nothing*/
   }
+  // bit 6
+  // 判断横摆角速度是否超限,15deg/s对应0.2094rad/s
+  if (fabs(vehicle_service_output_info_ptr->yaw_rate) > 15.0 / 57.3) {
+    yaw_rate_supp_duration_ += GetContext.get_param()->dt;
+    if (yaw_rate_supp_duration_ > 60.0) {
+      yaw_rate_supp_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    yaw_rate_supp_duration_ = 0.0;
+  }
+  if (yaw_rate_supp_duration_ > 5.0) {
+    ldw_right_kickdown_code += uint32_bit[7];
+  } else {
+    /*do nothing*/
+  }
 
+  // bit 7
+  // 方向盘转速过大，方向盘转速(deg/s)和车速(km/h)满足如下公式:
+  // 方向盘转速≥150-0.5*v，0<v≤100
+  // 方向盘转速≥100，v＞100
+  // PS1:1.8：mps转换为kph   PS2:使用实际车速 PS:滞回区间
+  double steering_wheel_angle_speed_supp_thrd = 0.0;
+  if (vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) {
+    steering_wheel_angle_speed_supp_thrd =
+        (150.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3;
+  } else {
+    steering_wheel_angle_speed_supp_thrd = 100.0/57.3;
+  }
+  if ((fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
+       steering_wheel_angle_speed_supp_thrd) &&
+      (ldw_state_ !=
+       iflyauto::LDWFunctionFSMWorkState::
+           LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) &&
+      (ldw_state_ != iflyauto::LDWFunctionFSMWorkState::
+                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION)
+
+  ) {
+    ldw_right_kickdown_code += uint32_bit[8];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 8
+  // 驾驶员未踩下制动踏板:制动力>3bar，持续0.2s
+  if (vehicle_service_output_info_ptr->esp_pressure > 10.0) {
+    brake_pedal_pressed_supp_duration_ += GetContext.get_param()->dt;
+    if (brake_pedal_pressed_supp_duration_ > 60.0) {
+      brake_pedal_pressed_supp_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    brake_pedal_pressed_supp_duration_ = 0.0;
+  }
+  if (brake_pedal_pressed_supp_duration_ > 0.2) {
+    ldw_right_kickdown_code += uint32_bit[9];
+  } else {
+    /*do nothing*/
+  }
+  // bit 9
+  // 油门踏板变化率>70%/s
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate >
+      GetContext.get_param()->ldw_disable_accel_pedal_pos_rate) {
+    ldw_right_kickdown_code += uint32_bit[10];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 10
+  // AEB未激活
+  // 0:Not Ready 1:Ready 2:Active 3:Temporary Failed 4:Permanently Failed
+  if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
+    ldw_right_kickdown_code += uint32_bit[11];
+  } else { /*do nothing*/
+  }
   return ldw_right_kickdown_code &
          GetContext.get_param()->ldw_right_kickdown_code_maskcode;
 }

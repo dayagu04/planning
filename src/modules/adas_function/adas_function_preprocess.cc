@@ -266,6 +266,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
       "ldw_right_kickdown_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_fault_code_maskcode, int,
                        "elk_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->adas_fault_sw_code, int,
+                       "adas_fault_sw_code");                     
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_enable_code_maskcode,
                        int, "elk_enable_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_disable_code_maskcode,
@@ -450,6 +452,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "meb_odbox_dis_buffer_d_static_default");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_veh_speed_kmh, std::vector<double>,
                        "meb_odbox_dis_buffer_veh_speed_kmh");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->sd_map_speed_sw, bool,
+                       "sd_map_speed_sw");
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }
@@ -480,6 +484,8 @@ void Preprocess::UpdateStateInfo(void) {
       vehicle_service_output_info_ptr->vehicle_speed;
   GetContext.mutable_state_info()->display_vehicle_speed =
       vehicle_service_output_info_ptr->vehicle_speed_display;
+  GetContext.mutable_state_info()->vehicle_speed_display_kph =
+      vehicle_service_output_info_ptr->vehicle_speed_display * 3.6F + 0.5f;
   // enu2car 变换矩阵
   Eigen::Vector2d current_pos_i(GetContext.mutable_session()
                                     ->environmental_model()

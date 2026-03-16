@@ -1098,7 +1098,10 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
   std::array<double, 4> x_cut_factor{0.2, 0.4, 0.6, 0.8};
   std::array<double, 4> f_cut_factor{10, 20, 30, 40};
   double cut_factor = interp(std::fabs(v_lat), x_cut_factor, f_cut_factor);
-
+  bool is_normal_static_obstacle =
+      obstacle.is_static() && (obstacle.accel_fusion() < 0.3 ||
+                               (obstacle.accel_fusion() >= 0.3 && v_lat > -0.3));
+  // 静态障碍物加速度小于0.3时，或大于0.3但是cut_out，不考虑横向速度，避免不避让
   if (is_avoidable) {
     // hack：missing prediction, considering v_lat
     // if (item.trajectory.intersection == 0 &&
@@ -1108,10 +1111,12 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
          std::fabs(frenet_obstacle.frenet_velocity_s()) < 0.5 && v_lat > -0.3 &&
          v_lat < 0.3) ||
         // 横向无运动的人或锥桶 || 自车在最右车道
-        (!obstacle.is_car() && (std::fabs(v_lat) < 0.3)) || rightest_lane) {
+        (!obstacle.is_car() && (std::fabs(v_lat) < 0.3)) || rightest_lane ||
+        is_normal_static_obstacle) {
       // hack: always true: 横向无运动的车 || 横向无运动的人或锥桶
       if (((v_lat > -0.3 && v_lat < 0.3 && obstacle.is_car()) ||
-           (std::fabs(v_lat) < 0.3 && !obstacle.is_car()))) {
+           (std::fabs(v_lat) < 0.3 && !obstacle.is_car())) ||
+          is_normal_static_obstacle) {
         history.ncar_count =
             std::min(history.ncar_count + gap, 100 * kPlanningCycleTime);
       }

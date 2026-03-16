@@ -141,7 +141,8 @@ void TargetPoseRegulator::GenerateYboundary(const AstarRequest *request,
 
 void TargetPoseRegulator::UpdateReferenceLinePath(
     const AstarRequest *request, const VehicleParam &veh_param,
-    const ParkingVehDirection &direction_request, HierarchyEulerDistanceTransform *edt) {
+    const ParkingVehDirection &direction_request,
+    HierarchyEulerDistanceTransform *edt) {
   // x boundary
   GenerateXboundary(request, veh_param);
 
@@ -236,9 +237,9 @@ const bool TargetPoseRegulator::IsParkingIn(const AstarRequest *request) {
   return false;
 }
 
-void TargetPoseRegulator::GenerateCandidates(HierarchyEulerDistanceTransform *edt,
-                                             const AstarRequest *request,
-                                             const VehicleParam &veh_param) {
+void TargetPoseRegulator::GenerateCandidates(
+    HierarchyEulerDistanceTransform *edt, const AstarRequest *request,
+    const VehicleParam &veh_param) {
   Pose2f global_pose;
   global_pose = target_;
 
@@ -359,7 +360,8 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
 }
 
 void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
-    HierarchyEulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
+    HierarchyEulerDistanceTransform *edt,
+    const ParkingVehDirection &direction_request,
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
@@ -392,6 +394,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   // 处理中间方向
   if (is_middle_direction) {
     Eigen::Vector2d mid_base_pose(target_.GetX(), kYLowerMid);
+    constexpr size_t kNumCandidateColumns = 3;
     for (size_t j = 0; j < kMidCandidateNum; ++j) {
       const Eigen::Vector2d temp_pos =
           mid_base_pose +

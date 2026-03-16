@@ -50,7 +50,7 @@ void EDTCollisionDetector::GenOccupancyGridMap(
 
 void EDTCollisionDetector::GenOccupancyGridMap(
     const Eigen::Vector2d &ogm_origin) {
-  ogm_origin_ << ogm_origin.x(), ogm_origin_.y();
+  ogm_origin_ << ogm_origin.x(), ogm_origin.y();
   ogm_bound_.Set(ogm_origin_.x(), ogm_origin_.y(),
                  ogm_origin_.x() + edt_ogm_grid_x_max * resolution_ + 1.0,
                  ogm_origin_.y() + edt_ogm_grid_y_max * resolution_ + 1.0);
@@ -97,7 +97,7 @@ void EDTCollisionDetector::AddObsToOGM() {
   // add pt cloud
   bool(*obs_ogm)[edt_ogm_grid_y_max] = nullptr;
   for (const auto &obs_pair : obs_map) {
-    const ApaObstacle obs = obs_pair.second;
+    const ApaObstacle& obs = obs_pair.second;
     ApaObsHeightType obs_height_type = obs.GetObsHeightType();
     if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
       obs_height_type = ApaObsHeightType::HIGH;
@@ -185,15 +185,21 @@ void EDTCollisionDetector::CalcObsDistArray() {
   cv::distanceTransform(car_with_mirror_map_matrix, car_with_mirror_edt_matrix,
                         CV_DIST_L2, CV_DIST_MASK_PRECISE);
 
-  TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
-                          car_without_mirror_obs_ogm_);
-  cv::distanceTransform(car_without_mirror_map_matrix,
-                        car_without_mirror_edt_matrix, CV_DIST_L2,
-                        CV_DIST_MASK_PRECISE);
+  if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+    TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
+    cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
+                          CV_DIST_L2, CV_DIST_MASK_PRECISE);
+  } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
+    TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
+                            car_without_mirror_obs_ogm_);
+    cv::distanceTransform(car_without_mirror_map_matrix,
+                          car_without_mirror_edt_matrix, CV_DIST_L2,
+                          CV_DIST_MASK_PRECISE);
 
-  TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
-  cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
-                        CV_DIST_L2, CV_DIST_MASK_PRECISE);
+    TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
+    cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
+                          CV_DIST_L2, CV_DIST_MASK_PRECISE);
+  }
 
   // only protect, avoid crash caused by excessive boundary values
   const int max_row_num = std::min(max_bound_x, edt_ogm_grid_x_max);
@@ -201,7 +207,9 @@ void EDTCollisionDetector::CalcObsDistArray() {
   for (int row = 0; row < max_row_num; ++row) {
     float *car_with_mirror_data, *car_without_mirror_data, *car_chassis_data;
     car_with_mirror_data = car_with_mirror_edt_matrix.ptr<float>(row);
-    if (apa_param.GetParam().enable_multi_height_col_det) {
+    if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+      car_chassis_data = car_chassis_edt_matrix.ptr<float>(row);
+    } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
       car_without_mirror_data = car_without_mirror_edt_matrix.ptr<float>(row);
       car_chassis_data = car_chassis_edt_matrix.ptr<float>(row);
     }
@@ -209,7 +217,10 @@ void EDTCollisionDetector::CalcObsDistArray() {
     for (int col = 0; col < max_col_num; ++col) {
       car_with_mirror_ogm_obs_data_.dist[row][col] =
           car_with_mirror_data[col] * resolution_;
-      if (apa_param.GetParam().enable_multi_height_col_det) {
+      if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+        car_chassis_ogm_obs_data_.dist[row][col] =
+            car_chassis_data[col] * resolution_;
+      } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
         car_without_mirror_ogm_obs_data_.dist[row][col] =
             car_without_mirror_data[col] * resolution_;
         car_chassis_ogm_obs_data_.dist[row][col] =

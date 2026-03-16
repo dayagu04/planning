@@ -37,7 +37,7 @@ class BoundMaker {
 
   double jerk_upper_bound(const double t) const;
 
-  double comfort_bound(const double t) const;
+  double s_soft_bound(const double t) const;
 
   struct UpperBoundInfo {
     double s = 0.0;
@@ -58,9 +58,9 @@ class BoundMaker {
 
   void MakeVBound();
 
-  void MakeJerkBound(const TargetMaker& target_maker);
+  void MakeJerkBound();
 
-  void MakeComfortBound();
+  void MakeSoftBound();
 
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string& lc_request);
@@ -105,7 +105,7 @@ class BoundMaker {
   std::vector<double> acc_lower_bound_;
   std::vector<double> jerk_upper_bound_;
   std::vector<double> jerk_lower_bound_;
-  std::vector<double> comfort_upper_bound_;
+  std::vector<double> s_soft_bound_;
 
   double acc_upper_bound_with_speed_ = 0.0;
 
@@ -122,8 +122,6 @@ class BoundMaker {
   const std::vector<double> _P_SLOPE_V{0.8, 0.2};
   const std::vector<double> _T_GAP_VEGO_BP{5.0, 15.0, 30.0};
   const std::vector<double> _T_GAP_VEGO_V{1.35, 1.55, 2.0};
-  const std::vector<double> _A_CRUISE_MIN_BP{0.0, 5.0, 10.0, 20.0, 40.0};
-  const std::vector<double> _A_CRUISE_MIN_V{-1.5, -1.5, -1.5, -1.0, -0.3};
   const std::vector<double> _A_CRUISE_MAX_BP{0.0, 5.0, 10.0, 20.0, 40.0};
   const std::vector<double> _A_CRUISE_MAX_V{1.0, 0.85, 0.6, 0.5, 0.3};
   const std::vector<double> _A_LEAD_LOW_SPEED_BP{0.0, 5.0};
