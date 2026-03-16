@@ -128,7 +128,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   if (ok) {
     ok = Evaluate();
   }
-  int kkkk = 0;
+  int astar_iteration_count = 0;
   if (ok) {
     if (min_cost_traj_ptr_ == nullptr ||
         !min_cost_traj_ptr_->anchor_points_match_gap_cost()
@@ -136,8 +136,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
         !min_cost_traj_ptr_->is_left_distance_enough()) {
       if (IsForcedMergeScenario()) {
         if (GenerateAStarTraj()) {
-          kkkk = astar_traj_ptr_->count_;
-          std::cout << " kkkk : " << kkkk << std::endl;
+          astar_iteration_count = astar_traj_ptr_->count_;
         } else {
           astar_traj_ptr_.reset();
         }
@@ -196,7 +195,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::cout << "evaluate_cost_time : " << evaluate_cost_time.count()
             << std::endl;
   LogDebugInfo(sample_cost_time.count(), evaluate_cost_time.count(),
-               all_cost_time.count());
+               all_cost_time.count(), astar_iteration_count);
   return true;
 };
 

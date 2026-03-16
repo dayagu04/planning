@@ -13,6 +13,10 @@ struct UniformJerkCurveCoffi {
     cofficients.clear();
     time_points.clear();
   }
+  void reserve(size_t size) {
+    cofficients.reserve(size);
+    time_points.reserve(size);
+  }
 };
 
 class UniformJerkCurve : public SamplePolyCurve {

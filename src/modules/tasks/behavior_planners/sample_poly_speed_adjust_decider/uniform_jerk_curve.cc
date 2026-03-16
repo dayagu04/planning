@@ -15,6 +15,7 @@ UniformJerkCurve::UniformJerkCurve(const StateLimit& state_limit,
 
 void UniformJerkCurve::BuildUniformJerkTraj() {
   jerk_curve_coffi_.clear();
+  jerk_curve_coffi_.reserve(4);
   SecondOrderParam second_order_param =
       SecondOrderTimeOptimalTrajectory::VelocityTargetSolver(lon_state_,
                                                              state_limit_);
