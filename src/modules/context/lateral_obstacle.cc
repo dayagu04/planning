@@ -114,14 +114,14 @@ void LateralObstacle::update_lead_info() {
     }
   }
 
-  for (auto &item : front_tracks_) {
+  for (auto &[id,  item]: tracks_map_) {
     ExtraObstacleInfo extra_obstacle_info;
-    if (extra_obstacle_info_map_.find(item->id()) ==
+    if (extra_obstacle_info_map_.find(id) ==
         extra_obstacle_info_map_.end()) {
       extra_obstacle_info.oncoming = item->frenet_velocity_s() < -3.0;
-      extra_obstacle_info_map_[item->id()] = extra_obstacle_info;
+      extra_obstacle_info_map_[id] = extra_obstacle_info;
     } else {
-      extra_obstacle_info = extra_obstacle_info_map_.at(item->id());
+      extra_obstacle_info = extra_obstacle_info_map_.at(id);
 
       extra_obstacle_info.last_recv_time = extra_obstacle_info.timestamp;
       extra_obstacle_info.timestamp = item->obstacle()->timestamp();
