@@ -329,12 +329,13 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   }
   // lc_remain_time = std::min(lc_remain_time, lc_time_for_merge_point);
   planning_weight_ptr_->SetLCRemainTime(std::max(lc_remain_time, 0.0));
+  bool is_risk_lc = general_lateral_decider_output.risk_level > RiskLevel::NO_RISK;
   bool is_emergency_lc = false;
   // lane_change_decider_output.is_emergency_avoidance_situation;
   if (is_emergency_lc) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
-  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 ||
+  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 || is_risk_lc ||
              (is_merge_lc && std::fabs(dist_to_merge_point) < planning_input_.ref_vel() * 5.0)) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
@@ -342,12 +343,17 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   // 低速变道优先
   bool is_low_speed_lane_change = false;
   bool is_low_speed_lane_change_without_obstacle = false;
-  const auto avoid_dist = planning_weight_ptr_->GetAvoidDist();
+  const size_t avoid_end_idx = planning_weight_ptr_->GetAvoidEndIndex();
+  double avoid_end_time = avoid_end_idx * config_.delta_t;
+  const double avoid_dist = planning_weight_ptr_->GetAvoidDist();
+  std::vector<double> xp_avoid_dist{0.1, 0.2, 0.3};
+  std::vector<double> fp_avoid_end_t{1.5, 0.9, 0.5};
+  double avoid_end_t_thr = planning::interp(avoid_dist, xp_avoid_dist, fp_avoid_end_t);
   if (general_lateral_decider_output.is_low_speed_lane_change_scene &&
       lane_change_scene) {
     if (((planning_weight_ptr_->GetLaneChangeStyle() ==
         pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE) ||
-        (avoid_dist > avoid_dist_thr || general_lateral_decider_output.bound_avoid ||
+        ((avoid_dist > avoid_dist_thr && avoid_end_time > avoid_end_t_thr) || general_lateral_decider_output.bound_avoid ||
          general_lateral_decider_output.is_emergency_avoid))) {
       is_low_speed_lane_change = true;
     } else {
