@@ -16,8 +16,9 @@ namespace planning {
 namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
-constexpr double min_follow_distance_gap_cut_in = 0.5;
-constexpr double kVirtualFrontS = 200.0;
+constexpr double min_follow_distance_gap_cut_in = 0.8;
+constexpr double kVirtualFrontS = 250.0;
+constexpr double kVirtualFrontV = 33.5;
 }  // namespace
 
 FollowTarget::FollowTarget(const SpeedPlannerConfig config,
@@ -80,6 +81,21 @@ void FollowTarget::GenerateUpperBoundInfo() {
       upper_bound_infos_[i].st_boundary_id = upper_bound.boundary_id();
     }
   }
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+  if (lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
+      lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
+    for (size_t i = 0; i < plan_points_num_ &&
+                       i < lon_ref_path_decider_output
+                               .comfort_target_upper_bound_infos.size();
+         i++) {
+      const auto& comfort_upper_bound_info =
+          lon_ref_path_decider_output.comfort_target_upper_bound_infos[i];
+      upper_bound_infos_[i].s = comfort_upper_bound_info.s;
+      upper_bound_infos_[i].v = comfort_upper_bound_info.v;
+      upper_bound_infos_[i].agent_id = comfort_upper_bound_info.agent_id;
+    }
+  }
 }
 
 void FollowTarget::MakeMinFollowDistance() {
@@ -114,15 +130,8 @@ void FollowTarget::MakeMinFollowDistance() {
 }
 
 void FollowTarget::GenerateFollowTarget() {
-  double matched_desired_headway = default_headway;
-  const double default_t = 0.0;
-  const bool default_has_target = false;
-  const double default_s_target = 0.0;
-  const double default_v_target = 0.0;
-  const TargetType default_target_type = TargetType::kNotSet;
   auto default_target_value =
-      TargetValue(default_t, default_has_target, default_s_target,
-                  default_v_target, default_target_type);
+      TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet);
   target_values_ =
       std::vector<TargetValue>(plan_points_num_, default_target_value);
 
@@ -130,56 +139,34 @@ void FollowTarget::GenerateFollowTarget() {
       session_->planning_context().agent_headway_decider_output();
   const auto& agents_headway_map =
       agent_headway_decider_output.agents_headway_Info();
-  const auto& cipv_info = session_->planning_context().cipv_decider_output();
-  const auto& stop_destination_decider_output =
-      session_->planning_context().stop_destination_decider_output();
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
-
-  // JSON DEBUG
-  JSON_DEBUG_VALUE("has_target_follow_curve", 0)
 
   for (int32_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
-    auto& target_value = target_values_[i];
-    target_value.set_relative_t(t);
-    if (upper_bound_infos_[i].target_type == TargetType::kNotSet) {
-      target_values_[i] = target_value;
-      double s_value = target_value.s_target_val();
-      if (MakeSValueWithTargetFollowCurve(i, false, &s_value)) {
-        target_value.set_has_target(true);
-        target_value.set_s_target_val(s_value);
-        target_value.set_target_type(TargetType::kFollow);
-      }
-      continue;
-    }
-    target_value.set_has_target(true);
-    const double vel = virtual_zero_acc_curve_->Evaluate(1, t);
-    const auto& agent_id = upper_bound_infos_[i].agent_id;
+    const double vel = virtual_zero_acc_curve_->Evaluate(1, i * dt_);
+    const int32_t agent_id = upper_bound_infos_[i].agent_id;
+    double upper_bound_s = kVirtualFrontS;
     double follow_time_gap = min_follow_distance_gap_cut_in;
-    auto iter = agents_headway_map.find(agent_id);
-    if (iter != agents_headway_map.end()) {
-      follow_time_gap = iter->second.current_headway;
+
+    if (agent_id != speed::kNoAgentId) {
+      auto iter = agents_headway_map.find(agent_id);
+      if (iter != agents_headway_map.end()) {
+        follow_time_gap = iter->second.current_headway;
+      }
+      upper_bound_s = upper_bound_infos_[i].s;
     }
 
-    double target_s_disatnce =
+    double target_s_distance =
         min_follow_distance_m_ + std::max(0.0, vel * follow_time_gap);
+    double target_s = std::max(upper_bound_s - target_s_distance, 0.0);
 
-    double upper_bound_s =
-        std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
-    double target_s =
-        std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
-    double s_target_value = std::min(upper_bound_s, target_s);
-
-    target_value.set_s_target_val(s_target_value);
-    target_value.set_v_target_val(vel);
-    target_value.set_target_type(upper_bound_infos_[i].target_type);
+    target_values_[i] =
+        TargetValue(t, true, target_s, vel, TargetType::kFollow);
 
     const auto* agent = agent_mgr->GetAgent(agent_id);
     if (agent && agent->is_lane_borrow_virtual_obs()) {
-      target_value.set_s_target_val(upper_bound_infos_[i].s);
+      target_values_[i].set_s_target_val(upper_bound_infos_[i].s);
     }
-
-    double s_value = target_value.s_target_val();
   }
 }
 
@@ -229,24 +216,27 @@ void FollowTarget::GenerateRadsFollowTarget() {
       follow_time_gap = iter->second.current_headway;
     }
     const auto* agent = agent_manager->GetAgent(agent_id);
-    double rads_obs_follow_distance_buffer = config_.rads_follow_distance_buffer_dynamic;
+    double rads_obs_follow_distance_buffer =
+        config_.rads_follow_distance_buffer_dynamic;
     if (agent != nullptr && agent->is_static()) {
-      rads_obs_follow_distance_buffer = config_.rads_follow_distance_buffer_static;
+      rads_obs_follow_distance_buffer =
+          config_.rads_follow_distance_buffer_static;
     }
-    double target_s_disatnce = std::max(
-        vel * follow_time_gap + rads_obs_follow_distance_buffer, rads_obs_follow_distance_buffer);
+    double target_s_distance =
+        std::max(vel * follow_time_gap + rads_obs_follow_distance_buffer,
+                 rads_obs_follow_distance_buffer);
 
-    double upper_bound_s =
-        std::max(upper_bound_infos_[i].s - rads_obs_follow_distance_buffer, 0.0);
+    double upper_bound_s = std::max(
+        upper_bound_infos_[i].s - rads_obs_follow_distance_buffer, 0.0);
     double target_s =
-        std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
+        std::max(upper_bound_infos_[i].s - target_s_distance, 0.0);
     double s_target_value = std::min(upper_bound_s, target_s);
 
     if (cipv_info.cipv_id() ==
         stop_destination_decider_output.stop_destination_virtual_agent_id()) {
-      target_s_disatnce = vel * follow_time_gap;
+      target_s_distance = vel * follow_time_gap;
       s_target_value =
-          std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);
+          std::max(upper_bound_infos_[i].s - target_s_distance, 0.0);
     }
 
     target_value.set_s_target_val(s_target_value);

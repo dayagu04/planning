@@ -70,6 +70,7 @@ message LongitudinalPlanningInput {
   optional double q_emergency_stop = 49;
   optional bool is_lon_cipv_emergency_stop = 50;
   optional bool is_joint_danger_emergency_stop = 51;
+  optional bool is_follow_cipv = 52;
 }
 
 

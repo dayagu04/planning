@@ -545,6 +545,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
       y_vec[i] = coarse_traj_points[i].y;
       // theta_vec[i] = coarse_traj_points[i].heading_angle;
       s_vec[i] = coarse_traj_points[i].s;
+      if (i > 0 && s_vec[i] <= s_vec[i - 1]) {
+        s_vec[i] = s_vec[i - 1] + kEps;
+      }
       // l_vec[i] = coarse_traj_points[i].l;
     }
     x_s_spline.set_points(s_vec, x_vec);
