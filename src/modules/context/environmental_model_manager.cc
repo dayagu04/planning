@@ -702,6 +702,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
           function_state_machine_info.pilot_req.has_obstacle_ahead);
   vehicle_status.mutable_stand_wait_request()->set_has_stand_wait_request(
       function_state_machine_info.pilot_req.stand_wait);
+  vehicle_status.mutable_efficient_pass_request()->set_has_efficient_pass_request(
+        function_state_machine_info.pilot_req.is_efficient_pass);
 
   if (vehicle_service_output_info.yaw_rate_available) {
     vehicle_status.mutable_angular_velocity()->set_available(true);
