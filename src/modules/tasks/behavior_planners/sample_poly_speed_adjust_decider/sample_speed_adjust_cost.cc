@@ -29,7 +29,8 @@ void MatchGapCost::GetCost(
                                     //大车额外增加5m基础距离
   auto& xpv = lc_safety_distance_config.diff_speed_init_ttc_map
                   .diff_kph_table;  // 后车 - 自车速度 kph
-  auto& fpv =
+  auto& fpv = is_emergency_scene?
+      lc_safety_distance_config.diff_speed_init_ttc_map.aggressive_ttc_table:
       lc_safety_distance_config.diff_speed_init_ttc_map.ttc_table;  //起始ttc
   auto calculate_gap_distance_match_cost =
       [](double dist_to_obj, double safe_border_distance,
@@ -137,11 +138,7 @@ void MatchGapCost::GetCost(
     double abs_buffer = interp(lower_st_point.velocity() * 3.6, xp, fp);
     double dist_rel_vel =
         (rel_vel > 0) ? rel_vel * interp(rel_vel * 3.6, xpv, fpv) : 0.0;
-    if(is_emergency_scene){
-      min_safe_distance_rear = abs_buffer;
-    }else{
-      min_safe_distance_rear = std::fmax(abs_buffer, dist_rel_vel);
-    }
+    min_safe_distance_rear = std::fmax(abs_buffer, dist_rel_vel);
     min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1) +
                              linear_expand_extra_gap_distance_by_ego_vel(
                                  poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
