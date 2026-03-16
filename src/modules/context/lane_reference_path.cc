@@ -136,6 +136,10 @@ bool LaneReferencePath::RoadBorderWidthCalByObs(
 
     double left_border = refer_path_points[i].distance_to_left_road_border;
     double right_border = -refer_path_points[i].distance_to_right_road_border;
+    double left_default_border =
+        refer_path_points[i].distance_to_left_road_border;
+    double right_default_border =
+        refer_path_points[i].distance_to_right_road_border;
 
     const double s_start =
         std::max(refer_path_points[i].path_point.s() - kLonBuffer, 0.0);
@@ -166,13 +170,13 @@ bool LaneReferencePath::RoadBorderWidthCalByObs(
       if (bnd.l_start * bnd.l_end < 0.0) continue;  // 横跨车道中线，忽略
 
       if (bnd.l_start > 0.0) {
-        if (bnd.l_end >= left_border - kLatBuffer &&
-            bnd.l_start <= left_border) {
+        if (bnd.l_end >= left_default_border - kLatBuffer &&
+            bnd.l_start <= left_default_border) {
           left_border = std::min(left_border, bnd.l_start);
         }
       } else {
-        if (bnd.l_start <= right_border + kLatBuffer &&
-            bnd.l_end >= right_border) {
+        if (bnd.l_start <= -right_default_border + kLatBuffer &&
+            bnd.l_end >= -right_default_border) {
           right_border = std::max(right_border, bnd.l_end);
         }
       }
