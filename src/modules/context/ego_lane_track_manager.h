@@ -13,6 +13,11 @@
 #include "virtual_lane.h"
 
 namespace planning {
+struct LaneCurvInfo {
+  int curv_sign = 0;
+  double curv = 0.0001;
+  double curv_radius = 10000.0;
+};
 
 class EgoLaneTrackManger {
  public:
@@ -61,8 +66,8 @@ class EgoLaneTrackManger {
       const std::vector<int> &order_ids);
 
   void ProcessSplitRegionInteractiveSelectEgoLane(
-      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-      const std::vector<int>& order_ids, const int lane_change_cmd);
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids, const int lane_change_cmd);
 
   void ProcessSplitWithGroundMark(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
@@ -223,6 +228,35 @@ class EgoLaneTrackManger {
   void CheckIfConsiderSecondSplit(
       std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       bool& is_consider_second_split);
+  void ComputeEgoDistanceToRoadBorder(
+      const std::shared_ptr<VirtualLane> &base_lane,
+      double &dis_to_left_road_border, double &dis_to_right_road_border);
+
+  double CalculateLinearCost(double ttc);
+
+  double Normalize(double value, double max_value);
+
+  double NormalizeCurvatureRadius(double radius);
+
+  double NormalizeCurvatureSign(double dis_to_ego);
+
+  void CalculateLaneCurvature(
+    const std::shared_ptr<planning_math::KDPath>& lane_frenet_coord,
+    std::vector<std::pair<int, double>>& lane_curv_info_set,
+    LaneCurvInfo& lane_curv_info,
+    double& max_road_radius,
+    const std::shared_ptr<VirtualLane>& relative_id_lane);
+
+  void CalculateDynamicCostWeights(
+    double curv_degree,
+    double& road_boundary_collision_cost_weight,
+    double& relative_theta_diff_cost_weight,
+    double& kappa_cost_weight);
+
+void CalculateRoadBoundaryCollisionCost(
+    const LaneCurvInfo& lane_curv_info,
+    double& road_boundary_collision_cost,
+    const std::shared_ptr<VirtualLane>& relative_id_lane);
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -271,6 +305,8 @@ class EgoLaneTrackManger {
   std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
   const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
+  const std::vector<double> collision_cost_weight_{100.0, 50.0, 5.0};
+  const std::vector<double> road_curv_radius_{200.0, 400.0, 1000.0};
 };
 
 }  // namespace planning
