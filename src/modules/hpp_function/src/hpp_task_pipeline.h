@@ -19,7 +19,7 @@
 #include "st_graph/st_graph.h"
 #include "st_graph/st_graph_helper.h"
 #include "st_graph/st_graph_input.h"
-#include "tasks/behavior_planners/hpp_obstacle_preprocess_decider/hpp_obstacle_preprocess_decider.h"
+#include "tasks/behavior_planners/hpp_lon_obstacle_preprocess_decider/hpp_lon_obstacle_preprocess_decider.h"
 #include "tasks/behavior_planners/hpp_obstacle_preprocess_decider/hpp_obstacle_lateral_preprocess_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
 #include "tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
@@ -55,7 +55,7 @@ class HppTaskPipeline : public BaseTaskPipeline {
   std::unique_ptr<HppGeneralLateralDecider> hpp_general_lateral_decider_;
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<ParkingSwitchDecider> parking_switch_decider_;
-  std::unique_ptr<HppObstaclePreprocessDecider> hpp_obstacle_preprocess_decider_;
+  std::unique_ptr<HppLonObstaclePreprocessDecider> hpp_lon_obstacle_preprocess_decider_;
 
   // V3 Longitudinal Pipeline Components
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;

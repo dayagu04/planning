@@ -20,11 +20,11 @@ namespace agent {
 class Agent;
 }  // namespace agent
 
-class HppObstaclePreprocessDecider : public Task {
+class HppLonObstaclePreprocessDecider : public Task {
  public:
-  HppObstaclePreprocessDecider(const EgoPlanningConfigBuilder *config_builder,
-                               framework::Session *session);
-  virtual ~HppObstaclePreprocessDecider() = default;
+  HppLonObstaclePreprocessDecider(const EgoPlanningConfigBuilder *config_builder,
+                                  framework::Session *session);
+  virtual ~HppLonObstaclePreprocessDecider() = default;
 
   bool Execute() override;
 

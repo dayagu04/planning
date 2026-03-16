@@ -19,8 +19,8 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<LateralMotionPlanner>(config_builder, session);
 
 
-  hpp_obstacle_preprocess_decider_ =
-      std::make_unique<HppObstaclePreprocessDecider>(config_builder, session);
+  hpp_lon_obstacle_preprocess_decider_ =
+      std::make_unique<HppLonObstaclePreprocessDecider>(config_builder, session);
 
   // V3 Longitudinal Pipeline
   stop_destination_decider_ =
@@ -113,13 +113,13 @@ bool HppTaskPipeline::Run() {
   JSON_DEBUG_VALUE("LateralMotionPlannerTime", time5 - time4);
 
   // HPP Obstacle Preprocessing (Ground Lines -> Virtual Agents, Dynamic Obs Fix)
-  ok = hpp_obstacle_preprocess_decider_->Execute();
+  ok = hpp_lon_obstacle_preprocess_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(hpp_obstacle_preprocess_decider_->Name());
+    AddErrorInfo(hpp_lon_obstacle_preprocess_decider_->Name());
     return false;
   }
   auto time5_6 = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("HppObstaclePreprocessDeciderTime", time5_6 - time5);
+  JSON_DEBUG_VALUE("HppLonObstaclePreprocessDeciderTime", time5_6 - time5);
 
   // --↓↓↓↓↓↓-- V3 Long Behavior --↓↓↓↓↓↓--
   ok = stop_destination_decider_->Execute();

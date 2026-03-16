@@ -1,4 +1,4 @@
-#include "hpp_obstacle_preprocess_decider.h"
+#include "hpp_lon_obstacle_preprocess_decider.h"
 
 #include <algorithm>
 #include <cmath>
@@ -180,20 +180,20 @@ std::pair<planning_math::Vec2d, planning_math::Vec2d> FindFarthestPoints(
 
 }  // namespace
 
-HppObstaclePreprocessDecider::HppObstaclePreprocessDecider(
+HppLonObstaclePreprocessDecider::HppLonObstaclePreprocessDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
-  name_ = "HppObstaclePreprocessDecider";
+  name_ = "HppLonObstaclePreprocessDecider";
   lon_config_ = config_builder->cast<LongitudinalDeciderV3Config>();
 }
 
-bool HppObstaclePreprocessDecider::Execute() {
+bool HppLonObstaclePreprocessDecider::Execute() {
   ProcessGroundLines();
   ProcessDynamicObstacles();
   return true;
 }
 
-void HppObstaclePreprocessDecider::ProcessGroundLines() {
+void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
   const auto &reference_path_manager =
       session_->environmental_model().get_reference_path_manager();
   const auto &reference_path =
@@ -284,7 +284,7 @@ void HppObstaclePreprocessDecider::ProcessGroundLines() {
 }
 
 
-void HppObstaclePreprocessDecider::CreateVirtualAgentFromGroundLine(
+void HppLonObstaclePreprocessDecider::CreateVirtualAgentFromGroundLine(
     const std::vector<planning_math::Vec2d> &hit_points,
     const TrajectoryPoint &anchor_traj_point, int id) {
   if (hit_points.empty()) {
@@ -365,7 +365,7 @@ void HppObstaclePreprocessDecider::CreateVirtualAgentFromGroundLine(
 }
 
 
-void HppObstaclePreprocessDecider::ProcessDynamicObstacles() {
+void HppLonObstaclePreprocessDecider::ProcessDynamicObstacles() {
   auto &agent_manager =
       session_->mutable_environmental_model()->mutable_agent_manager();
 
@@ -386,7 +386,7 @@ void HppObstaclePreprocessDecider::ProcessDynamicObstacles() {
   }
 }
 
-void HppObstaclePreprocessDecider::GenerateCurrentPoseTrajectory(
+void HppLonObstaclePreprocessDecider::GenerateCurrentPoseTrajectory(
     agent::Agent *agent) {
   double x = agent->x();
   double y = agent->y();
