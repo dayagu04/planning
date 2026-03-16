@@ -4298,9 +4298,10 @@ bool LaneChangeStateMachineManager::
       // 后车参考安全距离
       double agent_kph = agent_traj[0].v * 3.6;
       double dis_buff = interp(agent_kph, xp, fp);
+      // 激进变道时增加额外的减速度
       double rear_relative_decel = is_aggressive_lane_change_
-                                ? lc_safety_check_config_.rear_comfort_decel : 
-                                lc_safety_check_config_.rear_comfort_decel + lc_safety_check_config_.aggressive_decel_part;// 激进变道
+                                ? lc_safety_check_config_.rear_comfort_decel + lc_safety_check_config_.aggressive_decel_part
+                                : lc_safety_check_config_.rear_comfort_decel;
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
         rear_relative_decel = 0.3;
