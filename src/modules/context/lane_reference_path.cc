@@ -124,12 +124,8 @@ bool LaneReferencePath::RoadBorderWidthCalByObs(
     return false;
   }
 
-  constexpr double kDistanceBorderDefault = 3.5;
   constexpr double kLonBuffer = 0.5;
-  constexpr double kThresholdBak = 0.2;
-  constexpr double kRightFarThreshold = -kDistanceBorderDefault + kThresholdBak;
-  constexpr double kLeftFarThreshold = kDistanceBorderDefault - kThresholdBak;
-
+  constexpr double kLatBuffer = 0.5;
   size_t obs_idx = 0;  // 双指针：障碍物指针，随 s 单调前进
   for (size_t i = 0; i < refer_path_points.size(); ++i) {
     if (std::isnan(refer_path_points[i].path_point.x()) ||
@@ -138,8 +134,8 @@ bool LaneReferencePath::RoadBorderWidthCalByObs(
       continue;
     }
 
-    double left_border = kDistanceBorderDefault;
-    double right_border = -kDistanceBorderDefault;
+    double left_border = refer_path_points[i].distance_to_left_road_border;
+    double right_border = -refer_path_points[i].distance_to_right_road_border;
 
     const double s_start =
         std::max(refer_path_points[i].path_point.s() - kLonBuffer, 0.0);
@@ -170,13 +166,13 @@ bool LaneReferencePath::RoadBorderWidthCalByObs(
       if (bnd.l_start * bnd.l_end < 0.0) continue;  // 横跨车道中线，忽略
 
       if (bnd.l_start > 0.0) {
-        if (bnd.l_end >= kLeftFarThreshold &&
-            bnd.l_start <= kDistanceBorderDefault) {
+        if (bnd.l_end >= left_border - kLatBuffer &&
+            bnd.l_start <= left_border) {
           left_border = std::min(left_border, bnd.l_start);
         }
       } else {
-        if (bnd.l_start <= kRightFarThreshold &&
-            bnd.l_end >= -kDistanceBorderDefault) {
+        if (bnd.l_start <= right_border + kLatBuffer &&
+            bnd.l_end >= right_border) {
           right_border = std::max(right_border, bnd.l_end);
         }
       }

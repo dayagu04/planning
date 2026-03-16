@@ -50,7 +50,7 @@ struct ReferencePathPoint {
   bool is_in_intersection;
   /******** for hpp start *********/
   bool is_ramp;       // 是否在坡道上
-  bool ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
+  double ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
   planning_math::PathPoint left_bound_point;
   planning_math::PathPoint right_bound_point;
   /******** for hpp  end  *********/
