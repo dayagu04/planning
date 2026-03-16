@@ -59,13 +59,14 @@ ComparableCost TrajectoryCost::CalculatePathCost(
     double ego_s = current_reference_path_ptr_->get_frenet_ego_state().s();
     double aheads = path_s + start_s - ego_s;
     double vehicle_width = vehicle_param.width;
+    double half_vehicle_width = vehicle_width * 0.5;
     if (current_lane_ptr_ != nullptr) {
       sample_left_boundary =
           current_lane_ptr_->width_by_s(path_s + start_s) * 0.5 -
-          vehicle_width * 0.5;
+          half_vehicle_width;
       sample_right_boundary =
           -current_lane_ptr_->width_by_s(path_s + start_s) * 0.5 +
-          vehicle_width * 0.5;
+          half_vehicle_width;
     }
     if (left_lane_ptr_ != nullptr) {
       if (lane_borrow_status == kLaneBorrowCrossing || current_level == 1) {
@@ -100,10 +101,12 @@ ComparableCost TrajectoryCost::CalculatePathCost(
     double distance_to_left_road_border = 100;
     double distance_to_right_road_border = 100;
     if (current_reference_path_ptr_ != nullptr &&
-        current_reference_path_ptr_->get_reference_point_by_lon(
-            ego_frenet_state_.s(), refpath_pt)) {
-      distance_to_left_road_border = refpath_pt.distance_to_left_road_border;
-      distance_to_right_road_border = refpath_pt.distance_to_right_road_border;
+        current_reference_path_ptr_->get_reference_point_by_lon(path_s,
+                                                                refpath_pt)) {
+      distance_to_left_road_border =
+          refpath_pt.distance_to_left_road_border - half_vehicle_width;
+      distance_to_right_road_border =
+          refpath_pt.distance_to_right_road_border - half_vehicle_width;
     }
     sample_right_boundary =
         std::max(sample_right_boundary, -distance_to_right_road_border);

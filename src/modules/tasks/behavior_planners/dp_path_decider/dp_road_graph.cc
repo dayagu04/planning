@@ -28,6 +28,10 @@ constexpr double kMaxNudgingSpeed = 4.2;  // 15 kph
 constexpr double kMinSDelta = 1e-4;       // 路径点 s 值的最小增量阈值
 constexpr double kStaticEdgeDistance = 0.25;
 constexpr double kBlockedBorrowObstaclesRatioThreshold = 0.5;
+constexpr double kHardBuffer2Road = 0.4;  // 参考横向避让路沿的hard buffer
+constexpr double kScanRoadRange = 10.0; // 扫描路沿的范围 m
+constexpr double kScanRoadStep = 1.0; // 扫描路沿的步长 m
+constexpr double kEpsilon = 1e-6;
 };                                        // namespace
 
 namespace planning {
@@ -711,6 +715,9 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
 }
 bool DPRoadGraph::SampleLanes(
     LaneBorrowDeciderOutput* lane_borrow_decider_output) {
+  const auto& vehicle_param =
+  VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double half_vehicle_width = vehicle_param.width * 0.5;
   sampled_points_.clear();
   double accumulated_s = init_sl_point_.s;
   double prev_s = accumulated_s;
@@ -786,15 +793,33 @@ bool DPRoadGraph::SampleLanes(
     } else {
       // l_range_ = 1.0;
     }
-    // 考虑道路边缘和物理隔离
-    ReferencePathPoint refpath_pt{};
+    // 考虑道路边缘和物理隔离：遍历s_step前后10米取离路沿最小值，i=0时仅取当前位置
     double distance_to_left_road_border = 100;
     double distance_to_right_road_border = 100;
-    if (current_reference_path_ptr_ != nullptr &&
-        current_reference_path_ptr_->get_reference_point_by_lon(ego_s_,
-                                                                refpath_pt)) {
-      distance_to_left_road_border = refpath_pt.distance_to_left_road_border;
-      distance_to_right_road_border = refpath_pt.distance_to_right_road_border;
+    if (current_reference_path_ptr_ != nullptr) {
+      const double scan_range = (i == 0) ? 0.0 : kScanRoadRange;
+      for (double scan_s = s_step - scan_range;
+           scan_s <= s_step + scan_range + kEpsilon; scan_s += kScanRoadStep) {
+        if (scan_s < ego_s_) {
+          // 不考虑自车后方的路沿信息
+          continue;
+        }
+        ReferencePathPoint refpath_pt{};
+        if (current_reference_path_ptr_->get_reference_point_by_lon(
+                scan_s, refpath_pt)) {
+          double left_dist = refpath_pt.distance_to_left_road_border -
+                             kHardBuffer2Road - half_vehicle_width;
+          double right_dist = refpath_pt.distance_to_right_road_border -
+                              kHardBuffer2Road - half_vehicle_width;
+          distance_to_left_road_border =
+              std::min(distance_to_left_road_border, left_dist);
+          distance_to_right_road_border =
+              std::min(distance_to_right_road_border, right_dist);
+        }
+        if (i == 0) {
+          break;  // i=0时仅取当前位置，不需要遍历
+        }
+      }
     }
     sample_right_boundary =
         std::max(sample_right_boundary, -distance_to_right_road_border);
