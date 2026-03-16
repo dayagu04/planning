@@ -271,6 +271,8 @@ void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
+  const VehicleParam &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double obs_s_start = cluster.frenet_boundary.s_start;
   const double obs_s_end = cluster.frenet_boundary.s_end;
   const double obs_l_start = cluster.frenet_boundary.l_start;
@@ -280,35 +282,64 @@ void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
   ReferencePathPoint refpath_pt;
 
   reference_path_ptr->get_reference_point_by_lon(obs_s_start, refpath_pt);
-  const double obs_start2left_road_boundary_dis = refpath_pt.distance_to_left_road_border - obs_l_start;
-  const double obs_start2right_road_boundary_dis = refpath_pt.distance_to_right_road_border + obs_l_start;
+  const double obs_start2left_road_boundary_dis =
+      refpath_pt.distance_to_left_road_border - obs_l_start;
+  const double obs_start2right_road_boundary_dis =
+      refpath_pt.distance_to_right_road_border + obs_l_end;
 
   reference_path_ptr->get_reference_point_by_lon(obs_s_end, refpath_pt);
-  const double obs_end2left_road_boundary_dis = refpath_pt.distance_to_left_road_border - obs_l_end;
-  const double obs_end2right_road_boundary_dis = refpath_pt.distance_to_right_road_border + obs_l_end;
+  const double obs_end2left_road_boundary_dis =
+      refpath_pt.distance_to_left_road_border - obs_l_start;
+  const double obs_end2right_road_boundary_dis =
+      refpath_pt.distance_to_right_road_border + obs_l_end;
 
-  const double obs_2left_road_boundary_dis = std::max(obs_start2left_road_boundary_dis,obs_end2left_road_boundary_dis);//距离带正负
-  const double obs_2right_road_boundary_dis = std::min(obs_start2right_road_boundary_dis,obs_end2right_road_boundary_dis);
+  const double obs_2left_road_boundary_mindis =
+      std::max(obs_start2left_road_boundary_dis,
+               obs_end2left_road_boundary_dis);  //距离带正负
+  const double obs_2right_road_boundary_mindis = std::min(
+      obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
+  ILOG_INFO << "obs_2left_road_boundary_mindis = "
+            << obs_2left_road_boundary_mindis
+            << ", obs_2right_road_boundary_mindis = "
+            << obs_2right_road_boundary_mindis;
 
-  if (obs_2left_road_boundary_dis == obs_2right_road_boundary_dis)
-  {
-    if (obs_center_l > 0)
-    {
+  //是否仅针对车前的做通道宽度决策
+  if (obs_2left_road_boundary_mindis <
+      vehicle_param.max_width + krelativenudgebuffer) {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  } else if (obs_2left_road_boundary_mindis <
+             vehicle_param.max_width + kabsolutenudgebuffer) {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+  } else {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+  }
+
+  if (obs_2right_road_boundary_mindis <=
+      vehicle_param.max_width + krelativenudgebuffer) {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  } else if (obs_2right_road_boundary_mindis <
+             vehicle_param.max_width + kabsolutenudgebuffer) {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+  } else {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+  }
+
+  if (obs_2left_road_boundary_mindis == obs_2right_road_boundary_mindis) {
+    if (obs_center_l > 0) {
       /* code */
     }
 
-  }else if(obs_2left_road_boundary_dis > obs_2right_road_boundary_dis){
+  } else if (obs_2left_road_boundary_mindis > obs_2right_road_boundary_mindis) {
+    //如果左右两侧距离相差不大，采用迟滞模型，在范围内，还是用历史信息
 
-  }else{
-
+  } else {
   }
-
-
-
 }
 
 void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
-    const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {}
+    const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {
+
+    }
 
 void HppLateralObstacleDecider::MakeDecisionBasedLastPath(
     const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {}
