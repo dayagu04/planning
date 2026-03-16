@@ -195,7 +195,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::cout << "evaluate_cost_time : " << evaluate_cost_time.count()
             << std::endl;
   LogDebugInfo(sample_cost_time.count(), evaluate_cost_time.count(),
-               all_cost_time.count(), astar_iteration_count);
+               all_cost_time.count());
   return true;
 };
 
