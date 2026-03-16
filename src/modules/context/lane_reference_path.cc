@@ -234,13 +234,13 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
         refline_pt.distance_to_left_road_border, kDefaultLaneBorderDis);
     ref_path_pt.distance_to_right_road_border = std::fmin(
         refline_pt.distance_to_right_road_border, kDefaultLaneBorderDis);
-    ref_path_pt.distance_to_left_lane_border = width * 0.5;
-    ref_path_pt.distance_to_right_lane_border = width * 0.5;
+    ref_path_pt.distance_to_left_lane_border = refline_pt.distance_to_left_lane_border;
+    ref_path_pt.distance_to_right_lane_border = refline_pt.distance_to_right_lane_border;
     ref_path_pt.left_road_border_type = refline_pt.left_road_border_type;
     ref_path_pt.right_road_border_type = refline_pt.right_road_border_type;
     ref_path_pt.left_lane_border_type = refline_pt.left_lane_border_type;
     ref_path_pt.right_lane_border_type = refline_pt.right_lane_border_type;
-    ref_path_pt.lane_width = width;
+    ref_path_pt.lane_width = refline_pt.lane_width;
     ref_path_pt.max_velocity = refline_pt.speed_limit_max;
     ref_path_pt.min_velocity = refline_pt.speed_limit_min;
     ref_path_pt.type = ReferencePathPointType::MAP;

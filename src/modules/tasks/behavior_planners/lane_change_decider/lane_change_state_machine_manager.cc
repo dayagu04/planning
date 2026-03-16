@@ -244,7 +244,9 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
 
         bool is_hold_to_cancel =
-            hold_state_frame_nums_ > 80 || (hold_state_dash_cnt >= 2);
+            hold_state_frame_nums_ > 80
+            || (hold_state_dash_cnt >= 2)
+            || lc_req_mgr_->request() == NO_CHANGE;
 
         bool is_hold_to_execution =
             CheckIfHoldToExecution(transition_info_.lane_change_direction,
@@ -2552,6 +2554,9 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     //   target_rear_node_id = target_lane_node->node_id();
     //   target_rear_s = agent_s;  // 选择最靠前的
     // }
+    if (target_lane_node->is_static_type() || target_lane_node->node_speed() <0.3 ) {
+      continue;
+    }
     double rear_risk_dis = target_lane_node->node_speed() * 0.5 + 2.0;
     double rear_gap = std::max(0.0, ego_sl_bd.s_start - agent_s_end);
     bool is_rear_risk = rear_gap < rear_risk_dis;
@@ -5927,12 +5932,16 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
 
   if (is_rightest_extend_lane &&
-      route_info_output.map_split_region_info_list.front().split_direction ==
-          SPLIT_RIGHT) {
+      route_info_output.map_split_region_info_list.front()
+          .split_direction == SPLIT_RIGHT &&
+      route_info_output.map_split_region_info_list.front()
+          .distance_to_split_point < 200.0) {
     return RAMP_ON_RIGHT;
   } else if (is_leftest_extend_lane &&
-             route_info_output.map_split_region_info_list.front().split_direction ==
-                 SPLIT_LEFT) {
+             route_info_output.map_split_region_info_list.front()
+                .split_direction == SPLIT_LEFT &&
+             route_info_output.map_split_region_info_list.front()
+                .distance_to_split_point < 200.0) {
     return RAMP_ON_LEFT;
   }
   return RAMP_NONE;

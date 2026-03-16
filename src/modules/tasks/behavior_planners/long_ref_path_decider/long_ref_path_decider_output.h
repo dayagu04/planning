@@ -39,4 +39,5 @@ struct LonRefPathDeciderOutput {
   int32_t parallel_overtake_agent_id;
   std::vector<ComfortTargetUpperBoundInfo> comfort_target_upper_bound_infos;
   std::vector<std::pair<double, double>> comfort_target;  // s, v
+  bool is_follow_cipv = false;
 };

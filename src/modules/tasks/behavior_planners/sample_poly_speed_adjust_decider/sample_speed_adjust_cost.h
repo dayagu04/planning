@@ -158,4 +158,15 @@ class JerkLimitCost : public CurveCost {
   JerkLimitCost() = default;
   void GetCost(const double jerk_extrema);
 };
+
+class SafeDistanceCost : public CurveCost {
+ public:
+  SafeDistanceCost() = default;
+  void GetCost(const double distance_to_gap_front_obj,
+               const double distance_to_gap_back_obj,
+               const double limi_safe_distance_to_gap_front_obj,
+               const double limi_safe_distance_to_gap_back_obj,
+               const double max_safe_distance_to_gap_front_obj,
+               const double max_safe_distance_to_gap_back_obj);
+};
 }  // namespace planning

@@ -676,8 +676,6 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     } else {
       gl_pt.type = 2;
     }
-    ILOG_INFO << "try-plan point : " << gl_pt.GetX() << ", " << gl_pt.GetY()
-              << ", " << gl_pt.GetTheta();
     complete_path_point_global_vec_.emplace_back(gl_pt);
   }
 
@@ -2483,7 +2481,7 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
                  opposite_target_heading_rad);
       cur_request.real_goal_stack[3] =
           Pose2f(-3.0, -5.0, opposite_target_heading_rad);
-      cur_request.real_goal_stack[4] = Pose2f(-4.0, 0.0, 0.0);
+      cur_request.real_goal_stack[4] = Pose2f(-4.0, 0.0, M_PI);
       cur_request.real_goal_stack[5] = Pose2f(-3.0, 5.0, target_heading_rad);
     } else {
       cur_request.real_goal_stack[0] =
@@ -2493,7 +2491,7 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
       cur_request.real_goal_stack[3] =
           Pose2f(target_pos_tail_left.x(), target_pos_tail_left.y(),
                  opposite_target_heading_rad);
-      cur_request.real_goal_stack[4] = Pose2f(slot_length + 2.0, 0.0, 0.0);
+      cur_request.real_goal_stack[4] = Pose2f(slot_length + 2.0, 0.0, M_PI);
       cur_request.real_goal_stack[5] =
           Pose2f(target_pos_tail_right.x(), target_pos_tail_right.y(),
                  target_heading_rad);

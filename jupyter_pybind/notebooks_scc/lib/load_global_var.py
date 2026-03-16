@@ -28,7 +28,8 @@ def init():  # 初始化
     'is_vis_ground_mark': False,
     'is_vis_rads_path': False,
     'is_vis_nsa_line': False,
-    'is_vis_road_type_line': False,
+    'is_vis_prediction': True,
+    'is_vis_fus_obj': True,
   }
 
 
@@ -52,17 +53,17 @@ def set_value_by_scene(scene):
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
     global_dict['is_vis_sdpromap'] = False
-    global_dict['is_vis_fus_line'] = False        #融合车道线
-    global_dict['is_vis_fus_center_line'] = True  #融合引导线
-    global_dict['is_vis_lane_topo'] = False       #融合可变车道
-    global_dict['is_vis_rdg_line'] = False        #感知车道线
+    global_dict['is_vis_fus_line'] = True          #融合车道线
+    global_dict['is_vis_lane_topo'] = False        #融合可变车道
+    global_dict['is_vis_rdg_line'] = False         #感知车道线
     global_dict['is_vis_rdg_obj'] = False          #感知 OD
     global_dict['is_vis_rdg_occ'] = False          #感知 OCC
     global_dict['is_vis_rdg_groundline'] = False   #感知接地线
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
     global_dict['is_vis_hpp_map'] = True
-    global_dict['is_vis_occ_obj'] = True          #融合 OD和OCC
+    global_dict['is_vis_fus_obj'] = True          #融合OD
+    global_dict['is_vis_occ_obj'] = True          #融合OCC
     global_dict['is_vis_ground_line'] = True      #融合接地线
     global_dict['is_vis_parking_slot'] = True     #融合车位
     global_dict['is_vis_speed_bump'] = True       #融合减速带
@@ -78,7 +79,6 @@ def set_value_by_scene(scene):
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
     global_dict['is_vis_fus_line'] = False
-    global_dict['is_vis_fus_center_line'] = True
     global_dict['is_vis_lane_topo'] = True
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_rdg_obj'] = True
@@ -86,10 +86,11 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_groundline'] = True
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+    global_dict['is_vis_fus_obj'] = True
     global_dict['is_vis_occ_obj'] = True
     global_dict['is_vis_speed_bump'] = True
     global_dict['is_vis_nsa_line'] = True
-    global_dict['is_vis_prediction'] = True
+    global_dict['is_vis_prediction'] = False
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True
@@ -98,7 +99,6 @@ def set_value_by_scene(scene):
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
     global_dict['is_vis_fus_line'] = False
-    global_dict['is_vis_fus_center_line'] = True
     global_dict['is_vis_lane_topo'] = True
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_rdg_obj'] = True
@@ -106,10 +106,11 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_groundline'] = True
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+    global_dict['is_vis_fus_obj'] = True 
     global_dict['is_vis_occ_obj'] = True
     global_dict['is_vis_speed_bump'] = True
     global_dict['is_vis_rads_path'] = True
-    global_dict['is_vis_prediction'] = True
+    global_dict['is_vis_prediction'] = False
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True

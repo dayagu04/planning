@@ -41,6 +41,7 @@ constexpr double kNearLaneLateralDistanceThr = 0.1;
 constexpr double kNearEgoLongDistanceBuffer = 1;
 // 0.5g减速度刹停检测相关常量
 constexpr double kBrakeDeceleration = 3.92;  // 0.5g = 4.9 m/s^2  0.4g = 3.92 m/s^2
+constexpr double kMinStaticFollowingDistance = 1.0;  // 最小静止跟车距离 (m)
 constexpr double kMinFollowingDistance = 2.0;  // 最小跟车距离 (m)
 constexpr double kMinIntrusionDistanceDynamic = 0.6;  // 动态障碍物侵入车道的最小距离 (m)
 constexpr double kMinIntrusionDistanceStatic = 1.0;  // 静态障碍物侵入车道的最小距离 (m)
@@ -777,7 +778,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBrakeFailureObstacle(
     if (is_static) {
       // 静态障碍物不考虑预测轨迹
       double brake_distance = (ego_v * ego_v) / (2.0 * kBrakeDeceleration);
-      if (current_distance <= brake_distance + kMinFollowingDistance &&
+      if (current_distance <= brake_distance + kMinStaticFollowingDistance &&
           current_distance < kLaneChangeDistance) {
         obstacle_id = cipv_id;
         return true;

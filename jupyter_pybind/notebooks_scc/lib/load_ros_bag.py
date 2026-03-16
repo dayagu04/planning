@@ -732,7 +732,7 @@ class LoadRosbag:
                          "tsr_main_switch_","tsr_disable_code_","tsr_fault_code_","tsr_state_","tsr_speed_limit_",
                          "has_perception_speed_limit_","has_perception_end_of_speed_limit_","end_of_speed_limit_out_flag_","speed_limit_out_flag_","speed_limit_renew_flag_",
                          "current_map_speed_limit_", "current_map_speed_limit_valid_", "current_map_type_", "current_road_type_", "speed_limit_suppression_flag_",
-                         "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_",
+                         "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_","tsr_navi_flag_",
                          # ihc debug info
                          "ihc_function::ihc_high_beam_code", "ihc_function::ihc_fault_code", "ihc_function::ihc_state","ihc_function::ihc_request_status",
                          "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",
