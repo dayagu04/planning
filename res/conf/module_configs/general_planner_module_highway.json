@@ -2235,7 +2235,8 @@
     "hold_state_vel_jerk_map": {
       "vel_table":  [4.167, 8.333, 16.667, 25.0],
       "jerk_table": [1.2, 1.5, 1.4, 1.0]
-    }
+    },
+    "is_default_aggressive_scence": false
   },
   "hmi_decider": {
     "tfl_reminder_cipv_dis": 8.0,

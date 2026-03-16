@@ -671,13 +671,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
 
   RunSampleSceneStateMachine();
 
-  if (config_.is_forced_emergency_scene)
-  {
-    is_emergency_scene_ = true;
-  }else{
-    is_emergency_scene_ = IsNotUseGapSelect();
-  }
-
+  is_emergency_scene_ = session_->planning_context()
+            .lane_change_decider_output().is_aggressive_scence;
   // sample v upper and lower
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&

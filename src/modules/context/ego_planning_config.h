@@ -6534,6 +6534,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
                                  "jerk_table"},
                                  hold_state_vel_jerk_map.jerk_table);
+      ReadItem<bool>(json, is_default_aggressive_scence, "lane_change_safety_check",
+                     "is_default_aggressive_scence");
     }
     double exe_ttc_ratio = 0.5;
     double exe_rear_speed_ratio = 1.1;
@@ -6564,6 +6566,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};  // 对应的jerk值
     };
     HoldStateVelJerkMap hold_state_vel_jerk_map;
+    bool is_default_aggressive_scence = false;  // 默认紧急场景标志位，用于调试
 };
 
 struct HmiDeciderConfig : public EgoPlanningConfig{

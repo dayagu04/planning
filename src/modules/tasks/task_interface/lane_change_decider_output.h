@@ -62,7 +62,7 @@ struct LaneChangeDeciderOutput {
   // idm guess
   TrajectoryPoints ego_trajs_future;
   int origin_agent_id = -1;
-  bool is_emergency_scene = false;
+  bool is_aggressive_scence = false;
   int gap_front_id;
   int gap_back_id;
 };

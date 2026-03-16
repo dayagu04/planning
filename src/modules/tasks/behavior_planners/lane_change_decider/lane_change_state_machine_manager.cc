@@ -9,6 +9,7 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <unordered_set>
 #include <vector>
 
@@ -142,8 +143,6 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             break;
           }
         }
-        const auto& lane_change_output = session_->planning_context().lane_change_decider_output();
-        is_aggressive_lane_change_ = lane_change_output.is_emergency_scene;// 是否进行激进变道
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
@@ -1405,6 +1404,7 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
       lc_hold_state_lat_offset_;
 
   lane_change_decider_output.is_high_priority_back = is_high_priority_back_;
+  lane_change_decider_output.is_aggressive_scence = is_aggressive_scence_;
   // idm
   if (!ego_trajs_future_.empty()) {
     lane_change_decider_output.ego_trajs_future = ego_trajs_future_;
@@ -1600,7 +1600,6 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
   overtake_lane_change_confirmed_ = false;
-  is_aggressive_lane_change_ = false;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   if (transition_info_.lane_change_status != kLaneChangePropose &&
@@ -2092,7 +2091,8 @@ void LaneChangeStateMachineManager::PreProcess() {
   target_lane_rear_node_ = nullptr;
   ego_lane_front_node_ = nullptr;
   merging_rear_agent_id_ = -1;
-
+  // 初始化 is_aggressive_scence_
+  is_aggressive_scence_ = false;
   // init debug info
   lc_front_objs_ego_lane_vec_.clear();
   lc_front_objs_tar_lane_vec_.clear();
@@ -2178,6 +2178,9 @@ void LaneChangeStateMachineManager::PreProcess() {
                                          session_, fix_lane_virtual_id);
   fix_lane_congestion_level_ = congestion_detector.DetectLaneCongestion();
   // 变道条件下，生成初始轨迹
+  is_aggressive_scence_ = IsEmergencyScene();
+  JSON_DEBUG_VALUE("is_aggressive_scence", is_aggressive_scence_);
+  JSON_DEBUG_VALUE("is_default_aggressive_scence", lc_safety_check_config_.is_default_aggressive_scence);
 }
 void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   JSON_DEBUG_VALUE("joint_lane_change_state",
@@ -4207,8 +4210,8 @@ bool LaneChangeStateMachineManager::
   const auto& aggressive_ttc_table = diff_speed_init_ttc_map.aggressive_ttc_table;
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
-  double init_diff_speed_ttc = is_aggressive_lane_change_
-                                ? interp(delta_kph, xpv, aggressive_ttc_table) 
+  double init_diff_speed_ttc = is_aggressive_scence_
+                                ? interp(delta_kph, xpv, aggressive_ttc_table)
                                 : interp(delta_kph, xpv, ttc_table);
   // init_diff_speed_ttc -> 递减
   // double max_box_ttc_rear =
@@ -4298,8 +4301,8 @@ bool LaneChangeStateMachineManager::
       // 后车参考安全距离
       double agent_kph = agent_traj[0].v * 3.6;
       double dis_buff = interp(agent_kph, xp, fp);
-      // 激进变道时增加额外的减速度
-      double rear_relative_decel = is_aggressive_lane_change_
+      // 激进场景时增加额外的减速度
+      double rear_relative_decel = is_aggressive_scence_
                                 ? lc_safety_check_config_.rear_comfort_decel + lc_safety_check_config_.aggressive_decel_part
                                 : lc_safety_check_config_.rear_comfort_decel;
       if (is_large_car) {
@@ -4314,8 +4317,8 @@ bool LaneChangeStateMachineManager::
       }
       // 预测轨迹点车速对应ttc
       double diffspeed_kph = 3.6 * std::max(0., agent_traj[i].v - ego_trajs_future_[i].v);
-      double pred_ttc = is_aggressive_lane_change_ 
-                    ? interp(diffspeed_kph, xpv, aggressive_ttc_table) 
+      double pred_ttc = is_aggressive_scence_
+                    ? interp(diffspeed_kph, xpv, aggressive_ttc_table)
                     : interp(diffspeed_kph, xpv, ttc_table);  // 后车轨迹差速<->ttc
       //记录优化轨迹上的自车速度和后车速度
 
@@ -5964,5 +5967,49 @@ double LaneChangeStateMachineManager::ComputeInertialLatOffset(double v_y0, doub
   return
       (v_y0 * a_y0) / j_max +
       (a_y0 * a_y0 * a_y0) / (3.0 * j_max * j_max);
+}
+
+bool LaneChangeStateMachineManager::IsEmergencyScene() const {
+  // 调试用，如果配置文件为true，则直接返回true
+  if (lc_safety_check_config_.is_default_aggressive_scence) {
+    return true;
+  }
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+
+  // 如果变道来源是 MERGE_REQUEST，返回 true
+  if (lc_req_mgr_->request_source() == MERGE_REQUEST) {
+    return true;
+  }
+
+  // 如果变道来源是 MAP_REQUEST
+  if (lc_req_mgr_->request_source() == MAP_REQUEST) {
+    // 场景类型是 MERGE_SCENE
+    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE) {
+      return true;
+    }
+
+    constexpr double kMergeStopLineDistanceThreshold = 200.0;
+    const auto& virtual_lane_mgr =
+        session_->environmental_model().get_virtual_lane_manager();
+    const auto& merge_point_info =
+        route_info_output.map_merge_points_info.empty()
+            ? virtual_lane_mgr->get_current_lane()->get_map_merge_point_info()
+            : route_info_output.map_merge_points_info.front();
+
+    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        SPLIT_SCENE) {
+      double distance_to_split_point =
+          route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point;
+      double merge_stop_line_distance =
+          distance_to_split_point - route_info_output.lsl_length;
+      if (merge_stop_line_distance <= kMergeStopLineDistanceThreshold) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 }  // namespace planning
