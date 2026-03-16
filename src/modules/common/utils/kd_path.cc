@@ -386,6 +386,20 @@ const LineSegment2d* KDPath::GetNearestLineSegment(const Vec2d& point) const {
   return nearest_object->line_segment();
 }
 
+const LineSegment2d* KDPath::GetNearestLineSegment(const Vec2d& point,
+                                                   Vec2d& foot_point,
+                                                   double& distance) const {
+  const auto* nearest_object = kd_tree_->GetNearestObject(point);
+  if (nearest_object == nullptr) {
+    return nullptr;
+  }
+  const auto* line_segment = nearest_object->line_segment();
+  if (line_segment != nullptr) {
+    distance = line_segment->GetPerpendicularFoot(point, &foot_point);
+  }
+  return line_segment;
+}
+
 inline double KDPath::PerpendicularDistance(const PathPoint& line_pt_start,
                                             const PathPoint& line_pt_end,
                                             const PathPoint& cur_pt) {
