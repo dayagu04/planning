@@ -894,6 +894,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   const iflyauto::RoadInfo* roads_ptr = &roads;
   iflyauto::RoadInfo roads_virtual;
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const int lane_change_cmd =
+      lane_change_decider_output.coarse_planning_info.int_lane_change_cmd;
 
   // 1.检查lane的有效性
   if (!CheckLaneValid(roads)) {
@@ -1138,6 +1142,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
              << is_on_road_select_ramp_situation;
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
                    is_on_road_select_ramp_situation);
+  ego_lane_track_manager_.SetLastSelectChangeCmd(lane_change_cmd);
 
   // 9.生成导航变道的任务
   const auto& function_info = session_->environmental_model().function_info();

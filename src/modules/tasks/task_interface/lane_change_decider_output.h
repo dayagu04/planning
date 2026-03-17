@@ -59,7 +59,7 @@ struct LaneChangeDeciderOutput {
   RequestType hpp_turn_signal = NO_CHANGE;
   double lc_hold_state_lat_offset = 0;
   bool is_high_priority_back = false;
-  bool is_dash_not_enough_for_lc = false;
+  bool is_dash_not_enough_for_lc = false; 
   // idm guess
   TrajectoryPoints ego_trajs_future;
   int origin_agent_id = -1;
@@ -67,6 +67,9 @@ struct LaneChangeDeciderOutput {
   int gap_front_id;
   int gap_back_id;
   bool is_emergency_scene = false;
+  double distance_to_stop_point = 0.0;
+  StateMachineSplitSelectingStatus split_selecting_status = kNonSelecting;
+  SplitSelectingDirection split_select_direction = SplitSelectingNone;
 };
 
 }  // namespace planning

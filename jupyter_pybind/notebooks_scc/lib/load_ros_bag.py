@@ -655,7 +655,9 @@ class LoadRosbag:
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
-                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', 'current_segment_passed_distance', \
+                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', \
+                         'split_selecting_status','selecting_origin_order_id','selecting_selected_order_id','selecting_unfinished_reason', \
+                         'current_segment_passed_distance', \
                          'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', 'is_exist_interactive_select_split',\
                          'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'origin_relative_id_zero_nums', \
                          'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
