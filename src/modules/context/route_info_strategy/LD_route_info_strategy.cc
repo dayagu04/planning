@@ -860,7 +860,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    int ego_seq = left_lane_num + 1;
+    int ego_seq = left_lane_num + 1 - most_left_emergency_lane_num;
     route_info_output_.left_lane_num = left_lane_num;
     route_info_output_.right_lane_num = right_lane_num;
     route_info_output_.ego_seq = ego_seq;
@@ -930,7 +930,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     }
 
     // 如果自车左边的车道数大于等于link的总车道数，则认为左侧车道数误检，直接return;
-    bool is_per_left_lane_error = left_lane_num >= real_lane_num;
+    bool is_per_left_lane_error =
+        (left_lane_num - most_left_emergency_lane_num) >= real_lane_num;
 
     // 如果当前link上只有1条车道，则不需要再触发导航变道。
     bool is_only_one_lane_on_cur_link = real_lane_num == 1;
@@ -944,6 +945,11 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       } else {
         return;
       }
+    }
+
+    if (0 > ego_seq) {
+      ego_seq = 0;
+      route_info_output_.ego_seq = ego_seq;
     }
 
     std::vector<int> lc_num_task;
