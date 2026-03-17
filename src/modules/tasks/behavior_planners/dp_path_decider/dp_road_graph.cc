@@ -966,9 +966,10 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
   return std::make_shared<planning_math::KDPath>(std::move(dp_path_points));
 }
 
-bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
+void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
                                                double obs_start_s,
                                                double speed) {
+  SetPullOverPath(obs_start_s, obs_inner_l);
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
 
   /*
@@ -1006,7 +1007,7 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   double center_virtual_s = obs_start_s - mini_gap + virtual_length * 0.5;
   if (center_virtual_s - ego_s_ <
       vehicle_param.front_edge_to_rear_axle + virtual_length * 0.5) {
-    return false;
+    return;
   }
   double virtual_l = obs_inner_l;
   // if (center_virtual_s < 60.0 || center_virtual_s - virtual_length* 0.5 -
@@ -1074,7 +1075,6 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   agent_manager->Append(agent_table);
 
   // reset path
-  SetPullOverPath(obs_start_s, obs_inner_l);
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_pos_x", virtual_agent.x())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_pos_y", virtual_agent.y())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_theta",
@@ -1085,8 +1085,6 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
                    virtual_agent.width())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_length",
                    virtual_agent.length())
-
-  return true;
 }
 bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y,
                                double path_ego_theta,
