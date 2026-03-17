@@ -70,6 +70,22 @@ class HybridAStarPathGenerator : public ParkingTask {
     float traj_kappa_change_penalty;
   };
 
+  struct SearchLoopStats {
+    size_t curve_path_success_num = 0;
+    size_t explored_curve_path_num = 0;
+    size_t explored_node_num = 0;
+    size_t gen_child_node_num = 0;
+    size_t gen_child_node_num_success = 0;
+    size_t memory_usage = 0;
+    size_t max_memory_usage = static_cast<size_t>(46.8 * 1024 * 1024);
+    size_t curve_node_memory_usage = 16000;
+  };
+
+  struct SearchBudget {
+    size_t find_success_curve_min_count = 0;
+    double find_success_curve_max_time = 5000.0;
+  };
+
   enum class PreSearchPhaseOutcome {
     CONTINUE_FORMAL_SEARCH,
     RETURN_SUCCESS,
@@ -88,11 +104,45 @@ class HybridAStarPathGenerator : public ParkingTask {
   const geometry_lib::PathPoint& GetEndPoseForCurrentSearch() const;
   const bool InitStartAndEndNodes();
   void GenerateDpMapForCurrentSearch();
+  void SeedStartNodeIntoSearch();
+  Node3d* PopLowestCostOpenNode();
+  const bool PrepareCurrentNodeForExpansion(Node3d*& current_node);
+  const bool UpdateSearchElapsedTimeAndCheckTimeout(
+      const double search_start_time, double& search_continue_time) const;
+  void ConfigureAnalyticExpansionRequestForCurrentNode(
+      Node3d* current_node, CurveNode* curve_node_to_goal,
+      AnalyticExpansionRequest& analytic_expansion_request) const;
+  void TryRelaxAnalyticExpansionConstraintsForDifficultScenario(
+      size_t node_pool_size, size_t success_curve_count,
+      size_t node_pool_size_threshold,
+      AnalyticExpansionRequest& analytic_expansion_request);
+  const bool HandleSuccessfulCurvePath(
+      const AnalyticExpansionRequest& analytic_expansion_request,
+      CurveNode& curve_node_to_goal, double search_continue_time,
+      std::vector<CurveNode>& curve_node_to_goal_vec);
+  const bool PrepareSearchForUpdateOnce(
+      const PathColDetBuffer& path_col_det_buffer);
+  void ConfigureSearchBudget();
+  const bool ShouldStopCurveSearch(double search_continue_time) const;
+  const bool NeedCalObsDistForBestCurveSelection() const;
+  void LogSearchLoopSummary(
+      double search_start_time,
+      const std::vector<CurveNode>& curve_node_to_goal_vec) const;
+  void LogUpdateOnceSummary() const;
+  void SetLplInputPoseFromNode(
+      const Node3d& node,
+      link_pt_line::LinkPtLineInput<float>& lpl_input) const;
   const NodeDeleteInput BuildNodeDeleteInput(
       const PathColDetBuffer& path_col_det_buffer) const;
-  const bool ValidateStartAndEndNodes();
+  void ConfigureNodeDeleteRequestForChildNode(
+      Node3d& new_node, Node3d* current_node, const CarMotion& car_motion,
+      AstarPathGear default_gear_request,
+      NodeDeleteRequest& node_del_request) const;
+  AstarPathGear DetermineChildNodeGearRequest(
+      const Node3d& current_node, AstarPathGear default_gear_request) const;
   void PopulateChildNodeState(Node3d* new_node, Node3d* current_node,
                               const CarMotion& car_motion) const;
+  const bool ValidateStartAndEndNodes();
   const bool CheckOutOfGridBound(const NodeGridIndex& id) const;
   const bool CheckOutOfPoseBound(const Pose2D& pose) const;
   void InitSearchPhaseTimeCost();
@@ -183,6 +233,7 @@ class HybridAStarPathGenerator : public ParkingTask {
 
   link_pt_line::LinkPtLinePath<float> lpl_path_;
   link_pt_line::LinkPtLine<float> lpl_interface_;
+  link_pt_line::LinkPtLineInput<float> lpl_input_;
 
   static CompactNodePool node_pool_;
   static GridSearch grid_search_;
@@ -224,7 +275,11 @@ class HybridAStarPathGenerator : public ParkingTask {
   cdl::AABB interesting_area_;
   CulDeSacInfo cul_de_sac_info_;
 
+  SearchLoopStats search_loop_stats_;
+  SearchBudget search_budget_;
+
   NodeDeleteDecider node_delete_decider_;
+  ObstacleClearZoneDecider obstacle_clear_zone_decider_;
 
   // for debug
   double collision_check_time_ms_;

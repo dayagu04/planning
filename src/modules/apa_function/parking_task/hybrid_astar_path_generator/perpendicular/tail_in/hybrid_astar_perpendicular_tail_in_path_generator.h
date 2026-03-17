@@ -34,20 +34,20 @@ class HybridAStarPerpendicularTailInPathGenerator
   PathColDetBuffer BuildPreSearchPathColDetBuffer() const;
   void TryDecideCulDeSac(const PathColDetBuffer& pre_path_col_det_buffer);
   const bool RunPreSearch(const PathColDetBuffer& pre_path_col_det_buffer);
-  void ConfigureSearchBudget(size_t& find_success_curve_min_count,
-                             double& find_success_curve_max_time);
+  void ConfigureSearchBudget();
   void ConfigureBaseAnalyticExpansionRequest(
-      AnalyticExpansionRequest& analytic_expansion_request) const;
-  void ConfigureAnalyticExpansionRequestForCurrentNode(
-      Node3d* current_node, CurveNode* curve_node_to_goal,
-      AnalyticExpansionRequest& analytic_expansion_request) const;
+      AnalyticExpansionRequest& analytic_expansion_request);
   void ConfigureAnalyticExpansionRequestForNewNode(
       const Node3d& new_node,
       AnalyticExpansionRequest& analytic_expansion_request) const;
 
-  void TryRelaxAnalyticExpansionConstraintsForDifficultScenario(
-      size_t node_pool_size, size_t success_curve_count,
-      AnalyticExpansionRequest& analytic_expansion_request);
+  void UpdateCulDeSacLimitByNewNode(const Node3d& new_node);
+  Node3d* FindOrAllocateSearchNode(size_t new_node_global_id,
+                                   AstarNodeVisitedType& vis_type);
+  void ActivateNodeInOpenSet(const Node3d& new_node, Node3d* node_in_pool);
+  void InsertNewNodeIntoSearch(const Node3d& new_node, Node3d* node_in_pool);
+  void RefreshNodeInOpenSet(const Node3d& new_node, Node3d* node_in_pool);
+  void ReopenClosedNodeInSearch(const Node3d& new_node, Node3d* node_in_pool);
 
   virtual void UpdatePoseBoundary() override;
 

@@ -4,12 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include "aabb2d.h"
 #include "apa_context.h"
 #include "apa_param_config.h"
+#include "apa_slot.h"
 #include "common_math.h"
 #include "curve_node.h"
 #include "geometry_math.h"
@@ -30,6 +32,14 @@ const float kMaxTurnRadius = 100000.0;
 #define LOG_TIME_PROFILE (1)
 #define PLOT_DELETE_NODE (0)
 #define DEBUG_FINAL_PATH (0)
+
+#define DEBUG_PARENT_NODE (0)
+#define DEBUG_PARENT_NODE_MAX_NUM (20)
+
+#define PLOT_SEARCH_SEQUENCE (0)
+#define PLOT_ALL_SUCCESS_CURVE_PATH (0)
+#define PLOT_ALL_SUCCESS_CURVE_PATH_FIRST_GEAR_SWITCH_POSE (0)
+#define DEBUG_SUCCESS_CURVE_PATH_INFO (0)
 
 const bool HybridAStarPathGenerator::Init() {
   config_.InitConfig();
@@ -836,6 +846,9 @@ void HybridAStarPathGenerator::ResetSearchState() {
   all_success_path_first_gear_switch_pose_debug_.clear();
   all_search_node_list_.clear();
   all_curve_node_list_.clear();
+  search_loop_stats_ = SearchLoopStats();
+  search_budget_ = SearchBudget();
+  lpl_input_ = link_pt_line::LinkPtLineInput<float>();
   collision_check_time_ms_ = 0.0;
   rs_try_num_ = 0;
   rs_interpolate_time_ms_ = 0.0;
@@ -990,6 +1003,246 @@ void HybridAStarPathGenerator::GenerateDpMapForCurrentSearch() {
             << IflyTime::Now_ms() - dp_start_time << "  ms";
 }
 
+void HybridAStarPathGenerator::SeedStartNodeIntoSearch() {
+  start_node_->SetMultiMapIter(
+      open_pq_.insert(std::make_pair(0.0, start_node_)));
+  node_set_.emplace(start_node_->GetGlobalID(), start_node_);
+}
+
+Node3d* HybridAStarPathGenerator::PopLowestCostOpenNode() {
+  Node3d* current_node = open_pq_.begin()->second;
+  open_pq_.erase(open_pq_.begin());
+  return current_node;
+}
+
+const bool HybridAStarPathGenerator::PrepareCurrentNodeForExpansion(
+    Node3d*& current_node) {
+  current_node = PopLowestCostOpenNode();
+  if (current_node == nullptr) {
+    ILOG_INFO << "pq is null node";
+    return false;
+  }
+
+  search_loop_stats_.explored_node_num++;
+
+#ifndef X86
+  const ApaParameters& param = apa_param.GetParam();
+  const int yield_interval = param.yield_interval_explored_node_num;
+  const bool enable_yield_cpu = param.enable_yield_cpu;
+  const int yield_interval_ms = param.yield_interval_ms;
+  if (enable_yield_cpu && yield_interval > 0 &&
+      search_loop_stats_.explored_node_num % yield_interval == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(yield_interval_ms));
+  }
+#endif
+
+  current_node->SetVisitedType(AstarNodeVisitedType::IN_CLOSE);
+
+#if DEBUG_PARENT_NODE
+  if (search_loop_stats_.explored_node_num < DEBUG_PARENT_NODE_MAX_NUM) {
+    ILOG_INFO << "============== main cycle =========== ";
+    ILOG_INFO << "explored_node_num " << search_loop_stats_.explored_node_num
+              << " open set size for now " << open_pq_.size()
+              << "  cur_node_info:";
+    current_node->DebugString();
+  }
+#endif
+
+#if PLOT_SEARCH_SEQUENCE
+  queue_path_debug_.emplace_back(
+      Eigen::Vector2d(current_node->GetX(), current_node->GetY()));
+#endif
+
+  return true;
+}
+
+const bool HybridAStarPathGenerator::UpdateSearchElapsedTimeAndCheckTimeout(
+    const double search_start_time, double& search_continue_time) const {
+  search_continue_time = IflyTime::Now_ms() - search_start_time;
+  if (search_continue_time <= config_.max_search_time_ms) {
+    return false;
+  }
+
+  ILOG_INFO << "time out and search_continue_time(ms) = "
+            << search_continue_time;
+  return true;
+}
+
+void HybridAStarPathGenerator::ConfigureAnalyticExpansionRequestForCurrentNode(
+    Node3d* current_node, CurveNode* curve_node_to_goal,
+    AnalyticExpansionRequest& analytic_expansion_request) const {
+  analytic_expansion_request.current_node = current_node;
+  analytic_expansion_request.curve_node_to_goal = curve_node_to_goal;
+
+  if (analytic_expansion_request.type ==
+      AnalyticExpansionType::LINK_POSE_LINE) {
+    auto lpl_input = analytic_expansion_request.lpl_input;
+    switch (request_.scenario_type) {
+      case ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN:
+        lpl_input->ref_last_line_gear = AstarPathGear::REVERSE;
+        break;
+      case ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN:
+        lpl_input->ref_last_line_gear = AstarPathGear::DRIVE;
+        break;
+      default:
+        lpl_input->ref_last_line_gear = AstarPathGear::NONE;
+        break;
+    }
+    SetLplInputPoseFromNode(*current_node, *lpl_input);
+    lpl_input->sturn_radius = lpl_input->min_radius * 1.5;
+    lpl_input->lat_err = 0.03;
+    lpl_input->has_length_require = true;
+    lpl_input->use_bigger_radius = true;
+  }
+}
+
+void HybridAStarPathGenerator::TryRelaxAnalyticExpansionConstraintsForDifficultScenario(
+    size_t node_pool_size, size_t success_curve_count,
+    size_t node_pool_size_threshold,
+    AnalyticExpansionRequest& analytic_expansion_request) {
+  if (node_pool_size <= node_pool_size_threshold || success_curve_count > 0) {
+    return;
+  }
+
+  config_.traj_kappa_change_penalty = 0.0;
+
+  if (analytic_expansion_request.type ==
+      AnalyticExpansionType::LINK_POSE_LINE) {
+    analytic_expansion_request.lpl_input->use_bigger_radius = false;
+  }
+}
+
+const bool HybridAStarPathGenerator::HandleSuccessfulCurvePath(
+    const AnalyticExpansionRequest& analytic_expansion_request,
+    CurveNode& curve_node_to_goal, double search_continue_time,
+    std::vector<CurveNode>& curve_node_to_goal_vec) {
+#if PLOT_ALL_SUCCESS_CURVE_PATH
+  all_success_curve_path_debug_.emplace_back(curve_node_to_goal.GetCurvePath());
+#endif
+
+#if PLOT_ALL_SUCCESS_CURVE_PATH_FIRST_GEAR_SWITCH_POSE
+  all_success_path_first_gear_switch_pose_debug_.emplace_back(
+      curve_node_to_goal.GetGearSwitchPose());
+#endif
+
+#if DEBUG_SUCCESS_CURVE_PATH_INFO
+  ILOG_INFO << "find new curve path to target pose, success num = "
+            << search_loop_stats_.curve_path_success_num << "  search time = "
+            << search_continue_time << "ms";
+#endif
+
+  search_loop_stats_.curve_path_success_num++;
+
+  if (analytic_expansion_request.type == AnalyticExpansionType::LINK_POSE_LINE) {
+    lpl_path_.ptss.clear();
+    curve_node_to_goal.SetLPLPath(lpl_path_);
+  }
+
+  curve_node_to_goal_vec.emplace_back(curve_node_to_goal);
+  search_loop_stats_.memory_usage += search_loop_stats_.curve_node_memory_usage;
+
+  if (search_loop_stats_.memory_usage > search_loop_stats_.max_memory_usage) {
+    ILOG_INFO << "curve_node_to_goal_vec occupied memory is enough";
+    return true;
+  }
+
+  if (curve_node_to_goal.GetGearSwitchNum() < 1 &&
+      curve_node_to_goal.GetLatErr() < 0.02 &&
+      curve_node_to_goal.GetLastPathKappaChange() < max_kappa_change_ + 1e-2) {
+    ILOG_INFO << "find a path that can no shift gear to enter slot";
+    return true;
+  }
+
+  return false;
+}
+
+const bool HybridAStarPathGenerator::PrepareSearchForUpdateOnce(
+    const PathColDetBuffer& path_col_det_buffer) {
+  ILOG_INFO << "hybrid astar " << GetScenarioPrefix() << " update once begin";
+  ResetSearchState();
+  UpdatePoseBoundary();
+  if (!InitStartAndEndNodes()) {
+    return false;
+  }
+
+  const NodeDeleteInput node_del_input =
+      BuildNodeDeleteInput(path_col_det_buffer);
+  node_delete_decider_.Process(node_del_input);
+  if (!ValidateStartAndEndNodes()) {
+    return false;
+  }
+
+  GenerateDpMapForCurrentSearch();
+  SeedStartNodeIntoSearch();
+  ConfigureSearchBudget();
+  return true;
+}
+
+const bool HybridAStarPathGenerator::ShouldStopCurveSearch(
+    double search_continue_time) const {
+  if (search_loop_stats_.curve_path_success_num >
+          search_budget_.find_success_curve_min_count ||
+      (search_loop_stats_.curve_path_success_num > 0 &&
+       search_continue_time > search_budget_.find_success_curve_max_time)) {
+    ILOG_INFO << "curve_path_success_num or search continue time is enough";
+    return true;
+  }
+  return false;
+}
+
+const bool HybridAStarPathGenerator::NeedCalObsDistForBestCurveSelection() const {
+  return request_.search_mode == SearchMode::FORMAL;
+}
+
+void HybridAStarPathGenerator::LogSearchLoopSummary(
+    double search_start_time,
+    const std::vector<CurveNode>& curve_node_to_goal_vec) const {
+  constexpr double kBytesPerMb = 1024.0 * 1024.0;
+
+  ILOG_INFO << "node in pool num = " << node_pool_.PoolSize()
+            << "  open pq size = " << open_pq_.size()
+            << "  gen_child_node_num = "
+            << search_loop_stats_.gen_child_node_num
+            << " curve_path_success_num = "
+            << search_loop_stats_.curve_path_success_num
+            << "  curve_node_to_goal_vec size = "
+            << curve_node_to_goal_vec.size()
+            << "  curve_node_to_goal_vec memory_usage = "
+            << search_loop_stats_.memory_usage / kBytesPerMb << "MB";
+
+  ILOG_INFO << "hybrid astar main cycle search time = "
+            << IflyTime::Now_ms() - search_start_time << " ms"
+            << " generate_node_time = " << generate_next_node_time_ << " ms"
+            << " rs_interpolate_time_ms_ = " << rs_interpolate_time_ms_ << " ms"
+            << " rs_time_ms_ = " << rs_time_ms_ << " ms"
+            << "  rs_try_num_ = " << rs_try_num_
+            << " single_rs_time_ms = "
+            << rs_time_ms_ / (rs_try_num_ == 0 ? 1 : rs_try_num_) << " ms"
+            << " lpl_sample_time = " << lpl_interpolate_time_ms_ << " ms"
+            << " lpl_time_ms_ = " << lpl_time_ms_ << " ms"
+            << "  lpl_try_num_ = " << lpl_try_num_
+            << " single_lpl_time_ms = "
+            << lpl_time_ms_ / (lpl_try_num_ == 0 ? 1 : lpl_try_num_) << " ms"
+            << " set_curve_path_time_ = " << set_curve_path_time_ << " ms"
+            << " check_node_time = " << check_node_should_del_time_ << " ms";
+}
+
+void HybridAStarPathGenerator::LogUpdateOnceSummary() const {
+  ILOG_INFO << "hybrid astar " << GetScenarioPrefix() << " update once end"
+            << " slot id = " << request_.ego_info_under_slot.id
+            << " slot type = "
+            << GetSlotTypeString(request_.ego_info_under_slot.slot_type)
+            << "  search_mode = "
+            << GetSearchModeString(request_.search_mode);
+}
+
+void HybridAStarPathGenerator::SetLplInputPoseFromNode(
+    const Node3d& node, link_pt_line::LinkPtLineInput<float>& lpl_input) const {
+  lpl_input.pose.SetPos(node.GetX(), node.GetY());
+  lpl_input.pose.SetTheta(node.GetPhi());
+  lpl_input.pose.SetDir(node.GetPhi());
+}
+
 const NodeDeleteInput HybridAStarPathGenerator::BuildNodeDeleteInput(
     const PathColDetBuffer& path_col_det_buffer) const {
   NodeDeleteInput node_del_input;
@@ -1011,6 +1264,48 @@ const NodeDeleteInput HybridAStarPathGenerator::BuildNodeDeleteInput(
     node_del_input.enable_smart_fold_mirror = false;
   }
   return node_del_input;
+}
+
+void HybridAStarPathGenerator::ConfigureNodeDeleteRequestForChildNode(
+    Node3d& new_node, Node3d* current_node, const CarMotion& car_motion,
+    AstarPathGear default_gear_request,
+    NodeDeleteRequest& node_del_request) const {
+  node_del_request.current_node = &new_node;
+  node_del_request.parent_node = current_node;
+  node_del_request.curve_node = nullptr;
+  node_del_request.old_node = nullptr;
+  node_del_request.cur_gear = car_motion.gear;
+  node_del_request.gear_request =
+      DetermineChildNodeGearRequest(*current_node, default_gear_request);
+  node_del_request.explored_node_num = search_loop_stats_.explored_node_num + 3;
+}
+
+AstarPathGear HybridAStarPathGenerator::DetermineChildNodeGearRequest(
+    const Node3d& current_node, AstarPathGear default_gear_request) const {
+  AstarPathGear gear_request = default_gear_request;
+
+  if (current_node.GetPathType() == AstarPathType::START_NODE &&
+      request_.max_gear_shift_number == 0 &&
+      request_.search_mode == SearchMode::FORMAL) {
+    gear_request = request_.inital_action_request.ref_gear;
+  }
+
+  if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+    gear_request = AstarPathGear::DRIVE;
+  }
+
+  if (request_.search_mode == SearchMode::PRE_SEARCH &&
+      current_node.GetDistToStart() < 3.8f) {
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      gear_request = AstarPathGear::REVERSE;
+    } else if (request_.scenario_type ==
+               ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+      gear_request = AstarPathGear::DRIVE;
+    }
+  }
+
+  return gear_request;
 }
 
 const bool HybridAStarPathGenerator::ValidateStartAndEndNodes() {
