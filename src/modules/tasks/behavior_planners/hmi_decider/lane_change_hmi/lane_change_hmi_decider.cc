@@ -77,15 +77,20 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
                                       : RequestType::RIGHT_CHANGE;
     return;
   }
+  JSON_DEBUG_VALUE(
+      "turn_signal",
+      static_cast<int>(planning_result.turn_signal));
   if (turn_signal_from_ramp_direction) {
     planning_result.turn_signal =
         last_frame_dir_turn_signal_road_to_ramp_ ==
                 RampDirection::RAMP_ON_LEFT
             ? RequestType::LEFT_CHANGE
             : RequestType::RIGHT_CHANGE;
+    JSON_DEBUG_VALUE(
+      "turn_signal",
+      static_cast<int>(planning_result.turn_signal));
     return;
   }
-
   if (turn_signal_on_from_lane_borrow) {
     planning_result.turn_signal = lane_borrow_decider_output.borrow_direction ==
                                           BorrowDirection::LEFT_BORROW
