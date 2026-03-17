@@ -145,7 +145,8 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
                                                             const double obj_v,
                                                             const double ego_a,
                                                             const double obj_a,
-                                                            bool is_front_car) {
+                                                            bool is_front_car,
+                                                            double& extreme_time) {
   double differ_acc =
       std::fabs(ego_a - obj_a) < kZeroEpsilon ? 0.001 : (ego_a - obj_a);
   differ_acc =
@@ -157,8 +158,10 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
         (ego_v - obj_v) * prediction_time_ +
         0.5 * differ_acc * prediction_time_ * prediction_time_;
     if (ego_v > obj_v) {
+      extreme_time = is_front_car ? prediction_time_ : 0.0;
       return is_front_car ? limit_distance : 0.0;
     } else {
+      extreme_time = is_front_car ? 0.0 : prediction_time_;
       return is_front_car ? 0.0 : -limit_distance;
     }
   } else {
@@ -166,12 +169,14 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
         (ego_v - obj_v) * calculate_collision_time +
         0.5 * differ_acc * calculate_collision_time * calculate_collision_time;
     if (ego_v > obj_v) {
+      extreme_time = is_front_car ? calculate_collision_time : prediction_time_;
       return is_front_car ? limit_distance
                           : std::max((obj_v - ego_v) * prediction_time_ -
                                          0.5 * differ_acc * prediction_time_ *
                                              prediction_time_,
                                      0.0);
     } else {
+      extreme_time = is_front_car ? prediction_time_ : calculate_collision_time;
       return is_front_car ? std::max((ego_v - obj_v) * prediction_time_ +
                                          0.5 * differ_acc * prediction_time_ *
                                              prediction_time_,
@@ -213,12 +218,16 @@ void SampleQuarticPolynomialCurve::CalcCost(
   sample_space_base.GetBorderByAvailable(anchor_arrived_s, anchor_arrived_t,
                                          &anchor_matched_lower_st_point,
                                          &anchor_matched_upper_st_point);
+  double extreme_time_front = 0.0;
+  double extreme_time_back = 0.0;
   const double safe_distance_to_gap_front_obj = CalcGapVelSafeDistance(
       anchor_arrived_v, anchor_matched_upper_st_point.velocity(),
-      anchor_arrived_a, anchor_matched_upper_st_point.acceleration(), true);
+      anchor_arrived_a, anchor_matched_upper_st_point.acceleration(), true,
+      extreme_time_front);
   const double safe_distance_to_gap_back_obj = CalcGapVelSafeDistance(
       anchor_arrived_v, anchor_matched_lower_st_point.velocity(),
-      anchor_arrived_a, anchor_matched_lower_st_point.acceleration(), false);
+      anchor_arrived_a, anchor_matched_lower_st_point.acceleration(), false,
+      extreme_time_back);
   double rest_changeable_distance =
       anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s() -
       safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj -
@@ -245,7 +254,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
       anchor_arrived_s, anchor_arrived_t, anchor_arrived_v, anchor_arrived_a,
       safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
-      is_not_use_gap_select, lc_safety_distance_config, is_emergency_scene);
+      is_not_use_gap_select, lc_safety_distance_config, is_emergency_scene,
+      extreme_time_back);
   arrived_s_ = anchor_arrived_s;
   arrived_v_ = anchor_arrived_v;
   arrived_a_ = anchor_arrived_a;
