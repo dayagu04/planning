@@ -148,6 +148,7 @@ bool SpatioTemporalUnionDp::InitCostTable(
 
   unit_t_ = dp_search_paramms.unit_t();
   inv_unit_t_ = 1.0 / unit_t_;
+  inv_unit_t_square_ = inv_unit_t_ * inv_unit_t_;
   t_squared_ = unit_t_ * unit_t_;
   dense_dimension_s_ = dp_search_paramms.dense_dimension_s();
   total_length_t_ = dp_search_paramms.total_length_t();
@@ -318,6 +319,20 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
     int count = static_cast<int>(next_highest_row) -
                 static_cast<int>(next_lowest_row) + 1;
 
+    auto& cur_point = cost_table_[0][0][0];
+
+    // 预计算障碍物信息，减少循环内计算
+    std::vector<int> valid_agent_indices;
+    valid_agent_indices.reserve(agent_trajs.size());
+    for (int i = 0; i < agent_trajs.size(); ++i) {
+      const auto& agent = agent_trajs[i];
+      if (agent.agent_id != -1 && !agent.agent_boxs_set.empty() &&
+          (agent.is_static ||
+           cur_point.point().t() <= kConsiderDynamicObstacleCostTimeLength)) {
+        valid_agent_indices.push_back(i);
+      }
+    }
+
     // auto time_start = IflyTime::Now_us();
     if (count > 0) {
       if (spatio_temporal_union_plan_input.dp_search_paramms()
@@ -339,7 +354,7 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
             SLTGraphMessage msg(c, r, k);
             ILOG_DEBUG << "cost_cr c=" << c << " r=" << r << " k=" << k;
             CalculateCostAt(&msg, agent_trajs, target_s,
-                            spatio_temporal_union_plan_input);
+                            spatio_temporal_union_plan_input, valid_agent_indices);
           }
         }
       } else {
@@ -351,7 +366,7 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
 
             // auto t1 = IflyTime::Now_us();
             CalculateCostAt(&msg, agent_trajs, target_s,
-                            spatio_temporal_union_plan_input);
+                            spatio_temporal_union_plan_input, valid_agent_indices);
             // auto t2 = IflyTime::Now_us();
             // ILOG_DEBUG << "one time CalculateCostAt:" << t2 - t1;
           }
@@ -373,7 +388,7 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
           SLTGraphMessage msg(c, r, k);
           ILOG_DEBUG << "cost_cr c=" << c << " r=" << r << " k=" << k;
           CalculateCostAt(&msg, agent_trajs, target_s,
-                          spatio_temporal_union_plan_input);
+                          spatio_temporal_union_plan_input, valid_agent_indices);
         }
       }
     }
@@ -433,7 +448,7 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
           SLTGraphMessage msg(c, r, k);
           ILOG_DEBUG << "cost_cr c=" << c << " r=" << r << " k=" << k;
           CalculateCostAt(&msg, agent_trajs, target_s,
-                          spatio_temporal_union_plan_input);
+                          spatio_temporal_union_plan_input, valid_agent_indices);
         }
       }
     }
@@ -590,7 +605,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
     const double target_s,
     const planning::common::SpationTemporalUnionDpInput&
-        spatio_temporal_union_plan_input) {
+        spatio_temporal_union_plan_input,
+    const std::vector<int>& valid_agent_indices) {
   const uint32_t c = msg->c;
   const uint32_t r = msg->r;
   const uint32_t k = msg->k;
@@ -598,8 +614,9 @@ void SpatioTemporalUnionDp::CalculateCostAt(
   double ego_v = ego_init_state.v0();
   auto &cost_cr = cost_table_[c][r][k];
 
+  const double current_point_s = cost_cr.point().s();
   // 依靠target_s 进行纵向剪枝
-  if (cost_cr.point().s() > target_s) {
+  if (current_point_s > target_s) {
     return;
   }
   // cost_cr.SetSpatialPotentialCost(dp_st_cost_.GetSpatialPotentialCost(cost_cr));
@@ -620,7 +637,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
   const double min_s_consider_speed = dense_unit_s_ * dimension_t_;
 
   if (c == 1) {
-    const double delta_s = cost_cr.point().s() - cost_init.point().s();
+    const double delta_s = current_point_s - cost_init.point().s();
     const double delta_l = cost_cr.point().l() - cost_init.point().l();
     double v0 = cost_init.GetOptimalSpeed();
     if (std::fabs(v0) < 2.0e-1) {
@@ -630,7 +647,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     if (acc < kDefaultMaxDeceleration || acc > kDefaultMaxAcceleration) {
       return;
     }
-    const double lateral_acc = 4.0 * delta_l * inv_unit_t_ * inv_unit_t_;
+    const double lateral_acc = 4.0 * delta_l * inv_unit_t_square_;
     if (lateral_acc < kLateralMaxDeceleration ||
         lateral_acc > kLateralMaxAcceleration) {
       return;
@@ -646,8 +663,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       s_lower_bound = 0.5 * v0 * t_decel + cost_init.point().s();
     }
 
-    if (cost_cr.point().s() < s_lower_bound ||
-        cost_cr.point().s() > s_upper_bound) {
+    if (current_point_s < s_lower_bound ||
+        current_point_s > s_upper_bound) {
       return;
     }
     // if (init_state.v() + acc * unit_t_ < -kDoubleEpsilon &&
@@ -683,7 +700,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     int agent_id = -1;
     double dynamic_obstacle_cost_c1 = CalculateDynamicObstacleCost(
         cost_init, cost_cr, lateral_cubic_curve_c1, acc, agent_trajs,
-        spatio_temporal_union_plan_input, &dis, &agent_id);
+        spatio_temporal_union_plan_input, &dis, &agent_id, valid_agent_indices);
     // auto dynamicobstaclecost = IflyTime::Now_us();
     // ILOG_DEBUG << "c1 CalculateDynamicObstacleCost:" << dynamicobstaclecost -
     // pathcost;
@@ -712,7 +729,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
   }
 
   double pre_lowest_s =
-      cost_cr.point().s() - std::max(kPlanningUpperSpeedLimit, ego_v) *
+      current_point_s - std::max(kPlanningUpperSpeedLimit, ego_v) *
                                 (1 + kSpeedRangeBuffer) * unit_t_;
   pre_lowest_s = std::max(pre_lowest_s, cost_init.point().s());
   const auto pre_lowest_itr =
@@ -738,56 +755,57 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     for (uint32_t i = 0; i < r_pre_size; ++i) {
       uint32_t r_pre = r - i;
       for (int later_j = 0; later_j < dimension_l_; ++later_j) {
-        if ((pre_col[r_pre][later_j].total_cost() >
+        const auto &pre_node = pre_col[r_pre][later_j];
+        if ((pre_node.total_cost() >
              kObstacleCollisionDistanceCost) ||
-            pre_col[r_pre][later_j].pre_point() == nullptr) {
+            pre_node.pre_point() == nullptr) {
           continue;
         }
 
         const double delta_s =
-            cost_cr.point().s() - pre_col[r_pre][later_j].point().s();
+            current_point_s - pre_node.point().s();
         const double delta_l =
-            cost_cr.point().l() - pre_col[r_pre][later_j].point().l();
+            cost_cr.point().l() - pre_node.point().l();
         const double curr_a = 2 *
                               (delta_s * inv_unit_t_ -
-                               pre_col[r_pre][later_j].GetOptimalSpeed()) *
+                               pre_node.GetOptimalSpeed()) *
                               inv_unit_t_;
         if (curr_a < kDefaultMaxDeceleration ||
             curr_a > kDefaultMaxAcceleration) {
           continue;
         }
 
-        const double lateral_acc = 4.0 * delta_l * inv_unit_t_ * inv_unit_t_;
+        const double lateral_acc = 4.0 * delta_l * inv_unit_t_square_;
         if (lateral_acc < kLateralMaxDeceleration ||
             lateral_acc > kLateralMaxAcceleration) {
           continue;
         }
         double s_upper_bound =
-            pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+            pre_node.GetOptimalSpeed() * unit_t_ +
             0.5 * kDefaultMaxAcceleration * t_squared_ +
-            pre_col[r_pre][later_j].point().s();
+            pre_node.point().s();
         double s_lower_bound =
-            pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+            pre_node.GetOptimalSpeed() * unit_t_ +
             0.5 * kDefaultMaxDeceleration * t_squared_ +
-            pre_col[r_pre][later_j].point().s();
-        double t_decel = -pre_col[r_pre][later_j].GetOptimalSpeed() /
+            pre_node.point().s();
+        double t_decel = -pre_node.GetOptimalSpeed() /
                          kDefaultMaxDeceleration;
         if (t_decel < unit_t_) {
           s_lower_bound =
-              0.5 * pre_col[r_pre][later_j].GetOptimalSpeed() * t_decel +
-              pre_col[r_pre][later_j].point().s();
+              0.5 * pre_node.GetOptimalSpeed() * t_decel +
+              pre_node.point().s();
         }
-        if (cost_cr.point().s() < s_lower_bound ||
-            cost_cr.point().s() > s_upper_bound) {
+        if (current_point_s < s_lower_bound ||
+            current_point_s > s_upper_bound) {
           continue;
         }
 
-        // if (pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_ <
+        // if (pre_node.GetOptimalSpeed() + curr_a * unit_t_ <
         //         -kDoubleEpsilon && delta_s > min_s_consider_speed) {
         //   continue;
         // }
 
-        const auto &pre_cost = pre_col[r_pre][later_j];
+        const auto &pre_cost = pre_node;
         // 生成L方向三次多项式
         std::array<double, 2> later_start_state{pre_cost.point().l(), 0.0};
         std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
@@ -808,7 +826,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         int agent_id_c2;
         double dynamic_obstacle_cost_c2 = CalculateDynamicObstacleCost(
             pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a, agent_trajs,
-            spatio_temporal_union_plan_input, &distance_c2, &agent_id_c2);
+            spatio_temporal_union_plan_input, &distance_c2, &agent_id_c2, valid_agent_indices);
         // auto dynamicobstaclecost = IflyTime::Now_us();
         // ILOG_DEBUG << "c2 CalculateDynamicObstacleCost:" <<
         // dynamicobstaclecost - pathcost;
@@ -823,13 +841,13 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         // dynamicobstaclecost;
 
         const double cost = path_cost_c2 + dynamic_obstacle_cost_c2 +
-                            pre_col[r_pre][later_j].total_cost() + long_cost_c2;
+                            pre_node.total_cost() + long_cost_c2;
 
         // ILOG_DEBUG << "pre_cost: c: " << c-1
         //            << ", r:" << r_pre
         //            << ", k:" << later_j
         //            << ", total_cost:" <<
-        //            pre_col[r_pre][later_j].total_cost();
+        //            pre_node.total_cost();
 
         // ILOG_DEBUG << "path_cost_c2: " << path_cost_c2
         //            << ", dynamic_obstacle_cost_c2:" <<
@@ -844,9 +862,9 @@ void SpatioTemporalUnionDp::CalculateCostAt(
           cost_cr.SetLongitinalCost(long_cost_c2);
           cost_cr.SetTotalCost(cost);
           cost_cr.SetPathCost(path_cost_c2);
-          cost_cr.SetPrePoint(pre_col[r_pre][later_j]);
+          cost_cr.SetPrePoint(pre_node);
           cost_cr.SetOptimalSpeed(std::max(
-              pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_,
+              pre_node.GetOptimalSpeed() + curr_a * unit_t_,
               0.0));
           cost_cr.SetAcc(curr_a);
           // ILOG_DEBUG << "c is" << c;
@@ -863,8 +881,9 @@ void SpatioTemporalUnionDp::CalculateCostAt(
   for (uint32_t i = 0; i < r_pre_size; ++i) {
     uint32_t r_pre = r - i;
     for (int later_j = 0; later_j < dimension_l_; ++later_j) {
-      if (std::isinf(pre_col[r_pre][later_j].total_cost()) ||
-          pre_col[r_pre][later_j].pre_point() == nullptr) {
+      const auto& pre_node = pre_col[r_pre][later_j];
+      if (std::isinf(pre_node.total_cost()) ||
+          pre_node.pre_point() == nullptr) {
         continue;
       }
       // Use curr_v = (point.s - pre_point.s) / unit_t as current v
@@ -872,49 +891,49 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       // Current acc estimate: curr_a = (curr_v - pre_v) / unit_t
       // = (point.s + prepre_point.s - 2 * pre_point.s) / (unit_t * unit_t)
       const double delta_s =
-          cost_cr.point().s() - pre_col[r_pre][later_j].point().s();
+          current_point_s - pre_node.point().s();
       const double delta_l =
-          cost_cr.point().l() - pre_col[r_pre][later_j].point().l();
+          cost_cr.point().l() - pre_node.point().l();
       const double curr_a =
           2 *
-          (delta_s * inv_unit_t_ - pre_col[r_pre][later_j].GetOptimalSpeed()) *
+          (delta_s * inv_unit_t_ - pre_node.GetOptimalSpeed()) *
           inv_unit_t_;
       if (curr_a > kDefaultMaxAcceleration ||
           curr_a < kDefaultMaxDeceleration) {
         continue;
       }
-      const double lateral_acc = 4.0 * delta_l * inv_unit_t_ * inv_unit_t_;
+      const double lateral_acc = 4.0 * delta_l * inv_unit_t_square_;
       if (lateral_acc < kLateralMaxDeceleration ||
           lateral_acc > kLateralMaxAcceleration) {
         continue;
       }
       double s_upper_bound =
-          pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+          pre_node.GetOptimalSpeed() * unit_t_ +
           0.5 * kDefaultMaxAcceleration * t_squared_ +
-          pre_col[r_pre][later_j].point().s();
+          pre_node.point().s();
       double s_lower_bound =
-          pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+          pre_node.GetOptimalSpeed() * unit_t_ +
           0.5 * kDefaultMaxDeceleration * t_squared_ +
-          pre_col[r_pre][later_j].point().s();
+          pre_node.point().s();
       double t_decel =
-          -pre_col[r_pre][later_j].GetOptimalSpeed() / kDefaultMaxDeceleration;
+          -pre_node.GetOptimalSpeed() / kDefaultMaxDeceleration;
       if (t_decel < unit_t_) {
         s_lower_bound =
-            0.5 * pre_col[r_pre][later_j].GetOptimalSpeed() * t_decel +
-            pre_col[r_pre][later_j].point().s();
+            0.5 * pre_node.GetOptimalSpeed() * t_decel +
+            pre_node.point().s();
       }
-      if (cost_cr.point().s() < s_lower_bound ||
-          cost_cr.point().s() > s_upper_bound) {
+      if (current_point_s < s_lower_bound ||
+          current_point_s > s_upper_bound) {
         continue;
       }
 
-      // if (pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_ <
+      // if (pre_node.GetOptimalSpeed() + curr_a * unit_t_ <
       // -kDoubleEpsilon &&
       //     delta_s > min_s_consider_speed) {
       //   continue;
       // }
 
-      const auto &pre_cost = pre_col[r_pre][later_j];
+      const auto &pre_cost = pre_node;
       // 生成L方向三次多项式
       std::array<double, 2> later_start_state{pre_cost.point().l(), 0.0};
       std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
@@ -935,13 +954,13 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       double dynamic_obstacle_cost = 0.0;
       dynamic_obstacle_cost = CalculateDynamicObstacleCost(
           pre_cost, cost_cr, lateral_cubic_curve, curr_a, agent_trajs,
-          spatio_temporal_union_plan_input, &distance_c3, &agent_id_c3);
+          spatio_temporal_union_plan_input, &distance_c3, &agent_id_c3, valid_agent_indices);
       // auto dynamicobstaclecost = IflyTime::Now_us();
       // ILOG_DEBUG << "c3 CalculateDynamicObstacleCost:" << dynamicobstaclecost
       // - pathcost;
 
-      uint32_t r_prepre = pre_col[r_pre][later_j].pre_point()->index_s();
-      const auto &prepre_graph_point = pre_col[r_pre][later_j].pre_point();
+      uint32_t r_prepre = pre_node.pre_point()->index_s();
+      const auto &prepre_graph_point = pre_node.pre_point();
       if (prepre_graph_point->total_cost() > kObstacleCollisionDistanceCost) {
         continue;
       }
@@ -951,7 +970,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       }
       const auto &triple_pre_point = prepre_graph_point->pre_point();
       const auto &prepre_point = prepre_graph_point;
-      const auto &pre_point = pre_col[r_pre][later_j];
+      const auto &pre_point = pre_node;
       const auto &curr_point = cost_cr;
       curr_speed_limit =
           std::fmin(curr_speed_limit, speed_limit_by_index_[r_pre]);
@@ -960,14 +979,14 @@ void SpatioTemporalUnionDp::CalculateCostAt(
           CalculateEdgeCost(*triple_pre_point, *prepre_point, pre_point,
                             curr_point, curr_speed_limit, cruise_speed);
       double cost = path_cost_c + dynamic_obstacle_cost +
-                    pre_col[r_pre][later_j].total_cost() + long_cost;
+                    pre_node.total_cost() + long_cost;
 
       // auto edgecost = IflyTime::Now_us();
       // ILOG_DEBUG << "c3 CalculateEdgeCost:" << edgecost -
       // dynamicobstaclecost; ILOG_DEBUG << "pre_cost: c:" << c-1
       //          << ", r:" << r_pre
       //          << ", k:" << later_j
-      //          << ", total_cost:" << pre_col[r_pre][later_j].total_cost();
+      //          << ", total_cost:" << pre_node.total_cost();
 
       // ILOG_DEBUG << "path_cost_c:" << c-1
       //            << ", dynamic_obstacle_cost:" << path_cost_c
@@ -982,9 +1001,9 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         cost_cr.SetLongitinalCost(long_cost);
         cost_cr.SetTotalCost(cost);
         cost_cr.SetPathCost(path_cost_c);
-        cost_cr.SetPrePoint(pre_col[r_pre][later_j]);
+        cost_cr.SetPrePoint(pre_node);
         cost_cr.SetOptimalSpeed(std::max(
-            pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_, 0.0));
+            pre_node.GetOptimalSpeed() + curr_a * unit_t_, 0.0));
         cost_cr.SetAcc(curr_a);
         // ILOG_DEBUG << "c is" << c;
       }
@@ -1038,6 +1057,12 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   std::vector<double> s_vec;
   std::vector<double> t_vec;
   std::vector<double> l_vec;
+  // TODO, N的数值需要优化
+  const int N = 50;
+  s_vec.reserve(N);
+  t_vec.reserve(N);
+  l_vec.reserve(N);
+  speed_profile.reserve(N);
 
   while (cur_point != nullptr) {
     ILOG_DEBUG << "[RetrieveSpeedProfile] s:" << cur_point->point().s()
@@ -1416,11 +1441,12 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
     const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
     const planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
-    double* distance_to_point, int* agent_id) {
+    double* distance_to_point, int* agent_id,
+    const std::vector<int>& valid_agent_indices) {
   double obstacle_cost = 0.0;
   double v0 = pre_point.GetOptimalSpeed();
   const double total_t = cur_point.point().t() - pre_point.point().t();
-  if (agent_trajs.empty()) {
+  if (valid_agent_indices.empty()) {
     return obstacle_cost;
   }
   // if (pre_point.point().t() > kDefaultConsiderObstacleTajsTime) {
@@ -1450,48 +1476,71 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
   if (cur_point.point().t() > kDynamicObsConsiderTime) {
     time_gap = kDynamicObstacleCostLaterSampleTime;
   }
+
+  // 预计算自车轨迹点，避免重复计算
+  std::vector<AABox2d> ego_trajectory_boxes;
+  std::vector<double> ego_times;
+  PrecomputeEgoTrajectory(pre_point, cur_point, lateral_curve, acc, v0,
+                          time_gap, ego_trajectory_boxes, ego_times);
+
   // 外层循环遍历每个障碍物
-  for (const auto &agent_traj : agent_trajs) {
-    // 过滤无效障碍物
-    if (agent_traj.agent_id == -1) {
-      continue;
-    }
-    if (agent_traj.agent_boxs_set.empty()) {
-      continue;
-    }
-    if (!agent_traj.is_static &&
-        cur_point.point().t() > kConsiderDynamicObstacleCostTimeLength) {
-      continue;
-    }
+  for (int agent_idx : valid_agent_indices) {
+    // for (const auto& agent_traj : agent_trajs) {
+    const auto& agent_traj = agent_trajs[agent_idx];
+    // // 过滤无效障碍物
+    // if (agent_traj.agent_id == -1) {
+    //   continue;
+    // }
+    // if (agent_traj.agent_boxs_set.empty()) {
+    //   continue;
+    // }
+    // if (!agent_traj.is_static &&
+    //     cur_point.point().t() > kConsiderDynamicObstacleCostTimeLength) {
+    //   continue;
+    // }
 
     // 内层循环遍历时间间隔
-    int count = 0;
-    for (double cur_t = kDeltaTime; cur_t <= total_t; cur_t += time_gap) {
+    // int count = 0;
+    for (size_t i = 0; i < ego_trajectory_boxes.size(); ++i) {
+      // for (double cur_t = kDeltaTime; cur_t <= total_t; cur_t += time_gap) {
       // 计算当前时间点的自车状态
-      count += kDefaultIndexInterval;
-      cur_s = v0 * cur_t + 0.5 * acc * cur_t * cur_t + pre_point.point().s();
-      cur_l = lateral_curve.Evaluate(0, cur_t);
-      cur_ego_point.set_x(cur_s);
-      cur_ego_point.set_y(cur_l);
+      // count += kDefaultIndexInterval;
+      // cur_s = v0 * cur_t + 0.5 * acc * cur_t * cur_t + pre_point.point().s();
+      // cur_l = lateral_curve.Evaluate(0, cur_t);
+      // cur_ego_point.set_x(cur_s);
+      // cur_ego_point.set_y(cur_l);
+      const auto& cur_ego_box = ego_trajectory_boxes[i];
+      double current_time = ego_times[i];
 
-      ds = v0 + acc * cur_t;
-      ds = std::max(ds, 1e-6);
-      dl = lateral_curve.Evaluate(1, cur_t);
-      dl_ds = dl / ds;
+      // 获取障碍物box
+      int box_index = pre_point.index_t() * kDefaultTrajsPointNums +
+                      static_cast<int>(current_time / time_gap);
+      auto iter = agent_traj.agent_boxs_set.find(box_index);
+      if (iter == agent_traj.agent_boxs_set.end()) {
+        continue;
+      }
 
-      ego_heading_angle = std::atan(dl_ds);
-      ego_heading_angle = NormalizeAngle(
-          dl_ds);  // 注：此处可能存在笔误，建议检查是否应为NormalizeAngle(ego_heading_angle)
+      // ds = v0 + acc * cur_t;
+      // ds = std::max(ds, 1e-6);
+      // dl = lateral_curve.Evaluate(1, cur_t);
+      // dl_ds = dl / ds;
 
-      cos_theta = cos(ego_heading_angle);
-      sin_theta = sin(ego_heading_angle);
+      // ego_heading_angle = std::atan(dl_ds);
+      // ego_heading_angle = NormalizeAngle(
+      //     dl_ds);  //
+      //     注：此处可能存在笔误，建议检查是否应为NormalizeAngle(ego_heading_angle)
 
-      // 获取自车box顶点并构建box
-      GetVehicleBoxSLVertices(cur_ego_point, cos_theta, sin_theta,
-                              ego_box_vertices);
-      AABox2d cur_ego_box(ego_box_vertices, kDefaultValidBoxNums);
+      // cos_theta = cos(ego_heading_angle);
+      // sin_theta = sin(ego_heading_angle);
+
+      // // 获取自车box顶点并构建box
+      // GetVehicleBoxSLVertices(cur_ego_point, cos_theta, sin_theta,
+      //                         ego_box_vertices);
+      // AABox2d cur_ego_box(ego_box_vertices, kDefaultValidBoxNums);
 
       // 检查障碍物最大box与自车box的距离，超出范围则跳过
+
+      // 这个检查应该无必要
       dis_to_agent_max_box = agent_traj.max_agent_box.DistanceTo(cur_ego_box);
       if (dis_to_agent_max_box >
           spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params()
@@ -1499,57 +1548,52 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
         continue;
       }
 
-      // 获取当前时间点对应的障碍物box
-      int index = pre_point.index_t() * kDefaultTrajsPointNums + count;
-      auto iter = agent_traj.agent_boxs_set.find(index);
-      if (iter != agent_traj.agent_boxs_set.end()) {
-        const auto &cur_agent_box = iter->second;
-        distance = cur_agent_box.DistanceTo(cur_ego_box);
-        longit_dis_to_ego = cur_agent_box.LongitDistanceTo(cur_ego_box);
-        lateral_dis_to_ego = cur_agent_box.LateralDistanceTo(cur_ego_box);
+      const auto& cur_agent_box = iter->second;
+      distance = cur_agent_box.DistanceTo(cur_ego_box);
 
-        // 更新最小距离
-        if (distance < min_dis) {
-          min_dis = distance;
-          *distance_to_point = distance;
-          *agent_id = agent_traj.agent_id;
-        }
+      // 更新最小距离
+      if (distance < min_dis) {
+        min_dis = distance;
+        *distance_to_point = distance;
+        *agent_id = agent_traj.agent_id;
+      }
 
-        // 检测碰撞距离，满足条件直接返回
-        if (distance < kCollisionBetweenObstacleDistanceThreshold) {
-          return kObstacleCollisionDistanceCost;
-        }
+      // 检测碰撞距离，满足条件直接返回
+      if (distance < kCollisionBetweenObstacleDistanceThreshold) {
+        return kObstacleCollisionDistanceCost;
+      }
 
-        // 过滤范围外障碍物
-        if (longit_dis_to_ego > spatio_temporal_union_plan_input
-                                    .dp_dynamic_agent_weight_params()
-                                    .obstacle_longit_risk_distance() ||
-            lateral_dis_to_ego > spatio_temporal_union_plan_input
-                                     .dp_dynamic_agent_weight_params()
-                                     .obstacle_lateral_risk_distance()) {
-          continue;
-        }
+      longit_dis_to_ego = cur_agent_box.LongitDistanceTo(cur_ego_box);
+      lateral_dis_to_ego = cur_agent_box.LateralDistanceTo(cur_ego_box);
 
-        // 计算纵向成本
-        obstacle_cost += GetLongitCostBetweenObsBoxes(
-            longit_dis_to_ego, spatio_temporal_union_plan_input);
+      // 过滤范围外障碍物
+      if (longit_dis_to_ego >
+              spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params()
+                  .obstacle_longit_risk_distance() ||
+          lateral_dis_to_ego >
+              spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params()
+                  .obstacle_lateral_risk_distance()) {
+        continue;
+      }
 
-        // 计算横向成本（根据时间和障碍物类型）
-        if (cur_point.point().t() <= kDefaultConsiderObstacleTajsTime) {
-          if (agent_traj.agent_type == 6 || agent_traj.agent_type == 7 ||
-              agent_traj.agent_type == 8) {
-            obstacle_cost +=
-                kSpecialObstacleDistanceCost *
-                GetLateralCostBetweenObsBoxes(lateral_dis_to_ego,
-                                              spatio_temporal_union_plan_input);
-          } else {
-            obstacle_cost +=
-                spatio_temporal_union_plan_input
-                    .dp_dynamic_agent_weight_params()
-                    .default_obstacle_cost_weight() *
-                GetLateralCostBetweenObsBoxes(lateral_dis_to_ego,
-                                              spatio_temporal_union_plan_input);
-          }
+      // 计算纵向成本
+      obstacle_cost += GetLongitCostBetweenObsBoxes(
+          longit_dis_to_ego, spatio_temporal_union_plan_input);
+
+      // 计算横向成本（根据时间和障碍物类型）
+      if (cur_point.point().t() <= kDefaultConsiderObstacleTajsTime) {
+        if (agent_traj.agent_type == 6 || agent_traj.agent_type == 7 ||
+            agent_traj.agent_type == 8) {
+          obstacle_cost +=
+              kSpecialObstacleDistanceCost *
+              GetLateralCostBetweenObsBoxes(lateral_dis_to_ego,
+                                            spatio_temporal_union_plan_input);
+        } else {
+          obstacle_cost +=
+              spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params()
+                  .default_obstacle_cost_weight() *
+              GetLateralCostBetweenObsBoxes(lateral_dis_to_ego,
+                                            spatio_temporal_union_plan_input);
         }
       }
     }
@@ -1592,6 +1636,56 @@ double SpatioTemporalUnionDp::GetLongitCostBetweenObsBoxes(
           longit_dis_to_ego);
 
   return obstacle_cost;
+}
+
+void SpatioTemporalUnionDp::PrecomputeEgoTrajectory(
+    const SLTGraphPoint& pre_point, const SLTGraphPoint& cur_point,
+    const CubicPolynomialCurve1d& lateral_curve, const double& acc,
+    const double& v0, double time_gap, std::vector<AABox2d>& ego_boxes,
+    std::vector<double>& times) {
+  ego_boxes.clear();
+  times.clear();
+
+  const double total_t = cur_point.point().t() - pre_point.point().t();
+  const int num_samples = static_cast<int>(total_t / time_gap) + 1;
+
+  ego_boxes.reserve(num_samples);
+  times.reserve(num_samples);
+  Vec2d cur_ego_point(0, 0);
+  double ds = 1e-6;
+  double dl = 1e-6;
+  double dl_ds = 0.0;
+  double ego_heading_angle = 0.0;
+  // 获取sl坐标系下自车box的顶点坐标集合
+  double cos_theta = 0.0;
+  double sin_theta = 0.0;
+  std::array<planning_math::Vec2d, 8> ego_box_vertices;
+  for (double cur_t = kDeltaTime; cur_t <= total_t; cur_t += time_gap) {
+    double cur_s =
+        v0 * cur_t + 0.5 * acc * cur_t * cur_t + pre_point.point().s();
+    double cur_l = lateral_curve.Evaluate(0, cur_t);
+    cur_ego_point.set_x(cur_s);
+    cur_ego_point.set_y(cur_l);
+
+    ds = v0 + acc * cur_t;
+    ds = std::max(ds, 1e-6);
+    dl = lateral_curve.Evaluate(1, cur_t);
+    dl_ds = dl / ds;
+
+    ego_heading_angle = std::atan(dl_ds);
+    ego_heading_angle = NormalizeAngle(
+        dl_ds);  // 注：此处可能存在笔误，建议检查是否应为NormalizeAngle(ego_heading_angle)
+
+    cos_theta = cos(ego_heading_angle);
+    sin_theta = sin(ego_heading_angle);
+
+    // 获取自车box顶点并构建box
+    GetVehicleBoxSLVertices(cur_ego_point, cos_theta, sin_theta,
+                            ego_box_vertices);
+    AABox2d cur_ego_box(ego_box_vertices, kDefaultValidBoxNums);
+    ego_boxes.emplace_back(std::move(cur_ego_box));
+    times.push_back(cur_t);
+  }
 }
 
 double SpatioTemporalUnionDp::GetLateralCostBetweenObsBoxes(
@@ -1740,10 +1834,12 @@ void SpatioTemporalUnionDp::GetVehicleBoxSLVertices(
   double c_x = ego_point.x() + vehicle_param.rear_axle_to_center * cos_theta;
   double c_y = ego_point.y() + vehicle_param.rear_axle_to_center * sin_theta;
 
-  double d_wx = vehicle_param.width * 0.5 * sin_theta;
-  double d_wy = vehicle_param.width * 0.5 * cos_theta;
-  double d_lx = vehicle_param.length * 0.5 * cos_theta;
-  double d_ly = vehicle_param.length * 0.5 * sin_theta;
+  const double half_width = vehicle_param.width * 0.5;
+  const double half_length = vehicle_param.length * 0.5;
+  double d_wx = half_width * sin_theta;
+  double d_wy = half_width * cos_theta;
+  double d_lx = half_length * cos_theta;
+  double d_ly = half_length * sin_theta;
 
   // Counterclockwise from left-front vertex
   // vertices->emplace_back(Vec2d(c_x - d_wx + d_lx, c_y + d_wy + d_ly));

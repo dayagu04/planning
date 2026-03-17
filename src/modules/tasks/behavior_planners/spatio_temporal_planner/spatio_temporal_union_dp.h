@@ -81,7 +81,8 @@ class SpatioTemporalUnionDp {
       const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
       const double target_s,
       const planning::common::SpationTemporalUnionDpInput&
-          spatio_temporal_union_plan_input);
+          spatio_temporal_union_plan_input,
+      const std::vector<int>& valid_agent_indices);
 
   double CalculateEdgeCost(const SLTGraphPoint& first,
                            const SLTGraphPoint& second,
@@ -115,7 +116,8 @@ class SpatioTemporalUnionDp {
       const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
       const planning::common::SpationTemporalUnionDpInput&
           spatio_temporal_union_plan_input,
-      double* distance_to_point, int* agent_id);
+      double* distance_to_point, int* agent_id,
+      const std::vector<int>& valid_agent_indices);
 
   double GetLongitCostBetweenObsBoxes(
       const double longit_dis_to_ego,
@@ -176,6 +178,12 @@ class SpatioTemporalUnionDp {
 
   void PrecomputeInvSpeedLimit();
 
+  void PrecomputeEgoTrajectory(
+    const SLTGraphPoint& pre_point, const SLTGraphPoint& cur_point,
+    const CubicPolynomialCurve1d& lateral_curve, const double& acc,
+    const double& v0, double time_gap, std::vector<AABox2d>& ego_boxes,
+    std::vector<double>& times);
+    
   void FallbackFunction(const planning::common::SpationTemporalUnionDpInput&
                             spatio_temporal_union_plan_input,
                         TrajectoryPoints& traj_points,
@@ -215,6 +223,7 @@ class SpatioTemporalUnionDp {
   double total_length_t_ = 0.0;
   double unit_t_ = 0.0;
   double inv_unit_t_ = 0.0;
+  double inv_unit_t_square_ = 0.0;
   double t_squared_ = 0.0;
   int dimension_t_ = 0;
 
@@ -257,6 +266,7 @@ class SpatioTemporalUnionDp {
   double l0_ = 1.50;
   double b_ = 0.40;
   double k_ = 1.5;
+  double min_s_consider_speed_ = 0.0;
 };
 
 }  // namespace planning
