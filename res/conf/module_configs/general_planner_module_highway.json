@@ -830,7 +830,7 @@
     "q_ego_ref_y": 0.2,
     "q_ego_ref_theta": 20.0,
     "q_ego_ref_delta": 1.0,
-    "q_ego_ref_vel": 0.3,
+    "q_ego_ref_vel": 1.5,
     "q_ego_ref_acc": 0.05,
     "q_obs_ref_x": 0.2,
     "q_obs_ref_y": 0.2,

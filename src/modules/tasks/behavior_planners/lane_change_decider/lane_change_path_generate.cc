@@ -34,8 +34,8 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
   const double max_simulate_time = 5.0;
   const double end_poise_lat_err = 0.2;
   const double end_poise_theta_err = 0.12;
-  const double default_front_dis = 200.0;
-  const double default_front_v = 33.3;
+  const double default_front_dis = 250.0;
+  const double default_front_v = 37.5;
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -295,8 +295,8 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   pp_model_.ProcessReferencePath(ref_path_);
 
   // idm model default
-  const double default_front_dis = 150;
-  const double default_front_v = 33.3;
+  const double default_front_dis = 250.0;
+  const double default_front_v = 37.5;
   BasicIntelligentDriverModel::ModelParam idm_model_param;
   idm_model_param.kDesiredVelocity =
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
