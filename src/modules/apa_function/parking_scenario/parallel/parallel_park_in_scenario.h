@@ -210,6 +210,7 @@ class ParallelParkInScenario : public ParkingScenario {
   iflyauto::APAHMIData last_apa_hmi_;
   // success to failed nums
   int pa_try_s2f_count_ = 0;
+  int pa_try_success_count_ = 0;
 
   RelativeLocObserverManager relative_loc_observer_manager_;
   std::unordered_map<size_t, std::set<AngleResult>> try_bound_map_;
