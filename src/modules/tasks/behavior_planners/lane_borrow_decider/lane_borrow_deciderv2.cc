@@ -58,6 +58,7 @@ constexpr double kOverTakeLonDisBuffer = 1.0;
 constexpr double kOverTakeHysteresis = 3.0;
 constexpr double kLaneLineSegmentLength = 3.0;
 constexpr double kLaneBorrowBackNeededDistance = 10.0;
+constexpr double kLatBufferToLaneBoundary = 0.2;
 
 };  // namespace
 
@@ -366,8 +367,9 @@ void LaneBorrowDecider::UpdateToDP() {
           VehicleConfigurationContext::Instance()->get_vehicle_param();
       double virtual_v = static_blocked_obstacles_[0]->velocity();
       virtual_v = std::max(0.0, virtual_v);
-      double lateral_dist =
-          current_lane_ptr_->width() * 0.5 - vehicle_param.max_width * 0.5;
+      double lateral_dist = current_lane_ptr_->width() * 0.5 -
+                            vehicle_param.max_width * 0.5 -
+                            kLatBufferToLaneBoundary;
       double inner_l =
           (lane_borrow_decider_output_.borrow_direction == LEFT_BORROW)
               ? lateral_dist
