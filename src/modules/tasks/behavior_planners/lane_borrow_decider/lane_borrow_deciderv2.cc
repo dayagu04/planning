@@ -190,11 +190,11 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
     lane_borrow_decider_output_.lane_borrow_failed_reason = NOT_DBW_STATUS;
     return false;
   }
-  const auto& function_info = session_->environmental_model().function_info();
-  if (function_info.function_mode() != common::DrivingFunctionInfo::SCC) {
-    lane_borrow_decider_output_.lane_borrow_failed_reason = NO_LCC_MODE;
-    return false;
-  }
+  // const auto& function_info = session_->environmental_model().function_info();
+  // if (function_info.function_mode() != common::DrivingFunctionInfo::SCC) {
+  //   lane_borrow_decider_output_.lane_borrow_failed_reason = NO_LCC_MODE;
+  //   return false;
+  // }
   intersection_state_ = virtual_lane_manager->GetIntersectionState();
   distance_to_stop_line_ = virtual_lane_manager->GetEgoDistanceToStopline();
   distance_to_cross_walk_ = virtual_lane_manager->GetEgoDistanceToCrosswalk();
@@ -998,7 +998,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
         OBSERVE_TIME_CHECK_FAILED;
     return false;  // after 8 11 22
   }
-  
+
   if (lane_borrow_status_ == kNoLaneBorrow) {
     if (!CheckLeadObs()) {
       return false;
