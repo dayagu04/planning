@@ -1,11 +1,8 @@
 #include "modules/tasks/behavior_planners/hmi_decider/lane_change_hmi/lane_change_hmi_decider.h"
 
-#include "behavior_planners/lane_change_decider/lane_change_state_machine_manager.h"
 #include "common/ifly_time.h"
-#include "config/basic_type.h"
 #include "modules/context/environmental_model_manager.h"
 #include "modules/context/planning_context.h"
-#include "virtual_lane_manager.h"
 namespace planning {
 namespace {
 static constexpr int kHmiSendMsgCntThreshold = 5;
