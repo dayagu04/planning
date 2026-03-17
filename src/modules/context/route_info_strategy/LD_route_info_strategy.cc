@@ -1596,7 +1596,15 @@ void LDRouteInfoStrategy::CalculateMergeInfo() {
             iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
         merge_next_link->link_class() ==
             iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
-        (merge_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+        (merge_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+        (merge_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0 ||
+        (merge_next_link->link_type() & iflymapdata::sdpro::LT_TUNNEL) != 0 ||
+        (merge_next_link->link_type() & iflymapdata::sdpro::LT_BRIDGE) != 0 ||
+        (merge_next_link->link_type() & iflymapdata::sdpro::LT_TOLLBOOTH) !=
+            0 ||
+        (merge_next_link->link_type() & iflymapdata::sdpro::LT_TOLLGATE) != 0 ||
+        (merge_next_link->link_type() &
+         iflymapdata::sdpro::LT_MAINROAD_CONNECTION) != 0) {
       merge_info_vec_.emplace_back(merge_info);
     } else {
       break;
@@ -1659,7 +1667,15 @@ void LDRouteInfoStrategy::CalculateSplitInfo() {
             iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
         split_next_link->link_class() ==
             iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
-        (split_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0 ||
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_TUNNEL) != 0 ||
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_BRIDGE) != 0 ||
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_TOLLBOOTH) !=
+            0 ||
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_TOLLGATE) != 0 ||
+        (split_next_link->link_type() &
+         iflymapdata::sdpro::LT_MAINROAD_CONNECTION) != 0) {
       split_info_vec_.emplace_back(split_info);
     } else {
       break;
