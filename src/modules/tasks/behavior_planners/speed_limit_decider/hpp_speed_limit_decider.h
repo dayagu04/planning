@@ -49,7 +49,8 @@ class HPPSpeedLimitDecider : public Task {
                                           double& out_max_curvature);
 
   void CheckSpeedBumpZone(const TrajectoryPoints& traj_points, double ego_s);
-  double GetSpeedLimitInObjectiveZone(const HPPSpeedLimitZoneInfo& zone_info, const double target_v);
+  double GetSpeedLimitInObjectiveZone(const HPPSpeedLimitZoneInfo& zone_info,
+                                      const double target_v);
 
  private:
   LongitudinalDeciderV3Config

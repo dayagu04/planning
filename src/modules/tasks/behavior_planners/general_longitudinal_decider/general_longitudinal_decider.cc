@@ -2837,7 +2837,7 @@ double GeneralLongitudinalDecider::GetSpeedLimitInObjectiveZone(
     const SpeedBumpZoneInfo &zone_info, double ego_velocity) {
   // 减速带区域内限速
   const double kSpeedBumpZoneVelocityLimit =
-      config_.speed_bump_zone_speed_limit / 3.6;
+      config_.speed_bump_zone_speed_limit;
   // 减速度
   const double kDecelerationRate = config_.speed_bump_deceleration;
   

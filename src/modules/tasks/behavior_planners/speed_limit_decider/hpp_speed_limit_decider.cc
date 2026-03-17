@@ -335,8 +335,15 @@ bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
     return false;
   }
 
-  const auto speed_bump_near_ignore_range =
+  const std::pair<double, double> speed_bump_near_ignore_range =
       static_analysis_storage->GetFrontSRange(query_info, ego_head_s);
+
+  // JSON_DEBUG_VALUE("ego_head_s", ego_head_s);
+  // JSON_DEBUG_VALUE("ego_s", ego_s);
+  // JSON_DEBUG_VALUE("speed_bump_near_ignore_range_first",
+  //                  speed_bump_near_ignore_range.first);
+  // JSON_DEBUG_VALUE("speed_bump_near_ignore_range_second",
+  //                  speed_bump_near_ignore_range.second);
 
   const double kApproachingDistance =
       hpp_speed_limit_config_.speed_bump_approach_distance;
@@ -346,7 +353,8 @@ bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
       speed_bump_near_ignore_range.first <= ego_head_s &&
       speed_bump_near_ignore_range.second >= ego_s;
 
-  zone_info.distance_to_zone = speed_bump_near_ignore_range.first - ego_head_s;
+  zone_info.distance_to_zone =
+      std::max(0.0, speed_bump_near_ignore_range.first - ego_head_s);
   zone_info.approaching_speed_limit_zone =
       zone_info.distance_to_zone > 0 &&
       zone_info.distance_to_zone < kApproachingDistance;
@@ -446,7 +454,7 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
 
   JSON_DEBUG_VALUE("v_limit_speed_intersection_road",
                    v_limit_speed_intersection_road);
-  JSON_DEBUG_VALUE("in_speed_limit_intersection",
+  JSON_DEBUG_VALUE("v_limit_speed_intersection_road",
                    zone_info.in_speed_limit_zone);
   JSON_DEBUG_VALUE("approaching_speed_limit_zone_intersection",
                    zone_info.approaching_speed_limit_zone);
