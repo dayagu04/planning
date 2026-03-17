@@ -25,7 +25,7 @@
   "overtake_standard_right_lane_change_speed_threshold": 4.17,
   "overtake_radical_lane_change_speed_threshold": 2.78,
   "overtake_soft_lane_change_speed_threshold": 5.56,
-
+  "enable_overtake_cross_line_large_agent": false,
   "enable_use_speed_limit_to_suppress_interactive_lane_change": true,
   "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 500,
   "minimum_distance_nearby_split_to_surpress_specific_direction_overtake": 500,

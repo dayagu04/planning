@@ -20,13 +20,13 @@ ilqr_solver::State LateralMotionPlanningModel::UpdateDynamicsOneStep(
   const ilqr_solver::IlqrCostConfig &cost_config =
       cost_config_vec_ptr_->at(step);
 
-  const double &dt = solver_config_ptr_->model_dt;
-  const double &theta = x[StateId::THETA];
-  const double &delta = x[StateId::DELTA];
-  const double &omega = u[ControlId::OMEGA];
+  const double dt = solver_config_ptr_->model_dt;
+  const double theta = x[StateId::THETA];
+  const double delta = x[StateId::DELTA];
+  const double omega = u[ControlId::OMEGA];
 
-  const double &v = cost_config[REF_VEL];
-  const double &k = cost_config[CURV_FACTOR];
+  const double v = cost_config[REF_VEL];
+  const double k = cost_config[CURV_FACTOR];
 
   const double dt2 = dt * dt;
   const double dtv = dt * v;
@@ -60,11 +60,11 @@ void LateralMotionPlanningModel::GetDynamicsDerivatives(
     ilqr_solver::FxMT &f_x, ilqr_solver::FuMT &f_u, const size_t &step) const {
   const ilqr_solver::IlqrCostConfig &cost_config =
       cost_config_vec_ptr_->at(step);
-  const double &dt = solver_config_ptr_->model_dt;
-  const double &theta = x[StateId::THETA];
+  const double dt = solver_config_ptr_->model_dt;
+  const double theta = x[StateId::THETA];
 
-  const double &v = cost_config[REF_VEL];
-  const double &k = cost_config[CURV_FACTOR];
+  const double v = cost_config[REF_VEL];
+  const double k = cost_config[CURV_FACTOR];
 
   const double kv2 = k * v * v;
   const double sin_theta = std::sin(theta);

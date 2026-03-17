@@ -1,4 +1,4 @@
-#include "sample_poly_curve.h"
+#include "sample_quartic_poly_curve.h"
 
 #include <cmath>
 #include <cstddef>
@@ -19,10 +19,13 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_gap_avaliable, const double weight_acc_limit,
     const double weight_stop_penalty, const double weight_speed_change,
     const double weight_leading_veh_follow_s, const double weight_jerk_limit,
-    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle) {
+    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle,
+    const SamplePolySpeedAdjustDeciderConfig& config) {
   poly_ = poly;
   arrived_t_ = arrived_t;
-  arrived_v_ = poly_.CalculateFirstDerivative(poly_.T());
+  arrived_v_ = arrived_t_ - poly_.T() > 0
+                   ? poly_.CalculateFirstDerivative(poly_.T())
+                   : poly_.CalculateFirstDerivative(arrived_t_);
   arrived_s_ = arrived_t_ - poly_.T() > 0
                    ? poly_.CalculatePoint(poly_.T()) +
                          arrived_v_ * (arrived_t_ - poly_.T())
@@ -40,7 +43,12 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   follow_vel_cost_.SetWeight(weight_follow_vel);
   stop_line_cost_.SetWeight(weight_stop_line);
   leading_veh_safe_cost_.SetWeight(weight_leading_veh_safe_s);
-  leading_veh_safe_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
+  leading_veh_safe_cost_.SetUpParam(front_edge_to_rear_axle,
+                                    config.leading_safe_distance_gain,
+                                    config.leading_safe_delay_time,
+                                    config.leading_safe_max_dec,
+                                    config.leading_safe_overstep_gain,
+                                    config.leading_safe_overstep_buffer);
   speed_variable_cost_.SetWeight(weight_speed_variable);
   gap_avaliable_cost_.SetWeight(weight_gap_avaliable);
   acc_limit_cost_.SetWeight(weight_acc_limit);
@@ -188,8 +196,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   double last_arrived_t = arrived_t_;
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
-  const double& anchor_arrived_t = cur_time;
-  const double& anchor_arrived_v =
+  const double anchor_arrived_t = cur_time;
+  const double anchor_arrived_v =
       anchor_arrived_t - poly_.T() > 0
           ? poly_.CalculateFirstDerivative(poly_.T())
           : poly_.CalculateFirstDerivative(anchor_arrived_t);
@@ -243,12 +251,13 @@ void SampleQuarticPolynomialCurve::CalcCost(
   arrived_a_ = anchor_arrived_a;
   arrived_t_ = anchor_arrived_t;
   arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
+  is_left_distance_enough_ =
+    is_mergr_change
+        ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
+        : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
+
   if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
-    bool is_left_distance_enough =
-        is_mergr_change
-            ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
-            : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
-    if (is_left_distance_enough) {
+    if (is_left_distance_enough_) {
       speed_differ_gain = 0.0;
       distance_to_stop_point = kMaxDistanceToStopPoint;
       time_cost = 3.0 * std::exp(arrived_t_ / 2.5);

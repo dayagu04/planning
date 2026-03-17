@@ -4391,9 +4391,9 @@
 //   agent_node_right_neibor_lane_map_.clear();
 // }
 
-// bool StGraphGenerator::LateralCollisionCheck(const double &start_s,
-//                                              const double &end_s,
-//                                              const double &agent_min_l) {
+// bool StGraphGenerator::LateralCollisionCheck(const double start_s,
+//                                              const double end_s,
+//                                              const double agent_min_l) {
 //   const double sampling_interval_s = 1.0;
 //   for (double s = start_s; s <= end_s; s += sampling_interval_s) {
 //     double box_x = 0.0;

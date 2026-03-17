@@ -14,6 +14,7 @@
 #include "define/geometry.h"
 #include "environmental_model.h"
 #include "frenet_obstacle.h"
+#include "func_state_machine_c.h"
 #include "lane_borrow_decider.pb.h"
 #include "lateral_obstacle.h"
 #include "log.h"
@@ -54,7 +55,10 @@ constexpr double kBackNeededDistance = 5.0;
 namespace planning {
 namespace lane_borrow_deciderV1 {
 bool LaneBorrowDecider::Execute() {
-  if (session_->environmental_model().is_mrc_mode()) {
+  const auto& state_machine = session_->environmental_model()
+                                  .get_local_view()
+                                  .function_state_machine_info;
+  if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
     return true;
   }
   Update();
@@ -880,8 +884,8 @@ bool LaneBorrowDecider::IsSafeForBackOriginLane() {
   return true;
 }
 
-bool LaneBorrowDecider::IsSafeForPath(const double& left_bounds_l,
-                                      const double& right_bounds_l) {
+bool LaneBorrowDecider::IsSafeForPath(const double left_bounds_l,
+                                      const double right_bounds_l) {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   if (left_bounds_l - right_bounds_l <
@@ -1097,8 +1101,8 @@ bool LaneBorrowDecider::IsSafeForTurn() {
 
 // Turning center point
 const Point2D LaneBorrowDecider::CalTurningCenter(const Point2D& ego_pos,
-                                                  const double& theta,
-                                                  const double& radius) const {
+                                                  const double theta,
+                                                  const double radius) const {
   Eigen::Vector2d ego_heading_vec(std::cos(theta), std::sin(theta));
   Eigen::Vector2d rear_pos(ego_pos.x, ego_pos.y);
   Eigen::Vector2d ego_n_vec(-ego_heading_vec.y(), ego_heading_vec.x());

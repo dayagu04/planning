@@ -939,6 +939,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.use_geometry_path_head_out, bool,
                   "use_geometry_path_head_out");
 
+  JSON_READ_VALUE(param.use_scenario_perpendicular_heading_in, bool,
+                  "use_scenario_perpendicular_heading_in");
+
   // slot managent params
   JSON_READ_VALUE(param.move_slot_with_little_buffer, bool,
                   "move_slot_with_little_buffer");
@@ -1317,6 +1320,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.enable_interesting_search_area, bool,
                   "enable_interesting_search_area");
   JSON_READ_VALUE(param.pre_search_mode, int, "pre_search_mode");
+  JSON_READ_VALUE(param.yield_interval_explored_node_num, int, "yield_interval_explored_node_num");
+  JSON_READ_VALUE(param.enable_yield_cpu, bool, "enable_yield_cpu");
+  JSON_READ_VALUE(param.yield_interval_ms, int, "yield_interval_ms");
 
   // lat lon path buffer params
   JSON_READ_VALUE(param.lat_lon_path_buffer.lon_buffer, float,

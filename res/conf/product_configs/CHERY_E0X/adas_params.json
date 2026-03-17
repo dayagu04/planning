@@ -223,5 +223,7 @@
   "meb_hmi_state": 0,
   "meb_hmi_status": 0,
   "meb_hmi_vaule": 0.0,
-  "meb_hmi_direction": 0
+  "meb_hmi_direction": 0,
+  "sd_map_speed_sw": true,
+  "adas_fault_sw_code": 1
 }

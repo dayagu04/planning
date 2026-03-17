@@ -231,6 +231,12 @@ void EgoStateManager::set_has_stand_wait_request(
       vehicle_status.stand_wait_request().has_stand_wait_request();
 }
 
+void EgoStateManager::set_has_efficient_pass_request(
+    const planning::common::VehicleStatus &vehicle_status) {
+  has_efficient_pass_request_ =
+      vehicle_status.efficient_pass_request().has_efficient_pass_request();
+}
+
 void EgoStateManager::update_transform() {
   Eigen::Vector4d q;
   q.x() = location_enu_.orientation.x;
@@ -275,6 +281,7 @@ bool EgoStateManager::update(
   set_time_headway_level(vehicle_status);
   set_has_time_headway_scale_up_request(vehicle_status);
   set_has_stand_wait_request(vehicle_status);
+  set_has_efficient_pass_request(vehicle_status);
   const auto &planning_result = session_->planning_context().planning_result();
   const auto &last_planning_result =
       session_->planning_context().last_planning_result();
@@ -332,8 +339,8 @@ bool EgoStateManager::update(
   return true;
 }
 
-uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
-                                       const bool &set_lon_replan) {
+uint8_t EgoStateManager::ReplanProcess(const bool set_lat_replan,
+                                       const bool set_lon_replan) {
   // note that lon_reset_flag and lat_reset_flag reserved for acc and override
 
   const auto &ego_state =
@@ -628,8 +635,8 @@ void EgoStateManager::LongitudinalInitStateReset(
 //   }
 // }
 
-// uint8_t EgoStateManager::ReplanProcess(const bool &lat_reset_flag,
-//                                        const bool &lon_reset_flag) {
+// uint8_t EgoStateManager::ReplanProcess(const bool lat_reset_flag,
+//                                        const bool lon_reset_flag) {
 //   // note that lon_reset_flag and lat_reset_flag reserved for acc and
 //   override
 
@@ -669,7 +676,7 @@ void EgoStateManager::LongitudinalInitStateReset(
 //   // motion_planner_output.s_lat_vec.back(),
 //   //                                      init_point);
 //   // const auto s_init = projection_spline.GetOutput().s_proj;
-//   // const double &lon_err = s_init - s_proj;
+//   // const double lon_err = s_init - s_proj;
 //   const double lat_init_theta = lat_init_state.theta();
 //   double theta_err = lat_init_theta - ego_state->ego_pose_raw().theta;
 //   const double pi2 = 2.0 * M_PI;

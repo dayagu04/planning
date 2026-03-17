@@ -568,7 +568,7 @@ const bool UssObstacleAvoidance::CheckIsDirectlyFrontUss() {
   return false;
 }
 
-void UssObstacleAvoidance::SetUssRawDist(const double &uss_raw_dist) {
+void UssObstacleAvoidance::SetUssRawDist(const double uss_raw_dist) {
   // set uss raw dist data
   uss_raw_dist_vec_.clear();
   uss_raw_dist_vec_.reserve(uss_local_vertex_vec_.size());

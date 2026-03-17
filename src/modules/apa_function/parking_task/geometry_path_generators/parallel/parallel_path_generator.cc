@@ -143,6 +143,8 @@ void ParallelPathGenerator::Preprocess() {
 
   if (input_.ego_info_under_slot.slot_occupied_ratio < 0.01) {
     calc_params_.lat_outside_slot_buffer = CalcBufferViaDistOfEgoToObs();
+  } else if (enable_pa_park_) {
+    calc_params_.lat_outside_slot_buffer = 0.2;
   }
 
   const double tlane_length =
@@ -254,6 +256,57 @@ void ParallelPathGenerator::SetPathSegmentSource(
   return;
 }
 
+int ParallelPathGenerator::GetIntervalIndex(double value,
+                                            const double* intervals, int size) {
+  const double epsilon = 1e-6;
+  for (int i = 0; i < size; ++i) {
+    if (value <= intervals[i] - epsilon) {
+      return i;
+    }
+  }
+  return size;
+}
+
+const ParallelPathGenerator::PaPlanMethod
+ParallelPathGenerator::GetPaPlanMethodByTableFlexible(
+    const double slot_len, const double car_to_curb_dis,
+    const PaPlanMethod default_method) {
+  // using namespace PaPlanMethod;
+
+  static const double car_length = apa_param.GetParam().car_length;
+  static const double SLOT_LEN_INTERVALS[] = {
+      car_length + 1.0, car_length + 1.1, car_length + 1.2,
+      car_length + 1.3, car_length + 1.4, car_length + 1.5};
+  static const int SLOT_LEN_SIZE = 6;
+
+  static const double CAR_TO_CURB_INTERVALS[] = {0.22, 0.6, 0.7, 0.8, 1.0};
+  static const int CAR_TO_CURB_SIZE = 5;
+
+  static const PaPlanMethod DECISION_TABLE[SLOT_LEN_SIZE + 1][CAR_TO_CURB_SIZE + 1] = {
+      // dis < 0.2    dis < 0.6      dis < 0.7      dis < 0.8      dis < 1.0           dis > 1.0
+      {PaPlanInvalid, PaPlanInvalid, PaPlanInvalid,  PaPlanInvalid,  PaPlanInvalid, PaPlanInvalid},// slot_len < 1.0
+      {PaPlanInvalid, PaPlanInvalid, ApaOutSlotPlan,    ApaOutSlotPlan,    ApaOutSlotPlan, PaPlanInvalid},// 1.0 <= slot_len < 1.1
+      {PaPlanInvalid, PaPlanInvalid,   ApaOutSlotPlan, ApaOutSlotPlan, ApaOutSlotPlan, PaPlanInvalid},// 1.1 <= slot_len < 1.2
+      {PaPlanInvalid, ApaOutSlotPlan,   ApaOutSlotPlan,    ApaOutSlotPlan, ApaOutSlotPlan, PaPlanInvalid},// 1.2 <= slot_len < 1.3
+      {PaPlanInvalid, ApaOutSlotPlan,   ApaOutSlotPlan,    ApaOutSlotPlan, ApaOutSlotPlan, PaPlanInvalid},// 1.3 <= slot_len < 1.4
+      {PaPlanInvalid, PaSturnPlan,   ApaOutSlotPlan,    ApaOutSlotPlan,    ApaOutSlotPlan, PaPlanInvalid},// 1.4 <= slot_len < 1.5
+      {PaPlanInvalid, PaSturnPlan,   PaSturnPlan,    PaSturnPlan,    PaSturnPlan, PaPlanInvalid}};// slot_len >= 1.5
+
+  int slot_len_idx =
+      GetIntervalIndex(slot_len, SLOT_LEN_INTERVALS, SLOT_LEN_SIZE);
+  int car_to_curb_idx = GetIntervalIndex(car_to_curb_dis, CAR_TO_CURB_INTERVALS,
+                                         CAR_TO_CURB_SIZE);
+
+  ILOG_INFO << "slot_len_idx = " << slot_len_idx
+            << " car_to_curb_idx = " << car_to_curb_idx;
+  if (slot_len_idx < 0 || slot_len_idx > SLOT_LEN_SIZE || car_to_curb_idx < 0 ||
+      car_to_curb_idx > CAR_TO_CURB_SIZE) {
+    return default_method;
+  }
+
+  return DECISION_TABLE[slot_len_idx][car_to_curb_idx];
+}
+
 const ParallelPathGenerator::PaPlanMethod
 ParallelPathGenerator::CheckPaParkCondition() {
   PaPlanMethod res = PaPlanMethod::PaSturnPlan;
@@ -262,11 +315,6 @@ ParallelPathGenerator::CheckPaParkCondition() {
     return res;
   }
   const double switch_plan_ratio = 1.05;
-  if (input_.tlane.use_sturn_plan) {
-    first_pa_plan_method_ = res;
-    ILOG_INFO << "pa use sturn plan";
-    return res;
-  }
   const double slot_len = std::fabs(input_.tlane.obs_pt_inside.x() -
                                     input_.tlane.obs_pt_outside.x());
   const double car_to_curb_dis = input_.tlane.car_to_curb_dis;
@@ -276,37 +324,96 @@ ParallelPathGenerator::CheckPaParkCondition() {
             << " car_to_curb_dis = " << car_to_curb_dis << " ratio = " << ratio
             << " first ratio = " << input_.tlane.first_occupied_ratio
             << " sec ratio = " << sec_ratio;
-  if (sec_ratio < 0.8) {
+  if (input_.is_replan_first) {
+    had_park_out = false;
+  }
+  if (sec_ratio < 0.2) {
     had_park_out = true;
   }
-  if (slot_len < apa_param.GetParam().pa_slot_length_for_park_in +
-                     apa_param.GetParam().car_length) {
-    if (car_to_curb_dis < apa_param.GetParam().pa_to_curb_dis) {
-      res = PaPlanMethod::PaSturnPlan;
-    } else {
-      if (sec_ratio < switch_plan_ratio) {
-        res = PaPlanMethod::ApaOutSlotPlan;
-      } else {
-        res = PaPlanMethod::ApaInSlotPlan;
-      }
-    }
-  }
   if (input_.is_replan_first) {
+    res = GetPaPlanMethodByTableFlexible(
+        slot_len, car_to_curb_dis, PaPlanMethod::PaSturnPlan);
     first_pa_plan_method_ = res;
-  } else {
+    if (res == PaPlanMethod::PaPlanInvalid) {
+      ILOG_INFO << "PaPlanMethod invalid";
+      return res;
+    }
     ILOG_INFO << "first PaPlanMethod res = " << static_cast<int>(res);
+    if (input_.tlane.use_sturn_plan) {
+      first_pa_plan_method_ = PaPlanMethod::PaSturnPlan;
+      last_pa_plan_method_ = PaPlanMethod::PaSturnPlan;
+      ILOG_INFO << "pa use sturn plan";
+      return PaPlanMethod::PaSturnPlan;
+    }
+  } else {
     if (first_pa_plan_method_ == PaPlanMethod::ApaOutSlotPlan) {
       if (had_park_out) {
-        res = PaPlanMethod::ApaOutSlotPlan;
+        if (last_pa_plan_method_ == PaPlanMethod::ApaInSlotPlan) {
+          res = PaPlanMethod::ApaInSlotPlan;
+        } else if (sec_ratio > switch_plan_ratio) {
+          res = PaPlanMethod::ApaInSlotPlan;
+        } else {
+          res = PaPlanMethod::ApaOutSlotPlan;
+        }
       } else {
-        res = PaPlanMethod::ApaInSlotPlan;
+        res = PaPlanMethod::ApaOutSlotPlan;
       }
     } else if (first_pa_plan_method_ == PaPlanMethod::PaSturnPlan) {
       res = PaPlanMethod::PaSturnPlan;
     }
   }
+  last_pa_plan_method_ = res;
   ILOG_INFO << "second PaPlanMethod res = " << static_cast<int>(res);
   return res;
+}
+
+const bool ParallelPathGenerator::CalParkOutPathInSlot(
+    std::vector<pnc::geometry_lib::PathSegment>& out_path_vec,
+    const pnc::geometry_lib::PathPoint& in_pose) {
+  ILOG_INFO << "Enter CalParkOutPathInSlot";
+  bool success = false;
+  std::vector<pnc::geometry_lib::PathSegment> inversed_path_seg_vec;
+  if (input_.is_replan_first) {
+    success = AdvancedInversedTrialsInSlot(
+        inversed_path_seg_vec, in_pose,
+        false);  // input_.ego_info_under_slot.cur_pose
+    if (!success) {
+      ILOG_INFO << "first advanced inversed trials in slot fail";
+      return false;
+    }
+  } else {
+    inversed_path_seg_vec.clear();
+    success = InversedTrialsByGivenGear(inversed_path_seg_vec, in_pose,
+                                        input_.ref_gear);
+    if (success) {
+      const bool head_condition =
+          std::abs(inversed_path_seg_vec.back().GetArcSeg().headingA -
+                   arc_slot_init_out_heading_) > pnc::mathlib::Deg2Rad(50.0);
+
+      const bool pos_y_condition =
+          std::fabs(inversed_path_seg_vec.back().GetStartPos().y()) >
+          input_.tlane.slot_width;
+
+      const bool len_condition =
+          !CheckShortToFirstPath(inversed_path_seg_vec, 0.16);
+      if (pos_y_condition || len_condition || head_condition) {
+        ILOG_INFO << "inversed trials in slot fail";
+        success = false;
+      }
+    }
+    if (!success) {
+      inversed_path_seg_vec.clear();
+      success =
+          AdvancedInversedTrialsInSlot(inversed_path_seg_vec, in_pose, false);
+    }
+  }
+  if (!success || inversed_path_seg_vec.size() == 0) {
+    ILOG_INFO << "inversed search in slot failed!";
+    return false;
+  }
+  pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
+  out_path_vec = inversed_path_seg_vec;
+  return success;
 }
 
 const bool ParallelPathGenerator::OneLinePlanWhenMeetFinished(
@@ -371,6 +478,10 @@ const bool ParallelPathGenerator::Update() {
   const double start_time = IflyTime::Now_ms();
 
   const PaPlanMethod is_pa_condition = CheckPaParkCondition();
+  if (enable_pa_park_ && (is_pa_condition == PaPlanMethod::PaPlanInvalid)) {
+    ILOG_INFO << "pa plan invalid";
+    return false;
+  }
   const bool is_in_slot = CheckEgoInSlot();
 
   ILOG_INFO << "enable_pa_park_ = " << enable_pa_park_;
@@ -1476,17 +1587,44 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     // 0.36 as buffer
     const double min_lat_buffer = calc_params_.lat_outside_slot_buffer;
     ILOG_INFO << "min_lat_buffer = " << min_lat_buffer;
-
     collision_detector_ptr_->SetParam(
-        CollisionDetector::Paramters(min_lat_buffer, true,true));
+        CollisionDetector::Paramters(min_lat_buffer, true, true));
     pnc::geometry_lib::PrintPose("input_.ego_info_under_slot.cur_pose",
                                  input_.ego_info_under_slot.cur_pose);
+    pnc::geometry_lib::PathPoint cur_plan_pose = input_.ego_info_under_slot.cur_pose;
+    std::vector<pnc::geometry_lib::PathSegment> pa_out_seg_vec;
+    pa_out_seg_vec.clear();
+    if (enable_pa_park_ &&
+        input_.ego_info_under_slot.slot_occupied_ratio > 0.1) {
+      collision_detector_ptr_->SetParam(
+          CollisionDetector::Paramters(0.1, true, true));
+      const bool pa_res = CalParkOutPathInSlot(pa_out_seg_vec, cur_plan_pose);
+      if (!pa_res || pa_out_seg_vec.empty()) {
+        ILOG_INFO << "CalParkOutPathInSlot failed!";
+        continue;
+      }
+      cur_plan_pose = pa_out_seg_vec.back().GetStartPose();
+      pa_out_seg_vec.pop_back();
+      // ReversePathSegVec(pa_out_seg_vec);
+    }
+
+    if (enable_pa_park_) {
+      collision_detector_ptr_->SetSkipObstaclesType(
+          CollisionDetector::VIRTUAL_OBS);
+    }
     std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
-    if (!PlanToPreparingLine(prepare_seg_vec,
-                             input_.ego_info_under_slot.cur_pose,
-                             prepare_line)) {
+    const bool res_plan =
+        PlanToPreparingLine(prepare_seg_vec, cur_plan_pose, prepare_line);
+    if (enable_pa_park_) {
+      collision_detector_ptr_->ClearSkipObstacles(CollisionDetector::VIRTUAL_OBS);
+    }
+    if (!res_plan) {
       ILOG_INFO << "PlanToPreparingLine fail!";
       continue;
+    }
+    if (!pa_out_seg_vec.empty()) {
+      prepare_seg_vec.insert(prepare_seg_vec.begin(), pa_out_seg_vec.begin(),
+                             pa_out_seg_vec.end());
     }
     SetPathSegmentSource(prepare_seg_vec,
                          PathPlanSource::EGO_TO_PREPARELINE);
@@ -2015,7 +2153,7 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
   geometry_path.first_path_length = geometry_path.path_length_vec.front();
 
   double min_path_length = 100.0;
-  for (const double& path_length : geometry_path.path_length_vec) {
+  for (const double path_length : geometry_path.path_length_vec) {
     if (min_path_length < path_length) {
       min_path_length = path_length;
     }
@@ -2443,10 +2581,13 @@ const bool ParallelPathGenerator::InsertLineSegToEgo2Path(
   if (line.length > 0.02) {
     // const uint8_t seg_gear = pnc::geometry_lib::CalLineSegGear(line);
     uint8_t seg_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-    if (pnc::geometry_lib::CheckTwoVecSameOrOppositeDirection(
-            (line.pB - line.pA), GetUnitTangVecByHeading(line.heading))) {
+    const auto unit_v1 = (line.pB - line.pA).normalized();
+    const auto unit_v2 = GetUnitTangVecByHeading(line.heading).normalized();
+    const double cos_theta = unit_v1.dot(unit_v2);
+    ILOG_INFO << "cos_theta: " << cos_theta;
+    if (cos_theta > 0.5) {
       seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
-    } else {
+    } else if (cos_theta < -0.5) {
       seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     }
     if (!pnc::geometry_lib::IsValidGear(seg_gear)) {
@@ -2809,7 +2950,8 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
   }
 
   const bool is_park_out =
-    (dynamic_cast<const ParallelOutPathGenerator*>(this) != nullptr);
+      (dynamic_cast<const ParallelOutPathGenerator*>(this) != nullptr) ||
+      enable_pa_park_;
 
   // 复制路径向量用于排序
   sorted_path_vec = total_path_vec;
@@ -2853,17 +2995,17 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
       corner_dist = path.path_segment_vec.back().GetArcSeg().dis_ObsPin;
 
       // ===============[ 新增日志 ]========
-      std::stringstream ss;
-      ss << "Path [" << i << "] All Arc dis_ObsPin values -> ";
-      for (size_t j = 0; j < path.path_segment_vec.size(); ++j) {
-        const auto& seg = path.path_segment_vec[j];
-        // 只处理圆弧段
-        if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-          ss << "seg[" << j << "]:" << std::fixed << std::setprecision(3)
-             << seg.GetArcSeg().dis_ObsPin << "; ";
-        }
-      }
-      ILOG_INFO << ss.str();
+      // std::stringstream ss;
+      // ss << "Path [" << i << "] All Arc dis_ObsPin values -> ";
+      // for (size_t j = 0; j < path.path_segment_vec.size(); ++j) {
+      //   const auto& seg = path.path_segment_vec[j];
+      //   // 只处理圆弧段
+      //   if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+      //     ss << "seg[" << j << "]:" << std::fixed << std::setprecision(3)
+      //        << seg.GetArcSeg().dis_ObsPin << "; ";
+      //   }
+      // }
+      // ILOG_INFO << ss.str();
 
       // pnc::geometry_lib::PrintSegmentsVecInfo(path.path_segment_vec); //
       // 打印路径段信息
@@ -3154,7 +3296,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
         << selected_path_vec[i].path_segment_vec.back().GetStartPos().y();
     const double curr_y = std::fabs(
         selected_path_vec[i].path_segment_vec.back().GetStartPos().y());
-    if (curr_y > (input_.tlane.slot_width * 0.5)) {
+    if (curr_y > input_.tlane.slot_width) {
       continue;
     }
     sorted_path_vec.emplace_back(selected_path_vec[i]);
@@ -3164,7 +3306,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
 
 const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
-    const pnc::geometry_lib::PathPoint& target_pose) {
+    const pnc::geometry_lib::PathPoint& target_pose, const bool is_use_calc) {
   ILOG_INFO << "---------AdvancedInversedTrialsInSlot --------------";
   ILOG_INFO << "calc_params_.lon_buffer_rev_trials = "
             << calc_params_.lon_buffer_rev_trials;
@@ -3272,19 +3414,29 @@ const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
     return false;
   }
 
-  if (!SortPathByGearShiftHeadingAndLength(
-          total_path_vec, calc_params_.inversed_path_vec_in_slot)) {
+  std::vector<GeometryPath> sorted_path_vec;
+  if (!SortPathByGearShiftHeadingAndLength(total_path_vec, sorted_path_vec)) {
     ILOG_INFO << "sort failed!";
     return false;
   }
 
-  path_seg_vec =
-      calc_params_.inversed_path_vec_in_slot.front().path_segment_vec;
-
-  for (const auto& path : calc_params_.inversed_path_vec_in_slot) {
-    calc_params_.valid_target_pt_vec.emplace_back(
-        path.path_segment_vec.back().GetStartPose());
+  if (sorted_path_vec.empty()) {
+    ILOG_INFO << "no paths after sorting!";
+    return false;
   }
+
+  if (is_use_calc) {
+    calc_params_.inversed_path_vec_in_slot = sorted_path_vec;
+
+    calc_params_.valid_target_pt_vec.clear();
+    calc_params_.valid_target_pt_vec.reserve(sorted_path_vec.size());
+    for (const auto& path : sorted_path_vec) {
+      calc_params_.valid_target_pt_vec.emplace_back(
+          path.path_segment_vec.back().GetStartPose());
+    }
+
+  }
+  path_seg_vec = sorted_path_vec.front().path_segment_vec;
 
   return true;
 }
@@ -3699,10 +3851,10 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
         first_arc.headingB = sampled_path_pts[i].heading;
         first_arc.pB = sampled_path_pts[i].pos;
         first_arc.length =
-            std::fabs(sampled_path_pts[i].heading - first_arc.headingA) *
+            std::fabs((sampled_path_pts[i].heading - first_arc.headingA)) *
             first_arc.circle_info.radius;
-        ILOG_INFO << "debug last path: ";
-        first_arc.PrintInfo();
+        // ILOG_INFO << "debug last path: ";
+        // first_arc.PrintInfo();
         break;
       }
     }
@@ -7149,6 +7301,11 @@ const bool ParallelPathGenerator::CheckSamePos(
 void ParallelPathGenerator::AddPathSegToOutPut(
     const pnc::geometry_lib::PathSegment& path_seg) {
   output_.path_available = true;
+  if (output_.gear_cmd_vec.size() > 0) {
+    if (output_.gear_cmd_vec.back() != path_seg.seg_gear) {
+      output_.gear_change_count++;
+    }
+  }
   output_.path_segment_vec.emplace_back(path_seg);
   output_.length += path_seg.GetLength();
   output_.gear_cmd_vec.emplace_back(path_seg.seg_gear);

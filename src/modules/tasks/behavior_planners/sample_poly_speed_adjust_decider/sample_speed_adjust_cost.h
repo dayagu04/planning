@@ -20,12 +20,12 @@ class MatchGapCost : public CurveCost {
     weight_match_v_ = weight_vel;
   }
 
-  void SetRearAxleToBumpDis(const double& front_edge_to_rear_axle,
-                            const double& back_edge_to_rear_axle) {
+  void SetRearAxleToBumpDis(const double front_edge_to_rear_axle,
+                            const double back_edge_to_rear_axle) {
     front_edge_to_rear_axle_ = front_edge_to_rear_axle;
     rear_edge_to_rear_axle_ = back_edge_to_rear_axle;
   }
-  void SetAnchorT(const double& anchor_t) { anchor_t_ = anchor_t; }
+  void SetAnchorT(const double anchor_t) { anchor_t_ = anchor_t; }
   const double anchor_t() { return anchor_t_; };
   const double match_s_cost() const { return match_s_cost_; }
   const double match_v_cost() const { return match_v_cost_; }
@@ -81,12 +81,27 @@ class LeadingVehSafeCost : public CurveCost {
   LeadingVehSafeCost() = default;
   void GetCost(const double poly_end_s, const double poly_end_v,
                const double leading_veh_pred_s, const double leading_veh_v);
-  void SetRearAxleToBumpDis(const double& front_edge_to_rear_axle) {
+  void SetUpParam(const double front_edge_to_rear_axle,
+                  const double leading_safe_distance_gain,
+                  const double leading_safe_delay_time,
+                  const double leading_safe_max_dec,
+                  const double leading_safe_overstep_gain,
+                  const double leading_safe_overstep_buffer) {
     front_edge_to_rear_axle_ = front_edge_to_rear_axle;
+    leading_safe_distance_gain_ = leading_safe_distance_gain;
+    leading_safe_delay_time_ = leading_safe_delay_time;
+    leading_safe_max_dec_ = leading_safe_max_dec;
+    leading_safe_overstep_gain_ = leading_safe_overstep_gain;
+    leading_safe_overstep_buffer_ = leading_safe_overstep_buffer;
   }
 
  private:
   double front_edge_to_rear_axle_;
+  double leading_safe_distance_gain_;
+  double leading_safe_delay_time_;
+  double leading_safe_max_dec_;
+  double leading_safe_overstep_gain_;
+  double leading_safe_overstep_buffer_;
 };
 
 class SpeedVariableCost : public CurveCost {
@@ -131,7 +146,7 @@ class LeadingVehFollowCost : public CurveCost {
   void GetCost(const double leading_veh_pred_s, const double ego_v,
                const double ego_pred_s);
   void SetWeight(const double weight) { weight_ = weight; }
-  void SetRearAxleToBumpDis(const double& front_edge_to_rear_axle) {
+  void SetRearAxleToBumpDis(const double front_edge_to_rear_axle) {
     front_edge_to_rear_axle_ = front_edge_to_rear_axle;
   }
 
@@ -142,5 +157,16 @@ class JerkLimitCost : public CurveCost {
  public:
   JerkLimitCost() = default;
   void GetCost(const double jerk_extrema);
+};
+
+class SafeDistanceCost : public CurveCost {
+ public:
+  SafeDistanceCost() = default;
+  void GetCost(const double distance_to_gap_front_obj,
+               const double distance_to_gap_back_obj,
+               const double limi_safe_distance_to_gap_front_obj,
+               const double limi_safe_distance_to_gap_back_obj,
+               const double max_safe_distance_to_gap_front_obj,
+               const double max_safe_distance_to_gap_back_obj);
 };
 }  // namespace planning

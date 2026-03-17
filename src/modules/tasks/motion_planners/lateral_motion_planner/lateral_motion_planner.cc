@@ -49,6 +49,7 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_ref_x_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_y_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_theta_vec()->Resize(N, 0.0);
+  planning_input_.mutable_ref_vel_vec()->Resize(N, 0.0);
 
   planning_input_.mutable_last_x_vec()->Resize(N, 0.0);
   planning_input_.mutable_last_y_vec()->Resize(N, 0.0);
@@ -89,8 +90,10 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_front_axis_ref_x_vec()->Resize(N, 0.0);
   planning_input_.mutable_front_axis_ref_y_vec()->Resize(N, 0.0);
   //
+  is_uniform_motion_ = true;
   is_divide_lane_into_two_ = false;
   is_last_low_speed_lane_change_ = false;
+  valid_continuity_idx_ = 0;
   low_speed_lane_change_cd_timer_ = 0;
   avoid_back_time_ = 0.0;
   enter_split_time_ = 0.0;
@@ -162,6 +165,7 @@ bool LateralMotionPlanner::HandleInputData() {
 }
 
 void LateralMotionPlanner::ResetInput() {
+  valid_continuity_idx_ = 0;
   std::fill(ref_theta_vec_.begin(), ref_theta_vec_.end(), 0.0);
   std::fill(x_vec_.begin(), x_vec_.end(), 0.0);
   std::fill(y_vec_.begin(), y_vec_.end(), 0.0);
@@ -207,8 +211,13 @@ bool LateralMotionPlanner::HandleReferencePathData() {
       std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
   const auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   const auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
+  std::vector<double> enu_ref_vel = general_lateral_decider_output.enu_ref_vel;
+  if (is_uniform_motion_) {
+    enu_ref_vel.resize(enu_ref_path.size(), ref_vel);
+  }
   // assert(enu_ref_path.size() == enu_ref_theta.size());
-  if (enu_ref_path.empty() || enu_ref_theta.empty() || enu_ref_path.size() != enu_ref_theta.size() ||
+  if (enu_ref_path.empty() || enu_ref_theta.empty() || enu_ref_vel.empty() ||
+      enu_ref_path.size() != enu_ref_theta.size() || enu_ref_path.size() != enu_ref_vel.size() ||
       !session_->environmental_model().location_valid()) {
     return false;
   }
@@ -226,6 +235,7 @@ bool LateralMotionPlanner::HandleReferencePathData() {
         enu_ref_theta_i += 2.0 * M_PI;
       }
       ref_theta_vec_[i] = enu_ref_theta_i;
+      planning_input_.mutable_ref_vel_vec()->Set(i, -enu_ref_vel[i]);
     }
   } else {
     // set reference velocity
@@ -235,6 +245,7 @@ bool LateralMotionPlanner::HandleReferencePathData() {
       planning_input_.mutable_ref_x_vec()->Set(i, enu_ref_path[i].first);
       planning_input_.mutable_ref_y_vec()->Set(i, enu_ref_path[i].second);
       ref_theta_vec_[i] = enu_ref_theta[i];
+      planning_input_.mutable_ref_vel_vec()->Set(i, enu_ref_vel[i]);
     }
   }
   // set front axis reference path
@@ -279,29 +290,41 @@ bool LateralMotionPlanner::HandleReferencePathData() {
   // 3.set last trajectory: temporarily same as reference: TODO
   const auto &motion_planner_output =
       session_->planning_context().motion_planner_output();
-  double final_t = 5.0;  // hack now
-  double tmp_t = 0.0;
-  auto last_s_vec = motion_planner_output.s_lat_vec;
-  double last_path_length = last_s_vec.size() > 0 ? last_s_vec.back() : 0.0;
+  const auto& last_path_s_vec = motion_planner_output.s_lat_vec;
+  double final_t = 5.0;
+  double last_path_length = last_path_s_vec.size() > 0 ? last_path_s_vec.back() : 0.0;
   is_ref_consistent_ = (ref_vel * final_t - last_path_length) <= 2.0;
   if (motion_planner_output.lat_init_flag) {
+    Eigen::Vector2d init_point(planning_init_point.lat_init_state.x(),
+                              planning_init_point.lat_init_state.y());
+    pnc::spline::Projection last_path_projection_spline;
+    last_path_projection_spline.CalProjectionPoint(
+        motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
+        last_path_s_vec.front(), last_path_s_vec.back(), init_point);
+    double last_start_s = last_path_projection_spline.GetOutput().s_proj;
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
-      tmp_t = std::fmin(planning_loop_dt + i * 0.2, final_t);
-      planning_input_.mutable_last_x_vec()->Set(
-          i, motion_planner_output.lateral_x_t_spline(tmp_t));
-      planning_input_.mutable_last_y_vec()->Set(
-          i, motion_planner_output.lateral_y_t_spline(tmp_t));
+      double last_x = motion_planner_output.x_s_spline(last_start_s);
+      double last_y = motion_planner_output.y_s_spline(last_start_s);
+      double last_theta = motion_planner_output.theta_s_spline(last_start_s);
       double lateral_ref_theta = planning_input_.ref_theta_vec(i);
-      double last_lateral_theta =
-          motion_planner_output.lateral_theta_t_spline(tmp_t);
-      double theta_err = lateral_ref_theta - last_lateral_theta;
+      double theta_err = lateral_ref_theta - last_theta;
       const double pi2 = 2.0 * M_PI;
       if (theta_err > M_PI) {
-        last_lateral_theta += pi2;
+        last_theta += pi2;
       } else if (theta_err < -M_PI) {
-        last_lateral_theta -= pi2;
+        last_theta -= pi2;
       }
-      planning_input_.mutable_last_theta_vec()->Set(i, last_lateral_theta);
+      planning_input_.mutable_last_x_vec()->Set(i, last_x);
+      planning_input_.mutable_last_y_vec()->Set(i, last_y);
+      planning_input_.mutable_last_theta_vec()->Set(i, last_theta);
+      if (last_start_s <= last_path_length) {
+        valid_continuity_idx_++;
+      }
+      double ds = ref_vel * config_.delta_t;
+      if (!enu_ref_vel.empty()) {
+        ds = enu_ref_vel[i] * config_.delta_t;
+      }
+      last_start_s += ds;
     }
     planning_input_.set_q_continuity(0.0);
   } else {
@@ -502,6 +525,7 @@ void LateralMotionPlanner::StraightPathTest() {
 }
 
 bool LateralMotionPlanner::AssembleInputForHPP() {
+  is_uniform_motion_ = true;
   is_need_reverse_ = false;
   is_use_second_bound_ = false;
   if (!HandleReferencePathData()) {
@@ -513,7 +537,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
   if (!HandleFeedbackInfoData()) {
     return false;
   }
-  // const bool &search_success = session_->mutable_planning_context()
+  // const bool search_success = session_->mutable_planning_context()
   //                                ->mutable_lateral_obstacle_decider_output()
   //                                .search_success;
   const auto &general_lateral_decider_output =
@@ -523,7 +547,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
-  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+  const bool search_success = general_lateral_decider_output.enable_ara_ref;
   if (is_ref_consistent_) {
     planning_weight_ptr_->SetIsSearchSuccess(search_success);
   } else {
@@ -534,6 +558,7 @@ bool LateralMotionPlanner::AssembleInputForHPP() {
 }
 
 bool LateralMotionPlanner::AssembleInputForRADS() {
+  is_uniform_motion_ = true;
   is_need_reverse_ = true;
   is_use_second_bound_ = false;
   if (!HandleReferencePathData()) {
@@ -558,6 +583,7 @@ bool LateralMotionPlanner::AssembleInputForRADS() {
 }
 
 bool LateralMotionPlanner::AssembleInputForNSA() {
+  is_uniform_motion_ = true;
   is_need_reverse_ = false;
   is_use_second_bound_ = false;
   if (!HandleReferencePathData()) {
@@ -569,7 +595,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
   if (!HandleFeedbackInfoData()) {
     return false;
   }
-  // const bool &search_success = session_->mutable_planning_context()
+  // const bool search_success = session_->mutable_planning_context()
   //                                ->mutable_lateral_obstacle_decider_output()
   //                                .search_success;
   const auto &general_lateral_decider_output =
@@ -579,7 +605,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
-  const bool &search_success = general_lateral_decider_output.enable_ara_ref;
+  const bool search_success = general_lateral_decider_output.enable_ara_ref;
   if (is_ref_consistent_) {
     planning_weight_ptr_->SetIsSearchSuccess(search_success);
   } else {
@@ -590,6 +616,7 @@ bool LateralMotionPlanner::AssembleInputForNSA() {
 }
 
 bool LateralMotionPlanner::AssembleInput() {
+  is_uniform_motion_ = false;
   is_need_reverse_ = false;
   is_use_second_bound_ = true;
   if (!HandleReferencePathData()) {
@@ -629,9 +656,9 @@ bool LateralMotionPlanner::AssembleInput() {
   const auto &general_lateral_decider_output =  // result from lat decision
       session_->planning_context().general_lateral_decider_output();
   bool complete_follow = general_lateral_decider_output.complete_follow;
-  const bool &lane_change_scene =
+  const bool lane_change_scene =
       general_lateral_decider_output.lane_change_scene;
-  const bool &ramp_scene = general_lateral_decider_output.ramp_scene;
+  const bool ramp_scene = general_lateral_decider_output.ramp_scene;
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &coarse_planning_info = lane_change_decider_output.coarse_planning_info;
@@ -918,6 +945,8 @@ bool LateralMotionPlanner::AssembleInput() {
   if (!motion_planner_output.lat_init_flag || !is_ref_consistent_) {
     planning_input_.set_q_continuity(0.0);
   }
+  planning_weight_ptr_->SetContinuityWeightByLastPath(
+      valid_continuity_idx_, planning_input_);
   // spatio
   if (is_use_spatio_planner_result) {
     planning_input_.set_complete_follow(complete_follow);
@@ -1022,7 +1051,6 @@ bool LateralMotionPlanner::Update() {
   theta_vec_[0] = theta_vec_[1];
   delta_vec_[0] = delta_vec_[1];
   omega_vec_[0] = omega_vec_[1];
-  theta_vec_[0] = theta_vec_[1];
   curv_vec_[0] = curv_vec_[1];
   d_curv_vec_[0] = d_curv_vec_[1];
   t_vec_[0] = -0.2;
@@ -1108,6 +1136,7 @@ bool LateralMotionPlanner::Update() {
   motion_planner_output.lat_init_flag = true;
   motion_planner_output.curv_factor = curv_factor_;
   motion_planner_output.lat_valid_end_idx = planning_input_.motion_plan_concerned_index();
+  motion_planner_output.concerned_index = planning_input_.motion_plan_concerned_index() + 1;
   ilqr_solver::ControlVec u_vec;
   u_vec.resize(N);
 
@@ -1260,11 +1289,22 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
 double LateralMotionPlanner::CalculateRemainingCrossLaneTime() {
   double lc_remain_time = 10.0;
   double lc_remain_lon_distance = 1000.0;
+  // const auto& reference_path =
+  //     session_->environmental_model()
+  //             .get_virtual_lane_manager()
+  //             ->get_current_lane()->get_reference_path();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& lc_request_direction = lane_change_decider_output.lc_request;
+  // const auto& reference_path =
+  //     lane_change_decider_output.coarse_planning_info.reference_path;
   const auto& reference_path =
-      lane_change_decider_output.coarse_planning_info.reference_path;
+      session_->environmental_model()
+              .get_reference_path_manager()
+              ->get_reference_path_by_lane(lane_change_decider_output.origin_lane_virtual_id, false);
+  if (reference_path == nullptr) {
+    return lc_remain_time;
+  }
   const auto N =
       planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
       1;
@@ -1272,25 +1312,29 @@ double LateralMotionPlanner::CalculateRemainingCrossLaneTime() {
   double d_s = planning_input_.ref_vel() * config_.delta_t;
   bool is_exist_dash_line = false;
   bool is_exist_solid_line = false;
+  bool is_all_solid_line = false;
   for (size_t i = 0; i < N; ++i) {
     double s = init_s + d_s * i;
     ReferencePathPoint refpath_pt{};
     if (reference_path->get_reference_point_by_lon(s, refpath_pt)) {
       bool is_left_solid = refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
                            refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                           refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+                           refpath_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
       bool is_right_solid = refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
                            refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                           refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
-      if (lc_request_direction == LEFT_CHANGE && is_right_solid) {
+                           refpath_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+      if (lc_request_direction == LEFT_CHANGE && is_left_solid) {
+        is_all_solid_line = true;
         if (is_exist_dash_line) {
           is_exist_solid_line = true;
         }
-      } else if (lc_request_direction == RIGHT_CHANGE && is_left_solid) {
+      } else if (lc_request_direction == RIGHT_CHANGE && is_right_solid) {
+        is_all_solid_line = true;
         if (is_exist_dash_line) {
           is_exist_solid_line = true;
         }
       } else {
+        is_all_solid_line = false;
         is_exist_dash_line = true;
       }
     }
@@ -1299,6 +1343,9 @@ double LateralMotionPlanner::CalculateRemainingCrossLaneTime() {
     }
     lc_remain_time = config_.delta_t * i;
     lc_remain_lon_distance = d_s * i;
+  }
+  if (is_all_solid_line && !is_exist_dash_line) {
+    lc_remain_time = 0.0;
   }
   return lc_remain_time;
 }

@@ -9,14 +9,10 @@ namespace adas_function {
 namespace ldw_core {
 
 struct LdwParameters {
-  double enable_vehspd_display_min =
-      65.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
-  double enable_vehspd_display_max =
-      150.0 / 3.6;  // 激活的最大仪表车速，单位：m/s
-  double disable_vehspd_display_min =
-      60.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
-  double disable_vehspd_display_max =
-      155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
+  uint8 enable_vehspd_display_min = 65;  // 激活的最小仪表车速，单位：kph
+  uint8 enable_vehspd_display_max = 155;  // 激活的最大仪表车速，单位：kph
+  uint8 disable_vehspd_display_min = 60;  // 退出的最小仪表车速，单位：kph
+  uint8 disable_vehspd_display_max = 160;  // 退出的最大仪表车速，单位：kph
 
   double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
@@ -50,6 +46,7 @@ class LdwCore {
   iflyauto::ShiftLeverStateEnum shift_lever_state_ =
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_P;
   uint32 ldw_enable_code_ = 255;
+  uint32 mask_enable_code_e541_ldw = 255;
   uint32 UpdateLdwEnableCode(void);
 
   // 油门踏板变化率满足抑制阈值持续时间 单位:s

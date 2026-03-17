@@ -34,10 +34,10 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
 
   // bit 0
   // 判断车速是否处于工作车速范围内
-  if (vehicle_service_output_info_ptr->vehicle_speed_display <
+  if (GetContext.get_state_info()->vehicle_speed_display_kph <
       elk_param_.enable_vehspd_display_min) {
     enable_code += uint32_bit[0];
-  } else if (vehicle_service_output_info_ptr->vehicle_speed_display >
+  } else if (GetContext.get_state_info()->vehicle_speed_display_kph >
              elk_param_.enable_vehspd_display_max) {
     enable_code += uint32_bit[0];
   } else {
@@ -406,10 +406,10 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
 
   // bit 0
   // 判断车速是否处于工作车速范围内
-  if (vehicle_service_output_info_ptr->vehicle_speed_display <
+  if (GetContext.get_state_info()->vehicle_speed_display_kph <
       elk_param_.disable_vehspd_display_min) {
     disable_code += uint32_bit[0];
-  } else if (vehicle_service_output_info_ptr->vehicle_speed_display >
+  } else if (GetContext.get_state_info()->vehicle_speed_display_kph >
              elk_param_.disable_vehspd_display_max) {
     disable_code += uint32_bit[0];
   } else {
@@ -771,7 +771,8 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
     /*do nothing*/
   }
 
-  return elk_fault_code & GetContext.get_param()->elk_fault_code_maskcode;
+  return elk_fault_code & GetContext.get_param()->elk_fault_code_maskcode 
+  & GetContext.get_param()->adas_fault_sw_code;
 }
 
 uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {

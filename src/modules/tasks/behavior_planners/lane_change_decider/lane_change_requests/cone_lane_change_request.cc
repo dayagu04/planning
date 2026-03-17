@@ -587,7 +587,7 @@ void ConeRequest::ConeDir() {
   if (distance_to_first_road_split < 300.0 || dis_to_merge_point < 200.0 ||
       dis_ego_to_last_split_point < 100.0) {
     if (feasible_lane_sequence.size() > 0) {
-      int current_lane_order_num = left_lane_nums_ + 1;
+      int current_lane_order_num = route_info_output.ego_seq;
       int target_lane_order_num = current_lane_order_num - 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
@@ -597,7 +597,7 @@ void ConeRequest::ConeDir() {
     }
 
     if (feasible_lane_sequence.size() > 0) {
-      int current_lane_order_num = left_lane_nums_ + 1;
+      int current_lane_order_num = route_info_output.ego_seq;
       int target_lane_order_num = current_lane_order_num + 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),

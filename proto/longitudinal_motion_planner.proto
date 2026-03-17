@@ -65,9 +65,12 @@ message LongitudinalPlanningInput {
   repeated double djerk_min_vec = 44;
   optional double q_acc_start = 45;
   optional double q_jerk_start = 46;
-  optional double q_pos_safe_cost = 47;
+  optional double q_pos_safe = 47;
   optional double safe_distance = 48;
   optional double q_emergency_stop = 49;
+  optional bool is_lon_cipv_emergency_stop = 50;
+  optional bool is_joint_danger_emergency_stop = 51;
+  optional bool is_follow_cipv = 52;
 }
 
 

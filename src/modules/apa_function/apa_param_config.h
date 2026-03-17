@@ -725,6 +725,7 @@ struct ApaParameters {
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
   bool use_geometry_path_head_out = false;
+  bool use_scenario_perpendicular_heading_in = false;
 
   // path optimizer params
   bool cilqr_path_optimization_enable = true;
@@ -806,6 +807,9 @@ struct ApaParameters {
   bool enable_decide_cul_de_sac = true;
   bool enable_interesting_search_area = true;
   int pre_search_mode = 1;
+  int yield_interval_explored_node_num = 2000;
+  bool enable_yield_cpu = true;
+  int yield_interval_ms = 20;
 
   ParkingLatLonPathBuffer lat_lon_path_buffer;
   ParkingLatLonSpeedBuffer lat_lon_speed_buffer;

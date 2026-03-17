@@ -164,6 +164,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   x_relative_velocity_ = prediction_object.relative_speed_x;
   y_relative_velocity_ = prediction_object.relative_speed_y;
   acc_ = prediction_object.acc;
+  accel_fusion_ = prediction_object.acc_fusion;
   fusion_source_ = prediction_object.fusion_source;
   type_ = prediction_object.type;
   is_oversize_vehicle_ = prediction_object.is_oversize_vehicle;
@@ -290,6 +291,7 @@ Obstacle::Obstacle(const Obstacle *obstacle) {
   x_relative_velocity_ = obstacle->x_relative_velocity();
   y_relative_velocity_ = obstacle->y_relative_velocity();
   acc_ = obstacle->acceleration();
+  accel_fusion_ = obstacle->accel_fusion();
   fusion_source_ = obstacle->fusion_source();
   type_ = obstacle->type();
   trajectory_.reserve(obstacle->trajectory().size());
@@ -403,6 +405,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
       perception_points_(points) {
   velocity_ = 0.0;
   acc_ = 0.0;
+  accel_fusion_ = 0.0;
   fusion_source_ = 1;
   if (id_ >= 10000000) {  // intersection
     type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;
@@ -471,6 +474,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
       perception_points_(points) {
   velocity_ = 0.0;
   acc_ = 0.0;
+  accel_fusion_ = 0.0;
   fusion_source_ = 1;
 
   if (id_ > 7000000) {  // occupancy object

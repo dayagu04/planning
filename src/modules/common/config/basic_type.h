@@ -462,6 +462,7 @@ struct RouteInfoOutput {
   bool is_ego_on_city_expressway_hmi = false;
   bool is_ego_on_expressway_hmi = false;
   bool is_exist_toll_station = false;
+  bool is_ego_on_accelerate_lane = false;
   // bool is_ramp_merge_to_road_on_expressway = false;
   // bool is_road_merged_by_other_lane = false;
   // bool is_ramp_merge_to_ramp_on_expressway = false;
@@ -605,7 +606,8 @@ enum RequestSource {
   OVERTAKE_REQUEST,
   EMERGENCE_AVOID_REQUEST,
   CONE_REQUEST,
-  MERGE_REQUEST
+  MERGE_REQUEST,
+  DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST
 };
 
 struct PointLLH {

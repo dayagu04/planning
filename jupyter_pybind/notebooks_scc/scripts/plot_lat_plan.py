@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/share/data/clren/code/planning6/tools/bag_converter/output_c8118e0/data_collection_BESTUNE_E541_20406_EVENT_KEY_2026-01-12-15-42-17_no_camera.bag.1770038299.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_00136/trigger/20260129/20260129-18-28-48/data_collection_BESTUNE_E541_00136_EVENT_DOWNGRADE_2026-01-29-18-28-48_no_camera.bag.28-35.split.1772248110.close-loop.scc.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/common_frame/20260301/20260301-15-13-06/data_collection_BESTUNE_E541_36718_ALL_MANUAL_2026-03-01-15-13-06_no_camera.bag"
 
@@ -46,7 +46,8 @@ load_measure_distance_tool(fig7)
 # fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
 fig_receive_topic_time = load_receive_topic_time(bag_loader)
-hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table, rads_info_table = load_planning_hmi_info_table()
+hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table = load_planning_hmi_info_table()
+planning_request_data, planning_request_table = load_planning_request_table()
 fig_hmi = load_avoid_hmi(bag_loader)
 fig_hmi = load_enter_fuction_hmi(fig_hmi, bag_loader)
 fig_curve = load_road_curve(bag_loader, lat_plan_data)
@@ -57,12 +58,38 @@ behavior_data_1 = ColumnDataSource({
   'name':[],
   'data':[]
 })
+behavior_data_dynamic_lane_change = ColumnDataSource({
+  'name':[],
+  'data':[]
+})
 columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
 
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=1000)
+data_behavior_table_dynamic_lane_change = DataTable(source=behavior_data_dynamic_lane_change, columns=columns, width=400, height=1000)
+
+def update_dynamic_agent_emergency_lane_change_behavior_data(local_view_data):
+  planning_json = local_view_data['data_msg']['plan_debug_json_msg']
+  vars = ['recommend_dynamic_agent_emergency_avoidance_direction', 'risk_level',
+          'dynamic_agent_emergency_situation_timetstamp', 'dynamic_agent_emergency_lane_change_direction',
+          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp']
+  names  = []
+  datas = []
+  for name in vars:
+    try:
+      # print(getattr(vo_lat_behavior_plan,name))
+      print(name)
+      datas.append(planning_json[name])
+      names.append(name)
+    except:
+      pass
+
+  behavior_data_dynamic_lane_change.data.update({
+    'name': names,
+    'data': datas,
+  })
 
 def update_lat_behavior_data(local_view_data):
   lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
@@ -239,13 +266,15 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     update_lat_behavior_data(local_view_data)
+    update_dynamic_agent_emergency_lane_change_behavior_data(local_view_data)
   update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data)
+  update_planning_request_data(bag_loader, local_view_data, planning_request_data)
 
   push_notebook()
-
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_curve)), title="CurveFigure")
-pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(column(data_behavior_table_1)))), title="BehaviorInfo")
+pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(row(data_behavior_table_1, data_behavior_table_dynamic_lane_change)))), title="BehaviorInfo")
 pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table))))), title="Hmi")
+pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, planning_request_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")
 if scene_type == "HPP":
   pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ], height = 1200)

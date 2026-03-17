@@ -89,8 +89,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   bool CheckObstacleCrossingCondition(
       const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj);
 
-  void RefineConflictLatDecisions(const double &ego_l,
-                                  ObstacleDecision &obstacle_decision);
+  void RefineConflictLatDecisions(const double ego_l,
+                                  ObstacleDecision& obstacle_decision);
   bool HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
                            bool is_nudge_left, Polygon2d &overlap_polygon);
   bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
@@ -155,8 +155,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void SampleRoadDistanceInfo(const double &s_target,
-                              ReferencePathPoint &sample_path_point);
+  void SampleRoadDistanceInfo(const double s_target,
+                              ReferencePathPoint& sample_path_point);
 
   void GenerateEnuReferenceTraj(
       GeneralLateralDeciderOutput &general_lateral_decider_output);
@@ -183,7 +183,7 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
         std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info,
         const std::vector<std::pair<double, double>> second_frenet_soft_bounds,
         std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info);
-        
+
  private:
   bool is_ego_reverse_;
   double min_road_radius_;

@@ -68,7 +68,7 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
   std::vector<std::pair<STPoint, STPoint>> st_points_pairs;
   st_points_pairs.reserve(kSampleSpaceReserveNum);
   const double agent_s_start = agent_node->node_s();
-  const double& agent_half_length = agent_node->node_length() / 2.0;
+  const double agent_half_length = agent_node->node_length() / 2.0;
   const size_t TimeHorizion = kPlanningDuration / kPlanningStep;
   const size_t PredictionHorizon = current_trajectory.size() - 1;
   size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
@@ -433,11 +433,11 @@ void STSampleSpaceBase::GetAvailableGap(const int index, double ego_s) {
         [](double val, const std::pair<STPoint, STPoint>& elem) {
           return val < elem.second.s();
         });
-    if(it != temp_gap_array.end()){
+    if (it != temp_gap_array.end()) {
       if (it != temp_gap_array.begin()) {
         it--;
         gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
-      }else{
+      } else {
         gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
       }
     }

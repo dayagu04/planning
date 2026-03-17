@@ -747,7 +747,7 @@ void PlanningScheduler::FillPlanningTrajectory(
     const auto nsa_is_completed = session_.planning_context().nsa_planning_completed();
     if (((state_machine.current_state == iflyauto::FunctionalState_NRA_GUIDANCE &&
          nsa_is_completed) || state_machine.current_state == iflyauto::FunctionalState_NRA_COMPLETED ) &&
-        ego_state->planning_init_point().v < nsa_ego_stop_vel_thred) {
+        ego_state->ego_v() < nsa_ego_stop_vel_thred) {
       gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
     }
     if (nsa_is_completed) {
@@ -758,7 +758,9 @@ void PlanningScheduler::FillPlanningTrajectory(
       planning_status->nsa_planning_status = iflyauto::NSA_RUNNING_FAILED;
     }
   }
-
+  JSON_DEBUG_VALUE(
+    "gear_command",
+    static_cast<int>(gear_command->gear_command_value));
   // planning request
   // 绕行接管
   if (lane_borrow_decider_output.takeover_prompt) {
@@ -766,14 +768,7 @@ void PlanningScheduler::FillPlanningTrajectory(
         iflyauto::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         iflyauto::REQUEST_REASON_BORROW_FAILED;
-  } else {
-    planning_output->planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
-    planning_output->planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
-  }
-
-  if (speed_limit_decider_output.is_function_fading_away() &&
+  } else if (speed_limit_decider_output.is_function_fading_away() &&
       config_.left_right_turn_func_fading_away_switch) {
     planning_output->planning_request.take_over_req_level =
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
@@ -784,11 +779,6 @@ void PlanningScheduler::FillPlanningTrajectory(
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         iflyauto::RequestReason::REQUEST_REASON_ON_ROUNDABOUT;
-  } else {
-    planning_output->planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
-    planning_output->planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
   }
   JSON_DEBUG_VALUE(
       "take_over_request",
@@ -902,7 +892,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.borrow_lane_type = ad_info.borrow_lane_type;
   planning_hmi_info->ad_info.borrow_direction = ad_info.borrow_direction;
 
- 
+
   planning_hmi_info->ad_info.reference_line_msg =
       session_.planning_context()
           .planning_hmi_info()
@@ -1455,6 +1445,9 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     FillPlanningRequest(iflyauto::REQUEST_LEVEL_NO_REQ, planning_output);
     UpdateSuccessfulPlanningResult();
   }
+  // temp scc & noa
+  const auto& inner_planning_output = session_.planning_context().planning_output();
+  planning_output->planning_request = inner_planning_output.planning_request;
 
   ILOG_INFO << "The RunOnce is successed !!!!:";
   JSON_DEBUG_VALUE("planning_fault_code", FaultCode());

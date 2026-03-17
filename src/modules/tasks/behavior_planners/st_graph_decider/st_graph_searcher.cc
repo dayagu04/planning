@@ -978,7 +978,7 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
   if (agent_id == speed::kNoAgentId) {
     return base_cost;
   }
-  
+
   if (IsSpecialOvertakeAgent(agent_id)) {
     return base_cost * 0.1;
   }
@@ -1183,7 +1183,6 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
     const CIPVInfo& cipv_info,
     std::unordered_map<int64_t, speed::STBoundary::DecisionType>*
         succ_decision_table) const {
-  // make cipv yield decision when lane keep
   int64_t cipv_boundary_id = -1;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
@@ -1192,6 +1191,47 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangePropose;
   if (st_graph_input == nullptr) {
     return;
+  }
+
+  const auto& parallel_longitudinal_avoid_output =
+      session_->planning_context().parallel_longitudinal_avoid_decider_output();
+  const bool is_parallel_overtake =
+      parallel_longitudinal_avoid_output
+          .is_need_parallel_longitudinal_avoid() &&
+      parallel_longitudinal_avoid_output.is_parallel_overtake();
+  const auto parallel_overtake_agent_id =
+      is_parallel_overtake
+          ? parallel_longitudinal_avoid_output.parallel_target_agent_id()
+          : -1;
+
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  for (const auto& agent_entry : agent_id_st_boundaries_map) {
+    const int32_t agent_id = agent_entry.first;
+    const auto& st_boundary_ids = agent_entry.second;
+
+    if (agent_id == parallel_overtake_agent_id) {
+      continue;
+    }
+
+    bool is_reverse = false;
+    bool is_rear = false;
+    if (agent_manager) {
+      const auto* agent = agent_manager->GetAgent(agent_id);
+      if (agent != nullptr && agent->is_reverse()) {
+        is_reverse = true;
+      }
+      if (agent != nullptr && agent->d_rel() < 1e-6) {
+        is_rear = true;
+      }
+    }
+
+    if (!is_reverse && !is_rear && IsSpecialYieldAgent(agent_id)) {
+      for (const auto boundary_id : st_boundary_ids) {
+        succ_decision_table->insert(std::make_pair(
+            boundary_id, speed::STBoundary::DecisionType::YIELD));
+      }
+    }
   }
 
   const auto rear_st_id = speed::StGraphUtils::GetAgentStBoundaryId(

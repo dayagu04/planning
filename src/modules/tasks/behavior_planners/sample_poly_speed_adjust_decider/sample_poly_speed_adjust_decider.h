@@ -10,10 +10,12 @@
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "reference_path.h"
-#include "sample_poly_curve.h"
+#include "sample_quartic_poly_curve.h"
 #include "sample_space_base.h"
 #include "session.h"
+#include "simple_astar_path.h"
 #include "tasks/task.h"
+#include "uniform_jerk_curve.h"
 
 namespace planning {
 
@@ -39,7 +41,7 @@ class SamplePolySpeedAdjustDecider : public Task {
                     const double all_cost_time);
   bool CheckInitVelTraj();
   bool CheckLanelineChangeable();
-  double CalcHeadwayDistance(const double& headway_v, const double ego_v,
+  double CalcHeadwayDistance(const double headway_v, const double ego_v,
                              const std::vector<double>& t_gap_ego_v_bp,
                              const std::vector<double>& t_gap_ego_v);
   void StitchLastBestPoly();
@@ -54,11 +56,17 @@ class SamplePolySpeedAdjustDecider : public Task {
   double GetStoplineSpdDifferGain();
   void CalcDistanceToStopPoint();
   bool CheckTrajAvailable(const SampleQuarticPolynomialCurve& current_traj,
-                          const int& index);
+                          const int index);
   bool IsNotUseGapSelect();
+  bool IsForcedMergeScenario();
+  bool GenerateForceMergeTraj();
+  bool EvaluateForceMergeTraj();
+  bool GenerateAStarTraj();
+  double CalcPressLineRatio();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
+  SampleAstarTrajConfig astar_config_;
   LanChangeSafetyCheckConfig lc_safety_distance_config_;
 
   LeadingAgentInfo leading_veh_;
@@ -101,12 +109,17 @@ class SamplePolySpeedAdjustDecider : public Task {
   double evaluation_congest_t_{3.0};
 
   SampleQuarticPolynomialCurve* min_cost_traj_ptr_;
-
   SampleQuarticPolynomialCurve last_min_cost_traj_;
+  std::unique_ptr<UniformJerkCurve> jerk_curve_upper_;
+  std::unique_ptr<UniformJerkCurve> jerk_curve_lower_;
   std::shared_ptr<SampleQuarticPolynomialCurve>
       stitched_last_best_quartic_poly_ptr_;
 
   std::vector<std::vector<SampleQuarticPolynomialCurve>> sample_trajs_;
+  LonState lon_state_;
+  StateLimit state_limit_upper_;
+  StateLimit state_limit_lower_;
+  std::unique_ptr<LongitudinalAStar> astar_traj_ptr_;
 
   int count_wait_state_{0};
   int count_normal_to_hover_state_{0};

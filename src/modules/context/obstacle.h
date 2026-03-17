@@ -84,6 +84,7 @@ class Obstacle {
 
   // double perception_velocity() const { return perception_velocity_; }
   double acceleration() const { return acc_; }
+  double accel_fusion() const { return accel_fusion_; }
   // double acceleration_signed() const { return acc_signed_; }
   double velocity_angle() const { return velocity_angle_; }
   bool is_static() const { return is_static_; }
@@ -166,6 +167,7 @@ class Obstacle {
   double y_relative_velocity_ = 0.0;
   double relative_velocity_angle_ = 0.0;
   double acc_ = 0.0;
+  double accel_fusion_ = 0.0;
   // double acc_signed_ = 0.0;
   iflyauto::ObjectType type_;
   bool valid_ = true;

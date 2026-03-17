@@ -41,7 +41,7 @@ bool EnableLCCHMIDecider::Execute() {
   const double tp_init_s = traj_points.front().s;
 
   double lat_jerk_thr = config_.lat_jerk_thr;
-  const bool& ramp_scene =
+  const bool ramp_scene =
       session_->planning_context().general_lateral_decider_output().ramp_scene;
   if (ramp_scene) {
     lat_jerk_thr = config_.ramp_lat_jerk_thr;

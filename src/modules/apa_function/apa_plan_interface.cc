@@ -79,7 +79,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // run planner
-  const auto& apa_state_machine = apa_world_ptr_->GetStateMachineManagerPtr();
+  const auto &apa_state_machine = apa_world_ptr_->GetStateMachineManagerPtr();
   bool planning_success = true;
   if (!apa_state_machine->IsHppCruise()) {
     scenario_manager_.UpdateScenarioType();
@@ -113,27 +113,50 @@ void ApaPlanInterface::AddReleasedSlotInfo(
   const std::vector<bool> &release_slot_narrow_flag_vec =
       apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotNarrowFlagVec();
 
-  const std::vector<size_t> &release_slot_id_no_consider_obs_vec =
-      apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotNoConsiderObsVec();
+  const std::unordered_map<size_t, int> &perpendicular_redefine_info_map =
+      apa_world_ptr_->GetSlotManagerPtr()->GetPerpendicularRedefineInfoMap();
 
-  for (size_t i = 0;
-       i < std::min(release_slot_id_no_consider_obs_vec.size(),
-                    static_cast<size_t>(PLANNING_POS_PARKING_SLOT_MAX_NUM));
-       ++i) {
-    iflyauto::PosParkableSlotInfo slot_info;
-    slot_info.id = static_cast<uint32>(release_slot_id_no_consider_obs_vec[i]);
-    planning_output.pos_parkable_slot_info_list[i] = slot_info;
-    planning_output.pos_parkable_slot_info_list_size++;
-  }
+  const std::unordered_map<size_t, ApaSlot> &slots_map =
+      apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
 
   std::string release_slot_id;
-  for (size_t i = 0;
-       i < std::min(release_slot_id_vec.size(),
-                    static_cast<size_t>(PLANNING_PARKING_SLOT_MAX_NUM));
-       ++i) {
+  const auto MappingSlotType =
+      [](const ApaSlot &slot) -> iflyauto::ParkingSlotType {
+    switch (slot.GetType()) {
+      case SlotType::PERPENDICULAR:
+        return iflyauto::PARKING_SLOT_TYPE_VERTICAL;
+      case SlotType::PARALLEL:
+        return iflyauto::PARKING_SLOT_TYPE_HORIZONTAL;
+      case SlotType::SLANT:
+        return iflyauto::PARKING_SLOT_TYPE_SLANTING;
+      case SlotType::INVALID:
+        return iflyauto::PARKING_SLOT_TYPE_INVALID;
+      default:
+        return iflyauto::PARKING_SLOT_TYPE_INVALID;
+    }
+  };
+
+  for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
     iflyauto::SuccessfulSlotsInfo slot_info;
     slot_info.id = static_cast<uint32>(release_slot_id_vec[i]);
     slot_info.is_narrow_slot = release_slot_narrow_flag_vec[i];
+    if (slots_map.count(slot_info.id) == 0) {
+      continue;
+    }
+    const auto &slot = slots_map.at(slot_info.id);
+    slot_info.slot_type = MappingSlotType(slot);
+    slot_info.target_slot_opening_line_midpoint.x =
+        slot.origin_corner_coord_global_.pt_01_mid.x();
+
+    slot_info.target_slot_opening_line_midpoint.y =
+        slot.origin_corner_coord_global_.pt_01_mid.y();
+
+    if (perpendicular_redefine_info_map.count(slot_info.id) != 0) {
+      slot_info.is_redefine_slot_type = true;
+    } else {
+      slot_info.is_redefine_slot_type = false;
+    }
+
     planning_output.successful_slot_info_list[i] = slot_info;
     planning_output.successful_slot_info_list_size++;
     release_slot_id.append(std::string("[") + std::to_string(slot_info.id) +

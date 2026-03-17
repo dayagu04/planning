@@ -246,6 +246,7 @@ class ParkingScenario {
 
       has_response = false;
 
+      gear_change_count = 0;
       actual_gear_change_count = 0;
       ref_max_gear_change_count = 0;
       cur_path_gear_change_count = 0;
@@ -348,6 +349,7 @@ class ParkingScenario {
     uint8_t ref_max_gear_change_count = 0;
     uint8_t cur_path_gear_change_count = 0;
     bool ref_max_gear_change_count_already_update = false;
+    int gear_change_count = 0;
   };
 
   struct CalObsRemainDistParams {

@@ -307,9 +307,9 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       << ego_info_under_slot.origin_target_pose.pos.x(),
       -0.5 * ego_info_under_slot.slot.slot_width_;
 
-  if (std::fabs(ego_info_under_slot.cur_pose.pos.y()) <
+  if (std::fabs(ego_info_under_slot.terminal_err.GetY()) <
           param.slot_occupied_ratio_max_lat_err &&
-      std::fabs(ego_info_under_slot.cur_pose.heading) <
+      std::fabs(ego_info_under_slot.terminal_err.GetTheta()) <
           param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
     std::vector<double> x_tab = {
         ego_info_under_slot.origin_target_pose.pos.x(),
@@ -557,7 +557,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
     }
     bool find_target_pose = false;
     const double start_time = IflyTime::Now_ms();
-    for (const bool& fold_mirror_flag : fold_mirror_flag_vec) {
+    for (const bool fold_mirror_flag : fold_mirror_flag_vec) {
       apa_world_ptr_->GetColDetInterfacePtr()->Init(fold_mirror_flag);
       TargetPoseDecider target_pose_decider(
           apa_world_ptr_->GetColDetInterfacePtr());
@@ -659,6 +659,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
   ego_info_under_slot.tar_line =
       geometry_lib::BuildLineSegByPose(ego_info_under_slot.target_pose.pos,
                                        ego_info_under_slot.target_pose.heading);
+
+  ego_info_under_slot.tar_line.PrintInfo();
 
   ego_info_under_slot.terminal_err.Set(
       ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
@@ -1209,11 +1211,24 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
 
   request.ref_solve_number = apa_world_ptr_->GetSimuParam().ref_solve_number;
 
-  if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
-    if (ego_info_under_slot.slot.IsPointInCustomSlot(
-            ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.6, -0.6, true) &&
-        std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 10.0) {
-      request.adjust_pose = true;
+  if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+    if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
+      if (ego_info_under_slot.slot.IsPointInCustomSlot(
+              ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.4, -0.4, true) &&
+          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+              20.0) {
+        request.adjust_pose = true;
+      }
+    }
+  } else if (scenario_type_ ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    if (request.inital_action_request.ref_gear == AstarPathGear::REVERSE) {
+      if (ego_info_under_slot.slot.IsPointInCustomSlot(
+              ego_info_under_slot.cur_pose.pos, 7.0, -3.0, -0.4, -0.4, true) &&
+          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+              20.0) {
+        request.adjust_pose = true;
+      }
     }
   }
 
@@ -1891,7 +1906,8 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const double lat_err = cur_pose.pos.y() - target_pose.pos.y();
   const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
   const double heading_err =
-      (cur_pose.heading - target_pose.heading) * kRad2Deg;
+      geometry_lib::NormalizeAngle(cur_pose.heading - target_pose.heading) *
+      kRad2Deg;
 
   JSON_DEBUG_VALUE("terminal_error_x", lon_err)
   JSON_DEBUG_VALUE("terminal_error_y", lat_err)
@@ -2354,17 +2370,49 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     }
   }
 
-  const bool increase_lat_err_flag =
-      (frame_.mirror_command == MirrorCommand::NONE) &&
-      ((frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
-        ego_info_under_slot.cur_pose.pos.x() >
-            ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
-                2.168) ||
-       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-        frame_.slot_jump_big_flag) ||
-       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()));
+  bool increase_lat_err_flag = false;
+  do {
+    if (frame_.mirror_command == MirrorCommand::NONE) {
+      break;
+    }
+
+    uint8_t ref_gear =
+        scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN
+            ? geometry_lib::SEG_GEAR_REVERSE
+            : geometry_lib::SEG_GEAR_DRIVE;
+
+    if (frame_.gear_command == ref_gear &
+            ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+        frame_.slot_jump_big_flag) {
+      increase_lat_err_flag = true;
+      break;
+    }
+
+    if (frame_.gear_command == ref_gear &&
+        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
+      increase_lat_err_flag = true;
+      break;
+    }
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+      if (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
+          ego_info_under_slot.cur_pose.pos.x() >
+              ego_info_under_slot.slot.GetOriginCornerCoordLocal()
+                      .pt_01_mid.x() +
+                  2.168) {
+        increase_lat_err_flag = true;
+        break;
+      }
+    }
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      if (ego_info_under_slot.slot_occupied_ratio < 1e-4) {
+        increase_lat_err_flag = true;
+        break;
+      }
+    }
+
+  } while (false);
 
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
@@ -3494,12 +3542,17 @@ const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
     const geometry_lib::PathPoint& cur_pose) {
   const ApaParameters& params = apa_param.GetParam();
   const CheckFinishParams& finish_params = params.check_finish_params;
-  if (std::fabs(cur_pose.heading * kRad2Deg) > finish_params.heading_err) {
-    return CarSlotRelationship::TOUCHING;
-  }
-
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const double heading_err =
+      geometry_lib::NormalizeAngle(cur_pose.heading -
+                                   ego_info_under_slot.target_pose.heading) *
+      kRad2Deg;
+
+  if (std::fabs(heading_err) > finish_params.heading_err) {
+    return CarSlotRelationship::TOUCHING;
+  }
 
   const geometry_lib::PathPoint front_pose =
       GetCarFrontPoseFromCarPose(cur_pose);

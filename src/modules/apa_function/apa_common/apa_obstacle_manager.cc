@@ -73,7 +73,8 @@ void ApaObstacleManager::Update(
     // For now, do not consider ego slot limiter.
     // Todo: consider all limiters.
     if (last_ego_slot_->type ==
-        iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+            iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL &&
+        state_machine_manager_.IsParkOutStatus() && last_ego_slot_->id != 0) {
       if (slot_list->select_slot_id == last_ego_slot_->id ||
           static_cast<uint32>(ego_slot_id) == last_ego_slot_->id) {
         ego_slot_is_parallel_ = true;
@@ -885,10 +886,9 @@ std::pair<int, float> ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
       translateQuadrilateral = [](const std::array<Eigen::Vector2d, 4>& pts,
                                   const std::array<double, 4>& d_per_edge) {
         Eigen::Vector2d M;
-        for (int i = 0; i < pts.size(); ++i) {
-          M += pts[i];
-        }
-        M = M / pts.size();
+        M = (pts[0] + pts[1] + pts[2] +pts[3]);
+        M.x() = M.x() / 4; //
+        M.y() = M.y() / 4; //
         Eigen::Vector2d MA = pts[0] - M;
         Eigen::Vector2d MB = pts[1] - M;
         Eigen::Vector2d MC = pts[2] - M;

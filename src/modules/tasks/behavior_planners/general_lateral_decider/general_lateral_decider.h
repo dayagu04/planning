@@ -85,8 +85,8 @@ class GeneralLateralDecider : public Task {
   bool CheckObstacleCrossingCondition(
       const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj);
 
-  void RefineConflictLatDecisions(const double &ego_l,
-                                  ObstacleDecision &obstacle_decision);
+  void RefineConflictLatDecisions(const double ego_l,
+                                  ObstacleDecision& obstacle_decision);
   bool HackYawSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
                            bool is_nudge_left, double &limit_overlap_min_y,
                            double &limit_overlap_max_y);
@@ -159,8 +159,8 @@ class GeneralLateralDecider : public Task {
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void SampleRoadDistanceInfo(const double &s_target,
-                              ReferencePathPoint &sample_path_point);
+  void SampleRoadDistanceInfo(const double s_target,
+                              ReferencePathPoint& sample_path_point);
 
   void GenerateEnuReferenceTraj(
       GeneralLateralDeciderOutput &general_lateral_decider_output);
@@ -169,6 +169,7 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
+  bool CalculateCruiseVelocity(double * const avg_cruise_v);
   void HandleRefPathOffset(
       TrajectoryPoints &traj_points,
       std::vector<std::pair<double, double>> &front_axis_ref_path,

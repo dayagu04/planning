@@ -15,7 +15,8 @@ ApaSlot::ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot) {
   Update(fusion_slot);
 }
 
-void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot, bool is_redefine_slot_type, int ego2slot_side) {
+void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot,
+                     bool is_redefine_slot_type, int ego2slot_side) {
   id_ = fusion_slot.id;
   confidence_ = fusion_slot.confidence;
 
@@ -157,13 +158,13 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot, bool is_red
         }
       } else {
         limiter_.start_pt << 0.5 * (fusion_slot.limiters[0].end_points[0].x +
-                                  fusion_slot.limiters[0].end_points[1].x),
-          0.5 * (fusion_slot.limiters[0].end_points[0].y +
-                 fusion_slot.limiters[0].end_points[1].y);
+                                    fusion_slot.limiters[0].end_points[1].x),
+            0.5 * (fusion_slot.limiters[0].end_points[0].y +
+                   fusion_slot.limiters[0].end_points[1].y);
         limiter_.end_pt << 0.5 * (fusion_slot.limiters[1].end_points[0].x +
-                                fusion_slot.limiters[1].end_points[1].x),
-          0.5 * (fusion_slot.limiters[1].end_points[0].y +
-                 fusion_slot.limiters[1].end_points[1].y);
+                                  fusion_slot.limiters[1].end_points[1].x),
+            0.5 * (fusion_slot.limiters[1].end_points[0].y +
+                   fusion_slot.limiters[1].end_points[1].y);
       }
     }
   } else {
@@ -195,9 +196,8 @@ void ApaSlot::TransformCoordFromGlobalToLocal(
 }
 
 void ApaSlot::ResetAsParallel(const iflyauto::ParkingFusionSlot& fusion_slot,
-                         const bool is_redefine_slot_type,
-                         const int ego_side_to_slot) {
-  Update(fusion_slot, is_redefine_slot_type, ego_side_to_slot);
+                              const int ego_side_to_slot) {
+  Update(fusion_slot, true, ego_side_to_slot);
 }
 
 void ApaSlot::CorrectSlotPointOrder() {

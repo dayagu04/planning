@@ -15,7 +15,7 @@ SscMap::SscMap(const SscMap::Config& config) : config_(config) {
 }
 
 void SscMap::ResetSscMap(const FrenetEgoState& ego_frenet_state,
-                         const double& time) {
+                         const double time) {
   ClearGridMap();
   UpdateMapOrigin(ego_frenet_state, time);
 
@@ -23,7 +23,7 @@ void SscMap::ResetSscMap(const FrenetEgoState& ego_frenet_state,
 }
 
 void SscMap::UpdateMapOrigin(const FrenetEgoState& ego_state,
-                             const double& time) {
+                             const double time) {
   std::array<double, 3> map_origin;
   // set s
   map_origin[0] = ego_state.s() - config_.s_back_len;

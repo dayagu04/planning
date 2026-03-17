@@ -37,7 +37,7 @@ from lib.load_local_view import *
 # load bag info
 car_xb, car_yb = load_car_params_patch()
 coord_tf = coord_transformer()
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250612/20250612-15-38-05/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-12-15-38-05_no_camera.bag.1752649361.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_88446/trigger/20251129/20251129-13-39-07/data_collection_BESTUNE_E541_88446_EVENT_KEY_2025-11-29-13-39-07_no_camera.bag"
 frame_dt = 0.1
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

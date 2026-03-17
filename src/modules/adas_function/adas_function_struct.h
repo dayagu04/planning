@@ -92,6 +92,7 @@ struct Parameters {
   double tsr_speed_limit_offset = 1.0;
   double tsr_out_flag_need_last_time = 1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
   double tsr_warning_max_duration = 5.0;  // 声音报警最大时长，单位：s
+  bool sd_map_speed_sw=false;
   double lane_boundary_vaild_length_set = 15.0;
   double sideway_exist_gap_thrd = 0.5;
   double lane_line_width = 0.15;
@@ -128,6 +129,7 @@ struct Parameters {
   uint32 elk_left_kickdown_code_maskcode = 0;
   uint32 elk_right_suppression_code_maskcode = 0;
   uint32 elk_right_kickdown_code_maskcode = 0;
+  uint32 adas_fault_sw_code = 1;
   // 打断纠偏的横向速度持续时间，单位：S
   double ldp_kickdown_lat_v_dur = 3.0;
   // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
@@ -246,6 +248,7 @@ struct StateInfo {
 
   double vehicle_speed = 0.0;          // 本车实际车速 单位:m/s
   double display_vehicle_speed = 0.0;  // 本车实际车速 单位:m/s
+  uint8 vehicle_speed_display_kph = 0; // 自车仪表车速 单位:kph
   double yaw_rate = 0.0;               // 本车横摆角速度 单位:rad/s
   double yaw_rate_observer = 0.0;      // 本车横摆角速度 单位:rad/s
   double yaw_rate_loc = 0.0;

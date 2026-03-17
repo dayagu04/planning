@@ -129,7 +129,7 @@
 //   // TODO(clren)
 // }
 
-// bool LateralOffsetCalculator::update_basic_path(const int &status) {
+// bool LateralOffsetCalculator::update_basic_path(const int status) {
 //   const auto &lane_change_decider_output =
 //       session_->planning_context().lane_change_decider_output();
 //   const auto state = lane_change_decider_output.curr_state;
@@ -3351,7 +3351,7 @@
 
 // double LateralOffsetCalculator::calc_lane_width_by_dist(
 //     const std::vector<double> &left_poly, const std::vector<double>
-//     &right_poly, const double &dist_x) {
+//     &right_poly, const double dist_x) {
 //   std::vector<double> left_poly_yx, r_poly_yx;
 //   left_poly_yx.resize(left_poly.size());
 //   r_poly_yx.resize(right_poly.size());

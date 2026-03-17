@@ -93,8 +93,7 @@ void StartStopDecider::UpdateInput() {
 
   // ego state info
   planning_init_state_vel_ = environmental_model.get_ego_state_manager()
-                                 ->planning_init_point()
-                                 .lon_init_state.v();
+                                 ->ego_v();
   const auto& cur_start_stop_result =
       session_->planning_context().start_stop_result();
   ego_start_stop_info_.CopyFrom(cur_start_stop_result);

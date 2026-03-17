@@ -107,7 +107,7 @@ void ProcessLaneMapMergePoint(
  void CaculateDistanceToTollStation(
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
  bool IsLaneSuccessorInPlannedRoute(const iflymapdata::sdpro::Lane* lane_info);
- bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info);
+ bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info) const;
  const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
  void Erase1Split2FeasibleLane(TopoLinkGraph& feasible_lane_graph);
@@ -147,9 +147,15 @@ void ProcessLaneMapMergePoint(
   std::pair<FPPoint, FPPoint> CalculateSplitExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* split_link, const SplitDirection& split_dir);
   std::pair<FPPoint, FPPoint> CalculateMergeExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* merge_link, const SplitDirection& merge_dir);
   std::tuple<size_t, size_t> CountAccAndEntryLanes(const iflymapdata::sdpro::LinkInfo_Link* link) const;
-  void CalculateFrontMergePointInfo();
+  void CalculateFrontMergePointInfo(double search_dis);
   double CalculateDisToLastLinkSplitPoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
   double CalculateDisToLastLinkMergePoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
+  bool IsSucMergeLink(const iflymapdata::sdpro::LinkInfo_Link* link_info) const;
+  bool CalculateSplitLinkExitLane(
+      const iflymapdata::sdpro::LinkInfo_Link* split_link,
+      const iflymapdata::sdpro::LinkInfo_Link* out_link,
+      std::vector<iflymapdata::sdpro::Lane>& exit_lane_vec) const;
+  bool IsNeedFilterSplit(const iflymapdata::sdpro::Lane* lane) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
@@ -166,7 +172,7 @@ void ProcessLaneMapMergePoint(
   std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
       ramp_info_vec_;
   MLCDeciderSceneTypeInfo mlc_decider_scene_type_info_;
-  size_t count_continue_general_mlc_ = 0;
+  std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
 };
 }

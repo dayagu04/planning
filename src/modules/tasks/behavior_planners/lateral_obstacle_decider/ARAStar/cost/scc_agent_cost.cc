@@ -232,7 +232,8 @@ bool SccAgentCost::GetAreaCost(const SLBox2d& sl_box, const double ego_front_s,
   bool has_set_area_cost = false;
   double center_l = (sl_box.max_l + sl_box.min_l) / 2.0;
   double l_limit = sl_box.max_l - center_l + ego_half_width_ + kSoftBufferMore;
-  auto calculateCost = [l_limit](const double& s_distance, const double& l_distance) {
+  auto calculateCost = [l_limit](const double s_distance,
+                                 const double l_distance) {
     double area_cost = 0.0;
     bool has_set_area_cost = false;
     // 矩形代价

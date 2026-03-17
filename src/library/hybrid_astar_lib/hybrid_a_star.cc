@@ -13,6 +13,7 @@
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "log_glog.h"
+#include "modules/apa_function/apa_param_config.h"
 #include "node3d.h"
 #include "path_comparator.h"
 #include "rs_sampling.h"
@@ -1786,6 +1787,12 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   best_rs_node.ClearPath();
   best_rs_node.SetFCost(1000000.0f);
 
+  size_t explored_cur_node_num = 0;
+  const bool enable_yield_cpu = apa_param.GetParam().enable_yield_cpu;
+  const int yield_interval =
+      apa_param.GetParam().yield_interval_explored_node_num;
+  const int yield_interval_ms = apa_param.GetParam().yield_interval_ms;
+
   std::vector<AStarPathPoint> poly_path;
 
   while (!open_pq_.empty()) {
@@ -1797,6 +1804,14 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
       ILOG_INFO << "pq is null node";
       continue;
     }
+
+    explored_cur_node_num++;
+
+#ifndef X86
+    if (enable_yield_cpu && explored_cur_node_num % yield_interval == 0) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(yield_interval_ms));
+    }
+#endif
 
     current_node->SetVisitedType(AstarNodeVisitedType::IN_CLOSE);
 

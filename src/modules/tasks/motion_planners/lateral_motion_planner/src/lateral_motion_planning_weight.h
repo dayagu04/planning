@@ -202,6 +202,9 @@ class LateralMotionPlanningWeight {
   void SetLateralMotionWeightForNSA(
       planning::common::LateralPlanningInput &planning_input);
 
+  void SetContinuityWeightByLastPath(size_t valid_continuity_idx,
+      planning::common::LateralPlanningInput &planning_input);
+
   void SetInitDisToRef(const double init_dis_to_ref) {
     init_dis_to_ref_ = init_dis_to_ref;
   }
@@ -318,6 +321,9 @@ class LateralMotionPlanningWeight {
       planning::common::LateralPlanningInput &planning_input);
 
   void MakeDynamicWeight(
+      planning::common::LateralPlanningInput &planning_input);
+
+  void MakeDynamicWeight_Rads(
       planning::common::LateralPlanningInput &planning_input);
 
   void MakeLateralOffsetAvoidDynamicWeight(

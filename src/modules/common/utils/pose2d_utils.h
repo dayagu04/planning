@@ -53,7 +53,7 @@ bool get_theta(const std::vector<Pose2D> &in_array,
                std::vector<Pose2D> &out_array);
 double sub_theta(double t1, double t2);
 double go2target(double in, double step, double target);
-// double go2target(const double &in, const double &step, const double &target,
+// double go2target(const double in, const double step, const double target,
 // double &preview_dis);
 
 // planning

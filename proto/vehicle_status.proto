@@ -123,6 +123,11 @@ message StandWaitRequest {
   optional bool has_stand_wait_request = 2;
 }
 
+message EfficientPassRequest {
+  optional uint64 timestamp_us = 1;
+  optional bool has_efficient_pass_request = 2;
+}
+
 message DoorStatusData {
   optional uint64 timestamp_us = 1;
   repeated DoorType opened_doors = 2;
@@ -350,4 +355,5 @@ message VehicleStatus {
   optional TimeHeadwayLevel time_headway_level = 20;
   optional TimeHeadwayScaleUp time_headway_scale_up_request = 21;
   optional StandWaitRequest stand_wait_request = 22;
+  optional EfficientPassRequest efficient_pass_request = 23;
 }

@@ -9,14 +9,10 @@ namespace adas_function {
 namespace ldp_core {
 
 struct LdpParameters {
-  double enable_vehspd_display_min =
-      65.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
-  double enable_vehspd_display_max =
-      150.0 / 3.6;  // 激活的最大仪表车速，单位：m/s
-  double disable_vehspd_display_min =
-      60.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
-  double disable_vehspd_display_max =
-      155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
+  uint8 enable_vehspd_display_min = 65;  // 激活的最小仪表车速，单位：kph
+  uint8 enable_vehspd_display_max = 155;  // 激活的最大仪表车速，单位：kph
+  uint8 disable_vehspd_display_min = 60;  // 退出的最小仪表车速，单位：kph
+  uint8 disable_vehspd_display_max = 160;  // 退出的最大仪表车速，单位：kph
 
   double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
@@ -39,6 +35,7 @@ class LdpCore {
   bool UpdateLdpMainSwitch(void);
 
   uint32 ldp_enable_code_ = 255;
+  uint32 mask_enable_code_e541 = 255;
   // 车身YawRate满足取消抑制阈值持续时间 单位:s
   double yaw_rate_supp_recover_duration_ = 0.0;
   // 制动踏板表现满足取消抑制阈值持续时间 单位:s
@@ -65,6 +62,8 @@ class LdpCore {
 
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool left_suppress_repeat_warning_flag_ = false;
+  // 左侧不处于抑制重复报警状态的持续时长 单位:s
+  double left_not_suppress_repeat_warning_flag_duration_ = 0.0;
   // LDP纠偏冷却时间阈值 单位:s
   double ldp_right_coolingtime_duration_ = 0.0;
   double ldp_left_coolingtime_duration_ = 0.0;
@@ -90,6 +89,8 @@ class LdpCore {
 
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool right_suppress_repeat_warning_flag_ = false;
+  // 右侧不处于抑制重复报警状态的持续时长 单位:s
+  double right_not_suppress_repeat_warning_flag_duration_ = 0.0;
   uint32 ldp_right_suppression_code_ = 255;
   uint32 UpdateLdpRightSuppressionCode(void);
 

@@ -57,10 +57,13 @@ bool LaneChangeDecider::Execute() {
   }
 
   update_scenario();  // cruise or low speed or ...
+  const auto &state_machine = session_->environmental_model()
+                                  .get_local_view()
+                                  .function_state_machine_info;
 
   if (!active ||
       function_info.function_mode() == common::DrivingFunctionInfo::ACC ||
-      session_->environmental_model().is_mrc_mode()) {
+      state_machine.current_state == iflyauto::FunctionalState_MRC) {
     lc_sm_mgr_->ResetStateMachine();
   }
 

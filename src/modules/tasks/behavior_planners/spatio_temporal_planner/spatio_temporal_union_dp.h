@@ -44,23 +44,22 @@ class SpatioTemporalUnionDp {
  public:
   void Init();
 
-  bool Update(TrajectoryPoints &traj_points,
-              const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-              const planning::common::SpationTemporalUnionDpInput
-                  &spatio_temporal_union_plan_input,
-              const double &target_s, planning_math::KDPath &current_lane_coord,
-              const int &half_lateral_sample_nums,
-              const bool &last_enable_using_st_plan);
+  bool Update(TrajectoryPoints& traj_points,
+              const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+              const planning::common::SpationTemporalUnionDpInput&
+                  spatio_temporal_union_plan_input,
+              const double target_s, planning_math::KDPath& current_lane_coord,
+              const int half_lateral_sample_nums,
+              const bool last_enable_using_st_plan);
 
   planning::common::TrajectoryPoints &GetOutput() { return trajectory_points_; }
 
   void Reset();
 
  private:
-  bool InitCostTable(const planning::common::SpationTemporalUnionDpInput
-                         &spatio_temporal_union_plan_input,
-                     const int &half_lateral_sample_nums,
-                     const double &target_s);
+  bool InitCostTable(const planning::common::SpationTemporalUnionDpInput&
+                         spatio_temporal_union_plan_input,
+                     const int half_lateral_sample_nums, const double target_s);
 
   bool InitSpeedLimitLookUp(const planning::common::SpationTemporalUnionDpInput
                                 &spatio_temporal_union_plan_input);
@@ -70,69 +69,68 @@ class SpatioTemporalUnionDp {
                                 &spatio_temporal_union_plan_input);
 
   bool CalculateTotalCost(
-      const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-      const double &target_s,
-      const planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input);
+      const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+      const double target_s,
+      const planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input);
 
   // defined for cyber task
 
   void CalculateCostAt(
-      const SLTGraphMessage *msg,
-      const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-      const double &target_s,
-      const planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input);
+      const SLTGraphMessage* msg,
+      const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+      const double target_s,
+      const planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input);
 
-  double CalculateEdgeCost(const SLTGraphPoint &first,
-                           const SLTGraphPoint &second,
-                           const SLTGraphPoint &third,
-                           const SLTGraphPoint &forth,
-                           const double &speed_limit,
-                           const double &cruise_speed);
+  double CalculateEdgeCost(const SLTGraphPoint& first,
+                           const SLTGraphPoint& second,
+                           const SLTGraphPoint& third,
+                           const SLTGraphPoint& forth, const double speed_limit,
+                           const double cruise_speed);
   double CalculateEdgeCostForSecondCol(
-      const uint32_t row, const uint32_t col, const double &speed_limit,
-      const double &cruise_speed,
-      const planning::common::EgoInitInfo &init_state);
+      const uint32_t row, const uint32_t col, const double speed_limit,
+      const double cruise_speed,
+      const planning::common::EgoInitInfo& init_state);
   double CalculateEdgeCostForThirdCol(
       const uint32_t curr_row, const uint32_t curr_col, const uint32_t pre_row,
-      const uint32_t pre_col, const double &speed_limit,
-      const double &cruise_speed,
-      const planning::common::EgoInitInfo &init_state);
+      const uint32_t pre_col, const double speed_limit,
+      const double cruise_speed,
+      const planning::common::EgoInitInfo& init_state);
 
-  double CalculatePathCost(const SLTGraphPoint &start, const SLTGraphPoint &end,
-                           const CubicPolynomialCurve1d &lateral_curve,
-                           const double &acc,
-                           const planning::common::SpationTemporalUnionDpInput
-                               &spatio_temporal_union_plan_input);
+  double CalculatePathCost(const SLTGraphPoint& start, const SLTGraphPoint& end,
+                           const CubicPolynomialCurve1d& lateral_curve,
+                           const double acc,
+                           const planning::common::SpationTemporalUnionDpInput&
+                               spatio_temporal_union_plan_input);
 
   double CalculateStitchingCost(
-      const Point2D &current, const double &current_time,
-      const planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input);
+      const Point2D& current, const double current_time,
+      const planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input);
 
   double CalculateDynamicObstacleCost(
-      const SLTGraphPoint &pre_point, const SLTGraphPoint &cur_point,
-      const CubicPolynomialCurve1d &lateral_curve, const double &acc,
-      const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-      const planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input,
-      double *distance_to_point, int *agent_id);
+      const SLTGraphPoint& pre_point, const SLTGraphPoint& cur_point,
+      const CubicPolynomialCurve1d& lateral_curve, const double acc,
+      const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+      const planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input,
+      double* distance_to_point, int* agent_id);
 
   double GetLongitCostBetweenObsBoxes(
-      const double &longit_dis_to_ego,
-      const planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input);
+      const double longit_dis_to_ego,
+      const planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input);
 
   double GetLateralCostBetweenObsBoxes(
-      const double &lateral_dis_to_ego,
-      const planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input);
+      const double lateral_dis_to_ego,
+      const planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input);
 
   // get the row-range of next time step
-  void GetRowRange(const SLTGraphPoint &point, int *next_highest_row,
-                   int *next_lowest_row, const double &init_v,
-                   const double &v_cruise);
+  void GetRowRange(const SLTGraphPoint& point, int* next_highest_row,
+                   int* next_lowest_row, const double init_v,
+                   const double v_cruise);
 
   void GetColumnRange(const SLTGraphPoint &point, int *next_highest_l,
                       int *next_lowest_l);
@@ -144,17 +142,17 @@ class SpatioTemporalUnionDp {
       const SLTGraphPoint &cur_cost_point,
       const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs);
 
-  void GetVehicleBoxSLVertices(const planning_math::Vec2d &ego_point,
-                               const double &cos_theta, const double &sin_theta,
-                               std::array<planning_math::Vec2d, 8> &vertices);
+  void GetVehicleBoxSLVertices(const planning_math::Vec2d& ego_point,
+                               const double cos_theta, const double sin_theta,
+                               std::array<planning_math::Vec2d, 8>& vertices);
 
   double ComputeFirstDerivative(const std::array<double, 4> &lateral_curve_coef,
                                 const std::array<double, 4> &longit_curve_coef,
                                 const double param);
 
   double ComputeSecondDerivative(
-      const std::array<double, 4> &lateral_curve_coef, const double &acc,
-      const double &v0, const double &param);
+      const std::array<double, 4>& lateral_curve_coef, const double acc,
+      const double v0, const double param);
 
   void CaculateCurvatureLimitSpeed(
       double target_s, double &speed_limit,
@@ -178,10 +176,10 @@ class SpatioTemporalUnionDp {
 
   void PrecomputeInvSpeedLimit();
 
-  void FallbackFunction(const planning::common::SpationTemporalUnionDpInput
-                            &spatio_temporal_union_plan_input,
-                        TrajectoryPoints &traj_points,
-                        const bool &last_enable_using_st_plan);
+  void FallbackFunction(const planning::common::SpationTemporalUnionDpInput&
+                            spatio_temporal_union_plan_input,
+                        TrajectoryPoints& traj_points,
+                        const bool last_enable_using_st_plan);
 
   planning::common::TrajectoryPoints trajectory_points_;
   std::vector<double> speed_limit_by_index_;

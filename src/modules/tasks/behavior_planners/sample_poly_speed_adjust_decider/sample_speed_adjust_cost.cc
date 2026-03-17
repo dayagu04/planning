@@ -367,20 +367,21 @@ void LeadingVehSafeCost::GetCost(const double poly_end_s,
                                  const double leading_veh_pred_s,
                                  const double leading_veh_v) {
   cost_ = 0.0;
-  auto calculate_poly_dis_to_lead_cost = [](double dist, double safe_distance,
+  auto calculate_poly_dis_to_lead_cost = [this](double dist, double safe_distance,
                                             double weight) {
-    return (dist < 1.2 * safe_distance)
+    return (dist < leading_safe_distance_gain_ * safe_distance)
                ? (dist < safe_distance)
-                     ? weight * std::exp(4.0 * (safe_distance - dist) /
-                                         safe_distance)
-                     : weight * std::exp(10.0 * (safe_distance - dist) /
+                     ? weight * std::exp(leading_safe_overstep_gain_ * (safe_distance - dist) /
+                                         safe_distance + leading_safe_overstep_buffer_)
+                     : std::exp((safe_distance - dist) /
                                          safe_distance)
                : 0.0;
   };
-  double follow_distance =
-      poly_end_v * std::fmax(poly_end_v - leading_veh_v, 0.0) / (2.0 * 2.0);
-  double thw = 0.3 * poly_end_v;
-  double safe_distance = std::fmax(thw + follow_distance, 3.5);
+  double delta_v = poly_end_v - leading_veh_v;
+  double follow_distance = poly_end_v * delta_v / (2.0 * leading_safe_max_dec_);
+  double thw = leading_safe_delay_time_ * poly_end_v;
+  double min_follow_distance = 3.0;
+  double safe_distance = std::fmax(min_follow_distance + thw + follow_distance, min_follow_distance);
   cost_ = calculate_poly_dis_to_lead_cost(leading_veh_pred_s - poly_end_s,
                                           safe_distance, weight_);
 }
@@ -448,5 +449,28 @@ void LeadingVehFollowCost::GetCost(const double leading_veh_pred_s,
 void JerkLimitCost::GetCost(const double jerk_extrema) {
   cost_ =
       jerk_extrema > 1.5 ? weight_ * std::exp((jerk_extrema - 1.5) / 2.0) : 0.0;
+}
+
+void SafeDistanceCost::GetCost(const double distance_to_gap_front_obj,
+                               const double distance_to_gap_back_obj,
+                               const double limi_safe_distance_to_gap_front_obj,
+                               const double limi_safe_distance_to_gap_back_obj,
+                               const double max_safe_distance_to_gap_front_obj,
+                               const double max_safe_distance_to_gap_back_obj) {
+  auto front_obj_cost =
+      distance_to_gap_front_obj > max_safe_distance_to_gap_front_obj
+          ? 0.0
+          : std::exp((max_safe_distance_to_gap_front_obj -
+                      distance_to_gap_front_obj) /
+                     (max_safe_distance_to_gap_front_obj -
+                      limi_safe_distance_to_gap_front_obj));
+  auto back_obj_cost =
+      distance_to_gap_back_obj > max_safe_distance_to_gap_back_obj
+          ? 0.0
+          : std::exp(
+                (max_safe_distance_to_gap_back_obj - distance_to_gap_back_obj) /
+                (max_safe_distance_to_gap_back_obj -
+                 limi_safe_distance_to_gap_back_obj));
+  cost_ = weight_ * std::max(front_obj_cost, back_obj_cost);
 }
 }  // namespace planning

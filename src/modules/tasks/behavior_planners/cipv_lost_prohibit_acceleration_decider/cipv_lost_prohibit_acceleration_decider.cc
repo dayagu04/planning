@@ -56,7 +56,7 @@ bool CipvLostProhibitAccelerationDecider::Execute() {
   const auto &environmental_model = session_->environmental_model();
   const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto &v_ego = ego_state_mgr->ego_v();
-  const bool &dbw_status = environmental_model.GetVehicleDbwStatus();
+  const bool dbw_status = environmental_model.GetVehicleDbwStatus();
   const auto &lateral_obstacle = environmental_model.get_lateral_obstacle();
   const auto &lateral_behavior_planner_output =
       session_->planning_context().lateral_behavior_planner_output();

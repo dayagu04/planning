@@ -43,13 +43,13 @@ class PathTimeHeuristicOptimizer {
   DpStSpeedOptimizerConfig config_;
 
   bool Process(
-      TrajectoryPoints &traj_points,
-      const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-      const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-      const bool &last_enable_using_st_plan,
-      planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input,
-      bool &ego_in_intersection_state);
+      TrajectoryPoints& traj_points,
+      const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+      const std::vector<VirtualAgentSpatioTemporalInFo>& virtual_agents_info,
+      const bool last_enable_using_st_plan,
+      planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input,
+      bool& ego_in_intersection_state);
 
   bool GetStDpIsSuccess() const { return st_dp_is_sucess_; }
 
@@ -60,13 +60,13 @@ class PathTimeHeuristicOptimizer {
 
  private:
   bool SearchPathTimeGraph(
-      TrajectoryPoints &traj_points,
-      const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-      const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-      const bool &last_enable_using_st_plan,
-      planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input,
-      bool &ego_in_intersection_state);
+      TrajectoryPoints& traj_points,
+      const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+      const std::vector<VirtualAgentSpatioTemporalInFo>& virtual_agents_info,
+      const bool last_enable_using_st_plan,
+      planning::common::SpationTemporalUnionDpInput&
+          spatio_temporal_union_plan_input,
+      bool& ego_in_intersection_state);
 
   void FallbackFunction(TrajectoryPoints &traj_points);
 

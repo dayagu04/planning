@@ -240,8 +240,8 @@ bool AgentCost::GetAreaCost(
   }
 
   auto calculateCost = [&frenet_obstacle, &ellipse_major_axis,
-                        &ellipse_minor_axis](const double& s_distance,
-                                             const double& l_distance) {
+                        &ellipse_minor_axis](const double s_distance,
+                                             const double l_distance) {
     double area_cost = 0.0;
     bool has_set_area_cost = false;
     // 矩形代价 kRecRange = 6

@@ -617,7 +617,7 @@ class LoadRosbag:
     try:
       json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                          "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
-                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
+                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "fsm_state", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
@@ -631,7 +631,7 @@ class LoadRosbag:
                          'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
-                         'virtual_lane_relative_id_switch_flag', \
+                         'virtual_lane_relative_id_switch_flag', "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
                          'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', 'current_segment_passed_distance', \
                          'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', 'is_exist_interactive_select_split',\
                          'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'origin_relative_id_zero_nums', \
@@ -692,7 +692,7 @@ class LoadRosbag:
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
-                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_emergency_stop", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
+                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
                           "joint_target_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_cruise_speed", "is_confluence_area",
                           "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
                           "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
@@ -708,7 +708,8 @@ class LoadRosbag:
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
                           'UpdateObstacleInteractionInfoCostTime',
-                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state']
+                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
+                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp']
 
 
       json_value_list += [#new_ldw debug info:
@@ -731,7 +732,7 @@ class LoadRosbag:
                          "tsr_main_switch_","tsr_disable_code_","tsr_fault_code_","tsr_state_","tsr_speed_limit_",
                          "has_perception_speed_limit_","has_perception_end_of_speed_limit_","end_of_speed_limit_out_flag_","speed_limit_out_flag_","speed_limit_renew_flag_",
                          "current_map_speed_limit_", "current_map_speed_limit_valid_", "current_map_type_", "current_road_type_", "speed_limit_suppression_flag_",
-                         "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_",
+                         "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_","tsr_navi_flag_",
                          # ihc debug info
                          "ihc_function::ihc_high_beam_code", "ihc_function::ihc_fault_code", "ihc_function::ihc_state","ihc_function::ihc_request_status",
                          "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",

@@ -28,13 +28,13 @@ PathTimeHeuristicOptimizer::PathTimeHeuristicOptimizer(
 }
 
 bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
-    TrajectoryPoints &traj_points,
-    const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-    const bool &last_enable_using_st_plan,
-    planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input,
-    bool &ego_in_intersection_state) {
+    TrajectoryPoints& traj_points,
+    const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+    const std::vector<VirtualAgentSpatioTemporalInFo>& virtual_agents_info,
+    const bool last_enable_using_st_plan,
+    planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input,
+    bool& ego_in_intersection_state) {
   if (!slt_graph_.Search(traj_points, agent_trajs, virtual_agents_info,
                          last_enable_using_st_plan,
                          spatio_temporal_union_plan_input,
@@ -46,13 +46,13 @@ bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
 }
 
 bool PathTimeHeuristicOptimizer::Process(
-    TrajectoryPoints &traj_points,
-    const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-    const bool &last_enable_using_st_plan,
-    planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input,
-    bool &ego_in_intersection_state) {
+    TrajectoryPoints& traj_points,
+    const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
+    const std::vector<VirtualAgentSpatioTemporalInFo>& virtual_agents_info,
+    const bool last_enable_using_st_plan,
+    planning::common::SpationTemporalUnionDpInput&
+        spatio_temporal_union_plan_input,
+    bool& ego_in_intersection_state) {
   const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto &virtual_lane_mgr =

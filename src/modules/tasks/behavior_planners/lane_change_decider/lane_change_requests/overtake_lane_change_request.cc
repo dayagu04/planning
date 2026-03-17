@@ -101,6 +101,7 @@ constexpr double kDefaultTargetLaneAgentConsiderRange = 144.0;
 constexpr double kCouldOvertakeMaintainSpeedDiffThresholdPercentage = 0.75;
 constexpr double kCouldGenerateOvertakeSpeedDiffThresholdPercentage = 1.2;
 constexpr double kTargetLaneExistTruckSpeedDiffThresholdPercentage = 1.2;
+constexpr int kTruckConfirmFrames = 3;
 
 }  // namespace
 // class: OvertakeRequest
@@ -334,18 +335,106 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     return;
   }
 
+  const bool enable_overtake_cross_line_large_agent =
+      config_.enable_overtake_cross_line_large_agent;
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  const auto& current_agents = agent_manager->GetAllCurrentAgents();
+  const auto& lateral_obstacle_decision =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .lat_obstacle_decision;
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const int32_t cipv_id = cipv_info.cipv_id();
-  const auto& agent_manager =
-      session_->environmental_model().get_dynamic_world()->agent_manager();
-  const agent::Agent* agent = agent_manager->GetAgent(cipv_id);
+  double leading_relative_dis = cipv_info.relative_s();
+  // const auto& agent_manager =
+  //     session_->environmental_model().get_dynamic_world()->agent_manager();
+  // const agent::Agent* agent = agent_manager->GetAgent(cipv_id);
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
+  agent::Agent* agent = agent_manager->mutable_agent(cipv_id);
+  exist_cross_line_large_agent_ahead_ = false;
+  left_lane_exist_cross_line_truck_ = false;
+  right_lane_exist_cross_line_truck_ = false;
+  left_lane_exist_cross_line_truck_speed_ = 33.33;
+  right_lane_exist_cross_line_truck_speed_ = 33.33;
+  if (enable_overtake_cross_line_large_agent) {
+    // 1. 收集当前帧所有有效agent的ID（用于后续初始化和清理）
+    std::unordered_set<int32_t> current_frame_agent_ids;
+    current_frame_agent_ids.reserve(current_agents.size());
+    for (const auto& agt : current_agents) {
+      if (agt != nullptr) {
+        current_frame_agent_ids.insert(agt->agent_id());
+      }
+    }
+
+    // 2. 清理上一帧已消失的agent记录（避免哈希表无限膨胀）
+    std::vector<int32_t> agents_to_erase;
+    for (const auto & [ agent_id, count ] : truck_confirm_frame_count_map_) {
+      if (current_frame_agent_ids.find(agent_id) ==
+          current_frame_agent_ids.end()) {
+        agents_to_erase.push_back(agent_id);
+      }
+    }
+    for (int32_t id : agents_to_erase) {
+      truck_confirm_frame_count_map_.erase(id);
+    }
+
+    for (const auto& current_agent : current_agents) {
+      if (current_agent == nullptr) {
+        continue;
+      }
+
+      if (llane != nullptr) {
+        IsTargetLaneExistTruck(current_agent, llane, true,
+                               left_lane_exist_cross_line_truck_speed_);
+      }
+      if (rlane != nullptr) {
+        IsTargetLaneExistTruck(current_agent, rlane, false,
+                               right_lane_exist_cross_line_truck_speed_);
+      }
+
+      auto iter = lateral_obstacle_decision.find(current_agent->agent_id());
+      if (iter == lateral_obstacle_decision.end()) {
+        continue;
+      }
+      if (iter->second != LatObstacleDecisionType::FOLLOW) {
+        continue;
+      }
+      auto track_iter = tracks_map.find(current_agent->agent_id());
+      if (track_iter == tracks_map.end()) {
+        continue;
+      }
+      auto& frame_count =
+          truck_confirm_frame_count_map_[current_agent->agent_id()];
+      if (current_agent->is_truck()) {
+        frame_count += 1;
+        frame_count = std::min(frame_count, kTruckConfirmFrames);
+      } else {
+        frame_count -= 1;
+        frame_count = std::max(frame_count, 0);
+      }
+      if (frame_count < 2) {
+        continue;
+      }
+      if (track_iter->second->d_s_rel() <= leading_relative_dis &&
+          current_agent->agent_id() != cipv_id) {
+        agent = agent_manager->mutable_agent(current_agent->agent_id());
+        leading_relative_dis = track_iter->second->d_s_rel();
+        exist_cross_line_large_agent_ahead_ = true;
+        if (track_iter->second->frenet_l() > 1.5 && rlane && llane) {
+          enable_l_ = false;
+        } else if(track_iter->second->frenet_l() < -1.5 && rlane && llane) {
+          enable_r_ = false;
+        }
+      }
+    }
+  }
 
   // 无效的track_id暂时赋值为-1
   if ((agent != nullptr && agent->agent_id() == -1) || agent == nullptr ||
-      cipv_info.relative_s() > kDefaultLeadOneConsiderRange) {
+      leading_relative_dis > kDefaultLeadOneConsiderRange) {
     ILOG_DEBUG << "not exist stable leading vehicle";
     overtake_count_ = 0;
     leading_speed_filter_.Reset();
@@ -379,11 +468,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
 
   const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
-  const double long_diff =
-      cipv_info.relative_s() - ego_front_edge - agent->length() * 0.5;
-  const double need_overtake_distance = cipv_info.relative_s() +
-                                        agent->length() * 0.5 +
-                                        vehicle_param.rear_edge_to_rear_axle;
+  const double long_diff = leading_relative_dis;
+  const double need_overtake_distance = leading_relative_dis + agent->length();
 
   const double ego_speed = ego_state->ego_v();
   const double reference_speed = ego_state->ego_v_cruise();
@@ -436,7 +522,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   bool left_lane_is_on_navigation_route = true;
   if (feasible_lane_sequence.size() > 0) {
-    int current_lane_order_num = left_lane_nums_ + 1;
+    int current_lane_order_num = route_info_output.ego_seq;
     int target_lane_order_num = current_lane_order_num - 1;
     if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
                   target_lane_order_num) == feasible_lane_sequence.end()) {
@@ -446,7 +532,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   bool right_lane_is_on_navigation_route = true;
   if (feasible_lane_sequence.size() > 0) {
-    int current_lane_order_num = left_lane_nums_ + 1;
+    int current_lane_order_num = route_info_output.ego_seq;
     int target_lane_order_num = current_lane_order_num + 1;
     if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
                   target_lane_order_num) == feasible_lane_sequence.end()) {
@@ -502,13 +588,19 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
   };
 
-#ifdef X86
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
+  bool left_lane_exist_slow_cross_lane_truck =
+      left_lane_exist_cross_line_truck_speed_ <= agent->speed();
+  bool right_lane_exist_slow_cross_lane_truck =
+      right_lane_exist_cross_line_truck_speed_ <= agent->speed();
+
+  // #ifdef X86
   // const bool is_trigger_left = (is_left_overtake &&
   // is_left_lane_change_safe_);
   const bool is_trigger_left =
       is_left_overtake && left_lane_is_on_navigation_route &&
+      !left_lane_exist_slow_cross_lane_truck &&
       FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
                                          leading_vehicle_speed, llane, true,
                                          need_overtake_distance);
@@ -527,6 +619,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   //     (is_right_overtake && is_right_lane_change_safe_);
   const bool is_trigger_right =
       is_right_overtake && right_lane_is_on_navigation_route &&
+      !right_lane_exist_slow_cross_lane_truck &&
       FeasibleLaneDistanceEnoughJudgment(right_route_traffic_speed,
                                          leading_vehicle_speed, rlane, false,
                                          need_overtake_distance);
@@ -539,15 +632,27 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   if (counter_right >= 5) {
     trigger_right_overtake = true;
   }
-#else
-  const bool trigger_left_overtake = checkOvertakeTrigger(
-      current_time, is_left_overtake && left_lane_is_on_navigation_route,
-      &left_overtake_valid_timestamp_);
+  // #else
+  //   const bool is_trigger_left =
+  //       is_left_overtake && left_lane_is_on_navigation_route &&
+  //       !left_lane_exist_slow_cross_lane_truck &&
+  //       FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
+  //                                          leading_vehicle_speed, llane,
+  //                                          true, need_overtake_distance);
+  //   const bool trigger_left_overtake = checkOvertakeTrigger(
+  //       current_time, is_trigger_left,
+  //       &left_overtake_valid_timestamp_);
 
-  const bool trigger_right_overtake = checkOvertakeTrigger(
-      current_time, is_right_overtake && right_lane_is_on_navigation_route,
-      &right_overtake_valid_timestamp_);
-#endif
+  //   const bool is_trigger_right =
+  //       is_right_overtake && right_lane_is_on_navigation_route &&
+  //       !right_lane_exist_slow_cross_lane_truck &&
+  //       FeasibleLaneDistanceEnoughJudgment(right_route_traffic_speed,
+  //                                          leading_vehicle_speed, rlane,
+  //                                          false, need_overtake_distance);
+  //   const bool trigger_right_overtake = checkOvertakeTrigger(
+  //       current_time, is_trigger_right,
+  //       &right_overtake_valid_timestamp_);
+  // #endif
 
   JSON_DEBUG_VALUE("left_lane_is_on_navigation_route",
                    left_lane_is_on_navigation_route);
@@ -626,6 +731,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
              (lane_change_lane_mgr_->has_origin_lane() &&
               lane_change_lane_mgr_->is_ego_on(olane))) {
     if (request_type_ == LEFT_CHANGE && ConeSituationJudgement(llane) &&
+        !left_lane_exist_slow_cross_lane_truck &&
         FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
                                            leading_vehicle_speed, llane, true,
                                            need_overtake_distance)) {
@@ -642,6 +748,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         }
       }
     } else if (request_type_ == RIGHT_CHANGE && ConeSituationJudgement(rlane) &&
+               !right_lane_exist_slow_cross_lane_truck &&
                FeasibleLaneDistanceEnoughJudgment(
                    right_route_traffic_speed, leading_vehicle_speed, rlane,
                    false, need_overtake_distance)) {
@@ -769,8 +876,11 @@ void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
                                           const double reference_speed,
                                           const int max_count_thres) {
   int type_value = kOvertakeUpdateCountCarTypeThreshold;
-  if (leading_agent->type() == agent::AgentType::TRUCK) {
+  if (leading_agent->is_truck()) {
     type_value = kOvertakeUpdateCountTruckTypeThreshold;
+  }
+  if (exist_cross_line_large_agent_ahead_) {
+    type_value *= 2.0;
   }
   const int curr_count = round((reference_speed - leading_agent->speed()) *
                                kOvertakeUpdateCountSpeedRatioThreshold) +
@@ -852,9 +962,9 @@ void OvertakeRequest::updateRouteTrafficSpeed(
 bool OvertakeRequest::isCouldOvertakeByRoute(
     const std::shared_ptr<ReferencePath>& base_ref_line,
     const std::shared_ptr<VirtualLane>& target_lane,
-    const double& lane_traffic_speed, const agent::Agent* agent,
-    const bool& is_left, const bool& left_and_right_both_on_navigation_route,
-    const double& total_feasible_lane_remain_distance,
+    const double lane_traffic_speed, const agent::Agent* agent,
+    const bool is_left, const bool left_and_right_both_on_navigation_route,
+    const double total_feasible_lane_remain_distance,
     double& left_overtake_speed_threshold,
     double& right_overtake_speed_threshold) {
   std::shared_ptr<ReferencePath> target_ref_line =
@@ -881,9 +991,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   const double leading_vehicle_speed = agent->speed();
   double target_lane_exist_truck_speed_threshold_percentage = 1.0;
   double speed_threshold_percentage = 1.0;
-  if (agent->type() == agent::AgentType::TRUCK ||
-      agent->type() == agent::AgentType::BUS ||
-      agent->type() == agent::AgentType::TRAILER) {
+  if (agent->is_truck()) {
     speed_threshold_percentage = 0.8;
   }
   if (is_left && left_lane_exist_truck_) {
@@ -960,8 +1068,8 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
 bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
     const double lane_traffic_speed, const agent::Agent* agent,
     const bool is_left, const std::shared_ptr<VirtualLane>& target_lane,
-    const double& total_feasible_lane_remain_distance,
-    const bool& both_lane_is_on_navigation_route) {
+    const double total_feasible_lane_remain_distance,
+    const bool both_lane_is_on_navigation_route) {
   if (target_lane == nullptr) {
     return false;
   }
@@ -984,9 +1092,7 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
   const double leading_vehicle_speed = agent->speed();
   double speed_threshold_percentage = 1.0;
   double target_lane_exist_truck_maintain_percentage = 1.0;
-  if (agent->type() == agent::AgentType::TRUCK ||
-      agent->type() == agent::AgentType::BUS ||
-      agent->type() == agent::AgentType::TRAILER) {
+  if (agent->is_truck()) {
     speed_threshold_percentage = 0.8;
   }
   const auto& lane_change_style =
@@ -1057,6 +1163,7 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
   speed_threshold = speed_threshold * attenuation_coefficient;
   speed_threshold *= traget_lane_overtake_speed_threshold_weight;
   JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
+  speed_threshold_for_cancel_ = speed_threshold;
   const double speed_diff = lane_traffic_speed - leading_vehicle_speed;
   const bool is_overtake_maintain = (speed_diff > speed_threshold);
   return is_overtake_maintain;
@@ -1881,6 +1988,8 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         leading_vehicle_iter->second->frenet_velocity_l();
     double leading_vehicle_lateral_dis =
         leading_vehicle_iter->second->frenet_l();
+    double leading_vehicle_long_distance =
+        leading_vehicle_iter->second->d_s_rel();
 
     if (ego_front_vehicle_id_array.size() >= 1) {
       int ego_front_vehicle_id = ego_front_vehicle_id_array.at(0)->id();
@@ -1979,27 +2088,59 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
       }
     }
     if (request_type_ == LEFT_CHANGE) {
-      double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
-      if (ego_left_front_leading_vehivle_long_distance >=
-          kCancelOverTakeLnChgTargetLaneVehHighDst) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
-      } else if (ego_left_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                          leading_vehicle_iter->second->d_s_rel())) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // if (ego_left_front_leading_vehivle_long_distance >=
+      //     kCancelOverTakeLnChgTargetLaneVehHighDst) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
+      // } else if (ego_left_front_leading_vehivle_long_distance <=
+      //            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                     leading_vehicle_iter->second->d_s_rel())) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // } else {
+      //   speed_threshold = planning_math::lerp(
+      //       kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
+      //       std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                leading_vehicle_iter->second->d_s_rel()),
+      //       kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
+      //       kCancelOverTakeLnChgTargetLaneVehHighDst,
+      //       ego_left_front_leading_vehivle_long_distance);
+      // }
+      // if ((ego_left_front_leading_vehicle_min_speed <
+      //      overtake_lane_change_vehicle_speed + speed_threshold) &&
+      //     ego_left_front_leading_vehivle_long_distance <=
+      //         kCancelOverTakeLnChgTargetLaneVehDstThold) {
+      //   target_lane_exist_slow_front_veh_frame_num_ += 1;
+      // } else {
+      //   target_lane_exist_slow_front_veh_frame_num_ = 0;
+      // }
+      double speed_diff_upper_limit =
+          speed_threshold_for_cancel_;  //滞回的速度差作为插值上限
+      double speed_diff_thresh_during_parallel = planning_math::lerp(
+          speed_diff_upper_limit, 0.0, 0.0, 180.0,
+          leading_vehicle_long_distance);  //插值计算出目标车道前车与当前车道前车的并行时的速度差阈值要求
+      double distance_diff = ego_left_front_leading_vehivle_long_distance -
+                             leading_vehicle_long_distance;
+      double cancel_overtake_speed_diff_threshold = 0.0;
+      //分段插值
+      if (distance_diff <= 0) {
+        cancel_overtake_speed_diff_threshold = planning_math::lerp(
+            speed_diff_upper_limit, -leading_vehicle_long_distance,
+            speed_diff_thresh_during_parallel, 0.0,
+            distance_diff);  //自变量为目标车道前车与当前车道前车的距离差，得到分段插值第一段的取消超车速度差阈值
       } else {
-        speed_threshold = planning_math::lerp(
-            kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                     leading_vehicle_iter->second->d_s_rel()),
-            kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
-            kCancelOverTakeLnChgTargetLaneVehHighDst,
-            ego_left_front_leading_vehivle_long_distance);
+        // cancel_overtake_speed_diff_threshold = planning_math::lerp(
+        //   speed_diff_thresh_during_parallel,
+        //   0.0,
+        //   0.0,
+        //   50.0,
+        //   distance_diff);//自变量为目标车道前车与当前车道前车的距离差，得到分段插值第二段的取消超车速度差阈值
+        cancel_overtake_speed_diff_threshold =
+            -0.1 * distance_diff + speed_diff_thresh_during_parallel;
       }
-      if ((ego_left_front_leading_vehicle_min_speed <
-           overtake_lane_change_vehicle_speed + speed_threshold) &&
-          ego_left_front_leading_vehivle_long_distance <=
-              kCancelOverTakeLnChgTargetLaneVehDstThold) {
+
+      if (ego_left_front_leading_vehicle_min_speed -
+              overtake_lane_change_vehicle_speed <
+          cancel_overtake_speed_diff_threshold) {
         target_lane_exist_slow_front_veh_frame_num_ += 1;
       } else {
         target_lane_exist_slow_front_veh_frame_num_ = 0;
@@ -2043,27 +2184,60 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
       }
     }
     if (request_type_ == RIGHT_CHANGE) {
-      double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
-      if (ego_right_front_leading_vehivle_long_distance >=
-          kCancelOverTakeLnChgTargetLaneVehHighDst) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
-      } else if (ego_right_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                          leading_vehicle_iter->second->d_s_rel())) {
-        speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // double speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // if (ego_right_front_leading_vehivle_long_distance >=
+      //     kCancelOverTakeLnChgTargetLaneVehHighDst) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
+      // } else if (ego_right_front_leading_vehivle_long_distance <=
+      //            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                     leading_vehicle_iter->second->d_s_rel())) {
+      //   speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
+      // } else {
+      //   speed_threshold = planning_math::lerp(
+      //       kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
+      //       std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+      //                leading_vehicle_iter->second->d_s_rel()),
+      //       kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
+      //       kCancelOverTakeLnChgTargetLaneVehHighDst,
+      //       ego_right_front_leading_vehivle_long_distance);
+      // }
+      // if ((ego_right_front_leading_vehicle_min_speed <
+      //      overtake_lane_change_vehicle_speed + speed_threshold) &&
+      //     ego_right_front_leading_vehivle_long_distance <=
+      //         kCancelOverTakeLnChgTargetLaneVehDstThold) {
+      //   target_lane_exist_slow_front_veh_frame_num_ += 1;
+      // } else {
+      //   target_lane_exist_slow_front_veh_frame_num_ = 0;
+      // }
+
+      double speed_diff_upper_limit =
+          speed_threshold_for_cancel_;  //滞回的速度差作为插值上限
+      double speed_diff_thresh_during_parallel = planning_math::lerp(
+          speed_diff_upper_limit, 0.0, 0.0, 180.0,
+          leading_vehicle_long_distance);  //插值计算出目标车道前车与当前车道前车的并行时的速度差阈值要求
+      double distance_diff = ego_right_front_leading_vehivle_long_distance -
+                             leading_vehicle_long_distance;
+      double cancel_overtake_speed_diff_threshold = 0.0;
+      //分段插值
+      if (distance_diff <= 0) {
+        cancel_overtake_speed_diff_threshold = planning_math::lerp(
+            speed_diff_upper_limit, -leading_vehicle_long_distance,
+            speed_diff_thresh_during_parallel, 0.0,
+            distance_diff);  //自变量为目标车道前车与当前车道前车的距离差，得到分段插值第一段的取消超车速度差阈值
       } else {
-        speed_threshold = planning_math::lerp(
-            kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
-                     leading_vehicle_iter->second->d_s_rel()),
-            kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
-            kCancelOverTakeLnChgTargetLaneVehHighDst,
-            ego_right_front_leading_vehivle_long_distance);
+        // cancel_overtake_speed_diff_threshold = planning_math::lerp(
+        //   speed_diff_thresh_during_parallel,
+        //   0.0,
+        //   0.0,
+        //   50.0,
+        //   distance_diff);//自变量为目标车道前车与当前车道前车的距离差，得到分段插值第二段的取消超车速度差阈值
+        cancel_overtake_speed_diff_threshold =
+            -0.1 * distance_diff + speed_diff_thresh_during_parallel;
       }
-      if ((ego_right_front_leading_vehicle_min_speed <
-           overtake_lane_change_vehicle_speed + speed_threshold) &&
-          ego_right_front_leading_vehivle_long_distance <=
-              kCancelOverTakeLnChgTargetLaneVehDstThold) {
+
+      if (ego_right_front_leading_vehicle_min_speed -
+              overtake_lane_change_vehicle_speed <
+          cancel_overtake_speed_diff_threshold) {
         target_lane_exist_slow_front_veh_frame_num_ += 1;
       } else {
         target_lane_exist_slow_front_veh_frame_num_ = 0;
@@ -2075,10 +2249,10 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
                  << "LaneChangeProgress:" << lc_state
                  << "OverTake Vehicle LonSpd:"
                  << overtake_lane_change_vehicle_speed
-                 << "Left Lane Target Speed:"
-                 << ego_left_front_leading_vehicle_min_speed
+                 << "right Lane Target Speed:"
+                 << ego_right_front_leading_vehicle_min_speed
                  << "Ego Lat Distance:" << lateral_distance
-                 << "left lane exist slow front veh frame num:"
+                 << "right lane exist slow front veh frame num:"
                  << target_lane_exist_slow_front_veh_frame_num_;
       return true;
     }
@@ -2087,7 +2261,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
 }
 
 bool OvertakeRequest::FeasibleLaneDistanceEnoughJudgment(
-    const double& lane_traffic_speed, const double& leading_speed,
+    const double lane_traffic_speed, const double leading_speed,
     const std::shared_ptr<VirtualLane>& target_lane, bool is_left,
     const double need_s) {
   const auto& ego_state =
@@ -2116,7 +2290,7 @@ bool OvertakeRequest::FeasibleLaneDistanceEnoughJudgment(
 }
 
 double OvertakeRequest::CalculateAttenuationCoefficient(
-    const double& lc_duration) {
+    const double lc_duration) {
   // 1. 参数合法性校验
   if (lc_duration <= 0) {
     return kCouldOvertakeMaintainSpeedDiffThresholdPercentage;  // 非法输入返回初始值
@@ -2127,6 +2301,121 @@ double OvertakeRequest::CalculateAttenuationCoefficient(
   double coefficient = 0.35 + 0.4 * exp_term;
 
   return coefficient;
+}
+
+void OvertakeRequest::IsTargetLaneExistTruck(
+    const std::shared_ptr<agent::Agent>& agent,
+    const std::shared_ptr<VirtualLane>& target_lane, bool is_left,
+    double& target_lane_exist_truck_speed) {
+  if (!agent->is_truck()) {
+    return;
+  }
+
+  // 根据侵入距离，计算潜在的跟车目标
+  std::shared_ptr<ReferencePath> target_ref_line =
+      session_->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(target_lane->get_virtual_id(), false);
+  if (!target_ref_line) {
+    return;
+  }
+
+  const auto& target_lane_coord_ptr = target_ref_line->get_frenet_coord();
+  if (!target_lane_coord_ptr) {
+    return;
+  }
+  Point2D agent_point{agent->x(), agent->y()};
+  Point2D agent_frenet_point;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+
+  if (!target_lane_coord_ptr->XYToSL(agent_point, agent_frenet_point)) {
+    ILOG_DEBUG << "ego on ref lane failed!";
+    return;
+  }
+
+  // 与自车的纵向距离
+  double d_s_rel = agent_frenet_point.x -
+                   target_ref_line->get_frenet_ego_state().s() -
+                   0.5 * vehicle_param.length - 0.5 * agent->length();
+  if (d_s_rel < 0.0 || d_s_rel > 100.0) {
+    return;
+  }
+  if (is_left) {
+    if (agent_frenet_point.y >
+        0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+      return;
+    }
+  } else {
+    if (agent_frenet_point.y <
+        -0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+      return;
+    }
+  }
+
+  double intrusion_distance = -DBL_MAX;
+  // 计算侵入距离
+  Point2D box_point;
+  Point2D box_frenet_point;
+  for (const auto& corner : agent->box().GetAllCorners()) {
+    box_point.x = corner.x();
+    box_point.y = corner.y();
+    double point_intrusion_distance = 0.0;
+    if (target_lane_coord_ptr->XYToSL(box_point, box_frenet_point)) {
+      if (is_left) {
+        point_intrusion_distance =
+            0.5 * target_lane->width() - box_frenet_point.y;
+      } else {
+        point_intrusion_distance =
+            box_frenet_point.y - (-0.5 * target_lane->width());
+      }
+    }
+    if (point_intrusion_distance > intrusion_distance) {
+      intrusion_distance = point_intrusion_distance;
+    }
+  }
+
+  double follow_confidence = 0;
+  bool is_need_folow = false;
+  if (agent->is_static()) {
+    // 先过滤静态障碍物，因为静态障碍物的不确定性较低
+    follow_confidence = 0;
+    is_need_folow = false;
+    return;
+  }
+  double base_safe_intrusoin_for_dynamic = 0.4;
+  double base_safe_intrusoin_for_static = 0.7;
+  double extra_buffer_for_truck = -0.1;
+  double extra_buffer_for_vru = -0.1;
+  double lead_d_path_thr = base_safe_intrusoin_for_dynamic;
+
+  // 障碍物类型
+  if (agent->is_truck()) {
+    lead_d_path_thr += extra_buffer_for_truck;
+  } else if (agent->is_vru()) {
+    lead_d_path_thr += extra_buffer_for_vru;
+  }
+
+  // 车道宽的影响,同样倾入距离的情况下，窄车道更容易跟车
+  double lane_width_actor =
+      interp(target_lane->width(), lane_width_bp_, lane_width_factor_);
+  lead_d_path_thr = lead_d_path_thr * lane_width_actor;
+
+  if (intrusion_distance >= lead_d_path_thr) {
+    is_need_folow = true;
+    if (agent->speed() < target_lane_exist_truck_speed) {
+      target_lane_exist_truck_speed = agent->speed();
+    }
+  } else {
+    // 针对cut_out或者横穿的障碍物，即远离自车道的障碍物，v_lat > 0,
+    // 需要进一步优化 std::array<double, 5> x_cut_factor{0.2, 0.3, 0.4, 0.6,
+    // 0.8}; std::array<double, 5> f_cut_factor{0, 0, 2, 6, 11}; double
+    // cut_factor = interp(v_lat, x_cut_factor, f_cut_factor); follow_confidence
+    // = std::fmax(
+    //     follow_confidence - cut_factor * kPlanningCycleTime, 0.0);
+    is_need_folow = false;
+  }
+  return;
 }
 
 void OvertakeRequest::Reset() {
@@ -2140,6 +2429,9 @@ void OvertakeRequest::Reset() {
   right_traffic_speed_filter_.Reset();
   right_lane_nums_ = 0;
   left_lane_nums_ = 0;
+  truck_confirm_frame_count_ = 0;
+  truck_confirm_frame_count_map_.clear();
+  speed_threshold_for_cancel_ = 15;
 }
 
 }  // namespace planning

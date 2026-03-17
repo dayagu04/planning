@@ -125,8 +125,6 @@ const NodePath HybridAStarPathGenerator::GetNodePathByCarMotion(
                                            config_.node_path_dist_resolution)) +
                              1;
 
-  // ILOG_INFO << "path_point_num = " << path_point_num;
-
   path.point_size = 1;
   path.points[0] = pose;
 
@@ -182,8 +180,6 @@ const NodePath HybridAStarPathGenerator::GetNodePathByCarMotion(
     }
   }
 
-  // DebugNodePath(path, car_motion.gear);
-
   return path;
 }
 
@@ -204,6 +200,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansion(
   Node3d* current_node = request.current_node;
   CurveNode* curve_node = request.curve_node_to_goal;
   curve_node->Clear();
+
   if (request.type == AnalyticExpansionType::REEDS_SHEEP) {
     ret = AnalyticExpansionByRS(current_node, curve_node, request.rs_radius,
                                 request.need_rs_dense_point,
@@ -212,58 +209,63 @@ const bool HybridAStarPathGenerator::AnalyticExpansion(
     ret = AnalyticExpansionByLPL(current_node, curve_node, *request.lpl_input);
   }
 
-  const CurvePath& path = curve_node->GetCurvePath();
-  // request check
-  const AstarPathGear ref_gear = request_.inital_action_request.ref_gear;
-  const float ref_length = request_.inital_action_request.ref_length;
-  const float min_single_gear_length = request_.every_gear_length;
-  AstarPathGear cur_gear = current_node->GetGearType();
-  const bool gear_change = IsGearDifferent(path.gears[0], cur_gear);
-  float cur_length = current_node->GetSingleGearLength();
-  int index = 0;
-  int gear_change_num = path.gear_change_number;
-  if (current_node->GetPathType() == AstarPathType::START_NODE) {
-    cur_gear = path.gears[0];
-    cur_length = path.single_gear_lengths[0];
-    index = 1;
-  } else if (current_node->GetGearSwitchNum() == 0) {
-    if (gear_change) {
-      gear_change_num++;
-      cur_length = current_node->GetSingleGearLength();
-    } else {
-      cur_length =
-          current_node->GetSingleGearLength() + path.single_gear_lengths[0];
+  if (request_.search_mode == SearchMode::FORMAL) {
+    const CurvePath& path = curve_node->GetCurvePath();
+    // request check
+    const AstarPathGear ref_gear = request_.inital_action_request.ref_gear;
+    const float ref_length = request_.inital_action_request.ref_length;
+    const float min_single_gear_length = request_.every_gear_length;
+    AstarPathGear cur_gear = current_node->GetGearType();
+    const bool gear_change = IsGearDifferent(path.gears[0], cur_gear);
+    float cur_length = current_node->GetSingleGearLength();
+    int index = 0;
+    int gear_change_num = path.gear_change_number;
+    if (current_node->GetPathType() == AstarPathType::START_NODE) {
+      cur_gear = path.gears[0];
+      cur_length = path.single_gear_lengths[0];
       index = 1;
-    }
-  } else {
-    gear_change_num += current_node->GetGearSwitchNum();
-    cur_length = current_node->GearSwitchNode()->GetSingleGearLength();
-    if (gear_change) {
-      gear_change_num++;
+    } else if (current_node->GetGearSwitchNum() == 0) {
+      if (gear_change) {
+        gear_change_num++;
+        cur_length = current_node->GetSingleGearLength();
+      } else {
+        cur_length =
+            current_node->GetSingleGearLength() + path.single_gear_lengths[0];
+        index = 1;
+      }
     } else {
-      index = 1;
+      gear_change_num += current_node->GetGearSwitchNum();
+      cur_length = current_node->GearSwitchNode()->GetSingleGearLength();
+      if (gear_change) {
+        gear_change_num++;
+      } else {
+        index = 1;
+      }
     }
-  }
-  if (ret && IsGearDifferent(ref_gear, cur_gear)) {
-    ret = false;
-  }
-  if (ret && gear_change_num > request_.max_gear_shift_number) {
-    ret = false;
-  }
-  if (ret && cur_length < ref_length) {
-    ret = false;
-  }
-  for (int i = index; ret && i < path.gear_number; i++) {
-    if (path.single_gear_lengths[i] < min_single_gear_length) {
+    if (ret && (IsGearDifferent(ref_gear, cur_gear) ||
+                gear_change_num > request_.max_gear_shift_number ||
+                cur_length < ref_length)) {
       ret = false;
     }
-  }
+    for (int i = index; ret && i < path.gear_number; i++) {
+      if (path.single_gear_lengths[i] < min_single_gear_length) {
+        ret = false;
+      }
+    }
 
-  if (ret && request_.scenario_type ==
-                 ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-    if (IsGearDifferent(path.gears[path.segment_size - 1],
-                        AstarPathGear::REVERSE)) {
-      ret = false;
+    if (ret) {
+      if (request_.scenario_type ==
+              ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
+          IsGearDifferent(path.gears[path.segment_size - 1],
+                          AstarPathGear::REVERSE)) {
+        ret = false;
+      }
+      if (request_.scenario_type ==
+              ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN &&
+          IsGearDifferent(path.gears[path.segment_size - 1],
+                          AstarPathGear::DRIVE)) {
+        ret = false;
+      }
     }
   }
 
@@ -378,21 +380,60 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
     const LinkPoseLineInput& input
 #endif
 ) {
-
   if (request_.search_mode == SearchMode::FORMAL) {
+    const float x = current_node->GetX();
+    const float y = current_node->GetY();
+    const float abs_y = std::fabs(y);
+    const float phi = current_node->GetPhi() * common_math::kRad2DegF;
+    const float abs_phi = std::fabs(phi);
     if (request_.scenario_type ==
         ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-      if (std::fabs(current_node->GetPhi()) > M_PI_2f32) {
+      if (cul_de_sac_info_.is_cul_de_sac) {
+        if (cul_de_sac_info_.type == CulDeSacType::RIGHT &&
+            phi < cul_de_sac_info_.limit_phi) {
+          return false;
+        } else if (cul_de_sac_info_.type == CulDeSacType::LEFT &&
+                   phi > cul_de_sac_info_.limit_phi) {
+          return false;
+        }
+      }
+
+      if (abs_phi > 90.0f) {
         return false;
+      }
+      if (y * phi < 0.0f && abs_y > 5.0f) {
+        return false;
+      }
+      if (x < 3.0f && abs_phi > 68.0f && abs_y > 3.0f) {
+        return false;
+      }
+      const std::vector<float> y_t{1.368f, 2.368f, 3.368f};
+      const std::vector<float> phi_t{18.6f, 28.6f, 38.6f};
+      for (int i = 0; i < y_t.size(); i++) {
+        if (abs_y > y_t[i] && abs_phi < phi_t[i]) {
+          return false;
+        }
       }
     } else if (request_.scenario_type ==
                ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-      if (std::fabs(current_node->GetPhi()) < M_PI_2f32) {
+      if (abs_phi < 90.0f) {
         return false;
+      }
+      if (y * phi > 0.0f && abs_y > 5.0f) {
+        return false;
+      }
+      if (x < 5.0f && abs_phi < 132.0f && abs_y > 3.6f) {
+        return false;
+      }
+      const std::vector<float> y_t{1.368f, 2.368f, 3.368f};
+      const std::vector<float> phi_t{161.4f, 151.4f, 141.4f};
+      for (int i = 0; i < y_t.size(); i++) {
+        if (abs_y > y_t[i] && abs_phi > phi_t[i]) {
+          return false;
+        }
       }
     }
   }
-
   if (!CalcLPLPathToGoal(current_node, input)) {
     return false;
   }
@@ -414,6 +455,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
   path.ptss.resize(lpl_path_.seg_num);
   path.gear_change_number = lpl_path_.gear_change_num;
   path.kappa_change = lpl_path_.kappa_change;
+  path.last_path_kappa_change = 0.0f;
   path.gear_number = 1;
   path.single_gear_lengths[path.gear_number - 1] = lpl_path_.lengths[0];
   for (int i = 0; i < lpl_path_.seg_num; ++i) {
@@ -432,8 +474,11 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
     if (i > 0) {
       if (IsGearDifferent(path.gears[i], path.gears[i - 1])) {
         path.single_gear_lengths[(++path.gear_number) - 1] = path.dists[i];
+        path.last_path_kappa_change = 0.0f;
       } else {
         path.single_gear_lengths[path.gear_number - 1] += path.dists[i];
+        path.last_path_kappa_change +=
+            std::fabs(path.kappas[i] - path.kappas[i - 1]);
       }
     }
   }
@@ -594,6 +639,36 @@ const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
       }
     }
 
+    float last_path_kappa_change = path.last_path_kappa_change;
+    if (path.gear_change_number == 0) {
+      if (!curve_search_node_gear_change) {
+        last_path_kappa_change +=
+            std::fabs(path.kappas[0] - current_node->GetKappa());
+        auto pre_node = current_node;
+        while (pre_node->GetPreNode() != nullptr) {
+          auto pre_pre_node = pre_node->GetPreNode();
+          if (IsGearDifferent(pre_pre_node->GetGearType(),
+                              pre_node->GetGearType())) {
+            break;
+          }
+          if (pre_node->GetPhi() * pre_pre_node->GetPhi() < -1e-6f) {
+            last_path_kappa_change += max_kappa_change_;
+          }
+          last_path_kappa_change +=
+              std::fabs(pre_pre_node->GetKappa() - pre_node->GetKappa());
+          pre_node = pre_pre_node;
+        }
+      }
+
+      for (size_t i = 1; i < path.segment_size; ++i) {
+        if (path.ptss[i].back().GetTheta() *
+                path.ptss[i - 1].front().GetTheta() <
+            -1e-6f) {
+          last_path_kappa_change += max_kappa_change_;
+        }
+      }
+    }
+
     curve_node->SetCurGear(cur_gear);
     curve_node->SetCurKappa(cur_kappa);
     curve_node->SetCurGearLength(cur_gear_length);
@@ -601,6 +676,7 @@ const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
     curve_node->SetNextGearSwitchPose(next_gear_switch_pose);
     curve_node->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
     curve_node->SetThetaErr(std::fabs(path.ptss.back().back().GetTheta()));
+    curve_node->SetLastPathKappaChange(last_path_kappa_change);
   }
 
   return length_cost + gear_change_cost + kappa_change_cost;
@@ -619,10 +695,14 @@ const bool HybridAStarPathGenerator::CalcRSPathToGoal(
   const Pose2f& start_pose = current_node->GetPose();
   Pose2f end_pose = end_node_->GetPose();
 
-  if (request_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
-      request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
-    end_pose.x += 1.68;
+  if (request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+      end_pose.x += 1.68;
+    } else if (request_.scenario_type ==
+               ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      end_pose.x += 2.86;
+    }
   }
 
   bool is_connected_to_goal;
@@ -637,35 +717,47 @@ const bool HybridAStarPathGenerator::CalcRSPathToGoal(
 
   if (!is_connected_to_goal || rs_path_.total_length < 0.01 ||
       rs_path_.size < 1) {
-    ILOG_INFO << "REEDS_SHEEP path failed";
     return false;
   }
 
-  if (request_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
-      request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
-    RSPathSegment rs_seg;
-    rs_seg.gear = AstarPathGear::REVERSE;
-    rs_seg.steer = RSPathSteer::RS_STRAIGHT;
-    rs_seg.kappa = 0.0;
-    rs_seg.length = end_node_->GetPose().x - end_pose.x;
-    rs_seg.size = 1;
-    rs_seg.points[0].x = end_pose.x;
-    rs_seg.points[0].y = end_pose.y;
-    rs_seg.points[0].theta = end_pose.theta;
-    rs_seg.points[0].kappa = 0.0;
-    rs_seg.points[0].dir = AstarPathGear::REVERSE;
-
-    if (rs_path_.paths[rs_path_.size - 1].gear == AstarPathGear::DRIVE) {
-      rs_path_.gear_change_number += 1;
+  if (request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
+    if (request_.scenario_type ==
+            ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+        request_.scenario_type ==
+            ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      RSPathSegment rs_seg;
+      rs_seg.steer = RSPathSteer::RS_STRAIGHT;
+      rs_seg.kappa = 0.0;
+      rs_seg.size = 1;
+      rs_seg.points[0].x = end_pose.x;
+      rs_seg.points[0].y = end_pose.y;
+      rs_seg.points[0].theta = end_pose.theta;
+      rs_seg.points[0].kappa = 0.0;
+      if (request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+        rs_seg.gear = AstarPathGear::REVERSE;
+        rs_seg.length = end_node_->GetX() - end_pose.GetX();
+        rs_seg.points[0].dir = AstarPathGear::REVERSE;
+        if (rs_path_.paths[rs_path_.size - 1].gear == AstarPathGear::DRIVE) {
+          rs_path_.gear_change_number += 1;
+        }
+      } else if (request_.scenario_type ==
+                 ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+        rs_seg.gear = AstarPathGear::DRIVE;
+        rs_seg.length = end_pose.GetX() - end_node_->GetX();
+        rs_seg.points[0].dir = AstarPathGear::DRIVE;
+        if (rs_path_.paths[rs_path_.size - 1].gear == AstarPathGear::REVERSE) {
+          rs_path_.gear_change_number += 1;
+        }
+      }
+      rs_path_.total_length += std::fabs(rs_seg.length);
+      rs_path_.paths[rs_path_.size++] = rs_seg;
     }
-    rs_path_.total_length += rs_seg.length;
-    rs_path_.paths[rs_path_.size++] = rs_seg;
   }
 
-  if (request_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
-      request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+  if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC &&
+      request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     if (rs_path_.GetFirstGear() != AstarPathGear::DRIVE ||
         rs_path_.gear_change_number > 1) {
       return false;
@@ -728,74 +820,12 @@ const bool HybridAStarPathGenerator::CalcLPLPathToGoal(
 
 const float HybridAStarPathGenerator::GenerateHeuristicCostByRsPath(
     Node3d* next_node, NodeHeuristicCost* cost) {
-  RSPathRequestType rs_request = RSPathRequestType::NONE;
-  if (!CalcRSPathToGoal(next_node, false, false, rs_request, min_radius_,
-                        true)) {
+  if (!CalcRSPathToGoal(next_node, false, false, RSPathRequestType::NONE,
+                        min_radius_, true)) {
     return 100.0f;
   }
 
   return rs_path_.total_length * config_.traj_forward_penalty;
-
-  float length_cost = 0.0, gear_change_cost = 0.0, steer_cost = 0.0,
-        steer_change_cost = 0.0;
-  length_cost = rs_path_.total_length * config_.traj_forward_penalty;
-
-  // for (int i = 0; i < rs_path_.size - 1; i++) {
-  //   // gear cost
-  //   if (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) {
-  //     gear_change_cost += config_.gear_switch_penalty_heu;
-  //   }
-
-  //   // steer cost
-  //   if (rs_path_.paths[i].steer != RS_STRAIGHT) {
-  //     steer_cost += config_.traj_steer_penalty * max_front_wheel_angle_;
-  //   }
-
-  //   // steer change cost
-  //   if (rs_path_.paths[i].steer != rs_path_.paths[i + 1].steer) {
-  //     if (rs_path_.paths[i].steer == RS_STRAIGHT ||
-  //         rs_path_.paths[i + 1].steer == RS_STRAIGHT) {
-  //       steer_change_cost +=
-  //           config_.traj_steer_change_penalty * max_front_wheel_angle_;
-  //     } else {
-  //       steer_change_cost +=
-  //           config_.traj_steer_change_penalty * max_front_wheel_angle_ * 2;
-  //     }
-  //   }
-  // }
-
-  // // gear cost
-  // if (next_node->GetGearType() != rs_path_.paths[0].gear) {
-  //   gear_change_cost += config_.gear_switch_penalty_heu;
-  // }
-
-  // // steer cost, need modify
-  // if (next_node->GetSteer() > 0.0 && rs_path_.paths[0].steer != RS_LEFT) {
-  //   steer_change_cost +=
-  //       config_.traj_steer_change_penalty * max_front_wheel_angle_;
-  // } else if (next_node->GetSteer() < 0.0 &&
-  //            rs_path_.paths[0].steer != RS_RIGHT) {
-  //   steer_change_cost +=
-  //       config_.traj_steer_change_penalty * max_front_wheel_angle_;
-  // }
-
-  // cost->rs_path_dist = length_cost;
-  // cost->rs_path_gear = gear_change_cost;
-  // cost->rs_path_steer = steer_change_cost;
-
-  float collision_cost = 0.0;
-
-#if PLOT_RS_COST_PATH
-  if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
-    const Pose2D& rs_start_pose = next_node->GetPose();
-    rs_path_interface_.RSPathInterpolate(&rs_path_, &rs_start_pose,
-                                         min_radius_);
-    rs_path_h_cost_debug_.emplace_back(rs_path_);
-  }
-#endif
-
-  return length_cost + gear_change_cost + steer_cost + steer_change_cost +
-         collision_cost;
 }
 
 const float HybridAStarPathGenerator::GenerateHeuristicCostByLPLPath(
@@ -807,23 +837,11 @@ const float HybridAStarPathGenerator::GenerateHeuristicCostByLPLPath(
 #endif
     NodeHeuristicCost* cost) {
   if (!CalcLPLPathToGoal(next_node, input, true)) {
-    ILOG_INFO << "cal LPL path failed";
-    input.pose.PrintInfo();
-    // input.ref_line.PrintInfo();
     return 100.0f;
   }
 
   return std::min(float(lpl_path_.total_length), 36.8f) *
          config_.traj_forward_penalty;
-
-  float length_cost = 0.0f, gear_change_cost = 0.0f, steer_cost = 0.0f,
-        steer_change_cost = 0.0f;
-  length_cost = lpl_path_.total_length * config_.traj_forward_penalty;
-
-  float collision_cost = 0.0f;
-
-  return length_cost + gear_change_cost + steer_cost + steer_change_cost +
-         collision_cost;
 }
 
 void HybridAStarPathGenerator::InitNodePool() { node_pool_.Init(); }
@@ -1126,13 +1144,10 @@ void HybridAStarPathGenerator::DebugCurvePath(const CurvePath& path) {
             << "  segment size = " << path.segment_size
             << "  gear_change_number = " << path.gear_change_number;
   for (size_t i = 0; i < path.segment_size; i++) {
-    ILOG_INFO
-        << "segment " << i << "  dist = " << path.dists[i]
-        << "  gear = " << static_cast<int>(path.gears[i]) << "  steer = "
-        << static_cast<int>(path.steers[i])
-        // << "  front wheel angle = " << path.segment_front_wheel_angles[i]
-        << "  kappa = " << path.kappas[i]
-        << "  point size = " << path.point_sizes[i];
+    ILOG_INFO << "segment " << i << "  dist = " << path.dists[i]
+              << "  gear = " << static_cast<int>(path.gears[i])
+              << "  kappa = " << path.kappas[i]
+              << "  point size = " << path.point_sizes[i];
     const int jump_number =
         std::max(static_cast<int>(path.point_sizes[i] / 5), 1);
     for (size_t j = 0; j < path.point_sizes[i]; j += 1) {

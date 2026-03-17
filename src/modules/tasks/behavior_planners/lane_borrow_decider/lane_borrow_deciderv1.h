@@ -51,15 +51,15 @@ class LaneBorrowDecider : public Task {
   bool UpdateLaneBorrowDirection();
   bool CheckIfLaneBorrowBackOriginLaneToLaneBorrowDriving();
   bool IsSafeForLaneBorrow();
-  bool IsSafeForPath(const double& left_bounds_l, const double& right_bounds_l);
+  bool IsSafeForPath(const double left_bounds_l, const double right_bounds_l);
   bool IsSafeForTurn();
   bool ChecekIfLaneBorrowToLaneBorrowCrossing();
   bool CheckIfkLaneBorrowCrossingToNoBorrow();
   bool CheckIfLaneBorrowCrossingToBackDriving();
   bool CheckIfLaneBorrowBackOriginToLaneBorrowCrossing();
   bool CheckLaneBorrowCrossingCondition();
-  const Point2D CalTurningCenter(const Point2D& ego_pos, const double& theta,
-                                 const double& radius) const;
+  const Point2D CalTurningCenter(const Point2D& ego_pos, const double theta,
+                                 const double radius) const;
   Point2D CartesianRotation(const Point2D& Cartesian_point,
                             double heading_angle, double ego_x, double ego_y);
 

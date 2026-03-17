@@ -244,7 +244,9 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
 
         bool is_hold_to_cancel =
-            hold_state_frame_nums_ > 80 || (hold_state_dash_cnt >= 2);
+            hold_state_frame_nums_ > 80
+            || (hold_state_dash_cnt >= 2)
+            || lc_req_mgr_->request() == NO_CHANGE;
 
         bool is_hold_to_execution =
             CheckIfHoldToExecution(transition_info_.lane_change_direction,
@@ -708,7 +710,9 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
       transition_info_.lane_change_type == CONE_REQUEST) {
     lc_valid_thre = 1;
     is_dash_enough = true;  // 避让请求和锥桶请求不需要dash足够
-  } else if (transition_info_.lane_change_type == MERGE_REQUEST) {
+  } else if (transition_info_.lane_change_type == MERGE_REQUEST ||
+             transition_info_.lane_change_type ==
+                 DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
     lc_valid_thre = 1;
   }
   // can lc if more than continue 4 frame gap_insertable
@@ -1415,7 +1419,17 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
         lc_lane_mgr_->origin_lane_virtual_id(),
         lc_lane_mgr_->target_lane_virtual_id(),
         transition_info_.lane_change_direction);
+  lane_change_decider_output.ego_press_line_ratio = ego_press_line_ratio;
   JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 更新压线率
+  bool is_warning_collision_risk = 
+  transition_info_.lane_change_status == kLaneChangeHold || 
+  transition_info_.lane_change_status == kLaneChangeCancel||
+  (transition_info_.lane_change_status == kLaneChangeExecution && lc_back_cnt_ > 0);
+  if(is_warning_collision_risk) {
+    lane_change_decider_output.is_collision_risk = true;
+  } else {
+    lane_change_decider_output.is_collision_risk = false;
+  }
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const planning_data::DynamicAgentNode* const agent) {
@@ -1626,10 +1640,10 @@ void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   hold_state_dash_cnt = 0;
 }
 
-bool LaneChangeStateMachineManager::TimeOut(const bool& trigger,
+bool LaneChangeStateMachineManager::TimeOut(const bool trigger,
                                             bool* is_start_count,
                                             double* time_count,
-                                            const double& threshold) {
+                                            const double threshold) {
   if (trigger) {
     if (!(*is_start_count)) {
       *is_start_count = true;
@@ -2540,6 +2554,9 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     //   target_rear_node_id = target_lane_node->node_id();
     //   target_rear_s = agent_s;  // 选择最靠前的
     // }
+    if (target_lane_node->is_static_type() || target_lane_node->node_speed() <0.3 ) {
+      continue;
+    }
     double rear_risk_dis = target_lane_node->node_speed() * 0.5 + 2.0;
     double rear_gap = std::max(0.0, ego_sl_bd.s_start - agent_s_end);
     bool is_rear_risk = rear_gap < rear_risk_dis;
@@ -3380,7 +3397,13 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
   if (!current_lane_coord) {
     return false;
   }
-
+  //当前车道半宽度
+  double half_origin_lane = 1.75;
+  const auto origin_lane = session_->environmental_model().get_virtual_lane_manager()
+                          ->get_lane_with_virtual_id(lc_lane_mgr_->origin_lane_virtual_id());
+  if (origin_lane != nullptr) {
+    half_origin_lane = origin_lane->width() * 0.5;
+  }
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const double ego_need_dis = ego_state->ego_v() * kEgoReachBoundaryTime;
@@ -3396,18 +3419,20 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
     return false;  // 更换xytosl
   }
   Point2D frenet_point(s, l);
-  if (frenet_point.x - current_lane->get_frenet_ego_state().s() >
-      ego_need_dis) {
+  double ego_to_cone_distacne = frenet_point.x - current_lane->get_frenet_ego_state().s();
+  if (ego_to_cone_distacne > ego_need_dis || ego_to_cone_distacne < 0.0) {
     // 在变道所需的纵向距离之外，可以不用考虑，可以直接变道
     return true;
   } else {
     // TODO(fengwang31):暂时把traffic_cone的横向距离限制距离中心线在1m以外则认为安全
     // 后续根据自车的轨迹点是否与锥桶有overlap来判断是否安全
+    double approx_lat_offset = std::min(ego_to_cone_distacne / ego_need_dis, 1.0) * half_origin_lane;
+    //原方案假设 3V 纵向距离对应自车横向运动半个车道
     if (transition_info_.lane_change_direction == RIGHT_CHANGE &&
-        frenet_point.y > 1.0) {
+        frenet_point.y > 1.0 - approx_lat_offset) {
       return true;
     } else if (transition_info_.lane_change_direction == LEFT_CHANGE &&
-               frenet_point.y < -1.0) {
+               frenet_point.y < -1.0 + approx_lat_offset) {
       return true;
     }
   }
@@ -5907,12 +5932,16 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
 
   if (is_rightest_extend_lane &&
-      route_info_output.map_split_region_info_list.front().split_direction ==
-          SPLIT_RIGHT) {
+      route_info_output.map_split_region_info_list.front()
+          .split_direction == SPLIT_RIGHT &&
+      route_info_output.map_split_region_info_list.front()
+          .distance_to_split_point < 200.0) {
     return RAMP_ON_RIGHT;
   } else if (is_leftest_extend_lane &&
-             route_info_output.map_split_region_info_list.front().split_direction ==
-                 SPLIT_LEFT) {
+             route_info_output.map_split_region_info_list.front()
+                .split_direction == SPLIT_LEFT &&
+             route_info_output.map_split_region_info_list.front()
+                .distance_to_split_point < 200.0) {
     return RAMP_ON_LEFT;
   }
   return RAMP_NONE;
@@ -5936,5 +5965,66 @@ double LaneChangeStateMachineManager::ComputeInertialLatOffset(double v_y0, doub
   return
       (v_y0 * a_y0) / j_max +
       (a_y0 * a_y0 * a_y0) / (3.0 * j_max * j_max);
+}
+bool LaneChangeStateMachineManager::IsWarningCollisionRisk() {
+  const double ego_press_line_ratio =
+    lc_request_.CalculatePressLineRatioByTwoLanes(
+        lc_lane_mgr_->origin_lane_virtual_id(),
+        lc_lane_mgr_->target_lane_virtual_id(),
+        transition_info_.lane_change_direction);
+  const auto& ego_state_manager = session_->environmental_model().get_ego_state_manager();
+  double ego_v = ego_state_manager->ego_v();
+  double risk_obs_vel = lc_back_track_.v_rel;
+  double distance_to_risk_obs = lc_back_track_.d_rel;
+  const int risk_obs_id = lc_back_track_.track_id;
+  bool is_agent_risk = false;
+  // 13变2 的直接播报
+  if(!risk_side_agents_nodes_.empty()) {
+    for (const auto& side_obs : risk_side_agents_nodes_) {
+      if (side_obs == nullptr) {
+            continue;
+      }
+      if (side_obs->node_agent_id() == risk_obs_id) {
+        is_agent_risk = true;
+        break;
+      }
+    }
+  }
+  if(target_lane_front_node_ != nullptr) {
+    if(target_lane_front_node_->node_agent_id() == risk_obs_id) {
+      //危险性判断：自车无法舒适减速
+      double rel_distance = target_lane_front_node_->node_back_edge_to_ego_front_edge_distance();
+      double agent_vel = target_lane_front_node_->node_speed();
+      double ego_comfort_brake = 1.2;
+      double driver_reaction_time = 0.3;
+      double delta_v = std::max(0.0, ego_v - agent_vel);
+      //自车减速到前车速度需要多走的距离 + 自车反应时距
+      double ego_comfort_decel_distance = (delta_v * delta_v) / (2.0 * ego_comfort_brake);
+      ego_comfort_decel_distance = std::max(ego_comfort_decel_distance, 0.0);
+      if(rel_distance < ego_comfort_decel_distance +  ego_v * driver_reaction_time) {
+        is_agent_risk = true;
+      }
+    }
+  }
+  if(target_lane_rear_node_ != nullptr) {
+    //危险性判断: 后车距离过近或者无法舒适让行
+    if(target_lane_rear_node_->node_agent_id() == risk_obs_id) {
+      double rel_distance = target_lane_rear_node_->node_front_edge_to_ego_back_edge_distance();
+      double agent_vel = target_lane_rear_node_->node_speed();
+      double rear_comfort_decel = lc_safety_check_config_.rear_comfort_decel;
+      if (IsLargeAgent(target_lane_rear_node_)) {
+        rear_comfort_decel = 0.3;
+      }
+      double driver_reaction_time = 0.3;
+      double delta_v = std::max(0.0, agent_vel - ego_v);
+      //后车减速到自车速度需要多走的距离 + 后车反应时距
+      double rear_comfort_decel_distance = (delta_v * delta_v) / (2.0 * rear_comfort_decel);
+      rear_comfort_decel_distance = std::max(rear_comfort_decel_distance, 0.0);
+      if(rel_distance < rear_comfort_decel_distance +  agent_vel * driver_reaction_time) {
+        is_agent_risk = true;
+      }
+    }
+  }
+  return is_agent_risk;
 }
 }  // namespace planning

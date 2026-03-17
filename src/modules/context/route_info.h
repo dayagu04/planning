@@ -90,7 +90,8 @@ class RouteInfo {
 
   void UpdateTargetSlotInfo(const ad_common::math::Vec2d& center);
 
-  void UpdateTargetInfo(const double& dist_to_target_slot, const double& dist_to_target_dest);
+  void UpdateTargetInfo(const double dist_to_target_slot,
+                        const double dist_to_target_dest);
 
   void UpdateVisionInfo() const;
   const RouteInfoOutput& get_route_info_output() { return route_info_output_; }

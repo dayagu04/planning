@@ -20,7 +20,7 @@ Eigen::Quaterniond EulerZYX2Quat(Eigen::Vector3d &euler_zyx);
 Eigen::AngleAxisd EulerZYX2AxisAngle(Eigen::Vector3d &euler_zyx);
 Eigen::Matrix3d EulerZYX2Rotm(Eigen::Vector3d &euler_zyx);
 
-Eigen::Matrix2d Angle2Rotm2d(const double &angle);
+Eigen::Matrix2d Angle2Rotm2d(const double angle);
 
 Eigen::Vector2d Vector2dFrom3d(const Eigen::Vector3d v3d);
 double GetAngleFromTwoVec(Eigen::Vector2d a, Eigen::Vector2d b);

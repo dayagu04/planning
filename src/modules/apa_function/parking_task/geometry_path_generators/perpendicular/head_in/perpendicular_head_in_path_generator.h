@@ -135,9 +135,8 @@ class PerpendicularPathHeadingInPlanner : public PerpendicularPathGenerator {
       pnc::dubins_lib::DubinsLibrary::Input &input,
       const pnc::geometry_lib::PathPoint &target_pose);
 
-  const bool PreparePlanOnce(const double &x_offset,
-                             const double &heading_offset,
-                             const double &radius);
+  const bool PreparePlanOnce(const double x_offset, const double heading_offset,
+                             const double radius);
 
   const bool MonoPreparePlan(Eigen::Vector2d &tag_point);
   void CalMonoSafeCircle();
@@ -149,8 +148,8 @@ class PerpendicularPathHeadingInPlanner : public PerpendicularPathGenerator {
   // multi plan
   const bool MultiPlan();
   const bool CheckMultiPlanSuitable(
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const double &slot_occupied_ratio);
+      const pnc::geometry_lib::PathPoint& current_pose,
+      const double slot_occupied_ratio);
 
   const bool CalSinglePathInMulti(
       const pnc::geometry_lib::PathPoint &current_pose,
@@ -195,10 +194,10 @@ class PerpendicularPathHeadingInPlanner : public PerpendicularPathGenerator {
   // adjust plan
   const bool AdjustPlan();
   const bool CalSinglePathInAdjust(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &current_pose,
-      const uint8_t &current_gear, const double &steer_change_ratio,
-      const double &steer_change_radius, const size_t &i);
+      std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+      const pnc::geometry_lib::PathPoint& current_pose,
+      const uint8_t& current_gear, const double steer_change_ratio,
+      const double steer_change_radius, const size_t& i);
 
   const bool OneArcPlan(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,

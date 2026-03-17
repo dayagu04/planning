@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <memory>
 #include <set>
 #include <string>
@@ -48,7 +49,14 @@ namespace planning {
 namespace planner {
 namespace {
 static constexpr int kMRMStateDebounce = 5;
-}
+static constexpr int kPlanPoints = 26;
+static constexpr double kTimeStep = 0.2;
+static constexpr double kAlpha = 0.4;
+static constexpr int kMinHistoryFrameCount = 3;
+static constexpr double kFrameIntervalS = 0.1;
+static constexpr double kMaxDelayS = 0.3;
+static constexpr double kLowSpeedThreshold = 2.78;
+}  // namespace
 
 EnvironmentalModelManager::EnvironmentalModelManager() {
   ILOG_DEBUG << "EnvironmentalModelManager created";
@@ -317,6 +325,8 @@ bool EnvironmentalModelManager::Run() {
                   (fsm_state <= iflyauto::FunctionalState_NRA_ERROR);
   static bool is_mrc_mode_hold = false;
   static int mrm_state_hold_cnt = kMRMStateDebounce;
+  bool mrc_mode_from_state_machine = fsm_state == iflyauto::FunctionalState_MRC;
+
   if (fsm_state == iflyauto::FunctionalState_MRC) {
     is_mrc_mode_hold = true;
     mrm_state_hold_cnt = 1;
@@ -333,7 +343,7 @@ bool EnvironmentalModelManager::Run() {
   }
   bool mrc_mode = is_mrc_mode_hold;
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise ||
-                    rads_mode || nsa_mode || mrc_mode;
+                    rads_mode || nsa_mode || mrc_mode_from_state_machine;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
   JSON_DEBUG_VALUE("fsm_state", static_cast<int>(fsm_state))
@@ -447,7 +457,7 @@ bool EnvironmentalModelManager::Run() {
     time_end = IflyTime::Now_ms();
     ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
-    if(parking_slot_manager_ptr_->IsExistTargetSlot()) {
+    if (parking_slot_manager_ptr_->IsExistTargetSlot()) {
       const auto& target_slot_center =
           parking_slot_manager_ptr_->GetTargetSlotCenter();
       route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(
@@ -556,15 +566,22 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
     auto timestamp = local_view.localization.meta.timestamp;
-    if (!session_->is_hpp_scene() && !session_->is_rads_scene() && !session_->is_nsa_scene()) {
+    double fusion_timestamp_us =
+        local_view.fusion_objects_info.msg_header.stamp;
+    double planning_timestamp_us = current_time * 1.0e3;
+    double fusion_delay_time =
+        std::abs(planning_timestamp_us - fusion_timestamp_us) / 1.0e6;
+
+    if (!session_->is_hpp_scene() && !session_->is_rads_scene() &&
+        !session_->is_nsa_scene()) {
       truncate_prediction_info(local_view.prediction_result,
                                local_view.fusion_objects_info, timestamp,
-                               prediction_obj_id_set);
+                               prediction_obj_id_set, fusion_delay_time);
     } else if (session_->is_hpp_scene() &&
                ego_config_.enable_parking_prediction) {
       truncate_prediction_info(local_view.parking_prediction_result,
                                local_view.fusion_objects_info, timestamp,
-                               prediction_obj_id_set);
+                               prediction_obj_id_set, fusion_delay_time);
     } else {
       // hack:hpp 、rads 、nsa 暂时只用融合障碍物
       for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
@@ -693,6 +710,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
           function_state_machine_info.pilot_req.has_obstacle_ahead);
   vehicle_status.mutable_stand_wait_request()->set_has_stand_wait_request(
       function_state_machine_info.pilot_req.stand_wait);
+  vehicle_status.mutable_efficient_pass_request()->set_has_efficient_pass_request(
+        function_state_machine_info.pilot_req.is_efficient_pass);
 
   if (vehicle_service_output_info.yaw_rate_available) {
     vehicle_status.mutable_angular_velocity()->set_available(true);
@@ -841,8 +860,10 @@ static inline float32 y_turn(float32 inputx, float32 inputy, float32 theta) {
 void EnvironmentalModelManager::truncate_prediction_info(
     const iflyauto::PredictionResult& prediction_result,
     const iflyauto::FusionObjectsInfo& fusion_objects_result,
-    double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set) {
+    double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set,
+    double fusion_delay_time) {
   assert(session_ != nullptr);
+  current_prediction_ids_.clear();
   double current_time =
       session_->planning_context().planning_result().timestamp;
   const auto& ego_state =
@@ -874,27 +895,18 @@ void EnvironmentalModelManager::truncate_prediction_info(
     double fusion_vel = std::hypot(fusion_obj.common_info.velocity.x,
                                    fusion_obj.common_info.velocity.y);
 
-    double fusion_acc = 0.0;
-    constexpr double kMinVelocityThreshold = 0.5;  // 1.8 km/h
-    if (fusion_vel > kMinVelocityThreshold) {
-      double velocity_heading = std::atan2(fusion_obj.common_info.velocity.y,
-                                           fusion_obj.common_info.velocity.x);
-      Eigen::Vector2f velocity_heading_vec(cos(velocity_heading),
-                                           sin(velocity_heading));
-      fusion_acc = fusion_obj_acc_vec.dot(velocity_heading_vec);
-    } else {
-      Eigen::Vector2f obj_heading_vec(cos(obj_yaw), sin(obj_yaw));
-      fusion_acc = fusion_obj_acc_vec.dot(obj_heading_vec);
-    }
-
     double fusion_theta = 0.0;
-    bool is_low_speed_object = fusion_vel < 2.78 ? true : false;
+    bool is_low_speed_object = fusion_vel < kLowSpeedThreshold ? true : false;
     if (is_low_speed_object) {
       fusion_theta = fusion_obj.common_info.heading_angle;
     } else {
       fusion_theta = std::atan2(fusion_obj.common_info.velocity.y,
                                 fusion_obj.common_info.velocity.x);
     }
+
+    Eigen::Vector2f obs_heading_vec(cos(fusion_theta), sin(fusion_theta));
+    double fusion_acc = fusion_obj_acc_vec.dot(obs_heading_vec);
+
     int32_t obj_fusion_source = fusion_obj.additional_info.fusion_source;
     if (obj_fusion_source & OBSTACLE_SOURCE_CAMERA) {
       fusion_objects_acc_map.insert(
@@ -937,6 +949,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.fusion_source =
         prediction_object.fusion_obstacle.additional_info.fusion_source;
     // todo:后面接口变化时，取trajectory的时间戳
+    cur_predicion_obj.fusion_delay_time = fusion_delay_time;
     cur_predicion_obj.timestamp_us = prediction_result.msg_header.stamp;
     double prediction_relative_time =
         clip(prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3 -
@@ -956,12 +969,21 @@ void EnvironmentalModelManager::truncate_prediction_info(
 #if defined(X86) && !defined(X86_SIMULATION)
     cur_predicion_obj.delay_time =
         SimulationContext::Instance()->prediction_relative_time();
+    cur_predicion_obj.fusion_delay_time =
+        SimulationContext::Instance()->fusion_relative_time();
 #endif
 
     auto& debug_info_manager = DebugInfoManager::GetInstance();
     auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+    SimulationContext::Instance()->set_prediction_relative_time(
+        cur_predicion_obj.delay_time);
+    SimulationContext::Instance()->set_fusion_relative_time(
+        cur_predicion_obj.fusion_delay_time);
+
     planning_debug_data->mutable_simulation_core_param()
         ->set_prediction_relative_time(cur_predicion_obj.delay_time);
+    planning_debug_data->mutable_simulation_core_param()
+        ->set_fusion_relative_time(cur_predicion_obj.fusion_delay_time);
 
     if (prediction_object.obstacle_intent.type ==
         iflyauto::OBSTACLE_INTENT_COMMON) {
@@ -980,130 +1002,102 @@ void EnvironmentalModelManager::truncate_prediction_info(
         prediction_object.fusion_obstacle.common_info.shape.length;
     cur_predicion_obj.width =
         prediction_object.fusion_obstacle.common_info.shape.width;
-    cur_predicion_obj.speed =
-        std::hypot(prediction_object.fusion_obstacle.common_info.velocity.x,
-                   prediction_object.fusion_obstacle.common_info.velocity.y);
+    const double vel_x =
+        prediction_object.fusion_obstacle.common_info.velocity.x;
+    const double vel_y =
+        prediction_object.fusion_obstacle.common_info.velocity.y;
+    cur_predicion_obj.speed = std::hypot(vel_x, vel_y);
+    auto iter_vel = fusion_objects_vel_map.find(cur_predicion_obj.id);
+    auto iter_theta = fusion_objects_theta_map.find(cur_predicion_obj.id);
+    auto iter_acc = fusion_objects_acc_map.find(cur_predicion_obj.id);
 
-    auto iter = fusion_objects_vel_map.find(cur_predicion_obj.id);
-    if (iter != fusion_objects_vel_map.end()) {
-      cur_predicion_obj.speed_fusion = iter->second;
-    } else {
-      cur_predicion_obj.speed_fusion =
-          std::hypot(prediction_object.fusion_obstacle.common_info.velocity.x,
-                     prediction_object.fusion_obstacle.common_info.velocity.y);
-    }
+    cur_predicion_obj.speed_fusion = (iter_vel != fusion_objects_vel_map.end())
+                                         ? iter_vel->second
+                                         : cur_predicion_obj.speed;
 
     cur_predicion_obj.yaw =
         prediction_object.fusion_obstacle.common_info.heading_angle;
+    const double ego_heading = ego_state->heading_angle();
     if ((int)cur_predicion_obj.yaw == 255) {
-      // set object's yaw with ego heading
-      cur_predicion_obj.yaw = ego_state->heading_angle();
+      cur_predicion_obj.yaw = ego_heading;
     }
-    // For no prediction schemes, use heading angle when obstacles are slow
-    bool object_is_slow = false;
-    // The agent is slow when it's speed < 10km/h (person's speed)
-    object_is_slow = cur_predicion_obj.speed < 2.78 ? true : false;
+    const bool object_is_slow = cur_predicion_obj.speed < kLowSpeedThreshold;
     if (object_is_slow) {
-      cur_predicion_obj.relative_theta =
-          prediction_object.fusion_obstacle.common_info.heading_angle -
-          ego_state->heading_angle();
       cur_predicion_obj.theta =
           prediction_object.fusion_obstacle.common_info.heading_angle;
+      cur_predicion_obj.relative_theta = cur_predicion_obj.theta - ego_heading;
     } else {
-      cur_predicion_obj.theta =
-          std::atan2(prediction_object.fusion_obstacle.common_info.velocity.y,
-                     prediction_object.fusion_obstacle.common_info.velocity.x);
-      cur_predicion_obj.relative_theta =
-          cur_predicion_obj.theta - ego_state->heading_angle();
+      cur_predicion_obj.theta = std::atan2(vel_y, vel_x);
+      cur_predicion_obj.relative_theta = cur_predicion_obj.theta - ego_heading;
     }
+
     cur_predicion_obj.relative_theta =
         std::fmod(cur_predicion_obj.relative_theta, 2 * M_PI);
     if (cur_predicion_obj.relative_theta > M_PI) {
       cur_predicion_obj.relative_theta -= 2 * M_PI;
     }
-
-    auto iter2 = fusion_objects_theta_map.find(cur_predicion_obj.id);
-    if (iter2 != fusion_objects_acc_map.end()) {
-      cur_predicion_obj.theta_fusion = iter2->second;
-    } else {
-      cur_predicion_obj.theta_fusion = cur_predicion_obj.theta;
-    }
-
     if ((int)cur_predicion_obj.relative_theta == 255) {
       cur_predicion_obj.relative_theta = 0;
     }
 
-    auto iter1 = fusion_objects_acc_map.find(cur_predicion_obj.id);
-    if (iter1 != fusion_objects_acc_map.end()) {
-      cur_predicion_obj.acc_fusion = iter1->second;
-    } else {
-      cur_predicion_obj.acc_fusion = std::hypot(
-          prediction_object.fusion_obstacle.common_info.acceleration.x,
-          prediction_object.fusion_obstacle.common_info.acceleration.y);
-    }
-    cur_predicion_obj.acc = std::hypot(
-        prediction_object.fusion_obstacle.common_info.acceleration.x,
-        prediction_object.fusion_obstacle.common_info.acceleration.y);
+    cur_predicion_obj.theta_fusion =
+        (iter_theta != fusion_objects_theta_map.end())
+            ? iter_theta->second
+            : cur_predicion_obj.theta;
 
-    // 相对信息
     Eigen::Vector2f prediction_obj_acc_vec(
         prediction_object.fusion_obstacle.common_info.acceleration.x,
         prediction_object.fusion_obstacle.common_info.acceleration.y);
+    Eigen::Vector2f obj_heading_vec(cos(cur_predicion_obj.theta),
+                                    sin(cur_predicion_obj.theta));
 
-    constexpr double kMinVelocityThreshold = 0.5;  // 1.8 km/h
-    if (cur_predicion_obj.speed > kMinVelocityThreshold) {
-      Eigen::Vector2f velocity_heading_vec(cos(cur_predicion_obj.theta),
-                                           sin(cur_predicion_obj.theta));
-      cur_predicion_obj.acc = prediction_obj_acc_vec.dot(velocity_heading_vec);
-    } else {
-      Eigen::Vector2f obj_heading_vec(cos(cur_predicion_obj.yaw),
-                                      sin(cur_predicion_obj.yaw));
-      cur_predicion_obj.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
-    }
+    cur_predicion_obj.acc_fusion =
+        (iter_acc != fusion_objects_acc_map.end())
+            ? iter_acc->second
+            : prediction_obj_acc_vec.dot(obj_heading_vec);
 
-    // add relative info for highway
+    cur_predicion_obj.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
+
+    const double ego_x = ego_state->ego_pose().x;
+    const double ego_y = ego_state->ego_pose().y;
+    const double ego_v = ego_state->ego_v();
+    const double ego_acc = ego_state->ego_acc();
+    const double cos_ego_heading = cos(ego_heading);
+    const double sin_ego_heading = sin(ego_heading);
+    const double neg_ego_heading = -ego_heading;
+
+    const double delta_x = cur_predicion_obj.position_x - ego_x;
+    const double delta_y = cur_predicion_obj.position_y - ego_y;
     cur_predicion_obj.relative_position_x =
-        x_turn(cur_predicion_obj.position_x - ego_state->ego_pose().x,
-               cur_predicion_obj.position_y - ego_state->ego_pose().y,
-               -1 * ego_state->heading_angle());
+        x_turn(delta_x, delta_y, neg_ego_heading);
     cur_predicion_obj.relative_position_y =
-        y_turn(cur_predicion_obj.position_x - ego_state->ego_pose().x,
-               cur_predicion_obj.position_y - ego_state->ego_pose().y,
-               -1 * ego_state->heading_angle());
+        y_turn(delta_x, delta_y, neg_ego_heading);
 
-    auto relative_velocity_world_x =
-        prediction_object.fusion_obstacle.common_info.velocity.x -
-        ego_state->ego_v() * cos(ego_state->heading_angle());
-    auto relative_velocity_world_y =
-        prediction_object.fusion_obstacle.common_info.velocity.y -
-        ego_state->ego_v() * sin(ego_state->heading_angle());
+    const double relative_velocity_world_x = vel_x - ego_v * cos_ego_heading;
+    const double relative_velocity_world_y = vel_y - ego_v * sin_ego_heading;
+    cur_predicion_obj.relative_speed_x = x_turn(
+        relative_velocity_world_x, relative_velocity_world_y, neg_ego_heading);
+    cur_predicion_obj.relative_speed_y = y_turn(
+        relative_velocity_world_x, relative_velocity_world_y, neg_ego_heading);
 
-    cur_predicion_obj.relative_speed_x =
-        x_turn(relative_velocity_world_x, relative_velocity_world_y,
-               -1 * ego_state->heading_angle());
-    cur_predicion_obj.relative_speed_y =
-        y_turn(relative_velocity_world_x, relative_velocity_world_y,
-               -1 * ego_state->heading_angle());
-
-    auto relative_acceleration_world_x =
+    const double relative_acceleration_world_x =
         prediction_object.fusion_obstacle.common_info.acceleration.x -
-        ego_state->ego_acc() * cos(ego_state->heading_angle());
-    auto relative_acceleration_world_y =
+        ego_acc * cos_ego_heading;
+    const double relative_acceleration_world_y =
         prediction_object.fusion_obstacle.common_info.acceleration.y -
-        ego_state->ego_acc() * sin(ego_state->heading_angle());
+        ego_acc * sin_ego_heading;
     cur_predicion_obj.relative_acceleration_x =
         x_turn(relative_acceleration_world_x, relative_acceleration_world_y,
-               -1 * ego_state->heading_angle());
+               neg_ego_heading);
     cur_predicion_obj.relative_acceleration_y =
         y_turn(relative_acceleration_world_x, relative_acceleration_world_y,
-               -1 * ego_state->heading_angle());
+               neg_ego_heading);
 
     cur_predicion_obj.acceleration_relative_to_ground_x =
         prediction_object.fusion_obstacle.common_info.acceleration.x;
     cur_predicion_obj.acceleration_relative_to_ground_y =
         prediction_object.fusion_obstacle.common_info.acceleration.y;
 
-    // 运动属性，类型判断
     cur_predicion_obj.motion_pattern_current =
         prediction_object.fusion_obstacle.additional_info
             .motion_pattern_current;
@@ -1113,15 +1107,6 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.is_traffic_facilities =
         CheckIfTrafficFacilities(cur_predicion_obj.type);
     cur_predicion_obj.is_car = CheckIfCar(cur_predicion_obj.type);
-
-    // Currently unavailable attributes
-    // cur_predicion_obj.b_backup_freemove =
-    // prediction_object.b_backup_freemove();
-    // cur_predicion_obj.cutin_score = prediction_object.cutin_score();
-    // cur_predicion_obj.bottom_polygon_points =
-    // prediction_object.bottom_polygon_points();
-    // cur_predicion_obj.top_polygon_points =
-    // prediction_object.top_polygon_points();
 
     const auto& prediction_traj = prediction_object.trajectory;
     PredictionTrajectory cur_prediction_trajectory;
@@ -1183,6 +1168,17 @@ void EnvironmentalModelManager::truncate_prediction_info(
 
     cur_predicion_obj.trajectory_array.emplace_back(
         std::move(cur_prediction_trajectory));
+
+    current_prediction_ids_.insert(cur_predicion_obj.id);
+
+    ProcessPredictionTrajectory(cur_predicion_obj);
+
+    auto& history_queue = historical_prediction_objects_[cur_predicion_obj.id];
+    history_queue.emplace_back(cur_predicion_obj);
+    if (history_queue.size() > kMinHistoryFrameCount) {
+      history_queue.pop_front();
+    }
+
     cur_predicion_obj.is_static = IsStatic(cur_predicion_obj);
     cur_predicion_obj.turnstile_open_ratio =
         prediction_object.fusion_obstacle.common_info.other.open_ratio;
@@ -1193,6 +1189,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
     }
     prediction_info.emplace_back(std::move(cur_predicion_obj));
   }
+
+  DeleteOlderPredictionObjects();
 }
 
 PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(
@@ -1260,18 +1258,20 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   } else {
     prediction_object.yaw = fusion_object.common_info.heading_angle;
   }
-  prediction_object.acc = std::hypot(fusion_object.common_info.acceleration.x,
-                                     fusion_object.common_info.acceleration.y);
-  // judge direction of obj acc
-  auto obj_acc_heading_angle = atan2(fusion_object.common_info.acceleration.y,
-                                     fusion_object.common_info.acceleration.x);
-  Eigen::Vector2f obj_acc_heading_vec(cos(obj_acc_heading_angle),
-                                      sin(obj_acc_heading_angle));
-  Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
-                                  sin(prediction_object.yaw));
-  if (obj_acc_heading_vec.dot(obj_heading_vec) < 0.0) {
-    prediction_object.acc *= -1.0;
+  double fusion_theta = 0.0;
+  bool is_low_speed_object =
+      prediction_object.speed < kLowSpeedThreshold ? true : false;
+  if (is_low_speed_object) {
+    fusion_theta = prediction_object.yaw;
+  } else {
+    fusion_theta = std::atan2(fusion_object.common_info.velocity.y,
+                              fusion_object.common_info.velocity.x);
   }
+  Eigen::Vector2f obj_heading_vec(cos(fusion_theta), sin(fusion_theta));
+  Eigen::Vector2f prediction_obj_acc_vec(
+      fusion_object.common_info.acceleration.x,
+      fusion_object.common_info.acceleration.y);
+  prediction_object.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
   // add relative info for highway
   prediction_object.relative_position_x =
       fusion_object.common_info.relative_center_position.x;
@@ -1293,9 +1293,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
   double relative_v_x = fusion_object.common_info.relative_velocity.x;
   double relative_v_y = fusion_object.common_info.relative_velocity.y;
 
-  // The agent is slow when it's speed < 10km/h (person's speed)
-  object_is_slow = prediction_object.speed < 2.78 ? true : false;
-  // For no prediction schemes, use heading angle when obstacles are slow
+  object_is_slow = prediction_object.speed < kLowSpeedThreshold ? true : false;
   if (object_is_slow) {
     prediction_object.relative_theta =
         fusion_object.common_info.relative_heading_angle;
@@ -1376,9 +1374,16 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   } else {
     prediction_object.yaw = fusion_object.common_info.heading_angle;
   }
-  // judge direction of obj acc
-  Eigen::Vector2f obj_heading_vec(cos(prediction_object.yaw),
-                                  sin(prediction_object.yaw));
+  bool is_low_speed_object =
+      prediction_object.speed < kLowSpeedThreshold ? true : false;
+  double fusion_theta = 0.0;
+  if (is_low_speed_object) {
+    fusion_theta = prediction_object.yaw;
+  } else {
+    fusion_theta = std::atan2(fusion_object.common_info.velocity.y,
+                              fusion_object.common_info.velocity.x);
+  }
+  Eigen::Vector2f obj_heading_vec(cos(fusion_theta), sin(fusion_theta));
   Eigen::Vector2f prediction_obj_acc_vec(
       fusion_object.common_info.acceleration.x,
       fusion_object.common_info.acceleration.y);
@@ -1424,9 +1429,7 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
   prediction_object.acceleration_relative_to_ground_y =
       fusion_object.common_info.acceleration.y;
 
-  // The agent is slow when it's speed < 10km/h (person's speed)
-  object_is_slow = prediction_object.speed < 2.78 ? true : false;
-  // For no prediction schemes, use heading angle when obstacles are slow
+  object_is_slow = prediction_object.speed < kLowSpeedThreshold ? true : false;
   if (object_is_slow &&
       (!session_->is_hpp_scene() || !prediction_object.is_VRU)) {
     prediction_object.relative_theta =
@@ -1892,6 +1895,219 @@ bool EnvironmentalModelManager::CheckIfCar(const int type) {
     return true;
   } else {
     return false;
+  }
+}
+
+void EnvironmentalModelManager::ProcessPredictionTrajectory(
+    PredictionObject& prediction_object) {
+  if (prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_MINIBUS &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_VAN &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_BUS &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRAILER &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE &&
+      prediction_object.type !=
+          iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE &&
+      prediction_object.type !=
+          iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
+    return;
+  }
+
+  if (prediction_object.trajectory_array.empty() ||
+      prediction_object.trajectory_array[0].trajectory.empty()) {
+    return;
+  }
+
+  auto hist_iter = historical_prediction_objects_.find(prediction_object.id);
+  if (hist_iter == historical_prediction_objects_.end() ||
+      hist_iter->second.size() < static_cast<size_t>(kMinHistoryFrameCount)) {
+    return;
+  }
+
+  const auto& ego_state = *ego_state_manager_ptr_;
+  double heading_diff = std::abs(prediction_object.theta_fusion -
+                                 ego_state.planning_init_point().heading_angle);
+  if (heading_diff > M_PI) {
+    heading_diff = 2 * M_PI - heading_diff;
+  }
+  if (heading_diff * 180.0 / M_PI > 60.0) {
+    return;
+  }
+
+  const auto& hist_list = hist_iter->second;
+
+  double frame_index = prediction_object.fusion_delay_time / kFrameIntervalS;
+  if (prediction_object.fusion_delay_time > kMaxDelayS) {
+    frame_index = static_cast<double>(hist_list.size() - 1);
+  }
+  frame_index = std::max(0.0, frame_index);
+  frame_index =
+      std::min(frame_index, static_cast<double>(hist_list.size() - 1));
+  int frame_idx_lower = static_cast<int>(std::floor(frame_index));
+  int frame_idx_upper = static_cast<int>(std::ceil(frame_index));
+  frame_idx_lower =
+      std::min(frame_idx_lower, static_cast<int>(hist_list.size()) - 1);
+  frame_idx_upper =
+      std::min(frame_idx_upper, static_cast<int>(hist_list.size()) - 1);
+
+  int lower_idx = hist_list.size() - 1 - frame_idx_lower;
+  int upper_idx = hist_list.size() - 1 - frame_idx_upper;
+
+  double alpha = frame_index - frame_idx_lower;
+  double interpolated_acc = (1.0 - alpha) * hist_list[lower_idx].acc_fusion +
+                            alpha * hist_list[upper_idx].acc_fusion;
+
+  const auto& original_trajectory =
+      prediction_object.trajectory_array[0].trajectory;
+  const double init_speed = (prediction_object.speed_fusion > 0.0)
+                                ? prediction_object.speed_fusion
+                                : 0.0;
+  std::map<double, TmpPathPoint> path_cache;
+  if (!original_trajectory.empty()) {
+    path_cache[0.0] = {original_trajectory[0].x, original_trajectory[0].y,
+                       original_trajectory[0].theta};
+    double cumulative_s = 0.0;
+    for (size_t i = 1; i < original_trajectory.size(); ++i) {
+      const auto& prev = original_trajectory[i - 1];
+      const auto& curr = original_trajectory[i];
+      double dx = curr.x - prev.x;
+      double dy = curr.y - prev.y;
+      cumulative_s += std::sqrt(dx * dx + dy * dy);
+      path_cache[cumulative_s] = {curr.x, curr.y, curr.theta};
+    }
+  }
+
+  const double init_accel = interpolated_acc;
+
+  std::vector<double> kin_s(kPlanPoints), kin_speeds(kPlanPoints),
+      kin_accels(kPlanPoints), kin_x(kPlanPoints), kin_y(kPlanPoints),
+      kin_theta(kPlanPoints);
+
+  kin_s[0] = 0.0;
+  kin_speeds[0] = init_speed;
+  kin_accels[0] = init_accel;
+  kin_x[0] = prediction_object.position_x;
+  kin_y[0] = prediction_object.position_y;
+  kin_theta[0] = prediction_object.theta_fusion;
+
+  double current_s = 0.0;
+  double current_speed = init_speed;
+
+  for (size_t i = 1; i < kPlanPoints; ++i) {
+    if (current_speed <= 0.0) {
+      kin_s[i] = current_s;
+      kin_speeds[i] = 0.0;
+      kin_accels[i] = 0.0;
+      continue;
+    }
+
+    double t = i * kTimeStep;
+    double predicted_speed = init_speed + init_accel * t;
+
+    if (predicted_speed <= 0.0) {
+      double braking_distance =
+          (current_speed * current_speed) / (2.0 * std::fabs(init_accel));
+      current_s += braking_distance;
+      current_speed = 0.0;
+      kin_s[i] = current_s;
+      kin_speeds[i] = 0.0;
+      kin_accels[i] = 0.0;
+    } else {
+      current_s = init_speed * t + 0.5 * init_accel * t * t;
+      current_speed = predicted_speed;
+      kin_s[i] = current_s;
+      kin_speeds[i] = current_speed;
+      kin_accels[i] = init_accel;
+    }
+  }
+
+  auto interpolate_point = [&path_cache](double s) -> TmpPathPoint {
+    auto it_upper = path_cache.upper_bound(s);
+    if (it_upper == path_cache.begin()) {
+      return path_cache.begin()->second;
+    } else if (it_upper == path_cache.end()) {
+      return path_cache.rbegin()->second;
+    } else {
+      auto it_lower = std::prev(it_upper);
+      double s0 = it_lower->first;
+      double s1 = it_upper->first;
+      double ratio = (s1 - s0 > 1e-9) ? (s - s0) / (s1 - s0) : 0.0;
+      const auto& p0 = it_lower->second;
+      const auto& p1 = it_upper->second;
+      double theta_diff = p1.theta - p0.theta;
+      if (theta_diff > M_PI) {
+        theta_diff -= 2.0 * M_PI;
+      } else if (theta_diff < -M_PI) {
+        theta_diff += 2.0 * M_PI;
+      }
+      return {p0.x + ratio * (p1.x - p0.x), p0.y + ratio * (p1.y - p0.y),
+              p0.theta + ratio * theta_diff};
+    }
+  };
+
+  for (size_t i = 1; i < kPlanPoints; ++i) {
+    auto pt = interpolate_point(kin_s[i]);
+    kin_x[i] = pt.x;
+    kin_y[i] = pt.y;
+    kin_theta[i] = pt.theta;
+  }
+
+  std::vector<double> last_x(kPlanPoints), last_y(kPlanPoints),
+      last_theta(kPlanPoints), last_speeds(kPlanPoints);
+
+  const auto& last_trajectory = hist_list.back().trajectory_array[0].trajectory;
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    last_x[i] = last_trajectory[i].x;
+    last_y[i] = last_trajectory[i].y;
+    last_theta[i] = last_trajectory[i].theta;
+    last_speeds[i] = last_trajectory[i].speed;
+  }
+
+  std::vector<double> fused_x(kPlanPoints), fused_y(kPlanPoints),
+      fused_theta(kPlanPoints), fused_speeds(kPlanPoints);
+
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    fused_x[i] = kAlpha * last_x[i] + (1 - kAlpha) * kin_x[i];
+    fused_y[i] = kAlpha * last_y[i] + (1 - kAlpha) * kin_y[i];
+
+    double theta_diff = kin_theta[i] - last_theta[i];
+    if (theta_diff > M_PI) {
+      theta_diff -= 2.0 * M_PI;
+    } else if (theta_diff < -M_PI) {
+      theta_diff += 2.0 * M_PI;
+    }
+
+    fused_theta[i] = last_theta[i] + (1 - kAlpha) * theta_diff;
+    fused_speeds[i] = kAlpha * last_speeds[i] + (1 - kAlpha) * kin_speeds[i];
+  }
+
+  std::vector<PredictionTrajectoryPoint> processed_trajectory(
+      original_trajectory);
+
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    processed_trajectory[i].x = fused_x[i];
+    processed_trajectory[i].y = fused_y[i];
+    processed_trajectory[i].theta = fused_theta[i];
+    processed_trajectory[i].speed = fused_speeds[i];
+    processed_trajectory[i].acc = kin_accels[i];
+    processed_trajectory[i].relative_time = i * kTimeStep;
+  }
+
+  prediction_object.trajectory_array[0].trajectory =
+      std::move(processed_trajectory);
+}
+
+void EnvironmentalModelManager::DeleteOlderPredictionObjects() {
+  for (auto it = historical_prediction_objects_.begin();
+       it != historical_prediction_objects_.end();) {
+    if (current_prediction_ids_.find(it->first) ==
+        current_prediction_ids_.end()) {
+      it = historical_prediction_objects_.erase(it);
+    } else {
+      ++it;
+    }
   }
 }
 

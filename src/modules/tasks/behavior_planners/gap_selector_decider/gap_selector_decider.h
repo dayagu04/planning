@@ -120,10 +120,10 @@ class GapSelectorDecider : public Task {
       SecondOrderTimeOptimalTrajectory &traj_time_optimal);
 
   bool PathSplineLengthCheck(GapSelectorPathSpline &path_spline);
-  void StitchQuinticPath(const double &truancation_end_s,
+  void StitchQuinticPath(const double truancation_end_s,
                          const double expected_lc_time, const double expected_l,
-                         pnc::spline::QuinticPolynominalPath &quintic_path,
-                         GapSelectorPathSpline &path_spline);
+                         pnc::spline::QuinticPolynominalPath& quintic_path,
+                         GapSelectorPathSpline& path_spline);
   void DecoupleQuinticPathSpline(
       const double remaining_lc_duration,
       const pnc::spline::QuinticPolynominalPath &quintic_path,

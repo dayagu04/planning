@@ -229,6 +229,9 @@ struct EgoPlanningConfig : public Config {
     overtake_speed_threshold_adjust_params = read_json_key<double>(
         json, "overtake_speed_threshold_adjust_params");
 
+    enable_overtake_cross_line_large_agent =
+        read_json_key<bool>(
+            json, "enable_overtake_cross_line_large_agent");
     enable_use_speed_limit_to_suppress_interactive_lane_change =
         read_json_key<bool>(
             json, "enable_use_speed_limit_to_suppress_interactive_lane_change");
@@ -277,6 +280,8 @@ struct EgoPlanningConfig : public Config {
                      "enable_overtake_lane_change_confirmation");
     press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
     use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
+    enable_use_dynamic_agent_emergency_avoidence_lane_change_request = read_json_key<bool>(
+        json, "enable_use_dynamic_agent_emergency_avoidence_lane_change_request");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -295,6 +300,7 @@ struct EgoPlanningConfig : public Config {
   double overtake_radical_lane_change_speed_threshold = 2.78;
   double overtake_soft_lane_change_speed_threshold = 5.56;
   double overtake_speed_threshold_adjust_params = 0.6;
+  bool enable_overtake_cross_line_large_agent = false;
   bool enable_use_speed_limit_to_suppress_interactive_lane_change = true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 500;
   double minimum_distance_nearby_split_to_surpress_specific_direction_overtake =
@@ -319,6 +325,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_overtake_lane_change_confirmation = false;
   double press_line_fewly_threshold = 0.3;
   bool use_press_line_fewly_threshold = false;
+  bool enable_use_dynamic_agent_emergency_avoidence_lane_change_request = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -1062,6 +1069,21 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     decleration_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_jerk_limit"});
+    leading_safe_distance_gain = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_distance_gain"});
+    leading_safe_delay_time = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_delay_time"});
+    leading_safe_max_dec = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_max_dec"});
+    leading_safe_overstep_gain = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_overstep_gain"});
+    leading_safe_overstep_buffer = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "leading_safe_overstep_buffer"});
   }
 
   int sample_v_nums = 15;
@@ -1115,6 +1137,55 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double decleration_scene_weight_speed_change = 0.0;
   double decleration_scene_weight_leading_veh_follow_s = 1.0;
   double decleration_scene_weight_jerk_limit = 2.0;
+
+  double leading_safe_distance_gain = 1.3;
+  double leading_safe_delay_time = 0.5;
+  double leading_safe_max_dec = 2.0;
+  double leading_safe_overstep_gain = 4.0;
+  double leading_safe_overstep_buffer = 3.0;
+};
+
+struct SampleAstarTrajConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    time_step_near = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "time_step_near"});
+    time_step_far = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "time_step_far"});
+    distance_step = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "distance_step"});
+    goal_tolerance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "goal_tolerance"});
+    weight_dist = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_dist"});
+    weight_time = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_time"});
+    weight_vel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_vel"});
+    weight_accel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_accel"});
+    weight_jerk = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_jerk"});
+    weight_front_ttc = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_front_ttc"});
+    weight_back_ttc = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
+    weight_lead_safe_distance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "weight_lead_safe_distance"});
+  }
+  double time_step_near = 1.0;
+  double time_step_far = 1.0;
+  double distance_step = 0.1;
+  double goal_tolerance = 5.0;
+  double weight_dist = 1.0;
+  double weight_time = 1.0;
+  double weight_vel = 0.2;
+  double weight_accel = 0.2;
+  double weight_jerk = 0.2;
+  double weight_front_ttc = 1.0;
+  double weight_back_ttc = 1.0;
+  double weight_lead_safe_distance = 1.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -1874,6 +1945,10 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, "left_l_buffer_for_lat_decision", left_l_buffer_for_lat_decision);
     right_l_buffer_for_lat_decision = read_json_key<double>(
         json, "right_l_buffer_for_lat_decision", right_l_buffer_for_lat_decision);
+    l_buffer_for_lat_decision = read_json_key<double>(
+        json, "l_buffer_for_lat_decision", l_buffer_for_lat_decision);
+    column_l_buffer_for_decision = read_json_key<double>(
+        json, "column_l_buffer_for_decision", column_l_buffer_for_decision);
     emegency_avoid_ttc_lower = read_json_key<double>(
         json, "emegency_avoid_ttc_lower", emegency_avoid_ttc_lower);
     emegency_avoid_ttc_upper = read_json_key<double>(
@@ -1966,6 +2041,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double hybrid_ara_s_range = 20;
   double left_l_buffer_for_lat_decision = 1.0;
   double right_l_buffer_for_lat_decision = 0.6;
+  double l_buffer_for_lat_decision = 2;
+  double column_l_buffer_for_decision = 2;
   double delta_t = 0.2;
   double num_step = 25;
   double emegency_avoid_ttc_lower = 0;
@@ -4752,7 +4829,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_acc_speed_adjust");
     ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
                      "q_jerk_speed_adjust");
-    ReadItem<double>(json, q_pos_safe_cost, "long_motion_ilqr", "q_pos_safe_cost");
+    ReadItem<double>(json, q_pos_safe, "long_motion_ilqr", "q_pos_safe");
     ReadItem<double>(json, safe_distance, "long_motion_ilqr", "safe_distance");
     ReadItem<double>(json, q_emergency_stop, "long_motion_ilqr", "q_emergency_stop");
 
@@ -4809,7 +4886,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_pos_speed_adjust = 10.0;
   double q_acc_speed_adjust = 10.0;
   double q_jerk_speed_adjust = 5.0;
-  double q_pos_safe_cost = 100.0;
+  double q_pos_safe = 100.0;
   double safe_distance = 2.5;
   double q_emergency_stop = 2000.0;
 };
@@ -5463,6 +5540,8 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
                      "thw_low_rate_lane_change_to_lane_keep");
     ReadItem<double>(json, thw_scale_up_factor, "speed_planning",
                      "agent_headway_decider", "thw_scale_up_factor");
+    ReadItem<double>(json, thw_scale_down_factor, "speed_planning",
+                        "agent_headway_decider", "thw_scale_down_factor");
   }
   double plan_time = 5.0;
   double dt = 0.2;
@@ -5514,6 +5593,7 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double cone_min_follow_distance_gap = 5.0;
   double traffic_light_min_follow_distance_gap = 2.5;
   double thw_scale_up_factor = 1.2;
+  double thw_scale_down_factor = 0.8;
 };
 
 struct StartStopDeciderConfig : public EgoPlanningConfig {
@@ -6538,6 +6618,8 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                      "lon_jerk_thr");
     ReadItem<double>(json, lat_jerk_hysteresis_value, "hmi_decider",
                      "lat_jerk_hysteresis_value");
+    ReadItem<double>(json, lon_collision_dec_thred, "hmi_decider",
+                    "lon_collision_dec_thred");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
@@ -6548,6 +6630,7 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
   double lon_acc_thr = 3.0;
   double lon_jerk_thr = 0.3;
   double lat_jerk_hysteresis_value = 0.1;
+  double lon_collision_dec_thred = -5.0;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{
