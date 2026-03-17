@@ -430,7 +430,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         double half_lane_width = lane_width * 0.5;
         double agent_width = track_iter->second->width();
         double cutting_threshold =
-            std::max(half_lane_width + 0.2 - agent_width * 0.5, 0.6);
+            std::max(half_lane_width + 0.2 - agent_width * 0.5, 0.8);
         if (track_iter->second->frenet_l() > cutting_threshold && rlane &&
             llane) {
           enable_l_ = false;
