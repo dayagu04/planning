@@ -574,6 +574,62 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     planning_output.planning_request.request_reason =
         iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_FAILED;
   }
+
+  // 判断是否在接近匝道时因为旁边有车导致下不去匝道
+  bool is_nearing_ramp_mlc =
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          SPLIT_SCENE &&
+      lc_request_source == MAP_REQUEST;
+
+  if (is_nearing_ramp_mlc) {
+    const auto& ego_seq = route_info_output.ego_seq;
+    const auto& feasible_lane = route_info_output.feasible_lane_sequence;
+
+    // 判断 ego_seq 是否在 feasible_lane 中，如果不在，计算最小 gap
+    bool is_ego_seq_in_feasible = false;
+    int min_gap = 0;
+    for (const int lane_seq : feasible_lane) {
+      if (lane_seq == ego_seq) {
+        is_ego_seq_in_feasible = true;
+        break;
+      }
+    }
+
+    if (!is_ego_seq_in_feasible && !feasible_lane.empty()) {
+      // 计算 ego_seq 与 feasible_lane 中最近车道的差距
+      int min_diff = std::abs(ego_seq - feasible_lane.front());
+      for (const int lane_seq : feasible_lane) {
+        int diff = std::abs(ego_seq - lane_seq);
+        if (diff < min_diff) {
+          min_diff = diff;
+        }
+      }
+      min_gap = min_diff;
+
+      // 当前变一次道的提醒距离为高架为100m，高速200m；
+      double signal_lc_dis = 0.0;
+      if (route_info_output.is_ego_on_city_expressway_hmi) {
+        signal_lc_dis = 100.0;
+      } else if (route_info_output.is_ego_on_expressway_hmi) {
+        signal_lc_dis = 200.0;
+      }
+
+      const double pre_warning_dis = min_gap * signal_lc_dis;
+
+      if (route_info_output.mlc_decider_scene_type_info
+              .dis_to_link_topo_change_point < pre_warning_dis) {
+        if ((curr_state == kLaneChangeHold ||
+             curr_state == kLaneChangePropose ||
+             curr_state == kLaneChangeCancel)) {
+          planning_output.planning_request.take_over_req_level =
+              iflyauto::REQUEST_LEVEL_WARRING;
+          planning_output.planning_request.request_reason =
+              iflyauto::REQUEST_REASON_ENTER_RAMP_UNABLE;
+        }
+      }
+    }
+  }
+
   JSON_DEBUG_VALUE("lane_change_reason",
                    static_cast<int>(ad_info.lane_change_reason))
   JSON_DEBUG_VALUE("status_update_reason",
