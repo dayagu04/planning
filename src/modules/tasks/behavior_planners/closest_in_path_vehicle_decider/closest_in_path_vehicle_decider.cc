@@ -71,12 +71,13 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
   double cipv_ttc = kDefaultTTC;
   int32_t dangerous_level = -1;
   bool is_virtual = false;
+  bool is_turnstile_virtual_obs = false;
   bool is_large = false;
   auto &mutable_cipv_decider_output =
       session_->mutable_planning_context()->mutable_cipv_decider_output();
   if (st_boundaries.empty()) {
     Reset(&id, &releative_s, &cipv_v_frenet, &cipv_ttc, &dangerous_level,
-          &is_virtual, &is_large);
+          &is_virtual, &is_turnstile_virtual_obs, &is_large);
     mutable_cipv_decider_output.set_cipv_id(id);
     mutable_cipv_decider_output.set_relative_s(releative_s);
     mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
@@ -86,6 +87,8 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
     mutable_cipv_decider_output.set_ttc(cipv_ttc);
     mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
     mutable_cipv_decider_output.set_is_virtual(is_virtual);
+    mutable_cipv_decider_output.set_is_turnstile_virtual_obs(
+        is_turnstile_virtual_obs);
     mutable_cipv_decider_output.set_is_large(is_large);
   } else {
     for (const auto &item : st_boundaries) {
@@ -120,7 +123,7 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
       } else {
         MakeCipvInfo(id, &releative_s, &cipv_v_frenet, &cipv_v_fusion_frenet,
                      &cipv_acc, &cipv_acc_fusion, &cipv_ttc, &dangerous_level,
-                     &is_virtual, &is_large);
+                     &is_virtual, &is_turnstile_virtual_obs, &is_large);
         mutable_cipv_decider_output.set_cipv_id(id);
         mutable_cipv_decider_output.set_relative_s(releative_s);
         mutable_cipv_decider_output.set_v_frenet(cipv_v_frenet);
@@ -130,6 +133,8 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
         mutable_cipv_decider_output.set_ttc(cipv_ttc);
         mutable_cipv_decider_output.set_dangerous_level(dangerous_level);
         mutable_cipv_decider_output.set_is_virtual(is_virtual);
+        mutable_cipv_decider_output.set_is_turnstile_virtual_obs(
+            is_turnstile_virtual_obs);
         mutable_cipv_decider_output.set_is_large(is_large);
       }
     }
@@ -141,7 +146,8 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
     const int32_t cipv_id, double *const relative_s, double *const v_frenet,
     double *const v_fusion_frenet, double *acc, double *acc_fusion,
     double *const cipv_ttc, int32_t *const dangerous_level,
-    bool *const is_virtual, bool *const is_large) {
+    bool *const is_virtual, bool *const is_turnstile_virtual_obs,
+    bool *const is_large) {
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   const auto &ego_vehi_param =
@@ -220,6 +226,7 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
     *dangerous_level = -1;
   }
   *is_virtual = agent->type() == agent::AgentType::VIRTUAL;
+  *is_turnstile_virtual_obs = agent->is_turnstile_virtual_obs();
 }
 
 bool ClosestInPathVehicleDecider::DetermineIfConeBucketCIPV() {
@@ -394,13 +401,15 @@ void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() {
 void ClosestInPathVehicleDecider::Reset(
     int32_t *const cipv_id, double *const relative_s, double *const v_frenet,
     double *const cipv_ttc, int32_t *const dangerous_level,
-    bool *const is_virtual, bool *const is_large) {
+    bool *const is_virtual, bool *const is_turnstile_virtual_obs,
+    bool *const is_large) {
   *cipv_id = kInvalidId;
   *relative_s = std::numeric_limits<double>::max();
   *v_frenet = std::numeric_limits<double>::max();
   *cipv_ttc = std::numeric_limits<double>::max();
   *dangerous_level = -1;
   *is_virtual = true;
+  *is_turnstile_virtual_obs = false;
   *is_large = false;
 }
 
@@ -417,6 +426,7 @@ void ClosestInPathVehicleDecider::Reset() {
   mutable_cipv_decider_output.set_ttc(std::numeric_limits<double>::max());
   mutable_cipv_decider_output.set_dangerous_level(-1);
   mutable_cipv_decider_output.set_is_virtual(true);
+  mutable_cipv_decider_output.set_is_turnstile_virtual_obs(false);
   mutable_cipv_decider_output.set_is_large(false);
   agents_distance_id_map_.clear();
 }
