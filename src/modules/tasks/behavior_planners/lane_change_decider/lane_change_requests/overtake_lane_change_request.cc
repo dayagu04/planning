@@ -423,9 +423,13 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         agent = agent_manager->mutable_agent(current_agent->agent_id());
         leading_relative_dis = track_iter->second->d_s_rel();
         exist_cross_line_large_agent_ahead_ = true;
-        if (track_iter->second->frenet_l() > 1.5 && rlane && llane) {
+        double lane_width = clane->width_by_s(track_iter->second->frenet_s());
+        double half_lane_width = lane_width / 2.0;
+        double agent_width = track_iter->second->width();
+        double cutting_threshold = std::max(half_lane_width + 0.2 - agent_width/2.0, 0.6);
+        if (track_iter->second->frenet_l() >  cutting_threshold && rlane && llane) {
           enable_l_ = false;
-        } else if(track_iter->second->frenet_l() < -1.5 && rlane && llane) {
+        } else if(track_iter->second->frenet_l() < -cutting_threshold && rlane && llane) {
           enable_r_ = false;
         }
       }
@@ -2342,13 +2346,11 @@ void OvertakeRequest::IsTargetLaneExistTruck(
     return;
   }
   if (is_left) {
-    if (agent_frenet_point.y >
-        0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+    if (agent_frenet_point.y < -0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
       return;
     }
   } else {
-    if (agent_frenet_point.y <
-        -0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+    if (agent_frenet_point.y > 0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
       return;
     }
   }
