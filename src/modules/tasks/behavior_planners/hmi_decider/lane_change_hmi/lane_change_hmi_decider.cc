@@ -491,8 +491,12 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   const auto virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   if (virtual_lane_manager != nullptr) {
-    ad_info.reference_line_msg =
-        virtual_lane_manager->get_current_lane()->get_reference_line_msg();
+    const auto current_virtual_lane = virtual_lane_manager->get_current_lane();
+    if (current_virtual_lane) {
+      ad_info.reference_line_msg =
+          current_virtual_lane->get_reference_line_msg();
+    }
+
     if (curr_state == kLaneChangePropose || curr_state == kLaneChangeCancel ||
          curr_state == kLaneChangeHold) {
           auto target_lane_id = lane_change_decider_output.target_lane_virtual_id;
