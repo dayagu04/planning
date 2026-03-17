@@ -981,6 +981,15 @@ const bool HybridAStarPathGenerator::InitStartAndEndNodes() {
   return true;
 }
 
+void HybridAStarPathGenerator::GenerateDpMapForCurrentSearch() {
+  const double dp_start_time = IflyTime::Now_ms();
+  const auto& end_pose = GetEndPoseForCurrentSearch();
+  grid_search_.GenerateDpMap(end_pose.GetX(), end_pose.GetY(),
+                             search_map_boundary_);
+  ILOG_INFO << "generate dp map consume time = "
+            << IflyTime::Now_ms() - dp_start_time << "  ms";
+}
+
 const NodeDeleteInput HybridAStarPathGenerator::BuildNodeDeleteInput(
     const PathColDetBuffer& path_col_det_buffer) const {
   NodeDeleteInput node_del_input;

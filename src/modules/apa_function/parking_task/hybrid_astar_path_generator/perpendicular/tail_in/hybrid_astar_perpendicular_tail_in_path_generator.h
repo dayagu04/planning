@@ -34,16 +34,20 @@ class HybridAStarPerpendicularTailInPathGenerator
   PathColDetBuffer BuildPreSearchPathColDetBuffer() const;
   void TryDecideCulDeSac(const PathColDetBuffer& pre_path_col_det_buffer);
   const bool RunPreSearch(const PathColDetBuffer& pre_path_col_det_buffer);
-  link_pt_line::LinkPtLineInput<float> BuildDefaultLPLInput(
-      const geometry_lib::PathPoint& end_pose) const;
   void ConfigureSearchBudget(size_t& find_success_curve_min_count,
                              double& find_success_curve_max_time);
-  void PrepareLPLInputForCurrentNode(
-      const Node3d* current_node,
-      link_pt_line::LinkPtLineInput<float>& lpl_input) const;
-  void PrepareLPLInputForNewNode(
+  void ConfigureBaseAnalyticExpansionRequest(
+      AnalyticExpansionRequest& analytic_expansion_request) const;
+  void ConfigureAnalyticExpansionRequestForCurrentNode(
+      Node3d* current_node, CurveNode* curve_node_to_goal,
+      AnalyticExpansionRequest& analytic_expansion_request) const;
+  void ConfigureAnalyticExpansionRequestForNewNode(
       const Node3d& new_node,
-      link_pt_line::LinkPtLineInput<float>& lpl_input) const;
+      AnalyticExpansionRequest& analytic_expansion_request) const;
+
+  void TryRelaxAnalyticExpansionConstraintsForDifficultScenario(
+      size_t node_pool_size, size_t success_curve_count,
+      AnalyticExpansionRequest& analytic_expansion_request);
 
   virtual void UpdatePoseBoundary() override;
 

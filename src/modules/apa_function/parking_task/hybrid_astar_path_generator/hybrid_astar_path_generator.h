@@ -87,6 +87,7 @@ class HybridAStarPathGenerator : public ParkingTask {
   const geometry_lib::PathPoint& GetStartPoseForCurrentSearch() const;
   const geometry_lib::PathPoint& GetEndPoseForCurrentSearch() const;
   const bool InitStartAndEndNodes();
+  void GenerateDpMapForCurrentSearch();
   const NodeDeleteInput BuildNodeDeleteInput(
       const PathColDetBuffer& path_col_det_buffer) const;
   const bool ValidateStartAndEndNodes();
