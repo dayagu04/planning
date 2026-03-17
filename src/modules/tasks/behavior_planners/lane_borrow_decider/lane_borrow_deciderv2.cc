@@ -48,6 +48,7 @@ constexpr double kBackNeededDistance = 5.0;
 constexpr double kPreCentricOffsetHigh = 0.75;  // CUTIN 标准仍然保守
 constexpr double kPreCentricOffsetLow = 0.45;
 constexpr double kStaticEdgeDistance = 0.25;
+constexpr double kDynamicEdgeDistance = 0.3;
 constexpr double kMaxLateralRange = 5.0;
 constexpr double kTotalLaneBorrowTime =
     8;  // 借道的时间阈值，如果借道时间过长，不触发借道
@@ -1734,21 +1735,27 @@ BorrowDirection LaneBorrowDecider::GetPredBypassDirection(
   double lane_width = current_lane_ptr_->width();
   bool is_static = agent->speed() < 2.0 || agent->is_static();
   bool is_tiny = agent->is_vru() || agent->width() < 0.5;  // 行人在之前就过滤了
-  double scale = 1.0;                                      // 兜底感知跳动
-  if (lane_borrow_status_ != kNoLaneBorrow) {
-    scale = 0.5;
+  double scale = 1.0;
+  double margin = 0.0;  // 未借道：以是否跨中心线判断
+  const bool was_successful =
+      std::find(last_static_blocked_obj_id_vec_.begin(),
+                last_static_blocked_obj_id_vec_.end(),
+                obs_id) != last_static_blocked_obj_id_vec_.end();
+  if (was_successful) {
+    // 滞回
+    scale = 2.5;
+    margin = -kDynamicEdgeDistance; 
   }
 
-  // 先排除
   if (is_tiny || !is_static) {
-    if (frenet_obstacle_sl.l_start * frenet_obstacle_sl.l_end <
-        0.05) {  // 异号，压住中心线
+    // 障碍物与中心线 ± margin 区域有重叠 → 贴近或横跨中心线
+    if (frenet_obstacle_sl.l_start < margin &&
+        frenet_obstacle_sl.l_end > -margin) {
       return NO_BORROW;
     }
-  } else {  // 大 静态： 右边缘 在中心线右侧 0.25+  并且 左边缘 在中心线左侧
-            // 0.25+
-    if (frenet_obstacle_sl.l_start < -kStaticEdgeDistance &&
-        frenet_obstacle_sl.l_end > kStaticEdgeDistance) {  //左侧同理
+  } else {  // 大静态：两侧边缘均超过 scale * 阈值 → 横跨中心线
+    if (frenet_obstacle_sl.l_start < -scale * kStaticEdgeDistance &&
+        frenet_obstacle_sl.l_end > scale * kStaticEdgeDistance) {
       return NO_BORROW;
     }
   }
@@ -1760,6 +1767,7 @@ BorrowDirection LaneBorrowDecider::GetPredBypassDirection(
     return RIGHT_BORROW;
   }
 }
+
 // v2
 bool LaneBorrowDecider::EnoughSafetyDistance() {
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
