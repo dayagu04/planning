@@ -406,6 +406,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       if (track_iter == tracks_map.end()) {
         continue;
       }
+      if (track_iter->second == nullptr) {
+        continue;
+      }
       auto& frame_count =
           truck_confirm_frame_count_map_[current_agent->agent_id()];
       if (current_agent->is_truck()) {
@@ -426,10 +429,13 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         double lane_width = clane->width_by_s(track_iter->second->frenet_s());
         double half_lane_width = lane_width / 2.0;
         double agent_width = track_iter->second->width();
-        double cutting_threshold = std::max(half_lane_width + 0.2 - agent_width/2.0, 0.6);
-        if (track_iter->second->frenet_l() >  cutting_threshold && rlane && llane) {
+        double cutting_threshold =
+            std::max(half_lane_width + 0.2 - agent_width / 0.5, 0.6);
+        if (track_iter->second->frenet_l() > cutting_threshold && rlane &&
+            llane) {
           enable_l_ = false;
-        } else if(track_iter->second->frenet_l() < -cutting_threshold && rlane && llane) {
+        } else if (track_iter->second->frenet_l() < -cutting_threshold &&
+                   rlane && llane) {
           enable_r_ = false;
         }
       }
@@ -2346,11 +2352,13 @@ void OvertakeRequest::IsTargetLaneExistTruck(
     return;
   }
   if (is_left) {
-    if (agent_frenet_point.y < -0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+    if (agent_frenet_point.y <
+        -0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
       return;
     }
   } else {
-    if (agent_frenet_point.y > 0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
+    if (agent_frenet_point.y >
+        0.5 * target_lane->width_by_s(agent_frenet_point.x)) {
       return;
     }
   }
