@@ -1,8 +1,11 @@
 #include "modules/tasks/behavior_planners/hmi_decider/lane_change_hmi/lane_change_hmi_decider.h"
 
+#include "behavior_planners/lane_change_decider/lane_change_state_machine_manager.h"
 #include "common/ifly_time.h"
+#include "config/basic_type.h"
 #include "modules/context/environmental_model_manager.h"
 #include "modules/context/planning_context.h"
+#include "virtual_lane_manager.h"
 namespace planning {
 namespace {
 static constexpr int kHmiSendMsgCntThreshold = 5;
@@ -485,10 +488,21 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
     ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
   }
-  ad_info.reference_line_msg = session_->environmental_model()
-                                   .get_virtual_lane_manager()
-                                   ->get_current_lane()
-                                   ->get_reference_line_msg();
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager != nullptr) {
+    ad_info.reference_line_msg =
+        virtual_lane_manager->get_current_lane()->get_reference_line_msg();
+    if (curr_state == kLaneChangePropose || curr_state == kLaneChangeCancel ||
+         curr_state == kLaneChangeHold) {
+          auto target_lane_id = lane_change_decider_output.target_lane_virtual_id;
+          const auto target_virtual_lane = virtual_lane_manager->get_lane_with_virtual_id(target_lane_id);
+          if (target_virtual_lane) {
+            ad_info.reference_line_msg = target_virtual_lane->get_reference_line_msg();
+          }
+    }
+  }
+
   ad_info.landing_point.is_avaliable = false;
   ad_info.landing_point.heading = 0.0;
   ad_info.landing_point.relative_pos.x = 0.0;
