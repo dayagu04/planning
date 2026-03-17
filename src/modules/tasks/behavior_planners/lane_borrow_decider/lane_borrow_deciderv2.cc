@@ -1961,10 +1961,12 @@ bool LaneBorrowDecider::CheckBackWardObs() {
     left_risk_bound = -current_right_lane_width;
   }
   // TTC设置
-  double MaxConcernCollisionTime = 1.5;
+  double MaxConcernCollisionTime = 4;
   if (lane_borrow_decider_output_.lane_borrow_state == kLaneBorrowDriving) {
     MaxConcernCollisionTime = 3.0;
-  } else if (lane_borrow_decider_output_.lane_borrow_state == kNoLaneBorrow) {
+  } else if (lane_borrow_decider_output_.lane_borrow_state == kNoLaneBorrow ||
+             lane_borrow_decider_output_.lane_borrow_state ==
+                 kLaneBorrowWaitting) {
     MaxConcernCollisionTime = 5.0;
   }
 
