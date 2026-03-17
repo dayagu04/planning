@@ -5,8 +5,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <map>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "aabb2d.h"
@@ -21,6 +21,7 @@
 #include "grid_search.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_context.h"
+#include "hybrid_astar_path_generator.h"
 #include "ifly_time.h"
 #include "link_pose_line.h"
 #include "link_pt_line.h"
@@ -204,25 +205,82 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeHCost(
       std::max({dp_cost, curve_path_cost, euler_dist_cost, heading_cost}));
 }
 
-const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
-  ILOG_INFO << "hybrid astar perpendicular tail in update begin";
+HybridAStarPerpendicularTailInPathGenerator::SearchConfigSnapshot
+HybridAStarPerpendicularTailInPathGenerator::BuildSearchConfigSnapshot() const {
+  SearchConfigSnapshot snapshot;
+  snapshot.analytic_expansion_type = request_.analytic_expansion_type;
+  snapshot.swap_start_goal = request_.swap_start_goal;
+  snapshot.traj_kappa_change_penalty = config_.traj_kappa_change_penalty;
+  return snapshot;
+}
 
-  const ApaParameters& param = apa_param.GetParam();
+HybridAStarPerpendicularTailInPathGenerator::SearchConfigSnapshot
+HybridAStarPerpendicularTailInPathGenerator::PrepareSearchPhases() {
+  InitSearchPhaseTimeCost();
+  InitInterestingArea();
+  const SearchConfigSnapshot snapshot = BuildSearchConfigSnapshot();
+  ModifyPreSearchConfig();
+  return snapshot;
+}
+
+void HybridAStarPerpendicularTailInPathGenerator::ModifyPreSearchConfig() {
+  request_.analytic_expansion_type = AnalyticExpansionType::REEDS_SHEEP;
+  config_.traj_kappa_change_penalty = 0.0;
+}
+
+HybridAStarPerpendicularTailInPathGenerator::PreSearchPhaseOutcome
+HybridAStarPerpendicularTailInPathGenerator::HandlePreSearchPhase() {
+  const PathColDetBuffer pre_path_col_det_buffer =
+      BuildPreSearchPathColDetBuffer();
+
+  const double decide_cul_de_sac_start_time = IflyTime::Now_ms();
+  TryDecideCulDeSac(pre_path_col_det_buffer);
+  search_phase_time_cost_.decide_cul_de_sac_consume_time_ms =
+      IflyTime::Now_ms() - decide_cul_de_sac_start_time;
+
+  if (request_.pre_search_mode == 0 || cul_de_sac_info_.is_cul_de_sac) {
+    ILOG_INFO << "skip pre search, continue formal search";
+    return PreSearchPhaseOutcome::CONTINUE_FORMAL_SEARCH;
+  }
+
+  const double pre_search_start_time = IflyTime::Now_ms();
+  const bool pre_search_success = RunPreSearch(pre_path_col_det_buffer);
+  search_phase_time_cost_.pre_search_consume_time_ms =
+      IflyTime::Now_ms() - pre_search_start_time;
+
+  ILOG_INFO << "pre search success = " << pre_search_success;
+
+  if (request_.pre_search_mode == 2) {
+    ILOG_INFO << "only pre search, quit";
+    return pre_search_success ? PreSearchPhaseOutcome::RETURN_SUCCESS
+                              : PreSearchPhaseOutcome::RETURN_FAILURE;
+  }
+
+  return PreSearchPhaseOutcome::CONTINUE_FORMAL_SEARCH;
+}
+
+void HybridAStarPerpendicularTailInPathGenerator::RestoreFormalSearchConfig(
+    const SearchConfigSnapshot& snapshot) {
+  request_.search_mode = SearchMode::FORMAL;
+  request_.analytic_expansion_type = snapshot.analytic_expansion_type;
+  request_.swap_start_goal = snapshot.swap_start_goal;
+  config_.traj_kappa_change_penalty = snapshot.traj_kappa_change_penalty;
+}
+
+const bool HybridAStarPerpendicularTailInPathGenerator::RunFormalSearch(
+    const SearchConfigSnapshot& snapshot) {
+  RestoreFormalSearchConfig(snapshot);
+  ILOG_INFO << "interseting_area";
+  interesting_area_.DebugString();
+
+  return HybridAStarPathGenerator::RunFormalSearch(snapshot);
+}
+
+void HybridAStarPerpendicularTailInPathGenerator::InitInterestingArea() {
   const EgoInfoUnderSlot& ego_info_under_slot = request_.ego_info_under_slot;
-  const ParkingLatLonPathBuffer& lat_lon_path_buffer =
-      param.lat_lon_path_buffer;
-
-  const float bound = request_.ego_info_under_slot.slot_type == SlotType::SLANT
+  const float bound = ego_info_under_slot.slot_type == SlotType::SLANT
                           ? SLANT_SLOT_EXTEND_BOUND
                           : 0.0f;
-
-  double search_start_time = IflyTime::Now_ms();
-
-  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
-  const AnalyticExpansionType type = request_.analytic_expansion_type;
-  const bool swap_start_goal = request_.swap_start_goal;
-  const float traj_kappa_change_penalty = config_.traj_kappa_change_penalty;
-
   const Eigen::Vector2d& interesting_pos_slot =
       ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid;
 
@@ -253,19 +311,32 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
   interesting_area_.min_[1] =
       std::min(interesting_area_.min_[1],
                ego_info_under_slot.cur_pose.GetY() - extra_val);
+}
 
-  PathColDetBuffer pre_path_col_det_buffer;
-  pre_path_col_det_buffer.need_distinguish_outinslot = false;
-  pre_path_col_det_buffer.lon_buffer = param.lat_lon_path_buffer.lon_buffer;
-  pre_path_col_det_buffer.body_lat_buffer =
-      param.lat_lon_path_buffer.body_lat_buffer;
-  pre_path_col_det_buffer.mirror_lat_buffer =
-      param.lat_lon_path_buffer.mirror_lat_buffer;
-  pre_path_col_det_buffer.extra_turn_lat_buffer =
-      param.lat_lon_path_buffer.extra_lat_buffer;
+PathColDetBuffer
+HybridAStarPerpendicularTailInPathGenerator::BuildPreSearchPathColDetBuffer()
+    const {
+  const ParkingLatLonPathBuffer& lat_lon_path_buffer =
+      apa_param.GetParam().lat_lon_path_buffer;
 
-  request_.analytic_expansion_type = AnalyticExpansionType::REEDS_SHEEP;
-  config_.traj_kappa_change_penalty = 0.0;
+  PathColDetBuffer path_col_det_buffer;
+  path_col_det_buffer.need_distinguish_outinslot = false;
+  path_col_det_buffer.lon_buffer = lat_lon_path_buffer.lon_buffer;
+  path_col_det_buffer.body_lat_buffer = lat_lon_path_buffer.body_lat_buffer;
+  path_col_det_buffer.mirror_lat_buffer = lat_lon_path_buffer.mirror_lat_buffer;
+  path_col_det_buffer.extra_turn_lat_buffer =
+      lat_lon_path_buffer.extra_lat_buffer;
+  return path_col_det_buffer;
+}
+
+void HybridAStarPerpendicularTailInPathGenerator::TryDecideCulDeSac(
+    const PathColDetBuffer& pre_path_col_det_buffer) {
+  const ApaParameters& param = apa_param.GetParam();
+  const EgoInfoUnderSlot& ego_info_under_slot = request_.ego_info_under_slot;
+  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+  const float bound = ego_info_under_slot.slot_type == SlotType::SLANT
+                          ? SLANT_SLOT_EXTEND_BOUND
+                          : 0.0f;
 
   cul_de_sac_info_.Reset();
   do {
@@ -289,6 +360,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
         std::fabs(cur_pose.GetY()) > 2.168) {
       break;
     }
+
     geometry_lib::PathPoint end_pose;
     const float decide_cul_de_sac_y = 7.5f;
     if (cur_pose.GetTheta() < -0.001f) {
@@ -304,6 +376,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     } else {
       break;
     }
+
     constexpr double kCandidateXs[] = {7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0};
     bool find_safe_pos = false;
     std::vector<geometry_lib::PathPoint> collision_check_path(1);
@@ -348,103 +421,163 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     }
     request_.ego_info_under_slot.target_pose = real_target_pose;
   } while (false);
+}
 
-  do {
-    if (request_.pre_search_mode == 0) {
-      break;
+const bool HybridAStarPerpendicularTailInPathGenerator::RunPreSearch(
+    const PathColDetBuffer& pre_path_col_det_buffer) {
+  request_.search_mode = SearchMode::PRE_SEARCH;
+  request_.swap_start_goal = true;
+
+  const bool pre_search_success = UpdateOnce(pre_path_col_det_buffer);
+  if (!pre_search_success) {
+    return false;
+  }
+
+  float x_min = std::numeric_limits<float>::max();
+  float x_max = std::numeric_limits<float>::lowest();
+  float y_min = std::numeric_limits<float>::max();
+  float y_max = std::numeric_limits<float>::lowest();
+  for (size_t i = 0; i < result_.x_vec_vec.size(); ++i) {
+    const std::vector<float>& x_vec = result_.x_vec_vec[i];
+    const std::vector<float>& y_vec = result_.y_vec_vec[i];
+    for (size_t j = 0; j < x_vec.size(); ++j) {
+      const float x = x_vec[j];
+      const float y = y_vec[j];
+      x_min = std::min(x_min, x);
+      x_max = std::max(x_max, x);
+      y_min = std::min(y_min, y);
+      y_max = std::max(y_max, y);
     }
-    if (cul_de_sac_info_.is_cul_de_sac) {
-      break;
-    }
+  }
 
-    request_.search_mode = SearchMode::PRE_SEARCH;
-    request_.swap_start_goal = true;
+  const float bound = request_.ego_info_under_slot.slot_type == SlotType::SLANT
+                          ? SLANT_SLOT_EXTEND_BOUND
+                          : 0.0f;
+  const float x_extend = 0.86f, y_extend = 1.86f;
+  x_min -= x_extend;
+  x_max += x_extend;
+  y_min -= y_extend;
+  y_max += y_extend;
+  y_min = std::min(y_min, -3.6f);
+  y_max = std::max(y_max, 3.6f);
 
-    const bool pre_search_success = UpdateOnce(pre_path_col_det_buffer);
-    if (request_.pre_search_mode == 2) {
-      ILOG_INFO << "only pre search, quit";
-      result_.search_consume_time_ms = IflyTime::Now_ms() - search_start_time;
-      return pre_search_success;
-    }
+  cdl::AABB pre_search_box;
+  pre_search_box.min_ << x_min - bound, y_min - bound;
+  pre_search_box.max_ << x_max + bound, y_max + bound;
+  interesting_area_.combine(pre_search_box);
+  return true;
+}
 
-    if (!pre_search_success) {
-      ILOG_ERROR << "pre search failed";
-      break;
+link_pt_line::LinkPtLineInput<float>
+HybridAStarPerpendicularTailInPathGenerator::BuildDefaultLPLInput(
+    const geometry_lib::PathPoint& end_pose) const {
+  link_pt_line::LinkPtLineInput<float> lpl_input;
+  lpl_input.ref_line.Set(
+      common_math::Pos<float>(end_pose.GetX(), end_pose.GetY()), 1.0f,
+      float(end_pose.GetTheta()));
+  lpl_input.min_radius = min_radius_ + 0.068;
+  lpl_input.bigger_radius_asssign = min_radius_ + 2.0;
+  lpl_input.bigger_radius_no_asssign = min_radius_ + 1.0;
+  lpl_input.theta_err = 0.68;
+  lpl_input.link_line_start_pt = true;
+  lpl_input.reverse_last_line_min_length = 0.45;
+  lpl_input.drive_last_line_min_length = 1.68;
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    std::swap(lpl_input.reverse_last_line_min_length,
+              lpl_input.drive_last_line_min_length);
+  }
+  return lpl_input;
+}
+
+void HybridAStarPerpendicularTailInPathGenerator::ConfigureSearchBudget(
+    size_t& find_success_curve_min_count, double& find_success_curve_max_time) {
+  const ApaParameters& param = apa_param.GetParam();
+
+  if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+    find_success_curve_min_count = 0;
+    find_success_curve_max_time = 10;
+    config_.max_search_time_ms = 26;
+  } else if (request_.search_mode == SearchMode::PRE_SEARCH) {
+    find_success_curve_min_count = 0;
+    find_success_curve_max_time = 68;
+    config_.max_search_time_ms = 86;
+  } else {
+    if (request_.replan_reason == ReplanReason::SLOT_CRUISING) {
+      find_success_curve_min_count = 0;
+      find_success_curve_max_time = 68;
+      config_.max_search_time_ms = 9800;
+    } else if (request_.replan_reason == ReplanReason::DYNAMIC) {
+      find_success_curve_min_count = 18;
+      find_success_curve_max_time = 68;
+      config_.max_search_time_ms = 100;
+    } else if (request_.replan_reason == ReplanReason::PATH_DANGEROUS) {
+      find_success_curve_min_count = 68;
+      find_success_curve_max_time = param.max_dynamic_plan_proj_dt * 1000 * 0.8;
+      config_.max_search_time_ms = param.max_dynamic_plan_proj_dt * 1000;
+    } else if (request_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
+      const DynamicGearSwitchConfig& gear_switch_param =
+          param.gear_switch_config;
+      find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
+      find_success_curve_max_time =
+          (gear_switch_param.dist_thresh_for_gear_switch_point /
+           gear_switch_param.vel_thresh_for_gear_switch_point) *
+          1000;
+      config_.max_search_time_ms = find_success_curve_max_time + 100;
     } else {
-      ILOG_INFO << "pre search success";
-      float x_min = std::numeric_limits<float>::max();
-      float x_max = std::numeric_limits<float>::lowest();
-      float y_min = std::numeric_limits<float>::max();
-      float y_max = std::numeric_limits<float>::lowest();
-      for (size_t i = 0; i < result_.x_vec_vec.size(); ++i) {
-        const std::vector<float>& x_vec = result_.x_vec_vec[i];
-        const std::vector<float>& y_vec = result_.y_vec_vec[i];
-        for (size_t j = 0; j < x_vec.size(); ++j) {
-          const float x = x_vec[j];
-          const float y = y_vec[j];
-          x_min = std::min(x_min, x);
-          x_max = std::max(x_max, x);
-          y_min = std::min(y_min, y);
-          y_max = std::max(y_max, y);
-        }
-      }
-
-      const float x_extend = 0.86f, y_extend = 1.86f;
-      x_min -= x_extend, x_max += x_extend, y_min -= y_extend,
-          y_max += y_extend;
-      y_min = std::min(y_min, -3.6f);
-      y_max = std::max(y_max, 3.6f);
-      cdl::AABB pre_search_box;
-      pre_search_box.min_ << x_min - bound, y_min - bound;
-      pre_search_box.max_ << x_max + bound, y_max + bound;
-      interesting_area_.combine(pre_search_box);
+      find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
+      find_success_curve_max_time = 1800;
+      config_.max_search_time_ms = 10000;
     }
+  }
+}
 
-  } while (false);
+void HybridAStarPerpendicularTailInPathGenerator::PrepareLPLInputForCurrentNode(
+    const Node3d* current_node,
+    link_pt_line::LinkPtLineInput<float>& lpl_input) const {
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+    lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
+  } else if (request_.scenario_type ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
+  }
 
-  ILOG_INFO << "interseting_area";
-  interesting_area_.DebugString();
+  lpl_input.pose.SetPos(current_node->GetX(), current_node->GetY());
+  lpl_input.pose.SetTheta(current_node->GetPhi());
+  lpl_input.pose.SetDir(current_node->GetPhi());
+  lpl_input.sturn_radius = lpl_input.min_radius * 1.5;
+  lpl_input.lat_err = 0.03;
+  lpl_input.has_length_require = true;
+  lpl_input.use_bigger_radius = true;
+}
 
-  request_.search_mode = SearchMode::FORMAL;
-  request_.analytic_expansion_type = type;
-  request_.swap_start_goal = swap_start_goal;
-  config_.traj_kappa_change_penalty = traj_kappa_change_penalty;
+void HybridAStarPerpendicularTailInPathGenerator::PrepareLPLInputForNewNode(
+    const Node3d& new_node,
+    link_pt_line::LinkPtLineInput<float>& lpl_input) const {
+  lpl_input.ref_last_line_gear = AstarPathGear::NONE;
+  lpl_input.pose.SetPos(new_node.GetX(), new_node.GetY());
+  lpl_input.pose.SetTheta(new_node.GetPhi());
+  lpl_input.pose.SetDir(new_node.GetPhi());
+  lpl_input.sturn_radius = lpl_input.min_radius;
+  lpl_input.has_length_require = false;
+  lpl_input.lat_err = 0.009;
+  lpl_input.use_bigger_radius = false;
+}
 
-  search_start_time = IflyTime::Now_ms();
-  PathColDetBuffer path_col_det_buffer;
-  path_col_det_buffer.need_distinguish_outinslot = true;
-  path_col_det_buffer.lon_buffer = lat_lon_path_buffer.lon_buffer;
-  path_col_det_buffer.out_slot_body_lat_buffer =
-      lat_lon_path_buffer.out_slot_body_lat_buffer;
-  path_col_det_buffer.out_slot_mirror_lat_buffer =
-      lat_lon_path_buffer.out_slot_mirror_lat_buffer;
-  path_col_det_buffer.out_slot_extra_turn_lat_buffer =
-      lat_lon_path_buffer.out_slot_extra_turn_lat_buffer;
-  path_col_det_buffer.entrance_slot_body_lat_buffer =
-      lat_lon_path_buffer.entrance_slot_body_lat_buffer;
-  path_col_det_buffer.entrance_slot_mirror_lat_buffer =
-      lat_lon_path_buffer.entrance_slot_mirror_lat_buffer;
-  path_col_det_buffer.entrance_slot_extra_turn_lat_buffer =
-      lat_lon_path_buffer.entrance_slot_extra_turn_lat_buffer;
-  path_col_det_buffer.in_slot_body_lat_buffer =
-      lat_lon_path_buffer.in_slot_body_lat_buffer;
-  path_col_det_buffer.in_slot_mirror_lat_buffer =
-      lat_lon_path_buffer.in_slot_mirror_lat_buffer;
-  path_col_det_buffer.in_slot_extra_turn_lat_buffer =
-      lat_lon_path_buffer.in_slot_extra_turn_lat_buffer;
+const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
+  const SearchConfigSnapshot search_config_snapshot = PrepareSearchPhases();
 
-  const bool formal_search_success = UpdateOnce(path_col_det_buffer);
-
-  result_.search_consume_time_ms = IflyTime::Now_ms() - search_start_time;
-
-  result_.search_node_num = node_set_.size();
-
-  ILOG_INFO << "hybrid astar perpendicular tail in update end, time cost(ms): "
-            << result_.search_consume_time_ms
-            << ", node num: " << result_.search_node_num
-            << ", solve number: " << result_.solve_number;
-
-  return formal_search_success;
+  switch (HandlePreSearchPhase()) {
+    case PreSearchPhaseOutcome::RETURN_SUCCESS:
+      return FinalizeUpdate(true);
+    case PreSearchPhaseOutcome::RETURN_FAILURE:
+      return FinalizeUpdate(false);
+    case PreSearchPhaseOutcome::CONTINUE_FORMAL_SEARCH:
+      return FinalizeUpdate(RunFormalSearch(search_config_snapshot));
+    default:
+      return false;
+  };
 }
 
 const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
@@ -452,131 +585,30 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   const double start_time = IflyTime::Now_ms();
   const ApaParameters& param = apa_param.GetParam();
 
-  ResetNodePool();
-  open_pq_.clear();
-  node_set_.clear();
-  node_set_.reserve(NODE_POOL_MAX_NUM);
-  result_.Clear();
-  child_node_debug_.clear();
-  queue_path_debug_.clear();
-  delete_queue_path_debug_.clear();
-  all_success_curve_path_debug_.clear();
-  all_success_path_first_gear_switch_pose_debug_.clear();
-  all_search_node_list_.clear();
-  all_curve_node_list_.clear();
-  collision_check_time_ms_ = 0.0;
-  rs_try_num_ = 0;
-  rs_interpolate_time_ms_ = 0.0;
-  rs_time_ms_ = 0.0;
-  lpl_try_num_ = 0;
-  lpl_interpolate_time_ms_ = 0.0;
-  lpl_time_ms_ = 0.0;
-  set_curve_path_time_ = 0.0;
-  check_node_should_del_time_ = 0.0;
-  generate_next_node_time_ = 0.0;
+  ResetSearchState();
 
-  ILOG_INFO << "hybrid astar perpendicular tail in update once begin";
+  ILOG_INFO << "hybrid astar " << GetScenarioPrefix() << " update once begin";
 
   UpdatePoseBoundary();
 
-  // NodeGridIndex grid_index;
-  // Node3d::CoordinateToGridIndex(
-  //     search_map_boundary_.x_max, search_map_boundary_.y_max,
-  //     search_map_boundary_.phi_max, &grid_index, search_map_boundary_,
-  //     config_);
-  // if (!CheckOutOfGridBound(grid_index)) {
-  //   ILOG_ERROR << "search boundary out of map boundary" << grid_index.x <<
-  //   "
-  //   "
-  //              << grid_index.y << " " << grid_index.phi;
-
-  //   result_.fail_type = AstarFailType::OUT_OF_BOUND;
-  //   return false;
-  // }
-
-  // alloc start node
-  start_node_ = node_pool_.AllocateNode();
-  if (start_node_ == nullptr) {
-    ILOG_ERROR << "start node nullptr";
-    result_.fail_type = AstarFailType::ALLOCATE_NODE_FAIL;
+  if (!InitStartAndEndNodes()) {
     return false;
   }
 
-  geometry_lib::PathPoint start_pose = request_.ego_info_under_slot.cur_pose;
-
-  if (request_.swap_start_goal) {
-    start_pose = request_.ego_info_under_slot.target_pose;
-  }
-
-  start_node_->Set(
-      NodePath(start_pose.pos.x(), start_pose.pos.y(), start_pose.heading),
-      search_map_boundary_, config_, 0.0);
-
-  start_node_->SetPathType(AstarPathType::START_NODE);
-  start_node_->DebugString();
-  // alloc end node
-  end_node_ = node_pool_.AllocateNode();
-  if (end_node_ == nullptr) {
-    ILOG_ERROR << "end node nullptr";
-    result_.fail_type = AstarFailType::ALLOCATE_NODE_FAIL;
-    return false;
-  }
-  geometry_lib::PathPoint end_pose = request_.ego_info_under_slot.target_pose;
-  if (request_.swap_start_goal) {
-    end_pose = request_.ego_info_under_slot.cur_pose;
-  }
-  end_node_->Set(NodePath(end_pose.pos.x(), end_pose.pos.y(), end_pose.heading),
-                 search_map_boundary_, config_, 0.0);
-
-  end_node_->SetPathType(AstarPathType::END_NODE);
-  end_node_->DebugString();
-
-  NodeDeleteInput node_del_input;
-  node_del_input.ego_info_under_slot = request_.ego_info_under_slot;
-  node_del_input.map_bound = search_map_boundary_;
-  node_del_input.config = config_;
-  node_del_input.map_grid_bound = search_map_grid_boundary_;
-  node_del_input.scenario_type = request_.scenario_type;
-  node_del_input.start_id = start_node_->GetGlobalID();
-  node_del_input.max_gear_shift_number = request_.max_gear_shift_number;
-  node_del_input.path_col_det_buffer = path_col_det_buffer;
-  node_del_input.sample_ds = request_.sample_ds;
-  node_del_input.swap_start_goal = request_.swap_start_goal;
-  if (request_.search_mode == SearchMode::FORMAL) {
-    node_del_input.need_cal_obs_dist = true;
-    node_del_input.enable_smart_fold_mirror = request_.enable_smart_fold_mirror;
-  } else {
-    node_del_input.need_cal_obs_dist = false;
-    node_del_input.enable_smart_fold_mirror = false;
-  }
-
+  const NodeDeleteInput node_del_input =
+      BuildNodeDeleteInput(path_col_det_buffer);
   node_delete_decider_.Process(node_del_input);
+
+  if (!ValidateStartAndEndNodes()) {
+    return false;
+  }
 
   NodeDeleteRequest node_del_request;
 
-  // check start node
-  node_del_request.current_node = start_node_;
-  if (CheckNodeShouldDelete(node_del_request)) {
-    ILOG_ERROR << "start node is deleted, reason = "
-               << GetNodeDeleteReasonString(
-                      node_delete_decider_.GetNodeDeleteReason());
-    result_.fail_type = AstarFailType::START_COLLISION;
-    return false;
-  }
-
-  // check end node
-  node_del_request.current_node = end_node_;
-  if (CheckNodeShouldDelete(node_del_request)) {
-    ILOG_ERROR << "end node is deleted, reason = "
-               << GetNodeDeleteReasonString(
-                      node_delete_decider_.GetNodeDeleteReason());
-    result_.fail_type = AstarFailType::GOAL_COLLISION;
-    return false;
-  }
-
   // generate astar dist
   const double dp_start_time = IflyTime::Now_ms();
-  grid_search_.GenerateDpMap(end_pose.pos.x(), end_pose.pos.y(),
+  const auto& end_pose = GetEndPoseForCurrentSearch();
+  grid_search_.GenerateDpMap(end_pose.GetX(), end_pose.GetY(),
                              search_map_boundary_);
   ILOG_INFO << "generate dp map consume time = "
             << IflyTime::Now_ms() - dp_start_time << "  ms";
@@ -609,23 +641,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   double search_continue_time = 0.0;
 
   ILOG_INFO << "USE LINK PT LINE";
-  link_pt_line::LinkPtLineInput<float> lpl_input;
-  lpl_input.ref_line.Set(
-      common_math::Pos<float>(end_pose.GetX(), end_pose.GetY()), 1.0f,
-      float(end_pose.GetTheta()));
-
-  lpl_input.min_radius = min_radius_ + 0.068;
-  lpl_input.bigger_radius_asssign = min_radius_ + 2.0;
-  lpl_input.bigger_radius_no_asssign = min_radius_ + 1.0;
-  lpl_input.theta_err = 0.68;
-  lpl_input.link_line_start_pt = true;
-  lpl_input.reverse_last_line_min_length = 0.45;
-  lpl_input.drive_last_line_min_length = 1.68;
-  if (request_.scenario_type ==
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    std::swap(lpl_input.reverse_last_line_min_length,
-              lpl_input.drive_last_line_min_length);
-  }
+  auto lpl_input = BuildDefaultLPLInput(end_pose);
 
   AnalyticExpansionRequest analytic_expansion_request;
   analytic_expansion_request.type = request_.analytic_expansion_type;
@@ -634,44 +650,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
   double find_success_curve_max_time;
   size_t find_success_curve_min_count;
-  if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
-    find_success_curve_min_count = 0;
-    find_success_curve_max_time = 10;
-    config_.max_search_time_ms = 26;
-  } else if (request_.search_mode == SearchMode::PRE_SEARCH) {
-    find_success_curve_min_count = 0;
-    find_success_curve_max_time = 68;
-    config_.max_search_time_ms = 86;
-  } else {
-    if (request_.replan_reason == ReplanReason::SLOT_CRUISING) {
-      find_success_curve_min_count = 0;
-      find_success_curve_max_time = 68;
-      config_.max_search_time_ms = 9800;
-    } else if (request_.replan_reason == ReplanReason::DYNAMIC) {
-      // dynamic plan
-      find_success_curve_min_count = 18;
-      find_success_curve_max_time = 68;
-      config_.max_search_time_ms = 100;
-    } else if (request_.replan_reason == ReplanReason::PATH_DANGEROUS) {
-      find_success_curve_min_count = 68;
-      find_success_curve_max_time = param.max_dynamic_plan_proj_dt * 1000 * 0.8;
-      config_.max_search_time_ms = param.max_dynamic_plan_proj_dt * 1000;
-    } else if (request_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
-      const DynamicGearSwitchConfig& gear_switch_param =
-          param.gear_switch_config;
-      find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
-      find_success_curve_max_time =
-          (gear_switch_param.dist_thresh_for_gear_switch_point /
-           gear_switch_param.vel_thresh_for_gear_switch_point) *
-          1000;
-      config_.max_search_time_ms = find_success_curve_max_time + 100;
-    } else {
-      // static plan
-      find_success_curve_min_count = std::min(request_.ref_solve_number, 1080);
-      find_success_curve_max_time = 1800;
-      config_.max_search_time_ms = 10000;
-    }
-  }
+  ConfigureSearchBudget(find_success_curve_min_count,
+                        find_success_curve_max_time);
 
   ILOG_INFO << "find_success_curve_min_count = " << find_success_curve_min_count
             << " find_success_curve_max_time = " << find_success_curve_max_time
@@ -737,21 +717,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     // search ends.
     if (analytic_expansion_request.type ==
         AnalyticExpansionType::LINK_POSE_LINE) {
-      if (request_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-        lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
-      } else if (request_.scenario_type ==
-                 ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-        lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
-      }
-
-      lpl_input.pose.SetPos(current_node->GetX(), current_node->GetY());
-      lpl_input.pose.SetTheta(current_node->GetPhi());
-      lpl_input.pose.SetDir(current_node->GetPhi());
-      lpl_input.sturn_radius = lpl_input.min_radius * 1.5;
-      lpl_input.lat_err = 0.03;
-      lpl_input.has_length_require = true;
-      lpl_input.use_bigger_radius = true;
+      PrepareLPLInputForCurrentNode(current_node, lpl_input);
     }
 
     if (node_pool_.PoolSize() > 16800 && curve_node_to_goal_vec.size() < 1) {
@@ -852,55 +818,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       }
 
       node_del_request.explored_node_num = explored_node_num + 3;
-      new_node.SetPathType(AstarPathType::NODE_SEARCHING);
-      new_node.SetGearType(car_motion.gear);
-      // new_node.SetSteer(car_motion.front_wheel_angle);
-      // new_node.SetRadius(car_motion.radius);
-      new_node.SetKappa(car_motion.kappa);
-      new_node.SetPre(current_node);
-      // dist_to_start is the path distance from start_node to the cur_node
-      new_node.SetDistToStart(new_node.GetNodePathDistance() +
-                              current_node->GetDistToStart());
-      // GearSwitchNode only record first gear switch node
-      // NextGearSwitchNode only record second gear switch node
-      // SingleGearLength resprent every_single_gear_complete_length
-      // SingleGearMinLength only resprent min single_gear_complete_length
-      if (current_node->IsPathGearChange(car_motion.gear)) {
-        new_node.SetGearSwitchNum(current_node->GetGearSwitchNum() + 1);
-        if (new_node.GetGearSwitchNum() == 1) {
-          new_node.SetGearSwitchNode(current_node);
-          new_node.SetNextGearSwitchNode(nullptr);
-        } else if (new_node.GetGearSwitchNum() == 2) {
-          new_node.SetGearSwitchNode(current_node->GearSwitchNode());
-          new_node.SetNextGearSwitchNode(current_node);
-        } else {
-          new_node.SetGearSwitchNode(current_node->GearSwitchNode());
-          new_node.SetNextGearSwitchNode(current_node->NextGearSwitchNode());
-        }
-        new_node.SetScurveNum(current_node->GetScurveNum());
-        new_node.SetSingleGearLength(new_node.GetNodePathDistance());
-        new_node.SetSingleGearMinLength(
-            std::min(new_node.GetSingleGearLength(),
-                     current_node->GetSingleGearMinLength()));
-      } else {
-        new_node.SetGearSwitchNum(current_node->GetGearSwitchNum());
-        new_node.SetGearSwitchNode(current_node->GearSwitchNode());
-        new_node.SetNextGearSwitchNode(current_node->NextGearSwitchNode());
-        if (IsSteerOpposite(current_node->GetKappa(), new_node.GetKappa())) {
-          new_node.SetScurveNum(current_node->GetScurveNum() + 1);
-        } else {
-          new_node.SetScurveNum(current_node->GetScurveNum());
-        }
-        new_node.SetSingleGearLength(new_node.GetNodePathDistance() +
-                                     current_node->GetSingleGearLength());
-        if (new_node.GetGearSwitchNum() == 0) {
-          new_node.SetSingleGearMinLength(new_node.GetSingleGearLength());
-        } else {
-          new_node.SetSingleGearMinLength(
-              std::min(new_node.GetSingleGearLength(),
-                       current_node->GetSingleGearMinLength()));
-        }
-      }
+      PopulateChildNodeState(&new_node, current_node, car_motion);
 
       if (CheckNodeShouldDelete(node_del_request)) {
 #if DEBUG_CHILD_NODE
@@ -958,14 +876,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       // update lpl input pose, and make it easier to successfully link
       if (analytic_expansion_request.type ==
           AnalyticExpansionType::LINK_POSE_LINE) {
-        lpl_input.ref_last_line_gear = AstarPathGear::NONE;
-        lpl_input.pose.SetPos(new_node.GetX(), new_node.GetY());
-        lpl_input.pose.SetTheta(new_node.GetPhi());
-        lpl_input.pose.SetDir(new_node.GetPhi());
-        lpl_input.sturn_radius = lpl_input.min_radius;
-        lpl_input.has_length_require = false;
-        lpl_input.lat_err = 0.009;
-        lpl_input.use_bigger_radius = false;
+        PrepareLPLInputForNewNode(new_node, lpl_input);
       }
 
       CalcNodeGCost(current_node, &new_node);
@@ -1073,7 +984,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
             << " set_curve_path_time_ = " << set_curve_path_time_ << " ms"
             << " check_node_time = " << check_node_should_del_time_ << " ms";
 
-  ILOG_INFO << "hybrid astar perpendicular tail in update once end"
+  ILOG_INFO << "hybrid astar " << GetScenarioPrefix() << " update once end"
             << " slot id = " << request_.ego_info_under_slot.id
             << " slot type = "
             << GetSlotTypeString(request_.ego_info_under_slot.slot_type)
@@ -1285,10 +1196,9 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
   }
 
 #if PLOT_ALL_BEST_CURVE_PATH
-  std::sort(ranked_costs.begin(), ranked_costs.end(),
-            [](const auto& lhs, const auto& rhs) {
-              return lhs.first < rhs.first;
-            });
+  std::sort(
+      ranked_costs.begin(), ranked_costs.end(),
+      [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
   all_success_curve_path_debug_.clear();
   all_success_path_first_gear_switch_pose_debug_.clear();
   for (const auto& pair : ranked_costs) {
@@ -1311,10 +1221,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
 }
 
 const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
-    const common_math::PathPt<float>& gear_switch_pose,
-    AstarPathGear gear, const float gear_switch_penalty,
-    const float length_penalty) {
-
+    const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+    const float gear_switch_penalty, const float length_penalty) {
   const auto& target_pose = request_.ego_info_under_slot.target_pose;
 
   link_pt_line::LinkPtLineInput<float> lpl_input;
@@ -1410,9 +1318,8 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
       std::fabs(gear_switch_pose.GetY()) * w3;
 
   if (col_det_interface_ptr_->GetEDTColDetPtr()
-          ->Update
-      (std::vector<common_math::PathPt<float>>{gear_switch_pose}, 0.4f, 0.1f,
-       0.1f, gear)
+          ->Update(std::vector<common_math::PathPt<float>>{gear_switch_pose},
+                   0.4f, 0.1f, 0.1f, gear)
           .col_flag) {
     gear_switch_pose_cost += 0.5f * length_penalty;
   }

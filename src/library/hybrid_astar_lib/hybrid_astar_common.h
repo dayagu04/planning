@@ -355,6 +355,9 @@ struct HybridAStarResult {
   AstarFailType fail_type = AstarFailType::NONE;
 
   double search_consume_time_ms = 0;
+  double decide_cul_de_sac_consume_time_ms = 0;
+  double pre_search_consume_time_ms = 0;
+  double formal_search_consume_time_ms = 0;
 
   int solve_number = 0;
 
@@ -386,6 +389,9 @@ struct HybridAStarResult {
     gear_vec.clear();
 
     search_consume_time_ms = 0;
+    decide_cul_de_sac_consume_time_ms = 0;
+    pre_search_consume_time_ms = 0;
+    formal_search_consume_time_ms = 0;
 
     solve_number = 0;
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "aabb2d.h"
@@ -57,6 +58,24 @@ class HybridAStarPathGenerator : public ParkingTask {
   const cdl::AABB& GetIntersetingAreaForDebug();
 
  protected:
+  struct SearchPhaseTimeCost {
+    double decide_cul_de_sac_consume_time_ms = 0.0;
+    double pre_search_consume_time_ms = 0.0;
+    double formal_search_consume_time_ms = 0.0;
+  };
+
+  struct SearchConfigSnapshot {
+    AnalyticExpansionType analytic_expansion_type;
+    bool swap_start_goal;
+    float traj_kappa_change_penalty;
+  };
+
+  enum class PreSearchPhaseOutcome {
+    CONTINUE_FORMAL_SEARCH,
+    RETURN_SUCCESS,
+    RETURN_FAILURE,
+  };
+
   void InitNodePool();
   void ResetNodePool();
   void GenerateCarMotionVec();
@@ -64,8 +83,26 @@ class HybridAStarPathGenerator : public ParkingTask {
                                     const AstarPathGear gear);
 
   virtual void UpdatePoseBoundary() {}
+  void ResetSearchState();
+  const geometry_lib::PathPoint& GetStartPoseForCurrentSearch() const;
+  const geometry_lib::PathPoint& GetEndPoseForCurrentSearch() const;
+  const bool InitStartAndEndNodes();
+  const NodeDeleteInput BuildNodeDeleteInput(
+      const PathColDetBuffer& path_col_det_buffer) const;
+  const bool ValidateStartAndEndNodes();
+  void PopulateChildNodeState(Node3d* new_node, Node3d* current_node,
+                              const CarMotion& car_motion) const;
   const bool CheckOutOfGridBound(const NodeGridIndex& id) const;
   const bool CheckOutOfPoseBound(const Pose2D& pose) const;
+  void InitSearchPhaseTimeCost();
+  void SyncSearchPhaseTimeCostToResult();
+  const bool FinalizeUpdate(const bool search_success);
+  void LogUpdateSummary() const;
+  virtual const bool RunFormalSearch(const SearchConfigSnapshot& snapshot);
+  PathColDetBuffer BuildFormalSearchPathColDetBuffer() const;
+  virtual const std::string GetScenarioPrefix() const;
+  virtual const bool UpdateOnce(
+      const PathColDetBuffer& path_col_det_buffer) = 0;
 
   void GenerateNextNode(Node3d* new_node, Node3d* parent_node,
                         const CarMotion& car_motion);
@@ -103,13 +140,11 @@ class HybridAStarPathGenerator : public ParkingTask {
       const link_pt_line::LinkPtLineInput<float>& input);
 
   const bool CalcLPLPathToGoal(
-      Node3d* current_node,
-      const link_pt_line::LinkPtLineInput<float>& input,
+      Node3d* current_node, const link_pt_line::LinkPtLineInput<float>& input,
       const bool cal_h_cost = false);
 
   const float GenerateHeuristicCostByLPLPath(
-      Node3d* next_node,
-      const link_pt_line::LinkPtLineInput<float>& input,
+      Node3d* next_node, const link_pt_line::LinkPtLineInput<float>& input,
       NodeHeuristicCost* cost);
 
   const float CalcCurveNodeGCostToParentNode(Node3d* current_node,
@@ -130,9 +165,8 @@ class HybridAStarPathGenerator : public ParkingTask {
       ObsToPathDistRelativeSlot& obs_dist_relative_slot);
 
   virtual const float CalcGearChangePoseCost(
-      const common_math::PathPt<float>& gear_switch_pose,
-      AstarPathGear gear, const float gear_switch_penalty,
-      const float length_penalty);
+      const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
+      const float gear_switch_penalty, const float length_penalty);
 
   void DebugNodePath(const NodePath& path,
                      const AstarPathGear gear = AstarPathGear::NONE);
@@ -171,6 +205,7 @@ class HybridAStarPathGenerator : public ParkingTask {
   std::vector<CarMotion> car_motion_vec;
 
   HybridAStarResult result_;
+  SearchPhaseTimeCost search_phase_time_cost_;
 
   // astar start, end
   Node3d* start_node_;
