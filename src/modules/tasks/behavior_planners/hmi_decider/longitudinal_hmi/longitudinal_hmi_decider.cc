@@ -43,13 +43,15 @@ bool LongitudinalHmiDecider::Execute() {
   ad_info.intersection_state = iflyauto::IntersectionState(intersection_state);
 
   const auto lateral_obstacles = session_->environmental_model().get_lateral_obstacle();
+  auto start_stop_info =
+      session_->planning_context().start_stop_result().state();
 
   // update intersection traffic lights reminder hmi info
   constexpr uint8 kIntersectionStatusNone = 8;
   ad_info.intersection_pass_sts =
       iflyauto::IntersectionPassSts(kIntersectionStatusNone);
-  if (is_red_tfl && !tfl_decider.can_pass && intersection_state ==
-      planning::common::APPROACH_INTERSECTION && (!tfl_decider.is_small_front_intersection ||
+  if (is_red_tfl && !tfl_decider.can_pass && start_stop_info != common::StartStopInfo::STOP &&
+      intersection_state == planning::common::APPROACH_INTERSECTION && (!tfl_decider.is_small_front_intersection ||
       tfl_decider.is_tfl_match_intersection) && (lateral_obstacles->leadone() == nullptr ||
       (lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_stopline + config_.tfl_reminder_cipv_dis ||
       lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
