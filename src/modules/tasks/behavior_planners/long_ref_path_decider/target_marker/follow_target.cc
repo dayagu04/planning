@@ -69,6 +69,8 @@ void FollowTarget::GenerateUpperBoundInfo() {
               cipv_decider_output.is_large();
           cipv_info_.type = agent->type();
           cipv_info_.is_tfl_virtual_obs = agent->is_tfl_virtual_obs();
+          cipv_info_.is_turnstile_virtual_obs =
+              cipv_decider_output.is_turnstile_virtual_obs();
           cipv_info_.is_lane_borrow_obs = agent->is_lane_borrow_virtual_obs();
         }
       }
@@ -118,7 +120,9 @@ void FollowTarget::MakeMinFollowDistance() {
     min_follow_distance_m_ = cone_min_follow_distance;
     return;
   }
-  if (cipv_info_.agent_id != -1 && cipv_info_.is_tfl_virtual_obs) {
+  if (cipv_info_.agent_id != -1 &&
+      (cipv_info_.is_tfl_virtual_obs ||
+       cipv_info_.is_turnstile_virtual_obs)) {
     min_follow_distance_m_ = traffic_light_min_follow_distance_gap;
     return;
   }
@@ -174,6 +178,7 @@ void FollowTarget::GenerateFollowTarget() {
   }
 }
 
+
 void FollowTarget::GenerateHppFollowTarget() {
   double matched_desired_headway = default_headway;
   const double default_t = 0.0;
@@ -228,7 +233,8 @@ void FollowTarget::GenerateHppFollowTarget() {
     double s_target_value = std::min(upper_bound_s, target_s);
 
     if (cipv_info.cipv_id() ==
-        stop_destination_decider_output.stop_destination_virtual_agent_id()) {
+            stop_destination_decider_output.stop_destination_virtual_agent_id() ||
+        cipv_info.is_turnstile_virtual_obs()) {
       target_s_disatnce = vel * follow_time_gap;
       s_target_value =
           std::max(upper_bound_infos_[i].s - target_s_disatnce, 0.0);

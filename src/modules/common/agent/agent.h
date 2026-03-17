@@ -89,6 +89,8 @@ struct AgentDefaultInfo {
       kRadsVirtualAgentId_Base + 1;
   const static int32_t kHppStopDestinationVirtualAgentId =
       kHppVirtualAgentId_Base + 1;
+  const static int32_t kHppTurnstileVirtualAgentId =
+      kHppVirtualAgentId_Base + 10000;
 };
 
 struct TmpPathPoint {
@@ -259,6 +261,8 @@ class Agent {
   const bool is_stop_destination_virtual_obs() const;
   void set_is_stop_destination_virtual_obs(
       bool is_stop_destination_virtual_obs);
+  const bool is_turnstile_virtual_obs() const;
+  void set_is_turnstile_virtual_obs(bool is_turnstile_virtual_obs);
   const bool is_lane_borrow_virtual_obs() const;
   void set_is_lane_borrow_virtual_obs(bool is_lane_borrow_virtual_obs);
   const bool is_vru_crossing_virtual_obs() const;
@@ -352,6 +356,7 @@ class Agent {
 
   bool is_tfl_virtual_obs_ = false;
   bool is_stop_destination_virtual_obs_ = false;
+  bool is_turnstile_virtual_obs_ = false;
   bool is_lane_borrow_virtual_obs_ = false;
   bool is_vru_crossing_virtual_obs_ = false;
   unsigned int fusion_source_;

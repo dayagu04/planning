@@ -90,6 +90,8 @@ void StartStopDecider::UpdateInput() {
   cipv_relative_s_ = cipv_decider_output.relative_s();
   cipv_vel_frenet_ = cipv_decider_output.v_frenet();
   cipv_is_large_ = cipv_decider_output.is_large();
+  cipv_is_turnstile_virtual_obs_ =
+      cipv_decider_output.is_turnstile_virtual_obs();
 
   // ego state info
   planning_init_state_vel_ = environmental_model.get_ego_state_manager()
@@ -167,7 +169,8 @@ double StartStopDecider::CalculateStopDistance() {
     high_speed_min_follow_distance_gap = config_.cone_min_follow_distance_gap;
   }
 
-  if (agent->is_tfl_virtual_obs()) {
+  if (agent->is_tfl_virtual_obs() ||
+      cipv_is_turnstile_virtual_obs_) {
     high_speed_min_follow_distance_gap =
         config_.traffic_light_min_follow_distance_gap;
   }
