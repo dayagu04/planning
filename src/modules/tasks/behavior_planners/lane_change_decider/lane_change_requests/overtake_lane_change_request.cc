@@ -427,7 +427,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         leading_relative_dis = track_iter->second->d_s_rel();
         exist_cross_line_large_agent_ahead_ = true;
         double lane_width = clane->width_by_s(track_iter->second->frenet_s());
-        double half_lane_width = lane_width / 2.0;
+        double half_lane_width = lane_width * 0.5;
         double agent_width = track_iter->second->width();
         double cutting_threshold =
             std::max(half_lane_width + 0.2 - agent_width * 0.5, 0.6);
