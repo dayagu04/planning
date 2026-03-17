@@ -123,6 +123,7 @@ class LaneBorrowDecider : public Task {
   std::unordered_map<int32_t, int32_t> lat_flag_map_;
   int lane_change_state_{0};
 
+  std::shared_ptr<FrenetObstacle> nearest_no_borrow_obstacle_{nullptr};
   std::vector<int> static_blocked_obj_id_vec_;  // after decision
   std::vector<int> last_static_blocked_obj_id_vec_;
   std::vector<std::shared_ptr<FrenetObstacle>> static_blocked_obstacles_;
