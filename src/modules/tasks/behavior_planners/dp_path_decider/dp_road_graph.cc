@@ -605,6 +605,10 @@ bool DPRoadGraph::CartSpline(
   std::vector<double> x_vec;
   std::vector<double> y_vec;
   if (refined_paths_.size() < 2) {
+    ref_path_curve_.x_vec.clear();
+    ref_path_curve_.y_vec.clear();
+    ref_path_curve_.s_vec.clear();
+    ref_path_curve_.k_vec.clear();
     return false;
   }
   last_frame_paths_ =
@@ -625,6 +629,10 @@ bool DPRoadGraph::CartSpline(
 
   // 检查过滤后的点数是否足够（spline 至少需要 3 个点）
   if (s_vec.size() < 3) {
+    ref_path_curve_.x_vec.clear();
+    ref_path_curve_.y_vec.clear();
+    ref_path_curve_.s_vec.clear();
+    ref_path_curve_.k_vec.clear();
     return false;
   }
 
@@ -939,6 +947,10 @@ void DPRoadGraph::ClearDPInfo() {
   // sampled_points_.clear();
   dp_selected_points_.clear();
   min_cost_path_.clear();
+  ref_path_curve_.x_vec.clear();
+  ref_path_curve_.y_vec.clear();
+  ref_path_curve_.s_vec.clear();
+  ref_path_curve_.k_vec.clear();
 }
 std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
     const std::vector<double>& x_vec, const std::vector<double>& y_vec) {
