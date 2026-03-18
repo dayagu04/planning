@@ -2233,7 +2233,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   if (last_zero_relative_id_nums_ > 1 &&
       (lcc_split_select_is_finish_ || road_split_select_is_finish_ ||
        ramp_split_select_is_finish_) &&
-      ego_distance_to_lane_merge_split_point < ego_state->ego_v() * 1.0) {
+      ego_distance_to_lane_merge_split_point < ego_state->ego_v() * 1.5) {
     ILOG_DEBUG << "ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
@@ -4092,13 +4092,13 @@ double EgoLaneTrackManger::NormalizeCurvatureRadius(double radius) {
 double EgoLaneTrackManger::NormalizeCurvatureSign(double dis_to_ego) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  double min_consider_dis = std::max(ego_state->ego_v(), 1.0) * 1.0;
+  double min_consider_dis = std::max(ego_state->ego_v(), 1.0) * 1.5;
   double max_consider_dis = std::max(ego_state->ego_v(), 1.0) * 4.0;
   double clamped_dis =
       std::clamp(dis_to_ego, min_consider_dis, max_consider_dis);
   // 转换为曲率符号程度（离自车距离越近 权重越大）
   double sign_degree =
-      (max_consider_dis - dis_to_ego) / (max_consider_dis - min_consider_dis);
+      (max_consider_dis - clamped_dis) / (max_consider_dis - min_consider_dis);
   return sign_degree;
 }
 
@@ -4202,8 +4202,11 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
       if (!lane_frenet_coord->GetKappaByS(sample_s, &curv)) {
         continue;
       }
-      current_lane_curv_sign = curv > 0 ? 1 : -1;
-      curv_sign_degree = NormalizeCurvatureSign(sample_s - ego_frenet_point.x);
+      if (std::fabs(curv) > 0.001) {
+        current_lane_curv_sign = curv > 0 ? 1 : -1;
+      }
+      curv_sign_degree =
+          NormalizeCurvatureSign(sample_s - ego_frenet_point.x);
       curv_sign_total += current_lane_curv_sign * curv_sign_degree;
       curv_window_vec.emplace_back(std::fabs(curv));
     }
