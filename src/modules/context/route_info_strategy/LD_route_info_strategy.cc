@@ -190,6 +190,8 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
 
   CaculateDistanceToTollStation(current_link_, ego_on_cur_link_s_);
 
+  CaculateDistanceToNOAEnd(current_link_, ego_on_cur_link_s_);
+
   return true;
 }
 
@@ -5572,5 +5574,39 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
   }
 
   Erase1Split2FeasibleLane(feasible_lane_graph);
+}
+void LDRouteInfoStrategy::CaculateDistanceToNOAEnd(
+    const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
+  if (segment == nullptr) {
+    return;
+  }
+  double distance_to_noa_end = 0.0;
+  // 当前位于NOA状态，计算到地图信息终点/NOA
+  if (route_info_output_.is_ego_on_expressway) {
+    const auto* iter_link = segment;
+    while (iter_link) {
+      if (iter_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+          iter_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+          (iter_link->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+        if (iter_link->id() == current_link_->id()) {
+          distance_to_noa_end += iter_link->length() * 0.01 - nearest_s;
+        } else {
+          distance_to_noa_end += iter_link->length() * 0.01;
+        }
+        // 大于3km直接break
+        if (distance_to_noa_end > 3000.0) {
+          break;
+        }
+        iter_link = ld_map_.GetNextLinkOnRoute(iter_link->id());
+      } else {
+        break;
+      }
+    }
+  } else {
+    distance_to_noa_end = 0.0;
+  }
+  route_info_output_.distance_to_noa_end = distance_to_noa_end;
 }
 }  // namespace planning

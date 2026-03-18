@@ -3382,6 +3382,7 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
   JSON_DEBUG_VALUE("current_lane_distance", route_info_output_.current_lane_distance);
   JSON_DEBUG_VALUE("right_lane_distance", route_info_output_.right_lane_distance);
+  JSON_DEBUG_VALUE("right_lane_distance", route_info_output_.distance_to_noa_end);
 
   int minVal_seq = 0;
   int maxVal_seq = 0;

@@ -498,6 +498,7 @@ struct RouteInfoOutput {
   // double distance_to_exchange_area_end_point = -NL_NMAX;
   // double lsl_length = 0.0;
   double current_segment_passed_distance = 0.0;  // for xykuai
+  double distance_to_noa_end = NL_NMAX;
 
   // （for wangzhi17）目前只看到这两个对外只用作可视化信息，用virtual lane中的信息去更新，就不对外输出了
   // double left_lane_distance = 0.0; // 这个更新的方式没看懂
@@ -559,6 +560,7 @@ struct RouteInfoOutput {
     sum_dis_to_last_link_split_point = NL_NMAX;
     sum_dis_to_last_split_exchange_area_end_point = NL_NMAX;
     distance_to_toll_station = NL_NMAX;
+    distance_to_noa_end = NL_NMAX;
     is_ego_on_city_expressway_hmi = false;
     is_ego_on_expressway_hmi = false;
     is_exist_toll_station = false;
