@@ -8,18 +8,74 @@
 
 namespace planning {
 
-double LongRefPathDecider::CalcUpperBoundConfidence(const double distance_s) {
+std::unordered_map<int32_t, int32_t>
+    LongRefPathDecider::upper_bound_agent_observation_count_;
+
+double LongRefPathDecider::CalcUpperBoundConfidence(const int32_t agent_id,
+                                                    const double distance_s) {
   const double abs_s = std::fabs(distance_s);
-  if (abs_s <= kUpperBoundConfidenceFullDistance) {
-    return 1.0;
+  double distance_confidence = 1.0;
+  if (abs_s > kUpperBoundConfidenceFullDistance) {
+    if (abs_s >= kUpperBoundConfidenceZeroDistance) {
+      distance_confidence = 0.0;
+    } else {
+      const double denom =
+          kUpperBoundConfidenceZeroDistance - kUpperBoundConfidenceFullDistance;
+      const double ratio = (kUpperBoundConfidenceZeroDistance - abs_s) / denom;
+      distance_confidence = std::fmax(0.0, std::fmin(1.0, ratio));
+    }
   }
-  if (abs_s >= kUpperBoundConfidenceZeroDistance) {
-    return 0.0;
+
+  auto iter = upper_bound_agent_observation_count_.find(agent_id);
+  if (iter == upper_bound_agent_observation_count_.end()) {
+    return distance_confidence;
   }
-  const double denom =
-      kUpperBoundConfidenceZeroDistance - kUpperBoundConfidenceFullDistance;
-  const double ratio = (kUpperBoundConfidenceZeroDistance - abs_s) / denom;
-  return std::fmax(0.0, std::fmin(1.0, ratio));
+
+  const int32_t obs_count = iter->second;
+  if (obs_count < kUpperBoundAgentObservationCountThresholdMin) {
+    return distance_confidence;
+  }
+
+  if (obs_count < kUpperBoundAgentObservationCountThresholdMax) {
+    const double blend_ratio =
+        (obs_count - kUpperBoundAgentObservationCountThresholdMin) /
+        (kUpperBoundAgentObservationCountThresholdMax -
+         kUpperBoundAgentObservationCountThresholdMin);
+    return distance_confidence + blend_ratio * (1.0 - distance_confidence);
+  }
+  return 1.0;
+}
+
+void LongRefPathDecider::UpdateUpperBoundAgentObservation(
+    framework::Session *session, double dt, int32_t plan_points_num) {
+  std::unordered_set<int32_t> current_upper_bound_agents;
+
+  const auto st_graph_helper = session->planning_context().st_graph_helper();
+  if (!st_graph_helper) {
+    return;
+  }
+
+  for (int32_t i = 0; i < plan_points_num; ++i) {
+    const auto &upper_bound =
+        st_graph_helper->GetPassCorridorUpperBound(i * dt);
+    if (upper_bound.agent_id() != -1) {
+      current_upper_bound_agents.insert(upper_bound.agent_id());
+    }
+  }
+
+  for (auto it = upper_bound_agent_observation_count_.begin();
+       it != upper_bound_agent_observation_count_.end();) {
+    if (current_upper_bound_agents.find(it->first) ==
+        current_upper_bound_agents.end()) {
+      it = upper_bound_agent_observation_count_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  for (const auto &agent_id : current_upper_bound_agents) {
+    upper_bound_agent_observation_count_[agent_id]++;
+  }
 }
 
 LongRefPathDecider::LongRefPathDecider(
@@ -48,15 +104,17 @@ bool LongRefPathDecider::Execute() {
   }
   // 0. reset
   Reset();
-  // 1. calculate s_ref
+  // 1. update upper bound agent observation
+  UpdateUpperBoundAgentObservation(session_, dt_, plan_points_num_);
+  // 2. calculate s_ref
   target_maker_->Run();
-  // 2. calculate bound
+  // 3. calculate bound
   bound_maker_->Run(*target_maker_);
-  // 3. calculate weight
+  // 4. calculate weight
   weight_maker_->Run(*target_maker_, *bound_maker_);
-  // 4. update lon ref path
+  // 5. update lon ref path
   UpdateLonRefPath();
-  // 5. save long ref path
+  // 6. save long ref path
   SaveToSession();
   SaveToDebugInfo();
 

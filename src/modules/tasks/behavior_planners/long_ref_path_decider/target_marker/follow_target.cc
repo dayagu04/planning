@@ -17,7 +17,7 @@ namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
 constexpr double min_follow_distance_gap_cut_in = 0.8;
-constexpr double kVirtualFrontS = 250.0;
+constexpr double kVirtualFrontS = 200.0;
 constexpr double kVirtualFrontV = 33.5;
 }  // namespace
 
@@ -70,12 +70,13 @@ void FollowTarget::GenerateUpperBoundInfo() {
           cipv_info_.is_lane_borrow_obs = agent->is_lane_borrow_virtual_obs();
         }
       }
-      const double confidence =
-          LongRefPathDecider::CalcUpperBoundConfidence(upper_bound.s());
+      const double confidence = LongRefPathDecider::CalcUpperBoundConfidence(
+          upper_bound.agent_id(), upper_bound.s());
       upper_bound_infos_[i].s =
           confidence * upper_bound.s() + (1.0 - confidence) * kVirtualFrontS;
       upper_bound_infos_[i].t = t;
-      upper_bound_infos_[i].v = upper_bound.velocity();
+      upper_bound_infos_[i].v = confidence * upper_bound.velocity() +
+                                (1.0 - confidence) * kVirtualFrontV;
       upper_bound_infos_[i].target_type = TargetType::kFollow;
       upper_bound_infos_[i].agent_id = upper_bound.agent_id();
       upper_bound_infos_[i].st_boundary_id = upper_bound.boundary_id();

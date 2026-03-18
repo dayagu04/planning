@@ -12,7 +12,7 @@ constexpr double kFollowBuffer = 0.2;
 constexpr double kOvertakeBuffer = 2.0;
 
 constexpr double kSpeedBoundFactor = 1.1;
-constexpr double kPerSecondPlanLenth = 50.0;
+constexpr double kPerSecondPlanLenth = 40.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
 constexpr double kDecelJeck = -1.2;
@@ -26,7 +26,8 @@ constexpr double kJerkMaxLowerBound = -4.0;
 constexpr double kLaneChangeAccUpperBound = 1.2;
 constexpr double kLaneChangeFrontAgentHeadway = 0.8;
 
-constexpr double kVirtualUpperBound = 250.0;
+constexpr double kVirtualUpperBoundS = 200.0;
+constexpr double kVirtualUpperBoundV = 33.5;
 constexpr double s0 = 3.5;
 constexpr double max_tau = 1.35;
 constexpr double a_max = 2.0;
@@ -301,7 +302,7 @@ void BoundMaker::MakeSBound() {
 
     if (corridor_upper_point.valid() && corridor_upper_point.agent_id() != -1) {
       const double confidence = LongRefPathDecider::CalcUpperBoundConfidence(
-          corridor_upper_point.s());
+          corridor_upper_point.agent_id(), corridor_upper_point.s());
       upper_bound = confidence * corridor_upper_point.s() +
                     (1.0 - confidence) * upper_bound;
     }
@@ -395,7 +396,7 @@ void BoundMaker::MakeSoftBound() {
                                         .agent_headway_decider_output()
                                         .agents_headway_Info();
 
-  std::vector<double> s_soft_bound(plan_points_num_, kVirtualUpperBound);
+  std::vector<double> s_soft_bound(plan_points_num_, kVirtualUpperBoundS);
 
   int32_t gap_front_agent_id = -1;
   const auto& lane_change_decider_output =
@@ -551,12 +552,13 @@ void BoundMaker::GenerateUpperBoundInfo() {
     const auto& upper_bound = st_graph->GetPassCorridorUpperBound(t);
     const auto agent_id = upper_bound.agent_id();
     if (agent_id != speed::kNoAgentId) {
-      const double confidence =
-          LongRefPathDecider::CalcUpperBoundConfidence(upper_bound.s());
-      upper_bound_infos_[i].s =
-          confidence * upper_bound.s() + (1.0 - confidence) * virtual_front_s;
+      const double confidence = LongRefPathDecider::CalcUpperBoundConfidence(
+          agent_id, upper_bound.s());
+      upper_bound_infos_[i].s = confidence * upper_bound.s() +
+                                (1.0 - confidence) * kVirtualUpperBoundS;
       upper_bound_infos_[i].t = t;
-      upper_bound_infos_[i].v = upper_bound.velocity();
+      upper_bound_infos_[i].v = confidence * upper_bound.velocity() +
+                                (1.0 - confidence) * kVirtualUpperBoundV;
       upper_bound_infos_[i].a = upper_bound.acceleration();
       upper_bound_infos_[i].agent_id = agent_id;
       const auto* agent = agent_manager->GetAgent(agent_id);
