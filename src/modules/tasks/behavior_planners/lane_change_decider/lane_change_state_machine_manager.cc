@@ -197,9 +197,11 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfExecutionToHold(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
 
-        bool is_dash_enough = IsLCPathCollisionWithSolidLine(
+        bool is_dash_enough = !IsLCPathCollisionWithSolidLine(
             lc_lane_mgr_->origin_lane_virtual_id(),
-            transition_info_.lane_change_status);
+            transition_info_.lane_change_status,
+            transition_info_.lane_change_type,
+            transition_info_.lane_change_direction);
         if (!is_dash_enough) {
           execution_state_dash_cnt++;
         } else {
@@ -233,10 +235,16 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         hold_state_frame_nums_++;
 
         // 在hold状态下最多维持8s，不满足变道条件那么就返回原车道
-        bool is_dash_enough = IsLCPathCollisionWithSolidLine(
+        bool is_dash_enough = !IsLCPathCollisionWithSolidLine(
                                   lc_lane_mgr_->origin_lane_virtual_id(),
-                                  transition_info_.lane_change_status) &&
-                              CheckTargetLaneValid();
+                                  transition_info_.lane_change_status,
+                                  transition_info_.lane_change_type,
+                                  transition_info_.lane_change_direction) &&
+                              CheckTargetLaneValid() &&
+                              !IsLCPathCollisionWithRoadEdge(
+                                  lc_lane_mgr_->origin_lane_virtual_id(),
+                                  lc_lane_mgr_->target_lane_virtual_id(),
+                                  transition_info_.lane_change_status);
         hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
 
         bool is_hold_to_cancel =
@@ -482,6 +490,7 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   }
   // 增加路沿检查
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
+                                    lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
     return true;
   }
@@ -529,6 +538,7 @@ bool LaneChangeStateMachineManager::CheckIfHoldToCancel(
   }
   // 增加路沿检查
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
+                                    lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
     return true;
   }
@@ -704,15 +714,20 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     RequestType direction) {
   // check single frame lc gap if feasible
   lane_change_stage_info_ = CheckLCGapFeasible(direction);
-  bool is_dash_enough =
-      IsLCPathCollisionWithSolidLine(lc_lane_mgr_->origin_lane_virtual_id(),
+  bool is_dash_enough = !IsLCPathCollisionWithSolidLine(
+      lc_lane_mgr_->origin_lane_virtual_id(),
+      transition_info_.lane_change_status, transition_info_.lane_change_type,
+      transition_info_.lane_change_direction);
+  bool is_roadedge_safe =
+      !IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
+                                     lc_lane_mgr_->target_lane_virtual_id(),
                                      transition_info_.lane_change_status);
-  is_dash_enough = is_dash_enough && CheckTargetLaneValid();
+  is_dash_enough = is_dash_enough && CheckTargetLaneValid() && is_roadedge_safe;
   int lc_valid_thre = 4;
   if (transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST) {
     lc_valid_thre = 1;
-    is_dash_enough = true;  // 避让请求和锥桶请求不需要dash足够
+    is_dash_enough = is_roadedge_safe;  // 避让请求和锥桶请求不需要dash足够
   } else if (transition_info_.lane_change_type == MERGE_REQUEST ||
              transition_info_.lane_change_type ==
                  DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
@@ -2126,6 +2141,7 @@ void LaneChangeStateMachineManager::PreProcess() {
 
   // init ego future trajactorys
   ego_trajs_future_.clear();
+  ego_trajs_future_copy_.clear();
   agent_box_corners_x_.clear();
   agent_box_corners_y_.clear();
   ego_box_corners_x_.clear();
@@ -2210,6 +2226,8 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   }
   ego_trajs_future_ =
       CalculateEgoPPIDMTrajs();  // 生成初始轨迹，确保点数 26 [原在用IDM'PP]
+  ego_trajs_future_copy_ = ego_trajs_future_;
+
   if(ego_trajs_future_.empty()){
     return;
   }
@@ -6145,64 +6163,28 @@ bool LaneChangeStateMachineManager::IsEmergencyScene() const {
   return false;
 }
 bool LaneChangeStateMachineManager::IsLCPathCollisionWithRoadEdge(
-    int origin_lane_id, const StateMachineLaneChangeStatus& lc_status) const {
-  const double road_edge_buffer = 0.3;
-  const auto& virtual_lane_mgr =
-      session_->environmental_model().get_virtual_lane_manager();
-  std::shared_ptr<ReferencePathManager> reference_path_mgr =
-      session_->mutable_environmental_model()->get_reference_path_manager();
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
+    int origin_lane_id, int target_lane_id,
+    const StateMachineLaneChangeStatus& lc_status) {
   const auto& traj_points =
       session_->mutable_planning_context()->last_planning_result().traj_points;
-
-  std::shared_ptr<ReferencePath> origin_reference_path =
-      reference_path_mgr->get_reference_path_by_lane(origin_lane_id, false);
-  const std::shared_ptr<VirtualLane> origin_lane =
-      virtual_lane_mgr->get_lane_with_virtual_id(origin_lane_id);
-  if (!origin_reference_path) {
-    return true;
-  }
-  if (!origin_lane) {
-    return true;
-  }
-
-  const auto frenet_coord = origin_reference_path->get_frenet_coord();
-  if (frenet_coord == nullptr || !frenet_coord->KdtreeValid()) {
-    return true;
-  }
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_vehicle_width = vehicle_param.width * 0.5;
-
   const auto& ego_trajs_future_points =
-      lc_status == kLaneChangeExecution ? traj_points : ego_trajs_future_;
-  for (size_t i = 0; i < ego_trajs_future_points.size(); ++i) {
-    double s = 0.0, l = 0.0;
-    if (!frenet_coord->XYToSL(ego_trajs_future_points[i].x,
-                              ego_trajs_future_points[i].y, &s, &l)) {
-      continue;
-    }
-    ReferencePathPoint ref_pt{};
-    if (!origin_reference_path->get_reference_point_by_lon(s, ref_pt)) {
-      continue;
-    }
-    const double left_vehicle_edge = l + half_vehicle_width;
-    const double right_vehicle_edge = l - half_vehicle_width;
-    if (left_vehicle_edge >
-        ref_pt.distance_to_left_road_border + road_edge_buffer) {
-      return true;
-    }
-    if (right_vehicle_edge <
-        -ref_pt.distance_to_right_road_border - road_edge_buffer) {
-      return true;
-    }
-  }
-  return false;
+      lc_status == kLaneChangeExecution ? traj_points : ego_trajs_future_copy_;
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  return lc_request_.IsPathCollisionWithRoadEdge(virtual_lane_mgr, origin_lane_id,
+                                     target_lane_id, ego_trajs_future_points);
 }
 
 bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
-    int origin_lane_id, const StateMachineLaneChangeStatus& lc_status) const {
+    int origin_lane_id, const StateMachineLaneChangeStatus& lc_status,
+    const RequestSource& lc_request_source,
+    const RequestType& lc_request_type) const {
+  // 优先处理距离下匝道100米内忽略虚实线的逻辑
+  if (lc_request_.IsMLCIgnoreSolidLaneCheck(lc_request_type,
+                                            lc_request_source)) {
+    return false;
+  }
+
   const double road_line_buffer = 0.075;
   const auto& virtual_lane_mgr =
       session_->environmental_model().get_virtual_lane_manager();
@@ -6213,7 +6195,6 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
   const auto& traj_points =
       session_->mutable_planning_context()->last_planning_result().traj_points;
 
-
   std::shared_ptr<ReferencePath> origin_reference_path =
       reference_path_mgr->get_reference_path_by_lane(origin_lane_id, false);
   const std::shared_ptr<VirtualLane> origin_lane =
@@ -6233,8 +6214,18 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_vehicle_width = vehicle_param.width * 0.5;
 
+  // 获取车道边界分段信息，用于精确判断实线/虚线类型
+  const auto& lane_boundarys = lc_request_type == LEFT_CHANGE
+                                   ? origin_lane->get_left_lane_boundary()
+                                   : origin_lane->get_right_lane_boundary();
+  const auto boundary_path =
+      virtual_lane_mgr->MakeBoundaryPath(lane_boundarys);
+  if (boundary_path == nullptr) {
+    return true;
+  }
+
   const auto& ego_trajs_future_points =
-      lc_status == kLaneChangeExecution ? traj_points : ego_trajs_future_;
+      lc_status == kLaneChangeExecution ? traj_points : ego_trajs_future_copy_;
   for (size_t i = 0; i < ego_trajs_future_points.size(); ++i) {
     double s = 0.0, l = 0.0;
     if (!frenet_coord->XYToSL(ego_trajs_future_points[i].x,
@@ -6248,29 +6239,41 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
     const double left_vehicle_edge = l + half_vehicle_width;
     const double right_vehicle_edge = l - half_vehicle_width;
 
-    bool is_left_lane_solid_type =
-        ref_pt.left_lane_border_type ==
-            iflyauto::LaneBoundaryType_MARKING_SOLID ||
-        ref_pt.left_lane_border_type ==
-            iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-        ref_pt.left_lane_border_type ==
-            iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
-    bool is_right_lane_solid_type =
-        ref_pt.right_lane_border_type ==
-            iflyauto::LaneBoundaryType_MARKING_SOLID ||
-        ref_pt.right_lane_border_type ==
-            iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-        ref_pt.right_lane_border_type ==
+    // 通过车道线分段精确获取当前轨迹点对应位置的车道线类型
+    double boundary_s = 0.0, boundary_l = 0.0;
+    if (!boundary_path->XYToSL(ego_trajs_future_points[i].x,
+                               ego_trajs_future_points[i].y, &boundary_s,
+                               &boundary_l)) {
+      continue;
+    }
+
+    iflyauto::LaneBoundaryType boundary_type =
+        iflyauto::LaneBoundaryType_MARKING_SOLID;
+    double acc_length = 0.0;
+    for (int j = 0; j < lane_boundarys.type_segments_size; ++j) {
+      acc_length += lane_boundarys.type_segments[j].length;
+      if (acc_length > boundary_s) {
+        boundary_type = lane_boundarys.type_segments[j].type;
+        break;
+      }
+    }
+
+    const bool is_solid_type =
+        boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+        boundary_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+        boundary_type ==
+            iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+        boundary_type ==
             iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
 
-    if (is_left_lane_solid_type &&
+    if (lc_request_type == LEFT_CHANGE && is_solid_type &&
         left_vehicle_edge >
-            ref_pt.distance_to_left_lane_border + road_line_buffer) {
+            ref_pt.distance_to_left_lane_border - road_line_buffer) {
       return true;
     }
-    if (is_right_lane_solid_type &&
+    if (lc_request_type == RIGHT_CHANGE && is_solid_type &&
         right_vehicle_edge <
-            -ref_pt.distance_to_right_lane_border - road_line_buffer) {
+            -ref_pt.distance_to_right_lane_border + road_line_buffer) {
       return true;
     }
   }

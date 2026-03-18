@@ -280,9 +280,12 @@ class LaneChangeStateMachineManager {
   double ComputeInertialLatOffset(double v_y0, double a_y0, double j_max) const;
   bool IsWarningCollisionRisk();
   bool IsLCPathCollisionWithRoadEdge(
-      int origin_lane_id, const StateMachineLaneChangeStatus& lc_status) const;
+      int origin_lane_id, int target_lane_id,
+      const StateMachineLaneChangeStatus& lc_status);
   bool IsLCPathCollisionWithSolidLine(
-      int origin_lane_id, const StateMachineLaneChangeStatus& lc_status) const;
+      int origin_lane_id, const StateMachineLaneChangeStatus& lc_status,
+      const RequestSource& lc_request_source,
+      const RequestType& lc_request_type) const;
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
@@ -345,6 +348,7 @@ class LaneChangeStateMachineManager {
   bool rear_agent_overtaking_ = false;
 
   TrajectoryPoints ego_trajs_future_;
+  TrajectoryPoints ego_trajs_future_copy_;
   TrajectoryPoints front_node_trajs_future_;
   bool joint_decision_success_ = false;
   std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
