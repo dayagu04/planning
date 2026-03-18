@@ -741,7 +741,8 @@ void LateralOffsetCalculatorV2::CalcFrontMaxOppositeOffset(
       double obstacle_lat_distance =
           is_left ? track_object->d_min_cpath() : track_object->d_max_cpath();
       if (hysteresis_map[id_pair].IsValid()) {
-        if (track_object->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+        if (track_object->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
+            track_object->type() == iflyauto::OBJECT_TYPE_CYLINDER_BARRIER) {
           obstacle_lat_distance = is_left ? obstacle_lat_distance + 0.7
                                           : obstacle_lat_distance - 0.7;
         }

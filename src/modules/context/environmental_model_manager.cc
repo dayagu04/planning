@@ -1947,6 +1947,7 @@ bool EnvironmentalModelManager::CheckIfVru(const int type) {
 
 bool EnvironmentalModelManager::CheckIfTrafficFacilities(const int type) {
   if (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_CYLINDER_BARRIER ||
       type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_BARREL ||
       type == iflyauto::ObjectType::OBJECT_TYPE_FENCE ||
       type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN ||

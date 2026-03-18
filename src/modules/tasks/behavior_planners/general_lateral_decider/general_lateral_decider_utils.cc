@@ -242,7 +242,8 @@ bool IsVRU(iflyauto::ObjectType type) {
 
 bool IsCone(iflyauto::ObjectType type) {
   // TODO(clren):other type
-  return (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE);
+  return (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+          type == iflyauto::ObjectType::OBJECT_TYPE_CYLINDER_BARRIER);
 }
 
 bool IsBarrel(iflyauto::ObjectType type) {

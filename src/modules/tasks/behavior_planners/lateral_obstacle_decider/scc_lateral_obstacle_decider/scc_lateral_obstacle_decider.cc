@@ -1086,8 +1086,10 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
               borrow_bicycle_lane || rightest_lane ||
               (dist_intersect - lead_one->d_s_rel() < 50 &&
                 dist_intersect - lead_one->d_s_rel() >= -5 &&
-                lead_one->type() ==
-                    iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
+                (lead_one->type() ==
+                     iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+                 lead_one->type() ==
+                     iflyauto::ObjectType::OBJECT_TYPE_CYLINDER_BARRIER))))) {
           history.ncar_count =
               std::max(history.ncar_count - 10 * count * kPlanningCycleTime, 0.0);
         }
@@ -2041,6 +2043,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
     // 需要注意横向观测范围
     if (obstacle.is_static() && !history.is_not_set &&
         type != iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
+        type != iflyauto::ObjectType::OBJECT_TYPE_CYLINDER_BARRIER &&
         type != iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL &&
         type != iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
         output_[id] == LatObstacleDecisionType::IGNORE) {
