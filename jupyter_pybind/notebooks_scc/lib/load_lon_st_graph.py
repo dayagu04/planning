@@ -278,6 +278,21 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                           "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s",
                           "ignore_gap_rear_agent","rear_agent_ttc_to_ego"]
 
+  # HPP debug scalar keys
+  hpp_debug_value_list = [
+      "v_cruise_limit", "v_target_decider", "v_target_type_code",
+      "LaneChangeDeciderTime", "LateralObstacleDeciderTime",
+      "HppGeneralLateralDeciderTime", "LateralMotionPlannerTime",
+      "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
+      "ResultTrajectoryGeneratorTime", "ParkingSwitchDeciderTime",
+      "ARAStarTime", "HPP turn signal", "hpp_lon_collision_check_time_cost",
+      "dist_to_target_slot", "dist_to_target_dest", "is_exist_target_slot",
+      "is_target_slot_allowed_to_park", "is_standstill_near_target_slot",
+      "is_timeout_for_target_slot_allowed_to_park", "current planning_success",
+      "pass_interval_first", "pass_interval_second", "edt_manager_cost",
+      "GeneralLateralDeciderCostTime",
+  ]
+
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           # "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path']
 
@@ -677,6 +692,37 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for ind in range(len(new_cutin_list)):
      cutin_attr_vec.append(plan_debug_json_info[new_cutin_list[ind]])
 
+  # HPP debug attribute / value vectors
+  hpp_debug_attr_vec = []
+  hpp_debug_val_vec = []
+  for ind in range(len(hpp_debug_value_list)):
+     key = hpp_debug_value_list[ind]
+     val = plan_debug_json_info.get(key, None)
+     hpp_debug_attr_vec.append(key)
+     hpp_debug_val_vec.append(val)
+
+  # # #region agent log
+  # try:
+  #   import json as _json, time as _time
+  #   _log_entry = {
+  #       "sessionId": "c7627a",
+  #       "runId": "initial",
+  #       "hypothesisId": "H1",
+  #       "location": "load_lon_st_graph.update_lon_plan_data",
+  #       "message": "HPP debug snapshot",
+  #       "data": {
+  #           "v_cruise_limit": plan_debug_json_info.get("v_cruise_limit", None),
+  #           "v_target_decider": plan_debug_json_info.get("v_target_decider", None),
+  #           "v_target_type_code": plan_debug_json_info.get("v_target_type_code", None),
+  #       },
+  #       "timestamp": int(_time.time() * 1000),
+  #   }
+  #   with open("/root/code/planning/.cursor/debug-c7627a.log", "a") as _f:
+  #     _f.write(_json.dumps(_log_entry) + "\n")
+  # except Exception:
+  #   pass
+  # # #endregion
+
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
@@ -731,6 +777,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_text'].data.update({
     'VisionLonAttr': planning_json_value_list,
     'VisionLonVal': vision_lon_attr_vec
+  })
+
+  lon_plan_data['data_hpp_debug'].data.update({
+    'HPPDebugAttr': hpp_debug_attr_vec,
+    'HPPDebugVal': hpp_debug_val_vec,
   })
 
   lon_plan_data['data_st_search_text'].data.update({
@@ -1437,6 +1488,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
+  data_hpp_debug = ColumnDataSource(data = {'HPPDebugAttr':[], 'HPPDebugVal':[]})
   data_st_search_text = ColumnDataSource(data = {'StSearchAttr':[], 'StSearchVal': []})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
   data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[], 'vel_search':[], 'acc_search':[], 'jerk_search':[]})
@@ -1517,6 +1569,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
+                   'data_hpp_debug':data_hpp_debug, \
                    'data_cutin':data_cutin, \
                    'data_sv':data_sv, \
                    'data_tv':data_tv, \
@@ -1586,6 +1639,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   st_search_columns = [
         TableColumn(field="StSearchAttr", title="StSearchAttr", width=200, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
         TableColumn(field="StSearchVal", title="StSearchVal", width=200, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
+  ]
+  hpp_columns = [
+        TableColumn(field="HPPDebugAttr", title="HPPDebugAttr", width=300, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
+        TableColumn(field="HPPDebugVal", title="HPPDebugVal", width=200, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
   ]
   cutin_colums = [
       TableColumn(field="cutinAttr", title="cutinAttr", width=200, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
@@ -1827,6 +1884,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
 
   pan2 = Panel(child=row(column(tab1), column(velocity_fig, acc_fig, jerk_fig, fig_fsm_state), column(cost_time_fig, cutin_fig, fig_replan_status,topic_latency_fig)), title="Realtime")
 
-  pans = Tabs(tabs=[ pan1, pan2 ])
+  # HPP debug table and panel
+  hpp_tab = DataTable(source=data_hpp_debug, columns=hpp_columns, width=600, height=1200)
+  pan3 = Panel(child=row(column(hpp_tab)), title="HPP Debug")
+
+  pans = Tabs(tabs=[ pan1, pan2, pan3 ])
 
   return pans, lon_plan_data
