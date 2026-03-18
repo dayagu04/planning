@@ -59,17 +59,29 @@ bool TurnstileLongitudinalDecider::Execute() {
                    turnstile_decider_output_.front_car_passed_in_current_cycle())
   JSON_DEBUG_VALUE("turnstile_wait_reopen_required",
                    turnstile_decider_output_.wait_reopen_required())
-  JSON_DEBUG_VALUE("turnstile_seen_closed_after_front_pass",
-                   turnstile_decider_output_.has_seen_gate_closed_after_front_car_pass())
-  JSON_DEBUG_VALUE("turnstile_passable", turnstile_decider_output_.turnstile_passable())
+  JSON_DEBUG_VALUE("turnstile_seen_closed_status_after_front_pass",
+                   turnstile_decider_output_.has_seen_gate_closed_status_after_front_car_pass())
+  JSON_DEBUG_VALUE("turnstile_passable_status", turnstile_decider_output_.turnstile_passable_status())
   JSON_DEBUG_VALUE("turnstile_stop_required", turnstile_decider_output_.stop_required())
   JSON_DEBUG_VALUE("turnstile_virtual_agent_id", turnstile_decider_output_.stop_virtual_agent_id())
   JSON_DEBUG_VALUE("turnstile_s", turnstile_decider_output_.turnstile_s())
   JSON_DEBUG_VALUE("turnstile_stop_s", turnstile_decider_output_.turnstile_stop_s())
   JSON_DEBUG_VALUE("turnstile_target_lost_frame_count",
                    turnstile_decider_output_.target_turnstile_lost_frame_count())
-  JSON_DEBUG_VALUE("turnstile_passable_stable_frame_count",
-                   turnstile_decider_output_.turnstile_passable_stable_frame_count())
+  JSON_DEBUG_VALUE("turnstile_passable_status_stable_frame_count",
+                   turnstile_decider_output_.turnstile_passable_status_stable_frame_count())
+  JSON_DEBUG_VALUE("turnstile_cycle_closing_status_stable_frame_count",
+                   turnstile_decider_output_.cycle_closing_status_stable_frame_count())
+  JSON_DEBUG_VALUE("turnstile_reopen_open_status_continuous_frame_count",
+                   turnstile_decider_output_.reopen_open_status_continuous_frame_count())
+  JSON_DEBUG_VALUE("turnstile_release_by_open_timeout",
+                   turnstile_decider_output_.release_by_open_timeout())
+  JSON_DEBUG_VALUE("turnstile_closing_status_drop_consecutive_frame_count",
+                   turnstile_decider_output_.closing_status_drop_consecutive_frame_count())
+  JSON_DEBUG_VALUE("turnstile_closing_status_drop_emergency_active",
+                   turnstile_decider_output_.closing_status_drop_emergency_active())
+  JSON_DEBUG_VALUE("turnstile_emergency_opening_status_stable_frame_count",
+                   turnstile_decider_output_.emergency_opening_status_stable_frame_count())
   SaveToSession();
   return true;
 }
@@ -93,16 +105,31 @@ void TurnstileLongitudinalDecider::ResetCurrentFrameState() {
   turnstile_decider_output_.set_has_target_turnstile(false);
   turnstile_decider_output_.set_turnstile_scene_type(
       static_cast<int32_t>(reference_path_->get_turnstile_scene_type()));
-  turnstile_decider_output_.set_target_turnstile_obs_id(reference_path_->get_target_turnstile_obs_id());
-  turnstile_decider_output_.set_side_turnstile_obs_id(reference_path_->get_side_turnstile_obs_id());
-  turnstile_decider_output_.set_front_car_passed_in_current_cycle(front_car_passed_in_current_cycle_);
+  turnstile_decider_output_.set_target_turnstile_obs_id(
+      reference_path_->get_target_turnstile_obs_id());
+  turnstile_decider_output_.set_side_turnstile_obs_id(
+      reference_path_->get_side_turnstile_obs_id());
+  turnstile_decider_output_.set_front_car_passed_in_current_cycle(
+      front_car_passed_in_current_cycle_);
   turnstile_decider_output_.set_wait_reopen_required(wait_reopen_required_);
-  turnstile_decider_output_.set_has_seen_gate_closed_after_front_car_pass(
-      has_seen_gate_closed_after_front_car_pass_);
-  turnstile_decider_output_.set_turnstile_passable_stable_frame_count(turnstile_passable_stable_frame_count_);
-  turnstile_decider_output_.set_target_turnstile_lost_frame_count(target_turnstile_lost_frame_count_);
-  turnstile_decider_output_.set_last_valid_target_turnstile_obs_id(
-      turnstile_decider_output_.last_valid_target_turnstile_obs_id());
+  turnstile_decider_output_.set_has_seen_gate_closed_status_after_front_car_pass(
+      has_seen_gate_closed_status_after_front_car_pass_);
+  turnstile_decider_output_.set_turnstile_passable_status_stable_frame_count(
+      turnstile_passable_status_stable_frame_count_);
+  turnstile_decider_output_.set_target_turnstile_lost_frame_count(
+      target_turnstile_lost_frame_count_);
+  turnstile_decider_output_.set_cycle_closing_status_stable_frame_count(
+      cycle_closing_status_stable_frame_count_);
+  turnstile_decider_output_.set_reopen_open_status_continuous_frame_count(
+      reopen_open_status_continuous_frame_count_);
+  turnstile_decider_output_.set_release_by_open_timeout(
+      release_by_open_timeout_);
+  turnstile_decider_output_.set_closing_status_drop_consecutive_frame_count(
+      closing_status_drop_consecutive_frame_count_);
+  turnstile_decider_output_.set_closing_status_drop_emergency_active(
+      closing_status_drop_emergency_active_);
+  turnstile_decider_output_.set_emergency_opening_status_stable_frame_count(
+      emergency_opening_status_stable_frame_count_);
 }
 
 const FrenetObstacle* TurnstileLongitudinalDecider::FindTargetTurnstileFrenetObstacle()
@@ -251,52 +278,78 @@ void TurnstileLongitudinalDecider::UpdateFrontVehicle() {
   turnstile_decider_output_.set_front_car_id(front_vehicle_frenet_obs_->id());
 }
 
-bool TurnstileLongitudinalDecider::IsTurnstileClosedLike(const Obstacle& turnstile_obs) const {
+bool TurnstileLongitudinalDecider::IsTurnstileInClosingStatus(const Obstacle& turnstile_obs) const {
+  return turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN ||
+         turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_CLOSE;
+}
+
+bool TurnstileLongitudinalDecider::IsTurnstileInClosedStatus(
+    const Obstacle& turnstile_obs) const {
+  return turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_STATIC &&
+         turnstile_obs.turnstile_open_ratio() <= lon_config_.turnstile_closed_status_threshold;
+}
+
+bool TurnstileLongitudinalDecider::IsTurnstileInCycleClosingStatus(
+    const Obstacle& turnstile_obs) const {
   if (turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN ||
       turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_CLOSE) {
     return true;
   }
-  if (turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_STATIC &&
-      turnstile_obs.turnstile_open_ratio() <= lon_config_.turnstile_close_threshold) {
-    return true;
-  }
-  return false;
+  return turnstile_obs.turnstile_open_ratio() <=
+         lon_config_.turnstile_cycle_closing_status_ratio_threshold;
 }
 
-bool TurnstileLongitudinalDecider::IsTurnstileOpeningLike(const Obstacle& turnstile_obs) const {
+bool TurnstileLongitudinalDecider::IsTurnstileDroppedForEmergency(
+    const Obstacle& turnstile_obs) const {
+  if (turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN ||
+      turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_CLOSE) {
+    return true;
+  }
+  return turnstile_obs.turnstile_open_ratio() <=
+         lon_config_.turnstile_closing_status_drop_ratio_threshold;
+}
+
+bool TurnstileLongitudinalDecider::IsTurnstileInOpeningStatus(const Obstacle& turnstile_obs) const {
   return turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_OPEN;
 }
 
-bool TurnstileLongitudinalDecider::IsTurnstileCurrentlyPassable(const Obstacle& turnstile_obs) const {
+double TurnstileLongitudinalDecider::GetEffectiveTurnstileDtSec() const {
+  if (lon_config_.turnstile_frame_dt_override_sec > 1e-6) {
+    return lon_config_.turnstile_frame_dt_override_sec;
+  }
+  return std::max(lon_config_.delta_time, 1e-3);
+}
+
+bool TurnstileLongitudinalDecider::IsTurnstileInPassableStatus(const Obstacle& turnstile_obs) const {
   if (turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN ||
       turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_CLOSE) {
     return false;
   }
   if (turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_STATIC) {
-    return turnstile_obs.turnstile_open_ratio() >= lon_config_.turnstile_open_threshold;
+    return turnstile_obs.turnstile_open_ratio() >= lon_config_.turnstile_open_status_threshold;
   }
   if (turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_OPEN) {
-    return turnstile_obs.turnstile_open_ratio() >= lon_config_.turnstile_pass_threshold;
+    return turnstile_obs.turnstile_open_ratio() >= lon_config_.turnstile_passable_status_threshold;
   }
   return false;
 }
 
 void TurnstileLongitudinalDecider::UpdateTurnstilePassability() {
   if (target_turnstile_obs_ == nullptr) {
-    turnstile_passable_stable_frame_count_ = 0;
-    turnstile_decider_output_.set_turnstile_passable(false);
-    turnstile_decider_output_.set_turnstile_passable_stable_frame_count(0);
+    turnstile_passable_status_stable_frame_count_ = 0;
+    turnstile_decider_output_.set_turnstile_passable_status(false);
+    turnstile_decider_output_.set_turnstile_passable_status_stable_frame_count(0);
     return;
   }
-  const bool is_turnstile_passable = IsTurnstileCurrentlyPassable(*target_turnstile_obs_);
-  if (is_turnstile_passable) {
-    ++turnstile_passable_stable_frame_count_;
+  const bool is_turnstile_passable_status = IsTurnstileInPassableStatus(*target_turnstile_obs_);
+  if (is_turnstile_passable_status) {
+    ++turnstile_passable_status_stable_frame_count_;
   } else {
-    turnstile_passable_stable_frame_count_ = 0;
+    turnstile_passable_status_stable_frame_count_ = 0;
   }
-  turnstile_decider_output_.set_turnstile_passable(is_turnstile_passable);
-  turnstile_decider_output_.set_turnstile_passable_stable_frame_count(
-      turnstile_passable_stable_frame_count_);
+  turnstile_decider_output_.set_turnstile_passable_status(is_turnstile_passable_status);
+  turnstile_decider_output_.set_turnstile_passable_status_stable_frame_count(
+      turnstile_passable_status_stable_frame_count_);
 }
 
 bool TurnstileLongitudinalDecider::IsFrontVehicleInPassingWindow(
@@ -312,15 +365,41 @@ bool TurnstileLongitudinalDecider::IsFrontVehicleInPassingWindow(
 }
 
 void TurnstileLongitudinalDecider::UpdateTurnstileCycleState() {
-  if (target_turnstile_obs_ != nullptr &&
-      IsTurnstileClosedLike(*target_turnstile_obs_) &&
-      wait_reopen_required_) {
-    has_seen_gate_closed_after_front_car_pass_ = true;
+  if (wait_reopen_required_ && target_turnstile_obs_ != nullptr &&
+      lon_config_.enable_turnstile_cycle_closing_status_reopen_release) {
+    if (IsTurnstileInCycleClosingStatus(*target_turnstile_obs_)) {
+      ++cycle_closing_status_stable_frame_count_;
+    } else {
+      cycle_closing_status_stable_frame_count_ = 0;
+    }
+    if (cycle_closing_status_stable_frame_count_ >=
+        lon_config_.turnstile_cycle_closing_status_stable_frame_threshold) {
+      has_seen_gate_closed_status_after_front_car_pass_ = true;
+    }
+  } else {
+    cycle_closing_status_stable_frame_count_ = 0;
+  }
+
+  if (wait_reopen_required_ && target_turnstile_obs_ != nullptr &&
+      lon_config_.enable_turnstile_open_timeout_release &&
+      !has_seen_gate_closed_status_after_front_car_pass_) {
+    if (turnstile_decider_output_.turnstile_passable_status()) {
+      ++reopen_open_status_continuous_frame_count_;
+    } else {
+      reopen_open_status_continuous_frame_count_ = 0;
+    }
+    const double reopen_open_duration_sec =
+        reopen_open_status_continuous_frame_count_ * GetEffectiveTurnstileDtSec();
+    release_by_open_timeout_ =
+        reopen_open_duration_sec >= lon_config_.turnstile_open_timeout_sec;
+  } else {
+    reopen_open_status_continuous_frame_count_ = 0;
+    release_by_open_timeout_ = false;
   }
 
   bool has_current_front_vehicle = front_vehicle_frenet_obs_ != nullptr;
   if (!front_car_passed_in_current_cycle_ && had_valid_front_vehicle_in_prev_frame_ &&
-      was_turnstile_passable_in_prev_frame_ && target_turnstile_frenet_obs_ != nullptr) {
+      was_turnstile_passable_status_in_prev_frame_ && target_turnstile_frenet_obs_ != nullptr) {
     bool has_front_vehicle_passed = false;
     if (!has_current_front_vehicle ||
         (front_vehicle_frenet_obs_ != nullptr &&
@@ -333,8 +412,43 @@ void TurnstileLongitudinalDecider::UpdateTurnstileCycleState() {
     if (has_front_vehicle_passed) {
       front_car_passed_in_current_cycle_ = true;
       wait_reopen_required_ = true;
-      has_seen_gate_closed_after_front_car_pass_ = false;
+      has_seen_gate_closed_status_after_front_car_pass_ = false;
+      cycle_closing_status_stable_frame_count_ = 0;
+      reopen_open_status_continuous_frame_count_ = 0;
+      release_by_open_timeout_ = false;
     }
+  }
+
+  if (!wait_reopen_required_) {
+    cycle_closing_status_stable_frame_count_ = 0;
+    reopen_open_status_continuous_frame_count_ = 0;
+    release_by_open_timeout_ = false;
+  }
+
+  if (lon_config_.enable_turnstile_closing_status_drop_emergency_stop &&
+      target_turnstile_obs_ != nullptr &&
+      (stage_ == TurnstileStage::PASSING ||
+       stage_ == TurnstileStage::EMERGENCY_BLOCK ||
+       stage_ == TurnstileStage::PASSABLE_RELEASE)) {
+    if (IsTurnstileDroppedForEmergency(*target_turnstile_obs_)) {
+      ++closing_status_drop_consecutive_frame_count_;
+    } else {
+      closing_status_drop_consecutive_frame_count_ = 0;
+    }
+    closing_status_drop_emergency_active_ =
+        closing_status_drop_consecutive_frame_count_ >=
+        lon_config_.turnstile_closing_status_drop_consecutive_frame_threshold;
+  } else {
+    closing_status_drop_consecutive_frame_count_ = 0;
+    closing_status_drop_emergency_active_ = false;
+  }
+
+  if (stage_ == TurnstileStage::EMERGENCY_BLOCK &&
+      target_turnstile_obs_ != nullptr &&
+      IsTurnstileInOpeningStatus(*target_turnstile_obs_)) {
+    ++emergency_opening_status_stable_frame_count_;
+  } else {
+    emergency_opening_status_stable_frame_count_ = 0;
   }
 
   if (front_vehicle_frenet_obs_ != nullptr) {
@@ -346,17 +460,37 @@ void TurnstileLongitudinalDecider::UpdateTurnstileCycleState() {
     previous_front_vehicle_id_ = agent::AgentDefaultInfo::kNoAgentId;
     previous_front_vehicle_s_ = 0.0;
   }
-  was_turnstile_passable_in_prev_frame_ = turnstile_decider_output_.turnstile_passable();
+  was_turnstile_passable_status_in_prev_frame_ = turnstile_decider_output_.turnstile_passable_status();
 
   turnstile_decider_output_.set_front_car_passed_in_current_cycle(front_car_passed_in_current_cycle_);
   turnstile_decider_output_.set_wait_reopen_required(wait_reopen_required_);
-  turnstile_decider_output_.set_has_seen_gate_closed_after_front_car_pass(
-      has_seen_gate_closed_after_front_car_pass_);
+  turnstile_decider_output_.set_has_seen_gate_closed_status_after_front_car_pass(
+      has_seen_gate_closed_status_after_front_car_pass_);
+  turnstile_decider_output_.set_cycle_closing_status_stable_frame_count(
+      cycle_closing_status_stable_frame_count_);
+  turnstile_decider_output_.set_reopen_open_status_continuous_frame_count(
+      reopen_open_status_continuous_frame_count_);
+  turnstile_decider_output_.set_release_by_open_timeout(release_by_open_timeout_);
+  turnstile_decider_output_.set_closing_status_drop_consecutive_frame_count(
+      closing_status_drop_consecutive_frame_count_);
+  turnstile_decider_output_.set_closing_status_drop_emergency_active(
+      closing_status_drop_emergency_active_);
+  turnstile_decider_output_.set_emergency_opening_status_stable_frame_count(
+      emergency_opening_status_stable_frame_count_);
 }
 
 bool TurnstileLongitudinalDecider::HasCompletedReopenCycle() const {
-  return wait_reopen_required_ && has_seen_gate_closed_after_front_car_pass_ &&
-         turnstile_passable_stable_frame_count_ >= lon_config_.turnstile_passable_stable_frame_threshold;
+  if (!wait_reopen_required_) {
+    return false;
+  }
+  const bool completed_by_cycle =
+      lon_config_.enable_turnstile_cycle_closing_status_reopen_release &&
+      has_seen_gate_closed_status_after_front_car_pass_ &&
+      turnstile_passable_status_stable_frame_count_ >=
+          lon_config_.turnstile_passable_status_stable_frame_threshold;
+  const bool completed_by_timeout =
+      lon_config_.enable_turnstile_open_timeout_release && release_by_open_timeout_;
+  return completed_by_cycle || completed_by_timeout;
 }
 
 double TurnstileLongitudinalDecider::ComputeTurnstileStopS(
@@ -368,74 +502,203 @@ double TurnstileLongitudinalDecider::ComputeTurnstileStopS(
       ego_boundary.s_end + lon_config_.turnstile_min_forward_stop_buffer);
 }
 
-void TurnstileLongitudinalDecider::UpdateTurnstileStage() {
-  prev_stage_ = stage_;
-  if (!turnstile_decider_output_.has_target_turnstile()) {
-    if (target_turnstile_lost_frame_count_ >= lon_config_.turnstile_target_lost_tolerance_frames) {
-      stage_ = TurnstileStage::IDLE;
-      front_car_passed_in_current_cycle_ = false;
-      wait_reopen_required_ = false;
-      has_seen_gate_closed_after_front_car_pass_ = false;
+TurnstileLongitudinalDecider::TurnstileEventFlags
+TurnstileLongitudinalDecider::BuildTurnstileEventFlags() const {
+  TurnstileLongitudinalDecider::TurnstileEventFlags flags;
+  flags.has_target_turnstile = turnstile_decider_output_.has_target_turnstile();
+  flags.target_lost_timeout =
+      target_turnstile_lost_frame_count_ >= lon_config_.turnstile_target_lost_tolerance_frames;
+  flags.is_head_car = turnstile_decider_output_.is_head_car();
+  flags.turnstile_passable_status = turnstile_decider_output_.turnstile_passable_status();
+  flags.passable_status_stable =
+      flags.turnstile_passable_status &&
+      turnstile_passable_status_stable_frame_count_ >=
+          lon_config_.turnstile_passable_status_stable_frame_threshold;
+  flags.wait_reopen_required = wait_reopen_required_;
+  flags.has_seen_gate_closed_status_after_front_car_pass =
+      has_seen_gate_closed_status_after_front_car_pass_;
+  flags.reopen_completed = HasCompletedReopenCycle();
+  const double reopen_open_duration_sec =
+      reopen_open_status_continuous_frame_count_ * GetEffectiveTurnstileDtSec();
+  flags.reopen_timeout_halfway =
+      lon_config_.enable_turnstile_open_timeout_release &&
+      reopen_open_duration_sec >= 0.5 * lon_config_.turnstile_open_timeout_sec;
+  flags.emergency_active = closing_status_drop_emergency_active_;
+  flags.emergency_opening_status_stable =
+      emergency_opening_status_stable_frame_count_ >=
+      lon_config_.turnstile_emergency_opening_status_stable_frame_threshold;
+
+  if (reference_path_ != nullptr && flags.has_target_turnstile) {
+    const auto& ego_boundary = reference_path_->get_ego_frenet_boundary();
+    const double turnstile_s = turnstile_decider_output_.turnstile_s();
+    flags.ego_in_gate = ego_boundary.s_end >= turnstile_s;
+    flags.ego_passed =
+        ego_boundary.s_start > turnstile_s + lon_config_.turnstile_passed_clear_distance;
+  }
+
+  if (target_turnstile_obs_ != nullptr) {
+    flags.gate_opening_status = IsTurnstileInOpeningStatus(*target_turnstile_obs_);
+    flags.gate_closed_status = IsTurnstileInClosedStatus(*target_turnstile_obs_);
+    flags.gate_closing_status = IsTurnstileInClosingStatus(*target_turnstile_obs_);
+  }
+
+  return flags;
+}
+
+TurnstileLongitudinalDecider::TurnstileStage
+TurnstileLongitudinalDecider::ResolveWaitReopenStage(
+    const TurnstileLongitudinalDecider::TurnstileEventFlags& flags) const {
+  if (flags.reopen_completed) {
+    return TurnstileStage::PASSABLE_RELEASE;
+  }
+  if (!flags.is_head_car) {
+    if (flags.reopen_timeout_halfway) {
+      return TurnstileStage::FOLLOW_WAIT_OPEN_TIMEOUT;
     }
-    turnstile_decider_output_.set_turnstile_stage(static_cast<int32_t>(stage_));
+    return TurnstileStage::FOLLOW_WAIT_GATE_CLOSE;
+  }
+  if (!flags.has_seen_gate_closed_status_after_front_car_pass) {
+    if (flags.gate_closing_status) {
+      return TurnstileStage::HEAD_WAIT_CLOSED;
+    }
+    if (flags.reopen_timeout_halfway) {
+      return TurnstileStage::FOLLOW_WAIT_OPEN_TIMEOUT;
+    }
+    return TurnstileStage::FOLLOW_WAIT_GATE_CLOSE;
+  }
+  if (flags.gate_closed_status) {
+    return TurnstileStage::HEAD_WAIT_REOPEN;
+  }
+  if (flags.gate_opening_status) {
+    return TurnstileStage::HEAD_WAIT_FULLY_OPEN;
+  }
+  if (flags.gate_closing_status) {
+    return TurnstileStage::HEAD_WAIT_CLOSED;
+  }
+  return TurnstileStage::HEAD_WAIT_REOPEN;
+}
+
+TurnstileLongitudinalDecider::TurnstileStage
+TurnstileLongitudinalDecider::ResolveHeadCarStage(
+    const TurnstileLongitudinalDecider::TurnstileEventFlags& flags) const {
+  if (flags.passable_status_stable) {
+    return TurnstileStage::PASSABLE_RELEASE;
+  }
+  if (flags.gate_opening_status) {
+    return TurnstileStage::HEAD_WAIT_FULLY_OPEN;
+  }
+  if (flags.gate_closed_status) {
+    return TurnstileStage::HEAD_WAIT_REOPEN;
+  }
+  if (flags.gate_closing_status) {
+    return TurnstileStage::HEAD_WAIT_CLOSED;
+  }
+  return TurnstileStage::APPROACHING;
+}
+
+TurnstileLongitudinalDecider::TurnstileStage
+TurnstileLongitudinalDecider::ResolveEmergencyExitStage(
+    const TurnstileLongitudinalDecider::TurnstileEventFlags& flags) const {
+  if (flags.gate_closed_status) {
+    return TurnstileStage::HEAD_WAIT_REOPEN;
+  }
+  if (flags.emergency_opening_status_stable) {
+    return TurnstileStage::HEAD_WAIT_FULLY_OPEN;
+  }
+  return TurnstileStage::EMERGENCY_BLOCK;
+}
+
+TurnstileLongitudinalDecider::TurnstileStage
+TurnstileLongitudinalDecider::ResolveNextStage(
+    const TurnstileLongitudinalDecider::TurnstileEventFlags& flags) const {
+  if (!flags.has_target_turnstile) {
+    return flags.target_lost_timeout ? TurnstileStage::IDLE : stage_;
+  }
+  if (flags.ego_passed) {
+    return TurnstileStage::PASSED;
+  }
+  if (flags.emergency_active) {
+    return TurnstileStage::EMERGENCY_BLOCK;
+  }
+  if (flags.ego_in_gate) {
+    return TurnstileStage::PASSING;
+  }
+  if (stage_ == TurnstileStage::EMERGENCY_BLOCK) {
+    return ResolveEmergencyExitStage(flags);
+  }
+  if (flags.wait_reopen_required) {
+    return ResolveWaitReopenStage(flags);
+  }
+  if (!flags.is_head_car) {
+    return TurnstileStage::FOLLOW_WAIT;
+  }
+  return ResolveHeadCarStage(flags);
+}
+
+void TurnstileLongitudinalDecider::ResetReopenCycleFlags() {
+  front_car_passed_in_current_cycle_ = false;
+  wait_reopen_required_ = false;
+  has_seen_gate_closed_status_after_front_car_pass_ = false;
+  cycle_closing_status_stable_frame_count_ = 0;
+  reopen_open_status_continuous_frame_count_ = 0;
+  release_by_open_timeout_ = false;
+}
+
+void TurnstileLongitudinalDecider::ResetEmergencyFlags() {
+  closing_status_drop_consecutive_frame_count_ = 0;
+  emergency_opening_status_stable_frame_count_ = 0;
+  closing_status_drop_emergency_active_ = false;
+}
+
+void TurnstileLongitudinalDecider::OnEnterStage(TurnstileStage prev_stage,
+                                                TurnstileStage new_stage) {
+  if (prev_stage == new_stage) {
     return;
   }
-
-  const auto& ego_boundary = reference_path_->get_ego_frenet_boundary();
-  const double ego_front_s = ego_boundary.s_end;
-  const double ego_rear_s = ego_boundary.s_start;
-  const double turnstile_s = turnstile_decider_output_.turnstile_s();
-
-  if (ego_rear_s > turnstile_s + lon_config_.turnstile_passed_clear_distance) {
-    stage_ = TurnstileStage::PASSED;
-    front_car_passed_in_current_cycle_ = false;
-    wait_reopen_required_ = false;
-    has_seen_gate_closed_after_front_car_pass_ = false;
-  } else if (ego_front_s >= turnstile_s) {
-    stage_ = TurnstileStage::PASSING;
-  } else if (wait_reopen_required_) {
-    if (HasCompletedReopenCycle()) {
-      stage_ = TurnstileStage::PASSABLE_RELEASE;
-      wait_reopen_required_ = false;
-      front_car_passed_in_current_cycle_ = false;
-      has_seen_gate_closed_after_front_car_pass_ = false;
-    } else if (target_turnstile_obs_ != nullptr &&
-               IsTurnstileOpeningLike(*target_turnstile_obs_) &&
-               has_seen_gate_closed_after_front_car_pass_) {
-      stage_ = TurnstileStage::HEAD_WAIT_OPENING;
-    } else if (!turnstile_decider_output_.is_head_car()) {
-      stage_ = TurnstileStage::FOLLOW_CYCLE_CONSUMED_WAIT_CLOSE;
-    } else {
-      stage_ = TurnstileStage::HEAD_WAIT_REOPEN;
-    }
-  } else if (!turnstile_decider_output_.is_head_car()) {
-    stage_ = TurnstileStage::FOLLOW_WAIT;
-  } else if (turnstile_passable_stable_frame_count_ >= lon_config_.turnstile_passable_stable_frame_threshold &&
-             turnstile_decider_output_.turnstile_passable()) {
-    stage_ = TurnstileStage::PASSABLE_RELEASE;
-  } else if (target_turnstile_obs_ != nullptr &&
-             IsTurnstileOpeningLike(*target_turnstile_obs_)) {
-    stage_ = TurnstileStage::HEAD_WAIT_OPENING;
-  } else if (target_turnstile_obs_ != nullptr &&
-             IsTurnstileClosedLike(*target_turnstile_obs_)) {
-    stage_ = TurnstileStage::HEAD_WAIT_CLOSED;
-  } else {
-    stage_ = TurnstileStage::APPROACHING;
+  if (new_stage == TurnstileStage::IDLE || new_stage == TurnstileStage::PASSED) {
+    ResetReopenCycleFlags();
+    ResetEmergencyFlags();
+    return;
   }
+  if (new_stage == TurnstileStage::PASSABLE_RELEASE && wait_reopen_required_) {
+    ResetReopenCycleFlags();
+  }
+  if (prev_stage == TurnstileStage::EMERGENCY_BLOCK &&
+      new_stage != TurnstileStage::EMERGENCY_BLOCK) {
+    ResetEmergencyFlags();
+  }
+}
 
-  turnstile_decider_output_.set_front_car_passed_in_current_cycle(front_car_passed_in_current_cycle_);
+void TurnstileLongitudinalDecider::UpdateTurnstileStage() {
+  prev_stage_ = stage_;
+  const TurnstileLongitudinalDecider::TurnstileEventFlags flags = BuildTurnstileEventFlags();
+  const TurnstileStage new_stage = ResolveNextStage(flags);
+  OnEnterStage(stage_, new_stage);
+  stage_ = new_stage;
+
+  turnstile_decider_output_.set_front_car_passed_in_current_cycle(
+      front_car_passed_in_current_cycle_);
   turnstile_decider_output_.set_wait_reopen_required(wait_reopen_required_);
-  turnstile_decider_output_.set_has_seen_gate_closed_after_front_car_pass(
-      has_seen_gate_closed_after_front_car_pass_);
+  turnstile_decider_output_.set_has_seen_gate_closed_status_after_front_car_pass(
+      has_seen_gate_closed_status_after_front_car_pass_);
+  turnstile_decider_output_.set_release_by_open_timeout(release_by_open_timeout_);
+  turnstile_decider_output_.set_closing_status_drop_emergency_active(
+      closing_status_drop_emergency_active_);
+  turnstile_decider_output_.set_emergency_opening_status_stable_frame_count(
+      emergency_opening_status_stable_frame_count_);
   turnstile_decider_output_.set_turnstile_stage(static_cast<int32_t>(stage_));
   if (target_turnstile_frenet_obs_ != nullptr) {
-    turnstile_decider_output_.set_turnstile_stop_s(ComputeTurnstileStopS(*target_turnstile_frenet_obs_));
+    turnstile_decider_output_.set_turnstile_stop_s(
+        ComputeTurnstileStopS(*target_turnstile_frenet_obs_));
   }
 }
 
 bool TurnstileLongitudinalDecider::ShouldCreateVirtualObstacle() const {
   if (!turnstile_decider_output_.has_target_turnstile()) {
     return false;
+  }
+  if (stage_ == TurnstileStage::EMERGENCY_BLOCK) {
+    return true;
   }
   return stage_ != TurnstileStage::IDLE &&
          stage_ != TurnstileStage::PASSABLE_RELEASE &&
