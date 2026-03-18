@@ -83,7 +83,7 @@ bool ReferencePathManager::update() {
   ILOG_DEBUG << "ReferencePathManager update cost 1.2:"
              << time_end - time_start;
   ILOG_DEBUG << "--------- for lane_virtual_id: update" << lane_virtual_id;
-  if (left_lane != nullptr) {
+  if (!session_->is_hpp_scene() && left_lane != nullptr) {
     lane_virtual_id = left_lane->get_virtual_id();
     get_reference_path_by_lane(lane_virtual_id, true);
     ILOG_DEBUG << "--------- for left_lane: update" << lane_virtual_id;
@@ -91,7 +91,7 @@ bool ReferencePathManager::update() {
   time_end = IflyTime::Now_ms();
   ILOG_DEBUG << "ReferencePathManager update cost 1.3:"
              << time_end - time_start;
-  if (right_lane != nullptr) {
+  if (!session_->is_hpp_scene() && right_lane != nullptr) {
     lane_virtual_id = right_lane->get_virtual_id();
     get_reference_path_by_lane(lane_virtual_id, true);
     ILOG_DEBUG << "--------- for right_lane: update" << lane_virtual_id;

@@ -461,7 +461,8 @@ bool LaneReferencePath::get_ref_points_hpp(
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto virtual_lane =
       virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
-  auto &lane_points = virtual_lane->lane_points();
+  const auto& lane_points = virtual_lane->lane_points();
+  const auto& refline_point_floor_ids = virtual_lane->get_refline_point_floor_ids();
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
   const double width = virtual_lane->width();
   ref_path_points.clear();
@@ -488,7 +489,8 @@ bool LaneReferencePath::get_ref_points_hpp(
   auto right_boundary_kd_path =
       construct_boundary_kd_path(virtual_lane->get_right_lane_boundary());
 
-  for (auto &refline_pt : lane_points) {
+  for(size_t i = 0; i < lane_points.size(); ++i) {
+    const auto refline_pt = lane_points[i];
     ReferencePathPoint ref_path_pt;
     if (is_enu_valid) {
       ref_path_pt.path_point.set_x(refline_pt.local_point.x);
@@ -526,6 +528,7 @@ bool LaneReferencePath::get_ref_points_hpp(
     ref_path_pt.is_ramp =
         (refline_pt.lane_type == iflyauto::LaneType::LANETYPE_RAMP);
     ref_path_pt.ramp_slope = refline_pt.slope;
+    ref_path_pt.floor_id = refline_point_floor_ids[i];
 
     Vec2d left_foot_point, right_foot_point;
     double left_distance, right_distance;

@@ -5,6 +5,7 @@
 #include <limits.h>
 
 #include <vector>
+#include <memory>
 
 #include "camera_perception_lane_lines_c.h"
 #include "config/basic_type.h"
@@ -49,6 +50,8 @@ class VirtualLane {
 
  public:
   void update_data(const iflyauto::ReferenceLineMsg &lane);
+  // hack(taolu10)临时方案：将 HPP 中多层 lane 构造一个 virtual_lane
+  void update_data(const std::vector<iflyauto::ReferenceLineMsg> &lanes);
   void set_order_id(uint order_id) { order_id_ = order_id; };
   void set_virtual_id(int virtual_id) { virtual_id_ = virtual_id; };
   void set_relative_id(int relative_id) { relative_id_ = relative_id; };
@@ -206,6 +209,18 @@ class VirtualLane {
     return max_virtual_seg_ahead_length_;
   };
 
+  void set_next_virtul_lane(const std::shared_ptr<VirtualLane> &next_virtual_lane) {
+    next_virtual_lane_ = next_virtual_lane;
+  };
+
+  const std::shared_ptr<VirtualLane> get_next_virtual_lane() const {
+    return next_virtual_lane_;
+  };
+
+  const std::vector<int>& get_refline_point_floor_ids() const {
+    return refline_point_floor_ids_;
+  };
+
  private:
   planning::framework::Session *session_ = nullptr;
   int order_id_ = -1;
@@ -251,6 +266,14 @@ class VirtualLane {
 
   std::pair<bool, double> feasible_lane_distance_ = {true, 1000.0};
   MapMergePointInfo map_merge_point_info_;
+  /************* for hpp start *************/
+  std::shared_ptr<VirtualLane> next_virtual_lane_ = nullptr;
+  // hack(taolu10)临时方案：记录每个参考点对应的楼层信息
+  std::vector<int> refline_point_floor_ids_;
+  std::vector<iflyauto::ReferenceLineMsg> reference_line_msgs_;
+  /************* for hpp  end  *************/
 };
+using VirtualLanePtr = std::shared_ptr<VirtualLane>;
+using ConstVirtualLanePtr = std::shared_ptr<const VirtualLane>;
 }  // namespace planning
 #endif

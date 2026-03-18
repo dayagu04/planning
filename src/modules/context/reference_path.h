@@ -51,6 +51,7 @@ struct ReferencePathPoint {
   /******** for hpp start *********/
   bool is_ramp;       // 是否在坡道上
   double ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
+  int floor_id;
   planning_math::PathPoint left_bound_point;
   planning_math::PathPoint right_bound_point;
   /******** for hpp  end  *********/
