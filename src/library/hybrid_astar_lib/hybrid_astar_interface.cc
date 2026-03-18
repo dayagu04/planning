@@ -597,7 +597,7 @@ void HybridAStarInterface::UpdateGridMapBound() {
   // update grid map range, ego pose need to be in range map_bounds.
   if (request_.space_type == ParkSpaceType::VERTICAL ||
       request_.space_type == ParkSpaceType::SLANTING) {
-    map_bounds_.x_min = config_.vertical_map_bound_x_lower;
+    map_bounds_.x_min = request_.limiter_x;
     map_bounds_.x_max = 20.0f;
     map_bounds_.y_min = -20.0f;
     map_bounds_.y_max = 20.0f;
