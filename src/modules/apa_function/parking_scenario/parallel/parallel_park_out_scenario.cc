@@ -1263,6 +1263,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
+  const double kCurbMoveMinDist = 0.3;
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
       // add obs near channel
@@ -1278,7 +1279,8 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
             pnc::mathlib::IsInBound(obstacle_point_slot.x(), B.x(), E.x()) &&
             pnc::mathlib::IsInBound(
                 obstacle_point_slot.y(),
-                t_lane_.corner_outside_slot.y() * slot_side_sgn,
+                t_lane_.corner_outside_slot.y() -
+                    slot_side_sgn * kCurbMoveMinDist,
                 kMinChannelYMagIdentification * slot_side_sgn);
         if (channel_y_condition_try) {
           filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
