@@ -485,10 +485,25 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
     ad_info.ramp_pass_sts = iflyauto::RAMP_PASS_STS_NONE;
   }
-  ad_info.reference_line_msg = session_->environmental_model()
-                                   .get_virtual_lane_manager()
-                                   ->get_current_lane()
-                                   ->get_reference_line_msg();
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager != nullptr) {
+    const auto current_virtual_lane = virtual_lane_manager->get_current_lane();
+    if (current_virtual_lane) {
+      ad_info.reference_line_msg =
+          current_virtual_lane->get_reference_line_msg();
+    }
+
+    if (curr_state == kLaneChangePropose || curr_state == kLaneChangeCancel ||
+         curr_state == kLaneChangeHold) {
+          auto target_lane_id = lane_change_decider_output.target_lane_virtual_id;
+          const auto target_virtual_lane = virtual_lane_manager->get_lane_with_virtual_id(target_lane_id);
+          if (target_virtual_lane) {
+            ad_info.reference_line_msg = target_virtual_lane->get_reference_line_msg();
+          }
+    }
+  }
+
   ad_info.landing_point.is_avaliable = false;
   ad_info.landing_point.heading = 0.0;
   ad_info.landing_point.relative_pos.x = 0.0;
