@@ -279,6 +279,10 @@ class LaneChangeStateMachineManager {
   RampDirection CalcTurnSignalForBaiduSplitRegion() const;
   double ComputeInertialLatOffset(double v_y0, double a_y0, double j_max) const;
   bool IsWarningCollisionRisk();
+  bool IsLCPathCollisionWithRoadEdge(
+      int origin_lane_id, const StateMachineLaneChangeStatus& lc_status) const;
+  bool IsLCPathCollisionWithSolidLine(
+      int origin_lane_id, const StateMachineLaneChangeStatus& lc_status) const;
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
