@@ -969,7 +969,6 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
 void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
                                                double obs_start_s,
                                                double speed) {
-  SetPullOverPath(obs_start_s, obs_inner_l);
   const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
 
   /*
@@ -1007,8 +1006,12 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   double center_virtual_s = obs_start_s - mini_gap + virtual_length * 0.5;
   if (center_virtual_s - ego_s_ <
       vehicle_param.front_edge_to_rear_axle + virtual_length * 0.5) {
+    double target_l = obs_inner_l > 0 ? std::max(obs_inner_l, ego_l_)
+                                      : std::min(obs_inner_l, ego_l_);
+    SetPullOverPath(obs_start_s, target_l);
     return;
   }
+  SetPullOverPath(obs_start_s, obs_inner_l);
   double virtual_l = obs_inner_l;
   // if (center_virtual_s < 60.0 || center_virtual_s - virtual_length* 0.5 -
   // vehicle_param.front_edge_to_rear_axle - 1.0 < ego_s_){
