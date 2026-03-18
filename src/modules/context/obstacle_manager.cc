@@ -785,6 +785,7 @@ void ObstacleManager::clear() {
   road_edge_obstacles_ = IndexedList<int, Obstacle>();
   gs_care_obstacles_ = IndexedList<int, Obstacle>();
   occupancy_obstacles_ = IndexedList<int, Obstacle>();
+  uss_obstacles_ = IndexedList<int, Obstacle>();
 }
 
 Obstacle *ObstacleManager::add_obstacle(const Obstacle &obstacle) {
