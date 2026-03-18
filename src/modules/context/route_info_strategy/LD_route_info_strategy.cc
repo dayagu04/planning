@@ -2033,25 +2033,34 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
   //   }
   // }
 
-  const iflymapdata::sdpro::LinkInfo_Link* target_link =
+  const iflymapdata::sdpro::LinkInfo_Link* split_next_link =
       ld_map_.GetNextLinkOnRoute(split_link->id());
+  if (split_next_link == nullptr) {
+    return false;
+  }
+
+  const iflymapdata::sdpro::LinkInfo_Link* target_link = split_next_link;
   if (target_link == nullptr) {
     return false;
   }
 
+  //在split_next_link再向前计算200m处的link，作为target_link
   double sum_dis = 0.0;
-  while (target_link) {
-    if (target_link->successor_link_ids_size() != 1 ||
-        target_link->predecessor_link_ids_size() != 1) {
+  const iflymapdata::sdpro::LinkInfo_Link* tmp_link = split_next_link;
+  while (tmp_link) {
+    if (tmp_link->successor_link_ids_size() != 1 ||
+        tmp_link->predecessor_link_ids_size() != 1) {
       break;
     }
 
-    target_link = ld_map_.GetNextLinkOnRoute(target_link->id());
+    target_link = tmp_link;
 
-    sum_dis = sum_dis + target_link->length() * 0.01;
+    sum_dis = sum_dis + tmp_link->length() * 0.01;
     if (sum_dis > 200) {
       break;
     }
+
+    tmp_link = ld_map_.GetNextLinkOnRoute(tmp_link->id());
   }
 
   for (const auto& lane_id : target_link->lane_ids()) {
@@ -2065,7 +2074,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
   }
 
   if (!CalculateFeasibleLaneGraph(after_feasible_lane_graph, start_lane_vec,
-                                  *target_link)) {
+                                  *split_next_link)) {
     return false;
   }
 
