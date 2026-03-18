@@ -38,7 +38,7 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   bool turn_signal_from_ramp_direction =
-      lane_change_decider_output.dir_turn_signal_road_to_ramp !=
+      last_frame_dir_turn_signal_road_to_ramp_ !=
       RampDirection::RAMP_NONE;
   bool turn_signal_from_lane_change =
       lane_change_decider_output.lc_request != 0;
@@ -77,15 +77,20 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
                                       : RequestType::RIGHT_CHANGE;
     return;
   }
+  JSON_DEBUG_VALUE(
+      "turn_signal",
+      static_cast<int>(planning_result.turn_signal));
   if (turn_signal_from_ramp_direction) {
     planning_result.turn_signal =
-        lane_change_decider_output.dir_turn_signal_road_to_ramp ==
+        last_frame_dir_turn_signal_road_to_ramp_ ==
                 RampDirection::RAMP_ON_LEFT
             ? RequestType::LEFT_CHANGE
             : RequestType::RIGHT_CHANGE;
+    JSON_DEBUG_VALUE(
+      "turn_signal",
+      static_cast<int>(planning_result.turn_signal));
     return;
   }
-
   if (turn_signal_on_from_lane_borrow) {
     planning_result.turn_signal = lane_borrow_decider_output.borrow_direction ==
                                           BorrowDirection::LEFT_BORROW
@@ -139,7 +144,7 @@ bool LaneChangeHmiDecider::IsDistanceToOriginLineEnough(RampDirection ramp_direc
     double lane_width = ref_distance - target_lane_to_border;
     double ego_width  =
       VehicleConfigurationContext::Instance()->get_vehicle_param().width;
-    return ref_distance > ego_width / 2.0;
+    return lane_width > ego_width / 2.0;
   }
   return true;
 }
@@ -269,7 +274,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   }
 
   if(is_distance_enough || last_frame_dir_turn_signal_road_to_ramp_ == RAMP_NONE ||
-      dir_turn_signal_road_to_ramp == RAMP_NONE){
+      dir_turn_signal_road_to_ramp != RAMP_NONE){
     last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;//更新最后一帧结果
   }
 
