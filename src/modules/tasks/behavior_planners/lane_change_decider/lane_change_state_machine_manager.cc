@@ -71,15 +71,6 @@ LaneChangeStateMachineManager::LaneChangeStateMachineManager(
   congestion_detection_config_ =
       config_builder->cast<CongestionDetectionConfig>();
   lc_safety_check_config_ = config_builder->cast<LanChangeSafetyCheckConfig>();
-
-  // config st_graph_searcher behavior layer debounce params
-  auto* st_output =
-      session_->mutable_planning_context()->mutable_st_graph_searcher_output();
-  if (st_output != nullptr) {
-    st_output->set_debounce_params(
-        config_.st_search_overtake_debounce_min_consecutive_frames,
-        config_.st_search_overtake_debounce_min_hold_time_ms);
-  }
 }
 
 void LaneChangeStateMachineManager::Update() {
@@ -1306,6 +1297,15 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 }
 
 void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
+  // config st_graph_searcher behavior layer debounce params
+  auto* st_output =
+      session_->mutable_planning_context()->mutable_st_graph_searcher_output();
+  if (st_output != nullptr) {
+    st_output->set_debounce_params(
+        config_.st_search_overtake_debounce_min_consecutive_frames,
+        config_.st_search_overtake_debounce_min_hold_time_ms);
+  }
+
   auto& lane_change_decider_output = session_->mutable_planning_context()
                                          ->mutable_lane_change_decider_output();
 

@@ -72,14 +72,14 @@ class StGraphSearcher : public Task {
 
   bool CheckYieldBackVehicle(
       const std::unordered_map<int64_t, speed::STBoundary::DecisionType>&
-          decision_table) const;
+          decision_table);
 
   bool CheckOvertakeFrontVehicleOnTargetLane(
       const std::unordered_map<int64_t, speed::STBoundary::DecisionType>&
-          decision_table) const;
+          decision_table);
 
   // prevent frame to frame switching for rear agent
-  int32_t GetStabilizedTargetLaneRearAgentId() const;
+  int32_t GetStabilizedTargetLaneRearAgentId();
 
   bool CheckIfFrontVehcileSafe();
 
@@ -91,7 +91,7 @@ class StGraphSearcher : public Task {
   // compute cost and h_cost
   void ComputeNodeCost(const StSearchInput& input_info,
                        const StSearchNode& current_node,
-                       StSearchNode* const succ_node) const;
+                       StSearchNode* const succ_node);
 
   double ComputeYieldCost(const StSearchInput& input_info,
                           const StSearchNode& node) const;
@@ -158,9 +158,9 @@ class StGraphSearcher : public Task {
   bool prev_is_overtake_front_vehicle_on_target_lane_ = false;
   bool prev_is_yield_back_vehicle_ = false;
 
-  mutable int32_t last_target_lane_rear_agent_id_ = -1;
-  mutable int32_t candidate_rear_agent_id_ = -1;
-  mutable int rear_agent_consecutive_cnt_ = 0;
+  int32_t last_target_lane_rear_agent_id_ = -1;
+  int32_t candidate_rear_agent_id_ = -1;
+  int rear_agent_consecutive_cnt_ = 0;
   static constexpr int kRearAgentHysteresisFrames = 5;
 };
 

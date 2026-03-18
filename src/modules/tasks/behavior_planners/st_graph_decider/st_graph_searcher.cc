@@ -775,7 +775,7 @@ void StGraphSearcher::GenerateSuccessorNodes(
 
 void StGraphSearcher::ComputeNodeCost(const StSearchInput& input_info,
                                       const StSearchNode& current_node,
-                                      StSearchNode* const succ_node) const {
+                                      StSearchNode* const succ_node) {
   // all weight should be tuned
   const double weight_yield = config_.weight_yield;
   const double weight_overtake = config_.weight_overtake;
@@ -1318,7 +1318,7 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
   }
 }
 
-int32_t StGraphSearcher::GetStabilizedTargetLaneRearAgentId() const {
+int32_t StGraphSearcher::GetStabilizedTargetLaneRearAgentId() {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   if (lane_change_decider_output.lc_request == NO_CHANGE) {
@@ -1363,7 +1363,7 @@ int32_t StGraphSearcher::GetStabilizedTargetLaneRearAgentId() const {
 
 bool StGraphSearcher::CheckYieldBackVehicle(
     const std::unordered_map<int64_t, speed::STBoundary::DecisionType>&
-        decision_table) const {
+        decision_table) {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   if (lane_change_decider_output.lc_request == NO_CHANGE) {
@@ -1408,7 +1408,7 @@ bool StGraphSearcher::CheckYieldBackVehicle(
 
 bool StGraphSearcher::CheckOvertakeFrontVehicleOnTargetLane(
     const std::unordered_map<int64_t, speed::STBoundary::DecisionType>&
-        decision_table) const {
+        decision_table) {
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   if (lane_change_decider_output.lc_request == NO_CHANGE) {

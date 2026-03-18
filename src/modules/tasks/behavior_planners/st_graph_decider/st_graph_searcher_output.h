@@ -37,11 +37,8 @@ class StGraphSearcherOutput {
   }
 
  private:
-  void UpdateDebounceFlag(const bool raw_flag, const double now_ms,
-                          const int min_consecutive_frames,
-                          const double min_hold_time_ms, bool* debounced_flag,
-                          bool* last_raw_flag, int* consecutive_cnt,
-                          double* last_change_time_ms);
+  void UpdateYieldBackDebounce(bool raw_flag);
+  void UpdateOvertakeFrontDebounce(bool raw_flag);
 
   bool is_st_search_success_ = true;
   bool is_search_yield_back_vehicle_ = false;
