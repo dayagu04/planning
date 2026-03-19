@@ -88,9 +88,9 @@ bool TrafficLightDecider::Execute() {
       if (can_pass_ && dis_to_stopline > 100.0) {
         can_pass_ = true;
       } else {
-        if (dis_to_stopline < 100.0 && (is_small_front_intersection_ &&
+        if (dis_to_stopline < 100.0 && ((is_small_front_intersection_ &&
             !is_tfl_match_intersection_) || (!is_small_front_intersection_ &&
-            !IsIntersectionMatchTFLByDisRatio())) {
+            !IsIntersectionMatchTFLByDisRatio()))) {
           can_pass_ = true;
         } else {
           can_pass_ = false;
@@ -396,7 +396,7 @@ bool TrafficLightDecider::IsIntersectionMatchTFLByDisRatio() {
   double dis_to_stopline = environmental_model.get_virtual_lane_manager()
                                ->GetEgoDistanceToStopline();
 
-  //calc lane virtual len beyond stopline 
+  //calc lane virtual len beyond stopline
   const auto& l_boundry = curr_lane->get_left_lane_boundary();
   const auto& r_boundry = curr_lane->get_right_lane_boundary();
   int l_type_seg_size = l_boundry.type_segments_size;
@@ -428,12 +428,12 @@ bool TrafficLightDecider::IsIntersectionMatchTFLByDisRatio() {
 
 }
 
-double TrafficLightDecider::CalcVirtualLaneDisToStopline(double ego_pos, double dis_to_stopline, 
+double TrafficLightDecider::CalcVirtualLaneDisToStopline(double ego_pos, double dis_to_stopline,
                                                          const iflyauto::LaneBoundary& lane_boundry) {
   int stopline_idx = -1;
   int lane_type_seg_size = lane_boundry.type_segments_size;
   for (int i = 0; i < lane_type_seg_size; i++) {
-    if (ego_pos + dis_to_stopline >= lane_boundry.type_segments[i].begin && 
+    if (ego_pos + dis_to_stopline >= lane_boundry.type_segments[i].begin &&
         ego_pos + dis_to_stopline <= lane_boundry.type_segments[i].end) {
       stopline_idx = i;
       break;
@@ -445,7 +445,7 @@ double TrafficLightDecider::CalcVirtualLaneDisToStopline(double ego_pos, double 
 
   int max_dis_idx = -1;
   for (int i = 0; i < lane_type_seg_size; i++) {
-    if (ego_pos + dis_to_stopline + config_.max_dis_ahead_stopline >= lane_boundry.type_segments[i].begin && 
+    if (ego_pos + dis_to_stopline + config_.max_dis_ahead_stopline >= lane_boundry.type_segments[i].begin &&
         ego_pos + dis_to_stopline + config_.max_dis_ahead_stopline <= lane_boundry.type_segments[i].end) {
       max_dis_idx = i;
       break;
@@ -453,16 +453,16 @@ double TrafficLightDecider::CalcVirtualLaneDisToStopline(double ego_pos, double 
   }
   if (max_dis_idx == -1) {
     max_dis_idx = lane_type_seg_size - 1;
-  } 
+  }
   double lane_virtual_len = 0.0;
   for (int i = stopline_idx; i <= max_dis_idx; i++) {
-    if (i == stopline_idx && lane_boundry.type_segments[i].type == 
+    if (i == stopline_idx && lane_boundry.type_segments[i].type ==
         iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
       lane_virtual_len = std::min(lane_boundry.type_segments[i].end - ego_pos - dis_to_stopline, config_.max_dis_ahead_stopline);
       break;
-    } else if (i == max_dis_idx && lane_boundry.type_segments[i].type == 
+    } else if (i == max_dis_idx && lane_boundry.type_segments[i].type ==
       iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-      lane_virtual_len = std::min(ego_pos + dis_to_stopline + config_.max_dis_ahead_stopline - lane_boundry.type_segments[i].begin, 
+      lane_virtual_len = std::min(ego_pos + dis_to_stopline + config_.max_dis_ahead_stopline - lane_boundry.type_segments[i].begin,
                                   double(lane_boundry.type_segments[i].end - lane_boundry.type_segments[i].begin));
       break;
     } else if (lane_boundry.type_segments[i].type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
@@ -472,7 +472,7 @@ double TrafficLightDecider::CalcVirtualLaneDisToStopline(double ego_pos, double 
       continue;
     }
   }
-  return lane_virtual_len; 
+  return lane_virtual_len;
 }
 
 bool TrafficLightDecider::IsRunningRedTFL() {
