@@ -1164,7 +1164,7 @@ bool StGraphUtils::CalculateSRange(
     return *lower_s > kMathEpsilon || *upper_s > kMathEpsilon;
   }
 
-  if (min_s > path_range.second || max_s < path_range.first) {
+  if (min_s > path_range.second + front_edge_to_center || max_s < path_range.first) {
     return false;
   }
 

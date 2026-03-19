@@ -24,6 +24,10 @@ bool PathBorderQuerier::GetObjects(const double min_s, const double max_s,
 
   QueryUpperBound(max_s, end_index);
 
+  if (*start_index > -1 && *end_index == -1) {
+    *end_index = static_cast<int32_t>(path_border_segments_.size()) - 1;
+  }
+
   return *start_index > -1 && *end_index >= *start_index;
 }
 
