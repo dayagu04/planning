@@ -63,6 +63,13 @@ bool HppObstacleLateralPreprocessDecider::Execute() {
               return a.frenet_boundary.s_start < b.frenet_boundary.s_start;
             });
 
+  // 4: 过闸机场景识别、分类和预处理
+  auto& turnstile_scene_info =
+      hpp_obs_lat_preprocess_output.turnstile_scene_info;
+  if (!JudgeTurnstileScene(reference_path_ptr, ego_state, turnstile_scene_info)) {
+    return false;
+  }
+  reference_path_ptr->set_turnstile_scene_info(turnstile_scene_info);
   return true;
 }
 
@@ -142,6 +149,112 @@ bool HppObstacleLateralPreprocessDecider::ClusterObstacles(
     obstacle_cluster_container.obstacle_clusters.push_back(obstacle_cluster);
   }
 
+  return true;
+}
+
+bool HppObstacleLateralPreprocessDecider::JudgeTurnstileScene(
+    ConstReferencePathPtr reference_path_ptr, const FrenetEgoState& ego_state,
+    TurnstileSceneInfo& turnstile_scene_info) {
+  constexpr double kTurnstileLonThr1 = 15.0;
+  constexpr double kTurnstileLonThr2 = 1.0;
+  constexpr double kTurnstileLatThr = 5.0;
+  constexpr double kTurnstileLatSafeThr = 0.2;
+  if (!reference_path_ptr) {
+    return false;
+  }
+  const auto& veh_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double vel_max_width = veh_param.max_width;
+  const auto& ego_sl_boundary = ego_state.boundary();
+  // S1: 判断前方是否存在闸机
+  const auto& static_analysis_result = reference_path_ptr->get_static_analysis_storage();
+  QueryTypeInfo turnstile_type_info = {CRoadType::Ignore, CPassageType::Ignore,
+                                       CElemType::TurnStileRoad};
+  const auto front_turnstile_range =
+      static_analysis_result->GetFrontSRange(turnstile_type_info, ego_state.s());
+  if (front_turnstile_range.first > front_turnstile_range.second ||
+      front_turnstile_range.first > ego_sl_boundary.s_end + kTurnstileLonThr1) {
+    return true;
+  }
+
+  // S2：获取不同位置的闸机
+  const auto& turnstile_osbatcles =
+      reference_path_ptr->get_turnstile_obstacles();
+  std::vector<ConstFrenetObstaclePtr> l_turnstiles;
+  std::vector<ConstFrenetObstaclePtr> r_turnstiles;
+  std::vector<ConstFrenetObstaclePtr> m_turnstiles;
+  for(const auto& turnstile_osbatcle : turnstile_osbatcles) {
+    const auto& sl_boundary = turnstile_osbatcle->frenet_obstacle_boundary();
+    if (std::min(std::fabs(sl_boundary.l_start), std::fabs(sl_boundary.l_end)) >
+            kTurnstileLatThr ||
+        sl_boundary.s_start > ego_sl_boundary.s_end + kTurnstileLonThr1 ||
+        sl_boundary.s_end < ego_sl_boundary.s_start - kTurnstileLonThr2) {
+      continue;
+    }
+    const auto width = reference_path_ptr->get_interpolated_point_width(
+        turnstile_osbatcle->frenet_s(), true);
+    const double left_border_l = width.first;
+    const double right_border_l = -width.second;
+    const double mid_l = (left_border_l + right_border_l) / 2.0;
+    if (left_border_l - sl_boundary.l_end >
+            vel_max_width + kTurnstileLatSafeThr &&
+        sl_boundary.l_start - right_border_l >
+            vel_max_width + kTurnstileLatSafeThr) {
+      m_turnstiles.push_back(turnstile_osbatcle);
+    } else if (sl_boundary.l_start - right_border_l >
+               vel_max_width + kTurnstileLatSafeThr) {
+      l_turnstiles.push_back(turnstile_osbatcle);
+    } else if (left_border_l - sl_boundary.l_end >
+               vel_max_width + kTurnstileLatSafeThr) {
+      r_turnstiles.push_back(turnstile_osbatcle);
+    } else {
+      ILOG_ERROR << "block turnstile obsatcle id : "
+                 << turnstile_osbatcle->id();
+    }
+  }
+  const auto sort_fun = [](const ConstFrenetObstaclePtr& a,
+                           const ConstFrenetObstaclePtr& b) {
+    return a->frenet_obstacle_boundary().s_start <
+           b->frenet_obstacle_boundary().s_start;
+  };
+  std::sort(l_turnstiles.begin(), l_turnstiles.end(), sort_fun);
+  std::sort(r_turnstiles.begin(), r_turnstiles.end(), sort_fun);
+  std::sort(m_turnstiles.begin(), m_turnstiles.end(), sort_fun);
+
+  // S3: 判断闸机场景和目标闸机
+  if(l_turnstiles.empty() && r_turnstiles.empty() && m_turnstiles.empty()) {
+    turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_NONE;
+  } else if(m_turnstiles.empty() == false) {
+    if (l_turnstiles.empty() && r_turnstiles.empty()) {
+      turnstile_scene_info.type =
+          TurnstileSceneType::TURNSTILE_SCENE_MID_DOUBLE;
+      turnstile_scene_info.target_id = m_turnstiles.front()->id();
+    } else if (r_turnstiles.empty()) {
+      turnstile_scene_info.type =
+          TurnstileSceneType::TURNSTILE_SCENE_LEFT_SINGLE;
+      turnstile_scene_info.target_id = m_turnstiles.front()->id();
+    } else {
+      turnstile_scene_info.type =
+          TurnstileSceneType::TURNSTILE_SCENE_SIDE_DOUBLE;
+      turnstile_scene_info.target_id = r_turnstiles.front()->id();
+      turnstile_scene_info.side_id = m_turnstiles.front()->id();
+    }
+  } else {
+    if(l_turnstiles.empty() == false && r_turnstiles.empty() == false) {
+      turnstile_scene_info.type =
+          TurnstileSceneType::TURNSTILE_SCENE_SIDE_DOUBLE;
+      turnstile_scene_info.target_id = r_turnstiles.front()->id();
+      turnstile_scene_info.side_id = l_turnstiles.front()->id();
+    } else if(l_turnstiles.empty() == false) {
+      turnstile_scene_info.type =
+          TurnstileSceneType::TURNSTILE_SCENE_LEFT_SINGLE;
+      turnstile_scene_info.target_id = l_turnstiles.front()->id();
+    } else {
+      turnstile_scene_info.type =
+          TurnstileSceneType::TURNSTILE_SCENE_RIGHT_SINGLE;
+      turnstile_scene_info.target_id = r_turnstiles.front()->id();
+    }
+  }
   return true;
 }
 

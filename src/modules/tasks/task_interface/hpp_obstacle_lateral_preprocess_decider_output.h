@@ -88,9 +88,23 @@ struct ObstacleClusterContainer {
   std::vector<ObstacleCluster> obstacle_clusters;     // 聚类列表
 };
 
+enum class TurnstileSceneType {
+  TURNSTILE_SCENE_NONE = 0,
+  TURNSTILE_SCENE_LEFT_SINGLE = 1,    // 左侧单闸机
+  TURNSTILE_SCENE_RIGHT_SINGLE = 2,   // 右侧单闸机
+  TURNSTILE_SCENE_MID_DOUBLE = 3,         // 中间双闸机
+  TURNSTILE_SCENE_SIDE_DOUBLE = 4,        // 两侧双闸机
+};
+struct TurnstileSceneInfo {
+  TurnstileSceneType type = TurnstileSceneType::TURNSTILE_SCENE_NONE;
+  int target_id = -1;     // 需要通过的闸机障碍物 id
+  int side_id = -1;      // 双闸机场景下，另一个闸机障碍物 id
+};
+
 struct HppObstacleLateralPreprocessDeciderOutput {
   ObstacleClassificationResult obs_classification_result;
   ObstacleClusterContainer obs_cluster_container;
+  TurnstileSceneInfo turnstile_scene_info;
 };
 
 }  // namespace planning

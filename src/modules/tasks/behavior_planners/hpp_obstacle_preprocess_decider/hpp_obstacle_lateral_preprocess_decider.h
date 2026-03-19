@@ -42,6 +42,9 @@ class HppObstacleLateralPreprocessDecider : public Task{
       const ObstacleClassificationResult& classification_result,
       ObstacleClusterContainer& obstacle_cluster_constainer);
 
+  bool JudgeTurnstileScene(ConstReferencePathPtr reference_path_ptr,
+                           const FrenetEgoState& ego_state,
+                           TurnstileSceneInfo& turnstile_scene_info);
   /************** 障碍物分类相关私有函数定义 ************ */
   ObstacleRelPosType ClassifyObstaclesByRelPos(
       const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr);
