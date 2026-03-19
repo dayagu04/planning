@@ -44,7 +44,9 @@ ComparableCost TrajectoryCost::CalculatePathCost(
   // lateral sample two lanes
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-
+  double vehicle_width = vehicle_param.width;
+  double half_vehicle_width = vehicle_width * 0.5;
+  double ego_s = current_reference_path_ptr_->get_frenet_ego_state().s();
   for (double path_s = 0.0; path_s < (end_s - start_s);
        path_s += path_resolution_) {
     const double frenet_l = curve.Evaluate(0, path_s);
@@ -56,10 +58,7 @@ ComparableCost TrajectoryCost::CalculatePathCost(
     double sample_left_boundary = 0.0;
     double sample_right_boundary = 0.0;
     // avaliable lane boundary
-    double ego_s = current_reference_path_ptr_->get_frenet_ego_state().s();
     double aheads = path_s + start_s - ego_s;
-    double vehicle_width = vehicle_param.width;
-    double half_vehicle_width = vehicle_width * 0.5;
     if (current_lane_ptr_ != nullptr) {
       sample_left_boundary =
           current_lane_ptr_->width_by_s(path_s + start_s) * 0.5 -
@@ -117,12 +116,12 @@ ComparableCost TrajectoryCost::CalculatePathCost(
       cost.out_boundary_ = true;
     }
 
-    std::function<double(const double)> quasi_softmax = [this](const double x) {
-      const double l0 = 1.5;
-      const double b = 0.4;
-      const double k = 1.5;
-      return (b + std::exp(-k * (x - l0))) / (1.0 + std::exp(-k * (x - l0)));
-    };
+    // std::function<double(const double)> quasi_softmax = [this](const double x) {
+    //   const double l0 = 1.5;
+    //   const double b = 0.4;
+    //   const double k = 1.5;
+    //   return (b + std::exp(-k * (x - l0))) / (1.0 + std::exp(-k * (x - l0)));
+    // };
     path_cost += frenet_l * frenet_l * coeff_l_cost_;
     const double frenet_dl = curve.Evaluate(1, path_s);
     path_cost += frenet_dl * frenet_dl * coeff_dl_cost_;
