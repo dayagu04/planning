@@ -435,6 +435,20 @@ bool ReferencePath::get_reference_point_by_lon(
   reference_path_point.lane_width = planning_math::Interpolate(
       pre_reference_point.lane_width, next_reference_point.lane_width,
       interpolate_ratio);
+  reference_path_point.left_drivable_width = planning_math::Interpolate(
+      pre_reference_point.left_drivable_width, next_reference_point.left_drivable_width,
+      interpolate_ratio);
+  reference_path_point.right_drivable_width = planning_math::Interpolate(
+      pre_reference_point.right_drivable_width, next_reference_point.right_drivable_width,
+      interpolate_ratio);
+  reference_path_point.drivable_width = planning_math::Interpolate(
+      pre_reference_point.drivable_width, next_reference_point.drivable_width,
+      interpolate_ratio);
+  reference_path_point.ramp_slope = planning_math::Interpolate(
+      pre_reference_point.ramp_slope, next_reference_point.ramp_slope,
+      interpolate_ratio);
+  reference_path_point.is_ramp = pre_reference_point.is_ramp;
+  reference_path_point.floor_id = pre_reference_point.floor_id;
 
   reference_path_point.max_velocity = pre_reference_point.max_velocity;
 
@@ -524,6 +538,20 @@ bool ReferencePath::get_reference_point_by_lon_from_raw_ref_path_points(
   reference_path_point.lane_width = planning_math::Interpolate(
       pre_reference_point.lane_width, next_reference_point.lane_width,
       interpolate_ratio);
+  reference_path_point.left_drivable_width = planning_math::Interpolate(
+      pre_reference_point.left_drivable_width, next_reference_point.left_drivable_width,
+      interpolate_ratio);
+  reference_path_point.right_drivable_width = planning_math::Interpolate(
+      pre_reference_point.right_drivable_width, next_reference_point.right_drivable_width,
+      interpolate_ratio);
+  reference_path_point.drivable_width = planning_math::Interpolate(
+      pre_reference_point.drivable_width, next_reference_point.drivable_width,
+      interpolate_ratio);
+  reference_path_point.ramp_slope = planning_math::Interpolate(
+      pre_reference_point.ramp_slope, next_reference_point.ramp_slope,
+      interpolate_ratio);
+  reference_path_point.is_ramp = pre_reference_point.is_ramp;
+  reference_path_point.floor_id = pre_reference_point.floor_id;
 
   reference_path_point.max_velocity = pre_reference_point.max_velocity;
 
