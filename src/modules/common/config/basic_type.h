@@ -1117,6 +1117,9 @@ struct FrenetObstacleBoundary {
   double s_end{std::numeric_limits<double>::lowest()};
   double l_start{std::numeric_limits<double>::max()};
   double l_end{std::numeric_limits<double>::lowest()};
+  double obs_2left_road_boundary_mindis;
+  double obs_2right_road_boundary_mindis;
+
 };
 
 enum TrackType { SIDE_TRACK, FRONT_TRACK };

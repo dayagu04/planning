@@ -60,10 +60,10 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
       const ObstacleConsistencyMap& obstacle_consistency_map,
       LatObstacleDecisionType& decision);
 
-  void MakeDecisionBasedPassageWidth(const ObstacleCluster& cluster,
+  void MakeDecisionBasedPassageWidth(ObstacleCluster& cluster,
                                      LatObstacleDecisionInfo& decision_info);
 
-  void MakeDecisionBasedRelativePos(const ObstacleCluster& cluster,
+  void MakeDecisionBasedRelativePos(const ObstacleCluster& cluster, const LatObstacleDecisionInfo& passage_width_info,
                                     LatObstacleDecisionInfo& decision_info);
 
   void MakeDecisionBasedLastPath(const ObstacleCluster& cluster,
@@ -75,7 +75,11 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
                          LatObstacleDecisionInfo& relative_pos_info,
                          LatObstacleDecisionInfo& last_path_info,
                          LatObstacleDecisionType& decision);
-
+  void AnalyzeNudgeLevelBaseCurve(const ObstacleCluster &cluster,
+                                      const LatObstacleDecisionInfo& passage_width_info,
+                                      LatObstacleDecisionInfo &decision_info);
+  bool LRSCurve(const double min_line_length, double x, double y, double phi, double &t, double &u, double &v);
+  bool CalSCurve(const Pose2D &start_point,const Pose2D &end_point,const double radius,const bool is_left_path,std::vector<Pose2D>& path_points);
   //辅助函数2：更新历史记录状态机
   void UpdateObstacleConsistencyMap(
       const ObstacleLateralDecisionMap& lat_obstacle_decision,
