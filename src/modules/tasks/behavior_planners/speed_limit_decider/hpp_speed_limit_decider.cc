@@ -43,7 +43,8 @@ bool HPPSpeedLimitDecider::Execute() {
 
   // CalculateRampLimit();
 
-  CalculateIntersectionRoadLimit();
+  // CalculateIntersectionRoadLimit();
+  
 
   auto hpp_speed_limit_output = session_->mutable_planning_context()
                                     ->mutable_speed_limit_decider_output();
@@ -62,6 +63,63 @@ bool HPPSpeedLimitDecider::Execute() {
     ad_info->is_curva = false;
   }
 
+  // *********** query_info **********
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+
+  if (!reference_path_ptr) {
+    return true;
+  }
+
+  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  const double ego_head_s = frenet_ego_state.head_s();
+  const double ego_s = frenet_ego_state.s();
+
+  const ConstStaticAnalysisStoragePtr static_analysis_storage =
+      reference_path_ptr->get_static_analysis_storage();
+  if (!static_analysis_storage) {
+    return true;
+  }
+
+  // query_info_bump
+  QueryTypeInfo query_info = {CRoadType::Ignore, CPassageType::Ignore,
+                              CElemType::RampRoad};
+
+  const SRangeList speed_ramp_near_ignore_range_list =
+      static_analysis_storage->GetSRangeList(query_info);
+  JSON_DEBUG_VALUE("speed_ramp_near_ignore_range_list_size",
+                   speed_ramp_near_ignore_range_list.size());
+
+  if (!speed_ramp_near_ignore_range_list.empty()) {
+    const auto speed_ramp_near_ignore_range =
+        static_analysis_storage->GetFrontSRange(query_info, ego_head_s);
+    JSON_DEBUG_VALUE("speed_ramp_near_ignore_start",
+                     speed_ramp_near_ignore_range.first);
+    JSON_DEBUG_VALUE("speed_ramp_near_ignore_end",
+                     speed_ramp_near_ignore_range.second);
+  }
+
+  // query_info_intersection
+  QueryTypeInfo query_info_intersection = {
+      CRoadType::Ignore, CPassageType::Ignore, CElemType::IntersectionRoad};
+
+  const SRangeList speed_intersection_near_ignore_range_list =
+      static_analysis_storage->GetSRangeList(query_info_intersection);
+  JSON_DEBUG_VALUE("speed_intersection_near_ignore_range_list_size",
+                   speed_intersection_near_ignore_range_list.size());
+
+  if (!speed_intersection_near_ignore_range_list.empty()) {
+    const auto speed_intersection_near_ignore_range =
+        static_analysis_storage->GetFrontSRange(query_info_intersection,
+                                                ego_head_s);
+    JSON_DEBUG_VALUE("speed_intersection_near_ignore_start",
+                     speed_intersection_near_ignore_range.first);
+    JSON_DEBUG_VALUE("speed_intersection_near_ignore_end",
+                     speed_intersection_near_ignore_range.second);
+  }
+  // *******  
+  
   return true;
 }
 
