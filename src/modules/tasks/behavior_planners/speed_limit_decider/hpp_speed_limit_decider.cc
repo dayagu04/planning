@@ -44,7 +44,7 @@ bool HPPSpeedLimitDecider::Execute() {
   // CalculateRampLimit();
 
   // CalculateIntersectionRoadLimit();
-  
+
 
   auto hpp_speed_limit_output = session_->mutable_planning_context()
                                     ->mutable_speed_limit_decider_output();
@@ -83,21 +83,21 @@ bool HPPSpeedLimitDecider::Execute() {
   }
 
   // query_info_bump
-  QueryTypeInfo query_info = {CRoadType::Ignore, CPassageType::Ignore,
-                              CElemType::RampRoad};
+  QueryTypeInfo query_info = {CRoadType::Ignore, CPassageType::NarrowPassage,
+                              CElemType::Ignore};
 
-  const SRangeList speed_ramp_near_ignore_range_list =
+  const SRangeList speed_narrow_passage_near_ignore_range_list =
       static_analysis_storage->GetSRangeList(query_info);
-  JSON_DEBUG_VALUE("speed_ramp_near_ignore_range_list_size",
-                   speed_ramp_near_ignore_range_list.size());
+  JSON_DEBUG_VALUE("speed_narrow_passage_near_ignore_range_list_size",
+                   speed_narrow_passage_near_ignore_range_list.size());
 
-  if (!speed_ramp_near_ignore_range_list.empty()) {
-    const auto speed_ramp_near_ignore_range =
+  if (!speed_narrow_passage_near_ignore_range_list.empty()) {
+    const auto speed_narrow_passage_near_ignore_range =
         static_analysis_storage->GetFrontSRange(query_info, ego_head_s);
-    JSON_DEBUG_VALUE("speed_ramp_near_ignore_start",
-                     speed_ramp_near_ignore_range.first);
-    JSON_DEBUG_VALUE("speed_ramp_near_ignore_end",
-                     speed_ramp_near_ignore_range.second);
+    JSON_DEBUG_VALUE("speed_narrow_passage_near_ignore_start",
+                     speed_narrow_passage_near_ignore_range.first);
+    JSON_DEBUG_VALUE("speed_narrow_passage_near_ignore_end",
+                     speed_narrow_passage_near_ignore_range.second);
   }
 
   // query_info_intersection
@@ -118,8 +118,8 @@ bool HPPSpeedLimitDecider::Execute() {
     JSON_DEBUG_VALUE("speed_intersection_near_ignore_end",
                      speed_intersection_near_ignore_range.second);
   }
-  // *******  
-  
+  // *******
+
   return true;
 }
 
@@ -169,8 +169,8 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
   HPPSpeedLimitZoneInfo zone_info;
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
-                                   CPassageType::NarrowPassage,
-                                   CElemType::Ignore)) {
+                                   CPassageType::Ignore,
+                                   CElemType::IntersectionRoad)) {
     return;
   }
 
@@ -180,7 +180,7 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
   if (v_limit_speed_narrow_passage_road < v_target_) {
     v_target_ = v_limit_speed_narrow_passage_road;
-    v_target_type_ = SpeedLimitType::NARROW_PASSAGE;
+    v_target_type_ = SpeedLimitType::INTERSECTION_ROAD;
   }
 
   LOG_DEBUG(
@@ -190,9 +190,9 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
   JSON_DEBUG_VALUE("v_limit_speed_narrow_passage_road",
                    v_limit_speed_narrow_passage_road);
-  JSON_DEBUG_VALUE("in_speed_limit_narrow_passage",
+  JSON_DEBUG_VALUE("v_limit_speed_narrow_passage",
                    zone_info.in_speed_limit_zone);
-  JSON_DEBUG_VALUE("approaching_speed_limit_narrow_passage",
+  JSON_DEBUG_VALUE("approaching_speed_limit_zone_narrow_passage",
                    zone_info.approaching_speed_limit_zone);
   JSON_DEBUG_VALUE("distance_to_zone_narrow_passage", zone_info.distance_to_zone);
   return;
