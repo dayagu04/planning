@@ -2492,52 +2492,95 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
         continue;
       }
     }
-    // 3.4 平行汇入（汇入后总车道数增加且保持，则视为平行汇入，不做处理）
-    const auto* pre_link = ld_map_.GetPreviousLinkOnRoute(merge_ptr->id());
-    if (!pre_link) continue;
-
-    int pre_link_num = 0;
-    int merge_link_num = 0;
-
-    if (!CalculateLinkLaneNum(pre_link, pre_link_num) ||
-        !CalculateLinkLaneNum(merge_ptr, merge_link_num)) {
-      continue;
-    }
-
-    // merge_link之后 300米内的最小车道数
-    int min_front_lane_num = merge_link_num;
-    double accumulated_dis = 0.0;
-    const auto* current_front_link =
-        ld_map_.GetNextLinkOnRoute(merge_ptr->id());
-
-    while (current_front_link != nullptr && accumulated_dis < 300.0) {
-      int current_lane_num = 0;
-      if (!CalculateLinkLaneNum(current_front_link, current_lane_num)) {
-        break;
-      }
-
-      min_front_lane_num = std::min(min_front_lane_num, current_lane_num);
-
-      accumulated_dis += current_front_link->length() * 0.01;
-      current_front_link = ld_map_.GetNextLinkOnRoute(current_front_link->id());
-    }
-
-    // 如果merge及其后续300m内的最小车道数都大于汇入前，视为平行汇流
-    if (min_front_lane_num > pre_link_num) {
-      continue;
-    }
-
+    // 3.4 判断平行汇入
     auto it = link_id_to_index.find(merge_ptr->id());
     if (it == link_id_to_index.end()) {
       continue;
     }
     size_t merge_link_idx = it->second;
-
     if (feasible_lane_graph.lane_topo_groups[merge_link_idx].topo_lanes.size() <
         2) {
       continue;
     }
+    bool is_need_avoid = false;
+    for (const auto merge_link_lane_id : merge_ptr->lane_ids()) {
+      const auto* merge_link_lane = ld_map_.GetLaneInfoByID(merge_link_lane_id);
+      if (merge_link_lane == nullptr) {
+        continue;
+      }
+      if (IsEmergencyLane(merge_link_lane) || IsDiversionLane(merge_link_lane)) {
+        continue;
+      }
+      // 找出汇入车道
+      if (merge_link_lane->predecessor_lane_ids_size() == 0) {
+        continue;
+      }
+      const auto* pre_merge_link_lane =
+          ld_map_.GetLaneInfoByID(merge_link_lane->predecessor_lane_ids()[0]);
+      if (pre_merge_link_lane == nullptr) {
+        continue;
+      }
+      if (ld_map_.isOnRouteLinks(pre_merge_link_lane->link_id())) {
+        continue;
+      }
+      // 判断是否是feasible lane旁边车道
+      uint32 search_orderid = merge_direction == RAMP_ON_LEFT
+                                  ? merge_link_lane->sequence() + 1
+                                  : merge_link_lane->sequence() - 1;
+      auto it = std::find_if(
+          feasible_lane_graph.lane_topo_groups[merge_link_idx]
+              .topo_lanes.begin(),
+          feasible_lane_graph.lane_topo_groups[merge_link_idx].topo_lanes.end(),
+          [search_orderid](const TopoLane& lane) {
+            return lane.order_id == search_orderid;
+          });
+      if (it == feasible_lane_graph.lane_topo_groups[merge_link_idx].topo_lanes.end()) {
+        continue;
+      }
+      // 判断需要躲避的feasible_lane前继link是否在route上
+      const auto* avoid_feasible_lane = ld_map_.GetLaneInfoByID(it->id);
+      if (avoid_feasible_lane == nullptr) {
+        continue;
+      }
+      if (avoid_feasible_lane->predecessor_lane_ids_size() == 0) {
+        continue;
+      }
+      if (!ld_map_.isOnRouteLinks(
+              avoid_feasible_lane->predecessor_lane_ids()[0])) {
+        continue;
+      }
 
+      // 判断车道前方是否消亡
+      double accumulated_dis = 0.0;
+      const auto* itera_lane = merge_link_lane;
+      while (itera_lane != nullptr && accumulated_dis < 300.0) {
+        if (IsMergeLane(itera_lane)) {
+          const auto merge_lane_type = CalculateMergeLaneType(itera_lane);
+          if (merge_lane_type == MERGE_TO_LEFT &&
+                  merge_direction == RAMP_ON_LEFT ||
+              merge_lane_type == MERGE_TO_RIGHT &&
+                  merge_direction == RAMP_ON_RIGHT) {
+            is_need_avoid = true;
+            break;
+          }
+        }
+        if (!ld_map_.isOnRouteLinks(itera_lane->link_id())) {
+          is_need_avoid = true;
+          break;
+        }
+        accumulated_dis += itera_lane->length() * 0.01;
+        if (itera_lane->successor_lane_ids_size() > 0) {
+          itera_lane =
+              ld_map_.GetLaneInfoByID(itera_lane->successor_lane_ids()[0]);
+        } else {
+          is_need_avoid = true;
+          break;
+        }
+      }
+    }
+    if (!is_need_avoid) {
+      continue;
+    }
     // 4. 更新该合流点之前所有link的车道可行距离
     for (size_t t = feasible_lane_graph.lane_topo_groups.size() - 1;
          t > merge_link_idx; --t) {
@@ -2580,6 +2623,11 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     if (lanes.size() <= 1) {
       continue;
     }
+    // 记录被移除的lane
+    std::copy_if(
+        lanes.begin(), lanes.end(),
+        std::back_inserter(avoid_link_merge_lane_id_vec_),
+        [](const auto& lane) { return lane.front_feasible_distance < 0.0; });
     lanes.erase(std::remove_if(lanes.begin(), lanes.end(),
                                [](const auto& lane) {
                                  return lane.front_feasible_distance < 0.0;
@@ -3193,67 +3241,69 @@ bool LDRouteInfoStrategy::IsNeedFilterSplit(
 
 void LDRouteInfoStrategy::IsPreLaneOnOtherLink(
     TopoLinkGraph& before_split_feasible_lane_graph,
-    std::unordered_map<int, int>& order_diff){
+    std::unordered_map<int, int>& order_diff) {
   const int link_size =
       before_split_feasible_lane_graph.lane_topo_groups.size();
   const double extend_distance =
       current_link_->link_class() ==
               iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
           ? 800.
-          : 600.;
-  for (int i = 0; i < link_size; i++) {
-    auto& temp_link_topo =
-        before_split_feasible_lane_graph.lane_topo_groups[i];
+          : 500.;
 
+  for (int i = 0; i < link_size; i++) {
+    auto& temp_link_topo = before_split_feasible_lane_graph.lane_topo_groups[i];
     auto& temp_topo_lanes = temp_link_topo.topo_lanes;
 
     if (temp_topo_lanes.empty()) {
-      return;
+      continue;
     }
-    // 校验feasible lane回溯过程中有没有偏移
-    bool has_offset = false;
+
     if (i > 0) {
       for (auto& temp_topo_lane : temp_topo_lanes) {
-        bool current_lane_has_successor = false;
+        int max_inherited_diff = 0;
+        bool has_valid_successor = false;
 
         for (const auto& next_topo_lane :
              before_split_feasible_lane_graph.lane_topo_groups[i - 1]
                  .topo_lanes) {
-          // 检查是否是后继关系
           if (temp_topo_lane.successor_lane_ids.find(next_topo_lane.id) !=
               temp_topo_lane.successor_lane_ids.end()) {
-            current_lane_has_successor = true;
-            break;
+            has_valid_successor = true;
+            if (order_diff.count(next_topo_lane.id)) {
+              max_inherited_diff =
+                  std::max(max_inherited_diff, order_diff[next_topo_lane.id]);
+            }
           }
         }
 
-        // 如果当前车道在下一组中没有找到后继，说明存在偏移
-        if (!current_lane_has_successor) {
-          has_offset = true;
-          int sequence_diff = std::numeric_limits<int>::max();
+        int current_lane_diff = 0;
 
+        if (!has_valid_successor) {
+          int sequence_diff = std::numeric_limits<int>::max();
           for (const auto& next_topo_lane :
                before_split_feasible_lane_graph.lane_topo_groups[i - 1]
                    .topo_lanes) {
-            // 计算当前车道与下一组每个车道的sequence差值
             int diff = std::abs(
                 temp_link_topo.lane_nums -
                 static_cast<int>(temp_topo_lane.order_id) -
                 before_split_feasible_lane_graph.lane_topo_groups[i - 1]
                     .lane_nums +
                 static_cast<int>(next_topo_lane.order_id));
-            if (diff < sequence_diff) {
-              sequence_diff = diff;
-            }
+            if (diff < sequence_diff) sequence_diff = diff;
           }
+          current_lane_diff = (sequence_diff == std::numeric_limits<int>::max())
+                                  ? 0
+                                  : sequence_diff;
+        } else {
+          current_lane_diff = max_inherited_diff;
+        }
 
-          if (sequence_diff != std::numeric_limits<int>::max()) {
-            order_diff.emplace(temp_topo_lane.id, sequence_diff);
-            temp_topo_lane.front_feasible_distance =
-                std::max(temp_topo_lane.front_feasible_distance -
-                             sequence_diff * extend_distance,
-                         0.0);
-          }
+        if (current_lane_diff > 0) {
+          order_diff[temp_topo_lane.id] = current_lane_diff;
+          temp_topo_lane.front_feasible_distance =
+              std::max(temp_topo_lane.front_feasible_distance -
+                           current_lane_diff * extend_distance,
+                       0.0);
         }
       }
     }
