@@ -94,6 +94,9 @@ void ParkingScenario::ScenarioRunning() {
   // log json debug
   Log();
 
+  // record data to debuginfo
+  LogDebug();
+
   return;
 }
 
@@ -1476,6 +1479,160 @@ void ParkingScenario::DecideExpandMirrorCommand() {
   frame_.mirror_command = MirrorCommand::EXPAND;
 
   return;
+const void ParkingScenario::LogDebug() {
+  RecordDebugRemainDist();
+  RecordDebugStuckTimeInfo();
+  RecordDebugTerminalErr();
+  RecordDebugPlanningSlotInfo();
+}
+
+const void ParkingScenario::RecordDebugRemainDist() {
+  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaRemainDist* debug_apa_remain_dist =
+      debug_info->mutable_apa_path_debug()->mutable_remain_dist();
+
+  debug_apa_remain_dist->set_remain_path_dist(frame_.remain_dist_path);
+  debug_apa_remain_dist->set_remain_obs_dist(frame_.remain_dist_obs);
+  debug_apa_remain_dist->set_remain_static_obs_dist(
+      frame_.remain_dist_static_obs);
+  debug_apa_remain_dist->set_remain_dynamic_obs_dist(
+      frame_.remain_dist_dynamic_obs);
+  debug_apa_remain_dist->set_remain_slot_jump_dist(
+      frame_.remain_dist_slot_jump);
+  debug_apa_remain_dist->set_remain_dist_by_od(frame_.remain_dist_by_od);
+}
+
+const void ParkingScenario::RecordDebugStuckTimeInfo() {
+  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaStuckTimeInfo* debug_stuck_time_info =
+      debug_info->mutable_apa_path_debug()->mutable_stuck_time_info();
+  planning::common::ApaStuckTime* debug_stuck_time =
+      debug_stuck_time_info->mutable_stuck_time();
+
+  debug_stuck_time_info->set_stuck_by_dynamic_obs(frame_.stuck_by_dynamic_obs);
+  debug_stuck_time->set_stuck_time(frame_.stuck_time);
+  debug_stuck_time->set_stuck_path_time(frame_.stuck_path_time);
+  debug_stuck_time->set_stuck_static_obs_time(frame_.stuck_obs_time);
+  debug_stuck_time->set_stuck_dynamic_obs_time(frame_.stuck_dynamic_obs_time);
+}
+
+const void ParkingScenario::RecordDebugTerminalErr() {
+  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaTerminalErr* debug_terminal_err =
+      debug_info->mutable_apa_path_debug()->mutable_terminal_err();
+
+  debug_terminal_err->set_terminal_x_err(
+      frame_.ego_slot_info.terminal_err.GetX());
+  debug_terminal_err->set_terminal_y_err(
+      frame_.ego_slot_info.terminal_err.GetY());
+  debug_terminal_err->set_terminal_y_front_err(0.0);
+  debug_terminal_err->set_terminal_heading_err(
+      frame_.ego_slot_info.terminal_err.GetTheta());
+}
+
+const void ParkingScenario::RecordDebugPlanningSlotInfo() {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaPlanningSlotInfo* debug_slot_info =
+      debug_info->mutable_apa_path_debug()->mutable_slot_info();
+
+  debug_slot_info->set_every_replan_lat_move_slot_dist(
+      ego_info_under_slot.lat_move_dist_every_replan);
+  debug_slot_info->set_success_replan_lat_move_slot_dist(
+      ego_info_under_slot.lat_move_dist_replan_success);
+  debug_slot_info->set_every_replan_lon_move_slot_dist(
+      ego_info_under_slot.lon_move_dist_every_replan);
+  debug_slot_info->set_success_replan_lon_move_slot_dist(
+      ego_info_under_slot.lon_move_dist_replan_success);
+  debug_slot_info->set_slot_occupied_ratio(
+      ego_info_under_slot.slot_occupied_ratio);
+  debug_slot_info->set_slot_processed_occupied_ratio(
+      ego_info_under_slot.slot_occupied_ratio_postprocess);
+
+  planning::common::Pose2d* slot_origin_pose =
+      debug_slot_info->mutable_slot_origin_pose();
+  slot_origin_pose->set_x(ego_info_under_slot.origin_pose_global.GetX());
+  slot_origin_pose->set_y(ego_info_under_slot.origin_pose_global.GetY());
+  slot_origin_pose->set_theta(
+      ego_info_under_slot.origin_pose_global.GetTheta());
+
+  planning::common::Pose2d* origin_target_pose =
+      debug_slot_info->mutable_origin_target_pose();
+  origin_target_pose->set_x(ego_info_under_slot.origin_target_pose.GetX());
+  origin_target_pose->set_y(ego_info_under_slot.origin_target_pose.GetY());
+  origin_target_pose->set_theta(
+      ego_info_under_slot.origin_target_pose.GetTheta());
+
+  planning::common::Pose2d* target_pose =
+      debug_slot_info->mutable_target_pose();
+  target_pose->set_x(ego_info_under_slot.target_pose.GetX());
+  target_pose->set_y(ego_info_under_slot.target_pose.GetY());
+  target_pose->set_theta(ego_info_under_slot.target_pose.GetTheta());
+
+  debug_slot_info->clear_origin_slot_points();
+  const SlotCoord& origin_global_corner =
+      ego_info_under_slot.slot.origin_corner_coord_global_;
+
+  planning::common::Point2d* origin_pt0 =
+      debug_slot_info->add_origin_slot_points();
+  origin_pt0->set_x(origin_global_corner.pt_0.x());
+  origin_pt0->set_y(origin_global_corner.pt_0.y());
+
+  planning::common::Point2d* origin_pt1 =
+      debug_slot_info->add_origin_slot_points();
+  origin_pt1->set_x(origin_global_corner.pt_1.x());
+  origin_pt1->set_y(origin_global_corner.pt_1.y());
+
+  planning::common::Point2d* origin_pt2 =
+      debug_slot_info->add_origin_slot_points();
+  origin_pt2->set_x(origin_global_corner.pt_2.x());
+  origin_pt2->set_y(origin_global_corner.pt_2.y());
+
+  planning::common::Point2d* origin_pt3 =
+      debug_slot_info->add_origin_slot_points();
+  origin_pt3->set_x(origin_global_corner.pt_3.x());
+  origin_pt3->set_y(origin_global_corner.pt_3.y());
+
+  const double lat_move_dist = ego_info_under_slot.lat_move_dist_every_replan;
+  const auto& pt01_unit =
+      ego_info_under_slot.slot.origin_corner_coord_global_.pt_01_unit_vec;
+  const auto& pt23_unit =
+      ego_info_under_slot.slot.origin_corner_coord_global_.pt_23_unit_vec;
+  const auto& ocg = ego_info_under_slot.slot.origin_corner_coord_global_;
+
+  planning::common::Point2d* target_pt0 =
+      debug_slot_info->add_target_slot_points();
+  target_pt0->set_x(ocg.pt_0.x() + lat_move_dist * pt01_unit.x());
+  target_pt0->set_y(ocg.pt_0.y() + lat_move_dist * pt01_unit.y());
+
+  planning::common::Point2d* target_pt1 =
+      debug_slot_info->add_target_slot_points();
+  target_pt1->set_x(ocg.pt_1.x() + lat_move_dist * pt01_unit.x());
+  target_pt1->set_y(ocg.pt_1.y() + lat_move_dist * pt01_unit.y());
+
+  planning::common::Point2d* target_pt2 =
+      debug_slot_info->add_target_slot_points();
+  target_pt2->set_x(ocg.pt_2.x() + lat_move_dist * pt23_unit.x());
+  target_pt2->set_y(ocg.pt_2.y() + lat_move_dist * pt23_unit.y());
+
+  planning::common::Point2d* target_pt3 =
+      debug_slot_info->add_target_slot_points();
+  target_pt3->set_x(ocg.pt_3.x() + lat_move_dist * pt23_unit.x());
+  target_pt3->set_y(ocg.pt_3.y() + lat_move_dist * pt23_unit.y());
+
+  debug_slot_info->clear_virtual_limiters();
+
+  planning::common::Point2d* limiter_pt1 =
+      debug_slot_info->add_virtual_limiters();
+  limiter_pt1->set_x(ego_info_under_slot.virtual_limiter.first.x());
+  limiter_pt1->set_y(ego_info_under_slot.virtual_limiter.first.y());
+
+  planning::common::Point2d* limiter_pt2 =
+      debug_slot_info->add_virtual_limiters();
+  limiter_pt2->set_x(ego_info_under_slot.virtual_limiter.second.x());
+  limiter_pt2->set_y(ego_info_under_slot.virtual_limiter.second.y());
 }
 
 }  // namespace apa_planner
