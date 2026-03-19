@@ -13,7 +13,7 @@ namespace planning {
 
 static RSPathInfo cached_path_info;
 static bool global_data_inited = false;
-static const RSPathSteer ReedsSheppPathype[][5] = {
+const RSPathSteer ReedsSheppPathype[][5] = {
     // 0
     // C|C|C
     // CC|C
@@ -63,7 +63,10 @@ static const RSPathSteer ReedsSheppPathype[][5] = {
     // 18
     // SCS
     {RS_STRAIGHT, RS_LEFT, RS_STRAIGHT, RS_NOP, RS_NOP},
-    {RS_STRAIGHT, RS_RIGHT, RS_STRAIGHT, RS_NOP, RS_NOP}
+    {RS_STRAIGHT, RS_RIGHT, RS_STRAIGHT, RS_NOP, RS_NOP},
+    //CCS
+    {RS_LEFT, RS_RIGHT, RS_STRAIGHT, RS_NOP, RS_NOP},
+    {RS_RIGHT, RS_LEFT, RS_STRAIGHT, RS_NOP, RS_NOP}
 
 };
 
@@ -76,7 +79,7 @@ static int CartesianToPolar(float *r, float *theta, float x, float y) {
   return 0;
 }
 
-static int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, float t,
+int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, float t,
                           float u, float v, float w, float x) {
   path->type = type;
   path->t = t;
