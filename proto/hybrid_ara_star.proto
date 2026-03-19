@@ -20,6 +20,7 @@ message HybridARAPathCostInfo {
   repeated double boundary_cost = 5;
   repeated double center_cost = 6;
   repeated double motion_cost = 7;
+  repeated double stitching_cost = 8;
 }
 
 message HybridARANode {
@@ -38,6 +39,7 @@ message HybridARANode {
   optional double directly_behind_cost = 13;
   optional double pass_interval_cost = 14;
   optional double nearing_agent_cost = 15;
+  optional double stitching_cost = 16;
 }
 
 message HybridARAExpandNode {
