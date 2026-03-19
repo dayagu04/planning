@@ -4867,6 +4867,8 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
                      "stopline_tfl_dis_thred");
     ReadItem<double>(json, max_dis_ahead_stopline, "traffic_light_decider",
                         "max_dis_ahead_stopline");
+    ReadItem<double>(json, min_virtual_dis_thred, "traffic_light_decider",
+                            "min_virtual_dis_thred");
     ReadItem<double>(json, dis_ratio_can_pass, "traffic_light_decider",
                             "dis_ratio_can_pass");
   }
@@ -4875,6 +4877,7 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
   double virtual_dis_before_stopline = 20;
   double stopline_tfl_dis_thred = 50;
   double max_dis_ahead_stopline = 50;
+  double min_virtual_dis_thred = 10;
   double dis_ratio_can_pass = 3.0;
 };
 

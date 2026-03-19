@@ -420,7 +420,7 @@ bool TrafficLightDecider::IsIntersectionMatchTFLByDisRatio() {
       dis_to_tfl = all_tfls[i].traffic_light_x;
     }
   }
-  if (min_virtual_dis > config_.virtual_dis_before_stopline &&
+  if (min_virtual_dis > config_.min_virtual_dis_thred&
       dis_to_tfl / max_virtual_dis > config_.dis_ratio_can_pass) {
     return false;
   } else {
