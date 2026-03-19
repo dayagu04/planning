@@ -368,7 +368,7 @@ bool GenerateWidthRanges(
   bool in_wide = false;
   size_t wide_s_idx = 0;
   for (size_t i = 0; i < refer_path_points.size(); ++i) {
-    const auto curr_width = std::fabs(refer_path_points[i].lane_width);
+    const auto curr_width = std::fabs(refer_path_points[i].drivable_width);
     if (in_wide) {
       if (curr_width < kWideEndThr) {
         size_t e_idx = i > 0 ? i - 1 : 0;
