@@ -4533,8 +4533,9 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
                      "soft_halfplane_tau");
     ReadItem<double>(json, soft_halfplane_cost_allocation_ratio, "lane_change_joint_decision",
                      "soft_halfplane_cost_allocation_ratio");
-    ReadItem<double>(json, lc_thw, "lane_change_joint_decision",
-                     "lc_thw");
+    ReadItem<double>(json, halfplane_cost_allocation_ratio_later, "lane_change_joint_decision",
+                     "halfplane_cost_allocation_ratio_later");
+    ReadItem<double>(json, lc_thw, "lane_change_joint_decision", "lc_thw");
     ReadItem<double>(json, obs_reaction_decay_time, "lane_change_joint_decision",
                      "obs_reaction_decay_time");
     ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
@@ -4585,6 +4586,7 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double soft_halfplane_s0 = 3.5;
   double soft_halfplane_tau = 0.5;
   double soft_halfplane_cost_allocation_ratio = 0.7;
+  double halfplane_cost_allocation_ratio_later = 0.5;
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;

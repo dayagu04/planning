@@ -221,7 +221,7 @@ uint8_t JointDecisionPlanningProblem::Update(
     } else if (i < three_sec_steps) {
       hard_halfplane_allocation = planning_input.halfplane_cost_allocation_ratio();
     } else {
-      hard_halfplane_allocation = 0.5;
+      hard_halfplane_allocation = planning_input.halfplane_cost_allocation_ratio_later();
     }
     cost_config_vec.at(i)[HALFPLANE_COST_ALLOCATION_RATIO] = hard_halfplane_allocation;
 
@@ -252,7 +252,7 @@ uint8_t JointDecisionPlanningProblem::Update(
       soft_halfplane_allocation =
           planning_input.soft_halfplane_cost_allocation_ratio();
     } else {
-      soft_halfplane_allocation = 0.5;
+      soft_halfplane_allocation = planning_input.halfplane_cost_allocation_ratio_later();
     }
     cost_config_vec.at(i)[SOFT_HALFPLANE_COST_ALLOCATION_RATIO] =
         soft_halfplane_allocation;

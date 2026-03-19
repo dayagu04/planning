@@ -863,7 +863,8 @@
     "soft_halfplane_s0": 5.5,
     "soft_halfplane_tau": 0.5,
     "lc_thw": 0.5,
-    "soft_halfplane_cost_allocation_ratio": 0.8
+    "soft_halfplane_cost_allocation_ratio": 0.8,
+    "halfplane_cost_allocation_ratio_later": 0.5
   },
   "lat_lon_joint_planner": {
     "q_ego_ref_x": 3.0,
