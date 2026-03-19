@@ -158,6 +158,7 @@ class StGraphSearcher : public Task {
   bool prev_is_overtake_front_vehicle_on_target_lane_ = false;
   bool prev_is_yield_back_vehicle_ = false;
 
+  int32_t cached_stabilized_rear_agent_id_ = -1;
   int32_t last_target_lane_rear_agent_id_ = -1;
   int32_t candidate_rear_agent_id_ = -1;
   int rear_agent_consecutive_cnt_ = 0;

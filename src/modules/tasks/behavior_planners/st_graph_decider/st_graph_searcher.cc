@@ -281,6 +281,8 @@ bool StGraphSearcher::Execute() {
       prev_is_overtake_front_vehicle_on_target_lane_ ||
       prev_is_yield_back_vehicle_;
 
+  cached_stabilized_rear_agent_id_ = GetStabilizedTargetLaneRearAgentId();
+
   // search success
   bool search_success = false;
   for (auto search_style : search_style_context_) {
@@ -1375,7 +1377,7 @@ bool StGraphSearcher::CheckYieldBackVehicle(
   if (lane_change_decider_output.lc_request == NO_CHANGE) {
     return false;
   }
-  const int32_t agent_id = GetStabilizedTargetLaneRearAgentId();
+  const int32_t agent_id = cached_stabilized_rear_agent_id_;
   if (agent_id == -1) {
     return false;
   }
@@ -1420,7 +1422,7 @@ bool StGraphSearcher::CheckOvertakeFrontVehicleOnTargetLane(
   if (lane_change_decider_output.lc_request == NO_CHANGE) {
     return false;
   }
-  const int32_t agent_id = GetStabilizedTargetLaneRearAgentId();
+  const int32_t agent_id = cached_stabilized_rear_agent_id_;
   if (agent_id == -1) {
     return false;
   }
