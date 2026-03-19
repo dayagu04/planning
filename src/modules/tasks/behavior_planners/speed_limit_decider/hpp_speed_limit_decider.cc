@@ -43,8 +43,7 @@ bool HPPSpeedLimitDecider::Execute() {
 
   // CalculateRampLimit();
 
-  // CalculateIntersectionRoadLimit();
-
+  CalculateIntersectionRoadLimit();
 
   auto hpp_speed_limit_output = session_->mutable_planning_context()
                                     ->mutable_speed_limit_decider_output();
@@ -62,63 +61,6 @@ bool HPPSpeedLimitDecider::Execute() {
   } else {
     ad_info->is_curva = false;
   }
-
-  // *********** query_info **********
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-
-  if (!reference_path_ptr) {
-    return true;
-  }
-
-  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-  const double ego_head_s = frenet_ego_state.head_s();
-  const double ego_s = frenet_ego_state.s();
-
-  const ConstStaticAnalysisStoragePtr static_analysis_storage =
-      reference_path_ptr->get_static_analysis_storage();
-  if (!static_analysis_storage) {
-    return true;
-  }
-
-  // query_info_bump
-  QueryTypeInfo query_info = {CRoadType::Ignore, CPassageType::NarrowPassage,
-                              CElemType::Ignore};
-
-  const SRangeList speed_narrow_passage_near_ignore_range_list =
-      static_analysis_storage->GetSRangeList(query_info);
-  JSON_DEBUG_VALUE("speed_narrow_passage_near_ignore_range_list_size",
-                   speed_narrow_passage_near_ignore_range_list.size());
-
-  if (!speed_narrow_passage_near_ignore_range_list.empty()) {
-    const auto speed_narrow_passage_near_ignore_range =
-        static_analysis_storage->GetFrontSRange(query_info, ego_head_s);
-    JSON_DEBUG_VALUE("speed_narrow_passage_near_ignore_start",
-                     speed_narrow_passage_near_ignore_range.first);
-    JSON_DEBUG_VALUE("speed_narrow_passage_near_ignore_end",
-                     speed_narrow_passage_near_ignore_range.second);
-  }
-
-  // query_info_intersection
-  QueryTypeInfo query_info_intersection = {
-      CRoadType::Ignore, CPassageType::Ignore, CElemType::IntersectionRoad};
-
-  const SRangeList speed_intersection_near_ignore_range_list =
-      static_analysis_storage->GetSRangeList(query_info_intersection);
-  JSON_DEBUG_VALUE("speed_intersection_near_ignore_range_list_size",
-                   speed_intersection_near_ignore_range_list.size());
-
-  if (!speed_intersection_near_ignore_range_list.empty()) {
-    const auto speed_intersection_near_ignore_range =
-        static_analysis_storage->GetFrontSRange(query_info_intersection,
-                                                ego_head_s);
-    JSON_DEBUG_VALUE("speed_intersection_near_ignore_start",
-                     speed_intersection_near_ignore_range.first);
-    JSON_DEBUG_VALUE("speed_intersection_near_ignore_end",
-                     speed_intersection_near_ignore_range.second);
-  }
-  // *******
 
   return true;
 }
@@ -169,8 +111,8 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
   HPPSpeedLimitZoneInfo zone_info;
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
-                                   CPassageType::Ignore,
-                                   CElemType::IntersectionRoad)) {
+                                   CPassageType::NarrowPassage,
+                                   CElemType::Ignore)) {
     return;
   }
 
@@ -180,7 +122,7 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
   if (v_limit_speed_narrow_passage_road < v_target_) {
     v_target_ = v_limit_speed_narrow_passage_road;
-    v_target_type_ = SpeedLimitType::INTERSECTION_ROAD;
+    v_target_type_ = SpeedLimitType::NARROW_PASSAGE;
   }
 
   LOG_DEBUG(
@@ -190,9 +132,9 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
   JSON_DEBUG_VALUE("v_limit_speed_narrow_passage_road",
                    v_limit_speed_narrow_passage_road);
-  JSON_DEBUG_VALUE("v_limit_speed_narrow_passage",
+  JSON_DEBUG_VALUE("in_speed_limit_narrow_passage",
                    zone_info.in_speed_limit_zone);
-  JSON_DEBUG_VALUE("approaching_speed_limit_zone_narrow_passage",
+  JSON_DEBUG_VALUE("approaching_speed_limit_narrow_passage",
                    zone_info.approaching_speed_limit_zone);
   JSON_DEBUG_VALUE("distance_to_zone_narrow_passage", zone_info.distance_to_zone);
   return;

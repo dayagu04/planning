@@ -285,7 +285,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       # "ego_head_s", "ego_s", "speed_bump_near_ignore_range_first", "speed_bump_near_ignore_range_second", "update_speed_bump_near_ignore_range",\
       "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp",
       "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection",
-      "LaneChangeDeciderTime", "LateralObstacleDeciderTime",
+      "LaneChangeDeciderTime", "LateralObstacleDeciderTime", 
       "HppGeneralLateralDeciderTime", "LateralMotionPlannerTime",
       "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
       "ResultTrajectoryGeneratorTime", "ParkingSwitchDeciderTime",
