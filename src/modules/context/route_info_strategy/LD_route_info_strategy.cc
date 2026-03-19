@@ -929,6 +929,14 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
+    // 如果左、右侧观测车道数，大于道路车道数量。仅左观测比右侧大很多的时候，考虑用右侧观测。
+    if (left_lane_num + right_lane_num + 1 >
+        cur_link_feasible_lane.lane_nums - diversion_lane_num) {
+      if (left_lane_num > right_lane_num + 1) {
+        ego_seq = link_total_lane_num - right_lane_num;
+      }
+    }
+
     // 如果自车左边的车道数大于等于link的总车道数，则认为左侧车道数误检，直接return;
     bool is_per_left_lane_error =
         (left_lane_num - most_left_emergency_lane_num) >= real_lane_num;
@@ -1092,6 +1100,25 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
+    // It is necessary to check whether the ego vehicle is already in the
+    // leftmost or rightmost lane within a certain distance ahead. If it is
+    // already in that direction, then no lane change will be performed.
+    bool forward_in_left_most = false;
+    bool forward_in_right_most = false;
+
+    // Normally, it takes about 2 seconds for a vehicle to complete a lane
+    // change from initiation to crossing the lane boundary.
+    double const ego_v =
+        session_->environmental_model().get_ego_state_manager()->ego_v();
+    double const check_distance = std::fmax(ego_v * 2.0, 20.0);
+    for (iflyauto::LaneNumMsg const& lane_num : lane_nums) {
+      if (lane_num.begin <= check_distance && check_distance <= lane_num.end) {
+        forward_in_left_most = lane_num.left_lane_num == 0;
+        forward_in_right_most = lane_num.right_lane_num == 0;
+        break;
+      }
+    }
+
     // const bool lane_type_condition =
     //     !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
     const bool lane_type_condition = true;
@@ -1099,7 +1126,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     RampDirection front_ramp_dir = route_info_output_.ramp_direction;
 
     if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
-        is_nearing_ramp && lane_type_condition &&
+        !forward_in_right_most && is_nearing_ramp && lane_type_condition &&
         front_ramp_dir == RAMP_ON_RIGHT && !current_on_route) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
@@ -1110,7 +1137,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
       lc_num_task.emplace_back(1);
     } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp &&
-               !current_on_route) {
+               !current_on_route && !forward_in_left_most) {
       //split场景，目标车道在最左边的情况，一直向左变道
         // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
       if (ego_seq == avoid_link_merge_lane_seq) {
