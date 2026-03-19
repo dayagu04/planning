@@ -4,7 +4,6 @@
 #include <unordered_map>
 
 #include "apa_param_config.h"
-#include "apa_slot_manager.h"
 #include "apa_state_machine_manager.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"

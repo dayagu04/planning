@@ -1866,7 +1866,7 @@ const bool ParallelParkInScenario::GenTlane() {
   parent_height_count.clear();
   obs_id_pt_map_.clear();
   std::unordered_map<size_t, double> parent_min_y_abs;//<parent_id, min_y_abs>
-
+  bool is_car_in_curb = false;
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
@@ -1947,7 +1947,9 @@ const bool ParallelParkInScenario::GenTlane() {
           current_y_abs < parent_min_y_abs[obs_parent_id]) {
         parent_min_y_abs[obs_parent_id] = current_y_abs;
       }
-
+        if(obs_scement == ApaObsScemanticType::CAR){
+            is_car_in_curb = true;
+          }
         if (parent_total_count.find(obs_parent_id) == parent_total_count.end()) {
           parent_total_count[obs_parent_id] = 0;
         }
@@ -2315,7 +2317,7 @@ const bool ParallelParkInScenario::GenTlane() {
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
       -side_sgn * (half_slot_width - kCurbInitialOffset));
 
-  if (ego_info_under_slot.slot_occupied_ratio < 0.01) {
+  if (ego_info_under_slot.slot_occupied_ratio < 0.01 && !is_car_in_curb ) {
     curb_y_limit +=
         side_sgn * apa_param.GetParam().curb_offset_when_ego_outside_slot;
   }
