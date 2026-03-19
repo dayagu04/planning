@@ -26,7 +26,7 @@
 namespace planning {
 
 namespace {
-constexpr double kLongClusterCoeff = 5.0;
+constexpr double kLongClusterCoeff = 8.0;
 constexpr double kLatClusterThre = 0.3;
 constexpr double kLatPassThre = 0.8;
 constexpr double kLatPassThreBuffer = 0.35;
