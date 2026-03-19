@@ -144,6 +144,84 @@ void ReferencePath::update_refpath_points(
   UpdateReferencePath(is_need_smooth);
 }
 
+const size_t ReferencePath::get_nearest_point_idx(const double s) const {
+  // bindary search
+  auto it = std::lower_bound(refined_ref_path_points_.begin(),
+                             refined_ref_path_points_.end(), s,
+                             [](const ReferencePathPoint &a, double s) {
+                               return a.path_point.s() < s;
+                             });
+  size_t res_idx = 0;
+  if (it == refined_ref_path_points_.begin()) {
+    res_idx = 0;
+  } else if (it == refined_ref_path_points_.end()) {
+    res_idx = refined_ref_path_points_.size() - 1;
+  } else {
+    if (it->path_point.s() + (it - 1)->path_point.s() > 2 * s) {
+      res_idx = it - refined_ref_path_points_.begin() - 1;
+    } else {
+      res_idx = it - refined_ref_path_points_.begin();
+    }
+  }
+  return res_idx;
+}
+const ReferencePathPoint &ReferencePath::get_nearest_point(
+    const double s) const {
+  return refined_ref_path_points_[get_nearest_point_idx(s)];
+}
+const std::pair<double, double> ReferencePath::get_interpolated_point_width(
+    const double s, const bool is_raw_width) const {
+  size_t nearest_idx = get_nearest_point_idx(s);
+  const auto &nearest_point = refined_ref_path_points_[nearest_idx];
+  const auto get_width_one_point = [](const ReferencePathPoint &point,
+                            const bool is_raw_width) {
+    if (is_raw_width) {
+      return std::pair<double, double>( point.distance_to_left_road_border,
+                                       point.distance_to_right_road_border);
+    } else {
+      return std::pair<double, double>(point.left_drivable_width,
+                                       point.right_drivable_width);
+    }
+  };
+  const auto get_width_two_points = [](const ReferencePathPoint &point1,
+                            const ReferencePathPoint &point2, const double s,
+                            const bool is_raw_width) {
+    if (is_raw_width) {
+      return std::pair<double, double>(
+          planning_math::lerp(
+              point1.distance_to_left_road_border, point1.path_point.s(),
+              point2.distance_to_left_road_border, point2.path_point.s(), s),
+          planning_math::lerp(
+              point1.distance_to_right_road_border, point1.path_point.s(),
+              point2.distance_to_right_road_border, point2.path_point.s(), s));
+    } else {
+      return std::pair<double, double>(
+          planning_math::lerp(
+              point1.left_drivable_width, point1.path_point.s(),
+              point2.left_drivable_width, point2.path_point.s(), s),
+          planning_math::lerp(
+              point1.right_drivable_width, point1.path_point.s(),
+              point2.right_drivable_width, point2.path_point.s(), s));
+    }
+  };
+  if (nearest_point.path_point.s() < s) {
+    if (nearest_idx == refined_ref_path_points_.size() - 1) {
+      return get_width_one_point(nearest_point, is_raw_width);
+    } else {
+      return get_width_two_points(nearest_point,
+                                  refined_ref_path_points_[nearest_idx + 1], s,
+                                  is_raw_width);
+    }
+  } else {
+    if(nearest_idx == 0) {
+
+      return get_width_one_point(nearest_point, is_raw_width);
+    } else {
+      return get_width_two_points(refined_ref_path_points_[nearest_idx - 1],
+                                  nearest_point, s, is_raw_width);
+    }
+  }
+}
 void ReferencePath::update_refpath_points_in_hpp(
     const double ego_projection_length_in_reference_path,
     const ReferencePathPoints &raw_ref_path_points) {

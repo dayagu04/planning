@@ -181,10 +181,9 @@ bool LaneReferencePath::RoadBorderWidthCalByObs(
         }
       }
     }
-    refer_path_points[i].distance_to_left_road_border = left_border;
-    refer_path_points[i].distance_to_right_road_border =
-        std::fabs(right_border);
-    refer_path_points[i].lane_width = left_border + std::fabs(right_border);
+    refer_path_points[i].left_drivable_width = left_border;
+    refer_path_points[i].right_drivable_width = std::fabs(right_border);
+    refer_path_points[i].drivable_width = left_border + std::fabs(right_border);
   }
   return true;
 }
