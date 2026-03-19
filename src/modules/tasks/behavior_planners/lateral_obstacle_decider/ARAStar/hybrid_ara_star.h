@@ -74,6 +74,7 @@ class HybridARAStar {
   void CalculateSearchBounds(
       const std::vector<TrajectoryPoint>& plan_history_traj);
   double ReferencePathLength();
+  bool PrebuildLastFrameToCurrentSpline(const std::vector<TrajectoryPoint>& last_traj_points);
 
  private:
   framework::Session* session_;
@@ -119,6 +120,11 @@ class HybridARAStar {
   planning::planning_math::Box2d ego_box_;
   double expand_num_ = 0.0;
   std::vector<double> last_result_s_;
+  std::vector<double> last_result_l_;
+  pnc::mathlib::spline last2cur_stitching_spline_;
+  double spline_s_min_ = 0.0;
+  double spline_s_max_ = 0.0;
+  bool enable_stitching_cost_ = false;
   std::shared_ptr<ReferencePath> reference_path_ptr_ = nullptr;
   double ego_s_ = 0.0;
   double ego_l_ = 0.0;
