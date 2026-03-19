@@ -1,20 +1,15 @@
 #pragma once
-#include <cstdint>
 #include <string>
 #include <vector>
 
 #include "aabb2d.h"
-#include "apa_slot_manager.h"
 #include "common_math.h"
 #include "compact_node_pool.h"
 #include "curve_node.h"
-#include "dubins_lib.h"
 #include "geometry_math.h"
 #include "grid_search.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_context.h"
-#include "hybrid_astar_request.h"
-#include "link_pose_line.h"
 #include "link_pt_line.h"
 #include "node3d.h"
 #include "node_delete_decider/node_delete_decider.h"
@@ -22,9 +17,8 @@
 #include "parking_task.h"
 #include "pose2d.h"
 #include "reeds_shepp_interface.h"
-#include "rs_expansion_decider.h"
 #include "rs_path_interpolate.h"
-#include "vecf32.h"
+#include "rs_path_request.h"
 
 namespace planning {
 namespace apa_planner {
@@ -41,12 +35,11 @@ class HybridAStarPathGenerator : public ParkingTask {
 
   virtual void SetCollisionDetectorIntefacePtr(
       const std::shared_ptr<CollisionDetectorInterface>& col_det_interface_ptr)
-      override;
+      override final;
 
-  virtual const bool Init() override;
+  virtual const bool Init() override final;
 
   const HybridAStarResult& GetResult() { return result_; }
-
   const std::vector<DebugAstarSearchPoint>& GetChildNodeForDebug();
   const std::vector<Eigen::Vector2d>& GetQueuePathForDebug();
   const std::vector<Eigen::Vector2d>& GetDeleteQueuePathForDebug();
@@ -86,62 +79,43 @@ class HybridAStarPathGenerator : public ParkingTask {
     double find_success_curve_max_time = 5000.0;
   };
 
+  struct DebugTimeProfile {
+    double collision_check_time_ms = 0.0;
+    double rs_interpolate_time_ms = 0.0;
+    double rs_time_ms = 0.0;
+    int rs_try_num = 0;
+    double lpl_interpolate_time_ms = 0.0;
+    double lpl_time_ms = 0.0;
+    int lpl_try_num = 0;
+    double set_curve_path_time_ms = 0.0;
+    double check_node_should_del_time_ms = 0.0;
+    double heuristic_time_ms = 0.0;
+    double generate_next_node_time_ms = 0.0;
+  };
+
   enum class PreSearchPhaseOutcome {
     CONTINUE_FORMAL_SEARCH,
     RETURN_SUCCESS,
     RETURN_FAILURE,
   };
 
+  const bool UpdateOnce(const PathColDetBuffer& path_col_det_buffer);
+
+  const bool FindOrAllocateSearchNode(size_t new_node_global_id,
+                                      AstarNodeVisitedType& vis_type,
+                                      Node3d*& next_node_in_pool) const;
+
   void InitNodePool();
   void ResetNodePool();
   void GenerateCarMotionVec();
-  const CarMotion GenerateCarMotion(const float radius,
-                                    const AstarPathGear gear);
-
-  virtual void UpdatePoseBoundary() {}
   void ResetSearchState();
   const geometry_lib::PathPoint& GetStartPoseForCurrentSearch() const;
   const geometry_lib::PathPoint& GetEndPoseForCurrentSearch() const;
   const bool InitStartAndEndNodes();
   void GenerateDpMapForCurrentSearch();
   void SeedStartNodeIntoSearch();
-  Node3d* PopLowestCostOpenNode();
   const bool PrepareCurrentNodeForExpansion(Node3d*& current_node);
-  const bool UpdateSearchElapsedTimeAndCheckTimeout(
-      const double search_start_time, double& search_continue_time) const;
-  void ConfigureAnalyticExpansionRequestForCurrentNode(
-      Node3d* current_node, CurveNode* curve_node_to_goal,
-      AnalyticExpansionRequest& analytic_expansion_request) const;
-  void TryRelaxAnalyticExpansionConstraintsForDifficultScenario(
-      size_t node_pool_size, size_t success_curve_count,
-      size_t node_pool_size_threshold,
-      AnalyticExpansionRequest& analytic_expansion_request);
-  const bool HandleSuccessfulCurvePath(
-      const AnalyticExpansionRequest& analytic_expansion_request,
-      CurveNode& curve_node_to_goal, double search_continue_time,
-      std::vector<CurveNode>& curve_node_to_goal_vec);
-  const bool PrepareSearchForUpdateOnce(
-      const PathColDetBuffer& path_col_det_buffer);
-  void ConfigureSearchBudget();
-  const bool ShouldStopCurveSearch(double search_continue_time) const;
-  const bool NeedCalObsDistForBestCurveSelection() const;
-  void LogSearchLoopSummary(
-      double search_start_time,
-      const std::vector<CurveNode>& curve_node_to_goal_vec) const;
-  void LogUpdateOnceSummary() const;
-  void SetLplInputPoseFromNode(
-      const Node3d& node,
-      link_pt_line::LinkPtLineInput<float>& lpl_input) const;
-  const NodeDeleteInput BuildNodeDeleteInput(
-      const PathColDetBuffer& path_col_det_buffer) const;
-  void ConfigureNodeDeleteRequestForChildNode(
-      Node3d& new_node, Node3d* current_node, const CarMotion& car_motion,
-      AstarPathGear default_gear_request,
-      NodeDeleteRequest& node_del_request) const;
-  AstarPathGear DetermineChildNodeGearRequest(
-      const Node3d& current_node, AstarPathGear default_gear_request) const;
-  void PopulateChildNodeState(Node3d* new_node, Node3d* current_node,
-                              const CarMotion& car_motion) const;
+  const bool ShouldStopCurveSearch(double search_start_time) const;
   const bool ValidateStartAndEndNodes();
   const bool CheckOutOfGridBound(const NodeGridIndex& id) const;
   const bool CheckOutOfPoseBound(const Pose2D& pose) const;
@@ -152,8 +126,47 @@ class HybridAStarPathGenerator : public ParkingTask {
   virtual const bool RunFormalSearch(const SearchConfigSnapshot& snapshot);
   PathColDetBuffer BuildFormalSearchPathColDetBuffer() const;
   virtual const std::string GetScenarioPrefix() const;
-  virtual const bool UpdateOnce(
-      const PathColDetBuffer& path_col_det_buffer) = 0;
+  const bool AnalyticExpansion(const AnalyticExpansionRequest& request);
+  const bool CheckNodeShouldDelete(const NodeDeleteRequest& request);
+  void DebugCurvePath(const CurvePath& path);
+  void GenDecelerPointss();
+
+  const CarMotion GenerateCarMotion(const float radius,
+                                    const AstarPathGear gear);
+
+  void ActivateSearchNodeInOpenSet(const Node3d& new_node,
+                                   Node3d* next_node_in_pool);
+
+  void TryRelaxAnalyticExpansionConstraintsForDifficultScenario(
+      size_t success_curve_count, size_t node_pool_size_threshold,
+      AnalyticExpansionRequest& analytic_expansion_request);
+
+  const bool HandleSuccessfulCurvePath(
+      const AnalyticExpansionRequest& analytic_expansion_request,
+      CurveNode& curve_node_to_goal,
+      std::vector<CurveNode>& curve_node_to_goal_vec);
+
+  void LogUpdateOnceSummary(
+      double search_start_time,
+      const std::vector<CurveNode>& curve_node_to_goal_vec) const;
+
+  void SetLplInputPoseFromNode(
+      const Node3d* node,
+      link_pt_line::LinkPtLineInput<float>* lpl_input) const;
+
+  void ConfigNodeDeleteInput(const PathColDetBuffer& path_col_det_buffer,
+                             NodeDeleteInput* node_delete_input) const;
+
+  void ConfigureNodeDeleteRequestForChildNode(
+      Node3d& new_node, Node3d* current_node, const CarMotion& car_motion,
+      AstarPathGear default_gear_request,
+      NodeDeleteRequest& node_del_request) const;
+
+  AstarPathGear DetermineChildNodeGearRequest(
+      const Node3d& current_node, AstarPathGear default_gear_request) const;
+
+  void PopulateChildNodeState(Node3d* new_node, Node3d* current_node,
+                              const CarMotion& car_motion) const;
 
   void GenerateNextNode(Node3d* new_node, Node3d* parent_node,
                         const CarMotion& car_motion);
@@ -161,53 +174,27 @@ class HybridAStarPathGenerator : public ParkingTask {
   const NodePath GetNodePathByCarMotion(const Pose2f& pose,
                                         const CarMotion& car_motion);
 
-  virtual void CalcNodeGCost(Node3d* current_node, Node3d* next_node);
+  const bool AnalyticExpansionByRS(Node3d* current_node,
+                                   CurveNode* curve_node_to_goal,
+                                   const RSInput* input);
 
-  virtual void CalcNodeHCost(
-      Node3d* current_node, Node3d* next_node,
-      const AnalyticExpansionRequest& analytic_expansion_request);
-
-  const bool AnalyticExpansion(const AnalyticExpansionRequest& request);
-
-  const bool AnalyticExpansionByRS(
-      Node3d* current_node, CurveNode* curve_node_to_goal,
-      const float rs_radius, const bool need_rs_dense_point = false,
-      const bool need_anchor_point = false,
-      const RSPathRequestType rs_reuest =
-          RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE);
-
-  const bool CalcRSPathToGoal(Node3d* current_node,
-                              const bool need_rs_dense_point,
-                              const bool need_anchor_point,
-                              const RSPathRequestType rs_request,
-                              const float rs_radius,
+  const bool CalcRSPathToGoal(Node3d* current_node, const RSInput* input,
                               const bool cal_h_cost = false);
-
-  const float GenerateHeuristicCostByRsPath(Node3d* next_node,
-                                            NodeHeuristicCost* cost);
 
   const bool AnalyticExpansionByLPL(
       Node3d* current_node, CurveNode* curve_node_to_goal,
-      const link_pt_line::LinkPtLineInput<float>& input);
+      const link_pt_line::LinkPtLineInput<float>* input);
 
   const bool CalcLPLPathToGoal(
-      Node3d* current_node, const link_pt_line::LinkPtLineInput<float>& input,
+      Node3d* current_node, const link_pt_line::LinkPtLineInput<float>* input,
       const bool cal_h_cost = false);
 
-  const float GenerateHeuristicCostByLPLPath(
-      Node3d* next_node, const link_pt_line::LinkPtLineInput<float>& input,
-      NodeHeuristicCost* cost);
+  const float GenerateHeuristicCost(
+      Node3d* next_node,
+      const AnalyticExpansionRequest& analytic_expansion_request);
 
   const float CalcCurveNodeGCostToParentNode(Node3d* current_node,
                                              CurveNode* curve_node);
-
-  const bool CheckNodeShouldDelete(const NodeDeleteRequest& request);
-
-  virtual void ChooseBestCurveNode(
-      const std::vector<CurveNode>& curve_node_to_goal_vec,
-      const AnalyticExpansionType analytic_expansion_type,
-      const bool consider_obs_dist, const PathColDetBuffer& safe_buffer,
-      CurveNode& best_curve_node_to_goal);
 
   const bool BackwardPassByCurveNode(const CurveNode* curve_node_to_goal);
 
@@ -215,25 +202,48 @@ class HybridAStarPathGenerator : public ParkingTask {
       const CurveNode& curve_node,
       ObsToPathDistRelativeSlot& obs_dist_relative_slot);
 
+  void DebugNodePath(const NodePath& path,
+                     const AstarPathGear gear = AstarPathGear::NONE);
+
+  virtual void UpdatePoseBoundary() = 0;
+  virtual void ConfigureSearchBudget() = 0;
+
+  virtual void ConfigureBaseAnalyticExpansionRequest(
+      AnalyticExpansionRequest& analytic_expansion_request,
+      link_pt_line::LinkPtLineInput<float>* lpl_input, RSInput* rs_input) const;
+
+  virtual void ConfigureAnalyticExpansionRequestForCurrentNode(
+      Node3d* current_node, CurveNode* curve_node_to_goal,
+      AnalyticExpansionRequest& analytic_expansion_request) const;
+
+  virtual void ConfigureAnalyticExpansionRequestForNewNode(
+      const Node3d& new_node,
+      AnalyticExpansionRequest& analytic_expansion_request) const;
+
+  virtual void UpdateCulDeSacLimitByNewNode(Node3d& new_node);
+
+  virtual void CalcNodeGCost(Node3d* current_node, Node3d* next_node);
+
+  virtual void CalcNodeHCost(
+      Node3d* next_node,
+      const AnalyticExpansionRequest& analytic_expansion_request);
+
+  virtual void ChooseBestCurveNode(
+      const std::vector<CurveNode>& curve_node_to_goal_vec,
+      CurveNode& best_curve_node_to_goal);
+
   virtual const float CalcGearChangePoseCost(
       const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
       const float gear_switch_penalty, const float length_penalty);
 
-  void DebugNodePath(const NodePath& path,
-                     const AstarPathGear gear = AstarPathGear::NONE);
-
-  void DebugCurvePath(const CurvePath& path);
-
  protected:
   PlannerOpenSpaceConfig config_;
 
-  RSExpansionDecider rs_expansion_decider_;
   RSPathInterface rs_path_interface_;
   RSPath rs_path_;
 
   link_pt_line::LinkPtLinePath<float> lpl_path_;
   link_pt_line::LinkPtLine<float> lpl_interface_;
-  link_pt_line::LinkPtLineInput<float> lpl_input_;
 
   static CompactNodePool node_pool_;
   static GridSearch grid_search_;
@@ -257,7 +267,6 @@ class HybridAStarPathGenerator : public ParkingTask {
   std::vector<CarMotion> car_motion_vec;
 
   HybridAStarResult result_;
-  SearchPhaseTimeCost search_phase_time_cost_;
 
   // astar start, end
   Node3d* start_node_;
@@ -274,25 +283,13 @@ class HybridAStarPathGenerator : public ParkingTask {
 
   cdl::AABB interesting_area_;
   CulDeSacInfo cul_de_sac_info_;
-
+  SearchPhaseTimeCost search_phase_time_cost_;
   SearchLoopStats search_loop_stats_;
   SearchBudget search_budget_;
+  DebugTimeProfile debug_time_profile_;
 
   NodeDeleteDecider node_delete_decider_;
   ObstacleClearZoneDecider obstacle_clear_zone_decider_;
-
-  // for debug
-  double collision_check_time_ms_;
-  double rs_interpolate_time_ms_;
-  double rs_time_ms_;
-  int rs_try_num_;
-  double lpl_interpolate_time_ms_;
-  double lpl_time_ms_;
-  int lpl_try_num_;
-  double set_curve_path_time_ = 0.0;
-  double check_node_should_del_time_ = 0.0;
-  double heuristic_time_;
-  double generate_next_node_time_ = 0.0;
 };
 }  // namespace apa_planner
 }  // namespace planning

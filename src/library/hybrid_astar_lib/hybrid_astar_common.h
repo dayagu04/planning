@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "aabb2d.h"
+#include "log_glog.h"
 #include "pose2d.h"
 
 namespace planning {
@@ -252,6 +253,13 @@ struct MapBound {
     y_max = std::max(y_max, p.y);
 
     return;
+  }
+
+  void PrintInfo(const bool enable_log = true) {
+    ILOG_INFO_IF(enable_log)
+        << "x_min = " << x_min << "  x_max = " << x_max << "y_min = " << y_min
+        << "  y_max = " << y_max << "phi_min = " << phi_min * 57.3
+        << "  phi_max = " << phi_max * 57.3;
   }
 };
 
@@ -624,5 +632,4 @@ const std::string GetAstarNodeVisitedTypeDebugString(const AstarNodeVisitedType 
 bool GenerateStraightLinePath(std::vector<AStarPathPoint>&path,
                               const Pose2f& start, const Pose2f& end,
                               const AstarPathGear gear);
-
 }  // namespace planning

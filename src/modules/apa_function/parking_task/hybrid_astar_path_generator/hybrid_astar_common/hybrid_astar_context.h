@@ -106,16 +106,11 @@ struct CarMotion {
 
 struct AnalyticExpansionRequest {
   AnalyticExpansionType type;
-
   Node3d* current_node;
   CurveNode* curve_node_to_goal;
 
   link_pt_line::LinkPtLineInput<float>* lpl_input;
-
-  float rs_radius;
-  bool need_rs_dense_point = false;
-  bool need_anchor_point = false;
-  RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
+  RSInput* rs_input;
 
   AnalyticExpansionRequest() = default;
   ~AnalyticExpansionRequest() = default;
