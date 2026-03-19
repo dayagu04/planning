@@ -67,6 +67,7 @@ void StGraphSearcherOutput::UpdateYieldBackDebounce(bool raw_flag) {
   } else {
     last_raw_yield_back_ = raw_flag;
     yield_back_consecutive_cnt_ = 1;
+    yield_back_last_change_time_ms_ = now_ms;
   }
 
   const double hold_time = now_ms - yield_back_last_change_time_ms_;
@@ -92,6 +93,7 @@ void StGraphSearcherOutput::UpdateOvertakeFrontDebounce(bool raw_flag) {
   } else {
     last_raw_overtake_front_ = raw_flag;
     overtake_front_consecutive_cnt_ = 1;
+    overtake_front_last_change_time_ms_ = now_ms;
   }
 
   const double hold_time = now_ms - overtake_front_last_change_time_ms_;

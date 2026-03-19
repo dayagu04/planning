@@ -258,14 +258,25 @@ bool StGraphSearcher::Execute() {
     return false;
   }
 
+  auto* mutable_output =
+      session_->mutable_planning_context()->mutable_st_graph_searcher_output();
+  if (mutable_output == nullptr) {
+    ILOG_ERROR << "mutable st_graph_searcher_output is null";
+    return false;
+  }
+
+  mutable_output->set_debounce_params(
+      config_.st_search_overtake_debounce_min_consecutive_frames,
+      config_.st_search_overtake_debounce_min_hold_time_ms);
+
   std::vector<StSearchNode> st_path;
 
   const auto& last_output =
       session_->planning_context().st_graph_searcher_output();
+  // Use debounce strategy state for decision switch penalty
   prev_is_overtake_front_vehicle_on_target_lane_ =
-      last_output.raw_is_search_overtake_front_vehicle();
-  prev_is_yield_back_vehicle_ =
-      last_output.raw_is_search_yield_back_vehicle();
+      last_output.is_search_overtake_front_vehicle();
+  prev_is_yield_back_vehicle_ = last_output.is_search_yield_back_vehicle();
   has_prev_strategy_ =
       prev_is_overtake_front_vehicle_on_target_lane_ ||
       prev_is_yield_back_vehicle_;
@@ -283,9 +294,7 @@ bool StGraphSearcher::Execute() {
   // search fail
   if (!search_success) {
     SetSearchFailSafe();
-    session_->mutable_planning_context()
-        ->mutable_st_graph_searcher_output()
-        ->set_is_search_success(false);
+    mutable_output->set_is_search_success(false);
     AddStGraphSearcherDataToProto(st_path);
     return true;
   }
@@ -295,9 +304,7 @@ bool StGraphSearcher::Execute() {
   session_->mutable_planning_context()
       ->st_graph()
       ->UpdateStBoundaryDecisionResults(last_node.decision_table());
-  session_->mutable_planning_context()
-      ->mutable_st_graph_searcher_output()
-      ->set_is_search_success(true);
+  mutable_output->set_is_search_success(true);
 
   // store st path in proto
   st_graph_searcher_pb_.Clear();
@@ -311,8 +318,7 @@ bool StGraphSearcher::Execute() {
   // const auto traffic_light_decision_map =
   //     MakeDecisionForTrafficLightVirtualAgent(last_node);
   const bool is_yield_front_vehicle_safe = CheckIfFrontVehcileSafe();
-  auto* mutable_output =
-      session_->mutable_planning_context()->mutable_st_graph_searcher_output();
+
   mutable_output->set_is_yield_front_vehicle_safe(is_yield_front_vehicle_safe);
   mutable_output->set_search_yield_back_vehicle(is_yield_back_vehicle);
   mutable_output->set_is_search_overtake_front_vehicle(

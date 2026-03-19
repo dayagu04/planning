@@ -425,14 +425,6 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
     read_json_vec<double>(json, "lc_finished_dist_thr", lc_finished_dist_thr);
     min_ego_v_cruise = read_json_key<double>(json, "min_ego_v_cruise");
     lc_short_dis_thr = read_json_key<double>(json, "lc_short_dis_thr");
-
-    // St_graph_searcher behavior layer debounce config
-    ReadItem<int>(json, st_search_overtake_debounce_min_consecutive_frames,
-                  "scenario_state_machine",
-                  "st_search_overtake_debounce_min_consecutive_frames");
-    ReadItem<double>(json, st_search_overtake_debounce_min_hold_time_ms,
-                     "scenario_state_machine",
-                     "st_search_overtake_debounce_min_hold_time_ms");
   }
   double lc_t_actuator_delay = 0.03;
   double lc_back_available_thr = 1.5;
@@ -443,10 +435,6 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   std::vector<double> lc_finished_dist_thr{0.1, 0.15, 0.2, 0.3};
   double min_ego_v_cruise = 2.0;
   double lc_short_dis_thr = 5.0;
-
-  // st_graph_searcher behavior layer debounce config
-  int st_search_overtake_debounce_min_consecutive_frames = 5;
-  double st_search_overtake_debounce_min_hold_time_ms = 500.0;
 
 };
 
@@ -5352,6 +5340,14 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
     // decision switch penalty
     ReadItem(json, decision_switch_penalty, "speed_planning",
              "st_graph_searcher", "decision_switch_penalty");
+
+    // st_graph_searcher behavior layer debounce config
+    ReadItem<int>(json, st_search_overtake_debounce_min_consecutive_frames,
+                  "speed_planning", "st_graph_searcher",
+                  "st_search_overtake_debounce_min_consecutive_frames");
+    ReadItem<double>(json, st_search_overtake_debounce_min_hold_time_ms,
+                     "speed_planning", "st_graph_searcher",
+                     "st_search_overtake_debounce_min_hold_time_ms");
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -5413,6 +5409,10 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
   double yield_front_vehicle_collision_s_buffer = 1.0;
   bool enable_only_s_t_hash = false;
+
+  // st_graph_searcher behavior layer debounce config
+  int st_search_overtake_debounce_min_consecutive_frames = 3;
+  double st_search_overtake_debounce_min_hold_time_ms = 500.0;
 
   // overtake and yield decision switch penalty
   double decision_switch_penalty = 2.0;
