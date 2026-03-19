@@ -526,7 +526,7 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
         if (std::fabs(cart_ref_info.k_s_spline(s_check)) > kKappaStraightThr) {
           is_on_curve = true;
           const double s_before_curve = std::max(s_check - kStraightSampleStep, s_ref);
-          ref_len_based_on_straight = std::max(s_before_curve - s_ref, 3.0);
+          ref_len_based_on_straight = std::max(s_before_curve - s_ref, 0.0);
           break;
         }
       }
