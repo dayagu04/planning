@@ -242,59 +242,8 @@ void HybridAStarPathGenerator::CalcNodeGCost(Node3d* current_node,
     length_cost += config_.expect_dist_penalty;
   }
 
-  float exceed_interseting_area_cost = 0.0f,
-        exceed_cul_de_sac_limit_pos_cost = 0.0f, borrow_slot_cost = 0.0f;
-
-  if (request_.search_mode == SearchMode::FORMAL) {
-    if (interesting_area_.width() > 0.01 &&
-        !interesting_area_.contain(next_node->GetPose())) {
-      exceed_interseting_area_cost = config_.exceed_interseting_area_penalty;
-    }
-
-    if (cul_de_sac_info_.is_cul_de_sac) {
-      if (cul_de_sac_info_.type == CulDeSacType::RIGHT &&
-          next_node->GetPhi() < cul_de_sac_info_.limit_phi) {
-        if ((next_node->GetGearType() == AstarPathGear::DRIVE &&
-             next_node->GetKappa() < -0.001f) ||
-            (next_node->GetGearType() == AstarPathGear::REVERSE &&
-             next_node->GetKappa() > 0.001f)) {
-          exceed_cul_de_sac_limit_pos_cost =
-              config_.exceed_cul_de_sac_limit_pos_penalty;
-        }
-      } else if (cul_de_sac_info_.type == CulDeSacType::LEFT &&
-                 next_node->GetPhi() > cul_de_sac_info_.limit_phi) {
-        if ((next_node->GetGearType() == AstarPathGear::DRIVE &&
-             next_node->GetKappa() > 0.001f) ||
-            (next_node->GetGearType() == AstarPathGear::REVERSE &&
-             next_node->GetKappa() < -0.001f)) {
-          exceed_cul_de_sac_limit_pos_cost =
-              config_.exceed_cul_de_sac_limit_pos_penalty;
-        }
-      }
-    }
-  }
-
-  if ((next_node->GetX() - 0.5 * apa_param.GetParam().car_width) <
-      float(request_.ego_info_under_slot.slot.processed_corner_coord_local_
-                .pt_01_mid.x()) -
-          0.5f) {
-    const bool case1 =
-        request_.scenario_type ==
-            ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
-        fabs(next_node->GetPhi()) * common_math::kRad2DegF > 76.0f;
-    const bool case2 =
-        request_.scenario_type ==
-            ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN &&
-        fabs(next_node->GetPhi()) * common_math::kRad2DegF < 132.0f;
-    if (case1 || case2) {
-      borrow_slot_cost = config_.borrow_slot_penalty;
-    }
-  }
-
   next_node->SetGCost(current_node->GetGCost() + length_cost +
-                      gear_change_cost + kappa_cost + kappa_change_cost +
-                      borrow_slot_cost + exceed_cul_de_sac_limit_pos_cost +
-                      exceed_interseting_area_cost);
+                      gear_change_cost + kappa_cost + kappa_change_cost);
 
   return;
 }
