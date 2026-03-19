@@ -517,45 +517,13 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
     const double s_end = std::min(s_ref + kStraightCheckLength, s_max);
     if (s_end > s_ref + 1e-3) {
       ref_len_based_on_straight = std::max(s_end - s_ref, 0.0);
-
-      const auto static_analysis_storage = reference_path_ptr_->get_static_analysis_storage();
-      if (static_analysis_storage) {
-        const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
-                                       CElemType::Ignore);
-        const auto front_turn_range =
-            static_analysis_storage->GetFrontSRange(turn_query, s_ref);
-
-        constexpr double kTurnInnerPreview = 15.0;
-        constexpr double kExitRecoverDist = 5.0;
-        const double min_len_base_straight = 10.0;
-
-        bool in_turn_front = false;
-        if (front_turn_range.second > front_turn_range.first) {
-          in_turn_front = s_ref >= front_turn_range.first;
-        }
-
-        if (in_turn_front) {  // 当前位于弯道内
-          const double turn_span = front_turn_range.second - front_turn_range.first;
-          const double t = std::clamp(
-              (s_ref - front_turn_range.first) / (turn_span / 2.0), 0.0, 1.0);
-          const double ref_len_in_turn =
-              kTurnInnerPreview + (1.0 - t) * (kStraightCheckLength - kTurnInnerPreview);
-          ref_len_based_on_straight = std::max(min_len_base_straight, ref_len_in_turn);
-        } else {
-          const auto back_turn_range =
-              static_analysis_storage->GetBackSRange(turn_query, s_ref);
-          if (back_turn_range.second > back_turn_range.first &&
-              back_turn_range.second <= s_ref) {
-            const double dist_since_turn_end =
-                std::max(s_ref - back_turn_range.second, 0.0);
-            const double recover_ratio =
-                std::clamp(dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-            const double ref_len_recover =
-                kTurnInnerPreview +
-                recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
-            ref_len_based_on_straight =
-                  std::max(min_len_base_straight, ref_len_recover);
-          }
+      for (double s_check = s_ref; s_check <= s_end;
+           s_check += kStraightSampleStep) {
+        if (std::fabs(cart_ref_info.k_s_spline(s_check)) > kKappaStraightThr) {
+          is_on_curve = true;
+          const double s_before_curve = std::max(s_check - kStraightSampleStep, s_ref);
+          ref_len_based_on_straight = std::max(s_before_curve - s_ref, 0.0);
+          break;
         }
       }
     }
