@@ -52,6 +52,9 @@ struct ReferencePathPoint {
   bool is_ramp;       // 是否在坡道上
   double ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
   int floor_id;
+  double left_drivable_width;   // 左侧可通行宽度：考虑实时感知的障碍物
+  double right_drivable_width;  // 左侧可通行宽度：考虑实时感知的障碍物
+  double drivable_width;        // 左侧可通行宽度：考虑实时感知的障碍物
   planning_math::PathPoint left_bound_point;
   planning_math::PathPoint right_bound_point;
   /******** for hpp  end  *********/
@@ -222,6 +225,11 @@ class ReferencePath {
   const std::vector<const Obstacle *> &get_road_edges() const {
     return road_edges_;
   }
+
+  const size_t get_nearest_point_idx(const double s) const;
+  const ReferencePathPoint &get_nearest_point(const double s) const;
+  const std::pair<double, double> get_interpolated_point_width(
+      const double s, const bool is_raw_width = true) const;
 
   bool get_reference_point_by_lon(
       double s, ReferencePathPoint &reference_path_point) const;
