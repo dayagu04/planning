@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "apa_param_config.h"
+#include "apa_slot_manager.h"
 #include "apa_state_machine_manager.h"
 #include "debug_info_log.h"
 #include "geometry_math.h"
@@ -760,9 +761,15 @@ const bool ParallelParkOutScenario::CheckFinished() {
     ILOG_INFO << "delay_check_finish_ = " << delay_check_finish_;
     return false;
   }
+  const bool is_near_path_end = IsNearPathEnd();
+  ILOG_INFO << "is_near_path_end = " << is_near_path_end;
+  const bool is_lat_or_path_end_met =
+      (lat_condition && slot_occupied_ratio < 0.1) ||
+      (is_near_path_end && slot_occupied_ratio < 0.4);
 
-  return static_condition && slot_occupied_ratio < 0.1 &&
-         heading_mag_deg < finish_parallel_out_heading_mag && lat_condition;
+  return static_condition &&
+         heading_mag_deg < finish_parallel_out_heading_mag &&
+         is_lat_or_path_end_met;
 }
 
 const bool ParallelParkOutScenario::GenTlane() {
@@ -2672,6 +2679,24 @@ void ParallelParkOutScenario::JudgeArcSlot(){
   ILOG_INFO << "is_arc_slot_ = " << is_arc_slot_ << ", is_outer_arc_slot_ = " << is_outer_arc_slot_;
 }
 
+const bool ParallelParkOutScenario::IsNearPathEnd() {
+  if (complete_path_point_global_vec_.empty()) {
+    ILOG_INFO << "complete_path_point_global_vec_ is empty";
+    return false;
+  }
+  const double dis_thred = 0.2;
+  const auto path_end_pos = complete_path_point_global_vec_.back().pos;
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  const auto current_pos = measures_ptr->GetPos();
+  const double distance = std::hypot(path_end_pos.x() - current_pos.x(),
+                                     path_end_pos.y() - current_pos.y());
+  // ILOG_INFO << "path_end_pos:" << path_end_pos.x() << " " << path_end_pos.y()
+  //           << " current_pos:" << current_pos.x() << " " << current_pos.y();
+  ILOG_INFO << "distance to path end: " << distance
+            << ", threshold:" << dis_thred;
+
+  return distance < dis_thred;
+}
 
 }  // namespace apa_planner
 }  // namespace planning
