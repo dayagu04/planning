@@ -144,6 +144,13 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
 
   session_.set_scene_type(scene_type);
 
+  if (session_.is_scene_changed()) {
+    if(session_.is_hpp_scene()) {
+      hpp_function_->Reset();
+      DebugInfoManager::GetInstance().Clear();
+    }
+  }
+
   auto frame_info =
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
@@ -902,7 +909,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.borrow_lane_type = ad_info.borrow_lane_type;
   planning_hmi_info->ad_info.borrow_direction = ad_info.borrow_direction;
 
- 
+
   planning_hmi_info->ad_info.reference_line_msg =
       session_.planning_context()
           .planning_hmi_info()

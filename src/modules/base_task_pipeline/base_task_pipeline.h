@@ -16,6 +16,8 @@ class BaseTaskPipeline {
 
   virtual bool Run() = 0;
 
+  virtual bool Reset() { return true; };
+
  protected:
   void AddErrorInfo(const std::string &task_name);
 

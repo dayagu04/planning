@@ -31,6 +31,11 @@ class DebugInfoManager : public planning::common::Arena {
     return debug_info_json_;
   }
 
+  void Clear() {
+    debug_info_pb_->Clear();
+    debug_info_json_->clear();
+  }
+
  private:
   DebugInfoManager()
       : debug_info_pb_(std::make_unique<planning::common::PlanningDebugInfo>()),
