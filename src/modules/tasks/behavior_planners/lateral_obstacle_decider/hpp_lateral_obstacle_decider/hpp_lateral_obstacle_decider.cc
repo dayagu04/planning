@@ -432,12 +432,23 @@ void HppLateralObstacleDecider::AnalyzeNudgeLevelBaseCurve(
     const double squared_PH =
         std::pow((ideal_target_point_frenet.x - ego_point_frenet.x * 0.5), 2);
     const double R = (squared_AH + squared_PH) / (2 * length_AH);
-    if (R >= kAbsoluteSafeRadius) {
-      decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
-    } else if (R >= kRelativeSafeRadius) {
-      decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+    if (is_left) {
+      if (R >= kAbsoluteSafeRadius) {
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+      } else if (R >= kRelativeSafeRadius) {
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+      } else {
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+      }
     } else {
-      decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+      if (R >= kAbsoluteSafeRadius) {
+        decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+      } else if (R >= kRelativeSafeRadius) {
+        decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+      } else {
+        decision_info.right_nudge_level =
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+      }
     }
   };
   // left curve path
