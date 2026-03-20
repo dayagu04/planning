@@ -10,6 +10,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "Eigen/src/Core/Matrix.h"
 #include "ad_common/hdmap/hdmap.h"
@@ -972,7 +973,11 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // CalculateDistanceToRampSplitMergeWithSdMap(session_);
 
   // 3.根据计算的超视距信息，更新需要的lane信息
-  relative_id_lanes_ = UpdateLanes(roads_ptr);
+  if(session_->is_hpp_scene()){
+    relative_id_lanes_ = UpdateLanesForHPP(roads_ptr);
+  } else {
+    relative_id_lanes_ = UpdateLanes(roads_ptr);
+  }
 
 #if defined(X86) && !defined(X86_SIMULATION)
   int zero_order_count = 0;
@@ -1044,7 +1049,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     ego_lane_track_manager_.Reset();
     return false;
   }
-  
+
   set_is_exist_intersection_split( ego_lane_track_manager_.is_exist_intersection_split());
   set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
   set_is_exist_split_on_expressway(ego_lane_track_manager_.is_exist_split_on_expressway());
@@ -1934,6 +1939,63 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
   return relative_id_lanes;
 }
 
+std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanesForHPP(
+    const iflyauto::RoadInfo* roads_ptr) {
+  std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes;
+  // S1: 按照floor_id的顺序排序输入lanes
+  std::vector<iflyauto::ReferenceLineMsg> lane_msg;
+  lane_msg.reserve(roads_ptr->reference_line_msg_size);
+  for (int i = 0; i < roads_ptr->reference_line_msg_size; ++i) {
+    if (roads_ptr->reference_line_msg[i]
+            .lane_reference_line.virtual_lane_refline_points_size < 3) {
+      continue;
+    }
+    lane_msg.emplace_back(roads_ptr->reference_line_msg[i]);
+  }
+
+  auto compare_floor_id = [&](iflyauto::ReferenceLineMsg lane1,
+                              iflyauto::ReferenceLineMsg lane2) {
+    return lane1.floor_id > lane2.floor_id;
+  };
+  std::sort(lane_msg.begin(), lane_msg.end(), compare_floor_id);
+
+  // S2: 判断是上坡还是下坡
+  bool is_need_reverse_lane_msg = false;
+  if(lane_msg.size() > 1) {
+    const auto first_lane = lane_msg[0];
+    const auto second_lane = lane_msg[1];
+    const auto& first_start =
+        first_lane.lane_reference_line.virtual_lane_refline_points[0].local_point;
+    const auto& first_end =
+        first_lane.lane_reference_line.virtual_lane_refline_points
+            [first_lane.lane_reference_line.virtual_lane_refline_points_size -
+             1].local_point;
+    const auto& second_start =
+        second_lane.lane_reference_line.virtual_lane_refline_points[0].local_point;
+    const auto& second_end =
+        second_lane.lane_reference_line.virtual_lane_refline_points
+            [second_lane.lane_reference_line.virtual_lane_refline_points_size -
+             1].local_point;
+    const double first_start_to_second_end = std::hypot(first_start.x- second_end.x, first_start.y - second_end.y);
+    const double first_end_to_second_start = std::hypot(first_end.x - second_start.x, first_end.y - second_start.y);
+    if (first_start_to_second_end < first_end_to_second_start) {
+      is_need_reverse_lane_msg = true;
+    }
+  }
+  if(is_need_reverse_lane_msg) {
+    std::reverse(lane_msg.begin(), lane_msg.end());
+  }
+
+  // S3：更新来自道路融合模块的 virtual_lane
+  std::shared_ptr<VirtualLane> virtual_lane_tmp =
+      std::make_shared<VirtualLane>();
+  virtual_lane_tmp->update_data(lane_msg);
+  relative_id_lanes.emplace_back(virtual_lane_tmp);
+  origin_relative_id_zero_nums_ = 0;
+  lane_num_ = relative_id_lanes.size();
+  return relative_id_lanes;
+}
+
 void VirtualLaneManager::EraseOverlappingLanesId(
     std::vector<std::shared_ptr<VirtualLane>>& lanes) {
   //只有1条
@@ -2049,17 +2111,32 @@ bool VirtualLaneManager::IsLaneOverLappedLeft(
 }
 
 void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
-  auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
-                                 std::shared_ptr<VirtualLane> lane2) {
-    return lane1->get_relative_id() < lane2->get_relative_id();
-  };
-  std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(),
-            compare_relative_id);
+  if(session_->is_hpp_scene()){
+    const auto& ego_state = session_->environmental_model().get_ego_state_manager();
+    const auto ego_floor_id = ego_state->ego_floor_id();
+    for (const auto& relative_id_lane : relative_id_lanes_) {
+      if(relative_id_lane->get_floor_id() == ego_floor_id) {
+        current_lane_ = relative_id_lane;
+        break;
+      }
+      if (relative_id_lane->get_relative_id() == 0) {
+          current_lane_ = relative_id_lane;
+          ILOG_DEBUG << "create current_lane";
+      }
+    }
+  } else {
+    auto compare_relative_id = [&](std::shared_ptr<VirtualLane> lane1,
+                                   std::shared_ptr<VirtualLane> lane2) {
+      return lane1->get_relative_id() < lane2->get_relative_id();
+    };
+    std::sort(relative_id_lanes_.begin(), relative_id_lanes_.end(),
+              compare_relative_id);
 
-  for (const auto& relative_id_lane : relative_id_lanes_) {
-    if (relative_id_lane->get_relative_id() == 0) {
-      current_lane_ = relative_id_lane;
-      ILOG_DEBUG << "create current_lane";
+    for (const auto& relative_id_lane : relative_id_lanes_) {
+      if (relative_id_lane->get_relative_id() == 0) {
+          current_lane_ = relative_id_lane;
+          ILOG_DEBUG << "create current_lane";
+      }
     }
   }
 }

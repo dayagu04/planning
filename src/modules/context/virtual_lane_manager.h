@@ -293,6 +293,8 @@ class VirtualLaneManager {
       const iflyauto::LaneReferenceLine &refline);
   std::vector<std::shared_ptr<VirtualLane>> UpdateLanes(
       const iflyauto::RoadInfo *roads_ptr);
+  std::vector<std::shared_ptr<VirtualLane>> UpdateLanesForHPP(
+      const iflyauto::RoadInfo *roads_ptr);
   void EraseOverlappingLanesId(std::vector<std::shared_ptr<VirtualLane>>& lanes);
   bool IsLaneOverLappedLeft(const std::shared_ptr<VirtualLane> &left_lane,
                             const std::shared_ptr<VirtualLane> &right_lane,

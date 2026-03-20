@@ -12,6 +12,7 @@
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
 #include "modules/context/static_analysis_storage/static_analysis_storage.h"
+#include "modules/tasks/task_interface/hpp_obstacle_lateral_preprocess_decider_output.h"
 
 // class ObstacleManager;
 namespace planning {
@@ -24,14 +25,6 @@ enum class ReferencePathSource {
 };
 
 enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
-
-enum class TurnstileSceneType {
-  TURNSTILE_SCENE_NONE = 0,
-  TURNSTILE_SCENE_LEFT_SINGLE = 1,    // 左侧单闸机
-  TURNSTILE_SCENE_RIGHT_SINGLE = 2,   // 右侧单闸机
-  TURNSTILE_SCENE_MID_DOUBLE = 3,         // 中间双闸机
-  TURNSTILE_SCENE_SIDE_DOUBLE = 4,        // 两侧双闸机
-};
 
 struct ReferencePathPoint {
   planning_math::PathPoint path_point;
@@ -51,6 +44,10 @@ struct ReferencePathPoint {
   /******** for hpp start *********/
   bool is_ramp;       // 是否在坡道上
   double ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
+  int floor_id;
+  double left_drivable_width;  // 左侧可通行宽度：考虑实时感知的障碍物
+  double right_drivable_width; // 右侧可通行宽度：考虑实时感知的障碍物
+  double drivable_width;       // 可通行宽度：考虑实时感知的障碍物
   planning_math::PathPoint left_bound_point;
   planning_math::PathPoint right_bound_point;
   /******** for hpp  end  *********/
@@ -222,6 +219,11 @@ class ReferencePath {
     return road_edges_;
   }
 
+  const size_t get_nearest_point_idx(const double s) const;
+  const ReferencePathPoint &get_nearest_point(const double s) const;
+  const std::pair<double, double> get_interpolated_point_width(
+      const double s, const bool is_raw_width = true) const;
+
   bool get_reference_point_by_lon(
       double s, ReferencePathPoint &reference_path_point) const;
   bool transform_trajectory_points(TrajectoryPoints &trajectory_points) const;
@@ -256,14 +258,13 @@ class ReferencePath {
     return static_analysis_storage_;
   }
 
-  TurnstileSceneType get_turnstile_scene_type() const {
-    return turnstile_scene_type_;
+  void set_turnstile_scene_info(
+      const TurnstileSceneInfo &turnstile_scene_info) {
+    turnstile_scene_info_ = turnstile_scene_info;
   }
-  int get_target_turnstile_obs_id() const {
-    return target_turnstile_obs_id_;
-  }
-  int get_side_turnstile_obs_id() const {
-    return side_turnstile_obs_id_;
+
+  TurnstileSceneInfo get_turnstile_scene_info() const {
+    return turnstile_scene_info_;
   }
   /********* for hpp  end  **********/
  public:
@@ -422,9 +423,7 @@ class ReferencePath {
   std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
       semantic_sign_frenet_obstacles_map_;
 
-  TurnstileSceneType turnstile_scene_type_ = TurnstileSceneType::TURNSTILE_SCENE_NONE;
-  int target_turnstile_obs_id_ = -1;     // 需要通过的闸机障碍物 id
-  int side_turnstile_obs_id_ = -1;      // 双闸机场景下，另一个闸机障碍物 id
+  TurnstileSceneInfo turnstile_scene_info_;
   /********* for hpp  end  **********/
 
   std::vector<int> obstacles_in_lane_map_;
