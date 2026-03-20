@@ -1853,7 +1853,8 @@ void BaseWeight::SetWeightProtectionForLargePosDiff(
       lateral_motion_scene_ != LateralMotionScene::LANE_BORROW &&
       lateral_motion_scene_ != LateralMotionScene::SPLIT &&
       ref_vel_ > 2.0 && last_path_max_dist2ref_ > 2.0 &&
-      weight_.remotely_index >= 17) {
+      weight_.remotely_index >= 17 &&
+      emergency_level_ < EmergencyLevel::P1) {
     for (size_t i = 0; i < weight_.point_num; ++i) {
       weight_.jerk_upper_bound[i] = std::min(
           weight_.jerk_upper_bound[i], config_.jerk_bound_inactivated_limit);
