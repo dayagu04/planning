@@ -41,9 +41,13 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
         exceed_cul_de_sac_limit_pos_cost = 0.0f, borrow_slot_cost = 0.0f;
 
   if (request_.search_mode == SearchMode::FORMAL) {
-    if (interesting_area_.width() > 0.01 &&
-        !interesting_area_.contain(next_node->GetPose())) {
-      exceed_interseting_area_cost = config_.exceed_interseting_area_penalty;
+    if (has_interesting_area_) {
+      const float next_x = next_node->GetX();
+      const float next_y = next_node->GetY();
+      if (next_x < interesting_area_min_x_ || next_x > interesting_area_max_x_ ||
+          next_y < interesting_area_min_y_ || next_y > interesting_area_max_y_) {
+        exceed_interseting_area_cost = config_.exceed_interseting_area_penalty;
+      }
     }
 
     if (cul_de_sac_info_.is_cul_de_sac) {
@@ -199,6 +203,7 @@ void HybridAStarPerpendicularTailInPathGenerator::InitInterestingArea() {
   interesting_area_.min_[1] =
       std::min(interesting_area_.min_[1],
                ego_info_under_slot.cur_pose.GetY() - extra_val);
+  UpdateInterestingAreaCache();
 }
 
 PathColDetBuffer
@@ -305,6 +310,7 @@ void HybridAStarPerpendicularTailInPathGenerator::TryDecideCulDeSac(
                                     param.wheel_base + param.front_overhanging -
                                     0.5 * param.max_car_width;
       }
+      UpdateInterestingAreaCache();
     } else {
       ILOG_INFO << "this is not cul-de-sac";
     }
@@ -354,6 +360,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::RunPreSearch(
   pre_search_box.min_ << x_min - bound, y_min - bound;
   pre_search_box.max_ << x_max + bound, y_max + bound;
   interesting_area_.combine(pre_search_box);
+  UpdateInterestingAreaCache();
   return true;
 }
 

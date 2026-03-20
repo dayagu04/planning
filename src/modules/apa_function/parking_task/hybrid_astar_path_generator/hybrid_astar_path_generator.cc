@@ -1655,6 +1655,15 @@ const float HybridAStarPathGenerator::CalcGearChangePoseCost(
   return 0.0f;
 }
 
+void HybridAStarPathGenerator::UpdateInterestingAreaCache() {
+  interesting_area_min_x_ = static_cast<float>(interesting_area_.min_[0]);
+  interesting_area_max_x_ = static_cast<float>(interesting_area_.max_[0]);
+  interesting_area_min_y_ = static_cast<float>(interesting_area_.min_[1]);
+  interesting_area_max_y_ = static_cast<float>(interesting_area_.max_[1]);
+  has_interesting_area_ =
+      (interesting_area_max_x_ - interesting_area_min_x_) > 0.01f;
+}
+
 const bool HybridAStarPathGenerator::UpdateOnce(
     const PathColDetBuffer& path_col_det_buffer) {
   ILOG_INFO << "hybrid astar " << GetScenarioPrefix() << " update once begin";

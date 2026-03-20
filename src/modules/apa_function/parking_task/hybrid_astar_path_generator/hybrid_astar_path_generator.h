@@ -239,6 +239,8 @@ class HybridAStarPathGenerator : public ParkingTask {
       const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
       const float gear_switch_penalty, const float length_penalty);
 
+  void UpdateInterestingAreaCache();
+
  protected:
   PlannerOpenSpaceConfig config_;
 
@@ -285,6 +287,11 @@ class HybridAStarPathGenerator : public ParkingTask {
       all_success_path_first_gear_switch_pose_debug_;
 
   cdl::AABB interesting_area_;
+  bool has_interesting_area_ = false;
+  float interesting_area_min_x_ = 0.0f;
+  float interesting_area_max_x_ = 0.0f;
+  float interesting_area_min_y_ = 0.0f;
+  float interesting_area_max_y_ = 0.0f;
   CulDeSacInfo cul_de_sac_info_;
   SearchPhaseTimeCost search_phase_time_cost_;
   SearchLoopStats search_loop_stats_;
