@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Eigen/Core>
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -522,8 +523,8 @@ const bool CompleteArcSeg(ArcSeg<T>& arc, AstarPathSteer steer);
 
 template <typename T>
 const uint8_t CalIntersectionOfLineAndCircle(const LineSeg<T>& line,
-                                             const ArcSeg<T>& circle,
-                                             std::vector<Pos<T>>& pt_vec);
+                                       const ArcSeg<T>& circle,
+                                       std::array<Pos<T>, 2>& pts);
 
 template <typename T>
 const bool CalIntersectionOfTwoLines(Pos<T>& intersection,
@@ -541,16 +542,16 @@ const bool CalOneArcWithLineAndGear(ArcSeg<T>& arc, const LineSeg<T>& line,
                                     const T min_radius);
 
 template <typename T>
-const bool CalTwoArcWithLine(
-    const PathPt<T>& pose, const LineSeg<T>& line, const T radius1,
-    const T radius2,
-    std::vector<std::pair<ArcSeg<T>, ArcSeg<T>>>& arc_pair_vec);
+const uint8_t CalTwoArcWithLine(
+    const PathPt<T>& pose, const LineSeg<T>& line,
+    const T radius1, const T radius2,
+    std::array<std::pair<ArcSeg<T>, ArcSeg<T>>, 8>& arc_pairs);
 
 template <typename T>
-const bool CalCommonTangentCircleOfTwoLine(
+const uint8_t CalCommonTangentCircleOfTwoLine(
     const LineSeg<T>& line1, const LineSeg<T>& line2, const T radius,
-    std::vector<Pos<T>>& centers,
-    std::vector<std::pair<Pos<T>, Pos<T>>>& tangent_ptss);
+    std::array<Pos<T>, 4>& centers,
+    std::array<std::pair<Pos<T>, Pos<T>>, 4>& tangent_ptss);
 
 template <typename T>
 const bool CalTwoArcWithSameThetaAndGear(ArcSeg<T>& arc1, ArcSeg<T>& arc2,

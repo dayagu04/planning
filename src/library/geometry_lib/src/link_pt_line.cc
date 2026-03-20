@@ -153,7 +153,7 @@ const bool LinkPtLine<T>::OneArcPath(LinkPtLinePath<T>& lpl_path,
       LineSeg<T> end_line = ref_line;
       end_line.SetEndPt(arc.pB, ref_line.pA);
       // max lon err: 3cm, but it hardly causes any errors
-      if ((end_line.pA - end_line.pB).norm() < T(0.01f)) {
+      if ((end_line.pA - end_line.pB).squaredNorm() < T(1e-4f)) {
         end_line.pB += T(0.021f) * end_line.dir;
       }
 
@@ -237,14 +237,17 @@ const bool LinkPtLine<T>::TwoArcPath(LinkPtLinePath<T>& lpl_path,
 
   const PathPt<T>& pose = input_.pose;
   const T theta_err_threshold = input_.theta_err * kDeg2RadF;
-  std::vector<std::pair<ArcSeg<T>, ArcSeg<T>>> arc_pair_vec;
+  std::array<std::pair<ArcSeg<T>, ArcSeg<T>>, 8> arc_pairs;
   for (uint8_t i = 0; i < ref_line_num_; ++i) {
     const LineSeg<T>& ref_line = ref_lines_[i];
-    if (!CalTwoArcWithLine(pose, ref_line, radius1, radius2, arc_pair_vec)) {
+    const uint8_t arc_count =
+        CalTwoArcWithLine(pose, ref_line, radius1, radius2, arc_pairs);
+    if (arc_count == 0) {
       continue;
     }
 
-    for (const auto& arc_pair : arc_pair_vec) {
+    for (uint8_t k = 0; k < arc_count; ++k) {
+      const auto& arc_pair = arc_pairs[k];
       const ArcSeg<T>& arc1 = arc_pair.first;
       const ArcSeg<T>& arc2 = arc_pair.second;
 
@@ -296,7 +299,7 @@ const bool LinkPtLine<T>::TwoArcPath(LinkPtLinePath<T>& lpl_path,
         LineSeg<T> end_line = ref_line;
         end_line.SetEndPt(arc2.pB, ref_line.pA);
         // max lon err: 3cm, but it hardly causes any errors
-        if ((end_line.pA - end_line.pB).norm() < T(0.01f)) {
+        if ((end_line.pA - end_line.pB).squaredNorm() < T(1e-4f)) {
           end_line.pB += T(0.021f) * end_line.dir;
         }
 
@@ -404,14 +407,16 @@ const bool LinkPtLine<T>::LineArcPath(LinkPtLinePath<T>& lpl_path,
   const T theta_err_threshold = input_.theta_err * kDeg2RadF;
   for (uint8_t i = 0; i < ref_line_num_; ++i) {
     const LineSeg<T>& ref_line = ref_lines_[i];
-    std::vector<Pos<T>> centers;
-    std::vector<std::pair<Pos<T>, Pos<T>>> tangent_ptss;
-    if (!CalCommonTangentCircleOfTwoLine(line1, ref_line, radius, centers,
-                                         tangent_ptss)) {
+    std::array<Pos<T>, 4> centers;
+    std::array<std::pair<Pos<T>, Pos<T>>, 4> tangent_ptss;
+    const uint8_t tangent_count =
+        common_math::CalCommonTangentCircleOfTwoLine<T>(line1, ref_line, radius,
+                                                        centers, tangent_ptss);
+    if (tangent_count == 0) {
       continue;
     }
 
-    for (uint8_t j = 0; j < centers.size(); ++j) {
+    for (uint8_t j = 0; j < tangent_count; ++j) {
       LineSeg<T> line(line1.pA, tangent_ptss[j].first, line1.theta, line1.dir);
 
       ArcSeg<T> arc(centers[j], radius);
@@ -469,7 +474,7 @@ const bool LinkPtLine<T>::LineArcPath(LinkPtLinePath<T>& lpl_path,
         LineSeg<T> end_line = ref_line;
         end_line.SetEndPt(arc.pB, ref_line.pA);
         // max lon err: 3cm, but it hardly causes any errors
-        if ((end_line.pA - end_line.pB).norm() < T(0.01f)) {
+        if ((end_line.pA - end_line.pB).squaredNorm() < T(1e-4f)) {
           end_line.pB += T(0.021f) * end_line.dir;
         }
 
@@ -744,7 +749,7 @@ const bool LinkPtLine<T>::AlignBodySTurnPath(LinkPtLinePath<T>& lpl_path,
       LineSeg<T> end_line = ref_line;
       end_line.SetEndPt(arc_s_2.pB, ref_line.pA);
       // max lon err: 3cm, but it hardly causes any errors
-      if ((end_line.pA - end_line.pB).norm() < T(0.01f)) {
+      if ((end_line.pA - end_line.pB).squaredNorm() < T(1e-4f)) {
         end_line.pB += T(0.021f) * end_line.dir;
       }
 
@@ -819,8 +824,9 @@ void LinkPtLinePath<T>::SetPathSegs(const PathSeg<T> _segs[],
     gears[i] = segs[i].gear;
     steers[i] = segs[i].steer;
     kappas[i] = segs[i].kappa;
-    lengths[i] = segs[i].GetLength();
-    total_length += segs[i].GetLength();
+    const T length = segs[i].GetLength();
+    lengths[i] = length;
+    total_length += length;
 
     if (i > 0) {
       if (gears[i] == gears[i - 1]) {
@@ -833,7 +839,7 @@ void LinkPtLinePath<T>::SetPathSegs(const PathSeg<T> _segs[],
     }
 
     if (i == seg_num - 1 && steers[i] == AstarPathSteer::STRAIGHT) {
-      last_line_length = segs[i].GetLength();
+      last_line_length = length;
     }
   }
 }

@@ -350,23 +350,24 @@ const bool CalOneArcWithLineAndGear(ArcSeg<T>& arc, const LineSeg<T>& line,
 }
 
 template <typename T>
-const bool CalTwoArcWithLine(
+const uint8_t CalTwoArcWithLine(
     const PathPt<T>& pose, const LineSeg<T>& line, const T radius1,
     const T radius2,
-    std::vector<std::pair<ArcSeg<T>, ArcSeg<T>>>& arc_pair_vec) {
-  arc_pair_vec.clear();
-  arc_pair_vec.reserve(8);
+    std::array<std::pair<ArcSeg<T>, ArcSeg<T>>, 8>& arc_pairs) {
+  uint8_t count = 0;
 
-  std::vector<Pos<T>> center1s(2);
-  center1s[0] = pose.pos + radius1 * Pos<T>(pose.dir.y(), -pose.dir.x());
-  center1s[1] = pose.pos + radius1 * Pos<T>(-pose.dir.y(), pose.dir.x());
+  std::array<Pos<T>, 2> center1s = {
+      pose.pos + radius1 * Pos<T>(pose.dir.y(), -pose.dir.x()),
+      pose.pos + radius1 * Pos<T>(-pose.dir.y(), pose.dir.x())};
 
-  std::vector<Pos<T>> line_norm_dirs(2);
-  line_norm_dirs[0] << line.dir.y(), -line.dir.x();
-  line_norm_dirs[1] << -line.dir.y(), line.dir.x();
+  std::array<Pos<T>, 2> line_norm_dirs = {Pos<T>(line.dir.y(), -line.dir.x()),
+                                          Pos<T>(-line.dir.y(), line.dir.x())};
 
   for (const Pos<T>& center1 : center1s) {
     for (const Pos<T>& line_norm_dir : line_norm_dirs) {
+      if (count >= 8) {
+        return count;
+      }
       // the O2 is on arc2_center_line
       LineSeg<T> arc2_center_line(line.pA + line_norm_dir * radius2,
                                   line.pB + line_norm_dir * radius2);
@@ -374,13 +375,18 @@ const bool CalTwoArcWithLine(
       // of O1 and O2 is r1+r2
       ArcSeg<T> virtual_circle(center1, radius1 + radius2);
       // the intersection of arc2_center_line and virtual arc is arc2 center
-      std::vector<Pos<T>> center2s;
-      if (CalIntersectionOfLineAndCircle(arc2_center_line, virtual_circle,
-                                         center2s) < 1) {
+      std::array<Pos<T>, 2> center2s;
+      const uint8_t center2_count = CalIntersectionOfLineAndCircle(
+          arc2_center_line, virtual_circle, center2s);
+      if (center2_count < 1) {
         continue;
       }
 
-      for (const Pos<T>& center2 : center2s) {
+      for (uint8_t j = 0; j < center2_count; ++j) {
+        const Pos<T>& center2 = center2s[j];
+        if (count >= 8) {
+          return count;
+        }
         ArcSeg<T> arc1(center1, radius1);
         arc1.pA = pose.pos;
         arc1.thetaA = pose.theta;
@@ -410,12 +416,12 @@ const bool CalTwoArcWithLine(
           continue;
         }
 
-        arc_pair_vec.emplace_back(std::make_pair(arc1, arc2));
+        arc_pairs[count++] = std::make_pair(arc1, arc2);
       }
     }
   }
 
-  return arc_pair_vec.size() > 0;
+  return count;
 }
 
 template <typename T>
@@ -568,11 +574,10 @@ template const bool CompleteArcSeg(ArcSeg<double>&);
 template const bool CompleteArcSeg(ArcSeg<float>&, AstarPathSteer);
 template const bool CompleteArcSeg(ArcSeg<double>&, AstarPathSteer);
 
-template const uint8_t CalIntersectionOfLineAndCircle(const LineSeg<float>&,
-                                                      const ArcSeg<float>&,
-                                                      std::vector<Pos<float>>&);
 template const uint8_t CalIntersectionOfLineAndCircle(
-    const LineSeg<double>&, const ArcSeg<double>&, std::vector<Pos<double>>&);
+    const LineSeg<float>&, const ArcSeg<float>&, std::array<Pos<float>, 2>&);
+template const uint8_t CalIntersectionOfLineAndCircle(
+    const LineSeg<double>&, const ArcSeg<double>&, std::array<Pos<double>, 2>&);
 
 template const bool CalIntersectionOfTwoLines(Pos<float>&,
                                               const LineSeg<float>&,
@@ -595,20 +600,21 @@ template const bool CalOneArcWithLineAndGear(ArcSeg<double>&,
                                              const LineSeg<double>&,
                                              const AstarPathGear, const double);
 
-template const bool CalTwoArcWithLine(
+template const uint8_t CalTwoArcWithLine<float>(
     const PathPt<float>&, const LineSeg<float>&, const float, const float,
-    std::vector<std::pair<ArcSeg<float>, ArcSeg<float>>>&);
-template const bool CalTwoArcWithLine(
+    std::array<std::pair<ArcSeg<float>, ArcSeg<float>>, 8>&);
+template const uint8_t CalTwoArcWithLine<double>(
     const PathPt<double>&, const LineSeg<double>&, const double, const double,
-    std::vector<std::pair<ArcSeg<double>, ArcSeg<double>>>&);
+    std::array<std::pair<ArcSeg<double>, ArcSeg<double>>, 8>&);
 
-template const bool CalCommonTangentCircleOfTwoLine(
+template const uint8_t CalCommonTangentCircleOfTwoLine(
     const LineSeg<float>&, const LineSeg<float>&, const float,
-    std::vector<Pos<float>>&, std::vector<std::pair<Pos<float>, Pos<float>>>&);
-template const bool CalCommonTangentCircleOfTwoLine(
+    std::array<Pos<float>, 4>&,
+    std::array<std::pair<Pos<float>, Pos<float>>, 4>&);
+template const uint8_t CalCommonTangentCircleOfTwoLine(
     const LineSeg<double>&, const LineSeg<double>&, const double,
-    std::vector<Pos<double>>&,
-    std::vector<std::pair<Pos<double>, Pos<double>>>&);
+    std::array<Pos<double>, 4>&,
+    std::array<std::pair<Pos<double>, Pos<double>>, 4>&);
 
 template const bool CalTwoArcWithSameThetaAndGear(ArcSeg<float>&,
                                                   ArcSeg<float>&,
