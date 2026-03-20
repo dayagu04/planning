@@ -275,15 +275,15 @@ void HppObstacleLateralPreprocessDecider::CalObstacleClusterInfo(
   ReferencePathPoint refpath_pt;
   reference_path_ptr->get_reference_point_by_lon(cluster_s_start, refpath_pt);
   const double obs_start2left_road_boundary_dis =
-      refpath_pt.distance_to_left_road_border - cluster_l_end;
+      refpath_pt.left_drivable_width - cluster_l_end;
   const double obs_start2right_road_boundary_dis =
-      refpath_pt.distance_to_right_road_border + cluster_l_start;
+      refpath_pt.right_drivable_width + cluster_l_start;
 
   reference_path_ptr->get_reference_point_by_lon(cluster_s_end, refpath_pt);
   const double obs_end2left_road_boundary_dis =
-      refpath_pt.distance_to_left_road_border - cluster_l_end;
+      refpath_pt.left_drivable_width - cluster_l_end;
   const double obs_end2right_road_boundary_dis =
-      refpath_pt.distance_to_right_road_border + cluster_l_start;
+      refpath_pt.right_drivable_width + cluster_l_start;
 
   const double obs_2left_road_boundary_mindis =
       std::max(obs_start2left_road_boundary_dis,
