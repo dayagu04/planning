@@ -52,9 +52,13 @@ class Session : public planning::common::Arena {
   bool is_nsa_scene() const {
     return get_scene_type() == planning::common::SceneType::NSA;
   }
+  bool is_scene_changed() const {
+    return scene_type_ != last_scene_type_;
+  }
 
   planning::common::SceneType get_scene_type() const { return scene_type_; }
   void set_scene_type(const planning::common::SceneType &default_scene_type) {
+    last_scene_type_ = scene_type_;
     scene_type_ = default_scene_type;
   }
 
@@ -88,6 +92,7 @@ class Session : public planning::common::Arena {
   PlanningContext *planning_context_;
 
   planning::common::SceneType scene_type_;
+  planning::common::SceneType last_scene_type_;   // 上一帧的场景
 
   PlanningInitConfig planning_init_config_;
 
