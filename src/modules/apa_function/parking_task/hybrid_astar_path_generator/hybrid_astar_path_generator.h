@@ -202,6 +202,9 @@ class HybridAStarPathGenerator : public ParkingTask {
       const CurveNode& curve_node,
       ObsToPathDistRelativeSlot& obs_dist_relative_slot);
 
+  bool UpdateObsDistRelativeSlot(
+      CurveNode* curve_node, ObsToPathDistRelativeSlot* obs_dist_relative_slot);
+
   void DebugNodePath(const NodePath& path,
                      const AstarPathGear gear = AstarPathGear::NONE);
 
@@ -229,7 +232,7 @@ class HybridAStarPathGenerator : public ParkingTask {
       const AnalyticExpansionRequest& analytic_expansion_request);
 
   virtual void ChooseBestCurveNode(
-      const std::vector<CurveNode>& curve_node_to_goal_vec,
+      std::vector<CurveNode>& curve_node_to_goal_vec,
       CurveNode& best_curve_node_to_goal);
 
   virtual const float CalcGearChangePoseCost(

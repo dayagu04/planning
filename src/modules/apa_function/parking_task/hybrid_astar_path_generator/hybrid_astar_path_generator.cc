@@ -1391,11 +1391,12 @@ void HybridAStarPathGenerator::ConfigNodeDeleteInput(
   node_delete_input->scenario_type = request_.scenario_type;
   node_delete_input->start_id = start_node_->GetGlobalID();
   node_delete_input->max_gear_shift_number = request_.max_gear_shift_number;
+  node_delete_input->max_scurve_number = request_.max_scurve_number;
   node_delete_input->path_col_det_buffer = path_col_det_buffer;
   node_delete_input->sample_ds = request_.sample_ds;
   node_delete_input->swap_start_goal = request_.swap_start_goal;
   if (request_.search_mode == SearchMode::FORMAL) {
-    node_delete_input->need_cal_obs_dist = true;
+    node_delete_input->need_cal_obs_dist = !request_.recaluclate_obs_dist;
     node_delete_input->enable_smart_fold_mirror =
         request_.enable_smart_fold_mirror;
   } else {
@@ -1614,6 +1615,38 @@ void HybridAStarPathGenerator::CalcObsDistRelativeSlot(
     obs_dist_relative_slot.SetSmallerDist(pre_node->GetObsDistRelativeSlot());
     pre_node = pre_node->GetPreNode();
   }
+}
+
+bool HybridAStarPathGenerator::UpdateObsDistRelativeSlot(
+    CurveNode* curve_node, ObsToPathDistRelativeSlot* obs_dist_relative_slot) {
+  if (curve_node == nullptr || obs_dist_relative_slot == nullptr) {
+    return false;
+  }
+
+  *obs_dist_relative_slot = ObsToPathDistRelativeSlot();
+  std::vector<Node3d*> node_chain;
+  for (Node3d* pre_node = curve_node->GetPreNode(); pre_node != nullptr;
+       pre_node = pre_node->GetPreNode()) {
+    node_chain.emplace_back(pre_node);
+  }
+
+  NodeDeleteRequest node_delete_request;
+  for (auto it = node_chain.rbegin(); it != node_chain.rend(); ++it) {
+    node_delete_request.current_node = *it;
+    node_delete_request.curve_node = nullptr;
+    if (!node_delete_decider_.UpdateObsDistRelativeSlot(node_delete_request)) {
+      return false;
+    }
+    obs_dist_relative_slot->SetSmallerDist((*it)->GetObsDistRelativeSlot());
+  }
+
+  node_delete_request.current_node = nullptr;
+  node_delete_request.curve_node = curve_node;
+  if (!node_delete_decider_.UpdateObsDistRelativeSlot(node_delete_request)) {
+    return false;
+  }
+  obs_dist_relative_slot->SetSmallerDist(curve_node->GetObsDistRelativeSlot());
+  return true;
 }
 
 const float HybridAStarPathGenerator::CalcGearChangePoseCost(
@@ -1980,7 +2013,7 @@ const bool HybridAStarPathGenerator::BackwardPassByCurveNode(
 }
 
 void HybridAStarPathGenerator::ChooseBestCurveNode(
-    const std::vector<CurveNode>& curve_node_vec, CurveNode& best_curve_node) {
+    std::vector<CurveNode>& curve_node_vec, CurveNode& best_curve_node) {
   if (curve_node_vec.empty()) {
     return;
   }

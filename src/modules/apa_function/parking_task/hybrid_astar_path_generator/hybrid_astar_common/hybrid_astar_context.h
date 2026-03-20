@@ -65,6 +65,8 @@ struct HybridAStarRequest {
   ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
   InitalActionRequest inital_action_request;
 
+  bool recaluclate_obs_dist = false;
+
   void Clear() {
     splicing_pt_vec.clear();
     last_complete_pt_vec.clear();

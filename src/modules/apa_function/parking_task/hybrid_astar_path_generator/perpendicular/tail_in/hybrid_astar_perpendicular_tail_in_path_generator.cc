@@ -417,6 +417,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     case PreSearchPhaseOutcome::RETURN_FAILURE:
       return FinalizeUpdate(false);
     case PreSearchPhaseOutcome::CONTINUE_FORMAL_SEARCH:
+      request_.recaluclate_obs_dist = false;
       return FinalizeUpdate(RunFormalSearch(search_config_snapshot));
     default:
       return false;
@@ -424,7 +425,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
 }
 
 void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
-    const std::vector<CurveNode>& curve_node_to_goal_vec,
+    std::vector<CurveNode>& curve_node_to_goal_vec,
     CurveNode& best_curve_node_to_goal) {
   const float gear_change_penalty = 10.0f;
   const float length_penalty = 1.0f;
@@ -454,7 +455,7 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
     PathCompareCost cost;
 
     ObsToPathDistRelativeSlot obs_dist_relative_slot;
-    const CurveNode& temp_node = curve_node_to_goal_vec[i];
+    CurveNode& temp_node = curve_node_to_goal_vec[i];
 
     if (IsGearDifferent(request_.inital_action_request.ref_gear,
                         temp_node.GetCurGear())) {
@@ -523,16 +524,18 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       // todo: 单段路径长度如果过短是不是也可以施加惩罚
     }
 
-    if (true) {
+    if (request_.recaluclate_obs_dist) {
+      UpdateObsDistRelativeSlot(&temp_node, &obs_dist_relative_slot);
+    } else {
       CalcObsDistRelativeSlot(temp_node, obs_dist_relative_slot);
-      cost.obs_dist =
-          std::min(obs_dist_relative_slot.obs_dist_out_slot_straight,
-                   obs_dist_relative_slot.obs_dist_out_slot_turn);
-
-      cost.obs_dist_cost = NodeDeleteDecider::CalcObsDistCost(
-          cost.obs_dist * 100.0f, gear_change_penalty, length_penalty, 50.0f,
-          70.0f, 100.0f);
     }
+
+    cost.obs_dist = std::min(obs_dist_relative_slot.obs_dist_out_slot_straight,
+                             obs_dist_relative_slot.obs_dist_out_slot_turn);
+
+    cost.obs_dist_cost = NodeDeleteDecider::CalcObsDistCost(
+        cost.obs_dist * 100.0f, gear_change_penalty, length_penalty, 50.0f,
+        70.0f, 100.0f);
 
     if (temp_node.GearSwitchNode() != nullptr) {
       const auto& gear_switch_pose = temp_node.GetGearSwitchPose();

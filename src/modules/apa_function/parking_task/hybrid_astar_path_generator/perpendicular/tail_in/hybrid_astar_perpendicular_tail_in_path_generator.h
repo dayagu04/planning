@@ -37,7 +37,7 @@ class HybridAStarPerpendicularTailInPathGenerator
   virtual void CalcNodeGCost(Node3d* current_node, Node3d* next_node) override;
 
   virtual void ChooseBestCurveNode(
-      const std::vector<CurveNode>& curve_node_to_goal_vec,
+      std::vector<CurveNode>& curve_node_to_goal_vec,
       CurveNode& best_curve_node_to_goal) override;
 
   virtual const float CalcGearChangePoseCost(
