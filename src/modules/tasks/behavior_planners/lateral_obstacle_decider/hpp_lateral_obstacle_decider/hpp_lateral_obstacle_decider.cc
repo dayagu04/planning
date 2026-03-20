@@ -31,7 +31,6 @@
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
 #include "math/math_utils.h"
-#include "src/library/reeds_shepp/reeds_shepp.h"
 
 namespace planning {
 
@@ -266,67 +265,29 @@ void HppLateralObstacleDecider::MakeDecisionForDynamicCluster(
 }
 
 void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
-     ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {
-
-  //TODO:这部分是否移动到障碍物的预处理中计算
-  const double kRelativeNudgeBuffer = 0.8;
-  const double kAbsoluteNudgeBuffer = 2.0;
+     const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {
+  auto config_builder = session_->environmental_model().hpp_config_builder();
+  hpp_general_lateral_decider_config_ = config_builder->cast<HppLateralObstacleDeciderConfig>();
   const double kPositionJumpThreshold = 0.0;//TODO:阈值需要改为动态
-
-  const auto &reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
   const VehicleParam &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double cluster_s_start = cluster.frenet_boundary.s_start;
-  const double cluster_s_end = cluster.frenet_boundary.s_end;
-  const double cluster_l_start = cluster.frenet_boundary.l_start;
-  const double cluster_l_end = cluster.frenet_boundary.l_end;
-  const double cluster_center_l = (cluster_l_start + cluster_l_end) * 0.5;
-
-  ReferencePathPoint refpath_pt;
-
-  reference_path_ptr->get_reference_point_by_lon(cluster_s_start, refpath_pt);
-  const double obs_start2left_road_boundary_dis =
-      refpath_pt.distance_to_left_road_border - cluster_l_end;
-  const double obs_start2right_road_boundary_dis =
-      refpath_pt.distance_to_right_road_border + cluster_l_start;
-
-  reference_path_ptr->get_reference_point_by_lon(cluster_s_end, refpath_pt);
-  const double obs_end2left_road_boundary_dis =
-      refpath_pt.distance_to_left_road_border - cluster_l_end;
-  const double obs_end2right_road_boundary_dis =
-      refpath_pt.distance_to_right_road_border + cluster_l_start;
-
-  const double obs_2left_road_boundary_mindis =
-      std::max(obs_start2left_road_boundary_dis,
-               obs_end2left_road_boundary_dis);  //距离带正负
-  const double obs_2right_road_boundary_mindis = std::min(
-      obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
-  ILOG_INFO << "obs_2left_road_boundary_mindis = "
-            << obs_2left_road_boundary_mindis
-            << ", obs_2right_road_boundary_mindis = "
-            << obs_2right_road_boundary_mindis;
-  cluster.frenet_boundary.obs_2left_road_boundary_mindis = obs_2left_road_boundary_mindis;
-  cluster.frenet_boundary.obs_2right_road_boundary_mindis = obs_2right_road_boundary_mindis;
-  //TODO:
 
   //left decision
-  if (obs_2left_road_boundary_mindis <
-      vehicle_param.width + kRelativeNudgeBuffer + kPositionJumpThreshold) {
+  if (cluster.frenet_boundary.obs_2left_road_boundary_mindis <
+      vehicle_param.width + hpp_general_lateral_decider_config_.relative_nudge_buffer + kPositionJumpThreshold) {
     decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-  } else if (obs_2left_road_boundary_mindis <
-             vehicle_param.width + kAbsoluteNudgeBuffer + kPositionJumpThreshold) {
+  } else if (cluster.frenet_boundary.obs_2left_road_boundary_mindis <
+             vehicle_param.width + hpp_general_lateral_decider_config_.absolute_nudge_buffer + kPositionJumpThreshold) {
     decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
   } else {
     decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
   }
   //right decision
-  if (obs_2right_road_boundary_mindis <=
-      vehicle_param.width + kRelativeNudgeBuffer + kPositionJumpThreshold) {
+  if (cluster.frenet_boundary.obs_2right_road_boundary_mindis <=
+      vehicle_param.width + hpp_general_lateral_decider_config_.relative_nudge_buffer + kPositionJumpThreshold) {
     decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-  } else if (obs_2right_road_boundary_mindis <
-             vehicle_param.width + kAbsoluteNudgeBuffer + kPositionJumpThreshold) {
+  } else if (cluster.frenet_boundary.obs_2right_road_boundary_mindis <
+             vehicle_param.width + hpp_general_lateral_decider_config_.absolute_nudge_buffer + kPositionJumpThreshold) {
     decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
   } else {
     decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
@@ -339,8 +300,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
         decision_info.left_nudge_level ==
             LatObstacleNudgeLevel::RELATIVE_NUDGE) {
       decision_info.decision = LatObstacleDecisionType::LEFT;
-    } else if (decision_info.left_nudge_level ==
-               LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    } else{
       decision_info.decision = LatObstacleDecisionType::IGNORE;
     }
 
@@ -352,16 +312,13 @@ void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
             LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
         decision_info.left_nudge_level ==
             LatObstacleNudgeLevel::RELATIVE_NUDGE) {
-      if (obs_2left_road_boundary_mindis == obs_2right_road_boundary_mindis){
-        decision_info.decision = LatObstacleDecisionType::LEFT;//超车靠左
-      }else if (obs_2left_road_boundary_mindis > obs_2right_road_boundary_mindis)
+      if (cluster.frenet_boundary.obs_2left_road_boundary_mindis > cluster.frenet_boundary.obs_2right_road_boundary_mindis)
       {
         decision_info.decision = LatObstacleDecisionType::LEFT;
       }else{
         decision_info.decision = LatObstacleDecisionType::RIGHT;
       }
-    } else if (decision_info.left_nudge_level ==
-               LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    } else{
       decision_info.decision = LatObstacleDecisionType::RIGHT;
     }
   }
@@ -369,11 +326,11 @@ void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
 
 void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
     const ObstacleCluster &cluster,
-    const LatObstacleDecisionInfo &passage_width_info,
+    const LatObstacleDecisionInfo &previous_decision_info,
     LatObstacleDecisionInfo &decision_info) {
-  if (passage_width_info.left_nudge_level ==
+  if (previous_decision_info.left_nudge_level ==
           LatObstacleNudgeLevel::FORBIDDEN_NUDGE &&
-      passage_width_info.right_nudge_level ==
+      previous_decision_info.right_nudge_level ==
           LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
     decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
     decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
@@ -381,7 +338,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
     return;
   }
 
-  const double kAvoidanceSafeDis = 0.4;
+  const double kAvoidanceSafeDis = 0.5;//TODO:改为配置文件
 
   const double cluster_s_start = cluster.frenet_boundary.s_start;
   const double cluster_s_end = cluster.frenet_boundary.s_end;
@@ -399,7 +356,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
       decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
     } else {
       //曲线轨迹
-      AnalyzeNudgeLevelBaseCurve(cluster,passage_width_info,decision_info);
+      AnalyzeNudgeLevelBaseCurve(cluster,previous_decision_info,decision_info);
     }
   } else if (cluster_center_l < ego_state.l()) {
     const double dis_right =
@@ -410,13 +367,97 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
       decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
     } else {
       //曲线轨迹
-      AnalyzeNudgeLevelBaseCurve(cluster,passage_width_info,decision_info);
+      AnalyzeNudgeLevelBaseCurve(cluster,previous_decision_info,decision_info);
     }
   }
 
   //make final decision
+  if (decision_info.right_nudge_level ==
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      decision_info.decision = LatObstacleDecisionType::LEFT;
+    } else {
+      decision_info.decision = LatObstacleDecisionType::IGNORE;
+    }
+
+  } else if (decision_info.right_nudge_level ==
+                 LatObstacleNudgeLevel::RELATIVE_NUDGE ||
+             decision_info.right_nudge_level ==
+                 LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+    if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      decision_info.decision = LatObstacleDecisionType::LEFT;
+
+    } else {
+      decision_info.decision = LatObstacleDecisionType::RIGHT;
+    }
+  }
+}
+
+void HppLateralObstacleDecider::AnalyzeNudgeLevelBaseCurve(
+    const ObstacleCluster &cluster,
+    const LatObstacleDecisionInfo &passage_width_info,
+    LatObstacleDecisionInfo &decision_info) {
+
+  const double kAvoidanceSafeDis = 0.5;//TODO:改为配置文件
+  const VehicleParam &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  Point2D ideal_target_point_frenet;
+  Point2D ego_point_frenet;
 
 
+  ideal_target_point_frenet.x = cluster.frenet_boundary.s_start - vehicle_param.front_edge_to_rear_axle;
+  ego_point_frenet.x = reference_path_ptr_->get_frenet_ego_state().s();
+  ego_point_frenet.y = reference_path_ptr_->get_frenet_ego_state().l();
+
+  auto cal_R = [](const VehicleParam &vehicle_param,const Point2D &ideal_target_point_frenet,
+                  const Point2D &ego_point_frenet,
+                  const bool is_left,LatObstacleDecisionInfo &decision_info){
+    const double min_radius = vehicle_param.min_turn_radius;
+    const double kAbsoluteSafeRadius = 2.5 * min_radius;
+    const double kRelativeSafeRadius = 1.8 * min_radius;
+
+    double length_AH = 0.0;
+    if (is_left) {
+      length_AH = (ideal_target_point_frenet.y - ego_point_frenet.y) * 0.5;
+    } else {
+      length_AH = -(ideal_target_point_frenet.y - ego_point_frenet.y) * 0.5;
+    }
+    const double squared_AH = std::pow(length_AH, 2);
+    const double squared_PH =
+        std::pow((ideal_target_point_frenet.x - ego_point_frenet.x * 0.5), 2);
+    const double R = (squared_AH + squared_PH) / (2 * length_AH);
+    if (R >= kAbsoluteSafeRadius) {
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+    } else if (R >= kRelativeSafeRadius) {
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+    } else {
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    }
+  };
+  // left curve path
+  if (passage_width_info.left_nudge_level !=
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    ideal_target_point_frenet.y = cluster.frenet_boundary.l_end +
+                                  kAvoidanceSafeDis +
+                                  vehicle_param.max_width * 0.5;
+    cal_R(vehicle_param,ideal_target_point_frenet, ego_point_frenet,true,decision_info);
+  } else {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  }
+  //right curve path
+  if (passage_width_info.right_nudge_level !=
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    ideal_target_point_frenet.y = cluster.frenet_boundary.l_start - kAvoidanceSafeDis - vehicle_param.max_width * 0.5;
+    cal_R(vehicle_param,ideal_target_point_frenet, ego_point_frenet,false,decision_info);
+  } else {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  }
 }
 
 void HppLateralObstacleDecider::MakeDecisionBasedLastPath(
@@ -430,239 +471,8 @@ void HppLateralObstacleDecider::MakeFinalDecision(
     LatObstacleDecisionInfo &last_path_info,
     LatObstacleDecisionType &decision) {}
 
-void HppLateralObstacleDecider::AnalyzeNudgeLevelBaseCurve(
-    const ObstacleCluster &cluster,
-    const LatObstacleDecisionInfo &passage_width_info,
-    LatObstacleDecisionInfo &decision_info) {
-  const double kAvoidanceSafeDis = 0.4;
-  const double kSampleStep = 0.2;
-  const double kSampleStepInv = 5;
-  Pose2D start_point;  // TODO:起点也应该采样
-  std::vector<Pose2D> end_points;
-  double theta = 0;
-  Point2D end_point_frenet;
-  Point2D end_point_cartesian;
-  Polygon2D ego_polygon;
 
 
-  const VehicleParam &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
-
-  start_point.x =
-      session_->environmental_model().get_ego_state_manager()->ego_pose().x;
-  start_point.y =
-      session_->environmental_model().get_ego_state_manager()->ego_pose().y;
-  start_point.theta =
-      session_->environmental_model().get_ego_state_manager()->ego_pose().theta;
-  const uint32_t num_s = static_cast<uint32_t>(
-      (cluster.frenet_boundary.s_end - cluster.frenet_boundary.s_start) *
-      kSampleStepInv);
-  // right curve path left
-  if (passage_width_info.left_nudge_level !=
-      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-    std::vector<Pose2D> left_path_points;
-    const uint32_t num_l = static_cast<uint32_t>(
-        (cluster.frenet_boundary.obs_2left_road_boundary_mindis -
-         vehicle_param.width - kAvoidanceSafeDis * 2) *
-        kSampleStepInv);
-    for (uint32_t i = 0; i < num_s; i++) {
-      end_point_frenet.x = cluster.frenet_boundary.s_start + kSampleStep * i;
-      // TODO:确认航向是否正确
-      theta = (frenet_coord->GetPathPointByS(end_point_frenet.x)).theta;
-      for (uint32_t j = 0; j < num_l; j++) {
-        end_point_frenet.y = cluster.frenet_boundary.l_end + kAvoidanceSafeDis +
-                             vehicle_param.width * 0.5 + j * kSampleStep;
-        frenet_coord->SLToXY(end_point_frenet, end_point_cartesian);
-        end_points.emplace_back(
-            Pose2D(end_point_cartesian.x, end_point_cartesian.y, theta));
-      }
-    }
-  } else {
-    decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-  }
-  // right curve path
-  if (passage_width_info.right_nudge_level !=
-      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-    std::vector<Pose2D> right_path_points;
-    if (!end_points.empty()) std::vector<Pose2D>().swap(end_points);
-    const uint32_t num_r = static_cast<uint32_t>(
-        (cluster.frenet_boundary.obs_2right_road_boundary_mindis -
-         vehicle_param.width - kAvoidanceSafeDis * 2) *
-        kSampleStepInv);
-    for (uint32_t i = 0; i < num_s; i++) {
-      end_point_frenet.x = cluster.frenet_boundary.s_start + kSampleStep * i;
-      theta = (frenet_coord->GetPathPointByS(end_point_frenet.x)).theta;
-      for (uint32_t j = 0; j < num_r; j++) {
-        end_point_frenet.y = cluster.frenet_boundary.l_start -
-                             kAvoidanceSafeDis - vehicle_param.width * 0.5 -
-                             j * kSampleStep;
-        frenet_coord->SLToXY(end_point_frenet, end_point_cartesian);
-        end_points.emplace_back(
-            Pose2D(end_point_cartesian.x, end_point_cartesian.y, theta));
-      }
-    }
-  } else {
-    decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-  }
-}
-
-
-bool HppLateralObstacleDecider::LRSCurve(const double min_line_length, double x, double y, double theta, double &t, double &u, double &v) {
-  const double cos_theta = std::cos(theta);
-  const double sin_heta = std::sin(theta);
-  const double xi = x + sin_heta;
-  const double eta = y - 1.0 - cos_theta;
-  const double u1 = (xi * sin_heta - eta * cos_theta) * 0.5;
-  const double kZero = 1e-20;
-
-  double vs1 = 0.0;
-  double vs2 = 0.0;
-  bool validity = false;
-
-  theta = NormalizeAngle(theta);
-  if (u1 >= -1 && u1 <= 1) {
-    const double acos_u1 = std::acos(u1);
-    const double ts1 = NormalizeAngle(acos_u1 + theta);
-    const double us1 = NormalizeAngle(ts1 - theta);
-    if (std::fabs(std::fabs(theta) - M_PI * 0.5) > M_PI * 0.25) {
-      vs1 = (xi - 2 * std::sin(ts1)) / cos_theta;
-
-    } else {
-      vs1 = (eta + 2 * std::cos(ts1)) / sin_heta;
-    }
-    const double ts2 = NormalizeAngle(-acos_u1 + theta);
-    const double us2 = NormalizeAngle(ts2 - theta);
-    if (std::fabs(std::fabs(theta) - M_PI * 0.5) > M_PI * 0.25) {
-      vs2 = (xi - 2 * std::sin(ts2)) / cos_theta;
-
-    } else {
-      vs2 = (eta + 2 * std::cos(ts2)) / sin_heta;
-    }
-
-    if (ts1 < -kZero && us1 <= -kZero && vs1 <= -min_line_length) {
-      t = ts1;
-      u = us1;
-      v = vs1;
-      validity = true;
-    } else if (ts2 < -kZero && us2 <= -kZero && vs2 <= -min_line_length) {
-      t = ts2;
-      u = us2;
-      v = vs2;
-      validity = true;
-    } else {
-    }
-  }
-  return validity;
-}
-
-bool HppLateralObstacleDecider::CalSCurve(const Pose2D& start_point,
-                                          const Pose2D& end_point,
-                                          const double radius,const bool is_left_path,std::vector<Pose2D>& path_points) {
-
-  const double dx = end_point.x - start_point.x;
-  const double dy = end_point.y - start_point.y;
-  const double theta_rel = end_point.theta - start_point.theta;
-  const double x_rel = (std::cos(start_point.theta) * dx + std::sin(start_point.theta) * dy) / radius;
-  const double y_rel = (-std::sin(start_point.theta) * dx + std::cos(start_point.theta) * dy) / radius;
-  const double min_line_length = 0.3 / radius;
-  const double l_min = 1.0e6;;
-  const double step_size = 0.5 / radius;//采样步长
-  double t = 0;
-  double u = 0;
-  double v = 0;
-  double unit_path_length = 0;
-  double path_segment_num = 0;
-  bool is_curve_valid = false;
-  RSPathParam path;
-  if (is_left_path) {
-    if (LRSCurve(min_line_length,x_rel,-y_rel,-theta_rel,t,u,v))  // reflect
-    {
-      unit_path_length = std::fabs(t) + std::fabs(u) + std::fabs(v);
-      if (l_min > unit_path_length) {
-        SetRSPathParam(&path,ReedsSheppPathype[21],t,u,v,0,0);
-        is_curve_valid = true;
-        l_min = unit_path_length;
-      }
-    }
-
-    if (LRSCurve(min_line_length,-x_rel,-y_rel,theta_rel,t,u,v))  // timeflip+reflect
-    {
-      unit_path_length = std::fabs(t) + std::fabs(u) + std::fabs(v);
-      if (l_min > unit_path_length) {
-        SetRSPathParam(&path,ReedsSheppPathype[21],-t,-u,-v,0,0);
-        is_curve_valid = true;
-        l_min = unit_path_length;
-      }
-    }
-  } else {
-    if (LRSCurve(min_line_length, x_rel, y_rel, theta_rel, t, u, v)) {
-      unit_path_length = std::fabs(t) + std::fabs(u) + std::fabs(v);
-      if (l_min > unit_path_length) {
-        is_curve_valid = true;
-        SetRSPathParam(&path,ReedsSheppPathype[20],t,u,v,0,0);
-        l_min = unit_path_length;
-      }
-    }
-    if (LRSCurve(min_line_length,-x_rel,y_rel,-theta_rel,t,u,v))  // timeflip
-    {
-      unit_path_length = std::fabs(t) + std::fabs(u) + std::fabs(v);
-      if (l_min > unit_path_length) {
-        is_curve_valid = true;
-        SetRSPathParam(&path,ReedsSheppPathype[20],-t,-u,-v,0,0);
-        l_min = unit_path_length;
-      }
-    }
-  }
-  //插值
-  auto RSCurveInterpolate = [](const double seg_length, const double radius,
-                               const Pose2D &start_point,
-                               const RSPathParam &path,
-                               std::vector<Pose2D> &path_points) {
-    Pose2D path_point;
-
-    switch (path.type[i]) {
-      case RSPathSteer::RS_LEFT:
-        path_point.x = (std::sin(start_point.theta + seg_length) -
-                        std::sin(start_point.theta));
-        path_point.y = (-std::cos(start_point.theta + seg_length) +
-                        std::cos(start_point.theta));
-        path_point.theta = start_point.theta + seg_length;
-        break;
-      case RSPathSteer::RS_RIGHT:
-        path_point.x = (-std::sin(start_point.theta - seg_length) +
-                        std::sin(start_point.theta));
-        path_point.y = (std::cos(start_point.theta - seg_length) -
-                        std::cos(start_point.theta));
-        path_point.theta = start_point.theta - seg_length;
-        break;
-      case RSPathSteer::RS_STRAIGHT:
-        path_point.x = seg_length * std::cos(start_point.theta);
-        path_point.y = seg_length * std::sin(start_point.theta);
-        break;
-    }
-    path_point.x = path_point.x * radius + start_point.x;
-    path_point.y = path_point.y * radius + start_point.y;
-  };
-  if (is_curve_valid) {
-    path.length[0] = t;
-    path.length[1] = u;
-    path.length[2] = v;
-    for (size_t i = 0; i < 5; i++) {
-      if (path.type[i] != RS_NOP) {
-        path_segment_num++
-      };
-    }
-    for (size_t i = 0; i < path_segment_num; i++) {
-      double seg_length = 0.0;
-      for (seg_length = step_size; seg_length < path.length[i];
-           seg_length += step_size) {
-            RSCurveInterpolate(seg_length,radius,start_point,path,path_points)；
-      }
-    }
-  }
-
-}
 
 void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
     const ObstacleLateralDecisionMap &lat_obstacle_decision,

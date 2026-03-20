@@ -93,9 +93,7 @@ class RSPathGenerator {
 
  private:
 };
-static const RSPathSteer ReedsSheppPathype[][5];
-static int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, float t,
-                          float u, float v, float w, float x);
+
 int GetShortestRSPathParam(RSPathParam *path, const Pose2f *start_pose,
                            const Pose2f *goal_pose, float min_turn_radius,
                            float inverse_radius,

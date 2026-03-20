@@ -146,6 +146,7 @@ bool HppObstacleLateralPreprocessDecider::ClusterObstacles(
     if (!BuildObstacleClusterConvexHull(obs_item_map, obstacle_cluster)) {
       continue;
     }
+    CalObstacleClusterInfo(obstacle_cluster);
     obstacle_cluster_container.obstacle_clusters.push_back(obstacle_cluster);
   }
 
@@ -258,6 +259,46 @@ bool HppObstacleLateralPreprocessDecider::JudgeTurnstileScene(
   return true;
 }
 
+void HppObstacleLateralPreprocessDecider::CalObstacleClusterInfo(
+    ObstacleCluster& obstacle_cluster) {
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const VehicleParam& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double cluster_s_start = obstacle_cluster.frenet_boundary.s_start;
+  const double cluster_s_end = obstacle_cluster.frenet_boundary.s_end;
+  const double cluster_l_start = obstacle_cluster.frenet_boundary.l_start;
+  const double cluster_l_end = obstacle_cluster.frenet_boundary.l_end;
+  const double cluster_center_l = (cluster_l_start + cluster_l_end) * 0.5;
+
+  ReferencePathPoint refpath_pt;
+  reference_path_ptr->get_reference_point_by_lon(cluster_s_start, refpath_pt);
+  const double obs_start2left_road_boundary_dis =
+      refpath_pt.distance_to_left_road_border - cluster_l_end;
+  const double obs_start2right_road_boundary_dis =
+      refpath_pt.distance_to_right_road_border + cluster_l_start;
+
+  reference_path_ptr->get_reference_point_by_lon(cluster_s_end, refpath_pt);
+  const double obs_end2left_road_boundary_dis =
+      refpath_pt.distance_to_left_road_border - cluster_l_end;
+  const double obs_end2right_road_boundary_dis =
+      refpath_pt.distance_to_right_road_border + cluster_l_start;
+
+  const double obs_2left_road_boundary_mindis =
+      std::max(obs_start2left_road_boundary_dis,
+               obs_end2left_road_boundary_dis);  //距离带正负
+  const double obs_2right_road_boundary_mindis = std::min(
+      obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
+  ILOG_INFO << "obs_2left_road_boundary_mindis = "
+            << obs_2left_road_boundary_mindis
+            << ", obs_2right_road_boundary_mindis = "
+            << obs_2right_road_boundary_mindis;
+  obstacle_cluster.frenet_boundary.obs_2left_road_boundary_mindis =
+      obs_2left_road_boundary_mindis;
+  obstacle_cluster.frenet_boundary.obs_2right_road_boundary_mindis =
+      obs_2right_road_boundary_mindis;
+}
 ObstacleRelPosType
 HppObstacleLateralPreprocessDecider::ClassifyObstaclesByRelPos(
     const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr) {

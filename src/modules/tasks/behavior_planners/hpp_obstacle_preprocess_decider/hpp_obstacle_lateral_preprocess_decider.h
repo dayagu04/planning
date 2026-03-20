@@ -71,6 +71,7 @@ class HppObstacleLateralPreprocessDecider : public Task{
 
   bool BuildObstacleClusterConvexHull(
       const ObstacleItemMap& obs_item_map, ObstacleCluster& obstacle_cluster);
+  void CalObstacleClusterInfo(ObstacleCluster& obstacle_cluster);
 
 private:
   HppObstacleLateralPreprocessDeciderConfig config_;
