@@ -810,10 +810,11 @@ bool StaticAnalysisUtils::ElemTypeAnalysis(
       refer_path_ptr->get_semantic_sign_obstacles();
   std::vector<FrenetObstaclePtr> intersection_frenet_obstacles;
   for (const auto& frenet_obstacle : semantic_sign_frenet_obstacles) {
-    if (frenet_obstacle->obstacle()->intersection_type() !=
-        iflyauto::IntersectionType::INTERSECTION_UNKNOWN) {
-      intersection_frenet_obstacles.push_back(frenet_obstacle);
-    }
+    // if (frenet_obstacle->obstacle()->intersection_type() !=
+    //     iflyauto::IntersectionType::INTERSECTION_UNKNOWN) {
+    //   intersection_frenet_obstacles.push_back(frenet_obstacle);
+    // }
+    intersection_frenet_obstacles.push_back(frenet_obstacle);
   }
   constexpr double kValidIntersectionLatThr = 2.0;
   constexpr double kIntersectionLonExpandThr = 1.0;

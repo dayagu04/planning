@@ -757,7 +757,7 @@ BoundedConstantJerkTrajectory1d GeneralLongitudinalDecider::get_velocity_limit(
           {seg.first, seg.second});
     }
 
-    v_limit_speed_bump = GetSpeedBumpVelocityLimit(speed_bump_zone_info, ego_v);
+    v_limit_speed_bump = GetSpeedLimitInObjectiveZone(speed_bump_zone_info, ego_v);
     LOG_DEBUG(
         "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
         v_limit_speed_bump, speed_bump_zone_info.in_speed_bump_zone,
@@ -2838,11 +2838,11 @@ SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
   return zone_info;
 }
 
-double GeneralLongitudinalDecider::GetSpeedBumpVelocityLimit(
+double GeneralLongitudinalDecider::GetSpeedLimitInObjectiveZone(
     const SpeedBumpZoneInfo &zone_info, double ego_velocity) {
   // 减速带区域内限速
   const double kSpeedBumpZoneVelocityLimit =
-      config_.speed_bump_zone_speed_limit_kph / 3.6;
+      config_.speed_bump_zone_speed_limit;
   // 减速度
   const double kDecelerationRate = config_.speed_bump_deceleration;
   
