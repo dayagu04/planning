@@ -48,6 +48,8 @@ class HppTaskPipeline : public BaseTaskPipeline {
 
   bool Run() override;
 
+  bool Reset() override;
+
  private:
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<HppObstacleLateralPreprocessDecider> hpp_obstacle_lateral_preprocess_decider_;
