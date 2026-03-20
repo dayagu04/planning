@@ -130,7 +130,7 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
   planning_math::KDPath target_lane_coord(std::move(path_points));
   // ILOG_INFO << "\n 333 " ;
 
-  const double target_s = 200.0;
+  double target_s = spatio_temporal_union_input.target_s();
   const double default_points_num = 26;
   const double delta_time = 0.2;
   planning::TrajectoryPoints traj_points;
