@@ -268,6 +268,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
      const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {
   auto config_builder = session_->environmental_model().hpp_config_builder();
   hpp_general_lateral_decider_config_ = config_builder->cast<HppLateralObstacleDeciderConfig>();
+  
   const double kPositionJumpThreshold = 0.0;//TODO:阈值需要改为动态
   const VehicleParam &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -338,7 +339,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
     return;
   }
 
-  const double kAvoidanceSafeDis = 0.5;//TODO:改为配置文件
+  const double kAvoidanceSafeDis = 0.5;  // TODO:改为配置文件
 
   const double cluster_s_start = cluster.frenet_boundary.s_start;
   const double cluster_s_end = cluster.frenet_boundary.s_end;
@@ -350,28 +351,26 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
   //直行轨迹
   if (cluster_center_l > ego_state.l()) {
     const double dis_left = cluster_l_start - ego_state.boundary().l_end;
-    if (dis_left > kAvoidanceSafeDis + 0.6) {
+    if (dis_left > kAvoidanceSafeDis) {
       decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
-    } else if (dis_left > kAvoidanceSafeDis) {
-      decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
     } else {
       //曲线轨迹
-      AnalyzeNudgeLevelBaseCurve(cluster,previous_decision_info,decision_info);
+      AnalyzeNudgeLevelBaseCurve(cluster, previous_decision_info,
+                                 decision_info);
     }
   } else if (cluster_center_l < ego_state.l()) {
     const double dis_right =
         ego_state.boundary().l_start - ego_state.boundary().l_end;
-    if (dis_right > kAvoidanceSafeDis + 0.6) {
+    if (dis_right > kAvoidanceSafeDis) {
       decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
-    } else if (dis_right > kAvoidanceSafeDis) {
-      decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
     } else {
       //曲线轨迹
-      AnalyzeNudgeLevelBaseCurve(cluster,previous_decision_info,decision_info);
+      AnalyzeNudgeLevelBaseCurve(cluster, previous_decision_info,
+                                 decision_info);
     }
   }
 
-  //make final decision
+  // make final decision
   if (decision_info.right_nudge_level ==
       LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
     if (decision_info.left_nudge_level ==
@@ -414,7 +413,7 @@ void HppLateralObstacleDecider::AnalyzeNudgeLevelBaseCurve(
   ideal_target_point_frenet.x = cluster.frenet_boundary.s_start - vehicle_param.front_edge_to_rear_axle;
   ego_point_frenet.x = reference_path_ptr_->get_frenet_ego_state().s();
   ego_point_frenet.y = reference_path_ptr_->get_frenet_ego_state().l();
-
+  //TODO:考虑参考线的曲率，补偿到理想曲率上
   auto cal_R = [](const VehicleParam &vehicle_param,const Point2D &ideal_target_point_frenet,
                   const Point2D &ego_point_frenet,
                   const bool is_left,LatObstacleDecisionInfo &decision_info){
