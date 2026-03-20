@@ -5336,6 +5336,18 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
     // Lane change heuristic cost parameters
     ReadItem(json, weight_hcost_lane_change, "speed_planning",
              "st_graph_searcher", "weight_hcost_lane_change");
+
+    // decision switch penalty
+    ReadItem(json, decision_switch_penalty, "speed_planning",
+             "st_graph_searcher", "decision_switch_penalty");
+
+    // st_graph_searcher behavior layer debounce config
+    ReadItem<int>(json, st_search_overtake_debounce_min_consecutive_frames,
+                  "speed_planning", "st_graph_searcher",
+                  "st_search_overtake_debounce_min_consecutive_frames");
+    ReadItem<double>(json, st_search_overtake_debounce_min_hold_time_ms,
+                     "speed_planning", "st_graph_searcher",
+                     "st_search_overtake_debounce_min_hold_time_ms");
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -5397,6 +5409,13 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
   double yield_front_vehicle_collision_s_buffer = 1.0;
   bool enable_only_s_t_hash = false;
+
+  // st_graph_searcher behavior layer debounce config
+  int st_search_overtake_debounce_min_consecutive_frames = 3;
+  double st_search_overtake_debounce_min_hold_time_ms = 500.0;
+
+  // overtake and yield decision switch penalty
+  double decision_switch_penalty = 2.0;
 
   double distance_ego_rear_edge_to_lower_bound_when_overtake = 5.0;
   double cost_ego_overtake_has_collision_with_lower_bound = 1.0;
