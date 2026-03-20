@@ -5,6 +5,7 @@
 
 #include "config/basic_type.h"
 #include "environmental_model.h"
+#include "src/library/geometry_lib/include/geometry_math.h"
 #include "local_view.h"
 #include "route_info_strategy.h"
 
@@ -88,6 +89,12 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
 
   CalculateSplitInfo();
 
+  // 根据前方的split信息判断，自车是否走错路了
+  if (IsMissedNaviRoute()) {
+    route_info_output_.reset();
+    return false;
+  }
+
   // 一定要先计算split info，再计算ramp info
   CalculateRampInfo();
 
@@ -146,6 +153,222 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
   }
 
   return true;
+}
+
+bool LDRouteInfoStrategy::CheckEgoPositionRelativeTwoLinks(
+    const iflymapdata::sdpro::LinkInfo_Link* link1,
+    const iflymapdata::sdpro::LinkInfo_Link* link2,
+    EgoPositionResult& result) const{
+  if (link1 == nullptr || link2 == nullptr || !local_view_->localization.position.position_boot.available) {
+    return false;
+  }
+
+  // 初始化结果
+  result = EgoPositionResult{};
+  result.is_between_links = false;
+  result.is_left_of_link1 = false;
+  result.is_right_of_link1 = false;
+  result.is_left_of_link2 = false;
+  result.is_right_of_link2 = false;
+  result.dist_to_link1 = -1.0;
+  result.dist_to_link2 = -1.0;
+  result.min_dist_to_link1 = -1.0;
+  result.min_dist_to_link2 = -1.0;
+  result.min_dist_idx_link1 = -1;
+  result.min_dist_idx_link2 = -1;
+  result.proj_ratio_link1 = -1.0;
+  result.proj_ratio_link2 = -1.0;
+
+  // 获取自车在boot坐标系下的位置
+  Eigen::Vector2d ego_pos(
+      local_view_->localization.position.position_boot.x,
+      local_view_->localization.position.position_boot.y);
+
+  // 获取两段link的形点（转换为boot坐标系）
+  auto get_link_boot_points = [&](const iflymapdata::sdpro::LinkInfo_Link* link) -> std::vector<Eigen::Vector2d> {
+    std::vector<Eigen::Vector2d> boot_points;
+    if (link->has_points() && link->points().has_boot() &&
+               link->points().boot().points_size() > 0) {
+      boot_points.reserve(link->points().boot().points_size());
+      for (int i = 0; i < link->points().boot().points_size(); ++i) {
+        const auto& boot_pt = link->points().boot().points(i);
+        boot_points.emplace_back(boot_pt.x(), boot_pt.y());
+      }
+    }
+    return boot_points;
+  };
+
+  auto link1_points = get_link_boot_points(link1);
+  auto link2_points = get_link_boot_points(link2);
+
+  if (link1_points.empty() || link2_points.empty()) {
+    return false;
+  }
+
+  // 判断自车相对于两段link的位置
+  // 构造两条线段：link1的起点到终点，link2的起点到终点
+  pnc::geometry_lib::LineSegment link1_seg(link1_points.front(), link1_points.back());
+  pnc::geometry_lib::LineSegment link2_seg(link2_points.front(), link2_points.back());
+
+  // 计算自车到两条线段的距离
+  result.dist_to_link1 = pnc::geometry_lib::CalPoint2LineDist(ego_pos, link1_seg);
+  result.dist_to_link2 = pnc::geometry_lib::CalPoint2LineDist(ego_pos, link2_seg);
+
+  // 计算自车在每条link上的投影点参数（0到1之间表示在线段内，<0表示在线段起点之前，>1表示在线段终点之后）
+  auto calc_projection_ratio = [](const Eigen::Vector2d& point,
+                                   const pnc::geometry_lib::LineSegment& seg) -> double {
+    Eigen::Vector2d seg_vec = seg.pB - seg.pA;
+    Eigen::Vector2d pt_vec = point - seg.pA;
+    double seg_len = seg_vec.norm();
+    if (seg_len < 1e-6) {
+      return 0.0;
+    }
+    return seg_vec.dot(pt_vec) / (seg_len * seg_len);
+  };
+
+  result.proj_ratio_link1 = calc_projection_ratio(ego_pos, link1_seg);
+  result.proj_ratio_link2 = calc_projection_ratio(ego_pos, link2_seg);
+
+  // 计算到link每个形点的距离
+  auto calc_distances_to_all_points = [](const Eigen::Vector2d& ego_pos,
+                                          const std::vector<Eigen::Vector2d>& link_points) {
+    std::vector<double> distances;
+    distances.reserve(link_points.size());
+    for (const auto& pt : link_points) {
+      distances.push_back((ego_pos - pt).norm());
+    }
+    return distances;
+  };
+
+  auto dists_to_link1_points = calc_distances_to_all_points(ego_pos, link1_points);
+  auto dists_to_link2_points = calc_distances_to_all_points(ego_pos, link2_points);
+
+  // 找到每个link的最小距离和对应的形点索引
+  auto min_dist_link1_it = std::min_element(dists_to_link1_points.begin(), dists_to_link1_points.end());
+  result.min_dist_to_link1 = *min_dist_link1_it;
+  result.min_dist_idx_link1 = std::distance(dists_to_link1_points.begin(), min_dist_link1_it);
+
+  auto min_dist_link2_it = std::min_element(dists_to_link2_points.begin(), dists_to_link2_points.end());
+  result.min_dist_to_link2 = *min_dist_link2_it;
+  result.min_dist_idx_link2 = std::distance(dists_to_link2_points.begin(), min_dist_link2_it);
+
+  // 判断点在线段的哪一侧（使用叉积）
+  auto is_left_of_line = [](const Eigen::Vector2d& point,
+                           const pnc::geometry_lib::LineSegment& line) -> bool {
+    Eigen::Vector2d line_vec = line.pB - line.pA;
+    Eigen::Vector2d point_vec = point - line.pA;
+    // 叉积：如果值为正，点在线的左侧；负值，在线的右侧
+    double cross_product = line_vec.x() * point_vec.y() - line_vec.y() * point_vec.x();
+    return cross_product > 0;
+  };
+
+  // 判断自车相对于两段link的位置
+  result.is_left_of_link1 = is_left_of_line(ego_pos, link1_seg);
+  result.is_right_of_link1 = !is_left_of_line(ego_pos, link1_seg);
+  result.is_left_of_link2 = is_left_of_line(ego_pos, link2_seg);
+  result.is_right_of_link2 = !is_left_of_line(ego_pos, link2_seg);
+
+  // 情况1：自车在link1和link2之间（横向位置在两条link之间）
+  // 判断逻辑：
+  // - 横向距离：到两条link的横向距离都小于阈值
+  // - 侧向关系：自车在两条link之间（即相对于link1和link2的侧向关系相反）
+  result.is_between_links =
+      (result.dist_to_link1 < 5.0 && result.dist_to_link2 < 5.0) &&
+      (result.is_left_of_link1 != result.is_left_of_link2);
+
+  // 输出调试信息
+  ILOG_DEBUG << "CheckEgoPositionRelativeTwoLinks: "
+             << "ego_pos=(" << ego_pos.x() << "," << ego_pos.y() << "), "
+             << "dist_to_link1=" << result.dist_to_link1 << ", "
+             << "dist_to_link2=" << result.dist_to_link2 << ", "
+             << "min_dist_to_link1=" << result.min_dist_to_link1 << " (idx=" << result.min_dist_idx_link1 << "), "
+             << "min_dist_to_link2=" << result.min_dist_to_link2 << " (idx=" << result.min_dist_idx_link2 << "), "
+             << "proj_ratio_link1=" << result.proj_ratio_link1 << ", "
+             << "proj_ratio_link2=" << result.proj_ratio_link2 << ", "
+             << "is_between_links=" << result.is_between_links << ", "
+             << "is_left_of_link1=" << result.is_left_of_link1 << ", "
+             << "is_right_of_link1=" << result.is_right_of_link1 << ", "
+             << "is_left_of_link2=" << result.is_left_of_link2 << ", "
+             << "is_right_of_link2=" << result.is_right_of_link2;
+
+  // 返回判断结果（可根据实际需求调整返回值）
+  if (result.is_between_links) {
+    ILOG_DEBUG << "Ego is between link1 and link2";
+    return true;
+  } else if (result.is_left_of_link1 && result.dist_to_link1 < 10.0) {
+    ILOG_DEBUG << "Ego is on left side of link1";
+    return true;
+  } else if (result.is_right_of_link1 && result.dist_to_link1 < 10.0) {
+    ILOG_DEBUG << "Ego is on right side of link1";
+    return true;
+  } else if (result.is_left_of_link2 && result.dist_to_link2 < 10.0) {
+    ILOG_DEBUG << "Ego is on left side of link2";
+    return true;
+  } else if (result.is_right_of_link2 && result.dist_to_link2 < 10.0) {
+    ILOG_DEBUG << "Ego is on right side of link2";
+    return true;
+  } else {
+    ILOG_DEBUG << "Ego is far from both links";
+    return false;
+  }
+}
+
+bool LDRouteInfoStrategy::IsMissedNaviRoute() const {
+  // 1、 判断自车是否刚经过split_link,如果是的话，则需要判断在自车是否走错路了
+  if (current_link_ == nullptr) {
+    return true;
+  }
+
+  if (current_link_->predecessor_link_ids_size() != 1) {
+    return false;
+  }
+
+  const auto& last_link = ld_map_.GetPreviousLinkOnRoute(current_link_->id());
+  if (last_link == nullptr) {
+    return false;
+  }
+
+  if (last_link->successor_link_ids_size() != 2) {
+    return false;
+  }
+
+  // 目前先实现判断1分2link的版本，后续再继续迭代1分3的版本;
+  const auto& out_link_id =
+      last_link->successor_link_ids()[0] == current_link_->id()
+          ? last_link->successor_link_ids()[1]
+          : last_link->successor_link_ids()[0];
+
+  const auto& out_link = ld_map_.GetLinkOnRoute(out_link_id);
+
+  if (out_link == nullptr) {
+    return false;
+  }
+
+  EgoPositionResult ego_pos_result;
+  if (!CheckEgoPositionRelativeTwoLinks(current_link_, out_link,
+                                        ego_pos_result)) {
+    return false;
+  }
+
+  const auto& split_dir = CalculateSplitDirection(*last_link, ld_map_);
+
+  if (split_dir == RAMP_ON_LEFT) {
+    if (ego_pos_result.is_right_of_link2) {
+      return true;
+    } else if (ego_pos_result.is_between_links) {
+      // 由于自车位置与地图误差，有可能在这个条件下，也是走错的情况，后续根据测试情况继续完善
+    }
+  } else if (split_dir == RAMP_ON_RIGHT) {
+    const double ego_map_lat_err = 2.0;
+    if (ego_pos_result.is_left_of_link1 &&
+        ego_pos_result.dist_to_link1 > ego_map_lat_err) {
+      return true;
+    } else if (ego_pos_result.is_between_links) {
+      // 由于自车位置与地图误差，有可能在这个条件下，也是走错的情况，后续根据测试情况继续完善
+    }
+  }
+
+  return false;
 }
 
 void LDRouteInfoStrategy::CalculateMLCDecider(
