@@ -45,10 +45,9 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
                                const std::vector<double> &d_poly,
                                double &cruise_v);
 
-  void ConstructTrajPoints(TrajectoryPoints &traj_points);
+  void ConstructReferencePathPoints(TrajectoryPoints &traj_points);
 
-  // // 1. construct the trajectory of reference and bind the obstacle info on
-  bool ConstructReferencePathPoints(const TrajectoryPoints &traj_points);
+  bool GenerateBodyEnvelopeSplines(TrajectoryPoints &traj_points);
 
   // 2. construct the lane and boundary bound
   void GenerateRoadAndLaneBoundary();
