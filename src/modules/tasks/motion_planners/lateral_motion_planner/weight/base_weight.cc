@@ -202,6 +202,16 @@ void BaseWeight::SetLateralMotionWeight(
 
 void BaseWeight::SetLateralMotionWeightForHPP(
     planning::common::LateralPlanningInput &planning_input) {
+  if (!hpp_initialized_) {
+    weight_.point_num = config_.horizon + 1;
+    weight_.Init();
+    soft_bound_qratio_vec_.assign(weight_.point_num, 1.0);
+    hard_bound_qratio_vec_.assign(weight_.point_num, 1.0);
+    curvature_radius_vec_.assign((weight_.point_num + 4) / 5, 10000.0);
+    virtual_ref_.clear();
+    virtual_ref_.reserve(weight_.point_num);
+    hpp_initialized_ = true;
+  }
   weight_.proximal_index = config_.motion_plan_concerned_start_index;
   weight_.remotely_index = config_.motion_plan_concerned_end_index;
   weight_.complete_follow = false;
