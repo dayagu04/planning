@@ -722,12 +722,20 @@ void ParallelParkInScenario::UpdatePADirection() {
     }
     pa_state.SetRecommendPADirectionFlag(apa_hmi_, pa_recommend_dir);
   }
+  const int pa_try_s2f_count_max = 3;
+  const int pa_try_success_count_max = 8;
+  pa_try_success_count_ =
+      apa_hmi_.planning_park_pa_dir > 1 ? pa_try_success_count_ + 1 : 0;
+  if (pa_try_success_count_ > pa_try_success_count_max) {
+    pa_try_s2f_count_ = 0;
+  }
   ILOG_INFO << "current park_pa_dir: " << apa_hmi_.planning_park_pa_dir
             << " recommend_pa_dir: " << apa_hmi_.planning_recommend_pa_dir
             << " last park_pa_dir: " << last_apa_hmi_.planning_park_pa_dir
             << " recommend_pa_dir: " << last_apa_hmi_.planning_recommend_pa_dir
-            << " pa_try_s2f_count_: " << pa_try_s2f_count_;
-  if (pa_try_s2f_count_ > 3) {
+            << " pa_try_s2f_count_: " << pa_try_s2f_count_
+            << " pa_try_success_count_: " << pa_try_success_count_;
+  if (pa_try_s2f_count_ > pa_try_s2f_count_max) {
     complete_path_point_global_vec_.clear();
     pa_state.ClearPADirectionFlag(apa_hmi_);
     pa_state.ClearRecommendPADirectionFlag(apa_hmi_);

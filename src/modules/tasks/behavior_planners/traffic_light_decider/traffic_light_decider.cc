@@ -9,6 +9,7 @@ namespace {
 constexpr double kEgoStaticVelThred = 0.1;
 constexpr double kGreenReminderStartTime = 1.5;
 constexpr double kGreenReminderEndTime = 4.6;
+constexpr double kGreenReminderLeadoneDis = 10.0;
 }
 TrafficLightDecider::TrafficLightDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -361,8 +362,11 @@ bool TrafficLightDecider::IsStayingStillGreenTFL() {
   const auto &environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
+  const auto lateral_obstacles = environmental_model.get_lateral_obstacle();
   if (can_pass_ == false && v_ego < kEgoStaticVelThred) {
-    if (!is_first_car_) {
+    if ((!is_first_car_) || (is_first_car_ &&
+      lateral_obstacles->leadone() != nullptr &&
+      lateral_obstacles->leadone()->d_s_rel() < kGreenReminderLeadoneDis)) {
       is_green_start_no_lead_ = false;
     } else {
       is_green_start_no_lead_ = true;
