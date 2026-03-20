@@ -62,8 +62,8 @@ constexpr double kLaneBorrowBackNeededDistance = 10.0;
 constexpr double kLatBufferToLaneBoundary = 0.2;
 constexpr double kMaxNudgingSpeed = 4.2;  // 15 kph
 // 5s预测轨迹内相对于中心线的最大允许横向位移，超过则认为存在cut_in/cut_out风险，不借道
-constexpr double kMaxLateralMovementIn5sForBorrow = 1.5;
-constexpr double kMaxRelativeHeadingForBorrow = 0.175;  // 约30度
+constexpr double kMaxLateralMovementIn5sForBorrow = 0.8; // 低速障碍物5s内横向移动阈值
+constexpr double kMaxRelativeHeadingForBorrow = 0.087;  // 约5度
 
 };  // namespace
 
@@ -1435,10 +1435,12 @@ void LaneBorrowDecider::CheckBlockingObstaclesIntention(
   const auto box_at_0s = agent->box();
   const auto box_at_1_5s = PredictBoxPosition(agent, 1.5);
   const auto box_at_3s = PredictBoxPosition(agent, 3.0);
+  const auto box_at_5s = PredictBoxPosition(agent, 5.0);
 
   auto sl_at_0s = GetSLboundaryFromAgent(box_at_0s);
   auto sl_at_1_5s = GetSLboundaryFromAgent(box_at_1_5s);
   auto sl_at_3s = GetSLboundaryFromAgent(box_at_3s);
+  auto sl_at_5s = GetSLboundaryFromAgent(box_at_5s);
 
   // 各时刻的借道方向
   BorrowDirection direction_at_0s = GetPredBypassDirection(sl_at_0s, obs_id);
@@ -1483,7 +1485,9 @@ void LaneBorrowDecider::CheckBlockingObstaclesIntention(
       frenet_coord->XYToSL(pred_traj.back().x(), pred_traj.back().y(),
                            &project_s, &project_l_last);
       double lateral_range = std::fabs(project_l_last - project_l_first);
-      double hysteresis_lat_mov_conf = was_successful ? 1.5 : 1;
+      lateral_range = std::max(lateral_range,
+                               std::fabs(sl_at_5s.l_start - sl_at_0s.l_start));
+      double hysteresis_lat_mov_conf = was_successful ? 2 : 1;
       excessive_lateral_movement =
           lateral_range > kMaxLateralMovementIn5sForBorrow * hysteresis_lat_mov_conf;
     }
@@ -1495,13 +1499,13 @@ void LaneBorrowDecider::CheckBlockingObstaclesIntention(
     const auto& frenet_coord = current_reference_path_ptr_->get_frenet_coord();
     if (frenet_coord != nullptr) {
       double obs_center_s = (sl_at_0s.s_start + sl_at_0s.s_end) * 0.5;
-      double path_heading =
-          frenet_coord->GetPathPointByS(obs_center_s).theta();
+      double path_heading = frenet_coord->GetPathPointByS(obs_center_s).theta();
       double relative_heading =
           planning_math::NormalizeAngle(agent->theta() - path_heading);
       double hysteresis_heading_conf = was_successful ? 1.5 : 1;
       large_heading_angle =
-          std::fabs(relative_heading) > kMaxRelativeHeadingForBorrow;
+          std::fabs(relative_heading) >
+          hysteresis_heading_conf * kMaxRelativeHeadingForBorrow;
     }
   }
 
