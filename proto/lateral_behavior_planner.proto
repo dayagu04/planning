@@ -1,0 +1,19 @@
+syntax = "proto2";
+
+package planning.common;
+
+import "task_basic_types.proto";
+
+message LateralBehaviorDebugInfo {
+  repeated double bound_s_vec = 1;
+  repeated WeightedBound soft_upper_bound_info_vec = 2;
+  repeated WeightedBound soft_lower_bound_info_vec = 3;
+  repeated WeightedBound hard_upper_bound_info_vec = 4;
+  repeated WeightedBound hard_lower_bound_info_vec = 5;
+  repeated int32 obstacle_ids = 6;
+  repeated WeightedBound first_soft_upper_bound_info_vec = 7;
+  repeated WeightedBound first_soft_lower_bound_info_vec = 8;
+  repeated WeightedBound second_soft_upper_bound_info_vec = 9;
+  repeated WeightedBound second_soft_lower_bound_info_vec = 10;
+}
+

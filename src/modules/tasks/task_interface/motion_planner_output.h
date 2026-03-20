@@ -1,0 +1,62 @@
+#pragma once
+#include <memory>
+#include "ilqr_define.h"
+#include "spline.h"
+#include "utils/kd_path.h"
+namespace planning {
+
+struct MotionPlannerOutput {
+  bool lat_enable_flag = false;
+  bool lon_enable_flag = false;
+  bool lat_init_flag = false;
+  pnc::mathlib::spline ref_x_s_spline;
+  pnc::mathlib::spline ref_y_s_spline;
+  pnc::mathlib::spline x_s_spline;
+  pnc::mathlib::spline y_s_spline;
+  pnc::mathlib::spline theta_s_spline;
+  pnc::mathlib::spline delta_s_spline;
+  pnc::mathlib::spline omega_s_spline;
+  pnc::mathlib::spline curv_s_spline;
+  pnc::mathlib::spline d_curv_s_spline;
+
+  pnc::mathlib::spline lateral_x_t_spline;
+  pnc::mathlib::spline lateral_y_t_spline;
+  pnc::mathlib::spline lateral_theta_t_spline;
+  pnc::mathlib::spline lateral_s_t_spline;
+  pnc::mathlib::spline lateral_t_s_spline;
+
+  pnc::mathlib::spline s_t_spline;
+  pnc::mathlib::spline v_t_spline;
+  pnc::mathlib::spline a_t_spline;
+  pnc::mathlib::spline j_t_spline;
+
+  pnc::mathlib::spline x_t_spline;
+  pnc::mathlib::spline y_t_spline;
+
+  pnc::mathlib::spline ref_x_t_spline;
+  pnc::mathlib::spline ref_y_t_spline;
+
+  pnc::mathlib::spline theta_t_spline;
+  pnc::mathlib::spline delta_t_spline;
+  pnc::mathlib::spline omega_t_spline;
+
+  std::vector<double> s_lat_vec;
+  std::vector<double> s_lon_vec;
+  Point2D planning_end_xy_point;
+  bool is_valid_planning_end_xy_point = false;
+
+  ilqr_solver::ControlVec u_vec;
+
+  // lateral kd path
+  std::shared_ptr<planning_math::KDPath> lateral_path_coord;
+
+  double path_backward_appended_length;
+  double curv_factor;
+
+  bool is_limit_lon_acc_bound;
+  double recommended_acc_bound;
+
+  size_t lat_valid_end_idx;
+};
+
+}  // namespace planning

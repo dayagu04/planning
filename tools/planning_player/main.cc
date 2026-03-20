@@ -1,0 +1,180 @@
+#include <getopt.h>
+
+#include <chrono>
+#include <iostream>
+#include <string>
+
+// #include "modules_register.h"
+#include "planning_player.h"
+
+int run_planning_player(const std::string &bag_path, std::string &out_bag,
+                        bool is_close_loop, double auto_time_sec,
+                        const std::string &scene_type,
+                        const std::string mileage_path, bool no_debug,
+                        bool interface_check, bool no_version_check,
+                        const std::string &car, bool play_in_loop) {
+  planning::planning_player::PlanningPlayer player;
+
+  if (!no_version_check) {
+    player.VersinCheck(bag_path);
+  }
+  if (!player.FindSceneType(scene_type, bag_path, out_bag)) {
+    return -1;
+  }
+  if (!player.LoadRosBag(bag_path, is_close_loop, no_debug, interface_check)) {
+    return -1;
+  }
+  if (!player.Init(is_close_loop, auto_time_sec, no_debug, car, out_bag)) {
+    return -1;
+  }
+  if (no_debug) {
+    player.NoDebugInfoMode(is_close_loop, play_in_loop);
+  } else {
+    player.PlayAllFrames(is_close_loop, play_in_loop);
+  }
+  player.GenMileage(mileage_path);
+  player.StoreRosBag();
+  return 0;
+}
+
+int GetCarTypeIndex(const std::string &bag_path) {
+  std::array<std::string, 5> car_types{"CHERY_E0Y", "CHERY_T26", "JAC_S811", "CHERY_M32T", "BESTUNE_E541"};
+  for (int i = 0; i < car_types.size(); ++i) {
+    auto it = std::search(bag_path.begin(), bag_path.end(), car_types[i].begin(), car_types[i].end());
+    if (it != bag_path.end()) {
+      return i;
+    }
+  }
+  return 0;
+}
+
+int main(int argc, char **argv) {
+  std::string bag_path, out_bag, log_file, car;
+  bool is_close_loop = false;
+  bool no_debug = false;
+  bool play_in_loop = false;
+  bool interface_check = false;
+  bool no_version_check = false;
+  std::string mileage_path = "";
+  double auto_time_sec = 1.5;
+  std::string scene_type = "scc";
+
+  int opt, lopt, loidx;
+  const char *optstring = "";
+  const struct option long_options[] = {
+      {"help", no_argument, &lopt, 1},
+      {"play", required_argument, &lopt, 2},
+      {"close-loop", no_argument, &lopt, 3},
+      {"out-bag", required_argument, &lopt, 4},
+      {"auto-time", required_argument, &lopt, 5},
+      {"scene-type", required_argument, &lopt, 6},
+      {"mileage-path", required_argument, &lopt, 7},
+      {"no-debug", no_argument, &lopt, 8},
+      {"interface-check", no_argument, &lopt, 9},
+      {"no-version-check", no_argument, &lopt, 10},
+      {"car", required_argument, &lopt, 11},
+      {"play-in-loop", no_argument, &lopt, 12}};
+  while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
+         -1) {
+    if (opt == 0) opt = lopt;
+    switch (opt) {
+      case 1:
+        std::cout << "--help             print this message" << std::endl;
+        std::cout << "--play [bag path]  origin bag path, required"
+                  << std::endl;
+        std::cout << "--close-loop       run close loop, "
+                     "default false"
+                  << std::endl;
+        std::cout << "--out-bag          generated bag path, default [bag "
+                     "path].[timestamp].plan"
+                  << std::endl;
+        std::cout << "--log-file         generated log path, default [bag "
+                     "paht].[timestamp].log"
+                  << std::endl;
+        std::cout << "--auto-time        time when enter auto, default 1.5"
+                  << std::endl;
+        std::cout << "--scene-type       acc/apa, 程序会自动判断" << std::endl;
+        std::cout << "--no-debug         play without planning debug info"
+                  << std::endl;
+        std::cout
+            << "--interface-check   exit when interface version check failed"
+            << std::endl;
+        std::cout << "--no-version-check   disable version check" << std::endl;
+        std::cout << "--car   car type" << std::endl;
+        std::cout << "--play-in-loop      play bag in loop" << std::endl;
+        break;
+      case 2:
+        bag_path = std::string(optarg);
+        if (bag_path.empty()) {
+          std::cerr << "empty bag path" << std::endl;
+          return -1;
+        }
+        break;
+      case 3:
+        is_close_loop = true;
+        break;
+      case 4:
+        out_bag = std::string(optarg);
+        break;
+      case 5:
+        auto_time_sec = std::stod(optarg);
+        break;
+      case 6:
+        scene_type = std::string(optarg);
+        break;
+      case 7:
+        mileage_path = std::string(optarg);
+        break;
+      case 8:
+        no_debug = true;
+        break;
+      case 9:
+        interface_check = true;
+        break;
+      case 10:
+        no_version_check = true;
+        break;
+      case 11:
+        car = std::string(optarg);
+        break;
+      case 12:
+        play_in_loop = true;
+        break;
+      default:
+        std::cerr << "unknown option " << opt << std::endl;
+        return -1;
+    }
+  }
+  auto tp = std::chrono::time_point_cast<std::chrono::seconds>(
+                std::chrono::system_clock::now())
+                .time_since_epoch()
+                .count();
+  if (out_bag.empty()) {
+    if (no_debug) {
+      if (is_close_loop) {
+        out_bag = bag_path + "." + std::to_string(tp) + ".no-debug.close-loop.plan";
+      } else {
+        out_bag = bag_path + "." + std::to_string(tp) + ".no-debug.open-loop.plan";
+      }
+    } else if (is_close_loop) {
+      out_bag = bag_path + "." + std::to_string(tp) + ".close-loop.plan";
+    } else {
+      out_bag = bag_path + "." + std::to_string(tp) + ".open-loop.plan";
+    }
+  }
+
+  std::array<std::string, 5> car_type{"CHERY_E0X", "CHERY_T26", "JAC_S811", "CHERY_M32T", "BESTUNE_E541"};
+  if (std::find(car_type.begin(), car_type.end(), car) == car_type.end()) {
+    int car_type_index = GetCarTypeIndex(bag_path);
+    if (car_type_index < car_type.size()) {
+      car = car_type[car_type_index];
+    } else {
+      std::cerr << "Error car type!!!" << std::endl;
+      return -1;
+    }
+  }
+
+  return run_planning_player(
+      bag_path, out_bag, is_close_loop, auto_time_sec, scene_type, mileage_path,
+      no_debug, interface_check, no_version_check, car, play_in_loop);
+}

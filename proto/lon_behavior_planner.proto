@@ -1,0 +1,85 @@
+syntax = "proto2";
+import "task_basic_types.proto";
+
+package planning.common;
+
+message AccSafetyInfo {
+  optional bool need_takeover = 1 [default = false];
+}
+
+message ObstacleInformation {
+  optional int32 obstacle_id = 1 [default = -1];
+  optional int32 obstacle_type = 2 [default = -1];
+  optional double obstacle_s = 3 [default = 0.0];
+  optional double obstacle_v = 4 [default = 0.0];
+  optional double obstacle_length = 5 [default = 0.0];
+  optional double duration = 6 [default = 0.0];
+  optional double desired_distance = 7 [default = 1.0];
+}
+
+message LeadoneInfo {
+  optional bool has_leadone = 1;
+  optional ObstacleInformation leadone_information = 2;
+}
+
+message LeadtwoInfo {
+  optional bool has_leadtwo = 1;
+  optional ObstacleInformation leadtwo_information = 2;
+}
+
+message CutinInfo {
+  optional bool has_cutin = 1 [default = false];
+  repeated ObstacleInformation cutin_information = 2;
+}
+
+message CIPVInfo {
+  optional bool has_CIPV = 1 [default = false];
+  repeated ObstacleInformation cipv_information = 2;
+}
+
+message LonDecisionInfo {
+  optional LeadoneInfo leadone_info = 1;
+  optional LeadoneInfo temp_leadone_info = 2;
+  optional CutinInfo cutin_info = 3;
+  optional CIPVInfo cipv_info = 4;
+  optional AccSafetyInfo acc_safety_info = 5;
+  optional bool nearby_obstacle = 6 [default = false];
+  optional double map_velocity_limit = 7 [default = 0.0];
+  optional double v_cruise = 8 [default = 0.0];
+  optional LeadtwoInfo leadtwo_info = 9;
+}
+
+message SVBound {
+  optional double s = 1;
+  optional Bound v_bound = 2;
+}
+
+message SVBoundary {
+  enum SVBoundaryType {
+    DEFAULT = 0;
+    ROAD = 1;
+    CURVATURE = 2;
+    STOP = 3;
+  }
+  optional SVBoundaryType boundary_type = 1;
+  repeated SVBound sv_bounds = 2;
+}
+
+message LonRefPath {
+  repeated double t_list = 1;
+  repeated DoublePair s_refs = 2;  // <offset, weight>
+  repeated DoublePair ds_refs = 3;
+
+  repeated WeightedBounds bounds = 4;
+  repeated WeightedBounds soft_bounds = 5;
+  repeated WeightedLonLeadBounds lon_lead_bounds = 6;
+  optional SVBoundary lon_sv_boundary = 7;
+
+  optional Bounds lon_bound_v = 8;
+  optional Bounds lon_bound_a = 9;
+  optional Bounds lon_bound_jerk = 10;
+  
+  repeated double s_speed_adjust_target = 11;
+  repeated double s_lane_change_target = 12;
+}
+

@@ -1,0 +1,81 @@
+syntax = "proto2";
+
+package planning.common;
+
+message TargetPoint {
+  optional double s = 1;
+  optional double t = 2;
+  optional int32 target_type = 3;
+  optional double s_weight = 4;
+  optional double v = 5;
+  optional double a = 6;
+  optional double j = 7;
+}
+
+message TargetMaker {
+  optional FinalTarget final_target = 1;
+  optional CruiseTarget cruise_target = 2;
+  optional FollowTarget follow_target = 3;
+  optional NeighborTarget neighbor_target = 4;
+  optional OvertakeTarget overtake_target = 5;
+  optional CautionTarget caution_target = 6;
+  optional MaxDecelTarget max_decel_target = 7;
+  optional ComfortTarget comfort_target = 8;
+  optional CrossVRUTarget cross_vru_target = 9;
+}
+
+message WeightMaker {
+  optional WeightMakerReplayInfo weight_maker_replay_info = 1;
+}
+
+message FinalTarget {
+  repeated TargetPoint final_target_s_ref = 1;
+}
+
+message CruiseTarget {
+  repeated TargetPoint cruise_target_s_ref = 1;
+}
+
+message FollowTarget {
+  repeated TargetPoint follow_target_s_ref = 1;
+}
+
+message NeighborTarget {
+  repeated TargetPoint neighbor_target_s_ref = 1;
+}
+
+message OvertakeTarget {
+  repeated TargetPoint overtake_target_s_ref = 1;
+}
+
+message CautionTarget {
+  repeated TargetPoint caution_target_s_ref = 1;
+}
+
+message MaxDecelTarget {
+  repeated TargetPoint max_decel_s_ref = 1;
+}
+
+message ComfortTarget {
+  repeated TargetPoint comfort_target_s_ref = 1;
+  repeated UpperBoundInfo upper_bound_infos = 2;
+}
+
+message UpperBoundInfo {
+  optional double s = 1;
+  optional double t = 2;
+  optional double v = 3;
+  optional double a = 4;
+  optional int32 agent_id = 5;
+  optional int32 st_boundary_id = 6;
+}
+
+message WeightMakerReplayInfo {
+  optional bool is_urgent = 1;
+  repeated TargetPoint target_point = 2;
+  optional double urgent_scale = 3;
+}
+
+message CrossVRUTarget {
+  repeated TargetPoint cross_vru_target_s_ref = 1;
+}

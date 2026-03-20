@@ -1,0 +1,147 @@
+#pragma once
+
+#include <algorithm>
+#include <limits>
+
+#include "config/basic_type.h"
+#include "ego_state_manager.h"
+#include "obstacle.h"
+#include "speed/sl_polygon_seq.h"
+#include "utils/kd_path.h"
+namespace planning {
+
+class ReferencePath;
+
+class FrenetObstacle {
+ public:
+  FrenetObstacle(const Obstacle* obstacle_ptr,
+                 const ReferencePath& reference_path,
+                 const std::shared_ptr<EgoStateManager> ego_state_info,
+                 bool is_location_valid);
+
+  int id() const { return id_; }
+  iflyauto::ObjectType type() const { return obstacle_ptr_->type(); }
+
+  double frenet_s() const { return frenet_s_; }
+  double frenet_l() const { return frenet_l_; }
+  double width() const { return width_; }
+  double length() const { return length_; }
+  double frenet_velocity_s() const { return frenet_velocity_s_; }
+  double frenet_velocity_l() const { return frenet_velocity_l_; }
+  double frenet_velocity_lateral() const { return frenet_velocity_lateral_; };
+  double frenet_relative_velocity_s() const {
+    return frenet_relative_velocity_s_;
+  };
+  double frenet_relative_velocity_l() const {
+    return frenet_relative_velocity_l_;
+  };
+  double frenet_relative_velocity_angle() const {
+    return frenet_relative_velocity_angle_;
+  }
+  double rel_s() const { return rel_s_; }
+  double d_s_rel() const { return d_s_rel_; };
+  double rel_v() const { return rel_v_; }
+  double tail_s_rel() const { return tail_s_rel_; };
+  double d_path() const { return d_path_; };
+  double y_rel() const { return y_rel_; };
+  double d_path_pos() const { return d_path_pos_; };
+  double d_min_cpath() const { return d_min_cpath_; };
+  double d_max_cpath() const { return d_max_cpath_; };
+  Point2D s_min_l() const { return s_with_min_l_; }
+  Point2D s_max_l() const { return s_with_max_l_; }
+  double l_relative_to_ego() const { return l_relative_to_ego_; }
+
+  const Obstacle* obstacle() const { return obstacle_ptr_; }
+  double velocity() const { return obstacle_ptr_->velocity(); }
+  const bool b_frenet_valid() const { return b_frenet_valid_; }
+  const bool b_frenet_polygon_sequence_invalid() const {
+    return b_frenet_polygon_sequence_invalid_;
+  }
+  const bool is_static() const { return is_static_; }
+  SourceType source_type() const { return source_type_; }
+  const FrenetObstacleBoundary& frenet_obstacle_boundary() const {
+    return frenet_obstacle_boundary_;
+  }
+
+  const FrenetBoundaryCorners& frenet_obstacle_corners() const {
+    return frenet_obstacle_corners_;
+  }
+
+  const SLPolygonSeq& frenet_polygon_sequence() const {
+    return frenet_polygon_sequence_;
+  }
+
+  const std::vector<planning_math::Vec2d>& corner_points() const {
+    return corner_points_;
+  }
+
+  bool get_polygon_at_time(const double relative_time,
+                           const std::shared_ptr<ReferencePath>& reference_path,
+                           planning_math::Polygon2d& obstacle_polygon) const;
+  // bool get_polygon_at_timev2(const double relative_time,
+  //                           const std::shared_ptr<ReferencePath>
+  //                           &reference_path, planning_math::Polygon2d
+  //                           &obstacle_polygon) const;
+  bool get_polygon_at_time_tmp(
+      const double relative_time,
+      const std::shared_ptr<ReferencePath>& reference_path,
+      planning_math::Polygon2d& obstacle_polygon) const;
+
+  bool get_static_polygon_at_time_tmp(
+      const double relative_time,
+      const std::shared_ptr<ReferencePath>& reference_path,
+      planning_math::Polygon2d& obstacle_polygon) const;
+
+ private:
+  void compute_frenet_obstacle(const ReferencePath& reference_path);
+
+  void compute_frenet_obstacle_boundary(const ReferencePath& reference_path);
+
+  void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
+
+  static void generate_precise_frenet_polygon(
+      planning_math::Polygon2d& polygon,
+      std::shared_ptr<planning_math::KDPath> frenet_coord);
+
+ private:
+  int id_;
+  double frenet_s_;
+  double frenet_l_;
+  double frenet_velocity_s_;
+  double frenet_velocity_l_;
+  double frenet_velocity_lateral_;
+  double frenet_relative_velocity_s_;
+  double frenet_relative_velocity_l_;
+  double frenet_relative_velocity_angle_;
+  double rel_s_;
+  double d_s_rel_;
+  double d_min_cpath_;
+  double d_max_cpath_;
+  double tail_s_rel_;
+  double d_path_;
+  double d_path_pos_;
+  double y_rel_;
+
+  double rel_v_;
+  Point2D s_with_min_l_;  // x:l, y:s
+  Point2D s_with_max_l_;
+
+  double l_relative_to_ego_;
+
+  const Obstacle* obstacle_ptr_ = nullptr;
+
+  FrenetObstacleBoundary frenet_obstacle_boundary_;
+  FrenetBoundaryCorners frenet_obstacle_corners_;
+  SLPolygonSeq frenet_polygon_sequence_;
+
+  bool b_frenet_valid_ = false;
+  bool b_frenet_polygon_sequence_invalid_ = false;
+  bool is_location_valid_ = false;
+  bool is_static_ = false;
+  double width_;
+  double length_;
+  std::vector<planning_math::Vec2d> corner_points_;
+  SourceType source_type_;
+};
+
+}  // namespace planning

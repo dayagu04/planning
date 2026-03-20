@@ -1,0 +1,127 @@
+syntax = "proto2";
+package planning.common;
+message LaneChangeVehInfo {
+  optional int32 id = 1;
+  optional double center_s = 2;
+  optional double half_length = 3;
+  optional double v = 4;
+};
+
+message LaneChangeSlotInfo {
+  optional double slot_v = 1;
+  optional double aligned_v = 2;
+  optional double aligned_s = 3;
+  optional double cost = 4;
+  optional int32 front_veh_id = 5;
+  optional int32 back_veh_id = 6;
+  optional bool is_aligned_front = 7;
+};
+
+message ObstacleSTInfo {
+  optional int32 id = 1;
+  repeated double s_vec_upper = 2;
+  repeated double s_vec_lower = 3;
+  repeated double t_vec = 4;
+};
+
+message SampleParam {
+  optional double sample_delta_t = 1;
+  optional double sample_delta_v = 2;
+  optional double sample_upper_v = 3;
+  optional double sample_lower_v = 4;
+  optional double weight_match_gap_vel = 5;
+  optional double weight_match_gap_s = 6;
+  optional double weight_follow_vel = 7;
+  optional double weight_stop_line = 8;
+  optional double weight_leading_safe_s = 9;
+  optional double weight_leading_safe_v = 10;
+  optional double weight_vel_variable = 11;
+  optional double weight_gap_avaliable = 12;
+  optional double weight_acc_limit = 13;
+};
+message PolyCurveCostInfo {
+  optional double match_gap_cost_s_sum = 1;
+  optional double match_gap_cost_v_sum = 2;
+  optional double follow_vel_cost = 3;
+  optional double stop_line_cost = 4;
+  optional double leading_veh_safe_cost = 5;
+  optional double vel_variable_cost = 6;
+  optional double gap_avaliable_cost = 7;
+  optional double match_gap_cost_center_sum = 8;
+  optional double acc_limit_cost = 9;
+  optional double stop_penalty_cost = 10;
+}
+message MatchGapId {
+  optional int32 gap_front_id = 1;
+  optional int32 gap_back_id = 2;
+}
+
+message SamplePrintTableInfo {
+  optional MatchGapId stitched_sample_match_gap_id = 1;
+  optional MatchGapId current_sample_match_gap_id = 2;
+  optional PolyCurveCostInfo best_poly_cost_info = 3;
+  // optional PolyCurveCostInfo stitched_poly_cost_info = 4;
+  optional double sample_cost_time = 5;
+  optional double evaluate_cost_time = 6;
+  optional double all_cost_time = 7;
+  optional double ego_s = 8;
+  optional double ego_v = 9;
+  optional double ego_acc = 10;
+  optional double flow_vel = 11;
+  optional int32 sample_status = 12;
+  optional int32 sample_scene = 13;
+  optional int32 count_normal_to_hover_state = 14;
+  optional int32 count_hover_to_normal_state = 15;
+  optional double traffic_density = 16;
+  optional int32 traffic_density_status = 17;
+  optional double dist_to_ramp = 18;
+  optional bool is_nearing_ramp = 19;
+  optional double merge_emegency_distance = 20;
+  optional bool is_in_merge_region = 21;
+  optional double distance_to_road_merge = 22;
+  optional double distance_to_road_split = 23;
+  optional double v_suggestted = 24;
+}
+message SamplePolySpeedInfo {
+  repeated LaneChangeVehInfo agent_infos = 1;
+  optional LaneChangeVehInfo leading_veh_info = 2;
+  repeated double sample_s_vec = 3;
+  repeated double sample_v_vec = 4;
+  repeated double sample_a_vec = 5;
+  repeated double sample_j_vec = 6;
+  repeated double sample_t_vec = 7;
+  repeated double stitched_sample_s_vec = 8;
+  repeated double stitched_sample_v_vec = 9;
+  repeated double stitched_sample_a_vec = 10;
+  repeated double stitched_sample_j_vec = 11;
+  repeated double stitched_sample_t_vec = 12;
+  optional SampleParam sample_param = 13;
+  optional SamplePrintTableInfo sample_print_table_info = 14;
+};
+
+message StSearchDeciderInfo {
+  repeated LaneChangeVehInfo lane_change_veh_info = 1;
+  optional LaneChangeVehInfo leading_veh_info = 2;
+  optional double ego_s = 3;
+  optional double ego_l = 4;
+  optional double ego_x = 5;
+  optional double ego_y = 6;
+  optional double ego_v = 7;
+  optional double ego_a = 8;
+  repeated double search_s_vec = 9;
+  repeated double search_t_vec = 10;
+  repeated int32 rear_target_lane_id_set_info = 11;
+  repeated int32 front_target_lane_id_set_info = 12;
+  optional double ego_v_cruise = 13;
+  repeated ObstacleSTInfo obstacle_st_infos = 14;
+  optional bool st_search_status = 15;
+  optional int32 front_gap_id = 16;
+  optional int32 back_gap_id = 17;
+  repeated double search_v_vec = 18;
+  repeated double search_a_vec = 19;
+  repeated double search_j_vec = 20;
+  optional double target_objs_flow_vel = 21;
+  repeated LaneChangeSlotInfo slot_info_vec = 22;
+  optional bool slot_changed = 23;
+  optional SamplePolySpeedInfo sample_poly_speed_info = 24;
+};

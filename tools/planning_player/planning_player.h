@@ -1,0 +1,441 @@
+#pragma once
+
+#include <google/protobuf/message.h>
+#include <ros/ros.h>
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+
+#include <boost/any.hpp>
+#include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <unordered_map>
+#include <set>
+
+#include "planning_adapter.h"
+#include "struct.h"
+
+namespace planning {
+namespace planning_player {
+
+static constexpr auto TOPIC_PLANNING_PLAN = "/iflytek/planning/plan";
+static constexpr auto TOPIC_PLANNING_DEBUG_INFO =
+    "/iflytek/planning/debug_info";
+static constexpr auto TOPIC_PLANNING_DEBUG_INFO_ORIGIN =
+    "/iflytek/planning/debug_info_origin";
+static constexpr auto TOPIC_PLANNING_HMI = "/iflytek/planning/hmi";
+static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
+static constexpr auto TOPIC_FUSION_OCCUPANCY_OBJECTS =
+    "/iflytek/fusion/occupancy/objects";
+static constexpr auto TOPIC_ROAD_FUSION = "/iflytek/fusion/road_fusion";
+static constexpr auto TOPIC_LOCALIZATION_ESTIMATE =
+    "/iflytek/localization/ego_pose";
+static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/egomotion";
+static constexpr auto TOPIC_PREDICTION_RESULT =
+    "/iflytek/prediction/prediction_result";
+static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
+static constexpr auto TOPIC_CONTROL_COMMAN = "/iflytek/control/control_command";
+static constexpr auto TOPIC_HMI_MCU_INNER = "/iflytek/hmi/mcu_inner";
+static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
+static constexpr auto TOPIC_FUNC_STATE_MACHINE = "/iflytek/fsm/soc_state";
+static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
+static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
+static constexpr auto TOPIC_SDPro_MAP = "/iflytek/ehr/sdpromap_info";
+static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
+static constexpr auto TOPIC_SPEED_BUMP = "/iflytek/fusion/speed_bump";
+// static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
+static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
+static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
+static constexpr auto TOPIC_TRAFFIC_SIGN =
+    "/iflytek/camera_perception/traffic_sign_recognition";
+static constexpr auto TOPIC_PERCEPTION_SCENE =
+    "/iflytek/camera_perception/scene";
+static constexpr auto TOPIC_LANE_LINE = "/iflytek/camera_perception/lane_lines";
+static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO =
+    "/iflytek/camera_perception/lane_lines_debug_info";
+static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO =
+    "/iflytek/camera_perception/lane_topo_debug_info";
+static constexpr auto TOPIC_OBJECTS = "/iflytek/camera_perception/objects";
+static constexpr auto TOPIC_DEGRADED_DRIVING_FUNCTION =
+    "/iflytek/degrade_function/fm_a_service";
+
+// apa topics
+static constexpr auto TOPIC_USS_WAVE_INFO = "/iflytek/uss/usswave_info";
+static constexpr auto TOPIC_USS_PERCEPT_INFO =
+    "/iflytek/fusion/uss_perception_info";
+static constexpr auto TOPIC_VISION_PARKING_SLOT =
+    "/iflytek/camera_perception/parking_slot_list";
+static constexpr auto TOPIC_CONTROL_DEBUG_INFO = "/iflytek/control/debug_info";
+
+static const double KMaxCurvature = 1.0 / 5.6;  
+static const double KConstPi = 3.141592654;
+static const double KApaVelSimulation = 0.3;
+
+static std::set<std::string> kKeyTopicSet{TOPIC_PLANNING_DEBUG_INFO, TOPIC_FUSION_OBJECTS, TOPIC_ROAD_FUSION, TOPIC_VEHICLE_SERVICE, 
+                                       TOPIC_LOCALIZATION};
+
+using TopicMsgTimeCache =
+    std::map<std::string, std::map<ros::Time, boost::any>>;
+using TopicHeaderTimeCache =
+    std::map<std::string, std::map<uint64_t, boost::any>>;
+using PlanningMsgCache =
+    std::map<std::string, std::map<ros::Time, struct_msgs::PlanningOutput>>;
+using PlanningHmiMsgCache =
+    std::map<std::string,
+             std::map<ros::Time, struct_msgs::PlanningHMIOutputInfoStr>>;
+using PlanningDebugMsgCache =
+    std::map<std::string, std::map<ros::Time, sensor_interface::DebugInfo>>;
+
+class PlanningPlayer {
+ public:
+  struct DynamicState {
+    DynamicState() {}
+    DynamicState(const Eigen::Vector2d &pos_r, const double heading_r) {
+      pos = pos_r;
+      heading = heading_r;
+    }
+
+    double vel = 0.0;
+    Eigen::Vector2d pos = Eigen::Vector2d::Zero();
+    double heading = 0.0;
+    double static_time = 0.0;
+    bool static_flag = false;
+    double s_proj = 0.0;
+
+    void Reset() {
+      vel = 0.0;
+      pos = Eigen::Vector2d::Zero();
+      heading = 0.0;
+    }
+  };
+  PlanningPlayer() = default;
+  ~PlanningPlayer() = default;
+
+  bool Init(bool is_close_loop, double auto_time_sec, bool no_debug,
+            const std::string &car, std::string &out_bag);
+  bool FindSceneType(const std::string &scene_type, const std::string &bag_path,
+                     std::string &out_bag);
+  void Clear();
+  bool LoadRosBag(const std::string &bag_path, bool is_close_loop,
+                  bool no_debug, bool interface_check);
+  void StoreRosBag();
+  void GenMileage(const std::string &mileage_path);
+  void NoDebugInfoMode(bool is_close_loop, bool play_in_loop);
+  void PlayOneFrame(int frame_num,
+                    const planning::common::TopicTimeList &input_time_list,
+                    bool is_close_loop);
+  void PlayAllFrames(bool is_close_loop, bool play_in_loop);
+
+  void RunCloseLoop(const struct_msgs::PlanningOutput &planning_output);
+  void PerpareTrajectory(const struct_msgs::PlanningOutput &plan_msg);
+  void PerfectControlEgoMotion(uint64_t delta_t,
+                               struct_msgs::IFLYLocalization::Ptr loc_msg);
+  void PerfectControlEgoPose(
+      uint64_t delta_t,
+      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
+
+  void UpdateVehicleService(
+      uint64_t delta_t,
+      struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
+  void UpdateVehicleServiceData();
+  void getCommitHash(const std::string &directory, const int num,
+                     std::string &outVersion);
+  void VersinCheck(const std::string &bag_path);
+  // apa planning player module
+  void UpdateVehicleServiceAPA(
+      uint64_t delta_t,
+      struct_msgs::VehicleServiceOutputInfo::Ptr vehi_svc_msg);
+
+  void UpdateVehicleServiceDataAPA();
+
+  void PerfectControlAPA(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs_legacy_v2_4_6::LocalizationEstimate::Ptr loc_msg);
+
+  void PerfectControlAPANewLocalization(
+      const struct_msgs::PlanningOutput &plan_msg, uint64_t delta_t,
+      struct_msgs::IFLYLocalization::Ptr loc_msg);
+
+ private:
+  DynamicState state_;
+  std::unique_ptr<PlanningAdapter> planning_adapter_ = nullptr;
+  TopicHeaderTimeCache header_cache_{};  // msg cache indexed by header time(us)
+  TopicMsgTimeCache msg_cache_{};        // msg cache indexed by msg time(ns)
+  PlanningMsgCache
+      output_planning_msg_cache_{};  // output cache indexed by msg time(ns)
+  PlanningHmiMsgCache
+      output_planning_hmi_msg_cache_{};  // output cache indexed by msg time(ns)
+  PlanningDebugMsgCache
+      output_planning_debug_msg_cache_{};  // output cache indexed by msg
+                                           // time(ns)
+  std::map<uint64_t, boost::any> msg_cache_ordered_by_time_;
+  std::map<std::string, std::string> proto_desc_map_{};
+  ros::Time planning_msg_time_s_;
+  uint64_t planning_header_time_us_ = 0;
+  int frame_num_ = 0;
+  ros::Time planning_dubug_info_msg_time_s_;
+  uint64_t planning_dubug_info_header_time_us_ = 0;
+  uint64_t input_time_list_map_ = 0;
+  uint64_t input_time_list_sd_map_ = 0;
+  uint64_t input_time_list_sdpro_map_ = 0;
+  // uint64_t input_time_list_ehr_parking_map_ = 0;
+  uint64_t input_time_list_road_fusion_ = 0;
+  uint64_t planning_start_timestamp_ = 0;
+  uint64_t next_loc_header_time_us_ = 0;
+  uint64_t loc_header_time_us_ = 0;
+  uint64_t next_loc_esti_header_time_us_ = 0;
+  uint64_t loc_esti_header_time_us_ = 0;
+  uint64_t next_vehi_svc_header_time_us_ = 0;
+  uint64_t vehi_svc_header_time_us_ = 0;
+  uint64_t planning_dubug_info_frame_num_ = 0;
+  uint64_t local_time_ = 0;
+  int frame_num_before_enter_auto_ = 0;
+  std::string scene_type_ = "";
+  uint8_t last_functional_state = iflyauto::FunctionalState_MANUAL_DRIVING;
+  pnc::mathlib::spline x_t_spline_;
+  pnc::mathlib::spline y_t_spline_;
+  pnc::mathlib::spline theta_t_spline_;
+  pnc::mathlib::spline v_t_spline_;
+  pnc::mathlib::spline a_t_spline_;
+  pnc::mathlib::spline yaw_rate_t_spline_;
+  pnc::mathlib::spline curvature_t_spline_;
+  bool instant_error_ = false;
+  std::unordered_map<std::string, bool> instant_error_map_;
+  std::string local_planning_version_;
+  std::string local_interface_version_;
+  std::string bag_planning_version_;
+  std::string bag_interface_version_;
+  std::string car_;
+  uint64_t auto_timestamp_ = 0;
+  std::string out_bag_;
+  // apa planning player module
+  bool early_stop_ = false;
+  ros::Time early_stop_time_ = ros::TIME_MIN;
+  bool update_spline_ = false;
+  std::vector<double> path_s_vec_;
+  std::vector<double> path_x_vec_;
+  std::vector<double> path_y_vec_;
+  std::vector<double> path_heading_vec_;
+  pnc::mathlib::spline x_s_spline_;
+  pnc::mathlib::spline y_s_spline_;
+  pnc::mathlib::spline heading_s_spline_;
+
+  template <class T>
+  void cache_with_ros_msg_time(const rosbag::MessageInstance &msg);
+
+  template <class T>
+  void cache_with_ros_msg_and_header_time(const rosbag::MessageInstance &msg);
+
+  template <class T>
+  void cache_with_ros_msg_and_header_time_old(
+      const rosbag::MessageInstance &msg);
+
+  template <class T>
+  void cache_with_ros_msg_and_header_time_local(
+      const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+      bool is_close_loop);
+
+  template <class T>
+  void cache_with_ros_msg_and_header_time_local_old(
+      const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+      bool is_close_loop);
+
+  template <class T>
+  void write_ros_msg(const std::map<ros::Time, boost::any> &write_msg,
+                     const std::string &topic_name, rosbag::Bag &bag);
+
+  template <class T>
+  typename T::Ptr find_ros_msg_with_header_time(const std::string &topic,
+                                                uint64_t time);
+
+  template <class T>
+  typename T::Ptr find_ros_msg_with_header_time_upper_bound(
+      const std::string &topic, uint64_t time);
+
+  inline bool check_msg_exist(TopicMsgTimeCache &msg_cache,
+                              const std::string &topic_name) {
+    if (msg_cache.find(topic_name) == msg_cache.end()) {
+      std::cerr << "topic not found:" << topic_name << std::endl;
+      return false;
+    }
+    if (msg_cache[topic_name].empty()) {
+      std::cerr << "no msg in topic:" << topic_name << std::endl;
+      return false;
+    }
+    return true;
+  }
+
+  // planning::common::PlanningDebugInfo planning_debug_info;
+  std::shared_ptr<planning::common::PlanningDebugInfo> convert_debug_info(
+      boost::shared_ptr<sensor_interface::DebugInfo_<std::allocator<void>>>
+          debug_info) {
+    auto planning_debug_info =
+        std::make_shared<planning::common::PlanningDebugInfo>();
+    std::string planning_debug_info_str(debug_info->debug_info.begin(),
+                                        debug_info->debug_info.end());
+    planning_debug_info->ParseFromString(planning_debug_info_str);
+    return planning_debug_info;
+  }
+};
+
+template <class T>
+void PlanningPlayer::cache_with_ros_msg_time(
+    const rosbag::MessageInstance &msg) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    if (kKeyTopicSet.find(msg.getTopic()) != kKeyTopicSet.end()) {
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_ = true;
+    } else if(instant_error_map_.find(msg.getTopic()) == instant_error_map_.end()){
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_map_[msg.getTopic()] = false; 
+    }
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
+  }
+}
+
+template <class T>
+void PlanningPlayer::cache_with_ros_msg_and_header_time(
+    const rosbag::MessageInstance &msg) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    if (kKeyTopicSet.find(msg.getTopic()) != kKeyTopicSet.end()) {
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_ = true;
+    } else if(instant_error_map_.find(msg.getTopic()) == instant_error_map_.end()){
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_map_[msg.getTopic()] = false; 
+    }
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;                 // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.stamp] = obj_msg;  // us
+  }
+}
+
+template <class T>
+void PlanningPlayer::cache_with_ros_msg_and_header_time_old(
+    const rosbag::MessageInstance &msg) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    if (kKeyTopicSet.find(msg.getTopic()) != kKeyTopicSet.end()) {
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_ = true;
+    } else if(instant_error_map_.find(msg.getTopic()) == instant_error_map_.end()){
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_map_[msg.getTopic()] = false; 
+    }
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
+        obj_msg;  // us
+  }
+}
+
+template <class T>
+void PlanningPlayer::cache_with_ros_msg_and_header_time_local(
+    const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+    bool is_close_loop) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+              << "msg instantiate error, msg name: " << msg.getTopic()
+              << std::endl;
+    instant_error_ = true;
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;                 // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.stamp] = obj_msg;  // us
+    if (is_close_loop) {
+      auto origin_topic = msg.getTopic() + "_origin";
+      new_bag.write(origin_topic, msg.getTime(), obj_msg);
+    }
+  }
+}
+
+template <class T>
+void PlanningPlayer::cache_with_ros_msg_and_header_time_local_old(
+    const rosbag::MessageInstance &msg, rosbag::Bag &new_bag,
+    bool is_close_loop) {
+  typename T::Ptr obj_msg = msg.instantiate<T>();
+  if (obj_msg == nullptr) {
+    std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+              << "msg instantiate error, msg name: " << msg.getTopic()
+              << std::endl;
+    instant_error_ = true;
+  } else {
+    // auto time = msg.getTime();
+    // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
+    msg_cache_[msg.getTopic()][msg.getTime()] = obj_msg;  // ns
+    header_cache_[msg.getTopic()][obj_msg->msg_header.timestamp] =
+        obj_msg;  // us
+    if (is_close_loop) {
+      auto origin_topic = msg.getTopic() + "_origin";
+      new_bag.write(origin_topic, msg.getTime(), obj_msg);
+    }
+  }
+}
+
+template <class T>
+void PlanningPlayer::write_ros_msg(
+    const std::map<ros::Time, boost::any> &write_msg,
+    const std::string &topic_name, rosbag::Bag &bag) {
+  for (const auto &i : write_msg) {
+    auto msg = boost::any_cast<T>(i.second);
+    if (early_stop_time_ == ros::TIME_MIN || i.first <= early_stop_time_) {
+      bag.write(topic_name, i.first, msg);
+    }
+  }
+}
+
+template <class T>
+typename T::Ptr PlanningPlayer::find_ros_msg_with_header_time(
+    const std::string &topic, uint64_t time) {
+  auto it_topic = header_cache_.find(topic);
+  if (it_topic != header_cache_.end()) {
+    auto it_time = it_topic->second.find(time);
+    if (it_time != it_topic->second.end()) {
+      // typename T::Ptr msg = it_time->second->instantiate<T>();
+      typename T::Ptr msg = boost::any_cast<typename T::Ptr>(it_time->second);
+      return msg;
+    }
+  }
+  return nullptr;
+}
+
+template <class T>
+typename T::Ptr PlanningPlayer::find_ros_msg_with_header_time_upper_bound(
+    const std::string &topic, uint64_t time) {
+  auto it_topic = header_cache_.find(topic);
+  if (it_topic != header_cache_.end()) {
+    auto it_time = it_topic->second.lower_bound(time);
+    if (it_time != it_topic->second.end()) {
+      // typename T::Ptr msg = it_time->second->instantiate<T>();
+      typename T::Ptr msg = boost::any_cast<typename T::Ptr>(it_time->second);
+      return msg;
+    }
+  }
+  return nullptr;
+}
+
+}  // namespace planning_player
+}  // namespace planning

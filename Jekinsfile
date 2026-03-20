@@ -1,0 +1,145 @@
+pipeline {
+    agent any
+    environment {
+      IMAGE_NAME="artifacts.iflytek.com/auto-docker-product-public/autofpilotdevtools/simulation_tools"
+      SKIP_BUILD=true
+    }
+    stages {
+        stage('Check'){
+          steps{
+            script{
+              def BRANCH_SHORT = BRANCH[11..-1]
+              println BRANCH_SHORT
+              def reg = /^(.*simulation.*|develop|main)$/
+              SKIP_BUILD = !(BRANCH_SHORT ==~ reg)
+              println SKIP_BUILD
+            }
+          }
+        }
+        stage('Checkout') {
+            when {
+              expression {
+                !SKIP_BUILD
+              }
+            }
+            steps {
+                sh'''
+                echo Checkout start
+                echo current_branch $BRANCH
+                echo current_commit $COMMIT_ID
+                echo commits_message $COMMIT_MESSAGE
+                echo git_url $GIT_URL
+                '''
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'develop']],
+                    userRemoteConfigs: [[
+                        url: 'ssh://git@code.iflytek.com:30004/ZNQC_AutonomousDriving/common_tools.git'
+                    ]],
+                    extensions: [[
+                        $class: 'RelativeTargetDirectory',
+                        relativeTargetDir: 'common_tools'
+                    ]]
+                ])
+                sh 'echo checkout common_tools success'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '${COMMIT_ID}']],
+                    userRemoteConfigs: [[
+                      credentialsId: 'lunli_code_key',
+                      url: '${GIT_URL}'
+                    ]],
+                    extensions: [
+                      [
+                        $class: 'SubmoduleOption',
+                        disableSubmodules: false,
+                        recursiveSubmodules: true,
+                      ],
+                      [
+                      $class: 'RelativeTargetDirectory',
+                      relativeTargetDir: 'planning'
+                    ]]
+                ])
+                sh 'ls -al'
+                sh 'cd ./planning'
+                sh 'ls -al'
+                sh 'echo checkout planning success'
+                sh 'echo Checkout success'
+            }
+        }
+        stage('Dockerbuild') {
+            when {
+              expression {
+                !SKIP_BUILD
+              }
+            }
+            steps {
+                sh'''
+                echo docker build start
+                GIT_COMMIT_SHORT=$(echo $COMMIT_ID | cut -c1-7)
+                echo $GIT_COMMIT_SHORT
+                echo $IMAGE_NAME
+                mv common_tools planning/
+                ls -al
+                cd ./planning
+                ls -al
+                docker build -t ${IMAGE_NAME}:${GIT_COMMIT_SHORT} .
+                docker tag ${IMAGE_NAME}:${GIT_COMMIT_SHORT} ${IMAGE_NAME}:latest
+                docker push ${IMAGE_NAME}:${GIT_COMMIT_SHORT}
+                docker push $IMAGE_NAME:latest
+                docker rmi ${IMAGE_NAME}:${GIT_COMMIT_SHORT}
+                echo docker build success
+                '''
+            }
+        }
+        stage('Callback') {
+            when {
+              expression {
+                !SKIP_BUILD
+              }
+            }
+            steps {
+                sh'''
+                ls -al
+                cd ./planning
+                ls -al
+                echo Callback start
+                BRANCH_SHORT=$(echo $BRANCH | cut -c 12-)
+                GIT_COMMIT_SHORT=$(echo $COMMIT_ID | cut -c1-7)
+                COMMIT_MESSAGE_TRIM=$(echo $COMMIT_MESSAGE | tr -d ' ')
+                python CI_callback.py --b $BRANCH_SHORT --c $COMMIT_ID --m $COMMIT_MESSAGE_TRIM --u ${IMAGE_NAME}:${GIT_COMMIT_SHORT} --s success
+                echo Callback success 
+                '''
+            }
+        }
+        stage('End') {
+          steps {
+            sh 'echo build finished'
+          }
+        }
+    }
+  post {
+        failure {
+            script {
+              if (!SKIP_BUILD){
+                  sh'''
+                  ls -al
+                  cd ./planning
+                  ls -al
+                  echo failed Callback start
+                  BRANCH_SHORT=$(echo $BRANCH | cut -c 12-)
+                  GIT_COMMIT_SHORT=$(echo $COMMIT_ID | cut -c1-7)
+                  COMMIT_MESSAGE_TRIM=$(echo $COMMIT_MESSAGE | tr -d ' ')
+                  python CI_callback.py --b $BRANCH_SHORT --c $COMMIT_ID --m $COMMIT_MESSAGE_TRIM --s failed
+                  echo failed Callback success
+                  '''
+              }
+            }
+        }
+        cleanup{
+          script{
+            cleanWs()
+          }
+        }
+  }
+}

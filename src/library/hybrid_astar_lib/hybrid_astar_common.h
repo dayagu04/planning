@@ -1,0 +1,619 @@
+#pragma once
+#include <cstddef>
+#include <string>
+#include <vector>
+
+#include "aabb2d.h"
+#include "pose2d.h"
+
+namespace planning {
+
+enum class AstarFailType {
+  NONE,
+  START_COLLISION,
+  GOAL_COLLISION,
+  OUT_OF_BOUND,
+  TIME_OUT,
+  SUCCESS,
+  ALLOCATE_NODE_FAIL,
+  DP_COST_FAIL,
+  NODE_POOL_IS_NULL,
+};
+
+enum class AstarSearchState {
+  NONE,
+  TIME_OUT,
+  EXTEND_NODE_TOO_MUCH,
+  SUCCESS,
+  OVERDUE,
+  FAILURE,
+  SEARCHING,
+  SEARCH_STATE_MAX_NUMBER,
+};
+
+// use astar searching to get a path or just use rs path to link start and end.
+// path type: node searching, rs, dubins, cubic polynomial curve, quntic
+// polynomial curve, cubic spiral.
+enum class AstarPathGenerateType {
+  NONE,
+  ASTAR_SEARCHING,
+  GEAR_REVERSE_SEARCHING,
+  GEAR_DRIVE_SEARCHING,
+  // sampling method will retired, it just used to adjust ego pose in slot.
+  // It is better to use search-based method.
+  SPIRAL_SAMPLING,
+  CUBIC_POLYNOMIAL_SAMPLING,
+  QUNTIC_POLYNOMIAL_SAMPLING,
+  REEDS_SHEPP_SAMPLING,
+  // 点击车位之后，尝试搜索
+  TRY_SEARCHING,
+  MAX_NUMBER,
+};
+
+enum class ParkSpaceType {
+  NONE,
+  VERTICAL,
+  PARALLEL,
+  SLANTING,
+  PARALLEL_IN,
+  PARALLEL_OUT,
+  MAX_NUMBER,
+};
+
+enum class ParkingVehDirection {
+  NONE,
+  TAIL_IN,
+  TAIL_OUT_TO_LEFT,
+  TAIL_OUT_TO_RIGHT,
+  TAIL_OUT_TO_MIDDLE,
+  HEAD_IN,
+  HEAD_OUT_TO_LEFT,
+  HEAD_OUT_TO_RIGHT,
+  HEAD_OUT_TO_MIDDLE,
+  MAX_NUMBER,
+};
+
+enum class NodeCollisionType {
+  NONE = 0,
+  MAP_BOUND,
+  SLOT_LINE,
+  VIRTUAL_WALL,
+  GROUND_LINE,
+  FUSION_OCC_OBS,
+  SLOT_LIMITER,
+  MAX_NUM
+};
+
+enum class AstarPathType {
+  NONE = 0,
+  REEDS_SHEPP,
+  LINK_POSE_LINE,
+  DUBINS,
+  NODE_SEARCHING,
+  NODE_CURVE,
+  LINE_SEGMENT,
+  START_NODE,
+  END_NODE,
+  CUBIC_POLYNOMIAL,
+  QUNTIC_POLYNOMIAL,
+  SPIRAL,
+  MAX_NUM
+};
+
+enum class PlanningReason {
+  NONE,
+  PATH_COMPLETED,
+  PATH_STUCKED,
+  SLOT_REFRESHED,
+  FIRST_PLAN,
+  ADJUST_SELF_CAR_POSE,
+  SIMULATION_TRIGGER,
+  GEOMETRY_CURVE_FAIL,
+  SLOT_CRUISING,
+  DYNAMIC_GEAR_SWITCH,
+};
+
+enum class AstarPathSteer {
+  NONE = 0,
+  LEFT = 1,
+  RIGHT = 2,
+  STRAIGHT = 3,
+  MAX_NUM
+};
+
+enum class AstarPathGear {
+  NONE = 0,
+  DRIVE = 1,
+  REVERSE,
+  NORMAL,
+  PARKING,
+  MAX_NUM
+};
+
+enum class AstarPathSegType : uint8_t { NONE = 0, LINE = 1, ARC = 2, MAX_NUM };
+
+enum RSPathSteer {
+  RS_NOP = 0,
+  RS_LEFT = 1,
+  RS_STRAIGHT = 2,
+  RS_RIGHT = 3,
+  RS_STEER_MAX
+};
+
+enum class AstarNodeVisitedType {
+  NOT_VISITED = 0,
+  IN_OPEN = 1,
+  IN_CLOSE,
+  MAX_NUM
+};
+
+enum class PolynomialPathErrorCode {
+  NONE = 0,
+  OUT_OF_X_BOUNDARY = 1,
+  COLLISION = 2,
+  BACK_TO_START_NODE = 3,
+  BACK_TO_PARENT_NODE = 4,
+  OUT_OF_HEADING_BOUNDARY = 5,
+  UNEXPECTED_GEAR = 6,
+  UNEXPECTED_STEERING_WHEEL = 7,
+  UNEXPECTED_DRIVE_DIST = 8,
+  FAIL_TO_ALLOCATE_NODE = 9,
+  OUT_OF_Y_BOUNDARY,
+  OUT_OF_KAPPA_BOUNDARY,
+  LINK_POINT_INVALID_KAPPA,
+  OUT_OF_SEARCH_BOUNDARY,
+  MAX_NUMBER,
+};
+
+// set first action in path
+// 期望搜索节点的挡位。
+// 1. node点按照期望的动作，有可能无法搜索出结果，所以不能将挡位限定死。
+// 2. node点在该处依然可以不按照期望来，但是g cost会很大.
+struct ParkFirstActionRequest {
+  bool has_request;
+  AstarPathGear gear_request;
+  float dist_request;
+
+  AstarPathSteer steer_request;
+
+  void Clear() {
+    has_request = false;
+    gear_request = AstarPathGear::NONE;
+    dist_request = 0.0;
+
+    return;
+  }
+};
+
+struct RSPoint : public Pose2f {
+  // left turn is positive
+  float kappa;
+
+  AstarPathGear dir;
+};
+
+struct MapBound {
+  float x_min;
+  float x_max;
+  float y_min;
+  float y_max;
+  float phi_min;
+  float phi_max;
+
+  MapBound() = default;
+  MapBound(const float x_min_, const float x_max_, const float y_min_,
+           const float y_max_, const float phi_min_ = -M_PIf32,
+           const float phi_max_ = M_PIf32)
+      : x_min(x_min_),
+        x_max(x_max_),
+        y_min(y_min_),
+        y_max(y_max_),
+        phi_min(phi_min_),
+        phi_max(phi_max_) {}
+
+  bool Contain(const Pose2f& p) const {
+    if (x_min > p.x || y_min > p.y) {
+      return false;
+    }
+
+    if (x_max < p.x || y_max < p.y) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void Combine(const MapBound& a) {
+    x_min = std::min(x_min, a.x_min);
+    y_min = std::min(y_min, a.y_min);
+    x_max = std::max(x_max, a.x_max);
+    y_max = std::max(y_max, a.y_max);
+  }
+
+  bool Contain(const RSPoint& p) const {
+    if (x_min > p.x || y_min > p.y) {
+      return false;
+    }
+
+    if (x_max < p.x || y_max < p.y) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void MergePoint(const Pose2f& p) {
+    // x bound
+    x_min = std::min(x_min, p.x);
+    x_max = std::max(x_max, p.x);
+
+    // y bound
+    y_min = std::min(y_min, p.y);
+    y_max = std::max(y_max, p.y);
+
+    return;
+  }
+};
+
+struct AStarPathPoint {
+  float x;
+  float y;
+  float phi;
+
+  AstarPathGear gear;
+  float accumulated_s;
+  AstarPathType type;
+  // left turn is postive
+  float kappa;
+
+  AStarPathPoint() = default;
+  AStarPathPoint(const float x_, const float y_, const float phi_,
+                 const AstarPathGear gear_, const float s,
+                 const AstarPathType type_, const float kappa_)
+      : x(x_),
+        y(y_),
+        phi(phi_),
+        gear(gear_),
+        accumulated_s(s),
+        type(type_),
+        kappa(kappa_) {}
+};
+
+struct AStarSTPoint {
+  float v;
+  float acc;
+  float jerk;
+  float t;
+  float s;
+};
+
+struct HybridAStarTrajPoint {
+  AStarPathPoint path_point;
+  AStarSTPoint speed_point;
+};
+
+// For astar, max search direction number is 6.
+struct SearchTimeBenchmark {
+  double time_ms[9];
+  int32_t node_pool_size[9];
+  int8_t size;
+  double total_time_ms;
+
+  void Clear() {
+    total_time_ms = 0;
+    size = 0;
+    return;
+  }
+};
+
+struct SearchTrajectoryInfo {
+  int32_t first_action_gear[9];
+  int32_t first_action_gear_request[9];
+  float first_seg_path_length;
+  int8_t size;
+
+  void Clear() {
+    first_seg_path_length = 0;
+    size = 0;
+    return;
+  }
+};
+
+// need refact this data
+struct HybridAStarResult {
+  std::vector<float> x;
+  std::vector<float> y;
+  std::vector<float> phi;
+  std::vector<AstarPathGear> gear;
+  std::vector<AstarPathType> type;
+
+  std::vector<float> accumulated_s;
+  // left turn is is positive
+  std::vector<float> kappa;
+
+  std::vector<std::vector<float>> x_vec_vec;
+  std::vector<std::vector<float>> y_vec_vec;
+  std::vector<std::vector<float>> phi_vec_vec;
+  std::vector<std::vector<AstarPathType>> type_vec_vec;
+  std::vector<std::vector<float>> kappa_vec_vec;
+  std::vector<std::vector<float>> accumulated_s_vec_vec;
+  std::vector<AstarPathGear> gear_vec;
+  std::vector<float> length_vec;
+
+  AstarPathGear cur_gear = AstarPathGear::NONE;
+  AstarPathSteer cur_steer = AstarPathSteer::NONE;
+
+  bool path_plan_success = false;
+
+  int gear_change_num = 0;
+
+  // slot pose
+  Pose2D base_pose;
+
+  double time_ms = 0.0;
+
+  AstarFailType fail_type = AstarFailType::NONE;
+
+  double search_consume_time_ms = 0;
+
+  int solve_number = 0;
+
+  int search_node_num = 0;
+
+  void Clear() {
+    x.clear();
+    y.clear();
+    phi.clear();
+    accumulated_s.clear();
+    gear.clear();
+    type.clear();
+    kappa.clear();
+    length_vec.clear();
+    time_ms = 0;
+    fail_type = AstarFailType::NONE;
+    gear_change_num = 0;
+
+    path_plan_success = false;
+
+    x_vec_vec.clear();
+    y_vec_vec.clear();
+    phi_vec_vec.clear();
+    type_vec_vec.clear();
+    kappa_vec_vec.clear();
+    accumulated_s_vec_vec.clear();
+    gear_vec.clear();
+
+    search_consume_time_ms = 0;
+
+    solve_number = 0;
+
+    search_node_num = 0;
+
+    cur_gear = AstarPathGear::NONE;
+    cur_steer = AstarPathSteer::NONE;
+
+    return;
+  }
+
+  size_t GetFirstGearPathPointSize() const {
+    if (gear.empty()) {
+      return 0;
+    }
+
+    size_t id = 0;
+    AstarPathGear first_point_gear = gear[0];
+    for (size_t i = 0; i < gear.size(); i++) {
+      if (gear[i] != first_point_gear) {
+        break;
+      }
+      id = i;
+    }
+
+    return id + 1;
+  }
+};
+
+struct QueuePoint {
+  int node_id;
+  float f_cost;
+
+  QueuePoint() = default;
+  QueuePoint(const int id, const float f) : node_id(id), f_cost(f) {}
+};
+
+struct QueueCompare {
+  bool operator()(const QueuePoint& left, const QueuePoint& right) const {
+    return left.f_cost >= right.f_cost;
+  }
+};
+
+#define astar_max_angle_number (16)
+struct AstarSamplingAngle {
+  int size;
+  float angles[astar_max_angle_number];
+  // left turn is positive
+  float radius[astar_max_angle_number];
+  AstarPathSteer steer[astar_max_angle_number];
+};
+
+struct DebugAstarSearchPoint {
+  Position2f pos;
+  bool safe;
+  // If this point is first path end point, and is a gear switch point without
+  // collision, true.
+  bool gear_switch_point;
+
+  DebugAstarSearchPoint() = default;
+
+  DebugAstarSearchPoint(const float x, const float y, const bool is_safe) {
+    pos.x = x;
+    pos.y = y;
+    safe = is_safe;
+    gear_switch_point = false;
+  }
+
+  DebugAstarSearchPoint(const float x, const float y,
+                        const bool is_gear_switch_point, const bool is_safe) {
+    pos.x = x;
+    pos.y = y;
+    gear_switch_point = is_gear_switch_point;
+    safe = is_safe;
+  }
+};
+
+enum class SlotRelativePosition { NONE, RIGHT, LEFT, MAX_NUMBER };
+
+enum class VehRelativePosition { NONE, RIGHT, LEFT, MIDDLE, MAX_NUMBER };
+
+struct Boundary2D {
+  float min;
+  float max;
+};
+
+struct PolynomialPathCost {
+  float offset_to_center;
+  float accumulated_s;
+  float tail_heading;
+
+  int point_size;
+
+  void Clear() {
+    offset_to_center = 100.0;
+    tail_heading = 100.0;
+    point_size = 0;
+    return;
+  }
+};
+
+struct ObsToPathDistRelativeSlot {
+  float obs_dist_out_slot_straight = 16.8;
+  float obs_dist_out_slot_turn = 16.8;
+  float obs_dist_entrance_slot_straight = 16.8;
+  float obs_dist_entrance_slot_turn = 16.8;
+  float obs_dist_in_slot_straight = 16.8;
+  float obs_dist_in_slot_turn = 16.8;
+
+  ObsToPathDistRelativeSlot() = default;
+
+  ObsToPathDistRelativeSlot(float _obs_dist_out_slot_straight,
+                            float _obs_dist_out_slot_turn,
+                            float _obs_dist_entrance_slot_straight,
+                            float _obs_dist_entrance_slot_turn,
+                            float _obs_dist_in_slot_straight,
+                            float _obs_dist_in_slot_turn)
+      : obs_dist_out_slot_straight(_obs_dist_out_slot_straight),
+        obs_dist_out_slot_turn(_obs_dist_out_slot_turn),
+        obs_dist_entrance_slot_straight(_obs_dist_entrance_slot_straight),
+        obs_dist_entrance_slot_turn(_obs_dist_entrance_slot_turn),
+        obs_dist_in_slot_straight(_obs_dist_in_slot_straight),
+        obs_dist_in_slot_turn(_obs_dist_in_slot_turn) {}
+
+  void SetDist(float dist) {
+    obs_dist_out_slot_straight = dist;
+    obs_dist_out_slot_turn = dist;
+    obs_dist_entrance_slot_straight = dist;
+    obs_dist_entrance_slot_turn = dist;
+    obs_dist_in_slot_straight = dist;
+    obs_dist_in_slot_turn = dist;
+  }
+
+  void SetSmallerDist(const ObsToPathDistRelativeSlot& other) {
+    obs_dist_out_slot_straight =
+        std::min(obs_dist_out_slot_straight, other.obs_dist_out_slot_straight);
+    obs_dist_out_slot_turn =
+        std::min(obs_dist_out_slot_turn, other.obs_dist_out_slot_turn);
+    obs_dist_entrance_slot_straight = std::min(
+        obs_dist_entrance_slot_straight, other.obs_dist_entrance_slot_straight);
+    obs_dist_entrance_slot_turn = std::min(obs_dist_entrance_slot_turn,
+                                           other.obs_dist_entrance_slot_turn);
+    obs_dist_in_slot_straight =
+        std::min(obs_dist_in_slot_straight, other.obs_dist_in_slot_straight);
+    obs_dist_in_slot_turn =
+        std::min(obs_dist_in_slot_turn, other.obs_dist_in_slot_turn);
+  }
+
+  ~ObsToPathDistRelativeSlot() = default;
+};
+
+std::string PathGearDebugString(const AstarPathGear gear);
+
+std::string GetPathSteerDebugString(const AstarPathSteer type);
+
+bool IsGearSame(const AstarPathGear left, const AstarPathGear right);
+
+bool IsGearSame(const AstarPathGear left, const uint8_t right);
+
+bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
+
+bool IsGearDifferent(const AstarPathGear left, const uint8_t right);
+
+bool IsGearDifferent(const uint8_t left, const uint8_t right);
+
+bool IsTurn(const AstarPathSteer steer);
+
+bool IsTurn(const uint8_t steer);
+
+bool IsSteerOpposite(const AstarPathSteer left, const AstarPathSteer right);
+
+bool IsSteerOpposite(const uint8_t left, const uint8_t right);
+
+bool IsSteerOpposite(const float left, const float right);
+
+bool IsSteerOpposite(const AstarPathSteer left, const float right);
+
+AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear);
+
+uint8_t GetSegGearFromAstarGear(const AstarPathGear gear);
+
+uint8_t GetSegSteerFromAstarSteer(const AstarPathSteer steer);
+
+AstarPathSteer GetAstarSteerFromSegSteer(const uint8_t seg_steer);
+
+uint8_t GetSegSteerFromAstarSteer(const AstarPathSteer steer);
+
+AstarPathSteer GetAstarSteerFromRsSteer(const RSPathSteer rs_steer);
+
+AstarPathGear ReversePathGear(const AstarPathGear gear);
+
+RSPathSteer GetRsSteerFromAstarSteer(const AstarPathSteer steer);
+
+std::string PlanReasonDebugString(const PlanningReason reason);
+
+void DebugPolynomialPath(const std::vector<AStarPathPoint>& poly_path);
+
+// for debug
+void DebugPathString(const HybridAStarResult* result);
+
+std::string GetNodeCurveDebugString(const AstarPathType type);
+
+void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
+                                    const Pose2f& real_end);
+
+bool IsSearchNode(const AstarPathType type);
+
+const cdl::AABB GetAABoxByPath(const HybridAStarResult& result,
+                               const double back_overhanging,
+                               const double front_edge_to_rear_axis,
+                               const double half_width);
+
+const MapBound TransformMapBound(const cdl::AABB& box);
+
+void DebugMapBoundString(const MapBound& box);
+
+const cdl::AABB2f TransformMapBound(const MapBound& box);
+
+bool IsCurveBasedNode(const AstarPathType type);
+
+const bool HasGearRequest(const AstarPathGear type);
+
+const bool IsPathGearSameWithRequest(const AstarPathGear type,
+                                     const AstarPathGear request);
+
+const ParkingVehDirection GetParkDir(const int dir);
+
+const std::string GetAstarNodeVisitedTypeDebugString(const AstarNodeVisitedType type);
+bool GenerateStraightLinePath(std::vector<AStarPathPoint>&path,
+                              const Pose2f& start, const Pose2f& end,
+                              const AstarPathGear gear);
+
+}  // namespace planning

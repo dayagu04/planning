@@ -1,0 +1,64 @@
+#pragma once
+
+#include <vector>
+
+#include "gjk2d_interface.h"
+#include "pose2d.h"
+#include "src/library/convex_collision_detection/aabb2d.h"
+#include "src/library/convex_collision_detection/polygon_base.h"
+#include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
+#include "src/modules/apa_function/apa_common/apa_obstacle_manager.h"
+#include "src/modules/common/local_view.h"
+#include "transform2d.h"
+
+namespace planning {
+
+// now, use convex hull collision detection API, so we use point to restore
+// point cloud. But in the future, we will use occupancy grid
+// map (ogm) to represent all obstacle in astar search.
+// todo: move to apa_function
+struct PointCloudObstacle {
+  std::vector<Position2D> points;
+
+  Polygon2D envelop_polygon;
+  cdl::AABB box;
+  apa_planner::ApaObsAttributeType obs_type;
+  apa_planner::ApaObsHeightType height_type;
+};
+
+// todo: use ParkObstacle to replace PointCloudObstacle. And delete
+// ParkObstacleList.
+struct ParkObstacleList {
+  std::vector<Position2D> virtual_obs;
+
+  // fusion occ + ground line + od
+  std::vector<PointCloudObstacle> point_cloud_list;
+
+  void Clear() {
+    virtual_obs.clear();
+    point_cloud_list.clear();
+    return;
+  }
+
+  const bool IsEmpty() const {
+    if (point_cloud_list.size() > 0 || virtual_obs.size() > 0) {
+      return false;
+    }
+    return true;
+  }
+};
+
+class PointCloudObstacleTransform {
+ public:
+  PointCloudObstacleTransform() = default;
+
+  void GenerateLocalObstacle(
+      std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager,
+      ParkObstacleList& obs_list, const Pose2D& ego_pose,
+      const cdl::AABB& slot_box, const bool delete_slot_obs);
+
+ private:
+  GJK2DInterface gjk_;
+};
+
+}  // namespace planning

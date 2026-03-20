@@ -1,0 +1,52 @@
+#pragma once
+#include "avoid_obstacle_maintainer5V.h"
+#include "lateral_offset_calculatorV2.h"
+#include "lateral_offset_decider_utils.h"
+#include "session.h"
+#include "side_nudge_lateral_offset_calculate.h"
+#include "tasks/task.h"
+
+namespace planning {
+
+class LateralOffsetDecider : public Task {
+ public:
+  explicit LateralOffsetDecider(const EgoPlanningConfigBuilder* config_builder,
+                                framework::Session* session);
+
+  virtual ~LateralOffsetDecider() = default;
+
+  bool Execute() override;
+
+  bool ExecuteTest(bool pipeline_test);
+
+ private:
+  void CalLaneInfo();
+  void CalculateNormalLateralOffsetThreshold(
+      const std::shared_ptr<VirtualLane> flane);
+  double CalLaneWidth(const std::shared_ptr<VirtualLane> flane);
+  void SmoothLateralOffset(double in_lat_offset);
+  void PostProcess();
+  void SaveDebugInfo();
+  void CheckAvoidObstaclesDecision();
+  bool IsObstacleDecisionSwitch(LatObstacleDecisionType last_decision,
+                                LatObstacleDecisionType current_decision);
+  void Reset();
+  void GenerateOutput();
+  LateralOffsetDeciderConfig config_;
+  AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
+  LateralOffsetCalculatorV2 lateral_offset_calculatorv2_;
+  SideNudgeLateralOffsetDecider side_nudge_lateral_offset_decider_;
+  LatObstacleDecisionType last_first_obstacle_decision_ =
+      LatObstacleDecisionType::IGNORE;
+  LatObstacleDecisionType last_second_obstacle_decision_ =
+      LatObstacleDecisionType::IGNORE;
+  uint last_first_obstacle_id_ = 0;
+  uint last_second_obstacle_id_ = 0;
+
+  double lateral_offset_ = 0.0;
+  double lane_width_ = 3.8;
+  LaneInfo lane_info_;
+  LaneInfo last_lane_info_;
+};
+
+}  // namespace planning

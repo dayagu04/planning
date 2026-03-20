@@ -1,0 +1,85 @@
+syntax = "proto2";
+
+package planning.common;
+
+message LateralPathOptimizerInitState {
+  optional double x = 1;
+  optional double y = 2;
+  optional double theta = 3;
+  optional double k = 4;
+}
+message LateralPathOptimizerInput {
+  optional LateralPathOptimizerInitState init_state = 1;
+  repeated double ref_x_vec = 2;
+  repeated double ref_y_vec = 3;
+  repeated double ref_theta_vec = 4;
+
+  optional double last_theta = 5;
+  optional double last_y = 6;
+  optional double last_x = 7;
+
+  repeated double k_max_vec = 8;
+  repeated double k_min_vec = 9;
+  repeated double u_min_vec = 10;
+  repeated double u_max_vec = 11;
+
+  optional double r_min = 12;
+  optional double curv_factor = 13;
+  optional double delta_max = 14;
+  optional double ref_vel = 15;
+
+  optional double q_ref_x = 16;
+  optional double q_ref_y = 17;
+  optional double q_ref_theta = 18;
+  optional double q_terminal_theta = 19;
+  optional double q_terminal_x = 20;
+  optional double q_terminal_y = 21;
+  optional double q_k = 22;
+  optional double q_u = 23;
+  optional double q_k_bound = 24;
+  optional double q_u_bound = 25;
+
+
+  repeated double control_vec = 26;
+  optional double ref_s = 27;
+
+  repeated double last_x_vec = 28;
+  repeated double last_y_vec = 29;
+  repeated double last_theta_vec = 30;
+  repeated double last_k_vec = 31;
+  optional uint32 terminal_point_num = 32;
+
+  repeated double ref_k_vec = 33;
+}
+message PathOptimizerSolverIterationInfo {
+  optional bool linesearch_success = 1;
+  optional uint32 backward_pass_count = 2;
+  optional double lambda = 3;
+  optional double cost = 4;
+  optional double dcost = 5;
+  optional double expect = 6;
+  optional double du_norm = 7;
+}
+
+message PathOptimizerSolverInfo {
+  optional uint32 solver_condition = 1;
+  optional uint32 cost_size = 2;
+  optional uint32 iter_count = 3;
+  optional double init_cost = 4;
+  repeated PathOptimizerSolverIterationInfo iter_info = 5;
+}
+
+message LateralPathOptimizerOutput {
+  repeated double s_vec = 1;
+
+  repeated double x_vec = 2;
+  repeated double y_vec = 3;
+  repeated double theta_vec = 4;
+  repeated double k_vec = 5;
+  repeated double u_vec = 6;
+
+  optional PathOptimizerSolverInfo solver_info = 7;
+
+  optional double terminal_pos_error = 8;
+  optional double terminal_heading_error = 9;
+}

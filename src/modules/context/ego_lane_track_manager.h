@@ -1,0 +1,312 @@
+#pragma once
+
+#include <climits>
+#include <utility>
+#include <vector>
+
+#include "ego_planning_config.h"
+#include "fusion_road_c.h"
+#include "generated_refline.pb.h"
+#include "intersection.h"
+#include "local_view.h"
+#include "session.h"
+#include "virtual_lane.h"
+
+namespace planning {
+struct LaneCurvInfo {
+  int curv_sign = 0;
+  double curv = 0.0001;
+  double curv_radius = 10000.0;
+};
+
+class EgoLaneTrackManger {
+ public:
+  explicit EgoLaneTrackManger(const EgoPlanningConfigBuilder *config_builder,
+                              planning::framework::Session *session);
+  // EgoLaneTrackManger() = default;
+  ~EgoLaneTrackManger(){};
+
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
+
+  void Update(const RouteInfoOutput &route_info_output);
+
+  void Reset();
+
+  void CalculateVirtualLaneAttributes(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes);
+
+  void TrackEgoLane(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      std::vector<int> &order_ids_of_same_zero_relative_id,
+      const std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane);
+
+  void UpdateLaneVirtualId(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane,
+      int *last_fix_lane_virtual_id);
+
+  void PreprocessRoadSplit(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  void PreprocessRampSplit(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  void PreprocessOrdinarySplit(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids,
+      const std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane);
+
+  void ProcessIntersectionSplit(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  void ProcessSplitRegionInteractiveSelectEgoLane(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids, const int lane_change_cmd);
+
+  void ProcessSplitWithGroundMark(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  void SelectEgoLaneWithoutPlan(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes);
+
+  void SelectEgoLaneWithPlan(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids,
+      const std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane);
+
+  void MakesureManualLaneChangeByLaneOffset(
+      std::shared_ptr<VirtualLane> &last_zero_relative_id_lane_,
+      const std::shared_ptr<VirtualLane> &current_zero_relative_id_lane_,
+      bool &is_manual_lane_change);
+
+  bool CheckIfInRampSelectSplit(
+      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  bool CheckIfInRampSelectSplitForSdpro(
+      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  bool CheckIfInRoadSelectRamp(
+      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  bool CheckIfInRoadSelectRampForSdpro(
+      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  double ComputeTargetLaneSpecifiedRangeCurvature(
+      const std::shared_ptr<VirtualLane> virtual_lane);
+
+  bool CalcCrosslaneStatus(
+      const std::shared_ptr<VirtualLane> lane,
+      const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints);
+
+  std::shared_ptr<planning_math::KDPath> MakeBoundaryPath(
+      const iflyauto::LaneBoundary &boundary);
+
+  void CalcBoundaryCross(
+      const planning_math::KDPath &lane_boundary_path,
+      const std::vector<iflyauto::ReferencePoint> &center_line_pathpoints,
+      bool *cross_lane);
+
+  int CalcTargetLaneLineSegment(const std::shared_ptr<VirtualLane> base_lane,
+                                Point2D ego_cart_point);
+
+  void SetLastZeroRelativeIdNums(int last_zero_relative_id_nums) {
+    last_zero_relative_id_nums_ = last_zero_relative_id_nums;
+  }
+
+  void SetLastZeroRelativeIdOrderIdIndex(
+      int last_zero_relative_id_order_id_index) {
+    last_zero_relative_id_order_id_index_ =
+        last_zero_relative_id_order_id_index;
+  }
+
+  bool is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; }
+
+  bool is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; }
+
+  bool is_exist_split_on_expressway() const {
+    return is_exist_split_on_expressway_;
+  }
+
+  bool is_exist_intersection_split() const {
+    return is_exist_split_on_intersection_;
+  }
+
+  bool is_in_ramp_select_split_situation() const {
+    return is_in_ramp_select_split_situation_;
+  }
+
+  bool is_on_road_select_ramp_situation() const {
+    return is_on_road_select_ramp_situation_;
+  }
+
+  bool is_select_ego_lane_without_plan() const {
+    return is_select_ego_lane_without_plan_;
+  }
+
+  bool is_select_ego_lane_with_plan() const {
+    return is_select_ego_lane_with_plan_;
+  }
+
+  bool is_virtual_lane_relative_id_switch() const {
+    return virtual_lane_relative_id_switch_flag_;
+  }
+
+  bool is_ego_in_split_region() const { return ego_in_split_region_; }
+
+  bool is_exist_interactive_select_split() const {
+    return is_exist_interactive_select_split_;
+  }
+
+  bool enable_output_split_select_classical_chinese() const {
+    return enable_output_split_select_classical_chinese_;
+  }
+
+  int interactive_select_split_counter() const {
+    return interactive_select_split_counter_;
+  }
+
+  bool get_other_split_lane_right_side() const {
+    return other_split_lane_right_side_;
+  }
+
+  bool get_other_split_lane_left_side() const {
+    return other_split_lane_left_side_;
+  }
+
+ private:
+  double ComputeLanesMatchlaterakDisCost(
+      int virtual_id,
+      const std::shared_ptr<VirtualLane> current_relative_id_lane,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane,
+      const bool &is_fix);
+
+  double ComputeAverageHeadingDiff(std::shared_ptr<VirtualLane> base_lane,
+                                   const double ego_heading_angle);
+
+  void ComputeZeroRelativeIdOrderIdIndex(
+      const std::shared_ptr<VirtualLane> last_track_ego_lane,
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids, int &zero_relative_id_order_id_index);
+
+  bool MakesureVirtualLaneExistStraightDirecton(
+      const std::shared_ptr<VirtualLane> base_lane);
+
+  bool MakesureLastEgoLaneExistStraightDirecton(
+      const std::shared_ptr<VirtualLane> base_lane);
+
+  bool MakesureVirtualLaneExistOtherDirecton(
+      const std::shared_ptr<VirtualLane> base_lane);
+
+  void MakesureVirtualLaneSideIsVirtual(
+      const std::shared_ptr<VirtualLane> base_lane,
+      bool &virtual_lane_exist_virtual, const int lane_index);
+
+  void MakesureVirtualLaneIsVirtual(
+      const std::shared_ptr<VirtualLane> base_lane,
+      bool &virtual_lane_exist_virtual);
+
+  void ComputeIsSplitRegion(
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids,
+      const std::unordered_map<int, std::shared_ptr<VirtualLane>>
+          &virtual_id_mapped_lane);
+
+  void CheckIfConsiderSecondSplit(
+      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      bool& is_consider_second_split);
+  void ComputeEgoDistanceToRoadBorder(
+      const std::shared_ptr<VirtualLane> &base_lane,
+      double &dis_to_left_road_border, double &dis_to_right_road_border);
+
+  double CalculateLinearCost(double ttc);
+
+  double Normalize(double value, double max_value);
+
+  double NormalizeCurvatureRadius(double radius);
+
+  double NormalizeCurvatureSign(double dis_to_ego);
+
+  void CalculateLaneCurvature(
+    const std::shared_ptr<planning_math::KDPath>& lane_frenet_coord,
+    std::vector<std::pair<int, double>>& lane_curv_info_set,
+    LaneCurvInfo& lane_curv_info,
+    double& max_road_radius,
+    const std::shared_ptr<VirtualLane>& relative_id_lane);
+
+  void CalculateDynamicCostWeights(
+    double curv_degree,
+    double& road_boundary_collision_cost_weight,
+    double& relative_theta_diff_cost_weight,
+    double& kappa_cost_weight);
+
+void CalculateRoadBoundaryCollisionCost(
+    const LaneCurvInfo& lane_curv_info,
+    double& road_boundary_collision_cost,
+    const std::shared_ptr<VirtualLane>& relative_id_lane);
+
+ private:
+  planning::framework::Session *session_ = nullptr;
+  EgoPlanningConfig config_;
+  // int last_fix_lane_virtual_id_ = 0;
+  int current_lane_virtual_id_ = 0;
+  bool lcc_split_select_is_finish_ = false;
+  bool road_split_select_is_finish_ = false;
+  bool ramp_split_select_is_finish_ = false;
+
+  std::shared_ptr<VirtualLane> last_track_ego_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> last_zero_relative_id_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> current_zero_relative_id_lane_ = nullptr;
+  // uint lane_num_ = 0;
+  uint last_zero_relative_id_nums_ = 0;
+  int last_zero_relative_id_order_id_index_ = -1;
+  int current_fix_lane_order_id_ = -1;
+  bool is_ego_on_expressway_ = false;
+  bool is_on_ramp_ = false;
+  double dis_to_ramp_ = NL_NMAX;
+  bool is_leaving_ramp_ = false;
+  std::pair<SplitRelativeDirection, double> first_split_dir_dis_info_;
+  std::vector<std::pair<SplitRelativeDirection, double>>
+      split_direction_dis_info_list_;
+  double distance_to_first_road_merge_ = NL_NMAX;
+  double distance_to_first_road_split_ = NL_NMAX;
+  double sum_dis_to_last_split_point_ = NL_NMAX;
+  bool virtual_lane_relative_id_switch_flag_ = false;
+  bool is_exist_split_on_ramp_ = false;
+  bool is_exist_ramp_on_road_ = false;
+  bool is_exist_split_on_expressway_ = false;
+  bool is_exist_split_on_intersection_ = false;
+  bool is_in_ramp_select_split_situation_ = false;
+  bool is_on_road_select_ramp_situation_ = false;
+  bool is_interactive_select_split_situation_ = false;
+  bool is_exist_interactive_select_split_ = false;
+  bool enable_output_split_select_classical_chinese_ = false;
+  bool is_select_ego_lane_without_plan_ = false;
+  bool is_select_ego_lane_with_plan_ = false;
+  bool other_split_lane_right_side_ = false;
+  bool other_split_lane_left_side_ = false;
+  int interactive_select_split_counter_ = 0;
+  double current_segment_passed_distance_ = 0.0;
+  double sum_distance_from_ego_to_both_center_lines_ = 3.75;
+  bool ego_in_split_region_ = false;
+  std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
+  std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
+  const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
+  const std::vector<double> collision_cost_weight_{100.0, 50.0, 5.0};
+  const std::vector<double> road_curv_radius_{200.0, 400.0, 1000.0};
+};
+
+}  // namespace planning

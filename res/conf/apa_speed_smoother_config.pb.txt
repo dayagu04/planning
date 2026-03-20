@@ -1,0 +1,8 @@
+delta_s: 0.1
+max_iter: 5000
+weight_v: 0.0
+weight_dv: 1.0
+weight_ddv: 1.0
+weight_dddv: 1.0
+weight_ref_v: 10000.0
+weight_slack: 1.0

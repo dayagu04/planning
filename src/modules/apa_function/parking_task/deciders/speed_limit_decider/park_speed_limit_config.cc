@@ -1,0 +1,50 @@
+#include "park_speed_limit_config.h"
+
+#include <cmath>
+
+#include "apa_param_config.h"
+#include "log_glog.h"
+
+namespace planning {
+namespace apa_planner {
+
+void ParkSpeedLimitConfig::Init(const ParkingSpeedMode& park_speed_mode) {
+  const SpeedModeParams& speed_config =
+      apa_param.GetParam().speed_config.GetSpeedParams(park_speed_mode);
+
+  default_cruise_speed = speed_config.default_cruise_speed;
+
+  // update path point kappa gap
+  // If front wheel change 0.8 ratio, add speed limit.
+  double kappa = 1.0 / apa_param.GetParam().min_turn_radius;
+  kappa_switch_thresh = kappa;
+  speed_limit_by_kappa_switch = speed_config.speed_limit_by_kappa_switch.lower;
+
+  // kappa limit speed
+  kappa_thresh = kappa * 0.9;
+  speed_limit_lower_by_kappa = speed_config.speed_limit_by_kappa.lower;
+
+  // obs distance related
+  // v = speed_limit_by_obs_+ a0 * dist
+  obs_dist_upper = 0.8;
+  obs_dist_lower = 0.2;
+
+  speed_limit_lower_by_obs = speed_config.speed_limit_by_obs_dist.lower;
+  double max_speed = std::max(default_cruise_speed, speed_limit_lower_by_obs);
+  first_order_param_by_obs = (max_speed - speed_limit_lower_by_obs) /
+                             (obs_dist_upper - obs_dist_lower);
+  zero_order_param_by_obs =
+      speed_limit_lower_by_obs - first_order_param_by_obs * obs_dist_lower;
+
+  // speed limit by inside slot
+  enable_speed_limit_by_slot = true;
+  speed_limit_by_inside_slot = 0.56;
+
+  // 1.2kph
+  terminal_speed_limit = 0.33;
+  terminal_speed_limit_zone = 0.25;
+
+  return;
+}
+}  // namespace apa_planner
+}  // namespace planning

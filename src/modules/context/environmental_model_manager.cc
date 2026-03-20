@@ -1,0 +1,2085 @@
+#include "environmental_model_manager.h"
+
+#include <Eigen/Dense>
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <typeinfo>
+#include <unordered_map>
+
+#include "Eigen/src/Core/Matrix.h"
+#include "Eigen/src/Core/util/Constants.h"
+#include "agent/agent_manager.h"
+#include "basic_types.pb.h"
+#include "common_platform_type_soc.h"
+#include "config/basic_type.h"
+#include "debug_info_log.h"
+#include "ego_planning_config.h"
+#include "ego_state_manager.h"
+#include "frenet_ego_state.h"
+#include "fusion_objects_c.h"
+#include "general_planning_context.h"
+#include "history_obstacle_manager.h"
+#include "ifly_localization_c.h"
+#include "ifly_time.h"
+#include "lateral_obstacle.h"
+#include "math/linear_interpolation.h"
+#include "modules/common/config_context.h"
+#include "obstacle_manager.h"
+#include "planning_context.h"
+#include "planning_gflags.h"
+#include "reference_path_manager.h"
+#include "route_info.h"
+#include "scene_type_config.pb.h"
+#include "src/modules/common/config/basic_type.h"
+#include "traffic_light_decision_manager.h"
+#include "vehicle_model/vehicle_model.h"
+#include "vehicle_service_c.h"
+#include "vehicle_status.pb.h"
+#include "virtual_lane_manager.h"
+
+#define TRAJ_POINT_NUM_USED 25
+
+namespace planning {
+namespace planner {
+namespace {
+static constexpr int kMRMStateDebounce = 5;
+static constexpr int kPlanPoints = 26;
+static constexpr double kTimeStep = 0.2;
+static constexpr double kAlpha = 0.4;
+static constexpr int kMinHistoryFrameCount = 3;
+static constexpr double kFrameIntervalS = 0.1;
+static constexpr double kMaxDelayS = 0.3;
+static constexpr double kLowSpeedThreshold = 2.78;
+}  // namespace
+
+EnvironmentalModelManager::EnvironmentalModelManager() {
+  ILOG_DEBUG << "EnvironmentalModelManager created";
+}
+
+void EnvironmentalModelManager::Init(planning::framework::Session* session) {
+  session_ = session;
+  InitContext();
+}
+
+EgoPlanningConfigBuilder* EnvironmentalModelManager::load_config_builder(
+    const char* file_name) {
+  auto config_file_dir =
+      session_->environmental_model().get_module_config_file_dir();
+  auto ego_planning_config_json_file = config_file_dir + "/" + file_name;
+  ILOG_DEBUG << "ego_planning_config_json_file:"
+             << ego_planning_config_json_file.c_str();
+
+  Json ego_planning_config_json;
+  std::ifstream fin(ego_planning_config_json_file);
+  fin >> ego_planning_config_json;
+  fin.close();
+
+  return session_->alloc<EgoPlanningConfigBuilder>(ego_planning_config_json,
+                                                   file_name);
+}
+
+EgoPlanningConfigBuilder* EnvironmentalModelManager::load_config_builder(
+    const char* file_name, const char* vehicle_specified_file_name) {
+  auto config_file_dir =
+      session_->environmental_model().get_module_config_file_dir();
+  auto ego_planning_config_json_file = config_file_dir + "/" + file_name;
+  ILOG_INFO << "ego_planning_config_json_file:"
+            << ego_planning_config_json_file.c_str();
+  Json ego_planning_config_json;
+  std::ifstream fin(ego_planning_config_json_file);
+  fin >> ego_planning_config_json;
+  fin.close();
+
+  Json ego_planning_config_json_vehicle_specified;
+  std::string path = "/asw/planning/res/conf/scc_params.json";
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
+  if (engine_config.vehicle_cfg_dir.empty()) {
+    std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
+    common::ConfigurationContext::Instance()->load_engine_config_from_json(
+        engine_config_path);
+    ILOG_INFO << "load vehicle config: " << engine_config_path;
+    engine_config = common::ConfigurationContext::Instance()->engine_config();
+    ILOG_INFO << "vehicle config path: " << engine_config.vehicle_cfg_dir;
+  }
+  path = engine_config.vehicle_cfg_dir + "/" + vehicle_specified_file_name;
+  std::ifstream vehicle_config_fin(path);
+  vehicle_config_fin >> ego_planning_config_json_vehicle_specified;
+  vehicle_config_fin.close();
+  Json result_config_json = Config::merge_configs(
+      ego_planning_config_json, ego_planning_config_json_vehicle_specified);
+  return session_->alloc<EgoPlanningConfigBuilder>(result_config_json,
+                                                   file_name);
+}
+
+void EnvironmentalModelManager::InitContext() {
+  auto parking_config_builder =
+      load_config_builder("general_planner_module_parking.json");
+  session_->mutable_environmental_model()->set_parking_config_builder(
+      parking_config_builder);
+
+  auto highway_config_builder = load_config_builder(
+      "general_planner_module_highway.json", "scc_params.json");
+  session_->mutable_environmental_model()->set_highway_config_builder(
+      highway_config_builder);
+
+  auto hpp_config_builder =
+      load_config_builder("general_planner_module_hpp.json");
+  session_->mutable_environmental_model()->set_hpp_config_builder(
+      hpp_config_builder);
+
+  auto rads_config_builder =
+      load_config_builder("general_planner_module_rads.json");
+  session_->mutable_environmental_model()->set_rads_config_builder(
+      rads_config_builder);
+
+  auto nsa_config_builder =
+      load_config_builder("general_planner_module_nsa.json");
+  session_->mutable_environmental_model()->set_nsa_config_builder(
+      nsa_config_builder);
+  planning::common::SceneType scene_type = session_->get_scene_type();
+  auto config_builder =
+      session_->environmental_model().config_builder(scene_type);
+  ego_config_ = config_builder->cast<planning::EgoPlanningConfig>();
+
+  ego_state_manager_ptr_ =
+      std::make_shared<planning::EgoStateManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_ego_state(
+      ego_state_manager_ptr_);
+
+  virtual_lane_manager_ptr_ =
+      std::make_shared<planning::VirtualLaneManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_virtual_lane_manager(
+      virtual_lane_manager_ptr_);
+
+  traffic_light_decision_manager_ptr_ =
+      std::make_shared<planning::TrafficLightDecisionManager>(config_builder,
+                                                              session_);
+  session_->mutable_environmental_model()->set_traffic_light_decision_manager(
+      traffic_light_decision_manager_ptr_);
+
+  obstacle_manager_ptr_ =
+      std::make_shared<planning::ObstacleManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_obstacle_manager(
+      obstacle_manager_ptr_);
+
+  construction_scene_manager_ptr_ =
+      std::make_shared<planning::ConstructionSceneManager>(session_);
+  session_->mutable_environmental_model()->set_construction_scene_manager(
+      construction_scene_manager_ptr_);
+
+  reference_path_manager_ptr_ =
+      std::make_shared<planning::ReferencePathManager>(config_builder,
+                                                       session_);
+  session_->mutable_environmental_model()->set_reference_path_manager(
+      reference_path_manager_ptr_);
+
+  lateral_obstacle_ptr_ =
+      std::make_shared<planning::LateralObstacle>(config_builder, session_);
+  session_->mutable_environmental_model()->set_lateral_obstacle(
+      lateral_obstacle_ptr_);
+
+  lane_tracks_mgr_ptr_ = std::make_shared<LaneTracksManager>(
+      *lateral_obstacle_ptr_, *virtual_lane_manager_ptr_, session_);
+  session_->mutable_environmental_model()->set_lane_tracks_manager(
+      lane_tracks_mgr_ptr_);
+  // agent node manager
+  agent_node_mgr_ptr_ = std::make_shared<AgentNodeManager>();
+  session_->mutable_environmental_model()->set_agent_node_manager(
+      agent_node_mgr_ptr_);
+
+  parking_slot_manager_ptr_ = std::make_shared<ParkingSlotManager>(session_);
+  session_->mutable_environmental_model()->set_parking_slot_manager(
+      parking_slot_manager_ptr_);
+  history_obstacle_ptr_ = std::make_shared<planning::HistoryObstacleManager>(
+      config_builder, session_);
+  session_->mutable_environmental_model()->set_history_obstacle_manager(
+      history_obstacle_ptr_);
+
+  const std::string& config_file_dir =
+      session_->mutable_environmental_model()->get_module_config_file_dir();
+  common::VehicleModel::LoadVehicleModelConfig(config_file_dir);
+  // new agent manager
+  agent_manager_ptr_ =
+      std::make_shared<agent::AgentManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_agent_manager(
+      agent_manager_ptr_);
+
+  dynamic_world_ = std::make_shared<planning_data::DynamicWorld>(
+      *agent_manager_ptr_, session_);
+  session_->mutable_environmental_model()->set_dynamic_world(dynamic_world_);
+
+  route_info_ptr_ =
+      std::make_shared<planning::RouteInfo>(config_builder, session_);
+  session_->mutable_environmental_model()->set_route_info(route_info_ptr_);
+
+  edt_manager_ptr_ =
+      std::make_shared<planning::EdtManager>(config_builder, session_);
+  session_->mutable_environmental_model()->set_edt_manager(edt_manager_ptr_);
+}
+
+void EnvironmentalModelManager::SetConfig(
+    const planning::common::SceneType scene_type) {
+  auto config_builder =
+      session_->environmental_model().config_builder(scene_type);
+  ego_config_ = config_builder->cast<planning::EgoPlanningConfig>();
+
+  ego_state_manager_ptr_->SetConfig(config_builder);
+
+  virtual_lane_manager_ptr_->SetConfig(config_builder);
+
+  traffic_light_decision_manager_ptr_->SetConfig(config_builder);
+
+  obstacle_manager_ptr_->SetConfig(config_builder);
+
+  lateral_obstacle_ptr_->SetConfig(config_builder);
+
+  history_obstacle_ptr_->SetConfig(config_builder);
+
+  agent_manager_ptr_->SetConfig(config_builder);
+
+  route_info_ptr_->SetConfig(config_builder);
+
+  edt_manager_ptr_->SetConfig(config_builder);
+
+  reference_path_manager_ptr_->SetConfig(config_builder);
+}
+
+bool EnvironmentalModelManager::Run() {
+  ILOG_DEBUG << "EnvironmentalModelManager run";
+
+  auto current_time = IflyTime::Now_ms();
+  auto current_time_s = IflyTime::Now_s();
+
+  if (!session_->environmental_model().GetVehicleDbwStatus()) {
+    ILOG_DEBUG << "DBW_Disable, but EnvironmentalModelManager continue";
+  }
+
+  const auto& local_view = session_->environmental_model().get_local_view();
+
+  // 通过配置项进行实时长时的切换 true: 长时规划
+  // check localization
+  bool localization_valid =
+      local_view.localization.status.status_info.mode !=
+      iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
+  if (session_->is_hpp_scene()) {
+    localization_valid =
+        local_view.localization.status.status_info.mode ==
+        iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_MAPLOC;
+  }
+  // check fusion
+  bool fusion_valid_on_road = local_view.road_info.local_point_valid &&
+                              local_view.fusion_objects_info.local_point_valid;
+  bool location_valid_on_openspace =
+      // local_view.fusion_objects_info.local_point_valid &&
+      local_view.fusion_occupancy_objects_info.local_point_valid;
+  // check planner type
+  bool planner_valid = GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
+                           planning::context::PlannerType::SCC_PLANNER_V2 ||
+                       GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
+                           planning::context::PlannerType::SCC_PLANNER_V3 ||
+                       GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
+                           planning::context::PlannerType::HPP_PLANNER;
+  // printf("planner_type:%d\n",
+  // GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
+  auto location_valid =
+      localization_valid && fusion_valid_on_road && planner_valid;
+  if (session_->is_nsa_scene()) {
+    location_valid =
+        localization_valid && location_valid_on_openspace && planner_valid;
+  }
+  if (session_->is_hpp_scene() && !location_valid) {
+    ILOG_ERROR << "hpp location invalid";
+    return false;
+  }
+  // location_valid = true; //hack
+
+  auto environmental_model = session_->mutable_environmental_model();
+  environmental_model->set_location_valid(location_valid);
+  // Step 1) update vehicleDbwStatus
+  auto fsm_state = local_view.function_state_machine_info.current_state;
+  bool acc_mode = (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE);
+  bool scc_mode = (fsm_state == iflyauto::FunctionalState_SCC_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE);
+  bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
+  bool hpp_mode_cruise =
+      (fsm_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE_DRIVING) ||
+      (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) ||
+      (fsm_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING);
+  bool hpp_mode =
+      (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
+      (fsm_state <=
+       iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
+  bool rads_mode = fsm_state >= iflyauto::FunctionalState_RADS_PASSIVE &&
+                   fsm_state <= iflyauto::FunctionalState_RADS_ERROR;
+
+  bool nsa_mode = (fsm_state >= iflyauto::FunctionalState_NRA_PASSIVE) &&
+                  (fsm_state <= iflyauto::FunctionalState_NRA_ERROR);
+  static bool is_mrc_mode_hold = false;
+  static int mrm_state_hold_cnt = kMRMStateDebounce;
+  bool mrc_mode_from_state_machine = fsm_state == iflyauto::FunctionalState_MRC;
+
+  if (fsm_state == iflyauto::FunctionalState_MRC) {
+    is_mrc_mode_hold = true;
+    mrm_state_hold_cnt = 1;
+  }
+  if (is_mrc_mode_hold) {
+    const auto& vehicle_service_output = local_view.vehicle_service_output_info;
+    if (mrm_state_hold_cnt++ >= kMRMStateDebounce &&
+        false == vehicle_service_output.right_turn_light_state &&
+        false == vehicle_service_output.left_turn_light_state) {
+      is_mrc_mode_hold = false;
+      mrm_state_hold_cnt = kMRMStateDebounce;
+    }
+    mrm_state_hold_cnt = std::min(mrm_state_hold_cnt, kMRMStateDebounce);
+  }
+  bool mrc_mode = is_mrc_mode_hold;
+  bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise ||
+                    rads_mode || nsa_mode || mrc_mode_from_state_machine;
+  environmental_model->UpdateVehicleDbwStatus(dbw_status);
+  JSON_DEBUG_VALUE("dbw_status", dbw_status)
+  JSON_DEBUG_VALUE("fsm_state", static_cast<int>(fsm_state))
+
+  common::DrivingFunctionInfo::DrivingFunctionstate function_state =
+      common::DrivingFunctionInfo::ACTIVATE;
+  if (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE ||
+      fsm_state == iflyauto::FunctionalState_SCC_ACTIVATE ||
+      fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE ||
+      fsm_state == iflyauto::FunctionalState_RADS_TRACING) {
+    function_state = common::DrivingFunctionInfo::ACTIVATE;
+  } else if (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE ||
+             fsm_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
+             fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE) {
+    function_state = common::DrivingFunctionInfo::OVERRIDE;
+  } else if (fsm_state == iflyauto::FunctionalState_RADS_SUSPEND) {
+    function_state = common::DrivingFunctionInfo::SUSPEND;
+  }
+
+  if (scc_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::SCC,
+                                           function_state);
+  } else if (acc_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,
+                                           function_state);
+  } else if (noa_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::NOA,
+                                           function_state);
+  } else if (hpp_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::HPP,
+                                           function_state);
+  } else if (rads_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::RADS,
+                                           function_state);
+  } else if (nsa_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::NSA,
+                                           function_state);
+  } else {
+    LOG_NOTICE("function mode error");
+    environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,
+                                           function_state);
+  }
+  environmental_model->set_is_mrc_mode(mrc_mode);
+
+  // 自动有效，临时hack
+  // session_->mutable_environmental_model()->UpdateVehicleDbwStatus(true);
+  last_feed_time_[FEED_VEHICLE_DBW_STATUS] =
+      local_view.function_state_machine_info_recv_time;
+
+  // Step 2) update ego_state
+  auto time_start = IflyTime::Now_ms();
+  if (!ego_state_update(current_time, local_view)) {
+    ILOG_ERROR << "ego_state_update false";
+    return false;
+  }
+  auto time_end = IflyTime::Now_ms();
+  ILOG_INFO << "ego_state_update cost:" << time_end - time_start;
+
+  // Step 3) update route info
+  time_start = IflyTime::Now_ms();
+  route_info_ptr_->Update();
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "update route_info cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("update route_info cost", time_end - time_start)
+
+  // Step 4) update virtual_lane
+  time_start = IflyTime::Now_ms();
+  last_feed_time_[FEED_MAP_INFO] = local_view.static_map_info_recv_time;
+  if (rads_mode && !virtual_lane_manager_ptr_->update(
+                       local_view.function_state_machine_info)) {
+    ILOG_ERROR << "virtual_lane_manager update failed for rads";
+    return false;
+  }
+
+  if (!rads_mode) {
+    if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
+      ILOG_ERROR << "virtual_lane_manager update failed";
+      return false;
+    } else {
+      // 后面需要判断是否为地图
+      last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
+    }
+  }
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "virtual_lane_manager update cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
+
+  // update traffic lights info
+  if (!traffic_light_decision_manager_ptr_->Update(
+          local_view.perception_tsr_info)) {
+    ILOG_ERROR << "traffic_light_decision_manager update failed";
+    return false;
+  }
+
+  // Step 5) update obstacle
+  time_start = IflyTime::Now_ms();
+  if (!obstacle_prediction_update(current_time, local_view)) {
+    return false;
+  }
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "obstacle_prediction update cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
+
+  if (session_->is_hpp_scene()) {
+    time_start = IflyTime::Now_ms();
+    if (ego_config_.enable_fusion_parking_slot) {  // fusion parking slot
+      parking_slot_manager_ptr_->Update(local_view.parking_fusion_info);
+    } else {  // ehr parking space
+      parking_slot_manager_ptr_->Update(local_view.static_map_info);
+    }
+    time_end = IflyTime::Now_ms();
+    ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
+    JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
+    if (parking_slot_manager_ptr_->IsExistTargetSlot()) {
+      const auto& target_slot_center =
+          parking_slot_manager_ptr_->GetTargetSlotCenter();
+      route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(
+          target_slot_center.x(), target_slot_center.y()));
+    }
+  }
+
+  time_start = IflyTime::Now_ms();
+  obstacle_manager_ptr_->update();
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "obstacle_manager cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
+
+  time_start = IflyTime::Now_ms();
+  agent_manager_ptr_->Update(current_time_s);
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "agent manager cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
+
+  // Step 6) update reference path
+  time_start = IflyTime::Now_ms();
+  if (!construction_scene_manager_ptr_->update()) {
+    ILOG_ERROR << "construction_scene_manager update fail";
+    return false;
+  }
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "construction_scene_manager update cost:"
+            << time_end - time_start;
+  JSON_DEBUG_VALUE("construction_scene_manager", time_end - time_start);
+
+  // Step 6) update reference path
+  time_start = IflyTime::Now_ms();
+  if (!reference_path_manager_ptr_->update()) {
+    ILOG_ERROR << "reference_path_manager update fail";
+    return false;
+  }
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "reference_path_manager update cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
+
+  if (!session_->is_hpp_scene()) {
+    time_start = IflyTime::Now_ms();
+    lateral_obstacle_ptr_->update();
+    time_end = IflyTime::Now_ms();
+    ILOG_INFO << "lateral_obstacle update cost:" << time_end - time_start;
+    JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
+
+    lane_tracks_mgr_ptr_->update_lane_tracks();
+    // Step 7) update agent node manager
+    time_start = IflyTime::Now_ms();
+    agent_node_mgr_ptr_->init();
+    time_end = IflyTime::Now_ms();
+    ILOG_INFO << "agent_node_manager init cost:" << time_end - time_start;
+    JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
+    // std::cout<< "agent_node_mgr time is : " << time_end - time_start
+    // <<std::endl;
+  } else {
+    history_obstacle_ptr_->Update();
+  }
+
+  // DynamicWorld验证
+  time_start = IflyTime::Now_ms();
+  dynamic_world_->ConstructDynamicWorld();
+  time_end = IflyTime::Now_ms();
+  // dynamic_world_->DebugEgoNearByAgentNodesTrajectory();
+  ILOG_INFO << "dynamic world update cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
+
+  time_start = IflyTime::Now_ms();
+  edt_manager_ptr_->update();
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "edt_manager cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);
+
+  auto end_time = IflyTime::Now_ms();
+  ILOG_INFO << "EnvironmentalModelManager::Run cost time"
+            << time_end - time_start;
+  JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
+  std::string status_msg;
+  InputReady(current_time, status_msg);
+  // if (!InputReady(current_time, status_msg)) {
+  //   //   ILOG_ERROR << "";
+  // LOG_ERROR(("InputReady is failed !!!! \n");
+  //   // return false;
+  // }
+
+  return true;
+}
+
+bool EnvironmentalModelManager::ego_state_update(double current_time,
+                                                 const LocalView& local_view) {
+  common::VehicleStatus vehicle_status;
+  vehicle_status_adaptor(current_time, local_view, vehicle_status);
+  return ego_state_manager_ptr_->update(vehicle_status);
+}
+
+bool EnvironmentalModelManager::obstacle_prediction_update(
+    double current_time, const LocalView& local_view) {
+  // fusion and prediction update
+  auto& prediction_info =
+      session_->mutable_environmental_model()->get_mutable_prediction_info();
+  auto& fusion_objs_info =
+      session_->mutable_environmental_model()->get_mutable_fusion_info();
+  prediction_info.clear();
+  fusion_objs_info.clear();
+  if (session_->environmental_model().location_valid()) {
+    std::unordered_set<uint> prediction_obj_id_set;
+    auto timestamp = local_view.localization.meta.timestamp;
+    double fusion_timestamp_us =
+        local_view.fusion_objects_info.msg_header.stamp;
+    double planning_timestamp_us = current_time * 1.0e3;
+    double fusion_delay_time =
+        std::abs(planning_timestamp_us - fusion_timestamp_us) / 1.0e6;
+
+    if (!session_->is_hpp_scene() && !session_->is_rads_scene() &&
+        !session_->is_nsa_scene()) {
+      truncate_prediction_info(local_view.prediction_result,
+                               local_view.fusion_objects_info, timestamp,
+                               prediction_obj_id_set, fusion_delay_time);
+    } else {
+      // hack:hpp 、rads 、nsa 暂时只用融合障碍物
+      for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+           i++) {
+        const auto& obj = local_view.fusion_objects_info.fusion_object[i];
+        transform_fusion_to_prediction_longtime(
+            obj, (double)local_view.fusion_objects_info.msg_header.stamp,
+            prediction_info);
+      }
+    }
+
+    // for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+    //      i++) {
+    //   const auto &obj = local_view.fusion_objects_info.fusion_object[i];
+    //   transform_fusion_to_prediction_longtime(
+    //       obj, (double)local_view.fusion_objects_info.msg_header.stamp,
+    //       fusion_objs_info);
+    // }
+  } else {
+    for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+         i++) {
+      const auto& obj = local_view.fusion_objects_info.fusion_object[i];
+      transform_fusion_to_prediction(
+          obj, (double)local_view.fusion_objects_info.msg_header.stamp,
+          prediction_info);
+    }
+  }
+
+  last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
+  last_feed_time_[FEED_PREDICTION_INFO] =
+      local_view.prediction_result_recv_time;
+  return true;
+}
+
+void EnvironmentalModelManager::vehicle_status_adaptor(
+    double current_time, const LocalView& local_view,
+    common::VehicleStatus& vehicle_status) {
+  const auto& vehicle_service_output_info =
+      local_view.vehicle_service_output_info;
+  const auto& localization = local_view.localization;
+  bool new_local = true;
+  const auto& function_state_machine_info =
+      local_view.function_state_machine_info;
+  vehicle_status.mutable_header()->set_timestamp_us(
+      vehicle_service_output_info.msg_header.stamp);
+
+  if (session_->environmental_model().location_valid()) {
+    vehicle_status.mutable_heading_yaw()
+        ->mutable_heading_yaw_data()
+        ->set_value_rad(localization.orientation.euler_boot.yaw);
+    // ->set_value_rad(localization_estimate.pose.euler_angles.yaw);
+    vehicle_status.mutable_location()->set_available(true);
+    // auto llh_position = localization_estimate.pose.llh_position;
+    // auto llh_position = localization.position.position_llh;
+    vehicle_status.mutable_location()
+        ->mutable_location_geographic()
+        ->set_latitude_degree(localization.position.position_llh.latitude);
+    vehicle_status.mutable_location()
+        ->mutable_location_geographic()
+        ->set_longitude_degree(localization.position.position_llh.longitude);
+    vehicle_status.mutable_location()
+        ->mutable_location_geographic()
+        ->set_altitude_meter(localization.position.position_llh.height);
+    // auto local_position = localization_estimate.pose.local_position;
+    // auto local_position = localization.position.position_boot;
+    vehicle_status.mutable_location()->mutable_location_enu()->set_x(
+        localization.position.position_boot.x);
+    vehicle_status.mutable_location()->mutable_location_enu()->set_y(
+        localization.position.position_boot.y);
+    vehicle_status.mutable_location()->mutable_location_enu()->set_z(
+        localization.position.position_boot.z);
+    vehicle_status.mutable_location()->mutable_location_enu()->set_timestamp_us(
+        localization.meta.timestamp);
+    // auto enu_orientation = localization_estimate.pose.orientation;
+    // auto enu_orientation = localization.orientation.quaternion_boot;
+    vehicle_status.mutable_location()
+        ->mutable_location_enu()
+        ->mutable_orientation()
+        ->set_x(localization.orientation.quaternion_boot.x);
+    vehicle_status.mutable_location()
+        ->mutable_location_enu()
+        ->mutable_orientation()
+        ->set_y(localization.orientation.quaternion_boot.y);
+    vehicle_status.mutable_location()
+        ->mutable_location_enu()
+        ->mutable_orientation()
+        ->set_z(localization.orientation.quaternion_boot.z);
+    vehicle_status.mutable_location()
+        ->mutable_location_enu()
+        ->mutable_orientation()
+        ->set_w(localization.orientation.quaternion_boot.w);
+    // last_feed_time_[FEED_EGO_ENU] =
+    // local_view.localization_estimate_recv_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
+  } else {
+    vehicle_status.mutable_heading_yaw()
+        ->mutable_heading_yaw_data()
+        ->set_value_rad(0.);
+    vehicle_status.mutable_location()->set_available(true);
+    auto location_enu =
+        vehicle_status.mutable_location()->mutable_location_enu();
+    // Todo
+    // location_enu->set_timestamp_us(static_cast<uint64_t>(current_time *
+    // 1e6));
+    location_enu->set_x(0.0);
+    location_enu->set_y(0.0);
+    location_enu->set_z(0.0);
+    location_enu->mutable_orientation()->set_x(0.0);
+    location_enu->mutable_orientation()->set_y(0.0);
+    location_enu->mutable_orientation()->set_z(0.0);
+    location_enu->mutable_orientation()->set_w(1.0);
+    // last_feed_time_[FEED_EGO_ENU] =
+    // local_view.localization_estimate_recv_time;
+    last_feed_time_[FEED_EGO_ENU] = local_view.localization_recv_time;
+  }
+
+  vehicle_status.mutable_velocity()->mutable_cruise_velocity()->set_value_mps(
+      function_state_machine_info.pilot_req.acc_curise_real_spd);
+  vehicle_status.mutable_time_headway_level()->set_value_num(
+      function_state_machine_info.pilot_req.acc_curise_time_interval);
+  vehicle_status.mutable_time_headway_scale_up_request()
+      ->set_has_scale_up_request(
+          function_state_machine_info.pilot_req.has_obstacle_ahead);
+  vehicle_status.mutable_stand_wait_request()->set_has_stand_wait_request(
+      function_state_machine_info.pilot_req.stand_wait);
+
+  if (vehicle_service_output_info.yaw_rate_available) {
+    vehicle_status.mutable_angular_velocity()->set_available(true);
+    vehicle_status.mutable_angular_velocity()
+        ->mutable_heading_yaw_rate()
+        ->set_value_rps(vehicle_service_output_info.yaw_rate);
+  } else {
+    vehicle_status.mutable_angular_velocity()->set_available(false);
+    vehicle_status.mutable_angular_velocity()
+        ->mutable_heading_yaw_rate()
+        ->set_value_rps(0.);
+  }
+
+  if (session_->environmental_model().location_valid()) {
+    vehicle_status.mutable_velocity()->set_available(true);
+    vehicle_status.mutable_velocity()
+        ->mutable_heading_velocity()
+        ->set_value_mps(new_local ? localization.velocity.velocity_body.vx
+                                  : vehicle_service_output_info.vehicle_speed);
+    last_feed_time_[FEED_EGO_VEL] =
+        new_local ? local_view.localization_recv_time
+                  : local_view.vehicle_service_output_info_recv_time;
+  }
+
+  if (session_->environmental_model().location_valid()) {
+    vehicle_status.mutable_brake_info()
+        ->mutable_brake_info_data()
+        ->set_acceleration_on_vehicle_wheel(
+            new_local ? localization.acceleration.acceleration_body.ax
+                      : vehicle_service_output_info.long_acceleration);
+    last_feed_time_[FEED_EGO_ACC] =
+        new_local ? local_view.localization_recv_time
+                  : local_view.vehicle_service_output_info_recv_time;
+  }
+
+  if (vehicle_service_output_info.vehicle_speed_display_available) {
+    vehicle_status.mutable_velocity()->set_available(true);
+    vehicle_status.mutable_velocity()->set_hmi_speed(
+        vehicle_service_output_info.vehicle_speed_display);
+  }
+
+  // if (session_->environmental_model().location_valid()) {
+  //   auto linear_velocity_from_wheel = localization.velocity.velocity_body.vx;
+  // }
+
+  if (vehicle_service_output_info.steering_wheel_angle_available) {
+    auto steering_data = vehicle_status.mutable_steering_wheel();
+    steering_data->set_available(true);
+    steering_data->mutable_steering_wheel_data()->set_steering_wheel_rad(
+        vehicle_service_output_info.steering_wheel_angle);
+    steering_data->mutable_steering_wheel_data()->set_steering_wheel_torque(
+        vehicle_service_output_info.power_train_current_torque);
+
+    last_feed_time_[FEED_EGO_STEER_ANGLE] =
+        local_view.vehicle_service_output_info_recv_time;
+  }
+
+  if (vehicle_service_output_info.fl_wheel_speed_available &&
+      vehicle_service_output_info.fr_wheel_speed_available &&
+      vehicle_service_output_info.rl_wheel_speed_available &&
+      vehicle_service_output_info.rr_wheel_speed_available) {
+    vehicle_status.mutable_wheel_velocity()->set_available(true);  // hack
+    auto wheel_velocity4d =
+        vehicle_status.mutable_wheel_velocity()->mutable_wheel_velocity4d();
+    wheel_velocity4d->set_front_left(
+        vehicle_service_output_info.fl_wheel_speed);
+    wheel_velocity4d->set_front_right(
+        vehicle_service_output_info.fr_wheel_speed);
+    wheel_velocity4d->set_rear_left(vehicle_service_output_info.rl_wheel_speed);
+    wheel_velocity4d->set_rear_right(
+        vehicle_service_output_info.rr_wheel_speed);
+    last_feed_time_[FEED_WHEEL_SPEED_REPORT] =
+        local_view.vehicle_service_output_info_recv_time;
+  }
+
+  if (vehicle_service_output_info.power_train_override_flag_available) {
+    vehicle_status.mutable_throttle()->mutable_throttle_data()->set_override(
+        vehicle_service_output_info.power_train_override_flag);
+  }
+
+  auto vehicle_light = vehicle_status.mutable_vehicle_light();
+  // 转向拨杆状态
+  if (vehicle_service_output_info.turn_switch_state_available) {
+    // 紧急灯
+    if (vehicle_service_output_info.turn_switch_state == NONE &&
+        vehicle_service_output_info.hazard_light_state) {
+      if (vehicle_service_output_info.hazard_light_state_available) {
+        vehicle_light->mutable_vehicle_light_data()
+            ->mutable_turn_signal()
+            ->set_value(common::TurnSignalType::EMERGENCY_FLASHER);
+      }
+    } else {
+      // history_lc_source_[0] = history_lc_source_[1];  // 上上帧
+      // history_lc_source_[1] = session_->planning_context()
+      //                             .lane_change_decider_output()
+      //                             .lc_request_source;  // 上一帧
+      // // 根据传入的拨杆信号计算转向
+      // RunBlinkState(vehicle_service_output_info);
+      // vehicle_light->mutable_vehicle_light_data()
+      //     ->mutable_turn_signal()
+      //     ->set_value(current_turn_signal_);
+      vehicle_light->mutable_vehicle_light_data()
+          ->mutable_turn_signal()
+          ->set_value(vehicle_service_output_info.turn_switch_state);
+    }
+    last_feed_time_[FEED_MISC_REPORT] =
+        local_view.vehicle_service_output_info_recv_time;
+  }
+  last_frame_turn_sinagl_ = current_turn_signal_;
+  JSON_DEBUG_VALUE("turn_switch_state",
+                   vehicle_service_output_info.turn_switch_state)
+
+  if (vehicle_service_output_info.auto_light_state_available) {
+    vehicle_light->mutable_vehicle_light_data()->set_auto_light_state(
+        vehicle_service_output_info.auto_light_state);
+    last_feed_time_[FEED_MISC_REPORT] =
+        local_view.vehicle_service_output_info_recv_time;
+  }
+
+  if (vehicle_service_output_info.driver_hand_torque_available) {
+    vehicle_status.mutable_driver_hand_state()->set_driver_hand_torque(
+        vehicle_service_output_info.driver_hand_torque);
+  }
+
+  if (vehicle_service_output_info.driver_hands_off_state_available) {
+    vehicle_status.mutable_driver_hand_state()->set_driver_hands_off_state(
+        vehicle_service_output_info.driver_hands_off_state);
+  }
+
+  if (vehicle_service_output_info.gear_lever_state_available) {
+    vehicle_status.mutable_gear()
+        ->mutable_gear_data()
+        ->mutable_gear_status()
+        ->set_value(vehicle_service_output_info.gear_lever_state);
+  }
+}
+
+static inline float32 x_turn(float32 inputx, float32 inputy, float32 theta) {
+  return inputx * cos(theta) - inputy * sin(theta);
+}
+
+static inline float32 y_turn(float32 inputx, float32 inputy, float32 theta) {
+  return inputx * sin(theta) + inputy * cos(theta);
+}
+
+void EnvironmentalModelManager::truncate_prediction_info(
+    const iflyauto::PredictionResult& prediction_result,
+    const iflyauto::FusionObjectsInfo& fusion_objects_result,
+    double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set,
+    double fusion_delay_time) {
+  assert(session_ != nullptr);
+  current_prediction_ids_.clear();
+  double current_time =
+      session_->planning_context().planning_result().timestamp;
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto init_relative_time =
+      ego_state->planning_init_point().relative_time;
+  auto& prediction_info =
+      session_->mutable_environmental_model()->get_mutable_prediction_info();
+  prediction_info.clear();
+
+  // HACK: store fusion object info
+  // <key: Perception id, value: fusion obj acc>
+  std::unordered_map<int32_t, double> fusion_objects_acc_map;
+  // <key: Perception id, value: fusion obj vel>
+  std::unordered_map<int32_t, double> fusion_objects_vel_map;
+  // <key: Perception id, value: fusion obj theta>
+  std::unordered_map<int32_t, double> fusion_objects_theta_map;
+  for (int i = 0; i < fusion_objects_result.fusion_object_size; i++) {
+    const auto& fusion_obj = fusion_objects_result.fusion_object[i];
+    double obj_yaw = fusion_obj.common_info.heading_angle;
+    double ego_yaw = ego_state->heading_angle();
+    if ((int)obj_yaw == 255) {
+      obj_yaw = ego_state->heading_angle();
+    }
+    Eigen::Vector2f fusion_obj_acc_vec(fusion_obj.common_info.acceleration.x,
+                                       fusion_obj.common_info.acceleration.y);
+    double fusion_vel = std::hypot(fusion_obj.common_info.velocity.x,
+                                   fusion_obj.common_info.velocity.y);
+
+    double fusion_theta = 0.0;
+    bool is_low_speed_object = fusion_vel < kLowSpeedThreshold ? true : false;
+    if (is_low_speed_object) {
+      fusion_theta = fusion_obj.common_info.heading_angle;
+    } else {
+      fusion_theta = std::atan2(fusion_obj.common_info.velocity.y,
+                                fusion_obj.common_info.velocity.x);
+    }
+
+    Eigen::Vector2f obs_heading_vec(cos(fusion_theta), sin(fusion_theta));
+    double fusion_acc = fusion_obj_acc_vec.dot(obs_heading_vec);
+
+    int32_t obj_fusion_source = fusion_obj.additional_info.fusion_source;
+    if (obj_fusion_source & OBSTACLE_SOURCE_CAMERA) {
+      fusion_objects_acc_map.insert(
+          {fusion_obj.additional_info.sensor_source_id[0], fusion_acc});
+      fusion_objects_vel_map.insert(
+          {fusion_obj.additional_info.sensor_source_id[0], fusion_vel});
+      fusion_objects_theta_map.insert(
+          {fusion_obj.additional_info.sensor_source_id[0], fusion_theta});
+    }
+  }
+
+  for (int i = 0; i < prediction_result.prediction_obstacle_list_size; i++) {
+    const auto& prediction_object =
+        prediction_result.prediction_obstacle_list[i];
+
+    const auto trajectory_point_size =
+        prediction_object.trajectory.trajectory_point_size;
+
+    const auto fusion_source =
+        prediction_object.fusion_obstacle.additional_info.fusion_source;
+    if (!(fusion_source & OBSTACLE_SOURCE_CAMERA)) {
+      // 非相机融合成功的不用
+      continue;
+    }
+
+    PredictionObject cur_predicion_obj;
+    cur_predicion_obj.id =
+        prediction_object.fusion_obstacle.additional_info.track_id;
+    cur_predicion_obj.is_dangerous =
+        prediction_object.fusion_obstacle.common_info.is_dangerous;
+    cur_predicion_obj.dangerous_confidence =
+        prediction_object.fusion_obstacle.common_info.dangerous_conf;
+    prediction_obj_id_set.emplace(cur_predicion_obj.id);
+    cur_predicion_obj.type =
+        (iflyauto::ObjectType)
+            prediction_object.fusion_obstacle.common_info.type;
+    cur_predicion_obj.fusion_source =
+        prediction_object.fusion_obstacle.additional_info.fusion_source;
+    // todo:后面接口变化时，取trajectory的时间戳
+    cur_predicion_obj.fusion_delay_time = fusion_delay_time;
+    cur_predicion_obj.timestamp_us = prediction_result.msg_header.stamp;
+    double prediction_relative_time =
+        clip(prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3 -
+                 init_relative_time,
+             0.0, -1.0);
+    if (std::abs(prediction_relative_time) > 0.3) {
+      ILOG_DEBUG << "[prediction delay time] obstacle[" << cur_predicion_obj.id
+                 << "] absolute start time "
+                 << prediction_result.msg_header.stamp << " relative time "
+                 << prediction_result.msg_header.stamp / 1.e+6 -
+                        current_time / 1.e+3
+                 << " start time " << prediction_relative_time
+                 << " init_relative_time " << init_relative_time;
+    }
+    cur_predicion_obj.delay_time = prediction_relative_time;
+
+#if defined(X86) && !defined(X86_SIMULATION)
+    cur_predicion_obj.delay_time =
+        SimulationContext::Instance()->prediction_relative_time();
+    cur_predicion_obj.fusion_delay_time =
+        SimulationContext::Instance()->fusion_relative_time();
+#endif
+
+    auto& debug_info_manager = DebugInfoManager::GetInstance();
+    auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
+    SimulationContext::Instance()->set_prediction_relative_time(
+        cur_predicion_obj.delay_time);
+    SimulationContext::Instance()->set_fusion_relative_time(
+        cur_predicion_obj.fusion_delay_time);
+
+    planning_debug_data->mutable_simulation_core_param()
+        ->set_prediction_relative_time(cur_predicion_obj.delay_time);
+    planning_debug_data->mutable_simulation_core_param()
+        ->set_fusion_relative_time(cur_predicion_obj.fusion_delay_time);
+
+    if (prediction_object.obstacle_intent.type ==
+        iflyauto::OBSTACLE_INTENT_COMMON) {
+      cur_predicion_obj.intention = ObstacleIntentType::COMMON;
+    } else if (prediction_object.obstacle_intent.type ==
+               iflyauto::OBSTACLE_INTENT_CUT_IN) {
+      cur_predicion_obj.intention = ObstacleIntentType::CUT_IN;
+    }
+
+    // 绝对信息
+    cur_predicion_obj.position_x =
+        prediction_object.fusion_obstacle.common_info.center_position.x;
+    cur_predicion_obj.position_y =
+        prediction_object.fusion_obstacle.common_info.center_position.y;
+    cur_predicion_obj.length =
+        prediction_object.fusion_obstacle.common_info.shape.length;
+    cur_predicion_obj.width =
+        prediction_object.fusion_obstacle.common_info.shape.width;
+    const double vel_x =
+        prediction_object.fusion_obstacle.common_info.velocity.x;
+    const double vel_y =
+        prediction_object.fusion_obstacle.common_info.velocity.y;
+    cur_predicion_obj.speed = std::hypot(vel_x, vel_y);
+    auto iter_vel = fusion_objects_vel_map.find(cur_predicion_obj.id);
+    auto iter_theta = fusion_objects_theta_map.find(cur_predicion_obj.id);
+    auto iter_acc = fusion_objects_acc_map.find(cur_predicion_obj.id);
+
+    cur_predicion_obj.speed_fusion = (iter_vel != fusion_objects_vel_map.end())
+                                         ? iter_vel->second
+                                         : cur_predicion_obj.speed;
+
+    cur_predicion_obj.yaw =
+        prediction_object.fusion_obstacle.common_info.heading_angle;
+    const double ego_heading = ego_state->heading_angle();
+    if ((int)cur_predicion_obj.yaw == 255) {
+      cur_predicion_obj.yaw = ego_heading;
+    }
+    const bool object_is_slow = cur_predicion_obj.speed < kLowSpeedThreshold;
+    if (object_is_slow) {
+      cur_predicion_obj.theta =
+          prediction_object.fusion_obstacle.common_info.heading_angle;
+      cur_predicion_obj.relative_theta = cur_predicion_obj.theta - ego_heading;
+    } else {
+      cur_predicion_obj.theta = std::atan2(vel_y, vel_x);
+      cur_predicion_obj.relative_theta = cur_predicion_obj.theta - ego_heading;
+    }
+
+    cur_predicion_obj.relative_theta =
+        std::fmod(cur_predicion_obj.relative_theta, 2 * M_PI);
+    if (cur_predicion_obj.relative_theta > M_PI) {
+      cur_predicion_obj.relative_theta -= 2 * M_PI;
+    }
+    if ((int)cur_predicion_obj.relative_theta == 255) {
+      cur_predicion_obj.relative_theta = 0;
+    }
+
+    cur_predicion_obj.theta_fusion =
+        (iter_theta != fusion_objects_theta_map.end())
+            ? iter_theta->second
+            : cur_predicion_obj.theta;
+
+    Eigen::Vector2f prediction_obj_acc_vec(
+        prediction_object.fusion_obstacle.common_info.acceleration.x,
+        prediction_object.fusion_obstacle.common_info.acceleration.y);
+    Eigen::Vector2f obj_heading_vec(cos(cur_predicion_obj.theta),
+                                    sin(cur_predicion_obj.theta));
+
+    cur_predicion_obj.acc_fusion =
+        (iter_acc != fusion_objects_acc_map.end())
+            ? iter_acc->second
+            : prediction_obj_acc_vec.dot(obj_heading_vec);
+
+    cur_predicion_obj.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
+
+    const double ego_x = ego_state->ego_pose().x;
+    const double ego_y = ego_state->ego_pose().y;
+    const double ego_v = ego_state->ego_v();
+    const double ego_acc = ego_state->ego_acc();
+    const double cos_ego_heading = cos(ego_heading);
+    const double sin_ego_heading = sin(ego_heading);
+    const double neg_ego_heading = -ego_heading;
+
+    const double delta_x = cur_predicion_obj.position_x - ego_x;
+    const double delta_y = cur_predicion_obj.position_y - ego_y;
+    cur_predicion_obj.relative_position_x =
+        x_turn(delta_x, delta_y, neg_ego_heading);
+    cur_predicion_obj.relative_position_y =
+        y_turn(delta_x, delta_y, neg_ego_heading);
+
+    const double relative_velocity_world_x = vel_x - ego_v * cos_ego_heading;
+    const double relative_velocity_world_y = vel_y - ego_v * sin_ego_heading;
+    cur_predicion_obj.relative_speed_x = x_turn(
+        relative_velocity_world_x, relative_velocity_world_y, neg_ego_heading);
+    cur_predicion_obj.relative_speed_y = y_turn(
+        relative_velocity_world_x, relative_velocity_world_y, neg_ego_heading);
+
+    const double relative_acceleration_world_x =
+        prediction_object.fusion_obstacle.common_info.acceleration.x -
+        ego_acc * cos_ego_heading;
+    const double relative_acceleration_world_y =
+        prediction_object.fusion_obstacle.common_info.acceleration.y -
+        ego_acc * sin_ego_heading;
+    cur_predicion_obj.relative_acceleration_x =
+        x_turn(relative_acceleration_world_x, relative_acceleration_world_y,
+               neg_ego_heading);
+    cur_predicion_obj.relative_acceleration_y =
+        y_turn(relative_acceleration_world_x, relative_acceleration_world_y,
+               neg_ego_heading);
+
+    cur_predicion_obj.acceleration_relative_to_ground_x =
+        prediction_object.fusion_obstacle.common_info.acceleration.x;
+    cur_predicion_obj.acceleration_relative_to_ground_y =
+        prediction_object.fusion_obstacle.common_info.acceleration.y;
+
+    cur_predicion_obj.motion_pattern_current =
+        prediction_object.fusion_obstacle.additional_info
+            .motion_pattern_current;
+    cur_predicion_obj.is_oversize_vehicle =
+        CheckIfOversizeVehicle(cur_predicion_obj.type);
+    cur_predicion_obj.is_VRU = CheckIfVru(cur_predicion_obj.type);
+    cur_predicion_obj.is_traffic_facilities =
+        CheckIfTrafficFacilities(cur_predicion_obj.type);
+    cur_predicion_obj.is_car = CheckIfCar(cur_predicion_obj.type);
+
+    const auto& prediction_traj = prediction_object.trajectory;
+    PredictionTrajectory cur_prediction_trajectory;
+    size_t traj_index = 0;
+    double step_time = prediction_traj.relative_time;
+    std::vector<PredictionTrajectoryPoint> trajectory_points;
+    // Attention:PREDICTION_TRAJ_POINT_NUM whether valid in C struct
+    // size of prediction_traj.trajectory_point maybe not equal to
+    // PREDICTION_TRAJ_POINT_NUM
+    cur_predicion_obj.trajectory_valid =
+        trajectory_point_size < 1 ? false : true;
+    for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
+      const auto& point = prediction_traj.trajectory_point[j];
+      PredictionTrajectoryPoint trajectory_point;
+      double point_relative_time =
+          cur_predicion_obj.delay_time + step_time * traj_index;
+      trajectory_point.relative_time = point_relative_time;
+      trajectory_point.x = point.position.x;
+      trajectory_point.y = point.position.y;
+      trajectory_point.yaw = point.yaw;
+      trajectory_point.speed = point.velocity;
+      trajectory_point.theta = point.theta_vel;
+      trajectory_point.prob = prediction_traj.confidence;
+      trajectory_point.std_dev_x = point.gaussian_info.sigma_x;
+      trajectory_point.std_dev_y = point.gaussian_info.sigma_y;
+      // trajectory_point.std_dev_yaw = point.std_dev_yaw();
+      // trajectory_point.std_dev_speed = point.std_dev_speed();
+      trajectory_point.relative_ego_x = point.relative_position.x;
+      trajectory_point.relative_ego_y = point.relative_position.y;
+      trajectory_point.relative_ego_yaw = point.relative_yaw;
+      trajectory_point.relative_ego_speed =
+          std::hypot(point.relative_velocity.x, point.relative_velocity.y);
+      if (cur_predicion_obj.trajectory_valid == false) {
+        trajectory_point.relative_time = 0.2 * traj_index;
+        trajectory_point.x = cur_predicion_obj.position_x;
+        trajectory_point.y = cur_predicion_obj.position_y;
+        trajectory_point.yaw = cur_predicion_obj.yaw;
+        trajectory_point.speed = cur_predicion_obj.speed;
+        trajectory_point.theta = cur_predicion_obj.theta;
+        trajectory_point.relative_ego_x = cur_predicion_obj.relative_position_x;
+        trajectory_point.relative_ego_y = cur_predicion_obj.relative_position_y;
+        trajectory_point.relative_ego_yaw = cur_predicion_obj.relative_theta;
+        trajectory_point.relative_ego_speed =
+            std::hypot(cur_predicion_obj.relative_speed_x,
+                       cur_predicion_obj.relative_speed_y);
+        ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id
+                  << "s trajectory is empty!";
+      }
+      traj_index++;
+      trajectory_points.emplace_back(trajectory_point);
+    }
+    // synchronize time
+    for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED + 1; traj_index++) {
+      double target_time =
+          cur_predicion_obj.delay_time + 0.2 * traj_index;  // 考虑延迟
+      auto trajectory_point = GetPointAtTime(trajectory_points, target_time);
+      cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
+    }
+
+    cur_predicion_obj.trajectory_array.emplace_back(
+        std::move(cur_prediction_trajectory));
+
+    current_prediction_ids_.insert(cur_predicion_obj.id);
+
+    ProcessPredictionTrajectory(cur_predicion_obj);
+
+    auto& history_queue = historical_prediction_objects_[cur_predicion_obj.id];
+    history_queue.emplace_back(cur_predicion_obj);
+    if (history_queue.size() > kMinHistoryFrameCount) {
+      history_queue.pop_front();
+    }
+
+    cur_predicion_obj.is_static = IsStatic(cur_predicion_obj);
+    prediction_info.emplace_back(std::move(cur_predicion_obj));
+  }
+
+  DeleteOlderPredictionObjects();
+}
+
+PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(
+    const std::vector<PredictionTrajectoryPoint>& trajectory_points,
+    const double relative_time) const {
+  assert(trajectory_points.size() != 0);
+
+  if (trajectory_points.size() < 2) {
+    return trajectory_points.at(0);
+  } else {
+    auto comp = [](const PredictionTrajectoryPoint p, const double time) {
+      return p.relative_time < time;
+    };
+
+    auto it_lower =
+        std::lower_bound(trajectory_points.begin(), trajectory_points.end(),
+                         relative_time, comp);
+
+    if (it_lower == trajectory_points.begin()) {
+      return *trajectory_points.begin();
+    } else if (it_lower == trajectory_points.end()) {
+      return *trajectory_points.rbegin();
+    }
+    return planning_math::InterpolateUsingLinearApproximation(
+        *(it_lower - 1), *it_lower, relative_time);
+  }
+}
+
+bool EnvironmentalModelManager::transform_fusion_to_prediction(
+    const iflyauto::FusionObject& fusion_object, double timestamp,
+    std::vector<PredictionObject>& objects_infos) {
+  assert(session_ != nullptr);
+  if (session_ == nullptr) {
+    return false;
+  }
+  bool object_is_slow = false;
+  auto& ego_state = session_->environmental_model().get_ego_state_manager();
+
+  PredictionObject prediction_object;
+  prediction_object.id = fusion_object.additional_info.track_id;
+  prediction_object.type = fusion_object.common_info.type;
+  prediction_object.fusion_source = fusion_object.additional_info.fusion_source;
+  prediction_object.timestamp_us = timestamp;
+
+  prediction_object.delay_time = 0.0;
+  prediction_object.cutin_score = 0;
+  prediction_object.position_x = fusion_object.common_info.center_position.x;
+  prediction_object.position_y = fusion_object.common_info.center_position.y;
+  prediction_object.length = fusion_object.common_info.shape.length;
+  prediction_object.width = fusion_object.common_info.shape.width;
+  prediction_object.speed = std::hypot(fusion_object.common_info.velocity.x,
+                                       fusion_object.common_info.velocity.y);
+  prediction_object.motion_pattern_current =
+      fusion_object.additional_info.motion_pattern_current;
+  prediction_object.is_oversize_vehicle =
+      CheckIfOversizeVehicle(prediction_object.type);
+  prediction_object.is_VRU = CheckIfVru(prediction_object.type);
+  prediction_object.is_traffic_facilities =
+      CheckIfTrafficFacilities(prediction_object.type);
+  prediction_object.is_car = CheckIfCar(prediction_object.type);
+
+  prediction_object.yaw = fusion_object.common_info.heading_angle;
+  if ((int)prediction_object.yaw == 255) {
+    prediction_object.yaw = ego_state->heading_angle();
+  } else {
+    prediction_object.yaw = fusion_object.common_info.heading_angle;
+  }
+  double fusion_theta = 0.0;
+  bool is_low_speed_object =
+      prediction_object.speed < kLowSpeedThreshold ? true : false;
+  if (is_low_speed_object) {
+    fusion_theta = prediction_object.yaw;
+  } else {
+    fusion_theta = std::atan2(fusion_object.common_info.velocity.y,
+                              fusion_object.common_info.velocity.x);
+  }
+  Eigen::Vector2f obj_heading_vec(cos(fusion_theta), sin(fusion_theta));
+  Eigen::Vector2f prediction_obj_acc_vec(
+      fusion_object.common_info.acceleration.x,
+      fusion_object.common_info.acceleration.y);
+  prediction_object.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
+  // add relative info for highway
+  prediction_object.relative_position_x =
+      fusion_object.common_info.relative_center_position.x;
+  prediction_object.relative_position_y =
+      fusion_object.common_info.relative_center_position.y;
+  prediction_object.relative_speed_x =
+      fusion_object.common_info.relative_velocity.x;
+  prediction_object.relative_speed_y =
+      fusion_object.common_info.relative_velocity.y;
+  prediction_object.relative_acceleration_x =
+      fusion_object.common_info.relative_acceleration.x;
+  prediction_object.relative_acceleration_y =
+      fusion_object.common_info.relative_acceleration.y;
+  prediction_object.acceleration_relative_to_ground_x =
+      fusion_object.common_info.acceleration.x;
+  prediction_object.acceleration_relative_to_ground_y =
+      fusion_object.common_info.acceleration.y;
+
+  double relative_v_x = fusion_object.common_info.relative_velocity.x;
+  double relative_v_y = fusion_object.common_info.relative_velocity.y;
+
+  object_is_slow = prediction_object.speed < kLowSpeedThreshold ? true : false;
+  if (object_is_slow) {
+    prediction_object.relative_theta =
+        fusion_object.common_info.relative_heading_angle;
+    prediction_object.theta = fusion_object.common_info.heading_angle;
+  } else {
+    prediction_object.theta = std::atan2(fusion_object.common_info.velocity.y,
+                                         fusion_object.common_info.velocity.x);
+    prediction_object.relative_theta = std::atan2(
+        relative_v_y, relative_v_x + ego_state_manager_ptr_->ego_v());
+  }
+
+  if ((int)prediction_object.relative_theta == 255) {
+    prediction_object.relative_theta = 0;
+  }
+
+  PredictionTrajectoryPoint trajectory_point;
+  trajectory_point.relative_time = 0;
+  trajectory_point.x = prediction_object.position_x;
+  trajectory_point.y = prediction_object.position_y;
+  trajectory_point.yaw = prediction_object.yaw;
+  trajectory_point.speed = prediction_object.speed;
+
+  trajectory_point.theta = prediction_object.theta;
+  trajectory_point.prob = 1;
+  trajectory_point.relative_ego_x = prediction_object.relative_position_x;
+  trajectory_point.relative_ego_y = prediction_object.relative_position_y;
+  trajectory_point.relative_ego_yaw = prediction_object.relative_theta;
+  trajectory_point.relative_ego_speed = std::hypot(
+      prediction_object.relative_speed_x, prediction_object.relative_speed_y);
+  PredictionTrajectory tra;
+  tra.trajectory.emplace_back(std::move(trajectory_point));
+  prediction_object.trajectory_array.emplace_back(std::move(tra));
+  prediction_object.is_static = IsStatic(prediction_object);
+  objects_infos.emplace_back(std::move(prediction_object));
+  return true;
+}
+
+bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
+    const iflyauto::FusionObject& fusion_object, double timestamp,
+    std::vector<PredictionObject>& objects_infos) {
+  assert(session_ != nullptr);
+  if (session_ == nullptr) {
+    return false;
+  }
+  bool object_is_slow = false;
+  auto& ego_state = session_->environmental_model().get_ego_state_manager();
+
+  PredictionObject prediction_object;
+  prediction_object.id = fusion_object.additional_info.track_id;
+  prediction_object.type = fusion_object.common_info.type;
+  prediction_object.fusion_source = fusion_object.additional_info.fusion_source;
+  prediction_object.timestamp_us = timestamp;
+
+  prediction_object.delay_time = 0.0;
+  prediction_object.cutin_score = 0;
+  prediction_object.position_x = fusion_object.common_info.center_position.x;
+  prediction_object.position_y = fusion_object.common_info.center_position.y;
+  prediction_object.length = fusion_object.common_info.shape.length;
+  prediction_object.width = fusion_object.common_info.shape.width;
+  prediction_object.speed = std::hypot(fusion_object.common_info.velocity.x,
+                                       fusion_object.common_info.velocity.y);
+  prediction_object.motion_pattern_current =
+      fusion_object.additional_info.motion_pattern_current;
+  prediction_object.is_oversize_vehicle =
+      CheckIfOversizeVehicle(prediction_object.type);
+  prediction_object.is_VRU = CheckIfVru(prediction_object.type);
+  prediction_object.is_traffic_facilities =
+      CheckIfTrafficFacilities(prediction_object.type);
+  prediction_object.is_car = CheckIfCar(prediction_object.type);
+
+  prediction_object.yaw = fusion_object.common_info.heading_angle;
+  if ((int)prediction_object.yaw == 255) {
+    prediction_object.yaw = ego_state->heading_angle();
+  } else {
+    prediction_object.yaw = fusion_object.common_info.heading_angle;
+  }
+  bool is_low_speed_object =
+      prediction_object.speed < kLowSpeedThreshold ? true : false;
+  double fusion_theta = 0.0;
+  if (is_low_speed_object) {
+    fusion_theta = prediction_object.yaw;
+  } else {
+    fusion_theta = std::atan2(fusion_object.common_info.velocity.y,
+                              fusion_object.common_info.velocity.x);
+  }
+  Eigen::Vector2f obj_heading_vec(cos(fusion_theta), sin(fusion_theta));
+  Eigen::Vector2f prediction_obj_acc_vec(
+      fusion_object.common_info.acceleration.x,
+      fusion_object.common_info.acceleration.y);
+  prediction_object.acc = prediction_obj_acc_vec.dot(obj_heading_vec);
+  // add relative info for highway
+  prediction_object.relative_position_x =
+      x_turn(prediction_object.position_x - ego_state->ego_pose().x,
+             prediction_object.position_y - ego_state->ego_pose().y,
+             -1 * ego_state->heading_angle());
+  prediction_object.relative_position_y =
+      y_turn(prediction_object.position_x - ego_state->ego_pose().x,
+             prediction_object.position_y - ego_state->ego_pose().y,
+             -1 * ego_state->heading_angle());
+
+  auto relative_velocity_world_x =
+      fusion_object.common_info.velocity.x -
+      ego_state->ego_v() * cos(ego_state->heading_angle());
+  auto relative_velocity_world_y =
+      fusion_object.common_info.velocity.y -
+      ego_state->ego_v() * sin(ego_state->heading_angle());
+  prediction_object.relative_speed_x =
+      x_turn(relative_velocity_world_x, relative_velocity_world_y,
+             -1 * ego_state->heading_angle());
+  prediction_object.relative_speed_y =
+      y_turn(relative_velocity_world_x, relative_velocity_world_y,
+             -1 * ego_state->heading_angle());
+
+  auto relative_acceleration_world_x =
+      fusion_object.common_info.acceleration.x -
+      ego_state->ego_acc() * cos(ego_state->heading_angle());
+  auto relative_acceleration_world_y =
+      fusion_object.common_info.acceleration.y -
+      ego_state->ego_acc() * sin(ego_state->heading_angle());
+  prediction_object.relative_acceleration_x =
+      x_turn(relative_acceleration_world_x, relative_acceleration_world_y,
+             -1 * ego_state->heading_angle());
+  prediction_object.relative_acceleration_y =
+      y_turn(relative_acceleration_world_x, relative_acceleration_world_y,
+             -1 * ego_state->heading_angle());
+
+  prediction_object.acceleration_relative_to_ground_x =
+      fusion_object.common_info.acceleration.x;
+  prediction_object.acceleration_relative_to_ground_y =
+      fusion_object.common_info.acceleration.y;
+
+  object_is_slow = prediction_object.speed < kLowSpeedThreshold ? true : false;
+  if (object_is_slow &&
+      (!session_->is_hpp_scene() || !prediction_object.is_VRU)) {
+    prediction_object.relative_theta =
+        fusion_object.common_info.heading_angle - ego_state->heading_angle();
+    prediction_object.theta = fusion_object.common_info.heading_angle;
+  } else {
+    prediction_object.theta = std::atan2(fusion_object.common_info.velocity.y,
+                                         fusion_object.common_info.velocity.x);
+    prediction_object.relative_theta =
+        prediction_object.theta - ego_state->heading_angle();
+  }
+  prediction_object.relative_theta =
+      std::fmod(prediction_object.relative_theta, 2 * M_PI);
+  if (prediction_object.relative_theta > M_PI) {
+    prediction_object.relative_theta -= 2 * M_PI;
+  }
+
+  if ((int)prediction_object.relative_theta == 255) {
+    prediction_object.relative_theta = 0;
+  }
+
+  PredictionTrajectoryPoint trajectory_point;
+  trajectory_point.relative_time = 0;
+  trajectory_point.x = prediction_object.position_x;
+  trajectory_point.y = prediction_object.position_y;
+  trajectory_point.yaw = prediction_object.yaw;
+  trajectory_point.speed = prediction_object.speed;
+
+  trajectory_point.theta = prediction_object.theta;
+  trajectory_point.prob = 1;
+  trajectory_point.relative_ego_x = prediction_object.relative_position_x;
+  trajectory_point.relative_ego_y = prediction_object.relative_position_y;
+  trajectory_point.relative_ego_yaw = prediction_object.relative_theta;
+  trajectory_point.relative_ego_speed = std::hypot(
+      prediction_object.relative_speed_x, prediction_object.relative_speed_y);
+  PredictionTrajectory tra;
+  tra.trajectory.emplace_back(std::move(trajectory_point));
+  // hack:linear add trajectory point
+  // for (int i = 1; i < 26; i++) {
+  //   PredictionTrajectoryPoint trajectory_point_tmp;
+  //   trajectory_point_tmp.relative_time = i * 0.2;
+  //   const double dt = i * 0.2;
+  //   const double vel = prediction_object.speed;
+  //   const double theta = prediction_object.yaw;
+  //   const double pred_ds = std::fmax(0.0, vel * dt);
+  //   planning_math::Vec2d last_point(prediction_object.position_x,
+  //                                   prediction_object.position_y);
+  //   auto pred_point =
+  //       last_point + planning_math::Vec2d::CreateUnitVec2d(theta) * pred_ds;
+  //   trajectory_point_tmp.x = pred_point.x();
+  //   trajectory_point_tmp.y = pred_point.y();
+  //   tra.trajectory.emplace_back(std::move(trajectory_point_tmp));
+  // }
+  prediction_object.trajectory_array.emplace_back(std::move(tra));
+  prediction_object.is_static = IsStatic(prediction_object);
+  objects_infos.emplace_back(std::move(prediction_object));
+  return true;
+}
+
+bool EnvironmentalModelManager::IsStatic(
+    const PredictionObject& prediction_object) {
+  auto& ego_state = session_->environmental_model().get_ego_state_manager();
+  double prediction_trajectory_length = -10.0;
+  double prediction_duration = 0.0;
+  if (prediction_object.trajectory_valid) {
+    const auto& trajectory_array = prediction_object.trajectory_array.at(0);
+    if (trajectory_array.trajectory.size() > 0) {
+      const auto& start_point = trajectory_array.trajectory.at(0);
+      const auto& end_point = trajectory_array.trajectory.at(
+          trajectory_array.trajectory.size() - 1);
+      prediction_trajectory_length = std::sqrt(
+          (start_point.x - end_point.x) * (start_point.x - end_point.x) +
+          (start_point.y - end_point.y) * (start_point.y - end_point.y));
+      prediction_duration = end_point.relative_time;
+    }
+  }
+
+  double max_speed_static_obstacle = 0.25;
+  double max_static_prediction_length =
+      max_speed_static_obstacle * prediction_duration;
+  std::array<double, 3> xp{10, 20, 30};
+  std::array<double, 3> fp{0.25, 2, 3};
+  double static_speed = interp(ego_state->ego_v(), xp, fp);
+
+  // 滞回
+  const auto obstacle_manager =
+      session_->environmental_model().get_obstacle_manager();
+  const auto obstacle = obstacle_manager->find_obstacle(prediction_object.id);
+  if (obstacle != nullptr && obstacle->is_static()) {
+    static_speed = static_speed * 1.5;
+    max_static_prediction_length = max_static_prediction_length * 2;
+  }
+
+  bool is_static =
+      prediction_object.speed < static_speed ||
+      prediction_trajectory_length < max_static_prediction_length ||
+      prediction_object.is_traffic_facilities;
+  return is_static;
+}
+
+bool EnvironmentalModelManager::InputReady(double current_time,
+                                           std::string& error_msg) {
+  using namespace framework;
+  auto to_string = [](FeedType feed_type) -> const char* {
+    switch (feed_type) {
+      case FEED_VEHICLE_DBW_STATUS:
+        return "vehicle_dbw_status";
+      case FEED_EGO_VEL:
+        return "ego_pose_and_vel";
+      case FEED_EGO_STEER_ANGLE:
+        return "ego_steer_angle";
+      case FEED_EGO_ENU:
+        return "ego_enu";
+      case FEED_WHEEL_SPEED_REPORT:
+        return "wheel_speed_report";
+      case FEED_EGO_ACC:
+        return "ego_acc";
+      case FEED_MISC_REPORT:
+        return "misc_report";
+      case FEED_MAP_INFO:
+        return "map_info";
+      case FEED_FUSION_INFO:
+        return "fusion_info";
+      case FEED_PREDICTION_INFO:
+        return "prediction_info";
+      case FEED_FUSION_LANES_INFO:
+        return "fusion_lanes_info";
+      default:
+        return "unknown type";
+    }
+  };
+
+  static const double kCheckTimeDiff = 1.5 * 100;  // 1.5 * planning_T
+  // static const double kpredictionCheckTimeDiff = 50;
+  // static const double kfusionlaneCheckTimeDiff = 50;
+  // set default value
+  static const std::vector<FeedType> input_longtime_with_hdmap{
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
+      FEED_EGO_STEER_ANGLE,    FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC,
+      FEED_MISC_REPORT,        FEED_FUSION_INFO,
+      FEED_PREDICTION_INFO,    FEED_MAP_INFO,
+  };
+
+  static const std::vector<FeedType> input_longtime_without_hdmap{
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
+      FEED_EGO_STEER_ANGLE,    FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC,
+      FEED_MISC_REPORT,        FEED_FUSION_INFO,
+      FEED_PREDICTION_INFO,    FEED_FUSION_LANES_INFO,
+  };
+
+  static const std::vector<FeedType> input_realtime_with_hdmap{
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
+      FEED_EGO_STEER_ANGLE,    FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC,
+      FEED_MISC_REPORT,        FEED_FUSION_INFO,
+      FEED_MAP_INFO,
+  };
+
+  static const std::vector<FeedType> input_realtime_without_hdmap{
+      FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
+      FEED_EGO_STEER_ANGLE,    FEED_EGO_ENU,
+      FEED_WHEEL_SPEED_REPORT, FEED_EGO_ACC,
+      FEED_MISC_REPORT,        FEED_FUSION_INFO,
+      FEED_FUSION_LANES_INFO,
+  };
+
+  error_msg.clear();
+
+  bool res = true;
+  const auto& input_list =
+      session_->environmental_model().get_route_info()->get_hdmap_valid()
+          ? (session_->environmental_model().location_valid()
+                 ? input_longtime_with_hdmap
+                 : input_realtime_with_hdmap)
+          : (session_->environmental_model().location_valid()
+                 ? input_longtime_without_hdmap
+                 : input_realtime_without_hdmap);
+  auto* fault_counter_info_ptr = session_->mutable_fault_counter_info();
+  for (int i : input_list) {
+    auto feed_type = static_cast<FeedType>(i);
+    const char* feed_type_str = to_string(feed_type);
+    ILOG_DEBUG << "(" << __FUNCTION__ << ")"
+               << " topic latency: " << feed_type_str << ", "
+               << current_time - last_feed_time_[i] << "ms";
+    int fault_counter_vec_idx = -1;
+    switch (feed_type) {
+      case FEED_EGO_ENU:
+        fault_counter_vec_idx =
+            static_cast<int>(FaultType::LOCALIZATION_TIME_OUT);
+        break;
+      case FEED_PREDICTION_INFO:
+        fault_counter_vec_idx =
+            static_cast<int>(FaultType::PREDICTION_TIME_OUT);
+        break;
+      case FEED_FUSION_LANES_INFO:
+        fault_counter_vec_idx =
+            static_cast<int>(FaultType::PERCEPTION_TIME_OUT);
+        break;
+      case FEED_EGO_STEER_ANGLE:
+        fault_counter_vec_idx =
+            static_cast<int>(FaultType::VEHICLE_SERVICE_TIME_OUT);
+        break;
+      case FEED_VEHICLE_DBW_STATUS:
+        fault_counter_vec_idx = static_cast<int>(FaultType::FSM_TIME_OUT);
+        break;
+      default:
+        break;
+    }
+    if (fault_counter_vec_idx < 0) {
+      continue;
+    }
+    if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
+      ILOG_DEBUG << "(" << __FUNCTION__ << ")" << "input_delay:" << i << ", "
+                 << feed_type_str;
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter++;
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter =
+          0;
+      if ((*fault_counter_info_ptr)[fault_counter_vec_idx]
+                  .fault_trigger_counter >= 5 &&
+          getFaultcode() < 39000) {
+        switch (feed_type) {
+          // location
+          case FEED_EGO_ENU:
+            setFaultcode(39001);
+            break;
+          // prediction
+          case FEED_PREDICTION_INFO:
+            setFaultcode(39002);
+            break;
+          // static fusion
+          case FEED_FUSION_LANES_INFO:
+            setFaultcode(39000);
+            break;
+          // vehicle service
+          case FEED_EGO_STEER_ANGLE:
+            setFaultcode(39003);
+            break;
+          // functional state machine
+          case FEED_VEHICLE_DBW_STATUS:
+            setFaultcode(39004);
+            break;
+          default:
+            break;
+        }
+      }
+    } else {
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter =
+          0;
+      switch (feed_type) {
+        // location
+        case FEED_EGO_ENU:
+          if (getFaultcode() == 39001) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx]
+                .fault_recovery_counter++;
+          }
+          break;
+        // prediction
+        case FEED_PREDICTION_INFO:
+          if (getFaultcode() == 39002) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx]
+                .fault_recovery_counter++;
+          }
+          break;
+        // static fusion
+        case FEED_FUSION_LANES_INFO:
+          if (getFaultcode() == 39000) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx]
+                .fault_recovery_counter++;
+          }
+          break;
+        // vehicle service
+        case FEED_EGO_STEER_ANGLE:
+          if (getFaultcode() == 39003) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx]
+                .fault_recovery_counter++;
+          }
+          break;
+        // functional state machine
+        case FEED_VEHICLE_DBW_STATUS:
+          if (getFaultcode() == 39004) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx]
+                .fault_recovery_counter++;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  return res;
+}
+
+// void EnvironmentalModelManager::RunBlinkState(
+//     const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info) {
+//   const bool active = session_->environmental_model().GetVehicleDbwStatus();
+//   const auto &state =
+//       session_->planning_context().lane_change_decider_output().curr_state;
+//   const auto &lane_change_decider_output =
+//       session_->planning_context().lane_change_decider_output();
+//   const auto lc_request_direction = lane_change_decider_output.lc_request;
+//   const auto lc_source = lane_change_decider_output.lc_request_source;
+//   bool is_ilc_left_change =
+//       ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
+//        (state == kLaneChangePropose)) &&
+//       (lc_request_direction == LEFT_CHANGE) && (lc_source == INT_REQUEST);
+//   bool is_ilc_right_change =
+//       ((state == kLaneChangeExecution) || (state == kLaneChangeComplete) ||
+//        (state == kLaneChangePropose)) &&
+//       (lc_request_direction == RIGHT_CHANGE) && (lc_source == INT_REQUEST);
+//   bool is_cancel = state == kLaneChangeCancel;
+//   if (is_firmly_touch_) {
+//     num_firmly_touch_++;
+//   }
+//   switch (vehicle_service_output_info.turn_switch_state) {
+//     case NONE:
+//       if (active) {
+//         // 如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
+//         if (history_lc_source_[0] == INT_REQUEST &&
+//              history_lc_source_[1] != INT_REQUEST) {
+//           current_turn_signal_ = common::TurnSignalType::NONE;
+//         } else if (state == kLaneKeeping && num_firmly_touch_ > 200) {
+//           current_turn_signal_ = common::TurnSignalType::NONE;
+//         }
+//         // if ((history_lc_source_[0] == INT_REQUEST &&
+//         //      history_lc_source_[1] != INT_REQUEST) ||
+//         //     (state == kLaneKeeping)) {
+//         //   if (num_firmly_touch_ > 200) {
+
+//         //   }
+//         //   current_turn_signal_ = common::TurnSignalType::NONE;
+//         // }
+//       } else {
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       }
+//       break;
+//     case LEFT_FIRMLY_TOUCH:
+//       is_firmly_touch_ = true;
+//       num_firmly_touch_ = 0;
+//       if (history_lc_source_[0] == INT_REQUEST &&
+//           history_lc_source_[1] == INT_REQUEST &&
+//           last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
+//           is_ilc_right_change) {
+//         //
+//         表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       } else if (is_ilc_right_change || is_cancel) {
+//         //
+//         由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       } else {
+//         current_turn_signal_ = common::TurnSignalType::LEFT;
+//       }
+//       break;
+//     case RIGHT_FIRMLY_TOUCH:
+//       // 与上同理
+//       is_firmly_touch_ = true;
+//       num_firmly_touch_ = 0;
+//       if (history_lc_source_[0] == INT_REQUEST &&
+//           history_lc_source_[1] == INT_REQUEST &&
+//           last_frame_turn_sinagl_ == common::TurnSignalType::LEFT &&
+//           is_ilc_left_change) {
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       } else if (is_ilc_left_change || is_cancel) {
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       } else {
+//         current_turn_signal_ = common::TurnSignalType::RIGHT;
+//       }
+//       break;
+//     case LEFT_LIGHTLY_TOUCH:
+//       is_firmly_touch_ = false;
+//       num_firmly_touch_ = 0;
+//       // 只有在向右变道的过程中才会起作用
+//       if (last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT) {
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       }
+//       // 防止在变道动作完成时，正好有轻拨杆信号，比如1分2场景中
+//       if (history_lc_source_[0] == INT_REQUEST &&
+//           history_lc_source_[1] != INT_REQUEST) {
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       }
+//       break;
+//     case RIGHT_LIGHTLY_TOUCH:
+//       is_firmly_touch_ = false;
+//       num_firmly_touch_ = 0;
+//       // 只有在向左变道的过程中才会起作用
+//       if (last_frame_turn_sinagl_ == common::TurnSignalType::LEFT) {
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       }
+//       // 防止在变道动作完成时，正好有轻拨杆信号，比如1分2场景中
+//       if (history_lc_source_[0] == INT_REQUEST &&
+//           history_lc_source_[1] != INT_REQUEST) {
+//         current_turn_signal_ = common::TurnSignalType::NONE;
+//       }
+//       break;
+//     case ERROR:
+//       is_firmly_touch_ = false;
+//       num_firmly_touch_ = 0;
+//       current_turn_signal_ = common::TurnSignalType::NONE;
+//       break;
+//   }
+// }
+
+void EnvironmentalModelManager::setFaultcode(uint64_t faultcode) {
+  session_->set_fault_code(faultcode);
+}
+
+uint64_t EnvironmentalModelManager::getFaultcode() {
+  return session_->get_fault_code();
+}
+
+bool EnvironmentalModelManager::CheckIfOversizeVehicle(const int type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool EnvironmentalModelManager::CheckIfVru(const int type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_BICYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_ANIMAL ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool EnvironmentalModelManager::CheckIfTrafficFacilities(const int type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_BARREL ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_FENCE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+// TODO(zkxie): 包含UNKNOWN障碍物,确认感知什么时候会给UNKNOWN障碍物
+bool EnvironmentalModelManager::CheckIfCar(const int type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void EnvironmentalModelManager::ProcessPredictionTrajectory(
+    PredictionObject& prediction_object) {
+  if (prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_MINIBUS &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_VAN &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_BUS &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRAILER &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE &&
+      prediction_object.type !=
+          iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING &&
+      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE &&
+      prediction_object.type !=
+          iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
+    return;
+  }
+
+  if (prediction_object.trajectory_array.empty() ||
+      prediction_object.trajectory_array[0].trajectory.empty()) {
+    return;
+  }
+
+  auto hist_iter = historical_prediction_objects_.find(prediction_object.id);
+  if (hist_iter == historical_prediction_objects_.end() ||
+      hist_iter->second.size() < static_cast<size_t>(kMinHistoryFrameCount)) {
+    return;
+  }
+
+  const auto& ego_state = *ego_state_manager_ptr_;
+  double heading_diff = std::abs(prediction_object.theta_fusion -
+                                 ego_state.planning_init_point().heading_angle);
+  if (heading_diff > M_PI) {
+    heading_diff = 2 * M_PI - heading_diff;
+  }
+  if (heading_diff * 180.0 / M_PI > 60.0) {
+    return;
+  }
+
+  const auto& hist_list = hist_iter->second;
+
+  double frame_index = prediction_object.fusion_delay_time / kFrameIntervalS;
+  if (prediction_object.fusion_delay_time > kMaxDelayS) {
+    frame_index = static_cast<double>(hist_list.size() - 1);
+  }
+  frame_index = std::max(0.0, frame_index);
+  frame_index =
+      std::min(frame_index, static_cast<double>(hist_list.size() - 1));
+  int frame_idx_lower = static_cast<int>(std::floor(frame_index));
+  int frame_idx_upper = static_cast<int>(std::ceil(frame_index));
+  frame_idx_lower =
+      std::min(frame_idx_lower, static_cast<int>(hist_list.size()) - 1);
+  frame_idx_upper =
+      std::min(frame_idx_upper, static_cast<int>(hist_list.size()) - 1);
+
+  int lower_idx = hist_list.size() - 1 - frame_idx_lower;
+  int upper_idx = hist_list.size() - 1 - frame_idx_upper;
+
+  double alpha = frame_index - frame_idx_lower;
+  double interpolated_acc = (1.0 - alpha) * hist_list[lower_idx].acc_fusion +
+                            alpha * hist_list[upper_idx].acc_fusion;
+
+  const auto& original_trajectory =
+      prediction_object.trajectory_array[0].trajectory;
+  const double init_speed = (prediction_object.speed_fusion > 0.0)
+                                ? prediction_object.speed_fusion
+                                : 0.0;
+  std::map<double, TmpPathPoint> path_cache;
+  if (!original_trajectory.empty()) {
+    path_cache[0.0] = {original_trajectory[0].x, original_trajectory[0].y,
+                       original_trajectory[0].theta};
+    double cumulative_s = 0.0;
+    for (size_t i = 1; i < original_trajectory.size(); ++i) {
+      const auto& prev = original_trajectory[i - 1];
+      const auto& curr = original_trajectory[i];
+      double dx = curr.x - prev.x;
+      double dy = curr.y - prev.y;
+      cumulative_s += std::sqrt(dx * dx + dy * dy);
+      path_cache[cumulative_s] = {curr.x, curr.y, curr.theta};
+    }
+  }
+
+  const double init_accel = interpolated_acc;
+
+  std::vector<double> kin_s(kPlanPoints), kin_speeds(kPlanPoints),
+      kin_accels(kPlanPoints), kin_x(kPlanPoints), kin_y(kPlanPoints),
+      kin_theta(kPlanPoints);
+
+  kin_s[0] = 0.0;
+  kin_speeds[0] = init_speed;
+  kin_accels[0] = init_accel;
+  kin_x[0] = prediction_object.position_x;
+  kin_y[0] = prediction_object.position_y;
+  kin_theta[0] = prediction_object.theta_fusion;
+
+  double current_s = 0.0;
+  double current_speed = init_speed;
+
+  for (size_t i = 1; i < kPlanPoints; ++i) {
+    if (current_speed <= 0.0) {
+      kin_s[i] = current_s;
+      kin_speeds[i] = 0.0;
+      kin_accels[i] = 0.0;
+      continue;
+    }
+
+    double t = i * kTimeStep;
+    double predicted_speed = init_speed + init_accel * t;
+
+    if (predicted_speed <= 0.0) {
+      double braking_distance =
+          (current_speed * current_speed) / (2.0 * std::fabs(init_accel));
+      current_s += braking_distance;
+      current_speed = 0.0;
+      kin_s[i] = current_s;
+      kin_speeds[i] = 0.0;
+      kin_accels[i] = 0.0;
+    } else {
+      current_s = init_speed * t + 0.5 * init_accel * t * t;
+      current_speed = predicted_speed;
+      kin_s[i] = current_s;
+      kin_speeds[i] = current_speed;
+      kin_accels[i] = init_accel;
+    }
+  }
+
+  auto interpolate_point = [&path_cache](double s) -> TmpPathPoint {
+    auto it_upper = path_cache.upper_bound(s);
+    if (it_upper == path_cache.begin()) {
+      return path_cache.begin()->second;
+    } else if (it_upper == path_cache.end()) {
+      return path_cache.rbegin()->second;
+    } else {
+      auto it_lower = std::prev(it_upper);
+      double s0 = it_lower->first;
+      double s1 = it_upper->first;
+      double ratio = (s1 - s0 > 1e-9) ? (s - s0) / (s1 - s0) : 0.0;
+      const auto& p0 = it_lower->second;
+      const auto& p1 = it_upper->second;
+      double theta_diff = p1.theta - p0.theta;
+      if (theta_diff > M_PI) {
+        theta_diff -= 2.0 * M_PI;
+      } else if (theta_diff < -M_PI) {
+        theta_diff += 2.0 * M_PI;
+      }
+      return {p0.x + ratio * (p1.x - p0.x), p0.y + ratio * (p1.y - p0.y),
+              p0.theta + ratio * theta_diff};
+    }
+  };
+
+  for (size_t i = 1; i < kPlanPoints; ++i) {
+    auto pt = interpolate_point(kin_s[i]);
+    kin_x[i] = pt.x;
+    kin_y[i] = pt.y;
+    kin_theta[i] = pt.theta;
+  }
+
+  std::vector<double> last_x(kPlanPoints), last_y(kPlanPoints),
+      last_theta(kPlanPoints), last_speeds(kPlanPoints);
+
+  const auto& last_trajectory = hist_list.back().trajectory_array[0].trajectory;
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    last_x[i] = last_trajectory[i].x;
+    last_y[i] = last_trajectory[i].y;
+    last_theta[i] = last_trajectory[i].theta;
+    last_speeds[i] = last_trajectory[i].speed;
+  }
+
+  std::vector<double> fused_x(kPlanPoints), fused_y(kPlanPoints),
+      fused_theta(kPlanPoints), fused_speeds(kPlanPoints);
+
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    fused_x[i] = kAlpha * last_x[i] + (1 - kAlpha) * kin_x[i];
+    fused_y[i] = kAlpha * last_y[i] + (1 - kAlpha) * kin_y[i];
+
+    double theta_diff = kin_theta[i] - last_theta[i];
+    if (theta_diff > M_PI) {
+      theta_diff -= 2.0 * M_PI;
+    } else if (theta_diff < -M_PI) {
+      theta_diff += 2.0 * M_PI;
+    }
+
+    fused_theta[i] = last_theta[i] + (1 - kAlpha) * theta_diff;
+    fused_speeds[i] = kAlpha * last_speeds[i] + (1 - kAlpha) * kin_speeds[i];
+  }
+
+  std::vector<PredictionTrajectoryPoint> processed_trajectory(
+      original_trajectory);
+
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    processed_trajectory[i].x = fused_x[i];
+    processed_trajectory[i].y = fused_y[i];
+    processed_trajectory[i].theta = fused_theta[i];
+    processed_trajectory[i].speed = fused_speeds[i];
+    processed_trajectory[i].acc = kin_accels[i];
+    processed_trajectory[i].relative_time = i * kTimeStep;
+  }
+
+  prediction_object.trajectory_array[0].trajectory =
+      std::move(processed_trajectory);
+}
+
+void EnvironmentalModelManager::DeleteOlderPredictionObjects() {
+  for (auto it = historical_prediction_objects_.begin();
+       it != historical_prediction_objects_.end();) {
+    if (current_prediction_ids_.find(it->first) ==
+        current_prediction_ids_.end()) {
+      it = historical_prediction_objects_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+}  // namespace planner
+}  // namespace planning

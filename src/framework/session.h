@@ -1,0 +1,104 @@
+#pragma once
+
+#include "arena.h"
+#include "log_glog.h"
+#include "macro.h"
+#include "planning_def.h"
+#include "scene_type_config.pb.h"
+#include "simulation_context.h"
+namespace planning {
+
+class PlanningContext;
+class PlanningOutputContext;
+class EnvironmentalModel;
+class VehicleConfigurationContext;
+class SimulationContext;
+
+namespace framework {
+
+class Session : public planning::common::Arena {
+ public:
+  Session();
+  ~Session();
+
+  bool Init();
+  void Update();
+  void Reset();
+
+  const planning::EnvironmentalModel &environmental_model() const {
+    return *environmental_model_;
+  }
+
+  planning::EnvironmentalModel *mutable_environmental_model() {
+    return environmental_model_;
+  }
+
+  const PlanningContext &planning_context() const { return *planning_context_; }
+
+  PlanningContext *mutable_planning_context() { return planning_context_; }
+
+  bool is_parking_scene() const {
+    return get_scene_type() == planning::common::SceneType::PARKING_APA;
+  }
+
+  bool is_hpp_scene() const {
+    return get_scene_type() == planning::common::SceneType::HPP;
+  }
+
+  bool is_rads_scene() const {
+    return get_scene_type() == planning::common::SceneType::RADS;
+  }
+
+  bool is_nsa_scene() const {
+    return get_scene_type() == planning::common::SceneType::NSA;
+  }
+
+  planning::common::SceneType get_scene_type() const { return scene_type_; }
+  void set_scene_type(const planning::common::SceneType &default_scene_type) {
+    scene_type_ = default_scene_type;
+  }
+
+  const PlanningInitConfig &planning_init_config() const {
+    return planning_init_config_;
+  }
+
+  const SimulationContext &simulation_context() const {
+    return *simulation_context_;
+  }
+
+  SimulationContext *mutable_simulation_context() {
+    return simulation_context_;
+  }
+
+  const std::vector<FaultCounter> &fault_counter_info() {
+    return fault_counter_vec_;
+  }
+
+  std::vector<FaultCounter> *mutable_fault_counter_info() {
+    return &fault_counter_vec_;
+  }
+
+  uint64_t get_fault_code() { return faultcode_; }
+
+  void set_fault_code(uint64_t fault_code) { faultcode_ = fault_code; }
+
+ private:
+  planning::EnvironmentalModel *environmental_model_;
+
+  PlanningContext *planning_context_;
+
+  planning::common::SceneType scene_type_;
+
+  PlanningInitConfig planning_init_config_;
+
+  SimulationContext *simulation_context_;
+
+  std::vector<FaultCounter> fault_counter_vec_;
+
+  uint64_t faultcode_ = 666;
+
+  IFLY_DISALLOW_COPY_AND_ASSIGN(Session);
+};
+
+}  // namespace framework
+}  // namespace planning

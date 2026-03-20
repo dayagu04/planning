@@ -1,0 +1,1223 @@
+import bisect
+from enum import Enum, IntEnum
+import sys, math, os
+import numpy as np
+import math
+from lib.load_rotate import *
+
+kMapRange = 500
+only_display_map_in_route = False
+load_center_line_in_poly = False
+kRad2Deg = 180.0 / math.pi
+kDeg2Rad = math.pi / 180.0
+
+all_gear_command_dict = {0: 'gear_command_none', 1: 'gear_command_parking', 2: 'gear_command_reverse', 3: 'gear_command_neutral', 4: 'gear_command_drive', 5: 'gear_command_low'}
+parking_path_gen_request_response_state_dict = {0: 'none', 1: 'has_resquest', 2: 'has_response', 3: 'has_published_response'}
+parking_pre_plan_case_dict = {0: 'failed', 1: 'ego_pose', 2: 'mid_point'}
+parking_pre_plan_status_dict = {0: 'none', 1: 'computing', 2: 'success', 3: 'failed'}
+parking_plan_status_dict = {0: 'none', 1: 'in_progress', 2: 'finished', 3: 'failed'}
+parking_target_pose_type_dict = {0: 'fail', 1: 'normal', 2: 'fold_mirror'}
+parking_slot_lat_pos_preference_dict = {0: 'mid', 1: 'left', 2: 'right'}
+parking_fold_mirror_command_dict = {0: 'none', 1: 'fold_mirror', 2: 'unfold_mirror'}
+parking_vs_mirror_status_dict = {0: 'invalid', 1: 'have_folded', 2: 'not_folded'}
+parking_path_thread_status_dict = {0: 'inited', 1: 'running', 2: 'stopped', 3: "max_num"}
+parking_state_machine_dict = {0: 'search_in_no_selected', 1: 'search_in_selected_tail', 2: 'search_in_selected_heading', 3: 'active_in_tail', 4: 'active_in_heading', 5: 'search_out_no_selected', 6: 'search_out_selected_tail', 7: 'search_out_selected_heading', 8: 'active_out_tail', 9: 'active_out_heading', 10: 'suspend', 11: 'complete', 12: 'count', 13: 'invalid'}
+parking_planning_stm_dict = {0: 'park_idle', 1: 'park_running', 2: 'park_gearchange', 3: 'park_planning', 4: 'park_finished', 5: 'park_failed', 6: 'park_paused'}
+parking_replan_fail_reason_dict = {0: 'not_failed', 1: 'pause_failed_time', 2: 'stuck_failed_time', 3: 'update_ego_slot_info', 4: 'post_process_path_point_size', 5: 'post_process_path_point_same', 6: 'set_seg_index', 7: 'check_gear_length', 8: 'path_plan_failed', 9: 'plan_count_exceed_limit', 10: 'dynamic_path_not_superior', 11: "no_target_pose", 12: "fold_mirror_failed", 13: "slot_id_changed", 14: "slot_type_changed", 15: "gear_change_count_too_much", 16: "loss_search_path"}
+parking_replan_reason_dict = {0: 'not_replan', 1: 'first_plan', 2: 'seg_completed_path', 3: 'seg_completed_obs', 4: 'stucked', 5: 'dynamic', 6: 'seg_completed_col_det', 7: "force_plan", 8: "seg_completed_slot_jump", 9: "path_dangerous", 10: "slot_cruising", 11: "dynamic_gear_switch"}
+parking_process_obs_method_dict = {0: 'do_nothing', 1: 'move_obs_out_slot', 2: 'move_obs_out_car_safe_pos', 3: 'count'}
+parking_pathplan_result_dict = {0: 'failed', 1: 'hold', 2: 'update', 3: 'wait_path'}
+parking_free_slot_status_dict = {0: 'default', 1: 'draging', 2: 'finished'}
+parking_pause_reason_dict = {0: 'other', 1: 'static obs', 2: 'break', 3: 'dynamic obs', 4: 'none'}
+chassis_reduce_length = 0.25
+
+class CarStruct(IntEnum):
+  WITH_MIRROR = 0
+  FOLD_MIRROR = 1
+  WITHOUT_MIRROR = 2
+  CHASSIS = 3
+
+def check_two_number_is_equal(a, b, epsilon=1e-3):
+  return abs(a - b) < epsilon
+
+def load_car_params_patch():
+  # car_x = [3.624, 3.624, -0.947, -0.947, 3.624]
+  # car_y = [1.89*0.5, -1.89*0.5, -1.89*0.5, 1.89*0.5, 1.89*0.5]
+  # return car_x, car_y
+  car_x = [3.424, 3.624, 3.624, 3.424, 2.177, 2.177, 1.916, 1.916, -0.747, -0.947, -0.947, -0.747, 1.916, 1.916, 2.177, 2.177]
+  car_y = [0.945, 0.745, -0.745, -0.945, -0.945, -1.095, -1.095, -0.945, -0.945, -0.745, 0.745, 0.945, 0.945, 1.095, 1.095, 0.945]
+  return car_x, car_y
+
+JAC_S811 = 'JAC_S811'
+CHERY_T26 = 'CHERY_T26'
+CHERY_E0X = 'CHERY_E0X'
+CHERY_M32T = 'CHERY_M32T'
+BESTUNE_E541 = 'BESTUNE_E541'
+
+vehicle_type_list = [JAC_S811, CHERY_T26, CHERY_E0X, CHERY_M32T, BESTUNE_E541]
+
+def get_car_type(car_type_int):
+  if car_type_int == 0:
+    return JAC_S811
+  elif car_type_int == 1:
+    return CHERY_T26
+  elif car_type_int == 2:
+    return CHERY_E0X
+  elif car_type_int == 3:
+    return CHERY_M32T
+  elif car_type_int == 4:
+    return BESTUNE_E541
+  else:
+    return CHERY_E0X
+
+def construct_rectangle_from_center(cx, cy, length, width, heading, is_rad=False):
+  # 将航向转换为弧度
+  if not is_rad:
+    radians = math.radians(heading)
+  else:
+    radians = heading
+
+  unit_t = np.array([np.cos(radians), np.sin(radians)])
+  unit_n = np.array([-unit_t[1], unit_t[0]]) # 逆时针旋转
+
+  half_length = length / 2
+  half_width = width / 2
+
+  top_left = np.array([cx, cy]) + half_length * unit_t + half_width * unit_n
+  top_right = np.array([cx, cy]) + half_length * unit_t - half_width * unit_n
+  bottom_right = np.array([cx, cy]) - half_length * unit_t - half_width * unit_n
+  bottom_left = np.array([cx, cy]) - half_length * unit_t + half_width * unit_n
+
+  return [top_left[0], top_right[0], bottom_right[0], bottom_left[0], top_left[0]], [top_left[1], top_right[1], bottom_right[1], bottom_left[1], top_left[1]]
+
+def get_car_params(vehicle_type = CHERY_E0X):
+  tyre_radius, tyre_width, steer_ratio = 0.4, 0.22, 13.2
+  if vehicle_type == JAC_S811:
+    wheel_base = 2.7
+    car_width = 1.89
+  elif vehicle_type == CHERY_T26:
+    wheel_base = 2.796
+    car_width = 1.919
+  elif vehicle_type == CHERY_E0X:
+    wheel_base = 3.0
+    car_width = 1.975
+    tyre_radius = 0.75 * 0.5
+    tyre_width = 0.25
+  elif vehicle_type == CHERY_M32T:
+    wheel_base = 2.8
+    car_width = 1.89
+    tyre_radius = 0.72 * 0.5
+    tyre_width = 0.25
+  elif vehicle_type == BESTUNE_E541:
+    wheel_base = 3.0
+    car_width = 1.975
+  else:
+    wheel_base = 3.0
+    car_width = 1.975
+  return wheel_base, car_width, tyre_radius, tyre_width, steer_ratio
+
+def load_car_params_patch_parking(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, car_struct=CarStruct.WITH_MIRROR):
+  if vehicle_type == JAC_S811:
+    # for JAC_S811
+    wheel_base = 2.7
+    car_width = 1.89
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187,  2.177,  2.177,  1.977,  1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977, 1.977, 2.177, 2.177]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945, 0.945, 1.055, 1.055, 0.945]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187,  2.177,  2.177,  1.977,  1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977, 1.977, 2.177, 2.177]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945, 0.945, 1.055, 1.055, 0.945]
+
+  elif vehicle_type == CHERY_T26:
+    # for CHERY_T26
+    wheel_base = 2.796
+    car_width = 1.919
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980,  2.0920,  2.092,  1.892,  1.8920, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020, 1.892,  1.892, 2.092, 2.092]
+      car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -1.092, -1.092, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595, 0.9595, 1.092, 1.092, 0.9595]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020]
+      car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020]
+      car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980,  2.0920,  2.092,  1.892,  1.8920, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020, 1.892,  1.892, 2.092, 2.092]
+      car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -1.092, -1.092, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595, 0.9595, 1.092, 1.092, 0.9595]
+
+  elif vehicle_type == CHERY_E0X:
+    # for CHERY_E0X
+    wheel_base = 3.0
+    car_width = 1.975
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350,  2.2350,  2.0350,  2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
+      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.0245, -1.0245, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875, 0.9875, 1.0245, 1.0245, 0.9875]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690]
+      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690]
+      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350,  2.2350,  2.0350,  2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
+      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.1145, -1.1145, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875, 0.9875, 1.1145, 1.1145, 0.9875]
+
+  elif vehicle_type == CHERY_M32T:
+    # for CHERY_M32T
+    wheel_base = 2.8
+    car_width = 1.868
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.016,  -1.016, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.016,  1.016,   0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.106,  -1.106, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.106,  1.106,   0.934]
+
+  elif vehicle_type == BESTUNE_E541:
+    # for BESTUNE_E541
+    wheel_base = 2.88
+    car_width = 1.916
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030, -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217]
+      car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958, -0.958, -0.968, -0.968, -0.958, -0.958, -0.742, -0.361,  0.361,  0.742,  0.958,  0.958,  0.968,  0.968,  0.958]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  -0.625, -0.996, -1.097, -1.097, -0.996, -0.625]
+      car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958,  -0.958, -0.742, -0.361,  0.361,  0.742,  0.958]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  -0.625, -0.996, -1.097, -1.097, -0.996, -0.625]
+      car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958,  -0.958, -0.742, -0.361,  0.361,  0.742,  0.958]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030, -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217]
+      car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958, -0.958, -1.040, -1.040, -0.958, -0.958, -0.742, -0.361,  0.361,  0.742,  0.958,  0.958,  1.040,  1.040,  0.958]
+
+  else:
+    # for CHERY_M32T
+    wheel_base = 2.8
+    car_width = 1.868
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.016,  -1.016, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.016,  1.016,   0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.106,  -1.106, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.106,  1.106,   0.934]
+
+  for i in range(len(car_x)):
+    if car_y[i] > 0.0:
+      car_y[i] = car_y[i] + car_lat_inflation
+    else:
+      car_y[i] = car_y[i] - car_lat_inflation
+
+  return car_x, car_y, wheel_base
+
+def load_car_patch_coord_relative_ego_pose(car_x, car_y, ego_pose):
+  # ego_pose 0->x 1->y 2->heading(rad)
+  car_xn, car_yn = [], []
+  for i in range(len(car_x)):
+    tmp_x, tmp_y = local2global(car_x[i], car_y[i], ego_pose[0], ego_pose[1], ego_pose[2])
+    car_xn.append(tmp_x)
+    car_yn.append(tmp_y)
+  return car_xn, car_yn
+
+def load_car_patch_coord_relative_ego_pose_by_veh(ego_pose, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
+  # ego_pose 0->x 1->y 2->heading(rad) 3->car_inflation
+  if len(ego_pose) == 3:
+    ego_pose = np.append(ego_pose, 0.0)
+  car_x, car_y, wheel_base = load_car_params_patch_parking(vehicle_type, ego_pose[3], car_struct)
+  return load_car_patch_coord_relative_ego_pose(car_x, car_y, [ego_pose[0], ego_pose[1], ego_pose[2]])
+
+def load_car_patch_coords_relative_ego_pose_list(car_x, car_y, ego_pose_list):
+  # ego_pose 0->x 1->y 2->heading(rad)
+  car_xns, car_yns = [], []
+  for i in range(len(ego_pose_list)):
+    car_xn, car_yn = load_car_patch_coord_relative_ego_pose(car_x, car_y, ego_pose_list[i])
+    car_xns.append(car_xn)
+    car_yns.append(car_yn)
+  return car_xns, car_yns
+
+def load_car_patch_coords_relative_ego_pose_list_by_veh(ego_pose_list, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
+  car_xns, car_yns = [], []
+  for i in range(len(ego_pose_list)):
+    car_xn, car_yn = load_car_patch_coord_relative_ego_pose_by_veh(ego_pose_list[i], vehicle_type, car_struct)
+    car_xns.append(car_xn)
+    car_yns.append(car_yn)
+  return car_xns, car_yns
+
+def cal_car_rear_axle_line(ego_pose, half_car_width):
+  # ego_pose 0->x 1->y 2->heading(rad)
+  x1 = ego_pose[0] + half_car_width * math.sin(ego_pose[2])
+  y1 = ego_pose[1] - half_car_width * math.cos(ego_pose[2])
+  x2 = ego_pose[0] - half_car_width * math.sin(ego_pose[2])
+  y2 = ego_pose[1] + half_car_width * math.cos(ego_pose[2])
+  return [x1, x2], [y1, y2]
+
+def load_car_circle_coord():
+  circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
+  circle_y = [0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0]
+  circle_r = [2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95]
+
+  return circle_x, circle_y, circle_r
+
+def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, car_struct=CarStruct.WITH_MIRROR):
+  if vehicle_type == JAC_S811:
+    circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
+    circle_y = [0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0]
+    circle_r = [2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95]
+
+  elif vehicle_type == CHERY_T26:
+    circle_x = [1.3225, 3.26, 3.26, 2.04, -0.63, -0.63, 2.04, 2.9375, 1.8, 0.9, -0.0375]
+    circle_y = [0.0, 0.5, -0.5, -0.912, -0.5, 0.5, 0.912, 0.0, 0.0, 0.0, 0.0]
+    circle_r = [2.4075, 0.46, 0.46, 0.18, 0.46, 0.46, 0.18, 0.9595, 0.9595, 0.9595, 0.9595]
+
+  elif vehicle_type == CHERY_E0X:
+    if car_struct == CarStruct.FOLD_MIRROR:
+      circle_x = [1.45,  3.4650,   3.4650,   2.14,    -0.5650,  -0.5650,  2.14,    2.9375,  1.8,    0.9,   -0.0375]
+      circle_y = [0.0,   0.5175,  -0.5175,  -0.8145,  -0.5275,   0.5275,  0.8145,  0.0,     0.0,    0.0,    0.0]
+      circle_r = [2.58,  0.47,     0.47,     0.21,     0.46,     0.46,    0.21,    0.9875,  0.9875, 0.9875, 0.9875]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.45,  3.4650,   3.4650,  -0.5650,  -0.5650,  2.9375,  1.8,    0.9,   -0.0375]
+      circle_y = [0.0,   0.5175,  -0.5175,  -0.5275,   0.5275,  0.0,     0.0,    0.0,    0.0]
+      circle_r = [2.58,  0.47,     0.47,     0.46,     0.46,    0.9875,  0.9875, 0.9875, 0.9875]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.45,  3.4650,   3.4650,  -0.5650,  -0.5650,  2.9375,  1.8,    0.9,   -0.0375]
+      circle_y = [0.0,   0.5175,  -0.5175,  -0.5275,   0.5275,  0.0,     0.0,    0.0,    0.0]
+      circle_r = [2.58,  0.47,     0.47,     0.46,     0.46,    0.9875,  0.9875, 0.9875, 0.9875]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.45, 3.4650,  3.4650,  2.14,   -0.5650, -0.5650, 2.14,   2.9375, 1.8,    0.9,   -0.0375]
+      circle_y = [0.0,  0.5175, -0.5175, -0.9345, -0.5275,  0.5275, 0.9345, 0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.58, 0.47,    0.47,    0.18,    0.46,    0.46,   0.18,   0.9875, 0.9875, 0.9875, 0.9875]
+
+  elif vehicle_type == CHERY_M32T:
+    if car_struct == CarStruct.FOLD_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.776,   -0.4075,   0.4075,  0.776,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.24,     0.5295,   0.5295,  0.24,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.896,   -0.4075,   0.4075,  0.896,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.21,     0.5295,   0.5295,  0.21,   0.934, 0.934, 0.934, 0.934]
+
+  elif vehicle_type == BESTUNE_E541:
+    if car_struct == CarStruct.FOLD_MIRROR:
+      circle_x = [1.36, 3.305,   3.305,   2.12,   -0.615,  -0.615, 2.12,   2.8475, 1.8,    0.9,   -0.1575]
+      circle_y = [0.0,  0.5075, -0.5075, -0.8345, -0.4675, 0.4675, 0.8345, 0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.7,  0.45,    0.45,    0.16,    0.49,   0.49,   0.16,   0.9575, 0.9575, 0.9575, 0.9575]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.36, 3.305,   3.305,  -0.615,  -0.615,  2.8475, 1.8,    0.9,   -0.1575]
+      circle_y = [0.0,  0.5075, -0.5075, -0.4675, 0.4675,  0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.7,  0.45,    0.45,    0.49,   0.49,    0.9575, 0.9575, 0.9575, 0.9575]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.36, 3.305,   3.305,  -0.615,  -0.615,  2.8475, 1.8,    0.9,   -0.1575]
+      circle_y = [0.0,  0.5075, -0.5075, -0.4675, 0.4675,  0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.7,  0.45,    0.45,    0.49,   0.49,    0.9575, 0.9575, 0.9575, 0.9575]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.36, 3.305,   3.305,   2.12,   -0.615,  -0.615, 2.12,   2.8475, 1.8,    0.9,   -0.1575]
+      circle_y = [0.0,  0.5075, -0.5075, -0.9245, -0.4675, 0.4675, 0.9245, 0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.7,  0.45,    0.45,    0.14,    0.49,   0.49,   0.14,   0.9575, 0.9575, 0.9575, 0.9575]
+
+  else:
+    if car_struct == CarStruct.FOLD_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.776,   -0.4075,   0.4075,  0.776,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.24,     0.5295,   0.5295,  0.24,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.896,   -0.4075,   0.4075,  0.896,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.21,     0.5295,   0.5295,  0.21,   0.934, 0.934, 0.934, 0.934]
+
+  if car_struct == CarStruct.WITH_MIRROR or car_struct == CarStruct.FOLD_MIRROR:
+    for i in range(1, len(circle_x)):
+      if i == 1 or i == 5:
+        circle_y[i] += car_lat_inflation
+      elif i == 2 or i == 4:
+        circle_y[i] -= car_lat_inflation
+      elif i == 3 or i == 6:
+        circle_r[i] += car_lat_inflation
+      elif i == 7:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] -= car_lat_inflation
+      elif i == 10:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] += car_lat_inflation
+      else:
+        circle_r[i] += car_lat_inflation
+  elif car_struct == CarStruct.WITHOUT_MIRROR or car_struct == CarStruct.CHASSIS:
+    for i in range(1, len(circle_x)):
+      if i == 1 or i == 4:
+        circle_y[i] += car_lat_inflation
+      elif i == 2 or i == 3:
+        circle_y[i] -= car_lat_inflation
+      elif i == 5:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] -= car_lat_inflation
+      elif i == 8:
+        circle_r[i] += car_lat_inflation
+        circle_x[i] += car_lat_inflation
+      else:
+        circle_r[i] += car_lat_inflation
+
+  return circle_x, circle_y, circle_r
+
+def load_car_circle_coord_relative_ego_pose(circle_x, circle_y, circle_r, ego_pose):
+  # ego_pose 0->x 1->y 2->heading(rad)
+  circle_xn, circle_yn = [], []
+  for i in range(len(circle_x)):
+    tmp_x, tmp_y = local2global(circle_x[i], circle_y[i], ego_pose[0], ego_pose[1], ego_pose[2])
+    circle_xn.append(tmp_x)
+    circle_yn.append(tmp_y)
+  return circle_xn, circle_yn, circle_r
+
+def load_car_circle_coord_relative_ego_pose_by_veh(ego_pose, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
+  # ego_pose 0->x 1->y 2->heading(rad) 3->car_inflation
+  if len(ego_pose) == 3:
+    ego_pose = np.append(ego_pose, 0.0)
+  circle_x, circle_y, circle_r = load_car_circle_coord_by_veh(vehicle_type, ego_pose[3], car_struct)
+  return load_car_circle_coord_relative_ego_pose(circle_x, circle_y, circle_r, [ego_pose[0], ego_pose[1], ego_pose[2]])
+
+def load_car_circle_coord_relative_ego_pose_list_by_veh(ego_pose_list, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
+  car_xns, car_yns, car_rns = [], [], []
+  # ego_pose 0->x 1->y 2->heading(rad) 3->car_inflation
+  for i in range(len(ego_pose_list)):
+    car_xn, car_yn, car_rn = load_car_circle_coord_relative_ego_pose_by_veh(ego_pose_list[i], vehicle_type, car_struct)
+    car_xns.append(car_xn)
+    car_yns.append(car_yn)
+    car_rns.append(car_rn)
+  return car_xns, car_yns, car_rns
+
+def get_next_filename(folder):
+  # 获取文件夹中的所有文件
+  files = os.listdir(folder)
+  # 记录最高的编号
+  max_number = 0
+
+  # 遍历文件名，寻找以 data_ 开头且以 .json 结尾的文件
+  for file in files:
+    if file.startswith("data_") and file.endswith(".json"):
+      try:
+        # 从文件名中提取编号，并更新最大编号
+        number = int(file[len("data_"):-len(".json")])
+        if number > max_number:
+          max_number = number
+      except ValueError:
+        pass  # 如果转换失败，则跳过该文件
+
+  # 生成下一个文件名
+  next_number = max_number + 1
+  next_filename = f"data_{next_number}.json"
+  return next_filename
+
+def load_car_uss_patch(vehicle_type = JAC_S811):
+  if vehicle_type == JAC_S811:
+    # for JAC_S811
+    apa_x = [3.187342, 3.424531, 3.593071, 3.593071, 3.424531, 3.187342,
+            -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357]
+    apa_y = [0.887956, 0.681712, 0.334651, -0.334651, -0.681712, -0.887956,
+            -0.887956, -0.706505, -0.334845, 0.334845, 0.706505, 0.887956]
+  elif vehicle_type == CHERY_T26:
+   # for CHERY_T26
+    apa_x = [3.298241, 3.580141, 3.667435, 3.667435, 3.580141, 3.298241,
+            -0.602483, -0.997449, -1.06219, -1.06219, -0.997449, -0.602483]
+    apa_y = [0.935328, 0.680863, 0.334976, -0.334976, -0.680863, -0.935328,
+            -0.935328, -0.669815, -0.299949, 0.299949, 0.699815, 0.935328]
+  elif vehicle_type == CHERY_E0X:
+    apa_x = [3.4655,  3.7711,  3.8742, 3.8742, 3.7711,  3.4655,
+            -0.5150, -0.8653, -1.0115, -1.0115, -0.8653, -0.5150]
+    apa_y = [0.97620,  0.69918,  0.32000,  -0.32000, -0.66918, -0.97620,
+            -0.9583, -0.8314, -0.3250, 0.3250,  0.8314,  0.9583]
+  elif vehicle_type == CHERY_M32T:
+    apa_x = [3.4655,  3.7711,  3.8742, 3.8742, 3.7711,  3.4655,
+            -0.5150, -0.8653, -1.0115, -1.0115, -0.8653, -0.5150]
+    apa_y = [0.97620,  0.69918,  0.32000,  -0.32000, -0.66918, -0.97620,
+            -0.9583, -0.8314, -0.3250, 0.3250,  0.8314,  0.9583]
+  elif vehicle_type == BESTUNE_E541:
+    apa_x = [3.4655,  3.7711,  3.8742, 3.8742, 3.7711,  3.4655,
+            -0.5150, -0.8653, -1.0115, -1.0115, -0.8653, -0.5150]
+    apa_y = [0.97620,  0.69918,  0.32000,  -0.32000, -0.66918, -0.97620,
+            -0.9583, -0.8314, -0.3250, 0.3250,  0.8314,  0.9583]
+
+  return apa_x, apa_y
+
+def load_uss_angle_patch(vehicle_type = JAC_S811):
+  if vehicle_type == JAC_S811:
+    # for JAC_S811
+    uss_angle = [170, 130, 92, 88, 50, 8, 352, 298, 275, 264, 242, 187]
+  elif vehicle_type == CHERY_T26:
+    # for CHERY_T26
+    uss_angle = [169.998, 125.019, 97.046, 82.954, 54.981, 10.002,354.78, 298.086, 277.369, 262.631, 241.9914, 185.22]
+  elif vehicle_type == CHERY_E0X:
+    # for CHERY_E0X
+    uss_angle = [169.998, 125.019, 97.046, 82.954, 54.981, 10.002,354.78, 298.086, 277.369, 262.631, 241.9914, 185.22]
+  elif vehicle_type == CHERY_M32T:
+    # for CHERY_M32T
+    uss_angle = [169.998, 125.019, 97.046, 82.954, 54.981, 10.002,354.78, 298.086, 277.369, 262.631, 241.9914, 185.22]
+  elif vehicle_type == BESTUNE_E541:
+    # for BESTUNE_E541
+    uss_angle = [169.998, 125.019, 97.046, 82.954, 54.981, 10.002,354.78, 298.086, 277.369, 262.631, 241.9914, 185.22]
+
+  return uss_angle
+
+def one_echo_text_local(old_x, old_y, radian, distance):
+    new_x = old_x + distance * math.cos(radian)
+    new_y = old_y + distance * math.sin(radian)
+    return new_x, new_y
+def ehr_load_center_lane_lines(lanes,x,y,yaw,Max_line_size,lane_id_in_route_set):
+  ehr_line_info_list = []
+  for i in range(Max_line_size):
+    ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
+    if i < len(lanes):
+      if only_display_map_in_route and lanes[i].lane_id not in lane_id_in_route_set:
+        continue
+      lane = lanes[i]
+      line_x = []
+      line_y = []
+      cur_line_first_point = lane.points_on_central_line[0]
+      cur_line_last_point = lane.points_on_central_line[-1]
+      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
+        continue
+      for point in lane.points_on_central_line:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        # print("x:",ehr_x)
+        # print("y:",ehr_y)
+        line_x.append(car_x)
+        line_y.append(car_y)
+      ehr_lane_info['ehr_line_x_vec'] = line_x
+      ehr_lane_info['ehr_line_y_vec'] = line_y
+      ehr_lane_info['ehr_relative_id'] = lane.lane_id
+      ehr_lane_info['ehr_type'] = 0
+      ehr_line_info_list.append(ehr_lane_info)
+    else:
+      ehr_lane_info['ehr_line_x_vec'] = []
+      ehr_lane_info['ehr_line_y_vec'] = []
+      ehr_lane_info['ehr_relative_id'] = []
+      ehr_lane_info['ehr_type'] = []
+      ehr_line_info_list.append(ehr_lane_info)
+  return ehr_line_info_list
+
+def ehr_load_road_boundary_lines(road_boundaries,x,y,yaw,Road_boundary_max_line_size,road_boundary_id_in_route_set):
+  ehr_road_boundary_info_list = []
+  for i in range(Road_boundary_max_line_size):
+    ehr_road_boundary_info = {'ehr_road_boundary_x_vec':[], 'ehr_road_boundary_y_vec':[],'ehr_road_boundary_relative_id':[], 'ehr_type':[]}
+    if i < len(road_boundaries):
+      if only_display_map_in_route and road_boundaries[i].boundary_id not in road_boundary_id_in_route_set:
+        continue
+      road_boundary = road_boundaries[i]
+      line_x = []
+      line_y = []
+      cur_line_first_point = road_boundary.boundary_attributes[0].points[0]
+      cur_line_last_point = road_boundary.boundary_attributes[-1].points[-1]
+      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
+        continue
+      for doundary_attribute in road_boundary.boundary_attributes:
+        for  point in doundary_attribute.points:
+          ehr_x = point.x
+          ehr_y = point.y
+          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+          # print("x:",ehr_x)
+          # print("y:",ehr_y)
+          line_x.append(car_x)
+          line_y.append(car_y)
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = road_boundary.boundary_id
+      ehr_road_boundary_info['ehr_type'] = 0
+      ehr_road_boundary_info_list.append(ehr_road_boundary_info)
+    else:
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = []
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = []
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = []
+      ehr_road_boundary_info['ehr_type'] = []
+      ehr_road_boundary_info_list.append(ehr_road_boundary_info)
+  return ehr_road_boundary_info_list
+
+def ehr_load_lane_boundary_lines(lane_boundaries,x,y,yaw,Lane_boundary_max_line_size, lane_boundary_id_in_route_set):
+  ehr_lane_boundary_info_list = []
+
+  for i in range(Lane_boundary_max_line_size):
+    ehr_lane_boundary_info = {'ehr_lane_boundary_x_vec':[], 'ehr_lane_boundary_y_vec':[],'ehr_lane_boundary_relative_id':[], 'ehr_type':[]}
+    if i < len(lane_boundaries):
+      if only_display_map_in_route and lane_boundaries[i].boundary_id not in lane_boundary_id_in_route_set:
+        continue
+      lane_boundary = lane_boundaries[i]
+      cur_line_first_point = lane_boundary.boundary_attributes[0].points[0]
+      cur_line_last_point = lane_boundary.boundary_attributes[-1].points[-1]
+      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      if first_point_to_cur_dis > kMapRange and last_point_to_cur_dis > kMapRange:
+        continue
+      line_x = []
+      line_y = []
+      for boundary_attribute in lane_boundary.boundary_attributes:
+        for  point in boundary_attribute.points:
+          ehr_x = point.x
+          ehr_y = point.y
+          car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+          # print("x:",ehr_x)
+          # print("y:",ehr_y)
+          line_x.append(car_x)
+          line_y.append(car_y)
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = lane_boundary.boundary_id
+      ehr_lane_boundary_info['ehr_type'] = 0
+      ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
+    else:
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = []
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = []
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = []
+      ehr_lane_boundary_info['ehr_type'] = []
+      ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
+  return ehr_lane_boundary_info_list
+
+def load_lane_lines(lanes):
+  line_info_list = []
+
+  for i in range(10):
+    lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+    if i< len(lanes):
+      lane = lanes[i]
+      left_line = lane.left_lane_boundary
+      left_line_coef = left_line.poly_coefficient
+      try:
+        line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
+          left_line.begin, left_line.end)
+        lane_info_l['line_x_vec'] = line_x
+        lane_info_l['line_y_vec'] = line_y
+        try:
+          tp = left_line.type_segments[0].type
+        except:
+          print("旧格式：左车道线类型")
+          tp = left_line.segment[0].type
+        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+          lane_info_l['type'] = ['dashed']
+        else:
+          lane_info_l['type'] = ['solid']
+      except:
+        print("旧格式：左车道线信息")
+        line_x, line_y = gen_line(0,0,0,0,0,0)
+        lane_info_l['line_x_vec'] = line_x
+        lane_info_l['line_y_vec'] = line_y
+        lane_info_l['type'] = ['dashed']
+
+      line_info_list.append(lane_info_l)
+
+      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      right_line = lane.right_lane_boundary
+      right_line_coef = right_line.poly_coefficient
+      try:
+        line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
+          right_line.begin, right_line.end)
+        lane_info_r['line_x_vec'] = line_x
+        lane_info_r['line_y_vec'] = line_y
+        try:
+          tp = left_line.type_segments[0].type
+        except:
+          print("旧格式：右车道线类型")
+          tp = left_line.segment[0].type
+        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+          lane_info_r['type'] = ['dashed']
+        else:
+          lane_info_r['type'] = ['solid']
+      except:
+        line_x, line_y = gen_line(0,0,0,0,0,0)
+        lane_info_r['line_x_vec'] = line_x
+        lane_info_r['line_y_vec'] = line_y
+        lane_info_r['type'] = ['dashed']
+        print("旧格式：右车道线信息")
+      line_info_list.append(lane_info_r)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      lane_info_l['line_x_vec'] = line_x
+      lane_info_l['line_y_vec'] = line_y
+      lane_info_l['type'] = []
+      line_info_list.append(lane_info_l)
+
+  return line_info_list
+
+def load_lane_center_lines(lanes):
+  line_info_list = []
+
+  for i in range(10):
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[]}
+    if i< len(lanes):
+      lane = lanes[i]
+      virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
+      line_x = []
+      line_y = []
+      if not load_center_line_in_poly:
+        for virtual_lane_refline_point in virtual_lane_refline_points:
+          line_x.append(virtual_lane_refline_point.car_point.x)
+          line_y.append(virtual_lane_refline_point.car_point.y)
+      else:
+        line_x, line_y = gen_line(lane.lane_reference_line.poly_coefficient_car[0], \
+                                  lane.lane_reference_line.poly_coefficient_car[1], \
+                                  lane.lane_reference_line.poly_coefficient_car[2], \
+                                  lane.lane_reference_line.poly_coefficient_car[3], 0, 50)
+
+      lane_info['line_x_vec'] = line_x
+      lane_info['line_y_vec'] = line_y
+      lane_info['relative_id'] = lane.relative_id
+      lane_info['type'] = 0
+
+      line_info_list.append(lane_info)
+    else:
+      lane_info['line_x_vec'] = []
+      lane_info['line_y_vec'] = []
+      lane_info['relative_id'] = []
+      lane_info['type'] = 0
+      line_info_list.append(lane_info)
+
+  return line_info_list
+
+def load_obstacle_paramsV1(obstacle_list):
+
+  obs_info_all = dict()
+
+  obs_num = len(obstacle_list)
+  num = 0
+  for i in range(obs_num):
+    source = obstacle_list[i].additional_info.fusion_source
+    if source & 0x01: #相机融合障碍物
+      source = 1
+    elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
+      math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
+      math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
+      continue
+    else:
+      source = 4
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+      obs_info_all[source] = obs_info
+
+    long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
+    lat_pos_rel = obstacle_list[i].common_info.relative_center_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].common_info.shape.width /2
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].common_info.center_position.x
+    lat_pos = obstacle_list[i].common_info.center_position.y
+    theta = obstacle_list[i].common_info.heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    num = num + 1
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].additional_info.track_id)
+#             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
+    obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].additional_info.track_id) + ')=' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 2)))
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    # for ind in range(len(obs_y)):
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(long_pos)
+    obs_info_all[source]['pos_y'].append(lat_pos)
+
+  return obs_info_all
+
+def load_obstacle_me(obstacle_list):
+
+  obs_info_all = dict()
+
+  obs_num = len(obstacle_list)
+  num = 0
+  for i in range(obs_num):
+    source = 1#obstacle_list[i].additional_info.sensor_type
+    # if source & 0x01: #相机融合障碍物
+    #   source = 1
+    # elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
+    #   math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
+    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
+    #   continue
+    # else:
+    #   source = 4
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+    obs_info_all[source] = obs_info
+
+    long_pos_rel = obstacle_list[i].common_info.relative_position.x
+    # print(long_pos_rel)
+    lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].common_info.shape.width /2
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+    # print(obs_x_rel)
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].common_info.center_position.x
+    lat_pos = obstacle_list[i].common_info.center_position.y
+    theta = obstacle_list[i].common_info.heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    num = num + 1
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].common_info.id)#contour不太确定
+#             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
+    obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 2)))
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    # for ind in range(len(obs_y)):
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(long_pos_rel)
+    obs_info_all[source]['pos_y'].append(lat_pos_rel)
+    # print("me_message:(",obstacle_list[i].common_info.relative_position.x-10200,",",obstacle_list[i].common_info.relative_position.y+5000,")")
+
+  return obs_info_all
+
+def load_obstacle_radar(obstacle_list,type):
+  obs_info_all = dict()
+
+  obs_num = len(obstacle_list)
+  # print("obs_num:",obs_num)
+  # print(obs_num)
+  num = 0
+  if type == 0:
+    source = 11
+  elif type == 1:
+    source = 12
+  elif type == 2:
+    source = 13
+  elif type == 3:
+    source = 14
+  elif type == 4:
+    source = 15
+  # print("source:",source)
+  for i in range(obs_num):
+    # source = obstacle_list[i].additional_info.fusion_source
+    # if source & 0x01: #相机融合障碍物
+    #   source = 1
+    # elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
+    #   math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
+    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
+    #   continue
+    # else:
+
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+      obs_info_all[source] = obs_info
+
+    long_pos_rel = obstacle_list[i].relative_position.x
+    lat_pos_rel = obstacle_list[i].relative_position.y
+    theta = obstacle_list[i].relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].shape.width /2
+    half_length = obstacle_list[i].shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+
+    #print(obs_x_rel)
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].relative_position.x
+    lat_pos = obstacle_list[i].relative_position.y
+    theta = 0 #obstacle_list[i].heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    num = num + 1
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].id)
+#             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
+    obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].id) + ')=' \
+        + str(round(obstacle_list[i].relative_velocity.x, 2))+','+ str(round(obstacle_list[i].relative_velocity.y, 2)))
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    # for ind in range(len(obs_y)):
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(long_pos)
+    obs_info_all[source]['pos_y'].append(lat_pos)
+
+  return obs_info_all
+
+def gen_line(c0, c1, c2, c3, start, end):
+  points_x = []
+  points_y = []
+
+  for x in np.linspace(start, end, 50):
+      y = c0 + c1 * x + c2 * x * x + c3 * x * x* x
+      points_x.append(x)
+      points_y.append(y)
+
+  return points_x, points_y
+
+def load_prediction_objects(obstacle_list, localization_info):
+    obs_info = {'obstacles_x': [],
+                'obstacles_y': [],
+                'pos_x': [],
+                'pos_y': [],
+                'loc_x': [],
+                'loc_y': [],
+                'obstacles_vel': [],
+                'obstacles_acc': [],
+                'obstacles_tid': [],
+                'is_cipv': [],
+                'obs_label':[]
+                }
+    localization_x = 0
+    localization_y = 0
+    if localization_info.pose.type == 1:
+      localization_x = localization_info.pose.enu_position.x
+      localization_y = localization_info.pose.enu_position.y
+    elif localization_info.pose.type == 2:
+      localization_x = localization_info.pose.llh_position.x
+      localization_y = localization_info.pose.llh_position.y
+    elif localization_info.pose.type == 3:
+      localization_x = localization_info.pose.local_position.x
+      localization_y = localization_info.pose.local_position.y
+    elif localization_info.pose.type == 0:
+      localization_x = localization_info.pose.local_position.x
+      localization_y = localization_info.pose.local_position.y
+    linear_velocity_from_wheel = localization_info.pose.linear_velocity_from_wheel
+    localization_theta = localization_info.pose.euler_angles.yaw
+
+    trajectory_info = {'x':[],'y':[]}
+    obs_num = len(obstacle_list)
+    num = len(obstacle_list[0].trajectory[0].trajectory_point)
+    for i in range(obs_num):
+      if len(obstacle_list[i].trajectory[0].trajectory_point) == 0:
+        # print("No data")
+        continue
+      elif obstacle_list[i].fusion_obstacle.common_info.shape.width == 0 or obstacle_list[i].fusion_obstacle.common_info.shape.length == 0:
+        continue
+      else:
+        long_pos = obstacle_list[i].trajectory[0].trajectory_point[0].relative_position.x
+        lat_pos = obstacle_list[i].trajectory[0].trajectory_point[0].relative_position.y
+        theta = obstacle_list[i].fusion_obstacle.common_info.relative_heading_angle
+        half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width /2
+        length = obstacle_list[i].fusion_obstacle.common_info.shape.length
+        track_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
+
+        # print(f"long_pos = {long_pos}\tlat_pos = {lat_pos}\ttheta = {theta}\thalf_width = {half_width}\tlength = {length}\n")
+
+        obs_x = [long_pos+half_width*math.sin(theta), \
+                  long_pos+half_width*math.sin(theta)+length*math.cos(theta), \
+                  long_pos-half_width*math.sin(theta)+length*math.cos(theta), \
+                  long_pos-half_width*math.sin(theta), \
+                  long_pos+half_width*math.sin(theta)]
+
+        obs_y = [lat_pos-half_width*math.cos(theta), \
+                  lat_pos-half_width*math.cos(theta)+ length*math.sin(theta), \
+                  lat_pos+half_width*math.cos(theta)+ length*math.sin(theta), \
+                  lat_pos+half_width*math.cos(theta),
+                  lat_pos-half_width*math.cos(theta)]
+        num = num + 1
+        obs_info['obstacles_x'].append(obs_x)
+        obs_info['obstacles_y'].append(obs_y)
+        obs_info['pos_x'].append(lat_pos)
+        obs_info['pos_y'].append(long_pos)
+        obs_info['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
+        obs_info['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
+        obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
+        obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
+
+        p_x = []
+        p_y = []
+        for j in range(len(obstacle_list[i].trajectory[0].trajectory_point)):
+          # local_x = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.x
+          # local_y = obstacle_list[i].trajectory[0].trajectory_point[j].relative_position.y
+          global_x = obstacle_list[i].trajectory[0].trajectory_point[j].position.x
+          global_y = obstacle_list[i].trajectory[0].trajectory_point[j].position.y
+          local_x, local_y = global2local(global_x, global_y, localization_x, localization_y, localization_theta)
+          p_x.append(local_x)
+          p_y.append(local_y)
+        # trajectory_info[track_id] = [p_x, p_y]
+      trajectory_info['x'].append(p_x)
+      trajectory_info['y'].append(p_y)
+
+    return obs_info, trajectory_info
+
+def find_closest_index(values, target):
+  """
+  在已排序的列表中查找最接近目标值的索引
+
+  :param values: 已排序的数值列表
+  :param target: 目标值
+  :return: 最接近目标值的索引
+  """
+  if not values:
+      return 0
+
+  # 使用二分查找
+  idx = bisect.bisect_left(values, target)
+
+  if idx == 0:
+      return 0
+  if idx == len(values):
+      return len(values) - 1
+
+  # 比较前后两个值
+  prev_diff = target - values[idx-1]
+  next_diff = values[idx] - target
+
+  return idx - 1 if prev_diff < next_diff else idx
+
+if __name__ == "__main__":
+  import matplotlib.pyplot as plt
+
+  ori_x_vec, ori_y_vec, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_M32T, car_lat_inflation = 0.0, car_struct=CarStruct.WITH_MIRROR)
+  new_x_vec, new_y_vec, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_M32T, car_lat_inflation = 0.0, car_struct=CarStruct.FOLD_MIRROR)
+
+  ori_x = ori_x_vec + [ori_x_vec[0]]
+  ori_y = ori_y_vec + [ori_y_vec[0]]
+
+  new_x = new_x_vec + [new_x_vec[0]]
+  new_y = new_y_vec + [new_y_vec[0]]
+
+  plt.plot(ori_x, ori_y, 'g', label='Original', linewidth=2)
+  plt.plot(new_x, new_y, 'k', label='New', linewidth=2)
+
+  plt.xlabel('X (m)')
+  plt.ylabel('Y (m)')
+  plt.title('Vehicle Contour Comparison')
+  plt.legend()
+  plt.axis('equal')
+  plt.grid(True)
+  plt.tight_layout()
+  plt.savefig('m23t_vertex.svg', dpi=800, bbox_inches='tight')
+  plt.show()

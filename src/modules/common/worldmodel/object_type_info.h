@@ -1,0 +1,74 @@
+#pragma once
+#include "../common/common.h"
+
+namespace planning {
+
+enum MSDObjectTypePropertyEnum {
+  MSD_PROPERTY_OBJECT_TYPE_ENUM = 0,
+  MSD_PROPERTY_GENERAL_OBJECT_TYPE_ENUM = 1,
+  MSD_PROPERTY_VEHICLE_TYPE_ENUM = 2,
+  MSD_PROPERTY_VEHICLE_SUB_TYPE_ENUM = 3,
+  MSD_PROPERTY_VRU_TYPE_ENUM = 4,
+  MSD_PROPERTY_VRU_SUB_TYPE_ENUM = 5,
+  MSD_PROPERTY_TRAFFIC_BARRIER_TYPE_ENUM = 6,
+};
+
+enum MSDObjectTypeEnum {
+  MSD_OBJECT_TYPE_GENERAL_OBJECT = 0,
+  MSD_OBJECT_TYPE_VEHICLE = 1,
+  MSD_OBJECT_TYPE_VRU = 2,
+  MSD_OBJECT_TYPE_TRAFFIC_BARRIER = 3,
+};
+
+enum MSDGeneralObjectTypeEnum {
+  MSD_GENERAL_OBJECT_TYPE_UNKNOWN = 0,
+  MSD_GENERAL_OBJECT_TYPE_POINT = 1,
+  MSD_GENERAL_OBJECT_TYPE_BOUNDING_BOX = 2,
+};
+
+enum MSDVehicleTypeEnum {
+  MSD_VEHICLE_TYPE_UNKNOWN = 0,
+  MSD_VEHICLE_TYPE_CAR = 1,
+  MSD_VEHICLE_TYPE_TRUCK = 2,
+  MSD_VEHICLE_TYPE_BUS = 3,
+};
+
+enum MSDVehicleSubTypeEnum {
+  MSD_VEHICLE_SUB_TYPE_UNKNOWN = 0,
+  MSD_VEHICLE_SUB_TYPE_TRANSPORT_TRUCK = 1,
+  MSD_VEHICLE_SUB_TYPE_ENGINEERING_TRUCK = 2,
+  MSD_VEHICLE_SUB_TYPE_WATER_TRUCK = 3,
+};
+
+enum MSDVRUTypeEnum {
+  MSD_VRU_TYPE_UNKNOWN = 0,
+  MSD_VRU_TYPE_PEDESTRIAN = 1,
+  MSD_VRU_TYPE_CYCLIST = 2,
+};
+
+enum MSDVRUSubTypeEnum {
+  MSD_VRU_SUB_TYPE_UNKNOWN = 0,
+  MSD_VRU_SUB_TYPE_BICYCLIST = 1,
+  MSD_VRU_SUB_TYPE_MOTORCYCLIST = 2,
+  MSD_VRU_SUB_TYPE_TRICYCLIST = 3,
+};
+
+enum MSDTrafficBarrierTypeEnum {
+  MSD_TRAFFIC_BARRIER_TYPE_UNKNOWN = 0,
+  MSD_TRAFFIC_BARRIER_TYPE_CONE_BUCKET = 1,
+  MSD_TRAFFIC_BARRIER_TYPE_WARNING_TRIANGLE = 2,
+  MSD_TRAFFIC_BARRIER_TYPE_WATER_HORSE = 3,
+};
+
+struct MSDObjectTypeInfo {
+  std::vector<MSDObjectTypePropertyEnum> type_properties;
+  MSDObjectTypeEnum type;
+  MSDGeneralObjectTypeEnum general_object_type;
+  MSDVehicleTypeEnum vehicle_type;
+  MSDVehicleSubTypeEnum vehicle_sub_type;
+  MSDVRUTypeEnum vru_type;
+  MSDVRUSubTypeEnum vru_sub_type;
+  MSDTrafficBarrierTypeEnum traffic_barrier_type;
+};
+
+}  // namespace planning

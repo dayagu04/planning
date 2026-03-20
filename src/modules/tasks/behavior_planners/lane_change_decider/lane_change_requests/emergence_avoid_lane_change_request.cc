@@ -1,0 +1,431 @@
+#include "emergence_avoid_lane_change_request.h"
+
+#include <glog/logging.h>
+#include <math.h>
+
+#include <cassert>
+#include <cmath>
+#include <complex>
+#include <limits>
+
+#include "common.pb.h"
+#include "common_c.h"
+#include "config/basic_type.h"
+#include "debug_info_log.h"
+#include "define/geometry.h"
+#include "ego_state_manager.h"
+#include "ifly_time.h"
+#include "log.h"
+#include "planning_context.h"
+#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_request.h"
+#include "tracked_object.h"
+#include "virtual_lane_manager.h"
+
+namespace planning {
+
+namespace {
+constexpr double kEmergencyAvoidanceLateralSafeDistanceThreshold = 0.2;
+constexpr double kEmergencyAvoidanceHalfDistance = 0.65;
+constexpr double kEmergencyAvoidancelongitudinalDistanceThreshold = 100.0;
+constexpr int kInvalidAgentId = -1;
+constexpr double kEmergencySituationDuration = 0.4;
+constexpr double kSplitTriggleDistance = 3000.0;
+}  // namespace
+// class: EmergenceAvoidRequest
+EmergenceAvoidRequest::EmergenceAvoidRequest(
+    planning::framework::Session* session,
+    std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
+    std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
+    : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
+  base_frenet_coord_ = std::make_shared<planning_math::KDPath>();
+}
+
+void EmergenceAvoidRequest::Update(int lc_status) {
+  std::cout << "EmergenceAvoidRequest::Update::coming emergence avoid lane "
+               "change request"
+            << std::endl;
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
+
+  // trigger EA lane change when lane keep status.
+  if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
+    ILOG_DEBUG << "EmergenceAvoidRequest::Update: ego not in lane keeping!";
+    return;
+  }
+  // intersection surpression
+  if (EgoInIntersection()) {
+    Reset();
+    Finish();
+    return;
+  }
+  lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
+  lane_tracks_manager_ =
+      session_->environmental_model().get_lane_tracks_manager();
+
+  const int current_lane_virtual_id =
+      virtual_lane_mgr_->current_lane_virtual_id();
+
+  if (lane_change_lane_mgr_->has_origin_lane()) {
+    auto origin_lane = lane_change_lane_mgr_->olane();
+    origin_lane_virtual_id_ = origin_lane->get_virtual_id();
+  } else {
+    origin_lane_virtual_id_ = current_lane_virtual_id;
+  }
+  int target_lane_virtual_id_tmp{origin_lane_virtual_id_};
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  planning_init_point_ = ego_state->planning_init_point();
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  int fix_lane_virtual_id = lane_change_decider_output.fix_lane_virtual_id;
+  int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
+  int target_lane_virtual_id =
+      lane_change_decider_output.target_lane_virtual_id;
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  auto flane = virtual_lane_mgr_->get_lane_with_virtual_id(fix_lane_virtual_id);
+  auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
+  auto tlane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
+  const auto& clane = virtual_lane_mgr_->get_current_lane();
+  const auto& llane = virtual_lane_mgr_->get_left_lane();
+  const auto& rlane = virtual_lane_mgr_->get_right_lane();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+
+  UpdateEmergencyAvoidanceSituation(lc_status);
+  ILOG_DEBUG
+      << "EmergenceAvoidRequest::Update: is_emergency_avoidance_situation "
+      << is_emergency_avoidance_situation_;
+  JSON_DEBUG_VALUE("is_emergency_avoidance_situation_",
+                   is_emergency_avoidance_situation_);
+
+  if (!is_emergency_avoidance_situation_) {
+    if (request_type_ != NO_CHANGE) {
+      Finish();
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] finish request";
+    }
+    return;
+  }
+
+  lane_change_direction_ = NO_CHANGE;
+  LaneChangeDirection();
+
+  if (lane_change_direction_ == LEFT_CHANGE) {
+    // 获取左车道线型
+    iflyauto::LaneBoundaryType left_boundary_type =
+        MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
+    if (request_type_ != LEFT_CHANGE) {
+      target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+      GenerateRequest(LEFT_CHANGE);
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] Ask for emergency "
+                    "avoidence changing lane to left";
+    }
+    if (request_type_ != NO_CHANGE &&
+        (lc_status == kLaneChangeCancel &&
+         (lane_change_lane_mgr_->has_origin_lane() &&
+          lane_change_lane_mgr_->is_ego_on(olane)))) {
+      Finish();
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":"
+                 << __LINE__ << " finish request, dash not enough";
+    }
+    if (trigger_lane_change_cancel_) {
+      lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+      Finish();
+      Reset();
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+    }
+  } else if (lane_change_direction_ == RIGHT_CHANGE) {
+    // 获取右车道线型
+    iflyauto::LaneBoundaryType right_boundary_type =
+        MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
+    if (request_type_ != RIGHT_CHANGE) {
+      target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
+      GenerateRequest(RIGHT_CHANGE);
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] Ask for emergency "
+                    "avoidence changing lane to right";
+    }
+    if (request_type_ != NO_CHANGE &&
+        (lc_status == kLaneChangeCancel &&
+         (lane_change_lane_mgr_->has_origin_lane() &&
+          lane_change_lane_mgr_->is_ego_on(olane)))) {
+      Finish();
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":"
+                 << __LINE__ << " finish request, dash not enough";
+    }
+    if (trigger_lane_change_cancel_) {
+      lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+      Finish();
+      Reset();
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+    }
+  } else {
+    if (request_type_ != NO_CHANGE &&
+        (lane_change_lane_mgr_->has_origin_lane() &&
+         lane_change_lane_mgr_->is_ego_on(olane))) {
+      Finish();
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":"
+                 << __LINE__
+                 << " !trigger_left_overtake and !trigger_right_overtake";
+    }
+  }
+
+  return;
+}
+
+void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
+  const auto& rlane = virtual_lane_mgr_->get_right_lane();
+  const auto& llane = virtual_lane_mgr_->get_left_lane();
+  const int current_lane_virtual_id =
+      virtual_lane_mgr_->current_lane_virtual_id();
+  int base_lane_virtual_id{current_lane_virtual_id};
+
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  auto base_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(base_lane_virtual_id);
+  if (base_lane == nullptr) {
+    ILOG_DEBUG << "EmergenceAvoidRequest::base lane not exist";
+    Reset();
+    return;
+  }
+  right_lane_nums_ = 0;
+  left_lane_nums_ = 0;
+
+  std::shared_ptr<ReferencePath> origin_refline =
+      session_->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(base_lane_virtual_id, false);
+
+  base_frenet_coord_ = origin_refline->get_frenet_coord();
+  Point2D ego_frenet_point;
+  Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
+                         planning_init_point_.lat_init_state.y()};
+  if (base_frenet_coord_ == nullptr ||
+      !base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
+    ILOG_DEBUG
+        << "EmergenceAvoidRequest::fail to get ego position on base lane";
+    Reset();
+    return;
+  }
+
+  auto lane_nums_msg = base_lane->get_lane_nums();
+  auto iter =
+      std::find_if(lane_nums_msg.begin(), lane_nums_msg.end(),
+                   [&ego_frenet_point](const iflyauto::LaneNumMsg& lane_num) {
+                     return lane_num.begin <= ego_frenet_point.x &&
+                            lane_num.end > ego_frenet_point.x;
+                   });
+  if (iter != lane_nums_msg.end()) {
+    left_lane_nums_ = iter->left_lane_num;
+    right_lane_nums_ = iter->right_lane_num;
+  } else {
+    left_lane_nums_ = llane ? 1 : 0;
+    right_lane_nums_ = rlane ? 1 : 0;
+  }
+  // const double default_velocity_trigger_emergence_avoid_request = 13.88;
+
+  // if (ego_state->ego_v() < default_velocity_trigger_emergence_avoid_request)
+  // {
+  //   return;
+  // }
+
+  const double lateral_left_offset =
+      kEmergencyAvoidanceHalfDistance +
+      kEmergencyAvoidanceLateralSafeDistanceThreshold;
+  const double lateral_right_offset =
+      kEmergencyAvoidanceHalfDistance +
+      kEmergencyAvoidanceLateralSafeDistanceThreshold;
+  bool has_emergency_leading_vehicle = false;
+  int leading_vehicle_id_ = -1;
+  double leading_vehicle_speed = std::numeric_limits<double>::max();
+  double long_gap = std::numeric_limits<double>::max();
+  const auto& front_obstacles_array = lateral_obstacle_->front_tracks();
+  const auto& tracks_map = lateral_obstacle_->tracks_map();
+  for (const auto& front_obstacle : front_obstacles_array) {
+    int obstacle_id = front_obstacle->id();
+    auto front_vehicle_iter = tracks_map.find(obstacle_id);
+    if (front_vehicle_iter != tracks_map.end()) {
+      if (obstacle_id == kInvalidAgentId) {
+        continue;
+      }
+      // bool object_type_static =
+      //     front_vehicle_iter->second.motion_pattern_current ==
+      //     iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC;
+      // if ((!object_type_static ||
+      //      (front_vehicle_iter->second->type() !=
+      //           iflyauto::OBJECT_TYPE_COUPE &&
+      //       front_vehicle_iter->second->type() !=
+      //           iflyauto::OBJECT_TYPE_TRUCK) ||
+      //       function_info.function_mode() ==
+      //       common::DrivingFunctionInfo::NOA) &&
+      // 对静止车暂时不做处理
+      if (front_vehicle_iter->second->type() !=
+              iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+          front_vehicle_iter->second->type() !=
+              iflyauto::OBJECT_TYPE_CTASH_BARREL &&
+          front_vehicle_iter->second->type() !=
+              iflyauto::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
+        continue;
+      }
+      const double long_dis = front_vehicle_iter->second->d_s_rel();
+      if (long_dis > kEmergencyAvoidancelongitudinalDistanceThreshold) {
+        continue;
+      }
+      const double half_width = front_vehicle_iter->second->width() * 0.5;
+      const double front_track_left_boundary_l =
+          front_vehicle_iter->second->frenet_l() + half_width;
+      const double front_track_right_boundary_l =
+          front_vehicle_iter->second->frenet_l() - half_width;
+      const bool is_out_target_area =
+          (front_track_right_boundary_l > lateral_left_offset ||
+           front_track_left_boundary_l < -lateral_right_offset);
+      if (!is_out_target_area) {
+        has_emergency_leading_vehicle = true;
+        leading_vehicle_id_ = front_vehicle_iter->first;
+        leading_vehicle_speed =
+            front_vehicle_iter->second->obstacle()->velocity();
+        long_gap = long_dis;
+        break;
+      }
+    }
+  }
+
+  if (has_emergency_leading_vehicle) {
+    double current_timestamp = IflyTime::Now_s();
+    if (emergency_situation_timetstamp_ == std::numeric_limits<double>::max()) {
+      emergency_situation_timetstamp_ = current_timestamp;
+    }
+    if (current_timestamp - emergency_situation_timetstamp_ >
+        kEmergencySituationDuration) {
+      is_emergency_avoidance_situation_ = true;
+      ILOG_DEBUG << "leading_vehicle_speed: " << leading_vehicle_speed
+                 << ", long_gap: " << long_gap
+                 << " Front Leading track_id:" << leading_vehicle_id_;
+      JSON_DEBUG_VALUE("leading_vehicle_id_", leading_vehicle_id_);
+    }
+  } else {
+    emergency_situation_timetstamp_ = std::numeric_limits<double>::max();
+    is_emergency_avoidance_situation_ = false;
+  }
+
+  return;
+}
+
+void EmergenceAvoidRequest::LaneChangeDirection() {
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  const auto& rlane = virtual_lane_mgr_->get_right_lane();
+  const auto& llane = virtual_lane_mgr_->get_left_lane();
+  const auto& function_info = session_->environmental_model().function_info();
+
+  if (llane != nullptr) {
+    left_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
+        llane->get_virtual_id(), false);
+    ILOG_DEBUG << "EmergenceAvoidRequest::Update: for left_lane: update "
+               << llane->get_virtual_id();
+  } else {
+    left_reference_path_ = nullptr;
+  }
+
+  if (rlane != nullptr) {
+    right_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
+        rlane->get_virtual_id(), false);
+    ILOG_DEBUG << "EmergenceAvoidRequest::Update: for right_lane: update "
+               << rlane->get_virtual_id();
+  } else {
+    right_reference_path_ = nullptr;
+  }
+  bool enable_left = llane && left_reference_path_ &&
+                     llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  bool enable_right = rlane && right_reference_path_ &&
+                      rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  const bool is_left_lane_change_safe =
+      enable_left &&
+      !IsRoadBorderSurpressDuringLaneChange(
+          LEFT_CHANGE, origin_lane_virtual_id_, llane->get_virtual_id());
+  // (enable_left && ComputeLcValid(LEFT_CHANGE));
+  const bool is_right_lane_change_safe =
+      enable_right &&
+      !IsRoadBorderSurpressDuringLaneChange(
+          RIGHT_CHANGE, origin_lane_virtual_id_, rlane->get_virtual_id());
+  const auto& merge_points_info = route_info_output.map_merge_points_info;
+  double distance_to_first_road_split = NL_NMAX;
+  double dis_to_first_merge = NL_NMAX;
+  double dis_to_merge_point = NL_NMAX;
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    if (!merge_points_info.empty()) {
+      dis_to_merge_point = merge_points_info.front().dis_to_merge_fp;
+    }
+    const auto& split_region_info_list =
+        route_info_output.map_split_region_info_list;
+    const auto& map_merge_region_info_list =
+        route_info_output.map_merge_region_info_list;
+    if (!split_region_info_list.empty()) {
+      distance_to_first_road_split =
+          split_region_info_list[0].distance_to_split_point;
+    }
+    if (!map_merge_region_info_list.empty()) {
+      dis_to_first_merge = map_merge_region_info_list[0].distance_to_merge_point;
+    }
+  }
+
+  const auto& feasible_lane_sequence =
+      route_info_output.feasible_lane_sequence;
+  bool left_lane_is_on_navigation_route = true;
+  bool right_lane_is_on_navigation_route = true;
+  if (distance_to_first_road_split < 500.0 || dis_to_first_merge < 500.0 ||
+      dis_to_merge_point < 200.0) {
+    if (feasible_lane_sequence.size() > 0) {
+      int current_lane_order_num = route_info_output.ego_seq;
+      int target_lane_order_num = current_lane_order_num - 1;
+      if (std::find(feasible_lane_sequence.begin(),
+                    feasible_lane_sequence.end(),
+                    target_lane_order_num) == feasible_lane_sequence.end()) {
+        left_lane_is_on_navigation_route = false;
+      }
+    }
+
+    if (feasible_lane_sequence.size() > 0) {
+      int current_lane_order_num = route_info_output.ego_seq;
+      int target_lane_order_num = current_lane_order_num + 1;
+      if (std::find(feasible_lane_sequence.begin(),
+                    feasible_lane_sequence.end(),
+                    target_lane_order_num) == feasible_lane_sequence.end()) {
+        right_lane_is_on_navigation_route = false;
+      }
+    }
+  }
+
+  if (is_left_lane_change_safe && left_lane_is_on_navigation_route) {
+    ILOG_DEBUG << "emergency avoidence alc left!!!";
+    lane_change_direction_ = LEFT_CHANGE;
+    return;
+  } else if (is_right_lane_change_safe && right_lane_is_on_navigation_route) {
+    ILOG_DEBUG << "emergency avoidence alc left!!!";
+    lane_change_direction_ = RIGHT_CHANGE;
+    return;
+  } else {
+    // default
+    lane_change_direction_ = NO_CHANGE;
+    return;
+  }
+}
+
+void EmergenceAvoidRequest::Reset() {
+  emergency_situation_timetstamp_ = std::numeric_limits<double>::max();
+  leading_vehicle_id_ = -1;
+  is_emergency_avoidance_situation_ = false;
+  lane_change_direction_ = NO_CHANGE;
+  right_lane_nums_ = 0;
+  left_lane_nums_ = 0;
+}
+
+}  // namespace planning

@@ -1,0 +1,170 @@
+#pragma once
+
+#include <cstdint>
+#include <map>
+#include <string>
+#include <vector>
+
+#include "planning_plan_c.h"
+namespace planning {
+
+enum class SpeedLimitType {
+  NONE = 0,
+  CURVATURE = 1,
+  MERGE = 2,
+  CRUISE = 3,
+  CONE_BUCKET = 4,
+  CIPV_LOST = 5,
+  ROUNDABOUT = 6,
+  NOT_OVERTAKE_FROM_RIGHT = 7,
+  NORMAL_KAPPA = 8,
+  VRU_ROUND = 9,
+  MERGE_ALC = 10,
+  MAP_NEAR_RAMP = 11,
+  MAP_ON_RAMP = 12,
+  INTERSECTION = 13,
+  LANE_BORROW = 14,
+  NEAR_TFL = 15,
+  AVOID_AGENT = 16,
+  DANGEROUS_OBSTACLE = 17,
+  NEAR_POI = 18,
+  NEAR_CONSTRUCTION = 19,
+  ON_CONSTRUCTION = 20,
+  SHARP_CURVATURE = 21,
+  ROAD_BOUNDARY = 22,
+  ROAD_BOUNDARY_SHARP_DECEL = 23
+};
+
+struct SpeedLimitAgent {
+  int32_t id;
+  double min_s;
+  double v_limit;
+  bool is_collison;
+  bool is_need_v_hold;
+  double v_follow_desired;
+};
+
+class SpeedLimitDeciderOutput {
+ public:
+  SpeedLimitDeciderOutput() = default;
+  ~SpeedLimitDeciderOutput() = default;
+
+  void SetSpeedLimit(const double limited_speed,
+                     const SpeedLimitType& speed_limit_type);
+  void SetSpeedLimitIntoMap(const double limited_speed,
+                            const SpeedLimitType& speed_limit_type);
+
+  bool GetSpeedLimit(double* const limited_speed,
+                     SpeedLimitType* const speed_limit_type) const;
+
+  bool GetSpeedLimitByType(const SpeedLimitType& speed_limit_type,
+                           double* const limited_speed) const;
+
+  const std::vector<SpeedLimitType>& GetAllSpeedLimitTypes() const;
+
+  std::string ChangeSpeedLimitType(const SpeedLimitType type);
+
+  int32_t merge_alc_speed_limit_type() const;
+  void set_merge_alc_speed_limit_type(const int32_t merge_alc_speed_limit_type);
+
+  const std::string& merge_alc_speed_limit_debug_string() const;
+  void set_merge_alc_speed_limit_debug_string(
+      const std::string& merge_alc_speed_limit_debug_string);
+
+  int32_t roundabout_speed_limit_type() const;
+  void set_roundabout_speed_limit_type(
+      const int32_t roundabout_speed_limit_type);
+
+  std::string cipv_lost_debug_string_() const;
+  void set_cipv_lost_debug_string(
+      const std::string& cipv_lost_speed_limit_debug_string_);
+
+  std::string roundabout_debug_string() const;
+  void set_roundabout_debug_string(
+      const std::string& roundabout_speed_limit_debug_string);
+
+  int32_t not_overtake_from_right_speed_limit_type() const;
+  void set_not_overtake_from_right_speed_limit_type(
+      const int32_t not_overtake_from_right_speed_limit_type);
+  const std::string& not_overtake_from_right_speed_limit_debug_string() const;
+  void set_not_overtake_from_right_speed_limit_debug_string(
+      const std::string& not_overtake_from_right_speed_limit_debug_string);
+
+  std::string vru_round_debug_string() const;
+  void set_vru_round_debug_string(
+      const std::string& cipv_lost_speed_limit_debug_string_);
+
+  bool is_function_fading_away() const { return is_function_fading_away_; }
+  void set_is_function_fading_away(const bool is_function_fading_away) {
+    is_function_fading_away_ = is_function_fading_away;
+  }
+
+  iflyauto::RequestReason request_reason() const { return request_reason_; }
+  void set_request_reason(const iflyauto::RequestReason request_reason) {
+    request_reason_ = request_reason;
+  }
+
+  void set_map_speed_limit_value(const double limited_speed);
+  const double map_speed_limit_value() const;
+
+  void set_avoid_speed_limit_info(const SpeedLimitAgent speed_limit_agent_info);
+  const SpeedLimitAgent avoid_speed_limit_info() const;
+
+  bool function_inhibited_near_roundabout() const {
+    return function_inhibited_near_roundabout_;
+  }
+  void set_function_inhibited_near_roundabout(
+      const bool function_inhibited_near_roundabout) {
+    function_inhibited_near_roundabout_ = function_inhibited_near_roundabout;
+  }
+
+ private:
+  std::map<SpeedLimitType, double>
+      speed_limit_map_;  //(type, speedlimit) for all scenes one by one
+  std::pair<SpeedLimitType, double>
+      speed_limit_type_final_;  // final speed limit and type
+  int32_t roundabout_speed_limit_type_ = 0;
+  int32_t not_overtake_from_right_speed_limit_type_ = 0;
+  int32_t merge_alc_speed_limit_type_ = 0;
+  std::string merge_alc_speed_limit_debug_string_ = "";
+  std::string cone_bucket_speed_limit_debug_string_ = "";
+  std::string cipv_lost_speed_limit_debug_string_ = "";
+  std::string roundabout_speed_limit_debug_string_ = "";
+  std::string not_overtake_from_right_speed_limit_debug_string_ = "";
+  std::string vru_round_speed_limit_debug_string_ = "";
+  std::vector<SpeedLimitType> speed_limit_types_ = {
+      SpeedLimitType::NONE,
+      SpeedLimitType::CURVATURE,
+      SpeedLimitType::CRUISE,
+      SpeedLimitType::MERGE,
+      SpeedLimitType::CIPV_LOST,
+      SpeedLimitType::CONE_BUCKET,
+      SpeedLimitType::ROUNDABOUT,
+      SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT,
+      SpeedLimitType::NORMAL_KAPPA,
+      SpeedLimitType::VRU_ROUND,
+      SpeedLimitType::MERGE_ALC,
+      SpeedLimitType::MAP_NEAR_RAMP,
+      SpeedLimitType::MAP_ON_RAMP,
+      SpeedLimitType::INTERSECTION,
+      SpeedLimitType::LANE_BORROW,
+      SpeedLimitType::NEAR_TFL,
+      SpeedLimitType::AVOID_AGENT,
+      SpeedLimitType::DANGEROUS_OBSTACLE,
+      SpeedLimitType::NEAR_POI,
+      SpeedLimitType::NEAR_CONSTRUCTION,
+      SpeedLimitType::ON_CONSTRUCTION,
+      SpeedLimitType::SHARP_CURVATURE,
+      SpeedLimitType::ROAD_BOUNDARY,
+      SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL};
+  bool is_function_fading_away_ = false;
+  iflyauto::RequestReason request_reason_ =
+      iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
+
+  double v_limit_map_ramp_ = 0.0;
+  SpeedLimitAgent v_limit_avoid_agent_info_;
+
+  bool function_inhibited_near_roundabout_ = false;
+};
+
+}  // namespace planning

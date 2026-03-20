@@ -1,0 +1,1589 @@
+#include "apa_param_config.h"
+
+#include "common/config_context.h"
+#include "log_glog.h"
+#include "src/common/debug_info_log.h"
+
+namespace planning {
+namespace apa_planner {
+
+void SyncParkingParameters(const bool is_simulation) {
+  std::string path = "/asw/planning/res/conf/apa_params.json";
+  if (!is_simulation) {
+    auto engine_config =
+        common::ConfigurationContext::Instance()->engine_config();
+
+    if (engine_config.vehicle_cfg_dir.empty()) {
+      std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
+      common::ConfigurationContext::Instance()->load_engine_config_from_json(
+          engine_config_path);
+
+      ILOG_INFO << "load vehicle config: " << engine_config_path;
+      engine_config = common::ConfigurationContext::Instance()->engine_config();
+      ILOG_INFO << "vehicle config path: " << engine_config.vehicle_cfg_dir;
+    }
+
+    path = engine_config.vehicle_cfg_dir + "/apa_params.json";
+  }
+
+  std::string config_file = planning::common::util::ReadFile(path);
+  auto config = mjson::Reader(config_file);
+
+  ApaParameters& param = apa_param.SetParam();
+
+  // schedule params
+  JSON_READ_VALUE(param.plan_time, double, "plan_time");
+
+  // head in param
+  JSON_READ_VALUE(param.headin_fix_slot_occupied_ratio, double,
+                  "headin_fix_slot_occupied_ratio");
+
+  JSON_READ_VALUE(param.headin_multi_plan_min_heading_err, double,
+                  "headin_multi_plan_min_heading_err");
+
+  JSON_READ_VALUE(param.headin_multi_plan_min_lat_err, double,
+                  "headin_multi_plan_min_lat_err");
+
+  JSON_READ_VALUE(param.headin_multi_plan_max_occupied_ratio, double,
+                  "headin_multi_plan_max_occupied_ratio");
+
+  JSON_READ_VALUE(param.headin_linearc_plan_min_lat_err, double,
+                  "headin_linearc_plan_min_lat_err");
+
+  JSON_READ_VALUE(param.headin_linearc_plan_min_heading_err, double,
+                  "headin_linearc_plan_min_heading_err");
+
+  JSON_READ_VALUE(param.headin_linearc_plan_max_occupied_ratio, double,
+                  "headin_linearc_plan_max_occupied_ratio");
+
+  JSON_READ_VALUE(param.headin_adjust_plan_max_heading1_err, double,
+                  "headin_adjust_plan_max_heading1_err");
+
+  JSON_READ_VALUE(param.headin_adjust_plan_max_heading2_err, double,
+                  "headin_adjust_plan_max_heading2_err");
+
+  JSON_READ_VALUE(param.headin_adjust_plan_max_lon_err, double,
+                  "headin_adjust_plan_max_lon_err");
+
+  JSON_READ_VALUE(param.headin_extend_line_min_heading_err, double,
+                  "headin_extend_line_min_heading_err");
+
+  JSON_READ_VALUE(param.headin_extend_length, double, "headin_extend_length");
+
+  JSON_READ_VALUE(param.headin_reverse_deg, double, "headin_reverse_deg");
+
+  JSON_READ_VALUE(param.headin_prepare_line_min_x_offset_slot, double,
+                  "headin_prepare_line_min_x_offset_slot");
+
+  JSON_READ_VALUE(param.headin_prepare_line_max_x_offset_slot, double,
+                  "headin_prepare_line_max_x_offset_slot");
+
+  JSON_READ_VALUE(param.headin_prepare_line_max_heading_offset_slot_deg, double,
+                  "headin_prepare_line_max_heading_offset_slot_deg");
+
+  JSON_READ_VALUE(param.headin_prepare_line_min_heading_offset_slot_deg, double,
+                  "headin_prepare_line_min_heading_offset_slot_deg");
+
+  JSON_READ_VALUE(param.headin_max_pt_inside_drop_dy, double,
+                  "headin_max_pt_inside_drop_dy");
+
+  JSON_READ_VALUE(param.max_obs_invasion_slot_dist, double,
+                  "max_obs_invasion_slot_dist");
+
+  JSON_READ_VALUE(param.headin_virtual_obs_y_pos, double,
+                  "headin_virtual_obs_y_pos");
+
+  JSON_READ_VALUE(param.headin_virtual_obs_x_pos, double,
+                  "headin_virtual_obs_x_pos");
+
+  JSON_READ_VALUE(param.headin_obs_consider_lat_threshold, double,
+                  "headin_obs_consider_lat_threshold");
+
+  JSON_READ_VALUE(param.headin_tlane_obs_omit_x, double,
+                  "headin_tlane_obs_omit_x");
+
+  JSON_READ_VALUE(param.headin_target_pos_err, double, "headin_target_pos_err");
+
+  JSON_READ_VALUE(param.headin_target_heading_err, double,
+                  "headin_target_heading_err");
+
+  JSON_READ_VALUE(param.headin_max_radius_in_slot, double,
+                  "headin_max_radius_in_slot");
+
+  JSON_READ_VALUE(param.headin_min_radius_out_slot, double,
+                  "headin_min_radius_out_slot");
+
+  JSON_READ_VALUE(param.headin_sturn_steer_ratio_dist, double,
+                  "headin_sturn_steer_ratio_dist");
+
+  JSON_READ_VALUE(param.headin_max_replan_count, int,
+                  "headin_max_replan_count");
+
+  JSON_READ_VALUE(param.astar_config.max_replan_number_inside_slot, int,
+                  "max_replan_number_inside_slot");
+  JSON_READ_VALUE(param.astar_config.vertical_min_path_length, double,
+                  "vertical_min_path_length");
+  JSON_READ_VALUE(param.astar_config.lat_err_for_fix_slot, double,
+                  "lat_err_for_fix_slot");
+  JSON_READ_VALUE(param.astar_config.heading_err_for_fix_slot, double,
+                  "heading_err_for_fix_slot");
+  JSON_READ_VALUE(param.astar_config.lon_err_for_fix_slot, double,
+                  "lon_err_for_fix_slot");
+  JSON_READ_VALUE(param.astar_config.static_occ_lat_buffer, double,
+                  "static_occ_lat_buffer");
+  JSON_READ_VALUE(param.astar_config.static_occ_lon_buffer, double,
+                  "static_occ_lon_buffer");
+  JSON_READ_VALUE(param.astar_config.moving_occ_lat_buffer, double,
+                  "moving_occ_lat_buffer");
+  JSON_READ_VALUE(param.astar_config.moving_occ_lon_buffer, double,
+                  "moving_occ_lon_buffer");
+
+  // car params
+  std::string car_type_string;
+  int car_type_int = 0;
+  JSON_READ_VALUE(car_type_string, std::string, "car_type");
+  if (car_type_string == "jac_s811") {
+    car_type_int = 0;
+  } else if (car_type_string == "cherry_t26") {
+    car_type_int = 1;
+  } else if (car_type_string == "cherry_e0x") {
+    car_type_int = 2;
+  } else if (car_type_string == "cherry_m32t") {
+    car_type_int = 3;
+  } else if (car_type_string == "bestune_e541") {
+    car_type_int = 4;
+  } else {
+    car_type_int = 0;
+  }
+
+  param.car_type = car_type_int;
+  JSON_DEBUG_VALUE("car_type", car_type_int);
+  ILOG_INFO << "car_type_string = " << car_type_string
+            << "  car_type = " << car_type_int;
+
+  JSON_READ_VALUE(param.front_overhanging, double, "front_overhanging");
+
+  JSON_READ_VALUE(param.rear_overhanging, double, "rear_overhanging");
+
+  JSON_READ_VALUE(param.mirror_height, double, "mirror_height");
+  JSON_READ_VALUE(param.front_overhanging_height, double,
+                  "front_overhanging_height");
+  JSON_READ_VALUE(param.rear_overhanging_height, double,
+                  "rear_overhanging_height");
+  JSON_READ_VALUE(param.height_redundancy, double, "height_redundancy");
+  JSON_READ_VALUE(param.runover_height, double, "runover_height");
+  JSON_READ_VALUE(param.chassis_reduce_length, double, "chassis_reduce_length");
+
+  JSON_READ_VALUE(param.wheel_base, double, "wheel_base");
+  JSON_READ_VALUE(param.car_width, double, "car_width");
+  JSON_READ_VALUE(param.car_length, double, "car_length");
+  JSON_READ_VALUE(param.max_car_width, double, "max_car_width");
+  JSON_READ_VALUE(param.fold_mirror_max_car_width, double,
+                  "fold_mirror_max_car_width");
+  JSON_READ_VALUE(param.lon_dist_mirror_to_rear_axle, double,
+                  "lon_dist_mirror_to_rear_axle");
+
+  JSON_READ_VALUE(param.lat_dist_mirror_to_center, double,
+                  "lat_dist_mirror_to_center");
+  JSON_READ_VALUE(param.steer_ratio, double, "steer_ratio");
+  JSON_READ_VALUE(param.arc_line_shift_steer_angle_deg, double,
+                  "arc_line_shift_steer_angle_deg");
+  JSON_READ_VALUE(param.max_steer_angle_deg, double, "max_steer_angle_deg");
+  JSON_READ_VALUE(param.c1, double, "c1");
+
+  JSON_READ_VALUE(param.car_vertex_x_vec, std::vector<double>,
+                  "car_vertex_x_vec");
+  JSON_READ_VALUE(param.car_vertex_y_vec, std::vector<double>,
+                  "car_vertex_y_vec");
+
+  JSON_READ_VALUE(param.fold_mirror_car_vertex_x_vec, std::vector<double>,
+                  "fold_mirror_car_vertex_x_vec");
+  JSON_READ_VALUE(param.fold_mirror_car_vertex_y_vec, std::vector<double>,
+                  "fold_mirror_car_vertex_y_vec");
+
+  // slot params
+  JSON_READ_VALUE(param.normal_slot_length, double, "normal_slot_length");
+
+  JSON_READ_VALUE(param.normal_slot_width, double, "normal_slot_width");
+
+  JSON_READ_VALUE(param.slot_compare_to_car_length, double,
+                  "slot_compare_to_car_length");
+
+  JSON_READ_VALUE(param.slot_compare_to_car_width, double,
+                  "slot_compare_to_car_width");
+
+  JSON_READ_VALUE(param.car2line_dist_threshold, double,
+                  "car2line_dist_threshold");
+
+  // terminal pose params
+  JSON_READ_VALUE(param.terminal_target_x, double, "terminal_target_x");
+
+  JSON_READ_VALUE(param.terminal_target_y, double, "terminal_target_y");
+
+  JSON_READ_VALUE(param.terminal_target_heading, double,
+                  "terminal_target_heading");
+
+  JSON_READ_VALUE(param.terminal_target_x_to_line, double,
+                  "terminal_target_x_to_line");
+
+  JSON_READ_VALUE(param.terminal_parallel_y_offset, double,
+                  "terminal_parallel_y_offset");
+
+  JSON_READ_VALUE(param.terminal_parallel_y_offset_with_curb, double,
+                  "terminal_parallel_y_offset_with_curb");
+
+  JSON_READ_VALUE(param.terminal_parallel_y_offset_with_wall, double,
+                  "terminal_parallel_y_offset_with_wall");
+
+  JSON_READ_VALUE(param.parallel_max_ego_x_offset_with_invasion, double,
+                  "parallel_max_ego_x_offset_with_invasion");
+
+  JSON_READ_VALUE(param.parallel_ego_ac_x_offset_with_limiter, double,
+                  "parallel_ego_ac_x_offset_with_limiter");
+
+  JSON_READ_VALUE(param.parallel_virtual_limit_x_offset, double,
+                  "parallel_virtual_limit_x_offset");
+
+  JSON_READ_VALUE(param.parallel_terminal_x_offset_with_obs, double,
+                  "parallel_terminal_x_offset_with_obs");
+
+  // parallel pa params
+  JSON_READ_VALUE(param.finish_parallel_pa_lat_err, double,
+                  "finish_parallel_pa_lat_err");
+
+  JSON_READ_VALUE(param.finish_parallel_pa_lon_err, double,
+                  "finish_parallel_pa_lon_err");
+
+  JSON_READ_VALUE(param.finish_parallel_pa_heading_err, double,
+                  "finish_parallel_pa_heading_err");
+
+  JSON_READ_VALUE(param.debug_parallel_angle_threshold, double,
+                  "debug_parallel_angle_threshold");
+
+  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_1, double,
+                  "s_turn_plan_pa_buffer_1");
+
+  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_2, double,
+                  "s_turn_plan_pa_buffer_2");
+
+  JSON_READ_VALUE(param.line_plan_pa_buffer, double, "line_plan_pa_buffer");
+
+  JSON_READ_VALUE(param.pa_slot_move_distance, double, "pa_slot_move_distance");
+
+  JSON_READ_VALUE(param.pa_slot_length_for_park_in, double,
+                  "pa_slot_length_for_park_in");
+
+  JSON_READ_VALUE(param.pa_to_curb_dis, double, "pa_to_curb_dis");
+  JSON_READ_VALUE(param.pa_max_invalid_replan_times, double,
+                  "pa_max_invalid_replan_times");
+
+  // check finish params
+  JSON_READ_VALUE(param.finish_lat_err, double, "finish_lat_err");
+
+  JSON_READ_VALUE(param.finish_lat_err_strict, double, "finish_lat_err_strict");
+
+  JSON_READ_VALUE(param.finish_lon_err, double, "finish_lon_err");
+
+  JSON_READ_VALUE(param.finish_heading_err, double, "finish_heading_err");
+
+  JSON_READ_VALUE(param.should_stop_lat_err, double, "should_stop_lat_err");
+
+  JSON_READ_VALUE(param.should_stop_heading_err, double,
+                  "should_stop_heading_err");
+
+  JSON_READ_VALUE(param.finish_uss_slot_occupied_ratio, double,
+                  "finish_uss_slot_occupied_ratio");
+  JSON_READ_VALUE(param.finish_heading_err_loose, double,
+                  "finish_heading_err_loose");
+
+  JSON_READ_VALUE(param.finish_parallel_lat_err, double,
+                  "finish_parallel_lat_err");
+
+  JSON_READ_VALUE(param.finish_parallel_lat_rac_err, double,
+                  "finish_parallel_lat_rac_err");
+
+  JSON_READ_VALUE(param.finish_parallel_lon_err, double,
+                  "finish_parallel_lon_err");
+
+  JSON_READ_VALUE(param.finish_parallel_lon_overhaing_error, double,
+                  "finish_parallel_lon_overhaing_error");
+
+  JSON_READ_VALUE(param.finish_parallel_heading_err, double,
+                  "finish_parallel_heading_err");
+
+  JSON_READ_VALUE(param.finish_parallel_out_heading_mag, double,
+                  "finish_parallel_out_heading_mag");
+
+  JSON_READ_VALUE(param.finish_parallel_out_lat_wheel_y, double,
+                  "finish_parallel_out_lat_wheel_y");
+
+  CheckFinishParams& finish_param = param.check_finish_params;
+  JSON_READ_VALUE(finish_param.lon_err, float, "check_finish_lon_err");
+  JSON_READ_VALUE(finish_param.lat_err, float, "check_finish_lat_err");
+  JSON_READ_VALUE(finish_param.lat_err_strict, float,
+                  "check_finish_lat_err_strict");
+  JSON_READ_VALUE(finish_param.heading_err, float, "check_finish_heading_err");
+  JSON_READ_VALUE(finish_param.heading_err_strict, float,
+                  "check_finish_heading_err_strict");
+  JSON_READ_VALUE(finish_param.obs_stuck_slot_occupied_ratio, float,
+                  "check_finish_obs_stuck_slot_occupied_ratio");
+  JSON_READ_VALUE(finish_param.min_car2line_dist, float,
+                  "check_finish_min_car2line_dist");
+  JSON_READ_VALUE(finish_param.max_car2line_dist, float,
+                  "check_finish_max_car2line_dist");
+  JSON_READ_VALUE(finish_param.max_remain_path_dist, float,
+                  "check_finish_max_remain_path_dist");
+  JSON_READ_VALUE(finish_param.max_remain_obs_dist, float,
+                  "check_finish_max_remain_obs_dist");
+
+  // check fail params
+  JSON_READ_VALUE(param.stuck_failed_time, double, "stuck_failed_time");
+
+  JSON_READ_VALUE(param.stuck_failed_by_dynamic_obs_time, double,
+                  "stuck_failed_by_dynamic_obs_time");
+  JSON_READ_VALUE(param.max_replan_failed_time, double,
+                  "max_replan_failed_time");
+
+  // check static params
+  JSON_READ_VALUE(param.car_static_pos_err_strict, double,
+                  "car_static_pos_err_strict");
+
+  JSON_READ_VALUE(param.car_static_keep_time_by_pos_strict, double,
+                  "car_static_keep_time_by_pos_strict");
+
+  JSON_READ_VALUE(param.car_static_pos_err_normal, double,
+                  "car_static_pos_err_normal");
+
+  JSON_READ_VALUE(param.car_static_keep_time_by_pos_normal, double,
+                  "car_static_keep_time_by_pos_normal");
+
+  JSON_READ_VALUE(param.car_static_velocity_strict, double,
+                  "car_static_velocity_strict");
+
+  JSON_READ_VALUE(param.car_static_keep_time_by_vel_strict, double,
+                  "car_static_keep_time_by_vel_strict");
+
+  JSON_READ_VALUE(param.car_static_velocity_normal, double,
+                  "car_static_velocity_normal");
+
+  JSON_READ_VALUE(param.car_static_keep_time_by_vel_normal, double,
+                  "car_static_keep_time_by_vel_normal");
+
+  // uss params
+  JSON_READ_VALUE(param.is_uss_dist_from_perception, bool,
+                  "is_uss_dist_from_perception");
+
+  JSON_READ_VALUE(param.min_uss_origin_dist, double, "min_uss_origin_dist");
+
+  JSON_READ_VALUE(param.detection_distance, double, "detection_distance");
+
+  JSON_READ_VALUE(param.stop_lat_inflation, double, "stop_lat_inflation");
+
+  JSON_READ_VALUE(param.heavy_brake_lat_inflation, double,
+                  "heavy_brake_lat_inflation");
+
+  JSON_READ_VALUE(param.moderate_brake_lat_inflation, double,
+                  "moderate_brake_lat_inflation");
+
+  JSON_READ_VALUE(param.slight_brake_lat_inflation, double,
+                  "slight_brake_lat_inflation");
+
+  JSON_READ_VALUE(param.stop_lon_dist, double, "stop_lon_dist");
+
+  JSON_READ_VALUE(param.heavy_brake_lon_dist, double, "heavy_brake_lon_dist");
+
+  JSON_READ_VALUE(param.moderate_brake_lon_dist, double,
+                  "moderate_brake_lon_dist");
+
+  JSON_READ_VALUE(param.slight_brake_lon_dist, double, "slight_brake_lon_dist");
+
+  JSON_READ_VALUE(param.safe_uss_remain_dist_in_slot, double,
+                  "safe_uss_remain_dist_in_slot");
+
+  JSON_READ_VALUE(param.limited_safe_uss_remain_dist, double,
+                  "limited_safe_uss_remain_dist");
+
+  JSON_READ_VALUE(param.safe_lat_buffer_outside_parallel_slot, double,
+                  "safe_lat_buffer_outside_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_lat_buffer_in_parallel_slot, double,
+                  "safe_lat_buffer_in_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_lat_buffer_with_wall_in_parallel_slot, double,
+                  "safe_lat_buffer_with_wall_in_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_lat_buffer_in_1r_parallel_slot, double,
+                  "safe_lat_buffer_in_1r_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_remain_dist_in_1r_parallel_slot, double,
+                  "safe_remain_dist_in_1r_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_remain_dist_in_1r_with_wall_parallel_slot, double,
+                  "safe_remain_dist_in_1r_with_wall_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_uss_remain_dist_in_parallel_slot, double,
+                  "safe_uss_remain_dist_in_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_uss_remain_dist_in_parallel_slot_pa, double,
+                  "safe_uss_remain_dist_in_parallel_slot_pa");
+
+  JSON_READ_VALUE(param.safe_uss_remain_dist_out_slot, double,
+                  "safe_uss_remain_dist_out_slot");
+
+  JSON_READ_VALUE(param.uss_scan_angle_deg, double, "uss_scan_angle_deg");
+
+  JSON_READ_VALUE(param.uss_apa_scan_angle_deg, double,
+                  "uss_apa_scan_angle_deg");
+
+  JSON_READ_VALUE(param.uss_upa_scan_angle_deg, double,
+                  "uss_upa_scan_angle_deg");
+
+  JSON_READ_VALUE(param.corner_uss_scan_angle_deg_straight, double,
+                  "corner_uss_scan_angle_deg_straight");
+
+  JSON_READ_VALUE(param.corner_uss_scan_angle_deg_turn, double,
+                  "corner_uss_scan_angle_deg_turn");
+
+  JSON_READ_VALUE(param.corner_uss_dist_diff, double, "corner_uss_dist_diff");
+
+  JSON_READ_VALUE(param.corner_uss_steer_angle, double,
+                  "corner_uss_steer_angle");
+
+  JSON_READ_VALUE(param.enable_corner_uss_process, bool,
+                  "enable_corner_uss_process");
+
+  JSON_READ_VALUE(param.uss_corner_scan_angle_gain, double,
+                  "uss_corner_scan_angle_gain");
+
+  JSON_READ_VALUE(param.uss_face_scan_angle_gain, double,
+                  "uss_face_scan_angle_gain");
+
+  JSON_READ_VALUE(param.uss_vertex_x_vec, std::vector<double>,
+                  "uss_vertex_x_vec");
+
+  JSON_READ_VALUE(param.uss_vertex_y_vec, std::vector<double>,
+                  "uss_vertex_y_vec");
+
+  JSON_READ_VALUE(param.uss_normal_angle_deg_vec, std::vector<double>,
+                  "uss_normal_angle_deg_vec");
+
+  JSON_READ_VALUE(param.uss_wdis_index_front, std::vector<int>,
+                  "uss_wdis_index_front");
+
+  JSON_READ_VALUE(param.uss_wdis_index_back, std::vector<int>,
+                  "uss_wdis_index_back");
+
+  JSON_READ_VALUE(param.uss_directly_behind_index, std::vector<int>,
+                  "uss_directly_behind_index");
+
+  // check replan params
+  JSON_READ_VALUE(param.stuck_replan_time, double, "stuck_replan_time");
+
+  JSON_READ_VALUE(param.max_replan_remain_dist, double,
+                  "max_replan_remain_dist");
+
+  JSON_READ_VALUE(param.min_drive_dist, double, "min_drive_dist");
+
+  JSON_READ_VALUE(param.obs_stuck_replan_wait_time, double,
+                  "obs_stuck_replan_wait_time");
+
+  JSON_READ_VALUE(param.max_replan_count, int, "max_replan_count");
+
+  JSON_READ_VALUE(param.parallel_replan_dist, double, "parallel_replan_dist");
+
+  // construct t_lane params
+  JSON_READ_VALUE(param.vacant_pt_outside_dx, double, "vacant_pt_outside_dx");
+
+  JSON_READ_VALUE(param.vacant_pt_outside_dy, double, "vacant_pt_outside_dy");
+
+  JSON_READ_VALUE(param.vacant_pt_inside_dx, double, "vacant_pt_inside_dx");
+
+  JSON_READ_VALUE(param.vacant_pt_inside_dy, double, "vacant_pt_inside_dy");
+
+  JSON_READ_VALUE(param.occupied_pt_outside_dx, double,
+                  "occupied_pt_outside_dx");
+
+  JSON_READ_VALUE(param.occupied_pt_outside_dy, double,
+                  "occupied_pt_outside_dy");
+
+  JSON_READ_VALUE(param.occupied_pt_inside_dx, double, "occupied_pt_inside_dx");
+
+  JSON_READ_VALUE(param.occupied_pt_inside_dy, double, "occupied_pt_inside_dy");
+
+  JSON_READ_VALUE(param.nearby_slot_corner_dist, double,
+                  "nearby_slot_corner_dist");
+
+  JSON_READ_VALUE(param.enable_use_dynamic_obs, bool, "enable_use_dynamic_obs");
+
+  JSON_READ_VALUE(param.safe_threshold, double, "safe_threshold");
+
+  JSON_READ_VALUE(param.virtual_head_out_obs_y_pos, double,
+                  "virtual_head_out_obs_y_pos");
+
+  JSON_READ_VALUE(param.virtual_head_out_obs_x_pos, double,
+                  "virtual_head_out_obs_x_pos");
+
+  JSON_READ_VALUE(param.virtual_obs_left_y_pos, double,
+                  "virtual_obs_left_y_pos");
+
+  JSON_READ_VALUE(param.virtual_obs_left_x_pos, double,
+                  "virtual_obs_left_x_pos");
+
+  JSON_READ_VALUE(param.virtual_obs_right_y_pos, double,
+                  "virtual_obs_right_y_pos");
+
+  JSON_READ_VALUE(param.virtual_obs_right_x_pos, double,
+                  "virtual_obs_right_x_pos");
+
+  JSON_READ_VALUE(param.max_pt_inside_drop_dx_mono, double,
+                  "max_pt_inside_drop_dx_mono");
+
+  JSON_READ_VALUE(param.max_pt_inside_drop_dx_multi, double,
+                  "max_pt_inside_drop_dx_multi");
+
+  // construct parallel t-lane params
+  JSON_READ_VALUE(param.parallel_vacant_pt_outside_dx, double,
+                  "parallel_vacant_pt_outside_dx");
+
+  JSON_READ_VALUE(param.parallel_vacant_pt_outside_dy, double,
+                  "parallel_vacant_pt_outside_dy");
+
+  JSON_READ_VALUE(param.parallel_vacant_pt_inside_dx, double,
+                  "parallel_vacant_pt_inside_dx");
+
+  JSON_READ_VALUE(param.parallel_vacant_pt_inside_dy, double,
+                  "parallel_vacant_pt_inside_dy");
+
+  JSON_READ_VALUE(param.parallel_occupied_pt_outside_dx, double,
+                  "parallel_occupied_pt_outside_dx");
+
+  JSON_READ_VALUE(param.parallel_occupied_pt_outside_dy, double,
+                  "parallel_occupied_pt_outside_dy");
+
+  JSON_READ_VALUE(param.parallel_occupied_pt_inside_dx, double,
+                  "parallel_occupied_pt_inside_dx");
+
+  JSON_READ_VALUE(param.parallel_occupied_pt_inside_dy, double,
+                  "parallel_occupied_pt_inside_dy");
+
+  JSON_READ_VALUE(param.curb_offset, double, "curb_offset");
+
+  JSON_READ_VALUE(param.curb_offset_when_ego_outside_slot, double,
+                  "curb_offset_when_ego_outside_slot");
+
+  JSON_READ_VALUE(param.curb_offset_by_height, double, "curb_offset_by_height");
+
+  // construce obstacles params
+  JSON_READ_VALUE(param.channel_width, double, "channel_width");
+
+  JSON_READ_VALUE(param.min_channel_width, double, "min_channel_width");
+
+  JSON_READ_VALUE(param.channel_length, double, "channel_length");
+
+  JSON_READ_VALUE(param.max_obs2car_dist_in_slot, double,
+                  "max_obs2car_dist_in_slot");
+
+  JSON_READ_VALUE(param.max_obs2car_dist_out_slot, double,
+                  "max_obs2car_dist_out_slot");
+
+  JSON_READ_VALUE(param.max_obs2car_dist_slot_occupied_ratio, double,
+                  "max_obs2car_dist_slot_occupied_ratio");
+
+  JSON_READ_VALUE(param.col_obs_safe_dist_normal, double,
+                  "col_obs_safe_dist_normal");
+
+  JSON_READ_VALUE(param.obstacle_ds, double, "obstacle_ds");
+
+  JSON_READ_VALUE(param.car_lat_inflation_dynamic_plan, double,
+                  "car_lat_inflation_dynamic_plan");
+
+  JSON_READ_VALUE(param.car_lat_inflation_normal, double,
+                  "car_lat_inflation_normal");
+
+  JSON_READ_VALUE(param.believe_in_fus_obs, bool, "believe_in_fus_obs");
+
+  JSON_READ_VALUE(param.use_fus_occ_obj, bool, "use_fus_occ_obj");
+
+  JSON_READ_VALUE(param.use_fus_occ_column, bool, "use_fus_occ_column");
+
+  JSON_READ_VALUE(param.uss_config.use_uss_pt_cloud, bool, "use_uss_pt_cloud");
+  JSON_READ_VALUE(param.uss_config.use_uss_pt_for_path, bool,
+                  "use_uss_pt_for_path");
+  JSON_READ_VALUE(param.uss_config.use_uss_pt_for_slot_release, bool,
+                  "use_uss_pt_for_slot_release");
+  JSON_READ_VALUE(param.uss_config.use_uss_pt_for_speed, bool,
+                  "use_uss_pt_for_speed");
+  JSON_READ_VALUE(param.uss_config.uss_lat_attention_dist, double,
+                  "uss_lat_attention_dist");
+  JSON_READ_VALUE(param.uss_config.uss_lon_attention_dist, double,
+                  "uss_lon_attention_dist");
+  JSON_READ_VALUE(param.uss_config.uss_dist_coefficient_by_vel, double,
+                  "uss_dist_coefficient_by_vel");
+
+  JSON_DEBUG_VALUE("use_uss_pt_cloud", param.uss_config.use_uss_pt_cloud);
+
+  JSON_READ_VALUE(param.use_ground_line, bool, "use_ground_line");
+
+  JSON_READ_VALUE(param.use_ground_line_wall_column, bool,
+                  "use_ground_line_wall_column");
+
+  JSON_READ_VALUE(param.use_object_detect, bool, "use_object_detect");
+
+  JSON_READ_VALUE(param.enable_side_pass_limiter, bool,
+                  "enable_side_pass_limiter");
+
+  JSON_READ_VALUE(param.tlane_safe_dx, double, "tlane_safe_dx");
+
+  JSON_READ_VALUE(param.parallel_obs2slot_max_dist, double,
+                  "parallel_obs2slot_max_dist");
+
+  JSON_READ_VALUE(param.parallel_channel_y_mag, double,
+                  "parallel_channel_y_mag");
+
+  JSON_READ_VALUE(param.parallel_channel_x_mag, double,
+                  "parallel_channel_x_mag");
+
+  JSON_READ_VALUE(param.parallel_ego_side_to_obs_in_buffer, double,
+                  "parallel_ego_side_to_obs_in_buffer");
+
+  JSON_READ_VALUE(param.parallel_ego_front_corner_to_obs_in_buffer, double,
+                  "parallel_ego_front_corner_to_obs_in_buffer");
+
+  JSON_READ_VALUE(param.min_dynamic_plan_proj_dt, double,
+                  "min_dynamic_plan_proj_dt");
+
+  JSON_READ_VALUE(param.max_dynamic_plan_proj_dt, double,
+                  "max_dynamic_plan_proj_dt");
+
+  JSON_READ_VALUE(param.max_lat_err, double, "max_lat_err");
+
+  JSON_READ_VALUE(param.max_phi_err, double, "max_phi_err");
+
+  JSON_READ_VALUE(param.enable_multi_height_col_det, bool,
+                  "enable_multi_height_col_det");
+
+  JSON_READ_VALUE(param.enable_runover_obs, bool, "enable_runover_obs");
+
+  int use_obs_height_method = 0;
+  JSON_READ_VALUE(use_obs_height_method, int, "use_obs_height_method");
+  if (use_obs_height_method == 1) {
+    param.use_obs_height_method = UseObsHeightMethod::HIGH_LOW;
+  } else if (use_obs_height_method == 2) {
+    param.use_obs_height_method = UseObsHeightMethod::HIGH_MID_LOW;
+  } else {
+    param.use_obs_height_method = UseObsHeightMethod::HIGH;
+  }
+
+  if (param.use_obs_height_method == UseObsHeightMethod::HIGH) {
+    param.enable_multi_height_col_det = false;
+  } else {
+    param.enable_multi_height_col_det = true;
+  }
+
+  JSON_DEBUG_VALUE("use_obs_height_method", use_obs_height_method);
+  JSON_DEBUG_VALUE("enable_multi_height_col_det",
+                   param.enable_multi_height_col_det);
+
+  JSON_READ_VALUE(param.car_lat_inflation_strict, double,
+                  "car_lat_inflation_strict");
+
+  JSON_READ_VALUE(param.col_obs_safe_dist_strict, double,
+                  "col_obs_safe_dist_strict");
+
+  JSON_READ_VALUE(param.gen_ref_length_lat_buffer, double,
+                  "gen_ref_length_lat_buffer");
+
+  JSON_READ_VALUE(param.gen_ref_length_lon_buffer, double,
+                  "gen_ref_length_lon_buffer");
+
+  JSON_READ_VALUE(param.max_obs_lat_invasion_slot_dist, double,
+                  "max_obs_lat_invasion_slot_dist");
+
+  JSON_READ_VALUE(param.max_obs_lat_invasion_slot_dist_dynamic_col, double,
+                  "max_obs_lat_invasion_slot_dist_dynamic_col");
+
+  JSON_READ_VALUE(param.max_obs_lon_invasion_slot_dist, double,
+                  "max_obs_lon_invasion_slot_dist");
+
+  JSON_READ_VALUE(param.max_obs_lon_invasion_slot_dist_dynamic_col, double,
+                  "max_obs_lon_invasion_slot_dist_dynamic_col");
+
+  JSON_READ_VALUE(param.slot_entrance_obs_x, double, "slot_entrance_obs_x");
+
+  // dynamic update path params
+  JSON_READ_VALUE(param.enable_path_dangerous_replan, bool,
+                  "enable_path_dangerous_replan");
+
+  JSON_READ_VALUE(param.car_to_limiter_dis, double, "car_to_limiter_dis");
+
+  JSON_READ_VALUE(param.pose_y_err, double, "pose_y_err");
+
+  JSON_READ_VALUE(param.pose_heading_err, double, "pose_heading_err");
+
+  JSON_READ_VALUE(param.max_y_err_2, double, "max_y_err_2");
+
+  JSON_READ_VALUE(param.max_heading_err_2, double, "max_heading_err_2");
+
+  JSON_READ_VALUE(param.max_y_err_3, double, "max_y_err_3");
+
+  JSON_READ_VALUE(param.max_heading_err_3, double, "max_heading_err_3");
+
+  JSON_READ_VALUE(param.pose_slot_occupied_ratio, double,
+                  "pose_slot_occupied_ratio");
+
+  JSON_READ_VALUE(param.pose_slot_occupied_ratio_2, double,
+                  "pose_slot_occupied_ratio_2");
+
+  JSON_READ_VALUE(param.pose_slot_occupied_ratio_3, double,
+                  "pose_slot_occupied_ratio_3");
+
+  JSON_READ_VALUE(param.pose_min_remain_dis, double, "pose_min_remain_dis");
+
+  JSON_READ_VALUE(param.max_slot_jump_dist, double, "max_slot_jump_dist");
+
+  JSON_READ_VALUE(param.max_slot_jump_heading, double, "max_slot_jump_heading");
+
+  JSON_READ_VALUE(param.dynamic_plan_interval_time, double,
+                  "dynamic_plan_interval_time");
+
+  JSON_READ_VALUE(param.parallel_dynamic_lat_buffer, double,
+                  "parallel_dynamic_lat_buffer");
+
+  JSON_READ_VALUE(param.parallel_dynamic_lon_buffer, double,
+                  "parallel_dynamic_lon_buffer");
+
+  JSON_READ_VALUE(param.parallel_dynamic_lat_buffer_in_slot, double,
+                  "parallel_dynamic_lat_buffer_in_slot");
+
+  JSON_READ_VALUE(param.parallel_dynamic_lon_buffer_in_slot, double,
+                  "parallel_dynamic_lon_buffer_in_slot");
+
+  // slot update params when parking
+  JSON_READ_VALUE(param.fix_slot_occupied_ratio, double,
+                  "fix_slot_occupied_ratio");
+
+  // slot update params when replan
+  JSON_READ_VALUE(param.uss_slot_occupied_ratio, double,
+                  "uss_slot_occupied_ratio");
+
+  JSON_READ_VALUE(param.max_front_exceed_line_dx, double,
+                  "max_front_exceed_line_dx");
+
+  JSON_READ_VALUE(param.slot_jump_lat_big_err, double, "slot_jump_lat_big_err");
+
+  JSON_READ_VALUE(param.slot_jump_heading_big_err, double,
+                  "slot_jump_heading_big_err");
+
+  // path planner params
+  JSON_READ_VALUE(param.use_average_obs_dist, bool, "use_average_obs_dist");
+
+  JSON_READ_VALUE(param.min_turn_radius, double, "min_turn_radius");
+
+  JSON_READ_VALUE(param.safe_circle_radius, double, "safe_circle_radius");
+
+  JSON_READ_VALUE(param.max_radius_in_slot, double, "max_radius_in_slot");
+
+  JSON_READ_VALUE(param.min_radius_out_slot, double, "min_radius_out_slot");
+
+  JSON_READ_VALUE(param.max_one_step_arc_radius, double,
+                  "max_one_step_arc_radius");
+
+  JSON_READ_VALUE(param.radius_eps, double, "radius_eps");
+
+  JSON_READ_VALUE(param.min_line_length, double, "min_line_length");
+
+  JSON_READ_VALUE(param.min_path_length, double, "min_path_length");
+
+  JSON_READ_VALUE(param.insert_line_after_arc, double, "insert_line_after_arc");
+
+  JSON_READ_VALUE(param.min_one_step_path_length, double,
+                  "min_one_step_path_length");
+
+  JSON_READ_VALUE(param.min_one_step_path_length_in_slot, double,
+                  "min_one_step_path_length_in_slot");
+
+  JSON_READ_VALUE(param.prepare_max_reverse_heading_err, double,
+                  "prepare_max_reverse_heading_err");
+
+  JSON_READ_VALUE(param.prepare_line_min_x_offset_slot, double,
+                  "prepare_line_min_x_offset_slot");
+
+  JSON_READ_VALUE(param.prepare_line_dx_offset_slot, double,
+                  "prepare_line_dx_offset_slot");
+
+  JSON_READ_VALUE(param.prepare_line_max_x_offset_slot, double,
+                  "prepare_line_max_x_offset_slot");
+
+  JSON_READ_VALUE(param.prepare_line_max_heading_offset_slot_deg, double,
+                  "prepare_line_max_heading_offset_slot_deg");
+
+  JSON_READ_VALUE(param.prepare_line_dheading_offset_slot_deg, double,
+                  "prepare_line_dheading_offset_slot_deg");
+
+  JSON_READ_VALUE(param.prepare_line_min_heading_offset_slot_deg, double,
+                  "prepare_line_min_heading_offset_slot_deg");
+
+  JSON_READ_VALUE(param.prepare_directly_use_tangent_pos_err, double,
+                  "prepare_directly_use_tangent_pos_err");
+
+  JSON_READ_VALUE(param.prepare_directly_use_tangent_heading_err, double,
+                  "prepare_directly_use_tangent_heading_err");
+
+  JSON_READ_VALUE(param.prepare_adjust_drive_max_length, double,
+                  "prepare_adjust_drive_max_length");
+
+  JSON_READ_VALUE(param.prepare_adjust_reverse_max_length, double,
+                  "prepare_adjust_reverse_max_length");
+
+  JSON_READ_VALUE(param.prepare_single_max_allow_time_searching, double,
+                  "prepare_single_max_allow_time_searching");
+
+  JSON_READ_VALUE(param.prepare_single_max_allow_time_parking, double,
+                  "prepare_single_max_allow_time_parking");
+
+  JSON_READ_VALUE(param.prepare_max_try_count, int, "prepare_max_try_count");
+
+  JSON_READ_VALUE(param.third_prepare_heading_threshold, double,
+                  "third_prepare_heading_threshold");
+
+  JSON_READ_VALUE(param.static_pos_eps, double, "static_pos_eps");
+
+  JSON_READ_VALUE(param.static_heading_eps, double, "static_heading_eps");
+
+  JSON_READ_VALUE(param.target_pos_err, double, "target_pos_err");
+
+  JSON_READ_VALUE(param.target_heading_err, double, "target_heading_err");
+
+  JSON_READ_VALUE(param.target_radius_err, double, "target_radius_err");
+
+  JSON_READ_VALUE(param.perpendicular_park_out_max_target_heading, double,
+                  "target_heading_max");
+
+  JSON_READ_VALUE(param.perpendicular_park_out_min_target_heading, double,
+                  "target_heading_min");
+
+  JSON_READ_VALUE(param.path_extend_distance, double, "path_extend_distance");
+
+  JSON_READ_VALUE(param.mono_plan_enable, bool, "mono_plan_enable");
+
+  JSON_READ_VALUE(param.conservative_mono_enable, bool,
+                  "conservative_mono_enable");
+
+  JSON_READ_VALUE(param.multi_plan_min_lat_err, double,
+                  "multi_plan_min_lat_err");
+
+  JSON_READ_VALUE(param.multi_plan_min_heading_err, double,
+                  "multi_plan_min_heading_err");
+
+  JSON_READ_VALUE(param.multi_plan_max_occupied_ratio, double,
+                  "multi_plan_max_occupied_ratio");
+
+  JSON_READ_VALUE(param.adjust_plan_max_heading1_err, double,
+                  "adjust_plan_max_heading1_err");
+
+  JSON_READ_VALUE(param.adjust_plan_max_lat_err, double,
+                  "adjust_plan_max_lat_err");
+
+  JSON_READ_VALUE(param.adjust_plan_max_heading2_err, double,
+                  "adjust_plan_max_heading2_err");
+
+  JSON_READ_VALUE(param.parallel_lat_opt_enable, bool,
+                  "parallel_lat_opt_enable");
+
+  JSON_READ_VALUE(param.perpendicular_lat_opt_enable, bool,
+                  "perpendicular_lat_opt_enable");
+
+  JSON_READ_VALUE(param.cilqr_path_optimization_enable, bool,
+                  "is_cilqr_path_optimization_enable");
+
+  JSON_READ_VALUE(param.min_opt_path_length, double, "min_opt_path_length");
+
+  JSON_READ_VALUE(param.min_gear_path_length, double, "min_gear_path_length");
+
+  JSON_READ_VALUE(param.parallel_multi_plan_radius_eps, double,
+                  "parallel_multi_plan_radius_eps");
+
+  JSON_READ_VALUE(param.parallel_search_out_heading, double,
+                  "parallel_search_out_heading");
+
+  JSON_READ_VALUE(param.x_max_internal_obstacles, double,
+                  "x_max_internal_obstacles");
+
+  JSON_READ_VALUE(param.min_x_value_park_out_position, double,
+                  "min_x_value_park_out_position");
+
+  JSON_READ_VALUE(param.is_parallel_advanced_method, bool,
+                  "is_parallel_advanced_method");
+
+  JSON_READ_VALUE(param.is_trim_limter_parallel_enable, bool,
+                  "is_trim_limter_parallel_enable");
+
+  JSON_READ_VALUE(param.trim_limter_tire_distance, double,
+                  "trim_limter_tire_distance");
+
+  int path_generator_type = 1;
+  JSON_READ_VALUE(path_generator_type, int, "path_generator_type");
+  switch (path_generator_type) {
+    case 0:
+      param.path_generator_type = ParkPathGenerationType::GEOMETRY_BASED;
+      break;
+    case 1:
+      param.path_generator_type = ParkPathGenerationType::SEARCH_BASED;
+      break;
+    default:
+      break;
+  }
+  ILOG_INFO << "path_generator_type "
+            << static_cast<int>(apa_param.GetParam().path_generator_type);
+
+  JSON_READ_VALUE(param.use_geometry_path_head_out, bool,
+                  "use_geometry_path_head_out");
+
+  JSON_READ_VALUE(param.use_scenario_perpendicular_heading_in, bool,
+                  "use_scenario_perpendicular_heading_in");
+
+  // slot managent params
+  JSON_READ_VALUE(param.move_slot_with_little_buffer, bool,
+                  "move_slot_with_little_buffer");
+
+  JSON_READ_VALUE(param.max_slot_window_size, int, "max_slot_window_size");
+
+  JSON_READ_VALUE(param.max_limiter_window_size, int,
+                  "max_limiter_window_size");
+
+  // slot update
+  JSON_READ_VALUE(param.slot_update_in_or_out_occupied_ratio, double,
+                  "slot_update_in_or_out_occupied_ratio");
+
+  JSON_READ_VALUE(param.slot_update_out_heading_max, double,
+                  "slot_update_out_heading_max");
+
+  JSON_READ_VALUE(param.slot_update_out_heading_min, double,
+                  "slot_update_out_heading_min");
+
+  JSON_READ_VALUE(param.slot_update_out_lat_max, double,
+                  "slot_update_out_lat_max");
+
+  JSON_READ_VALUE(param.slot_update_out_lat_min, double,
+                  "slot_update_out_lat_min");
+
+  JSON_READ_VALUE(param.slot_update_in_heading, double,
+                  "slot_update_in_heading");
+
+  JSON_READ_VALUE(param.slot_update_in_lat, double, "slot_update_in_lat");
+
+  JSON_READ_VALUE(param.slot_reset_threshold, int, "slot_reset_threshold");
+
+  JSON_READ_VALUE(param.limiter_move_dist, double, "limiter_move_dist");
+
+  JSON_READ_VALUE(param.limiter_update_min_occupied_ratio, double,
+                  "limiter_update_min_occupied_ratio");
+
+  JSON_READ_VALUE(param.limiter_update_max_occupied_ratio, double,
+                  "limiter_update_max_occupied_ratio");
+
+  JSON_READ_VALUE(param.limiter_update_distance_to_car, double,
+                  "limiter_update_distance_to_car");
+
+  JSON_READ_VALUE(param.limiter_update_occupied_ratio, double,
+                  "limiter_update_occupied_ratio");
+
+  JSON_READ_VALUE(param.max_slots_update_angle_dis_limit_deg, double,
+                  "max_slots_update_angle_dis_limit_deg");
+
+  JSON_READ_VALUE(param.max_slot_boundary_line_angle_dif_deg, double,
+                  "max_slot_boundary_line_angle_dif_deg");
+
+  JSON_READ_VALUE(param.outside_lon_dist_max_slot2mirror, double,
+                  "outside_lon_dist_max_slot2mirror");
+
+  JSON_READ_VALUE(param.outside_lon_dist_min_slot2mirror, double,
+                  "outside_lon_dist_min_slot2mirror");
+
+  JSON_READ_VALUE(param.inside_lon_dist_max_slot2mirror, double,
+                  "inside_lon_dist_max_slot2mirror");
+
+  JSON_READ_VALUE(param.inside_lon_dist_min_slot2mirror, double,
+                  "inside_lon_dist_min_slot2mirror");
+
+  JSON_READ_VALUE(param.min_slot_release_long_dist_slot2mirror, double,
+                  "min_slot_release_long_dist_slot2mirror");
+
+  JSON_READ_VALUE(param.min_parallel_uss_slot_release_long_dist_slot2mirror,
+                  double,
+                  "min_parallel_uss_slot_release_long_dist_slot2mirror");
+
+  JSON_READ_VALUE(param.min_parallel_vis_slot_release_long_dist_slot2mirror,
+                  double,
+                  "min_parallel_vis_slot_release_long_dist_slot2mirror");
+
+  JSON_READ_VALUE(param.believe_obs_ego_area, double, "believe_obs_ego_area");
+
+  JSON_READ_VALUE(param.limiter_length, double, "limiter_length");
+
+  JSON_READ_VALUE(param.slot_occupied_ratio_max_lat_err, double,
+                  "slot_occupied_ratio_max_lat_err");
+
+  JSON_READ_VALUE(param.slot_occupied_ratio_max_heading_err, double,
+                  "slot_occupied_ratio_max_heading_err");
+
+  // gen output params
+  JSON_READ_VALUE(param.max_velocity, double, "max_velocity");
+
+  JSON_READ_VALUE(param.footprint_circle_x, std::vector<float>,
+                  "footprint_circle_x");
+  JSON_READ_VALUE(param.footprint_circle_y, std::vector<float>,
+                  "footprint_circle_y");
+  JSON_READ_VALUE(param.footprint_circle_r, std::vector<float>,
+                  "footprint_circle_r");
+
+  JSON_READ_VALUE(param.fold_mirror_footprint_circle_x, std::vector<float>,
+                  "fold_mirror_footprint_circle_x");
+  JSON_READ_VALUE(param.fold_mirror_footprint_circle_y, std::vector<float>,
+                  "fold_mirror_footprint_circle_y");
+  JSON_READ_VALUE(param.fold_mirror_footprint_circle_r, std::vector<float>,
+                  "fold_mirror_footprint_circle_r");
+
+  JSON_READ_VALUE(param.astar_config.perpendicular_slot_auto_switch_to_astar,
+                  bool, "perpendicular_slot_auto_switch_to_astar");
+  JSON_READ_VALUE(param.astar_config.parallel_slot_auto_switch_to_astar, bool,
+                  "parallel_slot_auto_switch_to_astar");
+  JSON_READ_VALUE(param.astar_config.parallel_slot_end_straight_dist, double,
+                  "parallel_slot_end_straight_dist");
+  JSON_READ_VALUE(param.astar_config.cubic_polynomial_pose_adjustment, bool,
+                  "cubic_polynomial_pose_adjustment");
+  JSON_READ_VALUE(param.astar_config.parallel_finish_lon_err, double,
+                  "astar_parallel_finish_lon_err");
+  JSON_READ_VALUE(param.astar_config.parallel_finish_center_lat_err, double,
+                  "astar_parallel_finish_center_lat_err");
+  JSON_READ_VALUE(param.astar_config.parallel_finish_head_lat_err, double,
+                  "astar_parallel_finish_head_lat_err");
+  JSON_READ_VALUE(param.astar_config.parallel_finish_heading_err, double,
+                  "astar_parallel_finish_heading_err");
+  JSON_READ_VALUE(param.astar_config.enable_delete_occ_in_slot, bool,
+                  "enable_delete_occ_in_slot");
+  JSON_READ_VALUE(param.astar_config.enable_delete_occ_in_ego, bool,
+                  "enable_delete_occ_in_ego");
+  JSON_READ_VALUE(param.astar_config.deadend_replan_time_by_obs, double,
+                  "deadend_replan_time_by_obs");
+  JSON_READ_VALUE(param.astar_config.vertical_tail_in_end_straight_dist, double,
+                  "vertical_tail_in_end_straight_dist");
+
+  JSON_READ_VALUE(param.astar_config.vertical_head_in_end_straight_dist, double,
+                  "vertical_head_in_end_straight_dist");
+
+  JSON_READ_VALUE(param.astar_config.adjust_ego_y_thresh_outside_slot, double,
+                  "adjust_ego_y_thresh_outside_slot");
+  JSON_READ_VALUE(param.astar_config.enable_blind_zone, bool,
+                  "enable_blind_zone");
+  JSON_READ_VALUE(param.astar_config.vertical_slot_passage_height_bound, float,
+                  "vertical_slot_passage_height_bound");
+  JSON_READ_VALUE(param.astar_config.vertical_slot_passage_length_bound, float,
+                  "vertical_slot_passage_length_bound");
+  JSON_READ_VALUE(param.astar_config.parallel_passage_width, float,
+                  "parallel_passage_width");
+  JSON_READ_VALUE(param.astar_config.parallel_passage_length, float,
+                  "parallel_passage_length");
+  JSON_READ_VALUE(param.astar_config.head_in_finish_heading_err, double,
+                  "head_in_finish_heading_err");
+  JSON_READ_VALUE(param.astar_config.wide_slot_finish_heading_err, double,
+                  "wide_slot_finish_heading_err");
+
+  JSON_READ_VALUE(param.speed_config.enable_apa_speed_plan, bool,
+                  "enable_apa_speed_plan");
+  JSON_READ_VALUE(param.speed_config.slow_mode.default_cruise_speed, double,
+                  "slow_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.middle_mode.default_cruise_speed, double,
+                  "middle_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.fast_mode.default_cruise_speed, double,
+                  "fast_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.min_cruise_speed, double,
+                  "min_cruise_speed");
+
+  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_obs_dist.lower,
+                  double, "slow_speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_obs_dist.upper,
+                  double, "slow_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_obs_dist.lower,
+                  double, "mid_speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_obs_dist.upper,
+                  double, "middle_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_obs_dist.lower,
+                  double, "fast_speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_obs_dist.upper,
+                  double, "fast_cruise_speed");
+
+  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_kappa.lower,
+                  double, "slow_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_kappa.upper,
+                  double, "slow_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_kappa.lower,
+                  double, "mid_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_kappa.upper,
+                  double, "middle_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_kappa.lower,
+                  double, "fast_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_kappa.upper,
+                  double, "fast_cruise_speed");
+
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa_switch.lower, double,
+      "slow_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa_switch.upper, double,
+      "slow_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa_switch.lower, double,
+      "mid_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa_switch.upper, double,
+      "middle_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa_switch.lower, double,
+      "fast_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa_switch.upper, double,
+      "fast_cruise_speed");
+
+  JSON_READ_VALUE(param.speed_config.min_path_dist_for_speed_optimizer, double,
+                  "min_path_dist_for_speed_optimizer");
+  JSON_READ_VALUE(param.speed_config.min_path_dist_for_veh_starting, double,
+                  "min_path_dist_for_veh_starting");
+  JSON_READ_VALUE(param.speed_config.optimizer_time_limit, double,
+                  "optimizer_time_limit");
+  JSON_READ_VALUE(param.speed_config.use_remain_dist, bool, "use_remain_dist");
+  JSON_READ_VALUE(param.speed_config.fast_cruise_speed, double,
+                  "fast_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.middle_cruise_speed, double,
+                  "middle_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.slow_cruise_speed, double,
+                  "slow_cruise_speed");
+  JSON_READ_VALUE(apa_param.SetParam().speed_config.long_path_acc_upper, double,
+                  "long_path_acc_upper");
+  JSON_READ_VALUE(apa_param.SetParam().speed_config.short_path_acc_upper,
+                  double, "short_path_acc_upper");
+  JSON_READ_VALUE(param.speed_config.lon_stitch_type, int, "lon_stitch_type");
+  JSON_READ_VALUE(param.speed_config.jerk_upper, double, "jerk_upper");
+  JSON_READ_VALUE(param.speed_config.jerk_lower, double, "jerk_lower");
+  JSON_READ_VALUE(param.speed_config.speed_stitch_type, int,
+                  "speed_stitch_type");
+  JSON_READ_VALUE(param.speed_config.acc_stitch_type, int, "acc_stitch_type");
+
+  // hybrid a star params
+  JSON_READ_VALUE(param.astar_config.tail_in_slot_virtual_wall_x_offset, float,
+                  "tail_in_slot_virtual_wall_x_offset");
+
+  JSON_READ_VALUE(param.astar_config.tail_in_slot_virtual_wall_y_offset, float,
+                  "tail_in_slot_virtual_wall_y_offset");
+
+  JSON_READ_VALUE(param.astar_config.head_in_slot_virtual_wall_x_offset, float,
+                  "head_in_slot_virtual_wall_x_offset");
+
+  JSON_READ_VALUE(param.astar_config.head_in_slot_virtual_wall_y_offset, float,
+                  "head_in_slot_virtual_wall_y_offset");
+  JSON_READ_VALUE(param.astar_config.max_replan_number, int,
+                  "max_replan_number");
+
+  // fold mirror params
+  SmartFoldMirrorParams& smart_fold_mirror_params =
+      param.smart_fold_mirror_params;
+  JSON_READ_VALUE(smart_fold_mirror_params.has_smart_fold_mirror, bool,
+                  "has_smart_fold_mirror");
+  JSON_READ_VALUE(smart_fold_mirror_params.force_fold_mirror, bool,
+                  "force_fold_mirror");
+  if (smart_fold_mirror_params.force_fold_mirror) {
+    smart_fold_mirror_params.has_smart_fold_mirror = false;
+  }
+  if (smart_fold_mirror_params.has_smart_fold_mirror) {
+    param.car_lat_inflation_normal += 0.02;
+    param.stop_lat_inflation += 0.02;
+  }
+  JSON_READ_VALUE(smart_fold_mirror_params.locked_obs_slot_with_fold_mirror,
+                  bool, "locked_obs_slot_with_fold_mirror");
+  JSON_READ_VALUE(smart_fold_mirror_params.consume_time, float,
+                  "fold_mirror_consume_time");
+  JSON_READ_VALUE(smart_fold_mirror_params.state_transition_time, float,
+                  "fold_mirror_state_transition_time");
+  JSON_READ_VALUE(smart_fold_mirror_params.reaction_time, float,
+                  "fold_mirror_reaction_time");
+  JSON_READ_VALUE(smart_fold_mirror_params.max_stuck_wait_time, float,
+                  "fold_mirror_max_stuck_wait_time");
+  JSON_READ_VALUE(smart_fold_mirror_params.lat_buffer, float,
+                  "fold_mirror_lat_buffer");
+  JSON_READ_VALUE(smart_fold_mirror_params.min_lat_buffer, float,
+                  "fold_mirror_min_lat_buffer");
+  JSON_READ_VALUE(smart_fold_mirror_params.min_vel, float,
+                  "fold_mirror_min_vel");
+  JSON_READ_VALUE(smart_fold_mirror_params.x_down_offset, float,
+                  "fold_mirror_x_down_offset");
+  JSON_READ_VALUE(smart_fold_mirror_params.x_up_offset, float,
+                  "fold_mirror_x_up_offset");
+  JSON_READ_VALUE(smart_fold_mirror_params.x_redunant, float,
+                  "fold_mirror_x_redunant");
+  JSON_READ_VALUE(smart_fold_mirror_params.y_offset, float,
+                  "fold_mirror_y_offset");
+  JSON_READ_VALUE(smart_fold_mirror_params.heading_offset, float,
+                  "fold_mirror_heading_offset");
+
+  DynamicGearSwitchConfig& dynamic_gear_switch_config =
+      param.gear_switch_config;
+  JSON_READ_VALUE(dynamic_gear_switch_config.enable_dynamic_gear_switch, bool,
+                  "enable_dynamic_gear_switch");
+  JSON_READ_VALUE(dynamic_gear_switch_config.dist_thresh_for_current_path,
+                  double, "dist_thresh_for_current_path");
+  JSON_READ_VALUE(dynamic_gear_switch_config.dist_thresh_for_next_path, double,
+                  "dist_thresh_for_next_path");
+  JSON_READ_VALUE(dynamic_gear_switch_config.vel_thresh_for_gear_switch_point,
+                  double, "vel_thresh_for_gear_switch_point");
+  JSON_READ_VALUE(dynamic_gear_switch_config.dist_thresh_for_gear_switch_point,
+                  double, "dist_thresh_for_gear_switch_point");
+  JSON_READ_VALUE(
+      dynamic_gear_switch_config.slot_occupied_ratio_for_gear_switch_point,
+      double, "slot_occupied_ratio_for_gear_switch_point");
+  JSON_READ_VALUE(dynamic_gear_switch_config.lat_error_for_dynamic_gear_switch,
+                  double, "lat_error_for_dynamic_gear_switch");
+  JSON_READ_VALUE(
+      dynamic_gear_switch_config.theta_error_for_dynamic_gear_switch, double,
+      "theta_error_for_dynamic_gear_switch");
+  JSON_READ_VALUE(dynamic_gear_switch_config.cur_path_lat_buffer, double,
+                  "cur_path_lat_buffer");
+  JSON_READ_VALUE(dynamic_gear_switch_config.cur_path_lon_buffer, double,
+                  "cur_path_lon_buffer");
+  JSON_READ_VALUE(dynamic_gear_switch_config.next_path_lat_buffer, double,
+                  "next_path_lat_buffer");
+
+  PreparePlanConfig& prepare_plan_config = param.prepare_plan_config;
+  JSON_READ_VALUE(prepare_plan_config.enable_stable_prepare_route, bool,
+                  "enable_stable_prepare_route");
+
+  int park_path_plan_type = 0;
+  JSON_READ_VALUE(park_path_plan_type, int, "park_path_plan_type");
+  switch (park_path_plan_type) {
+    case 0:
+      param.park_path_plan_type = ParkPathPlanType::GEOMETRY;
+      break;
+    case 1:
+      param.park_path_plan_type = ParkPathPlanType::HYBRID_ASTAR;
+      break;
+    case 2:
+      param.park_path_plan_type = ParkPathPlanType::HYBRID_ASTAR_THREAD;
+      break;
+    default:
+      param.park_path_plan_type = ParkPathPlanType::GEOMETRY;
+      break;
+  }
+  if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    param.enable_narrow_space_vertical_tail_in = false;
+  } else {
+    param.enable_narrow_space_vertical_tail_in = true;
+  }
+  PrintParkPathPlanType(param.park_path_plan_type, true);
+
+  if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR ||
+      param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    param.virtual_obs_left_y_pos += 1.0;
+    param.virtual_obs_left_x_pos += 1.4;
+    param.virtual_obs_right_y_pos += 1.0;
+    param.virtual_obs_right_x_pos += 1.4;
+    // param.channel_length -= 4.0;
+    param.channel_width += 2.0;
+  }
+
+  int analytic_expansion_type = 1;
+  JSON_READ_VALUE(analytic_expansion_type, int, "analytic_expansion_type");
+  switch (analytic_expansion_type) {
+    case 0:
+      param.analytic_expansion_type = AnalyticExpansionType::REEDS_SHEEP;
+      break;
+    case 1:
+      param.analytic_expansion_type = AnalyticExpansionType::LINK_POSE_LINE;
+      break;
+    case 2:
+      param.analytic_expansion_type = AnalyticExpansionType::ALL;
+      break;
+    default:
+      param.analytic_expansion_type = AnalyticExpansionType::LINK_POSE_LINE;
+      break;
+  }
+
+  JSON_READ_VALUE(param.max_plan_gear_shift_number_searching, int,
+                  "max_plan_gear_shift_number_searching");
+  JSON_READ_VALUE(param.max_plan_gear_shift_number_parking, int,
+                  "max_plan_gear_shift_number_parking");
+  JSON_READ_VALUE(param.max_real_gear_shift_number_parking, int,
+                  "max_real_gear_shift_number_parking");
+
+  JSON_READ_VALUE(param.traj_kappa_change_penalty, float,
+                  "traj_kappa_change_penalty");
+  JSON_READ_VALUE(param.enable_decide_cul_de_sac, bool,
+                  "enable_decide_cul_de_sac");
+  JSON_READ_VALUE(param.enable_interesting_search_area, bool,
+                  "enable_interesting_search_area");
+  JSON_READ_VALUE(param.pre_search_mode, int, "pre_search_mode");
+  JSON_READ_VALUE(param.yield_interval_explored_node_num, int, "yield_interval_explored_node_num");
+  JSON_READ_VALUE(param.enable_yield_cpu, bool, "enable_yield_cpu");
+  JSON_READ_VALUE(param.yield_interval_ms, int, "yield_interval_ms");
+
+  // lat lon path buffer params
+  JSON_READ_VALUE(param.lat_lon_path_buffer.lon_buffer, float,
+                  "path_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.body_lat_buffer, float,
+                  "body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.mirror_lat_buffer, float,
+                  "mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.extra_lat_buffer, float,
+                  "extra_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.out_slot_body_lat_buffer, float,
+                  "out_slot_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.out_slot_mirror_lat_buffer, float,
+                  "out_slot_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.out_slot_extra_turn_lat_buffer,
+                  float, "out_slot_extra_turn_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.entrance_slot_body_lat_buffer,
+                  float, "entrance_slot_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.entrance_slot_mirror_lat_buffer,
+                  float, "entrance_slot_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.entrance_slot_extra_turn_lat_buffer,
+                  float, "entrance_slot_extra_turn_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_body_lat_buffer, float,
+                  "in_slot_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_mirror_lat_buffer, float,
+                  "in_slot_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_extra_turn_lat_buffer,
+                  float, "in_slot_extra_turn_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.parallel_col_buffer_in_slot, float,
+                  "parallel_col_buffer_in_slot");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.parallel_col_small_buffer_in_slot,
+                  float, "parallel_col_small_buffer_in_slot");
+
+  // lat lon speed buffer params
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.lon_buffer, float,
+                  "speed_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_lon_buffer, float,
+                  "speed_dynamic_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_body_lat_buffer, float,
+                  "stop_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_mirror_lat_buffer, float,
+                  "stop_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_stop_body_lat_buffer,
+                  float, "dynamic_stop_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_stop_mirror_lat_buffer,
+                  float, "dynamic_stop_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_min_lon_dist, float,
+                  "stop_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.special_stop_body_lat_buffer,
+                  float, "special_stop_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.special_stop_mirror_lat_buffer,
+                  float, "special_stop_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.special_stop_min_lon_dist, float,
+                  "special_stop_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_body_lat_buffer, float,
+                  "low_speed_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_mirror_lat_buffer, float,
+                  "low_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_low_speed_body_lat_buffer,
+                  float, "dynamic_low_speed_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.dynamic_low_speed_mirror_lat_buffer, float,
+      "dynamic_low_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_min_lon_dist, float,
+                  "low_speed_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_body_lat_buffer, float,
+                  "mid_speed_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_mirror_lat_buffer, float,
+                  "mid_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_mid_speed_body_lat_buffer,
+                  float, "dynamic_mid_speed_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.dynamic_mid_speed_mirror_lat_buffer, float,
+      "dynamic_mid_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_min_lon_dist, float,
+                  "mid_speed_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_body_lat_buffer, float,
+                  "high_speed_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_mirror_lat_buffer,
+                  float, "high_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_high_speed_body_lat_buffer,
+                  float, "dynamic_high_speed_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.dynamic_high_speed_mirror_lat_buffer, float,
+      "dynamic_high_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_min_lon_dist, float,
+                  "high_speed_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.extreme_case_lon_buffer, float,
+                  "extreme_case_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.extra_reverse_gear_lon_buffer,
+                  float, "extra_reverse_gear_lon_buffer");
+
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.enable_leave_initial_place, bool,
+                  "enable_leave_initial_place");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.leave_initial_place_body_lat_buffer, float,
+      "leave_initial_place_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.leave_initial_place_mirror_lat_buffer, float,
+      "leave_initial_place_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.leave_initial_place_lon_buffer,
+                  float, "leave_initial_place_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.leave_initial_place_min_lon_dist,
+                  float, "leave_initial_place_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.leave_initial_place_dist, float,
+                  "leave_initial_place_dist");
+
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.enable_keep_stuck_place, bool,
+                  "enable_keep_stuck_place");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_body_lat_buffer,
+                  float, "keep_stuck_place_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_mirror_lat_buffer,
+                  float, "keep_stuck_place_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_lon_buffer, float,
+                  "keep_stuck_place_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_min_lon_dist,
+                  float, "keep_stuck_place_min_lon_dist");
+
+  // lat lon slot release buffer params
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.lon_buffer, float,
+                  "slot_release_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.maximum_lat_body_buffer,
+                  float, "slot_release_maximum_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.maximum_lat_mirror_buffer,
+                  float, "slot_release_maximum_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.accumulate_lat_body_buffer,
+                  float, "slot_release_accumulate_lat_body_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_slot_release_buffer.accumulate_lat_mirror_buffer, float,
+      "slot_release_accumulate_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.hold_lat_body_buffer, float,
+                  "slot_release_hold_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.hold_lat_mirror_buffer,
+                  float, "slot_release_hold_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.subtract_lat_body_buffer,
+                  float, "slot_release_subtract_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.subtract_lat_mirror_buffer,
+                  float, "slot_release_subtract_lat_mirror_buffer");
+
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.channel_width, double,
+                  "slot_release_channel_width");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.channel_lat_offset, double,
+                  "slot_release_channel_lat_offset");
+  JSON_READ_VALUE(
+      param.lat_lon_slot_release_buffer.one_side_empty_channel_width, double,
+      "slot_release_one_side_empty_channel_width");
+  JSON_READ_VALUE(
+      param.lat_lon_slot_release_buffer.two_side_empty_channel_width, double,
+      "slot_release_two_side_empty_channel_width");
+
+  // lat lon slot target pose params
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.lon_buffer, float,
+                  "target_pose_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.max_lat_body_buffer, float,
+                  "target_pose_max_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.max_lat_mirror_buffer, float,
+                  "target_pose_max_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.min_lat_body_buffer, float,
+                  "target_pose_min_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.min_lat_mirror_buffer, float,
+                  "target_pose_min_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.buf_size, int,
+                  "target_pose_buf_size");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.special_max_lat_buffer,
+                  float, "target_pose_special_max_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.preference_lat_offset, float,
+                  "target_pose_preference_lat_offset");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.preference_lon_buffer, float,
+                  "target_pose_preference_lon_buffer");
+
+  JSON_READ_VALUE(param.od_config.use_specificationer, bool,
+                  "use_specificationer");
+  JSON_READ_VALUE(param.od_config.use_dynamic_od_car, bool,
+                  "use_dynamic_od_car");
+  JSON_READ_VALUE(param.od_config.use_living_things, bool, "use_living_things");
+  JSON_READ_VALUE(param.od_config.use_speed_bump, bool, "use_speed_bump");
+  JSON_READ_VALUE(param.od_config.moving_veh_speed_thresh, double,
+                  "moving_veh_speed_thresh");
+  JSON_READ_VALUE(param.parallel_enable_hybrid_astar, bool,
+                  "parallel_enable_hybrid_astar");
+
+  JSON_READ_VALUE(
+      param.gear_change_decide_params.all_max_gear_change_count_searching, int,
+      "all_max_gear_change_count_searching");
+  JSON_READ_VALUE(
+      param.gear_change_decide_params.all_max_gear_change_count_parking, int,
+      "all_max_gear_change_count_parking");
+  JSON_READ_VALUE(param.gear_change_decide_params.normal_max_gear_change_count,
+                  int, "normal_max_gear_change_count");
+  JSON_READ_VALUE(param.gear_change_decide_params.extra_gear_change_count, int,
+                  "extra_gear_change_count");
+  JSON_READ_VALUE(param.gear_change_decide_params.redunant_gear_change_count,
+                  int, "redunant_gear_change_count");
+  return;
+}
+
+const std::string GetParkPathPlanType(const ParkPathPlanType type) {
+  switch (type) {
+    case ParkPathPlanType::GEOMETRY:
+      return "GEOMETRY";
+    case ParkPathPlanType::HYBRID_ASTAR:
+      return "HYBRID_ASTAR";
+    case ParkPathPlanType::HYBRID_ASTAR_THREAD:
+      return "HYBRID_ASTAR_THREAD";
+    default:
+      return "ERR";
+  }
+}
+void PrintParkPathPlanType(const ParkPathPlanType type, const bool enable_log) {
+  ILOG_INFO_IF(enable_log) << "park_path_plan_type = "
+                           << GetParkPathPlanType(type);
+}
+
+const std::string GetAnalyticExpansionTypeString(
+    const AnalyticExpansionType type) {
+  switch (type) {
+    case AnalyticExpansionType::REEDS_SHEEP:
+      return "REEDS_SHEEP";
+    case AnalyticExpansionType::LINK_POSE_LINE:
+      return "LINK_POSE_LINE";
+    case AnalyticExpansionType::ALL:
+      return "ALL";
+    default:
+      return "ERR";
+  }
+}
+
+void PrintAnalyticExpansionType(const AnalyticExpansionType type,
+                                const bool enable_log) {
+  ILOG_INFO_IF(enable_log) << "analytic_expansion_type = "
+                           << GetAnalyticExpansionTypeString(type);
+}
+const SpeedModeParams& ParkingSpeedConfig::GetSpeedParams(
+    const ParkingSpeedMode& park_speed_mode) const {
+  switch (park_speed_mode) {
+    case ParkingSpeedMode::FAST:
+      return fast_mode;
+    case ParkingSpeedMode::SLOW:
+      return slow_mode;
+    case ParkingSpeedMode::NORMAL:
+    default:
+      return middle_mode;
+  }
+}
+
+const std::string GetUseObsHeightMethodString(const UseObsHeightMethod method) {
+  switch (method) {
+    case UseObsHeightMethod::HIGH_LOW:
+      return "HIGH_LOW";
+    case UseObsHeightMethod::HIGH_MID_LOW:
+      return "HIGH_MID_LOW";
+    default:
+      return "HIGH";
+  }
+}
+
+void PrintUseObsHeightMethod(const UseObsHeightMethod method,
+                             const bool enable_log) {
+  ILOG_INFO_IF(enable_log) << "use_obs_height_method = "
+                           << GetUseObsHeightMethodString(method);
+}
+
+}  // namespace apa_planner
+}  // namespace planning

@@ -1,0 +1,4019 @@
+import sys
+import numpy as np
+import math
+from scipy.interpolate import interp1d
+from scipy.misc import derivative
+from lib.load_rotate import *
+sys.path.append('../../python_proto')
+from ehr_sdmap_pb2 import *
+from map_data_pb2 import *
+from bokeh.models import TextInput
+import ipywidgets
+import itertools
+from bokeh.palettes import Category10
+
+def isINJupyter():
+    try:
+        __file__
+    except NameError:
+        return True
+    else:
+        return False
+def find(msg, t):
+  if msg['enable']  == True:
+    t_list = msg['timestamp']
+    ind = binary_search(t_list, t)
+    if(ind == -1):
+      return None
+    else:
+      return msg['data'][ind]
+  else:
+    return None
+def findbyseq(msg, t):
+  try:
+    if msg['enable']  == True:
+      t_list = msg['seq']
+      ind = binary_search(t_list, t)
+      if(ind == -1):
+        return None
+      else:
+        return msg['data'][ind]
+    else:
+      return None
+  except:
+    return None
+def binary_search(in_list, target):
+  low = 0
+  high = len(in_list) - 1
+  while low <= high:
+      mid = (low + high) // 2
+      if in_list[mid] == target:
+          return mid
+      elif in_list[mid] > target:
+          high = mid - 1
+      else:
+          low = mid + 1
+  return -1
+
+def find_nearest(msg, bag_time, find_json = False):
+  try:
+    if msg['enable']  == True:
+      msg_idx = 0
+      while msg['t'][msg_idx] <= bag_time and msg_idx < (len(msg['t'])-2):
+        msg_idx = msg_idx + 1
+      if find_json:
+        return msg['json'][msg_idx]
+      else:
+        return msg['data'][msg_idx]
+    else:
+      return None
+  except:
+    print("find nearest error!")
+    return None
+
+def load_car_params_patch(car_type = 'CHERY_E0X'):
+  if car_type == 'JAC_S811':
+    car_x = [3.187342, 3.424531, 3.593071,  3.593071,  3.424531,  3.187342,   2.177994,  1.916421,  1.96496, -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357, 1.96496, 1.916421, 2.177994]
+    car_y = [0.887956, 0.681712, 0.334651, -0.334651, -0.681712, -0.887956,  -0.887956, -1.06715, -0.887956, -0.887956, -0.706505, -0.334845,  0.334845,  0.706505,  0.887956, 0.887956, 1.06715, 0.887956]
+  elif car_type == 'CHERY_T26':
+    car_x = [3.518, 3.718, 3.718, 3.518, 2.092, 2.092, 1.906, 1.906, -0.885, -1.085, -1.085, -0.885, 1.906, 1.906, 2.092, 2.092]
+    car_y = [0.9595, 0.7595, -0.7595, -0.9595, -0.9595, -1.1095, -1.1095, -0.9595, -0.9595, -0.7595, 0.7595, 0.9595, 0.9595, 1.1095, 1.1095, 0.9595]
+  elif car_type == 'CHERY_E0X':
+    car_x = [3.825, 4.025, 4.025, 3.825, 2.399, 2.399, 2.213, 2.213, -0.725, -0.925, -0.925, -0.725, 2.213, 2.213, 2.399, 2.399]
+    car_y = [0.9875, 0.7875, -0.7875, -0.9875, -0.9875, -1.1145, -1.1145, -.9875, -.9875, -0.7875, 0.7875, 0.9875, 0.9875, 1.1145, 1.1145, 0.9875]
+  elif car_type == 'CHERY_M32T':
+    # read apa param
+    car_x = [3.03816, 3.42037, 3.70078,  3.70078,  3.42037,  3.03816,  2.12876,  2.01588,  1.91856,  1.97535, -0.31524, -0.76338, -0.99602, -0.99602, -0.76338, -0.31524, 1.97535, 1.91856, 2.01588, 2.12876]
+    car_y = [0.93191, 0.86195, 0.36204, -0.36204, -0.86195, -0.93191, -0.92354, -1.07305, -1.09833, -0.92583, -0.90815, -0.80937, -0.37859,  0.37859,  0.80937,  0.90815, 0.92583, 1.09833, 1.07305, 0.92354]
+    # 根据车辆参数修正坐标
+    car_x = [3.08738, 3.46959, 3.75000,  3.75000,  3.46959,  3.08738,  2.01876,  1.90588,  1.80856,  1.86535, -0.34922, -0.79736, -1.03000, -1.03000, -0.79736, -0.34922, 1.86535, 1.80856, 1.90588, 2.01876]
+    car_y = [0.94500, 0.87503, 0.37512, -0.37512, -0.87503, -0.94500, -0.93662, -1.06905, -1.09433, -0.93891, -0.92123, -0.82245, -0.39167,  0.39167,  0.82245,  0.92123, 0.93891, 1.09433, 1.06905, 0.93662]
+  elif car_type == 'BESTUNE_E541':
+    car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030, -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217]
+    car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958, -0.958, -1.040, -1.040, -0.958, -0.958, -0.742, -0.361,  0.361,  0.742,  0.958,  0.958,  1.040,  1.040,  0.958]
+  return car_x, car_y
+
+def load_car_circle_coord():
+  # circle_x = [3.3, 3.3, 2.0, -0.6, -0.6, 2.0, 2.7, 1.8, 0.9, 0.0]
+  # circle_y = [-0.55, 0.55, 0.85, 0.55, -0.55, -0.85, 0.0, 0.0, 0.0, 0.0]
+  # circle_r = [0.35, 0.35, 0.25, 0.35, 0.35, 0.25, 0.95, 0.95, 0.95, 0.95]
+  # circle_x = [1.35, 3.2, 3.2, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
+  # circle_y = [0.0, -0.5, 0.5, 0.95, 0.5, -0.5, -0.95, 0.0, 0.0, 0.0, 0.0]
+  # circle_r = [2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95]
+
+  circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
+  circle_y = [0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0]
+  circle_r = [2.4, 0.35, 0.35, 0.18, 0.35, 0.35, 0.18, 0.95, 0.95, 0.95, 0.95]
+
+  return circle_x, circle_y, circle_r
+
+def load_steer_ratio(car_type = 'CHERY_E0X'):
+  steer_ratio = 13.0
+  if car_type == 'JAC_S811':
+    steer_ratio = 16.5
+  elif car_type == 'CHERY_T26':
+    steer_ratio = 15.3
+  elif car_type == 'CHERY_E0X':
+    steer_ratio = 13.0
+  elif car_type == 'CHERY_M32T':
+    steer_ratio = 15.88
+  elif car_type == "BESTUNE_E541":
+    steer_ratio = 16.2
+  return steer_ratio
+
+def load_wheel_base(car_type = 'CHERY_E0X'):
+  wheel_base = 3.0
+  if car_type == 'JAC_S811':
+    wheel_base = 2.7
+  elif car_type == 'CHERY_T26':
+    wheel_base = 2.796
+  elif car_type == 'CHERY_E0X':
+    wheel_base = 3.0
+  elif car_type == 'CHERY_M32T':
+    wheel_base = 2.8
+  elif car_type == "BESTUNE_E541":
+    wheel_base = 2.8835
+  return wheel_base
+
+def load_car_uss_patch():
+  apa_x = [3.187342, 3.424531, 3.593071,  3.593071,  3.424531,  3.187342, -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357]
+  apa_y = [0.887956, 0.681712, 0.334651, -0.334651, -0.681712, -0.887956, -0.887956, -0.706505, -0.334845,  0.334845,  0.706505,  0.887956]
+  return apa_x, apa_y
+
+def load_uss_angle_patch():
+   uss_angle = [170, 130, 92, 88, 50, 8, 352, 298, 275, 264, 242, 187]
+   return uss_angle
+
+def one_echo_text_local(old_x, old_y, radian, distance):
+    new_x = old_x + distance * math.cos(radian)
+    new_y = old_y + distance * math.sin(radian)
+    return new_x, new_y
+
+def ehr_load_center_lane_lines(lanes, x, y, yaw, Max_line_size, g_is_display_enu = False):
+  ehr_line_info_list = []
+  for i in range(Max_line_size):
+    ehr_lane_info = {'ehr_line_x_vec':[], 'ehr_line_y_vec':[],'ehr_relative_id':[], 'ehr_type':[]}
+    if i < len(lanes):
+      lane = lanes[i]
+      line_x = []
+      line_y = []
+      cur_line_first_point = lane.points_on_central_line[0]
+      cur_line_last_point = lane.points_on_central_line[-1]
+      first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
+      #   continue
+      for point in lane.points_on_central_line:
+        if g_is_display_enu:
+          ehr_x, ehr_y = point.x, point.y
+        else:
+          ehr_x, ehr_y = global2local(point.x, point.y, x, y, yaw)
+        # print("x:",ehr_x)
+        # print("y:",ehr_y)
+        line_x.append(ehr_x)
+        line_y.append(ehr_y)
+      ehr_lane_info['ehr_line_x_vec'] = line_x
+      ehr_lane_info['ehr_line_y_vec'] = line_y
+      ehr_lane_info['ehr_relative_id'] = lane.lane_id
+      ehr_lane_info['ehr_type'] = 0
+      ehr_line_info_list.append(ehr_lane_info)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_lane_info['ehr_line_x_vec'] = line_x
+      ehr_lane_info['ehr_line_y_vec'] = line_y
+      ehr_lane_info['ehr_relative_id'] = 1000
+      ehr_lane_info['ehr_type'] = 0
+      ehr_line_info_list.append(ehr_lane_info)
+  return ehr_line_info_list
+
+# def load_sd_map_segments(segments,x,y,yaw,Max_sdmap_segment_size):
+#   sdmap_road_line_info = {'sdmap_road_line_x_vec':[], 'sdmap_road_line_y_vec':[],
+#                           'sdmap_ramp_line_x_vec':[], 'sdmap_ramp_line_y_vec':[],
+#                           'sdmap_expressway_line_x_vec':[], 'sdmap_expressway_line_y_vec':[],
+#                           'inlinek_x_vec':[], 'inlinek_y_vec':[],
+#                           'outlinek_x_vec':[], 'outlinek_y_vec':[],}
+#   line_x = []
+#   line_y = []
+#   ramp_line_x = []
+#   ramp_line_y = []
+#   expressway_line_x = []
+#   expressway_line_y = []
+#   inlink_x = []
+#   inlink_y = []
+#   outlink_x = []
+#   outlink_y = []
+#   route_ids = set([seg.id for seg in segments])
+#   for segment in segments:
+#     for point in segment.enu_points:
+#       ehr_x = point.x
+#       ehr_y = point.y
+#       car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#       line_x.append(car_x)
+#       line_y.append(car_y)
+#     if (segment.usage != RoadUsage.RAMP and segment.usage != RoadUsage.ENTRANCE_EXIT):
+#       for point in segment.enu_points:
+#         ehr_x = point.x
+#         ehr_y = point.y
+#         car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#         expressway_line_x.append(car_x)
+#         expressway_line_y.append(car_y)
+#     if (segment.usage == RoadUsage.RAMP or segment.usage == RoadUsage.ENTRANCE_EXIT):
+#       for point in segment.enu_points:
+#         ehr_x = point.x
+#         ehr_y = point.y
+#         car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#         ramp_line_x.append(car_x)
+#         ramp_line_y.append(car_y)
+#     for inlink in segment.in_link:
+#       if inlink.id in route_ids:
+#         continue
+#       for point in inlink.enu_points:
+#         ehr_x = point.x
+#         ehr_y = point.y
+#         car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#         inlink_x.append(car_x)
+#         inlink_y.append(car_y)
+#     for outlink in segment.out_link:
+#       if outlink.id in route_ids:
+#         continue
+#       for point in outlink.enu_points:
+#         ehr_x = point.x
+#         ehr_y = point.y
+#         car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#         outlink_x.append(car_x)
+#         outlink_y.append(car_y)
+
+#   sdmap_road_line_info['sdmap_road_line_x_vec'] = line_x
+#   sdmap_road_line_info['sdmap_road_line_y_vec'] = line_y
+#   sdmap_road_line_info['sdmap_ramp_line_x_vec'] = ramp_line_x
+#   sdmap_road_line_info['sdmap_ramp_line_y_vec'] = ramp_line_y
+#   sdmap_road_line_info['sdmap_expressway_line_x_vec'] = expressway_line_x
+#   sdmap_road_line_info['sdmap_expressway_line_y_vec'] = expressway_line_y
+#   sdmap_road_line_info['inlinek_x_vec'] = inlink_x
+#   sdmap_road_line_info['inlinek_y_vec'] = inlink_y
+#   sdmap_road_line_info['outlinek_x_vec'] = outlink_x
+#   sdmap_road_line_info['outlinek_y_vec'] = outlink_y
+#   return sdmap_road_line_info
+
+# def load_sdpro_map_segments(links,route_links,x,y,yaw,Max_sdmap_segment_size):
+#   sdpromap_road_line_info = {'sdpromap_road_line_x_vec':[], 'sdpromap_road_line_y_vec':[],
+#                           'sdpromap_ramp_line_x_vec':[], 'sdpromap_ramp_line_y_vec':[],
+#                           'sdpromap_expressway_line_x_vec':[], 'sdpromap_expressway_line_y_vec':[],
+#                           'inlinek_x_vec':[], 'inlinek_y_vec':[],
+#                           'outlinek_x_vec':[], 'outlinek_y_vec':[],
+#                           'sdpromap_road_info':[],
+#                           'data_sdpromap_FP_info':[],'data_sdpromap_FP_x_vec':[], 'data_sdpromap_FP_y_vec':[],
+#                           'load_inlink_info':[], 'load_outlink_info':[]}
+#   line_x = []
+#   line_y = []
+#   ramp_line_x = []
+#   ramp_line_y = []
+#   expressway_line_x = []
+#   expressway_line_y = []
+#   inlink_x = []
+#   inlink_y = []
+#   outlink_x = []
+#   outlink_y = []
+
+#   fp_type_map = {
+#     0: "无",
+#     1: "车道类型变化",
+#     2: "车道数变化",
+#     3: "数据边界开始",
+#     4: "数据边界结束",
+#     5: "车道连续点",
+#     6: "交换区起点",
+#     7: "交换区终点",
+#     8: "普通路口进入点",
+#     9: "普通路口退出点",
+#     10: "掉头路口进入点",
+#     11: "掉头路口退出点",
+#     12: "宽车道进入点",
+#     13: "宽车道退出点",
+#     14: "收费站进入点",
+#     15: "收费站退出点",
+#     16: "交换区内点",
+#     17: "宽车道内点",
+#     18: "收费站内点",
+#     19: "标线变化点",
+#     20: "T型路口进入点"
+#   }
+#   link_class_map = {
+#     0: "无",
+#     1: "高速公路",
+#     2: "城市快速路",
+#     3: "国道",
+#     4: "省道",
+#     5: "县道",
+#     6: "乡道",
+#     7: "特服道路",
+#     8: "步行道路",
+#     9: "人渡",
+#     10: "轮渡",
+#     11: "其他道路"
+#   }
+#   link_type_map = {
+#       0x00000000: "普通",
+#       0x00000001: "隧道",
+#       0x00000002: "桥",
+#       0x00000004: "收费站道路",
+#       0x00000008: "断头路",
+#       0x00000010: "IC(高速连接普通路的道路)",
+#       0x00000020: "JCT(高速连接高速的道路)",
+#       0x00000040: "SAPA(服务器、停车区道路)",
+#       0x00000080: "路口内道路",
+#       0x00000100: "授权道路",
+#       0x00000200: "收费岛道路",
+#       0x00000400: "废弃收费岛道路",
+#       0x00000800: "检查站道路",
+#       0x00001000: "环岛内道路",
+#       0x00002000: "锯齿道路",
+#       0x00004000: "主路(main road)",
+#       0x00008000: "辅路(side road)",
+#       0x00010000: "主辅路连接路(mainside connection)",
+#       0x00020000: "无小路口",
+#       0x00040000: "小路口左侧道路",
+#       0x00080000: "小路口右侧道路",
+#       0x00100000: "小路口两侧道路",
+#       0x00200000: "路口内道路（编译计算）",
+#       0x00400000: "出口收费站",
+#       0x00800000: "入口收费站",
+#       0x01000000: "出入口收费站"
+#   }
+
+#   route_link_ids = set([route_link.link_id for route_link in route_links])
+
+#   # 构建一个将 link_id 映射到 link 对象的字典，以此加快查找速度
+#   link_dict = {link.id: link for link in links}
+#   route_link_dict = {link.link_id: link for link in route_links}
+
+#   # 按照 route_links 的顺序筛选并生成 filtered_links
+#   filtered_links = []
+#   for route_link in route_links:
+#       link_id = route_link.link_id
+#       if link_id in link_dict:
+#           filtered_links.append(link_dict[link_id])
+
+#   # 用于记录每个坐标点对应的info_str索引
+#   point_to_info_idx = {}
+#   for link in filtered_links:
+#     #1、存放link上feature point的相关信息
+#     for fp_info in link.feature_points:
+#       fp = fp_info.location_info.boot
+#       ehr_x = fp.x
+#       ehr_y = fp.y
+#       car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#       sdpromap_road_line_info['data_sdpromap_FP_x_vec'].append(car_x)
+#       sdpromap_road_line_info['data_sdpromap_FP_y_vec'].append(car_y)
+
+#       # 通过映射字典获取中文类型名称
+#       # type_name = fp_type_map.get(fp_info.type, f"未知类型({fp_info.type})")
+#       type_values = fp_info.type
+#       type_names = [fp_type_map.get(t, f"未知类型({t})") for t in type_values]
+#       type_name = ", ".join(type_names)
+#       info_str = (
+#           f"fp_id: {fp_info.id}, "
+#           f"fp_type: {type_name}, "
+#           f"fp_projection_percent: {fp_info.projection_percent}, "
+#           f"fp_lane_ids: {fp_info.lane_ids}, "
+#       )
+#       sdpromap_road_line_info['data_sdpromap_FP_info'].append(info_str)
+
+#     #2、存放link的相关信息
+#     # 构建当前link的信息
+#     link_class_name = link_class_map.get(link.link_class, f"未知类型({link.link_class})")
+#     link_type_name = link_type_map.get(link.link_type, f"未知类型({link.link_type})")
+#     info_str = (
+#         f"link_id: {link.id}, "
+#         f"link_type: {link_type_name}, "
+#         f"link_class: {link_class_name}, "
+#         f"lane_num: {link.lane_num}, "
+#         # f"main_action: {route_link_dict[link.id].main_action}, "
+#         # f"assi_action: {route_link_dict[link.id].assi_action}, "
+#     )
+#     for point in link.points.boot.points:
+#         ehr_x, ehr_y = point.x, point.y
+#         car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+#         line_x.append(car_x)
+#         line_y.append(car_y)
+
+#         # 生成点的唯一键（坐标字符串）
+#         point_key = f"{car_x}_{car_y}"
+
+#         # 检查该点是否已存在于字典中
+#         if point_key in point_to_info_idx:
+#             # 重叠点：追加信息到已存在的info_str
+#             existing_idx = point_to_info_idx[point_key]
+#             sdpromap_road_line_info['sdpromap_road_info'][existing_idx] += f" | {info_str}"
+#             # 为当前点添加相同的info_str（保持长度一致）
+#             sdpromap_road_line_info['sdpromap_road_info'].append(
+#                 sdpromap_road_line_info['sdpromap_road_info'][existing_idx]
+#             )
+#         else:
+#             # 新点：添加新的info_str并记录其索引
+#             sdpromap_road_line_info['sdpromap_road_info'].append(info_str)
+#             point_to_info_idx[point_key] = len(sdpromap_road_line_info['sdpromap_road_info']) - 1
+
+#     # 跳过非高速公路
+#     if link.link_class not in (LinkClass.LC_EXPRESSWAY, LinkClass.LC_CITY_EXPRESSWAY):
+#       continue
+
+#     # 判断是否为主路
+
+#     # 按位或运算构造掩码（与C++的LT_IC | LT_JCT等价）
+#     ramp_mask = LinkType.LT_IC | LinkType.LT_JCT
+#     # 按位与运算检查是否包含任一标志（与C++的link_type & (LT_IC | LT_JCT)等价）
+#     is_ramp = (link.link_type & ramp_mask) != 0
+#     is_main_road = not is_ramp
+#     # is_main_road = link.link_type not in (LinkType.LT_IC, LinkType.LT_JCT, LinkType.LT_MAINROAD_CONNECTION)
+
+#     if is_main_road:
+#       for point in link.points.boot.points:
+#           ehr_x, ehr_y = point.x, point.y
+#           car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+#           expressway_line_x.append(car_x)
+#           expressway_line_y.append(car_y)
+
+#     if not is_main_road:
+#       for point in link.points.boot.points:
+#         ehr_x = point.x
+#         ehr_y = point.y
+#         car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#         ramp_line_x.append(car_x)
+#         ramp_line_y.append(car_y)
+
+#     for inlink_id in link.predecessor_link_ids:
+#       if inlink_id in route_link_ids:
+#         continue
+#       if inlink_id not in link_dict:
+#         continue
+#       in_link = link_dict[inlink_id]
+#       # 构建inlink的信息
+#       link_class_name = link_class_map.get(in_link.link_class, f"未知类型({in_link.link_class})")
+#       link_type_name = link_type_map.get(in_link.link_type, f"未知类型({in_link.link_type})")
+#       info_str = (
+#           f"link_id: {in_link.id}, "
+#           f"link_type: {link_type_name}, "
+#           f"link_class: {link_class_name}, "
+#           f"lane_num: {in_link.lane_num}, "
+#       )
+#       for point in in_link.points.boot.points:
+#         ehr_x = point.x
+#         ehr_y = point.y
+#         car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#         inlink_x.append(car_x)
+#         inlink_y.append(car_y)
+#         sdpromap_road_line_info['load_inlink_info'].append(info_str)
+
+#     for outlink_id in link.successor_link_ids:
+#       if outlink_id in route_link_ids:
+#         continue
+#       if outlink_id not in link_dict:
+#         continue
+#       out_link = link_dict[outlink_id]
+#       # 构建当前link的信息
+#       link_class_name = link_class_map.get(out_link.link_class, f"未知类型({out_link.link_class})")
+#       link_type_name = link_type_map.get(out_link.link_type, f"未知类型({out_link.link_type})")
+#       info_str = (
+#           f"link_id: {out_link.id}, "
+#           f"link_type: {link_type_name}, "
+#           f"link_class: {link_class_name}, "
+#           f"lane_num: {out_link.lane_num}, "
+#       )
+#       for point in out_link.points.boot.points:
+#         ehr_x = point.x
+#         ehr_y = point.y
+#         car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+#         outlink_x.append(car_x)
+#         outlink_y.append(car_y)
+#         sdpromap_road_line_info['load_outlink_info'].append(info_str)
+def parse_link_type(link_type_value, type_map):
+    """
+    解析link_type位掩码，返回所有匹配的类型名称拼接字符串
+    :param link_type_value: 整数型的link_type值（如0x00000003）
+    :param type_map: 类型映射字典（link_type_map）
+    :return: 拼接后的类型名称字符串，如"隧道; 桥"
+    """
+    # 特殊处理：0值对应"普通"（若0是默认类型）
+    if link_type_value == 0:
+        return type_map.get(0, "普通")
+
+    # 遍历所有类型键，检查位是否匹配
+    matched_types = []
+    for mask, name in type_map.items():
+        # 跳过0值（已单独处理），避免重复匹配
+        if mask == 0:
+            continue
+        # 按位与判断是否包含该类型
+        if (link_type_value & mask) == mask:
+            matched_types.append(name)
+
+    # 无匹配项则返回"未知类型"，否则拼接所有类型
+    if not matched_types:
+        return f"未知类型({hex(link_type_value)})"
+    return "; ".join(matched_types)
+
+def load_sdpro_map_segments(links, route_links, lanes, x, y, yaw, Max_sdmap_segment_size):
+    sdpromap_road_line_info = {
+        'sdpromap_road_line_x_vec': [], 'sdpromap_road_line_y_vec': [],
+        'sdpromap_ramp_line_x_vec': [], 'sdpromap_ramp_line_y_vec': [],
+        'sdpromap_expressway_line_x_vec': [], 'sdpromap_expressway_line_y_vec': [],
+        'inlinek_x_vec': [], 'inlinek_y_vec': [],
+        'outlinek_x_vec': [], 'outlinek_y_vec': [],
+        'sdpromap_road_info': [],  # 原有：存储link+车道信息
+        'sdpromap_lane_info': [],  # 新增：单独存储每条车道的详细信息（便于按车道查询）
+        'data_sdpromap_FP_info': [], 'data_sdpromap_FP_x_vec': [], 'data_sdpromap_FP_y_vec': [],
+        'load_inlink_info': [], 'load_outlink_info': [],
+        'load_inlink_lane_info': [],  # 新增：inlink的车道信息
+        'load_outlink_lane_info': []   # 新增：outlink的车道信息
+    }
+    line_x = []
+    line_y = []
+    ramp_line_x = []
+    ramp_line_y = []
+    expressway_line_x = []
+    expressway_line_y = []
+    inlink_x = []
+    inlink_y = []
+    outlink_x = []
+    outlink_y = []
+
+    # ---------------------- 新增：车道类型映射（根据实际业务补充）----------------------
+    lane_type_map = {
+        0: "普通",                      # LAT_NORMAL
+        1: "入口",                      # LAT_ENTRY
+        2: "出口",                      # LAT_EXIT
+        3: "应急车道",                  # LAT_EMERGENCY
+        4: "进入匝道",                  # LAT_ON_RAMP
+        5: "退出匝道",                  # LAT_OFF_RAMP
+        6: "连接匝道",                  # LAT_CONNECT_RAMP
+        7: "加速车道",                  # LAT_ACCELERATE
+        8: "减速车道",                  # LAT_DECELERATE
+        9: "紧急停车带",                # LAT_EMERGENCY_PARKING_STRIP
+        10: "爬坡车道",                 # LAT_CLIMBING
+        11: "避险车道",                 # LAT_ESCAPE
+        12: "海关专用车道",             # LAT_DEDICATED_CUSTOMS
+        13: "观景台车道",               # LAT_VIEWING_PLATFROM
+        14: "平行车道",                 # LAT_PARALLEL_LANE
+        17: "导流区车道",               # LAT_DIVERSION（注意：编码15、16跳过，按原定义保留）
+        19: "停车车道",                 # LAT_PARKING（编码18跳过）
+        20: "左转等待车道",             # LAT_LEFT_TURN_AREA
+        21: "可变车道",                 # LAT_VARIABLE_LANE
+        22: "非机动车道",               # LAT_NON_MOTOR_LANE
+        23: "公交停靠站",               # LAT_BUS_STOP
+        24: "不可行驶车道",             # LAT_NO_ENTRY_LANE
+        25: "掉头车道",                 # LAT_U_TURN_LANE
+        26: "右转专用车道",             # LAT_RIGHT_TURN_LANE
+        28: "ETC车道",                  # LAT_ETC_LANE（编码27跳过）
+        29: "人工收费车道",             # LAT_MANUAL_TOLL_LANE
+        30: "收费站外广场车道",         # LAT_PLAZA_LANE
+        31: "港湾停靠站",               # LAT_HARBOR_STOP
+        32: "右转等待车道",             # LAT_RIGHT_TURN_AREA
+        33: "掉头等待车道",             # LAT_U_TURN_AREA
+        34: "直行等待车道",             # LAT_NO_TURN_AREA
+        35: "虚拟连接车道"              # LAT_VIRTUAL_CONNECTED_LANE
+    }
+
+    # ---------------------- 原有映射字典保持不变 ----------------------
+    fp_type_map = {
+        0: "无", 1: "车道类型变化", 2: "车道数变化", 3: "数据边界开始", 4: "数据边界结束",
+        5: "车道连续点", 6: "交换区起点", 7: "交换区终点", 8: "普通路口进入点", 9: "普通路口退出点",
+        10: "掉头路口进入点", 11: "掉头路口退出点", 12: "宽车道进入点", 13: "宽车道退出点",
+        14: "收费站进入点", 15: "收费站退出点", 16: "交换区内点", 17: "宽车道内点",
+        18: "收费站内点", 19: "标线变化点", 20: "T型路口进入点"
+    }
+    link_class_map = {
+        0: "无", 1: "高速公路", 2: "城市快速路", 3: "国道", 4: "省道", 5: "县道",
+        6: "乡道", 7: "特服道路", 8: "步行道路", 9: "人渡", 10: "轮渡", 11: "其他道路"
+    }
+    link_type_map = {
+        0x00000000: "普通", 0x00000001: "隧道", 0x00000002: "桥", 0x00000004: "收费站道路",
+        0x00000008: "断头路", 0x00000010: "IC(高速连接普通路的道路)", 0x00000020: "JCT(高速连接高速的道路)",
+        0x00000040: "SAPA(服务器、停车区道路)", 0x00000080: "路口内道路", 0x00000100: "授权道路",
+        0x00000200: "收费岛道路", 0x00000400: "废弃收费岛道路", 0x00000800: "检查站道路",
+        0x00001000: "环岛内道路", 0x00002000: "锯齿道路", 0x00004000: "主路(main road)",
+        0x00008000: "辅路(side road)", 0x00010000: "主辅路连接路(mainside connection)",
+        0x00020000: "无小路口", 0x00040000: "小路口左侧道路", 0x00080000: "小路口右侧道路",
+        0x00100000: "小路口两侧道路", 0x00200000: "路口内道路（编译计算）", 0x00400000: "出口收费站",
+        0x00800000: "入口收费站", 0x01000000: "出入口收费站"
+    }
+
+    # ---------------------- 原有初始化逻辑保持不变 ----------------------
+    route_link_ids = set([route_link.link_id for route_link in route_links])
+    link_dict = {link.id: link for link in links}
+    route_link_dict = {link.link_id: link for link in route_links}
+    filtered_links = []
+    for route_link in route_links:
+        link_id = route_link.link_id
+        if link_id in link_dict:
+            filtered_links.append(link_dict[link_id])
+
+    # 关键新增：从filtered_links中提取车道信息，构建临时lane_dict
+    temp_lane_dict = {lane.id: lane for lane in lanes}  # 临时车道字典：key=lane_id，value=车道对象
+    # for link in filtered_links:
+    #     # 从当前link中获取车道列表（需根据实际link结构调整！假设link有"lanes"属性）
+    #     link_lanes = getattr(link, "lane_ids", [])  # 若link无lanes，取空列表
+    #     for lane in link_lanes:
+    #         # 获取车道ID（需根据实际车道对象结构调整！假设车道对象有"id"属性）
+    #         lane_id = getattr(lane, "id", None)
+    #         if lane_id is None or lane_id in temp_lane_dict:
+    #             continue  # 跳过无ID的车道，或已存在的车道（避免重复）
+    #         # 将车道对象存入临时字典
+    #         temp_lane_dict[lane_id] = lane
+
+    point_to_info_idx = {}
+
+    # ---------------------- 核心修改：遍历link时添加车道信息 ----------------------
+    for link in filtered_links:
+        # ---------------------- 1. 原有：处理feature point信息（保持不变） ----------------------
+        for fp_info in link.feature_points:
+            fp = fp_info.location_info.boot
+            ehr_x = fp.x
+            ehr_y = fp.y
+            car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+            sdpromap_road_line_info['data_sdpromap_FP_x_vec'].append(car_x)
+            sdpromap_road_line_info['data_sdpromap_FP_y_vec'].append(car_y)
+            type_values = fp_info.type
+            type_names = [fp_type_map.get(t, f"未知类型({t})") for t in type_values]
+            type_name = ", ".join(type_names)
+            info_str = (
+                f"fp_id: {fp_info.id}, "
+                f"fp_type: {type_name}, "
+                f"fp_projection_percent: {fp_info.projection_percent}, "
+                f"fp_lane_ids: {fp_info.lane_ids}, "
+            )
+            sdpromap_road_line_info['data_sdpromap_FP_info'].append(info_str)
+
+        # ---------------------- 2. 新增：处理当前link的车道信息 ----------------------
+        # 2.1 获取当前link的所有车道ID（假设link有lane_ids属性，若无则需调整为实际字段）
+        current_link_lane_ids = getattr(link, "lane_ids", [])  # 兼容无lane_ids的情况
+        lane_info_list = []  # 存储当前link下所有车道的详细信息
+
+        for lane_id in current_link_lane_ids:
+            # 2.2 从lane_dict中获取车道详情（若车道不存在，跳过或标记为未知）
+            if lane_id not in temp_lane_dict:
+                lane_info_str = f"lane_id: {lane_id}（未知车道，无数据）"
+                lane_info_list.append(lane_info_str)
+                continue
+
+            lane = temp_lane_dict[lane_id]
+            # 2.3 解析车道的type、predecessor、successor（根据实际字段调整）
+            # lane_type = lane_type_map.get(getattr(lane, "lane_type", 0), f"未知类型({getattr(lane, 'lane_type', '无')})")
+            # 获取 lane.lane_type 的值（假设是可迭代对象，如 RepeatedScalarContainer）
+            lane_type_values = getattr(lane, "lane_type", [])
+            # 遍历每个类型编码，映射为中文名称
+            lane_type_names = [lane_type_map.get(t, f"未知类型({t})") for t in lane_type_values]
+            # 用逗号拼接多个类型名称（若需单个字符串）
+            lane_type = ", ".join(lane_type_names) if lane_type_names else "无"
+            # 处理前驱车道（列表→格式化字符串）
+            pred_lane_ids = getattr(lane, "predecessor_lane_ids", [])
+            pred_lane_str = ", ".join([str(p) for p in pred_lane_ids]) if pred_lane_ids else "无"
+            # 处理后继车道（列表→格式化字符串）
+            succ_lane_ids = getattr(lane, "successor_lane_ids", [])
+            succ_lane_str = ", ".join([str(s) for s in succ_lane_ids]) if succ_lane_ids else "无"
+            # （可选）添加其他车道属性（如宽度、限速）
+            # lane_width = getattr(lane, "lane_width", "未知")
+            # speed_limit = getattr(lane, "speed_limit", "未知")
+            lane_sequence = getattr(lane, "sequence", "未知")
+
+            # 2.4 构建单条车道的信息字符串
+            lane_info_str = (
+                f"id: {lane_id}, "
+                f"type: {lane_type}, "
+                f"pre_ids: [{pred_lane_str}], "
+                f"suc_ids: [{succ_lane_str}], "
+                # f"lane_width: {lane_width}m, "
+                # f"speed_limit: {speed_limit}km/h"
+                f"seq: [{lane_sequence}], "
+            )
+            lane_info_list.append(lane_info_str)
+            # 2.5 将单条车道信息存入结果字典（单独存储，便于后续按车道查询）
+            sdpromap_road_line_info['sdpromap_lane_info'].append(lane_info_str)
+
+        # ---------------------- 3. 原有：处理link基础信息（新增车道信息嵌入） ----------------------
+        link_class_name = link_class_map.get(link.link_class, f"未知类型({link.link_class})")
+        link_type_name = parse_link_type(link.link_type, link_type_map)
+        # link_type_name = link_type_map.get(link.link_type, f"未知类型({link.link_type})")
+        # 3.1 在原有link信息中添加「车道数量」和「车道列表」
+        lane_count = len(current_link_lane_ids)
+        lane_summary = f"车道总数: {lane_count}，车道详情: [{'; '.join(lane_info_list)}]" if lane_info_list else "无车道数据"
+
+        info_str = (
+            f"link_id: {link.id}, "
+            f"link_type: {link_type_name}, "
+            f"link_class: {link_class_name}, "
+            f"lane_num: {link.lane_num}, "
+            f"{lane_summary}"  # 嵌入车道汇总信息
+            # f"main_action: {route_link_dict[link.id].main_action}, "  # 原有注释代码，按需启用
+            # f"assi_action: {route_link_dict[link.id].assi_action}, "
+        )
+
+        # 3.2 原有：处理link的坐标点与信息关联（保持不变，信息字符串已包含车道）
+        for point in link.points.boot.points:
+            ehr_x, ehr_y = point.x, point.y
+            car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+            line_x.append(car_x)
+            line_y.append(car_y)
+            point_key = f"{car_x}_{car_y}"
+
+            if point_key in point_to_info_idx:
+                existing_idx = point_to_info_idx[point_key]
+                sdpromap_road_line_info['sdpromap_road_info'][existing_idx] += f" | {info_str}"
+                sdpromap_road_line_info['sdpromap_road_info'].append(
+                    sdpromap_road_line_info['sdpromap_road_info'][existing_idx]
+                )
+            else:
+                sdpromap_road_line_info['sdpromap_road_info'].append(info_str)
+                point_to_info_idx[point_key] = len(sdpromap_road_line_info['sdpromap_road_info']) - 1
+
+        # ---------------------- 4. 原有：处理高速公路/主路/匝道分类（保持不变） ----------------------
+        if link.link_class not in (LinkClass.LC_EXPRESSWAY, LinkClass.LC_CITY_EXPRESSWAY):
+            continue
+
+        ramp_mask = LinkType.LT_IC | LinkType.LT_JCT
+        is_ramp = (link.link_type & ramp_mask) != 0
+        is_main_road = not is_ramp
+
+        if is_main_road:
+            for point in link.points.boot.points:
+                ehr_x, ehr_y = point.x, point.y
+                car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+                expressway_line_x.append(car_x)
+                expressway_line_y.append(car_y)
+
+        if not is_main_road:
+            for point in link.points.boot.points:
+                ehr_x = point.x
+                ehr_y = point.y
+                car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+                ramp_line_x.append(car_x)
+                ramp_line_y.append(car_y)
+
+        # # ---------------------- 5. 新增：处理inlink的车道信息 ----------------------
+        # for inlink_id in link.predecessor_link_ids:
+        #     if inlink_id in route_link_ids or inlink_id not in link_dict:
+        #         continue
+        #     in_link = link_dict[inlink_id]
+        #     # 5.1 获取inlink的车道ID并构建车道信息
+        #     inlink_lane_ids = getattr(in_link, "lane_ids", [])
+        #     inlink_lane_info_list = []
+        #     for lane_id in inlink_lane_ids:
+        #         if lane_id not in temp_lane_dict:
+        #             inlink_lane_info_list.append(f"lane_id: {lane_id}（未知车道）")
+        #             continue
+        #         lane = temp_lane_dict[lane_id]
+        #         # lane_type = lane_type_map.get(getattr(lane, "lane_type", 0), f"未知类型({getattr(lane, 'lane_type', '无')})")
+        #         # 获取 lane.lane_type 的值（假设是可迭代对象，如 RepeatedScalarContainer）
+        #         lane_type_values = getattr(lane, "lane_type", [])
+        #         # 遍历每个类型编码，映射为中文名称
+        #         lane_type_names = [lane_type_map.get(t, f"未知类型({t})") for t in lane_type_values]
+        #         # 用逗号拼接多个类型名称（若需单个字符串）
+        #         lane_type = ", ".join(lane_type_names) if lane_type_names else "无"
+        #         inlink_lane_info_list.append(f"lane_id: {lane_id}, lane_type: {lane_type}")
+        #     inlink_lane_summary = "; ".join(inlink_lane_info_list) if inlink_lane_info_list else "无车道数据"
+
+        #     # 5.2 构建inlink的信息（嵌入车道信息）
+        #     link_class_name = link_class_map.get(in_link.link_class, f"未知类型({in_link.link_class})")
+        #     link_type_name = link_type_map.get(in_link.link_type, f"未知类型({in_link.link_type})")
+        #     inlink_info_str = (
+        #         f"link_id: {in_link.id}, "
+        #         f"link_type: {link_type_name}, "
+        #         f"link_class: {link_class_name}, "
+        #         f"lane_num: {in_link.lane_num}, "
+        #         f"车道详情: [{inlink_lane_summary}]"
+        #     )
+
+        #     # 5.3 原有：处理inlink坐标与信息存储（新增车道信息列表）
+        #     for point in in_link.points.boot.points:
+        #         ehr_x = point.x
+        #         ehr_y = point.y
+        #         car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+        #         inlink_x.append(car_x)
+        #         inlink_y
+
+        for inlink_id in link.predecessor_link_ids:
+          if inlink_id in route_link_ids:
+            continue
+          if inlink_id not in link_dict:
+            continue
+          in_link = link_dict[inlink_id]
+          # 构建inlink的信息
+          link_class_name = link_class_map.get(in_link.link_class, f"未知类型({in_link.link_class})")
+          link_type_name = parse_link_type(in_link.link_type, link_type_map)
+          # link_type_name = link_type_map.get(in_link.link_type, f"未知类型({in_link.link_type})")
+          info_str = (
+              f"link_id: {in_link.id}, "
+              f"link_type: {link_type_name}, "
+              f"link_class: {link_class_name}, "
+              f"lane_num: {in_link.lane_num}, "
+          )
+          for point in in_link.points.boot.points:
+            ehr_x = point.x
+            ehr_y = point.y
+            car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+            inlink_x.append(car_x)
+            inlink_y.append(car_y)
+            sdpromap_road_line_info['load_inlink_info'].append(info_str)
+
+        for outlink_id in link.successor_link_ids:
+          if outlink_id in route_link_ids:
+            continue
+          if outlink_id not in link_dict:
+            continue
+          out_link = link_dict[outlink_id]
+          # 构建当前link的信息
+          link_class_name = link_class_map.get(out_link.link_class, f"未知类型({out_link.link_class})")
+          link_type_name = parse_link_type(out_link.link_type, link_type_map)
+          # link_type_name = link_type_map.get(out_link.link_type, f"未知类型({out_link.link_type})")
+          info_str = (
+              f"link_id: {out_link.id}, "
+              f"link_type: {link_type_name}, "
+              f"link_class: {link_class_name}, "
+              f"lane_num: {out_link.lane_num}, "
+          )
+          for point in out_link.points.boot.points:
+            ehr_x = point.x
+            ehr_y = point.y
+            car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+            outlink_x.append(car_x)
+            outlink_y.append(car_y)
+            sdpromap_road_line_info['load_outlink_info'].append(info_str)
+
+    sdpromap_road_line_info['sdpromap_road_line_x_vec'] = line_x
+    sdpromap_road_line_info['sdpromap_road_line_y_vec'] = line_y
+    sdpromap_road_line_info['sdpromap_ramp_line_x_vec'] = ramp_line_x
+    sdpromap_road_line_info['sdpromap_ramp_line_y_vec'] = ramp_line_y
+    sdpromap_road_line_info['sdpromap_expressway_line_x_vec'] = expressway_line_x
+    sdpromap_road_line_info['sdpromap_expressway_line_y_vec'] = expressway_line_y
+    sdpromap_road_line_info['inlinek_x_vec'] = inlink_x
+    sdpromap_road_line_info['inlinek_y_vec'] = inlink_y
+    sdpromap_road_line_info['outlinek_x_vec'] = outlink_x
+    sdpromap_road_line_info['outlinek_y_vec'] = outlink_y
+    return sdpromap_road_line_info
+
+def ehr_load_road_boundary_lines(road_boundaries, x, y, yaw, Road_boundary_max_line_size, g_is_display_enu = False):
+  ehr_road_boundary_info_list = []
+  for i in range(Road_boundary_max_line_size):
+    ehr_road_boundary_info = {'ehr_road_boundary_x_vec':[], 'ehr_road_boundary_y_vec':[],'ehr_road_boundary_relative_id':[], 'ehr_type':[]}
+    if i < len(road_boundaries):
+      road_boundary = road_boundaries[i]
+      line_x = []
+      line_y = []
+      # cur_line_first_point = road_boundary.points_on_central_line[0]
+      # cur_line_last_point = road_boundary.points_on_central_line[-1]
+      # first_point_to_cur_dis = math.sqrt((cur_line_first_point.x - x)**2 + (cur_line_first_point.y - y)**2)
+      # last_point_to_cur_dis = math.sqrt((cur_line_last_point.x - x)**2 + (cur_line_last_point.y - y)**2)
+      # # if ((first_point_to_cur_dis > 1000) & (last_point_to_cur_dis>1000)):
+      # #   continue
+      for doundary_attribute in road_boundary.boundary_attributes:
+        for  point in doundary_attribute.points:
+          if g_is_display_enu:
+            ehr_x, ehr_y = point.x, point.y
+          else:
+            ehr_x, ehr_y= global2local(point.x, point.y, x, y, yaw)
+          # print("x:",ehr_x)
+          # print("y:",ehr_y)
+          line_x.append(ehr_x)
+          line_y.append(ehr_y)
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = road_boundary.boundary_id
+      ehr_road_boundary_info['ehr_type'] = 0
+      ehr_road_boundary_info_list.append(ehr_road_boundary_info)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_road_boundary_info['ehr_road_boundary_x_vec'] = line_x
+      ehr_road_boundary_info['ehr_road_boundary_y_vec'] = line_y
+      ehr_road_boundary_info['ehr_road_boundary_relative_id'] = 1000
+      ehr_road_boundary_info['ehr_type'] = 0
+      ehr_road_boundary_info_list.append(ehr_road_boundary_info)
+  return ehr_road_boundary_info_list
+
+def ehr_load_lane_boundary_lines(lane_boundaries, x, y, yaw, Lane_boundary_max_line_size, g_is_display_enu = False):
+  ehr_lane_boundary_info_list = []
+
+  for i in range(Lane_boundary_max_line_size):
+    ehr_lane_boundary_info = {'ehr_lane_boundary_x_vec':[], 'ehr_lane_boundary_y_vec':[],'ehr_lane_boundary_relative_id':[], 'ehr_type':[]}
+    if i < len(lane_boundaries):
+      lane_boundary = lane_boundaries[i]
+      line_x = []
+      line_y = []
+      for boundary_attribute in lane_boundary.boundary_attributes:
+        for  point in boundary_attribute.points:
+          if g_is_display_enu:
+            ehr_x, ehr_y = point.x, point.y
+          else:
+            ehr_x, ehr_y = global2local(point.x, point.y, x, y, yaw)
+          # print("x:",ehr_x)
+          # print("y:",ehr_y)
+          line_x.append(ehr_x)
+          line_y.append(ehr_y)
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = lane_boundary.boundary_id
+      ehr_lane_boundary_info['ehr_type'] = 0
+      ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
+    else:
+      line_x, line_y = gen_line(0,0,0,0,0,0)
+      ehr_lane_boundary_info['ehr_lane_boundary_x_vec'] = line_x
+      ehr_lane_boundary_info['ehr_lane_boundary_y_vec'] = line_y
+      ehr_lane_boundary_info['ehr_lane_boundary_relative_id'] = 1000
+      ehr_lane_boundary_info['ehr_type'] = 0
+      ehr_lane_boundary_info_list.append(ehr_lane_boundary_info)
+  return ehr_lane_boundary_info_list
+
+# 加载车道boundary
+def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  reference_line_msg = road_msg.reference_line_msg
+  reference_line_msg_size = road_msg.reference_line_msg_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  lane_line_info = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[], 'relative_id_vec':[]}
+  dash_line_x, dash_line_y, dash_line_id = [], [], []
+  solid_line_x, solid_line_y, solid_line_id = [], [], []
+  dot_line_x, dot_line_y, dot_line_id = [], [], []
+  for i in range(10):
+    if i < reference_line_msg_size:
+      lane = reference_line_msg[i]
+      relative_id = lane.relative_id
+      left_line = lane.left_lane_boundary
+      left_length = 0.0
+      try:
+        line_x, line_y = [], []
+        if g_is_display_enu:
+          local_points = left_line.enu_points
+          point_num = left_line.enu_points_size
+          type_num = left_line.type_segments_size
+          k = 0
+          for j in range(point_num):
+            line_x.append(local_points[j].x)
+            line_y.append(local_points[j].y)
+            if j < (point_num - 1):
+              left_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+            if left_length > left_line.type_segments[k].length or j == (point_num - 1):
+              left_length = 0
+              tp = left_line.type_segments[k].type
+              k += 1
+              k = max(min(k, type_num - 1), 0)
+              if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                dash_line_x.append(line_x)
+                dash_line_y.append(line_y)
+                dash_line_id.append(relative_id)
+              elif tp == 9:
+                dot_line_x.append(line_x)
+                dot_line_y.append(line_y)
+                dot_line_id.append(relative_id)
+              else:
+                solid_line_x.append(line_x)
+                solid_line_y.append(line_y)
+                solid_line_id.append(relative_id)
+              line_x, line_y = [], []
+              line_x.append(local_points[j].x)
+              line_y.append(local_points[j].y)
+        else :
+          if is_enu_to_car:
+            coord_tf = coord_transformer()
+            if loc_msg != None: # 长时轨迹
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              local_points = left_line.enu_points
+              point_num = left_line.enu_points_size
+              type_num = left_line.type_segments_size
+              k = 0
+              for j in range(point_num):
+                line_x.append(local_points[j].x)
+                line_y.append(local_points[j].y)
+                if j < (point_num - 1):
+                  left_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+                if left_length > left_line.type_segments[k].length or j == (point_num - 1):
+                  left_length = 0
+                  tp = left_line.type_segments[k].type
+                  k += 1
+                  k = max(min(k, type_num - 1), 0)
+                  line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    dash_line_x.append(line_x)
+                    dash_line_y.append(line_y)
+                    dash_line_id.append(relative_id)
+                  elif tp == 9:
+                    dot_line_x.append(line_x)
+                    dot_line_y.append(line_y)
+                    dot_line_id.append(relative_id)
+                  else:
+                    solid_line_x.append(line_x)
+                    solid_line_y.append(line_y)
+                    solid_line_id.append(relative_id)
+                  line_x, line_y = [], []
+                  line_x.append(local_points[j].x)
+                  line_y.append(local_points[j].y)
+            else:
+              dash_line_x.append(default_line_x)
+              dash_line_y.append(default_line_y)
+              dash_line_id.append(relative_id)
+          else:
+            car_points = left_line.car_points
+            point_num = left_line.car_points_size
+            type_num = left_line.type_segments_size
+            k = 0
+            for j in range(point_num):
+              line_x.append(car_points[j].x)
+              line_y.append(car_points[j].y)
+              if j < (point_num - 1):
+                left_length += math.sqrt((car_points[j + 1].x - car_points[j].x)**2 + (car_points[j + 1].y - car_points[j].y)**2)
+              if left_length > left_line.type_segments[k].length or j == (point_num - 1):
+                left_length = 0
+                tp = left_line.type_segments[k].type
+                k += 1
+                k = max(min(k, type_num - 1), 0)
+                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                  dash_line_x.append(line_x)
+                  dash_line_y.append(line_y)
+                  dash_line_id.append(relative_id)
+                elif tp == 9:
+                  dot_line_x.append(line_x)
+                  dot_line_y.append(line_y)
+                  dot_line_id.append(relative_id)
+                else:
+                  solid_line_x.append(line_x)
+                  solid_line_y.append(line_y)
+                  solid_line_id.append(relative_id)
+                line_x, line_y = [], []
+                line_x.append(car_points[j].x)
+                line_y.append(car_points[j].y)
+      except:
+        dash_line_x.append(default_line_x)
+        dash_line_y.append(default_line_y)
+        dash_line_id.append(relative_id)
+
+      right_line = lane.right_lane_boundary
+      right_length = 0.0
+      try:
+        line_x, line_y = [], []
+        if g_is_display_enu:
+          local_points = right_line.enu_points
+          point_num = right_line.enu_points_size
+          type_num = right_line.type_segments_size
+          k = 0
+          for j in range(point_num):
+            line_x.append(local_points[j].x)
+            line_y.append(local_points[j].y)
+            if j < (point_num - 1):
+              right_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+            if right_length > right_line.type_segments[k].length or j == (point_num - 1):
+              right_length = 0
+              tp = right_line.type_segments[k].type
+              k += 1
+              k = max(min(k, type_num - 1), 0)
+              if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                dash_line_x.append(line_x)
+                dash_line_y.append(line_y)
+                dash_line_id.append(relative_id)
+              elif tp == 9:
+                dot_line_x.append(line_x)
+                dot_line_y.append(line_y)
+                dot_line_id.append(relative_id)
+              else:
+                solid_line_x.append(line_x)
+                solid_line_y.append(line_y)
+                solid_line_id.append(relative_id)
+              line_x, line_y = [], []
+              line_x.append(local_points[j].x)
+              line_y.append(local_points[j].y)
+        else :
+          if is_enu_to_car:
+            coord_tf = coord_transformer()
+            if loc_msg != None: # 长时轨迹
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              local_points = right_line.enu_points
+              point_num = right_line.enu_points_size
+              type_num = right_line.type_segments_size
+              k = 0
+              for j in range(point_num):
+                line_x.append(local_points[j].x)
+                line_y.append(local_points[j].y)
+                if j < (point_num - 1):
+                  right_length += math.sqrt((local_points[j + 1].x - local_points[j].x)**2 + (local_points[j + 1].y - local_points[j].y)**2)
+                if right_length > right_line.type_segments[k].length or j == (point_num - 1):
+                  right_length = 0
+                  tp = right_line.type_segments[k].type
+                  k += 1
+                  k = max(min(k, type_num - 1), 0)
+                  line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+                  if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                    dash_line_x.append(line_x)
+                    dash_line_y.append(line_y)
+                    dash_line_id.append(relative_id)
+                  elif tp == 9:
+                    dot_line_x.append(line_x)
+                    dot_line_y.append(line_y)
+                    dot_line_id.append(relative_id)
+                  else:
+                    solid_line_x.append(line_x)
+                    solid_line_y.append(line_y)
+                    solid_line_id.append(relative_id)
+                  line_x, line_y = [], []
+                  line_x.append(local_points[j].x)
+                  line_y.append(local_points[j].y)
+            else:
+              dash_line_x.append(default_line_x)
+              dash_line_y.append(default_line_y)
+              dash_line_id.append(relative_id)
+          else:
+            car_points = right_line.car_points
+            point_num = right_line.car_points_size
+            type_num = right_line.type_segments_size
+            k = 0
+            for j in range(point_num):
+              line_x.append(car_points[j].x)
+              line_y.append(car_points[j].y)
+              if j < (point_num - 1):
+                right_length += math.sqrt((car_points[j + 1].x - car_points[j].x)**2 + (car_points[j + 1].y - car_points[j].y)**2)
+              if right_length > right_line.type_segments[k].length or j == (point_num - 1):
+                right_length = 0
+                tp = right_line.type_segments[k].type
+                k += 1
+                k = max(min(k, type_num - 1), 0)
+                if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+                  dash_line_x.append(line_x)
+                  dash_line_y.append(line_y)
+                  dash_line_id.append(relative_id)
+                elif tp == 9:
+                  dot_line_x.append(line_x)
+                  dot_line_y.append(line_y)
+                  dot_line_id.append(relative_id)
+                else:
+                  solid_line_x.append(line_x)
+                  solid_line_y.append(line_y)
+                  solid_line_id.append(relative_id)
+                line_x, line_y = [], []
+                line_x.append(car_points[j].x)
+                line_y.append(car_points[j].y)
+      except:
+        dash_line_x.append(default_line_x)
+        dash_line_y.append(default_line_y)
+        dash_line_id.append(relative_id)
+    else:
+      dash_line_x.append(default_line_x)
+      dash_line_y.append(default_line_y)
+      dash_line_id.append(relative_id)
+  line_x_vec, line_y_vec, type_vec, relative_id_vec = [], [], [], []
+  line_x_vec.extend([dash_line_x, solid_line_x, dot_line_x])
+  line_y_vec.extend([dash_line_y, solid_line_y, dot_line_y])
+  type_vec.extend(['dashed_line', 'solid_line', 'virtual_line'])
+  relative_id_vec.extend([dash_line_id, solid_line_id, dot_line_id])
+  lane_line_info['line_x_vec'] = line_x_vec
+  lane_line_info['line_y_vec'] = line_y_vec
+  lane_line_info['type_vec'] = type_vec
+  lane_line_info['relative_id_vec'] = relative_id_vec
+  return lane_line_info
+
+# 加载车道boundary
+def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  line_info_list = []
+  reference_line_msg = road_msg.reference_line_msg
+  reference_line_msg_size = road_msg.reference_line_msg_size
+  #print("reference_line_msg_size ", reference_line_msg_size)
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(10):
+    if i< reference_line_msg_size:
+      lane = reference_line_msg[i]
+      lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
+      left_line = lane.left_lane_boundary
+      # left_line_coef = left_line.poly_coefficient
+      try:
+        line_x, line_y = [], []
+        if g_is_display_enu:
+          # print(left_line.enu_points)
+          local_points = left_line.enu_points
+          point_num = left_line.enu_points_size
+          line_x = [local_points[j].x for j in range(point_num)]
+          line_y = [local_points[j].y for j in range(point_num)]
+        else :
+          if is_enu_to_car:
+            coord_tf = coord_transformer()
+            if loc_msg != None: # 长时轨迹
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              local_points = left_line.enu_points
+              point_num = left_line.enu_points_size
+              line_x = [local_points[j].x for j in range(point_num)]
+              line_y = [local_points[j].y for j in range(point_num)]
+              line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+            else:
+              line_x = default_line_x
+              line_y = default_line_y
+            #pt_vec = local_points[:point_num]
+            #line_x, line_y = coord_tf.global_to_local(pt_vec)
+          else:
+            car_points = left_line.car_points
+            point_num = left_line.car_points_size
+            line_x = [car_points[j].x for j in range(point_num)]
+            line_y = [car_points[j].y for j in range(point_num)]
+        # line_x, line_y = gen_line(left_line_coef[0], left_line_coef[1], left_line_coef[2], left_line_coef[3], \
+        #   left_line.begin, left_line.end)
+        lane_info_l['line_y_vec'] = line_y
+        lane_info_l['line_x_vec'] = line_x
+
+        left_line_type_vec = []
+        if (len(left_line.type_segments) == 0):
+          left_line_type_vec.append(['dashed'])
+        for j in range(len(left_line.type_segments)):
+          tp = left_line.type_segments[j].type
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            left_line_type_vec.append(['dashed'])
+          elif tp == 9:
+            left_line_type_vec.append(['dashdot'])
+          else:
+            left_line_type_vec.append(['solid'])
+        lane_info_l['type_vec'] = left_line_type_vec
+      except:
+        lane_info_l['line_x_vec'] = default_line_x
+        lane_info_l['line_y_vec'] = default_line_y
+        lane_info_l['type_vec'] = ['dashed']
+
+      line_info_list.append(lane_info_l)
+
+      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
+      right_line = lane.right_lane_boundary
+      # right_line_coef = right_line.poly_coefficient
+      try:
+        line_x, line_y = [], []
+        if g_is_display_enu:
+          # print(right_line.enu_points)
+          local_points = right_line.enu_points
+          point_num = right_line.enu_points_size
+          line_x = [local_points[j].x for j in range(point_num)]
+          line_y = [local_points[j].y for j in range(point_num)]
+        else :
+          if is_enu_to_car:
+            coord_tf = coord_transformer()
+            if loc_msg != None: # 长时轨迹
+              cur_pos_xn = loc_msg.position.position_boot.x
+              cur_pos_yn = loc_msg.position.position_boot.y
+              cur_yaw = loc_msg.orientation.euler_boot.yaw
+              coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+              local_points = right_line.enu_points
+              point_num = right_line.enu_points_size
+              line_x = [local_points[j].x for j in range(point_num)]
+              line_y = [local_points[j].y for j in range(point_num)]
+              line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+            #pt_vec = local_points[:point_num]
+            #line_x, line_y = coord_tf.global_to_local(pt_vec)
+          else:
+            car_points = right_line.car_points
+            point_num = right_line.car_points_size
+            line_x = [car_points[j].x for j in range(point_num)]
+            line_y = [car_points[j].y for j in range(point_num)]
+        # line_x, line_y = gen_line(right_line_coef[0], right_line_coef[1], right_line_coef[2], right_line_coef[3], \
+        #   right_line.begin, right_line.end)
+        lane_info_r['line_x_vec'] = line_x
+        lane_info_r['line_y_vec'] = line_y
+
+        right_line_type_vec = []
+        if (len(right_line.type_segments) == 0):
+          right_line_type_vec.append(['dashed'])
+        for j in range(len(right_line.type_segments)):
+          tp = right_line.type_segments[j].type
+          if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+            right_line_type_vec.append(['dashed'])
+          elif tp == 9:
+            right_line_type_vec.append(['dashdot'])
+          else:
+            right_line_type_vec.append(['solid'])
+        lane_info_r['type_vec'] = right_line_type_vec
+      except:
+        lane_info_r['line_x_vec'] = default_line_x
+        lane_info_r['line_y_vec'] = default_line_y
+        lane_info_r['type_vec'] = ['dashed']
+
+      line_info_list.append(lane_info_r)
+    else:
+      lane_info_l = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
+      lane_info_l['line_x_vec'] = default_line_x
+      lane_info_l['line_y_vec'] = default_line_y
+      lane_info_l['type_vec'] = ['dashed']
+      lane_info_r = {'line_x_vec':[], 'line_y_vec':[], 'type_vec':[]}
+      lane_info_r['line_x_vec'] = default_line_x
+      lane_info_r['line_y_vec'] = default_line_y
+      lane_info_r['type_vec'] = ['dashed']
+      line_info_list.append(lane_info_l)
+      line_info_list.append(lane_info_r)
+  return line_info_list
+
+def load_road_border_lines(road_msg, loc_msg = None, g_is_display_enu = False):
+  fusion_polyline_size = road_msg.fusion_polyline_size
+  fusion_polyline = road_msg.fusion_polyline
+  line_x_vec, line_y_vec = [], []
+  coord_tf = coord_transformer()
+  if loc_msg != None:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+  for i in range(fusion_polyline_size):
+    line_x, line_y = [], []
+    line_type = fusion_polyline[i].type
+    local_points_size = fusion_polyline[i].local_points_size
+    local_points = fusion_polyline[i].local_points
+    for j in range(local_points_size):
+      line_x.append(local_points[j].x)
+      line_y.append(local_points[j].y)
+    if not g_is_display_enu:
+      if loc_msg != None:
+        line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+      else:
+        line_x, line_y = [], []
+    line_x_vec.append(line_x)
+    line_y_vec.append(line_y)
+  return line_x_vec, line_y_vec
+
+#加载topo车道线
+def load_lane_topo_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  line_topo_info_list = []
+  line_topo_msg = lane_topo_msg.lane_line
+  line_topo_msg_size = lane_topo_msg.lane_line_size
+
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(20):
+    lane_info = {'line_x_topo':[], 'line_y_topo':[],'type':[]}
+    if i< line_topo_msg_size:
+      lane_line = line_topo_msg[i]
+      lane_line_topo_refline_points = lane_line.lane_points_attr_set
+      lane_line_topo_refline_points_size = lane_line.lane_points_attr_set_size
+      line_x = []
+      line_y = []
+      line_x = [lane_line_topo_refline_points[j].lane_point_coordinate.x for j in range(lane_line_topo_refline_points_size)]
+      line_y = [lane_line_topo_refline_points[j].lane_point_coordinate.y for j in range(lane_line_topo_refline_points_size)]
+
+      lane_info['line_x_topo'] = line_x
+      lane_info['line_y_topo'] = line_y
+
+      line_topo_info_list.append(lane_info)
+
+      tp = lane_line.type
+      if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+        lane_info['type'] = ['dashed']
+      else:
+        lane_info['type'] = ['solid']
+    else:
+      lane_info['line_x_topo'] = default_line_x
+      lane_info['line_y_topo'] = default_line_y
+      lane_info['type'] = ['dashed']
+      line_topo_info_list.append(lane_info)
+
+  return line_topo_info_list
+
+# 加载中心线
+def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  line_info_list = []
+  reference_line_msg = road_msg.reference_line_msg
+  reference_line_msg_size = road_msg.reference_line_msg_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(10):
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
+                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[], 'dist_to_lborder':[], 'dist_to_rborder':[]}
+    if i< reference_line_msg_size:
+      lane = reference_line_msg[i]
+      virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
+      virtual_lane_refline_points_size = lane.lane_reference_line.virtual_lane_refline_points_size
+      d_poly = lane.lane_reference_line.poly_coefficient_car
+      virtual_lane_marks_size = lane.lane_marks_size
+      lane_mark_s_vec = [lane.lane_marks[j].end for j in range(virtual_lane_marks_size)]
+      lane_mark_s_begin_vec = [lane.lane_marks[j].begin for j in range(virtual_lane_marks_size)]
+      lane_info['lane_mark_vec'] = [lane.lane_marks[j].lane_mark for j in range(virtual_lane_marks_size)]
+      lane_info['dist_to_lborder'] = [virtual_lane_refline_points[j].distance_to_left_road_border for j in range(virtual_lane_refline_points_size)]
+      lane_info['dist_to_rborder'] = [virtual_lane_refline_points[j].distance_to_right_road_border for j in range(virtual_lane_refline_points_size)]
+      lane_mark_point_x = []
+      lane_mark_point_y = []
+      lane_mark_loc_x = []
+      lane_mark_loc_y = []
+      line_x = []
+      line_y = []
+      line_curvature = []
+      d_poly_line_curvature = []
+      line_s = []
+      line_confidence = []
+      if g_is_display_enu:
+        line_x = [virtual_lane_refline_points[j].local_point.x for j in range(virtual_lane_refline_points_size)]
+        line_y = [virtual_lane_refline_points[j].local_point.y for j in range(virtual_lane_refline_points_size)]
+      else:
+        if is_enu_to_car:
+          coord_tf = coord_transformer()
+          if loc_msg != None: # 长时轨迹
+            cur_pos_xn = loc_msg.position.position_boot.x
+            cur_pos_yn = loc_msg.position.position_boot.y
+            cur_yaw = loc_msg.orientation.euler_boot.yaw
+            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            line_x = [virtual_lane_refline_points[j].local_point.x for j in range(virtual_lane_refline_points_size)]
+            line_y = [virtual_lane_refline_points[j].local_point.y for j in range(virtual_lane_refline_points_size)]
+            line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+            """ for virtual_lane_refline_point in virtual_lane_refline_points:
+              car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.enu_point.x], [virtual_lane_refline_point.enu_point.y])
+              line_x.append(car_point_x[0])
+              line_y.append(car_point_y[0]) """
+          else:
+            line_x = default_line_x
+            line_y = default_line_y
+        else:
+          line_x = [virtual_lane_refline_points[j].car_point.x for j in range(virtual_lane_refline_points_size)]
+          line_y = [virtual_lane_refline_points[j].car_point.y for j in range(virtual_lane_refline_points_size)]
+
+      line_s = [virtual_lane_refline_points[j].s for j in range(virtual_lane_refline_points_size)]
+      line_confidence = [virtual_lane_refline_points[j].confidence for j in range(virtual_lane_refline_points_size)]
+      line_curvature = [max(min(1.0 / (virtual_lane_refline_points[j].curvature + 1e-6), 10000.0), -10000.0) for j in range(virtual_lane_refline_points_size)]
+      try:
+        d_poly_line_curvature = [max(min(1.0 / ((math.fabs(2 * d_poly[3] * (virtual_lane_refline_points[j].s - 50.0) + d_poly[2]) / math.pow(math.pow(2 * d_poly[3] * (virtual_lane_refline_points[j].s - 50.0) + d_poly[2], 2) + 1,1.5)) + 1e-6), 10000.0), -10000.0) for j in range(virtual_lane_refline_points_size)]
+      except:
+        print("d_poly error!")
+
+      lane_info['line_x_vec'] = line_x
+      lane_info['line_y_vec'] = line_y
+      lane_info['relative_id'] = [lane.relative_id for j in range(virtual_lane_refline_points_size)]
+      lane_info['type'] = [0]
+      lane_info['line_s_vec'] = line_s
+      lane_info['confidence_vec'] = line_confidence
+      lane_info['curvature_vec'] = line_curvature
+      lane_info['d_poly_curvature_vec'] = d_poly_line_curvature
+
+      try:
+        for i in range(10):
+          if i < virtual_lane_marks_size:
+            is_no_lm_point = True
+            for j in range(virtual_lane_refline_points_size):
+              if i == virtual_lane_marks_size - 1:
+                lane_mark_point_x.append(line_x[-1])
+                lane_mark_point_y.append(line_y[-1])
+                break
+              if line_s[j] >= lane_mark_s_vec[i]:
+                lane_mark_point_x.append(line_x[j])
+                lane_mark_point_y.append(line_y[j])
+                is_no_lm_point = False
+                break
+            if is_no_lm_point and (virtual_lane_refline_points_size > 0):
+              lane_mark_point_x.append(line_x[virtual_lane_refline_points_size - 1])
+              lane_mark_point_y.append(line_y[virtual_lane_refline_points_size - 1])
+          else:
+            break
+      except:
+        pass
+
+      try:
+        for i in range(10):
+          if i < virtual_lane_marks_size:
+            is_no_lm_point = True
+            for j in range(virtual_lane_refline_points_size):
+              if line_s[j] >= (lane_mark_s_vec[i] + lane_mark_s_begin_vec[i]) / 2:
+                lane_mark_loc_x.append(line_x[j])
+                lane_mark_loc_y.append(line_y[j])
+                is_no_lm_point = False
+                break
+            if is_no_lm_point and (virtual_lane_refline_points_size > 0):
+              lane_mark_loc_x.append(line_x[virtual_lane_refline_points_size - 1])
+              lane_mark_loc_y.append(line_y[virtual_lane_refline_points_size - 1])
+          else:
+            break
+      except:
+        pass
+
+    else:
+      lane_mark_point_x = []
+      lane_mark_point_y = []
+      lane_mark_loc_x = []
+      lane_mark_loc_y = []
+      lane_info['line_x_vec'] = [0]
+      lane_info['line_y_vec'] = [0]
+      lane_info['relative_id'] = [1000]
+      lane_info['type'] = [0]
+      lane_info['line_s_vec'] = [0]
+      lane_info['curvature_vec'] = [0]
+      lane_info['d_poly_curvature_vec'] = [0]
+      lane_info['confidence_vec'] = [0]
+      lane_info['lane_mark_vec'] = []
+      lane_info['dist_to_lborder'] = [0]
+      lane_info['dist_to_rborder'] = [0]
+
+    lane_info['lane_mark_point_x'] = lane_mark_point_x
+    lane_info['lane_mark_point_y'] = lane_mark_point_y
+    lane_info['lane_mark_loc_x'] = lane_mark_loc_x
+    lane_info['lane_mark_loc_y'] = lane_mark_loc_y
+    line_info_list.append(lane_info)
+
+  return line_info_list
+
+# 加载topo中心线
+def load_lane_topo_center_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  center_line_topo_info_list = []
+  lane_topo_msg_msg = lane_topo_msg.lanes
+  lane_topo_size = lane_topo_msg.lane_line_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(10):
+    lane_info = {'center_line_x_topo':[], 'center_line_y_topo':[]}
+    if i< lane_topo_size:
+      lane = lane_topo_msg_msg[i]
+      center_lane_topo_refline_points = lane.central_line.lane_points_attr_set
+      center_lane_topo_refline_points_size = lane.central_line.lane_points_attr_set_size
+      line_x = []
+      line_y = []
+      line_x = [center_lane_topo_refline_points[j].lane_point_coordinate.x for j in range(center_lane_topo_refline_points_size)]
+      line_y = [center_lane_topo_refline_points[j].lane_point_coordinate.y for j in range(center_lane_topo_refline_points_size)]
+
+      lane_info['center_line_x_topo'] = line_x
+      lane_info['center_line_y_topo'] = line_y
+
+      center_line_topo_info_list.append(lane_info)
+    else:
+      lane_info['center_line_x_topo'] = default_line_x
+      lane_info['center_line_y_topo'] = default_line_y
+      center_line_topo_info_list.append(lane_info)
+
+  return center_line_topo_info_list
+
+def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  line_info_list = []
+  lane_line = road_msg.lane_line
+  lane_line_size = road_msg.lane_line_size
+  #print("reference_line_msg_size ", reference_line_msg_size)
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+
+  for i in range(20):
+    if i< lane_line_size:
+      lane = lane_line[i]
+      lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+
+      lane_points_attr_set = lane.lane_points_attr_set
+      point_num = lane.lane_points_attr_set_size
+      if g_is_display_enu:
+        if loc_msg != None: # 长时轨迹
+          coord_tf = coord_transformer()
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
+          coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        line_x = [lane_points_attr_set[j].lane_point_coordinate.x for j in range(point_num)]
+        line_y = [lane_points_attr_set[j].lane_point_coordinate.y for j in range(point_num)]
+        line_x, line_y = coord_tf.local_to_global(line_x, line_y)
+      else:
+        line_x = [lane_points_attr_set[j].lane_point_coordinate.x for j in range(point_num)]
+        line_y = [lane_points_attr_set[j].lane_point_coordinate.y for j in range(point_num)]
+
+      lane_info['line_x_vec'] = line_x
+      lane_info['line_y_vec'] = line_y
+      if( lane.marking_segments_size != 0 ):
+        tp = lane.marking_segments[0].marking
+        if tp == 0 or tp == 1 or tp == 3 or tp == 4:
+          lane_info['type'] = ['dashed']
+        else:
+          lane_info['type'] = ['solid']
+      else:
+        lane_info['type'] = ['solid']
+
+      if (lane.type == 2):
+        # print('lane_info curb')
+        lane_info['type'] = ['curb']
+      line_info_list.append(lane_info)
+    else:
+      lane_info = {'line_x_vec':[], 'line_y_vec':[], 'type':[]}
+      lane_info['line_x_vec'] = default_line_x
+      lane_info['line_y_vec'] = default_line_y
+      lane_info['type'] = ['dashed']
+      line_info_list.append(lane_info)
+  return line_info_list
+
+def load_rdg_parking_lane_line(rdg_parking_lane_line_msg, loc_msg):
+  ground_mark_info = {
+    'ground_mark_x_rel': [],
+    'ground_mark_y_rel': [],
+    'ground_mark_x': [],
+    'ground_mark_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'ground_mark_label':[]
+  }
+  LaneDrivableDirection = ['未知', '直行', '直行加右转', '右转', '直行加左转', '左转', '调头加左转', '调头加右转',
+                           '直行加左转加右转', '直行加左调头', '直行加右调头', '直行加左转加左掉头', '左调头', '右调头',
+                           '禁止调头', '左转加右转', '左侧汇流', '右侧汇流', '人行横道']
+  try:
+    lane_ground_markings_size = rdg_parking_lane_line_msg.lane_ground_markings_size
+    for j in range(lane_ground_markings_size):
+      lane_ground_marking = rdg_parking_lane_line_msg.lane_ground_markings[j]
+      turn_type = lane_ground_marking.turn_type
+      ground_marking_points_set = lane_ground_marking.ground_marking_points_set
+      pos_x_rel = 0.0
+      pos_y_rel = 0.0
+      ground_mark_x_rel, ground_mark_y_rel = [], []
+      for index, points in enumerate(ground_marking_points_set):
+        ground_mark_x_rel.append(points.x)
+        ground_mark_y_rel.append(points.y)
+        pos_x_rel += points.x
+        pos_y_rel += points.y
+
+      pos_x_rel /= 4.0
+      pos_y_rel /= 4.0
+
+      pos_x, pos_y= [], []
+      ground_mark_x, ground_mark_y = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        ground_mark_x, ground_mark_y = coord_tf.local_to_global(ground_mark_x_rel, ground_mark_y_rel)
+        pos_x, pos_y = coord_tf.local_to_global([pos_x_rel], [pos_y_rel])
+
+      ground_mark_info['ground_mark_x_rel'].append(ground_mark_x_rel)
+      ground_mark_info['ground_mark_y_rel'].append(ground_mark_y_rel)
+      ground_mark_info['pos_x_rel'].append(pos_x_rel)
+      ground_mark_info['pos_y_rel'].append(pos_y_rel)
+      ground_mark_info['ground_mark_x'].append(ground_mark_x)
+      ground_mark_info['ground_mark_y'].append(ground_mark_y)
+      ground_mark_info['pos_x'].append([pos_x])
+      ground_mark_info['pos_y'].append([pos_y])
+      ground_mark_info['ground_mark_label'].append([LaneDrivableDirection[turn_type]])
+  except:
+    print("rdg_parking_lane_line_msg error")
+  return ground_mark_info
+
+def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  stop_line_info_list = []
+  stop_line_msg = rdg_lane_lines_msg.stop_line
+  stop_line_msg_size = rdg_lane_lines_msg.stop_line_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(5):
+    lane_info = {'stop_line_x':[], 'stop_line_y':[]}
+    if i< stop_line_msg_size:
+      stop_line = stop_line_msg[i]
+      stop_line_points = stop_line.lane_points_attr_set
+      stop_line_points_size = stop_line.lane_points_attr_set_size
+      line_x = []
+      line_y = []
+      line_x = [stop_line_points[j].lane_point_coordinate.x for j in range(stop_line_points_size)]
+      line_y = [stop_line_points[j].lane_point_coordinate.y for j in range(stop_line_points_size)]
+
+      lane_info['stop_line_x'] = line_x
+      lane_info['stop_line_y'] = line_y
+
+      stop_line_info_list.append(lane_info)
+
+    else:
+      lane_info['stop_line_x'] = default_line_x
+      lane_info['stop_line_y'] = default_line_y
+      stop_line_info_list.append(lane_info)
+
+  return stop_line_info_list
+
+def load_zebra_crossing_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  zebra_crossing_lines_info_list = []
+  zebra_crossing_lines_msg = rdg_lane_lines_msg.lane_ground_markings
+  zebra_crossing_lines_size = rdg_lane_lines_msg.lane_ground_markings_size
+  default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
+  for i in range(20):
+    zebra_crossing_info = {'zebra_crossing_line_x':[], 'zebra_crossing_line_y':[]}
+    if i< zebra_crossing_lines_size and zebra_crossing_lines_msg[i].turn_type == 18 :
+      zebra_crossing_line = zebra_crossing_lines_msg[i]
+      zebra_crossing_line_points = zebra_crossing_line.ground_marking_points_set
+      zebra_crossing_line_points_size = zebra_crossing_line.ground_marking_points_set_size
+      line_x = []
+      line_y = []
+      line_x = [zebra_crossing_line_points[j].x for j in range(zebra_crossing_line_points_size)]
+      line_y = [zebra_crossing_line_points[j].y for j in range(zebra_crossing_line_points_size)]
+
+      zebra_crossing_info['zebra_crossing_line_x'] = line_x
+      zebra_crossing_info['zebra_crossing_line_y'] = line_y
+
+      zebra_crossing_lines_info_list.append(zebra_crossing_info)
+    else:
+      zebra_crossing_info['zebra_crossing_line_x'] = default_line_x
+      zebra_crossing_info['zebra_crossing_line_y'] = default_line_y
+
+      zebra_crossing_lines_info_list.append(zebra_crossing_info)
+
+  return zebra_crossing_lines_info_list
+
+
+
+def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False, loc_msg = [], g_is_display_enu = False):
+  virtual_lane_refline_points = plan_gen_refline.virtual_lane_refline_points
+  line_x, line_y = [], []
+  coord_tf = coord_transformer()
+  cur_pos_xn = loc_msg.position.position_boot.x
+  cur_pos_yn = loc_msg.position.position_boot.y
+  cur_yaw = loc_msg.orientation.euler_boot.yaw
+  coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+  for virtual_lane_refline_point in virtual_lane_refline_points:
+    car_point_x, car_point_y = [virtual_lane_refline_point.local_point.x], [virtual_lane_refline_point.local_point.y]
+    if not g_is_display_enu:
+      car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.local_point.x], [virtual_lane_refline_point.local_point.y])
+    line_x.append(car_point_x[0])
+    line_y.append(car_point_y[0])
+  return line_x, line_y
+
+def load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_enu_to_car = False, loc_msg = None):
+  obs_info = {
+    'polygon_x': [],
+    'polygon_y': [],
+    'polygon_x_rel': [],
+    'polygon_y_rel': [],
+    'id': [],
+    'type': [],
+    'lat_decision': [],
+    'is_static': [],
+    'frenet_vs': [],
+    'frenet_vl': [],
+  }
+  obstacles_id_vec = []
+  obstacles_type_vec = []
+  obstacles_vs_vec = []
+  obstacles_vl_vec = []
+  obstacles_lat_decision_vec = []
+  obstacles_is_static_vec = []
+  polygon_x_vec = []
+  polygon_y_vec = []
+  polygon_x_rel_vec = []
+  polygon_y_rel_vec = []
+  obs_id_num = len(obstacle_polygon_id)
+  num = 0
+  try:
+    lat_decision = "None"
+    is_static = ""
+    for obstacle in environment_model_info.obstacle:
+      if (obs_id_num > 0) and (obstacle.id not in obstacle_polygon_id):
+        continue
+      num = num + 1
+      obstacles_id_vec.append([obstacle.id])
+      obstacles_type_vec.append([obstacle.type])
+      obstacles_vs_vec.append([obstacle.vs_lon_relative])
+      obstacles_vl_vec.append([obstacle.vs_lat_relative])
+      if (0 == obstacle.lat_decision):
+        lat_decision = "LEFT"
+      elif (1 == obstacle.lat_decision):
+        lat_decision = "RIGHT"
+      elif (2 == obstacle.lat_decision):
+        lat_decision = "IGNORE"
+      obstacles_lat_decision_vec.append([lat_decision])
+      if obstacle.is_static:
+        is_static = "Static"
+      obstacles_is_static_vec.append([is_static])
+      polygon_x = []
+      polygon_y = []
+      for point in obstacle.polygon_points:
+        polygon_x.append(point.x)
+        polygon_y.append(point.y)
+      polygon_x_vec.append(polygon_x)
+      polygon_y_vec.append(polygon_y)
+      polygon_x_rel = []
+      polygon_y_rel = []
+      if is_enu_to_car:
+        coord_tf = coord_transformer()
+        if loc_msg != None: # 长时轨迹
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
+          coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+          polygon_x_rel, polygon_y_rel = coord_tf.global_to_local(polygon_x, polygon_y)
+      polygon_x_rel_vec.append(polygon_x_rel)
+      polygon_y_rel_vec.append(polygon_y_rel)
+  except:
+    pass
+
+  obs_info['id'] = obstacles_id_vec
+  obs_info['type'] = obstacles_type_vec
+  obs_info['frenet_vs'] = obstacles_vs_vec
+  obs_info['frenet_vl'] = obstacles_vl_vec
+  obs_info['lat_decision'] = obstacles_lat_decision_vec
+  obs_info['is_static'] = obstacles_is_static_vec
+  obs_info['polygon_x'] = polygon_x_vec
+  obs_info['polygon_y'] = polygon_y_vec
+  obs_info['polygon_x_rel'] = polygon_x_rel_vec
+  obs_info['polygon_y_rel'] = polygon_y_rel_vec
+
+  return obs_info
+
+def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environment_model_info = None):
+  obs_info_all = dict()
+  fusion_object_size = fus_msg.fusion_object_size
+  obstacle_list = fus_msg.fusion_object
+  local_point_valid = fus_msg.local_point_valid  # 障碍物中用到的绝对坐标是否有效
+  # print("obj local_point_valid: ", local_point_valid)
+  num = 0
+  for i in range(fusion_object_size):
+    obs_id = obstacle_list[i].additional_info.track_id
+    source = obstacle_list[i].additional_info.fusion_source
+    type = obstacle_list[i].common_info.type
+    if source & 0x01: #相机融合障碍物
+      source = 1
+    elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
+      math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
+      math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
+      continue
+    else:
+      source = 4
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'polygon_x_rel': [],
+        'polygon_y_rel': [],
+        'polygon_x': [],
+        'polygon_y': [],
+        'obstacles_id': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+      obs_info_all[source] = obs_info
+    polygon_x = []
+    polygon_y = []
+    try:
+      frenet_vs, frenet_vl = 255, 255
+      lat_decision = "None"
+      is_static = ""
+      obs_polygon = []
+      for obstacle in environment_model_info.obstacle:
+        if obstacle.id == obs_id:
+          obs_polygon = obstacle.polygon_points
+          frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
+          if (0 == obstacle.lat_decision):
+            lat_decision = "LEFT"
+          elif (1 == obstacle.lat_decision):
+            lat_decision = "RIGHT"
+          elif (2 == obstacle.lat_decision):
+            lat_decision = "IGNORE"
+          elif (3 == obstacle.lat_decision):
+            lat_decision = "FOLLOW"
+          elif (4 == obstacle.lat_decision):
+            lat_decision = "PRE_FOLLOW_WITHIN_LANE"
+          elif (5 == obstacle.lat_decision):
+            lat_decision = "PRE_NUDGE"
+          elif (6 == obstacle.lat_decision):
+            lat_decision = "NOT_SET"
+          if obstacle.is_static:
+            is_static = "Static"
+          break
+      for point in obs_polygon:
+        polygon_x.append(point.x)
+        polygon_y.append(point.y)
+    except:
+      pass
+    long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
+    lat_pos_rel = obstacle_list[i].common_info.relative_center_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].common_info.shape.width /2
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].common_info.center_position.x
+    lat_pos = obstacle_list[i].common_info.center_position.y
+    theta = obstacle_list[i].common_info.heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    num = num + 1
+    # obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    # obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    # obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    # obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+
+    polygon_x_rel, polygon_y_rel = [], []
+    if is_enu_to_car:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        obstacles_x_rel, obstacles_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([long_pos], [lat_pos])
+        polygon_x_rel, polygon_y_rel = coord_tf.global_to_local(polygon_x, polygon_y)
+      else:
+        obstacles_x_rel, obstacles_y_rel = obs_x_rel, obs_y_rel
+        pos_x_rel, pos_y_rel = long_pos_rel, lat_pos_rel
+      obs_info_all[source]['obstacles_x_rel'].append(obstacles_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obstacles_y_rel)
+      obs_info_all[source]['polygon_x_rel'].append(polygon_x_rel)
+      obs_info_all[source]['polygon_y_rel'].append(polygon_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(pos_x_rel)
+      obs_info_all[source]['pos_y_rel'].append(pos_y_rel)
+    else:
+      obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+      obs_info_all[source]['polygon_x_rel'].append(polygon_x_rel)
+      obs_info_all[source]['polygon_y_rel'].append(polygon_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+      obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obs_id)
+#             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
+    if frenet_vs == 255 and  frenet_vl == 255:
+      obs_info_all[source]['obs_label'].append('v(' + str(obs_id) + ')=' \
+          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 4))+','+ str(type)+'\n'\
+          + str(round(obstacle_list[i].common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.velocity.y, 4))+'\n'\
+          + lat_decision + '\n' + is_static)
+    else:
+      obs_info_all[source]['obs_label'].append('vs(' + str(obs_id) + ')=' \
+          + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(type)+'\n' +'rel_v: '\
+          + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].common_info.relative_velocity.y, 2))+'\n'\
+          +'abs_v: '+ str(round(obstacle_list[i].common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].common_info.velocity.y, 2))+'\n'\
+          + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].common_info.velocity.x, obstacle_list[i].common_info.velocity.y), 2)))
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    # for ind in range(len(obs_y)):
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['polygon_x'].append(polygon_x)
+    obs_info_all[source]['polygon_y'].append(polygon_y)
+    obs_info_all[source]['obstacles_id'].append(obs_id)
+    obs_info_all[source]['pos_x'].append(long_pos)
+    obs_info_all[source]['pos_y'].append(lat_pos)
+    # print(long_pos_rel, lat_pos_rel, long_pos, lat_pos)
+
+  obs_info = {
+    'obstacles_x_rel': [],
+    'obstacles_y_rel': [],
+    'obstacles_x': [],
+    'obstacles_y': [],
+    'polygon_x_rel': [],
+    'polygon_y_rel': [],
+    'polygon_x': [],
+    'polygon_y': [],
+    'obstacles_id': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'obstacles_vel': [],
+    'obstacles_acc': [],
+    'obstacles_tid': [],
+    'is_cipv': [],
+    'obs_label':[]
+  }
+  if (1 in obs_info_all.keys()) == False:
+    obs_info_all[1] = obs_info
+  if (4 in obs_info_all.keys()) == False:
+    obs_info_all[4] = obs_info
+
+  return obs_info_all
+
+
+def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_info = None):
+  obs_info_all = dict()
+  fusion_object_size = fus_occ_obj_msg.fusion_object_size
+  obstacle_list = fus_occ_obj_msg.fusion_object
+  local_point_valid = fus_occ_obj_msg.local_point_valid  # 障碍物中用到的绝对坐标是否有效
+  # print("occ obj local_point_valid: ", local_point_valid)
+  num = 0
+  plan_obs_id = 7000000
+  for i in range(fusion_object_size):
+    plan_obs_id += 1
+    common_info = obstacle_list[i].common_occupancy_info
+    additional_info = obstacle_list[i].additional_occupancy_info
+    obs_id = additional_info.track_id + 7000000
+    source = additional_info.fusion_source
+    source = 0  # hack
+    type = common_info.type
+    # if source & 0x01: #相机融合障碍物
+    #   source = 1
+    # elif (common_info.relative_center_position.x > 0 and \
+    #   math.tan(25) > math.fabs(common_info.relative_center_position.y / common_info.relative_center_position.x)) or \
+    #   math.fabs(common_info.relative_center_position.y) > 10:
+    #   continue
+    # else:
+    #   source = 4
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'polygon_x': [],
+        'polygon_y': [],
+        'polygon_x_rel': [],
+        'polygon_y_rel': [],
+        'obstacles_id': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+      obs_info_all[source] = obs_info
+    polygon_x = []
+    polygon_y = []
+    try:
+      frenet_vs, frenet_vl = 255, 255
+      lat_decision = "None"
+      is_static = ""
+      obs_polygon = []
+      for obstacle in environment_model_info.obstacle:
+        if obstacle.id == obs_id:
+        # if obstacle.id == plan_obs_id:
+          obs_polygon = obstacle.polygon_points
+          frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
+          if (0 == obstacle.lat_decision):
+            lat_decision = "LEFT"
+          elif (1 == obstacle.lat_decision):
+            lat_decision = "RIGHT"
+          elif (2 == obstacle.lat_decision):
+            lat_decision = "IGNORE"
+          if obstacle.is_static:
+            is_static = "Static"
+          break
+      for point in obs_polygon:
+        polygon_x.append(point.x)
+        polygon_y.append(point.y)
+    except:
+      pass
+    # pos_x_rel = common_info.relative_center_position.x
+    # pos_y_rel = common_info.relative_center_position.y
+    # hpp
+    pos_x = common_info.relative_center_position.x
+    pos_y = common_info.relative_center_position.y
+    # apa hack
+    pos_x = common_info.center_position.x
+    pos_y = common_info.center_position.y
+    polygon_points_size = additional_info.polygon_points_size
+    polygon_points = additional_info.polygon_points
+    obs_x, obs_y = [], []
+    for index, points in enumerate(polygon_points):
+      obs_x.append(points.x)
+      obs_y.append(points.y)
+
+    num = num + 1
+
+    pos_x_rel, pos_y_rel = [], []
+    obs_x_rel, obs_y_rel = [], []
+    polygon_x_rel, polygon_y_rel = [], []
+    coord_tf = coord_transformer()
+    if loc_msg != None: # 长时轨迹
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      obs_x_rel, obs_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+      pos_x_rel, pos_y_rel = coord_tf.global_to_local([pos_x], [pos_y])
+      polygon_x_rel, polygon_y_rel = coord_tf.global_to_local(polygon_x, polygon_y)
+
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(pos_x_rel)
+    obs_info_all[source]['pos_y_rel'].append(pos_y_rel)
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(pos_x)
+    obs_info_all[source]['pos_y'].append(pos_y)
+    obs_info_all[source]['polygon_x'].append(polygon_x)
+    obs_info_all[source]['polygon_y'].append(polygon_y)
+    obs_info_all[source]['polygon_x_rel'].append(polygon_x_rel)
+    obs_info_all[source]['polygon_y_rel'].append(polygon_y_rel)
+    obs_info_all[source]['obstacles_id'].append(obs_id)
+    obs_info_all[source]['obstacles_vel'].append(common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(additional_info.track_id)
+
+    if frenet_vs == 255 and  frenet_vl == 255:
+      obs_info_all[source]['obs_label'].append('v(' + str(obs_id) + ')=' \
+          + str(type))
+    else:
+      obs_info_all[source]['obs_label'].append('vs(' + str(obs_id) + ')=' \
+          + str(type)+'\n'\
+          + lat_decision + '\n' + is_static)
+
+  if fusion_object_size == 0:
+    obs_info = {
+      'obstacles_x_rel': [],
+      'obstacles_y_rel': [],
+      'obstacles_x': [],
+      'obstacles_y': [],
+      'pos_x_rel': [],
+      'pos_y_rel': [],
+      'pos_x': [],
+      'pos_y': [],
+      'polygon_x': [],
+      'polygon_y': [],
+      'polygon_x_rel': [],
+      'polygon_y_rel': [],
+      'obstacles_id': [],
+      'obstacles_vel': [],
+      'obstacles_acc': [],
+      'obstacles_tid': [],
+      'is_cipv': [],
+      'obs_label':[]
+    }
+    obs_info_all[0] = obs_info
+
+  return obs_info_all
+
+
+def load_obstacle_me(camera_msg,is_rdg):
+
+  obs_info_all = dict()
+  obstacle_list = camera_msg.camera_perception_objects
+  obs_num = camera_msg.camera_perception_objects_size
+  num = 0
+  for i in range(obs_num):
+    source = 1
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+    obs_info_all[source] = obs_info
+    long_pos_rel = 0
+    if is_rdg == False:
+      long_pos_rel = obstacle_list[i].common_info.relative_position.x + obstacle_list[i].common_info.shape.length / 2
+    else:
+      long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
+    # print(long_pos_rel)
+    lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].common_info.shape.width /2
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+    # print(obs_x_rel)
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].common_info.center_position.x
+    lat_pos = obstacle_list[i].common_info.center_position.y
+    theta = obstacle_list[i].common_info.heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    num = num + 1
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].common_info.id)#contour不太确定
+#             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
+    obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].common_info.relative_velocity.y, 2)))
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    # for ind in range(len(obs_y)):
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(long_pos_rel)
+    obs_info_all[source]['pos_y'].append(lat_pos_rel)
+    # print("me_message:(",obstacle_list[i].common_info.relative_position.x-10200,",",obstacle_list[i].common_info.relative_position.y+5000,")")
+
+  return obs_info_all
+
+def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car = False, loc_msg = None, environment_model_info = None):
+  obs_info_all = dict()
+  obstacle_list = prediction_msg.prediction_obstacle_list
+  obs_num = len(obstacle_list)
+  num = 0
+
+  # 原始调色板
+  palette = Category10[10]
+  # 剔除偏黄 (#bcbd22) 和红色 (#d62728)
+  palette = [c for c in palette if c.lower() not in ['#bcbd22', '#d62728']]
+  default_fill_color = "yellow"
+  default_text_color = "red"
+
+  construction_agent_clusters = plan_debug_json_msg['construction_agent_clusters']
+  construction_agent_clusters_length = plan_debug_json_msg['construction_agent_clusters_length']
+  construction_agent_cluster_attribute_ids = plan_debug_json_msg['construction_agent_cluster_attribute_ids']
+  construction_agent_clusters_driection = plan_debug_json_msg['construction_agent_clusters_driection']
+  vars = [f'cluster_{i}' for i in range(1, 9)] # 默认8个类别
+  construction_agent_clusters_nums = len(construction_agent_clusters)
+  names  = []
+  datas = []
+  i = 0
+  id_to_color = {}
+  id_to_text_color = {}
+  id_to_direction = {}
+  for name in vars:
+    try:
+      if i < construction_agent_clusters_nums:
+        cluster = construction_agent_clusters[i]
+        start = sum(construction_agent_clusters_length[:i])
+        end = start + construction_agent_clusters_length[i]
+        cluster_ids = construction_agent_cluster_attribute_ids[int(start):int(end)]
+        if (0 == construction_agent_clusters_driection[i]):
+          direction = "DEFAULT"
+        elif (1 == construction_agent_clusters_driection[i]):
+          direction = "LEFT"
+        elif (2 == construction_agent_clusters_driection[i]):
+          direction = "RIGHT"
+        elif (3 == construction_agent_clusters_driection[i]):
+          direction = "LON"
+        elif (4 == construction_agent_clusters_driection[i]):
+          direction = "UNSURE"
+        datas.append(cluster_ids)
+        names.append(cluster)
+        color = palette[i % len(palette)] if i < len(palette) else default_fill_color
+        for cid in cluster_ids:
+            id_to_color[cid] = color
+        text_color = palette[i % len(palette)] if i < len(palette) else default_text_color
+        for cid in cluster_ids:
+            id_to_text_color[cid] = text_color
+        for cid in cluster_ids:
+            id_to_direction[cid] = direction
+      else:
+        datas.append([])
+        names.append([])
+      i = i + 1
+    except:
+      pass
+
+  for i in range(obs_num):
+    source = 1
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[],
+        'color':[],
+        'text_color':[]
+      }
+    obs_info_all[source] = obs_info
+    try:
+      frenet_vs, frenet_vl = 255, 255
+      lat_decision = "None"
+      is_static = ""
+      for obstacle in environment_model_info.obstacle:
+        if obstacle.id == obstacle_list[i].fusion_obstacle.additional_info.track_id:
+          frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
+          if (0 == obstacle.lat_decision):
+            lat_decision = "LEFT"
+          elif (1 == obstacle.lat_decision):
+            lat_decision = "RIGHT"
+          elif (2 == obstacle.lat_decision):
+            lat_decision = "IGNORE"
+          elif (3 == obstacle.lat_decision):
+            lat_decision = "FOLLOW"
+          elif (4 == obstacle.lat_decision):
+            lat_decision = "PRE_FOLLOW_WITHIN_LANE"
+          elif (5 == obstacle.lat_decision):
+            lat_decision = "PRE_NUDGE"
+          elif (6 == obstacle.lat_decision):
+            lat_decision = "NOT_SET"
+          if obstacle.is_static:
+            is_static = "Static"
+          break
+    except:
+      pass
+    long_pos_rel = 0
+    long_pos_rel = obstacle_list[i].fusion_obstacle.common_info.relative_center_position.x
+    lat_pos_rel = obstacle_list[i].fusion_obstacle.common_info.relative_center_position.y
+    theta = obstacle_list[i].fusion_obstacle.common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width /2
+    half_length = obstacle_list[i].fusion_obstacle.common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+    # print(obs_x_rel)
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.x
+    lat_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.y
+    theta = obstacle_list[i].fusion_obstacle.common_info.heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    if is_enu_to_car:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        obstacles_x_rel, obstacles_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([long_pos], [lat_pos])
+      else:
+        obstacles_x_rel, obstacles_y_rel = obs_x_rel, obs_y_rel
+        pos_x_rel, pos_y_rel = long_pos_rel, lat_pos_rel
+      obs_info_all[source]['obstacles_x_rel'].append(obstacles_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obstacles_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(pos_x_rel)
+      obs_info_all[source]['pos_y_rel'].append(pos_y_rel)
+    else:
+      obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+      obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+
+    num = num + 1
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
+
+    if obstacle_list[i].fusion_obstacle.additional_info.track_id in id_to_direction:
+      obs_direction = id_to_direction[obstacle_list[i].fusion_obstacle.additional_info.track_id]
+      if frenet_vs == 255 and frenet_vl == 255:
+        obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
+            + lat_decision + '\n' + is_static + '\n' + 'direction: ' + obs_direction)
+      else:
+        obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
+            +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
+            + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].fusion_obstacle.common_info.velocity.x, obstacle_list[i].fusion_obstacle.common_info.velocity.y), 2))+'\n'\
+            + 'direction: ' + obs_direction)
+    else:
+      if frenet_vs == 255 and frenet_vl == 255:
+        obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
+            + lat_decision + '\n' + is_static)
+      else:
+        obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
+            +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
+            + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].fusion_obstacle.common_info.velocity.x, obstacle_list[i].fusion_obstacle.common_info.velocity.y), 2)))
+
+    obs_color = id_to_color.get(obstacle_list[i].fusion_obstacle.additional_info.track_id, default_fill_color)
+    obs_info_all[source]['color'].append(obs_color)
+    text_obs_color = id_to_text_color.get(obstacle_list[i].fusion_obstacle.additional_info.track_id, default_text_color)
+    obs_info_all[source]['text_color'].append(text_obs_color)
+
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(long_pos_rel)
+    obs_info_all[source]['pos_y'].append(lat_pos_rel)
+
+  return obs_info_all
+
+def load_rdg_general_obstacle(camera_msg, loc_msg = None):
+  obs_info_all = {
+    'obstacles_x_rel': [],
+    'obstacles_y_rel': [],
+    'obstacles_x': [],
+    'obstacles_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'obstacles_vel': [],
+    'obstacles_acc': [],
+    'obstacles_tid': [],
+    'is_cipv': [],
+    'obs_label':[]
+  }
+  obstacle_list = camera_msg.camera_perception_objects
+  obs_num = camera_msg.camera_perception_objects_size
+  num = 0
+  for i in range(obs_num):
+    #remove obstacle
+    type = obstacle_list[i].common_info.type
+    if type > 22 and type != 27 :
+      continue
+
+    long_pos_rel = obstacle_list[i].common_info.relative_center_position.x
+    lat_pos_rel = obstacle_list[i].common_info.relative_position.y
+    theta = obstacle_list[i].common_info.relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].common_info.shape.width /2
+    half_length = obstacle_list[i].common_info.shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+                long_pos_rel + dx1 - dx2,
+                long_pos_rel- dx1 - dx2,
+                long_pos_rel - dx1 + dx2,
+                long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+                lat_pos_rel + dy1 - dy2,
+                lat_pos_rel - dy1 - dy2,
+                lat_pos_rel - dy1 + dy2,
+                lat_pos_rel + dy1 + dy2]
+    # 绝对坐标系下的数据
+    obs_x, obs_y = [], []
+    long_pos, lat_pos = [], []
+    if loc_msg != None:
+      coord_tf = coord_transformer()
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      obs_x, obs_y = coord_tf.local_to_global(obs_x_rel, obs_y_rel)
+      long_pos, lat_pos = coord_tf.local_to_global([long_pos_rel], [lat_pos_rel])
+    else:
+      print("no loc_msg in load_rdg_general_obstacle")
+    obs_info_all['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all['pos_x_rel'].append(long_pos_rel)
+    obs_info_all['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all['obstacles_vel'].append(obstacle_list[i].common_info.relative_velocity.x)
+    obs_info_all['obstacles_acc'].append(obstacle_list[i].common_info.relative_acceleration.x)
+    obs_info_all['obstacles_tid'].append(obstacle_list[i].common_info.id)#contour不太确定
+    # obs_info_all['is_cipv'].append(obstacle_list[i].target_selection_type)
+    obs_info_all['obs_label'].append('v(' + str(obstacle_list[i].common_info.id) + ')=' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.x, 2)) + ',' \
+        + str(round(obstacle_list[i].common_info.relative_velocity.y, 2)) + '\n' \
+        + str(round(obstacle_list[i].common_info.velocity.x, 2))+ ',' \
+        + str(round(obstacle_list[i].common_info.velocity.y, 4)) + ',' \
+        + str(type))
+    obs_info_all['obstacles_x'].append(obs_x)
+    obs_info_all['obstacles_y'].append(obs_y)
+    obs_info_all['pos_x'].append(long_pos)
+    obs_info_all['pos_y'].append(lat_pos)
+    num = num + 1
+
+  return obs_info_all
+
+
+def load_rdg_occupancy_obstacle(rdg_occ_obj_msg, loc_msg = None):
+  obs_info_all = {
+    'obstacles_x_rel': [],
+    'obstacles_y_rel': [],
+    'obstacles_x': [],
+    'obstacles_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'obs_label':[]
+  }
+  perception_objects_size = rdg_occ_obj_msg.camera_perception_objects_size
+  perception_objects = rdg_occ_obj_msg.camera_perception_objects
+  num = 0
+  for i in range(perception_objects_size):
+    num = num + 1
+    id = perception_objects[i].id
+    type = perception_objects[i].type
+    # visable_seg_num = perception_objects[i].type
+    # contour_points_size = perception_objects[i].contour_points_size
+    contour_points = perception_objects[i].contour_points
+
+    pos_x_rel, pos_y_rel = [], []
+    obs_x_rel, obs_y_rel = [], []
+    for index, points in enumerate(contour_points):
+      obs_x_rel.append(points.x)
+      obs_y_rel.append(points.y)
+      if index > 0:
+        continue
+      pos_x_rel.append(points.x)
+      pos_y_rel.append(points.y)
+
+    pos_x, pos_y = [], []
+    obs_x, obs_y = [], []
+    coord_tf = coord_transformer()
+    if loc_msg != None: # 长时轨迹
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      obs_x, obs_y = coord_tf.local_to_global(obs_x_rel, obs_y_rel)
+      pos_x, pos_y = coord_tf.local_to_global(pos_x_rel, pos_y_rel)
+
+    obs_info_all['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all['pos_x_rel'].append(pos_x_rel)
+    obs_info_all['pos_y_rel'].append(pos_y_rel)
+    obs_info_all['obstacles_x'].append(obs_x)
+    obs_info_all['obstacles_y'].append(obs_y)
+    obs_info_all['pos_x'].append(pos_x)
+    obs_info_all['pos_y'].append(pos_y)
+    obs_info_all['obs_label'].append('t(' + str(id) + ')=' \
+        + str(type))
+
+  return obs_info_all
+
+
+def load_obstacle_radar(obstacle_list,type,num):
+  obs_info_all = dict()
+  obs_num = num
+  # print("obs_num:",obs_num)
+  #print(obs_num)
+  if type == 0:
+    source = 11
+  elif type == 1:
+    source = 12
+  elif type == 2:
+    source = 13
+  elif type == 3:
+    source = 14
+  elif type == 4:
+    source = 15
+  # print("source:",source)
+  for i in range(obs_num):
+    # source = obstacle_list[i].additional_info.fusion_source
+    # if source & 0x01: #相机融合障碍物
+    #   source = 1
+    # elif (obstacle_list[i].common_info.relative_center_position.x > 0 and \
+    #   math.tan(25) > math.fabs(obstacle_list[i].common_info.relative_center_position.y / obstacle_list[i].common_info.relative_center_position.x)) or \
+    #   math.fabs(obstacle_list[i].common_info.relative_center_position.y) > 10:
+    #   continue
+    # else:
+
+    if (source in obs_info_all.keys()) == False:
+      obs_info = {
+        'obstacles_x_rel': [],
+        'obstacles_y_rel': [],
+        'obstacles_x': [],
+        'obstacles_y': [],
+        'pos_x_rel': [],
+        'pos_y_rel': [],
+        'pos_x': [],
+        'pos_y': [],
+        'obstacles_vel': [],
+        'obstacles_acc': [],
+        'obstacles_tid': [],
+        'is_cipv': [],
+        'obs_label':[]
+      }
+      obs_info_all[source] = obs_info
+
+    long_pos_rel = obstacle_list[i].relative_position.x
+    lat_pos_rel = obstacle_list[i].relative_position.y
+    theta = obstacle_list[i].relative_heading_angle
+    if theta == 255:
+      theta = 0
+    half_width = obstacle_list[i].shape.width /2
+    half_length = obstacle_list[i].shape.length / 2
+    # if half_width == 0 or half_length == 0:
+    #   continue
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+
+    obs_x_rel = [long_pos_rel + dx1 + dx2,
+              long_pos_rel + dx1 - dx2,
+              long_pos_rel- dx1 - dx2,
+              long_pos_rel - dx1 + dx2,
+              long_pos_rel + dx1 + dx2]
+    obs_y_rel = [lat_pos_rel + dy1 + dy2,
+              lat_pos_rel + dy1 - dy2,
+              lat_pos_rel - dy1 - dy2,
+              lat_pos_rel - dy1 + dy2,
+              lat_pos_rel + dy1 + dy2]
+
+    #print(obs_x_rel)
+    # 绝对坐标系下的数据
+    long_pos = obstacle_list[i].relative_position.x
+    lat_pos = obstacle_list[i].relative_position.y
+    theta = 0 #obstacle_list[i].heading_angle
+    cos_heading = math.cos(theta)
+    sin_heading = math.sin(theta)
+    dx1 = cos_heading * half_length
+    dy1 = sin_heading * half_length
+    dx2 = sin_heading * half_width
+    dy2 = -cos_heading * half_width
+    obs_x = [long_pos + dx1 + dx2,
+              long_pos + dx1 - dx2,
+              long_pos - dx1 - dx2,
+              long_pos - dx1 + dx2,
+              long_pos + dx1 + dx2]
+    obs_y = [lat_pos + dy1 + dy2,
+              lat_pos + dy1 - dy2,
+              lat_pos - dy1 - dy2,
+              lat_pos - dy1 + dy2,
+              lat_pos + dy1 + dy2]
+
+    num = num + 1
+    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+    obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].relative_velocity.x)
+    obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].relative_acceleration.x)
+    obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].id)
+#             fusion_obs_info['is_cipv'].append(obstacle_list[i].target_selection_type)
+    obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].id) + ')=' \
+        + str(round(obstacle_list[i].relative_velocity.x, 2))+','+ str(round(obstacle_list[i].relative_velocity.y, 2)))
+    obs_info_all[source]['obstacles_x'].append(obs_x)
+    # for ind in range(len(obs_y)):
+    obs_info_all[source]['obstacles_y'].append(obs_y)
+    obs_info_all[source]['pos_x'].append(long_pos)
+    obs_info_all[source]['pos_y'].append(lat_pos)
+
+  return obs_info_all
+
+def gen_line(c0, c1, c2, c3, start, end):
+  points_x = []
+  points_y = []
+
+  for x in np.linspace(start, end, 50):
+      y = c0 + c1 * x + c2 * x * x + c3 * x * x* x
+      points_x.append(x)
+      points_y.append(y)
+
+  return points_x, points_y
+
+def load_prediction_objects(obstacle_list, prediction_obs_id, localization_info, g_is_display_enu = False):
+  prediction_dict = {0: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     1: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     2: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     3: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []},
+                     4: {'x': [], 'y': [], 'obs_x': [], 'obs_y': []}}
+
+  trajectory_info = {'x':[],'y':[], 'obs_x': [], 'obs_y': [], 'r':[]}
+  p_x = []
+  p_y = []
+  p_obs_x = []
+  p_obs_y = []
+  obs_id_num = len(prediction_obs_id)
+  obs_num = len(obstacle_list)
+
+  for i in range(obs_num):
+    obs_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
+    if (obs_id_num > 0) and (obs_id not in prediction_obs_id):
+      continue
+    if (obstacle_list[i].fusion_obstacle.additional_info.fusion_source & 1) == 0:
+      continue
+    if len(obstacle_list[i].trajectory.trajectory_point) == 0:
+      # print("No data")
+      continue
+    elif obstacle_list[i].fusion_obstacle.common_info.shape.width == 0 or obstacle_list[i].fusion_obstacle.common_info.shape.length == 0:
+      continue
+    else:
+      # long_pos = obstacle_list[i].trajectory.trajectory_point[0].center_position.x
+      # lat_pos = obstacle_list[i].trajectory.trajectory_point[0].center_position.y
+      # theta = obstacle_list[i].fusion_obstacle.common_info.heading_angle
+      half_width = obstacle_list[i].fusion_obstacle.common_info.shape.width / 2
+      half_length = obstacle_list[i].fusion_obstacle.common_info.shape.length / 2
+      # track_id = obstacle_list[i].fusion_obstacle.additional_info.track_id
+
+      # print(f"long_pos = {long_pos}\tlat_pos = {lat_pos}\ttheta = {theta}\thalf_width = {half_width}\tlength = {length}\n")
+
+      # obs_x = [long_pos+half_width*math.sin(theta), \
+      #           long_pos+half_width*math.sin(theta)+length*math.cos(theta), \
+      #           long_pos-half_width*math.sin(theta)+length*math.cos(theta), \
+      #           long_pos-half_width*math.sin(theta), \
+      #           long_pos+half_width*math.sin(theta)]
+
+      # obs_y = [lat_pos-half_width*math.cos(theta), \
+      #           lat_pos-half_width*math.cos(theta)+ length*math.sin(theta), \
+      #           lat_pos+half_width*math.cos(theta)+ length*math.sin(theta), \
+      #           lat_pos+half_width*math.cos(theta),
+      #           lat_pos-half_width*math.cos(theta)]
+      # num = num + 1
+      # obs_info['obstacles_x'].append(obs_x)
+      # obs_info['obstacles_y'].append(obs_y)
+      # obs_info['pos_x'].append(lat_pos)
+      # obs_info['pos_y'].append(long_pos)
+      # obs_info['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
+      # obs_info['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
+      # obs_info['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
+      # obs_info['obs_label'].append(str(obstacle_list[i].fusion_obstacle.common_info.id) + ',v=' + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2)))
+      for j in range(len(obstacle_list[i].trajectory.trajectory_point)):
+        global_x = obstacle_list[i].trajectory.trajectory_point[j].position.x
+        global_y = obstacle_list[i].trajectory.trajectory_point[j].position.y
+        global_yaw = obstacle_list[i].trajectory.trajectory_point[j].yaw
+        cos_heading = math.cos(global_yaw)
+        sin_heading = math.sin(global_yaw)
+        dx1 = cos_heading * half_length
+        dy1 = sin_heading * half_length
+        dx2 = sin_heading * half_width
+        dy2 = -cos_heading * half_width
+        obs_x = [global_x + dx1 + dx2,
+                 global_x + dx1 - dx2,
+                 global_x - dx1 - dx2,
+                 global_x - dx1 + dx2,
+                 global_x + dx1 + dx2]
+        obs_y = [global_y + dy1 + dy2,
+                 global_y + dy1 - dy2,
+                 global_y - dy1 - dy2,
+                 global_y - dy1 + dy2,
+                 global_y + dy1 + dy2]
+        # print(global_x, global_y)
+        if g_is_display_enu:
+          p_x.append(global_x)
+          p_y.append(global_y)
+          p_obs_x.append(obs_x)
+          p_obs_y.append(obs_y)
+        else:
+          coord_tf = coord_transformer()
+          if localization_info != None:
+            cur_pos_xn = localization_info.position.position_boot.x
+            cur_pos_yn = localization_info.position.position_boot.y
+            cur_yaw = localization_info.orientation.euler_boot.yaw
+            coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+            local_x, local_y = coord_tf.global_to_local(global_x, global_y)
+            p_x.append(local_x)
+            p_y.append(local_y)
+            obs_x_rel, obs_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+            p_obs_x.append(obs_x_rel)
+            p_obs_y.append(obs_y_rel)
+          else:
+            p_x.append(global_x)
+            p_y.append(global_y)
+            p_obs_x.append(obs_x)
+            p_obs_y.append(obs_y)
+            print("load_prediction_objects: localization_info error!")
+
+  trajectory_info['x']=p_x
+  trajectory_info['y']=p_y
+  trajectory_info['obs_x']=p_obs_x
+  trajectory_info['obs_y']=p_obs_y
+
+  for j in range(len(trajectory_info['x'])):
+    index_object = (int)(j / 26)
+    if (j - 1 - index_object * 26) < 5:
+      index = 0
+    else:
+      index = (int)((j - 1 - index_object * 26) / 5)
+    prediction_dict[index]['x'].append(trajectory_info['x'][j])
+    prediction_dict[index]['y'].append(trajectory_info['y'][j])
+    if obs_id_num > 0:
+      prediction_dict[index]['obs_x'].append(trajectory_info['obs_x'][j])
+      prediction_dict[index]['obs_y'].append(trajectory_info['obs_y'][j])
+    else:
+      prediction_dict[index]['obs_x'].append([])
+      prediction_dict[index]['obs_y'].append([])
+
+  return prediction_dict
+
+def generate_planning_trajectory(trajectory, loc_msg = None, g_is_display_enu = False):
+  plan_dict = {0: {'x': [], 'y': []},
+               1: {'x': [], 'y': []},
+               2: {'x': [], 'y': []},
+               3: {'x': [], 'y': []},
+               4: {'x': [], 'y': []}}
+  plan_x = []
+  plan_y = []
+  plan_theta = []
+  try:
+    for i in range(len(trajectory.trajectory_points)):
+      plan_x.append(trajectory.trajectory_points[i].x)
+      plan_y.append(trajectory.trajectory_points[i].y)
+      plan_theta.append(trajectory.trajectory_points[i].heading_yaw)
+
+    if trajectory.target_reference.lateral_maneuver_gear == 2:
+      pass
+    else:
+      if g_is_display_enu:
+        for i in range(len(plan_x)):
+          index = (int)(i / 40)
+          if index > 4:
+            break
+          plan_dict[index]['x'].append(plan_x[i])
+          plan_dict[index]['y'].append(plan_y[i])
+      else:
+        coord_tf = coord_transformer()
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        plan_x, plan_y = coord_tf.global_to_local(plan_x, plan_y)
+        for i in range(len(plan_x)):
+          index = (int)(i / 40)
+          if index > 4:
+            break
+          plan_dict[index]['x'].append(plan_x[i])
+          plan_dict[index]['y'].append(plan_y[i])
+        for i in range(len(plan_theta)):
+          tmp_theta = plan_theta[i] - cur_yaw
+          plan_theta[i] = tmp_theta
+  except:
+    print('generate_planning_trajectory error')
+  return plan_x, plan_y, plan_theta, plan_dict
+
+def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_model_info = None, g_is_display_enu = False):
+  parking_space_boxes_x = []
+  parking_space_boxes_y = []
+  target_parking_space_box_x = []
+  target_parking_space_box_y = []
+  road_mark_boxes_x = []
+  road_mark_boxes_y = []
+  road_obstacle_x_vec = []
+  road_obstacle_y_vec = []
+  polygon_obstacle_x_vec = []
+  polygon_obstacle_y_vec = []
+  polygon_obstacle_label_vec = []
+  polygon_x_vec = []
+  polygon_y_vec = []
+  polygon_id_vec = []
+  polygon_obstacle_id = 8000000
+  try:
+    parking_assist_info = ehr_static_map_msg.parking_assist_info
+    # print("parking_assist_info:", parking_assist_info)
+    parking_spaces = parking_assist_info.parking_spaces
+    target_parking_space = parking_assist_info.target_parking_space
+    # print("ehr tar space: ", target_parking_space)
+    road_obstacles = parking_assist_info.road_obstacles
+    polygon_obstacles = []
+    try:
+      polygon_obstacles = parking_assist_info.polygon_obstacles
+    except:
+      pass
+    # 车道级
+    lanes = ehr_static_map_msg.road_map.lanes
+    # print("lanes: ", lanes)
+    # 道路级
+    lane_groups = ehr_static_map_msg.road_map.lane_groups
+    # print("lane_groups: ", lane_groups)
+    if g_is_display_enu:
+      for parking_space in parking_spaces:
+        parking_space_box_x = []
+        parking_space_box_y = []
+        for shape in parking_space.shape:
+          x = shape.x
+          y = shape.y
+          parking_space_box_x.append(x)
+          parking_space_box_y.append(y)
+        parking_space_boxes_x.append(parking_space_box_x)
+        parking_space_boxes_y.append(parking_space_box_y)
+
+      for shape in target_parking_space.shape:
+        x = shape.x
+        y = shape.y
+        target_parking_space_box_x.append(x)
+        target_parking_space_box_y.append(y)
+
+      for lane in lane_groups:
+        for road_mark in lane.road_marks:
+          road_mark_box_x = []
+          road_mark_box_y = []
+          for shape in road_mark.shape:
+            x = shape.x
+            y = shape.y
+            road_mark_box_x.append(x)
+            road_mark_box_y.append(y)
+          road_mark_boxes_x.append(road_mark_box_x)
+          road_mark_boxes_y.append(road_mark_box_y)
+
+      for road_obstacle in road_obstacles:
+        road_obstacle_x = []
+        road_obstacle_y = []
+        for shape in road_obstacle.shape:
+          x = shape.x
+          y = shape.y
+          road_obstacle_x.append(x)
+          road_obstacle_y.append(y)
+        road_obstacle_x_vec.append(road_obstacle_x)
+        road_obstacle_y_vec.append(road_obstacle_y)
+
+      for polygon_obstacle in polygon_obstacles:
+        polygon_obstacle_id += 1
+        polygon_id_vec.append(polygon_obstacle_id)
+        polygon_obstacle_x = []
+        polygon_obstacle_y = []
+        for shape in polygon_obstacle.shape:
+          x = shape.x
+          y = shape.y
+          polygon_obstacle_x.append(x)
+          polygon_obstacle_y.append(y)
+        polygon_obstacle_x_vec.append(polygon_obstacle_x)
+        polygon_obstacle_y_vec.append(polygon_obstacle_y)
+        polygon_x = []
+        polygon_y = []
+        lat_decision = "None"
+        is_static = ""
+        try:
+          obs_polygon = []
+          for obstacle in environment_model_info.obstacle:
+            if obstacle.id == polygon_obstacle_id:
+              obs_polygon = obstacle.polygon_points
+              if (0 == obstacle.lat_decision):
+                lat_decision = "LEFT"
+              elif (1 == obstacle.lat_decision):
+                lat_decision = "RIGHT"
+              elif (2 == obstacle.lat_decision):
+                lat_decision = "IGNORE"
+              if obstacle.is_static:
+                is_static = "Static"
+              break
+          for point in obs_polygon:
+            polygon_x.append(point.x)
+            polygon_y.append(point.y)
+        except:
+          pass
+        polygon_x_vec.append(polygon_x)
+        polygon_y_vec.append(polygon_y)
+        polygon_obstacle_label_vec.append('(id)='\
+            + str(polygon_obstacle_id) + '\n' \
+            + lat_decision + '\n' + is_static)
+    else:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for parking_space in parking_spaces:
+          parking_space_box_x = []
+          parking_space_box_y = []
+          for shape in parking_space.shape:
+            x = shape.x
+            y = shape.y
+            local_x, local_y = coord_tf.global_to_local([x], [y])
+            parking_space_box_x.append(local_x)
+            parking_space_box_y.append(local_y)
+          parking_space_boxes_x.append(parking_space_box_x)
+          parking_space_boxes_y.append(parking_space_box_y)
+
+        for shape in target_parking_space.shape:
+          x = shape.x
+          y = shape.y
+          local_x, local_y = coord_tf.global_to_local([x], [y])
+          target_parking_space_box_x.append(local_x)
+          target_parking_space_box_y.append(local_y)
+
+        for lane in lane_groups:
+          for road_mark in lane.road_marks:
+            road_mark_box_x = []
+            road_mark_box_y = []
+            for shape in road_mark.shape:
+              x = shape.x
+              y = shape.y
+              local_x, local_y = coord_tf.global_to_local([x], [y])
+              road_mark_box_x.append(local_x)
+              road_mark_box_y.append(local_y)
+            road_mark_boxes_x.append(road_mark_box_x)
+            road_mark_boxes_y.append(road_mark_box_y)
+
+        for road_obstacle in road_obstacles:
+          road_obstacle_x = []
+          road_obstacle_y = []
+          for shape in road_obstacle.shape:
+            x = shape.x
+            y = shape.y
+            local_x, local_y = coord_tf.global_to_local([x], [y])
+            road_obstacle_x.append(local_x)
+            road_obstacle_y.append(local_y)
+          road_obstacle_x_vec.append(road_obstacle_x)
+          road_obstacle_y_vec.append(road_obstacle_y)
+
+        for polygon_obstacle in polygon_obstacles:
+          polygon_obstacle_id += 1
+          polygon_id_vec.append(polygon_obstacle_id)
+          polygon_obstacle_x = []
+          polygon_obstacle_y = []
+          for shape in polygon_obstacle.shape:
+            x = shape.x
+            y = shape.y
+            local_x, local_y = coord_tf.global_to_local([x], [y])
+            polygon_obstacle_x.append(local_x)
+            polygon_obstacle_y.append(local_y)
+          polygon_obstacle_x_vec.append(polygon_obstacle_x)
+          polygon_obstacle_y_vec.append(polygon_obstacle_y)
+          polygon_x = []
+          polygon_y = []
+          lat_decision = "None"
+          is_static = ""
+          try:
+            obs_polygon = []
+            for obstacle in environment_model_info.obstacle:
+              if obstacle.id == polygon_obstacle_id:
+                obs_polygon = obstacle.polygon_points
+                if (0 == obstacle.lat_decision):
+                  lat_decision = "LEFT"
+                elif (1 == obstacle.lat_decision):
+                  lat_decision = "RIGHT"
+                elif (2 == obstacle.lat_decision):
+                  lat_decision = "IGNORE"
+                if obstacle.is_static:
+                  is_static = "Static"
+                break
+            for point in obs_polygon:
+              local_x, local_y = coord_tf.global_to_local([point.x], [point.y])
+              polygon_x.append(local_x)
+              polygon_y.append(local_y)
+          except:
+            pass
+          polygon_obstacle_label_vec.append('(id)='\
+              + str(polygon_obstacle_id) + '\n' \
+              + lat_decision + '\n' + is_static)
+          polygon_x_vec.append(polygon_x)
+          polygon_y_vec.append(polygon_y)
+  except:
+    print('generate_ehr_static_map error')
+  road_obstacle_x_vec = list(itertools.chain.from_iterable(road_obstacle_x_vec))
+  road_obstacle_y_vec = list(itertools.chain.from_iterable(road_obstacle_y_vec))
+  return parking_space_boxes_x, parking_space_boxes_y, \
+         target_parking_space_box_x, target_parking_space_box_y, \
+         road_mark_boxes_x, road_mark_boxes_y, \
+         road_obstacle_x_vec, road_obstacle_y_vec, \
+         polygon_obstacle_x_vec, polygon_obstacle_y_vec, polygon_obstacle_label_vec, \
+         polygon_x_vec, polygon_y_vec, polygon_id_vec
+
+def generate_ground_line(ground_line_msg, loc_msg = None, environment_model_info = None, g_is_display_enu = False):
+  groundline_x_vec = []
+  groundline_y_vec = []
+  groundline_id_vec = []
+  pos_x_vec = []
+  pos_y_vec = []
+  ground_line_label_vec = []
+  polygon_x_vec = []
+  polygon_y_vec = []
+  try:
+    groundline_size = ground_line_msg.groundline_size
+    ground_lines = ground_line_msg.groundline
+    ground_line_id = 5000000
+    if g_is_display_enu:
+      for j in range(groundline_size):
+        groundline = ground_lines[j]
+        id = groundline.id
+        type = groundline.type
+        resource_type = groundline.resource_type
+        single_groundline_x_vec = []
+        single_groundline_y_vec = []
+        groundline_point_size = groundline.groundline_point_size
+        for k in range(groundline_point_size):
+          ground_x_enu = groundline.groundline_point[k].x
+          ground_y_enu = groundline.groundline_point[k].y
+          single_groundline_x_vec.append(ground_x_enu)
+          single_groundline_y_vec.append(ground_y_enu)
+        groundline_x_vec.append(single_groundline_x_vec)
+        groundline_y_vec.append(single_groundline_y_vec)
+        polygon_x = []
+        polygon_y = []
+        lat_decision = "None"
+        is_static = ""
+        ground_line_id = id + 5000000
+        groundline_id_vec.append(ground_line_id)
+        try:
+          obs_polygon = []
+          for obstacle in environment_model_info.obstacle:
+            if obstacle.id == ground_line_id:
+              obs_polygon = obstacle.polygon_points
+              if (0 == obstacle.lat_decision):
+                lat_decision = "LEFT"
+              elif (1 == obstacle.lat_decision):
+                lat_decision = "RIGHT"
+              elif (2 == obstacle.lat_decision):
+                lat_decision = "IGNORE"
+              if obstacle.is_static:
+                is_static = "Static"
+              break
+          for point in obs_polygon:
+            polygon_x.append(point.x)
+            polygon_y.append(point.y)
+        except:
+          pass
+        polygon_x_vec.append(polygon_x)
+        polygon_y_vec.append(polygon_y)
+        pos_x_vec.append(single_groundline_x_vec[0])
+        pos_y_vec.append(single_groundline_y_vec[0])
+        ground_line_label_vec.append('(id,type,resource)=' + '\n'\
+            + str(ground_line_id) + ',' + str(type) + ',' + str(resource_type) + '\n'\
+            + lat_decision + '\n' + is_static)
+    else:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for j in range(groundline_size):
+          groundline = ground_lines[j]
+          id = groundline.id
+          type = groundline.type
+          resource_type = groundline.resource_type
+          single_groundline_x_vec = []
+          single_groundline_y_vec = []
+          groundline_point_size = groundline.groundline_point_size
+          for k in range(groundline_point_size):
+            ground_x_enu = groundline.groundline_point[k].x
+            ground_y_enu = groundline.groundline_point[k].y
+            local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+            single_groundline_x_vec.append(local_x)
+            single_groundline_y_vec.append(local_y)
+          groundline_x_vec.append(single_groundline_x_vec)
+          groundline_y_vec.append(single_groundline_y_vec)
+          polygon_x = []
+          polygon_y = []
+          lat_decision = "None"
+          is_static = ""
+          ground_line_id = id + 5000000
+          groundline_id_vec.append(ground_line_id)
+          try:
+            obs_polygon = []
+            for obstacle in environment_model_info.obstacle:
+              if obstacle.id == ground_line_id:
+                obs_polygon = obstacle.polygon_points
+                if (0 == obstacle.lat_decision):
+                  lat_decision = "LEFT"
+                elif (1 == obstacle.lat_decision):
+                  lat_decision = "RIGHT"
+                elif (2 == obstacle.lat_decision):
+                  lat_decision = "IGNORE"
+                if obstacle.is_static:
+                  is_static = "Static"
+                break
+            for point in obs_polygon:
+              local_x, local_y = coord_tf.global_to_local([point.x], [point.y])
+              polygon_x.append(local_x)
+              polygon_y.append(local_y)
+          except:
+            pass
+          pos_x_vec.append(single_groundline_x_vec[0])
+          pos_y_vec.append(single_groundline_y_vec[0])
+          ground_line_label_vec.append('(id,type,resource)=' + '\n'\
+              + str(ground_line_id) + ',' + str(type) + ',' + str(resource_type) + '\n'\
+              + lat_decision + '\n' + is_static)
+          polygon_x_vec.append(polygon_x)
+          polygon_y_vec.append(polygon_y)
+  except:
+    print('groundline error')
+  groundline_x_vec = list(itertools.chain.from_iterable(groundline_x_vec))
+  groundline_y_vec = list(itertools.chain.from_iterable(groundline_y_vec))
+  return groundline_x_vec, groundline_y_vec, groundline_id_vec, pos_x_vec, pos_y_vec, ground_line_label_vec, polygon_x_vec, polygon_y_vec
+
+def generate_rdg_ground_line(ground_line_msg, loc_msg = None, g_is_display_enu = False):
+  groundline_x_vec = []
+  groundline_y_vec = []
+  try:
+    groundline_size = ground_line_msg.ground_lines_size
+    ground_lines = ground_line_msg.ground_lines
+    if not g_is_display_enu:
+      for j in range(groundline_size):
+        groundline = ground_lines[j]
+        single_groundline_x_vec = []
+        single_groundline_y_vec = []
+        groundline_point_size = groundline.points_2d_size
+        for k in range(groundline_point_size):
+          ground_x_enu = groundline.points_2d[k].x
+          ground_y_enu = groundline.points_2d[k].y
+          single_groundline_x_vec.append(ground_x_enu)
+          single_groundline_y_vec.append(ground_y_enu)
+        groundline_x_vec.append(single_groundline_x_vec)
+        groundline_y_vec.append(single_groundline_y_vec)
+    else:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for j in range(groundline_size):
+          groundline = ground_lines[j]
+          single_groundline_x_vec = []
+          single_groundline_y_vec = []
+          groundline_point_size = groundline.points_2d_size
+          for k in range(groundline_point_size):
+            ground_x_enu = groundline.points_2d[k].x
+            ground_y_enu = groundline.points_2d[k].y
+            # local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+            local_x, local_y = coord_tf.local_to_global([ground_x_enu], [ground_y_enu])
+            single_groundline_x_vec.append(local_x)
+            single_groundline_y_vec.append(local_y)
+          groundline_x_vec.append(single_groundline_x_vec)
+          groundline_y_vec.append(single_groundline_y_vec)
+  except:
+    print('rdg ground line error')
+  groundline_x_vec = list(itertools.chain.from_iterable(groundline_x_vec))
+  groundline_y_vec = list(itertools.chain.from_iterable(groundline_y_vec))
+  return groundline_x_vec, groundline_y_vec
+
+def generate_control(control_msg, loc_msg = None, g_is_display_enu = False):
+  mpc_dx = []
+  mpc_dy = []
+  mpc_dtheta = []
+  if control_msg.control_status.available:
+    control_result_points_size = control_msg.control_trajectory.control_result_points_size
+    control_result_points = control_msg.control_trajectory.control_result_points
+    #print("real control_result_points size: ", control_result_points_size)
+    for i in range(control_result_points_size):
+      mpc_dx.append(control_result_points[i].x)
+      mpc_dy.append(control_result_points[i].y)
+    if len(mpc_dx) > 0:
+      f1 = interp1d(mpc_dx, mpc_dy, kind='cubic')
+      try:
+        for i in range(len(mpc_dx) - 1):
+          mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[i] + 1e-6, dx = 1e-6)))
+        mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[len(mpc_dx) - 1] - 1e-6, dx = 1e-6)))
+      except:
+        mpc_dtheta = len(mpc_dx) * [0]
+    if g_is_display_enu:
+      if loc_msg == None:
+        mpc_dx = len(mpc_dx) * [0]
+        mpc_dy = len(mpc_dy) * [0]
+        return mpc_dx, mpc_dy, mpc_dtheta
+      coord_tf = coord_transformer()
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      mpc_dx, mpc_dy = coord_tf.local_to_global(mpc_dx, mpc_dy)
+      for i in range(len(mpc_dtheta)):
+        mpc_dtheta[i] = mpc_dtheta[i] + cur_yaw
+  else:
+    # print("control_status available is false")
+    pass
+  return mpc_dx, mpc_dy, mpc_dtheta
+
+# GroundLinePoint & GroundLineDecider & generate_ground_line_clusters must be consistent with C++ code
+class GroundLinePoint:
+  class Status:
+      UNCLASSIFIED = 0
+      CLASSIFIED = 1
+      NOISE = 2
+
+  def __init__(self, point, status):
+      self.point = point
+      self.status = status
+
+  def __eq__(self, other):
+      return self.point == other.point and self.status == other.status
+
+  def __ne__(self, other):
+      return not (self.point == other.point and self.status == other.status)
+
+class GroundLineDecider:
+  min_pts = 3
+  eps = 0.5
+
+  def update_params(min_pts, eps):
+    GroundLineDecider.min_pts = min_pts
+    GroundLineDecider.eps = eps
+
+  def execute(ground_line_points):
+    result = []
+    points = ground_line_points
+    for point in points:
+      if point.status == GroundLinePoint.Status.UNCLASSIFIED:
+        cluster = []
+        GroundLineDecider.expand_cluster(point, points, cluster)
+        if cluster:
+          result.append(cluster)
+    return result
+
+  def calc_cluster(point, points, cluster_index):
+    for i in range(len(points)):
+      if point != points[i] and math.sqrt((point.point[0] - points[i].point[0])**2 + (point.point[1] - points[i].point[1])**2) <= GroundLineDecider.eps:
+        cluster_index.append(i)
+
+  def expand_cluster(point, points, result):
+    result.clear()
+    cluster = []
+    GroundLineDecider.calc_cluster(point, points, cluster)
+    if len(cluster) < GroundLineDecider.min_pts:
+      point.status = GroundLinePoint.Status.NOISE
+      return
+
+    point.status = GroundLinePoint.Status.CLASSIFIED
+    result.append(point.point)
+    index = 0
+    for c_index in cluster:
+      index += 1
+      cluster_exp = []
+      GroundLineDecider.calc_cluster(points[c_index], points, cluster_exp)
+      points[c_index].status = GroundLinePoint.Status.CLASSIFIED
+      result.append(points[c_index].point)
+
+      if len(cluster_exp) >= GroundLineDecider.min_pts:
+        for j in range(len(cluster_exp)):
+          if points[cluster_exp[j]].status == GroundLinePoint.Status.UNCLASSIFIED:
+            if cluster_exp[j] not in cluster:
+              cluster.append(cluster_exp[j])
+          elif points[cluster_exp[j]].status == GroundLinePoint.Status.NOISE:
+            points[cluster_exp[j]].status = GroundLinePoint.Status.CLASSIFIED
+            result.append(points[cluster_exp[j]].point)
+
+def generate_ground_line_clusters(ground_line_msg, loc_msg = None, g_is_display_enu = False):
+  groundline_point_x_vec = []
+  groundline_point_y_vec = []
+  groundline_points = []
+  try:
+    ground_lines = ground_line_msg.groundline
+    groundline_size = ground_line_msg.groundline_size
+    if g_is_display_enu:
+      for j in range(groundline_size):
+        groundline = ground_lines[j]
+        groundline_point_size = groundline.groundline_point_size
+        for k in range(groundline_point_size):
+          ground_x_enu = groundline.shape[k].x
+          ground_y_enu = groundline.shape[k].y
+          groundline_point_x_vec.append(ground_x_enu)
+          groundline_point_y_vec.append(ground_y_enu)
+          groundline_point = GroundLinePoint([ground_x_enu, ground_y_enu], GroundLinePoint.Status.UNCLASSIFIED)
+          groundline_points.append(groundline_point)
+
+    else:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        for j in range(groundline_size):
+          groundline = ground_lines[j]
+          groundline_point_size = groundline.groundline_point_size
+          for k in range(groundline_point_size):
+            ground_x_enu = groundline.shape[k].x
+            ground_y_enu = groundline.shape[k].y
+            local_x, local_y = coord_tf.global_to_local([ground_x_enu], [ground_y_enu])
+            groundline_point_x_vec.append(local_x)
+            groundline_point_y_vec.append(local_y)
+            groundline_point = GroundLinePoint([ground_x_enu, ground_y_enu], GroundLinePoint.Status.UNCLASSIFIED)
+            groundline_points.append(groundline_point)
+  except:
+    print('groundline error')
+
+  clusters = GroundLineDecider.execute(groundline_points)
+  groundline_x_vec = []
+  groundline_y_vec = []
+  groundline_id_vec = []
+  kGroundLineIdOffset = 5000000
+  for cluster in clusters:
+    single_groundline_x_vec = []
+    single_groundline_y_vec = []
+    single_groundline_id_vec = []
+    kGroundLineIdOffset += 1
+    single_groundline_id_vec.append(kGroundLineIdOffset)
+    for groundline_point in cluster:
+      single_groundline_x_vec.append(groundline_point[0])
+      single_groundline_y_vec.append(groundline_point[1])
+    groundline_x_vec.append(single_groundline_x_vec)
+    groundline_y_vec.append(single_groundline_y_vec)
+    groundline_id_vec.append(single_groundline_id_vec)
+  return groundline_point_x_vec, groundline_point_y_vec, groundline_x_vec, groundline_y_vec, groundline_id_vec
+
+# ParkingSlotManager & hpp_generate_ehr_static_map must be consistent with C++ code
+class ParkingSlotManager:
+  kMaxDistanceY = 5
+  kMaxDistanceFrontX = 40
+  kMaxDistanceBackX = 30
+
+  def update(parking_info, loc_info, is_fusion = False):
+    points_ = []
+    if is_fusion:
+      parking_fusion_slot_lists_size = parking_info.parking_fusion_slot_lists_size
+      for i in range(parking_fusion_slot_lists_size):
+        park_space = parking_info.parking_fusion_slot_lists[i]
+        corner_points = park_space.corner_points
+        slot_point = []
+        if len(corner_points) != 4:
+          continue
+        min_x, min_y, max_x, max_y = float('inf'), float('inf'), float('-inf'), float('-inf')
+        for lot_point in corner_points:
+          v = np.array([[lot_point.x], [lot_point.y], [0]])
+          park_space_point_car = ParkingSlotManager.enu2car_matrix(loc_info, v, True)
+          min_x = min(min_x, park_space_point_car[0])
+          min_y = min(min_y, park_space_point_car[1])
+          max_x = max(max_x, park_space_point_car[0])
+          max_y = max(max_y, park_space_point_car[1])
+          slot_point.append([lot_point.x, lot_point.y])
+        if ((min_y > 0 and min_y < ParkingSlotManager.kMaxDistanceY) or (max_y < 0 and max_y > -ParkingSlotManager.kMaxDistanceY) or (min_y <= 0 and max_y >=0)) and min_x < ParkingSlotManager.kMaxDistanceFrontX and max_x > -ParkingSlotManager.kMaxDistanceBackX:
+          points_.append(slot_point)
+    else:
+      park_spaces = parking_info.parking_assist_info.parking_spaces
+      for park_space in park_spaces:
+        slot_point = []
+        if len(park_space.shape) != 4:
+          continue
+        min_x, min_y, max_x, max_y = float('inf'), float('inf'), float('-inf'), float('-inf')
+        for lot_point in park_space.shape:
+          v = np.array([[lot_point.x], [lot_point.y], [lot_point.z]])
+          park_space_point_car = ParkingSlotManager.enu2car_matrix(loc_info, v)
+          min_x = min(min_x, park_space_point_car[0])
+          min_y = min(min_y, park_space_point_car[1])
+          max_x = max(max_x, park_space_point_car[0])
+          max_y = max(max_y, park_space_point_car[1])
+          slot_point.append([lot_point.x, lot_point.y])
+        if ((min_y > 0 and min_y < ParkingSlotManager.kMaxDistanceY) or (max_y < 0 and max_y > -ParkingSlotManager.kMaxDistanceY) or (min_y <= 0 and max_y >=0)) and min_x < ParkingSlotManager.kMaxDistanceFrontX and max_x > -ParkingSlotManager.kMaxDistanceBackX:
+          points_.append(slot_point)
+    return points_
+
+  def enu2car_matrix(loc_info, v, is_fusion = False):
+    o = loc_info.orientation.quaternion_boot
+    p = loc_info.position.position_boot
+    if is_fusion:
+      m_basis = ParkingSlotManager.calculate_m_basis(np.array([o.x, o.y, o.z, o.w]))
+      m_origin = np.array([[p.x], [p.y], [0]])
+      enu2car_q = m_basis.T
+      enu2car_v = enu2car_q.dot(-1 * m_origin)
+      return enu2car_q.dot(v) + enu2car_v
+    else:
+      m_basis = ParkingSlotManager.calculate_m_basis(np.array([o.x, o.y, o.z, o.w]))
+      m_origin = np.array([[p.x], [p.y], [p.z]])
+      enu2car_q = m_basis.T
+      enu2car_v = enu2car_q.dot(-1 * m_origin)
+      return enu2car_q.dot(v) + enu2car_v
+
+  def calculate_m_basis(q):
+    d = q.dot(q)
+    k_epsilon = 1.0e-10
+    if d >= 0.0:
+      d = max(d, k_epsilon)
+    else:
+      d = min(d, -k_epsilon)
+    s = 2.0 / d
+    xs = q[0] * s
+    ys = q[1] * s
+    zs = q[2] * s
+    wx = q[3] * xs
+    wy = q[3] * ys
+    wz = q[3] * zs
+    xx = q[0] * xs
+    xy = q[0] * ys
+    xz = q[0] * zs
+    yy = q[1] * ys
+    yz = q[1] * zs
+    zz = q[2] * zs
+    return np.array([[(1.0 - (yy + zz)), (xy - wz), (xz + wy)],
+                     [(xy + wz), (1.0 - (xx + zz)), (yz - wx)],
+                     [(xz - wy), (yz + wx), (1.0 - (xx + yy))]])
+
+def hpp_generate_ehr_static_map(ehr_static_map_msg, loc_msg, g_is_display_enu = False):
+  # road_mark_boxes_x = []
+  # road_mark_boxes_y = []
+  parking_space_boxes_x = []
+  parking_space_boxes_y = []
+  parking_space_boxes_id = []
+  kParkingSlotIdOffset = 6000000
+  try:
+    parking_slot_points = ParkingSlotManager.update(ehr_static_map_msg, loc_msg)
+    # road_mark_info = ehr_static_map_msg.
+    if g_is_display_enu:
+      for parking_slot_point in parking_slot_points:
+        if len(parking_slot_point) != 4:
+          continue
+        kParkingSlotIdOffset += 1
+        parking_space_box_x = []
+        parking_space_box_y = []
+        for points in parking_slot_point:
+          parking_space_box_x.append(points[0])
+          parking_space_box_y.append(points[1])
+        parking_space_boxes_x.append(parking_space_box_x)
+        parking_space_boxes_y.append(parking_space_box_y)
+        parking_space_boxes_id.append(kParkingSlotIdOffset)
+
+      # for road_mark in road_mark_info:
+        # road_mark_box_x = []
+        # road_mark_box_y = []
+        # for shape in road_mark.shape:
+          # x = shape.boot.x
+          # y = shape.boot.y
+          # road_mark_box_x.append(x)
+          # road_mark_box_y.append(y)
+        # road_mark_boxes_x.append(road_mark_box_x)
+        # road_mark_boxes_y.append(road_mark_box_y)
+    else:
+      coord_tf = coord_transformer()
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      for parking_slot_point in parking_slot_points:
+        if len(parking_slot_point) != 4:
+          continue
+        kParkingSlotIdOffset += 1
+        parking_space_box_x = []
+        parking_space_box_y = []
+        for points in parking_slot_point:
+          local_x, local_y = coord_tf.global_to_local(points[0], points[1])
+          parking_space_box_x.append(local_x)
+          parking_space_box_y.append(local_y)
+        parking_space_boxes_x.append(parking_space_box_x)
+        parking_space_boxes_y.append(parking_space_box_y)
+        parking_space_boxes_id.append(kParkingSlotIdOffset)
+
+      # for road_mark in road_mark_info:
+        # road_mark_box_x = []
+        # road_mark_box_y = []
+        # for shape in road_mark.shape:
+          # x = shape.boot.x
+          # y = shape.boot.y
+          # local_x, local_y = coord_tf.global_to_local([x], [y])
+          # road_mark_box_x.append(local_x)
+          # road_mark_box_y.append(local_y)
+        # road_mark_boxes_x.append(road_mark_box_x)
+        # road_mark_boxes_y.append(road_mark_box_y)
+  except:
+    print('hpp_generate_ehr_static_map error')
+  return parking_space_boxes_x, parking_space_boxes_y, parking_space_boxes_id  # , road_mark_boxes_x, road_mark_boxes_y
+
+def hpp_generate_parking_slot(fus_parking_msg, loc_msg, g_is_display_enu = False):
+  # road_mark_boxes_x = []
+  # road_mark_boxes_y = []
+  parking_space_boxes_x = []
+  parking_space_boxes_y = []
+  parking_space_boxes_id = []
+  kParkingSlotIdOffset = 6000000
+  try:
+    parking_slot_points = ParkingSlotManager.update(fus_parking_msg, loc_msg, True)
+    if g_is_display_enu:
+      for parking_slot_point in parking_slot_points:
+        if len(parking_slot_point) != 4:
+          continue
+        kParkingSlotIdOffset += 1
+        parking_space_box_x = []
+        parking_space_box_y = []
+        for points in parking_slot_point:
+          parking_space_box_x.append(points[0])
+          parking_space_box_y.append(points[1])
+        parking_space_boxes_x.append(parking_space_box_x)
+        parking_space_boxes_y.append(parking_space_box_y)
+        parking_space_boxes_id.append(kParkingSlotIdOffset)
+    else:
+      coord_tf = coord_transformer()
+      cur_pos_xn = loc_msg.position.position_boot.x
+      cur_pos_yn = loc_msg.position.position_boot.y
+      cur_yaw = loc_msg.orientation.euler_boot.yaw
+      coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      for parking_slot_point in parking_slot_points:
+        if len(parking_slot_point) != 4:
+          continue
+        kParkingSlotIdOffset += 1
+        parking_space_box_x = []
+        parking_space_box_y = []
+        for points in parking_slot_point:
+          local_x, local_y = coord_tf.global_to_local(points[0], points[1])
+          parking_space_box_x.append(local_x)
+          parking_space_box_y.append(local_y)
+        parking_space_boxes_x.append(parking_space_box_x)
+        parking_space_boxes_y.append(parking_space_box_y)
+        parking_space_boxes_id.append(kParkingSlotIdOffset)
+  except:
+    print('hpp_generate_parking_slot error')
+  return parking_space_boxes_x, parking_space_boxes_y, parking_space_boxes_id
+
+def generate_parking_slot(fus_parking_msg, loc_msg, release_slot_id_list):
+  parking_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  release_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  plan_release_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  select_parking_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  try:
+    select_slot_id = fus_parking_msg.select_slot_id
+    print("select_slot_id: ", select_slot_id)
+    print("memorized_slot_id: {}".format(fus_parking_msg.memorized_slot_id))
+    parking_fusion_slot_lists_size = fus_parking_msg.parking_fusion_slot_lists_size
+    for j in range(parking_fusion_slot_lists_size):
+      parking_fusion_slot_lists = fus_parking_msg.parking_fusion_slot_lists[j]
+      id = parking_fusion_slot_lists.id
+      is_release = False
+      for release_id in release_slot_id_list:
+        if id == release_id.id:
+          is_release = True
+          break
+      # uss_id = parking_fusion_slot_lists.uss_id
+      resource_type = parking_fusion_slot_lists.resource_type
+      fusion_source = parking_fusion_slot_lists.fusion_source
+      type = parking_fusion_slot_lists.type
+      allow_parking = parking_fusion_slot_lists.allow_parking
+
+      corner_points = parking_fusion_slot_lists.corner_points
+      pos_x = 0.0
+      pos_y = 0.0
+      parking_slot_x, parking_slot_y = [], []
+      for index, points in enumerate(corner_points):
+        parking_slot_x.append(points.x)
+        parking_slot_y.append(points.y)
+        pos_x += points.x
+        pos_y += points.y
+
+      pos_x /= 4.0
+      pos_y /= 4.0
+
+      pos_x_rel, pos_y_rel = [], []
+      parking_slot_x_rel, parking_slot_y_rel = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        parking_slot_x_rel, parking_slot_y_rel = coord_tf.global_to_local(parking_slot_x, parking_slot_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([pos_x], [pos_y])
+
+      if id == select_slot_id:
+        select_parking_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        select_parking_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        select_parking_slot_info['pos_x_rel'].append(pos_x_rel)
+        select_parking_slot_info['pos_y_rel'].append(pos_y_rel)
+        select_parking_slot_info['parking_slot_x'].append(parking_slot_x)
+        select_parking_slot_info['parking_slot_y'].append(parking_slot_y)
+        select_parking_slot_info['pos_x'].append([pos_x])
+        select_parking_slot_info['pos_y'].append([pos_y])
+        select_parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ',' +  str(allow_parking) +')'])
+      elif is_release:
+        plan_release_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        plan_release_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        plan_release_slot_info['pos_x_rel'].append(pos_x_rel)
+        plan_release_slot_info['pos_y_rel'].append(pos_y_rel)
+        plan_release_slot_info['parking_slot_x'].append(parking_slot_x)
+        plan_release_slot_info['parking_slot_y'].append(parking_slot_y)
+        plan_release_slot_info['pos_x'].append([pos_x])
+        plan_release_slot_info['pos_y'].append([pos_y])
+        plan_release_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+      elif allow_parking == 1:
+        release_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        release_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        release_slot_info['pos_x_rel'].append(pos_x_rel)
+        release_slot_info['pos_y_rel'].append(pos_y_rel)
+        release_slot_info['parking_slot_x'].append(parking_slot_x)
+        release_slot_info['parking_slot_y'].append(parking_slot_y)
+        release_slot_info['pos_x'].append([pos_x])
+        release_slot_info['pos_y'].append([pos_y])
+        release_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+      else:
+        parking_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+        parking_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+        parking_slot_info['pos_x_rel'].append(pos_x_rel)
+        parking_slot_info['pos_y_rel'].append(pos_y_rel)
+        parking_slot_info['parking_slot_x'].append(parking_slot_x)
+        parking_slot_info['parking_slot_y'].append(parking_slot_y)
+        parking_slot_info['pos_x'].append([pos_x])
+        parking_slot_info['pos_y'].append([pos_y])
+        parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(resource_type) + ')'])
+  except:
+    print("fus_parking_msg error")
+  return parking_slot_info, release_slot_info, plan_release_slot_info, select_parking_slot_info
+
+
+def generate_rdg_parking_slot(rdg_parking_msg, loc_msg):
+  parking_slot_info = {
+    'parking_slot_x_rel': [],
+    'parking_slot_y_rel': [],
+    'parking_slot_x': [],
+    'parking_slot_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'parking_slot_label':[]
+  }
+  try:
+    parking_slots_size = rdg_parking_msg.parking_slots_size
+    for j in range(parking_slots_size):
+      parking_camera_slot = rdg_parking_msg.parking_slots[j]
+      id = parking_camera_slot.id
+      type = parking_camera_slot.type
+      allow_parking = parking_camera_slot.allow_parking
+      corner_points = parking_camera_slot.corner_points
+      pos_x_rel = 0.0
+      pos_y_rel = 0.0
+      parking_slot_x_rel, parking_slot_y_rel = [], []
+      for index, points in enumerate(corner_points):
+        parking_slot_x_rel.append(points.x)
+        parking_slot_y_rel.append(points.y)
+        pos_x_rel += points.x
+        pos_y_rel += points.y
+
+      pos_x_rel /= 4.0
+      pos_y_rel /= 4.0
+
+      pos_x, pos_y= [], []
+      parking_slot_x, parking_slot_y = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        parking_slot_x, parking_slot_y = coord_tf.local_to_global(parking_slot_x_rel, parking_slot_y_rel)
+        pos_x, pos_y = coord_tf.local_to_global([pos_x_rel], [pos_y_rel])
+
+      parking_slot_info['parking_slot_x_rel'].append(parking_slot_x_rel)
+      parking_slot_info['parking_slot_y_rel'].append(parking_slot_y_rel)
+      parking_slot_info['pos_x_rel'].append(pos_x_rel)
+      parking_slot_info['pos_y_rel'].append(pos_y_rel)
+      parking_slot_info['parking_slot_x'].append(parking_slot_x)
+      parking_slot_info['parking_slot_y'].append(parking_slot_y)
+      parking_slot_info['pos_x'].append([pos_x])
+      parking_slot_info['pos_y'].append([pos_y])
+      parking_slot_info['parking_slot_label'].append(['(' + str(id) + ',' + str(allow_parking) + ',' + str(type) + ')'])
+  except:
+    print("rdg_parking_msg error")
+  return parking_slot_info
+
+
+def generate_speed_bump(fus_speed_bump_msg, loc_msg):
+  speed_bump_info = {
+    'speed_bump_x_rel': [],
+    'speed_bump_y_rel': [],
+    'speed_bump_x': [],
+    'speed_bump_y': [],
+    'pos_x_rel': [],
+    'pos_y_rel': [],
+    'pos_x': [],
+    'pos_y': [],
+    'speed_bump_label':[]
+  }
+  try:
+    decelers_size = fus_speed_bump_msg.decelers_size
+    for j in range(decelers_size):
+      decelers = fus_speed_bump_msg.decelers[j]
+      id = decelers.id
+      # resource_type = decelers.resource_type
+      deceler_points = decelers.deceler_points
+      pos_x = 0.0
+      pos_y = 0.0
+      speed_bump_x, speed_bump_y = [], []
+      for index, points in enumerate(deceler_points):
+        speed_bump_x.append(points.x)
+        speed_bump_y.append(points.y)
+        pos_x += points.x
+        pos_y += points.y
+
+      pos_x /= 4.0
+      pos_y /= 4.0
+
+      pos_x_rel, pos_y_rel = [], []
+      speed_bump_x_rel, speed_bump_y_rel = [], []
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        speed_bump_x_rel, speed_bump_y_rel = coord_tf.global_to_local(speed_bump_x, speed_bump_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([pos_x], [pos_y])
+
+      speed_bump_info['speed_bump_x_rel'].append(speed_bump_x_rel)
+      speed_bump_info['speed_bump_y_rel'].append(speed_bump_y_rel)
+      speed_bump_info['pos_x_rel'].append(pos_x_rel)
+      speed_bump_info['pos_y_rel'].append(pos_y_rel)
+      speed_bump_info['speed_bump_x'].append(speed_bump_x)
+      speed_bump_info['speed_bump_y'].append(speed_bump_y)
+      speed_bump_info['pos_x'].append(pos_x)
+      speed_bump_info['pos_y'].append(pos_y)
+      speed_bump_info['speed_bump_label'].append(str(id))
+  except:
+    print("fus_speed_bump_msg error")
+  return speed_bump_info
+
+
+def load_lat_common(plan_debug, planning_json):
+  vo_lat_motion_plan = plan_debug.vo_lat_motion_plan
+  vo_lat_behavior_plan = plan_debug.vo_lat_behavior_plan
+  lat_behavior_common = plan_debug.lat_behavior_common
+  vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
+          'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
+            'is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
+      'lc_valid_back','lc_back_obj_id','lc_back_cnt','lc_back_invalid_reason',\
+        'v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
+          'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
+            'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
+              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', ]
+  # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
+  data_dict1 = {}
+  for name in vars:
+    try:
+      data_dict1[name] = getattr(lat_behavior_common,name)
+    except:
+      pass
+
+  data_dict2 = {}
+  try:
+  # 横向运动规划offset 可视化
+    basic_dpoly = vo_lat_motion_plan.basic_dpoly
+    data_dict2['premove_dpoly_c0'] = vo_lat_motion_plan.premove_dpoly_c0 - basic_dpoly[3]
+    data_dict2['avoid_dpoly_c0'] = vo_lat_motion_plan.avoid_dpoly_c0 - basic_dpoly[3]
+  except:
+    pass
+
+  avoid_car_id_str = ""
+  for avoid_car_id in vo_lat_behavior_plan.avoid_car_ids:
+    avoid_car_id_str = avoid_car_id_str + str(avoid_car_id) + ' '
+  left_alc_car_id_str = ""
+  right_alc_car_id_str = ""
+  for left_alc_car_id in lat_behavior_common.left_alc_car_ids:
+    left_alc_car_id_str = left_alc_car_id_str + str(left_alc_car_id) + ' '
+  for right_alc_car_id in lat_behavior_common.right_alc_car_ids:
+    right_alc_car_id_str = right_alc_car_id_str + str(right_alc_car_id) + ' '
+  # 添加可视化left_alc_car_ids、right_alc_car_ids可视化
+
+  avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
+                        "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "normal_right_avoid_threshold","normal_left_avoid_threshold", "avoid_way", "is_use_ego_position",\
+                        "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","maintain_avoid", "lateral_avoid_ids", "left_road_extra_buffer","right_road_extra_buffer",
+                        'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state']
+  for key in avoid_debug_key:
+    try:
+      data_dict2[key] = planning_json[key]
+    except:
+      pass
+
+  try:
+    data_dict2['lateral_offset'] = planning_json["lateral_offset"]
+  except:
+    pass
+  try:
+    data_dict2['avoid_way'] = planning_json["avoid_way"]
+  except:
+    pass
+  return data_dict1, data_dict2
+
+def load_avoid(plan_debug, planning_json):
+
+  data_dict2 = {}
+  avoid_debug_key = ["avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
+                        "select_avoid_car_ids_1", "select_avoid_car_ids_2","lat_offset", "smooth_lateral_offset", "lane_width", "normal_right_avoid_threshold","normal_left_avoid_threshold", "avoid_way", "is_use_ego_position",\
+                        "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
+                        "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "can_left_borrow","can_right_borrow","maintain_avoid","lateral_avoid_ids","left_road_extra_buffer","right_road_extra_buffer"]
+  for key in avoid_debug_key:
+    try:
+      data_dict2[key] = planning_json[key]
+    except:
+      data_dict2[key] = 'none'
+      pass
+
+  # try:
+  #   data_dict2['lateral_offset'] = planning_json["lateral_offset"]
+  # except:
+  #   data_dict2[key] = 'none'
+  #   pass
+  # try:
+  #   data_dict2['avoid_way'] = planning_json["avoid_way"]
+  # except:
+  #   pass
+  return  data_dict2
+
+def load_time_cost(plan_debug, planning_json):
+  time_cost_keys = ["VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", "edt_manager_cost"]
+  data_dict = {}
+  for key in time_cost_keys:
+    try:
+      data_dict[key] = planning_json[key]
+    except:
+      data_dict[key] = 'none'
+      pass
+  print(data_dict)
+# 障碍物的id选择
+class ObjText:
+  def __init__(self,  obj_callback):
+    self.id = ipywidgets.IntText(layout=ipywidgets.Layout(width='10%'), description= "obj_id",min=0.0, max=10000)
+    ipywidgets.interact(obj_callback, id = self.id)

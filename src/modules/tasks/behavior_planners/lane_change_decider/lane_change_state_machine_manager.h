@@ -1,0 +1,362 @@
+#pragma once
+
+#include <cstdint>
+#include <memory>
+#include <unordered_map>
+
+#include "behavior_planners/lane_change_decider/lane_change_joint_decision_generator/lat_lon_joint_decision_generator.h"
+#include "behavior_planners/lane_change_decider/lane_change_path_generate.h"
+#include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
+#include "config/basic_type.h"
+#include "define/geometry.h"
+#include "ego_planning_config.h"
+#include "session.h"
+#include "task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "traffic_congestion_decider.h"
+#include "trajectory1d/second_order_time_optimal_trajectory.h"
+#include "trajectory1d/third_order_time_optimal_trajectory.h"
+#include "virtual_lane.h"
+namespace planning {
+using namespace planning_math;  // fix
+using namespace lane_change_joint_decision;
+struct StateTransitionInfo {
+  StateMachineLaneChangeStatus lane_change_status = kLaneKeeping;
+  RequestType lane_change_direction = NO_CHANGE;
+  RequestSource lane_change_type = NO_REQUEST;
+  void Rest() {
+    lane_change_status = kLaneKeeping;
+    lane_change_direction = NO_CHANGE;
+    lane_change_type = NO_REQUEST;
+  }
+};
+
+struct LaneChangeTimer {
+  bool propose_time_count_ = false;
+  double propose_at_time_ = 0.0;
+  bool execution_time_count_ = false;
+  double execution_at_time_ = 0.0;
+  bool gap_not_available_time_count_ = false;
+  double gap_not_available_at_time_ = 0.0;
+  bool hold_time_count_ = false;
+  double hold_at_time_ = 0.0;
+  bool is_safe_hold_to_execution_count_ = false;
+  double is_safe_hold_to_execution_at_time_ = 0.0;
+  bool complete_time_count_ = false;
+  double complete_at_time_ = 0.0;
+  bool cancel_time_count_ = false;
+  double cancel_at_time_ = 0.0;
+  void Reset() {
+    propose_time_count_ = false;
+    propose_at_time_ = IflyTime::Now_ms();
+
+    execution_time_count_ = false;
+    execution_at_time_ = IflyTime::Now_ms();
+
+    gap_not_available_time_count_ = false;
+    gap_not_available_at_time_ = IflyTime::Now_ms();
+
+    hold_time_count_ = false;
+    hold_at_time_ = IflyTime::Now_ms();
+
+    is_safe_hold_to_execution_count_ = false;
+    is_safe_hold_to_execution_at_time_ = IflyTime::Now_ms();
+
+    complete_time_count_ = false;
+    complete_at_time_ = IflyTime::Now_ms();
+
+    cancel_time_count_ = false;
+    cancel_at_time_ = IflyTime::Now_ms();
+  }
+};
+
+struct LaneChangeStageInfo {
+  bool gap_insertable{false};
+  // lc valid related
+  bool should_premove{false};
+  std::string lc_invalid_reason{"none"};
+  // back to state machine only for debug
+  bool lc_should_back{false};
+  bool lc_valid{false};
+  std::string lc_back_reason{"none"};
+  LaneChangeGapInfo lc_gap_info;
+  bool is_cancel_to_hold{false};
+  void Reset() {
+    should_premove = false;
+    lc_invalid_reason = "none";
+    lc_should_back = false;
+    lc_valid = false;
+    lc_back_reason = "none";
+    lc_gap_info.front_node_id = -1;
+    lc_gap_info.rear_node_id = -1;
+    is_cancel_to_hold = false;
+  }
+};
+class LaneChangeStateMachineManager {
+ public:
+  LaneChangeStateMachineManager(
+      const EgoPlanningConfigBuilder* config_builder,
+      framework::Session* session,
+      std::shared_ptr<LaneChangeRequestManager> lane_change_req_mgr,
+      std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
+  void init();
+  virtual ~LaneChangeStateMachineManager() = default;
+
+  void Update();
+  void ResetStateMachine();
+  void WeaklyResetStateMachine();
+
+ private:
+  void PreProcess();
+  void JointLaneChangeDecisionGeneration();
+  void RunStateMachine();
+  bool CheckIfProposeLaneChange(RequestType* const lane_change_direction,
+                                RequestSource* const lane_change_type) const;
+  bool CheckIfProposeToExecution(const RequestType& lane_change_direction,
+                                 const RequestSource& lane_change_type);
+  bool CheckIfProposeToCancel(const RequestType& lane_change_direction,
+                              const RequestSource& lane_change_type);
+  bool CheckIfLaneChangeComplete(const RequestType& lane_change_direction,
+                                 const RequestSource& lane_change_type) const;
+  bool CheckIfExecutionToCancel(const RequestType& lane_change_direction,
+                                const RequestSource& lane_change_type);
+  bool CheckIfExecutionToHold(const RequestType& lane_change_direction,
+                              const RequestSource& lane_change_type);
+  bool CheckIfHoldToCancel(const RequestType& lane_change_direction,
+                           const RequestSource& lane_change_type);
+  bool CheckIfHoldToExecution(const RequestType& lane_change_direction,
+                              const RequestSource& lane_change_type);
+  bool CheckIfCompleteToLaneKeeping();
+  bool CheckIfInPerfectLaneKeeping() const;
+  bool CheckIfCancelToLaneKeeping() const;
+  bool CheckIfCancelToComplete() const;
+  bool CheckIfCompleteToCancel();
+  bool CheckIfCancelTimeOut();
+
+  void LaneChangeDecisionInfoReset();
+
+  void CheckLaneChangeValid(RequestType direction);
+  LaneChangeStageInfo CheckLCGapFeasible(RequestType direction);
+  void CheckLaneChangeBackValid(RequestType direction);
+  LaneChangeStageInfo CheckIfNeedLCBack(RequestType direction);
+
+  void MakeFixLane();
+  void UpdateStateMachine();
+  void GenerateStateMachineOutput();
+  bool CalculateSideGapFeasible(
+      const planning_data::DynamicAgentNode* const agent);
+  void CalculateFrontGapFeasible(LaneChangeStageInfo* const lc_state_info);
+  bool CalculateSideAreaIsSafetyExecution(
+      const planning_data::DynamicAgentNode* const agent);
+  void CalculateFrontAreaIfNeedBack(LaneChangeStageInfo* const lc_state_info);
+  bool TimeOut(const bool trigger, bool* is_start_count, double* time_count,
+               const double threshold);
+  void UpdateCoarsePlanningInfo();
+  void UpdateStateMachineDebugInfo();
+  void GenerateTurnSignalForSplitRegion();
+  bool IsSplitRegion(RampDirection* ramp_direction);
+  void CalculateLatOffsetOfOverlappedLanes(
+      double* lat_diff, const std::shared_ptr<ReferencePath> reference_path);
+  bool IsOffTurnLight(const RampDirection ramp_direction);
+  const double CalculateEgoFrontLineLength();
+  void GetFrontRiskAgentTrajs();
+  void GetSideRiskAgents();
+
+  iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
+      const RequestType lc_request) const;
+  RequestType CalculaTurnSignalForHPP();
+
+  bool IsLargeAgent(const planning_data::DynamicAgentNode* agent);
+  void CalculateLatCloseValue();
+  void IsEgoOnSideLane();
+  bool IsLCFeasibleForTrafficCone(
+      const planning_data::DynamicAgentNode* traffic_cone) const;
+  bool IsLCFeasibleForTrafficConeInTargetLane(
+      const planning_data::DynamicAgentNode* traffic_cone,
+      const int fix_lane_virtual_id) const;
+  bool IsNotNeedLCBackForTrafficConeInTargetLane(
+      const planning_data::DynamicAgentNode* traffic_cone,
+      const int fix_lane_virtual_id, const double t_remain_lc) const;
+  const std::vector<double> GetObjsDebugInfo(const double obj_v,
+                                             const double obj_a,
+                                             const double obj_t,
+                                             const double obj_s) const;
+
+  bool IsLatOffsetValid() const;
+  bool IsDashLineCurBoundary(const RequestType lc_direction) const;
+
+  void CalculateLCGapFeasibleWithPredictionInfo(
+      LaneChangeStageInfo* const lc_state_info,
+      const planning_data::DynamicAgentNode* agent_node,
+      const bool is_front_car, const bool is_ego_lane_car);
+  TrajectoryPoints CalculateAgentPredictionTrajs(
+      const planning_data::DynamicAgentNode* agent_node,
+      const bool is_front_agent, const bool is_ego_lane_agent,
+      const planning_data::DynamicAgentNode** after_filter_agent);
+  TrajectoryPoints CalculateEgoFutureTrajs() const;
+  TrajectoryPoints CalculateEgoPPIDMTrajs();
+  TrajectoryPoints CalculateEgoPPIDMTrajs(
+      const planning_data::DynamicAgentNode* front_agent_node);
+  bool CheckIfSafetyForPredictionTrajs(
+      const TrajectoryPoints& agent_traj,
+      const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
+      const bool is_front_agent);
+  bool CheckIfSafetyForOptimizedTrajs(
+      const TrajectoryPoints& agent_traj,
+      const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
+      const bool is_front_agent);
+  bool IsFilterAgent(
+      const planning_data::DynamicAgentNode* agent_node,
+      const std::shared_ptr<planning_math::KDPath> target_lane_coor,
+      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent,
+      const bool is_front_agent);
+  void StoreObjDebugPredictionInfo(
+      const planning_data::DynamicAgentNode* agent_node,
+      const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
+      const bool is_ego_lane_agent);
+  SecondOrderTimeOptimalTrajectory GenerateEgoMaxDecelerationCurve(
+      const double ego_v, const double target_v);
+  double CalculateLCSafetyCheckTime() const;
+  double CalculateCheckTimeRatio() const;
+  std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(
+      const std::array<double, 3> init_lon_state) const;
+
+  bool IsTargetLaneMergeToOriginLane() const;
+
+  bool IsNeedCancelLCTargetLaneMergeToOriginLane();
+
+  ThirdOrderTimeOptimalTrajectory GenerateLatMaxDecelerationCurve(
+      const std::shared_ptr<ReferencePath> ref_path, const double p_end);
+
+  bool IsCancelToHold();
+  double CalculateLCHoldStateLatOffset() const;
+  bool IsHighPriorityCompleteMLC() const;
+  bool IsFilterStaticAgentLC(
+      const planning_data::DynamicAgentNode& agent_node) const;
+
+  void UpdateLCCoarsePlanningInfo();
+
+  void UpdateLCPath(
+      TrajectoryPoints& traj_points,
+      const LaneChangePathGenerateManager::LCPathResult& lc_path_result,
+      const std::shared_ptr<ReferencePath> ref_path);
+  void CheckTargetFrontNode(int64_t target_lane_front_node_id);
+  void CheckTargetRearNode(int64_t target_lane_rear_node_id);
+  FrenetObstacleBoundary GetSLboundaryFromAgent(
+      const std::shared_ptr<ReferencePath> ref_path,
+      const planning_math::Box2d& obs_box);
+  bool PassInLane(double lane_width, const FrenetObstacleBoundary& obs_bd,
+                  const double car_width, const double safety_margin,
+                  const RequestType direction);
+  bool CheckFrontRiskAgentTrajs(
+      const planning_data::DynamicAgentNode* agent_node, bool is_large_car);
+  void CalculateCongestionLatOffsetValue();
+  bool IfFrenetCollision(std::pair<double, double> l1, double v1,
+                        std::pair<double, double> l2, double v2,
+                        double max_time = 4.0, double dt = 0.5);
+  void CheckOtherAgents(LaneChangeStageInfo* const lc_state_info);
+  bool GetDecelerationTraj(double a0, const TrajectoryPoints& agent_traj,
+                           TrajectoryPoints& agent_deceleration_traj,
+                           const double deceleration, const double j,
+                           bool is_press_line);
+  bool IfFrenetCollision2D(std::pair<double, double> s1, double vs1,
+                           std::pair<double, double> s2, double vs2,
+                           std::pair<double, double> l1, double vl1,
+                           std::pair<double, double> l2, double vl2,
+                           double max_time, double dt);
+  void AddRearAgentMerging();
+  void CheckMergingRearAgent(LaneChangeStageInfo* const lc_state_info);
+  bool CheckMergingRearAgentTraj(const int merging_rear_agent_id);
+  bool IsSuppressLCShortDis() const;
+  bool IsSideClear(int front_agent_id, int rear_agent_id);
+
+  bool CheckTargetLaneValid();
+  bool IsExistExtendLane(const iflymapdata::sdpro::Lane* lane, bool is_right) const;
+  std::pair<const iflymapdata::sdpro::Lane*, const iflymapdata::sdpro::Lane*>
+  CalculateLeftestRightestLane(
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
+
+  RampDirection CalcTurnSignalForTencentSplitRegion() const;
+  RampDirection CalcTurnSignalForBaiduSplitRegion() const;
+  double ComputeInertialLatOffset(double v_y0, double a_y0, double j_max) const;
+
+ private:
+  //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
+  ScenarioStateMachineConfig config_;
+  SpeedPlannerConfig speed_planning_config_;
+  CongestionDetectionConfig congestion_detection_config_;
+  LanChangeSafetyCheckConfig lc_safety_check_config_;
+  const EgoPlanningConfigBuilder* config_builder_;
+  framework::Session* session_;
+  std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
+  std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
+  std::shared_ptr<LatLonJointDecision> lc_joint_decision_generator_;
+  LaneChangeRequest lc_request_;
+  StateTransitionInfo transition_info_;
+  LaneChangeTimer lc_timer_;
+  LaneChangeStageInfo lane_change_stage_info_;
+  double pre_ego_l_ = 0.0;
+  double pre_lane_change_finish_time_ = 0.0;
+  int lc_back_cnt_ = 0;
+  int lc_valid_cnt_ = 0;
+  int hold_state_dash_cnt = 0;
+  int execution_state_dash_cnt = 0;
+  int lc_target_lane_merge_to_origin_lane_cnt_ = 0;
+  RequestType map_turn_signal_ = NO_CHANGE;
+  bool is_dash_not_enough_for_lc_ = false;
+
+  TrackInfo lc_invalid_track_;
+  TrackInfo lc_back_track_;
+  bool must_change_lane_ = false;
+  int scenario_ = SCENARIO_CRUISE;
+  RampDirection road_to_ramp_turn_signal_ = RAMP_NONE;
+  double overlap_lane_virtual_id_ = 0;
+  int propose_state_frame_nums_ = 0;
+  int execution_state_frame_nums_ = 0;
+  int hold_state_frame_nums_ = 0;
+  int complete_state_frame_nums_ = 0;
+  double lat_close_boundary_offset_ = 0;
+  double lc_hold_state_lat_offset_ = 0;
+  const planning_data::DynamicAgentNode* target_lane_front_node_ = nullptr;
+  const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
+  const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
+  const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
+  int last_target_rear_agent_id_ = -1;
+  int last_merging_rear_agent_id_ = -1;
+  int merging_rear_agent_id_ = -1;
+  bool is_large_car_in_side_ = false;
+  bool is_ego_on_leftmost_lane_ = false;
+  bool is_ego_on_rightmost_lane_ = false;
+  std::vector<double> lc_front_objs_ego_lane_vec_{};
+  std::vector<double> lc_front_objs_tar_lane_vec_{};
+  std::vector<double> lc_rear_objs_vec_{};
+  std::vector<double> lc_egos_vec_{};
+  std::vector<double> lc_time_vec_{};
+  std::vector<double> lc_front_obj_need_dis_vec_{};
+  std::vector<double> lc_rear_obj_need_dis_vec_{};
+  std::vector<double> front_obj_future_v_{};
+  std::vector<double> rear_obj_future_v_{};
+  std::vector<double> ego_future_v_{};
+
+  TrajectoryPoints ego_trajs_future_;
+  TrajectoryPoints front_node_trajs_future_;
+  bool joint_decision_success_ = false;
+  std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
+  std::vector<const planning_data::DynamicAgentNode*> risk_side_agents_nodes_;
+  double lc_safety_check_time_ = 0.0;
+  int lc_safety_check_num_ = 0;
+  bool is_high_priority_back_ = false;
+  bool is_side_clear_{false};
+  bool is_pre_move_{false};
+
+  CongestionResult fix_lane_congestion_level_;
+
+  std::shared_ptr<LaneChangePathGenerateManager> lc_path_generate_;
+  std::vector<double> agent_box_corners_x_{};
+  std::vector<double> agent_box_corners_y_{};
+  std::vector<double> ego_box_corners_x_{};
+  std::vector<double> ego_box_corners_y_{};
+  StateMachineLaneChangeStatus last_state_{
+      StateMachineLaneChangeStatus::kLaneKeeping};
+  bool overtake_lane_change_confirmed_{false};
+};
+}  // namespace planning

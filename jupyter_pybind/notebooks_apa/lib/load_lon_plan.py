@@ -1,0 +1,806 @@
+from lib.load_rotate import *
+import numpy as np
+import time
+import ipywidgets
+from bokeh.io import output_notebook, push_notebook
+from bokeh.layouts import layout, column, row
+from IPython.core.display import display, HTML
+from bokeh.models import Label, LabelSet, DataTable, DateFormatter, TableColumn, Panel, Tabs
+import ipywidgets as widgets
+from IPython.display import display
+from ipywidgets import Button, HBox
+from IPython.display import clear_output
+import time
+import threading
+import ipywidgets
+from collections import namedtuple
+from functools import  partial
+import bokeh.plotting as bkp
+from bokeh.models import WheelZoomTool, HoverTool
+from bokeh.plotting import ColumnDataSource
+from cyber_record.record import Record
+from lib.load_json import *
+from lib.load_struct import *
+from jupyter_pybind.python_proto import planning_debug_info_pb2
+
+coord_tf = coord_transformer()
+
+def update_lon_plan_online_data(dp_speed_constraints,qp_speed_constraints, ref_cruise_speed,dp_speed,qp_speed,lon_plan_data):
+
+  # get dp sv_bound:
+  sv_bound_s_vec = []
+  sv_bound_v_vec = []
+  obs_dist = []
+  acc_upper = []
+  acc_lower = []
+  jerk_upper = []
+  jerk_lower = []
+  ref_v = []
+
+  for i in range(len(dp_speed_constraints)):
+     sv_bound_s_vec.append(dp_speed_constraints[i][0])
+     sv_bound_v_vec.append(dp_speed_constraints[i][2])
+     obs_dist.append(dp_speed_constraints[i][1])
+
+     acc_upper.append(dp_speed_constraints[i][3])
+     acc_lower.append(dp_speed_constraints[i][4])
+
+     jerk_upper.append(dp_speed_constraints[i][5])
+     jerk_lower.append(dp_speed_constraints[i][6])
+
+     ref_v.append(ref_cruise_speed)
+
+    #  print('s', dp_speed_constraints[i][0], 'obs dist',
+    #        dp_speed_constraints[i][1], 'v upper', dp_speed_constraints[i][2],
+    #        'ref_v', ref_v[i], 'acc upper', dp_speed_constraints[i][3],
+    #        'jerk upper', dp_speed_constraints[i][5])
+
+  lon_plan_data['data_s_vref'].data.update({
+    's_ref': sv_bound_s_vec,
+    'v_ref': ref_v,
+  })
+
+  lon_plan_data['dp_sv_bound'].data.update({
+    'dp_sv_bound_s': sv_bound_s_vec,
+    'dp_sv_bound_v': sv_bound_v_vec,
+  })
+
+  lon_plan_data['online_data_sobs'].data.update({
+    'online_s': sv_bound_s_vec,
+    'online_obs_dist': obs_dist,
+  })
+
+  lon_plan_data['data_s_acc_upper'].data.update({
+    's': sv_bound_s_vec,
+    'acc': acc_upper,
+  })
+
+  lon_plan_data['data_s_acc_lower'].data.update({
+    's': sv_bound_s_vec,
+    'acc': acc_lower,
+  })
+
+  # jerk
+  lon_plan_data['data_s_jerk_upper'].data.update({
+    's': sv_bound_s_vec,
+    'jerk': jerk_upper,
+  })
+  lon_plan_data['data_s_jerk_lower'].data.update({
+    's': sv_bound_s_vec,
+    'jerk': jerk_lower,
+  })
+
+  # plot dp optimization data
+  s =[]
+  t =[]
+  v =[]
+  acc =[]
+  jerk =[]
+  for i in range(len(dp_speed)):
+    s.append(dp_speed[i][0])
+    t.append(dp_speed[i][1])
+    v.append(dp_speed[i][2])
+
+    acc.append(dp_speed[i][3])
+    jerk.append(dp_speed[i][4])
+
+  lon_plan_data['dp_data_sv'].data.update({
+    'dp_sv_s': s,
+    'dp_sv_v': v,
+  })
+
+  lon_plan_data['dp_data_s_acc'].data.update({
+    's': s,
+    'acc': acc,
+  })
+
+  lon_plan_data['dp_data_s_jerk'].data.update({
+    's': s,
+    'jerk': jerk,
+  })
+
+  lon_plan_data['dp_st_data'].data.update({
+    't': t,
+    's': s,
+  })
+
+  # get qp constraints
+  sv_bound_s_vec = []
+  sv_bound_v_vec = []
+  for i in range(len(qp_speed_constraints)):
+     sv_bound_s_vec.append(qp_speed_constraints[i][0])
+     sv_bound_v_vec.append(qp_speed_constraints[i][1])
+
+  lon_plan_data['qp_sv_bound'].data.update({
+    's': sv_bound_s_vec,
+    'v': sv_bound_v_vec,
+  })
+
+  # plot qp optimization data
+  s =[]
+  t =[]
+  v =[]
+  acc =[]
+  jerk =[]
+  for i in range(len(qp_speed)):
+    s.append(qp_speed[i][0])
+    t.append(qp_speed[i][1])
+    v.append(qp_speed[i][2])
+
+    acc.append(qp_speed[i][3])
+    jerk.append(qp_speed[i][4])
+
+  lon_plan_data['qp_data_sv'].data.update({
+    'qp_sv_s': s,
+    'qp_sv_v': v,
+  })
+
+  lon_plan_data['qp_data_s_acc'].data.update({
+    's': s,
+    'acc': acc,
+  })
+
+  lon_plan_data['qp_data_s_jerk'].data.update({
+    's': s,
+    'jerk': jerk,
+  })
+
+  lon_plan_data['qp_st_data'].data.update({
+    't': t,
+    's': s,
+  })
+
+
+def update_jlt_online_data(jlt_speed,lon_plan_data):
+  # plot jlt optimization data
+  s =[]
+  t =[]
+  v =[]
+  acc =[]
+  jerk =[]
+  for i in range(len(jlt_speed)):
+    s.append(jlt_speed[i][0])
+    t.append(jlt_speed[i][1])
+    v.append(jlt_speed[i][2])
+
+    acc.append(jlt_speed[i][3])
+    jerk.append(jlt_speed[i][4])
+
+    # print('s ', s[i], 't ',
+    #   t[i], 'v ', v[i],
+    #   'acc ', acc[i], 'jerk ', jerk[i])
+
+  lon_plan_data['jlt_data_sv'].data.update({
+    's': s,
+    'v': v,
+  })
+
+  lon_plan_data['jlt_data_s_acc'].data.update({
+    's': s,
+    'acc': acc,
+  })
+
+  lon_plan_data['jlt_data_s_jerk'].data.update({
+    's': s,
+    'jerk': jerk,
+  })
+
+  lon_plan_data['jlt_data_st'].data.update({
+    't': t,
+    's': s,
+  })
+
+def update_publish_data(planning,lon_plan_data):
+  # plot jlt optimization data
+  s =[]
+  t =[]
+  v =[]
+  acc =[]
+  jerk =[]
+  for i in range(len(planning.trajectory.trajectory_points)):
+    s.append(planning.trajectory.trajectory_points[i].distance)
+    t.append(planning.trajectory.trajectory_points[i].t)
+    v.append(planning.trajectory.trajectory_points[i].v)
+
+    acc.append(planning.trajectory.trajectory_points[i].a)
+    jerk.append(planning.trajectory.trajectory_points[i].jerk)
+
+    # print('s ', s[i], 't ',
+    #   t[i], 'v ', v[i],
+    #   'acc ', acc[i], 'jerk ', jerk[i])
+
+  lon_plan_data['traj_data_sv'].data.update({
+    's': s,
+    'v': v,
+  })
+
+  lon_plan_data['traj_data_s_acc'].data.update({
+    's': s,
+    'acc': acc,
+  })
+
+  lon_plan_data['traj_data_s_jerk'].data.update({
+    's': s,
+    'jerk': jerk,
+  })
+
+  lon_plan_data['traj_data_st'].data.update({
+    't': t,
+    's': s,
+  })
+
+def update_record_speed_data(speed,lon_plan_data):
+  s =[]
+  t =[]
+  v =[]
+  acc =[]
+  jerk =[]
+  for i in range(len(speed)):
+    s.append(speed[i][0])
+    t.append(speed[i][1])
+    v.append(speed[i][2])
+
+    acc.append(speed[i][3])
+    jerk.append(speed[i][4])
+
+    # print('s ', s[i], 't ',
+    #   t[i], 'v ', v[i],
+    #   'acc ', acc[i], 'jerk ', jerk[i])
+
+  lon_plan_data['record_data_sv'].data.update({
+    's': s,
+    'v': v,
+  })
+
+  lon_plan_data['record_data_s_acc'].data.update({
+    's': s,
+    'acc': acc,
+  })
+
+  lon_plan_data['record_data_s_jerk'].data.update({
+    's': s,
+    'jerk': jerk,
+  })
+
+  lon_plan_data['record_data_st'].data.update({
+    't': t,
+    's': s,
+  })
+
+def update_veh_speed_data(speed,lon_plan_data):
+  s =[]
+  v =[]
+  for i in range(len(speed)):
+    s.append(speed[i][0])
+    v.append(speed[i][1])
+
+    # print('s ', s[i], 't ',
+    #   t[i], 'v ', v[i],
+    #   'acc ', acc[i], 'jerk ', jerk[i])
+
+  lon_plan_data['veh_data_sv'].data.update({
+    's': s,
+    'v': v,
+  })
+
+# plot 离线所有帧数据
+def load_lon_global_data_figure(bag_loader):
+  #real time global figure data process
+  velocity_fig = bkp.figure(title='车速',x_axis_label='time/s',
+                y_axis_label='velocity/(m/s)',width=500,height=300)
+
+  ego_velocity_vec = []
+  target_velocity_vec = []
+  # ref_velocity_vec = []
+  leadone_velocity_vec = []
+  leadtwo_velocity_vec = []
+  t_plan_vec = bag_loader.plan_debug_msg['t']
+  t_loc_vec = bag_loader.loc_msg['t']
+  t_vehicle_service_vec = bag_loader.vs_msg['t']
+
+  velocity_fig.line(t_plan_vec, target_velocity_vec, line_width=1,
+                              legend_label='target_velocity', color="green")
+  # velocity_fig.line(t_plan_vec, ref_velocity_vec, line_width=1,
+  #                             legend_label='ref_velocity', color="gray")
+  velocity_fig.line(t_vehicle_service_vec, ego_velocity_vec, line_width=1,
+                                legend_label='ego_velocity',color="blue")
+  velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
+                              legend_label='leadone_velocity', color="red")
+  velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,
+                                legend_label='leadtwo_velocity',color="orange")
+
+  acc_fig = bkp.figure(title='加速度',x_axis_label='time/s',
+                y_axis_label='acc/(m/s2)',width=500,height=300)
+
+  ego_acc_vec = []
+  acc_min_vec = []
+  acc_max_vec = []
+
+  t_vs_vec = bag_loader.vs_msg['t']
+
+  acc_fig.line(t_plan_vec, acc_min_vec, line_width=1,
+                              legend_label='acc_min', color="brown")
+  acc_fig.line(t_vs_vec, ego_acc_vec, line_width=1,
+                                legend_label='ego_acc',color="blue")
+  acc_fig.line(t_plan_vec, acc_max_vec, line_width=1,
+                              legend_label='acc_max', color="red")
+
+  lead_fig = bkp.figure(title='lead_car_distance',x_axis_label='time/s',
+                y_axis_label='distance/(m)',width=500,height=300)
+  # 各阶段耗时
+  cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
+                  y_axis_label='time cost/(ms)',width=500,height=300)
+
+  lead_one_dis_vec = []
+  lead_two_dis_vec = []
+  temp_lead_one_dis_vec = []
+  temp_lead_two_dis_vec = []
+  desired_distance_rss_vec = []
+  desired_distance_calibrate_vec = []
+  RealTimeLonBehaviorCostTime_vec = []
+  RealTimeLonMotionCostTime_vec = []
+  RealTimeLateralMotionCostTime_vec = []
+  EnvironmentalModelManagerCost_vec = []
+  GeneralPlannerModuleCostTime_vec = []
+
+  lead_fig.line(t_plan_vec, desired_distance_rss_vec, line_width=1, legend_label='distance_rss', color="yellow")
+  lead_fig.line(t_plan_vec, desired_distance_calibrate_vec, line_width=1, legend_label='distance_cali', color="orange")
+
+  cost_time_fig.line(t_plan_vec, RealTimeLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
+  cost_time_fig.line(t_plan_vec, RealTimeLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime', color="blue")
+  cost_time_fig.line(t_plan_vec, RealTimeLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime', color="orange")
+  cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime', color="yellow")
+  cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
+
+  cutin_fig = bkp.figure(title='速度',x_axis_label='time/s', y_axis_label='velocity/(m/s)',width=500,height=300)
+
+  limit_cutin_vel_vec = []
+  potential_cutin_speed_vec = []
+  cutin_status_vec = []
+
+  cutin_fig.line(t_plan_vec, limit_cutin_vel_vec, line_width=1,
+                                  legend_label='Pre-deceleration cutin',color="blue")
+  cutin_fig.line(t_plan_vec, potential_cutin_speed_vec, line_width=1,
+                                legend_label='Speed regulation cutin', color="red")
+
+  return
+
+# offline data + online data
+def create_lon_plan_figure(fig1):
+
+  # online data
+  data_s_vref = ColumnDataSource(data = {'s_ref':[], 'v_ref':[]})
+  dp_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  qp_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  dp_st_data = ColumnDataSource(data = {'t':[], 's':[]})
+  qp_st_data = ColumnDataSource(data = {'t':[], 's':[]})
+
+  data_s_acc_upper = ColumnDataSource(data = {'s':[], 'acc':[]})
+  data_s_acc_lower = ColumnDataSource(data = {'s':[], 'acc':[]})
+
+  dp_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  qp_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  data_s_jerk_upper = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  data_s_jerk_lower = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
+
+  dp_data_sv = ColumnDataSource(data = {'dp_sv_s':[], 'dp_sv_v':[]})
+  qp_data_sv = ColumnDataSource(data = {'qp_sv_s':[], 'qp_sv_v':[]})
+  dp_data_sv_bound = ColumnDataSource(data = {'dp_sv_bound_s':[], 'dp_sv_bound_v':[]})
+  qp_data_sv_bound = ColumnDataSource(data = {'s':[], 'v':[]})
+  online_data_sobs = ColumnDataSource(data = {'online_s':[], 'online_obs_dist':[]})
+
+  # jlt
+  jlt_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  jlt_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  jlt_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  jlt_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
+  # offline data
+  traj_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  traj_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  traj_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  traj_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
+  # offline data
+  record_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  record_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  record_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  record_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
+  veh_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+
+  lon_plan_data = {'data_text':data_text, \
+                   'data_s_vref':data_s_vref, \
+                   'dp_data_sv':dp_data_sv, \
+                   'qp_data_sv':qp_data_sv, \
+                   'dp_sv_bound':dp_data_sv_bound, \
+                   'qp_sv_bound':qp_data_sv_bound, \
+                   'dp_data_s_acc':dp_data_s_acc, \
+                   'qp_data_s_acc':qp_data_s_acc, \
+                   'data_s_acc_upper':data_s_acc_upper, \
+                   'data_s_acc_lower':data_s_acc_lower, \
+                   'dp_data_s_jerk':dp_data_s_jerk, \
+                   'qp_data_s_jerk':qp_data_s_jerk, \
+                   'data_s_jerk_upper':data_s_jerk_upper, \
+                   'data_s_jerk_lower':data_s_jerk_lower, \
+                   'online_data_sobs':online_data_sobs,
+                   'dp_st_data':dp_st_data,
+                   'qp_st_data':qp_st_data,
+                   'jlt_data_sv':jlt_data_sv,
+                   'jlt_data_st':jlt_data_st,
+                   'jlt_data_s_acc':jlt_data_s_acc,
+                   'jlt_data_s_jerk':jlt_data_s_jerk,
+                   'record_data_sv':record_data_sv,
+                   'record_data_st':record_data_st,
+                   'record_data_s_acc':record_data_s_acc,
+                   'record_data_s_jerk':record_data_s_jerk,
+                   'traj_data_sv':traj_data_sv,
+                   'traj_data_st':traj_data_st,
+                   'traj_data_s_acc':traj_data_s_acc,
+                   'traj_data_s_jerk':traj_data_s_jerk,
+                   'veh_data_sv':veh_data_sv,
+  }
+
+  columns = [
+        TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
+        TableColumn(field="VisionLonVal", title="VisionLonVal"),
+    ]
+  hover = HoverTool(tooltips = [
+     ('index','$index'),
+     ('id_low','@obs_low_id'),
+     ('id_high','@obs_high_id'),
+     ('low_type','@obs_low_type'),
+     ('high_type','@obs_high_type'),
+  ])
+
+  # fig2 S-T
+  fig_s_time = bkp.figure(x_axis_label='t', y_axis_label='s',x_range = [-0.1, 10.0], y_range = [-0.1, 10.0], width=400, height=400, match_aspect = True, aspect_scale=1)
+
+  # fig3 S-V
+  fig_sv = bkp.figure(x_axis_label='s', y_axis_label='v',x_range = [-0.1, 6.0], y_range = [-0.1, 1.5], width=400, height=400, match_aspect = True, aspect_scale=1)
+  # fig5 s-dist to obs
+  fig_sobs = bkp.figure(x_axis_label='s', y_axis_label='dist',x_range = [-0.1, 6], y_range = [-0.1, 20.0], width=400, height=300)
+  # fig6 a-s
+  fig_as = bkp.figure(x_axis_label='s', y_axis_label='acc',x_range = [-0.1, 6], y_range = [-3, 1], width=400, height=300)
+  # fig7 j-s
+  fig_js = bkp.figure(x_axis_label='s', y_axis_label='jerk',x_range = [-0.1, 6],y_range = [-10, 10], width=400, height=300)
+
+  # plot
+  f3 = fig_sv.line('s_ref', 'v_ref', source = data_s_vref, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'v_ref')
+  fig_sv.line('dp_sv_s', 'dp_sv_v', source = dp_data_sv, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_sv')
+  fig_sv.line('qp_sv_s', 'qp_sv_v', source = qp_data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_sv')
+  fig_sv.line('dp_sv_bound_s', 'dp_sv_bound_v', source = dp_data_sv_bound, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'dp v bound')
+  fig_sv.line('s', 'v', source = qp_data_sv_bound, line_width = 2, line_color = 'orange', line_dash = 'solid', legend_label = 'qp v bound')
+
+  f2 = fig_s_time.line('t', 's', source = dp_st_data, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_st')
+  f2 = fig_s_time.line('t', 's', source = qp_st_data, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_st')
+
+  # obs dist
+  f5 = fig_sobs.line('online_s', 'online_obs_dist', source = online_data_sobs, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'obs dist')
+
+  # acc
+  f6 = fig_as.line('s', 'acc', source = data_s_acc_upper, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'acc_upper')
+  f6 = fig_as.line('s', 'acc', source = data_s_acc_lower, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'acc_lower')
+  f6 = fig_as.line('s', 'acc', source = dp_data_s_acc, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_acc')
+  f6 = fig_as.line('s', 'acc', source = qp_data_s_acc, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_acc')
+
+  # jerk
+  f7 = fig_js.line('s', 'jerk', source = data_s_jerk_upper, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'jerk_upper')
+  f7 = fig_js.line('s', 'jerk', source=data_s_jerk_lower, line_width=2,line_color='red', line_dash='solid', legend_label='jerk_lower')
+  f7 = fig_js.line('s', 'jerk', source = dp_data_s_jerk, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_jerk')
+  f7 = fig_js.line('s', 'jerk', source =qp_data_s_jerk, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_jerk')
+
+  # plot jlt data
+  f3 = fig_sv.line('s', 'v', source = jlt_data_sv, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt sv')
+  f2 = fig_s_time.line('t', 's', source = jlt_data_st, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt_st')
+  f6 = fig_as.line('s', 'acc', source = jlt_data_s_acc, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt acc')
+  f7 = fig_js.line('s', 'jerk', source=jlt_data_s_jerk, line_width=2, line_color='black', line_dash='solid', legend_label='jlt jerk')
+
+  # publish traj to control data
+  f3 = fig_sv.line('s', 'v', source = traj_data_sv, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'traj sv')
+  f2 = fig_s_time.line('t', 's', source = traj_data_st, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'traj st')
+  f6 = fig_as.line('s', 'acc', source = traj_data_s_acc, line_width = 2, line_color = 'cyan', line_dash = 'solid', legend_label = 'traj acc')
+  f7 = fig_js.line('s', 'jerk', source=traj_data_s_jerk, line_width=2, line_color='cyan', line_dash='solid', legend_label='traj jerk')
+
+  # offline data
+  f3 = fig_sv.line('s', 'v', source = record_data_sv, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record sv')
+  f2 = fig_s_time.line('t', 's', source = record_data_st, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record_st')
+  f6 = fig_as.line('s', 'acc', source = record_data_s_acc, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record acc')
+  f7 = fig_js.line('s', 'jerk', source=record_data_s_jerk, line_width=2, line_color='gray', line_dash='solid', legend_label='record jerk')
+  fig_sv.line('s', 'v', source=veh_data_sv, line_width=2, line_color='yellow', line_dash='solid', legend_label='ego_v')
+
+
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
+  hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
+
+  fig_sobs.add_tools(hover5)
+  fig_as.add_tools(hover6)
+  fig_js.add_tools(hover7)
+
+  fig_sv.toolbar.active_scroll = fig_sv.select_one(WheelZoomTool)
+  fig_sv.legend.click_policy = 'hide'
+
+  fig_sobs.toolbar.active_scroll = fig_sobs.select_one(WheelZoomTool)
+  fig_sobs.legend.click_policy = 'hide'
+
+  fig_as.toolbar.active_scroll = fig_as.select_one(WheelZoomTool)
+  fig_as.legend.click_policy = 'hide'
+
+  fig_js.toolbar.active_scroll = fig_js.select_one(WheelZoomTool)
+  fig_js.legend.click_policy = 'hide'
+
+  fig_s_time.toolbar.active_scroll = fig_s_time.select_one(WheelZoomTool)
+  fig_s_time.legend.click_policy = 'hide'
+
+  pan1 = Panel(child=row(column(fig_sv, fig_s_time), column(fig_sobs, fig_as, fig_js)), title="online simulation")
+  pans = Tabs(tabs=[ pan1 ])
+
+  return pans, lon_plan_data
+
+# online data
+def create_online_lon_plan_figure(fig1):
+  data_s_vref = ColumnDataSource(data = {'s_ref':[], 'v_ref':[]})
+  dp_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  qp_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  dp_st_data = ColumnDataSource(data = {'t':[], 's':[]})
+  qp_st_data = ColumnDataSource(data = {'t':[], 's':[]})
+
+  data_s_acc_upper = ColumnDataSource(data = {'s':[], 'acc':[]})
+  data_s_acc_lower = ColumnDataSource(data = {'s':[], 'acc':[]})
+
+  dp_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  qp_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  data_s_jerk_upper = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  data_s_jerk_lower = ColumnDataSource(data = {'s':[], 'jerk':[]})
+  data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
+
+  dp_data_sv = ColumnDataSource(data = {'dp_sv_s':[], 'dp_sv_v':[]})
+  qp_data_sv = ColumnDataSource(data = {'qp_sv_s':[], 'qp_sv_v':[]})
+  dp_data_sv_bound = ColumnDataSource(data = {'dp_sv_bound_s':[], 'dp_sv_bound_v':[]})
+  qp_data_sv_bound = ColumnDataSource(data = {'s':[], 'v':[]})
+  online_data_sobs = ColumnDataSource(data = {'online_s':[], 'online_obs_dist':[]})
+
+
+  data_lon_motion_plan = ColumnDataSource(data = {'time_vec': [],
+                                                  'ref_pos_vec_origin': [],
+                                                  'ref_pos_vec':[],
+                                                  'ref_vel_vec':[],
+                                                  'soft_pos_max_vec':[],
+                                                  'soft_pos_min_vec':[],
+                                                  'vel_max_vec':[],
+                                                  'vel_min_vec':[],
+                                                  'acc_max_vec':[],
+                                                  'acc_min_vec':[],
+                                                  'jerk_max_vec':[],
+                                                  'jerk_min_vec':[],
+                                                  'pos_vec':[],
+                                                  'vel_vec':[],
+                                                  'acc_vec':[],
+                                                  'jerk_vec':[],
+                                                        })
+
+  data_planning = ColumnDataSource(data = {'plan_traj_y':[],
+                                    'plan_traj_x':[],})
+
+  # jlt
+  jlt_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  jlt_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  jlt_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  jlt_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
+  lon_plan_data = {'data_text':data_text, \
+                   'data_s_vref':data_s_vref, \
+                   'dp_data_sv':dp_data_sv, \
+                   'qp_data_sv':qp_data_sv, \
+                   'dp_sv_bound':dp_data_sv_bound, \
+                   'qp_sv_bound':qp_data_sv_bound, \
+                   'dp_data_s_acc':dp_data_s_acc, \
+                   'qp_data_s_acc':qp_data_s_acc, \
+                   'data_s_acc_upper':data_s_acc_upper, \
+                   'data_s_acc_lower':data_s_acc_lower, \
+                   'dp_data_s_jerk':dp_data_s_jerk, \
+                   'qp_data_s_jerk':qp_data_s_jerk, \
+                   'data_s_jerk_upper':data_s_jerk_upper, \
+                   'data_s_jerk_lower':data_s_jerk_lower, \
+                   'data_lon_motion_plan': data_lon_motion_plan, \
+                   'data_planning':data_planning,
+                   'online_data_sobs':online_data_sobs,
+                   'dp_st_data':dp_st_data,
+                   'qp_st_data':qp_st_data,
+                   'jlt_data_sv':jlt_data_sv,
+                   'jlt_data_st':jlt_data_st,
+                   'jlt_data_s_acc':jlt_data_s_acc,
+                   'jlt_data_s_jerk':jlt_data_s_jerk,
+  }
+
+  columns = [
+        TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
+        TableColumn(field="VisionLonVal", title="VisionLonVal"),
+    ]
+  hover = HoverTool(tooltips = [
+     ('index','$index'),
+     ('id_low','@obs_low_id'),
+     ('id_high','@obs_high_id'),
+     ('low_type','@obs_low_type'),
+     ('high_type','@obs_high_type'),
+  ])
+
+  # fig2 S-T
+  fig_s_time = bkp.figure(x_axis_label='t', y_axis_label='s',x_range = [-0.1, 10.0], y_range = [-0.1, 10.0], width=400, height=200, match_aspect = True, aspect_scale=1)
+
+  # fig3 S-V
+  fig_sv = bkp.figure(x_axis_label='s', y_axis_label='v',x_range = [-0.1, 6.0], y_range = [-0.1, 1.5], width=400, height=400, match_aspect = True, aspect_scale=1)
+  # fig5 s-dist to obs
+  fig_sobs = bkp.figure(x_axis_label='s', y_axis_label='dist',x_range = [-0.1, 6], y_range = [-0.1, 20.0], width=400, height=200)
+  # fig6 a-s
+  fig_as = bkp.figure(x_axis_label='s', y_axis_label='acc',x_range = [-0.1, 6], width=400, height=200)
+  # fig7 j-s
+  fig_js = bkp.figure(x_axis_label='s', y_axis_label='jerk',x_range = [-0.1, 6], width=400, height=200)
+
+  # plot sv
+  f3 = fig_sv.line('s_ref', 'v_ref', source = data_s_vref, line_width = 2, line_color = 'green', line_dash = 'solid', legend_label = 'v_ref')
+  fig_sv.line('dp_sv_s', 'dp_sv_v', source = dp_data_sv, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_sv')
+  fig_sv.line('qp_sv_s', 'qp_sv_v', source = qp_data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_sv')
+  fig_sv.line('dp_sv_bound_s', 'dp_sv_bound_v', source = dp_data_sv_bound, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'dp v bound')
+  fig_sv.line('s', 'v', source = qp_data_sv_bound, line_width = 2, line_color = 'orange', line_dash = 'solid', legend_label = 'qp v bound')
+  fig_sv.line('s', 'v', source = jlt_data_sv, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt sv')
+
+  # st
+  f2 = fig_s_time.line('t', 's', source = dp_st_data, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_st')
+  f2 = fig_s_time.line('t', 's', source = qp_st_data, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_st')
+  f2 = fig_s_time.line('t', 's', source = jlt_data_st, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt_st')
+
+  # obs dist
+  f5 = fig_sobs.line('online_s', 'online_obs_dist', source = online_data_sobs, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'obs dist')
+
+  # acc
+  f6 = fig_as.line('s', 'acc', source = dp_data_s_acc, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_acc')
+  f6 = fig_as.line('s', 'acc', source = qp_data_s_acc, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_acc')
+  f6 = fig_as.line('s', 'acc', source = data_s_acc_upper, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'acc_upper')
+  f6 = fig_as.line('s', 'acc', source = data_s_acc_lower, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'acc_lower')
+  f6 = fig_as.line('s', 'acc', source = jlt_data_s_acc, line_width = 2, line_color = 'black', line_dash = 'solid', legend_label = 'jlt acc')
+
+  # jerk
+  f7 = fig_js.line('s', 'jerk', source = dp_data_s_jerk, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'dp_jerk')
+  f7 = fig_js.line('s', 'jerk', source =qp_data_s_jerk, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'qp_jerk')
+  f7 = fig_js.line('s', 'jerk', source = data_s_jerk_upper, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'jerk_upper')
+  f7 = fig_js.line('s', 'jerk', source=data_s_jerk_lower, line_width=2,
+                   line_color='red', line_dash='solid', legend_label='jerk_lower')
+  f7 = fig_js.line('s', 'jerk', source=jlt_data_s_jerk, line_width=2, line_color='black', line_dash='solid', legend_label='jlt jerk')
+
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
+  hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
+
+  fig_sobs.add_tools(hover5)
+  fig_as.add_tools(hover6)
+  fig_js.add_tools(hover7)
+
+  fig_sv.toolbar.active_scroll = fig_sv.select_one(WheelZoomTool)
+  fig_sv.legend.click_policy = 'hide'
+
+  fig_sobs.toolbar.active_scroll = fig_sobs.select_one(WheelZoomTool)
+  fig_sobs.legend.click_policy = 'hide'
+
+  fig_as.toolbar.active_scroll = fig_as.select_one(WheelZoomTool)
+  fig_as.legend.click_policy = 'hide'
+
+  fig_js.toolbar.active_scroll = fig_js.select_one(WheelZoomTool)
+  fig_js.legend.click_policy = 'hide'
+
+  fig_s_time.toolbar.active_scroll = fig_s_time.select_one(WheelZoomTool)
+  fig_s_time.legend.click_policy = 'hide'
+
+  pan1 = Panel(child=row(column(fig_sv,fig_s_time), column(fig_sobs, fig_as, fig_js)), title="online simulation")
+
+  tab1 = DataTable(source=data_text, columns=columns, width=500, height=800)
+
+  pans = Tabs(tabs=[ pan1])
+
+  return pans, lon_plan_data
+
+# offline data
+def create_lon_offline_plan_figure():
+  # offline data
+  record_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  record_data_st = ColumnDataSource(data = {'s':[], 't':[]})
+  record_data_s_acc = ColumnDataSource(data = {'s':[], 'acc':[]})
+  record_data_s_jerk = ColumnDataSource(data = {'s':[], 'jerk':[]})
+
+  veh_data_sv = ColumnDataSource(data = {'s':[], 'v':[]})
+  online_data_sobs = ColumnDataSource(data = {'online_s':[], 'online_obs_dist':[]})
+
+
+  lon_plan_data = {
+                   'record_data_sv':record_data_sv,
+                   'record_data_st':record_data_st,
+                   'record_data_s_acc':record_data_s_acc,
+                   'record_data_s_jerk':record_data_s_jerk,
+                   'veh_data_sv':veh_data_sv,
+                   'online_data_sobs':online_data_sobs,
+  }
+
+  columns = [
+        TableColumn(field="VisionLonAttr", title="VisionLonAttr"),
+        TableColumn(field="VisionLonVal", title="VisionLonVal"),
+    ]
+  hover = HoverTool(tooltips = [
+     ('index','$index'),
+     ('id_low','@obs_low_id'),
+     ('id_high','@obs_high_id'),
+     ('low_type','@obs_low_type'),
+     ('high_type','@obs_high_type'),
+  ])
+
+  # fig2 S-T
+  fig_s_time = bkp.figure(x_axis_label='t', y_axis_label='s',x_range = [-0.1, 10.0], y_range = [-0.1, 10.0], width=400, height=400, match_aspect = True, aspect_scale=1)
+
+  # fig3 S-V
+  fig_sv = bkp.figure(x_axis_label='s', y_axis_label='v',x_range = [-0.1, 6.0], y_range = [-0.1, 1.5], width=400, height=400, match_aspect = True, aspect_scale=1)
+  # fig5 s-dist to obs
+  fig_sobs = bkp.figure(x_axis_label='s', y_axis_label='dist',x_range = [-0.1, 6], y_range = [-0.1, 20.0], width=400, height=300)
+  # fig6 a-s
+  fig_as = bkp.figure(x_axis_label='s', y_axis_label='acc',x_range = [-0.1, 6], y_range = [-3, 1], width=400, height=300)
+  # fig7 j-s
+  fig_js = bkp.figure(x_axis_label='s', y_axis_label='jerk',x_range = [-0.1, 6],y_range = [-10, 10], width=400, height=300)
+
+  # obs dist
+  f5 = fig_sobs.line('online_s', 'online_obs_dist', source = online_data_sobs, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'obs dist')
+
+  # offline data
+  f3 = fig_sv.line('s', 'v', source = record_data_sv, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record sv')
+  f2 = fig_s_time.line('t', 's', source = record_data_st, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record_st')
+  f6 = fig_as.line('s', 'acc', source = record_data_s_acc, line_width = 2, line_color = 'gray', line_dash = 'solid', legend_label = 'record acc')
+  f7 = fig_js.line('s', 'jerk', source=record_data_s_jerk, line_width=2, line_color='gray', line_dash='solid', legend_label='record jerk')
+  fig_sv.line('s', 'v', source=veh_data_sv, line_width=2, line_color='yellow', line_dash='solid', legend_label='ego_v')
+
+
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
+  hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
+
+  # fig_sobs.add_tools(hover5)
+  fig_as.add_tools(hover6)
+  fig_js.add_tools(hover7)
+
+  fig_sv.toolbar.active_scroll = fig_sv.select_one(WheelZoomTool)
+  fig_sv.legend.click_policy = 'hide'
+
+  fig_sobs.toolbar.active_scroll = fig_sobs.select_one(WheelZoomTool)
+  fig_sobs.legend.click_policy = 'hide'
+
+  fig_as.toolbar.active_scroll = fig_as.select_one(WheelZoomTool)
+  fig_as.legend.click_policy = 'hide'
+
+  fig_js.toolbar.active_scroll = fig_js.select_one(WheelZoomTool)
+  fig_js.legend.click_policy = 'hide'
+
+  fig_s_time.toolbar.active_scroll = fig_s_time.select_one(WheelZoomTool)
+  fig_s_time.legend.click_policy = 'hide'
+
+  pan1 = Panel(child=row(column(fig_sv, fig_s_time), column(fig_sobs, fig_as, fig_js)), title="speed plan")
+
+  return pan1, lon_plan_data
+

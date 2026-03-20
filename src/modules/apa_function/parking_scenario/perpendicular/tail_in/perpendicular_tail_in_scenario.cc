@@ -1,0 +1,4000 @@
+#include "perpendicular_tail_in_scenario.h"
+
+#include <cmath>
+#include <cstddef>
+#include <utility>
+#include <vector>
+
+#include "apa_context.h"
+#include "apa_obstacle.h"
+#include "apa_param_config.h"
+#include "apa_slot.h"
+#include "apa_slot_manager.h"
+#include "apa_state_machine_manager.h"
+#include "collision_detection/collision_detection.h"
+#include "collision_detection/gjk_collision_detector.h"
+#include "debug_info_log.h"
+#include "generate_obstacle_decider/generate_obstacle_decider.h"
+#include "geometry_math.h"
+#include "geometry_path_generator.h"
+#include "ifly_time.h"
+#include "initial_action_decider/initial_action_decider.h"
+#include "log_glog.h"
+#include "math_lib.h"
+#include "parking_scenario.h"
+#include "perpendicular_tail_in_path_generator.h"
+#include "target_pose_decider/target_pose_decider.h"
+
+namespace planning {
+namespace apa_planner {
+
+void PerpendicularTailInScenario::Reset() {
+  current_plan_path_vec_.clear();
+  all_plan_path_vec_.clear();
+  ParkingScenario::Reset();
+}
+
+void PerpendicularTailInScenario::Clear() {
+  current_plan_path_vec_.clear();
+  all_plan_path_vec_.clear();
+  ParkingScenario::Clear();
+}
+
+void PerpendicularTailInScenario::ScenarioTry() {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+    return;
+  }
+
+  Reset();
+
+  frame_.replan_reason = ReplanReason::SLOT_CRUISING;
+
+  SlotReleaseInfo& release_info = apa_world_ptr_->GetSlotManagerPtr()
+                                      ->GetMutableEgoInfoUnderSlot()
+                                      .slot.release_info_;
+
+  if (!UpdateEgoSlotInfo()) {
+    release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+    return;
+  }
+
+  if (!GenTlane()) {
+    release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+    return;
+  }
+
+  uint8_t path_plan_res = PathPlannerResult::PLAN_FAILED;
+  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    path_plan_res = PathPlanOnce();
+  } else if (apa_param.GetParam().park_path_plan_type ==
+             ParkPathPlanType::HYBRID_ASTAR) {
+    path_plan_res = PathPlanOnceHybridAstar();
+  } else if (apa_param.GetParam().park_path_plan_type ==
+             ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    path_plan_res = PathPlanOnceHybridAstarThread();
+  }
+
+  TansformPreparePlanningTraj();
+  Clear();
+
+  switch (path_plan_res) {
+    case PathPlannerResult::PLAN_UPDATE:
+      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::RELEASE;
+      break;
+    case PathPlannerResult::WAIT_PATH:
+      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::COMPUTING;
+      break;
+    case PathPlannerResult::PLAN_FAILED:
+    default:
+      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+      break;
+  }
+
+  if (apa_param.GetParam().park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+    release_info.release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+        release_info
+            .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE];
+  }
+
+  // fill head/tail in parking action.
+  // TODO: actions need computing by algorithm.
+  SetParkInFeasibleDirection();
+
+  return;
+}
+
+void PerpendicularTailInScenario::ExcutePathPlanningTask() {
+  // prepare simulation
+  InitSimulation();
+
+  DecideExpandMirrorCommand();
+
+  // check planning status
+  if (CheckPlanSkip()) {
+    return;
+  }
+
+  UpdateStuckTime();
+
+  // update ego slot info
+  if (!UpdateEgoSlotInfo()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+    return;
+  }
+
+  CalSlotJumpErr();
+  // update remain dist
+  frame_.remain_dist_path = CalRemainDistFromPath();
+  frame_.remain_dist_obs = CalRealTimeBrakeDist();
+  frame_.remain_dist_slot_jump = CalRemainDistBySlotJump();
+  frame_.remain_dist_col_det = CalRemainDistFromPlanPathDangerous(
+      0.0, 0.0, 0.0, apa_param.GetParam().use_obs_height_method);
+  DecideFoldMirrorCommand();
+
+  // check finish
+  if (CheckFinished()) {
+    ILOG_INFO << "check apa finished!";
+    SetParkingStatus(PARKING_FINISHED);
+    return;
+  }
+
+  // check failed
+  if (CheckStuckFailed()) {
+    ILOG_INFO << "check stuck failed!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    return;
+  }
+
+  PrintParkPathPlanType(apa_param.GetParam().park_path_plan_type);
+  PrintAnalyticExpansionType(apa_param.GetParam().analytic_expansion_type);
+  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY ||
+      apa_param.GetParam().park_path_plan_type ==
+          ParkPathPlanType::HYBRID_ASTAR) {
+    PathPlan();
+  } else if (apa_param.GetParam().park_path_plan_type ==
+             ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    PathPlanByHybridAstarThread();
+  }
+
+  // check finish
+  if (CheckFinished()) {
+    ILOG_INFO << "check apa finished!";
+    SetParkingStatus(PARKING_FINISHED);
+    return;
+  }
+
+  // check failed
+  if (CheckStuckFailed()) {
+    ILOG_INFO << "check stuck failed!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    return;
+  }
+
+  if (frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      frame_.stuck_time >
+          apa_param.GetParam().smart_fold_mirror_params.max_stuck_wait_time) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
+    return;
+  }
+
+  if (CheckGearChangeCountTooMuch(
+          apa_param.GetParam().gear_change_decide_params)) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return;
+  }
+
+  // check planning status
+  ILOG_INFO << "parking status = "
+            << static_cast<int>(GetPlannerStates().planning_status);
+}
+
+const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
+  const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
+      apa_world_ptr_->GetMeasureDataManagerPtr();
+
+  const ApaParameters& param = apa_param.GetParam();
+
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  if (ego_info_under_slot.slot.slot_type_ != SlotType::SLANT &&
+      ego_info_under_slot.slot.slot_type_ != SlotType::PERPENDICULAR) {
+    return false;
+  }
+
+  ego_info_under_slot.origin_pose_global.heading_vec =
+      ego_info_under_slot.slot.processed_corner_coord_global_
+          .pt_23mid_01mid_unit_vec;
+
+  ego_info_under_slot.origin_pose_global.heading =
+      std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
+                 ego_info_under_slot.origin_pose_global.heading_vec.x());
+
+  ego_info_under_slot.origin_pose_global.pos =
+      ego_info_under_slot.slot.processed_corner_coord_global_.pt_01_mid -
+      ego_info_under_slot.slot.slot_length_ *
+          ego_info_under_slot.origin_pose_global.heading_vec;
+
+  ego_info_under_slot.g2l_tf = geometry_lib::GlobalToLocalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
+
+  ego_info_under_slot.l2g_tf = geometry_lib::LocalToGlobalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
+
+  ego_info_under_slot.origin_pose_local.pos = ego_info_under_slot.g2l_tf.GetPos(
+      ego_info_under_slot.origin_pose_global.pos);
+
+  ego_info_under_slot.origin_pose_local.heading =
+      ego_info_under_slot.g2l_tf.GetHeading(
+          ego_info_under_slot.origin_pose_global.heading);
+
+  ego_info_under_slot.origin_pose_local.heading_vec =
+      geometry_lib::GenHeadingVec(
+          ego_info_under_slot.origin_pose_local.heading);
+
+  ego_info_under_slot.cur_pose.pos =
+      ego_info_under_slot.g2l_tf.GetPos(measures_ptr->GetPos());
+  ego_info_under_slot.cur_pose.heading =
+      ego_info_under_slot.g2l_tf.GetHeading(measures_ptr->GetHeading());
+  ego_info_under_slot.cur_pose.heading_vec =
+      geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
+
+  // transform slot and obs from global to slot
+  ego_info_under_slot.slot.TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
+
+  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
+
+  if (frame_.is_replan_first) {
+    const Eigen::Vector2d ego_to_slot_center_vec =
+        ego_info_under_slot.slot.origin_corner_coord_global_.pt_center -
+        measures_ptr->GetPos();
+
+    const double cross_ego_to_slot_center =
+        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
+                                                ego_to_slot_center_vec);
+
+    const double cross_ego_to_slot_heading =
+        pnc::geometry_lib::GetCrossFromTwoVec2d(
+            measures_ptr->GetHeadingVec(),
+            ego_info_under_slot.origin_pose_global.heading_vec);
+
+    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+    if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
+      ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
+    } else if (cross_ego_to_slot_heading < 0.0 &&
+               cross_ego_to_slot_center > 0.0) {
+      ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_LEFT;
+    } else {
+      ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_INVALID;
+    }
+  }
+
+  // no consider obs target pose, real-time update
+  TargetPoseDecider target_pose_decider(
+      apa_world_ptr_->GetColDetInterfacePtr());
+
+  TargetPoseDeciderRequest tar_pose_decider_request(
+      std::vector<double>{0.15}, std::vector<double>{0.15}, 0.3, scenario_type_,
+      false, false,
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetSlotLatPosPreference());
+
+  TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
+      ego_info_under_slot.slot, tar_pose_decider_request);
+
+  ego_info_under_slot.origin_target_pose = res.target_pose_local;
+
+  ego_info_under_slot.virtual_limiter.first
+      << ego_info_under_slot.origin_target_pose.pos.x(),
+      0.5 * ego_info_under_slot.slot.slot_width_;
+
+  ego_info_under_slot.virtual_limiter.second
+      << ego_info_under_slot.origin_target_pose.pos.x(),
+      -0.5 * ego_info_under_slot.slot.slot_width_;
+
+  if (std::fabs(ego_info_under_slot.terminal_err.GetY()) <
+          param.slot_occupied_ratio_max_lat_err &&
+      std::fabs(ego_info_under_slot.terminal_err.GetTheta()) <
+          param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
+    std::vector<double> x_tab = {
+        ego_info_under_slot.origin_target_pose.pos.x(),
+        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+
+    std::vector<double> x_postprocess_tab = {
+        ego_info_under_slot.target_pose.pos.x(),
+        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      x_tab[1] = ego_info_under_slot.slot.slot_length_ +
+                 param.front_overhanging + param.wheel_base;
+      x_postprocess_tab[1] = x_tab[1];
+    }
+
+    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+
+    ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
+        x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+
+    ego_info_under_slot.slot_occupied_ratio_postprocess =
+        mathlib::Interp1(x_postprocess_tab, occupied_ratio_tab,
+                         ego_info_under_slot.cur_pose.pos.x());
+
+  } else {
+    ego_info_under_slot.slot_occupied_ratio = 0.0;
+    ego_info_under_slot.slot_occupied_ratio_postprocess = 0.0;
+  }
+
+  PostProcessPathAccordingLimiter();
+
+  // fix slot
+  if (ego_info_under_slot.slot_occupied_ratio_postprocess >
+          param.fix_slot_occupied_ratio &&
+      !ego_info_under_slot.fix_slot && measures_ptr->GetStaticFlag()) {
+    ego_info_under_slot.fix_slot = true;
+  }
+
+  return true;
+}
+
+const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
+  return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+         !CheckEgoPoseInBelieveObsArea(
+             0.2, apa_param.GetParam().believe_obs_ego_area);
+  // return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+  //        ((frame_.current_gear != geometry_lib::SEG_GEAR_REVERSE) ||
+  //         !CheckEgoPoseInBelieveObsArea(
+  //             0.2, apa_param.GetParam().believe_obs_ego_area));
+}
+
+const bool PerpendicularTailInScenario::CalcPtInside() {
+  // construct tlane pq
+  // left y is positive, right y is negative
+  // left y should be smallest, right y should be largest
+  // all x should be largest
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      left_pq_for_y(geometry_lib::Compare(3));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      left_pq_for_x(geometry_lib::Compare(0));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      right_pq_for_y(geometry_lib::Compare(2));
+  std::priority_queue<Eigen::Vector2d, std::vector<Eigen::Vector2d>,
+                      geometry_lib::Compare>
+      right_pq_for_x(geometry_lib::Compare(0));
+
+  const auto& param = apa_param.GetParam();
+
+  const double mir_width =
+      (param.max_car_width - param.car_width) * 0.5 - 0.0168;
+
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  const double mir_x = ego_info_under_slot.target_pose.pos.x() +
+                       param.lon_dist_mirror_to_rear_axle - 0.368;
+
+  const auto& obstacles =
+      apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
+
+  Eigen::Vector2d obs_pt_slot;
+  for (const auto& pair : obstacles) {
+    for (const auto& obs : pair.second.GetPtClout2dLocal()) {
+      obs_pt_slot = obs;
+      SlotObsType obs_slot_type = CalSlotObsType(obs_pt_slot);
+      if (obs_slot_type != SlotObsType::INSIDE_OBS &&
+          obs_slot_type != SlotObsType::OUTSIDE_OBS) {
+        continue;
+      }
+
+      // the obs lower mir can relax lat requirements
+      if (obs_pt_slot.x() < mir_x) {
+        if (obs_pt_slot.y() > 1e-6) {
+          obs_pt_slot.y() += mir_width;
+        } else {
+          obs_pt_slot.y() -= mir_width;
+        }
+      }
+
+      // the obs far from slot can relax lon equirements
+      if (std::fabs(obs_pt_slot.y()) >
+          ego_info_under_slot.slot.slot_width_ * 0.5 + 0.468) {
+        obs_pt_slot.x() -= 0.268;
+      }
+
+      if (obs_pt_slot.y() > 1e-6) {
+        left_pq_for_y.emplace(std::move(obs_pt_slot));
+        left_pq_for_x.emplace(std::move(obs_pt_slot));
+      } else {
+        right_pq_for_y.emplace(std::move(obs_pt_slot));
+        right_pq_for_x.emplace(std::move(obs_pt_slot));
+      }
+    }
+  }
+
+  apa_param.SetParam().actual_mono_plan_enable = param.mono_plan_enable;
+  frame_.is_left_empty = left_pq_for_x.empty();
+  frame_.is_right_empty = right_pq_for_x.empty();
+  if (param.conservative_mono_enable &&
+      (!frame_.is_left_empty || !frame_.is_right_empty)) {
+    apa_param.SetParam().actual_mono_plan_enable = false;
+  }
+
+  const Eigen::Vector2d pt_01_unit_vec =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_unit_vec;
+
+  const Eigen::Vector2d pt_01_mid =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid;
+
+  double half_origin_slot_width =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_vec.norm() *
+      0.5;
+  half_origin_slot_width =
+      std::max(half_origin_slot_width, param.max_car_width * 0.5 + 0.168);
+
+  const Eigen::Vector2d virtual_left_obs =
+      pt_01_mid -
+      param.virtual_obs_left_x_pos *
+          ego_info_under_slot.origin_pose_local.heading_vec +
+      (half_origin_slot_width + param.virtual_obs_left_y_pos) * pt_01_unit_vec;
+
+  const Eigen::Vector2d virtual_right_obs =
+      pt_01_mid -
+      param.virtual_obs_right_x_pos *
+          ego_info_under_slot.origin_pose_local.heading_vec -
+      (half_origin_slot_width + param.virtual_obs_right_y_pos) * pt_01_unit_vec;
+
+  left_pq_for_y.emplace(virtual_left_obs);
+  left_pq_for_x.emplace(virtual_left_obs);
+  right_pq_for_y.emplace(virtual_right_obs);
+  right_pq_for_x.emplace(virtual_right_obs);
+
+  const Eigen::Vector2d left_obs(left_pq_for_x.top().x(),
+                                 left_pq_for_y.top().y());
+  const Eigen::Vector2d right_obs(right_pq_for_x.top().x(),
+                                  right_pq_for_y.top().y());
+
+  if (ego_info_under_slot.slot_side == geometry_lib::SLOT_SIDE_RIGHT) {
+    ego_info_under_slot.pt_inside = right_obs;
+    ego_info_under_slot.pt_inside.x() =
+        mathlib::Constrain(
+            ego_info_under_slot.pt_inside.x(),
+            ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x() -
+                2.168,
+            ego_info_under_slot.slot.origin_corner_coord_local_.pt_0.x() +
+                2.68) +
+        param.tlane_safe_dx;
+
+    ego_info_under_slot.pt_inside.y() =
+        mathlib::Constrain(
+            ego_info_under_slot.pt_inside.y(),
+            -0.5 * ego_info_under_slot.slot.slot_width_ - 0.128,
+            -0.5 * ego_info_under_slot.slot.slot_width_ + 0.068) +
+        0.0268;
+  } else {
+    ego_info_under_slot.pt_inside = left_obs;
+    ego_info_under_slot.pt_inside.x() =
+        mathlib::Constrain(
+            ego_info_under_slot.pt_inside.x(),
+            ego_info_under_slot.slot.origin_corner_coord_local_.pt_1.x() -
+                2.168,
+            ego_info_under_slot.slot.origin_corner_coord_local_.pt_1.x() +
+                2.68) +
+        param.tlane_safe_dx;
+
+    ego_info_under_slot.pt_inside.y() =
+        mathlib::Constrain(ego_info_under_slot.pt_inside.y(),
+                           0.5 * ego_info_under_slot.slot.slot_width_ - 0.068,
+                           0.5 * ego_info_under_slot.slot.slot_width_ + 0.128) -
+        0.0268;
+  }
+
+  return true;
+}
+
+const bool PerpendicularTailInScenario::GenTlane() {
+  // if safe target pose exist, return true, otherwise return false
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  const ApaParameters& param = apa_param.GetParam();
+
+  const geometry_lib::PathPoint& ego_pose = ego_info_under_slot.cur_pose;
+
+  GenerateObstacleRequest gen_obs_request(scenario_type_,
+                                          frame_.process_obs_method);
+
+  apa_world_ptr_->GetParkingTaskInterfacePtr()
+      ->GetGenerateObstacleDeciderPtr()
+      ->GenObs(ego_info_under_slot, gen_obs_request);
+
+  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    CalcPtInside();
+  }
+
+  bool update_slot_move_dist = true;
+  if (frame_.replan_reason == ReplanReason::NOT_REPLAN ||
+      (frame_.replan_reason == ReplanReason::DYNAMIC &&
+       ego_info_under_slot.slot_occupied_ratio > 0.6)) {
+    update_slot_move_dist = false;
+  }
+
+  ILOG_INFO << "  update_slot_move_dist = " << update_slot_move_dist
+            << "  process_obs_method = "
+            << static_cast<int>(frame_.process_obs_method);
+
+  if (update_slot_move_dist) {
+    std::vector<bool> fold_mirror_flag_vec;
+    if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+      fold_mirror_flag_vec.emplace_back(true);
+    } else {
+      if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
+        if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+          fold_mirror_flag_vec.emplace_back(true);
+        } else {
+          fold_mirror_flag_vec.emplace_back(false);
+          fold_mirror_flag_vec.emplace_back(true);
+        }
+      } else {
+        fold_mirror_flag_vec.emplace_back(false);
+      }
+    }
+    bool find_target_pose = false;
+    const double start_time = IflyTime::Now_ms();
+    for (const bool fold_mirror_flag : fold_mirror_flag_vec) {
+      apa_world_ptr_->GetColDetInterfacePtr()->Init(fold_mirror_flag);
+      TargetPoseDecider target_pose_decider(
+          apa_world_ptr_->GetColDetInterfacePtr());
+
+      const ParkingLatLonTargetPoseBuffer& target_pose_buffer =
+          param.lat_lon_target_pose_buffer;
+
+      double max_lat_body_buf = target_pose_buffer.max_lat_body_buffer;
+      double max_lat_mirror_buf = target_pose_buffer.max_lat_mirror_buffer;
+      double min_lat_body_buf = target_pose_buffer.min_lat_body_buffer;
+      double min_lat_mirror_buf = target_pose_buffer.min_lat_mirror_buffer;
+      int buf_size = target_pose_buffer.buf_size;
+      double lon_buffer = target_pose_buffer.lon_buffer;
+
+      const double body_buf_step =
+          std::max((max_lat_body_buf - min_lat_body_buf) / buf_size, 5e-3);
+      const double mirror_buf_step =
+          std::max((max_lat_mirror_buf - min_lat_mirror_buf) / buf_size, 5e-3);
+
+      if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
+          frame_.replan_reason != ReplanReason::FIRST_PLAN &&
+          frame_.replan_reason != FORCE_PLAN) {
+        max_lat_body_buf = std::min(max_lat_body_buf,
+                                    ego_info_under_slot.safe_lat_body_buffer);
+        max_lat_mirror_buf = std::min(
+            max_lat_mirror_buf, ego_info_under_slot.safe_lat_mirror_buffer);
+      }
+
+      max_lat_body_buf =
+          std::max(max_lat_body_buf, min_lat_body_buf + body_buf_step + 1e-3);
+      max_lat_mirror_buf = std::max(
+          max_lat_mirror_buf, min_lat_mirror_buf + mirror_buf_step + 1e-3);
+
+      ILOG_INFO << "find target pose max lat body buffer = " << max_lat_body_buf
+                << " max lat mirror buffer = " << max_lat_mirror_buf;
+
+      std::vector<double> lat_body_buffer_vec, lat_mirror_buffer_vec;
+      for (double lat_body_buf = max_lat_body_buf,
+                  lat_mirror_buf = max_lat_mirror_buf;
+           lat_body_buf > min_lat_body_buf - 1e-3 &&
+           lat_mirror_buf > min_lat_mirror_buf - 1e-3;
+           lat_body_buf -= body_buf_step, lat_mirror_buf -= mirror_buf_step) {
+        lat_body_buffer_vec.emplace_back(lat_body_buf);
+        lat_mirror_buffer_vec.emplace_back(lat_mirror_buf);
+      }
+
+      const TargetPoseDeciderRequest tar_pose_decider_request(
+          lat_body_buffer_vec, lat_mirror_buffer_vec, lon_buffer,
+          scenario_type_, true, true,
+          apa_world_ptr_->GetStateMachineManagerPtr()
+              ->GetSlotLatPosPreference(),
+          false, ego_info_under_slot.cur_pose);
+
+      const TargetPoseDeciderResult res =
+          apa_world_ptr_->GetParkingTaskInterfacePtr()
+              ->GetTargetPoseDeciderPtr()
+              ->CalcTargetPose(ego_info_under_slot.slot,
+                               tar_pose_decider_request);
+
+      if (res.target_pose_type == TargetPoseType::FAIL) {
+        if (fold_mirror_flag) {
+          break;
+        } else {
+          continue;
+        }
+      }
+
+      find_target_pose = true;
+
+      ego_info_under_slot.target_pose = res.target_pose_local;
+
+      if (frame_.replan_reason != ReplanReason::DYNAMIC) {
+        ego_info_under_slot.safe_lat_body_buffer = res.safe_lat_body_buffer;
+        ego_info_under_slot.safe_lat_mirror_buffer = res.safe_lat_mirror_buffer;
+      }
+
+      ego_info_under_slot.tar_pose_result = res;
+
+      ego_info_under_slot.lon_move_dist_every_replan = res.safe_lon_move_dist;
+      ego_info_under_slot.lat_move_dist_every_replan = res.safe_lat_move_dist;
+
+      break;
+    }
+    ILOG_INFO << "find target pose time cost = "
+              << (IflyTime::Now_ms() - start_time);
+
+    if (!find_target_pose) {
+      ILOG_ERROR << "can not find target pose";
+      return false;
+    }
+  } else {
+    ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
+    ego_info_under_slot.target_pose.pos.x() +=
+        ego_info_under_slot.lon_move_dist_replan_success;
+    ego_info_under_slot.target_pose.pos.y() +=
+        ego_info_under_slot.lat_move_dist_replan_success;
+  }
+
+  ego_info_under_slot.tar_line =
+      geometry_lib::BuildLineSegByPose(ego_info_under_slot.target_pose.pos,
+                                       ego_info_under_slot.target_pose.heading);
+
+  ego_info_under_slot.tar_line.PrintInfo();
+
+  ego_info_under_slot.terminal_err.Set(
+      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
+      geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+                                   ego_info_under_slot.target_pose.heading));
+
+  apa_world_ptr_->GetColDetInterfacePtr()
+      ->GetEDTColDetPtr()
+      ->UpdateObsClearZone(
+          std::vector<Eigen::Vector2d>{ego_info_under_slot.cur_pose.pos,
+                                       ego_info_under_slot.target_pose.pos});
+
+  ILOG_INFO << "cur pose = " << ego_info_under_slot.cur_pose.pos.x() << " "
+            << ego_info_under_slot.cur_pose.pos.y() << "  "
+            << ego_info_under_slot.cur_pose.heading * kRad2Deg
+            << "  origin_tar_pose = "
+            << ego_info_under_slot.origin_target_pose.pos.x() << " "
+            << ego_info_under_slot.origin_target_pose.pos.y() << "  "
+            << ego_info_under_slot.origin_target_pose.heading * kRad2Deg
+            << "  tar_pose = " << ego_info_under_slot.target_pose.pos.x() << " "
+            << ego_info_under_slot.target_pose.pos.y() << "  "
+            << ego_info_under_slot.target_pose.heading * kRad2Deg
+            << "  terminal_err = " << ego_info_under_slot.terminal_err.pos.x()
+            << " " << ego_info_under_slot.terminal_err.pos.y() << "  "
+            << ego_info_under_slot.terminal_err.heading * kRad2Deg
+            << "  slot_occupied_ratio_postprocess = "
+            << ego_info_under_slot.slot_occupied_ratio_postprocess
+            << "  slot occupied ratio = "
+            << ego_info_under_slot.slot_occupied_ratio
+            << "  pt_inside = " << ego_info_under_slot.pt_inside.x() << " "
+            << ego_info_under_slot.pt_inside.y()
+            << "  stuck time(s) = " << frame_.stuck_time
+            << "  stuck_obs_time(s) = " << frame_.stuck_obs_time
+            << "  stuck_dynamic_obs_time(s) = " << frame_.stuck_dynamic_obs_time
+            << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs
+            << "  " << "  slot side = "
+            << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
+
+  return true;
+}
+
+const bool PerpendicularTailInScenario::GenObstacles() { return true; }
+
+const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
+  if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    ILOG_INFO << "PathPlanOnce not support perpendicular head in";
+    frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+    return PathPlannerResult::PLAN_UPDATE;
+  }
+
+  const ApaParameters& param = apa_param.GetParam();
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const SimulationParam& simu_param = apa_world_ptr_->GetSimuParam();
+
+  GeometryPathInput input;
+  input.ego_info_under_slot = ego_info_under_slot;
+  input.is_complete_path = simu_param.is_complete_path;
+  input.sample_ds = simu_param.sample_ds;
+  input.ref_gear = frame_.current_gear;
+  input.ref_arc_steer = frame_.current_arc_steer;
+  input.is_replan_first = frame_.is_replan_first;
+  input.is_replan_second = frame_.is_replan_second;
+  input.is_replan_dynamic = (frame_.replan_reason == ReplanReason::DYNAMIC);
+  input.is_searching_stage =
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
+
+  input.force_mid_process_plan = simu_param.force_mid_process_plan;
+
+  input.can_first_plan_again = frame_.can_first_plan_again;
+
+  input.is_simulation = simu_param.is_simulation;
+
+  if (simu_param.is_simulation && simu_param.ref_gear != 0) {
+    input.ref_gear = simu_param.ref_gear;
+  }
+
+  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+  } else {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+    if (ego_info_under_slot.tar_pose_result.target_pose_type ==
+        TargetPoseType::FOLD_MIRROR) {
+      ILOG_INFO << "try path plan with fold mirror";
+      input.enable_smart_fold_mirror = true;
+    }
+  }
+
+  if (input.is_simulation) {
+    apa_param.SetParam().use_average_obs_dist =
+        apa_world_ptr_->GetSimuParam().use_average_obs_dist;
+  }
+
+  input.is_left_empty = frame_.is_left_empty;
+  input.is_right_empty = frame_.is_right_empty;
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    ILOG_INFO << "dynamic replan, gear should be reverse";
+    input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+  }
+
+  std::vector<geometry_lib::PathPoint> splicing_point_global_vec;
+  CalcProjPtForDynamicPlan(input.ego_info_under_slot.cur_pose,
+                           splicing_point_global_vec);
+
+  const std::shared_ptr<PerpendicularTailInPathGenerator>&
+      per_path_planner_ptr = apa_world_ptr_->GetParkingTaskInterfacePtr()
+                                 ->GetPerpendicularTailInPathGeneratorPtr();
+
+  per_path_planner_ptr->SetInput(input);
+
+  const bool path_plan_success = per_path_planner_ptr->Update();
+
+  if (input.is_searching_stage) {
+    if (!path_plan_success) {
+      return PathPlannerResult::PLAN_FAILED;
+    }
+    // if (path_plan_success) {
+    //   return PathPlannerResult::PLAN_UPDATE;
+    // }
+  }
+
+  // dynamic replan
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    if (!path_plan_success) {
+      frame_.dynamic_plan_fail_flag = true;
+      ILOG_INFO << "path dynamic plan fail";
+      frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+    ILOG_INFO << "path dynamic plan success";
+    frame_.dynamic_plan_fail_flag = false;
+    if (!CheckDynamicPlanPathOptimalByGeometryPath()) {
+      frame_.dynamic_plan_path_superior = false;
+      frame_.plan_fail_reason = ParkingFailReason::DYNAMIC_PATH_NOT_SUPERIOR;
+      ILOG_INFO << "path dynamic plan is not superior, should not replace "
+                   "last path";
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+    ILOG_INFO << "path dynamic plan is superior, should replace last path";
+    frame_.dynamic_plan_path_superior = true;
+  }
+  // static replan
+  else {
+    if (path_plan_success) {
+      ILOG_INFO << "path plan success";
+      if (frame_.process_obs_method == ProcessObsMethod::DO_NOTHING &&
+          !frame_.is_replan_first &&
+          per_path_planner_ptr->GetOutput().current_gear !=
+              frame_.current_gear &&
+          CheckCanDelObsInSlot()) {
+        ILOG_INFO << "when process_obs_method is do nothing and no first "
+                     "replan and can del obs in slot, plan gear should be same "
+                     "with ref gear, otherwise fail";
+        frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+        return PathPlannerResult::PLAN_FAILED;
+      }
+    } else {
+      ILOG_INFO << "path plan fail";
+      const bool direct_fail_flag =
+          frame_.process_obs_method == ProcessObsMethod::DO_NOTHING ||
+          frame_.process_obs_method == ProcessObsMethod::MOVE_OBS_OUT_SLOT ||
+          !frame_.can_first_plan_again || frame_.is_replan_first;
+
+      if (direct_fail_flag) {
+        ILOG_INFO << "no try first path plan, directly fail";
+        frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+        return PathPlannerResult::PLAN_FAILED;
+      }
+
+      ILOG_INFO << "try first path plan again";
+      frame_.is_replan_first = true;
+      frame_.is_replan_second = false;
+      frame_.can_first_plan_again = false;
+      input.is_replan_first = frame_.is_replan_first;
+      input.is_replan_second = frame_.is_replan_second;
+      input.can_first_plan_again = frame_.can_first_plan_again;
+      per_path_planner_ptr->SetInput(input);
+      if (!per_path_planner_ptr->Update()) {
+        ILOG_INFO << "try first path plan again also fail";
+        frame_.plan_fail_reason = PATH_PLAN_FAILED;
+        return PathPlannerResult::PLAN_FAILED;
+      }
+      // it can limit gear, but now not limit, try success possible
+      if (per_path_planner_ptr->GetOutput().current_gear !=
+          frame_.current_gear) {
+        // return PathPlannerResult::PLAN_FAILED;
+      }
+      ILOG_INFO << "try first path plan again success";
+    }
+  }
+
+  if (!per_path_planner_ptr->SetCurrentPathSegIndex()) {
+    ILOG_INFO << "path plan fail";
+    frame_.plan_fail_reason = ParkingFailReason::SET_SEG_INDEX;
+    return PathPlannerResult::PLAN_FAILED;
+  }
+
+  if (!per_path_planner_ptr->CheckCurrentGearLength()) {
+    ILOG_INFO << "path plan fail";
+    frame_.plan_fail_reason = ParkingFailReason::CHECK_GEAR_LENGTH;
+    return PathPlannerResult::PLAN_FAILED;
+  }
+
+  per_path_planner_ptr->SampleCurrentPathSeg();
+
+  per_path_planner_ptr->PrintOutputSegmentsInfo();
+
+  const GeometryPathOutput& planner_output = per_path_planner_ptr->GetOutput();
+  current_plan_path_vec_.clear();
+  current_plan_path_vec_.reserve(5);
+  all_plan_path_vec_.clear();
+  all_plan_path_vec_.reserve(8);
+
+  frame_.is_last_path = planner_output.is_last_path;
+
+  geometry_lib::PathSegment path_seg_global;
+  for (size_t i = planner_output.path_seg_index.first;
+       i < planner_output.path_segment_vec.size(); ++i) {
+    path_seg_global = planner_output.path_segment_vec[i];
+    path_seg_global.LocalToGlobal(ego_info_under_slot.l2g_tf);
+    all_plan_path_vec_.emplace_back(path_seg_global);
+    if (i <= planner_output.path_seg_index.second) {
+      current_plan_path_vec_.emplace_back(path_seg_global);
+    }
+  }
+
+  frame_.current_gear = geometry_lib::ReverseGear(planner_output.current_gear);
+
+  if (frame_.is_replan_first) {
+    frame_.is_replan_first = false;
+    frame_.is_replan_second = true;
+  } else {
+    if (frame_.is_replan_second) {
+      frame_.is_replan_second = false;
+    }
+  }
+
+  frame_.gear_command = planner_output.current_gear;
+  frame_.cur_path_gear_change_count = planner_output.gear_change_count;
+
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.reserve(planner_output.path_point_vec.size() +
+                                         splicing_point_global_vec.size() + 18);
+
+  complete_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.reserve(
+      planner_output.all_gear_path_point_vec.size() +
+      splicing_point_global_vec.size() + 18);
+
+  std::vector<pnc::geometry_lib::PathPoint> path_pt_vec;
+  if (LateralPathOptimize(path_pt_vec)) {
+    JSON_DEBUG_VALUE("is_path_lateral_optimized", true);
+  } else {
+    path_pt_vec = planner_output.path_point_vec;
+    JSON_DEBUG_VALUE("is_path_lateral_optimized", false);
+  }
+
+  for (const geometry_lib::PathPoint& pt : splicing_point_global_vec) {
+    current_path_point_global_vec_.emplace_back(pt);
+    complete_path_point_global_vec_.emplace_back(pt);
+  }
+
+  geometry_lib::PathPoint global_point;
+  for (const geometry_lib::PathPoint& path_point : path_pt_vec) {
+    global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+                     ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+    global_point.lat_buffer = path_point.lat_buffer;
+    global_point.s = path_point.s;
+    global_point.kappa = path_point.kappa;
+    current_path_point_global_vec_.emplace_back(global_point);
+  }
+  for (const auto& path_point : planner_output.all_gear_path_point_vec) {
+    global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+                     ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+    global_point.lat_buffer = path_point.lat_buffer;
+    global_point.s = path_point.s;
+    global_point.kappa = path_point.kappa;
+    global_point.gear = path_point.gear;
+    complete_path_point_global_vec_.emplace_back(global_point);
+  }
+
+  // correct target pose
+  if (!complete_path_point_global_vec_.empty()) {
+    EgoInfoUnderSlot& mutable_ego_info_under_slot =
+        apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+    geometry_lib::PathPoint real_target_pose =
+        complete_path_point_global_vec_.back();
+    real_target_pose.GlobalToLocal(mutable_ego_info_under_slot.g2l_tf);
+    const geometry_lib::PathPoint& origin_target_pose =
+        mutable_ego_info_under_slot.origin_target_pose;
+    geometry_lib::PathPoint& target_pose =
+        mutable_ego_info_under_slot.target_pose;
+    mutable_ego_info_under_slot.lat_move_dist_replan_success =
+        real_target_pose.GetY() - origin_target_pose.GetY();
+    mutable_ego_info_under_slot.lon_move_dist_replan_success =
+        real_target_pose.GetX() - origin_target_pose.GetX();
+    target_pose = real_target_pose;
+  }
+
+  perferred_geometry_path_vec_ = planner_output.perferred_geometry_path_vec;
+
+  ILOG_INFO << "current_path_point_global_vec_.size() = "
+            << current_path_point_global_vec_.size()
+            << "  complete_path_point_global_vec_.size() = "
+            << complete_path_point_global_vec_.size();
+
+  return PathPlannerResult::PLAN_UPDATE;
+}
+
+void PerpendicularTailInScenario::PathPlan() {
+  CheckReplanParams replan_params;
+  replan_params.use_obs_height_method =
+      apa_param.GetParam().use_obs_height_method;
+  frame_.replan_flag = CheckReplan(replan_params);
+  frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+  frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
+  const ApaParameters& param = apa_param.GetParam();
+  if (!CheckCanDelObsInSlot()) {
+    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+  }
+
+  if (apa_world_ptr_->GetSimuParam().is_simulation &&
+      apa_world_ptr_->GetSimuParam().process_obs_method != -1) {
+    frame_.process_obs_method = static_cast<ProcessObsMethod>(
+        apa_world_ptr_->GetSimuParam().process_obs_method);
+  }
+
+  const bool exist_target_pose = GenTlane();
+  if (!frame_.replan_flag) {
+    ILOG_INFO << "replan is not required!";
+    SetParkingStatus(ParkingStatus::PARKING_RUNNING);
+    return;
+  }
+  SetParkingStatus(ParkingStatus::PARKING_PLANNING);
+
+  if (!exist_target_pose) {
+    frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = ParkingFailReason::NO_TARGET_POSE;
+    if (frame_.replan_fail_time > apa_param.GetParam().max_replan_failed_time) {
+      SetParkingStatus(ParkingStatus::PARKING_FAILED);
+    }
+    SwitchProcessObsMethod();
+    return;
+  }
+
+  // if exist target pose, try to plan path
+  ILOG_INFO << "target pose exists and replan is required!";
+  const double start_time = IflyTime::Now_ms();
+
+  if (frame_.replan_reason != ReplanReason::FORCE_PLAN &&
+      frame_.replan_reason != ReplanReason::DYNAMIC) {
+    frame_.total_plan_count++;
+  }
+
+  if (frame_.total_plan_count > param.max_replan_count) {
+    ILOG_INFO << "replan count is exceed max count, fail, directly quit apa";
+    frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+    frame_.plan_fail_reason = ParkingFailReason::PLAN_COUNT_EXCEED_LIMIT;
+    SetParkingStatus(ParkingStatus::PARKING_FAILED);
+    return;
+  }
+
+  // when dynamic plan, the pathplan_result is always PLAN_UPDATE
+  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    frame_.pathplan_result = PathPlanOnce();
+  } else {
+    frame_.pathplan_result = PathPlanOnceHybridAstar();
+  }
+
+  ILOG_INFO << "try generate path, and replan_consume_time = "
+            << IflyTime::Now_ms() - start_time << " ms, replan count = "
+            << static_cast<int>(frame_.total_plan_count)
+            << "  dynamic_plan_fail_flag = " << frame_.dynamic_plan_fail_flag
+            << "  dynamic_plan_path_superior = "
+            << frame_.dynamic_plan_path_superior;
+
+  JSON_DEBUG_VALUE("replan_count", frame_.total_plan_count)
+  JSON_DEBUG_VALUE("replan_consume_time", IflyTime::Now_ms() - start_time)
+  JSON_DEBUG_VALUE("dynamic_plan_fail_flag", frame_.dynamic_plan_fail_flag)
+  JSON_DEBUG_VALUE("dynamic_plan_path_superior",
+                   frame_.dynamic_plan_path_superior)
+  JSON_DEBUG_VALUE("process_obs_method",
+                   static_cast<int>(frame_.process_obs_method))
+
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_PATH_PLAN_TIME,
+                                    IflyTime::Now_ms() - start_time);
+
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  // dynamic plan fail
+  if (frame_.replan_reason == ReplanReason::DYNAMIC &&
+      (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED ||
+       frame_.dynamic_plan_fail_flag || !frame_.dynamic_plan_path_superior)) {
+    ILOG_INFO << "dynamic replan failed or path is not superior, use last path";
+    frame_.dynamic_replan_fail_count++;
+
+    // restore target pose and terminal err
+    // now not restore, use real-time target pose
+    // ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
+    // ego_info_under_slot.target_pose.pos.y() +=
+    //     ego_info_under_slot.lat_move_dist_replan_success;
+    // ego_info_under_slot.target_pose.pos.x() +=
+    //     ego_info_under_slot.lon_move_dist_replan_success;
+    // ego_info_under_slot.terminal_err.Set(
+    //     ego_info_under_slot.cur_pose.pos -
+    //     ego_info_under_slot.target_pose.pos,
+    //     geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+    //                                  ego_info_under_slot.target_pose.heading));
+
+    // const bool ego_should_stop_by_slot_jump =
+    // CheckShouldStopWhenSlotJumpsMuch();
+    // JSON_DEBUG_VALUE("ego_should_stop_by_slot_jump",
+    // ego_should_stop_by_slot_jump) ILOG_INFO << " ego_should_stop_by_slot_jump
+    // = " << ego_should_stop_by_slot_jump
+    //           << "  dynamic_replan_fail_count = "
+    //           << static_cast<int>(frame_.dynamic_replan_fail_count);
+
+    return;
+  }
+
+  // static plan fail
+  if (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED) {
+    ILOG_INFO << "static replan fail";
+    if (frame_.total_plan_count > 0) {
+      frame_.total_plan_count--;
+    }
+    if (frame_.replan_fail_time > param.max_replan_failed_time) {
+      SetParkingStatus(PARKING_FAILED);
+    }
+    SwitchProcessObsMethod();
+    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    return;
+  }
+
+  // static or dynamic plan success
+  if (frame_.pathplan_result == PathPlannerResult::PLAN_UPDATE) {
+    // update slot move dist replan success
+    ego_info_under_slot.lat_move_dist_replan_success =
+        ego_info_under_slot.lat_move_dist_every_replan;
+
+    ego_info_under_slot.lon_move_dist_replan_success =
+        ego_info_under_slot.lon_move_dist_every_replan;
+
+    ego_info_under_slot.replan_success_origin_target_pose =
+        ego_info_under_slot.origin_target_pose;
+    ego_info_under_slot.replan_success_origin_target_pose.LocalToGlobal(
+        ego_info_under_slot.l2g_tf);
+
+    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+
+    if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+      ILOG_INFO << "dynamic replan success and path is superior, update path";
+      frame_.dynamic_replan_fail_count = 0;
+    } else {
+      ILOG_INFO << "static replan success, update path";
+      ego_info_under_slot.fix_limiter = false;
+    }
+
+    if (PostProcessPath()) {
+      ILOG_INFO << "postprocess path success!";
+    } else {
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      if (frame_.replan_fail_time > param.max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
+      ILOG_INFO << "postprocess path failed!";
+    }
+  }
+
+  return;
+}
+
+void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
+    PlannerOpenSpaceConfig& config, HybridAStarRequest& request) {
+  const ApaParameters& param = apa_param.GetParam();
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  // gen config
+  config.InitConfig();
+  // targeted customization parameters
+  config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
+  config.exceed_interseting_area_penalty = 1.2f * config.gear_switch_penalty;
+  config.exceed_cul_de_sac_limit_pos_penalty =
+      0.68f * config.gear_switch_penalty;
+  config.borrow_slot_penalty = 3.68f;
+  config.expect_steer_penalty = 1.68f;
+
+  // gen request
+  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+    request.mirror_has_folded_flag = true;
+  } else {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+    if (ego_info_under_slot.tar_pose_result.target_pose_type ==
+        TargetPoseType::FOLD_MIRROR) {
+      ILOG_INFO << "try path plan with fold mirror";
+      request.enable_smart_fold_mirror = true;
+    }
+  }
+  request.process_obs_method = frame_.process_obs_method;
+  request.sample_ds = config.node_path_dist_resolution;
+  request.replan_reason = frame_.replan_reason;
+  request.every_gear_length = 0.3;
+  request.swap_start_goal = false;
+  request.scenario_type = scenario_type_;
+  request.analytic_expansion_type = param.analytic_expansion_type;
+  request.ego_info_under_slot = ego_info_under_slot;
+  request.inital_action_request.ref_length = config.node_step + 0.01;
+  request.inital_action_request.ref_gear =
+      GetAstarGearFromSegGear(frame_.current_gear);
+  request.inital_action_request.ref_steer =
+      GetAstarSteerFromSegSteer(frame_.current_arc_steer);
+  if (apa_world_ptr_->GetSimuParam().ref_gear != 0) {
+    request.inital_action_request.ref_gear =
+        GetAstarGearFromSegGear(apa_world_ptr_->GetSimuParam().ref_gear);
+  }
+  if (apa_world_ptr_->GetSimuParam().ref_steer != 0) {
+    request.inital_action_request.ref_steer =
+        GetAstarSteerFromSegSteer(apa_world_ptr_->GetSimuParam().ref_steer);
+  }
+
+  request.pre_search_mode = param.pre_search_mode;
+  request.decide_cul_de_sac = param.enable_decide_cul_de_sac;
+  request.enable_interesting_search_area = param.enable_interesting_search_area;
+
+  if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
+    // searching_stage
+    request.max_gear_shift_number =
+        param.gear_change_decide_params.all_max_gear_change_count_searching;
+  } else {
+    request.max_gear_shift_number =
+        param.gear_change_decide_params.all_max_gear_change_count_parking;
+  }
+
+  request.max_scurve_number = 2;
+
+  // now, when dynamic plan, the path should not shift gear, and the gear must
+  // be reverse
+  if (frame_.replan_reason == DYNAMIC) {
+    request.inital_action_request.ref_gear = AstarPathGear::REVERSE;
+    request.max_gear_shift_number = 0;
+  }
+
+  request.ref_solve_number = apa_world_ptr_->GetSimuParam().ref_solve_number;
+
+  if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+    if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
+      if (ego_info_under_slot.slot.IsPointInCustomSlot(
+              ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.4, -0.4, true) &&
+          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+              20.0) {
+        request.adjust_pose = true;
+      }
+    }
+  } else if (scenario_type_ ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    if (request.inital_action_request.ref_gear == AstarPathGear::REVERSE) {
+      if (ego_info_under_slot.slot.IsPointInCustomSlot(
+              ego_info_under_slot.cur_pose.pos, 7.0, -3.0, -0.4, -0.4, true) &&
+          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+              20.0) {
+        request.adjust_pose = true;
+      }
+    }
+  }
+
+  InitalActionDecider inital_action_decider(
+      apa_world_ptr_->GetColDetInterfacePtr());
+  inital_action_decider.Process(request.inital_action_request,
+                                ego_info_under_slot.cur_pose,
+                                ego_info_under_slot.tar_line, config.node_step,
+                                config.node_path_dist_resolution, 3.0);
+
+  ILOG_INFO << "hybrid_ref_gear = "
+            << PathGearDebugString(request.inital_action_request.ref_gear)
+            << " ref steer = "
+            << GetPathSteerDebugString(request.inital_action_request.ref_steer)
+            << " ref length = " << request.inital_action_request.ref_length
+            << "  max_gear_shift_number = " << request.max_gear_shift_number
+            << "  adjust_pose = " << request.adjust_pose
+            << "  ref_solve_number = " << request.ref_solve_number;
+}
+
+const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
+  HybridAStarRequest request;
+  PlannerOpenSpaceConfig config;
+  GenHybridAstarConfigAndRequest(config, request);
+
+  const ApaParameters& param = apa_param.GetParam();
+  CalcProjPtForDynamicPlan(request.ego_info_under_slot.cur_pose,
+                           request.splicing_pt_vec);
+
+  const std::shared_ptr<HybridAstarPathGeneratorInterface>&
+      hybrid_astar_path_generator_ptr =
+          apa_world_ptr_->GetParkingTaskInterfacePtr()
+              ->GetHybridAstarPathGeneratorInterfacePtr();
+
+  HybridAStarResult hybrid_astar_result;
+  hybrid_astar_path_generator_ptr->SetRequest(request);
+  hybrid_astar_path_generator_ptr->UpdateConfig(config);
+  hybrid_astar_path_generator_ptr->Update();
+  hybrid_astar_path_generator_ptr->GetResult(hybrid_astar_result);
+
+  const bool path_plan_success = hybrid_astar_result.path_plan_success;
+  ILOG_INFO << "hybrid astar plan success = " << path_plan_success << "  "
+            << "  path_plan_consume_time_ms = "
+            << hybrid_astar_result.search_consume_time_ms;
+
+  JSON_DEBUG_VALUE("search_consume_time",
+                   hybrid_astar_result.search_consume_time_ms)
+
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,
+                                    hybrid_astar_result.search_consume_time_ms);
+
+  JSON_DEBUG_VALUE("solve_number", hybrid_astar_result.solve_number)
+  JSON_DEBUG_VALUE("search_node_num", hybrid_astar_result.search_node_num)
+
+  if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
+    if (!path_plan_success) {
+      return PathPlannerResult::PLAN_FAILED;
+    }
+    // if (path_plan_success) {
+    //   return PathPlannerResult::PLAN_UPDATE;
+    // }
+  }
+
+  HybridAstarResponse response;
+  response.result = hybrid_astar_result;
+  response.request = request;
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    // dynamic replan
+    if (!path_plan_success) {
+      frame_.dynamic_plan_fail_flag = true;
+      ILOG_INFO << "path dynamic plan fail";
+      frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+
+    frame_.dynamic_plan_fail_flag = false;
+    ILOG_INFO << "path dynamic plan success";
+    if (!CheckDynamicPlanPathOptimalByHybridAstarPath(response)) {
+      frame_.dynamic_plan_path_superior = false;
+      frame_.plan_fail_reason = ParkingFailReason::DYNAMIC_PATH_NOT_SUPERIOR;
+      ILOG_INFO << "path dynamic plan is not superior, should not replace "
+                   "last path";
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+
+    frame_.dynamic_plan_path_superior = true;
+    ILOG_INFO << "path dynamic plan is superior, should replace last path";
+  } else {
+    // static replan
+    if (!path_plan_success) {
+      ILOG_INFO << "path static plan fail";
+      frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_FAILED;
+    }
+    ILOG_INFO << "path static plan success";
+  }
+
+  if (frame_.is_replan_first) {
+    frame_.is_replan_first = false;
+  }
+
+  FillPathPointGlobalFromHybridPath(response);
+
+  return PathPlannerResult::PLAN_UPDATE;
+}
+
+const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
+  const std::shared_ptr<PathGeneratorThread>& path_generator_thread_ptr =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()->GetPathGeneratorThreadPtr();
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  frame_.has_response = UpdateThreadPath();
+
+  // gen request every frame, but not set every frame
+  PathGenThreadRequest request;
+  request.col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+  GenHybridAstarConfigAndRequest(request.config, request.hybrid_astar_request);
+
+  HybridAstarResponse response;
+  if (frame_.has_response) {
+    ILOG_INFO << "path gen thread has response, update responsse";
+    path_generator_thread_ptr->PublishResponseData(hybrid_astar_response_);
+    TimeBenchmark::Instance().SetTime(
+        TimeBenchmarkType::TB_APA_ASTAR,
+        hybrid_astar_response_.result.search_consume_time_ms);
+  }
+  response = hybrid_astar_response_;
+
+  if (!CheckResponseReasonable(request.hybrid_astar_request,
+                               hybrid_astar_response_)) {
+    ILOG_INFO << "response not reasonable";
+    hybrid_astar_response_.Clear();
+    response.Clear();
+  }
+
+  FillPathPointGlobalFromHybridPath(response);
+
+  if (frame_.path_gen_request_response_state ==
+      PathGenRequestResponseState::HAS_RESPONSE) {
+    if (!hybrid_astar_response_.result.path_plan_success) {
+      return PathPlannerResult::PLAN_FAILED;
+    } else {
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+  }
+
+  if (frame_.path_gen_request_response_state !=
+      PathGenRequestResponseState::HAS_REQUEST) {
+    ILOG_INFO << "path generator thread has not request, can set request";
+    path_generator_thread_ptr->SetRequest(request);
+  }
+
+  const SlotReleaseState last_release_state =
+      apa_world_ptr_->GetSlotManagerPtr()
+          ->GetEgoInfoUnderSlot()
+          .slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE];
+
+  if (last_release_state == SlotReleaseState::RELEASE) {
+    ILOG_INFO << "last result is release, the frame set release";
+    return PathPlannerResult::PLAN_UPDATE;
+  } else if (last_release_state == SlotReleaseState::NOT_RELEASE) {
+    ILOG_INFO << "last result is not release, the frame set not release";
+    return PathPlannerResult::PLAN_FAILED;
+  } else if (last_release_state == SlotReleaseState::UNKNOWN) {
+    ILOG_INFO << "last result is unkown, the frame set computing";
+    return PathPlannerResult::WAIT_PATH;
+  } else if (last_release_state == SlotReleaseState::COMPUTING) {
+    ILOG_INFO << "last result is computing, the frame set computing";
+    return PathPlannerResult::WAIT_PATH;
+  }
+
+  return PathPlannerResult::PLAN_FAILED;
+}
+
+void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
+  CheckReplanParams replan_params;
+  replan_params.use_obs_height_method =
+      apa_param.GetParam().use_obs_height_method;
+  frame_.replan_flag = CheckReplan(replan_params);
+  frame_.has_response = UpdateThreadPath();
+  frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+  frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
+  const ApaParameters& param = apa_param.GetParam();
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  if (!CheckCanDelObsInSlot()) {
+    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+  }
+
+  if (apa_world_ptr_->GetSimuParam().is_simulation &&
+      apa_world_ptr_->GetSimuParam().process_obs_method != -1) {
+    frame_.process_obs_method = static_cast<ProcessObsMethod>(
+        apa_world_ptr_->GetSimuParam().process_obs_method);
+  }
+
+  if (frame_.is_replan_first) {
+    current_path_point_global_vec_.clear();
+    complete_path_point_global_vec_.clear();
+  }
+
+  const std::shared_ptr<PathGeneratorThread>& path_generator_thread_ptr =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()->GetPathGeneratorThreadPtr();
+
+  switch (frame_.path_gen_request_response_state) {
+    case PathGenRequestResponseState::HAS_REQUEST:
+      ILOG_INFO << "thread request response state is has_request, should wait "
+                   "for response, no need to trigger plan";
+      frame_.replan_flag = false;
+      break;
+    case PathGenRequestResponseState::HAS_RESPONSE:
+      ILOG_INFO << "thread request response state is has_response, should get "
+                   "path from thread, no need to trigger plan";
+      frame_.replan_flag = false;
+      break;
+    case PathGenRequestResponseState::HAS_PUBLISHED_RESPONSE:
+      ILOG_INFO << "thread request response state is has_published_response, "
+                   "use last path and can trigger plan";
+      break;
+    default:
+      ILOG_INFO << "thread request response state is NONE, can trigger plan";
+      break;
+  }
+
+  SetParkingStatus(PARKING_RUNNING);
+
+  const bool exist_target_pose = GenTlane();
+
+  if (!frame_.replan_flag) {
+    frame_.replan_reason = NOT_REPLAN;
+  }
+
+  HybridAstarResponse response;
+  if (frame_.path_gen_request_response_state ==
+      PathGenRequestResponseState::HAS_RESPONSE) {
+    path_generator_thread_ptr->PublishResponseData(response);
+    const HybridAStarRequest& last_request = response.request;
+
+    if (last_request.replan_reason == ReplanReason::SLOT_CRUISING) {
+      if (!response.result.path_plan_success) {
+        ILOG_INFO << "this respose path is search path and path plan fail";
+        frame_.plan_fail_reason = LOSS_SEARCH_PATH;
+        return;
+      }
+      const double useable_search_time_ms = 1900.0;
+      if (response.result.search_consume_time_ms < useable_search_time_ms) {
+        ILOG_INFO << "this respose path is search path and consume time < "
+                  << useable_search_time_ms << "ms, need loss and replan";
+        frame_.plan_fail_reason = LOSS_SEARCH_PATH;
+        return;
+      }
+      ILOG_INFO << "this respose path is search path and consume time > "
+                << useable_search_time_ms
+                << "ms, decide it can directly use th path";
+    }
+
+    const EgoInfoUnderSlot& last_ego_info_under_slot =
+        last_request.ego_info_under_slot;
+
+    ILOG_INFO << "hybrid astar plan success = "
+              << response.result.path_plan_success << "  "
+              << "  path_plan_consume_time_ms = "
+              << response.result.search_consume_time_ms;
+
+    JSON_DEBUG_VALUE("process_obs_method",
+                     static_cast<int>(last_request.process_obs_method))
+
+    JSON_DEBUG_VALUE("search_consume_time",
+                     response.result.search_consume_time_ms)
+
+    TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,
+                                      response.result.search_consume_time_ms);
+
+    JSON_DEBUG_VALUE("solve_number", response.result.solve_number)
+    JSON_DEBUG_VALUE("search_node_num", response.result.search_node_num)
+
+    JSON_DEBUG_VALUE("last_replan_reason", last_request.replan_reason)
+
+    bool success = false;
+    do {
+      if (!response.result.path_plan_success) {
+        frame_.plan_fail_reason = PATH_PLAN_FAILED;
+        ILOG_INFO << "this respose path plan fail";
+        break;
+      }
+      if (last_ego_info_under_slot.id != ego_info_under_slot.id) {
+        frame_.plan_fail_reason = SLOT_ID_CHANGED;
+        ILOG_INFO << "this respose slot id has changed, cur id = "
+                  << response.request.ego_info_under_slot.id
+                  << "  history id = " << ego_info_under_slot.id;
+        break;
+      }
+      if (last_ego_info_under_slot.slot_type != ego_info_under_slot.slot_type) {
+        frame_.plan_fail_reason = SLOT_TYPE_CHANGED;
+        ILOG_INFO << "this respose slot type has changed, history type = "
+                  << GetSlotTypeString(
+                         last_request.ego_info_under_slot.slot_type)
+                  << "  cur type = "
+                  << GetSlotTypeString(ego_info_under_slot.slot_type);
+        break;
+      }
+      success = true;
+    } while (false);
+
+    // dynamic fail
+    while (last_request.replan_reason == DYNAMIC) {
+      if (!success) {
+        frame_.plan_fail_reason = PATH_PLAN_FAILED;
+        ILOG_INFO << "dynamic replan failed";
+      } else if (!CheckDynamicPlanPathOptimalByHybridAstarPath(response)) {
+        frame_.plan_fail_reason = DYNAMIC_PATH_NOT_SUPERIOR;
+        success = false;
+        ILOG_INFO << "dynamic replan path is not superior";
+      } else {
+        ILOG_INFO
+            << "dynamic replan success and path is superior, use this path";
+        break;
+      }
+
+      // restore target pose and terminal err
+      // now not restore, use real-time target pose
+      // ego_info_under_slot.target_pose =
+      // ego_info_under_slot.origin_target_pose;
+      // ego_info_under_slot.target_pose.pos.y() +=
+      //     last_ego_info_under_slot.lat_move_dist_replan_success;
+      // ego_info_under_slot.target_pose.pos.x() +=
+      //     last_ego_info_under_slot.lon_move_dist_replan_success;
+      // ego_info_under_slot.terminal_err.Set(
+      //     ego_info_under_slot.cur_pose.pos -
+      //         ego_info_under_slot.target_pose.pos,
+      //     geometry_lib::NormalizeAngle(
+      //         ego_info_under_slot.cur_pose.heading -
+      //         ego_info_under_slot.target_pose.heading));
+
+      break;
+    }
+
+    // static plan fail
+    if (!success && last_request.replan_reason != DYNAMIC &&
+        last_request.replan_reason != PATH_DANGEROUS) {
+      ILOG_ERROR << "static replan fail";
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      if (frame_.replan_fail_time >
+          apa_param.GetParam().max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
+      SwitchProcessObsMethod();
+      if (last_request.replan_reason == FIRST_PLAN) {
+        frame_.is_replan_first = true;
+      }
+      return;
+    }
+
+    // static or dynamic plan fail
+    if (!success) {
+      ILOG_INFO << "this respose is not vaild";
+      path_generator_thread_ptr->Reset();
+      return;
+    }
+
+    ego_info_under_slot.lat_move_dist_replan_success =
+        last_ego_info_under_slot.lat_move_dist_every_replan;
+
+    ego_info_under_slot.lon_move_dist_replan_success =
+        last_ego_info_under_slot.lon_move_dist_every_replan;
+
+    ego_info_under_slot.replan_success_origin_target_pose =
+        last_ego_info_under_slot.origin_target_pose;
+
+    ego_info_under_slot.replan_success_origin_target_pose.LocalToGlobal(
+        last_ego_info_under_slot.l2g_tf);
+
+    if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+      ILOG_INFO << "dynamic replan success and path is superior, update path";
+      frame_.dynamic_replan_fail_count = 0;
+    } else if (frame_.replan_reason != ReplanReason::PATH_DANGEROUS) {
+      ILOG_INFO << "static replan success, update path";
+      ego_info_under_slot.fix_limiter = false;
+    }
+
+    ILOG_INFO << "this respose is vaild, and use new path";
+    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+    frame_.is_replan_first = false;
+    FillPathPointGlobalFromHybridPath(response);
+
+    // update path success
+    SetParkingStatus(PARKING_PLANNING);
+
+    if (PostProcessPath()) {
+      ILOG_INFO << "postprocess path success!";
+    } else {
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      if (frame_.replan_fail_time > param.max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
+      ILOG_INFO << "postprocess path failed!";
+    }
+    return;
+  }
+
+  if (frame_.replan_flag) {
+    SetParkingStatus(PARKING_PLANNING);
+
+    if (!exist_target_pose) {
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      frame_.plan_fail_reason = ParkingFailReason::NO_TARGET_POSE;
+      if (frame_.replan_fail_time >
+          apa_param.GetParam().max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
+      SwitchProcessObsMethod();
+      return;
+    }
+
+    ILOG_INFO << "replan is required, set request to path generate thread!";
+    PathGenThreadRequest request;
+    request.col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+
+    GenHybridAstarConfigAndRequest(request.config,
+                                   request.hybrid_astar_request);
+
+    CalcProjPtForDynamicPlan(
+        request.hybrid_astar_request.ego_info_under_slot.cur_pose,
+        request.hybrid_astar_request.splicing_pt_vec);
+
+    // request.hybrid_astar_request.last_complete_pt_vec =
+    //     complete_path_point_global_vec_;
+
+    path_generator_thread_ptr->SetRequest(request);
+
+    if (frame_.is_replan_first) {
+      frame_.is_replan_first = false;
+    }
+  }
+}
+
+void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
+    geometry_lib::PathPoint& proj_pt,
+    std::vector<geometry_lib::PathPoint>& splicing_pt_vec) {
+  splicing_pt_vec.clear();
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const ApaParameters& param = apa_param.GetParam();
+
+  proj_pt = ego_info_under_slot.cur_pose;
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
+    proj_pt = GetCurrentPathTerminal(true);
+    return;
+  }
+
+  if (frame_.replan_reason != ReplanReason::DYNAMIC &&
+      frame_.replan_reason != ReplanReason::PATH_DANGEROUS) {
+    return;
+  }
+
+  ILOG_INFO << "decide ego pose or proj pt for dynamic path plan";
+
+  if (apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
+    ILOG_INFO << "control err is big, directly use ego pose to dynamic plan";
+    return;
+  }
+
+  const double remain_dist =
+      std::min({frame_.remain_dist_path, frame_.remain_dist_obs,
+                frame_.remain_dist_slot_jump});
+
+  std::vector<double> dist_vec{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+  const double delta_t =
+      (param.max_dynamic_plan_proj_dt - param.min_dynamic_plan_proj_dt) /
+      (dist_vec.size() - 1);
+  std::vector<double> dt_vec{};
+  dt_vec.resize(dist_vec.size());
+  for (size_t i = 0; i < dist_vec.size(); ++i) {
+    dt_vec[i] = param.min_dynamic_plan_proj_dt + delta_t * i;
+  }
+  const double dt = mathlib::Interp1(dist_vec, dt_vec, remain_dist);
+  const double s =
+      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) * dt;
+
+  ILOG_INFO << "s = " << s << "  dt = " << dt << "  delta_t = " << delta_t
+            << "  remain_dist = " << remain_dist;
+
+  JSON_DEBUG_VALUE("dynamic_plan_predict_dt", dt)
+  JSON_DEBUG_VALUE("dynamic_plan_predict_ds", s)
+
+  if (s > remain_dist - 0.68) {
+    return;
+  }
+
+  const size_t pt_number = current_path_point_global_vec_.size();
+
+  if (pt_number < 2) {
+    return;
+  }
+
+  const double ds = current_path_point_global_vec_[pt_number - 1].s -
+                    current_path_point_global_vec_[pt_number - 2].s;
+
+  if (s < ds * 2) {
+    return;
+  }
+
+  const double ego_s_proj =
+      frame_.current_path_length - frame_.remain_dist_path;
+  const double fur_s_proj = ego_s_proj + s;
+  geometry_lib::PathPoint ego_proj_pt, fur_proj_pt;
+  size_t ego_proj_index = 0, fur_proj_index = 0;
+  bool find_ego_proj_pt = false, find_fur_proj_pt = false;
+  for (size_t i = 0; i < current_path_point_global_vec_.size(); ++i) {
+    const geometry_lib::PathPoint& pt = current_path_point_global_vec_[i];
+    if (!find_ego_proj_pt && pt.s > ego_s_proj) {
+      find_ego_proj_pt = true;
+      ego_proj_index = i;
+      ego_proj_pt = pt;
+    }
+    if (!find_fur_proj_pt && pt.s > fur_s_proj) {
+      find_fur_proj_pt = true;
+      fur_proj_index = i;
+      fur_proj_pt = pt;
+    }
+  }
+
+  proj_pt.pos = ego_info_under_slot.g2l_tf.GetPos(fur_proj_pt.pos);
+  proj_pt.heading = ego_info_under_slot.g2l_tf.GetHeading(fur_proj_pt.heading);
+
+  splicing_pt_vec.reserve(fur_proj_index - ego_proj_index + 1);
+  for (size_t i = ego_proj_index + 1; i < fur_proj_index; ++i) {
+    splicing_pt_vec.emplace_back(current_path_point_global_vec_[i]);
+  }
+
+  fur_proj_pt.PrintInfo();
+
+  return;
+}
+
+void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
+    const HybridAstarResponse& response) {
+  const HybridAStarResult& result = response.result;
+  const HybridAStarRequest& request = response.request;
+  const std::vector<geometry_lib::PathPoint>& splicing_pt_vec =
+      request.splicing_pt_vec;
+
+  hybrid_astar_response_ = response;
+
+  frame_.is_last_path = (result.gear_change_num < 1);
+
+  frame_.cur_path_gear_change_count = result.gear_change_num;
+
+  frame_.gear_command = GetSegGearFromAstarGear(result.cur_gear);
+  frame_.current_gear = geometry_lib::ReverseGear(frame_.gear_command);
+  frame_.current_arc_steer = GetSegSteerFromAstarSteer(result.cur_steer);
+  frame_.current_arc_steer =
+      geometry_lib::ReverseSteer(frame_.current_arc_steer);
+
+  ILOG_INFO << "path gear change count = " << result.gear_change_num
+            << " path cur gear = " << PathGearDebugString(result.cur_gear);
+
+  current_path_point_global_vec_.clear();
+  complete_path_point_global_vec_.clear();
+
+  if (result.x_vec_vec.empty()) {
+    ILOG_INFO << "no path can fill path pt global";
+    return;
+  }
+
+  current_path_point_global_vec_.reserve(result.x_vec_vec[0].size() +
+                                         splicing_pt_vec.size() + 18);
+
+  complete_path_point_global_vec_.reserve(result.x_vec_vec.size() *
+                                              result.x_vec_vec[0].size() +
+                                          splicing_pt_vec.size() + 18);
+
+  for (const geometry_lib::PathPoint& pt : splicing_pt_vec) {
+    current_path_point_global_vec_.emplace_back(pt);
+    complete_path_point_global_vec_.emplace_back(pt);
+  }
+
+  const geometry_lib::LocalToGlobalTf& l2g_tf =
+      request.ego_info_under_slot.l2g_tf;
+
+  geometry_lib::PathPoint global_path_point;
+
+  const size_t gear_size = std::min(
+      {result.gear_vec.size(), result.x_vec_vec.size(), result.y_vec_vec.size(),
+       result.phi_vec_vec.size(), result.kappa_vec_vec.size(),
+       result.type_vec_vec.size(), result.accumulated_s_vec_vec.size()});
+
+  for (size_t i = 0; i < gear_size; ++i) {
+    const std::vector<float>& x_vec = result.x_vec_vec[i];
+    const std::vector<float>& y_vec = result.y_vec_vec[i];
+    const std::vector<float>& phi_vec = result.phi_vec_vec[i];
+    const std::vector<float>& kappa_vec = result.kappa_vec_vec[i];
+    const std::vector<float>& s_vec = result.accumulated_s_vec_vec[i];
+    const std::vector<AstarPathType>& type_vec = result.type_vec_vec[i];
+    const size_t pt_size =
+        std::min({x_vec.size(), y_vec.size(), phi_vec.size(), kappa_vec.size(),
+                  s_vec.size(), type_vec.size()});
+    for (size_t j = 0; j < pt_size; ++j) {
+      global_path_point.pos =
+          l2g_tf.GetPos(Eigen::Vector2d(x_vec[j], y_vec[j]));
+      global_path_point.heading = l2g_tf.GetHeading(phi_vec[j]);
+      global_path_point.type = static_cast<int>(type_vec[j]);
+      global_path_point.kappa = kappa_vec[j];
+      global_path_point.s = s_vec[j];
+      global_path_point.gear = GetSegGearFromAstarGear(result.gear_vec[i]);
+      if (i == 0) {
+        current_path_point_global_vec_.emplace_back(global_path_point);
+      }
+      complete_path_point_global_vec_.emplace_back(global_path_point);
+    }
+  }
+
+  // correct target pose
+  if (!complete_path_point_global_vec_.empty()) {
+    EgoInfoUnderSlot& mutable_ego_info_under_slot =
+        apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+    geometry_lib::PathPoint real_target_pose =
+        complete_path_point_global_vec_.back();
+    real_target_pose.GlobalToLocal(mutable_ego_info_under_slot.g2l_tf);
+    const geometry_lib::PathPoint& origin_target_pose =
+        mutable_ego_info_under_slot.origin_target_pose;
+    geometry_lib::PathPoint& target_pose =
+        mutable_ego_info_under_slot.target_pose;
+    mutable_ego_info_under_slot.lat_move_dist_replan_success =
+        real_target_pose.GetY() - origin_target_pose.GetY();
+    mutable_ego_info_under_slot.lon_move_dist_replan_success =
+        real_target_pose.GetX() - origin_target_pose.GetX();
+    target_pose = real_target_pose;
+  }
+
+  ILOG_INFO << "current_path_point_global_vec_.size() = "
+            << current_path_point_global_vec_.size()
+            << "  complete_path_point_global_vec_.size() = "
+            << complete_path_point_global_vec_.size();
+
+  return;
+}
+
+void PerpendicularTailInScenario::SwitchProcessObsMethod() {
+  switch (frame_.process_obs_method) {
+    case ProcessObsMethod::DO_NOTHING:
+      frame_.process_obs_method = ProcessObsMethod::MOVE_OBS_OUT_SLOT;
+      break;
+    case ProcessObsMethod::MOVE_OBS_OUT_SLOT:
+      frame_.process_obs_method = ProcessObsMethod::MOVE_OBS_OUT_CAR_SAFE_POS;
+      break;
+    case ProcessObsMethod::MOVE_OBS_OUT_CAR_SAFE_POS:
+    default:
+      frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+      break;
+  }
+}
+
+const bool PerpendicularTailInScenario::CheckFinished() {
+  const ApaParameters& param = apa_param.GetParam();
+  const CheckFinishParams& finish_params = param.check_finish_params;
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+  const geometry_lib::PathPoint front_pose =
+      GetCarFrontPoseFromCarPose(cur_pose);
+  const geometry_lib::PathPoint& target_pose = ego_info_under_slot.target_pose;
+
+  const double lon_err = cur_pose.pos.x() - target_pose.pos.x();
+  const double lat_err = cur_pose.pos.y() - target_pose.pos.y();
+  const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
+  const double heading_err =
+      geometry_lib::NormalizeAngle(cur_pose.heading - target_pose.heading) *
+      kRad2Deg;
+
+  JSON_DEBUG_VALUE("terminal_error_x", lon_err)
+  JSON_DEBUG_VALUE("terminal_error_y", lat_err)
+  JSON_DEBUG_VALUE("terminal_error_y_front", front_lat_err)
+  JSON_DEBUG_VALUE("terminal_error_heading", heading_err * kDeg2Rad)
+  ILOG_INFO << "terminal_error_x = " << lon_err
+            << "  terminal_error_y = " << lat_err
+            << "  front_lat_err = " << front_lat_err
+            << "  heading_err = " << heading_err;
+
+  const CarSlotRelationship ship = CalCarSlotRelationship(cur_pose);
+
+  const bool auto_fold_mirror =
+      param.smart_fold_mirror_params.has_smart_fold_mirror &&
+      frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag();
+
+  ILOG_INFO << "check finish ship = " << static_cast<int>(ship);
+
+  if (ship == CarSlotRelationship::TOUCHING && !auto_fold_mirror) {
+    ILOG_INFO << "car press line, not allow finish";
+    return false;
+  }
+
+  const double gain = auto_fold_mirror ? 3.0 : 1.0;
+
+  const double finish_lon_err = finish_params.lon_err;
+
+  const double finish_lat_err =
+      (ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
+                                          : finish_params.lat_err_strict) *
+      gain;
+  const double finish_heading_err =
+      (ship == CarSlotRelationship::IDEAL ? finish_params.heading_err
+                                          : finish_params.heading_err_strict) *
+      gain;
+
+  const bool lon_condition = lon_err < finish_lon_err;
+
+  const bool lat_condition = std::fabs(lat_err) < finish_lat_err &&
+                             std::fabs(front_lat_err) < finish_lat_err;
+
+  const bool heading_condition = std::fabs(heading_err) < finish_heading_err;
+
+  const bool static_condition =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  const bool remain_s_condition =
+      frame_.remain_dist_path < finish_params.max_remain_path_dist;
+
+  bool parking_finish =
+      lon_condition && lat_condition && static_condition && remain_s_condition;
+
+  if (parking_finish) {
+    return true;
+  }
+
+  // stucked by directly behind obs
+  const bool enter_slot_condition = ego_info_under_slot.slot_occupied_ratio >
+                                    finish_params.obs_stuck_slot_occupied_ratio;
+  const bool remain_obs_condition =
+      frame_.remain_dist_obs < finish_params.max_remain_obs_dist;
+
+  GJKColDetRequest gjl_col_det_request(true, param.uss_config.use_uss_pt_cloud);
+
+  bool end_pos_has_obs_condition = apa_world_ptr_->GetColDetInterfacePtr()
+                                       ->GetGJKColDetPtr()
+                                       ->Update(
+                                           std::vector<geometry_lib::PathPoint>{
+                                               ego_info_under_slot.target_pose},
+                                           0.0, 0.0, gjl_col_det_request)
+                                       .col_flag;
+
+  ILOG_INFO << "end_pos_has_obs_condition = " << end_pos_has_obs_condition;
+
+  if (!end_pos_has_obs_condition) {
+    double move_back_dist = 0.168;
+    if (lon_err < 0.368) {
+      // if only can move 0.1m, no move, finish
+      move_back_dist = param.safe_uss_remain_dist_in_slot + 0.1;
+    }
+
+    const geometry_lib::PathPoint uss_pose{
+        ego_info_under_slot.target_pose.pos -
+            move_back_dist * Eigen::Vector2d(1.0, 0.0),
+        ego_info_under_slot.target_pose.heading};
+
+    end_pos_has_obs_condition =
+        apa_world_ptr_->GetColDetInterfacePtr()
+            ->GetGJKColDetPtr()
+            ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
+                     gjl_col_det_request)
+            .col_flag;
+
+    ILOG_INFO << "after_pos_has_obs_condition = " << end_pos_has_obs_condition;
+  }
+
+  parking_finish = lat_condition && static_condition && enter_slot_condition &&
+                   remain_obs_condition && end_pos_has_obs_condition;
+
+  // Consider whether there are really obstacles at target pos. If so, finish
+  // it is indeed impossible to reach the target pos, if not, try replan again
+  if (parking_finish) {
+    return true;
+  }
+
+  return false;
+
+  // stucked by dynamic col det
+  const bool remain_dist_col_det_condition =
+      frame_.remain_dist_col_det < param.max_replan_remain_dist;
+
+  parking_finish = lat_condition && static_condition && enter_slot_condition &&
+                   remain_dist_col_det_condition && (lon_err < 0.568);
+
+  return parking_finish;
+}
+
+const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
+  frame_.correct_path_for_limiter = false;
+
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  const ApaParameters& param = apa_param.GetParam();
+
+  size_t origin_traj_size = current_path_point_global_vec_.size();
+
+  if (frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      ego_info_under_slot.cur_pose.GetX() -
+              ego_info_under_slot.origin_target_pose.GetX() >
+          0.068) {
+    ILOG_INFO << "mirror has folded, try to change path according limiter";
+    ego_info_under_slot.fix_limiter = false;
+  }
+
+  if (frame_.gear_command != geometry_lib::SEG_GEAR_REVERSE &&
+          !frame_.is_last_path ||
+      !frame_.spline_success || origin_traj_size < 2) {
+    return false;
+  }
+
+  const geometry_lib::LineSegment limiter_line(
+      Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
+                      0.5 * ego_info_under_slot.slot.slot_width_),
+      Eigen::Vector2d(ego_info_under_slot.origin_target_pose.pos.x(),
+                      -0.5 * ego_info_under_slot.slot.slot_width_));
+
+  const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
+      ego_info_under_slot.cur_pose.pos, limiter_line);
+
+  const double diff = ego_info_under_slot.slot_occupied_ratio_postprocess -
+                      ego_info_under_slot.slot_occupied_ratio;
+
+  double delta_dis = 0.0;
+  if (diff < 0.06) {
+    delta_dis = 0.0;
+  } else if (diff < 0.12) {
+    delta_dis = 0.43;
+  } else if (diff < 0.24) {
+    delta_dis = 0.86;
+  } else if (diff < 0.36) {
+    delta_dis = 1.72;
+  } else {
+    delta_dis = 2.58;
+  }
+
+  const double car_to_limiter_dis = param.car_to_limiter_dis + delta_dis;
+
+  ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter
+            << "  car_to_limiter_dis = " << car_to_limiter_dis;
+
+  if (!(dist_ego_limiter < car_to_limiter_dis &&
+        std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg <
+            param.check_finish_params.heading_err * 2.0 &&
+        std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
+            param.check_finish_params.lat_err * 2.0)) {
+    return false;
+  }
+
+  ILOG_INFO << "try extend or trim path by limiter";
+
+  std::vector<double> x_vec, y_vec, s_vec, heading_vec;
+  x_vec.reserve(origin_traj_size + 20);
+  y_vec.reserve(origin_traj_size + 20);
+  s_vec.reserve(origin_traj_size + 20);
+  heading_vec.reserve(origin_traj_size + 20);
+
+  const auto& l2g_tf = ego_info_under_slot.l2g_tf;
+  const auto& g2l_tf = ego_info_under_slot.g2l_tf;
+  const Eigen::Vector2d limiter_mid =
+      l2g_tf.GetPos(ego_info_under_slot.origin_target_pose.pos);
+
+  geometry_lib::PathPoint pt = current_path_point_global_vec_.back();
+
+  // If the target pose is very close to the previously planned
+  // endpoint, there is no need to run the following steps
+  if ((limiter_mid - pt.pos).norm() < 0.026) {
+    return false;
+  }
+
+  if (ego_info_under_slot.fix_limiter &&
+      (limiter_mid - pt.pos).norm() >
+          param.check_finish_params.lon_err - 0.026) {
+    ego_info_under_slot.fix_limiter = false;
+  }
+
+  if (ego_info_under_slot.fix_limiter &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      dist_ego_limiter > param.check_finish_params.lon_err - 0.026) {
+    ego_info_under_slot.fix_limiter = false;
+  }
+
+  if (ego_info_under_slot.fix_limiter) {
+    return false;
+  }
+
+  const double max_extend_dist = 2.5;
+
+  double s_proj = 0.0;
+  bool success = geometry_lib::CalProjFromSplineByBisection(
+      0.0, frame_.current_path_length + max_extend_dist, s_proj, limiter_mid,
+      frame_.x_s_spline, frame_.y_s_spline);
+
+  if (!success) {
+    ILOG_INFO << "path is err";
+    return false;
+  }
+
+  if (s_proj < 0.068) {
+    ILOG_INFO << "limiter s_proj is too small";
+    return false;
+  }
+
+  double ds = 0.0, s = 0.0;
+  for (size_t i = 0; i < origin_traj_size; ++i) {
+    if (i > 0) {
+      ds = std::hypot(current_path_point_global_vec_[i].GetX() -
+                          current_path_point_global_vec_[i - 1].GetX(),
+                      current_path_point_global_vec_[i].GetY() -
+                          current_path_point_global_vec_[i - 1].GetY());
+      s += std::max(ds, 1e-3);
+    }
+
+    if (s > s_proj) {
+      ILOG_INFO << "path shoule be shorten because of limiter";
+      if (s_proj - s_vec.back() > 0.036) {
+        x_vec.emplace_back(frame_.x_s_spline(s_proj));
+        y_vec.emplace_back(frame_.y_s_spline(s_proj));
+        heading_vec.emplace_back(heading_vec.back());
+        s_vec.emplace_back(s_proj);
+      }
+      break;
+    }
+
+    x_vec.emplace_back(current_path_point_global_vec_[i].GetX());
+    y_vec.emplace_back(current_path_point_global_vec_[i].GetY());
+    heading_vec.emplace_back(current_path_point_global_vec_[i].GetTheta());
+    s_vec.emplace_back(s);
+  }
+
+  if (s < s_proj) {
+    ILOG_INFO << "path shoule be extended because of limiter";
+    if (std::fabs(g2l_tf.GetHeading(pt.GetTheta())) * kRad2Deg >
+        param.check_finish_params.heading_err_strict) {
+      ILOG_INFO << "ego heading is big, not allow extend path";
+      return false;
+    }
+
+    double extend_length = s_proj - s;
+    double temp_s = 0.0, temp_ds = 0.05;
+    pt.s = temp_s;
+    // reverse gear
+    const Eigen::Vector2d unit_heading_vec =
+        geometry_lib::GenHeadingVec(pt.GetTheta()) * (-1.0);
+    std::vector<geometry_lib::PathPoint> extend_pt_vec{pt};
+    do {
+      temp_s += temp_ds;
+      if (temp_s >= extend_length) {
+        temp_ds = std::max(extend_length - extend_pt_vec.back().s, 0.01);
+        temp_s = extend_length;
+      }
+      pt.pos += unit_heading_vec * temp_ds;
+      pt.s += temp_ds;
+      extend_pt_vec.emplace_back(pt);
+    } while (temp_s < extend_length - 1e-5);
+
+    ILOG_INFO << "extend path according limiter with fold mirror = "
+              << apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag();
+
+    double body_lat_buffer = param.lat_lon_speed_buffer.stop_body_lat_buffer;
+    double mirror_lat_buffer =
+        param.lat_lon_speed_buffer.stop_mirror_lat_buffer;
+    double lon_buffer = param.lat_lon_speed_buffer.lon_buffer;
+
+    if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+      body_lat_buffer = param.stop_lat_inflation;
+      mirror_lat_buffer = param.stop_lat_inflation;
+      lon_buffer = param.col_obs_safe_dist_normal;
+    }
+
+    body_lat_buffer += 0.02;
+    mirror_lat_buffer += 0.02;
+
+    const ColResult col_res =
+        apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
+            extend_pt_vec, body_lat_buffer, lon_buffer, GJKColDetRequest(false),
+            true, mirror_lat_buffer);
+
+    if (col_res.remain_dist < 0.02) {
+      ILOG_INFO << "consider obs extend_length is small, not allow extend "
+                   "length, value = "
+                << col_res.remain_dist;
+      return false;
+    }
+
+    ILOG_INFO << "origin extend_length = " << extend_length
+              << "  consider obs extend_length = " << col_res.remain_dist;
+
+    extend_length = col_res.remain_dist;
+
+    const double total_length = s + extend_length;
+    while (s < total_length - 1e-2) {
+      s += temp_ds;
+      if (s > total_length) {
+        s = total_length;
+      }
+      x_vec.emplace_back(frame_.x_s_spline(s));
+      y_vec.emplace_back(frame_.y_s_spline(s));
+      heading_vec.emplace_back(heading_vec.back());
+      s_vec.emplace_back(s);
+    }
+  }
+
+  const size_t N = x_vec.size();
+  if (N < 2) {
+    return false;
+  }
+
+  // need extend by cal proj point
+  Eigen::Vector2d extended_point;
+  success = pnc::geometry_lib::CalExtendedPointByTwoPoints(
+      Eigen::Vector2d(x_vec[N - 2], y_vec[N - 2]),
+      Eigen::Vector2d(x_vec[N - 1], y_vec[N - 1]), extended_point,
+      frame_.path_extended_dist);
+
+  if (!success) {
+    return false;
+  }
+
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.reserve(N);
+  pnc::geometry_lib::PathPoint path_point;
+  for (size_t i = 0; i < N; ++i) {
+    path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
+    path_point.s = s_vec[i];
+    current_path_point_global_vec_.emplace_back(path_point);
+  }
+  complete_path_point_global_vec_ = current_path_point_global_vec_;
+
+  frame_.current_path_length = s_vec.back();
+
+  x_vec.emplace_back(extended_point.x());
+  y_vec.emplace_back(extended_point.y());
+  heading_vec.emplace_back(heading_vec.back());
+  s_vec.emplace_back(frame_.current_path_length + frame_.path_extended_dist);
+
+  frame_.x_s_spline.set_points(s_vec, x_vec);
+  frame_.y_s_spline.set_points(s_vec, y_vec);
+
+  frame_.spline_success = true;
+
+  ego_info_under_slot.fix_limiter = true;
+  frame_.correct_path_for_limiter = true;
+
+  if (complete_path_point_global_vec_.size() > 0) {
+    geometry_lib::PathPoint end_pose = complete_path_point_global_vec_.back();
+    end_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
+    ego_info_under_slot.target_pose.pos.x() = end_pose.pos.x();
+    ego_info_under_slot.target_pose.PrintInfo();
+    ego_info_under_slot.lon_move_dist_every_replan =
+        ego_info_under_slot.target_pose.pos.x() -
+        ego_info_under_slot.origin_target_pose.pos.x();
+    ego_info_under_slot.lon_move_dist_replan_success =
+        ego_info_under_slot.lon_move_dist_every_replan;
+  }
+  ILOG_INFO << "adjust path according to limiter complete";
+
+  return true;
+}
+
+const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
+  const double start_time = IflyTime::Now_ms();
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag());
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+
+  const ApaParameters& param = apa_param.GetParam();
+  const ParkingLatLonSpeedBuffer& speed_buffer = param.lat_lon_speed_buffer;
+
+  double lon_buffer;
+  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
+                     ? param.safe_uss_remain_dist_out_slot
+                     : param.safe_uss_remain_dist_in_slot;
+
+    geometry_lib::GeometryPath geometry_path_brake(all_plan_path_vec_);
+    if (geometry_path_brake.gear_change_count > 0 &&
+        geometry_path_brake.gear_index_vec.size() > 0) {
+      const size_t start_index = geometry_path_brake.gear_index_vec[0];
+      size_t end_index = geometry_path_brake.path_count - 1;
+      if (geometry_path_brake.gear_index_vec.size() > 1) {
+        end_index = geometry_path_brake.gear_index_vec[1] - 1;
+      }
+      std::vector<geometry_lib::PathSegment> seg_vec;
+      seg_vec.reserve(end_index - start_index + 1);
+      for (size_t i = start_index; i <= end_index; ++i) {
+        seg_vec.emplace_back(geometry_path_brake.path_segment_vec[i]);
+      }
+      geometry_path_brake.SetPath(seg_vec);
+      if (geometry_path_brake.collide_flag &&
+          geometry_path_brake.total_length < 0.76) {
+        lon_buffer = param.limited_safe_uss_remain_dist;
+        ILOG_INFO
+            << "next path is col and length is short, so this path need be "
+               "more radical";
+      }
+    }
+
+    if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
+      if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
+          std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
+        lon_buffer += 0.05;  // extra lon buffer when ref gear in special case
+      }
+    }
+  }
+
+  else {
+    // use hybrid a star
+    lon_buffer = speed_buffer.lon_buffer;
+    const HybridAStarResult& res = hybrid_astar_response_.result;
+    if (res.length_vec.size() > 1) {
+      if (res.length_vec[0] < 0.68 && res.length_vec[1] < 0.68) {
+        lon_buffer = speed_buffer.extreme_case_lon_buffer;
+        ILOG_INFO << "cur gear length and next gear length are both short, so "
+                     "cur gear path need be more radical";
+      }
+    }
+
+    if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
+      if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
+          std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
+        lon_buffer += speed_buffer.extra_reverse_gear_lon_buffer;
+      }
+    }
+  }
+
+  bool increase_lat_err_flag = false;
+  do {
+    if (frame_.mirror_command == MirrorCommand::NONE) {
+      break;
+    }
+
+    uint8_t ref_gear =
+        scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN
+            ? geometry_lib::SEG_GEAR_REVERSE
+            : geometry_lib::SEG_GEAR_DRIVE;
+
+    if (frame_.gear_command == ref_gear &
+            ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+        frame_.slot_jump_big_flag) {
+      increase_lat_err_flag = true;
+      break;
+    }
+
+    if (frame_.gear_command == ref_gear &&
+        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
+      increase_lat_err_flag = true;
+      break;
+    }
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+      if (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
+          ego_info_under_slot.cur_pose.pos.x() >
+              ego_info_under_slot.slot.GetOriginCornerCoordLocal()
+                      .pt_01_mid.x() +
+                  2.168) {
+        increase_lat_err_flag = true;
+        break;
+      }
+    }
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      if (ego_info_under_slot.slot_occupied_ratio < 1e-4) {
+        increase_lat_err_flag = true;
+        break;
+      }
+    }
+
+  } while (false);
+
+  // adopting a graded lat buffer real-time braking
+  std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
+  real_time_brake_info_vec.resize(4);
+
+  double stop_body_lat_inflation = param.stop_lat_inflation;
+  double stop_mirror_lat_inflation = param.stop_lat_inflation;
+  double stop_lon_dist = param.stop_lon_dist;
+
+  double heavy_brake_body_lat_inflation = param.heavy_brake_lat_inflation;
+  double heavy_brake_mirror_lat_inflation = param.heavy_brake_lat_inflation;
+  double heavy_brake_lon_dist = param.heavy_brake_lon_dist;
+
+  double moderate_brake_body_lat_inflation = param.moderate_brake_lat_inflation;
+  double moderate_brake_mirror_lat_inflation =
+      param.moderate_brake_lat_inflation;
+  double moderate_brake_lon_dist = param.moderate_brake_lon_dist;
+
+  double slight_brake_body_lat_inflation = param.slight_brake_lat_inflation;
+  double slight_brake_mirror_lat_inflation = param.slight_brake_lat_inflation;
+  double slight_brake_lon_dist = param.slight_brake_lon_dist;
+
+  if (param.park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+    stop_body_lat_inflation = speed_buffer.stop_body_lat_buffer;
+    stop_mirror_lat_inflation = speed_buffer.stop_mirror_lat_buffer;
+    stop_lon_dist = speed_buffer.stop_min_lon_dist;
+
+    heavy_brake_body_lat_inflation = speed_buffer.low_speed_body_lat_buffer;
+    heavy_brake_mirror_lat_inflation = speed_buffer.low_speed_mirror_lat_buffer;
+    heavy_brake_lon_dist = speed_buffer.low_speed_min_lon_dist;
+
+    moderate_brake_body_lat_inflation = speed_buffer.mid_speed_body_lat_buffer;
+    moderate_brake_mirror_lat_inflation =
+        speed_buffer.mid_speed_mirror_lat_buffer;
+    moderate_brake_lon_dist = speed_buffer.mid_speed_min_lon_dist;
+
+    slight_brake_body_lat_inflation = speed_buffer.high_speed_body_lat_buffer;
+    slight_brake_mirror_lat_inflation =
+        speed_buffer.high_speed_mirror_lat_buffer;
+    slight_brake_lon_dist = speed_buffer.high_speed_min_lon_dist;
+  }
+
+  real_time_brake_info_vec[0].Set(
+      RealTimeBrakeType::STOP, stop_body_lat_inflation,
+      stop_mirror_lat_inflation, stop_lon_dist, lon_buffer,
+      speed_buffer.dynamic_stop_body_lat_buffer,
+      speed_buffer.dynamic_stop_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
+  real_time_brake_info_vec[1].Set(
+      RealTimeBrakeType::HEAVY_BRAKE, heavy_brake_body_lat_inflation,
+      heavy_brake_mirror_lat_inflation, heavy_brake_lon_dist, lon_buffer,
+      speed_buffer.dynamic_low_speed_body_lat_buffer,
+      speed_buffer.dynamic_low_speed_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
+  real_time_brake_info_vec[2].Set(
+      RealTimeBrakeType::MODERATE_BRAKE, moderate_brake_body_lat_inflation,
+      moderate_brake_mirror_lat_inflation, moderate_brake_lon_dist, lon_buffer,
+      speed_buffer.dynamic_mid_speed_body_lat_buffer,
+      speed_buffer.dynamic_mid_speed_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
+  real_time_brake_info_vec[3].Set(
+      RealTimeBrakeType::SLIGHT_BRAKE, slight_brake_body_lat_inflation,
+      slight_brake_mirror_lat_inflation, slight_brake_lon_dist, lon_buffer,
+      speed_buffer.dynamic_high_speed_body_lat_buffer,
+      speed_buffer.dynamic_high_speed_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
+
+  bool special_stop_flag = false;
+  double special_stop_body_lat_buffer =
+      speed_buffer.special_stop_body_lat_buffer;
+  double special_stop_mirror_lat_buffer =
+      speed_buffer.special_stop_mirror_lat_buffer;
+  double special_stop_lon_dist = speed_buffer.special_stop_min_lon_dist;
+  double special_stop_lon_buffer = lon_buffer;
+  if (increase_lat_err_flag) {
+    special_stop_flag = true;
+  } else if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    const bool new_plan_path =
+        (frame_.current_path_length - frame_.remain_dist_path < 0.168);
+    if (new_plan_path) {
+      // leave inital place logic to let car move
+      if (speed_buffer.enable_leave_initial_place &&
+          frame_.current_path_length - frame_.remain_dist_path <
+              speed_buffer.leave_initial_place_dist) {
+        special_stop_flag = true;
+        special_stop_body_lat_buffer =
+            speed_buffer.leave_initial_place_body_lat_buffer;
+        special_stop_mirror_lat_buffer =
+            speed_buffer.leave_initial_place_mirror_lat_buffer;
+        special_stop_lon_dist = speed_buffer.leave_initial_place_min_lon_dist;
+        special_stop_lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
+      }
+    } else {
+      // keep stuck place logic to let cat stuck and replan reverse path
+      if (speed_buffer.enable_keep_stuck_place &&
+          !frame_.stuck_by_dynamic_obs &&
+          (frame_.stuck_obs_time > 0.0 ||
+           frame_.stuck_dynamic_obs_time > 0.0)) {
+        special_stop_flag = true;
+        special_stop_body_lat_buffer =
+            speed_buffer.keep_stuck_place_body_lat_buffer;
+        special_stop_mirror_lat_buffer =
+            speed_buffer.keep_stuck_place_mirror_lat_buffer;
+        special_stop_lon_dist = speed_buffer.keep_stuck_place_min_lon_dist;
+        special_stop_lon_buffer = speed_buffer.keep_stuck_place_lon_buffer;
+      }
+    }
+  }
+
+  if (special_stop_flag) {
+    real_time_brake_info_vec[0].Set(
+        RealTimeBrakeType::STOP, special_stop_body_lat_buffer,
+        special_stop_mirror_lat_buffer, special_stop_lon_dist,
+        special_stop_lon_buffer, speed_buffer.dynamic_stop_body_lat_buffer,
+        speed_buffer.dynamic_stop_mirror_lat_buffer,
+        speed_buffer.dynamic_lon_buffer);
+  }
+
+  double safe_remain_dist = std::numeric_limits<double>::infinity();
+  for (const auto& real_time_brake_info : real_time_brake_info_vec) {
+    double remain_dist = CalRemainDistFromObs(
+        real_time_brake_info.lon_buffer, real_time_brake_info.body_lat_buffer,
+        real_time_brake_info.mirror_lat_buffer,
+        real_time_brake_info.dynamic_lon_buffer,
+        real_time_brake_info.dynamic_body_lat_buffer,
+        real_time_brake_info.dynamic_mirror_lat_buffer, false,
+        param.use_obs_height_method);
+    remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
+    safe_remain_dist = std::min(safe_remain_dist, remain_dist);
+  }
+
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
+                   real_time_brake_info_vec[0].body_lat_buffer)
+
+  ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
+            << "  lon_buffer = " << lon_buffer
+            << "  lat_buffer = " << real_time_brake_info_vec[0].body_lat_buffer
+            << "  increase_lat_err_flag = " << increase_lat_err_flag;
+
+  ILOG_INFO << "real time brake time cost = "
+            << (IflyTime::Now_ms() - start_time);
+
+  return safe_remain_dist;
+}
+
+const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  const double ego_stop_dist = 1.0;
+
+  if (frame_.ego_stop_when_slot_jumps_much ||
+      frame_.replan_reason != ReplanReason::DYNAMIC || !frame_.is_last_path ||
+      ego_info_under_slot.slot_occupied_ratio < 1e-3 ||
+      ego_info_under_slot.slot_occupied_ratio > 0.708 ||
+      ego_info_under_slot.fix_slot ||
+      frame_.remain_dist_path < ego_stop_dist + 0.168 ||
+      (frame_.remain_dist_obs < ego_stop_dist + 0.168 && false)) {
+    ILOG_INFO << "should not stop when slot jumps much 1";
+    return false;
+  }
+
+  if (!frame_.dynamic_plan_fail_flag && frame_.dynamic_plan_path_superior) {
+    ILOG_INFO << "should not stop when slot jumps much 2";
+    frame_.dynamic_replan_fail_count = 0;
+    return false;
+  }
+
+  if (frame_.dynamic_replan_fail_count < 3) {
+    ILOG_INFO << "should not stop when slot jumps much 3";
+    return false;
+  }
+
+  geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
+  geometry_path_bef.GlobalToLocal(
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf);
+  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
+  const geometry_lib::PathPoint front_tar_pose_bef =
+      GetCarFrontPoseFromCarPose(tar_pose_bef);
+
+  geometry_lib::PathPoint tar_pose_now = ego_info_under_slot.origin_target_pose;
+  tar_pose_now.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
+  tar_pose_now.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
+  const geometry_lib::PathPoint front_tar_pose_now =
+      GetCarFrontPoseFromCarPose(tar_pose_now);
+
+  const auto& param = apa_param.GetParam();
+
+  std::vector<double> fail_count_tab{3.0, 4.0, 5.0, 6.0, 7.0};
+  const double dlat = (param.should_stop_lat_err -
+                       (param.check_finish_params.lat_err_strict - 1e-3)) /
+                      (fail_count_tab.size() - 1);
+  const double dheading =
+      (param.should_stop_heading_err -
+       (param.check_finish_params.heading_err_strict - 1e-3)) /
+      (fail_count_tab.size() - 1);
+  std::vector<double> lat_err_tab{};
+  std::vector<double> heading_err_tab{};
+  lat_err_tab.reserve(fail_count_tab.size());
+  heading_err_tab.reserve(fail_count_tab.size());
+  for (size_t i = 0; i < fail_count_tab.size(); ++i) {
+    lat_err_tab.emplace_back(param.should_stop_lat_err - i * dlat);
+    heading_err_tab.emplace_back(param.should_stop_heading_err - i * dheading);
+  }
+
+  const double lat_err_threshold =
+      mathlib::Interp1(fail_count_tab, lat_err_tab,
+                       static_cast<double>(frame_.dynamic_replan_fail_count));
+
+  const double heading_err_threshold =
+      mathlib::Interp1(fail_count_tab, heading_err_tab,
+                       static_cast<double>(frame_.dynamic_replan_fail_count));
+
+  const double lat_err = std::max(
+      std::fabs(tar_pose_now.pos.y() - tar_pose_bef.pos.y()),
+      std::fabs(front_tar_pose_now.pos.y() - front_tar_pose_bef.pos.y()));
+
+  const double heading_err =
+      std::fabs(tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
+
+  ILOG_INFO << "lat_err = " << lat_err << "  heading_err = " << heading_err
+            << "  lat_err_threshold = " << lat_err_threshold
+            << "  heading_err_threshold = " << heading_err_threshold;
+
+  if (std::fabs(lat_err) < lat_err_threshold &&
+      std::fabs(heading_err) < heading_err_threshold) {
+    ILOG_INFO << "should not stop when slot jumps much 4";
+    return false;
+  }
+
+  frame_.ego_stop_when_slot_jumps_much = true;
+
+  ego_info_under_slot.fix_limiter = true;
+
+  ILOG_INFO << "the slot jumps too much, ego should stop, trim path, and then "
+               "plan reverse path";
+
+  PostProcessPathAccordingRemainDist(frame_.current_path_length -
+                                     frame_.remain_dist_path + ego_stop_dist);
+
+  return true;
+}
+
+void PerpendicularTailInScenario::CalSlotJumpErr() {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const geometry_lib::PathPoint& real_time_pose =
+      ego_info_under_slot.origin_target_pose;
+  geometry_lib::PathPoint front_real_time_pose =
+      GetCarFrontPoseFromCarPose(real_time_pose);
+
+  geometry_lib::PathPoint last_time_pose =
+      ego_info_under_slot.replan_success_origin_target_pose;
+  last_time_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
+  geometry_lib::PathPoint front_last_time_pose =
+      GetCarFrontPoseFromCarPose(last_time_pose);
+
+  const double lat_err = std::max(
+      std::fabs(real_time_pose.pos.y() - last_time_pose.pos.y()),
+      std::fabs(front_real_time_pose.pos.y() - front_last_time_pose.pos.y()));
+
+  const double heading_err =
+      std::fabs(real_time_pose.heading - last_time_pose.heading) * kRad2Deg;
+
+  const double lon_err =
+      std::fabs(real_time_pose.pos.x() - last_time_pose.pos.x());
+
+  frame_.slot_jump_lat_err = lat_err;
+  frame_.slot_jump_lon_err = lon_err;
+  frame_.slot_jump_heading_err = heading_err;
+
+  double terminal_error_y = 16.8;
+  if (ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+      std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg < 6.8) {
+    terminal_error_y = std::fabs(ego_info_under_slot.terminal_err.GetY());
+  }
+
+  frame_.slot_jump_big_flag =
+      std::min(lat_err, terminal_error_y) >
+          apa_param.GetParam().slot_jump_lat_big_err ||
+      heading_err > apa_param.GetParam().slot_jump_heading_big_err;
+
+  ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
+            << "  heading_err = " << heading_err
+            << "  slot_jump_big_flag = " << frame_.slot_jump_big_flag;
+
+  JSON_DEBUG_VALUE("slot_lat_err", lat_err)
+  JSON_DEBUG_VALUE("slot_heading_err", heading_err)
+  JSON_DEBUG_VALUE("slot_lon_err", lon_err)
+  JSON_DEBUG_VALUE("slot_jump_big_flag", frame_.slot_jump_big_flag)
+}
+
+const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
+      frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
+      ego_info_under_slot.slot_occupied_ratio < 0.168 ||
+      (ego_info_under_slot.slot_occupied_ratio > 0.708 &&
+       !frame_.ego_should_stop_by_slot_jump)) {
+    frame_.car_already_move_dist = 0.0;
+    frame_.ego_should_stop_by_slot_jump = false;
+    return 5.01;
+  }
+
+  const auto& param = apa_param.GetParam();
+
+  if (!frame_.slot_jump_big_flag ||
+      frame_.mirror_command != MirrorCommand::NONE) {
+    frame_.car_already_move_dist = 0.0;
+    frame_.ego_should_stop_by_slot_jump = false;
+    return 5.01;
+  }
+
+  const double car_already_move_dist_last =
+      frame_.current_path_length - frame_.remain_dist_path_last;
+
+  const double car_already_move_dist =
+      frame_.current_path_length - frame_.remain_dist_path;
+
+  if (!frame_.ego_should_stop_by_slot_jump) {
+    double lon_stop_dist = 0.0, heading_stop_dist = 0.0;
+    for (const auto& path_point : current_path_point_global_vec_) {
+      if (path_point.pos.x() > ego_info_under_slot.target_pose.pos.x() + 1.68) {
+        lon_stop_dist = path_point.s;
+      }
+      if (std::fabs(path_point.heading) * kRad2Deg > 12.68) {
+        heading_stop_dist = path_point.s;
+      }
+    }
+
+    ILOG_INFO << "lon_stop_dist = " << lon_stop_dist
+              << "  heading_stop_dist = " << heading_stop_dist;
+
+    lon_stop_dist -= car_already_move_dist;
+    heading_stop_dist -= car_already_move_dist;
+    frame_.ego_should_stop_dist_by_slot_jump =
+        std::max(std::min(lon_stop_dist, heading_stop_dist), 1.268);
+  }
+
+  const double remain_dist_slot_jump =
+      frame_.ego_should_stop_dist_by_slot_jump - frame_.car_already_move_dist;
+
+  frame_.car_already_move_dist +=
+      std::fabs(car_already_move_dist - car_already_move_dist_last);
+
+  ILOG_INFO
+      << "should stop because of the slot jump much, remain_dist_slot_jump = "
+      << remain_dist_slot_jump
+      << "  ego_stop_dist = " << frame_.ego_should_stop_dist_by_slot_jump
+      << "  car_already_move_dist = " << car_already_move_dist
+      << "  car_already_move_dist_last = " << car_already_move_dist_last
+      << "  frame_.car_already_move_dist = " << frame_.car_already_move_dist;
+
+  frame_.ego_should_stop_by_slot_jump = true;
+
+  return remain_dist_slot_jump;
+}
+
+const bool PerpendicularTailInScenario::PostProcessPathAccordingRemainDist(
+    const double remain_dist) {
+  size_t origin_traj_size = current_path_point_global_vec_.size();
+
+  if (origin_traj_size < 2) {
+    frame_.spline_success = false;
+    ILOG_INFO << "error: origin_traj_size = " << origin_traj_size;
+    return false;
+  }
+
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  std::vector<double> s_vec;
+  std::vector<double> heading_vec;
+  x_vec.clear();
+  y_vec.clear();
+  s_vec.clear();
+  heading_vec.clear();
+
+  x_vec.reserve(origin_traj_size);
+  y_vec.reserve(origin_traj_size);
+  s_vec.reserve(origin_traj_size);
+  heading_vec.reserve(origin_traj_size);
+
+  double ds = 0.0;
+  double s = 0.0;
+  for (size_t i = 0; i < origin_traj_size; ++i) {
+    if (i > 0) {
+      ds = std::hypot(current_path_point_global_vec_[i].pos.x() -
+                          current_path_point_global_vec_[i - 1].pos.x(),
+                      current_path_point_global_vec_[i].pos.y() -
+                          current_path_point_global_vec_[i - 1].pos.y());
+      s += std::max(ds, 1e-3);
+    }
+    if (s > remain_dist) {
+      ILOG_INFO << "path shoule be shorten";
+      if (remain_dist - s_vec.back() > 0.036 && frame_.spline_success) {
+        x_vec.emplace_back(frame_.x_s_spline(remain_dist));
+        y_vec.emplace_back(frame_.y_s_spline(remain_dist));
+        heading_vec.emplace_back(heading_vec.back());
+        s_vec.emplace_back(remain_dist);
+      }
+      break;
+    }
+    x_vec.emplace_back(current_path_point_global_vec_[i].pos.x());
+    y_vec.emplace_back(current_path_point_global_vec_[i].pos.y());
+    heading_vec.emplace_back(current_path_point_global_vec_[i].heading);
+    s_vec.emplace_back(s);
+  }
+
+  frame_.current_path_length = s_vec.back();
+  const size_t N = x_vec.size();
+  if (N < 2) {
+    frame_.spline_success = false;
+    ILOG_INFO << "error: no enough point = " << x_vec.size();
+    return false;
+  }
+  current_path_point_global_vec_.clear();
+  current_path_point_global_vec_.reserve(N);
+  pnc::geometry_lib::PathPoint path_point;
+  for (size_t i = 0; i < N; ++i) {
+    path_point.Set(Eigen::Vector2d(x_vec[i], y_vec[i]), heading_vec[i]);
+    current_path_point_global_vec_.emplace_back(path_point);
+  }
+
+  // need extend by cal proj point
+  Eigen::Vector2d extended_point;
+  bool success = pnc::geometry_lib::CalExtendedPointByTwoPoints(
+      Eigen::Vector2d(x_vec[N - 2], y_vec[N - 2]),
+      Eigen::Vector2d(x_vec[N - 1], y_vec[N - 1]), extended_point,
+      frame_.path_extended_dist);
+
+  if (!success) {
+    frame_.spline_success = false;
+    ILOG_INFO << "limit need extend fit line by spline error!";
+    return false;
+  }
+
+  x_vec.emplace_back(extended_point.x());
+  y_vec.emplace_back(extended_point.y());
+  heading_vec.emplace_back(heading_vec.back());
+  s_vec.emplace_back(frame_.current_path_length + frame_.path_extended_dist);
+
+  frame_.x_s_spline.set_points(s_vec, x_vec);
+  frame_.y_s_spline.set_points(s_vec, y_vec);
+
+  frame_.spline_success = true;
+
+  return true;
+}
+
+const bool
+PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByGeometryPath() {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  geometry_lib::GeometryPath old_geometry_path(all_plan_path_vec_);
+  old_geometry_path.GlobalToLocal(ego_info_under_slot.g2l_tf);
+
+  const geometry_lib::GeometryPath new_geometry_path(
+      apa_world_ptr_->GetParkingTaskInterfacePtr()
+          ->GetPerpendicularTailInPathGeneratorPtr()
+          ->GetOutput()
+          .path_segment_vec);
+
+  if (complete_path_point_global_vec_.empty()) {
+    return true;
+  }
+
+  if (new_geometry_path.cur_gear != geometry_lib::SEG_GEAR_REVERSE ||
+      new_geometry_path.gear_change_count > 0) {
+    return false;
+  }
+
+  double final_line_length = 0.0;
+  for (int i = new_geometry_path.path_segment_vec.size() - 1; i >= 0; i--) {
+    const geometry_lib::PathSegment& seg =
+        new_geometry_path.path_segment_vec[i];
+    if (seg.seg_steer == geometry_lib::SEG_STEER_STRAIGHT) {
+      final_line_length += seg.GetLength();
+    } else {
+      break;
+    }
+  }
+
+  double first_pt_kappa = 0.0;
+  std::vector<geometry_lib::PathPoint> s_turn_path;
+  s_turn_path.reserve(35);
+  if (new_geometry_path.IsHasSTurnPath()) {
+    const std::vector<geometry_lib::PathSegment>& segments =
+        new_geometry_path.path_segment_vec;
+
+    std::vector<geometry_lib::PathSegment> s_turn_segs;
+
+    int last_added_idx = -1;
+    for (size_t i = 0; i < new_geometry_path.path_count - 1; ++i) {
+      if (i == 0) {
+        if (segments[i].seg_steer == geometry_lib::SEG_STEER_STRAIGHT) {
+          first_pt_kappa = 0.0;
+        } else if (segments[i].seg_steer == geometry_lib::SEG_STEER_LEFT) {
+          first_pt_kappa = 1.0 / std::max(segments[i].GetRadius(), 0.01);
+        } else if (segments[i].seg_steer == geometry_lib::SEG_STEER_RIGHT) {
+          first_pt_kappa = -1.0 / std::max(segments[i].GetRadius(), 0.01);
+        }
+      }
+      if (IsSTrunPath(segments[i], segments[i + 1])) {
+        if (last_added_idx != static_cast<int>(i)) {
+          s_turn_segs.emplace_back(segments[i]);
+        }
+        s_turn_segs.emplace_back(segments[i + 1]);
+        last_added_idx = static_cast<int>(i + 1);
+      }
+    }
+
+    s_turn_path = geometry_lib::SamplePathSegVec(s_turn_segs, 0.1);
+  }
+
+  return CheckDynamicPlanPathOptimal(
+      old_geometry_path.gear_change_count, new_geometry_path.gear_change_count,
+      final_line_length, first_pt_kappa, s_turn_path,
+      old_geometry_path.end_pose, new_geometry_path.end_pose,
+      ego_info_under_slot.target_pose);
+}
+
+const bool
+PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByHybridAstarPath(
+    const HybridAstarResponse& response) {
+  const HybridAStarResult& res = response.result;
+  const HybridAStarRequest& req = response.request;
+  const EgoInfoUnderSlot& ego_info_under_slot = req.ego_info_under_slot;
+
+  if (complete_path_point_global_vec_.empty()) {
+    return true;
+  }
+
+  if (!res.path_plan_success || res.gear_change_num > 0 ||
+      res.kappa_vec_vec.empty() || res.kappa_vec_vec.back().empty() ||
+      res.cur_gear != AstarPathGear::REVERSE) {
+    return false;
+  }
+
+  const double first_pt_kappa = res.kappa_vec_vec.back().front();
+
+  std::vector<pnc::geometry_lib::PathPoint> s_turn_path;
+  float final_line_length = 0.0;
+  const bool has_sturn_flag = ExtractSTurnAndStraight(
+      res.x_vec_vec.back(), res.y_vec_vec.back(), res.phi_vec_vec.back(),
+      res.kappa_vec_vec.back(), req.sample_ds, s_turn_path, final_line_length);
+
+  geometry_lib::PathPoint old_tar_pose = complete_path_point_global_vec_.back();
+  old_tar_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
+
+  geometry_lib::PathPoint new_tar_pose;
+  new_tar_pose.pos << res.x_vec_vec.back().back(), res.y_vec_vec.back().back();
+  new_tar_pose.heading = res.phi_vec_vec.back().back();
+
+  return CheckDynamicPlanPathOptimal(
+      hybrid_astar_response_.result.gear_change_num, res.gear_change_num,
+      final_line_length, first_pt_kappa, s_turn_path, old_tar_pose,
+      new_tar_pose, ego_info_under_slot.target_pose);
+}
+
+const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal(
+    const size_t old_path_gear_change_count,
+    const size_t new_path_gear_change_count,
+    const double new_path_final_line_length, const double first_pt_kappa,
+    const std::vector<geometry_lib::PathPoint>& s_turn_path,
+    const geometry_lib::PathPoint& old_tar_pose,
+    const geometry_lib::PathPoint& new_tar_pose,
+    const geometry_lib::PathPoint& real_tar_pose) {
+  const ApaParameters& param = apa_param.GetParam();
+
+  if (new_path_final_line_length < 0.268) {
+    ILOG_INFO << "new path final line length is too small";
+    return false;
+  }
+
+  const bool new_path_has_sturn_flag = (s_turn_path.size() > 0);
+
+  if (old_path_gear_change_count > 0 && !new_path_has_sturn_flag) {
+    ILOG_INFO << "old path has gear change and new path has no s turn";
+    return true;
+  }
+
+  if (new_path_has_sturn_flag) {
+    const double cur_steer =
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
+        kRad2Deg;
+    const double new_steer = std::atan(param.wheel_base * first_pt_kappa) *
+                             param.steer_ratio * kRad2Deg;
+    if (std::fabs(cur_steer - new_steer) > param.max_steer_angle_deg + 1.68) {
+      return false;
+    }
+  }
+
+  const geometry_lib::PathPoint old_front_pose =
+      GetCarFrontPoseFromCarPose(old_tar_pose);
+
+  const geometry_lib::PathPoint new_front_pose =
+      GetCarFrontPoseFromCarPose(new_tar_pose);
+
+  const geometry_lib::PathPoint real_front_pose =
+      GetCarFrontPoseFromCarPose(real_tar_pose);
+
+  const double old_lat_err = old_tar_pose.GetY() - real_tar_pose.GetY();
+  const double old_front_lat_err = old_front_pose.GetY() - real_tar_pose.GetY();
+  const double old_lon_err = old_tar_pose.GetX() - real_tar_pose.GetX();
+  const double old_theta_err =
+      (old_tar_pose.GetTheta() - real_tar_pose.GetTheta()) * kRad2Deg;
+
+  const double new_lat_err = new_tar_pose.GetY() - real_tar_pose.GetY();
+  const double new_front_lat_err = new_front_pose.GetY() - real_tar_pose.GetY();
+  const double new_lon_err = new_tar_pose.GetX() - real_tar_pose.GetX();
+  const double new_theta_err =
+      (new_tar_pose.GetTheta() - real_tar_pose.GetTheta()) * kRad2Deg;
+
+  ILOG_INFO << "old_lat_err = " << old_lat_err
+            << "  old_front_lat_err = " << old_front_lat_err
+            << "  old_lon_err = " << old_lon_err
+            << "  old_theta_err = " << old_theta_err
+            << "  new_lat_err = " << new_lat_err
+            << "  new_front_lat_err = " << new_front_lat_err
+            << "  new_lon_err = " << new_lon_err
+            << "  new_theta_err = " << new_theta_err;
+
+  // check s turn path tracking and security
+  if (new_path_has_sturn_flag) {
+    if (new_path_final_line_length <
+        mathlib::Interp1(
+            std::vector<double>{0.05, 0.10, 0.15, 0.20},
+            std::vector<double>{0.3, 0.7, 1.1, 1.5},
+            std::max(std::fabs(old_lat_err), std::fabs(old_front_lat_err)))) {
+      ILOG_INFO << "the old path err is bigger and new path final line length "
+                   "is relatively small";
+      return false;
+    }
+
+    const auto& gjk_col_det_ptr =
+        apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
+
+    GJKColDetRequest gjk_col_det_req(
+        true, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
+        ApaObsMovementType::ALL, param.use_obs_height_method, true);
+
+    if (gjk_col_det_ptr->Update(s_turn_path, 0.2, 0.0, gjk_col_det_req)
+            .col_flag) {
+      ILOG_INFO << "the s turn path is not safe enough";
+      return false;
+    }
+  }
+
+  if (old_lon_err > param.car_to_limiter_dis - 0.068 &&
+      geometry_lib::IsTwoNumerEqual(new_lon_err, 0.0)) {
+    ILOG_INFO << "old path not to target and new path reach it";
+    return true;
+  }
+
+  const CheckFinishParams& finish_params = param.check_finish_params;
+  bool old_path_meet_finish = false;
+  const CarSlotRelationship old_ship = CalCarSlotRelationship(old_tar_pose);
+  if (old_ship != CarSlotRelationship::TOUCHING) {
+    const double finish_lat_err =
+        (old_ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
+                                                : finish_params.lat_err_strict);
+
+    const double finish_heading_err = (old_ship == CarSlotRelationship::IDEAL
+                                           ? finish_params.heading_err
+                                           : finish_params.heading_err_strict);
+
+    old_path_meet_finish = std::fabs(old_lat_err) < finish_lat_err &&
+                           std::fabs(old_front_lat_err) < finish_lat_err &&
+                           std::fabs(old_theta_err) < finish_heading_err;
+  }
+
+  const CarSlotRelationship new_ship = CalCarSlotRelationship(new_tar_pose);
+  bool new_path_meet_finish = false;
+  if (new_ship != CarSlotRelationship::TOUCHING) {
+    const double finish_lat_err =
+        (new_ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
+                                                : finish_params.lat_err_strict);
+
+    const double finish_heading_err = (new_ship == CarSlotRelationship::IDEAL
+                                           ? finish_params.heading_err
+                                           : finish_params.heading_err_strict);
+
+    new_path_meet_finish = std::fabs(new_lat_err) < finish_lat_err &&
+                           std::fabs(new_front_lat_err) < finish_lat_err &&
+                           std::fabs(new_theta_err) < finish_heading_err;
+  }
+
+  ILOG_INFO << "check dynamic path optimal, bef_ship = "
+            << static_cast<int>(old_ship)
+            << "  new_ship = " << static_cast<int>(new_ship)
+            << "  old_path_meet_finish = " << old_path_meet_finish
+            << "  new_path_meet_finish = " << new_path_meet_finish;
+
+  if (!old_path_meet_finish && new_path_meet_finish) {
+    return true;
+  }
+
+  if (old_path_meet_finish && !new_path_meet_finish) {
+    return false;
+  }
+
+  const std::vector<double> lat_err_tab{0.01, 0.03, 0.05, 0.07, 0.09, 0.10};
+  const std::vector<double> line_length_tab{1.3, 1.1, 0.9, 0.7, 0.5, 0.368};
+  const double min_line_length = mathlib::Interp1(
+      lat_err_tab, line_length_tab,
+      std::max(std::fabs(old_lat_err), std::fabs(old_front_lat_err)));
+
+  if (new_path_final_line_length < min_line_length) {
+    ILOG_INFO << "compared to this error, the new_path_final_line_length is "
+                 "too short";
+    return false;
+  }
+
+  const double allow_err = 0.04;
+  const double front_allow_err = 0.06;
+
+  if (std::fabs(new_lat_err) > std::fabs(old_lat_err) &&
+      std::fabs(new_front_lat_err) > std::fabs(old_front_lat_err)) {
+    return false;
+  }
+
+  if (std::fabs(old_lat_err) > std::fabs(new_lat_err) + allow_err ||
+      std::fabs(old_front_lat_err) >
+          std::fabs(new_front_lat_err) + front_allow_err) {
+    return true;
+  }
+
+  if (std::fabs(old_lat_err) < std::fabs(new_lat_err) + allow_err &&
+      std::fabs(old_front_lat_err) <
+          std::fabs(new_front_lat_err) + front_allow_err) {
+    if (new_path_has_sturn_flag) {
+      return false;
+    } else {
+      if (std::fabs(old_lat_err) > std::fabs(new_lat_err) + allow_err * 0.5 ||
+          std::fabs(old_front_lat_err) >
+              std::fabs(new_front_lat_err) + front_allow_err * 0.5) {
+        return true;
+      }
+      return false;
+    }
+  }
+
+  return false;
+}
+
+const bool PerpendicularTailInScenario::LateralPathOptimize(
+    std::vector<geometry_lib::PathPoint>& optimal_path_vec) {
+  const GeometryPathOutput& path_plan_output =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()
+          ->GetPerpendicularTailInPathGeneratorPtr()
+          ->GetOutput();
+  const double sample_ds = path_plan_output.actual_ds;
+  const std::vector<pnc::geometry_lib::PathPoint>& pt_vec =
+      path_plan_output.path_point_vec;
+  const double cur_gear_length = path_plan_output.cur_gear_length;
+  const SimulationParam& simu_param = apa_world_ptr_->GetSimuParam();
+  if (pt_vec.size() < 3 ||
+      cur_gear_length < apa_param.GetParam().min_opt_path_length) {
+    return false;
+  }
+  bool cilqr_optimization_enable = true;
+  bool perpendicular_optimization_enable = true;
+  if (!simu_param.is_simulation) {
+    perpendicular_optimization_enable =
+        apa_param.GetParam().perpendicular_lat_opt_enable;
+
+    cilqr_optimization_enable =
+        apa_param.GetParam().cilqr_path_optimization_enable;
+  } else {
+    perpendicular_optimization_enable = simu_param.is_path_optimization;
+    cilqr_optimization_enable = simu_param.is_cilqr_optimization;
+  }
+
+  if (!perpendicular_optimization_enable) {
+    return false;
+  }
+
+  LateralPathOptimizer::Parameter param;
+  param.sample_ds = 0.01;
+  if (simu_param.is_simulation) {
+    param.q_ref_xy = simu_param.q_ref_xy;
+    param.q_ref_theta = simu_param.q_ref_theta;
+    param.q_terminal_xy = simu_param.q_terminal_xy;
+    param.q_terminal_theta = simu_param.q_terminal_theta;
+    param.q_k = simu_param.q_k;
+    param.q_u = simu_param.q_u;
+    param.q_k_bound = simu_param.q_k_bound;
+    param.q_u_bound = simu_param.q_u_bound;
+  } else {
+    param.q_ref_xy = 50.0;
+    param.q_ref_theta = 50.0;
+    param.q_terminal_xy = 5000.0;
+    param.q_terminal_theta = 168000.0;
+    param.q_k = 5.0;
+    param.q_u = 5.0;
+    param.q_k_bound = 100.0;
+    param.q_u_bound = 100.0;
+  }
+
+  const double start_time = IflyTime::Now_ms();
+
+  apa_world_ptr_->GetLateralPathOptimizerPtr()->Init(cilqr_optimization_enable);
+  apa_world_ptr_->GetLateralPathOptimizerPtr()->SetParam(param);
+  apa_world_ptr_->GetLateralPathOptimizerPtr()->Update(pt_vec,
+                                                       frame_.gear_command);
+
+  ILOG_INFO << "lat_path_opt_cost_time_ms = " << IflyTime::Now_ms() - start_time
+            << " ms";
+
+  const std::vector<pnc::geometry_lib::PathPoint>& origin_optimized_path_vec =
+      apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOriginOutputPathVec();
+
+  if (origin_optimized_path_vec.size() < 3) {
+    ILOG_INFO << "origin_optimized_path_vec.size() < 3";
+    return false;
+  }
+
+  const size_t max_pt_number =
+      PLANNING_TRAJ_POINTS_MAX_NUM - APA_COMPARE_PLANNING_TRAJ_POINTS_MAX_NUM;
+  optimal_path_vec.clear();
+  optimal_path_vec.reserve(max_pt_number + 2);
+  if (origin_optimized_path_vec.size() <= max_pt_number) {
+    optimal_path_vec = origin_optimized_path_vec;
+  } else {
+    const double length = origin_optimized_path_vec.back().s;
+    const double resampled_ds = length / max_pt_number;
+    std::vector<double> x_vec;
+    std::vector<double> y_vec;
+    std::vector<double> s_vec;
+    std::vector<double> heading_vec;
+    std::vector<double> kappa_vec;
+    x_vec.reserve(origin_optimized_path_vec.size());
+    y_vec.reserve(origin_optimized_path_vec.size());
+    s_vec.reserve(origin_optimized_path_vec.size());
+    heading_vec.reserve(origin_optimized_path_vec.size());
+    kappa_vec.reserve(origin_optimized_path_vec.size());
+    for (const auto& pt : origin_optimized_path_vec) {
+      x_vec.emplace_back(pt.pos.x());
+      y_vec.emplace_back(pt.pos.y());
+      s_vec.emplace_back(pt.s);
+      heading_vec.emplace_back(pt.heading);
+      kappa_vec.emplace_back(pt.kappa);
+    }
+    mathlib::spline x_s_spline;
+    mathlib::spline y_s_spline;
+    mathlib::spline heading_s_spline;
+    mathlib::spline kappa_s_spline;
+    x_s_spline.set_points(s_vec, x_vec);
+    y_s_spline.set_points(s_vec, y_vec);
+    heading_s_spline.set_points(s_vec, heading_vec);
+    kappa_s_spline.set_points(s_vec, kappa_vec);
+    geometry_lib::PathPoint tmp_pt;
+    double ds = 0.0;
+    for (size_t i = 1; i < max_pt_number; ++i) {
+      tmp_pt.pos << x_s_spline(ds), y_s_spline(ds);
+      tmp_pt.heading = heading_s_spline(ds);
+      tmp_pt.s = ds;
+      tmp_pt.kappa = kappa_s_spline(ds);
+      ds += resampled_ds;
+      if (optimal_path_vec.size() > 0) {
+        const double dist_err =
+            (tmp_pt.pos - optimal_path_vec.back().pos).norm();
+        const double heading_err =
+            geometry_lib::NormalizeAngle(tmp_pt.heading -
+                                         optimal_path_vec.back().heading) *
+            kRad2Deg;
+        if (dist_err < 0.01 || std::fabs(heading_err) > 36.8) {
+          continue;
+        }
+      }
+      optimal_path_vec.emplace_back(tmp_pt);
+    }
+
+    if (optimal_path_vec.size() > 0) {
+      tmp_pt = optimal_path_vec.back();
+      if (s_vec.back() - optimal_path_vec.back().s > 1e-2) {
+        tmp_pt.pos << x_s_spline(s_vec.back()), y_s_spline(s_vec.back());
+        tmp_pt.heading = heading_s_spline(s_vec.back());
+        tmp_pt.s = s_vec.back();
+        tmp_pt.kappa = kappa_s_spline(s_vec.back());
+        optimal_path_vec.emplace_back(tmp_pt);
+      }
+    }
+  }
+
+  if (optimal_path_vec.size() < 3) {
+    ILOG_INFO << "optimized_path_vec.size() < 3";
+    return false;
+  }
+
+  if (std::fabs(cur_gear_length - optimal_path_vec.back().s) > 5e-2) {
+    ILOG_INFO << "length is not the same, cur_gear_length = " << cur_gear_length
+              << "  optimized_path length = " << optimal_path_vec.back().s;
+    return false;
+  }
+
+  if (!pnc::geometry_lib::CheckTwoPoseIsSame(
+          optimal_path_vec.front(), pt_vec.front(), 0.02, 0.3 / 57.3) ||
+      !pnc::geometry_lib::CheckTwoPoseIsSame(optimal_path_vec.back(),
+                                             pt_vec.back(), 0.02, 0.3 / 57.3)) {
+    ILOG_INFO << "start or end pose is not same";
+    return false;
+  }
+
+  if (apa_world_ptr_->GetColDetInterfacePtr()
+          ->GetGJKColDetPtr()
+          ->Update(optimal_path_vec, 0.08, 0.0, GJKColDetRequest())
+          .col_flag) {
+    ILOG_INFO << "the optimal path is col";
+    return false;
+  }
+
+  ILOG_INFO << "optimal path success, pos_err = "
+            << (pt_vec.back().pos - optimal_path_vec.back().pos).norm()
+            << "  heading_err = "
+            << (pt_vec.back().heading - optimal_path_vec.back().heading) *
+                   kRad2Deg;
+
+  return true;
+}
+
+const PerpendicularTailInScenario::SlotObsType
+PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const std::vector<double> slot_width_tab{2.2, 2.4, 2.6, 2.8, 3.0, 3.2};
+  const std::vector<double> invasion_dist_tab{0.20, 0.25, 0.30, 0.35, 0.40};
+  const double dy1 = mathlib::Interp1(slot_width_tab, invasion_dist_tab,
+                                      ego_info_under_slot.slot.slot_width_);
+
+  const double dy2 = 1.68;
+
+  double dx1 = 3.468;
+  dx1 = std::min(dx1, ego_info_under_slot.cur_pose.pos.x() -
+                          apa_param.GetParam().car_width * 0.5 -
+                          ego_info_under_slot.slot.slot_length_);
+
+  dx1 = std::max(dx1, 0.368);
+
+  double dx2 = 4.86 / 5.0 * ego_info_under_slot.slot.slot_length_;
+
+  double dx3 = 5.2 / 5.0 * ego_info_under_slot.slot.slot_length_ - dx2;
+
+  Eigen::Vector2d slot_left_pt =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_1;
+  Eigen::Vector2d slot_right_pt =
+      ego_info_under_slot.slot.origin_corner_coord_local_.pt_0;
+  if (slot_left_pt.y() < slot_right_pt.y()) {
+    std::swap(slot_left_pt, slot_right_pt);
+  }
+
+  bool is_left_side = false;
+  if (ego_info_under_slot.slot_side == geometry_lib::SLOT_SIDE_LEFT) {
+    is_left_side = true;
+  }
+
+  std::vector<Eigen::Vector2d> inside_area;
+  std::vector<Eigen::Vector2d> outside_area;
+  std::vector<Eigen::Vector2d> in_area;
+  std::vector<Eigen::Vector2d> discard_area;
+  inside_area.resize(4);
+  outside_area.resize(4);
+  in_area.resize(4);
+  discard_area.resize(4);
+
+  const Eigen::Vector2d unit_right2left_vec =
+      (slot_left_pt - slot_right_pt).normalized();
+  const Eigen::Vector2d unit_left2right_vec = -unit_right2left_vec;
+  const Eigen::Vector2d unit_up2down_vec(-1.0, 0.0);
+  const Eigen::Vector2d unit_down2up_vec = -unit_up2down_vec;
+
+  // Firstly, the default right side is the inner side, and the left side is
+  // the outer side
+  Eigen::Vector2d pt;
+  // cal inside area
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx1 * unit_down2up_vec;
+  inside_area[0] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec + dx1 * unit_down2up_vec;
+  inside_area[1] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  inside_area[2] = pt;
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  inside_area[3] = pt;
+
+  // cal outside area
+  pt = slot_left_pt + dy2 * unit_right2left_vec + dx1 * unit_down2up_vec;
+  outside_area[0] = pt;
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx1 * unit_down2up_vec;
+  outside_area[1] = pt;
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  outside_area[2] = pt;
+  pt = slot_left_pt + dy2 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  outside_area[3] = pt;
+
+  if (is_left_side) {
+    std::swap(inside_area, outside_area);
+  }
+
+  // cal in_area
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx1 * unit_down2up_vec;
+  in_area[0] = pt;
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx1 * unit_down2up_vec;
+  in_area[1] = pt;
+  pt = slot_right_pt + dy1 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  in_area[2] = pt;
+  pt = slot_left_pt + dy1 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  in_area[3] = pt;
+
+  // cal discard area
+  pt = slot_left_pt + dy2 * unit_right2left_vec + dx2 * unit_up2down_vec;
+  discard_area[0] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec + dx2 * unit_up2down_vec;
+  discard_area[1] = pt;
+  pt = slot_right_pt + dy2 * unit_left2right_vec +
+       (dx2 + dx3) * unit_up2down_vec;
+  discard_area[2] = pt;
+  pt =
+      slot_left_pt + dy2 * unit_right2left_vec + (dx2 + dx3) * unit_up2down_vec;
+  discard_area[3] = pt;
+
+  if (geometry_lib::IsPointInPolygon(inside_area, obs_slot)) {
+    return SlotObsType::INSIDE_OBS;
+  } else if (geometry_lib::IsPointInPolygon(outside_area, obs_slot)) {
+    return SlotObsType::OUTSIDE_OBS;
+  } else if (geometry_lib::IsPointInPolygon(in_area, obs_slot)) {
+    return SlotObsType::IN_OBS;
+  } else if (geometry_lib::IsPointInPolygon(discard_area, obs_slot)) {
+    return SlotObsType::DISCARD_OBS;
+  } else {
+    return SlotObsType::OTHER_OBS;
+  }
+}
+
+const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
+  const ApaParameters& param = apa_param.GetParam();
+
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
+    return false;
+  }
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const bool gear_case =
+      (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
+
+  const bool car_motion_case =
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  const bool slot_confidence_case = (ego_info_under_slot.confidence == 1);
+
+  const bool car_pos_case =
+      ego_info_under_slot.cur_pose.pos.x() <
+          (ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
+           2.68) &&
+      std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 60;
+
+  const bool occupied_ratio_case = (ego_info_under_slot.slot_occupied_ratio <
+                                    param.pose_slot_occupied_ratio_3);
+
+  const bool remain_dist_case =
+      frame_.remain_dist_path >
+          param.gear_switch_config.dist_thresh_for_gear_switch_point &&
+      frame_.remain_dist_obs > 2.5 * param.min_drive_dist;
+
+  const bool dynamic_update_flag = gear_case && car_motion_case &&
+                                   slot_confidence_case && car_pos_case &&
+                                   occupied_ratio_case && remain_dist_case;
+
+  if (dynamic_update_flag) {
+    frame_.dynamic_plan_time += param.plan_time;
+  } else {
+    frame_.dynamic_plan_time = 0.0;
+  }
+
+  if (frame_.dynamic_plan_time > param.dynamic_plan_interval_time) {
+    frame_.dynamic_plan_time = 0.0;
+    return true;
+  }
+
+  return false;
+}
+
+const bool PerpendicularTailInScenario::CheckPathDangerous() {
+  const ApaParameters& param = apa_param.GetParam();
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  if (!param.enable_path_dangerous_replan) {
+    return false;
+  }
+
+  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    return false;
+  }
+
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
+    return false;
+  }
+
+  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    return false;
+  }
+
+  if (frame_.remain_dist_col_det > frame_.current_path_length - 0.1) {
+    return false;
+  }
+
+  if (std::min({frame_.remain_dist_path, frame_.remain_dist_obs,
+                frame_.remain_dist_slot_jump}) < 3.86) {
+    return false;
+  }
+
+  if (ego_info_under_slot.slot_occupied_ratio > 0.0) {
+    return false;
+  }
+
+  return true;
+}
+
+const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
+    const geometry_lib::PathPoint& cur_pose) {
+  const ApaParameters& params = apa_param.GetParam();
+  const CheckFinishParams& finish_params = params.check_finish_params;
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const double heading_err =
+      geometry_lib::NormalizeAngle(cur_pose.heading -
+                                   ego_info_under_slot.target_pose.heading) *
+      kRad2Deg;
+
+  if (std::fabs(heading_err) > finish_params.heading_err) {
+    return CarSlotRelationship::TOUCHING;
+  }
+
+  const geometry_lib::PathPoint front_pose =
+      GetCarFrontPoseFromCarPose(cur_pose);
+
+  const std::vector<double> car_border_ys = {
+      cur_pose.pos.y() + 0.5 * params.car_width,
+      cur_pose.pos.y() - 0.5 * params.car_width,
+      front_pose.pos.y() + 0.5 * params.car_width,
+      front_pose.pos.y() - 0.5 * params.car_width};
+
+  const double half_slot_width = 0.5 * ego_info_under_slot.slot.slot_width_;
+
+  double min_car2line_dist = finish_params.min_car2line_dist;
+  const double dw = half_slot_width - 0.5 * params.car_width;
+  if (dw < 0.0) {
+    min_car2line_dist += dw;
+  } else if (dw < 0.03) {
+    min_car2line_dist -= dw;
+  }
+
+  for (const double y : car_border_ys) {
+    if (half_slot_width - std::fabs(y) < min_car2line_dist) {
+      return CarSlotRelationship::TOUCHING;
+    }
+  }
+
+  for (const double y : car_border_ys) {
+    if (half_slot_width - std::fabs(y) < finish_params.max_car2line_dist) {
+      return CarSlotRelationship::MARGINAL;
+    }
+  }
+
+  return CarSlotRelationship::IDEAL;
+}
+
+void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
+  const ApaParameters& param = apa_param.GetParam();
+  const SmartFoldMirrorParams& smart_fold_mirror_params =
+      param.smart_fold_mirror_params;
+
+  if (!smart_fold_mirror_params.has_smart_fold_mirror) {
+    ILOG_INFO << "decide fold mirror, not enable smart fold mirror";
+    return;
+  }
+
+  if (frame_.mirror_command != MirrorCommand::NONE) {
+    ILOG_INFO << "decide fold mirror, mirror command is not none";
+    return;
+  }
+
+  if (!frame_.is_last_path) {
+    ILOG_INFO << "decide fold mirror, not last path";
+    return;
+  }
+
+  const auto measuredata_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  if (measuredata_ptr->GetFoldMirrorFlag() ||
+      measuredata_ptr->GetStaticFlag() || measuredata_ptr->GetBrakeFlag()) {
+    ILOG_INFO
+        << "decide fold mirror, fold mirror or static or brake flag is true";
+    return;
+  }
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const Eigen::Vector2d mirror_pos =
+      ego_info_under_slot.cur_pose.pos +
+      param.lon_dist_mirror_to_rear_axle *
+          ego_info_under_slot.cur_pose.heading_vec;
+
+  const Eigen::Vector2d& slot_pt_01_mid =
+      ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid;
+
+  const double max_x = slot_pt_01_mid.x() +
+                       smart_fold_mirror_params.x_up_offset -
+                       smart_fold_mirror_params.x_redunant;
+
+  const double min_x = slot_pt_01_mid.x() +
+                       smart_fold_mirror_params.x_down_offset -
+                       smart_fold_mirror_params.x_redunant;
+
+  if (!mathlib::IsInBound(mirror_pos.x(), min_x, max_x)) {
+    ILOG_INFO << "decide fold mirror, mirror is not in x range, x = "
+              << mirror_pos.x() << "  min_x = " << min_x
+              << "  max_x = " << max_x;
+    return;
+  }
+
+  const geometry_lib::PathPoint& termial_err = ego_info_under_slot.terminal_err;
+  if (std::fabs(termial_err.GetY()) > smart_fold_mirror_params.y_offset ||
+      std::fabs(termial_err.GetTheta()) * kRad2Deg >
+          smart_fold_mirror_params.heading_offset) {
+    ILOG_INFO << "decide fold mirror, terminal err is not in y range, y = "
+              << termial_err.GetY()
+              << "  heading = " << termial_err.GetTheta() * kRad2Deg
+              << "  y_offset = " << -smart_fold_mirror_params.y_offset
+              << "  heading_offset= "
+              << smart_fold_mirror_params.heading_offset;
+    return;
+  }
+
+  geometry_lib::PathPoint old_tar_pose = complete_path_point_global_vec_.back();
+  old_tar_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
+  geometry_lib::PathPoint real_tar_pose = ego_info_under_slot.target_pose;
+  if (std::fabs(old_tar_pose.GetY() - real_tar_pose.GetY()) >
+          param.check_finish_params.lat_err_strict - 0.0168 ||
+      std::fabs(old_tar_pose.GetTheta() - real_tar_pose.GetTheta()) * kRad2Deg >
+          param.check_finish_params.heading_err_strict - 0.168) {
+    ILOG_INFO << "decide fold mirror, terminal err is not in heading range, "
+              << "heading = " << old_tar_pose.GetTheta() * kRad2Deg
+              << "  real_heading = " << real_tar_pose.GetTheta() * kRad2Deg
+              << "  heading_err_strict= "
+              << param.check_finish_params.heading_err_strict;
+    return;
+  }
+
+  const double predict_traj_s =
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictTrajS();
+
+  const double vel = std::max(
+      float(std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel())),
+      smart_fold_mirror_params.min_vel);
+
+  const double folding_mirror_safe_lat_buffer =
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.stop_lat_inflation
+           : param.lat_lon_speed_buffer.stop_mirror_lat_buffer) +
+      0.015;
+
+  const double folding_mirror_consume_dist =
+      std::max(std::min({vel * smart_fold_mirror_params.consume_time,
+                         predict_traj_s - 0.1,
+                         ego_info_under_slot.cur_pose.GetX() -
+                             ego_info_under_slot.target_pose.GetX() + 0.068}),
+               0.068);
+
+  const double dynamic_lon_buffer =
+      param.lat_lon_speed_buffer.dynamic_lon_buffer + 0.015;
+
+  const double dynamic_stop_body_lat_buffer =
+      param.lat_lon_speed_buffer.dynamic_stop_body_lat_buffer + 0.015;
+
+  if (CalRemainDistFromObs(
+          folding_mirror_consume_dist, folding_mirror_safe_lat_buffer,
+          folding_mirror_safe_lat_buffer, dynamic_lon_buffer,
+          dynamic_stop_body_lat_buffer, dynamic_stop_body_lat_buffer, true,
+          param.use_obs_height_method) < 0.0) {
+    ILOG_INFO << "decide fold mirror, mirror is not safe when folding mirror, "
+                 "should not fold mirror";
+    return;
+  }
+
+  const double folded_mirror_safe_lat_buffer =
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.stop_lat_inflation
+           : param.lat_lon_speed_buffer.stop_mirror_lat_buffer) +
+      0.015;
+
+  const double fold_mirror_reduce_width =
+      0.5 * (param.max_car_width - param.fold_mirror_max_car_width);
+
+  const double lat_buffer =
+      -1.0 * (fold_mirror_reduce_width - folded_mirror_safe_lat_buffer);
+
+  const double folded_mirror_consume_dist =
+      std::max(std::min({vel * (smart_fold_mirror_params.consume_time +
+                                smart_fold_mirror_params.reaction_time),
+                         predict_traj_s - 0.1,
+                         ego_info_under_slot.cur_pose.GetX() -
+                             ego_info_under_slot.target_pose.GetX() + 0.068}),
+               0.068);
+
+  if (CalRemainDistFromObs(folded_mirror_consume_dist, lat_buffer, lat_buffer,
+                           dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+                           dynamic_stop_body_lat_buffer, true,
+                           param.use_obs_height_method) < 0.0) {
+    ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
+                 "should not fold mirror";
+    return;
+  }
+
+  const double stop_body_lat_buffer =
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.stop_lat_inflation
+           : param.lat_lon_speed_buffer.stop_body_lat_buffer) +
+      0.015;
+
+  const double stop_body_lon_buffer =
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.safe_uss_remain_dist_in_slot
+           : param.lat_lon_speed_buffer.lon_buffer) +
+      0.015;
+
+  if (CalRemainDistFromObs(
+          stop_body_lon_buffer, stop_body_lat_buffer, lat_buffer,
+          dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+          dynamic_stop_body_lat_buffer, false, param.use_obs_height_method) <
+      frame_.remain_dist_path - param.check_finish_params.lon_err - 0.068) {
+    ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
+                 "should not fold mirror";
+    return;
+  }
+
+  const double min_safe_obs2mirror_dist = smart_fold_mirror_params.lat_buffer;
+
+  if (CalRemainDistFromObs(folded_mirror_consume_dist, min_safe_obs2mirror_dist,
+                           min_safe_obs2mirror_dist, dynamic_lon_buffer,
+                           dynamic_stop_body_lat_buffer,
+                           dynamic_stop_body_lat_buffer, true,
+                           param.use_obs_height_method) < 0.0) {
+    ILOG_INFO << "decide fold mirror, need send fold mirror msg";
+    frame_.mirror_command = MirrorCommand::FOLD;
+    return;
+  }
+
+  ILOG_INFO << "decide fold mirror, should not send fold mirror msg";
+
+  return;
+}
+
+void PerpendicularTailInScenario::DecideExpandMirrorCommand() {
+  const ApaParameters& param = apa_param.GetParam();
+  const SmartFoldMirrorParams& smart_fold_mirror_params =
+      param.smart_fold_mirror_params;
+
+  if (!smart_fold_mirror_params.has_smart_fold_mirror) {
+    return;
+  }
+
+  if (frame_.plan_stm.planning_status != PARKING_FINISHED &&
+      frame_.plan_stm.planning_status != PARKING_FAILED) {
+    return;
+  }
+
+  if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+    return;
+  }
+
+  if (frame_.mirror_command == MirrorCommand::EXPAND) {
+    return;
+  }
+
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+
+  const auto gjk_col_det_ptr =
+      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
+
+  GJKColDetRequest gjk_col_det_request(
+      false, param.uss_config.use_uss_pt_cloud, CarBodyType::ONLY_MIRROR,
+      ApaObsMovementType::STATIC, param.use_obs_height_method);
+
+  if (gjk_col_det_ptr
+          ->Update(
+              std::vector<geometry_lib::PathPoint>{
+                  apa_world_ptr_->GetMeasureDataManagerPtr()->GetPoseV2()},
+              smart_fold_mirror_params.min_lat_buffer, 0.0, gjk_col_det_request)
+          .col_flag) {
+    return;
+  }
+
+  gjk_col_det_request.movement_type = ApaObsMovementType::MOTION;
+
+  if (gjk_col_det_ptr
+          ->Update(
+              std::vector<geometry_lib::PathPoint>{
+                  apa_world_ptr_->GetMeasureDataManagerPtr()->GetPoseV2()},
+              smart_fold_mirror_params.min_lat_buffer, 0.0, gjk_col_det_request)
+          .col_flag) {
+    return;
+  }
+
+  frame_.mirror_command = MirrorCommand::EXPAND;
+
+  return;
+}
+
+void PerpendicularTailInScenario::Log() const {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  JSON_DEBUG_VALUE(
+      "target_pose_type",
+      static_cast<int>(ego_info_under_slot.tar_pose_result.target_pose_type))
+
+  JSON_DEBUG_VALUE("move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_replan_success)
+
+  JSON_DEBUG_VALUE("replan_move_slot_dist",
+                   ego_info_under_slot.lat_move_dist_every_replan)
+
+  JSON_DEBUG_VALUE("lon_move_slot_dist",
+                   ego_info_under_slot.lon_move_dist_replan_success)
+
+  JSON_DEBUG_VALUE("replan_lon_move_slot_dist",
+                   ego_info_under_slot.lon_move_dist_every_replan)
+
+  ILOG_INFO << "lat_move_dist_replan_success = "
+            << ego_info_under_slot.lat_move_dist_replan_success
+            << "  lon_move_dist_replan_success = "
+            << ego_info_under_slot.lon_move_dist_replan_success
+            << "  lat_move_dist_every_replan = "
+            << ego_info_under_slot.lat_move_dist_every_replan
+            << "  lon_move_dist_every_replan = "
+            << ego_info_under_slot.lon_move_dist_every_replan
+            << "  target_pose_type = "
+            << static_cast<int>(
+                   ego_info_under_slot.tar_pose_result.target_pose_type);
+
+  const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
+
+  std::vector<double> obstaclesX;
+  obstaclesX.reserve(100);
+  std::vector<double> obstaclesY;
+  obstaclesY.reserve(100);
+
+  for (const auto& pair :
+       apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
+    if (pair.second.GetObsAttributeType() !=
+        ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
+      continue;
+    }
+    for (const Eigen::Vector2d& pt : pair.second.GetPtClout2dLocal()) {
+      const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(pt);
+      obstaclesX.emplace_back(tmp_obstacle.x());
+      obstaclesY.emplace_back(tmp_obstacle.y());
+    }
+  }
+
+  RecordDebugObstacle(obstaclesX, obstaclesY);
+
+  std::vector<double> slot_corner_X;
+  slot_corner_X.clear();
+  slot_corner_X.reserve(16);
+  std::vector<double> slot_corner_Y;
+  slot_corner_Y.clear();
+  slot_corner_Y.reserve(16);
+
+  const auto& origin_corner_coord_global =
+      ego_info_under_slot.slot.origin_corner_coord_global_;
+
+  std::vector<Eigen::Vector2d> pt_vec{
+      origin_corner_coord_global.pt_0, origin_corner_coord_global.pt_1,
+      origin_corner_coord_global.pt_2, origin_corner_coord_global.pt_3};
+
+  for (const Eigen::Vector2d& pt : pt_vec) {
+    slot_corner_X.emplace_back(pt.x());
+    slot_corner_Y.emplace_back(pt.y());
+  }
+
+  slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+  slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+
+  pt_vec[0] = pt_vec[0] + ego_info_under_slot.lat_move_dist_every_replan *
+                              origin_corner_coord_global.pt_01_unit_vec;
+  pt_vec[1] = pt_vec[1] + ego_info_under_slot.lat_move_dist_every_replan *
+                              origin_corner_coord_global.pt_01_unit_vec;
+  pt_vec[2] = pt_vec[2] + ego_info_under_slot.lat_move_dist_every_replan *
+                              origin_corner_coord_global.pt_23_unit_vec;
+  pt_vec[3] = pt_vec[3] + ego_info_under_slot.lat_move_dist_every_replan *
+                              origin_corner_coord_global.pt_23_unit_vec;
+
+  for (const Eigen::Vector2d& pt : pt_vec) {
+    slot_corner_X.emplace_back(pt.x());
+    slot_corner_Y.emplace_back(pt.y());
+  }
+
+  slot_corner_X.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[0] + pt_vec[1]) * 0.5).y());
+  slot_corner_X.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).x());
+  slot_corner_Y.emplace_back(((pt_vec[2] + pt_vec[3]) * 0.5).y());
+
+  slot_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).x());
+  slot_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).y());
+
+  JSON_DEBUG_VECTOR("slot_corner_X", slot_corner_X, 3)
+  JSON_DEBUG_VECTOR("slot_corner_Y", slot_corner_Y, 3)
+
+  std::vector<double> limiter_corner_X;
+  limiter_corner_X.clear();
+  limiter_corner_X.reserve(3);
+  std::vector<double> limiter_corner_Y;
+  limiter_corner_Y.clear();
+  limiter_corner_Y.reserve(3);
+
+  limiter_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).x());
+  limiter_corner_X.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).x());
+  limiter_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).y());
+  limiter_corner_Y.emplace_back(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).y());
+
+  JSON_DEBUG_VECTOR("limiter_corner_X", limiter_corner_X, 2)
+  JSON_DEBUG_VECTOR("limiter_corner_Y", limiter_corner_Y, 2)
+
+  JSON_DEBUG_VALUE("replan_flag", frame_.replan_flag)
+  JSON_DEBUG_VALUE("correct_path_for_limiter", frame_.correct_path_for_limiter)
+  JSON_DEBUG_VALUE("is_replan_first", frame_.is_replan_first)
+  JSON_DEBUG_VALUE("current_path_length", frame_.current_path_length)
+  JSON_DEBUG_VALUE("path_plan_success", frame_.plan_stm.path_plan_success)
+  JSON_DEBUG_VALUE("planning_status", frame_.plan_stm.planning_status)
+  JSON_DEBUG_VALUE("spline_success", frame_.spline_success)
+  JSON_DEBUG_VALUE("remain_dist", frame_.remain_dist_path)
+  JSON_DEBUG_VALUE("remain_dist_col_det", frame_.remain_dist_col_det)
+  JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
+  JSON_DEBUG_VALUE("remain_dist_slot_jump", frame_.remain_dist_slot_jump)
+  JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
+  JSON_DEBUG_VALUE("stuck_path_time", frame_.stuck_path_time)
+  JSON_DEBUG_VALUE("stuck_obs_time", frame_.stuck_obs_time)
+  JSON_DEBUG_VALUE("stuck_dynamic_obs_time", frame_.stuck_dynamic_obs_time)
+  JSON_DEBUG_VALUE("stuck_by_dynamic_obs", frame_.stuck_by_dynamic_obs)
+  JSON_DEBUG_VALUE("remain_dist_by_od", frame_.remain_dist_by_od)
+  JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
+  JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
+
+  JSON_DEBUG_VALUE("ego_should_stop_by_slot_jump",
+                   frame_.ego_should_stop_by_slot_jump)
+
+  JSON_DEBUG_VALUE("slot_origin_pos_x",
+                   ego_info_under_slot.origin_pose_global.pos.x())
+
+  JSON_DEBUG_VALUE("slot_origin_pos_y",
+                   ego_info_under_slot.origin_pose_global.pos.y())
+
+  JSON_DEBUG_VALUE("slot_origin_heading",
+                   ego_info_under_slot.origin_pose_global.heading)
+
+  JSON_DEBUG_VALUE("slot_occupied_ratio",
+                   ego_info_under_slot.slot_occupied_ratio)
+
+  std::vector<double> target_ego_pos_slot = {
+      ego_info_under_slot.target_pose.pos.x(),
+      ego_info_under_slot.target_pose.pos.y()};
+
+  JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result)
+}
+
+}  // namespace apa_planner
+}  // namespace planning

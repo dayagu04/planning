@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package planning.common;
+
+message VOLatBehaviorPlan {
+  repeated int32 avoid_car_ids = 1;
+  repeated int32 avoid_car_allow_max_opposite_offset = 2;
+}

@@ -1,0 +1,594 @@
+#include <gflags/gflags.h>
+#include <pybind11/eigen.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
+#include <pybind11/stl.h>
+
+#include <Eigen/Core>
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
+#include <iostream>
+#include <memory>
+#include <vector>
+
+#include "apa_debug_data.pb.h"
+#include "apa_plan_interface.h"
+#include "camera_perception_groundline_c.h"
+#include "config_context.h"
+#include "control_command_c.h"
+#include "debug_info_log.h"
+#include "func_state_machine_c.h"
+#include "fusion_objects_c.h"
+#include "fusion_occupancy_objects_c.h"
+#include "fusion_parking_slot_c.h"
+#include "ifly_localization_c.h"
+#include "log_glog.h"
+#include "perfect_control.h"
+#include "planning_debug_info.pb.h"
+#include "planning_plan_c.h"
+#include "pose2d.h"
+#include "serialize_utils.h"
+#include "spline.h"
+#include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "struct_convert/camera_perception_groundline_c.h"
+#include "struct_convert/common_c.h"
+#include "struct_convert/control_command_c.h"
+#include "struct_convert/func_state_machine_c.h"
+#include "struct_convert/fusion_groundline_c.h"
+#include "struct_convert/fusion_objects_c.h"
+#include "struct_convert/fusion_occupancy_objects_c.h"
+#include "struct_convert/fusion_parking_slot_c.h"
+#include "struct_convert/hmi_inner_c.h"
+#include "struct_convert/ifly_localization_c.h"
+#include "struct_convert/planning_plan_c.h"
+#include "struct_convert/uss_perception_info_c.h"
+#include "struct_convert/uss_wave_info_c.h"
+#include "struct_convert/vehicle_service_c.h"
+#include "struct_msgs/ControlOutput.h"
+#include "struct_msgs/FuncStateMachine.h"
+#include "struct_msgs/FusionGroundLineInfo.h"
+#include "struct_msgs/FusionObjectsInfo.h"
+#include "struct_msgs/FusionOccupancyObjectsInfo.h"
+#include "struct_msgs/GroundLinePerceptionInfo.h"
+#include "struct_msgs/IFLYLocalization.h"
+#include "struct_msgs/ParkingFusionInfo.h"
+#include "struct_msgs/PlanningOutput.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
+#include "struct_msgs/UssPerceptInfo.h"
+#include "struct_msgs/UssWaveInfo.h"
+#include "struct_msgs/VehicleServiceOutputInfo.h"
+#include "transform2d.h"
+#include "vehicle_service_c.h"
+#include "apa_lon_util.h"
+
+namespace py = pybind11;
+using namespace planning;
+using namespace planning::apa_planner;
+static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
+static PerfectControl *perfect_control_ptr;
+
+static planning::LocalView local_view;
+
+int Init() {
+  // const std::string flag_file_path =
+  //     "/asw/planning/res/conf/planning_gflags.conf";
+  // google::SetCommandLineOption("flagfile", flag_file_path.c_str());
+  (void)common::ConfigurationContext::Instance();
+
+  apa_interface_ptr = new apa_planner::ApaPlanInterface();
+
+  FilePath::SetName("apa_simulation_py");
+  InitGlog(FilePath::GetName().c_str());
+
+  apa_interface_ptr->Init(true);
+
+  perfect_control_ptr = new PerfectControl();
+  perfect_control_ptr->Init();
+
+  return 0;
+}
+
+const bool InterfaceUpdate(py::bytes &func_statemachine_bytes,
+                           py::bytes &parking_slot_info_bytes,
+                           py::bytes &localization_info_bytes,
+                           py::bytes &vehicle_service_output_info_bytes,
+                           py::bytes &uss_wave_info_bytes) {
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+
+  iflyauto::FuncStateMachine func_statemachine;
+
+  iflyauto::ParkingFusionInfo parking_slot_info =
+      BytesToStruct<iflyauto::ParkingFusionInfo,
+                    struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
+
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
+
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
+
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
+
+  local_view.localization = localization_info;
+  local_view.vehicle_service_output_info = vehicle_service_output_info;
+  local_view.parking_fusion_info = parking_slot_info;
+  local_view.function_state_machine_info = func_statemachine;
+  local_view.uss_wave_info = uss_wave_info;
+
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
+  apa_interface_ptr->UpdateDebugInfo();
+
+  return result;
+}
+
+const bool InterfaceUpdateClosedLoop(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes) {
+  // iflyauto::FuncStateMachine func_statemachine =
+  //     BytesToStruct<iflyauto::FuncStateMachine,
+  //     struct_msgs::FuncStateMachine>(
+  //         func_statemachine_bytes);
+  iflyauto::FuncStateMachine func_statemachine;
+
+  iflyauto::ParkingFusionInfo parking_slot_info =
+      BytesToStruct<iflyauto::ParkingFusionInfo,
+                    struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
+
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
+
+  // iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+  //     BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+  //                   struct_msgs::VehicleServiceOutputInfo>(
+  //         vehicle_service_output_info_bytes);
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info;
+
+  local_view.localization = localization_info;
+  local_view.vehicle_service_output_info = vehicle_service_output_info;
+  local_view.parking_fusion_info = parking_slot_info;
+  local_view.function_state_machine_info = func_statemachine;
+
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
+  apa_interface_ptr->UpdateDebugInfo();
+
+  return result;
+}
+
+const bool InterfaceUpdateParam(
+    py::bytes &func_statemachine_bytes, py::bytes &parking_slot_info_bytes,
+    py::bytes &localization_info_bytes,
+    py::bytes &vehicle_service_output_info_bytes,
+    py::bytes &uss_wave_info_bytes, py::bytes &uss_perception_info_bytes,
+    py::bytes &ground_line_info_bytes, py::bytes &fus_obj_info_bytes,
+    py::bytes &fus_occ_obj_info_bytes, py::bytes &control_output_bytes,
+    int plan_type, int select_id, bool force_plan, bool is_path_optimization,
+    bool is_cilqr_optimization, bool is_reset, bool is_complete_path,
+    bool sim_to_target, int pybind_state, bool use_obs_in_bag, double sample_ds,
+    std::vector<double> target_managed_slot_x_vec,
+    std::vector<double> target_managed_slot_y_vec,
+    std::vector<double> target_managed_limiter_x_vec,
+    std::vector<double> target_managed_limiter_y_vec,
+    std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
+    std::vector<double> lat_path_optimizier_params) {
+  SimulationParam param;
+  param.is_simulation = true;
+  param.plan_type = plan_type;
+  param.is_complete_path = is_complete_path;
+  param.force_plan = force_plan;
+  param.is_path_optimization = is_path_optimization;
+  param.is_cilqr_optimization = is_cilqr_optimization;
+  param.q_ref_xy = lat_path_optimizier_params[0];
+  param.q_ref_theta = lat_path_optimizier_params[1];
+  param.q_terminal_xy = lat_path_optimizier_params[2];
+  param.q_terminal_theta = lat_path_optimizier_params[3];
+  param.q_k = lat_path_optimizier_params[4];
+  param.q_u = lat_path_optimizier_params[5];
+  param.q_k_bound = lat_path_optimizier_params[6];
+  param.q_u_bound = lat_path_optimizier_params[7];
+  param.sample_ds = sample_ds;
+  param.is_reset = is_reset;
+  param.sim_to_target = sim_to_target;
+  param.use_obs_in_bag = use_obs_in_bag;
+  param.target_managed_slot_x_vec = target_managed_slot_x_vec;
+  param.target_managed_slot_y_vec = target_managed_slot_y_vec;
+  param.target_managed_limiter_x_vec = target_managed_limiter_x_vec;
+  param.target_managed_limiter_y_vec = target_managed_limiter_y_vec;
+  param.obs_x_vec = obs_x_vec;
+  param.obs_y_vec = obs_y_vec;
+
+  iflyauto::FuncStateMachine func_statemachine =
+      BytesToStruct<iflyauto::FuncStateMachine, struct_msgs::FuncStateMachine>(
+          func_statemachine_bytes);
+
+  iflyauto::ParkingFusionInfo parking_slot_info =
+      BytesToStruct<iflyauto::ParkingFusionInfo,
+                    struct_msgs::ParkingFusionInfo>(parking_slot_info_bytes);
+
+  iflyauto::IFLYLocalization localization_info =
+      BytesToStruct<iflyauto::IFLYLocalization, struct_msgs::IFLYLocalization>(
+          localization_info_bytes);
+
+  // iflyauto::GroundLinePerceptionInfo ground_line_info =
+  //     BytesToStruct<iflyauto::GroundLinePerceptionInfo,
+  //                   struct_msgs::GroundLinePerceptionInfo>(
+  //         ground_line_info_bytes);
+
+  iflyauto::FusionGroundLineInfo ground_line_info =
+      BytesToStruct<iflyauto::FusionGroundLineInfo,
+                    struct_msgs::FusionGroundLineInfo>(ground_line_info_bytes);
+
+  iflyauto::FusionObjectsInfo fus_obj_info =
+      BytesToStruct<iflyauto::FusionObjectsInfo,
+                    struct_msgs::FusionObjectsInfo>(fus_obj_info_bytes);
+
+  iflyauto::FusionOccupancyObjectsInfo fus_occ_obj_info =
+      BytesToStruct<iflyauto::FusionOccupancyObjectsInfo,
+                    struct_msgs::FusionOccupancyObjectsInfo>(
+          fus_occ_obj_info_bytes);
+
+  iflyauto::ControlOutput control_output_info =
+      BytesToStruct<iflyauto::ControlOutput, struct_msgs::ControlOutput>(
+          control_output_bytes);
+
+  iflyauto::VehicleServiceOutputInfo vehicle_service_output_info =
+      BytesToStruct<iflyauto::VehicleServiceOutputInfo,
+                    struct_msgs::VehicleServiceOutputInfo>(
+          vehicle_service_output_info_bytes);
+
+  iflyauto::UssPdcIccSendDataType uss_wave_info =
+      BytesToStruct<iflyauto::UssPdcIccSendDataType,
+                    struct_msgs::UssPdcIccSendDataType>(uss_wave_info_bytes);
+
+  iflyauto::UssPerceptInfo uss_perception_info =
+      BytesToStruct<iflyauto::UssPerceptInfo, struct_msgs::UssPerceptInfo>(
+          uss_perception_info_bytes);
+
+  // ground_line_info.groundline_size = gl_coord.size();
+  // for (size_t i = 0; i < ground_line_info.groundline_size; ++i) {
+  //   ground_line_info.groundline[i].groundline_point_size =
+  //   gl_coord[i].size(); for (size_t j = 0; j <
+  //   ground_line_info.groundline[i].groundline_point_size;
+  //        ++j) {
+  //     ground_line_info.groundline[i].groundline_point[j].x =
+  //     gl_coord[i][j].x();
+  //     ground_line_info.groundline[i].groundline_point[j].y =
+  //     gl_coord[i][j].y();
+  //   }
+  // }
+  // fus_obj_info.fusion_object_size = fus_obj_coord.size();
+  // for (size_t i = 0; i < fus_obj_info.fusion_object_size; ++i) {
+  //   fus_obj_info.fusion_object[i].additional_info.polygon_points_size =
+  //       fus_obj_coord[i].size();
+  //   for (size_t j = 0;
+  //        j <
+  //        fus_obj_info.fusion_object[i].additional_info.polygon_points_size;
+  //        ++j) {
+  //     fus_obj_info.fusion_object[i].additional_info.polygon_points[j].x =
+  //         fus_obj_coord[i][j].x();
+  //     fus_obj_info.fusion_object[i].additional_info.polygon_points[j].y =
+  //         fus_obj_coord[i][j].y();
+  //   }
+  // }
+  // fus_occ_obj_info.fusion_object_size = fus_occ_obj_coord.size();
+  // for (size_t i = 0; i < fus_occ_obj_info.fusion_object_size; ++i) {
+  //   fus_occ_obj_info.fusion_object[i]
+  //       .additional_occupancy_info.polygon_points_size =
+  //       fus_occ_obj_coord[i].size();
+  //   for (size_t j = 0; j < fus_occ_obj_info.fusion_object[i]
+  //                              .additional_occupancy_info.polygon_points_size;
+  //        ++j) {
+  //     fus_occ_obj_info.fusion_object[i]
+  //         .additional_occupancy_info.polygon_points[j]
+  //         .x = fus_occ_obj_coord[i][j].x();
+  //     fus_occ_obj_info.fusion_object[i]
+  //         .additional_occupancy_info.polygon_points[j]
+  //         .y = fus_occ_obj_coord[i][j].y();
+  //   }
+  // }
+
+  if (pybind_state != 0) {
+    func_statemachine.current_state =
+        static_cast<FunctionalState>(pybind_state);
+  }
+
+  local_view.localization = localization_info;
+  local_view.vehicle_service_output_info = vehicle_service_output_info;
+  local_view.parking_fusion_info = parking_slot_info;
+  local_view.uss_wave_info = uss_wave_info;
+  local_view.function_state_machine_info = func_statemachine;
+  local_view.uss_percept_info = uss_perception_info;
+  local_view.ground_line_perception = ground_line_info;
+  local_view.fusion_objects_info = fus_obj_info;
+  local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
+  local_view.control_output = control_output_info;
+
+  // DEBUG_PRINT(
+  //     "c++ gl size = " <<
+  //     static_cast<int>(ground_line_info.ground_lines_size));
+
+  // DEBUG_PRINT("c++ fus_obj_num = "
+  //             << static_cast<int>(fus_obj_info.fusion_object_size));
+
+  // DEBUG_PRINT("c++ fus_occ_obj_num = "
+  //             << static_cast<int>(fus_occ_obj_info.fusion_object_size));
+
+  // Note: currently plan once when slot selected in searching state
+  if (force_plan) {
+    local_view.function_state_machine_info.current_state =
+        iflyauto::FunctionalState_PARK_GUIDANCE;
+  }
+  if (select_id > 0) {
+    local_view.parking_fusion_info.select_slot_id = select_id;
+    std::cout << "pybind select slot id = "
+              << local_view.parking_fusion_info.select_slot_id << std::endl;
+  }
+
+  apa_interface_ptr->SetSimuParam(param);
+
+  PlanningResult navigation_traj;
+  const bool result = apa_interface_ptr->Update(&local_view, &navigation_traj);
+  if (apa_interface_ptr->GetPlaningOutput()
+              .planning_status.apa_planning_status !=
+          iflyauto::APA_IN_PROGRESS ||
+      apa_interface_ptr->GetPlaningOutput()
+              .planning_status.hpp_planning_status != iflyauto::HPP_RUNNING) {
+    return false;
+  }
+
+  apa_interface_ptr->UpdateDebugInfo();
+
+  return result;
+}
+
+py::bytes GetPlanningOutput() {
+  iflyauto::PlanningOutput planning_output =
+      apa_interface_ptr->GetPlaningOutput();
+  return StructToBytes<iflyauto::PlanningOutput, struct_msgs::PlanningOutput>(
+      planning_output);
+}
+
+py::bytes GetPlanningDebugInfo() {
+  return ProtoToBytes(apa_interface_ptr->GetPlanningDebugInfo());
+}
+
+void DynamicsUpdate(py::bytes &planning_output_bytes, double dt) {
+  iflyauto::PlanningOutput planning_output =
+      BytesToStruct<iflyauto::PlanningOutput, struct_msgs::PlanningOutput>(
+          planning_output_bytes);
+  perfect_control_ptr->Update(planning_output, dt);
+}
+
+std::vector<double> GetDynamicState() {
+  const auto &state = perfect_control_ptr->GetState();
+
+  std::vector<double> res = {state.pos.x(), state.pos.y(), state.heading,
+                             state.vel};
+
+  return res;
+}
+
+void DynamicsSwitchBuf(double x, double y, double heading) {
+  perfect_control_ptr->SetState(
+      PerfectControl::DynamicState(Eigen::Vector2d(x, y), heading));
+}
+
+std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
+  std::vector<Eigen::VectorXd> speed_debug_data = TransformDpSpeedConstraints();
+
+  return speed_debug_data;
+}
+
+std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
+  std::vector<Eigen::Vector2d> speed_debug_data = TransformQPSpeedConstraints();
+
+  return speed_debug_data;
+}
+
+const double GetRefCruiseSpeed() {
+  return GetDebugRefCruiseSpeed();
+}
+
+std::vector<Eigen::VectorXd> GetDPSpeedOptimizationData() {
+  std::vector<Eigen::VectorXd> speed_profile =
+      TransformDPSpeedOptimizationData();
+
+  return speed_profile;
+}
+
+std::vector<Eigen::VectorXd> GetQPSpeedOptimizationData() {
+  std::vector<Eigen::VectorXd> speed_profile =
+      TransformQPSpeedOptimizationData();
+
+  return speed_profile;
+}
+
+std::vector<Eigen::VectorXd> GetStopSigns() {
+  std::vector<Eigen::VectorXd> stop_signs = TransformStopSigns();
+
+  return stop_signs;
+}
+
+std::vector<Eigen::VectorXd> GetJLTSpeedData() {
+  std::vector<Eigen::VectorXd> speed_profile = TransformJLTSpeedData();
+
+  return speed_profile;
+}
+
+bool ComputeLineIntersection(const Eigen::Vector2d& A, const Eigen::Vector2d& B,
+                             double k, double b, Eigen::Vector2d& res) {
+  // AB line: a1*x + b1*y + c1 = 0
+  double a1 = A.y() - B.y();
+  double b1 = B.x() - A.x();
+  double c1 = A.x() * B.y() - B.x() * A.y();
+
+  // L line: a2*x + b2*y + c2 = 0 => kx - y + b = 0
+  double a2 = k;
+  double b2 = -1.0;
+  double c2 = b;
+
+  // Calculate the determinant
+  double det = a1 * b2 - a2 * b1;
+
+  if (std::abs(det) < 1e-10) {
+    // line parallel
+    return false;
+  }
+
+  // Calculate intersection point
+  double x = (b1 * c2 - b2 * c1) / det;
+  double y = (a2 * c1 - a1 * c2) / det;
+
+  res << x, y;
+  return true;
+}
+
+std::vector<std::vector<double>> GetPASlot() {
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  if (!debug->has_apa_path_debug()) {
+    return {x_vec, y_vec};
+  }
+  const auto& apa_path_debug = debug->apa_path_debug();
+
+  for (int i = 0; i < apa_path_debug.pa_objects_size(); ++i) {
+    const auto& pa_object = apa_path_debug.pa_objects(i);
+
+    if (pa_object.category() == planning::common::PaCategory::SLOT &&
+        pa_object.object_id() == "slot_1") {
+      // 提取车位角点用于可视化或其他处理
+      std::vector<Eigen::Vector2d> slot_corners;
+      for (int j = 0; j < pa_object.points_size(); ++j) {
+        const auto& point = pa_object.points(j);
+        slot_corners.emplace_back(point.x(), point.y());
+        // std::cout << "slot j = " << j << " point.x = " << point.x()
+        //           << " point.y = " << point.y() << std::endl;
+      }
+      x_vec.emplace_back(slot_corners[0].x());
+      x_vec.emplace_back(slot_corners[3].x());
+      x_vec.emplace_back(slot_corners[2].x());
+      x_vec.emplace_back(slot_corners[1].x());
+
+      y_vec.emplace_back(slot_corners[0].y());
+      y_vec.emplace_back(slot_corners[3].y());
+      y_vec.emplace_back(slot_corners[2].y());
+      y_vec.emplace_back(slot_corners[1].y());
+      break;
+    }
+  }
+  return {x_vec, y_vec};
+}
+
+std::vector<std::vector<double>> GetPAObs() {
+  // const SimuDebugInfo& debug_info = apa_interface_ptr->GetSimuDebugInfo();
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  if (!debug->has_apa_path_debug()) {
+    return {x_vec, y_vec};
+  }
+  const auto& apa_path_debug = debug->apa_path_debug();
+  for (int i = 0; i < apa_path_debug.pa_objects_size(); ++i) {
+    const auto& pa_object = apa_path_debug.pa_objects(i);
+
+    if (pa_object.category() == planning::common::PaCategory::OBSTACLE &&
+        pa_object.object_id() == "obstacle_1") {
+      for (int j = 0; j < pa_object.points_size(); ++j) {
+        const auto& point = pa_object.points(j);
+        // std::cout << "obstacle j = " << j << " point.x = " << point.x()
+        //           << " point.y = " << point.y() << std::endl;
+        x_vec.emplace_back(point.x());
+        y_vec.emplace_back(point.y());
+      }
+      break;
+    }
+  }
+  return {x_vec, y_vec};
+}
+
+std::vector<std::vector<double>> GetPALine() {
+  std::vector<std::vector<double>> slot_point = GetPASlot();
+  std::vector<double> x_line;
+  std::vector<double> y_line;
+
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  if (!debug->has_apa_path_debug()) {
+    return {x_line, y_line};
+  }
+  const auto& apa_path_debug = debug->apa_path_debug();
+
+  double k = 0.0;
+  double b = 0.0;
+  for (int i = 0; i < apa_path_debug.pa_objects_size(); ++i) {
+    const auto& pa_object = apa_path_debug.pa_objects(i);
+
+    if (pa_object.category() == planning::common::PaCategory::LINE &&
+        pa_object.object_id() == "line_1") {
+      for (int j = 0; j < pa_object.points_size(); ++j) {
+        const auto& point = pa_object.points(j);
+        // std::cout << "line j = " << j << " point.x = " << point.x()
+        //           << " point.y = " << point.y() << std::endl;
+        k = point.x();
+        b = point.y();
+      }
+      break;
+    }
+  }
+
+  Eigen::Vector2d A;
+  if (ComputeLineIntersection(
+          Eigen::Vector2d(slot_point[0][0], slot_point[1][0]),
+          Eigen::Vector2d(slot_point[0][1], slot_point[1][1]), k, b, A)) {
+    x_line.emplace_back(A.x());
+    y_line.emplace_back(A.y());
+  }
+  Eigen::Vector2d B;
+  if (ComputeLineIntersection(
+          Eigen::Vector2d(slot_point[0][3], slot_point[1][3]),
+          Eigen::Vector2d(slot_point[0][2], slot_point[1][2]), k, b, B)) {
+    x_line.emplace_back(B.x());
+    y_line.emplace_back(B.y());
+  }
+  return {x_line, y_line};
+}
+
+PYBIND11_MODULE(apa_simulation_py, m) {
+  m.doc() = "m";
+
+  m.def("Init", &Init)
+      .def("InterfaceUpdate", &InterfaceUpdate)
+      .def("InterfaceUpdateClosedLoop", &InterfaceUpdateClosedLoop)
+      .def("InterfaceUpdateParam", &InterfaceUpdateParam)
+      .def("GetPlanningOutput", &GetPlanningOutput)
+      .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
+      .def("DynamicsUpdate", &DynamicsUpdate)
+      .def("DynamicsSwitchBuf", &DynamicsSwitchBuf)
+      .def("GetDpSpeedConstraints", &GetDpSpeedConstraints)
+      .def("GetQPSpeedConstraints", &GetQPSpeedConstraints)
+      .def("GetRefCruiseSpeed", &GetRefCruiseSpeed)
+      .def("GetDPSpeedOptimizationData", &GetDPSpeedOptimizationData)
+      .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
+      .def("GetJLTSpeedData", &GetJLTSpeedData)
+      .def("GetStopSigns", &GetStopSigns)
+      .def("GetDynamicState", &GetDynamicState)
+      .def("GetPASlot", &GetPASlot)
+      .def("GetPAObs", &GetPAObs)
+      .def("GetPALine", &GetPALine);
+}

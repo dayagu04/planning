@@ -1,0 +1,1541 @@
+#include "sample_poly_speed_adjust_decider.h"
+
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <limits>
+#include <memory>
+#include <vector>
+
+#include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
+#include "config/basic_type.h"
+#include "dynamic_world/dynamic_agent_node.h"
+#include "lateral_obstacle.h"
+#include "planning_context.h"
+#include "st_graph/st_point.h"
+#include "task_basic_types.h"
+#include "trajectory1d/quartic_poly_trajectory1d.h"
+
+using planning::planning_data::DynamicAgentNode;
+using planning::planning_data::DynamicWorld;
+namespace {
+constexpr double kNormalSceneWeightMatchGapVel = 6.5;
+constexpr double kNormalSceneWeightMatchGapS = 4.5;
+constexpr double kNormalSceneWeightFollowVel = 5.0;
+constexpr double kNormalSceneWeightStopLine = 50.0;
+constexpr double kNormalSceneWeightLeadingSafeS = 13.5;
+constexpr double kNormalSceneWeightLeadingSafeV = 0.0;
+constexpr double kNormalSceneWeightVelVariable = 3.5;
+constexpr double kNormalSceneWeightGapAvailable = 2.5;
+constexpr double kNormalSceneWeightAccLimit = 25.0;
+constexpr double kNormalSceneWeightStopPenalty = 2.5;
+constexpr double kNormalSceneWeightSpeedChange = 10.0;
+
+constexpr double kPurseFlowVelSceneWeightMatchGapVel = 0.0;
+constexpr double kPurseFlowVelSceneWeightMatchGapS = 0.0;
+constexpr double kPurseFlowVelSceneWeightFollowVel = 6.25;
+constexpr double kPurseFlowVelSceneWeightStopLine = 50.0;
+constexpr double kPurseFlowVelSceneWeightLeadingSafeS = 13.5;
+constexpr double kPurseFlowVelSceneWeightLeadingSafeV = 0.0;
+constexpr double kPurseFlowVelSceneWeightVelVariable = 2.0;
+constexpr double kPurseFlowVelSceneWeightGapAvailable = 1.25;
+constexpr double kPurseFlowVelSceneWeightAccLimit = 25.0;
+constexpr double kPurseFlowVelSceneWeightStopPenalty = 2.5;
+constexpr double kPurseFlowVelSceneWeightSpeedChange = 0.0;
+
+constexpr double kDeclerationSceneWeightMatchGapVel = 4.5;
+constexpr double kDeclerationSceneWeightMatchGapS = 2.5;
+constexpr double kDeclerationSceneWeightFollowVel = 0.0;
+constexpr double kDeclerationSceneWeightStopLine = 50.0;
+constexpr double kDeclerationSceneWeightLeadingSafeS = 13.5;
+constexpr double kDeclerationSceneWeightLeadingSafeV = 0.0;
+constexpr double kDeclerationSceneWeightVelVariable = 0.5;
+constexpr double kDeclerationSceneWeightGapAvailable = 2.5;
+constexpr double kDeclerationSceneWeightAccLimit = 0.0;
+constexpr double kDeclerationSceneWeightStopPenalty = 0.0;
+constexpr double kDeclerationSceneWeightSpeedChange = 0.0;
+}  // namespace
+namespace planning {
+
+SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider() {  // for pybind
+  name_ = "SamplePolySpeedAdjustDecider";
+  config_ = SamplePolySpeedAdjustDeciderConfig();
+  lc_safety_distance_config_ = LanChangeSafetyCheckConfig();
+
+  front_edge_to_rear_axle_ = 4.025;
+  rear_edge_to_rear_axle_ = 0.925;
+  st_sample_space_base_ =
+      STSampleSpaceBase(front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
+  sample_trajs_ = std::vector<std::vector<SampleQuarticPolynomialCurve>>();
+  min_cost_traj_ptr_ = nullptr;
+  evaulation_t_ = 5.0;
+}
+
+SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
+    const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
+    : Task(config_builder, session) {
+  name_ = "SamplePolySpeedAdjustDecider";
+  config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
+  astar_config_ = config_builder->cast<SampleAstarTrajConfig>();
+  lc_safety_distance_config_ =
+      config_builder->cast<LanChangeSafetyCheckConfig>();
+
+  front_edge_to_rear_axle_ = VehicleConfigurationContext::Instance()
+                                 ->get_vehicle_param()
+                                 .front_edge_to_rear_axle;
+  rear_edge_to_rear_axle_ = VehicleConfigurationContext::Instance()
+                                ->get_vehicle_param()
+                                .rear_edge_to_rear_axle;
+  ego_width_ =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().width;
+  st_sample_space_base_ =
+      STSampleSpaceBase(front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
+  sample_trajs_ = std::vector<std::vector<SampleQuarticPolynomialCurve>>();
+  min_cost_traj_ptr_ = nullptr;
+  SetNormalSceneWeight();
+  evaulation_t_ = 5.0;
+}
+
+bool SamplePolySpeedAdjustDecider::Execute() {
+  bool ok = true;
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
+      std::chrono::high_resolution_clock::now();
+  ok = ProcessEnvInfos();
+
+  if (ok) {
+    planning::speed::STPoint current_matched_upper_st_point;
+    planning::speed::STPoint current_matched_lower_st_point;
+    st_sample_space_base_.GetBorderByAvailable(ego_s_, 0.0,
+                                               &current_matched_lower_st_point,
+                                               &current_matched_upper_st_point);
+    ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
+          current_matched_lower_st_point.agent_id() != kNoAgentId);
+  }
+
+  if (ok) {
+    ok = CheckLanelineChangeable();
+  }
+
+  if (ok) {
+    ok = SamplePolys();
+  }
+
+  std::chrono::time_point<std::chrono::high_resolution_clock> sample_end_time =
+      std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> sample_cost_time = sample_end_time - start_time;
+
+  if (ok) {
+    ok = Evaluate();
+  }
+  int astar_iteration_count = 0;
+  if (ok) {
+    if (min_cost_traj_ptr_ == nullptr ||
+        !min_cost_traj_ptr_->anchor_points_match_gap_cost()
+             .is_gap_changeable() ||
+        !min_cost_traj_ptr_->is_left_distance_enough()) {
+      if (IsForcedMergeScenario()) {
+        if (GenerateAStarTraj()) {
+          astar_iteration_count = astar_traj_ptr_->count_;
+        } else {
+          astar_traj_ptr_.reset();
+        }
+      }
+    }
+  }
+
+  if (ok) {
+    if (min_cost_traj_ptr_ != nullptr) {
+      ok = BestTrajCheck();
+    }
+  }
+
+  std::chrono::time_point<std::chrono::high_resolution_clock>
+      evaluate_end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> evaluate_cost_time =
+      evaluate_end_time - sample_end_time;
+  std::chrono::duration<double> all_cost_time = evaluate_end_time - start_time;
+  auto& search_path = session_->mutable_planning_context()
+                          ->mutable_lane_change_decider_output()
+                          .st_search_vec;
+  session_->mutable_planning_context()
+      ->mutable_lane_change_decider_output()
+      .s_search_status = false;
+  auto& v_search_path = session_->mutable_planning_context()
+                            ->mutable_lane_change_decider_output()
+                            .v_search_vec;
+
+  if (ok && min_cost_traj_ptr_ != nullptr) {
+    session_->mutable_planning_context()
+        ->mutable_lane_change_decider_output()
+        .s_search_status = true;
+    search_path.clear();
+    v_search_path.clear();
+    search_path.resize(kPlanningHorizions);
+    v_search_path.resize(kPlanningHorizions);
+    if (astar_traj_ptr_ && astar_traj_ptr_->IsValid()) {
+      for (size_t i = 0; i < kPlanningHorizions; i++) {
+        double s = astar_traj_ptr_->CalcS(i * kPlanningStep);
+        search_path[i] = std::move(s);
+        v_search_path[i] = astar_traj_ptr_->CalcV(i * kPlanningStep);
+      }
+    } else {
+      for (size_t i = 0; i < kPlanningHorizions; i++) {
+        double s =
+            min_cost_traj_ptr_->CalcRef(i * kPlanningStep, config_.decay_coffi) -
+            ego_s_;
+        search_path[i] = std::move(s);
+        v_search_path[i] = min_cost_traj_ptr_->CalcVelRef(i * kPlanningStep,
+                                                          config_.decay_coffi);
+      }
+    }
+    last_min_cost_traj_ = SampleQuarticPolynomialCurve(*min_cost_traj_ptr_);
+    last_ego_cart_point_ = ego_cart_point_;
+  }
+  std::cout << "evaluate_cost_time : " << evaluate_cost_time.count()
+            << std::endl;
+  LogDebugInfo(sample_cost_time.count(), evaluate_cost_time.count(),
+               all_cost_time.count());
+  return true;
+};
+
+bool SamplePolySpeedAdjustDecider::SamplePolys() {
+  delta_t_ = (config_.sample_t_upper - config_.sample_t_lower) /
+             (config_.sample_t_nums - 1);
+  delta_v_ = (speed_adjust_range_.first - speed_adjust_range_.second) /
+             (config_.sample_v_nums - 1);
+
+  for (int i = 0; i < config_.sample_v_nums; i++) {
+    const double v = speed_adjust_range_.second + i * delta_v_;
+    std::vector<SampleQuarticPolynomialCurve> sample_traj_at_t;
+    for (int j = 0; j < config_.sample_t_nums; j++) {
+      const double t = config_.sample_t_lower + j * delta_t_;
+      const double ultra_acc = (v - ego_v_) / t;
+      if (ultra_acc > adjust_speed_max_acc_ ||
+          ultra_acc < adjust_speed_min_acc_) {
+        continue;
+      }
+      QuarticPolyState quartic_start{ego_s_, ego_v_, ego_a_,
+                                     0.0};  // bind p0, v0, a0, ve, ae
+      QuarticPolyState quartic_end{0.0, v, 0.0, t};
+      QuarticPolynomial quartic_sample_polynomial(quartic_start, quartic_end);
+      SampleQuarticPolynomialCurve quartic_sample_traj(
+          quartic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
+          weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
+          weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
+          weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+          weight_speed_change_, weight_leading_veh_follow_s_,
+          weight_jerk_limit_, front_edge_to_rear_axle_,
+          rear_edge_to_rear_axle_, config_);
+
+      sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
+    }
+    sample_trajs_.emplace_back(std::move(sample_traj_at_t));
+  }
+  return true;
+};
+
+bool SamplePolySpeedAdjustDecider::Evaluate() {
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  bool is_not_use_gap_select = IsNotUseGapSelect();
+  std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
+      std::chrono::high_resolution_clock::now();
+  double min_cost = std::numeric_limits<double>::max();
+  double leading_veh_s = kMaxPathLength;
+  double leading_veh_v = kAgentNoValidVel;
+  if (leading_veh_.id != kNoAgentId) {
+    leading_veh_s = ego_s_ + leading_veh_.center_s;
+    leading_veh_v = leading_veh_.v;
+  }
+  double speed_differ_gain = 1.0;
+  int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
+  if (traffic_density_status_ == Congested || is_not_use_gap_select) {
+    count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
+  }
+  size_t start_index = traffic_density_status_ == Congested ? 1 : 3;
+  if (sample_scene_ == PurseFlowVelScene && is_not_use_gap_select) {
+    for (size_t k = 0; k < sample_trajs_.size(); k++) {
+      auto& sample_traj_at_v = sample_trajs_[k];
+      for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
+        auto& sample_traj = sample_traj_at_v[j];
+        sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
+                             v_suggestted_, merge_stop_line_distance_,
+                             leading_veh_, is_not_use_gap_select,
+                             speed_differ_gain, distance_to_stop_point_,
+                             lc_safety_distance_config_, 3.0, is_merge_change_);
+      }
+    }
+  } else {
+    for (size_t i = start_index; i <= count; i++) {
+      st_sample_space_base_.GetAvailableGap(
+          i * kEvaluationStep / kTimeResolution,
+          ego_s_ + speed_adjust_range_.second * i * kEvaluationStep);
+      for (size_t k = 0; k < sample_trajs_.size(); k++) {
+        auto& sample_traj_at_v = sample_trajs_[k];
+        for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
+          auto& sample_traj = sample_traj_at_v[j];
+          if (is_not_use_gap_select || CheckTrajAvailable(sample_traj, i)) {
+            sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
+                                 v_suggestted_, merge_stop_line_distance_,
+                                 leading_veh_, is_not_use_gap_select,
+                                 speed_differ_gain, distance_to_stop_point_,
+                                 lc_safety_distance_config_,
+                                 i * kEvaluationStep, is_merge_change_);
+          }
+        }
+      }
+    }
+  }
+  for (size_t i = 0; i < sample_trajs_.size(); i++) {
+    auto& sample_traj_at_v = sample_trajs_[i];
+    for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
+      auto& sample_traj = sample_traj_at_v[j];
+      if (sample_traj.cost_sum_ < min_cost) {
+        min_cost_traj_ptr_ = &sample_traj;
+        min_cost = sample_traj.cost_sum_;
+        min_cost_traj_index_.first = i;
+        min_cost_traj_index_.second = j;
+      }
+    }
+  }
+  return true;
+}
+
+double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
+  double rear_speed_differ_gain = 1;
+  double front_speed_differ_gain = 1;
+  double speed_differ_gain = 1;
+  speed::STPoint prediction_matched_upper_st_point;
+  speed::STPoint prediction_matched_lower_st_point;
+  st_sample_space_base_.GetBorderByAvailable(
+      ego_s_, 0.0, &prediction_matched_lower_st_point,
+      &prediction_matched_upper_st_point);
+  const double vel_diff_to_gap_rear_car =
+      (ego_v_ - prediction_matched_lower_st_point.velocity()) > -kZeroEpsilon
+          ? std::fmax(ego_v_ - prediction_matched_lower_st_point.velocity(),
+                      kZeroEpsilon)
+          : ego_v_ - prediction_matched_lower_st_point.velocity();
+  const double ttc_to_rear_car =
+      (ego_s_ - prediction_matched_lower_st_point.s()) > 0.0
+          ? (prediction_matched_lower_st_point.s() - ego_s_) /
+                vel_diff_to_gap_rear_car
+          : (ego_s_ - prediction_matched_lower_st_point.s()) /
+                vel_diff_to_gap_rear_car;
+  const double vel_diff_to_gap_front_car =
+      ego_v_ - prediction_matched_upper_st_point.velocity() >= 0
+          ? std::fmax(ego_v_ - prediction_matched_upper_st_point.velocity(),
+                      kZeroEpsilon)
+          : ego_v_ - prediction_matched_upper_st_point.velocity();
+
+  if (prediction_matched_upper_st_point.agent_id() !=
+      prediction_matched_lower_st_point.agent_id()) {
+    if (prediction_matched_lower_st_point.agent_id() != kNoAgentId) {
+      if (vel_diff_to_gap_rear_car > 0.0) {
+        rear_speed_differ_gain = 0.0;
+      } else {
+        double acc_to_rear_car =
+            std::fmax(0.4 - prediction_matched_lower_st_point.acceleration(),
+                      kZeroEpsilon);
+        double distance_to_rear_car = std::fmax(
+            ego_s_ - prediction_matched_lower_st_point.s() - 2.0, 0.0);
+        double acc_distance =
+            std::pow(vel_diff_to_gap_rear_car, 2.0) / (2.0 * acc_to_rear_car);
+        rear_speed_differ_gain = distance_to_rear_car > acc_distance
+                                     ? 0.0
+                                     : 2.0 * std::pow(7.0 - ttc_to_rear_car, 2);
+      }
+    } else {
+      rear_speed_differ_gain = 0.0;
+    }
+
+    if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
+      if (vel_diff_to_gap_front_car > 0.0) {
+        double ultra_acc = 0.6;
+        double distance_to_overtake = std::fmax(
+            prediction_matched_upper_st_point.s() - ego_s_ + 15.0, 0.0);
+        double overtake_time =
+            (std::sqrt(2 * distance_to_overtake * ultra_acc +
+                       std::pow(vel_diff_to_gap_front_car, 2.0)) -
+             vel_diff_to_gap_front_car) /
+            ultra_acc;
+        double rest_time =
+            (merge_stop_line_distance_ - ego_v_ * overtake_time -
+             std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
+            std::fmax(ego_v_ + ultra_acc * overtake_time, kZeroEpsilon);
+        front_speed_differ_gain = rest_time > 3.0 ? 0.0 : 1.0;
+      } else {
+        front_speed_differ_gain =
+            (prediction_matched_upper_st_point.s() - ego_s_) > 10.0 ? 0.0 : 1.0;
+      }
+    } else {
+      front_speed_differ_gain = 0.0;
+    }
+  } else if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
+    if (vel_diff_to_gap_front_car > 0.0) {
+      double ultra_acc = 1;
+      double distance_to_overtake =
+          std::fmax(prediction_matched_upper_st_point.s() - ego_s_ + 2.0, 0.0);
+      double overtake_time =
+          (std::sqrt(2 * distance_to_overtake * ultra_acc +
+                     std::pow(vel_diff_to_gap_front_car, 2.0)) -
+           vel_diff_to_gap_front_car) /
+          ultra_acc;
+      double rest_time =
+          (merge_stop_line_distance_ - ego_v_ * overtake_time -
+           std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
+          std::fmax(ego_v_ + ultra_acc * overtake_time, kZeroEpsilon);
+      front_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
+      rear_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
+    }
+  }
+  speed_differ_gain =
+      std::fmax(rear_speed_differ_gain, front_speed_differ_gain);
+  return speed_differ_gain;
+}
+void SamplePolySpeedAdjustDecider::CalcTargetLaneObjsFlowVel() {
+  if (agent_info_.empty()) {
+    target_lane_objs_flow_vel_ = ego_v_;
+    return;
+  }
+
+  double dis_weight = 0.0;
+  double vel_sum = 0.0;
+
+  for (const auto& veh_info : agent_info_) {
+    if (veh_info.id < 0) {
+      continue;
+    }
+
+    double veh_dis_weight = 1.0 / (std::fabs(veh_info.center_s) + 1e-6);
+    dis_weight += veh_dis_weight;
+    vel_sum += veh_dis_weight * veh_info.v;
+  }
+
+  if (dis_weight < 1e-6) {
+    target_lane_objs_flow_vel_ = ego_v_;
+  } else {
+    target_lane_objs_flow_vel_ = vel_sum / dis_weight;
+  }
+  return;
+}
+
+void SamplePolySpeedAdjustDecider::CalcTargetLaneVehDensity() {
+  if (agent_info_.size() < kJudgeCongestedVehNumThreshold) {
+    traffic_density_ = 0.0;
+    traffic_density_status_ = LineClear;
+    return;
+  }
+
+  int total_vehicles = 0;
+  double total_length = 0.0;
+  for (const auto& veh : agent_info_) {
+    if (std::fabs(veh.center_s) > kVehDensityDistanceThreshold) {
+      continue;
+    }
+
+    total_vehicles += 1;
+  }
+  if (total_vehicles == 0) {
+    return;
+  }
+  traffic_density_ = 2 * kVehDensityDistanceThreshold / total_vehicles;
+  if (traffic_density_ < kJudgeCongestedSceneDensity) {
+    traffic_density_status_ = Congested;
+  }
+  return;
+}
+
+bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
+  // target lane ids
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_st_search_decider_info()
+      ->mutable_sample_poly_speed_info()
+      ->Clear();
+  agent_info_.clear();
+  astar_traj_ptr_.reset(nullptr);
+  leading_veh_ = LeadingAgentInfo();
+  leading_veh_.prediction_path.clear();
+  leading_veh_.prediction_path_valid = false;
+  sample_status_ = OK;
+  distance_to_stop_point_ = kMaxDistanceToStopPoint;
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& ego_frenet_state = session_->environmental_model()
+                                     .get_reference_path_manager()
+                                     ->get_reference_path_by_current_lane()
+                                     ->get_frenet_ego_state();
+  const double ego_s = ego_frenet_state.s();
+  const auto target_lane_virtual_id = session_->planning_context()
+                                          .lane_change_decider_output()
+                                          .target_lane_virtual_id;
+  const std::shared_ptr<DynamicWorld> dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const std::shared_ptr<FrenetObstacle> lead_one =
+      session_->environmental_model().get_lateral_obstacle()->leadone();
+  const auto& coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  lane_change_request_ =
+      session_->planning_context().lane_change_decider_output().lc_request;
+  lane_change_source_ = session_->planning_context()
+                            .lane_change_decider_output()
+                            .lc_request_source;
+  is_in_merge_region_ = session_->mutable_planning_context()
+                            ->ego_lane_road_right_decider_output()
+                            .is_merge_region;
+  merge_stop_line_distance_ = kMaxMergeDistance;
+  // process lane change status
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  is_merge_change_ =
+      (lane_change_source_ == MERGE_REQUEST) ||
+      ((lane_change_source_ == MAP_REQUEST) &&
+       (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE));
+  const bool enable_merge_decelaration =
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
+       lane_change_source_ == MERGE_REQUEST);
+  // const bool enable_merge_decelaration_hold =
+  //     (enable_merge_decelaration &&
+  //      coarse_planning_info.target_state == kLaneChangeHold);
+
+  const bool enable_hold_adjust_speed =
+      coarse_planning_info.target_state == kLaneChangeHold;
+
+  if (coarse_planning_info.target_state != kLaneChangePropose &&
+      !enable_hold_adjust_speed) {
+    count_wait_state_ = 0;
+    lane_change_request_ = 0;
+    sample_scene_ = SampleScene::NormalSampleScene;
+    count_normal_to_hover_state_ = 0;
+    count_hover_to_normal_state_ = 0;
+    ClearStitchedPolyPtr();
+    return false;
+  }
+
+  if (coarse_planning_info.target_state == kLaneChangePropose ||
+      enable_hold_adjust_speed) {
+    count_wait_state_++;
+  }
+
+  const int count_wait_limit = enable_merge_decelaration ? 1 : 3;
+
+  if (count_wait_state_ <= count_wait_limit) {
+    ClearStitchedPolyPtr();
+    return false;
+  }
+
+  if (lead_one != nullptr) {
+    if (lead_one->id() > 0) {
+      leading_veh_.half_length = lead_one->length() * 0.5;
+      leading_veh_.id = lead_one->id();
+      leading_veh_.v = lead_one->velocity();
+      leading_veh_.center_s = lead_one->d_s_rel();
+      const auto& lead_one_agent = dynamic_world->GetNodeByAgentID(leading_veh_.id);
+      if (lead_one_agent != nullptr) {
+        const auto& primary_trajectories =
+            lead_one_agent->node_trajectories_used_by_st_graph();
+        const auto& fallback_trajectories = lead_one_agent->node_trajectories();
+        const auto& selected_trajectories = primary_trajectories.empty()
+                                                ? fallback_trajectories
+                                                : primary_trajectories;
+        if (selected_trajectories.empty() ||
+            selected_trajectories.front().empty()) {
+          leading_veh_.prediction_path_valid = false;
+        } else {
+          leading_veh_.prediction_path_valid = true;
+          const auto& current_trajectory = selected_trajectories.front();
+          std::pair<double, double> path_point;
+          const size_t TimeHorizion = kPlanningDuration / kPlanningStep;
+          const size_t PredictionHorizon = current_trajectory.size() - 1;
+          size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
+          double end_v = 0.0;
+          double end_s = 0.0;
+          if (PredictionHorizon > 0) {
+            leading_veh_.v = current_trajectory[0].vel();
+          }
+          for (size_t i = 0; i <= min_horizion; ++i) {
+            end_s = current_trajectory[i].s();
+            end_v = current_trajectory[i].vel();
+            path_point.first = end_s;
+            path_point.second = end_v;
+            leading_veh_.prediction_path.emplace_back(path_point);
+            if (i == min_horizion) {
+              break;
+            }
+            end_s += kTimeResolution * end_v;
+            path_point.first = end_s;
+            path_point.second = end_v;
+            leading_veh_.prediction_path.emplace_back(path_point);
+          }
+          if (PredictionHorizon < TimeHorizion) {
+            for (size_t i = PredictionHorizon; i < TimeHorizion; ++i) {
+              const double time_start = i * kPlanningStep + kTimeResolution;
+              double time_end = (i + 1) * kPlanningStep;
+              for (double t = time_start;
+                   t < time_end + planning_math::kMathEpsilon;
+                   t += kTimeResolution) {
+                end_s += end_v * kTimeResolution;
+                path_point.first = end_s;
+                path_point.second = end_v;
+                leading_veh_.prediction_path.emplace_back(path_point);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const std::vector<const DynamicAgentNode*> target_lane_nodes =
+      dynamic_world->GetNodesByLaneId(target_lane_virtual_id);
+  for (const auto* target_lane_node : target_lane_nodes) {
+    AgentInfo target_lane_agnet_info{
+        target_lane_node->node_agent_id(),
+        target_lane_node->node_s() - ego_s,
+        target_lane_node->node_length() * 0.5,
+        target_lane_node->node_speed(),
+    };
+
+    agent_info_.emplace_back(std::move(target_lane_agnet_info));
+  }
+
+  std::sort(agent_info_.begin(), agent_info_.end(),
+            [&](AgentInfo& a, AgentInfo& b) -> bool {
+              return a.center_s < b.center_s;
+            });
+
+  // ego state info
+  ego_s_ = ego_s;
+  const auto& init_point = ego_state_manager->planning_init_point();
+  ego_v_ = init_point.v;
+  ego_a_ = init_point.a;
+  lon_state_.p = 0.0;
+  lon_state_.v = ego_v_;
+  lon_state_.a = ego_a_;
+  lon_state_.j = 0.0;
+  lon_state_.t = 0.0;
+
+  ego_cart_point_.first = ego_state_manager->ego_pose().x;
+  ego_cart_point_.second = ego_state_manager->ego_pose().y;
+
+  v_suggestted_ = ego_state_manager->ego_v_cruise();
+  auto v_cruise_speed = ego_state_manager->ego_v_cruise_upper();
+  double speed_limit = 0.0;
+  SpeedLimitType speed_limit_type = SpeedLimitType::NONE;
+  if (session_->planning_context().speed_limit_decider_output().GetSpeedLimit(
+          &speed_limit, &speed_limit_type)) {
+    if (is_merge_change_) {
+      v_adjust_speed_limit_ = std::max(v_cruise_speed, speed_limit);
+    } else {
+      if (speed_limit_type == SpeedLimitType::CURVATURE) {
+        v_adjust_speed_limit_ = std::min(v_cruise_speed, speed_limit);
+      } else {
+        v_adjust_speed_limit_ = std::max(v_cruise_speed, speed_limit);
+      }
+    }
+  } else {
+    v_adjust_speed_limit_ = v_cruise_speed;
+  }
+  // double v_sdmap_limit = 0.0;
+  // if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
+  //   if (session_->environmental_model().get_route_info()->get_sdmap_valid())
+  //   {
+  //     const auto navi_road_info = session_->environmental_model()
+  //                                     .get_route_info()
+  //                                     ->get_sd_map()
+  //                                     .GetNaviRoadInfo();
+  //     if (navi_road_info != std::nullopt) {
+  //       v_sdmap_limit = navi_road_info.value().cur_road_speed_limit() / 3.6;
+  //     }
+  //   }
+  // }
+  // init sample space
+  st_sample_space_base_.Init(target_lane_nodes, ego_s);
+
+  // calc flow vel
+  StitchLastBestPoly();
+  min_cost_traj_ptr_ = nullptr;      // clear last ptr;
+  sample_trajs_.clear();
+
+  CalcTargetLaneObjsFlowVel();
+  CalcTargetLaneVehDensity();
+
+  RunSampleSceneStateMachine();
+
+  // sample v upper and lower
+  bool is_split_map_change =
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
+       lane_change_source_ == MAP_REQUEST &&
+       route_info_output.mlc_decider_scene_type_info.mlc_scene_type !=
+           MERGE_SCENE);
+  speed_adjust_range_.first = std::fmin(
+      config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
+  speed_adjust_range_.first =
+      v_adjust_speed_limit_ * 1.05 > ego_v_
+          ? std::fmin(v_adjust_speed_limit_ * 1.05, speed_adjust_range_.first)
+          : ego_v_;
+  speed_adjust_range_.first = std::fmin(speed_adjust_range_.first, 130.0 / 3.6);
+  speed_adjust_range_.second =
+      is_merge_change_ && merge_stop_line_distance_ <= 20.0
+          ? 0.0
+          : std::fmax(config_.sample_v_lower,
+                      ego_v_ - config_.maximum_speed_adjustment);
+  double suggested_v_lower =
+      std::fmin(target_lane_objs_flow_vel_, v_adjust_speed_limit_);
+  speed_adjust_range_.second =
+      !is_merge_change_
+          ? (suggested_v_lower / 1.8) > ego_v_
+                ? ego_v_
+                : std::fmax(suggested_v_lower / 1.8,
+                            ego_v_ - config_.maximum_speed_adjustment)
+          : speed_adjust_range_.second;
+  return !agent_info_.empty();
+}
+
+bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  boundary_merge_point_valid_ = session_->planning_context()
+                                    .ego_lane_road_right_decider_output()
+                                    .boundary_merge_point_valid;
+
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+
+  is_nearing_ramp_ =
+      session_->planning_context().lane_change_decider_output().is_nearing_ramp;
+
+  distance_to_ramp_ = route_info_output.dis_to_ramp;
+
+  const auto& merge_point_info =
+      route_info_output.map_merge_points_info.empty()
+          ? virtual_lane_mgr->get_current_lane()->get_map_merge_point_info()
+          : route_info_output.map_merge_points_info.front();
+  const auto& function_info = session_->environmental_model().function_info();
+  distance_to_merge_point_ = NL_NMAX;
+  distance_to_road_split_ = NL_NMAX;
+  distance_to_road_merge_ = NL_NMAX;
+  const auto& llane = virtual_lane_mgr->get_left_lane();
+  const auto& rlane = virtual_lane_mgr->get_right_lane();
+  bool is_left_edge_side_lane = llane == nullptr;
+  bool is_right_edge_side_lane = rlane == nullptr;
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        SPLIT_SCENE) {
+      distance_to_road_split_ =
+          route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point;
+    } else if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+               MERGE_SCENE) {
+      if (merge_point_info.merge_type != NONE_MERGE) {
+        distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
+      }
+    }
+  }
+
+  if (is_nearing_ramp_ && distance_to_ramp_ < kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = distance_to_ramp_;
+    return true;
+  } else if (virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task() &&
+             distance_to_ramp_ < kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = distance_to_ramp_;
+    return true;
+  } else if (virtual_lane_mgr->get_current_lane()
+                 ->is_nearing_split_mlc_task() &&
+             distance_to_road_split_ < kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = distance_to_road_split_;
+    return true;
+  } else if (lane_change_source_ == MERGE_REQUEST) {
+    if (boundary_merge_point_valid_) {
+      const auto& boundary_merge_point =
+          session_->planning_context()
+              .ego_lane_road_right_decider_output()
+              .boundary_merge_point;
+      merge_stop_line_distance_ =
+          std::hypot(boundary_merge_point.x - ego_cart_point_.first,
+                     boundary_merge_point.y - ego_cart_point_.second);
+      return true;
+    } else {
+      if ( distance_to_merge_point_ < kDistanceToMapRequestPoint &&
+          ((is_left_edge_side_lane &&
+            merge_point_info.merge_type == MERGE_TO_RIGHT) ||
+           (is_right_edge_side_lane &&
+            merge_point_info.merge_type == MERGE_TO_LEFT))) {
+        merge_stop_line_distance_ = distance_to_merge_point_;
+        return true;
+      } else if (distance_to_road_split_ < kDistanceToMapRequestPoint ||
+                 distance_to_merge_point_ < kDistanceToMapRequestPoint ||
+                 is_in_merge_region_) {
+        merge_stop_line_distance_ =
+            std::fmin(distance_to_merge_point_, distance_to_road_split_);
+        return true;
+      }
+    }
+  } else if (lane_change_source_ == MAP_REQUEST &&
+             (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+                  MERGE_SCENE ||
+              route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+                  SPLIT_SCENE)) {
+    bool is_ramp_to_main =
+        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE;
+    if (boundary_merge_point_valid_) {
+      const auto& boundary_merge_point =
+          session_->planning_context()
+              .ego_lane_road_right_decider_output()
+              .boundary_merge_point;
+      auto current_merge_stop_line_distance =
+          std::hypot(boundary_merge_point.x - ego_cart_point_.first,
+                     boundary_merge_point.y - ego_cart_point_.second);
+      merge_stop_line_distance_ =
+          is_ramp_to_main
+              ? current_merge_stop_line_distance
+              : current_merge_stop_line_distance - route_info_output.lsl_length;
+      return true;
+    } else {
+      if (is_ramp_to_main) {
+        bool is_nearing_merge_point =
+            distance_to_merge_point_ < kDistanceToMapRequestPoint &&
+            ((is_left_edge_side_lane &&
+              merge_point_info.merge_type == MERGE_TO_RIGHT) ||
+             (is_right_edge_side_lane &&
+              merge_point_info.merge_type == MERGE_TO_LEFT));
+        if (is_nearing_merge_point) {
+          merge_stop_line_distance_ = distance_to_merge_point_;
+          return true;
+        } else if (distance_to_merge_point_ < kDistanceToMapRequestPoint ||
+                   is_in_merge_region_) {
+          merge_stop_line_distance_ = distance_to_merge_point_;
+          return true;
+        }
+      } else {
+        merge_stop_line_distance_ =
+            distance_to_road_split_ - route_info_output.lsl_length;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
+  if (min_cost_traj_ptr_ != nullptr) {
+    // step1: get t hit by current ego point
+    std::vector<double> s_vec(kPlanningHorizions, 0.0);
+    std::vector<double> t_vec(kPlanningHorizions, 0.0);
+
+    for (size_t i = 1; i < kPlanningHorizions; ++i) {
+      double s_delta = min_cost_traj_ptr_->CalcS(i * kPlanningStep) -
+                       min_cost_traj_ptr_->CalcS((i - 1) * kPlanningStep);
+      s_vec[i] = s_vec[i - 1] + s_delta;  // 累计和构建
+      t_vec[i] = i * kPlanningStep;
+    }
+    double delta_s =
+        std::hypot(ego_cart_point_.first - last_ego_cart_point_.first,
+                   ego_cart_point_.second - last_ego_cart_point_.second);
+    ILOG_DEBUG << "Delta s between the adjacent frames: " << delta_s;
+
+    auto iter_delta_s = std::lower_bound(s_vec.begin(), s_vec.end(), delta_s);
+    if (iter_delta_s == s_vec.end()) {
+      --iter_delta_s;
+    }
+
+    size_t index = std::distance(s_vec.begin(), iter_delta_s);
+    size_t next_index = (index + 1 < kPlanningHorizions) ? index + 1 : index;
+    double s_curr = s_vec[index];
+    double s_next = s_vec[next_index];
+    double t_curr = t_vec[index];
+    double t_next = t_vec[next_index];
+
+    double t_hit = t_curr;
+    if (s_next > s_curr) {
+      t_hit += (delta_s - s_curr) / (s_next - s_curr) * (t_next - t_curr);
+    }
+
+    ILOG_DEBUG << "interpolated t_hit: " << t_hit;
+
+    // step2: resample the last best traj
+    const double resample_t = min_cost_traj_ptr_->poly().T() - t_hit;
+    const double resample_v = min_cost_traj_ptr_->arrived_v();
+    QuarticPolyState resample_start{ego_s_, ego_v_, ego_a_,
+                                    0.0};  // bind p0, v0, a0, ve, ae
+    QuarticPolyState resample_end{0.0, resample_v, 0.0, resample_t};
+    QuarticPolynomial resample_polynomial(resample_start, resample_end);
+    stitched_last_best_quartic_poly_ptr_ =
+        std::make_shared<SampleQuarticPolynomialCurve>(
+            resample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
+            weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
+            weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
+            weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+            weight_speed_change_, weight_leading_veh_follow_s_,
+            weight_jerk_limit_, front_edge_to_rear_axle_,
+            rear_edge_to_rear_axle_,config_);
+    const double stitched_poly_checked_s =
+        stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
+    planning::speed::STPoint stitched_poly_checked_lower_st_point,
+        stitched_poly_checked_upper_st_point;
+    st_sample_space_base_.GetBorderByAvailable(
+        stitched_poly_checked_s, evaulation_t_,
+        &stitched_poly_checked_lower_st_point,
+        &stitched_poly_checked_upper_st_point);
+    stitched_last_best_quartic_poly_ptr_->set_end_point_matched_gap_front_id(
+        stitched_poly_checked_upper_st_point.agent_id());
+    stitched_last_best_quartic_poly_ptr_->set_end_point_matched_gap_back_id(
+        stitched_poly_checked_lower_st_point.agent_id());
+  }
+}
+
+void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
+  //  sample scene state machine
+  if (sample_scene_ == NormalSampleScene ||
+      sample_scene_ == DecelerationPriorityScene) {
+    if (std::fabs(target_lane_objs_flow_vel_ - ego_v_) >
+            kJudePurseFlowVelValue &&
+        traffic_density_status_ == Congested) {
+      count_normal_to_hover_state_ =
+          std::min(count_normal_to_hover_state_ + 2, kNormalToHoverThreshold);
+    } else {
+      count_normal_to_hover_state_ =
+          std::max(count_normal_to_hover_state_ - 1, 0);
+    }
+
+    // smooth the count
+    // count_normal_to_hover_state_ = count_normal_to_hover_state_ * 0.9 + 1;
+    if (count_normal_to_hover_state_ >= kNormalToHoverThreshold &&
+        target_lane_objs_flow_vel_ >= 1.0) {
+      sample_scene_ = PurseFlowVelScene;
+      count_normal_to_hover_state_ = 0;  // reset
+      ClearStitchedPolyPtr();
+    }
+  } else if (sample_scene_ == PurseFlowVelScene ||
+             sample_scene_ == DecelerationPriorityScene) {
+    if (traffic_density_status_ != Congested) {
+      count_hover_to_normal_state_ =
+          std::min(count_hover_to_normal_state_ + 2, kHoverToNormalThreshold);
+    } else {
+      count_hover_to_normal_state_ =
+          std::max(count_hover_to_normal_state_ - 1, 0);
+    }
+
+    if (count_hover_to_normal_state_ >= kHoverToNormalThreshold) {
+      sample_scene_ = NormalSampleScene;
+      count_hover_to_normal_state_ = 0;
+      ClearStitchedPolyPtr();
+    }
+  }
+
+  if (IsInDeceleartionScene()) {
+    bool is_not_use_gap_select = IsNotUseGapSelect();
+    if (sample_scene_ == PurseFlowVelScene && is_not_use_gap_select) {
+      v_suggestted_ = target_lane_objs_flow_vel_;
+      SetPurseFlowVelSceneWeight();
+    } else {
+      sample_scene_ = DecelerationPriorityScene;
+      count_hover_to_normal_state_ = 0;
+      count_normal_to_hover_state_ = 0;
+      CalcDistanceToStopPoint();
+      SetDeclerationSceneWeight();
+      ClearStitchedPolyPtr();
+      is_in_deceleartion_scene_ = true;
+    }
+  } else {
+    SetNormalSceneWeight();
+    is_in_deceleartion_scene_ = false;
+    if (sample_scene_ == DecelerationPriorityScene) {
+      sample_scene_ = NormalSampleScene;
+    }
+  }
+}
+
+void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
+  weight_match_gap_vel_ = config_.normal_scene_weight_match_gap_vel;
+  weight_match_gap_s_ = config_.normal_scene_weight_match_gap_s;
+  weight_follow_vel_ = config_.normal_scene_weight_follow_vel;
+  weight_stop_line_ = config_.normal_scene_weight_stop_line;
+  weight_leading_safe_s_ = config_.normal_scene_weight_leading_safe_s;
+  weight_leading_safe_v_ = config_.normal_scene_weight_leading_safe_v;
+  weight_vel_variable_ = config_.normal_scene_weight_vel_variable;
+  weight_gap_avaliable_ = config_.normal_scene_weight_gap_available;
+  weight_acc_limit_ = config_.normal_scene_weight_acc_limit;
+  weight_stop_penalty_ = config_.normal_scene_weight_stop_penalty;
+  weight_speed_change_ = config_.normal_scene_weight_speed_change;
+  weight_leading_veh_follow_s_ =
+      config_.normal_scene_weight_leading_veh_follow_s;
+  weight_jerk_limit_ = config_.normal_scene_weight_jerk_limit;
+}
+
+void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
+  weight_match_gap_vel_ = config_.purse_flow_vel_scene_weight_match_gap_vel;
+  weight_match_gap_s_ = config_.purse_flow_vel_scene_weight_match_gap_s;
+  weight_follow_vel_ = config_.purse_flow_vel_scene_weight_follow_vel;
+  weight_stop_line_ = config_.purse_flow_vel_scene_weight_stop_line;
+  weight_leading_safe_s_ = config_.purse_flow_vel_scene_weight_leading_safe_s;
+  weight_leading_safe_v_ = config_.purse_flow_vel_scene_weight_leading_safe_v;
+  weight_vel_variable_ = config_.purse_flow_vel_scene_weight_vel_variable;
+  weight_gap_avaliable_ = config_.purse_flow_vel_scene_weight_gap_available;
+  weight_acc_limit_ = config_.purse_flow_vel_scene_weight_acc_limit;
+  weight_stop_penalty_ = config_.purse_flow_vel_scene_weight_stop_penalty;
+  weight_speed_change_ = config_.purse_flow_vel_scene_weight_speed_change;
+  weight_leading_veh_follow_s_ =
+      config_.purse_flow_vel_scene_weight_leading_veh_follow_s;
+  weight_jerk_limit_ = config_.purse_flow_vel_scene_weight_jerk_limit;
+}
+
+void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
+  weight_match_gap_vel_ = config_.decleration_scene_weight_match_gap_vel;
+  weight_match_gap_s_ = config_.decleration_scene_weight_match_gap_s;
+  weight_follow_vel_ = config_.decleration_scene_weight_follow_vel;
+  weight_stop_line_ = config_.decleration_scene_weight_stop_line;
+  weight_leading_safe_s_ = config_.decleration_scene_weight_leading_safe_s;
+  weight_leading_safe_v_ = config_.decleration_scene_weight_leading_safe_v;
+  weight_vel_variable_ = config_.decleration_scene_weight_vel_variable;
+  weight_gap_avaliable_ = config_.decleration_scene_weight_gap_available;
+  weight_acc_limit_ = config_.decleration_scene_weight_acc_limit;
+  weight_stop_penalty_ = config_.decleration_scene_weight_stop_penalty;
+  weight_speed_change_ = config_.decleration_scene_weight_speed_change;
+  weight_leading_veh_follow_s_ =
+      config_.decleration_scene_weight_leading_veh_follow_s;
+  weight_jerk_limit_ = config_.decleration_scene_weight_jerk_limit;
+}
+
+double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
+    const double headway_v, const double ego_v,
+    const std::vector<double>& t_gap_ego_v_bp,
+    const std::vector<double>& t_gap_ego_v) {
+  double v_lead_clip = std::max(headway_v, 0.0);
+  double t_gap = interp(ego_v, t_gap_ego_v_bp, t_gap_ego_v);
+  t_gap = t_gap * (0.6 * ego_v * 0.01);  // why?
+  double v_rel = ego_v - v_lead_clip;
+  double distance_hysteresis = ego_v * config_.leading_safe_delay_time;
+  double min_follow_distance = 3.0;
+  double fix_safe_distance = v_rel * ego_v / (2.0 * config_.leading_safe_max_dec);
+  return std::max(min_follow_distance + fix_safe_distance + distance_hysteresis, min_follow_distance);
+}
+bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
+  if (leading_veh_.id != kNoAgentId && leading_veh_.id != -1) {
+    bool is_forced_merge_check = false;
+    double poly_arrived_t = 0.0;
+    double ego_pred_end_s = 0.0;
+    double ego_pred_end_v = 0.0;
+    if (astar_traj_ptr_) {
+      poly_arrived_t = astar_traj_ptr_->GetAStarTraj().back().t;
+      ego_pred_end_s = astar_traj_ptr_->GetAStarTraj().back().s + ego_s_;
+      ego_pred_end_v = astar_traj_ptr_->GetAStarTraj().back().v;
+      is_forced_merge_check = true;
+    } else {
+      poly_arrived_t = min_cost_traj_ptr_->arrived_t();
+      ego_pred_end_s = min_cost_traj_ptr_->CalcS(poly_arrived_t);
+      ego_pred_end_v = min_cost_traj_ptr_->CalcV(poly_arrived_t);
+    }
+    int dex = static_cast<int>(poly_arrived_t / kTimeResolution + 0.51);
+    double traveled_distance = 0.0;
+    double leading_veh_v = 0.0;
+    if (dex < leading_veh_.prediction_path.size()) {
+      traveled_distance = leading_veh_.prediction_path[dex].first;
+      leading_veh_v = leading_veh_.prediction_path[dex].second;
+    } else {
+      if (leading_veh_.prediction_path_valid) {
+        leading_veh_v = leading_veh_.prediction_path.back().second;
+        traveled_distance = leading_veh_.prediction_path.back().first +
+                            leading_veh_v *
+                                (dex - leading_veh_.prediction_path.size()) *
+                                kTimeResolution;
+      } else {
+        leading_veh_v = leading_veh_.v;
+        traveled_distance = leading_veh_.v * poly_arrived_t;
+      }
+    }
+    double buffer_distance = CalcHeadwayDistance(leading_veh_v, ego_pred_end_v,
+                                                 t_gap_ego_v_bp_, t_gap_ego_v_);
+    if (leading_veh_.half_length > 4.0) {
+      buffer_distance += 3.0;
+    }
+    if (ego_pred_end_s >
+        leading_veh_.center_s + ego_s_ + traveled_distance - buffer_distance) {
+      if (is_forced_merge_check) {
+        astar_traj_ptr_.reset();
+        return BestTrajCheck();
+      }
+      std::cout << "ego pred s is exceed upper" << std::endl;
+      min_cost_traj_ptr_ = nullptr;
+      sample_status_ = kEgoPredSExceedLeadOne;
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SamplePolySpeedAdjustDecider::CheckInitVelTraj() {
+  double init_vel_is_ok = true;
+  const double ego_init_vel_pred_end_s = ego_s_ + ego_v_ * kPlanningDuration;
+
+  if (leading_veh_.id != kNoAgentId && leading_veh_.id != -1) {
+    if (ego_init_vel_pred_end_s >
+        leading_veh_.center_s + ego_s_ + leading_veh_.v * evaulation_t_ -
+            CalcHeadwayDistance(leading_veh_.v, ego_v_, t_gap_ego_v_bp_,
+                                t_gap_ego_v_)) {
+      init_vel_is_ok = false;
+    }
+  }
+  if (init_vel_is_ok) {
+    planning::speed::STPoint lower_st_point;
+    planning::speed::STPoint upper_st_point;
+
+    st_sample_space_base_.GetBorderByAvailable(
+        ego_init_vel_pred_end_s, kPlanningDuration, &lower_st_point,
+        &upper_st_point);
+    if (lower_st_point.agent_id() != kNoAgentId) {
+      if (ego_init_vel_pred_end_s < lower_st_point.s() + kBasicSafeDistance ||
+          ego_v_ < lower_st_point.velocity()) {
+        init_vel_is_ok = false;
+        return init_vel_is_ok;
+      }
+    }
+
+    if (upper_st_point.agent_id() != kNoAgentId) {
+      if (ego_init_vel_pred_end_s > upper_st_point.s() - kBasicSafeDistance ||
+          ego_v_ > upper_st_point.velocity()) {
+        init_vel_is_ok = false;
+        return init_vel_is_ok;
+      }
+    }
+  }
+  return init_vel_is_ok;
+}
+
+void SamplePolySpeedAdjustDecider::ClearStitchedPolyPtr() {
+  stitched_last_best_quartic_poly_ptr_ = nullptr;
+}
+
+bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  if ((lane_change_source_ == MERGE_REQUEST) ||
+      ((lane_change_source_ == MAP_REQUEST) &&
+       (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE))) {
+    return true;
+  }
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  if (current_lane.get() == nullptr) {
+    return false;
+  }
+  float32 left_unchangeable_distance = 0.0;
+  if (lane_change_request_ == 1) {
+    const auto& current_lane_line = current_lane->get_left_lane_boundary();
+    float32 compare_point_s = 0.0;
+    for (int i = 0; i < current_lane_line.type_segments_size; i++) {
+      const auto& type_segment = current_lane_line.type_segments[i];
+      compare_point_s += type_segment.length;
+      bool is_changeable =
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
+      if (compare_point_s > ego_s_) {
+        if (!is_changeable)
+          left_unchangeable_distance = compare_point_s - ego_s_;
+        else
+          break;
+      }
+    }
+  } else if (lane_change_request_ == 2) {
+    const auto& current_lane_line = current_lane->get_right_lane_boundary();
+    float32 compare_point_s = 0.0;
+    for (int i = 0; i < current_lane_line.type_segments_size; i++) {
+      const auto& type_segment = current_lane_line.type_segments[i];
+      compare_point_s += type_segment.length;
+      bool is_changeable =
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
+      if (compare_point_s > ego_s_) {
+        if (!is_changeable)
+          left_unchangeable_distance = compare_point_s - ego_s_;
+        else
+          break;
+      }
+    }
+  }
+  if (left_unchangeable_distance < 20)
+    return true;
+  else
+    return false;
+}
+
+void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
+  if (!is_merge_change_) {
+    return;
+  }
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  const auto& virtual_target_lane = lane_change_request_ == 1
+                                        ? virtual_lane_mgr->get_left_lane()
+                                        : virtual_lane_mgr->get_right_lane();
+  if (!current_lane || !virtual_target_lane) {
+    return;
+  }
+  const auto& current_reference_points =
+      current_lane->get_reference_path()->get_points();
+  const auto& target_reference_points =
+      virtual_target_lane->get_reference_path()->get_points();
+  if (!current_reference_points.empty() && !target_reference_points.empty()) {
+    auto comp = [](const ReferencePathPoint& p, const double s) {
+      return p.path_point.s() < s;
+    };
+    size_t count = std::min(current_reference_points.size(),
+                            target_reference_points.size());
+    auto p_first_point =
+        std::lower_bound(current_reference_points.begin(),
+                         current_reference_points.end(), ego_s_, comp);
+    if (p_first_point == current_reference_points.end()) {
+      return;
+    } else {
+      for (size_t current_point =
+               p_first_point - current_reference_points.begin();
+           current_point < count; current_point++) {
+        double ref_y = current_reference_points[current_point].path_point.y() -
+                       target_reference_points[current_point].path_point.y();
+        double ref_x = current_reference_points[current_point].path_point.x() -
+                       target_reference_points[current_point].path_point.x();
+        double target_heading =
+            target_reference_points[current_point].path_point.theta();
+        double ref_distance =
+            std::abs(ref_x * sin(target_heading) - ref_y * cos(target_heading));
+        double target_lane_to_border =
+            lane_change_request_ == 1 ? target_reference_points[current_point]
+                                            .distance_to_right_lane_border
+                                      : target_reference_points[current_point]
+                                            .distance_to_left_lane_border;
+        double lane_width = ref_distance - target_lane_to_border;
+        if (lane_width < (ego_width_ / 2.0 + config_.stop_point_buffer)) {
+          distance_to_stop_point_ =
+              current_reference_points[current_point].path_point.s() - ego_s_;
+          return;
+        }
+      }
+    }
+  }
+}
+
+bool SamplePolySpeedAdjustDecider::CheckTrajAvailable(
+    const SampleQuarticPolynomialCurve& current_traj, const int index) {
+  double cur_s = current_traj.CalcS(index * kEvaluationStep);
+  if (st_sample_space_base_.get_gap_array().empty()) {
+    return false;
+  } else {
+    for (auto gap_array : st_sample_space_base_.get_gap_array()) {
+      if (gap_array.first.s() <= (cur_s - rear_edge_to_rear_axle_) &&
+          (cur_s + front_edge_to_rear_axle_) <= gap_array.second.s()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  if ((lane_change_source_ == MERGE_REQUEST) ||
+      ((lane_change_source_ == MAP_REQUEST) &&
+       ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+        MERGE_SCENE) ||
+      (merge_stop_line_distance_ <= 200.0)))) {
+    return true;
+  }
+  return false;
+}
+
+bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
+  double left_time = distance_to_stop_point_ / std::fmax(ego_v_, kZeroEpsilon);
+  if (!is_merge_change_ || left_time > 6.0) {
+    return false;
+  }
+  double press_line_ratio = CalcPressLineRatio();
+  if(press_line_ratio > 0.2){
+    return true;
+  }
+  state_limit_lower_ = {
+      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      -2.0, 1.2, -2.5, 2.5};
+  StateLimit state_limit_lower = {
+  0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+  -1.5, 1.2, -1.5, 2.5};
+  UniformJerkCurve jerk_curve(state_limit_lower, lon_state_, false);
+  auto arrived_s = jerk_curve.arrived_s();
+  if (arrived_s > distance_to_stop_point_) {
+    return true;
+  }
+  return false;
+}
+
+double SamplePolySpeedAdjustDecider::CalcPressLineRatio() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& virtual_target_lane = lane_change_request_ == 1
+                                        ? virtual_lane_mgr->get_left_lane()
+                                        : virtual_lane_mgr->get_right_lane();
+  if (!virtual_target_lane) {
+    return 0.0;
+  }
+  const auto& target_reference_points =
+      virtual_target_lane->get_reference_path()->get_points();
+  if (!target_reference_points.empty()) {
+    auto comp = [](const ReferencePathPoint& p, const double s) {
+      return p.path_point.s() < s;
+    };
+    auto p_first_point =
+        std::lower_bound(target_reference_points.begin(),
+                         target_reference_points.end(), ego_s_, comp);
+    if (p_first_point == target_reference_points.end()) {
+      p_first_point--;
+    }
+    double ref_y = ego_cart_point_.second - p_first_point->path_point.y();
+    double ref_x = ego_cart_point_.first - p_first_point->path_point.x();
+    double target_heading = p_first_point->path_point.theta();
+    double ref_distance =
+        std::abs(ref_x * sin(target_heading) - ref_y * cos(target_heading));
+    double target_lane_to_border =
+        lane_change_request_ == 1
+            ? p_first_point->distance_to_right_lane_border
+            : p_first_point->distance_to_left_lane_border;
+    double lane_width = ref_distance - target_lane_to_border;
+    if(lane_width > ego_width_ / 2.0){
+      return 0.0;
+    }else if(lane_width < -ego_width_ / 2.0){
+      return 1.0;
+    }else{
+      return (0.5 - lane_width / ego_width_);
+    }
+  }
+  return 0.0;
+}
+
+bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
+  GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);
+  STNode start_node(0.0, 0.0, ego_v_, ego_a_);
+  state_limit_upper_ = {
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      -2.0, 1.2,
+      -2.5, 2.5};
+  double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_
+                             ? distance_to_stop_point_
+                             : 0.0;
+  astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
+      start_node, goal_state, &st_sample_space_base_, merge_point_s,
+      leading_veh_, state_limit_upper_, state_limit_lower_,
+      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_);
+  return astar_traj_ptr_->IsValid();
+}
+void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
+                                                const double evaluate_cost_time,
+                                                const double all_cost_time) {
+#ifdef ENABLE_PROTO_LOG
+  if (min_cost_traj_ptr_ != nullptr) {
+    JSON_DEBUG_VALUE(
+        "end_point_matched_gap_front_id",
+        static_cast<int>(min_cost_traj_ptr_->end_point_matched_gap_front_id()));
+    JSON_DEBUG_VALUE(
+        "end_point_matched_gap_back_id",
+        static_cast<int>(min_cost_traj_ptr_->end_point_matched_gap_back_id()));
+  }
+  auto sample_poly_speed_pb_info = DebugInfoManager::GetInstance()
+                                       .GetDebugInfoPb()
+                                       ->mutable_st_search_decider_info()
+                                       ->mutable_sample_poly_speed_info();
+
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_dist_to_ramp(distance_to_ramp_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_is_nearing_ramp(is_nearing_ramp_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_is_in_merge_region(is_in_merge_region_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_merge_emegency_distance(merge_stop_line_distance_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_distance_to_road_merge(distance_to_road_merge_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_distance_to_road_split(distance_to_road_split_);
+
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()->set_ego_s(
+      ego_s_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()->set_ego_v(
+      ego_v_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()->set_ego_acc(
+      ego_a_);
+
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_v_suggestted(v_suggestted_);
+
+  for (size_t i = 0; i < agent_info_.size(); i++) {
+    auto* agent_info = sample_poly_speed_pb_info->mutable_agent_infos()->Add();
+    agent_info->set_id(agent_info_[i].id);
+    agent_info->set_center_s(agent_info_[i].center_s);
+    agent_info->set_half_length(agent_info_[i].half_length);
+    agent_info->set_v(agent_info_[i].v);
+  }
+
+  sample_poly_speed_pb_info->mutable_leading_veh_info()->set_id(-1);
+  if (leading_veh_.id > 0) {
+    sample_poly_speed_pb_info->mutable_leading_veh_info()->set_id(
+        leading_veh_.id);
+    sample_poly_speed_pb_info->mutable_leading_veh_info()->set_center_s(
+        leading_veh_.center_s);
+    sample_poly_speed_pb_info->mutable_leading_veh_info()->set_half_length(
+        leading_veh_.half_length);
+    sample_poly_speed_pb_info->mutable_leading_veh_info()->set_v(
+        leading_veh_.v);
+  }
+
+  const auto& search_path = session_->mutable_planning_context()
+                                ->mutable_lane_change_decider_output()
+                                .st_search_vec;
+
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->mutable_current_sample_match_gap_id()
+      ->set_gap_front_id(kNoAgentId);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->mutable_current_sample_match_gap_id()
+      ->set_gap_back_id(kNoAgentId);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->mutable_stitched_sample_match_gap_id()
+      ->set_gap_front_id(kNoAgentId);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->mutable_stitched_sample_match_gap_id()
+      ->set_gap_back_id(kNoAgentId);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_sample_status(0);
+  if (min_cost_traj_ptr_ != nullptr) {
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->set_sample_status(1);
+    for (double t = 0; t < kPlanningDuration + 0.21; t += 0.2) {
+      const double s = min_cost_traj_ptr_->CalcS(t) - ego_s_;
+      sample_poly_speed_pb_info->mutable_sample_s_vec()->Add(s);
+      sample_poly_speed_pb_info->mutable_sample_v_vec()->Add(
+          min_cost_traj_ptr_->CalcV(t));
+      sample_poly_speed_pb_info->mutable_sample_a_vec()->Add(
+          min_cost_traj_ptr_->CalcAcc(t));
+      sample_poly_speed_pb_info->mutable_sample_j_vec()->Add(
+          min_cost_traj_ptr_->CalcJerk(t));
+      sample_poly_speed_pb_info->mutable_sample_t_vec()->Add(t);
+    }
+
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_current_sample_match_gap_id()
+        ->set_gap_front_id(
+            min_cost_traj_ptr_->end_point_matched_gap_front_id());
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_current_sample_match_gap_id()
+        ->set_gap_back_id(min_cost_traj_ptr_->end_point_matched_gap_back_id());
+
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_follow_vel_cost(min_cost_traj_ptr_->follow_vel_cost().cost());
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_stop_line_cost(min_cost_traj_ptr_->stop_line_cost().cost());
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_leading_veh_safe_cost(
+            min_cost_traj_ptr_->leading_veh_safe_cost().cost());
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_vel_variable_cost(
+            min_cost_traj_ptr_->speed_variable_cost().cost());
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_gap_avaliable_cost(
+            min_cost_traj_ptr_->gap_avaliable_cost().cost());
+    double match_gap_cost_s_sum = 0.0;
+    double match_gap_cost_v_sum = 0.0;
+    double match_gap_cost_center_sum = 0.0;
+    const auto& anchor_points_match_gap_cost =
+        min_cost_traj_ptr_->anchor_points_match_gap_cost();
+    match_gap_cost_s_sum = anchor_points_match_gap_cost.match_s_cost();
+    match_gap_cost_v_sum = anchor_points_match_gap_cost.match_v_cost();
+    match_gap_cost_center_sum =
+        anchor_points_match_gap_cost.match_gap_center_cost();
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_match_gap_cost_s_sum(match_gap_cost_s_sum);
+
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_match_gap_cost_v_sum(match_gap_cost_v_sum);
+    sample_poly_speed_pb_info->mutable_sample_print_table_info()
+        ->mutable_best_poly_cost_info()
+        ->set_match_gap_cost_center_sum(match_gap_cost_center_sum);
+  }
+
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()->set_flow_vel(
+      target_lane_objs_flow_vel_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_sample_cost_time(sample_cost_time);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_all_cost_time(all_cost_time);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_evaluate_cost_time(evaluate_cost_time);
+
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_sample_scene(sample_scene_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_count_normal_to_hover_state(count_normal_to_hover_state_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_count_hover_to_normal_state(count_hover_to_normal_state_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_traffic_density(traffic_density_);
+  sample_poly_speed_pb_info->mutable_sample_print_table_info()
+      ->set_traffic_density_status(traffic_density_status_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_sample_delta_t(
+      delta_t_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_sample_delta_v(
+      delta_v_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_sample_upper_v(
+      speed_adjust_range_.first);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_sample_lower_v(
+      speed_adjust_range_.second);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_match_gap_vel(
+      weight_match_gap_vel_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_match_gap_s(
+      weight_match_gap_s_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_follow_vel(
+      weight_follow_vel_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_stop_line(
+      weight_stop_line_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_leading_safe_s(
+      weight_leading_safe_s_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_leading_safe_v(
+      weight_leading_safe_v_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_vel_variable(
+      weight_vel_variable_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_gap_avaliable(
+      weight_gap_avaliable_);
+  sample_poly_speed_pb_info->mutable_sample_param()->set_weight_acc_limit(
+      weight_acc_limit_);
+#endif
+}
+}  // namespace planning

@@ -1,0 +1,162 @@
+{
+    // 使用 IntelliSense 了解相关属性。
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) pp open loop",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tools/planning_player/pp",
+            "args": [
+                "--play",
+                "/data_cold/abu_zone/autoparse/chery_m32t_52927/trigger/20251229/20251229-13-58-29/data_collection_CHERY_M32T_52927_EVENT_KEY_2025-12-29-13-58-29_no_camera.bag",
+            ],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make unit_test",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(gdb) pp close loop",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tools/planning_player/pp",
+            "args": [
+                "--play",
+                "/data_cold/abu_zone/autoparse/bestune_e541_00105/common_frame/20251018/20251018-11-37-03/data_collection_BESTUNE_E541_00105_ALL_MANUAL_2025-10-18-11-37-03_no_camera.bag",
+                "--close-loop"
+            ],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make unit_test",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(gdb) pp no debug open loop",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tools/planning_player/pp",
+            "args": [
+                "--play",
+                "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240606/20240606-15-01-45/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-06-15-01-45_no_camera.bag",
+                "--no-debug"
+            ],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make unit_test",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(gdb) pp no debug close loop",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/tools/planning_player/pp",
+            "args": [
+                "--play",
+                "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20240606/20240606-15-01-45/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2024-06-06-15-01-45_no_camera.bag",
+                "--no-debug",
+                "--close-loop"
+            ],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make unit_test",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(gdb) 启动",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/usr/bin/mainboard",
+            "args": [
+                "-d",
+                "/asw/planning/planning.dag"
+            ],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make build",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "(gdb) unit_test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/test/unit_test",
+            "args": [],
+            "stopAtEntry": false, // 不在调试入口停留
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "为 gdb 启用整齐打印",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            // "preLaunchTask": "make unit_test",
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "Python: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${fileDirname}"
+        }
+    ]
+}

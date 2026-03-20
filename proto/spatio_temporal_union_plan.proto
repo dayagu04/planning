@@ -1,0 +1,12 @@
+syntax = "proto2";
+package planning.common;
+import "basic_types.proto";
+
+message SpatioTemporalUnionPlan {
+  optional bool st_dp_is_sucess = 1;
+  repeated Point2d origin_refline_points = 2;
+  repeated TrajectoryPoint trajectory_points = 3;
+  optional double cost_time = 4;
+  optional bool enable_using_st_plan = 5;
+}
+

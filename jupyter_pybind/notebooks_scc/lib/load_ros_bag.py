@@ -1,0 +1,1416 @@
+from lib.load_struct import *
+from lib.load_rotate import *
+from lib.load_json import *
+import lib.load_global_var as global_var
+
+sys.path.append('../../python_proto')
+from planning_debug_info_pb2 import *
+from control_debug_info_pb2 import *
+from ehr_pb2 import *
+from ehr_sdmap_pb2 import *
+from map_data_pb2 import *
+
+import numpy as np
+import time
+import ipywidgets
+from bokeh.io import output_notebook, push_notebook
+from bokeh.layouts import layout, column, row
+from IPython.core.display import display, HTML
+from bokeh.models import Label
+import ipywidgets as widgets
+from IPython.display import display
+from ipywidgets import Button, HBox
+from IPython.display import clear_output
+import time
+import threading
+import ipywidgets
+from collections import OrderedDict, defaultdict, namedtuple
+from functools import  partial
+from bokeh.models import ColumnDataSource
+import bokeh.plotting as bkp
+from bokeh.models import WheelZoomTool, HoverTool, TapTool, CustomJS, CheckboxGroup
+from google.protobuf.json_format import MessageToJson
+import rosbag
+import rospy
+import time
+# from pympler import asizeof
+# from google.protobuf import descriptor
+global_var.init()
+
+
+class LoadRosbag:
+  def __init__(self, path) -> None:
+    self.bag_path = path
+    self.bag = rosbag.Bag(path)
+    # loclization msg
+    self.loc_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    self.origin_loc_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    self.old_loc_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # road msg
+    self.road_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # fusion object msg
+    self.fus_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # me object msg
+    self.mobileye_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    # rdg object msg
+    self.rdg_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    self.lidar_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # radar_fm object msg
+    self.radar_fm_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # radar_fl object msg
+    self.radar_fl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # radar_fr object msg
+    self.radar_fr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # radar_rl object msg
+    self.radar_rl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # radar_rr object msg
+    self.radar_rr_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # vehicle service msg
+    self.vs_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    # car pos in local coordinates
+
+    # prediction_msg
+    self.prediction_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # planning msg
+    self.plan_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # planning debug msg
+    self.plan_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
+
+    # planning debug msg
+    self.plan_debug_origin_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
+
+    # control msg
+    self.ctrl_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # control debug msg
+    self.ctrl_debug_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
+
+    # fusion parking slot msg
+    self.fus_parking_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
+
+    # soc state machine
+    self.soc_state_msg = {'t':[], 'data':[], 'json':[], 'enable':[], 'timestamp':[]}
+
+    # ehr static map msg
+    self.ehr_static_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # ehr sd map msg
+    self.ehr_sd_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # ehr sdpro map msg
+    self.ehr_sdpro_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # fusion ground line msg
+    self.fus_ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # fusion speed bump msg
+    self.fus_speed_bump_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # fusion occ object msg
+    self.fus_occ_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # uss perception msg
+    self.uss_perception_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # uss wave msg
+    self.uss_wave_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # planning hmi msg
+    self.planning_hmi_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    self.mobileye_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+    self.rdg_lane_lines_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
+
+    self.lane_topo_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception ground line msg
+    self.rdg_ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception parking slot msg
+    self.rdg_parking_slot_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception 3d general objects msg
+    self.rdg_general_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception 3d occupancy objects msg
+    self.rdg_occ_objects_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # perception parking lane line msg
+    self.rdg_parking_lane_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
+
+    # time offset
+    t0 = 0
+
+    # is_new_loc
+    topics = self.bag.get_type_and_topic_info().topics
+    for topic in topics:
+      if topic == "/iflytek/localization/egomotion":
+        global_var.set_value('is_new_loc', True)
+
+    if 'E0Y' in self.bag_path:
+        global_var.set_value('car_type', 'CHERY_E0X')
+    elif 'M32T' in self.bag_path:
+        global_var.set_value('car_type', 'CHERY_M32T')
+    elif 'E541' in self.bag_path:
+        global_var.set_value('car_type', 'BESTUNE_E541')
+
+  def load_all_data(self, normal_print = True):
+    print('load bag')
+    scene_type = 'HIGHWAY'
+    start_time = time.time()
+    max_time = 0.0
+    t0 = 0
+    """ try:
+      loc_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"):
+        loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in loc_msg_dict.items():
+        self.loc_msg['t'].append(t)
+        self.loc_msg['data'].append(msg)
+        self.loc_msg['timestamp'].append(msg.msg_header.stamp)
+      t0 = self.loc_msg['t'][0]
+      print("T0 in loc msg:",t0)
+      self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
+      max_time = max(max_time, self.loc_msg['t'][-1])
+      print('loc_msg time:',self.loc_msg['t'][-1])
+      if len(self.loc_msg['t']) > 0:
+        self.loc_msg['enable'] = True
+      else:
+        self.loc_msg['enable'] = False
+    except Exception as e:
+      self.loc_msg['enable'] = False
+      print('missing /iflytek/localization/egomotion !!!') """
+
+    if global_var.get_value('is_new_loc'):
+      try:
+        loc_msg_dict = {}
+        for topic, msg, t in self.bag.read_messages("/iflytek/localization/egomotion"): # 2.10.0 adapt localization timestamp
+          loc_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        loc_msg_dict = {key: val for key, val in sorted(loc_msg_dict.items(), key = lambda ele: ele[0])}
+        for t, msg in loc_msg_dict.items():
+          self.loc_msg['t'].append(t)
+          self.loc_msg['data'].append(msg)
+          self.loc_msg['timestamp'].append(msg.msg_header.stamp)
+        t0 = self.loc_msg['t'][0]
+        print("T0 in loc msg:",t0)
+        self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
+        max_time = max(max_time, self.loc_msg['t'][-1])
+        print('loc_msg time:',self.loc_msg['t'][-1])
+        if len(self.loc_msg['t']) > 0:
+          self.loc_msg['enable'] = True
+        else:
+          self.loc_msg['enable'] = False
+      except Exception as e:
+        self.loc_msg['enable'] = False
+        print('missing /iflytek/localization/egomotion !!!')
+    else: #加载 旧定位
+      class PositionBoot:
+        def __init__(self,):
+          self.x = 0
+          self.y = 0
+          self.z = 0
+          pass
+
+      class Position:
+        def __init__(self,):
+          self.position_boot = PositionBoot()
+          pass
+
+      class StatusInfo :
+        def __init__(self,):
+          self.mode = 1
+          pass
+      class Status :
+        def __init__(self,):
+          self.status_info = StatusInfo()
+          pass
+      class EulerBoot:
+        def __init__(self,):
+          self.yaw = 0
+          pass
+
+      class Orientation:
+        def __init__(self,):
+          pass
+          self.euler_boot = EulerBoot()
+
+      class VelocityBoot:
+        def __init__(self,):
+          self.vx = 0
+          self.vy = 0
+          self.vz = 0
+          pass
+      class Velocity:
+        def __init__(self,):
+          pass
+          self.velocity_boot = VelocityBoot()
+
+      class OldCvtNewLoc:
+        def __init__(self,):
+          self.position = Position()
+          self.orientation = Orientation()
+          self.status = Status()
+          self.velocity = Velocity()
+      try:
+        loc_msg_dict = {}
+        for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose"):
+          loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        sorted_loc_msg_dict = OrderedDict(sorted(loc_msg_dict.items(), key=lambda ele: ele[0]))
+        for t, msg in sorted_loc_msg_dict.items():
+          self.loc_msg['t'].append(t)
+          self.loc_msg['timestamp'].append(msg.msg_header.timestamp)
+          cvt_msg = OldCvtNewLoc()
+          cvt_msg.position.position_boot.x = msg.pose.local_position.x
+          cvt_msg.position.position_boot.y = msg.pose.local_position.y
+          cvt_msg.orientation.euler_boot.yaw = msg.pose.euler_angles.yaw
+          cvt_msg.velocity.velocity_boot.vx = msg.pose.linear_velocity_from_wheel
+          cvt_msg.status.status_info.mode = 2
+          self.loc_msg['data'].append(cvt_msg)
+        t0 = self.loc_msg['t'][0]
+        print("T0 in loc msg:",t0)
+        self.loc_msg['t'] = [tmp - t0  for tmp in self.loc_msg['t']]
+        max_time = max(max_time, self.loc_msg['t'][-1])
+        print('loc_msg time:',self.loc_msg['t'][-1])
+        if len(self.loc_msg['t']) > 0:
+          self.loc_msg['enable'] = True
+        else:
+          self.loc_msg['enable'] = False
+      except Exception as e:
+        self.loc_msg['enable'] = False
+        print('missing /iflytek/localization/ego_pose !!!')
+        print(e)
+
+      try:
+        origin_loc_msg_dict = {}
+        for topic, msg, t in self.bag.read_messages("/iflytek/localization/ego_pose_origin"):
+          origin_loc_msg_dict[msg.msg_header.timestamp / 1e6] = msg
+        sorted_loc_msg_dict = OrderedDict(sorted(origin_loc_msg_dict.items(), key=lambda ele: ele[0]))
+        for t, msg in sorted_loc_msg_dict.items():
+          self.origin_loc_msg['t'].append(t)
+          self.origin_loc_msg['timestamp'].append(msg.msg_header.timestamp)
+          cvt_msg = OldCvtNewLoc()
+          cvt_msg.position.position_boot.x = msg.pose.local_position.x
+          cvt_msg.position.position_boot.y = msg.pose.local_position.y
+          cvt_msg.orientation.euler_boot.yaw = msg.pose.euler_angles.yaw
+          cvt_msg.velocity.velocity_boot.vx = msg.pose.linear_velocity_from_wheel
+          cvt_msg.status.status_info.mode = 2
+          self.origin_loc_msg['data'].append(cvt_msg)
+
+        self.origin_loc_msg['t'] = [tmp - t0  for tmp in self.origin_loc_msg['t']]
+        max_time = max(max_time, self.origin_loc_msg['t'][-1])
+        print('loc_msg time:',self.origin_loc_msg['t'][-1])
+        if len(self.origin_loc_msg['t']) > 0:
+          self.origin_loc_msg['enable'] = True
+        else:
+          self.origin_loc_msg['enable'] = False
+      except Exception as e:
+        self.origin_loc_msg['enable'] = False
+        print('missing /iflytek/localization/ego_pose_origin !!!')
+
+    # load road_fusion msg
+    try:
+      road_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/road_fusion"):
+        road_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      road_msg_dict = {key: val for key, val in sorted(road_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in road_msg_dict.items():
+        self.road_msg['t'].append(t)
+        self.road_msg['timestamp'].append(msg.msg_header.stamp)
+        self.road_msg['data'].append(msg)
+      if t0 == 0:
+        t0 = self.road_msg['t'][0]
+      self.road_msg['t'] = [tmp - t0  for tmp in self.road_msg['t']]
+      print('road_msg time:',self.road_msg['t'][-1])
+      if len(self.road_msg['t']) > 0:
+        self.road_msg['enable'] = True
+      else:
+        self.road_msg['enable'] = False
+    except Exception as e:
+      self.road_msg['enable'] = False
+      print('missing /iflytek/fusion/road_fusion topic !!!')
+
+
+    # load mobileye lane_lines msg
+    try:
+      mobileye_lane_lines_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/lane_lines"):
+        # print(msg.msg_header.stamp)
+        mobileye_lane_lines_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      sorted_mobileye_lane_lines_msg_dict = OrderedDict(sorted(mobileye_lane_lines_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_mobileye_lane_lines_msg_dict.items():
+        self.mobileye_lane_lines_msg['t'].append(t)
+        self.mobileye_lane_lines_msg['timestamp'].append(msg.msg_header.stamp)
+        self.mobileye_lane_lines_msg['data'].append(msg)
+      self.mobileye_lane_lines_msg['t'] = [tmp - t0  for tmp in self.mobileye_lane_lines_msg['t']]
+      print('mobileye_lane_lines_msg time:',self.mobileye_lane_lines_msg['t'][-1])
+      if len(self.mobileye_lane_lines_msg['t']) > 0:
+        self.mobileye_lane_lines_msg['enable'] = True
+      else:
+        self.mobileye_lane_lines_msg['enable'] = False
+    except Exception as e:
+      self.mobileye_lane_lines_msg['enable'] = False
+      print('missing /mobileye/camera_perception/lane_lines topic !!!')
+
+    # load rdg lane_lines msg
+    try:
+      rdg_lane_lines_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_lines"):
+        rdg_lane_lines_msg_dict[msg.isp_timestamp / 1e6] = msg
+      # rdg_lane_lines_msg_dict = {key: val for key, val in sorted(rdg_lane_lines_msg_dict.items(), key = lambda ele: ele[0])}
+      sorted_rdg_lane_lines_msg_dict = OrderedDict(sorted(rdg_lane_lines_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_rdg_lane_lines_msg_dict.items():
+        self.rdg_lane_lines_msg['t'].append(t)
+        self.rdg_lane_lines_msg['timestamp'].append(msg.isp_timestamp)
+        self.rdg_lane_lines_msg['seq'].append(msg.msg_header.seq)
+        self.rdg_lane_lines_msg['data'].append(msg)
+      self.rdg_lane_lines_msg['t'] = [tmp - t0  for tmp in self.rdg_lane_lines_msg['t']]
+      print('rdg_lane_lines_msg time:',self.rdg_lane_lines_msg['t'][-1])
+      if len(self.rdg_lane_lines_msg['t']) > 0:
+        self.rdg_lane_lines_msg['enable'] = True
+      else:
+        self.rdg_lane_lines_msg['enable'] = False
+    except Exception as e:
+      self.rdg_lane_lines_msg['enable'] = False
+      print('missing /iflytek/camera_perception/lane_lines topic !!!')
+
+    # load lane_topo
+    try:
+      lane_topo_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/lane_topo"):
+        lane_topo_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      sorted_lane_topo_msg_dict = OrderedDict(sorted(lane_topo_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_lane_topo_msg_dict.items():
+        self.lane_topo_msg['t'].append(t)
+        self.lane_topo_msg['timestamp'].append(msg.msg_header.stamp)
+        self.lane_topo_msg['data'].append(msg)
+      self.lane_topo_msg['t'] = [tmp - t0  for tmp in self.lane_topo_msg['t']]
+      print('lane_topo_msg time:',self.lane_topo_msg['t'][-1])
+      if len(self.lane_topo_msg['t']) > 0:
+        self.lane_topo_msg['enable'] = True
+      else:
+        self.lane_topo_msg['enable'] = False
+    except Exception as e:
+      self.lane_topo_msg['enable'] = False
+      print('missing /iflytek/camera_perception/lane_topo topic !!!')
+    # load fusion objects msg
+    try:
+      fus_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/objects"):
+        fus_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      # fus_msg_dict = {key: val for key, val in sorted(fus_msg_dict.items(), key = lambda ele: ele[0])}
+      sorted_fus_msg_dict = OrderedDict(sorted(fus_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_fus_msg_dict.items():
+        self.fus_msg['t'].append(t)
+        self.fus_msg['data'].append(msg)
+        self.fus_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_msg['t'] = [tmp - t0  for tmp in self.fus_msg['t']]
+      print('fus_msg time:',self.fus_msg['t'][-1])
+      if len(self.fus_msg['t']) > 0:
+        self.fus_msg['enable'] = True
+      else:
+        self.fus_msg['enable'] = False
+    except Exception as e:
+      self.fus_msg['enable'] = False
+      print('missing /iflytek/fusion/objects !!!')
+
+    # load mobile_eye_camera objects msg
+    try:
+      mobileye_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/mobileye/camera_perception/objects"):
+        mobileye_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      sorted_mobileye_objects_msg_dict = OrderedDict(sorted(mobileye_objects_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_mobileye_objects_msg_dict.items():
+        self.mobileye_objects_msg['t'].append(t)
+        self.mobileye_objects_msg['data'].append(msg)
+        self.mobileye_objects_msg['timestamp'].append(msg.msg_header.stamp)
+      self.mobileye_objects_msg['t'] = [tmp - t0  for tmp in self.mobileye_objects_msg['t']]
+      print('mobileye_objects_msg time:',self.mobileye_objects_msg['t'][-1])
+      if len(self.mobileye_objects_msg['t']) > 0:
+        self.mobileye_objects_msg['enable'] = True
+      else:
+        self.mobileye_objects_msg['enable'] = False
+    except Exception as e:
+      self.mobileye_objects_msg['enable'] = False
+      print('missing /mobileye/camera_perception/objects !!!')
+
+    # load rdg objects msg
+    try:
+      rdg_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/objects"):
+        rdg_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      sorted_rdg_objects_msg_dict = OrderedDict(sorted(rdg_objects_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_rdg_objects_msg_dict.items():
+        self.rdg_objects_msg['t'].append(t)
+        self.rdg_objects_msg['data'].append(msg)
+        self.rdg_objects_msg['timestamp'].append(msg.msg_header.stamp)
+      self.rdg_objects_msg['t'] = [tmp - t0  for tmp in self.rdg_objects_msg['t']]
+      print('rdg_objects_msg time:',self.rdg_objects_msg['t'][-1])
+      if len(self.rdg_objects_msg['t']) > 0:
+        self.rdg_objects_msg['enable'] = True
+      else:
+        self.rdg_objects_msg['enable'] = False
+    except Exception as e:
+      self.rdg_objects_msg['enable'] = False
+      print('missing /iflytek/camera_perception/objects !!!')
+
+    # load lidar objects msg
+    try:
+      lidar_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/lidar_objects"):
+        lidar_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      lidar_msg_dict = {key: val for key, val in sorted(lidar_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in lidar_msg_dict.items():
+        self.lidar_msg['t'].append(t)
+        self.lidar_msg['data'].append(msg)
+        self.lidar_msg['timestamp'].append(msg.msg_header.stamp)
+      self.lidar_msg['t'] = [tmp - t0  for tmp in self.lidar_msg['t']]
+      print('lidar_msg time:',self.lidar_msg['t'][-1])
+      if len(self.lidar_msg['t']) > 0:
+        self.lidar_msg['enable'] = True
+      else:
+        self.lidar_msg['enable'] = False
+    except Exception as e:
+      self.lidar_msg['enable'] = False
+      print('missing /iflytek/lidar_objects !!!')
+
+    # load radar objects msg
+    radar_msg = [self.radar_fm_msg,self.radar_fl_msg,self.radar_fr_msg,self.radar_rl_msg,self.radar_rr_msg]
+    topic_name = ["/iflytek/radar_fm_perception_info","/iflytek/radar_fl_perception_info","/iflytek/radar_fr_perception_info","/iflytek/radar_rl_perception_info","/iflytek/radar_rr_perception_info"]
+    # for i in range(5):
+    #   print(topic[i])
+    for i in range(5):
+      try:
+        radar_msg_dict = {}
+        if i == 0:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fm_perception_info"):
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        elif i == 1:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        elif i == 2:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_fr_perception_info"):
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        elif i == 3:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_rl_perception_info"):
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        elif i == 4:
+          for topic, msg, t in self.bag.read_messages("/iflytek/radar_rr_perception_info"):
+            radar_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        radar_msg_dict = {key: val for key, val in sorted(radar_msg_dict.items(), key = lambda ele: ele[0])}
+        for t, msg in radar_msg_dict.items():
+          radar_msg[i]['t'].append(t)
+          radar_msg[i]['data'].append(msg)
+          radar_msg[i]['timestamp'].append(msg.msg_header.stamp)
+          #temp_t = radar_msg[i]['t']
+        radar_msg[i]['t'] = [tmp - t0  for tmp in radar_msg[i]['t']]
+          #print("load message:",i)
+        #print(radar_msg[i],'_time:',radar_msg[i]['t'][-1])
+        if len(radar_msg[i]['t']) > 0:
+          radar_msg[i]['enable'] = True
+          print("true:",topic_name[i])
+          #print("size:",len(radar_msg[i]['t']))
+        else:
+          radar_msg[i]['enable'] = False
+      except Exception as e:
+        radar_msg[i]['enable'] = False
+        print('missing',topic[i])
+
+    # # load radar_fl objects msg
+    # try:
+    #   radar_fl_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/radar_fl_perception_info"):
+    #     radar_fl_msg_dict[msg.msg_header.stamp / 1e6] = msg
+    #   radar_fl_msg_dict = {key: val for key, val in sorted(radar_fl_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in radar_fl_msg_dict.items():
+    #     self.radar_fl_msg['t'].append(t)
+    #     self.radar_fl_msg['data'].append(msg)
+    #   self.radar_fl_msg['t'] = [tmp - t0  for tmp in self.radar_fl_msg['t']]
+    #   print('radar_fl_msg time:',self.radar_fl_msg['t'][-1])
+    #   if len(self.radar_fl_msg['t']) > 0:
+    #     self.radar_fl_msg['enable'] = True
+    #   else:
+    #     self.radar_fl_msg['enable'] = False
+    # except Exception as e:
+    #   self.radar_fl_msg['enable'] = False
+    #   print('missing /iflytek/radar_fl/objects !!!')
+
+    # load vehicle service msg
+    try:
+      vs_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/vehicle_service"):
+        vs_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      vs_msg_dict = {key: val for key, val in sorted(vs_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in vs_msg_dict.items():
+        self.vs_msg['t'].append(t)
+        self.vs_msg['data'].append(msg)
+        self.vs_msg['timestamp'].append(msg.msg_header.stamp)
+      self.vs_msg['t'] = [tmp - t0  for tmp in self.vs_msg['t']]
+      self.vs_msg['enable'] = True
+      print('vs time:',self.vs_msg['t'][-1])
+      max_time = max(max_time, self.vs_msg['t'][-1])
+      if len(self.vs_msg['t']) > 0:
+        self.vs_msg['enable'] = True
+      else:
+        self.vs_msg['enable'] = False
+    except Exception as e:
+      self.vs_msg['enable'] = False
+      print("missing /iflytek/vehicle_service !!!")
+
+    # load planning msg
+    try:
+      plan_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/plan"):
+        plan_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      plan_msg_dict = {key: val for key, val in sorted(plan_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in plan_msg_dict.items():
+        self.plan_msg['t'].append(t)
+        self.plan_msg['data'].append(msg)
+        self.plan_msg['timestamp'].append(msg.msg_header.stamp)
+      self.plan_msg['t'] = [tmp - t0  for tmp in self.plan_msg['t']]
+      max_time = max(max_time, self.plan_msg['t'][-1])
+      print('plan_msg time:',self.plan_msg['t'][-1])
+      if len(self.plan_msg['t']) > 0:
+        self.plan_msg['enable'] = True
+      else:
+        self.plan_msg['enable'] = False
+    except Exception as e:
+      self.plan_msg['enable'] = False
+      print("missing /iflytek/planning/plan !!!")
+
+
+    # load prediction msg
+    try:
+      prediction_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/prediction/prediction_result"):
+        prediction_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      prediction_msg_dict = {key: val for key, val in sorted(prediction_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in prediction_msg_dict.items():
+        self.prediction_msg['t'].append(t)
+        self.prediction_msg['data'].append(msg)
+        self.prediction_msg['timestamp'].append(msg.msg_header.stamp)
+      self.prediction_msg['t'] = [tmp - t0  for tmp in self.prediction_msg['t']]
+      self.prediction_msg['enable'] = True
+      max_time = max(max_time, self.prediction_msg['t'][-1])
+      print('prediction_msg time:',self.prediction_msg['t'][-1])
+      if len(self.prediction_msg['t']) > 0:
+        self.prediction_msg['enable'] = True
+      else:
+        self.prediction_msg['enable'] = False
+    except Exception as e:
+      self.prediction_msg['enable'] = False
+      print("missing /iflytek/prediction/prediction_result !!!")
+
+    # load planning debug msg
+    try:
+      json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
+                         "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
+                         "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "fsm_state", "iLqr_lat_update_time", "concerned_start_q_jerk", \
+                         'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
+                         "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
+                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state", "obstacle_brake_hmi_sts",\
+                         'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
+                         'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'road_radius_origin',\
+                         'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
+                         'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", "avg_radius_0_80m","use_avg_radius_for_ewma",\
+                         'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
+                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
+                         'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\
+                         'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
+                         "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
+                         'virtual_lane_relative_id_switch_flag', "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
+                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', 'current_segment_passed_distance', \
+                         'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', 'is_exist_interactive_select_split',\
+                         'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'origin_relative_id_zero_nums', \
+                         'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
+                         "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
+                         "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
+                         'sdpromap_valid_','lane_change_cmd_','cur_state','overtake_lane_change_confirmed', 'pilot_overtake_comfirm_siginal', 'enable_overtake_confirm', \
+                         'lc_map_decision', "lat_path_length", "extend_path_length", \
+                         "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","left_boundary_type","right_boundary_type", \
+                         "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
+                         "leading_vehicle_speed", "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold", \
+                         "left_overtake_speed_threshold", "right_overtake_speed_threshold", \
+                         "road_boundary_regular_v_limit_set", "road_boundary_regular_v_limit", "road_boundary_regular_trigger_distance", "road_boundary_regular_required_decel", "road_boundary_regular_manual_intervention_detected", "road_boundary_regular_manual_intervention_reset_count",\
+                         "road_boundary_regular_is_left_triggered", "road_boundary_regular_is_right_triggered", "road_boundary_regular_left_range_idx", "road_boundary_regular_right_range_idx", "road_boundary_regular_cooldown_count", \
+                         "road_boundary_strictest_applied", "road_boundary_strictest_v_limit", "road_boundary_strictest_trigger_distance", "road_boundary_strictest_required_decel","road_boundary_strictest_cooldown_count",\
+                         "s_curve_road_boundary_triggered", "s_curve_road_boundary_v_limit", "s_curve_road_boundary_trigger_distance", "s_curve_min_radius", "s_curve_first_direction", \
+                         "curve_road_boundary_road_radius", "curve_road_boundary_left_gear", "curve_road_boundary_right_gear", "curve_road_boundary_v_limit", "curve_road_boundary_trigger_distance", \
+                         "lateral_acceleration_limit_triggered", "lateral_acceleration_limit_v_limit","lateral_acceleration_limit_trigger_distance",\
+                         "road_boundary_collision_v_limit", "road_boundary_collision_trigger_distance", "road_boundary_collision_valid", "road_boundary_collision_distance",\
+                         "left_lane_is_on_navigation_route", "right_lane_is_on_navigation_route", \
+                         "is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_", "cone_nums_of_front_objects", "is_emergency_avoidance_situation_", "leading_vehicle_id_", \
+                         "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
+                         'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost","construction_manual_intervention_detected",\
+                         "front_node_id", "rear_node_id","prohibit_acc_", "lane_borrow_agent_id", "lane_borrow_agent_v_limit", 'ego_ttc_to_front_invade_agent', 'avoid_agent_id', 'avoid_agent_v_limit', "construction_lat_dist_flag",\
+                         "v_target_construction","v_target_near_construction","dis_to_construction","is_exist_construction_area","is_pass_construction_area","construction_strong_deceleration_mode","construction_strong_mode_reason","construction_strong_mode_frame_count",\
+                         "ego_left_node", "ego_left_front_node", "ego_left_rear_node", "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", \
+                         "ego_right_node", "ego_right_front_node", "ego_right_rear_node", "v_cruise_limit","v_target_decider","v_target_type_code",\
+                         "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", "v_target_for_dangerous_obs", "dangerous_obs_id",\
+                         "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
+                         "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
+                         "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point","sum_dis_to_last_split_point", \
+                         "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region', 'is_split_region', 'merge_lane_virtual_id', \
+                         'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
+                         'sdmap_min_curv_radius',"is_static_avoid_scene", "is_overlap", "merge_target_one_id", "merge_target_two_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
+                         'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y", "current_lane_is_continue", 'cipv_id_st',
+                         'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
+                         'macroeconomic_decider_merge_point_x','macroeconomic_decider_merge_point_y','cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
+                         'boundary_line_merge_point_x','boundary_line_merge_point_y','cur_lane_is_continue','forward_lane_num',
+                         'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region', 'road_curvature_radius',
+                         'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty','start_stop_status','cipv_relative_s', 'cipv_relative_s_prev', 'cipv_stop_distance',
+                         "agents_headway_id", "agents_headway_value", "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target",
+                         "cipv_vel_frenet","cipv_vel_fusion",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
+                         "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',"lane_borrow_agent_id", "lane_borrow_agent_v_limit",'coarse_planning_info_ref_line_s',"coarse_planning_info_ref_pnts_size","raw_virtual_lane_s","raw_virtual_lane_pnts_size",
+                         "ramp_pass_sts","first_split_direction", "first_merge_direction","stop_destination_virtual_agent_pos_x","stop_destination_virtual_agent_pos_y","stop_destination_virtual_agent_theta","stop_destination_virtual_agent_id",
+                          "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length", "gear_command", "THW", "can_left_borrow","stand_wait",
+                          "can_right_borrow", "maintain_avoid", "lateral_emergency_level", "goal_point_x", "goal_point_y",
+                          "pp_init_x", "pp_init_y", "lon_decision_to_invade_ego_motion_sim_path", "invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
+                          "left_road_extra_buffer", "right_road_extra_buffer", "target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
+                          "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_bound_distance",
+                          "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel", "planning_fault_code",
+                          "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq", "cross_vru_agent_ids",
+                          "average_lon_acc", "potential_hard_break_count", "emergency_avoid_obstacle_ids", "lon_overtake_avoid",
+                          "potential_dangerous_agent_id", "need_decelerate_func_fade_away", "v_target_func_fade_away", "cur_lane_mark",
+                          "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
+                          "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
+                          "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
+                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
+                          "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
+                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
+                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
+                          "joint_target_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_cruise_speed", "is_confluence_area",
+                          "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
+                          "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
+                          'is_current_lane_available', 'is_right_lane_available', 'is_left_lane_available', 'is_left_left_lane_available', 'is_right_right_lane_available',
+                          'construction_intrusion_level', 'traj_available', "rads_planning_status",
+                          "LatLonJointDecisionTime", "JointDecisionObstacleSelectionTime", "JointDecisionOptimizationTime", "LatLonJointPlannerDeciderTime",
+                          "target_lane_virtual_id", "origin_lane_virtual_id", "lc_gap_front_agent_id", "lc_gap_rear_agent_id",
+                          "ego_front_edge", "ego_rear_edge",
+                          "front_agent_front_edge", "front_agent_rear_edge",
+                          "rear_agent_front_edge", "rear_agent_rear_edge",
+                          "rear_agent_longitudinal_label", "lane_change_reason",
+                          "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene',
+                          'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
+                          'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
+                          'UpdateObstacleInteractionInfoCostTime',
+                          'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
+                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp']
+
+
+      json_value_list += [#new_ldw debug info:
+                         "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
+                         "ldw_right_suppression_code_","ldw_right_kickdown_code_","ldw_tlc_threshold_","ldw_left_intervention_","ldw_right_intervention_","ldw_state_",
+                         "ldw_preview_left_y_gap","ldw_preview_right_y_gap",
+                         #new_ldp debug info:
+                         "ldp_main_switch_","ldp_enable_code_", "ldp_disable_code_", "ldp_fault_code_", "ldp_left_suppression_code_","ldp_left_kickdown_code_",
+                         "ldp_right_suppression_code_","ldp_right_kickdown_code_","ldp_tlc_threshold_","ldp_roadedge_tlc_threshold_","ldp_left_intervention_","ldp_right_intervention_","ldp_state_",
+                         "ldp_preview_left_y_gap","ldp_preview_right_y_gap","ldp_left_intervention_by_line","ldp_left_intervention_by_roadedge",
+                         "ldp_right_intervention_by_line","ldp_right_intervention_by_roadedge","ldp_roadedge_offset",
+                         #new_elk debug info:
+                         "elk_main_switch_","elk_enable_code_", "elk_disable_code_", "elk_fault_code_", "elk_left_suppression_code_","elk_left_kickdown_code_",
+                         "elk_right_suppression_code_","elk_right_kickdown_code_","elk_tlc_threshold_","elk_roadedge_tlc_threshold_","elk_left_intervention_","elk_right_intervention_","elk_state_",
+                         "elk_preview_left_y_gap","elk_preview_right_y_gap","elk_left_intervention_by_line","elk_left_intervention_by_roadedge",
+                         "elk_right_intervention_by_line","elk_right_intervention_by_roadedge","elk_roadedge_offset",
+                         "elk_left_has_risk","elk_right_has_risk","elk_fl_risk_code","elk_ml_risk_code","elk_rl_risk_code","elk_fr_risk_code","elk_mr_risk_code","elk_rr_risk_code",
+                         "left_has_risk_code","right_has_risk_code","elk_obj_fl_tlc_","elk_obj_ml_tlc_","elk_obj_rl_tlc_","elk_obj_fr_tlc_","elk_obj_mr_tlc_","elk_obj_rr_tlc_",
+                         #tsr debug info
+                         "tsr_main_switch_","tsr_disable_code_","tsr_fault_code_","tsr_state_","tsr_speed_limit_",
+                         "has_perception_speed_limit_","has_perception_end_of_speed_limit_","end_of_speed_limit_out_flag_","speed_limit_out_flag_","speed_limit_renew_flag_",
+                         "current_map_speed_limit_", "current_map_speed_limit_valid_", "current_map_type_", "current_road_type_", "speed_limit_suppression_flag_",
+                         "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_","tsr_navi_flag_",
+                         # ihc debug info
+                         "ihc_function::ihc_high_beam_code", "ihc_function::ihc_fault_code", "ihc_function::ihc_state","ihc_function::ihc_request_status",
+                         "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",
+                         "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle",
+                         "ihc_function::low_beam_due_to_oncomming_cycle", "ihc_function::lighting_condition", "ihc_function::processed_lighting_condition",
+                         "ihc_function::ihc_low_beam_code", "ihc_function::ihc_active_code",
+                         #meb debug info:
+                         "meb_inner_state","meb_state", "meb_main_switch", "meb_enable_code", "meb_disable_code","meb_fault_code",
+                         "meb_intervention_flag","meb_intervention_ttc","meb_od_obs_collision_flag",
+                         "meb_occ_obs_collision_flag","meb_kickdown_code","meb_all_obs_point_num","meb_obs_distance","meb_od_obs_distance",
+                         "meb_occ_obs_distance","meb_radius","meb_fusion_occ_obs_size","meb_fusion_od_obs_size","meb_relative_distance_min",
+                         "meb_occ_path_distance","meb_uss_obs_distance","meb_uss_collision_flag",
+                         "meb_occ_path_distance","meb_uss_obs_distance","meb_uss_collision_flag","meb_od_acc_min","meb_occ_acc_min","meb_uss_acc_min",
+                         "meb_output_state","meb_output_requset_status","meb_output_requset_value","meb_od_ttc_min","meb_occ_ttc_min","meb_uss_ttc_min",
+                         "meb_fusion_uss_obs_size","meb_od_box_collision_flag","meb_od_box_id","od_box_dis_buffer","OdBox_index","OdBox_dis_type",
+                         "Arc_dis_type","Arc_dis_buffer","Arc_index","Line_dis_type","Line_dis_buffer","Line_index",
+                         #adas_debug info
+                         "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
+                         "params_ldp_c0_right_offset", "params_ldp_center_line_offset","params_ldp_ttlc_right_hack","params_ldp_tlc_thrd","params_ldw_enable_speed",
+                         "state_left_turn_light_off_time","state_right_turn_light_off_time","state_driver_hand_trq","state_ego_curvature","state_fl_wheel_distance_to_line",
+                         "state_fr_wheel_distance_to_line","state_vehicle_speed", "state_yaw_rate","state_left_departure_speed","state_right_departure_speed","state_steer_wheel_angle_degree",
+                         "state_yaw_rate_observer","state_yaw_rate_loc","state_dispaly_vehicle_speed","state_ctrl_output_steering_angle","state_lat_departure_acc","state_brake_pedal_pressed",
+                         "state_vel_acc",
+                         "road_left_line_boundary_type", "road_left_line_line_type","road_left_line_begin","road_left_line_end","road_left_line_c0","road_left_line_c1","road_left_line_c2","road_left_line_c3","state_fl_wheel_distance_to_roadedge",
+                         "road_right_line_boundary_type","road_right_line_line_type","road_right_line_begin", "road_right_line_end","road_right_line_c0","road_right_line_c1","road_right_line_c2","road_right_line_c3","state_fr_wheel_distance_to_roadedge",
+                         "road_left_line_valid","road_right_line_valid","road_left_roadedge_valid","road_right_roadedge_valid","road_lane_width_valid","road_lane_width",
+                         "road_left_roadedge_begin_x","road_left_roadedge_end_x","road_right_roadedge_begin_x","road_right_roadedge_end_x",
+                         "road_left_line_segement0_length","road_left_line_segement0_type","road_left_line_segement1_length","road_left_line_segement1_type",
+                         "road_left_line_segement2_length","road_left_line_segement2_type","road_left_line_segement3_length","road_left_line_segement3_type",
+                         "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
+                         "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type",
+                         "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
+                         "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3",
+                         "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_","sideway_relative_id_zero_nums","left_lane_samedir_exist_flag","left_sideway_near_gap_tmp",
+                         "right_lane_samedir_exist_flag","right_sideway_near_gap_tmp","state_shift_lever",]
+
+      json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec",
+                         "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
+                         "ego_rear_agent_traj_x_vec","ego_rear_agent_traj_y_vec","ego_rear_agent_traj_theta_vec",
+                         "ego_left_agent_traj_x_vec","ego_left_agent_traj_y_vec","ego_left_agent_traj_theta_vec",
+                         "ego_right_agent_traj_x_vec","ego_right_agent_traj_y_vec","ego_right_agent_traj_theta_vec",
+                         "ego_left_front_agent_traj_x_vec","ego_left_front_agent_traj_y_vec","ego_left_front_agent_traj_theta_vec",
+                         "ego_right_front_agent_traj_x_vec","ego_right_front_agent_traj_y_vec","ego_right_front_agent_traj_theta_vec",
+                         "ego_left_rear_agent_traj_x_vec","ego_left_rear_agent_traj_y_vec","ego_left_rear_agent_traj_theta_vec",
+                         "ego_right_rear_agent_traj_x_vec","ego_right_rear_agent_traj_y_vec","ego_right_rear_agent_traj_theta_vec",
+                         "expanded_nodes_t_vec", "expanded_nodes_s_vec", "history_cur_nodes_t_vec", "history_cur_nodes_s_vec",
+                         "st_path_final_nodes_total_cost_vec","st_path_final_nodes_g_cost_vec","st_path_final_nodes_h_cost_vec",
+                         "st_path_final_nodes_cost_yield_vec","st_path_final_nodes_cost_overtake_vec","st_path_final_nodes_cost_vel_vec",
+                         "st_path_final_nodes_cost_accel_vec","st_path_final_nodes_cost_accel_sign_changed_vec", "lon_danger_agent_ids",
+                         "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec", 'lateral_avoid_ids',
+                         'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec',"front_obj_need_dis_vec",'rear_obj_need_dis_vec',
+                         'front_obj_future_v_vec', 'rear_obj_future_v_vec', 'ego_future_v_vec', 'expected_steer_vec', "lat_path_x", "lat_path_y", "ori_lat_path_x", "ori_lat_path_y",
+                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec', 'agent_box_corners_x', 'agent_box_corners_y', 'ego_box_corners_x', 'ego_box_corners_y', 'lat_path_v',
+                         'lat_path_t','ego_sim_s', "history_steer_vec", "virtual_ref_x", "virtual_ref_y", "virtual_ref_theta",
+                         'construction_agent_clusters', 'construction_agent_clusters_length', 'construction_agent_cluster_attribute_ids',
+                         'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids', "comfort_jerk_min_vec", "comfort_v_target_vec",
+                         "joint_target_v0_vec",  "joint_collision_obstacle_ids",
+                         'construction_refline_x', 'construction_refline_y', 'construction_blocked_virtual_lane_ids','cluster_is_construction_area']
+
+      # hpp
+      json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
+                         "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
+                         "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
+                         "dist_to_target_slot", "dist_to_target_dest", "is_exist_target_slot", "is_target_slot_allowed_to_park",
+                          "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
+      json_vector_list += ["lon_collision_object_position_x_vec",
+                           "lon_collision_object_position_y_vec",'expand_num_vec']
+      # nsa
+      json_value_list += ["narrow_space_state", "narrow_space_left_rear_x","narrow_space_left_rear_y","narrow_space_right_rear_x", "narrow_space_right_rear_y", \
+                          "narrow_space_left_front_x","narrow_space_left_front_y","narrow_space_right_front_x", "narrow_space_right_front_y", "narrow_space_end_point_x", "narrow_space_end_point_y"]
+      #
+      json_vector_list += ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
+                           "road_right_line_all_dx_vec_","road_right_line_all_dy_vec_",
+                           "road_left_roadedge_all_dx_vec_","road_left_roadedge_all_dy_vec_",
+                           "road_right_roadedge_all_dx_vec_","road_right_roadedge_all_dy_vec_",
+                         "ldp_preview_ego_pos_vec","elk_preview_ego_pos_vec",
+                         "obj_fl_obj_loc_vec","obj_fm_obj_loc_vec","obj_fr_obj_loc_vec","obj_ml_obj_loc_vec",
+                         "obj_mr_obj_loc_vec","obj_rl_obj_loc_vec","obj_rm_obj_loc_vec","obj_rr_obj_loc_vec","meb_all_obs_x_vector","meb_all_obs_y_vector",
+                         "meb_od_obs_x_vector","meb_od_obs_y_vector","meb_occ_obs_x_vector","meb_occ_obs_y_vector","meb_traj_x_vector","meb_traj_y_vector",
+                         "meb_point_x_vector","meb_point_y_vector","meb_traj_dphi_vector","uss_distance_vec","uss_acc_vec_","meb_uss_obs_x_vector","meb_uss_obs_y_vector",
+                         ]
+      # 安全检查相关的向量数据
+      json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",
+                           "agent_vel_vec", "ego_vel_vec", "rear_distance_vec"]
+      # 安全检查相关的标量数据
+      json_value_list += ["lc_ego_press_line_ratio"]
+
+      plan_debug_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
+        #print(asizeof.asizeof(msg)/1024)
+        planning_debug_output = PlanningDebugInfo()
+        planning_debug_output.ParseFromString(msg.debug_info)
+        # for field in planning_debug_output.DESCRIPTOR.fields:
+        #   try:
+        #     if planning_debug_output.HasField(field.name):
+        #       field_value = getattr(planning_debug_output, field.name)
+        #       print(field.name, sys.getsizeof(field_value.SerializeToString())/1024)
+        #   except:
+        #       print(field.name, '异常')
+        plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
+      plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      try:
+        if plan_debug_msg_dict:
+          version_commit = plan_debug_msg_dict[next(iter(plan_debug_msg_dict))].version_commit
+          print("planning_commit = ", version_commit.planning_commit, "  interface_commit = ", version_commit.interface_commit, "  ad_common_commit = ", version_commit.adcommon_commit)
+      except:
+        print('planning debug not have version commit')
+      for t, msg in plan_debug_msg_dict.items():
+        self.plan_debug_msg['t'].append(t)
+        self.plan_debug_msg['data'].append(msg)
+        self.plan_debug_msg['timestamp'].append(msg.timestamp)
+        try:
+          json_struct = json.loads(msg.data_json, strict = False)
+          json_data = {}
+          LoadScalarList(json_data, json_value_list, json_struct)
+          LoadVectorList(json_data, json_vector_list, json_struct)
+          self.plan_debug_msg['json'].append(json_data)
+        except json.decoder.JSONDecodeError as jserr:
+          print('except',jserr)
+
+      self.plan_debug_msg['t'] = [tmp - t0  for tmp in self.plan_debug_msg['t']]
+      max_time = max(max_time, self.plan_debug_msg['t'][-1])
+      print('plan_debug_msg time:',self.plan_debug_msg['t'][-1])
+      if len(self.plan_debug_msg['t']) > 0:
+        self.plan_debug_msg['enable'] = True
+      else:
+        self.plan_debug_msg['enable'] = False
+    except Exception as e:
+      self.plan_debug_msg['enable'] = False
+      print("missing /iflytek/planning/debug_info !!!")
+
+
+    # load planning debug origin msg
+    try:
+      plan_debug_origin_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info_origin"):
+        planning_debug_output = PlanningDebugInfo()
+        planning_debug_output.ParseFromString(msg.debug_info)
+        plan_debug_origin_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
+      plan_debug_origin_msg_dict = {key: val for key, val in sorted(plan_debug_origin_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in plan_debug_origin_msg_dict.items():
+        self.plan_debug_origin_msg['t'].append(t)
+        self.plan_debug_origin_msg['data'].append(msg)
+        self.plan_debug_origin_msg['timestamp'].append(msg.timestamp)
+        try:
+          json_struct = json.loads(msg.data_json, strict = False)
+          json_data = {}
+          LoadScalarList(json_data, json_value_list, json_struct)
+          LoadVectorList(json_data, json_vector_list, json_struct)
+          self.plan_debug_origin_msg['json'].append(json_data)
+        except json.decoder.JSONDecodeError as jserr:
+          print('except',jserr)
+
+      self.plan_debug_origin_msg['t'] = [tmp - t0  for tmp in self.plan_debug_origin_msg['t']]
+      max_time = max(max_time, self.plan_debug_origin_msg['t'][-1])
+      print('plan_debug_origin_msg time:',self.plan_debug_origin_msg['t'][-1])
+      if len(self.plan_debug_origin_msg['t']) > 0:
+        self.plan_debug_origin_msg['enable'] = True
+      else:
+        self.plan_debug_origin_msg['enable'] = False
+    except Exception as e:
+      self.plan_debug_origin_msg['enable'] = False
+      print("missing /iflytek/planning/debug_info_origin !!!")
+
+
+    # load control msg
+    try:
+      ctrl_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/control/control_command"):
+        ctrl_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      ctrl_msg_dict = {key: val for key, val in sorted(ctrl_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ctrl_msg_dict.items():
+        self.ctrl_msg['t'].append(t)
+        self.ctrl_msg['data'].append(msg)
+        self.ctrl_msg['timestamp'].append(msg.msg_header.stamp)
+      self.ctrl_msg['t'] = [tmp - t0  for tmp in self.ctrl_msg['t']]
+      max_time = max(max_time, self.ctrl_msg['t'][-1])
+      print('ctrl_msg time:',self.ctrl_msg['t'][-1])
+      if len(self.ctrl_msg['t']) > 0:
+        self.ctrl_msg['enable'] = True
+      else:
+        self.ctrl_msg['enable'] = False
+    except Exception as e:
+      self.ctrl_msg['enable'] = False
+      print("missing /iflytek/control/control_command !!!")
+
+
+    # load control debug msg
+    try:
+      json_value_list = ["steer_angle_cmd", "steer_angle", "acc_ego", "acc_vel", "vel_ego", "vel_wheel", "wheel_angle_cmd",
+        "slope_acc", "vel_cmd",  "vel_raw_cmd","vel_error", "vel_fdbk_out", "vel_raw_error", "vel_ffwd_out", "vel_out",
+        "vel_raw_out", "lon_err", "lat_err", "phi_err", "controller_status", "driver_hand_torque", "lat_enable", "lon_enable",
+        "lat_mpc_status", "planning_type", "planning_time_offset", "planning_update_flag", "vel_KP_term", "vel_KI_term", "yaw_conti",
+        "steer_angle_bias_deg", "steer_bias_deg", "axle_torque", "throttle_brake", "euler_angle_pitch", "euler_angle_yaw" ]
+
+      json_vector_list = ["dx_ref_mpc_vec", "dy_ref_mpc_vec", "dphi_ref_mpc_vec", "dx_mpc_vec", "dy_mpc_vec", "delta_mpc_vec", "dphi_mpc_vec"]
+
+      ctrl_debug_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/control/debug_info"):
+        ctrl_debug_output = ControlDebugInfo()
+        ctrl_debug_output.ParseFromString(msg.debug_info)
+        ctrl_debug_msg_dict[ctrl_debug_output.timestamp / 1e6] = ctrl_debug_output
+      ctrl_debug_msg_dict = {key: val for key, val in sorted(ctrl_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ctrl_debug_msg_dict.items():
+        self.ctrl_debug_msg['t'].append(t)
+        self.ctrl_debug_msg['data'].append(msg)
+        self.ctrl_debug_msg['timestamp'].append(msg.timestamp)
+        try:
+          json_struct = json.loads(msg.extra_json, strict = False)
+          json_data = {}
+          LoadScalarList(json_data, json_value_list, json_struct)
+          LoadVectorList(json_data, json_vector_list, json_struct)
+
+          self.ctrl_debug_msg['json'].append(json_data)
+        except json.decoder.JSONDecodeError as jserr:
+          print('except',jserr)
+
+      self.ctrl_debug_msg['t'] = [tmp - self.ctrl_debug_msg['t'][0]  for tmp in self.ctrl_debug_msg['t']]
+      max_time = max(max_time, self.ctrl_debug_msg['t'][-1])
+      print('ctrl_debug_msg time:',self.ctrl_debug_msg['t'][-1])
+      if len(self.ctrl_debug_msg['t']) > 0:
+        self.ctrl_debug_msg['enable'] = True
+      else:
+        self.ctrl_debug_msg['enable'] = False
+    except Exception as e:
+      self.ctrl_debug_msg['enable'] = False
+      print("missing /iflytek/control/debug_info !!!")
+
+    # load parking fusion msg
+    try:
+      fus_parking_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/parking_slot"):
+        fus_parking_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      fus_parking_msg_dict = {key: val for key, val in sorted(fus_parking_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_parking_msg_dict.items():
+        self.fus_parking_msg['t'].append(t)
+        self.fus_parking_msg['data'].append(msg)
+        self.fus_parking_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_parking_msg['t'] = [tmp - self.fus_parking_msg['t'][0]  for tmp in self.fus_parking_msg['t']]
+      max_time = max(max_time, self.fus_parking_msg['t'][-1])
+      print('fus_parking_msg time:',self.fus_parking_msg['t'][-1])
+      if len(self.fus_parking_msg['t']) > 0:
+        self.fus_parking_msg['enable'] = True
+      else:
+        self.fus_parking_msg['enable'] = False
+    except Exception as e:
+      self.fus_parking_msg['enable'] = False
+      print('missing /iflytek/fusion/parking_slot !!!')
+
+    # load state machine msg
+    try:
+      soc_state_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fsm/soc_state"):
+        soc_state_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      soc_state_msg_dict = {key: val for key, val in sorted(soc_state_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in soc_state_msg_dict.items():
+        self.soc_state_msg['t'].append(t)
+        self.soc_state_msg['data'].append(msg)
+        self.soc_state_msg['timestamp'].append(msg.msg_header.stamp)
+        # if msg.current_state > 13 and msg.current_state < 19:
+        #   scene_type = 'PARKING_APA'
+        if msg.current_state > 4 and msg.current_state < 7:
+          scene_type = 'HIGHWAY'  # ACC
+        elif msg.current_state > 7 and msg.current_state < 13:
+          scene_type = 'HIGHWAY'  # SCC NOA
+        elif msg.current_state >= 50 and msg.current_state <= 62:
+          scene_type = 'HPP'
+        elif msg.current_state >= 22 and msg.current_state <= 28:
+          scene_type = 'NSA'
+        elif msg.current_state >= 70 and msg.current_state <= 76:
+          scene_type = 'RADS'
+      self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
+      max_time = max(max_time, self.soc_state_msg['t'][-1])
+      print('soc_state_msg time:',self.soc_state_msg['t'][-1])
+      if len(self.soc_state_msg['t']) > 0:
+        self.soc_state_msg['enable'] = True
+      else:
+        self.soc_state_msg['enable'] = False
+    except Exception as e:
+      self.soc_state_msg['enable'] = False
+      print('missing /iflytek/fsm/soc_state !!!')
+    # scene_type = 'HPP'
+    # load ehr static map msg
+    try:
+      ehr_static_map_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/static_map"):
+        static_map = StaticMap()
+        static_map.ParseFromString(msg.debug_info)
+        ehr_static_map_msg_dict[static_map.header.timestamp / 1e6] = static_map
+      ehr_static_map_msg_dict = {key: val for key, val in sorted(ehr_static_map_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ehr_static_map_msg_dict.items():
+        self.ehr_static_map_msg['t'].append(t)
+        self.ehr_static_map_msg['data'].append(msg)
+        self.ehr_static_map_msg['timestamp'].append(msg.header.timestamp)
+      self.ehr_static_map_msg['t'] = [tmp - t0  for tmp in self.ehr_static_map_msg['t']]
+      print('ehr_static_map_msg time:',self.ehr_static_map_msg['t'][-1])
+      if len(self.ehr_static_map_msg['t']) > 0:
+        self.ehr_static_map_msg['enable'] = True
+      else:
+        self.ehr_static_map_msg['enable'] = False
+    except Exception as e:
+      self.ehr_static_map_msg['enable'] = False
+      print('missing /iflytek/ehr/static_map topic !!!')
+
+    # load ehr sd map msg
+    try:
+      ehr_sd_map_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdmap_info"):
+        sdmap = SdMap()
+        sdmap.ParseFromString(msg.debug_info)
+        ehr_sd_map_msg_dict[sdmap.header.timestamp / 1e6] = sdmap
+      ehr_sd_map_msg_dict = {key: val for key, val in sorted(ehr_sd_map_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ehr_sd_map_msg_dict.items():
+        self.ehr_sd_map_msg['t'].append(t)
+        self.ehr_sd_map_msg['data'].append(msg)
+        self.ehr_sd_map_msg['timestamp'].append(msg.header.timestamp)
+      self.ehr_sd_map_msg['t'] = [tmp - t0  for tmp in self.ehr_sd_map_msg['t']]
+      print('ehr_sd_map_msg time:',self.ehr_sd_map_msg['t'][-1])
+      if len(self.ehr_sd_map_msg['t']) > 0:
+        self.ehr_sd_map_msg['enable'] = True
+      else:
+        self.ehr_sd_map_msg['enable'] = False
+    except Exception as e:
+      self.ehr_sd_map_msg['enable'] = False
+      print('missing /iflytek/ehr/sdmap topic !!!')
+
+    # load ehr sdpro map msg
+    try:
+      ehr_sdpro_map_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdpromap_info"):
+        sdpromap = MapData()
+        sdpromap.ParseFromString(msg.debug_info)
+        ehr_sdpro_map_msg_dict[sdpromap.header.timestamp / 1e6] = sdpromap
+      ehr_sdpro_map_msg_dict = {key: val for key, val in sorted(ehr_sdpro_map_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ehr_sdpro_map_msg_dict.items():
+        self.ehr_sdpro_map_msg['t'].append(t)
+        self.ehr_sdpro_map_msg['data'].append(msg)
+        self.ehr_sdpro_map_msg['timestamp'].append(msg.header.timestamp)
+      self.ehr_sdpro_map_msg['t'] = [tmp - t0  for tmp in self.ehr_sdpro_map_msg['t']]
+      print('ehr_sdpro_map_msg time:',self.ehr_sdpro_map_msg['t'][-1])
+      if len(self.ehr_sdpro_map_msg['t']) > 0:
+        self.ehr_sdpro_map_msg['enable'] = True
+      else:
+        self.ehr_sdpro_map_msg['enable'] = False
+    except Exception as e:
+      self.ehr_sdpro_map_msg['enable'] = False
+      print('missing /iflytek/ehr/sdpromap topic !!!')
+
+    # load fus_ground_line_msg
+    try:
+      fus_ground_line_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/ground_line"):
+        fus_ground_line_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        # print("fus_ground_line_msg: ", msg)
+      fus_ground_line_msg_dict = {key: val for key, val in sorted(fus_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_ground_line_msg_dict.items():
+        self.fus_ground_line_msg['t'].append(t)
+        self.fus_ground_line_msg['data'].append(msg)
+        self.fus_ground_line_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_ground_line_msg['t'] = [tmp - t0  for tmp in self.fus_ground_line_msg['t']]
+      print('fus_ground_line_msg time:',self.fus_ground_line_msg['t'][-1])
+      if len(self.fus_ground_line_msg['t']) > 0:
+        self.fus_ground_line_msg['enable'] = True
+      else:
+        self.fus_ground_line_msg['enable'] = False
+    except Exception as e:
+      self.fus_ground_line_msg['enable'] = False
+      print('missing /iflytek/fusion/ground_line topic !!!')
+
+    # load fus_speed_bump_msg
+    try:
+      fus_speed_bump_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/speed_bump"):
+        fus_speed_bump_msg_dict[msg.msg_header.stamp / 1e6] = msg
+        # print("fus_speed_bump_msg: ", msg)
+      fus_speed_bump_msg_dict = {key: val for key, val in sorted(fus_speed_bump_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_speed_bump_msg_dict.items():
+        self.fus_speed_bump_msg['t'].append(t)
+        self.fus_speed_bump_msg['data'].append(msg)
+        self.fus_speed_bump_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_speed_bump_msg['t'] = [tmp - t0  for tmp in self.fus_speed_bump_msg['t']]
+      print('fus_speed_bump_msg time:',self.fus_speed_bump_msg['t'][-1])
+      if len(self.fus_speed_bump_msg['t']) > 0:
+        self.fus_speed_bump_msg['enable'] = True
+      else:
+        self.fus_speed_bump_msg['enable'] = False
+    except Exception as e:
+      self.fus_speed_bump_msg['enable'] = False
+      print('missing /iflytek/fusion/speed_bump topic !!!')
+
+    # load fus_occ_objects_msg
+    try:
+      fus_occ_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/occupancy/objects"):
+        fus_occ_objects_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      fus_occ_objects_msg_dict = {key: val for key, val in sorted(fus_occ_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in fus_occ_objects_msg_dict.items():
+        self.fus_occ_objects_msg['t'].append(t)
+        self.fus_occ_objects_msg['data'].append(msg)
+        self.fus_occ_objects_msg['timestamp'].append(msg.msg_header.stamp)
+      self.fus_occ_objects_msg['t'] = [tmp - t0  for tmp in self.fus_occ_objects_msg['t']]
+      print('fus_occ_objects_msg time:',self.fus_occ_objects_msg['t'][-1])
+      if len(self.fus_occ_objects_msg['t']) > 0:
+        self.fus_occ_objects_msg['enable'] = True
+      else:
+        self.fus_occ_objects_msg['enable'] = False
+    except Exception as e:
+      self.fus_occ_objects_msg['enable'] = False
+      print('missing /iflytek/fusion/occupancy/objects topic !!!')
+
+    # load uss_perception_msg
+    # Todo(bsniu): plot uss
+    try:
+      uss_perception_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/uss_perception_info"):
+        uss_perception_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      uss_perception_msg_dict = {key: val for key, val in sorted(uss_perception_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in uss_perception_msg_dict.items():
+        self.uss_perception_msg['t'].append(t)
+        self.uss_perception_msg['data'].append(msg)
+        self.uss_perception_msg['timestamp'].append(msg.msg_header.stamp)
+      self.uss_perception_msg['t'] = [tmp - t0  for tmp in self.uss_perception_msg['t']]
+      print('uss_perception_msg time:',self.uss_perception_msg['t'][-1])
+      if len(self.uss_perception_msg['t']) > 0:
+        self.uss_perception_msg['enable'] = True
+      else:
+        self.uss_perception_msg['enable'] = False
+    except Exception as e:
+      self.uss_perception_msg['enable'] = False
+      print('missing /iflytek/fusion/uss_perception_info topic !!!')
+
+    # # load uss_wave_msg
+    # try:
+    #   uss_wave_msg_dict = {}
+    #   for topic, msg, t in self.bag.read_messages("/iflytek/uss/usswave_info"):
+    #     uss_wave_msg_dict[msg.msg_header.stamp / 1e6] = msg
+    #   uss_wave_msg_dict = {key: val for key, val in sorted(uss_wave_msg_dict.items(), key = lambda ele: ele[0])}
+    #   for t, msg in uss_wave_msg_dict.items():
+    #     self.uss_wave_msg['t'].append(t)
+    #     self.uss_wave_msg['data'].append(msg)
+    #     self.uss_wave_msg['timestamp'].append(msg.msg_header.stamp)
+    #   self.uss_wave_msg['t'] = [tmp - t0  for tmp in self.uss_wave_msg['t']]
+    #   print('uss_wave_msg time:',self.uss_wave_msg['t'][-1])
+    #   if len(self.uss_wave_msg['t']) > 0:
+    #     self.uss_wave_msg['enable'] = True
+    #   else:
+    #     self.uss_wave_msg['enable'] = False
+    # except Exception as e:
+    #   self.uss_wave_msg['enable'] = False
+    #   print('missing /iflytek/uss/usswave_info topic !!!')
+
+    # load planning hmi msg
+    try:
+      planning_hmi_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/planning/hmi"):
+        planning_hmi_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      planning_hmi_msg_dict = {key: val for key, val in sorted(planning_hmi_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in planning_hmi_msg_dict.items():
+        self.planning_hmi_msg['t'].append(t)
+        self.planning_hmi_msg['data'].append(msg)
+        self.planning_hmi_msg['timestamp'].append(msg.msg_header.stamp)
+      self.planning_hmi_msg['t'] = [tmp - t0  for tmp in self.planning_hmi_msg['t']]
+      print('planning_hmi_msg time:',self.planning_hmi_msg['t'][-1])
+      if len(self.planning_hmi_msg['t']) > 0:
+        self.planning_hmi_msg['enable'] = True
+      else:
+        self.planning_hmi_msg['enable'] = False
+    except Exception as e:
+      self.planning_hmi_msg['enable'] = False
+      print('missing /iflytek/planning/hmi topic !!!')
+
+    # load perception ground line msg
+    try:
+      rdg_ground_line_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/ground_line"):
+        rdg_ground_line_msg_dict[msg.isp_timestamp  / 1e6] = msg
+      rdg_ground_line_msg_dict = {key: val for key, val in sorted(rdg_ground_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_ground_line_msg_dict.items():
+        self.rdg_ground_line_msg['t'].append(t)
+        self.rdg_ground_line_msg['data'].append(msg)
+        self.rdg_ground_line_msg['timestamp'].append(msg.isp_timestamp)
+      self.rdg_ground_line_msg['t'] = [tmp - t0  for tmp in self.rdg_ground_line_msg['t']]
+      print('rdg_ground_line_msg time:',self.rdg_ground_line_msg['t'][-1])
+      if len(self.rdg_ground_line_msg['t']) > 0:
+        self.rdg_ground_line_msg['enable'] = True
+      else:
+        self.rdg_ground_line_msg['enable'] = False
+    except Exception as e:
+      self.rdg_ground_line_msg['enable'] = False
+      print('missing /iflytek/camera_perception/ground_line topic !!!')
+
+    # load perception parking slot msg
+    try:
+      rdg_parking_slot_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_slot_list"):
+        rdg_parking_slot_msg_dict[msg.isp_timestamp  / 1e6] = msg
+      rdg_parking_slot_msg_dict = {key: val for key, val in sorted(rdg_parking_slot_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_parking_slot_msg_dict.items():
+        self.rdg_parking_slot_msg['t'].append(t)
+        self.rdg_parking_slot_msg['data'].append(msg)
+        self.rdg_parking_slot_msg['timestamp'].append(msg.isp_timestamp )
+      self.rdg_parking_slot_msg['t'] = [tmp - t0  for tmp in self.rdg_parking_slot_msg['t']]
+      print('rdg_parking_slot_msg time:',self.rdg_parking_slot_msg['t'][-1])
+      if len(self.rdg_parking_slot_msg['t']) > 0:
+        self.rdg_parking_slot_msg['enable'] = True
+      else:
+        self.rdg_parking_slot_msg['enable'] = False
+    except Exception as e:
+      self.rdg_parking_slot_msg['enable'] = False
+      print('missing /iflytek/camera_perception/parking_slot_list topic !!!')
+
+    # load perception 3d general objects msg
+    try:
+      rdg_general_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/3d_general_objects"):
+        rdg_general_objects_msg_dict[msg.isp_timestamp  / 1e6] = msg
+      rdg_general_objects_msg_dict = {key: val for key, val in sorted(rdg_general_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_general_objects_msg_dict.items():
+        self.rdg_general_objects_msg['t'].append(t)
+        self.rdg_general_objects_msg['data'].append(msg)
+        self.rdg_general_objects_msg['timestamp'].append(msg.isp_timestamp )
+      self.rdg_general_objects_msg['t'] = [tmp - t0  for tmp in self.rdg_general_objects_msg['t']]
+      print('rdg_general_objects_msg time:',self.rdg_general_objects_msg['t'][-1])
+      if len(self.rdg_general_objects_msg['t']) > 0:
+        self.rdg_general_objects_msg['enable'] = True
+      else:
+        self.rdg_general_objects_msg['enable'] = False
+    except Exception as e:
+      self.rdg_general_objects_msg['enable'] = False
+      print('missing /iflytek/camera_perception/3d_general_objects topic !!!')
+
+    # # load perception 3d occupancy objects msg
+    try:
+      rdg_occ_objects_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/occupancy_objects"):
+        rdg_occ_objects_msg_dict[msg.isp_timestamp / 1e6] = msg
+      rdg_occ_objects_msg_dict = {key: val for key, val in sorted(rdg_occ_objects_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_occ_objects_msg_dict.items():
+        self.rdg_occ_objects_msg['t'].append(t)
+        self.rdg_occ_objects_msg['data'].append(msg)
+        self.rdg_occ_objects_msg['timestamp'].append(msg.isp_timestamp)
+      self.rdg_occ_objects_msg['t'] = [tmp - t0  for tmp in self.rdg_occ_objects_msg['t']]
+      print('rdg_occ_objects_msg time:',self.rdg_occ_objects_msg['t'][-1])
+      if len(self.rdg_occ_objects_msg['t']) > 0:
+        self.rdg_occ_objects_msg['enable'] = True
+      else:
+        self.rdg_occ_objects_msg['enable'] = False
+    except Exception as e:
+      self.rdg_occ_objects_msg['enable'] = False
+      print('missing /iflytek/camera_perception/occupancy_objects topic !!!')
+
+    # load perception parking lane line msg
+    try:
+      rdg_parking_lane_line_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/parking_lane_line"):
+        rdg_parking_lane_line_msg_dict[msg.isp_timestamp / 1e6] = msg
+      rdg_parking_lane_line_msg_dict = {key: val for key, val in sorted(rdg_parking_lane_line_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in rdg_parking_lane_line_msg_dict.items():
+        self.rdg_parking_lane_line_msg['t'].append(t)
+        self.rdg_parking_lane_line_msg['data'].append(msg)
+        self.rdg_parking_lane_line_msg['timestamp'].append(msg.isp_timestamp)
+      self.rdg_parking_lane_line_msg['t'] = [tmp - t0  for tmp in self.rdg_parking_lane_line_msg['t']]
+      print('rdg_parking_lane_line_msg time:',self.rdg_parking_lane_line_msg['t'][-1])
+      if len(self.rdg_parking_lane_line_msg['t']) > 0:
+        self.rdg_parking_lane_line_msg['enable'] = True
+      else:
+        self.rdg_parking_lane_line_msg['enable'] = False
+    except Exception as e:
+      self.rdg_parking_lane_line_msg['enable'] = False
+      print('missing /iflytek/camera_perception/parking_lane_line topic !!!')
+
+    global_var.set_value_by_scene(scene_type)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print("load bag 耗时：", elapsed_time, "秒")
+    return max_time
+
+#/mobileye/camera_perception/objects
+  def msg_timeline_figure(self):
+    topic_list = [
+      '/iflytek/localization/egomotion',
+      '/iflytek/localization/ego_pose',
+      '/iflytek/fusion/road_fusion',
+      '/iflytek/fusion/objects',
+      '/mobileye/camera_perception/objects',
+      '/iflytek/radar_fm_perception_info',
+      '/iflytek/radar_fl_perception_info',
+      '/iflytek/radar_fr_perception_info',
+      '/iflytek/radar_rl_perception_info',
+      '/iflytek/radar_rr_perception_info',
+      '/iflytek/vehicle_service',
+      '/iflytek/prediction/prediction_result',
+      '/iflytek/planning/plan',
+      '/iflytek/planning/debug_info',
+      '/iflytek/control/control_command',
+      '/iflytek/control/debug_info',
+      '/iflytek/fusion/parking_slot',
+      '/iflytek/fsm/soc_state',
+    ]
+    detail_list = [
+      '/iflytek/planning/plan',
+      '/iflytek/planning/debug_info',
+      '/iflytek/fsm/soc_state',
+    ]
+    print("========【使用说明】========")
+    print("========鼠标滚轮缩放时间轴，鼠标悬停或点击以下topic的点，可以在浏览器控制台（F12打开）查看该msg具体内容: ")
+    print("========", detail_list)
+    data_list = [
+      self.loc_msg,
+      self.old_loc_msg,
+      self.road_msg,
+      self.fus_msg,
+      self.mobileye_objects_msg,
+      self.radar_fm_msg,
+      self.radar_fl_msg,
+      self.radar_fr_msg,
+      self.radar_rl_msg,
+      self.radar_rr_msg,
+      self.vs_msg,
+      self.prediction_msg,
+      self.plan_msg,
+      self.plan_debug_msg,
+      self.ctrl_msg,
+      self.ctrl_debug_msg,
+      self.fus_parking_msg,
+      self.soc_state_msg,
+    ]
+
+    topic_list_with_hz = topic_list[:]
+    for i in range(len(topic_list)):
+      if len(data_list[i]['t']) != 0:
+        time_span = max(data_list[i]['t']) - min(data_list[i]['t'])
+        hz = int(len(data_list[i]['t']) / time_span) if time_span != 0.0 else 0
+        topic_list_with_hz[i] += ' (' + str(hz) + 'hz)'
+
+    data = {'topic_with_hz':[], 't':[], 'msg':[]}
+    min_time = sys.maxsize
+    for i in range(len(topic_list)):
+      for j in range(len(data_list[i]['t'])):
+        data['topic_with_hz'].append(topic_list_with_hz[i])
+        if topic_list[i] in detail_list:
+          data['msg'].append(MessageToJson(data_list[i]['data'][j]))
+        else:
+          data['msg'].append('')
+        t = data_list[i]['t'][j]
+        data['t'].append(t)
+        if t != 0 and t < min_time:
+          min_time = t
+
+    # if msg_header time is 0, don't minus
+    for i in range(len(data['t'])):
+      if data['t'][i] == 0:
+        data['t'][i] = 0
+      else:
+        data['t'][i] = data['t'][i] - min_time
+
+    source = ColumnDataSource(data=data)
+    hover = HoverTool(tooltips=[('topic_with_hz', '@topic_with_hz'), ('t', '@t'), ('msg', '@msg')])
+    #args=dict(msg_data=msg_data),
+    callback = CustomJS(code="""
+        //console.log(cb_obj);
+        //console.log(cb_data);
+
+        var data = cb_data.source.data;
+        var indices = cb_data.source.selected.indices;
+        var selected_msgs='';
+
+        for (let i = 0; i < indices.length; i++) {
+            const index = indices[i]
+            selected_msgs += data['msg'][index];
+        }
+
+        console.log(selected_msgs);
+    """)
+    taptool = TapTool(callback=callback)
+
+    fig1 = bkp.figure(plot_width=1600, plot_height=400,
+              y_range=topic_list_with_hz, x_axis_type='datetime', title=self.bag_path,
+              tools=[hover, taptool, "xwheel_zoom,reset"], active_scroll='xwheel_zoom')
+    fig1.circle(x='t', y='topic_with_hz', source=source)
+    return fig1

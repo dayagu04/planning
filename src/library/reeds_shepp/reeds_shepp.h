@@ -1,0 +1,139 @@
+
+#pragma once
+
+#include "./../hybrid_astar_lib/hybrid_astar_common.h"
+#include "pose2d.h"
+#include "rs_path_request.h"
+
+namespace planning {
+
+#define is_veh_move_forward(mov_dir) \
+  ((AstarPathGear::DRIVE == mov_dir) ? true : false)
+
+#define is_veh_move_backward(mov_dir) \
+  ((AstarPathGear::REVERSE == mov_dir) ? true : false)
+
+#define get_signed_segment_dir(signed_length)                       \
+  ((1 == ifly_sign(signed_length))                                  \
+       ? AstarPathGear::DRIVE                                       \
+       : ((-1 == ifly_sign(signed_length)) ? AstarPathGear::REVERSE \
+                                           : AstarPathGear::NONE))
+
+#define MAX_RS_PATH_NUM (6)
+
+struct RSPathParam {
+  float t;
+  float u;
+  float v;
+  float w;
+  float x;
+  // if < 0, gear is reverse
+  // if > 0, gear if drive
+  // if ==0, dist is 0
+  // length is real dist.
+  float length[MAX_RS_PATH_NUM];
+  float total_length;
+  const RSPathSteer *type;
+
+  void Clear() {
+    t = 1000.0;
+    u = 1000.0;
+    v = 1000.0;
+    w = 1000.0;
+    x = 1000.0;
+  }
+};
+
+// base coordinate is rs start point. start point local system is up-left.
+struct RSEndPoint {
+  Pose2f pose;
+  float sin_theta;
+  float cos_theta;
+
+  float sin_minus_theta;
+  float cos_minus_theta;
+};
+
+struct RSSegmentKappaParam {
+  /* signed arc length */
+  float length;
+  // left is postive, kappa
+  float kappa;
+
+  RSPathSteer steer_type;
+};
+
+struct RSAnchorPoints {
+  // record points if kappa change or gear change
+  RSPoint points[16];
+  int size;
+};
+
+struct RSPathKappaParam {
+  RSSegmentKappaParam path_kappa[MAX_RS_PATH_NUM];
+  int size;
+
+  int gear_change_num;
+};
+
+struct RSPathInfo {
+  Pose2f start;
+  Pose2f end;
+  float min_radius;
+  RSPathParam path;
+
+  bool is_path_valid;
+  RSPathKappaParam kappa_param;
+};
+
+// todo
+class RSPathGenerator {
+ public:
+  RSPathGenerator() = default;
+
+ private:
+};
+
+int GetShortestRSPathParam(RSPathParam *path, const Pose2f *start_pose,
+                           const Pose2f *goal_pose, float min_turn_radius,
+                           float inverse_radius,
+                           const RSPathRequestType request_type);
+
+RSPathInfo *GetRSPathGlobalInfo(void);
+
+/**
+ * \brief Get gear switch num of the reeds shepp shortest path.
+ *        The unit of start_pose.pos and goal_pose.pos should
+ *        be the same (m or cell).
+ *
+ * \param[out]      gear_switch_num gear switch num of the rs shortest path;
+ * \param[in]            start_pose start pose;
+ * \param[in]             goal_pose goal pose;
+ * \param[in]       min_turn_radius min turn radius of vehicle;
+ * \param[in]      initial_pose_dir direction of initial pose;
+ * \return 0 or error code.
+ **/
+int GetRSPathGearSwitchNum(int *gear_switch_num, const Pose2f *start_pose,
+                           const Pose2f *goal_pose, float min_turn_radius,
+                           AstarPathGear initial_pose_dir);
+
+/**
+ * \brief Get the shortest distance of start pose to goal pose by reeds shepp.
+ *        The unit of start_pose.pos and goal_pose.pos should be
+ *        the same (m or cell). The unit of out param distance
+ *        keeps pace with pos.
+ *
+ * \param[out]          distance distance of start pose to goal pose;
+ * \param[in]         start_pose start pose;
+ * \param[in]          goal_pose goal pose;
+ * \param[in]    min_turn_radius min turn radius of vehicle;
+ * \return 0 or error code.
+ **/
+int GetRSPathDist(float *distance, const Pose2f *start_pose,
+                  const Pose2f *goal_pose, float min_turn_radius);
+
+int TestSCS(RSPathParam *path, const Pose2f *start_pose,
+            const Pose2f *goal_pose, float min_turn_radius,
+            float inverse_radius, const RSPathRequestType request_type);
+
+}  // namespace planning
