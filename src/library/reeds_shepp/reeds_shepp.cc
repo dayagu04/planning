@@ -13,7 +13,7 @@ namespace planning {
 
 static RSPathInfo cached_path_info;
 static bool global_data_inited = false;
-const RSPathSteer ReedsSheppPathype[][5] = {
+static const RSPathSteer ReedsSheppPathype[][5] = {
     // 0
     // C|C|C
     // CC|C
@@ -79,7 +79,7 @@ static int CartesianToPolar(float *r, float *theta, float x, float y) {
   return 0;
 }
 
-int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, float t,
+static int SetRSPathParam(RSPathParam *path, const RSPathSteer *type, float t,
                           float u, float v, float w, float x) {
   path->type = type;
   path->t = t;
