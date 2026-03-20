@@ -1235,7 +1235,11 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
-
+    const bool was_successful =
+        std::find(last_static_blocked_obj_id_vec_.begin(),
+                  last_static_blocked_obj_id_vec_.end(),
+                  id) != last_static_blocked_obj_id_vec_.end();
+    const double speed_hysteresis = was_successful ? 1.33 : 1;
     const auto& frenet_obstacle_sl = obstacle->frenet_obstacle_boundary();
     if (frenet_obstacle_sl.s_start > forward_obs_s ||
         frenet_obstacle_sl.s_end + kObsLonDisBuffer <
@@ -1266,7 +1270,7 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
         frenet_obstacle_sl.l_start > left_width) {  // away from cur lane
       continue;
     } else {
-      if (obstacle->frenet_velocity_s() > kMaxNudgingSpeed) {
+      if (obstacle->frenet_velocity_s() > speed_hysteresis * kMaxNudgingSpeed) {
         continue;
       }
     }
