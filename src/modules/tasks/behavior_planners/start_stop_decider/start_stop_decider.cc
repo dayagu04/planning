@@ -395,6 +395,7 @@ void StartStopDecider::SaveHppStopOutput(const HppStopConditions& conditions,
                                          bool is_stopped_at_destination) {
   // 在判断进入 STOP 逻辑后，再更新 session 相关逻辑（避免未进入 STOP 时写下游）
   if (ego_start_stop_info_.state() != common::StartStopInfo::STOP) {
+    session_->mutable_planning_context()->mutable_hpp_stop_decider_output().Clear();
     return;
   }
 
