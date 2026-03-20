@@ -97,6 +97,7 @@ void ConeRequest::Update(int lc_status) {
   auto tlane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
   cone_longit_distribution_dis_ = 0.0;
+  cluster_index_set_.clear();
 
   UpdateConeSituation(lc_status);
   ILOG_DEBUG << "ConeRequest::Update: is_cone_lane_change_situation "
@@ -104,6 +105,7 @@ void ConeRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("is_cone_lane_change_situation_",
                    is_cone_lane_change_situation_);
 
+  ComputeConeClusterLongitDistribution();
   if (!is_cone_must_lane_change_situation_) {
     if (!is_cone_lane_change_situation_) {
       if (request_type_ != NO_CHANGE &&
@@ -307,7 +309,6 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
   double all_cone_cluster_min_lateral_distance =
       std::numeric_limits<double>::max();
-  std::vector<int> cluster_index_set;
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
@@ -366,7 +367,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
         (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 &&
          average_l < 0.0)) {
       cone_alc_trigger_counter_++;
-      cluster_index_set.emplace_back(cluster);
+      cluster_index_set_.emplace_back(cluster);
       ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_
                  << ", cluster is " << cluster;
       if (cone_alc_trigger_counter_ >= kConeAlcMaxCountThre) {
@@ -395,8 +396,6 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     }
   }
   // if all cone l is larger than threshold, then no need to lane change
-  ComputeConeClusterLongitDistribution(cluster_index_set);
-
   return;
 }
 
@@ -596,7 +595,7 @@ void ConeRequest::ConeDir() {
       int target_lane_order_num = current_lane_order_num - 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
-                    target_lane_order_num) == feasible_lane_sequence.end()) {
+                    target_lane_order_num) == feasible_lane_sequence.end() || !IfFeasibleLaneDistanceEnough(llane)) {
         left_lane_is_on_navigation_route = false;
       }
     }
@@ -606,7 +605,7 @@ void ConeRequest::ConeDir() {
       int target_lane_order_num = current_lane_order_num + 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
-                    target_lane_order_num) == feasible_lane_sequence.end()) {
+                    target_lane_order_num) == feasible_lane_sequence.end() || !IfFeasibleLaneDistanceEnough(rlane)) {
         right_lane_is_on_navigation_route = false;
       }
     }
@@ -698,17 +697,13 @@ void ConeRequest::ConeDir() {
   }
 
   if (left_change_available && left_lane_is_on_navigation_route) {
-    if (IfFeasibleLaneDistanceEnough(llane)) {
-      ILOG_DEBUG << "cone alc left!!!";
-      cone_lane_change_direction_ = LEFT_CHANGE;
-      return;
-    }
+    ILOG_DEBUG << "cone alc left!!!";
+    cone_lane_change_direction_ = LEFT_CHANGE;
+    return;
   } else if (right_change_available && right_lane_is_on_navigation_route) {
-    if (IfFeasibleLaneDistanceEnough(rlane)) {
-      ILOG_DEBUG << "cone alc right!!!";
-      cone_lane_change_direction_ = RIGHT_CHANGE;
-      return;
-    }
+    ILOG_DEBUG << "cone alc right!!!";
+    cone_lane_change_direction_ = RIGHT_CHANGE;
+    return;
   } else {
     // default
     cone_lane_change_direction_ = NO_CHANGE;
@@ -1071,12 +1066,12 @@ void ConeRequest::Reset() {
   cone_longit_distribution_dis_ = 0.0;
 }
 
-void ConeRequest::ComputeConeClusterLongitDistribution(std::vector<int>& cones_cluster) {
-  if (cones_cluster.empty()|| cone_cluster_attribute_set_.empty()) {
+void ConeRequest::ComputeConeClusterLongitDistribution() {
+  if (cluster_index_set_.empty()|| cone_cluster_attribute_set_.empty()) {
     return;
   }
   double max_cone_distribution_dis = 0.0;
-  for (const auto index : cones_cluster) {
+  for (const auto index : cluster_index_set_) {
     auto it = cone_cluster_attribute_set_.find(index);
     if (it != cone_cluster_attribute_set_.end()) {
       // 找到对应键，获取vector<ConePoint>
@@ -1109,7 +1104,7 @@ bool ConeRequest::IfFeasibleLaneDistanceEnough(
     return false;
   }
   bool enable_lane_change =
-      (cone_longit_distribution_dis_ + ego_v * 3.5) < feasible_lane_distance;
+      (cone_longit_distribution_dis_ + ego_v * 2.5) < feasible_lane_distance;
 
   return enable_lane_change;
 }
