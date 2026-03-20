@@ -989,12 +989,12 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
     lane_borrow_decider_output_.borrow_direction = bypass_direction_;
   }
 
-  // // 虚拟车道抑制借道检查
-  // if (!CheckVirtualLaneSuppressBorrow()) {
-  //   lane_borrow_decider_output_.lane_borrow_failed_reason =
-  //   VIRTUAL_LANE_SUPPRESS;
-  //   return false;
-  // }
+  // 虚拟车道抑制借道检查
+  if (!CheckVirtualLaneSuppressBorrow()) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+    VIRTUAL_LANE_SUPPRESS;
+    return false;
+  }
 
   // get blocking obs
   SendObserveToLatFlag();
