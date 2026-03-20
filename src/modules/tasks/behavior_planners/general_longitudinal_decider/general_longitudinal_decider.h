@@ -165,7 +165,7 @@ class GeneralLongitudinalDecider : public Task {
    * @param ego_velocity 自车当前速度
    * @return 减速带限速值（m/s）
    */
-  double GetSpeedBumpVelocityLimit(const SpeedBumpZoneInfo &zone_info,
+  double GetSpeedLimitInObjectiveZone(const SpeedBumpZoneInfo &zone_info,
                                    double ego_velocity);
 
  private:

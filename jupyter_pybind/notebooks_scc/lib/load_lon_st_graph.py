@@ -249,7 +249,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \
                               "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
-                              "lon_danger_agent_ids", "v_cruise_limit","v_target_decider","v_target_type_code","construction_manual_intervention_detected",\
+                              "lon_danger_agent_ids", "v_cruise_limit","v_target_decider","v_target_type_code", "construction_manual_intervention_detected",\
                               "v_target_construction","v_target_near_construction","dis_to_construction","is_exist_construction_area","is_pass_construction_area","construction_lat_dist_flag",\
                               "construction_strong_deceleration_mode", "construction_strong_mode_reason","construction_strong_mode_frame_count","agents_headway_id", "agents_headway_value",\
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
@@ -280,8 +280,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   # HPP debug scalar keys
   hpp_debug_value_list = [
-      "v_cruise_limit", "v_target_decider", "v_target_type_code",
-      "LaneChangeDeciderTime", "LateralObstacleDeciderTime",
+      "v_cruise_limit", "v_target_decider", "v_target_type_code", "v_limit_curv", "v_limit_avoid", 
+      "v_limit_speed_bump", "in_speed_bump_zone", "approaching_speed_bump", "distance_to_bump_zone",
+      # "ego_head_s", "ego_s", "speed_bump_near_ignore_range_first", "speed_bump_near_ignore_range_second", "update_speed_bump_near_ignore_range",\
+      "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp",
+      "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection",
+      "LaneChangeDeciderTime", "LateralObstacleDeciderTime", 
       "HppGeneralLateralDeciderTime", "LateralMotionPlannerTime",
       "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
       "ResultTrajectoryGeneratorTime", "ParkingSwitchDeciderTime",
