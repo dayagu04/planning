@@ -504,8 +504,8 @@
   "entrance_slot_mirror_lat_buffer": 0.13,
   "entrance_slot_extra_turn_lat_buffer": 0.03,
 
-  "in_slot_body_lat_buffer": 0.13,
-  "in_slot_mirror_lat_buffer": 0.10,
+  "in_slot_body_lat_buffer": 0.10,
+  "in_slot_mirror_lat_buffer": 0.08,
   "in_slot_extra_turn_lat_buffer": 0.03,
 
   "comment_23": "lat lon speed buffer",

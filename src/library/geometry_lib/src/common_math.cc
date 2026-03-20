@@ -94,10 +94,9 @@ const bool CalLineSegByGearAndPose(const AstarPathGear gear, const T length,
 template <typename T>
 const bool CalLineUnitNormVecByPt(const Pos<T>& pt, const LineSeg<T>& line,
                                   Pos<T>& line_norm_vec) {
-  const Pos<T> v_AB = line.pB - line.pA;
   const Pos<T> v_AO = pt - line.pA;
-  const T cross = CalCrossFromTwoVec(v_AB, v_AO);
-  const Pos<T> line_tang_vec = (line.pB - line.pA).normalized();
+  const T cross = CalCrossFromTwoVec(line.dir, v_AO);
+  const Pos<T> line_tang_vec = line.dir;
   // line_norm_vec is from pos to line
   if (cross > T(1e-6f)) {
     // pos is on left side of the line
@@ -166,15 +165,15 @@ const bool SamplePathSeg(std::vector<PathPt<T>>& pts, const PathSeg<T>& seg,
 
 template <typename T>
 const bool CompleteArcSeg(ArcSeg<T>& arc) {
+  // known: pA, pB, thetaA, center, radius
+  // unknown: thetaB, dirB, length, is_anticlockwise
   const Pos<T> OA = arc.pA - arc.center;
   const Pos<T> OB = arc.pB - arc.center;
   const T rot_angle = FastSignedAngle(OA, OB);
 
   arc.is_anticlockwise = rot_angle > T(0.0f);
 
-  const T OA_norm = OA.norm();
-
-  // arc.radius = OA_norm;
+  const T OA_norm = arc.radius;
 
   arc.thetaB = UnifyAngle(arc.thetaA + rot_angle);
 
@@ -188,10 +187,8 @@ const bool CompleteArcSeg(ArcSeg<T>& arc) {
 template <typename T>
 const bool CompleteArcSeg(ArcSeg<T>& arc, AstarPathSteer steer) {
   const Pos<T> t = arc.dirA;
-  Pos<T> n(t.y(), -t.x());
-  if (steer == AstarPathSteer::LEFT) {
-    n *= -1.0;
-  }
+  const Pos<T> n = (steer == AstarPathSteer::LEFT) ? Pos<T>(-t.y(), t.x())
+                                                   : Pos<T>(t.y(), -t.x());
 
   arc.center = arc.pA + arc.radius * n;
 
@@ -206,8 +203,10 @@ const bool CompleteArcSeg(ArcSeg<T>& arc, AstarPathSteer steer) {
   }
 
   const Pos<T> OA = arc.pA - arc.center;
-  const Eigen::Matrix<T, 2, 2> rot_m = CalRotMatFromTheta(rot_angle);
-  const Pos<T> OB = rot_m * OA;
+  const T cos_rot = std::cos(rot_angle);
+  const T sin_rot = std::sin(rot_angle);
+  const Pos<T> OB(cos_rot * OA.x() - sin_rot * OA.y(),
+                  sin_rot * OA.x() + cos_rot * OA.y());
 
   arc.pB = arc.center + OB;
   arc.length = std::fabs(rot_angle) * arc.radius;
@@ -219,29 +218,38 @@ const bool CompleteArcSeg(ArcSeg<T>& arc, AstarPathSteer steer) {
 template <typename T>
 const uint8_t CalIntersectionOfLineAndCircle(const LineSeg<T>& line,
                                              const ArcSeg<T>& circle,
-                                             std::vector<Pos<T>>& pt_vec) {
-  pt_vec.clear();
+                                             std::array<Pos<T>, 2>& pts) {
+  const Pos<T> v_AB = line.pB - line.pA;
+  const Pos<T> v_AO = circle.center - line.pA;
+  const T v_AB_sq = v_AB.squaredNorm();
 
-  const T dist = CalPt2LineDist(circle.center, line);
-
-  Pos<T> line_norm_vec;
-  CalLineUnitNormVecByPt(circle.center, line, line_norm_vec);
-
-  if (dist > circle.radius + T(1e-6f)) {
+  if (v_AB_sq < T(1e-4f)) {
     return 0;
-  } else if (dist < circle.radius - T(1e-6f)) {
-    pt_vec.resize(2);
-    const T d1 = std::sqrt(circle.radius * circle.radius - dist * dist);
-    const Pos<T> line_tang_vec = (line.pB - line.pA).normalized();
-
-    pt_vec[0] = circle.center + dist * line_norm_vec + d1 * line_tang_vec;
-    pt_vec[1] = circle.center + dist * line_norm_vec - d1 * line_tang_vec;
-    return 2;
-  } else {
-    pt_vec.resize(1);
-    pt_vec[0] = circle.center + dist * line_norm_vec;
-    return 1;
   }
+
+  const T v_AO_dot_v_AB = v_AO.dot(v_AB);
+  const T dist_sq =
+      v_AO.squaredNorm() - v_AO_dot_v_AB * v_AO_dot_v_AB / v_AB_sq;
+
+  if (dist_sq > Square(circle.radius + T(1e-6f))) {
+    return 0;  // no intersection, avoid sqrt
+  }
+
+  const T dist = (dist_sq < T(1e-4f)) ? T(0.0f) : std::sqrt(dist_sq);
+  const Pos<T> line_tang_vec = v_AB / std::sqrt(v_AB_sq);
+  const T cross = CalCrossFromTwoVec(v_AB, v_AO);
+  const Pos<T> line_norm_vec =
+      (cross > T(1e-6f)) ? Pos<T>(line_tang_vec.y(), -line_tang_vec.x())
+                         : Pos<T>(-line_tang_vec.y(), line_tang_vec.x());
+
+  if (dist < circle.radius - T(1e-6f)) {
+    const T d1 = std::sqrt(circle.radius * circle.radius - dist_sq);
+    pts[0] = circle.center + dist * line_norm_vec + d1 * line_tang_vec;
+    pts[1] = circle.center + dist * line_norm_vec - d1 * line_tang_vec;
+    return 2;
+  }
+  pts[0] = circle.center + dist * line_norm_vec;
+  return 1;
 }
 
 template <typename T>
@@ -288,13 +296,14 @@ const bool CalOneArcWithTargetThetaAndGear(ArcSeg<T>& arc,
                                            const T target_theta) {
   arc.thetaB = target_theta;
   const T theta_diff = UnifyAngleDiff(arc.thetaA, target_theta);
-  AstarPathSteer arc_steer;
-  if ((theta_diff < 0.0 && gear == AstarPathGear::DRIVE) ||
-      (theta_diff > 0.0 && gear == AstarPathGear::REVERSE)) {
-    arc_steer = AstarPathSteer::LEFT;
-  } else {
-    arc_steer = AstarPathSteer::RIGHT;
+  if (IsTwoNumerEqual(theta_diff, T(0.0f), T(1e-4f))) {
+    return false;
   }
+  const AstarPathSteer arc_steer =
+      ((theta_diff < T(0.0f) && gear == AstarPathGear::DRIVE) ||
+       (theta_diff > T(0.0f) && gear == AstarPathGear::REVERSE))
+          ? AstarPathSteer::LEFT
+          : AstarPathSteer::RIGHT;
 
   return CompleteArcSeg(arc, arc_steer);
 }
@@ -313,23 +322,15 @@ const bool CalOneArcWithLineAndGear(ArcSeg<T>& arc, const LineSeg<T>& line,
     return false;
   }
 
-  AstarPathSteer steer;
-  if ((heading_diff < T(0.0f) && gear == AstarPathGear::DRIVE) ||
-      (heading_diff > T(0.0f) && gear == AstarPathGear::REVERSE)) {
-    steer = AstarPathSteer::LEFT;
-  } else {
-    steer = AstarPathSteer::RIGHT;
-  }
+  const bool is_left =
+      (heading_diff < T(0.0f) && gear == AstarPathGear::DRIVE) ||
+      (heading_diff > T(0.0f) && gear == AstarPathGear::REVERSE);
 
-  Pos<T> pose_norm_vec;
-  if (steer == AstarPathSteer::RIGHT) {
-    pose_norm_vec << arc.dirA.y(), -arc.dirA.x();
-  } else if (steer == AstarPathSteer::LEFT) {
-    pose_norm_vec << -arc.dirA.y(), arc.dirA.x();
-  }
+  const Pos<T> pose_norm_vec = is_left ? Pos<T>(-arc.dirA.y(), arc.dirA.x())
+                                       : Pos<T>(arc.dirA.y(), -arc.dirA.x());
 
   const Pos<T> AC = arc.pA - line.pA;
-  const Pos<T> line_tang_vec = (line.pB - line.pA).normalized();
+  const Pos<T> line_tang_vec = line.dir;
   const Pos<T> norm_vec = pose_norm_vec + line_norm_vec;
   const T a = CalCrossFromTwoVec(norm_vec, line_tang_vec);
   if (IsTwoNumerEqual(a, T(0.0f))) {
@@ -349,23 +350,24 @@ const bool CalOneArcWithLineAndGear(ArcSeg<T>& arc, const LineSeg<T>& line,
 }
 
 template <typename T>
-const bool CalTwoArcWithLine(
+const uint8_t CalTwoArcWithLine(
     const PathPt<T>& pose, const LineSeg<T>& line, const T radius1,
     const T radius2,
-    std::vector<std::pair<ArcSeg<T>, ArcSeg<T>>>& arc_pair_vec) {
-  arc_pair_vec.clear();
-  arc_pair_vec.reserve(8);
+    std::array<std::pair<ArcSeg<T>, ArcSeg<T>>, 8>& arc_pairs) {
+  uint8_t count = 0;
 
-  std::vector<Pos<T>> center1s(2);
-  center1s[0] = pose.pos + radius1 * Pos<T>(pose.dir.y(), -pose.dir.x());
-  center1s[1] = pose.pos + radius1 * Pos<T>(-pose.dir.y(), pose.dir.x());
+  std::array<Pos<T>, 2> center1s = {
+      pose.pos + radius1 * Pos<T>(pose.dir.y(), -pose.dir.x()),
+      pose.pos + radius1 * Pos<T>(-pose.dir.y(), pose.dir.x())};
 
-  std::vector<Pos<T>> line_norm_dirs(2);
-  line_norm_dirs[0] << line.dir.y(), -line.dir.x();
-  line_norm_dirs[1] << -line.dir.y(), line.dir.x();
+  std::array<Pos<T>, 2> line_norm_dirs = {Pos<T>(line.dir.y(), -line.dir.x()),
+                                          Pos<T>(-line.dir.y(), line.dir.x())};
 
   for (const Pos<T>& center1 : center1s) {
     for (const Pos<T>& line_norm_dir : line_norm_dirs) {
+      if (count >= 8) {
+        return count;
+      }
       // the O2 is on arc2_center_line
       LineSeg<T> arc2_center_line(line.pA + line_norm_dir * radius2,
                                   line.pB + line_norm_dir * radius2);
@@ -373,13 +375,18 @@ const bool CalTwoArcWithLine(
       // of O1 and O2 is r1+r2
       ArcSeg<T> virtual_circle(center1, radius1 + radius2);
       // the intersection of arc2_center_line and virtual arc is arc2 center
-      std::vector<Pos<T>> center2s;
-      if (CalIntersectionOfLineAndCircle(arc2_center_line, virtual_circle,
-                                         center2s) < 1) {
+      std::array<Pos<T>, 2> center2s;
+      const uint8_t center2_count = CalIntersectionOfLineAndCircle(
+          arc2_center_line, virtual_circle, center2s);
+      if (center2_count < 1) {
         continue;
       }
 
-      for (const Pos<T>& center2 : center2s) {
+      for (uint8_t j = 0; j < center2_count; ++j) {
+        const Pos<T>& center2 = center2s[j];
+        if (count >= 8) {
+          return count;
+        }
         ArcSeg<T> arc1(center1, radius1);
         arc1.pA = pose.pos;
         arc1.thetaA = pose.theta;
@@ -409,65 +416,63 @@ const bool CalTwoArcWithLine(
           continue;
         }
 
-        arc_pair_vec.emplace_back(std::make_pair(arc1, arc2));
+        arc_pairs[count++] = std::make_pair(arc1, arc2);
       }
     }
   }
 
-  return arc_pair_vec.size() > 0;
+  return count;
 }
 
 template <typename T>
-const bool CalCommonTangentCircleOfTwoLine(
+const uint8_t CalCommonTangentCircleOfTwoLine(
     const LineSeg<T>& line1, const LineSeg<T>& line2, const T radius,
-    std::vector<Pos<T>>& centers,
-    std::vector<std::pair<Pos<T>, Pos<T>>>& tangent_ptss) {
+    std::array<Pos<T>, 4>& centers,
+    std::array<std::pair<Pos<T>, Pos<T>>, 4>& tangent_ptss) {
   Pos<T> intersection = Pos<T>(0.0f, 0.0f);
 
-  if (CalIntersectionOfTwoLines(intersection, line1, line2)) {
-    const Pos<T> unit_line1_vec = (line1.pB - line1.pA).normalized();
-    const Pos<T> unit_line2_vec = (line2.pB - line2.pA).normalized();
-    // every line have two direction, so two lines have four combination
-    std::vector<Pos<T>> combination{Pos<T>(1.0f, 1.0f), Pos<T>(1.0f, -1.0f),
-                                    Pos<T>(-1.0f, 1.0f), Pos<T>(-1.0f, -1.0f)};
-    centers.resize(combination.size());
-    tangent_ptss.resize(combination.size());
-    for (uint8_t i = 0; i < combination.size(); ++i) {
-      const Pos<T> actual_unit_line1_vec = unit_line1_vec * combination[i].x();
-      const Pos<T> actual_unit_line2_vec = unit_line2_vec * combination[i].y();
-
-      const Pos<T> unit_angular_bisector_vec =
-          (actual_unit_line1_vec + actual_unit_line2_vec).normalized();
-
-      // the angle between two lines is 2*theta, sin_theta is no impossible 0
-      const T sin_theta =
-          CalCrossFromTwoVec(actual_unit_line1_vec, unit_angular_bisector_vec);
-      if (IsTwoNumerEqual(sin_theta, T(0.0f))) {
-        return false;
-      }
-
-      const T dist_intersection_center = radius / sin_theta;
-
-      // A is intersection, O is center
-      const Pos<T> AO = dist_intersection_center * unit_angular_bisector_vec;
-      const T cos_theta = actual_unit_line1_vec.dot(unit_angular_bisector_vec);
-      const T dist_intersection_tangpt = dist_intersection_center * cos_theta;
-
-      centers[i] = AO + intersection;
-
-      // P1, P2 is tang pt
-      const Pos<T> AP1 = dist_intersection_tangpt * actual_unit_line1_vec;
-      const Pos<T> AP2 = dist_intersection_tangpt * actual_unit_line2_vec;
-
-      std::pair<Pos<T>, Pos<T>> tang_pts;
-      tang_pts.first = AP1 + intersection;
-      tang_pts.second = AP2 + intersection;
-      tangent_ptss[i] = tang_pts;
-    }
-  } else {
-    return false;
+  if (!CalIntersectionOfTwoLines(intersection, line1, line2)) {
+    return 0;
   }
-  return true;
+
+  const Pos<T> unit_line1_vec = (line1.pB - line1.pA).normalized();
+  const Pos<T> unit_line2_vec = (line2.pB - line2.pA).normalized();
+  // every line have two direction, so two lines have four combination
+  const std::array<Pos<T>, 4> combination = {
+      Pos<T>(1.0f, 1.0f), Pos<T>(1.0f, -1.0f), Pos<T>(-1.0f, 1.0f),
+      Pos<T>(-1.0f, -1.0f)};
+
+  for (uint8_t i = 0; i < combination.size(); ++i) {
+    const Pos<T> actual_unit_line1_vec = unit_line1_vec * combination[i].x();
+    const Pos<T> actual_unit_line2_vec = unit_line2_vec * combination[i].y();
+
+    const Pos<T> unit_angular_bisector_vec =
+        (actual_unit_line1_vec + actual_unit_line2_vec).normalized();
+
+    // the angle between two lines is 2*theta, sin_theta is no impossible 0
+    const T sin_theta =
+        CalCrossFromTwoVec(actual_unit_line1_vec, unit_angular_bisector_vec);
+    if (IsTwoNumerEqual(sin_theta, T(0.0f))) {
+      return 0;
+    }
+
+    const T dist_intersection_center = radius / sin_theta;
+
+    // A is intersection, O is center
+    const Pos<T> AO = dist_intersection_center * unit_angular_bisector_vec;
+    const T cos_theta = actual_unit_line1_vec.dot(unit_angular_bisector_vec);
+    const T dist_intersection_tangpt = dist_intersection_center * cos_theta;
+
+    centers[i] = AO + intersection;
+
+    // P1, P2 is tang pt
+    const Pos<T> AP1 = dist_intersection_tangpt * actual_unit_line1_vec;
+    const Pos<T> AP2 = dist_intersection_tangpt * actual_unit_line2_vec;
+
+    tangent_ptss[i] = std::make_pair(AP1 + intersection, AP2 + intersection);
+  }
+
+  return static_cast<uint8_t>(combination.size());
 }
 
 template <typename T>
@@ -500,10 +505,8 @@ const bool CalTwoArcWithSameThetaAndGear(ArcSeg<T>& arc1, ArcSeg<T>& arc2,
   // lon_dist is the proj length of AC in line2
   const T lon_dist = arc1.radius * sin_theta;
 
-  Pos<T> tmp_tang_vec = arc1.dirA;
-  if (gear == AstarPathGear::REVERSE) {
-    tmp_tang_vec *= -1.0;
-  }
+  const Pos<T> tmp_tang_vec =
+      (gear == AstarPathGear::REVERSE) ? -arc1.dirA : arc1.dirA;
 
   arc1.pB =
       arc1.pA + lat_dist * T(0.5f) * line_norm_vec + lon_dist * tmp_tang_vec;
@@ -571,11 +574,10 @@ template const bool CompleteArcSeg(ArcSeg<double>&);
 template const bool CompleteArcSeg(ArcSeg<float>&, AstarPathSteer);
 template const bool CompleteArcSeg(ArcSeg<double>&, AstarPathSteer);
 
-template const uint8_t CalIntersectionOfLineAndCircle(const LineSeg<float>&,
-                                                      const ArcSeg<float>&,
-                                                      std::vector<Pos<float>>&);
 template const uint8_t CalIntersectionOfLineAndCircle(
-    const LineSeg<double>&, const ArcSeg<double>&, std::vector<Pos<double>>&);
+    const LineSeg<float>&, const ArcSeg<float>&, std::array<Pos<float>, 2>&);
+template const uint8_t CalIntersectionOfLineAndCircle(
+    const LineSeg<double>&, const ArcSeg<double>&, std::array<Pos<double>, 2>&);
 
 template const bool CalIntersectionOfTwoLines(Pos<float>&,
                                               const LineSeg<float>&,
@@ -598,20 +600,21 @@ template const bool CalOneArcWithLineAndGear(ArcSeg<double>&,
                                              const LineSeg<double>&,
                                              const AstarPathGear, const double);
 
-template const bool CalTwoArcWithLine(
+template const uint8_t CalTwoArcWithLine<float>(
     const PathPt<float>&, const LineSeg<float>&, const float, const float,
-    std::vector<std::pair<ArcSeg<float>, ArcSeg<float>>>&);
-template const bool CalTwoArcWithLine(
+    std::array<std::pair<ArcSeg<float>, ArcSeg<float>>, 8>&);
+template const uint8_t CalTwoArcWithLine<double>(
     const PathPt<double>&, const LineSeg<double>&, const double, const double,
-    std::vector<std::pair<ArcSeg<double>, ArcSeg<double>>>&);
+    std::array<std::pair<ArcSeg<double>, ArcSeg<double>>, 8>&);
 
-template const bool CalCommonTangentCircleOfTwoLine(
+template const uint8_t CalCommonTangentCircleOfTwoLine(
     const LineSeg<float>&, const LineSeg<float>&, const float,
-    std::vector<Pos<float>>&, std::vector<std::pair<Pos<float>, Pos<float>>>&);
-template const bool CalCommonTangentCircleOfTwoLine(
+    std::array<Pos<float>, 4>&,
+    std::array<std::pair<Pos<float>, Pos<float>>, 4>&);
+template const uint8_t CalCommonTangentCircleOfTwoLine(
     const LineSeg<double>&, const LineSeg<double>&, const double,
-    std::vector<Pos<double>>&,
-    std::vector<std::pair<Pos<double>, Pos<double>>>&);
+    std::array<Pos<double>, 4>&,
+    std::array<std::pair<Pos<double>, Pos<double>>, 4>&);
 
 template const bool CalTwoArcWithSameThetaAndGear(ArcSeg<float>&,
                                                   ArcSeg<float>&,
