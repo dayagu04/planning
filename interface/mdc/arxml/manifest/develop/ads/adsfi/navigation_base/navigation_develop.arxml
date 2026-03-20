@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="79aeee67-df44-4475-b275-cd3845183322">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE UUID="dbb88cc2-5f2e-4f59-91f9-092a63fd7f11">
+          <SHORT-NAME>FunctionalSoftware</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE UUID="fdddcd9b-8b3a-44d7-9c69-e692e305b486">
+              <SHORT-NAME>NavigationApplication</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE UUID="a9827765-aaa5-4570-a0fe-2a9c864be7c3">
+                  <SHORT-NAME>Execution</SHORT-NAME>
+                </AR-PACKAGE>
+                <AR-PACKAGE UUID="6f7a1665-9d93-46c4-ba76-06543b1054a0">
+                  <SHORT-NAME>SwComponent</SHORT-NAME>
+                  <ELEMENTS>
+                    <ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE UUID="e86e375a-7cd0-4d5e-8491-935a1654cfa5">
+                      <SHORT-NAME>navigation</SHORT-NAME>
+                      <PORTS>
+                        <R-PORT-PROTOTYPE UUID="c39520b7-a4b9-4209-9275-cb304a2a8216">
+                          <SHORT-NAME>NavigationLocationPointRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="7453e325-7d1d-4eaf-8d6b-771744751b9a">
+                          <SHORT-NAME>NavigationNavigationResultPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE UUID="73f64e07-2a69-440d-862f-cface3a368d9">
+                          <SHORT-NAME>NavigationSelectPointRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                      </PORTS>
+                    </ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

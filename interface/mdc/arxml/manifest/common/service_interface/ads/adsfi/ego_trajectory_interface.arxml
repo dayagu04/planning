@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="a758d4e7-93ae-42bb-a09c-07d91fcb4104">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE UUID="dfc3a554-c8d7-4697-8c93-85f63663b830">
+          <SHORT-NAME>FunctionalSoftware</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE UUID="16bad73f-8f2b-4f9d-8bd4-ebeb002b646b">
+              <SHORT-NAME>EgoTrajectoryMsgDataType</SHORT-NAME>
+            </AR-PACKAGE>
+            <AR-PACKAGE UUID="345da103-9232-4b94-af36-e1a12512a0ca">
+              <SHORT-NAME>EgoTrajectoryServiceInterface</SHORT-NAME>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

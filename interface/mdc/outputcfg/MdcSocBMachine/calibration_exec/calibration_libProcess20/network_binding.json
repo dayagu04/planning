@@ -1,0 +1,153 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "calibration_exec/calibration_libExecutable20Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/CameraStructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10000",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundResizeImageFront_DdsRequiredServiceInstance176"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10001",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundResizeImageLeft_DdsRequiredServiceInstance176"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10002",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundResizeImageRear_DdsRequiredServiceInstance99"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10006",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundResizeImageRight_DdsRequiredServiceInstance100"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10050",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront30_DdsRequiredServiceInstance91"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10051",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideFl_DdsRequiredServiceInstance90"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10052",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideFr_DdsRequiredCalibration"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10053",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideRl_DdsRequiredServiceInstance88"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10054",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideRr_DdsRequiredServiceInstance87"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10055",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraRear_DdsRequiredCalibration"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10106",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront120FullResolutionH265_DdsRequiredServiceInstance92"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10189",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront120FullResolutionClearH265_DdsRequiredServiceInstance229"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "calibration_exec/calibration_libExecutable20Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10009",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoCalibration_RequiredSomeipServiceInstance16"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "calibration_exec/calibration_libExecutable20Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10016",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationEgomotion_DdsRequiredServiceInstance118"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10033",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorImu_DdsRequiredServiceInstance116"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10034",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekVehicleService_DdsRequiredServiceInstance117"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10036",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekCameraPerceptionObjects_DdsRequiredServiceInstance119"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10037",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFusionObjects_DdsRequiredServiceInstance120"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10039",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCalibrationCalibInfo_DdsProvidedCalibration"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10104",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredServiceInstance177"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10231",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCalibrationPhmReport_DdsProvidedCalibration"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10234",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCalibrationDebugInfo_DdsProvidedCalibration"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "calibration_exec/calibration_libExecutable20Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10013",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekPostSaleCalibrationActivation_ProvidedSomeipServiceInstance11"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10014",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekPostSaleCalibrationStop_ProvidedSomeipServiceInstance12"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10016",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekPostSaleCalibrationResult_ProvidedSomeipServiceInstance13"
+        }
+      ]
+    }
+  ]
+}

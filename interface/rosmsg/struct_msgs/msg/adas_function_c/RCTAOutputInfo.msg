@@ -1,0 +1,4 @@
+uint8 rcta_state
+uint8 rcta_left_warning_level
+uint8 rcta_right_warning_level
+RiskObjInfo rcta_risk_obj

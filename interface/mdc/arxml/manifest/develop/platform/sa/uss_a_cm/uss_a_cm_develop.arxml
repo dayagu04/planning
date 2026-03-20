@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="79aeee67-df44-4475-b275-cd3845183322">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformApplication</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>UssCmCenterApplication</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>Execution</SHORT-NAME>
+                  <ELEMENTS>
+                    <EXECUTABLE>
+                      <SHORT-NAME>libuss_a_cm</SHORT-NAME>
+                      <ROOT-SW-COMPONENT-PROTOTYPE>
+                        <SHORT-NAME>uss_a_cm</SHORT-NAME>
+                        <APPLICATION-TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/UssCmCenterApplication/SwComponent/libuss_a_cm</APPLICATION-TYPE-TREF>
+                      </ROOT-SW-COMPONENT-PROTOTYPE>
+                    </EXECUTABLE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>SwComponent</SHORT-NAME>
+                  <ELEMENTS>
+                    <ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                      <SHORT-NAME>libuss_a_cm</SHORT-NAME>
+                      <PORTS>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ApaToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ApaServiceInterface/ApaServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>DiagnosisInfoToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/DiagnosisInfoServiceInterface/DiagnosisInfoServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>DistanceToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/DistanceServiceInterface/DistanceServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>EcuToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/EcuServiceInterface/EcuServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>SensorStatusToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/SensorStatusServiceInterface/SensorStatusServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>SonarInfoToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/SonarInfoServiceInterface/SonarInfoServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>UpaToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/UpaServiceInterface/UpaServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssBodyRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/BodyServiceInterface/BodyReportServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssCfgClientRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssChassisRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisServiceInterface/ChassisReportServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssActCompensationRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActCompensationServiceInterface/ActCompensationServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssActCompensationGacRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActCompensationGacServiceInterface/ActCompensationGacServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>UssDataFlowPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssMntRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/MntAgentServiceInterface/MntDelayServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssNrmcRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/NrmcServiceInterface/NrmCenterServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>UssTimeDelayPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>reportEventRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>DetectDistanceToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/DetectDistanceServiceInterface/DetectDistanceServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>AreaDistanceToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/AreaDistanceServiceInterface/AreaDistanceServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ObstacleInfoToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ObstaclesInfoServiceInterface/ObstaclesInfoServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ParkSlotToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ParkSlotsServiceInterface/ParkSlotsServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>SystemStatusToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/SystemStatusServiceInterface/SystemStatusServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>UssWorkModRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/WorkModServiceInterface/WorkModServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>SenStsToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/SenStsServiceInterface/SenStsServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ProbDistanceToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ProbDistanceServiceInterface/ProbDistanceServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ProbObstacleInfoToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ProbObstaclesInfoServiceInterface/ProbObstaclesInfoServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ProbParkSlotToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ProbParkSlotsServiceInterface/ProbParkSlotsServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>PasDetectDistanceToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/PasDetectDistanceServiceInterface/PasDetectDistanceServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>PasObstaclesInfoToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/PasObstaclesInfoServiceInterface/PasObstaclesInfoServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>PasParkSlotsToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/PasParkSlotsServiceInterface/PasParkSlotsServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>PasSenStatusToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/PasSenStsServiceInterface/PasSenStsServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="" UUID="">
+                          <SHORT-NAME>PasSystemStatusToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/PasSystemStatusServiceInterface/PasSystemStatusServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>CommonDistancesToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/CommonDistancesServiceInterface/DistancesServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>CommonObstaclesToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/CommonObstaclesServiceInterface/ObstaclesServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>CommonParkSlotsToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/CommonParkSlotsServiceInterface/ParkSlotsServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                      </PORTS>
+                    </ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                    <COMPOSITION-SW-COMPONENT-TYPE S="">
+                      <SHORT-NAME>uss_a</SHORT-NAME>
+                      <COMPONENTS>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>diag_agent</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/DiagAgentApplication/SwComponent/diag_agent</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>uss_a_cm</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/UssCmCenterApplication/SwComponent/libuss_a_cm</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                      </COMPONENTS>
+                    </COMPOSITION-SW-COMPONENT-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>UssProcessStartupConfig</SHORT-NAME>
+                  <ELEMENTS>
+                    <STARTUP-CONFIG-SET>
+                      <SHORT-NAME>UssStartupConfigSet</SHORT-NAME>
+                      <STARTUP-CONFIGS>
+                        <STARTUP-CONFIG>
+                          <SHORT-NAME>UssStartupConfig</SHORT-NAME>
+                          <SCHEDULING-POLICY>SCHEDULING-POLICY-ROUND-ROBIN</SCHEDULING-POLICY>
+                          <SCHEDULING-PRIORITY>12</SCHEDULING-PRIORITY>
+                        </STARTUP-CONFIG>
+                      </STARTUP-CONFIGS>
+                    </STARTUP-CONFIG-SET>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

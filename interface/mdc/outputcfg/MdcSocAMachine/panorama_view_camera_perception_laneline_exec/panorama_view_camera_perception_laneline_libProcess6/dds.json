@@ -1,0 +1,243 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/panorama_view_camera_perception_laneline_libCompositionSwComponentType6/panorama_view_camera_perception_laneline_libProcess6",
+  "services": [
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/CameraStructContainerInterface",
+      "serviceId": 2,
+      "events": [
+        {
+          "event": "event",
+          "id": 31614,
+          "isDpRawData": true,
+          "dataType": "/HuaweiMDC/CameraStructContainer",
+          "topicName": "TopicOfevent"
+        }
+      ],
+      "fields": [],
+      "methods": [],
+      "instances": [
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekCameraPerceptionLaneFeature_DdsRequiredPanoramaViewCameraPerceptionLaneline",
+          "instance": "10215",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekCameraPerceptionObstacleFeature_DdsRequiredPanoramaViewCameraPerceptionLaneline",
+          "instance": "10176",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        }
+      ]
+    },
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "serviceId": 1,
+      "events": [
+        {
+          "event": "event",
+          "id": 31614,
+          "isDpRawData": false,
+          "dataType": "/HuaweiMDC/PlatformServices/DiagMsgDataType/DataTypes/ByteVector",
+          "topicName": "TopicOfevent"
+        }
+      ],
+      "fields": [],
+      "methods": [],
+      "instances": [
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionDrivableSpaceGrid_DdsProvidedPanoramaViewCameraPerceptionLaneline",
+          "instance": "10101",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "default_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionLaneLines_DdsProvidedServiceInstance7",
+          "instance": "10069",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionLaneTopo_DdsProvidedServiceInstance10",
+          "instance": "10073",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionObjects_DdsProvidedServiceInstance26",
+          "instance": "10025",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionPanoramaLanelinePhmReport_DdsProvidedPanoramaViewCameraPerceptionLaneline",
+          "instance": "10203",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionPanoramaView2DBoundingBoxes_DdsProvidedServiceInstance36",
+          "instance": "10186",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "default_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekPredictionPredictionResult_DdsProvidedServiceInstance24",
+          "instance": "10029",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredServiceInstance46",
+          "instance": "10110",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationEgomotion_DdsRequiredServiceInstance46",
+          "instance": "10083",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekVehicleService_DdsRequiredServiceInstance48",
+          "instance": "10009",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        }
+      ]
+    }
+  ]
+}

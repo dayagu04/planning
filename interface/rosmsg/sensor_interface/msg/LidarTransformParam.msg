@@ -1,0 +1,10 @@
+float32 x
+float32 y
+float32 z
+float32 roll
+float32 pitch
+float32 yaw
+float32 split_angle
+float32 max_distance
+uint32 use_lidar_clock
+uint32 ts_first_point

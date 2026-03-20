@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="79aeee67-df44-4475-b275-cd3845183322">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformApplication</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>ChassisCenterApplication</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE S="">
+                  <SHORT-NAME>ChassisProcessStartupConfig</SHORT-NAME>
+                  <ELEMENTS>
+                    <STARTUP-CONFIG-SET>
+                      <SHORT-NAME>ChassisStartupConfigSet</SHORT-NAME>
+                      <STARTUP-CONFIGS>
+                        <STARTUP-CONFIG>
+                          <SHORT-NAME>ChassisStartupConfig</SHORT-NAME>
+                          <SCHEDULING-POLICY>SCHEDULING-POLICY-ROUND-ROBIN</SCHEDULING-POLICY>
+                          <SCHEDULING-PRIORITY>12</SCHEDULING-PRIORITY>
+                        </STARTUP-CONFIG>
+                      </STARTUP-CONFIGS>
+                    </STARTUP-CONFIG-SET>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>Execution</SHORT-NAME>
+                  <ELEMENTS>
+                    <EXECUTABLE>
+                      <SHORT-NAME>libchassis_a_cm</SHORT-NAME>
+                      <ROOT-SW-COMPONENT-PROTOTYPE>
+                        <SHORT-NAME>libchassis_a_cm</SHORT-NAME>
+                        <APPLICATION-TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/ChassisCenterApplication/SwComponent/libchassis_a_cm</APPLICATION-TYPE-TREF>
+                      </ROOT-SW-COMPONENT-PROTOTYPE>
+                    </EXECUTABLE>
+                    <COMPOSITION-SW-COMPONENT-TYPE S="">
+                      <SHORT-NAME>chassis_a</SHORT-NAME>
+                      <COMPONENTS>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>diag_agent</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/DiagAgentApplication/SwComponent/diag_agent</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>chassis_a</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/ChassisCenterApplication/SwComponent/libchassis_a_cm</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                      </COMPONENTS>
+                    </COMPOSITION-SW-COMPONENT-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>SwComponent</SHORT-NAME>
+                  <ELEMENTS>
+                    <ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                      <SHORT-NAME>libchassis_a_cm</SHORT-NAME>
+                      <PORTS>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChasHostFromMcuRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/CanRxServiceInterface/CanRxServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChasHostToMcuPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/CanTxServiceInterface/CanTxServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisCMFromCanTpRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/CanTpServiceInterface/CanTpMsgServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChassisCMToCanTpPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/CanTpServiceInterface/CanTpMsgServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisCfgClientRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChassisDataFlowPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisFromAppRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisServiceInterface/ChassisCommandServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisMntRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/MntAgentServiceInterface/MntDelayServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisNrmcRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/NrmcServiceInterface/NrmCenterServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChassisRepBakUpPubPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisRepBakUpPubServiceInterface/ChassisRepBakUpPubServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChassisReportPubPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisReportPubServiceInterface/ChassisReportPubServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChassisTimeDelayPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChassisToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisServiceInterface/ChassisReportServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ChassisGacA13AcanToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisGacA13AcanPubServiceInterface/ChassisGacA13AcanPubServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisGacA13IcanToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisGacA13IcanPubServiceInterface/ChassisGacA13IcanPubServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisCheryJx65ToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisCheryJx65PubServiceInterface/ChassisCheryJx65PubServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>reportEventRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ChassisCheryJx65FromAppRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ChassisCheryJx65SubServiceInterface/ChassisCheryJx65SubServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>VehicleInfoChassisToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/VehicleInfoServiceInterface/VehicleInfoChassisServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ActCompensationToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActCompensationServiceInterface/ActCompensationServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>ActCompensationGacToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActCompensationGacServiceInterface/ActCompensationGacServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>Chassis9000ToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/Chassis9000ServiceInterface/ChassisReport9000ServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>ActGacA13AcanToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActGacA13AcanPubServiceInterface/ActGacA13AcanPubServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ActGacParking100FromAppRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActGacParking100SubServiceInterface/ActGacParking100SubServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ActGacParking20FromAppRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActGacParking20SubServiceInterface/ActGacParking20SubServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ActGacAssembleForDrivingFromAppRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActGacAssembleForDrivingSubServiceInterface/ActGacAssembleForDrivingSubServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>ActGacControlCommandFromAppRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActGacControlCommandSubServiceInterface/ActGacControlCommandSubServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                      </PORTS>
+                    </ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

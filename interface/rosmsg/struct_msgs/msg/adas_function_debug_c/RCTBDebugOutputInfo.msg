@@ -1,0 +1,10 @@
+uint8 rctb_state
+bool rctb_deceleration_request_status
+float32 rctb_deceleration_request_value
+bool rctb_hold_request_status
+uint16 rctb_enable_code
+uint16 rctb_disable_code
+uint16 rctb_brake_code
+uint16 rctb_autohold_code
+uint16 rctb_brake_kick_code
+uint16 rctb_autohold_kick_code

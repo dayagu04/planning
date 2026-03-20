@@ -1,0 +1,92 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "factory_calibration_exec/factory_calibration_libExecutable14Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10029",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFactoryCalibrationActivation_ProvidedSomeipServiceInstance28"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10030",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFactoryCalibrationResult_ProvidedSomeipServiceInstance29"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "factory_calibration_exec/factory_calibration_libExecutable14Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/CameraStructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10107",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront120FullResolutionH265_DdsRequiredServiceInstance40"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10115",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundFrontFullResolutionH265_DdsRequiredServiceInstance44"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10116",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundLeftFullResolutionH265_DdsRequiredServiceInstance41"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10117",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundRearFullResolutionH265_DdsRequiredServiceInstance42"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10118",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSurroundRightFullResolutionH265_DdsRequiredServiceInstance43"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10126",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront30FullResolutionH265_DdsRequiredServiceInstance39"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10127",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideFlFullResolutionH265_DdsRequiredServiceInstance41"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10128",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideFrFullResolutionH265_DdsRequiredServiceInstance42"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10129",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideRlFullResolutionH265_DdsRequiredServiceInstance43"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10130",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideRrFullResolutionH265_DdsRequiredServiceInstance44"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10135",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraRearFullResolutionH265MDCA_DdsRequiredServiceInstance49"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "factory_calibration_exec/factory_calibration_libExecutable14Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10008",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorImu_DdsRequiredServiceInstance40"
+        }
+      ]
+    }
+  ]
+}

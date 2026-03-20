@@ -1,0 +1,13 @@
+bool is_avaliable
+float32 distance_to_parking_space
+int16 avoid_status
+int16 avoid_obstacle_type
+bool is_approaching_turn
+bool is_approaching_intersection
+bool is_approaching_speed_bumps
+int16 emergency_level
+bool is_parking_space_occupied
+bool is_new_parking_space_found
+bool is_on_hpp_lane
+bool is_reached_hpp_trace_start
+float32 accumulated_driving_distance

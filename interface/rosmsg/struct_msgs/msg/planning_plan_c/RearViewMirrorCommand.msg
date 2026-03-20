@@ -1,0 +1,2 @@
+bool available
+int16 rear_view_mirror_value

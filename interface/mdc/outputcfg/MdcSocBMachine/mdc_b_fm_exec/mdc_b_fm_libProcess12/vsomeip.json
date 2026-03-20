@@ -1,0 +1,39 @@
+{
+  "logging": {
+    "level": "info",
+    "console": "false",
+    "syslog": {
+      "enable": "true"
+    }
+  },
+  "routing": "someipd",
+  "services": [],
+  "clients": [
+    {
+      "service": "1100",
+      "instance": "2",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "2",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    }
+  ]
+}

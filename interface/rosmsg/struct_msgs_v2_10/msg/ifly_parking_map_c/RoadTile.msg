@@ -1,0 +1,13 @@
+TileId id
+uint8 road_size
+Road[] road
+uint8 lane_segment_size
+LaneSegment[] lane_segment
+uint8 road_mark_size
+RoadMark[] road_mark
+uint8 road_obstacle_size
+RoadObstacle[] road_obstacle
+uint8 parking_space_size
+ParkingSpace[] parking_space
+uint8 polygon_obstacle_size
+PolygonObject[] polygon_obstacle

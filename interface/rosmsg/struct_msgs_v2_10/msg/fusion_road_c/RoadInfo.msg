@@ -1,0 +1,9 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+uint64 isp_timestamp
+uint8 reference_line_msg_size
+ReferenceLineMsg[] reference_line_msg
+uint8 lane_ground_markings_size
+FusionLaneGroundMarking[] lane_ground_markings
+bool local_point_valid

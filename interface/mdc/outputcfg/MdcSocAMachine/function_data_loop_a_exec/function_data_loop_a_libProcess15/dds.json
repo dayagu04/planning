@@ -1,0 +1,90 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/function_data_loop_a_libCompositionSwComponentType15/function_data_loop_a_libProcess15",
+  "services": [
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "serviceId": 1,
+      "events": [
+        {
+          "event": "event",
+          "id": 31614,
+          "isDpRawData": false,
+          "dataType": "/HuaweiMDC/PlatformServices/DiagMsgDataType/DataTypes/ByteVector",
+          "topicName": "TopicOfevent"
+        }
+      ],
+      "fields": [],
+      "methods": [],
+      "instances": [
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFdlAPhmReport_DdsProvidedFunctionDataLoopA",
+          "instance": "10233",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFdlTriggerAck_DdsProvidedFunctionDataLoopA",
+          "instance": "10163",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFdlTrigger_DdsRequiredFunctionDataLoopA",
+          "instance": "10164",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSystemAProcessLoading_DdsRequiredFunctionDataLoopA",
+          "instance": "10230",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "default_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        }
+      ]
+    }
+  ]
+}

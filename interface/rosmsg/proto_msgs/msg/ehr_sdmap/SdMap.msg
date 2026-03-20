@@ -1,0 +1,4 @@
+std_msgs/Header header
+common_Header msg_header
+RouteMapInfo route_map
+uint32 ehr_map_status

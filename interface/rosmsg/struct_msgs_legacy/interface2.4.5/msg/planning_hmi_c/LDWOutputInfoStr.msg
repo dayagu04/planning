@@ -1,0 +1,3 @@
+int16 ldw_state
+bool ldw_left_warning
+bool ldw_right_warning

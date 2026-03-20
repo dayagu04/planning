@@ -1,0 +1,14 @@
+int16 noa_status
+bool noa_activate_resp
+bool noa_driver_denied
+int16 noa_takeover_req_lv
+uint32 distance_to_destination
+uint32 distance_to_station
+uint32 distance_to_ramp
+uint32 distance_to_tunnel
+uint32 distance_to_split
+uint32 distance_to_merge
+int16 noa_notify_req
+int16 noa_notify
+int16 lane_change_style
+bool noa_cruise_dclc_resp

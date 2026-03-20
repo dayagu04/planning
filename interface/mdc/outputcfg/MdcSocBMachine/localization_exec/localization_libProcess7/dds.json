@@ -1,0 +1,209 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/localization_libCompositionSwComponentType7/localization_libProcess7",
+  "services": [
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "serviceId": 1,
+      "events": [
+        {
+          "event": "event",
+          "id": 31614,
+          "isDpRawData": false,
+          "dataType": "/HuaweiMDC/PlatformServices/DiagMsgDataType/DataTypes/ByteVector",
+          "topicName": "TopicOfevent"
+        }
+      ],
+      "fields": [],
+      "methods": [],
+      "instances": [
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekLocalizationEgomotion_DdsProvidedLocalization",
+          "instance": "10016",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": false,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekLocalizationPhmReport_DdsProvidedLocalization",
+          "instance": "10196",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": false,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekLocalizationSemanticInfo_DdsProvidedServiceInstance75",
+          "instance": "10088",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": false,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhpParkingMap_DdsRequiredLocalization",
+          "instance": "10047",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhrSdmapInfo_DdsRequiredServiceInstance138",
+          "instance": "10013",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhrSdpromapInfo_DdsRequiredServiceInstance199",
+          "instance": "10173",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredServiceInstance175",
+          "instance": "10104",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekMegaLocalMap_DdsRequiredServiceInstance146",
+          "instance": "10092",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "customized_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorGnss_DdsRequiredServiceInstance87",
+          "instance": "10056",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorImu_DdsRequiredServiceInstance113",
+          "instance": "10033",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekVehicleService_DdsRequiredServiceInstance114",
+          "instance": "10034",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.70",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        }
+      ]
+    }
+  ]
+}

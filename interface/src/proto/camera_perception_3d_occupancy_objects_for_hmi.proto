@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package autopilot;
+
+import "hmi_common.proto";
+
+message Point3u_3D {
+  uint32 t = 1; // 类型
+  uint32 x = 2;
+  uint32 y = 3;
+  uint32 z = 4;
+}
+
+
+message occ_3d {
+  string version = 1;           // proto版本 
+  Header header = 2;            // 消息头
+  Point3f voxel_grid = 3;       // xyz轴体素单元几何大小
+  repeated Point3u_3D points = 4; // 点集
+}

@@ -1,0 +1,8 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+uint64 isp_timestamp
+uint8 parking_fusion_slot_lists_size
+ParkingFusionSlot[] parking_fusion_slot_lists
+uint32 select_slot_id
+uint32 select_local_map_slot_id

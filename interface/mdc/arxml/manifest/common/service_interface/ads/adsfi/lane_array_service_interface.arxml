@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="5544f300-21b8-4efb-aadb-3ec47fbb0e6e">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE UUID="5647593d-78a4-48ea-b75d-2da23ee2c40f">
+          <SHORT-NAME>FunctionalSoftware</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE UUID="2483bc8d-3006-466b-8802-699fd138349e">
+              <SHORT-NAME>LaneLineArrayMsgDataType</SHORT-NAME>
+            </AR-PACKAGE>
+            <AR-PACKAGE UUID="f6137dc6-90df-46f2-a7b5-d0145daf395f">
+              <SHORT-NAME>LaneLineArrayServiceInterface</SHORT-NAME>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

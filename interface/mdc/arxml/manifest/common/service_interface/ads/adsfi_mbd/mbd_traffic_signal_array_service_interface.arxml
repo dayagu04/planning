@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="ec43fffb-6f32-4e1b-819b-26163dcdc838">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE UUID="e7010770-0aa5-4fcd-a3a5-7a48bd171729">
+          <SHORT-NAME>FunctionalSoftware</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE UUID="16c30147-e34b-4e22-9336-4d347e6854b1">
+              <SHORT-NAME>TrafficSignalMsgDataType</SHORT-NAME>
+            </AR-PACKAGE>
+            <AR-PACKAGE UUID="fb9ac86e-0923-42ef-96a8-44dcac6ae65a">
+              <SHORT-NAME>TrafficSignalServiceInterface</SHORT-NAME>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

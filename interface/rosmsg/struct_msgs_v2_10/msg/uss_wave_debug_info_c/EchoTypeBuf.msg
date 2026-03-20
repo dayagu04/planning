@@ -1,0 +1,1 @@
+uint32[10] echo_type_value

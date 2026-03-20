@@ -1,0 +1,3 @@
+LCCS_TrajPoly start
+LCCS_TrajPoly middle
+LCCS_TrajPoly end

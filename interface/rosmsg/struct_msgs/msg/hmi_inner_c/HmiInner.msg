@@ -1,0 +1,19 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+bool is_valid
+APAIn apa_in
+RPAIn rpa_in
+HPPIn hpp_in
+EHPIn ehp_in
+ADASIn adas_in
+PilotIn pilot_in
+bool calib_active_switch
+bool data_record_switch
+RADSIn rads_in
+PAIn pa_in
+NRAIn nra_in
+CommonIn common_in
+int16 data_upload_btn
+int16 record_upload_btn
+int16 sr_switch

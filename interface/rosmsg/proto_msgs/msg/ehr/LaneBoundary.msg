@@ -1,0 +1,2 @@
+uint64 boundary_id
+BoundaryAttributes[] boundary_attributes

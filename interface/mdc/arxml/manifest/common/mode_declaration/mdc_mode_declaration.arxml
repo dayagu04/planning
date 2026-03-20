@@ -1,0 +1,602 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>ModeDeclaration</SHORT-NAME>
+          <ELEMENTS>
+            <MODE-DECLARATION-GROUP>
+              <SHORT-NAME>Access</SHORT-NAME>
+              <INITIAL-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/Access/Off</INITIAL-MODE-REF>
+              <MODE-DECLARATIONS>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Off</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Running</SHORT-NAME>
+                </MODE-DECLARATION>
+              </MODE-DECLARATIONS>
+              <MODE-TRANSITIONS>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>OffToRunning</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl88d80103-61df-4d66-b73c-c4ce23516d25</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl1b26e3d1-f2e8-4201-913b-5106dc75d8ff</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl2a9afee9-f298-4491-8130-b082a2d7b537</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/Access/Running</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/Access/Off</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>RunningToOff</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpld1aea193-760f-4b29-8592-8949cc1cb6b9</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl1cc4bed8-98fe-43d7-9588-9bf25d03c6aa</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpldc035831-0c1b-4906-8abd-2e3df8fcd249</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ModeTransitionTask</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/Access/Off</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/Access/Running</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+              </MODE-TRANSITIONS>
+            </MODE-DECLARATION-GROUP>
+            <MODE-DECLARATION-GROUP UUID="8cd5a6a1-f1a9-4726-ac4d-a04892b4c2bb">
+              <SHORT-NAME>MachineState</SHORT-NAME>
+              <CATEGORY>FunctionGroup</CATEGORY>
+              <INITIAL-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</INITIAL-MODE-REF>
+              <MODE-DECLARATIONS>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Off</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Reset</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION UUID="">
+                  <SHORT-NAME>Restart</SHORT-NAME>
+                  <VALUE>2</VALUE>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION UUID="7678bcd5-88ba-4d6a-8300-d4d622af9a7c">
+                  <SHORT-NAME>Shutdown</SHORT-NAME>
+                  <VALUE>1</VALUE>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Standby</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION UUID="c3278453-592a-495d-9980-c8b04e5ca981">
+                  <SHORT-NAME>Startup</SHORT-NAME>
+                  <VALUE>0</VALUE>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Update</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Verify</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION UUID="c3278453-592a-495d-9980-c8b04e5ca981">
+                  <SHORT-NAME>Escape</SHORT-NAME>
+                  <VALUE>0</VALUE>
+                </MODE-DECLARATION>
+              </MODE-DECLARATIONS>
+              <MODE-TRANSITIONS>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>OffToStartup</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpld7a5cb04-924d-4c27-ada1-ecc74ae49739</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Off</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StandbyToShutdown</SHORT-NAME>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Shutdown</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Standby</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StandbyToStartup</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImplcb02a1be-3284-44f3-8591-de5a2cd83481</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl406a4db8-183f-4aa8-8283-4c47e27f3b65</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTask670f850a-76b3-4920-9e9b-ef6125df0c42</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">30000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                        <SD GID="Uuid">6b5777a2-5702-49fe-8937-76b7c58afeab</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Standby</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StartupToReset</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl214b8bb0-515f-4f9e-a445-36be90c966e5</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTask73e46f9e-64a6-4226-ab83-654127eb2d76</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">30000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                        <SD GID="Uuid">be750c5d-a23e-42b2-b2f9-9386c3ea4b4f</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl40897fd3-eabd-4bf9-a5d2-a4fcdfe15023</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Reset</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StartupToRestart</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl94f59878-afd2-4f30-b97a-b371e71e8308</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl9e5e3548-5a7d-45ef-a628-e43d3f48c49a</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTask0fac2005-b237-449e-8f8c-e1fe91742d8e</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">30000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                        <SD GID="Uuid">b5e07972-64c2-4913-8d60-df778fff8b99</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Restart</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StartupToShutdown</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl6604423d-5b09-4d90-b74d-2b36af717865</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl657f612a-5178-4263-8681-451683a9ffe6</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl13f1007a-672c-464f-b338-0b7c80cd7aff</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Shutdown</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StartupToStandby</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTask3cd6caf1-80c3-451f-8095-9bb7d367cd28</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">30000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                        <SD GID="Uuid">82722a36-9d04-41a4-a44d-b18ef9f83152</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTask49c509f1-27c9-4199-81f6-de09f483dca0</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">30000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                        <SD GID="Uuid">b77b7b34-9b63-4e99-a78c-0560ceb32013</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTaskb9d0decc-814d-4834-a381-35f58e620a28</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">30000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                        <SD GID="Uuid">c856fdd2-9dae-4b25-98c5-7b1c440a0938</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Standby</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StartupToUpdate</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTask0c0e3c23-6d01-4b55-852c-b2f8cbc20ca2</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                        <SD GID="Uuid">18ff168d-4920-40fd-852f-561a952d99b3</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTask52a33135-acd3-4065-a000-c4d3efdd4dfc</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                        <SD GID="Uuid">fefb77b4-e0d8-4bbe-a456-e1e3baa6ddc6</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">ModeTransitionTaskcd2e9ed3-6683-4eac-b065-63c636984891</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                        <SD GID="Uuid">7cab1397-0d0e-44c8-8190-84c887bbc44f</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ACTIONS>
+                    <ACTION DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Update</ACTION>
+                  </ACTIONS>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Update</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StartupToVerify</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl253fe057-b010-430c-b541-18e688d220c9</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl20be9411-484e-469e-8bc6-e259c03ef0b0</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpla11c9b60-11ea-4ff3-8f4a-e18ba46a85fa</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Verify</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>UpdateToReset</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpla73b71bf-f0af-41fe-87bf-4088605ebec7</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImplbe2d9a3f-f994-44f9-bed6-ba96e3c13c53</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Reset</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Update</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>UpdateToStartup</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImplab17e50b-6436-4f38-9426-799d947dbf81</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl8ccda305-9c61-4861-8c87-ba53af1920cf</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl9225c290-01e6-4cce-8b14-2e6d74c217bc</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ACTIONS>
+                    <ACTION DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</ACTION>
+                  </ACTIONS>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Update</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>VerifyToRestart</SHORT-NAME>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Restart</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Verify</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>VerifyToStartup</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl3c3d2e03-5367-42cc-9380-08c82ba7a45a</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl1468f411-7ff1-4510-860d-5dad3d9bdab1</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl0e43a6a5-7294-4673-9d31-9363b6dc0192</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Verify</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>OffToEscape</SHORT-NAME>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Escape</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Off</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>EscapeToStartup</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl56167a99-ccdd-471f-bbec-2d88f72b828b</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImplef80e956-46c4-4729-8f84-35ce71349c5c</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImplc755ba82-b8e2-4aac-bb0e-4df5ab08accf</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Escape</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>StartupToEscape</SHORT-NAME>
+                  <ADMIN-DATA>
+                    <SDGS>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImplc4085761-7a86-4b4c-a5b8-77cd1cb8e535</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PostProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">POST_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpla7846aaf-ad98-4146-9242-37113257c960</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">ArbitrateProcess</SD>
+                        <SD GID="Timeout">1000</SD>
+                        <SD GID="Category">ARBITRATE_PROCESS</SD>
+                      </SDG>
+                      <SDG GID="ModeTransitionTask">
+                        <SD GID="_ExtensionKey">SmExtend.impl.ModeTransitionTaskImpl289e7d7e-0f15-45ef-b194-40b876bbfa53</SD>
+                        <SD GID="_NsURI">http://autosar.org/sm</SD>
+                        <SD GID="_Type">ModeTransitionTask</SD>
+                        <SD GID="ShortName">PreProcess</SD>
+                        <SD GID="Timeout">3000</SD>
+                        <SD GID="Category">PRE_PROCESS</SD>
+                      </SDG>
+                    </SDGS>
+                  </ADMIN-DATA>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Escape</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Startup</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>EscapeToUpdate</SHORT-NAME>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Update</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Escape</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>UpdateToEscape</SHORT-NAME>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Escape</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Update</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+                <MODE-TRANSITION>
+                  <SHORT-NAME>EscapeToReset</SHORT-NAME>
+                  <ENTERED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Reset</ENTERED-MODE-REF>
+                  <EXITED-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/MachineState/Escape</EXITED-MODE-REF>
+                </MODE-TRANSITION>
+              </MODE-TRANSITIONS>
+            </MODE-DECLARATION-GROUP>
+            <MODE-DECLARATION-GROUP>
+              <SHORT-NAME>ProcessState</SHORT-NAME>
+              <CATEGORY>Process</CATEGORY>
+              <INITIAL-MODE-REF DEST="MODE-DECLARATION">/HuaweiMDC/ModeDeclaration/ProcessState/Idle</INITIAL-MODE-REF>
+              <MODE-DECLARATIONS>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Idle</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Running</SHORT-NAME>
+                </MODE-DECLARATION>
+                <MODE-DECLARATION>
+                  <SHORT-NAME>Terminated</SHORT-NAME>
+                </MODE-DECLARATION>
+              </MODE-DECLARATIONS>
+            </MODE-DECLARATION-GROUP>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>
+

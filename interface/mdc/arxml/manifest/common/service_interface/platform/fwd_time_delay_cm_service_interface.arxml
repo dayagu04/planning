@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformServiceInterface</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>TimeDelayDataType</SHORT-NAME>
+              <ELEMENTS>
+                <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  <SHORT-NAME>Header</SHORT-NAME>
+                  <CATEGORY>STRUCTURE</CATEGORY>
+                  <NAMESPACES>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>ara</SHORT-NAME>
+                      <SYMBOL>ara</SYMBOL>
+                    </SYMBOL-PROPS>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>timedelay</SHORT-NAME>
+                      <SYMBOL>timedelay</SYMBOL>
+                    </SYMBOL-PROPS>
+                  </NAMESPACES>
+                  <SUB-ELEMENTS>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>seq</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>stamp</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/TimeDelayDataType/Time</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT UUID="">
+                      <SHORT-NAME>frameId</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                  </SUB-ELEMENTS>
+                </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  <SHORT-NAME>Time</SHORT-NAME>
+                  <CATEGORY>STRUCTURE</CATEGORY>
+                  <NAMESPACES>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>ara</SHORT-NAME>
+                      <SYMBOL>ara</SYMBOL>
+                    </SYMBOL-PROPS>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>timedelay</SHORT-NAME>
+                      <SYMBOL>timedelay</SYMBOL>
+                    </SYMBOL-PROPS>
+                  </NAMESPACES>
+                  <SUB-ELEMENTS>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>sec</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>nsec</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                  </SUB-ELEMENTS>
+                </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  <SHORT-NAME>TimeDelayDataType</SHORT-NAME>
+                  <CATEGORY>STRUCTURE</CATEGORY>
+                  <NAMESPACES>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>ara</SHORT-NAME>
+                      <SYMBOL>ara</SYMBOL>
+                    </SYMBOL-PROPS>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>timedelay</SHORT-NAME>
+                      <SYMBOL>timedelay</SYMBOL>
+                    </SYMBOL-PROPS>
+                  </NAMESPACES>
+                  <SUB-ELEMENTS>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>header</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/TimeDelayDataType/Header</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>mdcRecvTimePoint</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/TimeDelayDataType/TimePoint</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>sensorAccessRecvTimePoint</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/TimeDelayDataType/TimePoint</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>publishTimePoint</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/TimeDelayDataType/TimePoint</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>driverTimeDelay</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>sensorAccessTimeDelay</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>forwardTimeDelay</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>frameTimeDelay</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                  </SUB-ELEMENTS>
+                </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  <SHORT-NAME>TimePoint</SHORT-NAME>
+                  <CATEGORY>STRUCTURE</CATEGORY>
+                  <NAMESPACES>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>ara</SHORT-NAME>
+                      <SYMBOL>ara</SYMBOL>
+                    </SYMBOL-PROPS>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>timedelay</SHORT-NAME>
+                      <SYMBOL>timedelay</SYMBOL>
+                    </SYMBOL-PROPS>
+                  </NAMESPACES>
+                  <SUB-ELEMENTS>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>sec</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                    <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      <SHORT-NAME>usec</SHORT-NAME>
+                      <TYPE-REFERENCE>
+                        <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                      </TYPE-REFERENCE>
+                    </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                  </SUB-ELEMENTS>
+                </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+              </ELEMENTS>
+            </AR-PACKAGE>
+            <AR-PACKAGE>
+              <SHORT-NAME>TimeDelayServiceInterface</SHORT-NAME>
+              <ELEMENTS>
+                <DDS-SERVICE-INTERFACE-DEPLOYMENT UUID="">
+                  <SHORT-NAME>TimeDelayDeployment</SHORT-NAME>
+                  <EVENT-DEPLOYMENTS>
+                    <DDS-EVENT-DEPLOYMENT UUID="">
+                      <SHORT-NAME>TimeDelayDdsEventDeployment</SHORT-NAME>
+                      <TOPIC-NAME>TimeDelayDdsEvent</TOPIC-NAME>
+                      <TRANSPORT-PROTOCOLS>
+                        <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                      </TRANSPORT-PROTOCOLS>
+                    </DDS-EVENT-DEPLOYMENT>
+                  </EVENT-DEPLOYMENTS>
+                  <SERVICE-INTERFACE-ID>3587</SERVICE-INTERFACE-ID>
+                </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+              </ELEMENTS>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

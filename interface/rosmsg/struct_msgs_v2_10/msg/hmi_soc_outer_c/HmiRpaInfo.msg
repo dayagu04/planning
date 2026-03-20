@@ -1,0 +1,2 @@
+bool rpa_available
+bool rpa_active_resp

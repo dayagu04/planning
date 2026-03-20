@@ -1,0 +1,14 @@
+bool lat_ctrl_desired_angle_req_status
+float32 lat_ctrl_desired_angle
+float32 lat_ctrl_desired_angle_dt
+float32 lat_ctrl_desired_angle_error
+float32 lat_ctrl_desired_angle_error_dt
+float32 lat_ctrl_trq_feedforward
+float32 lat_ctrl_trq_feedback
+float32 lat_ctrl_trq_feedback_p
+float32 lat_ctrl_trq_feedback_p_gain
+float32 lat_ctrl_trq_feedback_i
+float32 lat_ctrl_trq_feedback_i_gain
+float32 lat_ctrl_trq_feedback_d
+bool lat_ctrl_trq_req_status
+float32 lat_ctrl_trq_req_value

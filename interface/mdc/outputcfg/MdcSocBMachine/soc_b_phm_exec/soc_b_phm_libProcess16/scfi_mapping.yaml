@@ -1,0 +1,21 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10219,10227,10228]
+        portName: ["IflytekDiskSpaceInfoPhmBOta","IflytekDiskStatePhmBFdl","IflytekDiskCleanRequestPhmBFdl"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10040]
+        portName: ["IflytekAlarmInfoPhmB"]
+    StructContainerInterface:
+        instanceId: [10194,10196,10197,10198,10199,10200,10201,10202,10222,10231,10232]
+        portName: ["IflytekEhrPhmReport","IflytekLocalizationPhmReport","IflytekGnssPhmReport","IflytekHmiPhmReport","Iflytek4dRadarPhmReport","IflytekCameraPerceptionPanoramaPhmReport","IflytekFsmPhmReport","IflytekCameraPanoramaPhmReport","IflytekDiskCleanRequest","IflytekCalibrationPhmReport","IflytekFdlPhmReport"]
+    ConfigServerServiceInterface:
+        instanceId: [1]
+        portName: ["IflytekConfigManager"]
+    TriggerInOut:
+        instanceId: [1]
+        portName: ["IflytekStateManager"]

@@ -1,0 +1,571 @@
+<qos>
+    <profile name="DDSQosProfile">
+        <domain_participant name="domain_30_192.168.10.70">
+            <transport>
+                <mask>TRANSPORT_UDP|TRANSPORT_FSHM</mask>
+                <property name="FSHM">
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.multicast.topic</key>
+                        <value>0000049CMqGNMWB0</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.poolSize</key>
+                        <value>262144</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.multicast.drtLen</key>
+                        <value>512</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.unicast.drtLen</key>
+                        <value>1024</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.unicast.topic</key>
+                        <value>0000070_2tR2-L-O</value>
+                    </item>
+                </property>
+            </transport>
+            <transport_interfaces>
+                <interfaces>
+                    <interface>192.168.10.70</interface>
+                </interfaces>
+            </transport_interfaces>
+            <discover_config>
+                <participant_liveliness_lease_duration>
+                    <sec>60</sec>
+                    <nanosec>0</nanosec>
+                </participant_liveliness_lease_duration>
+                <participant_liveliness_assert_period>
+                    <sec>24</sec>
+                    <nanosec>0</nanosec>
+                </participant_liveliness_assert_period>
+            </discover_config>
+        </domain_participant>
+        <datareader name="domain_30_192.168.10.70_1_10108_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000001RdvT_A3ycL</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75644</ShmId>
+                <FragSize>819200</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10187_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000002O-kNOg9oZU</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75723</ShmId>
+                <FragSize>819200</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_2_10137_TopicOfevent_reader">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datawriter name="domain_30_192.168.10.70_1_10202_TopicOfevent_writer">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000002AUtTtcS-3V</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75738</ShmId>
+                <FragSize>819200</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10045_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10050_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10051_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10052_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10053_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10054_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10055_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10066_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10106_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10119_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10120_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10121_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10122_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10123_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10125_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_2_10189_TopicOfevent_writer">
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_DSHM</Channel>
+                <Determinate>false</Determinate>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <topic name="domain_30_192.168.10.70_1_10108_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10187_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10202_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10045_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10050_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10051_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10052_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10053_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10054_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10055_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10066_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10106_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10119_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10120_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10121_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10122_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10123_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10125_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10137_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_2_10189_TopicOfevent"></topic>
+    </profile>
+</qos>

@@ -1,0 +1,9 @@
+SnsBkWvStartTimeBuf[12] sns_bk_wv_start_time
+uint32[12] sns_wv_number
+SnsBkWvWidthBuf[12] sns_bk_wv_width
+SnsBkWvHighBuf[12] sns_bk_wv_high
+uint32[12] sns_measure_mode
+SnsBkWvObjTypeBuf[12] sns_bk_wv_obj_type
+uint32[12] sns_work_mode
+uint32[12] sns_ring_time
+EchoTypeBuf[12] echo_type

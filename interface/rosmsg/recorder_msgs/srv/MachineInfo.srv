@@ -1,0 +1,7 @@
+---
+bool success
+uint64 mem_total
+uint64 mem_free
+string record_mode
+bool record_status
+int32 record_time

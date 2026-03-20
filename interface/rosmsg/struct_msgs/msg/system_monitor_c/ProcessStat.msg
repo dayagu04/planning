@@ -1,0 +1,14 @@
+int32 soc_id
+int32 pid
+uint64 stamp
+char[64] name
+float32 cpu_usage
+float32 memory_usage
+uint64 rss
+uint64 shr
+uint64 pss
+uint64 uss
+uint64 vsize
+uint64 shr_pool
+uint64 read_bytes
+uint64 write_bytes

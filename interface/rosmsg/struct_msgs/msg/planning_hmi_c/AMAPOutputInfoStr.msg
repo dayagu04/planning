@@ -1,0 +1,3 @@
+int16 amap_state
+bool amap_request_flag
+float64 amap_trq_limit_max

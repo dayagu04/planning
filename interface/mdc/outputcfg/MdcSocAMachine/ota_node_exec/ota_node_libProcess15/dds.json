@@ -1,0 +1,73 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/ota_node_libCompositionSwComponentType15/ota_node_libProcess15",
+  "services": [
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "serviceId": 1,
+      "events": [
+        {
+          "event": "event",
+          "id": 31614,
+          "isDpRawData": false,
+          "dataType": "/HuaweiMDC/PlatformServices/DiagMsgDataType/DataTypes/ByteVector",
+          "topicName": "TopicOfevent"
+        }
+      ],
+      "fields": [],
+      "methods": [],
+      "instances": [
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekDiskCleanRequest_DdsProvidedOtaNode",
+          "instance": "10221",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": false,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekDiskSpaceInfoPhmAOta_DdsRequiredOtaNode",
+          "instance": "10218",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        },
+        {
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekDiskSpaceInfoPhmBOta_DdsRequiredOtaNode",
+          "instance": "10220",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "domainId": 30,
+          "network": "192.168.10.6",
+          "isClient": true,
+          "qosProfile": "small_buffer_qos.xml",
+          "events": [
+            {
+              "id": 31614,
+              "dataIds": []
+            }
+          ],
+          "fields": [],
+          "methods": []
+        }
+      ]
+    }
+  ]
+}

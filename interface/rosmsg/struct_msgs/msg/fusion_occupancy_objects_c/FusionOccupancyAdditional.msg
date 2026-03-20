@@ -1,0 +1,13 @@
+int16 motion_pattern_current
+int16 motion_pattern_history
+uint32 fusion_source
+uint16 track_id
+uint16 track_age
+uint8 confidence
+int16 track_status
+uint8 bounding_box_points_size
+Point2f[] bounding_box_points
+uint32 visable_seg_num
+uint32 polygon_points_size
+Point3f[] polygon_points
+float32 relative_speed_angle

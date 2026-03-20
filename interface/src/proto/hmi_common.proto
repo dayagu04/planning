@@ -1,0 +1,930 @@
+syntax = "proto3";
+package autopilot;
+
+// 时间戳统计信息
+message InputHistoryTimestamp {
+  // 输入数据类型
+  enum InputHistoryTimestampSourceType {
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_NODE                     = 0;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_AROUND_VIEW_CAMERA_NODE                       = 1;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_RADAR_FM_PERCEPTION                           = 2;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_RADAR_FL_PERCEPTION                           = 3;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_RADAR_FR_PERCEPTION                           = 4;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_RADAR_RL_PERCEPTION                           = 5;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_RADAR_RR_PERCEPTION                           = 6;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_IMU                                           = 7;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_GNSS                                          = 8;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_WAVE                                      = 9;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_VIHECLE_SERVICES                              = 10;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_COM_SERVICE                                   = 11;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER                         = 12;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_SOC_INNER                         = 13;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_SD_MAP_SERVICE                                = 14;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_BSW_RESERVE1                                  = 15;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_BSW_RESERVE2                                  = 16;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_OBJ           = 20;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_OCCUPANCY_OBJ = 21;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_LANELINE      = 22;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_RESERVE1      = 23;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_RESERVE2      = 24;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_AROUND_VIEW_PERCEPTION                        = 25;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_AROUND_VIEW_PERCEPTION_RESERVE1               = 26;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_AROUND_VIEW_PERCEPTION_RESERVE2               = 27;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_PERCEPTION                                = 28;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_PERCEPTION_RESERVE1                       = 29;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION                               = 40;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MEGA                                          = 41;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATIC_FUSION                                 = 42;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_FUSION_RESERVE1                               = 43;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION                                  = 44;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION_RESERVE1                         = 45;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING                                      = 50;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PLANNING_HMI                                  = 51;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION                                    = 52;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CONTROL                                       = 53;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE                                 = 60;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_OUT                                       = 61;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_RESERVE1                                  = 62;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_RESERVE2                                  = 63;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_EHR                                           = 70;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MAP                                           = 71;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_SYS_RESERVE1                                  = 100;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_SYS_RESERVE2                                  = 101;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_SYS_RESERVE3                                  = 102;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_SYS_RESERVE4                                  = 103;
+    INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_SYS_RESERVE5                                  = 104;
+  }
+  InputHistoryTimestampSourceType input_type = 1;  // 时间戳来源模块
+  uint64 seq                                 = 2;  // 接收数据的seq，用于离线排查整个链路的数据情况
+};
+
+// 信息头结构
+message Header {
+  uint64 timestamp                          = 1;  // 仅表示本次消息发送时刻的时间戳，不可表示某项数据产生时间戳     (微秒)
+  string version                            = 2;  // 模块版本, eg:fsm(module_name)_12345678(commit_id[8位]):hmi_12345678
+  repeated InputHistoryTimestamp input_list = 3;  // 输入数据时间戳历史
+  uint64 seq                                = 4;  // 信息发送序号, 从0开始，每次发topic计数+1
+};
+
+message Point2f {
+  float x = 1;
+  float y = 2;
+};
+
+message Point3f {
+  float x = 1;
+  float y = 2;
+  float z = 3;
+};
+
+message Point3d {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+};
+
+enum PosType {
+  POS_TYPE_EGO_CENTER     = 0;   // 自车压住的线    <感知可能给不出>
+  POS_TYPE_EGO_RIGHT      = 1;   // 右侧第一条线
+  POS_TYPE_ADJACENT_RIGHT = 2;   // 右侧第二条线
+  POS_TYPE_THIRD_RIGHT    = 3;   // 右侧第三条线
+  POS_TYPE_FOURTH_RIGHT   = 4;   // 右侧第四条线
+  POS_TYPE_CURB_RIGHT     = 5;   // 右侧道路边沿
+  POS_TYPE_OTHER          = 6;   // 其他
+  POS_TYPE_UNKNOWN        = 7;   // 未知
+  POS_TYPE_EGO_LEFT       = 11;  // 左侧第一条线
+  POS_TYPE_ADJACENT_LEFT  = 12;  // 左侧第二条线
+  POS_TYPE_THIRD_LEFT     = 13;  // 左侧第三条线
+  POS_TYPE_FOURTH_LEFT    = 14;  // 左侧第四条线
+  POS_TYPE_CURB_LEFT      = 15;  // 左侧道路边沿
+};
+
+// 车道线类型
+enum LineType {
+  LINE_TYPE_UNKNOWN              = 0;   // 未知线型
+  LINE_TYPE_LANELINE             = 1;   // 车道线
+  LINE_TYPE_BORDERLINE           = 2;   // 边沿线，物理隔离障碍物统称
+  LINE_TYPE_CENTER               = 3;   // 双向道路的道路中心线
+  LANE_LINE_TYPE_GUARDRAIL       = 4;   // 护栏
+  LANE_LINE_TYPE_CONCRETEBARRIER = 5;   // 水泥护栏
+  LANE_LINE_TYPE_FENCE           = 6;   // 栅栏
+  LANE_LINE_TYPE_WALL            = 7;   // 墙
+  LANE_LINE_TYPE_CANOPY          = 8;   // 绿植
+  LANE_LINE_TYPE_CONE            = 9;   // 锥形桶
+  LANE_LINE_TYPE_STOPLINE        = 10;  // 停止线
+  LANE_LINE_TYPE_INHIBITLINE     = 11;  // 禁止线
+};
+
+message LineSegment {
+  double a0        = 1;  // 车道线方程常数项
+  double a1        = 2;  // 车道线方程一次项
+  double a2        = 3;  // 车道线方程二次项
+  double a3        = 4;  // 车道线方程三次项
+  float begin      = 5;  // 起点             (米)
+  float end        = 6;  // 终点             (米)
+  float confidence = 7;  // 车道线置信度     [0.0-1.0]
+};
+
+// 车道线虚实类型
+enum LaneBoundaryType {
+  LaneBoundaryType_MARKING_UNKNOWN                 = 0;  /* 未知线型 */
+  LaneBoundaryType_MARKING_DASHED                  = 1;  /* 虚线 */
+  LaneBoundaryType_MARKING_SOLID                   = 2;  /* 实线 */
+  LaneBoundaryType_MARKING_SHORT_DASHED            = 3;  /* 短虚线 */
+  LaneBoundaryType_MARKING_DOUBLE_DASHED           = 4;  /* 双虚线 */
+  LaneBoundaryType_MARKING_DOUBLE_SOLID            = 5;  /* 双实线 */
+  LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID = 6;  /* 左虚右实线 */
+  LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED = 7;  /* 左实右虚线 */
+  LaneBoundaryType_MARKING_DECELERATION            = 8;  /* 减速线 */
+  LaneBoundaryType_MARKING_VIRTUAL                 = 9;  /* 虚拟线 */
+  LaneBoundaryType_MARKING_WAITLINE                = 10; /* 待转线 */
+  LaneBoundaryType_MARKING_DECELERATION_DASHED     = 11; /* 减速虚线 */
+  LaneBoundaryType_MARKING_DECELERATION_SOLID      = 12; /* 减速实线 */
+};
+
+message MarkingSegment {
+  LaneBoundaryType marking = 1;  // 线型
+  float begin              = 2;  // 起点     (米)
+  float end                = 3;  // 终点     (米)
+};
+
+// 车道线颜色类型
+enum LaneLineColor {
+  LaneLineColor_COLOR_UNKNOWN                 = 0;  /* 未知 */
+  LaneLineColor_COLOR_WHITE                   = 1;  /* 白色 */
+  LaneLineColor_COLOR_YELLOW                  = 2;  /* 黄色 */
+  LaneLineColor_COLOR_BLUE                    = 3;  /* 蓝色 */
+  LaneLineColor_COLOR_GREEN                   = 4;  /* 绿色 */
+  LaneLineColor_COLOR_GRAY                    = 5;  /* 灰色 */
+  LaneLineColor_COLOR_ORANGE                  = 6;  /* 橘色 */
+  LaneLineColor_COLOR_LEFT_GRAY_RIGHT_YELLOW  = 7;  /* 左侧车道线灰色，右侧车道线黄色 */
+  LaneLineColor_COLOR_LEFT_YELLOW_RIGHT_WHITE = 8;  /* 左侧车道线黄色，右侧车道线白色 */
+  LaneLineColor_COLOR_RED                     = 9;  /* 红色 */
+  LaneLineColor_COLOR_RAINBOW                 = 10; /* 彩色 */
+};
+
+message ColorSegment {
+  LaneLineColor color = 1;  // 车道线颜色
+  float begin         = 2;  // 起点     (米)
+  float end           = 3;  // 终点     (米)
+};
+
+// 车道转向类型
+enum LaneDrivableDirection {
+  LaneDrivableDirection_DIRECTION_UNKNOWN              = 0;   // 未知
+  LaneDrivableDirection_DIRECTION_STRAIGHT             = 1;   // 直行
+  LaneDrivableDirection_DIRECTION_STRAIGHT_RIGHT       = 2;   // 直行加右转
+  LaneDrivableDirection_DIRECTION_RIGHT                = 3;   // 右转
+  LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT        = 4;   // 直行加左转
+  LaneDrivableDirection_DIRECTION_LEFT                 = 5;   // 左转
+  LaneDrivableDirection_DIRECTION_UTURN_LEFT           = 6;   // 调头加左转
+  LaneDrivableDirection_DIRECTION_UTURN_RIGHT          = 7;   // 调头加右转
+  LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT_RIGHT  = 8;   // 直行加左转加右转
+  LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT  = 9;   // 直行加左调头
+  LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT = 10;  // 直行加右调头
+  LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE   = 11;  // 直行加左转加左掉头
+  LaneDrivableDirection_DIRECTION_LEFT_UTURN           = 12;  // 左调头
+  LaneDrivableDirection_DIRECTION_RIGHT_UTURN          = 13;  // 右调头
+  LaneDrivableDirection_DIRECTION_NO_UTURN             = 14;  // 禁止调头
+  LaneDrivableDirection_DIRECTION_LEFT_RIGHT           = 15;  // 左转加右转
+  LaneDrivableDirection_DIRECTION_LEFT_MERGE           = 16;  // 左侧汇流
+  LaneDrivableDirection_DIRECTION_RIGHT_MERGE          = 17;  // 右侧汇流
+  LaneDrivableDirection_DIRECTION_CROSS_LINE           = 18;  // 人行横道
+};
+
+// 车道类型
+enum LaneType {
+  LANETYPE_UNKNOWN                  = 0;   // 未知类型
+  LANETYPE_NORMAL                   = 1;   // 常规车道
+  LANETYPE_VIRTUAL                  = 2;   // 虚拟车道
+  LANETYPE_PARKING                  = 3;   // 车位线
+  LANETYPE_ACCELERATE               = 4;   // 加速车道
+  LANETYPE_DECELERATE               = 5;   // 减速车道
+  LANETYPE_BUS                      = 6;   // 公交车道
+  LANETYPE_EMERGENCY                = 7;   // 应急车道
+  LANETYPE_ACCELERATE_DECELERATE    = 8;   // 加减速车道
+  LANETYPE_LEFT_TURN_WAITTING_AREA  = 9;   // 左转弯待转区
+  LANETYPE_NON_MOTOR                = 10;  // 非机动车道
+  LANETYPE_HOV                      = 11;  // HOV
+  LANETYPE_SLOW                     = 12;  // 慢车道
+  LANETYPE_SHOULDER                 = 13;  // 路肩
+  LANETYPE_DRIVABLE_SHOULDER        = 14;  // 可行驶路肩
+  LANETYPE_CONTROL                  = 15;  // 管制车道
+  LANETYPE_EMERGENCY_PARKING_STRIP  = 16;  // 紧急停车带
+  LANETYPE_TIDE                     = 17;  // 潮汐车道
+  LANETYPE_DIRECTION_CHANGE         = 18;  // 可变车道
+  LANETYPE_DRIVABLE_PARKING_ROAD    = 19;  // 可行驶停车道
+  LANETYPE_TRUCK                    = 20;  // 货车专用道
+  LANETYPE_TIME_LIMIT_BUS           = 21;  // 限时公交车道
+  LANETYPE_PASSING_BAY              = 22;  // 错车道
+  LANETYPE_REVERSAL_LEFT_TURN       = 23;  // 借道左转车道
+  LANETYPE_TAXI                     = 24;  // 出租车车道
+  LANETYPE_DIRECTION_LOCKED         = 25;  // 定向车道
+  LANETYPE_VEHICLE_BICYCLE_MIX      = 26;  // 机非混合车道
+  LANETYPE_MOTOR                    = 27;  // 摩托车道
+  LANETYPE_U_TURN                   = 28;  // 掉头车道
+  LANETYPE_TOLL                     = 29;  // 收费站车道
+  LANETYPE_CHECK_POINT              = 30;  // 检查站车道
+  LANETYPE_DANGEROUS_ARTICLE        = 31;  // 危险品专用车道
+  LANETYPE_FORBIDDEN_DRIVE          = 32;  // 非行驶区域
+  LANETYPE_THOUGH_LANE_ZONE         = 33;  // 借道区
+  LANETYPE_STREET_RAILWAY           = 34;  // 有轨电车车道
+  LANETYPE_BUS_BAY                  = 35;  // 公交港湾车道
+  LANETYPE_SPECIAL_CAR              = 36;  // 特殊车辆专用车道
+  LANETYPE_PEDESTRIANS              = 37;  // 人行道
+  LANETYPE_ETC                      = 38;  // ETC车道
+  LANETYPE_RAMP                     = 39;  // 斜坡
+  LANETYPE_RIGHT_TURN_WAITTING_AREA = 40;  // 右转弯待转区
+  LANETYPE_BRANCH                   = 41;  // 岔道
+};
+
+// 车道类型信息
+message LaneTypeMsg {
+  double begin  = 1;  // 起点             (米)
+  double end    = 2;  // 终点             (米)
+  LaneType type = 3;  // 车道类型
+};
+
+// 车道分合流方向类型
+enum LaneOrientation {
+  LaneOrientation_ORIENTATION_UNKNOWN = 0;
+  LaneOrientation_ORIENTATION_LEFT    = 1;
+  LaneOrientation_ORIENTATION_RIGHT   = 2;
+};
+
+// 车道分合流信息
+message LaneMergeSplitPointData {
+  double distance             = 1;  // 自车后轴中心到该分合流点起始位置距离     (米)
+  float length                = 2;  // 该分合流长度                           (米)
+  bool is_split               = 3;  // 该参考线是否为分流                     (true:yes / false:no)
+  bool is_continue            = 4;  // 该参考线是否占路权                     (true:yes / false:no)
+  LaneOrientation orientation = 5;  // 车道分合流方向
+  Point3d point               = 6;  // 分合流点
+};
+
+// 通用障碍物类型
+enum ObjectType {
+  OBJECT_TYPE_UNKNOWN              = 0;   // 未知障碍物
+  OBJECT_TYPE_UNKNOWN_MOVABLE      = 1;   // 未知可移动障碍物
+  OBJECT_TYPE_UNKNOWN_IMMOVABLE    = 2;   // 未知不可移动障碍物
+  OBJECT_TYPE_COUPE                = 3;   // 轿车
+  OBJECT_TYPE_MINIBUS              = 4;   // 面包车
+  OBJECT_TYPE_VAN                  = 5;   // 厢式轿车
+  OBJECT_TYPE_BUS                  = 6;   // 大型客车
+  OBJECT_TYPE_TRUCK                = 7;   // 卡车
+  OBJECT_TYPE_TRAILER              = 8;   // 拖车
+  OBJECT_TYPE_BICYCLE              = 9;   // 自行车
+  OBJECT_TYPE_MOTORCYCLE           = 10;  // 摩托车
+  OBJECT_TYPE_TRICYCLE             = 11;  // 三轮车
+  OBJECT_TYPE_PEDESTRIAN           = 12;  // 行人
+  OBJECT_TYPE_ANIMAL               = 13;  // 动物
+  OBJECT_TYPE_TRAFFIC_CONE         = 14;  // 交通锥
+  OBJECT_TYPE_TRAFFIC_BARREL       = 15;  // 隔离墩
+  OBJECT_TYPE_TRAFFIC_TEM_SIGN     = 16;  // 临时指示牌
+  OBJECT_TYPE_FENCE                = 17;  // 栅栏
+  OBJECT_TYPE_CYCLE_RIDING         = 18;  // 人骑着自行车
+  OBJECT_TYPE_MOTORCYCLE_RIDING    = 19;  // 人骑着摩托车
+  OBJECT_TYPE_TRICYCLE_RIDING      = 20;  // 人骑着三轮车
+  OBJECT_TYPE_WATER_SAFETY_BARRIER = 21;  // 水马
+  OBJECT_TYPE_CTASH_BARREL         = 22;  // 防撞桶
+  OBJECT_TYPE_SOLT                 = 23;  // 泊车-车位; context = IdpParkingEntranceType | IdpParkingEntranceStatusType | ...
+  OBJECT_TYPE_DECELER              = 24;  // 泊车-减速带
+  OBJECT_TYPE_SPECIFICATIONER      = 25;  // 泊车-地锁; context = IdpParkingEntranceStatusType | ...
+  OBJECT_TYPE_LIMITER              = 26;  // 泊车-限位器
+  OBJECT_TYPE_COLUMN               = 27;  // 柱子
+
+  OBJECT_TYPE_PICKUP              = 40;  // 皮卡
+  OBJECT_TYPE_SUV                 = 41;  // SUV
+  OBJECT_TYPE_MPV                 = 42;  // MPV
+  OBJECT_TYPE_ENGINEERING_VEHICLE = 43;  // 工程车
+  OBJECT_TYPE_ADULT               = 47;  // 成人
+  OBJECT_TYPE_TRAFFIC_POLICE      = 48;  // 交警
+  OBJECT_TYPE_CHILD               = 49;  // 儿童
+
+  //占用网络类型
+  OBJECT_TYPE_OCC_EMPTY           = 50;
+  OBJECT_TYPE_OCC_GENERAL         = 51;  // 通用障碍物，除 CAR; CYCLIST; PEOPLE; 以外的其他所有物体
+  OBJECT_TYPE_OCC_CAR             = 52;  // 车
+  OBJECT_TYPE_OCC_CYCLIST         = 53;  // 二轮车
+  OBJECT_TYPE_OCC_PEOPLE          = 54;  // 人
+  OBJECT_TYPE_OCC_GENERAL_STATIC  = 55;  // 静态大类，所有静态物体
+  OBJECT_TYPE_OCC_GENERAL_DYNAMIC = 56;  // 动态大类，所有动态物体
+  OBJECT_TYPE_OCC_GROUDING_WIRE   = 57;  // 接地线大类，IdpContextOccupancyGroudingWireClass 墙的接地线，柱子接地线，路沿
+  OBJECT_TYPE_OCC_COLUMN          = 58;  // 柱子
+  OBJECT_TYPE_OCC_WALL            = 59;  // 墙
+  OBJECT_TYPE_OCC_NUM             = 60;
+};
+
+// 障碍物运动状态
+enum ObjectMotionType {
+  OBJECT_MOTION_TYPE_UNKNOWN = 0;  // 未知
+  OBJECT_MOTION_TYPE_STATIC  = 1;  // 静止
+  OBJECT_MOTION_TYPE_STOPED  = 2;  // 停止
+  OBJECT_MOTION_TYPE_MOVING  = 3;  // 同向
+  OBJECT_MOTION_TYPE_ONCOME  = 4;  // 对向
+  OBJECT_MOTION_TYPE_CROSS   = 5;  // 横穿
+};
+
+// 障碍物灯光状态
+enum ObjectLightType {
+  OBJECT_LIGHT_TYPE_UNKNOWN                    = 0;   // 无
+  OBJECT_LIGHT_TYPE_TURN_LEFT                  = 1;   // 左转
+  OBJECT_LIGHT_TYPE_TURN_RIGHT                 = 2;   // 右转
+  OBJECT_LIGHT_TYPE_DOUBLE_FLASH               = 3;   // 双闪
+  OBJECT_LIGHT_TYPE_BRAKE                      = 4;   // 刹车灯
+  OBJECT_LIGHT_TYPE_REVERSE                    = 5;   // 倒车灯
+  OBJECT_LIGHT_TYPE_BRAKE_REVERSE              = 6;   // 刹车灯+倒车灯
+  OBJECT_LIGHT_TYPE_TURN_LEFT_BRAKE            = 7;   // 左转+刹车灯
+  OBJECT_LIGHT_TYPE_TURN_LEFT_REVERSE          = 8;   // 左转+倒车灯
+  OBJECT_LIGHT_TYPE_TURN_LEFT_BRAKE_REVERSE    = 9;   // 左转+刹车灯+倒车灯
+  OBJECT_LIGHT_TYPE_TURN_RIGHT_BRAKE           = 10;  // 右转+刹车灯
+  OBJECT_LIGHT_TYPE_TURN_RIGHT_REVERSE         = 11;  // 右转+倒车灯
+  OBJECT_LIGHT_TYPE_TURN_RIGHT_BRAKE_REVERSE   = 12;  // 右转+刹车灯+倒车灯
+  OBJECT_LIGHT_TYPE_DOUBLE_FLASH_BRAKE         = 13;  // 双闪+刹车灯
+  OBJECT_LIGHT_TYPE_DOUBLE_FLASH_REVERSE       = 14;  // 双闪+倒车灯
+  OBJECT_LIGHT_TYPE_DOUBLE_FLASH_BRAKE_REVERSE = 15;  // 双闪+刹车灯+倒车灯
+  OBJECT_LIGHT_TYPE_RESERVE                    = 16;  // 预留
+};
+
+message Shape3d {
+  double length = 1;  // 长  (米)
+  double width  = 2;  // 宽  (米)
+  double height = 3;  // 高  (米)
+};
+
+enum StaticFusionResourceType {
+  RESOURCE_TYPE_INVALID          = 0;  // 无效的
+  RESOURCE_TYPE_MAP              = 1;  // 来源于地图
+  RESOURCE_TYPE_REAL_TIME_FUSION = 2;  // 来源于实时建图融合
+};
+
+// 单个限位器信息
+message ParkingFusionLimiter {
+  uint32 id                              = 1;  // 属性标识id信息
+  StaticFusionResourceType resource_type = 2;  // 数据来源
+  repeated Point2f end_points            = 3;  // 车体限位器端点位置 （米） <固定2个> FUSION_PARKING_SLOT_LIMITER_POINT_NUM
+};
+
+// 点击车位后，发送泊车预规划状态
+enum PreparePlanningState {
+  PREPARE_PLANNING_NONE      = 0;  // 空值，正式泊车按钮不能点击
+  PREPARE_PLANNING_COMPUTING = 1;  // 计算中，正式泊车按钮不能点击
+  PREPARE_PLANNING_SUCCESS   = 2;  // 计算成功，泊车按钮可以点击
+  PREPARE_PLANNING_FAILED    = 3;  // 计算失败，车位变成灰色，播报请选择其他车位
+};
+
+// Landing point
+message LandingPoint {
+  Point3d relative_pos = 1;
+  float heading        = 2;
+  bool is_avaliable    = 3;
+};
+
+//  LDW功能输出的结构体定义
+enum LDWFunctionFSMWorkState {
+  LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE               = 0;  // Unavailable
+  LDW_FUNCTION_FSM_WORK_STATE_OFF                       = 1;  // Off
+  LDW_FUNCTION_FSM_WORK_STATE_STANDBY                   = 2;  // Standby
+  LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION    = 3;  // Active(No Intervention)
+  LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION  = 4;  // Active(Left Intervention)
+  LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION = 5;  // Active(Right Intervention)
+  LDW_FUNCTION_FSM_WORK_STATE_FAULT                     = 6;  // Fault
+};
+
+message LDWOutputInfoStr {
+  LDWFunctionFSMWorkState ldw_state = 1;  // LDW功能状态机状态
+  bool ldw_left_warning             = 2;  // LDW功能触发左侧报警标志位    (true:Left Warning / false:No Warning)
+  bool ldw_right_warning            = 3;  // LDW功能触发右侧报警标志位    (true:Rirht Warning / false:No Warning)
+};
+
+//  LDP功能输出的结构体定义
+enum LDPFunctionFSMWorkState {
+  LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE               = 0;  // Unavailable
+  LDP_FUNCTION_FSM_WORK_STATE_OFF                       = 1;  // Off
+  LDP_FUNCTION_FSM_WORK_STATE_STANDBY                   = 2;  // Standby
+  LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION    = 3;  // Active(No Intervention)
+  LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION  = 4;  // Active(Left Intervention)
+  LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION = 5;  // Active(Right Intervention)
+  LDP_FUNCTION_FSM_WORK_STATE_FAULT                     = 6;  // Fault
+};
+
+message LDPOutputInfoStr {
+  LDPFunctionFSMWorkState ldp_state = 1;  // LDP功能状态机状态
+  bool ldp_left_intervention_flag   = 2;  // LDP功能触发左侧报警标志位    (true:Left Intervention / false:No Intervention)
+  bool ldp_right_intervention_flag  = 3;  // LDP功能触发右侧报警标志位    (true:Rirht Intervention / false:No Intervention)
+};
+
+// ELK功能输出结构体定义
+enum ELKFunctionFSMWorkState {
+  ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE               = 0;  // Unavailable
+  ELK_FUNCTION_FSM_WORK_STATE_OFF                       = 1;  // Off
+  ELK_FUNCTION_FSM_WORK_STATE_STANDBY                   = 2;  // Standby
+  ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION    = 3;  // Active(No Intervention)
+  ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION  = 4;  // Active(Left Intervention)
+  ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION = 5;  // Active(Right Intervention)
+  ELK_FUNCTION_FSM_WORK_STATE_FAULT                     = 6;  // Fault
+};
+
+message ELKRiskObjInfo {
+  bool obj_valid                   = 1;  // false:invalid true:valid
+  uint32 id                        = 2;  // 障碍物id
+  ObjectType type                  = 3;  // 障碍物类型
+  ObjectLightType light_type       = 4;  // 障碍物灯光状态
+  Shape3d shape                    = 5;  // 障碍物尺寸
+  Point3f relative_velocity        = 6;  // 障碍物相对自车坐标系相对速度         (米/秒)
+  Point3f relative_acceleration    = 7;  // 障碍物相对自车坐标系相对加速度 (米/秒^2)
+  Point3f relative_center_position = 8;  // 障碍物几何中心距离自车后轴中心的距离 (米)
+
+  /* 障碍物与自车的相对朝向角
+       单位：弧度rad
+       备注：沿自车坐标系x轴正向逆时针旋转为正（0~Π），顺时针为负（0~-Π）
+    */
+  float relative_heading_angle      = 9;
+  float relative_heading_angle_rate = 10;  // 障碍物与自车的相对朝向角变化率
+};
+
+message ELKOutputInfoStr {
+  ELKFunctionFSMWorkState elk_state = 1;  // ELK功能状态机状态
+  bool elk_left_intervention_flag   = 2;  // ELK功能触发左侧报警标志位    (true:Left Intervention / false:No Intervention)
+  bool elk_right_intervention_flag  = 3;  // ELK功能触发右侧报警标志位    (true:Rirht Intervention / false:No Intervention)
+  ELKRiskObjInfo elk_risk_obj       = 4;
+};
+
+// TSR功能输出结构体定义
+enum TSRFunctionFSMWorkState {
+  TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE = 0;  // Unavailable
+  TSR_FUNCTION_FSM_WORK_STATE_OFF         = 1;  // Off
+  TSR_FUNCTION_FSM_WORK_STATE_STANDBY     = 2;  // Standby
+  TSR_FUNCTION_FSM_WORK_STATE_ACTIVE      = 3;  // Active
+  TSR_FUNCTION_FSM_WORK_STATE_FAULT       = 4;  // Fault
+};
+
+enum SuppSignType {
+  SUPP_SIGN_TYPE_UNKNOWN                    = 0;   // 未知类型
+  SUPP_SIGN_TYPE_NO_ENTRY                   = 1;   // 禁止驶入
+  SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING    = 2;   // 禁止机动车驶入
+  SUPP_SIGN_TYPE_NO_STOPPING                = 3;   // 禁止车辆停放
+  SUPP_SIGN_TYPE_NO_PARKING                 = 4;   // 禁止停车
+  SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING = 5;   // 禁止长时间停车
+  SUPP_SIGN_TYPE_NO_OVERTAKING              = 6;   // 禁止超车
+  SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING       = 7;   // 解除禁止超车
+  SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT         = 8;   // 禁止左转弯
+  SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT        = 9;   // 禁止右转弯
+  SUPP_SIGN_TYPE_PROHIBIT_TURN_U            = 10;  // 禁止掉头
+  SUPP_SIGN_TYPE_STOP_SIGN                  = 11;  // 停车标识
+  SUPP_SIGN_TYPE_YIELD_SIGN                 = 12;  // 让行标识
+  SUPP_SIGN_TYPE_NO_PASSING                 = 13;  // 禁止通行
+  SUPP_SIGN_TYPE_NO_HONKING                 = 14;  // 禁止鸣喇叭
+  SUPP_SIGN_TYPE_HONK                       = 15;  // 鸣喇叭
+  SUPP_SIGN_TYPE_MAXIMUM_SPEED              = 16;  // 最高车速，包括电子限速
+  SUPP_SIGN_TYPE_MINIMUM_SPEED              = 17;  // 最低车速，包括电子限速
+  SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT         = 18;  // 解除限速
+  SUPP_SIGN_TYPE_ATTENTION_CHILDREN         = 19;  // 注意儿童
+  SUPP_SIGN_TYPE_ATTENTION_PEDESTRIANS      = 20;  // 注意行人
+  SUPP_SIGN_TYPE_ROAD_CONSTRUCTION_SIGN     = 21;  // 道路施工标识
+  SUPP_SIGN_TYPE_SHARP_TURN_LEFT            = 22;  // 左转急弯
+  SUPP_SIGN_TYPE_SHARP_TURN_RIGHT           = 23;  // 右转急弯
+  SUPP_SIGN_TYPE_VEHICLE_MERGE_LEFT         = 24;  // 左侧车辆汇入
+  SUPP_SIGN_TYPE_VEHICLE_MERGE_RIGHT        = 25;  // 右侧车辆汇入
+  SUPP_SIGN_TYPE_SINGLE_WAY                 = 26;  // 单行路
+  SUPP_SIGN_TYPE_CROSSROADS                 = 27;  // 交叉路口
+  SUPP_SIGN_TYPE_CURVES_AHEAD               = 28;  // 连续弯路
+  SUPP_SIGN_TYPE_UP_STEEP_SLOPE             = 29;  // 上陡坡
+  SUPP_SIGN_TYPE_DOWN_STEEP_SLOPE           = 30;  // 下陡坡
+  SUPP_SIGN_TYPE_NARROW_ROAD                = 31;  // 窄路
+  SUPP_SIGN_TYPE_TUNNEL                     = 32;  // 隧道
+  SUPP_SIGN_TYPE_MOTORWAY_START_SIGN        = 33;  // 高速公路启动标志
+  SUPP_SIGN_TYPE_MOTORWAY_END_SIGN          = 34;  // 高速公路结束标志
+};
+
+message TSROutputInfoStr {
+  TSRFunctionFSMWorkState tsr_state = 1;  // TSR功能状态
+  uint32 tsr_speed_limit            = 2;  // TSR识别到的限速标识牌    (公里/小时)
+  bool tsr_warning                  = 3;  // TSR超速报警标志位 (true:Warning / false:No Warning)
+  SuppSignType tsr_supp_sign_type   = 4;  // TSR辅助标志牌类型
+  bool tsr_speed_unlimit_warning    = 5;  // TSR取消限速提醒标志位 (true:Warning / false:No Warning)
+};
+
+// IHC功能输出结构体定义
+enum IHCFunctionFSMWorkState {
+  IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE = 0;  // Unavailable
+  IHC_FUNCTION_FSM_WORK_STATE_OFF         = 1;  // Off
+  IHC_FUNCTION_FSM_WORK_STATE_STANDBY     = 2;  // Standby
+  IHC_FUNCTION_FSM_WORK_STATE_ACTIVE      = 3;  // Active
+  IHC_FUNCTION_FSM_WORK_STATE_FAULT       = 4;  // Fault
+};
+
+message IHCOutputInfoStr {
+  IHCFunctionFSMWorkState ihc_state = 1;  // IHC功能状态
+  bool ihc_request_status           = 2;  // IHC请求状态  (true:Request / false:No Request)
+  bool ihc_request                  = 3;  // IHC请求      (true:HighBeam / false:LowBeam)
+};
+
+// 交通标识的boundingbox信息(像素坐标系，可视化用)
+message TrafficSignBoundingbox {
+  float x      = 1;  // 锚框左上角顶点的x坐标 (pixel)
+  float y      = 2;  // 锚框右上角顶点的y坐标 (pixel)
+  float width  = 3;  // 锚框的宽度 (pixel)
+  float height = 4;  // 锚框的高度 (pixel)
+};
+
+// 辅助标志牌信息
+message CameraPerceptionSuppSign {
+  uint32 id                   = 1;  // 跟踪id号
+  SuppSignType supp_sign_type = 2;  // 辅助标志牌类型
+  float supp_sign_x           = 3;  // 辅助标志牌纵向距离 (m)
+  float supp_sign_y           = 4;  // 辅助标志牌横向距离 (m)
+  float supp_sign_z           = 5;  // 辅助标志牌高度     (m)
+  uint32 speed_limit          = 6;  // 限速速度值(km/h)  仅在标识牌类型为【MAXIMUM_SPEED】、【MINIMUM_SPEED】、【END_OF_SPEED_LIMIT】时对该字段赋值;否则该字段默认赋值为0
+  TrafficSignBoundingbox bbox = 7;  // 辅助标志牌的boundingbox
+};
+
+// 交通信号灯类型枚举
+enum TrafficLightType {
+  TRAFFIC_LIGHT_TYPE_UNKNOWN    = 0;  // 未知
+  TRAFFIC_LIGHT_TYPE_CIRCULAR   = 1;  // 圆饼型
+  TRAFFIC_LIGHT_TYPE_ARROW      = 2;  // 箭头型
+  TRAFFIC_LIGHT_TYPE_NUM        = 3;  // 数字型
+  TRAFFIC_LIGHT_TYPE_OTHER      = 4;  // 其他类型
+  TRAFFIC_LIGHT_TYPE_LEFT_TURN  = 5;  // 左转灯
+  TRAFFIC_LIGHT_TYPE_STRAIGHT   = 6;  // 直行灯
+  TRAFFIC_LIGHT_TYPE_RIGHT_TURN = 7;  // 右转灯
+  TRAFFIC_LIGHT_TYPE_U_TURN     = 8;  // 掉头灯
+};
+
+// 交通信号灯排布类型枚举
+enum TrafficLightArrangeType {
+  TRAFFIC_LIGHT_ARRANGE_TYPE_UNKNOWN    = 0;  // 未知
+  TRAFFIC_LIGHT_ARRANGE_TYPE_VERTICAL   = 1;  // 纵向排布
+  TRAFFIC_LIGHT_ARRANGE_TYPE_HORIZONTAL = 2;  // 横向排布
+  TRAFFIC_LIGHT_ARRANGE_TYPE_OTHER      = 3;  // 其他类型
+};
+
+// 交通信号灯颜色枚举
+enum TrafficLightColor {
+  TRAFFIC_LIGHT_COLOR_UNKNOWN         = 0;  // 未知
+  TRAFFIC_LIGHT_COLOR_RED             = 1;  // 红色交通灯
+  TRAFFIC_LIGHT_COLOR_YELLOW          = 2;  // 黄色交通灯
+  TRAFFIC_LIGHT_COLOR_GREEN           = 3;  // 绿色交通灯
+  TRAFFIC_LIGHT_COLOR_OFF             = 4;  // 关闭
+  TRAFFIC_LIGHT_COLOR_FLASHING_RED    = 5;  // 闪烁的红色交通灯
+  TRAFFIC_LIGHT_COLOR_FLASHING_YELLOW = 6;  // 闪烁的黄色交通灯
+  TRAFFIC_LIGHT_COLOR_FLASHING_GREEN  = 7;  // 闪烁的绿色交通灯
+};
+
+// 交通信号灯信息
+message CameraPerceptionTrafficLight {
+  uint32 id                                          = 1;  // 跟踪id号
+  TrafficLightType traffic_light_type                = 2;  // 交通信号灯类型
+  TrafficLightColor traffic_light_color              = 3;  // 交通信号灯颜色
+  TrafficLightArrangeType traffic_light_arrange_type = 4;  // 交通信号灯排布类型
+  float traffic_light_x                              = 5;  // 交通信号灯纵向距离 (m)
+  float traffic_light_y                              = 6;  // 交通信号灯横向距离 (m)
+  float traffic_light_z                              = 7;  // 交通信号灯高度     (m)
+  TrafficSignBoundingbox bbox                        = 8;  // 交通信号灯的boundingbox
+  int32 countdown_number                             = 9;  // 交通灯倒计时时间  仅在交通信号灯类型为【TRAFFIC_LIGHT_TYPE_NUM】时对其赋值
+};
+
+enum SensorType {
+  SENSOR_TYPE_UNKNOWN               = 0;
+  SENSOR_TYPE_FRONT_CAMERA          = 1;
+  SENSOR_TYPE_REAR_CAMERA           = 2;
+  SENSOR_TYPE_LEFT_FRONT_CAMERA     = 3;
+  SENSOR_TYPE_LEFT_REAR_CAMERA      = 4;
+  SENSOR_TYPE_RIHGT_FRONT_CAMERA    = 5;
+  SENSOR_TYPE_RIGHT_REAR_CAMERA     = 6;
+  SENSOR_TYPE_FRONT_SURROUND_CAMERA = 7;
+  SENSOR_TYPE_REAR_SURROUND_CAMERA  = 8;
+  SENSOR_TYPE_LEFT_SURROUND_CAMERA  = 9;
+  SENSOR_TYPE_RIGHT_SURROUND_CAMERA = 10;
+  SENSOR_TYPE_FRONT_RADAR           = 11;
+  SENSOR_TYPE_LEFT_FRONT_RADAR      = 12;
+  SENSOR_TYPE_RIGHT_FRONT_RADAR     = 13;
+  SENSOR_TYPE_LEFT_REAR_RADAR       = 14;
+  SENSOR_TYPE_RIGHT_REAR_RADAR      = 15;
+};
+
+// Ehp输出信息
+enum EhpStatus {
+  EHP_NOTIFY_NO_REQ              = 0;   // 无消息
+  EHP_QUERY_SUCCESS              = 1;   // 地图查询成功
+  EHP_QUERY_FAILED               = 2;   // 地图查询失败
+  EHP_DELETE_SUCCESS             = 3;   // 删除成功
+  EHP_DELETE_FAILED              = 4;   // 删除失败
+  EHP_UPDATE_SUCCESS             = 5;   // 更新成功
+  EHP_UPDATE_FAILED              = 6;   // 更新失败
+  EHP_EXIST_OLD_MAP              = 7;   // 存在老地图
+  EHP_SAVE_MAP_SUCCESS           = 8;   // 地图保存成功
+  EHP_QUERY_SPECIFIC_MAP_SUCCESS = 9;   // 指定地图查询成功
+  EHP_QUERY_SPECIFIC_MAP_FAILED  = 10;  // 指定地图查询失败
+};
+
+message EhpfileInfo {
+  uint32 map_file_id   = 1;  // 地图文件ID
+  string map_file_name = 2;  // 地图文件名称 PROTO_STR_LEN
+};
+
+message EhpOutput {
+  Header header                 = 1;  // 头信息
+  repeated EhpfileInfo map_file = 2;  // 地图文件列表 上限10个 PARKING_MAP_EHP_MAP_MAX_NUN
+  EhpStatus ehp_status          = 3;  // 地图管理处理状态
+  string failed_reason          = 4;  // 失败原因 PARKING_MAP_EHP_MESSAGE_DESCRIBE_STR_LEN
+};
+
+// 系统运行模式
+enum RunningMode {
+  RUNNING_MODE_HIGHWAY              = 0;  // 行车
+  RUNNING_MODE_PARKING              = 1;  // 泊车
+  RUNNING_MODE_PRODUCTION_LINE      = 2;  // 产线标定
+  RUNNING_MODE_MANUAL_DRIVING       = 3;  // 手动驾驶
+  RUNNING_MODE_ACE                  = 4;
+  RUNNING_MODE_MEMROY_HIGHWAY       = 5;  // 记忆行车
+  RUNNING_MODE_MEMROY_PARKING       = 6;  // 记忆泊车
+  RUNNING_MODE_REVERSE_FOLLOW_TRACE = 7;  // 循迹倒车
+};
+
+// 图像来源
+enum CameraSourceEnum {
+  CAMERA_SOURCE_FRONT_FAR             = 0;   // 前视30°相机
+  CAMERA_SOURCE_FRONT_MID             = 1;   // 前视相机
+  CAMERA_SOURCE_FRONT_WIDE            = 2;   // 前视120°相机
+  CAMERA_SOURCE_LEFT_FRONT            = 3;   // 左前相机
+  CAMERA_SOURCE_LEFT_REAR             = 4;   // 左后相机
+  CAMERA_SOURCE_REAR_MID              = 5;   // 后视相机
+  CAMERA_SOURCE_REAR_MID_UP           = 6;   // 后视相机(视角向上)
+  CAMERA_SOURCE_REAR_MID_DOWN         = 7;   // 后视相机(视角向下)
+  CAMERA_SOURCE_RIGHT_FRONT           = 8;   // 右前相机
+  CAMERA_SOURCE_RIGHT_REAR            = 9;   // 右后相机
+  CAMERA_SOURCE_FRONT_FISHEYE         = 10;  // 前鱼眼相机
+  CAMERA_SOURCE_LEFT_FISHEYE          = 11;  // 左鱼眼相机
+  CAMERA_SOURCE_RIGHT_FISHEYE         = 12;  // 右鱼眼相机
+  CAMERA_SOURCE_REAR_FISHEYE          = 13;  // 后鱼眼相机
+  CAMERA_SOURCE_FISHEYE               = 14;  // 鱼眼相机
+  CAMERA_SOURCE_FRONT_WIDE_SUB_LEFT   = 15;  // 前视120°相机与左鱼眼相机的组合视角
+  CAMERA_SOURCE_FRONT_WIDE_SUB_RIGHT  = 16;  // 前视120°相机与右鱼眼相机的组合视角
+  CAMERA_SOURCE_RIGHT_FRONT_SUB_LEFT  = 17;  // 右前相机与左鱼眼相机的组合视角
+  CAMERA_SOURCE_RIGHT_FRONT_SUB_RIGHT = 18;  // 右前相机与右鱼眼相机的组合视角
+  CAMERA_SOURCE_LEFT_FRONT_SUB_LEFT   = 19;  // 左前相机与左鱼眼相机的组合视角
+  CAMERA_SOURCE_LEFT_FRONT_SUB_RIGHT  = 20;  // 左前相机与右鱼眼相机的组合视角
+  CAMERA_SOURCE_LEFT_REAR_SUB_LEFT    = 21;  // 左后相机与左鱼眼相机的组合视角
+  CAMERA_SOURCE_RIGHT_REAR_SUB_RIGHT  = 22;  // 右后相机与右鱼眼相机的组合视角
+  CAMERA_SOURCE_IPM                   = 23;  // 逆透视变换视角的鸟瞰图
+};
+
+// 相机模型
+enum CameraModelEnum {
+  CAMERA_MODEL_UNKNOWN    = 0;  // 未知相机模型
+  CAMERA_MODEL_RAW        = 1;  // 原始图像
+  CAMERA_MODEL_CYLINDER   = 2;  // 柱形图像
+  CAMERA_MODEL_DEDISTORT  = 3;  // 无畸变图像
+  CAMERA_MODEL_PSTITCH    = 4;  // 全景拼接图像
+  CAMERA_MODEL_RESERVED_A = 5;  // 预留字段A
+  CAMERA_MODEL_RESERVED_B = 6;  // 预留字段B
+  CAMERA_MODEL_RESERVED_C = 7;  // 预留字段C
+};
+
+// 接地线类型
+enum GroundLineType {
+  GROUND_LINE_TYPE_UNKNOWN = 0;  // 未知类型接地线
+  GROUND_LINE_TYPE_WALL    = 1;  // 墙面接地线
+  GROUND_LINE_TYPE_COLUMN  = 2;  // 立柱接地线
+  GROUND_LINE_TYPE_FENCE   = 3;  // 围栏接地线
+  GROUND_LINE_TYPE_STEP    = 4;  // 楼梯接地线
+  GROUND_LINE_TYPE_CURB    = 5;  // 路沿接地线
+  GROUND_LINE_TYPE_SPECIAL = 6;  // 特殊建筑接地线
+};
+
+// 接地线点的类型
+enum GroundLinePointType {
+  GROUND_LINE_POINT_TYPE_2D = 0;  // 2d点
+  GROUND_LINE_POINT_TYPE_3D = 1;  // 3d点
+};
+
+message GroundLine {
+  CameraSourceEnum camera_source = 1;  // 图像来源
+  CameraModelEnum camera_model   = 2;  // 相机模型
+  GroundLineType semantic_type   = 3;  // 接地线类型
+  GroundLinePointType point_type = 4;  // 接地线点的类型
+
+  int32 visable_seg_num      = 5;  // 值大于0点有序，数值表示前多少个可见点，其余点为预测点;值小于0点无序，点全为预测点
+  repeated Point2f points_2d = 6;  // 组成接地线的2d点 CAMERA_PERCEPTION_GROUND_LINE_POINTS_MAX_NUM
+  repeated Point3f points_3d = 7;  // 组成接地线的3d点 CAMERA_PERCEPTION_GROUND_LINE_POINTS_MAX_NUM
+  float confidence           = 8;  // 接地线感知置信度 [0.0-1.0]
+};
+
+message Deceler {
+  uint32 id                       = 1;  // 减速带id
+  repeated Point2f deceler_points = 2;  // 减速带顶点坐标  <固定4个;逆时针排列> CAMERA_PERCEPTION_DECELER_POINTS_NUM
+  float confidence                = 3;  // 感知置信度      [0.0;1.0]
+  uint32 life_time                = 4;  // 生命周期
+};
+
+enum ShiftLeverStateEnum {
+  ShiftLeverState_P = 0;
+  ShiftLeverState_R = 1;
+  ShiftLeverState_N = 2;
+  ShiftLeverState_D = 3;
+  ShiftLeverState_M = 4;
+};  // shift_lever_state枚举值
+
+// 位置(LLH坐标系)
+message PosGlobal {
+  bool available   = 1;  // 是否可用
+  double longitude = 2;  // 经度     (度)    [-180°;180°)
+  double latitude  = 3;  // 纬度     (度)    [-90;90]
+  double height    = 4;  // 高度     (米)
+};
+
+// 位置(开机坐标系)，单位(米)
+message PosLocal {
+  bool available = 1;  // 是否可用
+  double x       = 2;  // x 轴方向上的位置
+  double y       = 3;  // y 轴方向上的位置
+  double z       = 4;  // z 轴方向上的位置
+};
+
+message PosEnu {
+  bool available = 1;  // 是否可用
+  double e       = 2;  // e 轴方向上的位置
+  double n       = 3;  // n 轴方向上的位置
+  double u       = 4;  // u 轴方向上的位置
+};
+
+// 位置(LLH坐标系，开机坐标系)
+message Position {
+  PosGlobal position_llh = 1;  // LLH坐标系下的位置信息
+  PosLocal position_boot = 2;  // 开机坐标系下的位置信息
+  PosEnu position_enu    = 3;  // body坐标系下的位置信息
+};
+
+// LLH信息
+message PointLLH {
+  double lon    = 1;  // Longitude in degrees     (度)    [-180,180)
+  double lat    = 2;  // Latitude in degrees      (度)    [-90,90]
+  double height = 3;  // WGS-84 ellipsoid height in meters    (米)
+};
+
+// ENU信息
+message PointENU {
+  double x = 1;  // East from the origin         (米)
+  double y = 2;  // North from the origin        (米)
+  double z = 3;  // Up from the WGS-84 ellipsoid (米)
+};
+
+// 旋转四元数
+message Quaternion {
+  double w = 1;  // 四元数的实部，标量部分
+  double x = 2;  // 四元数的虚部 i 分量
+  double y = 3;  // 四元数的虚部 j 分量
+  double z = 4;  // 四元数的虚部 k 分量
+};
+
+// 后视镜请求信息
+enum RearViewMirrorSignalType {
+  REAR_VIEW_MIRROR_NONE   = 0;  // 无指令
+  REAR_VIEW_MIRROR_FOLD   = 1;  // 折叠后视镜
+  REAR_VIEW_MIRROR_UNFOLD = 2;  // 展开后视镜
+};
+
+// 规划后视镜请求
+message RearViewMirrorCommand {
+  bool available                                  = 1;  // 挡位请求有效性。   (true:有效/false:无效)
+  RearViewMirrorSignalType rear_view_mirror_value = 2;  // 后视镜折叠请求值
+};
+
+message RiskObjInfo {
+  bool obj_valid                    = 1;   // false:invalid true:valid
+  uint32 id                         = 2;   // 障碍物id
+  ObjectType type                   = 3;   // 障碍物类型
+  ObjectLightType light_type        = 4;   // 障碍物灯光状态
+  Shape3d shape                     = 5;   // 障碍物尺寸
+  Point3f relative_velocity         = 6;   // 障碍物相对自车坐标系相对速度 (米/秒)
+  Point3f relative_acceleration     = 7;   // 障碍物相对自车坐标系相对加速度 (米/秒^2)
+  Point3f relative_center_position  = 8;   // 障碍物几何中心距离自车后轴中心的距离 (米)
+  float relative_heading_angle      = 9;   // 障碍物与自车的相对朝向角 单位：弧度rad 备注：沿自车坐标系x轴正向逆时针旋转为正（0~Π），顺时针为负（0~-Π）
+  float relative_heading_angle_rate = 10;  // 障碍物与自车的相对朝向角变化率 (弧度rad/秒)
+};
+
+// FCW功能输出信息
+message FCWOutputInfo {
+  uint32 fcw_state                 = 1;  // FCW功能状态
+  uint32 fcw_warning_level         = 2;  // FCW功能报警等级
+  bool fcw_prefill_request_status  = 3;  // Prefill请求状态 (true:Request/false:No Request)
+  bool fcw_jerk_request_status     = 4;  // Jerk请求状态 (true:Request/false:No Request)
+  RiskObjInfo fcw_risk_obj         = 5;
+  bool fcw_headway_warning_request = 6;  // 安全距离请求状态 (true:Request/false:No Request)
+};
+
+message PCWOutputInfo {
+  uint32 pcw_state                = 1;  // PCW功能状态
+  uint32 pcw_warning_level        = 2;  // PCW功能报警等级
+  bool pcw_prefill_request_status = 3;  // Prefill请求状态 (true:Request/false:No Request)
+  bool pcw_jerk_request_status    = 4;  // Jerk请求状态 (true:Request/false:No Request)
+  RiskObjInfo pcw_risk_obj        = 5;  // 风险对象信息
+};
+
+message AEBOutputInfo {
+  uint32 aeb_state                     = 1;  // AEB功能状态
+  bool aeb_deceleration_request_status = 2;  // AEB减速请求状态 (true:Request/false:No Request)
+  float aeb_deceleration_request_value = 3;  // AEB减速请求值 单位：米/秒^2 (m/s^2) 备注：AEB激活时，请求值为负值
+  bool aeb_hold_request_status         = 4;  // AEB停车保压请求状态 (true:Request/false:No Request)
+  RiskObjInfo aeb_risk_obj             = 5;  // 风险对象信息
+};
+
+message AEBPOutputInfo {
+  uint32 aebp_state                     = 1;  // AEBP功能状态
+  bool aebp_deceleration_request_status = 2;  // AEBP减速请求状态 (true:Request/false:No Request)
+  float aebp_deceleration_request_value = 3;  // AEBP减速请求值 单位：米/秒^2 (m/s^2) 备注：AEB激活时，请求值为负值
+  bool aebp_hold_request_status         = 4;  // AEBP停车保压请求状态 (true:Request/false:No Request)
+  RiskObjInfo aebp_risk_obj             = 5;  // 风险对象信息
+};
+
+message BSDOutputInfo {
+  uint32 bsd_state               = 1;  // BSD功能状态
+  uint32 bsd_left_warning_level  = 2;  // BSD左侧报警状态
+  uint32 bsd_right_warning_level = 3;  // BSD右侧报警状态
+};
+
+message LCAOutputInfo {
+  uint32 lca_state               = 1;  // LCA功能状态
+  uint32 lca_left_warning_level  = 2;  // LCA左侧报警状态
+  uint32 lca_right_warning_level = 3;  // LCA右侧报警状态
+};
+
+message DOWOutputInfo {
+  uint32 dow_state                     = 1;  // DOW功能状态
+  uint32 dow_front_left_warning_level  = 2;  // DOW前左侧报警状态
+  uint32 dow_front_right_warning_level = 3;  // DOW前右侧报警状态
+  uint32 dow_rear_left_warning_level   = 4;  // DOW后左侧报警状态
+  uint32 dow_rear_right_warning_level  = 5;  // DOW后右侧报警状态
+};
+
+message RCWOutputInfo {
+  uint32 rcw_state         = 1;  // RCW功能状态
+  uint32 rcw_warning_level = 2;  // RCW报警状态
+};
+
+message FCTAOutputInfo {
+  uint32 fcta_state               = 1;  // FCTA功能状态
+  uint32 fcta_left_warning_level  = 2;  // FCTA左侧报警状态
+  uint32 fcta_right_warning_level = 3;  // FCTA右侧报警状态
+  RiskObjInfo fcta_risk_obj       = 4;  // 风险对象信息
+};
+
+message RCTAOutputInfo {
+  uint32 rcta_state               = 1;  // RCTA功能状态
+  uint32 rcta_left_warning_level  = 2;  // RCTA左侧报警状态
+  uint32 rcta_right_warning_level = 3;  // RCTA右侧报警状态
+  RiskObjInfo rcta_risk_obj       = 4;  // 风险对象信息
+};
+
+message FCTBOutputInfo {
+  uint32 fctb_state                     = 1;  // FCTB功能状态
+  bool fctb_deceleration_request_status = 2;  // FCTB减速请求状态 (true:Request/false:No Request)
+  float fctb_deceleration_request_value = 3;  // FCTB减速请求值 单位：米/秒^2 (m/s^2) 备注：AEB激活时，请求值为负值
+  bool fctb_hold_request_status         = 4;  // FCTB停车保压请求状态 (true:Request/false:No Request)
+  RiskObjInfo fctb_risk_obj             = 5;  // 风险对象信息
+  uint32 fctb_active_source             = 6;  // FCTB激活来源
+};
+
+message RCTBOutputInfo {
+  uint32 rctb_state                     = 1;  // RCTB功能状态
+  bool rctb_deceleration_request_status = 2;  // RCTB减速请求状态 (true:Request/false:No Request)
+  float rctb_deceleration_request_value = 3;  // RCTB减速请求值 单位：m/s^2 备注：AEB激活时，请求值为负值
+  bool rctb_hold_request_status         = 4;  // RCTB停车保压请求状态 (true:Request/false:No Request)
+  RiskObjInfo rctb_risk_obj             = 5;  // 风险对象信息
+  uint32 rctb_active_source             = 6;  // RCTB激活来源
+};
+
+message DAIOutputInfo {
+  uint32 dai_state         = 1;  // 驶离提醒功能状态
+  bool dai_warning_request = 2;  // 驶离提醒请求状态 (true:Request/false:No Request)
+};
+
+enum AMAPFunctionFSMWorkState {
+  AMAP_FUNCTION_FSM_WORK_STATE_INIT    = 0;  // Init
+  AMAP_FUNCTION_FSM_WORK_STATE_OFF     = 1;  // Off
+  AMAP_FUNCTION_FSM_WORK_STATE_STANDBY = 2;  // Standby
+  AMAP_FUNCTION_FSM_WORK_STATE_ACTIVE  = 3;  // Active
+  AMAP_FUNCTION_FSM_WORK_STATE_FAULT   = 4;  // Fault
+};
+
+message AMAPOutputInfoStr {
+  AMAPFunctionFSMWorkState amap_state = 1;  // AMAP功能状态
+  bool amap_request_flag              = 2;  // 0:no request  1:request
+  double amap_trq_limit_max           = 3;  // 单位 : Nm
+};
+
+enum MEBFunctionFSMWorkState {
+  MEB_FUNCTION_FSM_WORK_STATE_INIT    = 0;  // Init
+  MEB_FUNCTION_FSM_WORK_STATE_OFF     = 1;  // Off
+  MEB_FUNCTION_FSM_WORK_STATE_STANDBY = 2;  // Standby
+  MEB_FUNCTION_FSM_WORK_STATE_ACTIVE  = 3;  // Active
+  MEB_FUNCTION_FSM_WORK_STATE_FAULT   = 4;  // Fault
+};
+
+message MEBOutputInfoStr {
+  MEBFunctionFSMWorkState meb_state = 1;  // MEB功能状态
+  uint32 meb_request_status         = 2;  // 请求状态
+  double meb_request_value          = 3;  // 单位:m/ss
+};

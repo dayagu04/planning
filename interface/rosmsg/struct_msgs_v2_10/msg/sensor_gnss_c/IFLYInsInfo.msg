@@ -1,0 +1,3 @@
+uint32 angle_heading
+float32 angle_pitch
+float32 angle_roll

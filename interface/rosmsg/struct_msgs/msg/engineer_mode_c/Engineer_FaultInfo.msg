@@ -1,0 +1,2 @@
+uint32 alarmId
+uint32 alarmObj

@@ -1,0 +1,61 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "ehr_exec/ehr_libExecutable8Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10012",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSdmapSdmapInfo_DdsRequiredServiceInstance170"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10013",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhrSdmapInfo_DdsProvidedServiceInstance59"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10016",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationEgomotion_DdsRequiredServiceInstance176"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10047",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhpParkingMap_DdsRequiredEhr"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10096",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhrStaticMap_DdsProvidedServiceInstance80"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10104",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredServiceInstance174"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10173",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhrSdpromapInfo_DdsProvidedServiceInstance144"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10194",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhrPhmReport_DdsProvidedEhr"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "ehr_exec/ehr_libExecutable8Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10008",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoEhr_RequiredSomeipServiceInstance6"
+        }
+      ]
+    }
+  ]
+}

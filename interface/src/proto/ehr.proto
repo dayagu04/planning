@@ -1,0 +1,261 @@
+/*******************************************************************************
+ * 地图信息
+ * topic：/iflytek/ehr/static_map
+ * 频率：1Hz
+ * 结构体：StaticMap
+ *
+ * EHP原始数据
+ * topic: /iflytek/ehr/origin_data
+ * 频率：20Hz
+ * 结构体：OriginData
+ *******************************************************************************/
+
+syntax = "proto3";
+
+package Map;
+
+import "common3.proto";
+import "parking_map.proto";
+
+message MapInfo {
+    Common3.Header header = 1;  // 头信息
+    string map_info = 2;       // 地图信息
+}
+enum Direction {
+    UNKNOWN = 0;        // Unknown Direction
+    GO_STRAIGHT = 1;    // Go Straight
+    TURN_RIGHT = 2;     // Turning Right
+    TURN_LEFT = 3;      // Turning Left
+    U_TURN_LEFT = 4;    // U Turn Left, Not applied in Right-hand Driving Region
+    U_TURN_RIGHT = 5;   // U Turn Right, Not applied in Left-hand Driving Region
+    OFF_ROUTE = 6;      // when the successor lanes all offroute in certain distance
+};
+
+enum LaneType {
+    LANETYPE_UNKNOWN = 0;                   // Unknown Lane Type
+    LANETYPE_NORMAL = 1;                    // Normal Lane Type
+    LANETYPE_VIRTUAL = 2;                   // Virtual Lane Type
+    LANETYPE_PARKING = 3;                   // Parking Lane Type
+    LANETYPE_ACCELERATE = 4;                // Accelerate Lane Type
+    LANETYPE_DECELERATE = 5;                // Decelerate Lane TYpe
+    LANETYPE_BUS = 6;                       // Bus Lane Type
+    LANETYPE_EMERGENCY = 7;                 // Emergency Lane Type
+    LANETYPE_ACCELERATE_DECELERATE = 8;     // Accelerate and Decelerate Lane Type
+    LANETYPE_LEFT_TURN_WAITTING_AREA = 9;   // Left Turning Waiting Area
+    LANETYPE_NON_MOTOR = 10;                // Non-Motor Lane Type
+    /*下面的type 11-38为腾讯地图内定义的类型*/
+    LANETYPE_HOV = 11;                      // HOV
+    LANETYPE_SLOW = 12;                     // 慢车道
+    LANETYPE_SHOULDER = 13;                 // 路肩
+    LANETYPE_DRIVABLE_SHOULDER = 14;        // 可行驶路肩
+    LANETYPE_CONTROL = 15;                  // 管制车道
+    LANETYPE_EMERGENCY_PARKING_STRIP = 16;  // 紧急停车带
+    LANETYPE_TIDE = 17;                     // 潮汐车道
+    LANETYPE_DIRECTION_CHANGE = 18;         // 可变车道
+    LANETYPE_DRIVABLE_PARKING_ROAD = 19;    // 可行驶停车道
+    LANETYPE_TRUCK = 20;                    // 货车专用道
+    LANETYPE_TIME_LIMIT_BUS = 21;           // 限时公交车道
+    LANETYPE_PASSING_BAY = 22;              // 错车道
+    LANETYPE_REVERSAL_LEFT_TURN = 23;       // 借道左转车道
+    LANETYPE_TAXI = 24;                     // 出租车车道
+    LANETYPE_DIRECTION_LOCKED = 25;         // 定向车道
+    LANETYPE_VEHICLE_BICYCLE_MIX = 26;      // 机非混合车道
+    LANETYPE_MOTOR = 27;                    // 摩托车道
+    LANETYPE_U_TURN = 28;                   // 掉头车道
+    LANETYPE_TOLL = 29;                     // 收费站车道
+    LANETYPE_CHECK_POINT = 30;              // 检查站车道
+    LANETYPE_DANGEROUS_ARTICLE = 31;        // 危险品专用车道
+    LANETYPE_FORBIDDEN_DRIVE = 32;          // 非行驶区域
+    LANETYPE_THOUGH_LANE_ZONE = 33;         // 借道区
+    LANETYPE_STREET_RAILWAY = 34;           // 有轨电车车道
+    LANETYPE_BUS_BAY = 35;                  // 公交港湾车道
+    LANETYPE_SPECIAL_CAR = 36;              // 特殊车辆专用车道
+    LANETYPE_PEDESTRIANS = 37;              // 人行道
+    LANETYPE_ETC = 38;                      // ETC车道
+};
+
+enum OverLapType {
+    OVERLAP_UNKNOWN = 0;
+    OVERLAP_JUNCTION = 1;
+};
+
+message OverLap {
+    uint64 id = 1;
+    int32 type = 2;
+    double s_begin = 3;
+    double s_end = 4;
+};
+
+message RoadMark {
+    uint64 id = 1;
+    IFLYParkingMap.RoadMark.RoadMarkType type = 2;
+    repeated Common3.Point3d shape = 3;
+    IFLYParkingMap.Lane.Direction direction = 4;  // 可选字段，只对某些特定类型的道路标线（如指示箭头）有效。
+    float angle = 5;  // 标识朝向角度，只对某些特定类型的道路标线（如指示箭头）有效。
+};
+
+message LaneData {
+    uint64 lane_id = 1;        // id of current lane
+    int32 sequence_id = 2;     // from most rigt of the way,
+                                        // lane's sequence_id is 1,2,3,4...
+    repeated Common3.Point3d points_on_central_line = 3;
+    repeated double central_points_offset = 4;  // distance to the 1st point, in m
+    repeated double width = 5;                  // in m
+    repeated double curvature = 6;              // in m
+    repeated double heading = 7;                // in rad
+    Direction lane_direction = 8;      // 车道方向
+    LaneType lane_type = 9;            // 车道类型
+    uint64 left_lane_boundary_id = 10; // 左车道边线id
+    uint64 right_lane_boundary_id = 11;         // 右车道边线id
+    uint64 left_road_boundary_id = 12;          // 左道路边线id
+    uint64 right_road_boundary_id = 13;         // 右道路边线id
+    double min_speed_limit = 15;                // min speed
+    double max_speed_limit = 16;                // max speed
+    repeated uint64 predecessor_lane_id = 17;            // 前驱车道id
+    repeated uint64 successor_lane_id = 18;              //后继车道id
+    uint64 left_neighbor_forward_lane_id = 19;  // unused
+    uint64 right_neighbor_forward_lane_id = 20; // unused
+    uint64 left_neighbor_reverse_lane_id = 21;  // unused
+    uint64 right_neighbor_reverse_lane_id = 22; // unused
+    uint64 lane_group_id = 23; // 车道所属LaneGroup id
+    repeated OverLap overlaps = 24;     // unused
+    repeated RoadMark road_marks = 25;  // 道路标线-车道级
+};
+
+message BoundaryAttributes {
+    repeated Common3.Point3d points = 1; // 边线形点
+    repeated double points_s = 2;       //相对于boundary第一个点的累积长度
+    enum Type {
+        UNKNOWN = 0;        // Unknown Lane Boundary Type
+        SOLID = 1;          // Solid Lane Boundary
+        DASH = 2;           // Dashed Lane Boundary
+        VIRTUAL = 3;        // Virtual Lane Boundary
+        PHYSICAL = 4;       // Physical Lane Boundary
+        DOUBLE_SOLID = 5;   // Double Solid Lane Boundary
+        DASH_SOLID = 6;     // Dash and Solid Lane Boundary, can be crossed by this side
+        SOLID_DASH = 7;     // Dash and Solid Lane Boundary, cant be crossed by this side
+    };
+    repeated Type types = 3;
+    enum Color {
+        WHITE = 0;  // while color
+        YELLOW = 1; // yellow color
+        OTHER = 2;  // other color
+    };
+    repeated Color colors = 4;
+};
+
+message LaneBoundary {
+    uint64 boundary_id = 1;                     // 边线id
+    repeated BoundaryAttributes boundary_attributes = 2; // 边线属性
+};
+
+enum FormOfWayType {
+    NONE = 0;
+    RAMP = 1;
+    MAIN_ROAD = 2;
+};
+
+message LaneGroup {
+    uint64 lane_group_id = 1;              // LaneGroup id
+    double length = 2;                     // Group长度
+    repeated FormOfWayType way_forms = 3;           // 道路属性
+    repeated uint64 predecessor_lane_group_ids = 4; // 前驱LaneGroup
+    repeated uint64 successor_lane_group_ids = 5;   // 后继LaneGroup
+    repeated uint64 lane_ids = 6;                   // 下属所有Lane的id
+    repeated RoadMark road_marks = 7;              // 道路标线-道路级
+    repeated IFLYParkingMap.Road.RoadStructure road_structures = 9; // 道路结构信息:隧道、桥、收费站、环岛
+};
+
+message LaneInRoute {
+    uint64 lane_id = 1;
+    repeated uint64 entry_lane_ids = 2;
+    repeated uint64 exit_lane_ids = 3;
+};
+
+message LaneGroupInRoute {
+    uint64 lane_group_id = 1;          // id
+    double length = 2;                 // 可以由该lane group包含的所有的lane长度的平均值计算得到
+    repeated LaneInRoute lanes_in_route = 3;
+    Common3.Point3d start_point = 4;    // reserve,暂时不用
+    Common3.Point3d end_point = 5;      // reserve,暂时不用
+};
+
+message RoadMap {
+    uint64 timestamp = 2;              // 地图时间戳           (微秒)
+    repeated LaneData lanes = 3;                // 地图内所有Lane
+    repeated LaneBoundary lane_boundaries = 4;  // 地图内所有车道边线
+    repeated LaneBoundary road_boundaries = 5;  // 地图内所有道路边线
+    repeated LaneGroup lane_groups = 6;         // 地图内所有LaneGroup
+};
+
+message CurrentRouting {
+    uint64 updated_time = 2;       // 最近一次导航重新计算匹配的时间   (微秒)
+    uint64 counter = 3;            // 用于下游判断路线信息是否有更新，每更新一次导航路线信息，计数器加一
+    repeated LaneGroupInRoute lane_groups_in_route = 4; // 每个路由信息
+};
+
+message ParkingSpace {
+    message Limiter {
+        repeated Common3.Point3d end_points = 1; //车体限位器端点位置 （米） 限两个
+    };
+
+    uint64 tile_id = 1; // 所属tile
+    uint64 road_id = 2; // 所属road的id
+    uint64 id = 3; // 停车位id
+    IFLYParkingMap.ParkingSpace.ParkingSlotType parking_slot_type = 4; // 停车位类型
+    repeated Common3.Point3d shape = 5; // 车位角点
+    string floor_name = 6; // 楼层名称
+    repeated Limiter limiters = 7; //车体限位器,单个库位最多2个限位器
+    IFLYParkingMap.ParkingSpace.SlotSourceType slot_source = 8; // 车位来源
+};
+
+message RoadObstacle {
+    uint64 road_id = 1; // 所属road的id
+    uint64 id = 2; // obstacle的id
+    IFLYParkingMap.RoadObstacle.RoadObstacleType type = 3;
+    repeated Common3.Point3d shape = 4;
+};
+
+// 3D-box类障碍物
+message PolygonObject {
+    uint64 road_id = 1; // 所属road的id
+    uint64 id = 2;
+    IFLYParkingMap.PolygonObject.PolygonObjectType type = 3; // 障碍物类型
+    repeated Common3.Point3d shape = 4; // 障碍物角点  <最大10个>
+};
+
+message OverallFloorRoadInfo {
+    int32 floor_num = 1; // 楼层总数
+    repeated float road_length = 2; // 每层楼中道路的长度，单位米
+}
+
+message ParkingAssistInfo {
+    Common3.PointLLH trajectory_ref_point = 1; // 轨迹参考点
+    Common3.Point3d trace_start = 2; // 轨迹起点
+    Common3.Point3d trace_end = 3;   // 轨迹终点
+    IFLYParkingMap.SemanticInfo semantic_info = 4; // 语义信息:消星点、坡道点
+    repeated ParkingSpace parking_spaces = 7;      // 停车位信息
+    repeated RoadObstacle road_obstacles = 8;      // 障碍物信息
+    repeated PolygonObject polygon_obstacles = 9;  // 3D-box类障碍物信息
+    OverallFloorRoadInfo floor_road_info = 10; // 每层楼道路信息
+    ParkingSpace target_parking_space = 11;    // 目标停车位信息
+};
+
+message StaticMap {
+    Common3.Header header = 1;      // 头信息
+    RoadMap road_map = 2;          // 以自车为中心的一定范围内的地图信息
+    CurrentRouting current_routing = 3;    // 当前路由
+    ParkingAssistInfo parking_assist_info = 4;    // 泊车辅助信息
+};
+
+
+message EhpData {
+    int32 msg_counter = 1;         // 消息序号，监测消息丢包用
+    bytes data = 2;                // ehp原始输出消息，字节流
+};
+
+message OriginData {
+    Common3.Header header = 1;      // 头信息
+    uint64 seq = 2;                // 计数序号
+    repeated EhpData origin_data = 3;       // ehp原始输出
+};

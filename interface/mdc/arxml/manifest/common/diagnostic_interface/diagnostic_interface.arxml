@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="490f7e18-1e7c-4f74-a5cf-0d131165f4b5">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>DiagnosticPortInterface</SHORT-NAME>
+          <ELEMENTS>
+            <DIAGNOSTIC-CONDITION-INTERFACE>
+              <SHORT-NAME>DiagConditionIntf</SHORT-NAME>
+            </DIAGNOSTIC-CONDITION-INTERFACE>
+            <DIAGNOSTIC-DATA-IDENTIFIER-GENERIC-INTERFACE>
+              <SHORT-NAME>DiagDidGenericIntf</SHORT-NAME>
+              <IS-SERVICE>false</IS-SERVICE>
+              <SERVICE-KIND>DIAGNOSTIC-COMMUNICATION-MANAGER</SERVICE-KIND>
+            </DIAGNOSTIC-DATA-IDENTIFIER-GENERIC-INTERFACE>
+            <DIAGNOSTIC-MONITOR-INTERFACE>
+              <SHORT-NAME>DiagMonitorIntf</SHORT-NAME>
+              <IS-SERVICE>false</IS-SERVICE>
+              <SERVICE-KIND>DIAGNOSTIC-EVENT-MANAGER</SERVICE-KIND>
+            </DIAGNOSTIC-MONITOR-INTERFACE>
+            <DIAGNOSTIC-OPERATION-CYCLE-INTERFACE>
+              <SHORT-NAME>DiagOpCycleIntf</SHORT-NAME>
+            </DIAGNOSTIC-OPERATION-CYCLE-INTERFACE>
+            <DIAGNOSTIC-ROUTINE-GENERIC-INTERFACE>
+              <SHORT-NAME>DiagRoutineGenericIntf</SHORT-NAME>
+            </DIAGNOSTIC-ROUTINE-GENERIC-INTERFACE>
+            <DIAGNOSTIC-SECURITY-LEVEL-INTERFACE>
+              <SHORT-NAME>DiagSecurityLevelIntf</SHORT-NAME>
+            </DIAGNOSTIC-SECURITY-LEVEL-INTERFACE>
+            <DIAGNOSTIC-DOWNLOAD-INTERFACE>
+              <SHORT-NAME>DiagDownloadIntf</SHORT-NAME>
+            </DIAGNOSTIC-DOWNLOAD-INTERFACE>
+            <DIAGNOSTIC-UPLOAD-INTERFACE>
+              <SHORT-NAME>DiagUploadIntf</SHORT-NAME>
+            </DIAGNOSTIC-UPLOAD-INTERFACE>
+            <DIAGNOSTIC-DTC-INFORMATION-INTERFACE>
+              <SHORT-NAME>DiagDtcInfoIntf</SHORT-NAME>
+            </DIAGNOSTIC-DTC-INFORMATION-INTERFACE>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

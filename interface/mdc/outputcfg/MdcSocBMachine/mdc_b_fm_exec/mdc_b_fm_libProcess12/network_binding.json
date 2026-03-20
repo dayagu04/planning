@@ -1,0 +1,20 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "mdc_b_fm_exec/mdc_b_fm_libExecutable13Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "2",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoMdcB_RequiredSomeipServiceInstance8"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "2",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoMdcB_RequiredSomeipServiceInstance24"
+        }
+      ]
+    }
+  ]
+}

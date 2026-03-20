@@ -1,0 +1,10 @@
+bool apa_main_switch
+bool apa_active_switch
+uint8 apa_active_mode
+bool apa_cancel_switch
+uint32 apa_select_slot_id
+bool apa_start
+bool apa_resume
+---
+bool success
+string message

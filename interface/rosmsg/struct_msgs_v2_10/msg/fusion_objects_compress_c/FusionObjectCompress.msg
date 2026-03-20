@@ -1,0 +1,2 @@
+ObstacleCompress common_info
+FusionObjectsAdditionalCompress additional_info

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="7f8156d7-d06e-4fd3-a94b-b722d206a38d">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE UUID="505936a0-da42-4d12-8015-dbd0c82a1753">
+          <SHORT-NAME>FunctionalSoftware</SHORT-NAME>
+          <SHORT-NAME-PATTERN></SHORT-NAME-PATTERN>
+          <AR-PACKAGES>
+            <AR-PACKAGE UUID="18f17420-3706-4e05-9bf5-8cbe2e11bb9c">
+              <SHORT-NAME>RadarDetectionApplication</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE UUID="1b5f012f-d96b-48c7-8602-7fa0ae711a67">
+                  <SHORT-NAME>Execution</SHORT-NAME>
+                </AR-PACKAGE>
+                <AR-PACKAGE UUID="433f3f42-f707-4b46-a792-aeb552a06ec9">
+                  <SHORT-NAME>SwComponent</SHORT-NAME>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

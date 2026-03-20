@@ -1,0 +1,10 @@
+int16 type
+PointENU enu_position
+PointLLH llh_position
+Point3d local_position
+Quaternion orientation
+Point3d linear_acceleration
+Point3d angular_velocity
+float64 heading
+EulerAngle euler_angles
+float64 linear_velocity_from_wheel

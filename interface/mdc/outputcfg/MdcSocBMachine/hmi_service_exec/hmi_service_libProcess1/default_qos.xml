@@ -1,0 +1,592 @@
+<qos>
+    <profile name="DDSQosProfile">
+        <domain_participant name="domain_30_192.168.10.70">
+            <transport>
+                <mask>TRANSPORT_FSHM</mask>
+                <property name="FSHM">
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.multicast.topic</key>
+                        <value>0000049CMqGNMWB0</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.poolSize</key>
+                        <value>262144</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.multicast.drtLen</key>
+                        <value>512</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.unicast.drtLen</key>
+                        <value>1024</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.unicast.topic</key>
+                        <value>000002uQeST56dtE</value>
+                    </item>
+                </property>
+            </transport>
+            <transport_interfaces>
+                <interfaces>
+                    <interface>192.168.10.70</interface>
+                </interfaces>
+            </transport_interfaces>
+            <discover_config>
+                <participant_liveliness_lease_duration>
+                    <sec>60</sec>
+                    <nanosec>0</nanosec>
+                </participant_liveliness_lease_duration>
+                <participant_liveliness_assert_period>
+                    <sec>24</sec>
+                    <nanosec>0</nanosec>
+                </participant_liveliness_assert_period>
+            </discover_config>
+        </domain_participant>
+        <datareader name="domain_30_192.168.10.70_1_10016_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000003brvCa9KvPF</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75552</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10034_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>0000066SE9McU0RJ</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75570</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10035_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000005JKfp6qx84I</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75571</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10104_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000001h-L1UpUxSF</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75640</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10105_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000000UTmheDxF5E</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75641</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10134_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000004vLhBk7y96I</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75670</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10158_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>0000054o5A-sylyG</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75694</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10167_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000006y5FSOu763I</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75703</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10213_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>0000018BYLfm7qEG</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75749</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datareader name="domain_30_192.168.10.70_1_10241_TopicOfevent_reader">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>0000058CgP_EuPqL</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>1</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75777</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <ignore_local_participant>
+                <value>false</value>
+            </ignore_local_participant>
+        </datareader>
+        <datawriter name="domain_30_192.168.10.70_1_10007_TopicOfevent_writer">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000001JJXkn89LiI</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75543</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_1_10075_TopicOfevent_writer">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>00000202ZtHnoD4R</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75611</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_1_10181_TopicOfevent_writer">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>00000322ls-GIa9V</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75717</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <datawriter name="domain_30_192.168.10.70_1_10198_TopicOfevent_writer">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000001mIPFAppQyP</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75734</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <topic name="domain_30_192.168.10.70_1_10007_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10016_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10034_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10035_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10075_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10104_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10105_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10134_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10158_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10167_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10181_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10198_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10213_TopicOfevent"></topic>
+        <topic name="domain_30_192.168.10.70_1_10241_TopicOfevent"></topic>
+    </profile>
+</qos>

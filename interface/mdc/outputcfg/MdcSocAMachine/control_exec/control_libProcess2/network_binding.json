@@ -1,0 +1,61 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "control_exec/control_libExecutable2Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10009",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekVehicleService_DdsRequiredServiceInstance167"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10078",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekPlanningPlan_DdsRequiredServiceInstance162"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10080",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekControlControlCommand_DdsProvidedServiceInstance99"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10083",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationEgomotion_DdsRequiredServiceInstance166"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10102",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekPlanningHmi_DdsRequiredControl"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10110",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredServiceInstance181"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10170",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekControlDebugInfo_DdsProvidedControl"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10210",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekControlPhmReport_DdsProvidedControl"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "control_exec/control_libExecutable2Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10025",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoControl_RequiredSomeipServiceInstance20"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+[
+  {
+    "key": "application_name",
+    "value": {
+      "string": "soc_a_communication_exec"
+    },
+    "checksum": 111
+  },
+  {
+    "key": "startup_configs",
+    "value": {
+      "object[]": [
+        {
+          "key": "soc_a_communication_libProcess18",
+          "value": {
+            "object[]": [
+              {
+                "key": "executable",
+                "value": {
+                  "string": "soc_a_communication_exec"
+                },
+                "checksum": 333
+              },
+              {
+                "key": "restart_attempt_num",
+                "value": {
+                  "uint32": 0
+                },
+                "checksum": 333
+              },
+              {
+                "key": "machine_states",
+                "value": {
+                  "string[]": []
+                },
+                "checksum": 333
+              },
+              {
+                "key": "environments",
+                "value": {
+                  "string[]": [
+                    "VIZ_ADDRESS=192.168.1.102 7000",
+                    "CM_LOG_TYPE=SYS_LOG",
+                    "CM_LOG_LEVEL=LOG_INFO",
+                    "PATH=/usr/bin/:/usr/sbin/:/usr/bin/busybox/:${PATH}",
+                    "LD_LIBRARY_PATH=/opt/usr/app/1/gea/lib/:/opt/usr/app/1/gea/runtime_service/soc_a_communication_exec/lib/:${LD_LIBRARY_PATH}",
+                    "CM_CONFIG_FILE_PATH=/opt/usr/app/1/gea/runtime_service/soc_a_communication_exec/etc/soc_a_communication_libProcess18",
+                    "IFLYAD_LOG_CONFIG_PATH=/opt/usr/app/1/gea/conf/iflyadlog.conf",
+                    "SET_IFLY_LOG_LEVEL=5",
+                    "ENABLE_MDC_LOG_CONSOLE=ON",
+                    "SET_MDC_AP_LOG_LEVEL=FATAL",
+                    "EM_INNER_APP_USER=root"
+                  ]
+                },
+                "checksum": 333
+              },
+              {
+                "key": "function_group_states",
+                "value": {
+                  "string[]": [
+                            "IflyadState.Startup",
+                            "IflyadState.Factory",
+                            "IflyadState.WorkingNoCam",
+                            "IflyadState.Working"
+                  ]
+                },
+                "checksum": 333
+              },
+              {
+                "key": "shall_run_ons",
+                "value": {
+                  "string[]": []
+                },
+                "checksum": 333
+              },
+              {
+                "key": "shall_not_run_ons",
+                "value": {
+                  "string[]": [
+                    "Cpu.Processor0_Core3"
+                  ]
+                },
+                "checksum": 333
+              }
+            ]
+          },
+          "checksum": 222
+        }
+      ]
+    },
+    "checksum": 111
+  }
+]

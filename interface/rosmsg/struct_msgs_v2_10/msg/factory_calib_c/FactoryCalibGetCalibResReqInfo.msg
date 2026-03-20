@@ -1,0 +1,1 @@
+uint8 req_calib_res

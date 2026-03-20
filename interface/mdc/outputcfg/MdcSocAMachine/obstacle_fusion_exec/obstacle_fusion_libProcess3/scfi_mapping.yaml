@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10059,10086,10087,10091,10093,10204]
+        portName: ["IflytekFusionObjectsCompress","IflytekFusionUssPerceptionInfo","IflytekFusionSpatialParkingSlot","IflytekFusionOccupancyObjects","IflytekFusionObjects","IflytekFusionObstaclePhmReport"]
+  recvInstanceID:
+    StructContainerInterface:
+        instanceId: [10021,10022,10026,10028,10030,10018,10081,10009,10083,10005,10044,10043,10025,10110]
+        portName: ["IflytekRadarFmPerceptionInfo","IflytekRadarFlPerceptionInfo","IflytekRadarFrPerceptionInfo","IflytekRadarRlPerceptionInfo","IflytekRadarRrPerceptionInfo","IflytekUssUsswaveInfo","IflytekRadarFmPerception4dTarget","IflytekVehicleService","IflytekLocalizationEgomotion","IflytekFusionParkingSlot","IflytekCameraPerceptionOccupancyObjects","IflytekCameraPerception3dGeneralObjects","IflytekCameraPerceptionObjects","IflytekFsmSocState"]
+    FmAlarmReceiveService:
+        instanceId: [10021]
+        portName: ["IflytekAlarmInfoObstacleFusion"]

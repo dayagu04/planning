@@ -1,0 +1,3 @@
+LaneBoundaryGroupId id
+uint8 parallel_lane_boundaries_size
+ParallelLaneBoundary[] parallel_lane_boundaries

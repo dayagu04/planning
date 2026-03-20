@@ -1,0 +1,12 @@
+AttributeId id
+int16 parking_space_type
+uint8 ref_size
+Reference[] ref
+Coordinate[4] shape
+uint8[64] floor_name
+bool allow_parking
+int16 slot_source
+uint8 limiters_size
+ParkingMapLimiter[] limiters
+int32 empty_votes
+int16 is_turn_corner

@@ -1,0 +1,823 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="386f12f2-5b2a-4a72-a38c-b706cf168125">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformServiceInterface</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>UpdateManagerMsgDataTypes</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>CompuMethods</SHORT-NAME>
+                  <ELEMENTS>
+                    <COMPU-METHOD>
+                      <SHORT-NAME>CM_PackageManagerStatusType</SHORT-NAME>
+                      <CATEGORY>TEXTTABLE</CATEGORY>
+                      <COMPU-INTERNAL-TO-PHYS>
+                        <COMPU-SCALES>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">0</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">0</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kIdle</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">1</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">1</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kReady</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">2</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">2</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kBusy</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">3</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">3</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kActivating</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">4</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">4</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kActivated</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">5</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">5</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kRollingBack</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">6</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">6</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kRolledBack</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">7</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">7</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kCleaning_Up</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">8</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">8</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kVerifying</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                        </COMPU-SCALES>
+                      </COMPU-INTERNAL-TO-PHYS>
+                    </COMPU-METHOD>
+                    <COMPU-METHOD>
+                      <SHORT-NAME>CM_ProcessResultType</SHORT-NAME>
+                      <CATEGORY>TEXTTABLE</CATEGORY>
+                      <COMPU-INTERNAL-TO-PHYS>
+                        <COMPU-SCALES>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">0</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">0</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kSuccess</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">1</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">1</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kReady</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">2</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">2</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kBusy</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">3</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">3</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kActivating</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">4</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">4</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kActivated</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">5</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">5</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kRollingBack</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">6</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">6</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kRolledBack</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">7</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">7</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kCleaning_Up</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">8</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">8</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kVerifying</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                        </COMPU-SCALES>
+                      </COMPU-INTERNAL-TO-PHYS>
+                    </COMPU-METHOD>
+                    <COMPU-METHOD>
+                      <SHORT-NAME>CM_SwClusterStateType</SHORT-NAME>
+                      <CATEGORY>TEXTTABLE</CATEGORY>
+                      <COMPU-INTERNAL-TO-PHYS>
+                        <COMPU-SCALES>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">0</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">0</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kPresent</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">1</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">1</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kAdded</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">2</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">2</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kUpdated</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">3</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">3</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>kRemoved</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                        </COMPU-SCALES>
+                      </COMPU-INTERNAL-TO-PHYS>
+                    </COMPU-METHOD>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DataTypes</SHORT-NAME>
+                  <ELEMENTS>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>CheckItemResult</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>name</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>message</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="">
+                      <SHORT-NAME>CheckItemResultVector</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/CheckItemResult</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>ExpectedVersionCheckResult</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>state</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>checkStatus</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>expectedVersion</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/SoftwareManagerMsgDataTypes/DataTypes/SysVersion</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>currVersion</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/SoftwareManagerMsgDataTypes/DataTypes/SysVersion</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="">
+                      <SHORT-NAME>ItemStateVector</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/itemState</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>PackageManagerStatusType</SHORT-NAME>
+                      <CATEGORY>TYPE_REFERENCE</CATEGORY>
+                      <SW-DATA-DEF-PROPS>
+                        <SW-DATA-DEF-PROPS-VARIANTS>
+                          <SW-DATA-DEF-PROPS-CONDITIONAL>
+                            <COMPU-METHOD-REF DEST="COMPU-METHOD">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/CompuMethods/CM_PackageManagerStatusType</COMPU-METHOD-REF>
+                          </SW-DATA-DEF-PROPS-CONDITIONAL>
+                        </SW-DATA-DEF-PROPS-VARIANTS>
+                      </SW-DATA-DEF-PROPS>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>PreCheckResult</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>results</SHORT-NAME>
+                          <CATEGORY>VECTOR</CATEGORY>
+                          <TYPE-REFERENCE S="">
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/CheckItemResultVector</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="">
+                      <SHORT-NAME>ProcessResultType</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/ProcessSwPackageReturnType</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>transferId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/TransferIdType</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>ProcessSwPackageReturnType</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>transferId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/TransferIdType</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>Response</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>code</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>message</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>StrongRevisionLabelString</SHORT-NAME>
+                      <CATEGORY>TYPE_REFERENCE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>SwClusterInfoType</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>name</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/SwNameType</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>Version</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/StrongRevisionLabelString</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>State</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/SwClusterStateType</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE S="" UUID="">
+                      <SHORT-NAME>SwClusterInfoVectorType</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/SwClusterInfoType</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>SwClusterStateType</SHORT-NAME>
+                      <CATEGORY>TYPE_REFERENCE</CATEGORY>
+                      <SW-DATA-DEF-PROPS>
+                        <SW-DATA-DEF-PROPS-VARIANTS>
+                          <SW-DATA-DEF-PROPS-CONDITIONAL>
+                            <COMPU-METHOD-REF DEST="COMPU-METHOD">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/CompuMethods/CM_SwClusterStateType</COMPU-METHOD-REF>
+                          </SW-DATA-DEF-PROPS-CONDITIONAL>
+                        </SW-DATA-DEF-PROPS-VARIANTS>
+                      </SW-DATA-DEF-PROPS>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>SwNameType</SHORT-NAME>
+                      <CATEGORY>TYPE_REFERENCE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="">
+                      <SHORT-NAME>SwNameVectorType</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/SwNameType</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="">
+                      <SHORT-NAME>TransferIdType</SHORT-NAME>
+                      <CATEGORY>ARRAY</CATEGORY>
+                      <ARRAY-SIZE>16</ARRAY-SIZE>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>itemState</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>name</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>process</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>errcode</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>message</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>SoftwareVersionItem</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>deviceName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>swName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>version</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="">
+                      <SHORT-NAME>VerifyCheckResultVectorType</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/PlatformServiceInterface/UpdateManagerMsgDataTypes/DataTypes/VerifyCheckResult</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>VerifyCheckResult</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>swm</SHORT-NAME>
+                          <SYMBOL>swm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>pkgName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>deviceName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>currentVersion</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>expectVersion</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>message</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+            <AR-PACKAGE>
+              <SHORT-NAME>UpdateManagerServiceInterface</SHORT-NAME>
+              <ELEMENTS>
+                <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                  <SHORT-NAME>UpdateManagerSomeipServiceInterfaceDeployment</SHORT-NAME>
+                  <METHOD-DEPLOYMENTS>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>ActivateSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>10</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>FinishSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>11</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>GetActivationProgressSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>7</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>GetSwProcessProgressSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>14</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>GetUpdatePreCheckProgressSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>4</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>GetUpdatePreCheckResultSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>5</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>GetUpdateProgressSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>6</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>GetUpdateStatusSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>3</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>ProcessSwPackageSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>17</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>UpdatePreCheckSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>1</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>UpdateSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>2</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>GetVerifyListSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>18</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>RollbackSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>8</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>ActivateByModeSomeIpMethodDeploy</SHORT-NAME>
+                      <METHOD-ID>20</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                  </METHOD-DEPLOYMENTS>
+                  <SERVICE-INTERFACE-ID>3073</SERVICE-INTERFACE-ID>
+                  <SERVICE-INTERFACE-VERSION>
+                    <MAJOR-VERSION>1</MAJOR-VERSION>
+                    <MINOR-VERSION>0</MINOR-VERSION>
+                  </SERVICE-INTERFACE-VERSION>
+                </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+              </ELEMENTS>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

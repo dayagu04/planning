@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COMPONENT>
+  <!--Component name. Do not modify manually!-->
+  <NAME>common_swc_lib</NAME>
+  <!--Component description. Can be customized!-->
+  <DESCRIPTION>An ap component.</DESCRIPTION>
+  <!--Component type. Do not modify manually!-->
+  <TYPE>shared_library</TYPE>
+  <!--Component version. Can be customized!-->
+  <VERSION>1.0.0</VERSION>
+  <!--Manage component's dependencies. Can be customized! Dependency type can only be either 'mdc_sdk' or 'rpm'-->
+  <DEPENDENCIES>
+    <DEPENDENCY>
+      <NAME>ara-log</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>ara-per</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>ara-com</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>rm</NAME>
+      <TYPE>mdc_sdk</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>yaml</NAME>
+      <TYPE>builtin</TYPE>
+    </DEPENDENCY>
+    <DEPENDENCY>
+      <NAME>pthread</NAME>
+      <TYPE>builtin</TYPE>
+    </DEPENDENCY>
+  </DEPENDENCIES>
+  <!--Generated interfaces. Do not modify manually!-->
+  <INTERFACES>
+    <INTERFACE>
+      <NAME>StructContainerInterface</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>iflyauto::struct_container</NAMESPACE>
+      <DIRECTION>PPortPrototype</DIRECTION>
+    </INTERFACE>
+    <INTERFACE>
+      <NAME>StructContainerInterface</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>iflyauto::struct_container</NAMESPACE>
+      <DIRECTION>RPortPrototype</DIRECTION>
+    </INTERFACE>
+    <INTERFACE>
+      <NAME>CameraStructContainerInterface</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>iflyauto::camera_struct_container</NAMESPACE>
+      <DIRECTION>PPortPrototype</DIRECTION>
+    </INTERFACE>
+    <INTERFACE>
+      <NAME>CameraStructContainerInterface</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>iflyauto::camera_struct_container</NAMESPACE>
+      <DIRECTION>RPortPrototype</DIRECTION>
+    </INTERFACE>
+    <INTERFACE>
+      <NAME>FmAlarmReceiveService</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>mdc::fm</NAMESPACE>
+      <DIRECTION>PPortPrototype</DIRECTION>
+    </INTERFACE>
+    <INTERFACE>
+      <NAME>FmAlarmReceiveService</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>mdc::fm</NAMESPACE>
+      <DIRECTION>RPortPrototype</DIRECTION>
+    </INTERFACE>
+    <INTERFACE>
+      <NAME>ClientServiceContainerInterface</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>iflyauto::struct_container</NAMESPACE>
+      <DIRECTION>PPortPrototype</DIRECTION>
+    </INTERFACE>
+    <INTERFACE>
+      <NAME>ClientServiceContainerInterface</NAME>
+      <TYPE>ServiceInterface</TYPE>
+      <NAMESPACE>iflyauto::struct_container</NAMESPACE>
+      <DIRECTION>RPortPrototype</DIRECTION>
+    </INTERFACE>
+  </INTERFACES>
+  <!--Generated from manifest. Do not modify manually!-->
+  <FEATURES>
+    <FEATURE>cm</FEATURE>
+  </FEATURES>
+</COMPONENT>

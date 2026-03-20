@@ -1,0 +1,2 @@
+bool has_CIPV
+ObstacleInformation[] cipv_information

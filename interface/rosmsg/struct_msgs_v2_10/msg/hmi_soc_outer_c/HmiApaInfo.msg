@@ -1,0 +1,17 @@
+int16 apa_mode_status
+int16 apa_status
+uint8 apa_slot_info_size
+HmiApaSlotInfo[] apa_slot_info
+uint32 select_slot_id
+int16 apa_notify_req
+float32 apa_notify_remain_distance
+float32 remain_distance_percentage
+ApaFreeSlotInfo apa_free_slot_info
+int16 prepare_plan_state
+uint16 planning_park_dir
+int16 select_park_out_dir
+int16 select_park_in_dir
+uint32 parking_time
+HmiRpaInfo hmi_rap_info
+int16 apa_active_resp
+bool apa_active_denied

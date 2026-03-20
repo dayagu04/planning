@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="1935d3b7-f8a1-4f3c-95f0-b13e41ee9c46">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>Ethernet</SHORT-NAME>
+          <ELEMENTS>
+            <ETHERNET-CLUSTER>
+              <SHORT-NAME>MdcSocBEthernetCluster</SHORT-NAME>
+              <ETHERNET-CLUSTER-VARIANTS>
+                <ETHERNET-CLUSTER-CONDITIONAL S="">
+                  <PHYSICAL-CHANNELS>
+                    <ETHERNET-PHYSICAL-CHANNEL>
+                      <SHORT-NAME>InnerEthernetPhysicalChannel</SHORT-NAME>
+                      <COMM-CONNECTORS>
+                        <COMMUNICATION-CONNECTOR-REF-CONDITIONAL>
+                          <COMMUNICATION-CONNECTOR-REF DEST="ETHERNET-COMMUNICATION-CONNECTOR">/HuaweiMDC/Machine/MdcSocBMachineDesign/InnerEthernetCommConnector</COMMUNICATION-CONNECTOR-REF>
+                        </COMMUNICATION-CONNECTOR-REF-CONDITIONAL>
+                      </COMM-CONNECTORS>
+                      <NETWORK-ENDPOINTS>
+                        <NETWORK-ENDPOINT>
+                          <SHORT-NAME>InnerNetworkEndpoint</SHORT-NAME>
+                          <NETWORK-ENDPOINT-ADDRESSES>
+                            <IPV-4-CONFIGURATION>
+                              <DEFAULT-GATEWAY>127.0.0.1</DEFAULT-GATEWAY>
+                              <IPV-4-ADDRESS>192.168.10.70</IPV-4-ADDRESS>
+                              <NETWORK-MASK>255.255.255.0</NETWORK-MASK>
+                            </IPV-4-CONFIGURATION>
+                            <IPV-4-CONFIGURATION>
+                              <IPV-4-ADDRESS>239.192.255.123</IPV-4-ADDRESS>
+                            </IPV-4-CONFIGURATION>
+                          </NETWORK-ENDPOINT-ADDRESSES>
+                        </NETWORK-ENDPOINT>
+                      </NETWORK-ENDPOINTS>
+                    </ETHERNET-PHYSICAL-CHANNEL>
+                    <ETHERNET-PHYSICAL-CHANNEL>
+                      <SHORT-NAME>SocInnerEthernetPhysicalChannel</SHORT-NAME>
+                      <COMM-CONNECTORS>
+                        <COMMUNICATION-CONNECTOR-REF-CONDITIONAL>
+                          <COMMUNICATION-CONNECTOR-REF DEST="ETHERNET-COMMUNICATION-CONNECTOR">/HuaweiMDC/Machine/MdcSocBMachineDesign/InnerEthernetCommConnector</COMMUNICATION-CONNECTOR-REF>
+                        </COMMUNICATION-CONNECTOR-REF-CONDITIONAL>
+                      </COMM-CONNECTORS>
+                      <NETWORK-ENDPOINTS>
+                        <NETWORK-ENDPOINT>
+                          <SHORT-NAME>SocInnerNetworkEndpoint</SHORT-NAME>
+                          <NETWORK-ENDPOINT-ADDRESSES>
+                            <IPV-4-CONFIGURATION>
+                              <DEFAULT-GATEWAY>127.0.0.1</DEFAULT-GATEWAY>
+                              <IPV-4-ADDRESS>127.0.0.1</IPV-4-ADDRESS>
+                              <NETWORK-MASK>255.255.255.0</NETWORK-MASK>
+                            </IPV-4-CONFIGURATION>
+                            <IPV-4-CONFIGURATION>
+                              <IPV-4-ADDRESS>239.192.255.123</IPV-4-ADDRESS>
+                            </IPV-4-CONFIGURATION>
+                          </NETWORK-ENDPOINT-ADDRESSES>
+                        </NETWORK-ENDPOINT>
+                      </NETWORK-ENDPOINTS>
+                      <VLAN>
+                        <SHORT-NAME>SocInnerNet</SHORT-NAME>
+                        <VLAN-IDENTIFIER>4094</VLAN-IDENTIFIER>
+                      </VLAN>
+                    </ETHERNET-PHYSICAL-CHANNEL>
+                    <ETHERNET-PHYSICAL-CHANNEL>
+                      <SHORT-NAME>MultiSocBEthernetPhysicalChannel</SHORT-NAME>
+                      <COMM-CONNECTORS>
+                        <COMMUNICATION-CONNECTOR-REF-CONDITIONAL>
+                          <COMMUNICATION-CONNECTOR-REF DEST="ETHERNET-COMMUNICATION-CONNECTOR">/HuaweiMDC/Machine/MdcSocBMachineDesign/MultiSocBEthernetCommConnector</COMMUNICATION-CONNECTOR-REF>
+                        </COMMUNICATION-CONNECTOR-REF-CONDITIONAL>
+                      </COMM-CONNECTORS>
+                      <NETWORK-ENDPOINTS>
+                        <NETWORK-ENDPOINT>
+                          <SHORT-NAME>MultiSocBNetworkEndpoint</SHORT-NAME>
+                          <NETWORK-ENDPOINT-ADDRESSES>
+                            <IPV-4-CONFIGURATION>
+                              <DEFAULT-GATEWAY>127.0.0.1</DEFAULT-GATEWAY>
+                              <IPV-4-ADDRESS>192.168.2.76</IPV-4-ADDRESS>
+                              <NETWORK-MASK>255.255.255.0</NETWORK-MASK>
+                            </IPV-4-CONFIGURATION>
+                            <IPV-4-CONFIGURATION>
+                              <IPV-4-ADDRESS>239.0.0.255</IPV-4-ADDRESS>
+                            </IPV-4-CONFIGURATION>
+                          </NETWORK-ENDPOINT-ADDRESSES>
+                        </NETWORK-ENDPOINT>
+                      </NETWORK-ENDPOINTS>
+                      <VLAN>
+                        <SHORT-NAME>MultiSocBNet</SHORT-NAME>
+                        <VLAN-IDENTIFIER>20</VLAN-IDENTIFIER>
+                      </VLAN>
+                    </ETHERNET-PHYSICAL-CHANNEL>
+                  </PHYSICAL-CHANNELS>
+                  <PROTOCOL-NAME></PROTOCOL-NAME>
+                  <PROTOCOL-VERSION></PROTOCOL-VERSION>
+                </ETHERNET-CLUSTER-CONDITIONAL>
+              </ETHERNET-CLUSTER-VARIANTS>
+            </ETHERNET-CLUSTER>
+          </ELEMENTS>
+        </AR-PACKAGE>
+        <AR-PACKAGE>
+          <SHORT-NAME>Machine</SHORT-NAME>
+          <ELEMENTS>
+            <MACHINE>
+              <SHORT-NAME>MdcSocBMachine</SHORT-NAME>
+              <ADMIN-DATA>
+                <SDGS>
+                  <SDG GID="ExtrasMachine">
+                    <SD GID="_ExtensionKey">com.huawei.mdc.designer.metamodel.extendmodel.machine.impl.ExtrasMachineImpl0d817203-8f80-4b00-ba0a-9dd8a31b77f2</SD>
+                    <SD GID="_NsURI">autosar.org/machine</SD>
+                    <SD GID="_Type">ExtrasMachine</SD>
+                    <SDG GID="masterMachine">
+                      <SD GID="_URI">ar:/#/HuaweiMDC/Machine/MdcSocAMachine?type=Machine</SD>
+                    </SDG>
+                  </SDG>
+                </SDGS>
+              </ADMIN-DATA>
+              <DEFAULT-APPLICATION-TIMEOUT>
+                <ENTER-TIMEOUT-VALUE>8.0</ENTER-TIMEOUT-VALUE>
+                <EXIT-TIMEOUT-VALUE>8.0</EXIT-TIMEOUT-VALUE>
+              </DEFAULT-APPLICATION-TIMEOUT>
+              <FUNCTION-GROUPS>
+                <MODE-DECLARATION-GROUP-PROTOTYPE>
+                  <SHORT-NAME>Access</SHORT-NAME>
+                  <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/HuaweiMDC/ModeDeclaration/Access</TYPE-TREF>
+                </MODE-DECLARATION-GROUP-PROTOTYPE>
+                <MODE-DECLARATION-GROUP-PROTOTYPE>
+                  <SHORT-NAME>MachineState</SHORT-NAME>
+                  <TYPE-TREF DEST="MODE-DECLARATION-GROUP">/HuaweiMDC/ModeDeclaration/MachineState</TYPE-TREF>
+                </MODE-DECLARATION-GROUP-PROTOTYPE>
+              </FUNCTION-GROUPS>
+              <MACHINE-DESIGN-REF DEST="MACHINE-DESIGN">/HuaweiMDC/Machine/MdcSocBMachineDesign</MACHINE-DESIGN-REF>
+              <MODULE-INSTANTIATIONS>
+                <OS-MODULE-INSTANTIATION>
+                  <SHORT-NAME>OS</SHORT-NAME>
+                  <RESOURCE-GROUPS>
+                    <RESOURCE-GROUP UUID="">
+                      <SHORT-NAME>ResourceLimit</SHORT-NAME>
+                    </RESOURCE-GROUP>
+                  </RESOURCE-GROUPS>
+                </OS-MODULE-INSTANTIATION>
+                <DO-IP-INSTANTIATION UUID="">
+                  <SHORT-NAME>IsoDoip</SHORT-NAME>
+                  <EID>2505430597752</EID>
+                  <ENTITY-STATUS-MAX-BYTE-FIELD-USE>true</ENTITY-STATUS-MAX-BYTE-FIELD-USE>
+                  <GID>281474976710655</GID>
+                  <GID-INVALIDITY-PATTERN>255</GID-INVALIDITY-PATTERN>
+                  <LOGICAL-ADDRESS>4291</LOGICAL-ADDRESS>
+                  <MAX-REQUEST-BYTES>4194304</MAX-REQUEST-BYTES>
+                  <NETWORK-INTERFACES>
+                    <DO-IP-NETWORK-CONFIGURATION>
+                      <EID-USE-MAC>true</EID-USE-MAC>
+                      <IS-ACTIVATION-LINE-DEPENDENT>false</IS-ACTIVATION-LINE-DEPENDENT>
+                      <MAX-INITIAL-VEHICLE-ANNOUNCEMENT-TIME>0.5</MAX-INITIAL-VEHICLE-ANNOUNCEMENT-TIME>
+                      <MAX-TESTER-CONNECTIONS>3</MAX-TESTER-CONNECTIONS>
+                      <NETWORK-CONFIGURATION>
+                        <SHORT-NAME>IsoDoIpEth</SHORT-NAME>
+                        <COMMUNICATION-CONNECTOR-REF DEST="ETHERNET-COMMUNICATION-CONNECTOR">/HuaweiMDC/Machine/MdcSocBMachineDesign/InnerEthernetCommConnector</COMMUNICATION-CONNECTOR-REF>
+                        <IPV-4-MULTICAST-IP-ADDRESS>239.2.0.1</IPV-4-MULTICAST-IP-ADDRESS>
+                        <TCP-PORT>13400</TCP-PORT>
+                        <UDP-PORT>13400</UDP-PORT>
+                      </NETWORK-CONFIGURATION>
+                      <NETWORK-INTERFACE-ID>0</NETWORK-INTERFACE-ID>
+                      <TCP-ALIVE-CHECK-RESPONSE-TIMEOUT>0.5</TCP-ALIVE-CHECK-RESPONSE-TIMEOUT>
+                      <TCP-GENERAL-INACTIVITY-TIME>300.0</TCP-GENERAL-INACTIVITY-TIME>
+                      <TCP-INITIAL-INACTIVITY-TIME>2.0</TCP-INITIAL-INACTIVITY-TIME>
+                      <VEHICLE-ANNOUNCEMENT-COUNT>0</VEHICLE-ANNOUNCEMENT-COUNT>
+                      <VEHICLE-ANNOUNCEMENT-INTERVAL>0.1</VEHICLE-ANNOUNCEMENT-INTERVAL>
+                      <VEHICLE-IDENTIFICATION-SYNC-STATUS>false</VEHICLE-IDENTIFICATION-SYNC-STATUS>
+                    </DO-IP-NETWORK-CONFIGURATION>
+                  </NETWORK-INTERFACES>
+                  <REQUEST-CONFIGURATIONS>
+                    <DO-IP-REQUEST-CONFIGURATION>
+                      <END-ADDRESS>32767</END-ADDRESS>
+                      <REQUEST-TYPE>PHYSICAL</REQUEST-TYPE>
+                      <START-ADDRESS>4096</START-ADDRESS>
+                    </DO-IP-REQUEST-CONFIGURATION>
+                    <DO-IP-REQUEST-CONFIGURATION>
+                      <END-ADDRESS>61439</END-ADDRESS>
+                      <REQUEST-TYPE>FUNCTIONAL</REQUEST-TYPE>
+                      <START-ADDRESS>58368</START-ADDRESS>
+                    </DO-IP-REQUEST-CONFIGURATION>
+                  </REQUEST-CONFIGURATIONS>
+                  <VIN-INVALIDITY-PATTERN>255</VIN-INVALIDITY-PATTERN>
+                </DO-IP-INSTANTIATION>
+              </MODULE-INSTANTIATIONS>
+              <PROCESSORS>
+                <PROCESSOR UUID="3b448e18-558f-4540-9e8f-1e9cb6d0f789">
+                  <SHORT-NAME>Cpu</SHORT-NAME>
+                  <CORES>
+                    <PROCESSOR-CORE UUID="da55042d-22ac-4714-94ab-f354c2516669">
+                      <SHORT-NAME>Processor0_Core0</SHORT-NAME>
+                      <CORE-ID>0</CORE-ID>
+                    </PROCESSOR-CORE>
+                    <PROCESSOR-CORE UUID="da55042d-22ac-4714-94ab-f354c2516669">
+                      <SHORT-NAME>Processor0_Core1</SHORT-NAME>
+                      <CORE-ID>1</CORE-ID>
+                    </PROCESSOR-CORE>
+                  </CORES>
+                </PROCESSOR>
+              </PROCESSORS>
+              <TRUSTED-PLATFORM-EXECUTABLE-LAUNCH-BEHAVIOR>MONITOR-MODE</TRUSTED-PLATFORM-EXECUTABLE-LAUNCH-BEHAVIOR>
+            </MACHINE>
+            <MACHINE-DESIGN>
+              <SHORT-NAME>MdcSocBMachineDesign</SHORT-NAME>
+              <COMMUNICATION-CONNECTORS>
+                <ETHERNET-COMMUNICATION-CONNECTOR>
+                  <SHORT-NAME>InnerEthernetCommConnector</SHORT-NAME>
+                  <UNICAST-NETWORK-ENDPOINT-REF DEST="NETWORK-ENDPOINT">/HuaweiMDC/Ethernet/MdcSocBEthernetCluster/InnerEthernetPhysicalChannel/InnerNetworkEndpoint</UNICAST-NETWORK-ENDPOINT-REF>
+                </ETHERNET-COMMUNICATION-CONNECTOR>
+                <ETHERNET-COMMUNICATION-CONNECTOR>
+                  <SHORT-NAME>SocInnerEthernetCommConnector</SHORT-NAME>
+                  <UNICAST-NETWORK-ENDPOINT-REF DEST="NETWORK-ENDPOINT">/HuaweiMDC/Ethernet/MdcSocBEthernetCluster/SocInnerEthernetPhysicalChannel/SocInnerNetworkEndpoint</UNICAST-NETWORK-ENDPOINT-REF>
+                </ETHERNET-COMMUNICATION-CONNECTOR>
+                <ETHERNET-COMMUNICATION-CONNECTOR>
+                  <SHORT-NAME>MultiSocBEthernetCommConnector</SHORT-NAME>
+                  <UNICAST-NETWORK-ENDPOINT-REF DEST="NETWORK-ENDPOINT">/HuaweiMDC/Ethernet/MdcSocBEthernetCluster/MultiSocBEthernetPhysicalChannel/MultiSocBNetworkEndpoint</UNICAST-NETWORK-ENDPOINT-REF>
+                </ETHERNET-COMMUNICATION-CONNECTOR>
+              </COMMUNICATION-CONNECTORS>
+              <SERVICE-DISCOVER-CONFIGS>
+                <SOMEIP-SERVICE-DISCOVERY>
+                  <MULTICAST-SD-IP-ADDRESS-REF DEST="NETWORK-ENDPOINT">/HuaweiMDC/Ethernet/MdcSocBEthernetCluster/InnerEthernetPhysicalChannel/InnerNetworkEndpoint</MULTICAST-SD-IP-ADDRESS-REF>
+                  <SOMEIP-SERVICE-DISCOVERY-PORT>30491</SOMEIP-SERVICE-DISCOVERY-PORT>
+                </SOMEIP-SERVICE-DISCOVERY>
+                <SOMEIP-SERVICE-DISCOVERY>
+                  <MULTICAST-SD-IP-ADDRESS-REF DEST="NETWORK-ENDPOINT">/HuaweiMDC/Ethernet/MdcSocBEthernetCluster/SocInnerEthernetPhysicalChannel/SocInnerNetworkEndpoint</MULTICAST-SD-IP-ADDRESS-REF>
+                  <SOMEIP-SERVICE-DISCOVERY-PORT>30491</SOMEIP-SERVICE-DISCOVERY-PORT>
+                </SOMEIP-SERVICE-DISCOVERY>
+              </SERVICE-DISCOVER-CONFIGS>
+            </MACHINE-DESIGN>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

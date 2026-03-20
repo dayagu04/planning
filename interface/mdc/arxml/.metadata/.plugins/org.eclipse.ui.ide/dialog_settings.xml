@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<list key="installedFeatures">
+		<item value="org.eclipse.draw2d:3.10.100.201606061308"/>
+		<item value="org.eclipse.elk.algorithms.feature:0.7.0"/>
+		<item value="org.eclipse.elk.feature:0.7.0"/>
+		<item value="org.eclipse.emf.common:2.26.0.v20220325-0806"/>
+		<item value="org.eclipse.emf.ecore.edit:2.15.0.v20210924-1718"/>
+		<item value="org.eclipse.emf.ecore.editor:2.18.0.v20210924-1718"/>
+		<item value="org.eclipse.emf.ecore:2.28.0.v20220426-0617"/>
+		<item value="org.eclipse.emf.edit:2.18.0.v20220201-1551"/>
+		<item value="org.eclipse.emf.transaction:1.12.0.201805140824"/>
+		<item value="org.eclipse.emf.validation:1.13.0.202208101528"/>
+		<item value="org.eclipse.emf.workspace:1.12.0.201805140824"/>
+		<item value="org.eclipse.gef:3.11.0.201606061308"/>
+		<item value="org.eclipse.gmf.runtime.notation:1.13.0.202002250905"/>
+		<item value="org.eclipse.gmf:1.13.0.202004160913"/>
+		<item value="org.eclipse.help:2.3.0.v20191210-0610"/>
+		<item value="org.eclipse.platform:4.14.0.v20191210-0610"/>
+		<item value="org.eclipse.rcp:4.14.0.v20191210-0610"/>
+		<item value="org.eclipse.sirius.aql:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.doc.feature:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.interpreter.feature:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.properties.feature:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.runtime.acceleo:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.runtime.aql:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.runtime.ide.ui.acceleo:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.runtime.ide.ui:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.runtime.ocl:6.4.0.202011190936"/>
+		<item value="org.eclipse.sirius.runtime:6.4.0.202011190936"/>
+		<item value="org.eclipse.sphinx.emf.compare:0.11.2.201802230805"/>
+	</list>
+	<section name="ExternalProjectImportWizard">
+		<item key="WizardProjectsImportPage.STORE_NESTED_PROJECTS" value="false"/>
+		<item key="WizardProjectsImportPage.STORE_COPY_PROJECT_ID" value="false"/>
+		<item key="WizardProjectsImportPage.STORE_ARCHIVE_SELECTED" value="false"/>
+		<item key="WizardProjectsImportPage.STORE_CLOSE_CREATED_PROJECTS_ID" value="false"/>
+		<item key="WizardProjectsImportPage.STORE_HIDE_CONFLICTING_PROJECTS_ID" value="false"/>
+		<list key="WizardProjectsImportPage.STORE_DIRECTORIES">
+			<item value="/home/system_integration/mdc_workspace/mmc_workspace/iflyauto_0314"/>
+			<item value="/home/system_integration/workspace/interface/mmc/iflyauto_arch"/>
+		</list>
+		<list key="WizardProjectsImportPage.STORE_ARCHIVES">
+			<item value=""/>
+		</list>
+	</section>
+</section>

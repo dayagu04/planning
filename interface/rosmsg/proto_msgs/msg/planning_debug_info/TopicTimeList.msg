@@ -1,0 +1,14 @@
+uint64 fusion_object 
+uint64 fusion_road 
+uint64 localization_estimate 
+uint64 prediction 
+uint64 vehicle_service 
+uint64 radar_perception 
+uint64 control_output 
+uint64 hmi 
+uint64 parking_fusion 
+uint64 function_state_machine 
+uint64 map
+uint64 ehr_parking_map
+uint64 ground_line
+uint64 localization

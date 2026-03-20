@@ -1,0 +1,3 @@
+uint8 u8s_uss_sfl_burst_mode
+uint8 u8s_uss_sfl_meas_mode
+EchoInfo[10] echo_info

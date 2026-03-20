@@ -1,0 +1,10 @@
+std_msgs/Header header
+common_Header msg_header 
+PointLLH trajectory_ref_point
+FeaturePoint gps_signal_loss_point
+Coordinate trace_start
+Coordinate trace_dest
+Coordinate[] target_prk_pos
+TargetParkingId target_prk_id
+RoadTile road_tile_info
+uint32 map_id

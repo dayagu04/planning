@@ -1,0 +1,8 @@
+uint8 id
+int16 type
+Shape3d shape
+Point2f relative_velocity
+Point2f relative_acceleration
+Point2f relative_center_position
+float32 relative_heading_angle
+float32 relative_heading_angle_rate

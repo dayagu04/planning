@@ -1,0 +1,16 @@
+float64 lat
+float64 lon
+float64 alt
+float64 vel_e
+float64 vel_n
+float64 vel_u
+float64 azi_track
+float64 speed
+int8 status
+int8 msg_type
+int16 sat_num
+float64 hdop
+float64 rtk_age
+float64 sec_in_gps_week
+uint16 gps_week
+float64 utc_time

@@ -1,0 +1,4 @@
+bool available
+float64 jerk_factor
+bool need_steering_wheel_stationary
+float64 steering_wheel_rad_limit

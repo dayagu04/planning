@@ -1,0 +1,2 @@
+bool noa_cruise_dclc_resp_display
+int16 lane_change_style_display

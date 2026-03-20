@@ -1,0 +1,24 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10002,10004,10005,10006,10026,10015,10020,10021,10022,10024,10025,1,10041,10019]
+        portName: ["IflytekAlarmInfoCameraNodeAroundView","IflytekAlarmInfoAroundViewCameraPerception","IflytekAlarmInfoSocACommunication","IflytekAlarmInfoPanoramaViewCameraPerceptionLaneline","IflytekAlarmInfoMega","IflytekAlarmInfoStaticFusion","IflytekAlarmInfoComServicePncNode","IflytekAlarmInfoObstacleFusion","IflytekAlarmInfoPlanning","IflytekAlarmInfoOtaNode","IflytekAlarmInfoControl","IflytekAlarmInfoMdcA","IflytekAlarmInfoPhmA","IflytekAlarmInfoEhp"]
+    StructContainerInterface:
+        instanceId: [10060,10155,10156,10109,10166,10168,10183,10184]
+        portName: ["IflytekFmMcuInfo","IflytekAlarmInfoFmAService","IflytekDTCInfoFmAService","IflytekAlarmInfoToACamera","IflytekFmAMcuSentinel","IflytekFmACameraSentinel","IflytekFmAMcuDegradeFunciton","IflytekFmADegradeFunciton"]
+  recvInstanceID:
+    ClientServiceContainerInterface:
+        instanceId: [10032,10034,10035,10029,10030,10037,10038,10039,10043,10044]
+        portName: ["IflytekSensorGetSurroundCameraIntriParam","IflytekSensorGetPanoramaCameraIntriParam","IflytekSensorWriteFile","IflytekFactoryCalibrationActivation","IflytekFactoryCalibrationResult","IflytekPostSaleCalibrationActivation","IflytekPostSaleCalibrationStop","IflytekPostSaleCalibrationResult","IflytekFdlNetStatCheck","IflytekObdUpdateEvent"]
+    TriggerInOut:
+        instanceId: [1]
+        portName: ["IflytekStateManager"]
+    StructContainerInterface:
+        instanceId: [10027,10019,10020,10009,10165,10182,10214,10217,10218,10220,10239]
+        portName: ["IflytekAlarmInfoSoc","IflytekSensorMcuToFmInfo","IflytekAlarmInfoMcu","IflytekVehicleService","IflytekMcuFmASentinel","IflytekEngineerInner","IflytekCameraState","IflytekFdlUploadState","IflytekDiskSpaceInfoPhmAOta","IflytekDiskSpaceInfoPhmBOta","IflytekCalibrationCalibInfo"]
+    ConfigServerServiceInterface:
+        instanceId: [1]
+        portName: ["IflytekConfigManager"]

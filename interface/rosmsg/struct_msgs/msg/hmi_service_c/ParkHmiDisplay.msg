@@ -1,0 +1,16 @@
+int16 park_disp_apa_status
+int16 park_disp_apa_notify_req
+int16 park_disp_apa_mode_status
+int16 park_disp_rads_status
+int16 park_disp_rads_notify_req
+int16 park_disp_nra_status
+int16 park_disp_nra_notify
+int16 park_disp_pa_status
+int16 park_disp_pa_notify
+int16 park_disp_hpp_status
+int16 park_disp_hpp_notify_req
+int16 select_park_in_dir
+float32 apa_notify_remain_distance
+int16 select_park_out_dir
+uint16 planning_park_dir
+int16 apa_mode_status

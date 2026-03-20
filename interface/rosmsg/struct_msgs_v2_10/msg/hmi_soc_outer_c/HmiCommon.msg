@@ -1,0 +1,7 @@
+int16 common_notify_req
+float32 vehicle_speed_display
+bool brake_pedal_pressed
+int16 shift_lever_state
+int16 turn_light_state
+TrajectoryPointSet tp_set
+IFLYPosition position

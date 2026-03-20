@@ -1,0 +1,15 @@
+bool rpa_available
+bool rpa_active_resp
+int16 rpa_sub_func_sts
+bool rpa_start_button_sts
+bool bafa_back_but_sts
+bool bafa_front_but_sts
+bool rpa_resume_button_sts
+bool bafa_fun_sts
+int16 rpa_quit_notify
+int16 rpa_operate_notify
+int16 rpa_pause_notify
+int16 rpa_self_check_sts
+int16 rpa_slot_type
+int16 bafa_status
+int16 apa_popup

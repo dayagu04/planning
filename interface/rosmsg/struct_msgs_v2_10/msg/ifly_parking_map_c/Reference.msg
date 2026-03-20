@@ -1,0 +1,10 @@
+RoadId road_id
+LaneId lane_id
+AttributeId attribute_id
+RoadPortId road_port
+LanePortId lane_port
+float32 offset
+float32 length
+int16 orientation
+int16 id_type
+bool fully_covered

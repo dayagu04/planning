@@ -1,0 +1,19 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+FCWDebugOutputInfo fcw_output_info
+PCWDebugOutputInfo pcw_output_info
+AEBDebugOutputInfo aeb_output_info
+AEBPDebugOutputInfo aebp_output_info
+BSDDebugOutputInfo bsd_output_info
+LCADebugOutputInfo lca_output_info
+DOWDebugOutputInfo dow_output_info
+RCWDebugOutputInfo rcw_output_info
+FCTADebugOutputInfo fcta_output_info
+RCTADebugOutputInfo rcta_output_info
+FCTBDebugOutputInfo fctb_output_info
+RCTBDebugOutputInfo rctb_output_info
+ControlAdaptorDebugOutputInfo control_adaptor_debug_output_info
+CcrOutput ccr_output_info
+VruOutput vru_output_info
+EthDebugOutputInfo eth_debug_output_info

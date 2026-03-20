@@ -1,0 +1,2 @@
+bool has_cutin
+ObstacleInformation[] cutin_information

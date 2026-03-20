@@ -1,0 +1,12 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10003,10007,10008,10010,10011,10017,10018,10023,2,10011,10023,10003,10007,10010,10018,10008,2,10017,10012,10009,10031,10036,10040]
+        portName: ["IflytekAlarmInfoSdmap","IflytekAlarmInfoGnssServiceNode","IflytekAlarmInfoEhr","IflytekAlarmInfoLocalization","IflytekAlarmInfoSocBCommunication","IflytekAlarmInfoCameraNodePanoramaView","IflytekAlarmInfoPanoramaViewCameraPerception","IflytekAlarmInfoHmiService","IflytekAlarmInfoMdcB","IflytekAlarmInfoSocBCommunication","IflytekAlarmInfoHmiService","IflytekAlarmInfoSdmap","IflytekAlarmInfoGnssServiceNode","IflytekAlarmInfoLocalization","IflytekAlarmInfoPanoramaViewCameraPerception","IflytekAlarmInfoEhr","IflytekAlarmInfoMdcB","IflytekAlarmInfoCameraNodePanoramaView","IflytekAlarmInfoRadar4dService","IflytekAlarmInfoCalibration","IflytekAlarmInfoFiniteStateManager","IflytekAlarmInfoFdl","IflytekAlarmInfoPhmB"]
+    StructContainerInterface:
+        instanceId: [10057,10108]
+        portName: ["IflytekAlarmInfoSoc","IflytekAlarmInfoToBCamera"]
+  recvInstanceID:

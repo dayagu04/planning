@@ -1,0 +1,8 @@
+LDWOutputInfoStr ldw_output_info
+LDPOutputInfoStr ldp_output_info
+ELKOutputInfoStr elk_output_info
+TSROutputInfoStr tsr_output_info
+IHCOutputInfoStr ihc_output_info
+ALCOutputInfoStr alc_output_info
+int16 traffic_sign
+HmiTrafficLight traffic_light

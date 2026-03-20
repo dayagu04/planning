@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10056,10197]
+        portName: ["IflytekSensorGnss","IflytekGnssPhmReport"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10007]
+        portName: ["IflytekAlarmInfoGnssServiceNode"]
+    StructContainerInterface:
+        instanceId: [10032]
+        portName: ["IflytekSensorTboxTime"]

@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+package planning.common;
+import "basic_types.proto";
+
+message CornerPoints {
+  repeated Point2d corner_point = 1;
+}
+
+message SlotInfo {
+  optional uint32 id = 1;
+  optional CornerPoints corner_points = 2;
+  optional Point2d center = 3;
+  optional bool is_release = 4;
+  optional bool is_occupied = 5;
+  optional uint32 slot_type = 6;
+}
+
+message SlotManagementInfo {
+  repeated SlotInfo slot_info_vec = 1;
+  repeated Point2d limiter_points = 2;
+  repeated Point2d point_obstacle_vec = 3;
+  optional uint32 selected_id = 4;
+  optional uint32 selected_slot_side = 5;
+}

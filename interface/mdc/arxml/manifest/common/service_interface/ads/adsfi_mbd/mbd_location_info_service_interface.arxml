@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="a4434daf-f988-4a54-adf3-8aaeddcb87dd">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE UUID="a34b6e75-b5ba-4548-b9e8-c37eefaceda3">
+          <SHORT-NAME>FunctionalSoftware</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE UUID="3d59a443-1440-47e0-b1e7-73401a8f2119">
+              <SHORT-NAME>LocationInfoMsgDataType</SHORT-NAME>
+            </AR-PACKAGE>
+            <AR-PACKAGE UUID="225dfacc-2784-4de7-a66d-57195b2272ae">
+              <SHORT-NAME>LocationInfoServiceInterface</SHORT-NAME>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

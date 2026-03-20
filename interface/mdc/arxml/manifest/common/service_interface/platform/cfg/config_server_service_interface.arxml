@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>MdcPlatformServices</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>ConfigServerMsgDataType</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>ImplementationDataTypes</SHORT-NAME>
+                  <ELEMENTS>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="d6edb5ec-3ac9-4309-8aaa-a316d9a39f62">
+                      <SHORT-NAME>ParamUpdateData</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <SHORT-NAME-PATTERN></SHORT-NAME-PATTERN>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>config</SHORT-NAME>
+                          <SYMBOL>config</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>server</SHORT-NAME>
+                          <SYMBOL>server</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT UUID="f11b88fc-d96c-45fc-a541-095ffd7540dd">
+                          <SHORT-NAME>paramName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT UUID="f11b88fc-d96c-45fc-a541-095ffd7540dd">
+                          <SHORT-NAME>paramValue</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT UUID="f11b88fc-d96c-45fc-a541-095ffd7540dd">
+                          <SHORT-NAME>paramType</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT UUID="f11b88fc-d96c-45fc-a541-095ffd7540dd">
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>uuid</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>ServerNotifyData</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>config</SHORT-NAME>
+                          <SYMBOL>config</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>server</SHORT-NAME>
+                          <SYMBOL>server</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>notifyType</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/int32_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>extraData</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="e9b43a83-a9ca-43f7-a0f4-999a3ac1e1ea">
+                      <SHORT-NAME>CfgStringList</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <SHORT-NAME-PATTERN></SHORT-NAME-PATTERN>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+            <AR-PACKAGE>
+              <SHORT-NAME>ConfigServerServiceInterface</SHORT-NAME>
+              <ELEMENTS>
+                <SERVICE-INTERFACE>
+                  <SHORT-NAME>ConfigServerServiceInterface</SHORT-NAME>
+                  <SHORT-NAME-PATTERN></SHORT-NAME-PATTERN>
+                  <IS-SERVICE>true</IS-SERVICE>
+                  <NAMESPACES>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>mdc</SHORT-NAME>
+                      <SYMBOL>mdc</SYMBOL>
+                    </SYMBOL-PROPS>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>config</SHORT-NAME>
+                      <SYMBOL>config</SYMBOL>
+                    </SYMBOL-PROPS>
+                    <SYMBOL-PROPS>
+                      <SHORT-NAME>server</SHORT-NAME>
+                      <SYMBOL>server</SYMBOL>
+                    </SYMBOL-PROPS>
+                  </NAMESPACES>
+                  <EVENTS>
+                    <VARIABLE-DATA-PROTOTYPE>
+                      <SHORT-NAME>ParamUpdateEvent</SHORT-NAME>
+                      <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/ParamUpdateData</TYPE-TREF>
+                    </VARIABLE-DATA-PROTOTYPE>
+                    <VARIABLE-DATA-PROTOTYPE>
+                      <SHORT-NAME>ServerNotifyEvent</SHORT-NAME>
+                      <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/ServerNotifyData</TYPE-TREF>
+                    </VARIABLE-DATA-PROTOTYPE>
+                  </EVENTS>
+                  <METHODS>
+                    <CLIENT-SERVER-OPERATION>
+                      <SHORT-NAME>AnswerAlive</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/int32_t</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                    <CLIENT-SERVER-OPERATION UUID="">
+                      <SHORT-NAME>DelParam</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                    <CLIENT-SERVER-OPERATION UUID="">
+                      <SHORT-NAME>GetMonitorClients</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>monitorClients</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/CfgStringList</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                    <CLIENT-SERVER-OPERATION UUID="">
+                      <SHORT-NAME>GetParam</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramValue</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>paramType</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                    <CLIENT-SERVER-OPERATION UUID="">
+                      <SHORT-NAME>MonitorParam</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                    <CLIENT-SERVER-OPERATION UUID="">
+                      <SHORT-NAME>SetParam</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramValue</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>paramType</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>persistType</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>uuid</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                    <CLIENT-SERVER-OPERATION UUID="">
+                      <SHORT-NAME>UnMonitorParam</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>paramName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE UUID="">
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                    <CLIENT-SERVER-OPERATION>
+                      <SHORT-NAME>InitClient</SHORT-NAME>
+                      <ARGUMENTS>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>clientName</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-TREF>
+                          <DIRECTION>IN</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                        <ARGUMENT-DATA-PROTOTYPE>
+                          <SHORT-NAME>result</SHORT-NAME>
+                          <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                          <DIRECTION>OUT</DIRECTION>
+                        </ARGUMENT-DATA-PROTOTYPE>
+                      </ARGUMENTS>
+                    </CLIENT-SERVER-OPERATION>
+                  </METHODS>
+                </SERVICE-INTERFACE>
+                <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT UUID="">
+                  <SHORT-NAME>ConfigServerSomeipServiceInterfaceDeployment</SHORT-NAME>
+                  <EVENT-DEPLOYMENTS>
+                    <SOMEIP-EVENT-DEPLOYMENT>
+                      <SHORT-NAME>ParamUpdateEvent_Event</SHORT-NAME>
+                      <EVENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/ParamUpdateEvent</EVENT-REF>
+                      <EVENT-ID>1001</EVENT-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-EVENT-DEPLOYMENT>
+                    <SOMEIP-EVENT-DEPLOYMENT>
+                      <SHORT-NAME>ServerNotifyEvent_Event</SHORT-NAME>
+                      <EVENT-REF DEST="VARIABLE-DATA-PROTOTYPE">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/ServerNotifyEvent</EVENT-REF>
+                      <EVENT-ID>1002</EVENT-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-EVENT-DEPLOYMENT>
+                  </EVENT-DEPLOYMENTS>
+                  <METHOD-DEPLOYMENTS>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>AnswerAlive_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/AnswerAlive</METHOD-REF>
+                      <METHOD-ID>7</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT UUID="">
+                      <SHORT-NAME>DelParam_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/DelParam</METHOD-REF>
+                      <METHOD-ID>3</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT UUID="">
+                      <SHORT-NAME>GetMonitorClients_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/GetMonitorClients</METHOD-REF>
+                      <METHOD-ID>6</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT UUID="">
+                      <SHORT-NAME>GetParam_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/GetParam</METHOD-REF>
+                      <METHOD-ID>1</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT UUID="">
+                      <SHORT-NAME>MonitorParam_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/MonitorParam</METHOD-REF>
+                      <METHOD-ID>4</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT UUID="">
+                      <SHORT-NAME>SetParam_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/SetParam</METHOD-REF>
+                      <METHOD-ID>2</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT UUID="">
+                      <SHORT-NAME>UnMonitorParam_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/UnMonitorParam</METHOD-REF>
+                      <METHOD-ID>5</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                    <SOMEIP-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>InitClient_Method</SHORT-NAME>
+                      <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/InitClient</METHOD-REF>
+                      <METHOD-ID>8</METHOD-ID>
+                      <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                    </SOMEIP-METHOD-DEPLOYMENT>
+                  </METHOD-DEPLOYMENTS>
+                  <SERVICE-INTERFACE-REF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface</SERVICE-INTERFACE-REF>
+                  <EVENT-GROUPS>
+                    <SOMEIP-EVENT-GROUP>
+                      <SHORT-NAME>ParamUpdateEventGroup</SHORT-NAME>
+                      <EVENT-GROUP-ID>1</EVENT-GROUP-ID>
+                      <EVENT-REFS>
+                        <EVENT-REF DEST="SOMEIP-EVENT-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerSomeipServiceInterfaceDeployment/ParamUpdateEvent_Event</EVENT-REF>
+                      </EVENT-REFS>
+                    </SOMEIP-EVENT-GROUP>
+                    <SOMEIP-EVENT-GROUP>
+                      <SHORT-NAME>ServerNotifyEventGroup</SHORT-NAME>
+                      <EVENT-GROUP-ID>2</EVENT-GROUP-ID>
+                      <EVENT-REFS>
+                        <EVENT-REF DEST="SOMEIP-EVENT-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerSomeipServiceInterfaceDeployment/ServerNotifyEvent_Event</EVENT-REF>
+                      </EVENT-REFS>
+                    </SOMEIP-EVENT-GROUP>
+                  </EVENT-GROUPS>
+                  <SERVICE-INTERFACE-ID>3392</SERVICE-INTERFACE-ID>
+                  <SERVICE-INTERFACE-VERSION>
+                    <MAJOR-VERSION>1</MAJOR-VERSION>
+                    <MINOR-VERSION>0</MINOR-VERSION>
+                  </SERVICE-INTERFACE-VERSION>
+                </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+              </ELEMENTS>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

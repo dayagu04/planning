@@ -1,0 +1,3 @@
+IFLYAccGlobal acceleration_enu
+IFLYAccLocal acceleration_boot
+IFLYAccLocal acceleration_body

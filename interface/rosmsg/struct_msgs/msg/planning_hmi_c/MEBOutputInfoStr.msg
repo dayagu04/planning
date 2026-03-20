@@ -1,0 +1,4 @@
+int16 meb_state
+uint32 meb_request_status
+float64 meb_request_value
+int16 meb_request_direction

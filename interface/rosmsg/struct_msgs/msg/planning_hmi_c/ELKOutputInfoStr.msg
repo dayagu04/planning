@@ -1,0 +1,4 @@
+int16 elk_state
+bool elk_left_intervention_flag
+bool elk_right_intervention_flag
+ELKRiskObjInfo elk_risk_obj

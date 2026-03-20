@@ -1,0 +1,2 @@
+int16 take_over_req_level
+int16 request_reason

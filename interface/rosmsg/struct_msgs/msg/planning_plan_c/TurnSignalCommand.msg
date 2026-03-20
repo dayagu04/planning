@@ -1,0 +1,2 @@
+bool available
+int16 turn_signal_value

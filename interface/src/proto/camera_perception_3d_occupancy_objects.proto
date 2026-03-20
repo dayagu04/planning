@@ -1,0 +1,20 @@
+/*******************************************************************************
+ * 3D通用障碍物
+ * topic：/iflytek/camera_perception/3d_occupancy_objects
+ * 频率：20Hz,10Hz(各项目视效果和负载而定)
+ * 结构体：CameraPerceptionObjectsInfo
+*******************************************************************************/
+
+syntax = "proto2";
+
+package CameraPerception3DObjects;
+
+import "common.proto";
+
+message CameraPerceptionObjectsInfo3D {
+    optional Common.Header header = 1;        // 头信息
+    optional float voxel_grid_x = 2;          // x轴体素单元几何大小
+    optional float voxel_grid_y = 3;          // y轴体素单元几何大小
+    optional float voxel_grid_z = 4;          // z轴体素单元几何大小
+    repeated Common.Point3u_3D contour  = 5;     // 点集
+}

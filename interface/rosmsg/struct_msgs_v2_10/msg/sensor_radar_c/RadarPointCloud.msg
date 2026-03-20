@@ -1,0 +1,8 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+SensorMeta sensor_meta
+float32 short_dpl_unambi_scale_mps
+float32 long_dpl_unambi_scale_mps
+uint8 is_valid
+uint16 pointcloud_size
+RadarPointCloudUnit[2048] pointcloud_unit

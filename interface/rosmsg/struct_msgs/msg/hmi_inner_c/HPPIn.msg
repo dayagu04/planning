@@ -1,0 +1,16 @@
+int16 hpp_main_switch
+bool hpp_cancel_switch
+bool hpp_active_switch
+bool start_memory_parking
+bool continue_memory_parking
+bool stop_memory_parking
+bool start_route_learning
+bool complete_route_learning
+bool stop_route_learning
+bool resume_location
+bool save_route
+bool cancel_route
+int16 cruise_mode_switch
+uint8 need_gnss_loss_signal
+uint32 target_prk_space_id
+bool try_it_now_request

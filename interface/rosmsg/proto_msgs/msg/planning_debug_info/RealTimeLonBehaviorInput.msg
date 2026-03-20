@@ -1,0 +1,12 @@
+EgoInfo ego_info
+LatOutputInfo lat_output
+LatObsInfo lat_obs_info
+LaneChangeInfo lc_info
+StartStopInfo start_stop_info
+bool dbw_status
+LonDecisionInfo lon_decision_info
+DrivingFunctionInfo function_info
+bool is_on_ramp
+float64 dis_to_ramp
+float64 dis_to_merge
+ReferencePathPoint[] ref_path_points

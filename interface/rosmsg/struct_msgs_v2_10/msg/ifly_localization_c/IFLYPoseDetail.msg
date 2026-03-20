@@ -1,0 +1,1 @@
+IFLYPoseDetailInfo pose_detail_info

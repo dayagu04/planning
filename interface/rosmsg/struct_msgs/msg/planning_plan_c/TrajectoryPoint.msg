@@ -1,0 +1,9 @@
+float64 x
+float64 y
+float64 heading_yaw
+float64 curvature
+float64 t
+float64 v
+float64 a
+float64 distance
+float64 jerk

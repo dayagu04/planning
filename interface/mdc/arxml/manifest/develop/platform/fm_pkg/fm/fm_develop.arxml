@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformApplication</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>FmApplication</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>Execution</SHORT-NAME>
+                  <ELEMENTS>
+                    <EXECUTABLE>
+                      <SHORT-NAME>fm</SHORT-NAME>
+                      <ROOT-SW-COMPONENT-PROTOTYPE>
+                        <SHORT-NAME>fm</SHORT-NAME>
+                        <APPLICATION-TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/FmApplication/SwcComponent/fm</APPLICATION-TYPE-TREF>
+                      </ROOT-SW-COMPONENT-PROTOTYPE>
+                    </EXECUTABLE>
+                    <EXECUTABLE>
+                      <SHORT-NAME>fm_sea</SHORT-NAME>
+                      <ROOT-SW-COMPONENT-PROTOTYPE>
+                        <SHORT-NAME>fm</SHORT-NAME>
+                        <APPLICATION-TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/FmApplication/SwcComponent/fm</APPLICATION-TYPE-TREF>
+                      </ROOT-SW-COMPONENT-PROTOTYPE>
+                    </EXECUTABLE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE S="">
+                  <SHORT-NAME>SwcComponent</SHORT-NAME>
+                  <ELEMENTS>
+                    <ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                      <SHORT-NAME>fm</SHORT-NAME>
+                      <PORTS>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmLowPowerNotifyPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmQueryPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmReportEventPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>QARPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmAlarmReceiveRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmMcuReportRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>SmPluginFromCfgRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmSmClientRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmReportAlmProcPolicyPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmRequiredNrmRport</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/NrmcServiceInterface/NrmCenterServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmTransMcuDataPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmSmCenterRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/SmcInnerServiceInterface/SmCenter</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmReportEventRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmPlatformStateAgentRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>FmForwardFaultRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                      </PORTS>
+                    </ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                    <COMPOSITION-SW-COMPONENT-TYPE>
+                      <SHORT-NAME>fm_diag</SHORT-NAME>
+                      <COMPONENTS>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/FmApplication/SwcComponent/fm</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>diag_agent</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/DiagAgentApplication/SwComponent/diag_agent</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                      </COMPONENTS>
+                    </COMPOSITION-SW-COMPONENT-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

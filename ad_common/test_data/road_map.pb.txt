@@ -1,0 +1,220 @@
+timestamp: 0
+lanes {
+  lane_id: 1
+  sequence_id: 1
+  points_on_central_line {
+    x: 0.0
+    y: -4.0
+    z: 0.0
+  }
+  points_on_central_line {
+    x: 100.0
+    y: -4.0
+    z: 0.0
+  }
+  central_points_offset: [0.0, 100.0]
+  width: [4.0, 4.0]
+  curvature: [0.0, 0.0]
+  heading: [0.0, 0.0]
+  lane_direction: GO_STRAIGHT
+  lane_type: LANETYPE_UNKNOWN
+  left_lane_boundary_id: 2
+  right_lane_boundary_id: 1
+  left_road_boundary_id: 2
+  right_road_boundary_id: 1
+  min_speed_limit: 0.0
+  max_speed_limit: 20.0
+  predecessor_lane_id: []
+  successor_lane_id: []
+  left_neighbor_forward_lane_id: 2
+  lane_group_id: 1
+  overlaps: []
+}
+
+lanes {
+  lane_id: 2
+  sequence_id: 2
+  points_on_central_line {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  }
+  points_on_central_line {
+    x: 100.0
+    y: 0.0
+    z: 0.0
+  }
+  central_points_offset: [0.0, 100.0]
+  width: [4.0, 4.0]
+  curvature: [0.0, 0.0]
+  heading: [0.0, 0.0]
+  lane_direction: GO_STRAIGHT
+  lane_type: LANETYPE_UNKNOWN
+  left_lane_boundary_id: 3
+  right_lane_boundary_id: 2
+  left_road_boundary_id: 2
+  right_road_boundary_id: 1
+  min_speed_limit: 0.0
+  max_speed_limit: 20.0
+  predecessor_lane_id: []
+  successor_lane_id: []
+  left_neighbor_forward_lane_id: 3
+  right_neighbor_forward_lane_id: 1
+  lane_group_id: 1
+  overlaps: []
+}
+
+lanes {
+  lane_id: 3
+  sequence_id: 3
+  points_on_central_line {
+    x: 0.0
+    y: 4.0
+    z: 0.0
+  }
+  points_on_central_line {
+    x: 100.0
+    y: 4.0
+    z: 0.0
+  }
+  central_points_offset: [0.0, 100.0]
+  width: [4.0, 4.0]
+  curvature: [0.0, 0.0]
+  heading: [0.0, 0.0]
+  lane_direction: GO_STRAIGHT
+  lane_type: LANETYPE_UNKNOWN
+  left_lane_boundary_id: 4
+  right_lane_boundary_id: 3
+  left_road_boundary_id: 2
+  right_road_boundary_id: 1
+  min_speed_limit: 0.0
+  max_speed_limit: 20.0
+  predecessor_lane_id: []
+  successor_lane_id: []
+  right_neighbor_forward_lane_id: 2
+  lane_group_id: 1
+  overlaps: []
+}
+
+lane_boundaries {
+  boundary_id: 1
+  boundary_attributes {
+    points {
+      x: 0.0
+      y: -6.0
+      z: 0.0
+    }
+    points {
+      x: 100.0
+      y: -6.0
+      z: 0.0
+    }
+    points_s: [0.0, 100.0]
+    types: [SOLID]
+    colors: [WHITE]
+  }
+}
+
+lane_boundaries {
+  boundary_id: 2
+  boundary_attributes {
+    points {
+      x: 0.0
+      y: -2.0
+      z: 0.0
+    }
+    points {
+      x: 100.0
+      y: -2.0
+      z: 0.0
+    }
+    points_s: [0.0, 100.0]
+    types: [DASH]
+    colors: [WHITE]
+  }
+}
+
+lane_boundaries {
+  boundary_id: 3
+  boundary_attributes {
+    points {
+      x: 0.0
+      y: 2.0
+      z: 0.0
+    }
+    points {
+      x: 100.0
+      y: 2.0
+      z: 0.0
+    }
+    points_s: [0.0, 100.0]
+    types: [DASH]
+    colors: [WHITE]
+  }
+}
+
+lane_boundaries {
+  boundary_id: 4
+  boundary_attributes {
+    points {
+      x: 0.0
+      y: 6.0
+      z: 0.0
+    }
+    points {
+      x: 100.0
+      y: 6.0
+      z: 0.0
+    }
+    points_s: [0.0, 100.0]
+    types: [SOLID]
+    colors: [WHITE]
+  }
+}
+
+road_boundaries {
+  boundary_id: 1
+  boundary_attributes {
+    points {
+      x: 0.0
+      y: -6.0
+      z: 0.0
+    }
+    points {
+      x: 100.0
+      y: -6.0
+      z: 0.0
+    }
+    points_s: [0.0, 100.0]
+    types: [SOLID]
+    colors: [WHITE]
+  }
+}
+
+road_boundaries {
+  boundary_id: 2
+  boundary_attributes {
+    points {
+      x: 0.0
+      y: 6.0
+      z: 0.0
+    }
+    points {
+      x: 100.0
+      y: 6.0
+      z: 0.0
+    }
+    points_s: [0.0, 100.0]
+    types: [SOLID]
+    colors: [WHITE]
+  }
+}
+
+lane_groups {
+  lane_group_id: 1
+  length: 100.0
+  way_forms: [MAIN_ROAD]
+  predecessor_lane_group_ids: []
+  successor_lane_group_ids: []
+  lane_ids: [1, 2, 3]
+}

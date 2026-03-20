@@ -1,0 +1,3 @@
+int32 warning_judge_status
+uint32 warning_judge_type
+uint32 warning_bounding_distance

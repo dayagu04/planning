@@ -1,0 +1,55 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "fm_b_service_exec/fm_b_service_libExecutable10Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10003",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoSdmap_ProvidedSomeipServiceInstance2"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10007",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoGnssServiceNode_ProvidedSomeipServiceInstance6"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10008",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoEhr_ProvidedSomeipServiceInstance7"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10010",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoLocalization_ProvidedSomeipServiceInstance9"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10011",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoSocBCommunication_ProvidedSomeipServiceInstance10"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10017",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoCameraNodePanoramaView_ProvidedSomeipServiceInstance16"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10018",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoPanoramaViewCameraPerception_ProvidedSomeipServiceInstance17"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10023",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoHmiService_ProvidedSomeipServiceInstance22"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "2",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoMdcB_ProvidedSomeipServiceInstance27"
+        }
+      ]
+    }
+  ]
+}

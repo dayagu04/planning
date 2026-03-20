@@ -1,0 +1,5 @@
+uint8 aeb_state
+bool aeb_deceleration_request_status
+float32 aeb_deceleration_request_value
+bool aeb_hold_request_status
+RiskObjInfo aeb_risk_obj

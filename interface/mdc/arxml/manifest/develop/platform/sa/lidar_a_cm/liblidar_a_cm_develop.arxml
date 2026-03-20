@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="79aeee67-df44-4475-b275-cd3845183322">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformApplication</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE S="">
+              <SHORT-NAME>LidarCmCenterApplication</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>Execution</SHORT-NAME>
+                  <ELEMENTS>
+                    <EXECUTABLE UUID="">
+                      <SHORT-NAME>liblidar_a_cm</SHORT-NAME>
+                      <ROOT-SW-COMPONENT-PROTOTYPE S="">
+                        <SHORT-NAME>liblidar_a_cm</SHORT-NAME>
+                        <APPLICATION-TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/LidarCmCenterApplication/SwComponent/liblidar_a_cm</APPLICATION-TYPE-TREF>
+                      </ROOT-SW-COMPONENT-PROTOTYPE>
+                    </EXECUTABLE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>SwComponent</SHORT-NAME>
+                  <ELEMENTS>
+                    <ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                      <SHORT-NAME>liblidar_a_cm</SHORT-NAME>
+                      <PORTS>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarCfgClientRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarChassisRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActCompensationServiceInterface/ActCompensationServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarCmFromBodyRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/BodyServiceInterface/BodyReportServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>LidarCmToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/LidarServiceInterface/LidarServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>LidarDataFlowPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarMntRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/MntAgentServiceInterface/MntDelayServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarNrmcRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/NrmcServiceInterface/NrmCenterServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>LidarTimeDelayPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>reportEventRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarDevmRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarActCompensationRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActCompensationServiceInterface/ActCompensationServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarActCompensationGacRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/ActCompensationGacServiceInterface/ActCompensationGacServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>LidarRawCmToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/LidarRawServiceInterface/LidarRawServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                      </PORTS>
+                    </ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                    <COMPOSITION-SW-COMPONENT-TYPE S="">
+                      <SHORT-NAME>lidar_a</SHORT-NAME>
+                      <COMPONENTS>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>diag_agent</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/DiagAgentApplication/SwComponent/diag_agent</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                        <SW-COMPONENT-PROTOTYPE>
+                          <SHORT-NAME>lidar_a_cm</SHORT-NAME>
+                          <TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/LidarCmCenterApplication/SwComponent/liblidar_a_cm</TYPE-TREF>
+                        </SW-COMPONENT-PROTOTYPE>
+                      </COMPONENTS>
+                    </COMPOSITION-SW-COMPONENT-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

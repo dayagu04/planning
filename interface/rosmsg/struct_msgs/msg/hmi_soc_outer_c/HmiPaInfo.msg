@@ -1,0 +1,11 @@
+int16 pa_status
+int16 pa_notify
+bool pa_active_resp
+bool pa_active_denied
+float32 pa_remain_distance
+float32 remain_distance_percentage
+int16 pa_direction
+int16[2] available_direction
+int16 ftba_active_button_sts
+int16 pa_continue_button_sts
+int16 pa_start_button_sts

@@ -1,0 +1,9 @@
+uint8 point_id
+bool point_valid
+int16 point_x
+int16 point_y
+uint8 point_error_a
+uint8 point_error_b
+float32 point_error_theta
+uint8 point_high
+uint8 point_exist_probability

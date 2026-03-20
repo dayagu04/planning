@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>MdcPlatformServices</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>PlatformServiceInterface</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>FmAlarmReceiveServiceInterface</SHORT-NAME>
+                  <ELEMENTS>
+                    <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>FmAlarmReceiveServiceDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportAlarm_Someip</SHORT-NAME>
+                          <METHOD-REF DEST="CLIENT-SERVER-OPERATION">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService/ReportAlarm</METHOD-REF>
+                          <METHOD-ID>1</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <SERVICE-INTERFACE-REF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService</SERVICE-INTERFACE-REF>
+                      <SERVICE-INTERFACE-ID>1100</SERVICE-INTERFACE-ID>
+                      <SERVICE-INTERFACE-VERSION>
+                        <MAJOR-VERSION>1</MAJOR-VERSION>
+                        <MINOR-VERSION>0</MINOR-VERSION>
+                      </SERVICE-INTERFACE-VERSION>
+                    </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                    <SERVICE-INTERFACE>
+                      <SHORT-NAME>FmAlarmReceiveService</SHORT-NAME>
+                      <IS-SERVICE>true</IS-SERVICE>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <METHODS>
+                        <CLIENT-SERVER-OPERATION>
+                          <SHORT-NAME>ReportAlarm</SHORT-NAME>
+                          <ARGUMENTS>
+                            <ARGUMENT-DATA-PROTOTYPE UUID="">
+                              <SHORT-NAME>alarmMsg</SHORT-NAME>
+                              <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/AlarmInfo</TYPE-TREF>
+                              <DIRECTION>IN</DIRECTION>
+                            </ARGUMENT-DATA-PROTOTYPE>
+                            <ARGUMENT-DATA-PROTOTYPE UUID="">
+                              <SHORT-NAME>result</SHORT-NAME>
+                              <TYPE-TREF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-TREF>
+                              <DIRECTION>OUT</DIRECTION>
+                            </ARGUMENT-DATA-PROTOTYPE>
+                          </ARGUMENTS>
+                        </CLIENT-SERVER-OPERATION>
+                      </METHODS>
+                    </SERVICE-INTERFACE>
+                    <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>FmReportAlmProcPolicyServiceDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportAlmProcPolicy_Someip</SHORT-NAME>
+                          <METHOD-ID>1</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>DisableOneAlarm_Someip</SHORT-NAME>
+                          <METHOD-ID>2</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <SERVICE-INTERFACE-ID>1101</SERVICE-INTERFACE-ID>
+                      <SERVICE-INTERFACE-VERSION>
+                        <MAJOR-VERSION>1</MAJOR-VERSION>
+                        <MINOR-VERSION>0</MINOR-VERSION>
+                      </SERVICE-INTERFACE-VERSION>
+                    </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DataTypes</SHORT-NAME>
+                  <ELEMENTS>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE S="">
+                      <SHORT-NAME>AlarmInfo</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>alarmId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt16</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>alarmObj</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt16</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>clss</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>level</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>status</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>time</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>desc</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

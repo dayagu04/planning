@@ -1,0 +1,2 @@
+Obstacle common_info
+CameraPerceptionAdditional additional_info

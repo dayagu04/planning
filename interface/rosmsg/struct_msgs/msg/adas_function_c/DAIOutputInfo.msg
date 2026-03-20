@@ -1,0 +1,2 @@
+int16 dai_state
+bool dai_warning_request

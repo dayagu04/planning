@@ -1,0 +1,1 @@
+Point2d[] corner_point

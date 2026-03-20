@@ -1,0 +1,2 @@
+uint8 u8s_uss_echo_type
+uint8 u16s_uss_echo_timestamp

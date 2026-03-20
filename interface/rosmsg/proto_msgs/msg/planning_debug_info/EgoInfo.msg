@@ -1,0 +1,4 @@
+float64 ego_v
+float64 ego_cruise
+float64 ego_acc
+float64 ego_steer_angle

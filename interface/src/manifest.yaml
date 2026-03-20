@@ -1,0 +1,1608 @@
+topo:
+  components:
+  - name: around_view_camera_perception
+    desc: "环视相机感知"
+    hz: 0
+    alias: Aper
+    pports:
+    - name: IflytekCameraPerceptionOccupancyObjects
+      mviz: /iflytek/camera_perception/occupancy_objects
+      type: iflyauto::CameraPerceptionOccObjectsInfo
+      desc: "环视通用障碍物信息(2D轮廓点)"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerception3dGeneralObjects
+      mviz: /iflytek/camera_perception/3d_general_objects
+      type: iflyauto::CameraPerceptionObjectsInfo
+      desc: "3D-box障碍物信息(3D-BOX)"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionParkingSlotList
+      mviz: /iflytek/camera_perception/parking_slot_list
+      type: iflyauto::ParkingSlotSelectInfo
+      desc: "视觉感知车位线"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionGroundLine
+      mviz: /iflytek/camera_perception/ground_line
+      type: iflyauto::GroundLinePerceptionInfo
+      desc: "视觉感知接地线"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionParkingLaneLine
+      mviz: /iflytek/camera_perception/parking_lane_line
+      type: iflyauto::LaneLineSet
+      desc: "环视感知车道线（泊车用）"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionDeceler
+      mviz: /iflytek/camera_perception/deceler
+      type: iflyauto::DecelerPerceptionInfo
+      desc: "视觉感知减速带"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionAroundView2DBoundingBoxes
+      mviz: /iflytek/camera_perception/around_view_2d_bounding_boxes
+      type: iflyauto::CameraPerceptionAllView2DBoundingBoxes
+      desc: "视觉感知2D边界框"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerception3dOccupancyObjects
+      mviz: /iflytek/camera_perception/3d_occupancy_objects
+      type: iflyauto::StructContainer
+      desc: "3D通用障碍物信息(3D体素,用于可视化显示)"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionAroundPhmReport
+      mviz: /iflytek/camera_perception/around/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "环视健康管理信息"
+      desc_hz: "10Hz"
+    rports:
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekUssUsswaveInfo
+      type: iflyauto::UssPdcIccSendDataType
+    fm_pports:
+    - name: IflytekAlarmInfoAroundViewCameraPerception
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+    cam_rports:
+    - name: IflytekSensorCameraSurroundResizeImageFront
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundResizeImageLeft
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundResizeImageRear
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundResizeImageRight
+      type: RawBuffer
+  - name: calibration
+    desc: "在线标定"
+    hz: 0
+    alias: Cali
+    pports:
+    - name: IflytekCalibrationCalibInfo
+      mviz: /iflytek/calibration/calib_info
+      type: iflyauto::CalibInfo
+      desc: "标定结果"
+      desc_hz: "不定帧率"
+    - name: IflytekCalibrationPhmReport
+      mviz: /iflytek/calibration/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "在线标定健康管理信息"
+      desc_hz: "不定帧率"
+    - name: IflytekCalibrationDebugInfo
+      mviz: /iflytek/calibration/debug_info
+      type: iflyauto::StructContainer
+      desc: "calibration模块调试信息"
+      desc_hz: "不定帧率"
+    rports:
+    - name: IflytekFusionObjects
+      type: iflyauto::FusionObjectsInfo
+    - name: IflytekSensorImu
+      type: iflyauto::IFLYIMU
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    fm_pports:
+    - name: IflytekAlarmInfoCalibration
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+    cam_rports:
+    - name: IflytekSensorCameraSurroundResizeImageFront
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundResizeImageLeft
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundResizeImageRear
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundResizeImageRight
+      type: RawBuffer
+    - name: IflytekSensorCameraFront120FullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraFront120FullResolutionClearH265
+      type: RawBuffer
+    - name: IflytekSensorCameraFront30
+      type: RawBuffer
+    # - name: IflytekSensorCameraRearMDCA
+    #   type: RawBuffer
+    - name: IflytekSensorCameraRear
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFl
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFr
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRl
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRr
+      type: RawBuffer
+    - name: IflytekSensorLidarRsp128
+      type: RawBuffer
+    methods:
+    - name: IflytekPostSaleCalibrationActivation
+      mviz: /iflytek/post_sale_calibration/activation
+      type_in: iflyauto::PostSaleCalibActiveInfo
+      type_out: iflyauto::PostSaleCalibActiveInfoResult
+      desc: "售后标定激活"
+      desc_hz: "无固定值"
+    - name: IflytekPostSaleCalibrationStop
+      mviz: /iflytek/post_sale_calibration/stop
+      type_in: iflyauto::PostSaleCalibStopReqInfo
+      type_out: iflyauto::PostSaleCalibStopResult
+      desc: "售后标定终止"
+      desc_hz: "无固定值"
+    - name: IflytekPostSaleCalibrationResult
+      mviz: /iflytek/post_sale_calibration/result
+      type_in: iflyauto::PostSaleCalibGetCalibResReqInfo
+      type_out: iflyauto::PostSaleCalibResults
+      desc: "工厂标定标定结果传递"
+      desc_hz: "无固定值"
+  - name: control
+    desc: "控制"
+    hz: 50
+    alias: Ctrl
+    pports:
+    - name: IflytekControlControlCommand
+      mviz: /iflytek/control/control_command
+      type: iflyauto::ControlOutput
+      desc: "control模块输出"
+      desc_hz: "50Hz"
+    - name: IflytekControlDebugInfo
+      mviz: /iflytek/control/debug_info
+      type: iflyauto::StructContainer
+      desc: "control调试信息"
+      desc_hz: "50Hz"
+    - name: IflytekControlPhmReport
+      mviz: /iflytek/control/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "control健康管理信息"
+      desc_hz: "50Hz"
+    rports:
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekPlanningPlan
+      type: iflyauto::PlanningOutput
+    - name: IflytekPlanningHmi
+      type: iflyauto::PlanningHMIOutputInfoStr
+    fm_pports:
+    - name: IflytekAlarmInfoControl
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: ehp
+    desc: ""
+    hz: 10
+    alias: Ehp
+    pports:
+    - name: IflytekEhpParkingMapFileInfo
+      mviz: /iflytek/ehp/parking_map_file_info
+      type: iflyauto::ParkingMapFileInfo
+      desc: "hpp地图信息（建图文件命名使用）"
+      desc_hz: "1Hz"
+    - name: IflytekEhpMapManager
+      mviz:  /iflytek/ehp/map_manager
+      type: iflyauto::EhpOutput
+      desc: "mapping_status信息"
+      desc_hz: "触发式，不计帧率"
+    - name: IflytekEhpParkingMap
+      mviz: /iflytek/ehp/parking_map
+      type: iflyauto::StructContainer
+      desc: "hpp地图信息（地图使用）"
+      desc_hz: "1Hz"
+    - name: IflytekEhpParkingMapToHmi
+      mviz: /iflytek/ehp/parking_map_to_hmi
+      type: iflyauto::StructContainer
+      desc: "hpp地图信息（hmi使用）"
+      desc_hz: "触发式，不计帧率"
+    - name: IflytekEhpPhmReport
+      mviz: /iflytek/ehp/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "hpp地图健康管理信息"
+      desc_hz: "1Hz"
+    rports:
+    - name: IflytekMegaMappingStatus
+      type: iflyauto::MappingStatusInfo
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekSensorGnss
+      type: iflyauto::IFLYGnss
+    - name: IflytekLocalizationSemanticInfo
+      type: iflyauto::SemanticInfo
+    fm_pports:
+    - name: IflytekAlarmInfoEhp
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: ehr
+    desc: "地图"
+    hz: 1
+    alias: Ehr
+    pports:
+    - name: IflytekEhrSdmapInfo
+      mviz: /iflytek/ehr/sdmap_info
+      type: SdMapSwtx::SdMap
+      desc: "SD地图信息"
+      desc_hz: "1Hz"
+    - name: IflytekEhrSdpromapInfo
+      mviz: /iflytek/ehr/sdpromap_info
+      type: iflyauto::StructContainer
+      desc: "SD地图增补信息"
+      desc_hz: "1Hz"
+    - name: IflytekEhrStaticMap
+      mviz: /iflytek/ehr/static_map
+      type: Map::StaticMap
+      desc: "导航地图信息"
+      desc_hz: "1Hz"
+    - name: IflytekEhrDebuginfo
+      mviz: /iflytek/ehr/debuginfo
+      type: iflyauto::StructContainer
+      desc: "SD地图调试信息"
+      desc_hz: "非固定频率"
+      mviz_only: true
+    - name: IflytekEhrPhmReport
+      mviz: /iflytek/ehr/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "地图健康管理信息"
+      desc_hz: "1Hz"
+    rports:
+    - name: IflytekSdmapSdmapInfo  
+      type: std::string
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekEhpParkingMap
+      type: iflyauto::StructContainer
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    fm_pports:
+    - name: IflytekAlarmInfoEhr
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: factory_calibration
+    desc: "工厂标定"
+    hz: 0
+    alias: Fcal
+    rports:
+    - name: IflytekSensorImu
+      type: iflyauto::IFLYIMU
+    fm_pports:
+    - name: IflytekAlarmInfoFactoryCalibration
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+    cam_rports:
+    - name: IflytekSensorCameraSurroundFrontFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundLeftFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundRightFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundRearFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraFront120FullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraFront30FullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraRearFullResolutionH265MDCA
+      type: RawBuffer
+    - name: IflytekSensorCameraRearFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFlFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFrFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRlFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRrFullResolutionH265
+      type: RawBuffer
+    methods:
+    - name: IflytekFactoryCalibrationActivation
+      mviz: /iflytek/factory_calibration/activation
+      type_in: iflyauto::FactoryCalibActiveInfo
+      type_out: iflyauto::FactoryCalibActiveInfoResult
+      desc: "工厂标定激活模式"
+      desc_hz: "无固定值"
+    - name: IflytekFactoryCalibrationResult
+      mviz: /iflytek/factory_calibration/result
+      type_in: iflyauto::FactoryCalibGetCalibResReqInfo
+      type_out: iflyauto::FactoryCalibResults
+      desc: "工厂标定标定结果传递"
+      desc_hz: "无固定值"
+  - name: system_monitor_a
+    desc: "系统负载监控"
+    hz: once
+    alias: Sma
+    pports:
+    - name: IflytekSystemAProcessLoading
+      mviz: /iflytek/system_a/process_loading
+      type: iflyauto::StructContainer
+      desc: "进程负载"
+      desc_hz: "不定频率"
+  - name: system_monitor_b
+    desc: "系统负载监控"
+    hz: once
+    alias: Smb
+    pports:
+    - name: IflytekSystemBProcessLoading
+      mviz: /iflytek/system_b/process_loading
+      type: iflyauto::StructContainer
+      desc: "进程负载"
+      desc_hz: "不定频率"
+  - name: function_data_loop_a
+    desc: "数据回流"
+    hz: 20
+    alias: Fdl
+    pports:
+    - name: IflytekFdlTriggerAck
+      mviz: /iflytek/fdl/trigger_ack
+      type: iflyauto::FdlTriggerState
+      desc: "数据回流状态"
+      desc_hz: "不定频率"
+    - name: IflytekFdlAPhmReport
+      mviz: /iflytek/fdl/a_phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "A面数据回流健康管理信息"
+      desc_hz: "1Hz"
+    rports:
+    - name: IflytekFdlTrigger
+      type: iflyauto::FdlTriggerState
+    fm_pports:
+    - name: IflytekAlarmInfoFdl
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: function_data_loop
+    desc: "数据回流"
+    hz: 20
+    alias: Fdl
+    pports:
+    - name: IflytekFdlUploadState
+      mviz: /iflytek/fdl/upload_state
+      type: iflyauto::FdlUploadState
+      desc: "数据回流状态"
+      desc_hz: "不定频率"
+    - name: IflytekFdlTrigger
+      mviz: /iflytek/fdl/trigger
+      type: iflyauto::FdlTriggerState
+      desc: "数据回流触发信号"
+      desc_hz: "不定频率"
+    - name: IflytekFdlPhmReport
+      mviz: /iflytek/fdl/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "数据回流健康管理信息"
+      desc_hz: "1Hz"
+    methods:
+    - name: IflytekFdlNetStatCheck
+      mviz: /iflytek/fdl/net_stat_check
+      type_in: iflyauto::FdlNetStatCheck
+      type_out: iflyauto::FdlNetStatCheck
+      desc: "数据回流车云链路检测信号"
+      desc_hz: "不定频率"
+    - name: IflytekOtaLogUploadRequest
+      mviz: /iflytek/ota/log_upload_request
+      type_in: iflyauto::OTALogUploadRequest
+      type_out: iflyauto::OTALogUploadRequest
+      desc: "OTA日志上传请求信号"
+      desc_hz: "不定频率"
+    rports:
+    - name: IflytekCalibrationCalibInfo
+      type: iflyauto::CalibInfo
+    - name: IflytekCalibrationDebugInfo
+      type: iflyauto::StructContainer
+    - name: IflytekCameraPerceptionLaneTopo
+      type: iflyauto::LaneLineSet
+    - name: IflytekCameraPerceptionLaneLines
+      type: iflyauto::LaneLineSet
+    - name: IflytekCameraPerceptionObjects
+      type: iflyauto::CameraPerceptionObjectsInfo
+    - name: IflytekPredictionPredictionResult
+      type: iflyauto::PredictionResult
+    - name: IflytekCameraPerceptionTrafficSignRecognition
+      type: iflyauto::CameraPerceptionTsrInfo
+    - name: IflytekCameraPerceptionOccGrid
+      type: iflyauto::CameraPerceptionOccGridInfo
+    - name: IflytekCameraPerceptionDrivableSpaceGrid
+      type: iflyauto::CameraPerceptionDrivableSpaceGridInfo
+    - name: IflytekCameraPerceptionScene
+      type: iflyauto::CameraPerceptionScene
+    - name: IflytekSensorImu
+      type: iflyauto::IFLYIMU
+    - name: IflytekSensorGnss
+      type: iflyauto::IFLYGnss
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekRadarFlPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFrPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarRlPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarRrPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFmPerception4dPointCloud
+      type: iflyauto::RadarPointCloud
+    - name: IflytekRadarFmPerception4dTarget
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFmPerception4dObstacle
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekUssUsswaveInfo
+      type: iflyauto::UssPdcIccSendDataType
+    - name: IflytekSdmapSdmapInfo
+      type: std::string
+    - name: IflytekHmiInner
+      type: iflyauto::HmiInner
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekFsmHmiSocOuter
+      type: iflyauto::HmiSocOuter
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekLocalizationSemanticInfo
+      type: iflyauto::SemanticInfo
+    - name: IflytekEhrStaticMap
+      type: Map::StaticMap
+    - name: IflytekEhrSdmapInfo
+      type: SdMapSwtx::SdMap
+    - name: IflytekEhrSdpromapInfo
+      type: iflyauto::StructContainer
+    - name: IflytekFusionObjects
+      type: iflyauto::FusionObjectsInfo
+    - name: IflytekFusionObjectsCompress
+      type: iflyauto::FusionObjectsInfoCompress
+    - name: IflytekFusionOccupancyObjects
+      type: iflyauto::FusionOccupancyObjectsInfo
+    - name: IflytekFusionSpatialParkingSlot
+      type: iflyauto::FusionSpatialParkingSlot
+    - name: IflytekFusionUssPerceptionInfo
+      type: iflyauto::UssPerceptInfo
+    - name: IflytekPlanningPlan
+      type: iflyauto::PlanningOutput
+    - name: IflytekPlanningHmi
+      type: iflyauto::PlanningHMIOutputInfoStr
+    - name: IflytekControlControlCommand
+      type: iflyauto::ControlOutput
+    - name: IflytekAdasFunctionAdas
+      type: iflyauto::ADASFunctionOutputInfo
+    - name: IflytekFusionRoadFusion
+      type: iflyauto::RoadInfo
+    - name: IflytekFusionRoadFusionCompress
+      type: iflyauto::RoadInfoCompress
+    - name: IflytekFusionParkingSlot
+      type: iflyauto::ParkingFusionInfo
+    - name: IflytekFusionGroundLine
+      type: iflyauto::FusionGroundLineInfo
+    - name: IflytekFusionSpeedBump
+      type: iflyauto::FusionDecelerInfo
+    - name: IflytekMegaLocalMap
+      type: iflyauto::ParkingInfo
+    - name: IflytekMegaMappingStatus
+      type: iflyauto::MappingStatusInfo
+    - name: IflytekEhpParkingMapFileInfo
+      type: iflyauto::ParkingMapFileInfo
+    - name: IflytekEhpMapManager
+      type: iflyauto::EhpOutput
+    - name: IflytekEhpParkingMap
+      type: iflyauto::StructContainer
+    - name: IflytekEhpParkingMapToHmi
+      type: iflyauto::StructContainer
+    - name: IflytekCameraPerceptionOccupancyObjects
+      type: iflyauto::CameraPerceptionOccObjectsInfo
+    - name: IflytekCameraPerception3dGeneralObjects
+      type: iflyauto::CameraPerceptionObjectsInfo
+    - name: IflytekCameraPerceptionParkingSlotList
+      type: iflyauto::ParkingSlotSelectInfo
+    - name: IflytekCameraPerceptionGroundLine
+      type: iflyauto::GroundLinePerceptionInfo
+    - name: IflytekCameraPerceptionParkingLaneLine
+      type: iflyauto::LaneLineSet
+    - name: IflytekCameraPerceptionDeceler
+      type: iflyauto::DecelerPerceptionInfo
+    - name: IflytekAlarmInfoFmAService
+      type: iflyauto::StructContainer
+    - name: IflytekDTCInfoFmAService
+      type: iflyauto::IFLYAllDtcState
+    - name: IflytekSystemVersion
+      type: iflyauto::SystemVersion
+    - name: IflytekFdlTriggerAck
+      type: iflyauto::FdlTriggerState
+    - name: IflytekPlanningDebugInfo
+      type: iflyauto::StructContainer
+    - name: IflytekControlDebugInfo
+      type: iflyauto::StructContainer
+    - name: IflytekAdasFunctionDebugInfo
+      type: iflyauto::ADASFunctionDebugOutputInfo
+    - name: IflytekFmADegradeFunciton
+      type: iflyauto::DegradedDrivingFunction
+    - name: IflytekFmAMcuSentinel
+      type: iflyauto::SENTINEL_Soc2Mcu
+    - name: IflytekMcuFmASentinel
+      type: iflyauto::SENTINEL_Mcu2Soc
+    - name: IflytekEngineerInner
+      type: iflyauto::Engineer_Inner
+    - name: IflytekCameraPerceptionAroundView2DBoundingBoxes
+      type: iflyauto::CameraPerceptionAllView2DBoundingBoxes
+    - name: IflytekCameraPerceptionPanoramaView2DBoundingBoxes
+      type: iflyauto::CameraPerceptionAllView2DBoundingBoxes
+    - name: IflytekDiskStatePhmAFdl
+      type: iflyauto::StorageInfo
+    - name: IflytekDiskStatePhmBFdl
+      type: iflyauto::StorageInfo
+    - name: IflytekDiskCleanRequestPhmBFdl
+      type: iflyauto::DiskCleanRequestList
+    - name: IflytekSystemAProcessLoading
+      type: iflyauto::StructContainer
+    - name: IflytekSystemBProcessLoading
+      type: iflyauto::StructContainer
+    - name: IflytekCanTxInfo
+      type: iflyauto::StructContainer
+    fm_pports:
+    - name: IflytekAlarmInfoFdl
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+    cam_rports:
+    - name: IflytekSensorCameraSurroundFrontFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundLeftFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundRearFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSurroundRightFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraRearFullResolutionH265MDCA
+      type: RawBuffer
+    - name: IflytekSensorCameraRearFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRrFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRlFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFrFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFlFullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraFront30FullResolutionH265
+      type: RawBuffer
+    - name: IflytekSensorCameraFront120FullResolutionH265
+      type: RawBuffer
+  - name: finite_state_manager
+    desc: "状态机"
+    hz: 20
+    alias: Fsm
+    pports:
+    - name: IflytekFsmSocState
+      mviz: /iflytek/fsm/soc_state
+      type: iflyauto::FuncStateMachine
+      desc: "功能状态机输出"
+      desc_hz: "20Hz"
+    - name: IflytekFsmHmiSocOuter
+      mviz: /iflytek/fsm/hmi_soc_outer
+      type: iflyauto::HmiSocOuter
+      desc: "hmi的输出到仪表、可视化的信号"
+      desc_hz: "20Hz"
+    - name: IflytekFsmPhmReport
+      mviz: /iflytek/fsm/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "状态机健康管理信息"
+      desc_hz: "20Hz"
+    rports:
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekSensorGnss
+      type: iflyauto::IFLYGnss
+    - name: IflytekEhrSdmapInfo
+      type: SdMapSwtx::SdMap
+    - name: IflytekEhrSdpromapInfo
+      type: iflyauto::StructContainer
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekLocalizationSemanticInfo
+      type: iflyauto::SemanticInfo
+    - name: IflytekHmiInner
+      type: iflyauto::HmiInner
+    - name: IflytekEhpParkingMap
+      type: iflyauto::StructContainer
+    - name: IflytekEhpMapManager
+      type: iflyauto::EhpOutput
+    - name: IflytekMegaMappingStatus
+      type: iflyauto::MappingStatusInfo
+    - name: IflytekCameraPerceptionGroundLine
+      type: iflyauto::GroundLinePerceptionInfo
+    - name: IflytekCameraPerceptionDeceler
+      type: iflyauto::DecelerPerceptionInfo
+    - name: IflytekCameraPerceptionLaneLines
+      type: iflyauto::LaneLineSet
+    - name: IflytekFusionRoadFusion
+      type: iflyauto::RoadInfo
+    - name: IflytekFusionParkingSlot
+      type: iflyauto::ParkingFusionInfo
+    - name: IflytekCameraPerceptionTrafficSignRecognition
+      type: iflyauto::CameraPerceptionTsrInfo
+    - name: IflytekCameraPerceptionDrivableSpaceGrid
+      type: iflyauto::CameraPerceptionDrivableSpaceGridInfo
+    - name: IflytekFusionObjects
+      type: iflyauto::FusionObjectsInfo
+    - name: IflytekFusionSpatialParkingSlot
+      type: iflyauto::FusionSpatialParkingSlot
+    - name: IflytekPlanningHmi
+      type: iflyauto::PlanningHMIOutputInfoStr
+    - name: IflytekPlanningPlan
+      type: iflyauto::PlanningOutput
+    - name: IflytekEngineerInner
+      type: iflyauto::Engineer_Inner
+    - name: IflytekFmADegradeFunciton
+      type: iflyauto::DegradedDrivingFunction
+    - name: IflytekFusionOccupancyObjects
+      type: iflyauto::FusionOccupancyObjectsInfo
+    - name: IflytekAdasFunctionAdas
+      type: iflyauto::ADASFunctionOutputInfo
+    fm_pports:
+    - name: IflytekAlarmInfoFiniteStateManager
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  # - name: finite_state_manager_mcu
+  #   pports:
+  #   - name: IflytekFsmMcuOut
+  #     desc: "系统状态机输出(暂无),MCU用"
+  #     type: iflyauto::FsmMcuOut
+  #     head: fsm_mcu_out_c.h
+  - name: localization
+    desc: "定位"
+    hz: 100
+    alias: Loca
+    pports:
+    - name: IflytekLocalizationEgomotion
+      mviz: /iflytek/localization/egomotion
+      type: iflyauto::IFLYLocalization
+      desc: "定位信息"
+      desc_hz: "100Hz"
+    - name: IflytekLocalizationSemanticInfo
+      mviz: /iflytek/localization/semantic_info
+      type: iflyauto::SemanticInfo
+      desc: "语义信息"
+      desc_hz: "10Hz"
+    - name: IflytekLocalizationPhmReport
+      mviz: /iflytek/localization/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "定位健康管理信息"
+      desc_hz: "100Hz"
+    rports:
+    - name: IflytekSensorGnss
+      type: iflyauto::IFLYGnss
+    - name: IflytekSensorImu
+      type: iflyauto::IFLYIMU
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekEhpParkingMap
+      type: iflyauto::StructContainer
+    - name: IflytekMegaLocalMap
+      type: iflyauto::ParkingInfo
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekEhrSdmapInfo
+      type: SdMapSwtx::SdMap
+    - name: IflytekEhrSdpromapInfo
+      type: iflyauto::StructContainer
+    fm_pports:
+    - name: IflytekAlarmInfoLocalization
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: mega
+    desc: "建图"
+    hz: 20
+    alias: Mega
+    pports:
+    - name: IflytekMegaLocalMap
+      mviz: /iflytek/mega/local_map
+      type: iflyauto::ParkingInfo
+      desc: "建图信息(新车位融合使用)"
+      desc_hz: "20Hz"
+    - name: IflytekMegaMappingStatus
+      mviz: /iflytek/mega/mapping_status
+      type: iflyauto::MappingStatusInfo
+      desc: "建图状态信息"
+      desc_hz: "20Hz"
+    - name: IflytekMegaPhmReport
+      mviz: /iflytek/mega/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "建图健康管理信息"
+      desc_hz: "20Hz"
+    rports:
+    - name: IflytekCameraPerception3dGeneralObjects
+      type: iflyauto::CameraPerceptionObjectsInfo
+    - name: IflytekCameraPerceptionParkingSlotList
+      type: iflyauto::ParkingSlotSelectInfo
+    - name: IflytekCameraPerceptionGroundLine
+      type: iflyauto::GroundLinePerceptionInfo
+    - name: IflytekCameraPerceptionParkingLaneLine
+      type: iflyauto::LaneLineSet
+    - name: IflytekCameraPerceptionDeceler
+      type: iflyauto::DecelerPerceptionInfo
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekFusionSpatialParkingSlot
+      type: iflyauto::FusionSpatialParkingSlot
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekLocalizationSemanticInfo
+      type: iflyauto::SemanticInfo
+    - name: IflytekEhpParkingMapFileInfo
+      type: iflyauto::ParkingMapFileInfo
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    fm_pports:
+    - name: IflytekAlarmInfoMega
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: obstacle_fusion
+    desc: "障碍物融合"
+    hz: 20
+    alias: Ofus
+    pports:
+    - name: IflytekFusionUssPerceptionInfo
+      mviz: /iflytek/fusion/uss_perception_info
+      type: iflyauto::UssPerceptInfo
+      desc: "超声波感知结果"
+      desc_hz: "20Hz"
+    - name: IflytekFusionSpatialParkingSlot
+      mviz: /iflytek/fusion/spatial_parking_slot
+      type: iflyauto::FusionSpatialParkingSlot
+      desc: "通用障碍物空间车位输出"
+      desc_hz: "20Hz"
+    - name: IflytekFusionOccupancyObjects
+      mviz: /iflytek/fusion/occupancy/objects
+      type: iflyauto::FusionOccupancyObjectsInfo
+      desc: "通用障碍物融合输出"
+      desc_hz: "20Hz"
+    - name: IflytekFusionObjects
+      mviz: /iflytek/fusion/objects
+      type: iflyauto::FusionObjectsInfo
+      desc: "障碍物融合输出"
+      desc_hz: "20Hz"
+    - name: IflytekFusionObjectsCompress
+      mviz: /iflytek/fusion/objects_compress
+      type: iflyauto::FusionObjectsInfoCompress
+      desc: "障碍物融合简易输出(降负载)"
+      desc_hz: "20Hz"
+    - name: IflytekFusionObstaclePhmReport
+      mviz: /iflytek/fusion/obstacle/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "障碍物融合健康管理信息"
+      desc_hz: "20Hz"
+    rports:
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekFusionParkingSlot
+      type: iflyauto::ParkingFusionInfo
+    - name: IflytekCameraPerceptionOccupancyObjects
+      type: iflyauto::CameraPerceptionOccObjectsInfo
+    - name: IflytekCameraPerception3dGeneralObjects
+      type: iflyauto::CameraPerceptionObjectsInfo
+    - name: IflytekCameraPerceptionObjects
+      type: iflyauto::CameraPerceptionObjectsInfo
+    - name: IflytekUssUsswaveInfo
+      type: iflyauto::UssPdcIccSendDataType
+    - name: IflytekRadarFmPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFlPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFrPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarRlPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarRrPerceptionInfo
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFmPerception4dTarget
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFmPerception4dObstacle
+      type: iflyauto::RadarPerceptionObjectsInfo
+    fm_pports:
+    - name: IflytekAlarmInfoObstacleFusion
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: panorama_view_camera_perception
+    desc: "周视相机感知"
+    hz: 0
+    alias: Pper
+    pports:
+    - name: IflytekCameraPerceptionTrafficSignRecognition
+      mviz: /iflytek/camera_perception/traffic_sign_recognition
+      type: iflyauto::CameraPerceptionTsrInfo
+      desc: "视觉感知交通标志信息(信号灯/限速标志牌/辅助标志牌)"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionScene
+      mviz: /iflytek/camera_perception/scene
+      type: iflyauto::CameraPerceptionScene
+      desc: "视觉感知场景信息"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionOccGrid
+      mviz: /iflytek/camera_perception/occ_grid
+      type: iflyauto::CameraPerceptionOccGridInfo
+      desc: "周视感知OCC信息"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionPanoramaPhmReport
+      mviz: /iflytek/camera_perception/panorama/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "周视感知健康管理信息"
+      desc_hz: "10Hz"
+    rports:
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekRadarFmPerception4dTarget
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFmPerception4dObstacle
+      type: iflyauto::RadarPerceptionObjectsInfo
+    - name: IflytekRadarFmPerception4dPointCloud
+      type: iflyauto::RadarPointCloud
+    fm_pports:
+    - name: IflytekAlarmInfoPanoramaViewCameraPerception
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+    cam_rports:
+    - name: IflytekSensorCameraFront120
+      type: RawBuffer
+    - name: IflytekSensorCameraFront120Eagle
+      type: RawBuffer
+    - name: IflytekSensorCameraFront30
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFl
+      type: RawBuffer
+    - name: IflytekSensorCameraSideFr
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRl
+      type: RawBuffer
+    - name: IflytekSensorCameraSideRr
+      type: RawBuffer
+    - name: IflytekSensorCameraRear
+      type: RawBuffer
+    cam_pports:
+    - name: IflytekCameraPerceptionLaneFeature
+      mviz: /iflytek/camera_perception/lane_feature
+      type: Mbuf
+      desc: "视觉感知车道特征"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionObstacleFeature
+      mviz: /iflytek/camera_perception/obstacle_feature
+      type: Mbuf
+      desc: "视觉感知障碍物特征"
+      desc_hz: "10Hz"
+  - name: panorama_view_camera_perception_laneline
+    desc: "周视相机感知(车道线)"
+    hz: 0
+    alias: Pper
+    pports:
+    - name: IflytekCameraPerceptionObjects
+      mviz: /iflytek/camera_perception/objects
+      type: iflyauto::CameraPerceptionObjectsInfo
+      desc: "视觉感知障碍物"
+    - name: IflytekPredictionPredictionResult
+      mviz: /iflytek/prediction/prediction_result
+      type: iflyauto::PredictionResult
+      desc: "障碍物预测结果"
+      desc_hz: "10Hz"
+      desc_hz: "20Hz,10Hz(各项目视效果和负载而定)"
+    - name: IflytekCameraPerceptionLaneTopo
+      mviz: /iflytek/camera_perception/lane_topo
+      type: iflyauto::LaneLineSet
+      desc: "视觉感知可变车道"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionLaneLines
+      mviz: /iflytek/camera_perception/lane_lines
+      type: iflyauto::LaneLineSet
+      desc: "视觉感知车道线"
+      desc_hz: "25Hz"
+    - name: IflytekCameraPerceptionPanoramaView2DBoundingBoxes
+      mviz: /iflytek/camera_perception/panorama_view_2d_bounding_boxes
+      type: iflyauto::CameraPerceptionAllView2DBoundingBoxes
+      desc: "视觉感知2D边界框"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionDrivableSpaceGrid
+      mviz: /iflytek/camera_perception/drivable_space_grid
+      type: iflyauto::CameraPerceptionDrivableSpaceGridInfo
+      desc: "周视感知可行驶区域栅格"
+      desc_hz: "10Hz"
+    - name: IflytekCameraPerceptionLaneTopoDebugInfo
+      mviz: /iflytek/camera_perception/lane_topo_debug_info
+      type: iflyauto::LaneLineSet
+      desc: "视觉感知可变车道调试信息"
+      desc_hz: "10Hz"
+      mviz_only: true
+    - name: IflytekCameraPerceptionLaneLinesDebugInfo
+      mviz: /iflytek/camera_perception/lane_lines_debug_info
+      type: iflyauto::LaneLineSet
+      desc: "视觉感知车道线调试信息"
+      desc_hz: "10Hz"
+      mviz_only: true
+    - name: IflytekCameraPerceptionPanoramaLanelinePhmReport
+      mviz: /iflytek/camera_perception/panorama_lane_line/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "视觉感知车道线健康管理信息"
+      desc_hz: "10Hz"
+    rports:
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    cam_rports:
+    - name: IflytekCameraPerceptionObstacleFeature
+      type: RawBuffer
+    - name: IflytekCameraPerceptionLaneFeature
+      type: RawBuffer
+    fm_pports:
+    - name: IflytekAlarmInfoPanoramaViewCameraPerceptionLaneline
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: planning
+    desc: "规划"
+    hz: 10
+    alias: Plan
+    pports:
+    - name: IflytekPlanningPlan
+      mviz: /iflytek/planning/plan
+      type: iflyauto::PlanningOutput
+      desc: "路径规划结果"
+      desc_hz: "10Hz"
+    - name: IflytekPlanningHmi
+      mviz: /iflytek/planning/hmi
+      type: iflyauto::PlanningHMIOutputInfoStr
+      desc: "规划给可视化的状态"
+      desc_hz: "10Hz"
+    - name: IflytekPlanningDebugInfo
+      mviz: /iflytek/planning/debug_info
+      type: iflyauto::StructContainer
+      desc: "规划调试信息"
+      desc_hz: "10Hz"
+    - name: IflytekPlanningPhmReport
+      mviz: /iflytek/planning/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "规划健康管理信息"
+      desc_hz: "10Hz"
+    rports:
+    - name: IflytekEhrSdmapInfo
+      type: SdMapSwtx::SdMap
+    - name: IflytekEhrSdpromapInfo
+      type: iflyauto::StructContainer
+    - name: IflytekEhrStaticMap
+      type: Map::StaticMap
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekUssUsswaveInfo
+      type: iflyauto::UssPdcIccSendDataType
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekFusionRoadFusion
+      type: iflyauto::RoadInfo
+    - name: IflytekFusionParkingSlot
+      type: iflyauto::ParkingFusionInfo
+    - name: IflytekFusionGroundLine
+      type: iflyauto::FusionGroundLineInfo
+    - name: IflytekFusionSpeedBump
+      type: iflyauto::FusionDecelerInfo
+    - name: IflytekPredictionPredictionResult
+      type: iflyauto::PredictionResult
+    - name: IflytekCameraPerceptionTrafficSignRecognition
+      type: iflyauto::CameraPerceptionTsrInfo
+    - name: IflytekCameraPerceptionScene
+      type: iflyauto::CameraPerceptionScene
+    - name: IflytekCameraPerceptionOccGrid
+      type: iflyauto::CameraPerceptionOccGridInfo
+    - name: IflytekCameraPerceptionDrivableSpaceGrid
+      type: iflyauto::CameraPerceptionDrivableSpaceGridInfo
+    - name: IflytekFusionUssPerceptionInfo
+      type: iflyauto::UssPerceptInfo
+    - name: IflytekFusionOccupancyObjects
+      type: iflyauto::FusionOccupancyObjectsInfo
+    - name: IflytekFusionObjects
+      type: iflyauto::FusionObjectsInfo
+    - name: IflytekControlControlCommand
+      type: iflyauto::ControlOutput
+    - name: IflytekFmADegradeFunciton
+      type: iflyauto::DegradedDrivingFunction
+    fm_pports:
+    - name: IflytekAlarmInfoPlanning
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+  - name: static_fusion
+    desc: "静态融合"
+    hz: 20
+    alias: Sfus
+    params:
+    - key: "version_path"
+      value: "/../../version.json"
+    pports:
+    - name: IflytekFusionRoadFusion
+      mviz: /iflytek/fusion/road_fusion
+      type: iflyauto::RoadInfo
+      desc: "车道线融合输出"
+      desc_hz: "20Hz"
+    - name: IflytekFusionRoadFusionCompress
+      mviz: /iflytek/fusion/road_fusion_compress
+      type: iflyauto::RoadInfoCompress
+      desc: "车道线融合简易输出(降负载)"
+      desc_hz: "20Hz"
+    - name: IflytekFusionParkingSlot
+      mviz: /iflytek/fusion/parking_slot
+      type: iflyauto::ParkingFusionInfo
+      desc: "车位融合输出"
+      desc_hz: "20Hz"
+    - name: IflytekFusionGroundLine
+      mviz: /iflytek/fusion/ground_line
+      type: iflyauto::FusionGroundLineInfo
+      desc: "接地线融合输出"
+      desc_hz: "20Hz"
+    - name: IflytekFusionSpeedBump
+      mviz: /iflytek/fusion/speed_bump
+      type: iflyauto::FusionDecelerInfo
+      desc: "减速带融合输出"
+      desc_hz: "20Hz"
+    - name: IflytekFusionStaticPhmReport
+      mviz: /iflytek/fusion/static/phm_report
+      type: iflyauto::IflyPhmReport
+      desc: "静态融合健康管理信息"
+      desc_hz: "20Hz"
+    - name: IflytekSystemVersion
+      mviz: /iflytek/system/version
+      type: iflyauto::SystemVersion
+      desc: "系统版本号信息"
+      desc_hz: "无需固定，随发布模块而定"
+      # mviz_only: true
+    rports:
+    - name: IflytekCameraPerceptionLaneTopo
+      type: iflyauto::LaneLineSet
+    - name: IflytekCameraPerceptionLaneLines
+      type: iflyauto::LaneLineSet
+    - name: IflytekCameraPerceptionParkingSlotList
+      type: iflyauto::ParkingSlotSelectInfo
+    - name: IflytekCameraPerceptionGroundLine
+      type: iflyauto::GroundLinePerceptionInfo
+    - name: IflytekCameraPerceptionParkingLaneLine
+      type: iflyauto::LaneLineSet
+    - name: IflytekCameraPerceptionDeceler
+      type: iflyauto::DecelerPerceptionInfo
+    - name: IflytekMegaLocalMap
+      type: iflyauto::ParkingInfo
+    - name: IflytekVehicleService
+      type: iflyauto::VehicleServiceOutputInfo
+    - name: IflytekFsmSocState
+      type: iflyauto::FuncStateMachine
+    - name: IflytekEhrSdmapInfo
+      type: SdMapSwtx::SdMap
+    - name: IflytekEhrSdpromapInfo
+      type: iflyauto::StructContainer
+    - name: IflytekEhrStaticMap
+      type: Map::StaticMap
+    - name: IflytekPlanningHmi
+      type: iflyauto::PlanningHMIOutputInfoStr
+    - name: IflytekLocalizationEgomotion
+      type: iflyauto::IFLYLocalization
+    - name: IflytekMegaMappingStatus
+      type: iflyauto::MappingStatusInfo
+    # - name: MobileyeCameraPerceptionLaneLines
+    #   type: iflyauto::LaneLineSet
+    fm_pports:
+    - name: IflytekAlarmInfoStaticFusion
+      type: iflyauto::FmInfo
+      desc: "故障信息上报"
+other:
+  components:
+  - name: adas
+    pports:
+    - name: IflytekAdasFunctionDebugInfo
+      mviz: /iflytek/adas_function/debug_info
+      type: iflyauto::ADASFunctionDebugOutputInfo
+      desc: "adas调试信息"
+      desc_hz: "50Hz"
+  - name: fm_service
+    pports:
+    - name: IflytekAlarmInfoFmAService
+      mviz: /iflytek/alarm_info/fm_a_service
+      type: iflyauto::FmInfo
+      desc: "a面故障信息(传给工控机)"
+      desc_hz: "1Hz"
+    - name: IflytekAlarmInfoFmBService
+      mviz: /iflytek/alarm_info/fm_b_service
+      type: iflyauto::FmInfo
+      desc: "b面故障信息(传给工控机)"
+      desc_hz: "1Hz"
+    # 接口： 各模块故障上报接口，上报给fm_service
+    # topic： /iflytek/alarm_info/模块名
+    # 示例-状态机：/iflytek/alarm_info/finite_state_manager
+    # 示例-片间通信：/iflytek/alarm_info/com_service_pnc_node
+    # 头文件： 使用平台提供的接口头文件
+    # 结构体： 使用平台提供的结构体
+    # 上报时机： 故障发生时上报
+    - name: IflytekAlarmInfoMcu
+      mviz: /iflytek/alarm_info/mcu
+      type: "底软内部维护"
+      desc: "MCU故障上报汇总接口"
+      desc_hz: "底软自行设计"
+    - name: IflytekAlarmInfoSoc
+      mviz: /iflytek/alarm_info/soc
+      type: "底软内部维护"
+      desc: "SOC故障上报汇总接口(适用于存在多片soc的情况,topic视情况扩展)"
+      desc_hz: "底软自行设计"
+  - name: hmi
+    pports:
+    - name: IflytekHmiInner
+      mviz: /iflytek/hmi/inner
+      type: iflyauto::HmiInner
+      desc: "输出给fsm的hmi信息"
+      desc_hz: "20Hz"
+    - name: IflytekEngineerInner
+      mviz: /iflytek/engineer/inner
+      type: iflyauto::Engineer_Inner
+      desc: "输出给fsm的工程模式信息"
+      desc_hz: "20Hz"
+    - name: IflytekHmiMcuToSocBswCheryT26Fdc
+      mviz: /iflytek/hmi/mcu_to_soc_bsw/chery_t26_fdc
+      type: iflyauto::HmiMcuToSocBsw_CHERY_T26
+      desc: "CHERY_T26的HMI上行数据,mcu至soc"
+      desc_hz: "20Hz"
+    - name: IflytekHmiSocToMcuBswCheryT26Fdc
+      mviz: /iflytek/hmi/soc_to_mcu_bsw/chery_t26_fdc
+      type: iflyauto::HmiSocToMcuBsw_CHERY_T26
+      desc: "CHERY_T26的HMI下行数据,soc至mcu"
+      desc_hz: "20Hz"
+    - name: IflytekHmiMcuToSocBswCheryE0yMdc510
+      mviz: /iflytek/hmi/mcu_to_soc_bsw/chery_e0y_mdc510
+      type: iflyauto::HmiMcuToSocBsw_CHERY_E0Y_MDC510
+      desc: "CHERY_E0Y_MDC510的HMI上行数据,mcu至soc,(需要数采)"
+      desc_hz: "20Hz"
+    - name: IflytekHmiSocToMcuBswCheryE0yMdc510
+      mviz: /iflytek/hmi/soc_to_mcu_bsw/chery_e0y_mdc510
+      type: iflyauto::HmiSocToMcuBsw_CHERY_E0Y_MDC510
+      desc: "CHERY_E0Y_MDC510的HMI下行数据,soc至mcu,(需要数采)"
+      desc_hz: "20Hz"
+    - name: IflytekHmiMcuOut
+      desc: "MCU上的hmi的输出,到mcu的hmi_service"
+      type: iflyauto::HmiMcuOut
+      head: hmi_mcu_out_c.h
+  - name: radar_perception
+    pports:
+    - name: IflytekRadarFmPerceptionInfo
+      mviz: /iflytek/radar_fm_perception_info
+      type: iflyauto::RadarPerceptionObjectsInfo
+      desc: "前毫米波雷达障碍物"
+      desc_hz: "20Hz"
+    - name: IflytekRadarFlPerceptionInfo
+      mviz: /iflytek/radar_fl_perception_info
+      type: iflyauto::RadarPerceptionObjectsInfo
+      desc: "左前毫米波雷达障碍物"
+      desc_hz: "20Hz"
+    - name: IflytekRadarFrPerceptionInfo
+      mviz: /iflytek/radar_fr_perception_info
+      type: iflyauto::RadarPerceptionObjectsInfo
+      desc: "右前毫米波雷达障碍物"
+      desc_hz: "20Hz"
+    - name: IflytekRadarRlPerceptionInfo
+      mviz: /iflytek/radar_rl_perception_info
+      type: iflyauto::RadarPerceptionObjectsInfo
+      desc: "左后毫米波雷达障碍物"
+      desc_hz: "20Hz"
+    - name: IflytekRadarRrPerceptionInfo
+      mviz: /iflytek/radar_rr_perception_info
+      type: iflyauto::RadarPerceptionObjectsInfo
+      desc: "右后毫米波雷达障碍物"
+      desc_hz: "20Hz"
+  - name: around_view_camera_node
+    pports:
+    - name: IflytekSensorCameraSurroundImage
+      mviz: /iflytek/sensor/camera/surround/image
+      type: iflyauto::Surround_Camera_Image_Info
+      desc: "环视相机原图信息(做拼接的图，适用于环视视相机所有路一并发送的情况，或者仅发送拼接图的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSurroundImageRight
+      mviz: /iflytek/sensor/camera/surround/image/right
+      type: iflyauto::Camera_Image_Info
+      desc: "右环视相机原图信息(适用于环视相机原图需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSurroundImageFront
+      mviz: /iflytek/sensor/camera/surround/image/front
+      type: iflyauto::Camera_Image_Info
+      desc: "前环视相机原图信息(适用于环视相机原图需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSurroundImageLeft
+      mviz: /iflytek/sensor/camera/surround/image/left
+      type: iflyauto::Camera_Image_Info
+      desc: "左环视相机原图信息(适用于环视相机原图需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSurroundImageRear
+      mviz: /iflytek/sensor/camera/surround/image/rear
+      type: iflyauto::Camera_Image_Info
+      desc: "后环视相机原图信息(适用于环视相机原图需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSurroundResizeImageRight
+      mviz: /iflytek/sensor/camera/surround/resize_image/right
+      type: iflyauto::Camera_Image_Info
+      desc: "右环视相机重采样图片信息(做障碍物检测，适用于环视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz;"
+    - name: IflytekSensorCameraSurroundResizeImageFront
+      mviz: /iflytek/sensor/camera/surround/resize_image/front
+      type: iflyauto::Camera_Image_Info
+      desc: "前环视相机重采样图片信息(做障碍物检测，适用于环视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz;"
+    - name: IflytekSensorCameraSurroundResizeImageLeft
+      mviz: /iflytek/sensor/camera/surround/resize_image/left
+      type: iflyauto::Camera_Image_Info
+      desc: "左环视相机重采样图片信息(做障碍物检测，适用于环视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz;"
+    - name: IflytekSensorCameraSurroundResizeImageRear
+      mviz: /iflytek/sensor/camera/surround/resize_image/rear
+      type: iflyauto::Camera_Image_Info
+      desc: "后环视相机重采样图片信息(做障碍物检测，适用于环视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz;"
+    - name: IflytekDcCameraSurroundRight
+      mviz: /iflytek/dc/camera/surround_right
+      type: iflyauto::Camera_Image_Info
+      desc: "数采环视相机-右"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraSurroundFront
+      mviz: /iflytek/dc/camera/surround_front
+      type: iflyauto::Camera_Image_Info
+      desc: "数采环视相机-前"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraSurroundLeft
+      mviz: /iflytek/dc/camera/surround_left
+      type: iflyauto::Camera_Image_Info
+      desc: "数采环视相机-左"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraSurroundRear
+      mviz: /iflytek/dc/camera/surround_rear
+      type: iflyauto::Camera_Image_Info
+      desc: "数采环视相机-后"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+  - name: panorama_view_camera_node
+    pports:
+    - name: IflytekSensorCameraFrontImage
+      mviz: /iflytek/sensor/camera/front/image
+      type: iflyauto::Front_Camera_Image_Info
+      desc: "前视相机图片信息"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraFront120FullResolutionH265
+      mviz: /iflytek/sensor/camera/front_120_full_resolution_h265
+      type: iflyauto::Camera_Image_Info
+      desc: "动态标定的前视相机专用信息"
+      desc_hz: "10Hz"
+    - name: IflytekSensorCameraPanoramaImage
+      mviz: /iflytek/sensor/camera/panorama/image
+      type: iflyauto::Panorama_Camera_Image_Info
+      desc: "周视相机图片信息(适用于周视相机图片所有路一并发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraFront30
+      mviz: /iflytek/sensor/camera/front_30
+      type: iflyauto::Camera_Image_Info
+      desc: "前视30度周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraFront120
+      mviz: /iflytek/sensor/camera/front_120
+      type: iflyauto::Camera_Image_Info
+      desc: "前视120度周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraFront120Eagle
+      mviz: /iflytek/sensor/camera/front_120_eagle
+      type: iflyauto::Camera_Image_Info
+      desc: "前视120度鹰眼视角周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraRear
+      mviz: /iflytek/sensor/camera/rear
+      type: iflyauto::Camera_Image_Info
+      desc: "后周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSideFl
+      mviz: /iflytek/sensor/camera/side_fl
+      type: iflyauto::Camera_Image_Info
+      desc: "左前周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSideFr
+      mviz: /iflytek/sensor/camera/side_fr
+      type: iflyauto::Camera_Image_Info
+      desc: "右前周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSideRl
+      mviz: /iflytek/sensor/camera/side_rl
+      type: iflyauto::Camera_Image_Info
+      desc: "左后周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekSensorCameraSideRr
+      mviz: /iflytek/sensor/camera/side_rr
+      type: iflyauto::Camera_Image_Info
+      desc: "右后周视相机图片独立信息(适用于周视相机图片需要各路逐一发送的情况)"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraFront30
+      mviz: /iflytek/dc/camera/front_30
+      type: iflyauto::Camera_Image_Info
+      desc: "数采周视相机-前视30度"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraFront120
+      mviz: /iflytek/dc/camera/front_120
+      type: iflyauto::Camera_Image_Info
+      desc: "数采周视相机-前视120度"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraRear
+      mviz: /iflytek/dc/camera/rear
+      type: iflyauto::Camera_Image_Info
+      desc: "数采周视相机-后视"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraSideFl
+      mviz: /iflytek/dc/camera/side_fl
+      type: iflyauto::Camera_Image_Info
+      desc: "数采周视相机-左前"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraSideFr
+      mviz: /iflytek/dc/camera/side_fr
+      type: iflyauto::Camera_Image_Info
+      desc: "数采周视相机-右前"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraSideRl
+      mviz: /iflytek/dc/camera/side_rl
+      type: iflyauto::Camera_Image_Info
+      desc: "数采周视相机-左后"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+    - name: IflytekDcCameraSideRr
+      mviz: /iflytek/dc/camera/side_rr
+      type: iflyauto::Camera_Image_Info
+      desc: "数采周视相机-右后"
+      desc_hz: "MDC平台研发车频率为10Hz; MDC平台数采车频率为20Hz; FDC平台频率为20Hz"
+  - name: gnss
+    pports:
+    - name: IflytekSensorGnss
+      mviz: /iflytek/sensor/gnss
+      type: iflyauto::IFLYGnss
+      desc: "gnss信息"
+      desc_hz: "1Hz"
+    - name: IflytekSensorGnssTbox
+      mviz: /iflytek/sensor/gnss_tbox
+      type: iflyauto::IFLYGnss
+      desc: "tbox信息"
+      desc_hz: "1Hz"
+  - name: imu
+    pports:
+    - name: IflytekSensorImu
+      mviz: /iflytek/sensor/imu
+      type: iflyauto::IFLYIMU
+      desc: "imu信息"
+      desc_hz: "100Hz"
+  - name: lidar_node
+    pports:
+    - name: IflytekSensorLidarRsp128
+      mviz: /iflytek/sensor/lidar/rsp128
+      type: RawBuffer
+      desc: "Lidar rsp128信息 iflyauto::LidarMsgInfo"
+      desc_hz: "10Hz"
+  - name: uss_wave
+    pports:
+    - name: IflytekUssUsswaveInfo
+      mviz: /iflytek/uss/usswave_info
+      type: iflyauto::UssPdcIccSendDataType
+      desc: "超声波驱动"
+      desc_hz: "50Hz"
+  - name: vehicle_service
+    pports:
+    - name: IflytekVehicleService
+      mviz: /iflytek/vehicle_service
+      type: iflyauto::VehicleServiceOutputInfo
+      desc: "自车信息"
+      desc_hz: "50Hz"
+  - name: sdmap
+    pports:
+    - name: IflytekSdmapSdmapInfo
+      mviz: /iflytek/sdmap/sdmap_info
+      type: std::string
+      desc: "算路信息(地图app的算路json消息发送给ehr)"
+      desc_hz: "0.2Hz"
+  - name: time_sync
+    pports:
+    - name: IflytekOtherTimeSynchronization
+      mviz: /iflytek/other/time_synchronization
+      type: iflyauto::TimeSynchronizationInfo
+      desc: "域控时间戳信息"
+      desc_hz: "1Hz"
+  direct:
+  - name: /iflytek/control/debug_info
+  - name: /iflytek/planning/debug_info
+  - name: /iflytek/prediction/prediction_debug_info
+  - name: /iflytek/ehr/debuginfo
+  - name: /iflytek/ehr/static_map
+  - name: /iflytek/ehr/origin_data
+  - name: /iflytek/ehr/sdmap_info
+  - name: /iflytek/hmi/hpp_inner
+  - name: /iflytek/hmi/hpp_outer
+  - name: /iflytek/hmi/mcu_inner
+  - name: /iflytek/hmi/soc_inner
+  - name: /iflytek/hmi/soc_outer
+  - name: /iflytek/localization/ego_pose
+type:
+  struct:
+  - name: iflyauto::ADASFunctionOutputInfo
+    require: adas_function_c.h
+  - name: iflyauto::ADASFunctionDebugOutputInfo
+    require: adas_function_debug_c.h
+  - name: iflyauto::CalibInfo
+    require: calib_info_c.h
+  - name: iflyauto::LaneLineSet
+    require: camera_perception_lane_lines_c.h
+  - name: iflyauto::CameraPerceptionOccObjectsInfo
+    require: camera_perception_occupancy_objects_c.h
+  - name: iflyauto::DecelerPerceptionInfo
+    require: camera_perception_deceler_c.h
+  - name: iflyauto::CameraPerceptionObstacleFeatureInfo
+    require: camera_perception_feature_c.h
+  - name: iflyauto::CameraPerceptionLaneFeatureInfo
+    require: camera_perception_feature_c.h
+  - name: iflyauto::GroundLinePerceptionInfo
+    require: camera_perception_groundline_c.h
+  - name: iflyauto::CameraPerceptionObjectsInfo
+    require: camera_perception_objects_c.h
+  - name: iflyauto::CameraPerceptionAllView2DBoundingBoxes
+    require: camera_perception_objects_c.h
+  - name: iflyauto::ParkingSlotSelectInfo
+    require: camera_perception_parking_slot_c.h
+  - name: iflyauto::CameraPerceptionScene
+    require: camera_perception_scene_c.h
+  - name: iflyauto::CameraPerceptionOccGridInfo
+    require: camera_perception_occupancy_grid_c.h
+  - name: iflyauto::CameraPerceptionDrivableSpaceGridInfo
+    require: camera_perception_occupancy_grid_c.h
+  - name: iflyauto::CameraPerceptionTsrInfo
+    require: camera_perception_tsr_c.h
+  - name: iflyauto::ControlOutput
+    require: control_command_c.h
+  - name: iflyauto::IFLYAllDtcState
+    require: dtc_code_c.h
+  - name: iflyauto::Position
+    require: ehr_c.h
+  - name: iflyauto::Engineer_Outer
+    require: engineer_mode_c.h
+  - name: iflyauto::FactoryCalibActiveInfoResult
+    require: factory_calib_c.h
+  - name: iflyauto::FactoryCalibActiveInfo
+    require: factory_calib_c.h
+  - name: iflyauto::FactoryCalibResults
+    require: factory_calib_c.h
+  - name: iflyauto::FactoryCalibGetCalibResReqInfo
+    require: factory_calib_c.h
+  - name: iflyauto::FdlUploadState
+    require: fdl_upload_state_c.h
+  - name: iflyauto::FdlTriggerState
+    require: fdl_trigger_c.h
+  - name: iflyauto::FmInfo
+    require: fm_info_c.h
+  - name: iflyauto::FsmMcuOut
+    require: fsm_mcu_out_c.h
+  - name: iflyauto::FuncStateMachine
+    require: func_state_machine_c.h
+  - name: iflyauto::FusionDecelerInfo
+    require: fusion_deceler_c.h
+  - name: iflyauto::FusionGroundLineInfo
+    require: fusion_groundline_c.h
+  - name: iflyauto::FusionObjectsInfo
+    require: fusion_objects_c.h
+  - name: iflyauto::FusionObjectsInfoCompress
+    require: fusion_objects_compress_c.h
+  - name: iflyauto::FusionOccupancyObjectsInfo
+    require: fusion_occupancy_objects_c.h
+  - name: iflyauto::ParkingFusionInfo
+    require: fusion_parking_slot_c.h
+  - name: iflyauto::RoadInfo
+    require: fusion_road_c.h
+  - name: iflyauto::RoadInfoCompress
+    require: fusion_road_compress_c.h
+  - name: iflyauto::FusionSpatialParkingSlot
+    require: fusion_spatial_parking_slot_c.h
+  - name: iflyauto::HmiInner
+    require: hmi_inner_c.h
+  - name: iflyauto::HmiSocOuter
+    require: hmi_soc_outer_c.h
+  - name: iflyauto::IFLYLocalization
+    require: ifly_localization_c.h
+  - name: iflyauto::MappingStatusInfo
+    require: ifly_mapping_status_c.h
+  - name: iflyauto::EhpOutput
+    require: ifly_parking_map_c.h
+  - name: iflyauto::FeaturePoint
+    require: ifly_parking_map_c.h
+  - name: iflyauto::ParkingInfo
+    require: ifly_parking_map_c.h
+  - name: iflyauto::ParkingMapFileInfo
+    require: ifly_parking_map_c.h
+  - name: iflyauto::SemanticInfo
+    require: ifly_parking_map_c.h
+  - name: iflyauto::PlanningHMIOutputInfoStr
+    require: planning_hmi_c.h
+  - name: iflyauto::PlanningOutput
+    require: planning_plan_c.h
+  - name: iflyauto::PostSaleCalibActiveInfo
+    require: post_sale_calibration_c.h
+  - name: iflyauto::PostSaleCalibActiveInfoResult
+    require: post_sale_calibration_c.h
+  - name: iflyauto::PostSaleCalibStopReqInfo
+    require: post_sale_calibration_c.h
+  - name: iflyauto::PostSaleCalibStopResult
+    require: post_sale_calibration_c.h
+  - name: iflyauto::PostSaleCalibGetCalibResReqInfo
+    require: post_sale_calibration_c.h
+  - name: iflyauto::PostSaleCalibResults
+    require: post_sale_calibration_c.h
+  - name: iflyauto::PredictionResult
+    require: prediction_c.h
+  - name: iflyauto::RadarPerceptionObjectsInfo
+    require: radar_perception_objects_c.h
+  - name: iflyauto::IFLYGnss
+    require: sensor_gnss_c.h
+  - name: iflyauto::IFLYIMU
+    require: sensor_imu_c.h
+  - name: iflyauto::RadarPointCloud
+    require: sensor_radar_c.h
+  - name: iflyauto::SystemVersion
+    require: system_version_c.h
+  - name: iflyauto::UssPerceptInfo
+    require: uss_perception_info_c.h
+  - name: iflyauto::UssPerceptDebugInfo
+    require: uss_perception_debug_info_c.h
+  - name: iflyauto::UssPdcIccSendDataType
+    require: uss_wave_info_c.h
+  - name: iflyauto::VehicleServiceOutputInfo
+    require: vehicle_service_c.h
+  - name: iflyauto::Engineer_Inner
+    require: engineer_mode_c.h
+  - name: iflyauto::DegradedDrivingFunction
+    require: degraded_driving_function_c.h
+  - name: iflyauto::SENTINEL_Soc2Mcu
+    require: sentinel_mode_c.h
+  - name: iflyauto::IflyPhmReport
+    require: ifly_phm_c.h
+  - name: iflyauto::CameraHotSwapStatus
+    require: camera_hot_swap_c.h
+  - name: iflyauto::StorageInfo
+    require: disk_info_c.h
+  - name: iflyauto::DiskCleanRequest
+    require: disk_info_c.h 
+  - name: iflyauto::FdlNetStatCheck
+    require: fdl_net_stat_check_c.h
+  - name: iflyauto::OTALogUploadRequest
+    require: ota_log_upload_c.h
+  - name: Mbuf
+    require: mdc_mbuf.h
+  proto:
+  - name: CameraPerception3DObjects::CameraPerceptionObjectsInfo3D
+    require: camera_perception_3d_occupancy_objects.pb.h
+  - name: ControlDebugInfo::ControlDebugInfo
+    require: control_debug_info.pb.h
+  - name: SdMapSwtx::SdMap
+    require: ehr_sdmap.pb.h
+  - name: Map::StaticMap
+    require: ehr.pb.h
+  - name: planning::common::PlanningDebugInfo
+    require: planning_debug_info.pb.h
+  - name: iflyauto::StructContainer
+    require: struct_container.hpp
+  - name: iflyauto::ProcessStat
+    require: system_monitor_c.h

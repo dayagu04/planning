@@ -1,0 +1,12 @@
+LDWOutputInfoStr ldw_output_info
+LDPOutputInfoStr ldp_output_info
+ELKOutputInfoStr elk_output_info
+TSROutputInfoStr tsr_output_info
+IHCOutputInfoStr ihc_output_info
+AMAPOutputInfoStr ama_output_info
+MEBOutputInfoStr meb_output_info
+uint8 supp_signs_size
+CameraPerceptionSuppSign[] supp_signs
+uint8 traffic_lights_size
+CameraPerceptionTrafficLight[] traffic_lights
+CameraPerceptionTrafficLight current_lane_traffic_light

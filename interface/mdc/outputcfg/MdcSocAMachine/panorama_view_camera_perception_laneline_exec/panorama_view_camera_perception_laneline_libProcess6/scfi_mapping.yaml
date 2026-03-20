@@ -1,0 +1,18 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10069,10073,10025,10029,10186,10203,10101]
+        portName: ["IflytekCameraPerceptionLaneLines","IflytekCameraPerceptionLaneTopo","IflytekCameraPerceptionObjects","IflytekPredictionPredictionResult","IflytekCameraPerceptionPanoramaView2DBoundingBoxes","IflytekCameraPerceptionPanoramaLanelinePhmReport","IflytekCameraPerceptionDrivableSpaceGrid"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10006]
+        portName: ["IflytekAlarmInfoPanoramaViewCameraPerceptionLaneline"]
+    StructContainerInterface:
+        instanceId: [10083,10009,10110]
+        portName: ["IflytekLocalizationEgomotion","IflytekVehicleService","IflytekFsmSocState"]
+    CameraStructContainerInterface:
+        instanceId: [10176,10215]
+        portName: ["IflytekCameraPerceptionObstacleFeature","IflytekCameraPerceptionLaneFeature"]

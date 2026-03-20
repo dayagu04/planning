@@ -1,0 +1,4 @@
+uint32 ground_marking_points_set_size
+Point2f[] ground_marking_points_set
+float32 orientation_angle
+int16 turn_type

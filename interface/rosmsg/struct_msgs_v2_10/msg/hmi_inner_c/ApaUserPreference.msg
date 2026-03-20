@@ -1,0 +1,3 @@
+int16 select_source
+int16 horizontal_preference_slot
+int16 vertical_preference_slot

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="79aeee67-df44-4475-b275-cd3845183322">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformApplication</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>BodyCenterApplication</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE S="">
+                  <SHORT-NAME>BodyProcessStartupConfig</SHORT-NAME>
+                  <ELEMENTS>
+                    <STARTUP-CONFIG-SET>
+                      <SHORT-NAME>BodyStartupConfigSet</SHORT-NAME>
+                      <STARTUP-CONFIGS>
+                        <STARTUP-CONFIG>
+                          <SHORT-NAME>BodyStartupConfig</SHORT-NAME>
+                          <SCHEDULING-POLICY>SCHEDULING-POLICY-ROUND-ROBIN</SCHEDULING-POLICY>
+                          <SCHEDULING-PRIORITY>12</SCHEDULING-PRIORITY>
+                        </STARTUP-CONFIG>
+                      </STARTUP-CONFIGS>
+                    </STARTUP-CONFIG-SET>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>Execution</SHORT-NAME>
+                  <ELEMENTS>
+                    <EXECUTABLE>
+                      <SHORT-NAME>libbody_a_cm</SHORT-NAME>
+                      <ROOT-SW-COMPONENT-PROTOTYPE>
+                        <SHORT-NAME>libbody_a_cm</SHORT-NAME>
+                        <APPLICATION-TYPE-TREF DEST="ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE">/HuaweiMDC/PlatformApplication/BodyCenterApplication/SwComponent/libbody_a_cm</APPLICATION-TYPE-TREF>
+                      </ROOT-SW-COMPONENT-PROTOTYPE>
+                    </EXECUTABLE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>SwComponent</SHORT-NAME>
+                  <ELEMENTS>
+                    <ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                      <SHORT-NAME>libbody_a_cm</SHORT-NAME>
+                      <PORTS>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>BodyCMFromCanTpRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/CanTpServiceInterface/CanTpMsgServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>BodyCMToCanTpPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/CanTpServiceInterface/CanTpMsgServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>BodyCfgClientRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>BodyDataFlowPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>BodyFromAppRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/BodyServiceInterface/BodyCommandServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>BodyMntRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/MntAgentServiceInterface/MntDelayServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>BodyNrmcRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/NrmcServiceInterface/NrmCenterServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>BodyTimeDelayPPort</SHORT-NAME>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>BodyToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/BodyServiceInterface/BodyReportServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>reportEventRPort</SHORT-NAME>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE S="">
+                          <SHORT-NAME>VehicleInfoBodyToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/VehicleInfoServiceInterface/VehicleInfoBodyServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>BodyHostToMcuPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/CanTxServiceInterface/CanTxServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                        <R-PORT-PROTOTYPE>
+                          <SHORT-NAME>BodyHostFromMcuRPort</SHORT-NAME>
+                          <REQUIRED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/MdcPlatformServices/CanRxServiceInterface/CanRxServiceInterface</REQUIRED-INTERFACE-TREF>
+                        </R-PORT-PROTOTYPE>
+                        <P-PORT-PROTOTYPE>
+                          <SHORT-NAME>Body9000ToAppPPort</SHORT-NAME>
+                          <PROVIDED-INTERFACE-TREF DEST="SERVICE-INTERFACE">/HuaweiMDC/PlatformServiceInterface/Body9000ServiceInterface/BodyReport9000ServiceInterface</PROVIDED-INTERFACE-TREF>
+                        </P-PORT-PROTOTYPE>
+                      </PORTS>
+                    </ADAPTIVE-APPLICATION-SW-COMPONENT-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

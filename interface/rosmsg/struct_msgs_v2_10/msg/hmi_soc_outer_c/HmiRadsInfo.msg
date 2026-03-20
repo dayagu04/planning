@@ -1,0 +1,5 @@
+int16 rads_status
+int16 rads_notify_req
+float32 rads_remain_distance
+bool rads_active_resp
+bool rads_active_denied

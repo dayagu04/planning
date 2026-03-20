@@ -1,0 +1,3 @@
+uint32 start_index
+uint32 end_index
+float32 length

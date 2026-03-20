@@ -1,0 +1,6 @@
+uint64 isp_timestamp
+int16 camera_type
+uint16 camera_width
+uint16 camera_height
+uint8 bounding_box_2d_size
+CameraPerception2DBoundingBox[256] boundingbox_2d

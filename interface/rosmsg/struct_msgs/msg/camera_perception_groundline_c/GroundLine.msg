@@ -1,0 +1,10 @@
+int16 camera_source
+int16 camera_model
+int16 semantic_type
+int16 point_type
+int32 visable_seg_num
+uint16 points_2d_size
+uint16 points_3d_size
+Point2f[] points_2d
+Point3f[] points_3d
+float32 confidence

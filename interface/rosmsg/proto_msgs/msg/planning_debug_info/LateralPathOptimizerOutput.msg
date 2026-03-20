@@ -1,0 +1,9 @@
+float64[] s_vec
+float64[] x_vec
+float64[] y_vec
+float64[] theta_vec
+float64[] k_vec
+float64[] u_vec
+PathOptimizerSolverInfo solver_info
+float64 terminal_pos_error
+float64 terminal_heading_error

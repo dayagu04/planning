@@ -1,0 +1,5 @@
+float64[] bound_s_vec
+WeightedBound[] soft_upper_bound_info_vec
+WeightedBound[] soft_lower_bound_info_vec
+WeightedBound[] hard_upper_bound_info_vec
+WeightedBound[] hard_lower_bound_info_vec

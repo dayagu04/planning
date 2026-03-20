@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="d2f570b6-17ae-4cc0-b12a-604d38095f9b">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformService</SHORT-NAME>
+          <ELEMENTS>
+            <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+              <SHORT-NAME>DiagComNotifierDeployment</SHORT-NAME>
+              <EVENT-DEPLOYMENTS>
+                <DDS-EVENT-DEPLOYMENT>
+                  <SHORT-NAME>DataDeployment</SHORT-NAME>
+                  <FRAG-SIZE>2048</FRAG-SIZE>
+                  <LIST-SIZE>256</LIST-SIZE>
+                  <TOPIC-NAME>TopicNameOfDataDeployment</TOPIC-NAME>
+                  <TRANSPORT-PROTOCOLS>
+                    <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                  </TRANSPORT-PROTOCOLS>
+                </DDS-EVENT-DEPLOYMENT>
+              </EVENT-DEPLOYMENTS>
+              <SERVICE-INTERFACE-ID>102</SERVICE-INTERFACE-ID>
+            </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

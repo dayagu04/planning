@@ -1,0 +1,11 @@
+int16 l_line_marking_type
+float32 l_line_marking_dis
+float32 l_line_marking_poly_coe_a0
+float32 l_line_marking_poly_coe_a1
+float32 l_line_marking_poly_coe_a2
+Point2f l_line_marking_start
+Point2f l_line_marking_end
+int16 line_index
+uint8 line_id
+int16 line_color
+float32 line_width

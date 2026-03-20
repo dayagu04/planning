@@ -1,0 +1,15 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "common_swc_exec2/common_swc_libExecutable23Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/CameraStructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10064",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/camera_struct_container_DdsProvidedServiceInstance65"
+        }
+      ]
+    }
+  ]
+}

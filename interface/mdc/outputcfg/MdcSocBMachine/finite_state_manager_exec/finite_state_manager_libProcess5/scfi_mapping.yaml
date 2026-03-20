@@ -1,0 +1,18 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10104,10105,10201]
+        portName: ["IflytekFsmSocState","IflytekFsmHmiSocOuter","IflytekFsmPhmReport"]
+  recvInstanceID:
+    ConfigServerServiceInterface:
+        instanceId: [1,1]
+        portName: ["IflytekConfigManager","IflytekConfigManager"]
+    FmAlarmReceiveService:
+        instanceId: [10031]
+        portName: ["IflytekAlarmInfoFiniteStateManager"]
+    StructContainerInterface:
+        instanceId: [10034,10056,10013,10173,10016,10088,10058,10031,10038,10070,10077,10082,10037,10039,10085,10103,10007,10071,10067,10181,10185,10047,10236,10167,10142,10152]
+        portName: ["IflytekVehicleService","IflytekSensorGnss","IflytekEhrSdmapInfo","IflytekEhrSdpromapInfo","IflytekLocalizationEgomotion","IflytekLocalizationSemanticInfo","IflytekMegaMappingStatus","IflytekCameraPerceptionLaneLines","IflytekCameraPerceptionGroundLine","IflytekCameraPerceptionDeceler","IflytekFusionParkingSlot","IflytekFusionSpatialParkingSlot","IflytekFusionObjects","IflytekCalibrationCalibInfo","IflytekPlanningHmi","IflytekPlanningPlan","IflytekHmiInner","IflytekFusionRoadFusion","IflytekCameraPerceptionTrafficSignRecognition","IflytekEngineerInner","IflytekFmADegradeFunciton","IflytekEhpParkingMap","IflytekEhpMapManager","IflytekCameraPerceptionDrivableSpaceGrid","IflytekFusionOccupancyObjects","IflytekAdasFunctionAdas"]

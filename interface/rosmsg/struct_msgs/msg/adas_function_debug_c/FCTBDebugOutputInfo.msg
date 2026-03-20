@@ -1,0 +1,10 @@
+uint8 fctb_state
+bool fctb_deceleration_request_status
+float32 fctb_deceleration_request_value
+bool fctb_hold_request_status
+uint16 fctb_enable_code
+uint16 fctb_disable_code
+uint16 fctb_brake_code
+uint16 fctb_autohold_code
+uint16 fctb_brake_kick_code
+uint16 fctb_autohold_kick_code

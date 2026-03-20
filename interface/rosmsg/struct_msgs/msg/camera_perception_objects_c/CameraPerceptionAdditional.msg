@@ -1,0 +1,12 @@
+int16 sensor_type
+uint8 bounding_box_points_size
+Point3f[] bounding_box_points
+uint8 contour_points_size
+Point3f[] contour_points
+int32 life_time
+int32 age
+float32 conf
+float32 orientation_angle_conf
+float32 vel_conf
+float32 accel_conf
+bool is_fusion

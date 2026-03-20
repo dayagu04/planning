@@ -1,0 +1,7 @@
+std_msgs/Header header # ros header
+Camera_Image_Info front120_camera_data
+Camera_Image_Info rear_camera_data
+Camera_Image_Info side_fl_camera_data
+Camera_Image_Info side_fr_camera_data
+Camera_Image_Info side_rl_camera_data
+Camera_Image_Info side_rr_camera_data

@@ -1,0 +1,3 @@
+uint64 updated_time
+uint64 counter
+LaneGroupInRoute[] lane_groups_in_route

@@ -1,0 +1,41 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "radar_4d_service_exec/radar_4d_service_libExecutable2Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10010",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekRadarFmPerception4dPointCloud_DdsProvidedServiceInstance24"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10084",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekRadarFmPerception4dTarget_DdsProvidedServiceInstance19"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10179",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekRadarPerception4dTargetMcu_DdsProvidedServiceInstance32"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10199",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/Iflytek4dRadarPhmReport_DdsProvidedRadar4dService"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "radar_4d_service_exec/radar_4d_service_libExecutable2Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10012",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoRadar4dService_RequiredSomeipServiceInstance18"
+        }
+      ]
+    }
+  ]
+}

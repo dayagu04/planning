@@ -1,0 +1,4 @@
+int16 rads_main_switch
+bool rads_cancel_switch
+bool rads_active_switch
+bool rads_start_switch

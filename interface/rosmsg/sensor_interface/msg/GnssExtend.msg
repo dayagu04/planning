@@ -1,0 +1,16 @@
+int16 sv_num
+int16[] sv_id
+int16[] sv_elv
+int16[] sv_az
+int16[] sv_cno
+float64 std_pe
+float64 std_pn
+float64 std_pu
+float64 std_ve
+float64 std_vn
+float64 std_vu
+float64 dual_antenna_azimuth
+float64 pdop
+float64 vdop
+int8 fix_type
+float64 alt_msl

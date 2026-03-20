@@ -1,0 +1,5 @@
+uint32 solver_condition
+uint32 cost_size
+uint32 iter_count
+float64 init_cost
+PathOptimizerSolverIterationInfo[] iter_info

@@ -1,0 +1,2 @@
+Obstacle common_occupancy_info
+FusionOccupancyAdditional additional_occupancy_info

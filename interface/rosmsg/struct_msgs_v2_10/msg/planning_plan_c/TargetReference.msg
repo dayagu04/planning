@@ -1,0 +1,4 @@
+float64[4] polynomial
+float64 target_velocity
+AccelerationRange acceleration_range_limit
+int16 lateral_maneuver_gear

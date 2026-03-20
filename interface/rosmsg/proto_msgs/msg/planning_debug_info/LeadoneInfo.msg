@@ -1,0 +1,2 @@
+bool has_leadone
+ObstacleInformation leadone_information

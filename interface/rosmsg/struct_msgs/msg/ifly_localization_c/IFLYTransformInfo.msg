@@ -1,0 +1,4 @@
+bool available
+IFLYQuaternion transform_q
+IFLYPosLocal transform_t
+IFLYPosGlobal transform_center

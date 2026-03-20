@@ -1,0 +1,3 @@
+int16 offset_mode
+int16 speed_offset_set
+int32 speed_offset_value

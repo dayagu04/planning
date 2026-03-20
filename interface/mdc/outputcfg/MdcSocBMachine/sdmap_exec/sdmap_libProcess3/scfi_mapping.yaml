@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10012]
+        portName: ["IflytekSdmapSdmapInfo"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10003]
+        portName: ["IflytekAlarmInfoSdmap"]
+    StructContainerInterface:
+        instanceId: [10016,10056]
+        portName: ["IflytekLocalizationEgomotion","IflytekSensorGnss"]

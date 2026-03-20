@@ -1,0 +1,3 @@
+bool existence
+uint8 merge_split_point_data_size
+LaneMergeSplitPointData[] merge_split_point_data

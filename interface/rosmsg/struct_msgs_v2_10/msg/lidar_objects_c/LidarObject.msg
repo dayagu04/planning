@@ -1,0 +1,2 @@
+Obstacle common_info
+LidarAdditional additional_info

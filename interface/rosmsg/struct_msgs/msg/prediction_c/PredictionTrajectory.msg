@@ -1,0 +1,5 @@
+float32 confidence
+uint64 time_stamp
+float64 relative_time
+uint8 trajectory_point_size
+PredictionTrajectoryPoint[] trajectory_point

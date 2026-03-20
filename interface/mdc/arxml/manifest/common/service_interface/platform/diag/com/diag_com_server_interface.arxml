@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="0dc70e73-e996-41de-aa7e-640aa22969d6">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformServices</SHORT-NAME>
+          <ELEMENTS>
+            <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+              <SHORT-NAME>DiagComServerDeployment</SHORT-NAME>
+              <METHOD-DEPLOYMENTS>
+                <DDS-METHOD-DEPLOYMENT>
+                  <SHORT-NAME>RequestDeployment</SHORT-NAME>
+                  <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/PlatformServices/DiagComServerDeployment/RpcOfRequestDeployment</DDS-RPC-SERVICE-REF>
+                  <TRANSPORT-PROTOCOLS>
+                    <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                  </TRANSPORT-PROTOCOLS>
+                </DDS-METHOD-DEPLOYMENT>
+              </METHOD-DEPLOYMENTS>
+              <DDS-RPC-SERVICES>
+                <DDS-RPC-SERVICE-DEPLOYMENT>
+                  <SHORT-NAME>RpcOfRequestDeployment</SHORT-NAME>
+                  <FRAG-SIZE>2048</FRAG-SIZE>
+                  <LIST-SIZE>256</LIST-SIZE>
+                  <REPLY-TOPIC-NAME>ReplyTopicNameOfRequestDeployment</REPLY-TOPIC-NAME>
+                  <REQUEST-TOPIC-NAME>RequestTopicNameOfRequestDeployment</REQUEST-TOPIC-NAME>
+                </DDS-RPC-SERVICE-DEPLOYMENT>
+              </DDS-RPC-SERVICES>
+              <FRAG-SIZE>2048</FRAG-SIZE>
+              <LIST-SIZE>256</LIST-SIZE>
+              <SERVICE-INTERFACE-ID>103</SERVICE-INTERFACE-ID>
+            </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

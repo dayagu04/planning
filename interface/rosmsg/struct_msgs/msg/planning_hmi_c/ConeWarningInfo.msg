@@ -1,0 +1,2 @@
+bool cone_warning
+int16 cone_warning_action

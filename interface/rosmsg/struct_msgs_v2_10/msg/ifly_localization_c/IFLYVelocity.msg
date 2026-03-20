@@ -1,0 +1,3 @@
+IFLYVelGlobal velocity_enu
+IFLYVelLocal velocity_boot
+IFLYVelLocal velocity_body

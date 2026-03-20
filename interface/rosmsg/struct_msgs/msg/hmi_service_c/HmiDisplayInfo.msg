@@ -1,0 +1,7 @@
+PilotHmiDisplay pilot_hmi_display
+ParkHmiDisplay park_hmi_display
+SwitchHmiDisplay hmi_switch_display
+AdasHmiDisplay adas_hmi_display
+AccHmiDisplay acc_hmi_display
+SccHmiDisPlay scc_hmi_display
+NoaHmiDisplay noa_hmi_display

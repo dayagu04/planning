@@ -1,0 +1,8 @@
+int16 acc_status
+bool acc_active_resp
+bool acc_driver_denied
+int16 acc_takeover_req_lv
+int32 acc_set_headway
+float32 acc_set_speed
+bool intelligent_following
+int16 acc_notify_req

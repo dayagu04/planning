@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="386f12f2-5b2a-4a72-a38c-b706cf168125">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformServiceInterface</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>PlatformStateAgentServiceInterface</SHORT-NAME>
+              <ELEMENTS>
+                <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                  <SHORT-NAME>PlatformStateAgentDeployment</SHORT-NAME>
+                  <EVENT-DEPLOYMENTS>
+                    <DDS-EVENT-DEPLOYMENT>
+                      <SHORT-NAME>PlatformStateEventDdsDeployment</SHORT-NAME>
+                      <TOPIC-NAME>PlatformStateEventDdsDeployment</TOPIC-NAME>
+                    </DDS-EVENT-DEPLOYMENT>
+                  </EVENT-DEPLOYMENTS>
+                  <METHOD-DEPLOYMENTS>
+                    <DDS-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>QueryPlatformStateDdsDeployment</SHORT-NAME>
+                      <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/PlatformServiceInterface/PlatformStateAgentServiceInterface/PlatformStateAgentDeployment/RpcQueryPlatformStateDdsDeployment</DDS-RPC-SERVICE-REF>
+                    </DDS-METHOD-DEPLOYMENT>
+                    <DDS-METHOD-DEPLOYMENT>
+                      <SHORT-NAME>RequestPlatformStateDdsDeployment</SHORT-NAME>
+                      <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/PlatformServiceInterface/PlatformStateAgentServiceInterface/PlatformStateAgentDeployment/RpcRequestPlatformStateDdsDeployment</DDS-RPC-SERVICE-REF>
+                    </DDS-METHOD-DEPLOYMENT>
+                  </METHOD-DEPLOYMENTS>
+                  <DDS-RPC-SERVICES>
+                    <DDS-RPC-SERVICE-DEPLOYMENT>
+                      <SHORT-NAME>RpcQueryPlatformStateDdsDeployment</SHORT-NAME>
+                      <REPLY-TOPIC-NAME>ReplyRpcQueryPlatformStateDdsDeployment</REPLY-TOPIC-NAME>
+                      <REQUEST-TOPIC-NAME>RequestRpcQueryPlatformStateDdsDeployment</REQUEST-TOPIC-NAME>
+                    </DDS-RPC-SERVICE-DEPLOYMENT>
+                    <DDS-RPC-SERVICE-DEPLOYMENT>
+                      <SHORT-NAME>RpcRequestPlatformStateDdsDeployment</SHORT-NAME>
+                      <REPLY-TOPIC-NAME>ReplyRpcRequestPlatformStateDdsDeployment</REPLY-TOPIC-NAME>
+                      <REQUEST-TOPIC-NAME>RequestRpcRequestPlatformStateDdsDeployment</REQUEST-TOPIC-NAME>
+                    </DDS-RPC-SERVICE-DEPLOYMENT>
+                  </DDS-RPC-SERVICES>
+                  <SERVICE-INTERFACE-ID>2983</SERVICE-INTERFACE-ID>
+                </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+              </ELEMENTS>
+            </AR-PACKAGE>
+            <AR-PACKAGE>
+              <SHORT-NAME>PlatformStateAgentMsgDataTypes</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DataTypes</SHORT-NAME>
+                  <ELEMENTS>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>PlatformStateMsg</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>ara</SHORT-NAME>
+                          <SYMBOL>ara</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>sm</SHORT-NAME>
+                          <SYMBOL>sm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>platformState</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint8_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

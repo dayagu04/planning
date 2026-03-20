@@ -1,0 +1,14 @@
+int16 scc_status
+bool scc_active_resp
+bool scc_driver_denied
+int16 scc_hands_off_warning
+int16 scc_takeover_req_lv
+int16 scc_line_detect_status
+HmiIntelligentEvasion intelligent_evasion
+HmiLaneChange lane_change
+int16 narrow_road_tips
+int16 scc_notify_req
+int16 scc_notify
+int16 hands_off_detection
+bool traffic_light_stop_go
+bool obstacle_bypass

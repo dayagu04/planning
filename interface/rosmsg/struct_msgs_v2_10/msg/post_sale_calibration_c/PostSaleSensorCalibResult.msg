@@ -1,0 +1,9 @@
+uint8 status
+uint8 result
+char[32] fail_sensor_name
+float32 delta_x
+float32 delta_y
+float32 delta_z
+float32 delta_roll
+float32 delta_yaw
+float32 delta_pitch

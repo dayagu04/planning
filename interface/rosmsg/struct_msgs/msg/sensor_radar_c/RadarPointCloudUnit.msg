@@ -1,0 +1,17 @@
+uint16 matched_obj_id
+float32 rng_m
+float32 azi_deg
+float32 ele_deg
+float32 x
+float32 y
+float32 z
+uint8 motion_status
+float32 motion_speed
+float32 dpl_raw_mps
+float32 dpl_unambi_mps
+uint8 bandwidth_mode
+float32 snr_db
+float32 rcs_dbsm
+uint8 is_peek
+uint8 is_ghost
+uint8 azimuth_order

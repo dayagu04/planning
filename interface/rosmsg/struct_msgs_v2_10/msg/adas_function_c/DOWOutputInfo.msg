@@ -1,0 +1,5 @@
+uint8 dow_state
+uint8 dow_front_left_warning_level
+uint8 dow_front_right_warning_level
+uint8 dow_rear_left_warning_level
+uint8 dow_rear_right_warning_level

@@ -1,0 +1,5 @@
+int16 pa_main_switch
+bool pa_cancel_switch
+bool pa_active_switch
+bool pa_start_switch
+int16 pa_direction

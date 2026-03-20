@@ -1,0 +1,7 @@
+uint8 rcta_state
+uint8 rcta_left_warning_level
+uint8 rcta_right_warning_level
+uint16 rcta_enable_code
+uint16 rcta_disable_code
+uint16 rcta_objs_state_l1
+uint16 rcta_objs_state_r1

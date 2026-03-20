@@ -1,0 +1,270 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/fm_b_service_libCompositionSwComponentType9/fm_b_service_libProcess9",
+  "services": [
+    {
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "serviceId": 1100,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "ReportAlarm",
+          "id": 30845,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/AlarmInfo"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService/ReportAlarmOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "2",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoMdcB_ProvidedSomeipServiceInstance27",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10040",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoPhmB_ProvidedSomeipFmBService",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10036",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoFdl_ProvidedSomeipServiceInstance30",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10031",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoFiniteStateManager_ProvidedSomeipServiceInstance29",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10023",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoHmiService_ProvidedSomeipServiceInstance22",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10018",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoPanoramaViewCameraPerception_ProvidedSomeipServiceInstance17",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10017",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoCameraNodePanoramaView_ProvidedSomeipServiceInstance16",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10012",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoRadar4dService_ProvidedSomeipServiceInstance32",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10011",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoSocBCommunication_ProvidedSomeipServiceInstance10",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10010",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoLocalization_ProvidedSomeipServiceInstance9",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10009",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoCalibration_ProvidedSomeipServiceInstance22",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10008",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoEhr_ProvidedSomeipServiceInstance7",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10007",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoGnssServiceNode_ProvidedSomeipServiceInstance6",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10003",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoSdmap_ProvidedSomeipServiceInstance2",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        }
+      ]
+    }
+  ]
+}

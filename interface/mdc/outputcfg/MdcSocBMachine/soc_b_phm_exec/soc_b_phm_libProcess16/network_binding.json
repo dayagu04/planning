@@ -1,0 +1,113 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "soc_b_phm_exec/soc_b_phm_libExecutable17Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10040",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoPhmB_RequiredSomeipSocBPhm"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "soc_b_phm_exec/soc_b_phm_libExecutable17Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10194",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhrPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10196",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10197",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekGnssPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10198",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekHmiPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10199",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/Iflytek4dRadarPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10200",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekCameraPerceptionPanoramaPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10201",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10202",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekCameraPanoramaPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10219",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekDiskSpaceInfoPhmBOta_DdsProvidedSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10222",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekDiskCleanRequest_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10227",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekDiskStatePhmBFdl_DdsProvidedSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10228",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekDiskCleanRequestPhmBFdl_DdsProvidedSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10231",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekCalibrationPhmReport_DdsRequiredSocBPhm"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10232",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFdlPhmReport_DdsRequiredSocBPhm"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "soc_b_phm_exec/soc_b_phm_libExecutable17Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "1",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekConfigManager_RequiredSomeipSocBPhm"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "soc_b_phm_exec/soc_b_phm_libExecutable17Prototype/",
+      "service": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "1",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekStateManager_RequiredSomeipSocBPhm"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+std_msgs/Header header
+int64 whl_rr
+int64 whl_rl
+int64 whl_fl
+int64 whl_fr
+uint8 direction_rl
+uint8 direction_rr
+uint8 direction_fl
+uint8 direction_fr
+float64 str_ang_act
+float64 veh_yaw_rate
+float64 veh_acc_y
+float64 veh_acc_x
+float64 veh_spd

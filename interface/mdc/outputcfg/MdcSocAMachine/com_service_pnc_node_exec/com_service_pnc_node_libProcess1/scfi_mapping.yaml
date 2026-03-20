@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10008,10009,10017,10018,10019,10020,10021,10022,10026,10028,10030,10151,10165,10177,10206,10011,10242]
+        portName: ["IflytekSensorImu","IflytekVehicleService","IflytekHmiMcuToSocBsw","IflytekUssUsswaveInfo","IflytekSensorMcuToFmInfo","IflytekAlarmInfoMcu","IflytekRadarFmPerceptionInfo","IflytekRadarFlPerceptionInfo","IflytekRadarFrPerceptionInfo","IflytekRadarRlPerceptionInfo","IflytekRadarRrPerceptionInfo","IflytekAdasFunctionAdas","IflytekMcuFmASentinel","IflytekAdasFunctionDebugInfo","IflytekComPncPhmReport","IflytekSensorTboxTime","IflytekCanTxInfo"]
+  recvInstanceID:
+    StructContainerInterface:
+        instanceId: [10059,10060,10004,10076,10083,10078,10080,10110,10166,10180,10183,10238]
+        portName: ["IflytekFusionObjectsCompress","IflytekFmMcuInfo","IflytekFusionRoadFusionCompress","IflytekHmiSocToMcuBsw","IflytekLocalizationEgomotion","IflytekPlanningPlan","IflytekControlControlCommand","IflytekFsmSocState","IflytekFmAMcuSentinel","IflytekRadarPerception4dTargetMcu","IflytekFmAMcuDegradeFunciton","IflytekCameraAroundErrorStatus"]
+    FmAlarmReceiveService:
+        instanceId: [10020]
+        portName: ["IflytekAlarmInfoComServicePncNode"]

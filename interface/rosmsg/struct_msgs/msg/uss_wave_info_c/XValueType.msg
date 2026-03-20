@@ -1,0 +1,1 @@
+float32[5] wx_value

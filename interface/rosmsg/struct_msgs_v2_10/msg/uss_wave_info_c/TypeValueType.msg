@@ -1,0 +1,1 @@
+uint32[5] wtype_value

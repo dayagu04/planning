@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>MdcPlatformServices</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>PlatformServiceInterface</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DataTypes</SHORT-NAME>
+                  <ELEMENTS>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE S="">
+                      <SHORT-NAME>FmFaultData</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>faultId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt16</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>faultObj</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt16</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>phyCpuNo</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>cpuCoreNo</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>componentId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>type</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>flag</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>paraNum</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>para</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/FmParaArray</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>clss</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>time</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/FmCharVec</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>FmFaultDetail</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>faultData</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/FmFaultData</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>actionName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>timePointFirst</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>timePointLast</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>FmFaultDetailVector</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT S="">
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/FmFaultDetail</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>FmParaArray</SHORT-NAME>
+                      <CATEGORY>ARRAY</CATEGORY>
+                      <SHORT-NAME-PATTERN></SHORT-NAME-PATTERN>
+                      <ARRAY-SIZE>4</ARRAY-SIZE>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int64</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE S="">
+                      <SHORT-NAME>FmFaultFull</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>faultId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt16</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>faultObj</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt16</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>phyCpuNo</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>cpuCoreNo</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>type</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>clss</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>level</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>flag</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>componentId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>count</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>timeFirst</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>timeLast</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>para</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>desc</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>actionName</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>actionResult</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>subFaultVec</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/FmStringVec</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>FmStringVec</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT S="">
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>FmFaultFullVec</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT S="">
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/FmFaultFull</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>FmCharVec</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT S="">
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Int8</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE S="">
+                      <SHORT-NAME>FmFaultStatData</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>faultCnt</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>faultClearCnt</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>minTimeInvl</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>maxTimeInvl</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>avgTimeInvl</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/Double</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>alarmCnt</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>alarmClearCnt</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE S="">
+                      <SHORT-NAME>FmMcuDataHeader</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>type</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint8_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>version</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint8_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>checkSum</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint32_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>seqId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint32_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>sendTime</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint64_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE S="">
+                      <SHORT-NAME>FmMcuDataRetInfo</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>fm</SHORT-NAME>
+                          <SYMBOL>fm</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>type</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint8_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>seqId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint32_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>retCode</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppBasicDataType/uint32_t</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>FmServiceInterface</SHORT-NAME>
+                  <ELEMENTS>
+                    <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>FmQueryServiceDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultDetail_Someip</SHORT-NAME>
+                          <METHOD-ID>3</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaulOnFlag_Someip</SHORT-NAME>
+                          <METHOD-ID>4</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultStatistic_Someip</SHORT-NAME>
+                          <METHOD-ID>5</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QuerySystemFaultStatus_Someip</SHORT-NAME>
+                          <METHOD-ID>6</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <SERVICE-INTERFACE-ID>1088</SERVICE-INTERFACE-ID>
+                      <SERVICE-INTERFACE-VERSION>
+                        <MAJOR-VERSION>1</MAJOR-VERSION>
+                        <MINOR-VERSION>0</MINOR-VERSION>
+                      </SERVICE-INTERFACE-VERSION>
+                    </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                    <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>FmReportEventServiceInterfaceDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportFault_Someip</SHORT-NAME>
+                          <METHOD-ID>3</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportCheckPoint_Someip</SHORT-NAME>
+                          <METHOD-ID>4</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportProcState_Someip</SHORT-NAME>
+                          <METHOD-ID>5</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <SERVICE-INTERFACE-ID>1089</SERVICE-INTERFACE-ID>
+                      <SERVICE-INTERFACE-VERSION>
+                        <MAJOR-VERSION>1</MAJOR-VERSION>
+                        <MINOR-VERSION>0</MINOR-VERSION>
+                      </SERVICE-INTERFACE-VERSION>
+                    </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                    <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>FmQueryServiceDdsDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultDetail_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmServiceInterface/FmQueryServiceDdsDeployment/QueryFaultDetial_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultOnFlag_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmServiceInterface/FmQueryServiceDdsDeployment/QueryFaultOnFlag_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultStatistic_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmServiceInterface/FmQueryServiceDdsDeployment/QueryFaultStatistic_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>QuerySystemFaultStatus_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmServiceInterface/FmQueryServiceDdsDeployment/QuerySystemFaultStatus_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <DDS-RPC-SERVICES>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultDetial_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyQueryFaultDetailDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestQueryFaultDetailDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultOnFlag_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyQueryFaultOnFlagDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestQueryFaultOnFlagDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>QueryFaultStatistic_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyQueryFaultStatisticDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestQueryFaultStatisticDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>QuerySystemFaultStatus_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyQuerySystemFaultStatusDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestQuerySystemFaultStatusDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                      </DDS-RPC-SERVICES>
+                      <SERVICE-INTERFACE-ID>1088</SERVICE-INTERFACE-ID>
+                    </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                    <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>FmReportEventServiceDdsDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportFault_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmServiceInterface/FmReportEventServiceDdsDeployment/ReportFault_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportCheckPoint_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmServiceInterface/FmReportEventServiceDdsDeployment/ReportCheckPoint_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportProcState_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmServiceInterface/FmReportEventServiceDdsDeployment/ReportProcState_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <DDS-RPC-SERVICES>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>ReportFault_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyReportFaultDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestReportFaultDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>ReportCheckPoint_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyReportCheckPointDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestReportCheckPointDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>ReportProcState_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyReportProcStateDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestReportProcStateDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                      </DDS-RPC-SERVICES>
+                      <SERVICE-INTERFACE-ID>1089</SERVICE-INTERFACE-ID>
+                    </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                    <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>FmTransMcuDataServiceInterfaceDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>ReportMcuData_Someip</SHORT-NAME>
+                          <METHOD-ID>1</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <SERVICE-INTERFACE-ID>1090</SERVICE-INTERFACE-ID>
+                      <SERVICE-INTERFACE-VERSION>
+                        <MAJOR-VERSION>1</MAJOR-VERSION>
+                        <MINOR-VERSION>0</MINOR-VERSION>
+                      </SERVICE-INTERFACE-VERSION>
+                    </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

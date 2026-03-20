@@ -1,0 +1,4 @@
+int16 offset_mode_display
+int32 speed_offset_value_display
+int32 speed_offset_percentage_display
+int16 acc_spd_mode_ind_display

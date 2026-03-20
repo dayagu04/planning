@@ -1,0 +1,6 @@
+float32 apa_sns_dtd_obj_first
+uint8 obj1_type
+float32 apa_sns_dtd_obj_sencond
+uint8 obj2_type
+float32 apa_sns_dtd_obj_three
+uint8 obj3_type

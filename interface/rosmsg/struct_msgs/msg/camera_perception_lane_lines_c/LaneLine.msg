@@ -1,0 +1,14 @@
+uint32 id
+uint32 life_time
+int16 source
+int16 type
+int16 pos_type
+uint32 lane_points_attr_set_size
+LanePointAttr[] lane_points_attr_set
+uint8 line_segments_size
+LineSegment[] line_segments
+uint8 marking_segments_size
+MarkingSegment[] marking_segments
+uint8 color_segments_size
+ColorSegment[] color_segments
+float32 confidence

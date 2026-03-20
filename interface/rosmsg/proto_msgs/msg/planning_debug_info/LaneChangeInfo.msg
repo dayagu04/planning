@@ -1,0 +1,9 @@
+bool has_target_lane
+int32 tlane_virtual_id
+int32 lc_map_decision
+float64 lc_end_dis
+float64 v_limit
+int32 current_lane_type 
+int32 target_gap_obs_first 
+int32 target_gap_obs_second
+TrackedObjectInfo[] lc_cars

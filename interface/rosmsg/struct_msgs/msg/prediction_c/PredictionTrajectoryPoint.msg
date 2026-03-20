@@ -1,0 +1,10 @@
+float32 confidence
+Point2f position
+float32 yaw
+float32 theta_vel
+float32 velocity
+Point2f relative_position
+Point2f relative_velocity
+float32 relative_yaw
+float32 relative_theta_vel
+GaussianInfo gaussian_info

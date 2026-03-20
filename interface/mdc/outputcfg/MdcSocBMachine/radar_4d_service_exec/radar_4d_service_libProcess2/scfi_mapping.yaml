@@ -1,0 +1,12 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10084,10010,10179,10199]
+        portName: ["IflytekRadarFmPerception4dTarget","IflytekRadarFmPerception4dPointCloud","IflytekRadarPerception4dTargetMcu","Iflytek4dRadarPhmReport"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10012]
+        portName: ["IflytekAlarmInfoRadar4dService"]

@@ -1,0 +1,8 @@
+LaneId id
+int32 lane_type
+Polyline center_line
+LaneBoundaryGroupId left_boundary_group
+LaneBoundaryGroupId right_boundary_group
+LanePortId head_id
+LanePortId tail_id
+int16 direction

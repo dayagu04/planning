@@ -1,0 +1,374 @@
+/**
+  雄狮导航地图消息定义
+  topic: /iflytek/sdmap/sdmap_info
+  频率： 非固定周期
+  结构体： LionMapMessage
+  接口说明：本文档定义了雄狮导航地图(M32T项目车机中的地图)与域控交互的消息体。
+  信息的传导路径为 智驾APK -> 底软 -> EHR。 底软不解析proto数据，只做消息转发。
+  智驾apk -> 底软： 通信方式为someip
+  底软 -> EHR：消息topic为/iflytek/sdmap/sdmap_info
+  消息频率：非固定周期(即有周期信号，也有事件触发型信号)
+*/
+
+syntax = "proto2";
+
+package lion_map;
+
+message LionMapMessage {
+  optional uint64 timestamp = 1;  // 系统时间戳, 单位: ms
+  optional bytes body = 2;  // 消息内容, MessageBody 序列化后的二进制数据
+
+  message MessageBody {
+    oneof data {
+      // 导航路线信息，json字符串。有则发送，没有则不发
+      bytes route_path_info = 1;
+
+      bytes tts = 2;  // tts播报文本信息。有则发送，没有则不发
+
+      LaneInfos lane_info_list = 3;  // 导航车道线信息。有则发送，没有则不发
+
+      NaviStatusInfo navi_status = 4;  // 导航状态信息。1S发送一次
+
+      // 导航电子眼信息。有则发送，没有则不发。
+      NaviCameraExtInfo navi_camera_info = 9;
+    }
+
+    // 红绿灯倒计时信息。和导航状态信息一起发送，有则携带，没有则不带。协议3.46
+    repeated TrafficLightCountdownInfo traffic_light_count_down = 5;
+
+    // 定位匹配信息。和导航状态信息一起发送，有则携带，没有则不带。协议3.59
+    optional LocMatchInfo loc_match_info = 6;
+
+    // 导航道路信息
+    // (路段限速)。和导航状态信息一起发送，有则携带，没有则不带。协议3.12
+    optional NaviRoadInfo navi_road_info = 7;
+
+    // 天气信息。和导航状态信息一起发送，有则携带，没有则不带。协议3.3
+    repeated WeatherInfo navi_weather_info = 8;
+  }
+}
+
+message LaneInfos {
+  message LaneInfo {
+    repeated uint32 back_lanes = 1;  // 背景车道，参看LaneAction
+    repeated uint32 front_lanes = 2;  // 前景车道，仅导航有效，参看LaneAction
+    repeated uint32 optimal_lanes =
+        3;  // 建议车道，仅在线导航有效，参看LaneAction
+    repeated uint32 back_extend_lanes =
+        4;  // 背景扩展车道信息，参看ExtenLaneAction
+    repeated uint32 front_extend_lanes =
+        5;  // 前景扩展车道信息，参看ExtenLaneAction
+    repeated uint32 extension_lanes =
+        6;  // 扩展车道信息，仅在线导航有效，参数定义请参见ExtenLaneAction
+    optional uint32 segmeng_idx = 7;  //所在导航段的索引
+    optional uint32 link_idx = 8;     //所在link的索引
+  }
+  repeated LaneInfo lane_info = 1;
+}
+
+message NaviStatusInfo {
+  enum NaviMode {
+    NORMAL = 0;    //非导航非巡航模式
+    NAVI = 1;      //真实导航模式
+    NAVI_SIM = 2;  //模拟导航模式
+    CRUISE = 3;    // 巡航模式
+  }
+  enum NaviStatus {
+    DEFAULT = 0;
+    RUNNING = 1;  //导航进行中
+    PAUSE = 2;    //导航暂停
+    RESUME = 3;   //导航恢复
+    STOP = 4;     //导航结束
+  }
+  optional uint32 mode = 1;    //导航模式，参看枚举NaviMode
+  optional uint32 status = 2;  // 具体状态，参看枚举NaviStatus
+}
+
+// 红绿灯倒计时信息 协议3.46
+message TrafficLightCountdownInfo {
+  message GpsPosition {
+    optional double longitude = 1;  // 经度，单位度，gcj02格式
+    optional double latitude = 2;   // 纬度，单位度，gcj02格式
+  }
+  optional GpsPosition position = 1;  // 红绿灯位置
+  optional int64 segment_idx = 2;     // 所在segment索引
+  optional int64 link_idx = 3;        // 所在link索引
+  // 路况：1-极度拥堵，2-拥堵，3-拥堵+缓行， 4-缓行， 5-畅通
+  optional uint32 status = 4;
+  optional LightInfo light_info = 5;
+  optional int64 path_id = 6;  // 路线ID
+  optional int64 link_id = 7;  // 所在linkID值
+
+  message LightInfo {
+    optional uint32 wait_num = 1;  //等红绿灯轮数
+    optional int32 dir =
+        2;  // 红绿指示方向，1 是左转，2 是右转，7是调头、8是直行
+    repeated LightState light_states = 3;  //红绿灯状态
+    optional string desc = 4;              // 灯态列表（字符串）
+    optional int32 showType =
+        5;  // 显示形态标识[ 0: 不展示灯态和倒计时 1: 仅展示倒计时
+            // (实际不存在，因为有倒计时一定伴随有灯态) 2:
+            // 仅展示灯态，不展示倒计时 3: 展示灯态和倒计时 ]
+    optional int32 phase =
+        6;  // 左转和直行是否同相位[ 0: 非同相位，即灯态颜色或倒计时读秒不相同
+            // 1: 是同相位，即灯态颜色及倒计时读秒都相同 ]
+    optional int32 standardType =
+        7;  // 灯规格类型[ 0: 无效值 1: 常规灯，有颜色及读秒变化的灯 2:
+            // 降级灯，仅有颜色变化的灯 ]
+  }
+  message LightState {
+    optional TrafficLightType type = 1;  // 红绿灯状态类型
+    /*
+     * lightState 对象中的 lastSeconds 含义
+     * 1. lastSeconds 的定义
+     * lastSeconds 是 LightState
+     * 类的一个属性，代表倒计时截止时间下限阈值。当前只有绿灯有此属性32。
+     *
+     * 2. lastSeconds 的作用
+     * 倒计时区间：如果设置了
+     * lastSeconds，则在倒计时的最后几秒内会显示特定的状态或文案。
+     * 中间态展示：如果 lastSeconds
+     * 小于1，则表示不展示中间态直接进入下一个灯态周期32。
+     * 3. 示例说明
+     * 示例1：常规绿灯倒计时为30秒，若下限阈值为3秒。倒计时区间[30,3)用读秒显示，倒计时区间[3,0]用“通行”文案显示绿变红的中间态32。
+     * 示例2：常规绿灯倒计时为30秒，下限阈值为0秒。倒计时区间[30,0]用读秒显示，无“通行”文案显示绿变红的中间态32。
+     * 4. 巡航与导航场景差异
+     * 导航场景：绿灯闪烁 lastSeconds 一般为3秒21。
+     * 巡航场景：绿灯闪烁 lastSeconds
+     * 为0秒，原因是巡航显示多灯组，不希望同时闪烁，暂不透出21。
+     * 通过以上信息，可以理解 lastSeconds 在不同场景下的具体含义和使用方式。
+     */
+    optional int32 last_seconds = 2;
+    optional uint64 stime = 3;  // 灯态开始时间戳，单位秒,1970,utc+8
+    optional uint64 etime = 4;  // 灯态结束时间戳，单位秒,1970,utc+8
+  }
+  enum TrafficLightType {
+    kInvalid = 0;  // 无效值
+    kOff = 1;      // 不亮灯，暂停不显示  1
+    kRed = 2;      // 红灯  2
+    kGreen = 3;    // 绿灯 3
+    kYellow = 4;   // 黄灯 4
+  }
+}
+
+message LocMatchInfo {
+  optional int32 formway = 1;
+  optional int32 linkType = 2;
+  optional int32 ownership = 3;
+  optional int32 roadClass = 4;
+  optional int32 currentroadspeed = 5;  //道路限速(仅当导航态有效)
+  optional string roadName = 6;         // 道路名称
+  enum Ownership {
+    kUnknown = -1;             // 未知
+    kPublicRoad = 0;           // 公共道路
+    kInternalRoad = 1;         //内部道路
+    kPrivateRoad = 2;          //私有道路
+    kUndergroundParkRoad = 3;  //地下停车场道路
+    k3DParkRoad = 4;           //立体停车场道路
+  }
+}
+
+message NaviRoadInfo {
+  optional string road_name = 1;            // 道路名称
+  optional int32 road_class = 2;            // 当前自车所在道路等级
+  optional int32 cur_road_speed_limit = 3;  // 道路限速
+  optional int32 form_way = 4;              // 道路属性
+}
+
+// 天气详情信息
+message WeatherDetailInfo {
+  optional string weather_name = 1;      // 天气名称 UTF16
+  optional string alert_level_name = 2;  // 预警名称 UTF16
+
+  // 天气 ID 说明:
+  // 1:台风预警 2:暴雨预警 3:暴雪预警 5:大风预警 6:沙尘暴预警
+  // 9:雷电预警 10:冰雹预警 11:霜冻预警 12:大雾预警 13:霾预警
+  // 14:道路结冰预警 16:灰霾预警 17:雷雨大风预警 21:道路冰雪预警 100: 晴
+  // 101:多云 102:少云 103:晴间多云 104:阴 200:有风 201:平静 202:微风 203:和风
+  // 204:清风 205:强风/劲风 206:疾风 207:大风 208:烈风 209:风暴 210: 狂暴风
+  // 211:飓风 212:龙卷风 213:热带风暴 300:阵雨 301:强阵雨 302:雷阵雨
+  // 303:强雷阵雨 304:雷阵雨伴有冰雹 305:小雨 306:中雨 307:大雨 308:极端降雨
+  // 309:毛毛雨/细雨 310:暴雨 311:大暴雨 312:特大暴雨 313:冻雨 400:小雪 401:中雪
+  // 402: 大雪 403:暴雪 404:雨夹雪 405:雨雪天气 406:阵雨夹雪 407:阵雪 500:薄雾
+  // 501:大雾 502:雾霾 503:扬沙 504:浮尘 507:沙尘 暴 508:强沙尘暴 900:热 901:冷
+  // 1001:冰粒 1002:冰针 1003:冰雹 1004:雷暴 1005:雷电
+  optional int32 weather_id = 3;  // 天气 ID
+
+  // 预警等级:
+  // 若大于等于 0，weather_name 存储的为预警天气名称
+  // 否则，weather_name 存储的为恶劣天气名称
+  optional int32 alert_level_id = 4;  // 预警等级
+
+  // 天气作用区域到当前车位距离(单位:米):
+  // 0: 当前车位在天气范围内
+  // 大于 0: 当前车位不在天气范围内
+  // 不会给出小于 0 的情况
+  optional int32 distance_to_car = 5;  // 到当前车位的距离
+}
+
+// 天气信息
+message WeatherInfo {
+  repeated WeatherDetailInfo weather_info = 1;  // 天气信息列表
+  optional int64 path_id = 2;                   // 路径唯一 ID
+}
+
+// 二维坐标信息
+message Coord2DDouble {
+  optional double x = 1;  // x坐标
+  optional double y = 2;  // y坐标
+}
+
+// 三维坐标信息
+message Coord3DDouble {
+  optional double x = 1;  // x坐标
+  optional double y = 2;  // y坐标
+  optional double z = 3;  // z坐标
+}
+
+/******** 协议 3.7-V2 ********/
+// 电子眼细类信息
+message NaviSubCameraExt {
+  // 细类电子眼id
+  optional int32 sub_camera_id = 1;
+
+  // 公交车道是否生效 1:生效 0:不生效
+  optional int32 busway_time_enable = 2;
+
+  // 电子眼的详细违章类型:SubCameraExtType
+  // {@link com.lion.api.module.navi.NaviValue.SubCameraExtType}
+  optional int32 sub_type = 3;
+
+  // 高罚数据是否生效 2:高罚 1:有罚单 0:不生效
+  optional int32 penalty = 4;
+
+  // 电子眼显示优先级
+  optional int32 priority = 5;
+
+  // 是否是新增电子眼
+  optional bool is_new = 6;
+
+  // 是否可变限速电子眼
+  optional bool is_variable_speed = 7;
+
+  // 区间测速是否配对:仅对区间测速电子眼生效
+  optional bool is_match = 8;
+
+  // 城市特色电子眼标识
+  optional bool is_special = 9;
+
+  // 电子眼限速 size = 0没有限速值 0车道禁行 0xff车道无数据 单位km/h
+  repeated int32 speed = 10;  // 使用int32存储short值
+}
+
+// 导航电子眼扩展信息
+message NaviCameraExt {
+  // 电子眼id
+  optional int32 camera_id = 1;
+
+  // 电子眼所在segment索引
+  optional int64 segment_idx = 2;
+
+  // 电子眼所在link索引
+  optional int64 link_index = 3;
+
+  // 自车到电子眼距离
+  optional int32 distance = 4;
+
+  // 电子眼到Link终点的距离 单位:米（仅导航场景生效）
+  optional int32 distance_to_end = 5;
+
+  // 电子眼所在道路的道路等级
+  optional int32 road_class = 6;
+
+  // 是否隐藏式电子眼
+  optional bool is_hidden = 7;
+
+  // 摄像头位置坐标(二维)
+  optional Coord2DDouble coord2d = 8;
+
+  // 摄像头位置坐标(三维)
+  optional Coord3DDouble coord3d = 9;
+
+  // 电子眼细类列表
+  repeated NaviSubCameraExt sub_cameras = 10;
+}
+
+message NaviCameraExtInfo {
+  repeated NaviCameraExt navi_cameras = 1;
+}
+
+// 导航引导服务摄像头类型枚举
+enum SubCameraExtType {
+  // 自动未知错误
+  AUTO_UNKNOWN_ERROR = -2147483648;
+  // 无效值
+  SUB_CAMERA_EXT_TYPE_NULL = 0;
+  // 违规用灯
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_USE_LIGHT = 1;
+  // 不系安全带
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_USE_SAFETY_BELT = 2;
+  // 违规占车道
+  SUB_CAMERA_EXT_TYPE_DO_NOT_FOLLOW_LANE = 3;
+  // 违规过路口
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_PASS_CROSS = 4;
+  // 开车打手机
+  SUB_CAMERA_EXT_TYPE_DIAL_PHONE_WHEN_DRIVING = 5;
+  // 分车道限速
+  SUB_CAMERA_EXT_TYPE_LANE_LIMIT_SPEED = 6;
+  // 超高速
+  SUB_CAMERA_EXT_TYPE_ULTRA_HIGH_SPEED = 7;
+  // 超低速
+  SUB_CAMERA_EXT_TYPE_VERY_LOW_SPEED = 8;
+  // 可变限速
+  SUB_CAMERA_EXT_TYPE_VARIABLE_SPEED = 9;
+  // 闯红灯
+  SUB_CAMERA_EXT_TYPE_TRAFFIC_LIGHT = 10;
+  // 尾号限行
+  SUB_CAMERA_EXT_TYPE_END_NUMBER_LIMIT = 11;
+  // 环保限行
+  SUB_CAMERA_EXT_TYPE_ENVIRONMENTAL_LIMIT = 12;
+  // 违反禁令标志
+  SUB_CAMERA_EXT_TYPE_BREACH_PROHIBITION_SIGN = 13;
+  // 违反禁止标线
+  SUB_CAMERA_EXT_TYPE_VIOLATE_PROHIBITED_MARKINGS = 14;
+  // 礼让行人
+  SUB_CAMERA_EXT_TYPE_COURTESY_CROSSING = 15;
+  // 逆向行驶
+  SUB_CAMERA_EXT_TYPE_REVERSE_DRIVING = 16;
+  // 违章停车
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_PARKING = 17;
+  // 占用非机动车道
+  SUB_CAMERA_EXT_TYPE_BICYCLE_LANE = 18;
+  // 占用公交专用车道
+  SUB_CAMERA_EXT_TYPE_BUS_WAY = 19;
+  // 占用应急车道
+  SUB_CAMERA_EXT_TYPE_EMERGENCY_LANE = 20;
+  // 禁止鸣笛
+  SUB_CAMERA_EXT_TYPE_HONK = 21;
+  // 流动测速
+  SUB_CAMERA_EXT_TYPE_FLOW_SPEED = 22;
+  // 路口不让行-让车
+  SUB_CAMERA_EXT_TYPE_COURTESY_CAR_CROSSING = 23;
+  // 违规过铁路道口
+  SUB_CAMERA_EXT_TYPE_RAILWAY_CROSSING = 24;
+  // 区间测速起点
+  SUB_CAMERA_EXT_TYPE_INTERVAL_VELOCITY_START = 25;
+  // 区间测速终点
+  SUB_CAMERA_EXT_TYPE_INTERVAL_VELOCITY_END = 26;
+  // 区间测速起终点
+  SUB_CAMERA_EXT_TYPE_INTERVAL_VELOCITY_START_END = 27;
+  // 车间距抓拍
+  SUB_CAMERA_EXT_TYPE_CAR_SPACING = 28;
+  // HOV车道
+  SUB_CAMERA_EXT_TYPE_HOV_LANE = 29;
+  // 压线抓拍
+  SUB_CAMERA_EXT_TYPE_OCCUPIED_LINE = 30;
+  // ETC拍照
+  Sub_Camera_Ext_Type_ETC = 99;
+  // 无细类的违章
+  SUB_CAMERA_EXT_TYPE_BREAK_RULE = 100;
+  // 视频监控
+  SUB_CAMERA_EXT_TYPE_SUR_VEIL_LANCE = 101;
+  // 其他
+  SUB_CAMERA_EXT_TYPE_CONSEQUENT = 255;
+}

@@ -1,0 +1,5 @@
+int16 nra_main_switch
+bool nra_cancel_switch
+bool nra_active_switch
+bool nra_start_switch
+bool nra_resume_switch

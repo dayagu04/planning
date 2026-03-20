@@ -1,0 +1,4 @@
+uint8 aebp_state
+bool aebp_deceleration_request_status
+float32 aebp_deceleration_request_value
+bool aebp_hold_request_status

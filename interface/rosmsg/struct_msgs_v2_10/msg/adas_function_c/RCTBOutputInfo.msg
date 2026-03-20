@@ -1,0 +1,4 @@
+uint8 rctb_state
+bool rctb_deceleration_request_status
+float32 rctb_deceleration_request_value
+bool rctb_hold_request_status

@@ -1,0 +1,3 @@
+uint8 virtual_lane_refline_points_size
+ReferencePoint[] virtual_lane_refline_points
+float64[4] poly_coefficient_car

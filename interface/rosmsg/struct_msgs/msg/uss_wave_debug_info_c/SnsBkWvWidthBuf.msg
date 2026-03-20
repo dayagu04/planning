@@ -1,0 +1,1 @@
+uint32[30] sns_bk_wv_width_value

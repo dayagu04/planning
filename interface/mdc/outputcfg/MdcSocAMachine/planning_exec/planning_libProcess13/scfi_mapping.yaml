@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10078,10102,10169,10205]
+        portName: ["IflytekPlanningPlan","IflytekPlanningHmi","IflytekPlanningDebugInfo","IflytekPlanningPhmReport"]
+  recvInstanceID:
+    StructContainerInterface:
+        instanceId: [10091,10029,10086,10093,10005,10097,10072,10174,10083,10018,10009,10068,10094,10098,10100,10080,10110,10099,10133,10184,10101]
+        portName: ["IflytekFusionOccupancyObjects","IflytekPredictionPredictionResult","IflytekFusionUssPerceptionInfo","IflytekFusionObjects","IflytekFusionParkingSlot","IflytekEhrStaticMap","IflytekEhrSdmapInfo","IflytekEhrSdpromapInfo","IflytekLocalizationEgomotion","IflytekUssUsswaveInfo","IflytekVehicleService","IflytekFusionGroundLine","IflytekFusionSpeedBump","IflytekCameraPerceptionScene","IflytekCameraPerceptionOccGrid","IflytekControlControlCommand","IflytekFsmSocState","IflytekCameraPerceptionTrafficSignRecognition","IflytekFusionRoadFusion","IflytekFmADegradeFunciton","IflytekCameraPerceptionDrivableSpaceGrid"]
+    FmAlarmReceiveService:
+        instanceId: [10022]
+        portName: ["IflytekAlarmInfoPlanning"]

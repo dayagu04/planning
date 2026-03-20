@@ -1,0 +1,9 @@
+string plate_number
+string record_dir
+uint64 max_duration
+uint32 max_bags_in_dir
+string[] topics
+string tag_info
+---
+bool success
+string message

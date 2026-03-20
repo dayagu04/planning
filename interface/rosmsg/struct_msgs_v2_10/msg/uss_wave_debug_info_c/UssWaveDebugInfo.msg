@@ -1,0 +1,11 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+SensorMeta sensor_meta
+SnsCmdEepromData[12] sns_cmd_eeprom_data_buf
+SnsCmdEepromData[12] sns_cmd_eepromwrite_data_buf
+USSenDataOneChannel[12] uss_en_data_one_channel
+SnsOpInfoType sns_command_data
+SnsBkWvTimeType[12] sns_bk_wv_time
+uint8[12] sns_input_capture_int_cnt
+SnsDtBufType prepare_tobe_compare_data
+SnsDtBufType sns_source_data

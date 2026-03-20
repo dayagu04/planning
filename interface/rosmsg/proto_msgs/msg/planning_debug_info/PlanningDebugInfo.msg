@@ -1,0 +1,31 @@
+std_msgs/Header header
+common_Header msg_header
+uint64 timestamp
+  # TBD: 存在多条candidates时，应该使用repeated
+  # TBD: lat behavior
+  # TBD: lat motion
+LonRefPath long_ref_path
+LateralPlanningInput lateral_motion_planning_input
+LateralPlanningOutput lateral_motion_planning_output
+LongitudinalPlanningInput longitudinal_motion_planning_input
+LongitudinalPlanningOutput longitudinal_motion_planning_output
+LatBehaviorCommon lat_behavior_common
+VOLatBehaviorPlan vo_lat_behavior_plan
+VOLatMotionPlan vo_lat_motion_plan
+EnvironmentModelInfo environment_model_info
+TopicTimeList input_topic_timestamp
+TopicTimeList input_topic_latency
+FrameInfo frame_info
+ImageLatency road_fusion_latency
+ImageLatency obstacle_fusion_latency
+LocationLatency location_latency
+string data_json
+SlotManagementInfo slot_management_info
+RealTimeLonBehaviorInput real_time_lon_behavior_planning_input
+LateralBehaviorDebugInfo lateral_behavior_debug_info
+LateralPathOptimizerInput lateral_path_optimizer_input
+LateralPathOptimizerOutput lateral_path_optimizer_output
+GapSelectorInput gap_selector_input
+GapSelectorReplayInfo gap_selector_replay_info
+PlanTrajectoryPoint[] refline_info
+PlanningReferenceLine[] generated_refline_info

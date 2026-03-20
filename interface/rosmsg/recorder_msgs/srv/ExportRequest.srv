@@ -1,0 +1,10 @@
+string plate_number
+string record_dir
+uint64 timestamp
+uint32 before_duration
+uint32 after_duration
+string[] topics
+string tag_info
+---
+bool success
+string message

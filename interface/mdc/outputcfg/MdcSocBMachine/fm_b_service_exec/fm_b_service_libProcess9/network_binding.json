@@ -1,0 +1,96 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "fm_b_service_exec/fm_b_service_libExecutable10Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10003",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoSdmap_ProvidedSomeipServiceInstance2"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10007",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoGnssServiceNode_ProvidedSomeipServiceInstance6"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10008",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoEhr_ProvidedSomeipServiceInstance7"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10009",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoCalibration_ProvidedSomeipServiceInstance22"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10010",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoLocalization_ProvidedSomeipServiceInstance9"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10011",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoSocBCommunication_ProvidedSomeipServiceInstance10"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10012",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoRadar4dService_ProvidedSomeipServiceInstance32"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10017",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoCameraNodePanoramaView_ProvidedSomeipServiceInstance16"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10018",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoPanoramaViewCameraPerception_ProvidedSomeipServiceInstance17"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10023",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoHmiService_ProvidedSomeipServiceInstance22"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10031",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoFiniteStateManager_ProvidedSomeipServiceInstance29"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10036",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoFdl_ProvidedSomeipServiceInstance30"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10040",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoPhmB_ProvidedSomeipFmBService"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "2",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoMdcB_ProvidedSomeipServiceInstance27"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "fm_b_service_exec/fm_b_service_libExecutable10Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10057",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoSoc_DdsProvidedServiceInstance23"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10108",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekAlarmInfoToBCamera_DdsProvidedFmBService"
+        }
+      ]
+    }
+  ]
+}

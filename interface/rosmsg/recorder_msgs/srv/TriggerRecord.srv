@@ -1,0 +1,9 @@
+uint64 timestamp
+uint8 record_mode
+string uri
+uint64 max_bagfile_size
+uint64 max_bagfile_duration
+uint64 max_cache_size
+---
+bool success
+string message

@@ -1,0 +1,6 @@
+int32 failsafe_loc_status
+int32 failsafe_gnss_status
+int32 failsafe_camera_status
+int32 failsafe_hdmap_status
+int32 failsafe_vehicle_status
+int32 failsafe_imu_status

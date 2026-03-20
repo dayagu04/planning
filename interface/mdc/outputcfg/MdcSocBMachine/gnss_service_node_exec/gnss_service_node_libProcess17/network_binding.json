@@ -1,0 +1,36 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "gnss_service_node_exec/gnss_service_node_libExecutable17Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10032",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorTboxTime_DdsRequiredGnssServiceNode"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10056",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekSensorGnss_DdsProvidedGnssServiceNode"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10197",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekGnssPhmReport_DdsProvidedGnssServiceNode"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "gnss_service_node_exec/gnss_service_node_libExecutable17Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10007",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoGnssServiceNode_RequiredSomeipServiceInstance5"
+        }
+      ]
+    }
+  ]
+}

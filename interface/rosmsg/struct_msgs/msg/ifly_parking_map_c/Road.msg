@@ -1,0 +1,14 @@
+RoadId id
+RoadPortId head_id
+RoadPortId tail_id
+float32 length
+int16 road_type
+Polyline road_center
+int16 travel_direction
+int16 ramp
+uint8[64] name
+int16 road_class
+uint8 road_structure_size
+int16[] road_structure
+bool intersection_internal
+IntersectionId intersection_id

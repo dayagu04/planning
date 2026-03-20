@@ -1,0 +1,11 @@
+int16 rads_status
+int16 rads_notify_req
+float32 rads_remain_distance
+float32 remain_distance_percentage
+bool rads_active_resp
+bool rads_active_denied
+uint16 path_point_size
+Point2f[] path_point
+int16 rads_active_button_sts
+int16 rads_start_button_sts
+int16 rads_continue_button_sts

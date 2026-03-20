@@ -1,0 +1,103 @@
+{
+  "logging": {
+    "level": "info",
+    "console": "false",
+    "syslog": {
+      "enable": "true"
+    }
+  },
+  "routing": "someipd",
+  "services": [
+    {
+      "service": "3",
+      "instance": "10042",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2",
+          "events": []
+        }
+      ]
+    },
+    {
+      "service": "3",
+      "instance": "10045",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2",
+          "events": []
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "service": "1100",
+      "instance": "10036",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "3392",
+      "instance": "1",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "7"
+        },
+        {
+          "event": "3"
+        },
+        {
+          "event": "6"
+        },
+        {
+          "event": "1"
+        },
+        {
+          "event": "4"
+        },
+        {
+          "event": "2"
+        },
+        {
+          "event": "5"
+        },
+        {
+          "event": "8"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "1"
+        },
+        {
+          "eventgroup": "2"
+        }
+      ]
+    }
+  ]
+}

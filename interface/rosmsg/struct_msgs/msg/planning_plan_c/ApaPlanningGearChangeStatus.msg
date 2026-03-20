@@ -1,0 +1,2 @@
+bool has_request_continue_parking
+uint8 remaining_gear_change_count

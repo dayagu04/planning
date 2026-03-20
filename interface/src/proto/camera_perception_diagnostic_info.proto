@@ -1,0 +1,62 @@
+/*******************************************************************************
+ * 感知诊断信息
+ * 行车topic：/iflytek/camera_perception/objects_diagnostic_info                     障碍物
+             /iflytek/camera_perception/lane_lines_diagnostic_info                  车道线
+             /iflytek/camera_perception/lane_topo_diagnostic_info                   可变车道
+             /iflytek/camera_perception/traffic_sign_recognition_diagnostic_info    道路交通标识
+ * 泊车topic: /iflytek/camera_perception/parking_slot_list_diagnostic_info          车位与限位器信息
+             /iflytek/camera_perception/deceler_diagnostic_info                     减速带
+             /iflytek/camera_perception/ground_line_diagnostic_info                 接地线
+             /iflytek/camera_perception/occupancy_objects_diagnostic_info           通用障碍物信息（2D轮廓点）
+             /iflytek/camera_perception/3d_occupancy_objects_diagnostic_info        通用障碍物信息(3D体素)
+             /iflytek/camera_perception/3d_general_objects_diagnostic_info          3D-box障碍物信息
+ * 频率：20Hz;10Hz(各项目视效果和负载而定)
+ * 结构体：CameraPerceptionDiagnosticInfo
+*******************************************************************************/
+
+
+syntax = "proto2";
+
+package CameraPerceptionDiagnostic;
+
+import "common.proto";
+
+// 感知结果类型
+enum CameraPerceptionResultType {
+    CAMERA_PERCEPTION_RESULT_TYPE_OBJECT = 0;               // 障碍物
+    CAMERA_PERCEPTION_RESULT_TYPE_LANE_LINE = 1;            // 车道线
+    CAMERA_PERCEPTION_RESULT_TYPE_LANE_TOPO = 2;            // 可变车道
+    CAMERA_PERCEPTION_RESULT_TYPE_ORIGIN_LANE_LINE = 3;     // 原始车道线
+    CAMERA_PERCEPTION_RESULT_TYPE_ORIGIN_LANE_TOPO = 4;     // 原始可变车道
+    CAMERA_PERCEPTION_RESULT_TYPE_TSR = 5;                  // 道路交通标识
+    CAMERA_PERCEPTION_RESULT_TYPE_PARKING_SLOT = 6;         // 车位与限位器
+    CAMERA_PERCEPTION_RESULT_TYPE_GROUNDLINE = 7;           // 接地线
+    CAMERA_PERCEPTION_RESULT_TYPE_DECELER = 8;              // 减速带
+    CAMERA_PERCEPTION_RESULT_TYPE_OCCUPANCY_OBJECT_2D = 9;  // 2D通用障碍物
+    CAMERA_PERCEPTION_RESULT_TYPE_OCCUPANCY_OBJECT_3D = 10; // 3D通用障碍物
+    CAMERA_PERCEPTION_RESULT_TYPE_GENERAL_OBJECT_3D = 11;   // 3D-box障碍物
+    CAMERA_PERCEPTION_RESULT_TYPE_OTHER = 12;               // 其他
+    CAMERA_PERCEPTION_RESULT_TYPE_RESERVE_1 = 13;           // 预留
+    CAMERA_PERCEPTION_RESULT_TYPE_RESERVE_2 = 14;           // 预留
+    CAMERA_PERCEPTION_RESULT_TYPE_RESERVE_3 = 15;           // 预留
+    CAMERA_PERCEPTION_RESULT_TYPE_RESERVE_4 = 16;           // 预留  
+    CAMERA_PERCEPTION_RESULT_TYPE_UNKNOWN = 17;             // 未知
+};
+
+// 感知引擎资源信息 
+message CameraPerceptionResourceInfo {
+    optional string vehicle_name = 1;         // 车辆名称
+    optional uint32 res_type = 2;             // 资源名称
+    optional uint32 res_tag = 3;              // 资源版本
+    optional uint32 calib_tag = 4;            // 标定版本
+    optional uint32 reserved = 5;             // 预留
+};
+
+// 感知诊断信息 
+message CameraPerceptionDiagnosticInfo {
+    optional Common.Header header = 1;                                                         // 头信息
+    optional uint64 status = 2;                                                                // 感知引擎状态码
+    optional CameraPerceptionResultType camera_perception_result_type = 3;                     // 感知结果类型
+    repeated CameraPerceptionResourceInfo camera_perception_resource_info = 4;                 // 感知引擎资源信息列表
+    optional uint64 reserved = 5;                                                              // 预留
+};

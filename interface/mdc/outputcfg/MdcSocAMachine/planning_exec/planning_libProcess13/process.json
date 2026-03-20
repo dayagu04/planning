@@ -1,0 +1,29 @@
+[
+  {
+    "key": "logTraceProcess",
+    "value": {
+      "object[]": [
+        {
+          "key": "logTraceDefaultLogLevel",
+          "value": {
+            "string": "info"
+          }
+        },
+        {
+          "key": "logTraceLogMode",
+          "value": {
+            "string[]": [
+              "network"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "Checksum",
+    "value": {
+      "string": "59C49A5C"
+    }
+  }
+]

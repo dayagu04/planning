@@ -1,0 +1,8 @@
+int16 nra_status
+int16 nra_notify
+bool nra_active_resp
+bool nra_active_denied
+float32 nra_distance
+int16 nra_active_button_sts
+int16 nra_start_button_sts
+int16 nra_continue_button_sts

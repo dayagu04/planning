@@ -1,0 +1,76 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/factory_calibration_libCompositionSwComponentType13/factory_calibration_libProcess13",
+  "services": [
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface",
+      "serviceId": 3,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "method",
+          "id": 17484,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/interface_manifests/datatypes/StructContainer"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/interface_manifests/datatypes/StructContainer"
+          ],
+          "methodOutputName": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface/methodOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "10030",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFactoryCalibrationResult_ProvidedSomeipServiceInstance29",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10029",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFactoryCalibrationActivation_ProvidedSomeipServiceInstance28",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+bool is_avaliable
+int16 nsa_disable_reason
+bool is_complete
+int16 nsa_complete_reason
+int16 nsa_pause_reason

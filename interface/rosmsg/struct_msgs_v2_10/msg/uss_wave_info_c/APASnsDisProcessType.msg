@@ -1,0 +1,4 @@
+APASnsDtdObjDisInfoType[5] apa_sns_dis_buf
+uint8 apa_sns_dtd_obj_dis_info_buf_read_index
+uint8 apa_sns_dtd_obj_dis_info_buf_write_index
+uint32 apa_sns_dtd_obj_dis_info_counter

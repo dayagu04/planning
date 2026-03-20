@@ -1,0 +1,4 @@
+uint8 fctb_state
+bool fctb_deceleration_request_status
+float32 fctb_deceleration_request_value
+bool fctb_hold_request_status

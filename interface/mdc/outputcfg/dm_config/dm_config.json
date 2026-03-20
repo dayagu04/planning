@@ -1,0 +1,617 @@
+[
+  {
+    "key": "DiagnosticCommonProps",
+    "value": {
+      "object[]": [
+        {
+          "key": "clearDtcLimitation",
+          "value": {
+            "string": "allSupportedDtcs"
+          }
+        },
+        {
+          "key": "memoryEntryStorageTrigger",
+          "value": {
+            "string": "confirmed"
+          }
+        },
+        {
+          "key": "statusBitHandlingTestFailedSinceLastClear",
+          "value": {
+            "string": "statusBitAgingAndDisplacement"
+          }
+        },
+        {
+          "key": "agingRequiresTestedCycle",
+          "value": {
+            "bool": false
+          }
+        },
+        {
+          "key": "maxNumberOfRequestCorrectlyReceivedResponsePending",
+          "value": {
+            "uint32": 3
+          }
+        },
+        {
+          "key": "responseOnSecondDeclinedRequest",
+          "value": {
+            "bool": false
+          }
+        },
+        {
+          "key": "dtcStatusAvailabilityMask",
+          "value": {
+            "uint8": 123
+          }
+        },
+        {
+          "key": "typeOfDtcSupported",
+          "value": {
+            "string": "SAE-J-2012--DA"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "DebounceAlgorithms",
+    "value": {
+      "object[]": [
+        {
+          "key": "debounceAlgorithm",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "debounceAlgorithm_noDebounce"
+                }
+              },
+              {
+                "key": "debounceBehavior",
+                "value": {
+                  "string": "FREEZE"
+                }
+              },
+              {
+                "key": "debounceAlgorithmType",
+                "value": {
+                  "uint32": 2
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "SoftwareCluster",
+    "value": {
+      "object[]": [
+        {
+          "key": "functionAddressList",
+          "value": {
+            "uint16[]": [
+              58368
+            ]
+          }
+        },
+        {
+          "key": "physicAddress",
+          "value": {
+            "uint16": 4120
+          }
+        },
+        {
+          "key": "tpInstances",
+          "value": {
+            "string[]": [
+              ""
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "AccessPermission",
+    "value": {
+      "object[]": [
+        {
+          "key": "accessPermission",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "AllSessionAccessPermission"
+                }
+              },
+              {
+                "key": "allowedSessions",
+                "value": {
+                  "uint8[]": [
+                    1,
+                    2,
+                    3
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "accessPermission",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "NonDefaultSessionAccessPermission"
+                }
+              },
+              {
+                "key": "allowedSessions",
+                "value": {
+                  "uint8[]": [
+                    2,
+                    3
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "accessPermission",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "OnlyProgrammingSessionAccessPermission"
+                }
+              },
+              {
+                "key": "allowedSessions",
+                "value": {
+                  "uint8[]": [
+                    2
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "accessPermission",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "OnlyExtendedSessionAccessPermission"
+                }
+              },
+              {
+                "key": "allowedSessions",
+                "value": {
+                  "uint8[]": [
+                    3
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "accessPermission",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "NonProgrammingSessionAccessPermission"
+                }
+              },
+              {
+                "key": "allowedSessions",
+                "value": {
+                  "uint8[]": [
+                    1,
+                    3
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "Sessions",
+    "value": {
+      "object[]": [
+        {
+          "key": "session",
+          "value": {
+            "object[]": [
+              {
+                "key": "id",
+                "value": {
+                  "uint8": 1
+                }
+              },
+              {
+                "key": "p2",
+                "value": {
+                  "float": 0.05
+                }
+              },
+              {
+                "key": "p2_star",
+                "value": {
+                  "float": 5.0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "session",
+          "value": {
+            "object[]": [
+              {
+                "key": "id",
+                "value": {
+                  "uint8": 3
+                }
+              },
+              {
+                "key": "p2",
+                "value": {
+                  "float": 0.05
+                }
+              },
+              {
+                "key": "p2_star",
+                "value": {
+                  "float": 5.0
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "session",
+          "value": {
+            "object[]": [
+              {
+                "key": "id",
+                "value": {
+                  "uint8": 2
+                }
+              },
+              {
+                "key": "p2",
+                "value": {
+                  "float": 0.05
+                }
+              },
+              {
+                "key": "p2_star",
+                "value": {
+                  "float": 5.0
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "OperationCycles",
+    "value": {
+      "object[]": [
+        {
+          "key": "operationCycle",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "opcycle_sleep_wakeup"
+                }
+              },
+              {
+                "key": "cycleAutostart",
+                "value": {
+                  "bool": false
+                }
+              },
+              {
+                "key": "cycleAutoEnd",
+                "value": {
+                  "bool": false
+                }
+              },
+              {
+                "key": "cycleStatusStorage",
+                "value": {
+                  "bool": false
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "DiagnosticAgings",
+    "value": {
+      "object[]": [
+        {
+          "key": "diagnosticAging",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "aging1"
+                }
+              },
+              {
+                "key": "threshold",
+                "value": {
+                  "uint32": 100
+                }
+              },
+              {
+                "key": "operationCycle",
+                "value": {
+                  "string": "opcycle_sleep_wakeup"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "FreezeFrames",
+    "value": {
+      "object[]": [
+        {
+          "key": "freezeFrame",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "snapshot1"
+                }
+              },
+              {
+                "key": "update",
+                "value": {
+                  "bool": true
+                }
+              },
+              {
+                "key": "trigger",
+                "value": {
+                  "string": "testFailed"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "DIDs",
+    "value": {
+      "object[]": [
+        {
+          "key": "DID",
+          "value": {
+            "object[]": [
+              {
+                "key": "didId",
+                "value": {
+                  "uint16": 53251
+                }
+              },
+              {
+                "key": "didSize",
+                "value": {
+                  "uint32": 1
+                }
+              },
+              {
+                "key": "dataParams",
+                "value": {
+                  "object[]": [
+                    {
+                      "key": "dataParameter",
+                      "value": {
+                        "object[]": [
+                          {
+                            "key": "bitOffset",
+                            "value": {
+                              "uint64": 0
+                            }
+                          },
+                          {
+                            "key": "dataElement",
+                            "value": {
+                              "string": "DiagnosticDataElement_0xd003"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "DID",
+          "value": {
+            "object[]": [
+              {
+                "key": "didId",
+                "value": {
+                  "uint16": 53253
+                }
+              },
+              {
+                "key": "didSize",
+                "value": {
+                  "uint32": 4
+                }
+              },
+              {
+                "key": "dataParams",
+                "value": {
+                  "object[]": [
+                    {
+                      "key": "dataParameter",
+                      "value": {
+                        "object[]": [
+                          {
+                            "key": "bitOffset",
+                            "value": {
+                              "uint64": 0
+                            }
+                          },
+                          {
+                            "key": "dataElement",
+                            "value": {
+                              "string": "DiagnosticDataElement_0xd005"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "ExtendDataRecords",
+    "value": {
+      "object[]": [
+        {
+          "key": "extendDataRecord",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "extendDataRecord_1"
+                }
+              },
+              {
+                "key": "trigger",
+                "value": {
+                  "string": "testFailed"
+                }
+              },
+              {
+                "key": "update",
+                "value": {
+                  "bool": true
+                }
+              },
+              {
+                "key": "recordNo",
+                "value": {
+                  "uint32": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "extendDataRecord",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "extendDataRecord_2"
+                }
+              },
+              {
+                "key": "trigger",
+                "value": {
+                  "string": "testFailed"
+                }
+              },
+              {
+                "key": "update",
+                "value": {
+                  "bool": true
+                }
+              },
+              {
+                "key": "recordNo",
+                "value": {
+                  "uint32": 2
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "key": "DataElements",
+    "value": {
+      "object[]": [
+        {
+          "key": "dataElement",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "DiagnosticDataElement_0xd003"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "key": "dataElement",
+          "value": {
+            "object[]": [
+              {
+                "key": "shortName",
+                "value": {
+                  "string": "DiagnosticDataElement_0xd005"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+]

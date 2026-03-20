@@ -1,0 +1,230 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/soc_a_communication_libCompositionSwComponentType18/soc_a_communication_libProcess18",
+  "services": [
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface",
+      "serviceId": 3,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "method",
+          "id": 17484,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/interface_manifests/datatypes/StructContainer"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/interface_manifests/datatypes/StructContainer"
+          ],
+          "methodOutputName": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface/methodOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "10046",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekOtaLogUploadRequest_ProvidedSomeipSocACommunication",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10043",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFdlNetStatCheck_ProvidedSomeipSocACommunication",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10039",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekPostSaleCalibrationResult_ProvidedSomeipSocACommunication",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10038",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekPostSaleCalibrationStop_ProvidedSomeipSocACommunication",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10037",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekPostSaleCalibrationActivation_ProvidedSomeipSocACommunication",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10035",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekSensorWriteFile_ProvidedSomeipServiceInstance9",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "instance": "10034",
+          "isClient": false,
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekSensorGetPanoramaCameraIntriParam_ProvidedSomeipServiceInstance8",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "eventGroups": [
+            {
+              "id": 2
+            }
+          ],
+          "events": [],
+          "methods": [
+            {
+              "id": 17484,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        }
+      ]
+    },
+    {
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "serviceId": 1100,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "ReportAlarm",
+          "id": 30845,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/AlarmInfo"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService/ReportAlarmOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "10005",
+          "isClient": true,
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoSocACommunication_RequiredSomeipServiceInstance4",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.6",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+int16 gnss_type
+uint32 gnss_num_in_view
+uint32 gnss_sat_prn
+uint32 gnss_sat_snr
+uint32 gnss_sat_elev
+uint32 gnss_sat_azimuth

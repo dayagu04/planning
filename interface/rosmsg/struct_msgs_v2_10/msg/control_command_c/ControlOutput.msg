@@ -1,0 +1,21 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+LatControlMode lat_control_mode
+float64 steering
+float64 steering_rate
+float64 steering_torque
+LonControlMode lon_control_mode
+float64 throttle
+float64 brake
+float64 speed
+float64 acceleration
+float64 axle_torque
+float64 stop_distance
+int16 gear_command_value
+int16 turn_signal_cmd
+int16 light_signal_cmd
+int16 horn_signal_cmd
+int16 rear_view_mirror_signal_cmd
+ControlTrajectory control_trajectory
+ControlStatus control_status

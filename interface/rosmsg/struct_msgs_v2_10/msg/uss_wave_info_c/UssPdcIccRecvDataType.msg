@@ -1,0 +1,4 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+UssPdcUpcVehiclePosDataType upc_vehicle_pos_data

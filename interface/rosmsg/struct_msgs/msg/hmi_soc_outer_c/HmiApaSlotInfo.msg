@@ -1,0 +1,9 @@
+uint32 apa_slot_id
+int16 apa_slot_type
+Point2f[4] apa_slot_corner_points
+bool allow_parking
+bool planning_success
+bool is_narrow_slot
+uint32 apa_slot_num
+uint8 limiters_size
+ParkingFusionLimiter[] limiters

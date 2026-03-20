@@ -1,0 +1,3 @@
+float32 distance_to_parking_space
+bool is_parking_pause
+int16 parking_pause_reason

@@ -1,0 +1,4 @@
+uint32 id
+int16 ramp_type
+FeaturePoint entrance_ramp_point
+FeaturePoint exit_ramp_point

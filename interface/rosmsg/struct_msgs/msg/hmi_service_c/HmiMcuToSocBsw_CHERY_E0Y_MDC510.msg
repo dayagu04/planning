@@ -1,0 +1,22 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+bool active_btn_press
+bool cancel_btn_press
+int16 vcu_actual_gear
+int16 vcu_target_gear
+int8 cruise_speed_value
+int8 time_gap_value
+bool break_btn_press
+bool record_btn_press
+ADASFunctionOutputInfo adas_out_info
+HmiPdcInfo hmi_pdc_info
+RPAIn rpa_info
+uint8 hmi_car_mode
+uint8 auto_driving_btn_active
+uint8 auto_driving_btn_cancel
+uint8 cruise_speed_sync
+uint8 btn_reboot_adcc_req
+uint8 reboot_adcc_standby
+uint8 cruise_speed_cont
+HmiSetInfo hmi_set_info
+uint8[64] reserved

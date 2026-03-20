@@ -1,0 +1,15 @@
+uint8[12] sns_data
+uint8 cur_bit_index
+uint8 sns_op_cmd_tx_bit_cnt
+uint8 data_bit_index
+uint8 data_cnt
+uint8 data_addr
+uint8 data_rx_try_cnt
+uint8[12] check_sum
+uint8[12] prev_sns_bkwv_time
+uint8[12] rcv_data_completed_flag
+uint8[12] need_rcv_data_bit_length
+uint8[12] rcv_data_bit_index
+uint8[12] cmd_processed_state
+uint8[12] rcv_data_cmd_type
+RcDataTypeDebug[12] rcv_data_buf

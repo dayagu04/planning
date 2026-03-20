@@ -1,0 +1,15 @@
+bool apa_active_switch # APA功能开启按钮      (true:Press/false:Release)
+bool hpp_main_switch # HPP主开关            (true:Press/false:Release)
+bool hpp_cancel_switch # HPP取消开关          (true:Press/false:Release)
+bool hpp_active_switch # HPP激活按键          (true:Press/false:Release)
+bool start_memory_parking # 开始记忆泊车         (true:Press/false:Release)
+bool continue_memory_parking # 恢复记忆泊车         (true:Press/false:Release)
+bool start_route_learning # 开始路径学习         (true:Press/false:Release)
+bool start_parking # 开始泊车             (true:Press/false:Release)
+bool continue_parking # 继续泊车             (true:Press/false:Release)
+bool complete_route_learning # 完成路径学习         (true:Press/false:Release)
+uint32 select_slot_id #选择的车位id
+bool resume_location #重定位               (true:Press/false:Release)
+---
+bool success
+string message

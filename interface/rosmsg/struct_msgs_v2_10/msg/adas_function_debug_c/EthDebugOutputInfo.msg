@@ -1,0 +1,14 @@
+uint64 ctrl_timestamp
+uint64 fusion_road_timestamp
+uint64 fusion_objects_timestamp
+uint64 hmi_timestamp
+uint64 corner_radar_fl_timestamp
+uint64 corner_radar_fr_timestamp
+uint64 corner_radar_rl_timestamp
+uint64 corner_radar_rr_timestamp
+float32 pilot_acc_to_veh
+float32 pilot_torque_to_veh
+float32 pilot_steer_angle_to_veh
+float32 park_acc_to_veh
+float32 park_steer_to_veh
+float32 park_torque_to_veh

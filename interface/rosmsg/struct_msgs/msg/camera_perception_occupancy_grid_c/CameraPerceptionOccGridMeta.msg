@@ -1,0 +1,9 @@
+float32 grid_resolution_x
+float32 grid_resolution_y
+float32 grid_resolution_z
+uint32 grid_size_positive_x
+uint32 grid_size_negative_x
+uint32 grid_size_positive_y
+uint32 grid_size_negative_y
+uint32 grid_size_positive_z
+uint32 grid_size_negative_z

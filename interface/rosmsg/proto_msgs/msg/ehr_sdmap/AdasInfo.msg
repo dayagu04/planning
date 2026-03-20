@@ -1,0 +1,3 @@
+int32 dis_to_seg_start
+int32 slope
+int32 curvature

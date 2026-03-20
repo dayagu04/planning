@@ -1,0 +1,14 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+bool apa_active_switch
+bool hpp_main_switch
+bool hpp_cancel_switch
+bool hpp_active_switch
+bool start_memory_parking
+bool continue_memory_parking
+bool start_route_learning
+bool start_parking
+bool continue_parking
+bool complete_route_learning
+uint32 select_slot_id
+bool resume_location

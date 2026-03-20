@@ -1,0 +1,3 @@
+int32 geofence_judge_status
+uint32 geofence_judge_type
+uint32 geofence_bounding_distance

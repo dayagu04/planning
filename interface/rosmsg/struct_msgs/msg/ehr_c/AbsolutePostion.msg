@@ -1,0 +1,13 @@
+uint64 original_loc_timestamp
+float64 lon
+float64 lat
+float32 heading
+float32 velocity_x
+float32 velocity_y
+float32 velocity_z
+float32 x_acc
+float32 y_acc
+float32 z_acc
+float32 angular_velocity_x
+float32 angular_velocity_y
+float32 angular_velocity_z

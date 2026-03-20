@@ -1,0 +1,4 @@
+uint8 fcw_state
+uint8 fcw_warning_level
+bool fcw_Prefill_request_status
+bool fcw_jerk_request_status

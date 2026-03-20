@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="7a45fdd6-b1ee-4b1a-8b6d-335e9e58835a">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>UploadableSoftwarePackage</SHORT-NAME>
+          <ELEMENTS>
+            <SOFTWARE-CLUSTER>
+              <SHORT-NAME>MdcPlatform</SHORT-NAME>
+              <CATEGORY>ROOT_SOFTWARE_CLUSTER</CATEGORY>
+              <DIAGNOSTIC-ADDRESSS>
+                <SOFTWARE-CLUSTER-DOIP-DIAGNOSTIC-ADDRESS>
+                  <ADDRESS-SEMANTICS>PHYSICAL-ADDRESS</ADDRESS-SEMANTICS>
+                  <DIAGNOSTIC-ADDRESS>4120</DIAGNOSTIC-ADDRESS>
+                </SOFTWARE-CLUSTER-DOIP-DIAGNOSTIC-ADDRESS>
+                <SOFTWARE-CLUSTER-DOIP-DIAGNOSTIC-ADDRESS>
+                  <ADDRESS-SEMANTICS>FUNCTIONAL-ADDRESS</ADDRESS-SEMANTICS>
+                  <DIAGNOSTIC-ADDRESS>58368</DIAGNOSTIC-ADDRESS>
+                </SOFTWARE-CLUSTER-DOIP-DIAGNOSTIC-ADDRESS>
+              </DIAGNOSTIC-ADDRESSS>
+              <DIAGNOSTIC-EXTRACT-REF DEST="DIAGNOSTIC-CONTRIBUTION-SET">/HuaweiMDC/DiagnosticMdcExtractTemplate/CommConfig/MdcDext</DIAGNOSTIC-EXTRACT-REF>
+              <MODULE-INSTANTIATION-REFS>
+                <MODULE-INSTANTIATION-REF DEST="DO-IP-INSTANTIATION">/HuaweiMDC/Machine/Host0DpMachine/IsoDoip</MODULE-INSTANTIATION-REF>
+              </MODULE-INSTANTIATION-REFS>
+              <VENDOR-ID>0</VENDOR-ID>
+              <VENDOR-SIGNATURE-REF DEST="CRYPTO-SERVICE-CERTIFICATE">/HuaweiMDC/UploadableSoftwarePackage/MdcSignature</VENDOR-SIGNATURE-REF>
+              <VERSION>1.0.0.0</VERSION>
+            </SOFTWARE-CLUSTER>
+            <CRYPTO-SERVICE-CERTIFICATE>
+              <SHORT-NAME>MdcSignature</SHORT-NAME>
+              <ALGORITHM-FAMILY>RSA</ALGORITHM-FAMILY>
+              <FORMAT>X-509</FORMAT>
+              <MAXIMUM-LENGTH>4096</MAXIMUM-LENGTH>
+            </CRYPTO-SERVICE-CERTIFICATE>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

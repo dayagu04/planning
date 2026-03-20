@@ -1,0 +1,85 @@
+<qos>
+    <profile name="DDSQosProfile">
+        <domain_participant name="domain_30_192.168.10.6">
+            <transport>
+                <mask>TRANSPORT_FSHM</mask>
+                <property name="FSHM">
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.multicast.topic</key>
+                        <value>0000049CMqGNMWB0</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.poolSize</key>
+                        <value>262144</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.multicast.drtLen</key>
+                        <value>512</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.unicast.drtLen</key>
+                        <value>1024</value>
+                    </item>
+                    <item isPropagate="false">
+                        <key>huawei.dds.shm.discovery.unicast.topic</key>
+                        <value>000005gDV-4jkH6u</value>
+                    </item>
+                </property>
+            </transport>
+            <transport_interfaces>
+                <interfaces>
+                    <interface>192.168.10.6</interface>
+                </interfaces>
+            </transport_interfaces>
+            <discover_config>
+                <participant_liveliness_lease_duration>
+                    <sec>60</sec>
+                    <nanosec>0</nanosec>
+                </participant_liveliness_lease_duration>
+                <participant_liveliness_assert_period>
+                    <sec>24</sec>
+                    <nanosec>0</nanosec>
+                </participant_liveliness_assert_period>
+            </discover_config>
+        </domain_participant>
+        <datawriter name="domain_30_192.168.10.6_1_10230_TopicOfevent_writer">
+            <property name="FSHM">
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic</key>
+                    <value>000004-jnqWhLRcG</value>
+                </item>
+                <item isPropagate="false">
+                    <key>huawei.dds.shm.topic.poolSize</key>
+                    <value>262144</value>
+                </item>
+            </property>
+            <durability>
+                <kind>VOLATILE_DURABILITY_QOS</kind>
+            </durability>
+            <reliability>
+                <kind>BEST_EFFORT_RELIABILITY_QOS</kind>
+            </reliability>
+            <destination_order>
+                <kind>BY_RECEPTION_TIMESTAMP_DESTINATIONORDER_QOS</kind>
+            </destination_order>
+            <history>
+                <kind>KEEP_LAST_HISTORY_QOS</kind>
+                <depth>3</depth>
+            </history>
+            <transport>
+                <mask>TRANSPORT_UDP</mask>
+            </transport>
+            <transchannel>
+                <Channel>TRANS_CHANNEL_FSHM</Channel>
+                <ShmId>75766</ShmId>
+                <FragSize>102400</FragSize>
+                <ListSize>10</ListSize>
+                <EnableUDPMulticast>false</EnableUDPMulticast>
+            </transchannel>
+            <transport_priority>
+                <value>0</value>
+            </transport_priority>
+        </datawriter>
+        <topic name="domain_30_192.168.10.6_1_10230_TopicOfevent"></topic>
+    </profile>
+</qos>

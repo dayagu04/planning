@@ -1,0 +1,16 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+FCWOutputInfo fcw_output_info
+PCWOutputInfo pcw_output_info
+AEBOutputInfo aeb_output_info
+AEBPOutputInfo aebp_output_info
+BSDOutputInfo bsd_output_info
+LCAOutputInfo lca_output_info
+DOWOutputInfo dow_output_info
+RCWOutputInfo rcw_output_info
+FCTAOutputInfo fcta_output_info
+RCTAOutputInfo rcta_output_info
+FCTBOutputInfo fctb_output_info
+RCTBOutputInfo rctb_output_info
+DAIOutputInfo dai_output_info

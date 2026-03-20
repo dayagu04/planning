@@ -1,0 +1,2 @@
+bool available
+int16 gear_command_value

@@ -1,0 +1,6 @@
+uint8 rcw_state
+uint8 rcw_warning_level
+uint16 rcw_enable_code
+uint16 rcw_disable_code
+uint8 rcw_left_warning_flag
+uint8 rcw_right_warning_flag

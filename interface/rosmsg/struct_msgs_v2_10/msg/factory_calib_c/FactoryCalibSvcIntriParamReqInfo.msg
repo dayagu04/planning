@@ -1,0 +1,1 @@
+uint8 svc_intri_param_req

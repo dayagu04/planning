@@ -1,0 +1,10 @@
+uint32 id
+float32 speed_x
+float32 speed_y
+float32 heading
+int16 type
+float32 center_x
+float32 center_y
+Shape3f size
+int16 lon_status
+int16 anchor

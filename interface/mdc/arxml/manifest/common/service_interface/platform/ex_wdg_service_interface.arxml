@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE>
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>MdcPlatformServices</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE S="">
+              <SHORT-NAME>PlatformServiceInterface</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DataTypes</SHORT-NAME>
+                  <ELEMENTS>
+                    <COMPU-METHOD>
+                      <SHORT-NAME>Answer</SHORT-NAME>
+                      <CATEGORY>TEXTTABLE</CATEGORY>
+                      <COMPU-INTERNAL-TO-PHYS>
+                        <COMPU-SCALES>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">0</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">0</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>ANSWER_OPENING</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">1</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">1</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>ANSWER_PANDA</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">2</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">2</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>ANSWER_GLODEN_MONKEY</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">3</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">3</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>ANSWER_SOUTH_CHINA_TIGER</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">4</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">4</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>ANSWER_CRESTED_IBIS</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">5</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">5</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>ANSWER_CHINESE_STURGEON</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">6</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">6</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>ANSWER_CHINESE_RURAL_DOG</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                        </COMPU-SCALES>
+                      </COMPU-INTERNAL-TO-PHYS>
+                    </COMPU-METHOD>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>AnswerEnum</SHORT-NAME>
+                      <CATEGORY>TYPE_REFERENCE</CATEGORY>
+                      <SW-DATA-DEF-PROPS>
+                        <SW-DATA-DEF-PROPS-VARIANTS>
+                          <SW-DATA-DEF-PROPS-CONDITIONAL>
+                            <COMPU-METHOD-REF DEST="COMPU-METHOD">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/Answer</COMPU-METHOD-REF>
+                          </SW-DATA-DEF-PROPS-CONDITIONAL>
+                        </SW-DATA-DEF-PROPS-VARIANTS>
+                      </SW-DATA-DEF-PROPS>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>ex_wdg</SHORT-NAME>
+                          <SYMBOL>ex_wdg</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>AnswerMsgType</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>ex_wdg</SHORT-NAME>
+                          <SYMBOL>ex_wdg</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>versionId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT UUID="">
+                          <SHORT-NAME>msgId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>answerParamLen</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>qaParam</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/ParamType</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE UUID="">
+                      <SHORT-NAME>ParamType</SHORT-NAME>
+                      <CATEGORY>VECTOR</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>ex_wdg</SHORT-NAME>
+                          <SYMBOL>ex_wdg</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TEMPLATE-ARGUMENTS>
+                        <CPP-TEMPLATE-ARGUMENT>
+                          <TEMPLATE-TYPE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TEMPLATE-TYPE-REF>
+                        </CPP-TEMPLATE-ARGUMENT>
+                      </TEMPLATE-ARGUMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <COMPU-METHOD>
+                      <SHORT-NAME>Quesion</SHORT-NAME>
+                      <CATEGORY>TEXTTABLE</CATEGORY>
+                      <COMPU-INTERNAL-TO-PHYS>
+                        <COMPU-SCALES>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">0</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">0</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>QUESION_OPENING</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">1</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">1</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>QUESION_PANDA</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">2</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">2</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>QUESION_GLODEN_MONKEY</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">3</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">3</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>QUESION_SOUTH_CHINA_TIGER</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">4</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">4</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>QUESION_CRESTED_IBIS</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">5</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">5</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>QUESION_CHINESE_STURGEON</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                          <COMPU-SCALE>
+                            <LOWER-LIMIT INTERVAL-TYPE="CLOSED">6</LOWER-LIMIT>
+                            <UPPER-LIMIT INTERVAL-TYPE="CLOSED">6</UPPER-LIMIT>
+                            <COMPU-CONST>
+                              <VT>QUESION_CHINESE_RURAL_DOG</VT>
+                            </COMPU-CONST>
+                          </COMPU-SCALE>
+                        </COMPU-SCALES>
+                      </COMPU-INTERNAL-TO-PHYS>
+                    </COMPU-METHOD>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>QuesionEnum</SHORT-NAME>
+                      <CATEGORY>TYPE_REFERENCE</CATEGORY>
+                      <SW-DATA-DEF-PROPS>
+                        <SW-DATA-DEF-PROPS-VARIANTS>
+                          <SW-DATA-DEF-PROPS-CONDITIONAL>
+                            <COMPU-METHOD-REF DEST="COMPU-METHOD">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/Quesion</COMPU-METHOD-REF>
+                          </SW-DATA-DEF-PROPS-CONDITIONAL>
+                        </SW-DATA-DEF-PROPS-VARIANTS>
+                      </SW-DATA-DEF-PROPS>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>ex_wdg</SHORT-NAME>
+                          <SYMBOL>ex_wdg</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                    <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                      <SHORT-NAME>QuesionMsgType</SHORT-NAME>
+                      <CATEGORY>STRUCTURE</CATEGORY>
+                      <NAMESPACES>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>mdc</SHORT-NAME>
+                          <SYMBOL>mdc</SYMBOL>
+                        </SYMBOL-PROPS>
+                        <SYMBOL-PROPS>
+                          <SHORT-NAME>ex_wdg</SHORT-NAME>
+                          <SYMBOL>ex_wdg</SYMBOL>
+                        </SYMBOL-PROPS>
+                      </NAMESPACES>
+                      <SUB-ELEMENTS>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>versionId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT UUID="">
+                          <SHORT-NAME>msgId</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt32</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>quesionType</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>quesionParamLen</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                        <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                          <SHORT-NAME>qaParam</SHORT-NAME>
+                          <TYPE-REFERENCE>
+                            <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/ParamType</TYPE-REFERENCE-REF>
+                          </TYPE-REFERENCE>
+                        </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                      </SUB-ELEMENTS>
+                    </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>ExWdgServiceInterface</SHORT-NAME>
+                  <ELEMENTS>
+                    <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>ExwdgLowPowerNotifyDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>LowPowerNotify_Someip</SHORT-NAME>
+                          <METHOD-ID>1</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>TCP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <SERVICE-INTERFACE-ID>1027</SERVICE-INTERFACE-ID>
+                      <SERVICE-INTERFACE-VERSION>
+                        <MAJOR-VERSION>1</MAJOR-VERSION>
+                        <MINOR-VERSION>0</MINOR-VERSION>
+                      </SERVICE-INTERFACE-VERSION>
+                    </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                    <SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>QADeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>Answer_Someip</SHORT-NAME>
+                          <METHOD-ID>2</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                        <SOMEIP-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>Quesion_Someip</SHORT-NAME>
+                          <METHOD-ID>1</METHOD-ID>
+                          <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                        </SOMEIP-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <SERVICE-INTERFACE-ID>1025</SERVICE-INTERFACE-ID>
+                      <SERVICE-INTERFACE-VERSION>
+                        <MAJOR-VERSION>1</MAJOR-VERSION>
+                        <MINOR-VERSION>0</MINOR-VERSION>
+                      </SERVICE-INTERFACE-VERSION>
+                    </SOMEIP-SERVICE-INTERFACE-DEPLOYMENT>
+                    <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>ExwdgLowPowerNotifyDdsDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>LowPowerNotify_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/ExWdgServiceInterface/ExwdgLowPowerNotifyDdsDeployment/LowPowerNotify_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <DDS-RPC-SERVICES>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>LowPowerNotify_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyLowPowerNotifyDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestLowPowerNotifyDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                      </DDS-RPC-SERVICES>
+                      <SERVICE-INTERFACE-ID>1027</SERVICE-INTERFACE-ID>
+                    </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                    <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                      <SHORT-NAME>QADdsDeployment</SHORT-NAME>
+                      <METHOD-DEPLOYMENTS>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>Answer_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/ExWdgServiceInterface/QADdsDeployment/Anser_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                        <DDS-METHOD-DEPLOYMENT>
+                          <SHORT-NAME>Question_Dds</SHORT-NAME>
+                          <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/ExWdgServiceInterface/QADdsDeployment/Question_DdsRpc</DDS-RPC-SERVICE-REF>
+                        </DDS-METHOD-DEPLOYMENT>
+                      </METHOD-DEPLOYMENTS>
+                      <DDS-RPC-SERVICES>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>Anser_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyAnswerDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestAnswerDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                        <DDS-RPC-SERVICE-DEPLOYMENT>
+                          <SHORT-NAME>Question_DdsRpc</SHORT-NAME>
+                          <REPLY-TOPIC-NAME>ReplyQuestionDdsRpc</REPLY-TOPIC-NAME>
+                          <REQUEST-TOPIC-NAME>RequestQuestionDdsRpc</REQUEST-TOPIC-NAME>
+                        </DDS-RPC-SERVICE-DEPLOYMENT>
+                      </DDS-RPC-SERVICES>
+                      <SERVICE-INTERFACE-ID>1025</SERVICE-INTERFACE-ID>
+                    </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

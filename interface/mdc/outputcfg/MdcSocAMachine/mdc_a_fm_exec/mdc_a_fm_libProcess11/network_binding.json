@@ -1,0 +1,37 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "mdc_a_fm_exec/mdc_a_fm_libExecutable12Prototype/",
+      "service": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "1",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekStateManager_ProvidedSomeipMdcAFm"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "mdc_a_fm_exec/mdc_a_fm_libExecutable12Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "1",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekConfigManager_ProvidedSomeipMdcAFm"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "mdc_a_fm_exec/mdc_a_fm_libExecutable12Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "1",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoMdcA_RequiredSomeipMdcAFm"
+        }
+      ]
+    }
+  ]
+}

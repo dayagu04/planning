@@ -1,0 +1,9 @@
+uint8 id
+int16 traffic_light_type
+int16 traffic_light_color
+int16 traffic_light_arrange_type
+float32 traffic_light_x
+float32 traffic_light_y
+float32 traffic_light_z
+TrafficSignBoundingbox bbox
+int32 countdown_number

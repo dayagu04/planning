@@ -1,0 +1,66 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "ehp_exec/ehp_libExecutable13Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10040",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhpPhmReport_DdsProvidedEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10046",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhpParkingMap_DdsProvidedEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10089",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationSemanticInfo_DdsRequiredEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10090",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekMegaMappingStatus_DdsRequiredEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10110",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10114",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhpParkingMapFileInfo_DdsProvidedEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10216",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhpParkingMapToHmi_DdsProvidedEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10235",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekEhpMapManager_DdsProvidedEhp"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10237",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorGnss_DdsRequiredEhp"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "ehp_exec/ehp_libExecutable13Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10019",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoEhp_RequiredSomeipEhp"
+        }
+      ]
+    }
+  ]
+}

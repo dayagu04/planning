@@ -1,0 +1,14 @@
+float32 pilot_disp_acc_set_speed
+int32 pilot_disp_acc_set_headway
+int16 pilot_disp_acc_sts
+int16 pilot_disp_acc_notify
+int16 pilot_disp_scc_sts
+int16 pilot_disp_scc_notify
+int16 pilot_disp_noa_sts
+int16 pilot_disp_noa_notify
+bool pilot_disp_adas_takeover_req
+int16 pilot_disp_adas_takeover_reason
+int16 pilot_disp_lc_reason
+int16 pilot_disp_scc_handoff_warning
+uint32 pilot_disp_dist_to_dest
+uint32 pilot_disp_dist_to_station

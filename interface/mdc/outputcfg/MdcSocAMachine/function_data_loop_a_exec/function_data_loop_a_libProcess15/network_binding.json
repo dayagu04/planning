@@ -1,0 +1,30 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "function_data_loop_a_exec/function_data_loop_a_libExecutable16Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10163",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFdlTriggerAck_DdsProvidedFunctionDataLoopA"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10164",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFdlTrigger_DdsRequiredFunctionDataLoopA"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10230",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSystemAProcessLoading_DdsRequiredFunctionDataLoopA"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10233",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekFdlAPhmReport_DdsProvidedFunctionDataLoopA"
+        }
+      ]
+    }
+  ]
+}

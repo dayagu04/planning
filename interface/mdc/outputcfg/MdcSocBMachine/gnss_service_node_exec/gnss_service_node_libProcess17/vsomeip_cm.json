@@ -1,0 +1,49 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/gnss_service_node_libCompositionSwComponentType17/gnss_service_node_libProcess17",
+  "services": [
+    {
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "serviceId": 1100,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "ReportAlarm",
+          "id": 30845,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/AlarmInfo"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService/ReportAlarmOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "10007",
+          "isClient": true,
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoGnssServiceNode_RequiredSomeipServiceInstance5",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        }
+      ]
+    }
+  ]
+}

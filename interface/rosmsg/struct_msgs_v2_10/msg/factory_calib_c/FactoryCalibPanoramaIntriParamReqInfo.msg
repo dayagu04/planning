@@ -1,0 +1,1 @@
+uint8 panorama_intri_param_req

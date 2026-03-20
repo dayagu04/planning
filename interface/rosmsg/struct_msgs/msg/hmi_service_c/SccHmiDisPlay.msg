@@ -1,0 +1,3 @@
+int16 hands_off_detection_display
+bool traffic_light_stop_go_display
+bool obstacle_bypass_display

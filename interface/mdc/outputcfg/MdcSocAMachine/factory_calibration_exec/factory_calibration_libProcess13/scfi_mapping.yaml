@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    ClientServiceContainerInterface:
+        instanceId: [10029,10030]
+        portName: ["IflytekFactoryCalibrationActivation","IflytekFactoryCalibrationResult"]
+  recvInstanceID:
+    CameraStructContainerInterface:
+        instanceId: [10115,10116,10117,10118,10126,10107,10127,10128,10129,10130,10135]
+        portName: ["IflytekSensorCameraSurroundFrontFullResolutionH265","IflytekSensorCameraSurroundLeftFullResolutionH265","IflytekSensorCameraSurroundRearFullResolutionH265","IflytekSensorCameraSurroundRightFullResolutionH265","IflytekSensorCameraFront30FullResolutionH265","IflytekSensorCameraFront120FullResolutionH265","IflytekSensorCameraSideFlFullResolutionH265","IflytekSensorCameraSideFrFullResolutionH265","IflytekSensorCameraSideRlFullResolutionH265","IflytekSensorCameraSideRrFullResolutionH265","IflytekSensorCameraRearFullResolutionH265MDCA"]
+    StructContainerInterface:
+        instanceId: [10008]
+        portName: ["IflytekSensorImu"]

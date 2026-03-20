@@ -1,0 +1,2 @@
+bool is_sharp_turn
+bool is_weather_abnormal

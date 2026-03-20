@@ -1,0 +1,4 @@
+int16 lane_point_marking
+int16 lane_point_color
+float32 lane_point_confidence
+Point2f lane_point_coordinate

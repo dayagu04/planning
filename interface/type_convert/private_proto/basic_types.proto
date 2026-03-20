@@ -1,0 +1,329 @@
+syntax = "proto2";
+
+package planning.common;
+
+enum RequestType {
+  NO_CHANGE = 0;
+  LEFT_CHANGE = 1;
+  RIGHT_CHANGE = 2;
+}
+
+enum RequestSource {
+  NO_REQUEST = 0;
+  INT_REQUEST = 1;
+  MAP_REQUEST = 2;
+  DD_REQUEST = 3;
+  ROUTE_REQUEST = 4;
+}
+
+message ObjectType {
+  enum ObjectTypeEnum {
+    NOT_KNOW = 0;
+    PEDESTRIAN = 1;
+    OFO = 2;
+    COUPE = 3;
+    TRANSPORT_TRUCK = 4;
+    BUS = 5;
+    ENGINEER_TRUCK = 6;
+    TRICYCLE = 7;
+    CONE_BUCKET = 8;
+    STOP_LINE = 9;
+    VIRTUAL_SOILD = 10;
+    VIRTUAL_BUS = 11;
+  }
+  optional ObjectTypeEnum value = 1;
+}
+
+message Shape3d {
+  optional double length = 1;
+  optional double width = 2;
+  optional double height = 3;
+}
+
+message Shape {
+  optional double length = 1;
+  optional double width = 2;
+  optional double height = 3;
+}
+
+message Point3d {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+}
+
+message Point {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+}
+
+message Points {
+  repeated Point point = 1;
+}
+
+message Vector3d {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+}
+
+message Point2d {
+  optional double x = 1;
+  optional double y = 2;
+}
+
+message Pose2d {
+  optional double x = 1;
+  optional double y = 2;
+  optional double theta = 3;
+}
+
+message Quaternion {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+  optional double w = 4;
+}
+
+message Pose {
+  optional Point3d position = 1;
+  optional Quaternion orientation = 2;
+}
+
+message Transform {
+  optional Point3d position = 1;
+  optional Quaternion orientation = 2;
+}
+
+message EgoPose {
+  optional double timestamp = 1;
+  optional Point3d position = 2;
+  optional Vector3d velocity = 3;
+  optional double heading_angle = 4;
+}
+
+message EgoPoses {
+  repeated EgoPose pose = 1;
+}
+
+enum LineType {
+  ROUTE_ON_ROUTE = 0;
+  ROUTE_OFF_ROUTE = 1;
+  ROUTE_BUS = 2;
+  LANE_PROPOSAL_ON_ROUTE = 3;
+  LANE_PROPOSAL_OFF_ROUTE = 4;
+  LANE_PROPOSAL_BUS = 5;
+  SOLID_LANE_BOUNDARY = 6;
+  DASHED_LANE_BOUNDARY = 7;
+  SOLID_ROAD_BOUNDARY = 8;
+  DASHED_ROAD_BOUNDARY = 9;
+  STATIC_OBSTACLE = 10;
+  JUNCTION_LINE = 11;
+  OTHER_LINE = 12;
+}
+
+message Node {
+  optional Point start_point = 1;
+  optional Point end_point = 2;
+  optional LineType type = 3;
+  optional int32 id = 4;
+  optional bool b_in_intersection = 5;
+}
+
+message NodeLane {
+  repeated Node nodes = 1;
+  optional string id = 2;
+  optional LineType type = 3;
+  optional int32 color = 4;
+  optional float min_distance_to_ego = 5;
+  optional float on_route_dis = 6;
+}
+
+message NodeLanes {
+  repeated NodeLane node_lanes = 1;
+}
+
+message VirtualPoint2D {
+  optional double x = 1;
+  optional double y = 2;
+}
+
+message VirtualPoint3D {
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+}
+
+message TrajectoryPoint {
+  // enu
+  optional double x = 1;
+  optional double y = 2;
+  optional double heading_angle = 3;
+  optional double curvature = 4;
+  optional double t = 5;
+  optional double v = 6;
+  optional double a = 7;
+
+  // frenet
+  optional double s = 8;
+  optional double l = 9;
+  optional bool frenet_valid = 10;
+}
+
+message TrajectoryPoints {
+  repeated TrajectoryPoint point = 1;
+}
+
+enum ScenarioStateEnum {
+  CRUISE_KEEP = 0;
+  CRUISE_CHANGE = 1;
+  CRUISE_WAIT = 2;
+  CRUISE_BACK = 3;
+  CRUISE_UTURN = 4;
+}
+
+enum ScenarioEnum {
+  SCENARIO_CRUISE = 0;
+  SCENARIO_LOW_SPEED = 1;
+}
+
+enum TrajectoryTypeEnum {
+  DDP_RAW = 0;
+  DDP_LANE_CHANGE = 1;
+  DDP_UNKNOWN = 2;
+}
+
+message EgoPredictionTrajectory {
+  optional TrajectoryPoints trajectory = 1;
+  optional TrajectoryTypeEnum type = 2;
+  optional double logit = 3;
+  repeated EgoPredictionTrajectory trajectory_array = 4;
+}
+message EgoPredictionObject {
+  optional double timestamp_us = 1;
+  optional double timestamp = 2;
+  optional bool ego_prediction_valid = 3;
+  repeated EgoPredictionTrajectory trajectory_array = 4;
+}
+
+enum ResultTrajectoryType {
+  REFERENCE_PATH = 0;
+  RAW_TRAJ = 1;
+  REFINED_TRAJ = 2;
+}
+
+message FrenetBoundary {
+  optional double s_start = 1;
+  optional double s_end = 2;
+  optional double l_start = 3;
+  optional double l_end = 4;
+}
+
+message FrenetBoundaryCorners {
+  optional double s_front_left = 1;
+  optional double l_front_left = 2;
+  optional double s_front_right = 3;
+  optional double l_front_right = 4;
+  optional double s_rear_left = 5;
+  optional double l_rear_left = 6;
+  optional double s_rear_right = 7;
+  optional double l_rear_right = 8;
+}
+
+message FrenetObstacleBoundary {
+  optional double s_start = 1;
+  optional double s_end = 2;
+  optional double l_start = 3;
+  optional double l_end = 4;
+}
+
+enum TrafficLightState {  // origin: CurrentState
+  INIT = 0;
+  LANE_KEEPING = 1;
+  APPROACH_STOPLINE_SLOW = 2;
+  PASS_INTERSECTION = 3;
+  RED_LIGHT_STOP = 4;
+  COVER_LIGHT = 5;
+  INTO_WAIT_ZONE = 6;
+}
+
+message FrenetState {
+  optional double s = 1;
+  optional double r = 2;
+}
+
+message PlanningInitPoint {
+  optional double x = 1;
+  optional double y = 2;
+  optional double heading_angle = 3;
+  optional double curvature = 4;
+  optional double v = 5;
+  optional double a = 6;
+  optional double relative_time = 7;
+  optional FrenetState frenet_state = 8;
+}
+
+message TimeDurationFlag {
+  optional double duration_time = 1;
+  optional bool flag = 2;
+  optional double last_time = 3;
+}
+
+message PathPoint {
+  // coordinates
+  optional double x = 1;
+  optional double y = 2;
+  optional double z = 3;
+  optional double theta = 4;  // direction on the x-y plane
+  optional double kappa = 5;  // curvature on the x-y plane
+  optional double s = 6;      // accumulated distance from beginning of the path
+  optional double dkappa = 7;   // derivative of kappa w.r.t s.
+  optional double ddkappa = 8;  // derivative of derivative of kappa w.r.t s.
+  optional string lane_id = 9;  // The lane ID where the path point is on
+  // derivative of x and y w.r.t parametric parameter t in CosThetareferenceline
+  optional double x_derivative = 10;
+  optional double y_derivative = 11;
+}
+
+message ReferencePathPoint {
+  optional PathPoint path_point = 1;
+  optional double distance_to_left_road_border = 2;
+  optional double distance_to_right_road_border = 3;
+  optional double distance_to_left_lane_border = 4;
+  optional double distance_to_right_lane_border = 5;
+  optional double lane_width = 6;
+  optional double max_velocity = 7;
+  optional double min_velocity = 8;
+  optional bool is_in_intersection = 9;
+}
+
+message StartStopInfo {
+  enum StateType {
+    CRUISE = 0;
+    STOP = 1;
+    START = 2;
+  }
+  optional bool is_stop = 1 [default = false];
+  optional bool is_start = 2 [default = false];
+  optional bool enable_stop = 3 [default = false];
+  optional StateType state = 4 [default = CRUISE];
+  optional double stop_distance_of_leadone = 5 [default = 0.0];
+}
+
+message DrivingFunctionInfo {
+  enum DrivingFunctionMode {
+    ACC = 0;
+    SCC = 1;
+    NOA = 2;
+    HPP = 3;
+  }
+  enum DrivingFunctionstate {
+    ACTIVATE = 0;
+    STANDSTILL = 1;
+    OVERRIDE = 2;
+    SECURE = 3;
+  }
+  optional DrivingFunctionMode function_mode = 1 [default = SCC];
+  optional DrivingFunctionstate function_state = 2 [default = ACTIVATE];
+}

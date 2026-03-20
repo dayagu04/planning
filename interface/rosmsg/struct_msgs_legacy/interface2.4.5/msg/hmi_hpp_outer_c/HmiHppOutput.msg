@@ -1,0 +1,23 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+int16 func_state
+int16 alert_msg
+int16 disp_msg
+int16 voice_msg
+bool memory_parking_available
+bool is_first_time_using
+bool is_start_point_reached
+bool memory_parking_resume_available
+uint32 speed_bumps_count
+float32 learning_distance
+float32 distance_to_parking_space
+float32 distance_remaining_to_park
+int16 shift_lever
+uint32 pedestrian_avoidance_count
+uint32 vehicle_avoidance_count
+uint32 hpp_time_minute
+uint32 apa_time_minute
+bool takeover_reminder
+int16 location
+int16 route_save_failure_reason
+bool is_position_need_refresh

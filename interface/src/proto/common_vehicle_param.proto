@@ -1,0 +1,51 @@
+/*******************************************************************************
+ * 车辆相关的公共配置
+ * 用作配置文件，无topic
+*******************************************************************************/
+
+syntax = "proto2";
+
+package CommonVehicleParam;
+
+message CommonVehicleParam{
+    optional string project = 1;        // 项目id
+    optional string car_type = 2;       // 应用车型
+
+    optional double vehicle_weight_curb = 5;            // 整备质量         (kg千克)
+    optional double vehicle_weight_gross = 6;           // 总质量           (kg千克)
+    optional double vehicle_length = 7;                 // 车辆总长度       (米)
+    optional double vehicle_width = 8;                  // 车辆总宽度       (米)
+    optional double vehicle_height = 9;                 // 车辆总高度       (米)
+    optional double wheel_base = 10;                    // 轴距             (米)
+    optional double front_wheel_distance = 11;          // 前轮距           (米)
+    optional double rear_wheel_distance = 12;           // 后轮距           (米)
+    optional double lon_distance_from_front_edge_to_rear_axis = 13;     // 车辆前保到后轴中心的纵向距离     (米)
+    optional double lon_distance_from_back_edge_to_rear_axis = 14;      // 车辆后保到后轴中心的纵向距离     (米)
+    optional double lat_distance_from_left_edge_to_rear_axis = 15;      // 车辆左端到后轴中心的横向距离     (米)
+    optional double lat_distance_from_right_edge_to_rear_axis = 16;     // 车辆右端到后轴中心的横向距离     (米)
+    optional double lat_distance_from_front_bumper_to_front_axle = 17;  // 车辆前保到前轴中心的纵向距离     (米)
+
+    optional double turn_radius_min = 20;               // 最小转弯半径             (米)
+    optional double steer_angle_max = 21;               // 方向盘最大转向角         (rad)
+    optional double steer_angle_rate_max = 22;          // 方向盘最大转向角速度     (rad/s)
+    optional double front_wheel_max_angle = 23;         // 前轮最大转角             (rad)
+    optional double steer_ratio = 24;                   // 转向器比率
+
+    optional double acceleration_max = 30;              // 最大加速度       (m/s^2)
+    optional double deceleration_max = 31;              // 最大减速度       (m/s^2)
+    optional double front_wheel_rolling_radius = 32;    // 前车轮滚动半径   (米)
+    optional double rear_wheel_rolling_radius = 33;     // 后车轮滚动半径   (米)
+    optional double abs_max_speed_when_stopped = 34;    // 车辆静止时,abs测量的最大速度     (m/s)
+    optional double brake_deadzone = 35;                // 制动死区         (米)
+    optional double throttle_deadzone = 36;             // 节气门死区       (米)
+    optional double rolling_resistance_coeff = 38;      // 滚动阻力系数
+    optional double air_drag_coeff = 39;                // 空气阻力系数
+    optional double windward_area = 40;                 // 迎风面积         (平方米m^2)
+    optional double equivalent_mass_coeff = 41;         // 等效质量系数
+    optional double distance_per_wheel_pulse = 42;      // 轮速脉冲(米)
+
+    optional double front_shrink_distance = 50;         // 泊车前边收缩距离         (米)
+    optional double front_side_shrink_distance = 51;    // 泊车前方侧边收缩距离     (米)
+    optional double rear_shrink_distance = 52;          // 泊车后边收缩距离         (米)
+    optional double rear_side_shrink_distance = 53;     // 泊车后方侧边收缩距离     (米)
+};

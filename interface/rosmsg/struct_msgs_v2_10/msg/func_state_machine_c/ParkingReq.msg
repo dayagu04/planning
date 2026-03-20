@@ -1,0 +1,10 @@
+int16 apa_stop
+ApaUserPreference apa_user_preference
+int16 apa_park_out_direction
+uint32 parking_select_slotid
+int16 apa_work_mode
+int16 apa_parking_direction
+ApaFreeSlotInfo apa_free_slot_info
+uint32 local_map_id
+int16 pa_direction
+float32 parking_speed_set

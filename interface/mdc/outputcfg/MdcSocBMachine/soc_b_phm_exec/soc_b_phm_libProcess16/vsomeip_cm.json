@@ -1,0 +1,398 @@
+{
+  "applicationName": "/HuaweiMDC/Common/Common/soc_b_phm_libCompositionSwComponentType16/soc_b_phm_libProcess16",
+  "services": [
+    {
+      "service": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut",
+      "serviceId": 2980,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [],
+      "fields": [
+        {
+          "field": "Notifier",
+          "id": 54564,
+          "dataType": "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/TriggerDataType",
+          "eventId": 33974,
+          "eventGroup": [
+            13455
+          ],
+          "reliable": true,
+          "getterId": 1205,
+          "getterreliable": true
+        },
+        {
+          "field": "Trigger",
+          "id": 24507,
+          "dataType": "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/TriggerDataType",
+          "eventGroup": [],
+          "setterId": 1204,
+          "setterreliable": true
+        }
+      ],
+      "methods": [
+        {
+          "method": "AcquireFunctionGroupInfo",
+          "id": 36548,
+          "isFireAndForget": false,
+          "methodId": 2,
+          "reliable": true,
+          "requestDataType": [],
+          "replyDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/FunctionGroupInfoVec"
+          ],
+          "methodOutputName": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut/AcquireFunctionGroupInfoOutput"
+        },
+        {
+          "method": "ProcessSyncRequest",
+          "id": 8148,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/StateTransitionVec"
+          ],
+          "replyDataType": [],
+          "methodOutputName": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut/ProcessSyncRequestOutput"
+        },
+        {
+          "method": "ResetSystem",
+          "id": 43154,
+          "isFireAndForget": false,
+          "methodId": 3,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/ResetCode",
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/ResetCause"
+          ],
+          "replyDataType": [],
+          "methodOutputName": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut/ResetSystemOutput"
+        },
+        {
+          "method": "ProcessAsyncRequest",
+          "id": 477,
+          "isFireAndForget": true,
+          "methodId": 4,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/StateTransitionVec"
+          ],
+          "replyDataType": [],
+          "methodOutputName": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut/ProcessAsyncRequestOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "1",
+          "isClient": true,
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekStateManager_RequiredSomeipSocBPhm",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 36548,
+              "dataIds": []
+            },
+            {
+              "id": 8148,
+              "dataIds": []
+            },
+            {
+              "id": 43154,
+              "dataIds": []
+            },
+            {
+              "id": 477,
+              "dataIds": []
+            }
+          ],
+          "fields": [
+            {
+              "id": 54564,
+              "setter": {
+                "dataIds": []
+              },
+              "getter": {
+                "dataIds": []
+              },
+              "notifier": {
+                "dataIds": []
+              }
+            },
+            {
+              "id": 24507,
+              "setter": {
+                "dataIds": []
+              },
+              "getter": {
+                "dataIds": []
+              },
+              "notifier": {
+                "dataIds": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "serviceId": 1100,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "ReportAlarm",
+          "id": 30845,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": true,
+          "requestDataType": [
+            "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/AlarmInfo"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService/ReportAlarmOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "10040",
+          "isClient": true,
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoPhmB_RequiredSomeipSocBPhm",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [],
+          "methods": [
+            {
+              "id": 30845,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        }
+      ]
+    },
+    {
+      "service": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface",
+      "serviceId": 3392,
+      "protocolIdUsed": true,
+      "majorVersion": 1,
+      "minorVersion": 0,
+      "events": [
+        {
+          "event": "ParamUpdateEvent",
+          "id": 35207,
+          "dataType": "/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/ParamUpdateData",
+          "eventId": 33769,
+          "eventGroup": [
+            1
+          ],
+          "reliable": false
+        },
+        {
+          "event": "ServerNotifyEvent",
+          "id": 27155,
+          "dataType": "/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/ServerNotifyData",
+          "eventId": 33770,
+          "eventGroup": [
+            2
+          ],
+          "reliable": false
+        }
+      ],
+      "fields": [],
+      "methods": [
+        {
+          "method": "AnswerAlive",
+          "id": 30329,
+          "isFireAndForget": false,
+          "methodId": 7,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/AnswerAliveOutput"
+        },
+        {
+          "method": "DelParam",
+          "id": 56227,
+          "isFireAndForget": false,
+          "methodId": 3,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/DelParamOutput"
+        },
+        {
+          "method": "GetMonitorClients",
+          "id": 42802,
+          "isFireAndForget": false,
+          "methodId": 6,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/CfgStringList",
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/GetMonitorClientsOutput"
+        },
+        {
+          "method": "GetParam",
+          "id": 5505,
+          "isFireAndForget": false,
+          "methodId": 1,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/UInt8",
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/GetParamOutput"
+        },
+        {
+          "method": "MonitorParam",
+          "id": 3875,
+          "isFireAndForget": false,
+          "methodId": 4,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/MonitorParamOutput"
+        },
+        {
+          "method": "SetParam",
+          "id": 31959,
+          "isFireAndForget": false,
+          "methodId": 2,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/UInt8",
+            "/HuaweiMDC/StdCppDataType/UInt8",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/SetParamOutput"
+        },
+        {
+          "method": "UnMonitorParam",
+          "id": 36659,
+          "isFireAndForget": false,
+          "methodId": 5,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/UnMonitorParamOutput"
+        },
+        {
+          "method": "InitClient",
+          "id": 55067,
+          "isFireAndForget": false,
+          "methodId": 8,
+          "reliable": false,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ],
+          "methodOutputName": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface/InitClientOutput"
+        }
+      ],
+      "instances": [
+        {
+          "instance": "1",
+          "isClient": true,
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekConfigManager_RequiredSomeipSocBPhm",
+          "vlan": "InnerEthernetPhysicalChannel",
+          "reliable": "0",
+          "network": "InnerEthernetPhysicalChannel",
+          "unicast": "192.168.10.70",
+          "events": [
+            {
+              "id": 35207,
+              "dataIds": []
+            },
+            {
+              "id": 27155,
+              "dataIds": []
+            }
+          ],
+          "methods": [
+            {
+              "id": 30329,
+              "dataIds": []
+            },
+            {
+              "id": 56227,
+              "dataIds": []
+            },
+            {
+              "id": 42802,
+              "dataIds": []
+            },
+            {
+              "id": 5505,
+              "dataIds": []
+            },
+            {
+              "id": 3875,
+              "dataIds": []
+            },
+            {
+              "id": 31959,
+              "dataIds": []
+            },
+            {
+              "id": 36659,
+              "dataIds": []
+            },
+            {
+              "id": 55067,
+              "dataIds": []
+            }
+          ],
+          "fields": []
+        }
+      ]
+    }
+  ]
+}

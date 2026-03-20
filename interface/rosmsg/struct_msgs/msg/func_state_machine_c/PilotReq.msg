@@ -1,0 +1,12 @@
+int16 lane_change_sts
+PilotUserPreference pilot_usr_preference
+float32 acc_curise_real_spd
+float32 acc_curise_time_interval
+int16 lane_change_style
+bool noa_cruise_dclc_resp
+bool is_overtake_lane_change_confirmed
+bool traffic_light_stop_go
+bool obstacle_bypass
+bool stand_wait
+int16 turn_switch
+bool has_obstacle_ahead

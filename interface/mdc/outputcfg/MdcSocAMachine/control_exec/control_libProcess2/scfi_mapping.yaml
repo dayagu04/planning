@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10080,10170,10210]
+        portName: ["IflytekControlControlCommand","IflytekControlDebugInfo","IflytekControlPhmReport"]
+  recvInstanceID:
+    StructContainerInterface:
+        instanceId: [10078,10083,10009,10102,10110]
+        portName: ["IflytekPlanningPlan","IflytekLocalizationEgomotion","IflytekVehicleService","IflytekPlanningHmi","IflytekFsmSocState"]
+    FmAlarmReceiveService:
+        instanceId: [10025]
+        portName: ["IflytekAlarmInfoControl"]

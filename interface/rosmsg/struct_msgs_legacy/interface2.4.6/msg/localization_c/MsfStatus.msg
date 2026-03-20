@@ -1,0 +1,2 @@
+bool available
+int16 msf_status

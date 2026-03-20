@@ -1,0 +1,9 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+uint64 isp_timestamp
+uint8 supp_signs_size
+CameraPerceptionSuppSign[] supp_signs
+uint8 traffic_lights_size
+CameraPerceptionTrafficLight[] traffic_lights
+CameraPerceptionTrafficStatus traffic_status

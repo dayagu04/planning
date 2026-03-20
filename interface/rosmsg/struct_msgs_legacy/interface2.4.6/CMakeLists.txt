@@ -1,0 +1,10 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(struct_msgs_legacy_v2_4_6)
+find_package(catkin REQUIRED COMPONENTS roscpp rospy message_generation std_msgs)
+add_message_files(DIRECTORY msg)
+add_message_files(DIRECTORY msg/common_c)
+add_message_files(DIRECTORY msg/localization_c)
+
+generate_messages(DEPENDENCIES std_msgs)
+include_directories(${catkin_INCLUDE_DIRS})
+catkin_package()

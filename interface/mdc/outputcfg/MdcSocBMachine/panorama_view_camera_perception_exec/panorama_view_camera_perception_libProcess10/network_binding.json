@@ -1,0 +1,122 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "panorama_view_camera_perception_exec/panorama_view_camera_perception_libExecutable10Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/CameraStructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10045",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront120_DdsRequiredServiceInstance172"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10048",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionObstacleFeature_DdsProvidedPanoramaViewCameraPerception"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10049",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionLaneFeature_DdsProvidedPanoramaViewCameraPerception"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10050",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront30_DdsRequiredServiceInstance81"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10051",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideFl_DdsRequiredServiceInstance82"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10052",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideFr_DdsRequiredServiceInstance83"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10053",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideRl_DdsRequiredServiceInstance84"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10054",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraSideRr_DdsRequiredServiceInstance85"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10055",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraRear_DdsRequiredPanoramaViewCameraPerception"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10066",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorCameraFront120Eagle_DdsRequiredServiceInstance173"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "panorama_view_camera_perception_exec/panorama_view_camera_perception_libExecutable10Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10018",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoPanoramaViewCameraPerception_RequiredSomeipServiceInstance15"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "panorama_view_camera_perception_exec/panorama_view_camera_perception_libExecutable10Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10010",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekRadarFmPerception4dPointCloud_DdsRequiredServiceInstance174"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10016",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationEgomotion_DdsRequiredServiceInstance177"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10034",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekVehicleService_DdsRequiredServiceInstance115"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10067",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionTrafficSignRecognition_DdsProvidedServiceInstance68"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10084",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekRadarFmPerception4dTarget_DdsRequiredServiceInstance175"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10095",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionScene_DdsProvidedServiceInstance104"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10104",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredServiceInstance176"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10175",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionOccGrid_DdsProvidedServiceInstance146"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10200",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekCameraPerceptionPanoramaPhmReport_DdsProvidedPanoramaViewCameraPerception"
+        }
+      ]
+    }
+  ]
+}

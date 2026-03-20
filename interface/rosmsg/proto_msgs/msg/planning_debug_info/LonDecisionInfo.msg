@@ -1,0 +1,9 @@
+LeadoneInfo leadone_info
+LeadoneInfo temp_leadone_info
+CutinInfo cutin_info
+CIPVInfo cipv_info
+AccSafetyInfo acc_safety_info
+bool nearby_obstacle
+float64 map_velocity_limit
+float64 v_cruise
+

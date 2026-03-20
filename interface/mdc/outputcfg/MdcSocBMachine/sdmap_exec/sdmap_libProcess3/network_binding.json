@@ -1,0 +1,36 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "sdmap_exec/sdmap_libExecutable3Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10012",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekSdmapSdmapInfo_DdsProvidedServiceInstance4"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10016",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekLocalizationEgomotion_DdsRequiredServiceInstance29"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10056",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorGnss_DdsRequiredSdmap"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "sdmap_exec/sdmap_libExecutable3Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10003",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoSdmap_RequiredSomeipServiceInstance1"
+        }
+      ]
+    }
+  ]
+}

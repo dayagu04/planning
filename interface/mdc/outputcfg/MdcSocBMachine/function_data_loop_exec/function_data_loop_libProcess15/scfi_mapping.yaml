@@ -1,0 +1,24 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10161,10154,10232]
+        portName: ["IflytekFdlTrigger","IflytekFdlUploadState","IflytekFdlPhmReport"]
+    ClientServiceContainerInterface:
+        instanceId: [10042,10045]
+        portName: ["IflytekFdlNetStatCheck","IflytekOtaLogUploadRequest"]
+  recvInstanceID:
+    StructContainerInterface:
+        instanceId: [10039,10067,10175,10131,10132,10031,10036,10134,10003,10138,10139,10038,10070,10082,10077,10071,10037,10140,10141,10142,10143,10144,10145,10092,10058,10146,10147,10148,10149,10150,10010,10084,10033,10034,10056,10016,10088,10013,10096,10173,10007,10104,10105,10152,10153,10103,10085,10012,10157,10158,10160,10162,10171,10172,10178,10191,10192,10185,10181,10193,10187,10095,10224,10226,10227,10228,10229,10234,10047,10195,10236,10240,10167,10241,10243]
+        portName: ["IflytekCalibrationCalibInfo","IflytekCameraPerceptionTrafficSignRecognition","IflytekCameraPerceptionOccGrid","IflytekCameraPerceptionLaneTopo","IflytekPredictionPredictionResult","IflytekCameraPerceptionLaneLines","IflytekCameraPerceptionObjects","IflytekCameraPerceptionOccupancyObjects","IflytekCameraPerception3dGeneralObjects","IflytekCameraPerceptionParkingSlotList","IflytekCameraPerceptionParkingLaneLine","IflytekCameraPerceptionGroundLine","IflytekCameraPerceptionDeceler","IflytekFusionSpatialParkingSlot","IflytekFusionParkingSlot","IflytekFusionRoadFusion","IflytekFusionObjects","IflytekFusionObjectsCompress","IflytekFusionUssPerceptionInfo","IflytekFusionOccupancyObjects","IflytekFusionRoadFusionCompress","IflytekFusionGroundLine","IflytekFusionSpeedBump","IflytekMegaLocalMap","IflytekMegaMappingStatus","IflytekUssUsswaveInfo","IflytekRadarFlPerceptionInfo","IflytekRadarFrPerceptionInfo","IflytekRadarRlPerceptionInfo","IflytekRadarRrPerceptionInfo","IflytekRadarFmPerception4dPointCloud","IflytekRadarFmPerception4dTarget","IflytekSensorImu","IflytekVehicleService","IflytekSensorGnss","IflytekLocalizationEgomotion","IflytekLocalizationSemanticInfo","IflytekEhrSdmapInfo","IflytekEhrStaticMap","IflytekEhrSdpromapInfo","IflytekHmiInner","IflytekFsmSocState","IflytekFsmHmiSocOuter","IflytekAdasFunctionAdas","IflytekControlControlCommand","IflytekPlanningPlan","IflytekPlanningHmi","IflytekSdmapSdmapInfo","IflytekDTCInfoFmAService","IflytekAlarmInfoFmAService","IflytekSystemVersion","IflytekFdlTriggerAck","IflytekPlanningDebugInfo","IflytekControlDebugInfo","IflytekAdasFunctionDebugInfo","IflytekFmAMcuSentinel","IflytekMcuFmASentinel","IflytekFmADegradeFunciton","IflytekEngineerInner","IflytekCameraPerceptionAroundView2DBoundingBoxes","IflytekCameraPerceptionPanoramaView2DBoundingBoxes","IflytekCameraPerceptionScene","IflytekDiskStatePhmAFdl","IflytekDiskCleanRequestPhmAFdl","IflytekDiskStatePhmBFdl","IflytekDiskCleanRequestPhmBFdl","IflytekSystemBProcessLoading","IflytekCalibrationDebugInfo","IflytekEhpParkingMap","IflytekEhpParkingMapFileInfo","IflytekEhpMapManager","IflytekSystemAProcessLoading","IflytekCameraPerceptionDrivableSpaceGrid","IflytekEhpParkingMapToHmi","IflytekCanTxInfo"]
+    CameraStructContainerInterface:
+        instanceId: [10111,10112,10113,10124,10106,10119,10120,10121,10122,10123,10125,10190]
+        portName: ["IflytekSensorCameraSurroundFrontFullResolutionH265","IflytekSensorCameraSurroundLeftFullResolutionH265","IflytekSensorCameraSurroundRearFullResolutionH265","IflytekSensorCameraSurroundRightFullResolutionH265","IflytekSensorCameraFront120FullResolutionH265","IflytekSensorCameraFront30FullResolutionH265","IflytekSensorCameraSideFlFullResolutionH265","IflytekSensorCameraSideFrFullResolutionH265","IflytekSensorCameraSideRlFullResolutionH265","IflytekSensorCameraSideRrFullResolutionH265","IflytekSensorCameraRearFullResolutionH265","IflytekSensorCameraRearFullResolutionH265MDCA"]
+    FmAlarmReceiveService:
+        instanceId: [10036]
+        portName: ["IflytekAlarmInfoFdl"]
+    ConfigServerServiceInterface:
+        instanceId: [1]
+        portName: ["IflytekConfigManager"]

@@ -1,0 +1,167 @@
+{
+  "logging": {
+    "level": "info",
+    "console": "false",
+    "syslog": {
+      "enable": "true"
+    }
+  },
+  "routing": "someipd",
+  "services": [
+    {
+      "service": "1100",
+      "instance": "10003",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10007",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10008",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10009",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10010",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10011",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10012",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10017",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10018",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10023",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10031",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10036",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "10040",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "1100",
+      "instance": "2",
+      "is_signal": "false",
+      "reliable": "0",
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    }
+  ],
+  "clients": []
+}

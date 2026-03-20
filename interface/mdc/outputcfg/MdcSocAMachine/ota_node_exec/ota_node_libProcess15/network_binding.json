@@ -1,0 +1,63 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "ota_node_exec/ota_node_libExecutable16Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "1",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekConfigManager_RequiredSomeipServiceInstance20"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "ota_node_exec/ota_node_libExecutable16Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10024",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoOtaNode_RequiredSomeipServiceInstance24"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "ota_node_exec/ota_node_libExecutable16Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10218",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekDiskSpaceInfoPhmAOta_DdsRequiredOtaNode"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10220",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekDiskSpaceInfoPhmBOta_DdsRequiredOtaNode"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10221",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekDiskCleanRequest_DdsProvidedOtaNode"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "ota_node_exec/ota_node_libExecutable16Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10044",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekObdUpdateEvent_ProvidedSomeipOtaNode"
+        },
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10046",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekOtaLogUploadRequest_RequiredSomeipOtaNode"
+        }
+      ]
+    }
+  ]
+}

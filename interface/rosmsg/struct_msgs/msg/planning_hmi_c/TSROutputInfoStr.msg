@@ -1,0 +1,5 @@
+int16 tsr_state
+uint32 tsr_speed_limit
+bool tsr_warning
+int16 tsr_supp_sign_type
+bool tsr_speed_unlimit_warning

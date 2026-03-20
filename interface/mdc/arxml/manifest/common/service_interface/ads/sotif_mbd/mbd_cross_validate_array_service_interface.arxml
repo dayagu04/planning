@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="a55d9190-171d-4415-baf9-657ac2cd5c12">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE UUID="b0f64877-60d2-473c-9ec3-d10c15b30da6">
+          <SHORT-NAME>Sotif</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE UUID="3675411f-3b46-49ef-be5c-d27145ad604f">
+              <SHORT-NAME>CrossValidateArrayMsgDataType</SHORT-NAME>
+            </AR-PACKAGE>
+            <AR-PACKAGE UUID="86339dd0-c83d-4f07-807d-c13880ca2166">
+              <SHORT-NAME>CrossValidateArrayServiceInterface</SHORT-NAME>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

@@ -1,0 +1,21 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10039,10231,10234]
+        portName: ["IflytekCalibrationCalibInfo","IflytekCalibrationPhmReport","IflytekCalibrationDebugInfo"]
+    ClientServiceContainerInterface:
+        instanceId: [10013,10014,10016]
+        portName: ["IflytekPostSaleCalibrationActivation","IflytekPostSaleCalibrationStop","IflytekPostSaleCalibrationResult"]
+  recvInstanceID:
+    CameraStructContainerInterface:
+        instanceId: [10054,10053,10051,10050,10106,10002,10006,10001,10000,10052,10055,10189]
+        portName: ["IflytekSensorCameraSideRr","IflytekSensorCameraSideRl","IflytekSensorCameraSideFl","IflytekSensorCameraFront30","IflytekSensorCameraFront120FullResolutionH265","IflytekSensorCameraSurroundResizeImageRear","IflytekSensorCameraSurroundResizeImageRight","IflytekSensorCameraSurroundResizeImageLeft","IflytekSensorCameraSurroundResizeImageFront","IflytekSensorCameraSideFr","IflytekSensorCameraRear","IflytekSensorCameraFront120FullResolutionClearH265"]
+    FmAlarmReceiveService:
+        instanceId: [10009]
+        portName: ["IflytekAlarmInfoCalibration"]
+    StructContainerInterface:
+        instanceId: [10033,10034,10016,10036,10037,10104]
+        portName: ["IflytekSensorImu","IflytekVehicleService","IflytekLocalizationEgomotion","IflytekCameraPerceptionObjects","IflytekFusionObjects","IflytekFsmSocState"]

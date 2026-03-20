@@ -1,0 +1,5 @@
+int16 ldp_state
+bool ldp_left_intervention_flag
+bool ldp_right_intervention_flag
+bool ldp_warning_audio_flag
+int16 ldp_driver_handsoff_warning

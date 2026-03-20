@@ -1,0 +1,383 @@
+/*******************************************************************************
+ * 地图信息
+ * topic：/iflytek/ehr/sdmap_info
+ * 频率：1Hz
+ * 结构体：SdMap
+ *
+ *
+ *******************************************************************************/
+
+syntax = "proto2";
+// SdMap输出导航信息
+package SdMapSwtx;
+
+import "common.proto";
+
+enum Direction {
+  GO_STRAIGHT = 1;
+  RIGTH_30_DEGREE = 2;
+  RIGHT_60_DEGREE = 3;
+  TURN_RIGHT = 4;
+  RIGHT_120_DEGREE = 5;
+  RIGHT_150_DEGREE = 6;
+  U_TURN = 7;
+  LEFT_150_DEGREE = 8;
+  LEFT_120_DEGREE = 9;
+  TURN_LEFT = 10;
+  LEFT_60_DEGREE = 11;
+  LEFT_30_DEGREE = 12;
+  MERGE_LEFT = 13;  // 靠左行驶
+  MERGE_RIGHT = 14; // 靠右行驶
+}
+
+enum RoadPriority {
+  EXPRESSWAY = 0;           // 高速公路
+  CITY_EXPRESSWAY = 1;      // 城市快速路
+  NATIONAL_HIGHWAY = 2;     // 国道
+  PROVINCIAL_HIGHWAY = 3;   // 省道、城市主干道
+  PREFECTURAL_HIGHWAY = 4;  // 县道
+  GOOD_COUNTRY_ROAD = 5;    //路况较好的乡镇道路
+  COMMON_COUNTRY_ROAD = 6;  //乡镇道路
+  POI = 7;            // POI 连接线，类似于小区 路，但可以穿行
+  COMMUNITY_WAY = 8;  //小区路，不能穿行
+  LV9_ROAD = 9;  //九级辅路：非机动车辆通 行的辅路我们定义为九级辅路
+  FERRY = 10;            //轮渡
+  PEDESTRIAN_ROAD = 11;  //步行路
+};
+
+enum RoadUsage {
+  ROUNDABOUT = 0;     // 0 环岛
+  ORDINARY_ROAD = 1;  // 1 普通道路
+  SEPARATE = 2;       // 2 上下行分离道路
+  RAMP = 3;           // 3 匝道
+  JUNCTION_LINK = 4;  // 4 路口内道路（4 号路段，即 junction link）
+  ENTRANCE_EXIT = 5;  // 5 出入口
+  PARING_AREA = 6;    // 6 停车区
+  SERVICE_AREA = 7;   // 7 服务区
+  U_TURN_LANE = 12;   // 12 掉头车道
+  LEFT_TURAN_LANE = 13;          // 13 左转车道
+  ADVANCE_RIGHT_TURN_LANE = 14;  // 14 提前右转车道
+};
+
+message LinkInfo {
+  optional uint64 id = 1;
+  optional uint32 dis = 2;
+  optional uint32 speed_limit = 3;
+  repeated Common.PointLLH shape_points = 4;
+  optional bool crossing = 5;
+  optional Direction direction = 6;
+  repeated Common.PointENU enu_points = 7;  // 形点，实际为boot系的xyz
+  optional int32 forward_lane_num = 8;
+};
+
+message DriveAssistInfo {
+  optional Direction direction = 1;  // 通行方向
+  repeated uint32 lane_positon =
+      2;  // 当前通行方向可以走的车道，按照从左开始数。eg:如果通行方向为左转，lane_positon=[1,2]的话，表示左侧第1条和第2条车道可以左转
+  optional uint32 total_lane_num = 3;  // 车道的总数目,包括左右附加车道
+  optional uint32 left_additional_lane_num = 4;   //左附加车道的数目
+  optional uint32 right_additional_lane_num = 5;  //右附加车道的数目
+}
+
+message AdasInfo {
+  optional int32 dis_to_seg_start = 1; //当前点到所在Segment起点的距离，表示过渡ADAS数据时不下发, 单位：米
+  optional int32 slope = 2; //该点位置处的坡度，正值表示 上坡，负值表示下坡。单位：度*(10^2)。 无数据时不下发。
+  optional int32 curvature = 3; //曲线半径的倒数乘以 10^6，正值表示左转，负值表示右转。取值的绝对值越大，表示弯越急，转弯半径越小。单位： 10^(-6) m^(-1)。无数据时不下发
+}
+
+message BranchInfo {
+  enum BranchType{
+    BranchTypeNull = 0; // 无分支
+    BranchTypeMerge = 1; // 有分支汇入(除了导航路线上前一路段外，还有其它路段可通向当前路段)
+    BranchTypeSplit = 2; // 有分支岔出(除了导航路线上下一路段外，当前路段还可以通向其它路段)
+  }
+  enum BranchDirection{
+    BranchDirectionNull = 0; //无方向
+    BranchDirectionLeft = 1; //左侧
+    BranchDirectionRight = 2; //右侧
+    BranchDirectionLeftAndRight = 3; //左右
+  }
+  optional BranchType branch_type = 1; // 分支类型
+  optional BranchDirection direction = 2; // 分支方向
+}
+
+message Segment {
+  optional uint64 id = 1;
+  optional uint32 dis = 2;          //当前路段长度，米
+  optional uint32 speed_limit = 3;  // 限速，km/h
+  repeated Common.PointLLH shape_points = 4;
+  optional bool crossing = 5;        // 当前路段的末尾是否是路口
+  optional Direction direction = 6;  // 当前路段末尾车辆的行驶方向
+  optional RoadPriority priority = 7;        // 当前路段道路优先级
+  optional RoadUsage usage = 8;              // 当前路段道路用途
+  repeated LinkInfo in_link = 9;             // 前驱路段信息
+  repeated LinkInfo out_link = 10;           // 后继路段信息
+  repeated Common.PointENU enu_points = 11;  // 形点，实际为boot系的xyz
+  optional uint64 usage_flag = 12;  // 道路属性标识位，按位表示属性
+  optional int32 forward_lane_num = 13;  // 顺向行驶时，可用的车道数
+  repeated DriveAssistInfo lane_info_list = 14;  // 驾驶辅助信息 预留
+  optional bool is_tunnel = 15;                  // 是否为隧道
+  optional bool has_toll_station = 16;  //当前路段的终点是否有收费站
+  repeated AdasInfo adas_data = 17; // 路段上的坡度、曲率信息，无数据时不下发。
+  optional AdasInfo transition_adas_data = 18; // 与下一个Segment之间过渡的adas数据。只包含曲率数据。无数据或者为最后一个路段时不下发
+  repeated BranchInfo branch_info = 19; // 路段上的分支信息(分叉/汇入)，无数据时不下发
+  repeated TrafficLightCountdownInfo tfl_count_downs = 20; // 红绿灯倒计时信息，无数据时不带
+  optional NaviCameraExtInfo camera_info = 21; // 导航电子眼信息，无数据时不带
+  optional OwnerShip owner_ship = 22;  // 路段上的道路权属信息，无数据时不下发
+};
+
+enum OwnerShip {
+  // 公共道路
+  OwnershipPublicRoad = 0;
+  // 内部道路
+  OwnershipInternalRoad = 1;
+  // 私有道路
+  OwnershipPrivateRoad = 2;
+  // 地下停车场道路
+  OwnershipUndergroundParkRoad = 3;
+  // 立体停车场道路
+  Ownership3DParkRoad = 4;
+
+  OwnershipUnknownError = 99;
+}
+
+message RouteMapInfo {
+  repeated Segment segms = 1;   // 路段信息
+  optional int32 distance = 2;  // 路线总长，米
+  optional int32 duration = 3;  // 路线总时间，秒
+  optional NaviRoadInfo navi_road_info = 4; // 导航道路信息(路段限速)
+  optional uint64 path_id = 5;              // 路径ID
+};
+
+enum EhrMapStatus {
+  NAVI_OK = 0;                 // 0 正常导航中
+  NAVI_QUIT = 1;               // 1 导航退出
+  TRANSFORM_INFO_INVALID = 2;  // 2 定位消息中的转换信息无效
+  SDMAP_MSG_LOST = 3;          // 3 导航路径消息丢失
+  LOC_MSG_LOST = 4;            // 4 定位消息丢失
+};
+
+message SdMap {
+  optional Common.Header header = 1;    // 头信息
+  optional RouteMapInfo route_map = 3;  // 当前的导航路线信息
+  optional EhrMapStatus ehr_map_status = 4;
+};
+
+// 红绿灯倒计时信息 from:雄狮协议3.46
+message TrafficLightCountdownInfo {
+  optional Common.PointLLH position = 1;  // 红绿灯位置
+  // 路况：1-极度拥堵，2-拥堵，3-拥堵+缓行， 4-缓行， 5-畅通
+  optional uint32 status = 4;
+  optional LightInfo light_info = 5;
+  optional Common.Point3d position_boot = 6; // 红绿灯位置，boot坐标
+
+  message LightInfo {
+    optional uint32 wait_num = 1;  //等红绿灯轮数
+    optional int32 dir =
+        2;  // 红绿指示方向，1 是左转，2 是右转，7是调头、8是直行
+    repeated LightState light_states = 3;  //红绿灯状态
+    optional string desc = 4;              // 灯态列表（字符串）
+    optional int32 showType =
+        5;  // 显示形态标识[ 0: 不展示灯态和倒计时 1: 仅展示倒计时
+            // (实际不存在，因为有倒计时一定伴随有灯态) 2:
+            // 仅展示灯态，不展示倒计时 3: 展示灯态和倒计时 ]
+    optional int32 phase =
+        6;  // 左转和直行是否同相位[ 0: 非同相位，即灯态颜色或倒计时读秒不相同
+            // 1: 是同相位，即灯态颜色及倒计时读秒都相同 ]
+    optional int32 standardType =
+        7;  // 灯规格类型[ 0: 无效值 1: 常规灯，有颜色及读秒变化的灯 2:
+            // 降级灯，仅有颜色变化的灯 ]
+  }
+  message LightState {
+    optional TrafficLightType type = 1;  // 红绿灯状态类型
+    /*
+     * lightState 对象中的 lastSeconds 含义
+     * 1. lastSeconds 的定义
+     * lastSeconds 是 LightState
+     * 类的一个属性，代表倒计时截止时间下限阈值。当前只有绿灯有此属性32。
+     *
+     * 2. lastSeconds 的作用
+     * 倒计时区间：如果设置了
+     * lastSeconds，则在倒计时的最后几秒内会显示特定的状态或文案。
+     * 中间态展示：如果 lastSeconds
+     * 小于1，则表示不展示中间态直接进入下一个灯态周期32。
+     * 3. 示例说明
+     * 示例1：常规绿灯倒计时为30秒，若下限阈值为3秒。倒计时区间[30,3)用读秒显示，倒计时区间[3,0]用“通行”文案显示绿变红的中间态32。
+     * 示例2：常规绿灯倒计时为30秒，下限阈值为0秒。倒计时区间[30,0]用读秒显示，无“通行”文案显示绿变红的中间态32。
+     * 4. 巡航与导航场景差异
+     * 导航场景：绿灯闪烁 lastSeconds 一般为3秒21。
+     * 巡航场景：绿灯闪烁 lastSeconds
+     * 为0秒，原因是巡航显示多灯组，不希望同时闪烁，暂不透出21。
+     * 通过以上信息，可以理解 lastSeconds 在不同场景下的具体含义和使用方式。
+     */
+    optional int32 last_seconds = 2;
+    optional uint64 stime = 3;  // 灯态开始时间戳，单位秒,1970,utc+8
+    optional uint64 etime = 4;  // 灯态结束时间戳，单位秒,1970,utc+8
+  }
+  enum TrafficLightType {
+    kInvalid = 0;  // 无效值
+    kOff = 1;      // 不亮灯，暂停不显示  1
+    kRed = 2;      // 红灯  2
+    kGreen = 3;    // 绿灯 3
+    kYellow = 4;   // 黄灯 4
+  }
+}
+
+// 导航道路信息(路段限速)。from:雄狮协议3.12
+message NaviRoadInfo {
+  optional string road_name = 1;            // 道路名称
+  optional int32 road_class = 2;            // 当前自车所在道路等级
+  optional int32 cur_road_speed_limit = 3;  // 道路限速
+  optional int32 form_way = 4;              // 道路属性
+  optional uint64 recv_time = 5; // EHR接收到该消息时刻的时间戳。微秒
+}
+
+/******** from:雄狮协议 3.7-V2 ********/
+// 电子眼细类信息
+message NaviSubCameraExt {
+  // 细类电子眼id
+  optional int32 sub_camera_id = 1;
+
+  // 公交车道是否生效 1:生效 0:不生效
+  optional int32 busway_time_enable = 2;
+
+  // 电子眼的详细违章类型:SubCameraExtType
+  // {@link com.lion.api.module.navi.NaviValue.SubCameraExtType}
+  optional int32 sub_type = 3;
+
+  // 高罚数据是否生效 2:高罚 1:有罚单 0:不生效
+  optional int32 penalty = 4;
+
+  // 电子眼显示优先级
+  optional int32 priority = 5;
+
+  // 是否是新增电子眼
+  optional bool is_new = 6;
+
+  // 是否可变限速电子眼
+  optional bool is_variable_speed = 7;
+
+  // 区间测速是否配对:仅对区间测速电子眼生效
+  optional bool is_match = 8;
+
+  // 城市特色电子眼标识
+  optional bool is_special = 9;
+
+  // 电子眼限速 size = 0没有限速值 0车道禁行 0xff车道无数据 单位km/h
+  repeated int32 speed = 10;  // 使用int32存储short值
+}
+
+// 导航电子眼扩展信息
+message NaviCameraExt {
+  // 电子眼id
+  optional int32 camera_id = 1;
+
+  // // 电子眼所在segment索引
+  // optional int32 segment_idx = 2;
+
+  // // 电子眼所在link索引
+  // optional int32 link_index = 3;
+
+  // 自车到电子眼距离
+  optional int32 distance = 4;
+
+  // 电子眼到Link终点的距离 单位:米（仅导航场景生效）
+  optional int32 distance_to_end = 5;
+
+  // 电子眼所在道路的道路等级
+  optional int32 road_class = 6;
+
+  // 是否隐藏式电子眼
+  optional bool is_hidden = 7;
+
+  // 摄像头位置坐标(二维)经纬
+  optional Common.PointLLH coord2d = 8;
+
+  // 摄像头位置坐标(三维)经纬高
+  optional Common.PointLLH coord3d = 9;
+
+  // 电子眼细类列表
+  repeated NaviSubCameraExt sub_cameras = 10;
+
+  optional Common.Point3d coord_boot = 11; // 摄像头位置坐标 boot系
+}
+
+message NaviCameraExtInfo {
+  repeated NaviCameraExt navi_cameras = 1;
+}
+
+// 导航引导服务摄像头类型枚举
+enum SubCameraExtType {
+  // 自动未知错误
+  AUTO_UNKNOWN_ERROR = -2147483648;
+  // 无效值
+  SUB_CAMERA_EXT_TYPE_NULL = 0;
+  // 违规用灯
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_USE_LIGHT = 1;
+  // 不系安全带
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_USE_SAFETY_BELT = 2;
+  // 违规占车道
+  SUB_CAMERA_EXT_TYPE_DO_NOT_FOLLOW_LANE = 3;
+  // 违规过路口
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_PASS_CROSS = 4;
+  // 开车打手机
+  SUB_CAMERA_EXT_TYPE_DIAL_PHONE_WHEN_DRIVING = 5;
+  // 分车道限速
+  SUB_CAMERA_EXT_TYPE_LANE_LIMIT_SPEED = 6;
+  // 超高速
+  SUB_CAMERA_EXT_TYPE_ULTRA_HIGH_SPEED = 7;
+  // 超低速
+  SUB_CAMERA_EXT_TYPE_VERY_LOW_SPEED = 8;
+  // 可变限速
+  SUB_CAMERA_EXT_TYPE_VARIABLE_SPEED = 9;
+  // 闯红灯
+  SUB_CAMERA_EXT_TYPE_TRAFFIC_LIGHT = 10;
+  // 尾号限行
+  SUB_CAMERA_EXT_TYPE_END_NUMBER_LIMIT = 11;
+  // 环保限行
+  SUB_CAMERA_EXT_TYPE_ENVIRONMENTAL_LIMIT = 12;
+  // 违反禁令标志
+  SUB_CAMERA_EXT_TYPE_BREACH_PROHIBITION_SIGN = 13;
+  // 违反禁止标线
+  SUB_CAMERA_EXT_TYPE_VIOLATE_PROHIBITED_MARKINGS = 14;
+  // 礼让行人
+  SUB_CAMERA_EXT_TYPE_COURTESY_CROSSING = 15;
+  // 逆向行驶
+  SUB_CAMERA_EXT_TYPE_REVERSE_DRIVING = 16;
+  // 违章停车
+  SUB_CAMERA_EXT_TYPE_ILLEGAL_PARKING = 17;
+  // 占用非机动车道
+  SUB_CAMERA_EXT_TYPE_BICYCLE_LANE = 18;
+  // 占用公交专用车道
+  SUB_CAMERA_EXT_TYPE_BUS_WAY = 19;
+  // 占用应急车道
+  SUB_CAMERA_EXT_TYPE_EMERGENCY_LANE = 20;
+  // 禁止鸣笛
+  SUB_CAMERA_EXT_TYPE_HONK = 21;
+  // 流动测速
+  SUB_CAMERA_EXT_TYPE_FLOW_SPEED = 22;
+  // 路口不让行-让车
+  SUB_CAMERA_EXT_TYPE_COURTESY_CAR_CROSSING = 23;
+  // 违规过铁路道口
+  SUB_CAMERA_EXT_TYPE_RAILWAY_CROSSING = 24;
+  // 区间测速起点
+  SUB_CAMERA_EXT_TYPE_INTERVAL_VELOCITY_START = 25;
+  // 区间测速终点
+  SUB_CAMERA_EXT_TYPE_INTERVAL_VELOCITY_END = 26;
+  // 区间测速起终点
+  SUB_CAMERA_EXT_TYPE_INTERVAL_VELOCITY_START_END = 27;
+  // 车间距抓拍
+  SUB_CAMERA_EXT_TYPE_CAR_SPACING = 28;
+  // HOV车道
+  SUB_CAMERA_EXT_TYPE_HOV_LANE = 29;
+  // 压线抓拍
+  SUB_CAMERA_EXT_TYPE_OCCUPIED_LINE = 30;
+  // ETC拍照
+  Sub_Camera_Ext_Type_ETC = 99;
+  // 无细类的违章
+  SUB_CAMERA_EXT_TYPE_BREAK_RULE = 100;
+  // 视频监控
+  SUB_CAMERA_EXT_TYPE_SUR_VEIL_LANCE = 101;
+  // 其他
+  SUB_CAMERA_EXT_TYPE_CONSEQUENT = 255;
+}

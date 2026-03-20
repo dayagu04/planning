@@ -1,0 +1,3 @@
+FusionObject fusion_obstacle
+PredictionTrajectory trajectory
+ObstacleIntent obstacle_intent

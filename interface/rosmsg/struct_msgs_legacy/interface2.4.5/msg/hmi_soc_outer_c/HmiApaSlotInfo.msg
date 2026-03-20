@@ -1,0 +1,6 @@
+uint32 apa_slot_id
+int16 apa_slot_type
+Point2f apa_slot_corner_points1
+Point2f apa_slot_corner_points2
+Point2f apa_slot_corner_points3
+Point2f apa_slot_corner_points4

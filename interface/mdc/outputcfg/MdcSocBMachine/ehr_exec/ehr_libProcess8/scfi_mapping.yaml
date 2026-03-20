@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10013,10096,10173,10194]
+        portName: ["IflytekEhrSdmapInfo","IflytekEhrStaticMap","IflytekEhrSdpromapInfo","IflytekEhrPhmReport"]
+  recvInstanceID:
+    StructContainerInterface:
+        instanceId: [10012,10016,10104,10047]
+        portName: ["IflytekSdmapSdmapInfo","IflytekLocalizationEgomotion","IflytekFsmSocState","IflytekEhpParkingMap"]
+    FmAlarmReceiveService:
+        instanceId: [10008]
+        portName: ["IflytekAlarmInfoEhr"]

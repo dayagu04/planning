@@ -1,0 +1,5 @@
+bool available
+int16 trajectory_type
+TargetReference target_reference
+uint8 trajectory_points_size
+TrajectoryPoint[] trajectory_points

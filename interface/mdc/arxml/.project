@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>iflyauto_arch</name>
+	<comment></comment>
+	<projects>
+	</projects>
+	<buildSpec>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.sirius.nature.modelingproject</nature>
+		<nature>com.huawei.mdc.diagrams.workspace.draganddropnature</nature>
+		<nature>org.artop.aal.workspace.autosarnature</nature>
+		<nature>com.huawei.mdc.diagrams.adsfi.design.ui.adsfinature</nature>
+	</natures>
+</projectDescription>

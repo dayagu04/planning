@@ -1,0 +1,16 @@
+uint32 id
+int16 type
+int16 light_type
+Shape3d shape
+Point3f relative_position
+Point3f relative_velocity
+Point3f relative_acceleration
+Point3f relative_center_position
+float32 relative_heading_angle
+float32 relative_heading_angle_rate
+Point3f position
+Point3f velocity
+Point3f acceleration
+Point3f center_position
+float32 heading_angle
+float32 heading_angle_rate

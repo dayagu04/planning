@@ -1,0 +1,5 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+SensorMeta sensor_meta
+UssPdcPasSonarDistanceType[12] sonar_distance_data
+UssPdcPrivPointType priv_point_data

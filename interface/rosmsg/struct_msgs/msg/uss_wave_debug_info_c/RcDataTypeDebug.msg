@@ -1,0 +1,1 @@
+uint8[20] rcv_data_value

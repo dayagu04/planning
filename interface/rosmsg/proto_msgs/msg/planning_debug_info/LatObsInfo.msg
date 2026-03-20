@@ -1,0 +1,6 @@
+TrackedObjectInfo lead_one
+TrackedObjectInfo lead_two
+TrackedObjectInfo temp_lead_one
+TrackedObjectInfo temp_lead_two
+TrackedObjectInfo[] front_tracks
+TrackedObjectInfo[] side_tracks

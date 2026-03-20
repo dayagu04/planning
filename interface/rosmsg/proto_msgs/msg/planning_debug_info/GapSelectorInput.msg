@@ -1,0 +1,17 @@
+Point2d[] origin_refline_points
+Point2d[] target_refline_points
+GapSelectorInfo gap_selector_info
+PlanTrajectoryPoint[] trajectory_points
+int32 request
+PlanningPredictionObject[] gs_care_objs
+int32[] target_lane_obstacle_ids
+int32[] origin_lane_obstacles_ids
+float64 cruise_vel
+PlanningInitPoint planning_init_state
+Point2d[] origin_lane_s_width
+Point2d[] target_lane_s_width
+int32 origin_lane_id
+int32 target_lane_id
+int32 current_lane_id
+float64 ego_l_cur_lane
+Point2d[] current_refline_points

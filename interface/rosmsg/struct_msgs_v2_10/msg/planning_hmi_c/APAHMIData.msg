@@ -1,0 +1,5 @@
+float32 remain_dist
+bool is_parking_pause
+int16 parking_pause_reason
+int16 prepare_plan_state
+uint16 planning_park_dir

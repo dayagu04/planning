@@ -1,0 +1,6 @@
+int32 relative_id
+uint8 lane_types_size
+LaneTypeMsg[] lane_types
+uint8 merge_split_points_size
+LaneMergeSplitPointData[] merge_split_points
+float32 speed_limit

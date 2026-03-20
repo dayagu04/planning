@@ -1,0 +1,7 @@
+syntax = "proto2"; 
+
+package iflyauto;
+
+message StructContainer{
+    optional bytes payload = 1;
+}

@@ -1,0 +1,13 @@
+uint8 result
+uint8 name
+uint8 model
+char[64] hardware_info
+char[64] sn
+float64 fx
+float64 fy
+float64 cx
+float64 cy
+uint32 width
+uint32 height
+uint8 distortion_param_size
+float64[20] distortion_param_array

@@ -1,0 +1,3 @@
+uint8 bsd_state
+uint8 bsd_left_warning_level
+uint8 bsd_right_warning_level

@@ -1,0 +1,7 @@
+string operate
+string calib_types
+string calib_time
+string mode
+---
+bool success
+string message

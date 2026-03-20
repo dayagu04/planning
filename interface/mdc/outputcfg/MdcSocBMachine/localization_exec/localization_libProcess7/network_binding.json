@@ -1,0 +1,76 @@
+{
+  "instanceSpecifiers": [
+    {
+      "instanceSpecifier": "localization_exec/localization_libExecutable7Prototype/",
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "instanceIdentifiers": [
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10013",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhrSdmapInfo_DdsRequiredServiceInstance138"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10016",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekLocalizationEgomotion_DdsProvidedLocalization"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10033",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorImu_DdsRequiredServiceInstance113"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10034",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekVehicleService_DdsRequiredServiceInstance114"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10047",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhpParkingMap_DdsRequiredLocalization"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10056",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekSensorGnss_DdsRequiredServiceInstance87"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10088",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekLocalizationSemanticInfo_DdsProvidedServiceInstance75"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10092",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekMegaLocalMap_DdsRequiredServiceInstance146"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10104",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekFsmSocState_DdsRequiredServiceInstance175"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10173",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekEhrSdpromapInfo_DdsRequiredServiceInstance199"
+        },
+        {
+          "protocol": "DDS",
+          "instanceIdentifier": "10196",
+          "shortName": "/HuaweiMDC/instance_manifests/providedInstances/IflytekLocalizationPhmReport_DdsProvidedLocalization"
+        }
+      ]
+    },
+    {
+      "instanceSpecifier": "localization_exec/localization_libExecutable7Prototype/",
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "instanceIdentifiers": [
+        {
+          "protocol": "SOMEIP",
+          "instanceIdentifier": "10010",
+          "shortName": "/HuaweiMDC/instance_manifests/requiredInstances/IflytekAlarmInfoLocalization_RequiredSomeipServiceInstance8"
+        }
+      ]
+    }
+  ]
+}

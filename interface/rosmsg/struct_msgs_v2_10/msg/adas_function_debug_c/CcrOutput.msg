@@ -1,0 +1,4 @@
+AebObjInfo cipv_1nd
+AebObjInfo cipv_2nd
+AebObjInfo left_1nd
+AebObjInfo right_1nd

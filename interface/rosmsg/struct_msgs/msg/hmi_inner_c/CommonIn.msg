@@ -1,0 +1,1 @@
+int16 blue_light_main_switch

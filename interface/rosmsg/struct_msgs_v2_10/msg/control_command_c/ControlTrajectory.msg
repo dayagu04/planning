@@ -1,0 +1,2 @@
+uint8 control_result_points_size
+Point3d[] control_result_points

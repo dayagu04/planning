@@ -1,0 +1,15 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    TriggerInOut:
+        instanceId: [1]
+        portName: ["IflytekStateManager"]
+    ConfigServerServiceInterface:
+        instanceId: [1]
+        portName: ["IflytekConfigManager"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [1]
+        portName: ["IflytekAlarmInfoMdcA"]

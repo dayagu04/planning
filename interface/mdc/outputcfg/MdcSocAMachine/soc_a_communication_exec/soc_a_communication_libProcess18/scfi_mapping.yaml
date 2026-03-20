@@ -1,0 +1,24 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10072,10083,10089,10097,10027,10174,10076,10081,10098,10100,10110,10099,10164,10180,10182,10217,10220,10237,10239]
+        portName: ["IflytekEhrSdmapInfo","IflytekLocalizationEgomotion","IflytekLocalizationSemanticInfo","IflytekEhrStaticMap","IflytekAlarmInfoSoc","IflytekEhrSdpromapInfo","IflytekHmiSocToMcuBsw","IflytekRadarFmPerception4dTarget","IflytekCameraPerceptionScene","IflytekCameraPerceptionOccGrid","IflytekFsmSocState","IflytekCameraPerceptionTrafficSignRecognition","IflytekFdlTrigger","IflytekRadarPerception4dTargetMcu","IflytekEngineerInner","IflytekFdlUploadState","IflytekDiskSpaceInfoPhmBOta","IflytekSensorGnss","IflytekCalibrationCalibInfo"]
+    CameraStructContainerInterface:
+        instanceId: [10107,10126,10127,10128,10129,10130,10176,10215]
+        portName: ["IflytekSensorCameraFront120FullResolutionH265","IflytekSensorCameraFront30FullResolutionH265","IflytekSensorCameraSideFlFullResolutionH265","IflytekSensorCameraSideFrFullResolutionH265","IflytekSensorCameraSideRlFullResolutionH265","IflytekSensorCameraSideRrFullResolutionH265","IflytekCameraPerceptionObstacleFeature","IflytekCameraPerceptionLaneFeature"]
+    ClientServiceContainerInterface:
+        instanceId: [10034,10035,10037,10038,10039,10043,10046]
+        portName: ["IflytekSensorGetPanoramaCameraIntriParam","IflytekSensorWriteFile","IflytekPostSaleCalibrationActivation","IflytekPostSaleCalibrationStop","IflytekPostSaleCalibrationResult","IflytekFdlNetStatCheck","IflytekOtaLogUploadRequest"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10005]
+        portName: ["IflytekAlarmInfoSocACommunication"]
+    StructContainerInterface:
+        instanceId: [10090,10015,10025,10008,10009,10017,10093,10069,10065,10079,10005,10087,10102,10078,10073,10029,10044,10133,10043,10014,10074,10059,10086,10091,10004,10068,10094,10018,10022,10026,10028,10030,10151,10080,10155,10156,10159,10163,10169,10170,10177,10184,10186,10166,10165,10188,10212,10011,10221,10223,10225,10046,10114,10235,10230,10101,10216,10242]
+        portName: ["IflytekMegaMappingStatus","IflytekMegaLocalMap","IflytekCameraPerceptionObjects","IflytekSensorImu","IflytekVehicleService","IflytekHmiMcuToSocBsw","IflytekFusionObjects","IflytekCameraPerceptionLaneLines","IflytekCameraPerceptionGroundLine","IflytekCameraPerceptionDeceler","IflytekFusionParkingSlot","IflytekFusionSpatialParkingSlot","IflytekPlanningHmi","IflytekPlanningPlan","IflytekCameraPerceptionLaneTopo","IflytekPredictionPredictionResult","IflytekCameraPerceptionOccupancyObjects","IflytekFusionRoadFusion","IflytekCameraPerception3dGeneralObjects","IflytekCameraPerceptionParkingSlotList","IflytekCameraPerceptionParkingLaneLine","IflytekFusionObjectsCompress","IflytekFusionUssPerceptionInfo","IflytekFusionOccupancyObjects","IflytekFusionRoadFusionCompress","IflytekFusionGroundLine","IflytekFusionSpeedBump","IflytekUssUsswaveInfo","IflytekRadarFlPerceptionInfo","IflytekRadarFrPerceptionInfo","IflytekRadarRlPerceptionInfo","IflytekRadarRrPerceptionInfo","IflytekAdasFunctionAdas","IflytekControlControlCommand","IflytekAlarmInfoFmAService","IflytekDTCInfoFmAService","IflytekSystemVersion","IflytekFdlTriggerAck","IflytekPlanningDebugInfo","IflytekControlDebugInfo","IflytekAdasFunctionDebugInfo","IflytekFmADegradeFunciton","IflytekCameraPerceptionPanoramaView2DBoundingBoxes","IflytekFmAMcuSentinel","IflytekMcuFmASentinel","IflytekCameraPerceptionAroundView2DBoundingBoxes","IflytekCameraPerception3dOccupancyObjects","IflytekSensorTboxTime","IflytekDiskCleanRequest","IflytekDiskStatePhmAFdl","IflytekDiskCleanRequestPhmAFdl","IflytekEhpParkingMap","IflytekEhpParkingMapFileInfo","IflytekEhpMapManager","IflytekSystemAProcessLoading","IflytekCameraPerceptionDrivableSpaceGrid","IflytekEhpParkingMapToHmi","IflytekCanTxInfo"]
+    CameraStructContainerInterface:
+        instanceId: [10136,10023,10024,10042,10041,10115,10116,10117,10118,10135]
+        portName: ["IflytekSensorCameraRearMDCA","IflytekSensorCameraSurroundResizeImageFront","IflytekSensorCameraSurroundResizeImageLeft","IflytekSensorCameraSurroundResizeImageRear","IflytekSensorCameraSurroundResizeImageRight","IflytekSensorCameraSurroundFrontFullResolutionH265","IflytekSensorCameraSurroundLeftFullResolutionH265","IflytekSensorCameraSurroundRearFullResolutionH265","IflytekSensorCameraSurroundRightFullResolutionH265","IflytekSensorCameraRearFullResolutionH265MDCA"]

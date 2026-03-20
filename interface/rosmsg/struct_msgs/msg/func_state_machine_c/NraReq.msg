@@ -1,0 +1,1 @@
+float32 nra_distance

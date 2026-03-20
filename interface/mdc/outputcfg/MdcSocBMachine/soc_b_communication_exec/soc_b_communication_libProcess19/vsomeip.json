@@ -1,0 +1,134 @@
+{
+  "logging": {
+    "level": "info",
+    "console": "false",
+    "syslog": {
+      "enable": "true"
+    }
+  },
+  "routing": "someipd",
+  "services": [],
+  "clients": [
+    {
+      "service": "1100",
+      "instance": "10011",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ]
+    },
+    {
+      "service": "3",
+      "instance": "10013",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2"
+        }
+      ]
+    },
+    {
+      "service": "3",
+      "instance": "10014",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2"
+        }
+      ]
+    },
+    {
+      "service": "3",
+      "instance": "10016",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2"
+        }
+      ]
+    },
+    {
+      "service": "3",
+      "instance": "10033",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2"
+        }
+      ]
+    },
+    {
+      "service": "3",
+      "instance": "10042",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2"
+        }
+      ]
+    },
+    {
+      "service": "3",
+      "instance": "10045",
+      "is_signal": "false",
+      "reliable": [
+        "0"
+      ],
+      "events": [
+        {
+          "event": "1"
+        }
+      ],
+      "eventgroups": [
+        {
+          "eventgroup": "2"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+int32 order_id
+int32 relative_id
+uint8 lane_types_size
+LaneTypeMsg[] lane_types
+uint8 lane_marks_size
+LaneMarkMsg[] lane_marks
+uint8 lane_sources_size
+LaneSourceMsg[] lane_sources
+uint8 lane_num_size
+LaneNumMsg[] lane_num
+LaneReferenceLine lane_reference_line
+LaneMergeSplitPoint lane_merge_split_point
+LaneBoundary left_lane_boundary
+LaneBoundary right_lane_boundary
+LaneBoundary stop_line

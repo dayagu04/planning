@@ -1,0 +1,10 @@
+float32 target_long_position
+float32 target_lat_position
+float32 heading_angle
+int32 target_track_id
+int16 target_type
+int16 motion_pattern
+int16 light_status
+Shape3d shape
+Point2f velocity
+int32 lane_id

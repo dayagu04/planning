@@ -1,0 +1,30 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    CameraStructContainerInterface:
+        instanceId: [10055,10051,10054,10050,10052,10053,10045,10066,10106,10119,10120,10121,10122,10123,10125,10189]
+        portName: ["IflytekSensorCameraRear","IflytekSensorCameraSideFl","IflytekSensorCameraSideRr","IflytekSensorCameraFront30","IflytekSensorCameraSideFr","IflytekSensorCameraSideRl","IflytekSensorCameraFront120","IflytekSensorCameraFront120Eagle","IflytekSensorCameraFront120FullResolutionH265","IflytekSensorCameraFront30FullResolutionH265","IflytekSensorCameraSideFlFullResolutionH265","IflytekSensorCameraSideFrFullResolutionH265","IflytekSensorCameraSideRlFullResolutionH265","IflytekSensorCameraSideRrFullResolutionH265","IflytekSensorCameraRearFullResolutionH265","IflytekSensorCameraFront120FullResolutionClearH265"]
+    ClientServiceContainerInterface:
+        instanceId: [10033]
+        portName: ["IflytekSensorGetPanoramaCameraIntriParam"]
+    FmAlarmReceiveService:
+        instanceId: [2]
+        portName: ["IflytekAlarmInfoMdcB"]
+    StructContainerInterface:
+        instanceId: [10202]
+        portName: ["IflytekCameraPanoramaPhmReport"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10017]
+        portName: ["IflytekAlarmInfoCameraNodePanoramaView"]
+    CameraStructContainerInterface:
+        instanceId: [10137]
+        portName: ["IflytekSensorCameraRearMDCA"]
+    ConfigServerServiceInterface:
+        instanceId: [1,1]
+        portName: ["IflytekConfigManager","IflytekConfigManager"]
+    StructContainerInterface:
+        instanceId: [10108,10187]
+        portName: ["IflytekAlarmInfoToBCamera","IflytekCameraPerceptionPanoramaView2DBoundingBoxes"]

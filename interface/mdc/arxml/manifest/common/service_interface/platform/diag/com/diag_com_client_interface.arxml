@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="06b92b7a-810a-4c7e-89a8-2ebd8f4c9cb4">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>DiagDataType</SHORT-NAME>
+          <ELEMENTS>
+            <STD-CPP-IMPLEMENTATION-DATA-TYPE>
+              <SHORT-NAME>RequestTriggerType</SHORT-NAME>
+              <CATEGORY>STRUCTURE</CATEGORY>
+              <NAMESPACES>
+                <SYMBOL-PROPS>
+                  <SHORT-NAME>ara</SHORT-NAME>
+                  <SYMBOL>ara</SYMBOL>
+                </SYMBOL-PROPS>
+                <SYMBOL-PROPS>
+                  <SHORT-NAME>diag</SHORT-NAME>
+                  <SYMBOL>diag</SYMBOL>
+                </SYMBOL-PROPS>
+              </NAMESPACES>
+              <SUB-ELEMENTS>
+                <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                  <SHORT-NAME>instanceSpecifier</SHORT-NAME>
+                  <IS-OPTIONAL>false</IS-OPTIONAL>
+                  <TYPE-REFERENCE>
+                    <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/String</TYPE-REFERENCE-REF>
+                  </TYPE-REFERENCE>
+                </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                  <SHORT-NAME>serailNumber</SHORT-NAME>
+                  <TYPE-REFERENCE>
+                    <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt64</TYPE-REFERENCE-REF>
+                  </TYPE-REFERENCE>
+                </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                <CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+                  <SHORT-NAME>eventType</SHORT-NAME>
+                  <IS-OPTIONAL>false</IS-OPTIONAL>
+                  <TYPE-REFERENCE>
+                    <TYPE-REFERENCE-REF DEST="STD-CPP-IMPLEMENTATION-DATA-TYPE">/HuaweiMDC/StdCppDataType/UInt8</TYPE-REFERENCE-REF>
+                  </TYPE-REFERENCE>
+                </CPP-IMPLEMENTATION-DATA-TYPE-ELEMENT>
+              </SUB-ELEMENTS>
+            </STD-CPP-IMPLEMENTATION-DATA-TYPE>
+          </ELEMENTS>
+        </AR-PACKAGE>
+        <AR-PACKAGE>
+          <SHORT-NAME>PlatformServices</SHORT-NAME>
+          <ELEMENTS>
+            <DDS-SERVICE-INTERFACE-DEPLOYMENT>
+              <SHORT-NAME>DiagComClientDeployment</SHORT-NAME>
+              <EVENT-DEPLOYMENTS>
+                <DDS-EVENT-DEPLOYMENT>
+                  <SHORT-NAME>RequestTriggerDeployment</SHORT-NAME>
+                  <FRAG-SIZE>2048</FRAG-SIZE>
+                  <LIST-SIZE>256</LIST-SIZE>
+                  <TOPIC-NAME>TopicNameOfRequestTriggerDeployment</TOPIC-NAME>
+                  <TRANSPORT-PROTOCOLS>
+                    <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                  </TRANSPORT-PROTOCOLS>
+                </DDS-EVENT-DEPLOYMENT>
+              </EVENT-DEPLOYMENTS>
+              <METHOD-DEPLOYMENTS>
+                <DDS-METHOD-DEPLOYMENT>
+                  <SHORT-NAME>GetRequestDeployment</SHORT-NAME>
+                  <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/PlatformServices/DiagComClientDeployment/RpcOfGetRequestDeployment</DDS-RPC-SERVICE-REF>
+                  <TRANSPORT-PROTOCOLS>
+                    <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                  </TRANSPORT-PROTOCOLS>
+                </DDS-METHOD-DEPLOYMENT>
+                <DDS-METHOD-DEPLOYMENT>
+                  <SHORT-NAME>SendResponseDeployment</SHORT-NAME>
+                  <DDS-RPC-SERVICE-REF DEST="DDS-RPC-SERVICE-DEPLOYMENT">/HuaweiMDC/PlatformServices/DiagComClientDeployment/RpcOfSendResponseDeployment</DDS-RPC-SERVICE-REF>
+                  <TRANSPORT-PROTOCOLS>
+                    <TRANSPORT-PROTOCOL>UDP</TRANSPORT-PROTOCOL>
+                  </TRANSPORT-PROTOCOLS>
+                </DDS-METHOD-DEPLOYMENT>
+              </METHOD-DEPLOYMENTS>
+              <DDS-RPC-SERVICES>
+                <DDS-RPC-SERVICE-DEPLOYMENT>
+                  <SHORT-NAME>RpcOfGetRequestDeployment</SHORT-NAME>
+                  <FRAG-SIZE>2048</FRAG-SIZE>
+                  <LIST-SIZE>256</LIST-SIZE>
+                  <REPLY-TOPIC-NAME>ReplyOfRpcOfGetRequestDeployment</REPLY-TOPIC-NAME>
+                  <REQUEST-TOPIC-NAME>RequestOfRpcOfGetRequestDeployment</REQUEST-TOPIC-NAME>
+                </DDS-RPC-SERVICE-DEPLOYMENT>
+                <DDS-RPC-SERVICE-DEPLOYMENT>
+                  <SHORT-NAME>RpcOfSendResponseDeployment</SHORT-NAME>
+                  <FRAG-SIZE>2048</FRAG-SIZE>
+                  <LIST-SIZE>256</LIST-SIZE>
+                  <REPLY-TOPIC-NAME>ReplyOfRpcOfSendResponseDeployment</REPLY-TOPIC-NAME>
+                  <REQUEST-TOPIC-NAME>RequestOfRpcOfSendResponseDeployment</REQUEST-TOPIC-NAME>
+                </DDS-RPC-SERVICE-DEPLOYMENT>
+              </DDS-RPC-SERVICES>
+              <SERVICE-INTERFACE-ID>101</SERVICE-INTERFACE-ID>
+            </DDS-SERVICE-INTERFACE-DEPLOYMENT>
+          </ELEMENTS>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

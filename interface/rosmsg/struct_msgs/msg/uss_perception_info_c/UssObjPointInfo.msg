@@ -1,0 +1,3 @@
+int16 obj_point_type
+float32 obj_point_xpos
+float32 obj_point_ypos

@@ -1,0 +1,15 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+PlanMeta meta
+Trajectory trajectory
+TurnSignalCommand turn_signal_command
+LightSignalCommand light_signal_command
+HornSignalCommand horn_signal_command
+GearCommand gear_command
+RearViewMirrorCommand rear_view_mirror_signal_command
+OpenLoopSteeringCommand open_loop_steering_command
+PlanningStatus planning_status
+uint8 successful_slot_info_list_size
+SuccessfulSlotsInfo[] successful_slot_info_list
+PlanningRequest planning_request

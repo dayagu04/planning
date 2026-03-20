@@ -1,0 +1,14 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+IFLYReserved reserved
+IFLYLocalizationMeta meta
+IFLYAcceleration acceleration
+IFLYAngularVelocity angular_velocity
+IFLYVelocity velocity
+IFLYOrientation orientation
+IFLYPosition position
+IFLYTransform transform
+IFLYStatus status
+IFLYPoseDetail pose_detail
+IFLYLocalizationException exception

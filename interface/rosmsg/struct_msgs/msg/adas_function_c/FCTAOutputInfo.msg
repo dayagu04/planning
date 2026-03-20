@@ -1,0 +1,4 @@
+uint8 fcta_state
+uint8 fcta_left_warning_level
+uint8 fcta_right_warning_level
+RiskObjInfo fcta_risk_obj

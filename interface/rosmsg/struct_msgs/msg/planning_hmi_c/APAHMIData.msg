@@ -1,0 +1,12 @@
+float32 remain_dist
+bool is_parking_pause
+int16 parking_pause_reason
+int16 prepare_plan_state
+uint16 planning_park_dir
+uint16 planning_recommend_park_dir
+bool recommend_park_out
+bool recommend_park_in
+float32 pa_remain_distance
+float32 remain_distance_percentage
+uint16 planning_park_pa_dir
+uint16 planning_recommend_pa_dir

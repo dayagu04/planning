@@ -1,0 +1,6 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+MsgMeta msg_meta
+uint8 fusion_object_size
+FusionOccupancyObject[] fusion_object
+bool local_point_valid

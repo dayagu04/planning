@@ -1,0 +1,13 @@
+uint8 data_valid_flag
+uint8 void0
+uint8 osc_trim
+uint8 void1
+uint8 customer_bits
+uint8 void2
+uint8 gain_digital
+uint8 void3
+uint8 gain_analog
+uint8 void4
+uint8 drive_current
+uint8 void5
+uint8 drive_frequence

@@ -1,0 +1,15 @@
+bool apa_main_switch
+bool apa_active_switch
+int16 apa_work_mode
+bool apa_cancel_switch
+uint32 apa_select_slot_id
+bool apa_start
+bool apa_resume
+int16 apa_parking_direction
+int16 apa_park_out_direction
+bool apa_avm_main_switch
+ApaUserPreference apa_user_preference
+ApaFreeSlotInfo apa_free_slot_info
+bool stop_parking
+bool outside_parking
+bool change_slot

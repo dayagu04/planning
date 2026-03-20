@@ -1,0 +1,1 @@
+uint32[10] sns_bk_wv_obj_type_value

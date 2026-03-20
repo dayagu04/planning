@@ -1,0 +1,2 @@
+int16 dodge_type
+int32 object_id

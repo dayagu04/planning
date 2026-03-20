@@ -1,0 +1,12 @@
+std_msgs/Header header # ros header
+MsgHeader msg_header
+LDWOutputInfoStr ldw_output_info
+LDPOutputInfoStr ldp_output_info
+ELKOutputInfoStr elk_output_info
+TSROutputInfoStr tsr_output_info
+IHCOutputInfoStr ihc_output_info
+ALCOutputInfoStr alc_output_info
+CIPVInfoStr cipv_info
+AD2HMIData ad_info
+HPPHMIData hpp_info
+APAHMIData apa_info

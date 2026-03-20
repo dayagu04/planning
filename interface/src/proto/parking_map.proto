@@ -1,0 +1,492 @@
+syntax = "proto3";
+
+package IFLYParkingMap;
+
+import "common3.proto";
+
+// 坐标类型
+message Coordinate {
+  oneof pose {
+    Common3.PointLLH llh = 1;
+    Common3.PointENU enu = 2;
+    Common3.Point3d boot = 3;
+  }
+}
+
+// 属性标识 (描述对象属性标识)
+message AttributeId {
+  enum AttributeType {
+    UNKNOWN = 0;  // 未知类型
+
+    // 用于定位的地图属性字段 (1 - 50)
+    POLE                 = 1;  // 电线杆
+    TRAFFIC_SIGN         = 2;  // 交通标志
+    DASHED_LINE_SEGEMENT = 3;  // 虚线段
+
+    // 用于导航的地图属性字段 (51 - 100)
+    TRAFFIC_LIGHT    = 51;  // 交通信号灯
+    ROAD_MARK        = 52;  // 道路标志物
+    ROAD_OBSTACLE    = 53;  // 道路障碍物
+    ROAD_FACILITY    = 54;  // 道路设施
+    LANE_MERGE_SPLIT = 55;  // 车道合并/分流
+    SPEED_LIMIT      = 56;  // 速度限制标志
+    DIVERGENT_POINT  = 57;  // 分歧点
+    MULTI_DIGITIZED  = 58;  // 数字化分段
+    BUS_LANE         = 59;  // 公交车道
+    ROAD_PRIORITY    = 60;  // 道路优先权
+    POLYGON_OBSTACLE = 61;  // 3D box 障碍物
+
+    // 用于特定点的地图属性字段 (101 - 200)
+    POI              = 101;  // 特定点
+    PARKING_SPACE    = 102;  // 停车位
+    PARKING_LOT      = 103;  // 停车场
+    PARKING_FACILITY = 104;  // 停车设施
+
+    // 用于指南的地图属性字段 experience (201 - 250)
+    EXPERIENCE_GUIDE_LINE = 201;  // 体验指南线
+    CROSS_LAYER_GROUP     = 301;  // 交叉路口层组
+  }
+  AttributeType type = 1;  // 属性类型（描述对象属性）
+  Common3.TileId tile_id     = 2;  // 地图瓦片标识id
+  uint32 count       = 3;  // 对象id
+  Common3.FloorId floor_id   = 4;  // 楼层id
+}
+
+// 道路标识id信息
+message RoadId {
+  Common3.TileId tile_id   = 1;  // 地图瓦片标识id
+  uint32 count     = 2;  // 道路id
+  Common3.UrId ur_id       = 3;  // 城市标识id
+  Common3.FloorId floor_id = 4;  // 楼层id
+}
+
+// 道路端口标识id
+message RoadPortId {
+  Common3.TileId tile_id = 1;  // 地图瓦片标识id
+  uint32 count   = 2;  // 道路口id
+}
+
+// 车道组id信息
+message LaneGroupId {
+  RoadId road_id    = 1;  // 车道组所在的道路id信息
+  bool dir_reversed = 2;  // 保留字段，车道组方向是否被反转，true表示车道组的方向与正常方向相反，否则表示方向与正常方向一致。
+  uint32 index      = 3;  // 车道祖index，车道组在道路上的索引顺序
+}
+
+// 车道边界组id信息
+message LaneBoundaryGroupId {
+  LaneGroupId lane_group_id = 1;  // 车道组id信息
+  uint32 index              = 2;  // 车道组index，车道边界组在所属车道组中的索引顺序
+}
+
+// 车道标识id信息
+message LaneId {
+  LaneGroupId lane_group_id = 1;  // 车道组id信息
+  uint32 index              = 2;  // 车道index，车道在车道组中的索引顺序
+}
+
+// 车道端口标识id
+message LanePortId {
+  Common3.TileId tile_id = 1;  // 地图瓦片标识id
+  uint32 count   = 2;  // 车道id
+}
+
+// 平行车道边界id信息
+message ParallelLaneBoundaryId {
+  LaneBoundaryGroupId lane_boundary_group_id = 1;  // 车道边界组id信息
+  uint32 index                               = 2;  // 平行车道边界index，平行车道边界在车道边界组中的索引
+}
+
+// 车道边界id信息
+message LaneBoundaryId {
+  ParallelLaneBoundaryId parallel_lane_boundary_id = 1;  // 平行车道边界id信息
+  uint32 index                                     = 2;  // 车道边界index，车道边界在平行车道边界中的索引
+}
+
+// 交叉口id信息
+message IntersectionId {
+  Common3.TileId tile_id = 1;  // 地图瓦片标识id信息
+  uint32 count   = 2;  // 交叉口索引id（交叉口在所属瓦片内的索引）
+  Common3.UrId ur_id     = 3;  // 城市标识id信息
+}
+
+message Polyline {
+  repeated Coordinate points = 1;  // 点的坐标
+  float length               = 2;  // 长度       (米)
+  bytes buffer               = 3;  // 保留字段，用于提高序列化/反序列化的速度
+}
+
+// 车道边界
+message LaneBoundary {
+  // 车道线类型
+  enum LineType {
+    UNKNOWN     = 0;  // 未知
+    SOLID_LINE  = 1;  // 实线
+    DASHED_LINE = 2;  // 虚线
+    VIRTUAL     = 3;  // 虚拟线
+    PHYSICAL    = 4;  // 实体线
+    LOGICAL     = 5;  // 逻辑线
+  }
+  // 车道边界类型
+  enum BoundaryType {
+    UNKNOWN_TYPE = 0;  // 未知类型
+    LANE_BORDER  = 1;  // 车道边界
+    ROAD_BORDER  = 2;  // 道路边界
+  }
+  // 颜色
+  enum Color {
+    UNKNOWN_COLOR = 0;  // 未知颜色
+    WHITE         = 1;  // 白色
+    YELLOW        = 2;  // 黄色
+  }
+  // 车道边界信息来源
+  enum Source {
+    auto_mapping = 0;  // 自动映射
+    manual_valid = 1;  // 手动验证
+    manual_guess = 2;  // 手动猜测
+    other        = 3;  // 未知
+  }
+  LaneBoundaryId id               = 1;  // 车道边界id信息
+  LineType line_type              = 2;  // 车道边界线型类型
+  BoundaryType lane_boundary_type = 3;  // 车道边界类型
+  Polyline geometry               = 4;  // 多线段
+  Color color                     = 5;  // 车道边界颜色
+  Source source                   = 6;  // 车道边界信息来源
+}
+
+// 平行车道边界
+message ParallelLaneBoundary {
+  repeated LaneBoundary sequential_lane_boundaries = 1;  // 多个平行车道边界
+  ParallelLaneBoundaryId id                        = 2;  // 平行车道边界id信息
+}
+
+// 车道边界组
+message LaneBoundaryGroup {
+  LaneBoundaryGroupId id                                 = 1;  // 车道边界组id信息
+  repeated ParallelLaneBoundary parallel_lane_boundaries = 2;  // 平行车道边界
+}
+
+// 分段信息
+message Segment {
+  uint32 start_index = 1;  // 起始索引
+  uint32 end_index   = 2;  // 结束索引
+  float length       = 3;  // 分段长度
+}
+
+// 车道分段信息
+message LaneSegment {
+  LaneId lane_id        = 1;  // 车道标识id信息
+  repeated Segment segs = 2;  // 多个分段车道信息
+}
+
+// 车道信息
+message Lane {
+  // 车道类型
+  enum LaneType {
+    NORMAL                 = 0;   // 普通车道
+    ACCELERATE             = 1;   // 加速车道
+    DECELERATE             = 2;   // 减速车道
+    BUS                    = 3;   // 公交车道
+    EMERGENCY              = 4;   // 紧急车道
+    ACC_DEC                = 5;   // 加减速车道
+    LEFT_TURN_WAITING_AREA = 6;   // 左转等待区
+    PARKING                = 7;   // 停车区
+    TIDAL                  = 8;   // 潮汐车道（根据交通流量变化而设定的车道）
+    NON_MOTOR              = 9;   // 非机动车道
+    TOLL_ETC               = 10;  // ETC 收费车道
+    TOLL_MANUAL            = 11;  // 人工收费车道
+    TOLL                   = 12;  // 收费车道
+    VARIABLE               = 13;  // 可变车道
+    HOV                    = 14;  // 用于高乘客数车辆的车道
+  }
+  // 车道行驶箭头方向
+  enum Direction {
+    LaneDrivableDirection_DIRECTION_UNKNOWN              = 0;   // 未知
+    LaneDrivableDirection_DIRECTION_STRAIGHT             = 1;   // 直行
+    LaneDrivableDirection_DIRECTION_STRAIGHT_RIGHT       = 2;   // 直行加右转
+    LaneDrivableDirection_DIRECTION_RIGHT                = 3;   // 右转
+    LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT        = 4;   // 直行加左转
+    LaneDrivableDirection_DIRECTION_LEFT                 = 5;   // 左转
+    LaneDrivableDirection_DIRECTION_UTURN_LEFT           = 6;   // 调头加左转
+    LaneDrivableDirection_DIRECTION_UTURN_RIGHT          = 7;   // 调头加右转
+    LaneDrivableDirection_DIRECTION_STRAIGHT_LEFT_RIGHT  = 8;   // 直行加左转加右转
+    LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_LEFT  = 9;   // 直行加左调头
+    LaneDrivableDirection_DIRECTION_STRAIGHT_UTURN_RIGHT = 10;  // 直行加右调头
+    LaneDrivableDirection_DIRECTION_STRAIGHT_OFF_ROUTE   = 11;  // 直行加左转加左掉头
+    LaneDrivableDirection_DIRECTION_LEFT_UTURN           = 12;  // 左调头
+    LaneDrivableDirection_DIRECTION_RIGHT_UTURN          = 13;  // 右调头
+    LaneDrivableDirection_DIRECTION_NO_UTURN             = 14;  // 禁止调头
+    LaneDrivableDirection_DIRECTION_LEFT_RIGHT           = 15;  // 左转加右转
+    LaneDrivableDirection_DIRECTION_LEFT_MERGE           = 16;  // 左侧汇流
+    LaneDrivableDirection_DIRECTION_RIGHT_MERGE          = 17;  // 右侧汇流
+    LaneDrivableDirection_DIRECTION_CROSS_LINE           = 18;  // 人行横道
+  }
+  LaneId id                                = 1;  // 车道标识id信息
+  LaneType lane_type                       = 2;  // 车道类型
+  Polyline center_line                     = 3;  // 车道中心线（也会用来存储车道线）
+  LaneBoundaryGroupId left_boundary_group  = 4;  // 车道左边界组id信息
+  LaneBoundaryGroupId right_boundary_group = 5;  // 车道右边界组id信息
+  LanePortId head_id                       = 6;  // 车道起始端标识id信息
+  LanePortId tail_id                       = 7;  // 车道终止端标识id信息
+  Direction direction                      = 8;  // 车道行驶箭头方向
+}
+
+// 车道组信息
+message LaneGroup {
+  LaneGroupId id                                  = 1;  // 车道组id信息
+  float length                                    = 2;  // 车道组长度
+  uint32 num_lanes                                = 3;  // 车道组包含的车道数量
+  repeated Lane lanes                             = 4;  // 车道组中的所有车道，每个车道有自己的属性信息
+  repeated LaneBoundaryGroup lane_boundary_groups = 5;  // 车道组的车道边界信息
+}
+
+// 道路信息
+message Road {
+  // 道路类别
+  enum RoadClass {
+    ROAD_CLASS_UNKNOWN = 0;  // 未知类别
+    HIGHWAY            = 1;  // 高速公路
+    URBAN              = 2;  // 城市道路
+    CITY_EXPRESSWAY    = 3;  // 城市快速路
+  }
+  // 道路结构信息
+  enum RoadStructure {
+    ROAD_STRUCTURE_UNKNOWN = 0;  // 未知结构
+    TUNNEL                 = 1;  // 隧道
+    TOLL                   = 2;  // 收费站
+    BRIDGE                 = 3;  // 桥梁
+    ROUNDABOUT             = 4;  // 环岛
+  }
+  // 道路类型
+  enum RoadType {
+    ROAD_TYPE_UNKNOWN      = 0;  // 未知类型
+    U_TURN                 = 1;  // U形转弯
+    INTERSECTION_LEFT_TURN = 2;  // 交叉口左转
+    SEPARATE_TURN_RIGHT    = 3;  // 右转道
+    SEPARATE_TURN_LEFT     = 4;  // 左转道
+  }
+  // 道路行驶方向
+  enum TravelDirection {
+    UNKNOWN = 0;  // 未知方向
+    NONE    = 1;  // 无特定行驶方向
+    A_B     = 2;  // 正向行驶方向
+    B_A     = 3;  // 反向行驶方向
+    BOTH    = 4;  // 双向行驶方向
+  }
+  // 匝道类型
+  enum Ramp {
+    NOT          = 0;  // 非匝道（没有匝道）
+    IC           = 1;  // 互通式匝道
+    JCT          = 2;  // 交叉式匝道
+    SAPA         = 3;  // 上下匝道
+    PARKING_RAMP = 4;  // 停车坡道
+  }
+  RoadId id                             = 1;   // 道路标识id信息
+  RoadPortId head_id                    = 2;   // 道路起始端标识id信息
+  RoadPortId tail_id                    = 3;   // 道路终止端标识id信息
+  float length                          = 4;   // 道路长度
+  RoadType road_type                    = 5;   // 道路类型
+  Polyline road_center                  = 6;   // 道路中心线（也会复用这个字段用来存储轨迹信息）
+  TravelDirection travel_direction      = 7;   // 道路行驶方向
+  repeated LaneGroup lane_group_ab      = 8;   // 正向车道组信息
+  repeated LaneGroup lane_group_ba      = 9;   // 反向车道组信息
+  Ramp ramp                             = 10;  // 匝道类型
+  string name                           = 11;  // 道路名称
+  RoadClass road_class                  = 12;  // 道路类别
+  repeated RoadStructure road_structure = 13;  // 道路结构信息
+  bool intersection_internal            = 14;  // 描述内部是否有交叉 (true：有交叉/false:不相交)
+  IntersectionId intersection_id        = 15;  // 道路的交叉口标识id
+}
+
+// 绑定关系（存储绑定的地图道路信息）
+message Reference {
+  oneof binding {
+    RoadId road_id           = 1;  // 绑定道路id
+    LaneId lane_id           = 2;  // 绑定车道id
+    AttributeId attribute_id = 3;  // 绑定属性id
+    RoadPortId road_port     = 4;  // 绑定路口id
+    LanePortId lane_port     = 5;  // 绑定车道口id
+  }
+  // 地图元素的方位朝向
+  enum Orientation {
+    UNKNOWN   = 0;  // 未知
+    LEFT      = 1;  // 左侧
+    RIGHT     = 2;  // 右侧
+    INTERSECT = 3;  // 相交
+  }
+  enum IdType {
+    ID_UNKNOWN   = 0;  // 未知
+    ID_ROAD      = 1;  // 道路
+    ID_LANE      = 2;  // 车道
+    ID_ATTRIBUTE = 3;  // 属性
+    ID_ROAD_PORT = 4;  // 路口
+    ID_LANE_PORT = 5;  // 车道口
+  }
+  float offset            = 6;   // 车位中心到道路上某一个点的距离
+  float length            = 7;   // 长度，保留字段
+  Orientation orientation = 8;   // 方位
+  IdType id_type          = 9;   // id类型
+  bool fully_covered      = 10;  // 地图元素中是否有完全重叠 (true：有重叠，则offset和length字段不需要使用/false:无重叠)
+}
+
+// 道路标线信息
+message RoadMark {
+  // 道路标线类型
+  enum RoadMarkType {
+    UNKNOWN                      = 0;   // 未知类型
+    SPEED_BUMP                   = 1;   // 减速带
+    STOP_LINE                    = 2;   // 停车线
+    GUIDE_ARROW                  = 3;   // 指示箭头
+    CROSSWALK                    = 4;   // 斑马线，人行横道
+    CENTRAL_CIRCLE               = 5;   // 中央圆圈（通常表示道路上的交叉口或环岛）
+    NO_PARKING_ZONE              = 6;   // 禁停区
+    INDICATED_LINE               = 7;   // 指示线
+    LATERAL_DECELERATION_MARKING = 8;   // 侧向减速标线
+    SYMBOL                       = 9;   // 符号（包括道路上的各种标志、符号、图标）
+    TEXT                         = 10;  // 文本（用于显示道路上的文本信息，如路名、方向指示等）
+  }
+  // 道路标线的涂装类型
+  enum PaintingType {
+    PAINTINGTYPE_UNKNOWN = 0;  // 未知类型
+    NORMAL               = 1;  // 常规类型
+    SPECIAL              = 2;  // 特殊类型
+  }
+  AttributeId id             = 1;  // 属性标识id信息
+  RoadMarkType type          = 2;  // 道路标线类型
+  repeated Reference ref     = 3;  // 绑定关系（绑定的地图道路信息）
+  repeated Coordinate shape  = 4;  // 道路标线的几何位置信息
+  float angle                = 5;  // 标识朝向角度，只对某些特定类型的道路标线（如指示箭头）有效。
+  Lane.Direction direction   = 6;  // 可选字段，只对某些特定类型的道路标线（如指示箭头）有效。
+  PaintingType painting_type = 7;  // 道路标线的涂装类型，用于满足特殊斑马线的渲染需求
+}
+
+// 道路障碍物信息
+message RoadObstacle {
+  // 道路障碍物类型
+  enum RoadObstacleType {
+    UNKNOWN = 0;  // 未知类型接地线
+    WALL    = 1;  // 墙面接地线
+    COLUMN  = 2;  // 立柱接地线
+    FENCE   = 3;  // 围栏接地线
+    STEP    = 4;  // 楼梯接地线
+    CURB    = 5;  // 路沿接地线
+    SPECIAL = 6;  // 特殊建筑接地线
+  }
+  AttributeId id            = 1;  // 属性标识id信息
+  RoadObstacleType type     = 2;  // 道路障碍物类型
+  repeated Reference ref    = 3;  // 绑定关系（绑定的地图道路信息）
+  repeated Coordinate shape = 4;  // 道路障碍物的几何位置信息
+}
+
+// 单个限位器信息
+message ParkingMapLimiter {
+  AttributeId id                 = 1;  // 属性标识id信息
+  repeated Coordinate end_points = 2;  // 车体限位器端点位置 （米） 限两个, boot坐标系下
+}
+
+// 车位信息
+message ParkingSpace {
+  // 车位类型
+  enum ParkingSlotType {
+    PARKING_SLOT_TYPE_VERTICAL   = 0;  // 垂直车位
+    PARKING_SLOT_TYPE_HORIZONTAL = 1;  // 平行车位
+    PARKING_SLOT_TYPE_SLANTING   = 2;  // 斜车位
+    PARKING_SLOT_TYPE_INVALID    = 3;  // 不合法车位
+  }
+  // 车位来源
+  enum SlotSourceType {
+    SLOT_SOURCE_TYPE_INVALID     = 0;  // 无效的
+    SLOT_SOURCE_TYPE_ONLY_CAMERA = 1;  // 仅相机
+    SLOT_SOURCE_TYPE_ONLY_USS    = 2;  // 仅超声波雷达
+    SLOT_SOURCE_TYPE_CAMERA_USS  = 3;  // 相机和超声波雷达融合
+  }
+  AttributeId id                      = 1;  // 属性标识id信息
+  ParkingSlotType parking_slot_type   = 2;  // 车位类型
+  repeated Reference ref              = 3;  // 绑定关系（绑定的地图道路信息）
+  repeated Coordinate shape           = 4;  // 车位角点
+  string floor_name                   = 5;  // 楼层
+  repeated ParkingMapLimiter limiters = 6;  // 单个库位最多2个限位器
+  SlotSourceType slot_source          = 7;  // 车位来源
+  int32 empty_votes                   = 8;  // 保留字段
+}
+
+// 目标停车位id信息
+message TargetParkingId {
+  AttributeId attribute_id = 1;  // 属性标识id信息
+  Reference ref            = 2;  // 绑定关系（存储绑定的地图道路信息）
+}
+
+message PolygonObject {
+  enum PolygonObjectType {
+    UNKNOWN = 0;  // 未知类型
+    COLUMN  = 1;  // 立柱
+  }
+
+  AttributeId id              = 1;  // 属性标识id信息
+  PolygonObjectType type      = 2;  // 障碍物类型
+  repeated Reference ref      = 3;  // 绑定关系（绑定的地图道路信息）
+  repeated Coordinate corners = 4;  // 障碍物角点  <最大10个>
+}
+
+// 楼层信息
+message Floor {
+  Common3.FloorId floor_id           = 1;  // 楼层id
+  SemanticInfo semantic_info = 2;  // 语义信息
+  // 基础信息
+  repeated Road road = 3;  // 道路信息        <最大200个>
+  // 路由信息
+  repeated LaneSegment lane_segment = 4;  // 分段信息        <最大200个>
+  // 导航信息
+  repeated RoadMark road_mark             = 5;   // 道路标线信息     <最大200个>
+  repeated RoadObstacle road_obstacle     = 6;   // 道路障碍物信息   <最大1000个>
+  repeated ParkingSpace parking_space     = 7;   // 停车位信息       <最大1000个>
+  repeated PolygonObject polygon_obstacle = 8;   // 3D障碍物信息     <最大1000个>
+}
+
+//道路相关信息
+message RoadTile {
+  Common3.TileId id            = 1;  // 地图瓦片标识id
+  repeated Floor floor = 2;  // 地图楼层信息
+}
+
+// 特征点信息
+message FeaturePoint {
+  bool available         = 1;  // 信息是否可用标志
+  Common3.PointLLH global_pos    = 2;  // 点的位置（global坐标系）
+  Common3.Point3d local_pos      = 3;  // 点的位置（local坐标系）
+  Common3.Quaternion global_quat = 4;  // 点的方位（global坐标系）
+  Common3.Quaternion local_quat  = 5;  // 点的方位（local坐标系）
+}
+
+// 坡道信息
+message RampInfo {
+  // 坡道类型
+  enum RampType {
+    RAMP_TYPE_UNKNOWN = 0;  // 未知类型
+    RAMP_TYPE_UP      = 1;  // 上坡
+    RAMP_TYPE_DOWN    = 2;  // 下坡
+  }
+
+  uint32 id                        = 1;
+  RampType ramp_type               = 2;
+  FeaturePoint entrance_ramp_point = 3;  // 入坡点信息
+  FeaturePoint exit_ramp_point     = 4;  // 出坡点信息
+}
+
+// 语义信息
+message SemanticInfo {
+  Common3.Header header               = 1;  // 信息头
+  repeated RampInfo ramp_info = 2;  // 坡道信息
+}
+
+message ParkingInfo {
+  Common3.Header header                      = 1;  // 消息头
+  Common3.PointLLH trajectory_ref_point      = 2;  // 参考点（LLH），用于将local坐标系(ENU)-global坐标系(LLH)坐标进行相互转换的参考点
+  FeaturePoint gps_signal_loss_point = 3;  // 消星点信息
+  Coordinate trace_start             = 4;  // 轨迹起点
+  Coordinate trace_dest              = 5;  // 轨迹终点
+  repeated Coordinate target_prk_pos = 6;  // 目标停车位四个角点信息   <固定4个>
+  TargetParkingId target_prk_id      = 7;  // 目标停车位id信息
+  RoadTile road_tile_info            = 8;  // 道路相关信息
+  uint32 map_id                      = 9;  // ehp每次更新地图消息，值加1
+}

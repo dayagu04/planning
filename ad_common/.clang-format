@@ -1,0 +1,13 @@
+# https://releases.llvm.org/5.0.0/tools/clang/docs/ClangFormatStyleOptions.html
+
+# Run manually to reformat a file:
+# clang-format -i --style=file <file>
+---
+BasedOnStyle: Google
+---
+Language: Cpp
+Standard: Cpp11
+TabWidth: 2
+ColumnLimit: 80
+---
+Language: Proto

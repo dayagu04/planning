@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AUTOSAR xmlns="http://autosar.org/schema/r4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://autosar.org/schema/r4.0 AUTOSAR_00048.xsd">
+  <AR-PACKAGES>
+    <AR-PACKAGE UUID="3280835d-7410-4703-aca4-59f40e8c0fa5">
+      <SHORT-NAME>HuaweiMDC</SHORT-NAME>
+      <AR-PACKAGES>
+        <AR-PACKAGE>
+          <SHORT-NAME>DiagnosticMdcExtractTemplate</SHORT-NAME>
+          <AR-PACKAGES>
+            <AR-PACKAGE>
+              <SHORT-NAME>DEM</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DTCs</SHORT-NAME>
+                  <AR-PACKAGES>
+                    <AR-PACKAGE>
+                      <SHORT-NAME>ExtendedDataRecords</SHORT-NAME>
+                      <ELEMENTS>
+                        <DIAGNOSTIC-EXTENDED-DATA-RECORD UUID="">
+                          <SHORT-NAME>extendDataRecord_1</SHORT-NAME>
+                          <RECORD-NUMBER>1</RECORD-NUMBER>
+                          <TRIGGER>TEST-FAILED</TRIGGER>
+                          <UPDATE>true</UPDATE>
+                        </DIAGNOSTIC-EXTENDED-DATA-RECORD>
+                        <DIAGNOSTIC-EXTENDED-DATA-RECORD UUID="">
+                          <SHORT-NAME>extendDataRecord_2</SHORT-NAME>
+                          <RECORD-NUMBER>2</RECORD-NUMBER>
+                          <TRIGGER>TEST-FAILED</TRIGGER>
+                          <UPDATE>true</UPDATE>
+                        </DIAGNOSTIC-EXTENDED-DATA-RECORD>
+                      </ELEMENTS>
+                    </AR-PACKAGE>
+                    <AR-PACKAGE>
+                      <SHORT-NAME>FreezeFrames</SHORT-NAME>
+                      <ELEMENTS>
+                        <DIAGNOSTIC-FREEZE-FRAME UUID="">
+                          <SHORT-NAME>snapshot1</SHORT-NAME>
+                          <CUSTOM-TRIGGER></CUSTOM-TRIGGER>
+                          <RECORD-NUMBER>1</RECORD-NUMBER>
+                          <TRIGGER>TEST-FAILED</TRIGGER>
+                          <UPDATE>true</UPDATE>
+                        </DIAGNOSTIC-FREEZE-FRAME>
+                      </ELEMENTS>
+                    </AR-PACKAGE>
+                    <AR-PACKAGE>
+                      <SHORT-NAME>DiagAgings</SHORT-NAME>
+                      <ELEMENTS>
+                        <DIAGNOSTIC-AGING>
+                          <SHORT-NAME>aging1</SHORT-NAME>
+                          <AGING-CYCLES>
+                            <DIAGNOSTIC-OPERATION-CYCLE-REF-CONDITIONAL S="opcycle_sleep_wakeup">
+                              <DIAGNOSTIC-OPERATION-CYCLE-REF DEST="DIAGNOSTIC-OPERATION-CYCLE">/HuaweiMDC/DiagnosticMdcExtractTemplate/DEM/OperationCylces/opcycle_sleep_wakeup</DIAGNOSTIC-OPERATION-CYCLE-REF>
+                            </DIAGNOSTIC-OPERATION-CYCLE-REF-CONDITIONAL>
+                          </AGING-CYCLES>
+                          <THRESHOLD S="thresold">100</THRESHOLD>
+                        </DIAGNOSTIC-AGING>
+                      </ELEMENTS>
+                    </AR-PACKAGE>
+                  </AR-PACKAGES>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DiagnosticEvents</SHORT-NAME>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>OperationCylces</SHORT-NAME>
+                  <ELEMENTS>
+                    <DIAGNOSTIC-OPERATION-CYCLE>
+                      <SHORT-NAME>opcycle_sleep_wakeup</SHORT-NAME>
+                      <AUTOMATIC-END>false</AUTOMATIC-END>
+                      <CYCLE-AUTOSTART>false</CYCLE-AUTOSTART>
+                      <CYCLE-STATUS-STORAGE>false</CYCLE-STATUS-STORAGE>
+                      <TYPE>WARMUP</TYPE>
+                    </DIAGNOSTIC-OPERATION-CYCLE>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+            <AR-PACKAGE>
+              <SHORT-NAME>CommConfig</SHORT-NAME>
+              <ELEMENTS>
+                <DIAGNOSTIC-SOFTWARE-CLUSTER-PROPS>
+                  <SHORT-NAME>DtcStatusAvailability</SHORT-NAME>
+                  <DTC-STATUS-AVAILABILITY-MASK>127</DTC-STATUS-AVAILABILITY-MASK>
+                </DIAGNOSTIC-SOFTWARE-CLUSTER-PROPS>
+                <DIAGNOSTIC-CONTRIBUTION-SET>
+                  <SHORT-NAME>MdcDext</SHORT-NAME>
+                  <COMMON-PROPERTIES S="DiagCommPros">
+                    <DIAGNOSTIC-COMMON-PROPS-VARIANTS>
+                      <DIAGNOSTIC-COMMON-PROPS-CONDITIONAL>
+                        <AGING-REQUIRES-TESTED-CYCLE>false</AGING-REQUIRES-TESTED-CYCLE>
+                        <CLEAR-DTC-LIMITATION>ALL-SUPPORTED-DTCS</CLEAR-DTC-LIMITATION>
+                        <DEBOUNCE-ALGORITHM-PROPSS>
+                          <DIAGNOSTIC-DEBOUNCE-ALGORITHM-PROPS>
+                            <SHORT-NAME>debounceAlgorithm_noDebounce</SHORT-NAME>
+                            <DEBOUNCE-ALGORITHM>
+                              <DIAG-EVENT-DEBOUNCE-MONITOR-INTERNAL>
+                                <SHORT-NAME>debounceAlgorithm_noDebounce</SHORT-NAME>
+                              </DIAG-EVENT-DEBOUNCE-MONITOR-INTERNAL>
+                            </DEBOUNCE-ALGORITHM>
+                            <DEBOUNCE-BEHAVIOR>FREEZE</DEBOUNCE-BEHAVIOR>
+                          </DIAGNOSTIC-DEBOUNCE-ALGORITHM-PROPS>
+                        </DEBOUNCE-ALGORITHM-PROPSS>
+                        <DTC-STATUS-AVAILABILITY-MASK>123</DTC-STATUS-AVAILABILITY-MASK>
+                        <MAX-NUMBER-OF-REQUEST-CORRECTLY-RECEIVED-RESPONSE-PENDING>3</MAX-NUMBER-OF-REQUEST-CORRECTLY-RECEIVED-RESPONSE-PENDING>
+                        <MEMORY-ENTRY-STORAGE-TRIGGER>CONFIRMED</MEMORY-ENTRY-STORAGE-TRIGGER>
+                        <RESPONSE-ON-SECOND-DECLINED-REQUEST>false</RESPONSE-ON-SECOND-DECLINED-REQUEST>
+                        <STATUS-BIT-HANDLING-TEST-FAILED-SINCE-LAST-CLEAR>STATUS-BIT-AGING-AND-DISPLACEMENT</STATUS-BIT-HANDLING-TEST-FAILED-SINCE-LAST-CLEAR>
+                        <TYPE-OF-DTC-SUPPORTED>SAE-J-2012--DA</TYPE-OF-DTC-SUPPORTED>
+                        <TYPE-OF-FREEZE-FRAME-RECORD-NUMERATION>CALCULATED</TYPE-OF-FREEZE-FRAME-RECORD-NUMERATION>
+                      </DIAGNOSTIC-COMMON-PROPS-CONDITIONAL>
+                    </DIAGNOSTIC-COMMON-PROPS-VARIANTS>
+                  </COMMON-PROPERTIES>
+                  <ELEMENTS>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="Aging1Element">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-AGING">/HuaweiMDC/DiagnosticMdcExtractTemplate/DEM/DTCs/DiagAgings/aging1</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="AllSessionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-ACCESS-PERMISSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/AccessPermission/AllSessionAccessPermission</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="DefaultdSessionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/DefaultSession</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="ExtendDataRecord1Element">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-EXTENDED-DATA-RECORD">/HuaweiMDC/DiagnosticMdcExtractTemplate/DEM/DTCs/ExtendedDataRecords/extendDataRecord_1</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="ExtendDataRecord2Element">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-EXTENDED-DATA-RECORD">/HuaweiMDC/DiagnosticMdcExtractTemplate/DEM/DTCs/ExtendedDataRecords/extendDataRecord_2</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="ExtendedSessionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ExtendedSession</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="NonDefaultSessionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-ACCESS-PERMISSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/AccessPermission/NonDefaultSessionAccessPermission</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="NonProgrammingSessionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-ACCESS-PERMISSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/AccessPermission/OnlyProgrammingSessionAccessPermission</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="OnluExtendSessionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-ACCESS-PERMISSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/AccessPermission/OnlyExtendedSessionAccessPermission</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="ProgrammingSessionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ProgrammingSession</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="Snapshot1Element">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-FREEZE-FRAME">/HuaweiMDC/DiagnosticMdcExtractTemplate/DEM/DTCs/FreezeFrames/snapshot1</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="OpcycleSleepWakeupElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-OPERATION-CYCLE">/HuaweiMDC/DiagnosticMdcExtractTemplate/DEM/OperationCylces/opcycle_sleep_wakeup</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="DiagnosticDataIdentifier_0xd003">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-DATA-IDENTIFIER">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DIDs/DiagnosticDataIdentifier_0xd003</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="DiagnosticDataIdentifier_0xd005">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-DATA-IDENTIFIER">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DIDs/DiagnosticDataIdentifier_0xd005</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                    <DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL S="NonProgrammingSessionAccessPermissionElement">
+                      <DIAGNOSTIC-COMMON-ELEMENT-REF DEST="DIAGNOSTIC-ACCESS-PERMISSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/AccessPermission/NonProgrammingSessionAccessPermission</DIAGNOSTIC-COMMON-ELEMENT-REF>
+                    </DIAGNOSTIC-COMMON-ELEMENT-REF-CONDITIONAL>
+                  </ELEMENTS>
+                </DIAGNOSTIC-CONTRIBUTION-SET>
+              </ELEMENTS>
+            </AR-PACKAGE>
+            <AR-PACKAGE>
+              <SHORT-NAME>DCM</SHORT-NAME>
+              <AR-PACKAGES>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DignosticSessions</SHORT-NAME>
+                  <ELEMENTS>
+                    <DIAGNOSTIC-SESSION>
+                      <SHORT-NAME>DefaultSession</SHORT-NAME>
+                      <ID>1</ID>
+                      <JUMP-TO-BOOT-LOADER>NO-BOOT</JUMP-TO-BOOT-LOADER>
+                      <P-2-SERVER-MAX>0.05</P-2-SERVER-MAX>
+                      <P-2-STAR-SERVER-MAX>5.0</P-2-STAR-SERVER-MAX>
+                    </DIAGNOSTIC-SESSION>
+                    <DIAGNOSTIC-SESSION>
+                      <SHORT-NAME>ExtendedSession</SHORT-NAME>
+                      <ID>3</ID>
+                      <JUMP-TO-BOOT-LOADER>NO-BOOT</JUMP-TO-BOOT-LOADER>
+                      <P-2-SERVER-MAX>0.05</P-2-SERVER-MAX>
+                      <P-2-STAR-SERVER-MAX>5.0</P-2-STAR-SERVER-MAX>
+                    </DIAGNOSTIC-SESSION>
+                    <DIAGNOSTIC-SESSION>
+                      <SHORT-NAME>ProgrammingSession</SHORT-NAME>
+                      <ID>2</ID>
+                      <JUMP-TO-BOOT-LOADER>NO-BOOT</JUMP-TO-BOOT-LOADER>
+                      <P-2-SERVER-MAX>0.05</P-2-SERVER-MAX>
+                      <P-2-STAR-SERVER-MAX>5.0</P-2-STAR-SERVER-MAX>
+                    </DIAGNOSTIC-SESSION>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>SecurityLevels</SHORT-NAME>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DIDs</SHORT-NAME>
+                  <ELEMENTS>
+                    <DIAGNOSTIC-DATA-IDENTIFIER UUID="11239dea-3f54-4b8b-8aa1-8179333a924d">
+                      <SHORT-NAME>DiagnosticDataIdentifier_0xd003</SHORT-NAME>
+                      <ID>53251</ID>
+                      <DATA-ELEMENTS>
+                        <DIAGNOSTIC-PARAMETER>
+                          <BIT-OFFSET>0</BIT-OFFSET>
+                          <DATA-ELEMENTS>
+                            <DIAGNOSTIC-DATA-ELEMENT UUID="e771eaf9-3af4-4635-918f-38eeab73aa0d">
+                              <SHORT-NAME>DiagnosticDataElement_0xd003</SHORT-NAME>
+                            </DIAGNOSTIC-DATA-ELEMENT>
+                          </DATA-ELEMENTS>
+                        </DIAGNOSTIC-PARAMETER>
+                      </DATA-ELEMENTS>
+                      <DID-SIZE>1</DID-SIZE>
+                    </DIAGNOSTIC-DATA-IDENTIFIER>
+                    <DIAGNOSTIC-DATA-IDENTIFIER UUID="423c9961-709e-4839-acee-9ef5741085a0">
+                      <SHORT-NAME>DiagnosticDataIdentifier_0xd005</SHORT-NAME>
+                      <ID>53253</ID>
+                      <DATA-ELEMENTS>
+                        <DIAGNOSTIC-PARAMETER>
+                          <BIT-OFFSET>0</BIT-OFFSET>
+                          <DATA-ELEMENTS>
+                            <DIAGNOSTIC-DATA-ELEMENT UUID="2b077963-c632-426b-a2e1-2a4e1154c7a8">
+                              <SHORT-NAME>DiagnosticDataElement_0xd005</SHORT-NAME>
+                            </DIAGNOSTIC-DATA-ELEMENT>
+                          </DATA-ELEMENTS>
+                        </DIAGNOSTIC-PARAMETER>
+                      </DATA-ELEMENTS>
+                      <DID-SIZE>4</DID-SIZE>
+                    </DIAGNOSTIC-DATA-IDENTIFIER>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>AccessPermission</SHORT-NAME>
+                  <ELEMENTS>
+                    <DIAGNOSTIC-ACCESS-PERMISSION>
+                      <SHORT-NAME>AllSessionAccessPermission</SHORT-NAME>
+                      <DIAGNOSTIC-SESSION-REFS>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/DefaultSession</DIAGNOSTIC-SESSION-REF>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ProgrammingSession</DIAGNOSTIC-SESSION-REF>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ExtendedSession</DIAGNOSTIC-SESSION-REF>
+                      </DIAGNOSTIC-SESSION-REFS>
+                    </DIAGNOSTIC-ACCESS-PERMISSION>
+                    <DIAGNOSTIC-ACCESS-PERMISSION>
+                      <SHORT-NAME>OnlyExtendedSessionAccessPermission</SHORT-NAME>
+                      <DIAGNOSTIC-SESSION-REFS>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ExtendedSession</DIAGNOSTIC-SESSION-REF>
+                      </DIAGNOSTIC-SESSION-REFS>
+                    </DIAGNOSTIC-ACCESS-PERMISSION>
+                    <DIAGNOSTIC-ACCESS-PERMISSION>
+                      <SHORT-NAME>NonDefaultSessionAccessPermission</SHORT-NAME>
+                      <DIAGNOSTIC-SESSION-REFS>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ProgrammingSession</DIAGNOSTIC-SESSION-REF>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ExtendedSession</DIAGNOSTIC-SESSION-REF>
+                      </DIAGNOSTIC-SESSION-REFS>
+                    </DIAGNOSTIC-ACCESS-PERMISSION>
+                    <DIAGNOSTIC-ACCESS-PERMISSION>
+                      <SHORT-NAME>OnlyProgrammingSessionAccessPermission</SHORT-NAME>
+                      <DIAGNOSTIC-SESSION-REFS>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ProgrammingSession</DIAGNOSTIC-SESSION-REF>
+                      </DIAGNOSTIC-SESSION-REFS>
+                    </DIAGNOSTIC-ACCESS-PERMISSION>
+                    <DIAGNOSTIC-ACCESS-PERMISSION>
+                      <SHORT-NAME>NonProgrammingSessionAccessPermission</SHORT-NAME>
+                      <DIAGNOSTIC-SESSION-REFS>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/DefaultSession</DIAGNOSTIC-SESSION-REF>
+                        <DIAGNOSTIC-SESSION-REF DEST="DIAGNOSTIC-SESSION">/HuaweiMDC/DiagnosticMdcExtractTemplate/DCM/DignosticSessions/ExtendedSession</DIAGNOSTIC-SESSION-REF>
+                      </DIAGNOSTIC-SESSION-REFS>
+                    </DIAGNOSTIC-ACCESS-PERMISSION>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+                <AR-PACKAGE>
+                  <SHORT-NAME>DiagClass</SHORT-NAME>
+                  <ELEMENTS>
+                    <DIAGNOSTIC-READ-DATA-BY-IDENTIFIER-CLASS>
+                      <SHORT-NAME>readDidClass</SHORT-NAME>
+                      <ACCESS-PERMISSION-VALIDITY>ACCESS-PERMISSION-INSTANCE-OVERRIDES-CLASS</ACCESS-PERMISSION-VALIDITY>
+                      <MAX-DID-TO-READ>1024</MAX-DID-TO-READ>
+                    </DIAGNOSTIC-READ-DATA-BY-IDENTIFIER-CLASS>
+                    <DIAGNOSTIC-WRITE-DATA-BY-IDENTIFIER-CLASS>
+                      <SHORT-NAME>writeDidClass</SHORT-NAME>
+                      <ACCESS-PERMISSION-VALIDITY>ACCESS-PERMISSION-INSTANCE-OVERRIDES-CLASS</ACCESS-PERMISSION-VALIDITY>
+                    </DIAGNOSTIC-WRITE-DATA-BY-IDENTIFIER-CLASS>
+                    <DIAGNOSTIC-IO-CONTROL-CLASS>
+                      <SHORT-NAME>ioCtrlClass</SHORT-NAME>
+                      <ACCESS-PERMISSION-VALIDITY>ACCESS-PERMISSION-INSTANCE-OVERRIDES-CLASS</ACCESS-PERMISSION-VALIDITY>
+                    </DIAGNOSTIC-IO-CONTROL-CLASS>
+                    <DIAGNOSTIC-ROUTINE-CONTROL-CLASS>
+                      <SHORT-NAME>routineClass</SHORT-NAME>
+                      <ACCESS-PERMISSION-VALIDITY>ACCESS-PERMISSION-INSTANCE-OVERRIDES-CLASS</ACCESS-PERMISSION-VALIDITY>
+                    </DIAGNOSTIC-ROUTINE-CONTROL-CLASS>
+                  </ELEMENTS>
+                </AR-PACKAGE>
+              </AR-PACKAGES>
+            </AR-PACKAGE>
+          </AR-PACKAGES>
+        </AR-PACKAGE>
+      </AR-PACKAGES>
+    </AR-PACKAGE>
+  </AR-PACKAGES>
+</AUTOSAR>

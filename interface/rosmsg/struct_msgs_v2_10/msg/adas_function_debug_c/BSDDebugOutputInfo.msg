@@ -1,0 +1,13 @@
+uint8 bsd_state
+uint8 bsd_left_warning_level
+uint8 bsd_right_warning_level
+uint8 bsd_left_fence_judge
+uint8 bsd_right_fence_judge
+uint8 bsd_left_fence_reprocess_judge
+uint8 bsd_right_fence_reprocess_judge
+uint8 bsd_left_warning_front
+uint8 bsd_right_warning_front
+uint8 bsd_fr_warning_code_total
+uint8 bsd_rr_warning_code_total
+uint8 bsd_fl_warning_code_total
+uint8 bsd_rl_warning_code_total

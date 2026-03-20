@@ -1,0 +1,5 @@
+uint8 lca_state
+uint8 lca_left_warning_level
+uint8 lca_right_warning_level
+uint8 lca_left_area_car_flag
+uint8 lca_right_area_car_flag

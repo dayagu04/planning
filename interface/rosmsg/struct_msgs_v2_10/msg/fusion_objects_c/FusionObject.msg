@@ -1,0 +1,2 @@
+Obstacle common_info
+FusionObjectsAdditional additional_info

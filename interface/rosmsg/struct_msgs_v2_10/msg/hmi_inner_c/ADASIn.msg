@@ -1,0 +1,16 @@
+bool fcw_main_switch
+int16 fcw_set_sensitivity_level
+bool aeb_main_switch
+bool meb_main_switch
+bool tsr_main_switch
+bool ihc_main_switch
+bool ldw_main_switch
+int16 ldw_set_sensitivity_level
+bool elk_main_switch
+bool bsd_main_switch
+bool lca_main_switch
+bool dow_main_switch
+bool fcta_main_switch
+bool rcta_main_switch
+bool rcw_main_switch
+bool ldp_main_switch

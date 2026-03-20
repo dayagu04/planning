@@ -1,0 +1,2 @@
+int16 construction_state
+uint32 distance_to_construction

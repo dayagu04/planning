@@ -1,0 +1,9 @@
+PathPoint path_point
+float64 distance_to_left_road_border
+float64 distance_to_right_road_border
+float64 distance_to_left_lane_border
+float64 distance_to_right_lane_border
+float64 lane_width
+float64 max_velocity
+float64 min_velocity
+bool is_in_intersection

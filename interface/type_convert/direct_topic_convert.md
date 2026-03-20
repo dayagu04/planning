@@ -1,0 +1,17 @@
+/iflytek/ace/debug_info
+/iflytek/control/debug_info
+/iflytek/planning/debug_info
+/iflytek/prediction/prediction_debug_info
+/iflytek/ehr/debuginfo
+/iflytek/ehr/static_map
+/iflytek/ehr/origin_data
+/iflytek/ehr/sdmap_info
+/iflytek/ehp/parking_map
+/iflytek/camera_perception/3d_occupancy_objects
+/iflytek/sdmap/sdmap_info
+/iflytek/hmi/hpp_inner
+/iflytek/hmi/hpp_outer
+/iflytek/hmi/mcu_inner
+/iflytek/hmi/soc_inner
+/iflytek/hmi/soc_outer
+/iflytek/localization/ego_pose

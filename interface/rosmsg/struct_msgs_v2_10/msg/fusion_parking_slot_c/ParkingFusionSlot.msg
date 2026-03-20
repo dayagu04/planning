@@ -1,0 +1,14 @@
+uint32 id
+uint32 uss_id
+int16 resource_type
+int16 type
+Point2f[4] corner_points
+float32 line_a
+float32 line_b
+int16 fusion_source
+uint32 confidence
+int16 slot_side
+uint8 limiters_size
+ParkingFusionLimiter[] limiters
+int16 allow_parking
+int16 is_turn_corner

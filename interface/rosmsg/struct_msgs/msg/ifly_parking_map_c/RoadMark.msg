@@ -1,0 +1,9 @@
+AttributeId id
+int16 type
+uint8 ref_size
+Reference[] ref
+uint8 shape_size
+Coordinate[] shape
+float32 angle
+int16 direction
+int16 painting_type

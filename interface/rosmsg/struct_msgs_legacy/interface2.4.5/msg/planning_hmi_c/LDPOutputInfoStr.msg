@@ -1,0 +1,3 @@
+int16 ldp_state
+bool ldp_left_intervention_flag
+bool ldp_right_intervention_flag

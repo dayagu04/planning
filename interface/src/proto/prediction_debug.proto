@@ -1,0 +1,29 @@
+/*******************************************************************************
+ * 预测轨迹调试信息
+ * topic：/iflytek/prediction/prediction_debug_info
+ * 频率：20Hz
+ * 结构体：PredictionDebugInfo
+*******************************************************************************/
+
+syntax = "proto2";
+
+package Prediction;
+
+import "common.proto";
+
+// 感知结果类型
+message TrajectoryPointsInfo {
+    repeated Common.Point2f points = 1;              // 轨迹点，每条轨迹25个点
+};
+
+// 感知引擎资源信息
+message TrajectoryInfo {
+    optional uint32 obstacle_id = 1;                 // 障碍物ID
+    repeated TrajectoryPointsInfo trajectorys = 2;   // 障碍物轨迹信息，5条
+};
+
+// 感知诊断信息
+message PredictionDebugInfo {
+    optional Common.Header header = 1;                                         // 头信息
+    repeated TrajectoryInfo trajectory_info = 2;                               // 预测轨迹信息，40个障碍物的轨迹信息
+};

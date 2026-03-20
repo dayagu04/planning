@@ -1,0 +1,225 @@
+{
+  "services": [
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/StructContainerInterface",
+      "events": [
+        {
+          "event": "event",
+          "id": 31614,
+          "dataType": "/HuaweiMDC/PlatformServices/DiagMsgDataType/DataTypes/ByteVector"
+        }
+      ],
+      "fields": [],
+      "methods": []
+    },
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/ClientServiceContainerInterface",
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "method",
+          "id": 17484,
+          "requestDataType": [
+            "/HuaweiMDC/interface_manifests/datatypes/StructContainer"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/interface_manifests/datatypes/StructContainer"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "/HuaweiMDC/interface_manifests/interfaces/CameraStructContainerInterface",
+      "events": [
+        {
+          "event": "event",
+          "id": 31614,
+          "dataType": "/HuaweiMDC/CameraStructContainer"
+        }
+      ],
+      "fields": [],
+      "methods": []
+    },
+    {
+      "service": "/HuaweiMDC/PlatformServiceInterface/SmcServiceInterface/TriggerInOut",
+      "events": [],
+      "fields": [
+        {
+          "field": "Notifier",
+          "id": 54564,
+          "dataType": "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/TriggerDataType",
+          "eventGroup": []
+        },
+        {
+          "field": "Trigger",
+          "id": 24507,
+          "dataType": "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/TriggerDataType",
+          "eventGroup": []
+        }
+      ],
+      "methods": [
+        {
+          "method": "AcquireFunctionGroupInfo",
+          "id": 36548,
+          "requestDataType": [],
+          "replyDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/FunctionGroupInfoVec"
+          ]
+        },
+        {
+          "method": "ProcessSyncRequest",
+          "id": 8148,
+          "requestDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/StateTransitionVec"
+          ],
+          "replyDataType": []
+        },
+        {
+          "method": "ResetSystem",
+          "id": 43154,
+          "requestDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/ResetCode",
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/ResetCause"
+          ],
+          "replyDataType": []
+        },
+        {
+          "method": "ProcessAsyncRequest",
+          "id": 477,
+          "requestDataType": [
+            "/HuaweiMDC/PlatformServiceInterface/SmcMsgDataTypes/DataTypes/StateTransitionVec"
+          ],
+          "replyDataType": []
+        }
+      ]
+    },
+    {
+      "service": "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/FmAlarmReceiveServiceInterface/FmAlarmReceiveService",
+      "events": [],
+      "fields": [],
+      "methods": [
+        {
+          "method": "ReportAlarm",
+          "id": 30845,
+          "requestDataType": [
+            "/HuaweiMDC/MdcPlatformServices/PlatformServiceInterface/DataTypes/AlarmInfo"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        }
+      ]
+    },
+    {
+      "service": "/HuaweiMDC/MdcPlatformServices/ConfigServerServiceInterface/ConfigServerServiceInterface",
+      "events": [
+        {
+          "event": "ParamUpdateEvent",
+          "id": 35207,
+          "dataType": "/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/ParamUpdateData"
+        },
+        {
+          "event": "ServerNotifyEvent",
+          "id": 27155,
+          "dataType": "/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/ServerNotifyData"
+        }
+      ],
+      "fields": [],
+      "methods": [
+        {
+          "method": "AnswerAlive",
+          "id": 30329,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": []
+        },
+        {
+          "method": "DelParam",
+          "id": 56227,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        },
+        {
+          "method": "GetMonitorClients",
+          "id": 42802,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/MdcPlatformServices/ConfigServerMsgDataType/ImplementationDataTypes/CfgStringList",
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        },
+        {
+          "method": "GetParam",
+          "id": 5505,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/UInt8",
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        },
+        {
+          "method": "MonitorParam",
+          "id": 3875,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        },
+        {
+          "method": "SetParam",
+          "id": 31959,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/UInt8",
+            "/HuaweiMDC/StdCppDataType/UInt8",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        },
+        {
+          "method": "UnMonitorParam",
+          "id": 36659,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String",
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        },
+        {
+          "method": "InitClient",
+          "id": 55067,
+          "requestDataType": [
+            "/HuaweiMDC/StdCppDataType/String"
+          ],
+          "replyDataType": [
+            "/HuaweiMDC/StdCppDataType/Int32"
+          ]
+        }
+      ]
+    }
+  ]
+}

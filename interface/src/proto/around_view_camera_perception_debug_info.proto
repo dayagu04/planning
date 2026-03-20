@@ -1,0 +1,174 @@
+/*******************************************************************************
+ * 环视相机感知结果
+ * topic：/iflytek/camera_perception/around_view_camera_perception_debug_info
+ * 频率：20Hz
+ * 结构体：AroundViewCameraPerceptionInfo
+*******************************************************************************/
+
+syntax = "proto2";
+
+package AroundViewCameraPerceptionResult;
+
+// 信息头结构
+message Header {
+    optional uint64 timestamp = 1;                  // 仅表示本次消息发送时刻的时间戳，不可表示某项数据产生时间戳     (微秒)
+    optional string version = 2;                    // 模块版本号，最大64
+    /** 信息发送序号
+     *  备注：从0开始，每次发topic计数+1，mcu产生的消息，在soc转发侧计数
+    **/
+    optional uint64 seq = 3;
+};
+
+message Point2f {
+    optional float x = 1;
+    optional float y = 2;
+};
+
+message ParkingSpace {
+    optional float point0_x = 1;             
+    optional float point0_y = 2;             
+    optional float point1_x = 3;            
+    optional float point1_y = 4;           
+    optional float point2_x = 5;             
+    optional float point2_y = 6;            
+    optional float point3_x = 7;              
+    optional float point3_y = 8;              
+    optional float direction1 = 9;              // 车位入口A斜率
+    optional float direction2 = 10;             // 车位入口B斜率
+    optional uint32 entrance_vacant = 11;       // 车位是否为空
+    optional float entrance_score = 12;         // 车位入口得分     
+    optional uint32 entrance_type = 13;         // 视觉车位类型
+    optional uint32 id = 14;                    // 车位id
+    optional float confidence = 15;             // 车位置信度       [0.0-1.0]
+    optional float confidence0 = 16;            // 角点置信度       [0.0-1.0]
+    optional float confidence1 = 17;            // 角点置信度       [0.0-1.0]
+    optional float confidence2 = 18;            // 角点置信度       [0.0-1.0]
+    optional float confidence3 = 19;            // 角点置信度       [0.0-1.0]
+    optional uint32 life_time = 20;             // 生命周期
+};
+
+message ParkingLimiter {
+    optional float point1_x = 1; 
+    optional float point1_y = 2;           
+    optional float point2_x = 3;             
+    optional float point2_y = 4; 
+    optional uint32 id = 5;                        // 限位器id
+    optional float confidence = 6;                 // 限位器置信度       [0.0-1.0]
+    optional uint32 life_time = 7;                 // 生命周期
+};
+
+message ParkingDeceler {
+    optional float point1_x = 1;            
+    optional float point1_y = 2;           
+    optional float point2_x = 3;             
+    optional float point2_y = 4;            
+    optional float point3_x = 5;              
+    optional float point3_y = 6; 
+    optional float point4_x = 7;              
+    optional float point4_y = 8;  
+    optional uint32 id = 9;                      // 减速带id
+    optional float confidence = 10;              // 感知置信度      [0.0,1.0]
+    optional uint32 life_time = 11;              // 生命周期
+};
+
+message ParkingColumn {
+    optional uint32 id = 1;                        // 立柱接地线id
+    repeated Point2f points_2d = 2;                // 组成接地线的2d点
+    optional float confidence = 3;                 // 接地线感知置信度 [0.0-1.0]
+    optional uint32 life_time = 4;                 // 生命周期
+    optional uint32 column_dim = 5;                 
+    optional uint32 column_num = 6;           
+    optional uint32 column_reserved = 7;         
+}
+
+message ParkingWall {
+    optional uint32 id = 1;                        // 墙面接地线id
+    repeated Point2f points_2d = 2;                // 组成接地线的2d点
+    optional float confidence = 3;                 // 接地线感知置信度 [0.0-1.0]
+    optional uint32 life_time = 4;                 // 生命周期
+    optional uint32 wall_dim = 5;                 
+    optional uint32 wall_num = 6;           
+    optional uint32 wall_reserved = 7;         
+}
+
+message ParkingCurb {
+    optional uint32 id = 1;                        // 路沿接地线id
+    repeated Point2f points_2d = 2;                // 组成接地线的2d点
+    optional float confidence = 3;                 // 接地线感知置信度 [0.0-1.0]
+    optional uint32 life_time = 4;                 // 生命周期
+    optional uint32 Crub_dim = 5;                 
+    optional uint32 Crub_num = 6;           
+    optional uint32 Crub_reserved = 7;         
+}
+
+
+message ParkingArrow {
+    optional uint32 id = 1;                      // 地面箭头id
+    repeated Point2f begin_points_2d = 2;        // 组成箭头起始点的2d点
+    repeated Point2f end_points_2d = 3;          // 组成箭头终止点的2d点
+    optional float confidence = 4;               // 接地线感知置信度 [0.0-1.0]
+    optional uint32 life_time = 5;               // 生命周期
+    repeated float begin_scores = 6;
+    optional uint32 begin_dim = 7;                 
+    optional uint32 begin_num = 8;           
+    optional uint32 begin_reserved = 9;
+    repeated float end_scores = 10;
+    optional uint32 end_dim = 11;                 
+    optional uint32 end_num = 12;           
+    optional uint32 end_reserved = 13;           
+}
+
+message ParkingLane {
+    optional uint32 id = 1;                 // 车道线id
+    repeated Point2f points_2d = 2;         // 组成接地线的2d点
+    optional float confidence = 3;          // 接地线感知置信度 [0.0-1.0]
+    optional uint32 life_time = 4;          // 生命周期
+    optional uint32 lane_dim = 5;                 
+    optional uint32 lane_num = 6;           
+    optional uint32 lane_reserved = 7;         
+}
+
+message ParkingLeftExtend{
+    optional uint32 id = 1;                      // 车位尾部左侧延伸点id                
+    optional float point1_x = 2;
+    optional float point1_y = 3;
+    optional float confidence = 4;               // 感知置信度      [0.0,1.0]
+    optional uint32 life_time = 5;               // 生命周期 
+};
+
+message ParkingRightExtend{
+    optional uint32 id = 1;                      //车位尾部右侧延伸点id
+    optional float point1_x = 2;
+    optional float point1_y = 3;
+    optional float confidence = 4;               // 感知置信度      [0.0,1.0]
+    optional uint32 life_time = 5;               // 生命周期 
+};
+
+message AroundViewCameraPerceptionInfo{
+    optional uint64 id = 1;                                   // 消息id
+    optional Header header = 2;                               // 头信息
+    optional uint64 avm_time_stamp = 3;                       // avm拼接图生成时的时间戳
+    optional uint64 left_camera_exposure_time_stamp = 4;      // 左环视相机的曝光时间戳
+    optional uint64 front_camera_exposure_time_stamp = 5;     // 前环视相机的曝光时间戳
+    optional uint64 right_camera_exposure_time_stamp = 6;     // 右环视相机的曝光时间戳
+    optional uint64 rear_camera_exposure_time_stamp = 7;      // 后环视相机的曝光时间戳
+    repeated ParkingSpace parking_spaces = 8;                 // 视觉车位线信息   <最大8个>
+    repeated ParkingLimiter parking_limiters = 9;             // 视觉限位器信息
+    repeated ParkingColumn parking_columns = 10;              // 视觉立柱接地线信息
+    repeated ParkingWall parking_walls = 11;                  // 视觉墙面接地线信息
+	repeated ParkingCurb parking_curbs = 12; 				  // 视觉墙面接地线信息
+    repeated ParkingDeceler parking_decelers = 13;            // 视觉减速带信息
+    repeated ParkingLane parking_lanes = 14;                  // 视觉车道线信息
+    repeated ParkingArrow parking_arrows = 15;                // 视觉地面箭头信息
+    repeated ParkingLeftExtend parking_left_extends = 16;     
+    repeated ParkingRightExtend parking_right_extends = 17;  
+    optional uint32 parking_space_num = 18;
+    optional uint32 parking_limiter_num = 19;
+    optional uint32 parking_deceler_num = 20;
+    optional uint32 parking_column_num = 21;
+    optional uint32 parking_wall_num = 22;
+    optional uint32 parking_left_extend_num = 23;
+    optional uint32 parking_right_extend_num = 24;
+    optional uint32 parking_arrow_num = 25;
+    optional uint32 parking_lane_num = 26;
+};

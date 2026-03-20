@@ -1,0 +1,2 @@
+int32 function_mode
+int32 function_state

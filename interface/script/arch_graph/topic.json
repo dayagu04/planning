@@ -1,0 +1,595 @@
+{
+    "version": "0.1",
+    "groups": [
+        {
+            "group_name": "soc_asw",
+            "components": [
+                {
+                    "component_name": "ehr",
+                    "position": [
+                        100,
+                        825
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [],
+                    "writer_topics": [
+                        "/iflytek/ehr/static_map",
+                        "/iflytek/ehr/position",
+                        "/iflytek/ehr/origin_data"
+                    ]
+                },
+                {
+                    "component_name": "around_view_camera_perception",
+                    "position": [
+                        250,
+                        825
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/ego_motion"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/camera_perception/parking_slot_list",
+                        "/iflytek/camera_perception/ground_line",
+                        "/iflytek/camera_perception/deceler",
+                        "/vision_slot_all_info",
+                        "/iflytek/camera_perception/vision_slot_image"
+                    ]
+                },
+                {
+                    "component_name": "front_view_camera_perception",
+                    "position": [
+                        400,
+                        825
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/sensor/pbox/imu"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/camera_perception/objects",
+                        "/iflytek/camera_perception/lane_lines",
+                        "/iflytek/camera_perception/debug_info"
+                    ]
+                },
+                {
+                    "component_name": "panorama_view_camera_perception",
+                    "position": [
+                        100,
+                        625
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/sensor/pbox/imu"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/camera_perception/objects",
+                        "/iflytek/camera_perception/lane_lines",
+                        "/iflytek/camera_perception/debug_info"
+                    ]
+                },
+                {
+                    "component_name": "obstacle_fusion",
+                    "position": [
+                        250,
+                        575
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/camera_perception/objects",
+                        "/iflytek/radar_fm_perception_info",
+                        "/iflytek/radar_fl_perception_info",
+                        "/iflytek/radar_fr_perception_info",
+                        "/iflytek/radar_rl_perception_info",
+                        "/iflytek/radar_rr_perception_info",
+                        "/iflytek/vehicle_service",
+                        "/iflytek/localization/ego_pose"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/fusion/objects"
+                    ]
+                },
+                {
+                    "component_name": "road_structure_fusion",
+                    "position": [
+                        400,
+                        625
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/camera_perception/lane_lines",
+                        "/iflytek/vehicle_service",
+                        "/iflytek/camera_perception/parking_slot_list",
+                        "/iflytek/localization/ego_pose",
+                        "/iflytek/ultrasonic_perception_info",
+                        "/iflytek/hmi/soc_inner",
+                        "/iflytek/system_state/soc_state",
+                        "/iflytek/ehr/static_map",
+                        "/iflytek/planning/hmi"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/fusion/road_fusion",
+                        "/iflytek/fusion/parking_slot"
+                    ]
+                },
+                {
+                    "component_name": "uss_perception",
+                    "position": [
+                        100,
+                        425
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/system_state/soc_state",
+                        "/iflytek/fusion/parking_slot",
+                        "/iflytek/localization/ego_pose",
+                        "/iflytek/vehicle_service",
+                        "/iflytek/uss/wave_info",
+                        "/iflytek/uss/ussdriver_debug_info"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/ultrasonic_perception_info",
+                        "/iflytek/ultrasonic_perception_debug_info"
+                    ]
+                },
+                {
+                    "component_name": "localization",
+                    "position": [
+                        250,
+                        425
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/sensor/pbox/gnss",
+                        "/iflytek/sensor/pbox/imu",
+                        "/iflytek/sensor/gnss",
+                        "/iflytek/sensor/imu",
+                        "/iflytek/camera_perception/parking_slot_list",
+                        "/iflytek/fusion/parking_slot",
+                        "/iflytek/ehr/position"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/localization/ego_pose"
+                    ]
+                },
+                {
+                    "component_name": "prediction",
+                    "position": [
+                        400,
+                        425
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/fusion/objects",
+                        "/iflytek/localization/ego_pose",
+                        "/iflytek/fusion/road_fusion"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/prediction/prediction_result",
+                        "/prediction_debug_info"
+                    ]
+                },
+                {
+                    "component_name": "planning",
+                    "position": [
+                        100,
+                        225
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/fusion/objects",
+                        "/iflytek/fusion/road_fusion",
+                        "/iflytek/localization/ego_pose",
+                        "/iflytek/prediction/prediction_result",
+                        "/iflytek/vehicle_service",
+                        "/iflytek/control/control_command",
+                        "/iflytek/hmi/mcu_inner",
+                        "/iflytek/fusion/parking_slot",
+                        "/iflytek/system_state/soc_state",
+                        "/iflytek/uss/wave_info",
+                        "/iflytek/ehr/static_map"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/planning/plan",
+                        "/iflytek/planning/hmi",
+                        "/iflytek/planning/plan/uncompress",
+                        "/iflytek/planning/debug_info"
+                    ]
+                },
+                {
+                    "component_name": "control",
+                    "position": [
+                        250,
+                        225
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/localization/ego_pose",
+                        "/iflytek/planning/plan",
+                        "/iflytek/planning/hmi",
+                        "/iflytek/system_state/soc_state"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/control/control_command",
+                        "/iflytek/control/debug_info"
+                    ]
+                },
+                {
+                    "component_name": "finite_state_manager",
+                    "position": [
+                        400,
+                        225
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/hmi/mcu_inner",
+                        "/iflytek/hmi/soc_inner",
+                        "/iflytek/planning/plan",
+                        "/iflytek/fusion/parking_slot",
+                        "/iflytek/ehr/position"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/system_state/soc_state"
+                    ]
+                },
+                {
+                    "component_name": "hmi_hpp_inner",
+                    "position": [
+                        250,
+                        25
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/system_state/soc_state",
+                        "/iflytek/fviz/hpp_inner"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/hmi/hpp_inner"
+                    ]
+                },
+                {
+                    "component_name": "hmi_hpp_outer",
+                    "position": [
+                        250,
+                        -125
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/system_state/soc_state",
+                        "/iflytek/planning/hmi",
+                        "/iflytek/planning/plan",
+                        "/iflytek/mapping/local_map",
+                        "/iflytek/ehp/parking_map",
+                        "/iflytek/localization/egomotion",
+                        "/iflytek/hmi/hpp_inner",
+                        "/iflytek/mapping/mapping_status"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/hmi/hpp_outer"
+                    ]
+                },
+                {
+                    "component_name": "hmi_soc_inner",
+                    "position": [
+                        400,
+                        50
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/ParkingHmiInfo",
+                        "/iflytek/system_state/soc_state"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/hmi/soc_inner"
+                    ]
+                },
+                {
+                    "component_name": "hmi_soc_outer",
+                    "position": [
+                        400,
+                        -100
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/fusion/parking_slot",
+                        "/iflytek/system_state/soc_state",
+                        "/iflytek/planning/hmi",
+                        "/iflytek/planning/plan",
+                        "/iflytek/hmi/mcu_inner",
+                        "/iflytek/fusion/road_fusion",
+                        "/iflytek/fusion/objects",
+                        "/iflytek/ehr/position"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/hmi/soc_outer",
+                        "/iflytek/hmi/soc_outer/uncompress"
+                    ]
+                },
+                {
+                    "component_name": "hmi_for_map",
+                    "position": [
+                        100,
+                        -25
+                    ],
+                    "color": "blue3",
+                    "group1": "asw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service",
+                        "/iflytek/planning/plan",
+                        "/iflytek/planning/hmi",
+                        "/iflytek/fusion/objects",
+                        "/iflytek/system_state/soc_state",
+                        "/iflytek/hmi/soc_outer",
+                        "/iflytek/hmi/mcu_inner"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/hmi/ad2hmi"
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": "soc_bsw",
+            "components": [
+                {
+                    "component_name": "camera_node",
+                    "position": [
+                        100,
+                        -300
+                    ],
+                    "color": "blue3",
+                    "group1": "bsw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/camera_node"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/camera_node"
+                    ]
+                },
+                {
+                    "component_name": "time_service",
+                    "position": [
+                        250,
+                        -450
+                    ],
+                    "color": "blue3",
+                    "group1": "bsw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/time_servicer"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/time_service"
+                    ]
+                },
+                {
+                    "component_name": "communication_service",
+                    "position": [
+                        400,
+                        -450
+                    ],
+                    "color": "blue3",
+                    "group1": "bsw",
+                    "group2": "soc",
+                    "reader_topics": [
+                        "/iflytek/communication_service"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/communication_service"
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": "mcu_asw",
+            "components": [
+                {
+                    "component_name": "hmi_mcu",
+                    "position": [
+                        625,
+                        825
+                    ],
+                    "color": "orange3",
+                    "group1": "asw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/hmi_mcu"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/hmi_mcu"
+                    ]
+                },
+                {
+                    "component_name": "parking_distance_control",
+                    "position": [
+                        775,
+                        825
+                    ],
+                    "color": "orange3",
+                    "group1": "asw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/parking_distance_control"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/parking_distance_control"
+                    ]
+                },
+                {
+                    "component_name": "radar_perception",
+                    "position": [
+                        625,
+                        675
+                    ],
+                    "color": "orange3",
+                    "group1": "asw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/radar_perception"
+                    ],
+                    "writer_topics": [
+                        "/iflytekradar_perception"
+                    ]
+                },
+                {
+                    "component_name": "uss_driver",
+                    "position": [
+                        625,
+                        525
+                    ],
+                    "color": "orange3",
+                    "group1": "asw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/uss_driver"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/uss_driver"
+                    ]
+                },
+                {
+                    "component_name": "vehicle_service",
+                    "position": [
+                        625,
+                        225
+                    ],
+                    "color": "orange3",
+                    "group1": "asw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/vehicle_service"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/vehicle_service"
+                    ]
+                },
+                {
+                    "component_name": "adas_function",
+                    "position": [
+                        625,
+                        75
+                    ],
+                    "color": "orange3",
+                    "group1": "asw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/adas_function"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/adas_function"
+                    ]
+                },
+                {
+                    "component_name": "control_adapter",
+                    "position": [
+                        775,
+                        75
+                    ],
+                    "color": "orange3",
+                    "group1": "asw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/control_adapter"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/control_adapter"
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": "mcu_bsw",
+            "components": [
+                {
+                    "component_name": "sensor",
+                    "position": [
+                        625,
+                        -300
+                    ],
+                    "color": "orange3",
+                    "group1": "bsw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/sensor"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/sensor"
+                    ]
+                },
+                {
+                    "component_name": "communication",
+                    "position": [
+                        625,
+                        -450
+                    ],
+                    "color": "orange3",
+                    "group1": "bsw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/communication"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/communication"
+                    ]
+                },
+                {
+                    "component_name": "time_sync",
+                    "position": [
+                        775,
+                        -450
+                    ],
+                    "color": "orange3",
+                    "group1": "bsw",
+                    "group2": "mcu",
+                    "reader_topics": [
+                        "/iflytek/time_sync"
+                    ],
+                    "writer_topics": [
+                        "/iflytek/time_sync"
+                    ]
+                }
+            ]
+        }
+    ]
+}

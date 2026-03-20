@@ -1,0 +1,5 @@
+uint32 record_mode
+string[] topics
+---
+bool success
+string message

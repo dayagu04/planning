@@ -1,0 +1,13 @@
+uint32 path_id
+uint32 offset
+uint32 accuracy
+uint32 lateral_accuracy
+uint32 longitudinal_accuracy
+float64 original_lon
+float64 original_lat
+int32 deviation
+float32 vehicle_speed
+float32 relative_heading
+float32 probability
+uint32 current_lane
+uint32 preferred_path

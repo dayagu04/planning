@@ -1,0 +1,5 @@
+uint8 pcw_state
+uint8 pcw_warning_level
+bool pcw_prefill_request_status
+bool pcw_jerk_request_status
+RiskObjInfo pcw_risk_obj

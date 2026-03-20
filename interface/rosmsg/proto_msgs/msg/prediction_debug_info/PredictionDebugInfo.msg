@@ -1,0 +1,9 @@
+std_msgs/Header header
+common_Header msg_header
+uint64 fusion_object_stamp 
+uint64 localization_stamp 
+uint64 prediction_result_stamp 
+uint32 fusion_objects_num 
+uint32 fusion_objects_input_num 
+uint32 object_num_output 
+float64 process_cost_time 

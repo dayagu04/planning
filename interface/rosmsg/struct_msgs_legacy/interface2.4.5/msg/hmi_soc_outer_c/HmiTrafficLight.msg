@@ -1,0 +1,3 @@
+int16 traffic_light_type
+int16 traffic_light_color
+int32 traffic_light_countdown_number

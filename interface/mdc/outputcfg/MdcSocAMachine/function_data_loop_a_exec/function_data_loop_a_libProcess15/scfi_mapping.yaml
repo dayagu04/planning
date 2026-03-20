@@ -1,0 +1,12 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10163,10233]
+        portName: ["IflytekFdlTriggerAck","IflytekFdlAPhmReport"]
+  recvInstanceID:
+    StructContainerInterface:
+        instanceId: [10164,10230]
+        portName: ["IflytekFdlTrigger","IflytekSystemAProcessLoading"]

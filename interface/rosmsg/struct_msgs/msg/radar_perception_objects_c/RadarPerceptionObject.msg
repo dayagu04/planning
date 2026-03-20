@@ -1,0 +1,16 @@
+uint32 id
+int16 type
+Shape3d shape
+Point2f relative_position
+Point2f relative_velocity
+Point2f relative_acceleration
+float32 relative_heading_angle
+float32 relative_heading_angle_rate
+int32 age
+float32 conf
+float32 orientation_angle_conf
+float32 vel_conf
+float32 accel_conf
+int16 obj_update_flag
+int16 obj_motion_pattern
+float32 obstacle_prob

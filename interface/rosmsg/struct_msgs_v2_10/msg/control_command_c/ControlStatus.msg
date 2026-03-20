@@ -1,0 +1,2 @@
+bool available
+int16 control_status_type

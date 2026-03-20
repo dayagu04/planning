@@ -1,0 +1,1 @@
+uint8 need_gnss_loss_signal

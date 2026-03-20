@@ -1,0 +1,6 @@
+bool standstill
+bool ready_to_go
+int16 apa_planning_status
+int16 hpp_planning_status
+int16 rads_planning_status
+int16 nsa_planning_status

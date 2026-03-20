@@ -1,0 +1,24 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    StructContainerInterface:
+        instanceId: [10221]
+        portName: ["IflytekDiskCleanRequest"]
+    ClientServiceContainerInterface:
+        instanceId: [10044]
+        portName: ["IflytekObdUpdateEvent"]
+  recvInstanceID:
+    ConfigServerServiceInterface:
+        instanceId: [1]
+        portName: ["IflytekConfigManager"]
+    FmAlarmReceiveService:
+        instanceId: [10024]
+        portName: ["IflytekAlarmInfoOtaNode"]
+    StructContainerInterface:
+        instanceId: [10218,10220]
+        portName: ["IflytekDiskSpaceInfoPhmAOta","IflytekDiskSpaceInfoPhmBOta"]
+    ClientServiceContainerInterface:
+        instanceId: [10046]
+        portName: ["IflytekOtaLogUploadRequest"]

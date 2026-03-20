@@ -1,0 +1,13 @@
+int16 common_notify_req
+float32 vehicle_speed_display
+bool brake_pedal_pressed
+int16 shift_lever_state
+int16 turn_light_state
+TrajectoryPointSet tp_set
+IFLYPosition position
+RearViewMirrorCommand rear_view_mirror_signal_command
+bool adas_takeover_req
+int16 adas_takeover_reason
+int16 CruiseAccelerateSts
+int16 avoiddirect
+int16 borrow_direction

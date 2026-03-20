@@ -1,0 +1,27 @@
+identifier:
+  "MAPPING"
+description: "Mapping module"
+common_swc_lib:
+  sendInstanceID:
+    CameraStructContainerInterface:
+        instanceId: [10023,10024,10041,10042,10115,10116,10117,10118,10135,10136]
+        portName: ["IflytekSensorCameraSurroundResizeImageFront","IflytekSensorCameraSurroundResizeImageLeft","IflytekSensorCameraSurroundResizeImageRight","IflytekSensorCameraSurroundResizeImageRear","IflytekSensorCameraSurroundFrontFullResolutionH265","IflytekSensorCameraSurroundLeftFullResolutionH265","IflytekSensorCameraSurroundRearFullResolutionH265","IflytekSensorCameraSurroundRightFullResolutionH265","IflytekSensorCameraRearFullResolutionH265MDCA","IflytekSensorCameraRearMDCA"]
+    ClientServiceContainerInterface:
+        instanceId: [10032]
+        portName: ["IflytekSensorGetSurroundCameraIntriParam"]
+    FmAlarmReceiveService:
+        instanceId: [1]
+        portName: ["IflytekAlarmInfoMdcA"]
+    StructContainerInterface:
+        instanceId: [10208,10214,10238]
+        portName: ["IflytekCameraAroundPhmReport","IflytekCameraState","IflytekCameraAroundErrorStatus"]
+  recvInstanceID:
+    FmAlarmReceiveService:
+        instanceId: [10002]
+        portName: ["IflytekAlarmInfoCameraNodeAroundView"]
+    ConfigServerServiceInterface:
+        instanceId: [1]
+        portName: ["IflytekConfigManager"]
+    StructContainerInterface:
+        instanceId: [10109,10168,10186,10188,10009,10110]
+        portName: ["IflytekAlarmInfoToACamera","IflytekFmACameraSentinel","IflytekCameraPerceptionPanoramaView2DBoundingBoxes","IflytekCameraPerceptionAroundView2DBoundingBoxes","IflytekVehicleService","IflytekFsmSocState"]

@@ -1,0 +1,6 @@
+float32 upc_vehicle_position_x
+float32 upc_vehicle_position_y
+float32 upc_vehicle_position_update_time
+float32 upc_vehicle_position_curvature
+float32 upc_vechile_position_yaw_angle
+float32 upc_vechile_position_drive_distance

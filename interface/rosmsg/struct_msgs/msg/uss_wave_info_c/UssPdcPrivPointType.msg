@@ -1,0 +1,2 @@
+float32[22] point_priv_timestamp
+UssPdcPrivPointDataType[150] priv_point_data_prop

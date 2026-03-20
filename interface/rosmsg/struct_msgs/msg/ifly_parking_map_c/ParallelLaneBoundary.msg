@@ -1,0 +1,3 @@
+uint8 sequential_lane_boundaries_size
+ParkingLaneBoundary[] sequential_lane_boundaries
+ParallelLaneBoundaryId id

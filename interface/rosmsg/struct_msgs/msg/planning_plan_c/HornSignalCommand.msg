@@ -1,0 +1,2 @@
+bool available
+int16 horn_signal_value

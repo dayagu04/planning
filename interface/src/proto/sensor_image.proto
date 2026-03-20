@@ -1,0 +1,38 @@
+syntax = "proto2";
+package SensorImage;
+
+// 基础相机结构
+message Camera_Image_Info {
+    optional string frame_id = 1;               // 图片的id
+    optional string format = 2;                 // 图片的编码格式 nv12 jpeg h264
+    optional string camera_view_angle = 3;      // 相机视角
+    optional string camera_resolution = 4;      // 相机分辨率信息
+    optional uint32 height = 5;                 // 图片的高
+    optional uint32 width = 6;                  // 图片的宽
+	optional uint64 exposure_starting_utc_time = 7;                // 相机曝光开始UTC时间(微妙)
+    optional uint64 isp_arrival_utc_timestamp = 8;                 // 从ISP收到数据的到达UTC时间(微秒)
+    optional uint64 isp_arrival_monotonic_timestamp = 9;           // 从ISP收到数据的到达内核时间(微秒)
+    optional uint32 exposure_duration = 10;                         // 相机的曝光时长(微秒)
+    optional uint32 isp_arrival_to_app_capture_duration_time = 11;  // 相机从isp到达到应用层捕获的EOF时间(微妙)
+    optional int32  dmabuf_fd_index = 12;       // 图片在dma ringbuffer里的序号
+    optional bytes  data = 13;                  // 图片数据 <使用dma时，不用这个字段>
+};
+
+/*******************************************************************************
+ * 数采压缩channel定义
+ * channel定义规则：按照安装位置区分（前视有两个，按照视角区分）
+ * 结构体：Camera_Image_Info
+ * topic：
+ *      /iflytek/dc/camera/front_30  //前视30°
+ *      /iflytek/dc/camera/front_120 //前视120°
+ *      /iflytek/dc/camera/rear      //后视
+ *      /iflytek/dc/camera/side_fl   //侧前左
+ *      /iflytek/dc/camera/side_fr   //侧前右
+ *      /iflytek/dc/camera/side_rl   //侧后右
+ *      /iflytek/dc/camera/side_rr   //侧后左
+ *      /iflytek/dc/camera/surround_right //环视右
+ *      /iflytek/dc/camera/surround_front //环视前
+ *      /iflytek/dc/camera/surround_left  //环视左
+ *      /iflytek/dc/camera/surround_rear  //环视后
+ * 频率：>20Hz，和相机同步
+ ********************************************************************************/

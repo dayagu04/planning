@@ -1,0 +1,4 @@
+uint64 vehicle_service
+uint64 localization
+uint64 planning_output
+uint64 func_state_machine

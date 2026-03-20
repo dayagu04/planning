@@ -1,0 +1,15 @@
+bool tsr_warning_display
+uint32 tsr_speed_limit_display
+bool tsr_speed_unlimit_warning_display
+int16 tsr_state_display
+bool ldw_left_warning_display
+bool ldw_right_warning_display
+bool ldp_left_intervention_flag_display
+bool ldp_right_intervention_flag_display
+int16 ldw_state_display
+int16 ldp_state_display
+bool elk_left_intervention_flag_display
+bool elk_right_intervention_flag_display
+int16 elk_state_display
+int16 meb_state_display
+int16 meb_request_direction_display

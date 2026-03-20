@@ -1,0 +1,15 @@
+RoadId id
+RoadPortId head_id
+RoadPortId tail_id
+float32 length
+int32 road_type
+Polyline road_center
+int32 travel_direction
+IflyLaneGroup[] lane_group_ab
+IflyLaneGroup[] lane_group_ba
+int32 ramp
+string name
+int32 road_class
+int32[] road_structure
+bool intersection_internal
+IntersectionId intersection_id

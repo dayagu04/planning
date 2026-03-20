@@ -1,0 +1,9 @@
+uint8 status
+uint8 result
+char[32] sensor_name
+float32 install_error_rx
+float32 install_error_ry
+float32 install_error_rz
+float32 install_error_tx
+float32 install_error_ty
+float32 install_error_tz
