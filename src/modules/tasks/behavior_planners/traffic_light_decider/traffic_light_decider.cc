@@ -6,6 +6,7 @@
 
 namespace planning {
 namespace {
+constexpr double kEpsilon = 0.001;
 constexpr double kEgoStaticVelThred = 0.1;
 constexpr double kGreenReminderStartTime = 1.5;
 constexpr double kGreenReminderEndTime = 4.6;
@@ -420,8 +421,9 @@ bool TrafficLightDecider::IsIntersectionMatchTFLByDisRatio() {
       dis_to_tfl = all_tfls[i].traffic_light_x;
     }
   }
-  if (min_virtual_dis > config_.min_virtual_dis_thred&
-      dis_to_tfl / max_virtual_dis > config_.dis_ratio_can_pass) {
+  double dis_tfl_to_stopline = std::abs(dis_to_tfl - dis_to_stopline);
+  if (min_virtual_dis > config_.min_virtual_dis_thred &&
+      (dis_tfl_to_stopline / std::max(max_virtual_dis, kEpsilon)) > config_.dis_ratio_can_pass) {
     return false;
   } else {
     return true;
