@@ -189,7 +189,7 @@ void ParkingScenario::SetParkingStatus(uint8_t status) {
   return;
 }
 
-//TODO(taolu10): move to  PlanningScheduler
+// TODO(taolu10): move to  PlanningScheduler
 void ParkingScenario::PublishPlanningTraj() {
   pnc::geometry_lib::PathPoint current_ego_pose(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(),
@@ -474,7 +474,8 @@ const bool ParkingScenario::CheckGearChangeCountTooMuch(
     frame_.ref_max_gear_change_count_already_update = true;
   }
 
-  JSON_DEBUG_VALUE("ref_max_gear_change_count", frame_.ref_max_gear_change_count)
+  JSON_DEBUG_VALUE("ref_max_gear_change_count",
+                   frame_.ref_max_gear_change_count)
   JSON_DEBUG_VALUE("actual_gear_change_count", frame_.actual_gear_change_count)
 
   return false;

@@ -69,6 +69,8 @@ struct AstarRequest {
 
   std::vector<Pose2f> parallel_target_group;
 
+  double limiter_x;
+
   void Clear() {
     path_generate_method = AstarPathGenerateType::NONE;
     plan_reason = PlanningReason::NONE;
@@ -78,6 +80,7 @@ struct AstarRequest {
     gear_switch_num = 0;
     x_axis_direction_coordinate_slant.setZero();
     fold_mirror = false;
+    limiter_x = 0.0;
     return;
   }
 };
