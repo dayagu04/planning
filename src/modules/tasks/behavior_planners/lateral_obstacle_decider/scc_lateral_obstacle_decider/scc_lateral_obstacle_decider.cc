@@ -847,7 +847,7 @@ bool SccLateralObstacleDecider::IsAvoidable(
   if (frenet_obstacle.obstacle()->is_static()) {
     can_avoid = history.can_avoid;
   } else {
-    can_avoid = HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_lane_change);
+    can_avoid = HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_in_lane_change_execution_scene);
   }
 
   // if (is_lane_change &&
