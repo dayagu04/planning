@@ -34,7 +34,7 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
       lane_borrow_decider_output.lane_borrow_state ==
           LaneBorrowStatus::kLaneBorrowDriving ||
       lane_borrow_decider_output.lane_borrow_state ==
-          LaneBorrowStatus::kLaneBorrowCrossing;
+          LaneBorrowStatus::kLaneBorrowCrossing ||
       lane_borrow_decider_output.lane_borrow_state ==
           LaneBorrowStatus::kLaneBorrowWaitting;
   const auto& lane_change_decider_output =
