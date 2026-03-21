@@ -643,18 +643,19 @@ bool SccLateralObstacleDecider::IsPotentialAvoidingCar(
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &target_state = session_->planning_context()
-                                 .lane_change_decider_output()
-                                 .coarse_planning_info.target_state;
+                                .lane_change_decider_output()
+                                .coarse_planning_info.target_state;
   bool is_lane_change =
       (target_state == kLaneChangeExecution ||
-       target_state == kLaneChangeHold || target_state == kLaneChangeCancel);
+      target_state == kLaneChangeHold || target_state == kLaneChangeCancel);
+  bool is_static = frenet_obstacle.obstacle()->is_static();
 
   // // static obs lat_safety_buffer
   // if ((l > 0 && can_right_borrow) || (l < 0 && can_left_borrow)) {
   //   static_obs_buffer = config_.large_static_obs_buffer;
   // }
   double lat_safety_buffer;
-  if (!frenet_obstacle.obstacle()->is_static()) {
+  if (!is_static) {
     lat_safety_buffer = CalDynamicLatBuffer(frenet_obstacle);
   } else {
     lat_safety_buffer = config_.large_static_obs_buffer;
@@ -666,7 +667,59 @@ bool SccLateralObstacleDecider::IsPotentialAvoidingCar(
   bool is_in_range = IsInRange(frenet_obstacle);
   bool is_about_to_enter_range = IsAboutToEnterRange(frenet_obstacle);
 
+  if (is_static) {
+    return IsStaticPotentialAvoidingCar(
+        frenet_obstacle, lat_safety_buffer, is_in_range,
+        is_about_to_enter_range, farthest_distance, rightest_lane,
+        is_in_lane_change_execution_scene, is_lane_change);
+  } else {
+    return IsDynamicPotentialAvoidingCar(
+        frenet_obstacle, lat_safety_buffer, is_in_range,
+        is_about_to_enter_range, farthest_distance, rightest_lane,
+        is_in_lane_change_execution_scene, is_lane_change);
+  }
+  return false;
+}
+
+bool SccLateralObstacleDecider::IsStaticPotentialAvoidingCar(
+    const FrenetObstacle& frenet_obstacle, double lat_safety_buffer,
+    bool is_in_range, bool is_about_to_enter_range, double farthest_distance,
+    bool rightest_lane, bool is_in_lane_change_execution_scene,
+    bool is_lane_change) {
   bool is_avoidable = false;
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[frenet_obstacle.id()];
+  // 依据车道内剩余距离计算是否能够避让，更新静态障碍物can_avoid标志位
+  // 不采用HasEnoughNudgeSpace函数，因为静态障碍物在车道内剩余距离计算时，不需要考虑预测，仅考虑车道内通行距离
+  UpdateStaticNudgeDecision(
+    frenet_obstacle, lat_safety_buffer, is_in_lane_change_execution_scene);
+
+  if (is_in_range || is_about_to_enter_range) {
+    // 静态障碍物is_in_range一定会满足
+    history.is_not_set = false;
+    is_avoidable = history.can_avoid;
+  }
+
+  // for Intersection
+  if (frenet_obstacle.d_s_rel() > farthest_distance + ego_length_ ||
+      (frenet_obstacle.d_s_rel() > farthest_distance - ego_length_ &&
+      ((frenet_obstacle.d_max_cpath() < 0 &&
+        std::fabs(frenet_obstacle.d_max_cpath()) > lane_width_ * 0.5) ||
+        (frenet_obstacle.d_min_cpath() > 0 &&
+        frenet_obstacle.d_min_cpath() > lane_width_ * 0.5)))) {
+    return false;
+  }
+  return is_avoidable;
+}
+
+bool SccLateralObstacleDecider::IsDynamicPotentialAvoidingCar(
+    const FrenetObstacle& frenet_obstacle, double lat_safety_buffer,
+    bool is_in_range, bool is_about_to_enter_range, double farthest_distance,
+    bool rightest_lane, bool is_in_lane_change_execution_scene,
+    bool is_lane_change) {
+  bool is_avoidable = false;
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[frenet_obstacle.id()];
   if (is_in_range || is_about_to_enter_range) {
     history.is_not_set = false;
     is_avoidable =
@@ -681,21 +734,20 @@ bool SccLateralObstacleDecider::IsPotentialAvoidingCar(
   // for Intersection
   if (frenet_obstacle.d_s_rel() > farthest_distance + ego_length_ ||
       (frenet_obstacle.d_s_rel() > farthest_distance - ego_length_ &&
-       ((frenet_obstacle.d_max_cpath() < 0 &&
-         std::fabs(frenet_obstacle.d_max_cpath()) > lane_width_ * 0.5) ||
+      ((frenet_obstacle.d_max_cpath() < 0 &&
+        std::fabs(frenet_obstacle.d_max_cpath()) > lane_width_ * 0.5) ||
         (frenet_obstacle.d_min_cpath() > 0 &&
-         frenet_obstacle.d_min_cpath() > lane_width_ * 0.5)))) {
+        frenet_obstacle.d_min_cpath() > lane_width_ * 0.5)))) {
     return false;
   }
 
   double ncar_count = GetAvoidCountThre(frenet_obstacle);
 
   if (UpdateObstacleAvoidCount(frenet_obstacle, is_avoidable, is_in_range,
-                               is_about_to_enter_range, ncar_count,
-                               rightest_lane, is_lane_change)) {
+                              is_about_to_enter_range, ncar_count,
+                              rightest_lane, is_lane_change)) {
     return true;
   }
-
   return false;
 }
 
@@ -879,6 +931,53 @@ bool SccLateralObstacleDecider::HasEnoughNudgeSpace(
   }
 
   return has_enough_nudge_space;
+}
+
+double SccLateralObstacleDecider::CalStaticNudgeHysteresis(
+    const FrenetObstacle &frenet_obstacle) const {
+  // can_avoid 为真时从横向安全缓冲中扣除的滞回量；VRU/锥桶感知抖动更大，使用更大滞回以稳定决策
+  constexpr double kDefaultHysteresis = 0.2;
+  constexpr double kVruAndConeHysteresis = 0.3;
+
+  const auto *obstacle = frenet_obstacle.obstacle();
+  if (obstacle == nullptr) {
+    return kDefaultHysteresis;
+  }
+  if (obstacle->is_VRU()) {
+    return kVruAndConeHysteresis;
+  }
+  if (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE) {
+    return kVruAndConeHysteresis;
+  }
+  return kDefaultHysteresis;
+}
+
+void SccLateralObstacleDecider::UpdateStaticNudgeDecision(
+    const FrenetObstacle &frenet_obstacle, double lat_safety_buffer,
+    bool is_in_lane_change_execution_scene) {
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[frenet_obstacle.id()];
+
+  const double d_max_cpath = frenet_obstacle.d_max_cpath();
+  const double d_min_cpath = frenet_obstacle.d_min_cpath();
+
+  if (history.can_avoid) {
+    lat_safety_buffer -= CalStaticNudgeHysteresis(frenet_obstacle);
+  }
+
+  bool has_enough_space =
+      (d_min_cpath >
+       std::min((ego_width_ + lat_safety_buffer) - lane_width_ / 2, 1.8)) ||
+      (d_max_cpath <
+       std::max(lane_width_ / 2 - (ego_width_ + lat_safety_buffer), -1.8));
+
+  if (is_in_lane_change_execution_scene &&
+      frenet_obstacle.frenet_obstacle_boundary().s_start <
+          lc_gap_info_.gap_front_s) {
+    has_enough_space = true;
+  }
+
+  history.can_avoid = has_enough_space;
 }
 
 double SccLateralObstacleDecider::CalDynamicLatBuffer(
@@ -2083,27 +2182,41 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::FOLLOW;
     }
   } else if (d_s_rel > history.front_expand_len) {
-    if (history.can_avoid) {
-      const bool last_was_avoid =
-          last_output_.find(id) != last_output_.end() &&
-          (last_output_[id] == LatObstacleDecisionType::LEFT ||
-           last_output_[id] == LatObstacleDecisionType::RIGHT);
-      if (last_was_avoid) {
-        avoid_front_buffer = config_.avoid_persistence_front_buffer;
-      }
-      if (obstacle.is_traffic_facilities()) {
-        avoid_front_buffer += config_.traffic_cone_thr;
-      }
-      if (d_max_cpath < 0 &&
-          std::fabs(d_max_cpath) > lane_width_ * 0.5 - avoid_front_buffer) {
-        output_[id] = LatObstacleDecisionType::LEFT;
-      } else if (d_min_cpath > lane_width_ * 0.5 - avoid_front_buffer) {
-        output_[id] = LatObstacleDecisionType::RIGHT;
+    if (obstacle.is_static()) {
+      if (history.can_avoid) {
+        if (d_max_cpath > 0 && d_min_cpath < 0) {
+          output_[id] = LatObstacleDecisionType::IGNORE;
+        } else if (d_max_cpath < 0) {
+          output_[id] = LatObstacleDecisionType::LEFT;
+        } else if (d_min_cpath > 0) {
+          output_[id] = LatObstacleDecisionType::RIGHT;
+        }
       } else {
         output_[id] = LatObstacleDecisionType::IGNORE;
       }
     } else {
-      output_[id] = LatObstacleDecisionType::IGNORE;
+      if (history.can_avoid) {
+        const bool last_was_avoid =
+            last_output_.find(id) != last_output_.end() &&
+            (last_output_[id] == LatObstacleDecisionType::LEFT ||
+             last_output_[id] == LatObstacleDecisionType::RIGHT);
+        if (last_was_avoid) {
+          avoid_front_buffer = config_.avoid_persistence_front_buffer;
+        }
+        if (obstacle.is_traffic_facilities()) {
+          avoid_front_buffer += config_.traffic_cone_thr;
+        }
+        if (d_max_cpath < 0 &&
+            std::fabs(d_max_cpath) > lane_width_ * 0.5 - avoid_front_buffer) {
+          output_[id] = LatObstacleDecisionType::LEFT;
+        } else if (d_min_cpath > lane_width_ * 0.5 - avoid_front_buffer) {
+          output_[id] = LatObstacleDecisionType::RIGHT;
+        } else {
+          output_[id] = LatObstacleDecisionType::IGNORE;
+        }
+      } else {
+        output_[id] = LatObstacleDecisionType::IGNORE;
+      }
     }
     // cut_in 或 横穿
     if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_execution_scene)) {
