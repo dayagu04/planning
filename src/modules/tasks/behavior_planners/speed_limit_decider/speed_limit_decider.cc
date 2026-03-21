@@ -35,7 +35,7 @@ constexpr double kSSharpBendSpeedScaleRatio = 0.8;
 constexpr double kTFLSpeedLimitDis = 160.0;
 constexpr double kMergePointDetectedDistance = 20.0;
 constexpr double kStaticAgentAvoidLimitedSpeedHigh = 10.0;
-constexpr double kStaticAgentAvoidLimitedSpeedLow = 4.17;
+constexpr double kStaticAgentAvoidLimitedSpeedLow = 8.33;
 constexpr double kDynamicAgentAvoidLimitedSpeedHigh = 5.56;
 constexpr double kDynamicAgentAvoidLimitedSpeedLow = 2.78;
 const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
