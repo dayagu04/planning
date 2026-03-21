@@ -34,6 +34,9 @@ std::vector<int> MatchRefTrajPoints(int s,
 TrajectoryPoint GetTrajectoryPointAtTime(
     const TrajectoryPoints trajectory_points, const double relative_time);
 
+TrajectoryPoint GetTrajectoryPointAtS(
+    const TrajectoryPoints trajectory_points, const double query_s);
+
 bool IsVRU(iflyauto::ObjectType type);
 bool IsCone(iflyauto::ObjectType type);
 bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle);

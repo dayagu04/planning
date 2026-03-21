@@ -658,11 +658,10 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints(
 
   auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
   if (ego_s <= plan_history_traj_tmp.front().s) {
-    for (double t = 0; t <= plan_history_traj_tmp.back().t;
-         t += config_.delta_t) {
+    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
       TrajectoryPoint pt =
-          hpp_general_lateral_decider_utils::GetTrajectoryPointAtTime(
-              plan_history_traj_tmp, t);
+          hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+              plan_history_traj_tmp, ref_traj_points_[i].s);
       pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
       plan_history_traj_.emplace_back(std::move(pt));
     }
@@ -682,11 +681,20 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints(
     const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
     const double weight1 = 1.0 - weight0;
     const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
-    for (double t = base_t; t <= plan_history_traj_tmp.back().t;
-         t += config_.delta_t) {
+    const double base_s = weight1 * traj_1.s + weight0 * traj_2.s;
+
+    TrajectoryPoint pt =
+        hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+            plan_history_traj_tmp, base_s);
+    plan_history_traj_.emplace_back(std::move(pt));
+
+    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+      if (ref_traj_points_[i].s <= base_s) {
+        continue;
+      }
       TrajectoryPoint pt =
-          hpp_general_lateral_decider_utils::GetTrajectoryPointAtTime(
-              plan_history_traj_tmp, t);
+          hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+              plan_history_traj_tmp, ref_traj_points_[i].s);
       plan_history_traj_.emplace_back(std::move(pt));
     }
 
@@ -695,11 +703,19 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints(
     }
 
     if (plan_history_traj_.size() != 0) {
+      double fallback_ref_ds =
+          std::max(ref_traj_points_.back().s - ref_traj_points_[ref_traj_points_.size() - 2].s, 1e-3);
+
       for (int point_num = plan_history_traj_.size();
            point_num < config_.num_step + 1; point_num++) {
         TrajectoryPoint pt = plan_history_traj_.back();
-        // For now, only s and t are modified
-        pt.s += pt.v * config_.delta_t;
+
+        auto& ref_ds = fallback_ref_ds;
+        if (point_num > 0 &&
+            point_num < static_cast<int>(ref_traj_points_.size())) {
+          ref_ds = std::max(ref_traj_points_[point_num].s - ref_traj_points_[point_num - 1].s, 1e-3);
+        }
+        pt.s += ref_ds;
         pt.t += config_.delta_t;
         plan_history_traj_.emplace_back(std::move(pt));
       }
