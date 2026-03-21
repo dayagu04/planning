@@ -697,7 +697,8 @@ bool SccLateralObstacleDecider::IsStaticPotentialAvoidingCar(
   if (is_in_range || is_about_to_enter_range) {
     // 静态障碍物is_in_range一定会满足
     history.is_not_set = false;
-    is_avoidable = history.can_avoid;
+    is_avoidable =
+        IsAvoidable(frenet_obstacle, lat_safety_buffer, is_lane_change);
   }
 
   // for Intersection
@@ -842,8 +843,12 @@ bool SccLateralObstacleDecider::IsAvoidable(
         v_lat > potential_near_car_v_ub);
 
   // can avoid flag
-  bool can_avoid =
-      HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_in_lane_change_execution_scene);
+  bool can_avoid = false;
+  if (frenet_obstacle.obstacle()->is_static()) {
+    can_avoid = history.can_avoid;
+  } else {
+    can_avoid = HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_lane_change);
+  }
 
   // if (is_lane_change &&
   //         frenet_obstacle.frenet_obstacle_boundary().s_start <
