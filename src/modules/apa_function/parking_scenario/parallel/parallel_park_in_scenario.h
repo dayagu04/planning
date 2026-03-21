@@ -61,8 +61,10 @@ class ParallelParkInScenario : public ParkingScenario {
   ParallelParkInScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
     memset(&last_apa_hmi_, 0, sizeof(last_apa_hmi_));
+    Init();
   }
 
+  virtual void Init() override;
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); };
   virtual const bool UpdateEgoSlotInfo() override;
@@ -73,6 +75,22 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual void ExcutePathPlanningTask() override;
   virtual void ScenarioTry() override;
   virtual void Log() const override;
+
+  virtual const PathPlannerResult PathPlanOnceGeometry();
+  virtual void SetTargetGroup(AstarRequest& cur_request);
+  virtual void UpdateStartPosByInSlot(
+      Pose2f& start_pos, pnc::geometry_lib::PathSegGear& last_path_gear);
+  virtual void SetRequestForScenarioTry(AstarRequest& cur_request,
+                                const EgoInfoUnderSlot& ego_info);
+  virtual void UpdatePathByGeometry(const AstarResponse& response);
+  virtual const bool SetAstarRequest(AstarRequest& astar_request,
+                                     ParkObstacleList& obs_hastar);
+  virtual const PathPlannerResult PubResponseForScenarioTry(
+      const EgoInfoUnderSlot& ego_info);
+  virtual const PathPlannerResult PubResponseForScenarioRunning(
+      const EgoInfoUnderSlot& ego_info);
+  virtual const PathPlannerResult PathPlanOnceHybridAStar();
+  virtual void UpdatePostProcessStatus(PathPlannerResult pathplan_result);
 
   const double CalcSlotOccupiedRatio(const Eigen::Vector2d& terminal_err,
                                      const double slot_width,
@@ -104,8 +122,8 @@ class ParallelParkInScenario : public ParkingScenario {
       const std::vector<bool>& inliers, const Eigen::Vector2d& ego_pose);
 
   const bool GeneralPASlot(const ApaPADirection direction);
-  const bool ParkInTry(const ApaSlot& slot, const ApaPADirection direction =
-                                                ApaPADirection::PA_INVALID);
+  const uint8_t ParkInTry(const ApaSlot& slot, const ApaPADirection direction =
+                                                   ApaPADirection::PA_INVALID);
   const bool CheckPAFinished();
 
   const bool UpdatePASlotInfo();
@@ -147,6 +165,18 @@ class ParallelParkInScenario : public ParkingScenario {
   Eigen::Vector2d line_coeffs_out_;
 
  protected:
+  void LateralPathOptimization(
+      std::vector<pnc::geometry_lib::PathPoint>& out_path_vec,
+      const std::vector<pnc::geometry_lib::PathPoint>& in_path_vec,
+      const uint8_t gear_cmd);
+  bool UseLastPathForAstar();
+  void TrimPathToFirstGearChange(
+      std::vector<pnc::geometry_lib::PathPoint>& complete_path_point_vec,
+      std::vector<pnc::geometry_lib::PathPoint>& current_path_point_vec);
+  bool IsContinuousSTurn(
+      const std::vector<pnc::geometry_lib::PathPoint>& path_points,
+      int& start_idx, int& end_idx);
+  bool SimplifyComplexSTurn(std::vector<pnc::geometry_lib::PathPoint>& points);
   std::vector<Eigen::Vector2d> ProcessCurbPointsAndGetNearestAbsY(
       double& nearest_abs_y,
       const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
@@ -191,6 +221,8 @@ class ParallelParkInScenario : public ParkingScenario {
 
   void UpdatePADirection();
 
+  const bool PostProcessToZigZagPath();
+
   Tlane t_lane_;
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
@@ -221,17 +253,23 @@ class ParallelParkInScenario : public ParkingScenario {
   std::unordered_map<int, std::vector<AngleResultHeightObs>> multi_frame_height_obs_map_;
   bool last_frame_limiter_valid_ = false;
   bool out_again_path_better_ = false;
+  std::vector<std::vector<pnc::geometry_lib::PathSegment>>
+      path_in_slot_for_request_;
+  std::vector<std::vector<pnc::geometry_lib::PathSegment>>
+      path_in_slot_for_with_path_;
 
-  protected:
+ protected:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
   // do not clear it every frame in cruise state.
   AstarResponse response_;
 
   AstarPathGear current_gear_ = AstarPathGear::PARKING;
-  ParkObstacleList obs_hastar;
+  ParkObstacleList obs_hastar_;
   VirtualWallDecider virtual_wall_decider_;
   AstarSearchState astar_state_ = AstarSearchState::NONE;
+  ReplanReason last_replan_reason_ = ReplanReason::NOT_REPLAN;
+  bool used_last_path_ = false;
 };
 
 }  // namespace apa_planner

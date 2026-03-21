@@ -152,6 +152,7 @@ struct GeometryPathInput {
 
   Tlane tlane;
   bool out_again_path_better = false;
+  AstarSearchState astar_state = AstarSearchState::NONE;
 };
 
 struct GeometryPathOutput {

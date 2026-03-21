@@ -474,6 +474,52 @@ const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
   return (cos_AOC > cos_AOB && cos_BOC > cos_AOB);
 }
 
+const bool CheckPointLiesOnArcV2(const Arc& arc, const Eigen::Vector2d& pC,
+                                 double eps) {
+  const Eigen::Vector2d& center = arc.circle_info.center;
+  double radius = std::abs(arc.circle_info.radius);
+
+  double dist_to_center = (pC - center).norm();
+  if (std::abs(dist_to_center - radius) > eps) {
+    return false;
+  }
+
+  auto get_angle = [&](const Eigen::Vector2d& pt) {
+    return std::atan2(pt.y() - center.y(), pt.x() - center.x());
+  };
+
+  double angle_A = get_angle(arc.pA);
+  double angle_B = get_angle(arc.pB);
+  double angle_C = get_angle(pC);
+
+  auto normalize = [](double a) {
+    while (a < 0) a += 2 * M_PI;
+    while (a >= 2 * M_PI) a -= 2 * M_PI;
+    return a;
+  };
+  angle_A = normalize(angle_A);
+  angle_B = normalize(angle_B);
+  angle_C = normalize(angle_C);
+
+  Eigen::Vector2d vA = arc.pA - center;
+  Eigen::Vector2d vB = arc.pB - center;
+  bool is_anticlockwise = (vA.x() * vB.y() - vA.y() * vB.x()) > 0;
+
+  if (is_anticlockwise) {
+    if (angle_A <= angle_B) {
+      return angle_C >= angle_A - eps && angle_C <= angle_B + eps;
+    } else {
+      return angle_C >= angle_A - eps || angle_C <= angle_B + eps;
+    }
+  } else {
+    if (angle_B <= angle_A) {
+      return angle_C <= angle_A + eps && angle_C >= angle_B - eps;
+    } else {
+      return angle_C <= angle_A + eps || angle_C >= angle_B - eps;
+    }
+  }
+}
+
 const bool CalTangentLineFromHeadingAndArc(
     const double line_heading, const pnc::geometry_lib::Arc &arc,
     std::vector<Eigen::Vector2d> &tangent_points) {

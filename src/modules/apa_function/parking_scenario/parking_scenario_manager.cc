@@ -242,7 +242,8 @@ bool ParkingScenarioManager::ScenarioRunning() {
 
   if (scenario_type_ == ParkingScenarioType::SCENARIO_NARROW_SPACE) {
     JSON_DEBUG_VALUE("geometry_path_release", false);
-  } else {
+  } else if (scenario_type_ != ParkingScenarioType::SCENARIO_PARALLEL_IN &&
+             scenario_type_ != ParkingScenarioType::SCENARIO_PARALLEL_OUT) {
     JSON_DEBUG_VALUE("geometry_path_release", true);
   }
 
