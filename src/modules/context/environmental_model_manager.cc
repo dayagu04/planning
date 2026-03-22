@@ -393,10 +393,8 @@ bool EnvironmentalModelManager::Run() {
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] =
       local_view.function_state_machine_info_recv_time;
 
-#ifdef PlanTimeBenchmark
-  double start_time, end_time;
-  start_time = IflyTime::Now_ms();
-#endif
+  double start_time = current_time;
+  double end_time;
 
   // Step 2) update ego_state
   if (!ego_state_update(current_time, local_view)) {
@@ -606,8 +604,9 @@ bool EnvironmentalModelManager::Run() {
   // ILOG_INFO << "edt_manager cost:" << time_end - time_start;
   // JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);
 
-#ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
+
+#ifdef PlanTimeBenchmark
   JSON_DEBUG_VALUE("edt_manager cost", end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
