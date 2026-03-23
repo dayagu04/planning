@@ -147,7 +147,7 @@ void PathTimeHeuristicOptimizer::FallbackFunction(
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
-          ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
+          ILOG_INFO << "ERROR! Frenet Point -> Cart Point Failed!!!";
         }
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;
@@ -175,7 +175,7 @@ void PathTimeHeuristicOptimizer::FallbackFunction(
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
-          ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
+          ILOG_INFO << "ERROR! Frenet Point -> Cart Point Failed!!!";
         }
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;
@@ -198,14 +198,13 @@ void PathTimeHeuristicOptimizer::FallbackFunction(
 void PathTimeHeuristicOptimizer::GenerateEgoBoxSet(
     TrajectoryPoints &traj_points) {
   if (!traj_points.empty()) {
-    TrajectoryPoint traj_point;
     std::vector<planning_math::Vec2d> vertices;
     for (int i = 0; i < traj_points.size(); i++) {
       vertices.clear();
-      traj_point = traj_points[i];
+      const TrajectoryPoint& traj_point = traj_points[i];
       GetVehicleVertices(traj_point, vertices);
       AABox2d ego_box(vertices);
-      ego_box_set_[i] = ego_box;
+      ego_box_set_[i] = std::move(ego_box);
     }
   }
 }
@@ -230,8 +229,9 @@ void PathTimeHeuristicOptimizer::GetVehicleVertices(
   ego_points[2] = Point2D(c_x + d_wx - d_lx, c_y - d_wy - d_ly);
   ego_points[3] = Point2D(c_x + d_wx + d_lx, c_y + d_ly - d_wy);
 
-  Vec2d ego_vertice_frenet(traj_point.x, traj_point.y);
-  Point2D ego_point_frenet(traj_point.s, traj_point.l);
+  Vec2d ego_vertice_frenet;
+  Point2D ego_point_frenet;
+  vertices.reserve(ego_points.size());
   for (int i = 0; i < ego_points.size(); ++i) {
     if (base_frenet_coord_->XYToSL(ego_points[i], ego_point_frenet)) {
       ego_vertice_frenet.set_x(ego_point_frenet.x);

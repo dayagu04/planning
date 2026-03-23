@@ -72,23 +72,26 @@ class StGraphSearcher : public Task {
 
   bool CheckYieldBackVehicle(
       const std::unordered_map<int64_t, speed::STBoundary::DecisionType>&
-          decision_table) const;
+          decision_table);
 
   bool CheckOvertakeFrontVehicleOnTargetLane(
       const std::unordered_map<int64_t, speed::STBoundary::DecisionType>&
-          decision_table) const;
+          decision_table);
+
+  // prevent frame to frame switching for rear agent
+  int32_t GetStabilizedTargetLaneRearAgentId();
 
   bool CheckIfFrontVehcileSafe();
 
   double GetAgentMinPredictionSpeed(const int64_t agent_id) const;
 
   void AddStGraphSearcherDataToProto(
-      const std::vector<StSearchNode> st_search_path);
+      const std::vector<StSearchNode>& st_search_path);
 
   // compute cost and h_cost
   void ComputeNodeCost(const StSearchInput& input_info,
                        const StSearchNode& current_node,
-                       StSearchNode* const succ_node) const;
+                       StSearchNode* const succ_node);
 
   double ComputeYieldCost(const StSearchInput& input_info,
                           const StSearchNode& node) const;
@@ -150,6 +153,16 @@ class StGraphSearcher : public Task {
   std::vector<StSearchNode> successor_nodes_;
   std::array<AStarSearchStyle, 2> search_style_context_;
   AStarSearchConfig search_config_;
+
+  bool has_prev_strategy_ = false;
+  bool prev_is_overtake_front_vehicle_on_target_lane_ = false;
+  bool prev_is_yield_back_vehicle_ = false;
+
+  int32_t cached_stabilized_rear_agent_id_ = -1;
+  int32_t last_target_lane_rear_agent_id_ = -1;
+  int32_t candidate_rear_agent_id_ = -1;
+  int rear_agent_consecutive_cnt_ = 0;
+  static constexpr int kRearAgentHysteresisFrames = 5;
 };
 
 }  // namespace planning

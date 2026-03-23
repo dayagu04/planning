@@ -31,12 +31,12 @@ class StGraphUtils {
 
   static const agent::Agent* GetFrontAgentOfTargetLane(
       const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-      const std::string lane_change_status,
+      const std::string& lane_change_status,
       const std::string& lane_change_request);
 
   static const agent::Agent* GetRearAgentOfTargetLane(
       const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-      const std::string lane_change_status,
+      const std::string& lane_change_status,
       const std::string& lane_change_request);
 
   static double CalculateLateralBufferForNormalLaneKeeping(
@@ -50,8 +50,8 @@ class StGraphUtils {
 
   static void DetermineCautionYieldDecision(
       const std::shared_ptr<StGraphInput>& st_graph_input,
-      const std::string lane_change_status,
-      const std::string lane_change_request,
+      const std::string& lane_change_status,
+      const std::string& lane_change_request,
       const std::unordered_map<int32_t, std::vector<int64_t>>&
           agent_id_st_boundaries_map,
       const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&

@@ -16,7 +16,8 @@ void MatchGapCost::GetCost(
     const double reliable_safe_distance_to_gap_front_obj,
     const double reliable_safe_distance_to_gap_back_obj,
     const double ego_current_vel, const bool is_merge_change,
-    const LanChangeSafetyCheckConfig& lc_safety_distance_config) {
+    const LanChangeSafetyCheckConfig& lc_safety_distance_config,
+    const bool is_emergency_scene, const double extreme_time_back) {
   // Helper function to calculate the cost for distance and velocity
   const double ttc_safe_limit = is_merge_change ? 0.0 : 0.0;
   const double gap_vel_gain = is_merge_change ? 1.0 : 1.0;
@@ -28,7 +29,8 @@ void MatchGapCost::GetCost(
                                     //大车额外增加5m基础距离
   auto& xpv = lc_safety_distance_config.diff_speed_init_ttc_map
                   .diff_kph_table;  // 后车 - 自车速度 kph
-  auto& fpv =
+  auto& fpv = is_emergency_scene?
+      lc_safety_distance_config.diff_speed_init_ttc_map.aggressive_ttc_table:
       lc_safety_distance_config.diff_speed_init_ttc_map.ttc_table;  //起始ttc
   auto calculate_gap_distance_match_cost =
       [](double dist_to_obj, double safe_border_distance,
@@ -115,15 +117,16 @@ void MatchGapCost::GetCost(
   cost_ = 0.0;
 
   double safe_border_distance_to_gap_front_obj = 0.0;
-  double min_safe_distance_front = 3.8;
+  double min_safe_distance_front = 3.5;
   double safe_border_distance_to_gap_back_obj = 0.0;
   double min_safe_distance_rear = 0.0;
   if (upper_st_point.agent_id() != kNoAgentId) {
     if (upper_st_point.velocity() < poly_end_v) {
       double rel_v = poly_end_v - upper_st_point.velocity();
       double front_ttc_buffer = (poly_end_v * rel_v) / (2.0 * 2.5);
-      min_safe_distance_front = std::max(front_ttc_buffer, 3.8);
+      min_safe_distance_front = std::max(front_ttc_buffer, 3.5);
     }
+    min_safe_distance_front = std::max(min_safe_distance_front, poly_end_v * 0.3);
     double large_car_buffer = upper_st_point.extreme_l() > 8.0 ? 3.0 : 0.0;
     safe_border_distance_to_gap_front_obj =
         min_safe_distance_front + reliable_safe_distance_to_gap_front_obj +
@@ -140,12 +143,13 @@ void MatchGapCost::GetCost(
                              linear_expand_extra_gap_distance_by_ego_vel(
                                  poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
     double large_car_buffer = lower_st_point.extreme_l() > 8.0 ? 5.0 : 0.0;
+    double coffi_index = extreme_time_back / 0.2;
     safe_border_distance_to_gap_back_obj =
         lower_st_point.acceleration() > poly_end_a
             ? reliable_safe_distance_to_gap_back_obj + min_safe_distance_rear +
                   large_car_buffer
             : std::max(reliable_safe_distance_to_gap_back_obj +
-                           min_safe_distance_rear * 0.75,
+                           min_safe_distance_rear * std::pow(0.9, coffi_index),
                        min_safe_distance_rear) +
                   large_car_buffer;
   }

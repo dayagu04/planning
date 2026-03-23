@@ -37,8 +37,7 @@ MergeRequest::MergeRequest(
 }
 
 void MergeRequest::Update(int lc_status) {
-  std::cout << "MergeRequest::Update::coming merge lane change request"
-            << std::endl;
+  ILOG_DEBUG << "MergeRequest::Update::coming merge lane change request";
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   // trigger merge lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {

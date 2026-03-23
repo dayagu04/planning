@@ -466,12 +466,12 @@ bool DPRoadGraph::CartSpline(
     y_vec.emplace_back(path_point.y());
     last_s = adjusted_s;
   }
-  
+
   // 检查过滤后的点数是否足够（spline 至少需要 3 个点）
   if (s_vec.size() < 3) {
     return false;
   }
-  
+
   ref_path_curve_.x_vec = x_vec;
   ref_path_curve_.y_vec = y_vec;
   ref_path_curve_.s_vec = s_vec;
@@ -590,7 +590,7 @@ bool DPRoadGraph::SampleLanes(
     // avaliable lane boundary
     if (current_lane_ptr_ == nullptr && left_lane_ptr_ == nullptr &&
         right_lane_ptr_ == nullptr) {
-      ILOG_ERROR << "No avaliable lanes";
+      ILOG_INFO << "No avaliable lanes";
       return false;
     }
     double aheads = s_step - ego_s_;

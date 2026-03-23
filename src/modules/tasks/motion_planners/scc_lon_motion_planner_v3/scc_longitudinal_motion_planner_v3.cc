@@ -34,9 +34,10 @@ void SccLongitudinalMotionPlannerV3::Init() {
   // init planning input
   planning_input_.mutable_ref_pos_vec()->Resize(N, 0.0);
   planning_input_.mutable_ref_vel_vec()->Resize(N, 0.0);
+  planning_input_.mutable_ref_acc_vec()->Resize(N, 0.0);
   planning_input_.mutable_s_weights()->Resize(N, 0.0);
   planning_input_.mutable_v_weights()->Resize(N, 0.0);
-
+  planning_input_.mutable_a_weights()->Resize(N, 0.0);
   planning_input_.mutable_soft_pos_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_soft_pos_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_hard_pos_max_vec()->Resize(N, 0.0);
@@ -93,6 +94,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
       session_->planning_context().longitudinal_decider_output();
   const auto &s_refs = longitudinal_decider_output.s_refs;
   const auto &v_refs = longitudinal_decider_output.ds_refs;
+  const auto &a_refs = longitudinal_decider_output.dds_refs;
   const auto &s_bounds = longitudinal_decider_output.hard_bounds_v3;
   const auto &s_soft_bounds = longitudinal_decider_output.soft_bounds_v3;
   // const auto &s_lead_bounds = longitudinal_decider_output.lon_lead_bounds;
@@ -107,6 +109,10 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
 
     auto const &v_ref = v_refs[i].first;
     auto const &v_weight = v_refs[i].second;
+
+    auto const &a_ref = a_refs[i].first;
+    auto const &a_weight = a_refs[i].second;
+
     auto s_ref = s_refs[i].first;
     auto s_weight = s_refs[i].second;
 
@@ -118,8 +124,10 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
 
     planning_input_.mutable_ref_pos_vec()->Set(i, s_ref);
     planning_input_.mutable_ref_vel_vec()->Set(i, v_ref);
+    planning_input_.mutable_ref_acc_vec()->Set(i, a_ref);
     planning_input_.mutable_s_weights()->Set(i, s_weight);
     planning_input_.mutable_v_weights()->Set(i, v_weight);
+    planning_input_.mutable_a_weights()->Set(i, a_weight);
   }
 
   // 2. set bounds

@@ -218,7 +218,7 @@ class LaneChangeStateMachineManager {
   double CalculateLCSafetyCheckTime() const;
   double CalculateCheckTimeRatio() const;
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(
-      const std::array<double, 3> init_lon_state) const;
+      const std::array<double, 3>& init_lon_state) const;
 
   bool IsTargetLaneMergeToOriginLane() const;
 
@@ -360,5 +360,8 @@ class LaneChangeStateMachineManager {
   StateMachineLaneChangeStatus last_state_{
       StateMachineLaneChangeStatus::kLaneKeeping};
   bool overtake_lane_change_confirmed_{false};
+  bool is_aggressive_scence_{false}; // 激进场景标志位
+  // 用于判断紧急场景
+  bool IsEmergencyScene() const;
 };
 }  // namespace planning

@@ -198,7 +198,7 @@ class ObjectDecisionType {
     ignore_ = ignore;
     object_tag_case_ = kIgnore;
   }
-  void setDecisionSource(std::string module_name) {
+  void setDecisionSource(const std::string& module_name) {
     decision_source_ = module_name;
   }
 

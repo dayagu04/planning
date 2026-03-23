@@ -40,9 +40,8 @@ void LaneChangeLaneManager::reset_lc_lanes(
       target_lane_virtual_id_ = origin_lane_virtual_id_;
       fix_lane_virtual_id_ = origin_lane_virtual_id_;
     } else {
-      std::cout
-          << "origin lane disappear ,set cur_lane as origin/target/fix_lane"
-          << std::endl;
+      ILOG_DEBUG
+          << "origin lane disappear ,set cur_lane as origin/target/fix_lane";
       target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
       origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
       fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
@@ -54,9 +53,8 @@ void LaneChangeLaneManager::reset_lc_lanes(
       // target_lane_virtual_id_ = origin_lane_virtual_id_;
       fix_lane_virtual_id_ = origin_lane_virtual_id_;
     } else {
-      std::cout
-          << "origin lane disappear ,set cur_lane as origin/target/fix_lane"
-          << std::endl;
+      ILOG_DEBUG
+          << "origin lane disappear ,set cur_lane as origin/target/fix_lane";
       target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
       origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
       fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();

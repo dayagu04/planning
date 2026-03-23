@@ -162,6 +162,10 @@ class StGraphInput {
 
   void Reset();
 
+  const std::unordered_set<int32_t>& GetFollowAgentIds() const {
+    return follow_agent_ids_;
+  }
+
  private:
   planning::framework::Session* session_ = nullptr;
   STGraphConfig config_;
@@ -210,6 +214,8 @@ class StGraphInput {
   bool enable_backward_extend_st_boundary_ = false;
   double backward_extend_time_s_ = 0.0;
   planning_math::Box2d planning_init_point_box_;
+  
+  std::unordered_set<int32_t> follow_agent_ids_;
 };
 }  // namespace speed
 }  // namespace planning

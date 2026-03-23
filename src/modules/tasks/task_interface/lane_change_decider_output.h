@@ -66,6 +66,9 @@ struct LaneChangeDeciderOutput {
   double ego_press_line_ratio = 0.0;
   bool is_hard_to_merge = false;
   bool is_fail_to_merge = false;
+  bool is_aggressive_scence = false;
+  int gap_front_id;
+  int gap_back_id;
 };
 
 }  // namespace planning

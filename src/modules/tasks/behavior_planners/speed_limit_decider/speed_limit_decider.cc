@@ -35,7 +35,7 @@ constexpr double kSSharpBendSpeedScaleRatio = 0.8;
 constexpr double kTFLSpeedLimitDis = 160.0;
 constexpr double kMergePointDetectedDistance = 20.0;
 constexpr double kStaticAgentAvoidLimitedSpeedHigh = 10.0;
-constexpr double kStaticAgentAvoidLimitedSpeedLow = 4.17;
+constexpr double kStaticAgentAvoidLimitedSpeedLow = 8.33;
 constexpr double kDynamicAgentAvoidLimitedSpeedHigh = 5.56;
 constexpr double kDynamicAgentAvoidLimitedSpeedLow = 2.78;
 const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
@@ -80,8 +80,15 @@ constexpr double kRoadBoundarySharpDecelThreshold = -1.2;  // Deceleration thres
 constexpr double kRoadBoundaryCooldownDeltaThreshold = 1.11;  // m/s threshold to treat limit change as significant
 constexpr double kDefaultLimitSpeedMps = 100.0;  // Default value meaning no speed limit applied
 constexpr double kCurvSpeedDifference = 3 / 3.6;
-constexpr int kSharpCurveMinFrames =
-    5;  // Min frames to maintain sharp curve state
+constexpr double kCurvatureByDecelExitThreshold = -0.5;
+constexpr double kCurvatureByDecelNearSpeedDecelExitThreshold = -1.0;
+constexpr double kCurvatureByDecelSpeedDiffExit = 4 / 3.6;  // 4kph
+constexpr double kRoadBoundarySharpDecelExitThreshold = -0.5;
+constexpr double kRoadBoundarySharpNearSpeedDecelExitThreshold = -1.0;
+constexpr double kRoadBoundarySharpSpeedDiffExit = 4 / 3.6;  // 4kph
+constexpr double kMapSharpCurveByDecelExitThreshold = -0.5;
+constexpr double kMapSharpCurveByDecelNearSpeedDecelExitThreshold = -1.0;
+constexpr double kMapSharpCurveByDecelSpeedDiffExit = 4 / 3.6;  // 4kph
 constexpr double kMinRampSampleLength = 150.0;
 constexpr double kMapSharpCurveRadiusEnter =
     100.0;  // Enter radius threshold for map sharp curve (m)
@@ -972,6 +979,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   if (reference_path_ptr == nullptr) {
+    // Reset curve hysteresis states when reference path is unavailable.
+    last_is_sharp_curve_ = false;
+    last_is_sharp_curve_by_decel_ = false;
     road_radius_origin_ = 10000.0;
     JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin_);
     JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
@@ -1230,39 +1240,29 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     required_deceleration = -2.0;
   }
 
-  // Determine sharp curve by deceleration with frame count hysteresis
+  // Determine sharp curve by deceleration with explicit enter/exit hysteresis
   bool is_sharp_curve_by_decel = false;
+  const double sharp_curve_by_decel_speed_diff = v_ego - v_limit_road;
+  bool should_enter_sharp_curve_by_decel = false;
+  bool should_exit_sharp_curve_by_decel = false;
 
   if (speed_limit_config_.enable_sharp_curve_by_decel) {
-    bool should_enter_sharp_curve =
+    should_enter_sharp_curve_by_decel =
         (required_deceleration < kCurvatureDecelThreshold) && is_sharp_curve;
+    should_exit_sharp_curve_by_decel =
+        !is_sharp_curve ||
+        (required_deceleration > kCurvatureByDecelExitThreshold) ||
+        ((sharp_curve_by_decel_speed_diff < kCurvatureByDecelSpeedDiffExit) &&
+         (required_deceleration >
+          kCurvatureByDecelNearSpeedDecelExitThreshold));
     if (last_is_sharp_curve_by_decel_) {
-      if (should_enter_sharp_curve) {
-        is_sharp_curve_by_decel = true;
-        sharp_curve_frame_count_ = 0;
-      } else {
-        // Maintain state for minimum frames
-        if (sharp_curve_frame_count_ < kSharpCurveMinFrames) {
-          is_sharp_curve_by_decel = true;
-          sharp_curve_frame_count_++;
-        } else {
-          is_sharp_curve_by_decel = false;
-          sharp_curve_frame_count_ = 0;
-        }
-      }
+      is_sharp_curve_by_decel = !should_exit_sharp_curve_by_decel;
     } else {
-      if (should_enter_sharp_curve) {
-        is_sharp_curve_by_decel = true;
-        sharp_curve_frame_count_ = 0;
-      } else {
-        is_sharp_curve_by_decel = false;
-        sharp_curve_frame_count_ = 0;
-      }
+      is_sharp_curve_by_decel = should_enter_sharp_curve_by_decel;
     }
   } else {
     // Reset if disabled
     is_sharp_curve_by_decel = false;
-    sharp_curve_frame_count_ = 0;
   }
   last_is_sharp_curve_by_decel_ = is_sharp_curve_by_decel;
 
@@ -1658,13 +1658,30 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_map_sharp_curve);
 
+  bool is_map_sharp_curve_by_decel = false;
+  if (speed_limit_config_.enable_map_sharp_curve_by_decel && is_map_sharp_curve) {
+    const bool should_enter_map_sharp_curve_by_decel =
+        map_sharp_curve_required_decel < kCurvatureDecelThreshold;
+    const bool should_exit_map_sharp_curve_by_decel =
+        (map_sharp_curve_required_decel > kMapSharpCurveByDecelExitThreshold) ||
+        ((v_ego - v_limit_map_sharp_curve) < kMapSharpCurveByDecelSpeedDiffExit &&
+         map_sharp_curve_required_decel >
+             kMapSharpCurveByDecelNearSpeedDecelExitThreshold);
+
+    if (last_is_map_sharp_curve_by_decel_) {
+      is_map_sharp_curve_by_decel = !should_exit_map_sharp_curve_by_decel;
+    } else {
+      is_map_sharp_curve_by_decel = should_enter_map_sharp_curve_by_decel;
+    }
+  } else {
+    is_map_sharp_curve_by_decel = false;
+  }
+  last_is_map_sharp_curve_by_decel_ = is_map_sharp_curve_by_decel;
+
   // Priority: is_sharp_curve_by_decel > map_sharp_curve
   SpeedLimitType v_limit_type = SpeedLimitType::CURVATURE;
 
-  if (is_sharp_curve_by_decel ||
-      (speed_limit_config_.enable_map_sharp_curve_by_decel &&
-       is_map_sharp_curve &&
-       map_sharp_curve_required_decel < kCurvatureDecelThreshold)) {
+  if (is_sharp_curve_by_decel || is_map_sharp_curve_by_decel) {
     // Highest priority: sharp curve by deceleration
     v_limit_type = SpeedLimitType::SHARP_CURVATURE;
   }
@@ -1675,12 +1692,21 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
 
   JSON_DEBUG_VALUE("is_map_sharp_curve", is_map_sharp_curve ? 1 : 0);
+  JSON_DEBUG_VALUE("is_map_sharp_curve_by_decel",
+                   is_map_sharp_curve_by_decel ? 1 : 0);
   JSON_DEBUG_VALUE("v_limit_map_sharp_curve", v_limit_map_sharp_curve);
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
   JSON_DEBUG_VALUE("is_sharp_curve", is_sharp_curve ? 1 : 0);
   JSON_DEBUG_VALUE("is_sharp_curve_by_decel", is_sharp_curve_by_decel ? 1 : 0);
-  JSON_DEBUG_VALUE("sharp_curve_frame_count", sharp_curve_frame_count_);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_should_enter",
+                   should_enter_sharp_curve_by_decel ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_should_exit",
+                   should_exit_sharp_curve_by_decel ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_state",
+                   last_is_sharp_curve_by_decel_ ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_speed_diff",
+                   sharp_curve_by_decel_speed_diff);
   JSON_DEBUG_VALUE("required_deceleration", required_deceleration);
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
@@ -3322,6 +3348,7 @@ void SpeedLimitDecider::ResetRoadBoundarySpeedLimitState() {
   last_road_boundary_strictest_v_limit_ = kDefaultLimitSpeedMps;
   last_road_boundary_strictest_trigger_distance_ = 0.0;
   road_boundary_strictest_cooldown_count_ = 0;
+  last_is_road_boundary_sharp_decel_strictest_ = false;
 
   // Road boundary speed limit manual intervention detection
   road_boundary_v_limit_set_ = false;
@@ -4739,8 +4766,31 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
              (v_ego - v_limit_road_boundary_strictest) > kCurvSpeedDifference) {
               required_decel_strictest = -2.0;
   }
-  if (required_decel_strictest < kRoadBoundarySharpDecelThreshold) {
+  const double road_boundary_strictest_speed_diff =
+      v_ego - v_limit_road_boundary_strictest;
+  const bool should_enter_road_boundary_sharp_decel_strictest =
+      road_boundary_strictest_valid &&
+      (required_decel_strictest < kRoadBoundarySharpDecelThreshold);
+  const bool should_exit_road_boundary_sharp_decel_strictest =
+      !road_boundary_strictest_valid ||
+      (required_decel_strictest > kRoadBoundarySharpDecelExitThreshold) ||
+      ((road_boundary_strictest_speed_diff < kRoadBoundarySharpSpeedDiffExit) &&
+       (required_decel_strictest >
+        kRoadBoundarySharpNearSpeedDecelExitThreshold));
+  bool is_road_boundary_sharp_decel_strictest = false;
+  if (last_is_road_boundary_sharp_decel_strictest_) {
+    is_road_boundary_sharp_decel_strictest =
+        !should_exit_road_boundary_sharp_decel_strictest;
+  } else {
+    is_road_boundary_sharp_decel_strictest =
+        should_enter_road_boundary_sharp_decel_strictest;
+  }
+  last_is_road_boundary_sharp_decel_strictest_ =
+      is_road_boundary_sharp_decel_strictest;
+  if (is_road_boundary_sharp_decel_strictest) {
     road_boundary_type_strictest = SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL;
+  } else {
+    road_boundary_type_strictest = SpeedLimitType::ROAD_BOUNDARY;
   }
 
   // Apply strictest road boundary limit to v_target_ only (not v_cruise_limit_)
@@ -4784,6 +4834,14 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
                    required_decel_strictest);
   JSON_DEBUG_VALUE("road_boundary_strictest_type",
                    static_cast<int>(road_boundary_type_strictest));
+  JSON_DEBUG_VALUE("road_boundary_strictest_sharp_should_enter",
+                   should_enter_road_boundary_sharp_decel_strictest ? 1 : 0);
+  JSON_DEBUG_VALUE("road_boundary_strictest_sharp_should_exit",
+                   should_exit_road_boundary_sharp_decel_strictest ? 1 : 0);
+  JSON_DEBUG_VALUE("road_boundary_strictest_sharp_state",
+                   is_road_boundary_sharp_decel_strictest ? 1 : 0);
+  JSON_DEBUG_VALUE("road_boundary_strictest_speed_diff",
+                   road_boundary_strictest_speed_diff);
   JSON_DEBUG_VALUE("road_boundary_strictest_valid",
                    road_boundary_strictest_valid);
   JSON_DEBUG_VALUE("road_boundary_strictest_applied",

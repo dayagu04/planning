@@ -37,10 +37,10 @@ void LaneReferencePath::update(planning::framework::Session *session) {
                           ->mutable_virtual_lane_manager()
                           ->mutable_lane_with_virtual_id(lane_virtual_id_);
   if (virtual_lane == nullptr) {
-    std::cout << "virtual_lane == nullptr!!!:" << lane_virtual_id_ << std::endl;
+    ILOG_DEBUG << "virtual_lane == nullptr!!!:" << lane_virtual_id_;
     return;
   }
-  std::cout << "get id " << lane_virtual_id_ << std::endl;
+  ILOG_DEBUG << "get id " << lane_virtual_id_;
   virtual_lane->update_reference_path(shared_from_this());
 
   // Step 2) get reference_points
@@ -197,10 +197,10 @@ void LaneReferencePath::Update(planning::framework::Session *session,
                           ->mutable_virtual_lane_manager()
                           ->mutable_lane_with_virtual_id(lane_virtual_id_);
   if (virtual_lane == nullptr) {
-    std::cout << "virtual_lane == nullptr!!!:" << lane_virtual_id_ << std::endl;
+    ILOG_DEBUG << "virtual_lane == nullptr!!!:" << lane_virtual_id_;
     return;
   }
-  std::cout << "get id " << lane_virtual_id_ << std::endl;
+  ILOG_DEBUG << "get id " << lane_virtual_id_;
   virtual_lane->update_reference_path(shared_from_this());
 
   // Step 2) get reference_points
@@ -366,7 +366,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       session_->environmental_model().get_reference_path_manager();
   // get raw ref line
   auto &lane_points = virtual_lane->lane_points();
-  std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
+  ILOG_DEBUG << "lane_points.size(): " << lane_points.size();
   const double width = virtual_lane->width();
   ref_path_points.clear();
   ref_path_points.reserve(lane_points.size());
@@ -462,7 +462,7 @@ bool LaneReferencePath::get_ref_points_hpp(
       virtual_lane_manager->get_lane_with_virtual_id(lane_virtual_id_);
   const auto& lane_points = virtual_lane->lane_points();
   const auto& refline_point_floor_ids = virtual_lane->get_refline_point_floor_ids();
-  std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
+  ILOG_DEBUG << "lane_points.size(): " << lane_points.size();
   const double width = virtual_lane->width();
   ref_path_points.clear();
   ref_path_points.reserve(lane_points.size());
@@ -618,7 +618,7 @@ bool LaneReferencePath::get_ref_points_rads(
   if (lane_points.size() < 2) {
     return false;
   }
-  // std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
+  ILOG_DEBUG << "lane_points.size(): " << lane_points.size();
   const double width = virtual_lane->width();
   const double length = lane_points.back().s;
   const double backward_extend_buff = 5.0;

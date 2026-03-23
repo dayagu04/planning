@@ -16,8 +16,7 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
   hpp_general_lateral_decider_ =
       std::make_unique<HppGeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
-      std::make_unique<LateralMotionPlanner>(config_builder, session);
-
+      std::make_unique<HPPLateralMotionPlanner>(config_builder, session);
 
   hpp_lon_obstacle_preprocess_decider_ =
       std::make_unique<HppLonObstaclePreprocessDecider>(config_builder, session);

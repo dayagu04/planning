@@ -2,11 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 
+#include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "common/config/basic_type.h"
 #include "environmental_model.h"
-#include "lateral_obstacle.h"
 #include "math/math_utils.h"
 #include "planning_context.h"
 
@@ -18,8 +19,6 @@ JointMotionInputBuilder::JointMotionInputBuilder(
   config_ = config_builder->cast<JointMotionPlannerConfig>();
   speed_planning_config_ = config_builder->cast<SpeedPlannerConfig>();
   obstacles_selector_ = std::make_shared<JointMotionObstaclesSelector>(session);
-  speed_limit_calculator_ =
-      std::make_unique<JointMotionSpeedLimit>(config_builder, session);
 
   joint_traj_params_.s0 = 3.5;
   joint_traj_params_.a = 1.5;
@@ -564,8 +563,19 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
   const double cruise_speed = ego_state_manager->ego_v_cruise();
   JSON_DEBUG_VALUE("joint_cruise_speed", cruise_speed);
 
-  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
-  const double current_limit_speed = speed_limit_result.speed_limit;
+  const auto& speed_limit_decider_output =
+      session_->planning_context().speed_limit_decider_output();
+  double speed_limit_normal = cruise_speed;
+  if (is_in_lane_change_condition) {
+    speed_limit_normal = std::fmin(
+        speed_limit_normal, speed_planning_config_.lane_change_upper_speed_limit_kph / 3.6);
+  }
+
+  double speed_limit_ref = std::numeric_limits<double>::max();
+  auto speed_limit_type_ref = SpeedLimitType::NONE;
+  speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
+                                           &speed_limit_type_ref);
+  const double current_limit_speed = std::fmin(speed_limit_normal, speed_limit_ref);
   JSON_DEBUG_VALUE("joint_limit_speed", current_limit_speed);
 
   double current_s = 0.0;

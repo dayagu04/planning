@@ -90,18 +90,18 @@ const bool IsODLivingThings(const iflyauto::ObjectType type) {
   return false;
 }
 
-const bool IsDynamicLivingThings(const double v,
+const bool IsDynamicLivingThings(
                                  const iflyauto::ObjectType type) {
-  if (v > 0.1 && IsODLivingThings(type)) {
+  if (IsODLivingThings(type)) {
     return true;
   }
 
   return false;
 }
 
-const bool IsDynamicODVeh(const double speed_thresh, const double v,
+const bool IsDynamicODVeh(const double v,
                           const iflyauto::ObjectType type) {
-  if (v > speed_thresh && IsODVeh(type)) {
+  if (IsODVeh(type)) {
     return true;
   }
 

@@ -1863,8 +1863,7 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
   bool current_lane_exist = false;
   bool y_interval_valid = true;
   std::vector<int> y_interval_invalid_idx_vec;
-  std::cout << "roads.reference_line_msg_size:" << roads.reference_line_msg_size
-            << std::endl;
+  ILOG_DEBUG << "roads.reference_line_msg_size:" << roads.reference_line_msg_size;
   if (roads.reference_line_msg_size == 0) {
     lane_valid = false;
     return lane_valid;

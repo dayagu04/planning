@@ -643,6 +643,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   v_ref_vec = []
   for item in (plan_debug_info.long_ref_path.ds_refs):
      v_ref_vec.append(item.first)
+  a_ref_vec = []
+  if hasattr(plan_debug_info.long_ref_path, 'dds_refs'):
+      for item in (plan_debug_info.long_ref_path.dds_refs):
+          a_ref_vec.append(item.first)
+  else:
+      a_ref_vec = [0.0] * len(v_ref_vec)
 
   v_bound_low_vec = []
   try:
@@ -653,6 +659,20 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       v_bound_high_vec.append(item.upper)
   except:
     print("there is no lon_ref_path.lon_bound_v.bound")
+    v_bound_low_vec = [0.0] * len(v_ref_vec)
+    v_bound_high_vec = [0.0] * len(v_ref_vec)
+
+    a_bound_low_vec = []
+    a_bound_high_vec = []
+    try:
+        for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
+            a_bound_low_vec.append(item.lower)
+        for item in (plan_debug_info.long_ref_path.lon_bound_a.bound):
+            a_bound_high_vec.append(item.upper)
+    except:
+        print("there is no lon_ref_path.lon_bound_a.bound")
+        a_bound_low_vec = [0.0] * len(v_ref_vec)
+        a_bound_high_vec = [0.0] * len(v_ref_vec)
 
   # get sv_bound:
   sv_bound_s_vec = []
@@ -778,6 +798,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     # 'sv_bound_v': sv_bound_v_vec,
   })
 
+  lon_plan_data['data_sa'].data.update({
+    's_ref': s_ref_vec,
+    'a_ref': a_ref_vec,
+    'a_low': a_bound_low_vec,
+    'a_high': a_bound_high_vec,
+  })
+
   lon_plan_data['data_text'].data.update({
     'VisionLonAttr': planning_json_value_list,
     'VisionLonVal': vision_lon_attr_vec
@@ -885,6 +912,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'ref_pos_vec_origin': s_ref_vec,
     'ref_pos_vec': ref_pos_vec,
     'ref_vel_vec': ref_vel_vec,
+    'a_ref': a_ref_vec,
     'hard_pos_max_vec': hard_pos_max_vec,
     'hard_pos_min_vec': hard_pos_min_vec,
     'soft_pos_max_vec': soft_pos_max_vec,
@@ -1178,7 +1206,7 @@ def load_lon_global_figure(bag_loader):
   velocity_fig.line(t_plan_vec, curve_limit_velocity_vec, line_width=1,
                     legend_label='v_limit_in_turns', color="teal")  # 点状虚线，青绿色
   velocity_fig.line(t_plan_vec, speed_decider_limit_velocity_vec, line_width=1,
-                    legend_label='speed_decider_limit_velocity', color="orange") 
+                    legend_label='speed_decider_limit_velocity', color="orange")
   # velocity_fig.line(t_plan_vec, road_boundary_regular_v_limit_vec, line_width=1,
   #                     legend_label='boundary_regular_v', color="purple")
   # velocity_fig.line(t_plan_vec, road_boundary_strictest_v_limit_vec, line_width=1,
@@ -1238,8 +1266,8 @@ def load_lon_global_figure(bag_loader):
   jerk_fig.legend.click_policy = 'hide'
 
   # 各阶段耗时
-  cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
-                  y_axis_label='time cost/(ms)',width=600,height=300)
+  # cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
+  #                 y_axis_label='time cost/(ms)',width=600,height=300)
 
   plan_debug_Astar = ColumnDataSource(data ={'t_plan_debug': [],'st_graph_searcher_cost': []})
 
@@ -1258,7 +1286,58 @@ def load_lon_global_figure(bag_loader):
   GeneralPlannerModuleCostTime_vec = []
   DynamicWorldAverageCostTime_vec = []
   st_graph_searcher_cost_vec = []
+  # ARAStarTime_vec = []
+  # LateralMotionPlannerTime_vec = []
+  # GeneralLateralDeciderCostTime_vec = []
+  # LateralObstacleDeciderTime_vec = []
+  # LaneChangeDeciderTime_vec = []
 
+  # 新增字段（按你提供的列表创建
+  # TaskFunctionCost_vec = []
+  # ego_state_update_cost_vec = []
+  # update_route_info_cost_vec = []
+  # virtual_lane_manager_cost_vec = []
+  # traffic_light_decision_cost_vec = []
+  # obstacle_prediction_cost_vec = []
+  # obstacle_manager_cost_vec = []
+  # agent_manager_cost_vec = []
+  # construction_scene_manager_cost_vec = []
+  # reference_path_manager_cost_vec = []
+  # lateral_obstacle_cost_vec = []
+  # lane_tracks_mgr_cost_vec = []
+  # ConstructDynamicWorld_cost_vec = []
+  # edt_manager_cost_vec = []
+  # traffic_light_decider_cost_vec = []
+  # ego_lane_road_right_decider_cost_vec = []
+  # potential_dangerous_agent_decider_cost_vec = []
+  # lane_change_decider_cost_vec = []
+  # lat_lon_joint_planner_decider_cost_vec = []
+  # sample_poly_speed_adjust_decider_cost_vec = []
+  # lateral_obstacle_decider_cost_vec = []
+  # lane_borrow_decider_cost_vec = []
+  # lateral_offset_decider_cost_vec = []
+  # gap_selector_decider_cost_vec = []
+  # spatio_temporal_planner_cost_vec = []
+  # general_lateral_decider_cost_vec = []
+  # lateral_motion_planner_cost_vec = []
+  # stop_destination_decider_cost_vec = []
+  # mrc_brake_decider_cost_vec = []
+  # agent_longitudinal_decider_cost_vec = []
+  # construct_st_graph_cost_vec = []
+  # expand_st_boundaries_decider_cost_vec = []
+  # closest_in_path_vehicle_decider_cost_vec = []
+  # cipv_lost_prohibit_start_decider_cost_vec = []
+  # cipv_lost_prohibit_acceleration_decider_cost_vec = []
+  # parallel_longitudinal_avoid_decider_cost_vec = []
+  # agent_headway_decider_cost_vec = []
+  # longitudinal_decision_decider_cost_vec = []
+  # speed_limit_decider_cost_vec = []
+  # start_stop_decider_cost_vec = []
+  # long_ref_path_decider_cost_vec = []
+  # scc_longitudinal_motion_planner_cost_vec = []
+  # result_trajectory_generator_cost_vec = []
+  # hmi_decider_cost_vec = []
+  # planning_cost_time_vec = []
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     lead_one_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_one_dis'], 2))
     lead_two_dis_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lead_two_dis'], 2))
@@ -1267,6 +1346,8 @@ def load_lon_global_figure(bag_loader):
     desired_distance_rss_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_rss'], 2))
     desired_distance_calibrate_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_desired_distance_calibrate'], 2))
     soft_brake_distance_lead_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['soft_brake_distance_lead'], 2))
+
+
     SccLonBehaviorCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['SccLonBehaviorCostTime'], 2))
     SccLonMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['SccLonMotionCostTime'], 2))
     SccLateralMotionCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LateralMotionCostTime'], 2))
@@ -1275,7 +1356,58 @@ def load_lon_global_figure(bag_loader):
     GeneralPlannerModuleCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralPlannerModuleCostTime'], 2))
     DynamicWorldAverageCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['dynamic_world_cost'], 2))
     st_graph_searcher_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['st_graph_searcher_cost'], 2))
+    # ARAStarTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['Astar time'], 2))
+    # LateralMotionPlannerTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LateralMotionPlannerTime'], 2))
+    # GeneralLateralDeciderCostTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['GeneralLateralDeciderCostTime'], 2))
+    # LateralObstacleDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LateralObstacleDeciderTime'], 2))
+    # LaneChangeDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LaneChangeDeciderTime'], 2))
 
+    # 新增字段的读取逻辑（一一对应）
+    # TaskFunctionCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['TaskFunctionCost'], 2))
+    # ego_state_update_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ego_state_update cost'], 2))
+    # update_route_info_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['update route_info cost'], 2))
+    # virtual_lane_manager_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['virtual_lane_manager cost'], 2))
+    # traffic_light_decision_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['traffic_light_decision cost'], 2))
+    # obstacle_prediction_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['obstacle_prediction cost'], 2))
+    # obstacle_manager_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['obstacle_manager cost'], 2))
+    # agent_manager_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['agent_manager cost'], 2))
+    # construction_scene_manager_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['construction_scene_manager cost'], 2))
+    # reference_path_manager_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['reference_path_manager cost'], 2))
+    # lateral_obstacle_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lateral_obstacle cost'], 2))
+    # lane_tracks_mgr_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lane_tracks_mgr cost'], 2))
+    # ConstructDynamicWorld_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ConstructDynamicWorld cost'], 2))
+    # edt_manager_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['edt_manager cost'], 2))
+    # traffic_light_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['traffic_light_decider_cost'], 2))
+    # ego_lane_road_right_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ego_lane_road_right_decider_cost'], 2))
+    # potential_dangerous_agent_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['potential_dangerous_agent_decider_cost'], 2))
+    # lane_change_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lane_change_decider_cost'], 2))
+    # lat_lon_joint_planner_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lat_lon_joint_planner_decider_cost'], 2))
+    # sample_poly_speed_adjust_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['sample_poly_speed_adjust_decider_cost'], 2))
+    # lateral_obstacle_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lateral_obstacle_decider_cost'], 2))
+    # lane_borrow_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lane_borrow_decider_cost'], 2))
+    # lateral_offset_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lateral_offset_decider_cost'], 2))
+    # gap_selector_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['gap_selector_decider_cost'], 2))
+    # spatio_temporal_planner_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['spatio_temporal_planner_cost'], 2))
+    # general_lateral_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['general_lateral_decider_cost'], 2))
+    # lateral_motion_planner_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['lateral_motion_planner_cost'], 2))
+    # stop_destination_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['stop_destination_decider_cost'], 2))
+    # mrc_brake_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['mrc_brake_decider_cost'], 2))
+    # agent_longitudinal_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['agent_longitudinal_decider_cost'], 2))
+    # construct_st_graph_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['construct_st_graph_cost'], 2))
+    # expand_st_boundaries_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['expand_st_boundaries_decider_cost'], 2))
+    # closest_in_path_vehicle_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['closest_in_path_vehicle_decider_cost'], 2))
+    # cipv_lost_prohibit_start_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_lost_prohibit_start_decider_cost'], 2))
+    # cipv_lost_prohibit_acceleration_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_lost_prohibit_acceleration_decider_cost'], 2))
+    # parallel_longitudinal_avoid_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['parallel_longitudinal_avoid_decider_cost'], 2))
+    # agent_headway_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['agent_headway_decider_cost'], 2))
+    # longitudinal_decision_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['longitudinal_decision_decider_cost'], 2))
+    # speed_limit_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['speed_limit_decider_cost'], 2))
+    # start_stop_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['start_stop_decider_cost'], 2))
+    # long_ref_path_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['long_ref_path_decider_cost'], 2))
+    # scc_longitudinal_motion_planner_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['scc_longitudinal_motion_planner_cost'], 2))
+    # result_trajectory_generator_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['result_trajectory_generator_cost'], 2))
+    # hmi_decider_cost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['hmi_decider_cost'], 2))
+    # planning_cost_time_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['planning_cost_time'], 2))
   t_plan_debug = bag_loader.plan_debug_msg['t']
   plan_debug_Astar.data.update({
   't_plan_debug': t_plan_debug,
@@ -1283,12 +1415,71 @@ def load_lon_global_figure(bag_loader):
   })
 
   cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
-                  y_axis_label='time cost/(ms)', x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600,height=300)
+                  y_axis_label='time cost/(ms)', x_range = [t_plan_debug[0], t_plan_debug[-1]], width=800,height=1600, output_backend="svg")
   cost_time_fig.line(t_plan_vec, SccLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
   cost_time_fig.line(t_plan_vec, SccLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime_vec', color="blue")
   cost_time_fig.line(t_plan_vec, SccLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime_vec', color="orange")
   cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalCostTime_vec', color="yellow")
   cost_time_fig.line(t_plan_vec, GeneralPlannerModuleCostTime_vec, line_width=1, legend_label='GeneralPlannerModuleCostTime', color="purple")
+  # cost_time_fig.line(t_plan_vec, ARAStarTime_vec, line_width=1, legend_label='ARAStarTime_vec', color="khaki")
+  # cost_time_fig.line(t_plan_vec, GeneralLateralDeciderCostTime_vec, line_width=1, legend_label='GeneralLateralDeciderCostTime_vec', color="maroon")
+  # cost_time_fig.line(t_plan_vec, LateralMotionPlannerTime_vec, line_width=1, legend_label='LateralMotionPlannerTime_vec', color="gray")
+  # cost_time_fig.line(t_plan_vec, LateralObstacleDeciderTime_vec, line_width=1, legend_label='LateralObstacleDeciderTime_vec', color="brown")
+  # cost_time_fig.line(t_plan_vec, LaneChangeDeciderTime_vec, line_width=1, legend_label='LaneChangeDeciderTime_vec', color="black")
+
+  # 新增字段绘图逻辑（为避免颜色重复，我用了不同色系，你可根据需要调整）
+  # 第一组：环境/模型相关
+  # cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalModelManagerCost', color="green")
+  # cost_time_fig.line(t_plan_vec, TaskFunctionCost_vec, line_width=1, legend_label='TaskFunctionCost', color="purple")
+  # cost_time_fig.line(t_plan_vec, ego_state_update_cost_vec, line_width=1, legend_label='ego_state_update cost', color="brown")
+  # cost_time_fig.line(t_plan_vec, update_route_info_cost_vec, line_width=1, legend_label='update route_info cost', color="pink")
+  # cost_time_fig.line(t_plan_vec, virtual_lane_manager_cost_vec, line_width=1, legend_label='virtual_lane_manager cost', color="gray")
+  # cost_time_fig.line(t_plan_vec, traffic_light_decision_cost_vec, line_width=1, legend_label='traffic_light_decision cost', color="olive")
+  # cost_time_fig.line(t_plan_vec, obstacle_prediction_cost_vec, line_width=1, legend_label='obstacle_prediction cost', color="cyan")
+  # cost_time_fig.line(t_plan_vec, obstacle_manager_cost_vec, line_width=1, legend_label='obstacle_manager cost', color="magenta")
+  # cost_time_fig.line(t_plan_vec, agent_manager_cost_vec, line_width=1, legend_label='agent_manager cost', color="teal")
+  # cost_time_fig.line(t_plan_vec, construction_scene_manager_cost_vec, line_width=1, legend_label='construction_scene_manager cost', color="lavender")
+  # cost_time_fig.line(t_plan_vec, reference_path_manager_cost_vec, line_width=1, legend_label='reference_path_manager cost', color="maroon")
+  # cost_time_fig.line(t_plan_vec, lateral_obstacle_cost_vec, line_width=1, legend_label='lateral_obstacle cost', color="gold")
+  # cost_time_fig.line(t_plan_vec, lane_tracks_mgr_cost_vec, line_width=1, legend_label='lane_tracks_mgr cost', color="coral")
+  # cost_time_fig.line(t_plan_vec, ConstructDynamicWorld_cost_vec, line_width=1, legend_label='ConstructDynamicWorld cost', color="indigo")
+  # cost_time_fig.line(t_plan_vec, edt_manager_cost_vec, line_width=1, legend_label='edt_manager cost', color="khaki")
+
+  # # 第二组：决策相关
+  # cost_time_fig.line(t_plan_vec, traffic_light_decider_cost_vec, line_width=1, legend_label='traffic_light_decider_cost', color="navy")
+  # cost_time_fig.line(t_plan_vec, ego_lane_road_right_decider_cost_vec, line_width=1, legend_label='ego_lane_road_right_decider_cost', color="salmon")
+  # cost_time_fig.line(t_plan_vec, potential_dangerous_agent_decider_cost_vec, line_width=1, legend_label='potential_dangerous_agent_decider_cost', color="plum")
+  # cost_time_fig.line(t_plan_vec, lane_change_decider_cost_vec, line_width=1, legend_label='lane_change_decider_cost', color="sienna")
+  # cost_time_fig.line(t_plan_vec, lat_lon_joint_planner_decider_cost_vec, line_width=1, legend_label='lat_lon_joint_planner_decider_cost', color="tan")
+  # cost_time_fig.line(t_plan_vec, sample_poly_speed_adjust_decider_cost_vec, line_width=1, legend_label='sample_poly_speed_adjust_decider_cost', color="violet")
+  # cost_time_fig.line(t_plan_vec, lateral_obstacle_decider_cost_vec, line_width=1, legend_label='lateral_obstacle_decider_cost', color="turquoise")
+  # cost_time_fig.line(t_plan_vec, lane_borrow_decider_cost_vec, line_width=1, legend_label='lane_borrow_decider_cost', color="tomato")
+  # cost_time_fig.line(t_plan_vec, lateral_offset_decider_cost_vec, line_width=1, legend_label='lateral_offset_decider_cost', color="orchid")
+  # cost_time_fig.line(t_plan_vec, gap_selector_decider_cost_vec, line_width=1, legend_label='gap_selector_decider_cost', color="peru")
+  # cost_time_fig.line(t_plan_vec, spatio_temporal_planner_cost_vec, line_width=1, legend_label='spatio_temporal_planner_cost', color="palegreen")
+  # cost_time_fig.line(t_plan_vec, general_lateral_decider_cost_vec, line_width=1, legend_label='general_lateral_decider_cost', color="peachpuff")
+  # cost_time_fig.line(t_plan_vec, lateral_motion_planner_cost_vec, line_width=1, legend_label='lateral_motion_planner_cost', color="powderblue")
+  # cost_time_fig.line(t_plan_vec, stop_destination_decider_cost_vec, line_width=1, legend_label='stop_destination_decider_cost', color="rosybrown")
+  # cost_time_fig.line(t_plan_vec, mrc_brake_decider_cost_vec, line_width=1, legend_label='mrc_brake_decider_cost', color="royalblue")
+
+  # # 第三组：纵向决策/规划相关
+  # cost_time_fig.line(t_plan_vec, agent_longitudinal_decider_cost_vec, line_width=1, legend_label='agent_longitudinal_decider_cost', color="seagreen")
+  # cost_time_fig.line(t_plan_vec, construct_st_graph_cost_vec, line_width=1, legend_label='construct_st_graph_cost', color="sienna")
+  # cost_time_fig.line(t_plan_vec, expand_st_boundaries_decider_cost_vec, line_width=1, legend_label='expand_st_boundaries_decider_cost', color="silver")
+  # cost_time_fig.line(t_plan_vec, closest_in_path_vehicle_decider_cost_vec, line_width=1, legend_label='closest_in_path_vehicle_decider_cost', color="skyblue")
+  # cost_time_fig.line(t_plan_vec, cipv_lost_prohibit_start_decider_cost_vec, line_width=1, legend_label='cipv_lost_prohibit_start_decider_cost', color="slateblue")
+  # cost_time_fig.line(t_plan_vec, cipv_lost_prohibit_acceleration_decider_cost_vec, line_width=1, legend_label='cipv_lost_prohibit_acceleration_decider_cost', color="slategray")
+  # cost_time_fig.line(t_plan_vec, parallel_longitudinal_avoid_decider_cost_vec, line_width=1, legend_label='parallel_longitudinal_avoid_decider_cost', color="snow")
+  # cost_time_fig.line(t_plan_vec, agent_headway_decider_cost_vec, line_width=1, legend_label='agent_headway_decider_cost', color="springgreen")
+  # cost_time_fig.line(t_plan_vec, longitudinal_decision_decider_cost_vec, line_width=1, legend_label='longitudinal_decision_decider_cost', color="steelblue")
+  # cost_time_fig.line(t_plan_vec, speed_limit_decider_cost_vec, line_width=1, legend_label='speed_limit_decider_cost', color="tan")
+  # cost_time_fig.line(t_plan_vec, start_stop_decider_cost_vec, line_width=1, legend_label='start_stop_decider_cost', color="thistle")
+  # cost_time_fig.line(t_plan_vec, long_ref_path_decider_cost_vec, line_width=1, legend_label='long_ref_path_decider_cost', color="tomato")
+  # cost_time_fig.line(t_plan_vec, scc_longitudinal_motion_planner_cost_vec, line_width=1, legend_label='scc_longitudinal_motion_planner_cost', color="turquoise")
+  # cost_time_fig.line(t_plan_vec, result_trajectory_generator_cost_vec, line_width=1, legend_label='result_trajectory_generator_cost', color="violet")
+  # cost_time_fig.line(t_plan_vec, hmi_decider_cost_vec, line_width=1, legend_label='hmi_decider_cost', color="wheat")
+  # cost_time_fig.line(t_plan_vec, planning_cost_time_vec, line_width=1, legend_label='planning_cost_time_cost', color="wheat")
+
   f_cost_time = cost_time_fig.line("t_plan_debug", "st_graph_searcher_cost", source = plan_debug_Astar, line_width=1.6, legend_label='st_graph_searcher_cost', color="green")
   cost_time_fig.legend.click_policy = 'hide'
 
@@ -1488,6 +1679,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   })
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
+  data_sa = ColumnDataSource(data = {'s_ref':[], 'a_ref':[], 'a_low':[], 'a_high':[]})
   data_tv = ColumnDataSource(data = {'t':[], 'vel':[]})
   data_ta = ColumnDataSource(data = {'t':[], 'acc':[]})
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
@@ -1576,6 +1768,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_hpp_debug':data_hpp_debug, \
                    'data_cutin':data_cutin, \
                    'data_sv':data_sv, \
+                   'data_sa': data_sa,\
                    'data_tv':data_tv, \
                    'data_ta':data_ta, \
                    'data_tj':data_tj, \
@@ -1838,6 +2031,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig6.line('t_comfort_target', 'a_comfort_target', source = data_target_s_comfort, line_width = 2, line_color = 'orange', line_dash = 'dashed', legend_label = 'a_comfort_target')
   fig6.line('t_upper_bound', 'a_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'a_upper_bound')
   fig6.circle('t_upper_bound', 'a_upper_bound', source = data_target_s_comfort, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'a_upper_bound')
+  fig6.line('time_vec', 'a_ref', source = data_lon_motion_plan, line_width = 3, line_color = 'red', line_dash = 'dashed', legend_label = 'a_ref')
   fig6.line('time_vec', 'acc_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_lb')
   fig6.triangle ('time_vec', 'acc_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_lb')
   fig6.line('time_vec', 'acc_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_ub')
@@ -1858,7 +2052,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig7.line('time_vec', 'jerk_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkviolet', line_dash = 'solid', legend_label = 'j_joint_opt', visible=False)
 
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
-  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec'),('a_ref', '@a_ref')], mode='vline')
   hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
 
   fig5.add_tools(hover5)

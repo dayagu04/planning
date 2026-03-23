@@ -257,13 +257,8 @@ const bool NodeDeleteDecider::CheckCollision() {
       check_start_index = 1;
     }
 
-#if USE_LINK_PT_LINE
     std::vector<common_math::PathPt<float>> pt_vec;
     common_math::PathPt<float> pt;
-#else
-    std::vector<geometry_lib::PathPoint> pt_vec;
-    geometry_lib::PathPoint pt;
-#endif
 
     pt_vec.reserve(path.point_size - check_start_index + 2);
 
@@ -322,13 +317,8 @@ const bool NodeDeleteDecider::CheckCollision() {
     // do col det for every pt in curve
     const CurvePath& path = curve_node->GetCurvePath();
 // The first {x, y, phi} is collision free unless they are start and end
-#if USE_LINK_PT_LINE
     std::vector<std::vector<common_math::PathPt<float>>> pt_vec_vec;
     std::vector<common_math::PathPt<float>> pt_vec;
-#else
-    std::vector<std::vector<geometry_lib::PathPoint>> pt_vec_vec;
-    std::vector<geometry_lib::PathPoint> pt_vec;
-#endif
 
     std::vector<AstarPathGear> gear_vec;
     AstarPathGear cur_gear, next_gear;
@@ -372,11 +362,7 @@ const bool NodeDeleteDecider::CheckCollision() {
       }
       const AstarPathGear last_gear = gear_vec.back();
       const auto& pts = pt_vec_vec.back();
-#if USE_LINK_PT_LINE
       std::vector<common_math::PathPt<float>> pt_line, pt_arc;
-#else
-      std::vector<geometry_lib::PathPoint> pt_line, pt_arc;
-#endif
 
       int i = pts.size() - 1;
       for (; i >= 0; --i) {
@@ -433,11 +419,7 @@ const bool NodeDeleteDecider::CheckCollision() {
         pt_vec_vec.emplace_back(pt_line);
         gear_vec.emplace_back(last_gear);
       } else {
-#if USE_LINK_PT_LINE
         std::vector<common_math::PathPt<float>> pt_line_up, pt_line_down;
-#else
-        std::vector<geometry_lib::PathPoint> pt_line_up, pt_line_down;
-#endif
         i = 0;
         for (; i < pt_line.size(); ++i) {
           if (pt_line[i].GetX() > upper_x - redundant_x) {
@@ -697,11 +679,7 @@ const bool NodeDeleteDecider::CheckDelBySameGridNodeContinuous() {
 }
 
 void NodeDeleteDecider::SplitPathPtsUsingGradeBuffer(
-#if USE_LINK_PT_LINE
     const std::vector<common_math::PathPt<float>>& origin_pts,
-#else
-    const std::vector<geometry_lib::PathPoint>& origin_pts,
-#endif
     std::vector<GradeBufferPathPts>& grade_buffer_pts_vec) {
   grade_buffer_pts_vec.clear();
   if (origin_pts.size() < 1) {
@@ -710,11 +688,7 @@ void NodeDeleteDecider::SplitPathPtsUsingGradeBuffer(
   GradeBufferPathPts grade_buffer_pts;
   GradeColDetBufferType last_type = GetGradeBufferType(origin_pts[0]);
   GradeColDetBufferType now_type;
-#if USE_LINK_PT_LINE
   std::vector<common_math::PathPt<float>> pts;
-#else
-  std::vector<geometry_lib::PathPoint> pts;
-#endif
 
   for (size_t i = 0; i < origin_pts.size(); ++i) {
     const auto& pt = origin_pts[i];
@@ -740,11 +714,7 @@ void NodeDeleteDecider::SplitPathPtsUsingGradeBuffer(
 }
 
 const GradeColDetBufferType NodeDeleteDecider::GetGradeBufferType(
-#if USE_LINK_PT_LINE
     const common_math::PathPt<float>& pt
-#else
-    const geometry_lib::PathPoint& pt
-#endif
 ) {
   bool is_turn = true;
   if (std::fabs(pt.kappa) < 1e-3f) {
@@ -806,11 +776,7 @@ const GradeColDetBufferType NodeDeleteDecider::GetGradeBufferType(
 }
 
 const bool NodeDeleteDecider::CheckPtsCollision(
-#if USE_LINK_PT_LINE
     const std::vector<common_math::PathPt<float>>& pts,
-#else
-    const std::vector<geometry_lib::PathPoint>& pts,
-#endif
     AstarPathGear gear, bool is_special_node,
     ObsToPathDistRelativeSlot* obs_dist, double* safe_remain_dist) {
   const std::shared_ptr<EDTCollisionDetector>& edt_col_det_ptr =
@@ -838,17 +804,10 @@ const bool NodeDeleteDecider::CheckPtsCollision(
       lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
     }
 
-#if USE_LINK_PT_LINE
     const auto res =
         edt_col_det_ptr->Update(pts, lon_buffer, body_lat_buffer,
                                 mirror_lat_buffer, gear, need_cal_obs_dist);
     min_obs_dist = res.min_obs_dist;
-#else
-    const auto res = edt_col_det_ptr->Update(pts, body_lat_buffer, lon_buffer,
-                                             input_.need_cal_obs_dist, 0.5,
-                                             true, mirror_lat_buffer, gear);
-    min_obs_dist = res.pt_closest2obs.first;
-#endif
 
     if (need_cal_obs_dist) {
       obs_dist->SetDist(min_obs_dist);
@@ -919,17 +878,10 @@ const bool NodeDeleteDecider::CheckPtsCollision(
     }
 
     float min_obs_dist = 26.8f;
-#if USE_LINK_PT_LINE
     const auto res =
         edt_col_det_ptr->Update(temp_pts, lon_buffer, body_lat_buffer,
                                 mirror_lat_buffer, gear, need_cal_obs_dist);
     min_obs_dist = res.min_obs_dist;
-#else
-    const auto res = edt_col_det_ptr->Update(temp_pts, body_lat_buffer,
-                                             lon_buffer, need_cal_obs_dist, 0.5,
-                                             true, mirror_lat_buffer, gear);
-    min_obs_dist = res.pt_closest2obs.first;
-#endif
 
     if (input_.need_cal_obs_dist) {
       switch (temp_type) {

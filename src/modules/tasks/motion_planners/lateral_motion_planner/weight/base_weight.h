@@ -129,11 +129,11 @@ struct PathWeight {  // temp
   }
 };
 
-class LateralMotionPlanningWeight {
+class BaseWeight {
  public:
-  explicit LateralMotionPlanningWeight(
+  explicit BaseWeight(
       const planning::LateralMotionPlannerConfig &config);
-  ~LateralMotionPlanningWeight() = default;
+  ~BaseWeight() = default;
 
   void Init();
 
@@ -146,8 +146,8 @@ class LateralMotionPlanningWeight {
   void CalculateLatAvoidBoundPriority(
       const std::vector<std::pair<double, double>> &second_soft_bounds,
       const std::vector<std::pair<double, double>> &hard_bounds,
-      const std::vector<planning::WeightedBounds> soft_bounds_vec,
-      const std::vector<planning::WeightedBounds> hard_bounds_vec,
+      const std::vector<planning::WeightedBounds>& soft_bounds_vec,
+      const std::vector<planning::WeightedBounds>& hard_bounds_vec,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
           &second_soft_bounds_info,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
@@ -162,7 +162,7 @@ class LateralMotionPlanningWeight {
 
   void CalculateExpectedLatAccAndSteerAngle(
       double init_s, double ref_vel, double wheel_base, double steer_ratio,
-      double curv_factor, const pnc::mathlib::spline &k_s_spline,
+      double curv_factor, const std::shared_ptr<planning::ReferencePath>& reference_path,
       std::vector<double> &expected_steer_vec);
 
   void CalculateLatAccAndSteerAngleByHistoryPath(
@@ -294,7 +294,11 @@ class LateralMotionPlanningWeight {
     return virtual_ref_;
   }
 
+  const size_t GetAvoidEndIndex() const { return avoid_end_index_; }
+
   const double GetAvoidDist() const { return avoid_dist_; }
+
+  const double GetAvoidTime() const { return avoid_time_; }
 
   const LaneChangeStyle GetLaneChangeStyle() const { return lc_style_; }
 
@@ -354,6 +358,7 @@ class LateralMotionPlanningWeight {
   planning::RiskLevel risk_level_;
   double lat_offset_;
   double avoid_dist_;
+  double avoid_time_;
   double init_dis_to_ref_;
   double init_ref_theta_error_;
   double concerned_start_q_jerk_;

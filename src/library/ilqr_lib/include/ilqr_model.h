@@ -35,6 +35,7 @@ class iLqrModel {
   void Reset() { solver_success_ = false; }
 
   double GetCost(const State &x, const Control &u, const size_t &step);
+  
   double GetTerminalCost(const State &x);
 
   void GetGradientHessian(const State &x, const Control &u, const size_t &step,
@@ -45,6 +46,9 @@ class iLqrModel {
                                   LxxMT &lxx, LxuMT &lxu, LuuMT &luu);
 
   void AddCost(std::shared_ptr<BaseCostTerm> cost_term);
+
+  void ClearCost();
+
   double UpateDynamics(StateVec &x0, const ControlVec &u0);
 
   // init control u and u_vec
