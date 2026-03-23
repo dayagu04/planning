@@ -9,7 +9,6 @@
 #include "library/lc_idm_lib/include/longitudinal_motion_simulator_intelligent_driver_model.h"
 #include "reference_path.h"
 #include "src/library/lc_pure_pursuit_lib/include/basic_pure_pursuit_model.h"
-#include "tasks/behavior_planners/lane_change_decider/lane_change_joint_decision_generator/src/joint_decision_speed_limit.h"
 #include "utils/spline.h"
 
 using BasicPurePursuitModel = planning::BasicPurePursuitModel;
