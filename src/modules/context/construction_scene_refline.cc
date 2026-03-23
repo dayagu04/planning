@@ -80,15 +80,19 @@ bool ConstructionSceneRefline::ExtractRoadBoundaries(
     for (const auto& point : cluster_area.points) {
       double point_s, point_l;
       if (frenet_coord->XYToSL(point.x, point.y, &point_s, &point_l)) {
-        auto last_point = boundaries[cluster_area.direction].find(point_s);
-        if (last_point != boundaries[cluster_area.direction].end()) {
-          if (cluster_area.direction == ConstructionDirection::LEFT) {
-            boundaries[cluster_area.direction][point_s] = std::max(last_point->second, point_l);
-          } else if (cluster_area.direction == ConstructionDirection::RIGHT) {
-            boundaries[cluster_area.direction][point_s] = std::min(last_point->second, point_l);
+        for (double obs_s = point_s - kAgentBackwardDistance;
+             obs_s < point_s + kAgentForwardDistance + kSamplingLineLonGap;
+             obs_s += kSamplingLineLonGap) {
+          auto last_point = boundaries[cluster_area.direction].find(obs_s);
+          if (last_point != boundaries[cluster_area.direction].end()) {
+            if (cluster_area.direction == ConstructionDirection::LEFT) {
+              boundaries[cluster_area.direction][obs_s] = std::max(last_point->second, point_l);
+            } else if (cluster_area.direction == ConstructionDirection::RIGHT) {
+              boundaries[cluster_area.direction][obs_s] = std::min(last_point->second, point_l);
+            }
+          } else {
+            boundaries[cluster_area.direction][obs_s] = point_l;
           }
-        } else {
-          boundaries[cluster_area.direction][point_s] = point_l;
         }
       }
     }
@@ -474,8 +478,8 @@ bool ConstructionSceneRefline::GenerateConstructionRefLine(
             raw_ref_path_pt.distance_to_left_road_border - line_point.y, kDefaultLaneBorderDis);
         ref_path_pt.distance_to_right_road_border = std::fmin(
             raw_ref_path_pt.distance_to_right_road_border + line_point.y, kDefaultLaneBorderDis);
-        ref_path_pt.distance_to_left_lane_border = raw_ref_path_pt.lane_width * 0.5;
-        ref_path_pt.distance_to_right_lane_border = raw_ref_path_pt.lane_width * 0.5;
+        ref_path_pt.distance_to_left_lane_border = raw_ref_path_pt.distance_to_left_lane_border - line_point.y;
+        ref_path_pt.distance_to_right_lane_border = raw_ref_path_pt.distance_to_right_lane_border + line_point.y;
         ref_path_pt.left_road_border_type = raw_ref_path_pt.left_road_border_type;
         ref_path_pt.right_road_border_type = raw_ref_path_pt.right_road_border_type;
         ref_path_pt.left_lane_border_type = raw_ref_path_pt.left_lane_border_type;
