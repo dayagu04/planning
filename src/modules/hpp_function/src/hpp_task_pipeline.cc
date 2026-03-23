@@ -72,6 +72,35 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<ParkingSwitchDecider>(config_builder, session);
 }
 
+bool HppTaskPipeline::Reset() {
+  //TODO: 统一所有 task 的 Reset 函数
+  // lane_change_decider_->Reset();
+  // hpp_obstacle_lateral_preprocess_decider_->Reset();
+  // lateral_obstacle_decider_->Reset();
+  // hpp_general_lateral_decider_->Reset();
+  // lateral_motion_planner_->Reset();
+  // hpp_lon_obstacle_preprocess_decider_->Reset();
+  // stop_destination_decider_->Reset();
+  // mrc_brake_decider_->Reset();
+  // agent_longitudinal_decider_->Reset();
+  // expand_st_boundaries_decider_->Reset();
+  // closest_in_path_vehicle_decider_->Reset();
+  // cipv_lost_prohibit_start_decider_->Reset();
+  // cipv_lost_prohibit_acceleration_decider_->Reset();
+  // stop_destination_decider_->Reset();
+  // st_graph_searcher_->Reset();
+  // parallel_longitudinal_avoid_decider_->Reset();
+  // agent_headway_decider_->Reset();
+  // longitudinal_decision_decider_->Reset();
+  // hpp_speed_limit_decider_->Reset();
+  // start_stop_decider_->Reset();
+  // long_ref_path_decider_->Reset();
+  // scc_longitudinal_motion_planner_->Reset();
+  // result_trajectory_generator_->Reset();
+  // parking_switch_decider_->Reset();
+  return true;
+}
+
 bool HppTaskPipeline::Run() {
   auto time1 = IflyTime::Now_ms();
   bool ok = lane_change_decider_->Execute();
