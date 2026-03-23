@@ -9,6 +9,63 @@ LongitudinalHmiDecider::LongitudinalHmiDecider(framework::Session* session,
                                                const HmiDeciderConfig& config)
     : session_(session), config_(config) {}
 
+void LongitudinalHmiDecider::IntersectionLeftRightLaneTakeOverProc() {
+  const auto &virtual_lane_manager =
+    session_->environmental_model().get_virtual_lane_manager();
+  const auto current_ego_lane_mark =
+    virtual_lane_manager->lane_mark_at_ego_front_edge_pos_current();
+
+  const auto distance_to_stop_line =
+    virtual_lane_manager->GetEgoDistanceToStopline();
+  const auto distance_to_crosswalk =
+    virtual_lane_manager->GetEgoDistanceToCrosswalk();
+
+  if (distance_to_stop_line > config_.left_right_lane_mild_dis &&
+      distance_to_crosswalk > config_.left_right_lane_mild_dis) {
+    return;
+  }
+
+  auto& planning_output = session_->mutable_planning_context()
+                      ->mutable_planning_output();
+  planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_MILD;
+  if (distance_to_stop_line < config_.left_right_lane_middle_dis ||
+      distance_to_crosswalk < config_.left_right_lane_middle_dis) {
+    planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_MIDDLE;
+  }
+
+  static const std::unordered_set<iflyauto::LaneDrivableDirection>
+    left_turning_direction_set = {
+        iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_LEFT,
+        iflyauto::LaneDrivableDirection::
+            LaneDrivableDirection_DIRECTION_UTURN_LEFT,
+        iflyauto::LaneDrivableDirection::
+            LaneDrivableDirection_DIRECTION_LEFT_UTURN,
+        iflyauto::LaneDrivableDirection::
+            LaneDrivableDirection_DIRECTION_LEFT_RIGHT,
+        iflyauto::LaneDrivableDirection::
+            LaneDrivableDirection_DIRECTION_UTURNLEFT_RIGHT};
+
+  static const std::unordered_set<iflyauto::LaneDrivableDirection>
+    right_turning_direction_set = {
+        iflyauto::LaneDrivableDirection::
+            LaneDrivableDirection_DIRECTION_RIGHT,
+        iflyauto::LaneDrivableDirection::
+            LaneDrivableDirection_DIRECTION_UTURN_RIGHT,
+        iflyauto::LaneDrivableDirection::
+            LaneDrivableDirection_DIRECTION_RIGHT_UTURN};
+
+  if (left_turning_direction_set.find(current_ego_lane_mark) !=
+            left_turning_direction_set.end()) {
+    planning_output.planning_request.request_reason =
+              iflyauto::RequestReason::REQUEST_REASON_ON_INTERSECTION_LEFT_LANE;
+  } else if (right_turning_direction_set.find(current_ego_lane_mark) !=
+                   right_turning_direction_set.end()) {
+    planning_output.planning_request.request_reason =
+              iflyauto::RequestReason::REQUEST_REASON_ON_INTERSECTION_RIGHT_LANE;
+  }
+
+}
+
 bool LongitudinalHmiDecider::Execute() {
   if (!session_) {
     return false;
@@ -59,6 +116,11 @@ bool LongitudinalHmiDecider::Execute() {
         iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
   }
   JSON_DEBUG_VALUE("intersection_pass_sts", int(ad_info.intersection_pass_sts));
+
+  //intersection left/right takeover request
+  if (!tfl_decider.is_in_straight_lane) {
+    IntersectionLeftRightLaneTakeOverProc();
+  }
   return true;
 }
 }  // namespace planning
