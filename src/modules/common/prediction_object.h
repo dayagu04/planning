@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "common_c.h"
+#include "fusion_objects_c.h"
 #include "config/basic_type.h"
 
 namespace planning {
@@ -104,6 +105,11 @@ struct PredictionObject {
   bool trajectory_valid{false};
   bool is_dangerous{false};
   float32 dangerous_confidence{0.0};
+  /******* for hpp start ******/
+  double turnstile_open_ratio = 0.0;                // 闸机打开比例
+  iflyauto::GateBarrierStatus turnstile_status =
+      iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN;
+  /******* for hpp start ******/
 
   std::vector<PredictionTrajectory> trajectory_array;
 };

@@ -300,8 +300,10 @@ class IntervalMethodSolution {
 };
 
 double Interpolate(double x1, double y1, double x2, double y2, double x);
+double ClampInterpolate(double x1, double y1, double x2, double y2, double x);
 
 double Interpolate(double y1, double y2, double ratio);
+double ClampInterpolate(double y1, double y2, double ratio);
 
 double InterpolateAngle(double x1, double y1, double x2, double y2, double x);
 

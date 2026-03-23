@@ -42,6 +42,7 @@ message ElemTypeItem {
     UNKNOWN_RAMP_ROAD = 4; // 不确定的坡道
     SPEED_BUMP_ROAD = 5; // 减速带
     INTERSECTION_ROAD = 6; // 路口
+    TurnStileRoad = 7;     // 闸机
   }
   optional ElemTypeEnum type = 1;
   repeated Point points = 2;

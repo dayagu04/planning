@@ -146,7 +146,8 @@ class StGraphUtils {
       const std::vector<double>& agent_sl_boundary,
       std::vector<std::pair<int32_t, planning_math::Vec2d>>& considered_corners,
       const planning_math::Box2d& planning_init_point_box,
-      double* const lower_s, double* const upper_s, const bool is_rads_scene);
+      double* const lower_s, double* const upper_s, const bool is_rads_scene,
+      const bool is_hpp_scene);
 
   static void GetIntersectiveLineSegments(
       const std::shared_ptr<planning_math::KDPath>& kd_path, const bool is_left,

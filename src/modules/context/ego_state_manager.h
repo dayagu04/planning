@@ -53,6 +53,9 @@ class EgoStateManager {
   void set_ego_enu(const planning::common::VehicleStatus &vehicle_status);
   void set_ego_pose_and_vel(
       const planning::common::VehicleStatus &vehicle_status);
+  void set_ego_floor_id(int floor_id) {
+    ego_floor_id_ = floor_id;
+  }
   void set_ego_prediction_info(double ego_pose_timestamp);
   void set_ego_steer_angle(
       const planning::common::VehicleStatus &vehicle_status);
@@ -101,6 +104,7 @@ class EgoStateManager {
   EulerAngle euler_angle() const { return euler_angle_; }
   Pose2D ego_pose() const { return ego_pose_; };
   Pose2D ego_pose_raw() const { return ego_pose_raw_; };
+  int ego_floor_id() const { return ego_floor_id_; };
   Pose2D last_ego_pose_raw() const { return last_ego_pose_raw_; };
   Point2D ego_carte() const { return ego_carte_; };
   uint32_t ego_gear() const { return ego_gear_; };
@@ -189,6 +193,7 @@ class EgoStateManager {
   PointLLH position_llh_;
   EulerAngle euler_angle_;  // 车身姿态yaw, pitch, roll
   Pose2D ego_pose_;
+  int ego_floor_id_ = -1000;    //for hpp
   Pose2D ego_pose_raw_;
   Pose2D last_ego_pose_raw_;
   Point2D ego_carte_;

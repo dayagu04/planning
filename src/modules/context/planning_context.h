@@ -35,6 +35,7 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "../tasks/task_interface/hpp_obstacle_lateral_preprocess_decider_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -477,6 +478,18 @@ class PlanningContext {
     return narrow_space_decider_output_;
   }
 
+  /*************** for hpp start **************/
+  const HppObstacleLateralPreprocessDeciderOutput &
+  hpp_obstacle_lat_preprocess_output() const {
+    return hpp_obstacle_lat_preprocess_output_;
+  }
+
+  HppObstacleLateralPreprocessDeciderOutput &
+  mutable_hpp_obstacle_lat_preprocess_output() {
+    return hpp_obstacle_lat_preprocess_output_;
+  }
+  /*************** for hpp  end  **************/
+
   const std::shared_ptr<AdaptiveCruiseControl>
       &adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
@@ -653,6 +666,10 @@ class PlanningContext {
 
   // nsa: NarrowSpaceDeciderOutput
   NarrowSpaceDeciderOutput narrow_space_decider_output_;
+
+  /*************** for hpp start **************/
+  HppObstacleLateralPreprocessDeciderOutput hpp_obstacle_lat_preprocess_output_;
+  /*************** for hpp  end  **************/
 };
 
 }  // namespace planning

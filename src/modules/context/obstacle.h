@@ -8,6 +8,7 @@
 #include "fusion_groundline_c.h"
 #include "fusion_objects_c.h"
 #include "fusion_occupancy_objects_c.h"
+#include "fusion_road_c.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
 #include "math/polygon2d.h"
@@ -24,6 +25,8 @@ enum class SourceType {
   OCC,
   ParkingSlot,
   MAP,
+  SpeedBump,
+  RoadFusion,
 };
 
 class Obstacle {
@@ -97,6 +100,7 @@ class Obstacle {
   bool is_VRU() const { return is_VRU_; }
   bool is_traffic_facilities() const { return is_traffic_facilities_; }
   bool is_car() const { return is_car_; }
+  bool is_pedestrain() const { return is_pedestrain_; }
   bool trajectory_valid() const { return trajectory_valid_; }
   void set_cutin_prob(double cutin_prob) { cutin_prob_ = cutin_prob; }
   double cutin_prob() const { return cutin_prob_; }  // hack:clren,暂时不要用
@@ -118,6 +122,27 @@ class Obstacle {
 
   planning_math::Polygon2d get_polygon_at_point(
       const PncTrajectoryPoint &point) const;
+  /******** for hpp start ********/
+  int floor_id() const { return floor_id_; }
+  double turnstile_open_ratio() const { return turnstile_open_ratio_; }
+  iflyauto::IntersectionType intersection_type() const {
+    return intersection_type_;
+  }
+  iflyauto::GateBarrierStatus turnstile_status() const {
+    return turnstile_status_;
+  }
+  void set_floor_id(int floor_id) { floor_id_ = floor_id; }
+  void set_turnstile_open_ratio(double turnstile_open_ratio) {
+    turnstile_open_ratio_ = turnstile_open_ratio;
+  }
+  void set_intersection_type(iflyauto::IntersectionType intersection_type) {
+    intersection_type_ = intersection_type;
+  }
+  void set_turnstile_status(iflyauto::GateBarrierStatus turnstile_status) {
+    turnstile_status_ = turnstile_status;
+  }
+
+  /******** for hpp  end ********/
 
  private:
   void extract_point_at_specified_resolution(
@@ -154,6 +179,7 @@ class Obstacle {
   double length_;
   bool is_oversize_vehicle_ = false;
   bool is_VRU_ = false;
+  bool is_pedestrain_ = false;
   bool is_traffic_facilities_ = false;
   bool is_car_ = false;
   bool trajectory_valid_ = false;
@@ -169,6 +195,15 @@ class Obstacle {
   std::vector<planning_math::Vec2d> perception_points_;
   unsigned int fusion_source_;
   SourceType source_type_;
+
+  /************* for hpp start *************/
+  int floor_id_ = 0;                                        // 楼层 id
+  double turnstile_open_ratio_ = 0.0;                       // 闸机打开比例
+  iflyauto::GateBarrierStatus turnstile_status_ =
+      iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN;      // 闸机运动状态
+  iflyauto::IntersectionType intersection_type_ =
+      iflyauto::IntersectionType::INTERSECTION_UNKNOWN;  // 路口类型
+  /************* for hpp end   *************/
 };
 
 using ObstaclePtr = std::shared_ptr<Obstacle>;

@@ -35,6 +35,8 @@ class FollowTarget : public Target {
 
   void GenerateRadsFollowTarget();
 
+  void GenerateHppFollowTarget();
+
   void MakeMinFollowDistance();
 
   bool MakeSValueWithTargetFollowCurve(const int32_t index,

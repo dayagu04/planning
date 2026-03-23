@@ -12,6 +12,7 @@
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
 #include "modules/context/static_analysis_storage/static_analysis_storage.h"
+#include "modules/tasks/task_interface/hpp_obstacle_lateral_preprocess_decider_output.h"
 
 // class ObstacleManager;
 namespace planning {
@@ -40,6 +41,16 @@ struct ReferencePathPoint {
   double min_velocity;
   ReferencePathPointType type;
   bool is_in_intersection;
+  /******** for hpp start *********/
+  bool is_ramp;       // 是否在坡道上
+  double ramp_slope;    // 坡道的坡度，+为上坡，-为下坡
+  int floor_id;
+  double left_drivable_width;  // 左侧可通行宽度：考虑实时感知的障碍物
+  double right_drivable_width; // 右侧可通行宽度：考虑实时感知的障碍物
+  double drivable_width;       // 可通行宽度：考虑实时感知的障碍物
+  planning_math::PathPoint left_bound_point;
+  planning_math::PathPoint right_bound_point;
+  /******** for hpp  end  *********/
 };
 using ReferencePathPoints = std::vector<ReferencePathPoint>;
 
@@ -158,6 +169,33 @@ class ReferencePath {
     return frenet_obstacles_map_;
   }
 
+  const std::vector<std::shared_ptr<FrenetObstacle>> &get_speed_bump_obstacles()
+      const {
+    return speed_bump_frenet_obstacles_;
+  }
+  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &
+  get_speed_bump_obstacles_map() const {
+    return speed_bump_frenet_obstacles_map_;
+  }
+
+  const std::vector<std::shared_ptr<FrenetObstacle>> &get_turnstile_obstacles()
+      const {
+    return turnstile_frenet_obstacles_;
+  }
+  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &
+  get_turnstile_obstacles_map() const {
+    return turnstile_frenet_obstacles_map_;
+  }
+
+  const std::vector<std::shared_ptr<FrenetObstacle>> &
+  get_semantic_sign_obstacles() const {
+    return semantic_sign_frenet_obstacles_;
+  }
+  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &
+  get_semantic_sign_obstacles_map() const {
+    return semantic_sign_frenet_obstacles_map_;
+  }
+
   // std::vector<int> &mutable_obstacles_in_lane_map() {
   //   return obstacles_in_lane_map_;
   // }
@@ -180,6 +218,11 @@ class ReferencePath {
   const std::vector<const Obstacle *> &get_road_edges() const {
     return road_edges_;
   }
+
+  const size_t get_nearest_point_idx(const double s) const;
+  const ReferencePathPoint &get_nearest_point(const double s) const;
+  const std::pair<double, double> get_interpolated_point_width(
+      const double s, const bool is_raw_width = true) const;
 
   bool get_reference_point_by_lon(
       double s, ReferencePathPoint &reference_path_point) const;
@@ -207,6 +250,7 @@ class ReferencePath {
     return ref_path_source_;
   }
 
+  /********* for hpp start **********/
   ConstStaticAnalysisStoragePtr get_static_analysis_storage() const {
     return static_analysis_storage_;
   }
@@ -214,6 +258,15 @@ class ReferencePath {
     return static_analysis_storage_;
   }
 
+  void set_turnstile_scene_info(
+      const TurnstileSceneInfo &turnstile_scene_info) {
+    turnstile_scene_info_ = turnstile_scene_info;
+  }
+
+  TurnstileSceneInfo get_turnstile_scene_info() const {
+    return turnstile_scene_info_;
+  }
+  /********* for hpp  end  **********/
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
   inline static bool compare_obstacle_s_descend(
@@ -339,6 +392,7 @@ class ReferencePath {
   ReferencePathPoint raw_start_point_;
   ReferencePathPoint raw_end_point_;
   ReferencePathPoints refined_ref_path_points_;
+
   // frenet coord system
   // FrenetCoordinateSystemParameters frenet_parameters_;
   // std::shared_ptr<FrenetCoordinateSystem> frenet_coord_;
@@ -355,6 +409,22 @@ class ReferencePath {
 
   std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
       frenet_obstacles_map_;
+
+  /********* for hpp start **********/
+  std::vector<std::shared_ptr<FrenetObstacle>> speed_bump_frenet_obstacles_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      speed_bump_frenet_obstacles_map_;
+
+  std::vector<std::shared_ptr<FrenetObstacle>> turnstile_frenet_obstacles_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      turnstile_frenet_obstacles_map_;
+
+  std::vector<std::shared_ptr<FrenetObstacle>> semantic_sign_frenet_obstacles_;
+  std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
+      semantic_sign_frenet_obstacles_map_;
+
+  TurnstileSceneInfo turnstile_scene_info_;
+  /********* for hpp  end  **********/
 
   std::vector<int> obstacles_in_lane_map_;
 

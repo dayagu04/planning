@@ -25,6 +25,7 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   order_id_ = lane.order_id;
   // virtual_id_ = lane.virtual_id();
   relative_id_ = lane.relative_id;
+  floor_id_ = lane.floor_id;
   // ego_lateral_offset_ = lane.ego_lateral_offset();
 
   lane_types_.reserve(lane.lane_types_size);
@@ -140,6 +141,153 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   for (int i = 0; i < num_of_reflane_point; i++) {
     virtual_lane_refline_points_[i] =
         lane.lane_reference_line.virtual_lane_refline_points[i];
+  }
+
+  center_line_points_track_id_.clear();
+  // for (auto &virtual_lane_refine_point :
+  //      lane_reference_line_.virtual_lane_refline_points()) {
+  // center_line_points_track_id_.emplace_back(virtual_lane_refine_point.track_id());
+  // // todo
+  // }
+
+  width_ = width(0);
+}
+
+void VirtualLane::update_data(const std::vector<iflyauto::ReferenceLineMsg> &lanes) {
+  if(lanes.empty()) {
+    return;
+  }
+  const auto& front_lane = lanes.front();
+  reference_line_msgs_ = lanes;
+  is_nearing_ramp_mlc_task_ = false;
+  is_nearing_split_mlc_task_ = false;
+  order_id_ = front_lane.order_id;
+  // virtual_id_ = lane.virtual_id();
+  relative_id_ = front_lane.relative_id;
+  floor_id_ = front_lane.floor_id;
+  // ego_lateral_offset_ = lane.ego_lateral_offset();
+
+  lane_types_.reserve(front_lane.lane_types_size);
+  for (int i = 0; i < front_lane.lane_types_size; i++) {
+    lane_types_.emplace_back(front_lane.lane_types[i]);
+  }
+  lane_marks_.reserve(front_lane.lane_marks_size);
+  for (int i = 0; i < front_lane.lane_marks_size; i++) {
+    lane_marks_.emplace_back(front_lane.lane_marks[i]);
+  }
+  lane_sources_.reserve(front_lane.lane_sources_size);
+  for (int i = 0; i < front_lane.lane_sources_size; i++) {
+    lane_sources_.emplace_back(front_lane.lane_sources[i]);
+  }
+  lane_nums_.reserve(front_lane.lane_num_size);
+  for (int i = 0; i < front_lane.lane_num_size; i++) {
+    lane_nums_.emplace_back(front_lane.lane_num[i]);
+  }
+  lane_merge_split_point_ = front_lane.lane_merge_split_point;
+  left_lane_boundary_ = front_lane.left_lane_boundary;
+  right_lane_boundary_ = front_lane.right_lane_boundary;
+  stop_line_ = front_lane.stop_line;
+
+  max_virtual_seg_ahead_length_ = 0.0;
+  max_virtual_seg_ahead_x_ = 0.0;
+  double max_virtual_length = 0.0;
+  double max_left_virtual_length = 0.0;
+  double max_left_virtual_x = 0.0;
+  double left_boundary_x = left_lane_boundary_.begin;
+  for (int i = 0; i < left_lane_boundary_.type_segments_size; i++) {
+    const auto &left_boundary_seg = left_lane_boundary_.type_segments[i];
+    double left_boundary_seg_end_x = left_boundary_x + left_boundary_seg.length;
+    if (left_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      if (left_boundary_x >= 0) {
+        max_virtual_length += left_boundary_seg.length;
+      } else if (left_boundary_seg_end_x >= 0) {
+        max_virtual_length += left_boundary_seg_end_x;
+      }
+      if (max_virtual_length > max_left_virtual_length) {
+        max_left_virtual_length = max_virtual_length;
+        max_left_virtual_x = left_boundary_seg_end_x - max_left_virtual_length;
+      }
+    } else {
+      max_virtual_length = 0;
+    }
+    left_boundary_x += left_boundary_seg.length;
+  }
+  max_virtual_length = 0.0;
+  double max_right_virtual_length = 0.0;
+  double max_right_virtual_x = 0.0;
+  double right_boundary_x = right_lane_boundary_.begin;
+  for (int i = 0; i < right_lane_boundary_.type_segments_size; i++) {
+    const auto &right_boundary_seg = right_lane_boundary_.type_segments[i];
+    double right_boundary_seg_end_x =
+        right_boundary_x + right_boundary_seg.length;
+    if (right_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      if (right_boundary_x >= 0) {
+        max_virtual_length += right_boundary_seg.length;
+      } else if (right_boundary_seg_end_x >= 0) {
+        max_virtual_length += right_boundary_seg_end_x;
+      }
+      if (max_virtual_length > max_right_virtual_length) {
+        max_right_virtual_length = max_virtual_length;
+        max_right_virtual_x =
+            right_boundary_seg_end_x - max_right_virtual_length;
+      }
+    } else {
+      max_virtual_length = 0;
+    }
+    right_boundary_x += right_boundary_seg.length;
+  }
+  if (max_left_virtual_x < max_right_virtual_x &&
+      max_left_virtual_x + max_left_virtual_length > max_right_virtual_x) {
+    max_virtual_seg_ahead_x_ = max_left_virtual_x;
+    max_virtual_seg_ahead_length_ =
+        (max_right_virtual_x - max_left_virtual_x) + max_right_virtual_length;
+  } else if (max_right_virtual_x < max_left_virtual_x &&
+             max_right_virtual_x + max_right_virtual_length >
+                 max_left_virtual_x) {
+    max_virtual_seg_ahead_x_ = max_right_virtual_x;
+    max_virtual_seg_ahead_length_ =
+        (max_left_virtual_x - max_right_virtual_x) + max_left_virtual_length;
+  } else {
+    if (max_left_virtual_length > max_right_virtual_length) {
+      max_virtual_seg_ahead_x_ = max_left_virtual_x;
+      max_virtual_seg_ahead_length_ = max_left_virtual_length;
+    } else {
+      max_virtual_seg_ahead_x_ = max_right_virtual_x;
+      max_virtual_seg_ahead_length_ = max_right_virtual_length;
+    }
+  }
+
+  if (left_lane_boundary_.existence) {
+    if (right_lane_boundary_.existence) {
+      lane_status_ = BOTH_AVAILABLE;
+    } else {
+      lane_status_ = LEFT_AVAILABLE;
+    }
+  } else {
+    if (right_lane_boundary_.existence) {
+      lane_status_ = RIGHT_AVAILABLE;
+    } else {
+      lane_status_ = BOTH_MISSING;
+    }
+  }
+  c_poly_.resize(FUSION_ROAD_LINE_POLYNOMIAL_NUM);
+  for (int i = 0; i < FUSION_ROAD_LINE_POLYNOMIAL_NUM; i++) {
+    c_poly_[i] = front_lane.lane_reference_line.poly_coefficient_car[i];
+  }
+  virtual_lane_refline_points_.clear();
+  refline_point_floor_ids_.clear();
+  for(const auto& lane : lanes) {
+    const int num_of_reflane_point =
+        lane.lane_reference_line.virtual_lane_refline_points_size;
+    virtual_lane_refline_points_.reserve(virtual_lane_refline_points_.size() +
+                                         num_of_reflane_point);
+    refline_point_floor_ids_.reserve(refline_point_floor_ids_.size() +
+                                     num_of_reflane_point);
+    for (int i = 0; i < num_of_reflane_point; i++) {
+      virtual_lane_refline_points_.push_back(
+          lane.lane_reference_line.virtual_lane_refline_points[i]);
+      refline_point_floor_ids_.push_back(lane.floor_id);
+    }
   }
 
   center_line_points_track_id_.clear();

@@ -264,6 +264,7 @@ bool EgoStateManager::update(
   set_ego_position_llh(vehicle_status);
   set_ego_enu(vehicle_status);
   set_ego_pose_and_vel(vehicle_status);
+  set_ego_floor_id(vehicle_status.location().floor_id());
   set_ego_carte(convert_pose2point(ego_pose_));
   // set_ego_prediction_info(vehicle_status);
   set_ego_steer_angle(vehicle_status);

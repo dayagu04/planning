@@ -256,10 +256,18 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_use_ground_mark_process_split");
     enable_fusion_occupancy_objects =
         read_json_key<bool>(json, "enable_fusion_occupancy_objects");
+    enable_fusion_speed_bump_objects =
+        read_json_key<bool>(json, "enable_fusion_speed_bump_objects");
+    enable_fusion_turnstile_objects =
+        read_json_key<bool>(json, "enable_fusion_turn_stile_objects");
+    enable_fusion_intersection_objects =
+        read_json_key<bool>(json, "enable_fusion_intersection_objects");
     enable_fusion_parking_slot =
         read_json_key<bool>(json, "enable_fusion_parking_slot");
     enable_fusion_ground_line =
         read_json_key<bool>(json, "enable_fusion_ground_line");
+    enable_parking_prediction =
+        read_json_key<bool>(json, "enable_parking_prediction");
     is_ground_line_cluster =
         read_json_key<bool>(json, "is_ground_line_cluster");
     enable_ehr_column_box = read_json_key<bool>(json, "enable_ehr_column_box");
@@ -303,8 +311,12 @@ struct EgoPlanningConfig : public Config {
   bool enable_use_cone_change_request = false;
   bool enable_use_merge_change_request = false;
   bool enable_fusion_occupancy_objects = false;
+  bool enable_fusion_speed_bump_objects = false;
+  bool enable_fusion_turnstile_objects = false;
+  bool enable_fusion_intersection_objects = false;
   bool enable_fusion_parking_slot = false;
   bool enable_fusion_ground_line = true;
+  bool enable_parking_prediction = false;
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
   double hpp_min_search_range = 20;
@@ -1870,6 +1882,12 @@ struct GapSelectorConfig : public EgoPlanningConfig {
   double min_ego_v_cruise = 2.0;
 };
 
+struct HppObstacleLateralPreprocessDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+  }
+};
+
 struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -3427,6 +3445,18 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
                   curv_speed_limits_ms);
     hpp_avoid_velocity_limit_kph =
         read_json_key<double>(json, "hpp_avoid_velocity_limit_kph");
+    speed_bump_front_buffer =
+        read_json_key<double>(json, "speed_bump_front_buffer");
+    speed_bump_rear_buffer =
+        read_json_key<double>(json, "speed_bump_rear_buffer");
+    speed_bump_approach_distance =
+        read_json_key<double>(json, "speed_bump_approach_distance");
+    speed_bump_zone_speed_limit =
+        read_json_key<double>(json, "speed_bump_zone_speed_limit");
+    speed_bump_deceleration =
+        read_json_key<double>(json, "speed_bump_deceleration");
+    speed_bump_collision_buffer =
+        read_json_key<double>(json, "speed_bump_collision_buffer");
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3468,6 +3498,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   std::vector<double> curv_speed_limits_ms = {5.0 / 3.6, 6.0 / 3.6, 8.0 / 3.6,
                                          10.0 / 3.6, 20.0 / 3.6};
   double hpp_avoid_velocity_limit_kph = 10.0;
+  double speed_bump_front_buffer = 10.0;           // m
+  double speed_bump_rear_buffer = 5.0;             // m
+  double speed_bump_approach_distance = 20.0;      // m
+  double speed_bump_zone_speed_limit = 2.22;    // 8kph
+  double speed_bump_deceleration = -1.0;           // m/s^2
+  double speed_bump_collision_buffer = 0.0;        // m
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {

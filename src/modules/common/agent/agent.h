@@ -79,12 +79,16 @@ struct AgentDefaultInfo {
   /***common id info***/
   const static int32_t kNoAgentId = -1;
   // Note: agent virtual id = xxId_Base + num(which maybe a relative agent id)
-  // RADS virtual agent id base
+  // RADS virtual agent id base (倒车巡航场景)
   const static int32_t kRadsVirtualAgentId_Base = 200000;
+  // HPP virtual agent id base (前进记忆泊车场景)
+  const static int32_t kHppVirtualAgentId_Base = 300000;
 
   /***specific id which is defined by user***/
   const static int32_t kRadsStopDestinationVirtualAgentId =
       kRadsVirtualAgentId_Base + 1;
+  const static int32_t kHppStopDestinationVirtualAgentId =
+      kHppVirtualAgentId_Base + 1;
 };
 
 struct TmpPathPoint {

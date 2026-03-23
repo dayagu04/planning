@@ -9,7 +9,14 @@ HppFunction::HppFunction(framework::Session *session) : BaseFunction(session) {
 }
 
 bool HppFunction::Reset() {
-  task_pipeline_.reset(nullptr);
+  const auto config_builder =
+      session_->environmental_model().hpp_config_builder();
+  task_pipeline_ = std::make_unique<HppTaskPipeline>(config_builder, session_);
+
+  // TODO: 待所有 task 的 Reset 函数统一后，通过调用 pipeline::Reset 进行重置
+  //if (!task_pipeline_->Reset()) {
+  //  return false;
+  //}
 
   return true;
 }

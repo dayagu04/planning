@@ -229,7 +229,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
         lon_ref_path_decider_output.is_joint_danger_emergency_stop);
   }
   planning_input_.set_is_follow_cipv(lon_ref_path_decider_output.is_follow_cipv);
-  if (session_->is_rads_scene()) {
+  if (session_->is_rads_scene() || session_->is_hpp_scene()) {
     planning_input_.set_safe_distance(0.0);
   }
 

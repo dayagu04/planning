@@ -144,6 +144,13 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
 
   session_.set_scene_type(scene_type);
 
+  if (session_.is_scene_changed()) {
+    if(session_.is_hpp_scene()) {
+      hpp_function_->Reset();
+      DebugInfoManager::GetInstance().Clear();
+    }
+  }
+
   auto frame_info =
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
@@ -498,6 +505,24 @@ void PlanningScheduler::FillPlanningTrajectory(
         path_point->a = planning_result.traj_points[i].a;
         path_point->distance = planning_result.traj_points[i].s;
         path_point->jerk = planning_result.traj_points[i].jerk;
+        // 高度类型：优先采用 ResultTrajectoryGenerator 在
+        // planning_result.traj_points 中设置的 TrajectoryHeightType，
+        // 再映射到接口层的 TrajectoryPointHeightType。
+        switch (planning_result.traj_points[i].height_type) {
+          case TrajectoryHeightType::SPEED_BUMP:
+            path_point->info.type =
+                iflyauto::TRAJECTORY_POINT_HEIGHT_TYPE_SPEED_BUMP;
+            break;
+          case TrajectoryHeightType::STEP:
+            path_point->info.type =
+                iflyauto::TRAJECTORY_POINT_HEIGHT_TYPE_STEP;
+            break;
+          case TrajectoryHeightType::NORMAL:
+          default:
+            path_point->info.type =
+                iflyauto::TRAJECTORY_POINT_HEIGHT_TYPE_NORMAL;
+            break;
+        }
         ++(trajectory->trajectory_points_size);
       }
     }
@@ -931,6 +956,7 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
       current_reference_path->get_static_analysis_storage();
   const auto ego_s = frenet_ego_state.s();
   const auto ego_head_s = frenet_ego_state.head_s();
+  const auto& ego_sl_boundary = frenet_ego_state.boundary();
 
   const double kEgoIsApproachingIntersectionThs = 10.0;
   QueryTypeInfo intersection_type_info = {
@@ -945,6 +971,81 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
   } else {
     hpp_info->is_approaching_intersection = false;
   }
+
+  const double kEgoIsApproachingSpeedBoumpThs = 5.0;
+  QueryTypeInfo speed_bump_type_info = {
+      CRoadType::Ignore, CPassageType::Ignore, CElemType::SpeedBumpRoad};
+  const auto front_speed_bump = static_analysis_storage->GetFrontSRange(
+      speed_bump_type_info, ego_head_s);
+  if (front_speed_bump.first < front_speed_bump.second &&
+      ego_head_s >
+          front_speed_bump.first - kEgoIsApproachingSpeedBoumpThs &&
+      ego_s < front_speed_bump.second) {
+    hpp_info->is_approaching_speed_bumps= true;
+  } else {
+    hpp_info->is_approaching_speed_bumps = false;
+  }
+
+  const double kEgoIsInNarrowPassageThr = 3.0;
+  const double kEgoIsOutNarrowPassageThr = 1.0;
+  QueryTypeInfo narrow_passage_type_info = {
+      CRoadType::Ignore, CPassageType::NarrowPassage, CElemType::Ignore};
+  const auto front_narrow_passage_range =
+      static_analysis_storage->GetFrontSRange(narrow_passage_type_info, ego_s);
+  if (front_narrow_passage_range.first < front_narrow_passage_range.second &&
+      ego_head_s > front_narrow_passage_range.first - kEgoIsInNarrowPassageThr &&
+      ego_s < front_narrow_passage_range.second + kEgoIsOutNarrowPassageThr) {
+    hpp_info->is_narrow_passage = true;
+  } else {
+    hpp_info->is_narrow_passage = false;
+  }
+
+  const auto& lat_decision = session_.planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+  const auto& frenet_obstacles = current_reference_path->get_obstacles();
+  const auto is_nudge = [](const LatObstacleDecisionType& type) {
+    return type == LatObstacleDecisionType::LEFT || type == LatObstacleDecisionType::RIGHT;
+  };
+  constexpr double kExistPedestrainLonThr = 6.0;
+  constexpr double kExistPedestrainLatThr = 0.5;
+  constexpr double kNudgePedestrainLatThr = 0.8;
+  constexpr double kNudgeVehicleLatThr = 1.0;
+  hpp_info->is_exist_pedestrain = false;
+  hpp_info->is_nudge_pedestrain = false;
+  hpp_info->is_yield_pedestrain = false;
+  hpp_info->is_nudge_vehicle = false;
+  for(const auto& frenet_obs : frenet_obstacles) {
+    const auto id = frenet_obs->id();
+    const auto& sl_boundary = frenet_obs->frenet_obstacle_boundary();
+    if(frenet_obs->obstacle()->is_pedestrain()) {
+      if (sl_boundary.s_end > ego_sl_boundary.s_start &&
+          sl_boundary.s_start <
+              ego_sl_boundary.s_end + kExistPedestrainLonThr &&
+          sl_boundary.l_start <
+              ego_sl_boundary.l_end + kExistPedestrainLatThr &&
+          sl_boundary.l_end >
+              ego_sl_boundary.l_start - kExistPedestrainLatThr) {
+        hpp_info->is_exist_pedestrain = false;
+      }
+      if(lat_decision.find(id) != lat_decision.end() && is_nudge(lat_decision.at(id))) {
+        if(std::min(std::fabs(sl_boundary.l_start), std::fabs(sl_boundary.l_end)) <
+            kNudgePedestrainLatThr) {
+          hpp_info->is_nudge_pedestrain = true;
+        }
+      }
+    }
+    if (frenet_obs->obstacle()->is_car()) {
+      if (lat_decision.find(id) != lat_decision.end() &&
+          is_nudge(lat_decision.at(id))) {
+        if (std::min(std::fabs(sl_boundary.l_start),
+                     std::fabs(sl_boundary.l_end)) < kNudgeVehicleLatThr) {
+          hpp_info->is_nudge_pedestrain = true;
+        }
+      }
+    }
+  }
+
 
   const double kEgoIsInTurnThr = 3.0;
   const double kEgoIsOutTurnThr = 1.0;

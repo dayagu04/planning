@@ -744,6 +744,13 @@ struct VirtualPoint3D {
   VirtualPoint3D(double xx, double yy, double zz) : x(xx), y(yy), z(zz) {}
 };
 
+// 轨迹点高度类型（内部表示），与接口层 TrajectoryPointHeightType 一一对应
+enum class TrajectoryHeightType : std::uint8_t {
+  NORMAL = 0,
+  SPEED_BUMP = 1,
+  STEP = 2,
+};
+
 struct TrajectoryPoint {
   // enu
   double x = 0;
@@ -762,6 +769,8 @@ struct TrajectoryPoint {
   double s = 0;
   double l = 0;
   bool frenet_valid = false;
+  // 默认 NORMAL，高度类型可由具体场景覆盖
+  TrajectoryHeightType height_type = TrajectoryHeightType::NORMAL;
 };
 using TrajectoryPoints = std::vector<TrajectoryPoint>;
 
@@ -1000,6 +1009,13 @@ struct GapSelectorInfo {
   int lc_request = 0;
   GapSelectorPathSpline last_gap_selector_path_spline;
 };
+
+// 与自车路径有碰撞关系的减速带在参考线上的纵向区间 [s_min, s_max]（仅 HPP 使用）
+struct SpeedBumpPathSegment {
+  double s_min = 0.0;
+  double s_max = 0.0;
+};
+
 struct PlanningResult {
   planning::common::SceneType scene_type;
   int target_lane_id;
@@ -1016,9 +1032,11 @@ struct PlanningResult {
   // bool gap_selector_trustworthy = false;
   // std::string extra_json;
   mjson::Json extra_json = mjson::Json(mjson::Json::object());
+  std::vector<SpeedBumpPathSegment> speed_bump_path_segments;
   void Clear() {
     raw_traj_points.clear();
     traj_points.clear();
+    speed_bump_path_segments.clear();
     extra_json = mjson::Json(mjson::Json::object());
   }
 };

@@ -32,6 +32,9 @@ namespace planning {
  */
 
 struct LocalView {
+  iflyauto::PredictionResult parking_prediction_result;
+  double parking_prediction_result_recv_time = 0.0;
+
   iflyauto::PredictionResult prediction_result;
   double prediction_result_recv_time = 0.0;
 
