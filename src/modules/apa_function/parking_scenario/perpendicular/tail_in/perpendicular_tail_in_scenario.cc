@@ -2694,10 +2694,15 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
     terminal_error_y = std::fabs(ego_info_under_slot.terminal_err.GetY());
   }
 
+  const double scale_factor =
+      ego_info_under_slot.slot.slot_source_type_ == SlotSourceType::USS ? 3.0
+                                                                        : 1.0;
+
   frame_.slot_jump_big_flag =
       std::min(lat_err, terminal_error_y) >
-          apa_param.GetParam().slot_jump_lat_big_err ||
-      heading_err > apa_param.GetParam().slot_jump_heading_big_err;
+          apa_param.GetParam().slot_jump_lat_big_err * scale_factor ||
+      heading_err >
+          apa_param.GetParam().slot_jump_heading_big_err * scale_factor;
 
   ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
             << "  heading_err = " << heading_err
