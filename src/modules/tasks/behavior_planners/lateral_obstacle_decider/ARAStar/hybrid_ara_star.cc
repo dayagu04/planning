@@ -1,5 +1,5 @@
 #include "hybrid_ara_star.h"
-#include "cost/stitching_cost.h"
+
 
 #include <algorithm>
 #include <cstddef>
@@ -1626,28 +1626,28 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
 
 bool HybridARAStar::PrebuildLastFrameToCurrentSpline(
     const std::vector<TrajectoryPoint>& last_traj_points) {
-  const double last_frame_sample_interval = 0.0;  // 2.0
-  const int last_frame_max_sample_num = 0;  // 50
+  const double last_frame_sample_interval = 2.0;
+  const int last_frame_max_sample_num = 50;
   spline_s_min_ = 0.0;
   spline_s_max_ = 0.0;
 
-  // 1. 校验上一帧轨迹有效性
-  if (last_traj_points.empty()) {
+  // 轨迹点数检查
+  if (last_traj_points.size() < 2) {
     enable_stitching_cost_ = false;
     return false;
   }
 
-  // 2. 沿上一帧轨迹采样（等间隔采样，避免过密）
-  std::vector<double> cur_s_list; // 当前帧Frenet系s
-  std::vector<double> cur_l_list; // 当前帧Frenet系l（上一帧轨迹在当前帧的l值）
+  std::vector<double> cur_s_list;
+  std::vector<double> cur_l_list;
 
   double total_length = 0.0;
-  // 估算轨迹长度（简单欧氏距离累加）
   for (size_t i = 1; i < last_traj_points.size(); ++i) {
-    double dx = last_traj_points[i].x - last_traj_points[i-1].x;
-    double dy = last_traj_points[i].y - last_traj_points[i-1].y;
+    double dx = last_traj_points[i].x - last_traj_points[i - 1].x;
+    double dy = last_traj_points[i].y - last_traj_points[i - 1].y;
     total_length += std::hypot(dx, dy);
   }
+
+  // 防止轨迹点几乎重合
   if (total_length < 1e-6) {
     enable_stitching_cost_ = false;
     return false;
@@ -1656,6 +1656,7 @@ bool HybridARAStar::PrebuildLastFrameToCurrentSpline(
   int sample_num = std::min(
       static_cast<int>(total_length / last_frame_sample_interval),
       last_frame_max_sample_num);
+
   if (sample_num < 2) {
     enable_stitching_cost_ = false;
     return false;
@@ -1666,40 +1667,52 @@ bool HybridARAStar::PrebuildLastFrameToCurrentSpline(
   size_t seg_idx = 0;
   double seg_start_x = last_traj_points[0].x;
   double seg_start_y = last_traj_points[0].y;
-  double seg_length = 0.0;
+
+  double dx0 = last_traj_points[1].x - seg_start_x;
+  double dy0 = last_traj_points[1].y - seg_start_y;
+  double seg_length = std::hypot(dx0, dy0);
 
   for (int i = 0; i <= sample_num; ++i) {
     double target_dist = i * step;
-    // 找到目标距离对应的轨迹点
-    while (seg_idx + 1 < last_traj_points.size() &&
+
+    while (seg_idx + 1 < last_traj_points.size() - 1 &&
            accumulated + seg_length < target_dist) {
       accumulated += seg_length;
-      seg_idx++;
+      ++seg_idx;
       seg_start_x = last_traj_points[seg_idx].x;
       seg_start_y = last_traj_points[seg_idx].y;
-      double dx = last_traj_points[seg_idx+1].x - seg_start_x;
-      double dy = last_traj_points[seg_idx+1].y - seg_start_y;
+
+      double dx = last_traj_points[seg_idx + 1].x - seg_start_x;
+      double dy = last_traj_points[seg_idx + 1].y - seg_start_y;
       seg_length = std::hypot(dx, dy);
     }
 
-    double ratio = (target_dist - accumulated) / seg_length;
-    double x = seg_start_x + ratio * (last_traj_points[seg_idx+1].x - seg_start_x);
-    double y = seg_start_y + ratio * (last_traj_points[seg_idx+1].y - seg_start_y);
+    if (seg_length < 1e-6) {
+      continue;
+    }
 
-    // 全局坐标→当前帧Frenet系
-    double s_cur = 0.0, l_cur = 0.0;
+    double ratio = (target_dist - accumulated) / seg_length;
+    ratio = std::max(0.0, std::min(1.0, ratio));
+
+    double x = seg_start_x +
+               ratio * (last_traj_points[seg_idx + 1].x - seg_start_x);
+    double y = seg_start_y +
+               ratio * (last_traj_points[seg_idx + 1].y - seg_start_y);
+
+    double s_cur = 0.0;
+    double l_cur = 0.0;
     if (fix_lane_ && fix_lane_->XYToSL(x, y, &s_cur, &l_cur)) {
       cur_s_list.push_back(s_cur);
       cur_l_list.push_back(l_cur);
     }
   }
 
-  if (cur_s_list.size() < 2) {
+  if (cur_s_list.size() < 3) {
     enable_stitching_cost_ = false;
     return false;
   }
 
-  // 构建s-l cubic spline
+  // 构建 spline
   try {
     last2cur_stitching_spline_.set_points(cur_s_list, cur_l_list);
     spline_s_min_ = last2cur_stitching_spline_.get_x_min();
