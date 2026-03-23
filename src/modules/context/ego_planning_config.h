@@ -3574,11 +3574,11 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
     turnstile_closing_status_drop_ratio_threshold = read_json_key<double>(
         json, "turnstile_closing_status_drop_ratio_threshold", 0.5);
     turnstile_closing_status_drop_consecutive_frame_threshold = read_json_key<int32_t>(
-        json, "turnstile_closing_status_drop_consecutive_frame_threshold", 2);
+        json, "turnstile_closing_status_drop_consecutive_frame_threshold", 3);
     turnstile_emergency_opening_status_stable_frame_threshold = read_json_key<int32_t>(
-        json, "turnstile_emergency_opening_status_stable_frame_threshold", 2);
+        json, "turnstile_emergency_opening_status_stable_frame_threshold", 3);
     turnstile_frame_dt_override_sec =
-        read_json_key<double>(json, "turnstile_frame_dt_override_sec", 0.0);
+        read_json_key<double>(json, "turnstile_frame_dt_override_sec", 0.1);
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3652,9 +3652,9 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double turnstile_open_timeout_sec = 45.0;
   bool enable_turnstile_closing_status_drop_emergency_stop = true;
   double turnstile_closing_status_drop_ratio_threshold = 0.5;
-  int32_t turnstile_closing_status_drop_consecutive_frame_threshold = 2;
-  int32_t turnstile_emergency_opening_status_stable_frame_threshold = 2;
-  double turnstile_frame_dt_override_sec = 0.0;
+  int32_t turnstile_closing_status_drop_consecutive_frame_threshold = 3;
+  int32_t turnstile_emergency_opening_status_stable_frame_threshold = 3;
+  double turnstile_frame_dt_override_sec = 0.1;
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {

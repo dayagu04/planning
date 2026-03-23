@@ -295,8 +295,8 @@ bool TurnstileLongitudinalDecider::IsTurnstileInCycleClosingStatus(
       turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_CLOSE) {
     return true;
   }
-  return turnstile_obs.turnstile_open_ratio() <=
-         lon_config_.turnstile_cycle_closing_status_ratio_threshold;
+  return turnstile_obs.turnstile_status() == iflyauto::GateBarrierStatus::MOTION_DIR_STATIC &&
+         turnstile_obs.turnstile_open_ratio() <= lon_config_.turnstile_cycle_closing_status_ratio_threshold;
 }
 
 bool TurnstileLongitudinalDecider::IsTurnstileDroppedForEmergency(
