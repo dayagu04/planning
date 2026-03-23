@@ -89,18 +89,10 @@ bool RealTimeLaneChangeDecider::process() {
     if (obstacle_on_target_.at(i).d_rel < -5.0) {
       nearest_rear_car_track_ = obstacle_on_target_.at(i);
     }
-    LOG_NOTICE("obstacle_on_target[%d]'s d_rel: [%f], v_rel: [%f] \n", i,
-               obstacle_on_target_.at(i).d_rel,
-               obstacle_on_target_.at(i).v_rel);
-    LOG_NOTICE("obstacle_on_target[%d]'s d_rel: [%f], v_rel: [%f] \n", i + 1,
-               obstacle_on_target_.at(i + 1).d_rel,
-               obstacle_on_target_.at(i + 1).v_rel);
+
     GapInfo gap_info = check_gap_valid(obstacle_on_target_.at(i),
                                        obstacle_on_target_.at(i + 1));
-    std::cout << "TBDEBUG Gap Info: valid: " << gap_info.valid
-              << " front_id:" << gap_info.front_id
-              << " rear_id: " << gap_info.rear_id << " cost: " << gap_info.cost
-              << std::endl;
+
     if (gap_info.valid) {
       if (gap_info.front_id == lc_info_.target_gap_obs_first() &&
           gap_info.rear_id == lc_info_.target_gap_obs_second()) {

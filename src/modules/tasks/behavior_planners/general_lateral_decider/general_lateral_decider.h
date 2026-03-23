@@ -61,13 +61,13 @@ class GeneralLateralDecider : public Task {
   void GenerateObstaclesBoundary();
   void ApplyFirstSoftBoundsHysteresis();
   void GenerateStaticObstaclesBoundary(
-      const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+      const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
       ObstacleDecisions &obstacle_decisions);
   void GenerateStaticObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision, BoundHierarchy bound_hierarchy);
   void GenerateDynamicObstaclesBoundary(
-      const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+      const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
       ObstacleDecisions &obstacle_decisions);
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
@@ -198,10 +198,10 @@ class GeneralLateralDecider : public Task {
       int id, bool is_agent_pred_lon_overlap_with_plan_path);
   void ResetIsExceedObstacleHysteresisMap(int id = -1);
   void CalculateAvoidObstacles(
-        const std::vector<std::pair<double, double>> first_frenet_soft_bounds,
-        std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info,
-        const std::vector<std::pair<double, double>> second_frenet_soft_bounds,
-        std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info);
+        const std::vector<std::pair<double, double>>& first_frenet_soft_bounds,
+        const std::vector<std::pair<BoundInfo, BoundInfo>>& first_soft_bounds_info,
+        const std::vector<std::pair<double, double>>& second_frenet_soft_bounds,
+        const std::vector<std::pair<BoundInfo, BoundInfo>>& second_soft_bounds_info);
 
   double CalStaticNudgeLatBufDis(const std::shared_ptr<FrenetObstacle> obstacle,
                                  bool in_intersection, bool is_nudge_left,

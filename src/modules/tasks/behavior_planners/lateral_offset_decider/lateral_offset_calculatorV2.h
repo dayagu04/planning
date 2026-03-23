@@ -91,8 +91,8 @@ class LateralOffsetCalculatorV2 {
   void PostProcess(const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
   void PostSmoothLateralOffset(
       double in_lat_offset,
-      const std::array<AvoidObstacleInfo, 2> avoid_obstacles,
-      const std::array<AvoidObstacleInfo, 2> avd_obstacles_history);
+      const std::array<AvoidObstacleInfo, 2>& avoid_obstacles,
+      const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history);
   void SaveDebugInfo();
 
  private:

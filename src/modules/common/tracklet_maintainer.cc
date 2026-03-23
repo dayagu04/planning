@@ -183,11 +183,8 @@ void TrackletMaintainer::recv_prediction_objects(
   double ego_ly = ego_fx;
 
   for (auto &p : predictions) {
-    std::cout << "---recv_prediction_objects---" << std::endl;
+    ILOG_DEBUG << "---recv_prediction_objects---";
     if (p.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
-      LOG_DEBUG(
-          "[obstacle_prediction_update] ignore unknown obstacle : [%d] \n",
-          p.id);
       continue;
     }
     // Ignore the agent which is within the FOV and is fail to fusion with the
@@ -200,8 +197,8 @@ void TrackletMaintainer::recv_prediction_objects(
     bool is_ignore_by_size = p.length == 0 || p.width == 0;
 
     if (is_ignore_by_fov || is_ignore_by_size) {
-      LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
-                p.id);
+      // LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
+      //           p.id);
       continue;
     }
     double dx = p.position_x - ego_state_->ego_pose_raw().x;
@@ -213,9 +210,9 @@ void TrackletMaintainer::recv_prediction_objects(
     if (rel_x < config_.obstacle_detect_distance_lower ||
         rel_x > config_.obstacle_detect_distance_upper ||
         p.trajectory_array.size() == 0) {
-      LOG_DEBUG(
-          "[obstacle_prediction_update] ignore far away obstacle : [%d] \n",
-          p.id);
+      // LOG_DEBUG(
+      //     "[obstacle_prediction_update] ignore far away obstacle : [%d] \n",
+      //     p.id);
       continue;
     }
 
@@ -389,7 +386,7 @@ void TrackletMaintainer::recv_prediction_objects(
       trajectory_idx++;
     }
   }
-  LOG_DEBUG("1map size= : [%lu] \n", lt_fusion_object_history_map_.size());
+  // LOG_DEBUG("1map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = lt_fusion_object_history_map_.begin();
@@ -408,7 +405,7 @@ void TrackletMaintainer::recv_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%lu] \n", lt_fusion_object_history_map_.size());
+  // LOG_DEBUG("2map size= : [%lu] \n", lt_fusion_object_history_map_.size());
 }
 
 // use relative interface when hdmap valid is false
@@ -419,12 +416,12 @@ void TrackletMaintainer::recv_relative_prediction_objects(
   std::set<int> id_sets;
 
   for (auto &p : predictions) {
-    LOG_DEBUG("---recv_relative_prediction_objects--- \n");
+    // LOG_DEBUG("---recv_relative_prediction_objects--- \n");
     if (id_sets.find(p.id) != id_sets.end()) {
-      LOG_DEBUG("[obstacle_prediction_update] !!!!!! : [%d] \n", p.id);
+      // LOG_DEBUG("[obstacle_prediction_update] !!!!!! : [%d] \n", p.id);
       continue;
     } else {
-      LOG_DEBUG("[obstacle_prediction_update] new obstacle: [%d] \n", p.id);
+      // LOG_DEBUG("[obstacle_prediction_update] new obstacle: [%d] \n", p.id);
     }
     // 过滤未与相机融合， 且在相机FOV之内的
     if ((p.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
@@ -433,8 +430,8 @@ void TrackletMaintainer::recv_relative_prediction_objects(
          (p.relative_position_x > 0 &&
           tan(25) > fabs(p.relative_position_y / p.relative_position_x))) ||
         fabs(p.relative_position_y) > 10 || p.length == 0 || p.width == 0) {
-      LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
-                p.id);
+      // LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
+      //           p.id);
       continue;
     }
     double rel_x = p.relative_position_x;
@@ -529,7 +526,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
     objects.push_back(origin);
     id_sets.insert(p.id);
   }
-  LOG_DEBUG("1map size= : [%lu] \n", fusion_object_history_map_.size());
+  // LOG_DEBUG("1map size= : [%lu] \n", fusion_object_history_map_.size());
 
   if (id_sets.size() == 0) {
     for (auto iter = fusion_object_history_map_.begin();
@@ -549,7 +546,7 @@ void TrackletMaintainer::recv_relative_prediction_objects(
       }
     }
   }
-  LOG_DEBUG("2map size= : [%lu] \n", fusion_object_history_map_.size());
+  // LOG_DEBUG("2map size= : [%lu] \n", fusion_object_history_map_.size());
 }
 
 void TrackletMaintainer::fisheye_helper(const PredictionObject &prediction,
@@ -1066,7 +1063,7 @@ bool TrackletMaintainer::fill_info_with_refline(TrackedObject &item,
 }
 
 void TrackletMaintainer::fill_deriv_info(TrackedObject &item) {
-  LOG_DEBUG("----fill_deriv_info-----\n");
+  // LOG_DEBUG("----fill_deriv_info-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (!item.has_history) {
     return;
@@ -1429,7 +1426,7 @@ void TrackletMaintainer::check_accident_car(TrackedObject &item, double v_ego,
                                             double intersect_length,
                                             bool isRedLightStop,
                                             bool isOnHighway) {
-  LOG_DEBUG("----check_accident_car-----\n");
+  // LOG_DEBUG("----check_accident_car-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp{0, 10, 15, 20, 30};
   std::array<double, 5> fp{250, 200, 170, 140, 100};
@@ -1527,13 +1524,13 @@ void TrackletMaintainer::check_prebrk_object(TrackedObject &item, double v_ego,
 
 bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
                                                double v_ego) {
-  LOG_DEBUG("----is_potential_lead_one-----\n");
+  // LOG_DEBUG("----is_potential_lead_one-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   double gap = (item.last_recv_time == 0.0)
                    ? planning_cycle_time
                    : std::max((item.timestamp - item.last_recv_time),
                               planning_cycle_time);
-  LOG_DEBUG("the gap is : [%f]ms \n", gap);
+  // LOG_DEBUG("the gap is : [%f]ms \n", gap);
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
   std::array<double, 5> fp1{0.3, 0.4, 0.3, 0.25, 0.0};
   double t_lookahead = interp(item.d_rel, xp1, fp1);
@@ -1551,8 +1548,8 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   double lat_corr =
       std::max(max_d_offset, std::min(0.0, t_lookahead * item.v_lat)) *
       item.lat_coeff;
-  LOG_DEBUG("max_d_offset is: [%f], t_lookahead: [%f], lat_corr is: [%f]\n",
-            max_d_offset, t_lookahead, lat_corr);
+  // LOG_DEBUG("max_d_offset is: [%f], t_lookahead: [%f], lat_corr is: [%f]\n",
+  //           max_d_offset, t_lookahead, lat_corr);
   if (item.oncoming && item.d_rel >= 0) {
     lat_corr = 0.0;
   }
@@ -1575,10 +1572,10 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   }
 
   double d_path = std::max(item.d_path_pos + lat_corr, 0.0);
-  LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n",
-            item.track_id, item.d_rel, item.v_lat);
-  LOG_DEBUG("item.d_path_pos is: [%f], lat_corr is: [%f], d_path is : [%f]\n",
-            item.d_path_pos, lat_corr, d_path);
+  // LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n",
+  //           item.track_id, item.d_rel, item.v_lat);
+  // LOG_DEBUG("item.d_path_pos is: [%f], lat_corr is: [%f], d_path is : [%f]\n",
+  //           item.d_path_pos, lat_corr, d_path);
   if (item.v_lead > 2.0) {
     lead_d_path_thr = result;
   } else if (item.v_lead <= 2.0 && item.motion_pattern_current ==
@@ -1591,19 +1588,19 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
   if (item.oncoming && item.d_rel > 50) {
     lead_d_path_thr = 0.3;
   }
-  LOG_DEBUG("lead_d_path_thr is: [%f]\n", lead_d_path_thr);
-  LOG_DEBUG("the gap is : [%f]ms \n", gap);
+  // LOG_DEBUG("lead_d_path_thr is: [%f]\n", lead_d_path_thr);
+  // LOG_DEBUG("the gap is : [%f]ms \n", gap);
 
   if (d_path < lead_d_path_thr && item.d_rel > 0.0) {
     item.leadone_confidence_cnt =
         std::min(item.leadone_confidence_cnt + gap, 10 * planning_cycle_time);
   } else {
-    LOG_DEBUG("gap is : [%f] \n", gap);
+    // LOG_DEBUG("gap is : [%f] \n", gap);
     int count = (int)((gap + 0.01) / planning_cycle_time);
     item.leadone_confidence_cnt = std::max(
         item.leadone_confidence_cnt - 2 * count * planning_cycle_time, 0.0);
-    LOG_DEBUG("leadone_confidence_cnt is : [%f] \n",
-              item.leadone_confidence_cnt);
+    // LOG_DEBUG("leadone_confidence_cnt is : [%f] \n",
+    //           item.leadone_confidence_cnt);
   }
 
   std::array<double, 5> xp4{0, 30, 60, 90, 120};
@@ -1619,15 +1616,15 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
       item.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
     lead_confidence_thrshld = 1.0;
   }
-  LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
+  // LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
   item.is_lead = item.leadone_confidence_cnt >=
                  lead_confidence_thrshld * planning_cycle_time;
-  LOG_DEBUG("item.is_lead: [%d]\n", item.is_lead);
+  // LOG_DEBUG("item.is_lead: [%d]\n", item.is_lead);
 
   // calculate cutin
   if (hdmap_valid_) {
   } else {
-    LOG_DEBUG("----fill_possibility_of_cutin-----\n");
+    // LOG_DEBUG("----fill_possibility_of_cutin-----\n");
     double ttc = std::max(item.d_path - 1.5, 0.0) / std::max(-item.v_lat, 0.01);
     ttc = std::min(15.0, ttc);
 
@@ -1665,8 +1662,8 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
       int count = (int)((gap + 0.01) / planning_cycle_time);
       item.cutin_confidence_cnt = std::max(
           item.cutin_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
-      LOG_DEBUG("!!!!!!!cutin_confidence_cnt is : [%f] \n",
-                item.cutin_confidence_cnt);
+      // LOG_DEBUG("!!!!!!!cutin_confidence_cnt is : [%f] \n",
+      //           item.cutin_confidence_cnt);
     }
 
     std::array<double, 5> xp4{0, 30, 60, 90, 120};
@@ -1678,7 +1675,7 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     } else {
       cutin_confidence_cnt = interp(item.d_rel, xp4, fp4);
     }
-    LOG_DEBUG("cutin_confidence_cnt is : [%f]\n", cutin_confidence_cnt);
+    // LOG_DEBUG("cutin_confidence_cnt is : [%f]\n", cutin_confidence_cnt);
     if (is_need_consider && is_in_range) {
       if (item.cutin_confidence_cnt >=
           cutin_confidence_cnt * planning_cycle_time) {
@@ -1696,14 +1693,14 @@ bool TrackletMaintainer::is_potential_lead_one(TrackedObject &item,
     if (item.oncoming) {
       item.cutinp = 0.0;
     }
-    LOG_DEBUG("cutin_p is : [%f]\n", item.cutinp);
+    // LOG_DEBUG("cutin_p is : [%f]\n", item.cutinp);
   }
   return item.is_lead;
 }
 
 bool TrackletMaintainer::is_potential_lead_two(TrackedObject &item,
                                                TrackedObject *lead_one) {
-  LOG_DEBUG("----is_potential_lead_two-----\n");
+  // LOG_DEBUG("----is_potential_lead_two-----\n");
   // Only use obstacle fusion with camera
   if (!(item.fusion_source & OBSTACLE_SOURCE_CAMERA)) {
     return false;
@@ -1758,7 +1755,7 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
   if (!item.frenet_transform_valid) {
     return false;
   }
-  LOG_DEBUG("----is_potential_temp_lead_one-----\n");
+  // LOG_DEBUG("----is_potential_temp_lead_one-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
   std::array<double, 5> fp1{0.8, 1.0, 0.8, 0.7, 0.0};
@@ -1773,9 +1770,9 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
   if (item.oncoming && item.d_rel >= 0) {
     lat_corr = 0.0;
   }
-  LOG_DEBUG("v_lat_self is: [%f], v_lat: [%f]\n", item.v_lat_self, item.v_lat);
-  LOG_DEBUG("max_d_offset is: [%f], t_lookahead: [%f], lat_corr is: [%f]\n",
-            max_d_offset, t_lookahead, lat_corr);
+  // LOG_DEBUG("v_lat_self is: [%f], v_lat: [%f]\n", item.v_lat_self, item.v_lat);
+  // LOG_DEBUG("max_d_offset is: [%f], t_lookahead: [%f], lat_corr is: [%f]\n",
+  //           max_d_offset, t_lookahead, lat_corr);
   double d_path_self = std::max(item.d_path_self_pos + lat_corr, 0.0);
   item.d_path_self_ori =
       std::max(std::fabs(item.y_rel_ori - item.dy_self) + lat_corr, 0.0);
@@ -1808,15 +1805,15 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
         ((item.y_rel_ori > item.dy_self && item.y_rel_ori < item.dy) ||
          (item.y_rel_ori < item.dy_self && item.y_rel_ori > item.dy));
   }
-  LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n",
-            item.track_id, item.d_rel, item.v_lat);
-  LOG_DEBUG(
-      "item.d_path_self_pos is: [%f], lat_corr is: [%f], d_path_self is : "
-      "[%f]\n",
-      item.d_path_self_pos, lat_corr, d_path_self);
-  LOG_DEBUG(
-      "item.l is: [%f], l0 is: [%f], y_rel_ori is : [%f], dy_self is : [%f]\n",
-      item.l, item.l0, item.y_rel_ori, item.dy_self);
+  // LOG_DEBUG("item's id is: [%d], item.d_rel is: [%f], item.v_lat is: [%f]\n",
+  //           item.track_id, item.d_rel, item.v_lat);
+  // LOG_DEBUG(
+  //     "item.d_path_self_pos is: [%f], lat_corr is: [%f], d_path_self is : "
+  //     "[%f]\n",
+  //     item.d_path_self_pos, lat_corr, d_path_self);
+  // LOG_DEBUG(
+  //     "item.l is: [%f], l0 is: [%f], y_rel_ori is : [%f], dy_self is : [%f]\n",
+  //     item.l, item.l0, item.y_rel_ori, item.dy_self);
 
   if (hdmap_valid_) {
     item.tleadone_confidence_cnt = 0.0;
@@ -1852,13 +1849,13 @@ bool TrackletMaintainer::is_potential_temp_lead_one(TrackedObject &item,
     item.is_temp_lead = item.tleadone_confidence_cnt >=
                         lead_confidence_time * planning_cycle_time;
   }
-  LOG_DEBUG("item.is_temp_lead: [%d]\n", item.is_temp_lead);
+  // LOG_DEBUG("item.is_temp_lead: [%d]\n", item.is_temp_lead);
   return item.is_temp_lead;
 }
 
 bool TrackletMaintainer::is_potential_temp_lead_two(
     TrackedObject &item, TrackedObject *temp_lead_one) {
-  LOG_DEBUG("----is_potential_temp_lead_two-----\n");
+  // LOG_DEBUG("----is_potential_temp_lead_two-----\n");
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   if (temp_lead_one == nullptr) {
     return false;
@@ -1907,7 +1904,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
     double dist_rblane, bool tleft_lane, bool rightest_lane,
     double dist_intersect, double intersect_length, bool isRedLightStop,
     double farthest_distance) {
-  LOG_DEBUG("----is_potential_avoiding_car-----\n");
+  // LOG_DEBUG("----is_potential_avoiding_car-----\n");
   auto config_builder =
       session_->environmental_model().highway_config_builder();
   LateralObstacleDeciderConfig config =

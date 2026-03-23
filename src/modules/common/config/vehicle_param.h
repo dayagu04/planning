@@ -8,7 +8,7 @@ namespace planning {
 
 struct VehicleParam {
   VehicleParam() = default;
-  VehicleParam(std::string config_path) { InitParameters(config_path); }
+  VehicleParam(const std::string& config_path) { InitParameters(config_path); }
 
   double front_edge_to_rear_axle = 3.73;
   double rear_edge_to_rear_axle = 1.085;
@@ -34,7 +34,7 @@ struct VehicleParam {
   double mirror_lon_dist_to_rear_axle = 3.0;
   double mirror_lat_dist_to_center = 1.0;
 
-  void InitParameters(std::string config_path) {
+  void InitParameters(const std::string& config_path) {
     std::string path = config_path;
 
     std::string config_file = planning::common::util::ReadFile(path);

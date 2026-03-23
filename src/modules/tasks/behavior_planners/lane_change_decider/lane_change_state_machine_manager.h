@@ -218,7 +218,7 @@ class LaneChangeStateMachineManager {
   double CalculateLCSafetyCheckTime() const;
   double CalculateCheckTimeRatio() const;
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(
-      const std::array<double, 3> init_lon_state) const;
+      const std::array<double, 3>& init_lon_state) const;
 
   bool IsTargetLaneMergeToOriginLane() const;
 

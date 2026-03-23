@@ -620,8 +620,8 @@ class LoadRosbag:
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "fsm_state", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
-                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state", "obstacle_brake_hmi_sts",\
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost', 'Astar time', \
+                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state", "obstacle_brake_hmi_sts", "obstacle_brake_hmi_sts",\
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'road_radius_origin',\
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
@@ -711,7 +711,18 @@ class LoadRosbag:
                           'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
                           'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp']
 
-
+      json_value_list += ["planning_cost_time", 'EnvironmentalModelManagerCost', 'TaskFunctionCost', "ego_state_update cost",
+                          "update route_info cost", "virtual_lane_manager cost", "traffic_light_decision cost", "obstacle_prediction cost", "obstacle_manager cost", "agent_manager cost", "construction_scene_manager cost",
+                          "reference_path_manager cost", "lateral_obstacle cost", "lane_tracks_mgr cost", "ConstructDynamicWorld cost",
+                          "edt_manager cost", "traffic_light_decider_cost", "ego_lane_road_right_decider_cost", "potential_dangerous_agent_decider_cost",
+                          "lane_change_decider_cost", "lat_lon_joint_planner_decider_cost", "sample_poly_speed_adjust_decider_cost",
+                          "lateral_obstacle_decider_cost", "lane_borrow_decider_cost", "lateral_offset_decider_cost", "gap_selector_decider_cost",
+                          "spatio_temporal_planner_cost", "general_lateral_decider_cost", "lateral_motion_planner_cost","stop_destination_decider_cost",
+                          "mrc_brake_decider_cost", "agent_longitudinal_decider_cost", "construct_st_graph_cost", "expand_st_boundaries_decider_cost",
+                          "closest_in_path_vehicle_decider_cost", "cipv_lost_prohibit_start_decider_cost", "cipv_lost_prohibit_acceleration_decider_cost",
+                          "st_graph_searcher_cost", "parallel_longitudinal_avoid_decider_cost", "agent_headway_decider_cost", "longitudinal_decision_decider_cost",
+                          "speed_limit_decider_cost", "start_stop_decider_cost", "long_ref_path_decider_cost", "scc_longitudinal_motion_planner_cost",
+                          "result_trajectory_generator_cost", "hmi_decider_cost"]
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
                          "ldw_right_suppression_code_","ldw_right_kickdown_code_","ldw_tlc_threshold_","ldw_left_intervention_","ldw_right_intervention_","ldw_state_",

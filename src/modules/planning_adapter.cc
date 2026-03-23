@@ -97,7 +97,9 @@ bool PlanningAdapter::Proc() {
   ILOG_INFO << "PlanningAdapter::Proc()";
   start_time_ = IflyTime::Now_us();
 
+
   SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_start);
+  // 1.1 receive prediction
   // 1.1 receive prediction
   // 1.1 receive prediction
   if (is_prediction_result_msg_updated_) {
@@ -396,7 +398,7 @@ bool PlanningAdapter::Proc() {
   double planning_cost_time = (IflyTime::Now_us() - start_time_) / 1000;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
                                     planning_cost_time);
-
+  JSON_DEBUG_VALUE("planning_cost_time", planning_cost_time);
   return true;
 }
 

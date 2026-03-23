@@ -1515,7 +1515,7 @@ bool StGraphSearcher::CheckIfFrontVehcileSafe() {
 }
 
 void StGraphSearcher::AddStGraphSearcherDataToProto(
-    const std::vector<StSearchNode> st_search_path) {
+    const std::vector<StSearchNode>& st_search_path) {
 #ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_st_graph_searcher_data =

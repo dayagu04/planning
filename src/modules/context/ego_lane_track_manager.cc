@@ -3043,7 +3043,7 @@ double EgoLaneTrackManger::ComputeAverageHeadingDiff(
 }
 
 bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids) {
   if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
     ILOG_DEBUG << "CheckIfInRampSelectSplit::sd_map is invalid!!!";
@@ -3120,7 +3120,7 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
 }
 
 bool EgoLaneTrackManger::CheckIfInRampSelectSplitForSdpro(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids) {
   if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
     LOG_DEBUG("CheckIfInRampSelectSplitForSdpro::sd_map is invalid!!!");
@@ -3213,7 +3213,7 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplitForSdpro(
 }
 
 bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids) {
   if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
     ILOG_DEBUG << "CheckIfInRoadSelectRamp::sd_map is invalid!!!";
@@ -3289,7 +3289,7 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
 }
 
 bool EgoLaneTrackManger::CheckIfInRoadSelectRampForSdpro(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const std::vector<int>& order_ids) {
   if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
     LOG_DEBUG("CheckIfInRoadSelectRampForSdpro::sd_map is invalid!!!");

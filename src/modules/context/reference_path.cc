@@ -522,6 +522,7 @@ bool ReferencePath::get_polygon_at_time(
     auto enu_polygon =
         obstacle_ptr->get_polygon_at_point(obstacle_ptr->get_point_at_time(0));
     std::vector<planning_math::Vec2d> frenet_points;
+    frenet_points.reserve(enu_polygon.points().size());
     for (auto &pt : enu_polygon.points()) {
       Point2D frenet_point, carte_point;
       carte_point.x = pt.x();
@@ -531,8 +532,8 @@ bool ReferencePath::get_polygon_at_time(
                   << " Frenet_coord failed!!";
         continue;
       }
-      frenet_points.push_back(planning_math::Vec2d(
-          frenet_point.x + prediction_frenet_s, frenet_point.y));
+      frenet_points.emplace_back(std::move(planning_math::Vec2d(
+          frenet_point.x + prediction_frenet_s, frenet_point.y)));
     }
     bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
                                                           &obstacle_polygon);
@@ -550,8 +551,11 @@ bool ReferencePath::get_polygon_at_time(
     }
     const auto &enu_polygon = obstacle_ptr->get_bounding_box(
         obstacle_ptr->get_point_at_time(relative_time * 0.1));
-    std::vector<planning_math::Vec2d> frenet_points;
+
     const auto &corners = enu_polygon.GetAllCorners();
+
+    std::vector<planning_math::Vec2d> frenet_points;
+    frenet_points.reserve(corners.size());
     for (auto &pt : corners) {
       Point2D frenet_point, carte_point;
       carte_point.x = pt.x();
@@ -561,8 +565,8 @@ bool ReferencePath::get_polygon_at_time(
                   << " Frenet_coord failed!!!!";
         continue;
       }
-      frenet_points.push_back(
-          planning_math::Vec2d(frenet_point.x, frenet_point.y));
+      frenet_points.emplace_back(std::move(
+          planning_math::Vec2d(frenet_point.x, frenet_point.y)));
     }
     bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
                                                           &obstacle_polygon);
@@ -1632,7 +1636,9 @@ bool ReferencePath::UpdateReferencePathInfo(
       std::make_shared<planning_math::KDPath>(std::move(smoothed_path_points));
   const auto &frenet_path_points = smoothed_frenet_coord->path_points();
   ReferencePathPoint last_ref_pt = refined_ref_path_points_.front();
-  for (const auto pt : frenet_path_points) {
+
+  Point2D frenet_point;
+  for (const auto& pt : frenet_path_points) {
     ReferencePathPoint ref_pt;
     ref_pt.path_point.set_x(pt.x());
     ref_pt.path_point.set_y(pt.y());
@@ -1641,7 +1647,6 @@ bool ReferencePath::UpdateReferencePathInfo(
     ref_pt.path_point.set_kappa(pt.kappa());
     ref_pt.path_point.set_dkappa(pt.dkappa());
     ref_pt.path_point.set_ddkappa(pt.ddkappa());
-    Point2D frenet_point;
     if (frenet_coord_->XYToSL(
             pt.x(), pt.y(), &frenet_point.x, &frenet_point.y)) {
       ReferencePathPoint raw_pt;

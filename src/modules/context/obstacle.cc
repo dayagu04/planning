@@ -177,6 +177,7 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     perception_bounding_box_.GetAllCorners(&polygon_points);
   } else {
     ILOG_DEBUG << "raw size " << prediction_object.bottom_polygon_points.size();
+    polygon_points.reserve(prediction_object.bottom_polygon_points.size() - 1);
     for (size_t i = 0; i < prediction_object.bottom_polygon_points.size() - 1;
          ++i) {
       auto &point = prediction_object.bottom_polygon_points[i];
@@ -442,13 +443,14 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   yaw_ = perception_bounding_box_.heading();
   velocity_angle_ = perception_bounding_box_.heading();
   std::vector<planning_math::Vec2d> ego_polygon_points;
+  ego_polygon_points.reserve(perception_polygon_.points().size());
   for (const auto &point : perception_polygon_.points()) {
     ego_polygon_points.emplace_back(
         planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
   }
   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
                                                    &obstacle_ego_polygon_)) {
-    ILOG_ERROR << "polygon_debug invalid ego polygon";
+    ILOG_INFO << "polygon_debug invalid ego polygon";
   }
 }
 
@@ -498,6 +500,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   is_car_ = (type_ == iflyauto::OBJECT_TYPE_OCC_CAR);
 
   std::vector<planning_math::Vec2d> ego_polygon_points;
+  ego_polygon_points.reserve(perception_polygon_.points().size());
   for (const auto &point : perception_polygon_.points()) {
     ego_polygon_points.emplace_back(
         planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
@@ -591,22 +594,25 @@ planning_math::Box2d Obstacle::get_bounding_box(
 planning_math::Polygon2d Obstacle::get_polygon_at_point(
     const PncTrajectoryPoint &point) const {
   std::vector<planning_math::Vec2d> polygon_points;
+  polygon_points.reserve(obstacle_ego_polygon_.points().size());
   double rel_theta = point.path_point.theta() - yaw_;
+  double sin_theta = sin(rel_theta);
+  double cos_theta = cos(rel_theta);
   for (const auto &ego_point : obstacle_ego_polygon_.points()) {
     polygon_points.emplace_back(planning_math::Vec2d(
-        ego_point.x() * cos(rel_theta) - ego_point.y() * sin(rel_theta) +
+        ego_point.x() * cos(rel_theta) - ego_point.y() * sin_theta +
             point.path_point.x(),
-        ego_point.y() * cos(rel_theta) + ego_point.x() * sin(rel_theta) +
+        ego_point.y() * cos(rel_theta) + ego_point.x() * sin_theta +
             point.path_point.y()));
   }
 
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
-    ILOG_ERROR << "polygon_debug : get position" << point.path_point.x() << ", "
+    ILOG_INFO << "polygon_debug : get position" << point.path_point.x() << ", "
                << point.path_point.y() << " failed";
     if (!planning_math::Polygon2d::ComputeConvexHull(
             get_bounding_box(point).GetAllCorners(), &polygon)) {
-      ILOG_ERROR << "polygon_debug : invalid box polygon";
+      ILOG_INFO << "polygon_debug : invalid box polygon";
     }
   }
   return polygon;

@@ -63,7 +63,7 @@ class IntRequest : public LaneChangeRequest {
 
  private:
   void PrintForbidGeneratingReason(
-      const std::vector<std::string> forbid_generating_reason);
+      const std::vector<std::string>& forbid_generating_reason);
 
   // void check_lc_forbid_reason(
   //     std::vector<std::string>& forbid_generating_left_reason,

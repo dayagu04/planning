@@ -1145,7 +1145,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
                                                          refpath_pt)) {
       // add logs
-      ILOG_ERROR << "Get reference point by lon failed!";
+      ILOG_INFO << "Get reference point by lon failed!";
     }
     ref_path_points_.emplace_back(refpath_pt);
   }
@@ -2236,7 +2236,7 @@ void GeneralLateralDecider::EnsureBoundGapSafe(
 }
 
 void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions& obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto& obstacle : obs_vec) {
@@ -2823,7 +2823,7 @@ iflyauto::LaneBoundaryType GeneralLateralDecider::CalLaneBoundaryType(
 }
 
 void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions& obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto& obstacle : obs_vec) {
@@ -5395,10 +5395,10 @@ void GeneralLateralDecider::SampleRoadDistanceInfo(
 }
 
 void GeneralLateralDecider::CalculateAvoidObstacles(
-    const std::vector<std::pair<double, double>> first_frenet_soft_bounds,
-    std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info,
-    const std::vector<std::pair<double, double>> second_frenet_soft_bounds,
-    std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info) {
+    const std::vector<std::pair<double, double>>& first_frenet_soft_bounds,
+    const std::vector<std::pair<BoundInfo, BoundInfo>>& first_soft_bounds_info,
+    const std::vector<std::pair<double, double>>& second_frenet_soft_bounds,
+    const std::vector<std::pair<BoundInfo, BoundInfo>>& second_soft_bounds_info) {
   auto& lateral_offset_decider_output =
       session_->mutable_planning_context()
           ->mutable_lateral_offset_decider_output();

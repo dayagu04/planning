@@ -344,11 +344,11 @@ double VirtualLane::max_width() const {
       case iflyauto::LANETYPE_NON_MOTOR:;
         return kMaxLaneWidth;
       default:
-        ILOG_ERROR << "Error Lane Type";
+        ILOG_DEBUG << "Error Lane Type";
         return kMinLaneWidth;
     }
   } else {
-    ILOG_ERROR << "Error Lane Type";
+    ILOG_DEBUG << "Error Lane Type";
     return kMinLaneWidth;
   }
 }
@@ -401,11 +401,11 @@ double VirtualLane::min_width() const {
       case iflyauto::LANETYPE_NON_MOTOR:;
         return kMinLaneWidth;
       default:
-        ILOG_ERROR << "Error Lane Type";
+        ILOG_DEBUG << "Error Lane Type";
         return kMinLaneWidth;
     }
   } else {
-    ILOG_ERROR << "Error Lane Type";
+    ILOG_DEBUG << "Error Lane Type";
     return kMinLaneWidth;
   }
 }
@@ -500,14 +500,12 @@ void VirtualLane::ProcessEgoOnRoadMLC(
     if (first_merge_direction == RAMP_ON_LEFT) {
       if (order_id_ + 1 == lane_num) {
         current_tasks_.emplace_back(-1);
-        std::cout << "高速前方右侧有汇入车道，最右侧车道产生一个变道任务"
-                  << std::endl;
+        ILOG_DEBUG << "高速前方右侧有汇入车道，最右侧车道产生一个变道任务";
       }
     } else if (first_merge_direction == RAMP_ON_RIGHT) {
       if (order_id_ == 0) {
         current_tasks_.emplace_back(1);
-        std::cout << "高速前方左侧有汇入车道，最左侧车道产生一个变道任务"
-                  << std::endl;
+        ILOG_DEBUG << "高速前方左侧有汇入车道，最左侧车道产生一个变道任务";
       }
     }
   } else if (is_nearing_ramp && !is_on_ramp &&
@@ -532,7 +530,7 @@ void VirtualLane::ProcessEgoOnRoadMLC(
     // TODO（fengwang31）：需要考虑上一次汇入的方向。目前默认匝道都是从右边汇入主路的
     if (order_id_ + 1 == lane_num) {
       current_tasks_.emplace_back(-1);
-      std::cout << "在最右侧车道上时,向左产生一个变道任务" << std::endl;
+      ILOG_DEBUG << "在最右侧车道上时,向左产生一个变道任务";
     }
   }
 }

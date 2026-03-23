@@ -44,7 +44,7 @@ class ConfigurationContext {
 
   AlgorithmParam algorithm_config() { return algorithm_conf_; }
 
-  bool load_params_from_json(std::string config_file_dir) {
+  bool load_params_from_json(const std::string& config_file_dir) {
     ILOG_DEBUG << "config_file_dir ====" << config_file_dir;
     if (access((config_file_dir + "/scene.pb.txt").c_str(), F_OK) == -1) {
       ILOG_ERROR << config_file_dir << "/scene.pb.txt not exist!";
@@ -56,7 +56,7 @@ class ConfigurationContext {
     return ret;
   }
 
-  bool load_engine_config_from_json(std::string config_path) {
+  bool load_engine_config_from_json(const std::string& config_path) {
     std::ifstream fjson(config_path);
     if (!fjson.is_open()) {
       ILOG_ERROR << "Failed to open engine config file.";
@@ -104,8 +104,8 @@ class ConfigurationContext {
     return true;
   }
 
-  bool load_engine_config_from_json(std::string res_path,
-                                    std::string config_path) {
+  bool load_engine_config_from_json(const std::string& res_path,
+                                    const std::string& config_path) {
     std::ifstream fjson(config_path);
     if (!fjson.is_open()) {
       ILOG_ERROR << "Failed to open engine config file.";

@@ -34,7 +34,7 @@ class Registry {
     }
 
     factory_map_[name] = factory;
-    std::cout << "factory inserted: name= " << name << std::endl;
+    // std::cout << "factory inserted: name= " << name << std::endl;
     // printf("factory inserted: name=%s", name);
     return true;
   }
