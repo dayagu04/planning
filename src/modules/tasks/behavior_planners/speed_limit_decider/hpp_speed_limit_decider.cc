@@ -103,7 +103,7 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
 }
 
 void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
-  double v_limit_speed_narrow_passage_road =
+  double v_limit_speed_narrow_passage =
       hpp_speed_limit_config_.velocity_upper_bound;
   if (!session_->is_hpp_scene()) {
     return;
@@ -117,21 +117,21 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
   }
 
   constexpr double kIntersectionRoadTargetV = 2.22;
-  v_limit_speed_narrow_passage_road =
+  v_limit_speed_narrow_passage =
       GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
 
-  if (v_limit_speed_narrow_passage_road < v_target_) {
-    v_target_ = v_limit_speed_narrow_passage_road;
+  if (v_limit_speed_narrow_passage < v_target_) {
+    v_target_ = v_limit_speed_narrow_passage;
     v_target_type_ = SpeedLimitType::NARROW_PASSAGE;
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_narrow_passage_road, zone_info.in_speed_limit_zone,
+      v_limit_speed_narrow_passage, zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
-  JSON_DEBUG_VALUE("v_limit_speed_narrow_passage_road",
-                   v_limit_speed_narrow_passage_road);
+  JSON_DEBUG_VALUE("",
+                   v_limit_speed_narrow_passage);
   JSON_DEBUG_VALUE("in_speed_limit_narrow_passage",
                    zone_info.in_speed_limit_zone);
   JSON_DEBUG_VALUE("approaching_speed_limit_narrow_passage",
@@ -475,7 +475,7 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
     return;
   }
 
-  constexpr double kIntersectionRoadTargetV = 2.22;
+  constexpr double kIntersectionRoadTargetV = 2.77;
   v_limit_speed_intersection_road =
       GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
 
