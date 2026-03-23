@@ -214,7 +214,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     // }
     // std::cout << "link info:" << std::endl;
     sdpro_map_info_msg_.CopyFrom(*sdpro_mapdata);
-    std::cout << "feed sdpro_map_info_msg_ end" << std::endl;
+    // std::cout << "feed sdpro_map_info_msg_ end" << std::endl;
     sdpro_map_info_msg_recv_time_ = IflyTime::Now_ms();
     is_sdpro_map_info_msg_updated_.store(true);
   }

@@ -7,6 +7,9 @@ using namespace pnc::mathlib;
 namespace pnc {
 namespace lane_change_joint_decision {
 constexpr int kHalfYieldStep  = 15;
+// EGO_OVERTAKE 标签覆盖 alpha=1.0 的时间窗口：1s~2s，dt=0.2
+constexpr int kEgoOvertakeOverrideStart = 5;
+constexpr int kEgoOvertakeOverrideEnd = 10;
 static const double kEps = 1e-6;
 
 double EgoReferenceCostTerm::GetCost(const ilqr_solver::State& x,
@@ -1024,6 +1027,17 @@ void HardHalfplaneCostTerm::GetGradientHessian(
   const double weight = cost_config_ptr_->at(W_HARD_HALFPLANE);
   double alpha = cost_config_ptr_->at(HALFPLANE_COST_ALLOCATION_RATIO);
   constexpr double epsilon = 1e-3;
+  // 推断当前时间步
+  int current_time_step = -1;
+  if (cost_config_vec_ptr_ != nullptr && cost_config_ptr_ != nullptr) {
+    for (size_t i = 0; i < cost_config_vec_ptr_->size(); ++i) {
+      if (&cost_config_vec_ptr_->at(i) == cost_config_ptr_) {
+        current_time_step = static_cast<int>(i);
+        break;
+      }
+    }
+  }
+  // 1s~2s 对应步骤 [5, 10)，dt=0.2
 
   for (const auto& result : results) {
     if (result.plane_dist >= -epsilon) {
@@ -1038,12 +1052,15 @@ void HardHalfplaneCostTerm::GetGradientHessian(
     const double normal_x = result.normal_x;
     const double normal_y = result.normal_y;
 
-    // 代价分配系数：alpha=0 全部施加到障碍物, alpha=1 全部施加到自车
-    if(result.label_type == planning::lane_change_joint_decision::EGO_OVERTAKE){
-      alpha = 1.0; //全都分配给自车
+    // 代价分配系数：EGO_OVERTAKE 仅在 1-2s 内覆盖为 1.0，每个障碍物独立计算
+    double cur_alpha = alpha;
+    if (result.label_type == planning::lane_change_joint_decision::EGO_OVERTAKE &&
+        current_time_step >= kEgoOvertakeOverrideStart &&
+        current_time_step < kEgoOvertakeOverrideEnd) {
+      cur_alpha = 1.0;
     }
-    double ego_weight = alpha;
-    const double obs_weight = 1.0 - alpha;
+    double ego_weight = cur_alpha;
+    const double obs_weight = 1.0 - cur_alpha;
 
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;
@@ -1383,21 +1400,21 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
 
     const int obs_idx = result.obs_index;
     const planning::lane_change_joint_decision::LongitudinalLabel label_type = result.label_type;
-    // const int label_type = result.label_type;
-    // const int label_type = alpha > 0.99 ? 0 : result.label_type;//
-    // 反应时间内主要靠自车
 
-    if(label_type == planning::lane_change_joint_decision::EGO_OVERTAKE){
-      alpha = 1.0; //全都分配给自车
-    }
     const int state_base_idx = EGO_STATE_SIZE + obs_idx * OBS_STATE_SIZE;
 
     const double normal_x = result.normal_x;
     const double normal_y = result.normal_y;
 
-    // 代价分配系数
-    double ego_weight = alpha;
-    const double obs_weight = 1.0 - alpha;
+    // 代价分配系数，每个障碍物独立计算
+    double cur_alpha = alpha;
+    if (label_type == planning::lane_change_joint_decision::EGO_OVERTAKE &&
+        current_time_step >= kEgoOvertakeOverrideStart &&
+        current_time_step < kEgoOvertakeOverrideEnd) {
+      cur_alpha = 1.0;
+    }
+    double ego_weight = cur_alpha;
+    const double obs_weight = 1.0 - cur_alpha;
 
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;

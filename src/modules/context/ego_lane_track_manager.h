@@ -88,19 +88,19 @@ class EgoLaneTrackManger {
       bool &is_manual_lane_change);
 
   bool CheckIfInRampSelectSplit(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRampSelectSplitForSdpro(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRamp(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRampForSdpro(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
       const std::vector<int> &order_ids);
 
   double ComputeTargetLaneSpecifiedRangeCurvature(
@@ -226,8 +226,8 @@ class EgoLaneTrackManger {
           &virtual_id_mapped_lane);
 
   void CheckIfConsiderSecondSplit(
-      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-      bool& is_consider_second_split);
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      bool &is_consider_second_split);
   void ComputeEgoDistanceToRoadBorder(
       const std::shared_ptr<VirtualLane> &base_lane,
       double &dis_to_left_road_border, double &dis_to_right_road_border);
@@ -241,22 +241,19 @@ class EgoLaneTrackManger {
   double NormalizeCurvatureSign(double dis_to_ego);
 
   void CalculateLaneCurvature(
-    const std::shared_ptr<planning_math::KDPath>& lane_frenet_coord,
-    std::vector<std::pair<int, double>>& lane_curv_info_set,
-    LaneCurvInfo& lane_curv_info,
-    double& max_road_radius,
-    const std::shared_ptr<VirtualLane>& relative_id_lane);
+      const std::shared_ptr<planning_math::KDPath> &lane_frenet_coord,
+      std::vector<std::pair<int, double>> &lane_curv_info_set,
+      LaneCurvInfo &lane_curv_info, double &max_road_radius,
+      const std::shared_ptr<VirtualLane> &relative_id_lane);
 
-  void CalculateDynamicCostWeights(
-    double curv_degree,
-    double& road_boundary_collision_cost_weight,
-    double& relative_theta_diff_cost_weight,
-    double& kappa_cost_weight);
+  void CalculateDynamicCostWeights(double curv_degree,
+                                   double &road_boundary_collision_cost_weight,
+                                   double &relative_theta_diff_cost_weight,
+                                   double &kappa_cost_weight);
 
-void CalculateRoadBoundaryCollisionCost(
-    const LaneCurvInfo& lane_curv_info,
-    double& road_boundary_collision_cost,
-    const std::shared_ptr<VirtualLane>& relative_id_lane);
+  void CalculateRoadBoundaryCollisionCost(
+      const LaneCurvInfo &lane_curv_info, double &road_boundary_collision_cost,
+      const std::shared_ptr<VirtualLane> &relative_id_lane);
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -304,9 +301,11 @@ void CalculateRoadBoundaryCollisionCost(
   bool ego_in_split_region_ = false;
   std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;
-  const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
+  const iflymapdata::sdpro::LinkInfo_Link *current_link_ = nullptr;
   const std::vector<double> collision_cost_weight_{100.0, 50.0, 5.0};
   const std::vector<double> road_curv_radius_{200.0, 400.0, 1000.0};
+  int acc_predict_left_change_count_ = 0;
+  int acc_predict_right_change_count_ = 0;
 };
 
 }  // namespace planning

@@ -162,13 +162,13 @@ void ApaSlotManager::Update(
       ego_info_under_slot_.slot_type = slot.slot_type_;
     }
   } else if (state_machine_ptr->IsParkingInStatus()) {
-    if (slots_map_.count(ego_info_under_slot_.id) == 0) {
+    if (slots_map_.empty() || slots_map_.count(ego_info_under_slot_.id) == 0) {
       ILOG_INFO << "the selected slot disappear when parking";
-      ego_info_under_slot_.slot_disappear_flag = true;
       if (measure_data_ptr_->GetStaticFlag()) {
         ILOG_INFO << "car is static, reset ego_info_under_slot";
         ego_info_under_slot_.Reset();
       }
+      ego_info_under_slot_.slot_disappear_flag = true;
     } else {
       ego_info_under_slot_.slot_disappear_flag = false;
     }

@@ -1,7 +1,6 @@
 #include "path_compare_decider.h"
 
 #include <cmath>
-#include <cstddef>
 
 #include "apa_context.h"
 #include "apa_slot.h"
@@ -9,8 +8,6 @@
 #include "curve_node.h"
 #include "geometry_math.h"
 #include "hybrid_astar_common.h"
-#include "log_glog.h"
-#include "pose2d.h"
 
 namespace planning {
 namespace apa_planner {

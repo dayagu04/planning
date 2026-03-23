@@ -32,7 +32,7 @@ void RuleBasedPredictor::Execute(
       continue;
     }
 
-    if (obstacle.Speed() < 0.05) {
+    if (obstacle.Speed() < 0.3) {
       continue;
     }
 
@@ -89,7 +89,7 @@ void RuleBasedPredictor::PredictByCTRV(ApaObstacle& obs) {
   obs.ClearPredictTraj();
 
   double speed = obs.Speed();
-  if (speed < 0.05) {
+  if (speed < 0.3) {
     return;
   }
 
@@ -248,7 +248,7 @@ const double RuleBasedPredictor::PredictApaObstacleSignedOmega(
 const double RuleBasedPredictor::EstimateOmegaByCurvature(
     const std::deque<Eigen::Vector2d>& history, double history_dt,
     double speed) {
-  constexpr double kFreezeSpeed = 0.15;
+  constexpr double kFreezeSpeed = 0.3;
   if (history.size() < 3 || speed < kFreezeSpeed) return 0.0;
 
   const auto& p0 = history[history.size() - 3];

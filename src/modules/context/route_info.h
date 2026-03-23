@@ -80,13 +80,13 @@ class RouteInfo {
   void GetStrategy();
 
   void UpdateMLCInfoDecider(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes);
 
   void UpdateMLCInfoDeciderBaseBaidu(
       const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes);
 
   void UpdateMLCInfoDeciderBaseTencent(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes);
 
   void UpdateTargetSlotInfo(const ad_common::math::Vec2d& center);
 

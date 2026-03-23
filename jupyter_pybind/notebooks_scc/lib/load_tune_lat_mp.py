@@ -772,16 +772,70 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'virtual_ref_theta': virtual_ref_theta,
     })
 
-    # print("dbw_status = ", planning_json['dbw_status'])
-    # print("replan_status = ", planning_json['replan_status'])
-    # print("lat_err = ", planning_json['lat_err'])
-    # print("theta_err = ", planning_json['theta_err'])
-    # print("lon_err = ", planning_json['lon_err'])
-    # print("dist_err = ", planning_json['dist_err'])
     print("solver_condition = ", lat_motion_plan_output.solver_info.solver_condition)
     print("iLqr_lat_update_time = ", planning_json['iLqr_lat_update_time'], " ms")
-    if len(lat_motion_plan_output.solver_info.iter_info) > 0:
-      print("min cost = ", lat_motion_plan_output.solver_info.iter_info[max(lat_motion_plan_output.solver_info.iter_count - 1, 0)].cost)
+    iter_count = lat_motion_plan_output.solver_info.iter_count
+    iter_info = lat_motion_plan_output.solver_info.iter_info
+    iter_counts = list(range(1, iter_count + 1))
+    total_costs = [0] * iter_count
+    ref_costs, front_ref_costs, continuity_costs, virtual_ref_costs = ([0] * iter_count for _ in range(4))
+    lat_acc_costs, lat_jerk_costs, lat_acc_bound_costs, lat_jerk_bound_costs = ([0] * iter_count for _ in range(4))
+    first_soft_bound_costs, second_soft_bound_costs, hard_bound_costs = ([0] * iter_count for _ in range(3))
+    for i in range(iter_count):
+      total_costs[i] = iter_info[i].cost
+      try:
+        cost_info = iter_info[i].cost_info
+        for j in range(len(cost_info)):
+          if cost_info[j].id == 0:
+            ref_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 1:
+            front_ref_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 2:
+            continuity_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 3:
+            virtual_ref_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 4:
+            lat_acc_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 5:
+            lat_jerk_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 6:
+            lat_acc_bound_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 7:
+            lat_jerk_bound_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 8:
+            first_soft_bound_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 9:
+            second_soft_bound_costs[i] = cost_info[j].cost
+          elif cost_info[j].id == 10:
+            hard_bound_costs[i] = cost_info[j].cost
+      except:
+        # ref_costs.append(0)
+        # front_ref_costs.append(0)
+        # continuity_costs.append(0)
+        # virtual_ref_costs.append(0)
+        # lat_acc_costs.append(0)
+        # lat_jerk_costs.append(0)
+        # lat_acc_bound_costs.append(0)
+        # lat_jerk_bound_costs.append(0)
+        # first_soft_bound_costs.append(0)
+        # second_soft_bound_costs.append(0)
+        # hard_bound_costs.append(0)
+        pass
+    lat_plan_data['data_iter_info'].data.update({
+      'iter_counts': iter_counts,
+      'total_costs': total_costs,
+      'ref_costs': ref_costs,
+      'front_ref_costs': front_ref_costs,
+      'continuity_costs': continuity_costs,
+      'virtual_ref_costs': virtual_ref_costs,
+      'lat_acc_costs': lat_acc_costs,
+      'lat_jerk_costs': lat_jerk_costs,
+      'lat_acc_bound_costs': lat_acc_bound_costs,
+      'lat_jerk_bound_costs': lat_jerk_bound_costs,
+      'first_soft_bound_costs': first_soft_bound_costs,
+      'second_soft_bound_costs': second_soft_bound_costs,
+      'hard_bound_costs': hard_bound_costs,
+    })
 
   if bag_loader.plan_msg['enable'] == True:
     trajectory = plan_msg.trajectory
@@ -1095,6 +1149,22 @@ def load_lat_plan_figure(fig1):
                                              'hard_lower_bound_type_vec':[],
                                              })
 
+  data_iter_info = ColumnDataSource(data = {'iter_counts':[],
+                                            'total_costs':[],
+                                            'ref_costs':[],
+                                            'front_ref_costs':[],
+                                            'continuity_costs':[],
+                                            'virtual_ref_costs':[],
+                                            'lat_acc_costs':[],
+                                            'lat_jerk_costs':[],
+                                            'lat_acc_bound_costs':[],
+                                            'lat_jerk_bound_costs':[],
+                                            'first_soft_bound_costs':[],
+                                            'second_soft_bound_costs':[],
+                                            'hard_bound_costs':[],
+                                            })
+
+
   data_lat_motion_plan_input = ColumnDataSource(data = {'ref_x':[],
                                                         'ref_y':[],
                                                         'ref_xn':[],
@@ -1238,7 +1308,8 @@ def load_lat_plan_figure(fig1):
                    'data_virtual_ref':data_virtual_ref,
                    'data_first_soft_bound':data_first_soft_bound,
                    'data_second_soft_bound':data_second_soft_bound,
-                   'data_hard_bound':data_hard_bound
+                   'data_hard_bound':data_hard_bound,
+                   'data_iter_info': data_iter_info
   }
 
   # motion planning
@@ -1276,11 +1347,12 @@ def load_lat_plan_figure(fig1):
   #     ]
   # tab1 = DataTable(source = data_lat_motion_plan_input, columns = columns, width = 600, height = 400)
 
-  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=200)
-  fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)
-  fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=600, height=160)
-  fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=180)
-  fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=600, height=160)
+  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=800, height=200)
+  fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)
+  fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=800, height=160)
+  fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=800, height=180)
+  fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=800, height=160)
+  fig8 = bkp.figure(x_axis_label='iter_count', y_axis_label='cost', width=800, height=600)
 
   fig7 = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=600, match_aspect = True, aspect_scale=1)
   fig7.x_range.flipped = True
@@ -1379,6 +1451,19 @@ def load_lat_plan_figure(fig1):
   fig6.triangle ('time_vec', 'steer_dot_deg_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer dot deg corridor')
   fig6.inverted_triangle ('time_vec', 'steer_dot_deg_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer dot deg corridor')
 
+  f8 = fig8.line('iter_counts', 'total_costs', source = data_iter_info, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'total')
+  fig8.line('iter_counts', 'ref_costs', source = data_iter_info, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ref')
+  fig8.line('iter_counts', 'front_ref_costs', source = data_iter_info, line_width = 1, line_color = 'yellow', line_dash = 'solid', legend_label = 'front ref')
+  fig8.line('iter_counts', 'continuity_costs', source = data_iter_info, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'continuity')
+  fig8.line('iter_counts', 'virtual_ref_costs', source = data_iter_info, line_width = 1, line_color = 'deepskyblue', line_dash = 'solid', legend_label = 'virtual ref')
+  fig8.line('iter_counts', 'lat_acc_costs', source = data_iter_info, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'lat acc')
+  fig8.line('iter_counts', 'lat_jerk_costs', source = data_iter_info, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'lat jerk')
+  fig8.line('iter_counts', 'lat_acc_bound_costs', source = data_iter_info, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'lat acc bound')
+  fig8.line('iter_counts', 'lat_jerk_bound_costs', source = data_iter_info, line_width = 1, line_color = 'brown', line_dash = 'solid', legend_label = 'lat jerk bound')
+  fig8.line('iter_counts', 'first_soft_bound_costs', source = data_iter_info, line_width = 1, line_color = 'pink', line_dash = 'solid', legend_label = 'first soft bound')
+  fig8.line('iter_counts', 'second_soft_bound_costs', source = data_iter_info, line_width = 1, line_color = 'maroon', line_dash = 'solid', legend_label = 'second soft bound')
+  fig8.line('iter_counts', 'hard_bound_costs', source = data_iter_info, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'hard bound')
+
   hover1_1 = HoverTool(renderers=[fig_first_soft_ubound], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @first_soft_upper_bound_vec)'),
                                                                     ('obstacle id', '@first_soft_upper_bound_id_vec'), ('type', '@first_soft_upper_bound_type_vec')])
   hover1_2 = HoverTool(renderers=[fig_first_soft_lbound], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @first_soft_lower_bound_vec)'),
@@ -1396,6 +1481,9 @@ def load_lat_plan_figure(fig1):
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t'), ('|jerk bound|', '@jerk_upper_bound')], mode='vline')
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound'), ('expected steer', '@expected_steer_deg_vec'), ('history steer', '@history_steer_deg_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('origin steer dot', '@steer_dot_deg_vec'), ('tuned steer dot', '@steer_dot_deg_vec_t'), ('|steer dot deg bound|', '@steer_dot_deg_upper_bound')], mode='vline')
+  hover8 = HoverTool(renderers=[f8], tooltips=[('iter', '@iter_counts'), ('total', '@total_costs'), ('ref', '@ref_costs'), ('front ref', '@front_ref_costs'), ('continuity', '@continuity_costs'), ('virtual ref', '@virtual_ref_costs'),
+                                               ('lat acc', '@lat_acc_costs'), ('lat jerk', '@lat_jerk_costs'), ('lat acc bound', '@lat_acc_bound_costs'), ('lat jerk bound', '@lat_jerk_bound_costs'),
+                                               ('first soft bound', '@first_soft_bound_costs'), ('second soft bound', '@second_soft_bound_costs'), ('hard bound', '@hard_bound_costs')], mode='vline')
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)
@@ -1408,7 +1496,7 @@ def load_lat_plan_figure(fig1):
   fig4.add_tools(hover4)
   fig5.add_tools(hover5)
   fig6.add_tools(hover6)
-
+  fig8.add_tools(hover8)
 
   fig2.toolbar.active_scroll = fig2.select_one(WheelZoomTool)
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
@@ -1416,6 +1504,7 @@ def load_lat_plan_figure(fig1):
   fig5.toolbar.active_scroll = fig5.select_one(WheelZoomTool)
   fig6.toolbar.active_scroll = fig6.select_one(WheelZoomTool)
   fig7.toolbar.active_scroll = fig7.select_one(WheelZoomTool)
+  fig8.toolbar.active_scroll = fig8.select_one(WheelZoomTool)
 
   fig2.legend.click_policy = 'hide'
   fig3.legend.click_policy = 'hide'
@@ -1423,5 +1512,6 @@ def load_lat_plan_figure(fig1):
   fig5.legend.click_policy = 'hide'
   fig6.legend.click_policy = 'hide'
   fig7.legend.click_policy = 'hide'
+  fig8.legend.click_policy = 'hide'
 
-  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, lat_plan_data
+  return fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, lat_plan_data

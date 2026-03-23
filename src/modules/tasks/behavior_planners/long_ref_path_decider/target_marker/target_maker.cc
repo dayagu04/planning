@@ -61,11 +61,11 @@ common::Status TargetMaker::Run() {
         cross_vru_target.target_value(relative_t);
 
     TargetValue upper_target_value(0.0, false,
-                                   std::numeric_limits<double>::max(), 0.0,
+                                   std::numeric_limits<double>::max(), 0.0, 0.0,
                                    TargetType::kNotSet);
     TargetValue lower_target_value(0.0, false,
                                    -std::numeric_limits<double>::max(), 0.0,
-                                   TargetType::kNotSet);
+                                   0.0, TargetType::kNotSet);
 
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
@@ -158,8 +158,10 @@ common::Status TargetMaker::Run() {
     if (ego_start_stop_info.state() == common::StartStopInfo::STOP) {
       upper_target_value.set_s_target_val(0.0);
       upper_target_value.set_v_target_val(0.0);
+      upper_target_value.set_a_target_val(0.0);
       lower_target_value.set_s_target_val(0.0);
       lower_target_value.set_v_target_val(0.0);
+      lower_target_value.set_a_target_val(0.0);
     }
 
     auto final_lower_bound_value =
@@ -184,6 +186,11 @@ double TargetMaker::s_target(const double t) const {
 double TargetMaker::v_target(const double t) const {
   size_t index = static_cast<size_t>(std::round(t / dt_));
   return target_values_.at(index).v_target_val();
+}
+
+double TargetMaker::a_target(const double t) const {
+  size_t index = static_cast<size_t>(std::round(t / dt_));
+  return target_values_.at(index).a_target_val();
 }
 
 const TargetValue& TargetMaker::target_value(const double t) const {

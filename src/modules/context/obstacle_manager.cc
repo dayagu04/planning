@@ -70,7 +70,7 @@ void ObstacleManager::update() {
 
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
-    auto prediction_object = prediction_objects[i];
+    auto& prediction_object = prediction_objects[i];
     if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       ILOG_DEBUG << "[ObstacleManager Update] ignore unknown obstacle : ["
                  << prediction_object.id << "]";
@@ -571,8 +571,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
       ground_line_manager_ptr_->Update(local_view.ground_line_perception);
       const std::vector<GroundLinePoints> &ground_line_points =
           ground_line_manager_ptr_->GetPoints();
-      std::cout << "ground_line_points.size = " << ground_line_points.size()
-                << std::endl;
+      ILOG_DEBUG << "ground_line_points.size = " << ground_line_points.size();
       for (const auto &ground_line_point : ground_line_points) {
         index_offset += 1;
         if (ground_line_point.size() >= 3) {
@@ -758,7 +757,7 @@ void ObstacleManager::UpdateMapStaticObstacle() {
       for (const Map::PolygonObject &polygon_object : polygon_obstacles) {
         ehr_column_id += 1;
         if (polygon_object.shape_size() != 4U) {
-          ILOG_ERROR << "invalid polygon_object.shape_size = ",
+          ILOG_INFO << "invalid polygon_object.shape_size = ",
               polygon_object.shape_size();
           continue;
         }

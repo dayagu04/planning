@@ -1552,7 +1552,7 @@ void NSAGeneralLateralDecider::GenerateObstaclesBoundary() {
 }
 
 void NSAGeneralLateralDecider::GenerateStaticObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions& obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto& obstacle : obs_vec) {
@@ -1795,7 +1795,7 @@ double NSAGeneralLateralDecider::CalculateExtraDecreaseBuffer(
 }
 
 void NSAGeneralLateralDecider::GenerateDynamicObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions& obstacle_decisions) {
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto& obstacle : obs_vec) {

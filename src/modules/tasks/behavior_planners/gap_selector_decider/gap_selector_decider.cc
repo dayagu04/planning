@@ -532,7 +532,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
           .lane_change_decider_output()
           .coarse_planning_info.reference_path->get_frenet_coord();
   if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
-    ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
+    ILOG_INFO << "ERROR! Frenet Point -> Cart Point Failed!!!";
   }
   // if reamining duration less than 1s, then aggresively lane change
   if (remain_lc_duration < 1.0) {

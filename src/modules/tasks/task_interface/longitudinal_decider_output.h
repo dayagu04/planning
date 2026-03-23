@@ -11,6 +11,7 @@ struct LongitudinalDeciderOutput {
   std::vector<double> t_list;
   std::vector<std::pair<double, double>> s_refs;  // <offset, weight>
   std::vector<std::pair<double, double>> ds_refs;
+  std::vector<std::pair<double, double>> dds_refs;
 
   std::vector<WeightedBounds> hard_bounds;             // s hard bounds
   WeightedBounds hard_bounds_v3;                       // s hard bounds for v3

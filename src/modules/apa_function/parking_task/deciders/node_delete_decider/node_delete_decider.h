@@ -105,29 +105,18 @@ class NodeDeleteDecider final : public ParkingTask {
   const bool CheckShouldBeDeletedForPerpendicularIn();
 
   const bool CheckPtsCollision(
-#if USE_LINK_PT_LINE
       const std::vector<common_math::PathPt<float>>& origin_pts,
-#else
-      const std::vector<geometry_lib::PathPoint>& origin_pts,
-#endif
       AstarPathGear gear, bool is_special_node,
       ObsToPathDistRelativeSlot* obs_dist, double* safe_remain_dist);
 
   void SplitPathPtsUsingGradeBuffer(
-#if USE_LINK_PT_LINE
       const std::vector<common_math::PathPt<float>>& origin_pts,
-#else
-      const std::vector<geometry_lib::PathPoint>& origin_pts,
-#endif
       std::vector<GradeBufferPathPts>& grade_buffer_pts_vec);
 
   const GradeColDetBufferType GetGradeBufferType(
-#if USE_LINK_PT_LINE
       const common_math::PathPt<float>& pt
-#else
-      const geometry_lib::PathPoint& pt
-#endif
   );
+
 
   const bool CheckCollision();
 

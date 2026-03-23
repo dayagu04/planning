@@ -25,10 +25,11 @@ void NeighborTarget::GenerateNeighborTarget() {
   const bool default_has_target = false;
   const double default_s_target = 0.0;
   const double default_v_target = 0.0;
+  const double default_a_target = 0.0;
   const TargetType default_target_type = TargetType::kNotSet;
   auto default_target_value =
       TargetValue(default_t, default_has_target, default_s_target,
-                  default_v_target, default_target_type);
+                  default_v_target, default_a_target, default_target_type);
   target_values_ =
       std::vector<TargetValue>(plan_points_num_, default_target_value);
 
@@ -49,12 +50,14 @@ void NeighborTarget::GenerateNeighborTarget() {
     double v_target_value =
         std::min(neighbor_target_curve_->Evaluate(1, t),
                  neighbor_target_curve_lower_bound_->Evaluate(1, t));
+    double a_target_value = neighbor_target_curve_->Evaluate(2, t);
     s_target_value =
         std::min(s_target_value, max_speed_limit_curve_->Evaluate(0, t));
     v_target_value =
         std::min(v_target_value, max_speed_limit_curve_->Evaluate(1, t));
     target_value.set_s_target_val(s_target_value);
     target_value.set_v_target_val(v_target_value);
+    target_value.set_a_target_val(a_target_value);
     target_value.set_target_type(neighbor_target_type_);
   }
 }

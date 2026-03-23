@@ -25,6 +25,8 @@ class TargetMaker {
 
   double v_target(const double t) const;
 
+  double a_target(const double t) const;
+
   const TargetValue& target_value(const double t) const;
 
  private:

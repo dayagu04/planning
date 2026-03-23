@@ -33,7 +33,7 @@ class ConeRequest : public LaneChangeRequest {
   void setLaneChangeRequestByCone();
 
   void GetTargetLaneWidthByCone(
-      const std::vector<std::pair<double, double>> lane_s_width,
+      const std::vector<std::pair<double, double>>& lane_s_width,
       const std::shared_ptr<VirtualLane> target_lane, const double cone_s,
       const double cone_l, bool is_left, double* dist);
 
@@ -63,9 +63,9 @@ class ConeRequest : public LaneChangeRequest {
   bool CheckTargetLaneAvailable(bool is_left,
                                 const std::shared_ptr<VirtualLane> lane);
 
-  double ConeSpearmanRankCorrelation(const std::vector<ConePoint> points);
+  double ConeSpearmanRankCorrelation(const std::vector<ConePoint>& points);
 
-  double ConeComputeSlope(std::vector<ConePoint> points);
+  double ConeComputeSlope(std::vector<ConePoint>& points);
 
   std::vector<double> ConeRankify(std::vector<double>& arr);
 

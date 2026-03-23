@@ -455,7 +455,7 @@ void ApaObstacleManager::GenerateObsByOD(
 
     double speed = std::sqrt(obs.velocity.x * obs.velocity.x +
                              obs.velocity.y * obs.velocity.y);
-    if (IsDynamicODVeh(od_config.moving_veh_speed_thresh, speed, obs.type)) {
+    if (IsDynamicODVeh(speed, obs.type)) {
       if (!od_config.use_dynamic_od_car) {
         continue;
       }
@@ -532,8 +532,7 @@ void ApaObstacleManager::GenerateObsByOD(
     apa_obs.SetPose(pose);
     apa_obs.SetSpeed(speed);
 
-    if (IsDynamicODVeh(od_config.moving_veh_speed_thresh, speed, obs.type) ||
-        IsDynamicLivingThings(speed, obs.type)) {
+    if (IsDynamicODVeh(speed, obs.type) || IsDynamicLivingThings(obs.type)) {
       Eigen::Vector2d speed_dir(obs.velocity.x, obs.velocity.y);
       apa_obs.SetSpeedHeading(speed_dir.normalized());
       apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
@@ -571,7 +570,7 @@ void ApaObstacleManager::GenerateObsByODTracking(
 
     double speed = std::sqrt(obs.velocity.x * obs.velocity.x +
                              obs.velocity.y * obs.velocity.y);
-    if (IsDynamicODVeh(od_config.moving_veh_speed_thresh, speed, obs.type)) {
+    if (IsDynamicODVeh(speed, obs.type)) {
       if (!od_config.use_dynamic_od_car) {
         continue;
       }
@@ -666,8 +665,7 @@ void ApaObstacleManager::GenerateObsByODTracking(
     apa_obs.SetPose(pose);
     apa_obs.SetSpeed(speed);
 
-    if (IsDynamicODVeh(od_config.moving_veh_speed_thresh, speed, obs.type) ||
-        IsDynamicLivingThings(speed, obs.type)) {
+    if (IsDynamicODVeh(speed, obs.type) || IsDynamicLivingThings(obs.type)) {
       Eigen::Vector2d speed_dir(obs.velocity.x, obs.velocity.y);
       apa_obs.SetSpeedHeading(speed_dir.normalized());
       apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);

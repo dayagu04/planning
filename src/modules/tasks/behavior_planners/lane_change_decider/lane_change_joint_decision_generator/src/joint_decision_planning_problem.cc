@@ -207,8 +207,23 @@ uint8_t JointDecisionPlanningProblem::Update(
         planning_input.q_hard_halfplane_weight() * hard_halfplane_bound_decay;
     cost_config_vec.at(i)[HARD_HALFPLANE_DIST] =
         planning_input.hard_halfplane_dist();
-    cost_config_vec.at(i)[HALFPLANE_COST_ALLOCATION_RATIO] =
-        planning_input.halfplane_cost_allocation_ratio();
+    // 硬半平面代价分配：与软半平面对齐
+    //   [0, 1s)   -> 1.0（全给自车）
+    //   [1s, 3s)  -> halfplane_cost_allocation_ratio（配置值）
+    //   [3s, end) -> 0.5
+    const int reaction_steps = (reaction_time > 1e-6)
+                                   ? static_cast<int>(reaction_time / dt)
+                                   : static_cast<int>(1.0 / dt);
+    const int three_sec_steps = static_cast<int>(3.0 / dt);
+    double hard_halfplane_allocation;
+    if (i < reaction_steps) {
+      hard_halfplane_allocation = 1.0;
+    } else if (i < three_sec_steps) {
+      hard_halfplane_allocation = planning_input.halfplane_cost_allocation_ratio();
+    } else {
+      hard_halfplane_allocation = planning_input.halfplane_cost_allocation_ratio_later();
+    }
+    cost_config_vec.at(i)[HALFPLANE_COST_ALLOCATION_RATIO] = hard_halfplane_allocation;
 
     double soft_halfplane_bound_decay = 0.0;
     if (i >= 3) {
@@ -226,14 +241,18 @@ uint8_t JointDecisionPlanningProblem::Update(
     cost_config_vec.at(i)[SOFT_HALFPLANE_TAU] =
         planning_input.soft_halfplane_tau();
 
-    // 软半平面代价分配：反应时间内全部给自车，之后按配置分配
-    double soft_halfplane_allocation =
-        planning_input.soft_halfplane_cost_allocation_ratio();
-    if (reaction_time > 1e-6) {
-      const int reaction_steps = static_cast<int>(reaction_time / dt);
-      if (i < reaction_steps) {
-        soft_halfplane_allocation = 1.0;  // 反应时间内：自车承担100%
-      }
+    // 软半平面代价分配：
+    //   [0, 1s)   -> 1.0（全给自车）
+    //   [1s, 3s)  -> soft_halfplane_cost_allocation_ratio（配置值）
+    //   [3s, end) -> 0.5
+    double soft_halfplane_allocation;
+    if (i < reaction_steps) {
+      soft_halfplane_allocation = 1.0;
+    } else if (i < three_sec_steps) {
+      soft_halfplane_allocation =
+          planning_input.soft_halfplane_cost_allocation_ratio();
+    } else {
+      soft_halfplane_allocation = planning_input.halfplane_cost_allocation_ratio_later();
     }
     cost_config_vec.at(i)[SOFT_HALFPLANE_COST_ALLOCATION_RATIO] =
         soft_halfplane_allocation;

@@ -110,11 +110,7 @@ struct AnalyticExpansionRequest {
   Node3d* current_node;
   CurveNode* curve_node_to_goal;
 
-#if USE_LINK_PT_LINE
   link_pt_line::LinkPtLineInput<float>* lpl_input;
-#else
-  LinkPoseLineInput* lpl_input;
-#endif
 
   float rs_radius;
   bool need_rs_dense_point = false;
@@ -137,20 +133,11 @@ enum class GradeColDetBufferType : uint8_t {
 
 struct GradeBufferPathPts {
   GradeColDetBufferType type;
-#if USE_LINK_PT_LINE
   std::vector<common_math::PathPt<float>> pts;
-#else
-  std::vector<geometry_lib::PathPoint> pts;
-#endif
 
   GradeBufferPathPts() = default;
   GradeBufferPathPts(GradeColDetBufferType _type,
-#if USE_LINK_PT_LINE
-                     std::vector<common_math::PathPt<float>> _pts
-#else
-                     std::vector<geometry_lib::PathPoint> _pts
-#endif
-                     )
+                     std::vector<common_math::PathPt<float>> _pts)
       : type(_type), pts(_pts) {
   }
   ~GradeBufferPathPts() = default;

@@ -16,7 +16,7 @@ LongtimeNoaTaskPipeline::LongtimeNoaTaskPipeline(
   general_lateral_decider_ =
       std::make_unique<GeneralLateralDecider>(config_builder, session);
   lateral_motion_planner_ =
-      std::make_unique<LateralMotionPlanner>(config_builder, session);
+      std::make_unique<SCCLateralMotionPlanner>(config_builder, session);
   // scc_lon_behavior_planner_ =
   //     std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   scc_longitudinal_motion_planner_ =

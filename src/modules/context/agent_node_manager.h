@@ -21,11 +21,12 @@ enum MonotonicStatus { NONMONOTIONIC = 0, INCREASE, DECREASE };
 class AgentNodeManager {
  public:
   AgentNodeManager(){};
-  AgentNodeManager(std::vector<std::pair<double, double>> origin_refline_points,
-                   std::vector<std::pair<double, double>> target_refline_points,
-                   std::unordered_map<int, Obstacle> map_gs_care_obstacles,
-                   std::vector<int> map_target_lane_obstacles,
-                   std::vector<int> map_origin_lane_obstacles, int target_state)
+  AgentNodeManager(
+      const std::vector<std::pair<double, double>>& origin_refline_points,
+      const std::vector<std::pair<double, double>>& target_refline_points,
+      const std::unordered_map<int, Obstacle>& map_gs_care_obstacles,
+      const std::vector<int>& map_target_lane_obstacles,
+      const std::vector<int>& map_origin_lane_obstacles, int target_state)
       : target_state_(target_state),
         map_gs_care_obstacles_(map_gs_care_obstacles),
         map_target_lane_obstacles_(map_target_lane_obstacles),

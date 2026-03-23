@@ -50,7 +50,7 @@ bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
 
 const agent::Agent* StGraphUtils::GetFrontAgentOfTargetLane(
     const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-    const std::string lane_change_status,
+    const std::string& lane_change_status,
     const std::string& lane_change_request) {
   const auto* ptr_agent_manager = dynamic_world->agent_manager();
   if (nullptr == ptr_agent_manager) {
@@ -89,7 +89,7 @@ const agent::Agent* StGraphUtils::GetFrontAgentOfTargetLane(
 
 const agent::Agent* StGraphUtils::GetRearAgentOfTargetLane(
     const std::shared_ptr<planning_data::DynamicWorld>& dynamic_world,
-    const std::string lane_change_status,
+    const std::string& lane_change_status,
     const std::string& lane_change_request) {
   const auto* ptr_agent_manager = dynamic_world->agent_manager();
   if (nullptr == ptr_agent_manager) {
@@ -144,7 +144,8 @@ double StGraphUtils::CalculateLateralBufferForTimeRange(
 
 void StGraphUtils::DetermineCautionYieldDecision(
     const std::shared_ptr<StGraphInput>& st_graph_input,
-    const std::string lane_change_status, const std::string lane_change_request,
+    const std::string& lane_change_status,
+    const std::string& lane_change_request,
     const std::unordered_map<int32_t, std::vector<int64_t>>&
         agent_id_st_boundaries_map,
     const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&

@@ -26,6 +26,13 @@ class iLqr {
     FAULT_INPUT_SIZE,         // input size is error
   };
 
+  struct CostInfo {
+    size_t id = 0;
+    double cost = 0.0;
+
+    CostInfo(const size_t id_, const double cost_) : id(id_), cost(cost_) {}
+  };
+
   // solver info for each iteration
   struct IterationInfo {
     bool linesearch_success = false;
@@ -38,6 +45,7 @@ class iLqr {
     double du_norm = 0.0;
     StateVec x_vec;
     ControlVec u_vec;
+    std::vector<CostInfo> cost_vec;
   };
 
   struct AlIterationInfo {
@@ -46,6 +54,19 @@ class iLqr {
     Eigen::MatrixXd rho_k_iteration;
     Eigen::MatrixXd mu_u_iteration;
     Eigen::MatrixXd rho_u_iteration;
+    Eigen::MatrixXd constraint_data_iteration;
+  };
+
+  struct LateralAlIterationInfo {
+    // record al param
+    Eigen::MatrixXd mu_hard_acc_iteration;
+    Eigen::MatrixXd rho_hard_acc_iteration;
+    Eigen::MatrixXd mu_hard_jerk_iteration;
+    Eigen::MatrixXd rho_hard_jerk_iteration;
+    Eigen::MatrixXd mu_hard_upper_pos_iteration;
+    Eigen::MatrixXd rho_hard_upper_pos_iteration;
+    Eigen::MatrixXd mu_hard_lower_pos_iteration;
+    Eigen::MatrixXd rho_hard_lower_pos_iteration;
     Eigen::MatrixXd constraint_data_iteration;
   };
 
@@ -68,6 +89,7 @@ class iLqr {
     double dcost_outer = 0.0;
     double constraint_violation = 0.0;
     AlIterationInfo al_iteration_info;
+    LateralAlIterationInfo lat_al_iteration_info;
   };
 
   struct TimeInfo {
@@ -157,6 +179,8 @@ class iLqr {
   void UpdateDynamicsDerivatives();
 
   void AddCost(std::shared_ptr<BaseCostTerm> cost_term);
+
+  void ClearCost();
 
   void SetSolverConfig(const iLqrSolverConfig &ilqr_sovler_config) {
     *solver_config_ptr_ = ilqr_sovler_config;

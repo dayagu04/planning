@@ -174,8 +174,6 @@ class SpeedLimitDecider : public Task {
   bool last_is_sharp_curve_ = false;
   bool last_is_sharp_curve_by_decel_ =
       false;  // Previous sharp curve state based on deceleration
-  int sharp_curve_frame_count_ =
-      0;  // Frame count counter for maintaining sharp curve state
   bool last_is_map_sharp_curve_ramp_ =
       false;  // Previous map sharp curve state (for hysteresis, ramp related)
   bool last_condition_ramp_raw_count_ =
@@ -183,6 +181,8 @@ class SpeedLimitDecider : public Task {
   bool last_is_map_sharp_curve_ =
       false;  // Previous complete is_map_sharp_curve state (for detecting
               // entering state)
+  bool last_is_map_sharp_curve_by_decel_ =
+      false;  // Previous map sharp curve by deceleration state
   bool last_use_avg_radius_for_ewma_ =
       false;  // Previous use_avg_radius_for_ewma state (for hysteresis)
   double last_road_radius_origin_ = 10000.0;  // Previous road_radius_origin
@@ -218,6 +218,8 @@ class SpeedLimitDecider : public Task {
       0.0;  // Last road boundary strictest trigger distance
   int road_boundary_strictest_cooldown_count_ =
       0;  // Cooldown frame counter for strictest limit
+  bool last_is_road_boundary_sharp_decel_strictest_ =
+      false;  // Previous strictest sharp decel state (for hysteresis)
 
   // Road boundary speed limit manual intervention detection
   bool road_boundary_v_limit_set_ = false;
