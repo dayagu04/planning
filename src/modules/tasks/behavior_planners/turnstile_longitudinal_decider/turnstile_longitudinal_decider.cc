@@ -103,12 +103,13 @@ void TurnstileLongitudinalDecider::ResetCurrentFrameState() {
   turnstile_decider_output_.set_front_car_id(agent::AgentDefaultInfo::kNoAgentId);
   turnstile_decider_output_.set_is_head_car(true);
   turnstile_decider_output_.set_has_target_turnstile(false);
+  const auto& turnstile_info = reference_path_->get_turnstile_scene_info();
   turnstile_decider_output_.set_turnstile_scene_type(
-      static_cast<int32_t>(reference_path_->get_turnstile_scene_type()));
+      static_cast<int32_t>(turnstile_info.type));
   turnstile_decider_output_.set_target_turnstile_obs_id(
-      reference_path_->get_target_turnstile_obs_id());
+      turnstile_info.target_id);
   turnstile_decider_output_.set_side_turnstile_obs_id(
-      reference_path_->get_side_turnstile_obs_id());
+      turnstile_info.side_id);
   turnstile_decider_output_.set_front_car_passed_in_current_cycle(
       front_car_passed_in_current_cycle_);
   turnstile_decider_output_.set_wait_reopen_required(wait_reopen_required_);
@@ -137,7 +138,7 @@ const FrenetObstacle* TurnstileLongitudinalDecider::FindTargetTurnstileFrenetObs
   if (reference_path_ == nullptr) {
     return nullptr;
   }
-  const auto target_id = reference_path_->get_target_turnstile_obs_id();
+  const auto target_id = reference_path_->get_turnstile_scene_info().target_id;
   const auto& turnstile_map = reference_path_->get_turnstile_obstacles_map();
   auto target_turnstile_iter = turnstile_map.find(target_id);
   if (target_turnstile_iter == turnstile_map.end() ||
