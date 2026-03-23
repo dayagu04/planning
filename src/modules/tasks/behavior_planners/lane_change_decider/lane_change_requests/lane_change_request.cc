@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #include "common_c.h"
 #include "config/basic_type.h"
@@ -1583,7 +1584,6 @@ bool LaneChangeRequest::IsLargeCurvatureByQuantile(
 
   return false;
 }
-
 bool LaneChangeRequest::CollectConsiderPoints(std::vector<ad_common::math::Vec2d>& consider_points) const {
   if (session_ == nullptr) {
     return false;
@@ -1699,4 +1699,42 @@ bool LaneChangeRequest::CollectPointsFromLink(
   return false;  // Not reached target length
 }
 
+bool LaneChangeRequest::IsCurveSurpressLaneChange(int target_lane_virtual_id) const {
+  if (session_ == nullptr) {
+    return true;
+  }
+  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  const auto& target_lane = virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+  if (target_lane == nullptr) {
+    return true;
+  }
+  const auto& target_ref = target_lane->get_reference_path();
+  if (target_ref == nullptr) {
+    return true;
+  }
+  const double ego_s = target_ref->get_frenet_ego_state().s();
+  // 遍历自车前方 80m 参考点平均曲率
+  double curv_sum = 0.0;
+  int count = 0;
+  constexpr int kMinValidPointCount = 5;
+  for (int idx = 0; idx * 2.0 < 80.0; idx++) {
+    ReferencePathPoint refpath_pt;
+    if (target_ref->get_reference_point_by_lon(ego_s + idx * 2.0, refpath_pt)) {
+      double kappa = refpath_pt.path_point.kappa();
+      // 检查曲率值有效性
+      if (std::isnan(kappa) || std::isinf(kappa)) {
+        continue;  // 跳过无效的曲率值
+      }
+      curv_sum += std::abs(kappa);
+      count++;
+    }
+  }
+  // 如果有效点数不足，采用保守策略：抑制变道
+  if (count < kMinValidPointCount) {
+    return true;
+  }
+  double average_curve = curv_sum / count;  // 计算平均曲率 
+  const double curve_condition = 1.0 / kCurveRadiusThreshold;
+  return average_curve > curve_condition;
+}
 }  // namespace planning

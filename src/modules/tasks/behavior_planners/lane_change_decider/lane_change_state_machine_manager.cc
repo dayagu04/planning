@@ -381,14 +381,24 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   // check lc gap if feasible
   if (!has_target_lane) {
-    lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+    lane_change_stage_info_.lc_invalid_reason = "no target lane";
+    return false;
+  }
+  // check target lane curve (execpt emergency lc request)
+  bool is_suppress_large_curve = false;
+  if(lane_change_type != EMERGENCE_AVOID_REQUEST && lane_change_type != CONE_REQUEST) {
+    is_suppress_large_curve = lc_request_.IsCurveSurpressLaneChange(lc_req_mgr_->target_lane_virtual_id());
+    if(is_suppress_large_curve) {
+      lane_change_stage_info_.lc_invalid_reason = "target lane too large curve";
+      return false;
+    }
   }
   CheckLaneChangeValid(lane_change_direction);
   const bool is_suppress_LC_short_dis = IsSuppressLCShortDis();
   const bool is_allowed_lc_in_cone_scene =
       lc_req_mgr_->get_int_request_is_allowed_lc_in_cone_scene();
   return has_target_lane && lane_change_stage_info_.gap_insertable &&
-         !ego_trajs_future_.empty() && !is_suppress_LC_short_dis &&
+         !ego_trajs_future_.empty() && !is_suppress_LC_short_dis && !is_suppress_large_curve &&
          (is_allowed_lc_in_cone_scene || lane_change_type != INT_REQUEST);
 }
 

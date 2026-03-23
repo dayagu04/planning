@@ -469,6 +469,7 @@ struct RouteInfoOutput {
   // bool is_nearing_other_lane_merge_to_road_point = false;
   // bool is_on_highway = false;
   bool is_continuous_ramp = false;  // for jwliu23
+  bool is_in_tunnel = false;
   // bool is_nearing_ramp = false;
   // bool is_ego_on_split_region = false;
   // bool is_find_exc_fp = false;
@@ -556,6 +557,7 @@ struct RouteInfoOutput {
     is_exist_toll_station = false;
     // is_on_highway = false;
     is_continuous_ramp = false;
+    bool is_in_tunnel = false;
     // first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
     // split_dir_dis_info_list.clear();
     current_segment_passed_distance = 0.0;

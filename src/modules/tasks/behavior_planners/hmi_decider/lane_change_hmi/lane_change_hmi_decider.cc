@@ -159,6 +159,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   // ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
+  ad_info.is_in_tunnel = route_info_output.is_in_tunnel;
   ad_info.lane_change_direction =
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
   // update LaneChangeStatus
@@ -269,8 +270,10 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;
   } else if (curr_state == kLaneChangeComplete) {
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-  } else if (curr_state == kLaneChangeCancel || curr_state == kLaneChangeHold) {
+  } else if (curr_state == kLaneChangeCancel) {
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
+  } else if (curr_state == kLaneChangeHold) {
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_HOLD;
   }
 
   if(is_distance_enough || last_frame_dir_turn_signal_road_to_ramp_ == RAMP_NONE ||
@@ -296,11 +299,16 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
     proposal_time_out_cnt++;
+  } else if (lane_change_decider_output.lc_invalid_reason == "no target lane") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_LANE_UNAVAILABLE;
   } else if (lc_back_reason == "dash line length not satisfy" ||
-             lane_change_decider_output.lc_invalid_reason ==
-                 "dash not enough") {
+             lane_change_decider_output.lc_invalid_reason == "dash not enough") {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+  } else if (lane_change_decider_output.lc_invalid_reason == "target lane too large curve") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_HIGH_CURVATURE;
   } else if (lc_invalid_reason == "side view invalid" ||
              lc_invalid_reason == "front view invalid" ||
              lc_back_reason == "side view back" ||
