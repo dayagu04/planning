@@ -1853,7 +1853,8 @@ void BaseWeight::SetWeightProtectionForLargePosDiff(
       lateral_motion_scene_ != LateralMotionScene::LANE_BORROW &&
       lateral_motion_scene_ != LateralMotionScene::SPLIT &&
       ref_vel_ > 2.0 && last_path_max_dist2ref_ > 2.0 &&
-      weight_.remotely_index >= 17) {
+      weight_.remotely_index >= 17 &&
+      emergency_level_ < EmergencyLevel::P1) {
     for (size_t i = 0; i < weight_.point_num; ++i) {
       weight_.jerk_upper_bound[i] = std::min(
           weight_.jerk_upper_bound[i], config_.jerk_bound_inactivated_limit);
@@ -1900,9 +1901,12 @@ void BaseWeight::SetMotionPlanConcernedEndIndex(
     weight_.complete_follow = origin_complete_follow;
   }
 
-  std::vector<double> xp_road_radius{50.0, 150.0, 400.0, 1000.0, 2000.0};
-  double valid_perception_range = planning::interp(
-      target_road_radius_, xp_road_radius, config_.valid_perception_range);
+  double valid_perception_range = config_.valid_perception_range.back();
+  if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
+    std::vector<double> xp_road_radius{50.0, 150.0, 400.0, 1000.0, 2000.0};
+    valid_perception_range = planning::interp(
+        target_road_radius_, xp_road_radius, config_.valid_perception_range);
+  }
   for (size_t i = weight_.proximal_index + 1; i < weight_.remotely_index; ++i) {
     planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),
                                   planning_input.ref_y_vec(i));
