@@ -30,6 +30,7 @@ void BaseWeight::Init() {
   risk_level_ = planning::RiskLevel::NO_RISK;
   lat_offset_ = 0.0;
   avoid_dist_ = 0.0;
+  avoid_time_ = 0.0;
   init_dis_to_ref_ = 0.0;
   init_ref_theta_error_ = 0.0;
   concerned_start_q_jerk_ = 0.0;
@@ -128,14 +129,14 @@ void BaseWeight::SetLateralMotionWeight(
     //   break;
     // }
     case LateralMotionScene::LANE_CHANGE: {
-      if (std::fabs(avoid_dist_) > 0.1) {
-        if (lc_style_ == LaneChangeStyle::STANDARD_LANE_CHANGE) {
-          lc_style_ = LaneChangeStyle::QUICKLY_LANE_CHANGE;
-        }
+      // if (std::fabs(avoid_dist_) > 0.1) {
+        // if (lc_style_ == LaneChangeStyle::STANDARD_LANE_CHANGE) {
+        //   lc_style_ = LaneChangeStyle::QUICKLY_LANE_CHANGE;
+        // }
         // if (ego_vel_ < 4.167) {
         //   lc_style_ = LaneChangeStyle::LOW_SPEED_LANE_CHANGE;
         // }
-      }
+      // }
       end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
       end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
       planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
@@ -515,7 +516,7 @@ void BaseWeight::CalculateLastPathDistToRef(
 
 void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
     double init_s, double ref_vel, double wheel_base, double steer_ratio,
-    double curv_factor, const pnc::mathlib::spline &k_s_spline,
+    double curv_factor, const std::shared_ptr<planning::ReferencePath>& reference_path,
     std::vector<double> &expected_steer_vec) {
   expected_average_acc_ = 0.0;
   expected_max_acc_ = -10.0;
@@ -525,10 +526,7 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   target_road_radius_ = 10000.0;
   is_s_bend_ = false;
   is_sharp_turn_ = false;
-  bool is_k_s_spline_valid = false;
-  if (!k_s_spline.get_x().empty() && !k_s_spline.get_y().empty()) {
-    is_k_s_spline_valid = true;
-  }
+  const auto& frenet_coord = reference_path->get_frenet_coord();
   bool is_left_bend = false;
   bool is_right_bend = false;
   size_t time = 0;
@@ -537,6 +535,7 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   size_t right_count = 0;
   min_road_radius_ = 10000.0;
   double max_road_radius = 1.0;
+  double current_road_radius = 10000.0;
   double preview_road_radius = 10000.0;
   double sum_kappa = 0;
   double left_bend_s = 0;
@@ -552,9 +551,86 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   double last_acc = 0;
   planning::ReferencePathPoint ref_point;
   for (size_t i = 0; i < weight_.point_num; ++i) {
-    if (is_k_s_spline_valid) {
-      init_s = std::max(std::min(k_s_spline.get_x().back(), init_s), k_s_spline.get_x().front());
-      pt_kappa = k_s_spline(init_s);
+    if (frenet_coord->GetKappaByS(init_s, &pt_kappa)) {
+      if (pt_kappa > kCurvatureThreshold) {
+        left_count++;
+        right_count = 0;
+      } else if (pt_kappa < -kCurvatureThreshold) {
+        left_count = 0;
+        right_count++;
+      } else {
+        left_count = 0;
+        right_count = 0;
+      }
+      if (pt_kappa > kBigCurvatureThreshold) {
+        left_bend_s += ds;
+      } else {
+        left_bend_s = 0;
+      }
+      if (left_bend_s > (ds + 10.0)) {
+        is_left_bend = true;
+      }
+      if (pt_kappa < -kBigCurvatureThreshold) {
+        right_bend_s += ds;
+      } else {
+        right_bend_s = 0;
+      }
+      if (right_bend_s > (ds + 10.0)) {
+        is_right_bend = true;
+      }
+      kappa_gap += 1;
+      sum_kappa += std::fabs(pt_kappa);
+      double expected_delta = std::atan(wheel_base * pt_kappa);         // rad
+      double expected_steer = steer_ratio * expected_delta * kRad2Deg;  // deg
+      double expected_lat_acc = kv2 * expected_delta;
+      expected_steer_vec[i] = expected_steer;
+      weight_.expected_acc[i] = expected_lat_acc;
+      if (i < 16) {
+        expected_average_acc_ += expected_lat_acc;
+      }
+      if (i < 21) {
+        expected_max_acc_ = std::max(expected_lat_acc, expected_max_acc_);
+        expected_min_acc_ = std::min(expected_lat_acc, expected_min_acc_);
+        if (i > 0) {
+          double d_jerk = (expected_lat_acc - last_acc) / config_.delta_t;
+          expected_max_jerk_ = std::max(d_jerk, expected_max_jerk_);
+          expected_min_jerk_ = std::min(d_jerk, expected_min_jerk_);
+        }
+        last_acc = expected_lat_acc;
+      }
+      if (i % 5 == 0) {  // 0 1 2 3 4 5
+        double average_kappa = sum_kappa / kappa_gap;
+        if (std::fabs(average_kappa) > 1e-6) {
+          double average_radius = 1 / average_kappa;
+          curvature_radius_vec_[time] = average_radius;
+          if (time < 5) {
+            min_road_radius_ = std::min(std::fabs(curvature_radius_vec_[time]),
+                                        min_road_radius_);
+            max_road_radius =
+                std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
+          }
+          if (time == 1) {
+            current_road_radius = average_radius;
+            if (right_count > 2) {
+              current_road_radius *= -1.0;
+            }
+          }
+          if (time == 3 || time == 4) {
+            if (right_count > 2) {
+              average_radius *= -1.0;
+            }
+            if (std::fabs(average_radius) < std::fabs(preview_road_radius)) {
+              preview_road_radius = average_radius;
+            }
+          }
+        }
+        time += 1;
+        sum_kappa = 0;
+        kappa_gap = 0;
+        left_count = 0;
+        right_count = 0;
+      }
+      init_s += ds;
     } else {
       if (i > 0) {
         expected_steer_vec[i] = expected_steer_vec[i - 1];
@@ -566,77 +642,6 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
       init_s += ds;
       continue;
     }
-    if (pt_kappa > kCurvatureThreshold) {
-      left_count++;
-      right_count = 0;
-    } else if (pt_kappa < -kCurvatureThreshold) {
-      left_count = 0;
-      right_count++;
-    } else {
-      left_count = 0;
-      right_count = 0;
-    }
-    if (pt_kappa > kBigCurvatureThreshold) {
-      left_bend_s += ds;
-    } else {
-      left_bend_s = 0;
-    }
-    if (left_bend_s > (ds + 10.0)) {
-      is_left_bend = true;
-    }
-    if (pt_kappa < -kBigCurvatureThreshold) {
-      right_bend_s += ds;
-    } else {
-      right_bend_s = 0;
-    }
-    if (right_bend_s > (ds + 10.0)) {
-      is_right_bend = true;
-    }
-    kappa_gap += 1;
-    sum_kappa += std::fabs(pt_kappa);
-    double expected_delta = std::atan(wheel_base * pt_kappa);         // rad
-    double expected_steer = steer_ratio * expected_delta * kRad2Deg;  // deg
-    double expected_lat_acc = kv2 * expected_delta;
-    expected_steer_vec[i] = expected_steer;
-    weight_.expected_acc[i] = expected_lat_acc;
-    if (i < 16) {
-      expected_average_acc_ += expected_lat_acc;
-    }
-    if (i < 21) {
-      expected_max_acc_ = std::max(expected_lat_acc, expected_max_acc_);
-      expected_min_acc_ = std::min(expected_lat_acc, expected_min_acc_);
-      if (i > 0) {
-        double d_jerk = (expected_lat_acc - last_acc) / config_.delta_t;
-        expected_max_jerk_ = std::max(d_jerk, expected_max_jerk_);
-        expected_min_jerk_ = std::min(d_jerk, expected_min_jerk_);
-      }
-      last_acc = expected_lat_acc;
-    }
-    if (i % 5 == 0) {  // 0 1 2 3 4 5
-      double average_kappa = sum_kappa / kappa_gap;
-      if (std::fabs(average_kappa) > 1e-6) {
-        double average_radius = 1 / average_kappa;
-        curvature_radius_vec_[time] = average_radius;
-        if (time < 5) {
-          min_road_radius_ = std::min(std::fabs(curvature_radius_vec_[time]),
-                                      min_road_radius_);
-          max_road_radius =
-              std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
-        }
-        if (time == 4) {
-          preview_road_radius = average_radius;
-          if (right_count > 2) {
-            preview_road_radius *= -1.0;
-          }
-        }
-      }
-      time += 1;
-      sum_kappa = 0;
-      kappa_gap = 0;
-      left_count = 0;
-      right_count = 0;
-    }
-    init_s += ds;
   }
   expected_average_acc_ = expected_average_acc_ / 16;
   // if (std::fabs(expected_max_acc_) > std::fabs(expected_min_acc_)) {
@@ -656,7 +661,8 @@ void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
   last_expected_average_acc_ = expected_average_acc_;
   // S bend
   if ((is_left_bend && is_right_bend) ||
-      (expected_average_acc_ * preview_road_radius < -1e-6 &&
+      (current_road_radius * preview_road_radius < -1e-6 &&
+       std::fabs(current_road_radius) < 2000.0 &&
        std::fabs(preview_road_radius) < 2000.0)) {
     is_s_bend_ = true;
   }
@@ -796,19 +802,26 @@ void BaseWeight::CalculateLatAccAndSteerAngleByHistoryPath(
 void BaseWeight::CalculateLatAvoidDistance(
     const std::vector<std::pair<double, double>> &bounds) {
   avoid_dist_ = 0;
-  avoid_end_index_ = weight_.proximal_index;
+  avoid_time_ = 0;
+  size_t avoid_start_index_ = 26;
+  avoid_end_index_ = 0;
   for (size_t i = 0; i < bounds.size() - 5; ++i) {
     if (bounds[i].first > init_l_) {
       avoid_dist_ = std::max(bounds[i].first - init_l_, avoid_dist_);
       avoid_end_index_ = std::max(avoid_end_index_, i);
+      avoid_start_index_ = std::min(avoid_start_index_, i);
     }
     if (bounds[i].second < init_l_) {
       avoid_dist_ = std::max(init_l_ - bounds[i].second, avoid_dist_);
       avoid_end_index_ = std::max(avoid_end_index_, i);
+      avoid_start_index_ = std::min(avoid_start_index_, i);
     }
   }
   avoid_end_index_ =
       std::min(avoid_end_index_ + 1, config_.motion_plan_concerned_end_index);
+  if (avoid_start_index_ <= avoid_end_index_) {
+    avoid_time_ = ((avoid_end_index_ - avoid_start_index_) + 1) * config_.delta_t;
+  }
 }
 
 void BaseWeight::CalculateLatAvoidBoundPriority(
@@ -982,6 +995,9 @@ void BaseWeight::SetAccJerkBoundAndWeight(
       jerk_bound += 0.6;
     } else if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
       jerk_bound += 0.2;
+      if (risk_level_ == planning::RiskLevel::HIGH_RISK) {
+        jerk_bound += 0.2;
+      }
     }
     if (is_lane_change_hold_) {
       jerk_bound += 0.1;
@@ -991,8 +1007,9 @@ void BaseWeight::SetAccJerkBoundAndWeight(
   } else if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
     jerk_bound = config_.jerk_bound_ramp;
   }
-  // recommended avoid
-  if (is_bound_avoid_ || is_emergency_avoid_) {
+  if (lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE &&
+      (is_bound_avoid_ || is_emergency_avoid_)) {
+    // recommended avoid
     jerk_bound = std::max(expected_avoid_jerk_, jerk_bound);
   }
   // tiny speed
@@ -1138,6 +1155,10 @@ void BaseWeight::CalculateJerkBoundByLastJerk(
     } else if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
       extra_jerk_buffer = 0.1;
       jerk_bound += 0.3;
+      if (risk_level_ == planning::RiskLevel::HIGH_RISK) {
+        extra_jerk_buffer += 0.1;
+        jerk_bound += 0.3;
+      }
       if (lc_remain_time_ <= 4.0) {
         extra_jerk_buffer += 0.2;
         jerk_bound += 0.1;
@@ -1176,8 +1197,9 @@ void BaseWeight::CalculateJerkBoundByLastJerk(
           0.5;
     }
   }
-  // recommended avoid
-  if (is_bound_avoid_ || is_emergency_avoid_) {
+  if (lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE &&
+      (is_bound_avoid_ || is_emergency_avoid_)) {
+    // recommended avoid
     jerk_bound = std::max(expected_avoid_jerk_, jerk_bound);
   }
   // emergency
@@ -1197,6 +1219,9 @@ void BaseWeight::CalculateJerkBoundByLastJerk(
   }
   double violate_bound_max_dist = 0;
   EmergencyLevel cur_emergency_level = EmergencyLevel::NONE;
+  if (risk_level_ == planning::RiskLevel::HIGH_RISK) {
+    cur_emergency_level = EmergencyLevel::P2;
+  }
   if (reference_path != nullptr) {
     double init_s = reference_path->get_frenet_ego_state()
                         .planning_init_point()
@@ -1743,16 +1768,16 @@ void BaseWeight::MakeSplitDynamicWeight(
 
 void BaseWeight::MakeDynamicPosBoundWeight(
     planning::common::LateralPlanningInput &planning_input) {
-  double risk_factor = 1.0;
-  if (risk_level_ == planning::RiskLevel::LOW_RISK &&
-      emergency_level_ < EmergencyLevel::P2) {
-    emergency_level_ = EmergencyLevel::P2;
-    risk_factor = 1.5;
-  } else if (risk_level_ == planning::RiskLevel::HIGH_RISK &&
-             emergency_level_ < EmergencyLevel::P1) {
-    emergency_level_ = EmergencyLevel::P1;
-    risk_factor = 2.0;
-  }
+  // double risk_factor = 1.0;
+  // if (risk_level_ == planning::RiskLevel::LOW_RISK &&
+  //     emergency_level_ < EmergencyLevel::P2) {
+  //   emergency_level_ = EmergencyLevel::P2;
+  //   risk_factor = 1.5;
+  // } else if (risk_level_ == planning::RiskLevel::HIGH_RISK &&
+  //            emergency_level_ < EmergencyLevel::P1) {
+  //   emergency_level_ = EmergencyLevel::P1;
+  //   risk_factor = 2.0;
+  // }
   if (std::fabs(avoid_dist_) > 0.1 &&
       lateral_motion_scene_ == LateralMotionScene::LANE_KEEP) {
     if (emergency_level_ >= EmergencyLevel::P1) {
@@ -1791,10 +1816,10 @@ void BaseWeight::MakeDynamicPosBoundWeight(
   // Set according to different vel
   std::vector<double> xp_v{1.0, 4.167, 8.333, 16.667, 25.0, 30.0};
   double q_soft_bound =
-      planning::interp(ref_vel_, xp_v, config_.map_qsoft_bound) * risk_factor *
+      planning::interp(ref_vel_, xp_v, config_.map_qsoft_bound) *
       emergence_factor * intersection_factor;
   double q_hard_bound =
-      planning::interp(ref_vel_, xp_v, config_.map_qhard_bound) * risk_factor *
+      planning::interp(ref_vel_, xp_v, config_.map_qhard_bound) *
       emergence_factor * intersection_factor;
   if (std::fabs(avoid_dist_) > 0.4 &&
       lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE) {
@@ -1901,6 +1926,7 @@ void BaseWeight::SetMotionPlanConcernedEndIndex(
     min_avoid_index = 8;
   }
   if (is_bound_avoid_ && std::fabs(avoid_dist_) > 0.1) {
+    avoid_end_index_ = std::max(weight_.proximal_index, avoid_end_index_);
     // 避免过短，导致超调, 按照1：2的比例，放宽avoid_end_index_
     avoid_end_index_ = std::fmax(min_avoid_index,
         (avoid_end_index_ - weight_.proximal_index) * avoid_ratio + weight_.proximal_index);
