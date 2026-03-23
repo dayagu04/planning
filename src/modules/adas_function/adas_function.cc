@@ -242,6 +242,23 @@ void AdasFunction::SetLkaTrajectory() {
                        plan_traj_dt * i +
                    s_proj;
     Eigen::Vector3d car_point, local_point;
+
+    double ldp_center_line_offset = GetContext.get_param()->ldp_center_line_offset;
+    double ldp_center_line_offset_final = GetContext.get_param()->ldp_center_line_offset_final;
+    int ldp_center_line_offset_nums = GetContext.get_param()->ldp_center_line_offset_nums;
+    double ldp_center_line_offset_step = 0;
+    if(ldp_center_line_offset_nums > 1 && ldp_center_line_offset_final > ldp_center_line_offset) {
+      ldp_center_line_offset_step = (ldp_center_line_offset_final - ldp_center_line_offset) / ldp_center_line_offset_nums;
+    }
+    if(i < ldp_center_line_offset_nums) {
+      ldp_center_line_offset += ldp_center_line_offset_step * i;
+    } else {
+      ldp_center_line_offset = ldp_center_line_offset_final;
+    }
+    
+    ldp_center_line_offset = std::min(ldp_center_line_offset, ldp_center_line_offset_final);
+    ldp_center_line_offset = std::max(ldp_center_line_offset, GetContext.get_param()->ldp_center_line_offset);
+
     if (GetContext.get_output_info()
             ->ldp_output_info_.ldp_left_intervention_flag_ ||
         GetContext.get_output_info()
@@ -254,7 +271,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.left_line.dy_s_spline_(
                 s_ref) -
-            GetContext.get_param()->ldp_center_line_offset -
+                ldp_center_line_offset -
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else if (GetContext.mutable_road_info()
@@ -286,7 +303,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.right_line.dy_s_spline_(
                 s_ref) +
-            GetContext.get_param()->ldp_center_line_offset +
+              ldp_center_line_offset +
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else if (GetContext.get_road_info()

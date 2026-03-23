@@ -1138,6 +1138,13 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
     ldp_left_suppression_code += uint32_bit[17];
   } else { /*do nothing*/
   }
+
+  // bit 18 双闪抑制
+  if (vehicle_service_output_info_ptr->hazard_light_state == true) {
+    ldp_left_suppression_code += uint32_bit[18];
+  } else {
+    /*do nothing*/
+  }
   return ldp_left_suppression_code &
          GetContext.get_param()->ldp_left_suppression_code_maskcode;
 }
@@ -1777,6 +1784,13 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
   if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
     ldp_right_suppression_code += uint32_bit[17];
   } else { /*do nothing*/
+  }
+
+  // bit 18 双闪抑制
+  if (vehicle_service_output_info_ptr->hazard_light_state == true) {
+    ldp_right_suppression_code += uint32_bit[18];
+  } else {
+    /*do nothing*/
   }
   return ldp_right_suppression_code &
          GetContext.get_param()->ldp_right_suppression_code_maskcode;
