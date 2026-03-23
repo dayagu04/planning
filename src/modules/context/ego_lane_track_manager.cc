@@ -127,7 +127,8 @@ void EgoLaneTrackManger::TrackEgoLane(
       lane_change_decider_output.coarse_planning_info.int_lane_change_cmd;
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
   bool is_process_split_exchange = false;
   const bool is_in_lane_borrow_status = session_->planning_context()
                                             .lane_borrow_decider_output()
@@ -170,6 +171,8 @@ void EgoLaneTrackManger::TrackEgoLane(
   other_split_lane_right_side_ = false;
   other_split_lane_left_side_ = false;
   current_fix_lane_order_id_ = -1;
+  double road_merge_and_split_exchange_distance_thld =
+      std::max(60.0, ego_state->ego_v() * 4.0);
 
   //判断自车是否处于分流场景
   ComputeIsSplitRegion(relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -178,10 +181,13 @@ void EgoLaneTrackManger::TrackEgoLane(
   if (!route_info_output.map_split_region_info_list.empty()) {
     if (!route_info_output.map_merge_region_info_list.empty()) {
       is_process_split_exchange =
-          route_info_output.map_split_region_info_list[0]
+          (route_info_output.map_split_region_info_list[0]
               .distance_to_split_point <
           route_info_output.map_merge_region_info_list[0]
-              .distance_to_merge_point;
+              .distance_to_merge_point) ||
+          (std::fabs(route_info_output.map_split_region_info_list[0]
+              .distance_to_split_point - route_info_output.map_merge_region_info_list[0]
+              .distance_to_merge_point) < road_merge_and_split_exchange_distance_thld);
     } else {
       is_process_split_exchange = true;
     }
@@ -1830,7 +1836,11 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   // } else {
 
   // 这里识别需要判断的split，此处直接用first不太合理。
-  if (distance_to_first_road_merge_ > distance_to_first_road_split_) {
+  double road_merge_and_split_distance_thld_surpress_lane_select =
+      std::max(60.0, ego_state->ego_v() * 4.0);
+
+  if (distance_to_first_road_merge_ > distance_to_first_road_split_ ||
+      (std::fabs(distance_to_first_road_merge_ - distance_to_first_road_split_) < road_merge_and_split_distance_thld_surpress_lane_select)) {
     is_exist_split_on_ramp_ = true;
     std::pair<SplitRelativeDirection, double> const& split_dir_dis =
         need_consider_second_split ? split_direction_dis_info_list_[1]
