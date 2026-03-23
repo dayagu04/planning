@@ -81,7 +81,14 @@ void ApaPredictPathManager::Update(
   ILOG_INFO << "lat_err: " << lat_err_ << ", phi_err: " << phi_err_
             << ", control_err_big_: " << control_err_big_;
 
-  bool use_steer_angle_flag = false;
+  JSON_DEBUG_VALUE("control_err_big", control_err_big_);
+
+  constexpr double kPredictStep = 0.1;
+  constexpr double kMaxHeadingJumpRad = 6.8 / 57.3;
+  constexpr double kSpliceProjMaxDist = 1.5;
+  constexpr double kSpliceProjMaxHeadingDiffRad = 35.0 / 57.3;
+  constexpr int kSpliceProjSearchWindow = 68;
+  constexpr int kSplicePlanPointCount = 8;
 
   const iflyauto::ControlTrajectory& mpc_traj =
       local_view->control_output.control_trajectory;
@@ -94,16 +101,14 @@ void ApaPredictPathManager::Update(
       (planning_output->gear_command.gear_command_value ==
        local_view->control_output.gear_command_value);
 
-  if (mpc_pt_size < 1) {
-    use_steer_angle_flag = true;
-  }
+  bool use_steer_angle_flag = mpc_pt_size < 1;
 
   if (!use_steer_angle_flag) {
     ILOG_INFO << "use mpc traj";
     predict_pt_vec_.emplace_back(pnc::geometry_lib::PathPoint(
         measure_data_ptr->GetPos(), measure_data_ptr->GetHeading()));
-    pnc::geometry_lib::LocalToGlobalTf l2g_tf;
-    l2g_tf.Init(measure_data_ptr->GetPos(), measure_data_ptr->GetHeading());
+    pnc::geometry_lib::LocalToGlobalTf l2g_tf(measure_data_ptr->GetPos(),
+                                              measure_data_ptr->GetHeading());
     pnc::geometry_lib::PathPoint car_predict_pt;
     for (int i = 0; i < mpc_pt_size; ++i) {
       const iflyauto::Point3d& pt = mpc_traj.control_result_points[i];
@@ -111,14 +116,16 @@ void ApaPredictPathManager::Update(
       car_predict_pt.heading =
           pnc::geometry_lib::NormalizeAngle(l2g_tf.GetHeading(pt.z));
 
+      const auto& last_predict_pt = predict_pt_vec_.back();
+
       const double ds =
-          std::hypot(car_predict_pt.GetX() - predict_pt_vec_.back().GetX(),
-                     car_predict_pt.GetY() - predict_pt_vec_.back().GetY());
+          std::hypot(car_predict_pt.GetX() - last_predict_pt.GetX(),
+                     car_predict_pt.GetY() - last_predict_pt.GetY());
 
       const double dphi = pnc::geometry_lib::NormalizeAngle(
-          car_predict_pt.GetTheta() - predict_pt_vec_.back().GetTheta());
+          car_predict_pt.GetTheta() - last_predict_pt.GetTheta());
 
-      if (ds > 1.0 || dphi * kRad2Deg > 6.8) {
+      if (ds > 1.0 || std::fabs(dphi) > kMaxHeadingJumpRad) {
         ILOG_ERROR << "control output is err";
         predict_pt_vec_.clear();
         break;
@@ -128,15 +135,16 @@ void ApaPredictPathManager::Update(
         continue;
       }
 
-      car_predict_pt.s = ds + predict_pt_vec_.back().s;
+      car_predict_pt.s = ds + last_predict_pt.s;
       predict_pt_vec_.emplace_back(car_predict_pt);
     }
 
-    while (predict_pt_vec_.back().s < predict_distance &&
-           predict_pt_vec_.size() > 2) {
+    while (predict_pt_vec_.size() > 2 &&
+           predict_pt_vec_.back().s < predict_distance) {
       // mpc traj is vaild, extend to predict_distance
-      const double step = 0.1;
+      const double step = kPredictStep;
       const size_t cur_pt_size = predict_pt_vec_.size();
+      // Extrapolating along a straight line
       do {
         size_t n = predict_pt_vec_.size();
         pnc::geometry_lib::CalExtendedPointByTwoPoints(
@@ -154,26 +162,41 @@ void ApaPredictPathManager::Update(
 
       // need splice plan traj with smooth transition
       const pnc::geometry_lib::PathPoint last_mpc_pt = predict_pt_vec_.back();
-
-      // Find the projection point of last_mpc_pt on planning_traj
-      int pro_index = CalProjIndexFromPlanningTraj(
-          plan_traj.trajectory_points, plan_pt_size, last_mpc_pt.GetX(),
-          last_mpc_pt.GetY());
-      if (pro_index == -1) {
-        predict_pt_vec_.clear();
-        return;
-      }
-
-      // Get the actual distance of the projection point on plan_traj
-      const double proj_s = plan_traj.trajectory_points[pro_index].distance;
       const double plan_traj_last_s =
           plan_traj.trajectory_points[plan_pt_size - 1].distance;
 
-      // Check if last_mpc_pt has exceeded plan_traj length
-      // If projection point is the last point of plan_traj and last_mpc_pt.s
-      // is greater than the last point's distance, skip splicing to avoid loop
-      if (pro_index == plan_pt_size - 1 && last_mpc_pt.s > plan_traj_last_s) {
-        // last_mpc_pt exceeds plan_traj, directly extend mpc traj
+      int best_pro_index = -1;
+      double best_proj_dist = std::numeric_limits<double>::infinity();
+      const int search_start = std::max(0, pro_index);
+      const int search_end =
+          std::min(plan_pt_size, pro_index + kSpliceProjSearchWindow);
+      for (int i = search_start; i < search_end; ++i) {
+        const auto& plan_pt = plan_traj.trajectory_points[i];
+        const double proj_dist = std::hypot(plan_pt.x - last_mpc_pt.GetX(),
+                                            plan_pt.y - last_mpc_pt.GetY());
+        const double heading_diff_rad =
+            std::fabs(pnc::geometry_lib::NormalizeAngle(
+                plan_pt.heading_yaw - last_mpc_pt.GetTheta()));
+        if (proj_dist > kSpliceProjMaxDist ||
+            heading_diff_rad > kSpliceProjMaxHeadingDiffRad) {
+          continue;
+        }
+        if (proj_dist < best_proj_dist) {
+          best_proj_dist = proj_dist;
+          best_pro_index = i;
+        }
+      }
+
+      if (best_pro_index == -1) {
+        ILOG_INFO
+            << "skip splicing due to invalid projection, keep mpc extension";
+        break;
+      }
+
+      const double proj_s =
+          plan_traj.trajectory_points[best_pro_index].distance;
+      if (best_pro_index == plan_pt_size - 1 &&
+          last_mpc_pt.s > plan_traj_last_s) {
         ILOG_INFO << "last_mpc_pt exceeds plan_traj (last_mpc_pt.s="
                   << last_mpc_pt.s << ", plan_traj_last_s=" << plan_traj_last_s
                   << "), skip splicing";
@@ -181,11 +204,6 @@ void ApaPredictPathManager::Update(
       }
 
       predict_pt_vec_.resize(cur_pt_size);
-
-      const double proj_x = plan_traj.trajectory_points[pro_index].x;
-      const double proj_y = plan_traj.trajectory_points[pro_index].y;
-      const double proj_heading =
-          plan_traj.trajectory_points[pro_index].heading_yaw;
 
       pnc::mathlib::spline x_s_spline, y_s_spline, heading_s_spline;
       std::vector<double> x_vec, y_vec, s_vec, heading_vec;
@@ -195,20 +213,33 @@ void ApaPredictPathManager::Update(
         s_vec.emplace_back(pt.s);
         heading_vec.emplace_back(pt.GetTheta());
       }
-      x_vec.emplace_back(proj_x);
-      y_vec.emplace_back(proj_y);
-      s_vec.emplace_back(proj_s);
-      heading_vec.emplace_back(proj_heading);
+
+      const double splice_start_s = predict_pt_vec_.back().s;
+      const int splice_end_index =
+          std::min(plan_pt_size, best_pro_index + kSplicePlanPointCount);
+      for (int i = best_pro_index; i < splice_end_index; ++i) {
+        const auto& plan_pt = plan_traj.trajectory_points[i];
+        const double local_s = splice_start_s + (plan_pt.distance - proj_s);
+        if (local_s <= s_vec.back() + 1e-3) {
+          continue;
+        }
+        x_vec.emplace_back(plan_pt.x);
+        y_vec.emplace_back(plan_pt.y);
+        s_vec.emplace_back(local_s);
+        heading_vec.emplace_back(plan_pt.heading_yaw);
+      }
+
+      if (s_vec.size() < predict_pt_vec_.size() + 2) {
+        ILOG_INFO << "skip splicing due to insufficient plan points";
+        break;
+      }
 
       // Unwrap heading angles to avoid discontinuity at ±π
-      // This is necessary for spline interpolation of periodic angles
       double angle_offset = 0.0;
       std::vector<double> heading_vec_unwrapped;
       heading_vec_unwrapped.reserve(heading_vec.size());
       heading_vec_unwrapped.emplace_back(heading_vec[0]);
       for (size_t i = 1; i < heading_vec.size(); ++i) {
-        // Calculate raw angle difference (before normalization)
-        // If the difference is large (>1.5π or <-1.5π), it means we crossed ±π boundary
         double delta_theta = heading_vec[i] - heading_vec[i - 1];
         if (delta_theta > 1.5 * M_PI) {
           angle_offset -= 2.0 * M_PI;
@@ -221,12 +252,11 @@ void ApaPredictPathManager::Update(
       x_s_spline.set_points(s_vec, x_vec);
       y_s_spline.set_points(s_vec, y_vec);
       heading_s_spline.set_points(s_vec, heading_vec_unwrapped);
-      for (double s = predict_pt_vec_.back().s + 0.1; s < predict_distance;
-           s += 0.1) {
+      for (double s = predict_pt_vec_.back().s + kPredictStep;
+           s < predict_distance; s += kPredictStep) {
         const double x = x_s_spline(s);
         const double y = y_s_spline(s);
         const double heading_unwrapped = heading_s_spline(s);
-        // Normalize the interpolated heading back to [-π, π]
         const double heading =
             pnc::geometry_lib::NormalizeAngle(heading_unwrapped);
         car_predict_pt.SetX(x);
@@ -239,7 +269,9 @@ void ApaPredictPathManager::Update(
     }
   }
 
-  if (predict_pt_vec_.size() < 2) {
+  use_steer_angle_flag = predict_pt_vec_.size() < 2;
+
+  if (use_steer_angle_flag) {
     ILOG_INFO << "use steer angle traj";
     Reset();
     const double steer_angle = measure_data_ptr->GetSteerWheelAngle();
