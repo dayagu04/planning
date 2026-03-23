@@ -2485,6 +2485,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, max_care_time_for_roadborder,
                      "general_lateral_decider",
                      "max_care_time_for_roadborder");
+    ReadItem<double>(json, decrease_time_for_roadborder,
+                     "general_lateral_decider",
+                     "decrease_time_for_roadborder");                 
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -2631,6 +2634,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double bound_recurrence_v_limit_max = 60;
   double nudge_buffer2lane_boundary_buffer = 0.0;
   double max_care_time_for_roadborder = 3;
+  double decrease_time_for_roadborder = 2.5;
   std::vector<double> curv_bp{50, 150, 400, 600};
   std::vector<double> lat_compensation_buffer{0.25, 0.1, 0.0, 0.0};
   double max_nudge_buffer2side_car = 0.3;
