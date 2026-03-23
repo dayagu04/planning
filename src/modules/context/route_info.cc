@@ -3365,6 +3365,9 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("left_lane_num", route_info_output_.left_lane_num);
   JSON_DEBUG_VALUE("right_lane_num", route_info_output_.right_lane_num);
   JSON_DEBUG_VALUE("emergency_lane_num", route_info_output_.emergency_lane_num);
+  JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
+  JSON_DEBUG_VALUE("current_lane_distance", route_info_output_.current_lane_distance);
+  JSON_DEBUG_VALUE("right_lane_distance", route_info_output_.right_lane_distance);
 
   int minVal_seq = 0;
   int maxVal_seq = 0;
