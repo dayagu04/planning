@@ -1932,7 +1932,10 @@ const bool PerpendicularTailInScenario::CheckFinished() {
     return false;
   }
 
-  const double gain = auto_fold_mirror ? 3.0 : 1.0;
+  const bool is_space_slot =
+      (ego_info_under_slot.slot.slot_source_type_ == SlotSourceType::USS);
+
+  const double gain = (auto_fold_mirror || is_space_slot) ? 3.0 : 1.0;
 
   const double finish_lon_err = finish_params.lon_err;
 
