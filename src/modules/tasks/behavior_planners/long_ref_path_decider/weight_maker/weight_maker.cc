@@ -30,7 +30,7 @@ common::Status WeightMaker::Run(const TargetMaker& target_maker,
 
   MakeVWeight(target_maker);
 
-  MakeAccWeight();
+  MakeAccWeight(target_maker);
 
   MakeJerkWeight();
 
@@ -95,19 +95,46 @@ void WeightMaker::MakeVWeight(const TargetMaker& target_maker) {
   const double cruise_v_weight =
       speed_planning_config_.weight_maker_config.cruise_v_weight;
   v_weight_ = std::vector<double>(plan_points_num_, default_v_weight);
+  int kCruiseSpeedCount = 0;
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     auto target_value = target_maker.target_value(relative_t);
     if (target_value.target_type() == TargetType::kCruiseSpeed) {
       v_weight_[i] = cruise_v_weight;
+      ++kCruiseSpeedCount;
+    }
+  }
+  if(kCruiseSpeedCount == plan_points_num_) {
+    for(size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = cruise_v_weight + DefaultVWeightIncrement_;
     }
   }
 }
 
-void WeightMaker::MakeAccWeight() {
+bool WeightMaker::IsNeedAWeight(const TargetMaker& target_maker) {
+  int kCruiseSpeedCount = 0;
+  for (size_t i = 0; i < plan_points_num_; ++i) {
+    double relative_t = i * dt_;
+    auto target_value = target_maker.target_value(relative_t);
+    if (target_value.target_type() == TargetType::kCruiseSpeed) {
+      ++kCruiseSpeedCount;
+      if(kCruiseSpeedCount == plan_points_num_) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+void WeightMaker::MakeAccWeight(const TargetMaker& target_maker) {
   const double default_a_weight =
       speed_planning_config_.weight_maker_config.a_weight;
   acc_weight_ = std::vector<double>(plan_points_num_, default_a_weight);
+  if(IsNeedAWeight(target_maker)) {
+    a_weight_ = std::vector<double>(plan_points_num_, default_a_weight + DefaultAWeightIncrement_);
+  }else {
+    a_weight_ = std::vector<double>(plan_points_num_, 0.0);
+  }
 }
 
 void WeightMaker::MakeJerkWeight() {
@@ -131,6 +158,11 @@ double WeightMaker::a_weight(const double t) const {
   return acc_weight_[index];
 }
 
+double WeightMaker::a_new_weight(const double t) const {
+  int32_t index = static_cast<int32_t>(std::round(t / dt_));
+  return a_weight_[index];
+}
+
 double WeightMaker::jerk_weight(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
   return jerk_weight_[index];
@@ -139,6 +171,7 @@ double WeightMaker::jerk_weight(const double t) const {
 void WeightMaker::Reset() {
   s_weight_.clear();
   v_weight_.clear();
+  a_weight_.clear();
   acc_weight_.clear();
   jerk_weight_.clear();
   weight_maker_replay_info_.Clear();

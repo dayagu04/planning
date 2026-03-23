@@ -97,9 +97,10 @@ CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
     bool has_target = true;
     double s_target_value = acceleration_trajectory1d->Evaluate(0, relative_t);
     double v_target_value = acceleration_trajectory1d->Evaluate(1, relative_t);
+    double a_target_value = acceleration_trajectory1d->Evaluate(2, relative_t);
     TargetType type = TargetType::kCruiseSpeed;
     target_values_.emplace_back(relative_t, has_target, s_target_value,
-                                v_target_value, type);
+                                v_target_value, a_target_value, type);
     ++count;
   }
   std::cout << ++count << std::endl;
