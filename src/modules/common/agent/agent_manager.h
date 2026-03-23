@@ -21,11 +21,6 @@ class AgentManager {
 
   void Update(const double start_timestamp_s);
 
-  // The 'Update' method will clear and update the 'current_agents_'
-  //   void Update(const double start_timestamp_s,
-  //               const std::unordered_map<int32_t, Agent>& agent_table);
-
-  // The 'Append' method will just append the agent in 'current_agents_'
   void Append(const std::unordered_map<int32_t, Agent>& agent_table);
 
   void Reset();
@@ -45,6 +40,8 @@ class AgentManager {
   void DeleteOlderAgent();
 
   void DeleteOlderAgentInfo();
+
+  void ProcessPredictionTrajectory(std::shared_ptr<Agent>& agent);
 
  private:
   planning::framework::Session* session_ = nullptr;
