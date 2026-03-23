@@ -61,6 +61,10 @@ bool NarrowSpaceDecider::Execute() {
 
   LogNarrowSpaceCorners();
 
+  UpdateLateralObstacleDeicision();
+
+  Log();
+
   return true;
 }
 
@@ -134,7 +138,7 @@ bool NarrowSpaceDecider::HandleNarrowSpaceData() {
 
 bool NarrowSpaceDecider::ExtractNarrowSpaceOutline(
     std::map<LatObstacleDecisionType, std::map<double, double>>& outline) {
-  const auto &reference_path = session_->planning_context()
+  const auto& reference_path = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   const auto& frenet_coord = reference_path->get_frenet_coord();
@@ -847,6 +851,46 @@ void NarrowSpaceDecider::LogNarrowSpaceCorners() {
 
   JSON_DEBUG_VALUE("narrow_space_end_point_x", end_point_.x);
   JSON_DEBUG_VALUE("narrow_space_end_point_y", end_point_.y);
+}
+
+bool NarrowSpaceDecider::UpdateLateralObstacleDeicision() {
+  const auto& reference_path = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const auto& obs_vec = reference_path->get_obstacles();
+  if (obs_vec.empty()) {
+    return true;
+  }
+  const double ego_s = reference_path->get_frenet_ego_state().s();
+  auto& lat_obstacle_decision = session_->mutable_planning_context()
+                                        ->mutable_lateral_obstacle_decider_output()
+                                        .lat_obstacle_decision;
+  for (const auto& obstacle : obs_vec) {
+    if (obstacle->b_frenet_valid()) {
+      const auto& frenet_obs_boundary = obstacle->frenet_obstacle_boundary();
+      if (frenet_obs_boundary.s_start > narrow_space_s_range_.second ||
+          frenet_obs_boundary.s_start > (ego_s + distance_to_end_)) {
+        lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+      }
+    }
+  }
+  return true;
+}
+
+void NarrowSpaceDecider::Log() {
+#ifdef ENABLE_PROTO_LOG
+  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto environment_model_debug_info =
+      planning_debug_data->mutable_environment_model_info();
+  auto obstacle_log = environment_model_debug_info->mutable_obstacle();
+  auto &lat_obstacle_decision = session_->mutable_planning_context()
+                                    ->mutable_lateral_obstacle_decider_output()
+                                    .lat_obstacle_decision;
+  for (size_t i = 0; i < obstacle_log->size();++i) {
+    auto obs = obstacle_log->Mutable(i);
+    obs->set_lat_decision(static_cast<uint32_t>(lat_obstacle_decision[obs->id()]));
+  }
+#endif
 }
 
 }  // namespace planning
