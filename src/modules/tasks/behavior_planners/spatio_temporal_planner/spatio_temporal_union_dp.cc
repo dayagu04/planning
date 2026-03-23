@@ -2349,6 +2349,12 @@ bool SpatioTemporalUnionDp::PrebuildLastFrameToCurrentSpline() {
   for (const auto& xy : global_xy_list) {
     Point2D cur_frenet;
     if (current_lane_coord_.XYToSL(xy, cur_frenet)) {
+      if (!cur_s_list.empty()) {
+        double last_s = cur_s_list.back();
+        if (cur_frenet.x <= last_s) {
+          break;
+        }
+      }
       cur_s_list.push_back(cur_frenet.x);
       cur_l_list.push_back(cur_frenet.y);
     }
