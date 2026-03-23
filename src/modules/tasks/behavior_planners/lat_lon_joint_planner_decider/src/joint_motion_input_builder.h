@@ -7,7 +7,6 @@
 #include "ego_planning_config.h"
 #include "joint_motion_obstacles_selector.h"
 #include "joint_motion_planning_problem.h"
-#include "joint_motion_speed_limit.h"
 #include "session.h"
 #include "tasks/behavior_planners/lat_lon_joint_planner_decider/lat_lon_joint_planner_decider_output.h"
 
@@ -68,7 +67,6 @@ class JointMotionInputBuilder {
   framework::Session* session_;
   JointMotionPlannerConfig config_;
   SpeedPlannerConfig speed_planning_config_;
-  std::unique_ptr<JointMotionSpeedLimit> speed_limit_calculator_;
   std::shared_ptr<JointMotionObstaclesSelector> obstacles_selector_;
   JointTrajParams joint_traj_params_;
   std::vector<JointPlannerTrajectoryPoint> ref_trajectory_;

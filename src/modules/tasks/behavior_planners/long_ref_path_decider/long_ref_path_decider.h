@@ -17,7 +17,11 @@ class LongRefPathDecider : public Task {
 
   bool Execute() override;
 
-  static double CalcUpperBoundConfidence(const double distance_s);
+  static double CalcUpperBoundConfidence(const int32_t agent_id,
+                                         const double distance_s);
+  static void UpdateUpperBoundAgentObservation(framework::Session *session,
+                                               double dt,
+                                               int32_t plan_points_num);
 
  public:
   void Reset();
@@ -41,6 +45,12 @@ class LongRefPathDecider : public Task {
   int32_t plan_points_num_ = 0.0;
   static constexpr double kUpperBoundConfidenceFullDistance = 120.0;
   static constexpr double kUpperBoundConfidenceZeroDistance = 150.0;
+  static constexpr int32_t kUpperBoundAgentObservationCountThresholdMin = 3;
+  static constexpr int32_t kUpperBoundAgentObservationCountThresholdMax = 10;
+
+  // Track upper bound agent observation count (static for global access)
+  static std::unordered_map<int32_t, int32_t>
+      upper_bound_agent_observation_count_;
 
   LongitudinalDeciderOutput lon_behavior_output_;
   planning::common::LonRefPath lon_behavior_output_pb_;
