@@ -3464,6 +3464,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "speed_bump_rear_buffer");
     speed_bump_approach_distance =
         read_json_key<double>(json, "speed_bump_approach_distance");
+    speed_ramp_approach_distance =
+        read_json_key<double>(json, "speed_ramp_approach_distance");
+    speed_narrow_passage_approach_distance =
+        read_json_key<double>(json, "speed_narrow_passage_approach_distance");
+    speed_intersection_approach_distance =
+        read_json_key<double>(json, "speed_intersection_approach_distance");
     speed_bump_zone_speed_limit =
         read_json_key<double>(json, "speed_bump_zone_speed_limit");
     speed_bump_deceleration =
@@ -3514,6 +3520,9 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double speed_bump_front_buffer = 10.0;           // m
   double speed_bump_rear_buffer = 5.0;             // m
   double speed_bump_approach_distance = 20.0;      // m
+  double speed_ramp_approach_distance = 20.0;      // m
+  double speed_narrow_passage_approach_distance = 20.0;      // m
+  double speed_intersection_approach_distance = 20.0;      // m
   double speed_bump_zone_speed_limit = 2.22;    // 8kph
   double speed_bump_deceleration = -1.0;           // m/s^2
   double speed_bump_collision_buffer = 0.0;        // m

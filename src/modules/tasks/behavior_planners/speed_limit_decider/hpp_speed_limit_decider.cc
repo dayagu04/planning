@@ -109,10 +109,13 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
     return;
   }
 
+  const double approach_distance_threshold =
+      hpp_speed_limit_config_.speed_narrow_passage_approach_distance;
   HPPSpeedLimitZoneInfo zone_info;
-  if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
-                                   CPassageType::NarrowPassage,
-                                   CElemType::Ignore)) {
+
+  if (!BuildSpeedObjectiveZoneInfo(
+          zone_info, CRoadType::Ignore, CPassageType::NarrowPassage,
+          CElemType::Ignore, approach_distance_threshold)) {
     return;
   }
 
@@ -136,7 +139,8 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
                    zone_info.in_speed_limit_zone);
   JSON_DEBUG_VALUE("approaching_speed_limit_narrow_passage",
                    zone_info.approaching_speed_limit_zone);
-  JSON_DEBUG_VALUE("distance_to_zone_narrow_passage", zone_info.distance_to_zone);
+  JSON_DEBUG_VALUE("distance_to_zone_narrow_passage",
+                   zone_info.distance_to_zone);
   return;
 }
 
@@ -305,10 +309,13 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
     return;
   }
 
+  const double approach_distance_threshold =
+      hpp_speed_limit_config_.speed_bump_approach_distance;
   HPPSpeedLimitZoneInfo zone_info;
-  if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
-                                   CPassageType::Ignore,
-                                   CElemType::SpeedBumpRoad)) {
+
+  if (!BuildSpeedObjectiveZoneInfo(
+          zone_info, CRoadType::Ignore, CPassageType::Ignore,
+          CElemType::SpeedBumpRoad, approach_distance_threshold)) {
     auto& planning_result =
         session_->mutable_planning_context()->mutable_planning_result();
     planning_result.speed_bump_path_segments.clear();
@@ -345,7 +352,8 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
 
 bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
     HPPSpeedLimitZoneInfo& zone_info, const CRoadType& road_type,
-    const CPassageType& passage_type, const CElemType& elem_type) {
+    const CPassageType& passage_type, const CElemType& elem_type,
+    const double approach_distance_threshold) {
   const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
@@ -366,35 +374,28 @@ bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
 
   QueryTypeInfo query_info = {road_type, passage_type, elem_type};
 
-  const SRangeList speed_bump_near_ignore_range_list =
+  const SRangeList object_near_range_list =
       static_analysis_storage->GetSRangeList(query_info);
-  if (speed_bump_near_ignore_range_list.empty()) {
+  if (object_near_range_list.empty()) {
     return false;
   }
 
-  const std::pair<double, double> speed_bump_near_ignore_range =
+  const std::pair<double, double> object_near_range =
       static_analysis_storage->GetFrontSRange(query_info, ego_head_s);
 
-  // JSON_DEBUG_VALUE("ego_head_s", ego_head_s);
-  // JSON_DEBUG_VALUE("ego_s", ego_s);
-  // JSON_DEBUG_VALUE("speed_bump_near_ignore_range_first",
-  //                  speed_bump_near_ignore_range.first);
-  // JSON_DEBUG_VALUE("speed_bump_near_ignore_range_second",
-  //                  speed_bump_near_ignore_range.second);
+  if (object_near_range.first > object_near_range.second) {
+    return false;
+  }
 
-  const double kApproachingDistance =
-      hpp_speed_limit_config_.speed_bump_approach_distance;
-
-  zone_info.s_segments = speed_bump_near_ignore_range_list;
-  zone_info.in_speed_limit_zone =
-      speed_bump_near_ignore_range.first <= ego_head_s &&
-      speed_bump_near_ignore_range.second >= ego_s;
+  zone_info.s_segments = object_near_range_list;
+  zone_info.in_speed_limit_zone = object_near_range.first <= ego_head_s &&
+                                  object_near_range.second >= ego_s;
 
   zone_info.distance_to_zone =
-      std::max(0.0, speed_bump_near_ignore_range.first - ego_head_s);
+      std::max(0.0, object_near_range.first - ego_head_s);
   zone_info.approaching_speed_limit_zone =
       zone_info.distance_to_zone > 0 &&
-      zone_info.distance_to_zone < kApproachingDistance;
+      zone_info.distance_to_zone < approach_distance_threshold;
 
   return true;
 }
@@ -432,10 +433,13 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
   if (!session_->is_hpp_scene()) {
     return;
   }
-
+  const double approach_distance_threshold =
+      hpp_speed_limit_config_.speed_ramp_approach_distance;
   HPPSpeedLimitZoneInfo zone_info;
+
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
-                                   CPassageType::Ignore, CElemType::RampRoad)) {
+                                   CPassageType::Ignore, CElemType::RampRoad,
+                                   approach_distance_threshold)) {
     return;
   }
 
@@ -468,10 +472,13 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
     return;
   }
 
+  const double approach_distance_threshold =
+      hpp_speed_limit_config_.speed_intersection_approach_distance;
   HPPSpeedLimitZoneInfo zone_info;
-  if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
-                                   CPassageType::Ignore,
-                                   CElemType::IntersectionRoad)) {
+
+  if (!BuildSpeedObjectiveZoneInfo(
+          zone_info, CRoadType::Ignore, CPassageType::Ignore,
+          CElemType::IntersectionRoad, approach_distance_threshold)) {
     return;
   }
 

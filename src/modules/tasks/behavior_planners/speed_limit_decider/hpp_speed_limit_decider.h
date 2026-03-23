@@ -15,7 +15,7 @@ namespace planning {
 struct HPPSpeedLimitZoneInfo {
   bool in_speed_limit_zone = false;           // 是否在减速带区域内
   bool approaching_speed_limit_zone = false;  // 是否接近减速带区域
-  double distance_to_zone = 1000.0;  // 距离减速带区域的最小距离
+  double distance_to_zone = 1000.0;           // 距离减速带区域的最小距离
   // 与自车路径有碰撞关系的减速带在参考线上的 [s_min, s_max] 区间列表
   std::vector<std::pair<double, double>> s_segments;
 };
@@ -40,7 +40,8 @@ class HPPSpeedLimitDecider : public Task {
   bool BuildSpeedObjectiveZoneInfo(HPPSpeedLimitZoneInfo& zone_info,
                                    const CRoadType& road_type,
                                    const CPassageType& passage_type,
-                                   const CElemType& elem_type);
+                                   const CElemType& elem_type,
+                                   const double approach_distance_threshold);
   const double ComputeMaxLatAcceleration();
   const double ComputeCurvatureSpeedLimit(const TrajectoryPoints& traj_points,
                                           double max_lat_acceleration,
