@@ -979,9 +979,10 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
 }
 
 void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
-                                               double obs_start_s,
-                                               double speed) {
-  const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+                                               double obs_start_s, double speed,
+                                               bool is_reverse, int borrow_id) {
+  const auto& frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
 
   /*
     if (min_cost_path_.size() <= 1) { // No Dp path add on center line
@@ -1038,20 +1039,50 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   // virtual_obs_y = refpath_pt.path_point.y();
   double virtual_obs_x = cart_point.x;
   double virtual_obs_y = cart_point.y;
-  double virtual_obs_theta = frenet_coord->GetPathCurveHeading(obs_start_s);
-
+  double path_heading = frenet_coord->GetPathCurveHeading(obs_start_s);
+  double virtual_obs_theta = is_reverse ? (path_heading + M_PI) : path_heading;
   // construct trajectory for virtual obs
   std::vector<trajectory::Trajectory> trajectories;
   trajectories.reserve(1);
   trajectory::Trajectory trajectory;
-  for (int i = 0; i < 25; ++i) {
-    Point2D end_sl_point(center_virtual_s + speed * 0.2 * i, virtual_l);
-    Point2D cart_point;
-    frenet_coord->SLToXY(end_sl_point, cart_point);
-    auto point = trajectory::TrajectoryPoint(
-        cart_point.x, cart_point.y, virtual_obs_theta, speed, 0.0, i * 0.2, 0.0,
-        0.0, center_virtual_s + speed * 0.2 * i, 0.0);
-    trajectory.emplace_back(point);
+  if (is_reverse) {
+    bool is_use_lead_trajectory = true;
+    const auto& agent = agent_mgr->GetAgent(borrow_id);
+    if (agent == nullptr) {
+      is_use_lead_trajectory = false;
+    }
+    const auto& lead_trajectories = agent->trajectories();
+    if (lead_trajectories.empty()) {
+      is_use_lead_trajectory = false;
+    }
+    const auto& lead_trajectory = lead_trajectories[0];
+    if (lead_trajectory.empty()) {
+      is_use_lead_trajectory = false;
+    }
+    for (int i = 0; i < 25; ++i) {
+      Point2D cart_point_tmp(lead_trajectory[i].x(), lead_trajectory[i].y());
+      Point2D sl_point;
+      frenet_coord->XYToSL(cart_point_tmp, sl_point);
+      double traj_s = is_use_lead_trajectory ? sl_point.x : center_virtual_s;
+      Point2D end_sl_point(traj_s, virtual_l);
+      Point2D cart_point;
+      frenet_coord->SLToXY(end_sl_point, cart_point);
+      auto point = trajectory::TrajectoryPoint(cart_point.x, cart_point.y,
+                                              virtual_obs_theta, speed, 0.0,
+                                              i * 0.2, 0.0, 0.0, traj_s, 0.0);
+      trajectory.emplace_back(point);
+    }
+  } else {
+    for (int i = 0; i < 25; ++i) {
+      double traj_s = center_virtual_s + speed * 0.2 * i;
+      Point2D end_sl_point(traj_s, virtual_l);
+      Point2D cart_point;
+      frenet_coord->SLToXY(end_sl_point, cart_point);
+      auto point = trajectory::TrajectoryPoint(cart_point.x, cart_point.y,
+                                              virtual_obs_theta, speed, 0.0,
+                                              i * 0.2, 0.0, 0.0, traj_s, 0.0);
+      trajectory.emplace_back(point);
+    }
   }
   trajectories.emplace_back(trajectory);
 
@@ -1067,6 +1098,7 @@ void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   virtual_agent.set_fusion_source(1);
   bool is_static = (speed < 0.3) ? true : false;
   virtual_agent.set_is_static(is_static);
+  virtual_agent.set_is_reverse(is_reverse);
 
   virtual_agent.set_speed(speed);
   virtual_agent.set_theta(virtual_obs_theta);
