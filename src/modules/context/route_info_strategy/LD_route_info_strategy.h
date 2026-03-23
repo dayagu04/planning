@@ -9,6 +9,7 @@
 // #include "sdmap/sdmap.h"
 // #include "sdpromap/sdpromap.h"
 #include "lane_topo_graph.h"
+#include "modules/context/route_info_strategy/centerline_link_analyzer.h"
 
 namespace planning{
 
@@ -105,6 +106,9 @@ bool get_sdpromap_valid() override;
 const ad_common::sdpromap::SDProMap& get_sdpro_map() override;
 const iflymapdata::sdpro::LinkInfo_Link* get_current_link() override;
 
+// 包装函数：判断传入lane是否在route link上，结果写入lane的route_on_link_status属性
+void UpdateLaneIsOnRouteLinkStatus(const std::shared_ptr<VirtualLane>& lane);
+
 //todo(ldh): 其他virutal函数。
 protected:
  bool UpdateLDMap();
@@ -129,7 +133,14 @@ protected:
 
  bool IsInExpressWay();
 
- bool IsNearingSplit();
+  // 检查中心线与两条link的位置关系
+  bool CheckCenterlineRelativeTwoLinks(
+      const std::shared_ptr<VirtualLane>& current_lane,
+      const iflymapdata::sdpro::LinkInfo_Link* link1,
+      const iflymapdata::sdpro::LinkInfo_Link* link2,
+      context::CenterlineCheckResult& result) const;
+
+  bool IsNearingSplit();
 
  bool IsNearingRamp();
 
@@ -352,6 +363,13 @@ void ProcessLaneMapMergePoint(
   std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
   TopoLinkGraph feasible_lane_graph_;
+  
+  // 中心线与Link关系分析器
+  context::CenterlineLinkAnalyzer centerline_link_analyzer_;
+
+  // 车道不在导航路线上的连续帧计数
+  int lane_off_route_frame_count_ = 0;
+
 };
 }
 

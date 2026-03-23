@@ -7,6 +7,8 @@
 #include "environmental_model.h"
 #include "local_view.h"
 #include "route_info_strategy.h"
+#include "modules/context/route_info_strategy/centerline_link_analyzer.h"
+#include "virtual_lane_manager.h"
 
 namespace planning {
 namespace {
@@ -180,6 +182,102 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   return true;
 }
 
+void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
+    const std::shared_ptr<VirtualLane>& lane) {
+  if (lane == nullptr) {
+    return;
+  }
+
+  // 场景前置条件检查
+  if (split_info_vec_.empty()) {
+    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
+    return;
+  }
+
+  const auto& front_split_info = split_info_vec_.front();
+  const auto& split_link = ld_map_.GetLinkOnRoute(front_split_info.first->id());
+  if (split_link == nullptr || split_link->successor_link_ids_size() != 2) {
+    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
+    return;
+  }
+
+  const auto& split_next_link = ld_map_.GetNextLinkOnRoute(split_link->id());
+  if (split_next_link == nullptr) {
+    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
+    return;
+  }
+
+  const auto& out_link_id =
+      split_link->successor_link_ids()[0] == split_next_link->id()
+          ? split_link->successor_link_ids()[1]
+          : split_link->successor_link_ids()[0];
+  const auto& out_link = ld_map_.GetLinkOnRoute(out_link_id);
+  if (out_link == nullptr) {
+    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
+    return;
+  }
+
+  context::CenterlineCheckResult result;
+  if (!CheckCenterlineRelativeTwoLinks(lane, split_next_link, out_link, result)) {
+    // 数据无效（无overlap等），状态不确定
+    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
+    return;
+  }
+
+  const RampDirection split_dir = CalculateSplitDirection(*split_link, ld_map_);
+  if (split_dir == RampDirection::RAMP_NONE) {
+    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
+    return;
+  }
+
+  // 统计各位置关系的加权分数（近处权重高）
+  const double kPerceptionRange = 120.0;
+  const double kDecayFactor = 60.0;
+  double on_route_weighted = 0.0;
+  double total_weighted = 0.0;
+
+  for (const auto& segment : result.segments) {
+    double seg_length = segment.s_end - segment.s_start;
+    double avg_s_relative = (segment.s_start + segment.s_end) / 2.0 - result.s_ego;
+    avg_s_relative = std::max(0.0, std::min(avg_s_relative, kPerceptionRange));
+    double weight = std::exp(-avg_s_relative / kDecayFactor);
+    total_weighted += weight * seg_length;
+
+    bool is_on_route = false;
+    if (split_dir == RampDirection::RAMP_ON_LEFT) {
+      is_on_route = segment.relation == context::PositionRelation::BETWEEN_LINKS;
+    } else {
+      is_on_route = segment.relation == context::PositionRelation::RIGHT_OF_LINK1;
+    }
+    if (is_on_route) {
+      on_route_weighted += weight * seg_length;
+    }
+  }
+
+  if (total_weighted <= 0.1) {
+    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
+    return;
+  }
+
+  double on_route_ratio = on_route_weighted / total_weighted;
+  double distance_to_split = front_split_info.second;
+  const double kFarDist = 120.0, kNearDist = 60.0;
+  const double kFarThreshold = 0.5, kNearThreshold = 0.7;
+  double threshold = 0.6;
+  if (distance_to_split >= kFarDist) {
+    threshold = kFarThreshold;
+  } else if (distance_to_split <= kNearDist) {
+    threshold = kNearThreshold;
+  } else {
+    double t = (distance_to_split - kNearDist) / (kFarDist - kNearDist);
+    threshold = kNearThreshold + t * (kFarThreshold - kNearThreshold);
+  }
+
+  lane->set_route_on_link_status(on_route_ratio > threshold
+                                     ? RouteOnLinkStatus::ON_ROUTE
+                                     : RouteOnLinkStatus::OFF_ROUTE);
+}
+
 bool LDRouteInfoStrategy::CalculateCurrentLink() {
   const double search_distance = 50.0;
   const double max_heading_diff = PI / 4;
@@ -229,6 +327,57 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
   }
 
   return true;
+}
+
+bool LDRouteInfoStrategy::CheckCenterlineRelativeTwoLinks(
+    const std::shared_ptr<VirtualLane>& current_lane,
+    const iflymapdata::sdpro::LinkInfo_Link* link1,
+    const iflymapdata::sdpro::LinkInfo_Link* link2,
+    context::CenterlineCheckResult& result) const {
+  // 由于这部分可能在选道之前被调用，因此需要自己建立frenet坐标系
+  auto& lane_points = current_lane->lane_points();
+  if (lane_points.size() < 3) {
+    return false;
+  }
+  std::shared_ptr<planning_math::KDPath> frenet_coord;
+  std::vector<planning_math::PathPoint> path_points;
+  path_points.reserve(lane_points.size());
+
+
+  for (const auto& point : lane_points) {
+    if (std::isnan(point.local_point.x) ||
+        std::isnan(point.local_point.y)) {
+      ILOG_ERROR << "update_lane_points: skip NaN point";
+      continue;
+    }
+    auto pt = planning_math::PathPoint(point.local_point.x,
+                                        point.local_point.y);
+    if (!path_points.empty()) {
+      auto& last_pt = path_points.back();
+      if (planning_math::Vec2d(last_pt.x() - pt.x(), last_pt.y() - pt.y())
+              .Length() < 1e-2) {
+        continue;
+      }
+    }
+    path_points.emplace_back(pt);
+  }
+
+  if (path_points.size() <
+      planning_math::KDPath::kKDPathMinPathPointSize + 1) {
+    return false;;
+  }
+
+  frenet_coord =
+      std::make_shared<planning_math::KDPath>(std::move(path_points));
+
+  // 获取自车当前位置
+  const auto& ego_state = session_->environmental_model().get_ego_state_manager();
+  double ego_x = ego_state->ego_pose().x;
+  double ego_y = ego_state->ego_pose().y;
+
+  // 调用分析器进行判断
+  return centerline_link_analyzer_.CheckCenterlineRelativeTwoLinks(
+      current_lane, link1, link2, frenet_coord, ego_x, ego_y, result);
 }
 
 void LDRouteInfoStrategy::CalculateMLCDecider(
@@ -1154,6 +1303,17 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
+    const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+    const auto& cur_lane = virtual_lane_manager->get_current_lane();
+    const auto& left_lane = virtual_lane_manager->get_left_lane();
+    const auto& right_lane = virtual_lane_manager->get_right_lane();
+    UpdateLaneIsOnRouteLinkStatus(cur_lane);
+    UpdateLaneIsOnRouteLinkStatus(left_lane);
+    UpdateLaneIsOnRouteLinkStatus(right_lane);
+
+    bool cur_lane_on_route_link_base_map_link =
+        cur_lane->get_route_on_link_status() == RouteOnLinkStatus::ON_ROUTE;
+
     // const bool lane_type_condition =
     //     !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
     const bool lane_type_condition = true;
@@ -1162,7 +1322,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
         !forward_in_right_most && is_nearing_ramp && lane_type_condition &&
-        front_ramp_dir == RAMP_ON_RIGHT && !current_on_route) {
+        front_ramp_dir == RAMP_ON_RIGHT && !current_on_route &&
+        !cur_lane_on_route_link_base_map_link) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
         // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
@@ -1172,7 +1333,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
       lc_num_task.emplace_back(1);
     } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp &&
-               !current_on_route && !forward_in_left_most) {
+               !current_on_route && !forward_in_left_most &&
+               !cur_lane_on_route_link_base_map_link) {
       //split场景，目标车道在最左边的情况，一直向左变道
         // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
       if (ego_seq == avoid_link_merge_lane_seq) {
@@ -1180,7 +1342,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
 
       lc_num_task.emplace_back(-1);
-    } else if (current_on_route) {
+    } else if (current_on_route || cur_lane_on_route_link_base_map_link) {
       continue;
     } else {
       if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
