@@ -1621,19 +1621,24 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       // ReversePathSegVec(pa_out_seg_vec);
     }
 
-    if (enable_pa_park_) {
-      collision_detector_ptr_->SetSkipObstaclesType(
-          CollisionDetector::VIRTUAL_OBS);
-    }
     std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
-    const bool res_plan =
+    bool res_plan =
         PlanToPreparingLine(prepare_seg_vec, cur_plan_pose, prepare_line);
-    if (enable_pa_park_) {
-      collision_detector_ptr_->ClearSkipObstacles(CollisionDetector::VIRTUAL_OBS);
-    }
     if (!res_plan) {
-      ILOG_INFO << "PlanToPreparingLine fail!";
-      continue;
+      ILOG_INFO << "PlanToPreparingLine fail! try clear virtual";
+      if (enable_pa_park_) {
+        prepare_seg_vec.clear();
+        collision_detector_ptr_->SetSkipObstaclesType(
+            CollisionDetector::VIRTUAL_OBS);
+        res_plan =
+            PlanToPreparingLine(prepare_seg_vec, cur_plan_pose, prepare_line);
+        collision_detector_ptr_->ClearSkipObstacles(
+            CollisionDetector::VIRTUAL_OBS);
+      }
+      if (!res_plan) {
+        ILOG_INFO << "PlanToPreparingLine fail!";
+        continue;
+      }
     }
     if (!pa_out_seg_vec.empty()) {
       prepare_seg_vec.insert(prepare_seg_vec.begin(), pa_out_seg_vec.begin(),
@@ -1869,6 +1874,10 @@ const double ParallelPathGenerator::CalcBufferViaDistOfEgoToObs() {
 const bool ParallelPathGenerator::GenAlignedPreparingLine(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec,
     const pnc::geometry_lib::PathPoint& ego_pose) {
+  if (enable_pa_park_) {
+    ILOG_INFO << "PA park not need aligning line";
+    return true;
+  }
   if (std::fabs(input_.ego_info_under_slot.cur_pose.heading) * kRad2Deg <
       0.01) {
     if (input_.ego_info_under_slot.cur_pose.pos.x() >
@@ -1965,14 +1974,29 @@ const bool ParallelPathGenerator::GenParallelPreparingLineVec(
 
   pnc::geometry_lib::PathPoint prepare_pose(input_.tlane.pt_inside, 0.0);
   prepare_pose.pos.y() = rac_tlane_bound;
-  preparing_pose_vec.emplace_back(prepare_pose);
 
   const auto y_vec =
       pnc::geometry_lib::Linspace(rac_tlane_bound, rac_channel_bound, dy);
 
-  for (const auto y : y_vec) {
-    prepare_pose.pos.y() = y;
+  if (enable_pa_park_) {
+    size_t n = std::min(5UL, y_vec.size());
+
+    for (size_t i = n; i < y_vec.size(); ++i) {
+      prepare_pose.pos.y() = y_vec[i];
+      preparing_pose_vec.emplace_back(prepare_pose);
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+      prepare_pose.pos.y() = y_vec[n - 1 - i];
+      preparing_pose_vec.emplace_back(prepare_pose);
+    }
     preparing_pose_vec.emplace_back(prepare_pose);
+  } else {
+    preparing_pose_vec.emplace_back(prepare_pose);
+    for (const auto y : y_vec) {
+      prepare_pose.pos.y() = y;
+      preparing_pose_vec.emplace_back(prepare_pose);
+    }
   }
 
   return true;
@@ -2003,6 +2027,7 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine(
   size_t max_num = 10;
 
   for (const auto& heading_deg : heading_vec) {
+    std::vector<pnc::geometry_lib::PathPoint> tilted_pose_vec;
     const double heading_rad = heading_deg * kDeg2Rad;
 
     const auto v_preparing_line_heading =
@@ -2020,8 +2045,23 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine(
         break;
       }
 
-      preparing_pose_vec.emplace_back(
+      tilted_pose_vec.emplace_back(
           pnc::geometry_lib::PathPoint(start_pos, heading_rad));
+    }
+    if (enable_pa_park_) {
+      size_t n = std::min(2UL, tilted_pose_vec.size());
+
+      for (size_t i = n; i < tilted_pose_vec.size(); ++i) {
+        preparing_pose_vec.emplace_back(tilted_pose_vec[i]);
+      }
+
+      for (size_t i = 0; i < n; ++i) {
+        preparing_pose_vec.emplace_back(tilted_pose_vec[n - 1 - i]);
+      }
+    } else {
+      for (const auto& pose : tilted_pose_vec) {
+        preparing_pose_vec.emplace_back(pose);
+      }
     }
   }
 
