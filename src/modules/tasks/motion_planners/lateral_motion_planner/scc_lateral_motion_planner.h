@@ -46,7 +46,9 @@ class SCCLateralMotionPlanner : public BaseLateralMotionPlanner {
 
   bool IsLocatedInSplitArea();
 
-  double CalculateRemainingCrossLaneTime();
+  NudgeDirection CalculateDrivingDirectionForLeavingLane();
+
+  double CalculateRemainingDrivingTimeToSolidLine(bool is_check_left, bool is_check_right);
 
  private:
   std::shared_ptr<pnc::lateral_planning::iLQRSolver> ilqr_solver_ptr_;
@@ -57,6 +59,7 @@ class SCCLateralMotionPlanner : public BaseLateralMotionPlanner {
   double avoid_back_time_;
   double enter_split_time_;
   double enter_lccnoa_time_;
+  double driving_away_lane_time_;
 
   std::vector<double> history_steer_vec_;
   std::vector<double> expected_steer_vec_;
