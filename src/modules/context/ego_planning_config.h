@@ -1072,6 +1072,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     leading_safe_overstep_buffer = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "leading_safe_overstep_buffer"});
+    is_forced_emergency_scene = read_json_keys<bool>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "is_forced_emergency_scene"});
   }
 
   int sample_v_nums = 15;
@@ -1131,6 +1134,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double leading_safe_max_dec = 2.0;
   double leading_safe_overstep_gain = 4.0;
   double leading_safe_overstep_buffer = 3.0;
+  bool is_forced_emergency_scene = false;
 };
 
 struct SampleAstarTrajConfig : public EgoPlanningConfig {
@@ -4529,8 +4533,9 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
                      "soft_halfplane_tau");
     ReadItem<double>(json, soft_halfplane_cost_allocation_ratio, "lane_change_joint_decision",
                      "soft_halfplane_cost_allocation_ratio");
-    ReadItem<double>(json, lc_thw, "lane_change_joint_decision",
-                     "lc_thw");
+    ReadItem<double>(json, halfplane_cost_allocation_ratio_later, "lane_change_joint_decision",
+                     "halfplane_cost_allocation_ratio_later");
+    ReadItem<double>(json, lc_thw, "lane_change_joint_decision", "lc_thw");
     ReadItem<double>(json, obs_reaction_decay_time, "lane_change_joint_decision",
                      "obs_reaction_decay_time");
     ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
@@ -4581,6 +4586,7 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double soft_halfplane_s0 = 3.5;
   double soft_halfplane_tau = 0.5;
   double soft_halfplane_cost_allocation_ratio = 0.7;
+  double halfplane_cost_allocation_ratio_later = 0.5;
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;
@@ -6491,6 +6497,11 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                                  diff_speed_init_ttc_map.ttc_table);
       read_json_vec(
         json,
+        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
+                                 "aggressive_ttc_table"},
+                                 diff_speed_init_ttc_map.aggressive_ttc_table);
+      read_json_vec(
+        json,
         std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
                                  "rear_speed_kph_table"},
                                  rear_vehicle_speed_min_space_map.rear_speed_kph_table);
@@ -6507,6 +6518,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                        "faster_rear_delay_time");
       ReadItem<double>(json, rear_comfort_decel, "lane_change_safety_check",
                        "rear_comfort_decel");
+      ReadItem<double>(json, aggressive_decel_part, "lane_change_safety_check",
+                       "aggressive_decel_part");
       ReadItem<double>(json, lat_offset_buffer, "lane_change_safety_check",
                        "lat_offset_buffer");
       ReadItem<double>(json, target_lane_side_cut_in_check_time, "lane_change_safety_check",
@@ -6523,6 +6536,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
                                  "jerk_table"},
                                  hold_state_vel_jerk_map.jerk_table);
+      ReadItem<bool>(json, is_default_aggressive_scence, "lane_change_safety_check",
+                     "is_default_aggressive_scence");
     }
     double exe_ttc_ratio = 0.5;
     double exe_rear_speed_ratio = 1.1;
@@ -6533,12 +6548,14 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     double rear_close_speed_diff_threshold = 1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
     double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
     double rear_comfort_decel = 0.7;  // 后车舒适减速度（m/s²）
+    double aggressive_decel_part = 0.7;  // 激进变道减速度增量（m/s²）
     double lat_offset_buffer = 0.35;  // 横向贴边偏移缓冲区（米）
     double target_lane_side_cut_in_check_time = 1.5;  // 目标车道侧方车切入检查时间窗口（秒）
     double hold_steer_angle_rate_limit_deg = 150.0;  // hold状态下的方向盘转速限制（度/秒）
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
+        std::vector<double> aggressive_ttc_table{0.8, 1.8, 2.0, 2.5, 3.5, 4.5, 6.5, 8.5, 10.0};  // 激进模式起始ttc
     };
     DiffSpeedInitTTCable diff_speed_init_ttc_map;
     struct RearVehicleSpeedMinSpaceMap {
@@ -6551,6 +6568,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};  // 对应的jerk值
     };
     HoldStateVelJerkMap hold_state_vel_jerk_map;
+    bool is_default_aggressive_scence = false;  // 默认紧急场景标志位，用于调试
 };
 
 struct HmiDeciderConfig : public EgoPlanningConfig{

@@ -80,7 +80,7 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
         'v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
           'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
             'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
-              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', ]
+              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason']
   # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
   names  = []
   datas = []
@@ -117,8 +117,8 @@ def update_lc_data (noa_info, plan_debug_json):
             'current_segment_passed_distance', 'forward_lane_num', 'is_ego_on_split_region',
             'ego_status_on_route','bd_mlc_scene', 'left_lane_num', 'minVal_seq',
             'maxVal_seq', 'right_lane_num', 'emergency_lane_num', 'average_curve','lsl_length', 'lat_offset_lc_hold',
-            'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose',
-            'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id','merging_rear_id']
+            'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose','is_emergency_scene',
+            'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id','merging_rear_id', 'is_aggressive_scence', 'is_default_aggressive_scence']
 
   for name in vars_lc:
     try:

@@ -358,5 +358,8 @@ class LaneChangeStateMachineManager {
   StateMachineLaneChangeStatus last_state_{
       StateMachineLaneChangeStatus::kLaneKeeping};
   bool overtake_lane_change_confirmed_{false};
+  bool is_aggressive_scence_{false}; // 激进场景标志位
+  // 用于判断紧急场景
+  bool IsEmergencyScene() const;
 };
 }  // namespace planning

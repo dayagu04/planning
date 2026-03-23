@@ -102,7 +102,6 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   ok = ProcessEnvInfos();
-
   if (ok) {
     planning::speed::STPoint current_matched_upper_st_point;
     planning::speed::STPoint current_matched_lower_st_point;
@@ -150,6 +149,8 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     }
   }
 
+  JSON_DEBUG_VALUE("is_emergency_scene",
+                   is_emergency_scene_);
   std::chrono::time_point<std::chrono::high_resolution_clock>
       evaluate_end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> evaluate_cost_time =
@@ -251,7 +252,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   }
   double speed_differ_gain = 1.0;
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
-  if (traffic_density_status_ == Congested || is_not_use_gap_select) {
+  if (traffic_density_status_ == Congested) {
     count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
   }
   size_t start_index = traffic_density_status_ == Congested ? 1 : 3;
@@ -264,7 +265,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                              v_suggestted_, merge_stop_line_distance_,
                              leading_veh_, is_not_use_gap_select,
                              speed_differ_gain, distance_to_stop_point_,
-                             lc_safety_distance_config_, 3.0, is_merge_change_);
+                             lc_safety_distance_config_, 3.0, is_merge_change_,
+                             is_emergency_scene_);
       }
     }
   } else {
@@ -282,7 +284,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                                  leading_veh_, is_not_use_gap_select,
                                  speed_differ_gain, distance_to_stop_point_,
                                  lc_safety_distance_config_,
-                                 i * kEvaluationStep, is_merge_change_);
+                                 i * kEvaluationStep, is_merge_change_,
+                                 is_emergency_scene_);
           }
         }
       }
@@ -461,6 +464,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   leading_veh_.prediction_path_valid = false;
   sample_status_ = OK;
   distance_to_stop_point_ = kMaxDistanceToStopPoint;
+  is_emergency_scene_ = false;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()
@@ -667,6 +671,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
 
   RunSampleSceneStateMachine();
 
+  is_emergency_scene_ = session_->planning_context()
+            .lane_change_decider_output().is_aggressive_scence;
   // sample v upper and lower
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&

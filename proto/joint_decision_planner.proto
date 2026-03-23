@@ -175,6 +175,7 @@ message JointDecisionPlanningInput {
   optional double soft_halfplane_s0 = 49;
   optional double soft_halfplane_tau = 50; 
   optional double soft_halfplane_cost_allocation_ratio = 51;
+  optional double halfplane_cost_allocation_ratio_later = 56;
 
   // 障碍物反应衰减参数
   optional double obs_reaction_decay_time = 54;

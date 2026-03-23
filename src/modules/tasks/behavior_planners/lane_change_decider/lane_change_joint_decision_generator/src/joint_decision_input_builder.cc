@@ -459,6 +459,8 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   planning_input.set_soft_halfplane_tau(lc_decision_config_.soft_halfplane_tau);
   planning_input.set_soft_halfplane_cost_allocation_ratio(
       lc_decision_config_.soft_halfplane_cost_allocation_ratio);
+  planning_input.set_halfplane_cost_allocation_ratio_later(
+      lc_decision_config_.halfplane_cost_allocation_ratio_later);
 
   planning_input.set_obs_reaction_decay_time(
       lc_decision_config_.obs_reaction_decay_time);
