@@ -94,6 +94,11 @@ message LateralPlanningInput {
   repeated double ref_vel_vec = 60;
 }
 
+message CostInfo {
+  optional uint32 id = 1;
+  optional double cost = 2;
+}
+
 message SolverIterationInfo {
   optional bool linesearch_success = 1;
   optional uint32 backward_pass_count = 2;
@@ -102,6 +107,7 @@ message SolverIterationInfo {
   optional double dcost = 5;
   optional double expect = 6;
   optional double du_norm = 7;
+  repeated CostInfo cost_info = 8;
 }
 
 message LateralSolverInfo {

@@ -23,7 +23,7 @@
 #include "tasks/behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
-#include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
+#include "tasks/motion_planners/lateral_motion_planner/scc_lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 

@@ -129,11 +129,11 @@ struct PathWeight {  // temp
   }
 };
 
-class LateralMotionPlanningWeight {
+class BaseWeight {
  public:
-  explicit LateralMotionPlanningWeight(
+  explicit BaseWeight(
       const planning::LateralMotionPlannerConfig &config);
-  ~LateralMotionPlanningWeight() = default;
+  ~BaseWeight() = default;
 
   void Init();
 

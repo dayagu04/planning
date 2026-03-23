@@ -1,4 +1,5 @@
-#include "lateral_motion_planning_weight.h"
+#include "base_weight.h"
+
 #include <cmath>
 #include <cstddef>
 
@@ -16,13 +17,13 @@ static constexpr size_t kMaxHistoryPoints = 20;
 namespace pnc {
 namespace lateral_planning {
 
-LateralMotionPlanningWeight::LateralMotionPlanningWeight(
+BaseWeight::BaseWeight(
     const planning::LateralMotionPlannerConfig &config)
     : config_(config) {
   Init();
 }
 
-void LateralMotionPlanningWeight::Init() {
+void BaseWeight::Init() {
   lateral_motion_scene_ = LateralMotionScene::LANE_KEEP;
   emergency_level_ = EmergencyLevel::NONE;
   lc_style_ = LaneChangeStyle(config_.lc_style);
@@ -80,7 +81,7 @@ void LateralMotionPlanningWeight::Init() {
   is_emergency_avoid_ = false;
 }
 
-void LateralMotionPlanningWeight::SetLateralMotionWeight(
+void BaseWeight::SetLateralMotionWeight(
     const LateralMotionScene scene,
     planning::common::LateralPlanningInput &planning_input) {
   lateral_motion_scene_ = scene;
@@ -198,7 +199,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
   }
 }
 
-void LateralMotionPlanningWeight::SetLateralMotionWeightForHPP(
+void BaseWeight::SetLateralMotionWeightForHPP(
     planning::common::LateralPlanningInput &planning_input) {
   weight_.proximal_index = config_.motion_plan_concerned_start_index;
   weight_.remotely_index = config_.motion_plan_concerned_end_index;
@@ -216,7 +217,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeightForHPP(
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
 }
 
-void LateralMotionPlanningWeight::SetLateralMotionWeightForRADS(
+void BaseWeight::SetLateralMotionWeightForRADS(
     planning::common::LateralPlanningInput &planning_input) {
   weight_.proximal_index = config_.motion_plan_concerned_start_index;
   weight_.remotely_index = config_.motion_plan_concerned_end_index;
@@ -233,7 +234,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeightForRADS(
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
 }
 
-void LateralMotionPlanningWeight::SetLateralMotionWeightForNSA(
+void BaseWeight::SetLateralMotionWeightForNSA(
     planning::common::LateralPlanningInput &planning_input) {
   weight_.proximal_index = config_.motion_plan_concerned_start_index;
   weight_.remotely_index = config_.motion_plan_concerned_end_index;
@@ -251,7 +252,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeightForNSA(
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
 }
 
-void LateralMotionPlanningWeight::CalculateInitInfo(
+void BaseWeight::CalculateInitInfo(
     const planning::common::LateralPlanningInput &planning_input) {
   const double a = planning_input.ref_y_vec(1) - planning_input.ref_y_vec(0);
   const double b = planning_input.ref_x_vec(0) - planning_input.ref_x_vec(1);
@@ -279,7 +280,7 @@ void LateralMotionPlanningWeight::CalculateInitInfo(
       kRad2Deg;
 }
 
-void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
+void BaseWeight::CalculateLastPathDistToRef(
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     planning::common::LateralPlanningInput &planning_input) {
   last_path_max_dist2ref_ = 0.0;
@@ -337,7 +338,7 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
   }
 }
 
-// void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
+// void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
 //     double init_s, double ref_vel, double wheel_base,
 //     double steer_ratio, double curv_factor,
 //     const planning::CoarsePlanningInfo &coarse_planning_info,
@@ -512,7 +513,7 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
 //   target_road_radius_ = std::min(target_road_radius_, 10000.0);
 // }
 
-void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
+void BaseWeight::CalculateExpectedLatAccAndSteerAngle(
     double init_s, double ref_vel, double wheel_base, double steer_ratio,
     double curv_factor, const pnc::mathlib::spline &k_s_spline,
     std::vector<double> &expected_steer_vec) {
@@ -701,7 +702,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   target_road_radius_ = std::min(target_road_radius_, 10000.0);
 }
 
-void LateralMotionPlanningWeight::CalculateLatAccAndSteerAngleByHistoryPath(
+void BaseWeight::CalculateLatAccAndSteerAngleByHistoryPath(
     const bool is_in_function, const bool is_no_replan, const double wheel_base,
     const double steer_ratio, const double curv_factor, const double init_x,
     const double init_y, std::vector<double> &history_steer_vec) {
@@ -792,7 +793,7 @@ void LateralMotionPlanningWeight::CalculateLatAccAndSteerAngleByHistoryPath(
   history_average_acc_ = average_acc;
 }
 
-void LateralMotionPlanningWeight::CalculateLatAvoidDistance(
+void BaseWeight::CalculateLatAvoidDistance(
     const std::vector<std::pair<double, double>> &bounds) {
   avoid_dist_ = 0;
   avoid_end_index_ = weight_.proximal_index;
@@ -810,7 +811,7 @@ void LateralMotionPlanningWeight::CalculateLatAvoidDistance(
       std::min(avoid_end_index_ + 1, config_.motion_plan_concerned_end_index);
 }
 
-void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
+void BaseWeight::CalculateLatAvoidBoundPriority(
     const std::vector<std::pair<double, double>> &second_soft_bounds,
     const std::vector<std::pair<double, double>> &hard_bounds,
     const std::vector<planning::WeightedBounds> soft_bounds_vec,
@@ -956,7 +957,7 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
                                      pnc::mathlib::spline::linear);
 }
 
-void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
+void BaseWeight::SetAccJerkBoundAndWeight(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_v{4.167, 8.333, 16.667, 25.0};
   double acc_bound = std::min(config_.acc_bound, max_acc_);
@@ -1053,7 +1054,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   planning_input.set_q_jerk_bound(config_.q_jerk_bound);
 }
 
-void LateralMotionPlanningWeight::SetMinJerkWeightByVel(
+void BaseWeight::SetMinJerkWeightByVel(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_v{0.2, 2.0, 4.167, 8.333, 25.0};
   std::vector<double> fp_min_qjerk{500.0, 40.0, 20.0, 5.0, 2.0};
@@ -1076,7 +1077,7 @@ void LateralMotionPlanningWeight::SetMinJerkWeightByVel(
   }
 }
 
-void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
+void BaseWeight::CalculateJerkBoundByLastJerk(
     const bool is_high_priority_back, const bool is_in_function,
     const double enter_lccnoa_time,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
@@ -1404,7 +1405,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   }
 }
 
-void LateralMotionPlanningWeight::MakeDynamicWeight(
+void BaseWeight::MakeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_v{1.0, 4.167, 8.333, 12.5, 16.667, 20.833, 25.0};
   double q_xy = planning::interp(ref_vel_, xp_v, config_.map_qxy);
@@ -1493,7 +1494,7 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   }
 }
 
-void LateralMotionPlanningWeight::MakeDynamicWeight_Rads(
+void BaseWeight::MakeDynamicWeight_Rads(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_v{1.0, 4.167, 8.333, 12.5, 16.667, 20.833, 25.0};
   double q_xy = planning::interp(ref_vel_, xp_v, config_.map_qxy);
@@ -1583,7 +1584,7 @@ void LateralMotionPlanningWeight::MakeDynamicWeight_Rads(
   }
 }
 
-void LateralMotionPlanningWeight::MakeLateralOffsetAvoidDynamicWeight(
+void BaseWeight::MakeLateralOffsetAvoidDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_v{2.0, 4.167, 8.333, 20.0};
   std::vector<double> fp_qtheta{3000.0, 5000.0, config_.q_ref_theta_avoid,
@@ -1598,7 +1599,7 @@ void LateralMotionPlanningWeight::MakeLateralOffsetAvoidDynamicWeight(
   concerned_start_q_jerk_ = q_jerk;
 }
 
-void LateralMotionPlanningWeight::MakeRampDynamicWeight(
+void BaseWeight::MakeRampDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double q_xy = config_.q_ref_x_ramp;
   std::vector<double> xp_xy{0.2, 0.4, 0.8, 1.5};
@@ -1619,7 +1620,7 @@ void LateralMotionPlanningWeight::MakeRampDynamicWeight(
   planning_input.set_q_ref_theta(q_theta_ratio1 * q_theta);
 }
 
-void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
+void BaseWeight::MakeLaneChangeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   if (ref_vel_ > 5.0) {
     end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
@@ -1674,7 +1675,7 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
   end_ratio_for_qreftheta_ = planning::interp(lc_remain_time_, xp_time, fp_end_qtheta);
 }
 
-void LateralMotionPlanningWeight::MakeLaneChangeBackDynamicWeight(
+void BaseWeight::MakeLaneChangeBackDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_xy{0.2, 0.4, 0.6, 1.0, 1.5};
   std::vector<double> fp_factor1{10.0, 5.0, 1.0, 4.0, 8.0};
@@ -1700,7 +1701,7 @@ void LateralMotionPlanningWeight::MakeLaneChangeBackDynamicWeight(
   concerned_start_q_jerk_ = q_jerk;
 }
 
-void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
+void BaseWeight::MakeSplitDynamicWeight(
     const bool is_divide_lane_into_two,
     planning::common::LateralPlanningInput &planning_input) {
   if (is_divide_lane_into_two) {
@@ -1738,7 +1739,7 @@ void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
   }
 }
 
-void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
+void BaseWeight::MakeDynamicPosBoundWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double risk_factor = 1.0;
   if (risk_level_ == planning::RiskLevel::LOW_RISK &&
@@ -1819,7 +1820,7 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
   // }
 }
 
-void LateralMotionPlanningWeight::SetWeightProtectionForLargePosDiff(
+void BaseWeight::SetWeightProtectionForLargePosDiff(
     planning::common::LateralPlanningInput &planning_input) {
   if (lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE &&
       lateral_motion_scene_ != LateralMotionScene::LANE_BORROW &&
@@ -1862,7 +1863,7 @@ void LateralMotionPlanningWeight::SetWeightProtectionForLargePosDiff(
   }
 }
 
-void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
+void BaseWeight::SetMotionPlanConcernedEndIndex(
     const bool origin_complete_follow, const bool is_divide_lane_into_two,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     planning::common::LateralPlanningInput &planning_input) {
@@ -1982,7 +1983,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
   SetWeightProtectionForLargePosDiff(planning_input);
 }
 
-void LateralMotionPlanningWeight::ConstructVirtualRef(
+void BaseWeight::ConstructVirtualRef(
     const double wheel_base, const double curv_factor,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     planning::common::LateralPlanningInput &planning_input,
@@ -2089,7 +2090,7 @@ void LateralMotionPlanningWeight::ConstructVirtualRef(
   }
 }
 
-void LateralMotionPlanningWeight::SetContinuityWeightByLastPath(
+void BaseWeight::SetContinuityWeightByLastPath(
     size_t valid_continuity_idx,
     planning::common::LateralPlanningInput &planning_input) {
   std::fill(weight_.q_continuity.begin(), weight_.q_continuity.end(), 0.0);

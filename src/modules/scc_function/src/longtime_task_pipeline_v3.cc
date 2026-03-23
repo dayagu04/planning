@@ -40,7 +40,7 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   traffic_light_decider_ =
       std::make_unique<TrafficLightDecider>(config_builder, session);
   lateral_motion_planner_ =
-      std::make_unique<LateralMotionPlanner>(config_builder, session);
+      std::make_unique<SCCLateralMotionPlanner>(config_builder, session);
 
   // long pipeline V3
   stop_destination_decider_ =
