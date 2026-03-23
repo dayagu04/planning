@@ -684,15 +684,15 @@ std::shared_ptr<planning_math::KDPath> BaseLateralMotionPlanner::ConstructLatera
       continue;
     }
     planning_math::PathPoint path_point{x_vec[i], y_vec[i]};
-    lat_path_points.emplace_back(path_point);
     if (!lat_path_points.empty()) {
-      auto &last_pt = lat_path_points.back();
+      const auto& last_pt = lat_path_points.back();
       if (planning_math::Vec2d(last_pt.x() - path_point.x(),
                                last_pt.y() - path_point.y())
               .Length() < 1e-3) {
         continue;
       }
     }
+    lat_path_points.emplace_back(std::move(path_point));
   }
   if (lat_path_points.size() <= planning_math::KDPath::kKDPathMinPathPointSize) {
     return nullptr;
