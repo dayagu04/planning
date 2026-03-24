@@ -95,7 +95,7 @@ void ParkingScenario::ScenarioRunning() {
   Log();
 
   // record data to debuginfo
-  LogDebug();
+  RecordDebug();
 
   return;
 }
@@ -629,6 +629,9 @@ const double ParkingScenario::CalRemainDistFromObs(
             << "  uss remain dist = " << uss_remain_dist
             << "  obs_pt_remain_dist_static = " << obs_pt_remain_dist_static
             << "  obs_pt_remain_dist_dynamic = " << obs_pt_remain_dist_dynamic;
+
+  frame_.remain_dist_static_obs = obs_pt_remain_dist_static;
+  frame_.remain_dist_dynamic_obs = obs_pt_remain_dist_dynamic;
 
   if (param.enable_corner_uss_process) {
     frame_.stuck_by_dynamic_obs = false;
@@ -1479,7 +1482,9 @@ void ParkingScenario::DecideExpandMirrorCommand() {
   frame_.mirror_command = MirrorCommand::EXPAND;
 
   return;
-const void ParkingScenario::LogDebug() {
+}
+
+const void ParkingScenario::RecordDebug() {
   RecordDebugRemainDist();
   RecordDebugStuckTimeInfo();
   RecordDebugTerminalErr();
@@ -1521,18 +1526,23 @@ const void ParkingScenario::RecordDebugTerminalErr() {
   planning::common::ApaTerminalErr* debug_terminal_err =
       debug_info->mutable_apa_path_debug()->mutable_terminal_err();
 
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
   debug_terminal_err->set_terminal_x_err(
-      frame_.ego_slot_info.terminal_err.GetX());
+      ego_info_under_slot.terminal_err.GetX());
   debug_terminal_err->set_terminal_y_err(
-      frame_.ego_slot_info.terminal_err.GetY());
-  debug_terminal_err->set_terminal_y_front_err(0.0);
+      ego_info_under_slot.terminal_err.GetY());
+  debug_terminal_err->set_terminal_y_front_err(
+      ego_info_under_slot.terminal_y_front_err);
   debug_terminal_err->set_terminal_heading_err(
-      frame_.ego_slot_info.terminal_err.GetTheta());
+      ego_info_under_slot.terminal_err.GetTheta());
 }
 
 const void ParkingScenario::RecordDebugPlanningSlotInfo() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaPlanningSlotInfo* debug_slot_info =
@@ -1567,8 +1577,8 @@ const void ParkingScenario::RecordDebugPlanningSlotInfo() {
 
   planning::common::Pose2d* target_pose =
       debug_slot_info->mutable_target_pose();
-  target_pose->set_x(ego_info_under_slot.target_pose.GetX());
-  target_pose->set_y(ego_info_under_slot.target_pose.GetY());
+  target_pose->set_x(l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).x());
+  target_pose->set_y(l2g_tf.GetPos(ego_info_under_slot.target_pose.pos).y());
   target_pose->set_theta(ego_info_under_slot.target_pose.GetTheta());
 
   debug_slot_info->clear_origin_slot_points();
@@ -1626,13 +1636,17 @@ const void ParkingScenario::RecordDebugPlanningSlotInfo() {
 
   planning::common::Point2d* limiter_pt1 =
       debug_slot_info->add_virtual_limiters();
-  limiter_pt1->set_x(ego_info_under_slot.virtual_limiter.first.x());
-  limiter_pt1->set_y(ego_info_under_slot.virtual_limiter.first.y());
+  limiter_pt1->set_x(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).x());
+  limiter_pt1->set_y(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.first).y());
 
   planning::common::Point2d* limiter_pt2 =
       debug_slot_info->add_virtual_limiters();
-  limiter_pt2->set_x(ego_info_under_slot.virtual_limiter.second.x());
-  limiter_pt2->set_y(ego_info_under_slot.virtual_limiter.second.y());
+  limiter_pt2->set_x(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).x());
+  limiter_pt2->set_y(
+      l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).y());
 }
 
 }  // namespace apa_planner

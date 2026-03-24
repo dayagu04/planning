@@ -533,7 +533,7 @@ class ParkingScenario {
       const UseObsHeightMethod use_obs_height_method =
           UseObsHeightMethod::HIGH) const;
 
-  const void LogDebug();
+  const void RecordDebug();
 
   const void RecordDebugRemainDist();
 

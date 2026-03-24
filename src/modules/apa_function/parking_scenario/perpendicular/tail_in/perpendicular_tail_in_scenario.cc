@@ -667,6 +667,13 @@ const bool PerpendicularTailInScenario::GenTlane() {
       geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                    ego_info_under_slot.target_pose.heading));
 
+  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+  const geometry_lib::PathPoint front_pose =
+      GetCarFrontPoseFromCarPose(cur_pose);
+  const geometry_lib::PathPoint& target_pose = ego_info_under_slot.target_pose;
+  const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
+  ego_info_under_slot.terminal_y_front_err = front_lat_err;
+
   apa_world_ptr_->GetColDetInterfacePtr()
       ->GetEDTColDetPtr()
       ->UpdateObsClearZone(
