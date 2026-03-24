@@ -332,14 +332,6 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   bool is_risk_lc = general_lateral_decider_output.risk_level > RiskLevel::NO_RISK;
   bool is_emergency_lc = false;
   // lane_change_decider_output.is_emergency_avoidance_situation;
-  if (is_emergency_lc) {
-    planning_weight_ptr_->SetLaneChangeStyle(
-        pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
-  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 || is_risk_lc ||
-             (is_merge_lc && std::fabs(dist_to_merge_point) < planning_input_.ref_vel() * 5.0)) {
-    planning_weight_ptr_->SetLaneChangeStyle(
-        pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
-  }
   // 低速变道优先
   bool is_low_speed_lane_change = false;
   bool is_low_speed_lane_change_without_obstacle = false;
@@ -359,6 +351,14 @@ bool SCCLateralMotionPlanner::AssembleInput() {
     } else {
       is_low_speed_lane_change_without_obstacle = true;
     }
+  }
+  if (is_emergency_lc) {
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
+  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 || is_risk_lc ||
+             (is_merge_lc && std::fabs(dist_to_merge_point) < planning_input_.ref_vel() * 5.0)) {
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
   }
   double max_steer_angle_rate_low_speed_lc =
       std::min(vehicle_param.max_steer_angle_rate,
