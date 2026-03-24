@@ -244,6 +244,7 @@ class EgoLaneTrackManger {
       const std::shared_ptr<planning_math::KDPath> &lane_frenet_coord,
       std::vector<std::pair<int, double>> &lane_curv_info_set,
       LaneCurvInfo &lane_curv_info, double &max_road_radius,
+      double &min_road_radius,
       const std::shared_ptr<VirtualLane> &relative_id_lane);
 
   void CalculateDynamicCostWeights(double curv_degree,
