@@ -1612,6 +1612,7 @@ const void ParkingScenario::RecordDebugPlanningSlotInfo() {
       ego_info_under_slot.slot.origin_corner_coord_global_.pt_23_unit_vec;
   const auto& ocg = ego_info_under_slot.slot.origin_corner_coord_global_;
 
+  debug_slot_info->clear_target_slot_points();
   planning::common::Point2d* target_pt0 =
       debug_slot_info->add_target_slot_points();
   target_pt0->set_x(ocg.pt_0.x() + lat_move_dist * pt01_unit.x());
