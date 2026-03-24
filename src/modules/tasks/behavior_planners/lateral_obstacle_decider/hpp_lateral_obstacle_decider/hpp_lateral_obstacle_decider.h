@@ -49,7 +49,9 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   // 该函数被下面的函数替代
   LatObstacleDecisionType MakeDecisionForSingleCluster(
       const ObstacleCluster& cluster) ;
-
+  void MakeDecisionForSingleDynamicObs(
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      const std::shared_ptr<FrenetObstacle> obstacle);
   void MakeDecisionForStaticCluster(
       const ObstacleCluster& cluster,
       const ObstacleConsistencyMap& obstacle_consistency_map,
@@ -66,8 +68,12 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   void MakeDecisionBasedRelativePos(const ObstacleCluster& cluster, const LatObstacleDecisionInfo& previous_decision_info,
                                     LatObstacleDecisionInfo& decision_info);
 
-  void MakeDecisionBasedLastPath(const ObstacleCluster& cluster, const ObstacleConsistencyMap &obstacle_consistency_map,
-                                 LatObstacleDecisionInfo& decision_info);
+  void MakeDecisionBasedReferPath(
+      const ObstacleCluster& cluster,
+      const ObstacleConsistencyMap& obstacle_consistency_map,
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      const std::vector<PathPoint>& refer_path,
+      LatObstacleDecisionInfo& decision_info);
 
   void MakeFinalDecision(const ObstacleCluster& cluster,
                          const ObstacleConsistencyMap& obstacle_consistency_map,
@@ -76,7 +82,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
                          LatObstacleDecisionInfo& last_path_info,
                          LatObstacleDecisionType& decision);
   void AnalyzeNudgeLevelBaseCurve(const ObstacleCluster &cluster,
-                                      const LatObstacleDecisionInfo& passage_width_info,
+                                      const LatObstacleDecisionInfo& previous_decision_info,
                                       LatObstacleDecisionInfo &decision_info);
   bool JudgeObsAndEgoInSameStraightLane(const std::shared_ptr<ReferencePath> &reference_path_ptr,const ObstacleCluster& cluster);
   //辅助函数2：更新历史记录状态机
