@@ -18,46 +18,32 @@ namespace planning {
 namespace apa_planner {
 namespace {
 
-enum class PredictSpliceStatus : uint8_t {
-  kInit = 0,
-  kInvalidInput = 1,
-  kApaNotInProgress = 2,
-  kPlanProjectionFail = 3,
-  kMpcOnly = 4,
-  kSkipByControlOrGear = 5,
-  kSpliceProjectionFail = 6,
-  kSpliceInsufficientPlanPoints = 7,
-  kSplineSplice = 8,
-  kSteerAngleFallback = 9,
+enum class PredictPathType : uint8_t {
+  INVALID = 0,
+  ONLY_MPC = 1,
+  EXTEND_MPC = 2,
+  MPC_SPLICE_PLAN = 3,
+  ONLY_STEER_ANGLE = 4,
 };
 
-const char* ToString(const PredictSpliceStatus status) {
-  switch (status) {
-    case PredictSpliceStatus::kInit:
-      return "init";
-    case PredictSpliceStatus::kInvalidInput:
-      return "invalid_input";
-    case PredictSpliceStatus::kApaNotInProgress:
-      return "apa_not_in_progress";
-    case PredictSpliceStatus::kPlanProjectionFail:
-      return "plan_projection_fail";
-    case PredictSpliceStatus::kMpcOnly:
-      return "mpc_only";
-    case PredictSpliceStatus::kSkipByControlOrGear:
-      return "skip_by_control_or_gear";
-    case PredictSpliceStatus::kSpliceProjectionFail:
-      return "splice_projection_fail";
-    case PredictSpliceStatus::kSpliceInsufficientPlanPoints:
-      return "splice_insufficient_plan_points";
-    case PredictSpliceStatus::kSplineSplice:
-      return "spline_splice";
-    case PredictSpliceStatus::kSteerAngleFallback:
-      return "steer_angle_fallback";
+const char* ToString(const PredictPathType type) {
+  switch (type) {
+    case PredictPathType::INVALID:
+      return "invalid";
+    case PredictPathType::ONLY_MPC:
+      return "only_mpc";
+    case PredictPathType::EXTEND_MPC:
+      return "extend_mpc";
+    case PredictPathType::MPC_SPLICE_PLAN:
+      return "mpc_splice_plan";
+    case PredictPathType::ONLY_STEER_ANGLE:
+      return "only_steer_angle";
   }
-  return "unknown";
+  return "invalid";
 }
 
-std::vector<double> UnwrapHeadingSequence(const std::vector<double>& heading_vec) {
+std::vector<double> UnwrapHeadingSequence(
+    const std::vector<double>& heading_vec) {
   std::vector<double> heading_vec_unwrapped;
   if (heading_vec.empty()) {
     return heading_vec_unwrapped;
@@ -74,19 +60,18 @@ std::vector<double> UnwrapHeadingSequence(const std::vector<double>& heading_vec
 
   return heading_vec_unwrapped;
 }
-}
+}  // namespace
 
 void ApaPredictPathManager::Update(
     const LocalView* local_view,
     const iflyauto::PlanningOutput* planning_output,
     const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr) {
-  PredictSpliceStatus splice_status = PredictSpliceStatus::kInit;
+  PredictPathType predict_path_type = PredictPathType::INVALID;
   Reset();
 
   if (planning_output == nullptr || local_view == nullptr ||
       measure_data_ptr == nullptr) {
-    splice_status = PredictSpliceStatus::kInvalidInput;
-    JSON_DEBUG_VALUE("predict_splice_status", int(splice_status));
+    JSON_DEBUG_VALUE("predict_path_type", int(predict_path_type));
     ILOG_ERROR << "Update ApaPredictPathManager, local_view_ptr is nullptr";
     return;
   }
@@ -95,8 +80,7 @@ void ApaPredictPathManager::Update(
 
   if (planning_output->planning_status.apa_planning_status !=
       iflyauto::APA_IN_PROGRESS) {
-    splice_status = PredictSpliceStatus::kApaNotInProgress;
-    JSON_DEBUG_VALUE("predict_splice_status", int(splice_status));
+    JSON_DEBUG_VALUE("predict_path_type", int(predict_path_type));
     ILOG_INFO << "apa not in progress, no predict_path";
     return;
   }
@@ -113,13 +97,6 @@ void ApaPredictPathManager::Update(
 
   const int pro_index = CalProjIndexFromPlanningTraj(
       plan_traj.trajectory_points, plan_pt_size, ego_x, ego_y);
-
-  if (pro_index == -1) {
-    splice_status = PredictSpliceStatus::kPlanProjectionFail;
-    JSON_DEBUG_VALUE("predict_splice_status", int(splice_status));
-    return;
-  }
-
   const double path_length =
       plan_traj.trajectory_points[plan_pt_size - 1].distance;
   const double proj_s = plan_traj.trajectory_points[pro_index].distance;
@@ -149,12 +126,8 @@ void ApaPredictPathManager::Update(
 
   JSON_DEBUG_VALUE("control_err_big", control_err_big_);
 
+  constexpr int kSplicePlanPointCount = 4;
   constexpr double kPredictStep = 0.1;
-  constexpr double kMaxHeadingJumpRad = 6.8 / 57.3;
-  constexpr double kSpliceProjMaxDist = 1.5;
-  constexpr double kSpliceProjMaxHeadingDiffRad = 35.0 / 57.3;
-  constexpr int kSpliceProjSearchWindow = 68;
-  constexpr int kSplicePlanPointCount = 8;
 
   const iflyauto::ControlTrajectory& mpc_traj =
       local_view->control_output.control_trajectory;
@@ -167,17 +140,17 @@ void ApaPredictPathManager::Update(
       (planning_output->gear_command.gear_command_value ==
        local_view->control_output.gear_command_value);
 
-  bool use_steer_angle_flag = mpc_pt_size < 1;
-
-  if (!use_steer_angle_flag) {
-    ILOG_INFO << "use mpc traj";
+  int cur_predict_size = 0;
+  double cur_predict_s = 0.0;
+  // try taking points in the MPC path as predict path
+  while (mpc_pt_size > 1) {
     predict_pt_vec_.emplace_back(pnc::geometry_lib::PathPoint(
         measure_data_ptr->GetPos(), measure_data_ptr->GetHeading()));
     pnc::geometry_lib::LocalToGlobalTf l2g_tf(measure_data_ptr->GetPos(),
                                               measure_data_ptr->GetHeading());
     pnc::geometry_lib::PathPoint car_predict_pt;
     for (int i = 0; i < mpc_pt_size; ++i) {
-      const iflyauto::Point3d& pt = mpc_traj.control_result_points[i];
+      const auto& pt = mpc_traj.control_result_points[i];
       car_predict_pt.pos = l2g_tf.GetPos(Eigen::Vector2d(pt.x, pt.y));
       car_predict_pt.heading =
           pnc::geometry_lib::NormalizeAngle(l2g_tf.GetHeading(pt.z));
@@ -191,7 +164,7 @@ void ApaPredictPathManager::Update(
       const double dphi = pnc::geometry_lib::NormalizeAngle(
           car_predict_pt.GetTheta() - last_predict_pt.GetTheta());
 
-      if (ds > 1.0 || std::fabs(dphi) > kMaxHeadingJumpRad) {
+      if (ds > 1.0 || std::fabs(dphi) > 6.8 / 57.3) {
         ILOG_ERROR << "control output is err";
         predict_pt_vec_.clear();
         break;
@@ -205,152 +178,106 @@ void ApaPredictPathManager::Update(
       predict_pt_vec_.emplace_back(car_predict_pt);
     }
 
-    while (predict_pt_vec_.size() > 2 &&
-           predict_pt_vec_.back().s < predict_distance) {
-      // mpc traj is vaild, extend to predict_distance
-      const double step = kPredictStep;
-      const size_t cur_pt_size = predict_pt_vec_.size();
-      // Extrapolating along a straight line
+    cur_predict_size = predict_pt_vec_.size();
+    if (cur_predict_size < 2) {
+      predict_pt_vec_.clear();
+      predict_path_type = PredictPathType::ONLY_STEER_ANGLE;
+      break;
+    }
+
+    cur_predict_s = predict_pt_vec_.back().s;
+    if (cur_predict_s > predict_distance) {
+      predict_path_type = PredictPathType::ONLY_MPC;
+      break;
+    }
+
+    const auto extend_predict_pts = [&]() {
       do {
         size_t n = predict_pt_vec_.size();
         pnc::geometry_lib::CalExtendedPointByTwoPoints(
             predict_pt_vec_[n - 2].pos, predict_pt_vec_[n - 1].pos,
-            car_predict_pt.pos, step);
+            car_predict_pt.pos, kPredictStep);
+
         car_predict_pt.heading = predict_pt_vec_[n - 1].heading;
-        car_predict_pt.s = predict_pt_vec_[n - 1].s + step;
+        car_predict_pt.s = predict_pt_vec_[n - 1].s + kPredictStep;
         predict_pt_vec_.emplace_back(car_predict_pt);
+
       } while (predict_pt_vec_.back().s < predict_distance);
+    };
 
-      if (control_err_big_ || !splice_plan_traj) {
-        splice_status = PredictSpliceStatus::kSkipByControlOrGear;
-        ILOG_INFO << "skip splicing and keep mpc extension, control_err_big="
-                  << control_err_big_
-                  << ", splice_plan_traj=" << splice_plan_traj
-                  << ", cur_pt_size=" << cur_pt_size
-                  << ", predict_distance=" << predict_distance;
-        // no splice plan traj, directly extend mpc traj
-        break;
-      }
+    const auto get_proj_index = [&]() -> int {
+      const auto& last_predict_pt = predict_pt_vec_.back();
+      return CalProjIndexFromPlanningTraj(plan_traj.trajectory_points,
+                                          plan_pt_size, last_predict_pt.GetX(),
+                                          last_predict_pt.GetY());
+    };
 
-      // need splice plan traj with smooth transition
-      const pnc::geometry_lib::PathPoint last_mpc_pt = predict_pt_vec_.back();
+    const int mpc_index = get_proj_index();
+    const double mpc_s = plan_traj.trajectory_points[mpc_index].distance;
 
-      int best_pro_index = -1;
-      double best_proj_dist = std::numeric_limits<double>::infinity();
-      const int search_start = std::max(0, pro_index);
-      const int search_end =
-          std::min(plan_pt_size, pro_index + kSpliceProjSearchWindow);
-      for (int i = search_start; i < search_end; ++i) {
-        const auto& plan_pt = plan_traj.trajectory_points[i];
-        const double proj_dist = std::hypot(plan_pt.x - last_mpc_pt.GetX(),
-                                            plan_pt.y - last_mpc_pt.GetY());
-        const double heading_diff_rad =
-            std::fabs(pnc::geometry_lib::NormalizeAngle(
-                plan_pt.heading_yaw - last_mpc_pt.GetTheta()));
-        if (proj_dist > kSpliceProjMaxDist ||
-            heading_diff_rad > kSpliceProjMaxHeadingDiffRad) {
-          continue;
-        }
-        if (proj_dist < best_proj_dist) {
-          best_proj_dist = proj_dist;
-          best_pro_index = i;
-        }
-      }
-
-      if (best_pro_index == -1) {
-        splice_status = PredictSpliceStatus::kSpliceProjectionFail;
-        ILOG_INFO
-            << "skip splicing due to invalid projection, keep mpc extension"
-            << ", last_mpc_pt=(" << last_mpc_pt.GetX() << ", "
-            << last_mpc_pt.GetY() << ", " << last_mpc_pt.GetTheta() << ")"
-            << ", search_range=[" << search_start << ", " << search_end
-            << ")"
-            << ", proj_dist_limit=" << kSpliceProjMaxDist
-            << ", heading_diff_limit_rad=" << kSpliceProjMaxHeadingDiffRad;
-        break;
-      }
-
-      const double proj_s =
-          plan_traj.trajectory_points[best_pro_index].distance;
-      ILOG_INFO << "splice projection found"
-                << ", best_pro_index=" << best_pro_index
-                << ", best_proj_dist=" << best_proj_dist
-                << ", proj_s=" << proj_s
-                << ", last_mpc_s=" << last_mpc_pt.s;
-
-      pnc::mathlib::spline x_s_spline, y_s_spline, heading_s_spline;
-      std::vector<double> x_vec, y_vec, s_vec, heading_vec;
-      for (size_t i = 0; i < cur_pt_size; ++i) {
-        const auto& pt = predict_pt_vec_[i];
-        x_vec.emplace_back(pt.GetX());
-        y_vec.emplace_back(pt.GetY());
-        s_vec.emplace_back(pt.s);
-        heading_vec.emplace_back(pt.GetTheta());
-      }
-
-      const double splice_start_s = predict_pt_vec_[cur_pt_size - 1].s;
-      const int splice_end_index =
-          std::min(plan_pt_size, best_pro_index + kSplicePlanPointCount);
-      for (int i = best_pro_index; i < splice_end_index; ++i) {
-        const auto& plan_pt = plan_traj.trajectory_points[i];
-        const double local_s = splice_start_s + (plan_pt.distance - proj_s);
-        if (local_s <= s_vec.back() + 1e-3) {
-          continue;
-        }
-        x_vec.emplace_back(plan_pt.x);
-        y_vec.emplace_back(plan_pt.y);
-        s_vec.emplace_back(local_s);
-        heading_vec.emplace_back(plan_pt.heading_yaw);
-      }
-
-      if (s_vec.size() < cur_pt_size + 2) {
-        splice_status = PredictSpliceStatus::kSpliceInsufficientPlanPoints;
-        ILOG_INFO << "skip splicing due to insufficient plan points, keep mpc "
-                     "extension"
-                  << ", cur_pt_size=" << cur_pt_size
-                  << ", sampled_point_count=" << s_vec.size()
-                  << ", required_min=" << (cur_pt_size + 2)
-                  << ", best_pro_index=" << best_pro_index
-                  << ", splice_end_index=" << splice_end_index;
-        break;
-      }
-
-      predict_pt_vec_.resize(cur_pt_size);
-
-      const std::vector<double> heading_vec_unwrapped =
-          UnwrapHeadingSequence(heading_vec);
-
-      splice_status = PredictSpliceStatus::kSplineSplice;
-      ILOG_INFO << "splice spline rebuild path"
-                << ", cur_pt_size=" << cur_pt_size
-                << ", heading_point_count=" << heading_vec_unwrapped.size()
-                << ", target_predict_distance=" << predict_distance;
-      x_s_spline.set_points(s_vec, x_vec);
-      y_s_spline.set_points(s_vec, y_vec);
-      heading_s_spline.set_points(s_vec, heading_vec_unwrapped);
-      for (double s = predict_pt_vec_.back().s + kPredictStep;
-           s < predict_distance; s += kPredictStep) {
-        const double x = x_s_spline(s);
-        const double y = y_s_spline(s);
-        const double heading_unwrapped = heading_s_spline(s);
-        const double heading =
-            pnc::geometry_lib::NormalizeAngle(heading_unwrapped);
-        car_predict_pt.SetX(x);
-        car_predict_pt.SetY(y);
-        car_predict_pt.SetTheta(heading);
-        car_predict_pt.s = s;
-        predict_pt_vec_.emplace_back(car_predict_pt);
-      }
+    if (!splice_plan_traj || cur_predict_s > predict_distance - 0.3 ||
+        mpc_index >= plan_pt_size - kSplicePlanPointCount) {
+      predict_path_type = PredictPathType::EXTEND_MPC;
+      extend_predict_pts();
       break;
     }
+
+    extend_predict_pts();
+    const int extend_index = get_proj_index();
+    if (extend_index <= mpc_index) {
+      predict_path_type = PredictPathType::ONLY_STEER_ANGLE;
+      predict_pt_vec_.clear();
+      break;
+    }
+
+    predict_pt_vec_.resize(cur_predict_size);
+
+    pnc::mathlib::spline x_s_spline, y_s_spline, heading_s_spline;
+    std::vector<double> x_vec, y_vec, s_vec, heading_vec;
+    for (const auto& pt : predict_pt_vec_) {
+      x_vec.emplace_back(pt.GetX());
+      y_vec.emplace_back(pt.GetY());
+      s_vec.emplace_back(pt.s);
+      heading_vec.emplace_back(pt.GetTheta());
+    }
+
+    for (int i = mpc_index + 1; i <= extend_index; ++i) {
+      const auto& plan_pt = plan_traj.trajectory_points[i];
+      const double local_s = cur_predict_s + (plan_pt.distance - mpc_s);
+      if (local_s <= s_vec.back() + 1e-3) {
+        continue;
+      }
+      x_vec.emplace_back(plan_pt.x);
+      y_vec.emplace_back(plan_pt.y);
+      s_vec.emplace_back(local_s);
+      heading_vec.emplace_back(plan_pt.heading_yaw);
+    }
+
+    const std::vector<double> heading_vec_unwrapped =
+        UnwrapHeadingSequence(heading_vec);
+
+    x_s_spline.set_points(s_vec, x_vec);
+    y_s_spline.set_points(s_vec, y_vec);
+    heading_s_spline.set_points(s_vec, heading_vec_unwrapped);
+    for (double s = predict_pt_vec_.back().s + kPredictStep;
+         s < predict_distance; s += kPredictStep) {
+      const double x = x_s_spline(s);
+      const double y = y_s_spline(s);
+      const double heading_unwrapped = heading_s_spline(s);
+      const double heading =
+          pnc::geometry_lib::NormalizeAngle(heading_unwrapped);
+      car_predict_pt.SetX(x);
+      car_predict_pt.SetY(y);
+      car_predict_pt.SetTheta(heading);
+      car_predict_pt.s = s;
+      predict_pt_vec_.emplace_back(car_predict_pt);
+    }
+
+    break;
   }
 
-  use_steer_angle_flag = predict_pt_vec_.size() < 2;
-
-  if (use_steer_angle_flag) {
-    splice_status = PredictSpliceStatus::kSteerAngleFallback;
-    ILOG_INFO << "use steer angle traj";
-    Reset();
+  if (predict_path_type == PredictPathType::ONLY_STEER_ANGLE) {
+    predict_pt_vec_.clear();
     const double steer_angle = measure_data_ptr->GetSteerWheelAngle();
     const uint8_t gear = (planning_output->gear_command.gear_command_value ==
                           iflyauto::GEAR_COMMAND_VALUE_DRIVE)
@@ -381,13 +308,8 @@ void ApaPredictPathManager::Update(
     pnc::geometry_lib::SamplePointSetInPathSeg(predict_pt_vec_, path_seg, 0.2);
   }
 
-  if (!use_steer_angle_flag && splice_status == PredictSpliceStatus::kInit) {
-    splice_status = PredictSpliceStatus::kMpcOnly;
-  }
-
-  JSON_DEBUG_VALUE("predict_splice_status", int(splice_status));
-  ILOG_INFO << "predict splice status: " << ToString(splice_status)
-            << " (" << int(splice_status) << ")";
+  JSON_DEBUG_VALUE("predict_path_type", int(predict_path_type));
+  ILOG_INFO << "predict_path_type: " << ToString(predict_path_type);
 
   if (planning_output->gear_command.available) {
     gear_ = (planning_output->gear_command.gear_command_value ==
