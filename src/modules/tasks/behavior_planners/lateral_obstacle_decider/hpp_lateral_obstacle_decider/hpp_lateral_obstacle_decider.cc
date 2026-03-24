@@ -283,13 +283,17 @@ void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
       cluster.rel_pos_types.count(ObstacleRelPosType::MID_FRONT) > 0 ||
       cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_FRONT) > 0 ||
       cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_FRONT) > 0;
-  if (!cluster_is_front) {
+  const bool cluster_is_side =
+      cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_SIDE) > 0 ||
+      cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_SIDE) > 0;
+
+  if (!cluster_is_front && !cluster_is_side) {
     decision = LatObstacleDecisionType::IGNORE;
     return;
   }
   const bool use_relativepos_decision =
       JudgeObsAndEgoInSameStraightLane(reference_path_ptr_, cluster);
-  if (!use_relativepos_decision) {
+  if (!use_relativepos_decision || cluster_is_side) {
     MakeDecisionBasedPassageWidth(cluster, passage_width_info);
     decision = passage_width_info.decision;
     ILOG_INFO << "passage_width_info.decision = "
