@@ -66,7 +66,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   void MakeDecisionBasedRelativePos(const ObstacleCluster& cluster, const LatObstacleDecisionInfo& previous_decision_info,
                                     LatObstacleDecisionInfo& decision_info);
 
-  void MakeDecisionBasedLastPath(const ObstacleCluster& cluster,
+  void MakeDecisionBasedLastPath(const ObstacleCluster& cluster, const ObstacleConsistencyMap &obstacle_consistency_map,
                                  LatObstacleDecisionInfo& decision_info);
 
   void MakeFinalDecision(const ObstacleCluster& cluster,
@@ -78,6 +78,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   void AnalyzeNudgeLevelBaseCurve(const ObstacleCluster &cluster,
                                       const LatObstacleDecisionInfo& passage_width_info,
                                       LatObstacleDecisionInfo &decision_info);
+  bool JudgeObsAndEgoInSameStraightLane(const std::shared_ptr<ReferencePath> &reference_path_ptr,const ObstacleCluster& cluster);
   //辅助函数2：更新历史记录状态机
   void UpdateObstacleConsistencyMap(
       const ObstacleLateralDecisionMap& lat_obstacle_decision,
