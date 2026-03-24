@@ -22,6 +22,32 @@ class DebugInfoManager : public planning::common::Arena {
     static DebugInfoManager instance;
     return instance;
   }
+  static void AddKeyValue(const std::string& key, const int value) {
+    auto* item = DebugInfoManager::GetInstance().GetDebugInfoPb()->add_key_values();
+    item->set_key(key);
+    item->set_int_value(value);
+  }
+  static void AddKeyValue(const std::string& key, const bool value) {
+    auto* item = DebugInfoManager::GetInstance().GetDebugInfoPb()->add_key_values();
+    item->set_key(key);
+    item->set_int_value(value);
+  }
+  static void AddKeyValue(const std::string& key, const float value) {
+    auto* item = DebugInfoManager::GetInstance().GetDebugInfoPb()->add_key_values();
+    item->set_key(key);
+    item->set_float_value(value);
+  }
+  static void AddKeyValue(const std::string& key, const double value) {
+    auto* item = DebugInfoManager::GetInstance().GetDebugInfoPb()->add_key_values();
+    item->set_key(key);
+    item->set_float_value(value);
+  }
+  static void AddKeyValue(const std::string& key, const std::string& value) {
+    auto* item = DebugInfoManager::GetInstance().GetDebugInfoPb()->add_key_values();
+    item->set_key(key);
+    item->set_str_value(value);
+  }
+
   // 获取proto内容
   std::unique_ptr<planning::common::PlanningDebugInfo> &GetDebugInfoPb() {
     return debug_info_pb_;
@@ -48,6 +74,9 @@ class DebugInfoManager : public planning::common::Arena {
 #ifndef LOG_ARRAY_CACHE
 #define LOG_ARRAY_CACHE 5000
 #endif
+
+#define DEBUG_KEY_VALUE(var_name, var_value)                     \
+    DebugInfoManager::AddKeyValue(var_name, var_value);
 
 #ifdef ENABLE_JSON_LOG
 #define JSON_DEBUG_VALUE(var_name, var_value)                     \

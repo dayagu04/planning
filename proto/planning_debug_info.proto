@@ -106,6 +106,15 @@ message TimeBenchmark {
   optional ApaTimeBenchmark apa_planning_time = 2;
 }
 
+message KeyValue {
+  optional string key = 1;
+  oneof value {
+    int32 int_value = 2;
+    float float_value = 3;
+    string str_value = 4;
+  }
+}
+
 message PlanningDebugInfo {
   optional uint64 timestamp = 1;  // us
   // TBD: 存在多条candidates时，应该使用repeated
@@ -171,4 +180,5 @@ message PlanningDebugInfo {
   optional StaticAnalysisResult static_analysis_result = 60;
   optional HppSpeedLimitDeciderDebug  hpp_speed_limit_decider_debug  = 61;
   optional HppLateralObstacleDeciderResult hpp_lateral_obstacle_decider_result = 62;
+  repeated KeyValue key_values = 63;
 }
