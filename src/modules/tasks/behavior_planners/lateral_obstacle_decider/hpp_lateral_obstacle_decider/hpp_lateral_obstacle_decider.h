@@ -63,10 +63,10 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   void MakeDecisionBasedPassageWidth(const ObstacleCluster& cluster,
                                      LatObstacleDecisionInfo& decision_info);
 
-  void MakeDecisionBasedRelativePos(const ObstacleCluster& cluster,
+  void MakeDecisionBasedRelativePos(const ObstacleCluster& cluster, const LatObstacleDecisionInfo& previous_decision_info,
                                     LatObstacleDecisionInfo& decision_info);
 
-  void MakeDecisionBasedLastPath(const ObstacleCluster& cluster,
+  void MakeDecisionBasedLastPath(const ObstacleCluster& cluster, const ObstacleConsistencyMap &obstacle_consistency_map,
                                  LatObstacleDecisionInfo& decision_info);
 
   void MakeFinalDecision(const ObstacleCluster& cluster,
@@ -75,7 +75,10 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
                          LatObstacleDecisionInfo& relative_pos_info,
                          LatObstacleDecisionInfo& last_path_info,
                          LatObstacleDecisionType& decision);
-
+  void AnalyzeNudgeLevelBaseCurve(const ObstacleCluster &cluster,
+                                      const LatObstacleDecisionInfo& passage_width_info,
+                                      LatObstacleDecisionInfo &decision_info);
+  bool JudgeObsAndEgoInSameStraightLane(const std::shared_ptr<ReferencePath> &reference_path_ptr,const ObstacleCluster& cluster);
   //辅助函数2：更新历史记录状态机
   void UpdateObstacleConsistencyMap(
       const ObstacleLateralDecisionMap& obs_lat_decision_map,
@@ -89,6 +92,8 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
   SearchResult search_result_;
   ObstacleConsistencyMap obstacle_consistency_map_;
+  HppLateralObstacleDeciderConfig hpp_general_lateral_decider_config_;
+
 };
 
 }  // namespace planning
