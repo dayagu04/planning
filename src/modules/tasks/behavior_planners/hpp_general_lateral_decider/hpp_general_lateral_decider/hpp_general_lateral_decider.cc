@@ -140,6 +140,9 @@ bool HppGeneralLateralDecider::Execute() {
   PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                                       general_lateral_decider_output);
 
+  GenerateSoftBoundCenterLine(second_frenet_soft_bounds_, frenet_hard_bounds_, 2.0);
+  MergeReferenceTrajectories(frenet_hard_bounds_, second_frenet_soft_bounds_);
+
   GenerateLateralDeciderOutput(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                                frenet_hard_bounds_, second_soft_bounds_info_,
                                first_soft_bounds_info_, hard_bounds_info_,
@@ -795,6 +798,9 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
           std::min(road_radius - 1.0, min_road_radius_), 0.2);
     }
   }
+
+  ref_traj_points_.resize(config_.num_step + 1);
+  bound_center_line_.resize(config_.num_step + 1);
 
   auto &last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
@@ -2168,6 +2174,270 @@ void HppGeneralLateralDecider::PostProcessBoundary() {
   LimitFrenetLateralSlope(first_frenet_soft_bounds_);
   LimitFrenetLateralSlope(second_frenet_soft_bounds_);
   LimitFrenetLateralSlope(frenet_hard_bounds_);
+}
+
+std::vector<Point2D> HppGeneralLateralDecider::SmoothPointsIteratively(
+  const std::vector<Point2D> &input,
+  const int effective_radius,
+  const size_t iters) {
+  const size_t n = input.size();
+  if (n < 3 || effective_radius <= 0 || iters == 0) {
+    return input;
+  }
+
+  std::vector<Point2D> curr = input;
+  std::vector<Point2D> next(n);
+
+  std::vector<double> t(n, 0.0);
+  if (n == 1) {
+    return curr;
+  }
+  for (size_t i = 0; i < n; ++i) {
+    t[i] = static_cast<double>(i) / static_cast<double>(n - 1);
+  }
+
+  int base_stride = std::max(1, effective_radius);
+  base_stride = std::min<int>(base_stride, static_cast<int>(n - 1));
+
+  for (size_t iter = 0; iter < iters; ++iter) {
+    const int stride = std::max(1, base_stride - static_cast<int>(iter));
+
+    std::vector<size_t> ctrl_idx;
+    ctrl_idx.reserve(n / static_cast<size_t>(stride) + 4);
+
+    ctrl_idx.push_back(0);
+    ctrl_idx.push_back(n - 1);
+    for (size_t i = 0; i < n; i += static_cast<size_t>(stride)) {
+      ctrl_idx.push_back(i);
+    }
+
+    std::sort(ctrl_idx.begin(), ctrl_idx.end());
+    ctrl_idx.erase(std::unique(ctrl_idx.begin(), ctrl_idx.end()),
+                  ctrl_idx.end());
+
+    if (ctrl_idx.size() < 2) {
+      next = curr;
+      break;
+    }
+
+    std::vector<double> t_ctrl;
+    std::vector<double> x_ctrl;
+    std::vector<double> y_ctrl;
+    t_ctrl.reserve(ctrl_idx.size());
+    x_ctrl.reserve(ctrl_idx.size());
+    y_ctrl.reserve(ctrl_idx.size());
+
+    for (size_t idx : ctrl_idx) {
+      t_ctrl.push_back(t[idx]);
+      x_ctrl.push_back(curr[idx].x);
+      y_ctrl.push_back(curr[idx].y);
+    }
+
+    pnc::mathlib::spline sx;
+    pnc::mathlib::spline sy;
+
+    const pnc::mathlib::spline::spline_type type =
+        (ctrl_idx.size() >= 4) ? pnc::mathlib::spline::cspline
+                              : pnc::mathlib::spline::linear;
+
+    sx.set_points(t_ctrl, x_ctrl, type);
+    sy.set_points(t_ctrl, y_ctrl, type);
+
+    for (size_t i = 0; i < n; ++i) {
+      next[i] = Point2D(sx(t[i]), sy(t[i]));
+    }
+
+    curr.swap(next);
+  }
+
+  return curr;
+}
+
+void HppGeneralLateralDecider::GenerateSoftBoundCenterLine(
+    const std::vector<std::pair<double, double>> &soft_bounds,
+    const std::vector<std::pair<double, double>> &hard_bounds,
+    const int window) {
+  const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
+
+  const size_t n = ref_traj_points_.size();
+  if (n == 0 || soft_bounds.size() != n || hard_bounds.size() != n) {
+    return;
+  }
+
+  std::vector<std::pair<double, double>> soft_bounds_used = soft_bounds;
+
+  const int radius = std::max(0, window);
+  const int effective_radius =
+      std::min<int>(static_cast<int>(n - 1), radius * 2);
+
+  std::vector<Point2D> lower_xy(n), upper_xy(n);
+  for (size_t i = 0; i < n; ++i) {
+    const double s = ref_traj_points_[i].s;
+    double lower_l = soft_bounds_used[i].first;
+    double upper_l = soft_bounds_used[i].second;
+
+    const Point2D lower_sl(s, lower_l);
+    const Point2D upper_sl(s, upper_l);
+
+    Point2D lower_xy_tmp;
+    Point2D upper_xy_tmp;
+    const bool ok_lower = frenet_coord->SLToXY(lower_sl, lower_xy_tmp);
+    const bool ok_upper = frenet_coord->SLToXY(upper_sl, upper_xy_tmp);
+
+    if (!ok_upper || !ok_lower) {
+      upper_xy[i] = Point2D(ref_traj_points_[i].x, ref_traj_points_[i].y);
+      lower_xy[i] = Point2D(ref_traj_points_[i].x, ref_traj_points_[i].y);
+      LOG_DEBUG(" SLToXY Failed in bound center line generation ! \n");
+    } else {
+      upper_xy[i] = upper_xy_tmp;
+      lower_xy[i] = lower_xy_tmp;
+    }
+  }
+
+  std::vector<Point2D> center_xy_candidate(n);
+  for (size_t i = 0; i < n; ++i) {
+    Point2D center_xy(0.5 * (lower_xy[i].x + upper_xy[i].x),
+                      0.5 * (lower_xy[i].y + upper_xy[i].y));
+    center_xy_candidate[i] = center_xy;
+  }
+
+  std::vector<Point2D> center_xy_smoothed = center_xy_candidate;
+  if (effective_radius > 0) {
+    constexpr size_t kSmoothIters = 1;
+    center_xy_smoothed = SmoothPointsIteratively(
+        center_xy_candidate, effective_radius, kSmoothIters);
+  }
+
+  for (size_t i = 0; i < n; ++i) {
+    Point2D center_xy = center_xy_smoothed[i];
+    Point2D center_sl;
+    if (!frenet_coord->XYToSL(center_xy, center_sl)) {
+      continue;
+    }
+
+    if (center_sl.y > hard_bounds[i].second ||
+        center_sl.y < hard_bounds[i].first) {
+      center_sl.y = std::min(std::max(center_sl.y, hard_bounds[i].first),
+                             hard_bounds[i].second);
+    }
+
+    bound_center_line_[i].s = center_sl.x;
+    bound_center_line_[i].l = center_sl.y;
+    Point2D center_xy_new;
+    if (frenet_coord->SLToXY(center_sl, center_xy_new)) {
+      bound_center_line_[i].x = center_xy_new.x;
+      bound_center_line_[i].y = center_xy_new.y;
+    } else {
+      bound_center_line_[i].x = ref_traj_points_[i].x;
+      bound_center_line_[i].y = ref_traj_points_[i].y;
+    }
+  }
+  // ref_traj_points_ = bound_center_line_;
+}
+
+TrajectoryPoints HppGeneralLateralDecider::iterativeSmoothWithBounds(
+    const TrajectoryPoints& trajectory) {
+  const int iterations = 10;
+  const double smooth_factor = 0.8;
+  const size_t n = trajectory.size();
+
+  TrajectoryPoints result = trajectory;
+  std::vector<double> current_l(n), new_l(n);
+
+  for (int iter = 0; iter < iterations; ++iter) {
+    for (size_t i = 0; i < n; ++i) {
+      current_l[i] = result[i].l;
+      new_l[i] = current_l[i];
+    }
+
+    for (size_t i = 1; i < n - 1; ++i) {
+      const double smoothed =
+          (current_l[i - 1] + current_l[i] + current_l[i + 1]) / 3.0;
+      new_l[i] =
+          (1.0 - smooth_factor) * current_l[i] + smooth_factor * smoothed;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+      new_l[i] = std::max(frenet_hard_bounds_[i].first,
+                          std::min(frenet_hard_bounds_[i].second, new_l[i]));
+      result[i].l = new_l[i];
+    }
+  }
+  return result;
+}
+
+void HppGeneralLateralDecider::MergeReferenceTrajectories(
+    const std::vector<std::pair<double, double>> &hard_bounds,
+    const std::vector<std::pair<double, double>> &soft_bounds) {
+  const TrajectoryPoints raw_ref_traj_points = ref_traj_points_;
+  const size_t n = raw_ref_traj_points.size();
+  if (n == 0 || bound_center_line_.size() != n || hard_bounds.size() != n ||
+      soft_bounds.size() != n) {
+    return;
+  }
+
+  constexpr size_t kBlendRadius = 4;
+  const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    ref_traj_points_ = raw_ref_traj_points;
+    return;
+  }
+
+  auto is_break_hard_bound = [&](size_t idx) {
+    return raw_ref_traj_points[idx].l < hard_bounds[idx].first ||
+           raw_ref_traj_points[idx].l > hard_bounds[idx].second;
+  };
+
+  size_t break_start = n;
+  for (size_t i = 0; i < n; ++i) {
+    if (is_break_hard_bound(i)) {
+      break_start = i < kBlendRadius ? 0 : i;
+      break;
+    }
+  }
+
+  if (break_start == n) {
+    ref_traj_points_ = raw_ref_traj_points;
+    return;
+  }
+
+  TrajectoryPoints merged = raw_ref_traj_points;
+  size_t recover_idx = break_start;
+  while (recover_idx < n && is_break_hard_bound(recover_idx)) {
+    ++recover_idx;
+  }
+
+  if (recover_idx > n - 1 - kBlendRadius) {
+    recover_idx = n - 1;
+  }
+
+  for (size_t i = 0; i < n; ++i) {
+    if (i < break_start) {
+      merged[i] = plan_history_traj_[i];
+    } else if (i > recover_idx) {
+      merged[i] = raw_ref_traj_points[i];
+    } else {
+      merged[i] = bound_center_line_[i];
+    }
+  }
+
+  merged = iterativeSmoothWithBounds(merged);
+
+  for (size_t i = 0; i < n; ++i) {
+    // merged[i].heading_angle = raw_ref_traj_points[i].heading_angle;
+    if (i + 1 < n) {
+      const double dx = merged[i + 1].x - merged[i].x;
+      const double dy = merged[i + 1].y - merged[i].y;
+      merged[i].heading_angle = std::atan2(dy, dx);
+    } else {
+      merged[i].heading_angle = merged[i - 1].heading_angle;
+    }
+  }
+
+  ref_traj_points_ = merged;
 }
 
 void HppGeneralLateralDecider::LimitFrenetLateralSlope(
