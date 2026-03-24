@@ -96,6 +96,22 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
+  void GenerateSoftBoundCenterLine(
+      const std::vector<std::pair<double, double>> &soft_bounds,
+      const std::vector<std::pair<double, double>> &hard_bounds,
+      const int window);
+  void MergeReferenceTrajectories(
+      const std::vector<std::pair<double, double>> &hard_bounds,
+      const std::vector<std::pair<double, double>> &soft_bounds);
+  std::vector<Point2D> SmoothPointsIteratively(
+      const std::vector<Point2D> &input,
+      const int effective_radius,
+      const size_t iters);
+  TrajectoryPoints iterativeSmoothWithBounds(const TrajectoryPoints& trajectory);
+  void PreprocessSoftBounds(
+      std::vector<std::pair<double, double>> *soft_bounds,
+      const TrajectoryPoints &ref_traj,
+      const std::vector<std::pair<double, double>> &hard_bounds);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
@@ -188,6 +204,7 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
+  TrajectoryPoints bound_center_line_;
   TrajectoryPoints plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
 
