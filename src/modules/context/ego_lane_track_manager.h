@@ -256,6 +256,8 @@ class EgoLaneTrackManger {
       const LaneCurvInfo &lane_curv_info, double &road_boundary_collision_cost,
       const std::shared_ptr<VirtualLane> &relative_id_lane);
 
+  double EWMAFilter(double current_value, double alpha, double& filtered_history);
+
  private:
   planning::framework::Session *session_ = nullptr;
   EgoPlanningConfig config_;
@@ -307,6 +309,8 @@ class EgoLaneTrackManger {
   const std::vector<double> road_curv_radius_{200.0, 400.0, 1000.0};
   int acc_predict_left_change_count_ = 0;
   int acc_predict_right_change_count_ = 0;
+  double raw_min_road_radius_ = 2000.0;
+  double raw_max_road_radius_ = 2000.0;
 };
 
 }  // namespace planning

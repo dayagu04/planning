@@ -202,6 +202,8 @@ void EgoLaneTrackManger::TrackEgoLane(
     ramp_split_select_is_finish_ = false;
     interactive_select_split_counter_ = 0;
     enable_output_split_select_classical_chinese_ = false;
+    raw_min_road_radius_ = 1500.0;
+    raw_max_road_radius_ = 1500.0;
   }
   if (!active ||
       function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
@@ -2218,10 +2220,15 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       }
     }
   }
-  if (max_road_radius < road_radius_origin) {
-    road_radius_origin = max_road_radius;
-  }
 
+  double ewma_alpha = 0.3;
+  double current_max_road_radius =
+      EWMAFilter(max_road_radius, ewma_alpha, raw_max_road_radius_);
+  double current_min_road_radius =
+      EWMAFilter(min_road_radius, ewma_alpha, raw_min_road_radius_);
+  if (current_max_road_radius < road_radius_origin) {
+    road_radius_origin = current_max_road_radius;
+  }
   if (last_zero_relative_id_nums_ > 1 &&
       (lcc_split_select_is_finish_ || road_split_select_is_finish_ ||
        ramp_split_select_is_finish_) &&
@@ -2406,7 +2413,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
 
   // 计算归一化的曲率程度（0=纯直道，1=最大曲率）
   double curv_degree =
-      std::fabs(max_road_radius - min_road_radius) > 200.0 ? 0.0 : NormalizeCurvatureRadius(road_radius_origin);
+      std::fabs(current_max_road_radius - current_min_road_radius) > 200.0 ? 0.0 : NormalizeCurvatureRadius(road_radius_origin);
   double relative_theta_diff_cost_weight, road_boundary_collision_cost_weight,
       kappa_cost_weight;
   //计算各项cost权重
@@ -4308,6 +4315,20 @@ void EgoLaneTrackManger::CalculateRoadBoundaryCollisionCost(
 
   // 根据TTI计算线性碰撞成本，赋值给输出参数
   road_boundary_collision_cost = CalculateLinearCost(ttc);
+}
+
+double EgoLaneTrackManger::EWMAFilter(double current_value, double alpha, double& filtered_history) {
+  double filtered;
+  if (std::fabs(filtered_history) > 1000.0) {
+    // 首次滤波：无历史值，直接用当前值初始化
+    filtered = current_value;
+  } else {
+    // EWMA核心公式
+    filtered = alpha * current_value + (1 - alpha) * filtered_history;
+  }
+  // 更新历史值（供下一帧使用）
+  filtered_history = filtered;
+  return filtered;
 }
 
 }  // namespace planning
