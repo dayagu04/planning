@@ -932,8 +932,7 @@ void TsrCore::RunOnce(void) {
   if (function_state_machine_info_ptr->current_state ==
           iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE ||
       function_state_machine_info_ptr->current_state ==
-          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE ||
-      tsr_navi_flag_) {
+          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE) {
     UpdateTsrSpeedLimitOnlyByMap();
   } else {
     // 非NOA模式下，使用感知+地图的综合限速信息
