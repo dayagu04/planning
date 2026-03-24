@@ -264,18 +264,35 @@ bool LDRouteInfoStrategy::CheckEgoPositionRelativeTwoLinks(
   };
 
   // 判断自车相对于两段link的位置
-  result.is_left_of_link1 = is_left_of_line(ego_pos, link1_seg);
-  result.is_right_of_link1 = !is_left_of_line(ego_pos, link1_seg);
-  result.is_left_of_link2 = is_left_of_line(ego_pos, link2_seg);
-  result.is_right_of_link2 = !is_left_of_line(ego_pos, link2_seg);
+  bool left_of_link1 = is_left_of_line(ego_pos, link1_seg);
+  bool left_of_link2 = is_left_of_line(ego_pos, link2_seg);
+
+  if (left_of_link1 != left_of_link2) {
+    // 自车在两条link之间，两侧标志均有效
+    result.is_left_of_link1 = left_of_link1;
+    result.is_right_of_link1 = !left_of_link1;
+    result.is_left_of_link2 = left_of_link2;
+    result.is_right_of_link2 = !left_of_link2;
+  } else {
+    // 自车在两条link同侧，只保留距离更近的link的标志位
+    if (result.dist_to_link1 <= result.dist_to_link2) {
+      result.is_left_of_link1 = left_of_link1;
+      result.is_right_of_link1 = !left_of_link1;
+      result.is_left_of_link2 = false;
+      result.is_right_of_link2 = false;
+    } else {
+      result.is_left_of_link1 = false;
+      result.is_right_of_link1 = false;
+      result.is_left_of_link2 = left_of_link2;
+      result.is_right_of_link2 = !left_of_link2;
+    }
+  }
 
   // 情况1：自车在link1和link2之间（横向位置在两条link之间）
   // 判断逻辑：
   // - 横向距离：到两条link的横向距离都小于阈值
   // - 侧向关系：自车在两条link之间（即相对于link1和link2的侧向关系相反）
-  result.is_between_links =
-      (result.dist_to_link1 < 5.0 && result.dist_to_link2 < 5.0) &&
-      (result.is_left_of_link1 != result.is_left_of_link2);
+  result.is_between_links = (result.is_left_of_link1 != result.is_left_of_link2);
 
   // 输出调试信息
   ILOG_DEBUG << "CheckEgoPositionRelativeTwoLinks: "
@@ -292,26 +309,15 @@ bool LDRouteInfoStrategy::CheckEgoPositionRelativeTwoLinks(
              << "is_left_of_link2=" << result.is_left_of_link2 << ", "
              << "is_right_of_link2=" << result.is_right_of_link2;
 
-  // 返回判断结果（可根据实际需求调整返回值）
   if (result.is_between_links) {
     ILOG_DEBUG << "Ego is between link1 and link2";
-    return true;
-  } else if (result.is_left_of_link1 && result.dist_to_link1 < 10.0) {
-    ILOG_DEBUG << "Ego is on left side of link1";
-    return true;
-  } else if (result.is_right_of_link1 && result.dist_to_link1 < 10.0) {
-    ILOG_DEBUG << "Ego is on right side of link1";
-    return true;
-  } else if (result.is_left_of_link2 && result.dist_to_link2 < 10.0) {
-    ILOG_DEBUG << "Ego is on left side of link2";
-    return true;
-  } else if (result.is_right_of_link2 && result.dist_to_link2 < 10.0) {
-    ILOG_DEBUG << "Ego is on right side of link2";
-    return true;
+  } else if (result.is_left_of_link1 || result.is_right_of_link1) {
+    ILOG_DEBUG << "Ego is on same side, beside link1 (dist=" << result.dist_to_link1 << ")";
   } else {
-    ILOG_DEBUG << "Ego is far from both links";
-    return false;
+    ILOG_DEBUG << "Ego is on same side, beside link2 (dist=" << result.dist_to_link2 << ")";
   }
+
+  return true;
 }
 
 bool LDRouteInfoStrategy::IsMissedNaviRoute() const {
@@ -360,7 +366,7 @@ bool LDRouteInfoStrategy::IsMissedNaviRoute() const {
       // 由于自车位置与地图误差，有可能在这个条件下，也是走错的情况，后续根据测试情况继续完善
     }
   } else if (split_dir == RAMP_ON_RIGHT) {
-    const double ego_map_lat_err = 2.0;
+    const double ego_map_lat_err = 1.5;
     if (ego_pos_result.is_left_of_link1 &&
         ego_pos_result.dist_to_link1 > ego_map_lat_err) {
       return true;
