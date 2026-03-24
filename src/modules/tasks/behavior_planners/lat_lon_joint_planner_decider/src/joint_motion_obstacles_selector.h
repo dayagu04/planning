@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "agent/agent.h"
@@ -50,19 +51,33 @@ class JointMotionObstaclesSelector {
       const std::vector<JointPlannerTrajectoryPoint>& prior_trajectory,
       int32_t lead_one_id);
 
+  struct EgoTrajectoryFramet {
+    std::vector<double> min_s_vec;
+    std::vector<double> max_s_vec;
+    std::vector<double> min_l_vec;
+    std::vector<double> max_l_vec;
+    std::vector<double> vel_vec;
+  };
+
   bool JudgeOverlapWithPriorTrajectory(
       const KeyObstacle& key_obstacle, const double agent_l,
       const PlanningInitPoint init_point,
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       const std::vector<JointPlannerTrajectoryPoint>& prior_trajectory,
-      bool* is_in_front = nullptr);
+      const EgoTrajectoryFramet& ego_frenet_data, bool* is_in_front = nullptr);
 
-  std::vector<KeyObstacle> GetKeyObstacles() const;
+  EgoTrajectoryFramet PrecomputeEgoTrajectoryFrenet(
+      const std::vector<JointPlannerTrajectoryPoint>& prior_trajectory,
+      const std::shared_ptr<planning_math::KDPath>& planned_path);
+
+  std::vector<std::shared_ptr<KeyObstacle>> GetKeyObstacles() const;
 
  private:
-  KeyObstacle CreateKeyObstacle(
+
+  KeyObstacle* CreateKeyObstacle(
       const std::shared_ptr<agent::Agent>& agent,
       const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+      double ego_s, double ego_l,
       LongitudinalLabel longitudinal_label = IGNORE);
 
   void CalculateAgentSLBoundary(
@@ -71,11 +86,11 @@ class JointMotionObstaclesSelector {
       double* const ptr_max_s, double* const ptr_min_l,
       double* const ptr_max_l);
 
-  void CorrectTrajectoryInConfluenceArea(KeyObstacle& key_obstacle,
+  void CorrectTrajectoryInConfluenceArea(std::shared_ptr<KeyObstacle>& key_obstacle,
                                          bool is_left_side);
 
   framework::Session* session_;
-  std::vector<KeyObstacle> key_obstacles_;
+  std::vector<std::shared_ptr<KeyObstacle>> key_obstacles_;
   std::vector<std::shared_ptr<agent::Agent>> surrounding_agents_;
 };
 
