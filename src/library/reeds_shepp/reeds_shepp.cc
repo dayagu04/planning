@@ -64,6 +64,7 @@ static const RSPathSteer ReedsSheppPathype[][5] = {
     // SCS
     {RS_STRAIGHT, RS_LEFT, RS_STRAIGHT, RS_NOP, RS_NOP},
     {RS_STRAIGHT, RS_RIGHT, RS_STRAIGHT, RS_NOP, RS_NOP}
+    
 };
 
 RSPathRequestType re_request_type_;
