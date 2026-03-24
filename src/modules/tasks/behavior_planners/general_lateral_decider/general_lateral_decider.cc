@@ -4154,14 +4154,16 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
            lat_obs_position_iter->second.lon_overtake_avoid)) {
         return true;
       }
-      const auto cossing_map_iter = is_crossing_map.find(obstacle->id());
+      const auto crossing_map_iter = is_crossing_map.find(obstacle->id());
+      bool is_cross_obj = false;
+      if (crossing_map_iter != is_crossing_map.end()) {
+        is_cross_obj = crossing_map_iter->second;
+      }
       if (obstacle->obstacle()->is_reverse() &&
           (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
           !obstacle->is_static() &&
-          (obstacle->frenet_s() < ref_traj_points_.back().s) &&
-          (cossing_map_iter != is_crossing_map.end() &&
-           !cossing_map_iter->second) &&
-          !general_lateral_decider_output.lane_change_scene &&
+          // (obstacle->frenet_s() < ref_traj_points_.back().s) &&
+          !is_cross_obj && !general_lateral_decider_output.lane_change_scene &&
           !in_intersection) {
         // 对向静止的ignore先不考虑
         return true;
