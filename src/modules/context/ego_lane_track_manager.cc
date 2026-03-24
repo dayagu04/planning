@@ -2160,15 +2160,6 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   double max_road_radius = 100.0;
   std::vector<std::pair<int, double>> lane_curv_info_set;
   std::unordered_map<int, LaneCurvInfo> lanes_curv_info;
-  double k_ego_look_ahead_time = kEgoLookAheadTime;
-  double k_sampling_step_i = kSamplingStepI;
-  double k_sampling_step_j = kSamplingStepJ;
-  // 自车车速小于30kph
-  if (ego_state->ego_v() < 8.34) {
-    k_ego_look_ahead_time = kEgoLookAheadTime * 0.5;
-    k_sampling_step_i = 5.0;
-    k_sampling_step_j = 2.5;
-  }
   for (size_t i = 0; i < order_ids.size(); i++) {
     // double road_radius = 10000;
     LaneCurvInfo lane_curv_info;
@@ -4169,7 +4160,6 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
   if (ego_state->ego_v() < 8.34) {  // 车速<30kph
     k_ego_look_ahead_time = kEgoLookAheadTime * 0.5;
     k_sampling_step_i = 5.0;
-    k_sampling_step_j = 2.5;
   }
 
   Point2D cart_point(ego_state->planning_init_point().x,
