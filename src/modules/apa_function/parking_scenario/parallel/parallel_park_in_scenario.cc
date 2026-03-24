@@ -1898,6 +1898,8 @@ const bool ParallelParkInScenario::GenTlane() {
   parent_height_count.clear();
   obs_id_pt_map_.clear();
   std::unordered_map<size_t, double> parent_min_y_abs;//<parent_id, min_y_abs>
+  Eigen::Vector2d obs_slot_front_pt = {slot_length + half_slot_width, 0.0};
+  Eigen::Vector2d obs_slot_rear_pt = {-half_slot_width, 0.0};
   bool is_car_in_curb = false;
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
@@ -1966,7 +1968,31 @@ const bool ParallelParkInScenario::GenTlane() {
         // rear_box_fail_cnt++;
         continue;
       }
-
+      const bool is_near_slot_front =
+          pnc::mathlib::IsInBound(obs_pt_local.x(),
+                                  0.5*slot_length ,
+                                  slot_length + half_slot_width) &&
+          pnc::mathlib::IsInBound(obs_pt_local.y(), -(half_slot_width+kCurbInitialOffset),
+                                  half_slot_width+kCurbInitialOffset);
+      const bool is_near_slot_rear =
+          pnc::mathlib::IsInBound(obs_pt_local.x(), -half_slot_width,
+                                  0.5*slot_length) &&
+          pnc::mathlib::IsInBound(obs_pt_local.y(), -(half_slot_width+kCurbInitialOffset),
+                                  half_slot_width+kCurbInitialOffset);
+      if (is_near_slot_front) {
+        // ILOG_INFO << "near_slot_front, obs_pt_local = " << obs_pt_local.x()
+                  // << " , " << obs_pt_local.y();
+        if (obs_pt_local.x() < obs_slot_front_pt.x()) {
+          obs_slot_front_pt = obs_pt_local;
+        }
+      }
+      if (is_near_slot_rear) {
+        // ILOG_INFO << "near_slot_rear, obs_pt_local = " << obs_pt_local.x()
+                  // << " , " << obs_pt_local.y();
+        if (obs_pt_local.x() > obs_slot_rear_pt.x()) {
+          obs_slot_rear_pt = obs_pt_local;
+        }
+      }
       const bool curb_condition =
           pnc::mathlib::IsInBound(obs_pt_local.x(), 0.0,
                                   slot_length ) &&
@@ -2169,6 +2195,11 @@ const bool ParallelParkInScenario::GenTlane() {
   // curb
   size_t curb_count = 0;
   double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
+  const bool is_slot_empty_enough =
+      (obs_slot_front_pt.x() - obs_slot_rear_pt.x()) > 5.8;
+  ILOG_INFO << "is_slot_empty_enough:" << is_slot_empty_enough
+            << "obs_slot_front_pt.x:" << obs_slot_front_pt.x()
+            << "obs_slot_rear_pt.x():" << obs_slot_rear_pt.x();
 
   const double pa_x_limit_min = 1.0;
   const double pa_x_limit_max = slot_length - 1.0;
@@ -2248,6 +2279,9 @@ const bool ParallelParkInScenario::GenTlane() {
         if (curb_condition && !(cat_to_curb_condition &&
             obstacle_point_set.first ==
                 static_cast<size_t>(ApaObsScemanticType::CAR))) {
+          if(is_slot_empty_enough){
+            continue;
+          }
           curb_count++;
           if (side_sgn > 0.0) {
             curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
