@@ -512,6 +512,7 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   constexpr double kStraightSampleStep = 1.0;
   constexpr double kKappaStraightThr = 0.1;
   double ref_len_based_on_straight = 15.0; // 默认长度
+  bool is_on_curve = false;
 
   if (!cart_ref_info.s_vec.empty() && cart_ref_info.s_vec.back() > s_ref &&
       cart_ref_info.k_s_spline.get_x().size() > 1) {
@@ -523,6 +524,7 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
       for (double s_check = s_ref; s_check <= s_end;
            s_check += kStraightSampleStep) {
         if (std::fabs(cart_ref_info.k_s_spline(s_check)) > kKappaStraightThr) {
+          is_on_curve = true;
           const double s_before_curve = std::max(s_check - kStraightSampleStep, s_ref);
           ref_len_based_on_straight = std::max(s_before_curve - s_ref, 3.0);
           break;
@@ -531,9 +533,8 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
     }
   }
 
-  constexpr double kRefLenProtectThreshold = 3.0;
-  if (ref_len_based_on_speed < kRefLenProtectThreshold &&
-      ref_len_based_on_straight < kRefLenProtectThreshold) {
+  // 避免弯道速度较低时参考线过短
+  if (is_on_curve && ego_v < 2.0) {
     ref_len_based_on_straight = 15.0;
   }
 
