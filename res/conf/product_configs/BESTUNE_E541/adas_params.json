@@ -115,7 +115,7 @@
   "ldp_ttlc_right_hack": 1.1,
   "ldp_center_line_offset": 0.4,
   "ldp_center_line_offset_final": 0.8,
-  "ldp_center_line_offset_nums": 48,
+  "ldp_center_line_offset_nums": 10,
   "ldp_center_roadedge_offset": 0.7,
   "ldw_main_switch": false,
   "ldp_main_switch": false,

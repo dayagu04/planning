@@ -62,6 +62,7 @@ class AdasFunction : public BaseFunction {
   double ldp_intervention_duration_ = 0.0;
   double ldp_handsoff_duration_ = 0.0;  // 驾驶员手离方向盘计时器，单位:s
   bool ldp_driver_handsoff_flag = false;  // 驾驶员手离方向盘标志位
+  double ldp_intervention_duration_for_offset_ = 0.0;           // ldp持续时间用于计算中心线偏移
   iflyauto::LDPDriverhandsoffWarning ldp_driver_handsoff_warning_ =
       iflyauto::LDPDriverhandsoffWarning::LDP_DRIVER_HANDSOFF_WARNING_OFF;
   bool ldp_warning_audio_flag_ = false;

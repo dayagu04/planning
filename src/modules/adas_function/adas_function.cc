@@ -229,6 +229,30 @@ void AdasFunction::SetLkaTrajectory() {
   } else {
     s_proj = 0.0;
   }
+  if(GetContext.get_output_info()->ldp_output_info_.ldp_left_intervention_flag_ ||
+      GetContext.get_output_info()->elk_output_info_.elk_left_intervention_flag_ || 
+      GetContext.get_output_info()->ldp_output_info_.ldp_right_intervention_flag_ ||
+      GetContext.get_output_info()->elk_output_info_.elk_right_intervention_flag_){
+        ldp_intervention_duration_for_offset_ += GetContext.get_param()->dt;
+  }else{
+    ldp_intervention_duration_for_offset_ = 0.0;
+  }
+  if(ldp_intervention_duration_for_offset_ > 10.0) {
+    ldp_intervention_duration_for_offset_ = 10.0;
+  }
+
+  double ldp_center_line_offset_initial = GetContext.get_param()->ldp_center_line_offset;
+  double ldp_center_line_offset_final = GetContext.get_param()->ldp_center_line_offset_final;
+  int ldp_center_line_offset_nums = GetContext.get_param()->ldp_center_line_offset_nums;
+  double ldp_center_line_offset_step = 0;
+  if(ldp_center_line_offset_nums > 1 && ldp_center_line_offset_final > ldp_center_line_offset_initial) {
+      ldp_center_line_offset_step = 10 * (ldp_center_line_offset_final - ldp_center_line_offset_initial) / ldp_center_line_offset_nums;
+  }
+  double ldp_center_line_offset = ldp_intervention_duration_for_offset_ * ldp_center_line_offset_step + 
+                                   GetContext.get_param()->ldp_center_line_offset;
+
+  ldp_center_line_offset = std::min(ldp_center_line_offset, ldp_center_line_offset_final);
+  ldp_center_line_offset = std::max(ldp_center_line_offset, GetContext.get_param()->ldp_center_line_offset);
 
   auto &car2local =
       session_->environmental_model().get_ego_state_manager()->get_car2enu();
@@ -242,22 +266,7 @@ void AdasFunction::SetLkaTrajectory() {
                        plan_traj_dt * i +
                    s_proj;
     Eigen::Vector3d car_point, local_point;
-
-    double ldp_center_line_offset = GetContext.get_param()->ldp_center_line_offset;
-    double ldp_center_line_offset_final = GetContext.get_param()->ldp_center_line_offset_final;
-    int ldp_center_line_offset_nums = GetContext.get_param()->ldp_center_line_offset_nums;
-    double ldp_center_line_offset_step = 0;
-    if(ldp_center_line_offset_nums > 1 && ldp_center_line_offset_final > ldp_center_line_offset) {
-      ldp_center_line_offset_step = (ldp_center_line_offset_final - ldp_center_line_offset) / ldp_center_line_offset_nums;
-    }
-    if(i < ldp_center_line_offset_nums) {
-      ldp_center_line_offset += ldp_center_line_offset_step * i;
-    } else {
-      ldp_center_line_offset = ldp_center_line_offset_final;
-    }
     
-    ldp_center_line_offset = std::min(ldp_center_line_offset, ldp_center_line_offset_final);
-    ldp_center_line_offset = std::max(ldp_center_line_offset, GetContext.get_param()->ldp_center_line_offset);
 
     if (GetContext.get_output_info()
             ->ldp_output_info_.ldp_left_intervention_flag_ ||
