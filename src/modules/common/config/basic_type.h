@@ -436,6 +436,7 @@ struct GaodeRouteInfoOutput {
   }
 };
 struct RouteInfoOutput {
+  bool is_missed_navi_route = false;
   double lsl_length = 0.0;// 公供里面optional，注意汉杰调用的地方需要放在merge point里面输出给他使用
   std::vector<int> feasible_lane_sequence;
   MLCDeciderSceneTypeInfo mlc_decider_scene_type_info;
@@ -540,6 +541,7 @@ struct RouteInfoOutput {
   GaodeRouteInfoOutput gaode_route_info_output;
 
   void reset() {
+    is_missed_navi_route = false;
     is_update_segment_success = false;
     is_on_ramp = false;
     dis_to_ramp = NL_NMAX;

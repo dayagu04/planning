@@ -92,6 +92,7 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   // 根据前方的split信息判断，自车是否走错路了
   if (IsMissedNaviRoute()) {
     route_info_output_.reset();
+    route_info_output_.is_missed_navi_route = true;
     return false;
   }
 

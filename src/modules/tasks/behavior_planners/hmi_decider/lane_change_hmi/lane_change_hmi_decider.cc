@@ -630,6 +630,14 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     }
   }
 
+  // 错过导航路线，发出的接管信息
+  if (route_info_output.is_missed_navi_route) {
+    planning_output.planning_request.take_over_req_level =
+        iflyauto::REQUEST_LEVEL_WARRING;
+    planning_output.planning_request.request_reason =
+        iflyauto::REQUEST_REASON_ENTER_RAMP_FAILED;
+    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+  }
   JSON_DEBUG_VALUE("lane_change_reason",
                    static_cast<int>(ad_info.lane_change_reason))
   JSON_DEBUG_VALUE("status_update_reason",
