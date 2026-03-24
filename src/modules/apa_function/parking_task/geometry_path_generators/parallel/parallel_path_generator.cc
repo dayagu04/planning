@@ -102,8 +102,7 @@ static const double kMaxYPenalty = 2.0;
 static double kEps = 1e-5;
 static double kFrontDetaXMagWhenFrontVacant = 3.0;
 
-static std::vector<double> big_heading_vec_ = {22.5, 27.5, 47.5,
-                                               55.0, 35.0, 60.0};
+static std::vector<double> big_heading_vec_ = {22.5, 27.5, 47.5, 35.0, 60.0};
 
 static double kAstarToGeometryEgoRatio = 0.4;
 
@@ -1546,9 +1545,18 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       calc_params_.slot_side_sgn * (input_.tlane.obs_pt_inside.y() -
                                     input_.tlane.corner_inside_slot.y()) >
       0.5;
+  const auto start_time = std::chrono::high_resolution_clock::now();
   for (size_t i = 0; i < preparing_pose_vec.size(); i++) {
     ILOG_INFO << "No. " << i;
     geometry_lib::PrintPose("prepare pose", preparing_pose_vec[i]);
+    const auto end_time = std::chrono::high_resolution_clock::now();
+    const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              end_time - start_time)
+                              .count();
+    if (duration > 800.0) {
+      ILOG_INFO << "time out! not geometry plan path out slot";
+      break;
+    }
     if ((i >= aligned_size && i < parallel_line_size &&
          parallel_success_cnt > 1) ||
         (parallel_line_size <= i && i < tiled_line_size &&
@@ -2082,8 +2090,8 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
     return false;
   }
 
-  const double step = 0.2;
-  size_t max_num = 16;
+  const double step = 0.3;
+  size_t max_num = 10;
 
   for (size_t i = 1; i < max_num; i++) {
     for (const auto& heading_deg : big_heading_vec_) {

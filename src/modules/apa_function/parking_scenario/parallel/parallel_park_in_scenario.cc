@@ -2606,6 +2606,215 @@ const bool ParallelParkInScenario::GenTlane() {
 
 const bool ParallelParkInScenario::GenObstacles() { return true; }
 
+/**
+ * @brief Modified illumination-based filtering: keep at most 3 nearest points
+ * per angular bin, with adjacent retained points not exceeding a specified
+ * distance threshold.
+ * @param filtered_channel_obs_vec Original obstacle point cloud (in world
+ * coordinates)
+ * @param veh_pos World coordinate of the filtering center (e.g., front point A,
+ * rear point B, or rear axle center)
+ * @param yaw Vehicle heading angle (in radians)
+ * @param angle_resolution Angular resolution (in degrees)
+ * @param start_angle Start angle of interest (in degrees)
+ * @param end_angle End angle of interest (in degrees)
+ * @param max_range Maximum range of interest (in meters)
+ * @param max_neighbor_dist Maximum allowed distance between adjacent retained
+ * points (in meters, default: 0.5m)
+ * @param max_points_per_bin Maximum number of points to retain per angular bin
+ * (default: 3)
+ * @return Filtered obstacle point cloud
+ */
+std::vector<Eigen::Vector2d>
+ParallelParkInScenario::FilterByLightVisibilityMultiPoints(
+    const std::vector<Eigen::Vector2d>& filtered_channel_obs_vec,
+    const Eigen::Vector2d& veh_pos, double yaw, double angle_resolution,
+    double start_angle, double end_angle, double max_range,
+    double max_neighbor_dist, int max_points_per_bin) {
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+  const double angle_resolution_rad = angle_resolution * M_PI / 180.0;
+  const double start_angle_rad = start_angle * M_PI / 180.0;
+  const double end_angle_rad = end_angle * M_PI / 180.0;
+
+  // ====================== Step 1: Collect all points into angular bins
+  // ====================== Data structure: (bin index, vector<(distance, world
+  // coordinate point)>)
+  std::unordered_map<int, std::vector<std::pair<double, Eigen::Vector2d>>>
+      angle_bins;
+
+  for (const auto& p_world : filtered_channel_obs_vec) {
+    // Transform from world coordinate system to vehicle coordinate system
+    const double dx = p_world.x() - veh_pos.x();
+    const double dy = p_world.y() - veh_pos.y();
+    const double x_veh = dx * cos_yaw + dy * sin_yaw;
+    const double y_veh = -dx * sin_yaw + dy * cos_yaw;
+
+    // Basic filtering: exclude points near origin, beyond max range, or outside
+    // the angle range of interest
+    const double dist = std::sqrt(x_veh * x_veh + y_veh * y_veh);
+    if (dist < 0.9 || dist > max_range) continue;
+
+    double angle = std::atan2(y_veh, x_veh);
+    if (angle < start_angle_rad || angle > end_angle_rad) continue;
+
+    // Calculate angular bin index and add point to corresponding bin
+    int bin_index =
+        static_cast<int>((angle - start_angle_rad) / angle_resolution_rad);
+    angle_bins[bin_index].emplace_back(dist, p_world);
+  }
+
+  // ====================== Step 2: Sort and filter points within each bin
+  // ======================
+  std::vector<Eigen::Vector2d> filtered_obs;
+
+  for (auto& [bin_index, points_with_dist] : angle_bins) {
+    // 1. Sort by distance in ascending order
+    std::sort(points_with_dist.begin(), points_with_dist.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    // 2.
+    // Filtering: keep at most max_points_per_bin points, where the distance
+    // between adjacent kept points does not exceed max_neighbor_dist
+    std::vector<Eigen::Vector2d> selected_points;
+    for (const auto& [dist, point] : points_with_dist) {
+      if (selected_points.empty()) {
+        // Keep the first point directly
+        selected_points.push_back(point);
+      } else {
+        // Calculate distance between current point and the last kept point
+        const double neighbor_dist = (point - selected_points.back()).norm();
+        if (neighbor_dist <= max_neighbor_dist &&
+            selected_points.size() < max_points_per_bin) {
+          selected_points.push_back(point);
+        }
+      }
+
+      // Reached maximum number of points to keep, exit early
+      if (selected_points.size() >= max_points_per_bin) {
+        break;
+      }
+    }
+
+    // 3. Add filtered points to final result
+    filtered_obs.insert(filtered_obs.end(), selected_points.begin(),
+                        selected_points.end());
+  }
+
+  return filtered_obs;
+}
+
+/**
+ * @brief Helper function: Check if a point already exists (using distance
+ * tolerance to avoid floating-point errors)
+ * @param point The point to check
+ * @param existing_points The set of existing points
+ * @param tolerance Distance tolerance (in meters; points closer than this are
+ * considered duplicates)
+ * @return true if the point already exists
+ */
+bool ParallelParkInScenario::IsPointDuplicate(
+    const Eigen::Vector2d& point,
+    const std::vector<Eigen::Vector2d>& existing_points, double tolerance) {
+  for (const auto& p : existing_points) {
+    if ((point - p).norm() < tolerance) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @brief Dual-center illumination-based filtering: filter independently from
+ * rear axle center and front axle center, then merge and deduplicate
+ * @param filtered_channel_obs_vec Original obstacle point cloud (in world
+ * coordinates)
+ * @param rear_axle_pos World coordinates of the vehicle's rear axle center
+ * (rotation center)
+ * @param yaw Vehicle heading angle (in radians)
+ * @param wheelbase Vehicle wheelbase (distance from front axle to rear axle, in
+ * meters; a core parameter)
+ * @param angle_resolution Angular resolution (in degrees)
+ * @param start_angle Start angle of interest (in degrees, relative to the
+ * vehicle's positive X-axis)
+ * @param end_angle End angle of interest (in degrees)
+ * @param max_range Maximum range of interest (in meters)
+ * @param duplicate_tolerance Deduplication distance tolerance (in meters;
+ * points closer than this are considered duplicates)
+ * @return Point cloud after dual-center filtering and deduplication
+ */
+std::vector<Eigen::Vector2d>
+ParallelParkInScenario::FilterByLightVisibilityDualAxle(
+    const std::vector<Eigen::Vector2d>& filtered_channel_obs_vec,
+    double angle_resolution, double start_angle, double end_angle,
+    double max_range, double duplicate_tolerance) {
+  const int min_obs_nums = 200;
+  if (filtered_channel_obs_vec.size() < min_obs_nums) {
+    ILOG_INFO << "obs nums < min_obs_nums, return all";
+    return filtered_channel_obs_vec;
+  }
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  double yaw = ego_info_under_slot.cur_pose.GetTheta();
+  const auto& rear_axle_pos = ego_info_under_slot.cur_pose.GetPos();
+
+  // ====================== Step 1: Calculate world coordinates of the front
+  // axle center ======================
+  const double cos_yaw = std::cos(yaw);
+  const double sin_yaw = std::sin(yaw);
+
+  // 1. Calculate point A (frontmost point of vehicle): rear axle center +
+  // (wheelbase + front overhang) * heading direction
+  const double dist_A =
+      apa_param.GetParam().wheel_base + apa_param.GetParam().front_overhanging;
+  Eigen::Vector2d point_A;
+  point_A.x() = rear_axle_pos.x() + dist_A * cos_yaw;
+  point_A.y() = rear_axle_pos.y() + dist_A * sin_yaw;
+
+  // 2. Calculate point B (rearmost point of vehicle): rear axle center - rear
+  // overhang * heading direction (opposite direction)
+  const double dist_B = -apa_param.GetParam().rear_overhanging;
+  Eigen::Vector2d point_B;
+  point_B.x() = rear_axle_pos.x() + dist_B * cos_yaw;
+  point_B.y() = rear_axle_pos.y() + dist_B * sin_yaw;
+
+  ILOG_INFO << "point_A: " << point_A.x() << ", " << point_A.y();
+  ILOG_INFO << "point_B: " << point_B.x() << ", " << point_B.y();
+
+  // ====================== Step 2: Perform independent filtering from both
+  // centers ======================
+  // 1. Filtering from rear axle center
+  auto result_rear = FilterByLightVisibilityMultiPoints(
+      filtered_channel_obs_vec, point_A, yaw, angle_resolution, start_angle,
+      end_angle, max_range);
+
+  // 2. Filtering from front axle center (using the same angular range and
+  // parameters as rear axle)
+  auto result_front = FilterByLightVisibilityMultiPoints(
+      filtered_channel_obs_vec, point_B, yaw, angle_resolution, start_angle,
+      end_angle, max_range);
+
+  // ====================== Step 3: Merge and deduplicate ======================
+  std::vector<Eigen::Vector2d> merged_result;
+  merged_result.reserve(result_rear.size() + result_front.size());
+
+  ILOG_INFO << "result_rear.size(): " << result_rear.size();
+  ILOG_INFO << "result_front.size(): " << result_front.size();
+
+  for (const auto& p : result_rear) {
+    merged_result.push_back(p);
+  }
+
+  for (const auto& p : result_front) {
+    if (!IsPointDuplicate(p, merged_result, duplicate_tolerance)) {
+      merged_result.push_back(p);
+    }
+  }
+  ILOG_INFO << "merged_result.size(): " << merged_result.size();
+
+  return merged_result;
+}
+
 void ParallelParkInScenario::GenTBoundaryObstacles() {
   //                                                  |
   //                         c-------------D
@@ -2656,22 +2865,25 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   // sample channel boundary line
   std::vector<Eigen::Vector2d> channel_line_obs_vec;
-  std::vector<Eigen::Vector2d> filtered_channel_obs_vec;
+  std::vector<Eigen::Vector2d> filtered_channel_line_obs_vec;
   pnc::geometry_lib::SamplePointSetInLineSeg(channel_line_obs_vec, channel_line,
                                              kChannelSampleDist);
 
   for (const auto& obs : channel_line_obs_vec) {
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs, ego_info_under_slot.cur_pose, kDeletedObsDistOutSlot)) {
-      filtered_channel_obs_vec.emplace_back(obs);
+      filtered_channel_line_obs_vec.emplace_back(obs);
     }
   }
+  // apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+  //     filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 
   const double slot_side_y =
       slot_side_sgn > 0.0
           ? std::max(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y())
           : std::min(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y());
   ILOG_INFO << "1 channel_y =" << t_lane_.channel_y;
+  std::vector<Eigen::Vector2d> origin_channel_obs_vec;
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
       // add obs near channel
@@ -2698,7 +2910,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
       if (channel_y_condition || channel_x_condition ||
           channel_slot_condition) {
-        filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
+        origin_channel_obs_vec.emplace_back(obstacle_point_slot);
       }
       if (channel_x_condition) {
         t_lane_.is_short_channel = true;
@@ -2721,6 +2933,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   }
   ILOG_INFO << "is_short_channel =" << t_lane_.is_short_channel;
   ILOG_INFO << "2 channel_y =" << t_lane_.channel_y;
+  std::vector<Eigen::Vector2d> filtered_channel_obs_vec;
+
+  // const double filtered_obs_start = IflyTime::Now_ms();
+  filtered_channel_obs_vec = FilterByLightVisibilityDualAxle(origin_channel_obs_vec, 3.5);
+  // ILOG_INFO << "filtered obs cost time(ms) = "
+  //           << IflyTime::Now_ms() - filtered_obs_start;
+
+  filtered_channel_obs_vec.insert(filtered_channel_obs_vec.end(),
+                                  filtered_channel_line_obs_vec.begin(),
+                                  filtered_channel_line_obs_vec.end());
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 
@@ -3767,6 +3989,12 @@ void ParallelParkInScenario::UpdatePostProcessStatus(
   return;
 }
 
+void ParallelParkInScenario::ThreadClearState() {
+  thread_.Clear();
+  ILOG_INFO << "ParallelParkInScenario implement ThreadClearState";
+  return;
+}
+
 void ParallelParkInScenario::SetRequestForScenarioTry(
     AstarRequest& cur_request, const EgoInfoUnderSlot& ego_info) {
   cur_request.direction_request_size = 0;
@@ -4444,6 +4672,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     if (plan_result != PathPlannerResult::PLAN_FAILED &&
         astar_state_ == AstarSearchState::NONE) {
       ILOG_INFO << "geometry path planning success";
+      if (!apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+        ThreadClearState();
+      }
       return uint8_t(plan_result);
     }
   }

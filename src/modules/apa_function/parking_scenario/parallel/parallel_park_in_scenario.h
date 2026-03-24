@@ -65,6 +65,7 @@ class ParallelParkInScenario : public ParkingScenario {
   }
 
   virtual void Init() override;
+  virtual void ThreadClearState() override;
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); };
   virtual const bool UpdateEgoSlotInfo() override;
@@ -177,6 +178,20 @@ class ParallelParkInScenario : public ParkingScenario {
       const std::vector<pnc::geometry_lib::PathPoint>& path_points,
       int& start_idx, int& end_idx);
   bool SimplifyComplexSTurn(std::vector<pnc::geometry_lib::PathPoint>& points);
+  bool IsPointDuplicate(const Eigen::Vector2d& point,
+                        const std::vector<Eigen::Vector2d>& existing_points,
+                        double tolerance = 1e-3);
+  std::vector<Eigen::Vector2d> FilterByLightVisibilityMultiPoints(
+      const std::vector<Eigen::Vector2d>& filtered_channel_obs_vec,
+      const Eigen::Vector2d& veh_pos, double yaw, double angle_resolution = 0.5,
+      double start_angle = -180.0, double end_angle = 180.0,
+      double max_range = 12.0, double max_neighbor_dist = 0.5,
+      int max_points_per_bin = 5);
+  std::vector<Eigen::Vector2d> FilterByLightVisibilityDualAxle(
+      const std::vector<Eigen::Vector2d>& filtered_channel_obs_vec,
+      double angle_resolution = 5.0, double start_angle = -180.0,
+      double end_angle = 180.0, double max_range = 12.0,
+      double duplicate_tolerance = 1e-3);
   std::vector<Eigen::Vector2d> ProcessCurbPointsAndGetNearestAbsY(
       double& nearest_abs_y,
       const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&

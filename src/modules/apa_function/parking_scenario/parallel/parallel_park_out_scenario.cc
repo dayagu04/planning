@@ -2477,6 +2477,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
     if (plan_result == PathPlannerResult::PLAN_UPDATE &&
         astar_state_ == AstarSearchState::NONE) {
       ILOG_INFO << "geometry path planning success";
+      ParallelParkInScenario::ThreadClearState();
       return uint8_t(plan_result);
     }
   }
