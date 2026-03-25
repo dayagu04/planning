@@ -85,6 +85,14 @@ class ObstacleManager {
     return occupancy_obstacles_;
   }
 
+  Obstacle *add_uss_obstacle(const Obstacle &obstacle) {
+    return uss_obstacles_.Add(obstacle.id(), obstacle);
+  }
+
+  const IndexedList<int, Obstacle> &get_uss_obstacles() const {
+    return uss_obstacles_;
+  }
+
   double GetUssRemainDistance() {
     double remain_dist_uss = 5.01;
     const double kSafeUssRemainDist = 0.35;
@@ -109,6 +117,7 @@ class ObstacleManager {
 
   void UpdateMapStaticObstacle();
 
+  void UpdateUssObstacle();
   bool IsOnBend(const std::shared_ptr<ReferencePath> &reference_path,
                 double ego_s);
 
@@ -158,6 +167,8 @@ class ObstacleManager {
   IndexedList<int, Obstacle> parking_space_obstacles_;
   IndexedList<int, Obstacle> road_edge_obstacles_;
   IndexedList<int, Obstacle> occupancy_obstacles_;
+  IndexedList<int, Obstacle> uss_obstacles_;
+
   EgoPlanningObstacleManagerConfig config_;
   // std::unordered_map<int, std::vector<int>> lanes_obstacles_;
   UssObstacle uss_obstacle_;

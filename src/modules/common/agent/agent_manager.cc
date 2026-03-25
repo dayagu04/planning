@@ -166,6 +166,33 @@ void AgentManager::Update(const double start_timestamp_s) {
     occ_agent_table.insert({occ_agent.agent_id(), occ_agent});
     Append(occ_agent_table);
   }
+
+  //add uss obstacles
+  const auto& uss_obs = obs_mgr->get_uss_obstacles().Items();
+  std::unordered_map<int32_t, Agent> uss_agent_table;
+  for (int i = 0; i < uss_obs.size(); i++) {
+    planning::agent::Agent uss_agent;
+    uss_agent.set_agent_id(uss_obs[i]->id());
+    uss_agent.set_type(agent::AgentType(uss_obs[i]->type()));
+    uss_agent.set_x(uss_obs[i]->x_center());  // 几何中心
+    uss_agent.set_y(uss_obs[i]->y_center());
+    uss_agent.set_length(uss_obs[i]->length());
+    uss_agent.set_width(uss_obs[i]->width());
+    uss_agent.set_fusion_source(1);
+    uss_agent.set_is_static(uss_obs[i]->is_static());
+
+    uss_agent.set_speed(uss_obs[i]->velocity());
+    uss_agent.set_theta(0.0);
+    uss_agent.set_accel(0.0);
+    uss_agent.set_time_range({0.0, 5.0});
+
+    uss_agent.set_box(uss_obs[i]->perception_bounding_box());
+    uss_agent.set_polygon(uss_obs[i]->perception_polygon());
+    uss_agent.set_timestamp_s(0.0);
+    uss_agent.set_timestamp_us(0.0);
+    uss_agent_table.insert({uss_agent.agent_id(), uss_agent});
+    Append(uss_agent_table);
+  }
   DeleteOlderAgent();
   DeleteOlderAgentInfo();
 }

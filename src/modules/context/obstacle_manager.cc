@@ -16,13 +16,7 @@
 #include "virtual_lane_manager.h"
 namespace planning {
 
-namespace {
-static constexpr int kEHRColumnIdOffset = 8000000;
-static constexpr int kOccupancyObjectIdOffset = 7000000;
-static constexpr int kParkingSlotIdOffset = 6000000;
-static constexpr int kGroundLineIdOffset = 5000000;
 
-}  // namespace
 
 ObstacleManager::ObstacleManager(const EgoPlanningConfigBuilder *config_builder,
                                  planning::framework::Session *session)
@@ -100,8 +94,8 @@ void ObstacleManager::update() {
 
     // hpp中过滤近处的OD
     if (session_->is_hpp_scene() || session_->is_nsa_scene() || session_->is_rads_scene()) {
-      if (reference_path != nullptr) {
-        if (frenet_coord != nullptr) {
+      if (reference_path != nullptr && frenet_coord != nullptr) {
+        if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_SPECIFICATIONER) {
           bool in_range = true;
           Box2d bounding_box(
               {prediction_object.position_x, prediction_object.position_y},
@@ -183,10 +177,13 @@ void ObstacleManager::update() {
     JSON_DEBUG_VALUE(" UpdateMapStaticObstacleCost", time_end - time_start);
 
     // update uss
-    uss_obstacle_.SetLocalView(
-        &session_->environmental_model().get_local_view());
-    uss_obstacle_.Update();
+    // uss_obstacle_.SetLocalView(
+    //     &session_->environmental_model().get_local_view());
+    // uss_obstacle_.Update();
 
+    if (config_.enable_uss) {
+      UpdateUssObstacle();
+    }
     // ehr column box
 
     // look path in ogm
@@ -221,6 +218,27 @@ bool ObstacleManager::IsOnBend(
     }
   }
   return false;
+}
+
+void ObstacleManager::UpdateUssObstacle() {
+  constexpr double kUssObjectHalfLength = 0.005;
+  constexpr double kUssObjectHalfWidth = 0.005;
+  const auto &uss_percept_info = session_->environmental_model().get_local_view().uss_percept_info;
+  for (int i = 0; i < uss_percept_info.out_line_dataori->obj_pt_cnt; ++i) {
+    const auto &obj_pt = uss_percept_info.out_line_dataori->obj_pt_global[i];
+    std::vector<planning_math::Vec2d> object_points;
+    object_points.reserve(4);
+    object_points.emplace_back(obj_pt.x - kUssObjectHalfLength, obj_pt.y - kUssObjectHalfWidth); // 左下角
+    object_points.emplace_back(obj_pt.x - kUssObjectHalfLength, obj_pt.y + kUssObjectHalfWidth); // 左上角
+    object_points.emplace_back(obj_pt.x + kUssObjectHalfLength, obj_pt.y + kUssObjectHalfWidth); // 右上角
+    object_points.emplace_back(obj_pt.x + kUssObjectHalfLength, obj_pt.y - kUssObjectHalfWidth); // 右下角
+    Obstacle obstacle(
+        kUssObjectIdOffset + i,
+        std::move(object_points), iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL); // 类型临时用occ替代
+    if (obstacle.is_vaild()) {
+      add_uss_obstacle(obstacle);
+    }
+  }
 }
 
 void ObstacleManager::UpdateParkingSpaceObstacle() {
@@ -767,6 +785,7 @@ void ObstacleManager::clear() {
   road_edge_obstacles_ = IndexedList<int, Obstacle>();
   gs_care_obstacles_ = IndexedList<int, Obstacle>();
   occupancy_obstacles_ = IndexedList<int, Obstacle>();
+  uss_obstacles_ = IndexedList<int, Obstacle>();
 }
 
 Obstacle *ObstacleManager::add_obstacle(const Obstacle &obstacle) {
