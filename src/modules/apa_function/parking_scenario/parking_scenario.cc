@@ -220,7 +220,6 @@ void ParkingScenario::PublishPlanningTraj() {
       frame_.plan_stm.planning_status == PARKING_FINISHED) {
     frame_.replan_flag = false;
     frame_.correct_path_for_limiter = false;
-    frame_.ego_slot_info.Reset();
     apa_world_ptr_->GetCollisionDetectorPtr()->ClearObstacles();
   }
 

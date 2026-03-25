@@ -71,6 +71,8 @@ bool ParkingScenarioManager::Init(
 
 void ParkingScenarioManager::UpdateScenarioType() {
   ILOG_INFO << "UpdateScenarioType";
+  scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
+  scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
       apa_world_->GetStateMachineManagerPtr()->IsParkInvalidStatus()) {
     Reset();
