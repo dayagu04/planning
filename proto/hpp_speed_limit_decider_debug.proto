@@ -1,0 +1,54 @@
+syntax = "proto2";
+
+package planning.common;
+
+import "task_basic_types.proto";
+
+enum HppSpeedLimitType {
+  UNSPECIFIED = 0;
+  // 以下与 C++ SpeedLimitType 中 HPP 相关取值一致，例如：
+  // MAP = 24, USER = 25, ...
+  CURVATURE = 1;
+  CRUISE = 3;
+
+  MAP = 24;
+  USER = 25;
+  NARROW_PASSAGE = 26;
+  AVOID = 27;
+  BUMP_ROAD = 28;
+  RAMP_ROAD = 29;
+  INTERSECTION_ROAD = 30;
+  // ...
+}
+
+message HppSpeedLimitSimpleSnapshot {
+  optional HppSpeedLimitType module_type = 1;
+  optional double v_limit = 2;
+}
+
+message HppSpeedLimitZoneSnapshot {
+  optional HppSpeedLimitType module_type = 1;
+  optional double v_limit = 2;
+  optional bool in_speed_limit_zone = 3;
+  optional bool approaching_speed_limit_zone = 4;
+  optional double distance_to_zone = 5;
+  repeated DoublePair s_segments = 6;
+}
+
+message HppSpeedLimitDeciderDebug {
+  // Execute() 末尾：最终输出
+  optional double final_v_target = 1;
+  optional int32 final_speed_limit_type = 2;
+  // 简单过程
+  optional HppSpeedLimitSimpleSnapshot user = 10;
+  optional HppSpeedLimitSimpleSnapshot map = 11;
+  optional HppSpeedLimitSimpleSnapshot curvature = 12;
+  optional HppSpeedLimitSimpleSnapshot avoid = 13;
+  // 区段过程
+  optional HppSpeedLimitZoneSnapshot narrow_passage = 20;
+  optional HppSpeedLimitZoneSnapshot bump = 21;
+  optional HppSpeedLimitZoneSnapshot ramp = 22;
+  optional HppSpeedLimitZoneSnapshot intersection = 23;
+}
+
+
