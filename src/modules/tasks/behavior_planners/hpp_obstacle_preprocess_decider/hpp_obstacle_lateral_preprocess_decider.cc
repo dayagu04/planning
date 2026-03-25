@@ -37,6 +37,8 @@ bool HppObstacleLateralPreprocessDecider::Execute() {
       hpp_obs_lat_preprocess_output.obs_cluster_container;
   auto& obs_classification_result =
       hpp_obs_lat_preprocess_output.obs_classification_result;
+  obs_cluster_container.Clear();
+  obs_classification_result.Clear();
 
   ObstacleItemMap obs_item_map;
   // 1. 障碍物过滤
