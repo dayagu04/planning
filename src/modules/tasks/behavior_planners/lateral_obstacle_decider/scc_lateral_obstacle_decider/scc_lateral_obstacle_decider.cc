@@ -1386,8 +1386,10 @@ void SccLateralObstacleDecider::
                                road_boundary_free_space_desire_v);
     desire_v = std::min(desire_v, static_obstacle_free_space_desire_v);
     double space_hysteresis = 0;
-    if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
-        last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
+    if (last_output_.find(frenet_obstacle->id()) != last_output_.end() &&
+        (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
+         last_output_[frenet_obstacle->id()] ==
+             LatObstacleDecisionType::RIGHT)) {
       space_hysteresis = -0.1;
     } else {
       space_hysteresis = 0.1;
@@ -1491,12 +1493,12 @@ void SccLateralObstacleDecider::
       continue;
     }
 
-    if (!(output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT ||
-          output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT)) {
+    if (output_.find(frenet_obstacle->id()) == output_.end()) {
       continue;
     }
 
-    if (output_.find(frenet_obstacle->id()) == output_.end()) {
+    if (!(output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT ||
+          output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT)) {
       continue;
     }
 
@@ -1511,11 +1513,13 @@ void SccLateralObstacleDecider::
     }
 
     double space_hysteresis = 0;
-    if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
-        last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
+    if (last_output_.find(frenet_obstacle->id()) != last_output_.end() &&
+        (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
+         last_output_[frenet_obstacle->id()] ==
+             LatObstacleDecisionType::RIGHT)) {
       space_hysteresis = -0.1;
     } else {
-      space_hysteresis = 0.25;// 动态障碍物不确定性比静态障碍物大
+      space_hysteresis = 0.25;  // 动态障碍物不确定性比静态障碍物大
     }
 
     LateralObstacleHistoryInfo& history =
@@ -1542,8 +1546,9 @@ void SccLateralObstacleDecider::
     // 后续需要优化这个条件
     if (!(has_safe_v_space && has_enough_space)) {
       double nudge_buffer_hysteresis = 0;
-      if (last_output_[frenet_obstacle->id()] ==
-          LatObstacleDecisionType::FOLLOW) {
+      if (last_output_.find(frenet_obstacle->id()) != last_output_.end() &&
+          last_output_[frenet_obstacle->id()] ==
+              LatObstacleDecisionType::FOLLOW) {
         // 0.1的距离滞回
         nudge_buffer_hysteresis = 0.1;
       }
@@ -1577,12 +1582,12 @@ void SccLateralObstacleDecider::
 
 double SccLateralObstacleDecider::CalDesireStaticLateralDistance(
     const FrenetObstacle& frenet_obstacle) {
-  const double kStaticVRUMaxExtraLateralBuffer = 0.7;
-  const double kConeMaxExtraLateralBuffer = 0.15;
-  const double kBarrelMaxExtraLateralBuffer = 0.25;
-  const double kStaticOtherMaxExtraLateralBuffer = 0.35;
-  const double kExtraTruckNudgeBuffer = 0.2;
-  const double kNudgeBaseDistance = 0.4;
+  constexpr double kStaticVRUMaxExtraLateralBuffer = 0.7;
+  constexpr double kConeMaxExtraLateralBuffer = 0.15;
+  constexpr double kBarrelMaxExtraLateralBuffer = 0.25;
+  constexpr double kStaticOtherMaxExtraLateralBuffer = 0.35;
+  constexpr double kExtraTruckNudgeBuffer = 0.2;
+  constexpr double kNudgeBaseDistance = 0.4;
 
   double max_extra_lateral_buffer = 0;
   if (frenet_obstacle.obstacle()->is_VRU()) {
