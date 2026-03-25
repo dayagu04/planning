@@ -1467,7 +1467,7 @@ void SccLateralObstacleDecider::
 
     if (frenet_obstacle->frenet_obstacle_boundary().s_start >
         front_nearest_follow_obstacle->frenet_obstacle_boundary().s_start) {
-      output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
+      output_[frenet_obstacle->id()] = LatObstacleDecisionType::IGNORE;
     }
   }
 }
