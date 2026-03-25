@@ -1619,10 +1619,6 @@ void HybridAStarPathGenerator::CalcObsDistRelativeSlot(
 
 bool HybridAStarPathGenerator::UpdateObsDistRelativeSlot(
     CurveNode* curve_node, ObsToPathDistRelativeSlot* obs_dist_relative_slot) {
-  if (curve_node == nullptr || obs_dist_relative_slot == nullptr) {
-    return false;
-  }
-
   *obs_dist_relative_slot = ObsToPathDistRelativeSlot();
   std::vector<Node3d*> node_chain;
   for (Node3d* pre_node = curve_node->GetPreNode(); pre_node != nullptr;
