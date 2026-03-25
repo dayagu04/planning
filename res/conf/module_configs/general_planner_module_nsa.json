@@ -592,7 +592,8 @@
     "lat_jerk_thr": 0.3,
     "ramp_lat_jerk_thr": 0.65,
     "lon_acc_thr": 2.0,
-    "lon_jerk_thr": 1.5
+    "lon_jerk_thr": 1.5,
+    "output_time_length": 5.0
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,

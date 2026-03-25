@@ -795,7 +795,8 @@
     "lat_jerk_thr": 0.45,
     "ramp_lat_jerk_thr": 0.65,
     "lon_acc_thr": 2.0,
-    "lon_jerk_thr": 1.5
+    "lon_jerk_thr": 1.5,
+    "output_time_length": 5.0
   },
   "traffic_light_decider": {
     "enable_tfl_decider": false,

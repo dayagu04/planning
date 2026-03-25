@@ -5059,9 +5059,12 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                    "result_trajectory_generator", "use_dynamic_lat_jerk_thr");
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
+    ReadItem<double>(json, output_time_length, "result_trajectory_generator",
+                     "output_time_length");
   }
   bool use_dynamic_lat_jerk_thr = false;
   double planning_result_delta_time = 0.025;
+  double output_time_length = 5.0;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
 };

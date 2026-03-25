@@ -159,8 +159,10 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   }
 
   std::vector<TrajectoryPoint> dense_traj_points;
+  const double output_end_t =
+      std::min(traj_points.back().t, config_.output_time_length);
   int dense_num_points =
-      int(traj_points.back().t / config_.planning_result_delta_time) + 1;
+      int(output_end_t / config_.planning_result_delta_time) + 1;
 
   auto is_in_speed_bump_range = [&speed_bump_expanded_segments](double s) {
     for (const auto &range : speed_bump_expanded_segments) {
@@ -287,8 +289,10 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
 
   // Step 2) get dense trajectory points
   std::vector<TrajectoryPoint> dense_traj_points;
+  const double output_end_t =
+      std::min(traj_points.back().t, config_.output_time_length);
   size_t dense_num_points =
-      int(traj_points.back().t / config_.planning_result_delta_time) + 1;
+      int(output_end_t / config_.planning_result_delta_time) + 1;
   dense_traj_points.reserve(dense_num_points);
 
   for (int j = 0; j < dense_num_points; ++j) {
