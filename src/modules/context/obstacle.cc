@@ -174,7 +174,6 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   is_pedestrain_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) ||
                    (type_ == iflyauto::OBJECT_TYPE_PEDESTRIAN) ||
                    (type_ == iflyauto::OBJECT_TYPE_ADULT) ||
-                   (type_ == iflyauto::OBJECT_TYPE_CHILD) ||
                    (type_ == iflyauto::OBJECT_TYPE_CHILD);
 
   std::vector<planning_math::Vec2d> polygon_points;
@@ -513,7 +512,6 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   is_pedestrain_ = (type_ == iflyauto::OBJECT_TYPE_OCC_PEOPLE) ||
                    (type_ == iflyauto::OBJECT_TYPE_PEDESTRIAN) ||
                    (type_ == iflyauto::OBJECT_TYPE_ADULT) ||
-                   (type_ == iflyauto::OBJECT_TYPE_CHILD) ||
                    (type_ == iflyauto::OBJECT_TYPE_CHILD);
 
   std::vector<planning_math::Vec2d> ego_polygon_points;
