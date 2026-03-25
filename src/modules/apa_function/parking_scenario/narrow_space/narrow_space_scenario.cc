@@ -2331,7 +2331,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   // publish astar path in cruise state.
   Transform2d response_tf;
   response_tf.SetBasePose(response_.request.base_pose);
-  apa_hmi_ = PubDirectionForScenarioTry(cur_request);
+  apa_hmi_ = PubDirectionForScenarioTry(cur_request, apa_hmi_);
 
   const HybridAStarResult& pre_traj = GetPrePlanningParkingTraj(cur_request);
   PublishHybridAstarDebugInfo(pre_traj, &response_tf);
@@ -2398,8 +2398,7 @@ const bool NarrowSpaceScenario::IsNeedClipping(const HybridAStarResult& result,
 }
 
 iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
-    const AstarRequest& cur_request) {
-  iflyauto::APAHMIData apa_hmi_data;
+    const AstarRequest& cur_request, iflyauto::APAHMIData& apa_hmi_data) {
   ApaDirectionGenerator generator;
   generator.ClearReleaseDirectionFlag(apa_hmi_data);
   generator.ClearRecommendationDirectionFlag(apa_hmi_data);
