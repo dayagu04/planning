@@ -2374,17 +2374,27 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
            LatObstacleDecisionType::FOLLOW)) {
     return;
   }
-  // lane borrow
-  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
+  // lane borrow: 依据障碍物id从borrow_direction_map查询借道方向
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
-    if (borrow_direction == LEFT_BORROW) {
-      // 向左借道
-      is_nudge_left = false;
-    } else if (borrow_direction == RIGHT_BORROW) {
-      // 向右借道
-      is_nudge_left = true;
+    const auto& borrow_dir_map =
+        lane_borrow_decider_output.borrow_direction_map;
+    auto dir_it = borrow_dir_map.find(obstacle->id());
+    if (dir_it != borrow_dir_map.end()) {
+      if (dir_it->second == LEFT_BORROW) {
+        // 向左借道
+        is_nudge_left = false;
+      } else if (dir_it->second == RIGHT_BORROW) {
+        // 向右借道
+        is_nudge_left = true;
+      } else {
+        // 未找到借道方向，不进行借道
+        return;
+      }
+      bound_type = BoundType::AGENT;
+    } else {
+      // 未找到借道方向，不进行借道
+      return;
     }
-    bound_type = BoundType::AGENT;
   }
   bool is_cross_obj{false};
   bool has_lat_decision{false};
@@ -3039,19 +3049,29 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     bound_type = BoundType::LOW_PRIORITY_AGENT;
   }
 
-  // lane borrow
-  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
+  // lane borrow: 依据障碍物id从borrow_direction_map查询借道方向
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
-    if (borrow_direction == LEFT_BORROW) {
-      // 向左借道
-      is_nudge_left = false;
-    } else if (borrow_direction == RIGHT_BORROW) {
-      // 向右借道
-      is_nudge_left = true;
+    const auto& borrow_dir_map =
+        lane_borrow_decider_output.borrow_direction_map;
+    auto dir_it = borrow_dir_map.find(obstacle->id());
+    if (dir_it != borrow_dir_map.end()) {
+      if (dir_it->second == LEFT_BORROW) {
+        // 向左借道
+        is_nudge_left = false;
+      } else if (dir_it->second == RIGHT_BORROW) {
+        // 向右借道
+        is_nudge_left = true;
+      } else {
+        // 未找到借道方向，不进行借道
+        return;
+      }
+      is_care_rear_obstacle = false;
+      bound_type = BoundType::DYNAMIC_AGENT;
+      is_avoid_side_ignore_obj = false;
+    } else {
+      // 未找到借道方向，不进行借道
+      return;
     }
-    is_care_rear_obstacle = false;
-    bound_type = BoundType::DYNAMIC_AGENT;
-    is_avoid_side_ignore_obj = false;
   }
 
   double extra_decrease_buffer =
@@ -5799,8 +5819,10 @@ bool GeneralLateralDecider::IsBlockedObstacleInLaneBorrow(
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   if ((is_in_lane_borrow_status) &&
+      (lane_borrow_decider_output.lane_borrow_state != kLaneBorrowWaitting) &&
       (std::find(blocked_obstacles.begin(), blocked_obstacles.end(),
                  obstacle->id()) != blocked_obstacles.end())) {
+    // 借道等待状态不需要产生bound
     return true;
   } else {
     return false;
