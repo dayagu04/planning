@@ -464,7 +464,14 @@ void PlanningScheduler::FillPlanningTrajectory(
                             ->environmental_model()
                             .get_ego_state_manager()
                             ->get_car2enu();
-      for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
+      const size_t raw_size = planning_result.traj_points.size();
+      const size_t copy_size = std::min(
+          raw_size, static_cast<size_t>(PLANNING_TRAJ_POINTS_MAX_NUM));
+      if (raw_size > copy_size) {
+        ILOG_ERROR << "FillPlanningTrajectory truncates traj_points from "
+                   << raw_size << " to " << copy_size;
+      }
+      for (size_t i = 0; i < copy_size; i++) {
         double plan_traj_dt = 0.025;
 
         if (i > 0) {
@@ -494,7 +501,14 @@ void PlanningScheduler::FillPlanningTrajectory(
     }
 
     else {
-      for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
+      const size_t raw_size = planning_result.traj_points.size();
+      const size_t copy_size = std::min(
+          raw_size, static_cast<size_t>(PLANNING_TRAJ_POINTS_MAX_NUM));
+      if (raw_size > copy_size) {
+        ILOG_ERROR << "FillPlanningTrajectory truncates traj_points from "
+                   << raw_size << " to " << copy_size;
+      }
+      for (size_t i = 0; i < copy_size; i++) {
         auto path_point = &trajectory->trajectory_points[i];
         path_point->x = planning_result.traj_points[i].x;
         path_point->y = planning_result.traj_points[i].y;
