@@ -459,6 +459,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       ->Clear();
   agent_info_.clear();
   astar_traj_ptr_.reset(nullptr);
+  target_lane_coord_.reset();
   leading_veh_ = LeadingAgentInfo();
   leading_veh_.prediction_path.clear();
   leading_veh_.prediction_path_valid = false;
@@ -659,7 +660,16 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   //   }
   // }
   // init sample space
-  st_sample_space_base_.Init(target_lane_nodes, ego_s);
+  const auto& target_lane_reference_path =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(target_lane_virtual_id);
+  if (target_lane_reference_path) {
+    target_lane_coord_ = target_lane_reference_path->get_frenet_coord();
+  }
+  int change_direction = lane_change_request_ == 1 ? 1 : -1;
+  st_sample_space_base_.Init(target_lane_nodes, ego_s, target_lane_coord_,
+                             change_direction);
 
   // calc flow vel
   StitchLastBestPoly();

@@ -33,15 +33,21 @@ class STSampleSpaceBase {
                     const double init_s, const double front_edge_to_rear_axle,
                     const double rear_edge_to_rear_axle);
 
+  void LinearExtendAgentStBoundaryWithFrenet(
+      const planning_data::DynamicAgentNode* agent_node,
+      const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord);
   void LinearExtendAgentStBoundary(
       const planning_data::DynamicAgentNode* agent_node);
   void ConstructStPointsTable();
   bool GetBorderByAvailable(double s, double t,
                             planning::speed::STPoint* const lower_st_point,
                             planning::speed::STPoint* const upper_st_point);
-  void Init(const std::vector<const planning_data::DynamicAgentNode*>&
-                target_lane_nodes,
-            const double init_s);
+  void Init(
+      const std::vector<const planning_data::DynamicAgentNode*>&
+          target_lane_nodes,
+      const double init_s,
+      const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord,
+      int change_direction);
   void GetAvailableGap(const int index, double s);
 
   void Clear();
@@ -112,5 +118,6 @@ class STSampleSpaceBase {
 
   double front_edge_to_rear_axle_ = 3.73;
   double rear_edge_to_rear_axle_ = 1.085;
+  int change_direction_ = 0;
 };
 }  // namespace planning

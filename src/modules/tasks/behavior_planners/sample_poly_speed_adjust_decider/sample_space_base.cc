@@ -33,11 +33,18 @@ STSampleSpaceBase::STSampleSpaceBase(const double front_edge_to_rear_axle,
 
 void STSampleSpaceBase::Init(
     const std::vector<const DynamicAgentNode*>& target_lane_nodes,
-    const double init_s) {
+    const double init_s,
+    const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord,
+    int change_direction) {
   Clear();
   init_s_ = init_s;
+  change_direction_ = change_direction;
   for (const auto* agent_node : target_lane_nodes) {
-    LinearExtendAgentStBoundary(agent_node);
+    if (!target_lane_coord) {
+      LinearExtendAgentStBoundary(agent_node);
+    } else {
+      LinearExtendAgentStBoundaryWithFrenet(agent_node,target_lane_coord);
+    }
   }
   ConstructStPointsTable();
 }
@@ -137,6 +144,104 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
   agents_st_point_paris_.emplace_back(std::move(st_points_pairs));
 }
 
+void STSampleSpaceBase::LinearExtendAgentStBoundaryWithFrenet(
+    const DynamicAgentNode* agent_node,
+    const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord) {
+  const auto& primary_trajectories =
+      agent_node->node_trajectories_used_by_st_graph();
+  const auto& fallback_trajectories = agent_node->node_trajectories();
+  const auto& selected_trajectories = primary_trajectories.empty()
+                                          ? fallback_trajectories
+                                          : primary_trajectories;
+  if (selected_trajectories.empty() || selected_trajectories.front().empty()) {
+    return;
+  }
+  const auto& current_trajectory = selected_trajectories.front();
+  std::vector<std::pair<STPoint, STPoint>> st_points_pairs;
+  st_points_pairs.reserve(kSampleSpaceReserveNum);
+  const double agent_s_start = agent_node->node_s();
+  const double agent_half_length = agent_node->node_length() / 2.0;
+  const size_t TimeHorizion = kPlanningDuration / kPlanningStep;
+  const size_t PredictionHorizon = current_trajectory.size() - 1;
+  size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
+  double end_v = 0.0;
+  double end_s = 0.0;
+  double frenet_l = 0.0;
+  for (size_t i = 0; i <= min_horizion; ++i) {
+    double t = i * kPlanningStep;
+    Point2D cur_point_temp = {current_trajectory[i].x(),
+                              current_trajectory[i].y()};
+    Point2D frenet_point_temp;
+    frenet_l = target_lane_coord->XYToSL(cur_point_temp, frenet_point_temp)
+                   ? frenet_point_temp.y
+                   : 0.0;
+    end_s = agent_s_start + current_trajectory[i].s();
+    end_v = current_trajectory[i].vel();
+    double acc = current_trajectory[i].acc();
+    STPoint lower_point(end_s - agent_half_length, t);
+    STPoint upper_point(end_s + agent_half_length, t);
+    lower_point.set_agent_id(agent_node->node_agent_id());
+    upper_point.set_agent_id(agent_node->node_agent_id());
+    lower_point.set_velocity(end_v);
+    upper_point.set_velocity(end_v);
+    lower_point.set_acceleration(acc);
+    upper_point.set_acceleration(acc);
+    lower_point.set_extreme_l(2 * agent_half_length);
+    upper_point.set_extreme_l(2 * agent_half_length);
+    lower_point.set_l(frenet_l);
+    upper_point.set_l(frenet_l);
+    st_points_pairs.emplace_back(std::move(lower_point),
+                                 std::move(upper_point));
+    if (i == min_horizion) {
+      break;
+    }
+    t += kTimeResolution;
+    end_s += kTimeResolution * end_v;
+    end_v += kTimeResolution * acc;
+    lower_point.set_t(t);
+    upper_point.set_t(t);
+    lower_point.set_s(end_s - agent_half_length);
+    upper_point.set_s(end_s + agent_half_length);
+    lower_point.set_l(frenet_l);
+    upper_point.set_l(frenet_l);
+    lower_point.set_agent_id(agent_node->node_agent_id());
+    upper_point.set_agent_id(agent_node->node_agent_id());
+    lower_point.set_velocity(end_v);
+    upper_point.set_velocity(end_v);
+    lower_point.set_acceleration(acc);
+    upper_point.set_acceleration(acc);
+    lower_point.set_extreme_l(2 * agent_half_length);
+    upper_point.set_extreme_l(2 * agent_half_length);
+    st_points_pairs.emplace_back(std::move(lower_point),
+                                 std::move(upper_point));
+  }
+  if (PredictionHorizon < TimeHorizion) {
+    for (size_t i = PredictionHorizon; i < TimeHorizion; ++i) {
+      const double time_start = i * kPlanningStep + kTimeResolution;
+      double time_end = (i + 1) * kPlanningStep;
+      for (double t = time_start; t < time_end + planning_math::kMathEpsilon;
+           t += kTimeResolution) {
+        end_s += end_v * kTimeResolution;
+        STPoint lower_point(end_s - agent_half_length, t);
+        STPoint upper_point(end_s + agent_half_length, t);
+        lower_point.set_agent_id(agent_node->node_agent_id());
+        upper_point.set_agent_id(agent_node->node_agent_id());
+        lower_point.set_velocity(end_v);
+        upper_point.set_velocity(end_v);
+        lower_point.set_acceleration(0.0);
+        upper_point.set_acceleration(0.0);
+        lower_point.set_extreme_l(2 * agent_half_length);
+        upper_point.set_extreme_l(2 * agent_half_length);
+        st_points_pairs.emplace_back(std::move(lower_point),
+                                     std::move(upper_point));
+        lower_point.set_l(frenet_l);
+        upper_point.set_l(frenet_l);
+      }
+    }
+  }
+  agents_st_point_paris_.emplace_back(std::move(st_points_pairs));
+}
+
 void STSampleSpaceBase::ConstructStPointsTable() {
   st_points_table_.clear();
   st_points_table_.resize(kSampleSpaceReserveNum);
@@ -146,6 +251,9 @@ void STSampleSpaceBase::ConstructStPointsTable() {
        agents_st_point_paris_) {
     for (size_t i = 0; i < st_point_paris.size(); ++i) {
       int index = (st_point_paris[i].first.t()) / kTimeResolution;
+      if (st_point_paris[i].first.l() * change_direction_ > 2.8) {
+        continue;
+      }
       STPoint lower_point(st_point_paris[i].first.s(),
                           st_point_paris[i].first.t(),
                           st_point_paris[i].first.agent_id(), -1,
@@ -433,11 +541,11 @@ void STSampleSpaceBase::GetAvailableGap(const int index, double ego_s) {
         [](double val, const std::pair<STPoint, STPoint>& elem) {
           return val < elem.second.s();
         });
-    if(it != temp_gap_array.end()){
+    if (it != temp_gap_array.end()) {
       if (it != temp_gap_array.begin()) {
         it--;
         gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
-      }else{
+      } else {
         gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
       }
     }
