@@ -2448,7 +2448,7 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
       session_->planning_context().lane_borrow_decider_output();
   const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
   // const auto borrow_direction = lane_borrow_output.borrow_direction;
-  const auto borrow_direction_map = lane_borrow_output.borrow_direction_map;
+  const auto &borrow_direction_map = lane_borrow_output.borrow_direction_map;
 
   // get lane borrow agent
   const auto agent_manager =
