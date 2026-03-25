@@ -4202,7 +4202,7 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
       if (!lane_frenet_coord->GetKappaByS(sample_s, &curv)) {
         continue;
       }
-      if (std::fabs(curv) > 0.001) {
+      if (std::fabs(curv) > 0.0005) {
         current_lane_curv_sign = curv > 0 ? 1 : -1;
       }
       curv_sign_degree =
@@ -4222,7 +4222,10 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
     }
   }
 
-  curv_sign = curv_sign_total > 0 ? 1 : -1;
+  if (std::fabs(curv_sign_total) > 1e-3) {
+    curv_sign = curv_sign_total > 0 ? 1 : -1;
+  }
+
   // 存储曲率结果
   lane_curv_info_set.emplace_back(relative_id_lane->get_order_id(), lane_curv);
   const double road_radius = 1.0 / std::max(lane_curv, kMinCurvature);
@@ -4245,7 +4248,7 @@ void EgoLaneTrackManger::CalculateDynamicCostWeights(
     double& relative_theta_diff_cost_weight, double& kappa_cost_weight) {
   // 步骤1：定义权重的两个端点（直道→最大曲率，与原逻辑完全一致）
   const double theta_weight_straight = 0.8;      // 直道夹角权重
-  const double collision_weight_straight = 0.1;  // 直道碰撞权重
+  const double collision_weight_straight = 0.02;  // 直道碰撞权重
   const double kappa_weight_straight = 0.1;      // 直道曲率权重
   const double theta_weight_max_curv = 0.15;     // 最大曲率夹角权重
   const double collision_weight_max_curv = 0.6;  // 最大曲率碰撞权重
@@ -4294,7 +4297,7 @@ void EgoLaneTrackManger::CalculateRoadBoundaryCollisionCost(
                                  dis_to_right_road_border);
 
   // 初始化TTI（Time To Impact）为5.0
-  double ttc = 5.0;
+  double ttc = 5.5;
   // 取曲率绝对值（避免负号影响计算）
   double curv_abs = std::fabs(lane_curv_info.curv);
 
