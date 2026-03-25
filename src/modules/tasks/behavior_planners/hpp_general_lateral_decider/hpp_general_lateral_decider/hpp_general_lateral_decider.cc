@@ -507,6 +507,37 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
     }
   }
 
+  const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
+  constexpr double kStraightCheckLength = 25.0;
+  constexpr double kStraightSampleStep = 1.0;
+  constexpr double kKappaStraightThr = 0.1;
+  double ref_len_based_on_straight = 15.0; // 默认长度
+  bool is_on_curve = false;
+
+  if (!cart_ref_info.s_vec.empty() && cart_ref_info.s_vec.back() > s_ref &&
+      cart_ref_info.k_s_spline.get_x().size() > 1) {
+    const double s_max =
+        std::min(cart_ref_info.s_vec.back(), frenet_coord->Length());
+    const double s_end = std::min(s_ref + kStraightCheckLength, s_max);
+    if (s_end > s_ref + 1e-3) {
+      ref_len_based_on_straight = std::max(s_end - s_ref, 0.0);
+      for (double s_check = s_ref; s_check <= s_end;
+           s_check += kStraightSampleStep) {
+        if (std::fabs(cart_ref_info.k_s_spline(s_check)) > kKappaStraightThr) {
+          is_on_curve = true;
+          const double s_before_curve = std::max(s_check - kStraightSampleStep, s_ref);
+          ref_len_based_on_straight = std::max(s_before_curve - s_ref, 3.0);
+          break;
+        }
+      }
+    }
+  }
+
+  // 避免弯道速度较低时参考线过短
+  if (is_on_curve && ego_v < 2.0) {
+    ref_len_based_on_straight = 15.0;
+  }
+
   double ref_len_based_on_target_slot = std::numeric_limits<double>::max();
   if (parking_slot_manager->IsExistTargetSlot()) {
     const auto target_slot_point = parking_slot_manager->GetTargetSlotCenter();
@@ -516,13 +547,15 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
     }
   }
 
-  const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
   const double ref_len_based_on_ref_info =
       std::min(cart_ref_info.s_vec.back(), frenet_coord->Length()) - s_ref;
 
-  const double ref_s_len = std::min(
-      std::min(ref_len_based_on_speed, ref_len_based_on_target_slot),
-      ref_len_based_on_ref_info);
+  const double ref_len_based_on_guide_or_slot =
+      std::min(ref_len_based_on_target_slot, ref_len_based_on_ref_info);
+
+  const double ref_s_len =
+      std::min(ref_len_based_on_guide_or_slot,
+               std::max(ref_len_based_on_speed, ref_len_based_on_straight));
   double delta_s = std::max(ref_s_len / span_t, 0.0) * config_.delta_t;
 
   traj_points.clear();

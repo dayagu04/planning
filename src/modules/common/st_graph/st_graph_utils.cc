@@ -1144,6 +1144,9 @@ bool StGraphUtils::CalculateSRange(
   } else if (is_hpp_scene && agent.is_stop_destination_virtual_obs()) {
     // HPP（前进）场景：终点虚拟障碍物不受path_range限制，确保能投影到ST图
     // 当目标终点超出规划路径范围时，投影到路径终点附近仍有效
+    if (min_l > left_border_position || max_l < right_border_position) {
+      return false;
+    }
     *lower_s = min_s - front_edge_to_center;
     *upper_s = max_s + back_edge_to_center;
     return true;
