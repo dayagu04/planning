@@ -1508,7 +1508,10 @@
   "traffic_light_decider": {
     "enable_tfl_decider": false,
     "virtual_dis_before_stopline": 25.5,
-    "stopline_tfl_dis_thred": 50
+    "stopline_tfl_dis_thred": 50,
+    "max_dis_ahead_stopline": 50,
+    "min_virtual_dis_thred": 16,
+    "dis_ratio_can_pass": 3.0
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,
