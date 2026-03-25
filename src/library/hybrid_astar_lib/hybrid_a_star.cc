@@ -24,26 +24,26 @@
 
 namespace planning {
 
-#define PLOT_RS_COST_PATH (1)
-#define PLOT_RS_EXNTEND_TO_END (1)
-#define PLOT_CHILD_NODE (1)
-#define PLOT_SEARCH_SEQUENCE (1)
-#define PLOT_DELETE_NODE (1)
+#define PLOT_RS_COST_PATH (0)
+#define PLOT_RS_EXNTEND_TO_END (0)
+#define PLOT_CHILD_NODE (0)
+#define PLOT_SEARCH_SEQUENCE (0)
+#define PLOT_DELETE_NODE (0)
 #define RS_H_COST_MAX_NUM (32)
 
-#define DEBUG_SEARCH_RESULT (1)
+#define DEBUG_SEARCH_RESULT (0)
 #define DEBUG_CHILD_NODE (0)
-#define DEBUG_REF_LINE_COST (1)
+#define DEBUG_REF_LINE_COST (0)
 #define DEBUG_EDT (0)
 
 #define DEBUG_NODE_MAX_NUM (10000)
-#define DEBUG_NODE_GEAR_SWITCH_NUMBER (1)
+#define DEBUG_NODE_GEAR_SWITCH_NUMBER (0)
 
-#define LOG_TIME_PROFILE (1)
+#define LOG_TIME_PROFILE (0)
 
-#define DEBUG_ONE_SHOT_PATH (1)
+#define DEBUG_ONE_SHOT_PATH (0)
 #define DEBUG_ONE_SHOT_PATH_MAX_NODE (10000)
-#define ENABLE_OBS_DIST_G_COST (1)
+#define ENABLE_OBS_DIST_G_COST (0)
 
 HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
                          const VehicleParam& veh_param,
