@@ -6,13 +6,13 @@ namespace planning {
 namespace ara_star {
 class StitchingCost : public BaseCost {
  public:
-  StitchingCost(double weight, 
+  StitchingCost(double weight,
                 const pnc::mathlib::spline& last2cur_spline,
                 double spline_s_min, double spline_s_max);
 
   ~StitchingCost() = default;
 
-  double MakeCost(Node3D& vertex) const override;
+  double MakeCost(Node3d& vertex) const override;
 
  private:
   const pnc::mathlib::spline& last2cur_spline_;
