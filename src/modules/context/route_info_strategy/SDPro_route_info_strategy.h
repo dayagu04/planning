@@ -21,6 +21,12 @@ bool get_sdpromap_valid() override;
 const ad_common::sdpromap::SDProMap& get_sdpro_map() override;
 const iflymapdata::sdpro::LinkInfo_Link* get_current_link() override;
 
+VirtualLanesRouteCost GetVirtualLaneCostOnRoute(
+    std::vector<std::shared_ptr<VirtualLane>> const& relative_id_lanes) override {
+  (void)relative_id_lanes;
+  return VirtualLanesRouteCost();
+}
+
 //todo(ldh): 其他virutal函数。
 protected:
  ad_common::sdpromap::SDProMap sd_map_;

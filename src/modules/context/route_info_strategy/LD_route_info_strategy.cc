@@ -34,7 +34,90 @@ void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
     return;
   }
 
+  if (!UpdateFeasibleLaneGraph()){
+    return;
+  }
+
   route_info_output = route_info_output_;
+}
+
+bool LDRouteInfoStrategy::UpdateFeasibleLaneGraph() {
+  mlc_decider_scene_type_info_.reset();
+  feasible_lane_graph_.lane_topo_groups.clear();
+
+  MLCSceneTypeDecider();
+
+  MLCSceneType mlc_scene_type = mlc_decider_scene_type_info_.mlc_scene_type;
+
+  route_info_output_.mlc_decider_scene_type_info = mlc_decider_scene_type_info_;
+
+  TopoLinkGraph feasible_lane_graph_after_topo_change_vec;
+  switch (mlc_scene_type) {
+    case SPLIT_SCENE: {
+      if (!CalculateFeasibleLaneInRampScene(
+              feasible_lane_graph_, feasible_lane_graph_after_topo_change_vec)) {
+        return false;
+      }
+      break;
+    }
+    case NORMAL_SCENE: {
+      if (!CalculateFeasibleLaneInNormalScene(feasible_lane_graph_)) {
+        return false;
+      }
+      break;
+    }
+    case MERGE_SCENE: {
+      if (!CalculateFeasibleLaneInMergeScene(
+              feasible_lane_graph_, feasible_lane_graph_after_topo_change_vec)) {
+        return false;
+      }
+      break;
+    }
+    case NONE_SCENE:
+      break;
+    case AVOID_MERGE:
+    case AVOID_SPLIT:
+      break;
+  }
+
+  CalculateAvoidMergeFeasibleLane(feasible_lane_graph_);
+
+  // 增加处理在接近匝道时，feasible lane至少有2条车道可达ramp，其中一条是1分2的lane，则从feasible lane中移除这条lane
+  if (mlc_scene_type == SPLIT_SCENE) {
+    Erase1Split2FeasibleLane(feasible_lane_graph_);
+  }
+  // 计算车道减少信息
+  double search_distance = 500.0;
+  if (!merge_info_vec_.empty()) {
+    search_distance = std::min(search_distance, merge_info_vec_[0].second);
+  }
+  if (!split_info_vec_.empty()) {
+    search_distance = std::min(search_distance, split_info_vec_[0].second);
+  }
+  CalculateFrontMergePointInfo(search_distance);
+
+  CalculateFeasibleLaneByMergePoint(feasible_lane_graph_);
+
+  // 把拓扑变化点后面的拓扑信息加入到feasible lane中
+  // 供 UpdateLCNumTask & CalLaneCost 使用
+  if (!feasible_lane_graph_after_topo_change_vec.lane_topo_groups.empty()) {
+      // 插入到最前面
+      feasible_lane_graph_.lane_topo_groups.insert(
+          feasible_lane_graph_.lane_topo_groups.begin(),
+          feasible_lane_graph_after_topo_change_vec.lane_topo_groups.begin(),
+          feasible_lane_graph_after_topo_change_vec.lane_topo_groups.end()
+      );
+  }
+
+  return true;
+}
+
+VirtualLanesRouteCost LDRouteInfoStrategy::GetVirtualLaneCostOnRoute(
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
+  // Calculate VirtualLaneRouteCost for each VirtualLane
+  auto const& lane_cost =
+      CalculateVirtualLaneRouteCost(relative_id_lanes, feasible_lane_graph_);
+  return lane_cost;
 }
 
 bool LDRouteInfoStrategy::UpdateLDMap() {
@@ -151,76 +234,11 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
 void LDRouteInfoStrategy::CalculateMLCDecider(
     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     RouteInfoOutput& route_info_output) {
-  mlc_decider_scene_type_info_.reset();
-
   if (relative_id_lanes.empty()) {
     return;
   }
-  MLCSceneTypeDecider();
 
-  MLCSceneType mlc_scene_type = mlc_decider_scene_type_info_.mlc_scene_type;
-
-  route_info_output_.mlc_decider_scene_type_info = mlc_decider_scene_type_info_;
-
-  TopoLinkGraph feasible_lane_graph;
-  TopoLinkGraph feasible_lane_graph_after_topo_change_vec;
-  switch (mlc_scene_type) {
-    case SPLIT_SCENE: {
-      if (!CalculateFeasibleLaneInRampScene(
-              feasible_lane_graph, feasible_lane_graph_after_topo_change_vec)) {
-        return;
-      }
-      break;
-    }
-    case NORMAL_SCENE: {
-      if (!CalculateFeasibleLaneInNormalScene(feasible_lane_graph)) {
-        return;
-      }
-      break;
-    }
-    case MERGE_SCENE: {
-      if (!CalculateFeasibleLaneInMergeScene(
-              feasible_lane_graph, feasible_lane_graph_after_topo_change_vec)) {
-        return;
-      }
-      break;
-    }
-    case NONE_SCENE:
-      break;
-    case AVOID_MERGE:
-    case AVOID_SPLIT:
-      break;
-  }
-
-  CalculateAvoidMergeFeasibleLane(feasible_lane_graph);
-
-  // 增加处理在接近匝道时，feasible lane至少有2条车道可达ramp，其中一条是1分2的lane，则从feasible lane中移除这条lane
-  if (mlc_scene_type == SPLIT_SCENE) {
-    Erase1Split2FeasibleLane(feasible_lane_graph);
-  }
-  // 计算车道减少信息
-  double search_distance = 500.0;
-  if (!merge_info_vec_.empty()) {
-    search_distance = std::min(search_distance, merge_info_vec_[0].second);
-  }
-  if (!split_info_vec_.empty()) {
-    search_distance = std::min(search_distance, split_info_vec_[0].second);
-  }
-  CalculateFrontMergePointInfo(search_distance);
-
-  CalculateFeasibleLaneByMergePoint(feasible_lane_graph);
-
-  // 把拓扑变化点后面的拓扑信息加入到feasible lane中，供UpdateLCNumTask使用
-  if (!feasible_lane_graph_after_topo_change_vec.lane_topo_groups.empty()) {
-      // 插入到最前面
-      feasible_lane_graph.lane_topo_groups.insert(
-          feasible_lane_graph.lane_topo_groups.begin(),
-          feasible_lane_graph_after_topo_change_vec.lane_topo_groups.begin(),
-          feasible_lane_graph_after_topo_change_vec.lane_topo_groups.end()
-      );
-  }
-
-  UpdateLCNumTask(relative_id_lanes, feasible_lane_graph);
+  UpdateLCNumTask(relative_id_lanes, feasible_lane_graph_);
 
   // 如果有躲避前方link_merge的mlc，会更新mlc_decider_scene_type_info_.mlc_type，所以在这再次更新这个值
   route_info_output_.mlc_decider_scene_type_info = mlc_decider_scene_type_info_;
@@ -924,8 +942,15 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     }
 
     // 如果左、右侧观测车道数，大于道路车道数量。仅左观测比右侧大很多的时候，考虑用右侧观测。
-    if (left_lane_num + right_lane_num + 1 >
-        cur_link_feasible_lane.lane_nums - diversion_lane_num) {
+    int const per_total_num = left_lane_num + right_lane_num + 1;
+    int const map_total_num =
+        cur_link_feasible_lane.lane_nums - diversion_lane_num;
+
+    if (std::abs(per_total_num - map_total_num) > 2) {
+      continue;
+    }
+
+    if (per_total_num > map_total_num) {
       if (left_lane_num > right_lane_num + 1) {
         ego_seq = link_total_lane_num - right_lane_num;
       }
@@ -1928,7 +1953,9 @@ std::tuple<size_t, size_t> LDRouteInfoStrategy::CountAccAndEntryLanes(
 
   for (auto lane_id : link->lane_ids()) {
     const auto* lane_info = ld_map_.GetLaneInfoByID(lane_id);
-    if (lane_info == nullptr) continue;  // 空指针防护
+    if (lane_info == nullptr) {
+      continue;  // 空指针防护
+    }
     if (IsAccelerateLane(lane_info)) {
       acc_lane_num++;
     }
@@ -3036,8 +3063,6 @@ iflymapdata::sdpro::Lane LDRouteInfoStrategy::FindMatchingPreLaneInMainLink(
         IsDiversionLane(temp_lane)) {
       continue;
     }
-
-    // 遍历当前车道的后继车道，匹配拓扑车道所属link
     for (const auto& temp_suc_lane_id : temp_lane->successor_lane_ids()) {
       const auto* temp_suc_lane = ld_map_.GetLaneInfoByID(temp_suc_lane_id);
       if (!temp_suc_lane || IsEmergencyLane(temp_suc_lane) ||
@@ -3569,4 +3594,969 @@ bool LDRouteInfoStrategy::CalculateLinkLaneNum(
   lane_num = lane_info.size();
   return true;
 }
+
+// Creates a LaneTopoNode for the given link.
+// Each lane in the link is classified as on_route or off_route based on
+// whether its successor lane's link is on the navigation route.
+// Extracts recommended_orders from feasible_orders_by_link (upstream
+// FeasibleOrder). DiversionLanes are excluded, and the remaining lane orders
+// are adjusted.
+LaneTopoNode LDRouteInfoStrategy::CreateNodeFromLink(
+    const iflymapdata::sdpro::LinkInfo_Link* link, double begin_dist,
+    double end_dist, const std::unordered_set<uint64_t>& route_link_ids,
+    const std::unordered_map<uint64_t, std::vector<int>>&
+        feasible_orders_by_link) {
+  LaneTopoNode node;
+  node.link_id = link->id();
+  node.begin_dist = begin_dist;
+  node.end_dist = end_dist;
+
+  bool link_on_route = (route_link_ids.count(link->id()) > 0);
+
+  // Gather DiversionLane sequences so we can adjust orders
+  std::vector<int> diversion_seqs;
+  for (uint64_t lane_id : link->lane_ids()) {
+    const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (IsDiversionLane(lane)) {
+      diversion_seqs.push_back(static_cast<int>(lane->sequence()));
+    }
+  }
+
+  // Extract recommended orders (FeasibleOrder) from upstream
+  std::vector<int> raw_feasible_orders;
+  auto it = feasible_orders_by_link.find(link->id());
+  if (it != feasible_orders_by_link.end()) {
+    raw_feasible_orders = it->second;
+  }
+
+  // Adjust feasible orders for DiversionLane offset
+  for (int raw_ord : raw_feasible_orders) {
+    int adj_ord = raw_ord;
+    for (int div_seq : diversion_seqs) {
+      if (raw_ord > div_seq) {
+        adj_ord--;
+      }
+    }
+    node.recommended_orders.push_back(adj_ord);
+  }
+
+  // Classify each non-DiversionLane
+  for (uint64_t lane_id : link->lane_ids()) {
+    const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (lane == nullptr || IsDiversionLane(lane)) {
+      continue;
+    }
+    int raw_order = static_cast<int>(lane->sequence());
+
+    // Adjust order by subtracting the number of DiversionLane seqs < raw_order
+    int adj_order = raw_order;
+    for (int div_seq : diversion_seqs) {
+      if (raw_order > div_seq) {
+        adj_order--;
+      }
+    }
+
+    if (!link_on_route) {
+      // The entire link is off-route
+      node.off_route_orders.push_back(adj_order);
+    } else {
+      // Check if at least one successor lane leads to a route link
+      bool successor_on_route = false;
+      for (uint64_t suc_lane_id : lane->successor_lane_ids()) {
+        const auto* suc_lane = ld_map_.GetLaneInfoByID(suc_lane_id);
+        if (suc_lane == nullptr) {
+          continue;
+        }
+        if (route_link_ids.count(suc_lane->link_id()) > 0) {
+          successor_on_route = true;
+          break;
+        }
+      }
+      // Also handle lanes with no successors (end of route): treat as on_route
+      if (lane->successor_lane_ids().empty()) {
+        successor_on_route = true;
+      }
+      if (successor_on_route) {
+        node.on_route_orders.push_back(adj_order);
+      } else {
+        node.off_route_orders.push_back(adj_order);
+      }
+    }
+    node.lane_num++;
+  }
+
+  return node;
+}
+
+// Builds the complete VirtualLaneTopoGraph covering [-50m, +150m] around ego.
+// Uses BFS forward through successor links (up to 150m) and backward through
+// predecessor links (up to 50m or ego's position on current link).
+// Returns false when ego is on a link that is not on the navigation route
+// (wrong_route scenario), in which case topo_graph is left empty.
+bool LDRouteInfoStrategy::BuildVirtualLaneTopoGraph(
+    const TopoLinkGraph& feasible_lane_graph,
+    VirtualLaneTopoGraph& topo_graph) {
+  topo_graph.nodes.clear();
+  topo_graph.ego_node_index = -1;
+
+  if (current_link_ == nullptr) {
+    return false;
+  }
+
+  // Ego must be on route
+  if (ld_map_.GetLinkOnRoute(current_link_->id()) == nullptr) {
+    return false;
+  }
+
+  // Collect route link ids and feasible orders from feasible_lane_graph
+  std::unordered_set<uint64_t> route_link_ids;
+  std::unordered_map<uint64_t, std::vector<int>> feasible_orders_by_link;
+
+  route_link_ids.insert(current_link_->id());
+  for (const auto& group : feasible_lane_graph.lane_topo_groups) {
+    route_link_ids.insert(group.link_id);
+
+    // Extract feasible orders (recommended lanes) for this link
+    std::vector<int> feasible_orders;
+    for (const auto& topo_lane : group.topo_lanes) {
+      feasible_orders.push_back(static_cast<int>(topo_lane.order_id));
+    }
+    feasible_orders_by_link[group.link_id] = feasible_orders;
+  }
+
+  // Visited set to avoid revisiting (handles diamond merges etc.)
+  std::unordered_set<uint64_t> visited_fwd;
+
+  // Create ego node first
+  {
+    double cur_link_len = current_link_->length() * 0.01;  // cm to m
+    double remaining_len = std::max(0.0, cur_link_len - ego_on_cur_link_s_);
+    LaneTopoNode ego_node =
+        CreateNodeFromLink(current_link_, 0.0, remaining_len, route_link_ids,
+                           feasible_orders_by_link);
+    topo_graph.ego_node_index = static_cast<int>(topo_graph.nodes.size());
+    topo_graph.nodes.push_back(std::move(ego_node));
+    visited_fwd.insert(current_link_->id());
+  }
+
+  // BFS forward: process a queue of (link_id, begin_dist, parent_node_idx)
+  struct FwdEntry {
+    uint64_t link_id;
+    double begin_dist;
+    int parent_index;
+  };
+  std::queue<FwdEntry> fwd_queue;
+  // Seed from current link's successors
+  {
+    double ego_node_end = topo_graph.nodes[topo_graph.ego_node_index].end_dist;
+    for (uint64_t suc_id : current_link_->successor_link_ids()) {
+      if (ego_node_end < 150.0) {
+        fwd_queue.push({suc_id, ego_node_end, topo_graph.ego_node_index});
+      }
+    }
+  }
+
+  while (!fwd_queue.empty()) {
+    auto [link_id, begin_dist, parent_idx] = fwd_queue.front();
+    fwd_queue.pop();
+
+    if (visited_fwd.count(link_id)) {
+      continue;
+    }
+    visited_fwd.insert(link_id);
+
+    // Get link ptr — only available for route links via GetLinkOnRoute
+    const auto* link_ptr = ld_map_.GetLinkOnRoute(link_id);
+    double link_len = 50.0;  // nominal fallback for off-route links
+    if (link_ptr != nullptr) {
+      link_len = link_ptr->length() * 0.01;
+    }
+    double end_dist = begin_dist + link_len;
+
+    LaneTopoNode node =
+        (link_ptr != nullptr)
+            ? CreateNodeFromLink(link_ptr, begin_dist, end_dist, route_link_ids,
+                                 feasible_orders_by_link)
+            : LaneTopoNode{link_id, begin_dist, end_dist, 0, {},
+                           {},      {},         {},       {}};
+
+    int new_idx = static_cast<int>(topo_graph.nodes.size());
+    topo_graph.nodes.push_back(std::move(node));
+
+    // Link parent->child edges
+    topo_graph.nodes[parent_idx].successor_indices.push_back(new_idx);
+    topo_graph.nodes[new_idx].predecessor_indices.push_back(parent_idx);
+
+    // Enqueue successors if within range and link is on-route
+    if (end_dist < 150.0 && link_ptr != nullptr) {
+      for (uint64_t suc_id : link_ptr->successor_link_ids()) {
+        if (!visited_fwd.count(suc_id)) {
+          fwd_queue.push({suc_id, end_dist, new_idx});
+        }
+      }
+    }
+  }
+
+  // --- Backward BFS from current_link ---
+  // Only needed if ego hasn't traveled 50m from link start
+  double need_backward = 50.0 - ego_on_cur_link_s_;
+  if (need_backward > 0.0) {
+    struct BwdEntry {
+      uint64_t link_id;
+      double end_dist;  // negative (behind ego)
+      int child_index;
+    };
+    std::queue<BwdEntry> bwd_queue;
+    std::unordered_set<uint64_t> visited_bwd;
+    visited_bwd.insert(current_link_->id());
+
+    for (int i = 0; i < current_link_->predecessor_link_ids_size(); ++i) {
+      uint64_t pre_id = current_link_->predecessor_link_ids()[i];
+      bwd_queue.push({pre_id, 0.0, topo_graph.ego_node_index});
+    }
+
+    double acc_backward = 0.0;
+    while (!bwd_queue.empty() && acc_backward < need_backward) {
+      auto [link_id, end_dist_neg, child_idx] = bwd_queue.front();
+      bwd_queue.pop();
+
+      if (visited_bwd.count(link_id)) {
+        continue;
+      }
+      visited_bwd.insert(link_id);
+
+      const auto* link_ptr = ld_map_.GetLinkOnRoute(link_id);
+      double link_len = 50.0;
+      if (link_ptr != nullptr) {
+        link_len = link_ptr->length() * 0.01;
+      }
+
+      double end_dist = end_dist_neg;  // 0 means at ego's link start
+      double begin_dist = end_dist - link_len;
+
+      LaneTopoNode node =
+          (link_ptr != nullptr)
+              ? CreateNodeFromLink(link_ptr, begin_dist, end_dist,
+                                   route_link_ids, feasible_orders_by_link)
+              : LaneTopoNode{link_id, begin_dist, end_dist, 0, {},
+                             {},      {},         {},       {}};
+
+      int new_idx = static_cast<int>(topo_graph.nodes.size());
+      topo_graph.nodes.push_back(std::move(node));
+
+      // Edge: predecessor node -> ego node direction
+      topo_graph.nodes[new_idx].successor_indices.push_back(child_idx);
+      topo_graph.nodes[child_idx].predecessor_indices.push_back(new_idx);
+
+      acc_backward += link_len;
+      if (acc_backward < need_backward && link_ptr != nullptr) {
+        for (int i = 0; i < link_ptr->predecessor_link_ids_size(); ++i) {
+          uint64_t pre_id = link_ptr->predecessor_link_ids()[i];
+          if (!visited_bwd.count(pre_id)) {
+            bwd_queue.push({pre_id, begin_dist, new_idx});
+          }
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+// Calculate VirtualLaneRouteCost for each VirtualLane using
+// VirtualLaneTopoGraph. The graph covers [-50m, +150m] around ego and
+// explicitly classifies each lane's order as on_route (successor leads to
+// route) or off_route (successor diverges from route). This enables three-tier
+// distance penalties and off_route negative scoring to guarantee cost
+// monotonicity.
+std::vector<VirtualLaneRouteCost>
+LDRouteInfoStrategy::CalculateVirtualLaneRouteCost(
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    const TopoLinkGraph& feasible_lane_graph) {
+  std::vector<VirtualLaneRouteCost> lane_costs;
+  if (feasible_lane_graph.lane_topo_groups.empty() ||
+      current_link_ == nullptr) {
+    return lane_costs;
+  }
+  const auto& cur_link_topo = feasible_lane_graph.lane_topo_groups.back();
+  if (cur_link_topo.topo_lanes.empty()) {
+    return lane_costs;
+  }
+
+  double max_feasible_distance = 0.0;
+  for (const auto& topo_lane : cur_link_topo.topo_lanes) {
+    max_feasible_distance =
+        std::max(max_feasible_distance, topo_lane.front_feasible_distance);
+  }
+  int num_groups =
+      static_cast<int>(feasible_lane_graph.lane_topo_groups.size());
+
+  // Build VirtualLaneTopoGraph. Returns false if ego is off route
+  // (wrong_route).
+  VirtualLaneTopoGraph topo_graph;
+  bool ego_on_route =
+      BuildVirtualLaneTopoGraph(feasible_lane_graph, topo_graph);
+
+  // Infer ego order from perception (rel=0 VirtualLane's first valid
+  // LaneNumMsg)
+  int ego_order_from_perception = -1;
+  for (const auto& vl : relative_id_lanes) {
+    if (vl == nullptr || vl->get_relative_id() != 0) {
+      continue;
+    }
+    for (const auto& ln : vl->get_lane_nums()) {
+      if (ln.end > ln.begin && ln.left_lane_num <= 20 &&
+          ln.right_lane_num <= 20) {
+        ego_order_from_perception = ln.right_lane_num + 1;
+        break;
+      }
+    }
+    break;
+  }
+
+  // Check if ego lane (rel=0) has valid lane_nums; if not, skip this frame
+  if (ego_order_from_perception < 0) {
+    return lane_costs;
+  }
+
+  // Maximum distance covered by forward nodes (for coverage check)
+  double max_node_dist = 0.0;
+  for (const auto& node : topo_graph.nodes) {
+    if (node.end_dist > max_node_dist) {
+      max_node_dist = node.end_dist;
+    }
+  }
+  if (max_node_dist < 30.0) {
+    return lane_costs;
+  }
+
+  // --- Extract all possible topological paths from topo_graph ---
+  // This enables lateral relationship matching based on order_id
+  std::vector<TopoPath> const& topo_paths = ExtractTopoPaths(topo_graph, 150.0);
+
+  for (const auto& virtual_lane : relative_id_lanes) {
+    if (virtual_lane == nullptr) {
+      continue;
+    }
+
+    VirtualLaneRouteCost cost;
+    cost.order_id = virtual_lane->get_order_id();
+    cost.relative_id = virtual_lane->get_relative_id();
+    const auto& lane_nums = virtual_lane->get_lane_nums();
+
+    // Skip VirtualLane with invalid lane_nums
+    bool has_valid_lane_num = false;
+    if (lane_nums.size() < 100) {
+      for (const auto& ln : lane_nums) {
+        if (ln.end > ln.begin && ln.left_lane_num <= 20 &&
+            ln.right_lane_num <= 20) {
+          has_valid_lane_num = true;
+          break;
+        }
+      }
+    }
+
+    if (!has_valid_lane_num) {
+      cost.CalculateTotalCost();
+      lane_costs.push_back(cost);
+      continue;
+    }
+
+    // --- Wrong route: penalize everything ---
+    if (!ego_on_route) {
+      cost.distance_penalty = 1.0;
+      cost.CalculateTotalCost();
+      lane_costs.push_back(cost);
+      continue;
+    }
+
+    // --- Lane match confidence via topological path matching ---
+    // For each TopoPath, calculate match score. Pick the best-matching path.
+    // Then determine on/off route based on the best path's nodes.
+    double best_match_score = -1.0;
+    int best_path_idx = -1;
+    for (size_t pi = 0; pi < topo_paths.size(); ++pi) {
+      double const path_score =
+          CalculateMatchScore(virtual_lane, topo_paths[pi], 3.0, 120.0);
+      if (path_score > 0.0 && path_score > best_match_score) {
+        best_match_score = path_score;
+        best_path_idx = static_cast<int>(pi);
+      }
+    }
+
+    // --- Feasible distance reward ---
+    // TODO: each FeasibleOrder has its own distance; skip for now
+    cost.feasible_distance_reward = 0.0;
+
+    // --- Topo trace score ---
+    cost.topo_trace_score =
+        std::min(1.0, static_cast<double>(num_groups) / 8.0);
+
+    // --- Distance penalty ---
+    // Determined by the best-matching TopoPath:
+    //   - If best path's nodes are all on_route → low penalty
+    //   - If best path contains off_route nodes → high penalty
+    // Additionally use ego node's recommended_orders for fine-grained ordering.
+    if (best_path_idx >= 0) {
+      const TopoPath& best_path = topo_paths[best_path_idx];
+
+      // Check if the best path is on-route:
+      // A path is on-route if all nodes beyond feasible order.
+      bool const path_has_on_route =
+          std::find_if(best_path.nodes_ptr.begin(), best_path.nodes_ptr.end(),
+                       [](std::shared_ptr<planning::LaneTopoNode> const node) {
+                         return node->recommended_orders.empty();
+                       }) == best_path.nodes_ptr.end();
+
+      cost.on_link_route_score = best_match_score;
+
+      cost.is_on_route = path_has_on_route;
+
+      if (!path_has_on_route) {
+        // Path leads entirely off-route
+        cost.distance_penalty = 1.0;
+      } else {
+        // Sample and match observed order with recommended order
+        double total_match_error = 0.0;
+        int valid_samples = 0;
+
+        for (double dist = 0.0; dist <= 120.0; dist += 5.0) {
+          // Get topological node
+          std::shared_ptr<LaneTopoNode> node =
+              best_path.GetNodeAtDistance(dist);
+          if (node == nullptr || node->recommended_orders.empty() ||
+              node->lane_num == 0) {
+            continue;
+          }
+
+          // Get observed values at this distance from lane_nums
+          int per_left = -1;
+          int per_right = -1;
+          for (const auto& ln : lane_nums) {
+            if (ln.end <= ln.begin || ln.left_lane_num > 20 ||
+                ln.right_lane_num > 20) {
+              continue;
+            }
+            if (dist >= ln.begin && dist < ln.end) {
+              per_left = static_cast<int>(ln.left_lane_num);
+              per_right = static_cast<int>(ln.right_lane_num);
+              break;
+            }
+          }
+          if (per_left < 0 || per_right < 0) {
+            continue;  // No observation at this distance
+          }
+
+          // Compute observed order (right‑to‑left, 1‑based)
+          int per_order_from_right = per_right + 1;
+          if (per_order_from_right > node->lane_num) {
+            per_order_from_right = node->lane_num;
+          }
+
+          int per_order_from_left = node->lane_num - per_left;
+          if (per_order_from_left < 1) {
+            per_order_from_left = 1;
+          }
+
+          // Weighted fusion of left and right observations
+          // Smaller observation value indicates higher reliability
+          const double epsilon = 1e-6;
+          double weight_left = 1.0 / (per_left + 1.0 + epsilon);
+          double weight_right = 1.0 / (per_right + 1.0 + epsilon);
+          double total_weight = weight_left + weight_right;
+          double per_order = 0.0;
+          if (total_weight > epsilon) {
+            per_order = (weight_left * per_order_from_left +
+                         weight_right * per_order_from_right) /
+                        total_weight;
+          } else {
+            // Fallback: use average of the two orders
+            per_order = 0.5 * (per_order_from_left + per_order_from_right);
+          }
+
+          // Compute distance between observed order and the nearest recommended
+          // order
+          double min_dist = std::numeric_limits<double>::max();
+          for (int rec_ord : node->recommended_orders) {
+            min_dist = std::min(min_dist, std::abs(per_order - rec_ord));
+          }
+
+          // Compute confidence weight based on lane number difference
+          int const per_total = per_left + per_right + 1;
+          int const lane_num_diff = std::abs(per_total - node->lane_num);
+
+          // lane_num_diff > 2. no need consider this sample.
+          if (lane_num_diff > 2) {
+            continue;
+          }
+
+          // Exponential decay weight: exp(-diff / 2.0)
+          double const lane_num_diff_weight = std::exp(-lane_num_diff / 2.0);
+
+          // Accumulate error (normalized to 0‑1)
+          double error =
+              lane_num_diff_weight * min_dist / std::max(1, node->lane_num);
+          total_match_error += error;
+          ++valid_samples;
+        }
+
+        // Compute lane_match_confidence (higher confidence when error is
+        // smaller)
+        if (valid_samples > 0) {
+          double avg_error = total_match_error / valid_samples;
+          cost.lane_match_confidence = 1.0 - std::min(1.0, avg_error);
+        } else {
+          cost.lane_match_confidence = 0.0;
+        }
+      }
+    } else {
+      // Ambiguous — no clear on/off signal
+      cost.distance_penalty = 0.5;
+    }
+
+    cost.CalculateTotalCost();
+    lane_costs.push_back(cost);
+  }
+
+  return lane_costs;
+}
+
+// Extract all possible topological paths from topo_graph.
+// For each transition between nodes, compute exit_orders: which lane orders
+// in the parent node connect (via lane successor) to the child node's link.
+std::vector<TopoPath> LDRouteInfoStrategy::ExtractTopoPaths(
+    const VirtualLaneTopoGraph& topo_graph, double max_distance) {
+  std::vector<TopoPath> paths;
+
+  if (topo_graph.ego_node_index < 0) {
+    return paths;
+  }
+
+  // DFS to traverse all possible paths from ego node
+  std::function<void(int, TopoPath)> dfs = [&](int node_idx,
+                                               TopoPath current_path) {
+    const auto& node = topo_graph.nodes[node_idx];
+    // If no lane, save path
+    if (node.lane_num == 0) {
+      paths.push_back(current_path);
+      return;
+    }
+
+    current_path.nodes_ptr.push_back(std::make_shared<LaneTopoNode>(node));
+
+    // If exceeded max distance, save path and return
+    if (node.begin_dist >= max_distance) {
+      paths.push_back(current_path);
+      return;
+    }
+
+    // If no successors, save path
+    if (node.successor_indices.empty()) {
+      paths.push_back(current_path);
+      return;
+    }
+
+    // For each successor, compute exit_orders: which lane orders in current
+    // node connect to the successor node's link via lane-level successor.
+    for (int suc_idx : node.successor_indices) {
+      const auto& suc_node = topo_graph.nodes[suc_idx];
+
+      // Find which lanes in current link have successor lanes in suc_node's
+      // link
+      std::vector<int> cur_exit_orders;
+      const auto* link_ptr = ld_map_.GetLinkOnRoute(node.link_id);
+      if (link_ptr != nullptr) {
+        // Gather DiversionLane sequences for order adjustment
+        std::vector<int> diversion_seqs;
+        for (uint64_t lane_id : link_ptr->lane_ids()) {
+          const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+          if (lane != nullptr && IsDiversionLane(lane)) {
+            diversion_seqs.push_back(static_cast<int>(lane->sequence()));
+          }
+        }
+
+        for (uint64_t lane_id : link_ptr->lane_ids()) {
+          const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+          if (lane == nullptr || IsDiversionLane(lane)) {
+            continue;
+          }
+
+          // Check if any successor lane belongs to suc_node's link
+          bool connects_to_suc = false;
+          for (uint64_t suc_lane_id : lane->successor_lane_ids()) {
+            const auto* suc_lane = ld_map_.GetLaneInfoByID(suc_lane_id);
+            if (suc_lane != nullptr &&
+                suc_lane->link_id() == suc_node.link_id) {
+              connects_to_suc = true;
+              break;
+            }
+          }
+
+          if (connects_to_suc) {
+            // Adjust order for DiversionLane offset
+            int adj_order = static_cast<int>(lane->sequence());
+            for (int div_seq : diversion_seqs) {
+              if (adj_order > div_seq) {
+                adj_order--;
+              }
+            }
+            cur_exit_orders.push_back(adj_order);
+          }
+        }
+      }
+
+      // Sort exit_orders for consistent comparison
+      std::sort(cur_exit_orders.begin(), cur_exit_orders.end());
+
+      TopoPath branch_path = current_path;
+      branch_path.exit_orders.push_back(cur_exit_orders);
+      dfs(suc_idx, branch_path);
+    }
+  };
+
+  TopoPath initial_path;
+  dfs(topo_graph.ego_node_index, initial_path);
+
+  return paths;
+}
+
+// Calculate match score between VirtualLane and topological path.
+//
+// Core matching dimensions:
+//   1. Longitudinal lane-count sequence matching
+//   2. Exit-order matching at split points (pre-split order in exit_orders?)
+//   3. Fork boundary detection: at the split distance, a VirtualLane that sees
+//      one side drop to 0 (left=0 or right=0) has clearly entered a branch.
+//      - If per_order was in exit_orders AND the opposite side drops to 0
+//        → strong match (this VirtualLane follows this path)
+//      - If per_order was NOT in exit_orders AND one side drops to 0
+//        → strong mismatch (this VirtualLane follows the other branch)
+//   4. Post-split on_route/off_route order matching
+//
+// Fork boundary detection is the strongest signal because it combines two
+// independent observations: the lane-level connectivity (exit_orders) and
+// the perception geometry (left/right dropping to 0).
+double LDRouteInfoStrategy::CalculateMatchScore(
+    const std::shared_ptr<VirtualLane>& virtual_lane, const TopoPath& topo_path,
+    double sample_step, double max_distance) {
+  if (virtual_lane == nullptr || topo_path.nodes_ptr.empty()) {
+    return 0.0;
+  }
+
+  double total_score = 0.0;
+  double total_weight = 0.0;
+
+  // Build split info from node transitions + exit_orders
+  struct SplitInfo {
+    double dist;                 // begin_dist of the post-split node
+    std::vector<int> exit_ords;  // which orders in the pre-split node feed here
+    int pre_lane_num;            // lane_num of the pre-split node
+  };
+  std::vector<SplitInfo> splits;
+
+  for (size_t i = 0; i + 1 < topo_path.nodes_ptr.size(); ++i) {
+    int prev_ln = topo_path.nodes_ptr[i]->lane_num;
+    int cur_ln = topo_path.nodes_ptr[i + 1]->lane_num;
+    if (prev_ln - cur_ln >= 1 && i < topo_path.exit_orders.size()) {
+      splits.push_back({topo_path.nodes_ptr[i + 1]->begin_dist,
+                        topo_path.exit_orders[i], prev_ln});
+    }
+  }
+
+  const auto& lane_nums = virtual_lane->get_lane_nums();
+
+  // We need to look at perception data at two distances around each split
+  // to detect the fork boundary pattern. Pre-compute perception at each sample.
+  struct PerceptionSample {
+    double dist;
+    int left;
+    int right;
+    int total;
+    int order_from_right;  // right + 1
+  };
+  std::vector<PerceptionSample> samples;
+
+  for (double dist = 0.0; dist < max_distance; dist += sample_step) {
+    int per_left = -1;
+    int per_right = -1;
+    for (const auto& ln : lane_nums) {
+      if (ln.end <= ln.begin || ln.left_lane_num > 20 ||
+          ln.right_lane_num > 20) {
+        continue;
+      }
+      if (dist >= ln.begin && dist < ln.end) {
+        per_left = static_cast<int>(ln.left_lane_num);
+        per_right = static_cast<int>(ln.right_lane_num);
+        break;
+      }
+    }
+    if (per_left >= 0 && per_right >= 0) {
+      samples.push_back(
+          {dist, per_left, per_right, per_left + per_right + 1, per_right + 1});
+    }
+  }
+
+  // For each split, detect fork boundary pattern across consecutive samples.
+  //
+  // Key insight: left/right=0 has TWO meanings:
+  //   a) Fork: the other branch disappeared (pre>0, post=0) → STRONG signal
+  //   b) Edge lane: this VirtualLane is at the leftmost/rightmost → NOT a fork
+  // Only (a) is a fork signal. We detect it by checking pre>0 AND post=0.
+  //
+  // Fork direction determination (independent of order, which may have ±1
+  // error):
+  //   - right dropped (pre_right>0 → post_right=0): VirtualLane went LEFT
+  //   branch
+  //   - left dropped  (pre_left>0  → post_left=0):  VirtualLane went RIGHT
+  //   branch
+  //
+  // This direction signal is then compared with the path's exit_orders
+  // position:
+  //   - exit_orders contain high orders → this path is the LEFT branch
+  //   - exit_orders contain low orders  → this path is the RIGHT branch
+  //
+  // Even when two VirtualLanes have the SAME order (e.g. both order=2),
+  // if one has right=0 and the other has left=0, they are on different paths.
+  // Accumulators for all splits
+  double accumulated_fork_score = 0.0;
+  double accumulated_fork_weight = 0.0;
+  bool has_any_fork_signal = false;
+
+  for (const auto& split : splits) {
+    if (split.exit_ords.empty()) {
+      continue;
+    }
+
+    // Find samples at split.dist [-5.0, +10.0] m
+    const PerceptionSample* pre_sample = nullptr;
+    const PerceptionSample* post_sample = nullptr;
+
+    const double target_pre_dist = split.dist - 5.0;
+    const double target_post_dist = split.dist + 10.0;
+
+    double min_pre_dist = std::numeric_limits<double>::max();
+    double min_post_dist = std::numeric_limits<double>::max();
+
+    for (const auto& sample : samples) {
+      double dist_to_pre = std::abs(sample.dist - target_pre_dist);
+      double dist_to_post = std::abs(sample.dist - target_post_dist);
+
+      if (dist_to_pre <= min_pre_dist) {
+        min_pre_dist = dist_to_pre;
+        pre_sample = &sample;
+      }
+      if (dist_to_post <= min_post_dist) {
+        min_post_dist = dist_to_post;
+        post_sample = &sample;
+      }
+    }
+    if (pre_sample == nullptr || post_sample == nullptr) {
+      continue;
+    }
+
+    // Detect fork boundary: one side DROPS from >0 to 0.
+    // This distinguishes fork signals from edge-lane signals:
+    //   - Fork: pre_right=2, post_right=0 → right dropped → went left branch
+    //   - Edge: pre_right=0, post_right=0 → always 0 → just the rightmost lane
+    bool right_dropped = (pre_sample->right > 0 && post_sample->right == 0);
+    bool left_dropped = (pre_sample->left > 0 && post_sample->left == 0);
+
+    // Determine which side this path's exit_orders are on.
+    // Low orders = right side of road, high orders = left side of road.
+    int min_exit =
+        *std::min_element(split.exit_ords.begin(), split.exit_ords.end());
+    int max_exit =
+        *std::max_element(split.exit_ords.begin(), split.exit_ords.end());
+    double mid = (split.pre_lane_num + 1.0) / 2.0;
+    bool path_is_right_branch = (max_exit <= mid);
+    bool path_is_left_branch = (min_exit >= mid);
+    // If exit_orders span the middle, the path covers both sides (no clear
+    // branch)
+    bool path_spans_middle = !path_is_right_branch && !path_is_left_branch;
+
+    // Calculate current split match score
+    double current_split_match = 0.0;
+    bool current_has_signal = false;
+    bool is_hard_signal = false;  // Flag for geometric signal
+
+    if (right_dropped || left_dropped) {
+      // We have a clear fork signal: one side dropped to 0.
+      current_has_signal = true;
+      is_hard_signal = true;  // This is a strong geometric signal
+
+      // Determine VirtualLane's branch direction from the drop direction.
+      // This is the most reliable signal — independent of order value.
+      bool vl_went_left = right_dropped;  // right disappeared → went left
+      bool vl_went_right = left_dropped;  // left disappeared → went right
+
+      if (vl_went_left && path_is_left_branch) {
+        current_split_match =
+            1.0;  // VirtualLane went left, path is left branch → match
+      } else if (vl_went_right && path_is_right_branch) {
+        current_split_match =
+            1.0;  // VirtualLane went right, path is right branch → match
+      } else if (vl_went_left && path_is_right_branch) {
+        current_split_match =
+            -1.0;  // VirtualLane went left, path is right branch → mismatch
+      } else if (vl_went_right && path_is_left_branch) {
+        current_split_match =
+            -1.0;  // VirtualLane went right, path is left branch → mismatch
+      } else if (path_spans_middle) {
+        // Path spans both sides; use order as secondary signal
+        bool pre_order_in_exit =
+            std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                      pre_sample->order_from_right) != split.exit_ords.end();
+        int pre_order_from_left = split.pre_lane_num - pre_sample->left;
+        bool pre_order_left_in_exit =
+            std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                      pre_order_from_left) != split.exit_ords.end();
+        current_split_match =
+            (pre_order_in_exit || pre_order_left_in_exit) ? 0.5 : -0.5;
+      }
+    } else {
+      // No clear fork boundary (no side dropped to 0).
+      // Fall back to order-based matching with lower confidence.
+      bool pre_order_in_exit =
+          std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                    pre_sample->order_from_right) != split.exit_ords.end();
+      int pre_order_from_left = split.pre_lane_num - pre_sample->left;
+      bool pre_order_left_in_exit =
+          std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                    pre_order_from_left) != split.exit_ords.end();
+
+      if (pre_order_in_exit && pre_order_left_in_exit) {
+        current_split_match = 0.5;
+        current_has_signal = true;
+      } else if (pre_order_in_exit || pre_order_left_in_exit) {
+        current_split_match = 0.3;
+        current_has_signal = true;
+      } else if (!split.exit_ords.empty()) {
+        current_split_match = -0.3;
+        current_has_signal = true;
+      }
+    }
+
+    // Accumulate score with reasonable weight
+    if (current_has_signal) {
+      has_any_fork_signal = true;
+
+      // 1. Distance Weight: 0-60m consistent, 60m+ decay to 0.3
+      double dist_weight = 1.0;
+      if (split.dist > 60.0) {
+        // Linear decay from 1.0 at 60m to 0.3 at max_distance
+        dist_weight =
+            std::max(0.3, 1.0 - (split.dist - 60.0) / (max_distance - 60.0));
+      }
+
+      // 2. Signal Type Weight: Geometric signals are more reliable than
+      // Order-based ones
+      double type_weight = is_hard_signal ? 1.5 : 1.0;
+
+      double final_weight = dist_weight * type_weight;
+
+      accumulated_fork_score += current_split_match * final_weight;
+      accumulated_fork_weight += final_weight;
+    }
+  }
+
+  // Calculate final weighted average
+  double fork_match = 0.0;
+  if (accumulated_fork_weight > 1e-6) {
+    fork_match = accumulated_fork_score / accumulated_fork_weight;
+  }
+  bool has_fork_signal = has_any_fork_signal;
+
+  // Now compute per-sample scores
+  for (const auto& sample : samples) {
+    // Find node along THIS path at the given distance
+    const LaneTopoNode* path_node = nullptr;
+    int node_idx = -1;
+    for (size_t ni = 0; ni < topo_path.nodes_ptr.size(); ++ni) {
+      const auto& n = topo_path.nodes_ptr[ni];
+      if (sample.dist >= n->begin_dist && sample.dist < n->end_dist) {
+        path_node = n.get();
+        node_idx = static_cast<int>(ni);
+        break;
+      }
+    }
+    if (path_node == nullptr || path_node->lane_num <= 0) {
+      continue;
+    }
+
+    // Longitudinal lane-count matching
+    double lane_num_score = 0.0;
+    int diff = std::abs(sample.total - path_node->lane_num);
+    if (diff == 0) {
+      lane_num_score = 1.0;
+    } else if (diff == 1) {
+      lane_num_score = 0.5;
+    } else {
+      lane_num_score = 0.1;
+    }
+
+    // Order matching via exit_orders: does this VirtualLane's observed order
+    // fall within the lanes that connect to the next node on this path?
+    double order_score = 0.0;
+    bool has_order_signal = false;
+    if (node_idx >= 0 &&
+        node_idx < static_cast<int>(topo_path.exit_orders.size())) {
+      const auto& exit_ords = topo_path.exit_orders[node_idx];
+      if (!exit_ords.empty()) {
+        has_order_signal = true;
+        bool right_in = std::find(exit_ords.begin(), exit_ords.end(),
+                                  sample.order_from_right) != exit_ords.end();
+        int order_from_left = path_node->lane_num - sample.left;
+        bool left_in = std::find(exit_ords.begin(), exit_ords.end(),
+                                 order_from_left) != exit_ords.end();
+
+        if (right_in && left_in) {
+          order_score = (lane_num_score >= 0.5) ? 1.0 : 0.5;
+        } else if (!right_in && !left_in) {
+          order_score = -1.0;
+        } else {
+          // Disagreement: trust the side with smaller observation value
+          if (sample.right <= sample.left) {
+            order_score = right_in ? 0.5 : -0.5;
+          } else {
+            order_score = left_in ? 0.5 : -0.5;
+          }
+        }
+      }
+    }
+
+    // Combine: when order_score is unavailable (last node, no exit_orders),
+    // redistribute its weight to other signals to avoid path length bias.
+    double point_score = 0.0;
+    if (has_fork_signal) {
+      if (has_order_signal) {
+        point_score =
+            0.5 * fork_match + 0.3 * lane_num_score + 0.2 * order_score;
+      } else {
+        point_score = 0.625 * fork_match + 0.375 * lane_num_score;
+      }
+    } else {
+      if (has_order_signal) {
+        point_score = 0.4 * lane_num_score + 0.6 * order_score;
+      } else {
+        point_score = lane_num_score;
+      }
+    }
+
+    // Distance weight
+    double weight = 1.0;
+    if (sample.dist > 20.0) {
+      weight = std::max(0.3, 1.0 - (sample.dist - 20.0) / 80.0);
+    }
+
+    total_score += weight * point_score;
+    total_weight += weight;
+  }
+
+  double final_score = 0.0;
+  if (total_weight > 1e-6) {
+    final_score = total_score / total_weight;
+  }
+  return final_score;
+}
+
 }  // namespace planning
