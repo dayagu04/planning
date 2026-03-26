@@ -2545,8 +2545,12 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       if (avoid_feasible_lane->predecessor_lane_ids_size() == 0) {
         continue;
       }
-      if (!ld_map_.isOnRouteLinks(
-              avoid_feasible_lane->predecessor_lane_ids()[0])) {
+      const auto* avoid_feasible_lane_pre = ld_map_.GetLaneInfoByID(
+          avoid_feasible_lane->predecessor_lane_ids()[0]);
+      if (avoid_feasible_lane_pre == nullptr) {
+        continue;
+      }
+      if (!ld_map_.isOnRouteLinks(avoid_feasible_lane_pre->link_id())) {
         continue;
       }
 
