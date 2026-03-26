@@ -1804,11 +1804,32 @@ const bool HybridAStarPathGenerator::UpdateOnce(
     for (const CarMotion& car_motion : car_motion_vec) {
       GenerateNextNode(&new_node, current_node, car_motion);
 
+      PopulateChildNodeState(&new_node, current_node, car_motion);
+
+      const auto node_it = node_set_.find(new_node.GetGlobalID());
+      if (node_it == node_set_.end()) {
+        vis_type = AstarNodeVisitedType::NOT_VISITED;
+        next_node_in_pool = nullptr;
+      } else {
+        next_node_in_pool = node_it->second;
+        vis_type = next_node_in_pool->GetVisitedType();
+      }
+
+      CalcNodeGCost(current_node, &new_node);
+
+      if (vis_type == AstarNodeVisitedType::IN_OPEN &&
+          new_node.GetGCost() >= next_node_in_pool->GetGCost()) {
+        continue;
+      }
+
+      if (vis_type == AstarNodeVisitedType::IN_CLOSE &&
+          new_node.GetGCost() >= next_node_in_pool->GetGCost() + 1e-1) {
+        continue;
+      }
+
       ConfigureNodeDeleteRequestForChildNode(new_node, current_node, car_motion,
                                              default_gear_request,
                                              node_del_request);
-
-      PopulateChildNodeState(&new_node, current_node, car_motion);
 
       if (CheckNodeShouldDelete(node_del_request)) {
         continue;
@@ -1816,15 +1837,14 @@ const bool HybridAStarPathGenerator::UpdateOnce(
 
       UpdateCulDeSacLimitByNewNode(new_node);
 
-      if (!FindOrAllocateSearchNode(new_node.GetGlobalID(), vis_type,
+      if (vis_type == AstarNodeVisitedType::NOT_VISITED &&
+          !FindOrAllocateSearchNode(new_node.GetGlobalID(), vis_type,
                                     next_node_in_pool)) {
         continue;
       }
 
       ConfigureAnalyticExpansionRequestForNewNode(new_node,
                                                   analytic_expansion_request);
-
-      CalcNodeGCost(current_node, &new_node);
 
 #if DEBUG_CHILD_NODE
       if (search_loop_stats_.gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
@@ -1843,24 +1863,20 @@ const bool HybridAStarPathGenerator::UpdateOnce(
 
       else if (vis_type == AstarNodeVisitedType::IN_OPEN) {
         // in open set and need update
-        if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
-          CalcNodeHCost(&new_node, analytic_expansion_request);
-          open_pq_.erase(next_node_in_pool->GetMultiMapIter());
-          ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
-        }
+        CalcNodeHCost(&new_node, analytic_expansion_request);
+        open_pq_.erase(next_node_in_pool->GetMultiMapIter());
+        ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
       }
 
       else if (vis_type == AstarNodeVisitedType::IN_CLOSE) {
         // in close set and need update
-        if (new_node.GetGCost() < next_node_in_pool->GetGCost() + 1e-1) {
-          node_del_request.old_node = next_node_in_pool;
-          if (CheckNodeShouldDelete(node_del_request)) {
-            continue;
-          }
-
-          CalcNodeHCost(&new_node, analytic_expansion_request);
-          ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
+        node_del_request.old_node = next_node_in_pool;
+        if (CheckNodeShouldDelete(node_del_request)) {
+          continue;
         }
+
+        CalcNodeHCost(&new_node, analytic_expansion_request);
+        ActivateSearchNodeInOpenSet(new_node, next_node_in_pool);
       }
 
 #if DEBUG_CHILD_NODE
