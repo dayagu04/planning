@@ -533,6 +533,8 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
     double intrusion_distance = 0;
     double extra_lat_buffer_with_emergency_avoid = -0.1;  // 没有风险等级的障碍物，条件更加严格
     bool is_in_lat_range = false;        // 障碍物是否侵入自车道
+    if (frenet_obs.d_max_cpath() < 0) {
+      intrusion_distance =
           half_lane_width - std::fabs(frenet_obs.d_max_cpath());
     } else if (frenet_obs.d_min_cpath() > 0) {
       intrusion_distance =
