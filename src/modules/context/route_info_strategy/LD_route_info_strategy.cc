@@ -961,11 +961,11 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       if (merge_point_link == nullptr) {
         break;
       }
-      if (merge_point_info.merge_type == MERGE_TO_LEFT ||
-          merge_point_info.merge_type == MERGE_TO_RIGHT &&
-              route_info_output_.ego_seq ==
-                  merge_point_link->lane_num() -
-                      merge_point_info.merge_lane_sequence + 1) {
+      if ((merge_point_info.merge_type == MERGE_TO_LEFT ||
+           merge_point_info.merge_type == MERGE_TO_RIGHT) &&
+          route_info_output_.ego_seq ==
+              merge_point_link->lane_num() -
+                  merge_point_info.merge_lane_sequence + 1) {
         mlc_decider_scene_type_info_.mlc_scene_type = MERGE_SCENE;
       }
     }
