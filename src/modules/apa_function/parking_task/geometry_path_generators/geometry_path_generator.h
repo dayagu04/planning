@@ -21,6 +21,16 @@ namespace apa_planner {
 // only use for parallel parking, If parallel parking is unified behind, Tlane
 // can be deleted
 
+enum DynamicReplanStatus {
+  DR_INVALID = 0,
+  DR_NOT_REPLAN,
+  DR_REPLAN,
+  DR_FIRST_REVERSE,
+  DR_FIRST_DRIVE,
+  DR_HAS_FR, // has first reverse
+  DR_HAS_FD, // has first drive
+};
+
 struct TlaneCorner {
   Eigen::Vector2d A = Eigen::Vector2d::Zero();
   Eigen::Vector2d B = Eigen::Vector2d::Zero();
@@ -146,7 +156,7 @@ struct GeometryPathInput {
   bool is_simulation = false;
 
   bool enable_smart_fold_mirror = false;
-  int parallel_replan_again_ = 0;
+  DynamicReplanStatus parallel_replan_again_ = DR_INVALID;
   bool invalid_replan = false;
   pnc::geometry_lib::PathPoint  last_target_pose_= pnc::geometry_lib::PathPoint() ;
 
