@@ -37,12 +37,12 @@ ResultTrajectoryGenerator::ResultTrajectoryGenerator(
 
 void ResultTrajectoryGenerator::Init() {
   const int N = config_.trajectory_time_length / config_.planning_dt;
-  t_vec_.resize(N + 1);
-  s_vec_.resize(N + 1);
-  l_vec_.resize(N + 1);
-  curvature_vec_.resize(N + 1);
-  dkappa_vec_.resize(N + 1);
-  ddkappa_vec_.resize(N + 1);
+  t_vec_.reserve(static_cast<size_t>(N + 1));
+  s_vec_.reserve(static_cast<size_t>(N + 1));
+  l_vec_.reserve(static_cast<size_t>(N + 1));
+  curvature_vec_.reserve(static_cast<size_t>(N + 1));
+  dkappa_vec_.reserve(static_cast<size_t>(N + 1));
+  ddkappa_vec_.reserve(static_cast<size_t>(N + 1));
 }
 
 bool ResultTrajectoryGenerator::Execute() {
@@ -93,6 +93,18 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   pnc::mathlib::spline ddkappa_t_spline;
 
   auto const N = traj_points.size();
+  if (N == 0) {
+    ILOG_ERROR << "ResultTrajectoryGenerator::TrajectoryGenerator traj_points is empty";
+    return false;
+  }
+  if (t_vec_.size() != N) {
+    t_vec_.resize(N);
+    s_vec_.resize(N);
+    l_vec_.resize(N);
+    curvature_vec_.resize(N);
+    dkappa_vec_.resize(N);
+    ddkappa_vec_.resize(N);
+  }
 
   const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
