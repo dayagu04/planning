@@ -230,6 +230,8 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   // prepare simulation
   InitSimulation();
 
+  DecideExpandMirrorCommand();
+
   // check planning status
   if (CheckPlanSkip()) {
     return;
