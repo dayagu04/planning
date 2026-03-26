@@ -88,19 +88,19 @@ class EgoLaneTrackManger {
       bool &is_manual_lane_change);
 
   bool CheckIfInRampSelectSplit(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRampSelectSplitForSdpro(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRamp(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRampForSdpro(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   double ComputeTargetLaneSpecifiedRangeCurvature(
@@ -256,7 +256,8 @@ class EgoLaneTrackManger {
       const LaneCurvInfo &lane_curv_info, double &road_boundary_collision_cost,
       const std::shared_ptr<VirtualLane> &relative_id_lane);
 
-  double EWMAFilter(double current_value, double alpha, double& filtered_history);
+  double EWMAFilter(double current_value, double alpha,
+                    double &filtered_history);
 
  private:
   planning::framework::Session *session_ = nullptr;
