@@ -45,6 +45,8 @@ const float kMaxTurnRadius = 100000.0;
 #define PLOT_ALL_SUCCESS_CURVE_PATH_FIRST_GEAR_SWITCH_POSE (0)
 #define DEBUG_SUCCESS_CURVE_PATH_INFO (0)
 
+#define PLOT_ALL_BEST_CURVE_PATH (0)
+
 const bool HybridAStarPathGenerator::Init() {
   config_.InitConfig();
 
@@ -268,6 +270,23 @@ void HybridAStarPathGenerator::CalcNodeHCost(
   next_node->SetHeuCost(
       std::max({dp_cost, curve_path_cost, euler_dist_cost, heading_cost}));
 }
+
+HybridAStarPathGenerator::CurveNodeScoreParam
+HybridAStarPathGenerator::BuildCurveNodeScoreParam() const {
+  return CurveNodeScoreParam();
+}
+
+void HybridAStarPathGenerator::FillCurveNodeBaseCost(
+    const CurveNode& curve_node, const CurveNodeScoreParam& score_param,
+    PathCompareCost& cost) const {}
+
+void HybridAStarPathGenerator::FillCurveNodeObsDistCost(
+    CurveNode& curve_node, const CurveNodeScoreParam& score_param,
+    PathCompareCost& cost) {}
+
+void HybridAStarPathGenerator::FillCurveNodeGearSwitchCost(
+    const CurveNode& curve_node, const CurveNodeScoreParam& score_param,
+    PathCompareCost& cost) {}
 
 const bool HybridAStarPathGenerator::AnalyticExpansion(
     const AnalyticExpansionRequest& request) {
@@ -1645,12 +1664,6 @@ bool HybridAStarPathGenerator::UpdateObsDistRelativeSlot(
   return true;
 }
 
-const float HybridAStarPathGenerator::CalcGearChangePoseCost(
-    const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
-    const float gear_switch_penalty, const float length_penalty) {
-  return 0.0f;
-}
-
 void HybridAStarPathGenerator::UpdateInterestingAreaCache() {
   interesting_area_min_x_ = static_cast<float>(interesting_area_.min_[0]);
   interesting_area_max_x_ = static_cast<float>(interesting_area_.max_[0]);
@@ -1810,6 +1823,8 @@ const bool HybridAStarPathGenerator::UpdateOnce(
   }
 
   LogUpdateOnceSummary(search_start_time, curve_node_to_goal_vec);
+
+  result_.solve_number = curve_node_to_goal_vec.size();
 
   if (curve_node_to_goal_vec.empty()) {
     ILOG_ERROR << "there are no path";
@@ -2018,11 +2033,56 @@ const bool HybridAStarPathGenerator::BackwardPassByCurveNode(
 }
 
 void HybridAStarPathGenerator::ChooseBestCurveNode(
-    std::vector<CurveNode>& curve_node_vec, CurveNode& best_curve_node) {
-  if (curve_node_vec.empty()) {
-    return;
+    std::vector<CurveNode>& curve_node_to_goal_vec,
+    CurveNode& best_curve_node_to_goal) {
+  const CurveNodeScoreParam score_param = BuildCurveNodeScoreParam();
+  bool has_best_curve_node = false;
+  PathCompareCost best_cost;
+#if PLOT_ALL_BEST_CURVE_PATH
+  std::vector<std::pair<PathCompareCost, size_t>> ranked_costs;
+  ranked_costs.reserve(curve_node_to_goal_vec.size());
+#endif
+
+  for (size_t i = 0; i < curve_node_to_goal_vec.size(); ++i) {
+    PathCompareCost cost;
+    CurveNode& temp_node = curve_node_to_goal_vec[i];
+    FillCurveNodeBaseCost(temp_node, score_param, cost);
+    FillCurveNodeObsDistCost(temp_node, score_param, cost);
+    FillCurveNodeGearSwitchCost(temp_node, score_param, cost);
+    cost.GetTotalCost();
+#if PLOT_ALL_BEST_CURVE_PATH
+    ranked_costs.emplace_back(cost, i);
+#endif
+    if (!has_best_curve_node || cost < best_cost) {
+      best_cost = cost;
+      best_curve_node_to_goal = temp_node;
+      has_best_curve_node = true;
+    }
   }
-  best_curve_node = curve_node_vec.front();
+
+#if PLOT_ALL_BEST_CURVE_PATH
+  std::sort(
+      ranked_costs.begin(), ranked_costs.end(),
+      [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+  all_success_curve_path_debug_.clear();
+  all_success_path_first_gear_switch_pose_debug_.clear();
+  for (const auto& pair : ranked_costs) {
+    if (all_success_curve_path_debug_.size() > 20) {
+      break;
+    }
+    pair.first.PrintInfo();
+
+    curve_node_to_goal_vec[pair.second].GetGearSwitchPose().PrintInfo();
+    curve_node_to_goal_vec[pair.second].GetNextGearSwitchPose().PrintInfo();
+
+    // curve_node_to_goal_vec[pair.second].GetLPLPath().PrintInfo();
+
+    all_success_curve_path_debug_.emplace_back(
+        curve_node_to_goal_vec[pair.second].GetCurvePath());
+    all_success_path_first_gear_switch_pose_debug_.emplace_back(
+        curve_node_to_goal_vec[pair.second].GetGearSwitchPose());
+  }
+#endif
   return;
 }
 

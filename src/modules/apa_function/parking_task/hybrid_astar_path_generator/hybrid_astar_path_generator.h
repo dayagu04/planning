@@ -93,6 +93,16 @@ class HybridAStarPathGenerator : public ParkingTask {
     double generate_next_node_time_ms = 0.0;
   };
 
+  struct CurveNodeScoreParam {
+    float gear_change_penalty;
+    float length_penalty;
+    float unsuitable_last_line_length_penalty;
+    float kappa_change_penalty;
+    float last_path_kappa_change_penalty;
+    float lat_err_penalty;
+    float heading_err_penalty;
+  };
+
   enum class PreSearchPhaseOutcome {
     CONTINUE_FORMAL_SEARCH,
     RETURN_SUCCESS,
@@ -123,13 +133,13 @@ class HybridAStarPathGenerator : public ParkingTask {
   void SyncSearchPhaseTimeCostToResult();
   const bool FinalizeUpdate(const bool search_success);
   void LogUpdateSummary() const;
-  virtual const bool RunFormalSearch(const SearchConfigSnapshot& snapshot);
   PathColDetBuffer BuildFormalSearchPathColDetBuffer() const;
-  virtual const std::string GetScenarioPrefix() const;
+  const std::string GetScenarioPrefix() const;
   const bool AnalyticExpansion(const AnalyticExpansionRequest& request);
   const bool CheckNodeShouldDelete(const NodeDeleteRequest& request);
   void DebugCurvePath(const CurvePath& path);
   void GenDecelerPointss();
+  void UpdateInterestingAreaCache();
 
   const CarMotion GenerateCarMotion(const float radius,
                                     const AstarPathGear gear);
@@ -208,6 +218,9 @@ class HybridAStarPathGenerator : public ParkingTask {
   void DebugNodePath(const NodePath& path,
                      const AstarPathGear gear = AstarPathGear::NONE);
 
+  void ChooseBestCurveNode(std::vector<CurveNode>& curve_node_to_goal_vec,
+                           CurveNode& best_curve_node_to_goal);
+
   virtual void UpdatePoseBoundary() = 0;
   virtual void ConfigureSearchBudget() = 0;
 
@@ -231,15 +244,21 @@ class HybridAStarPathGenerator : public ParkingTask {
       Node3d* next_node,
       const AnalyticExpansionRequest& analytic_expansion_request);
 
-  virtual void ChooseBestCurveNode(
-      std::vector<CurveNode>& curve_node_to_goal_vec,
-      CurveNode& best_curve_node_to_goal);
+  virtual CurveNodeScoreParam BuildCurveNodeScoreParam() const;
 
-  virtual const float CalcGearChangePoseCost(
-      const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
-      const float gear_switch_penalty, const float length_penalty);
+  virtual void FillCurveNodeBaseCost(const CurveNode& curve_node,
+                                     const CurveNodeScoreParam& score_param,
+                                     PathCompareCost& cost) const;
 
-  void UpdateInterestingAreaCache();
+  virtual void FillCurveNodeObsDistCost(CurveNode& curve_node,
+                                        const CurveNodeScoreParam& score_param,
+                                        PathCompareCost& cost);
+
+  virtual void FillCurveNodeGearSwitchCost(
+      const CurveNode& curve_node, const CurveNodeScoreParam& score_param,
+      PathCompareCost& cost);
+
+  virtual const bool RunFormalSearch(const SearchConfigSnapshot& snapshot);
 
  protected:
   PlannerOpenSpaceConfig config_;

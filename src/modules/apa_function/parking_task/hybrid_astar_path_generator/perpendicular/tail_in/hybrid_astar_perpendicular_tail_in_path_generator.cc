@@ -69,8 +69,6 @@ link_pt_line::LinkPtLineInput<float> BuildGearSwitchPoseLPLInput(
 }
 }  // namespace
 
-#define PLOT_ALL_BEST_CURVE_PATH (0)
-
 void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
     Node3d* current_node, Node3d* next_node) {
   HybridAStarPathGenerator::CalcNodeGCost(current_node, next_node);
@@ -547,12 +545,16 @@ void HybridAStarPerpendicularTailInPathGenerator::FillCurveNodeBaseCost(
   const float unsuitable_last_line_length =
       (last_line_length < min_last_line_length)
           ? (min_last_line_length - last_line_length)
-          : (last_line_length > max_last_line_length)
-                ? (last_line_length - max_last_line_length)
-                : 0.0f;
+      : (last_line_length > max_last_line_length)
+          ? (last_line_length - max_last_line_length)
+          : 0.0f;
   cost.unsuitable_last_line_length_cost =
       unsuitable_last_line_length *
       score_param.unsuitable_last_line_length_penalty;
+
+  if (request_.adjust_pose) {
+    cost.kappa_change_cost = 0.0;
+  }
 }
 
 void HybridAStarPerpendicularTailInPathGenerator::FillCurveNodeObsDistCost(
@@ -574,7 +576,6 @@ void HybridAStarPerpendicularTailInPathGenerator::FillCurveNodeObsDistCost(
 
 void HybridAStarPerpendicularTailInPathGenerator::FillCurveNodeGearSwitchCost(
     const CurveNode& curve_node, const CurveNodeScoreParam& score_param,
-    const float cur_theta, const float end_theta, const float cur_theta_err,
     PathCompareCost& cost) {
   if (curve_node.GearSwitchNode() == nullptr) {
     return;
@@ -582,6 +583,12 @@ void HybridAStarPerpendicularTailInPathGenerator::FillCurveNodeGearSwitchCost(
 
   const auto& gear_switch_pose = curve_node.GetGearSwitchPose();
   const AstarPathGear cur_gear = curve_node.GetCurGear();
+
+  const float cur_theta = request_.ego_info_under_slot.cur_pose.GetTheta();
+  const float end_theta = end_node_->GetPhi();
+  const float cur_theta_err =
+      std::fabs(geometry_lib::NormalizeAngle(cur_theta - end_theta)) *
+      common_math::kRad2DegF;
 
   cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
       gear_switch_pose, cur_gear, score_param.gear_change_penalty,
@@ -764,75 +771,6 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPosePreferXCost(
   }
 
   return 0.0f;
-}
-
-void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
-    std::vector<CurveNode>& curve_node_to_goal_vec,
-    CurveNode& best_curve_node_to_goal) {
-  const CurveNodeScoreParam score_param = BuildCurveNodeScoreParam();
-
-  result_.solve_number = curve_node_to_goal_vec.size();
-
-  const float cur_theta = request_.ego_info_under_slot.cur_pose.GetTheta();
-  const float end_theta = end_node_->GetPhi();
-  const float cur_theta_err =
-      std::fabs(geometry_lib::NormalizeAngle(cur_theta - end_theta)) *
-      common_math::kRad2DegF;
-
-  bool has_best_curve_node = false;
-  PathCompareCost best_cost;
-#if PLOT_ALL_BEST_CURVE_PATH
-  std::vector<std::pair<PathCompareCost, size_t>> ranked_costs;
-  ranked_costs.reserve(curve_node_to_goal_vec.size());
-#endif
-
-  for (size_t i = 0; i < curve_node_to_goal_vec.size(); ++i) {
-    PathCompareCost cost;
-    CurveNode& temp_node = curve_node_to_goal_vec[i];
-
-    FillCurveNodeBaseCost(temp_node, score_param, cost);
-    FillCurveNodeObsDistCost(temp_node, score_param, cost);
-    FillCurveNodeGearSwitchCost(temp_node, score_param, cur_theta, end_theta,
-                                cur_theta_err, cost);
-
-    if (request_.adjust_pose) {
-      cost.kappa_change_cost = 0.0;
-    }
-
-    cost.GetTotalCost();
-#if PLOT_ALL_BEST_CURVE_PATH
-    ranked_costs.emplace_back(cost, i);
-#endif
-    if (!has_best_curve_node || cost < best_cost) {
-      best_cost = cost;
-      best_curve_node_to_goal = temp_node;
-      has_best_curve_node = true;
-    }
-  }
-
-#if PLOT_ALL_BEST_CURVE_PATH
-  std::sort(
-      ranked_costs.begin(), ranked_costs.end(),
-      [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
-  all_success_curve_path_debug_.clear();
-  all_success_path_first_gear_switch_pose_debug_.clear();
-  for (const auto& pair : ranked_costs) {
-    if (all_success_curve_path_debug_.size() > 20) {
-      break;
-    }
-    pair.first.PrintInfo();
-
-    curve_node_to_goal_vec[pair.second].GetGearSwitchPose().PrintInfo();
-    curve_node_to_goal_vec[pair.second].GetNextGearSwitchPose().PrintInfo();
-
-    // curve_node_to_goal_vec[pair.second].GetLPLPath().PrintInfo();
-
-    all_success_curve_path_debug_.emplace_back(
-        curve_node_to_goal_vec[pair.second].GetCurvePath());
-    all_success_path_first_gear_switch_pose_debug_.emplace_back(
-        curve_node_to_goal_vec[pair.second].GetGearSwitchPose());
-  }
-#endif
 }
 
 const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
