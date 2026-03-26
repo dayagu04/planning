@@ -36,6 +36,7 @@ class Node3d {
   double GetBoundaryCost() const { return boundary_cost_; }
   double GetCenterCost() const { return center_cost_; }
   double GetMotionCost() const { return motion_cost_; }
+  double GetStitchingCost() const { return stitching_cost_; }
   int GetGridX() const { return x_grid_; }
   int GetGridY() const { return y_grid_; }
   int GetGridPhi() const { return phi_grid_; }
@@ -65,6 +66,7 @@ class Node3d {
   void SetBoundaryCost(double cost) { boundary_cost_ = cost; }
   void SetCenterCost(double cost) { center_cost_ = cost; }
   void SetMotionCost(double cost) { motion_cost_ = cost; }
+  void SetStitchingCost(double cost) { stitching_cost_ = cost; }
   void SetSteer(double steering) { steering_ = steering; }
   void SetS(double s) { s_ = s; }
   void SetL(double l) { l_ = l; }
@@ -101,6 +103,7 @@ class Node3d {
   double boundary_cost_ = 0.0;
   double center_cost_ = 0.0;
   double motion_cost_ = 0.0;
+  double stitching_cost_ = 0.0;
   double min_dist_ = 0.0;
   double dist_cost_ = 0.0;
   double area_cost_ = 0.0;

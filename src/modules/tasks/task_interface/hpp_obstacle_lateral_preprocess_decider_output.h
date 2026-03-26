@@ -84,6 +84,10 @@ struct ObstacleCluster {
 };
 
 struct ObstacleClusterContainer {
+  void Clear() {
+    obs_id_to_cluster_id.clear();
+    obstacle_clusters.clear();
+  };
   std::unordered_map<int, int> obs_id_to_cluster_id;  // 原始ID -> 聚类ID
   std::vector<ObstacleCluster> obstacle_clusters;     // 聚类列表
 };

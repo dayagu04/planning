@@ -257,11 +257,11 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
     if g_is_display_enu:
       path_x_vec, path_y_vec = hybrid_ara_path_cost.x, hybrid_ara_path_cost.y
       path_xn_vec, path_yn_vec = coord_tf.global_to_local(hybrid_ara_path_cost.x, hybrid_ara_path_cost.y)
-      agent_cost_vec, boundary_cost_vec, center_cost_vec, motion_cost_vec = hybrid_ara_path_cost.agent_cost, hybrid_ara_path_cost.boundary_cost, hybrid_ara_path_cost.center_cost, hybrid_ara_path_cost.motion_cost
+      agent_cost_vec, boundary_cost_vec, center_cost_vec, motion_cost_vec, stitching_cost_vec = hybrid_ara_path_cost.agent_cost, hybrid_ara_path_cost.boundary_cost, hybrid_ara_path_cost.center_cost, hybrid_ara_path_cost.motion_cost, hybrid_ara_path_cost.stitching_cost
     else:
       path_x_vec, path_y_vec = coord_tf.global_to_local(hybrid_ara_path_cost.x, hybrid_ara_path_cost.y)
       path_xn_vec, path_yn_vec = hybrid_ara_path_cost.x, hybrid_ara_path_cost.y
-      agent_cost_vec, boundary_cost_vec, center_cost_vec, motion_cost_vec = hybrid_ara_path_cost.agent_cost, hybrid_ara_path_cost.boundary_cost, hybrid_ara_path_cost.center_cost, hybrid_ara_path_cost.motion_cost
+      agent_cost_vec, boundary_cost_vec, center_cost_vec, motion_cost_vec, stitching_cost_vec = hybrid_ara_path_cost.agent_cost, hybrid_ara_path_cost.boundary_cost, hybrid_ara_path_cost.center_cost, hybrid_ara_path_cost.motion_cost, hybrid_ara_path_cost.stitching_cost
 
     hybrid_ara_path_data['data_arastar_cost'].data.update({
       'x_vec': path_x_vec,
@@ -273,6 +273,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
       'boundary_cost_vec': boundary_cost_vec,
       'center_cost_vec': center_cost_vec,
       'motion_cost_vec': motion_cost_vec,
+      'stitching_cost_vec': stitching_cost_vec,
     })
 
     # hybrid_ara_expand
@@ -292,6 +293,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
     expand_cur_node_directly_behind_cost_vec = []
     expand_cur_node_pass_interval_cost_vec = []
     expand_cur_node_nearing_agent_cost_vec = []
+    expand_cur_node_stitching_cost_vec = []
 
     expand_openlist_vec = []
     expand_openlist_node_x_vec = []
@@ -309,6 +311,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
     expand_openlist_area_cost_vec = []
     expand_openlist_directly_behind_cost_vec = []
     expand_openlist_pass_interval_cost_vec = []
+    expand_openlist_stitching_cost_vec = []
 
     select_openlist_node_x_vec = []
     select_openlist_node_y_vec = []
@@ -319,6 +322,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
     select_openlist_motion_cost_vec = []
     select_openlist_heuristic_cost_vec = []
     select_openlist_total_cost_vec = []
+    select_openlist_stitching_cost_vec = []
 
     if expand_step > 0 and len(hybrid_ara_expand.hybrid_ara_expand) > 1:
       for i in range(min(expand_step, len(hybrid_ara_expand.hybrid_ara_expand))):
@@ -337,6 +341,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
         expand_cur_node_area_cost_vec.append(hybrid_ara_expand.hybrid_ara_expand[i].current_node.area_cost)
         expand_cur_node_directly_behind_cost_vec.append(hybrid_ara_expand.hybrid_ara_expand[i].current_node.directly_behind_cost)
         expand_cur_node_pass_interval_cost_vec.append(hybrid_ara_expand.hybrid_ara_expand[i].current_node.pass_interval_cost)
+        expand_cur_node_stitching_cost_vec.append(hybrid_ara_expand.hybrid_ara_expand[i].current_node.stitching_cost)
         expand_openlist_vec.append(hybrid_ara_expand.hybrid_ara_expand[i].open_list)
 
       # expand_line_x_vec = []
@@ -360,6 +365,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
         expand_openlist_area_cost_vec.append(expand_openlist_vec[expand_index][j].area_cost)
         expand_openlist_directly_behind_cost_vec.append(expand_openlist_vec[expand_index][j].directly_behind_cost)
         expand_openlist_pass_interval_cost_vec.append(expand_openlist_vec[expand_index][j].pass_interval_cost)
+        expand_openlist_stitching_cost_vec.append(expand_openlist_vec[expand_index][j].stitching_cost)
 
         if j in expand_nodes_index:
           select_openlist_node_x_vec.append(expand_openlist_vec[expand_index][j].x)
@@ -371,6 +377,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
           select_openlist_motion_cost_vec.append(expand_openlist_vec[expand_index][j].motion_cost)
           select_openlist_heuristic_cost_vec.append(expand_openlist_vec[expand_index][j].heuristic_cost)
           select_openlist_total_cost_vec.append(expand_openlist_vec[expand_index][j].total_cost)
+          select_openlist_stitching_cost_vec.append(expand_openlist_vec[expand_index][j].stitching_cost)
         # start_node_x, start_node_y = expand_cur_node_x_vec[i], expand_cur_node_y_vec[i]
         # end_node_x, end_node_y = expand_openlist_vec[i][j].x, expand_openlist_vec[i][j].y
         # if not g_is_display_enu:
@@ -457,6 +464,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
       'area_cost_vec': expand_cur_node_area_cost_vec,
       'directly_behind_cost_vec': expand_cur_node_directly_behind_cost_vec,
       'pass_interval_cost_vec': expand_cur_node_pass_interval_cost_vec,
+      'stitching_cost_vec': expand_cur_node_stitching_cost_vec,
     })
 
     hybrid_ara_path_data['data_ara_expand_open_list_node'].data.update({
@@ -475,6 +483,7 @@ def update_hybrid_ara_path_data(fig2, bag_loader, bag_time, local_view_data, hyb
       'area_cost_vec': expand_openlist_area_cost_vec,
       'directly_behind_cost_vec': expand_openlist_directly_behind_cost_vec,
       'pass_interval_cost_vec': expand_openlist_pass_interval_cost_vec,
+      'stitching_cost_vec': expand_openlist_stitching_cost_vec,
     })
 
     hybrid_ara_path_data['data_ara_expand_cur_node_car'].data.update({
@@ -746,7 +755,8 @@ def load_hybrid_ara_path_figure(fig1):
                                           'nearing_agent_cost_vec':[],
                                           'boundary_cost_vec':[],
                                           'center_cost_vec':[],
-                                          'motion_cost_vec':[]})
+                                          'motion_cost_vec':[],
+                                          'stitching_cost_vec':[]})
 
   data_ara_expand_cur_node = ColumnDataSource(data = {'x_vec':[],
                                                       'y_vec':[],
@@ -762,7 +772,8 @@ def load_hybrid_ara_path_figure(fig1):
                                                       'dist_cost_vec':[],
                                                       'area_cost_vec':[],
                                                       'directly_behind_cost_vec':[],
-                                                      'pass_interval_cost_vec':[]})
+                                                      'pass_interval_cost_vec':[],
+                                                      'stitching_cost_vec':[]})
 
   data_ara_expand_open_list_node = ColumnDataSource(data = {'x_vec':[],
                                                             'y_vec':[],
@@ -778,7 +789,8 @@ def load_hybrid_ara_path_figure(fig1):
                                                             'dist_cost_vec':[],
                                                             'area_cost_vec':[],
                                                             'directly_behind_cost_vec':[],
-                                                            'pass_interval_cost_vec':[]})
+                                                            'pass_interval_cost_vec':[],
+                                                            'stitching_cost_vec':[]})
 
   data_expand_line = ColumnDataSource(data = {'line_x_vec':[],
                                               'line_y_vec':[]})
@@ -907,7 +919,8 @@ def load_hybrid_ara_path_figure(fig1):
 
   fig1.line('y_vec','x_vec', source = data_arastar_cost, line_width = 4, line_color = "orange", line_dash = 'solid', line_alpha = 0.7, legend_label = 'hybrid ara path cost', visible=True)
   f2 = fig1.circle('y_vec','x_vec', source = data_arastar_cost, size = 6, line_width = 4, line_color = "red", line_alpha = 0.7, fill_color = 'gold',fill_alpha = 0.7, legend_label = 'hybrid ara path cost')
-  hover2 = HoverTool(renderers=[f2], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('agent_cost', '@agent_cost_vec'),('nearing_agent_cost','@nearing_agent_cost_vec'), ('boundary_cost', '@boundary_cost_vec'), ('center_cost', '@center_cost_vec'), ('motion_cost', '@motion_cost_vec')])
+  hover2 = HoverTool(renderers=[f2], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('agent_cost', '@agent_cost_vec'),('nearing_agent_cost','@nearing_agent_cost_vec'), ('boundary_cost', '@boundary_cost_vec'), ('center_cost', '@center_cost_vec'), ('motion_cost', '@motion_cost_vec'), ('stitching_cost', '@stitching_cost_vec')])
+  # hover2 = HoverTool(renderers=[f2], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('agent_cost', '@agent_cost_vec'), ('boundary_cost', '@boundary_cost_vec'), ('center_cost', '@center_cost_vec'), ('motion_cost', '@motion_cost_vec'), ('stitching_cost', '@stitching_cost_vec')])
   fig1.add_tools(hover2)
 
   # fig1.multi_line('line_y_vec', 'line_x_vec', source = data_expand_line, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'hybrid ara expand')
@@ -915,10 +928,14 @@ def load_hybrid_ara_path_figure(fig1):
   fig1.patches('patch_y_vec', 'patch_x_vec', source = data_ara_expand_open_list_node_car, fill_color = "grey", fill_alpha = 0.5, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'hybrid ara expand pose', visible=False)
   fig1.patches('patch_y_vec', 'patch_x_vec', source = data_ara_select_open_list_node_car, fill_color = "grey", fill_alpha = 0.5, line_color = "black", line_alpha = 0.3, line_width = 1,legend_label = 'selete pose')
   f3 = fig1.circle('y_vec','x_vec', source = data_ara_expand_cur_node, size = 8, line_width = 4, line_color = "red", line_alpha = 0.7, fill_color = 'red',fill_alpha = 0.7, legend_label = 'hybrid ara expand')
-  hover3 = HoverTool(renderers=[f3], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('motion_cost', '@motion_cost_vec{0.0000}'), ('boundary_cost', '@boundary_cost_vec{0.0000}'), ('nearing_agent_cost', '@nearing_agent_cost_vec{0.0000}'),('dist_cost', '@dist_cost_vec{0.0000}'), ('area_cost', '@area_cost_vec{0.0000}'), ('directly_behind_cost', '@directly_behind_cost_vec{0.0000}'), ('pass_interval_cost', '@pass_interval_cost_vec{0.0000}'), ('agent_cost', '@agent_cost_vec{0.0000}'), ('center_cost', '@center_cost_vec{0.0000}'), ('heuristic_cost_vec', '@heuristic_cost_vec{0.0000}'), ('total_cost_vec', '@total_cost_vec{0.0000}'), ('min_dist_vec', '@min_dist_vec{0.0000}')])
+  hover3 = HoverTool(renderers=[f3], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('motion_cost', '@motion_cost_vec{0.0000}'), ('boundary_cost', '@boundary_cost_vec{0.0000}'), ('nearing_agent_cost', '@nearing_agent_cost_vec{0.0000}'),('dist_cost', '@dist_cost_vec{0.0000}'), ('area_cost', '@area_cost_vec{0.0000}'), ('directly_behind_cost', '@directly_behind_cost_vec{0.0000}'), ('pass_interval_cost', '@pass_interval_cost_vec{0.0000}'), ('agent_cost', '@agent_cost_vec{0.0000}'), ('stitching_cost', '@stitching_cost_vec{0.0000}'), ('center_cost', '@center_cost_vec{0.0000}'), ('heuristic_cost_vec', '@heuristic_cost_vec{0.0000}'), ('total_cost_vec', '@total_cost_vec{0.0000}'), ('min_dist_vec', '@min_dist_vec{0.0000}')])
   fig1.add_tools(hover3)
   f4 = fig1.circle('y_vec','x_vec', source = data_ara_expand_open_list_node, size = 8, line_width = 4, line_color = "grey", line_alpha = 0.7, fill_color = 'grey',fill_alpha = 0.7, legend_label = 'hybrid ara expand')
-  hover4 = HoverTool(renderers=[f4], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('motion_cost', '@motion_cost_vec{0.0000}'), ('boundary_cost', '@boundary_cost_vec{0.0000}'), ('dist_cost', '@dist_cost_vec{0.0000}'), ('nearing_agent_cost', '@nearing_agent_cost_vec{0.0000}'), ('area_cost', '@area_cost_vec{0.0000}'), ('directly_behind_cost', '@directly_behind_cost_vec{0.0000}'), ('pass_interval_cost', '@pass_interval_cost_vec{0.0000}'), ('agent_cost', '@agent_cost_vec{0.0000}'), ('center_cost', '@center_cost_vec{0.0000}'), ('heuristic_cost_vec', '@heuristic_cost_vec{0.0000}'), ('total_cost_vec', '@total_cost_vec{0.0000}'), ('min_dist_vec', '@min_dist_vec{0.0000}')])
+  hover4 = HoverTool(renderers=[f4], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('motion_cost', '@motion_cost_vec{0.0000}'), ('boundary_cost', '@boundary_cost_vec{0.0000}'), ('dist_cost', '@dist_cost_vec{0.0000}'), ('nearing_agent_cost', '@nearing_agent_cost_vec{0.0000}'), ('area_cost', '@area_cost_vec{0.0000}'), ('directly_behind_cost', '@directly_behind_cost_vec{0.0000}'), ('pass_interval_cost', '@pass_interval_cost_vec{0.0000}'), ('stitching_cost', '@stitching_cost_vec{0.0000}'), ('agent_cost', '@agent_cost_vec{0.0000}'), ('center_cost', '@center_cost_vec{0.0000}'), ('heuristic_cost_vec', '@heuristic_cost_vec{0.0000}'), ('total_cost_vec', '@total_cost_vec{0.0000}'), ('min_dist_vec', '@min_dist_vec{0.0000}')])
+  # hover3 = HoverTool(renderers=[f3], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('motion_cost', '@motion_cost_vec{0.0000}'), ('boundary_cost', '@boundary_cost_vec{0.0000}'), ('dist_cost', '@dist_cost_vec{0.0000}'), ('area_cost', '@area_cost_vec{0.0000}'), ('directly_behind_cost', '@directly_behind_cost_vec{0.0000}'), ('pass_interval_cost', '@pass_interval_cost_vec{0.0000}'), ('stitching_cost', '@stitching_cost_vec{0.0000}'), ('agent_cost', '@agent_cost_vec{0.0000}'), ('center_cost', '@center_cost_vec{0.0000}'), ('heuristic_cost_vec', '@heuristic_cost_vec{0.0000}'), ('total_cost_vec', '@total_cost_vec{0.0000}'), ('min_dist_vec', '@min_dist_vec{0.0000}')])
+  fig1.add_tools(hover3)
+  # f4 = fig1.circle('y_vec','x_vec', source = data_ara_expand_open_list_node, size = 8, line_width = 4, line_color = "grey", line_alpha = 0.7, fill_color = 'grey',fill_alpha = 0.7, legend_label = 'hybrid ara expand')
+  # hover4 = HoverTool(renderers=[f4], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec'), ('motion_cost', '@motion_cost_vec{0.0000}'), ('boundary_cost', '@boundary_cost_vec{0.0000}'), ('dist_cost', '@dist_cost_vec{0.0000}'), ('area_cost', '@area_cost_vec{0.0000}'), ('directly_behind_cost', '@directly_behind_cost_vec{0.0000}'), ('pass_interval_cost', '@pass_interval_cost_vec{0.0000}'), ('stitching_cost', '@stitching_cost_vec{0.0000}'), ('agent_cost', '@agent_cost_vec{0.0000}'), ('center_cost', '@center_cost_vec{0.0000}'), ('heuristic_cost_vec', '@heuristic_cost_vec{0.0000}'), ('total_cost_vec', '@total_cost_vec{0.0000}'), ('min_dist_vec', '@min_dist_vec{0.0000}')])
   fig1.add_tools(hover4)
   # fig1.patches('obstacles_y', 'obstacles_x', source = ara_obs_data, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'ara obj')
   # fig1.text('pose_y', 'pose_x', text = 'obstacles_label', source = ara_obs_data, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ara_obs_info')

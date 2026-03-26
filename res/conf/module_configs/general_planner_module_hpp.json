@@ -1050,6 +1050,8 @@
     "center_cost_weight": 0.3,
     "motion_cost_weight": 0.0,
     "boundary_cost_weight": 0.1,
+    "stitching_cost_weight": 150.0,
+    "stitching_cost_time_decay_factor": 0.0,
     "boundary_soft_extra_buffer": 0.15,
     "crosslinebuffer": 0.5,
     "enable_middle_final_node": false,
@@ -1061,6 +1063,12 @@
     "longitudinal_extend": 0.3,
     "lateral_extend": 0.35,
     "search_once": true,
+    "use_occ_s_dist": 7
+  },
+  "hpp_lateral_obstacle_decider": {
+    "relative_nudge_buffer": 0.8,
+    "absolute_nudge_buffer": 2.0,
+    "ego_detour_safe_dis": 0.5,
     "use_occ_s_dist": 7
   }
 }
