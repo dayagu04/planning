@@ -42,6 +42,7 @@ import "reference_path_smooth.proto";
 import "joint_decision_planner.proto";
 import "static_analysis_result.proto";
 import "hpp_speed_limit_decider_debug.proto";
+import "hpp_lateral_obstacle_decider_result.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -169,4 +170,5 @@ message PlanningDebugInfo {
   //HPP debug info
   optional StaticAnalysisResult static_analysis_result = 60;
   optional HppSpeedLimitDeciderDebug  hpp_speed_limit_decider_debug  = 61;
+  optional HppLateralObstacleDeciderResult hpp_lateral_obstacle_decider_result = 62;
 }
