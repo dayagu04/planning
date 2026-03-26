@@ -1,0 +1,78 @@
+syntax = "proto2";
+
+package planning.common;
+
+import "basic_types.proto";
+
+enum LatObstacleDecisionType{
+  LEFT = 0;
+  RIGHT = 1;
+  IGNORE = 2;
+  FOLLOW = 3;
+  PRE_FOLLOW_WITHIN_LANE = 4;
+  PRE_NUDGE = 5;
+  NOT_SET = 6;
+}
+
+enum LatObstacleNudgeLevel {
+  FORBIDDEN_NUDGE = 0;      // 不可绕行
+  RELATIVE_NUDGE = 1;       // 相对安全可绕行
+  ABSOLUTE_NUDGE = 2;       // 绝对安全可绕行
+}
+
+message LatObstacleDecisionInfo {
+  optional LatObstacleDecisionType decision = 1;
+  optional LatObstacleNudgeLevel left_nudge_level = 2;
+  optional LatObstacleNudgeLevel right_nudge_level = 3;
+}
+
+enum ObstacleMotionType{
+ STATIC = 0;           // 静止车辆
+ OPPOSITE_DIR_MOVING = 1;  // 对向运动
+ SAME_DIR_MOVING = 2;      // 同向运动
+ CROSSING_MOVING = 3;      // 横穿运动
+}
+
+enum ObstacleRelPosType{
+  FAR_AWAY = 0;  // 远离自车障碍物
+  MID_FRONT = 1;     // 自车正前方
+  LEFT_FRONT = 2;    // 自车左前方
+  RIGHT_FRONT = 3;   // 自车右前方
+  LEFT_SIDE = 4;     // 自车左侧并排
+  RIGHT_SIDE = 5;    // 自车右侧并排
+  MID_BACK = 6;      // 自车正后方
+  LEFT_BACK = 7;     // 自车左后方
+  RIGHT_BACK = 8;    // 自车右后方
+}
+
+message OriginalObstacle{
+  optional int64 original_id = 1;
+  optional ObstacleRelPosType rel_pos_type = 2;
+  optional ObstacleMotionType motion_type = 3;
+}
+
+message StaticObstacleCluster{
+  message FrenetObstacleBoundary {
+    optional double s_start = 1;
+    optional double s_end = 2;
+    optional double l_start = 3;
+    optional double l_end = 4;
+    optional double obs_2left_road_boundary_mindis = 5; //单个cluster障碍物轮廓边缘到道路边界距离
+    optional double obs_2right_road_boundary_mindis = 6;
+  }
+  optional LatObstacleDecisionType final_decison_result = 1;
+  repeated OriginalObstacle original_obstacle = 2;//单个cluster障碍物中包含的所有原始障碍物
+  optional FrenetObstacleBoundary cluster_obstacle_frenet_boundary = 3;//cluster障碍物s和l边界
+  optional LatObstacleDecisionInfo passage_width_info = 4;
+  optional LatObstacleDecisionInfo relative_pos_info = 5;
+  optional LatObstacleDecisionInfo last_path_info = 6;
+}
+message DynamicObstacle{
+  optional int64 original_id = 1;
+  optional LatObstacleDecisionType final_decison_result = 2;
+}
+
+message HppLateralObstacleDeciderResult{
+  repeated StaticObstacleCluster static_obstacle_clusters = 1;//cluster障碍物只包含静态和低速
+  repeated DynamicObstacle dynamic_obstacle = 2;//单个动态障碍物
+}
