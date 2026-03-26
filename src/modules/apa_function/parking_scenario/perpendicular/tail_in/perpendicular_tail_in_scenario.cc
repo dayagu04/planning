@@ -1961,8 +1961,9 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_s_condition =
       frame_.remain_dist_path < finish_params.max_remain_path_dist;
 
-  bool parking_finish =
-      lon_condition && lat_condition && static_condition && remain_s_condition;
+  // first replan not check remain_s_condition
+  bool parking_finish = lon_condition && lat_condition && static_condition &&
+                        (remain_s_condition || frame_.is_replan_first);
 
   if (parking_finish) {
     return true;
