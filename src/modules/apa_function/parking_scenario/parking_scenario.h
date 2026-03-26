@@ -531,6 +531,8 @@ class ParkingScenario {
       const UseObsHeightMethod use_obs_height_method =
           UseObsHeightMethod::HIGH) const;
 
+  void DecideExpandMirrorCommand();
+
  protected:
   // TODO:
   // 1.

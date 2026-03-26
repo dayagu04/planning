@@ -1961,8 +1961,9 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_s_condition =
       frame_.remain_dist_path < finish_params.max_remain_path_dist;
 
-  bool parking_finish =
-      lon_condition && lat_condition && static_condition && remain_s_condition;
+  // first replan not check remain_s_condition
+  bool parking_finish = lon_condition && lat_condition && static_condition &&
+                        (remain_s_condition || frame_.is_replan_first);
 
   if (parking_finish) {
     return true;
@@ -3778,62 +3779,6 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   }
 
   ILOG_INFO << "decide fold mirror, should not send fold mirror msg";
-
-  return;
-}
-
-void PerpendicularTailInScenario::DecideExpandMirrorCommand() {
-  const ApaParameters& param = apa_param.GetParam();
-  const SmartFoldMirrorParams& smart_fold_mirror_params =
-      param.smart_fold_mirror_params;
-
-  if (!smart_fold_mirror_params.has_smart_fold_mirror) {
-    return;
-  }
-
-  if (frame_.plan_stm.planning_status != PARKING_FINISHED &&
-      frame_.plan_stm.planning_status != PARKING_FAILED) {
-    return;
-  }
-
-  if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
-    return;
-  }
-
-  if (frame_.mirror_command == MirrorCommand::EXPAND) {
-    return;
-  }
-
-  apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
-
-  const auto gjk_col_det_ptr =
-      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
-
-  GJKColDetRequest gjk_col_det_request(
-      false, param.uss_config.use_uss_pt_cloud, CarBodyType::ONLY_MIRROR,
-      ApaObsMovementType::STATIC, param.use_obs_height_method);
-
-  if (gjk_col_det_ptr
-          ->Update(
-              std::vector<geometry_lib::PathPoint>{
-                  apa_world_ptr_->GetMeasureDataManagerPtr()->GetPoseV2()},
-              smart_fold_mirror_params.min_lat_buffer, 0.0, gjk_col_det_request)
-          .col_flag) {
-    return;
-  }
-
-  gjk_col_det_request.movement_type = ApaObsMovementType::MOTION;
-
-  if (gjk_col_det_ptr
-          ->Update(
-              std::vector<geometry_lib::PathPoint>{
-                  apa_world_ptr_->GetMeasureDataManagerPtr()->GetPoseV2()},
-              smart_fold_mirror_params.min_lat_buffer, 0.0, gjk_col_det_request)
-          .col_flag) {
-    return;
-  }
-
-  frame_.mirror_command = MirrorCommand::EXPAND;
 
   return;
 }
