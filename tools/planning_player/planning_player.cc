@@ -1369,8 +1369,8 @@ void PlanningPlayer::RunCloseLoop(
 
 void PlanningPlayer::PerpareTrajectory(
     const struct_msgs::PlanningOutput& plan_msg) {
-  if (plan_msg.planning_request.take_over_req_level >
-      iflyauto::REQUEST_LEVEL_NO_REQ) {
+  if (plan_msg.planning_request.take_over_req_level == iflyauto::REQUEST_LEVEL_MIDDLE &&
+      plan_msg.planning_request.request_reason == iflyauto::REQUEST_REASON_NO_REASON) {
     early_stop_ = true;
     return;
   }
