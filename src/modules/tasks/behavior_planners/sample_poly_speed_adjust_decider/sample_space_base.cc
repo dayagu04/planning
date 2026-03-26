@@ -232,10 +232,10 @@ void STSampleSpaceBase::LinearExtendAgentStBoundaryWithFrenet(
         upper_point.set_acceleration(0.0);
         lower_point.set_extreme_l(2 * agent_half_length);
         upper_point.set_extreme_l(2 * agent_half_length);
-        st_points_pairs.emplace_back(std::move(lower_point),
-                                     std::move(upper_point));
         lower_point.set_l(frenet_l);
         upper_point.set_l(frenet_l);
+        st_points_pairs.emplace_back(std::move(lower_point),
+                                     std::move(upper_point));
       }
     }
   }
