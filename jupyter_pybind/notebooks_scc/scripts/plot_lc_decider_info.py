@@ -15,7 +15,7 @@ from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_20406/trigger/20260124/20260124-10-37-52/data_collection_BESTUNE_E541_20406_EVENT_FUNEXIT_2026-01-24-10-37-52_no_camera.bag.1770123900.open-loop.scc.plan"
+bag_path = "/home/ros/code/bags/data_collection_BESTUNE_E541_20404_EVENT_MANUAL_2026-03-24-11-12-56_1774321956000.bag.1774592561.close-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -135,62 +135,78 @@ def update_lc_data (noa_info, plan_debug_json):
 # 创建日志输出区域（需要在 slider_callback 之前定义）
 log_output = ipywidgets.Output(layout=ipywidgets.Layout(width='100%', height='200px', border='1px solid gray'))
 
+def _fill_or_empty(vec, length):
+  """辅助：vec 非空则原样返回，否则返回 length 个 0"""
+  return vec if len(vec) > 0 else [0] * length
+
+def _update_vel_range(fig, ego_vel_vec):
+  """动态调整速度图纵坐标范围（自车速度 ± 15 kph）"""
+  if len(ego_vel_vec) > 0:
+    avg = sum(ego_vel_vec) / len(ego_vel_vec)
+    margin = 15.0 / 3.6
+    fig.y_range.start = max(0, avg - margin)
+    fig.y_range.end = avg + margin
+
 def update_safety_check_data(plan_debug_json_msg):
-  """更新安全检查数据"""
+  """更新前车和后车的安全检查数据"""
   try:
-    box_longitudinal_buff_vec = plan_debug_json_msg.get('box_longitudinal_buff_vec', [])
-    box_ttc_vec = plan_debug_json_msg.get('box_ttc_vec', [])
-    distance_vec = plan_debug_json_msg.get('distance_vec', [])
-    agent_vel_vec = plan_debug_json_msg.get('agent_vel_vec', [])
-    ego_vel_vec = plan_debug_json_msg.get('ego_vel_vec', [])
-    rear_distance_vec = plan_debug_json_msg.get('rear_distance_vec', [])
+    # ---- 自车速度（前后车共用） ----
+    ego_vel = plan_debug_json_msg.get('ego_vel_vec', [])
 
-    # 调试输出
-    print(f"安全检查数据长度: buff={len(box_longitudinal_buff_vec)}, ttc={len(box_ttc_vec)}, dist={len(distance_vec)}")
-    print(f"速度数据长度: agent={len(agent_vel_vec)}, ego={len(ego_vel_vec)}, rear_dist={len(rear_distance_vec)}")
-    print(f"压线率: lc_ego_press_line_ratio={plan_debug_json_msg.get('lc_ego_press_line_ratio', 'N/A')}")
-    if len(box_longitudinal_buff_vec) > 0:
-      print(f"box_longitudinal_buff_vec 前3个值: {box_longitudinal_buff_vec[:3]}")
+    # ---- 后车数据 ----
+    rear_buff = plan_debug_json_msg.get('rear_box_longitudinal_buff_vec', [])
+    rear_ttc = plan_debug_json_msg.get('rear_box_ttc_vec', [])
+    rear_dist = plan_debug_json_msg.get('rear_distance_vec', [])
+    rear_agent_vel = plan_debug_json_msg.get('rear_agent_vel_vec', [])
+    rear_gap = plan_debug_json_msg.get('rear_actual_gap_vec', [])
 
-    # 创建索引
-    length = max(len(box_longitudinal_buff_vec), len(box_ttc_vec), len(distance_vec),
-                 len(agent_vel_vec), len(ego_vel_vec), len(rear_distance_vec))
-    if length > 0:
-      index = list(range(length))
-
-      # 更新数据源
-      safety_check_data.data = {
-          'index': index,
-          'box_longitudinal_buff': box_longitudinal_buff_vec if len(box_longitudinal_buff_vec) > 0 else [0] * length,
-          'box_ttc': box_ttc_vec if len(box_ttc_vec) > 0 else [0] * length,
-          'distance': distance_vec if len(distance_vec) > 0 else [0] * length,
-          'agent_vel': agent_vel_vec if len(agent_vel_vec) > 0 else [0] * length,
-          'ego_vel': ego_vel_vec if len(ego_vel_vec) > 0 else [0] * length,
-          'rear_distance': rear_distance_vec if len(rear_distance_vec) > 0 else [0] * length,
+    rear_len = max(len(rear_buff), len(rear_ttc), len(rear_dist),
+                   len(rear_agent_vel), len(rear_gap))
+    if rear_len > 0:
+      idx = list(range(rear_len))
+      rear_safety_data.data = {
+          'index': idx,
+          'box_longitudinal_buff': _fill_or_empty(rear_buff, rear_len),
+          'box_ttc': _fill_or_empty(rear_ttc, rear_len),
+          'distance': _fill_or_empty(rear_dist, rear_len),
+          'agent_vel': _fill_or_empty(rear_agent_vel, rear_len),
+          'ego_vel': _fill_or_empty(ego_vel, rear_len),
+          'actual_gap': _fill_or_empty(rear_gap, rear_len),
       }
-      print(f"已更新安全检查数据，共 {length} 个点")
-
-      # 动态调整速度图的纵坐标范围（自车速度 ± 15 kph）
-      if len(ego_vel_vec) > 0:
-        avg_ego_vel = sum(ego_vel_vec) / len(ego_vel_vec)
-        vel_margin = 15.0 / 3.6  # 15 kph 转换为 m/s ≈ 4.17 m/s
-        vel_min = max(0, avg_ego_vel - vel_margin)
-        vel_max = avg_ego_vel + vel_margin
-        fig_safety_vel.y_range.start = vel_min
-        fig_safety_vel.y_range.end = vel_max
-        print(f"速度图纵坐标范围: [{vel_min:.2f}, {vel_max:.2f}] m/s")
+      _update_vel_range(fig_rear_vel, ego_vel)
+      print(f"后车安全数据: {rear_len} 点, buff={rear_buff[:3] if rear_buff else '[]'}")
     else:
-      print("警告: 安全检查数据为空")
+      print("后车安全检查数据为空")
 
-    # 更新压线比例显示（独立于数据长度）
+    # ---- 前车数据 ----
+    front_buff = plan_debug_json_msg.get('front_box_longitudinal_buff_vec', [])
+    front_dist = plan_debug_json_msg.get('front_distance_vec', [])
+    front_agent_vel = plan_debug_json_msg.get('front_agent_vel_vec', [])
+    front_gap = plan_debug_json_msg.get('front_actual_gap_vec', [])
+
+    front_len = max(len(front_buff), len(front_dist),
+                    len(front_agent_vel), len(front_gap))
+    if front_len > 0:
+      idx = list(range(front_len))
+      front_safety_data.data = {
+          'index': idx,
+          'box_longitudinal_buff': _fill_or_empty(front_buff, front_len),
+          'distance': _fill_or_empty(front_dist, front_len),
+          'agent_vel': _fill_or_empty(front_agent_vel, front_len),
+          'ego_vel': _fill_or_empty(ego_vel, front_len),
+          'actual_gap': _fill_or_empty(front_gap, front_len),
+      }
+      _update_vel_range(fig_front_vel, ego_vel)
+      print(f"前车安全数据: {front_len} 点, buff={front_buff[:3] if front_buff else '[]'}")
+    else:
+      print("前车安全检查数据为空")
+
+    # ---- 压线率 ----
     lc_ego_press = plan_debug_json_msg.get('lc_ego_press_line_ratio', None)
-
     if lc_ego_press is not None:
       press_line_div.text = f"<h3>压线比例: <span style='color:blue;'>{lc_ego_press:.3f}</span></h3>"
-      print(f"更新压线率显示: {lc_ego_press:.3f}")
     else:
       press_line_div.text = f"<h3>压线比例: <span style='color:gray;'>N/A</span></h3>"
-      print("压线率: N/A")
 
   except Exception as e:
     print(f"更新安全检查数据失败: {e}")
@@ -234,81 +250,74 @@ def slider_callback(bag_time):
 # Tab 1: Longtime（联合规划图表）
 tab_longtime = Panel(child=pans, title="Longtime")
 
-# Tab 2: 安全检查（创建安全检查图表）
-# 创建安全检查数据源
-safety_check_data = ColumnDataSource(data={
-    'index': [],
-    'box_longitudinal_buff': [],
-    'box_ttc': [],
-    'distance': [],
-    'ego_press_line_ratio': [],
-    'agent_vel': [],  # 后车速度
-    'ego_vel': [],    # 自车速度
-    'rear_distance': []  # 后车到自车的纵向距离
+# ======== 安全检查 Tab ========
+rear_safety_data = ColumnDataSource(data={
+    'index': [], 'box_longitudinal_buff': [], 'box_ttc': [],
+    'distance': [], 'agent_vel': [], 'ego_vel': [], 'actual_gap': []
+})
+front_safety_data = ColumnDataSource(data={
+    'index': [], 'box_longitudinal_buff': [],
+    'distance': [], 'agent_vel': [], 'ego_vel': [], 'actual_gap': []
 })
 
-# 创建三个图表（仿照 vel 和 s 图表的样式）
-# 图1: 距离和缓冲区（合并）
+# 图1: 距离和缓冲区
 fig_safety_dist = bkp.figure(x_axis_label='Prediction Step', y_axis_label='Distance (m)',
                              x_range=[0, 16], y_range=[-5, 30],
-                             width=525, height=330,
-                             title="距离与缓冲区")
-# 超出安全距离（>= 0 表示安全）
-dist_renderer = fig_safety_dist.line('index', 'distance', source=safety_check_data,
-                     line_width=2, line_color='red', line_dash='solid',
-                     legend_label='over-safety_distance > 0')
-fig_safety_dist.circle('index', 'distance', source=safety_check_data,
-                       size=4, color='red')
-# 轨迹后车间隔
-rear_dist_renderer = fig_safety_dist.line('index', 'rear_distance', source=safety_check_data,
-                     line_width=2, line_color='brown', line_dash='dashed',
-                     legend_label='net_gap_on_opt')
-fig_safety_dist.circle('index', 'rear_distance', source=safety_check_data,
-                       size=4, color='brown')
-# 最小安全缓冲区
-buff_renderer = fig_safety_dist.line('index', 'box_longitudinal_buff', source=safety_check_data,
-                     line_width=2, line_color='blue', line_dash='dotted',
-                     legend_label='mini_safety_buff')
-fig_safety_dist.circle('index', 'box_longitudinal_buff', source=safety_check_data,
-                       size=4, color='blue')
+                             width=525, height=330, title="距离与缓冲区")
+# 图1 仅后车
+fig_safety_dist.line('index', 'distance', source=rear_safety_data,
+                     line_width=2, line_color='red', legend_label='rear_box_dist')
+fig_safety_dist.circle('index', 'distance', source=rear_safety_data, size=4, color='red')
+fig_safety_dist.line('index', 'actual_gap', source=rear_safety_data,
+                     line_width=2, line_color='brown', line_dash='dashed', legend_label='rear_actual_gap')
+fig_safety_dist.circle('index', 'actual_gap', source=rear_safety_data, size=4, color='brown')
+fig_safety_dist.line('index', 'box_longitudinal_buff', source=rear_safety_data,
+                     line_width=2, line_color='blue', line_dash='dotted', legend_label='rear_lon_buff')
+fig_safety_dist.circle('index', 'box_longitudinal_buff', source=rear_safety_data, size=4, color='blue')
 fig_safety_dist.legend.click_policy = 'hide'
 
-# 图2: TTC
-fig_safety_ttc = bkp.figure(x_axis_label='Prediction Step', y_axis_label='TTC (s)',
-                            x_range=fig_safety_dist.x_range, y_range=[0, 10],
-                            width=525, height=330,
-                            title="时间碰撞余量")
-ttc_renderer = fig_safety_ttc.line('index', 'box_ttc', source=safety_check_data,
-                    line_width=2, line_color='green', line_dash='solid',
-                    legend_label='ttc')
-fig_safety_ttc.circle('index', 'box_ttc', source=safety_check_data,
-                      size=4, color='green')
+# 图2: 后车 TTC + 前车距离缓冲区
+fig_safety_ttc = bkp.figure(x_axis_label='Prediction Step', y_axis_label='Value',
+                            x_range=fig_safety_dist.x_range, y_range=[-5, 30],
+                            width=525, height=330, title="后车TTC / 前车距离")
+# 后车 TTC
+fig_safety_ttc.line('index', 'box_ttc', source=rear_safety_data,
+                    line_width=2, line_color='green', legend_label='rear_ttc')
+fig_safety_ttc.circle('index', 'box_ttc', source=rear_safety_data, size=4, color='green')
+# 前车距离缓冲区
+fig_safety_ttc.line('index', 'distance', source=front_safety_data,
+                    line_width=2, line_color='red', legend_label='front_box_dist')
+fig_safety_ttc.circle('index', 'distance', source=front_safety_data, size=4, color='red')
+fig_safety_ttc.line('index', 'actual_gap', source=front_safety_data,
+                    line_width=2, line_color='brown', line_dash='dashed', legend_label='front_actual_gap')
+fig_safety_ttc.circle('index', 'actual_gap', source=front_safety_data, size=4, color='brown')
+fig_safety_ttc.line('index', 'box_longitudinal_buff', source=front_safety_data,
+                    line_width=2, line_color='orange', line_dash='dotted', legend_label='front_lon_buff')
+fig_safety_ttc.circle('index', 'box_longitudinal_buff', source=front_safety_data, size=4, color='orange')
 fig_safety_ttc.legend.click_policy = 'hide'
 
-# 图3: 速度对比图（仅后车）- 纵坐标动态调整
+# 图3: 速度对比（自车紫色，后车蓝色，前车橙色）
 fig_safety_vel = bkp.figure(x_axis_label='Prediction Step', y_axis_label='Velocity (m/s)',
                             x_range=fig_safety_dist.x_range,
-                            width=525, height=330,
-                            title="速度对比（后车）")
-# 后车速度
-agent_vel_renderer = fig_safety_vel.line('index', 'agent_vel', source=safety_check_data,
-                    line_width=2, line_color='orange', line_dash='solid',
-                    legend_label='agent_vel')
-fig_safety_vel.circle('index', 'agent_vel', source=safety_check_data,
-                      size=4, color='orange')
-# 自车速度
-ego_vel_renderer = fig_safety_vel.line('index', 'ego_vel', source=safety_check_data,
-                    line_width=2, line_color='purple', line_dash='dashed',
-                    legend_label='ego_vel')
-fig_safety_vel.circle('index', 'ego_vel', source=safety_check_data,
-                      size=4, color='purple')
+                            width=525, height=330, title="速度对比")
+fig_safety_vel.line('index', 'ego_vel', source=rear_safety_data,
+                    line_width=2, line_color='purple', line_dash='dashed', legend_label='ego_vel')
+fig_safety_vel.circle('index', 'ego_vel', source=rear_safety_data, size=4, color='purple')
+fig_safety_vel.line('index', 'agent_vel', source=rear_safety_data,
+                    line_width=2, line_color='blue', legend_label='rear_vel')
+fig_safety_vel.circle('index', 'agent_vel', source=rear_safety_data, size=4, color='blue')
+fig_safety_vel.line('index', 'agent_vel', source=front_safety_data,
+                    line_width=2, line_color='orange', legend_label='front_vel')
+fig_safety_vel.circle('index', 'agent_vel', source=front_safety_data, size=4, color='orange')
 fig_safety_vel.legend.click_policy = 'hide'
 
-# 压线比例显示（单个数值，使用 Div）
+fig_rear_vel = fig_safety_vel
+fig_front_vel = fig_safety_vel
+
+# 压线比例
 press_line_div = Div(text="<h3>压线比例: <span style='color:blue;'>N/A</span></h3>",
                      width=525, height=100)
 
-# 组合安全检查图表
 safety_check_layout = column(row(fig_safety_dist, fig_safety_ttc),
                              row(fig_safety_vel, press_line_div))
 tab_safety_check = Panel(child=safety_check_layout, title="安全检查")

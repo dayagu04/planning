@@ -852,7 +852,7 @@
     "q_obs_jerk_weight": 30.0,
     "q_obs_omega_weight": 80.0,
     "q_ego_acc_bound_weight": 1600.0,
-    "ego_acc_max": 1.5,
+    "ego_acc_max": 1.2,
     "ego_acc_min": -1.8,
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 2.0,
@@ -2186,7 +2186,7 @@
   },
   "lane_change_safety_check": {
     "exe_ttc_ratio": 0.7,
-    "ttc_decay_factor": 0.90,
+    "ttc_decay_factor": 0.92,
     "press_line_ratio_threshold": 0.1,
     "rear_close_distance_threshold": 6.0,
     "rear_close_speed_diff_threshold": 1.5,

@@ -849,9 +849,15 @@ class LoadRosbag:
                          "meb_od_obs_x_vector","meb_od_obs_y_vector","meb_occ_obs_x_vector","meb_occ_obs_y_vector","meb_traj_x_vector","meb_traj_y_vector",
                          "meb_point_x_vector","meb_point_y_vector","meb_traj_dphi_vector","uss_distance_vec","uss_acc_vec_","meb_uss_obs_x_vector","meb_uss_obs_y_vector",
                          ]
-      # 安全检查相关的向量数据
-      json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",
-                           "agent_vel_vec", "ego_vel_vec", "rear_distance_vec"]
+      # 安全检查相关的向量数据（前车）
+      json_vector_list += ["front_box_longitudinal_buff_vec", "front_distance_vec",
+                           "front_agent_vel_vec", "front_actual_gap_vec"]
+      # 安全检查相关的向量数据（后车）
+      json_vector_list += ["rear_box_longitudinal_buff_vec", "rear_box_ttc_vec",
+                           "rear_distance_vec", "rear_agent_vel_vec",
+                           "rear_actual_gap_vec"]
+      # 自车速度（前后车共用）
+      json_vector_list += ["ego_vel_vec"]
       # 安全检查相关的标量数据
       json_value_list += ["lc_ego_press_line_ratio"]
 
