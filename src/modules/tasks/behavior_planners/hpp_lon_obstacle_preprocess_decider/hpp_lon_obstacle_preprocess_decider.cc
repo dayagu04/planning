@@ -189,7 +189,7 @@ HppLonObstaclePreprocessDecider::HppLonObstaclePreprocessDecider(
 
 bool HppLonObstaclePreprocessDecider::Execute() {
   ProcessGroundLines();
-  ProcessDynamicObstacles();
+  //ProcessDynamicObstacles();
   return true;
 }
 
