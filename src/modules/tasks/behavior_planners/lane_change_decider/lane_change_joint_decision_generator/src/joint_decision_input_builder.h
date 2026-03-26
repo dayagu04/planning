@@ -8,7 +8,6 @@
 #include "joint_decision_obstacles_selector.h"
 #include "joint_decision_planner.pb.h"
 #include "joint_decision_planning_problem.h"
-#include "joint_decision_speed_limit.h"
 #include "session.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_joint_decision_generator/lat_lon_joint_decision_output.h"
 namespace planning {
@@ -71,8 +70,8 @@ class JointDecisionInputBuilder {
  private:
   framework::Session* session_;
   JointDecisionPlannerConfig lc_decision_config_;
+  SpeedPlannerConfig speed_planning_config_;
   std::shared_ptr<JointDecisionObstaclesSelector> obstacles_selector_;
-  std::unique_ptr<JointDecisionSpeedLimit> speed_limit_calculator_;
   std::vector<JointDecisionTrajectoryPoint> ref_trajectory_;
   ComfortParameters comfort_params_;
 

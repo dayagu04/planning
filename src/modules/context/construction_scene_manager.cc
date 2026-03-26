@@ -105,7 +105,7 @@ void ConstructionSceneManager::UpdateConstructionAgentClusters() {
   const std::unordered_map<int, Obstacle> &obstacles =
       obstacle_manager->get_obstacles().Dict();
   for (const auto &pair : obstacles) {
-    const auto obstacle = pair.second;
+    const auto& obstacle = pair.second;
     if (!obstacle.is_vaild()) {
       continue;
     }
@@ -137,7 +137,7 @@ void ConstructionSceneManager::UpdateConstructionAgentClusters() {
           obs_car_point.x, obs_car_point.y, construction_agent_s,
           construction_agent_l, dist_to_left_boundary,
           dist_to_right_boundary, obstacle.length(), obstacle.width());
-      construction_agent_points_.push_back(point);
+      construction_agent_points_.emplace_back(std::move(point));
     }
   }
   if (!construction_agent_points_.empty()) {
@@ -187,7 +187,7 @@ bool ConstructionSceneManager::ConstructionAgentDistance(
 void ConstructionSceneManager::ExpandCluster(
     ConstructionAgentPoints& cone_points, int index, int c, double eps_x,
     double eps_y, int minPts) {
-  std::vector<int> neighborPts;
+  std::vector<int> neighborPts; // 考虑效率
 
   for (size_t i = 0; i < cone_points.size(); ++i) {
     if (ConstructionAgentDistance(cone_points[index], cone_points[i], eps_x,
@@ -749,7 +749,7 @@ void ConstructionSceneManager::UpdateDriveArea() {
           .get_virtual_lane_manager()
           ->get_virtual_lanes();
 
-  std::map<int, std::map<int, std::vector<int>>> cone_results;
+  std::map<int, std::map<int, std::vector<int>>> cone_results; // 考虑效率
   std::map<int, std::map<int, std::vector<int>>> road_boundary_results;
   for (const auto& lane : lanes) {
     if (lane == nullptr) {
@@ -798,10 +798,10 @@ void ConstructionSceneManager::UpdateDriveArea() {
 
       cone_results[construction_agent_cluster_iter.first][result.second]
           .emplace_back(lane->get_virtual_id());
-      std::cout << "result: "
+      ILOG_DEBUG << "result: "
                 << "lane id:" << lane->get_virtual_id() << "   ***  "
                 << "cone cluster id" << construction_agent_cluster_iter.first
-                << "intersection :" << result.second << std::endl;
+                << "intersection :" << result.second;
     }
 
     // 路沿
@@ -817,10 +817,10 @@ void ConstructionSceneManager::UpdateDriveArea() {
 
       road_boundary_results[road_boundaries_cluster_iter.first][result.second]
           .emplace_back(lane->get_virtual_id());
-      std::cout << "result: "
+      ILOG_DEBUG << "result: "
                 << "lane id:" << lane->get_virtual_id() << "   ***  "
                 << "road boundary id" << road_boundaries_cluster_iter.first
-                << "intersection :" << result.second << std::endl;
+                << "intersection :" << result.second;
     }
   }
 
@@ -865,7 +865,7 @@ void ConstructionSceneManager::UpdateResult(
     if (result.second.count(1) && result.second.count(2)) {
       construction_agent_cluster_attribute_map_[result.first].direction =
           ConstructionDirection::UNSURE;
-      std::cout << "abnormal ref" << std::endl;
+      ILOG_DEBUG << "abnormal ref";
     } else if (result.second.count(1)) {
       construction_agent_cluster_attribute_map_[result.first].direction =
           ConstructionDirection::LEFT;
@@ -877,13 +877,13 @@ void ConstructionSceneManager::UpdateResult(
     if (result.second.count(-1)) {
       construction_agent_cluster_attribute_map_[result.first].direction =
           ConstructionDirection::UNSURE;
-      std::cout << "colinear_or_facing ref" << std::endl;
+      ILOG_DEBUG << "colinear_or_facing ref";
     }
   }
 
   for (auto result : road_boundary_results) {
     if (result.second.count(1) && result.second.count(2)) {
-      std::cout << "abnormal ref" << std::endl;
+      ILOG_DEBUG << "abnormal ref";
       road_boundaries_clusters_map_[result.first].direction =
           ConstructionDirection::UNSURE;
     } else if (result.second.count(1)) {
@@ -897,7 +897,7 @@ void ConstructionSceneManager::UpdateResult(
     if (result.second.count(-1)) {
       road_boundaries_clusters_map_[result.first].direction =
           ConstructionDirection::UNSURE;
-      std::cout << "colinear_or_facing ref" << std::endl;
+      ILOG_DEBUG << "colinear_or_facing ref";
     }
   }
 }

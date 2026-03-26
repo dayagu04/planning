@@ -13,13 +13,11 @@ const bool IsODVeh(const iflyauto::ObjectType type);
 
 const bool IsODSpecificationer(const iflyauto::ObjectType type);
 
-const bool IsDynamicODVeh(const double speed_thresh, const double v,
-                          const iflyauto::ObjectType type);
+const bool IsDynamicODVeh(const double v, const iflyauto::ObjectType type);
 
 const bool IsODLivingThings(const iflyauto::ObjectType type);
 
-const bool IsDynamicLivingThings(const double v,
-                                 const iflyauto::ObjectType type);
+const bool IsDynamicLivingThings(const iflyauto::ObjectType type);
 
 std::vector<Eigen::VectorXd> TransformDpSpeedConstraints();
 
@@ -34,4 +32,4 @@ std::vector<Eigen::VectorXd> TransformQPSpeedOptimizationData();
 std::vector<Eigen::VectorXd> TransformStopSigns();
 
 std::vector<Eigen::VectorXd> TransformJLTSpeedData();
-}
+}  // namespace planning

@@ -37,11 +37,7 @@ class HybridAStarPerpendicularTailInPathGenerator
       CurveNode& best_curve_node_to_goal) override;
 
   virtual const float CalcGearChangePoseCost(
-#if USE_LINK_PT_LINE
       const common_math::PathPt<float>& gear_switch_pose,
-#else
-      const geometry_lib::PathPoint& gear_switch_pose,
-#endif
       AstarPathGear gear, const float gear_switch_penalty,
       const float length_penalty) override;
 };

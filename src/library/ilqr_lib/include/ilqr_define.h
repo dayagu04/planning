@@ -104,6 +104,7 @@ struct iLqrSolverConfig {
   size_t constraint_num = 2;
   double cost_tolerance_tol = 1e-4;        // 1e2 ; 1e-8
   double constraint_tolerance_tol = 1e-3;  // 1e2 ; 1e-8
+  double max_al_solve_time = 30.0;  // ms
 };
 
 }  // namespace ilqr_solver

@@ -25,11 +25,12 @@ class TargetValue {
  public:
   TargetValue(const double relative_t, const double has_target,
               const double s_target_val, const double v_target_val,
-              const TargetType type)
+              const double a_target_val, const TargetType type)
       : relative_t_(relative_t),
         has_target_(has_target),
         s_target_val_(s_target_val),
         v_target_val_(v_target_val),
+        a_target_val_(a_target_val),
         target_type_(type) {}
 
   void set_relative_t(const double relative_t) { relative_t_ = relative_t; }
@@ -44,6 +45,10 @@ class TargetValue {
     v_target_val_ = v_target_val;
   }
 
+  void set_a_target_val(const double a_target_val) {
+    a_target_val_ = a_target_val;
+  }
+
   void set_target_type(const TargetType target_type) {
     target_type_ = target_type;
   }
@@ -56,6 +61,8 @@ class TargetValue {
 
   double v_target_val() const { return v_target_val_; }
 
+  double a_target_val() const { return a_target_val_; }
+
   TargetType target_type() const { return target_type_; }
 
  private:
@@ -63,6 +70,7 @@ class TargetValue {
   bool has_target_ = false;
   double s_target_val_ = 0.0;
   double v_target_val_ = 0.0;
+  double a_target_val_ = 0.0;
   TargetType target_type_ = TargetType::kNotSet;
 };
 

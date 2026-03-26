@@ -134,7 +134,7 @@ bool Target::has_target(const double t) const {
 
 TargetValue Target::target_value(const double t) const {
   if (!has_target(t)) {
-    return TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet);
+    return TargetValue(0.0, false, 0.0, 0.0, 0.0, TargetType::kNotSet);
   }
   size_t index = static_cast<size_t>(std::round(t / dt_));
   return target_values_[index];

@@ -5,7 +5,8 @@
 #include <cstddef>
 
 #include "lateral_motion_planner.pb.h"
-#include "motion_planners/lateral_motion_planner/src/lateral_motion_planning_problem.h"
+#include "motion_planners/lateral_motion_planner/problem_solver/ilqr_solver.h"
+#include "motion_planners/lateral_motion_planner/problem_solver/solver_define.h"
 #include "planning_debug_info.pb.h"
 
 #include "serialize_utils.h"
@@ -13,11 +14,22 @@
 namespace py = pybind11;
 using namespace pnc::lateral_planning;
 
-static LateralMotionPlanningProblem *pBase = nullptr;
+static iLQRSolver *pBase = nullptr;
+constexpr size_t N = 26;
+
+planning::common::LateralPlanningOutput planning_output;
 
 int Init() {
-  pBase = new LateralMotionPlanningProblem();
-  pBase->Init();
+  pBase = new iLQRSolver();
+  pBase->SimInit();
+  planning_output.mutable_time_vec()->Resize(N, 0.0);
+  planning_output.mutable_x_vec()->Resize(N, 0.0);
+  planning_output.mutable_y_vec()->Resize(N, 0.0);
+  planning_output.mutable_theta_vec()->Resize(N, 0.0);
+  planning_output.mutable_delta_vec()->Resize(N, 0.0);
+  planning_output.mutable_omega_vec()->Resize(N, 0.0);
+  planning_output.mutable_acc_vec()->Resize(N, 0.0);
+  planning_output.mutable_jerk_vec()->Resize(N, 0.0);
   return 0;
 }
 
@@ -32,10 +44,8 @@ int UpdateBytes(py::bytes &planning_input_bytes) {
 }
 
 py::bytes GetOutputBytes() {
-  auto res = pBase->GetOutput();
   std::string serialized_message;
-  res.SerializeToString(&serialized_message);
-
+  planning_output.SerializeToString(&serialized_message);
   return serialized_message;
 }
 
@@ -92,7 +102,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   }
   planning_input.set_motion_plan_concerned_index(motion_plan_concerned_end_index);
   // ref
-  const auto N = planning_input.ref_x_vec_size();
+  // const auto N = planning_input.ref_x_vec_size();
   for (size_t i = 0; i < N; i++) {
     Eigen::Vector2d ref_unit_vector(
         origin_planning_input.hard_upper_bound_x0_vec(i) -
@@ -484,14 +494,87 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   //   model_dt_vec[i] = new_dt;
   // }
 
-  pBase->Update(expected_acc, start_acc, end_acc,
-                end_ratio1, end_ratio2, end_ratio3,
-                max_iter, motion_plan_concerned_start_index,
-                start_w_jerk, ego_v,
-                wheel_base, q_front_ref_xy,
-                q_virtual_ref_xy, q_virtual_ref_theta,
-                virtual_ref_x, virtual_ref_y, virtual_ref_theta,
-                planning_input);
+  pBase->SimUpdate(expected_acc, start_acc, end_acc,
+                   end_ratio1, end_ratio2, end_ratio3,
+                   max_iter, motion_plan_concerned_start_index,
+                   start_w_jerk, ego_v,
+                   wheel_base, q_front_ref_xy,
+                   q_virtual_ref_xy, q_virtual_ref_theta,
+                   virtual_ref_x, virtual_ref_y, virtual_ref_theta,
+                   planning_input);
+  // output
+  const auto& ilqr_core_ptr = pBase->GetiLqrCorePtr();
+  const auto& state_result = ilqr_core_ptr->GetStateResultPtr();
+  const auto& control_result = ilqr_core_ptr->GetControlResultPtr();
+  const auto& dt = ilqr_core_ptr->GetSolverConfigPtr()->model_dt;
+  double t = 0.0;
+  for (size_t i = 0; i < N; ++i) {
+    double ref_vel = planning_input.ref_vel_vec(i);
+    if (i < N - 1) {
+      ref_vel = (ref_vel + planning_input.ref_vel_vec(i + 1)) * 0.5;
+    }
+    double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
+    planning_output.mutable_time_vec()->Set(i, t);
+    t += dt;
+
+    planning_output.mutable_x_vec()->Set(
+        i, state_result->at(i)[StateID::X]);
+    planning_output.mutable_y_vec()->Set(
+        i, state_result->at(i)[StateID::Y]);
+    planning_output.mutable_theta_vec()->Set(
+        i, state_result->at(i)[StateID::THETA]);
+    planning_output.mutable_delta_vec()->Set(
+        i, state_result->at(i)[StateID::DELTA]);
+    planning_output.mutable_acc_vec()->Set(
+        i, kv2 * state_result->at(i)[StateID::DELTA]);
+
+    if (i < N - 1) {
+      planning_output.mutable_omega_vec()->Set(
+          i, control_result->at(i)[ControlID::OMEGA]);
+      planning_output.mutable_jerk_vec()->Set(
+          i,
+          kv2 * control_result->at(i)[ControlID::OMEGA]);
+    } else {
+      planning_output.mutable_omega_vec()->Set(
+          i, planning_output.omega_vec(i - 1));
+      planning_output.mutable_jerk_vec()->Set(
+          i, planning_output.jerk_vec(i - 1));
+    }
+  }
+
+  // load solver and iteration info
+  planning_output.clear_solver_info();
+
+  const auto &soler_info_ptr = ilqr_core_ptr->GetSolverInfoPtr();
+
+  planning_output.mutable_solver_info()->set_solver_condition(
+      soler_info_ptr->solver_condition);
+  planning_output.mutable_solver_info()->set_cost_size(
+      soler_info_ptr->cost_size);
+  planning_output.mutable_solver_info()->set_iter_count(
+      soler_info_ptr->iter_count);
+  planning_output.mutable_solver_info()->set_init_cost(
+      soler_info_ptr->init_cost);
+
+  for (size_t i = 0; i < soler_info_ptr->iter_count; ++i) {
+    const auto& iter_info =
+        planning_output.mutable_solver_info()->add_iter_info();
+    iter_info->set_linesearch_success(
+        soler_info_ptr->iteration_info_vec[i].linesearch_success);
+    iter_info->set_backward_pass_count(
+        soler_info_ptr->iteration_info_vec[i].backward_pass_count);
+    iter_info->set_lambda(soler_info_ptr->iteration_info_vec[i].lambda);
+    iter_info->set_cost(soler_info_ptr->iteration_info_vec[i].cost);
+    iter_info->set_dcost(soler_info_ptr->iteration_info_vec[i].dcost);
+    iter_info->set_expect(soler_info_ptr->iteration_info_vec[i].expect);
+    iter_info->set_du_norm(soler_info_ptr->iteration_info_vec[i].du_norm);
+    for (size_t j = 0; j < soler_info_ptr->iteration_info_vec[i].cost_vec.size(); ++j) {
+      const auto& cost_info = iter_info->add_cost_info();
+      cost_info->set_id(soler_info_ptr->iteration_info_vec[i].cost_vec[j].id);
+      cost_info->set_cost(soler_info_ptr->iteration_info_vec[i].cost_vec[j].cost);
+    }
+  }
+
   return 0;
 }
 

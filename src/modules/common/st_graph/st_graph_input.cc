@@ -138,6 +138,16 @@ void StGraphInput::Update() {
 
   FilterAgentsByDecisionType(agents);
 
+  const auto& lateral_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
+  follow_agent_ids_.clear();
+  for (const auto& [agent_id, decision] : lateral_obstacle_decision) {
+    if (decision == LatObstacleDecisionType::FOLLOW) {
+      follow_agent_ids_.insert(agent_id);
+    }
+  }
+
   const auto& lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow = lane_borrow_output.is_in_lane_borrow_status;
@@ -948,9 +958,7 @@ LaneFrontRearAgents StGraphInput::MakeTargetLaneFrontRearAgents(
   }
 
   if (origin_agent_id != -1) {
-    auto* node = dynamic_world->GetNode(origin_agent_id);
-    result.current_front_agent_id =
-        node != nullptr ? node->node_agent_id() : -1;
+    result.current_front_agent_id = origin_agent_id;
   }
 
   return result;

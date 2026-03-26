@@ -64,12 +64,12 @@ class SLTGridMapAdapter {
    */
   std::shared_ptr<SscMap> p_ssc_map() const { return p_ssc_map_; }
 
-  std::string Name();
+  const std::string& Name();
 
   /**
    * @brief Initialize the planner with config path
    */
-  void Init(const std::string config_path);
+  void Init(const std::string& config_path);
 
   /**
    * @brief Run one planning round with given states

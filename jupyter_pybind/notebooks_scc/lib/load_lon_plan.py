@@ -676,7 +676,7 @@ def load_lon_global_figure(bag_loader):
     LongitudinalMotionPlannerTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['LongitudinalMotionPlannerTime'], 2))
     ResultTrajectoryGeneratorTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ResultTrajectoryGeneratorTime'], 2))
     ParkingSwitchDeciderTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ParkingSwitchDeciderTime'], 2))
-    ARAStarTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['ARAStarTime'], 2))
+    ARAStarTime_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['Astar time'], 2))
     HppLonCollisionCheckTimeCost_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['hpp_lon_collision_check_time_cost'], 2))
 
   lead_fig.line(t_plan_vec, lead_one_dis_vec, line_width=1, legend_label='lead_one_dis', color="red")
@@ -697,7 +697,7 @@ def load_lon_global_figure(bag_loader):
   cost_time_fig.line(t_plan_vec, LateralObstacleDeciderTime_vec, line_width=1, legend_label='LateralObstacleDeciderTime_vec', color="brown")
   cost_time_fig.line(t_plan_vec, HppGeneralLateralDeciderTime_vec, line_width=1, legend_label='HppGeneralLateralDeciderTime_vec', color="pink")
   cost_time_fig.line(t_plan_vec, GeneralLateralDeciderCostTime_vec, line_width=1, legend_label='GeneralLateralDeciderCostTime_vec', color="maroon")
-  # cost_time_fig.line(t_plan_vec, LateralMotionPlannerTime_vec, line_width=1, legend_label='LateralMotionPlannerTime_vec', color="gray")
+  cost_time_fig.line(t_plan_vec, LateralMotionPlannerTime_vec, line_width=1, legend_label='LateralMotionPlannerTime_vec', color="gray")
   # cost_time_fig.line(t_plan_vec, GeneralLongitudinalDeciderTime_vec, line_width=1, legend_label='GeneralLongitudinalDeciderTime_vec', color="maroon")
   # cost_time_fig.line(t_plan_vec, LongitudinalMotionPlannerTime_vec, line_width=1, legend_label='LongitudinalMotionPlannerTime_vec', color="navy")
   # cost_time_fig.line(t_plan_vec, ResultTrajectoryGeneratorTime_vec, line_width=1, legend_label='ResultTrajectoryGeneratorTime_vec', color="gold")

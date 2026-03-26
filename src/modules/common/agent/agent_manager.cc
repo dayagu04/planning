@@ -67,7 +67,7 @@ void AgentManager::Update(const double start_timestamp_s) {
 
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
-    auto prediction_object = prediction_objects[i];
+    auto& prediction_object = prediction_objects[i];
     // TBD:后续前移至EnvironmentalModelManager::obstacle_prediction_update中
     // Ignore the agent which is within the FOV and is fail to fusion with the
     // camera，or too small, or unknown

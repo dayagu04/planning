@@ -54,8 +54,7 @@ ConeRequest::ConeRequest(
 }
 
 void ConeRequest::Update(int lc_status) {
-  std::cout << "ConeRequest::Update::coming cone lane change request"
-            << std::endl;
+  ILOG_DEBUG << "ConeRequest::Update::coming cone lane change request";
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   // trigger EA lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
@@ -476,7 +475,7 @@ void ConeRequest::setLaneChangeRequestByCone() {
 }
 
 void ConeRequest::GetTargetLaneWidthByCone(
-    const std::vector<std::pair<double, double>> lane_s_width,
+    const std::vector<std::pair<double, double>>& lane_s_width,
     const std::shared_ptr<VirtualLane> base_lane, const double cone_s,
     const double cone_l, bool is_left, double* dist) {
   double target_lane_width = kDefaultLaneWidth;
@@ -842,7 +841,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
   }
 
   double max_l = CalcClusterToBoundaryDist(serach_cone_points, NO_CHANGE);
-  // std::cout << "max_l: " << max_l << " pass_thre: " << pass_thre <<
+  // ILOG_DEBUG << "max_l: " << max_l << " pass_thre: " << pass_thre <<
   // std::endl; judge if to trigger cone lc
   if (max_l <= pass_thre) {
     ILOG_DEBUG << " target lane is blocked";
@@ -936,7 +935,7 @@ std::vector<double> ConeRequest::ConeRankify(std::vector<double>& arr) {
 }
 
 double ConeRequest::ConeSpearmanRankCorrelation(
-    const std::vector<ConePoint> points) {
+    const std::vector<ConePoint>& points) {
   int n = points.size();
 
   std::vector<double> s(n);
@@ -960,7 +959,7 @@ double ConeRequest::ConeSpearmanRankCorrelation(
   return 1 - (6 * d_square_sum) / (n * (std::pow(n, 2) - 1));
 }
 
-double ConeRequest::ConeComputeSlope(std::vector<ConePoint> points) {
+double ConeRequest::ConeComputeSlope(std::vector<ConePoint>& points) {
   double s_mean, l_mean;
   double s_stddev, l_stddev;
   // 计算cone的s、l的平均值
@@ -977,7 +976,7 @@ double ConeRequest::ConeComputeSlope(std::vector<ConePoint> points) {
 
   // 数据标准化
   if (ConeStandardize(points)) {
-    // std::cout << "s_mean" << s_mean << "l_mean" << l_mean << std::endl;
+    // ILOG_DEBUG << "s_mean" << s_mean << "l_mean" << l_mean << std::endl;
     double numerator = 0.0, denominator = 0.0;
     s_mean = 0.0;
     l_mean = 0.0;
@@ -986,7 +985,7 @@ double ConeRequest::ConeComputeSlope(std::vector<ConePoint> points) {
     for (const auto& point : points) {
       numerator += (point.s - s_mean) * (point.l - l_mean);
       denominator += std::pow(point.s - s_mean, 2);
-      // std::cout << "numerator" << numerator << "denominator" << denominator
+      // ILOG_DEBUG << "numerator" << numerator << "denominator" << denominator
       // << std::endl;
     }
     denominator = std::max(denominator, 0.001);

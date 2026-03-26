@@ -29,7 +29,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.min_decel_jerk = 1.0;
   comfort_params_.max_decel_jerk = 1.5;
   comfort_params_.emergency_decel_jerk = 5.0;
-  comfort_params_.virtual_front_s = 250.0;
+  comfort_params_.virtual_front_s = 200.0;
   comfort_params_.cool_factor = 0.99;
   comfort_params_.delay_time_buffer = 0.3;
   comfort_params_.eps = 1e-3;
@@ -41,7 +41,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.virtual_front_agent_id = 799999;
   comfort_params_.default_follow_agent_id = 899999;
   comfort_params_.default_follow_st_boundary_id = 899999;
-  comfort_params_.default_follow_agent_s = 255.0;
+  comfort_params_.default_follow_agent_s = 205.0;
   comfort_params_.kinematic_half_coefficient = 0.5;
   comfort_params_.agent_length_half_coefficient = 0.5;
 
@@ -440,8 +440,8 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           double upper_bound_a = agent->is_static()
                                      ? agent->accel_fusion()
                                      : upper_bound.acceleration();
-          double confidence =
-              LongRefPathDecider::CalcUpperBoundConfidence(upper_bound.s());
+          double confidence = LongRefPathDecider::CalcUpperBoundConfidence(
+              upper_bound.agent_id(), upper_bound.s());
           upper_bound_infos_[i] = {confidence * upper_bound.s() +
                                        (1.0 - confidence) * virtual_front_s,
                                    confidence * upper_bound.velocity() +
@@ -459,7 +459,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
 
       if (!follow_agents.empty()) {
         double follow_confidence = LongRefPathDecider::CalcUpperBoundConfidence(
-            follow_agent_infos[i].s);
+            follow_agent_infos[i].agent_id, follow_agent_infos[i].s);
         double effective_s = follow_confidence * follow_agent_infos[i].s +
                              (1.0 - follow_confidence) * virtual_front_s;
         double effective_v = follow_confidence * follow_agent_infos[i].v +
@@ -591,7 +591,7 @@ void ComfortTarget::ProcessCutinAgents(
 
 void ComfortTarget::GenerateComfortTarget() {
   target_values_.resize(plan_points_num_,
-                        TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet));
+                        TargetValue(0.0, false, 0.0, 0.0, 0.0,TargetType::kNotSet));
   comfort_jerk_min_vec_.resize(plan_points_num_,
                                comfort_params_.min_decel_jerk);
   comfort_v_target_vec_.resize(plan_points_num_, comfort_params_.v0);
@@ -601,7 +601,7 @@ void ComfortTarget::GenerateComfortTarget() {
   double current_a = init_lon_state_[2];
 
   target_values_[0] =
-      TargetValue(0.0, true, current_s, current_v, TargetType::kComfort);
+      TargetValue(0.0, true, current_s, current_v, current_a, TargetType::kComfort);
   acc_values_[0] = current_a;
 
   const auto* st_graph = session_->planning_context().st_graph_helper();
@@ -666,9 +666,12 @@ void ComfortTarget::GenerateComfortTarget() {
                                    comfort_acc * dt_ * dt_);
     double next_s = current_s + ds;
     double next_v = std::max(0.0, current_v + comfort_acc * dt_);
+    double next_a = comfort_acc;
+    next_v = std::max(0.0, next_v);
 
     target_values_[i] =
-        TargetValue(t, true, next_s, next_v, TargetType::kComfort);
+        TargetValue(t, true, next_s, next_v, next_a,TargetType::kComfort);
+
     current_s = next_s;
     current_v = next_v;
     current_a = comfort_acc;

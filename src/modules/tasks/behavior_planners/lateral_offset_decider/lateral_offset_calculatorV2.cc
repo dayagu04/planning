@@ -1242,8 +1242,8 @@ void LateralOffsetCalculatorV2::PostProcess(
 
 void LateralOffsetCalculatorV2::PostSmoothLateralOffset(
     double in_lat_offset,
-    const std::array<AvoidObstacleInfo, 2> avoid_obstacles,
-    const std::array<AvoidObstacleInfo, 2> avd_obstacles_history) {
+    const std::array<AvoidObstacleInfo, 2>& avoid_obstacles,
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history) {
   bool is_overlap[2] = {false, false};
   const double t_buffer = 0.9;
   if (avoid_obstacles[0].flag != AvoidObstacleFlag::INVALID) {

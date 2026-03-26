@@ -24,6 +24,8 @@ bool TrafficLightDecider::Execute() {
                                ->GetEgoDistanceToStopline();
   double dis_to_crosswalk = environmental_model.get_virtual_lane_manager()
                                 ->GetEgoDistanceToCrosswalk();
+  is_in_straight_lane_= environmental_model.get_virtual_lane_manager()
+                                ->ego_currrent_pos_lane_has_straight_attributes();
 
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
@@ -47,6 +49,32 @@ bool TrafficLightDecider::Execute() {
   const auto tfl_manager =
       environmental_model.get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
+
+  if (!is_in_straight_lane_) {
+    const auto current_ego_lane_mark = environmental_model.get_virtual_lane_manager()
+                                           ->lane_mark_at_ego_front_edge_pos_current();
+    if (iflyauto::LaneDrivableDirection::
+        LaneDrivableDirection_DIRECTION_RIGHT == current_ego_lane_mark) {
+      if (traffic_status.go_right == 3 ||
+          traffic_status.go_right == 43) {
+            none_straight_green_brake_ = true;
+      } else {
+        none_straight_green_brake_ = false;
+      }
+
+    } else if (iflyauto::LaneDrivableDirection::
+               LaneDrivableDirection_DIRECTION_LEFT == current_ego_lane_mark) {
+      if (traffic_status.go_left == 3 ||
+          traffic_status.go_left == 43) {
+            none_straight_green_brake_ = true;
+      } else {
+        none_straight_green_brake_ = false;
+      }
+
+    }
+  }
+  //to keep straight tfl decision not influenced by left/right;
+  //straight tfl decision still running
   if ((dis_to_stopline > 0.5 && dis_to_crosswalk > 2) &&
       (intersection_state != planning::common::IN_INTERSECTION ||
        (intersection_state == planning::common::IN_INTERSECTION &&
@@ -161,7 +189,8 @@ bool TrafficLightDecider::Execute() {
     can_pass_ = true;
   }
 
-  if (config_.enable_tfl_decider && !can_pass_ && !in_acc_func) {
+  if (config_.enable_tfl_decider && !in_acc_func &&
+      ((is_in_straight_lane_ && !can_pass_) || !is_in_straight_lane_)) {
     AddVirtualObstacle();
   }
   //此外认为已经进入路口
@@ -194,10 +223,10 @@ bool TrafficLightDecider::Execute() {
       cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_DRIVING_PASSIVE) {
 
-    if (IsRunningRedTFL()) {
+    if (is_in_straight_lane_ && IsRunningRedTFL()) {
       tla_output_info.traffic_light_reminder =
           iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
-    } else if (IsStayingStillGreenTFL()) {
+    } else if (is_in_straight_lane_ && IsStayingStillGreenTFL()) {
       tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::
           TRAFFIC_LIGHT_REMINDER_GREEN_LIGHT_START;
     } else {
@@ -216,6 +245,7 @@ bool TrafficLightDecider::Execute() {
   tfl_decider.can_pass = can_pass_;
   tfl_decider.is_small_front_intersection = is_small_front_intersection_;
   tfl_decider.is_tfl_match_intersection = is_tfl_match_intersection_;
+  tfl_decider.is_in_straight_lane = is_in_straight_lane_;
   return true;
 }
 
@@ -243,6 +273,9 @@ bool TrafficLightDecider::AddVirtualObstacle() {
   double ego_start_s = frenet_ego_state.s();
   double virtual_obs_dis =
       std::min(dis_to_stopline + 3.5, dis_to_crosswalk + 1.5);
+  if (!is_in_straight_lane_ && none_straight_green_brake_) {
+    virtual_obs_dis = virtual_obs_dis + 5.0;
+  }
   ReferencePathPoint refpath_pt;
   if (reference_path_ptr->get_reference_point_by_lon(
           ego_start_s + virtual_obs_dis, refpath_pt)) {

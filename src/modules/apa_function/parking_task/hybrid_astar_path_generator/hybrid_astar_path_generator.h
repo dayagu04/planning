@@ -100,29 +100,16 @@ class HybridAStarPathGenerator : public ParkingTask {
 
   const bool AnalyticExpansionByLPL(
       Node3d* current_node, CurveNode* curve_node_to_goal,
-#if USE_LINK_PT_LINE
-      const link_pt_line::LinkPtLineInput<float>& input
-#else
-      const LinkPoseLineInput& input
-#endif
-  );
+      const link_pt_line::LinkPtLineInput<float>& input);
 
   const bool CalcLPLPathToGoal(
       Node3d* current_node,
-#if USE_LINK_PT_LINE
       const link_pt_line::LinkPtLineInput<float>& input,
-#else
-      const LinkPoseLineInput& input,
-#endif
       const bool cal_h_cost = false);
 
   const float GenerateHeuristicCostByLPLPath(
       Node3d* next_node,
-#if USE_LINK_PT_LINE
       const link_pt_line::LinkPtLineInput<float>& input,
-#else
-      const LinkPoseLineInput& input,
-#endif
       NodeHeuristicCost* cost);
 
   const float CalcCurveNodeGCostToParentNode(Node3d* current_node,
@@ -143,11 +130,7 @@ class HybridAStarPathGenerator : public ParkingTask {
       ObsToPathDistRelativeSlot& obs_dist_relative_slot);
 
   virtual const float CalcGearChangePoseCost(
-#if USE_LINK_PT_LINE
       const common_math::PathPt<float>& gear_switch_pose,
-#else
-      const geometry_lib::PathPoint& gear_switch_pose,
-#endif
       AstarPathGear gear, const float gear_switch_penalty,
       const float length_penalty);
 
@@ -163,13 +146,8 @@ class HybridAStarPathGenerator : public ParkingTask {
   RSPathInterface rs_path_interface_;
   RSPath rs_path_;
 
-#if USE_LINK_PT_LINE
   link_pt_line::LinkPtLinePath<float> lpl_path_;
   link_pt_line::LinkPtLine<float> lpl_interface_;
-#else
-  LinkPoseLinePath lpl_path_;
-  LinkPoseLine lpl_interface_;
-#endif
 
   static CompactNodePool node_pool_;
   static GridSearch grid_search_;
@@ -204,13 +182,8 @@ class HybridAStarPathGenerator : public ParkingTask {
   std::vector<std::vector<Eigen::Vector2d>> all_search_node_list_;
   std::vector<std::vector<Eigen::Vector2d>> all_curve_node_list_;
   std::vector<CurvePath> all_success_curve_path_debug_;
-#if USE_LINK_PT_LINE
   std::vector<common_math::PathPt<float>>
       all_success_path_first_gear_switch_pose_debug_;
-#else
-  std::vector<geometry_lib::PathPoint>
-      all_success_path_first_gear_switch_pose_debug_;
-#endif
 
   cdl::AABB interesting_area_;
   CulDeSacInfo cul_de_sac_info_;

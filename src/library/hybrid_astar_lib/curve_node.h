@@ -11,8 +11,6 @@
 #include "pose2d.h"
 namespace planning {
 
-#define USE_LINK_PT_LINE (1)
-
 #define MAX_CURVE_PATH_SEG_NUM (7)
 
 using namespace pnc;
@@ -28,11 +26,7 @@ struct CurvePath {
   AstarPathGear gears[MAX_CURVE_PATH_SEG_NUM];
   AstarPathSteer steers[MAX_CURVE_PATH_SEG_NUM];
   size_t point_sizes[MAX_CURVE_PATH_SEG_NUM];
-#if USE_LINK_PT_LINE
   std::vector<std::vector<common_math::PathPt<float>>> ptss;
-#else
-  std::vector<std::vector<pnc::geometry_lib::PathPoint>> ptss;
-#endif
 
   int gear_change_number = 0;
   int gear_number = 0;
@@ -77,7 +71,6 @@ class CurveNode : public Node3d {
   const AstarPathGear& GetCurGear() const { return cur_gear_; }
   const float GetCurGearLength() const { return cur_gear_length_; }
 
-#if USE_LINK_PT_LINE
   void SetGearSwitchPose(const common_math::PathPt<float>& pose) {
     gear_switch_pose_ = pose;
   }
@@ -102,27 +95,6 @@ class CurveNode : public Node3d {
     return lpl_path_;
   }
 
-#else
-  void SetGearSwitchPose(const geometry_lib::PathPoint& pose) {
-    gear_switch_pose_ = pose;
-  }
-
-  const geometry_lib::PathPoint& GetGearSwitchPose() const {
-    return gear_switch_pose_;
-  }
-
-  void SetNextGearSwitchPose(const geometry_lib::PathPoint& pose) {
-    next_gear_switch_pose_ = pose;
-  }
-
-  const geometry_lib::PathPoint& GetNextGearSwitchPose() const {
-    return next_gear_switch_pose_;
-  }
-
-  void SetLPLPath(const LinkPoseLinePath& lpl_path) { lpl_path_ = lpl_path; }
-
-  const LinkPoseLinePath& GetLPLPath() const { return lpl_path_; }
-#endif
 
   void Clear() {
     curve_path_.Clear();
@@ -137,15 +109,10 @@ class CurveNode : public Node3d {
   float lat_err_;
   float theta_err_;
   float last_path_kappa_change_;
-#if USE_LINK_PT_LINE
   link_pt_line::LinkPtLinePath<float> lpl_path_;
   common_math::PathPt<float> gear_switch_pose_;
   common_math::PathPt<float> next_gear_switch_pose_;
-#else
-  LinkPoseLinePath lpl_path_;
-  geometry_lib::PathPoint gear_switch_pose_;
-  geometry_lib::PathPoint next_gear_switch_pose_;
-#endif
+
 };
 
 }  // namespace planning

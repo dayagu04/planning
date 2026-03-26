@@ -14,7 +14,9 @@ double ReferenceCostTerm::GetCost(const ilqr_solver::State &x,
   return 0.5 * (cost_config_ptr_->at(W_REF_POS) *
                     Square(x[POS] - cost_config_ptr_->at(REF_POS)) +
                 cost_config_ptr_->at(W_REF_VEL) *
-                    Square(x[VEL] - cost_config_ptr_->at(REF_VEL)));
+                    Square(x[VEL] - cost_config_ptr_->at(REF_VEL)) +
+                cost_config_ptr_->at(W_REF_ACC) *
+                    Square(x[ACC] - cost_config_ptr_->at(REF_ACC)));
 }
 
 void ReferenceCostTerm::GetGradientHessian(
@@ -25,9 +27,11 @@ void ReferenceCostTerm::GetGradientHessian(
              (cost_config_ptr_->at(REF_POS) - x[POS]);
   lx(VEL) += -cost_config_ptr_->at(W_REF_VEL) *
              (cost_config_ptr_->at(REF_VEL) - x[VEL]);
-
+  lx(ACC) += -cost_config_ptr_->at(W_REF_ACC) *
+             (cost_config_ptr_->at(REF_ACC) - x[ACC]);
   lxx(POS, POS) += cost_config_ptr_->at(W_REF_POS);
   lxx(VEL, VEL) += cost_config_ptr_->at(W_REF_VEL);
+  lxx(ACC, ACC) += cost_config_ptr_->at(W_REF_ACC);
 }
 
 // longitudinal acc cost

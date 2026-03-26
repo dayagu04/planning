@@ -40,6 +40,15 @@ struct SLTGraphMessage {
   uint32_t k;
 };
 
+struct PairHash {
+    std::size_t operator()(const std::pair<double, double>& p) const noexcept {
+        // 使用位拼接组合两个 double 的哈希值
+        auto h1 = std::hash<double>{}(p.first);
+        auto h2 = std::hash<double>{}(p.second);
+        return h1 ^ (h2 << 1);  // 简单的组合方式
+    }
+};
+
 class SpatioTemporalUnionDp {
  public:
   void Init();
@@ -57,12 +66,13 @@ class SpatioTemporalUnionDp {
   void Reset();
 
  private:
+
   bool InitCostTable(const planning::common::SpationTemporalUnionDpInput&
                          spatio_temporal_union_plan_input,
                      const int half_lateral_sample_nums, const double target_s);
-
-  bool InitSpeedLimitLookUp(const planning::common::SpationTemporalUnionDpInput
-                                &spatio_temporal_union_plan_input);
+  void PreGenerateCubic();
+  bool InitSpeedLimitLookUp(const planning::common::SpationTemporalUnionDpInput&
+                                spatio_temporal_union_plan_input);
 
   bool RetrieveSpeedProfile(TrajectoryPoints &traj_points,
                             const planning::common::SpationTemporalUnionDpInput
@@ -81,7 +91,8 @@ class SpatioTemporalUnionDp {
       const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
       const double target_s,
       const planning::common::SpationTemporalUnionDpInput&
-          spatio_temporal_union_plan_input);
+          spatio_temporal_union_plan_input,
+      const std::vector<int>& valid_agent_indices);
 
   double CalculateEdgeCost(const SLTGraphPoint& first,
                            const SLTGraphPoint& second,
@@ -115,7 +126,8 @@ class SpatioTemporalUnionDp {
       const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
       const planning::common::SpationTemporalUnionDpInput&
           spatio_temporal_union_plan_input,
-      double* distance_to_point, int* agent_id);
+      double* distance_to_point, int* agent_id,
+      const std::vector<int>& valid_agent_indices);
 
   double GetLongitCostBetweenObsBoxes(
       const double longit_dis_to_ego,
@@ -176,10 +188,26 @@ class SpatioTemporalUnionDp {
 
   void PrecomputeInvSpeedLimit();
 
+  void PrecomputeEgoTrajectory(
+    const SLTGraphPoint& pre_point, const SLTGraphPoint& cur_point,
+    const CubicPolynomialCurve1d& lateral_curve, const double& acc,
+    const double& v0, double time_gap, std::vector<AABox2d>& ego_boxes,
+    std::vector<double>& times);
+
   void FallbackFunction(const planning::common::SpationTemporalUnionDpInput&
                             spatio_temporal_union_plan_input,
                         TrajectoryPoints& traj_points,
                         const bool last_enable_using_st_plan);
+
+  // 预构建上一帧→当前帧的s-l spline（仅执行一次）
+  bool PrebuildLastFrameToCurrentSpline();
+
+  // 新增：预构建的s-l spline及边界
+  pnc::mathlib::spline last2cur_stitching_spline_;
+  double spline_s_min_ = 0.0;  // spline的s最小值（当前帧Frenet系）
+  double spline_s_max_ = 0.0;  // spline的s最大值（当前帧Frenet系）
+
+  bool enable_use_last_planning_result_compute_stitching_ = false;
 
   planning::common::TrajectoryPoints trajectory_points_;
   std::vector<double> speed_limit_by_index_;
@@ -215,6 +243,7 @@ class SpatioTemporalUnionDp {
   double total_length_t_ = 0.0;
   double unit_t_ = 0.0;
   double inv_unit_t_ = 0.0;
+  double inv_unit_t_square_ = 0.0;
   double t_squared_ = 0.0;
   int dimension_t_ = 0;
 
@@ -257,6 +286,9 @@ class SpatioTemporalUnionDp {
   double l0_ = 1.50;
   double b_ = 0.40;
   double k_ = 1.5;
+  double min_s_consider_speed_ = 0.0;
+  std::unordered_map<std::pair<int, int>, CubicPolynomialCurve1d,
+                 PairHash> CubicPolynomialMap_;
 };
 
 }  // namespace planning

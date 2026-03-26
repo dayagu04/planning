@@ -426,14 +426,14 @@ bool MapRequest::CheckTargetLaneMergeDirection(RequestType request_type) {
   if (request_type == LEFT_CHANGE) {
     const auto& left_lane = virtual_lane_mgr_->get_left_lane();
     if (!left_lane) {
-      std::cout << "left_lane is nullptr" << std::endl;
+      ILOG_DEBUG << "left_lane is nullptr";
       return false;
     }
     target_lane_virtual_id = left_lane->get_virtual_id();
   } else if (request_type == RIGHT_CHANGE) {
     const auto& right_lane = virtual_lane_mgr_->get_right_lane();
     if (!right_lane) {
-      std::cout << "right_lane is nullptr" << std::endl;
+      ILOG_DEBUG << "right_lane is nullptr";
       return false;
     }
     target_lane_virtual_id = right_lane->get_virtual_id();

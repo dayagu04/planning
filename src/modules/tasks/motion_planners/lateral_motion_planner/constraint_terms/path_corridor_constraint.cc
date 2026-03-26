@@ -1,248 +1,12 @@
-#include "lateral_motion_planning_cost.h"
+#include "path_corridor_constraint.h"
 
 #include "math_lib.h"
 
 using namespace pnc::mathlib;
 namespace pnc {
 namespace lateral_planning {
-static const double kEps = 1e-6;
 
-double ReferenceCostTerm::GetCost(const ilqr_solver::State &x,
-                                  const ilqr_solver::Control & /*u*/) {
-  const double cost_x = 0.5 * cost_config_ptr_->at(W_REF_X) *
-                        Square(x[X] - cost_config_ptr_->at(REF_X));
-  const double cost_y = 0.5 * cost_config_ptr_->at(W_REF_Y) *
-                        Square(x[Y] - cost_config_ptr_->at(REF_Y));
-  const double cost_theta = 0.5 * cost_config_ptr_->at(W_REF_THETA) *
-                            Square(x[THETA] - cost_config_ptr_->at(REF_THETA));
-
-  return cost_x + cost_y + cost_theta;
-}
-
-void ReferenceCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  lx(X) +=
-      -cost_config_ptr_->at(W_REF_X) * (cost_config_ptr_->at(REF_X) - x[X]);
-  lx(Y) +=
-      -cost_config_ptr_->at(W_REF_Y) * (cost_config_ptr_->at(REF_Y) - x[Y]);
-  lx(THETA) += -cost_config_ptr_->at(W_REF_THETA) *
-               (cost_config_ptr_->at(REF_THETA) - x[THETA]);
-
-  lxx(X, X) += cost_config_ptr_->at(W_REF_X);
-  lxx(Y, Y) += cost_config_ptr_->at(W_REF_Y);
-  lxx(THETA, THETA) += cost_config_ptr_->at(W_REF_THETA);
-}
-
-double FrontReferenceCostTerm::GetCost(const ilqr_solver::State &x,
-                                       const ilqr_solver::Control & /*u*/) {
-  double head_x = x[X] + cost_config_ptr_->at(WHEEL_BASE) * std::cos(x[THETA]);
-  double head_y = x[Y] + cost_config_ptr_->at(WHEEL_BASE) * std::sin(x[THETA]);
-  const double cost_x = 0.5 * cost_config_ptr_->at(W_FRONT_REF_X) *
-                        Square(head_x - cost_config_ptr_->at(FRONT_REF_X));
-  const double cost_y = 0.5 * cost_config_ptr_->at(W_FRONT_REF_Y) *
-                        Square(head_y - cost_config_ptr_->at(FRONT_REF_Y));
-  // const double cost_theta = 0.5 * cost_config_ptr_->at(W_REF_THETA) *
-  //                           Square(x[THETA] -
-  //                           cost_config_ptr_->at(HEAD_REF_THETA));
-
-  return cost_x + cost_y;
-}
-
-void FrontReferenceCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  double head_x = x[X] + cost_config_ptr_->at(WHEEL_BASE) * std::cos(x[THETA]);
-  double head_y = x[Y] + cost_config_ptr_->at(WHEEL_BASE) * std::sin(x[THETA]);
-  lx(X) += -cost_config_ptr_->at(W_FRONT_REF_X) *
-           (cost_config_ptr_->at(FRONT_REF_X) - head_x);
-  lx(Y) += -cost_config_ptr_->at(W_FRONT_REF_Y) *
-           (cost_config_ptr_->at(FRONT_REF_Y) - head_y);
-  // lx(THETA) += -cost_config_ptr_->at(W_REF_THETA) *
-  //              (cost_config_ptr_->at(REF_THETA) - x[THETA]);
-
-  lxx(X, X) += cost_config_ptr_->at(W_FRONT_REF_X);
-  lxx(Y, Y) += cost_config_ptr_->at(W_FRONT_REF_Y);
-  // lxx(THETA, THETA) += cost_config_ptr_->at(W_REF_THETA);
-}
-
-double ContinuityCostTerm::GetCost(const ilqr_solver::State &x,
-                                   const ilqr_solver::Control & /*u*/) {
-  const double cost =
-      0.5 * (cost_config_ptr_->at(W_CONTINUITY_X) *
-                 Square(x[X] - cost_config_ptr_->at(CONTINUITY_X)) +
-             cost_config_ptr_->at(W_CONTINUITY_Y) *
-                 Square(x[Y] - cost_config_ptr_->at(CONTINUITY_Y)) +
-             cost_config_ptr_->at(W_CONTINUITY_THETA) *
-                 Square(x[THETA] - cost_config_ptr_->at(CONTINUITY_THETA)));
-
-  return cost;
-}
-
-void ContinuityCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  lx(X) += -cost_config_ptr_->at(W_CONTINUITY_X) *
-           (cost_config_ptr_->at(CONTINUITY_X) - x[X]);
-  lx(Y) += -cost_config_ptr_->at(W_CONTINUITY_Y) *
-           (cost_config_ptr_->at(CONTINUITY_Y) - x[Y]);
-  lx(THETA) += -cost_config_ptr_->at(W_CONTINUITY_THETA) *
-               (cost_config_ptr_->at(CONTINUITY_THETA) - x[THETA]);
-
-  lxx(X, X) += cost_config_ptr_->at(W_CONTINUITY_X);
-  lxx(Y, Y) += cost_config_ptr_->at(W_CONTINUITY_Y);
-  lxx(THETA, THETA) += cost_config_ptr_->at(W_CONTINUITY_THETA);
-}
-
-double VirtualReferenceCostTerm::GetCost(const ilqr_solver::State &x,
-                                         const ilqr_solver::Control & /*u*/) {
-  const double cost_x = 0.5 * cost_config_ptr_->at(W_VIRTUAL_REF_X) *
-                        Square(x[X] - cost_config_ptr_->at(VIRTUAL_REF_X));
-  const double cost_y = 0.5 * cost_config_ptr_->at(W_VIRTUAL_REF_Y) *
-                        Square(x[Y] - cost_config_ptr_->at(VIRTUAL_REF_Y));
-  const double cost_theta =
-      0.5 * cost_config_ptr_->at(W_VIRTUAL_REF_THETA) *
-      Square(x[THETA] - cost_config_ptr_->at(VIRTUAL_REF_THETA));
-
-  return cost_x + cost_y + cost_theta;
-}
-
-void VirtualReferenceCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  lx(X) += -cost_config_ptr_->at(W_VIRTUAL_REF_X) *
-           (cost_config_ptr_->at(VIRTUAL_REF_X) - x[X]);
-  lx(Y) += -cost_config_ptr_->at(W_VIRTUAL_REF_Y) *
-           (cost_config_ptr_->at(VIRTUAL_REF_Y) - x[Y]);
-  lx(THETA) += -cost_config_ptr_->at(W_VIRTUAL_REF_THETA) *
-               (cost_config_ptr_->at(VIRTUAL_REF_THETA) - x[THETA]);
-
-  lxx(X, X) += cost_config_ptr_->at(W_VIRTUAL_REF_X);
-  lxx(Y, Y) += cost_config_ptr_->at(W_VIRTUAL_REF_Y);
-  lxx(THETA, THETA) += cost_config_ptr_->at(W_VIRTUAL_REF_THETA);
-}
-
-double LatAccCostTerm::GetCost(const ilqr_solver::State &x,
-                               const ilqr_solver::Control & /*u*/) {
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(REF_VEL)));
-  const double delta = x[DELTA] - cost_config_ptr_->at(EXPECTEDE_DELTA);
-
-  const double cost =
-      0.5 * cost_config_ptr_->at(W_ACC) * k2v4 * (delta * delta);
-
-  return cost;
-}
-
-void LatAccCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(REF_VEL)));
-  const double delta = x[DELTA] - cost_config_ptr_->at(EXPECTEDE_DELTA);
-
-  lx(DELTA) += cost_config_ptr_->at(W_ACC) * k2v4 * delta;
-  lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC) * k2v4;
-}
-
-double LatJerkCostTerm::GetCost(const ilqr_solver::State &x,
-                                const ilqr_solver::Control &u) {
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(REF_VEL)));
-  const double omega = u[OMEGA];
-
-  const double cost =
-      0.5 * cost_config_ptr_->at(W_JERK) * k2v4 * (omega * omega);
-
-  return cost;
-}
-
-void LatJerkCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT &luu) {
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR) *
-                             Square(cost_config_ptr_->at(REF_VEL)));
-  const double omega = u[OMEGA];
-
-  lu(OMEGA) = cost_config_ptr_->at(W_JERK) * k2v4 * omega;
-  luu(OMEGA, OMEGA) = cost_config_ptr_->at(W_JERK) * k2v4;
-}
-
-double LatAccBoundCostTerm::GetCost(const ilqr_solver::State &x,
-                                    const ilqr_solver::Control & /*u*/) {
-  double cost = 0.;
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(REF_VEL));
-
-  if (x[DELTA] > cost_config_ptr_->at(DELTA_UPPER_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-           Square(x[DELTA] - cost_config_ptr_->at(DELTA_UPPER_BOUND));
-  } else if (x[DELTA] < cost_config_ptr_->at(DELTA_LOWER_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-           Square(x[DELTA] - cost_config_ptr_->at(DELTA_LOWER_BOUND));
-  }
-
-  return cost;
-}
-
-void LatAccBoundCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(REF_VEL));
-
-  if (x[DELTA] > cost_config_ptr_->at(DELTA_UPPER_BOUND)) {
-    lx(DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-                 (x[DELTA] - cost_config_ptr_->at(DELTA_UPPER_BOUND));
-    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4;
-  } else if (x[DELTA] < cost_config_ptr_->at(DELTA_LOWER_BOUND)) {
-    lx(DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4 *
-                 (x[DELTA] - cost_config_ptr_->at(DELTA_LOWER_BOUND));
-    lxx(DELTA, DELTA) += cost_config_ptr_->at(W_ACC_BOUND) * k2v4;
-  }
-}
-
-double LatJerkBoundCostTerm::GetCost(const ilqr_solver::State &x,
-                                     const ilqr_solver::Control &u) {
-  double cost = 0.;
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(REF_VEL));
-  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_UPPER_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-           Square(u[OMEGA] - cost_config_ptr_->at(OMEGA_UPPER_BOUND));
-  } else if (u[OMEGA] < cost_config_ptr_->at(OMEGA_LOWER_BOUND)) {
-    cost = 0.5 * cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-           Square(u[OMEGA] - cost_config_ptr_->at(OMEGA_LOWER_BOUND));
-  }
-  return cost;
-}
-
-void LatJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
-                                              const ilqr_solver::Control &u,
-                                              ilqr_solver::LxMT & /*lx*/,
-                                              ilqr_solver::LuMT &lu,
-                                              ilqr_solver::LxxMT & /*lxx*/,
-                                              ilqr_solver::LxuMT & /*lxu*/,
-                                              ilqr_solver::LuuMT &luu) {
-  const double k2v4 = Square(cost_config_ptr_->at(CURV_FACTOR)) *
-                      SSquare(cost_config_ptr_->at(REF_VEL));
-  if (u[OMEGA] > cost_config_ptr_->at(OMEGA_UPPER_BOUND)) {
-    lu(OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-                 (u[OMEGA] - cost_config_ptr_->at(OMEGA_UPPER_BOUND));
-    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4;
-  } else if (u[OMEGA] < cost_config_ptr_->at(OMEGA_LOWER_BOUND)) {
-    lu(OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4 *
-                 (u[OMEGA] - cost_config_ptr_->at(OMEGA_LOWER_BOUND));
-    luu(OMEGA, OMEGA) += cost_config_ptr_->at(W_JERK_BOUND) * k2v4;
-  }
-}
+constexpr double kEps = 1e-6;
 
 double PathFirstSoftCorridorCostTerm::GetCost(
     const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/) {
@@ -312,7 +76,7 @@ double PathFirstSoftCorridorCostTerm::GetCost(
               Square(distance_to_soft_lower_bound);
     }
   }
-
+  cost_value_ += cost;
   return cost;
 }
 
@@ -398,8 +162,8 @@ void PathFirstSoftCorridorCostTerm::GetGradientHessian(
   }
 }
 
-double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
-                                         const ilqr_solver::Control & /*u*/) {
+double PathSecondSoftCorridorCostTerm::GetCost(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/) {
   double cost = 0.0;
   // upper bound
   const double a1 = cost_config_ptr_->at(SECOND_SOFT_UPPER_BOUND_Y1) -
@@ -466,11 +230,11 @@ double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
               Square(distance_to_soft_lower_bound);
     }
   }
-
+  cost_value_ += cost;
   return cost;
 }
 
-void PathSoftCorridorCostTerm::GetGradientHessian(
+void PathSecondSoftCorridorCostTerm::GetGradientHessian(
     const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
@@ -548,8 +312,8 @@ void PathSoftCorridorCostTerm::GetGradientHessian(
   }
 }
 
-double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
-                                         const ilqr_solver::Control & /*u*/) {
+double PathHardCorridorCostTerm::GetCost(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/) {
   double cost = 0.0;
   // upper bound
   const double a1 = cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
@@ -614,7 +378,7 @@ double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
               Square(distance_to_hard_lower_bound);
     }
   }
-
+  cost_value_ += cost;
   return cost;
 }
 
@@ -693,6 +457,162 @@ void PathHardCorridorCostTerm::GetGradientHessian(
       lxx(Y, Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(b2) / d2;
     }
   }
+}
+
+double PathCorridorCostTerm::GetCost(const ilqr_solver::State &x,
+                                     const ilqr_solver::Control &) {
+  double cost = 0.;
+  // upper bound
+  const double a1 = cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+                    cost_config_ptr_->at(HARD_UPPER_BOUND_Y0);
+  const double b1 = cost_config_ptr_->at(HARD_UPPER_BOUND_X0) -
+                    cost_config_ptr_->at(HARD_UPPER_BOUND_X1);
+  const double c1 = cost_config_ptr_->at(HARD_UPPER_BOUND_Y0) *
+                        cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+                    cost_config_ptr_->at(HARD_UPPER_BOUND_X0) *
+                        cost_config_ptr_->at(HARD_UPPER_BOUND_Y1);
+  const double d1 = Square(a1) + Square(b1);
+  // check direction continuity
+  double ubound_result = 0;
+  planning::planning_math::Vec2d cur_ubound_direction{
+      cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
+      cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
+  if (ubound_direction_.Length() > 0) {
+    // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
+  }
+
+  if (d1 > kEps && ubound_result >= 0) {
+    ubound_direction_ = cur_ubound_direction;
+    const double upper_cost_var =
+        -(a1 * x[X] + b1 * x[Y] + c1) +
+        alilqr_config_ptr_->at(L_POS_UPPER_HARDBOUND) /
+        alilqr_config_ptr_->at(W_POS_UPPER_HARDBOUND);
+    if (upper_cost_var < 0.) {
+      cost += 0.5 * alilqr_config_ptr_->at(W_POS_UPPER_HARDBOUND) *
+              Square(upper_cost_var);
+    }
+  }
+
+  // lower bound
+  const double a2 = cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+                    cost_config_ptr_->at(HARD_LOWER_BOUND_Y0);
+  const double b2 = cost_config_ptr_->at(HARD_LOWER_BOUND_X0) -
+                    cost_config_ptr_->at(HARD_LOWER_BOUND_X1);
+  const double c2 = cost_config_ptr_->at(HARD_LOWER_BOUND_Y0) *
+                        cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+                    cost_config_ptr_->at(HARD_LOWER_BOUND_X0) *
+                        cost_config_ptr_->at(HARD_LOWER_BOUND_Y1);
+  const double d2 = Square(a2) + Square(b2);
+  // check direction continuity
+  double lbound_result = 0;
+  planning::planning_math::Vec2d cur_lbound_direction{
+      cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
+      cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
+  if (lbound_direction_.Length() > 0) {
+    // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
+  }
+
+  if (d2 > kEps && lbound_result >= 0) {
+    lbound_direction_ = cur_lbound_direction;
+    const double lower_cost_var =
+        a2 * x[X] + b2 * x[Y] + c2 +
+        alilqr_config_ptr_->at(L_POS_LOWER_HARDBOUND) /
+        alilqr_config_ptr_->at(W_POS_LOWER_HARDBOUND);
+    if (lower_cost_var < 0.) {
+      cost += 0.5 * cost_config_ptr_->at(W_POS_LOWER_HARDBOUND) *
+              Square(lower_cost_var);
+    }
+  }
+
+  return cost;
+}
+
+void PathCorridorCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
+  // upper bound
+  const double a1 = cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+                    cost_config_ptr_->at(HARD_UPPER_BOUND_Y0);
+  const double b1 = cost_config_ptr_->at(HARD_UPPER_BOUND_X0) -
+                    cost_config_ptr_->at(HARD_UPPER_BOUND_X1);
+  const double c1 = cost_config_ptr_->at(HARD_UPPER_BOUND_Y0) *
+                        cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+                    cost_config_ptr_->at(HARD_UPPER_BOUND_X0) *
+                        cost_config_ptr_->at(HARD_UPPER_BOUND_Y1);
+  const double d1 = Square(a1) + Square(b1);
+  // check direction continuity
+  double ubound_result = 0;
+  planning::planning_math::Vec2d cur_ubound_direction{
+      cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
+      cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
+  if (ubound_direction_.Length() > 0) {
+    // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
+  }
+
+  if (d1 > kEps && ubound_result >= 0) {
+    ubound_direction_ = cur_ubound_direction;
+    const double upper_cost_var =
+        -(a1 * x[X] + b1 * x[Y] + c1) +
+        alilqr_config_ptr_->at(L_POS_UPPER_HARDBOUND) /
+        alilqr_config_ptr_->at(W_POS_UPPER_HARDBOUND);
+    if (upper_cost_var < 0.) {
+      lx(X) += -alilqr_config_ptr_->at(W_POS_UPPER_HARDBOUND) *
+               upper_cost_var * a1;
+      lx(Y) += -alilqr_config_ptr_->at(W_POS_UPPER_HARDBOUND) *
+               upper_cost_var * b1;
+      lxx(X, X) +=
+          alilqr_config_ptr_->at(W_POS_UPPER_HARDBOUND) * Square(a1);
+      lxx(Y, Y) +=
+          alilqr_config_ptr_->at(W_POS_UPPER_HARDBOUND) * Square(b1);
+    }
+  }
+
+  // lower bound
+  const double a2 = cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+                    cost_config_ptr_->at(HARD_LOWER_BOUND_Y0);
+  const double b2 = cost_config_ptr_->at(HARD_LOWER_BOUND_X0) -
+                    cost_config_ptr_->at(HARD_LOWER_BOUND_X1);
+  const double c2 = cost_config_ptr_->at(HARD_LOWER_BOUND_Y0) *
+                        cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+                    cost_config_ptr_->at(HARD_LOWER_BOUND_X0) *
+                        cost_config_ptr_->at(HARD_LOWER_BOUND_Y1);
+  const double d2 = Square(a2) + Square(b2);
+  // check direction continuity
+  double lbound_result = 0;
+  planning::planning_math::Vec2d cur_lbound_direction{
+      cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
+      cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
+  if (lbound_direction_.Length() > 0) {
+    // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
+  }
+
+  if (d2 > kEps && lbound_result >= 0) {
+    lbound_direction_ = cur_lbound_direction;
+    const double lower_cost_var =
+        a2 * x[X] + b2 * x[Y] + c2 +
+        alilqr_config_ptr_->at(L_POS_LOWER_HARDBOUND) /
+        alilqr_config_ptr_->at(W_POS_LOWER_HARDBOUND);
+    if (lower_cost_var < 0.) {
+      lx(X) += alilqr_config_ptr_->at(W_POS_LOWER_HARDBOUND) *
+               lower_cost_var * a2;
+      lx(Y) += alilqr_config_ptr_->at(W_POS_LOWER_HARDBOUND) *
+               lower_cost_var * b2;
+      lxx(X, X) +=
+          alilqr_config_ptr_->at(W_POS_LOWER_HARDBOUND) * Square(a2);
+      lxx(Y, Y) +=
+          alilqr_config_ptr_->at(W_POS_LOWER_HARDBOUND) * Square(b1);
+    }
+  }
+
 }
 
 }  // namespace lateral_planning

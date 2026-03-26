@@ -6,7 +6,7 @@
 #include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/base_lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
-#include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
+#include "tasks/motion_planners/lateral_motion_planner/base_lateral_motion_planner.h"
 #include "tasks/motion_planners/longitudinal_motion_planner/longitudinal_motion_planner.h"
 #include "tasks/motion_planners/longitudinal_motion_planner/pwj_longitudinal_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner/scc_longitudinal_motion_planner.h"

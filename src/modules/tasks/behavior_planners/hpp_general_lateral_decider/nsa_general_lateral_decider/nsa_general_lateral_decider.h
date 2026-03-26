@@ -70,13 +70,13 @@ class NSAGeneralLateralDecider : public BaseGeneralLateralDecider {
   // 3. construct the obstacle decisions
   void GenerateObstaclesBoundary();
   void GenerateStaticObstaclesBoundary(
-      const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+      const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
       ObstacleDecisions &obstacle_decisions);
   void GenerateStaticObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision, bool is_update_hard_bound);
   void GenerateDynamicObstaclesBoundary(
-      const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+      const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
       ObstacleDecisions &obstacle_decisions);
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,

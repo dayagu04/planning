@@ -119,8 +119,7 @@ OvertakeRequest::OvertakeRequest(
 }
 
 void OvertakeRequest::Update(int lc_status) {
-  std::cout << "OvertakeRequest::Update::coming overtake lane change request"
-            << std::endl;
+  ILOG_DEBUG << "OvertakeRequest::Update::coming overtake lane change request";
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
@@ -492,10 +491,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       isSatisfyOvertakeCountMaintainCondition(agent, reference_speed, long_diff,
                                               is_rain_mode);
 
-  std::cout << "reference_speed: " << reference_speed
+  ILOG_DEBUG << "reference_speed: " << reference_speed
             << "is_satisfy_update_condition: " << is_satisfy_update_condition
             << "is_satisfy_maintain_condition: "
-            << is_satisfy_maintain_condition << std::endl;
+            << is_satisfy_maintain_condition;
 
   int left_count_thres = kOvertakeCountThreshold;
   int right_count_thres = kOvertakeRightLaneCountThreshold;
@@ -814,10 +813,10 @@ bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
   const double front_ttc = (speed_diff > 0.0)
                                ? (leading_vehicle_dist / speed_diff)
                                : std::numeric_limits<double>::max();
-  std::cout << "leading_vehicle_speed: " << leading_agent->speed()
+  ILOG_DEBUG << "leading_vehicle_speed: " << leading_agent->speed()
             << "ego_speed: " << ego_speed << "speed_diff: " << speed_diff
             << "long_distance: " << leading_vehicle_dist
-            << "front_ttc: " << front_ttc << std::endl;
+            << "front_ttc: " << front_ttc;
   const int high_speed_diff_thres =
       rain_mode ? kOvertakeHighSpeedDiffThresholdRainMode
                 : kOvertakeUpdateSpeedDiffThreshold;
@@ -1740,7 +1739,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
 
 void OvertakeRequest::selectTargetObstacleIds(
     const std::shared_ptr<KDPath>& ref_line, const Point2D ego_cart_point,
-    const std::vector<std::shared_ptr<FrenetObstacle>> candidate_obs_info,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& candidate_obs_info,
     const double search_range, const int max_target_num,
     const double ego_half_width, const double l_buffer,
     const double max_l_buffer, const bool order_reverse,

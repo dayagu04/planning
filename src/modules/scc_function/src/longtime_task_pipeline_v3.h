@@ -42,7 +42,7 @@
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
-#include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
+#include "tasks/motion_planners/lateral_motion_planner/scc_lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 
@@ -102,7 +102,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   //   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
 
   // Motion Planners
-  std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
+  std::unique_ptr<SCCLateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<SccLongitudinalMotionPlannerV3>
       scc_longitudinal_motion_planner_;
   std::unique_ptr<SCCHMIDecider> hmi_decider_;

@@ -1094,7 +1094,7 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
 
   // LPNP: obstacle's frenet is wrong when it out of route
   if (distance_to_destination < 10.0 && (obstacle->b_frenet_valid() == false)) {
-    ILOG_DEBUG << "The obstacle's frenet is invalid but it is needed to be "
+    ILOG_INFO << "The obstacle's frenet is invalid but it is needed to be "
                   "cared by LPNP "
                << "whose id :" << obstacle->id();
     return false;
@@ -1103,7 +1103,7 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
   if ((obstacle->obstacle()->fusion_source() != OBSTACLE_SOURCE_CAMERA) &&
       (obstacle->obstacle()->fusion_source() !=
        OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-    ILOG_DEBUG << "The obstacle's fusion source is no camera whose id :"
+    ILOG_INFO << "The obstacle's fusion source is no camera whose id :"
                << obstacle->id();
     return true;
   }

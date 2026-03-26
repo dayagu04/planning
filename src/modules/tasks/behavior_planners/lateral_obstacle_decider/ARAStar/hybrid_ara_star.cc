@@ -73,22 +73,22 @@ HybridARAStar::HybridARAStar(framework::Session* session) {
   lateral_extend_ = hybrid_ara_star_conf_.lateral_extend;
   hpp_min_search_range_ = hybrid_ara_star_conf_.hpp_min_search_range;
 
-  std::cout << "HybridARAStar::HybridARAStar() ===========" << std::endl;
-  std::cout << "x_grid_resolution_: " << x_grid_resolution_ << std::endl;
-  std::cout << "y_grid_resolution_: " << y_grid_resolution_ << std::endl;
-  std::cout << "phi_grid_resolution_: " << phi_grid_resolution_ << std::endl;
-  std::cout << "next_node_num_: " << next_node_num_ << std::endl;
-  std::cout << "step_size_: " << step_size_ << std::endl;
-  std::cout << "max_front_wheel_angle_: " << max_front_wheel_angle_
-            << std::endl;
-  std::cout << "agent cost weight: " << agent_cost_weight_ << std::endl;
-  std::cout << "center cost weight: " << center_cost_weight_ << std::endl;
-  std::cout << "motion cost weight: " << motion_cost_weight_ << std::endl;
-  std::cout << "boundary cost weight: " << boundary_cost_weight_ << std::endl;
-  std::cout << "collision_buffer: " << collision_buffer_ << std::endl;
-  std::cout << "l_limit: " << l_limit_ << std::endl;
-  std::cout << "enable_middle_final_node: " << enable_middle_final_node_
-            << std::endl;
+  ILOG_DEBUG << "HybridARAStar::HybridARAStar() ===========";
+  ILOG_DEBUG << "x_grid_resolution_: " << x_grid_resolution_;
+  ILOG_DEBUG << "y_grid_resolution_: " << y_grid_resolution_;
+  ILOG_DEBUG << "phi_grid_resolution_: " << phi_grid_resolution_;
+  ILOG_DEBUG << "next_node_num_: " << next_node_num_;
+  ILOG_DEBUG << "step_size_: " << step_size_;
+  ILOG_DEBUG << "max_front_wheel_angle_: " << max_front_wheel_angle_
+           ;
+  ILOG_DEBUG << "agent cost weight: " << agent_cost_weight_;
+  ILOG_DEBUG << "center cost weight: " << center_cost_weight_;
+  ILOG_DEBUG << "motion cost weight: " << motion_cost_weight_;
+  ILOG_DEBUG << "boundary cost weight: " << boundary_cost_weight_;
+  ILOG_DEBUG << "collision_buffer: " << collision_buffer_;
+  ILOG_DEBUG << "l_limit: " << l_limit_;
+  ILOG_DEBUG << "enable_middle_final_node: " << enable_middle_final_node_
+           ;
 }
 
 // void HybridARAStar::BuildRBLineSeg(
@@ -122,7 +122,7 @@ void HybridARAStar::UpdateHeuristicFactor() {
   while (open_set_.find(current_id) == open_set_.end()) {
     open_pq_.pop();
     if (open_pq_.empty()) {
-      std::cout << "open_pq_ is empty" << std::endl;
+      ILOG_DEBUG << "open_pq_ is empty";
       return;
     }
     current_id = open_pq_.top().first;
@@ -143,8 +143,8 @@ bool HybridARAStar::GetResult(ara_star::HybridARAStarResult& result) const {
   if (final_node_ == nullptr) {
     return false;
   }
-  std::cout << "final node: " << final_node_->GetS() << " "
-            << final_node_->GetL() << std::endl;
+  ILOG_DEBUG << "final node: " << final_node_->GetS() << " "
+            << final_node_->GetL();
 
   std::shared_ptr<Node3d> current_node = final_node_;
   std::vector<double> hybrid_a_x;
@@ -179,11 +179,11 @@ bool HybridARAStar::GetResult(ara_star::HybridARAStarResult& result) const {
     std::vector<double> phi = current_node->GetPhis();
 
     if (x.empty() || y.empty() || phi.empty()) {
-      // std::cout << "result size check failed" << std::endl;
+      // ILOG_DEBUG << "result size check failed";
       return false;
     }
     if (x.size() != y.size() || x.size() != phi.size()) {
-      // std::cout << "states sizes are not equal" << std::endl;
+      // ILOG_DEBUG << "states sizes are not equal";
       return false;
     }
     std::reverse(x.begin(), x.end());
@@ -275,7 +275,7 @@ std::shared_ptr<Node3d> HybridARAStar::NextNodeGenerator(
       steering = max_front_wheel_angle_ * scale;
     }
   } else {
-    std::cout << "next node index error" << std::endl;
+    ILOG_DEBUG << "next node index error";
     return nullptr;
   }
 
@@ -298,9 +298,9 @@ std::shared_ptr<Node3d> HybridARAStar::NextNodeGenerator(
   // one_shot_distance_的取值要注意，apollo中该值是xy_grid_resolution_的根号2倍，这样保证了一个格子里，最多只有一个节点
   int num_steps = static_cast<int>(one_shot_distance_update / step_size_);
 
-  // std::cout << "one_shot_distance_update: " << one_shot_distance_update
-  //           << std::endl;
-  // std::cout << "num_steps: " << num_steps << std::endl;
+  // ILOG_DEBUG << "one_shot_distance_update: " << one_shot_distance_update
+  //          ;
+  // ILOG_DEBUG << "num_steps: " << num_steps;
 
   std::vector<double> intermediate_x;
   intermediate_x.reserve(num_steps + 2);
@@ -353,19 +353,19 @@ std::shared_ptr<Node3d> HybridARAStar::NextNodeGenerator(
 
   if (!fix_lane_->XYToSL(intermediate_x.back(), intermediate_y.back(), &next_s,
                          &next_l)) {
-    std::cout << "next node out of lane" << std::endl;
+    ILOG_DEBUG << "next node out of lane";
     return nullptr;
   }
 
   if (next_s <= current_s) {
-    std::cout << "do not drive back in s derection" << std::endl;
+    ILOG_DEBUG << "do not drive back in s derection";
     return nullptr;
   }
 
   // check if the vehicle runs outside ego lane
   ReferencePathPoint refpath_pt{};
   if (!reference_path_ptr_->get_reference_point_by_lon(next_s, refpath_pt)) {
-    std::cout << "Hybrid ara*: Get reference point by lon failed!" << std::endl;
+    ILOG_DEBUG << "Hybrid ara*: Get reference point by lon failed!";
   }
   if (next_l > refpath_pt.distance_to_left_lane_border - ego_half_width_ +
                    crosslinebuffer_ ||
@@ -376,10 +376,10 @@ std::shared_ptr<Node3d> HybridARAStar::NextNodeGenerator(
 
   constexpr double kIgnoreLThreshold = 0.0;
   if (no_left_ && next_l > kIgnoreLThreshold) {
-    std::cout << "Ignore left point" << std::endl;
+    ILOG_DEBUG << "Ignore left point";
     return nullptr;
   } else if (no_right_ && next_l < -kIgnoreLThreshold) {
-    std::cout << "Ignore right point" << std::endl;
+    ILOG_DEBUG << "Ignore right point";
     return nullptr;
   }
 
@@ -436,16 +436,16 @@ bool HybridARAStar::ImprovePath() {
   cost_manager.AddCost(motion_cost_ptr);
 
   // auto end_time = (uint64_t)IflyTime::Now_us();
-  // std::cout << "ImprovePath: prepare time " << (end_time - start_time)
-  //           << std::endl;
+  // ILOG_DEBUG << "ImprovePath: prepare time " << (end_time - start_time)
+  //          ;
 
   while (true) {
     auto current_time = (uint64_t)IflyTime::Now_ms();
     auto diff = current_time - start_search_time_;
 
     if (diff > kTotalSearchTimeLimit) {
-      std::cout << "ARA search exceed time limit: " << kTotalSearchTimeLimit
-                << "ms" << std::endl;
+      ILOG_DEBUG << "ARA search exceed time limit: " << kTotalSearchTimeLimit
+                << "ms";
       if (!has_found_new_path) {
         search_find_result = false;
       }
@@ -460,8 +460,8 @@ bool HybridARAStar::ImprovePath() {
 
     // 找到终点后的退出机制
     if (goal_fvalue <= best_fvalue) {
-      std::cout << "ImprovePath success!!! goal_fvalue: " << goal_fvalue
-                << " best_fvalue: " << best_fvalue << std::endl;
+      ILOG_DEBUG << "ImprovePath success!!! goal_fvalue: " << goal_fvalue
+                << " best_fvalue: " << best_fvalue;
       break;
     }
 
@@ -486,7 +486,7 @@ bool HybridARAStar::ImprovePath() {
     }
 
     // auto time2 = (uint64_t)IflyTime::Now_us();
-    // std::cout << "pq pop time: " << (time2 - time1) << std::endl;
+    // ILOG_DEBUG << "pq pop time: " << (time2 - time1);
 
     expand_num_++;
     for (size_t i = 0; i < next_node_num_; ++i) {
@@ -496,7 +496,7 @@ bool HybridARAStar::ImprovePath() {
       num_node_expand_++;
 
       // auto time4 = (uint64_t)IflyTime::Now_us();
-      // std::cout << "next node generate time: " << (time4 - time3) <<
+      // ILOG_DEBUG << "next node generate time: " << (time4 - time3) <<
       // std::endl;
 
       // boundary check failure handle
@@ -509,7 +509,7 @@ bool HybridARAStar::ImprovePath() {
       }
 
       // auto time5 = (uint64_t)IflyTime::Now_us();
-      // std::cout << "ValidityCheck time: " << (time5 - time4) << std::endl;
+      // ILOG_DEBUG << "ValidityCheck time: " << (time5 - time4);
 
       // check if the node is already in the observed set
       // observed_set_ 不清空
@@ -529,7 +529,7 @@ bool HybridARAStar::ImprovePath() {
       double new_traj_cost = current_node->GetTrajCost() + cost;
 
       // auto time6 = (uint64_t)IflyTime::Now_us();
-      // std::cout << "ComputeCost time: " << (time6 - time5) << std::endl;
+      // ILOG_DEBUG << "ComputeCost time: " << (time6 - time5);
 
       if (next_node->GetTrajCost() > new_traj_cost) {
         // use new node connection
@@ -545,8 +545,8 @@ bool HybridARAStar::ImprovePath() {
 
         if (close_set_.find(next_node->GetIndex()) == close_set_.end()) {
           if (ReachDestination(next_node)) {
-            std::cout << "reach destination, traj cost " << new_traj_cost
-                      << std::endl;
+            ILOG_DEBUG << "reach destination, traj cost " << new_traj_cost
+                     ;
             next_node->SetHeuCost(0.0);
             next_node->SetReachDest(true);
             if (final_node_->GetTrajCost() > next_node->GetTrajCost()) {
@@ -565,13 +565,13 @@ bool HybridARAStar::ImprovePath() {
         }
       }
       // auto time7 = (uint64_t)IflyTime::Now_us();
-      // std::cout << "incons cost time: " << (time7 - time6) << std::endl;
+      // ILOG_DEBUG << "incons cost time: " << (time7 - time6);
 
     }  // end node explore loop
 
     if (open_set_.empty() && !has_found_new_path) {
-      std::cout << "ImprovePath: open_set_ is empty and find no path!!!"
-                << std::endl;
+      ILOG_DEBUG << "ImprovePath: open_set_ is empty and find no path!!!"
+               ;
       search_find_result = false;
       break;
     }
@@ -581,7 +581,7 @@ bool HybridARAStar::ImprovePath() {
   }  // end while loop
 
   if (!search_find_result) {
-    std::cout << "ImprovePath: search find no path" << std::endl;
+    ILOG_DEBUG << "ImprovePath: search find no path";
     return false;
   }
 
@@ -592,8 +592,8 @@ bool HybridARAStar::ImprovePath() {
       open_set_.emplace(node.first, node.second);
     }
     // auto time9 = (uint64_t)IflyTime::Now_us();
-    // std::cout << "merge incons_set_ into open_set_ time: " << (time9 - time8)
-    //           << std::endl;
+    // ILOG_DEBUG << "merge incons_set_ into open_set_ time: " << (time9 - time8)
+    //          ;
 
     // rebuild open_pq_
     open_pq_ = decltype(open_pq_)();
@@ -602,7 +602,7 @@ bool HybridARAStar::ImprovePath() {
       open_pq_.emplace(node.first, node.second->GetCost());
     }
     // auto time10 = (uint64_t)IflyTime::Now_us();
-    // std::cout << "rebuild open_pq_ time: " << (time10 - time9) << std::endl;
+    // ILOG_DEBUG << "rebuild open_pq_ time: " << (time10 - time9);
   }
 
   return true;
@@ -727,7 +727,7 @@ bool HybridARAStar::ValidityCheck(const std::shared_ptr<Node3d> node) {
     double ego_front_l = 0.0;
     if (!fix_lane_->XYToSL(ego_head_position.x(), ego_head_position.y(),
                            &ego_front_s, &ego_front_l)) {
-      std::cout << "ValidityCheck: ego out of lane" << std::endl;
+      ILOG_DEBUG << "ValidityCheck: ego out of lane";
       return false;
     }
     double max_l = std::max(std::abs(node->GetL()), std::abs(ego_front_l));
@@ -860,8 +860,8 @@ bool HybridARAStar::SetStartAndEndPose(
   // double ego_l = 0.0;
   // if (!fix_lane->XYToSL(planning_init_point.x, planning_init_point.y, &ego_s,
   //                       &ego_l)) {
-  //   std::cout << "Hybrid ara*: planning_init_point frenet failed!!!"
-  //             << std::endl;
+  //   ILOG_DEBUG << "Hybrid ara*: planning_init_point frenet failed!!!"
+  //            ;
   //   return false;
   // }
   // auto start_point = fix_lane.GetCenterLinePathPointByS(ego_s);
@@ -877,7 +877,7 @@ bool HybridARAStar::SetStartAndEndPose(
   double start_s = 0.0;
   double start_l = 0.0;
   if (!fix_lane_->XYToSL(start_pose_.x, start_pose_.y, &start_s, &start_l)) {
-    std::cout << "start node out of lane" << std::endl;
+    ILOG_DEBUG << "start node out of lane";
     return false;
   }
 
@@ -902,10 +902,10 @@ bool HybridARAStar::SetStartAndEndPose(
   end_pose_.y = end_point.y();
   end_pose_.theta = end_point.theta();
   if (!fix_lane_->XYToSL(end_pose_.x, end_pose_.y, &end_s_, &end_l_)) {
-    std::cerr << "end node out of lane" << std::endl;
+    std::cerr << "end node out of lane";
     return false;
   }
-  std::cout << "  end s l: " << end_s_ << " " << end_l_ << std::endl;
+  ILOG_DEBUG << "  end s l: " << end_s_ << " " << end_l_;
 
   // 扩展搜索范围
   CalculateSearchBounds(plan_history_traj);
@@ -1370,7 +1370,7 @@ bool HybridARAStar::Init(const SearchResult search_result) {
     ego_s_ = reference_path_ptr->get_frenet_ego_state().s();
     ego_l_ = reference_path_ptr->get_frenet_ego_state().l();
   } else {
-    std::cout << "Error!!! fix_lane_ is nullptr" << std::endl;
+    ILOG_DEBUG << "Error!!! fix_lane_ is nullptr";
     return false;
   }
 
@@ -1437,8 +1437,8 @@ bool HybridARAStar::Init(const SearchResult search_result) {
     return false;
   }
   auto time2 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "SetStartAndEndPose time: " << time2 - time1 << " ms"
-            << std::endl;
+  ILOG_DEBUG << "SetStartAndEndPose time: " << time2 - time1 << " ms"
+           ;
 
   // prepare for edt
   edt_ = session_->environmental_model()
@@ -1456,19 +1456,19 @@ bool HybridARAStar::Init(const SearchResult search_result) {
 bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
                          const SearchResult search_result) {
   // HARA* begins
-  std::cout << std::endl;
-  std::cout << "==== start hybrid ara star search ==== " << std::endl;
+  ILOG_DEBUG;
+  ILOG_DEBUG << "==== start hybrid ara star search ==== ";
 
   auto time1 = (uint64_t)IflyTime::Now_ms();
   Reset();
   auto time2 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "ARA star Reset time: " << time2 - time1 << " ms" << std::endl;
+  ILOG_DEBUG << "ARA star Reset time: " << time2 - time1 << " ms";
 
   if (!Init(search_result)) {
     return false;
   }
   auto time3 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "ARA star Init time: " << time3 - time2 << " ms" << std::endl;
+  ILOG_DEBUG << "ARA star Init time: " << time3 - time2 << " ms";
 
   // 如果静止障碍物是需要nudge的，那将其加入到 bounding_box_vec_ ,
   // virtual_lineseg_tree_ , agent_box_tree_
@@ -1476,27 +1476,27 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
     return false;
   }
   auto time4 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "ProcessStaticAgents time: " << time4 - time3 << " ms"
-            << std::endl;
+  ILOG_DEBUG << "ProcessStaticAgents time: " << time4 - time3 << " ms"
+           ;
 
   if (!in_bend_) {
     ChooseDirection();
   }
   auto time5 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "ChooseDirection time: " << time5 - time4 << " ms" << std::endl;
+  ILOG_DEBUG << "ChooseDirection time: " << time5 - time4 << " ms";
 
   if (!no_right_ && !no_left_) {
     // MergeCloseAgent();
   }
   auto time6 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "MergeCloseAgent time: " << time6 - time5 << " ms" << std::endl;
+  ILOG_DEBUG << "MergeCloseAgent time: " << time6 - time5 << " ms";
 
   LogAgent();
 
   FindClosestUncoveredInterval();
   auto time7 = (uint64_t)IflyTime::Now_ms();
-  std::cout << "FindClosestUncoveredInterval time: " << time7 - time6 << " ms"
-            << std::endl;
+  ILOG_DEBUG << "FindClosestUncoveredInterval time: " << time7 - time6 << " ms"
+           ;
 
   // load open set, pq
   open_set_.emplace(start_node_->GetIndex(), start_node_);
@@ -1505,75 +1505,75 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
   observed_set_.emplace(start_node_->GetIndex(), start_node_);
   start_search_time_ = (uint64_t)IflyTime::Now_ms();
   std::vector<double> expand_num_vec;
-  std::cout << "======== ImprovePath start =========" << std::endl;
+  ILOG_DEBUG << "======== ImprovePath start =========";
   if (!ImprovePath()) {
-    std::cout << "init search fail no result,return middle search result"
-              << std::endl;
+    ILOG_DEBUG << "init search fail no result,return middle search result"
+             ;
     // 如果第一次没找到路径，就找到close_set_中代价最小的点，将它作为终点
     if (enable_middle_final_node_) {
       SetMiddleFinalNode();
       if (!GetResult(result)) {
-        std::cout << "GetResult failed, middle search is empty" << std::endl;
+        ILOG_DEBUG << "GetResult failed, middle search is empty";
         return false;
       }
       return true;
     }
   }
-  std::cout << "======== ImprovePath end =========" << std::endl;
-  std::cout << "init search num_node_expand_: " << num_node_expand_
-            << std::endl;
-  std::cout << "init search expand_num_: " << expand_num_ << std::endl;
+  ILOG_DEBUG << "======== ImprovePath end =========";
+  ILOG_DEBUG << "init search num_node_expand_: " << num_node_expand_
+           ;
+  ILOG_DEBUG << "init search expand_num_: " << expand_num_;
   expand_num_vec.emplace_back(expand_num_);
 
   auto end_improve_time = (uint64_t)IflyTime::Now_ms();
   uint64_t diff = end_improve_time - start_search_time_;
-  std::cout << "Init ImprovePath time: " << diff << " ms" << std::endl;
+  ILOG_DEBUG << "Init ImprovePath time: " << diff << " ms";
 
   // HACK(zkxie): 迭代可能造成轨迹抖动，暂时关闭
   if (!hybrid_ara_star_conf_.search_once) {
     // zkxie(TODO): 为什么是2？应该是1？
     while (heuristic_factor_ > kMinHeuristicFactor) {
       if (open_set_.empty()) {
-        std::cout << "Exit!!! Open set empty" << std::endl;
+        ILOG_DEBUG << "Exit!!! Open set empty";
         break;
       }
       if (diff > kSkipAppendSearchTimeLimit) {
-        std::cout << "Exit!!! large time for init search: " << diff
-                  << std::endl;
+        ILOG_DEBUG << "Exit!!! large time for init search: " << diff
+                 ;
         break;
       }
       auto time1 = (uint64_t)IflyTime::Now_ms();
       UpdateHeuristicFactor();
       auto time2 = (uint64_t)IflyTime::Now_ms();
-      std::cout << "UpdateHeuristicFactor time: " << time2 - time1 << " ms"
-                << std::endl;
-      std::cout << "heuristic_factor_ after reduce: " << heuristic_factor_
-                << std::endl;
+      ILOG_DEBUG << "UpdateHeuristicFactor time: " << time2 - time1 << " ms"
+               ;
+      ILOG_DEBUG << "heuristic_factor_ after reduce: " << heuristic_factor_
+               ;
       UpdateOpenSetWithHeuristicFactor();
       auto time3 = (uint64_t)IflyTime::Now_ms();
-      std::cout << "UpdateOpenSetWithHeuristicFactor time: " << time3 - time2
-                << " ms" << std::endl;
+      ILOG_DEBUG << "UpdateOpenSetWithHeuristicFactor time: " << time3 - time2
+                << " ms";
 
       // zkxie(TODO): confirm
       close_set_.clear();
       auto start_t = (uint64_t)IflyTime::Now_ms();
-      std::cout << "======== ImprovePath start =========" << std::endl;
+      ILOG_DEBUG << "======== ImprovePath start =========";
       ImprovePath();
-      std::cout << "======== ImprovePath end =========" << std::endl;
+      ILOG_DEBUG << "======== ImprovePath end =========";
       auto end_t = (uint64_t)IflyTime::Now_ms();
-      std::cout << "ImprovePath time: " << end_t - start_t << " ms"
-                << std::endl;
-      std::cout << "all num_node_expand_ till now: " << num_node_expand_
-                << std::endl;
-      std::cout << "expand_num_: " << expand_num_ << std::endl;
+      ILOG_DEBUG << "ImprovePath time: " << end_t - start_t << " ms"
+               ;
+      ILOG_DEBUG << "all num_node_expand_ till now: " << num_node_expand_
+               ;
+      ILOG_DEBUG << "expand_num_: " << expand_num_;
       expand_num_vec.emplace_back(expand_num_);
     }
   }
   auto append_search_time = (uint64_t)IflyTime::Now_ms();
   diff = append_search_time - end_improve_time;
-  std::cout << "append search time: " << diff << " ms" << std::endl;
-  std::cout << "Final heuristic_factor_: " << heuristic_factor_ << std::endl;
-  std::cout << "kMinHeuristicFactor: " << kMinHeuristicFactor << std::endl;
+  ILOG_DEBUG << "append search time: " << diff << " ms";
+  ILOG_DEBUG << "Final heuristic_factor_: " << heuristic_factor_;
+  ILOG_DEBUG << "kMinHeuristicFactor: " << kMinHeuristicFactor;
 
   JSON_DEBUG_VECTOR("expand_num_vec", expand_num_vec, 0);
   JSON_DEBUG_VALUE("pass_interval_first", pass_interval_.first);
@@ -1581,7 +1581,7 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
 
   auto result_start_t = (uint64_t)IflyTime::Now_ms();
   if (!GetResult(result)) {
-    std::cout << "GetResult failed" << std::endl;
+    ILOG_DEBUG << "GetResult failed";
     return false;
   }
   last_result_s_.clear();
@@ -1592,13 +1592,13 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
   }
 
   auto result_end_t = (uint64_t)IflyTime::Now_ms();
-  std::cout << "GetResult time: " << result_end_t - result_start_t << " ms"
-            << std::endl;
+  ILOG_DEBUG << "GetResult time: " << result_end_t - result_start_t << " ms"
+           ;
 
   auto end_time = (uint64_t)IflyTime::Now_ms();
   diff = end_time - start_search_time_;
 
-  std::cout << "total search time: " << diff << " ms" << std::endl;
+  ILOG_DEBUG << "total search time: " << diff << " ms";
   return true;
 }
 }  // namespace planning

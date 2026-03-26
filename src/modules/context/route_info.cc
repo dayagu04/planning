@@ -147,7 +147,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
     tencent_split_region_info_list_.clear();
     return;
   }
-  is_in_tunnel_ = sdpro_map.isTunnel(link->link_type());
+  route_info_output_.is_in_tunnel = sdpro_map.isTunnel(link->link_type());
 
   if (IsMissSplitPoint(*link, nearest_l, nearest_s)) {
     route_info_output_.reset();
@@ -1653,7 +1653,7 @@ bool RouteInfo::UpdateStaticMap(const Map::StaticMap& static_map_info) {
 }
 
 void RouteInfo::UpdateMLCInfoDecider(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes) {
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
   route_info_output_.gaode_route_info_output.lane_num_except_emergency = relative_id_lanes.size();
   if (!route_info_output_.is_update_segment_success ||
       route_info_output_.gaode_route_info_output.lane_num_except_emergency < 1) {
@@ -1868,7 +1868,7 @@ void RouteInfo::UpdateMLCInfoDecider(
 }
 
 void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes) {
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
   mlc_decider_route_info_.feasible_lane_sequence.clear();
 
   if (relative_id_lanes.empty()) {
@@ -3369,6 +3369,9 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("left_lane_num", route_info_output_.left_lane_num);
   JSON_DEBUG_VALUE("right_lane_num", route_info_output_.right_lane_num);
   JSON_DEBUG_VALUE("emergency_lane_num", route_info_output_.emergency_lane_num);
+  JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
+  JSON_DEBUG_VALUE("current_lane_distance", route_info_output_.current_lane_distance);
+  JSON_DEBUG_VALUE("right_lane_distance", route_info_output_.right_lane_distance);
 
   int minVal_seq = 0;
   int maxVal_seq = 0;
@@ -5442,7 +5445,7 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::CalculateCurrentLink(
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
   double search_distance = 50.0;
   double max_heading_diff = PI / 4;
-  if (is_in_tunnel_) {
+  if (route_info_output_.is_in_tunnel) {
     search_distance = 100.0;
   }
   // 获取当前的segment

@@ -168,7 +168,7 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
     double s = 0.0;
     double l = 0.0;
     if (!planned_kd_path->XYToSL(point.x(), point.y(), &s, &l)) {
-      ILOG_ERROR << "----planned_kd_path err---";
+      ILOG_INFO << "----planned_kd_path err---";
       return;
     }
     min_s = std::fmin(min_s, s);
@@ -188,7 +188,7 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
   double center_l = 0.0;
   const auto &center = agent->box().center();
   if (!planned_kd_path->XYToSL(center.x(), center.y(), &center_s, &center_l)) {
-    ILOG_ERROR << "----planned_kd_path err---";
+    ILOG_INFO << "----planned_kd_path err---";
     return;
   }
   auto matched_point = planned_kd_path->GetPathPointByS(center_s);

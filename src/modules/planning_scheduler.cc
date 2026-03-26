@@ -860,6 +860,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // HMI for ad_info
   const auto& ad_info = session_.planning_context().planning_hmi_info().ad_info;
   // available
+  planning_hmi_info->ad_info.is_in_tunnel = ad_info.is_in_tunnel;
   planning_hmi_info->ad_info.is_avaliable = ad_info.is_avaliable;
   planning_hmi_info->ad_info.cruise_speed = ad_info.cruise_speed;
   planning_hmi_info->ad_info.lane_change_direction =
@@ -1502,11 +1503,21 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = function_type;
 
+#ifdef PlanTimeBenchmark
+  double start_time, end_time;
+  start_time = IflyTime::Now_ms();
+#endif
   // update environment model
   if (!environmental_model_manager_.Run()) {
     session_.mutable_planning_context()->Clear();
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   bool planning_success;
   if (function_type == planning::common::SceneType::HIGHWAY) {
@@ -1520,6 +1531,11 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   } else {
     planning_success = scc_function_->Plan();
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("TaskFunctionCost", end_time - start_time);
+#endif
 
   JSON_DEBUG_VALUE("current planning_success", planning_success);
   session_.mutable_planning_context()->mutable_last_planning_success() =

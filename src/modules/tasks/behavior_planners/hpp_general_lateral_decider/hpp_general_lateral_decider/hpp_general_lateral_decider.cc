@@ -623,8 +623,7 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
   double ego_l = 0.0;
   if (!frenet_coord->XYToSL(planning_init_point.x, planning_init_point.y,
                             &ego_s, &ego_l)) {
-    std::cout << "General Lateral Decider: planning_init_point frenet failed!!!"
-              << std::endl;
+    ILOG_DEBUG << "General Lateral Decider: planning_init_point frenet failed!!!";
     return false;
   }
 
@@ -682,7 +681,7 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
     if (!frenet_coord->SLToXY(hybrid_ara_result.s[i], hybrid_ara_result.l[i],
                               &hybrid_ara_result.x[i],
                               &hybrid_ara_result.y[i])) {
-      std::cout << "General Lateral Decider: SLToXY failed!!!" << std::endl;
+      ILOG_DEBUG << "General Lateral Decider: SLToXY failed!!!";
       return false;
     }
 
@@ -750,7 +749,7 @@ void HppGeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
         traj_point.l += lateral_offset;
       }
     } else {
-      std::cout << "HandleAvoidScene frenet error!" << std::endl;
+      ILOG_DEBUG << "HandleAvoidScene frenet error!";
     }
   }
 }
@@ -763,7 +762,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
     double point_s = std::min(traj_point.s, reference_path_ptr_->get_points().back().path_point.s());
     if (!reference_path_ptr_->get_reference_point_by_lon(point_s, refpath_pt)) {
       // add logs
-      ILOG_ERROR
+      ILOG_INFO
           << "ConstructReferencePathPoints: Get reference point by lon failed!";
     }
     double road_radius =
@@ -821,7 +820,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
                                     &last_lat_path_s, &last_lat_path_l)) {
             last_lat_path_l = 0.0;
           }
-          std::cout << "last_lat_path_s" << last_lat_path_s << std::endl;
+          ILOG_DEBUG << "last_lat_path_s" << last_lat_path_s;
           double ref_traj_theta = ref_traj_points_[i].heading_angle;
           double last_path_theta =
               motion_planner_output.lateral_theta_t_spline(tmp_t);
@@ -957,7 +956,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
       }
     }
   } else {
-    ILOG_ERROR << "no ref_traj_points!";
+    ILOG_INFO << "no ref_traj_points!";
     return false;
   }
   // extend s
@@ -1434,7 +1433,7 @@ void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
 
   if (plan_history_traj_.empty()) {
     // add logs
-    ILOG_ERROR << "lan history traj is null!";
+    ILOG_INFO << "lan history traj is null!";
     return;
   }
   GenerateDynamicObstaclesBoundary(dynamic_obstacles,
@@ -1442,7 +1441,7 @@ void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
 }
 
 void HppGeneralLateralDecider::GenerateStaticObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions &obstacle_decisions) {
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForStaticObstacle(obstacle)) {
@@ -1676,7 +1675,7 @@ double HppGeneralLateralDecider::CalculateExtraDecreaseBuffer(
 }
 
 void HppGeneralLateralDecider::GenerateDynamicObstaclesBoundary(
-    const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
+    const std::vector<std::shared_ptr<FrenetObstacle>>& obs_vec,
     ObstacleDecisions &obstacle_decisions) {
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForDynamicObstacle(obstacle)) {

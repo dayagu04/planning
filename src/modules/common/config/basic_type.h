@@ -451,6 +451,9 @@ struct RouteInfoOutput {
   int left_lane_num = 0;
   int right_lane_num = 0;
   int emergency_lane_num = 0;
+  double left_lane_distance = 0.0;
+  double current_lane_distance = 0.0;
+  double right_lane_distance = 0.0;
   // int minVal_seq = 0; // 用feasible_lane_sequence来代替
   // int maxVal_seq = 0; // 用feasible_lane_sequence来代替
   int ego_seq = 0; // 表示自车seq的，可以根据左右车道数计算出来，需要考虑这个还要不要输出
@@ -469,6 +472,7 @@ struct RouteInfoOutput {
   // bool is_nearing_other_lane_merge_to_road_point = false;
   // bool is_on_highway = false;
   bool is_continuous_ramp = false;  // for jwliu23
+  bool is_in_tunnel = false;
   // bool is_nearing_ramp = false;
   // bool is_ego_on_split_region = false;
   // bool is_find_exc_fp = false;
@@ -556,6 +560,7 @@ struct RouteInfoOutput {
     is_exist_toll_station = false;
     // is_on_highway = false;
     is_continuous_ramp = false;
+    bool is_in_tunnel = false;
     // first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
     // split_dir_dis_info_list.clear();
     current_segment_passed_distance = 0.0;
@@ -569,6 +574,9 @@ struct RouteInfoOutput {
     ego_seq = 0;
     emergency_lane_num = 0;
     lsl_length = 0.0;
+    left_lane_distance = 0.0;
+    current_lane_distance = 0.0;
+    right_lane_distance = 0.0;
     // mlc_request_type_route_info.reset();
     // is_closing_merge = false;
     // is_closing_split = false;
