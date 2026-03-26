@@ -78,7 +78,7 @@ constexpr double kSplitSelectEgoToExchangeAreaDistanceThd = 150.0;
 constexpr double kEnableSplitSelectionEgoLateralDistanceToBothLaneLines = 0.5;
 constexpr double kEgoLookAheadTime = 3.0;     // 自车前瞻时间
 constexpr double kSamplingStepI = 20.0;       // i循环采样步长
-constexpr double kSamplingStepJ = 5.0;        // j循环采样步长
+constexpr double kSamplingStepJ = 5.5;        // j循环采样步长
 constexpr int kSamplingRangeJ = 2;            // j循环范围（-2到2）
 constexpr double kMinCurvature = 0.0001;      // 最小曲率（避免除零）
 constexpr double kDefaultCurvature = 0.0001;  // 默认曲率值
@@ -92,10 +92,14 @@ constexpr double kAverageKappaCostWeight = 0.2;
 constexpr double kAverageThetaDiffCostWeight = 0.2;
 constexpr double kEgoLateralDistanceCostWeight = 0.1;
 constexpr double kUseVirtualLaneProcessSplitCostThd = 0.3;
-constexpr double kACCLeftOffsetThreshold = 0.8;  // ACC模式下左偏移阈值（米），可根据需求调整
-constexpr double kACCRightOffsetThreshold = 0.8;  // ACC模式下左偏移阈值（米），可根据需求调整
-constexpr double kACCHeadingLeftThreshold = M_PI / 36.0;  // 航向角向左偏差阈值（5°），可调整
-constexpr double kACCHeadingRightThreshold = M_PI / 36.0;  // 航向角向左偏差阈值（5°），可调整
+constexpr double kACCLeftOffsetThreshold =
+    0.8;  // ACC模式下左偏移阈值（米），可根据需求调整
+constexpr double kACCRightOffsetThreshold =
+    0.8;  // ACC模式下左偏移阈值（米），可根据需求调整
+constexpr double kACCHeadingLeftThreshold =
+    M_PI / 36.0;  // 航向角向左偏差阈值（5°），可调整
+constexpr double kACCHeadingRightThreshold =
+    M_PI / 36.0;  // 航向角向左偏差阈值（5°），可调整
 constexpr double kLeftRightRatioThreshold = 0.7;  // 偏左/偏右点占比阈值（70%）
 constexpr double kNormalizeAnglePI = M_PI;
 }  // namespace
@@ -182,12 +186,14 @@ void EgoLaneTrackManger::TrackEgoLane(
     if (!route_info_output.map_merge_region_info_list.empty()) {
       is_process_split_exchange =
           (route_info_output.map_split_region_info_list[0]
-              .distance_to_split_point <
-          route_info_output.map_merge_region_info_list[0]
-              .distance_to_merge_point) ||
+               .distance_to_split_point <
+           route_info_output.map_merge_region_info_list[0]
+               .distance_to_merge_point) ||
           (std::fabs(route_info_output.map_split_region_info_list[0]
-              .distance_to_split_point - route_info_output.map_merge_region_info_list[0]
-              .distance_to_merge_point) < road_merge_and_split_exchange_distance_thld);
+                         .distance_to_split_point -
+                     route_info_output.map_merge_region_info_list[0]
+                         .distance_to_merge_point) <
+           road_merge_and_split_exchange_distance_thld);
     } else {
       is_process_split_exchange = true;
     }
@@ -202,6 +208,8 @@ void EgoLaneTrackManger::TrackEgoLane(
     ramp_split_select_is_finish_ = false;
     interactive_select_split_counter_ = 0;
     enable_output_split_select_classical_chinese_ = false;
+    raw_min_road_radius_ = 1500.0;
+    raw_max_road_radius_ = 1500.0;
   }
   if (!active ||
       function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
@@ -1840,7 +1848,9 @@ void EgoLaneTrackManger::PreprocessRampSplit(
       std::max(60.0, ego_state->ego_v() * 4.0);
 
   if (distance_to_first_road_merge_ > distance_to_first_road_split_ ||
-      (std::fabs(distance_to_first_road_merge_ - distance_to_first_road_split_) < road_merge_and_split_distance_thld_surpress_lane_select)) {
+      (std::fabs(distance_to_first_road_merge_ -
+                 distance_to_first_road_split_) <
+       road_merge_and_split_distance_thld_surpress_lane_select)) {
     is_exist_split_on_ramp_ = true;
     std::pair<SplitRelativeDirection, double> const& split_dir_dis =
         need_consider_second_split ? split_direction_dis_info_list_[1]
@@ -2158,17 +2168,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   int split_lane_index = -1;
   double road_radius_origin = 10000;
   double max_road_radius = 100.0;
+  double min_road_radius = 10000.0;
   std::vector<std::pair<int, double>> lane_curv_info_set;
   std::unordered_map<int, LaneCurvInfo> lanes_curv_info;
-  double k_ego_look_ahead_time = kEgoLookAheadTime;
-  double k_sampling_step_i = kSamplingStepI;
-  double k_sampling_step_j = kSamplingStepJ;
-  // 自车车速小于30kph
-  if (ego_state->ego_v() < 8.34) {
-    k_ego_look_ahead_time = kEgoLookAheadTime * 0.5;
-    k_sampling_step_i = 5.0;
-    k_sampling_step_j = 2.5;
-  }
   for (size_t i = 0; i < order_ids.size(); i++) {
     // double road_radius = 10000;
     LaneCurvInfo lane_curv_info;
@@ -2183,7 +2185,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         road_radius_origin = 10000.0;
       } else {
         CalculateLaneCurvature(lane_frenet_coord, lane_curv_info_set,
-                               lane_curv_info, max_road_radius,
+                               lane_curv_info, max_road_radius, min_road_radius,
                                relative_id_lane);
       }
       lanes_curv_info.insert(std::make_pair(order_ids[i], lane_curv_info));
@@ -2226,14 +2228,19 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       }
     }
   }
-  if (max_road_radius < road_radius_origin) {
-    road_radius_origin = max_road_radius;
-  }
 
+  double ewma_alpha = 0.3;
+  double current_max_road_radius =
+      EWMAFilter(max_road_radius, ewma_alpha, raw_max_road_radius_);
+  double current_min_road_radius =
+      EWMAFilter(min_road_radius, ewma_alpha, raw_min_road_radius_);
+  if (current_max_road_radius < road_radius_origin) {
+    road_radius_origin = current_max_road_radius;
+  }
   if (last_zero_relative_id_nums_ > 1 &&
       (lcc_split_select_is_finish_ || road_split_select_is_finish_ ||
        ramp_split_select_is_finish_) &&
-      ego_distance_to_lane_merge_split_point < ego_state->ego_v() * 1.0) {
+      ego_distance_to_lane_merge_split_point < ego_state->ego_v() * 1.5) {
     ILOG_DEBUG << "ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
@@ -2413,7 +2420,10 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   }
 
   // 计算归一化的曲率程度（0=纯直道，1=最大曲率）
-  double curv_degree = NormalizeCurvatureRadius(road_radius_origin);
+  double curv_degree =
+      std::fabs(current_max_road_radius - current_min_road_radius) > 200.0
+          ? 0.0
+          : NormalizeCurvatureRadius(road_radius_origin);
   double relative_theta_diff_cost_weight, road_boundary_collision_cost_weight,
       kappa_cost_weight;
   //计算各项cost权重
@@ -4092,13 +4102,13 @@ double EgoLaneTrackManger::NormalizeCurvatureRadius(double radius) {
 double EgoLaneTrackManger::NormalizeCurvatureSign(double dis_to_ego) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  double min_consider_dis = std::max(ego_state->ego_v(), 1.0) * 1.0;
+  double min_consider_dis = std::max(ego_state->ego_v(), 1.0) * 1.5;
   double max_consider_dis = std::max(ego_state->ego_v(), 1.0) * 4.0;
   double clamped_dis =
       std::clamp(dis_to_ego, min_consider_dis, max_consider_dis);
   // 转换为曲率符号程度（离自车距离越近 权重越大）
   double sign_degree =
-      (max_consider_dis - dis_to_ego) / (max_consider_dis - min_consider_dis);
+      (max_consider_dis - clamped_dis) / (max_consider_dis - min_consider_dis);
   return sign_degree;
 }
 
@@ -4157,6 +4167,7 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
     const std::shared_ptr<planning_math::KDPath>& lane_frenet_coord,
     std::vector<std::pair<int, double>>& lane_curv_info_set,
     LaneCurvInfo& lane_curv_info, double& max_road_radius,
+    double& min_road_radius,
     const std::shared_ptr<VirtualLane>& relative_id_lane) {
   // 1. 内部获取ego_state（与原逻辑一致）
   const auto& ego_state =
@@ -4169,7 +4180,6 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
   if (ego_state->ego_v() < 8.34) {  // 车速<30kph
     k_ego_look_ahead_time = kEgoLookAheadTime * 0.5;
     k_sampling_step_i = 5.0;
-    k_sampling_step_j = 2.5;
   }
 
   Point2D cart_point(ego_state->planning_init_point().x,
@@ -4202,7 +4212,9 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
       if (!lane_frenet_coord->GetKappaByS(sample_s, &curv)) {
         continue;
       }
-      current_lane_curv_sign = curv > 0 ? 1 : -1;
+      if (std::fabs(curv) > 0.0005) {
+        current_lane_curv_sign = curv > 0 ? 1 : -1;
+      }
       curv_sign_degree = NormalizeCurvatureSign(sample_s - ego_frenet_point.x);
       curv_sign_total += current_lane_curv_sign * curv_sign_degree;
       curv_window_vec.emplace_back(std::fabs(curv));
@@ -4219,7 +4231,10 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
     }
   }
 
-  curv_sign = curv_sign_total > 0 ? 1 : -1;
+  if (std::fabs(curv_sign_total) > 1e-3) {
+    curv_sign = curv_sign_total > 0 ? 1 : -1;
+  }
+
   // 存储曲率结果
   lane_curv_info_set.emplace_back(relative_id_lane->get_order_id(), lane_curv);
   const double road_radius = 1.0 / std::max(lane_curv, kMinCurvature);
@@ -4227,22 +4242,26 @@ void EgoLaneTrackManger::CalculateLaneCurvature(
   lane_curv_info.curv = lane_curv;
   lane_curv_info.curv_sign = curv_sign;
 
-  // 4. 更新最大车道半径
+  // 4. 更新最大/最小车道半径
   if (lane_curv_info.curv_radius > max_road_radius) {
     max_road_radius = lane_curv_info.curv_radius;
   }
+  if (lane_curv_info.curv_radius < min_road_radius) {
+    min_road_radius = lane_curv_info.curv_radius;
+  }
+  return;
 }
 
 void EgoLaneTrackManger::CalculateDynamicCostWeights(
     double curv_degree, double& road_boundary_collision_cost_weight,
     double& relative_theta_diff_cost_weight, double& kappa_cost_weight) {
   // 步骤1：定义权重的两个端点（直道→最大曲率，与原逻辑完全一致）
-  const double theta_weight_straight = 0.6;      // 直道夹角权重
-  const double collision_weight_straight = 0.1;  // 直道碰撞权重
-  const double kappa_weight_straight = 0.2;      // 直道曲率权重
-  const double theta_weight_max_curv = 0.15;     // 最大曲率夹角权重
-  const double collision_weight_max_curv = 0.6;  // 最大曲率碰撞权重
-  const double kappa_weight_max_curv = 0.2;      // 最大曲率曲率权重
+  const double theta_weight_straight = 0.8;       // 直道夹角权重
+  const double collision_weight_straight = 0.02;  // 直道碰撞权重
+  const double kappa_weight_straight = 0.1;       // 直道曲率权重
+  const double theta_weight_max_curv = 0.15;      // 最大曲率夹角权重
+  const double collision_weight_max_curv = 0.6;   // 最大曲率碰撞权重
+  const double kappa_weight_max_curv = 0.2;       // 最大曲率曲率权重
   const double lateral_dis_weight = 0.01;  // 横向距离权重（固定值）
 
   // 步骤2：线性插值计算当前曲率对应的权重（连续动态变化）
@@ -4287,7 +4306,7 @@ void EgoLaneTrackManger::CalculateRoadBoundaryCollisionCost(
                                  dis_to_right_road_border);
 
   // 初始化TTI（Time To Impact）为5.0
-  double ttc = 5.0;
+  double ttc = 5.5;
   // 取曲率绝对值（避免负号影响计算）
   double curv_abs = std::fabs(lane_curv_info.curv);
 
@@ -4308,6 +4327,21 @@ void EgoLaneTrackManger::CalculateRoadBoundaryCollisionCost(
 
   // 根据TTI计算线性碰撞成本，赋值给输出参数
   road_boundary_collision_cost = CalculateLinearCost(ttc);
+}
+
+double EgoLaneTrackManger::EWMAFilter(double current_value, double alpha,
+                                      double& filtered_history) {
+  double filtered;
+  if (std::fabs(filtered_history) > 1000.0) {
+    // 首次滤波：无历史值，直接用当前值初始化
+    filtered = current_value;
+  } else {
+    // EWMA核心公式
+    filtered = alpha * current_value + (1 - alpha) * filtered_history;
+  }
+  // 更新历史值（供下一帧使用）
+  filtered_history = filtered;
+  return filtered;
 }
 
 }  // namespace planning
