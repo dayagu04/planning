@@ -44,10 +44,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   bool CalCruiseVelByCurvature(const double ego_v,
                                const std::vector<double> &d_poly,
                                double &cruise_v);
-
-  void ConstructReferencePathPoints(TrajectoryPoints &traj_points);
-
-  bool GenerateBodyEnvelopeSplines(TrajectoryPoints &traj_points);
+  void CalculateLonSampleLength();
+  void ConstructReferencePathPoints();
 
   // 2. construct the lane and boundary bound
   void GenerateRoadAndLaneBoundary();
@@ -186,6 +184,7 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
  private:
   bool is_ego_reverse_;
   double min_road_radius_;
+  double lon_sample_length = 0.0;
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
