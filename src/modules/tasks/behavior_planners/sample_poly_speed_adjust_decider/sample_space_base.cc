@@ -35,7 +35,7 @@ void STSampleSpaceBase::Init(
     const std::vector<const DynamicAgentNode*>& target_lane_nodes,
     const double init_s,
     const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord,
-    int change_direction) {
+    int change_direction,const double sample_st_limit_lat_offset) {
   Clear();
   init_s_ = init_s;
   change_direction_ = change_direction;
@@ -46,7 +46,7 @@ void STSampleSpaceBase::Init(
       LinearExtendAgentStBoundaryWithFrenet(agent_node,target_lane_coord);
     }
   }
-  ConstructStPointsTable();
+  ConstructStPointsTable(sample_st_limit_lat_offset);
 }
 
 void STSampleSpaceBase::Clear() {
@@ -242,7 +242,7 @@ void STSampleSpaceBase::LinearExtendAgentStBoundaryWithFrenet(
   agents_st_point_paris_.emplace_back(std::move(st_points_pairs));
 }
 
-void STSampleSpaceBase::ConstructStPointsTable() {
+void STSampleSpaceBase::ConstructStPointsTable(const double sample_st_limit_lat_offset) {
   st_points_table_.clear();
   st_points_table_.resize(kSampleSpaceReserveNum);
   sample_points_.clear();
@@ -251,7 +251,7 @@ void STSampleSpaceBase::ConstructStPointsTable() {
        agents_st_point_paris_) {
     for (size_t i = 0; i < st_point_paris.size(); ++i) {
       int index = (st_point_paris[i].first.t()) / kTimeResolution;
-      if (st_point_paris[i].first.l() * change_direction_ > 2.8) {
+      if (st_point_paris[i].first.l() * change_direction_ > sample_st_limit_lat_offset) {
         continue;
       }
       STPoint lower_point(st_point_paris[i].first.s(),

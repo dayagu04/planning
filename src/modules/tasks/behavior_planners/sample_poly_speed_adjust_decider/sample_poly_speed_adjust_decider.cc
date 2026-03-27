@@ -669,7 +669,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   }
   int change_direction = lane_change_request_ == 1 ? 1 : -1;
   st_sample_space_base_.Init(target_lane_nodes, ego_s, target_lane_coord_,
-                             change_direction);
+                             change_direction,
+                             config_.sample_st_limit_lat_offset);
 
   // calc flow vel
   StitchLastBestPoly();

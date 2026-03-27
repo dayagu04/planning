@@ -38,7 +38,7 @@ class STSampleSpaceBase {
       const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord);
   void LinearExtendAgentStBoundary(
       const planning_data::DynamicAgentNode* agent_node);
-  void ConstructStPointsTable();
+  void ConstructStPointsTable(const double sample_st_limit_lat_offset);
   bool GetBorderByAvailable(double s, double t,
                             planning::speed::STPoint* const lower_st_point,
                             planning::speed::STPoint* const upper_st_point);
@@ -47,7 +47,7 @@ class STSampleSpaceBase {
           target_lane_nodes,
       const double init_s,
       const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord,
-      int change_direction);
+      int change_direction, const double sample_st_limit_lat_offset);
   void GetAvailableGap(const int index, double s);
 
   void Clear();
