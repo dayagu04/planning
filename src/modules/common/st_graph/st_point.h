@@ -36,9 +36,6 @@ class STPoint : public planning_math::Vec2d {
   double t() const;
   void set_t(const double t);
 
-  double l() const { return l_; };
-  void set_l(const double l) { l_ = l; };
-
   int32_t agent_id() const;
   void set_agent_id(const int32_t agent_id);
 
@@ -66,8 +63,6 @@ class STPoint : public planning_math::Vec2d {
   double velocity_ = 0.0;
   double acceleration_ = 0.0;
   bool valid_ = true;
-  double l_ = 0.0;
-
   // save min_l in LowerPoints and max_l in UpperPoints
   double extreme_l_ = 0.0;
 };

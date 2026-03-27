@@ -8,9 +8,10 @@
 #include "task_interface/lane_change_utils.h"
 
 namespace planning {
+using planning::speed::STPointWithLateral;
 
 void MatchGapCost::GetCost(
-    const STPoint& upper_st_point, const STPoint& lower_st_point,
+    const STPointWithLateral& upper_st_point, const STPointWithLateral& lower_st_point,
     const double poly_end_s, const double poly_end_t, const double poly_end_v,
     const double poly_end_a,
     const double reliable_safe_distance_to_gap_front_obj,
@@ -127,7 +128,7 @@ void MatchGapCost::GetCost(
       min_safe_distance_front = std::max(front_ttc_buffer, 3.5);
     }
     min_safe_distance_front = std::max(min_safe_distance_front, poly_end_v * 0.3);
-    double large_car_buffer = upper_st_point.extreme_l() > 8.0 ? 3.0 : 0.0;
+    double large_car_buffer = upper_st_point.vehicle_length() > 8.0 ? 3.0 : 0.0;
     safe_border_distance_to_gap_front_obj =
         min_safe_distance_front + reliable_safe_distance_to_gap_front_obj +
         large_car_buffer;
@@ -142,7 +143,7 @@ void MatchGapCost::GetCost(
     min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1) +
                              linear_expand_extra_gap_distance_by_ego_vel(
                                  poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
-    double large_car_buffer = lower_st_point.extreme_l() > 8.0 ? 5.0 : 0.0;
+    double large_car_buffer = lower_st_point.vehicle_length() > 8.0 ? 5.0 : 0.0;
     double coffi_index = extreme_time_back / 0.2;
     safe_border_distance_to_gap_back_obj =
         lower_st_point.acceleration() > poly_end_a
