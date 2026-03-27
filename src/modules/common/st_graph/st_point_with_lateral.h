@@ -1,6 +1,7 @@
 #pragma once
 
 #include "st_point.h"
+#include "agent/agent.h"
 
 namespace planning {
 namespace speed {
@@ -18,6 +19,9 @@ class STPointWithLateral : public STPoint {
 
   ~STPointWithLateral() = default;
 
+  agent::AgentType type() const { return type_; }
+  void set_type(agent::AgentType type) { type_ = type; }
+
   double l() const { return l_; }
   void set_l(const double l) { l_ = l; }
 
@@ -29,6 +33,7 @@ class STPointWithLateral : public STPoint {
  private:
   double l_ = 0.0;
   double vehicle_length_ = 0.0;
+  agent::AgentType type_;
 };
 
 }  // namespace speed

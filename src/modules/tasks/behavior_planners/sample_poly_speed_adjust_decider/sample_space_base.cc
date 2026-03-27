@@ -90,6 +90,8 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
     double acc = current_trajectory[i].acc();
     STPointWithLateral lower_point(end_s - agent_half_length, t);
     STPointWithLateral upper_point(end_s + agent_half_length, t);
+    lower_point.set_type(agent_node->type());
+    upper_point.set_type(agent_node->type());
     lower_point.set_agent_id(agent_node->node_agent_id());
     upper_point.set_agent_id(agent_node->node_agent_id());
     lower_point.set_velocity(end_v);
@@ -108,6 +110,8 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
     end_v += kTimeResolution * acc;
     lower_point.set_t(t);
     upper_point.set_t(t);
+    lower_point.set_type(agent_node->type());
+    upper_point.set_type(agent_node->type());
     lower_point.set_s(end_s - agent_half_length);
     upper_point.set_s(end_s + agent_half_length);
     lower_point.set_agent_id(agent_node->node_agent_id());
@@ -132,6 +136,8 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
         STPointWithLateral upper_point(end_s + agent_half_length, t);
         lower_point.set_agent_id(agent_node->node_agent_id());
         upper_point.set_agent_id(agent_node->node_agent_id());
+        lower_point.set_type(agent_node->type());
+        upper_point.set_type(agent_node->type());
         lower_point.set_velocity(end_v);
         upper_point.set_velocity(end_v);
         lower_point.set_acceleration(0.0);

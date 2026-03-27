@@ -143,7 +143,11 @@ void MatchGapCost::GetCost(
     min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1) +
                              linear_expand_extra_gap_distance_by_ego_vel(
                                  poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
-    double large_car_buffer = lower_st_point.vehicle_length() > 8.0 ? 5.0 : 0.0;
+    bool is_large_car = agent::AgentType::BUS == lower_st_point.type() ||
+                        agent::AgentType::TRUCK == lower_st_point.type() ||
+                        agent::AgentType::TRAILER == lower_st_point.type() ||
+                        lower_st_point.vehicle_length() > kLargeAgentLengthM;
+    double large_car_buffer = is_large_car ? 5.0 : 0.0;
     double coffi_index = extreme_time_back / 0.2;
     safe_border_distance_to_gap_back_obj =
         lower_st_point.acceleration() > poly_end_a
