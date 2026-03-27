@@ -208,6 +208,8 @@ class ParkingScenario {
     double remain_dist_path_last = 15.01;
     // remain dist for obs
     double remain_dist_obs = 15.01;
+    double remain_dist_dynamic_obs = 15.01;
+    double remain_dist_static_obs = 15.01;
     // path remain dist by fusion dynamic occ check.
     double remain_dist_col_det = 15.01;
     double remain_dist_slot_jump = 15.0;
@@ -530,6 +532,16 @@ class ParkingScenario {
       const bool only_check_mirror = false,
       const UseObsHeightMethod use_obs_height_method =
           UseObsHeightMethod::HIGH) const;
+
+  const void RecordDebug();
+
+  const void RecordDebugRemainDist();
+
+  const void RecordDebugStuckTimeInfo();
+
+  const void RecordDebugTerminalErr();
+
+  const void RecordDebugPlanningSlotInfo();
 
   void DecideExpandMirrorCommand();
 
