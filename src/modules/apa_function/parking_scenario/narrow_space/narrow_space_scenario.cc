@@ -338,9 +338,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 
   if (CheckGearChangeCountTooMuch(
           apa_param.GetParam().gear_change_decide_params)) {
-    ILOG_INFO << "check gear change count too much!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
     return;
   }
 

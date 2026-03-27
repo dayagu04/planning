@@ -109,95 +109,65 @@ void PerpendicularTailInScenario::ScenarioTry() {
 }
 
 void PerpendicularTailInScenario::ExcutePathPlanningTask() {
-  // prepare simulation
   InitSimulation();
-
   DecideExpandMirrorCommand();
 
-  // check planning status
   if (CheckPlanSkip()) {
     return;
   }
 
-  UpdateStuckTime();
-
-  // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     SetParkingStatus(PARKING_FAILED);
     frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
     return;
   }
 
+  UpdateStuckTime();
   CalSlotJumpErr();
-  // update remain dist
-  frame_.remain_dist_path = CalRemainDistFromPath();
-  frame_.remain_dist_obs = CalRealTimeBrakeDist();
-  frame_.remain_dist_slot_jump = CalRemainDistBySlotJump();
-  frame_.remain_dist_col_det = CalRemainDistFromPlanPathDangerous(
-      0.0, 0.0, 0.0, apa_param.GetParam().use_obs_height_method);
+  UpdateRemainDist();
   DecideFoldMirrorCommand();
 
-  // check finish
   if (CheckFinished()) {
     ILOG_INFO << "check apa finished!";
     SetParkingStatus(PARKING_FINISHED);
     return;
   }
 
-  // check failed
   if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;
   }
 
-  PrintParkPathPlanType(apa_param.GetParam().park_path_plan_type);
-  PrintAnalyticExpansionType(apa_param.GetParam().analytic_expansion_type);
-  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY ||
-      apa_param.GetParam().park_path_plan_type ==
-          ParkPathPlanType::HYBRID_ASTAR) {
-    PathPlan();
-  } else if (apa_param.GetParam().park_path_plan_type ==
-             ParkPathPlanType::HYBRID_ASTAR_THREAD) {
-    PathPlanByHybridAstarThread();
-  }
+  RunPathPlanningByConfig();
 
-  // check finish
   if (CheckFinished()) {
     ILOG_INFO << "check apa finished!";
     SetParkingStatus(PARKING_FINISHED);
     return;
   }
 
-  // check failed
-  if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
+  if (CheckFoldMirrorFailed()) {
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = STUCK_FAILED_TIME;
-    return;
-  }
-
-  if (frame_.mirror_command == MirrorCommand::FOLD &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      frame_.stuck_time >
-          apa_param.GetParam().smart_fold_mirror_params.max_stuck_wait_time) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
     return;
   }
 
   if (CheckGearChangeCountTooMuch(
           apa_param.GetParam().gear_change_decide_params)) {
-    ILOG_INFO << "check gear change count too much!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
     return;
   }
+}
 
-  // check planning status
-  ILOG_INFO << "parking status = "
-            << static_cast<int>(GetPlannerStates().planning_status);
+void PerpendicularTailInScenario::RunPathPlanningByConfig() {
+  const auto park_path_plan_type = apa_param.GetParam().park_path_plan_type;
+  PrintParkPathPlanType(park_path_plan_type);
+  PrintAnalyticExpansionType(apa_param.GetParam().analytic_expansion_type);
+  if (park_path_plan_type == ParkPathPlanType::GEOMETRY ||
+      park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR) {
+    PathPlan();
+  } else if (park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    PathPlanByHybridAstarThread();
+  }
 }
 
 const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
@@ -2720,6 +2690,14 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
   JSON_DEBUG_VALUE("slot_heading_err", heading_err)
   JSON_DEBUG_VALUE("slot_lon_err", lon_err)
   JSON_DEBUG_VALUE("slot_jump_big_flag", frame_.slot_jump_big_flag)
+}
+
+void PerpendicularTailInScenario::UpdateRemainDist() {
+  frame_.remain_dist_path = CalRemainDistFromPath();
+  frame_.remain_dist_obs = CalRealTimeBrakeDist();
+  frame_.remain_dist_slot_jump = CalRemainDistBySlotJump();
+  frame_.remain_dist_col_det = CalRemainDistFromPlanPathDangerous(
+      0.0, 0.0, 0.0, apa_param.GetParam().use_obs_height_method);
 }
 
 const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {

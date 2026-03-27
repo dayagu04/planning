@@ -102,7 +102,6 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // check failed
   if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
     CheckEgoPoseWhenParkOutFaild(STUCK_FAILED_TIME);
     return;
   }
@@ -279,9 +278,7 @@ bool ParallelParkOutScenario::ParkOutDirectionTryHybridAStar() {
 
   if (CheckGearChangeCountTooMuch(
           apa_param.GetParam().gear_change_decide_params)) {
-    ILOG_INFO << "check gear change count too much!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
     return false;
   }
 

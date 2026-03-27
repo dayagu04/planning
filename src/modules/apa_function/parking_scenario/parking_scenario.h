@@ -481,6 +481,7 @@ class ParkingScenario {
   virtual const bool CheckDynamicUpdate();
 
   virtual const bool CheckStuckFailed();
+  virtual const bool CheckFoldMirrorFailed();
 
   virtual const bool CheckPathDangerous();
   virtual const bool CheckGearChangeCountTooMuch(
