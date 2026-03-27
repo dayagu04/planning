@@ -2177,6 +2177,10 @@ const bool ParallelPathGenerator::AssempleGeometryPath(
       max_y_mag =
           std::max(max_y_mag, std::fabs(current_path_seg.GetEndPos().y()));
     }
+    if (max_x > 14.0){
+      ILOG_INFO << "limit froward distance from slot origin x = 0 to 14.0";
+      return false;
+    }
 
     if (i > 0 && path_seg_vec[i].seg_gear != path_seg_vec[i - 1].seg_gear) {
       geometry_path.gear_change_count++;
