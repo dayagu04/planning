@@ -280,12 +280,12 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   # HPP debug scalar keys
   hpp_debug_value_list = [
-      "v_cruise_limit", "v_target_decider", "v_target_type_code", "v_limit_curv", "v_limit_avoid",
-      "v_limit_speed_bump", "in_speed_bump_zone", "approaching_speed_bump", "distance_to_bump_zone",
+      "v_cruise_limit", "v_target_decider", "v_target_type_code", "v_limit_curv", "v_limit_avoid", 
+      "v_limit_speed_bump", "in_speed_bump_zone", "approaching_bump", "distance_to_bump",
       # "ego_head_s", "ego_s", "speed_bump_near_ignore_range_first", "speed_bump_near_ignore_range_second", "update_speed_bump_near_ignore_range",\
-      "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp",
-      "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection",
-      "LaneChangeDeciderTime", "LateralObstacleDeciderTime",
+      "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_ramp", "distance_to_ramp",
+      "v_limit_speed_intersection", "in_speed_limit_intersection", "approaching_intersection", "distance_to_intersection",
+      "LaneChangeDeciderTime", "LateralObstacleDeciderTime", 
       "HppGeneralLateralDeciderTime", "LateralMotionPlannerTime",
       "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
       "ResultTrajectoryGeneratorTime", "ParkingSwitchDeciderTime",
@@ -295,6 +295,17 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       "is_timeout_for_target_slot_allowed_to_park", "current planning_success",
       "pass_interval_first", "pass_interval_second", "edt_manager_cost",
       "GeneralLateralDeciderCostTime",
+  ]
+
+  # Turnstile debug scalar keys
+  turnstile_debug_value_list = [
+      "turnstile_stage", "turnstile_has_target", "turnstile_is_head_car",
+      "turnstile_target_obs_id", "turnstile_side_obs_id", "turnstile_scene_type", "turnstile_s", "turnstile_stop_s", "turnstile_passable_status",
+      "turnstile_front_car_id", "turnstile_front_car_passed_in_cycle",
+      "turnstile_stop_required", "turnstile_wait_reopen_required", "turnstile_seen_closed_status_after_front_pass", "turnstile_release_by_open_timeout",
+      "turnstile_target_lost_frame_count", "turnstile_passable_status_stable_frame_count", "turnstile_cycle_closing_status_stable_frame_count",
+      "turnstile_reopen_open_status_continuous_frame_count", "turnstile_closing_status_drop_consecutive_frame_count", "turnstile_emergency_opening_status_stable_frame_count",
+      "turnstile_closing_status_drop_emergency_active", "turnstile_virtual_agent_id",
   ]
 
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
@@ -725,6 +736,15 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
      hpp_debug_attr_vec.append(key)
      hpp_debug_val_vec.append(val)
 
+  # Turnstile debug attribute / value vectors
+  turnstile_debug_attr_vec = []
+  turnstile_debug_val_vec = []
+  for ind in range(len(turnstile_debug_value_list)):
+     key = turnstile_debug_value_list[ind]
+     val = plan_debug_json_info.get(key, None)
+     turnstile_debug_attr_vec.append(key)
+     turnstile_debug_val_vec.append(val)
+
   # # #region agent log
   # try:
   #   import json as _json, time as _time
@@ -813,6 +833,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_hpp_debug'].data.update({
     'HPPDebugAttr': hpp_debug_attr_vec,
     'HPPDebugVal': hpp_debug_val_vec,
+  })
+
+  lon_plan_data['data_turnstile_debug'].data.update({
+    'TurnstileDebugAttr': turnstile_debug_attr_vec,
+    'TurnstileDebugVal': turnstile_debug_val_vec,
   })
 
   lon_plan_data['data_st_search_text'].data.update({
@@ -1685,6 +1710,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   data_tj = ColumnDataSource(data = {'t':[], 'jerk':[]})
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_hpp_debug = ColumnDataSource(data = {'HPPDebugAttr':[], 'HPPDebugVal':[]})
+  data_turnstile_debug = ColumnDataSource(data = {'TurnstileDebugAttr':[], 'TurnstileDebugVal':[]})
   data_st_search_text = ColumnDataSource(data = {'StSearchAttr':[], 'StSearchVal': []})
   data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
   data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[], 'vel_search':[], 'acc_search':[], 'jerk_search':[]})
@@ -1766,6 +1792,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
                    'data_hpp_debug':data_hpp_debug, \
+                   'data_turnstile_debug':data_turnstile_debug, \
                    'data_cutin':data_cutin, \
                    'data_sv':data_sv, \
                    'data_sa': data_sa,\
@@ -2084,7 +2111,15 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
 
   # HPP debug table and panel
   hpp_tab = DataTable(source=data_hpp_debug, columns=hpp_columns, width=600, height=1200)
-  pan3 = Panel(child=row(column(hpp_tab)), title="HPP Debug")
+
+  # Turnstile debug table
+  turnstile_columns = [
+        TableColumn(field="TurnstileDebugAttr", title="TurnstileDebugAttr", width=300, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
+        TableColumn(field="TurnstileDebugVal", title="TurnstileDebugVal", width=200, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
+  ]
+  turnstile_tab = DataTable(source=data_turnstile_debug, columns=turnstile_columns, width=600, height=1200)
+
+  pan3 = Panel(child=row(column(hpp_tab), column(turnstile_tab)), title="HPP Debug")
 
   pans = Tabs(tabs=[ pan1, pan2, pan3 ])
 

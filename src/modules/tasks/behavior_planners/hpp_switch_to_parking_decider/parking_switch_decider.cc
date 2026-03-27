@@ -70,6 +70,7 @@ bool ParkingSwitchDecider::Execute() {
           .successful_slot_info_list_size;
   const auto& parking_switch_decider_output =
       session_->planning_context().parking_switch_decider_output();
+  const double curr_timestamp = IflyTime::Now_ms();
   if(current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
     if(is_target_slot_allowed_to_park) {
       parking_switch_info_.is_selected_slot_allowed_to_park = true;
@@ -125,6 +126,7 @@ bool ParkingSwitchDecider::Execute() {
       last_is_standstill_near_target_slot_ = false;
     }
   } else {
+    timestamp_at_standstill_near_dest_ = curr_timestamp;
     // do nothing
   }
 

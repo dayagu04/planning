@@ -811,10 +811,17 @@ class LoadRosbag:
                          "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime",\
                          "v_limit_curv", "v_limit_avoid",\
                         #  "ego_head_s", "ego_s",
-                         "v_limit_speed_bump", "in_speed_bump_zone", "approaching_speed_bump", "distance_to_bump_zone",
+                         "v_limit_speed_bump", "in_speed_bump_zone", "approaching_bump", "distance_to_bump",
                         #  "speed_bump_near_ignore_range_first", "speed_bump_near_ignore_range_second", "update_speed_bump_near_ignore_range",\
-                         "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp", \
-                         "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection"]
+                         "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_ramp", "distance_to_ramp", \
+                         "v_limit_speed_intersection", "in_speed_limit_intersection", "approaching_intersection", "distance_to_intersection",\
+                         "turnstile_stage", "turnstile_has_target", "turnstile_is_head_car", \
+                         "turnstile_target_obs_id", "turnstile_side_obs_id", "turnstile_scene_type", "turnstile_s", "turnstile_stop_s", "turnstile_passable_status", \
+                         "turnstile_front_car_id", "turnstile_front_car_passed_in_cycle", \
+                         "turnstile_stop_required", "turnstile_wait_reopen_required", "turnstile_seen_closed_status_after_front_pass", "turnstile_release_by_open_timeout", \
+                         "turnstile_target_lost_frame_count", "turnstile_passable_status_stable_frame_count", "turnstile_cycle_closing_status_stable_frame_count", \
+                         "turnstile_reopen_open_status_continuous_frame_count", "turnstile_closing_status_drop_consecutive_frame_count", "turnstile_emergency_opening_status_stable_frame_count", \
+                         "turnstile_closing_status_drop_emergency_active", "turnstile_virtual_agent_id"]
       json_vector_list += ["lon_collision_object_position_x_vec",
                            "lon_collision_object_position_y_vec",'expand_num_vec']
       # nsa

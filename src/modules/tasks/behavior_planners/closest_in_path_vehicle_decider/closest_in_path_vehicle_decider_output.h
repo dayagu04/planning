@@ -39,6 +39,9 @@ class ClosestInPathVehicleDeciderOutput {
   bool is_virtual() const;
   void set_is_virtual(const bool is_virtual);
 
+  bool is_turnstile_virtual_obs() const;
+  void set_is_turnstile_virtual_obs(const bool is_turnstile_virtual_obs);
+
   bool is_large() const { return is_large_; }
   void set_is_large(const bool is_large) { is_large_ = is_large; }
 
@@ -53,6 +56,7 @@ class ClosestInPathVehicleDeciderOutput {
   double ttc_ = 100.0;
   int32_t dangerous_level_ = -1;
   bool is_virtual_ = false;
+  bool is_turnstile_virtual_obs_ = false;
   bool is_large_ = false;
 };
 

@@ -26,6 +26,8 @@ HppTaskPipeline::HppTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<StopDestinationDecider>(config_builder, session);
   mrc_brake_decider_ =
       std::make_unique<MRCBrakeDecider>(config_builder, session);
+  turnstile_longitudinal_decider_ =
+      std::make_unique<TurnstileLongitudinalDecider>(config_builder, session);
   agent_longitudinal_decider_ =
       std::make_unique<AgentLongitudinalDecider>(config_builder, session);
   expand_st_boundaries_decider_ =
@@ -159,6 +161,12 @@ bool HppTaskPipeline::Run() {
   ok = mrc_brake_decider_->Execute();
   if (!ok) {
     AddErrorInfo(mrc_brake_decider_->Name());
+    return false;
+  }
+
+  ok = turnstile_longitudinal_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(turnstile_longitudinal_decider_->Name());
     return false;
   }
 

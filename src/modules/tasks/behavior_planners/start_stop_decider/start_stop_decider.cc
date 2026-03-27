@@ -90,6 +90,8 @@ void StartStopDecider::UpdateInput() {
   cipv_relative_s_ = cipv_decider_output.relative_s();
   cipv_vel_frenet_ = cipv_decider_output.v_frenet();
   cipv_is_large_ = cipv_decider_output.is_large();
+  cipv_is_turnstile_virtual_obs_ =
+      cipv_decider_output.is_turnstile_virtual_obs();
 
   // ego state info
   planning_init_state_vel_ = environmental_model.get_ego_state_manager()
@@ -167,7 +169,8 @@ double StartStopDecider::CalculateStopDistance() {
     high_speed_min_follow_distance_gap = config_.cone_min_follow_distance_gap;
   }
 
-  if (agent->is_tfl_virtual_obs()) {
+  if (agent->is_tfl_virtual_obs() ||
+      cipv_is_turnstile_virtual_obs_) {
     high_speed_min_follow_distance_gap =
         config_.traffic_light_min_follow_distance_gap;
   }
@@ -395,6 +398,7 @@ void StartStopDecider::SaveHppStopOutput(const HppStopConditions& conditions,
                                          bool is_stopped_at_destination) {
   // 在判断进入 STOP 逻辑后，再更新 session 相关逻辑（避免未进入 STOP 时写下游）
   if (ego_start_stop_info_.state() != common::StartStopInfo::STOP) {
+    session_->mutable_planning_context()->mutable_hpp_stop_decider_output().Clear();
     return;
   }
 

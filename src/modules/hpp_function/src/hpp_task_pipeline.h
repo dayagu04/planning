@@ -21,6 +21,7 @@
 #include "tasks/behavior_planners/hpp_lon_obstacle_preprocess_decider/hpp_lon_obstacle_preprocess_decider.h"
 #include "tasks/behavior_planners/hpp_obstacle_preprocess_decider/hpp_obstacle_lateral_preprocess_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
+#include "tasks/behavior_planners/turnstile_longitudinal_decider/turnstile_longitudinal_decider.h"
 #include "tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
 #include "tasks/behavior_planners/agent_longitudinal_decider/agent_longitudinal_decider.h"
 #include "tasks/behavior_planners/expand_st_boundaries_decider/expand_st_boundaries_decider.h"
@@ -62,6 +63,7 @@ class HppTaskPipeline : public BaseTaskPipeline {
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
   std::unique_ptr<MRCBrakeDecider> mrc_brake_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
+  std::unique_ptr<TurnstileLongitudinalDecider> turnstile_longitudinal_decider_;
   std::unique_ptr<ExpandStBoundariesDecider> expand_st_boundaries_decider_;
   std::unique_ptr<ClosestInPathVehicleDecider> closest_in_path_vehicle_decider_;
   std::unique_ptr<CipvLostProhibitStartDecider> cipv_lost_prohibit_start_decider_;
