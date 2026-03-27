@@ -52,35 +52,38 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
             << col_det_interface_ptr_->GetFoldMirrorFlag()
             << "  heading in = " << heading_in;
   const ApaParameters& param = apa_param.GetParam();
-  const geometry_lib::GlobalToLocalTf g2l_tf = slot_.g2l_tf_;
-  const geometry_lib::LocalToGlobalTf l2g_tf = slot_.l2g_tf_;
+  const geometry_lib::GlobalToLocalTf& g2l_tf = slot_.g2l_tf_;
+  const geometry_lib::LocalToGlobalTf& l2g_tf = slot_.l2g_tf_;
   slot_.TransformCoordFromGlobalToLocal(g2l_tf);
+
+  const SlotCoord& processed_pt_local = slot_.processed_corner_coord_local_;
+  const SlotCoord& origin_pt_local = slot_.origin_corner_coord_local_;
+  const SlotCoord& origin_pt_global = slot_.origin_corner_coord_global_;
 
   double virtual_tar_x = 0.0;
   if (slot_.limiter_.valid) {
-    Eigen::Vector2d pt1 = g2l_tf.GetPos(slot_.limiter_.start_pt);
-    Eigen::Vector2d pt2 = g2l_tf.GetPos(slot_.limiter_.end_pt);
+    const Eigen::Vector2d pt1 = g2l_tf.GetPos(slot_.limiter_.start_pt);
+    const Eigen::Vector2d pt2 = g2l_tf.GetPos(slot_.limiter_.end_pt);
 
     virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
 
+    // avoid limit error
+    double max_tar_x = processed_pt_local.pt_01_mid.x() - 0.68;
+    double min_tar_x = processed_pt_local.pt_23_mid.x() + 0.18;
+
     if (heading_in) {
       virtual_tar_x += param.wheel_base;
+      max_tar_x = processed_pt_local.pt_01_mid.x() + 1.68;
     }
 
-    // avoid limit error
-    double max_tar_x = slot_.processed_corner_coord_local_.pt_01_mid.x() - 0.68;
-    if (heading_in) {
-      max_tar_x = slot_.processed_corner_coord_local_.pt_01_mid.x() + 1.68;
-    }
-    double min_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() + 0.18;
     if (!mathlib::IsInBound(virtual_tar_x, min_tar_x, max_tar_x)) {
       slot_.limiter_.valid = false;
     }
   }
 
   if (!slot_.limiter_.valid) {
-    virtual_tar_x = slot_.origin_corner_coord_local_.pt_23_mid.x() +
-                    param.terminal_target_x_to_line;
+    virtual_tar_x =
+        origin_pt_local.pt_23_mid.x() + param.terminal_target_x_to_line;
 
     if (heading_in) {
       virtual_tar_x += (param.front_overhanging + param.wheel_base);
@@ -89,9 +92,8 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     }
 
     // park in the middle of the slot
-    const double mid_x = (slot_.origin_corner_coord_local_.pt_01_mid.x() +
-                          slot_.origin_corner_coord_local_.pt_23_mid.x()) *
-                         0.5;
+    const double mid_x =
+        (origin_pt_local.pt_01_mid.x() + origin_pt_local.pt_23_mid.x()) * 0.5;
 
     double mid_ego_x =
         mid_x - (0.5 * param.car_length - param.rear_overhanging);
@@ -139,11 +141,11 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   }
 
   const Eigen::Vector2d lon_move_dir =
-      base_on_slot_ ? slot_.origin_corner_coord_local_.pt_23mid_01mid_unit_vec
-                    : slot_.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
-  const Eigen::Vector2d lat_move_dir =
-      base_on_slot_ ? slot_.origin_corner_coord_local_.pt_01_unit_vec
-                    : slot_.origin_corner_coord_global_.pt_01_unit_vec;
+      base_on_slot_ ? origin_pt_local.pt_23mid_01mid_unit_vec
+                    : origin_pt_global.pt_23mid_01mid_unit_vec;
+  const Eigen::Vector2d lat_move_dir = base_on_slot_
+                                           ? origin_pt_local.pt_01_unit_vec
+                                           : origin_pt_global.pt_01_unit_vec;
 
   ApaObsMovementType consider_obs_movement_type;
   bool use_limiter = true;
@@ -208,13 +210,13 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   max_lat_move_dist -= param.car2line_dist_threshold;
   max_lat_move_dist = std::max(max_lat_move_dist, 0.0001);
   double max_lon_move_dist{0.};
-  double dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
+  double dx = origin_pt_local.pt_01_mid.x() -
               (virtual_tar_x + param.wheel_base + param.front_overhanging);
   if (heading_in) {
-    dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
+    dx = origin_pt_local.pt_01_mid.x() -
          (virtual_tar_x + param.rear_overhanging);
   }
-  double front_exceed_line_dx = apa_param.GetParam().max_front_exceed_line_dx;
+  double front_exceed_line_dx = param.max_front_exceed_line_dx;
   if (slot_.slot_type_ == SlotType::SLANT) {
     front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
   }
@@ -298,59 +300,63 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
 
   bool exist_target_pose = false;
   std::vector<geometry_lib::PathPoint> tmp_pose_vec(4);
-  auto search_target_pose_in_lon_group = [&](const std::vector<double>& lon_dist_vec) {
-    for (size_t i = 0; i < lat_body_buffer_vec_.size(); ++i) {
-      const double lat_body_buffer = lat_body_buffer_vec_[i];
-      const double lat_mirror_buffer = lat_mirror_buffer_vec_[i];
-      for (const double lat_move_dist : lat_dist_vec) {
-        const Eigen::Vector2d lat_offset = lat_move_dist * lat_move_dir;
-        for (const double lon_move_dist : lon_dist_vec) {
-          const double lon_path_vec[] = {lon_move_dist - lon_buffer_,
-                                         lon_move_dist, lon_move_dist + 1.0,
-                                         lon_move_dist + 2.0};
-          for (size_t pose_idx = 0; pose_idx < tmp_pose_vec.size(); ++pose_idx) {
-            tmp_pose_vec[pose_idx] = base_target_pose;
-            tmp_pose_vec[pose_idx].pos +=
-                lat_offset + lon_path_vec[pose_idx] * lon_move_dir;
-          }
+  const auto search_target_pose_in_lon_group =
+      [&](const std::vector<double>& lon_dist_vec) {
+        for (size_t i = 0; i < lat_body_buffer_vec_.size(); ++i) {
+          const double lat_body_buffer = lat_body_buffer_vec_[i];
+          const double lat_mirror_buffer = lat_mirror_buffer_vec_[i];
+          for (const double lat_move_dist : lat_dist_vec) {
+            const Eigen::Vector2d lat_offset = lat_move_dist * lat_move_dir;
+            for (const double lon_move_dist : lon_dist_vec) {
+              const double lon_path_vec[] = {lon_move_dist - lon_buffer_,
+                                             lon_move_dist, lon_move_dist + 1.0,
+                                             lon_move_dist + 2.0};
+              for (size_t pose_idx = 0; pose_idx < tmp_pose_vec.size();
+                   ++pose_idx) {
+                tmp_pose_vec[pose_idx] = base_target_pose;
+                tmp_pose_vec[pose_idx].pos +=
+                    lat_offset + lon_path_vec[pose_idx] * lon_move_dir;
+              }
 
-          const ColResult& res = gjl_det_ptr->Update(
-              tmp_pose_vec, lat_body_buffer, 0.0, gjk_col_det_request, true,
-              lat_mirror_buffer);
-          if (res.col_flag) {
-            continue;
-          }
+              const ColResult& res = gjl_det_ptr->Update(
+                  tmp_pose_vec, lat_body_buffer, 0.0, gjk_col_det_request, true,
+                  lat_mirror_buffer);
+              if (res.col_flag) {
+                continue;
+              }
 
-          exist_target_pose = true;
-          result_.safe_lon_move_dist = lon_move_dist;
-          result_.safe_lat_move_dist = lat_move_dist;
-          result_.safe_lat_body_buffer = lat_body_buffer;
-          result_.safe_lat_mirror_buffer = lat_mirror_buffer;
-          if (base_on_slot_) {
-            result_.target_pose_local = tmp_pose_vec[1];
-            result_.target_pose_global =
-                geometry_lib::TransformPoseFromLocalToGlobal(
-                    result_.target_pose_local, l2g_tf);
-          } else {
-            result_.target_pose_global = tmp_pose_vec[1];
-            result_.target_pose_local =
-                geometry_lib::TransformPoseFromGlobalToLocal(
-                    result_.target_pose_global, g2l_tf);
-          }
+              exist_target_pose = true;
+              result_.safe_lon_move_dist = lon_move_dist;
+              result_.safe_lat_move_dist = lat_move_dist;
+              result_.safe_lat_body_buffer = lat_body_buffer;
+              result_.safe_lat_mirror_buffer = lat_mirror_buffer;
+              if (base_on_slot_) {
+                result_.target_pose_local = tmp_pose_vec[1];
+                result_.target_pose_global =
+                    geometry_lib::TransformPoseFromLocalToGlobal(
+                        result_.target_pose_local, l2g_tf);
+              } else {
+                result_.target_pose_global = tmp_pose_vec[1];
+                result_.target_pose_local =
+                    geometry_lib::TransformPoseFromGlobalToLocal(
+                        result_.target_pose_global, g2l_tf);
+              }
 
-          ILOG_INFO << "exist_target_pose = " << exist_target_pose
-                    << "  safe_lon_move_dist = " << result_.safe_lon_move_dist
-                    << "  safe_lat_move_dist = " << result_.safe_lat_move_dist
-                    << "  safe_lat_body_buffer = "
-                    << result_.safe_lat_body_buffer
-                    << "  safe_lat_mirror_buffer = "
-                    << result_.safe_lat_mirror_buffer;
-          return true;
+              ILOG_INFO << "exist_target_pose = " << exist_target_pose
+                        << "  safe_lon_move_dist = "
+                        << result_.safe_lon_move_dist
+                        << "  safe_lat_move_dist = "
+                        << result_.safe_lat_move_dist
+                        << "  safe_lat_body_buffer = "
+                        << result_.safe_lat_body_buffer
+                        << "  safe_lat_mirror_buffer = "
+                        << result_.safe_lat_mirror_buffer;
+              return true;
+            }
+          }
         }
-      }
-    }
-    return false;
-  };
+        return false;
+      };
 
   if (is_searching_stage_) {
     exist_target_pose = search_target_pose_in_lon_group(small_lon_dist_vec);
@@ -362,11 +368,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   if (exist_target_pose) {
     if (heading_in) {
       dx = result_.target_pose_local.GetX() + param.rear_overhanging -
-           slot_.origin_corner_coord_local_.pt_01_mid.x();
+           origin_pt_local.pt_01_mid.x();
     } else {
       dx = result_.target_pose_local.GetX() + param.wheel_base +
-           param.front_overhanging -
-           slot_.origin_corner_coord_local_.pt_01_mid.x();
+           param.front_overhanging - origin_pt_local.pt_01_mid.x();
     }
     result_.exceed_allow_max_dx = dx - front_exceed_line_dx;
     ILOG_INFO << "exceed_allow_max_dx = " << result_.exceed_allow_max_dx
