@@ -1942,7 +1942,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
   }
 
   const double init_start_time = start_time;
-  while (start_time < end_time) {
+  while (start_time < end_time && !early_stop_) {
     std::cout << "************************************** frame " << frame_num_
               << " **************************************" << std::endl;
     frame_num_++;
