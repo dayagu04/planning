@@ -109,8 +109,8 @@ class NodeDeleteDecider final : public ParkingTask {
 
   const bool CheckPtsCollision(
       const std::vector<common_math::PathPt<float>>& origin_pts,
-      AstarPathGear gear, bool is_special_node,
-      ObsToPathDistRelativeSlot* obs_dist, double* safe_remain_dist);
+      bool is_special_node, ObsToPathDistRelativeSlot* obs_dist,
+      double* safe_remain_dist);
 
   void SplitPathPtsUsingGradeBuffer(
       const std::vector<common_math::PathPt<float>>& origin_pts,

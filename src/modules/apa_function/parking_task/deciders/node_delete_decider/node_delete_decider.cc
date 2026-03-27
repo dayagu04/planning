@@ -246,7 +246,6 @@ const bool NodeDeleteDecider::CheckShouldBeDeletedForPerpendicularIn() {
   return false;
 }
 
-
 const bool NodeDeleteDecider::UpdateObsDistRelativeSlot(
     NodeDeleteRequest request) {
   request_ = request;
@@ -279,9 +278,9 @@ const bool NodeDeleteDecider::CheckCollision() {
 
     common_math::PathPt<float> pt;
     pt.kappa = current_node->GetKappa();
+    pt.gear = current_node->GetGearType();
     for (size_t i = check_start_index; i < path.point_size; ++i) {
-      pt.SetPos(path.points[i].x, path.points[i].y);
-      pt.SetTheta(path.points[i].theta);
+      pt.SetPose(path.points[i].x, path.points[i].y, path.points[i].theta);
       pt.s = s;
       s += ds;
       search_pts_.emplace_back(pt);
@@ -300,9 +299,8 @@ const bool NodeDeleteDecider::CheckCollision() {
          current_node->GetPathType() == AstarPathType::START_NODE ||
          current_node->GetPathType() == AstarPathType::END_NODE);
 
-    const bool col_flag =
-        CheckPtsCollision(search_pts_, current_node->GetGearType(),
-                          is_special_node, &obs_dist, &safe_remain_dist);
+    const bool col_flag = CheckPtsCollision(search_pts_, is_special_node,
+                                            &obs_dist, &safe_remain_dist);
 
     if (input_.need_cal_obs_dist) {
       current_node->SetObsDistRelativeSlot(obs_dist);
@@ -458,8 +456,8 @@ const bool NodeDeleteDecider::CheckCollision() {
       if (use_fold_mirror_col_det) {
         col_det_interface_ptr_->Init(true);
       }
-      const bool col_flag = CheckPtsCollision(
-          curve_ptss_[i], curve_gears_[i], false, &obs_dist, &safe_remain_dist);
+      const bool col_flag = CheckPtsCollision(curve_ptss_[i], false, &obs_dist,
+                                              &safe_remain_dist);
       if (use_fold_mirror_col_det) {
         col_det_interface_ptr_->Init(false);
       }
@@ -810,9 +808,8 @@ const GradeColDetBufferType NodeDeleteDecider::GetGradeBufferType(
 }
 
 const bool NodeDeleteDecider::CheckPtsCollision(
-    const std::vector<common_math::PathPt<float>>& pts, AstarPathGear gear,
-    bool is_special_node, ObsToPathDistRelativeSlot* obs_dist,
-    double* safe_remain_dist) {
+    const std::vector<common_math::PathPt<float>>& pts, bool is_special_node,
+    ObsToPathDistRelativeSlot* obs_dist, double* safe_remain_dist) {
   if (pts.empty()) {
     return false;
   }
@@ -914,9 +911,8 @@ const bool NodeDeleteDecider::CheckPtsCollision(
       set_special_buffers(&lon_buffer, &body_lat_buffer, &mirror_lat_buffer);
     }
 
-    const auto& res =
-        edt_col_det_ptr->Update(pts, lon_buffer, body_lat_buffer,
-                                mirror_lat_buffer, gear, need_cal_obs_dist);
+    const auto& res = edt_col_det_ptr->Update(
+        pts, lon_buffer, body_lat_buffer, mirror_lat_buffer, need_cal_obs_dist);
 
     if (need_cal_obs_dist) {
       obs_dist->SetDist(res.min_obs_dist);
@@ -939,7 +935,7 @@ const bool NodeDeleteDecider::CheckPtsCollision(
 
         const auto& res =
             edt_col_det_ptr->Update(check_pts, lon_buffer, body_lat_buffer,
-                                    mirror_lat_buffer, gear, need_cal_obs_dist);
+                                    mirror_lat_buffer, need_cal_obs_dist);
 
         if (need_cal_obs_dist) {
           set_obs_dist(type, res.min_obs_dist);

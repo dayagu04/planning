@@ -439,9 +439,10 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
     path.point_sizes[i] = single_rs_path.size;
     path.ptss[i].resize(single_rs_path.size);
     for (int j = 0; j < single_rs_path.size; j++) {
-      path.ptss[i][j].SetPos(single_rs_path.points[j].x,
-                             single_rs_path.points[j].y);
-      path.ptss[i][j].SetTheta(single_rs_path.points[j].theta);
+      path.ptss[i][j].SetPose(single_rs_path.points[j].x,
+                              single_rs_path.points[j].y,
+                              single_rs_path.points[j].theta);
+      path.ptss[i][j].SetGear(single_rs_path.gear);
     }
     if (i > 0) {
       if (IsGearDifferent(path.gears[i], path.gears[i - 1])) {
@@ -678,9 +679,10 @@ const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
         if (current_node->GetGearSwitchNum() > 0 ||
             curve_search_node_gear_change) {
           cur_gear_length = gear_switch_node->GetDistToStart();
-          gear_switch_pose.SetX(gear_switch_node->GetX());
-          gear_switch_pose.SetY(gear_switch_node->GetY());
-          gear_switch_pose.SetTheta(gear_switch_node->GetPhi());
+          gear_switch_pose.SetPose(gear_switch_node->GetX(),
+                                   gear_switch_node->GetY(),
+                                   gear_switch_node->GetPhi());
+          gear_switch_pose.SetGear(cur_gear);
         } else {
           cur_gear_length = gear_switch_node->GetDistToStart() + seg_length[0];
           gear_switch_pose = path.ptss[first_gear_switch_index][0];
@@ -713,9 +715,10 @@ const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
             next_gear_switch_pose = path.ptss[first_gear_switch_index][0];
           }
         } else {
-          next_gear_switch_pose.SetX(next_gear_switch_node->GetX());
-          next_gear_switch_pose.SetY(next_gear_switch_node->GetY());
-          next_gear_switch_pose.SetTheta(next_gear_switch_node->GetPhi());
+          next_gear_switch_pose.SetPose(next_gear_switch_node->GetX(),
+                                        next_gear_switch_node->GetY(),
+                                        next_gear_switch_node->GetPhi());
+          next_gear_switch_pose.SetGear(next_gear_switch_node->GetGearType());
         }
       }
     }
