@@ -291,7 +291,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.left_roadedge.dy_s_spline_(
                 s_ref) -
-            GetContext.get_param()->ldp_center_roadedge_offset -
+            ldp_center_line_offset -
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else {
@@ -321,7 +321,7 @@ void AdasFunction::SetLkaTrajectory() {
                             ->current_lane.right_roadedge.dx_s_spline_(s_ref);
         car_point.y() = GetContext.get_road_info()
                             ->current_lane.right_roadedge.dy_s_spline_(s_ref) +
-                        GetContext.get_param()->ldp_center_roadedge_offset +
+                        ldp_center_line_offset +
                         0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else {
