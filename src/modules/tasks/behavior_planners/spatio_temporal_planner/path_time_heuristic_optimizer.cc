@@ -270,6 +270,8 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
   const double longit_overlap_Threshold = 0.1;
   double longit_dis = 100.0;
   AABox2d agent_box;
+  LatObstacleDecisionType decision_at_t0 = LatObstacleDecisionType::IGNORE;
+  LatObstacleDecisionType decision = LatObstacleDecisionType::IGNORE;
   for (const auto &agent : agent_trajs) {
     auto iter = lateral_obstacle_decision.find(agent.agent_id);
     // auto iter_history = lateral_obstacle_history_info.find(agent.agent_id);
@@ -283,16 +285,26 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
         if (it != agent.agent_boxs_set.end()) {
           agent_box = it->second;
           longit_dis = agent_box.LongitDistanceTo(ego_box_set_[i]);
+          if (i == 0) {
+            // 计算第0时刻的决策
+            if (ego_box_set_[i].center_y() < agent_box.min_y()) {
+              decision_at_t0 = LatObstacleDecisionType::RIGHT;
+            } else if (ego_box_set_[i].center_y() > agent_box.max_y()) {
+              decision_at_t0 = LatObstacleDecisionType::LEFT;
+            } else {
+              decision_at_t0 = LatObstacleDecisionType::IGNORE;
+            }
+          }
           if (longit_dis < longit_overlap_Threshold) {
             if (ego_box_set_[i].center_y() < agent_box.min_y()) {
-              lateral_obstacle_decision[agent.agent_id] =
-                  LatObstacleDecisionType::RIGHT;
+              decision = LatObstacleDecisionType::RIGHT;
             } else if (ego_box_set_[i].center_y() > agent_box.max_y()) {
-              lateral_obstacle_decision[agent.agent_id] =
-                  LatObstacleDecisionType::LEFT;
+              decision = LatObstacleDecisionType::LEFT;
             } else {
-              lateral_obstacle_decision[agent.agent_id] =
-                  LatObstacleDecisionType::IGNORE;
+              decision = LatObstacleDecisionType::IGNORE;
+            }
+            if (decision_at_t0 == decision) {
+              lateral_obstacle_decision[agent.agent_id] = decision;
             }
             break;
           } else {
