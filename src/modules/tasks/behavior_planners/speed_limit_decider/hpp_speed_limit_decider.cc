@@ -79,13 +79,13 @@ bool HPPSpeedLimitDecider::Execute() {
 
   CalculateCurveSpeedLimit();
 
-  // CalculateNarrowAreaSpeedLimit();
+  CalculateNarrowAreaSpeedLimit();
 
   CalculateAvoidLimit();
 
   CalculateBumpLimit();
 
-  // CalculateRampLimit();
+  CalculateRampLimit();
 
   CalculateIntersectionRoadLimit();
 
