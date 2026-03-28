@@ -114,7 +114,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   double safe_border_distance_to_gap_back_obj_ = 0.0;
   double safe_border_distance_to_gap_front_obj_ = 0.0;
   double rest_changeable_distance_ = 0.0;
-  bool is_left_distance_enough_ = false;
+  bool is_left_distance_enough_ = true;
 
   // std::vector<double> anchor_points_checked_t_vec_;
   MatchGapCost anchor_points_match_gap_cost_;
