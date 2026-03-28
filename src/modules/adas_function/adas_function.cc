@@ -229,6 +229,30 @@ void AdasFunction::SetLkaTrajectory() {
   } else {
     s_proj = 0.0;
   }
+  if(GetContext.get_output_info()->ldp_output_info_.ldp_left_intervention_flag_ ||
+      GetContext.get_output_info()->elk_output_info_.elk_left_intervention_flag_ || 
+      GetContext.get_output_info()->ldp_output_info_.ldp_right_intervention_flag_ ||
+      GetContext.get_output_info()->elk_output_info_.elk_right_intervention_flag_){
+        ldp_intervention_duration_for_offset_ += GetContext.get_param()->dt;
+  }else{
+    ldp_intervention_duration_for_offset_ = 0.0;
+  }
+  if(ldp_intervention_duration_for_offset_ > 10.0) {
+    ldp_intervention_duration_for_offset_ = 10.0;
+  }
+
+  double ldp_center_line_offset_initial = GetContext.get_param()->ldp_center_line_offset;
+  double ldp_center_line_offset_final = GetContext.get_param()->ldp_center_line_offset_final;
+  int ldp_center_line_offset_nums = GetContext.get_param()->ldp_center_line_offset_nums;
+  double ldp_center_line_offset_step = 0;
+  if(ldp_center_line_offset_nums > 1 && ldp_center_line_offset_final > ldp_center_line_offset_initial) {
+      ldp_center_line_offset_step = 10 * (ldp_center_line_offset_final - ldp_center_line_offset_initial) / ldp_center_line_offset_nums;
+  }
+  double ldp_center_line_offset = ldp_intervention_duration_for_offset_ * ldp_center_line_offset_step + 
+                                   GetContext.get_param()->ldp_center_line_offset;
+
+  ldp_center_line_offset = std::min(ldp_center_line_offset, ldp_center_line_offset_final);
+  ldp_center_line_offset = std::max(ldp_center_line_offset, GetContext.get_param()->ldp_center_line_offset);
 
   auto &car2local =
       session_->environmental_model().get_ego_state_manager()->get_car2enu();
@@ -242,6 +266,8 @@ void AdasFunction::SetLkaTrajectory() {
                        plan_traj_dt * i +
                    s_proj;
     Eigen::Vector3d car_point, local_point;
+    
+
     if (GetContext.get_output_info()
             ->ldp_output_info_.ldp_left_intervention_flag_ ||
         GetContext.get_output_info()
@@ -254,7 +280,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.left_line.dy_s_spline_(
                 s_ref) -
-            GetContext.get_param()->ldp_center_line_offset -
+                ldp_center_line_offset -
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else if (GetContext.mutable_road_info()
@@ -265,7 +291,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.left_roadedge.dy_s_spline_(
                 s_ref) -
-            GetContext.get_param()->ldp_center_roadedge_offset -
+            ldp_center_line_offset -
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else {
@@ -286,7 +312,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.right_line.dy_s_spline_(
                 s_ref) +
-            GetContext.get_param()->ldp_center_line_offset +
+              ldp_center_line_offset +
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else if (GetContext.get_road_info()
@@ -295,7 +321,7 @@ void AdasFunction::SetLkaTrajectory() {
                             ->current_lane.right_roadedge.dx_s_spline_(s_ref);
         car_point.y() = GetContext.get_road_info()
                             ->current_lane.right_roadedge.dy_s_spline_(s_ref) +
-                        GetContext.get_param()->ldp_center_roadedge_offset +
+                        ldp_center_line_offset +
                         0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else {

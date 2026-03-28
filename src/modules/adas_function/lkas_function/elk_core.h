@@ -10,9 +10,9 @@ namespace elk_core {
 
 struct ElkParameters {
   uint8 enable_vehspd_display_min = 65.0;  // 激活的最小仪表车速，单位：kph
-  uint8 enable_vehspd_display_max = 155.0;  // 激活的最大仪表车速，单位：kph
+  uint8 enable_vehspd_display_max = 150.0;  // 激活的最大仪表车速，单位：kph
   uint8 disable_vehspd_display_min = 60.0;  // 退出的最小仪表车速，单位：kph
-  uint8 disable_vehspd_display_max = 160.0;  // 退出的最大仪表车速，单位：kph
+  uint8 disable_vehspd_display_max = 155.0;  // 退出的最大仪表车速，单位：kph
 
   double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m

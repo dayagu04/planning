@@ -129,6 +129,10 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "ldp_ttlc_right_hack");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_center_line_offset,
                        double, "ldp_center_line_offset");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_center_line_offset_final,
+                       double, "ldp_center_line_offset_final");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_center_line_offset_nums,
+                       int, "ldp_center_line_offset_nums");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_center_roadedge_offset,
                        double, "ldp_center_roadedge_offset");
 

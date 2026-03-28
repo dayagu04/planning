@@ -72,6 +72,10 @@ struct Parameters {
   double ldp_c0_right_offset = 0.0;
   double ldp_ttlc_right_hack = 1.1;
   double ldp_center_line_offset = 0.4;
+
+  double ldp_center_line_offset_final = 0.8;
+  int ldp_center_line_offset_nums = 50;
+
   double ldp_center_roadedge_offset = 0.7;
 
   bool ldw_main_switch = false;

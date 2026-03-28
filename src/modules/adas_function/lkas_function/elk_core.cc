@@ -1943,10 +1943,37 @@ void ElkCore::RunOnce(void) {
   } else { /*do nothing*/
   }
 
+  double elk_roadedge_offset_by_line_dis = 0.0;
+  if ((GetContext.get_road_info()->current_lane.left_roadedge.valid) &&
+      (GetContext.get_road_info()->current_lane.left_line.valid)) {
+      if(GetContext.get_road_info()->current_lane.left_roadedge.c0 > 
+         GetContext.get_road_info()->current_lane.left_line.c0){
+          elk_roadedge_offset_by_line_dis = GetContext.get_road_info()->current_lane.left_roadedge.c0 -
+                                            GetContext.get_road_info()->current_lane.left_line.c0;
+         }
+  } else if ((GetContext.get_road_info()->current_lane.right_roadedge.valid) &&
+             (GetContext.get_road_info()->current_lane.right_line.valid)) {
+      if(GetContext.get_road_info()->current_lane.right_roadedge.c0 < 
+        GetContext.get_road_info()->current_lane.right_line.c0){
+               elk_roadedge_offset_by_line_dis = GetContext.get_road_info()->current_lane.right_line.c0 -
+                                                 GetContext.get_road_info()->current_lane.right_roadedge.c0;
+
+        }
+  } else { /*do nothing*/
+  }
+
+  if(elk_roadedge_offset_by_line_dis > 0.6 && 
+     elk_roadedge_offset_by_line_dis < 1.0){
+    elk_roadedge_offset_by_line_dis = 0.2;
+  }else{
+
+  }
+  elk_roadedge_offset_by_line_dis = std::min(elk_roadedge_offset_by_line_dis, 0.2);
+  elk_roadedge_offset_by_line_dis = 0; //暂时关闭
   elk_roadedge_offset = pnc::mathlib::Interp1(
       GetContext.get_param()->elk_roadedge_departure_V_vector,
       GetContext.get_param()->elk_roadedge_offset_vector,
-      elk_roadedge_offset_temp);
+      elk_roadedge_offset_temp) + elk_roadedge_offset_by_line_dis;
 
   // ELK—Roadedge场景，触发线逻辑修改
   // 若压线行驶，触发线外移

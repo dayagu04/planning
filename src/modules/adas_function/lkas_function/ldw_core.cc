@@ -53,10 +53,14 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
 
   // bit 2
   // 判断当前车道宽度是否满足激活条件
-  if (GetContext.mutable_road_info()->current_lane.lane_width < 2.8) {
-    enable_code += uint32_bit[2];
-  } else if (GetContext.mutable_road_info()->current_lane.lane_width > 5.2) {
-    enable_code += uint32_bit[2];
+  if(GetContext.get_road_info()->current_lane.lane_width_valid){
+    if (GetContext.mutable_road_info()->current_lane.lane_width < 2.8) {
+      enable_code += uint32_bit[2];
+    } else if (GetContext.mutable_road_info()->current_lane.lane_width > 5.2) {
+      enable_code += uint32_bit[2];
+    } else {
+      /*do nothing*/
+    }
   } else {
     /*do nothing*/
   }
@@ -85,11 +89,11 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
 
   // bit 5
   // 判断危险报警灯是否开启:使用双闪来判断
-  if (vehicle_service_output_info_ptr->hazard_light_state == true) {
-    enable_code += uint32_bit[5];
-  } else {
-    /*do nothing*/
-  }
+  // if (vehicle_service_output_info_ptr->hazard_light_state == true) {
+  //   enable_code += uint32_bit[5];
+  // } else {
+  //   /*do nothing*/
+  // }
 
   // bit 6
   // 判断横摆角速度是否超限,12deg/s对应0.2094rad/s.横摆角速度绝对值<12deg/s，持续1s
@@ -415,11 +419,11 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
 
   // bit 5
   // 判断危险报警灯是否开启:使用双闪来判断
-  if (vehicle_service_output_info_ptr->hazard_light_state == true) {
-    disable_code += uint32_bit[5];
-  } else {
-    /*do nothing*/
-  }
+  // if (vehicle_service_output_info_ptr->hazard_light_state == true) {
+  //   disable_code += uint32_bit[5];
+  // } else {
+  //   /*do nothing*/
+  // }
 
   // bit 6
   // 判断横摆角速度是否超限,15deg/s对应0.2094rad/s
@@ -955,7 +959,12 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
     ldw_left_suppression_code += uint32_bit[14];
   } else { /*do nothing*/
   }
-
+  // bit 18 双闪抑制
+  if (vehicle_service_output_info_ptr->hazard_light_state == true) {
+    ldw_left_suppression_code += uint32_bit[15];
+  } else {
+    /*do nothing*/
+  }
   return ldw_left_suppression_code &
          GetContext.get_param()->ldw_left_suppression_code_maskcode;
 }
@@ -1393,6 +1402,12 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
   if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
     ldw_right_suppression_code += uint32_bit[14];
   } else { /*do nothing*/
+  }
+  // bit 18 双闪抑制
+  if (vehicle_service_output_info_ptr->hazard_light_state == true) {
+    ldw_right_suppression_code += uint32_bit[15];
+  } else {
+    /*do nothing*/
   }
   return ldw_right_suppression_code &
          GetContext.get_param()->ldw_right_suppression_code_maskcode;
