@@ -174,6 +174,14 @@ class VirtualLane {
     return route_on_link_status_;
   }
 
+  // 该lane在split_next_link上从左向右的序号（1=最左），-1表示未计算
+  void set_lane_order_on_split_next_link(int order) {
+    lane_order_on_split_next_link_ = order;
+  }
+  int get_lane_order_on_split_next_link() const {
+    return lane_order_on_split_next_link_;
+  }
+
   void update_lane_tasks(const RouteInfoOutput &route_info_output);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; }
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
@@ -253,6 +261,7 @@ class VirtualLane {
   std::vector<int> current_tasks_;
   bool hack_ = false;
   RouteOnLinkStatus route_on_link_status_ = RouteOnLinkStatus::UNKNOWN;
+  int lane_order_on_split_next_link_ = -1;  // 在split_next_link上从左向右的序号，-1表示未计算
 
   SpeedChangePoint speed_change_point_{};
   double v_cruise_ = 0.0;

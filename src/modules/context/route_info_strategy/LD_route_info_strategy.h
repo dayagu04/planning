@@ -109,6 +109,13 @@ const iflymapdata::sdpro::LinkInfo_Link* get_current_link() override;
 // 包装函数：判断传入lane是否在route link上，结果写入lane的route_on_link_status属性
 void UpdateLaneIsOnRouteLinkStatus(const std::shared_ptr<VirtualLane>& lane);
 
+// 对已判断为ON_ROUTE的lane，计算其在split_next_link上从左向右的序号
+// 若多条lane序号冲突，利用车道线点横向位置结合relative_id消歧
+void UpdateLanesOrderOnSplitNextLink(
+    const std::shared_ptr<VirtualLane>& cur_lane,
+    const std::shared_ptr<VirtualLane>& left_lane,
+    const std::shared_ptr<VirtualLane>& right_lane);
+
 //todo(ldh): 其他virutal函数。
 protected:
  bool UpdateLDMap();

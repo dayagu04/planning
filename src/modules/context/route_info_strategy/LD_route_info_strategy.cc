@@ -278,6 +278,167 @@ void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
                                      : RouteOnLinkStatus::OFF_ROUTE);
 }
 
+void LDRouteInfoStrategy::UpdateLanesOrderOnSplitNextLink(
+    const std::shared_ptr<VirtualLane>& cur_lane,
+    const std::shared_ptr<VirtualLane>& left_lane,
+    const std::shared_ptr<VirtualLane>& right_lane) {
+  // 前置条件：split_info_vec_非空，且存在有效的split_next_link
+  if (split_info_vec_.empty()) {
+    return;
+  }
+  const auto& front_split_info = split_info_vec_.front();
+  const auto& split_link = ld_map_.GetLinkOnRoute(front_split_info.first->id());
+  if (split_link == nullptr || split_link->successor_link_ids_size() != 2) {
+    return;
+  }
+  const auto& split_next_link = ld_map_.GetNextLinkOnRoute(split_link->id());
+  if (split_next_link == nullptr) {
+    return;
+  }
+
+  // 收集split_next_link上有效的（正常行驶）lane，按sequence从大到小排列（左大右小）
+  // 同时构��� sequence -> 从左向右序号 的映射
+  std::vector<std::pair<int, uint64_t>> seq_lane_ids;  // (sequence, lane_id)
+  for (auto lane_id : split_next_link->lane_ids()) {
+    const auto* map_lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (map_lane == nullptr) {
+      continue;
+    }
+    if (IsEmergencyLane(map_lane) || IsDiversionLane(map_lane) ||
+        IsExitLane(map_lane)) {
+      continue;
+    }
+    seq_lane_ids.emplace_back(map_lane->sequence(), lane_id);
+  }
+  if (seq_lane_ids.empty()) {
+    return;
+  }
+  // 按sequence从大到小排序（sequence大=靠左）
+  std::sort(seq_lane_ids.begin(), seq_lane_ids.end(),
+            [](const auto& a, const auto& b) { return a.first > b.first; });
+  const int total_normal_lanes = static_cast<int>(seq_lane_ids.size());
+
+  // sequence -> 从左向右序号（1=最左）
+  auto seq_to_order = [&](int sequence) -> int {
+    for (int i = 0; i < total_normal_lanes; ++i) {
+      if (seq_lane_ids[i].first == sequence) {
+        return i + 1;
+      }
+    }
+    return -1;
+  };
+
+  // 检查split_next_link的boot点是否可用
+  if (!split_next_link->has_points() || !split_next_link->points().has_boot() ||
+      split_next_link->points().boot().points_size() == 0) {
+    return;
+  }
+
+  // 收集所有ON_ROUTE的virtual lane，对每条lane：
+  // 1. 用lane的enu_point构建lane自己的Frenet坐标系
+  // 2. 把split_next_link的boot点投影到lane的Frenet上，计算平均l值
+  // 3. l值越小（越接近0），说明link和lane越重合；l值为正说明link在lane左侧
+  struct LaneWithL {
+    std::shared_ptr<VirtualLane> lane;
+    double avg_l;  // link相对于lane的平均横向偏移
+    double car_y;  // 用于冲突消歧
+  };
+  std::vector<LaneWithL> lanes_with_l;
+
+  auto collect_lane = [&](const std::shared_ptr<VirtualLane>& vlane) {
+    if (vlane == nullptr ||
+        vlane->get_route_on_link_status() != RouteOnLinkStatus::ON_ROUTE) {
+      return;
+    }
+    const auto& lane_pts = vlane->lane_points();
+    if (lane_pts.size() < 3) {
+      return;
+    }
+
+    // 用lane的enu_point构建lane的Frenet坐标系
+    std::vector<planning_math::PathPoint> lane_path_points;
+    for (const auto& pt : lane_pts) {
+      if (std::isnan(pt.enu_point.x) || std::isnan(pt.enu_point.y)) {
+        continue;
+      }
+      auto p = planning_math::PathPoint(pt.enu_point.x, pt.enu_point.y);
+      if (!lane_path_points.empty()) {
+        const auto& last = lane_path_points.back();
+        if (planning_math::Vec2d(last.x() - p.x(), last.y() - p.y()).Length() < 1e-2) {
+          continue;
+        }
+      }
+      lane_path_points.emplace_back(p);
+    }
+    if (static_cast<int>(lane_path_points.size()) <
+        planning_math::KDPath::kKDPathMinPathPointSize + 1) {
+      return;
+    }
+    auto lane_frenet =
+        std::make_shared<planning_math::KDPath>(std::move(lane_path_points));
+
+    // 把split_next_link的boot点投影到lane_frenet上，计算平均l值
+    double sum_l = 0.0;
+    int cnt = 0;
+    for (int i = 0; i < split_next_link->points().boot().points_size(); ++i) {
+      const auto& bp = split_next_link->points().boot().points(i);
+      double s = 0.0, l = 0.0;
+      if (lane_frenet->XYToSL(bp.x(), bp.y(), &s, &l)) {
+        sum_l += l;
+        cnt++;
+      }
+    }
+    if (cnt == 0) {
+      return;
+    }
+    double avg_l = sum_l / cnt;
+
+    // 计算car_y均值用于消歧
+    double sum_y = 0.0;
+    int cnt_y = 0;
+    for (const auto& pt : lane_pts) {
+      if (pt.car_point.x > 0.0 && pt.car_point.x < 200.0) {
+        sum_y += pt.car_point.y;
+        cnt_y++;
+      }
+    }
+    double avg_car_y = cnt_y > 0 ? sum_y / cnt_y : 0.0;
+
+    lanes_with_l.push_back({vlane, avg_l, avg_car_y});
+  };
+
+  collect_lane(cur_lane);
+  collect_lane(left_lane);
+  collect_lane(right_lane);
+
+  if (lanes_with_l.empty()) {
+    return;
+  }
+
+  // 按l值从小到大排序（l越小，link越靠右，说明lane越靠左）
+  std::sort(lanes_with_l.begin(), lanes_with_l.end(),
+            [](const LaneWithL& a, const LaneWithL& b) {
+              // 如果l值差异小于0.5m，用car_y消歧
+              if (std::abs(a.avg_l - b.avg_l) < 0.5) {
+                // car_y差异小于0.3m，用relative_id消歧
+                if (std::abs(a.car_y - b.car_y) < 0.3) {
+                  return a.lane->get_relative_id() < b.lane->get_relative_id();
+                }
+                return a.car_y > b.car_y;
+              }
+              return a.avg_l < b.avg_l;
+            });
+
+  // 分配序号：从左到右为1, 2, 3...
+  for (int i = 0; i < static_cast<int>(lanes_with_l.size()); ++i) {
+    int order = i + 1;
+    // 边界限制
+    order = std::max(1, std::min(order, total_normal_lanes));
+    lanes_with_l[i].lane->set_lane_order_on_split_next_link(order);
+  }
+}
+
+
 bool LDRouteInfoStrategy::CalculateCurrentLink() {
   const double search_distance = 50.0;
   const double max_heading_diff = PI / 4;
@@ -1310,6 +1471,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     UpdateLaneIsOnRouteLinkStatus(cur_lane);
     UpdateLaneIsOnRouteLinkStatus(left_lane);
     UpdateLaneIsOnRouteLinkStatus(right_lane);
+    UpdateLanesOrderOnSplitNextLink(cur_lane, left_lane, right_lane);
 
     bool cur_lane_on_route_link_base_map_link =
         cur_lane->get_route_on_link_status() == RouteOnLinkStatus::ON_ROUTE;
