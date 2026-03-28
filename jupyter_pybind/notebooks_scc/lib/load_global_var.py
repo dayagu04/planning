@@ -30,6 +30,7 @@ def init():  # 初始化
     'is_vis_rads_path': False,
     'is_vis_nsa_line': False,
     'is_vis_prediction': True,
+    'is_vis_around_prediction': False,
     'is_vis_fus_obj': True,
     'is_vis_lane_topo': True,
     'is_vis_tf_light': True,
@@ -73,6 +74,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_speed_bump'] = True       #融合减速带
     global_dict['is_vis_ground_mark'] = False
     global_dict['is_vis_prediction'] = False      #预测
+    global_dict['is_vis_around_prediction'] = True      #环视预测
     global_dict['is_vis_ego_motion_sim'] = False
     global_dict['is_vis_snrd'] = False
     global_dict['is_vis_snrd'] = False
@@ -96,6 +98,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_speed_bump'] = True
     global_dict['is_vis_nsa_line'] = True
     global_dict['is_vis_prediction'] = False
+    global_dict['is_vis_around_prediction'] = False
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True
@@ -116,6 +119,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_speed_bump'] = True
     global_dict['is_vis_rads_path'] = True
     global_dict['is_vis_prediction'] = False
+    global_dict['is_vis_around_prediction'] = False
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True

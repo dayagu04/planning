@@ -72,6 +72,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   plan_debug_msg = find_nearest(bag_loader.plan_debug_msg, bag_time)
   plan_debug_json_msg = find_nearest(bag_loader.plan_debug_msg, bag_time, True)
   prediction_msg = find_nearest(bag_loader.prediction_msg, bag_time)
+  around_prediction_msg = find_nearest(bag_loader.around_prediction_msg, bag_time)
   ctrl_msg = find_nearest(bag_loader.ctrl_msg, bag_time)
   # ctrl_debug_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time)
   # ctrl_debug_json_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time,True)
@@ -1600,6 +1601,64 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       print("prediction error: ", error)
       pass
 
+  # 加载around prediction_msg
+  if bag_loader.around_prediction_msg['enable'] == True:
+    prediction_obs_id = local_view_data['data_select_obs_id'].data['prediction_obstacle_id']
+    try:
+      for i in range(5):
+        local_view_data['data_around_prediction_' + str(i)].data.update({
+          'prediction_y' : [],
+          'prediction_x' : [],
+          'prediction_obs_y' : [],
+          'prediction_obs_x' : [],
+        })
+      # 预测轨迹
+      prediction_traj_dict = load_prediction_objects(around_prediction_msg.prediction_obstacle_list, prediction_obs_id, loc_msg, g_is_display_enu)
+      for i in range(5):
+        local_view_data['data_around_prediction_' + str(i)].data.update({
+          'prediction_y' : prediction_traj_dict[i]['y'],
+          'prediction_x' : prediction_traj_dict[i]['x'],
+          'prediction_obs_y' : prediction_traj_dict[i]['obs_y'],
+          'prediction_obs_x' : prediction_traj_dict[i]['obs_x'],
+        })
+      # 预测障碍物
+      prediction_obs_all = load_prediction_obstacle(around_prediction_msg, plan_debug_json_msg, is_enu_to_car, loc_msg, environment_model_info)
+      local_view_data['data_around_prediction_obj'].data.update({
+              'obstacles_x': [],
+              'obstacles_y': [],
+              'pos_x' : [],
+              'pos_y' : [],
+              'obs_label' : [],
+              'color' : [],
+              'text_color' : [],
+            })
+      for key in prediction_obs_all:
+        obstacles_info = prediction_obs_all[key]
+        key_name = 'data_around_prediction_obj'
+        if g_is_display_enu:
+          local_view_data[key_name].data.update({
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+            'color' : obstacles_info['color'],
+            'text_color' : obstacles_info['text_color'],
+          })
+        else:
+          local_view_data[key_name].data.update({
+            'obstacles_x': obstacles_info['obstacles_x_rel'],
+            'obstacles_y': obstacles_info['obstacles_y_rel'],
+            'pos_x' : obstacles_info['pos_x_rel'],
+            'pos_y' : obstacles_info['pos_y_rel'],
+            'obs_label' : obstacles_info['obs_label'],
+            'color' : obstacles_info['color'],
+            'text_color' : obstacles_info['text_color'],
+          })
+    except Exception as error:
+      print("around prediction error: ", error)
+      pass
+
   # load control
   if bag_loader.ctrl_msg['enable'] == True:
     try:
@@ -2166,6 +2225,7 @@ def load_local_view_figure():
   is_vis_lane_mark = global_var.get_value('is_vis_lane_mark')
   is_vis_merge_point = global_var.get_value('is_vis_merge_point')
   is_vis_prediction = global_var.get_value('is_vis_prediction')
+  is_vis_around_prediction = global_var.get_value('is_vis_around_prediction')
   is_vis_fus_obj = global_var.get_value('is_vis_fus_obj')
   is_vis_ego_motion_sim = global_var.get_value('is_vis_ego_motion_sim')
   is_vis_snrd = global_var.get_value('is_vis_snrd')
@@ -2426,6 +2486,9 @@ def load_local_view_figure():
   data_prediction_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[], 'color':[], 'text_color':[]})
+  data_around_prediction_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obs_label':[], 'color':[], 'text_color':[]})
   data_radar_fm_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
@@ -2479,6 +2542,26 @@ def load_local_view_figure():
                                                'prediction_obs_y':[],
                                                'prediction_obs_x':[],})
   data_prediction_4 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_0 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_1 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_2 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_3 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_4 = ColumnDataSource(data = {'prediction_y':[],
                                                'prediction_x':[],
                                                'prediction_obs_y':[],
                                                'prediction_obs_x':[],})
@@ -2710,6 +2793,11 @@ def load_local_view_figure():
                      'data_prediction_2' : data_prediction_2 ,\
                      'data_prediction_3' : data_prediction_3 ,\
                      'data_prediction_4' : data_prediction_4 ,\
+                     'data_around_prediction_0' : data_around_prediction_0 ,\
+                     'data_around_prediction_1' : data_around_prediction_1 ,\
+                     'data_around_prediction_2' : data_around_prediction_2 ,\
+                     'data_around_prediction_3' : data_around_prediction_3 ,\
+                     'data_around_prediction_4' : data_around_prediction_4 ,\
                      'data_parking_space' : data_parking_space , \
                      'data_target_parking_space' : data_target_parking_space , \
                      'data_parking_space_text' : data_parking_space_text , \
@@ -2737,6 +2825,7 @@ def load_local_view_figure():
                      'data_me_obj':data_me_obj, \
                      'data_rdg_obj':data_rdg_obj, \
                      'data_prediction_obj':data_prediction_obj, \
+                     'data_around_prediction_obj':data_around_prediction_obj, \
                      'data_rdg_general_obj': data_rdg_general_obj, \
                      'data_rdg_occ_obj': data_rdg_occ_obj, \
                      'data_radar_fm_obj':data_radar_fm_obj, \
@@ -3047,6 +3136,20 @@ def load_local_view_figure():
   if is_vis_prediction:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'prediction_obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_prediction_obj, text_color='text_color', text_align="center", text_font_size="10pt", legend_label = 'prediction_info')
+
+  if is_vis_around_prediction:
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_around_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'around_prediction_traj')
+    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_around_prediction_obj, text_color='text_color', text_align="center", text_font_size="10pt", legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_0, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'around_prediction_obs')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_1, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'blue', line_alpha = 1, legend_label = 'around_prediction_obs')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_2, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'orange', line_alpha = 1, legend_label = 'around_prediction_obs')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_3, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'black', line_alpha = 1, legend_label = 'around_prediction_obs')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_4, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'purple', line_alpha = 1, legend_label = 'around_prediction_obs')
 
   if is_vis_rdg_obj:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'rdg_obj',visible = False)
