@@ -280,11 +280,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   # HPP debug scalar keys
   hpp_debug_value_list = [
-      "v_cruise_limit", "v_target_decider", "v_target_type_code", "v_limit_curv", "v_limit_avoid", 
-      "v_limit_speed_bump", "in_speed_bump_zone", "approaching_speed_bump", "distance_to_bump_zone",
+      # "v_cruise_limit", "v_target_decider", "v_target_type_code", "v_limit_curv", "v_limit_avoid", 
+      # "v_limit_speed_bump", "in_speed_bump_zone", "approaching_speed_bump", "distance_to_bump_zone",
       # "ego_head_s", "ego_s", "speed_bump_near_ignore_range_first", "speed_bump_near_ignore_range_second", "update_speed_bump_near_ignore_range",\
-      "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp",
-      "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection",
+      # "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp",
+      # "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection",
       "LaneChangeDeciderTime", "LateralObstacleDeciderTime", 
       "HppGeneralLateralDeciderTime", "LateralMotionPlannerTime",
       "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
