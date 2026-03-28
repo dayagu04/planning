@@ -14,7 +14,6 @@
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "../tasks/behavior_planners/start_stop_decider/start_stop_decider_output.h"
 #include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
-#include "../tasks/behavior_planners/turnstile_longitudinal_decider/turnstile_longitudinal_decider_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 // #include "../tasks/task_interface/construction_scene_decider_output.h"
 #include "../tasks/task_interface/crossing_agent_decider_output.h"
@@ -339,16 +338,6 @@ class PlanningContext {
     return stop_destination_decider_output_;
   }
 
-  const TurnstileLongitudinalDeciderOutput &
-  turnstile_longitudinal_decider_output() const {
-    return turnstile_longitudinal_decider_output_;
-  }
-
-  TurnstileLongitudinalDeciderOutput &
-  mutable_turnstile_longitudinal_decider_output() {
-    return turnstile_longitudinal_decider_output_;
-  }
-
   const MRCBrakeDeciderOutput &mrc_brake_decider_output() const {
     return mrc_brake_decider_output_;
   }
@@ -664,7 +653,6 @@ class PlanningContext {
 
   StartStopDeciderOutPut start_stop_decider_output_;
   StopDestinationDeciderOutput stop_destination_decider_output_;
-  TurnstileLongitudinalDeciderOutput turnstile_longitudinal_decider_output_;
   MRCBrakeDeciderOutput mrc_brake_decider_output_;
   // LonRefPathDeciderOutput
   LonRefPathDeciderOutput lon_ref_path_decider_output_;
