@@ -16,6 +16,7 @@ def init():  # 初始化
     'is_vis_fus_line': True,
     'is_vis_rdg_line': True,
     'is_vis_rdg_obj': True,
+    'is_vis_rdg_parking_slot': True,
     'is_vis_me_obj': False,
     'is_vis_lane_mark': True,
     'is_vis_merge_point': False,
@@ -31,6 +32,7 @@ def init():  # 初始化
     'is_vis_prediction': True,
     'is_vis_fus_obj': True,
     'is_vis_lane_topo': True,
+    'is_vis_tf_light': True,
   }
 
 
@@ -60,6 +62,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_obj'] = False          #感知 OD
     global_dict['is_vis_rdg_occ'] = False          #感知 OCC
     global_dict['is_vis_rdg_groundline'] = False   #感知接地线
+    global_dict['is_vis_rdg_parking_slot'] = False   #感知接地线
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
     global_dict['is_vis_hpp_map'] = True
@@ -75,6 +78,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_snrd'] = False
     global_dict['is_vis_smooth_refline'] = False
     global_dict['is_vis_road_type_line'] = True
+    global_dict['is_vis_tf_light'] = False
   elif scene == 'NSA':
     global_dict['scene_type'] = 'NSA'
     global_dict['is_vis_map'] = False
