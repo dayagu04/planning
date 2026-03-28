@@ -310,6 +310,16 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
   plan_debug_json_info = local_view_data['data_msg']['plan_debug_json_msg']
 
+  turnstile_debug_value_map = {}
+  if hasattr(plan_debug_info, 'key_values'):
+    for item in plan_debug_info.key_values:
+      if item.HasField('int_value'):
+        turnstile_debug_value_map[item.key] = item.int_value
+      elif item.HasField('float_value'):
+        turnstile_debug_value_map[item.key] = item.float_value
+      elif item.HasField('str_value'):
+        turnstile_debug_value_map[item.key] = item.str_value
+
   # load new st boundaries
   # print(plan_debug_info.st_graph_data.st_boundaries)
   st_info_all = load_st_polygen_points(plan_debug_info.st_graph_data)
@@ -803,7 +813,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   turnstile_debug_val_vec = []
   for ind in range(len(turnstile_debug_value_list)):
      key = turnstile_debug_value_list[ind]
-     val = plan_debug_json_info.get(key, None)
+     val = turnstile_debug_value_map.get(key, None)
      turnstile_debug_attr_vec.append(key)
      turnstile_debug_val_vec.append(val)
 
