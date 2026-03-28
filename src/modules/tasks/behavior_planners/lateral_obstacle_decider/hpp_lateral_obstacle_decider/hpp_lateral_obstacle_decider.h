@@ -78,12 +78,15 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   //辅助函数2：更新历史记录状态机
   void UpdateObstacleConsistencyMap(
-      const ObstacleLateralDecisionMap& obs_lat_decision_map,
+      const ObstacleLateralDecisionMap& lat_obstacle_decision,
       ObstacleConsistencyMap& obs_consistency_map);
 
   void UpdateLatDecisionWithARAStar(
-      const std::shared_ptr<ReferencePath> &reference_path_ptr);
-  void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
+      const std::shared_ptr<ReferencePath>& reference_path_ptr);
+
+  void SaveObstaleToEnvironmentModelDebug(
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      const ObstacleLateralDecisionMap& lat_obstacle_decision);
 
  private:
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
