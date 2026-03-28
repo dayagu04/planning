@@ -1301,11 +1301,13 @@ def load_lat_plan_figure(fig1, local_view_data):
                    'data_construction_refline':data_construction_refline, \
                    'data_narrow_space_corners':data_narrow_space_corners
   }
+  scene_type = global_var.get_value("scene_type")
 
-  fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_narrow_space_corners, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 'narrow space')
+  if scene_type not in ("HPP", "PARKING_APA"):
+    fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_narrow_space_corners, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 'narrow space')
+    fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'spatio ref', visible=True)
   # motion planning
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
-  fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'spatio ref', visible=True)
   fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard upper bound')
   fig1.line('hard_lower_bound_y0_vec', 'hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard lower bound')
   fig1.line('second_soft_upper_bound_y0_vec', 'second_soft_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = "darkorange", line_dash = 'solid', line_alpha = 0.7, legend_label = 'second soft upper bound')
@@ -1327,7 +1329,6 @@ def load_lat_plan_figure(fig1, local_view_data):
   hover1 = HoverTool(renderers=[f1], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec')])
   fig1.add_tools(hover1)
 
-  scene_type = global_var.get_value("scene_type")
   if scene_type not in ("HPP", "PARKING_APA"):
     fig1.line('refline_y', 'refline_x', source = data_construction_refline, line_width = 2, line_color = 'red', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'construct ref', visible=False)
     fig_construction_refline = fig1.circle('refline_y', 'refline_x', source = data_construction_refline, size = 5, line_width = 4, line_color = "red", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'construct ref', visible=False)
