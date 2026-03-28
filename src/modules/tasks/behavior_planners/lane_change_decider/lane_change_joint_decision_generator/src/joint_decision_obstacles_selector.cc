@@ -788,6 +788,16 @@ JointDecisionObstaclesSelector::GetKeyObstacles() const {
   return key_obstacles_;
 }
 
+std::vector<int32_t> JointDecisionObstaclesSelector::GetKeyObstacleLabels()
+    const {
+  std::vector<int32_t> obstacle_labels;
+  obstacle_labels.reserve(key_obstacles_.size());
+  for (const auto& obstacle : key_obstacles_) {
+    obstacle_labels.push_back(static_cast<int32_t>(obstacle.longitudinal_label));
+  }
+  return obstacle_labels;
+}
+
 bool JointDecisionObstaclesSelector::
     ShouldIgnoreRearAgent(  // 忽略是意图修饰忽略，更保守的考虑
         const std::shared_ptr<agent::Agent>& agent,

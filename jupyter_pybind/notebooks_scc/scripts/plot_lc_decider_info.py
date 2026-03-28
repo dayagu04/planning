@@ -15,7 +15,7 @@ from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/home/ros/code/bags/data_collection_BESTUNE_E541_20404_EVENT_MANUAL_2026-03-24-11-12-56_1774321956000.bag.1774592561.close-loop.scc.plan"
+bag_path = "/home/ros/code/bags/data_collection_BESTUNE_E541_20404_EVENT_MANUAL_2026-03-24-11-12-56_1774321956000.bag"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -201,12 +201,16 @@ def update_safety_check_data(plan_debug_json_msg):
     else:
       print("前车安全检查数据为空")
 
-    # ---- 压线率 ----
+    # ---- 右下角汇总表 ----
     lc_ego_press = plan_debug_json_msg.get('lc_ego_press_line_ratio', None)
-    if lc_ego_press is not None:
-      press_line_div.text = f"<h3>压线比例: <span style='color:blue;'>{lc_ego_press:.3f}</span></h3>"
-    else:
-      press_line_div.text = f"<h3>压线比例: <span style='color:gray;'>N/A</span></h3>"
+    lc_safety_check_time = plan_debug_json_msg.get('lc_safety_check_time', None)
+    safety_summary_data.data = {
+        'name': ['压线率', '安全检查时长(s)'],
+        'data': [
+            f"{lc_ego_press:.3f}" if lc_ego_press is not None else 'N/A',
+            f"{lc_safety_check_time:.2f}" if lc_safety_check_time is not None else 'N/A',
+        ]
+    }
 
   except Exception as e:
     print(f"更新安全检查数据失败: {e}")
@@ -258,6 +262,10 @@ rear_safety_data = ColumnDataSource(data={
 front_safety_data = ColumnDataSource(data={
     'index': [], 'box_longitudinal_buff': [],
     'distance': [], 'agent_vel': [], 'ego_vel': [], 'actual_gap': []
+})
+safety_summary_data = ColumnDataSource(data={
+    'name': ['压线率', '安全检查时长(s)'],
+    'data': ['N/A', 'N/A']
 })
 
 # 图1: 距离和缓冲区
@@ -314,12 +322,21 @@ fig_safety_vel.legend.click_policy = 'hide'
 fig_rear_vel = fig_safety_vel
 fig_front_vel = fig_safety_vel
 
-# 压线比例
-press_line_div = Div(text="<h3>压线比例: <span style='color:blue;'>N/A</span></h3>",
-                     width=525, height=100)
+# 图4: 安全检查汇总表
+safety_summary_columns = [
+    TableColumn(field="name", title="指标"),
+    TableColumn(field="data", title="数值"),
+]
+safety_summary_table = DataTable(
+    source=safety_summary_data,
+    columns=safety_summary_columns,
+    width=525,
+    height=330,
+    index_position=None,
+)
 
 safety_check_layout = column(row(fig_safety_dist, fig_safety_ttc),
-                             row(fig_safety_vel, press_line_div))
+                             row(fig_safety_vel, safety_summary_table))
 tab_safety_check = Panel(child=safety_check_layout, title="安全检查")
 
 # 创建可切换的 Tabs

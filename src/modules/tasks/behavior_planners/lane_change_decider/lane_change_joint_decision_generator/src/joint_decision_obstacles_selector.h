@@ -61,6 +61,7 @@ class JointDecisionObstaclesSelector {
       bool* is_in_front = nullptr);
 
   std::vector<LaneChangeKeyObstacle> GetKeyObstacles() const;
+  std::vector<int32_t> GetKeyObstacleLabels() const;
   // 更新后车交互置信度，包含强制场景和常规增减。
   void UpdateRearAgentConfidence(
       const std::shared_ptr<agent::Agent>& agent,
