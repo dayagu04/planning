@@ -430,11 +430,9 @@ bool EnvironmentalModelManager::Run() {
     if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
       ILOG_ERROR << "virtual_lane_manager update failed";
       return false;
-    } else {
-      // 后面需要判断是否为地图
-      last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
     }
   }
+  last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
   // time_end = IflyTime::Now_ms();
   // ILOG_INFO << "virtual_lane_manager update cost:" << time_end - time_start;
   // JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
