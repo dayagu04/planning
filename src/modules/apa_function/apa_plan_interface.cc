@@ -173,7 +173,8 @@ void ApaPlanInterface::AddReleasedSlotInfo(
       slot_info.is_redefine_slot_type = false;
     }
 
-    planning_output.successful_slot_info_list[i] = slot_info;
+    planning_output.successful_slot_info_list
+        [planning_output.successful_slot_info_list_size] = slot_info;
     planning_output.successful_slot_info_list_size++;
     release_slot_id.append(std::string("[") + std::to_string(slot_info.id) +
                            "  " + std::to_string(slot_info.is_narrow_slot) +
