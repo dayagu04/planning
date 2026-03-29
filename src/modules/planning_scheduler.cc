@@ -1010,8 +1010,10 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
   };
   constexpr double kExistPedestrainLonThr = 6.0;
   constexpr double kExistPedestrainLatThr = 0.5;
+  constexpr double kNudgePedestrainLonThr = 6.0;
   constexpr double kNudgePedestrainLatThr = 0.8;
-  constexpr double kNudgeVehicleLatThr = 1.0;
+  constexpr double kNudgeVehicleLonThr = 6.0;
+  constexpr double kNudgeVehicleLatThr = 0.5;
   hpp_info->is_exist_pedestrain = false;
   hpp_info->is_nudge_pedestrain = false;
   hpp_info->is_yield_pedestrain = false;
@@ -1029,9 +1031,13 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
               ego_sl_boundary.l_start - kExistPedestrainLatThr) {
         hpp_info->is_exist_pedestrain = false;
       }
-      if(lat_decision.find(id) != lat_decision.end() && is_nudge(lat_decision.at(id))) {
-        if(std::min(std::fabs(sl_boundary.l_start), std::fabs(sl_boundary.l_end)) <
-            kNudgePedestrainLatThr) {
+      if (lat_decision.find(id) != lat_decision.end() &&
+          is_nudge(lat_decision.at(id))) {
+        if (sl_boundary.l_start < kNudgePedestrainLatThr &&
+            sl_boundary.l_end > -kNudgePedestrainLatThr &&
+            sl_boundary.s_end > ego_sl_boundary.s_start &&
+            sl_boundary.s_start <
+                ego_sl_boundary.s_end + kNudgePedestrainLonThr) {
           hpp_info->is_nudge_pedestrain = true;
         }
       }
@@ -1039,9 +1045,11 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
     if (frenet_obs->obstacle()->is_car()) {
       if (lat_decision.find(id) != lat_decision.end() &&
           is_nudge(lat_decision.at(id))) {
-        if (std::min(std::fabs(sl_boundary.l_start),
-                     std::fabs(sl_boundary.l_end)) < kNudgeVehicleLatThr) {
-          hpp_info->is_nudge_pedestrain = true;
+        if (sl_boundary.l_start < kNudgeVehicleLatThr &&
+            sl_boundary.l_end > -kNudgeVehicleLatThr &&
+            sl_boundary.s_end > ego_sl_boundary.s_start &&
+            sl_boundary.s_start < ego_sl_boundary.s_end + kNudgeVehicleLonThr) {
+          hpp_info->is_nudge_vehicle = true;
         }
       }
     }
