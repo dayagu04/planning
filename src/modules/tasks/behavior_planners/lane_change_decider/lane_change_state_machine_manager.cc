@@ -4375,7 +4375,9 @@ bool LaneChangeStateMachineManager::
       // 最小值
       double agent_kph = agent_traj[i].v * 3.6;
       const double min_space = interp(agent_kph, xp, fp);
+      // 状态回执压在最小值除防止跳变
       box_longitudinal_buff = std::max(box_longitudinal_buff, min_space);
+      box_longitudinal_buff = is_executing ? box_longitudinal_buff * 1.25 : box_longitudinal_buff;
       // 两类特殊pass
       if (ego_press_line_ratio > 0.3 && is_side_clear_ && is_executing) {
         break;  // 已经压线过多，侧方无车不返回
@@ -4528,10 +4530,10 @@ bool LaneChangeStateMachineManager::
   // distance_vec[j] == 0 表示扩展 box 重叠（DistanceTo 最小返回 0）
   // 根据 0 值在时间轴上的分布分三类处理：
   //   尾部集中（先安全后碰撞）→ 未来恶化，直接不安全
-  //   头部集中（先碰撞后安全）→ 当前裕度不足但未来改善，需 1/3 为 0 才不安全
-  //   其他（散布/全程）→ 需 1/2 为 0 才不安全
+  //   头部集中（先碰撞后安全）→ 当前裕度不足但未来改善，需 1/4 为 0 才不安全
+  //   其他（散布/全程）→ 需 1/3 为 0 才不安全
   const int vec_size = static_cast<int>(distance_vec.size());
-  if (vec_size > 0 && !is_front_agent) {
+  if (vec_size > 0) {
     int zero_count = 0;
     int first_zero = -1;
     int last_zero = -1;
@@ -4553,13 +4555,13 @@ bool LaneChangeStateMachineManager::
         return false;
       } else if (head_heavy) {
         // 前碰撞后安全：当前空间是为未来预留的裕度，未来在改善
-        // 需要三分之一以上步为 0 才判定不安全
-        if (zero_count * 3 >= vec_size) {
+        // 需要四分之一及以上步为 0 才判定不安全
+        if (zero_count * 4 >= vec_size) {
           return false;
         }
       } else {
-        // 散布或全程碰撞：需要一半以上步为 0 才判定不安全
-        if (zero_count * 2 >= vec_size) {
+        // 散布或全程碰撞：需要三分之一及以上步为 0 才判定不安全
+        if (zero_count * 3 >= vec_size) {
           return false;
         }
       }
