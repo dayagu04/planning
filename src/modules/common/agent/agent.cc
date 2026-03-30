@@ -53,8 +53,6 @@ Agent::Agent(const Agent& agent)
   dangerous_confidence_ = agent.dangerous_confidence();
   is_vru_crossing_virtual_obs_ = agent.is_vru_crossing_virtual_obs();
   time_range_ = agent.time_range();
-
-  // 当前默认trajectories_中只存一条轨迹
   trajectories_.clear();
   trajectories_ = agent.trajectories();
   trajectories_used_by_st_graph_ = agent.trajectories_used_by_st_graph();
@@ -73,9 +71,9 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   y_ = prediction_object.position_y;
   // theta定义
   // theta_ = prediction_object.relative_theta;
-  theta_ = prediction_object.theta_fusion;
+  theta_ = prediction_object.theta;
   theta_fusion_ = prediction_object.theta_fusion;
-  speed_ = prediction_object.speed_fusion;
+  speed_ = prediction_object.speed;
   speed_fusion_ = prediction_object.speed_fusion;
   accel_ = prediction_object.acc;
   accel_fusion_ = prediction_object.acc_fusion;
@@ -205,10 +203,6 @@ const std::vector<trajectory::Trajectory>& Agent::trajectories() const {
 void Agent::set_trajectories(
     const std::vector<trajectory::Trajectory>& trajectories) {
   trajectories_ = trajectories;
-
-  if (speed_ < kLowSpeedAgentSpeedThrMps && !is_reverse_ && !is_vru_) {
-    RecalculateLowSpeedTrajectories();
-  }
 }
 void Agent::add_trajectory(const trajectory::Trajectory& trajectory) {
   trajectories_.emplace_back(trajectory);
@@ -415,120 +409,6 @@ void Agent::set_d_rel(double d_rel) { d_rel_ = d_rel; };
 const double Agent::d_path() const { return d_path_; }
 
 void Agent::set_d_path(double d_path) { d_path_ = d_path; };
-
-void Agent::RecalculateLowSpeedTrajectories() {
-  const double init_accel = accel_;
-  const double init_speed = std::fmax(speed_, 0.0);
-  std::vector<double> processed_acc;
-  std::vector<double> processed_speed;
-  std::vector<double> processed_lon_position;
-  processed_lon_position.reserve(26);
-  processed_speed.reserve(26);
-  processed_acc.reserve(26);
-
-  // calculate low speed agent lon prediction info
-  for (double relative_time = 0.0; relative_time < kPredictionHorizon;
-       relative_time += kTimeResolution) {
-    if (init_accel + kMathEpsilon > 0) {
-      // acceling obj's accel is assumed to decay to zero to avoid over-reaction
-      double accel_to_zero_time = -init_accel / kDecayJerkMps3;
-      if (relative_time < accel_to_zero_time) {
-        const double t2 = relative_time * relative_time;
-        const double t3 = t2 * relative_time;
-        processed_acc.emplace_back(init_accel + kDecayJerkMps3 * relative_time);
-        processed_speed.emplace_back(init_speed + init_accel * relative_time +
-                                     kDecayJerkMps3 * t2 * 0.5);
-        processed_lon_position.emplace_back(init_speed * relative_time +
-                                            0.5 * init_accel * t2 +
-                                            0.167 * kDecayJerkMps3 * t3);
-      } else {
-        const double t2 = accel_to_zero_time * accel_to_zero_time;
-        const double t3 = t2 * accel_to_zero_time;
-        processed_acc.emplace_back(0.0);
-        processed_speed.emplace_back(init_speed +
-                                     init_accel * accel_to_zero_time +
-                                     kDecayJerkMps3 * t2 * 0.5);
-        processed_lon_position.emplace_back(
-            init_speed * accel_to_zero_time + 0.5 * init_accel * t2 +
-            0.167 * kDecayJerkMps3 * t3 +
-            processed_speed.back() * (relative_time - accel_to_zero_time));
-      }
-    } else {
-      // deceling obj is assume to stop with const accel to avoid late braking
-      if (init_accel < 0.0 && relative_time > (-init_speed / init_accel)) {
-        processed_lon_position.emplace_back(init_speed * init_speed * 0.5 /
-                                            std::fabs(init_accel));
-        processed_speed.emplace_back(0.0);
-        processed_acc.emplace_back(init_accel);
-        break;
-      } else {
-        processed_acc.emplace_back(init_accel);
-        processed_speed.emplace_back(init_speed + init_accel * relative_time);
-        processed_lon_position.emplace_back(init_speed * relative_time +
-                                            0.5 * init_accel * relative_time *
-                                                relative_time);
-      }
-    }
-  }
-
-  if (processed_lon_position.empty() || processed_speed.empty() ||
-      processed_acc.empty()) {
-    return;
-  }
-  // assign speed to predicted path
-  for (const auto& trajectory : trajectories_) {
-    if (trajectory.empty()) {
-      continue;
-    }
-    const double trajectory_len = trajectory.back().s();
-    const trajectory::TrajectoryPoint last_trajectory_point = trajectory.back();
-    const double last_x = last_trajectory_point.x();
-    const double last_y = last_trajectory_point.y();
-    const double last_theta = last_trajectory_point.theta();
-    trajectory::Trajectory processed_trajectory;
-    for (int i = 0; i < processed_speed.size(); ++i) {
-      if (processed_trajectory.empty() ||
-          processed_lon_position[i] < trajectory_len) {
-        // query nearest trajectory_point and interpolate
-        const int end_idx =
-            trajectory.QueryLowerBoundPointByS(processed_lon_position[i]);
-        const int start_idx = std::max(end_idx - 1, 0);
-        auto trajectory_point =
-            start_idx == end_idx
-                ? trajectory[start_idx]
-                : trajectory[start_idx].InterpolateTrajectoryPointByS(
-                      trajectory[end_idx], processed_lon_position[i]);
-        if (!processed_trajectory.empty() &&
-            trajectory_point.absolute_time() -
-                    processed_trajectory.back().absolute_time() <
-                kMathEpsilon) {
-          double target_time =
-              processed_trajectory.back().absolute_time() + kTimeResolution;
-          trajectory_point.set_absolute_time(target_time);
-        }
-        trajectory_point.set_s(processed_lon_position[i]);
-        trajectory_point.set_vel(processed_speed[i]);
-        trajectory_point.set_acc(processed_acc[i]);
-        processed_trajectory.emplace_back(trajectory_point);
-      } else {
-        const double ds = processed_lon_position[i] - trajectory_len;
-        double target_time =
-            processed_trajectory.back().absolute_time() + kTimeResolution;
-        if (processed_trajectory.back().vel() > kMathEpsilon) {
-          double dt = ds / processed_trajectory.back().vel();
-          target_time = std::fmin(
-              target_time, processed_trajectory.back().absolute_time() + dt);
-        }
-        double x = last_x + ds * std::cos(last_theta);
-        double y = last_y + ds * std::sin(last_theta);
-        processed_trajectory.emplace_back(x, y, last_theta, processed_speed[i],
-                                          processed_acc[i], target_time, 0.0,
-                                          0.0, processed_lon_position[i], 0.0);
-      }
-    }
-    // trajectories_used_by_st_graph_.emplace_back(processed_trajectory);
-  }
-}
 
 }  // namespace agent
 }  // namespace planning
