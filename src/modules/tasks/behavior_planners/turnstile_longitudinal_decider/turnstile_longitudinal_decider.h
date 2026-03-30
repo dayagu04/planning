@@ -14,18 +14,17 @@ class TurnstileLongitudinalDecider : public Task {
  public:
   // 道闸纵向状态机阶段。
   enum class TurnstileStage {
-    IDLE = 0,                     // 无有效道闸目标
-    APPROACHING = 1,              // 头车接近道闸
-    FOLLOW_WAIT = 2,              // 非头车常规跟停
-    FOLLOW_WAIT_GATE_CLOSE = 3,   // 非头车等待道闸先完成一次关闭
-    HEAD_WAIT_CLOSED = 4,         // 头车等待闸杆完全落下
-    HEAD_WAIT_REOPEN = 5,         // 头车等待重新抬杆
-    HEAD_WAIT_FULLY_OPEN = 6,     // 头车等待开闸稳定
-    PASSABLE_RELEASE = 7,         // 满足放行条件
-    PASSING = 8,                  // 自车已进入道闸区
-    PASSED = 9,                   // 自车已通过道闸区
-    FOLLOW_WAIT_OPEN_TIMEOUT = 10,  // 非头车按 open-timeout 兜底等待
-    EMERGENCY_BLOCK = 11,         // 通过中出现落杆风险，触发紧急阻挡
+    IDLE = 0,                    // 无有效道闸目标
+    APPROACHING = 1,             // 接近道闸（头车入口态）
+    FOLLOW_WAIT = 2,             // 非头车常规跟停
+    FOLLOW_WAIT_GATE_CLOSE = 3,  // 非头车等待前车通过后的重开周期
+    HEAD_WAIT_CLOSED = 4,        // 头车等待关闸完成
+    HEAD_WAIT_REOPEN = 5,        // 头车等待重开
+    HEAD_WAIT_FULLY_OPEN = 6,    // 头车等待开闸稳定
+    PASSABLE_RELEASE = 7,        // 满足放行条件
+    PASSING = 8,                 // 自车已进入道闸区
+    PASSED = 9,                  // 自车已通过道闸区
+    EMERGENCY_BLOCK = 10,        // 通过中出现风险，触发紧急阻挡
   };
 
   TurnstileLongitudinalDecider(const EgoPlanningConfigBuilder* config_builder,
@@ -47,18 +46,15 @@ class TurnstileLongitudinalDecider : public Task {
 
     // 应急相关。
     bool emergency_active = false;  // 是否触发落杆应急阻挡
-    bool emergency_opening_status_stable = false;  // 应急后抬杆状态是否达到稳定阈值
+    bool emergency_stop_stable = false;  // 应急解除所需的稳定停车条件是否满足
 
     // reopen 周期相关。
-    bool wait_reopen_required = false;  // 是否需要等待“先关后开”
-    bool has_seen_gate_closed_status_after_front_car_pass = false;  // 前车通过后是否已观测到关闸
-    bool reopen_completed = false;  // reopen 流程是否完成
-    bool reopen_timeout_halfway = false;  // open-timeout 是否超过 50%
+    bool wait_reopen_required = false;  // 当前状态转移是否需要进入 reopen 等待
+    bool open_timeout_release_ready = false;  // 是否满足开闸超时放行条件
 
     // 头车/放行相关。
     bool is_head_car = true;  // 是否为队列头车
-    bool turnstile_passable_status = false;  // 道闸当前帧是否可通行
-    bool passable_status_stable = false;  // 可通行状态是否达到稳定阈值
+    bool head_release_opened_stable = false;  // 头车放行条件（与可通行稳定判定合并）是否满足
 
     // 闸杆状态相关。
     bool gate_opening_status = false;  // 闸杆是否处于抬杆状态
@@ -66,13 +62,16 @@ class TurnstileLongitudinalDecider : public Task {
     bool gate_closing_status = false;  // 闸杆是否处于落杆/接近关闭状态
   };
 
-  // 道闸状态快照，用于减少重复状态判定分支。
+  // 道闸状态快照（按用户定义语义）。
   struct GateSnapshot {
     iflyauto::GateBarrierStatus status;
-    double open_ratio;
-    bool is_unknown_or_close = false;
+    double open_ratio = 0.0;
     bool is_static = false;
     bool is_opening = false;
+    bool is_closing = false;
+    bool is_closed = false;
+    bool is_opened = false;
+    bool is_passable = false;
   };
 
   // 当前帧上下文（每帧都会重置）。
@@ -84,6 +83,7 @@ class TurnstileLongitudinalDecider : public Task {
     bool is_head_car = true;  // 用于标记当前是否判定为头车
     int32_t front_car_id = agent::AgentDefaultInfo::kNoAgentId;  // 用于记录当前前车 id
     bool turnstile_passable_status = false;  // 用于记录当前帧道闸是否可通行
+    bool turnstile_passable_status_stable = false;  // 用于记录当前帧道闸是否稳定可通行
     bool stop_required = false;  // 用于记录当前帧是否需要生成停车虚拟障碍物
     int32_t stop_virtual_agent_id = agent::AgentDefaultInfo::kNoAgentId;  // 用于记录停车虚拟障碍物 id
     double turnstile_stop_s = 0.0;  // 用于记录当前帧计算得到的停车 s
@@ -92,26 +92,27 @@ class TurnstileLongitudinalDecider : public Task {
     const FrenetObstacle* target_turnstile_frenet_obs = nullptr;  // 用于缓存主道闸 frenet obstacle
     const Obstacle* target_turnstile_obs = nullptr;  // 用于缓存主道闸 obstacle
     const FrenetObstacle* front_vehicle_frenet_obs = nullptr;  // 用于缓存当前前车 frenet obstacle
+    GateSnapshot target_turnstile_gate_snapshot;
   };
 
   // 周期状态（跨帧保留）。
   struct CycleState {
     int32_t target_turnstile_lost_frame_count = 0;  // 用于累计连续丢失主道闸目标帧数
+    bool target_lost_timeout = false;  // 用于标记主道闸目标丢失是否达到超时阈值
     int32_t turnstile_passable_status_stable_frame_count = 0;  // 用于累计可通行状态稳定帧数
-    int32_t cycle_closing_status_stable_frame_count = 0;  // 用于累计“先关后开”中的关闸稳定帧数
     int32_t reopen_open_status_continuous_frame_count = 0;  // 用于累计 reopen 阶段连续开闸帧数
 
     bool front_car_passed_in_current_cycle = false;  // 用于标记当前周期是否已判定前车通过
-    bool wait_reopen_required = false;  // 用于标记当前周期是否需要等待 reopen
-    bool has_seen_gate_closed_status_after_front_car_pass = false;  // 用于标记前车通过后是否已观测到关闸
+    bool wait_reopen_after_front_car_passed = false;  // 用于标记前车通过后当前周期是否需要等待 reopen
     bool release_by_open_timeout = false;  // 用于标记是否由 open-timeout 触发放行
   };
 
   // 应急状态（跨帧保留）。
   struct EmergencyState {
     int32_t closing_status_drop_consecutive_frame_count = 0;  // 用于累计落杆风险连续帧数
-    int32_t emergency_opening_status_stable_frame_count = 0;  // 用于累计应急后开闸稳定帧数
+    int32_t emergency_stop_stable_frame_count = 0;  // 用于累计应急解除稳定停车帧数
     bool closing_status_drop_emergency_active = false;  // 用于标记落杆应急阻挡是否激活
+    bool emergency_stop_stable = false;  // 用于标记应急解除稳定停车条件是否满足
   };
 
   // 历史状态（跨帧保留）。
@@ -127,36 +128,28 @@ class TurnstileLongitudinalDecider : public Task {
   void ResetStateWhenDeciderInactive();
   void InitFrameContextFromReferencePath();
   void UpdateTargetTurnstile();
+  void UpdateGateSnapshot();
   void UpdateFrontVehicle();
   void UpdateTurnstilePassability();
-  void UpdateTurnstileCycleState(const FrameContext& frame_ctx,
-                                 TurnstileStage current_stage,
-                                 CycleState& cycle_state,
-                                 EmergencyState& emergency_state,
-                                 HistoryState& history_state);
-  void UpdateReopenCycleState(const FrameContext& frame_ctx,
-                              const HistoryState& history_state,
-                              CycleState& cycle_state);
-  void UpdateEmergencyState(const FrameContext& frame_ctx,
-                            TurnstileStage current_stage,
-                            EmergencyState& emergency_state);
-  void UpdateHistoryFromCurrentFrame(const FrameContext& frame_ctx,
-                                     HistoryState& history_state);
+  void UpdateTurnstileCrossFrameStates();
   void UpdateTurnstileStage();
   void DumpTurnstileDebug() const;
 
-  // 状态机：构造事件、求解下一状态、处理进状态副作用。
+  // 状态机：构造事件、按当前状态求解下一状态、处理进状态副作用。
   TurnstileEventFlags BuildTurnstileEventFlags(
       const FrameContext& frame_ctx, const CycleState& cycle_state,
       const EmergencyState& emergency_state,
       const ReferencePath* reference_path) const;
   TurnstileStage ResolveWaitReopenStage(const TurnstileEventFlags& flags) const;
+  TurnstileStage ResolveFollowWaitGateCloseStage(
+      const TurnstileEventFlags& flags) const;
   TurnstileStage ResolveHeadCarStage(const TurnstileEventFlags& flags) const;
   TurnstileStage ResolveEmergencyExitStage(const TurnstileEventFlags& flags) const;
-  TurnstileStage ResolveNextStage(const TurnstileEventFlags& flags,
-                                  TurnstileStage current_stage) const;
-  void OnEnterStage(TurnstileStage prev_stage, TurnstileStage new_stage,
-                    bool wait_reopen_required);
+  TurnstileStage ResolveNextStageByGraph(const TurnstileEventFlags& flags,
+                                         TurnstileStage current_stage) const;
+  void ResetStatesOnStageTransition(
+      TurnstileStage prev_stage, TurnstileStage new_stage,
+      bool wait_reopen_after_front_car_passed);
   void ResetReopenCycleFlags();
   void ResetEmergencyFlags();
 
@@ -169,12 +162,9 @@ class TurnstileLongitudinalDecider : public Task {
 
   // 道闸状态判定。
   GateSnapshot GetGateSnapshot(const Obstacle& turnstile_obs) const;
-  bool IsTurnstileInPassableStatus(const Obstacle& turnstile_obs) const;
-  bool IsTurnstileInCycleClosingStatus(const Obstacle& turnstile_obs) const;
-  bool IsTurnstileDroppedForEmergency(const Obstacle& turnstile_obs) const;
-  bool HasCompletedReopenCycle(const CycleState& cycle_state) const;
-  double GetEffectiveTurnstileDtSec() const;
+  bool IsOpenTimeoutReleaseReady(const CycleState& cycle_state) const;
   double ComputeTurnstileStopS(const FrenetObstacle& turnstile_obs) const;
+
 
  private:
   const LongitudinalDeciderV3Config lon_config_;  // 用于配置道闸相关阈值与开关
