@@ -3,6 +3,7 @@
 #include <glog/logging.h>
 #include <math.h>
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <complex>
@@ -17,6 +18,7 @@
 #include "ifly_time.h"
 #include "log.h"
 #include "planning_context.h"
+#include "task_interface/lane_borrow_decider_output.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_request.h"
 #include "tracked_object.h"
 #include "virtual_lane_manager.h"
@@ -260,7 +262,17 @@ void DynamicAgentEmergenceAvoidRequest::UpdateBrakeFailureEmergencySituation() {
   // 步骤1：检测0.5g减速度无法刹停的障碍物
   int current_obstacle_id = kInvalidAgentId;
   bool current_brake_failure = CheckEmergencyBrakeFailureObstacle(current_obstacle_id);
-
+  // 借道中则不针对借道障碍物触发刹停失败紧急变道
+  if (current_brake_failure && current_obstacle_id != kInvalidAgentId) {
+    const auto& lane_borrow_output =
+        session_->planning_context().lane_borrow_decider_output();
+    if (lane_borrow_output.is_in_lane_borrow_status &&
+        std::find(lane_borrow_output.blocked_obs_id.begin(),
+                  lane_borrow_output.blocked_obs_id.end(),
+                  current_obstacle_id) != lane_borrow_output.blocked_obs_id.end()) {
+      current_brake_failure = false;
+    }
+  }
   // 两帧滞回机制
   if (current_brake_failure) {
     // 检测到刹停失败，增加计数器
@@ -310,6 +322,8 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk()
   const auto& obstacles_map = origin_refline->get_obstacles_map();
   const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
   const auto half_lane_width = current_lane->width() * 0.5;
+  const auto& lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
 
   if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
       potential_dangerous_agent_decider_output.dangerous_agent_info.front()
@@ -329,6 +343,14 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk()
         std::min(obstacle_iter->second->frenet_obstacle_boundary().s_end,
                  ego_frenet_boundary.s_end);
     if (!is_overlap_side || obstacle_iter->second->is_static()) {
+      return false;
+    }
+    // 借道中则不针对借道障碍物触发紧急变道
+    if (lane_borrow_output.is_in_lane_borrow_status &&
+        std::find(lane_borrow_output.blocked_obs_id.begin(),
+                  lane_borrow_output.blocked_obs_id.end(),
+                  obstacle_iter->second->id()) !=
+            lane_borrow_output.blocked_obs_id.end()) {
       return false;
     }
     risk_level_ =
@@ -404,6 +426,13 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk()
       if (!is_overlap_side || frenet_obs.is_static()) {
         continue;
       }
+      // 借道中则不针对借道障碍物触发紧急变道
+      if (lane_borrow_output.is_in_lane_borrow_status &&
+          std::find(lane_borrow_output.blocked_obs_id.begin(),
+                    lane_borrow_output.blocked_obs_id.end(),
+                    frenet_obs.id()) != lane_borrow_output.blocked_obs_id.end()) {
+        continue;
+      }
       double v_lat = frenet_obs.frenet_velocity_lateral();
       double intrusion_distance = 0;
       bool is_near_lane_boundary = false;  // 自车是否在车道边界附近
@@ -454,6 +483,8 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
   const auto &lat_obstacle_position = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lateral_obstacle_history_info;
+  const auto& lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
   std::shared_ptr<ReferencePath> origin_refline =
@@ -488,6 +519,13 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyBaseLastEmergencyAvoid() {
       continue;
     }
     if (!lat_obstacle_position.find(frenet_obs.id())->second.emergency_avoid) {
+      continue;
+    }
+    // 借道中则不针对借道障碍物触发紧急变道
+    if (lane_borrow_output.is_in_lane_borrow_status &&
+        std::find(lane_borrow_output.blocked_obs_id.begin(),
+                  lane_borrow_output.blocked_obs_id.end(),
+                  frenet_obs.id()) != lane_borrow_output.blocked_obs_id.end()) {
       continue;
     }
     emergency_avoid_num += 1;

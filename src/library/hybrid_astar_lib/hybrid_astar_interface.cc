@@ -703,7 +703,8 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
   }
 
   target_regulator_goal_ = target_pose.pose;
-  if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT ||
+      request_.space_type == ParkSpaceType::PARALLEL_IN) {
     target_regulator_goal_ = request_.real_goal;
   }
   ILOG_INFO << "dist to obs = " << target_pose.dist_to_obs

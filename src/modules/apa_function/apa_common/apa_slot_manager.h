@@ -86,6 +86,7 @@ struct EgoInfoUnderSlot {
   geometry_lib::PathPoint origin_target_pose;
   geometry_lib::PathPoint target_pose;
   geometry_lib::PathPoint terminal_err;
+  double terminal_y_front_err = 0.0;
 
   // base on global
   geometry_lib::PathPoint replan_success_origin_target_pose;
@@ -146,6 +147,7 @@ struct EgoInfoUnderSlot {
     cur_pose.Reset();
     target_pose.Reset();
     terminal_err.Reset();
+    terminal_y_front_err = 0.0;
 
     origin_target_pose.Reset();
 

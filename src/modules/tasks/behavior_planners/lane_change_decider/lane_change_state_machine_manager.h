@@ -337,6 +337,8 @@ class LaneChangeStateMachineManager {
   std::vector<double> front_obj_future_v_{};
   std::vector<double> rear_obj_future_v_{};
   std::vector<double> ego_future_v_{};
+  std::unordered_map<int32_t, int32_t> joint_decision_obstacle_labels_{};
+  bool rear_agent_overtaking_ = false;
 
   TrajectoryPoints ego_trajs_future_;
   TrajectoryPoints front_node_trajs_future_;

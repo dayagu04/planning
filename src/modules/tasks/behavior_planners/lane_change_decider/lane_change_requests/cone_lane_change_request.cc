@@ -9,6 +9,7 @@
 #include <complex>
 #include <cstddef>
 #include <limits>
+#include <vector>
 
 #include "common.pb.h"
 #include "common_c.h"
@@ -26,7 +27,7 @@
 namespace planning {
 
 namespace {
-constexpr double kLongClusterCoeff = 5.0;
+constexpr double kLongClusterCoeff = 8.0;
 constexpr double kLatClusterThre = 0.3;
 constexpr double kLatPassThre = 0.8;
 constexpr double kLatPassThreBuffer = 0.35;
@@ -95,6 +96,8 @@ void ConeRequest::Update(int lc_status) {
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   auto tlane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
+  cone_longit_distribution_dis_ = 0.0;
+  cluster_index_set_.clear();
 
   UpdateConeSituation(lc_status);
   ILOG_DEBUG << "ConeRequest::Update: is_cone_lane_change_situation "
@@ -102,6 +105,7 @@ void ConeRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("is_cone_lane_change_situation_",
                    is_cone_lane_change_situation_);
 
+  ComputeConeClusterLongitDistribution();
   if (!is_cone_must_lane_change_situation_) {
     if (!is_cone_lane_change_situation_) {
       if (request_type_ != NO_CHANGE &&
@@ -365,6 +369,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
         (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 &&
          average_l < 0.0)) {
       cone_alc_trigger_counter_++;
+      cluster_index_set_.emplace_back(cluster);
       ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_
                  << ", cluster is " << cluster;
       if (cone_alc_trigger_counter_ >= kConeAlcMaxCountThre) {
@@ -585,14 +590,14 @@ void ConeRequest::ConeDir() {
       route_info_output.sum_dis_to_last_link_split_point;
   bool left_lane_is_on_navigation_route = true;
   bool right_lane_is_on_navigation_route = true;
-  if (distance_to_first_road_split < 300.0 || dis_to_merge_point < 200.0 ||
+  if (distance_to_first_road_split < 500.0 || dis_to_merge_point < 200.0 ||
       dis_ego_to_last_split_point < 100.0) {
     if (feasible_lane_sequence.size() > 0) {
       int current_lane_order_num = route_info_output.ego_seq;
       int target_lane_order_num = current_lane_order_num - 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
-                    target_lane_order_num) == feasible_lane_sequence.end()) {
+                    target_lane_order_num) == feasible_lane_sequence.end() || !IfFeasibleLaneDistanceEnough(llane)) {
         left_lane_is_on_navigation_route = false;
       }
     }
@@ -602,7 +607,7 @@ void ConeRequest::ConeDir() {
       int target_lane_order_num = current_lane_order_num + 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
-                    target_lane_order_num) == feasible_lane_sequence.end()) {
+                    target_lane_order_num) == feasible_lane_sequence.end() || !IfFeasibleLaneDistanceEnough(rlane)) {
         right_lane_is_on_navigation_route = false;
       }
     }
@@ -1060,6 +1065,50 @@ void ConeRequest::Reset() {
   cone_cluster_attribute_set_.clear();
   right_lane_nums_ = 0;
   left_lane_nums_ = 0;
+  cone_longit_distribution_dis_ = 0.0;
+}
+
+void ConeRequest::ComputeConeClusterLongitDistribution() {
+  if (cluster_index_set_.empty()|| cone_cluster_attribute_set_.empty()) {
+    return;
+  }
+  double max_cone_distribution_dis = 0.0;
+  for (const auto index : cluster_index_set_) {
+    auto it = cone_cluster_attribute_set_.find(index);
+    if (it != cone_cluster_attribute_set_.end()) {
+      // 找到对应键，获取vector<ConePoint>
+      const std::vector<ConePoint>& cone_points = it->second;
+      // 业务逻辑：遍历/使用cone_points
+      for (const ConePoint& point : cone_points) {
+        if (point.s > max_cone_distribution_dis) {
+          max_cone_distribution_dis = point.s;
+        }
+      }
+    }
+  }
+  cone_longit_distribution_dis_ = max_cone_distribution_dis;
+  return;
+}
+
+bool ConeRequest::IfFeasibleLaneDistanceEnough(
+    const std::shared_ptr<VirtualLane>& target_lane) {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  double ego_v = ego_state->ego_v();
+  double feasible_lane_distance = 0.0;
+  if (!target_lane) {
+    return false;
+  }
+  const auto& feasible_lane_pair = target_lane->get_feasible_lane_distance();
+  if (feasible_lane_pair.first) {
+    feasible_lane_distance = feasible_lane_pair.second;
+  } else {
+    return false;
+  }
+  bool enable_lane_change =
+      (cone_longit_distribution_dis_ + ego_v * 2.5) < feasible_lane_distance;
+
+  return enable_lane_change;
 }
 
 }  // namespace planning

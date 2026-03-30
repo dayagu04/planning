@@ -268,6 +268,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_fusion_ground_line");
     enable_parking_prediction =
         read_json_key<bool>(json, "enable_parking_prediction");
+    enable_uss =
+        read_json_key<bool>(json, "enable_uss");
     is_ground_line_cluster =
         read_json_key<bool>(json, "is_ground_line_cluster");
     enable_ehr_column_box = read_json_key<bool>(json, "enable_ehr_column_box");
@@ -319,6 +321,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_parking_prediction = false;
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
+  bool enable_uss = false;
   double hpp_min_search_range = 20;
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
@@ -1087,6 +1090,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     is_forced_emergency_scene = read_json_keys<bool>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "is_forced_emergency_scene"});
+    sample_st_limit_lat_offset = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "sample_st_limit_lat_offset"});
   }
 
   int sample_v_nums = 15;
@@ -1147,6 +1153,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double leading_safe_overstep_gain = 4.0;
   double leading_safe_overstep_buffer = 3.0;
   bool is_forced_emergency_scene = false;
+  double sample_st_limit_lat_offset = 2.8;
 };
 
 struct SampleAstarTrajConfig : public EgoPlanningConfig {
@@ -2502,6 +2509,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, max_care_time_for_roadborder,
                      "general_lateral_decider",
                      "max_care_time_for_roadborder");
+    ReadItem<double>(json, decrease_time_for_roadborder,
+                     "general_lateral_decider",
+                     "decrease_time_for_roadborder");                 
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -2648,6 +2658,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double bound_recurrence_v_limit_max = 60;
   double nudge_buffer2lane_boundary_buffer = 0.0;
   double max_care_time_for_roadborder = 3;
+  double decrease_time_for_roadborder = 2.5;
   std::vector<double> curv_bp{50, 150, 400, 600};
   std::vector<double> lat_compensation_buffer{0.25, 0.1, 0.0, 0.0};
   double max_nudge_buffer2side_car = 0.3;
@@ -4940,11 +4951,20 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
                      "virtual_dis_before_stopline");
     ReadItem<double>(json, stopline_tfl_dis_thred, "traffic_light_decider",
                      "stopline_tfl_dis_thred");
+    ReadItem<double>(json, max_dis_ahead_stopline, "traffic_light_decider",
+                        "max_dis_ahead_stopline");
+    ReadItem<double>(json, min_virtual_dis_thred, "traffic_light_decider",
+                            "min_virtual_dis_thred");
+    ReadItem<double>(json, dis_ratio_can_pass, "traffic_light_decider",
+                            "dis_ratio_can_pass");
   }
 
   bool enable_tfl_decider = false;
   double virtual_dis_before_stopline = 20;
   double stopline_tfl_dis_thred = 50;
+  double max_dis_ahead_stopline = 50;
+  double min_virtual_dis_thred = 10;
+  double dis_ratio_can_pass = 3.0;
 };
 
 struct CrossingAgentDeciderConfig : public EgoPlanningConfig {

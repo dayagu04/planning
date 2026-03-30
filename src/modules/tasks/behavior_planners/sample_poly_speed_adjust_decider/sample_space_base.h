@@ -8,6 +8,7 @@
 #include "sample_poly_const.h"
 // #include "speed/st_boundary.h"
 #include "st_graph/st_point.h"
+#include "st_graph/st_point_with_lateral.h"
 namespace planning {
 struct AgentInfo {
   int32_t id = kNoAgentId;
@@ -33,15 +34,21 @@ class STSampleSpaceBase {
                     const double init_s, const double front_edge_to_rear_axle,
                     const double rear_edge_to_rear_axle);
 
+  void LinearExtendAgentStBoundaryWithFrenet(
+      const planning_data::DynamicAgentNode* agent_node,
+      const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord);
   void LinearExtendAgentStBoundary(
       const planning_data::DynamicAgentNode* agent_node);
-  void ConstructStPointsTable();
+  void ConstructStPointsTable(const double sample_st_limit_lat_offset);
   bool GetBorderByAvailable(double s, double t,
-                            planning::speed::STPoint* const lower_st_point,
-                            planning::speed::STPoint* const upper_st_point);
-  void Init(const std::vector<const planning_data::DynamicAgentNode*>&
-                target_lane_nodes,
-            const double init_s);
+                            planning::speed::STPointWithLateral* const lower_st_point,
+                            planning::speed::STPointWithLateral* const upper_st_point);
+  void Init(
+      const std::vector<const planning_data::DynamicAgentNode*>&
+          target_lane_nodes,
+      const double init_s,
+      const std::shared_ptr<planning::planning_math::KDPath>& target_lane_coord,
+      int change_direction, const double sample_st_limit_lat_offset);
   void GetAvailableGap(const int index, double s);
 
   void Clear();
@@ -51,8 +58,8 @@ class STSampleSpaceBase {
     return s > start && s < end;
   };
   bool IsInInterval(double s, double front_edge_offset, double rear_edge_offset,
-                    const planning::speed::STPoint& interval_start,
-                    const planning::speed::STPoint& interval_end) {
+                    const planning::speed::STPointWithLateral& interval_start,
+                    const planning::speed::STPointWithLateral& interval_end) {
     double front_s = s + front_edge_offset;
     double rear_s = s - rear_edge_offset;
     return (front_s > interval_start.s() && front_s < interval_end.s()) ||
@@ -72,45 +79,46 @@ class STSampleSpaceBase {
   }
 
   std::vector<std::vector<
-      std::pair<planning::speed::STPoint, planning::speed::STPoint>>>&
+      std::pair<planning::speed::STPointWithLateral, planning::speed::STPointWithLateral>>>&
   mutable_st_points_table() {
     return st_points_table_;
   }
 
   const std::vector<std::vector<
-      std::pair<planning::speed::STPoint, planning::speed::STPoint>>>&
+      std::pair<planning::speed::STPointWithLateral, planning::speed::STPointWithLateral>>>&
   st_points_table() const {
     return st_points_table_;
   }
 
-  std::vector<planning::speed::STPoint>& mutable_sample_points() {
+  std::vector<planning::speed::STPointWithLateral>& mutable_sample_points() {
     return sample_points_;
   }
 
-  const std::vector<planning::speed::STPoint>& sample_points() const {
+  const std::vector<planning::speed::STPointWithLateral>& sample_points() const {
     return sample_points_;
   }
 
-  std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>>&
+  std::vector<std::pair<planning::speed::STPointWithLateral, planning::speed::STPointWithLateral>>&
   get_gap_array() {
     return gap_array_;
   }
 
  private:
   std::vector<std::vector<
-      std::pair<planning::speed::STPoint, planning::speed::STPoint>>>
+      std::pair<planning::speed::STPointWithLateral, planning::speed::STPointWithLateral>>>
       st_points_table_;
-  std::vector<planning::speed::STPoint> sample_points_;  //(s, v)
-  std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>>
+  std::vector<planning::speed::STPointWithLateral> sample_points_;  //(s, v)
+  std::vector<std::pair<planning::speed::STPointWithLateral, planning::speed::STPointWithLateral>>
       gap_array_;
 
   std::vector<std::vector<
-      std::pair<planning::speed::STPoint, planning::speed::STPoint>>>
+      std::pair<planning::speed::STPointWithLateral, planning::speed::STPointWithLateral>>>
       agents_st_point_paris_;
   std::unordered_map<int64_t, std::unique_ptr<AgentInfo>> agent_id_veh_info_;
   double init_s_{0.0};
 
   double front_edge_to_rear_axle_ = 3.73;
   double rear_edge_to_rear_axle_ = 1.085;
+  int change_direction_ = 0;
 };
 }  // namespace planning

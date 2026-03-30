@@ -1331,6 +1331,31 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   second_soft_bounds_.resize(ref_traj_points_.size());
   first_soft_bounds_.resize(ref_traj_points_.size());
   double max_care_lon_area_road_border = 0;
+
+  // buffer衰减率
+  double uncertain_decrease_slope = 0.2;
+
+  double uncertain_decrease_buffer = 0.0;
+
+  // buffer衰减率的变化率
+  const double change_rate = 0.5;
+
+  double compensation_buffer = 0.0;
+
+  const std::vector<double> curv_bp{50, 150, 400, 600};
+  const std::vector<double> extra_uncertain_decrease_slopes{2.5, 1, 0.5, 0.0};
+
+  double extra_uncertain_decrease_slope = 0.0;
+  if (ref_curve_info_.curve_type ==
+      ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+    extra_uncertain_decrease_slope =
+        interp(ref_curve_info_.min_radius, config_.curv_bp, extra_uncertain_decrease_slopes);
+  }
+  last_uncertain_decrease_slope_ = clip(extra_uncertain_decrease_slope,
+                                  last_uncertain_decrease_slope_ + change_rate,
+                                  last_uncertain_decrease_slope_ - change_rate);
+  uncertain_decrease_slope += last_uncertain_decrease_slope_;
+
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-init_dist_to_bound, init_dist_to_bound};
     Bound hard_bound_road{-init_dist_to_bound, init_dist_to_bound};
@@ -1351,6 +1376,11 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
              ego_frenet_state_.planning_init_point().frenet_state.s <
          config_.care_lon_area_road_border) &&
         map_obstacle_decision.tp.t < config_.max_care_time_for_roadborder) {
+
+      if (map_obstacle_decision.tp.t > config_.decrease_time_for_roadborder) {
+        uncertain_decrease_buffer = (map_obstacle_decision.tp.t - config_.decrease_time_for_roadborder) *
+                           uncertain_decrease_slope;
+      }
       hard_bound_road.upper =
           std::fmin(std::max(config_.hard_min_distance_road2center,
                              ref_path_points_[i].distance_to_left_road_border -
@@ -1365,11 +1395,11 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
           hard_bound_road.lower);
       soft_bound_road.upper =
           std::fmin(std::max(config_.soft_min_distance_road2center,
-                             hard_bound_road.upper - left_road_extra_buffer),
+                             hard_bound_road.upper - left_road_extra_buffer + uncertain_decrease_buffer),
                     soft_bound_road.upper);
       soft_bound_road.lower =
           std::fmax(std::min(-config_.soft_min_distance_road2center,
-                             hard_bound_road.lower + right_road_extra_buffer),
+                             hard_bound_road.lower + right_road_extra_buffer - uncertain_decrease_buffer),
                     soft_bound_road.lower);
       max_care_lon_area_road_border =
           std::max(map_obstacle_decision.tp.s -
@@ -2381,17 +2411,27 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
            LatObstacleDecisionType::FOLLOW)) {
     return;
   }
-  // lane borrow
-  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
+  // lane borrow: 依据障碍物id从borrow_direction_map查询借道方向
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
-    if (borrow_direction == LEFT_BORROW) {
-      // 向左借道
-      is_nudge_left = false;
-    } else if (borrow_direction == RIGHT_BORROW) {
-      // 向右借道
-      is_nudge_left = true;
+    const auto& borrow_dir_map =
+        lane_borrow_decider_output.borrow_direction_map;
+    auto dir_it = borrow_dir_map.find(obstacle->id());
+    if (dir_it != borrow_dir_map.end()) {
+      if (dir_it->second == LEFT_BORROW) {
+        // 向左借道
+        is_nudge_left = false;
+      } else if (dir_it->second == RIGHT_BORROW) {
+        // 向右借道
+        is_nudge_left = true;
+      } else {
+        // 未找到借道方向，不进行借道
+        return;
+      }
+      bound_type = BoundType::AGENT;
+    } else {
+      // 未找到借道方向，不进行借道
+      return;
     }
-    bound_type = BoundType::AGENT;
   }
   bool is_cross_obj{false};
   bool has_lat_decision{false};
@@ -3046,19 +3086,29 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     bound_type = BoundType::LOW_PRIORITY_AGENT;
   }
 
-  // lane borrow
-  const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
+  // lane borrow: 依据障碍物id从borrow_direction_map查询借道方向
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
-    if (borrow_direction == LEFT_BORROW) {
-      // 向左借道
-      is_nudge_left = false;
-    } else if (borrow_direction == RIGHT_BORROW) {
-      // 向右借道
-      is_nudge_left = true;
+    const auto& borrow_dir_map =
+        lane_borrow_decider_output.borrow_direction_map;
+    auto dir_it = borrow_dir_map.find(obstacle->id());
+    if (dir_it != borrow_dir_map.end()) {
+      if (dir_it->second == LEFT_BORROW) {
+        // 向左借道
+        is_nudge_left = false;
+      } else if (dir_it->second == RIGHT_BORROW) {
+        // 向右借道
+        is_nudge_left = true;
+      } else {
+        // 未找到借道方向，不进行借道
+        return;
+      }
+      is_care_rear_obstacle = false;
+      bound_type = BoundType::DYNAMIC_AGENT;
+      is_avoid_side_ignore_obj = false;
+    } else {
+      // 未找到借道方向，不进行借道
+      return;
     }
-    is_care_rear_obstacle = false;
-    bound_type = BoundType::DYNAMIC_AGENT;
-    is_avoid_side_ignore_obj = false;
   }
 
   double extra_decrease_buffer =
@@ -4141,14 +4191,16 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
            lat_obs_position_iter->second.lon_overtake_avoid)) {
         return true;
       }
-      const auto cossing_map_iter = is_crossing_map.find(obstacle->id());
+      const auto crossing_map_iter = is_crossing_map.find(obstacle->id());
+      bool is_cross_obj = false;
+      if (crossing_map_iter != is_crossing_map.end()) {
+        is_cross_obj = crossing_map_iter->second;
+      }
       if (obstacle->obstacle()->is_reverse() &&
           (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
           !obstacle->is_static() &&
-          (obstacle->frenet_s() < ref_traj_points_.back().s) &&
-          (cossing_map_iter != is_crossing_map.end() &&
-           !cossing_map_iter->second) &&
-          !general_lateral_decider_output.lane_change_scene &&
+          // (obstacle->frenet_s() < ref_traj_points_.back().s) &&
+          !is_cross_obj && !general_lateral_decider_output.lane_change_scene &&
           !in_intersection) {
         // 对向静止的ignore先不考虑
         return true;
@@ -5806,8 +5858,10 @@ bool GeneralLateralDecider::IsBlockedObstacleInLaneBorrow(
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   if ((is_in_lane_borrow_status) &&
+      (lane_borrow_decider_output.lane_borrow_state != kLaneBorrowWaitting) &&
       (std::find(blocked_obstacles.begin(), blocked_obstacles.end(),
                  obstacle->id()) != blocked_obstacles.end())) {
+    // 借道等待状态不需要产生bound
     return true;
   } else {
     return false;

@@ -7,7 +7,9 @@
 namespace planning {
 namespace {
 constexpr int32_t kLonCollisionCountThred = 3;
+constexpr double kEgoStaticVelThred = 0.1;
 }
+
 LongitudinalHmiDecider::LongitudinalHmiDecider(framework::Session* session,
                                                const HmiDeciderConfig& config)
     : session_(session), config_(config) {}
@@ -83,9 +85,9 @@ bool LongitudinalHmiDecider::Execute() {
   const auto tfl_manager =
       session_->environmental_model().get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
-  bool is_red_tfl =
-      traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
-      traffic_status.go_straight == 11 || traffic_status.go_straight == 10;
+  bool is_red_tfl = traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
+                    traffic_status.go_straight == 11 || traffic_status.go_straight == 10;
+  bool is_green_tfl = traffic_status.go_straight == 3 || traffic_status.go_straight == 43;
   const auto& tfl_decider = session_->mutable_planning_context()
                                 ->mutable_traffic_light_decider_output();
 
@@ -93,8 +95,11 @@ bool LongitudinalHmiDecider::Execute() {
                                .get_virtual_lane_manager()
                                ->GetEgoDistanceToStopline();
   double dis_to_crosswalk = session_->environmental_model()
-                                .get_virtual_lane_manager()
-                                ->GetEgoDistanceToCrosswalk();
+                               .get_virtual_lane_manager()
+                               ->GetEgoDistanceToCrosswalk();
+
+  const auto ego_state_mgr = session_->environmental_model().get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
   const auto& ego_vehi_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_rear_axle_to_front_edge =
@@ -116,18 +121,21 @@ bool LongitudinalHmiDecider::Execute() {
   constexpr uint8 kIntersectionStatusNone = 8;
   ad_info.intersection_pass_sts =
       iflyauto::IntersectionPassSts(kIntersectionStatusNone);
-  if (is_red_tfl && !tfl_decider.can_pass &&
-      start_stop_info != common::StartStopInfo::STOP &&
-      intersection_state == planning::common::APPROACH_INTERSECTION &&
-      (!tfl_decider.is_small_front_intersection ||
-       tfl_decider.is_tfl_match_intersection) &&
-      (lateral_obstacles->leadone() == nullptr ||
-       (lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge >
-            dis_to_stopline + config_.tfl_reminder_cipv_dis ||
-        lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge >
-            dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
+  if (tfl_decider.is_in_straight_lane && is_red_tfl && !tfl_decider.can_pass && start_stop_info != common::StartStopInfo::STOP &&
+      intersection_state == planning::common::APPROACH_INTERSECTION && (!tfl_decider.is_small_front_intersection ||
+      tfl_decider.is_tfl_match_intersection) && (lateral_obstacles->leadone() == nullptr ||
+      (lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_stopline + config_.tfl_reminder_cipv_dis ||
+      lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
     ad_info.intersection_pass_sts =
         iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
+  }
+
+  if (tfl_decider.is_in_straight_lane && is_green_tfl && tfl_decider.can_pass && v_ego < kEgoStaticVelThred &&
+      (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection) && (lateral_obstacles->leadone() == nullptr ||
+      (lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_stopline + config_.tfl_reminder_cipv_dis ||
+      lateral_obstacles->leadone()->d_s_rel() + ego_rear_axle_to_front_edge > dis_to_crosswalk + config_.tfl_reminder_cipv_dis))) {
+    ad_info.intersection_pass_sts =
+        iflyauto::IntersectionPassSts::INTERSECTION_GREEN_LIGHT_GO;
   }
   JSON_DEBUG_VALUE("intersection_pass_sts", int(ad_info.intersection_pass_sts));
 

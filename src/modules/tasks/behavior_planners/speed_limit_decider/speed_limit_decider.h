@@ -161,6 +161,8 @@ class SpeedLimitDecider : public Task {
   bool vru_round_triggered_ = false;
 
   bool poi_v_limit_set_ = false;
+  bool poi_v_limit_set_decision_from_fsm_ = false;
+  double poi_v_limit_kph_ = 120;
 
   bool construction_strong_deceleration_mode_ = false;
   int construction_strong_mode_frame_count_ = 0;

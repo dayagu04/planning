@@ -7,9 +7,6 @@ using namespace pnc::mathlib;
 namespace pnc {
 namespace lane_change_joint_decision {
 constexpr int kHalfYieldStep  = 15;
-// EGO_OVERTAKE 标签覆盖 alpha=1.0 的时间窗口：1s~2s，dt=0.2
-constexpr int kEgoOvertakeOverrideStart = 5;
-constexpr int kEgoOvertakeOverrideEnd = 10;
 static const double kEps = 1e-6;
 
 double EgoReferenceCostTerm::GetCost(const ilqr_solver::State& x,
@@ -341,47 +338,48 @@ void EgoThreeDiscSafeCostTerm::GetGradientHessian(
   double dy_dego_x = 0.0;
   double dy_dego_y = 1.0;
   double dy_dego_theta = offset * std::cos(ego_theta);
-  double ddist_dego_x = unit_x * dx_dego_x + unit_y * dy_dego_x;
-  double ddist_dego_y = unit_x * dx_dego_y + unit_y * dy_dego_y;
-  double ddist_dego_theta = unit_x * dx_dego_theta + unit_y * dy_dego_theta;
-  lx(EGO_X) += gradient_coeff * ddist_dego_x;
-  lx(EGO_Y) += gradient_coeff * ddist_dego_y;
-  lx(EGO_THETA) += gradient_coeff * ddist_dego_theta;
-  double dunitx_dx =
-      (rel_y * rel_y) / (rel_distance * rel_distance * rel_distance);
-  double dunitx_dy =
-      -(rel_x * rel_y) / (rel_distance * rel_distance * rel_distance);
-  double dunitx_dtheta = (-offset * std::sin(ego_theta) * rel_y * rel_y +
-                          offset * std::cos(ego_theta) * rel_x * rel_y) /
-                         (rel_distance * rel_distance * rel_distance);
-  double dunity_dx =
-      -(rel_x * rel_y) / (rel_distance * rel_distance * rel_distance);
-  double dunity_dy =
-      (rel_x * rel_x) / (rel_distance * rel_distance * rel_distance);
-  double dunity_dtheta = (-offset * std::sin(ego_theta) * rel_x * rel_y +
-                          offset * std::cos(ego_theta) * rel_x * rel_x) /
-                         (rel_distance * rel_distance * rel_distance);
-  double d2dist_dx2 = dunitx_dx * dx_dego_x + unit_x * 0.0 +
-                      dunity_dx * dy_dego_x + unit_y * 0.0;
-  double d2dist_dy2 = dunitx_dy * dx_dego_y + unit_x * 0.0 +
-                      dunity_dy * dy_dego_y + unit_y * 0.0;
-  double d2dist_dtheta2 =
-      dunitx_dtheta * dx_dego_theta + unit_x * (-offset * std::cos(ego_theta)) +
-      dunity_dtheta * dy_dego_theta + unit_y * (-offset * std::sin(ego_theta));
-  double hess_coeff = weight * std::exp(violation);
-  lxx(EGO_X, EGO_X) +=
-      hess_coeff * (ddist_dego_x * ddist_dego_x + violation * d2dist_dx2);
-  lxx(EGO_Y, EGO_Y) +=
-      hess_coeff * (ddist_dego_y * ddist_dego_y + violation * d2dist_dy2);
-  lxx(EGO_THETA, EGO_THETA) +=
-      hess_coeff *
-      (ddist_dego_theta * ddist_dego_theta + violation * d2dist_dtheta2);
-  lxx(EGO_X, EGO_Y) += hess_coeff * ddist_dego_x * ddist_dego_y;
-  lxx(EGO_Y, EGO_X) += hess_coeff * ddist_dego_y * ddist_dego_x;
-  lxx(EGO_X, EGO_THETA) += hess_coeff * ddist_dego_x * ddist_dego_theta;
-  lxx(EGO_THETA, EGO_X) += hess_coeff * ddist_dego_theta * ddist_dego_x;
-  lxx(EGO_Y, EGO_THETA) += hess_coeff * ddist_dego_y * ddist_dego_theta;
-  lxx(EGO_THETA, EGO_Y) += hess_coeff * ddist_dego_theta * ddist_dego_y;
+  // [DISABLED] skip x/y/theta gradients to prevent lateral trajectory distortion
+  // double ddist_dego_x = unit_x * dx_dego_x + unit_y * dy_dego_x;
+  // double ddist_dego_y = unit_x * dx_dego_y + unit_y * dy_dego_y;
+  // double ddist_dego_theta = unit_x * dx_dego_theta + unit_y * dy_dego_theta;
+  // lx(EGO_X) += gradient_coeff * ddist_dego_x;
+  // lx(EGO_Y) += gradient_coeff * ddist_dego_y;
+  // lx(EGO_THETA) += gradient_coeff * ddist_dego_theta;
+  // double dunitx_dx =
+  //     (rel_y * rel_y) / (rel_distance * rel_distance * rel_distance);
+  // double dunitx_dy =
+  //     -(rel_x * rel_y) / (rel_distance * rel_distance * rel_distance);
+  // double dunitx_dtheta = (-offset * std::sin(ego_theta) * rel_y * rel_y +
+  //                         offset * std::cos(ego_theta) * rel_x * rel_y) /
+  //                        (rel_distance * rel_distance * rel_distance);
+  // double dunity_dx =
+  //     -(rel_x * rel_y) / (rel_distance * rel_distance * rel_distance);
+  // double dunity_dy =
+  //     (rel_x * rel_x) / (rel_distance * rel_distance * rel_distance);
+  // double dunity_dtheta = (-offset * std::sin(ego_theta) * rel_x * rel_y +
+  //                         offset * std::cos(ego_theta) * rel_x * rel_x) /
+  //                        (rel_distance * rel_distance * rel_distance);
+  // double d2dist_dx2 = dunitx_dx * dx_dego_x + unit_x * 0.0 +
+  //                     dunity_dx * dy_dego_x + unit_y * 0.0;
+  // double d2dist_dy2 = dunitx_dy * dx_dego_y + unit_x * 0.0 +
+  //                     dunity_dy * dy_dego_y + unit_y * 0.0;
+  // double d2dist_dtheta2 =
+  //     dunitx_dtheta * dx_dego_theta + unit_x * (-offset * std::cos(ego_theta)) +
+  //     dunity_dtheta * dy_dego_theta + unit_y * (-offset * std::sin(ego_theta));
+  // double hess_coeff = weight * std::exp(violation);
+  // lxx(EGO_X, EGO_X) +=
+  //     hess_coeff * (ddist_dego_x * ddist_dego_x + violation * d2dist_dx2);
+  // lxx(EGO_Y, EGO_Y) +=
+  //     hess_coeff * (ddist_dego_y * ddist_dego_y + violation * d2dist_dy2);
+  // lxx(EGO_THETA, EGO_THETA) +=
+  //     hess_coeff *
+  //     (ddist_dego_theta * ddist_dego_theta + violation * d2dist_dtheta2);
+  // lxx(EGO_X, EGO_Y) += hess_coeff * ddist_dego_x * ddist_dego_y;
+  // lxx(EGO_Y, EGO_X) += hess_coeff * ddist_dego_y * ddist_dego_x;
+  // lxx(EGO_X, EGO_THETA) += hess_coeff * ddist_dego_x * ddist_dego_theta;
+  // lxx(EGO_THETA, EGO_X) += hess_coeff * ddist_dego_theta * ddist_dego_x;
+  // lxx(EGO_Y, EGO_THETA) += hess_coeff * ddist_dego_y * ddist_dego_theta;
+  // lxx(EGO_THETA, EGO_Y) += hess_coeff * ddist_dego_theta * ddist_dego_y;
 }
 
 void EgoRoadBoundaryCostTerm::CalculateBoundaryDistancesInfo(
@@ -1052,11 +1050,9 @@ void HardHalfplaneCostTerm::GetGradientHessian(
     const double normal_x = result.normal_x;
     const double normal_y = result.normal_y;
 
-    // 代价分配系数：EGO_OVERTAKE 仅在 1-2s 内覆盖为 1.0，每个障碍物独立计算
+    // EGO_OVERTAKE: 后车不让行，全程只靠自车加速
     double cur_alpha = alpha;
-    if (result.label_type == planning::lane_change_joint_decision::EGO_OVERTAKE &&
-        current_time_step >= kEgoOvertakeOverrideStart &&
-        current_time_step < kEgoOvertakeOverrideEnd) {
+    if (result.label_type == planning::lane_change_joint_decision::EGO_OVERTAKE) {
       cur_alpha = 1.0;
     }
     double ego_weight = cur_alpha;
@@ -1070,37 +1066,43 @@ void HardHalfplaneCostTerm::GetGradientHessian(
       // OVERTAKE: 自车超越障碍物
       // plane_dist = (ego_rear - obs_front) · ego_normal - hard_dist
 
-      // 对自车的梯度：∂dist/∂ego = ego_normal
-      const double ddist_dego_x = normal_x;
-      const double ddist_dego_y = normal_y;
+      // [DISABLED] skip ego/obs x,y gradients to prevent lateral distortion
+      // const double ddist_dego_x = normal_x;
+      // const double ddist_dego_y = normal_y;
 
-      lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
-      lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
+      // lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
+      // lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
 
-      lxx(EGO_X, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
-      lxx(EGO_Y, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
-      lxx(EGO_X, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
-      lxx(EGO_Y, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
+      // lxx(EGO_X, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
+      // lxx(EGO_Y, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
+      // lxx(EGO_X, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
+      // lxx(EGO_Y, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
 
-      // 对障碍物的梯度：∂dist/∂obs = -ego_normal
-      const double ddist_dobs_x = -normal_x;
-      const double ddist_dobs_y = -normal_y;
+      // const double ddist_dobs_x = -normal_x;
+      // const double ddist_dobs_y = -normal_y;
 
-      lx(state_base_idx + OBS_X) += obs_weight * gradient_coeff * ddist_dobs_x;
-      lx(state_base_idx + OBS_Y) += obs_weight * gradient_coeff * ddist_dobs_y;
+      // lx(state_base_idx + OBS_X) += obs_weight * gradient_coeff * ddist_dobs_x;
+      // lx(state_base_idx + OBS_Y) += obs_weight * gradient_coeff * ddist_dobs_y;
 
-      lxx(state_base_idx + OBS_X, state_base_idx + OBS_X) +=
-          obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_x;
-      lxx(state_base_idx + OBS_Y, state_base_idx + OBS_Y) +=
-          obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_y;
-      lxx(state_base_idx + OBS_X, state_base_idx + OBS_Y) +=
-          obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_y;
-      lxx(state_base_idx + OBS_Y, state_base_idx + OBS_X) +=
-          obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_x;
+      // lxx(state_base_idx + OBS_X, state_base_idx + OBS_X) +=
+      //     obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_x;
+      // lxx(state_base_idx + OBS_Y, state_base_idx + OBS_Y) +=
+      //     obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_y;
+      // lxx(state_base_idx + OBS_X, state_base_idx + OBS_Y) +=
+      //     obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_y;
+      // lxx(state_base_idx + OBS_Y, state_base_idx + OBS_X) +=
+      //     obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_x;
+
+      // vel gradient: ego speeds up to increase gap
+      constexpr double kDt = 0.2;
+      const double ddist_dego_vel = kDt;
+      lx(EGO_VEL) += ego_weight * gradient_coeff * ddist_dego_vel;
+      lxx(EGO_VEL, EGO_VEL) +=
+          ego_weight * hess_coeff * ddist_dego_vel * ddist_dego_vel;
 
       // 交叉项（使用几何平均：√(ego_weight * obs_weight)）
       // const double cross_weight = std::sqrt(ego_weight * obs_weight);
@@ -1125,22 +1127,29 @@ void HardHalfplaneCostTerm::GetGradientHessian(
       // YIELD: 自车让行障碍物
       // plane_dist = (obs_rear - ego_front) · ego_normal - hard_dist
 
-      // 对自车的梯度：∂dist/∂ego = -ego_normal
-      const double ddist_dego_x = -normal_x;
-      const double ddist_dego_y = -normal_y;
+      // [DISABLED] skip ego x,y gradients to prevent lateral distortion
+      // const double ddist_dego_x = -normal_x;
+      // const double ddist_dego_y = -normal_y;
       ego_weight = 1.0;
 
-      lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
-      lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
+      // lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
+      // lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
 
-      lxx(EGO_X, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
-      lxx(EGO_Y, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
-      lxx(EGO_X, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
-      lxx(EGO_Y, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
+      // lxx(EGO_X, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
+      // lxx(EGO_Y, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
+      // lxx(EGO_X, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
+      // lxx(EGO_Y, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
+
+      // vel gradient: ego slows down to increase gap
+      constexpr double kDt = 0.2;
+      const double ddist_dego_vel = -kDt;
+      lx(EGO_VEL) += ego_weight * gradient_coeff * ddist_dego_vel;
+      lxx(EGO_VEL, EGO_VEL) +=
+          ego_weight * hess_coeff * ddist_dego_vel * ddist_dego_vel;
 
       // 对障碍物的梯度：∂dist/∂obs = ego_normal
       // const double ddist_dobs_x = normal_x;
@@ -1406,11 +1415,9 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
     const double normal_x = result.normal_x;
     const double normal_y = result.normal_y;
 
-    // 代价分配系数，每个障碍物独立计算
+    // EGO_OVERTAKE: 后车不让行，全程只靠自车加速
     double cur_alpha = alpha;
-    if (label_type == planning::lane_change_joint_decision::EGO_OVERTAKE &&
-        current_time_step >= kEgoOvertakeOverrideStart &&
-        current_time_step < kEgoOvertakeOverrideEnd) {
+    if (label_type == planning::lane_change_joint_decision::EGO_OVERTAKE) {
       cur_alpha = 1.0;
     }
     double ego_weight = cur_alpha;
@@ -1439,53 +1446,52 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
       const double v_rel = obs_vel - ego_vel;
       const double s_target_term = obs_vel * tau + obs_vel * v_rel * k;
 
-      const double ddist_dego_x = normal_x;
-      const double ddist_dego_y = normal_y;
+      // [DISABLED] skip ego/obs x,y gradients to prevent lateral distortion
+      // const double ddist_dego_x = normal_x;
+      // const double ddist_dego_y = normal_y;
       const double ddist_dego_vel = (s_target_term > 0.0) ? obs_vel * k : 0.0;
 
-      const double ddist_dobs_x = -normal_x;
-      const double ddist_dobs_y = -normal_y;
+      // const double ddist_dobs_x = -normal_x;
+      // const double ddist_dobs_y = -normal_y;
       const double ddist_dobs_vel =
           (s_target_term > 0.0) ? -(tau + 2.0 * k * obs_vel - k * ego_vel)
                                 : 0.0;
 
-      // 自车梯度
-      lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
-      lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
+      // 自车: only vel gradient
+      // lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
+      // lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
       lx(EGO_VEL) += ego_weight * gradient_coeff * ddist_dego_vel;
 
-      // 自车Hessian
-      lxx(EGO_X, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
-      lxx(EGO_Y, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
+      // lxx(EGO_X, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
+      // lxx(EGO_Y, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
       lxx(EGO_VEL, EGO_VEL) +=
           ego_weight * hess_coeff * ddist_dego_vel * ddist_dego_vel;
-      lxx(EGO_X, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
-      lxx(EGO_Y, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
+      // lxx(EGO_X, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
+      // lxx(EGO_Y, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
       // x,y与vel的交叉项为0
       // lxx(EGO_X, EGO_VEL) = 0
       // lxx(EGO_Y, EGO_VEL) = 0
 
-      // 障碍物梯度
-      lx(obs_state_idx + OBS_X) += obs_weight * gradient_coeff * ddist_dobs_x;
-      lx(obs_state_idx + OBS_Y) += obs_weight * gradient_coeff * ddist_dobs_y;
+      // 障碍物: only vel gradient
+      // lx(obs_state_idx + OBS_X) += obs_weight * gradient_coeff * ddist_dobs_x;
+      // lx(obs_state_idx + OBS_Y) += obs_weight * gradient_coeff * ddist_dobs_y;
       lx(obs_state_idx + OBS_VEL) +=
           obs_weight * gradient_coeff * ddist_dobs_vel;
 
-      // 障碍物Hessian
-      lxx(obs_state_idx + OBS_X, obs_state_idx + OBS_X) +=
-          obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_x;
-      lxx(obs_state_idx + OBS_Y, obs_state_idx + OBS_Y) +=
-          obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_y;
+      // lxx(obs_state_idx + OBS_X, obs_state_idx + OBS_X) +=
+      //     obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_x;
+      // lxx(obs_state_idx + OBS_Y, obs_state_idx + OBS_Y) +=
+      //     obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_y;
       lxx(obs_state_idx + OBS_VEL, obs_state_idx + OBS_VEL) +=
           obs_weight * hess_coeff * ddist_dobs_vel * ddist_dobs_vel;
-      lxx(obs_state_idx + OBS_X, obs_state_idx + OBS_Y) +=
-          obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_y;
-      lxx(obs_state_idx + OBS_Y, obs_state_idx + OBS_X) +=
-          obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_x;
+      // lxx(obs_state_idx + OBS_X, obs_state_idx + OBS_Y) +=
+      //     obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_y;
+      // lxx(obs_state_idx + OBS_Y, obs_state_idx + OBS_X) +=
+      //     obs_weight * hess_coeff * ddist_dobs_y * ddist_dobs_x;
       // x,y与vel的交叉项为0
       // lxx(OBS_X, OBS_VEL) = 0
       // lxx(OBS_Y, OBS_VEL) = 0
@@ -1541,8 +1547,9 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
       const double v_rel = ego_vel - obs_vel;
       const double s_target_term = ego_vel * tau + ego_vel * v_rel * k;
 
-      const double ddist_dego_x = -normal_x;
-      const double ddist_dego_y = -normal_y;
+      // [DISABLED] skip ego x,y gradients to prevent lateral distortion
+      // const double ddist_dego_x = -normal_x;
+      // const double ddist_dego_y = -normal_y;
       const double ddist_dego_vel =
           (s_target_term > 0.0) ? -(tau + 2.0 * k * ego_vel - k * obs_vel)
                                 : 0.0;
@@ -1551,23 +1558,22 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
       const double ddist_dobs_y = normal_y;
       const double ddist_dobs_vel = (s_target_term > 0.0) ? ego_vel * k : 0.0;
 
-      // 自车梯度
+      // 自车: only vel gradient
       ego_weight = 1.0;
-      lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
-      lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
+      // lx(EGO_X) += ego_weight * gradient_coeff * ddist_dego_x;
+      // lx(EGO_Y) += ego_weight * gradient_coeff * ddist_dego_y;
       lx(EGO_VEL) += ego_weight * gradient_coeff * ddist_dego_vel;
 
-      // 自车Hessian
-      lxx(EGO_X, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
-      lxx(EGO_Y, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
+      // lxx(EGO_X, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_x;
+      // lxx(EGO_Y, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_y;
       lxx(EGO_VEL, EGO_VEL) +=
           ego_weight * hess_coeff * ddist_dego_vel * ddist_dego_vel;
-      lxx(EGO_X, EGO_Y) +=
-          ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
-      lxx(EGO_Y, EGO_X) +=
-          ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
+      // lxx(EGO_X, EGO_Y) +=
+      //     ego_weight * hess_coeff * ddist_dego_x * ddist_dego_y;
+      // lxx(EGO_Y, EGO_X) +=
+      //     ego_weight * hess_coeff * ddist_dego_y * ddist_dego_x;
       // x,y与vel的交叉项为0
       // lxx(EGO_X, EGO_VEL) = 0
       // lxx(EGO_Y, EGO_VEL) = 0

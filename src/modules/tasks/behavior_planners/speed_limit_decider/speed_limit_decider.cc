@@ -2259,6 +2259,8 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       environmental_model.get_route_info()->get_route_info_output();
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
     poi_v_limit_set_ = false;
+    poi_v_limit_set_decision_from_fsm_ = false;
+    poi_v_limit_kph_ = 120;
     return;
   }
   ad_common::math::Vec2d current_point;
@@ -2278,6 +2280,8 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       nearest_s, nearest_l, is_search_cur_link);
   if (current_segment == nullptr) {
     poi_v_limit_set_ = false;
+    poi_v_limit_set_decision_from_fsm_ = false;
+    poi_v_limit_kph_ = 120;
     return;
   } else {
     poi_v_limit_set_ = false;
@@ -2288,6 +2292,9 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     double v_cruise_fsm_kph = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
     double cur_road_map_v_limit = current_segment->speed_limit();
     double cur_link_v_limit = std::max(cur_road_map_v_limit, v_cruise_fsm_kph);
+    /* if (cur_link_v_limit - cur_road_map_v_limit > 1.0) {
+      poi_v_limit_set_decision_from_fsm_ = true;
+    } */
     double v_limit_dis = 10000.0;
 
     auto tunnel_info =
@@ -2323,6 +2330,15 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       if (tunnel_info.second < v_limit_dis && (tunnel_v_limit < v_cruise_fsm_kph + kEpsilon)) {
         v_cruise_limit_ = tunnel_v_limit;
         poi_v_limit_set_ = true;
+        if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+          poi_v_limit_set_decision_from_fsm_ = false;
+        } else {
+          poi_v_limit_set_decision_from_fsm_ = true;
+        }
+      }
+      else if (tunnel_info.second >= v_limit_dis && poi_v_limit_set_decision_from_fsm_ ) {
+        v_cruise_limit_ = poi_v_limit_kph_;
+        poi_v_limit_set_ = true;
       }
     } else if (tunnel_info.second < kEpsilon &&
                current_segment->link_type() &
@@ -2349,6 +2365,17 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
         // limit works
         v_cruise_limit_ = speed_limit_config_.toll_station_vel_limit_kph;
         poi_v_limit_set_ = true;
+        if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+          poi_v_limit_set_decision_from_fsm_ = false;
+        } else {
+          poi_v_limit_set_decision_from_fsm_ = true;
+        }
+
+      } else if (toll_station_info.first != nullptr && toll_station_info.second > 0) {
+        if (poi_v_limit_set_decision_from_fsm_ ) {
+          v_cruise_limit_ = poi_v_limit_kph_;
+          poi_v_limit_set_ = true;
+        }
       } else {
         v_limit_dis =
             interp(cur_link_v_limit,
@@ -2362,6 +2389,16 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
           // works
           v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
           poi_v_limit_set_ = true;
+          if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+            poi_v_limit_set_decision_from_fsm_ = false;
+          } else {
+            poi_v_limit_set_decision_from_fsm_ = true;
+          }
+        } else if (sapa_info.first != nullptr && sapa_info.second > 0) {
+          if (poi_v_limit_set_decision_from_fsm_ ) {
+            v_cruise_limit_ = poi_v_limit_kph_;
+            poi_v_limit_set_ = true;
+          }
         } else if (sapa_info.second < kEpsilon &&
                    current_segment->link_type() ==
                        iflymapdata::sdpro::LinkType::LT_SAPA) {
@@ -2382,6 +2419,16 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               none_express_info.second < v_limit_dis) {
             v_cruise_limit_ = speed_limit_config_.non_express_vel_limit_kph;
             poi_v_limit_set_ = true;
+            if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+              poi_v_limit_set_decision_from_fsm_ = false;
+            } else {
+              poi_v_limit_set_decision_from_fsm_ = true;
+            }
+          } else if (none_express_info.first != nullptr && none_express_info.second > 0) {
+            if (poi_v_limit_set_decision_from_fsm_ ) {
+              v_cruise_limit_ = poi_v_limit_kph_;
+              poi_v_limit_set_ = true;
+            }
           } else {
             bool function_need_inhibited = false;
             auto speed_limit_output =
@@ -2432,6 +2479,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       }
     }
     if (poi_v_limit_set_) {
+      poi_v_limit_kph_ = v_cruise_limit_;
       JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
       auto speed_limit_output = session_->mutable_planning_context()
                                     ->mutable_speed_limit_decider_output();
@@ -2447,7 +2495,8 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
-  const auto borrow_direction = lane_borrow_output.borrow_direction;
+  // const auto borrow_direction = lane_borrow_output.borrow_direction;
+  const auto &borrow_direction_map = lane_borrow_output.borrow_direction_map;
 
   // get lane borrow agent
   const auto agent_manager =
@@ -2491,6 +2540,11 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
       continue;
     }
     double min_lat_l_by_lat_path = 0.0;
+    auto dir_it = borrow_direction_map.find(agent->agent_id());
+    double borrow_direction = NO_BORROW;
+    if (dir_it != borrow_direction_map.end()) {
+      borrow_direction = dir_it->second;
+    }
     if (borrow_direction == LEFT_BORROW) {
       min_lat_l_by_lat_path = max_l_by_lat_path;
       // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;

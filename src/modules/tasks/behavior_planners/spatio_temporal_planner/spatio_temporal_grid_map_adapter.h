@@ -86,6 +86,10 @@ class SLTGridMapAdapter {
     return virtual_agents_st_info_;
   }
 
+  const std::vector<std::shared_ptr<agent::Agent>>& ConsiderSurroundAgents() {
+    return consider_surround_agents_;
+  }
+  
   SpatioTemporalGridMap config_;
   planning::framework::Session *session_;
   std::shared_ptr<ReferencePath> reference_path_ = nullptr;
