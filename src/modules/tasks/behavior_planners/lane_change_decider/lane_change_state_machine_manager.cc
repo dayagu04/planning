@@ -4295,6 +4295,29 @@ bool LaneChangeStateMachineManager::
   if (agent_traj.back().s < agent_traj.front().s && agent_node->node_speed() > 2.0) {
     is_front_reverse = true;
   }
+  //计算当前时刻与前车的ttc
+  bool front_risk = false;
+  double ego_v = ego_trajs_future_[0].v;
+  double front_v = agent_traj[0].v;
+  double front_gap = agent_traj[0].s - ego_trajs_future_[0].s 
+                    - 0.5 * agent_node->node_length() - kEgoFrontEdgeToRearAxleDistance;
+  // gap小于0 则不安全，gap大于0，有差速，ttc小于2 也不安全
+  if(front_gap < 1.0){
+    front_risk = true;
+  }else{
+    //自车相对前车慢速返回安全，自车相对前车快速则计算ttc
+    double rel_vel0 = ego_v - front_v;
+    if(rel_vel0 < 0.0){//前车快速 无ttc 
+      front_risk = false;
+    }else{
+      double front_ttc = front_gap / (rel_vel0 + 1e-6);
+      if(front_ttc < 2.0){
+        front_risk = true;
+      }else{
+        front_risk = false;
+      }
+    }
+  }
 
   for (int i = 0; i < iter_count; i++) {
     // //执行后缩短预测轨迹检查
@@ -4314,8 +4337,8 @@ bool LaneChangeStateMachineManager::
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
-      }
-      if (ego_press_line_ratio > 0.01 && is_side_clear_  && is_executing) {//对侧方车保持返回能力
+      } 
+      if (ego_press_line_ratio > 0.01 && is_side_clear_  && is_executing && !front_risk) {//对侧方车保持返回能力
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
       if (is_executing) {
