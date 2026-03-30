@@ -5953,18 +5953,24 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   bool is_rightest_extend_lane = IsExistExtendLane(rightest_lane, true);
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
 
-  if (is_rightest_extend_lane &&
-      route_info_output.map_split_region_info_list.front()
-          .split_direction == SPLIT_RIGHT &&
-      route_info_output.map_split_region_info_list.front()
-          .distance_to_split_point < 200.0) {
-    return RAMP_ON_RIGHT;
-  } else if (is_leftest_extend_lane &&
-             route_info_output.map_split_region_info_list.front()
-                .split_direction == SPLIT_LEFT &&
-             route_info_output.map_split_region_info_list.front()
-                .distance_to_split_point < 200.0) {
-    return RAMP_ON_LEFT;
+  if (!route_info_output.map_split_region_info_list.empty()) {
+    double distance_to_exchange =
+        route_info_output.map_split_region_info_list.front()
+            .distance_to_split_point +
+        route_info_output.map_split_region_info_list.front()
+            .start_fp_point.fp_distance_to_split_point;
+    if (is_rightest_extend_lane &&
+        route_info_output.map_split_region_info_list.front().split_direction ==
+            SPLIT_RIGHT &&
+        distance_to_exchange < 200.0) {
+      return RAMP_ON_RIGHT;
+    } else if (is_leftest_extend_lane &&
+               route_info_output.map_split_region_info_list.front()
+                       .split_direction == SPLIT_LEFT &&
+               route_info_output.map_split_region_info_list.front()
+                       .distance_to_split_point < 200.0) {
+      return RAMP_ON_LEFT;
+    }
   }
   return RAMP_NONE;
 }

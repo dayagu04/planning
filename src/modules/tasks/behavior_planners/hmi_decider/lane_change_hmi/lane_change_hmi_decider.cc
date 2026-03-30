@@ -542,7 +542,6 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   auto& planning_output = session_->mutable_planning_context()->mutable_planning_output();
   if(lane_change_decider_output.is_collision_risk &&
      (curr_state == kLaneChangeHold ||
-      curr_state == kLaneChangeExecution ||
       curr_state == kLaneChangeCancel)) {
     planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_WARRING;
     planning_output.planning_request.request_reason = iflyauto::REQUEST_REASON_LANE_CHANGE_RISK;
