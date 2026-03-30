@@ -291,15 +291,35 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       "pass_interval_first", "pass_interval_second", "edt_manager_cost",
       "GeneralLateralDeciderCostTime"]
 
-  # Turnstile debug scalar keys
+  # Turnstile debug fields from structured proto
   turnstile_debug_value_list = [
       "turnstile_stage", "turnstile_has_target", "turnstile_is_head_car",
-      "turnstile_target_obs_id", "turnstile_side_obs_id", "turnstile_scene_type", "turnstile_s", "turnstile_stop_s", "turnstile_passable_status",
+      "turnstile_target_obs_id", "turnstile_side_obs_id", "turnstile_scene_type",
+      "turnstile_s", "turnstile_stop_s", "turnstile_passable_status",
       "turnstile_front_car_id", "turnstile_front_car_passed_in_cycle",
-      "turnstile_stop_required", "turnstile_wait_reopen_required", "turnstile_seen_closed_status_after_front_pass", "turnstile_release_by_open_timeout",
-      "turnstile_target_lost_frame_count", "turnstile_passable_status_stable_frame_count", "turnstile_cycle_closing_status_stable_frame_count",
-      "turnstile_reopen_open_status_continuous_frame_count", "turnstile_closing_status_drop_consecutive_frame_count", "turnstile_emergency_opening_status_stable_frame_count",
+      "turnstile_stop_required", "turnstile_wait_reopen_required",
+      "turnstile_seen_closed_status_after_front_pass",
+      "turnstile_release_by_open_timeout",
       "turnstile_closing_status_drop_emergency_active", "turnstile_virtual_agent_id",
+      "turnstile_prev_front_vehicle_id", "turnstile_prev_front_vehicle_s",
+      "turnstile_prev_frame_has_valid_front_vehicle",
+      "turnstile_prev_frame_passable_status",
+      "turnstile_target_lost_frame_count",
+      "turnstile_passable_status_stable_frame_count",
+      "turnstile_cycle_closing_status_stable_frame_count",
+      "turnstile_reopen_open_status_continuous_frame_count",
+      "turnstile_closing_status_drop_consecutive_frame_count",
+      "turnstile_emergency_stop_stable_frame_count",
+      "turnstile_flag_target_lost_timeout", "turnstile_flag_ego_in_gate",
+      "turnstile_flag_ego_passed", "turnstile_flag_emergency_active",
+      "turnstile_flag_emergency_stop_stable", "turnstile_flag_open_timeout_release_ready",
+      "turnstile_flag_passable_status_stable",
+      "turnstile_flag_gate_opening_status", "turnstile_flag_gate_closed_status",
+      "turnstile_flag_gate_closing_status",
+      "turnstile_gate_status_raw", "turnstile_gate_open_ratio_raw",
+      "turnstile_gate_snapshot_is_static", "turnstile_gate_snapshot_is_opening",
+      "turnstile_gate_snapshot_is_closing", "turnstile_gate_snapshot_is_closed",
+      "turnstile_gate_snapshot_is_opened", "turnstile_gate_snapshot_is_passable",
   ]
 
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
@@ -311,14 +331,76 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   plan_debug_json_info = local_view_data['data_msg']['plan_debug_json_msg']
 
   turnstile_debug_value_map = {}
-  if hasattr(plan_debug_info, 'key_values'):
-    for item in plan_debug_info.key_values:
-      if item.HasField('int_value'):
-        turnstile_debug_value_map[item.key] = item.int_value
-      elif item.HasField('float_value'):
-        turnstile_debug_value_map[item.key] = item.float_value
-      elif item.HasField('str_value'):
-        turnstile_debug_value_map[item.key] = item.str_value
+  if hasattr(plan_debug_info, 'turnstile_longitudinal_debug') and \
+      plan_debug_info.HasField('turnstile_longitudinal_debug'):
+    turnstile_debug = plan_debug_info.turnstile_longitudinal_debug
+    turnstile_debug_value_map.update({
+        'turnstile_stage': turnstile_debug.stage,
+        'turnstile_has_target': turnstile_debug.has_target_turnstile,
+        'turnstile_is_head_car': turnstile_debug.is_head_car,
+        'turnstile_target_obs_id': turnstile_debug.target_turnstile_obs_id,
+        'turnstile_side_obs_id': turnstile_debug.side_turnstile_obs_id,
+        'turnstile_scene_type': turnstile_debug.scene_type,
+        'turnstile_s': turnstile_debug.turnstile_s,
+        'turnstile_stop_s': turnstile_debug.turnstile_stop_s,
+        'turnstile_passable_status': turnstile_debug.turnstile_passable_status,
+        'turnstile_front_car_id': turnstile_debug.front_car_id,
+        'turnstile_front_car_passed_in_cycle': turnstile_debug.front_car_passed_in_current_cycle,
+        'turnstile_stop_required': turnstile_debug.stop_required,
+        'turnstile_wait_reopen_required': turnstile_debug.wait_reopen_required,
+        'turnstile_release_by_open_timeout': turnstile_debug.release_by_open_timeout,
+        'turnstile_closing_status_drop_emergency_active':
+            turnstile_debug.closing_status_drop_emergency_active,
+        'turnstile_virtual_agent_id': turnstile_debug.stop_virtual_agent_id,
+        'turnstile_prev_front_vehicle_id': turnstile_debug.previous_front_vehicle_id,
+        'turnstile_prev_front_vehicle_s': turnstile_debug.previous_front_vehicle_s,
+        'turnstile_prev_frame_has_valid_front_vehicle':
+            turnstile_debug.had_valid_front_vehicle_in_prev_frame,
+        'turnstile_prev_frame_passable_status':
+            turnstile_debug.was_turnstile_passable_status_in_prev_frame,
+    })
+
+    if turnstile_debug.HasField('counters'):
+      counters = turnstile_debug.counters
+      turnstile_debug_value_map.update({
+          'turnstile_target_lost_frame_count': counters.target_turnstile_lost_frame_count,
+          'turnstile_passable_status_stable_frame_count':
+              counters.turnstile_passable_status_stable_frame_count,
+          'turnstile_cycle_closing_status_stable_frame_count':
+              counters.cycle_closing_status_stable_frame_count,
+          'turnstile_reopen_open_status_continuous_frame_count':
+              counters.reopen_open_status_continuous_frame_count,
+          'turnstile_closing_status_drop_consecutive_frame_count':
+              counters.closing_status_drop_consecutive_frame_count,
+          'turnstile_emergency_stop_stable_frame_count':
+              counters.emergency_stop_stable_frame_count,
+      })
+
+    if turnstile_debug.HasField('event_flags'):
+      event_flags = turnstile_debug.event_flags
+      turnstile_debug_value_map.update({
+          'turnstile_flag_target_lost_timeout': event_flags.target_lost_timeout,
+          'turnstile_flag_ego_in_gate': event_flags.ego_in_gate,
+          'turnstile_flag_ego_passed': event_flags.ego_passed,
+          'turnstile_flag_emergency_active': event_flags.emergency_active,
+          'turnstile_flag_emergency_stop_stable': event_flags.emergency_stop_stable,
+          'turnstile_flag_open_timeout_release_ready': event_flags.open_timeout_release_ready,
+          'turnstile_flag_passable_status_stable': event_flags.passable_status_stable,
+          'turnstile_flag_gate_opening_status': event_flags.gate_opening_status,
+          'turnstile_flag_gate_closed_status': event_flags.gate_closed_status,
+          'turnstile_flag_gate_closing_status': event_flags.gate_closing_status,
+      })
+
+    turnstile_debug_value_map.update({
+        'turnstile_gate_status_raw': turnstile_debug.gate_status_raw,
+        'turnstile_gate_open_ratio_raw': turnstile_debug.gate_open_ratio_raw,
+        'turnstile_gate_snapshot_is_static': turnstile_debug.gate_snapshot_is_static,
+        'turnstile_gate_snapshot_is_opening': turnstile_debug.gate_snapshot_is_opening,
+        'turnstile_gate_snapshot_is_closing': turnstile_debug.gate_snapshot_is_closing,
+        'turnstile_gate_snapshot_is_closed': turnstile_debug.gate_snapshot_is_closed,
+        'turnstile_gate_snapshot_is_opened': turnstile_debug.gate_snapshot_is_opened,
+        'turnstile_gate_snapshot_is_passable': turnstile_debug.gate_snapshot_is_passable,
+    })
 
   # load new st boundaries
   # print(plan_debug_info.st_graph_data.st_boundaries)

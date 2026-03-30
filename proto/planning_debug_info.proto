@@ -115,6 +115,72 @@ message KeyValue {
   }
 }
 
+message TurnstileEventFlagsDebug {
+  optional bool has_target_turnstile = 1;
+  optional bool target_lost_timeout = 2;
+  optional bool ego_passed = 3;
+  optional bool ego_in_gate = 4;
+  optional bool emergency_active = 5;
+  optional bool emergency_stop_stable = 6;
+  optional bool wait_reopen_required = 7;
+  optional bool open_timeout_release_ready = 9;
+  optional bool is_head_car = 11;
+  optional bool turnstile_passable_status = 12;
+  optional bool passable_status_stable = 13;
+  optional bool gate_opening_status = 14;
+  optional bool gate_closed_status = 15;
+  optional bool gate_closing_status = 16;
+}
+
+message TurnstileCounterDebug {
+  optional int32 target_turnstile_lost_frame_count = 1;
+  optional int32 turnstile_passable_status_stable_frame_count = 2;
+  optional int32 cycle_closing_status_stable_frame_count = 3;
+  optional int32 reopen_open_status_continuous_frame_count = 4;
+  optional int32 closing_status_drop_consecutive_frame_count = 5;
+  optional int32 emergency_stop_stable_frame_count = 6;
+}
+
+message TurnstileLongitudinalDebug {
+  optional int32 stage = 1;
+
+  optional bool has_target_turnstile = 2;
+  optional int32 target_turnstile_obs_id = 3;
+  optional int32 side_turnstile_obs_id = 4;
+  optional int32 scene_type = 5;
+  optional bool is_head_car = 6;
+  optional int32 front_car_id = 7;
+  optional bool turnstile_passable_status = 8;
+
+  optional bool stop_required = 9;
+  optional int32 stop_virtual_agent_id = 10;
+  optional double turnstile_s = 11;
+  optional double turnstile_stop_s = 12;
+
+  optional bool front_car_passed_in_current_cycle = 13;
+  optional bool wait_reopen_required = 14;
+  optional bool release_by_open_timeout = 16;
+  optional bool closing_status_drop_emergency_active = 17;
+
+  optional int32 previous_front_vehicle_id = 18;
+  optional double previous_front_vehicle_s = 19;
+  optional bool had_valid_front_vehicle_in_prev_frame = 20;
+  optional bool was_turnstile_passable_status_in_prev_frame = 21;
+
+  optional TurnstileEventFlagsDebug event_flags = 22;
+  optional TurnstileCounterDebug counters = 23;
+
+  // 原始闸机状态与 gate snapshot 状态。
+  optional int32 gate_status_raw = 24;
+  optional double gate_open_ratio_raw = 25;
+  optional bool gate_snapshot_is_static = 26;
+  optional bool gate_snapshot_is_opening = 27;
+  optional bool gate_snapshot_is_closing = 28;
+  optional bool gate_snapshot_is_closed = 29;
+  optional bool gate_snapshot_is_opened = 30;
+  optional bool gate_snapshot_is_passable = 31;
+}
+
 message PlanningDebugInfo {
   optional uint64 timestamp = 1;  // us
   // TBD: 存在多条candidates时，应该使用repeated
@@ -181,4 +247,5 @@ message PlanningDebugInfo {
   optional HppSpeedLimitDeciderDebug  hpp_speed_limit_decider_debug  = 61;
   optional HppLateralObstacleDeciderResult hpp_lateral_obstacle_decider_result = 62;
   repeated KeyValue key_values = 63;
+  optional TurnstileLongitudinalDebug turnstile_longitudinal_debug = 64;
 }
