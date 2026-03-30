@@ -349,6 +349,21 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
                                               ->get_local_view()
                                               .vehicle_service_output_info;
 
+  if(vehicle_service_output_info_ptr->driver_hands_off_state == true && 
+    fabs(vehicle_service_output_info_ptr->driver_hand_torque < 0.50)) {
+    lkas_handsoff_duration += GetContext.get_param()->dt;
+  } else {
+    lkas_handsoff_duration = 0.0;
+  }
+  if(lkas_handsoff_duration > 10.0) {
+    lkas_handsoff_duration = 10.0;
+  }
+  if(lkas_handsoff_duration >= 0.1) {
+    lkas_handsoff_state = true;
+  } else {
+    lkas_handsoff_state = false;
+  }
+
   lkas_intervention =
       ((GetContext.get_output_info()
             ->ldp_output_info_.ldp_left_intervention_flag_ == true) ||
@@ -375,7 +390,7 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
       );
 
   // 计数逻辑
-  if (lkas_intervention_rising_edge_ == true) {
+  if (lkas_intervention_rising_edge_ == true && lkas_handsoff_state == true ) {
     ldp_intervention_count += 1;
     // ldp_intervention_duration_ = 0.0;  // 重置180秒计时器
   }
@@ -391,9 +406,9 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
   if (ldp_intervention_count > 0) {
     ldp_intervention_duration_ += GetContext.get_param()->dt;
     if (ldp_intervention_duration_ > 180.0 ||
-        ((ldp_warning_audio_flag_ == true &&
-          ((vehicle_service_output_info_ptr->driver_hands_off_state == false) || lkas_handsoff_trq_flag == true)&&
-          GetContext.get_param()->ldp_handoff_state_switch_test_ == true)  )
+        (((ldp_warning_audio_flag_ == true || lkas_intervention == true) &&
+          ((lkas_handsoff_state == false) || lkas_handsoff_trq_flag == true) &&
+          GetContext.get_param()->ldp_handoff_state_switch_test_ == true))
 
     ) {
       ldp_intervention_duration_ = 0.0;
