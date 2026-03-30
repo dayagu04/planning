@@ -214,6 +214,11 @@ bool SCCLateralMotionPlanner::AssembleInput() {
       second_soft_bounds, hard_bounds, second_soft_bounds_info,
       hard_bounds_info);
   //
+  const auto target_state =
+      lane_change_decider_output.coarse_planning_info.target_state;
+  bool is_merge_lc =
+      lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
+      lane_change_decider_output.lc_request_source == MAP_REQUEST;
   NudgeDirection drive_away_direction = CalculateDrivingDirectionForLeavingLane();
   bool is_check_left_line = drive_away_direction == NudgeDirection::LEFT;
   bool is_check_right_line = drive_away_direction == NudgeDirection::RIGHT;
@@ -224,9 +229,18 @@ bool SCCLateralMotionPlanner::AssembleInput() {
     is_check_left_line = true;
     is_check_right_line = true;
   }
-  if (coarse_planning_info.target_state == kLaneChangeExecution) {
-    is_check_left_line = lc_request_direction == LEFT_CHANGE;
-    is_check_right_line = lc_request_direction == RIGHT_CHANGE;
+  if (target_state == kLaneChangeExecution) {
+    if (lc_request_direction == LEFT_CHANGE) {
+      is_check_left_line = true;
+      if (!is_merge_lc) {
+        is_check_right_line = false;
+      }
+    } else if (lc_request_direction == RIGHT_CHANGE) {
+      is_check_right_line = true;
+      if (!is_merge_lc) {
+        is_check_left_line = false;
+      }
+    }
   }
   double remain_nonsolid_line_time = CalculateRemainingDrivingTimeToSolidLine(is_check_left_line, is_check_right_line);
   if (remain_nonsolid_line_time <= 4.0) {
@@ -289,17 +303,12 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetIsEmergencyAvoid(general_lateral_decider_output.is_emergency_avoid);
 
   // lane change state
-  const auto target_state =
-      lane_change_decider_output.coarse_planning_info.target_state;
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
   bool lane_change_hold = target_state == kLaneChangeHold;
   planning_weight_ptr_->SetLCHoldFlag(lane_change_hold);
   bool is_cone_lc =
       lane_change_decider_output.lc_request_source == CONE_REQUEST;
-  bool is_merge_lc =
-      lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
-      lane_change_decider_output.lc_request_source == MAP_REQUEST;
   bool merge_point_valid = session_->planning_context()
                                .ego_lane_road_right_decider_output()
                                .boundary_merge_point_valid;
@@ -332,14 +341,6 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   bool is_risk_lc = general_lateral_decider_output.risk_level > RiskLevel::NO_RISK;
   bool is_emergency_lc = false;
   // lane_change_decider_output.is_emergency_avoidance_situation;
-  if (is_emergency_lc) {
-    planning_weight_ptr_->SetLaneChangeStyle(
-        pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
-  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 || is_risk_lc ||
-             (is_merge_lc && std::fabs(dist_to_merge_point) < planning_input_.ref_vel() * 5.0)) {
-    planning_weight_ptr_->SetLaneChangeStyle(
-        pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
-  }
   // 低速变道优先
   bool is_low_speed_lane_change = false;
   bool is_low_speed_lane_change_without_obstacle = false;
@@ -359,6 +360,14 @@ bool SCCLateralMotionPlanner::AssembleInput() {
     } else {
       is_low_speed_lane_change_without_obstacle = true;
     }
+  }
+  if (is_emergency_lc) {
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
+  } else if (is_prevent_solid_line_lc || is_cone_lc || lc_remain_time < 4.5 || is_risk_lc ||
+             (is_merge_lc && std::fabs(dist_to_merge_point) < planning_input_.ref_vel() * 5.0)) {
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
   }
   double max_steer_angle_rate_low_speed_lc =
       std::min(vehicle_param.max_steer_angle_rate,

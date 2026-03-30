@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <limits>
+#include <utility>
 
 #include "debug_info_log.h"
 #include "environmental_model.h"
@@ -76,16 +77,9 @@ bool LatLonJointPlannerDecider::Execute() {
       ->mutable_joint_motion_planning_output()
       ->CopyFrom(planning_problem_ptr_->GetOutput());
 
-  const auto& danger_ids = lat_lon_planning_output_.GetDangerObstacleIds();
-  std::vector<double> danger_ids_vec;
-  for (int32_t id : danger_ids) {
-    danger_ids_vec.push_back(static_cast<double>(id));
-  }
-  JSON_DEBUG_VECTOR("joint_danger_obstacle_ids", danger_ids_vec, 0);
-
   auto& context_output = session_->mutable_planning_context()
                              ->mutable_lat_lon_joint_planner_decider_output();
-  context_output = lat_lon_planning_output_;
+  context_output = std::move(lat_lon_planning_output_);
 
   return true;
 }
@@ -152,6 +146,7 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
   const double ego_length = vehicle_param.length;
   const double ego_width = vehicle_param.width;
   const double rear_axle_to_center = vehicle_param.rear_axle_to_center;
+  const double ego_half_width = ego_width * 0.5;
   constexpr double kStaticVehicleLatConflictThreshold = 0.2;
   constexpr double kLatConflictThreshold = 0.3;
   constexpr double kLargeVehicleLatConflictThreshold = 0.4;
@@ -247,32 +242,29 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
     }
 
     bool is_directly_in_front_or_is_rear_agent = false;
-    const double ego_half_width = ego_width * 0.5;
 
     double ego_init_s = std::numeric_limits<double>::max();
-    if (!ego_trajectory.empty()) {
-      const auto& ego_init_point = ego_trajectory[0];
-      const double center_x = ego_init_point.x +
-                              std::cos(ego_init_point.theta) * rear_axle_to_center;
-      const double center_y = ego_init_point.y +
-                              std::sin(ego_init_point.theta) * rear_axle_to_center;
-      double init_s = 0.0, init_l = 0.0;
-      frenet_coord->XYToSL(center_x, center_y, &init_s, &init_l);
-      ego_init_s = init_s;
-    }
+    const auto& ego_init_point = ego_trajectory[0];
+    const double ego_init_cos = std::cos(ego_init_point.theta);
+    const double ego_init_sin = std::sin(ego_init_point.theta);
+    const double center_x = ego_init_point.x + ego_init_cos * rear_axle_to_center;
+    const double center_y = ego_init_point.y + ego_init_sin * rear_axle_to_center;
+    double init_s = 0.0, init_l = 0.0;
+    frenet_coord->XYToSL(center_x, center_y, &init_s, &init_l);
+    ego_init_s = init_s;
 
     for (size_t i = 0; i < N && i < ref_traj_size; ++i) {
       const auto& ego_point = ego_trajectory[i];
 
-      double obs_x = obs_ref_traj.ref_x_vec(i);
-      double obs_y = obs_ref_traj.ref_y_vec(i);
-      double obs_theta = obs_ref_traj.ref_theta_vec(i);
-      double obs_point_vel = obs_ref_traj.ref_vel_vec(i);
+      const double obs_x = obs_ref_traj.ref_x_vec(i);
+      const double obs_y = obs_ref_traj.ref_y_vec(i);
+      const double obs_theta = obs_ref_traj.ref_theta_vec(i);
+      const double obs_point_vel = obs_ref_traj.ref_vel_vec(i);
 
-      const double center_x =
-          ego_point.x + std::cos(ego_point.theta) * rear_axle_to_center;
-      const double center_y =
-          ego_point.y + std::sin(ego_point.theta) * rear_axle_to_center;
+      const double ego_cos_theta = std::cos(ego_point.theta);
+      const double ego_sin_theta = std::sin(ego_point.theta);
+      const double center_x = ego_point.x + ego_cos_theta * rear_axle_to_center;
+      const double center_y = ego_point.y + ego_sin_theta * rear_axle_to_center;
 
       planning_math::Box2d ego_box(planning_math::Vec2d(center_x, center_y),
                                    ego_point.theta, ego_length, ego_width);

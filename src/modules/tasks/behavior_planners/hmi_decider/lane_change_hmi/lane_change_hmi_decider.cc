@@ -34,7 +34,9 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
       lane_borrow_decider_output.lane_borrow_state ==
           LaneBorrowStatus::kLaneBorrowDriving ||
       lane_borrow_decider_output.lane_borrow_state ==
-          LaneBorrowStatus::kLaneBorrowCrossing;
+          LaneBorrowStatus::kLaneBorrowCrossing ||
+      lane_borrow_decider_output.lane_borrow_state ==
+          LaneBorrowStatus::kLaneBorrowWaitting;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   bool turn_signal_from_ramp_direction =

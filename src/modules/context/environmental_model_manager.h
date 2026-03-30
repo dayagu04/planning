@@ -1,8 +1,6 @@
 #pragma once
 
-#include <deque>
 #include <memory>
-#include <unordered_map>
 #include <unordered_set>
 
 #include "agent/agent_manager.h"
@@ -40,21 +38,6 @@ enum FeedType {
   FEED_TYPE_MAX,
 };
 
-struct TmpPathPoint {
-    double x;
-    double y;
-    double theta;
-  };
-
-// enum TurnSwitchState {
-//   NONE = 0,
-//   LEFT_FIRMLY_TOUCH = 1,
-//   RIGHT_FIRMLY_TOUCH = 2,
-//   LEFT_LIGHTLY_TOUCH = 3,
-//   RIGHT_LIGHTLY_TOUCH = 4,
-//   ERROR = 5,
-// };
-
 class EnvironmentalModelManager {
  public:
   EnvironmentalModelManager();
@@ -65,11 +48,6 @@ class EnvironmentalModelManager {
   void setFaultcode(uint64_t faultcode);
   uint64_t getFaultcode();
   void SetConfig(const planning::common::SceneType scene_type);
-
-  //  private:
-  //   void SetPlanningPesult(const PlanningResult &ego_prediction_result,
-  //                            common::PlanningResult &pnc_result);
-  //   void ClearPlanningResult(common::PlanningResult &pnc_result);
 
  private:
   bool ego_state_update(double current_time, const LocalView& local_view);
@@ -106,12 +84,7 @@ class EnvironmentalModelManager {
   bool IsStatic(const PredictionObject& prediction_object);
 
  private:
-  void ProcessPredictionTrajectory(PredictionObject& prediction_object);
-  void DeleteOlderPredictionObjects();
-
   planning::framework::Session* session_ = nullptr;
-  //   std::shared_ptr<PlanningResultManager> planning_result_manager_ =
-  //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;
   std::shared_ptr<planning::ObstacleManager> obstacle_manager_ptr_ = nullptr;
   std::shared_ptr<planning::ParkingSlotManager> parking_slot_manager_ptr_ =
@@ -140,13 +113,8 @@ class EnvironmentalModelManager {
   int last_frame_turn_sinagl_ = 0;
   bool is_firmly_touch_ = false;
   int num_firmly_touch_ = 0;
-  // bool is_right_firmly_touch_ = false;
-  // int num_right_firmly_touch_ = 0;
   std::vector<int> history_lc_source_ = {0, 0};  // 0表示none，1表示ilc.
 
-  std::unordered_map<int32_t, std::deque<PredictionObject>>
-      historical_prediction_objects_;
-  std::unordered_set<int32_t> current_prediction_ids_;
 };
 
 }  // namespace planner

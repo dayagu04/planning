@@ -8,8 +8,10 @@
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_speed_adjust_cost.h"
 #include "st_graph/st_point.h"
+#include "st_graph/st_point_with_lateral.h"
 #include "task_interface/lane_change_utils.h"
 namespace planning {
+using planning::speed::STPointWithLateral;
 
 SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     QuarticPolynomial& poly, double arrived_t, double mid_t,
@@ -199,8 +201,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   double last_arrived_v = arrived_v_;
   double last_arrived_a = arrived_a_;
   double last_arrived_t = arrived_t_;
-  STPoint anchor_matched_upper_st_point;
-  STPoint anchor_matched_lower_st_point;
+  STPointWithLateral anchor_matched_upper_st_point;
+  STPointWithLateral anchor_matched_lower_st_point;
   const double anchor_arrived_t = cur_time;
   const double anchor_arrived_v =
       anchor_arrived_t - poly_.T() > 0

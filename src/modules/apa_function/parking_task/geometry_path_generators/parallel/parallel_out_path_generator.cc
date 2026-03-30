@@ -356,9 +356,10 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   const double slot_side_sgn = input_.tlane.slot_side_sgn;
 
   const double obs_pt_inside_y =
-      std::max(slot_side_sgn * input_.tlane.obs_pt_inside.y(),
-               slot_side_sgn * input_.tlane.pin_obs_far_y);
-  // ILOG_INFO<<"obs_pt_inside_y:"<<obs_pt_inside_y<<",pt_inside.y:"<<input_.tlane.obs_pt_inside.y()<<",pin_obs_far_y:"<<input_.tlane.pin_obs_far_y;
+      slot_side_sgn > 0
+          ? std::max(input_.tlane.obs_pt_inside.y(), input_.tlane.pin_obs_far_y)
+          : std::min(input_.tlane.obs_pt_inside.y(),
+                     input_.tlane.pin_obs_far_y);
   bool narrow_front_vacant = false;
   if (obs_pt_inside_y > half_slot_width * 0.5 - kEps &&
       obs_pt_inside_y < half_slot_width * 0.5 + kEps &&

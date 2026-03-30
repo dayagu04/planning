@@ -233,9 +233,15 @@ bool ComfortTarget::CheckJointDangerEmergencyBraking(double ego_v,
     return false;
   }
 
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  const auto* agent = agent_manager->GetAgent(agent_id);
+  if (agent == nullptr) {
+    return false;
+  }
+
   return CheckEmergencyCondition(ego_v, upper_bound_infos_[0].s,
-                                 upper_bound_infos_[0].v,
-                                 upper_bound_infos_[0].a);
+                                 agent->speed(), agent->accel_fusion());
 }
 
 void ComfortTarget::GenerateUpperBoundInfo() {

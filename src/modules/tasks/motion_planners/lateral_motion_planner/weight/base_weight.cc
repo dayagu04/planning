@@ -1906,6 +1906,10 @@ void BaseWeight::SetMotionPlanConcernedEndIndex(
     std::vector<double> xp_road_radius{50.0, 150.0, 400.0, 1000.0, 2000.0};
     valid_perception_range = planning::interp(
         target_road_radius_, xp_road_radius, config_.valid_perception_range);
+    std::vector<double> xp_v{15.0, 25.0};
+    std::vector<double> fp_ratio{1.0, 1.5};
+    double vel_ratio = planning::interp(ref_vel_, xp_v, fp_ratio);
+    valid_perception_range *= vel_ratio;
   }
   for (size_t i = weight_.proximal_index + 1; i < weight_.remotely_index; ++i) {
     planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),

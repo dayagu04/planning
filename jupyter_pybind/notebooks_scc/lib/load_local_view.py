@@ -82,6 +82,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ground_line_msg = find_nearest(bag_loader.fus_ground_line_msg, bag_time)
   planning_hmi_msg = find_nearest(bag_loader.planning_hmi_msg, bag_time)
   rdg_lane_lines_msg = find_nearest(bag_loader.rdg_lane_lines_msg, bag_time)
+  rdg_traffic_sign_msg = find_nearest(bag_loader.rdg_traffic_sign_msg, bag_time)
   fus_occ_obj_msg = find_nearest(bag_loader.fus_occ_objects_msg, bag_time)
   fus_parking_msg = find_nearest(bag_loader.fus_parking_msg, bag_time)
   fus_speed_bump_msg = find_nearest(bag_loader.fus_speed_bump_msg, bag_time)
@@ -111,6 +112,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       else:
         localization_timestamp = input_topic_timestamp.localization # main分支之前录得包
     prediction_timestamp = input_topic_timestamp.prediction
+    perception_tsr_timestamp = input_topic_timestamp.perception_tsr
     # vehicle_service_timestamp = input_topic_timestamp.vehicle_service
     # control_output_timestamp = input_topic_timestamp.control_output
 
@@ -192,6 +194,12 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         prediction_msg = prediction_msg_tmp
       else:
         print("match prediction_msg fail")
+
+      perception_tsr_tmp = find(bag_loader.rdg_traffic_sign_msg, perception_tsr_timestamp)
+      if perception_tsr_tmp != None:
+        rdg_traffic_sign_msg = perception_tsr_tmp
+      else:
+        print("match rdg_traffic_sign_msg fail")
 
     soc_state_msg_tmp = find(bag_loader.soc_state_msg, soc_state_timestamp)
     if soc_state_msg_tmp != None:
@@ -731,7 +739,32 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       except:
         print("vis topo_msg error")
 
-
+    # load traffic light
+    if bag_loader.rdg_traffic_sign_msg['enable'] == True:
+      traffic_lights = load_traffic_lights(rdg_traffic_sign_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+      data_tfl_dict = {
+        0:local_view_data['traffic_light_data_0'],
+        1:local_view_data['traffic_light_data_1'],
+        2:local_view_data['traffic_light_data_2'],
+        3:local_view_data['traffic_light_data_3'],
+        4:local_view_data['traffic_light_data_4'],
+        5:local_view_data['traffic_light_data_5'],
+        6:local_view_data['traffic_light_data_6'],
+        7:local_view_data['traffic_light_data_7'],
+        8:local_view_data['traffic_light_data_8'],
+        9:local_view_data['traffic_light_data_9']
+      }
+      for i in range(10):
+        try:
+          data_tfl = data_tfl_dict[i]
+          data_tfl.data.update({
+            'tfl_loc_x_{}'.format(i): traffic_lights[i]['tfl_loc_x'],
+            'tfl_loc_y_{}'.format(i): traffic_lights[i]['tfl_loc_y'],
+            'tfl_color_{}'.format(i): traffic_lights[i]['tfl_color'],
+            'tfl_type_{}'.format(i): traffic_lights[i]['tfl_type']
+          })
+        except:
+          pass
 
     # 加载rdg车道线
     if is_vis_rdg_line and bag_loader.rdg_lane_lines_msg['enable'] == True:
@@ -2348,6 +2381,16 @@ def load_local_view_figure():
   road_type_analysis_result_14 = ColumnDataSource(data = {'ref_path_x': [],
                                                        'ref_path_y': [],
                                                        })
+  traffic_light_data_0 = ColumnDataSource(data = {'tfl_loc_x_0':[], 'tfl_loc_y_0': [],  'tfl_color_0': [], 'tfl_type_0': []})
+  traffic_light_data_1 = ColumnDataSource(data = {'tfl_loc_x_1':[], 'tfl_loc_y_1': [],  'tfl_color_1': [], 'tfl_type_1': []})
+  traffic_light_data_2 = ColumnDataSource(data = {'tfl_loc_x_2':[], 'tfl_loc_y_2': [],  'tfl_color_2': [], 'tfl_type_2': []})
+  traffic_light_data_3 = ColumnDataSource(data = {'tfl_loc_x_3':[], 'tfl_loc_y_3': [],  'tfl_color_3': [], 'tfl_type_3': []})
+  traffic_light_data_4 = ColumnDataSource(data = {'tfl_loc_x_4':[], 'tfl_loc_y_4': [],  'tfl_color_4': [], 'tfl_type_4': []})
+  traffic_light_data_5 = ColumnDataSource(data = {'tfl_loc_x_5':[], 'tfl_loc_y_5': [],  'tfl_color_5': [], 'tfl_type_5': []})
+  traffic_light_data_6 = ColumnDataSource(data = {'tfl_loc_x_6':[], 'tfl_loc_y_6': [],  'tfl_color_6': [], 'tfl_type_6': []})
+  traffic_light_data_7 = ColumnDataSource(data = {'tfl_loc_x_7':[], 'tfl_loc_y_7': [],  'tfl_color_7': [], 'tfl_type_7': []})
+  traffic_light_data_8 = ColumnDataSource(data = {'tfl_loc_x_8':[], 'tfl_loc_y_8': [],  'tfl_color_8': [], 'tfl_type_8': []})
+  traffic_light_data_9 = ColumnDataSource(data = {'tfl_loc_x_9':[], 'tfl_loc_y_9': [],  'tfl_color_9': [], 'tfl_type_9': []})
 
   data_fix_lane = ColumnDataSource(data = {'fix_lane_y':[], 'fix_lane_x':[]})
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
@@ -2772,7 +2815,17 @@ def load_local_view_figure():
                      'sampled_points_data_source_xy':sampled_points_data_source_xy,
                      'fined_path_xy':fined_path_xy,
                      'data_ego_motion_sim_ref_traj' : data_ego_motion_sim_ref_traj,
-                     'data_nsa_end_point': data_nsa_end_point
+                     'data_nsa_end_point': data_nsa_end_point,
+                     'traffic_light_data_0': traffic_light_data_0,
+                     'traffic_light_data_1': traffic_light_data_1,
+                     'traffic_light_data_2': traffic_light_data_2,
+                     'traffic_light_data_3': traffic_light_data_3,
+                     'traffic_light_data_4': traffic_light_data_4,
+                     'traffic_light_data_5': traffic_light_data_5,
+                     'traffic_light_data_6': traffic_light_data_6,
+                     'traffic_light_data_7': traffic_light_data_7,
+                     'traffic_light_data_8': traffic_light_data_8,
+                     'traffic_light_data_9': traffic_light_data_9
                      }
 
   if is_vis_map:
@@ -2958,6 +3011,28 @@ def load_local_view_figure():
     fig1.text('lane_mark_loc_y_2', 'lane_mark_loc_x_2', text = 'lane_mark_2' ,source = lane_mark_data_2, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
     fig1.text('lane_mark_loc_y_3', 'lane_mark_loc_x_3', text = 'lane_mark_3' ,source = lane_mark_data_3, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
     fig1.text('lane_mark_loc_y_4', 'lane_mark_loc_x_4', text = 'lane_mark_4' ,source = lane_mark_data_4, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
+
+  fig1.circle('tfl_loc_y_0', 'tfl_loc_x_0', source = traffic_light_data_0, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = 'tfl_color_0', fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_1', 'tfl_loc_x_1', source = traffic_light_data_1, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_1", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_2', 'tfl_loc_x_2', source = traffic_light_data_2, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_2", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_3', 'tfl_loc_x_3', source = traffic_light_data_3, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_3", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_4', 'tfl_loc_x_4', source = traffic_light_data_4, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_4", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_5', 'tfl_loc_x_5', source = traffic_light_data_5, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_5", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_6', 'tfl_loc_x_6', source = traffic_light_data_6, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_6", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_7', 'tfl_loc_x_7', source = traffic_light_data_7, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_7", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_8', 'tfl_loc_x_8', source = traffic_light_data_8, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_8", fill_alpha = 1, legend_label = 'traffic_light')
+  fig1.circle('tfl_loc_y_9', 'tfl_loc_x_9', source = traffic_light_data_9, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_9", fill_alpha = 1, legend_label = 'traffic_light')
+
+  fig1.text('tfl_loc_y_0', 'tfl_loc_x_0', text = 'tfl_type_0', source = traffic_light_data_0, text_color = 'black', text_align = "left", text_font_size = '14pt', legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_1', 'tfl_loc_x_1', text = 'tfl_type_1', source = traffic_light_data_1, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_2', 'tfl_loc_x_2', text = 'tfl_type_2', source = traffic_light_data_2, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_3', 'tfl_loc_x_3', text = 'tfl_type_3', source = traffic_light_data_3, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_4', 'tfl_loc_x_4', text = 'tfl_type_4', source = traffic_light_data_4, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_5', 'tfl_loc_x_5', text = 'tfl_type_5', source = traffic_light_data_5, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_6', 'tfl_loc_x_6', text = 'tfl_type_6', source = traffic_light_data_6, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_7', 'tfl_loc_x_7', text = 'tfl_type_7', source = traffic_light_data_7, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_8', 'tfl_loc_x_8', text = 'tfl_type_8', source = traffic_light_data_8, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+  fig1.text('tfl_loc_y_9', 'tfl_loc_x_9', text = 'tfl_type_9', source = traffic_light_data_9, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
 
   if is_vis_snrd:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd',visible = False)

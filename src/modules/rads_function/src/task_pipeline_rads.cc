@@ -30,8 +30,8 @@ TaskPipelineRADS::TaskPipelineRADS(
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
       std::make_unique<GapSelectorDecider>(config_builder, session);
-  hpp_general_lateral_decider_ =
-      std::make_unique<HppGeneralLateralDecider>(config_builder, session);
+  rads_general_lateral_decider_ =
+      std::make_unique<RADSGeneralLateralDecider>(config_builder, session);
   traffic_light_decider_ =
       std::make_unique<TrafficLightDecider>(config_builder, session);
   lateral_motion_planner_ =
@@ -148,9 +148,9 @@ bool TaskPipelineRADS::Run() {
     return false;
   }
 
-  ok = hpp_general_lateral_decider_->Execute();
+  ok = rads_general_lateral_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(hpp_general_lateral_decider_->Name());
+    AddErrorInfo(rads_general_lateral_decider_->Name());
     return false;
   }
 

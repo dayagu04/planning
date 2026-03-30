@@ -30,6 +30,7 @@ def init():  # 初始化
     'is_vis_nsa_line': False,
     'is_vis_prediction': True,
     'is_vis_fus_obj': True,
+    'is_vis_lane_topo': True,
   }
 
 
@@ -106,7 +107,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_groundline'] = True
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
-    global_dict['is_vis_fus_obj'] = True 
+    global_dict['is_vis_fus_obj'] = True
     global_dict['is_vis_occ_obj'] = True
     global_dict['is_vis_speed_bump'] = True
     global_dict['is_vis_rads_path'] = True
