@@ -1330,6 +1330,32 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   hard_bounds_.resize(ref_traj_points_.size());
   second_soft_bounds_.resize(ref_traj_points_.size());
   first_soft_bounds_.resize(ref_traj_points_.size());
+  double max_care_lon_area_road_border = 0;
+
+  // buffer衰减率
+  double uncertain_decrease_slope = 0.2;
+
+  double uncertain_decrease_buffer = 0.0;
+
+  // buffer衰减率的变化率
+  const double change_rate = 0.5;
+
+  double compensation_buffer = 0.0;
+
+  const std::vector<double> curv_bp{50, 150, 400, 600};
+  const std::vector<double> extra_uncertain_decrease_slopes{2.5, 1, 0.5, 0.0};
+
+  double extra_uncertain_decrease_slope = 0.0;
+  if (ref_curve_info_.curve_type ==
+      ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+    extra_uncertain_decrease_slope =
+        interp(ref_curve_info_.min_radius, config_.curv_bp, extra_uncertain_decrease_slopes);
+  }
+  last_uncertain_decrease_slope_ = clip(extra_uncertain_decrease_slope,
+                                  last_uncertain_decrease_slope_ + change_rate,
+                                  last_uncertain_decrease_slope_ - change_rate);
+  uncertain_decrease_slope += last_uncertain_decrease_slope_;
+
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-init_dist_to_bound, init_dist_to_bound};
     Bound hard_bound_road{-init_dist_to_bound, init_dist_to_bound};
@@ -1350,6 +1376,11 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
              ego_frenet_state_.planning_init_point().frenet_state.s <
          config_.care_lon_area_road_border) &&
         map_obstacle_decision.tp.t < config_.max_care_time_for_roadborder) {
+
+      if (map_obstacle_decision.tp.t > config_.decrease_time_for_roadborder) {
+        uncertain_decrease_buffer = (map_obstacle_decision.tp.t - config_.decrease_time_for_roadborder) *
+                           uncertain_decrease_slope;
+      }
       hard_bound_road.upper =
           std::fmin(std::max(config_.hard_min_distance_road2center,
                              ref_path_points_[i].distance_to_left_road_border -
@@ -1364,11 +1395,11 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
           hard_bound_road.lower);
       soft_bound_road.upper =
           std::fmin(std::max(config_.soft_min_distance_road2center,
-                             hard_bound_road.upper - left_road_extra_buffer),
+                             hard_bound_road.upper - left_road_extra_buffer + uncertain_decrease_buffer),
                     soft_bound_road.upper);
       soft_bound_road.lower =
           std::fmax(std::min(-config_.soft_min_distance_road2center,
-                             hard_bound_road.lower + right_road_extra_buffer),
+                             hard_bound_road.lower + right_road_extra_buffer - uncertain_decrease_buffer),
                     soft_bound_road.lower);
     }
 
