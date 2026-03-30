@@ -581,13 +581,19 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
           SPLIT_SCENE &&
       lc_request_source == MAP_REQUEST;
 
+  static int propose_cnt = 0;
+  if (curr_state == kLaneChangePropose) {
+    propose_cnt++;
+  } else {
+    propose_cnt = 0;
+  }
+
   if (is_nearing_ramp_mlc) {
     const auto& ego_seq = route_info_output.ego_seq;
     const auto& feasible_lane = route_info_output.feasible_lane_sequence;
 
     // 判断 ego_seq 是否在 feasible_lane 中，如果不在，计算最小 gap
     bool is_ego_seq_in_feasible = false;
-    int min_gap = 0;
     for (const int lane_seq : feasible_lane) {
       if (lane_seq == ego_seq) {
         is_ego_seq_in_feasible = true;
@@ -597,14 +603,15 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
 
     if (!is_ego_seq_in_feasible && !feasible_lane.empty()) {
       // 计算 ego_seq 与 feasible_lane 中最近车道的差距
-      int min_diff = std::abs(ego_seq - feasible_lane.front());
-      for (const int lane_seq : feasible_lane) {
-        int diff = std::abs(ego_seq - lane_seq);
-        if (diff < min_diff) {
-          min_diff = diff;
-        }
-      }
-      min_gap = min_diff;
+      int min_gap = 1;
+      // int min_diff = std::abs(ego_seq - feasible_lane.front());
+      // for (const int lane_seq : feasible_lane) {
+      //   int diff = std::abs(ego_seq - lane_seq);
+      //   if (diff < min_diff) {
+      //     min_diff = diff;
+      //   }
+      // }
+      // min_gap = min_diff;
 
       // 当前变一次道的提醒距离为高架为100m，高速200m；
       double signal_lc_dis = 0.0;
@@ -613,13 +620,21 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
       } else if (route_info_output.is_ego_on_expressway_hmi) {
         signal_lc_dis = 200.0;
       }
-
+      
       const double pre_warning_dis = min_gap * signal_lc_dis;
+      const int propose_cnt_threshold = 30;
 
       if (route_info_output.mlc_decider_scene_type_info
               .dis_to_link_topo_change_point < pre_warning_dis) {
+        bool is_triggle_warning_on_propose =
+            curr_state == kLaneChangePropose &&
+            propose_cnt > propose_cnt_threshold &&
+            (ad_info.status_update_reason ==
+                 iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH ||
+             ad_info.status_update_reason ==
+                 iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE);
         if ((curr_state == kLaneChangeHold ||
-             curr_state == kLaneChangePropose ||
+             is_triggle_warning_on_propose ||
              curr_state == kLaneChangeCancel)) {
           planning_output.planning_request.take_over_req_level =
               iflyauto::REQUEST_LEVEL_WARRING;
