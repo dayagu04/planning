@@ -32,6 +32,9 @@ void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
   }
 
   if (!CalculateRouteInfo()) {
+    if (route_info_output_.is_missed_navi_route) {
+      route_info_output.is_missed_navi_route = true;
+    }
     return;
   }
 
@@ -366,7 +369,7 @@ bool LDRouteInfoStrategy::IsMissedNaviRoute() const {
       // 由于自车位置与地图误差，有可能在这个条件下，也是走错的情况，后续根据测试情况继续完善
     }
   } else if (split_dir == RAMP_ON_RIGHT) {
-    const double ego_map_lat_err = 1.5;
+    const double ego_map_lat_err = 1.2;
     if (ego_pos_result.is_left_of_link1 &&
         ego_pos_result.dist_to_link1 > ego_map_lat_err) {
       return true;
