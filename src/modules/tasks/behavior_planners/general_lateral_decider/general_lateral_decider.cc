@@ -1278,8 +1278,40 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
 void GeneralLateralDecider::UpdateDistanceToRoadBorder() {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+
+  // 预处理：获取路沿边界并转换到frenet坐标系（只做一次）
+  std::vector<std::pair<LineSegment2d, bool>> road_segments_frenet;
+  if (frenet_coord != nullptr && virtual_lane_manager != nullptr) {
+    const auto& road_boundaries = virtual_lane_manager->GetRoadboundary();
+    for (const auto& boundary_segments : road_boundaries) {
+      for (const auto& segment : boundary_segments) {
+        const Point2D& pt1 = segment.first;
+        const Point2D& pt2 = segment.second;
+
+        // 将笛卡尔坐标转换为frenet坐标
+        Point2D pt1_sl, pt2_sl;
+        if (frenet_coord->XYToSL(pt1, pt1_sl) &&
+            frenet_coord->XYToSL(pt2, pt2_sl)) {
+          const Vec2d seg_start(pt1_sl.x, pt1_sl.y);
+          const Vec2d seg_end(pt2_sl.x, pt2_sl.y);
+          const LineSegment2d road_segment(seg_start, seg_end);
+
+          // 判断是左侧还是右侧路沿
+          const double seg_l_avg = (pt1_sl.y + pt2_sl.y) * 0.5;
+          const bool is_left = (seg_l_avg > 0.0);
+
+          road_segments_frenet.emplace_back(road_segment, is_left);
+        }
+      }
+    }
+  }
+
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    SampleRoadDistanceInfo(ref_traj_points_[i].s, ref_path_points_[i]);
+    SampleRoadDistanceInfo(ref_traj_points_[i].s, ref_path_points_[i],
+                          road_segments_frenet);
     // distance to lane is unaccurate near end of the ref line
     // need to avoid the intersection of lane bound
     size_t lower_truncation_idx = 0;
@@ -5426,30 +5458,60 @@ void GeneralLateralDecider::GenerateEnuReferenceTheta(
 }
 
 void GeneralLateralDecider::SampleRoadDistanceInfo(
-    const double s_target, ReferencePathPoint& sample_path_point) {
-  const double cut_length = config_.sample_step;
-  ReferencePathPoint refpath_pt{};
+    const double s_target, ReferencePathPoint& sample_path_point,
+    const std::vector<std::pair<LineSegment2d, bool>>& road_segments_frenet) {
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
-  for (double s = s_target - vehicle_param.rear_edge_to_rear_axle;
-       s < s_target + vehicle_param.front_edge_to_rear_axle +
-               config_.sample_forward_distance;
-       s += cut_length) {
-    if (reference_path_ptr_->get_reference_point_by_lon(s, refpath_pt)) {
-      sample_path_point.distance_to_left_lane_border =
-          std::fmin(refpath_pt.distance_to_left_lane_border,
-                    sample_path_point.distance_to_left_lane_border);
-      sample_path_point.distance_to_right_lane_border =
-          std::fmin(refpath_pt.distance_to_right_lane_border,
-                    sample_path_point.distance_to_right_lane_border);
-      sample_path_point.distance_to_left_road_border =
-          std::fmin(refpath_pt.distance_to_left_road_border,
-                    sample_path_point.distance_to_left_road_border);
-      sample_path_point.distance_to_right_road_border =
-          std::fmin(refpath_pt.distance_to_right_road_border,
-                    sample_path_point.distance_to_right_road_border);
+  if (road_segments_frenet.empty()) {
+    return;
+  }
+
+  // 构建自车膨胀区域的polygon（在frenet坐标系下）
+  const double s_start = s_target - vehicle_param.rear_edge_to_rear_axle;
+  const double s_end = s_target + vehicle_param.front_edge_to_rear_axle +
+                       config_.sample_forward_distance;
+
+  const auto ego_center = Vec2d((s_start + s_end) * 0.5, 0.0);
+  const double ego_length = s_end - s_start;
+  const auto ego_box = Box2d(ego_center, 0.0, ego_length, vehicle_param.max_width);
+  const auto ego_polygon = Polygon2d(ego_box);
+
+  // 初始化最小距离
+  double min_left_road_dist = std::numeric_limits<double>::max();
+  double min_right_road_dist = std::numeric_limits<double>::max();
+
+  // 遍历所有预处理好的路沿线段，计算polygon到线段的最小距离
+  for (const auto& segment_info : road_segments_frenet) {
+    const LineSegment2d& road_segment = segment_info.first;
+    const bool is_left = segment_info.second;
+
+    // 只处理与自车膨胀区域纵向重叠的路沿线段
+    const double seg_s_min = std::min(road_segment.start().x(), road_segment.end().x());
+    const double seg_s_max = std::max(road_segment.start().x(), road_segment.end().x());
+    if (seg_s_max < s_start - 1.0 || seg_s_min > s_end + 1.0) {
+      continue;
     }
+
+    // 计算polygon到线段的距离
+    const double dist = ego_polygon.DistanceTo(road_segment);
+
+    // 更新对应侧的最小距离
+    if (is_left) {
+      min_left_road_dist = std::fmin(min_left_road_dist, dist);
+    } else {
+      min_right_road_dist = std::fmin(min_right_road_dist, dist);
+    }
+  }
+
+  // 更新结果（只有当计算出有效值时才更新）
+  if (min_left_road_dist < std::numeric_limits<double>::max()) {
+    sample_path_point.distance_to_left_road_border =
+        std::fmin(sample_path_point.distance_to_left_road_border, min_left_road_dist);
+  }
+  if (min_right_road_dist < std::numeric_limits<double>::max()) {
+    sample_path_point.distance_to_right_road_border =
+        std::fmin(sample_path_point.distance_to_right_road_border, min_right_road_dist);
   }
 }
 
