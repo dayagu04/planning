@@ -298,7 +298,7 @@ double LongitudinalAStar::CalcS(const double t) const {
 
 double LongitudinalAStar::CalcV(const double t) const {
   if (t < kZeroEpsilon) {
-    return 0.0;
+    return astar_traj_[0].v;
   }
   for (int i = 0; i < astar_traj_.size(); ++i) {
     if (t < astar_traj_[i].t) {

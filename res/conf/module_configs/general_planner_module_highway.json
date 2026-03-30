@@ -2000,7 +2000,8 @@
     "leading_safe_max_dec":2.0,
     "leading_safe_overstep_gain":4.0,
     "leading_safe_overstep_buffer":3.0,
-    "is_forced_emergency_scene": false
+    "is_forced_emergency_scene": false,
+    "sample_st_limit_lat_offset":2.8
   },
   "sample_astar_traj":{
     "time_step_near": 1,
