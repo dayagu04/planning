@@ -1950,7 +1950,7 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
       continue;
     }
 
-    bool is_filter_split = true;
+    bool is_filter_split = false;
     for (const auto& suc_link_id: split_link->successor_link_ids()) {
       if (suc_link_id == split_next_link->id()) {
         continue;
@@ -1963,20 +1963,16 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
 
       std::vector<iflymapdata::sdpro::Lane> exit_lane_vec;
       if (!CalculateSplitLinkExitLane(split_link, out_link, exit_lane_vec)) {
-        continue;
-      }
-
-      for (const auto& lane: exit_lane_vec) {
-        if (!IsNeedFilterSplit(&lane)) {
-          is_filter_split = false;
-          break;
-        }
-      }
-
-      if (!is_filter_split) {
         break;
       }
 
+      for (const auto& lane: exit_lane_vec) {
+        if (IsNeedFilterSplit(&lane)) {
+          is_filter_split = true;
+        } else {
+          is_filter_split = false;
+        }
+      }
     }
 
     if (!is_filter_split) {
