@@ -824,8 +824,10 @@ bool LaneReferencePath::IsObstacleOn(
   double distance_to_right_line =
       frenet_obstacle->s_max_l().x + lane_width / 2.0;
   // 扩张自车道上的锥桶，使之能被绑定在相邻车道上
-  if (frenet_obstacle->type() ==
-          iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
+  if ((frenet_obstacle->type() ==
+          iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+       frenet_obstacle->type() ==
+          iflyauto::ObjectType::OBJECT_TYPE_CYLINDER_BARRIER) &&
       std::abs(frenet_obstacle->l_relative_to_ego()) < lane_width) {
     distance_to_left_line = distance_to_left_line - 1.0;
     distance_to_right_line = distance_to_right_line + 1.0;
@@ -839,7 +841,9 @@ bool LaneReferencePath::IsObstacleOn(
     std::array<double, 5> xp_rel_s{-30, -20, 20, 30, 60};
     std::array<double, 5> fp_l2{0.45, 0.2, 0.3, 0.45, 0.6};
     if (frenet_obstacle->type() ==
-        iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE) {
+            iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+        frenet_obstacle->type() ==
+            iflyauto::ObjectType::OBJECT_TYPE_CYLINDER_BARRIER) {
       check_offset = interp(frenet_obstacle->rel_s(), xp_rel_s, fp_l2);
     } else {
       check_offset = interp(frenet_obstacle->rel_s(), xp_rel_s, fp_l2) +

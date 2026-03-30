@@ -489,7 +489,8 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
     perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
     if (perception_polygon_.area() < 0.01 &&
         type_ != iflyauto::OBJECT_TYPE_OCC_COLUMN &&
-        type_ != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+        type_ != iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
+        type_ != iflyauto::OBJECT_TYPE_CYLINDER_BARRIER) {
       valid_ = false;
     }
   } else {

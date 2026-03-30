@@ -152,7 +152,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   if(function_info.function_mode() == common::DrivingFunctionInfo::NOA){
     lane_borrow_decider_output_.lane_borrow_failed_reason = NOA_MODE;
     return false;
-  } 
+  }
   intersection_state_ = virtual_lane_manager->GetIntersectionState();
   distance_to_stop_line_ = virtual_lane_manager->GetEgoDistanceToStopline();
   distance_to_cross_walk_ = virtual_lane_manager->GetEgoDistanceToCrosswalk();
@@ -1119,8 +1119,10 @@ bool LaneBorrowDecider::ObstacleDecision() {
               });
   }
   const std::unordered_set<int> valid_obstacle_types = {
-      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE,      // 锥桶
-      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN,  // 临时指示牌
+      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE,          // 锥桶
+      iflyauto::ObjectType::OBJECT_TYPE_CYLINDER_BARRIER,      // 交通立柱
+      iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN,      // 临时指示牌
+      // iflyauto::ObjectType::OBJECT_TYPE_CONSTRUCTION_SIGNS,    // 施工牌
       iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER,  // 水马
       iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL};
   is_facility_ = false;

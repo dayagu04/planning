@@ -66,6 +66,8 @@ enum class AgentType {
   OCC_VEGETATION = 61,        // 植被
   OCC_DRIVEABLE_AREA = 62,    // 可行驶区域
   OCC_NON_DRIVEABLE_AREA = 63, // 不可行驶区域
+  CYLINDER_BARRIER = 64,       // 立柱
+  CONSTRUCTION_SIGNS = 65,     // 施工牌
 };
 
 struct AgentStInfo {
