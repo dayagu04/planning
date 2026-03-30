@@ -247,5 +247,5 @@ message PlanningDebugInfo {
   optional HppLateralObstacleDeciderResult hpp_lateral_obstacle_decider_result = 61;
   repeated KeyValue key_values = 62;
   optional HppSpeedLimitDeciderDebug  hpp_speed_limit_decider_debug  = 63;
-  optional TurnstileLongitudinalDebug turnstile_longitudinal_debug = 62;
+  optional TurnstileLongitudinalDebug turnstile_longitudinal_debug = 64;
 }
