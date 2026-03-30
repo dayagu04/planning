@@ -727,7 +727,7 @@ class LoadRosbag:
                           "ego_front_edge", "ego_rear_edge",
                           "front_agent_front_edge", "front_agent_rear_edge",
                           "rear_agent_front_edge", "rear_agent_rear_edge",
-                          "rear_agent_longitudinal_label", "lane_change_reason",
+                         "rear_agent_longitudinal_label", "rear_agent_confidence", "lane_change_reason",
                           "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene',
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
@@ -849,11 +849,17 @@ class LoadRosbag:
                          "meb_od_obs_x_vector","meb_od_obs_y_vector","meb_occ_obs_x_vector","meb_occ_obs_y_vector","meb_traj_x_vector","meb_traj_y_vector",
                          "meb_point_x_vector","meb_point_y_vector","meb_traj_dphi_vector","uss_distance_vec","uss_acc_vec_","meb_uss_obs_x_vector","meb_uss_obs_y_vector",
                          ]
-      # 安全检查相关的向量数据
-      json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",
-                           "agent_vel_vec", "ego_vel_vec", "rear_distance_vec"]
+      # 安全检查相关的向量数据（前车）
+      json_vector_list += ["front_box_longitudinal_buff_vec", "front_distance_vec",
+                           "front_agent_vel_vec", "front_actual_gap_vec"]
+      # 安全检查相关的向量数据（后车）
+      json_vector_list += ["rear_box_longitudinal_buff_vec", "rear_box_ttc_vec",
+                           "rear_distance_vec", "rear_agent_vel_vec",
+                           "rear_actual_gap_vec"]
+      # 自车速度（前后车共用）
+      json_vector_list += ["ego_vel_vec"]
       # 安全检查相关的标量数据
-      json_value_list += ["lc_ego_press_line_ratio"]
+      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

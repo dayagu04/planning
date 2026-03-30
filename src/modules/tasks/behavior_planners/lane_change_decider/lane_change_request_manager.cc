@@ -2,7 +2,6 @@
 
 #include "adas_function/mrc_condition.h"
 #include "basic_types.pb.h"
-#include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"

@@ -24,8 +24,8 @@ JointDecisionInputBuilder::JointDecisionInputBuilder(
   comfort_params_.v0 = 33.5;
   comfort_params_.s0 = 2.5;
   comfort_params_.T = lc_decision_config_.lc_thw;
-  comfort_params_.a = 2.0;
-  comfort_params_.b_max = 2.0;
+  comfort_params_.a = 2.5;
+  comfort_params_.b_max = 3.0;
   comfort_params_.b = 1.0;
   comfort_params_.b_hard = 4.0;
   comfort_params_.delta = 4.0;
@@ -276,7 +276,7 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   ref_trajectory_[0].theta = current_theta;
   ref_trajectory_[0].delta = current_delta;
 
-  double front_s = 200.0;
+  double front_s = 250.0;
   double front_vel = v0;
   double front_acc = 0.0;
 
