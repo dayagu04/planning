@@ -1437,15 +1437,15 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
         transition_info_.lane_change_direction);
   lane_change_decider_output.ego_press_line_ratio = ego_press_line_ratio;
   JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 更新压线率
-  bool is_warning_collision_risk = 
-  transition_info_.lane_change_status == kLaneChangeHold || 
-  transition_info_.lane_change_status == kLaneChangeCancel||
-  (transition_info_.lane_change_status == kLaneChangeExecution && lc_back_cnt_ > 0);
-  if(is_warning_collision_risk) {
-    lane_change_decider_output.is_collision_risk = true;
-  } else {
-    lane_change_decider_output.is_collision_risk = false;
-  }
+  // bool is_warning_collision_risk = 
+  // transition_info_.lane_change_status == kLaneChangeHold || 
+  // transition_info_.lane_change_status == kLaneChangeCancel||
+  // (transition_info_.lane_change_status == kLaneChangeExecution && lc_back_cnt_ > 0);
+  // if(is_warning_collision_risk) {
+  //   lane_change_decider_output.is_collision_risk = true;
+  // } else {
+  //   lane_change_decider_output.is_collision_risk = false;
+  // }
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const planning_data::DynamicAgentNode* const agent) {
