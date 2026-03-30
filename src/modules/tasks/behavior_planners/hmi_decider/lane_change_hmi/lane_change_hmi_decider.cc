@@ -290,7 +290,6 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
   static int proposal_time_out_cnt = kHmiSendMsgCntThreshold;
   static int manual_cancle_cnt = kHmiSendMsgCntThreshold;
-  auto& planning_output = session_->mutable_planning_context()->mutable_planning_output();
   if (int_request_cancel_reason == MANUAL_CANCEL) {
     manual_cancle_cnt = 1;
   }
@@ -318,9 +317,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
              lc_back_reason == "front view back" ||
              lc_back_reason == "but back cnt below threshold") {
     ad_info.status_update_reason = 
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
-    planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_WARRING;
-    planning_output.planning_request.request_reason = iflyauto::REQUEST_REASON_LANE_CHANGE_RISK;    
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;   
     iflyauto::ObstacleInfo obstacle;
     obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
     ad_info.obstacle_info[0] = obstacle;
@@ -543,14 +540,14 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     landing_point.is_avaliable = false;
   }
   ad_info.landing_point = landing_point;
-  //接管请求
-  // auto& planning_output = session_->mutable_planning_context()->mutable_planning_output();
-  // if(lane_change_decider_output.is_collision_risk &&
-  //    (curr_state == kLaneChangeHold ||
-  //     curr_state == kLaneChangeCancel)) {
-  //   planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_WARRING;
-  //   planning_output.planning_request.request_reason = iflyauto::REQUEST_REASON_LANE_CHANGE_RISK;
-  // }
+  // 接管请求
+  auto& planning_output = session_->mutable_planning_context()->mutable_planning_output();
+  if (ad_info.status_update_reason ==
+          iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH &&
+      (curr_state == kLaneChangeHold || curr_state == kLaneChangeCancel)) {
+    planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_WARRING;
+    planning_output.planning_request.request_reason = iflyauto::REQUEST_REASON_LANE_CHANGE_RISK;
+  }
   if (lane_change_decider_output.is_hard_to_merge &&
      (curr_state == kLaneChangeHold ||
       curr_state == kLaneChangePropose)) {
