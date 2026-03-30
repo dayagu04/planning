@@ -4374,10 +4374,10 @@ bool LaneChangeStateMachineManager::
                             : box_longitudinal_buff * (1.0 - press_ratio);
       // 最小值
       double agent_kph = agent_traj[i].v * 3.6;
-      const double min_space = interp(agent_kph, xp, fp);
-      // 状态回执压在最小值除防止跳变
+      double min_space = interp(agent_kph, xp, fp);
+      // 防止在最小值跳变
+      min_space = is_executing ? min_space * 1.0 : min_space * 1.25;
       box_longitudinal_buff = std::max(box_longitudinal_buff, min_space);
-      box_longitudinal_buff = is_executing ? box_longitudinal_buff * 1.25 : box_longitudinal_buff;
       // 两类特殊pass
       if (ego_press_line_ratio > 0.3 && is_side_clear_ && is_executing) {
         break;  // 已经压线过多，侧方无车不返回
