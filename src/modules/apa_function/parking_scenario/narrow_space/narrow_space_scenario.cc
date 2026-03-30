@@ -360,9 +360,13 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 
 const double NarrowSpaceScenario::CalRealTimeBrakeDist() {
   CalObsRemainDistParams params;
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const auto state_machine_ptr = apa_world_ptr_->GetStateMachineManagerPtr();
+
+  if ((state_machine_ptr->IsParkOutStatus() ||
+       state_machine_ptr->GetStateMachine() ==
+           ApaStateMachine::ACTIVE_IN_CAR_FRONT) &&
       ego_info_under_slot.slot_occupied_ratio > 0.5) {
     params.use_obs_height_method = UseObsHeightMethod::HIGH_LOW;
     return CalRemainDistFromObs(params);
