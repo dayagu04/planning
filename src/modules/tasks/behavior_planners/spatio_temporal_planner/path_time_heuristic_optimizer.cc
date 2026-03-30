@@ -258,7 +258,8 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
   if (!st_dp_is_sucess_) {
     return;
   }
-  const int k_ego_traj_points_nums = 16;
+  constexpr int k_dynamic_ego_traj_points_nums = 16;
+  constexpr int k_static_ego_traj_points_nums = 26;
   auto &lateral_obstacle_decision =
       session_->mutable_planning_context()
           ->mutable_lateral_obstacle_decider_output()
@@ -279,8 +280,9 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
     //     iter_history->second.cut_in_or_cross) {
     //   continue;
     // }
+    auto ego_traj_points_nums = agent.is_static ? k_static_ego_traj_points_nums : k_dynamic_ego_traj_points_nums;
     if (iter != lateral_obstacle_decision.end()) {
-      for (int i = 0; i < k_ego_traj_points_nums; i++) {
+      for (int i = 0; i < ego_traj_points_nums; i++) {
         auto it = agent.agent_boxs_set.find(i);
         if (it != agent.agent_boxs_set.end()) {
           agent_box = it->second;
