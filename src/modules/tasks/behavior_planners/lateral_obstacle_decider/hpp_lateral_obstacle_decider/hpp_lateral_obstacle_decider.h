@@ -11,6 +11,7 @@
 #include "tasks/task.h"
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "utils/kd_path.h"
+#include "hpp_lateral_obstacle_decider_result.pb.h"
 
 namespace planning {
 struct ObstacleConsistencyInfo {

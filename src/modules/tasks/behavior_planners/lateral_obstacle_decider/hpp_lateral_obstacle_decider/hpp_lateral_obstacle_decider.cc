@@ -721,40 +721,52 @@ void HppLateralObstacleDecider::SerializeStaticObsDecideResultToDebugInfo(
       cluster.frenet_boundary.obs_2left_road_boundary_mindis - half_l);
   cluster_obs_boundary->set_obs_2right_road_boundary_mindis(
       cluster.frenet_boundary.obs_2right_road_boundary_mindis - half_l);
+  if (static_cast<int>(passage_width_info.decision) <= 6 && static_cast<int>(passage_width_info.decision) >= 0) {
+    auto *cluster_obs_passage_width_info =
+        static_cluster_obstacle_info->mutable_passage_width_info();
+    cluster_obs_passage_width_info->set_decision(
+        static_cast<common::LatObstacleDecisionType>(
+            passage_width_info.decision));
+    if(static_cast<int>(passage_width_info.left_nudge_level) >=0 && static_cast<int>(passage_width_info.left_nudge_level) <= 2)
+    cluster_obs_passage_width_info->set_left_nudge_level(
+        static_cast<common::LatObstacleNudgeLevel>(
+            passage_width_info.left_nudge_level));
+    if(static_cast<int>(passage_width_info.right_nudge_level) >=0 && static_cast<int>(passage_width_info.right_nudge_level) <= 2)
+    cluster_obs_passage_width_info->set_right_nudge_level(
+        static_cast<common::LatObstacleNudgeLevel>(
+            passage_width_info.right_nudge_level));
+  }
 
-  auto *cluster_obs_passage_width_info =
-      static_cluster_obstacle_info->mutable_passage_width_info();
-  cluster_obs_passage_width_info->set_decision(
-      static_cast<common::LatObstacleDecisionType>(
-          passage_width_info.decision));
-  cluster_obs_passage_width_info->set_left_nudge_level(
-      static_cast<common::LatObstacleNudgeLevel>(
-          passage_width_info.left_nudge_level));
-  cluster_obs_passage_width_info->set_right_nudge_level(
-      static_cast<common::LatObstacleNudgeLevel>(
-          passage_width_info.right_nudge_level));
+  if (static_cast<int>(relative_pos_info.decision) <= 6 && static_cast<int>(relative_pos_info.decision) >= 0) {
+    auto *cluster_obs_relative_pos_info =
+        static_cluster_obstacle_info->mutable_relative_pos_info();
+    cluster_obs_relative_pos_info->set_decision(
+        static_cast<common::LatObstacleDecisionType>(
+            relative_pos_info.decision));
+    if(static_cast<int>(relative_pos_info.left_nudge_level) >=0 && static_cast<int>(relative_pos_info.left_nudge_level) <= 2)
+    cluster_obs_relative_pos_info->set_left_nudge_level(
+        static_cast<common::LatObstacleNudgeLevel>(
+            relative_pos_info.left_nudge_level));
+    if(static_cast<int>(relative_pos_info.right_nudge_level) >=0 && static_cast<int>(relative_pos_info.right_nudge_level) <= 2)
+    cluster_obs_relative_pos_info->set_right_nudge_level(
+        static_cast<common::LatObstacleNudgeLevel>(
+            relative_pos_info.right_nudge_level));
+  }
 
-  auto *cluster_obs_relative_pos_info =
-      static_cluster_obstacle_info->mutable_relative_pos_info();
-  cluster_obs_relative_pos_info->set_decision(
-      static_cast<common::LatObstacleDecisionType>(relative_pos_info.decision));
-  cluster_obs_relative_pos_info->set_left_nudge_level(
-      static_cast<common::LatObstacleNudgeLevel>(
-          relative_pos_info.left_nudge_level));
-  cluster_obs_relative_pos_info->set_right_nudge_level(
-      static_cast<common::LatObstacleNudgeLevel>(
-          relative_pos_info.right_nudge_level));
-
-  auto *cluster_obs_last_path_info =
-      static_cluster_obstacle_info->mutable_last_path_info();
-  cluster_obs_last_path_info->set_decision(
-      static_cast<common::LatObstacleDecisionType>(last_path_info.decision));
-  cluster_obs_last_path_info->set_left_nudge_level(
-      static_cast<common::LatObstacleNudgeLevel>(
-          last_path_info.left_nudge_level));
-  cluster_obs_last_path_info->set_right_nudge_level(
-      static_cast<common::LatObstacleNudgeLevel>(
-          last_path_info.right_nudge_level));
+  if (static_cast<int>(last_path_info.decision) <= 6 && static_cast<int>(last_path_info.decision) >= 0) {
+    auto *cluster_obs_last_path_info =
+        static_cluster_obstacle_info->mutable_last_path_info();
+    cluster_obs_last_path_info->set_decision(
+        static_cast<common::LatObstacleDecisionType>(last_path_info.decision));
+    if(static_cast<int>(last_path_info.left_nudge_level) >=0 && static_cast<int>(last_path_info.left_nudge_level) <= 2)
+    cluster_obs_last_path_info->set_left_nudge_level(
+        static_cast<common::LatObstacleNudgeLevel>(
+            last_path_info.left_nudge_level));
+    if(static_cast<int>(last_path_info.right_nudge_level) >=0 && static_cast<int>(last_path_info.right_nudge_level) <= 2)
+    cluster_obs_last_path_info->set_right_nudge_level(
+        static_cast<common::LatObstacleNudgeLevel>(
+            last_path_info.right_nudge_level));
+  }
 }
 
 void HppLateralObstacleDecider::SerializeDynamicObsDecideResultToDebugInfo(

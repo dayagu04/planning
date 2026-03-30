@@ -343,12 +343,6 @@ HppObstacleLateralPreprocessDecider::ClassifyObstaclesByRelPos(
       type = ObstacleRelPosType::MID_FRONT;
     }
   } else if (obs_end_s < ego_start_s - kSideObsBackThr) {
-    if (obs_l > ego_l) {
-      type = ObstacleRelPosType::LEFT_SIDE;
-    } else {
-      type = ObstacleRelPosType::RIGHT_SIDE;
-    }
-  } else {
     if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
       type = ObstacleRelPosType::LEFT_BACK;
     } else if (obs_end_l <
@@ -356,6 +350,12 @@ HppObstacleLateralPreprocessDecider::ClassifyObstaclesByRelPos(
       type = ObstacleRelPosType::RIGHT_BACK;
     } else {
       type = ObstacleRelPosType::MID_BACK;
+    }
+  } else {
+    if (obs_l > ego_l) {
+      type = ObstacleRelPosType::LEFT_SIDE;
+    } else {
+      type = ObstacleRelPosType::RIGHT_SIDE;
     }
   }
   return type;
