@@ -24,7 +24,7 @@ bool AdasFunction::Reset() {
 void AdasFunction::Init(void) {
   // Preprocess
   preprocess_ptr_ = std::make_shared<adas_function::preprocess::Preprocess>();
-  
+
 #if defined(X86) && !defined(X86_SIMULATION)
   // X86 平台：仿真模式
   preprocess_ptr_->Init(true);
@@ -126,18 +126,7 @@ bool AdasFunction::Plan() {
   ihc_core_ptr_->RunOnce();
 
   // MebCore
-  if (GetContext.get_param()->meb_call_switch == true) {
-    meb_core_ptr_->RunOnce();
-  } else {
-    // meb
-    GetContext.mutable_output_info()->meb_output_info_.meb_state =
-        iflyauto::MEB_FUNCTION_FSM_WORK_STATE_OFF;
-    GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
-        GetContext.get_param()->meb_request_status_const;
-    GetContext.mutable_output_info()->meb_output_info_.meb_request_value = 0;
-    GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
-        iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
-  }
+  meb_core_ptr_->RunOnce();
 
   // run lkas_function
   double start_time_lkas = IflyTime::Now_ms();
@@ -713,8 +702,8 @@ void AdasFunction::TestLkasForHmi(void) {
     GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ =
         iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
   } else {
-    GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ = iflyauto::
-        TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
+    GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ =
+        iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
   }
   GetContext.mutable_output_info()->tsr_output_info_.tsr_warning_ = false;
   GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = 0;
@@ -784,8 +773,10 @@ void AdasFunction::Log(void) {
                    GetContext.get_state_info()->yaw_rate_observer);
   JSON_DEBUG_VALUE("state_brake_pedal_pressed",
                    GetContext.get_state_info()->brake_pedal_pressed);
-  //   JSON_DEBUG_VALUE("state_yaw_rate_loc",
-  //                    GetContext.get_state_info()->yaw_rate_loc);
+  JSON_DEBUG_VALUE("state_brake_pedal_pos",
+                   GetContext.get_state_info()->brake_pedal_pos);
+  JSON_DEBUG_VALUE("state_accelerator_pedal_pos",
+                   GetContext.get_state_info()->accelerator_pedal_pos);
   JSON_DEBUG_VALUE("state_left_departure_speed",
                    GetContext.get_state_info()->veh_left_departure_speed);
   JSON_DEBUG_VALUE("state_right_departure_speed",

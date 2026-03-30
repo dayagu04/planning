@@ -94,14 +94,15 @@ struct Parameters {
   double lat_buffer_to_line = 4.0;
   double tsr_reset_path_length = 10000.0;
   double tsr_speed_limit_offset = 1.0;
-  double tsr_out_flag_need_last_time = 1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
+  double tsr_out_flag_need_last_time =
+      1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
   double tsr_warning_max_duration = 5.0;  // 声音报警最大时长，单位：s
   bool sd_map_speed_sw=false;
   double lane_boundary_vaild_length_set = 15.0;
   double sideway_exist_gap_thrd = 0.5;
   double lane_line_width = 0.15;
   bool elk_bicycle_motorcycle_sw = false;
-  // sim params
+  //   sim params
   bool adas_sim_switch = false;
   bool force_no_sideway_switch = true;
   bool force_no_safe_departure_switch = false;
@@ -170,7 +171,7 @@ struct Parameters {
   bool ldp_handoff_state_switch_test_ = false;
   bool elk_soildline_switch = true;  // elk仅实线场景功能开关
 
-  //以下定义了enable/disable条件中油门踏板变化率的阈值条件
+  // 以下定义了enable/disable条件中油门踏板变化率的阈值条件
   double elk_enable_accel_pedal_pos_rate = 30.0;
   double elk_disable_accel_pedal_pos_rate = 70.0;
   double ldp_enable_accel_pedal_pos_rate = 30.0;
@@ -207,12 +208,13 @@ struct Parameters {
   // TSR辅助标识牌测试
   uint16 tsr_supp_sign_type_test = 0;
 
+  // meb json 参数
   int meb_request_status_const = 0;
   bool meb_od_obs_switch = false;
   bool meb_occ_obs_switch = false;
   bool meb_uss_obs_switch = true;
-  double meb_ttc_thrd = 1.0;
-  double meb_dis_buffer = 0.35;
+  bool meb_function_state_switch = true;
+  bool meb_false_trigger_switch = true;
   double meb_acc_collision_thrd = -3.6;
   double meb_acc_collision_thrd_bak = -2.0;
   double meb_request_acc = -4.0;
@@ -244,7 +246,22 @@ struct Parameters {
   std::vector<double> meb_odbox_dis_buffer_d_static_car = {0.4, 0.4, 0.4};
   std::vector<double> meb_odbox_dis_buffer_d_static_motor = {0.4, 0.4, 0.4};
   std::vector<double> meb_odbox_dis_buffer_d_static_default = {0.4, 0.4, 0.4};
-  std::vector<double> meb_odbox_dis_buffer_veh_speed_kmh = {4.0, 6.0, 9.0}; 
+
+  std::vector<double> park_meb_odbox_dis_buffer_r_static_people = {0.4, 0.4,
+                                                                   0.4};
+  std::vector<double> park_meb_odbox_dis_buffer_r_static_car = {0.4, 0.4, 0.4};
+  std::vector<double> park_meb_odbox_dis_buffer_r_static_motor = {0.4, 0.4,
+                                                                  0.4};
+  std::vector<double> park_meb_odbox_dis_buffer_r_static_default = {0.4, 0.4,
+                                                                    0.4};
+  std::vector<double> park_meb_odbox_dis_buffer_d_static_people = {0.4, 0.4,
+                                                                   0.4};
+  std::vector<double> park_meb_odbox_dis_buffer_d_static_car = {0.4, 0.4, 0.4};
+  std::vector<double> park_meb_odbox_dis_buffer_d_static_motor = {0.4, 0.4,
+                                                                  0.4};
+  std::vector<double> park_meb_odbox_dis_buffer_d_static_default = {0.4, 0.4,
+                                                                    0.4};
+  std::vector<double> meb_odbox_dis_buffer_veh_speed_kmh = {4.0, 6.0, 9.0};
 };
 
 struct StateInfo {
@@ -414,8 +431,9 @@ struct LaneInfo {
 
 struct NavMapInfo {
   uint32 speed_limit = 0;
-  iflyauto::DrivingRoadType road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
-  uint8 map_source = 0; // 0: invalid, 1:sd_map, 2:sdpromap
+  iflyauto::DrivingRoadType road_type =
+      iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  uint8 map_source = 0;  // 0: invalid, 1:sd_map, 2:sdpromap
   bool valid_flag = false;
 };
 
@@ -614,6 +632,34 @@ struct ObjectsInfo {
   std::vector<FusionObjExtractInfo> all_objs_vector;
   SelectedAreasObjs objs_selected;
   std::vector<double> ego_around_area_x_vector;
+};
+
+struct SelfVehicleServiceFrameInfo {
+  uint64_t stamp;  // 消息发送时刻 (微秒)
+
+  float vehicle_speed;
+  float ego_acceleration;
+  float steering_angle;
+  float steering_angle_speed;
+  float yaw_rate;
+  bool yaw_rate_available;
+  float yaw_rate_jerk;
+  bool yaw_rate_jerk_available;
+  float accelerator_pedal_pos;
+
+  int start_turning_index;
+  int turning_count;
+  int straight_count;
+
+  uint64_t start_turning_timestamp;
+  uint64_t start_straight_running_timestamp;
+  uint64_t latest_straight_running_timestamp;
+
+  bool need_update_backright;
+  bool driver_linear_state;
+  bool driver_linear_state_available;
+  bool drive_slow_down;
+  bool brake_pedal_pressed;
 };
 
 }  // namespace context

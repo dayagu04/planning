@@ -7,6 +7,11 @@
 #include "planning_context.h"
 #include "session.h"
 
+#if defined(X86) && !defined(X86_SIMULATION)
+#define ADAS_IN_SIMULATION
+#else
+#endif
+
 namespace adas_function {
 namespace context {
 

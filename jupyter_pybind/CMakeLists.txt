@@ -338,3 +338,13 @@ target_link_libraries(reference_path_smooth_py PRIVATE
   modules_context
   modules_tasks
   legacy_c_interface)
+
+pybind11_add_module(meb_box_collision_py MODULE src/meb_box_collision_pybind.cc)
+target_link_libraries(meb_box_collision_py PRIVATE
+  autoplt
+  modules
+  modules_adas_function
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)

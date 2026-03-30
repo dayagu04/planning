@@ -1,8 +1,8 @@
 {
   "car_type": "cherry_t26",
   "mark_date": "20241114",
-  "lkas_version":"20251023",
-  "tsr_ihc_version":"20251208",
+  "lkas_version": "20251023",
+  "tsr_ihc_version": "20251208",
   "cherry_t26": {
     "wheel_base": 2.8,
     "steer_ratio": 13.04,
@@ -114,6 +114,8 @@
   "ldp_c0_right_offset": 0.0,
   "ldp_ttlc_right_hack": 1.1,
   "ldp_center_line_offset": 0.6,
+  "ldp_center_line_offset_final": 0.8,
+  "ldp_center_line_offset_nums": 50,
   "ldp_center_roadedge_offset": 0.7,
   "ldw_main_switch": false,
   "ldp_main_switch": false,
@@ -179,42 +181,150 @@
   "ihc_fault_code_maskcode": 65535,
   "ihc_high_beam_switch": false,
   "meb_request_status_const": 0,
-  "elk_roadedge_testswitch_temp_":false,
-  "ldp_handoff_state_switch_test_":true,
+  "elk_roadedge_testswitch_temp_": false,
+  "ldp_handoff_state_switch_test_": true,
   "elk_soildline_switch": true,
-  "ldw_tlc_far_":1.0,
-  "ldw_tlc_medium_":0.6,
-  "ldw_tlc_near_":0.2,
-  "elk_bicycle_motorcycle_sw":false,
+  "ldw_tlc_far_": 1.0,
+  "ldw_tlc_medium_": 0.6,
+  "ldw_tlc_near_": 0.2,
+  "elk_bicycle_motorcycle_sw": false,
   "meb_call_switch": false,
-  "meb_main_switch": true,
+  "meb_main_switch": false,
   "meb_od_obs_switch": true,
-  "meb_occ_obs_switch": true,
-  "meb_uss_obs_switch": true,
+  "meb_occ_obs_switch": false,
+  "meb_uss_obs_switch": false,
   "meb_od_box_switch": false,
-  "meb_ttc_thrd": 1.0,
-  "meb_dis_buffer": 0.4,
+  "meb_function_state_switch": true,
+  "meb_false_trigger_switch": true,
   "meb_odbox_dis_buffer": 0.4,
   "meb_odbox_dis_buffer_r": 0.4,
-  "meb_odbox_dis_buffer_r_dynamic_people":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_r_dynamic_car":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_r_dynamic_motor":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_r_dynamic_default":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_dynamic_people":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_dynamic_car":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_dynamic_motor":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_dynamic_default":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_r_static_people":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_r_static_car":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_r_static_motor":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_r_static_default":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_static_people":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_static_car":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_static_motor":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_d_static_default":[0.4, 0.4, 0.4],
-  "meb_odbox_dis_buffer_veh_speed_kmh":[4.0, 6.0, 9.0],
-  "meb_acc_collision_thrd": -5.0,
-  "meb_acc_collision_thrd_bak": -2.5,
+  "meb_odbox_dis_buffer_r_dynamic_people": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_r_dynamic_car": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_r_dynamic_motor": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_r_dynamic_default": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_dynamic_people": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_dynamic_car": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_dynamic_motor": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_dynamic_default": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_r_static_people": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_r_static_car": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_r_static_motor": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_r_static_default": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_static_people": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_static_car": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_static_motor": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "meb_odbox_dis_buffer_d_static_default": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "park_meb_odbox_dis_buffer_r_static_people": [
+    0.4,
+    0.4,
+    0.4
+  ],
+  "park_meb_odbox_dis_buffer_r_static_car": [
+    0.6,
+    0.6,
+    0.9
+  ],
+  "park_meb_odbox_dis_buffer_r_static_motor": [
+    0.6,
+    0.6,
+    1.2
+  ],
+  "park_meb_odbox_dis_buffer_r_static_default": [
+    0.6,
+    0.6,
+    1.2
+  ],
+  "park_meb_odbox_dis_buffer_d_static_people": [
+    0.6,
+    0.6,
+    1.2
+  ],
+  "park_meb_odbox_dis_buffer_d_static_car": [
+    0.6,
+    0.6,
+    0.8
+  ],
+  "park_meb_odbox_dis_buffer_d_static_motor": [
+    0.6,
+    0.6,
+    0.8
+  ],
+  "park_meb_odbox_dis_buffer_d_static_default": [
+    0.6,
+    0.6,
+    1.2
+  ],
+  "meb_odbox_dis_buffer_veh_speed_kmh": [
+    4.0,
+    6.0,
+    9.0
+  ],
+  "meb_acc_collision_thrd": -6.0,
+  "meb_acc_collision_thrd_bak": -6.0,
   "meb_request_acc": -6.0,
   "meb_dynamic_buffer_switch": true,
   "meb_actuator_act_time": 0.35,
