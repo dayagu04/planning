@@ -28,7 +28,7 @@ constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
 constexpr double kStandardLaneWidth = 3.8;
 constexpr double kEps = 1e-6;
 constexpr int kEgoInIntersectionCount = 3;
-constexpr double kLongClusterCoeff = 5.0;
+constexpr double kLongClusterCoeff = 10.0;
 constexpr double kLatClusterThre = 0.3;
 constexpr double kLatPassThre = 1.2;
 constexpr double kLatPassThreBuffer = 0.25;
@@ -1323,7 +1323,7 @@ double LaneChangeRequest::QueryLaneMinWidth(
       }
     }
 
-    if (cone_nums >= 5 &&
+    if (cone_nums >= 3 &&
         function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
       return max_lane_width;
     } else {
