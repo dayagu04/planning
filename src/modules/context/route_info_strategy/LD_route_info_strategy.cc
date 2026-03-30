@@ -683,17 +683,87 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
       }
 
       int lc_num = 0;
+      uint32_t target_seq = 0;
       if (temp_lane->sequence() <= max_seq &&
           temp_lane->sequence() >= min_seq) {
         continue;
       } else if (temp_lane->sequence() < min_seq) {
         lc_num = min_seq - temp_lane->sequence();
+        target_seq = min_seq;
       } else if (temp_lane->sequence() > max_seq) {
         lc_num = temp_lane->sequence() - max_seq;
+        target_seq = max_seq;
+      }
+
+      // 计算从当前link到目标的整个路径上的实线长度
+      double total_lsl_length = 0.0;
+
+      // 找到target_seq对应的lane_id
+      uint64_t target_lane_id = 0;
+      for (const auto& lane_id : temp_link->lane_ids()) {
+        const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+        if (lane && lane->sequence() == target_seq) {
+          target_lane_id = lane_id;
+          break;
+        }
+      }
+
+      if (target_lane_id == 0) {
+        continue;
+      }
+
+      // 当前link上的实线长度
+      total_lsl_length += CalculateLSLLengthBetweenLanes(
+          temp_link, temp_lane->sequence(), target_seq);
+
+      // 沿着target_lane向前追踪，累计后续link上的实线长度
+      const auto* current_trace_lane = temp_lane;
+      const auto* target_trace_lane = ld_map_.GetLaneInfoByID(target_lane_id);
+      if (!target_trace_lane) continue;
+
+      for (int j = i - 1; j >= 0; --j) {
+        const auto& next_link_topo =
+            before_split_feasible_lane_graph.lane_topo_groups[j];
+        const auto* next_link = ld_map_.GetLinkOnRoute(next_link_topo.link_id);
+        if (!next_link) break;
+
+        // 找到当前车道在下一个link上的后继
+        uint64_t next_lane_id = 0;
+        for (const auto& succ_id : current_trace_lane->successor_lane_ids()) {
+          const auto* succ_lane = ld_map_.GetLaneInfoByID(succ_id);
+          if (succ_lane && succ_lane->link_id() == next_link->id()) {
+            next_lane_id = succ_id;
+            break;
+          }
+        }
+        // 找到目标车道在下一个link上的后继
+        uint64_t target_next_lane_id = 0;
+        for (const auto& succ_id : target_trace_lane->successor_lane_ids()) {
+          const auto* succ_lane = ld_map_.GetLaneInfoByID(succ_id);
+          if (succ_lane && succ_lane->link_id() == next_link->id()) {
+            target_next_lane_id = succ_id;
+            break;
+          }
+        }
+
+        if (next_lane_id == 0 || target_next_lane_id == 0) break;
+
+        const auto* next_lane = ld_map_.GetLaneInfoByID(next_lane_id);
+        const auto* target_next_lane =
+            ld_map_.GetLaneInfoByID(target_next_lane_id);
+        if (!next_lane || !target_next_lane) break;
+
+        // 计算这个link上该车道的边界实线长度
+        total_lsl_length += CalculateLSLLengthBetweenLanes(
+            next_link, next_lane->sequence(), target_next_lane->sequence());
+
+        // 更新追踪车道
+        current_trace_lane = next_lane;
+        target_trace_lane = target_next_lane;
       }
 
       const double lc_need_dis =
-          extend_distance * std::fabs(lc_num);
+          extend_distance * std::fabs(lc_num) + total_lsl_length;
 
       if (link_sum_dis < lc_need_dis) {
         // 距离ramp点的距离小于变道需要的距离，因此该lane不需要加入进去
@@ -3560,5 +3630,45 @@ bool LDRouteInfoStrategy::CalculateLinkLaneNum(
   }
   lane_num = lane_info.size();
   return true;
+}
+
+double LDRouteInfoStrategy::CalculateLSLLengthBetweenLanes(
+    const iflymapdata::sdpro::LinkInfo_Link* link,
+    uint32_t from_seq, uint32_t to_seq) {
+  if (link == nullptr || from_seq == to_seq) {
+    return 0.0;
+  }
+
+  double total_lsl_length = 0.0;
+  uint32_t min_seq = std::min(from_seq, to_seq);
+  uint32_t max_seq = std::max(from_seq, to_seq);
+
+  for (uint32_t seq = min_seq; seq < max_seq; ++seq) {
+    const iflymapdata::sdpro::Lane* lane = nullptr;
+    double current_lane_lsl = 0.0;
+    for (const auto& lane_id : link->lane_ids()) {
+      const auto* temp_lane = ld_map_.GetLaneInfoByID(lane_id);
+      if (temp_lane && temp_lane->sequence() == seq) {
+        lane = temp_lane;
+        break;
+      }
+    }
+
+    if (!lane) continue;
+
+    for (const auto& boundary : lane->left_boundaries()) {
+      if (boundary.divider_marking_type() ==
+              iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                  LaneBoundary_DivederMarkingType_DMT_MARKING_SINGLE_SOLID_LINE ||
+          boundary.divider_marking_type() ==
+              iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                  LaneBoundary_DivederMarkingType_DMT_MARKING_DOUBLE_SOLID_LINE) {
+        current_lane_lsl += boundary.length() * 0.01;
+      }
+    }
+    total_lsl_length = std::max(total_lsl_length, current_lane_lsl);
+  }
+
+  return total_lsl_length;
 }
 }  // namespace planning

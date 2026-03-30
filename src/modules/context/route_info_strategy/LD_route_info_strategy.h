@@ -167,6 +167,9 @@ void ProcessLaneMapMergePoint(
   void CalculateFeasibleLaneByMergePoint(TopoLinkGraph& feasible_lane_graph);
   bool CalculateLinkLaneNum(const iflymapdata::sdpro::LinkInfo_Link* link,
                             int& lane_num);
+  double CalculateLSLLengthBetweenLanes(
+      const iflymapdata::sdpro::LinkInfo_Link* link, uint32_t from_seq,
+      uint32_t to_seq);
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
