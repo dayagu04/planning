@@ -498,13 +498,19 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     try:
       vel_ego = vs_msg.vehicle_speed
+      steer_deg = vs_msg.steering_wheel_angle * 57.3
     except:
       linear_velocity_from_wheel = math.sqrt(loc_msg.velocity.velocity_boot.vx * loc_msg.velocity.velocity_boot.vx + \
                 loc_msg.velocity.velocity_boot.vy * loc_msg.velocity.velocity_boot.vy + \
                 loc_msg.velocity.velocity_boot.vz * loc_msg.velocity.velocity_boot.vz)
       vel_ego =  linear_velocity_from_wheel
+      angular_velocity_from_wheel = math.sqrt(loc_msg.angular_velocity.angvelocity_boot.vx * loc_msg.angular_velocity.angvelocity_boot.vx + \
+                loc_msg.angular_velocity.angvelocity_boot.vy * loc_msg.angular_velocity.angvelocity_boot.vy)
+      # for E541
+      wheel_base = 2.8835
+      steer_ratio = 16.2
+      steer_deg = steer_ratio * math.atan(angular_velocity_from_wheel * wheel_base / vel_ego) * 57.3
 
-    steer_deg = 0
     if g_is_display_enu:
       local_view_data['data_text'].data.update({
         'vel_ego_text': ['v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))],
