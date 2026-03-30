@@ -450,7 +450,8 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   }
   ad_info.distance_to_toll_station = route_info_output.distance_to_toll_station;
   ad_info.noa_exit_warning_level_distance =
-      route_info_output.distance_to_route_end;
+      route_info_output.distance_to_exit_noa;
+  ad_info.noa_exit_type = route_info_output.noa_exit_type;
   // ad_info.distance_to_tunnel = ;  //
   // ad_info.is_within_hdmap = ;     //
   const int ramp_direction = route_info_output.ramp_direction;
@@ -637,7 +638,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
       } else if (route_info_output.is_ego_on_expressway_hmi) {
         signal_lc_dis = 200.0;
       }
-      
+
       const double pre_warning_dis = min_gap * signal_lc_dis;
       const int propose_cnt_threshold = 30;
 

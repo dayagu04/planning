@@ -3382,7 +3382,9 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
   JSON_DEBUG_VALUE("current_lane_distance", route_info_output_.current_lane_distance);
   JSON_DEBUG_VALUE("right_lane_distance", route_info_output_.right_lane_distance);
-  JSON_DEBUG_VALUE("right_lane_distance", route_info_output_.distance_to_noa_end);
+  JSON_DEBUG_VALUE("distance_to_enter_city", route_info_output_.distance_to_enter_city);
+  JSON_DEBUG_VALUE("distance_to_exit_noa", route_info_output_.distance_to_exit_noa);
+  JSON_DEBUG_VALUE("noa_exit_type", static_cast<int>(route_info_output_.noa_exit_type));
 
   int minVal_seq = 0;
   int maxVal_seq = 0;

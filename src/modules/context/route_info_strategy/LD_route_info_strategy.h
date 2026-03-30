@@ -323,6 +323,9 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
       const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
   void CaculateDistanceToNOAEnd(
       const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+  void CaculateDistanceToServiceArea(
+      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+  void UpdateDistanceToNOAExit();
   bool IsLaneSuccessorInPlannedRoute(const iflymapdata::sdpro::Lane* lane_info);
   bool IsLaneSuccessorIsMergeLane(
       const iflymapdata::sdpro::Lane* lane_info) const;
