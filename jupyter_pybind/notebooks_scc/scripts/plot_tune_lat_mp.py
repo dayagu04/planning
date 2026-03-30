@@ -201,6 +201,9 @@ class LocalViewSlider:
     self.use_new_param = ipywidgets.Checkbox(value=False, description='use_new_param')
     self.bag_dt_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "bag_dt",min=-10.0, max=10.0, value=0.1, step=0.1)
 
+    self.max_steer_angle_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "max_steer", min=0.0, max=540.0, value=490.0, step=0.5)
+    self.max_steer_angle_rate_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "max_steer_dot", min=0.0, max=540.0, value=180.0, step=0.5)
+
     ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                          bag_dt = self.bag_dt_slider,
                                          use_new_param = self.use_new_param,
@@ -248,6 +251,8 @@ class LocalViewSlider:
                                          end_ratio3 = self.end_ratio3_slider,
                                          q_virtual_ref_xy = self.q_virtual_ref_xy_slider,
                                          q_virtual_ref_theta = self.q_virtual_ref_theta_slider,
+                                         max_steer_angle = self.max_steer_angle_slider,
+                                         max_steer_angle_rate = self.max_steer_angle_rate_slider,
                                          max_iter = self.max_iter_slider)
 
 
@@ -259,7 +264,8 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
                     second_soft_ub_start_idx, second_soft_ub_end_idx, second_soft_lb_start_idx, second_soft_lb_end_idx,
                     hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
                     complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor,
-                    expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, q_virtual_ref_xy, q_virtual_ref_theta, max_iter):
+                    expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, q_virtual_ref_xy, q_virtual_ref_theta,
+                    max_steer_angle, max_steer_angle_rate, max_iter):
   g_is_display_enu = global_var.get_value('g_is_display_enu')
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
@@ -316,6 +322,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
     print("no plan debug json: raw_refline_k_vec")
   if len(lat_motion_plan_input.ref_theta_vec) > 0:
     ref_vel = lat_motion_plan_input.ref_vel
+    ref_vel_vec = lat_motion_plan_input.ref_vel_vec
     ego_vel = vs_msg.vehicle_speed
     init_info_vec = []
     init_info_vec.append(planning_json['dbw_status'])
@@ -395,8 +402,10 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
     except:
       print("no virtual ref!")
 
-    ref_s = ref_vel * 25.0 * 0.2
+    ref_s = ref_vel * 5.0
     print("ref_s:", ref_s)
+    max_delta = max_steer_angle / steer_ratio / 57.3
+    max_omega = max_steer_angle_rate / steer_ratio / 57.3
     input_string = lat_motion_plan_input.SerializeToString()
     start_time = time.time()
     lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_soft_bound, q_hard_bound,
@@ -406,20 +415,21 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
                                               hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
                                               motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 1.5), expected_acc,
                                               start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter, wheel_base, q_front_ref_xy,
-                                              q_virtual_ref_xy, q_virtual_ref_theta, virtual_ref_x, virtual_ref_y, virtual_ref_theta)
+                                              q_virtual_ref_xy, q_virtual_ref_theta, max_delta, max_omega, virtual_ref_x, virtual_ref_y, virtual_ref_theta)
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
     planning_output.ParseFromString(output_string_tmp)
 
     print("\n ------------------------------------------- \n")
+    delta_bound = [max_delta] * len(lat_motion_plan_input.ref_theta_vec)
+    omega_bound = [max_omega] * len(lat_motion_plan_input.ref_theta_vec)
     try:
-      delta_bound = acc_bound / (lat_motion_plan_input.curv_factor * max(ego_vel, 1.0) * max(ego_vel, 1.0))
-      omega_bound = jerk_bound / (lat_motion_plan_input.curv_factor * max(ego_vel, 1.0) * max(ego_vel, 1.0))
-    except:
-      delta_bound = 540.0 / steer_ratio / 57.3
-      omega_bound = 360.0 / steer_ratio / 57.3
-      print("no ego_vel!")
+      for i in range(len(ref_vel_vec)):
+        delta_bound[i] = min(acc_bound / (lat_motion_plan_input.curv_factor * max(ref_vel_vec[i], 1.0) * max(ref_vel_vec[i], 1.0)), max_delta)
+        omega_bound[i] = min(jerk_bound / (lat_motion_plan_input.curv_factor * max(ref_vel_vec[i], 1.0) * max(ref_vel_vec[i], 1.0)), max_omega)
+    except Exception as e:
+      print(f"no ref_vel_vec!: {e}")
     print("origin complete_follow : ", lat_motion_plan_input.complete_follow)
     print("origin motion_plan_concerned_end_index : ", lat_motion_plan_input.motion_plan_concerned_index)
     print("new complete_follow : ", complete_follow)
@@ -482,10 +492,10 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
       acc_lower_bound.append(-acc_bound)
       jerk_upper_bound.append(jerk_bound)
       jerk_lower_bound.append(-jerk_bound)
-      steer_dot_deg_upper_bound.append((omega_bound * 57.3 * steer_ratio))
-      steer_dot_deg_lower_bound.append(-(omega_bound * 57.3 * steer_ratio))
-      steer_deg_upper_bound.append((delta_bound * 57.3 * steer_ratio))
-      steer_deg_lower_bound.append(-(delta_bound * 57.3 * steer_ratio))
+      steer_dot_deg_upper_bound.append((omega_bound[i] * 57.3 * steer_ratio))
+      steer_dot_deg_lower_bound.append(-(omega_bound[i] * 57.3 * steer_ratio))
+      steer_deg_upper_bound.append((delta_bound[i] * 57.3 * steer_ratio))
+      steer_deg_lower_bound.append(-(delta_bound[i] * 57.3 * steer_ratio))
 
     acc_vec = planning_output.acc_vec
     jerk_vec = planning_output.jerk_vec

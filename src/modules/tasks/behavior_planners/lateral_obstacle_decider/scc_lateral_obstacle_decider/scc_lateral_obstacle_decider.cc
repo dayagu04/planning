@@ -1646,6 +1646,7 @@ void SccLateralObstacleDecider::
         obstacle_interaction_info.GetLateralConstraintDistance(
             LateralSpaceConstraintType::DYNAMIC_OBSTACLE) >
         kSafeDynamicObstacleSpace + space_hysteresis;
+    history.has_enough_space = has_enough_space;
     // 如果上一帧不避让，则当前帧的space_hysteresis加滞回，防止抖动
     // 后续需要优化这个条件
     if (!(has_safe_v_space && has_enough_space)) {

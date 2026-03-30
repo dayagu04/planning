@@ -33,7 +33,7 @@ int Init() {
 void ClearInfo(){
   pDPRoadGraph->mutable_sampled_points().clear();
   pDPRoadGraph->mutable_dp_selected_points().clear();
-  pDPRoadGraph->muteble_refined_paths().clear();
+  pDPRoadGraph->mutable_refined_paths().clear();
   pDPRoadGraph->muteble_min_cost_path().clear();
   return;// no clear function
 }

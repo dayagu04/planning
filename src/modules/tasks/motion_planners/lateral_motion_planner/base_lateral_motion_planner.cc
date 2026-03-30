@@ -95,6 +95,7 @@ void BaseLateralMotionPlanner::InitInputAndOutput() {
   is_need_reverse_ = false;
   is_ref_consistent_ = false;
   valid_continuity_idx_ = 0;
+  lane_rel_theta_error_ = 0.0;
   ref_theta_vec_.resize(N, 0.0);
   virtual_ref_x_.reserve(N);
   virtual_ref_y_.reserve(N);
@@ -413,17 +414,22 @@ bool BaseLateralMotionPlanner::HandleFeedbackInfoData() {
   const auto &planning_init_point =
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
   // set init info
+  const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
   Point2D cart_ref0(planning_input_.ref_x_vec(0), planning_input_.ref_y_vec(0));
   Point2D frenet_ref0;
   Point2D cart_init(planning_input_.init_state().x(),
                     planning_input_.init_state().y());
   Point2D frenet_init;
-  if (reference_path_ptr->get_frenet_coord() != nullptr &&
-      reference_path_ptr->get_frenet_coord()->XYToSL(cart_ref0, frenet_ref0) &&
-      reference_path_ptr->get_frenet_coord()->XYToSL(cart_init, frenet_init)) {
-    planning_weight_ptr_->SetInitDisToRef((frenet_init.y - frenet_ref0.y));
+  if (frenet_coord != nullptr) {
+    if (frenet_coord->XYToSL(cart_ref0, frenet_ref0)) {
+    planning_weight_ptr_->SetInitDisToRef((planning_init_point.frenet_state.r - frenet_ref0.y));
     planning_weight_ptr_->SetInitRefThetaError(
-        (planning_input_.init_state().theta() - planning_input_.ref_theta_vec(0)) * 57.3);
+          (planning_input_.init_state().theta() - planning_input_.ref_theta_vec(0)) * 57.3);
+    } else {
+      planning_weight_ptr_->CalculateInitInfo(planning_input_);
+    }
+    double lane_theta = frenet_coord->GetPathCurveHeading(planning_init_point.frenet_state.s);
+    lane_rel_theta_error_ = planning_math::NormalizeAngle(planning_init_point.lat_init_state.theta() - lane_theta);
   } else {
     planning_weight_ptr_->CalculateInitInfo(planning_input_);
   }
@@ -445,12 +451,12 @@ bool BaseLateralMotionPlanner::HandleFeedbackInfoData() {
       std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot / 57.3);
   double max_steer_angle_rate_lc =
       std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot_lc / 57.3);
-  double max_wheel_angle = max_steer_angle / steer_ratio;
-  double max_wheel_angle_rate = max_steer_angle_rate / steer_ratio;
-  double max_wheel_angle_rate_lc = max_steer_angle_rate_lc / steer_ratio;
-  double max_acc = std::min(max_wheel_angle * kv2, 5.0);
-  double limit_jerk = max_wheel_angle_rate * kv2;
-  double limit_jerk_lc = max_wheel_angle_rate_lc * kv2;
+  max_wheel_angle_ = max_steer_angle / steer_ratio;
+  max_wheel_angle_rate_ = max_steer_angle_rate / steer_ratio;
+  max_wheel_angle_rate_lc_ = max_steer_angle_rate_lc / steer_ratio;
+  double max_acc = std::min(max_wheel_angle_ * kv2, 5.0);
+  double limit_jerk = max_wheel_angle_rate_ * kv2;
+  double limit_jerk_lc = max_wheel_angle_rate_lc_ * kv2;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
   std::vector<double> fp_max_jerk{limit_jerk, 1.8, 1.5, 1.4};
   double max_jerk = planning::interp(planning_input_.ref_vel(), xp_v, fp_max_jerk);
@@ -458,6 +464,7 @@ bool BaseLateralMotionPlanner::HandleFeedbackInfoData() {
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
   planning_weight_ptr_->SetMaxJerkLC(limit_jerk_lc);
+  planning_weight_ptr_->SetInitSteerAngle(planning_init_point.lat_init_state.delta() * steer_ratio * 57.3);
   return true;
 }
 

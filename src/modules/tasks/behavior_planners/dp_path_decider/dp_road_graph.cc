@@ -108,7 +108,7 @@ bool DPRoadGraph::ProcessEnvInfos(
     return false;
   }
   if (agents.empty()) {
-    return true;
+    return false;
   }
   const auto& obstacles = current_reference_path_ptr_->get_obstacles();
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
@@ -279,7 +279,7 @@ bool DPRoadGraph::ProcessEnvInfos(
           dynamic_lead_obstacles_box.emplace_back(std::move(flatted_box));
           continue;
         } else {
-          dynamic_environment_obstacles_box.emplace_back(std::move(flatted_box));
+          // dynamic_environment_obstacles_box.emplace_back(std::move(flatted_box));
         }
       }
       std::vector<double> flatted_sl_boundary(4);
@@ -323,10 +323,12 @@ bool DPRoadGraph::ProcessEnvInfos(
   // }
 
   flatted_dynamic_obstacles_box_ = std::move(dynamic_need_borrow_obstacles_box);
-  flatted_dynamic_obstacles_box_.insert(
-      flatted_dynamic_obstacles_box_.end(),
-      std::make_move_iterator(dynamic_environment_obstacles_box.begin()),
-      std::make_move_iterator(dynamic_environment_obstacles_box.end()));
+  // flatted_dynamic_obstacles_box_.insert(
+  //     flatted_dynamic_obstacles_box_.end(),
+  //     std::make_move_iterator(dynamic_environment_obstacles_box.begin()),
+  //     std::make_move_iterator(dynamic_environment_obstacles_box.end()));
+
+  // dp 仅考虑借道障碍物（用于做对比hack）
   static_obstacles_box_ = std::move(static_need_borrow_obstacles_box);
   static_obstacles_box_.insert(
       static_obstacles_box_.end(),
