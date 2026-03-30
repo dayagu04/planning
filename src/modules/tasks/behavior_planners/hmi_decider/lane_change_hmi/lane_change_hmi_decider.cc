@@ -345,6 +345,9 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   }
 
   // update LaneChangeReason
+  const bool is_on_ramp_and_away_from_merge_link = route_info_output.is_on_ramp &&
+                                  (route_info_output.mlc_decider_scene_type_info
+                                       .dis_to_link_topo_change_point > 100);
   const auto& ego_lane_road_right_decider_output =
       session_->planning_context().ego_lane_road_right_decider_output();
   const bool is_merge_region =
@@ -379,8 +382,10 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     //   ad_info.lane_change_reason =
     //   iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     // } else
-    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE ||
-        route_info_output.is_ego_on_accelerate_lane) {
+    if ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+             MERGE_SCENE ||
+         route_info_output.is_ego_on_accelerate_lane) &&
+        !is_on_ramp_and_away_from_merge_link) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     } else {
       ad_info.lane_change_reason =
@@ -388,7 +393,9 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     }
   } else if (lc_request_source == MERGE_REQUEST) {
     if(function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-      if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type == MERGE_SCENE) {
+      if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+              MERGE_SCENE &&
+          !is_on_ramp_and_away_from_merge_link) {
         ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
       } else {
         ad_info.lane_change_reason =
