@@ -1189,6 +1189,12 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   second_soft_bounds_.resize(ref_traj_points_.size());
+
+  const ConstStaticAnalysisStoragePtr static_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+  const double ego_v_for_road = ego_cart_state_manager_ != nullptr
+                                    ? ego_cart_state_manager_->ego_v()
+                                    : 0.0;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-min_road_radius_, min_road_radius_};
     Bound hard_bound_road{-min_road_radius_, min_road_radius_};
@@ -1200,25 +1206,36 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
     if (map_obstacle_decision.tp.s -
             ego_frenet_state_.planning_init_point().frenet_state.s <
         config_.care_lon_area_road_border) {
+      const double road_type_hard_extra =
+          hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtS(
+              ref_traj_points_[i].s, static_storage, ego_v_for_road, true);
+      const double effective_hard_buffer2road =
+          config_.hard_buffer2road + road_type_hard_extra;
       hard_bound_road.upper =
           std::fmin(std::max(config_.hard_min_distance_road2center,
                              ref_path_points_[i].distance_to_left_road_border -
                                  0.5 * vehicle_param.max_width -
-                                 config_.hard_buffer2road),
+                                 effective_hard_buffer2road),
                     hard_bound_road.upper);
       hard_bound_road.lower = std::fmax(
           std::min(-config_.hard_min_distance_road2center,
                    -ref_path_points_[i].distance_to_right_road_border +
                        0.5 * vehicle_param.max_width +
-                       config_.hard_buffer2road),
+                       effective_hard_buffer2road),
           hard_bound_road.lower);
+
+      const double road_type_soft_extra =
+          hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtS(
+              ref_traj_points_[i].s, static_storage, ego_v_for_road, false);
       soft_bound_road.upper =
           std::fmin(std::max(config_.soft_min_distance_road2center,
-                             hard_bound_road.upper - left_road_extra_buffer),
+                             hard_bound_road.upper - left_road_extra_buffer -
+                                 road_type_soft_extra),
                     soft_bound_road.upper);
       soft_bound_road.lower =
           std::fmax(std::min(-config_.soft_min_distance_road2center,
-                             hard_bound_road.lower + right_road_extra_buffer),
+                             hard_bound_road.lower + right_road_extra_buffer +
+                                 road_type_soft_extra),
                     soft_bound_road.lower);
     }
 
@@ -1508,6 +1525,12 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     // TBD add log
     return;
   }
+
+  const ConstStaticAnalysisStoragePtr static_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+  const double ego_v_for_road = ego_cart_state_manager_ != nullptr
+                                    ? ego_cart_state_manager_->ego_v()
+                                    : 0.0;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
     const auto &t = traj_point.t;
@@ -1553,7 +1576,12 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     double lat_buf_dis =
         hpp_general_lateral_decider_utils::CalDesireStaticLateralDistance(
             config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(),
-            ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound, config_);
+            ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound,
+            config_);
+    const double road_type_dis =
+        hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
+            ref_traj_points_[i].s, static_storage, ego_v_for_road, false);
+    lat_buf_dis += road_type_dis;
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
@@ -1757,7 +1785,11 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   double extra_decrease_buffer =
       CalculateExtraDecreaseBuffer(obstacle, is_nudge_left);
-
+  const ConstStaticAnalysisStoragePtr static_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+  const double ego_v_for_road = ego_cart_state_manager_ != nullptr
+                                    ? ego_cart_state_manager_->ego_v()
+                                    : 0.0;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -1821,6 +1853,17 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
         hpp_general_lateral_decider_utils::CalDesireLateralDistance(
             ego_cart_state_manager_->ego_v(), t, 0, obstacle, is_nudge_left,
             in_intersection, config_);
+    const auto &indexes = match_index_map_[i];
+    double road_type_dis = 0.0;
+    for (auto index : indexes) {
+      road_type_dis +=
+          hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
+              ref_traj_points_[index].s, static_storage, ego_v_for_road, true);
+    }
+    if (indexes.size() > 0) {
+      road_type_dis = road_type_dis / ((double)indexes.size());
+    }
+    lat_buf_dis += road_type_dis;
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1838,7 +1881,7 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
       // TBD:add logs
     }
 
-    const auto &indexes = match_index_map_[i];
+    // const auto &indexes = match_index_map_[i];
     if (is_cut_out_side_obstacle || extra_decrease_buffer < 1e-5) {
       for (auto index : indexes) {
         GenerateObstaclePreliminaryDecision(
@@ -2802,47 +2845,106 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
     hard_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
         tmp_hard_lower_point, tmp_hard_upper_point));
   }
+  // const auto check_point =
+  //     [](const auto& refer_path_point,
+  //        auto &prev_point, auto &curr_point, auto &next_point) {
+  //       const auto prev_2_curr = planning_math::Vec2d(curr_point.x - prev_point.x,
+  //                                               curr_point.y - prev_point.y);
+  //       const auto curr_2_next = planning_math::Vec2d(next_point.x - curr_point.x,
+  //                                               next_point.y - curr_point.y);
+  //       const auto prev_2_curr_heading = prev_2_curr.Angle();
+  //       const auto curr_2_next_heading = curr_2_next.Angle();
+  //       const auto mid_heading = planning_math::NormalizeAngle(
+  //           (prev_2_curr_heading + curr_2_next_heading) / 2.0);
+  //       const auto refer_path_heading = refer_path_point.theta();
 
-  const auto check_point =
-      [](const auto& refer_path_point,
-         auto &prev_point, auto &curr_point, auto &next_point) {
-        const auto prev_2_curr = planning_math::Vec2d(curr_point.x - prev_point.x,
-                                                curr_point.y - prev_point.y);
-        const auto curr_2_next = planning_math::Vec2d(next_point.x - curr_point.x,
-                                                next_point.y - curr_point.y);
-        const auto prev_2_curr_heading = prev_2_curr.Angle();
-        const auto curr_2_next_heading = curr_2_next.Angle();
-        const auto mid_heading = planning_math::NormalizeAngle(
-            (prev_2_curr_heading + curr_2_next_heading) / 2.0);
-        const auto refer_path_heading = refer_path_point.theta();
+  //       const auto heading_diff1 =
+  //           planning_math::AngleDiff(prev_2_curr_heading, curr_2_next_heading);
+  //       const auto heading_diff2 =
+  //           planning_math::AngleDiff(refer_path_heading, mid_heading);
+  //       if (std::fabs(heading_diff1) > 3.0 * M_PI / 4.0 &&
+  //           (std::fabs(heading_diff2) > M_PI / 3.0 &&
+  //            std::fabs(heading_diff2) < 2.0 * M_PI / 3.0)) {
+  //         const auto temp = curr_point;
+  //         curr_point = next_point;
+  //         next_point = temp;
+  //       }
+  //     };
 
-        const auto heading_diff1 =
-            planning_math::AngleDiff(prev_2_curr_heading, curr_2_next_heading);
-        const auto heading_diff2 =
-            planning_math::AngleDiff(refer_path_heading, mid_heading);
-        if (std::fabs(heading_diff1) > 3.0 * M_PI / 4.0 &&
-            (std::fabs(heading_diff2) > M_PI / 3.0 &&
-             std::fabs(heading_diff2) < 2.0 * M_PI / 3.0)) {
-          const auto temp = curr_point;
-          curr_point = next_point;
-          next_point = temp;
-        }
-      };
+  // // 临时 hack（taolu10）：避免折返约束
+  // for(size_t idx = 1; idx < hard_bounds_output.size() - 1; ++idx) {
+  //   const auto refer_path_point = frenet_coord->GetPathPointByS(ref_traj_points_[idx].s);
+  //   size_t prev_idx = idx - 1;
+  //   size_t next_idx = idx + 1;
+  //   auto& curr_point_lower = hard_bounds_output[idx].first;
+  //   auto& prev_point_lower = hard_bounds_output[prev_idx].first;
+  //   auto& next_point_lower = hard_bounds_output[next_idx].first;
+  //   check_point(refer_path_point, prev_point_lower, curr_point_lower, next_point_lower);
 
-  // 临时 hack（taolu10）：避免折返约束
-  for(size_t idx = 1; idx < hard_bounds_output.size() - 1; ++idx) {
-    const auto refer_path_point = frenet_coord->GetPathPointByS(ref_traj_points_[idx].s);
-    size_t prev_idx = idx - 1;
-    size_t next_idx = idx + 1;
-    auto& curr_point_lower = hard_bounds_output[idx].first;
-    auto& prev_point_lower = hard_bounds_output[prev_idx].first;
-    auto& next_point_lower = hard_bounds_output[next_idx].first;
-    check_point(refer_path_point, prev_point_lower, curr_point_lower, next_point_lower);
+  //   auto& curr_point_upper = hard_bounds_output[idx].second;
+  //   auto& prev_point_upper = hard_bounds_output[prev_idx].second;
+  //   auto& next_point_upper = hard_bounds_output[next_idx].second;
+  //   check_point(refer_path_point, prev_point_upper, curr_point_upper,
+  //   next_point_upper);
+  // }
+  // 临时 hack（flli9）：避免折返约束
+  static constexpr double kReverseTurnDegThreshold = 90.0;
+  static constexpr double kMinNormProd = 1e-6;
+  const auto smooth_reverse_points = [&](const int current_index,
+                                         const bool use_lower) {
+    int move_step_num = 0;
+    int probe_index = current_index;
+    while (probe_index >= 2) {
+      const int pre_index = probe_index - 1;
+      const int pre_pre_index = probe_index - 2;
+      const auto &curr_point = use_lower
+                                   ? hard_bounds_output[current_index].first
+                                   : hard_bounds_output[current_index].second;
+      const auto &pre_point = use_lower ? hard_bounds_output[pre_index].first
+                                        : hard_bounds_output[pre_index].second;
+      const auto &pre_pre_point =
+          use_lower ? hard_bounds_output[pre_pre_index].first
+                    : hard_bounds_output[pre_pre_index].second;
+      const auto prev_2_curr = planning_math::Vec2d(curr_point.x - pre_point.x,
+                                                    curr_point.y - pre_point.y);
+      const auto prepre_2_pre = planning_math::Vec2d(
+          pre_point.x - pre_pre_point.x, pre_point.y - pre_pre_point.y);
+      const double norm_prod = prev_2_curr.Length() * prepre_2_pre.Length();
+      if (norm_prod <= kMinNormProd) {
+        break;
+      }
+      const double dot = prev_2_curr.InnerProd(prepre_2_pre);
+      const double cos_angle = std::max(-1.0, std::min(1.0, dot / norm_prod));
+      const double angle_thrd_deg = std::acos(cos_angle) * 180.0 / M_PI;
+      if (angle_thrd_deg <= kReverseTurnDegThreshold) {
+        break;
+      }
+      ++move_step_num;
+      --probe_index;
+    }
+    if (move_step_num <= 0) {
+      return;
+    }
+    auto current_point = use_lower ? hard_bounds_output[current_index].first
+                                   : hard_bounds_output[current_index].second;
+    for (int i = current_index; i > current_index - move_step_num; --i) {
+      if (use_lower) {
+        hard_bounds_output[i].first = hard_bounds_output[i - 1].first;
+      } else {
+        hard_bounds_output[i].second = hard_bounds_output[i - 1].second;
+      }
+    }
+    if (use_lower) {
+      hard_bounds_output[current_index - move_step_num].first = current_point;
+    } else {
+      hard_bounds_output[current_index - move_step_num].second = current_point;
+    }
+  };
 
-    auto& curr_point_upper = hard_bounds_output[idx].second;
-    auto& prev_point_upper = hard_bounds_output[prev_idx].second;
-    auto& next_point_upper = hard_bounds_output[next_idx].second;
-    check_point(refer_path_point, prev_point_upper, curr_point_upper, next_point_upper);
+  for (size_t idx = 1; idx < hard_bounds_output.size() - 1; ++idx) {
+    const int current_index = static_cast<int>(idx);
+    smooth_reverse_points(current_index, true);
+    smooth_reverse_points(current_index, false);
   }
   // 临时 hack
   general_lateral_decider_output.first_soft_bounds_cart_point = general_lateral_decider_output.second_soft_bounds_cart_point;
