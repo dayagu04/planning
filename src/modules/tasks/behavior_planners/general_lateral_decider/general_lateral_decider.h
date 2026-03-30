@@ -159,8 +159,10 @@ class GeneralLateralDecider : public Task {
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void SampleRoadDistanceInfo(const double s_target,
-                              ReferencePathPoint& sample_path_point);
+  void SampleRoadDistanceInfo(
+      const double s_target,
+      ReferencePathPoint& sample_path_point,
+      const std::vector<std::pair<LineSegment2d, bool>>& road_segments_frenet);
 
   void GenerateEnuReferenceTraj(
       GeneralLateralDeciderOutput &general_lateral_decider_output);
