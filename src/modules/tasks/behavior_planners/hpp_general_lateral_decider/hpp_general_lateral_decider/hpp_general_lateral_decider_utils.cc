@@ -356,5 +356,137 @@ void MakePolygon(
   }
 }
 
+double RoadTypeExtraBufferAtS(const double s,
+                              const ConstStaticAnalysisStoragePtr &storage,
+                              const double ego_v, bool is_hard_bound) {
+  double max_extra_buffer = 0.0;
+
+  ResultTypeInfo type_info;
+  if (storage) {
+    type_info = storage->GetTypeInfo(s);
+  }
+  double KRoadTypeSoftBuffer = 0.1;
+  if (!is_hard_bound) {
+    max_extra_buffer += KRoadTypeSoftBuffer;
+  }
+  // step1: road type extra buffer
+  switch (type_info.road_type) {
+    case CRoadType::UTurn:
+    case CRoadType::CurveTurn:
+    case CRoadType::NormalTurn:
+    case CRoadType::WideTurn:
+    case CRoadType::SCurveStaight:
+      max_extra_buffer += 0.2;
+      break;
+    case CRoadType::NudgeStraight:
+    case CRoadType::SharpTurn:
+      max_extra_buffer += 0.1;
+      break;
+    case CRoadType::Unknown:
+    case CRoadType::NormalStraight:
+      break;
+    default:
+      break;
+  }
+
+  // step2: element extra buffer
+  for (const auto elem : type_info.elem_types) {
+    switch (elem) {
+      case CElemType::IntersectionRoad:
+        max_extra_buffer += 0.2;
+        break;
+      case CElemType::UpRampRoad:
+      case CElemType::DownRampRoad:
+      case CElemType::UnknownRampRoad:
+        max_extra_buffer += 0.1;
+        break;
+      case CElemType::TurnStileRoad:
+      case CElemType::SpeedBumpRoad:
+      case CElemType::Unknown:
+      case CElemType::NormalRoad:
+        break;
+      default:
+        break;
+    }
+  }
+
+  // step3: speed extra buffer (capped)
+  double KMaxSpeedValue = 5.0;
+  double min_extra_buffer = std::fmin(0.1 * ego_v, max_extra_buffer);
+
+  double clip_ego_v = clip(fabs(ego_v), KMaxSpeedValue, 0.0);
+  double lateral_extra_buffer =
+      min_extra_buffer +
+      clip_ego_v * (max_extra_buffer - min_extra_buffer) / KMaxSpeedValue;
+
+  return lateral_extra_buffer;
+}
+double RoadTypeExtraBufferAtSForObs(
+    const double s, const ConstStaticAnalysisStoragePtr &storage,
+    const double ego_v, bool is_static) {
+  double max_extra_buffer = 0.0;
+
+  ResultTypeInfo type_info;
+  if (storage) {
+    type_info = storage->GetTypeInfo(s);
+  }
+
+  double KDynamicObsBuffer = 0.1;
+  if (!is_static) {
+    max_extra_buffer += KDynamicObsBuffer;
+  }
+  // step1: road type extra buffer
+  switch (type_info.road_type) {
+    case CRoadType::UTurn:
+    case CRoadType::CurveTurn:
+    case CRoadType::NormalTurn:
+    case CRoadType::WideTurn:
+    case CRoadType::SCurveStaight:
+      max_extra_buffer += 0.2;
+      break;
+    case CRoadType::NudgeStraight:
+    case CRoadType::SharpTurn:
+      max_extra_buffer += 0.1;
+      break;
+    case CRoadType::Unknown:
+    case CRoadType::NormalStraight:
+      break;
+    default:
+      break;
+  }
+
+  // step2: element extra buffer
+  for (const auto elem : type_info.elem_types) {
+    switch (elem) {
+      case CElemType::IntersectionRoad:
+        max_extra_buffer += 0.2;
+        break;
+      case CElemType::UpRampRoad:
+      case CElemType::DownRampRoad:
+      case CElemType::UnknownRampRoad:
+        max_extra_buffer += 0.1;
+        break;
+      case CElemType::TurnStileRoad:
+      case CElemType::SpeedBumpRoad:
+      case CElemType::Unknown:
+      case CElemType::NormalRoad:
+        break;
+      default:
+        break;
+    }
+  }
+
+  // step3: speed extra buffer (capped)
+  double KMaxSpeedValue = 5.0;
+  double min_extra_buffer = std::fmin(0.1 * ego_v, max_extra_buffer);
+
+  double clip_ego_v = clip(fabs(ego_v), KMaxSpeedValue, 0.0);
+  double lateral_extra_buffer =
+      min_extra_buffer +
+      clip_ego_v * (max_extra_buffer - min_extra_buffer) / KMaxSpeedValue;
+
+  return lateral_extra_buffer;
+}
+
 }  // namespace hpp_general_lateral_decider_utils
 }  // namespace planning
