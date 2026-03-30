@@ -760,6 +760,9 @@ class LoadRosbag:
                          "meb_output_state","meb_output_requset_status","meb_output_requset_value","meb_od_ttc_min","meb_occ_ttc_min","meb_uss_ttc_min",
                          "meb_fusion_uss_obs_size","meb_od_box_collision_flag","meb_od_box_id","od_box_dis_buffer","OdBox_index","OdBox_dis_type",
                          "Arc_dis_type","Arc_dis_buffer","Arc_index","Line_dis_type","Line_dis_buffer","Line_index",
+                         #meb new
+                         "meb_first_state","meb_second_state","meb_supp_code","meb_input_.ego_radius","meb_cooling_time_remain","meb_hold_duration","meb_no_response_duration","meb_brake_duration",
+                         "meb_request_status","meb_request_value","meb_request_direction",
                          #adas_debug info
                          "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
                          "params_ldp_c0_right_offset", "params_ldp_center_line_offset","params_ldp_ttlc_right_hack","params_ldp_tlc_thrd","params_ldw_enable_speed",
@@ -778,7 +781,10 @@ class LoadRosbag:
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
                          "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3",
                          "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_","sideway_relative_id_zero_nums","left_lane_samedir_exist_flag","left_sideway_near_gap_tmp",
-                         "right_lane_samedir_exist_flag","right_sideway_near_gap_tmp","state_shift_lever",]
+                         "right_lane_samedir_exist_flag","right_sideway_near_gap_tmp","state_shift_lever","od_box_dis_buffer","OdBox_index","OdBox_dis_type",
+                         "Arc_dis_type","Arc_dis_buffer","Arc_index","Line_dis_type","Line_dis_buffer","Line_index",
+                         # new
+                         "state_accelerator_pedal_pos", "state_brake_pedal_pos","meb_od_straight_scene_code_","meb_occ_straight_scene_code_","meb_uss_straight_scene_code_","meb_od_crossing_scene_code"]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
@@ -830,6 +836,7 @@ class LoadRosbag:
                          "obj_mr_obj_loc_vec","obj_rl_obj_loc_vec","obj_rm_obj_loc_vec","obj_rr_obj_loc_vec","meb_all_obs_x_vector","meb_all_obs_y_vector",
                          "meb_od_obs_x_vector","meb_od_obs_y_vector","meb_occ_obs_x_vector","meb_occ_obs_y_vector","meb_traj_x_vector","meb_traj_y_vector",
                          "meb_point_x_vector","meb_point_y_vector","meb_traj_dphi_vector","uss_distance_vec","uss_acc_vec_","meb_uss_obs_x_vector","meb_uss_obs_y_vector",
+                         "meb_od_obs_stop_distance_buffer_vector","meb_occ_obs_stop_distance_buffer_vector","meb_uss_obs_stop_distance_buffer_vector",
                          ]
       # 安全检查相关的向量数据
       json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",

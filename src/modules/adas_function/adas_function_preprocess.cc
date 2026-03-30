@@ -192,16 +192,16 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "ihc_high_beam_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_set_main_switch, bool,
                        "ihc_set_main_switch");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_high_beam_code_maskcode, int,
-                       "ihc_high_beam_code_maskcode");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_low_beam_code_maskcode, int,
-                       "ihc_low_beam_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_high_beam_code_maskcode,
+                       int, "ihc_high_beam_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_low_beam_code_maskcode,
+                       int, "ihc_low_beam_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code_maskcode, int,
                        "ihc_fault_code_maskcode");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_active_code_maskcode, int,
-                       "ihc_active_code_maskcode");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_disable_code_maskcode, int,
-                       "tsr_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_active_code_maskcode,
+                       int, "ihc_active_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_disable_code_maskcode,
+                       int, "tsr_disable_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code_maskcode, int,
                        "tsr_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
@@ -271,7 +271,7 @@ void Preprocess::SyncParameters(const bool is_simulation) {
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_fault_code_maskcode, int,
                        "elk_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->adas_fault_sw_code, int,
-                       "adas_fault_sw_code");                     
+                       "adas_fault_sw_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_enable_code_maskcode,
                        int, "elk_enable_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_disable_code_maskcode,
@@ -373,9 +373,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "ldw_tlc_near_");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_soildline_switch, bool,
                        "elk_soildline_switch");
-  ADAS_JSON_READ_VALUE(
-      GetContext.mutable_param()->elk_bicycle_motorcycle_sw, bool,
-      "elk_bicycle_motorcycle_sw");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_bicycle_motorcycle_sw,
+                       bool, "elk_bicycle_motorcycle_sw");
 
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_main_switch, bool,
                        "meb_main_switch");
@@ -385,10 +384,10 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "meb_occ_obs_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_uss_obs_switch, bool,
                        "meb_uss_obs_switch");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_ttc_thrd, double,
-                       "meb_ttc_thrd");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_dis_buffer, double,
-                       "meb_dis_buffer");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_function_state_switch,
+                       bool, "meb_function_state_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_false_trigger_switch,
+                       bool, "meb_false_trigger_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_acc_collision_thrd,
                        double, "meb_acc_collision_thrd");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_acc_collision_thrd_bak,
@@ -420,42 +419,83 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        int, "meb_request_status_const");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer, double,
                        "meb_odbox_dis_buffer");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r, double,
-                       "meb_odbox_dis_buffer_r");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_people,  std::vector<double>,
-                       "meb_odbox_dis_buffer_r_dynamic_people");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_car,  std::vector<double>,
-                       "meb_odbox_dis_buffer_r_dynamic_car");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_motor,  std::vector<double>,
-                       "meb_odbox_dis_buffer_r_dynamic_motor");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_default, std::vector<double>,
-                       "meb_odbox_dis_buffer_r_dynamic_default");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_people, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_dynamic_people");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_car, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_dynamic_car");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_motor, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_dynamic_motor");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_default, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_dynamic_default");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_people, std::vector<double>,
-                       "meb_odbox_dis_buffer_r_static_people");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_car, std::vector<double>,
-                       "meb_odbox_dis_buffer_r_static_car");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_motor, std::vector<double>,
-                       "meb_odbox_dis_buffer_r_static_motor");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_default, std::vector<double>,
-                       "meb_odbox_dis_buffer_r_static_default");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_people, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_static_people");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_car, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_static_car");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_motor, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_static_motor");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_default, std::vector<double>,
-                       "meb_odbox_dis_buffer_d_static_default");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_veh_speed_kmh, std::vector<double>,
-                       "meb_odbox_dis_buffer_veh_speed_kmh");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r,
+                       double, "meb_odbox_dis_buffer_r");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_people,
+      std::vector<double>, "meb_odbox_dis_buffer_r_dynamic_people");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_car,
+      std::vector<double>, "meb_odbox_dis_buffer_r_dynamic_car");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_motor,
+      std::vector<double>, "meb_odbox_dis_buffer_r_dynamic_motor");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_dynamic_default,
+      std::vector<double>, "meb_odbox_dis_buffer_r_dynamic_default");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_people,
+      std::vector<double>, "meb_odbox_dis_buffer_d_dynamic_people");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_car,
+      std::vector<double>, "meb_odbox_dis_buffer_d_dynamic_car");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_motor,
+      std::vector<double>, "meb_odbox_dis_buffer_d_dynamic_motor");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_dynamic_default,
+      std::vector<double>, "meb_odbox_dis_buffer_d_dynamic_default");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_people,
+      std::vector<double>, "meb_odbox_dis_buffer_r_static_people");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_car,
+      std::vector<double>, "meb_odbox_dis_buffer_r_static_car");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_motor,
+      std::vector<double>, "meb_odbox_dis_buffer_r_static_motor");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_r_static_default,
+      std::vector<double>, "meb_odbox_dis_buffer_r_static_default");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_people,
+      std::vector<double>, "meb_odbox_dis_buffer_d_static_people");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_car,
+      std::vector<double>, "meb_odbox_dis_buffer_d_static_car");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_motor,
+      std::vector<double>, "meb_odbox_dis_buffer_d_static_motor");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_d_static_default,
+      std::vector<double>, "meb_odbox_dis_buffer_d_static_default");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_odbox_dis_buffer_veh_speed_kmh,
+      std::vector<double>, "meb_odbox_dis_buffer_veh_speed_kmh");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_r_static_people,
+      std::vector<double>, "park_meb_odbox_dis_buffer_r_static_people");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_r_static_car,
+      std::vector<double>, "park_meb_odbox_dis_buffer_r_static_car");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_r_static_motor,
+      std::vector<double>, "park_meb_odbox_dis_buffer_r_static_motor");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_r_static_default,
+      std::vector<double>, "park_meb_odbox_dis_buffer_r_static_default");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_d_static_people,
+      std::vector<double>, "park_meb_odbox_dis_buffer_d_static_people");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_d_static_car,
+      std::vector<double>, "park_meb_odbox_dis_buffer_d_static_car");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_d_static_motor,
+      std::vector<double>, "park_meb_odbox_dis_buffer_d_static_motor");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->park_meb_odbox_dis_buffer_d_static_default,
+      std::vector<double>, "park_meb_odbox_dis_buffer_d_static_default");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->sd_map_speed_sw, bool,
                        "sd_map_speed_sw");
   // SetEgoAroundAreaRange();
@@ -864,17 +904,20 @@ void Preprocess::UpdateStateInfo(void) {
   } else {
     right_line_changed_flag = false;
   }
-  double excessive_line_crossing_dist_thrd = 0.5; // 判断车轮是否大幅压线的距离判断阈值 单位:m
-  bool left_has_excessive_line_crossing_flag = false;// 车辆左轮大幅压线
-  if(GetContext.get_road_info()->current_lane.left_line.valid &&
-     (GetContext.get_state_info()->fl_wheel_distance_to_line < (-1.0*excessive_line_crossing_dist_thrd))){
+  double excessive_line_crossing_dist_thrd =
+      0.5;  // 判断车轮是否大幅压线的距离判断阈值 单位:m
+  bool left_has_excessive_line_crossing_flag = false;  // 车辆左轮大幅压线
+  if (GetContext.get_road_info()->current_lane.left_line.valid &&
+      (GetContext.get_state_info()->fl_wheel_distance_to_line <
+       (-1.0 * excessive_line_crossing_dist_thrd))) {
     left_has_excessive_line_crossing_flag = true;
   } else {
     left_has_excessive_line_crossing_flag = false;
   }
-  bool right_has_excessive_line_crossing_flag = false;// 车辆右轮大幅压线
-  if(GetContext.get_road_info()->current_lane.right_line.valid &&
-     (GetContext.get_state_info()->fr_wheel_distance_to_line > excessive_line_crossing_dist_thrd)){
+  bool right_has_excessive_line_crossing_flag = false;  // 车辆右轮大幅压线
+  if (GetContext.get_road_info()->current_lane.right_line.valid &&
+      (GetContext.get_state_info()->fr_wheel_distance_to_line >
+       excessive_line_crossing_dist_thrd)) {
     right_has_excessive_line_crossing_flag = true;
   } else {
     right_has_excessive_line_crossing_flag = false;
@@ -882,14 +925,11 @@ void Preprocess::UpdateStateInfo(void) {
 
   if (left_line_changed_flag && right_line_changed_flag) {
     GetContext.mutable_road_info()->current_lane.lane_changed_flag = true;
-  } 
-  else if(left_has_excessive_line_crossing_flag){
+  } else if (left_has_excessive_line_crossing_flag) {
     GetContext.mutable_road_info()->current_lane.lane_changed_flag = true;
-  }
-  else if(right_has_excessive_line_crossing_flag){
+  } else if (right_has_excessive_line_crossing_flag) {
     GetContext.mutable_road_info()->current_lane.lane_changed_flag = true;
-  }
-  else {
+  } else {
     GetContext.mutable_road_info()->current_lane.lane_changed_flag = false;
   }
   last_left_line_valid_flag_ =
@@ -1700,9 +1740,9 @@ void Preprocess::SetNavMapInfo(void) {
           .get_route_info()
           ->get_sdpromap_valid()) {
     const auto &sd_pro_map_info_ptr = GetContext.get_session()
-                                      ->environmental_model()
-                                      .get_route_info()
-                                      ->get_sdpro_map();
+                                          ->environmental_model()
+                                          .get_route_info()
+                                          ->get_sdpro_map();
     // 获取sdpromap信息
     auto localization_info = GetContext.mutable_session()
                                  ->mutable_environmental_model()
@@ -1725,7 +1765,8 @@ void Preprocess::SetNavMapInfo(void) {
       sdpromap_info.valid_flag = false;
       sdpromap_info.map_source = 2;
       sdpromap_info.speed_limit = 0;
-      sdpromap_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+      sdpromap_info.road_type =
+          iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
     } else {
       sdpromap_info.valid_flag = true;
       sdpromap_info.map_source = 2;
@@ -1736,7 +1777,8 @@ void Preprocess::SetNavMapInfo(void) {
 }
 
 // 根据导航信息获取道路类型 (sd_map - 直接从 NaviRoadInfo 获取，无需匹配)
-iflyauto::DrivingRoadType Preprocess::GetRoadTypeFromNaviInfo(int32 road_class, int32 form_way) {
+iflyauto::DrivingRoadType Preprocess::GetRoadTypeFromNaviInfo(int32 road_class,
+                                                              int32 form_way) {
   // 根据 ehr_sdmap.proto 的 RoadPriority 枚举定义进行映射
   // EXPRESSWAY = 0;           // 高速公路
   // CITY_EXPRESSWAY = 1;      // 城市快速路
@@ -1761,7 +1803,8 @@ iflyauto::DrivingRoadType Preprocess::GetRoadTypeFromNaviInfo(int32 road_class, 
 }
 
 // 根据地图信息获取道路类型 (sd_pro_map)
-iflyauto::DrivingRoadType Preprocess::GetRoadTypeFromProMap(const iflymapdata::sdpro::LinkInfo_Link* link) {
+iflyauto::DrivingRoadType Preprocess::GetRoadTypeFromProMap(
+    const iflymapdata::sdpro::LinkInfo_Link *link) {
   if (link == nullptr) {
     return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }

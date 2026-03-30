@@ -6,6 +6,7 @@ file(GLOB_RECURSE SRC_FILES
   ${CMAKE_CURRENT_LIST_DIR}/ihc_function/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/tsr_function/*.cc
   ${CMAKE_CURRENT_LIST_DIR}/lkas_function/*.cc
+  ${CMAKE_CURRENT_LIST_DIR}/meb_function/*.cc
 )
 
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})

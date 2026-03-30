@@ -692,4 +692,199 @@ void leastSquareFittingForRoadedge(
   line_info_ptr->c2 = ret[2];
   line_info_ptr->c3 = ret[3];
 }
+
+OdObjGroup GetOdObjGroup(const iflyauto::ObjectType type) {
+  switch (type) {
+    case iflyauto::ObjectType::OBJECT_TYPE_ADULT:
+    case iflyauto::ObjectType::OBJECT_TYPE_CHILD:
+    case iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_POLICE:
+      return OdObjGroup::kPeople;
+    case iflyauto::ObjectType::OBJECT_TYPE_COUPE:
+    case iflyauto::ObjectType::OBJECT_TYPE_MINIBUS:
+    case iflyauto::ObjectType::OBJECT_TYPE_VAN:
+    case iflyauto::ObjectType::OBJECT_TYPE_BUS:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRUCK:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRAILER:
+      return OdObjGroup::kCar;
+    case iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING:
+    case iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING:
+    case iflyauto::ObjectType::OBJECT_TYPE_BICYCLE:
+    case iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE:
+    case iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE:
+      return OdObjGroup::kMotor;
+    default:
+      return OdObjGroup::kDefault;
+  }
+}
+
+float32 GetEgoCurvature(float32 v, float32 yaw_rate, float32 steer_angle,
+                        float32 steer_ratio, float32 wheel_base) {
+  double curv_low_spd = steer_angle / steer_ratio / wheel_base;
+  double curv_high_spd = yaw_rate / fmax(v, 0.1);
+
+  double curv_low_spd_factor;
+  double curv_knee_pt1_mps = 3.0;
+  double curv_knee_pt2_mps = 6.0;
+  if (v < curv_knee_pt1_mps) {
+    curv_low_spd_factor = 1.0;
+  } else if (v < curv_knee_pt2_mps) {
+    curv_low_spd_factor =
+        (curv_knee_pt2_mps - v) / (curv_knee_pt2_mps - curv_knee_pt1_mps);
+  } else {
+    curv_low_spd_factor = 0.0;
+  }
+  double irregular_yawrate_thr = 0.75;
+  if (fabs(yaw_rate) > irregular_yawrate_thr) {
+    curv_low_spd_factor = 1.0;
+  }
+
+  double curv = curv_low_spd_factor * curv_low_spd +
+                (1.0 - curv_low_spd_factor) * curv_high_spd;
+
+  if (fabs(curv) < 0.00001) {
+    curv = 0.00001;
+  } else {
+    // do nothing
+  }
+
+  return curv;
+}
+
+int32 min_int32(int32 x, int32 y) { return (x < y) ? x : y; }
+float32 min_float(float32 x, float32 y) { return (x < y) ? x : y; }
+int32 max_int32(int32 x, int32 y) { return (x > y) ? x : y; }
+float32 max_float(float32 x, float32 y) { return (x > y) ? x : y; }
+
+/*MySinRad函数功能:
+使用泰勒展开法替代<math.h>中的sin函数，解决计算量太大造成程序卡死问题
+输入接口：
+(1)angle_rad:角度 单位:rad 范围:-4pi 到 4pi
+输出接口：
+sin(angle_rad)
+*/
+float32 MySinRad(float32 angle_rad) {
+  float32 x = angle_rad;
+  float32 pi = 3.14159265358979323846F;
+  float32 two_pi = 2.0F * pi;
+
+  // 将x值等效至[-4.0*pi,4.0*pi]之间
+  float32 two_pi_times;  // angle_rad/(2*pi)取整的结果
+  two_pi_times = (int)(angle_rad / two_pi + 0.5);
+  x = angle_rad - two_pi_times * two_pi;
+
+  if ((x > 4.0 * pi) && (x < -4.0 * pi)) {
+    return 0.0F;
+  }
+
+  if (isnan(x)) {
+    return 0.0F;
+  }
+
+  // 将x值的范围控制在[0,2*pi]之间
+  while (x > two_pi)  // 大于360度
+  {
+    x = x - two_pi;
+  }
+  while (x < 0.0F)  // 小于0度
+  {
+    x = x + two_pi;
+  }
+
+  // 泰勒展开公式(x有效输入范围为[-0.5*pi,0.5*pi])
+  // sin x = x - x^3/3! + x^5/5! - x^7/7! +……+(-1)^(k-1)*(x^(2k-1))/(2k-1)!
+  // cos x = 1 - x^2/2! + x^4/4! - x^6/6! +……+(-1)^(k)*(x^(2k))/(2k)!
+  float32 result_sign = 1.0F;
+  if ((x >= 0.0F) && (x <= (pi / 2.0F))) {
+    //[0,90]deg
+    result_sign = 1.0F;
+  } else if (x <= (pi * 3.0F / 2.0F)) {
+    //(90,270]deg
+    // sin(pi+x) = -sin(x)
+    x = x - pi;  //(-90,90]
+    result_sign = -1.0F;
+  } else {
+    //(270,360]deg
+    // sin(two_pi+x) = sin(x)
+    x = x - two_pi;  //(-90,0]
+    result_sign = 1.0F;
+  }
+
+  float32 x_2 = x * x;
+  float32 x_3 = x_2 * x;
+  float32 x_5 = x_3 * x_2;
+  float32 x_7 = x_5 * x_2;
+  float32 result = 0.0F;
+  float32 result_temp = 0.0F;
+  result_temp = x - x_3 / 6.0F + x_5 / 120.0F - x_7 / 5040.0F;
+  result = result_temp * result_sign;
+  return result;
+}
+
+/*MyCosRad函数功能:
+使用泰勒展开法替代<math.h>中的cos函数，解决计算量太大造成程序卡死问题
+输入接口：
+(1)angle_rad:角度 单位:rad 范围:-4pi 到 4pi
+输出接口：
+sin(angle_rad)
+*/
+float32 MyCosRad(float32 angle_rad) {
+  float32 x = angle_rad;
+  float32 pi = 3.14159265358979323846F;
+  float32 two_pi = 2.0F * pi;
+
+  // 将x值等效至[-4.0*pi,4.0*pi]之间
+  float32 two_pi_times;  // angle_rad/(2*pi)取整的结果
+  two_pi_times = (int)(angle_rad / two_pi + 0.5);
+  x = angle_rad - two_pi_times * two_pi;
+
+  if ((x > 4.0 * pi) && (x < -4.0 * pi)) {
+    return 0.0F;
+  }
+
+  if (isnan(x)) {
+    return 0.0F;
+  }
+
+  // 将x值的范围控制在[0,2*pi]之间
+  while (x > two_pi)  // 大于360度
+  {
+    x = x - two_pi;
+  }
+  while (x < 0.0F)  // 小于0度
+  {
+    x = x + two_pi;
+  }
+
+  // 泰勒展开公式(x有效输入范围为[-0.5*pi,0.5*pi])
+  // sin x = x - x^3/3! + x^5/5! - x^7/7! +……+(-1)^(k-1)*(x^(2k-1))/(2k-1)!
+  // cos x = 1 - x^2/2! + x^4/4! - x^6/6! +……+(-1)^(k)*(x^(2k))/(2k)!
+  float32 result_sign = 1.0F;
+  if ((x >= 0.0F) && (x <= (pi / 2.0F))) {
+    //[0,90]deg
+    result_sign = 1.0F;
+  } else if (x <= (pi * 3.0F / 2.0F)) {
+    //(90,270]deg
+    // cos(pi+x) = -cos(x)
+    x = x - pi;  //(-90,90]
+    result_sign = -1.0F;
+  } else {
+    //(270,360]deg
+    // cos(two_pi+x) = cos(x)
+    x = x - two_pi;  //(-90,0]
+    result_sign = 1.0F;
+  }
+
+  float32 x_2 = x * x;
+  float32 x_4 = x_2 * x_2;
+  float32 x_6 = x_4 * x_2;
+  float32 x_8 = x_6 * x_2;
+  float32 result = 0.0F;
+  float32 result_temp = 0.0F;
+  result_temp = 1.0F - x_2 / 2.0F + x_4 / 24.0F - x_6 / 720.0F + x_8 / 40320.0F;
+  result = result_temp * result_sign;
+  return result;
+}
+
 }  // namespace adas_function
