@@ -3677,6 +3677,7 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
   } else {
     path_planner_input.parallel_replan_again_ = DR_NOT_REPLAN;
   }
+  parallel_path_planner_.DisablePAPark();
   if (enable_pa_park_) {
     parallel_path_planner_.EnablePAPark();
     ILOG_INFO << "total_plan_count = " << int(frame_.total_plan_count)
