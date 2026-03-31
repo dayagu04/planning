@@ -590,7 +590,8 @@
     "extra_static_nudge_buffer2first_bound": 0.05,
     "extra_dynamic_nudge_buffer2first_bound": 0.1,
     "use_first_soft_bound": true,
-    "first_soft_min_distance2center": 11
+    "first_soft_min_distance2center": 11,
+    "is_premove_in_merge_scene": false
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,

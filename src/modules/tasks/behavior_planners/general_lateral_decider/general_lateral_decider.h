@@ -265,6 +265,15 @@ class GeneralLateralDecider : public Task {
   void ProtectRoadBound(std::pair<double, double>& bound,
                         const int index);
 
+  bool HandleMergeSceneRefOffset(
+      double ref_buffer, TrajectoryPoints& traj_points,
+      std::vector<std::pair<double, double>>& front_axis_ref_path);
+
+  bool CheckPremoveSafety(
+      const int premove_direction, const double remain_distance,
+      const std::shared_ptr<LaneReferencePath> lane_ref_path,
+      double& min_safe_offset);
+
  private:
   GeneralLateralDeciderConfig config_;
 
