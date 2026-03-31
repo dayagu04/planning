@@ -713,6 +713,74 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   # HPP debug attribute / value vectors
   hpp_debug_attr_vec = []
   hpp_debug_val_vec = []
+
+  # === 追加：从 HppSpeedLimitDeciderDebug proto 里取值 ===
+  if hasattr(plan_debug_info, 'hpp_speed_limit_decider_debug') and \
+    plan_debug_info.HasField('hpp_speed_limit_decider_debug'):
+    hpp = plan_debug_info.hpp_speed_limit_decider_debug
+    # C++ 里 HppSpeedLimitType 的枚举映射
+    hpp_speed_limit_type_map = {
+        0: 'UNSPECIFIED',
+        1: 'CURVATURE',
+        3: 'CRUISE',
+        24: 'MAP',
+        25: 'USER',
+        26: 'NARROW_PASSAGE',
+        27: 'AVOID',
+        28: 'BUMP_ROAD',
+        29: 'RAMP_ROAD',
+        30: 'INTERSECTION_ROAD',
+    }
+    # 最终输出
+    hpp_debug_attr_vec += [
+        'hpp_final_v_target',
+        'hpp_final_speed_limit_type',
+    ]
+    hpp_debug_val_vec += [
+        hpp.final_v_target if hpp.HasField('final_v_target') else None,
+        hpp_speed_limit_type_map.get(hpp.final_speed_limit_type,
+                                    hpp.final_speed_limit_type),
+    ]
+    # 简单限速：user/map/curvature/avoid
+    if hpp.HasField('user'):
+      hpp_debug_attr_vec += ['hpp_user_v_limit']
+      hpp_debug_val_vec += [hpp.user.v_limit]
+    if hpp.HasField('map'):
+      hpp_debug_attr_vec += ['hpp_map_v_limit']
+      hpp_debug_val_vec += [hpp.map.v_limit]
+    if hpp.HasField('curvature'):
+      hpp_debug_attr_vec += ['hpp_curvature_v_limit']
+      hpp_debug_val_vec += [hpp.curvature.v_limit]
+    if hpp.HasField('avoid'):
+      hpp_debug_attr_vec += ['hpp_avoid_v_limit']
+      hpp_debug_val_vec += [hpp.avoid.v_limit]
+    # 区段限速：窄路/减速带/匝道/路口
+    def _append_zone(prefix, zone):
+      if not zone:
+        return
+      hpp_debug_attr_vec.extend([
+          f'{prefix}_v_limit',
+          f'{prefix}_in_zone',
+          f'{prefix}_approaching',
+          f'{prefix}_distance_to_zone',
+      ])
+      hpp_debug_val_vec.extend([
+          zone.v_limit if zone.HasField('v_limit') else None,
+          zone.in_speed_limit_zone if zone.HasField('in_speed_limit_zone') else None,
+          zone.approaching_speed_limit_zone
+              if zone.HasField('approaching_speed_limit_zone') else None,
+          zone.distance_to_zone if zone.HasField('distance_to_zone') else None,
+      ])
+    if hpp.HasField('narrow_passage'):
+      _append_zone('hpp_narrow_passage', hpp.narrow_passage)
+    if hpp.HasField('bump'):
+      _append_zone('hpp_bump', hpp.bump)
+    if hpp.HasField('ramp'):
+      _append_zone('hpp_ramp', hpp.ramp)
+    if hpp.HasField('intersection'):
+      _append_zone('hpp_intersection', hpp.intersection)
+
+  # 再把原来 JSON 的 HPP 字段追加在后面
   for ind in range(len(hpp_debug_value_list)):
      key = hpp_debug_value_list[ind]
      val = plan_debug_json_info.get(key, None)
