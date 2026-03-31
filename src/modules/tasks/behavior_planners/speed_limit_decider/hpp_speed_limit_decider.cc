@@ -172,6 +172,12 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
   if (!BuildSpeedObjectiveZoneInfo(
           zone_info, CRoadType::Ignore, CPassageType::NarrowPassage,
           CElemType::Ignore, approach_distance_threshold)) {
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(
+        MutableHppSpeedLimitDeciderDebug()->mutable_narrow_passage(),
+        SpeedLimitType::NARROW_PASSAGE, v_limit_speed_narrow_passage,
+        zone_info);
+#endif
     return;
   }
 
@@ -191,8 +197,8 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_narrow_passage(),
-                   SpeedLimitType::NARROW_PASSAGE,
-                   v_limit_speed_narrow_passage, zone_info);
+                   SpeedLimitType::NARROW_PASSAGE, v_limit_speed_narrow_passage,
+                   zone_info);
 #endif
   return;
 }
@@ -206,6 +212,10 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
   const auto& hpp_general_lateral_decider_output =
       session_->planning_context().hpp_general_lateral_decider_output();
   if (hpp_general_lateral_decider_output.avoid_ids.empty()) {
+#ifdef ENABLE_PROTO_LOG
+    FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_avoid(),
+                       SpeedLimitType::AVOID, v_limit_avoid);
+#endif
     return;
   }
 
@@ -375,6 +385,10 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
     auto& planning_result =
         session_->mutable_planning_context()->mutable_planning_result();
     planning_result.speed_bump_path_segments.clear();
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_bump(),
+                     SpeedLimitType::BUMP_ROAD, v_limit_speed_bump, zone_info);
+#endif
     return;
   }
 
@@ -495,6 +509,10 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
                                    CPassageType::Ignore, CElemType::RampRoad,
                                    approach_distance_threshold)) {
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_ramp(),
+                     SpeedLimitType::RAMP_ROAD, v_limit_speed_ramp, zone_info);
+#endif
     return;
   }
 
@@ -533,6 +551,11 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
   if (!BuildSpeedObjectiveZoneInfo(
           zone_info, CRoadType::Ignore, CPassageType::Ignore,
           CElemType::IntersectionRoad, approach_distance_threshold)) {
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_intersection(),
+                     SpeedLimitType::INTERSECTION_ROAD,
+                     v_limit_speed_intersection, zone_info);
+#endif
     return;
   }
 
