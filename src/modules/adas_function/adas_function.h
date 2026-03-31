@@ -53,6 +53,7 @@ class AdasFunction : public BaseFunction {
 
   void LdpDriverhandsoffWarning();
   bool lkas_handsoff_trq_flag = false;
+  double lkas_handsoff_trq_duration = 0.0;
   bool lkas_intervention = false;
   bool lkas_handsoff_state = false;
   double lkas_handsoff_duration = 0.0;

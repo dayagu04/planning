@@ -349,8 +349,8 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
                                               ->get_local_view()
                                               .vehicle_service_output_info;
 
-  if(vehicle_service_output_info_ptr->driver_hands_off_state == true && 
-    fabs(vehicle_service_output_info_ptr->driver_hand_torque < 0.50)) {
+  if(vehicle_service_output_info_ptr->driver_hands_off_state == true &&
+     vehicle_service_output_info_ptr->driver_hands_off_state_available == true) {
     lkas_handsoff_duration += GetContext.get_param()->dt;
   } else {
     lkas_handsoff_duration = 0.0;
@@ -358,7 +358,7 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
   if(lkas_handsoff_duration > 10.0) {
     lkas_handsoff_duration = 10.0;
   }
-  if(lkas_handsoff_duration >= 0.1) {
+  if(lkas_handsoff_duration > 0.1) {
     lkas_handsoff_state = true;
   } else {
     lkas_handsoff_state = false;
@@ -395,9 +395,14 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
     // ldp_intervention_duration_ = 0.0;  // 重置180秒计时器
   }
 
-  if (fabs(vehicle_service_output_info_ptr->driver_hand_torque > 0.50) &&
-      vehicle_service_output_info_ptr->driver_hand_torque_available ==
-          true && GetContext.get_param()->car_type == "bestune_e541") {
+  if (fabs(vehicle_service_output_info_ptr->driver_hand_torque) > 0.50 &&
+      vehicle_service_output_info_ptr->driver_hand_torque_available == true && 
+      GetContext.get_param()->car_type == "bestune_e541") {
+    lkas_handsoff_trq_duration += GetContext.get_param()->dt;
+  } else {
+    lkas_handsoff_trq_duration = 0.0;
+  }
+  if(lkas_handsoff_trq_duration > 0.2) {
     lkas_handsoff_trq_flag = true;
   } else {
     lkas_handsoff_trq_flag = false;
