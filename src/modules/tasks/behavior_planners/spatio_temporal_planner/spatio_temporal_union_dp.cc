@@ -15,6 +15,7 @@
 #include "log.h"
 #include "math/box2d.h"
 #include "spatio_temporal_union_dp_input.pb.h"
+#include "spatio_temporal_union_plan.pb.h"
 #include "src/library/advanced_ctrl_lib/include/spline.h"
 #include "src/modules/common/agent/agent.h"
 #include "src/modules/common/math/curve1d/cubic_polynomial_curve1d.h"
@@ -117,12 +118,20 @@ bool SpatioTemporalUnionDp::Update(
   // auto time_end = IflyTime::Now_ms();
   // ILOG_DEBUG << "SpatioTemporalUnionDp::Update() CalculateTotalCost cost:"
   //            << time_end - time_start;
-
-  if (!RetrieveSpeedProfile(traj_points, spatio_temporal_union_plan_input)) {
+  debug_points_.clear();
+  if (!RetrieveSpeedProfile(traj_points, spatio_temporal_union_plan_input, &debug_points_)) {
     ILOG_DEBUG << "Retrieve best speed profile failed";
     FallbackFunction(spatio_temporal_union_plan_input, traj_points,
                      last_enable_using_st_plan);
     return false;
+  }
+
+  auto* debug_plan = DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_spatio_temporal_union_plan();
+  std::cout << "debug_points size:" << debug_points_.size() <<std::endl;
+  for (const auto& point : debug_points_) {
+    debug_plan->add_debug_points()->CopyFrom(point);
   }
 
   return true;
@@ -706,9 +715,11 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     // ILOG_DEBUG << "c1 CheckOverlapOnDpSltGraph:" << overlap - c1;
 
     // 计算相邻两节点之间路径的cost
+    double path_l_cost_c1 = 0.0, path_dl_cost_c1 = 0.0, path_ddl_cost_c1 = 0.0, stitching_cost_c1 = 0.0;
     double path_cost_c1 =
         CalculatePathCost(cost_init, cost_cr, lateral_cubic_curve_c1, acc,
-                          spatio_temporal_union_plan_input);
+                          spatio_temporal_union_plan_input,
+                          &path_l_cost_c1, &path_dl_cost_c1, &path_ddl_cost_c1, &stitching_cost_c1);
     // auto pathcost = IflyTime::Now_us();
     // ILOG_DEBUG << "c1 CalculatePathCost:" << pathcost - overlap;
 
@@ -734,6 +745,10 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     cost_cr.SetMinObsDistance(dis);
     cost_cr.SetMinDistanceAgentId(agent_id);
     cost_cr.SetPathCost(path_cost_c1);
+    cost_cr.SetPathLCost(path_l_cost_c1);
+    cost_cr.SetPathDlCost(path_dl_cost_c1);
+    cost_cr.SetPathDdlCost(path_ddl_cost_c1);
+    cost_cr.SetStitchingCost(stitching_cost_c1);
     cost_cr.SetLongitinalCost(long_cost_c1);
     cost_cr.SetPrePoint(cost_init);
     cost_cr.SetOptimalSpeed(std::max(v0 + acc * unit_t_, 0.0));
@@ -832,9 +847,11 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         const CubicPolynomialCurve1d& lateral_cubic_curve_c2 = CubicPolynomialMap_.at({pre_cost.index_l(), cost_cr.index_l()});
         // 计算相邻两节点之间路径的cost
         // auto overlap_2 = IflyTime::Now_us();
+        double path_l_cost_c2 = 0.0, path_dl_cost_c2 = 0.0, path_ddl_cost_c2 = 0.0, stitching_cost_c2 = 0.0;
         double path_cost_c2 =
             CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a,
-                              spatio_temporal_union_plan_input);
+                              spatio_temporal_union_plan_input,
+                              &path_l_cost_c2, &path_dl_cost_c2, &path_ddl_cost_c2, &stitching_cost_c2);
         // auto pathcost = IflyTime::Now_us();
         // ILOG_DEBUG << "c2 CalculatePathCost:" << pathcost - overlap_2;
 
@@ -878,6 +895,10 @@ void SpatioTemporalUnionDp::CalculateCostAt(
           cost_cr.SetLongitinalCost(long_cost_c2);
           cost_cr.SetTotalCost(cost);
           cost_cr.SetPathCost(path_cost_c2);
+          cost_cr.SetPathLCost(path_l_cost_c2);
+          cost_cr.SetPathDlCost(path_dl_cost_c2);
+          cost_cr.SetPathDdlCost(path_ddl_cost_c2);
+          cost_cr.SetStitchingCost(stitching_cost_c2);
           cost_cr.SetPrePoint(pre_node);
           cost_cr.SetOptimalSpeed(std::max(
               pre_node.GetOptimalSpeed() + curr_a * unit_t_,
@@ -957,9 +978,11 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       // std::cout << pre_cost.point().l() << " " << cost_cr.point().l() << std::endl;
       const CubicPolynomialCurve1d& lateral_cubic_curve = CubicPolynomialMap_.at({pre_cost.index_l(), cost_cr.index_l()});
       // 计算相邻两节点之间路径的cost
+      double path_l_cost_c = 0.0, path_dl_cost_c = 0.0, path_ddl_cost_c = 0.0, stitching_cost_c = 0.0;
       double path_cost_c =
           CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve, curr_a,
-                            spatio_temporal_union_plan_input);
+                            spatio_temporal_union_plan_input,
+                            &path_l_cost_c, &path_dl_cost_c, &path_ddl_cost_c, &stitching_cost_c);
       // auto pathcost = IflyTime::Now_us();
       // ILOG_DEBUG << "c3 CalculatePathCost:" << pathcost - overlap;
 
@@ -1015,6 +1038,10 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         cost_cr.SetLongitinalCost(long_cost);
         cost_cr.SetTotalCost(cost);
         cost_cr.SetPathCost(path_cost_c);
+        cost_cr.SetPathLCost(path_l_cost_c);
+        cost_cr.SetPathDlCost(path_dl_cost_c);
+        cost_cr.SetPathDdlCost(path_ddl_cost_c);
+        cost_cr.SetStitchingCost(stitching_cost_c);
         cost_cr.SetPrePoint(pre_node);
         cost_cr.SetOptimalSpeed(std::max(
             pre_node.GetOptimalSpeed() + curr_a * unit_t_, 0.0));
@@ -1030,7 +1057,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
 bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
     TrajectoryPoints &traj_points,
     const planning::common::SpationTemporalUnionDpInput
-        &spatio_temporal_union_plan_input) {
+        &spatio_temporal_union_plan_input,
+    std::vector<planning::common::DebugPoint>* debug_points) {
   double min_cost = std::numeric_limits<double>::infinity();
   const SLTGraphPoint *best_end_point = nullptr;
   int c = dimension_t_ - 1;
@@ -1097,6 +1125,35 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
               << "  obstacle_id = " << cur_point->min_distance_agent_id()
               << "  total_cost = " << cur_point->total_cost() << " \n";
 #endif
+    if (debug_points != nullptr) {
+      planning::common::DebugPoint debug_point;
+      debug_point.set_s(cur_point->point().s());
+      debug_point.set_l(cur_point->point().l());
+      debug_point.set_t(cur_point->point().t());
+      debug_point.set_v(cur_point->GetOptimalSpeed());
+      debug_point.set_t_index(cur_point->index_t());
+      debug_point.set_s_index(cur_point->index_s());
+      debug_point.set_l_index(cur_point->index_l());
+      debug_point.set_obstacle_cost(cur_point->obstacle_cost());
+      debug_point.set_path_cost(cur_point->path_cost());
+      debug_point.set_path_l_cost(cur_point->path_l_cost());
+      debug_point.set_path_dl_cost(cur_point->path_dl_cost());
+      debug_point.set_path_ddl_cost(cur_point->path_ddl_cost());
+      debug_point.set_stitching_cost(cur_point->stitching_cost());
+      debug_point.set_long_cost(cur_point->longitinal_cost());
+      debug_point.set_obstacle_min_distance(cur_point->min_obs_distance());
+      debug_point.set_obstacle_id(cur_point->min_distance_agent_id());
+      debug_point.set_total_cost(cur_point->total_cost());
+
+      // Add predecessor node indices
+      if (cur_point->pre_point() != nullptr) {
+        debug_point.set_pre_t_index(cur_point->pre_point()->index_t());
+        debug_point.set_pre_s_index(cur_point->pre_point()->index_s());
+        debug_point.set_pre_l_index(cur_point->pre_point()->index_l());
+      }
+
+      debug_points->push_back(debug_point);
+    }
     SpeedInfo speed_point;
     speed_point.s = cur_point->point().s();
     speed_point.l = cur_point->point().l();
@@ -1117,6 +1174,69 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   std::reverse(s_vec.begin(), s_vec.end());
   std::reverse(l_vec.begin(), l_vec.end());
   std::reverse(t_vec.begin(), t_vec.end());
+  
+  if (false) {
+    // Post-processing: smooth out protruding points if no obstacle cost
+    // For each point i (i > 0 && i < size-1), if it protrudes laterally and
+    // the smoothed path has no obstacle cost, apply smoothing
+    const double kObstacleCostThreshold = 1e-3;  // threshold for "no obstacle"
+    const double kLateralProtrusionThreshold = 0.1;  // min lateral deviation to consider smoothing
+
+    for (size_t i = 1; i + 1 < speed_profile.size(); ++i) {
+      double l_prev = l_vec[i - 1];
+      double l_curr = l_vec[i];
+      double l_next = l_vec[i + 1];
+
+      // Check if current point protrudes (deviates from linear interpolation)
+      double l_expected = (l_prev + l_next) / 2.0;
+      double lateral_deviation = std::fabs(l_curr - l_expected);
+
+      if (lateral_deviation < kLateralProtrusionThreshold) {
+        continue;  // not protruding enough
+      }
+
+      // Try smoothing: move current point toward the average
+      double l_smoothed = l_expected;
+
+      // Check obstacle cost at smoothed position
+      // Find the closest grid point in cost_table using existing member variables
+      uint32_t t_idx = static_cast<uint32_t>(std::round(t_vec[i] / unit_t_));
+      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
+                                          spatial_distance_by_index_.end(), s_vec[i]);
+      uint32_t s_idx = static_cast<uint32_t>(
+          std::distance(spatial_distance_by_index_.begin(), s_itr));
+      if (s_itr == spatial_distance_by_index_.end()) {
+        s_idx = static_cast<uint32_t>(dimension_s_ - 1);
+      }
+
+      if (t_idx >= dimension_t_ || s_idx >= dimension_s_) {
+        continue;  // out of bounds
+      }
+
+      // Find l_idx for smoothed position using lateral_distance_by_index_
+      const auto l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
+                                          lateral_distance_by_index_.end(), l_smoothed);
+      int l_idx = static_cast<int>(
+          std::distance(lateral_distance_by_index_.begin(), l_itr));
+      if (l_itr == lateral_distance_by_index_.end()) {
+        l_idx = static_cast<int>(dimension_l_ - 1);
+      }
+
+      if (l_idx < 0 || l_idx >= static_cast<int>(dimension_l_)) {
+        continue;  // smoothed position out of lateral bounds
+      }
+
+      // Check obstacle cost at smoothed position
+      double obstacle_cost_smoothed = cost_table_[t_idx][s_idx][l_idx].obstacle_cost();
+
+      if (obstacle_cost_smoothed < kObstacleCostThreshold) {
+        // Safe to smooth
+        l_vec[i] = l_smoothed;
+        speed_profile[i].l = l_smoothed;
+      }
+    }
+  }
+
   s_t_spline_.set_points(t_vec, s_vec);
   // s_t_spline_.set_boundary(pnc::mathlib::spline::first_deriv,
   // speed_profile[0].v, pnc::mathlib::spline::first_deriv,
@@ -1408,8 +1528,16 @@ double SpatioTemporalUnionDp::CalculatePathCost(
     const SLTGraphPoint& start, const SLTGraphPoint& end,
     const CubicPolynomialCurve1d& lateral_curve, const double acc,
     const planning::common::SpationTemporalUnionDpInput&
-        spatio_temporal_union_plan_input) {
+        spatio_temporal_union_plan_input,
+    double* path_l_cost_out,
+    double* path_dl_cost_out,
+    double* path_ddl_cost_out,
+    double* stitching_cost_out) {
   double path_cost = 0.0;
+  double path_l_cost_sum = 0.0;
+  double path_dl_cost_sum = 0.0;
+  double path_ddl_cost_sum = 0.0;
+  double stitching_cost_sum = 0.0;
   double v0 = start.GetOptimalSpeed();
 
   std::array<double, 4> lateral_curve_coef;
@@ -1438,6 +1566,12 @@ double SpatioTemporalUnionDp::CalculatePathCost(
 
   Point2D current_point;
   double current_t = start_t;
+
+  bool is_enable_stitch_cost = true;
+  constexpr double disable_stitch_cost_t = 4.0;
+  if (fabs(current_t - disable_stitch_cost_t) < 1e-6) {
+    is_enable_stitch_cost = false;
+  }
   for (double curve_t = kPathCostComputeSampleTime;
        curve_t <= (end_t - start_t);
        curve_t += kPathCostComputeSampleTime) {
@@ -1446,20 +1580,43 @@ double SpatioTemporalUnionDp::CalculatePathCost(
         v0 * curve_t + 0.5 * acc * curve_t * curve_t + start_s;
     current_point.y = lateral_curve.Evaluate(0, curve_t);
     // Vec2d curve_point(cur_s, cur_l);
-    path_cost += current_point.y * current_point.y * path_l_cost;
+    double l_cost = current_point.y * current_point.y * path_l_cost;
+    path_l_cost_sum += l_cost;
+
     double ds = v0 + acc * curve_t;
     ds = std::max(ds, 1e-6);
     double dl = lateral_curve.Evaluate(1, curve_t);
     double dl_ds = dl / ds;
-    path_cost += dl_ds * dl_ds * path_dl_cost;
+    double dl_cost = dl_ds * dl_ds * path_dl_cost;
+    path_dl_cost_sum += dl_cost;
 
     const double ddl =
         ComputeSecondDerivative(lateral_curve_coef, acc, v0, curve_t);
-    path_cost += ddl * ddl * path_ddl_cost;
-    path_cost += CalculateStitchingCost(current_point, current_t,
+    double ddl_cost = ddl * ddl * path_ddl_cost;
+    path_ddl_cost_sum += ddl_cost;
+    path_cost += ddl_cost;
+
+    if (is_enable_stitch_cost) {
+      double stitch_cost = CalculateStitchingCost(current_point, current_t,
                                         spatio_temporal_union_plan_input);
+      stitching_cost_sum += stitch_cost;
+    }
   }
+  path_cost += path_l_cost_sum;
+  path_cost += path_dl_cost_sum;
+  path_cost += path_ddl_cost_sum;
+  path_cost += stitching_cost_sum;
+
   path_cost *= kPathCostComputeSampleTime;
+  path_l_cost_sum *= kPathCostComputeSampleTime;
+  path_dl_cost_sum *= kPathCostComputeSampleTime;
+  path_ddl_cost_sum *= kPathCostComputeSampleTime;
+  stitching_cost_sum *= kPathCostComputeSampleTime;
+
+  if (path_l_cost_out != nullptr) *path_l_cost_out = path_l_cost_sum;
+  if (path_dl_cost_out != nullptr) *path_dl_cost_out = path_dl_cost_sum;
+  if (path_ddl_cost_out != nullptr) *path_ddl_cost_out = path_ddl_cost_sum;
+  if (stitching_cost_out != nullptr) *stitching_cost_out = stitching_cost_sum;
 
   // if (end.point().t() == total_length_t_ || end.point().s() ==
   // total_length_s_) {

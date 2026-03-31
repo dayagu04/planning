@@ -666,8 +666,8 @@ def load_spatio_temporal_union_plan_figure(fig1):
   # fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'raw refline', visible=False)
   # fig1.line('y_vec', 'x_vec', source = data_lat_motion_plan_output, line_width = 5, line_color = 'red', line_dash = 'dashed', line_alpha = 0.4, legend_label = 'plan path')
   # fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
-  fig_spatio = fig1.circle('traj_y', 'traj_x', source = data_spatio_temporal_trajs, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'spatio_temporal_plan_point')
-  fig_spatio_back = fig1.circle('traj_y', 'traj_x', source = data_spatio_temporal_trajs_back, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'spatio_temporal_plan_back')
+  fig_spatio = fig1.circle('traj_y', 'traj_x', source = data_spatio_temporal_trajs, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'spatio_temporal_plan_point',visible=False)
+  fig_spatio_back = fig1.circle('traj_y', 'traj_x', source = data_spatio_temporal_trajs_back, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'spatio_temporal_plan_back',visible=False)
 
   hover1_1 = HoverTool(renderers=[fig1.renderers[len(fig1.renderers) - 4]], tooltips=[('index', '$index'), ('t', '@bound_t_vec'), ('(s,l)', '(@bound_s_vec, @soft_upper_bound_vec)'),
                                                                                       ('obstacle id', '@soft_upper_bound_id_vec'), ('type', '@soft_upper_bound_type_vec')])

@@ -63,7 +63,20 @@ class SpatioTemporalUnionDp {
 
   planning::common::TrajectoryPoints &GetOutput() { return trajectory_points_; }
 
+  const std::vector<planning::common::DebugPoint>& GetDebugPoints() const {
+   std::cout <<  "debug_points_:" << debug_points_.size()<< std::endl;
+    return debug_points_; }
+
+  const std::vector<std::vector<std::vector<SLTGraphPoint>>>& GetCostTable() const {
+    return cost_table_;
+  }
+
   void Reset();
+
+  // Set last frame trajectory from external source (e.g., bag data)
+  void SetLastFrameTrajectory(std::shared_ptr<planning_math::KDPath> last_traj_coord) {
+    last_planning_result_coord_ = last_traj_coord;
+  }
 
  private:
 
@@ -76,7 +89,8 @@ class SpatioTemporalUnionDp {
 
   bool RetrieveSpeedProfile(TrajectoryPoints &traj_points,
                             const planning::common::SpationTemporalUnionDpInput
-                                &spatio_temporal_union_plan_input);
+                                &spatio_temporal_union_plan_input,
+                            std::vector<planning::common::DebugPoint>* debug_points = nullptr);
 
   bool CalculateTotalCost(
       const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
@@ -99,6 +113,7 @@ class SpatioTemporalUnionDp {
                            const SLTGraphPoint& third,
                            const SLTGraphPoint& forth, const double speed_limit,
                            const double cruise_speed);
+
   double CalculateEdgeCostForSecondCol(
       const uint32_t row, const uint32_t col, const double speed_limit,
       const double cruise_speed,
@@ -113,7 +128,11 @@ class SpatioTemporalUnionDp {
                            const CubicPolynomialCurve1d& lateral_curve,
                            const double acc,
                            const planning::common::SpationTemporalUnionDpInput&
-                               spatio_temporal_union_plan_input);
+                               spatio_temporal_union_plan_input,
+                           double* path_l_cost_out = nullptr,
+                           double* path_dl_cost_out = nullptr,
+                           double* path_ddl_cost_out = nullptr,
+                           double* stitching_cost_out = nullptr);
 
   double CalculateStitchingCost(
       const Point2D& current, const double current_time,
@@ -210,6 +229,7 @@ class SpatioTemporalUnionDp {
   bool enable_use_last_planning_result_compute_stitching_ = false;
 
   planning::common::TrajectoryPoints trajectory_points_;
+  std::vector<planning::common::DebugPoint> debug_points_;
   std::vector<double> speed_limit_by_index_;
   std::vector<double> inv_speed_limit_table_;
 
