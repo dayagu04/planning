@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/bestune_e541_36718/trigger/20260328/20260328-14-24-37/data_collection_BESTUNE_E541_36718_EVENT_KEY_2026-03-28-14-24-37_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/bestune_e541_76341/trigger/20260309/20260309-14-19-54/data_collection_BESTUNE_E541_76341_EVENT_KEY_2026-03-09-14-19-54_no_camera.bag",
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
