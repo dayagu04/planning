@@ -79,7 +79,7 @@ void ReadItem(const Json &json, T &value, StringType &&key1) {
  */
 template <typename T, typename StringType, typename... RestKeys>
 void ReadItem(const Json &json, T &value, StringType &&key1,
-              RestKeys &&... rest_keys) {
+              RestKeys &&...rest_keys) {
   auto key = std::string(std::forward<StringType>(key1));
   if (json.find(key) != json.end()) {
     ReadItem(json[key], value, std::forward<RestKeys>(rest_keys)...);
@@ -100,7 +100,7 @@ void ReadVector(const Json &json, std::vector<T> &vec, StringType &&key1) {
 
 template <typename T, typename StringType, typename... RestKeys>
 void ReadVector(const Json &json, std::vector<T> &vec, StringType &&key1,
-                RestKeys &&... rest_keys) {
+                RestKeys &&...rest_keys) {
   auto key = std::string(std::forward<StringType>(key1));
   if (json.find(key) != json.end()) {
     ReadVector<T>(json[key], vec, std::forward<RestKeys>(rest_keys)...);
@@ -176,22 +176,22 @@ void read_json_vec(const Json &json, const std::vector<std::string> &keys,
 
 struct Config {
   virtual void init(const Json &json) = 0;
-  static Json merge_configs(const Json& base, const Json& overlay){
-    if (overlay.is_null() || overlay.empty()){
-        return base;
+  static Json merge_configs(const Json &base, const Json &overlay) {
+    if (overlay.is_null() || overlay.empty()) {
+      return base;
     }
     Json result = base;
     for (auto it = overlay.begin(); it != overlay.end(); ++it) {
-        const auto& key = it.key();
-        if (result.find(key) != result.end() && result[key].is_object() && it.value().is_object()){
-            result[key] = merge_configs(result[key], it.value());
-        } else{
-            result[key] = it.value();
-        }
+      const auto &key = it.key();
+      if (result.find(key) != result.end() && result[key].is_object() &&
+          it.value().is_object()) {
+        result[key] = merge_configs(result[key], it.value());
+      } else {
+        result[key] = it.value();
+      }
     }
     return result;
   }
-
 };
 
 /***************************************************************************************/
@@ -226,12 +226,11 @@ struct EgoPlanningConfig : public Config {
         json, "overtake_radical_lane_change_speed_threshold");
     overtake_soft_lane_change_speed_threshold = read_json_key<double>(
         json, "overtake_soft_lane_change_speed_threshold");
-    overtake_speed_threshold_adjust_params = read_json_key<double>(
-        json, "overtake_speed_threshold_adjust_params");
+    overtake_speed_threshold_adjust_params =
+        read_json_key<double>(json, "overtake_speed_threshold_adjust_params");
 
     enable_overtake_cross_line_large_agent =
-        read_json_key<bool>(
-            json, "enable_overtake_cross_line_large_agent");
+        read_json_key<bool>(json, "enable_overtake_cross_line_large_agent");
     enable_use_speed_limit_to_suppress_interactive_lane_change =
         read_json_key<bool>(
             json, "enable_use_speed_limit_to_suppress_interactive_lane_change");
@@ -279,11 +278,15 @@ struct EgoPlanningConfig : public Config {
     left_right_turn_func_fading_away_switch =
         read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
     ReadItem<bool>(json, enable_overtake_lane_change_confirmation,
-                     "enable_overtake_lane_change_confirmation");
-    press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
-    use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
-    enable_use_dynamic_agent_emergency_avoidence_lane_change_request = read_json_key<bool>(
-        json, "enable_use_dynamic_agent_emergency_avoidence_lane_change_request");
+                   "enable_overtake_lane_change_confirmation");
+    press_line_fewly_threshold =
+        read_json_key<double>(json, "press_line_fewly_threshold");
+    use_press_line_fewly_threshold =
+        read_json_key<bool>(json, "use_press_line_fewly_threshold");
+    enable_use_dynamic_agent_emergency_avoidence_lane_change_request =
+        read_json_key<bool>(
+            json,
+            "enable_use_dynamic_agent_emergency_avoidence_lane_change_request");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -450,7 +453,6 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   std::vector<double> lc_finished_dist_thr{0.1, 0.15, 0.2, 0.3};
   double min_ego_v_cruise = 2.0;
   double lc_short_dis_thr = 5.0;
-
 };
 
 struct SpeedAdjustDeciderConfig : public EgoPlanningConfig {
@@ -953,8 +955,8 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "stop_point_buffer"});
     decay_coffi = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decay_coffi"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust", "decay_coffi"});
     normal_scene_weight_match_gap_vel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "normal_scene_weight_match_gap_vel"});
@@ -989,53 +991,68 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "normal_scene_weight_speed_change"});
     normal_scene_weight_leading_veh_follow_s = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "normal_scene_weight_leading_veh_follow_s"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "normal_scene_weight_leading_veh_follow_s"});
     normal_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "normal_scene_weight_jerk_limit"});
     purse_flow_vel_scene_weight_match_gap_vel = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_match_gap_vel"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_match_gap_vel"});
     purse_flow_vel_scene_weight_match_gap_s = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_match_gap_s"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_match_gap_s"});
     purse_flow_vel_scene_weight_follow_vel = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_follow_vel"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_follow_vel"});
     purse_flow_vel_scene_weight_stop_line = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_stop_line"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_stop_line"});
     purse_flow_vel_scene_weight_leading_safe_s = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_leading_safe_s"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_leading_safe_s"});
     purse_flow_vel_scene_weight_leading_safe_v = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_leading_safe_v"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_leading_safe_v"});
     purse_flow_vel_scene_weight_vel_variable = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_vel_variable"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_vel_variable"});
     purse_flow_vel_scene_weight_gap_available = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_gap_available"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_gap_available"});
     purse_flow_vel_scene_weight_acc_limit = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_acc_limit"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_acc_limit"});
     purse_flow_vel_scene_weight_stop_penalty = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_stop_penalty"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_stop_penalty"});
     purse_flow_vel_scene_weight_speed_change = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_speed_change"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_speed_change"});
     purse_flow_vel_scene_weight_leading_veh_follow_s = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_leading_veh_follow_s"});
+        json, std::vector<std::string>{
+                  "sample_poly_speed_adjust",
+                  "purse_flow_vel_scene_weight_leading_veh_follow_s"});
     purse_flow_vel_scene_weight_jerk_limit = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "purse_flow_vel_scene_weight_jerk_limit"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "purse_flow_vel_scene_weight_jerk_limit"});
     decleration_scene_weight_match_gap_vel = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_match_gap_vel"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "decleration_scene_weight_match_gap_vel"});
     decleration_scene_weight_match_gap_s = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_match_gap_s"});
@@ -1046,29 +1063,36 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_stop_line"});
     decleration_scene_weight_leading_safe_s = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_leading_safe_s"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "decleration_scene_weight_leading_safe_s"});
     decleration_scene_weight_leading_safe_v = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_leading_safe_v"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "decleration_scene_weight_leading_safe_v"});
     decleration_scene_weight_vel_variable = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_vel_variable"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "decleration_scene_weight_vel_variable"});
     decleration_scene_weight_gap_available = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_gap_available"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "decleration_scene_weight_gap_available"});
     decleration_scene_weight_acc_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_acc_limit"});
     decleration_scene_weight_stop_penalty = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_stop_penalty"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "decleration_scene_weight_stop_penalty"});
     decleration_scene_weight_speed_change = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_speed_change"});
+        json,
+        std::vector<std::string>{"sample_poly_speed_adjust",
+                                 "decleration_scene_weight_speed_change"});
     decleration_scene_weight_leading_veh_follow_s = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_poly_speed_adjust",
-                                       "decleration_scene_weight_leading_veh_follow_s"});
+        json, std::vector<std::string>{
+                  "sample_poly_speed_adjust",
+                  "decleration_scene_weight_leading_veh_follow_s"});
     decleration_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_jerk_limit"});
@@ -1161,29 +1185,31 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     time_step_near = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "time_step_near"});
+        json, std::vector<std::string>{"sample_astar_traj", "time_step_near"});
     time_step_far = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "time_step_far"});
+        json, std::vector<std::string>{"sample_astar_traj", "time_step_far"});
     distance_step = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "distance_step"});
+        json, std::vector<std::string>{"sample_astar_traj", "distance_step"});
     goal_tolerance = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "goal_tolerance"});
+        json, std::vector<std::string>{"sample_astar_traj", "goal_tolerance"});
     weight_dist = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_dist"});
+        json, std::vector<std::string>{"sample_astar_traj", "weight_dist"});
     weight_time = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_time"});
+        json, std::vector<std::string>{"sample_astar_traj", "weight_time"});
     weight_vel = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_vel"});
+        json, std::vector<std::string>{"sample_astar_traj", "weight_vel"});
     weight_accel = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_accel"});
+        json, std::vector<std::string>{"sample_astar_traj", "weight_accel"});
     weight_jerk = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_jerk"});
+        json, std::vector<std::string>{"sample_astar_traj", "weight_jerk"});
     weight_front_ttc = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_front_ttc"});
+        json,
+        std::vector<std::string>{"sample_astar_traj", "weight_front_ttc"});
     weight_back_ttc = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
+        json, std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
     weight_lead_safe_distance = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "weight_lead_safe_distance"});
+        json, std::vector<std::string>{"sample_astar_traj",
+                                       "weight_lead_safe_distance"});
   }
   double time_step_near = 1.0;
   double time_step_far = 1.0;
@@ -1582,12 +1608,14 @@ struct NormalDpPolyPathConfig : public EgoPlanningConfig {
     step_length_max = read_json_keys<int>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "step_length_max"},
+                                 "normal_dp_poly_path_config",
+                                 "step_length_max"},
         step_length_max);
     step_length_min = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "step_length_min"},
+                                 "normal_dp_poly_path_config",
+                                 "step_length_min"},
         step_length_min);
     lateral_sample_offset = read_json_keys<double>(
         json,
@@ -1598,17 +1626,20 @@ struct NormalDpPolyPathConfig : public EgoPlanningConfig {
     lateral_adjust_coeff = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "lateral_adjust_coeff"},
+                                 "normal_dp_poly_path_config",
+                                 "lateral_adjust_coeff"},
         lateral_adjust_coeff);
     eval_time_interval = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "eval_time_interval"},
+                                 "normal_dp_poly_path_config",
+                                 "eval_time_interval"},
         eval_time_interval);
     path_resolution = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "path_resolution"},
+                                 "normal_dp_poly_path_config",
+                                 "path_resolution"},
         path_resolution);
     obstacle_ignore_distance = read_json_keys<double>(
         json,
@@ -1683,27 +1714,32 @@ struct NormalDpPolyPathConfig : public EgoPlanningConfig {
     path_l_cost_param_l0 = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "path_l_cost_param_l0"},
+                                 "normal_dp_poly_path_config",
+                                 "path_l_cost_param_l0"},
         path_l_cost_param_l0);
     path_l_cost_param_b = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "path_l_cost_param_b"},
+                                 "normal_dp_poly_path_config",
+                                 "path_l_cost_param_b"},
         path_l_cost_param_b);
     path_l_cost_param_k = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "path_l_cost_param_k"},
+                                 "normal_dp_poly_path_config",
+                                 "path_l_cost_param_k"},
         path_l_cost_param_k);
     path_out_lane_cost = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "path_out_lane_cost"},
+                                 "normal_dp_poly_path_config",
+                                 "path_out_lane_cost"},
         path_out_lane_cost);
     path_end_l_cost = read_json_keys<double>(
         json,
         std::vector<std::string>{"spatio_temporal_planner",
-                                 "normal_dp_poly_path_config", "path_end_l_cost"},
+                                 "normal_dp_poly_path_config",
+                                 "path_end_l_cost"},
         path_end_l_cost);
     path_l_stitching_cost_param = read_json_keys<double>(
         json,
@@ -1894,9 +1930,7 @@ struct GapSelectorConfig : public EgoPlanningConfig {
 };
 
 struct HppObstacleLateralPreprocessDeciderConfig : public EgoPlanningConfig {
-  void init(const Json &json) override {
-    EgoPlanningConfig::init(json);
-  }
+  void init(const Json &json) override { EgoPlanningConfig::init(json); }
 };
 
 struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
@@ -1954,8 +1988,9 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "hybrid_ara_s_range", hybrid_ara_s_range);
     left_l_buffer_for_lat_decision = read_json_key<double>(
         json, "left_l_buffer_for_lat_decision", left_l_buffer_for_lat_decision);
-    right_l_buffer_for_lat_decision = read_json_key<double>(
-        json, "right_l_buffer_for_lat_decision", right_l_buffer_for_lat_decision);
+    right_l_buffer_for_lat_decision =
+        read_json_key<double>(json, "right_l_buffer_for_lat_decision",
+                              right_l_buffer_for_lat_decision);
     l_buffer_for_lat_decision = read_json_key<double>(
         json, "l_buffer_for_lat_decision", l_buffer_for_lat_decision);
     column_l_buffer_for_decision = read_json_key<double>(
@@ -2003,21 +2038,27 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                                                    "lane_width_factor"},
                           lane_width_factor);
     read_json_vec<double>(json, "free_space_lane_bp", free_space_lane_bp);
-    read_json_vec<double>(json, "lane_static_limit_v_free_space", lane_static_limit_v_free_space);
+    read_json_vec<double>(json, "lane_static_limit_v_free_space",
+                          lane_static_limit_v_free_space);
     read_json_vec<double>(json, "free_space_road_bp", free_space_road_bp);
-    read_json_vec<double>(json, "road_static_limit_v_free_space", road_static_limit_v_free_space);
-    read_json_vec<double>(json, "free_space_static_obstacle_bp", free_space_static_obstacle_bp);
-    read_json_vec<double>(json, "static_obstacle_static_limit_v_free_space", static_obstacle_static_limit_v_free_space);
-    read_json_vec<double>(json, "free_space_dynamic_obstacle_bp", free_space_dynamic_obstacle_bp);
-    read_json_vec<double>(json, "dynamic_obstacle_static_limit_v_free_space", dynamic_obstacle_static_limit_v_free_space);
-    side_2_front_count_thr = read_json_key<int>(
-        json, "side_2_front_count_thr", side_2_front_count_thr);
-    side_2_front_max_count = read_json_key<int>(
-        json, "side_2_front_max_count", side_2_front_max_count);
+    read_json_vec<double>(json, "road_static_limit_v_free_space",
+                          road_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_static_obstacle_bp",
+                          free_space_static_obstacle_bp);
+    read_json_vec<double>(json, "static_obstacle_static_limit_v_free_space",
+                          static_obstacle_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_dynamic_obstacle_bp",
+                          free_space_dynamic_obstacle_bp);
+    read_json_vec<double>(json, "dynamic_obstacle_static_limit_v_free_space",
+                          dynamic_obstacle_static_limit_v_free_space);
+    side_2_front_count_thr = read_json_key<int>(json, "side_2_front_count_thr",
+                                                side_2_front_count_thr);
+    side_2_front_max_count = read_json_key<int>(json, "side_2_front_max_count",
+                                                side_2_front_max_count);
     open_side_lat_offset_nudge = read_json_key<bool>(
         json, "open_side_lat_offset_nudge", open_side_lat_offset_nudge);
-    start_nudge_ttc = read_json_key<double>(
-        json, "start_nudge_ttc", start_nudge_ttc);
+    start_nudge_ttc =
+        read_json_key<double>(json, "start_nudge_ttc", start_nudge_ttc);
     cross_lane_side_2_front_count_thr =
         read_json_key<int>(json, "cross_lane_side_2_front_count_thr",
                            cross_lane_side_2_front_count_thr);
@@ -2097,13 +2138,17 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double start_nudge_ttc = 3.6;
   int cross_lane_side_2_front_count_thr = 3;
   std::vector<double> free_space_lane_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
-  std::vector<double> lane_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> lane_static_limit_v_free_space{1.5, 5, 10, 15, 35, 50};
   std::vector<double> free_space_road_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
-  std::vector<double> road_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
-  std::vector<double> free_space_static_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
-  std::vector<double> static_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
-  std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
-  std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> road_static_limit_v_free_space{1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_static_obstacle_bp{0.6, 0.8, 1.2,
+                                                    1.3, 1.9, 2.5};
+  std::vector<double> static_obstacle_static_limit_v_free_space{1.5, 5,  10,
+                                                                15,  35, 50};
+  std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2,
+                                                     1.3, 1.9, 2.5};
+  std::vector<double> dynamic_obstacle_static_limit_v_free_space{1.5, 5,  10,
+                                                                 15,  35, 50};
   double extra_ratio_for_cut_out = 0.6;
   /******************* for hpp *******************/
   double lat_buffer_for_road_line = 0.2;
@@ -2260,10 +2305,11 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"lateral_offset_decider",
                                  "lateral_offset_obstacle_nudge_buffer_v_bp"},
         lateral_offset_obstacle_nudge_buffer_v_bp);
-    read_json_vec<double>(json,
-                          std::vector<std::string>{"lateral_offset_decider",
-                                                   "lateral_offset_nudge_buffer"},
-                          lateral_offset_nudge_buffer);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider",
+                                 "lateral_offset_nudge_buffer"},
+        lateral_offset_nudge_buffer);
   }
   double v_limit_max = 30;
   bool is_valid_lateral_offset = false;
@@ -2288,8 +2334,9 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   double extra_truck_nudge_lat_offset = 0.0;
   bool open_side_lat_offset_nudge = false;
   std::vector<double> lateral_offset_obstacle_nudge_buffer_v_bp{10, 40,  60,
-                                                         80, 100, 130};
-  std::vector<double> lateral_offset_nudge_buffer{0.04, 0.16, 0.25, 0.33, 0.41, 0.54};
+                                                                80, 100, 130};
+  std::vector<double> lateral_offset_nudge_buffer{0.04, 0.16, 0.25,
+                                                  0.33, 0.41, 0.54};
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -2542,26 +2589,19 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                      "general_lateral_decider",
                      "decrease_time_for_roadborder");
     read_json_vec<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "curv_bp"},
+        json, std::vector<std::string>{"general_lateral_decider", "curv_bp"},
         curv_bp);
-    read_json_vec<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "lat_compensation_buffer"},
-        lat_compensation_buffer);
-    ReadItem<double>(json, max_nudge_buffer2side_car,
-                     "general_lateral_decider",
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"general_lateral_decider",
+                                                   "lat_compensation_buffer"},
+                          lat_compensation_buffer);
+    ReadItem<double>(json, max_nudge_buffer2side_car, "general_lateral_decider",
                      "max_nudge_buffer2side_car");
-    ReadItem<double>(json, lower_risk_jerk_bound,
-                     "general_lateral_decider",
+    ReadItem<double>(json, lower_risk_jerk_bound, "general_lateral_decider",
                      "lower_risk_jerk_bound");
-    ReadItem<double>(json, high_risk_jerk_bound,
-                     "general_lateral_decider",
+    ReadItem<double>(json, high_risk_jerk_bound, "general_lateral_decider",
                      "high_risk_jerk_bound");
-    ReadItem<double>(json, limit_nudge_change_rate,
-                     "general_lateral_decider",
+    ReadItem<double>(json, limit_nudge_change_rate, "general_lateral_decider",
                      "limit_nudge_change_rate");
     ReadItem<double>(json, extra_static_nudge_buffer2first_bound,
                      "general_lateral_decider",
@@ -2569,9 +2609,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, extra_dynamic_nudge_buffer2first_bound,
                      "general_lateral_decider",
                      "extra_dynamic_nudge_buffer2first_bound");
-    ReadItem<bool>(json, use_first_soft_bound,
-                     "general_lateral_decider",
-                     "use_first_soft_bound");
+    ReadItem<bool>(json, use_first_soft_bound, "general_lateral_decider",
+                   "use_first_soft_bound");
     ReadItem<double>(json, first_soft_min_distance2center,
                      "general_lateral_decider",
                      "first_soft_min_distance2center");
@@ -2698,21 +2737,18 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double extra_dynamic_nudge_buffer2first_bound = 0.0;
   bool use_first_soft_bound = false;
   double first_soft_min_distance2center = 11;
-
 };
-
 
 struct ConstructionSceneDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
-    ReadItem<double>(json, hard_buffer2dynamic_agent, "construction_scene_decider",
-                     "hard_buffer2dynamic_agent");
+    ReadItem<double>(json, hard_buffer2dynamic_agent,
+                     "construction_scene_decider", "hard_buffer2dynamic_agent");
 
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
-  double desired_vel = 11.11;                    // KPH_40;
-
+  double desired_vel = 11.11;  // KPH_40;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -2728,31 +2764,36 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
                      "hard_buffer2lane");
     ReadItem<double>(json, hard_buffer2road, "general_lateral_decider",
                      "hard_buffer2road");
-    ReadItem<double>(json, extra_soft_buffer2groundline, "general_lateral_decider",
-                     "extra_soft_buffer2groundline");
-    ReadItem<double>(json, extra_hard_buffer2groundline, "general_lateral_decider",
-                     "extra_hard_buffer2groundline");
+    ReadItem<double>(json, extra_soft_buffer2groundline,
+                     "general_lateral_decider", "extra_soft_buffer2groundline");
+    ReadItem<double>(json, extra_hard_buffer2groundline,
+                     "general_lateral_decider", "extra_hard_buffer2groundline");
     ReadItem<bool>(json, lateral_ref_traj_type, "general_lateral_decider",
-                     "lateral_ref_traj_type");
+                   "lateral_ref_traj_type");
 
-    ReadItem<double>(json, care_dynamic_object_t_threshold, "general_lateral_decider",
+    ReadItem<double>(json, care_dynamic_object_t_threshold,
+                     "general_lateral_decider",
                      "care_dynamic_object_t_threshold");
-    ReadItem<double>(json, care_static_object_t_threshold, "general_lateral_decider",
+    ReadItem<double>(json, care_static_object_t_threshold,
+                     "general_lateral_decider",
                      "care_static_object_t_threshold");
-    ReadItem<double>(json, soft_min_distance_road2center, "general_lateral_decider",
+    ReadItem<double>(json, soft_min_distance_road2center,
+                     "general_lateral_decider",
                      "soft_min_distance_road2center");
-    ReadItem<double>(json, hard_min_distance_road2center, "general_lateral_decider",
+    ReadItem<double>(json, hard_min_distance_road2center,
+                     "general_lateral_decider",
                      "hard_min_distance_road2center");
     ReadItem<double>(json, care_lon_area_road_border, "general_lateral_decider",
                      "care_lon_area_road_border");
     ReadItem<double>(json, ramp_limit_v, "general_lateral_decider",
                      "ramp_limit_v");
     ReadItem<bool>(json, ramp_limit_v_valid, "general_lateral_decider",
-                     "ramp_limit_v_valid");
+                   "ramp_limit_v_valid");
     ReadItem<double>(json, min_v_cruise, "general_lateral_decider",
                      "min_v_cruise");
 
-    ReadItem<double>(json, nudge_extra_buffer_in_intersection, "general_lateral_decider",
+    ReadItem<double>(json, nudge_extra_buffer_in_intersection,
+                     "general_lateral_decider",
                      "nudge_extra_buffer_in_intersection");
     ReadItem<double>(json, map_bound_weight[BoundType::AGENT],
                      "general_lateral_decider", "bound_static_agent_weight");
@@ -2765,15 +2806,14 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, map_bound_weight[BoundType::REAR_AGENT],
                      "general_lateral_decider", "bound_rear_agent_weight");
 
-
-    ReadItem<double>(json, truck_decrease_extra_buffer, "general_lateral_decider",
-                     "truck_decrease_extra_buffer");
+    ReadItem<double>(json, truck_decrease_extra_buffer,
+                     "general_lateral_decider", "truck_decrease_extra_buffer");
     ReadItem<double>(json, ref_curvature_factor, "general_lateral_decider",
                      "ref_curvature_factor");
     ReadItem<bool>(json, enable_ara_ref, "general_lateral_decider",
-                     "enable_ara_ref");
+                   "enable_ara_ref");
     ReadItem<bool>(json, enable_last_lat_path, "general_lateral_decider",
-                     "enable_last_lat_path");
+                   "enable_last_lat_path");
 
     read_json_vec<double>(
         json,
@@ -2892,7 +2932,6 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double static_cone_max_extra_lateral_buffer = 0.15;
   double static_other_max_extra_lateral_buffer = 0.45;
   double bound2center_line_distance_thr = 0.1;
-
 };
 
 struct HppStopDeciderConfig : public EgoPlanningConfig {
@@ -2921,9 +2960,9 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    timeout_still_time_thr_for_giving_up_parking =
-        read_json_key<double>(json, "timeout_still_time_thr_for_giving_up_parking",
-                              timeout_still_time_thr_for_giving_up_parking);
+    timeout_still_time_thr_for_giving_up_parking = read_json_key<double>(
+        json, "timeout_still_time_thr_for_giving_up_parking",
+        timeout_still_time_thr_for_giving_up_parking);
     keeping_still_time_thr_for_switch_parking =
         read_json_key<double>(json, "keeping_still_time_thr_for_switch_parking",
                               keeping_still_time_thr_for_switch_parking);
@@ -2944,8 +2983,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<bool>(json, use_index_clip, "lat_motion_ilqr", "use_index_clip");
     ReadItem<bool>(json, use_acc_compensation, "lat_motion_ilqr",
                    "use_acc_compensation");
-    ReadItem<bool>(json, use_al_ilqr, "lat_motion_ilqr",
-                   "use_al_ilqr");
+    ReadItem<bool>(json, use_al_ilqr, "lat_motion_ilqr", "use_al_ilqr");
     ReadItem<size_t>(json, horizon, "lat_motion_ilqr", "horizon");
     ReadItem<size_t>(json, max_iter, "lat_motion_ilqr", "max_iter");
     ReadItem<double>(json, delta_t, "lat_motion_ilqr", "delta_t");
@@ -2991,8 +3029,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_jerk, "lat_motion_ilqr", "q_jerk");
     ReadItem<double>(json, q_acc_bound, "lat_motion_ilqr", "q_acc_bound");
     ReadItem<double>(json, q_jerk_bound, "lat_motion_ilqr", "q_jerk_bound");
-    ReadItem<double>(json, first_qsoft_bound_ratio, "lat_motion_ilqr", "first_qsoft_bound_ratio");
-    ReadItem<double>(json, second_qsoft_bound_ratio, "lat_motion_ilqr", "second_qsoft_bound_ratio");
+    ReadItem<double>(json, first_qsoft_bound_ratio, "lat_motion_ilqr",
+                     "first_qsoft_bound_ratio");
+    ReadItem<double>(json, second_qsoft_bound_ratio, "lat_motion_ilqr",
+                     "second_qsoft_bound_ratio");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qsoft_bound"},
         map_qsoft_bound, map_qsoft_bound);
@@ -3171,8 +3211,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ref_y_ramp, "lat_motion_ilqr", "q_ref_y_ramp");
     ReadItem<double>(json, q_ref_theta_ramp, "lat_motion_ilqr",
                      "q_ref_theta_ramp");
-    ReadItem<double>(json, q_front_ref_xy_ramp, "lat_motion_ilqr", "q_front_ref_xy_ramp");
-    ReadItem<double>(json, q_virtual_ref_xy, "lat_motion_ilqr", "q_virtual_ref_xy");
+    ReadItem<double>(json, q_front_ref_xy_ramp, "lat_motion_ilqr",
+                     "q_front_ref_xy_ramp");
+    ReadItem<double>(json, q_virtual_ref_xy, "lat_motion_ilqr",
+                     "q_virtual_ref_xy");
     ReadItem<double>(json, q_virtual_ref_theta, "lat_motion_ilqr",
                      "q_virtual_ref_theta");
     ReadItem<double>(json, q_acc_ramp, "lat_motion_ilqr", "q_acc_ramp");
@@ -3198,7 +3240,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "max_steer_angle_dot_low_speed_lc");
     ReadItem<double>(json, recommend_low_speed_lc_lon_acc, "lat_motion_ilqr",
                      "recommend_low_speed_lc_lon_acc");
-    ReadItem<double>(json, max_steer_angle_dot_low_speed_lc_without_obstacle, "lat_motion_ilqr",
+    ReadItem<double>(json, max_steer_angle_dot_low_speed_lc_without_obstacle,
+                     "lat_motion_ilqr",
                      "max_steer_angle_dot_low_speed_lc_without_obstacle");
   }
 
@@ -3207,7 +3250,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   bool warm_start_enable = false;
   bool use_index_clip = true;
   bool use_acc_compensation = true;
-  bool use_al_ilqr  = false;
+  bool use_al_ilqr = false;
   size_t horizon = 25;
   size_t max_iter = 15;
   double delta_t = 0.2;
@@ -3510,8 +3553,14 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "speed_narrow_passage_approach_distance");
     speed_intersection_approach_distance =
         read_json_key<double>(json, "speed_intersection_approach_distance");
-    speed_bump_zone_speed_limit =
-        read_json_key<double>(json, "speed_bump_zone_speed_limit");
+    target_speed_speed_bump_area =
+        read_json_key<double>(json, "target_speed_speed_bump_area");
+    target_speed_narrow_passage_area =
+        read_json_key<double>(json, "target_speed_narrow_passage_area");
+    target_speed_intersection_road_area =
+        read_json_key<double>(json, "target_speed_intersection_road_area");
+    target_speed_ramp_area =
+        read_json_key<double>(json, "target_speed_ramp_area");
     speed_bump_deceleration =
         read_json_key<double>(json, "speed_bump_deceleration");
     speed_bump_collision_buffer =
@@ -3555,7 +3604,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   std::vector<double> curv_trigger_distances = {0.0, 10.0, 15.0, 25.0, 40.0};
   std::vector<double> curv_radius_breakpoints = {5.0, 10.0, 15.0, 20.0, 50.0};
   std::vector<double> curv_speed_limits_ms = {5.0 / 3.6, 6.0 / 3.6, 8.0 / 3.6,
-                                         10.0 / 3.6, 20.0 / 3.6};
+                                              10.0 / 3.6, 20.0 / 3.6};
   double hpp_avoid_velocity_limit_kph = 10.0;
   double speed_bump_front_buffer = 10.0;           // m
   double speed_bump_rear_buffer = 5.0;             // m
@@ -3564,6 +3613,10 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double speed_narrow_passage_approach_distance = 20.0;      // m
   double speed_intersection_approach_distance = 20.0;      // m
   double speed_bump_zone_speed_limit = 2.22;    // 8kph
+  double target_speed_speed_bump_area = 2.22;            // 8kph
+  double target_speed_narrow_passage_area = 2.22;        // 8kph
+  double target_speed_intersection_road_area = 2.5;      // 9kph
+  double target_speed_ramp_area = 2.78;                  // 10kph
   double speed_bump_deceleration = -1.0;           // m/s^2
   double speed_bump_collision_buffer = 0.0;        // m
 };
@@ -3820,9 +3873,9 @@ struct RealTimeLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double a_max_comfort_brake =
       -2.5;  // maximum comfortable braking deceleration of the ego
   double CIPV_max_brake = -3.0;  // maximum braking deceleration of the CIPV
-  double lane_keep_cutinp_threshold = 0.2;    // 车道保持时cut in车辆判断阈值
+  double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
   double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
-  double corridor_width = 1.5;   // 通道半个宽度，用于判断cut in车辆是否侵入
+  double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
   double cruise_set_acc = 1.5;   // 巡航车速增加速率 0.8m/s2
   double cruise_set_dec = -1.0;  // 巡航车速减小速率 -1m/s2
 
@@ -3980,9 +4033,9 @@ struct SccLonBehaviorPlannerConfig : public EgoPlanningConfig {
   double a_max_comfort_brake =
       -2.5;  // maximum comfortable braking deceleration of the ego
   double CIPV_max_brake = -3.0;  // maximum braking deceleration of the CIPV
-  double lane_keep_cutinp_threshold = 0.2;    // 车道保持时cut in车辆判断阈值
+  double lane_keep_cutinp_threshold = 0.2;  // 车道保持时cut in车辆判断阈值
   double lane_change_cutinp_threshold = 0.6;  // 换道时cut in车辆判断阈值
-  double corridor_width = 1.5;   // 通道半个宽度，用于判断cut in车辆是否侵入
+  double corridor_width = 1.5;  // 通道半个宽度，用于判断cut in车辆是否侵入
   double cruise_set_acc = 1.5;   // 巡航车速增加速率 0.8m/s2
   double cruise_set_dec = -1.0;  // 巡航车速减小速率 -1m/s2
 
@@ -4147,19 +4200,20 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, ca_invade_exit_lat_dis_thr, "speed_limit_decider",
                      "ca_invade_exit_lat_dis_thr");
     ReadItem<int>(json, ca_invade_lat_dis_counter_thr, "speed_limit_decider",
-                     "ca_invade_lat_dis_counter_thr");
-    ReadItem<double>(json, construction_invade_speed_diff, "speed_limit_decider",
-                     "construction_invade_speed_diff");
+                  "ca_invade_lat_dis_counter_thr");
+    ReadItem<double>(json, construction_invade_speed_diff,
+                     "speed_limit_decider", "construction_invade_speed_diff");
     ReadItem<double>(json, construction_lat_dist_entry, "speed_limit_decider",
                      "construction_lat_dist_entry");
     ReadItem<double>(json, construction_lat_dist_exit, "speed_limit_decider",
                      "construction_lat_dist_exit");
     ReadItem<double>(json, construction_speed_upper, "speed_limit_decider",
                      "construction_speed_upper");
-    ReadItem<bool>(json, enable_construction_avoid_agent_speed_limit, "speed_limit_decider",
-                     "enable_construction_avoid_agent_speed_limit");
-    ReadItem<bool>(json, enable_map_sharp_curve_speed_limit, "speed_limit_decider",
-                   "enable_map_sharp_curve_speed_limit");
+    ReadItem<bool>(json, enable_construction_avoid_agent_speed_limit,
+                   "speed_limit_decider",
+                   "enable_construction_avoid_agent_speed_limit");
+    ReadItem<bool>(json, enable_map_sharp_curve_speed_limit,
+                   "speed_limit_decider", "enable_map_sharp_curve_speed_limit");
     ReadItem<bool>(json, enable_sharp_curve_by_decel, "speed_limit_decider",
                    "enable_sharp_curve_by_decel");
     ReadItem<bool>(json, enable_map_sharp_curve_by_decel, "speed_limit_decider",
@@ -4268,155 +4322,229 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, road_boundary_speed_limit_config.headway_max,
                      "speed_limit_decider", "road_boundary_headway_max");
     ReadItem<double>(json, road_boundary_speed_limit_config.max_search_distance,
-                     "speed_limit_decider", "road_boundary_max_search_distance");
+                     "speed_limit_decider",
+                     "road_boundary_max_search_distance");
     ReadItem<int>(json, road_boundary_speed_limit_config.min_points_in_range,
                   "speed_limit_decider", "road_boundary_min_points_in_range");
-    ReadItem<double>(json, road_boundary_speed_limit_config.both_sides_coefficient,
-                     "speed_limit_decider", "road_boundary_both_sides_coefficient");
-    ReadItem<double>(json, road_boundary_speed_limit_config.both_sides_coefficient_default,
-                     "speed_limit_decider", "road_boundary_both_sides_coefficient_default");
-    ReadItem<double>(json, road_boundary_speed_limit_config.decel_threshold_near,
-                     "speed_limit_decider", "road_boundary_decel_threshold_near");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.both_sides_coefficient,
+        "speed_limit_decider", "road_boundary_both_sides_coefficient");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.both_sides_coefficient_default,
+        "speed_limit_decider", "road_boundary_both_sides_coefficient_default");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.decel_threshold_near,
+        "speed_limit_decider", "road_boundary_decel_threshold_near");
     ReadItem<double>(json, road_boundary_speed_limit_config.decel_value_near,
                      "speed_limit_decider", "road_boundary_decel_value_near");
     ReadItem<double>(json, road_boundary_speed_limit_config.decel_value_far,
                      "speed_limit_decider", "road_boundary_decel_value_far");
     ReadItem<double>(json, road_boundary_speed_limit_config.highway_min_speed,
                      "speed_limit_decider", "road_boundary_highway_min_speed");
-    ReadItem<double>(json, road_boundary_speed_limit_config.expressway_min_speed,
-                     "speed_limit_decider", "road_boundary_expressway_min_speed");
-    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_distance_threshold,
-                     "speed_limit_decider", "road_boundary_lateral_distance_threshold");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.expressway_min_speed,
+        "speed_limit_decider", "road_boundary_expressway_min_speed");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.lateral_distance_threshold,
+        "speed_limit_decider", "road_boundary_lateral_distance_threshold");
     ReadItem<int>(json, road_boundary_speed_limit_config.confirmation_frames,
                   "speed_limit_decider", "road_boundary_confirmation_frames");
     ReadItem<int>(json, road_boundary_speed_limit_config.cooldown_frames,
                   "speed_limit_decider", "road_boundary_cooldown_frames");
-    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_road_boundary_speed_limit,
-                  "speed_limit_decider", "enable_road_boundary_speed_limit");
-    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_road_boundary_speed_limit_in_acc_mode,
-                  "speed_limit_decider", "enable_road_boundary_speed_limit_in_acc_mode");
-    ReadItem<int>(json, road_boundary_speed_limit_config.confirmation_frames_highway,
-                  "speed_limit_decider", "road_boundary_confirmation_frames_highway");
-    ReadItem<int>(json, road_boundary_speed_limit_config.min_points_in_range_highway,
-                  "speed_limit_decider", "road_boundary_min_points_in_range_highway");
-    ReadItem<int>(json, road_boundary_speed_limit_config.confirmation_frames_city_expressway,
-                  "speed_limit_decider", "road_boundary_confirmation_frames_city_expressway");
-    ReadItem<int>(json, road_boundary_speed_limit_config.min_points_in_range_city_expressway,
-                  "speed_limit_decider", "road_boundary_min_points_in_range_city_expressway");
-    ReadItem<int>(json, road_boundary_speed_limit_config.manual_intervention_reset_frames,
-                  "speed_limit_decider", "road_boundary_manual_intervention_reset_frames");
-    ReadItem<int>(json, road_boundary_speed_limit_config.manual_intervention_reset_frames_highway,
-                  "speed_limit_decider", "road_boundary_manual_intervention_reset_frames_highway");
-    ReadItem<int>(json, road_boundary_speed_limit_config.manual_intervention_reset_frames_city_expressway,
-                  "speed_limit_decider", "road_boundary_manual_intervention_reset_frames_city_expressway");
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_speed_limits_highway"},
-                  road_boundary_speed_limit_config.speed_limits_highway);
-    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_curve_road_boundary_speed_limit,
-                  "speed_limit_decider", "enable_curve_road_boundary_speed_limit");
-    ReadItem<double>(json, road_boundary_speed_limit_config.curve_road_radius_threshold,
-                     "speed_limit_decider", "road_boundary_curve_road_radius_threshold");
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_curve_radius_breakpoints"},
-                  road_boundary_speed_limit_config.curve_radius_breakpoints);
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_curve_width_expansion_values"},
-                  road_boundary_speed_limit_config.width_expansion_values);
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_curve_dkappa_breakpoints"},
-                  road_boundary_speed_limit_config.curve_dkappa_breakpoints);
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_curve_dkappa_width_expansion_values"},
-                  road_boundary_speed_limit_config.dkappa_width_expansion_values);
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_curve_lateral_distance_ranges"},
-                  road_boundary_speed_limit_config.lateral_distance_ranges);
-    ReadItem<int>(json, road_boundary_speed_limit_config.curve_min_points_in_range,
-                  "speed_limit_decider", "road_boundary_curve_min_points_in_range");
-    ReadItem<int>(json, road_boundary_speed_limit_config.curve_confirmation_frames,
-                  "speed_limit_decider", "road_boundary_curve_confirmation_frames");
-    ReadItem<int>(json, road_boundary_speed_limit_config.curve_max_gear_threshold,
-                  "speed_limit_decider", "road_boundary_curve_max_gear_threshold");
+    ReadItem<bool>(
+        json, road_boundary_speed_limit_config.enable_road_boundary_speed_limit,
+        "speed_limit_decider", "enable_road_boundary_speed_limit");
+    ReadItem<bool>(json,
+                   road_boundary_speed_limit_config
+                       .enable_road_boundary_speed_limit_in_acc_mode,
+                   "speed_limit_decider",
+                   "enable_road_boundary_speed_limit_in_acc_mode");
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.confirmation_frames_highway,
+        "speed_limit_decider", "road_boundary_confirmation_frames_highway");
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.min_points_in_range_highway,
+        "speed_limit_decider", "road_boundary_min_points_in_range_highway");
+    ReadItem<int>(
+        json,
+        road_boundary_speed_limit_config.confirmation_frames_city_expressway,
+        "speed_limit_decider",
+        "road_boundary_confirmation_frames_city_expressway");
+    ReadItem<int>(
+        json,
+        road_boundary_speed_limit_config.min_points_in_range_city_expressway,
+        "speed_limit_decider",
+        "road_boundary_min_points_in_range_city_expressway");
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.manual_intervention_reset_frames,
+        "speed_limit_decider",
+        "road_boundary_manual_intervention_reset_frames");
+    ReadItem<int>(json,
+                  road_boundary_speed_limit_config
+                      .manual_intervention_reset_frames_highway,
+                  "speed_limit_decider",
+                  "road_boundary_manual_intervention_reset_frames_highway");
+    ReadItem<int>(
+        json,
+        road_boundary_speed_limit_config
+            .manual_intervention_reset_frames_city_expressway,
+        "speed_limit_decider",
+        "road_boundary_manual_intervention_reset_frames_city_expressway");
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                 "road_boundary_speed_limits_highway"},
+        road_boundary_speed_limit_config.speed_limits_highway);
+    ReadItem<bool>(
+        json,
+        road_boundary_speed_limit_config.enable_curve_road_boundary_speed_limit,
+        "speed_limit_decider", "enable_curve_road_boundary_speed_limit");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.curve_road_radius_threshold,
+        "speed_limit_decider", "road_boundary_curve_road_radius_threshold");
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                 "road_boundary_curve_radius_breakpoints"},
+        road_boundary_speed_limit_config.curve_radius_breakpoints);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                 "road_boundary_curve_width_expansion_values"},
+        road_boundary_speed_limit_config.width_expansion_values);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                 "road_boundary_curve_dkappa_breakpoints"},
+        road_boundary_speed_limit_config.curve_dkappa_breakpoints);
+    read_json_vec(
+        json,
+        std::vector<std::string>{
+            "speed_limit_decider",
+            "road_boundary_curve_dkappa_width_expansion_values"},
+        road_boundary_speed_limit_config.dkappa_width_expansion_values);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                 "road_boundary_curve_lateral_distance_ranges"},
+        road_boundary_speed_limit_config.lateral_distance_ranges);
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.curve_min_points_in_range,
+        "speed_limit_decider", "road_boundary_curve_min_points_in_range");
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.curve_confirmation_frames,
+        "speed_limit_decider", "road_boundary_curve_confirmation_frames");
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.curve_max_gear_threshold,
+        "speed_limit_decider", "road_boundary_curve_max_gear_threshold");
     read_json_vec(json,
                   std::vector<std::string>{"speed_limit_decider",
                                            "road_boundary_curve_speed_limits"},
                   road_boundary_speed_limit_config.curve_speed_limits);
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_curve_front_edge_expansion_speed_breakpoints"},
-                  road_boundary_speed_limit_config.curve_front_edge_expansion_speed_breakpoints);
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_curve_front_edge_expansion_values"},
-                  road_boundary_speed_limit_config.curve_front_edge_expansion_values);
-    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_lateral_acceleration_limit,
-                  "speed_limit_decider", "road_boundary_enable_lateral_acceleration_limit");
-    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_acceleration_threshold,
-                     "speed_limit_decider", "road_boundary_lateral_acceleration_threshold");
-    ReadItem<int>(json, road_boundary_speed_limit_config.lateral_acceleration_min_points,
-                  "speed_limit_decider", "road_boundary_lateral_acceleration_min_points");
-    ReadItem<int>(json, road_boundary_speed_limit_config.lateral_acceleration_confirmation_frames,
-                  "speed_limit_decider", "road_boundary_lateral_acceleration_confirmation_frames");
-    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_acceleration_speed_reduction,
-                     "speed_limit_decider", "road_boundary_lateral_acceleration_speed_reduction");
-    ReadItem<double>(json, road_boundary_speed_limit_config.lateral_acceleration_desired,
-                     "speed_limit_decider", "road_boundary_lateral_acceleration_desired");
-    ReadItem<int>(json, road_boundary_speed_limit_config.curve_road_boundary_cooldown_frames,
-                  "speed_limit_decider", "road_boundary_curve_road_boundary_cooldown_frames");
-    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_s_curve_road_boundary_speed_limit,
-                  "speed_limit_decider", "enable_s_curve_road_boundary_speed_limit");
-    ReadItem<double>(json, road_boundary_speed_limit_config.s_curve_min_radius_threshold,
-                     "speed_limit_decider", "road_boundary_s_curve_min_radius_threshold");
-    ReadItem<double>(json, road_boundary_speed_limit_config.s_curve_dkappa_threshold,
-                     "speed_limit_decider", "road_boundary_s_curve_dkappa_threshold");
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_s_curve_speed_limits"},
-                  road_boundary_speed_limit_config.s_curve_speed_limits);
-    ReadItem<int>(json, road_boundary_speed_limit_config.s_curve_confirmation_frames,
-                  "speed_limit_decider", "road_boundary_s_curve_confirmation_frames");
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_speed_limits_both_sides_different"},
-                  road_boundary_speed_limit_config.speed_limits_both_sides_different);
-    read_json_vec(json,
-                  std::vector<std::string>{"speed_limit_decider",
-                                           "road_boundary_speed_limits_both_sides_same"},
-                  road_boundary_speed_limit_config.speed_limits_both_sides_same);
-    ReadItem<int>(json, road_boundary_speed_limit_config.collision_confirmation_frames,
-                  "speed_limit_decider", "road_boundary_collision_confirmation_frames");
-    ReadItem<bool>(json, road_boundary_speed_limit_config.enable_road_boundary_collision_speed_limit,
-                  "speed_limit_decider", "enable_road_boundary_collision_speed_limit");
-    ReadItem<double>(json, road_boundary_speed_limit_config.collision_speed_limit,
-                     "speed_limit_decider", "road_boundary_collision_speed_limit");
-    read_json_vec(json,
-            std::vector<std::string>{"speed_limit_decider",
-                                     "tunnel_vel_limit_dis_table_mid",
-                                     "vel_limit_table"},
-            tunnel_vel_limit_dis_table_mid.vel_limit_table);
+    read_json_vec(
+        json,
+        std::vector<std::string>{
+            "speed_limit_decider",
+            "road_boundary_curve_front_edge_expansion_speed_breakpoints"},
+        road_boundary_speed_limit_config
+            .curve_front_edge_expansion_speed_breakpoints);
+    read_json_vec(
+        json,
+        std::vector<std::string>{
+            "speed_limit_decider",
+            "road_boundary_curve_front_edge_expansion_values"},
+        road_boundary_speed_limit_config.curve_front_edge_expansion_values);
+    ReadItem<bool>(
+        json,
+        road_boundary_speed_limit_config.enable_lateral_acceleration_limit,
+        "speed_limit_decider",
+        "road_boundary_enable_lateral_acceleration_limit");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.lateral_acceleration_threshold,
+        "speed_limit_decider", "road_boundary_lateral_acceleration_threshold");
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.lateral_acceleration_min_points,
+        "speed_limit_decider", "road_boundary_lateral_acceleration_min_points");
+    ReadItem<int>(json,
+                  road_boundary_speed_limit_config
+                      .lateral_acceleration_confirmation_frames,
+                  "speed_limit_decider",
+                  "road_boundary_lateral_acceleration_confirmation_frames");
+    ReadItem<double>(
+        json,
+        road_boundary_speed_limit_config.lateral_acceleration_speed_reduction,
+        "speed_limit_decider",
+        "road_boundary_lateral_acceleration_speed_reduction");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.lateral_acceleration_desired,
+        "speed_limit_decider", "road_boundary_lateral_acceleration_desired");
+    ReadItem<int>(
+        json,
+        road_boundary_speed_limit_config.curve_road_boundary_cooldown_frames,
+        "speed_limit_decider",
+        "road_boundary_curve_road_boundary_cooldown_frames");
+    ReadItem<bool>(json,
+                   road_boundary_speed_limit_config
+                       .enable_s_curve_road_boundary_speed_limit,
+                   "speed_limit_decider",
+                   "enable_s_curve_road_boundary_speed_limit");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.s_curve_min_radius_threshold,
+        "speed_limit_decider", "road_boundary_s_curve_min_radius_threshold");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.s_curve_dkappa_threshold,
+        "speed_limit_decider", "road_boundary_s_curve_dkappa_threshold");
     read_json_vec(
         json,
         std::vector<std::string>{"speed_limit_decider",
-                                "tunnel_vel_limit_dis_table_mid", "dis_table"},
+                                 "road_boundary_s_curve_speed_limits"},
+        road_boundary_speed_limit_config.s_curve_speed_limits);
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.s_curve_confirmation_frames,
+        "speed_limit_decider", "road_boundary_s_curve_confirmation_frames");
+    read_json_vec(
+        json,
+        std::vector<std::string>{
+            "speed_limit_decider",
+            "road_boundary_speed_limits_both_sides_different"},
+        road_boundary_speed_limit_config.speed_limits_both_sides_different);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                 "road_boundary_speed_limits_both_sides_same"},
+        road_boundary_speed_limit_config.speed_limits_both_sides_same);
+    ReadItem<int>(
+        json, road_boundary_speed_limit_config.collision_confirmation_frames,
+        "speed_limit_decider", "road_boundary_collision_confirmation_frames");
+    ReadItem<bool>(json,
+                   road_boundary_speed_limit_config
+                       .enable_road_boundary_collision_speed_limit,
+                   "speed_limit_decider",
+                   "enable_road_boundary_collision_speed_limit");
+    ReadItem<double>(
+        json, road_boundary_speed_limit_config.collision_speed_limit,
+        "speed_limit_decider", "road_boundary_collision_speed_limit");
+    read_json_vec(json,
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "tunnel_vel_limit_dis_table_mid",
+                                           "vel_limit_table"},
+                  tunnel_vel_limit_dis_table_mid.vel_limit_table);
+    read_json_vec(
+        json,
+        std::vector<std::string>{"speed_limit_decider",
+                                 "tunnel_vel_limit_dis_table_mid", "dis_table"},
         tunnel_vel_limit_dis_table_mid.dis_table);
 
     read_json_vec(json,
-            std::vector<std::string>{"speed_limit_decider",
-                                     "tunnel_vel_limit_dis_table_low",
-                                     "vel_limit_table"},
-            tunnel_vel_limit_dis_table_low.vel_limit_table);
+                  std::vector<std::string>{"speed_limit_decider",
+                                           "tunnel_vel_limit_dis_table_low",
+                                           "vel_limit_table"},
+                  tunnel_vel_limit_dis_table_low.vel_limit_table);
     read_json_vec(
         json,
         std::vector<std::string>{"speed_limit_decider",
-                                "tunnel_vel_limit_dis_table_low", "dis_table"},
+                                 "tunnel_vel_limit_dis_table_low", "dis_table"},
         tunnel_vel_limit_dis_table_low.dis_table);
-
   }
   struct VehicleLatDisRelVelTable {
     std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
@@ -4438,13 +4566,23 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   };
 
   struct RoadBoundarySpeedLimitConfig {
-    bool enable_road_boundary_speed_limit = true;  // Enable/disable road boundary speed limit feature
-    bool enable_road_boundary_speed_limit_in_acc_mode = false;  // Enable/disable road boundary speed limit in ACC mode
-    std::vector<double> range_mins{0.0, 0.3, 0.4, 0.6, 0.75, 0.9, 1.05, 1.4, 2.1};  // Minimum lateral distance for each range (m)
-    std::vector<double> range_maxs{0.4, 0.6, 0.7, 0.85, 1.0, 1.15, 1.5, 2.2, 999.9};  // Maximum lateral distance for each range (m)
-    std::vector<double> speed_limits{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6, 130.0/3.6, 150.0/3.6, 150.0/3.6};
+    bool enable_road_boundary_speed_limit =
+        true;  // Enable/disable road boundary speed limit feature
+    bool enable_road_boundary_speed_limit_in_acc_mode =
+        false;  // Enable/disable road boundary speed limit in ACC mode
+    std::vector<double> range_mins{
+        0.0, 0.3,  0.4, 0.6, 0.75,
+        0.9, 1.05, 1.4, 2.1};  // Minimum lateral distance for each range (m)
+    std::vector<double> range_maxs{
+        0.4,  0.6, 0.7, 0.85, 1.0,
+        1.15, 1.5, 2.2, 999.9};  // Maximum lateral distance for each range (m)
+    std::vector<double> speed_limits{20.0 / 3.6,  30.0 / 3.6,  40.0 / 3.6,
+                                     60.0 / 3.6,  80.0 / 3.6,  100.0 / 3.6,
+                                     130.0 / 3.6, 150.0 / 3.6, 150.0 / 3.6};
     double both_sides_coefficient = 0.75;
-    double both_sides_coefficient_default = 0.83;  // Default coefficient when both sides triggered but different gear levels
+    double both_sides_coefficient_default =
+        0.83;  // Default coefficient when both sides triggered but different
+               // gear levels
     double decel_threshold_near = 1.2;
     double decel_value_near = -2.0;
     double decel_value_far = -1.0;
@@ -4455,53 +4593,125 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     double max_search_distance = 80.0;
     double lateral_distance_threshold = 0.5;
     int min_points_in_range = 5;
-    int confirmation_frames = 3;  // Number of frames required to confirm speed limit range change
-    int cooldown_frames = 50;  // Minimum frames to maintain speed limit value after change
-    int confirmation_frames_highway = 5;  // Confirmation frames for highway scenario
-    int min_points_in_range_highway = 10;  // Minimum points in range for highway scenario
-    int confirmation_frames_city_expressway = 4;  // Confirmation frames for elevated road scenario
-    int min_points_in_range_city_expressway = 7;  // Minimum points in range for elevated road scenario
-    int manual_intervention_reset_frames = 3000;  // Reset frames for manual intervention detection (default)
-    int manual_intervention_reset_frames_highway = 6000;  // Reset frames for highway scenario
-    int manual_intervention_reset_frames_city_expressway = 9000;  // Reset frames for city expressway scenario
-    std::vector<double> speed_limits_highway{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 90.0/3.6, 120.0/3.6, 130.0/3.6, 150.0/3.6, 150.0/3.6};  // Speed limits for highway scenario
-    std::vector<double> speed_limits_both_sides_different{20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6, 70.0/3.6, 80.0/3.6, 100.0/3.6, 130.0/3.6, 150.0/3.6};  // Speed limits when both sides triggered with different gear levels (use lower gear)
-    std::vector<double> speed_limits_both_sides_same{15.0/3.6, 20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6, 150.0/3.6};  // Speed limits when both sides triggered with same gear level
+    int confirmation_frames =
+        3;  // Number of frames required to confirm speed limit range change
+    int cooldown_frames =
+        50;  // Minimum frames to maintain speed limit value after change
+    int confirmation_frames_highway =
+        5;  // Confirmation frames for highway scenario
+    int min_points_in_range_highway =
+        10;  // Minimum points in range for highway scenario
+    int confirmation_frames_city_expressway =
+        4;  // Confirmation frames for elevated road scenario
+    int min_points_in_range_city_expressway =
+        7;  // Minimum points in range for elevated road scenario
+    int manual_intervention_reset_frames =
+        3000;  // Reset frames for manual intervention detection (default)
+    int manual_intervention_reset_frames_highway =
+        6000;  // Reset frames for highway scenario
+    int manual_intervention_reset_frames_city_expressway =
+        9000;  // Reset frames for city expressway scenario
+    std::vector<double>
+        speed_limits_highway{20.0 / 3.6, 30.0 / 3.6,  40.0 / 3.6,  60.0 / 3.6,
+                             90.0 / 3.6, 120.0 / 3.6, 130.0 / 3.6, 150.0 / 3.6,
+                             150.0 / 3.6};  // Speed limits for highway scenario
+    std::vector<double> speed_limits_both_sides_different{
+        20.0 / 3.6, 30.0 / 3.6,  40.0 / 3.6,  50.0 / 3.6, 70.0 / 3.6,
+        80.0 / 3.6, 100.0 / 3.6, 130.0 / 3.6, 150.0 / 3.6};  // Speed limits
+                                                             // when both sides
+                                                             // triggered with
+                                                             // different gear
+                                                             // levels (use
+                                                             // lower gear)
+    std::vector<double> speed_limits_both_sides_same{
+        15.0 / 3.6, 20.0 / 3.6, 30.0 / 3.6,  40.0 / 3.6, 50.0 / 3.6,
+        60.0 / 3.6, 80.0 / 3.6, 100.0 / 3.6, 150.0 / 3.6};  // Speed limits when
+                                                            // both sides
+                                                            // triggered with
+                                                            // same gear level
     // Curve road boundary speed limit configuration
-    bool enable_curve_road_boundary_speed_limit = false;  // Enable curve road boundary speed limit feature
-    double curve_road_radius_threshold = 300.0;  // Road radius threshold (m) to enable curve road boundary speed limit
-    std::vector<double> curve_radius_breakpoints{0.0, 25.0, 50.0, 100.0, 150.0, 200.0};  // Curve radius breakpoints for width expansion interpolation (m)
-    std::vector<double> width_expansion_values{0.30, 0.20, 0.15, 0.10, 0.05, 0.0};  // Width expansion values (m) corresponding to breakpoints
-    std::vector<double> curve_dkappa_breakpoints{0.0, 0.00016, 0.0002, 0.00025, 0.0003};  // Curve dkappa breakpoints for width expansion interpolation (ascending order)
-    std::vector<double> dkappa_width_expansion_values{0.0, 0.0, 0.6, 0.8, 0.9};  // Width expansion values (m) corresponding to dkappa breakpoints
-    std::vector<double> lateral_distance_ranges{0.40, 0.55, 0.70, 0.85};  // Lateral distance ranges (m) for point counting
-    int curve_min_points_in_range = 4;  // Minimum points in lateral distance range to trigger
-    int curve_confirmation_frames = 4;  // Number of frames required to confirm curve road boundary speed limit
-    int curve_max_gear_threshold = 4;  // Maximum gear threshold (gear must be < this value to be valid)
-    std::vector<double> curve_speed_limits{20.0/3.6, 30.0/3.6, 40.0/3.6, 50.0/3.6};  // Speed limits (m/s) for curve road boundary (corresponding to lateral_distance_ranges)
+    bool enable_curve_road_boundary_speed_limit =
+        false;  // Enable curve road boundary speed limit feature
+    double curve_road_radius_threshold =
+        300.0;  // Road radius threshold (m) to enable curve road boundary speed
+                // limit
+    std::vector<double> curve_radius_breakpoints{
+        0.0,   25.0, 50.0, 100.0,
+        150.0, 200.0};  // Curve radius breakpoints for width expansion
+                        // interpolation (m)
+    std::vector<double> width_expansion_values{
+        0.30, 0.20, 0.15, 0.10,
+        0.05, 0.0};  // Width expansion values (m) corresponding to breakpoints
+    std::vector<double> curve_dkappa_breakpoints{
+        0.0, 0.00016, 0.0002, 0.00025,
+        0.0003};  // Curve dkappa breakpoints for width expansion interpolation
+                  // (ascending order)
+    std::vector<double> dkappa_width_expansion_values{
+        0.0, 0.0, 0.6, 0.8,
+        0.9};  // Width expansion values (m) corresponding to dkappa breakpoints
+    std::vector<double> lateral_distance_ranges{
+        0.40, 0.55, 0.70,
+        0.85};  // Lateral distance ranges (m) for point counting
+    int curve_min_points_in_range =
+        4;  // Minimum points in lateral distance range to trigger
+    int curve_confirmation_frames = 4;  // Number of frames required to confirm
+                                        // curve road boundary speed limit
+    int curve_max_gear_threshold =
+        4;  // Maximum gear threshold (gear must be < this value to be valid)
+    std::vector<double> curve_speed_limits{
+        20.0 / 3.6, 30.0 / 3.6, 40.0 / 3.6,
+        50.0 / 3.6};  // Speed limits (m/s) for curve road boundary
+                      // (corresponding to lateral_distance_ranges)
 
     // Curve front edge expansion configuration based on speed limit
-    std::vector<double> curve_front_edge_expansion_speed_breakpoints{20.0/3.6, 30.0/3.6, 40.0/3.6, 60.0/3.6, 80.0/3.6, 100.0/3.6};  // Speed breakpoints (m/s) for front edge expansion interpolation
-    std::vector<double> curve_front_edge_expansion_values{0.30, 0.35, 0.40, 0.50, 0.60, 0.60};  // Expansion values (m) corresponding to speed breakpoints
+    std::vector<double> curve_front_edge_expansion_speed_breakpoints{
+        20.0 / 3.6, 30.0 / 3.6, 40.0 / 3.6, 60.0 / 3.6,
+        80.0 / 3.6, 100.0 / 3.6};  // Speed breakpoints (m/s) for front edge
+                                   // expansion interpolation
+    std::vector<double> curve_front_edge_expansion_values{
+        0.30, 0.35, 0.40, 0.50,
+        0.60, 0.60};  // Expansion values (m) corresponding to speed breakpoints
 
     // Lateral acceleration limit detection configuration
-    bool enable_lateral_acceleration_limit = false;  // Enable lateral acceleration limit detection
-    double lateral_acceleration_threshold = 2.0;  // Lateral acceleration threshold (m/s^2) to trigger speed limit
-    int lateral_acceleration_min_points = 4;  // Minimum number of points with lat_acc exceeding threshold
-    int lateral_acceleration_confirmation_frames = 3;  // Number of frames required to confirm lateral acceleration limit
-    double lateral_acceleration_speed_reduction = 10.0 / 3.6;  // Speed reduction (m/s) when lateral acceleration limit is triggered (default 10 kph)
-    double lateral_acceleration_desired = 1.6;  // Desired lateral acceleration (m/s^2) for speed limit calculation (default 1.6)
-    int curve_road_boundary_cooldown_frames = 15;  // Cooldown frames for curve road boundary speed limit (default 30)
+    bool enable_lateral_acceleration_limit =
+        false;  // Enable lateral acceleration limit detection
+    double lateral_acceleration_threshold =
+        2.0;  // Lateral acceleration threshold (m/s^2) to trigger speed limit
+    int lateral_acceleration_min_points =
+        4;  // Minimum number of points with lat_acc exceeding threshold
+    int lateral_acceleration_confirmation_frames =
+        3;  // Number of frames required to confirm lateral acceleration limit
+    double lateral_acceleration_speed_reduction =
+        10.0 / 3.6;  // Speed reduction (m/s) when lateral acceleration limit is
+                     // triggered (default 10 kph)
+    double lateral_acceleration_desired =
+        1.6;  // Desired lateral acceleration (m/s^2) for speed limit
+              // calculation (default 1.6)
+    int curve_road_boundary_cooldown_frames =
+        15;  // Cooldown frames for curve road boundary speed limit (default 30)
     // S-curve road boundary speed limit configuration
-    bool enable_s_curve_road_boundary_speed_limit = false;  // Enable/disable S-curve road boundary speed limit feature
-    double s_curve_min_radius_threshold = 200.0;  // Minimum curve radius threshold (m) for S-curve detection
-    double s_curve_dkappa_threshold = 0.00025;  // dkappa threshold when kappa sign changes
-    std::vector<double> s_curve_speed_limits{40.0/3.6, 40.0/3.6, 40.0/3.6, 40.0/3.6, 45.0/3.6, 50.0/3.6, 60.0/3.6};  // Speed limits (m/s) for S-curve based on gear (0-6)
-    int s_curve_confirmation_frames = 2;  // Number of frames required to confirm S-curve
+    bool enable_s_curve_road_boundary_speed_limit =
+        false;  // Enable/disable S-curve road boundary speed limit feature
+    double s_curve_min_radius_threshold =
+        200.0;  // Minimum curve radius threshold (m) for S-curve detection
+    double s_curve_dkappa_threshold =
+        0.00025;  // dkappa threshold when kappa sign changes
+    std::vector<double> s_curve_speed_limits{
+        40.0 / 3.6, 40.0 / 3.6, 40.0 / 3.6, 40.0 / 3.6,
+        45.0 / 3.6, 50.0 / 3.6, 60.0 / 3.6};  // Speed limits (m/s) for S-curve
+                                              // based on gear (0-6)
+    int s_curve_confirmation_frames =
+        2;  // Number of frames required to confirm S-curve
     // Collision distance confirmation configuration
-    int collision_confirmation_frames = 3;  // Minimum number of frames required to confirm collision distance (default 4)
-    bool enable_road_boundary_collision_speed_limit = true;  // Enable/disable road boundary confirmed collision distance speed limit feature
-    double collision_speed_limit = 15.0 / 3.6;  // Speed limit (m/s) when collision is confirmed (default 15 kph)
+    int collision_confirmation_frames =
+        3;  // Minimum number of frames required to confirm collision distance
+            // (default 4)
+    bool enable_road_boundary_collision_speed_limit =
+        true;  // Enable/disable road boundary confirmed collision distance
+               // speed limit feature
+    double collision_speed_limit =
+        15.0 /
+        3.6;  // Speed limit (m/s) when collision is confirmed (default 15 kph)
   };
 
   int lon_num_step = 25;
@@ -4548,7 +4758,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double brake_dis_near_construction = 20.0;
   double acc_to_construction = -0.7;
   double ca_invade_entry_lat_dis_thr = 2;
-  double ca_invade_exit_lat_dis_thr  = 2.2;
+  double ca_invade_exit_lat_dis_thr = 2.2;
   int ca_invade_lat_dis_counter_thr = 3.0;
   double construction_invade_speed_diff = 5.56;
   double construction_lat_dist_entry = 4.0;
@@ -4556,13 +4766,17 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double construction_speed_upper = 27.78;
   bool enable_construction_avoid_agent_speed_limit = false;
   bool enable_map_sharp_curve_speed_limit = true;  // 是否启用地图急弯限速
-  bool enable_sharp_curve_by_decel = true;  // 是否启用基于减速度的急弯判断（默认true）
-  bool enable_map_sharp_curve_by_decel = true;  // 是否启用基于减速度的地图急弯判断（默认false）
-  bool enable_avg_radius_for_ewma = true;  // 是否启用平均半径用于EWMA（默认true）
+  bool enable_sharp_curve_by_decel =
+      true;  // 是否启用基于减速度的急弯判断（默认true）
+  bool enable_map_sharp_curve_by_decel =
+      true;  // 是否启用基于减速度的地图急弯判断（默认false）
+  bool enable_avg_radius_for_ewma =
+      true;  // 是否启用平均半径用于EWMA（默认true）
   double map_sharp_curve_dis_to_ramp = 100.0;  // 接近匝道的距离阈值（m）
-  double map_sharp_curve_speed_limit = 40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
-  double ewma_alpha_v_limit_in_turns = 0.3;  // EWMA coefficient for v_limit_in_turns
-
+  double map_sharp_curve_speed_limit =
+      40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
+  double ewma_alpha_v_limit_in_turns =
+      0.3;  // EWMA coefficient for v_limit_in_turns
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
   VRULatDisRelVelTable vru_lat_dis_rel_vel_table;
@@ -4578,8 +4792,10 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
 struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
-    ReadItem<double>(json, q_ego_ref_x, "lane_change_joint_decision", "q_ego_ref_x");
-    ReadItem<double>(json, q_ego_ref_y, "lane_change_joint_decision", "q_ego_ref_y");
+    ReadItem<double>(json, q_ego_ref_x, "lane_change_joint_decision",
+                     "q_ego_ref_x");
+    ReadItem<double>(json, q_ego_ref_y, "lane_change_joint_decision",
+                     "q_ego_ref_y");
     ReadItem<double>(json, q_ego_ref_theta, "lane_change_joint_decision",
                      "q_ego_ref_theta");
     ReadItem<double>(json, q_ego_ref_delta, "lane_change_joint_decision",
@@ -4589,8 +4805,10 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ego_ref_acc, "lane_change_joint_decision",
                      "q_ego_ref_acc");
 
-    ReadItem<double>(json, q_obs_ref_x, "lane_change_joint_decision", "q_obs_ref_x");
-    ReadItem<double>(json, q_obs_ref_y, "lane_change_joint_decision", "q_obs_ref_y");
+    ReadItem<double>(json, q_obs_ref_x, "lane_change_joint_decision",
+                     "q_obs_ref_x");
+    ReadItem<double>(json, q_obs_ref_y, "lane_change_joint_decision",
+                     "q_obs_ref_y");
     ReadItem<double>(json, q_obs_ref_theta, "lane_change_joint_decision",
                      "q_obs_ref_theta");
     ReadItem<double>(json, q_obs_ref_delta, "lane_change_joint_decision",
@@ -4600,15 +4818,17 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_obs_ref_acc, "lane_change_joint_decision",
                      "q_obs_ref_acc");
 
-    ReadItem<double>(json, curv_factor, "lane_change_joint_decision", "curv_factor");
+    ReadItem<double>(json, curv_factor, "lane_change_joint_decision",
+                     "curv_factor");
 
     ReadItem<double>(json, three_disc_safe_dist, "lane_change_joint_decision",
                      "three_disc_safe_dist");
     ReadItem<double>(json, q_three_disc_safe_dist_weight,
-                     "lane_change_joint_decision", "q_three_disc_safe_dist_weight");
+                     "lane_change_joint_decision",
+                     "q_three_disc_safe_dist_weight");
 
-    ReadItem<double>(json, road_boundary_safe_dist, "lane_change_joint_decision",
-                     "road_boundary_safe_dist");
+    ReadItem<double>(json, road_boundary_safe_dist,
+                     "lane_change_joint_decision", "road_boundary_safe_dist");
     ReadItem<double>(json, q_road_boundary_weight, "lane_change_joint_decision",
                      "q_road_boundary_weight");
 
@@ -4627,35 +4847,40 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
 
     ReadItem<double>(json, q_ego_acc_bound_weight, "lane_change_joint_decision",
                      "q_ego_acc_bound_weight");
-    ReadItem<double>(json, ego_acc_max, "lane_change_joint_decision", "ego_acc_max");
-    ReadItem<double>(json, ego_acc_min, "lane_change_joint_decision", "ego_acc_min");
+    ReadItem<double>(json, ego_acc_max, "lane_change_joint_decision",
+                     "ego_acc_max");
+    ReadItem<double>(json, ego_acc_min, "lane_change_joint_decision",
+                     "ego_acc_min");
 
-    ReadItem<double>(json, q_ego_jerk_bound_weight, "lane_change_joint_decision",
-                     "q_ego_jerk_bound_weight");
+    ReadItem<double>(json, q_ego_jerk_bound_weight,
+                     "lane_change_joint_decision", "q_ego_jerk_bound_weight");
     ReadItem<double>(json, ego_jerk_max, "lane_change_joint_decision",
                      "ego_jerk_max");
     ReadItem<double>(json, ego_jerk_min, "lane_change_joint_decision",
                      "ego_jerk_min");
 
-    ReadItem<double>(json, q_hard_halfplane_weight, "lane_change_joint_decision",
-                     "q_hard_halfplane_weight");
+    ReadItem<double>(json, q_hard_halfplane_weight,
+                     "lane_change_joint_decision", "q_hard_halfplane_weight");
     ReadItem<double>(json, hard_halfplane_dist, "lane_change_joint_decision",
                      "hard_halfplane_dist");
-    ReadItem<double>(json, halfplane_cost_allocation_ratio, "lane_change_joint_decision",
+    ReadItem<double>(json, halfplane_cost_allocation_ratio,
+                     "lane_change_joint_decision",
                      "halfplane_cost_allocation_ratio");
-    ReadItem<double>(json, q_soft_halfplane_weight, "lane_change_joint_decision",
-                     "q_soft_halfplane_weight");
+    ReadItem<double>(json, q_soft_halfplane_weight,
+                     "lane_change_joint_decision", "q_soft_halfplane_weight");
     ReadItem<double>(json, soft_halfplane_s0, "lane_change_joint_decision",
                      "soft_halfplane_s0");
     ReadItem<double>(json, soft_halfplane_tau, "lane_change_joint_decision",
                      "soft_halfplane_tau");
-    ReadItem<double>(json, soft_halfplane_cost_allocation_ratio, "lane_change_joint_decision",
+    ReadItem<double>(json, soft_halfplane_cost_allocation_ratio,
+                     "lane_change_joint_decision",
                      "soft_halfplane_cost_allocation_ratio");
-    ReadItem<double>(json, halfplane_cost_allocation_ratio_later, "lane_change_joint_decision",
+    ReadItem<double>(json, halfplane_cost_allocation_ratio_later,
+                     "lane_change_joint_decision",
                      "halfplane_cost_allocation_ratio_later");
     ReadItem<double>(json, lc_thw, "lane_change_joint_decision", "lc_thw");
-    ReadItem<double>(json, obs_reaction_decay_time, "lane_change_joint_decision",
-                     "obs_reaction_decay_time");
+    ReadItem<double>(json, obs_reaction_decay_time,
+                     "lane_change_joint_decision", "obs_reaction_decay_time");
     ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
                      "obs_keep_ref_factor");
   }
@@ -4895,8 +5120,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_jerk_speed_adjust");
     ReadItem<double>(json, q_pos_safe, "long_motion_ilqr", "q_pos_safe");
     ReadItem<double>(json, safe_distance, "long_motion_ilqr", "safe_distance");
-    ReadItem<double>(json, q_emergency_stop, "long_motion_ilqr", "q_emergency_stop");
-
+    ReadItem<double>(json, q_emergency_stop, "long_motion_ilqr",
+                     "q_emergency_stop");
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -5166,7 +5391,8 @@ struct EgoPlanningVirtualLaneManagerConfig : public EgoPlanningConfig {
     /* read config from json */
     is_select_split_nearing_ramp = read_json_key<bool>(
         json, "is_select_split_nearing_ramp", is_select_split_nearing_ramp);
-    overlap_threshold = read_json_key<double>(json, "overlap_threshold", overlap_threshold);
+    overlap_threshold =
+        read_json_key<double>(json, "overlap_threshold", overlap_threshold);
   }
   bool is_select_split_nearing_ramp = true;
   double overlap_threshold = 0.35;
@@ -5633,7 +5859,7 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
     ReadItem<double>(json, thw_scale_up_factor, "speed_planning",
                      "agent_headway_decider", "thw_scale_up_factor");
     ReadItem<double>(json, thw_scale_down_factor, "speed_planning",
-                        "agent_headway_decider", "thw_scale_down_factor");
+                     "agent_headway_decider", "thw_scale_down_factor");
   }
   double plan_time = 5.0;
   double dt = 0.2;
@@ -5730,17 +5956,18 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, distance_stop_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
                      "distance_stop_between_ego_and_cipv_threshold");
-    ReadItem<double>(json, rads_distance_stop_between_ego_and_destination_cipv_threshold,
-                    "speed_planning", "start_stop_decider",
-                    "rads_distance_stop_between_ego_and_destination_cipv_threshold");
+    ReadItem<double>(
+        json, rads_distance_stop_between_ego_and_destination_cipv_threshold,
+        "speed_planning", "start_stop_decider",
+        "rads_distance_stop_between_ego_and_destination_cipv_threshold");
     ReadItem<double>(json, rads_distance_stop_between_ego_and_cipv_threshold,
-                    "speed_planning", "start_stop_decider",
-                    "rads_distance_stop_between_ego_and_cipv_threshold");
+                     "speed_planning", "start_stop_decider",
+                     "rads_distance_stop_between_ego_and_cipv_threshold");
     ReadItem<double>(json, rads_early_stop_distance_ego_to_end_threshold,
-                    "speed_planning", "start_stop_decider",
-                    "rads_early_stop_distance_ego_to_end_threshold");
-    ReadItem<double>(json, rads_early_stop_vel_threshold,
-                    "speed_planning", "start_stop_decider", "rads_early_stop_vel_threshold");
+                     "speed_planning", "start_stop_decider",
+                     "rads_early_stop_distance_ego_to_end_threshold");
+    ReadItem<double>(json, rads_early_stop_vel_threshold, "speed_planning",
+                     "start_stop_decider", "rads_early_stop_vel_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
     ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
@@ -5749,7 +5976,7 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, start_to_cruise_vel_threshold, "speed_planning",
                      "start_stop_decider", "start_to_cruise_vel_threshold");
     ReadItem<double>(json, stop_destination_to_ego_distance, "speed_planning",
-                    "start_stop_decider", "stop_destination_to_ego_distance");
+                     "start_stop_decider", "stop_destination_to_ego_distance");
   }
   double large_vehicle_length = 8.0;
   double lower_speed_min_follow_distance_gap = 2.5;
@@ -5915,132 +6142,151 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
       ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_upper,
                        "speed_planning", "cruise_target",
                        "sharp_curvature_kinematic_param", "acc_positive_upper");
-      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "acc_positive_speed_lower");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.acc_positive_speed_lower,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "acc_positive_speed_lower");
 
       ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_lower,
                        "speed_planning", "cruise_target",
                        "sharp_curvature_kinematic_param", "acc_positive_lower");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "acc_positive_speed_upper");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.acc_positive_speed_upper,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "acc_positive_speed_upper");
 
       ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_lower,
                        "speed_planning", "cruise_target",
                        "sharp_curvature_kinematic_param", "acc_negative_lower");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "acc_negative_speed_lower");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.acc_negative_speed_lower,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "acc_negative_speed_lower");
 
       ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_upper,
                        "speed_planning", "cruise_target",
                        "sharp_curvature_kinematic_param", "acc_negative_upper");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "acc_negative_speed_upper");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.acc_negative_speed_upper,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "acc_negative_speed_upper");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_upper,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_positive_upper");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_positive_upper,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_positive_upper");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_positive_speed_lower");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_positive_speed_lower,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_positive_speed_lower");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_lower,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_positive_lower");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_positive_lower,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_positive_lower");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_positive_speed_upper");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_positive_speed_upper,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_positive_speed_upper");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_lower,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_negative_lower");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_negative_lower,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_negative_lower");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_negative_speed_lower");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_negative_speed_lower,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_negative_speed_lower");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_upper,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_negative_upper");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_negative_upper,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_negative_upper");
 
-      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "sharp_curvature_kinematic_param", "jerk_negative_speed_upper");
+      ReadItem<double>(
+          json, sharp_curvature_kinematic_param.jerk_negative_speed_upper,
+          "speed_planning", "cruise_target", "sharp_curvature_kinematic_param",
+          "jerk_negative_speed_upper");
     }
     // construction_kinematic_param
     {
       ReadItem<double>(json, construction_kinematic_param.acc_positive_upper,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "acc_positive_upper");
-      ReadItem<double>(json, construction_kinematic_param.acc_positive_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "acc_positive_speed_lower");
+      ReadItem<double>(
+          json, construction_kinematic_param.acc_positive_speed_lower,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "acc_positive_speed_lower");
 
       ReadItem<double>(json, construction_kinematic_param.acc_positive_lower,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "acc_positive_lower");
 
-      ReadItem<double>(json, construction_kinematic_param.acc_positive_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "acc_positive_speed_upper");
+      ReadItem<double>(
+          json, construction_kinematic_param.acc_positive_speed_upper,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "acc_positive_speed_upper");
 
       ReadItem<double>(json, construction_kinematic_param.acc_negative_lower,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "acc_negative_lower");
 
-      ReadItem<double>(json, construction_kinematic_param.acc_negative_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "acc_negative_speed_lower");
+      ReadItem<double>(
+          json, construction_kinematic_param.acc_negative_speed_lower,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "acc_negative_speed_lower");
 
       ReadItem<double>(json, construction_kinematic_param.acc_negative_upper,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "acc_negative_upper");
 
-      ReadItem<double>(json, construction_kinematic_param.acc_negative_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "acc_negative_speed_upper");
+      ReadItem<double>(
+          json, construction_kinematic_param.acc_negative_speed_upper,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "acc_negative_speed_upper");
 
       ReadItem<double>(json, construction_kinematic_param.jerk_positive_upper,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "jerk_positive_upper");
 
-      ReadItem<double>(json, construction_kinematic_param.jerk_positive_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "jerk_positive_speed_lower");
+      ReadItem<double>(
+          json, construction_kinematic_param.jerk_positive_speed_lower,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "jerk_positive_speed_lower");
 
       ReadItem<double>(json, construction_kinematic_param.jerk_positive_lower,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "jerk_positive_lower");
 
-      ReadItem<double>(json, construction_kinematic_param.jerk_positive_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "jerk_positive_speed_upper");
+      ReadItem<double>(
+          json, construction_kinematic_param.jerk_positive_speed_upper,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "jerk_positive_speed_upper");
 
       ReadItem<double>(json, construction_kinematic_param.jerk_negative_lower,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "jerk_negative_lower");
 
-      ReadItem<double>(json, construction_kinematic_param.jerk_negative_speed_lower,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "jerk_negative_speed_lower");
+      ReadItem<double>(
+          json, construction_kinematic_param.jerk_negative_speed_lower,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "jerk_negative_speed_lower");
 
       ReadItem<double>(json, construction_kinematic_param.jerk_negative_upper,
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "jerk_negative_upper");
 
-      ReadItem<double>(json, construction_kinematic_param.jerk_negative_speed_upper,
-                       "speed_planning", "cruise_target",
-                       "construction_kinematic_param", "jerk_negative_speed_upper");
+      ReadItem<double>(
+          json, construction_kinematic_param.jerk_negative_speed_upper,
+          "speed_planning", "cruise_target", "construction_kinematic_param",
+          "jerk_negative_speed_upper");
     }
-
 
     {
       ReadItem<double>(json, avoid_agent_kinematic_param.acc_positive_upper,
@@ -6182,68 +6428,76 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
     // map_near_ramp_kinematic_param
     {
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_positive_upper");
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_speed_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_positive_speed_lower");
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_positive_lower");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "acc_positive_upper");
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.acc_positive_speed_lower,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "acc_positive_speed_lower");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "acc_positive_lower");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_speed_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_positive_speed_upper");
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.acc_positive_speed_upper,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "acc_positive_speed_upper");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_negative_lower");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "acc_negative_lower");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_speed_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_negative_speed_lower");
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.acc_negative_speed_lower,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "acc_negative_speed_lower");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_negative_upper");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "acc_negative_upper");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_speed_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "acc_negative_speed_upper");
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.acc_negative_speed_upper,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "acc_negative_speed_upper");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_positive_upper");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "jerk_positive_upper");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_speed_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_positive_speed_lower");
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.jerk_positive_speed_lower,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "jerk_positive_speed_lower");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_positive_lower");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "jerk_positive_lower");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_speed_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_positive_speed_upper");
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.jerk_positive_speed_upper,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "jerk_positive_speed_upper");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_negative_lower");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "jerk_negative_lower");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_speed_lower,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_negative_speed_lower");
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.jerk_negative_speed_lower,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "jerk_negative_speed_lower");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_negative_upper");
+      ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "map_near_ramp_kinematic_param", "jerk_negative_upper");
 
-        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_speed_upper,
-                         "speed_planning", "cruise_target",
-                         "map_near_ramp_kinematic_param", "jerk_negative_speed_upper");
-      }
+      ReadItem<double>(
+          json, map_near_ramp_kinematic_param.jerk_negative_speed_upper,
+          "speed_planning", "cruise_target", "map_near_ramp_kinematic_param",
+          "jerk_negative_speed_upper");
+    }
 
     //  kappa_speed_limit_table
     {
@@ -6409,14 +6663,14 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "speed_planning", "follow_target",
                        "traffic_light_min_follow_distance_gap");
       ReadItem<double>(json, rads_follow_distance_buffer_static,
-                        "speed_planning", "follow_target",
-                        "rads_follow_distance_buffer_static");
+                       "speed_planning", "follow_target",
+                       "rads_follow_distance_buffer_static");
       ReadItem<double>(json, rads_follow_distance_buffer_dynamic,
-                            "speed_planning", "follow_target",
-                            "rads_follow_distance_buffer_dynamic");
+                       "speed_planning", "follow_target",
+                       "rads_follow_distance_buffer_dynamic");
     }
 
-    //comfort target
+    // comfort target
     {
       ReadItem<double>(json, rads_comfort_param_static_s0,
             "speed_planning", "comfort_target",
@@ -6609,125 +6863,143 @@ struct LaneChangeDeciderConfig : public EgoPlanningConfig {
   double lookahead_time = 3.0;
 };
 struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
-    void init(const Json &json) override {
-      EgoPlanningConfig::init(json);
-      /* read config from json */
-      ReadItem<double>(json, exe_ttc_ratio,"lane_change_safety_check", "exe_ttc_ratio");
-      ReadItem<double>(json, ttc_decay_factor,"lane_change_safety_check", "ttc_decay_factor");
-      ReadItem<double>(json, press_line_ratio_threshold,"lane_change_safety_check", "press_line_ratio_threshold");
-      read_json_vec(
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ReadItem<double>(json, exe_ttc_ratio, "lane_change_safety_check",
+                     "exe_ttc_ratio");
+    ReadItem<double>(json, ttc_decay_factor, "lane_change_safety_check",
+                     "ttc_decay_factor");
+    ReadItem<double>(json, press_line_ratio_threshold,
+                     "lane_change_safety_check", "press_line_ratio_threshold");
+    read_json_vec(
         json,
-        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
-                                 "diff_kph_table"},
-                                 diff_speed_init_ttc_map.diff_kph_table);
-      read_json_vec(
+        std::vector<std::string>{"lane_change_safety_check",
+                                 "diff_speed_init_ttc_map", "diff_kph_table"},
+        diff_speed_init_ttc_map.diff_kph_table);
+    read_json_vec(
         json,
-        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
-                                 "ttc_table"},
-                                 diff_speed_init_ttc_map.ttc_table);
-      read_json_vec(
+        std::vector<std::string>{"lane_change_safety_check",
+                                 "diff_speed_init_ttc_map", "ttc_table"},
+        diff_speed_init_ttc_map.ttc_table);
+    read_json_vec(json,
+                  std::vector<std::string>{"lane_change_safety_check",
+                                           "diff_speed_init_ttc_map",
+                                           "aggressive_ttc_table"},
+                  diff_speed_init_ttc_map.aggressive_ttc_table);
+    read_json_vec(json,
+                  std::vector<std::string>{"lane_change_safety_check",
+                                           "rear_vehicle_speed_min_space_map",
+                                           "rear_speed_kph_table"},
+                  rear_vehicle_speed_min_space_map.rear_speed_kph_table);
+    read_json_vec(json,
+                  std::vector<std::string>{"lane_change_safety_check",
+                                           "rear_vehicle_speed_min_space_map",
+                                           "min_space_table"},
+                  rear_vehicle_speed_min_space_map.min_space_table);
+    ReadItem<double>(json, rear_close_distance_threshold,
+                     "lane_change_safety_check",
+                     "rear_close_distance_threshold");
+    ReadItem<double>(json, rear_close_speed_diff_threshold,
+                     "lane_change_safety_check",
+                     "rear_close_speed_diff_threshold");
+    ReadItem<double>(json, exe_rear_distance_ratio, "lane_change_safety_check",
+                     "exe_rear_distance_ratio");
+    ReadItem<double>(json, exe_rear_speed_ratio, "lane_change_safety_check",
+                     "exe_rear_speed_ratio");
+    ReadItem<double>(json, faster_rear_delay_time, "lane_change_safety_check",
+                     "faster_rear_delay_time");
+    ReadItem<double>(json, rear_comfort_decel, "lane_change_safety_check",
+                     "rear_comfort_decel");
+    ReadItem<double>(json, aggressive_decel_part, "lane_change_safety_check",
+                     "aggressive_decel_part");
+    ReadItem<double>(json, lat_offset_buffer, "lane_change_safety_check",
+                     "lat_offset_buffer");
+    ReadItem<double>(json, target_lane_side_cut_in_check_time,
+                     "lane_change_safety_check",
+                     "target_lane_side_cut_in_check_time");
+    ReadItem<double>(json, hold_steer_angle_rate_limit_deg,
+                     "lane_change_safety_check",
+                     "hold_steer_angle_rate_limit_deg");
+    read_json_vec(
         json,
-        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
-                                 "aggressive_ttc_table"},
-                                 diff_speed_init_ttc_map.aggressive_ttc_table);
-      read_json_vec(
+        std::vector<std::string>{"lane_change_safety_check",
+                                 "hold_state_vel_jerk_map", "vel_table"},
+        hold_state_vel_jerk_map.vel_table);
+    read_json_vec(
         json,
-        std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
-                                 "rear_speed_kph_table"},
-                                 rear_vehicle_speed_min_space_map.rear_speed_kph_table);
-      read_json_vec(
-        json,
-        std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
-                                 "min_space_table"},
-                                 rear_vehicle_speed_min_space_map.min_space_table);
-      ReadItem<double>(json, rear_close_distance_threshold, "lane_change_safety_check", "rear_close_distance_threshold");
-      ReadItem<double>(json, rear_close_speed_diff_threshold, "lane_change_safety_check", "rear_close_speed_diff_threshold");
-      ReadItem<double>(json, exe_rear_distance_ratio, "lane_change_safety_check", "exe_rear_distance_ratio");
-      ReadItem<double>(json, exe_rear_speed_ratio, "lane_change_safety_check", "exe_rear_speed_ratio");
-      ReadItem<double>(json, faster_rear_delay_time, "lane_change_safety_check",
-                       "faster_rear_delay_time");
-      ReadItem<double>(json, rear_comfort_decel, "lane_change_safety_check",
-                       "rear_comfort_decel");
-      ReadItem<double>(json, aggressive_decel_part, "lane_change_safety_check",
-                       "aggressive_decel_part");
-      ReadItem<double>(json, lat_offset_buffer, "lane_change_safety_check",
-                       "lat_offset_buffer");
-      ReadItem<double>(json, target_lane_side_cut_in_check_time, "lane_change_safety_check",
-                       "target_lane_side_cut_in_check_time");
-      ReadItem<double>(json, hold_steer_angle_rate_limit_deg, "lane_change_safety_check",
-                       "hold_steer_angle_rate_limit_deg");
-      read_json_vec(
-        json,
-        std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
-                                 "vel_table"},
-                                 hold_state_vel_jerk_map.vel_table);
-      read_json_vec(
-        json,
-        std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
-                                 "jerk_table"},
-                                 hold_state_vel_jerk_map.jerk_table);
-      ReadItem<bool>(json, is_default_aggressive_scence, "lane_change_safety_check",
-                     "is_default_aggressive_scence");
-    }
-    double exe_ttc_ratio = 0.5;
-    double exe_rear_speed_ratio = 1.1;
-    double exe_rear_distance_ratio = 0.8;
-    double ttc_decay_factor = 0.85;
-    double press_line_ratio_threshold = 0.2;  // 充分压线阈值，超过此值后不再按照ttc扩大buff
-    double rear_close_distance_threshold = 6.0;  // 近距离后车距离阈值（米），小于此值认为是近距离尾随
-    double rear_close_speed_diff_threshold = 1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
-    double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
-    double rear_comfort_decel = 0.7;  // 后车舒适减速度（m/s²）
-    double aggressive_decel_part = 0.7;  // 激进变道减速度增量（m/s²）
-    double lat_offset_buffer = 0.35;  // 横向贴边偏移缓冲区（米）
-    double target_lane_side_cut_in_check_time = 1.5;  // 目标车道侧方车切入检查时间窗口（秒）
-    double hold_steer_angle_rate_limit_deg = 150.0;  // hold状态下的方向盘转速限制（度/秒）
-    struct DiffSpeedInitTTCable {
-        std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
-        std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
-        std::vector<double> aggressive_ttc_table{0.8, 1.8, 2.0, 2.5, 3.5, 4.5, 6.5, 8.5, 10.0};  // 激进模式起始ttc
-    };
-    DiffSpeedInitTTCable diff_speed_init_ttc_map;
-    struct RearVehicleSpeedMinSpaceMap {
-        std::vector<double> rear_speed_kph_table{0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0};  // 后车速度 kph
-        std::vector<double> min_space_table     {0.1, 0.8,  1.2,  2.5,  3.5,  5.0,   6.5};   // 触发变道需要预留最小空间
-    };
-    RearVehicleSpeedMinSpaceMap rear_vehicle_speed_min_space_map;
-    struct HoldStateVelJerkMap {
-        std::vector<double> vel_table{4.167, 8.333, 16.667, 25.0};  // 速度表 (m/s)
-        std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};  // 对应的jerk值
-    };
-    HoldStateVelJerkMap hold_state_vel_jerk_map;
-    bool is_default_aggressive_scence = false;  // 默认紧急场景标志位，用于调试
+        std::vector<std::string>{"lane_change_safety_check",
+                                 "hold_state_vel_jerk_map", "jerk_table"},
+        hold_state_vel_jerk_map.jerk_table);
+    ReadItem<bool>(json, is_default_aggressive_scence,
+                   "lane_change_safety_check", "is_default_aggressive_scence");
+  }
+  double exe_ttc_ratio = 0.5;
+  double exe_rear_speed_ratio = 1.1;
+  double exe_rear_distance_ratio = 0.8;
+  double ttc_decay_factor = 0.85;
+  double press_line_ratio_threshold =
+      0.2;  // 充分压线阈值，超过此值后不再按照ttc扩大buff
+  double rear_close_distance_threshold =
+      6.0;  // 近距离后车距离阈值（米），小于此值认为是近距离尾随
+  double rear_close_speed_diff_threshold =
+      1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
+  double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
+  double rear_comfort_decel = 0.7;      // 后车舒适减速度（m/s²）
+  double aggressive_decel_part = 0.7;  // 激进变道减速度增量（m/s²）
+  double lat_offset_buffer = 0.35;     // 横向贴边偏移缓冲区（米）
+  double target_lane_side_cut_in_check_time =
+      1.5;  // 目标车道侧方车切入检查时间窗口（秒）
+  double hold_steer_angle_rate_limit_deg =
+      150.0;  // hold状态下的方向盘转速限制（度/秒）
+  struct DiffSpeedInitTTCable {
+    std::vector<double> diff_kph_table{
+        0.0,  5.0,  8.0,  10.0, 15.0,
+        20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
+    std::vector<double> ttc_table{0.5, 0.8, 1.0, 1.5, 4.0,
+                                  5.0, 8.0, 9.5, 10.0};  // 起始ttc
+    std::vector<double> aggressive_ttc_table{
+        0.8, 1.8, 2.0, 2.5, 3.5, 4.5, 6.5, 8.5, 10.0};  // 激进模式起始ttc
+  };
+  DiffSpeedInitTTCable diff_speed_init_ttc_map;
+  struct RearVehicleSpeedMinSpaceMap {
+    std::vector<double> rear_speed_kph_table{
+        0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0};  // 后车速度 kph
+    std::vector<double> min_space_table{
+        0.1, 0.8, 1.2, 2.5, 3.5, 5.0, 6.5};  // 触发变道需要预留最小空间
+  };
+  RearVehicleSpeedMinSpaceMap rear_vehicle_speed_min_space_map;
+  struct HoldStateVelJerkMap {
+    std::vector<double> vel_table{4.167, 8.333, 16.667, 25.0};  // 速度表 (m/s)
+    std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};  // 对应的jerk值
+  };
+  HoldStateVelJerkMap hold_state_vel_jerk_map;
+  bool is_default_aggressive_scence = false;  // 默认紧急场景标志位，用于调试
 };
 
-struct HmiDeciderConfig : public EgoPlanningConfig{
+struct HmiDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     ReadItem<double>(json, tfl_reminder_cipv_dis, "hmi_decider",
-                   "tfl_reminder_cipv_dis");
+                     "tfl_reminder_cipv_dis");
     ReadItem<double>(json, construction_warning_hmi_speed_max, "hmi_decider",
-                   "construction_warning_hmi_speed_max");
+                     "construction_warning_hmi_speed_max");
     ReadItem<double>(json, obstacle_brake_hmi_reminder_dis, "hmi_decider",
-                    "obstacle_brake_hmi_reminder_dis");
-    ReadItem<double>(json, lat_acc_thr, "hmi_decider",
-                     "lat_acc_thr");
-    ReadItem<double>(json, lat_jerk_thr, "hmi_decider",
-                     "lat_jerk_thr");
+                     "obstacle_brake_hmi_reminder_dis");
+    ReadItem<double>(json, lat_acc_thr, "hmi_decider", "lat_acc_thr");
+    ReadItem<double>(json, lat_jerk_thr, "hmi_decider", "lat_jerk_thr");
     ReadItem<double>(json, ramp_lat_jerk_thr, "hmi_decider",
                      "ramp_lat_jerk_thr");
-    ReadItem<double>(json, lon_acc_thr, "hmi_decider",
-                     "lon_acc_thr");
-    ReadItem<double>(json, lon_jerk_thr, "hmi_decider",
-                     "lon_jerk_thr");
+    ReadItem<double>(json, lon_acc_thr, "hmi_decider", "lon_acc_thr");
+    ReadItem<double>(json, lon_jerk_thr, "hmi_decider", "lon_jerk_thr");
     ReadItem<double>(json, lat_jerk_hysteresis_value, "hmi_decider",
                      "lat_jerk_hysteresis_value");
     ReadItem<double>(json, lon_collision_dec_thred, "hmi_decider",
-                    "lon_collision_dec_thred");
+                     "lon_collision_dec_thred");
     ReadItem<double>(json, left_right_lane_mild_dis, "hmi_decider",
-                        "left_right_lane_mild_dis");
+                     "left_right_lane_mild_dis");
     ReadItem<double>(json, left_right_lane_middle_dis, "hmi_decider",
-                            "left_right_lane_middle_dis");
+                     "left_right_lane_middle_dis");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
@@ -6743,20 +7015,17 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
   double left_right_lane_middle_dis = 1.0;
 };
 
-struct ReferencePathManagerConfig : public EgoPlanningConfig{
+struct ReferencePathManagerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
-    ReadItem<bool>(json, is_enable_construction_refline, "reference_path_manager",
-                   "is_enable_construction_refline");
+    ReadItem<bool>(json, is_enable_construction_refline,
+                   "reference_path_manager", "is_enable_construction_refline");
   }
   bool is_enable_construction_refline = false;
 };
 
-struct NarrowSpaceDeciderConfig : public EgoPlanningConfig{
-  void init(const Json &json) override {
-    EgoPlanningConfig::init(json);
-  }
-
+struct NarrowSpaceDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override { EgoPlanningConfig::init(json); }
 };
 
 }  // namespace planning
