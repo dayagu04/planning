@@ -1276,91 +1276,6 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   return true;
 }
 
-void GeneralLateralDecider::UpdateDistanceToRoadBorder() {
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
-  const auto& virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
-
-  // 预处理：获取路沿边界并转换到frenet坐标系（只做一次）
-  std::vector<std::pair<LineSegment2d, bool>> road_segments_frenet;
-  if (frenet_coord != nullptr && virtual_lane_manager != nullptr) {
-    const auto& road_boundaries = virtual_lane_manager->GetRoadboundary();
-
-    // 预估容量并预分配，避免多次内存重新分配
-    size_t estimated_size = 0;
-    for (const auto& boundary_segments : road_boundaries) {
-      if (boundary_segments.size() > 0) {
-        estimated_size += boundary_segments.size() - 1;
-      }
-    }
-    road_segments_frenet.reserve(estimated_size);
-
-    for (const auto& boundary_segments : road_boundaries) {
-      if (boundary_segments.empty()) continue;
-
-      // 缓存上一个点的转换结果，避免重复转换相邻线段的共享端点
-      Point2D prev_sl;
-      bool has_prev = false;
-
-      // 使用相邻点的second（全局系坐标）构成线段
-      for (size_t i = 0; i + 1 < boundary_segments.size(); ++i) {
-        const Point2d& pt1 = boundary_segments[i].second;
-        const Point2d& pt2 = boundary_segments[i + 1].second;
-
-        Point2D pt1_sl, pt2_sl;
-
-        // 复用上一次的 pt2_sl 作为这次的 pt1_sl
-        if (has_prev) {
-          pt1_sl = prev_sl;
-        } else {
-          if (!frenet_coord->XYToSL(Point2D(pt1.x, pt1.y), pt1_sl)) {
-            continue;
-          }
-        }
-
-        // 将笛卡尔坐标转换为frenet坐标
-        if (!frenet_coord->XYToSL(Point2D(pt2.x, pt2.y), pt2_sl)) {
-          has_prev = false;
-          continue;
-        }
-
-        prev_sl = pt2_sl;
-        has_prev = true;
-
-        // 直接在emplace_back中构造，减少临时对象
-        road_segments_frenet.emplace_back(
-            LineSegment2d(Vec2d(pt1_sl.x, pt1_sl.y), Vec2d(pt2_sl.x, pt2_sl.y)),
-            (pt1_sl.y + pt2_sl.y) * 0.5 > 0.0);
-      }
-    }
-  }
-
-  for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    SampleRoadDistanceInfo(ref_traj_points_[i].s, ref_path_points_[i],
-                           road_segments_frenet);
-    // distance to lane is unaccurate near end of the ref line
-    // need to avoid the intersection of lane bound
-    size_t lower_truncation_idx = 0;
-    size_t upper_truncation_idx = 0;
-    if (ref_path_points_[i].distance_to_left_lane_border >
-        0.5 * vehicle_param.max_width + config_.soft_buffer2lane) {
-      upper_truncation_idx = i;
-    } else {
-      ref_path_points_[i].distance_to_left_lane_border =
-          ref_path_points_[upper_truncation_idx].distance_to_left_lane_border;
-    }
-
-    if (ref_path_points_[i].distance_to_right_lane_border >
-        0.5 * vehicle_param.max_width + config_.soft_buffer2lane) {
-      lower_truncation_idx = i;
-    } else {
-      ref_path_points_[i].distance_to_right_lane_border =
-          ref_path_points_[lower_truncation_idx].distance_to_right_lane_border;
-    }
-  }
-}
 void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
   GenerateRoadHardSoftBoundary();
   GenerateLaneSoftBoundary();
@@ -1378,9 +1293,7 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
                                          .coarse_planning_info;
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
-  const auto& virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
+  
 
   double left_road_extra_buffer, right_road_extra_buffer;
   GetDesireRoadExtraBuffer(&left_road_extra_buffer, &right_road_extra_buffer);
@@ -1416,59 +1329,13 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
            last_uncertain_decrease_slope_ - change_rate);
   uncertain_decrease_slope += last_uncertain_decrease_slope_;
 
+
+  const double rear_lon_buf_dis = 0.5;
+  const double front_lon_buf_dis = 1.0;
   // 预处理：获取路沿边界并转换到frenet坐标系（只做一次）
   std::vector<std::pair<LineSegment2d, bool>> road_segments_frenet;
-  if (frenet_coord != nullptr && virtual_lane_manager != nullptr) {
-    const auto& road_boundaries = virtual_lane_manager->GetRoadboundary();
+  ConvertRoadBoundariesToFrenet(road_segments_frenet);
 
-    // 预估容量并预分配，避免多次内存重新分配
-    size_t estimated_size = 0;
-    for (const auto& boundary_segments : road_boundaries) {
-      if (boundary_segments.size() > 0) {
-        estimated_size += boundary_segments.size() - 1;
-      }
-    }
-    road_segments_frenet.reserve(estimated_size);
-
-    for (const auto& boundary_segments : road_boundaries) {
-      if (boundary_segments.empty()) continue;
-
-      // 缓存上一个点的转换结果，避免重复转换相邻线段的共享端点
-      Point2D prev_sl;
-      bool has_prev = false;
-
-      // 使用相邻点的second（全局系坐标）构成线段
-      for (size_t i = 0; i + 1 < boundary_segments.size(); ++i) {
-        const Point2d& pt1 = boundary_segments[i].second;
-        const Point2d& pt2 = boundary_segments[i + 1].second;
-
-        Point2D pt1_sl, pt2_sl;
-
-        // 复用上一次的 pt2_sl 作为这次的 pt1_sl
-        if (has_prev) {
-          pt1_sl = prev_sl;
-        } else {
-          if (!frenet_coord->XYToSL(Point2D(pt1.x, pt1.y), pt1_sl)) {
-            continue;
-          }
-        }
-
-        if (!frenet_coord->XYToSL(Point2D(pt2.x, pt2.y), pt2_sl)) {
-          has_prev = false;
-          continue;
-        }
-
-        prev_sl = pt2_sl;
-        has_prev = true;
-
-        // 直接在emplace_back中构造，减少临时对象
-        road_segments_frenet.emplace_back(
-            std::move(LineSegment2d(Vec2d(pt1_sl.x, pt1_sl.y),
-                                    Vec2d(pt2_sl.x, pt2_sl.y))),
-            (pt1_sl.y + pt2_sl.y) * 0.5 > 0.0);
-      }
-    }
-  }
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-init_dist_to_bound, init_dist_to_bound};
@@ -1491,10 +1358,9 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
 
       // 构建自车膨胀区域的polygon
       const double ego_s = ref_traj_points_[i].s;
-      const double s_start = ego_s - vehicle_param.rear_edge_to_rear_axle;
+      const double s_start = ego_s - vehicle_param.rear_edge_to_rear_axle -rear_lon_buf_dis;
       const double s_end = ego_s + vehicle_param.length -
-                           vehicle_param.rear_edge_to_rear_axle +
-                           config_.sample_forward_distance;
+                           vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
 
       const auto ego_center = Vec2d((s_start + s_end) * 0.5, 0.0);
       const double ego_length = s_end - s_start;
@@ -5570,67 +5436,6 @@ void GeneralLateralDecider::GenerateEnuReferenceTheta(
   }
 }
 
-void GeneralLateralDecider::SampleRoadDistanceInfo(
-    const double s_target, ReferencePathPoint& sample_path_point,
-    const std::vector<std::pair<LineSegment2d, bool>>& road_segments_frenet) {
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-
-  if (road_segments_frenet.empty()) {
-    return;
-  }
-
-  // 构建自车膨胀区域的polygon（在frenet坐标系下）
-  const double s_start = s_target - vehicle_param.rear_edge_to_rear_axle;
-  const double s_end = s_target + vehicle_param.front_edge_to_rear_axle +
-                       config_.sample_forward_distance;
-
-  const auto ego_center = Vec2d((s_start + s_end) * 0.5, 0.0);
-  const double ego_length = s_end - s_start;
-  const auto ego_box =
-      Box2d(ego_center, 0.0, ego_length, vehicle_param.max_width);
-  const auto ego_polygon = Polygon2d(ego_box);
-
-  // 初始化最小距离
-  double min_left_road_dist = std::numeric_limits<double>::max();
-  double min_right_road_dist = std::numeric_limits<double>::max();
-
-  // 遍历所有预处理好的路沿线段，计算polygon到线段的最小距离
-  for (const auto& segment_info : road_segments_frenet) {
-    const LineSegment2d& road_segment = segment_info.first;
-    const bool is_left = segment_info.second;
-
-    // 只处理与自车膨胀区域纵向重叠的路沿线段
-    const double seg_s_min =
-        std::min(road_segment.start().x(), road_segment.end().x());
-    const double seg_s_max =
-        std::max(road_segment.start().x(), road_segment.end().x());
-    if (seg_s_max < s_start - 1.0 || seg_s_min > s_end + 1.0) {
-      continue;
-    }
-
-    // 计算polygon到线段的距离
-    const double dist = ego_polygon.DistanceTo(road_segment);
-
-    // 更新对应侧的最小距离
-    if (is_left) {
-      min_left_road_dist = std::fmin(min_left_road_dist, dist);
-    } else {
-      min_right_road_dist = std::fmin(min_right_road_dist, dist);
-    }
-  }
-
-  // 更新结果（只有当计算出有效值时才更新）
-  if (min_left_road_dist < std::numeric_limits<double>::max()) {
-    sample_path_point.distance_to_left_road_border = std::fmin(
-        sample_path_point.distance_to_left_road_border, min_left_road_dist);
-  }
-  if (min_right_road_dist < std::numeric_limits<double>::max()) {
-    sample_path_point.distance_to_right_road_border = std::fmin(
-        sample_path_point.distance_to_right_road_border, min_right_road_dist);
-  }
-}
-
 void GeneralLateralDecider::CalculateAvoidObstacles(
     const std::vector<std::pair<double, double>>& first_frenet_soft_bounds,
     const std::vector<std::pair<BoundInfo, BoundInfo>>& first_soft_bounds_info,
@@ -6311,6 +6116,67 @@ bool GeneralLateralDecider::CheckLateralEmergencyAvoidSpace(
         config_.emergency_avoid_safe_space_to_obstacle_thr;
   }
   return true;
+}
+
+void GeneralLateralDecider::ConvertRoadBoundariesToFrenet(
+    std::vector<std::pair<LineSegment2d, bool>>& road_segments_frenet) {
+  const auto& frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+
+  if (frenet_coord == nullptr || virtual_lane_manager == nullptr) {
+    return;
+  }
+
+  const auto& road_boundaries = virtual_lane_manager->GetRoadboundary();
+
+  // 预估容量并预分配，避免多次内存重新分配
+  size_t estimated_size = 0;
+  for (const auto& boundary_segments : road_boundaries) {
+    if (boundary_segments.size() > 0) {
+      estimated_size += boundary_segments.size() - 1;
+    }
+  }
+  road_segments_frenet.reserve(estimated_size);
+
+  for (const auto& boundary_segments : road_boundaries) {
+    if (boundary_segments.empty()) continue;
+
+    // 缓存上一个点的转换结果，避免重复转换相邻线段的共享端点
+    Point2D prev_sl;
+    bool has_prev = false;
+
+    // 使用相邻点的second（全局系坐标）构成线段
+    for (size_t i = 0; i + 1 < boundary_segments.size(); ++i) {
+      const Point2d& pt1 = boundary_segments[i].second;
+      const Point2d& pt2 = boundary_segments[i + 1].second;
+
+      Point2D pt1_sl, pt2_sl;
+
+      // 复用上一次的 pt2_sl 作为这次的 pt1_sl
+      if (has_prev) {
+        pt1_sl = prev_sl;
+      } else {
+        if (!frenet_coord->XYToSL(Point2D(pt1.x, pt1.y), pt1_sl)) {
+          continue;
+        }
+      }
+
+      if (!frenet_coord->XYToSL(Point2D(pt2.x, pt2.y), pt2_sl)) {
+        has_prev = false;
+        continue;
+      }
+
+      prev_sl = pt2_sl;
+      has_prev = true;
+
+      // 直接在emplace_back中构造，减少临时对象
+      road_segments_frenet.emplace_back(
+          std::move(LineSegment2d(Vec2d(pt1_sl.x, pt1_sl.y),
+                                  Vec2d(pt2_sl.x, pt2_sl.y))),
+          (pt1_sl.y + pt2_sl.y) * 0.5 > 0.0);
+    }
+  }
 }
 
 }  // namespace planning
