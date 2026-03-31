@@ -292,11 +292,18 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     Point2D frenet_point, carte_point;
     carte_point.x = obs_point.x();
     carte_point.y = obs_point.y();
-    if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
+    // if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
+    //     std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+    //   b_frenet_valid_ = false;
+    //   return;
+    // }
+    if (!frenet_coord->XYToSLInRange(carte_point, frenet_s_-5.0, frenet_s_ + 5.0, frenet_point) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
       b_frenet_valid_ = false;
       return;
     }
+
+
     obs_start_s = std::min(obs_start_s, frenet_point.x);
     obs_end_s = std::max(obs_end_s, frenet_point.x);
     obs_start_l = std::min(obs_start_l, frenet_point.y);
