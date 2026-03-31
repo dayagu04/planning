@@ -1751,25 +1751,29 @@ bool LaneChangeRequest::IsMLCIgnoreSolidLaneCheck(
 }
 
 bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
-    const std::shared_ptr<VirtualLaneManager>& virtual_lane_mgr,
     int origin_lane_id, int target_lane_id,
     const TrajectoryPoints& path_points) {
   const double road_edge_buffer = 0.1;
-  const auto origin_lane =
-      virtual_lane_mgr->get_lane_with_virtual_id(origin_lane_id);
-  if (origin_lane == nullptr) {
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+
+  std::shared_ptr<ReferencePath> origin_reference_path =
+      reference_path_mgr->get_reference_path_by_lane(origin_lane_id, false);
+  if (!origin_reference_path) {
     return true;
   }
-  const auto& origin_lane_points = origin_lane->lane_points();
-  if (origin_lane_points.empty()) {
+  const auto origin_frenet_coord = origin_reference_path->get_frenet_coord();
+  if (origin_frenet_coord == nullptr || !origin_frenet_coord->KdtreeValid()) {
     return true;
   }
 
-  const auto target_lane =
-      virtual_lane_mgr->get_lane_with_virtual_id(target_lane_id);
-  const bool has_target_lane = target_lane != nullptr;
-  const std::vector<iflyauto::ReferencePoint>* target_lane_points_ptr =
-      has_target_lane ? &target_lane->lane_points() : nullptr;
+  // 获取目标车道参考线
+  std::shared_ptr<ReferencePath> target_reference_path =
+      reference_path_mgr->get_reference_path_by_lane(target_lane_id, false);
+  const bool has_target_path =
+      target_reference_path != nullptr &&
+      target_reference_path->get_frenet_coord() != nullptr &&
+      target_reference_path->get_frenet_coord()->KdtreeValid();
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1779,60 +1783,55 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
     const double pt_x = path_points[i].x;
     const double pt_y = path_points[i].y;
 
-    // 在 origin_lane 上找最近点
-    size_t origin_nearest_idx = 0;
-    double origin_min_dist_sq = std::numeric_limits<double>::max();
-    for (size_t j = 0; j < origin_lane_points.size(); ++j) {
-      const double dx = origin_lane_points[j].enu_point.x - pt_x;
-      const double dy = origin_lane_points[j].enu_point.y - pt_y;
-      const double dist_sq = dx * dx + dy * dy;
-      if (dist_sq < origin_min_dist_sq) {
-        origin_min_dist_sq = dist_sq;
-        origin_nearest_idx = j;
+    // 分别在 origin lane 和 target lane 上投影，选距离更近的参考线做路沿检查
+    double origin_s = 0.0, origin_l = 0.0;
+    bool origin_valid =
+        origin_frenet_coord->XYToSL(pt_x, pt_y, &origin_s, &origin_l);
+
+    double target_s = 0.0, target_l = 0.0;
+    bool target_valid =
+        has_target_path && target_reference_path->get_frenet_coord()->XYToSL(
+                               pt_x, pt_y, &target_s, &target_l);
+
+    // 选横向偏移绝对值更小的参考线
+    bool use_target = target_valid && (!origin_valid ||
+                                       std::abs(target_l) < std::abs(origin_l));
+
+    if (use_target) {
+      ReferencePathPoint ref_pt{};
+      if (!target_reference_path->get_reference_point_by_lon(target_s,
+                                                             ref_pt)) {
+        continue;
       }
-    }
-
-    // 在 target_lane 上找最近点
-    size_t target_nearest_idx = 0;
-    double target_min_dist_sq = std::numeric_limits<double>::max();
-    const bool target_valid =
-        has_target_lane && target_lane_points_ptr != nullptr &&
-        !target_lane_points_ptr->empty();
-    if (target_valid) {
-      for (size_t j = 0; j < target_lane_points_ptr->size(); ++j) {
-        const double dx = (*target_lane_points_ptr)[j].enu_point.x - pt_x;
-        const double dy = (*target_lane_points_ptr)[j].enu_point.y - pt_y;
-        const double dist_sq = dx * dx + dy * dy;
-        if (dist_sq < target_min_dist_sq) {
-          target_min_dist_sq = dist_sq;
-          target_nearest_idx = j;
-        }
+      const double left_vehicle_edge = target_l + half_vehicle_width;
+      const double right_vehicle_edge = target_l - half_vehicle_width;
+      if (left_vehicle_edge >
+          ref_pt.distance_to_left_road_border - road_edge_buffer) {
+        return true;
       }
-    }
-
-    // 选择距离更近的 lane
-    const bool use_target =
-        target_valid && target_min_dist_sq < origin_min_dist_sq;
-    const auto& nearest_pt =
-        use_target ? (*target_lane_points_ptr)[target_nearest_idx]
-                   : origin_lane_points[origin_nearest_idx];
-    const double ref_x = nearest_pt.enu_point.x;
-    const double ref_y = nearest_pt.enu_point.y;
-    const double ref_heading = nearest_pt.enu_heading;
-
-    const double dx = pt_x - ref_x;
-    const double dy = pt_y - ref_y;
-    const double l = -dx * std::sin(ref_heading) + dy * std::cos(ref_heading);
-
-    const double left_vehicle_edge = l + half_vehicle_width;
-    const double right_vehicle_edge = l - half_vehicle_width;
-    if (left_vehicle_edge >
-        nearest_pt.distance_to_left_road_border - road_edge_buffer) {
-      return true;
-    }
-    if (right_vehicle_edge <
-        -nearest_pt.distance_to_right_road_border + road_edge_buffer) {
-      return true;
+      if (right_vehicle_edge <
+          -ref_pt.distance_to_right_road_border + road_edge_buffer) {
+        return true;
+      }
+    } else {
+      if (!origin_valid) {
+        continue;
+      }
+      ReferencePathPoint ref_pt{};
+      if (!origin_reference_path->get_reference_point_by_lon(origin_s,
+                                                             ref_pt)) {
+        continue;
+      }
+      const double left_vehicle_edge = origin_l + half_vehicle_width;
+      const double right_vehicle_edge = origin_l - half_vehicle_width;
+      if (left_vehicle_edge >
+          ref_pt.distance_to_left_road_border - road_edge_buffer) {
+        return true;
+      }
+      if (right_vehicle_edge <
+          -ref_pt.distance_to_right_road_border + road_edge_buffer) {
+        return true;
+      }
     }
   }
   return false;

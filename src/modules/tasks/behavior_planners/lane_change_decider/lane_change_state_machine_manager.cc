@@ -6169,9 +6169,7 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithRoadEdge(
       session_->mutable_planning_context()->last_planning_result().traj_points;
   const auto& ego_trajs_future_points =
       lc_status == kLaneChangeExecution ? traj_points : ego_trajs_future_copy_;
-  const auto& virtual_lane_mgr =
-      session_->environmental_model().get_virtual_lane_manager();
-  return lc_request_.IsPathCollisionWithRoadEdge(virtual_lane_mgr, origin_lane_id,
+  return lc_request_.IsPathCollisionWithRoadEdge(origin_lane_id,
                                      target_lane_id, ego_trajs_future_points);
 }
 

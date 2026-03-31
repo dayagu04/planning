@@ -158,10 +158,8 @@ class LaneChangeRequest {
   bool IsCurveSurpressLaneChange(int target_lane_virtual_id) const;
   bool IsMLCIgnoreSolidLaneCheck(const RequestType& lc_request,
                                  const RequestSource& lc_request_source) const;
-  bool IsPathCollisionWithRoadEdge(
-      const std::shared_ptr<VirtualLaneManager>& virtual_lane_mgr,
-      int origin_lane_id, int target_lane_id,
-      const TrajectoryPoints& path_points);
+  bool IsPathCollisionWithRoadEdge(int origin_lane_id, int target_lane_id,
+                                   const TrajectoryPoints& path_points);
 
  protected:
   TrackInfo lc_invalid_track_;
