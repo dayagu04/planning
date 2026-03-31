@@ -280,11 +280,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   # HPP debug scalar keys
   hpp_debug_value_list = [
-      # "v_cruise_limit", "v_target_decider", "v_target_type_code", "v_limit_curv", "v_limit_avoid", 
-      # "v_limit_speed_bump", "in_speed_bump_zone", "approaching_speed_bump", "distance_to_bump_zone",
-      # "ego_head_s", "ego_s", "speed_bump_near_ignore_range_first", "speed_bump_near_ignore_range_second", "update_speed_bump_near_ignore_range",\
-      # "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp",
-      # "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection",
       "LaneChangeDeciderTime", "LateralObstacleDeciderTime", 
       "HppGeneralLateralDeciderTime", "LateralMotionPlannerTime",
       "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
@@ -294,8 +289,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       "is_target_slot_allowed_to_park", "is_standstill_near_target_slot",
       "is_timeout_for_target_slot_allowed_to_park", "current planning_success",
       "pass_interval_first", "pass_interval_second", "edt_manager_cost",
-      "GeneralLateralDeciderCostTime",
-  ]
+      "GeneralLateralDeciderCostTime"]
 
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           # "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path']
