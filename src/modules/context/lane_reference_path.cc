@@ -953,6 +953,9 @@ ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
   extend_point.min_velocity = last_point.min_velocity;
   extend_point.type = ReferencePathPointType::MAP;
   extend_point.is_in_intersection = last_point.is_in_intersection;
+  extend_point.is_ramp = last_point.is_ramp;
+  extend_point.ramp_slope = last_point.ramp_slope;
+  extend_point.floor_id = last_point.floor_id;
 
   return extend_point;
 }
