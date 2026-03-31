@@ -108,6 +108,7 @@ class VirtualWallDecider : public ParkingTask {
 
   void SamplingInVerticalBoundary(const VirtualWallBoundary& slot_boundary,
                                   const VirtualWallBoundary& passage_boundary,
+                                  const bool only_use_slot_boundary,
                                   std::vector<Position2D>& points);
 
   void SamplingInParallelBoundary(const VirtualWallBoundary& slot_boundary,
