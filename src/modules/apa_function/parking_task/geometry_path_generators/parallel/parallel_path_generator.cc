@@ -1479,8 +1479,10 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
         AssempleGeometryPath(ego_line_geo_path, tmp_path_seg_vec);
 
         ILOG_INFO << "first try ego line plan success!";
-        if ((ego_line_geo_path.gear_change_count + in_slot_gear_change_count) == 0
-            || input_.parallel_replan_again_ == 1) {
+        if ((ego_line_geo_path.gear_change_count + in_slot_gear_change_count) ==
+                0 ||
+            input_.parallel_replan_again_ ==
+                DynamicReplanStatus::DR_FIRST_REVERSE) {
           debug_info_.debug_all_path_vec.emplace_back(ego_line_geo_path);
           AddPathSegToOutPut(ego_line_geo_path.path_segment_vec);
           ILOG_INFO << "ego line path vec -----------------------------";
@@ -1495,7 +1497,8 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       }
     } else {
       ILOG_INFO << "first try ego line failed!";
-      if (input_.parallel_replan_again_ == 1) {
+      if (input_.parallel_replan_again_ ==
+          DynamicReplanStatus::DR_FIRST_REVERSE) {
         ILOG_INFO << "try to replan again! BackwardNormalPlan failed!";
         return false;
       }
