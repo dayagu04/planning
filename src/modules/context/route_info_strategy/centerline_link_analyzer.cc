@@ -38,9 +38,9 @@ bool CenterlineLinkAnalyzer::CheckCenterlineRelativeTwoLinks(
   auto link1_s_range = CalculateLinkSRange(link1_frenet_points);
   auto link2_s_range = CalculateLinkSRange(link2_frenet_points);
 
-  // 取两条link的s范围并集
-  double link_s_min = std::min(link1_s_range.first, link2_s_range.first);
-  double link_s_max = std::max(link1_s_range.second, link2_s_range.second);
+  // 取两条link的s范围交集
+  double link_s_min = std::max(link1_s_range.first, link2_s_range.first);
+  double link_s_max = std::min(link1_s_range.second, link2_s_range.second);
 
   // 初始化结果
   result.overlap_start_idx = -1;

@@ -237,11 +237,15 @@ void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
   double total_weighted = 0.0;
 
   for (const auto& segment : result.segments) {
-    double seg_length = segment.s_end - segment.s_start;
-    double avg_s_relative = (segment.s_start + segment.s_end) / 2.0 - result.s_ego;
-    avg_s_relative = std::max(0.0, std::min(avg_s_relative, kPerceptionRange));
-    double weight = std::exp(-avg_s_relative / kDecayFactor);
-    total_weighted += weight * seg_length;
+    double s_start = std::max(0.0, segment.s_start - result.s_ego);
+    double s_end = std::max(0.0, segment.s_end - result.s_ego);
+    s_start = std::min(s_start, kPerceptionRange);
+    s_end = std::min(s_end, kPerceptionRange);
+
+    // 对指数衰减函数做积分，替代中点近似，避免远处长segment权重被高估
+    double weighted_len = kDecayFactor * (std::exp(-s_start / kDecayFactor) -
+                                          std::exp(-s_end / kDecayFactor));
+    total_weighted += weighted_len;
 
     bool is_on_route = false;
     if (split_dir == RampDirection::RAMP_ON_LEFT) {
@@ -250,7 +254,7 @@ void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
       is_on_route = segment.relation == context::PositionRelation::RIGHT_OF_LINK1;
     }
     if (is_on_route) {
-      on_route_weighted += weight * seg_length;
+      on_route_weighted += weighted_len;
     }
   }
 
