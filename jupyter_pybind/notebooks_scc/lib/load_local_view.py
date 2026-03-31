@@ -498,13 +498,19 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
     try:
       vel_ego = vs_msg.vehicle_speed
+      steer_deg = vs_msg.steering_wheel_angle * 57.3
     except:
       linear_velocity_from_wheel = math.sqrt(loc_msg.velocity.velocity_boot.vx * loc_msg.velocity.velocity_boot.vx + \
                 loc_msg.velocity.velocity_boot.vy * loc_msg.velocity.velocity_boot.vy + \
                 loc_msg.velocity.velocity_boot.vz * loc_msg.velocity.velocity_boot.vz)
       vel_ego =  linear_velocity_from_wheel
+      angular_velocity_from_wheel = math.sqrt(loc_msg.angular_velocity.angvelocity_boot.vx * loc_msg.angular_velocity.angvelocity_boot.vx + \
+                loc_msg.angular_velocity.angvelocity_boot.vy * loc_msg.angular_velocity.angvelocity_boot.vy)
+      # for E541
+      wheel_base = 2.8835
+      steer_ratio = 16.2
+      steer_deg = steer_ratio * math.atan(angular_velocity_from_wheel * wheel_base / vel_ego) * 57.3
 
-    steer_deg = 0
     if g_is_display_enu:
       local_view_data['data_text'].data.update({
         'vel_ego_text': ['v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))],
@@ -1760,7 +1766,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     parking_space_boxes_x, parking_space_boxes_y, \
     target_parking_space_box_x, target_parking_space_box_y, \
     road_mark_boxes_x, road_mark_boxes_y, \
-    ehr_ground_line_x_vec, ehr_ground_line_y_vec, \
+    road_obstacle_x_vec, road_obstacle_y_vec, \
     polygon_obstacle_x_vec, polygon_obstacle_y_vec, polygon_obstacle_label_vec, \
     polygon_x_vec, polygon_y_vec, polygon_id_vec = generate_ehr_static_map(ehr_static_map_msg, loc_msg, environment_model_info, g_is_display_enu)
     local_view_data['data_parking_space'].data.update({
@@ -1775,9 +1781,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'road_mark_x' : road_mark_boxes_x,
       'road_mark_y' : road_mark_boxes_y,
     })
-    local_view_data['data_ehr_ground_line'].data.update({
-      'ehr_ground_line_x' : ehr_ground_line_x_vec,
-      'ehr_ground_line_y' : ehr_ground_line_y_vec,
+    local_view_data['data_ehr_road_obstacle'].data.update({
+      'road_obstacle_x_vec' : road_obstacle_x_vec,
+      'road_obstacle_y_vec' : road_obstacle_y_vec,
     })
     polygon_obstacle_center_x = []
     for polygon_obstacle_x in polygon_obstacle_x_vec:
@@ -2144,6 +2150,7 @@ def load_local_view_figure():
   is_vis_hpp_map = global_var.get_value('is_vis_hpp_map')
   is_vis_occ_obj = global_var.get_value('is_vis_occ_obj')
   is_vis_ground_line = global_var.get_value('is_vis_ground_line')
+  is_vis_rdg_parking_slot = global_var.get_value('is_vis_rdg_parking_slot')
   is_vis_parking_slot = global_var.get_value('is_vis_parking_slot')
   is_vis_speed_bump = global_var.get_value('is_vis_speed_bump')
   is_vis_ground_mark = global_var.get_value('is_vis_ground_mark')
@@ -2165,6 +2172,7 @@ def load_local_view_figure():
   is_vis_lane_topo = global_var.get_value('is_vis_lane_topo')
   is_vis_smooth_refline = global_var.get_value('is_vis_smooth_refline')
   is_vis_road_type_line = global_var.get_value('is_vis_road_type_line')
+  is_vis_tf_light = global_var.get_value('is_vis_tf_light')
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
@@ -2483,8 +2491,8 @@ def load_local_view_figure():
                                                      'parking_space_id_vec':[],})
   data_road_mark = ColumnDataSource(data = {'road_mark_y':[],
                                             'road_mark_x':[],})
-  data_ehr_ground_line = ColumnDataSource(data = {'ehr_ground_line_y':[],
-                                                'ehr_ground_line_x':[],})
+  data_ehr_road_obstacle = ColumnDataSource(data = {'road_obstacle_x_vec':[],
+                                                'road_obstacle_y_vec':[],})
   data_polygon_obstacle = ColumnDataSource(data = {'polygon_obstacle_y':[],
                                                    'polygon_obstacle_x':[],
                                                    'polygon_obstacle_label':[],
@@ -2706,7 +2714,7 @@ def load_local_view_figure():
                      'data_target_parking_space' : data_target_parking_space , \
                      'data_parking_space_text' : data_parking_space_text , \
                      'data_road_mark' : data_road_mark , \
-                     'data_ehr_ground_line': data_ehr_ground_line, \
+                     'data_ehr_road_obstacle': data_ehr_road_obstacle, \
                      'data_polygon_obstacle': data_polygon_obstacle, \
                      'data_map_key_point': data_map_key_point, \
                      'data_ground_line' : data_ground_line, \
@@ -2932,13 +2940,8 @@ def load_local_view_figure():
 
   #fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
   if is_vis_fus_line:
-    fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
-    fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
-    fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
-    fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
     fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
 
-  f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
   fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
@@ -2955,7 +2958,6 @@ def load_local_view_figure():
 
   fig1.line('init_pos_line_y', 'init_pos_line_x', source = data_init_line, line_width = 3, line_color = 'purple', line_dash = 'solid', legend_label = 'init_point_line', visible = False)
 
-  fig1.triangle_pin('lon_collision_object_position_y', 'lon_collision_object_position_x', source = data_lon_collision_object_position, size = 25, line_width = 4.5, line_alpha = 1,line_color = 'black', fill_color = "orange", fill_alpha = 1, legend_label = 'lon_collision_object_pos')
 
   if is_vis_map:
     for i in range (len(ehr_data_lanes)):
@@ -2987,6 +2989,10 @@ def load_local_view_figure():
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
   if is_vis_fus_line:
+    fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
+    fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
+    fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
+    fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
     fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
     fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -3074,15 +3080,6 @@ def load_local_view_figure():
     fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_13, radius = 0.1, line_width = 2, line_color = 'yellow', fill_color = 'yellow', legend_label = 'road_type_analysis') #U 型弯
     fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_14, radius = 0.1, line_width = 2, line_color = 'brown' , fill_color = 'brown' , legend_label = 'road_type_analysis') #环形弯
 
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_2, radius = 0.03, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_3, radius = 0.03, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_4, radius = 0.03, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 5, line_color = 'green', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'ctrl_traj')
-
   if is_vis_radar:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fm_obj, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fm_obj',visible = False)
     fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fl_obj, fill_color = "red", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fl_obj',visible = False)
@@ -3109,46 +3106,53 @@ def load_local_view_figure():
   if is_vis_hpp_map:
     fig1.circle('trace_start_y', 'trace_start_x', source = data_map_key_point, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_color = "green", fill_alpha = 1, legend_label = 'ehr_start')
     fig1.circle('trace_end_y', 'trace_end_x', source = data_map_key_point, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_color = "red", fill_alpha = 1, legend_label = 'ehr_end')
-    fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'parking_space')
+    fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_parking_space')
     fig1.patch('target_parking_space_y', 'target_parking_space_x', source = data_target_parking_space, fill_color = "red", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_target_slot')
-    # fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec', source = data_parking_space_text, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'parking_space_id', visible = False)
     fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
     fig1.text('pos_y', 'pos_x', text = 'polygon_obstacle_label' ,source = data_polygon_obstacle, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ehr_obs_info', visible = False)
-    # fig_ehr_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'ehr_road_mark')
-    # fig1.multi_line('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, line_width = 2, line_color = 'black', line_dash = 'dotted', legend_label = 'ehr_ground_line', visible = False)
-    fig1.scatter('ehr_ground_line_y', 'ehr_ground_line_x', source = data_ehr_ground_line, size = 2,color='black', legend_label = 'ehr_ground_line', visible = False)
+    #fig1.patches('road_mark_y', 'road_mark_x', source = data_road_mark, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'ehr_road_mark')
+    #fig1.scatter('road_obstacle_y_vec', 'road_obstacle_x_vec', source = data_ehr_road_obstacle, size = 2,color='black', legend_label = 'ehr_road_obstacle', visible = False)
   if is_vis_parking_slot:
-    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_parking_slot, fill_color = "turquoise", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'parking slot')
-    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
-    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_release_slot, fill_color = "turquoise", fill_alpha = 0.8, line_color = "black", line_width = 1, legend_label = 'parking slot')
-    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_release_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
-    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_plan_release_slot, fill_color = "orange", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'parking slot')
-    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_plan_release_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
-    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_select_parking_slot, fill_color = "blue", fill_alpha = 0.3, line_color = "black", line_width = 2, legend_label = 'parking slot')
-    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_select_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'slot_info')
+    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_parking_slot, fill_color = "turquoise", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'fus_slot')
+    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_slot_info')
+    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_release_slot, fill_color = "turquoise", fill_alpha = 0.8, line_color = "black", line_width = 1, legend_label = 'fus_slot')
+    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_release_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_slot_info')
+    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_plan_release_slot, fill_color = "orange", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'fus_slot')
+    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_plan_release_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_slot_info')
+    fig1.patches('parking_slot_y', 'parking_slot_x', source = data_select_parking_slot, fill_color = "blue", fill_alpha = 0.3, line_color = "black", line_width = 2, legend_label = 'fus_slot')
+    fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_select_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_slot_info')
+  if is_vis_rdg_parking_slot:
     fig1.patches('parking_slot_y', 'parking_slot_x', source = data_rdg_parking_slot, fill_color = "green", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg parking slot', visible = False)
     # fig1.text('pos_y', 'pos_x', text = 'parking_slot_label' ,source = data_rdg_parking_slot, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg slot_info', visible = False)
   # fig_fus_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
   if is_vis_occ_obj:
     # fig_fus_occ_obj_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_fus_occ_obj, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 2,color='red', fill_alpha = 0.15, legend_label = 'occ obj')
-    fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs in plan')
-    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'occ_obj_info', visible = False)
+    fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 2,color='red', fill_alpha = 0.15, legend_label = 'fus_occ_obj')
+    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_occ_obj_info', visible = False)
   if is_vis_fus_obj:
-    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'obj',visible = False)
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'fus_obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info',visible = False)
-  fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
   if is_vis_speed_bump:
-    fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'speed bump')
+    fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'fus_speed_bump')
     # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
   if is_vis_ground_line:
-    # fig_ground_line_polygon = fig1.patches('polygon_y', 'polygon_x', source = data_ground_line, fill_color = "grey", fill_alpha = 0.15, line_color = "red", line_width = 3, line_alpha = 0.4, legend_label = 'obs polygon')
-    fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ground_line_info', visible = False)
     fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
+    fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_ground_line_info', visible = False)
   if is_vis_ground_mark:
     fig1.patches('ground_mark_y', 'ground_mark_x', source = data_rdg_ground_mark, fill_color = "white", fill_alpha = 0.3, line_color = "black", line_width = 1, legend_label = 'rdg ground mark', visible = False)
     fig1.text('pos_y', 'pos_x', text = 'ground_mark_label' ,source = data_rdg_ground_mark, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'rdg ground mark', visible = False)
+  fig_obs_polygon_in_plan = fig1.patches('polygon_y', 'polygon_x', source = data_obj_polygon, fill_color = "grey", fill_alpha = 0.15, line_color = "blue", line_width = 3, line_alpha = 0.4, legend_label = 'obs_in_plan')
+  fig1.triangle_pin('lon_collision_object_position_y', 'lon_collision_object_position_x', source = data_lon_collision_object_position, size = 25, line_width = 4.5, line_alpha = 1,line_color = 'black', fill_color = "orange", fill_alpha = 1, legend_label = 'lon_collision_object_pos')
+  fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_2, radius = 0.03, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_3, radius = 0.03, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_4, radius = 0.03, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+  fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 5, line_color = 'green', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'ctrl_traj')
 
   hover1_1 = HoverTool(renderers=[fig_init_point], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
                                                                 ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),

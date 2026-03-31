@@ -118,13 +118,20 @@ bool HppLateralObstacleDecider::Execute() {
     // 3. 没有搜索结果，进行规则决策
     UpdateLatDecision(reference_path_ptr, obstacle_consistency_map_,
                       obs_cluster_container, obs_classification_result);
-    Log(reference_path_ptr);
   } else {
     // 4. 存在搜索结果，进行规则后决策
     UpdateLatDecisionWithARAStar(reference_path_ptr);
   }
 
   // 5. 缓存决策结果，用于下一帧连续性保障
+  const auto &lat_obstacle_decision = session_->mutable_planning_context()
+                                    ->mutable_lateral_obstacle_decider_output()
+                                    .lat_obstacle_decision;
+  UpdateObstacleConsistencyMap(lat_obstacle_decision,
+                               obstacle_consistency_map_);
+
+  // 6. 将障碍物信息 & 决策结果存储到 protobuf debug
+  SaveObstaleToEnvironmentModelDebug(reference_path_ptr, lat_obstacle_decision);
   return true;
 }
 
@@ -146,9 +153,6 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       lat_obstacle_decision[obs_id] = decision;
     }
   }
-
-  UpdateObstacleConsistencyMap(lat_obstacle_decision,
-                               obstacle_consistency_map_);
 }
 
 LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
@@ -249,7 +253,7 @@ LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
 }
 
 void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
-    const ObstacleLateralDecisionMap &obs_lat_decision_map,
+    const ObstacleLateralDecisionMap &lat_obstacle_decision,
     ObstacleConsistencyMap &obs_consistency_map) {
   constexpr double kMaxIdleTimeMs = 1000.0;
   double current_timestamp = IflyTime::Now_ms();
@@ -258,8 +262,8 @@ void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
        iter != obs_consistency_map.end();) {
     auto obs_id = iter->first;
     auto &consistency_info = iter->second;
-    if (obs_lat_decision_map.find(obs_id) != obs_lat_decision_map.end()) {
-      const auto curr_decision = obs_lat_decision_map.at(obs_id);
+    if (lat_obstacle_decision.find(obs_id) != lat_obstacle_decision.end()) {
+      const auto curr_decision = lat_obstacle_decision.at(obs_id);
 
       consistency_info.last_seen_timestamp = current_timestamp;
       if (curr_decision == consistency_info.last_decision) {
@@ -396,43 +400,51 @@ void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
   }
 }
 
-void HppLateralObstacleDecider::Log(
-    const std::shared_ptr<ReferencePath> &reference_path_ptr) {
+void HppLateralObstacleDecider::SaveObstaleToEnvironmentModelDebug(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr,
+    const ObstacleLateralDecisionMap &lat_obstacle_decision) {
 #ifdef ENABLE_PROTO_LOG
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->clear_obstacle();
 
-  auto &lat_obstacle_decision = session_->mutable_planning_context()
-                                    ->mutable_lateral_obstacle_decider_output()
-                                    .lat_obstacle_decision;
+  auto add_obstacles = [&](const std::vector<FrenetObstaclePtr> &obstacles) {
+    for (const auto obstacle : obstacles) {
+      // log
+      planning::common::Obstacle *obstacle_log =
+          environment_model_debug_info->add_obstacle();
+      obstacle_log->set_id(obstacle->id());
+      obstacle_log->set_type(obstacle->type());
+      obstacle_log->set_is_static(obstacle->is_static());
+      if (lat_obstacle_decision.find(obstacle->id()) ==
+          lat_obstacle_decision.end()) {
+        obstacle_log->set_lat_decision(
+            static_cast<uint32_t>(LatObstacleDecisionType::NOT_SET));
+      } else {
+        obstacle_log->set_lat_decision(
+            static_cast<uint32_t>(lat_obstacle_decision.at(obstacle->id())));
+      }
+      obstacle_log->set_vs_lat_relative(obstacle->frenet_velocity_l());
+      obstacle_log->set_vs_lon_relative(obstacle->frenet_velocity_s());
 
-  for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-    // log
-    planning::common::Obstacle *obstacle_log =
-        environment_model_debug_info->add_obstacle();
-    obstacle_log->set_id(obstacle->id());
-    obstacle_log->set_type(obstacle->type());
-    obstacle_log->set_is_static(obstacle->is_static());
-    obstacle_log->set_lat_decision(
-        static_cast<uint32_t>(lat_obstacle_decision[obstacle->id()]));
-    obstacle_log->set_vs_lat_relative(obstacle->frenet_velocity_l());
-    obstacle_log->set_vs_lon_relative(obstacle->frenet_velocity_s());
-
-    if (obstacle->source_type() == SourceType::GroundLine ||
-        obstacle->source_type() == SourceType::OCC ||
-        obstacle->source_type() == SourceType::OD ||
-        obstacle->source_type() == SourceType::MAP) {
-      for (const auto &polygon :
-           obstacle->obstacle()->perception_polygon().points()) {
-        planning::common::Point2d *obstacle_polygon =
-            obstacle_log->add_polygon_points();
-        obstacle_polygon->set_x(polygon.x());
-        obstacle_polygon->set_y(polygon.y());
+      if (obstacle->source_type() == SourceType::GroundLine ||
+          obstacle->source_type() == SourceType::OCC ||
+          obstacle->source_type() == SourceType::OD ||
+          obstacle->source_type() == SourceType::MAP) {
+        for (const auto &polygon :
+             obstacle->obstacle()->perception_polygon().points()) {
+          planning::common::Point2d *obstacle_polygon =
+              obstacle_log->add_polygon_points();
+          obstacle_polygon->set_x(polygon.x());
+          obstacle_polygon->set_y(polygon.y());
+        }
       }
     }
-  }
+  };
+  add_obstacles(reference_path_ptr->get_obstacles());
+  add_obstacles(reference_path_ptr->get_turnstile_obstacles());
+  add_obstacles(reference_path_ptr->get_speed_bump_obstacles());
 #endif
 }
 
