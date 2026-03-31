@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -991,28 +992,6 @@ void PerpendicularTailInScenario::PathPlan() {
        frame_.dynamic_plan_fail_flag || !frame_.dynamic_plan_path_superior)) {
     ILOG_INFO << "dynamic replan failed or path is not superior, use last path";
     frame_.dynamic_replan_fail_count++;
-
-    // restore target pose and terminal err
-    // now not restore, use real-time target pose
-    // ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
-    // ego_info_under_slot.target_pose.pos.y() +=
-    //     ego_info_under_slot.lat_move_dist_replan_success;
-    // ego_info_under_slot.target_pose.pos.x() +=
-    //     ego_info_under_slot.lon_move_dist_replan_success;
-    // ego_info_under_slot.terminal_err.Set(
-    //     ego_info_under_slot.cur_pose.pos -
-    //     ego_info_under_slot.target_pose.pos,
-    //     geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
-    //                                  ego_info_under_slot.target_pose.heading));
-
-    // const bool ego_should_stop_by_slot_jump =
-    // CheckShouldStopWhenSlotJumpsMuch();
-    // JSON_DEBUG_VALUE("ego_should_stop_by_slot_jump",
-    // ego_should_stop_by_slot_jump) ILOG_INFO << " ego_should_stop_by_slot_jump
-    // = " << ego_should_stop_by_slot_jump
-    //           << "  dynamic_replan_fail_count = "
-    //           << static_cast<int>(frame_.dynamic_replan_fail_count);
-
     return;
   }
 
@@ -2593,49 +2572,63 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
 }
 
 void PerpendicularTailInScenario::CalSlotJumpErr() {
+  if (frame_.is_replan_first) {
+    return;
+  }
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
+  const ApaParameters& param = apa_param.GetParam();
+
   const geometry_lib::PathPoint& real_time_pose =
       ego_info_under_slot.origin_target_pose;
-  geometry_lib::PathPoint front_real_time_pose =
+
+  const geometry_lib::PathPoint front_real_time_pose =
       GetCarFrontPoseFromCarPose(real_time_pose);
 
   geometry_lib::PathPoint last_time_pose =
       ego_info_under_slot.replan_success_origin_target_pose;
+
   last_time_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
-  geometry_lib::PathPoint front_last_time_pose =
+  const geometry_lib::PathPoint front_last_time_pose =
       GetCarFrontPoseFromCarPose(last_time_pose);
 
-  const double lat_err = std::max(
-      std::fabs(real_time_pose.pos.y() - last_time_pose.pos.y()),
-      std::fabs(front_real_time_pose.pos.y() - front_last_time_pose.pos.y()));
+  const double rear_lat_err =
+      std::fabs(real_time_pose.GetY() - last_time_pose.GetY());
+
+  const double front_lat_err =
+      std::fabs(front_real_time_pose.GetY() - front_last_time_pose.GetY());
+  const double lat_err = std::max(rear_lat_err, front_lat_err);
+  const double lon_err =
+      std::fabs(real_time_pose.GetX() - last_time_pose.GetX());
 
   const double heading_err =
-      std::fabs(real_time_pose.heading - last_time_pose.heading) * kRad2Deg;
-
-  const double lon_err =
-      std::fabs(real_time_pose.pos.x() - last_time_pose.pos.x());
+      std::fabs(geometry_lib::NormalizeAngle(real_time_pose.heading -
+                                             last_time_pose.heading)) *
+      kRad2Deg;
 
   frame_.slot_jump_lat_err = lat_err;
   frame_.slot_jump_lon_err = lon_err;
   frame_.slot_jump_heading_err = heading_err;
 
+  const geometry_lib::PathPoint& terminal_err =
+      ego_info_under_slot.terminal_err;
+
   double terminal_error_y = 16.8;
   if (ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-      std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg < 6.8) {
-    terminal_error_y = std::fabs(ego_info_under_slot.terminal_err.GetY());
+      std::fabs(terminal_err.heading) * kRad2Deg < 6.8) {
+    terminal_error_y = std::fabs(terminal_err.GetY());
   }
 
   const double scale_factor =
       ego_info_under_slot.slot.slot_source_type_ == SlotSourceType::USS ? 3.0
                                                                         : 1.0;
 
-  frame_.slot_jump_big_flag =
-      std::min(lat_err, terminal_error_y) >
-          apa_param.GetParam().slot_jump_lat_big_err * scale_factor ||
-      heading_err >
-          apa_param.GetParam().slot_jump_heading_big_err * scale_factor;
+  const bool lat_jump_big = std::min(lat_err, terminal_error_y) >
+                            param.slot_jump_lat_big_err * scale_factor;
+  const bool heading_jump_big =
+      heading_err > param.slot_jump_heading_big_err * scale_factor;
+  frame_.slot_jump_big_flag = lat_jump_big || heading_jump_big;
 
   ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
             << "  heading_err = " << heading_err
@@ -2659,20 +2652,21 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
-  if (!frame_.is_last_path || current_path_point_global_vec_.size() < 1 ||
-      frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE ||
+  const uint8_t ref_gear =
+      scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN
+          ? geometry_lib::SEG_GEAR_REVERSE
+          : geometry_lib::SEG_GEAR_DRIVE;
+
+  const bool should_skip_slot_jump_stop =
+      !frame_.is_last_path || !frame_.slot_jump_big_flag ||
+      frame_.mirror_command != MirrorCommand::NONE ||
+      frame_.gear_command != ref_gear ||
+      current_path_point_global_vec_.empty() ||
       ego_info_under_slot.slot_occupied_ratio < 0.168 ||
       (ego_info_under_slot.slot_occupied_ratio > 0.708 &&
-       !frame_.ego_should_stop_by_slot_jump)) {
-    frame_.car_already_move_dist = 0.0;
-    frame_.ego_should_stop_by_slot_jump = false;
-    return 5.01;
-  }
+       !frame_.ego_should_stop_by_slot_jump);
 
-  const auto& param = apa_param.GetParam();
-
-  if (!frame_.slot_jump_big_flag ||
-      frame_.mirror_command != MirrorCommand::NONE) {
+  if (should_skip_slot_jump_stop) {
     frame_.car_already_move_dist = 0.0;
     frame_.ego_should_stop_by_slot_jump = false;
     return 5.01;
@@ -2710,10 +2704,12 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
     ILOG_INFO << "lon_stop_dist = " << lon_stop_dist
               << "  heading_stop_dist = " << heading_stop_dist;
 
-    lon_stop_dist -= car_already_move_dist;
-    heading_stop_dist -= car_already_move_dist;
-    frame_.ego_should_stop_dist_by_slot_jump =
-        std::max(std::min(lon_stop_dist, heading_stop_dist), 1.268);
+    const double remain_lon_stop_dist = lon_stop_dist - car_already_move_dist;
+    const double remain_heading_stop_dist =
+        heading_stop_dist - car_already_move_dist;
+
+    frame_.ego_should_stop_dist_by_slot_jump = std::max(
+        std::min(remain_lon_stop_dist, remain_heading_stop_dist), 1.268);
   }
 
   const double remain_dist_slot_jump =
