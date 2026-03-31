@@ -542,15 +542,13 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
               back_turn_range.second <= s_ref) {
             const double dist_since_turn_end =
                 std::max(s_ref - back_turn_range.second, 0.0);
-            if (dist_since_turn_end <= kExitRecoverDist) {
-              const double recover_ratio =
-                  std::clamp(dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-              const double ref_len_recover =
-                  kTurnInnerPreview +
-                  recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
-              ref_len_based_on_straight =
-                  std::max(min_len_base_straight, ref_len_recover);
-            }
+            const double recover_ratio =
+                std::clamp(dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
+            const double ref_len_recover =
+                kTurnInnerPreview +
+                recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
+            ref_len_based_on_straight =
+                std::max(min_len_base_straight, ref_len_recover);
           }
         }
       }
