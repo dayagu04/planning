@@ -3556,54 +3556,54 @@ void LDRouteInfoStrategy::CalculateFeasibleLaneByMergePoint(
       continue;
     }
 
-    while (current_trace_lane->link_id() != current_link_->id() &&
-           !current_trace_lane->predecessor_lane_ids().empty()) {
-      uint64 pre_lane_id = 0;
-      for (auto id : current_trace_lane->predecessor_lane_ids()) {
+    // 使用队列处理所有前继车道分支
+    std::queue<std::pair<const iflymapdata::sdpro::Lane*, double>> lane_queue;
+    lane_queue.push({current_trace_lane, accumulated_dist});
+
+    while (!lane_queue.empty()) {
+      auto [current_lane, current_dist] = lane_queue.front();
+      lane_queue.pop();
+
+      if (current_lane->link_id() == current_link_->id()) {
+        continue;
+      }
+
+      for (auto id : current_lane->predecessor_lane_ids()) {
         const auto* pre_lane_info = ld_map_.GetLaneInfoByID(id);
         if (pre_lane_info == nullptr) {
           continue;
         }
-        if (ld_map_.isOnRouteLinks(pre_lane_info->link_id())) {
-          pre_lane_id = id;
-          break;
+        if (!ld_map_.isOnRouteLinks(pre_lane_info->link_id())) {
+          continue;
         }
-      }
 
-      if (pre_lane_id == 0) {
-        break;
-      }
-      const auto* pre_lane_info = ld_map_.GetLaneInfoByID(pre_lane_id);
-      if (pre_lane_info == nullptr) {
-        break;
-      }
+        auto pre_it = link_id_to_index.find(pre_lane_info->link_id());
+        if (pre_it == link_id_to_index.end()) {
+          continue;
+        }
 
-      auto pre_it = link_id_to_index.find(pre_lane_info->link_id());
-      if (pre_it == link_id_to_index.end()) {
-        break;
-      }
+        size_t pre_link_idx = pre_it->second;
+        double pre_lane_len = pre_lane_info->length() * 0.01;
 
-      size_t pre_link_idx = pre_it->second;
-      for (auto& lane_node :
-           feasible_lane_graph.lane_topo_groups[pre_link_idx].topo_lanes) {
-        if (lane_node.id == pre_lane_id) {
-          double pre_lane_len = lane_node.length;
+        for (auto& lane_node :
+             feasible_lane_graph.lane_topo_groups[pre_link_idx].topo_lanes) {
+          if (lane_node.id == id) {
+            double dist_to_merge;
 
-          if (lane_node.link_id == current_link_->id()) {
-            double dist_to_merge =
-                (pre_lane_len - ego_on_cur_link_s_) + accumulated_dist;
+            if (lane_node.link_id == current_link_->id()) {
+              dist_to_merge = (pre_lane_len - ego_on_cur_link_s_) + current_dist;
+            } else {
+              dist_to_merge = pre_lane_len + current_dist;
+            }
+
             lane_node.front_feasible_distance =
                 std::min(lane_node.front_feasible_distance, dist_to_merge);
-          } else {
-            double dist_to_merge = pre_lane_len + accumulated_dist;
-            lane_node.front_feasible_distance =
-                std::min(lane_node.front_feasible_distance, dist_to_merge);
+
+            lane_queue.push({pre_lane_info, dist_to_merge});
+            break;
           }
-          accumulated_dist += pre_lane_len;
-          break;
         }
       }
-      current_trace_lane = pre_lane_info;
     }
   }
 }
