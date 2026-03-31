@@ -290,6 +290,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
       "ResultTrajectoryGeneratorTime", "ParkingSwitchDeciderTime",
       "ARAStarTime", "HPP turn signal", "hpp_lon_collision_check_time_cost",
+      "is_reached_target_slot","is_reached_target_dest","is_stopped_at_destination","stop_frame_count",\
       "dist_to_target_slot", "dist_to_target_dest", "is_exist_target_slot",
       "is_target_slot_allowed_to_park", "is_standstill_near_target_slot",
       "is_timeout_for_target_slot_allowed_to_park", "current planning_success",
