@@ -18,7 +18,7 @@ from jupyter_pybind import spatio_temporal_union_planning_py
 # +
 # bag path and frame dt
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250624/20250624-14-34-41/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-24-14-34-41_no_camera.bag.1751002868.close-loop.scc.plan"
-bag_path = "/share//data_cold/abu_zone/project/bestune_dataset/bestune_e541/2026-03-17/57A38521CC943A4A26BB029B78718E4444BEC321ED96666C7E1EE2883F174BC7/1773710456589_1773710471589/12_120012_24_57A38521CC943A4A26BB029B78718E4444BEC321ED96666C7E1EE2883F174BC7_1773710456589_1773710471589_rosbag.bag"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_88446/trigger/20260328/20260328-15-00-38/data_collection_BESTUNE_E541_88446_EVENT_FUNEXIT_2026-03-28-15-00-38_no_camera.bag"
 
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250120/20250120-16-05-39/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2025-01-20-16-05-39_no_camera.bag.22-35.split.1742284603.close-loop.noa.plan"
 frame_dt = 0.1 # sec

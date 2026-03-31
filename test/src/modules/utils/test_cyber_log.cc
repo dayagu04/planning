@@ -14,7 +14,7 @@
  * limitations under the License.
  *****************************************************************************/
 
-#include <cyber/binary.h>
+// #include <cyber/binary.h>
 #include "cyber/init.h"
 #include "cyber/scheduler/scheduler_factory.h"
 #include "cyber/time/rate.h"
