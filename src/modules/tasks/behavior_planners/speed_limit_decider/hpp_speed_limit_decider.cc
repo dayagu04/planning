@@ -181,9 +181,9 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
     return;
   }
 
-  constexpr double kIntersectionRoadTargetV = 2.22;
-  v_limit_speed_narrow_passage =
-      GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
+  v_limit_speed_narrow_passage = GetSpeedLimitInObjectiveZone(
+      zone_info,
+      hpp_speed_limit_config_.speed_narrow_passage_approach_distance);
 
   if (v_limit_speed_narrow_passage < v_target_) {
     v_target_ = v_limit_speed_narrow_passage;
@@ -401,7 +401,7 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
   }
 
   v_limit_speed_bump = GetSpeedLimitInObjectiveZone(
-      zone_info, hpp_speed_limit_config_.speed_bump_zone_speed_limit);
+      zone_info, hpp_speed_limit_config_.target_speed_speed_bump_area);
 
   if (v_limit_speed_bump < v_target_) {
     v_target_ = v_limit_speed_bump;
@@ -516,8 +516,8 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
     return;
   }
 
-  constexpr double kRampTargetV = 2.78;
-  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(zone_info, kRampTargetV);
+  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(
+      zone_info, hpp_speed_limit_config_.target_speed_ramp_area);
 
   if (v_limit_speed_ramp < v_target_) {
     v_target_ = v_limit_speed_ramp;
@@ -559,9 +559,8 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
     return;
   }
 
-  constexpr double kIntersectionRoadTargetV = 2.5;
-  v_limit_speed_intersection =
-      GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
+  v_limit_speed_intersection = GetSpeedLimitInObjectiveZone(
+      zone_info, hpp_speed_limit_config_.speed_intersection_approach_distance);
 
   if (v_limit_speed_intersection < v_target_) {
     v_target_ = v_limit_speed_intersection;
