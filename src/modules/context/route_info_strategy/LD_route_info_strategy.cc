@@ -208,7 +208,7 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   CalculateFrontMergePointInfo(search_distance);
 
   CalculateFeasibleLaneByMergePoint(feasible_lane_graph);
-  
+
   // 把拓扑变化点后面的拓扑信息加入到feasible lane中，供UpdateLCNumTask使用
   if (!feasible_lane_graph_after_topo_change_vec.lane_topo_groups.empty()) {
       // 插入到最前面
@@ -948,8 +948,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    if (0 > ego_seq) {
-      ego_seq = 0;
+    if (1 > ego_seq) {
+      ego_seq = 1;
       route_info_output_.ego_seq = ego_seq;
     }
     // 当自车位于消亡车道上时，当前处理的场景修改成merge_sence
