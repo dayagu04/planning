@@ -153,19 +153,6 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       lat_obstacle_decision[obs_id] = decision;
     }
   }
-  for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
-    LatObstacleDecisionType decision;
-    if (!obstacle->b_frenet_valid()) {
-      continue;
-    }
-    int64_t obs_id = obstacle->id();
-    if (obs_classification_result.id_to_rel_pos_type.find(obs_id)->second ==
-        ObstacleRelPosType::FAR_AWAY)
-      continue;
-    if (lat_obstacle_decision.find(obs_id) == lat_obstacle_decision.end()) {
-      MakeDecisionForSingleDynamicObs(reference_path_ptr, obstacle);
-    }
-  }
 }
 
 LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
