@@ -509,15 +509,14 @@ const bool ParkingScenario::CheckGearChangeCountTooMuch(
 const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
     const double lat_expand, const double lon_expand,
     const double heading_err) {
-  const geometry_lib::PathPoint& ego_pose =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().cur_pose;
+  const auto& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
-  const ApaSlot& slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot;
-
-  if ((slot.IsPointInCustomSlot(ego_pose.pos, lon_expand, lon_expand,
-                                lat_expand, lat_expand, true) &&
-       std::fabs(ego_pose.heading) * kRad2Deg < heading_err)) {
+  if ((ego_info_under_slot.slot.IsPointInCustomSlot(
+           ego_info_under_slot.cur_pose.pos, lon_expand, lon_expand, lat_expand,
+           lat_expand, true) &&
+       std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+           heading_err)) {
     return true;
   }
 

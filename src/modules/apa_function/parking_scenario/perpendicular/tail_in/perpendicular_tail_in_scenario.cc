@@ -586,20 +586,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
       geometry_lib::BuildLineSegByPose(ego_info_under_slot.target_pose.pos,
                                        ego_info_under_slot.target_pose.heading);
 
-  ego_info_under_slot.tar_line.PrintInfo();
-
-  ego_info_under_slot.terminal_err.Set(
-      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
-      geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
-                                   ego_info_under_slot.target_pose.heading));
-
-  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
-  const geometry_lib::PathPoint front_pose =
-      GetCarFrontPoseFromCarPose(cur_pose);
-  const geometry_lib::PathPoint& target_pose = ego_info_under_slot.target_pose;
-  const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
-  ego_info_under_slot.terminal_y_front_err = front_lat_err;
-
   apa_world_ptr_->GetColDetInterfacePtr()
       ->GetEDTColDetPtr()
       ->UpdateObsClearZone(
@@ -619,6 +605,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
             << "  terminal_err = " << ego_info_under_slot.terminal_err.pos.x()
             << " " << ego_info_under_slot.terminal_err.pos.y() << "  "
             << ego_info_under_slot.terminal_err.heading * kRad2Deg
+            << "  terminal_y_front_err = "
+            << ego_info_under_slot.terminal_y_front_err
             << "  slot_occupied_ratio_postprocess = "
             << ego_info_under_slot.slot_occupied_ratio_postprocess
             << "  slot occupied ratio = "
@@ -1789,20 +1777,25 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const ApaParameters& param = apa_param.GetParam();
   const CheckFinishParams& finish_params = param.check_finish_params;
 
-  const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
-  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
-  const geometry_lib::PathPoint front_pose =
-      GetCarFrontPoseFromCarPose(cur_pose);
-  const geometry_lib::PathPoint& target_pose = ego_info_under_slot.target_pose;
+  const auto& cur_pose = ego_info_under_slot.cur_pose;
+  const auto& target_pose = ego_info_under_slot.target_pose;
+  const auto front_pose = GetCarFrontPoseFromCarPose(cur_pose);
 
-  const double lon_err = cur_pose.pos.x() - target_pose.pos.x();
-  const double lat_err = cur_pose.pos.y() - target_pose.pos.y();
-  const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
+  ego_info_under_slot.terminal_err.Set(
+      cur_pose.pos - target_pose.pos,
+      geometry_lib::NormalizeAngle(cur_pose.heading - target_pose.heading));
+
+  ego_info_under_slot.terminal_y_front_err =
+      front_pose.GetY() - target_pose.GetY();
+
+  const double lon_err = ego_info_under_slot.terminal_err.GetX();
+  const double lat_err = ego_info_under_slot.terminal_err.GetY();
+  const double front_lat_err = ego_info_under_slot.terminal_y_front_err;
   const double heading_err =
-      geometry_lib::NormalizeAngle(cur_pose.heading - target_pose.heading) *
-      kRad2Deg;
+      ego_info_under_slot.terminal_err.GetTheta() * kRad2Deg;
 
   JSON_DEBUG_VALUE("terminal_error_x", lon_err)
   JSON_DEBUG_VALUE("terminal_error_y", lat_err)
@@ -1813,16 +1806,19 @@ const bool PerpendicularTailInScenario::CheckFinished() {
             << "  front_lat_err = " << front_lat_err
             << "  heading_err = " << heading_err;
 
-  const CarSlotRelationship ship = CalCarSlotRelationship(cur_pose);
+  const CarSlotRelationship car_slot_relationship =
+      CalCarSlotRelationship(cur_pose);
 
   const bool auto_fold_mirror =
       param.smart_fold_mirror_params.has_smart_fold_mirror &&
       frame_.mirror_command == MirrorCommand::FOLD &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag();
 
-  ILOG_INFO << "check finish ship = " << static_cast<int>(ship);
+  ILOG_INFO << "check finish ship = "
+            << static_cast<int>(car_slot_relationship);
 
-  if (ship == CarSlotRelationship::TOUCHING && !auto_fold_mirror) {
+  if (car_slot_relationship == CarSlotRelationship::TOUCHING &&
+      !auto_fold_mirror) {
     ILOG_INFO << "car press line, not allow finish";
     return false;
   }
@@ -1835,15 +1831,18 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const double finish_lon_err = finish_params.lon_err;
 
   const double finish_lat_err =
-      (ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
-                                          : finish_params.lat_err_strict) *
-      gain;
-  const double finish_heading_err =
-      (ship == CarSlotRelationship::IDEAL ? finish_params.heading_err
-                                          : finish_params.heading_err_strict) *
+      (car_slot_relationship == CarSlotRelationship::IDEAL
+           ? finish_params.lat_err
+           : finish_params.lat_err_strict) *
       gain;
 
-  const bool lon_condition = lon_err < finish_lon_err;
+  const double finish_heading_err =
+      (car_slot_relationship == CarSlotRelationship::IDEAL
+           ? finish_params.heading_err
+           : finish_params.heading_err_strict) *
+      gain;
+
+  const bool lon_condition = std::fabs(lon_err) < finish_lon_err;
 
   const bool lat_condition = std::fabs(lat_err) < finish_lat_err &&
                              std::fabs(front_lat_err) < finish_lat_err;
@@ -1853,14 +1852,25 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool static_condition =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
-  const bool remain_s_condition =
-      frame_.remain_dist_path < finish_params.max_remain_path_dist;
-
   // first replan not check remain_s_condition
-  bool parking_finish = lon_condition && lat_condition && static_condition &&
-                        (remain_s_condition || frame_.is_replan_first);
+  const bool remain_s_condition =
+      frame_.remain_dist_path < finish_params.max_remain_path_dist ||
+      frame_.is_replan_first;
 
-  if (parking_finish) {
+  const bool basic_finish = lon_condition && lat_condition &&
+                            heading_condition && static_condition &&
+                            remain_s_condition;
+
+  ILOG_INFO << "finish condition, lon = " << lon_condition
+            << "  lat = " << lat_condition
+            << "  heading = " << heading_condition
+            << "  static = " << static_condition
+            << "  remain_s = " << remain_s_condition
+            << "  finish_lon_err = " << finish_lon_err
+            << "  finish_lat_err = " << finish_lat_err
+            << "  finish_heading_err = " << finish_heading_err;
+
+  if (basic_finish) {
     return true;
   }
 
@@ -1870,19 +1880,20 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_obs_condition =
       frame_.remain_dist_obs < finish_params.max_remain_obs_dist;
 
-  GJKColDetRequest gjl_col_det_request(true, param.uss_config.use_uss_pt_cloud);
+  GJKColDetRequest gjk_col_det_request(true, param.uss_config.use_uss_pt_cloud);
+  const auto has_obstacle_at_pose = [&](const geometry_lib::PathPoint& pose) {
+    return apa_world_ptr_->GetColDetInterfacePtr()
+        ->GetGJKColDetPtr()
+        ->Update(std::vector<geometry_lib::PathPoint>{pose}, 0.0, 0.0,
+                 gjk_col_det_request)
+        .col_flag;
+  };
 
-  bool end_pos_has_obs_condition = apa_world_ptr_->GetColDetInterfacePtr()
-                                       ->GetGJKColDetPtr()
-                                       ->Update(
-                                           std::vector<geometry_lib::PathPoint>{
-                                               ego_info_under_slot.target_pose},
-                                           0.0, 0.0, gjl_col_det_request)
-                                       .col_flag;
+  bool target_pose_blocked = has_obstacle_at_pose(target_pose);
 
-  ILOG_INFO << "end_pos_has_obs_condition = " << end_pos_has_obs_condition;
+  ILOG_INFO << "target_pose_blocked = " << target_pose_blocked;
 
-  if (!end_pos_has_obs_condition) {
+  if (!target_pose_blocked) {
     double move_back_dist = 0.168;
     if (lon_err < 0.368) {
       // if only can move 0.1m, no move, finish
@@ -1890,39 +1901,29 @@ const bool PerpendicularTailInScenario::CheckFinished() {
     }
 
     const geometry_lib::PathPoint uss_pose{
-        ego_info_under_slot.target_pose.pos -
-            move_back_dist * Eigen::Vector2d(1.0, 0.0),
-        ego_info_under_slot.target_pose.heading};
+        target_pose.pos - move_back_dist * Eigen::Vector2d(1.0, 0.0),
+        target_pose.heading};
 
-    end_pos_has_obs_condition =
-        apa_world_ptr_->GetColDetInterfacePtr()
-            ->GetGJKColDetPtr()
-            ->Update(std::vector<geometry_lib::PathPoint>{uss_pose}, 0.0, 0.0,
-                     gjl_col_det_request)
-            .col_flag;
+    target_pose_blocked = has_obstacle_at_pose(uss_pose);
 
-    ILOG_INFO << "after_pos_has_obs_condition = " << end_pos_has_obs_condition;
+    ILOG_INFO << "after_move_back_target_pose_blocked = " << target_pose_blocked
+              << "  move_back_dist = " << move_back_dist;
   }
 
-  parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_obs_condition && end_pos_has_obs_condition;
+  // If there are indeed obstacles near the target pose, finishing is allowed
+  // because reaching the exact target pose is no longer feasible.
+  const bool obs_stuck_finish = lat_condition && heading_condition &&
+                                static_condition && enter_slot_condition &&
+                                remain_obs_condition && target_pose_blocked;
 
-  // Consider whether there are really obstacles at target pos. If so, finish
-  // it is indeed impossible to reach the target pos, if not, try replan again
-  if (parking_finish) {
-    return true;
-  }
+  ILOG_INFO << "obs stuck finish condition, lat = " << lat_condition
+            << "  heading = " << heading_condition
+            << "  static = " << static_condition
+            << "  enter_slot = " << enter_slot_condition
+            << "  remain_obs = " << remain_obs_condition
+            << "  target_pose_blocked = " << target_pose_blocked;
 
-  return false;
-
-  // stucked by dynamic col det
-  const bool remain_dist_col_det_condition =
-      frame_.remain_dist_col_det < param.max_replan_remain_dist;
-
-  parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_dist_col_det_condition && (lon_err < 0.568);
-
-  return parking_finish;
+  return obs_stuck_finish;
 }
 
 const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
@@ -3475,9 +3476,7 @@ const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   const double heading_err =
-      geometry_lib::NormalizeAngle(cur_pose.heading -
-                                   ego_info_under_slot.target_pose.heading) *
-      kRad2Deg;
+      ego_info_under_slot.terminal_err.GetTheta() * kRad2Deg;
 
   if (std::fabs(heading_err) > finish_params.heading_err) {
     return CarSlotRelationship::TOUCHING;
@@ -3487,10 +3486,10 @@ const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
       GetCarFrontPoseFromCarPose(cur_pose);
 
   const std::vector<double> car_border_ys = {
-      cur_pose.pos.y() + 0.5 * params.car_width,
-      cur_pose.pos.y() - 0.5 * params.car_width,
-      front_pose.pos.y() + 0.5 * params.car_width,
-      front_pose.pos.y() - 0.5 * params.car_width};
+      cur_pose.GetY() + 0.5 * params.car_width,
+      cur_pose.GetY() - 0.5 * params.car_width,
+      front_pose.GetY() + 0.5 * params.car_width,
+      front_pose.GetY() - 0.5 * params.car_width};
 
   const double half_slot_width = 0.5 * ego_info_under_slot.slot.slot_width_;
 
