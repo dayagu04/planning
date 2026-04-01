@@ -61,6 +61,6 @@ double RoadTypeExtraBufferAtS(const double s,
                               const double ego_v, bool is_hard_bound);
 double RoadTypeExtraBufferAtSForObs(
     const double s, const ConstStaticAnalysisStoragePtr &storage,
-    const double ego_v, bool is_static);
+    const double ego_v, const std::shared_ptr<FrenetObstacle> obstacle);
 }  // namespace hpp_general_lateral_decider_utils
 }  // namespace planning
