@@ -132,18 +132,48 @@ void HPPSpeedLimitDecider::CalculateUserSpeedLimit() {
 void HPPSpeedLimitDecider::CalculateMapSpeedLimit() { return; }
 
 void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
-  const auto& traj_points = session_->mutable_planning_context()
-                                ->mutable_planning_result()
-                                .traj_points;
+  double v_limit_curv = hpp_speed_limit_config_.velocity_upper_bound;
+  if (!session_->is_hpp_scene()) {
+    return;
+  }
 
-  const double max_lat_acceleration = ComputeMaxLatAcceleration();
-  double vlimit_jerk = 0.0;
-  double time_to_brake = 1e-2;
   double out_max_curvature = 0.0;
 
-  double v_limit_curv =
-      ComputeCurvatureSpeedLimit(traj_points, max_lat_acceleration, vlimit_jerk,
-                                 time_to_brake, out_max_curvature);
+  const double approach_distance_threshold = hpp_speed_limit_config_.speed_intersection_approach_distance;
+  HPPSpeedLimitZoneInfo zone_info;
+
+  if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Turn,
+                                   CPassageType::Ignore, CElemType::Ignore,
+                                   approach_distance_threshold)) {
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_turn(),
+                     SpeedLimitType::CURVATURE, v_limit_curv, zone_info);
+#endif
+    return;
+  }
+
+  if (zone_info.approaching_speed_limit_zone || zone_info.in_speed_limit_zone) {
+    constexpr double kIntersectionRoadTargetV = 1.95;
+    v_limit_curv =
+        GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
+
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_turn(),
+                     SpeedLimitType::CURVATURE, v_limit_curv, zone_info);
+#endif
+  } else {
+    const auto& traj_points = session_->mutable_planning_context()
+                                  ->mutable_planning_result()
+                                  .traj_points;
+
+    const double max_lat_acceleration = ComputeMaxLatAcceleration();
+    double vlimit_jerk = 0.0;
+    double time_to_brake = 1e-2;
+
+    double v_limit_curv = ComputeCurvatureSpeedLimit(
+        traj_points, max_lat_acceleration, vlimit_jerk, time_to_brake,
+        out_max_curvature);
+  }
 
 #ifdef ENABLE_PROTO_LOG
   FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_curvature(),
@@ -478,7 +508,6 @@ double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
       hpp_speed_limit_config_.speed_bump_deceleration;
 
   if (zone_info.in_speed_limit_zone) {
-    // 在区域内，限速8 km/h
     return kSpeedObjectiveZoneLimit;
   } else if (zone_info.approaching_speed_limit_zone) {
     // 接近区域，根据距离和减速度计算限速
