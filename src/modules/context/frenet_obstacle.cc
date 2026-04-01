@@ -297,13 +297,12 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     //   b_frenet_valid_ = false;
     //   return;
     // }
-    if (!frenet_coord->XYToSLInRange(carte_point, frenet_s_-5.0, frenet_s_ + 5.0, frenet_point) ||
+    const double obs_max_edge = std::fmax(length_, width_);
+    if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- 2.0 * obs_max_edge), (frenet_s_ + 2.0 * obs_max_edge), frenet_point) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
       b_frenet_valid_ = false;
       return;
     }
-
-
     obs_start_s = std::min(obs_start_s, frenet_point.x);
     obs_end_s = std::max(obs_end_s, frenet_point.x);
     obs_start_l = std::min(obs_start_l, frenet_point.y);
