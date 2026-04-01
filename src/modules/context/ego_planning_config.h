@@ -2023,6 +2023,25 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                            cross_lane_side_2_front_count_thr);
     ReadItem<double>(json, extra_ratio_for_cut_out, "potential_follow_obstacle",
                      "extra_ratio_for_cut_out");
+    /******************* for hpp *******************/
+    ReadItem<double>(json, lat_buffer_for_road_line, "lat_buffer_for_road_line",
+                     "lat_buffer_for_road_line");
+    ReadItem<double>(json, lat_buffer_for_slot_line, "lat_buffer_for_slot_line",
+                     "lat_buffer_for_slot_line");
+    ReadItem<double>(json, lat_buffer_for_curb, "lat_buffer_for_curb",
+                     "lat_buffer_for_curb");
+    ReadItem<double>(json, lat_buffer_for_unmovable_obj,
+                     "lat_buffer_for_unmovable_obj",
+                     "lat_buffer_for_unmovable_obj");
+    ReadItem<double>(json, lat_buffer_for_vru, "lat_buffer_for_vru",
+                     "lat_buffer_for_vru");
+    ReadItem<double>(json, lat_buffer_for_vehicle, "lat_buffer_for_vehicle",
+                     "lat_buffer_for_vehicle");
+    ReadItem<double>(json, extra_lat_buffer_for_ramp, "extra_lat_buffer_for_ramp",
+                     "extra_lat_buffer_for_ramp");
+    ReadItem<double>(json, extra_lat_buffer_for_turn, "extra_lat_buffer_for_turn",
+                     "extra_lat_buffer_for_turn");
+    /******************* for hpp *******************/
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -2086,6 +2105,16 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
   std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
   double extra_ratio_for_cut_out = 0.6;
+  /******************* for hpp *******************/
+  double lat_buffer_for_road_line = 0.2;
+  double lat_buffer_for_slot_line = 0.2;
+  double lat_buffer_for_curb = 0.3;
+  double lat_buffer_for_unmovable_obj = 0.3;
+  double lat_buffer_for_vru = 0.4;
+  double lat_buffer_for_vehicle = 0.4;
+  double extra_lat_buffer_for_ramp = 0.1;
+  double extra_lat_buffer_for_turn = 0.1;
+  /******************* for hpp *******************/
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -2511,7 +2540,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                      "max_care_time_for_roadborder");
     ReadItem<double>(json, decrease_time_for_roadborder,
                      "general_lateral_decider",
-                     "decrease_time_for_roadborder");                 
+                     "decrease_time_for_roadborder");
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
