@@ -63,7 +63,6 @@ class STPoint : public planning_math::Vec2d {
   double velocity_ = 0.0;
   double acceleration_ = 0.0;
   bool valid_ = true;
-
   // save min_l in LowerPoints and max_l in UpperPoints
   double extreme_l_ = 0.0;
 };

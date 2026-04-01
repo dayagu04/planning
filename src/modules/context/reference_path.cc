@@ -522,6 +522,7 @@ bool ReferencePath::get_polygon_at_time(
     auto enu_polygon =
         obstacle_ptr->get_polygon_at_point(obstacle_ptr->get_point_at_time(0));
     std::vector<planning_math::Vec2d> frenet_points;
+    frenet_points.reserve(enu_polygon.points().size());
     for (auto &pt : enu_polygon.points()) {
       Point2D frenet_point, carte_point;
       carte_point.x = pt.x();
@@ -531,8 +532,8 @@ bool ReferencePath::get_polygon_at_time(
                   << " Frenet_coord failed!!";
         continue;
       }
-      frenet_points.push_back(planning_math::Vec2d(
-          frenet_point.x + prediction_frenet_s, frenet_point.y));
+      frenet_points.emplace_back(std::move(planning_math::Vec2d(
+          frenet_point.x + prediction_frenet_s, frenet_point.y)));
     }
     bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
                                                           &obstacle_polygon);
@@ -550,8 +551,11 @@ bool ReferencePath::get_polygon_at_time(
     }
     const auto &enu_polygon = obstacle_ptr->get_bounding_box(
         obstacle_ptr->get_point_at_time(relative_time * 0.1));
-    std::vector<planning_math::Vec2d> frenet_points;
+
     const auto &corners = enu_polygon.GetAllCorners();
+
+    std::vector<planning_math::Vec2d> frenet_points;
+    frenet_points.reserve(corners.size());
     for (auto &pt : corners) {
       Point2D frenet_point, carte_point;
       carte_point.x = pt.x();
@@ -561,8 +565,8 @@ bool ReferencePath::get_polygon_at_time(
                   << " Frenet_coord failed!!!!";
         continue;
       }
-      frenet_points.push_back(
-          planning_math::Vec2d(frenet_point.x, frenet_point.y));
+      frenet_points.emplace_back(std::move(
+          planning_math::Vec2d(frenet_point.x, frenet_point.y)));
     }
     bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
                                                           &obstacle_polygon);
@@ -765,11 +769,11 @@ bool ReferencePath::HandleRoadCurvature(
   static const double kPreviewRangeOffset = 20.0;   // 预览范围偏移量(m)
   // 4. 弯道长度判断阈值
   static const double kMinContinuousCurveLength = 21.0;      // 持续弯道判断的最小长度(m)
-  static const double kAverageContinuousCurveLength = 41.0;  // 持续弯道判断的平均长度(m)
+  static const double kAverageContinuousCurveLength = 40.0;  // 持续弯道判断的平均长度(m)
   static const double kMinCurveGapLength = 31.0;                 // 最小连续弯道间隔长度(m)
   static const double kMinCurveLength = 6.0;                 // 最小有效弯道长度(m)
   static const double kMinMidCurveLength = 11.0;             // 中等弯道的最小长度(m)
-  static const double kMinBigCurveContinuousLength = 31.0;   // 大弯道的最小持续长度(m)
+  static const double kMinBigCurveContinuousLength = 30.0;   // 大弯道的最小持续长度(m)
   static const double kMinConnectionLength = 21.0;           // 连续弯道段的最大间隔(m)
   // 5. 近/远距范围参数
   static const double kNearRangeStartOffset = -1.0;  // 近距范围起始偏移(自车位置向后，m)
@@ -785,44 +789,86 @@ bool ReferencePath::HandleRoadCurvature(
   // 7. 虚拟区域判断阈值
   static const double kVirtualRangeVelCoeff = 5.0;           // 虚拟范围与车速的系数(5.0*v)
   static const double kVirtualRangeOffset = 5.0;             // 虚拟范围偏移量(m)
-  static const double kMinIntersectionVirtualLength = 15.0;  // 路口虚拟区域最小长度(m)
-  static const double kMinVirtualLength = 50.0;              // 非路口虚拟区域最小长度(m)
-  const auto &planning_init_point =
+  static const double kMinIntersectionVirtualLength = 20.0;  // 路口虚拟区域最小长度(m)
+  static const double kMinVirtualLength = 40.0;              // 非路口虚拟区域最小长度(m)
+  static const double kScanVirtualRange = 70.0;              // 虚拟区域向前扫描范围(m)
+  static const double kScanVirtualStep = 5.0;               // 虚拟区域向前扫描步长(m)
+
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& planning_init_point =
       session_->environmental_model()
               .get_ego_state_manager()
               ->planning_init_point();
   double init_v =
       std::max(planning_init_point.v, kMinRefVel);
-  const auto &virtual_lane_manager =
+  const auto& virtual_lane_manager =
       session_->environmental_model()
               .get_virtual_lane_manager();
-  const auto &current_lane =
-      virtual_lane_manager->get_current_lane();
-  double max_virtual_seg_ahead_x =
-      current_lane->get_max_virtual_seg_ahead_x();
-  double max_virtual_seg_ahead_length =
-      current_lane->get_max_virtual_seg_ahead_length();
-  bool is_intersection_scene = false;
-  if ((virtual_lane_manager
-           ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-       virtual_lane_manager
-           ->GetIntersectionState() <= common::OFF_INTERSECTION &&
-       (max_virtual_seg_ahead_x > 0.0 &&
-        max_virtual_seg_ahead_x < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
-        max_virtual_seg_ahead_length > kMinIntersectionVirtualLength)) ||
-      (max_virtual_seg_ahead_x >= 0.0 &&
-       max_virtual_seg_ahead_x < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
-       max_virtual_seg_ahead_length > std::min(0.5 * init_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
-    is_intersection_scene = true;
+  // const auto& current_lane =
+  //     virtual_lane_manager->get_current_lane();
+  // double max_virtual_seg_ahead_x =
+  //     current_lane->get_max_virtual_seg_ahead_x();
+  // double max_virtual_seg_ahead_length =
+  //     current_lane->get_max_virtual_seg_ahead_length();
+  Point2D init_frenet_pt;
+  bool is_in_virtual_area = false;
+  double virtual_length = 0.;
+  double dist_to_virtual_start = 100.;
+  if (frenet_coord_->XYToSL(planning_init_point.x, planning_init_point.y,
+                            &init_frenet_pt.x, &init_frenet_pt.y)) {
+    bool is_find_valid_virtual_area = false;
+    double virtual_area_start_s = 100.;
+    double virtual_area_end_s = 0.;
+    for (double ref_pt_s = init_frenet_pt.x; ref_pt_s < init_frenet_pt.x + kScanVirtualRange; ref_pt_s += kScanVirtualStep) {
+      ReferencePathPoint ego_ahead_ref_pt;
+      if (get_reference_point_by_lon(ref_pt_s, ego_ahead_ref_pt)) {
+        if (ego_ahead_ref_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL &&
+            ego_ahead_ref_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          if (!is_find_valid_virtual_area) {
+            virtual_area_start_s = ref_pt_s;
+            is_find_valid_virtual_area = true;
+          }
+        } else {
+          if (is_find_valid_virtual_area) {
+            virtual_area_end_s = ref_pt_s;
+            virtual_length = virtual_area_end_s - virtual_area_start_s;
+            if (virtual_length >= kMinIntersectionVirtualLength) {
+              is_in_virtual_area = true;
+              dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
+              break;
+            } else {
+              is_find_valid_virtual_area = false;
+            }
+          }
+        }
+      }
+    }
+    if (is_find_valid_virtual_area && !is_in_virtual_area) {
+      virtual_area_end_s = init_frenet_pt.x + kScanVirtualRange;
+      virtual_length = virtual_area_end_s - virtual_area_start_s;
+      if (virtual_length >= kMinIntersectionVirtualLength) {
+        is_in_virtual_area = true;
+        dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
+      } else {
+        is_find_valid_virtual_area = false;
+      }
+    }
   }
   // 1.average curvature filter. sliding window
   std::vector<double> xp_vel{4.167, 8.333, 10.0};          // 20.0
   std::vector<double> fp_radius_thr{200.0, 400.0, 600.0};  // 1000.0
   double curve_radius_thr = interp(init_v, xp_vel, fp_radius_thr);
   double straight_radius_thr = kStraightRadiusDefault;
-  if (is_intersection_scene) {
+  if ((virtual_lane_manager
+           ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+       virtual_lane_manager
+           ->GetIntersectionState() < common::OFF_INTERSECTION) ||
+      (is_in_virtual_area &&
+       dist_to_virtual_start < (init_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
+       virtual_length >= std::max(0.5 * init_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
+    straight_radius_thr = curve_radius_thr;
     curve_radius_thr = kIntersectionRadiusThreshold;
-    straight_radius_thr = kIntersectionRadiusThreshold;
   }
   double big_curve_thr = 1.0 / curve_radius_thr;
   double straight_curv_thr = 1.0 / straight_radius_thr;
@@ -830,7 +876,9 @@ bool ReferencePath::HandleRoadCurvature(
   ref_path_curve_info_.s_vec.reserve(kMaxSamplingSize);
   std::vector<std::pair<double, double>> large_curvature_segments;
   large_curvature_segments.reserve(kMaxSamplingSize);
-  double sampling_range = init_s + kMaxSamplingRange;
+  double valid_range = std::max(valid_lane_line_length_ - init_s, 0.0);
+  double min_valid_continuous_length = std::max(valid_range, kMinCurveLength);
+  double sampling_range = init_s + std::min(kMaxSamplingRange, valid_range);
   double preview_range =
       std::min(std::max(init_s + init_v * kPreviewRangeVelCoeff + kPreviewRangeOffset, init_s + kPreviewRangeMin), sampling_range);
   double segment_start = init_s;
@@ -1000,11 +1048,11 @@ bool ReferencePath::HandleRoadCurvature(
     if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
     } else if ((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
-                kAverageContinuousCurveLength) ||
+                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length)) ||
                (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
-                kAverageContinuousCurveLength)) {
+                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length))) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
     } else {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
@@ -1046,11 +1094,11 @@ bool ReferencePath::HandleRoadCurvature(
     if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
     } else if ((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
-                kAverageContinuousCurveLength) ||
+                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length)) ||
                (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
-                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
-                kAverageContinuousCurveLength)) {
+                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >=
+                std::min(kAverageContinuousCurveLength, min_valid_continuous_length))) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
     } else {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
@@ -1084,8 +1132,9 @@ bool ReferencePath::HandleRoadCurvature(
     }
   } else {
     if ((init_dist_to_seg < kMinMidCurveLength ||
-         seg_length > kMinConnectionLength) &&
-        (init_dist_to_seg + seg_length) > kMinBigCurveContinuousLength) {
+         seg_length > std::min(kMinConnectionLength, min_valid_continuous_length)) &&
+        (std::fabs(init_dist_to_seg) + seg_length) >=
+         std::min(kMinBigCurveContinuousLength, min_valid_continuous_length)) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::BIG_CURVE;
     } else {
       if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
@@ -1098,11 +1147,11 @@ bool ReferencePath::HandleRoadCurvature(
           ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
         }
       } else if (((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
-                   ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
-                   kAverageContinuousCurveLength) ||
+                   ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >=
+                   std::min(kAverageContinuousCurveLength, min_valid_continuous_length)) ||
                   (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
-                   ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
-                   kAverageContinuousCurveLength))) {
+                   ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >=
+                   std::min(kAverageContinuousCurveLength, min_valid_continuous_length)))) {
         ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
       } else {
         ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
@@ -1632,7 +1681,9 @@ bool ReferencePath::UpdateReferencePathInfo(
       std::make_shared<planning_math::KDPath>(std::move(smoothed_path_points));
   const auto &frenet_path_points = smoothed_frenet_coord->path_points();
   ReferencePathPoint last_ref_pt = refined_ref_path_points_.front();
-  for (const auto pt : frenet_path_points) {
+
+  Point2D frenet_point;
+  for (const auto& pt : frenet_path_points) {
     ReferencePathPoint ref_pt;
     ref_pt.path_point.set_x(pt.x());
     ref_pt.path_point.set_y(pt.y());
@@ -1641,7 +1692,6 @@ bool ReferencePath::UpdateReferencePathInfo(
     ref_pt.path_point.set_kappa(pt.kappa());
     ref_pt.path_point.set_dkappa(pt.dkappa());
     ref_pt.path_point.set_ddkappa(pt.ddkappa());
-    Point2D frenet_point;
     if (frenet_coord_->XYToSL(
             pt.x(), pt.y(), &frenet_point.x, &frenet_point.y)) {
       ReferencePathPoint raw_pt;

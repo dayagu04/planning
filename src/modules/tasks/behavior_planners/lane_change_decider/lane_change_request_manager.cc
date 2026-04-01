@@ -2,7 +2,6 @@
 
 #include "adas_function/mrc_condition.h"
 #include "basic_types.pb.h"
-#include "behavior_planners/lane_change_decider/lane_change_requests/cone_lane_change_request.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -297,8 +296,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     ILOG_DEBUG << "[LaneChangeRequestManager::update] manual cancel finish dd "
                   "or map request!";
   }
-  std::cout << "\n int request type is: " << int_request_.request_type()
-            << std::endl;
+  ILOG_DEBUG << "\n int request type is: " << int_request_.request_type();
 
   if (int_request_.request_type() != NO_CHANGE) {
     if (emergence_avoid_request_.request_type() != NO_CHANGE) {

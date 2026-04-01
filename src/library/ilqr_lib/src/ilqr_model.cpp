@@ -18,6 +18,9 @@ void iLqrModel::InitControlVar() {
 
 double iLqrModel::UpateDynamics(StateVec &x0, const ControlVec &u0) {
   double cost = 0.0;
+  for (auto &each_cost : cost_stack_) {
+    each_cost->ResetCostValue();
+  }
   for (size_t t = 0; t < solver_config_ptr_->horizon; ++t) {
     cost += GetCost(x0[t], u0[t], t);
     x0[t + 1] = UpdateDynamicsOneStep(x0[t], u0[t], t);
@@ -28,6 +31,10 @@ double iLqrModel::UpateDynamics(StateVec &x0, const ControlVec &u0) {
 
 void iLqrModel::AddCost(std::shared_ptr<BaseCostTerm> cost_term) {
   cost_stack_.emplace_back(std::move(cost_term));
+}
+
+void iLqrModel::ClearCost() {
+  cost_stack_.clear();
 }
 
 double iLqrModel::GetCost(const State &x, const Control &u,
@@ -42,6 +49,7 @@ double iLqrModel::GetCost(const State &x, const Control &u,
     result = each_cost->GetCost(x, u);
     cost += result;
 
+    each_cost->SetCostValue(each_cost->GetCostValue() + result);
     // update cost map
 #ifdef __ILQR_DEBUG__
     cost_map_ptr_->at(each_cost->GetCostId())[step] = result;
@@ -63,6 +71,7 @@ double iLqrModel::GetTerminalCost(const State &x) {
     result = each_cost->GetCost(x, u);
     cost += result;
 
+    each_cost->SetCostValue(each_cost->GetCostValue() + result);
     // update cost map
 #ifdef __ILQR_DEBUG__
     cost_map_ptr_->at(each_cost->GetCostId())[solver_config_ptr_->horizon] =

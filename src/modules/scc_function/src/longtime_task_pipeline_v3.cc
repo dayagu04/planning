@@ -9,7 +9,7 @@
 
 namespace planning {
 LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
-    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : BaseTaskPipeline(config_builder, session) {
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
@@ -40,7 +40,7 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   traffic_light_decider_ =
       std::make_unique<TrafficLightDecider>(config_builder, session);
   lateral_motion_planner_ =
-      std::make_unique<LateralMotionPlanner>(config_builder, session);
+      std::make_unique<SCCLateralMotionPlanner>(config_builder, session);
 
   // long pipeline V3
   stop_destination_decider_ =
@@ -87,34 +87,63 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   enable_lane_borrow_deciderV2_ =
       lane_borrow_config.enable_lane_borrow_deciderV2;
 
-  hmi_decider_=
-      std::make_unique<SCCHMIDecider>(config_builder, session);
+  hmi_decider_ = std::make_unique<SCCHMIDecider>(config_builder, session);
 
   lat_lon_joint_planner_decider_ =
       std::make_unique<LatLonJointPlannerDecider>(config_builder, session);
 }
 
 bool LongTimeTaskPipelineV3::Run() {
+#ifdef PlanTimeBenchmark
+  double start_time, end_time;
+  start_time = IflyTime::Now_ms();
+#endif
+
   bool ok = traffic_light_decider_->Execute();
   if (!ok) {
     AddErrorInfo(traffic_light_decider_->Name());
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("traffic_light_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = ego_lane_road_right_decider_->Execute();
   if (!ok) {
     AddErrorInfo(ego_lane_road_right_decider_->Name());
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ego_lane_road_right_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = potential_dangerous_agent_decider_->Execute();
   if (!ok) {
     AddErrorInfo(potential_dangerous_agent_decider_->Name());
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("potential_dangerous_agent_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   // ok = construction_scene_decider_->Execute();
   // if (!ok) {
   //   AddErrorInfo(construction_scene_decider_->Name());
+  //   return false;
+  // }
+
+  // ok = sample_poly_speed_adjust_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(sample_poly_speed_adjust_decider_->Name());
   //   return false;
   // }
 
@@ -123,6 +152,11 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(lane_change_decider_->Name());
     return false;
   }
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lane_change_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = lat_lon_joint_planner_decider_->Execute();
   if (!ok) {
@@ -130,17 +164,40 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lat_lon_joint_planner_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = sample_poly_speed_adjust_decider_->Execute();
   if (!ok) {
     AddErrorInfo(sample_poly_speed_adjust_decider_->Name());
     return false;
   }
+  // ok = sample_poly_speed_adjust_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(sample_poly_speed_adjust_decider_->Name());
+  //   return false;
+  // }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("sample_poly_speed_adjust_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = lateral_obstacle_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_obstacle_decider_->Name());
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lateral_obstacle_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
   // if (enable_lane_borrow_deciderV2_) {
   //   ok = lane_borrow_deciderV2_->Execute();
   //   if (!ok) {
@@ -154,6 +211,7 @@ bool LongTimeTaskPipelineV3::Run() {
   //     return false;
   //   }
   // }
+
   if (enable_lane_borrow_deciderV2_) {
     ok = lane_borrow_deciderV2_->Execute();
     if (!ok) {
@@ -161,11 +219,24 @@ bool LongTimeTaskPipelineV3::Run() {
       return false;
     }
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lane_borrow_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = lateral_offset_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_offset_decider_->Name());
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lateral_offset_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   // cailiu2 的gap selector将来可以挪至下方
   ok = gap_selector_decider_->Execute();
@@ -174,12 +245,23 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("gap_selector_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   // 时空联合规划：暂时针对车道内保持
   ok = spatio_temporal_planner_->Execute();
   if (!ok) {
     AddErrorInfo(spatio_temporal_planner_->Name());
     return false;
   }
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("spatio_temporal_planner_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = general_lateral_decider_->Execute();
   if (!ok) {
@@ -187,11 +269,23 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("general_lateral_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = lateral_motion_planner_->Execute();
   if (!ok) {
     AddErrorInfo(lateral_motion_planner_->Name());
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lateral_motion_planner_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   // --↓↓↓↓↓↓--long behavior--↓↓↓↓↓↓--
   ok = stop_destination_decider_->Execute();
@@ -200,11 +294,23 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("stop_destination_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = mrc_brake_decider_->Execute();
   if (!ok) {
     AddErrorInfo(mrc_brake_decider_->Name());
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("mrc_brake_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = agent_longitudinal_decider_->Execute();
   if (!ok) {
@@ -212,6 +318,11 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("agent_longitudinal_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
   // auto *mutable_agent_manager = session_->mutable_environmental_model()
   //                                   ->get_dynamic_world()
   //                                   ->mutable_agent_manager();
@@ -232,18 +343,23 @@ bool LongTimeTaskPipelineV3::Run() {
   // }
 
   // 构建st input
-  double time_start = IflyTime::Now_ms();
+  // double time_start = IflyTime::Now_ms();
   st_graph_input_->Update();  // 相关障碍物 轨迹延长 初始轨迹的车身边界 box
   ok = st_graph_->Init(st_graph_input_);
   auto planning_context = session_->mutable_planning_context();
   planning_context->set_st_graph(st_graph_);
   planning_context->set_st_graph_helper(st_graph_helper_);
-  double time_end = IflyTime::Now_ms();
+  // double time_end = IflyTime::Now_ms();
   if (!ok) {
     ILOG_ERROR << "st graph init error";
     return false;
   }
-  JSON_DEBUG_VALUE("construct_st_graph_cost", time_end - time_start);
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("construct_st_graph_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = expand_st_boundaries_decider_->Execute();
   if (!ok) {
@@ -251,17 +367,34 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("expand_st_boundaries_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = closest_in_path_vehicle_decider_->Execute();
   if (!ok) {
     AddErrorInfo(closest_in_path_vehicle_decider_->Name());
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("closest_in_path_vehicle_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = cipv_lost_prohibit_start_decider_->Execute();
   if (!ok) {
     AddErrorInfo(cipv_lost_prohibit_start_decider_->Name());
     return false;
   }
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("cipv_lost_prohibit_start_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = cipv_lost_prohibit_acceleration_decider_->Execute();
   if (!ok) {
@@ -269,20 +402,36 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
-  time_start = IflyTime::Now_ms();
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("cipv_lost_prohibit_acceleration_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = st_graph_searcher_->Execute();
-  time_end = IflyTime::Now_ms();
+
   if (!ok) {
     AddErrorInfo(st_graph_searcher_->Name());
     return false;
   }
-  JSON_DEBUG_VALUE("st_graph_searcher_cost", time_end - time_start);
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("st_graph_searcher_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = parallel_longitudinal_avoid_decider_->Execute();
   if (!ok) {
     AddErrorInfo(parallel_longitudinal_avoid_decider_->Name());
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("parallel_longitudinal_avoid_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   // ok = gap_selector_decider_->Execute();
   // if (!ok) {
@@ -294,6 +443,11 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(agent_headway_decider_->Name());
     return false;
   }
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("agent_headway_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = longitudinal_decision_decider_->Execute();
   if (!ok) {
@@ -301,17 +455,35 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("longitudinal_decision_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = speed_limit_decider_->Execute();
   if (!ok) {
     AddErrorInfo(speed_limit_decider_->Name());
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("speed_limit_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = start_stop_decider_->Execute();
   if (!ok) {
     AddErrorInfo(start_stop_decider_->Name());
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("start_stop_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   ok = long_ref_path_decider_->Execute();
   if (!ok) {
@@ -320,6 +492,12 @@ bool LongTimeTaskPipelineV3::Run() {
   }
   // --↑↑↑↑↑↑--long behavior--↑↑↑↑↑↑--
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("long_ref_path_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   // ------ long motion planner ------
   ok = scc_longitudinal_motion_planner_->Execute();
   if (!ok) {
@@ -327,13 +505,31 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("scc_longitudinal_motion_planner_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   ok = result_trajectory_generator_->Execute();
   if (!ok) {
     AddErrorInfo(result_trajectory_generator_->Name());
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("result_trajectory_generator_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   hmi_decider_->Execute();
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("hmi_decider_cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   return true;
 }

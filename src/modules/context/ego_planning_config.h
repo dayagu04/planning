@@ -260,6 +260,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_fusion_parking_slot");
     enable_fusion_ground_line =
         read_json_key<bool>(json, "enable_fusion_ground_line");
+    enable_uss =
+        read_json_key<bool>(json, "enable_uss");
     is_ground_line_cluster =
         read_json_key<bool>(json, "is_ground_line_cluster");
     enable_ehr_column_box = read_json_key<bool>(json, "enable_ehr_column_box");
@@ -307,6 +309,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_fusion_ground_line = true;
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
+  bool enable_uss = false;
   double hpp_min_search_range = 20;
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
@@ -1072,6 +1075,12 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     leading_safe_overstep_buffer = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "leading_safe_overstep_buffer"});
+    is_forced_emergency_scene = read_json_keys<bool>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "is_forced_emergency_scene"});
+    sample_st_limit_lat_offset = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "sample_st_limit_lat_offset"});
   }
 
   int sample_v_nums = 15;
@@ -1131,6 +1140,8 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double leading_safe_max_dec = 2.0;
   double leading_safe_overstep_gain = 4.0;
   double leading_safe_overstep_buffer = 3.0;
+  bool is_forced_emergency_scene = false;
+  double sample_st_limit_lat_offset = 2.8;
 };
 
 struct SampleAstarTrajConfig : public EgoPlanningConfig {
@@ -2474,6 +2485,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, max_care_time_for_roadborder,
                      "general_lateral_decider",
                      "max_care_time_for_roadborder");
+    ReadItem<double>(json, decrease_time_for_roadborder,
+                     "general_lateral_decider",
+                     "decrease_time_for_roadborder");                 
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -2620,6 +2634,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double bound_recurrence_v_limit_max = 60;
   double nudge_buffer2lane_boundary_buffer = 0.0;
   double max_care_time_for_roadborder = 3;
+  double decrease_time_for_roadborder = 2.5;
   std::vector<double> curv_bp{50, 150, 400, 600};
   std::vector<double> lat_compensation_buffer{0.25, 0.1, 0.0, 0.0};
   double max_nudge_buffer2side_car = 0.3;
@@ -2864,14 +2879,19 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     ReadItem<bool>(json, pass_acc_mode, "lat_motion_ilqr", "pass_acc_mode");
-    ReadItem<bool>(json, enable_straight_rtk, "lat_motion_ilqr",
-                   "enable_straight_rtk");
+    ReadItem<bool>(json, enable_straight_path, "lat_motion_ilqr",
+                   "enable_straight_path");
     ReadItem<bool>(json, warm_start_enable, "lat_motion_ilqr",
                    "warm_start_enable");
     ReadItem<bool>(json, use_index_clip, "lat_motion_ilqr", "use_index_clip");
     ReadItem<bool>(json, use_acc_compensation, "lat_motion_ilqr",
                    "use_acc_compensation");
+    ReadItem<bool>(json, use_al_ilqr, "lat_motion_ilqr",
+                   "use_al_ilqr");
+    ReadItem<size_t>(json, horizon, "lat_motion_ilqr", "horizon");
+    ReadItem<size_t>(json, max_iter, "lat_motion_ilqr", "max_iter");
     ReadItem<double>(json, delta_t, "lat_motion_ilqr", "delta_t");
+    ReadItem<double>(json, du_tol, "lat_motion_ilqr", "du_tol");
     ReadItem<double>(json, min_v_cruise, "lat_motion_ilqr", "min_v_cruise");
     ReadItem<double>(json, min_ego_vel, "lat_motion_ilqr", "min_ego_vel");
     ReadItem<double>(json, acc_bound, "lat_motion_ilqr", "acc_bound");
@@ -3125,11 +3145,15 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   }
 
   bool pass_acc_mode = false;
-  bool enable_straight_rtk = false;
-  bool warm_start_enable = true;
+  bool enable_straight_path = false;
+  bool warm_start_enable = false;
   bool use_index_clip = true;
   bool use_acc_compensation = true;
+  bool use_al_ilqr  = false;
+  size_t horizon = 25;
+  size_t max_iter = 15;
   double delta_t = 0.2;
+  double du_tol = 0.01;
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;
   double max_steer_angle_dot = 200.0;
@@ -4520,8 +4544,9 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
                      "soft_halfplane_tau");
     ReadItem<double>(json, soft_halfplane_cost_allocation_ratio, "lane_change_joint_decision",
                      "soft_halfplane_cost_allocation_ratio");
-    ReadItem<double>(json, lc_thw, "lane_change_joint_decision",
-                     "lc_thw");
+    ReadItem<double>(json, halfplane_cost_allocation_ratio_later, "lane_change_joint_decision",
+                     "halfplane_cost_allocation_ratio_later");
+    ReadItem<double>(json, lc_thw, "lane_change_joint_decision", "lc_thw");
     ReadItem<double>(json, obs_reaction_decay_time, "lane_change_joint_decision",
                      "obs_reaction_decay_time");
     ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
@@ -4572,6 +4597,7 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double soft_halfplane_s0 = 3.5;
   double soft_halfplane_tau = 0.5;
   double soft_halfplane_cost_allocation_ratio = 0.7;
+  double halfplane_cost_allocation_ratio_later = 0.5;
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;
@@ -4847,11 +4873,20 @@ struct TrafficLightDeciderConfig : public EgoPlanningConfig {
                      "virtual_dis_before_stopline");
     ReadItem<double>(json, stopline_tfl_dis_thred, "traffic_light_decider",
                      "stopline_tfl_dis_thred");
+    ReadItem<double>(json, max_dis_ahead_stopline, "traffic_light_decider",
+                        "max_dis_ahead_stopline");
+    ReadItem<double>(json, min_virtual_dis_thred, "traffic_light_decider",
+                            "min_virtual_dis_thred");
+    ReadItem<double>(json, dis_ratio_can_pass, "traffic_light_decider",
+                            "dis_ratio_can_pass");
   }
 
   bool enable_tfl_decider = false;
   double virtual_dis_before_stopline = 20;
   double stopline_tfl_dis_thred = 50;
+  double max_dis_ahead_stopline = 50;
+  double min_virtual_dis_thred = 10;
+  double dis_ratio_can_pass = 3.0;
 };
 
 struct CrossingAgentDeciderConfig : public EgoPlanningConfig {
@@ -5336,6 +5371,18 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
     // Lane change heuristic cost parameters
     ReadItem(json, weight_hcost_lane_change, "speed_planning",
              "st_graph_searcher", "weight_hcost_lane_change");
+
+    // decision switch penalty
+    ReadItem(json, decision_switch_penalty, "speed_planning",
+             "st_graph_searcher", "decision_switch_penalty");
+
+    // st_graph_searcher behavior layer debounce config
+    ReadItem<int>(json, st_search_overtake_debounce_min_consecutive_frames,
+                  "speed_planning", "st_graph_searcher",
+                  "st_search_overtake_debounce_min_consecutive_frames");
+    ReadItem<double>(json, st_search_overtake_debounce_min_hold_time_ms,
+                     "speed_planning", "st_graph_searcher",
+                     "st_search_overtake_debounce_min_hold_time_ms");
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -5397,6 +5444,13 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double yield_front_vehicle_min_decrease_max_check_time_s = 5.0;
   double yield_front_vehicle_collision_s_buffer = 1.0;
   bool enable_only_s_t_hash = false;
+
+  // st_graph_searcher behavior layer debounce config
+  int st_search_overtake_debounce_min_consecutive_frames = 3;
+  double st_search_overtake_debounce_min_hold_time_ms = 500.0;
+
+  // overtake and yield decision switch penalty
+  double decision_switch_penalty = 2.0;
 
   double distance_ego_rear_edge_to_lower_bound_when_overtake = 5.0;
   double cost_ego_overtake_has_collision_with_lower_bound = 1.0;
@@ -6463,6 +6517,11 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                                  diff_speed_init_ttc_map.ttc_table);
       read_json_vec(
         json,
+        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
+                                 "aggressive_ttc_table"},
+                                 diff_speed_init_ttc_map.aggressive_ttc_table);
+      read_json_vec(
+        json,
         std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
                                  "rear_speed_kph_table"},
                                  rear_vehicle_speed_min_space_map.rear_speed_kph_table);
@@ -6479,6 +6538,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                        "faster_rear_delay_time");
       ReadItem<double>(json, rear_comfort_decel, "lane_change_safety_check",
                        "rear_comfort_decel");
+      ReadItem<double>(json, aggressive_decel_part, "lane_change_safety_check",
+                       "aggressive_decel_part");
       ReadItem<double>(json, lat_offset_buffer, "lane_change_safety_check",
                        "lat_offset_buffer");
       ReadItem<double>(json, target_lane_side_cut_in_check_time, "lane_change_safety_check",
@@ -6495,6 +6556,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<std::string>{"lane_change_safety_check", "hold_state_vel_jerk_map",
                                  "jerk_table"},
                                  hold_state_vel_jerk_map.jerk_table);
+      ReadItem<bool>(json, is_default_aggressive_scence, "lane_change_safety_check",
+                     "is_default_aggressive_scence");
     }
     double exe_ttc_ratio = 0.5;
     double exe_rear_speed_ratio = 1.1;
@@ -6505,12 +6568,14 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     double rear_close_speed_diff_threshold = 1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
     double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
     double rear_comfort_decel = 0.7;  // 后车舒适减速度（m/s²）
+    double aggressive_decel_part = 0.7;  // 激进变道减速度增量（m/s²）
     double lat_offset_buffer = 0.35;  // 横向贴边偏移缓冲区（米）
     double target_lane_side_cut_in_check_time = 1.5;  // 目标车道侧方车切入检查时间窗口（秒）
     double hold_steer_angle_rate_limit_deg = 150.0;  // hold状态下的方向盘转速限制（度/秒）
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
+        std::vector<double> aggressive_ttc_table{0.8, 1.8, 2.0, 2.5, 3.5, 4.5, 6.5, 8.5, 10.0};  // 激进模式起始ttc
     };
     DiffSpeedInitTTCable diff_speed_init_ttc_map;
     struct RearVehicleSpeedMinSpaceMap {
@@ -6523,6 +6588,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};  // 对应的jerk值
     };
     HoldStateVelJerkMap hold_state_vel_jerk_map;
+    bool is_default_aggressive_scence = false;  // 默认紧急场景标志位，用于调试
 };
 
 struct HmiDeciderConfig : public EgoPlanningConfig{
@@ -6546,6 +6612,10 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                      "lon_jerk_thr");
     ReadItem<double>(json, lat_jerk_hysteresis_value, "hmi_decider",
                      "lat_jerk_hysteresis_value");
+    ReadItem<double>(json, left_right_lane_mild_dis, "hmi_decider",
+                        "left_right_lane_mild_dis");
+    ReadItem<double>(json, left_right_lane_middle_dis, "hmi_decider",
+                            "left_right_lane_middle_dis");
   }
   double tfl_reminder_cipv_dis = 8.0;
   double construction_warning_hmi_speed_max = 60;
@@ -6556,6 +6626,8 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
   double lon_acc_thr = 3.0;
   double lon_jerk_thr = 0.3;
   double lat_jerk_hysteresis_value = 0.1;
+  double left_right_lane_mild_dis = 30.0;
+  double left_right_lane_middle_dis = 1.0;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{

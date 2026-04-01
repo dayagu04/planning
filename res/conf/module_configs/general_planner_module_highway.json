@@ -35,6 +35,7 @@
   "enable_fusion_occupancy_objects": true,
   "enable_fusion_parking_slot": true,
   "enable_fusion_ground_line": true,
+  "enable_uss":false,
   "enable_lane_borrow_deciderV2": false,
   "is_ground_line_cluster": false,
   "enable_ehr_column_box": false,
@@ -567,7 +568,8 @@
     "dynamic_vru_nudge_lateral_buffer": 0.9,
     "bound_recurrence_v_limit_max": 80,
     "nudge_buffer2lane_boundary_buffer": 0.1,
-    "max_care_time_for_roadborder": 3.5,
+    "max_care_time_for_roadborder": 4.2,
+    "decrease_time_for_roadborder": 3.5,
     "curv_bp": [
       50,
       200,
@@ -829,7 +831,7 @@
     "q_ego_ref_y": 0.2,
     "q_ego_ref_theta": 20.0,
     "q_ego_ref_delta": 1.0,
-    "q_ego_ref_vel": 0.3,
+    "q_ego_ref_vel": 1.5,
     "q_ego_ref_acc": 0.05,
     "q_obs_ref_x": 0.2,
     "q_obs_ref_y": 0.2,
@@ -851,19 +853,20 @@
     "q_obs_jerk_weight": 30.0,
     "q_obs_omega_weight": 80.0,
     "q_ego_acc_bound_weight": 1600.0,
-    "ego_acc_max": 1.5,
+    "ego_acc_max": 1.2,
     "ego_acc_min": -1.8,
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 2.0,
     "ego_jerk_min": -2.5,
-    "q_hard_halfplane_weight": 0.0,
+    "q_hard_halfplane_weight": 100.0,
     "hard_halfplane_dist": 3.5,
     "halfplane_cost_allocation_ratio": 0.6,
     "q_soft_halfplane_weight": 0.5,
     "soft_halfplane_s0": 5.5,
     "soft_halfplane_tau": 0.5,
     "lc_thw": 0.5,
-    "soft_halfplane_cost_allocation_ratio": 0.8
+    "soft_halfplane_cost_allocation_ratio": 0.8,
+    "halfplane_cost_allocation_ratio_later": 0.5
   },
   "lat_lon_joint_planner": {
     "q_ego_ref_x": 3.0,
@@ -897,8 +900,8 @@
   },
   "lat_motion_ilqr": {
     "pass_acc_mode": true,
-    "enable_straight_rtk": false,
-    "warm_start_enable": true,
+    "enable_straight_path": false,
+    "warm_start_enable": false,
     "use_index_clip": true,
     "use_acc_compensation": true,
     "delta_t": 0.2,
@@ -1506,7 +1509,10 @@
   "traffic_light_decider": {
     "enable_tfl_decider": false,
     "virtual_dis_before_stopline": 25.5,
-    "stopline_tfl_dis_thred": 50
+    "stopline_tfl_dis_thred": 50,
+    "max_dis_ahead_stopline": 50,
+    "min_virtual_dis_thred": 16,
+    "dis_ratio_can_pass": 3.0
   },
   "pnp_precise_lat_bound_care_threshold": 5.0,
   "pnp_lower_speed_protect_threshold": 0.3,
@@ -1605,7 +1611,8 @@
         "weight_accel_sign_overtake": 5.0
       },
       "cutin_time_st_graph_threshold": 2.0,
-      "weight_hcost_lane_change": 10.0
+      "weight_hcost_lane_change": 10.0,
+      "decision_switch_penalty": 2.0
     },
     "start_stop_decider": {
       "large_vehicle_length": 8.0,
@@ -1993,7 +2000,9 @@
     "leading_safe_delay_time":0.5,
     "leading_safe_max_dec":2.0,
     "leading_safe_overstep_gain":4.0,
-    "leading_safe_overstep_buffer":3.0
+    "leading_safe_overstep_buffer":3.0,
+    "is_forced_emergency_scene": false,
+    "sample_st_limit_lat_offset":2.8
   },
   "sample_astar_traj":{
     "time_step_near": 1,
@@ -2179,7 +2188,7 @@
   },
   "lane_change_safety_check": {
     "exe_ttc_ratio": 0.7,
-    "ttc_decay_factor": 0.90,
+    "ttc_decay_factor": 0.92,
     "press_line_ratio_threshold": 0.1,
     "rear_close_distance_threshold": 6.0,
     "rear_close_speed_diff_threshold": 1.5,
@@ -2187,6 +2196,7 @@
     "exe_rear_distance_ratio": 0.8,
     "faster_rear_delay_time": 0.3,
     "rear_comfort_decel": 0.8,
+    "aggressive_decel_part": 0.7,
     "lat_offset_buffer": 0.30,
     "target_lane_side_cut_in_check_time": 1.51,
     "hold_steer_angle_rate_limit_deg": 75.0,
@@ -2212,6 +2222,17 @@
         7.5,
         8.5,
         10.0
+      ],
+      "aggressive_ttc_table": [
+        0.8,
+        1.8,
+        2.0,
+        2.5,
+        3.5,
+        4.5,
+        6.5,
+        8.5,
+        10.0
       ]
     },
     "rear_vehicle_speed_min_space_map": {
@@ -2221,7 +2242,8 @@
     "hold_state_vel_jerk_map": {
       "vel_table":  [4.167, 8.333, 16.667, 25.0],
       "jerk_table": [1.2, 1.5, 1.4, 1.0]
-    }
+    },
+    "is_default_aggressive_scence": false
   },
   "hmi_decider": {
     "tfl_reminder_cipv_dis": 8.0,
@@ -2232,7 +2254,9 @@
     "ramp_lat_jerk_thr": 0.65,
     "lon_acc_thr": 2.0,
     "lon_jerk_thr": 1.5,
-    "lat_jerk_hysteresis_value": 0.2
+    "lat_jerk_hysteresis_value": 0.2,
+    "left_right_lane_mild_dis": 30.0,
+    "left_right_lane_middle_dis": 1.0
   },
   "reference_path_manager": {
     "is_enable_construction_refline": true

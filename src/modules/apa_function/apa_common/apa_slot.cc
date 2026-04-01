@@ -121,7 +121,7 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot,
       limiter_.end_pt << fusion_slot.limiters[0].end_points[1].x,
           fusion_slot.limiters[0].end_points[1].y;
     } else if (fusion_slot.limiters_size == 2) {
-      if (fusion_slot.type == iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+      if (slot_type_ == SlotType::PARALLEL) {
         Eigen::Vector2d a0b0 =
             Eigen::Vector2d(fusion_slot.limiters[0].end_points[0].x -
                                 fusion_slot.limiters[1].end_points[0].x,

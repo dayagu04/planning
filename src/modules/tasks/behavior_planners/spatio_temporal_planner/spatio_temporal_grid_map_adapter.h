@@ -64,12 +64,12 @@ class SLTGridMapAdapter {
    */
   std::shared_ptr<SscMap> p_ssc_map() const { return p_ssc_map_; }
 
-  std::string Name();
+  const std::string& Name();
 
   /**
    * @brief Initialize the planner with config path
    */
-  void Init(const std::string config_path);
+  void Init(const std::string& config_path);
 
   /**
    * @brief Run one planning round with given states
@@ -86,6 +86,10 @@ class SLTGridMapAdapter {
     return virtual_agents_st_info_;
   }
 
+  const std::vector<std::shared_ptr<agent::Agent>>& ConsiderSurroundAgents() {
+    return consider_surround_agents_;
+  }
+  
   SpatioTemporalGridMap config_;
   planning::framework::Session *session_;
   std::shared_ptr<ReferencePath> reference_path_ = nullptr;

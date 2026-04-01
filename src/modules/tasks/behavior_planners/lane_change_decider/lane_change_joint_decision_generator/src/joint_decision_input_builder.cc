@@ -17,16 +17,15 @@ JointDecisionInputBuilder::JointDecisionInputBuilder(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : session_(session) {
   lc_decision_config_ = config_builder->cast<JointDecisionPlannerConfig>();
+  speed_planning_config_ = config_builder->cast<SpeedPlannerConfig>();
   obstacles_selector_ =
       std::make_shared<JointDecisionObstaclesSelector>(session);
-  speed_limit_calculator_ =
-      std::make_unique<JointDecisionSpeedLimit>(config_builder, session);
 
   comfort_params_.v0 = 33.5;
   comfort_params_.s0 = 2.5;
   comfort_params_.T = lc_decision_config_.lc_thw;
-  comfort_params_.a = 2.0;
-  comfort_params_.b_max = 2.0;
+  comfort_params_.a = 2.5;
+  comfort_params_.b_max = 3.0;
   comfort_params_.b = 1.0;
   comfort_params_.b_hard = 4.0;
   comfort_params_.delta = 4.0;
@@ -189,15 +188,29 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
   const double dt = kPlanningTimeStep;
 
-  // auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
-  // const double v0 = speed_limit_result.speed_limit;
-  const auto& last_speed_limit_decider_output =
+  const double cruise_speed = ego_state_manager->ego_v_cruise();
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  const bool is_in_lane_change_execution =
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeExecution ||
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeComplete ||
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeHold;
+
+  const auto& speed_limit_decider_output =
       session_->planning_context().speed_limit_decider_output();
-  double last_speed_limit = 0.0;
-  auto last_speed_limit_type = SpeedLimitType::NONE;
-  last_speed_limit_decider_output.GetSpeedLimit(&last_speed_limit,
-                                                &last_speed_limit_type);
-  const double v0 = last_speed_limit;
+  double speed_limit_normal = cruise_speed;
+  
+  if (is_in_lane_change_execution) {
+    speed_limit_normal = std::fmin(
+        speed_limit_normal, speed_planning_config_.lane_change_upper_speed_limit_kph / 3.6);
+  }
+
+  double speed_limit_ref = std::numeric_limits<double>::max();
+  auto speed_limit_type_ref = SpeedLimitType::NONE;
+  speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
+                                           &speed_limit_type_ref);
+  const double v0 = std::fmin(speed_limit_normal, speed_limit_ref);
   comfort_params_.v0 = v0;
 
   // const auto& lane_change_decider_output =
@@ -263,7 +276,7 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   ref_trajectory_[0].theta = current_theta;
   ref_trajectory_[0].delta = current_delta;
 
-  double front_s = 200.0;
+  double front_s = 250.0;
   double front_vel = v0;
   double front_acc = 0.0;
 
@@ -446,6 +459,8 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   planning_input.set_soft_halfplane_tau(lc_decision_config_.soft_halfplane_tau);
   planning_input.set_soft_halfplane_cost_allocation_ratio(
       lc_decision_config_.soft_halfplane_cost_allocation_ratio);
+  planning_input.set_halfplane_cost_allocation_ratio_later(
+      lc_decision_config_.halfplane_cost_allocation_ratio_later);
 
   planning_input.set_obs_reaction_decay_time(
       lc_decision_config_.obs_reaction_decay_time);

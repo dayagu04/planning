@@ -86,8 +86,7 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                parking_type == ParkingVehDirection::NONE) {
       passage_half_length = 18.0;
       virtual_wall_x_offset = 1.5;
-      passage_height =
-          apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
+      passage_height = head_out_passage_height;
     }
 
     CalcVerticalVirtualWall(points, slot.GetWidth(), slot.GetLength(),
@@ -373,7 +372,8 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
 
   // passage left/right bound
   tmp_passage_boundary.y_upper = slot_boundary_.y_lower;
-  tmp_passage_boundary.y_lower = slot_boundary_.y_lower - config.parallel_passage_width;
+  tmp_passage_boundary.y_lower =
+      slot_boundary_.y_lower - config.parallel_passage_width;
 
   // boundary只能增长，不能缩减.
   // 否则车辆移动后，缩减后的boundary无法再生成一致的path.

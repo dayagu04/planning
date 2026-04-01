@@ -753,7 +753,7 @@ bool LaneBorrowDecider::IsSafeForLaneBorrow() {
     left_borrow_ = false;
     right_left_bounds_l = obs_right_l_;
     if (right_lane_ptr_ == nullptr) {
-      std::cout << "right lane is nullptr!" << std::endl;
+      ILOG_DEBUG << "right lane is nullptr!";
       return false;
     }
     const double neighbor_width =

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <complex>
 #include <cstddef>
+#include <iterator>
 #include <utility>
 #include <vector>
 
@@ -60,8 +61,9 @@ constexpr double kLongitReservedBuffer = 0.5;
 
 }  // namespace
 
-std::string SLTGridMapAdapter::Name() {
-  return std::string("spatio_temporal_grid_map_adapter");
+const std::string& SLTGridMapAdapter::Name() {
+  static const std::string kName("spatio_temporal_grid_map_adapter");
+  return kName;
 }
 
 SLTGridMapAdapter::SLTGridMapAdapter(
@@ -273,7 +275,7 @@ void SLTGridMapAdapter::StateTransformForInputData(
     if (agent_iter->trajectories().empty()) {
       continue;
     }
-    const trajectory::Trajectory agent_trajectory =
+    const trajectory::Trajectory& agent_trajectory =
         agent_iter->trajectories()[0];
     std::vector<State> agent_trajs_state;
     std::vector<planning_math::Vec2d> agent_frenet_point_vec;
@@ -296,13 +298,15 @@ void SLTGridMapAdapter::StateTransformForInputData(
 
       AgentVerticesTransform(v_global_vec, &v_frenet_vec);
 
-      agent_frenet_point_vec.insert(agent_frenet_point_vec.end(),
-                                    v_frenet_vec.begin(), v_frenet_vec.end());
+      agent_frenet_point_vec.insert(
+          agent_frenet_point_vec.end(),
+          std::make_move_iterator(v_frenet_vec.begin()),
+          std::make_move_iterator(v_frenet_vec.end()));
     }
-    agents_global_state_vec.insert(
-        std::make_pair(agent_iter->agent_id(), agent_trajs_state));
-    agents_frenet_point_vec.insert(
-        std::make_pair(agent_iter->agent_id(), agent_frenet_point_vec));
+    agents_global_state_vec.emplace(agent_iter->agent_id(),
+                                    std::move(agent_trajs_state));
+    agents_frenet_point_vec.emplace(agent_iter->agent_id(),
+                                    std::move(agent_frenet_point_vec));
   }
 
   // ~ Stage II. Retrieve states and points
@@ -363,6 +367,7 @@ void SLTGridMapAdapter::StateTransformForInputData(
     agent_time_corner->set_is_static(agent_iter->is_static());
     const auto& fs_point = fs_iter->second;
     int index = 0;
+    bool is_consider_spatio = false;
     for (int i = 0; i < state_iter->second.size(); ++i) {
       const auto& state = state_iter->second[i];
 
@@ -388,33 +393,36 @@ void SLTGridMapAdapter::StateTransformForInputData(
       }
       AABox2d agent_box(box_corners, num_agent);
       offset++;
-      agent_state.agent_box_set[i] = agent_box;
-      if ((agent_box.max_y() < min_target_l) ||
-          (agent_box.min_y() > max_target_l) ||
-          (agent_box.min_x() >
+      agent_state.agent_box_set[i] = std::move(agent_box);
+      const AABox2d& box_ref = agent_state.agent_box_set[i];
+      agent_state.agent_boxs_set.insert(std::make_pair(index, box_ref));
+      if ((box_ref.max_y() < min_target_l) ||
+          (box_ref.min_y() > max_target_l) ||
+          (box_ref.min_x() >
            ego_front_consider_obstacle_distance_ + ego_frenet_state_.s()) ||
-          (agent_box.max_x() < ego_box.min_x() - kLongitReservedBuffer)) {
+          (box_ref.max_x() < ego_box.min_x() - kLongitReservedBuffer)) {
         time_and_corners->set_enable_use(false);
         index++;
+        is_consider_spatio = is_consider_spatio || false;
         continue;
       } else {
-        agent_state.agent_boxs_set.insert(std::make_pair(index, agent_box));
         time_and_corners->set_enable_use(true);
         index++;
+        is_consider_spatio = true;
       }
       // agent_state.frenet_vertices.emplace_back(agent_state_vertices);
       if (state.time_stamp <= kDefaultConsiderDynamicObstacleTajsTime) {
-        if (agent_box.max_x() > max_x) {
-          max_x = agent_box.max_x();
+        if (box_ref.max_x() > max_x) {
+          max_x = box_ref.max_x();
         }
-        if (agent_box.max_y() > max_y) {
-          max_y = agent_box.max_y();
+        if (box_ref.max_y() > max_y) {
+          max_y = box_ref.max_y();
         }
-        if (agent_box.min_x() < min_x) {
-          min_x = agent_box.min_x();
+        if (box_ref.min_x() < min_x) {
+          min_x = box_ref.min_x();
         }
-        if (agent_box.min_y() < min_y) {
-          min_y = agent_box.min_y();
+        if (box_ref.min_y() < min_y) {
+          min_y = box_ref.min_y();
         }
       }
     }
@@ -456,15 +464,16 @@ void SLTGridMapAdapter::StateTransformForInputData(
     //       }
     //     }
     // #endif
-    if (agent_state.agent_boxs_set.empty()) {
-      continue;
-    }
+    // if (agent_state.agent_boxs_set.empty()) {
+    //   continue;
+    // }
     max_box_corners.emplace_back(Vec2d(min_x, max_y));
     max_box_corners.emplace_back(Vec2d(max_x, max_y));
     max_box_corners.emplace_back(Vec2d(max_x, min_y));
     max_box_corners.emplace_back(Vec2d(min_x, min_y));
 
-    for (int i = 0; i < max_box_corners.size(); ++i) {
+    const size_t n_corners = max_box_corners.size();
+    for (size_t i = 0; i < n_corners; ++i) {
       const auto& corner = max_box_corners[i];
       auto max_box_corner = agent_time_corner->mutable_max_box_corners()->Add();
       max_box_corner->set_x(corner.x());
@@ -472,8 +481,9 @@ void SLTGridMapAdapter::StateTransformForInputData(
     }
 
     AABox2d max_AABBbox(max_box_corners);
-    agent_state.max_agent_box = max_AABBbox;
-    surround_forward_trajs_state_.emplace_back(agent_state);
+    agent_state.max_agent_box = std::move(max_AABBbox);
+    agent_state.is_consider_spatio = is_consider_spatio;
+    surround_forward_trajs_state_.emplace_back(std::move(agent_state));
   }
 
   // * Virtual agengt spatio temporal info
@@ -481,7 +491,7 @@ void SLTGridMapAdapter::StateTransformForInputData(
   if (!virtual_agents_.empty()) {
     for (size_t i = 0; i < virtual_agents_.size(); ++i) {
       VirtualAgentSpatioTemporalInFo virtual_agent_st_info;
-      const auto agent = virtual_agents_[i];
+      const auto& agent = virtual_agents_[i];
       Point2D agent_point(agent->x(), agent->y());
       Point2D frenet_point;
       if (!current_lane_coord_->XYToSL(agent_point, frenet_point)) {
@@ -490,7 +500,7 @@ void SLTGridMapAdapter::StateTransformForInputData(
       virtual_agent_st_info.frenet_slt_info.set_s(frenet_point.x);
       virtual_agent_st_info.frenet_slt_info.set_l(frenet_point.y);
       virtual_agent_st_info.frenet_slt_info.set_t(0.0);
-      virtual_agents_st_info_.emplace_back(virtual_agent_st_info);
+      virtual_agents_st_info_.emplace_back(std::move(virtual_agent_st_info));
     }
   }
 

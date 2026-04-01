@@ -504,8 +504,8 @@
   "entrance_slot_mirror_lat_buffer": 0.13,
   "entrance_slot_extra_turn_lat_buffer": 0.03,
 
-  "in_slot_body_lat_buffer": 0.13,
-  "in_slot_mirror_lat_buffer": 0.10,
+  "in_slot_body_lat_buffer": 0.10,
+  "in_slot_mirror_lat_buffer": 0.08,
   "in_slot_extra_turn_lat_buffer": 0.03,
 
   "comment_23": "lat lon speed buffer",
@@ -622,6 +622,7 @@
   "parallel_col_buffer_in_slot": 0.25,
   "parallel_col_small_buffer_in_slot": 0.16,
   "parallel_enable_hybrid_astar": false,
+  "parallel_dynamic_plan_kappa_var": 0.2,
 
   "comment_31": "gear change decider params",
   "all_max_gear_change_count_searching": 20,

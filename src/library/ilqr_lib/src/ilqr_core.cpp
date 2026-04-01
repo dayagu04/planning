@@ -122,10 +122,29 @@ void iLqr::InitSolverConfig() {
   solver_info_.al_iteration_info.constraint_data_iteration.resize(
       constraint_num, horizon + 1);
 
+  solver_info_.lat_al_iteration_info.mu_hard_acc_iteration.resize(
+      max_outer_iter, horizon + 1);
+  solver_info_.lat_al_iteration_info.rho_hard_acc_iteration.resize(
+      max_outer_iter, horizon + 1);
+  solver_info_.lat_al_iteration_info.mu_hard_jerk_iteration.resize(
+      max_outer_iter, horizon + 1);
+  solver_info_.lat_al_iteration_info.rho_hard_jerk_iteration.resize(
+      max_outer_iter, horizon + 1);
+  solver_info_.lat_al_iteration_info.mu_hard_upper_pos_iteration.resize(
+      max_outer_iter, horizon + 1);
+  solver_info_.lat_al_iteration_info.rho_hard_upper_pos_iteration.resize(
+      max_outer_iter, horizon + 1);
+  solver_info_.lat_al_iteration_info.mu_hard_lower_pos_iteration.resize(
+      max_outer_iter, horizon + 1);
+  solver_info_.lat_al_iteration_info.rho_hard_lower_pos_iteration.resize(
+      max_outer_iter, horizon + 1);
+
+  solver_info_.lat_al_iteration_info.constraint_data_iteration.resize(
+      constraint_num, horizon + 1);
 #endif
 
   // init cost size
-  solver_info_.cost_size = 0;
+  solver_info_.cost_size = ilqr_model_ptr_->GetCostStackPtr()->size();
 
   // for ilqr_model
   ilqr_model_ptr_->InitControlVar();
@@ -186,6 +205,11 @@ void iLqr::InitSolverConfig(size_t state_size, size_t input_size) {
 void iLqr::AddCost(std::shared_ptr<BaseCostTerm> cost_term) {
   ilqr_model_ptr_->AddCost(cost_term);
   solver_info_.cost_size++;
+}
+
+void iLqr::ClearCost() {
+  ilqr_model_ptr_->ClearCost();
+  solver_info_.cost_size = 0;
 }
 
 void iLqr::Simulation(const State &x0, const ControlVec &u_vec) {
@@ -358,6 +382,9 @@ bool iLqr::ForwardPass(double &new_cost, double &expected, const size_t &iter) {
     alpha = solver_config_ptr_->alpha_vec[i];
     new_cost = 0.0;
 
+    for (auto &each_cost : *(ilqr_model_ptr_->GetCostStackPtr())) {
+      each_cost->ResetCostValue();
+    }
     for (size_t i = 0; i < solver_config_ptr_->horizon; ++i) {
       const auto du =
           alpha * k_vec_[i] + K_vec_[i] * (xk_new_vec_[i] - xk_vec_[i]);
@@ -575,6 +602,11 @@ bool iLqr::iLqrIteration() {
     solver_info_.iteration_info_vec[iter].dcost = dcost;
     solver_info_.iteration_info_vec[iter].lambda = lambda_;
     solver_info_.iteration_info_vec[iter].expect = expected;
+    solver_info_.iteration_info_vec[iter].cost_vec.clear();
+    for (auto &each_cost : *(ilqr_model_ptr_->GetCostStackPtr())) {
+      CostInfo each_cost_info(each_cost->GetCostId(), each_cost->GetCostValue());
+      solver_info_.iteration_info_vec[iter].cost_vec.emplace_back(std::move(each_cost_info));
+    }
 
     // calculate t_forward_pass_ms
 #ifdef __ILQR_TIMER__

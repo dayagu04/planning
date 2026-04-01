@@ -21,6 +21,8 @@
 namespace planning {
 const double kPlanningCycleTime = 1.0 / FLAGS_planning_loop_rate;
 const double kSpeedThr = 100;
+const double kRearVehicleTTCThreshold = 2.5;  // 交互时后方车TTC阈值 (s)
+const double kNudgeDistanceToCenterLineThreshold = 0.1;  // 避让静态障碍物超越中心线的距离
 
 SccLateralObstacleDecider::SccLateralObstacleDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -1383,15 +1385,11 @@ void SccLateralObstacleDecider::
     double desire_v = std::min(lane_boundary_free_space_desire_v,
                                road_boundary_free_space_desire_v);
     desire_v = std::min(desire_v, static_obstacle_free_space_desire_v);
-    double desire_v_hysteresis = 0;
     double space_hysteresis = 0;
-    if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
-        last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
-      // 低速状态下允许自车速度变化较快，但是中高速时，这个条件需要适当缩小
-      std::array<double, 5> x_v_factor{0.5, 4.17, 8.33, 16.67, 33.33};
-      std::array<double, 5> f_v_factor{5, 4.5, 4, 4, 2.7};
-      desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
-      // desire_v_hysteresis = 5;
+    if (last_output_.find(frenet_obstacle->id()) != last_output_.end() &&
+        (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
+         last_output_[frenet_obstacle->id()] ==
+             LatObstacleDecisionType::RIGHT)) {
       space_hysteresis = -0.1;
     } else {
       space_hysteresis = 0.1;
@@ -1426,6 +1424,10 @@ void SccLateralObstacleDecider::
       }
     }
     if (has_safe_v_space_current) {
+      // 低速状态下允许自车速度变化较快，但是中高速时，这个条件需要适当缩小
+      std::array<double, 5> x_v_factor{0.5, 4.17, 8.33, 16.67, 33.33};
+      std::array<double, 5> f_v_factor{5, 4.5, 4, 4, 2.7};
+      double desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
       obstacle_interaction_info.desire_nudge_static_safe_v =
           ego_v_ + desire_v_hysteresis;
     }
@@ -1465,7 +1467,7 @@ void SccLateralObstacleDecider::
 
     if (frenet_obstacle->frenet_obstacle_boundary().s_start >
         front_nearest_follow_obstacle->frenet_obstacle_boundary().s_start) {
-      output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
+      output_[frenet_obstacle->id()] = LatObstacleDecisionType::IGNORE;
     }
   }
 }
@@ -1474,6 +1476,9 @@ void SccLateralObstacleDecider::
     UpdateStaticObstacleLateralDecisionBaseDynamicFreeSpace() {
   // 计算静态障碍物的决策标签
   const double kSafeDynamicObstacleSpace = 0.8;
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double half_ego_width = 0.5 * vehicle_param.width;
   for (auto frenet_obstacle : reference_path_ptr_->get_obstacles()) {
     if (frenet_obstacle == nullptr) {
       continue;
@@ -1488,12 +1493,12 @@ void SccLateralObstacleDecider::
       continue;
     }
 
-    if (!(output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT ||
-          output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT)) {
+    if (output_.find(frenet_obstacle->id()) == output_.end()) {
       continue;
     }
 
-    if (output_.find(frenet_obstacle->id()) == output_.end()) {
+    if (!(output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT ||
+          output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT)) {
       continue;
     }
 
@@ -1507,17 +1512,14 @@ void SccLateralObstacleDecider::
       continue;
     }
 
-    double desire_v_hysteresis = 1;
     double space_hysteresis = 0;
-    if (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
-        last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::RIGHT) {
-      std::array<double, 5> x_v_factor{1, 4.17, 8.33, 16.67,33.33};
-      std::array<double, 5> f_v_factor{2, 2, 1.5, 1.2, 1.08};
-      desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
-      // desire_v_hysteresis = 2;
+    if (last_output_.find(frenet_obstacle->id()) != last_output_.end() &&
+        (last_output_[frenet_obstacle->id()] == LatObstacleDecisionType::LEFT ||
+         last_output_[frenet_obstacle->id()] ==
+             LatObstacleDecisionType::RIGHT)) {
       space_hysteresis = -0.1;
     } else {
-      space_hysteresis = 0.25;// 动态障碍物不确定性比静态障碍物大
+      space_hysteresis = 0.25;  // 动态障碍物不确定性比静态障碍物大
     }
 
     LateralObstacleHistoryInfo& history =
@@ -1543,15 +1545,66 @@ void SccLateralObstacleDecider::
     // 如果上一帧不避让，则当前帧的space_hysteresis加滞回，防止抖动
     // 后续需要优化这个条件
     if (!(has_safe_v_space && has_enough_space)) {
-      output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
-      lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car = false;
+      double nudge_buffer_hysteresis = 0;
+      if (last_output_.find(frenet_obstacle->id()) != last_output_.end() &&
+          last_output_[frenet_obstacle->id()] ==
+              LatObstacleDecisionType::FOLLOW) {
+        // 0.1的距离滞回
+        nudge_buffer_hysteresis = 0.1;
+      }
+      bool is_pre_nudge_over_center_lane = false;
+      double nudge_buffer = CalDesireStaticLateralDistance(*frenet_obstacle);
+      if (frenet_obstacle->d_min_cpath() > 0) {
+        is_pre_nudge_over_center_lane =
+            frenet_obstacle->d_min_cpath() - nudge_buffer - half_ego_width <
+            -kNudgeDistanceToCenterLineThreshold + nudge_buffer_hysteresis;
+      } else if (frenet_obstacle->d_max_cpath() < 0) {
+        is_pre_nudge_over_center_lane =
+            frenet_obstacle->d_max_cpath() + nudge_buffer + half_ego_width >
+            kNudgeDistanceToCenterLineThreshold - nudge_buffer_hysteresis;
+      }
+      if (is_pre_nudge_over_center_lane) {
+        output_[frenet_obstacle->id()] = LatObstacleDecisionType::FOLLOW;
+        lateral_obstacle_history_info_[frenet_obstacle->id()].is_avd_car =
+            false;
+      }
     }
     if (has_safe_v_space_current) {
+      std::array<double, 5> x_v_factor{1, 4.17, 8.33, 16.67,33.33};
+      std::array<double, 5> f_v_factor{2, 2, 1.5, 1.2, 1.08};
+      double desire_v_hysteresis = interp(std::fabs(ego_v_), x_v_factor, f_v_factor);
       obstacle_interaction_info.desire_nudge_dynamic_safe_v =
           ego_v_ * desire_v_hysteresis;
     }
     obstacle_interaction_info.has_dynamic_safe_v_space = has_safe_v_space;
   }
+}
+
+double SccLateralObstacleDecider::CalDesireStaticLateralDistance(
+    const FrenetObstacle& frenet_obstacle) {
+  constexpr double kStaticVRUMaxExtraLateralBuffer = 0.7;
+  constexpr double kConeMaxExtraLateralBuffer = 0.15;
+  constexpr double kBarrelMaxExtraLateralBuffer = 0.25;
+  constexpr double kStaticOtherMaxExtraLateralBuffer = 0.35;
+  constexpr double kExtraTruckNudgeBuffer = 0.2;
+  constexpr double kNudgeBaseDistance = 0.4;
+
+  double max_extra_lateral_buffer = 0;
+  if (frenet_obstacle.obstacle()->is_VRU()) {
+    max_extra_lateral_buffer = kStaticVRUMaxExtraLateralBuffer;
+  } else if (frenet_obstacle.obstacle()->type() ==
+             iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE) {
+    max_extra_lateral_buffer = kConeMaxExtraLateralBuffer;
+  } else if (frenet_obstacle.obstacle()->type() ==
+             iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL) {
+    max_extra_lateral_buffer = kBarrelMaxExtraLateralBuffer;
+  } else {
+    max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
+  }
+  if (IsTruck(frenet_obstacle)) {
+    max_extra_lateral_buffer += kExtraTruckNudgeBuffer;
+  }
+  return kNudgeBaseDistance + max_extra_lateral_buffer;
 }
 
 void SccLateralObstacleDecider::
@@ -1712,7 +1765,6 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     ObstacleInfo& obstacle_interaction_info,
     std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
   double free_space = 100;
-  double distance_to_centerline = 100;
   const double kLatOverlapBuffer = 0.3;
 
   if (obstacle_interaction_info.lateral_avoid_direction ==
@@ -1726,6 +1778,9 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
       continue;
     }
     if (frenet_obs->is_static()) {
+      continue;
+    }
+    if (!frenet_obs->obstacle()->is_normal()) {
       continue;
     }
     if (frenet_obs->id() == frenet_obstacle.id()) {
@@ -1743,11 +1798,20 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
     double start_l = std::max(ego_l_start, obstacle_l_start);
     double end_l = std::min(ego_l_end, obstacle_l_end);
     bool lat_overlap_for_rear_obs = (start_l < end_l - kLatOverlapBuffer);
-    bool is_rear_obstacle =
-        reference_path_ptr_->get_ego_frenet_boundary().s_start >
-        frenet_obs->frenet_obstacle_boundary().s_end;
-    if (is_rear_obstacle && lat_overlap_for_rear_obs) {
-      continue;
+    if (reference_path_ptr_->get_ego_frenet_boundary().s_start >
+        frenet_obs->frenet_obstacle_boundary().s_end) {
+      // 计算后方车ttc
+      double ttc =
+          frenet_obs->frenet_relative_velocity_s() > 0
+              ? ((reference_path_ptr_->get_ego_frenet_boundary().s_start -
+                  frenet_obs->frenet_obstacle_boundary().s_end) /
+                 frenet_obs->frenet_relative_velocity_s())
+              : std::numeric_limits<double>::max();
+      bool is_care_rear_obstacle =
+          ttc < kRearVehicleTTCThreshold && !lat_overlap_for_rear_obs;
+      if (!is_care_rear_obstacle) {
+        continue;
+      }
     }
 
     if (obstacle_interaction_info.lateral_avoid_direction ==
@@ -1755,9 +1819,11 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
       // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
       if (frenet_obs->d_min_cpath() > 0) {
         // 按照自车匀速递推的轨迹，判断自车是否与动态障碍物存在overlap
+        double min_right_boundary_l = 100;
         CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
-                                       distance_to_centerline,front_nearest_follow_obstacle);
-        double free_space_tmp = distance_to_centerline - frenet_obstacle.d_max_cpath();
+                                       min_right_boundary_l, true,
+                                       front_nearest_follow_obstacle);
+        double free_space_tmp = min_right_boundary_l - frenet_obstacle.d_max_cpath();
         // 不同类型的障碍物交互，空间权重不一样
         UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
         free_space = std::fmin(free_space_tmp, free_space);
@@ -1768,9 +1834,11 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
                LatObstacleDecisionType::RIGHT) {
       if (frenet_obs->d_max_cpath() < 0) {
         // 两个障碍物避让方向是否一致，后续通过初始标志位方向进行筛选
+        double max_left_boundary_l = -100;
         CheckEgoOverlapDynamicObstacle(*frenet_obs, frenet_obstacle,
-                                       distance_to_centerline,front_nearest_follow_obstacle);
-        double free_space_tmp = distance_to_centerline + frenet_obstacle.d_min_cpath();
+                                       max_left_boundary_l, false,
+                                       front_nearest_follow_obstacle);
+        double free_space_tmp = frenet_obstacle.d_min_cpath() - max_left_boundary_l;
         // 不同类型的障碍物交互，空间权重不一样
         UpdateDynamicFreeSpaceBaseInteractionType(*frenet_obs, free_space_tmp);
         free_space = std::fmin(free_space_tmp, free_space);
@@ -1787,10 +1855,11 @@ void SccLateralObstacleDecider::CalLateralFreeSpaceBaseDynamicObstacle(
 void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
     const FrenetObstacle& frenet_obstacle,
     const FrenetObstacle& target_static_obstacle,
-    double& distance_to_centerline,
+    double& boundary_l, bool is_right_boundary,
     std::shared_ptr<FrenetObstacle>& front_nearest_follow_obstacle) {
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const auto& obstacle_map = reference_path_ptr_->get_obstacles_map();
+  // 后续使用时，要注意cipv跟frenet_obstacle不能是同一个障碍物
   if (obstacle_map.find(cipv_info.cipv_id()) != obstacle_map.end()) {
     if (!frenet_obstacle.obstacle()->is_reverse() &&
         frenet_obstacle.frenet_obstacle_boundary().s_start >
@@ -1832,11 +1901,13 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
   int start_idx = 0;     // 0.0s
   int end_idx   = 50;    // 5.0s  (50 * 0.1)
   int step_idx  = 2;     // 0.2s  (2 * 0.1)
+  const double kIndexToTimeSec = 0.1;
   for (int t_idx = start_idx; t_idx <= end_idx; t_idx += step_idx) {
     Polygon2d obstacle_sl_polygon;
     ok = reference_path_ptr_->get_polygon_at_time(
         frenet_obstacle.id(), false, t_idx, obstacle_sl_polygon);
-    double delt_s = 0.1 * t_idx * ego_v_s_ + 0.5 * a * 0.01 * t_idx * t_idx;
+    double delt_s = kIndexToTimeSec * t_idx * ego_v_s_ +
+                    0.5 * a * kIndexToTimeSec * kIndexToTimeSec * t_idx * t_idx;
     double ego_start_s =
         reference_path_ptr_->get_ego_frenet_boundary().s_start + delt_s;
     double ego_end_s =
@@ -1846,10 +1917,16 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
     }
     double min_s = std::numeric_limits<double>::max();
     double max_s = std::numeric_limits<double>::lowest();
-    double distance_to_centerline_tmp = 100;
+    double boundary_l_tmp = 100;
+    if (!is_right_boundary) {
+      boundary_l_tmp = -100;
+    }
     for (auto& pt : obstacle_sl_polygon.points()) {
-      distance_to_centerline_tmp =
-          std::min(std::abs(pt.y()), distance_to_centerline_tmp);
+      if (is_right_boundary) {
+        boundary_l_tmp = std::min(pt.y(), boundary_l_tmp);
+      } else {
+        boundary_l_tmp = std::max(pt.y(), boundary_l_tmp);
+      }
       min_s = std::min(min_s, pt.x());
       max_s = std::max(max_s, pt.x());
     }
@@ -1868,11 +1945,17 @@ void SccLateralObstacleDecider::CheckEgoOverlapDynamicObstacle(
           std::min(max_s, ego_end_s + front_lon_buf_dis +
                               extra_lon_buf_dis_for_reverse_obstacle);
     }
-    if (!is_overlap_with_dynamic_agent || is_overtake_target_static_obstacle) {
+    if (is_overtake_target_static_obstacle) {
+      break;
+    }
+    if (!is_overlap_with_dynamic_agent) {
       continue;
     }
-    distance_to_centerline =
-        std::min(distance_to_centerline, distance_to_centerline_tmp);
+    if (is_right_boundary) {
+      boundary_l = std::min(boundary_l, boundary_l_tmp);
+    } else {
+      boundary_l = std::max(boundary_l, boundary_l_tmp);
+    }
   }
 }
 

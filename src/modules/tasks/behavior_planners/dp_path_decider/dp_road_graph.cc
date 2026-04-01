@@ -26,6 +26,12 @@ constexpr double kMaxLongitRange = 70.0;
 constexpr double kMinLongitRange = 25.0;
 constexpr double kMaxNudgingSpeed = 4.2;  // 15 kph
 constexpr double kMinSDelta = 1e-4;       // 路径点 s 值的最小增量阈值
+constexpr double kStaticEdgeDistance = 0.25;
+constexpr double kBlockedBorrowObstaclesRatioThreshold = 0.5;
+constexpr double kHardBuffer2Road = 0.4;  // 参考横向避让路沿的hard buffer
+constexpr double kScanRoadRange = 10.0; // 扫描路沿的范围 m
+constexpr double kScanRoadStep = 1.0; // 扫描路沿的步长 m
+constexpr double kEpsilon = 1e-6;
 };                                        // namespace
 
 namespace planning {
@@ -46,7 +52,9 @@ bool DPRoadGraph::Execute() {
   return true;
 }
 bool DPRoadGraph::ProcessEnvInfos(
-    const LaneBorrowDeciderOutput* lane_borrow_output) {
+    const LaneBorrowDeciderOutput* lane_borrow_output,
+    const LaneBorrowStatus lane_borrow_status,
+    const std::vector<int>& static_blocked_obj_id_vec) {
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto& agents = dynamic_world->agent_manager()->GetAllCurrentAgents();
@@ -120,6 +128,25 @@ bool DPRoadGraph::ProcessEnvInfos(
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
+  std::vector<planning_math::Box2d> static_lead_obstacles_box;
+  static_lead_obstacles_box.reserve(obstacles.size());
+  // 表示车道前方占据车道中心线的障碍物box（这类障碍物不会借道）
+  std::vector<planning_math::Box2d> static_need_borrow_obstacles_box;
+  static_need_borrow_obstacles_box.reserve(obstacles.size());
+  // 需要借道障碍物，由前决策产生
+  std::vector<planning_math::Box2d> static_environment_obstacles_box;
+  static_environment_obstacles_box.reserve(obstacles.size());
+  // 环境障碍物，借道过程检测碰撞
+  std::vector<planning_math::Box2d> dynamic_lead_obstacles_box;
+  dynamic_lead_obstacles_box.reserve(obstacles.size());
+  // 表示车道前方占据车道中心线的障碍物box（这类障碍物不会借道）
+  std::vector<planning_math::Box2d> dynamic_need_borrow_obstacles_box;
+  dynamic_need_borrow_obstacles_box.reserve(obstacles.size());
+  // 需要借道障碍物，由前决策产生
+  std::vector<planning_math::Box2d> dynamic_environment_obstacles_box;
+  dynamic_environment_obstacles_box.reserve(obstacles.size());
+  // 环境障碍物，借道过程检测碰撞
+
   for (const auto& obstacle : obstacles) {
     const auto& id = obstacle->obstacle()->id();
     const auto& agent = agent_mgr->GetAgent(id);
@@ -180,15 +207,28 @@ bool DPRoadGraph::ProcessEnvInfos(
           agent_sl_boundary[1] < kMinLongitRange) {  // tmp: should kvalue
         continue;
       }
+      if (std::find(static_blocked_obj_id_vec.begin(),
+                    static_blocked_obj_id_vec.end(),
+                    id) != static_blocked_obj_id_vec.end()) {
+        static_need_borrow_obstacles_box.emplace_back(obs_box);
+      } else {
+        if (GetPredBypassDirection(obstacle->frenet_obstacle_boundary(), id,
+                                   lane_borrow_status) == NO_BORROW) {
+          static_lead_obstacles_box.emplace_back(obs_box);
+          continue;
+        } else {
+          static_environment_obstacles_box.emplace_back(obs_box);
+        }
+      }
       StaticObstacleInfo static_obs_info{
           agent->agent_id(), agent_sl_boundary.at(1), agent_sl_boundary.at(0),
           agent_sl_boundary.at(3), agent_sl_boundary.at(2)};
       obstacles_info_.emplace_back(
           std::move(static_obs_info));  // just log info
-      static_obstacles_box_.emplace_back(obs_box);
+      // static_obstacles_box_.emplace_back(obs_box);
     } else if (obstacle->frenet_velocity_s() <
                kMaxNudgingSpeed) {  // slow dynamic filter
-                                    // filtered backward dynamic obs
+      // filtered backward dynamic obs
       if (!(agent_sl_boundary[3] > ego_frenet_boundary_.l_end ||
             agent_sl_boundary[2] < ego_frenet_boundary_.l_start) &&
           agent_sl_boundary[0] < ego_frenet_boundary_.s_start) {
@@ -226,7 +266,21 @@ bool DPRoadGraph::ProcessEnvInfos(
                                                   &agent_prediction_polygon);
       planning_math::Box2d flatted_box =
           agent_prediction_polygon.MinAreaBoundingBox();
-      flatted_dynamic_obstacles_box_.emplace_back(flatted_box);
+
+      if (std::find(static_blocked_obj_id_vec.begin(),
+                    static_blocked_obj_id_vec.end(),
+                    id) != static_blocked_obj_id_vec.end()) {
+        dynamic_need_borrow_obstacles_box.emplace_back(flatted_box);
+      } else {
+        if (GetPredBypassDirection(obstacle->frenet_obstacle_boundary(), id,
+                                   lane_borrow_status) == NO_BORROW) {
+          dynamic_lead_obstacles_box.emplace_back(flatted_box);
+          continue;
+        } else {
+          dynamic_environment_obstacles_box.emplace_back(flatted_box);
+        }
+      }
+      // flatted_dynamic_obstacles_box_.emplace_back(flatted_box);
 
       // log
       std::vector<planning_math::Vec2d> flatted_corners;
@@ -262,7 +316,109 @@ bool DPRoadGraph::ProcessEnvInfos(
     }
   }
 
+  // // 校验lead_obstacles_box是否会堵塞need_borrow_obstacles_box
+  // if (CheckBlockedBorrowObstacles(static_lead_obstacles_box,
+  //                                 static_need_borrow_obstacles_box)) {
+  //   return false;
+  // }
+  // if (CheckBlockedBorrowObstacles(dynamic_lead_obstacles_box,
+  //                                 dynamic_need_borrow_obstacles_box)) {
+  //   return false;
+  // }
+
+  flatted_dynamic_obstacles_box_ = std::move(dynamic_need_borrow_obstacles_box);
+  flatted_dynamic_obstacles_box_.insert(
+      flatted_dynamic_obstacles_box_.end(),
+      std::make_move_iterator(dynamic_environment_obstacles_box.begin()),
+      std::make_move_iterator(dynamic_environment_obstacles_box.end()));
+  static_obstacles_box_ = std::move(static_need_borrow_obstacles_box);
+  static_obstacles_box_.insert(
+      static_obstacles_box_.end(),
+      std::make_move_iterator(static_environment_obstacles_box.begin()),
+      std::make_move_iterator(static_environment_obstacles_box.end()));
+
   return true;
+}
+
+bool DPRoadGraph::CheckBlockedBorrowObstacles(
+    const std::vector<planning_math::Box2d>& lead_obstacles_box,
+    const std::vector<planning_math::Box2d>& need_borrow_obstacles_box) {
+  if (lead_obstacles_box.empty() || need_borrow_obstacles_box.empty()) {
+    return false;
+  }
+  const auto& frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+
+  // 逐个检查 need_borrow 障碍物是否被 lead 障碍物堵塞
+  for (const auto& borrow_box : need_borrow_obstacles_box) {
+    const auto& borrow_corners = borrow_box.GetAllCorners();
+    double borrow_s_min = std::numeric_limits<double>::max();
+    double borrow_s_max = std::numeric_limits<double>::lowest();
+    for (const auto& corner : borrow_corners) {
+      double s = 0.0, l = 0.0;
+      frenet_coord->XYToSL(corner.x(), corner.y(), &s, &l);
+      borrow_s_min = std::fmin(borrow_s_min, s);
+      borrow_s_max = std::fmax(borrow_s_max, s);
+    }
+    double borrow_length = borrow_s_max - borrow_s_min;
+    if (borrow_length < 1e-6) {
+      continue;
+    }
+
+    for (const auto& lead_box : lead_obstacles_box) {
+      const auto& lead_corners = lead_box.GetAllCorners();
+      double lead_s_min = std::numeric_limits<double>::max();
+      double lead_s_max = std::numeric_limits<double>::lowest();
+      for (const auto& corner : lead_corners) {
+        double s = 0.0, l = 0.0;
+        frenet_coord->XYToSL(corner.x(), corner.y(), &s, &l);
+        lead_s_min = std::fmin(lead_s_min, s);
+        lead_s_max = std::fmax(lead_s_max, s);
+      }
+      // lead 在 borrow 后方（自车与borrow之间），无法越过lead到达borrow借道
+      if (lead_s_max < borrow_s_min) {
+        return true;
+      }
+      // lead 与 borrow 纵向重叠超过阈值
+      double overlap_start = std::fmax(borrow_s_min, lead_s_min);
+      double overlap_end = std::fmin(borrow_s_max, lead_s_max);
+      double overlap = std::fmax(0.0, overlap_end - overlap_start);
+      if (overlap / borrow_length > kBlockedBorrowObstaclesRatioThreshold) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+BorrowDirection DPRoadGraph::GetPredBypassDirection(
+    const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id,
+    const LaneBorrowStatus lane_borrow_status) {
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  const auto& agent = agent_mgr->GetAgent(obs_id);
+  double lane_width = current_lane_ptr_->width();
+  bool is_static = agent->speed() < 2.0 || agent->is_static();
+  bool is_tiny = agent->is_vru() || agent->width() < 0.5;  // 行人在之前就过滤了
+
+  // 先排除
+  if (is_tiny || !is_static) {
+    if (frenet_obstacle_sl.l_start * frenet_obstacle_sl.l_end <
+        0.05) {  // 异号，压住中心线
+      return NO_BORROW;
+    }
+  } else {  // 大 静态： 右边缘 在中心线右侧 0.25+  并且 左边缘 在中心线左侧
+            // 0.25+
+    if (frenet_obstacle_sl.l_start < -kStaticEdgeDistance &&
+        frenet_obstacle_sl.l_end > kStaticEdgeDistance) {  //左侧同理
+      return NO_BORROW;
+    }
+  }
+  // 未被排除， 再判断左右方向
+  if (-frenet_obstacle_sl.l_start >
+      frenet_obstacle_sl.l_end) {  // right offset, left borrow
+    return LEFT_BORROW;
+  } else {  // left offset, right borrow
+    return RIGHT_BORROW;
+  }
 }
 
 bool DPRoadGraph::DPSearchPath(const LaneBorrowStatus lane_borrow_status) {
@@ -449,6 +605,10 @@ bool DPRoadGraph::CartSpline(
   std::vector<double> x_vec;
   std::vector<double> y_vec;
   if (refined_paths_.size() < 2) {
+    ref_path_curve_.x_vec.clear();
+    ref_path_curve_.y_vec.clear();
+    ref_path_curve_.s_vec.clear();
+    ref_path_curve_.k_vec.clear();
     return false;
   }
   last_frame_paths_ =
@@ -466,12 +626,16 @@ bool DPRoadGraph::CartSpline(
     y_vec.emplace_back(path_point.y());
     last_s = adjusted_s;
   }
-  
+
   // 检查过滤后的点数是否足够（spline 至少需要 3 个点）
   if (s_vec.size() < 3) {
+    ref_path_curve_.x_vec.clear();
+    ref_path_curve_.y_vec.clear();
+    ref_path_curve_.s_vec.clear();
+    ref_path_curve_.k_vec.clear();
     return false;
   }
-  
+
   ref_path_curve_.x_vec = x_vec;
   ref_path_curve_.y_vec = y_vec;
   ref_path_curve_.s_vec = s_vec;
@@ -559,6 +723,9 @@ bool DPRoadGraph::SetDPCostParams(LaneBorrowStatus lane_borrow_status) {
 }
 bool DPRoadGraph::SampleLanes(
     LaneBorrowDeciderOutput* lane_borrow_decider_output) {
+  const auto& vehicle_param =
+  VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double half_vehicle_width = vehicle_param.width * 0.5;
   sampled_points_.clear();
   double accumulated_s = init_sl_point_.s;
   double prev_s = accumulated_s;
@@ -590,7 +757,7 @@ bool DPRoadGraph::SampleLanes(
     // avaliable lane boundary
     if (current_lane_ptr_ == nullptr && left_lane_ptr_ == nullptr &&
         right_lane_ptr_ == nullptr) {
-      ILOG_ERROR << "No avaliable lanes";
+      ILOG_INFO << "No avaliable lanes";
       return false;
     }
     double aheads = s_step - ego_s_;
@@ -634,15 +801,33 @@ bool DPRoadGraph::SampleLanes(
     } else {
       // l_range_ = 1.0;
     }
-    // 考虑道路边缘和物理隔离
-    ReferencePathPoint refpath_pt{};
+    // 考虑道路边缘和物理隔离：遍历s_step前后10米取离路沿最小值，i=0时仅取当前位置
     double distance_to_left_road_border = 100;
     double distance_to_right_road_border = 100;
-    if (current_reference_path_ptr_ != nullptr &&
-        current_reference_path_ptr_->get_reference_point_by_lon(ego_s_,
-                                                                refpath_pt)) {
-      distance_to_left_road_border = refpath_pt.distance_to_left_road_border;
-      distance_to_right_road_border = refpath_pt.distance_to_right_road_border;
+    if (current_reference_path_ptr_ != nullptr) {
+      const double scan_range = (i == 0) ? 0.0 : kScanRoadRange;
+      for (double scan_s = s_step - scan_range;
+           scan_s <= s_step + scan_range + kEpsilon; scan_s += kScanRoadStep) {
+        if (scan_s < ego_s_) {
+          // 不考虑自车后方的路沿信息
+          continue;
+        }
+        ReferencePathPoint refpath_pt{};
+        if (current_reference_path_ptr_->get_reference_point_by_lon(
+                scan_s, refpath_pt)) {
+          double left_dist = refpath_pt.distance_to_left_road_border -
+                             kHardBuffer2Road - half_vehicle_width;
+          double right_dist = refpath_pt.distance_to_right_road_border -
+                              kHardBuffer2Road - half_vehicle_width;
+          distance_to_left_road_border =
+              std::min(distance_to_left_road_border, left_dist);
+          distance_to_right_road_border =
+              std::min(distance_to_right_road_border, right_dist);
+        }
+        if (i == 0) {
+          break;  // i=0时仅取当前位置，不需要遍历
+        }
+      }
     }
     sample_right_boundary =
         std::max(sample_right_boundary, -distance_to_right_road_border);
@@ -762,6 +947,10 @@ void DPRoadGraph::ClearDPInfo() {
   // sampled_points_.clear();
   dp_selected_points_.clear();
   min_cost_path_.clear();
+  ref_path_curve_.x_vec.clear();
+  ref_path_curve_.y_vec.clear();
+  ref_path_curve_.s_vec.clear();
+  ref_path_curve_.k_vec.clear();
 }
 std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
     const std::vector<double>& x_vec, const std::vector<double>& y_vec) {
@@ -789,10 +978,11 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
   return std::make_shared<planning_math::KDPath>(std::move(dp_path_points));
 }
 
-bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
-                                               double obs_start_s,
-                                               double speed) {
-  const auto frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+void DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
+                                               double obs_start_s, double speed,
+                                               bool is_reverse, int borrow_id) {
+  const auto& frenet_coord = current_reference_path_ptr_->get_frenet_coord();
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
 
   /*
     if (min_cost_path_.size() <= 1) { // No Dp path add on center line
@@ -829,8 +1019,12 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   double center_virtual_s = obs_start_s - mini_gap + virtual_length * 0.5;
   if (center_virtual_s - ego_s_ <
       vehicle_param.front_edge_to_rear_axle + virtual_length * 0.5) {
-    return false;
+    double target_l = obs_inner_l > 0 ? std::max(obs_inner_l, ego_l_)
+                                      : std::min(obs_inner_l, ego_l_);
+    SetPullOverPath(obs_start_s, target_l);
+    return;
   }
+  SetPullOverPath(obs_start_s, obs_inner_l);
   double virtual_l = obs_inner_l;
   // if (center_virtual_s < 60.0 || center_virtual_s - virtual_length* 0.5 -
   // vehicle_param.front_edge_to_rear_axle - 1.0 < ego_s_){
@@ -845,20 +1039,50 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   // virtual_obs_y = refpath_pt.path_point.y();
   double virtual_obs_x = cart_point.x;
   double virtual_obs_y = cart_point.y;
-  double virtual_obs_theta = frenet_coord->GetPathCurveHeading(obs_start_s);
-
+  double path_heading = frenet_coord->GetPathCurveHeading(obs_start_s);
+  double virtual_obs_theta = is_reverse ? (path_heading + M_PI) : path_heading;
   // construct trajectory for virtual obs
   std::vector<trajectory::Trajectory> trajectories;
   trajectories.reserve(1);
   trajectory::Trajectory trajectory;
-  for (int i = 0; i < 25; ++i) {
-    Point2D end_sl_point(center_virtual_s + speed * 0.2 * i, virtual_l);
-    Point2D cart_point;
-    frenet_coord->SLToXY(end_sl_point, cart_point);
-    auto point = trajectory::TrajectoryPoint(
-        cart_point.x, cart_point.y, virtual_obs_theta, speed, 0.0, i * 0.2, 0.0,
-        0.0, center_virtual_s + speed * 0.2 * i, 0.0);
-    trajectory.emplace_back(point);
+  if (is_reverse) {
+    bool is_use_lead_trajectory = true;
+    const auto& agent = agent_mgr->GetAgent(borrow_id);
+    if (agent == nullptr) {
+      is_use_lead_trajectory = false;
+    }
+    const auto& lead_trajectories = agent->trajectories();
+    if (lead_trajectories.empty()) {
+      is_use_lead_trajectory = false;
+    }
+    const auto& lead_trajectory = lead_trajectories[0];
+    if (lead_trajectory.empty()) {
+      is_use_lead_trajectory = false;
+    }
+    for (int i = 0; i < 25; ++i) {
+      Point2D cart_point_tmp(lead_trajectory[i].x(), lead_trajectory[i].y());
+      Point2D sl_point;
+      frenet_coord->XYToSL(cart_point_tmp, sl_point);
+      double traj_s = is_use_lead_trajectory ? sl_point.x : center_virtual_s;
+      Point2D end_sl_point(traj_s, virtual_l);
+      Point2D cart_point;
+      frenet_coord->SLToXY(end_sl_point, cart_point);
+      auto point = trajectory::TrajectoryPoint(cart_point.x, cart_point.y,
+                                              virtual_obs_theta, speed, 0.0,
+                                              i * 0.2, 0.0, 0.0, traj_s, 0.0);
+      trajectory.emplace_back(point);
+    }
+  } else {
+    for (int i = 0; i < 25; ++i) {
+      double traj_s = center_virtual_s + speed * 0.2 * i;
+      Point2D end_sl_point(traj_s, virtual_l);
+      Point2D cart_point;
+      frenet_coord->SLToXY(end_sl_point, cart_point);
+      auto point = trajectory::TrajectoryPoint(cart_point.x, cart_point.y,
+                                              virtual_obs_theta, speed, 0.0,
+                                              i * 0.2, 0.0, 0.0, traj_s, 0.0);
+      trajectory.emplace_back(point);
+    }
   }
   trajectories.emplace_back(trajectory);
 
@@ -874,6 +1098,7 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   virtual_agent.set_fusion_source(1);
   bool is_static = (speed < 0.3) ? true : false;
   virtual_agent.set_is_static(is_static);
+  virtual_agent.set_is_reverse(is_reverse);
 
   virtual_agent.set_speed(speed);
   virtual_agent.set_theta(virtual_obs_theta);
@@ -897,7 +1122,6 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   agent_manager->Append(agent_table);
 
   // reset path
-  SetPullOverPath(obs_start_s, obs_inner_l);
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_pos_x", virtual_agent.x())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_pos_y", virtual_agent.y())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_theta",
@@ -908,8 +1132,6 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
                    virtual_agent.width())
   JSON_DEBUG_VALUE("stop_destination_virtual_agent_length",
                    virtual_agent.length())
-
-  return true;
 }
 bool DPRoadGraph::NudgeOutPose(double path_ego_x, double path_ego_y,
                                double path_ego_theta,

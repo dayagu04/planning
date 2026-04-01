@@ -667,6 +667,13 @@ const bool PerpendicularTailInScenario::GenTlane() {
       geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                    ego_info_under_slot.target_pose.heading));
 
+  const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+  const geometry_lib::PathPoint front_pose =
+      GetCarFrontPoseFromCarPose(cur_pose);
+  const geometry_lib::PathPoint& target_pose = ego_info_under_slot.target_pose;
+  const double front_lat_err = front_pose.pos.y() - target_pose.pos.y();
+  ego_info_under_slot.terminal_y_front_err = front_lat_err;
+
   apa_world_ptr_->GetColDetInterfacePtr()
       ->GetEDTColDetPtr()
       ->UpdateObsClearZone(
@@ -1932,7 +1939,10 @@ const bool PerpendicularTailInScenario::CheckFinished() {
     return false;
   }
 
-  const double gain = auto_fold_mirror ? 3.0 : 1.0;
+  const bool is_space_slot =
+      (ego_info_under_slot.slot.slot_source_type_ == SlotSourceType::USS);
+
+  const double gain = (auto_fold_mirror || is_space_slot) ? 3.0 : 1.0;
 
   const double finish_lon_err = finish_params.lon_err;
 
@@ -1958,8 +1968,9 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_s_condition =
       frame_.remain_dist_path < finish_params.max_remain_path_dist;
 
-  bool parking_finish =
-      lon_condition && lat_condition && static_condition && remain_s_condition;
+  // first replan not check remain_s_condition
+  bool parking_finish = lon_condition && lat_condition && static_condition &&
+                        (remain_s_condition || frame_.is_replan_first);
 
   if (parking_finish) {
     return true;
@@ -2372,7 +2383,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   bool increase_lat_err_flag = false;
   do {
-    if (frame_.mirror_command == MirrorCommand::NONE) {
+    if (frame_.mirror_command != MirrorCommand::NONE) {
       break;
     }
 
@@ -2381,8 +2392,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             ? geometry_lib::SEG_GEAR_REVERSE
             : geometry_lib::SEG_GEAR_DRIVE;
 
-    if (frame_.gear_command == ref_gear &
-            ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+    if (frame_.gear_command == ref_gear &&
+        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
         frame_.slot_jump_big_flag) {
       increase_lat_err_flag = true;
       break;
@@ -2691,10 +2702,15 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
     terminal_error_y = std::fabs(ego_info_under_slot.terminal_err.GetY());
   }
 
+  const double scale_factor =
+      ego_info_under_slot.slot.slot_source_type_ == SlotSourceType::USS ? 3.0
+                                                                        : 1.0;
+
   frame_.slot_jump_big_flag =
       std::min(lat_err, terminal_error_y) >
-          apa_param.GetParam().slot_jump_lat_big_err ||
-      heading_err > apa_param.GetParam().slot_jump_heading_big_err;
+          apa_param.GetParam().slot_jump_lat_big_err * scale_factor ||
+      heading_err >
+          apa_param.GetParam().slot_jump_heading_big_err * scale_factor;
 
   ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
             << "  heading_err = " << heading_err
@@ -2737,12 +2753,24 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
   if (!frame_.ego_should_stop_by_slot_jump) {
     double lon_stop_dist = 0.0, heading_stop_dist = 0.0;
-    for (const auto& path_point : current_path_point_global_vec_) {
-      if (path_point.pos.x() > ego_info_under_slot.target_pose.pos.x() + 1.68) {
-        lon_stop_dist = path_point.s;
+    const double x_err = 1.68, heading_err = 12.68 * kDeg2Rad;
+    const double target_x = ego_info_under_slot.target_pose.GetX();
+    const double target_heading = ego_info_under_slot.target_pose.heading;
+    geometry_lib::PathPoint path_point_local;
+    for (const auto& path_point_global : current_path_point_global_vec_) {
+      path_point_local.pos =
+          ego_info_under_slot.g2l_tf.GetPos(path_point_global.pos);
+
+      path_point_local.heading =
+          ego_info_under_slot.g2l_tf.GetHeading(path_point_global.heading);
+
+      if (path_point_local.GetX() - target_x > x_err) {
+        lon_stop_dist = path_point_global.s;
       }
-      if (std::fabs(path_point.heading) * kRad2Deg > 12.68) {
-        heading_stop_dist = path_point.s;
+
+      if (std::fabs(geometry_lib::AngleSubtraction(
+              path_point_local.heading, target_heading)) > heading_err) {
+        heading_stop_dist = path_point_global.s;
       }
     }
 
@@ -3770,62 +3798,6 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   }
 
   ILOG_INFO << "decide fold mirror, should not send fold mirror msg";
-
-  return;
-}
-
-void PerpendicularTailInScenario::DecideExpandMirrorCommand() {
-  const ApaParameters& param = apa_param.GetParam();
-  const SmartFoldMirrorParams& smart_fold_mirror_params =
-      param.smart_fold_mirror_params;
-
-  if (!smart_fold_mirror_params.has_smart_fold_mirror) {
-    return;
-  }
-
-  if (frame_.plan_stm.planning_status != PARKING_FINISHED &&
-      frame_.plan_stm.planning_status != PARKING_FAILED) {
-    return;
-  }
-
-  if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
-    return;
-  }
-
-  if (frame_.mirror_command == MirrorCommand::EXPAND) {
-    return;
-  }
-
-  apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
-
-  const auto gjk_col_det_ptr =
-      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
-
-  GJKColDetRequest gjk_col_det_request(
-      false, param.uss_config.use_uss_pt_cloud, CarBodyType::ONLY_MIRROR,
-      ApaObsMovementType::STATIC, param.use_obs_height_method);
-
-  if (gjk_col_det_ptr
-          ->Update(
-              std::vector<geometry_lib::PathPoint>{
-                  apa_world_ptr_->GetMeasureDataManagerPtr()->GetPoseV2()},
-              smart_fold_mirror_params.min_lat_buffer, 0.0, gjk_col_det_request)
-          .col_flag) {
-    return;
-  }
-
-  gjk_col_det_request.movement_type = ApaObsMovementType::MOTION;
-
-  if (gjk_col_det_ptr
-          ->Update(
-              std::vector<geometry_lib::PathPoint>{
-                  apa_world_ptr_->GetMeasureDataManagerPtr()->GetPoseV2()},
-              smart_fold_mirror_params.min_lat_buffer, 0.0, gjk_col_det_request)
-          .col_flag) {
-    return;
-  }
-
-  frame_.mirror_command = MirrorCommand::EXPAND;
 
   return;
 }

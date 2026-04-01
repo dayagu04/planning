@@ -49,12 +49,6 @@ namespace planning {
 namespace planner {
 namespace {
 static constexpr int kMRMStateDebounce = 5;
-static constexpr int kPlanPoints = 26;
-static constexpr double kTimeStep = 0.2;
-static constexpr double kAlpha = 0.4;
-static constexpr int kMinHistoryFrameCount = 3;
-static constexpr double kFrameIntervalS = 0.1;
-static constexpr double kMaxDelayS = 0.3;
 static constexpr double kLowSpeedThreshold = 2.78;
 }  // namespace
 
@@ -393,24 +387,32 @@ bool EnvironmentalModelManager::Run() {
   last_feed_time_[FEED_VEHICLE_DBW_STATUS] =
       local_view.function_state_machine_info_recv_time;
 
+  double start_time = current_time;
+  double end_time;
+
   // Step 2) update ego_state
-  auto time_start = IflyTime::Now_ms();
   if (!ego_state_update(current_time, local_view)) {
     ILOG_ERROR << "ego_state_update false";
     return false;
   }
-  auto time_end = IflyTime::Now_ms();
-  ILOG_INFO << "ego_state_update cost:" << time_end - time_start;
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ego_state_update cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   // Step 3) update route info
-  time_start = IflyTime::Now_ms();
   route_info_ptr_->Update();
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "update route_info cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("update route_info cost", time_end - time_start)
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("update route_info cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   // Step 4) update virtual_lane
-  time_start = IflyTime::Now_ms();
+  // time_start = IflyTime::Now_ms();
   last_feed_time_[FEED_MAP_INFO] = local_view.static_map_info_recv_time;
   if (rads_mode && !virtual_lane_manager_ptr_->update(
                        local_view.function_state_machine_info)) {
@@ -422,14 +424,17 @@ bool EnvironmentalModelManager::Run() {
     if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
       ILOG_ERROR << "virtual_lane_manager update failed";
       return false;
-    } else {
-      // 后面需要判断是否为地图
-      last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
     }
   }
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "virtual_lane_manager update cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
+  last_feed_time_[FEED_FUSION_LANES_INFO] = local_view.road_info_recv_time;
+  // time_end = IflyTime::Now_ms();
+  // ILOG_INFO << "virtual_lane_manager update cost:" << time_end - time_start;
+  // JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("virtual_lane_manager cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   // update traffic lights info
   if (!traffic_light_decision_manager_ptr_->Update(
@@ -438,80 +443,134 @@ bool EnvironmentalModelManager::Run() {
     return false;
   }
 
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("traffic_light_decision cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   // Step 5) update obstacle
-  time_start = IflyTime::Now_ms();
+  // time_start = IflyTime::Now_ms();
   if (!obstacle_prediction_update(current_time, local_view)) {
     return false;
   }
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "obstacle_prediction update cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
+  // time_end = IflyTime::Now_ms();
+  // ILOG_INFO << "obstacle_prediction update cost:" << time_end - time_start;
+  // JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("obstacle_prediction cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   if (session_->is_hpp_scene()) {
-    time_start = IflyTime::Now_ms();
-    if (ego_config_.enable_fusion_parking_slot) {  // fusion parking slot
-      parking_slot_manager_ptr_->Update(local_view.parking_fusion_info);
-    } else {  // ehr parking space
-      parking_slot_manager_ptr_->Update(local_view.static_map_info);
-    }
-    time_end = IflyTime::Now_ms();
-    ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
-    JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
-    if (parking_slot_manager_ptr_->IsExistTargetSlot()) {
-      const auto& target_slot_center =
-          parking_slot_manager_ptr_->GetTargetSlotCenter();
-      route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(
-          target_slot_center.x(), target_slot_center.y()));
-    }
+    // time_start = IflyTime::Now_ms();
+    // if (ego_config_.enable_fusion_parking_slot) {  // fusion parking slot
+    //   parking_slot_manager_ptr_->Update(local_view.parking_fusion_info);
+    // } else {  // ehr parking space
+    //   parking_slot_manager_ptr_->Update(local_view.static_map_info);
+    // }
+    // // time_end = IflyTime::Now_ms();
+    // // ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
+    // // JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
+    // if(parking_slot_manager_ptr_->IsExistTargetSlot()) {
+    //   const auto& target_slot_center = parking_slot_manager_ptr_->GetTargetSlotCenter();
+    //   route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(target_slot_center.x(), target_slot_center.y()));
+    // }
   }
 
-  time_start = IflyTime::Now_ms();
+// #ifdef PlanTimeBenchmark
+//   end_time = IflyTime::Now_ms();
+//   JSON_DEBUG_VALUE("virtual_lane_manager cost", end_time - start_time);
+//   start_time = IflyTime::Now_ms();
+// #endif
+  // time_start = IflyTime::Now_ms();
   obstacle_manager_ptr_->update();
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "obstacle_manager cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
+  // time_end = IflyTime::Now_ms();
+  // ILOG_INFO << "obstacle_manager cost:" << time_end - time_start;
+  // JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
 
-  time_start = IflyTime::Now_ms();
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("obstacle_manager cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
+  // time_start = IflyTime::Now_ms();
   agent_manager_ptr_->Update(current_time_s);
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "agent manager cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
+  // time_end = IflyTime::Now_ms();
+  // ILOG_INFO << "agent manager cost:" << time_end - time_start;
+  // JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("agent_manager cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   // Step 6) update reference path
-  time_start = IflyTime::Now_ms();
+  // time_start = IflyTime::Now_ms();
   if (!construction_scene_manager_ptr_->update()) {
     ILOG_ERROR << "construction_scene_manager update fail";
     return false;
   }
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "construction_scene_manager update cost:"
-            << time_end - time_start;
-  JSON_DEBUG_VALUE("construction_scene_manager", time_end - time_start);
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("construction_scene_manager cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
+  // time_end = IflyTime::Now_ms();
+  // ILOG_INFO << "construction_scene_manager update cost:"
+  //           << time_end - time_start;
+  // JSON_DEBUG_VALUE("construction_scene_manager", time_end - time_start);
 
   // Step 6) update reference path
-  time_start = IflyTime::Now_ms();
+  // time_start = IflyTime::Now_ms();
   if (!reference_path_manager_ptr_->update()) {
     ILOG_ERROR << "reference_path_manager update fail";
     return false;
   }
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "reference_path_manager update cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
+  // time_end = IflyTime::Now_ms();
+  // ILOG_INFO << "reference_path_manager update cost:" << time_end - time_start;
+  // JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("reference_path_manager cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   if (!session_->is_hpp_scene()) {
-    time_start = IflyTime::Now_ms();
+    // time_start = IflyTime::Now_ms();
     lateral_obstacle_ptr_->update();
-    time_end = IflyTime::Now_ms();
-    ILOG_INFO << "lateral_obstacle update cost:" << time_end - time_start;
-    JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
+    // time_end = IflyTime::Now_ms();
+    // ILOG_INFO << "lateral_obstacle update cost:" << time_end - time_start;
+    // JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lateral_obstacle cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
     lane_tracks_mgr_ptr_->update_lane_tracks();
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("lane_tracks_mgr cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
     // Step 7) update agent node manager
-    time_start = IflyTime::Now_ms();
+    // time_start = IflyTime::Now_ms();
     agent_node_mgr_ptr_->init();
-    time_end = IflyTime::Now_ms();
-    ILOG_INFO << "agent_node_manager init cost:" << time_end - time_start;
-    JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
+
+    // time_end = IflyTime::Now_ms();
+    // ILOG_INFO << "agent_node_manager init cost:" << time_end - time_start;
+    // JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
     // std::cout<< "agent_node_mgr time is : " << time_end - time_start
     // <<std::endl;
   } else {
@@ -519,22 +578,31 @@ bool EnvironmentalModelManager::Run() {
   }
 
   // DynamicWorld验证
-  time_start = IflyTime::Now_ms();
+  // time_start = IflyTime::Now_ms();
   dynamic_world_->ConstructDynamicWorld();
-  time_end = IflyTime::Now_ms();
+  // time_end = IflyTime::Now_ms();
   // dynamic_world_->DebugEgoNearByAgentNodesTrajectory();
-  ILOG_INFO << "dynamic world update cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
+  // ILOG_INFO << "dynamic world update cost:" << time_end - time_start;
+  // JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("ConstructDynamicWorld cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
-  time_start = IflyTime::Now_ms();
+  // time_start = IflyTime::Now_ms();
   edt_manager_ptr_->update();
-  time_end = IflyTime::Now_ms();
-  ILOG_INFO << "edt_manager cost:" << time_end - time_start;
-  JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);
+  // time_end = IflyTime::Now_ms();
+  // ILOG_INFO << "edt_manager cost:" << time_end - time_start;
+  // JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);
 
-  auto end_time = IflyTime::Now_ms();
-  ILOG_INFO << "EnvironmentalModelManager::Run cost time"
-            << time_end - time_start;
+  end_time = IflyTime::Now_ms();
+
+#ifdef PlanTimeBenchmark
+  JSON_DEBUG_VALUE("edt_manager cost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
+
   JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
   std::string status_msg;
   InputReady(current_time, status_msg);
@@ -853,7 +921,6 @@ void EnvironmentalModelManager::truncate_prediction_info(
     double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set,
     double fusion_delay_time) {
   assert(session_ != nullptr);
-  current_prediction_ids_.clear();
   double current_time =
       session_->planning_context().planning_result().timestamp;
   const auto& ego_state =
@@ -1154,21 +1221,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.trajectory_array.emplace_back(
         std::move(cur_prediction_trajectory));
 
-    current_prediction_ids_.insert(cur_predicion_obj.id);
-
-    ProcessPredictionTrajectory(cur_predicion_obj);
-
-    auto& history_queue = historical_prediction_objects_[cur_predicion_obj.id];
-    history_queue.emplace_back(cur_predicion_obj);
-    if (history_queue.size() > kMinHistoryFrameCount) {
-      history_queue.pop_front();
-    }
-
     cur_predicion_obj.is_static = IsStatic(cur_predicion_obj);
     prediction_info.emplace_back(std::move(cur_predicion_obj));
   }
-
-  DeleteOlderPredictionObjects();
 }
 
 PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(
@@ -1868,218 +1923,6 @@ bool EnvironmentalModelManager::CheckIfCar(const int type) {
   }
 }
 
-void EnvironmentalModelManager::ProcessPredictionTrajectory(
-    PredictionObject& prediction_object) {
-  if (prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
-      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_MINIBUS &&
-      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_VAN &&
-      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_BUS &&
-      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
-      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRAILER &&
-      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE &&
-      prediction_object.type !=
-          iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING &&
-      prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE &&
-      prediction_object.type !=
-          iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
-    return;
-  }
-
-  if (prediction_object.trajectory_array.empty() ||
-      prediction_object.trajectory_array[0].trajectory.empty()) {
-    return;
-  }
-
-  auto hist_iter = historical_prediction_objects_.find(prediction_object.id);
-  if (hist_iter == historical_prediction_objects_.end() ||
-      hist_iter->second.size() < static_cast<size_t>(kMinHistoryFrameCount)) {
-    return;
-  }
-
-  const auto& ego_state = *ego_state_manager_ptr_;
-  double heading_diff = std::abs(prediction_object.theta_fusion -
-                                 ego_state.planning_init_point().heading_angle);
-  if (heading_diff > M_PI) {
-    heading_diff = 2 * M_PI - heading_diff;
-  }
-  if (heading_diff * 180.0 / M_PI > 60.0) {
-    return;
-  }
-
-  const auto& hist_list = hist_iter->second;
-
-  double frame_index = prediction_object.fusion_delay_time / kFrameIntervalS;
-  if (prediction_object.fusion_delay_time > kMaxDelayS) {
-    frame_index = static_cast<double>(hist_list.size() - 1);
-  }
-  frame_index = std::max(0.0, frame_index);
-  frame_index =
-      std::min(frame_index, static_cast<double>(hist_list.size() - 1));
-  int frame_idx_lower = static_cast<int>(std::floor(frame_index));
-  int frame_idx_upper = static_cast<int>(std::ceil(frame_index));
-  frame_idx_lower =
-      std::min(frame_idx_lower, static_cast<int>(hist_list.size()) - 1);
-  frame_idx_upper =
-      std::min(frame_idx_upper, static_cast<int>(hist_list.size()) - 1);
-
-  int lower_idx = hist_list.size() - 1 - frame_idx_lower;
-  int upper_idx = hist_list.size() - 1 - frame_idx_upper;
-
-  double alpha = frame_index - frame_idx_lower;
-  double interpolated_acc = (1.0 - alpha) * hist_list[lower_idx].acc_fusion +
-                            alpha * hist_list[upper_idx].acc_fusion;
-
-  const auto& original_trajectory =
-      prediction_object.trajectory_array[0].trajectory;
-  const double init_speed = (prediction_object.speed_fusion > 0.0)
-                                ? prediction_object.speed_fusion
-                                : 0.0;
-  std::map<double, TmpPathPoint> path_cache;
-  if (!original_trajectory.empty()) {
-    path_cache[0.0] = {original_trajectory[0].x, original_trajectory[0].y,
-                       original_trajectory[0].theta};
-    double cumulative_s = 0.0;
-    for (size_t i = 1; i < original_trajectory.size(); ++i) {
-      const auto& prev = original_trajectory[i - 1];
-      const auto& curr = original_trajectory[i];
-      double dx = curr.x - prev.x;
-      double dy = curr.y - prev.y;
-      cumulative_s += std::sqrt(dx * dx + dy * dy);
-      path_cache[cumulative_s] = {curr.x, curr.y, curr.theta};
-    }
-  }
-
-  const double init_accel = interpolated_acc;
-
-  std::vector<double> kin_s(kPlanPoints), kin_speeds(kPlanPoints),
-      kin_accels(kPlanPoints), kin_x(kPlanPoints), kin_y(kPlanPoints),
-      kin_theta(kPlanPoints);
-
-  kin_s[0] = 0.0;
-  kin_speeds[0] = init_speed;
-  kin_accels[0] = init_accel;
-  kin_x[0] = prediction_object.position_x;
-  kin_y[0] = prediction_object.position_y;
-  kin_theta[0] = prediction_object.theta_fusion;
-
-  double current_s = 0.0;
-  double current_speed = init_speed;
-
-  for (size_t i = 1; i < kPlanPoints; ++i) {
-    if (current_speed <= 0.0) {
-      kin_s[i] = current_s;
-      kin_speeds[i] = 0.0;
-      kin_accels[i] = 0.0;
-      continue;
-    }
-
-    double t = i * kTimeStep;
-    double predicted_speed = init_speed + init_accel * t;
-
-    if (predicted_speed <= 0.0) {
-      double braking_distance =
-          (current_speed * current_speed) / (2.0 * std::fabs(init_accel));
-      current_s += braking_distance;
-      current_speed = 0.0;
-      kin_s[i] = current_s;
-      kin_speeds[i] = 0.0;
-      kin_accels[i] = 0.0;
-    } else {
-      current_s = init_speed * t + 0.5 * init_accel * t * t;
-      current_speed = predicted_speed;
-      kin_s[i] = current_s;
-      kin_speeds[i] = current_speed;
-      kin_accels[i] = init_accel;
-    }
-  }
-
-  auto interpolate_point = [&path_cache](double s) -> TmpPathPoint {
-    auto it_upper = path_cache.upper_bound(s);
-    if (it_upper == path_cache.begin()) {
-      return path_cache.begin()->second;
-    } else if (it_upper == path_cache.end()) {
-      return path_cache.rbegin()->second;
-    } else {
-      auto it_lower = std::prev(it_upper);
-      double s0 = it_lower->first;
-      double s1 = it_upper->first;
-      double ratio = (s1 - s0 > 1e-9) ? (s - s0) / (s1 - s0) : 0.0;
-      const auto& p0 = it_lower->second;
-      const auto& p1 = it_upper->second;
-      double theta_diff = p1.theta - p0.theta;
-      if (theta_diff > M_PI) {
-        theta_diff -= 2.0 * M_PI;
-      } else if (theta_diff < -M_PI) {
-        theta_diff += 2.0 * M_PI;
-      }
-      return {p0.x + ratio * (p1.x - p0.x), p0.y + ratio * (p1.y - p0.y),
-              p0.theta + ratio * theta_diff};
-    }
-  };
-
-  for (size_t i = 1; i < kPlanPoints; ++i) {
-    auto pt = interpolate_point(kin_s[i]);
-    kin_x[i] = pt.x;
-    kin_y[i] = pt.y;
-    kin_theta[i] = pt.theta;
-  }
-
-  std::vector<double> last_x(kPlanPoints), last_y(kPlanPoints),
-      last_theta(kPlanPoints), last_speeds(kPlanPoints);
-
-  const auto& last_trajectory = hist_list.back().trajectory_array[0].trajectory;
-  for (size_t i = 0; i < kPlanPoints; ++i) {
-    last_x[i] = last_trajectory[i].x;
-    last_y[i] = last_trajectory[i].y;
-    last_theta[i] = last_trajectory[i].theta;
-    last_speeds[i] = last_trajectory[i].speed;
-  }
-
-  std::vector<double> fused_x(kPlanPoints), fused_y(kPlanPoints),
-      fused_theta(kPlanPoints), fused_speeds(kPlanPoints);
-
-  for (size_t i = 0; i < kPlanPoints; ++i) {
-    fused_x[i] = kAlpha * last_x[i] + (1 - kAlpha) * kin_x[i];
-    fused_y[i] = kAlpha * last_y[i] + (1 - kAlpha) * kin_y[i];
-
-    double theta_diff = kin_theta[i] - last_theta[i];
-    if (theta_diff > M_PI) {
-      theta_diff -= 2.0 * M_PI;
-    } else if (theta_diff < -M_PI) {
-      theta_diff += 2.0 * M_PI;
-    }
-
-    fused_theta[i] = last_theta[i] + (1 - kAlpha) * theta_diff;
-    fused_speeds[i] = kAlpha * last_speeds[i] + (1 - kAlpha) * kin_speeds[i];
-  }
-
-  std::vector<PredictionTrajectoryPoint> processed_trajectory(
-      original_trajectory);
-
-  for (size_t i = 0; i < kPlanPoints; ++i) {
-    processed_trajectory[i].x = fused_x[i];
-    processed_trajectory[i].y = fused_y[i];
-    processed_trajectory[i].theta = fused_theta[i];
-    processed_trajectory[i].speed = fused_speeds[i];
-    processed_trajectory[i].acc = kin_accels[i];
-    processed_trajectory[i].relative_time = i * kTimeStep;
-  }
-
-  prediction_object.trajectory_array[0].trajectory =
-      std::move(processed_trajectory);
-}
-
-void EnvironmentalModelManager::DeleteOlderPredictionObjects() {
-  for (auto it = historical_prediction_objects_.begin();
-       it != historical_prediction_objects_.end();) {
-    if (current_prediction_ids_.find(it->first) ==
-        current_prediction_ids_.end()) {
-      it = historical_prediction_objects_.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
 
 }  // namespace planner
 }  // namespace planning

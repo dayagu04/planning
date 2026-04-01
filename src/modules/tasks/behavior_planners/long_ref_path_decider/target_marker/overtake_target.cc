@@ -1,4 +1,5 @@
 #include "overtake_target.h"
+
 #include "environmental_model.h"
 #include "planning_context.h"
 
@@ -21,7 +22,8 @@ OvertakeTarget::OvertakeTarget(const SpeedPlannerConfig& config,
                                const FollowTarget& follow_target)
     : Target(config, session) {
   target_values_ = std::vector<TargetValue>(
-      plan_points_num_, TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet));
+      plan_points_num_,
+      TargetValue(0.0, false, 0.0, 0.0, 0.0, TargetType::kNotSet));
 
   // overtake target
   // first part must

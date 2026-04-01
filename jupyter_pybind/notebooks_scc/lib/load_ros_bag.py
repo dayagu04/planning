@@ -150,6 +150,9 @@ class LoadRosbag:
     # perception parking lane line msg
     self.rdg_parking_lane_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
 
+    # perception traffic sign msg
+    self.rdg_traffic_sign_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[], 'seq':[]}
+
     # time offset
     t0 = 0
 
@@ -405,6 +408,27 @@ class LoadRosbag:
     except Exception as e:
       self.lane_topo_msg['enable'] = False
       print('missing /iflytek/camera_perception/lane_topo topic !!!')
+
+    #load perception traffic sign info
+    try:
+      rdg_traffic_sign_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/camera_perception/traffic_sign_recognition"):
+        rdg_traffic_sign_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      sorted_rdg_traffic_sign_msg_dict = OrderedDict(sorted(rdg_traffic_sign_msg_dict.items(), key=lambda ele: ele[0]))
+      for t, msg in sorted_rdg_traffic_sign_msg_dict.items():
+        self.rdg_traffic_sign_msg['t'].append(t)
+        self.rdg_traffic_sign_msg['timestamp'].append(msg.msg_header.stamp)
+        self.rdg_traffic_sign_msg['data'].append(msg)
+      self.rdg_traffic_sign_msg['t'] = [tmp - t0  for tmp in self.rdg_traffic_sign_msg['t']]
+      print('rdg_traffic_sign_msg time:',self.rdg_traffic_sign_msg['t'][-1])
+      if len(self.rdg_traffic_sign_msg['t']) > 0:
+        self.rdg_traffic_sign_msg['enable'] = True
+      else:
+        self.rdg_traffic_sign_msg['enable'] = False
+    except Exception as e:
+      self.rdg_traffic_sign_msg['enable'] = False
+      print('missing /iflytek/camera_perception/traffic_sign_recognition !!!')
+
     # load fusion objects msg
     try:
       fus_msg_dict = {}
@@ -620,8 +644,8 @@ class LoadRosbag:
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "fsm_state", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
-                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state", "obstacle_brake_hmi_sts",\
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost', 'Astar time', \
+                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state", "obstacle_brake_hmi_sts", "obstacle_brake_hmi_sts",\
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'road_radius_origin',\
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
@@ -659,7 +683,7 @@ class LoadRosbag:
                          "front_node_id", "rear_node_id","prohibit_acc_", "lane_borrow_agent_id", "lane_borrow_agent_v_limit", 'ego_ttc_to_front_invade_agent', 'avoid_agent_id', 'avoid_agent_v_limit', "construction_lat_dist_flag",\
                          "v_target_construction","v_target_near_construction","dis_to_construction","is_exist_construction_area","is_pass_construction_area","construction_strong_deceleration_mode","construction_strong_mode_reason","construction_strong_mode_frame_count",\
                          "ego_left_node", "ego_left_front_node", "ego_left_rear_node", "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", \
-                         "ego_right_node", "ego_right_front_node", "ego_right_rear_node", "v_cruise_limit","v_target_decider","v_target_type_code",\
+                         "ego_right_node", "ego_right_front_node", "ego_right_rear_node", "v_cruise_limit","v_target_decider","v_target_type_code", "is_small_front_intersection", "dis_to_tfl", \
                          "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", "v_target_for_dangerous_obs", "dangerous_obs_id",\
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
@@ -703,15 +727,26 @@ class LoadRosbag:
                           "ego_front_edge", "ego_rear_edge",
                           "front_agent_front_edge", "front_agent_rear_edge",
                           "rear_agent_front_edge", "rear_agent_rear_edge",
-                          "rear_agent_longitudinal_label", "lane_change_reason",
+                         "rear_agent_longitudinal_label", "rear_agent_confidence", "lane_change_reason",
                           "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene',
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
-                          'UpdateObstacleInteractionInfoCostTime',
+                          'UpdateObstacleInteractionInfoCostTime','is_emergency_scene',
                           'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
-                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp']
+                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence']
 
-
+      json_value_list += ["planning_cost_time", 'EnvironmentalModelManagerCost', 'TaskFunctionCost', "ego_state_update cost",
+                          "update route_info cost", "virtual_lane_manager cost", "traffic_light_decision cost", "obstacle_prediction cost", "obstacle_manager cost", "agent_manager cost", "construction_scene_manager cost",
+                          "reference_path_manager cost", "lateral_obstacle cost", "lane_tracks_mgr cost", "ConstructDynamicWorld cost",
+                          "edt_manager cost", "traffic_light_decider_cost", "ego_lane_road_right_decider_cost", "potential_dangerous_agent_decider_cost",
+                          "lane_change_decider_cost", "lat_lon_joint_planner_decider_cost", "sample_poly_speed_adjust_decider_cost",
+                          "lateral_obstacle_decider_cost", "lane_borrow_decider_cost", "lateral_offset_decider_cost", "gap_selector_decider_cost",
+                          "spatio_temporal_planner_cost", "general_lateral_decider_cost", "lateral_motion_planner_cost","stop_destination_decider_cost",
+                          "mrc_brake_decider_cost", "agent_longitudinal_decider_cost", "construct_st_graph_cost", "expand_st_boundaries_decider_cost",
+                          "closest_in_path_vehicle_decider_cost", "cipv_lost_prohibit_start_decider_cost", "cipv_lost_prohibit_acceleration_decider_cost",
+                          "st_graph_searcher_cost", "parallel_longitudinal_avoid_decider_cost", "agent_headway_decider_cost", "longitudinal_decision_decider_cost",
+                          "speed_limit_decider_cost", "start_stop_decider_cost", "long_ref_path_decider_cost", "scc_longitudinal_motion_planner_cost",
+                          "result_trajectory_generator_cost", "hmi_decider_cost"]
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
                          "ldw_right_suppression_code_","ldw_right_kickdown_code_","ldw_tlc_threshold_","ldw_left_intervention_","ldw_right_intervention_","ldw_state_",
@@ -814,11 +849,17 @@ class LoadRosbag:
                          "meb_od_obs_x_vector","meb_od_obs_y_vector","meb_occ_obs_x_vector","meb_occ_obs_y_vector","meb_traj_x_vector","meb_traj_y_vector",
                          "meb_point_x_vector","meb_point_y_vector","meb_traj_dphi_vector","uss_distance_vec","uss_acc_vec_","meb_uss_obs_x_vector","meb_uss_obs_y_vector",
                          ]
-      # 安全检查相关的向量数据
-      json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",
-                           "agent_vel_vec", "ego_vel_vec", "rear_distance_vec"]
+      # 安全检查相关的向量数据（前车）
+      json_vector_list += ["front_box_longitudinal_buff_vec", "front_distance_vec",
+                           "front_agent_vel_vec", "front_actual_gap_vec"]
+      # 安全检查相关的向量数据（后车）
+      json_vector_list += ["rear_box_longitudinal_buff_vec", "rear_box_ttc_vec",
+                           "rear_distance_vec", "rear_agent_vel_vec",
+                           "rear_actual_gap_vec"]
+      # 自车速度（前后车共用）
+      json_vector_list += ["ego_vel_vec"]
       # 安全检查相关的标量数据
-      json_value_list += ["lc_ego_press_line_ratio"]
+      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

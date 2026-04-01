@@ -2,11 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <memory>
 
+#include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "common/config/basic_type.h"
 #include "environmental_model.h"
-#include "lateral_obstacle.h"
 #include "math/math_utils.h"
 #include "planning_context.h"
 
@@ -18,8 +19,6 @@ JointMotionInputBuilder::JointMotionInputBuilder(
   config_ = config_builder->cast<JointMotionPlannerConfig>();
   speed_planning_config_ = config_builder->cast<SpeedPlannerConfig>();
   obstacles_selector_ = std::make_shared<JointMotionObstaclesSelector>(session);
-  speed_limit_calculator_ =
-      std::make_unique<JointMotionSpeedLimit>(config_builder, session);
 
   joint_traj_params_.s0 = 3.5;
   joint_traj_params_.a = 1.5;
@@ -167,36 +166,36 @@ void JointMotionInputBuilder::BuildObsInfo(
     planning_input.set_obs_num(key_obstacles.size());
 
     for (const auto& obstacle : key_obstacles) {
-      key_agent_ids_.push_back(obstacle.agent_id);
+      key_agent_ids_.push_back(obstacle->agent_id);
       auto* obs_state = planning_input.add_obs_init_state();
-      obs_state->set_x(obstacle.init_x);
-      obs_state->set_y(obstacle.init_y);
-      obs_state->set_theta(obstacle.init_theta);
-      obs_state->set_delta(obstacle.init_delta);
-      obs_state->set_vel(obstacle.init_vel);
-      obs_state->set_acc(obstacle.init_acc);
+      obs_state->set_x(obstacle->init_x);
+      obs_state->set_y(obstacle->init_y);
+      obs_state->set_theta(obstacle->init_theta);
+      obs_state->set_delta(obstacle->init_delta);
+      obs_state->set_vel(obstacle->init_vel);
+      obs_state->set_acc(obstacle->init_acc);
 
       auto* obs_ref_trajectory = planning_input.add_obs_ref_trajectory();
-      obs_ref_trajectory->set_length(obstacle.length);
-      obs_ref_trajectory->set_width(obstacle.width);
-      obs_ref_trajectory->set_longitudinal_label(obstacle.longitudinal_label);
-      obs_ref_trajectory->set_obs_id(obstacle.agent_id);
-      obs_ref_trajectory->set_init_s(obstacle.init_s);
+      obs_ref_trajectory->set_length(obstacle->length);
+      obs_ref_trajectory->set_width(obstacle->width);
+      obs_ref_trajectory->set_longitudinal_label(obstacle->longitudinal_label);
+      obs_ref_trajectory->set_obs_id(obstacle->agent_id);
+      obs_ref_trajectory->set_init_s(obstacle->init_s);
 
-      const double obs_wheel_base = obstacle.length * 0.75;
+      const double obs_wheel_base = obstacle->length * 0.75;
       for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
-        obs_ref_trajectory->add_ref_x_vec(obstacle.ref_x_vec[i]);
-        obs_ref_trajectory->add_ref_y_vec(obstacle.ref_y_vec[i]);
-        obs_ref_trajectory->add_ref_theta_vec(obstacle.ref_theta_vec[i]);
-        obs_ref_trajectory->add_ref_delta_vec(obstacle.ref_delta_vec[i]);
-        obs_ref_trajectory->add_ref_vel_vec(obstacle.ref_vel_vec[i]);
-        obs_ref_trajectory->add_ref_acc_vec(obstacle.ref_acc_vec[i]);
-        obs_ref_trajectory->add_ref_s_vec(obstacle.ref_s_vec[i]);
+        obs_ref_trajectory->add_ref_x_vec(obstacle->ref_x_vec[i]);
+        obs_ref_trajectory->add_ref_y_vec(obstacle->ref_y_vec[i]);
+        obs_ref_trajectory->add_ref_theta_vec(obstacle->ref_theta_vec[i]);
+        obs_ref_trajectory->add_ref_delta_vec(obstacle->ref_delta_vec[i]);
+        obs_ref_trajectory->add_ref_vel_vec(obstacle->ref_vel_vec[i]);
+        obs_ref_trajectory->add_ref_acc_vec(obstacle->ref_acc_vec[i]);
+        obs_ref_trajectory->add_ref_s_vec(obstacle->ref_s_vec[i]);
 
         double c1 = 1 / std::max(obs_wheel_base, 1e-6);
         double c2 = 0.0;
         double obs_curv_factor =
-            pnc::mathlib::GetCurvFactor(c1, c2, obstacle.ref_vel_vec[i]);
+            pnc::mathlib::GetCurvFactor(c1, c2, obstacle->ref_vel_vec[i]);
         obs_ref_trajectory->add_curv_factor_vec(obs_curv_factor);
       }
     }
@@ -359,19 +358,17 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
       session_->environmental_model().get_ego_state_manager();
   const auto& planning_init_point = ego_state_manager->planning_init_point();
 
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto& reference_path_ptr =
+      lane_change_decider_output.coarse_planning_info.reference_path;
 
   if (reference_path_ptr == nullptr) {
     return;
   }
 
-  const auto& coarse_planning_info = session_->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info;
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
+  const auto& coarse_planning_info =
+      lane_change_decider_output.coarse_planning_info;
   const auto lane_change_state = lane_change_decider_output.curr_state;
 
   const bool is_in_lane_change_condition =
@@ -523,35 +520,19 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
   if (lead_one_agent != nullptr) {
     double lead_s = 0.0, lead_l = 0.0;
     if (ego_lane_coord->XYToSL(lead_one_agent->x(), lead_one_agent->y(),
-                               &lead_s, &lead_l)) {
-      if (lead_one_agent != nullptr) {
-        double lead_s = 0.0, lead_l = 0.0;
-        if (ego_lane_coord->XYToSL(lead_one_agent->x(), lead_one_agent->y(),
-                                   &lead_s, &lead_l)) {
-          if (lead_s > ego_s) {
-            const auto& primary_trajectories =
-                lead_one_agent->trajectories_used_by_st_graph();
-            const auto& fallback_trajectories = lead_one_agent->trajectories();
+                               &lead_s, &lead_l) &&
+        lead_s > ego_s) {
+      const auto& primary_trajectories =
+          lead_one_agent->trajectories_used_by_st_graph();
+      const auto& fallback_trajectories = lead_one_agent->trajectories();
 
-            const auto& selected_trajectories = primary_trajectories.empty()
-                                                    ? fallback_trajectories
-                                                    : primary_trajectories;
+      const auto& selected_trajectories = primary_trajectories.empty()
+                                              ? fallback_trajectories
+                                              : primary_trajectories;
 
-            if (!selected_trajectories.empty() &&
-                !selected_trajectories.front().empty()) {
-              lead_trajectory = selected_trajectories.front();
-            }
-          } else {
-            lead_one_agent = nullptr;
-            lead_one_id_ = -1;
-          }
-        } else {
-          lead_one_agent = nullptr;
-          lead_one_id_ = -1;
-        }
-      } else {
-        lead_one_agent = nullptr;
-        lead_one_id_ = -1;
+      if (!selected_trajectories.empty() &&
+          !selected_trajectories.front().empty()) {
+        lead_trajectory = selected_trajectories.front();
       }
     } else {
       lead_one_agent = nullptr;
@@ -564,8 +545,19 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
   const double cruise_speed = ego_state_manager->ego_v_cruise();
   JSON_DEBUG_VALUE("joint_cruise_speed", cruise_speed);
 
-  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
-  const double current_limit_speed = speed_limit_result.speed_limit;
+  const auto& speed_limit_decider_output =
+      session_->planning_context().speed_limit_decider_output();
+  double speed_limit_normal = cruise_speed;
+  if (is_in_lane_change_condition) {
+    speed_limit_normal = std::fmin(
+        speed_limit_normal, speed_planning_config_.lane_change_upper_speed_limit_kph / 3.6);
+  }
+
+  double speed_limit_ref = std::numeric_limits<double>::max();
+  auto speed_limit_type_ref = SpeedLimitType::NONE;
+  speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
+                                           &speed_limit_type_ref);
+  const double current_limit_speed = std::fmin(speed_limit_normal, speed_limit_ref);
   JSON_DEBUG_VALUE("joint_limit_speed", current_limit_speed);
 
   double current_s = 0.0;
@@ -621,12 +613,11 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
 
     double decel_jerk = joint_traj_params_.min_decel_jerk;
 
-    double next_acc = CalculateIdmAcceleration(
-        current_a, current_v, current_s, front_acc, front_vel, front_s,
-        target_tau, v0, decel_jerk);
+    double next_acc = CalculateIdmAcceleration(current_a, current_v, current_s,
+                                               front_acc, front_vel, front_s,
+                                               target_tau, v0, decel_jerk);
 
     constexpr double kHalf = 0.5;
-    const double dt = kPlanningTimeStep;
     const double dt2 = dt * dt;
 
     double next_v = std::max(0.0, current_v + next_acc * dt);
@@ -648,11 +639,11 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
     double d2x_ds2 = x_s_spline.deriv(2, ref_s);
     double d2y_ds2 = y_s_spline.deriv(2, ref_s);
 
-    double ds_norm = std::sqrt(dx_ds * dx_ds + dy_ds * dy_ds);
+    double ds_norm_sq = dx_ds * dx_ds + dy_ds * dy_ds;
+    double ds_norm = std::sqrt(ds_norm_sq);
     double curvature = 0.0;
     if (ds_norm > 1e-6) {
-      curvature =
-          (dx_ds * d2y_ds2 - dy_ds * d2x_ds2) / (ds_norm * ds_norm * ds_norm);
+      curvature = (dx_ds * d2y_ds2 - dy_ds * d2x_ds2) / (ds_norm_sq * ds_norm);
     }
 
     double next_delta = std::atan(wheel_base * curvature);

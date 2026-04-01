@@ -35,7 +35,7 @@ constexpr double kSSharpBendSpeedScaleRatio = 0.8;
 constexpr double kTFLSpeedLimitDis = 160.0;
 constexpr double kMergePointDetectedDistance = 20.0;
 constexpr double kStaticAgentAvoidLimitedSpeedHigh = 10.0;
-constexpr double kStaticAgentAvoidLimitedSpeedLow = 4.17;
+constexpr double kStaticAgentAvoidLimitedSpeedLow = 8.33;
 constexpr double kDynamicAgentAvoidLimitedSpeedHigh = 5.56;
 constexpr double kDynamicAgentAvoidLimitedSpeedLow = 2.78;
 const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
@@ -80,8 +80,15 @@ constexpr double kRoadBoundarySharpDecelThreshold = -1.2;  // Deceleration thres
 constexpr double kRoadBoundaryCooldownDeltaThreshold = 1.11;  // m/s threshold to treat limit change as significant
 constexpr double kDefaultLimitSpeedMps = 100.0;  // Default value meaning no speed limit applied
 constexpr double kCurvSpeedDifference = 3 / 3.6;
-constexpr int kSharpCurveMinFrames =
-    5;  // Min frames to maintain sharp curve state
+constexpr double kCurvatureByDecelExitThreshold = -0.5;
+constexpr double kCurvatureByDecelNearSpeedDecelExitThreshold = -1.0;
+constexpr double kCurvatureByDecelSpeedDiffExit = 4 / 3.6;  // 4kph
+constexpr double kRoadBoundarySharpDecelExitThreshold = -0.5;
+constexpr double kRoadBoundarySharpNearSpeedDecelExitThreshold = -1.0;
+constexpr double kRoadBoundarySharpSpeedDiffExit = 4 / 3.6;  // 4kph
+constexpr double kMapSharpCurveByDecelExitThreshold = -0.5;
+constexpr double kMapSharpCurveByDecelNearSpeedDecelExitThreshold = -1.0;
+constexpr double kMapSharpCurveByDecelSpeedDiffExit = 4 / 3.6;  // 4kph
 constexpr double kMinRampSampleLength = 150.0;
 constexpr double kMapSharpCurveRadiusEnter =
     100.0;  // Enter radius threshold for map sharp curve (m)
@@ -972,6 +979,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   if (reference_path_ptr == nullptr) {
+    // Reset curve hysteresis states when reference path is unavailable.
+    last_is_sharp_curve_ = false;
+    last_is_sharp_curve_by_decel_ = false;
     road_radius_origin_ = 10000.0;
     JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin_);
     JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
@@ -1230,39 +1240,29 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     required_deceleration = -2.0;
   }
 
-  // Determine sharp curve by deceleration with frame count hysteresis
+  // Determine sharp curve by deceleration with explicit enter/exit hysteresis
   bool is_sharp_curve_by_decel = false;
+  const double sharp_curve_by_decel_speed_diff = v_ego - v_limit_road;
+  bool should_enter_sharp_curve_by_decel = false;
+  bool should_exit_sharp_curve_by_decel = false;
 
   if (speed_limit_config_.enable_sharp_curve_by_decel) {
-    bool should_enter_sharp_curve =
+    should_enter_sharp_curve_by_decel =
         (required_deceleration < kCurvatureDecelThreshold) && is_sharp_curve;
+    should_exit_sharp_curve_by_decel =
+        !is_sharp_curve ||
+        (required_deceleration > kCurvatureByDecelExitThreshold) ||
+        ((sharp_curve_by_decel_speed_diff < kCurvatureByDecelSpeedDiffExit) &&
+         (required_deceleration >
+          kCurvatureByDecelNearSpeedDecelExitThreshold));
     if (last_is_sharp_curve_by_decel_) {
-      if (should_enter_sharp_curve) {
-        is_sharp_curve_by_decel = true;
-        sharp_curve_frame_count_ = 0;
-      } else {
-        // Maintain state for minimum frames
-        if (sharp_curve_frame_count_ < kSharpCurveMinFrames) {
-          is_sharp_curve_by_decel = true;
-          sharp_curve_frame_count_++;
-        } else {
-          is_sharp_curve_by_decel = false;
-          sharp_curve_frame_count_ = 0;
-        }
-      }
+      is_sharp_curve_by_decel = !should_exit_sharp_curve_by_decel;
     } else {
-      if (should_enter_sharp_curve) {
-        is_sharp_curve_by_decel = true;
-        sharp_curve_frame_count_ = 0;
-      } else {
-        is_sharp_curve_by_decel = false;
-        sharp_curve_frame_count_ = 0;
-      }
+      is_sharp_curve_by_decel = should_enter_sharp_curve_by_decel;
     }
   } else {
     // Reset if disabled
     is_sharp_curve_by_decel = false;
-    sharp_curve_frame_count_ = 0;
   }
   last_is_sharp_curve_by_decel_ = is_sharp_curve_by_decel;
 
@@ -1658,13 +1658,30 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_map_sharp_curve);
 
+  bool is_map_sharp_curve_by_decel = false;
+  if (speed_limit_config_.enable_map_sharp_curve_by_decel && is_map_sharp_curve) {
+    const bool should_enter_map_sharp_curve_by_decel =
+        map_sharp_curve_required_decel < kCurvatureDecelThreshold;
+    const bool should_exit_map_sharp_curve_by_decel =
+        (map_sharp_curve_required_decel > kMapSharpCurveByDecelExitThreshold) ||
+        ((v_ego - v_limit_map_sharp_curve) < kMapSharpCurveByDecelSpeedDiffExit &&
+         map_sharp_curve_required_decel >
+             kMapSharpCurveByDecelNearSpeedDecelExitThreshold);
+
+    if (last_is_map_sharp_curve_by_decel_) {
+      is_map_sharp_curve_by_decel = !should_exit_map_sharp_curve_by_decel;
+    } else {
+      is_map_sharp_curve_by_decel = should_enter_map_sharp_curve_by_decel;
+    }
+  } else {
+    is_map_sharp_curve_by_decel = false;
+  }
+  last_is_map_sharp_curve_by_decel_ = is_map_sharp_curve_by_decel;
+
   // Priority: is_sharp_curve_by_decel > map_sharp_curve
   SpeedLimitType v_limit_type = SpeedLimitType::CURVATURE;
 
-  if (is_sharp_curve_by_decel ||
-      (speed_limit_config_.enable_map_sharp_curve_by_decel &&
-       is_map_sharp_curve &&
-       map_sharp_curve_required_decel < kCurvatureDecelThreshold)) {
+  if (is_sharp_curve_by_decel || is_map_sharp_curve_by_decel) {
     // Highest priority: sharp curve by deceleration
     v_limit_type = SpeedLimitType::SHARP_CURVATURE;
   }
@@ -1675,12 +1692,21 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
 
   JSON_DEBUG_VALUE("is_map_sharp_curve", is_map_sharp_curve ? 1 : 0);
+  JSON_DEBUG_VALUE("is_map_sharp_curve_by_decel",
+                   is_map_sharp_curve_by_decel ? 1 : 0);
   JSON_DEBUG_VALUE("v_limit_map_sharp_curve", v_limit_map_sharp_curve);
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
   JSON_DEBUG_VALUE("is_sharp_curve", is_sharp_curve ? 1 : 0);
   JSON_DEBUG_VALUE("is_sharp_curve_by_decel", is_sharp_curve_by_decel ? 1 : 0);
-  JSON_DEBUG_VALUE("sharp_curve_frame_count", sharp_curve_frame_count_);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_should_enter",
+                   should_enter_sharp_curve_by_decel ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_should_exit",
+                   should_exit_sharp_curve_by_decel ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_state",
+                   last_is_sharp_curve_by_decel_ ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_by_decel_speed_diff",
+                   sharp_curve_by_decel_speed_diff);
   JSON_DEBUG_VALUE("required_deceleration", required_deceleration);
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
@@ -2233,6 +2259,8 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       environmental_model.get_route_info()->get_route_info_output();
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
     poi_v_limit_set_ = false;
+    poi_v_limit_set_decision_from_fsm_ = false;
+    poi_v_limit_kph_ = 120;
     return;
   }
   ad_common::math::Vec2d current_point;
@@ -2252,6 +2280,8 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       nearest_s, nearest_l, is_search_cur_link);
   if (current_segment == nullptr) {
     poi_v_limit_set_ = false;
+    poi_v_limit_set_decision_from_fsm_ = false;
+    poi_v_limit_kph_ = 120;
     return;
   } else {
     poi_v_limit_set_ = false;
@@ -2262,6 +2292,9 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     double v_cruise_fsm_kph = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
     double cur_road_map_v_limit = current_segment->speed_limit();
     double cur_link_v_limit = std::max(cur_road_map_v_limit, v_cruise_fsm_kph);
+    /* if (cur_link_v_limit - cur_road_map_v_limit > 1.0) {
+      poi_v_limit_set_decision_from_fsm_ = true;
+    } */
     double v_limit_dis = 10000.0;
 
     auto tunnel_info =
@@ -2297,6 +2330,15 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       if (tunnel_info.second < v_limit_dis && (tunnel_v_limit < v_cruise_fsm_kph + kEpsilon)) {
         v_cruise_limit_ = tunnel_v_limit;
         poi_v_limit_set_ = true;
+        if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+          poi_v_limit_set_decision_from_fsm_ = false;
+        } else {
+          poi_v_limit_set_decision_from_fsm_ = true;
+        }
+      }
+      else if (tunnel_info.second >= v_limit_dis && poi_v_limit_set_decision_from_fsm_ ) {
+        v_cruise_limit_ = poi_v_limit_kph_;
+        poi_v_limit_set_ = true;
       }
     } else if (tunnel_info.second < kEpsilon &&
                current_segment->link_type() &
@@ -2323,6 +2365,17 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
         // limit works
         v_cruise_limit_ = speed_limit_config_.toll_station_vel_limit_kph;
         poi_v_limit_set_ = true;
+        if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+          poi_v_limit_set_decision_from_fsm_ = false;
+        } else {
+          poi_v_limit_set_decision_from_fsm_ = true;
+        }
+
+      } else if (toll_station_info.first != nullptr && toll_station_info.second > 0) {
+        if (poi_v_limit_set_decision_from_fsm_ ) {
+          v_cruise_limit_ = poi_v_limit_kph_;
+          poi_v_limit_set_ = true;
+        }
       } else {
         v_limit_dis =
             interp(cur_link_v_limit,
@@ -2336,6 +2389,16 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
           // works
           v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
           poi_v_limit_set_ = true;
+          if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+            poi_v_limit_set_decision_from_fsm_ = false;
+          } else {
+            poi_v_limit_set_decision_from_fsm_ = true;
+          }
+        } else if (sapa_info.first != nullptr && sapa_info.second > 0) {
+          if (poi_v_limit_set_decision_from_fsm_ ) {
+            v_cruise_limit_ = poi_v_limit_kph_;
+            poi_v_limit_set_ = true;
+          }
         } else if (sapa_info.second < kEpsilon &&
                    current_segment->link_type() ==
                        iflymapdata::sdpro::LinkType::LT_SAPA) {
@@ -2356,6 +2419,16 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               none_express_info.second < v_limit_dis) {
             v_cruise_limit_ = speed_limit_config_.non_express_vel_limit_kph;
             poi_v_limit_set_ = true;
+            if (cur_link_v_limit - cur_road_map_v_limit < kEpsilon) {
+              poi_v_limit_set_decision_from_fsm_ = false;
+            } else {
+              poi_v_limit_set_decision_from_fsm_ = true;
+            }
+          } else if (none_express_info.first != nullptr && none_express_info.second > 0) {
+            if (poi_v_limit_set_decision_from_fsm_ ) {
+              v_cruise_limit_ = poi_v_limit_kph_;
+              poi_v_limit_set_ = true;
+            }
           } else {
             bool function_need_inhibited = false;
             auto speed_limit_output =
@@ -2406,6 +2479,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       }
     }
     if (poi_v_limit_set_) {
+      poi_v_limit_kph_ = v_cruise_limit_;
       JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
       auto speed_limit_output = session_->mutable_planning_context()
                                     ->mutable_speed_limit_decider_output();
@@ -2421,7 +2495,8 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   const auto &blocked_obs_id = lane_borrow_output.blocked_obs_id;
-  const auto borrow_direction = lane_borrow_output.borrow_direction;
+  // const auto borrow_direction = lane_borrow_output.borrow_direction;
+  const auto &borrow_direction_map = lane_borrow_output.borrow_direction_map;
 
   // get lane borrow agent
   const auto agent_manager =
@@ -2465,6 +2540,11 @@ void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
       continue;
     }
     double min_lat_l_by_lat_path = 0.0;
+    auto dir_it = borrow_direction_map.find(agent->agent_id());
+    double borrow_direction = NO_BORROW;
+    if (dir_it != borrow_direction_map.end()) {
+      borrow_direction = dir_it->second;
+    }
     if (borrow_direction == LEFT_BORROW) {
       min_lat_l_by_lat_path = max_l_by_lat_path;
       // (agent_l * min_l_by_lat_path) > 0 ? min_l_by_lat_path : 0;
@@ -3322,6 +3402,7 @@ void SpeedLimitDecider::ResetRoadBoundarySpeedLimitState() {
   last_road_boundary_strictest_v_limit_ = kDefaultLimitSpeedMps;
   last_road_boundary_strictest_trigger_distance_ = 0.0;
   road_boundary_strictest_cooldown_count_ = 0;
+  last_is_road_boundary_sharp_decel_strictest_ = false;
 
   // Road boundary speed limit manual intervention detection
   road_boundary_v_limit_set_ = false;
@@ -4739,8 +4820,31 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
              (v_ego - v_limit_road_boundary_strictest) > kCurvSpeedDifference) {
               required_decel_strictest = -2.0;
   }
-  if (required_decel_strictest < kRoadBoundarySharpDecelThreshold) {
+  const double road_boundary_strictest_speed_diff =
+      v_ego - v_limit_road_boundary_strictest;
+  const bool should_enter_road_boundary_sharp_decel_strictest =
+      road_boundary_strictest_valid &&
+      (required_decel_strictest < kRoadBoundarySharpDecelThreshold);
+  const bool should_exit_road_boundary_sharp_decel_strictest =
+      !road_boundary_strictest_valid ||
+      (required_decel_strictest > kRoadBoundarySharpDecelExitThreshold) ||
+      ((road_boundary_strictest_speed_diff < kRoadBoundarySharpSpeedDiffExit) &&
+       (required_decel_strictest >
+        kRoadBoundarySharpNearSpeedDecelExitThreshold));
+  bool is_road_boundary_sharp_decel_strictest = false;
+  if (last_is_road_boundary_sharp_decel_strictest_) {
+    is_road_boundary_sharp_decel_strictest =
+        !should_exit_road_boundary_sharp_decel_strictest;
+  } else {
+    is_road_boundary_sharp_decel_strictest =
+        should_enter_road_boundary_sharp_decel_strictest;
+  }
+  last_is_road_boundary_sharp_decel_strictest_ =
+      is_road_boundary_sharp_decel_strictest;
+  if (is_road_boundary_sharp_decel_strictest) {
     road_boundary_type_strictest = SpeedLimitType::ROAD_BOUNDARY_SHARP_DECEL;
+  } else {
+    road_boundary_type_strictest = SpeedLimitType::ROAD_BOUNDARY;
   }
 
   // Apply strictest road boundary limit to v_target_ only (not v_cruise_limit_)
@@ -4784,6 +4888,14 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
                    required_decel_strictest);
   JSON_DEBUG_VALUE("road_boundary_strictest_type",
                    static_cast<int>(road_boundary_type_strictest));
+  JSON_DEBUG_VALUE("road_boundary_strictest_sharp_should_enter",
+                   should_enter_road_boundary_sharp_decel_strictest ? 1 : 0);
+  JSON_DEBUG_VALUE("road_boundary_strictest_sharp_should_exit",
+                   should_exit_road_boundary_sharp_decel_strictest ? 1 : 0);
+  JSON_DEBUG_VALUE("road_boundary_strictest_sharp_state",
+                   is_road_boundary_sharp_decel_strictest ? 1 : 0);
+  JSON_DEBUG_VALUE("road_boundary_strictest_speed_diff",
+                   road_boundary_strictest_speed_diff);
   JSON_DEBUG_VALUE("road_boundary_strictest_valid",
                    road_boundary_strictest_valid);
   JSON_DEBUG_VALUE("road_boundary_strictest_applied",

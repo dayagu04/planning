@@ -53,48 +53,52 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   double max_virtual_length = 0.0;
   double max_left_virtual_length = 0.0;
   double max_left_virtual_x = 0.0;
-  double left_boundary_x = left_lane_boundary_.begin;
-  for (int i = 0; i < left_lane_boundary_.type_segments_size; i++) {
-    const auto &left_boundary_seg = left_lane_boundary_.type_segments[i];
-    double left_boundary_seg_end_x = left_boundary_x + left_boundary_seg.length;
-    if (left_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-      if (left_boundary_x >= 0) {
-        max_virtual_length += left_boundary_seg.length;
-      } else if (left_boundary_seg_end_x >= 0) {
-        max_virtual_length += left_boundary_seg_end_x;
+  if (left_lane_boundary_.car_points_size > 0) {
+    double left_boundary_x = left_lane_boundary_.car_points[0].x;
+    for (int i = 0; i < left_lane_boundary_.type_segments_size; ++i) {
+      const auto& left_boundary_seg = left_lane_boundary_.type_segments[i];
+      double left_boundary_seg_end_x = left_boundary_x + left_boundary_seg.length;
+      if (left_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        if (left_boundary_x >= 0) {
+          max_virtual_length += left_boundary_seg.length;
+        } else if (left_boundary_seg_end_x >= 0) {
+          max_virtual_length += left_boundary_seg_end_x;
+        }
+        if (max_virtual_length > max_left_virtual_length) {
+          max_left_virtual_length = max_virtual_length;
+          max_left_virtual_x = left_boundary_seg_end_x - max_virtual_length;
+        }
+      } else {
+        max_virtual_length = 0;
       }
-      if (max_virtual_length > max_left_virtual_length) {
-        max_left_virtual_length = max_virtual_length;
-        max_left_virtual_x = left_boundary_seg_end_x - max_left_virtual_length;
-      }
-    } else {
-      max_virtual_length = 0;
+      left_boundary_x = left_boundary_seg_end_x;
     }
-    left_boundary_x += left_boundary_seg.length;
   }
   max_virtual_length = 0.0;
   double max_right_virtual_length = 0.0;
   double max_right_virtual_x = 0.0;
-  double right_boundary_x = right_lane_boundary_.begin;
-  for (int i = 0; i < right_lane_boundary_.type_segments_size; i++) {
-    const auto &right_boundary_seg = right_lane_boundary_.type_segments[i];
-    double right_boundary_seg_end_x =
-        right_boundary_x + right_boundary_seg.length;
-    if (right_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-      if (right_boundary_x >= 0) {
-        max_virtual_length += right_boundary_seg.length;
-      } else if (right_boundary_seg_end_x >= 0) {
-        max_virtual_length += right_boundary_seg_end_x;
+  if (right_lane_boundary_.car_points_size > 0) {
+    double right_boundary_x = right_lane_boundary_.car_points[0].x;
+    for (int i = 0; i < right_lane_boundary_.type_segments_size; i++) {
+      const auto& right_boundary_seg = right_lane_boundary_.type_segments[i];
+      double right_boundary_seg_end_x =
+          right_boundary_x + right_boundary_seg.length;
+      if (right_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        if (right_boundary_x >= 0) {
+          max_virtual_length += right_boundary_seg.length;
+        } else if (right_boundary_seg_end_x >= 0) {
+          max_virtual_length += right_boundary_seg_end_x;
+        }
+        if (max_virtual_length > max_right_virtual_length) {
+          max_right_virtual_length = max_virtual_length;
+          max_right_virtual_x =
+              right_boundary_seg_end_x - max_virtual_length;
+        }
+      } else {
+        max_virtual_length = 0;
       }
-      if (max_virtual_length > max_right_virtual_length) {
-        max_right_virtual_length = max_virtual_length;
-        max_right_virtual_x =
-            right_boundary_seg_end_x - max_right_virtual_length;
-      }
-    } else {
-      max_virtual_length = 0;
+      right_boundary_x = right_boundary_seg_end_x;
     }
-    right_boundary_x += right_boundary_seg.length;
   }
   if (max_left_virtual_x < max_right_virtual_x &&
       max_left_virtual_x + max_left_virtual_length > max_right_virtual_x) {
@@ -344,11 +348,11 @@ double VirtualLane::max_width() const {
       case iflyauto::LANETYPE_NON_MOTOR:;
         return kMaxLaneWidth;
       default:
-        ILOG_ERROR << "Error Lane Type";
+        ILOG_DEBUG << "Error Lane Type";
         return kMinLaneWidth;
     }
   } else {
-    ILOG_ERROR << "Error Lane Type";
+    ILOG_DEBUG << "Error Lane Type";
     return kMinLaneWidth;
   }
 }
@@ -401,11 +405,11 @@ double VirtualLane::min_width() const {
       case iflyauto::LANETYPE_NON_MOTOR:;
         return kMinLaneWidth;
       default:
-        ILOG_ERROR << "Error Lane Type";
+        ILOG_DEBUG << "Error Lane Type";
         return kMinLaneWidth;
     }
   } else {
-    ILOG_ERROR << "Error Lane Type";
+    ILOG_DEBUG << "Error Lane Type";
     return kMinLaneWidth;
   }
 }
@@ -500,14 +504,12 @@ void VirtualLane::ProcessEgoOnRoadMLC(
     if (first_merge_direction == RAMP_ON_LEFT) {
       if (order_id_ + 1 == lane_num) {
         current_tasks_.emplace_back(-1);
-        std::cout << "高速前方右侧有汇入车道，最右侧车道产生一个变道任务"
-                  << std::endl;
+        ILOG_DEBUG << "高速前方右侧有汇入车道，最右侧车道产生一个变道任务";
       }
     } else if (first_merge_direction == RAMP_ON_RIGHT) {
       if (order_id_ == 0) {
         current_tasks_.emplace_back(1);
-        std::cout << "高速前方左侧有汇入车道，最左侧车道产生一个变道任务"
-                  << std::endl;
+        ILOG_DEBUG << "高速前方左侧有汇入车道，最左侧车道产生一个变道任务";
       }
     }
   } else if (is_nearing_ramp && !is_on_ramp &&
@@ -532,7 +534,7 @@ void VirtualLane::ProcessEgoOnRoadMLC(
     // TODO（fengwang31）：需要考虑上一次汇入的方向。目前默认匝道都是从右边汇入主路的
     if (order_id_ + 1 == lane_num) {
       current_tasks_.emplace_back(-1);
-      std::cout << "在最右侧车道上时,向左产生一个变道任务" << std::endl;
+      ILOG_DEBUG << "在最右侧车道上时,向左产生一个变道任务";
     }
   }
 }

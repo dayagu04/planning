@@ -374,12 +374,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
 
 const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
     Node3d* current_node, CurveNode* curve_node_to_goal,
-#if USE_LINK_PT_LINE
-    const link_pt_line::LinkPtLineInput<float>& input
-#else
-    const LinkPoseLineInput& input
-#endif
-) {
+    const link_pt_line::LinkPtLineInput<float>& input) {
   if (request_.search_mode == SearchMode::FORMAL) {
     const float x = current_node->GetX();
     const float y = current_node->GetY();
@@ -462,13 +457,8 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
     const auto& pt_vec = lpl_path_.ptss[i];
     path.dists[i] = lpl_path_.lengths[i];
     path.kappas[i] = lpl_path_.kappas[i];
-#if USE_LINK_PT_LINE
     path.gears[i] = lpl_path_.gears[i];
     path.steers[i] = lpl_path_.steers[i];
-#else
-    path.gears[i] = GetAstarGearFromSegGear(lpl_path_.gears[i]);
-    path.steers[i] = GetAstarSteerFromSegSteer(lpl_path_.steers[i]);
-#endif
     path.point_sizes[i] = lpl_path_.ptss[i].size();
     path.ptss[i] = std::move(lpl_path_.ptss[i]);
     if (i > 0) {
@@ -575,13 +565,8 @@ const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
     AstarPathGear cur_gear;
     float cur_kappa, cur_gear_length;
 
-#if USE_LINK_PT_LINE
     common_math::PathPt<float> gear_switch_pose;
     common_math::PathPt<float> next_gear_switch_pose;
-#else
-    geometry_lib::PathPoint gear_switch_pose;
-    geometry_lib::PathPoint next_gear_switch_pose;
-#endif
 
     if (gear_switch_node != nullptr) {
       // gear switch num > 0
@@ -769,11 +754,7 @@ const bool HybridAStarPathGenerator::CalcRSPathToGoal(
 
 const bool HybridAStarPathGenerator::CalcLPLPathToGoal(
     Node3d* current_node,
-#if USE_LINK_PT_LINE
     const link_pt_line::LinkPtLineInput<float>& input,
-#else
-    const LinkPoseLineInput& input,
-#endif
     const bool cal_h_cost) {
 #if LOG_TIME_PROFILE
   const double lpl_start_time = IflyTime::Now_ms();
@@ -830,11 +811,7 @@ const float HybridAStarPathGenerator::GenerateHeuristicCostByRsPath(
 
 const float HybridAStarPathGenerator::GenerateHeuristicCostByLPLPath(
     Node3d* next_node,
-#if USE_LINK_PT_LINE
     const link_pt_line::LinkPtLineInput<float>& input,
-#else
-    const LinkPoseLineInput& input,
-#endif
     NodeHeuristicCost* cost) {
   if (!CalcLPLPathToGoal(next_node, input, true)) {
     return 100.0f;
@@ -919,11 +896,7 @@ void HybridAStarPathGenerator::CalcObsDistRelativeSlot(
 }
 
 const float HybridAStarPathGenerator::CalcGearChangePoseCost(
-#if USE_LINK_PT_LINE
     const common_math::PathPt<float>& gear_switch_pose,
-#else
-    const geometry_lib::PathPoint& gear_switch_pose,
-#endif
     AstarPathGear gear, const float gear_switch_penalty,
     const float length_penalty) {
   return 0.0f;
@@ -1207,7 +1180,6 @@ HybridAStarPathGenerator::GetAllSuccessCurvePathForDebug() {
 
 const std::vector<geometry_lib::PathPoint>
 HybridAStarPathGenerator::GetAllSuccessCurvePathFirstGearSwitchPoseForDebug() {
-#if USE_LINK_PT_LINE
   std::vector<geometry_lib::PathPoint> poses(
       all_success_path_first_gear_switch_pose_debug_.size());
   for (size_t i = 0; i < all_success_path_first_gear_switch_pose_debug_.size();
@@ -1217,9 +1189,6 @@ HybridAStarPathGenerator::GetAllSuccessCurvePathFirstGearSwitchPoseForDebug() {
     poses[i].SetTheta(pose.GetTheta());
   }
   return poses;
-#else
-  return all_success_path_first_gear_switch_pose_debug_;
-#endif
 }
 
 const cdl::AABB& HybridAStarPathGenerator::GetIntersetingAreaForDebug() {

@@ -71,6 +71,8 @@ bool ParkingScenarioManager::Init(
 
 void ParkingScenarioManager::UpdateScenarioType() {
   ILOG_INFO << "UpdateScenarioType";
+  scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
+  scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
   if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
       apa_world_->GetStateMachineManagerPtr()->IsParkInvalidStatus()) {
     Reset();
@@ -242,7 +244,8 @@ bool ParkingScenarioManager::ScenarioRunning() {
 
   if (scenario_type_ == ParkingScenarioType::SCENARIO_NARROW_SPACE) {
     JSON_DEBUG_VALUE("geometry_path_release", false);
-  } else {
+  } else if (scenario_type_ != ParkingScenarioType::SCENARIO_PARALLEL_IN &&
+             scenario_type_ != ParkingScenarioType::SCENARIO_PARALLEL_OUT) {
     JSON_DEBUG_VALUE("geometry_path_release", true);
   }
 

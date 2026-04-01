@@ -51,6 +51,7 @@ constexpr double kTimeResolution = 0.2;
 constexpr double kConsideredReverseVruTime = 2.0;
 constexpr double kPlanningdt = 0.1;
 constexpr double kRadsOccPathRangeForL = 2.2;
+constexpr double kPedestrianLateralBuffer = 1.0;
 }  // namespace
 
 bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
@@ -206,6 +207,36 @@ void STGraph::MakeStaticAgentStBoundary(
       init_point, *mutable_agent_manager, agent, expand_buffer,
       small_expand_buffer, lat_buffer, &prev_st_count);
 
+  if (agent.type() == agent::AgentType::PEDESTRIAN && nullptr != ptr_obj_lane) {
+    const auto& follow_agent_ids = st_graph_input_->GetFollowAgentIds();
+    if (follow_agent_ids.find(agent.agent_id()) != follow_agent_ids.end()) {
+      double nearest_s_vru = 0.0;
+      double nearest_l_vru = 0.0;
+      ptr_virtual_lane_manager->GetNearestLane({agent.x(), agent.y()},
+                                               &nearest_s_vru, &nearest_l_vru);
+      double half_lane_width = 0.5 * ptr_ego_lane->width_by_s(nearest_s_vru);
+      const double ego_half_width =
+          VehicleConfigurationContext::Instance()->get_vehicle_param().width *
+          0.5;
+      const double invade_dist =
+          std::max(1e-6, std::fabs(nearest_l_vru) - agent.width() * 0.5);
+
+      if (invade_dist >= half_lane_width) {
+        lat_buffer += 0.0;
+      } else if (invade_dist <= ego_half_width) {
+        lat_buffer += kPedestrianLateralBuffer;
+      } else {
+        const double denominator = half_lane_width - ego_half_width;
+        if (denominator > kMathEpsilon) {
+          lat_buffer += kPedestrianLateralBuffer *
+                        (half_lane_width - invade_dist) / denominator;
+        } else {
+          lat_buffer += kPedestrianLateralBuffer;
+        }
+      }
+    }
+  }
+
   lat_buffer = reuse_for_close_pass
                    ? lat_buffer + extra_lateral_buffer_for_close_pass
                    : lat_buffer;
@@ -227,7 +258,7 @@ void STGraph::MakeStaticAgentStBoundary(
   st_point_pairs.reserve(reserve_num);
   double lower_s = std::numeric_limits<double>::max();
   double upper_s = std::numeric_limits<double>::lowest();
-  const int64_t boundary_id = (agent.agent_id() << 8) + 0;
+  const int64_t boundary_id = (int64_t(agent.agent_id()) << 8) + 0;
   double min_t = std::numeric_limits<double>::max();
   const double max_l = agent_sl_boundary[2];
   const double min_l = agent_sl_boundary[3];
@@ -235,17 +266,18 @@ void STGraph::MakeStaticAgentStBoundary(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_half_width = vehicle_param.width * 0.5;
 
-  auto make_polygon = [](const Vec2d &start, const Vec2d &end, double width) {
+  auto make_polygon = [](const Vec2d& start, const Vec2d& end, double width) {
     planning_math::Vec2d left_begin_point(start.x(), start.y() + width / 2);
     planning_math::Vec2d left_end_point(end.x(), end.y() + width / 2);
     planning_math::Vec2d right_begin_point(start.x(), start.y() - width / 2);
     planning_math::Vec2d right_end_point(end.x(), end.y() - width / 2);
     return Polygon2d(
-      {left_begin_point, left_end_point, right_end_point, right_begin_point});
+        {left_begin_point, left_end_point, right_end_point, right_begin_point});
   };
 
-  if(is_rads_scene && agent.type() > agent::AgentType::OCC_EMPTY) {
-    if(max_l * min_l > 0.0 && std::min(std::fabs(max_l), std::fabs(min_l)) > ego_half_width) {
+  if (is_rads_scene && agent.type() > agent::AgentType::OCC_EMPTY) {
+    if (max_l * min_l > 0.0 &&
+        std::min(std::fabs(max_l), std::fabs(min_l)) > ego_half_width) {
       return;
     } else if (max_l * min_l > 0.0) {
       // polygon points min l > ego_half_width, return
@@ -265,7 +297,7 @@ void STGraph::MakeStaticAgentStBoundary(
     }
     std::vector<planning_math::Vec2d> frenet_points;
     Polygon2d agt_sl_polygon;
-    for (auto &pt : agent.perception_polygon().points()) {
+    for (auto& pt : agent.perception_polygon().points()) {
       Point2D frenet_point, carte_point;
       carte_point.x = pt.x();
       carte_point.y = pt.y();
@@ -278,17 +310,18 @@ void STGraph::MakeStaticAgentStBoundary(
           planning_math::Vec2d(frenet_point.x, frenet_point.y));
     }
     bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
-      &agt_sl_polygon);
+                                                          &agt_sl_polygon);
     if (!ok) {
       return;
     }
     std::vector<Polygon2d> overlap_polygon_vec;
     const auto path_pts = planned_kd_path->path_points();
     for (size_t i = 1; i < path_pts.size(); ++i) {
-      auto &pre_point = path_pts[i - 1];
-      auto &cur_point = path_pts[i];
+      auto& pre_point = path_pts[i - 1];
+      auto& cur_point = path_pts[i];
       auto path_polygon = make_polygon(Vec2d(pre_point.s(), pre_point.l()),
-                          Vec2d(cur_point.s(), cur_point.l()), kRadsOccPathRangeForL);
+                                       Vec2d(cur_point.s(), cur_point.l()),
+                                       kRadsOccPathRangeForL);
 
       Polygon2d overlap_polygon;
 
@@ -300,7 +333,7 @@ void STGraph::MakeStaticAgentStBoundary(
         continue;
       }
     }
-    if(overlap_polygon_vec.empty()) {
+    if (overlap_polygon_vec.empty()) {
       return;
     }
     double overlap_max_s = overlap_polygon_vec.front().max_x();
@@ -308,16 +341,19 @@ void STGraph::MakeStaticAgentStBoundary(
     double overlap_max_l = overlap_polygon_vec.front().max_y();
     double overlap_min_l = overlap_polygon_vec.front().min_y();
     for (int idx = 1; idx < overlap_polygon_vec.size(); idx++) {
-      overlap_max_s = std::fmax(overlap_max_s, overlap_polygon_vec[idx].max_x());
-      overlap_min_s = std::fmin(overlap_min_s, overlap_polygon_vec[idx].min_x());
-      overlap_max_l = std::fmax(overlap_max_l, overlap_polygon_vec[idx].max_y());
-      overlap_min_l = std::fmin(overlap_min_l, overlap_polygon_vec[idx].min_y());
+      overlap_max_s =
+          std::fmax(overlap_max_s, overlap_polygon_vec[idx].max_x());
+      overlap_min_s =
+          std::fmin(overlap_min_s, overlap_polygon_vec[idx].min_x());
+      overlap_max_l =
+          std::fmax(overlap_max_l, overlap_polygon_vec[idx].max_y());
+      overlap_min_l =
+          std::fmin(overlap_min_l, overlap_polygon_vec[idx].min_y());
     }
     agent_sl_boundary[0] = overlap_max_s;
     agent_sl_boundary[1] = overlap_min_s;
     agent_sl_boundary[2] = overlap_max_l;
     agent_sl_boundary[3] = overlap_min_l;
-
   }
   if (StGraphUtils::CalculateSRange(
           planned_kd_path, *path_border_querier, agent, obs_box, type,
@@ -526,7 +562,8 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto ptr_virtual_lane_manager =
       st_graph_input_->ptr_virtual_lane_manager();
   const bool is_lane_keeping = st_graph_input_->is_lane_keeping();
-  const bool is_lane_change_execution = st_graph_input_->is_lane_change_execution();
+  const bool is_lane_change_execution =
+      st_graph_input_->is_lane_change_execution();
   const auto is_not_in_intersection =
       ptr_virtual_lane_manager->GetIntersectionState() ==
       common::NO_INTERSECTION;
@@ -562,7 +599,6 @@ void STGraph::MakeDynamicAgentStBoundary(
       init_point, *mutable_agent_manager, agent, expand_buffer,
       small_expand_buffer, lat_buffer, &prev_st_count);
 
-  // check whether need adjust buffer by t
   bool need_adjust_buffer_by_t = false;
   bool is_parallel = false;
   bool is_within_ego_lane = false;
@@ -572,6 +608,32 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto& ptr_obj_lane = ptr_virtual_lane_manager->GetNearestLane(
       {agent.x(), agent.y()}, &nearest_s, &nearest_l);
   const double half_ego_lane_width = 0.5 * ptr_ego_lane->width_by_s(nearest_s);
+
+  if (agent.type() == agent::AgentType::PEDESTRIAN && nullptr != ptr_obj_lane) {
+    const auto& follow_agent_ids = st_graph_input_->GetFollowAgentIds();
+    if (follow_agent_ids.find(agent.agent_id()) != follow_agent_ids.end()) {
+      double half_lane_width = 0.5 * ptr_ego_lane->width_by_s(nearest_s);
+      const double ego_half_width =
+          VehicleConfigurationContext::Instance()->get_vehicle_param().width *
+          0.5;
+      const double invade_dist =
+          std::max(1e-6, std::fabs(nearest_l) - agent.width() * 0.5);
+
+      if (invade_dist >= half_lane_width) {
+        lat_buffer += 0.0;
+      } else if (invade_dist <= ego_half_width) {
+        lat_buffer += kPedestrianLateralBuffer;
+      } else {
+        const double denominator = half_lane_width - ego_half_width;
+        if (denominator > kMathEpsilon) {
+          lat_buffer += kPedestrianLateralBuffer *
+                        (half_lane_width - invade_dist) / denominator;
+        } else {
+          lat_buffer += kPedestrianLateralBuffer;
+        }
+      }
+    }
+  }
   if (nullptr != ptr_obj_lane) {
     is_within_ego_lane =
         ptr_ego_lane->get_virtual_id() == ptr_obj_lane->get_virtual_id() &&
@@ -590,7 +652,6 @@ void STGraph::MakeDynamicAgentStBoundary(
   const bool need_dynamic_buffer =
       StGraphUtils::NeedDynamicBufferForTimeRange(agent) &&
       type == StBoundaryType::NORMAL;
-  // check whether is candicate for close pass
   bool is_candicate_for_close_pass =
       (!reuse_for_close_pass) && (nullptr != ptr_obj_lane) &&
       StGraphUtils::CheckCandicateAgentForClosePass(
@@ -603,10 +664,6 @@ void STGraph::MakeDynamicAgentStBoundary(
           ? agent.time_range()
           : st_graph_input_->time_range();
   const auto& path_range = st_graph_input_->path_range();
-  // const double obs_diagonal = agent.box().diagonal();
-  // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
-
-  // const auto& trajectories = agent.trajectories();
 
   auto trajectories = agent.trajectories_used_by_st_graph();
 
@@ -619,16 +676,6 @@ void STGraph::MakeDynamicAgentStBoundary(
       trajectories.push_back(trajectory_optimized);
     }
   }
-
-  // only consider 2s traj to reverse vru within ego_lane
-  const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
-  bool is_need_truncate_traj =
-      is_not_in_intersection && agent.is_reverse() &&
-      (is_within_ego_lane || is_within_ego_neighbor_lane);
-  if (is_need_truncate_traj) {
-    mutable_agent->set_is_reverse_relieve_agent(true);
-  }
-  is_need_truncate_traj = false;
 
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());
@@ -649,22 +696,12 @@ void STGraph::MakeDynamicAgentStBoundary(
         (agent.agent_id() << 8) + i + agent.trajectories().size();
     for (double relative_time = time_range.first; relative_time <= time_horizon;
          relative_time += kTimeResolution) {
-      // find path_border_segments which have collison risk
       trajectory::TrajectoryPoint point;
       if (start_absolute_time + relative_time < agent_pred_end_time) {
-        if (is_need_truncate_traj) {
-          point = trajectories[i].Evaluate(std::fmin(
-              start_absolute_time + relative_time, kConsideredReverseVruTime));
-        } else {
-          point = trajectories[i].Evaluate(start_absolute_time + relative_time);
-        }
+        point = trajectories[i].Evaluate(start_absolute_time + relative_time);
       } else {
-        if (is_need_truncate_traj) {
-          point = trajectories[i].Evaluate(kConsideredReverseVruTime);
-        } else {
-          StGraphUtils::LinearExtendTrajectory(
-              trajectories[i], start_absolute_time + relative_time, &point);
-        }
+        StGraphUtils::LinearExtendTrajectory(
+            trajectories[i], start_absolute_time + relative_time, &point);
       }
 
       double specific_lat_buffer = need_adjust_buffer_by_t
@@ -770,7 +807,7 @@ void STGraph::MakeStPointsTable() {
     auto st_boundary = it->second.get();
     // 只忽略 CAUTION_YIELD，不再忽略 RELIEVE_JERK（让其正常参与搜索）
     if (st_boundary->decision_type() ==
-            STBoundary::DecisionType::CAUTION_YIELD) {
+        STBoundary::DecisionType::CAUTION_YIELD) {
       continue;
     }
     const auto& lower_points = st_boundary->lower_points();
@@ -972,8 +1009,8 @@ void STGraph::BackwardExtendSingleStBoundary(
   constexpr int32_t KBackwardExtendStboundaryStartIdx = 100;
   const int64_t target_boundary_id =
       (agent.agent_id() << 8) + KBackwardExtendStboundaryStartIdx + idx;
-  for (double relative_time = std::max(0.0, start_time - kTimeResolution); relative_time < end_time;
-       relative_time += kTimeResolution) {
+  for (double relative_time = std::max(0.0, start_time - kTimeResolution);
+       relative_time < end_time; relative_time += kTimeResolution) {
     trajectory::TrajectoryPoint point;
     if (start_absolute_time + relative_time < agent_pred_end_time) {
       point = trajectory.Evaluate(start_absolute_time + relative_time);
@@ -1072,7 +1109,7 @@ bool STGraph::CalculateStPassCorridor() {
         continue;
       }
       if (st_boundary->decision_type() ==
-              STBoundary::DecisionType::CAUTION_YIELD) {
+          STBoundary::DecisionType::CAUTION_YIELD) {
         continue;
       }
       const auto& decision_type = st_boundary->decision_type();
@@ -1082,10 +1119,11 @@ bool STGraph::CalculateStPassCorridor() {
           continue;
         }
         const int32_t boundary_agent_id = cur_lower_pt.agent_id();
-        const bool is_relieve_jerk = std::find(relieve_jerk_agent_ids_.begin(),
-                                               relieve_jerk_agent_ids_.end(),
-                                               boundary_agent_id) != relieve_jerk_agent_ids_.end();
-        
+        const bool is_relieve_jerk =
+            std::find(relieve_jerk_agent_ids_.begin(),
+                      relieve_jerk_agent_ids_.end(),
+                      boundary_agent_id) != relieve_jerk_agent_ids_.end();
+
         bool is_reverse = false;
         if (is_relieve_jerk) {
           auto agent_manager = st_graph_input_->mutable_agent_manager();
@@ -1096,7 +1134,7 @@ bool STGraph::CalculateStPassCorridor() {
             }
           }
         }
-        
+
         if (is_relieve_jerk && is_reverse) {
           continue;
         }

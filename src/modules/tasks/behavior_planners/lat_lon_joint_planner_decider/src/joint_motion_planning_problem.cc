@@ -39,7 +39,6 @@ void JointMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(std::make_shared<EgoOmegaCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<EgoAccBoundCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<EgoJerkBoundCostTerm>());
-  // Obstacles use reference trajectories, no optimization cost terms.
   ilqr_core_ptr_->InitAdvancedInfo();
   const auto &N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
   planning_output_.mutable_time_vec()->Resize(N, 0.0);
@@ -52,6 +51,7 @@ void JointMotionPlanningProblem::Init() {
   planning_output_.mutable_omega_vec()->Resize(N, 0.0);
   planning_output_.mutable_jerk_vec()->Resize(N, 0.0);
   planning_output_.mutable_s_vec()->Resize(N, 0.0);
+  u_vec_.reserve(N);
 }
 void JointMotionPlanningProblem::SetBoundaryPaths(
     std::shared_ptr<planning::planning_math::KDPath> road_left,
@@ -69,6 +69,14 @@ uint8_t JointMotionPlanningProblem::Update(
 
   std::vector<IlqrCostConfig> cost_config_vec;
   cost_config_vec.resize(N);
+  
+  const auto &vehicle_param =
+      planning::VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double vehicle_length = vehicle_param.length;
+  const double vehicle_width = vehicle_param.width;
+  const double vehicle_front_edge = vehicle_param.front_edge_to_rear_axle;
+  const double vehicle_wheel_base = vehicle_param.wheel_base;
+  
   for (size_t i = 0; i < N; ++i) {
     // Ego vehicle reference trajectory configuration.
     cost_config_vec.at(i)[EGO_REF_X] = planning_input.ref_x_vec(i);
@@ -162,14 +170,11 @@ uint8_t JointMotionPlanningProblem::Update(
     cost_config_vec.at(i)[SOFT_HALFPLANE_COST_ALLOCATION_RATIO] =
         planning_input.soft_halfplane_cost_allocation_ratio();
 
-    const auto &vehicle_param =
-        planning::VehicleConfigurationContext::Instance()->get_vehicle_param();
     cost_config_vec.at(i)[CURV_FACTOR] = planning_input.curv_factor_vec(i);
-    cost_config_vec.at(i)[EGO_LENGTH] = vehicle_param.length;
-    cost_config_vec.at(i)[EGO_WIDTH] = vehicle_param.width;
-    cost_config_vec.at(i)[EGO_FRONT_EDGE_TO_REAR_AXLE] =
-        vehicle_param.front_edge_to_rear_axle;
-    cost_config_vec.at(i)[EGO_WHEEL_BASE] = vehicle_param.wheel_base;
+    cost_config_vec.at(i)[EGO_LENGTH] = vehicle_length;
+    cost_config_vec.at(i)[EGO_WIDTH] = vehicle_width;
+    cost_config_vec.at(i)[EGO_FRONT_EDGE_TO_REAR_AXLE] = vehicle_front_edge;
+    cost_config_vec.at(i)[EGO_WHEEL_BASE] = vehicle_wheel_base;
 
     cost_config_vec.at(i)[THREE_DISC_SAFE_DIST] =
         planning_input.three_disc_safe_dist();

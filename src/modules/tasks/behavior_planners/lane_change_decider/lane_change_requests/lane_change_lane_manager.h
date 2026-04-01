@@ -31,15 +31,13 @@ class LaneChangeLaneManager {
       fix_lane_virtual_id_ = target_lane_virtual_id_;
     } else if (origin_lane) {
       fix_lane_virtual_id_ = origin_lane_virtual_id_;
-      std::cout
-          << "last frame target lane disappear, set origin as target&fix lane"
-          << std::endl;
+      ILOG_DEBUG
+          << "last frame target lane disappear, set origin as target&fix lane";
       target_lane_virtual_id_ = origin_lane_virtual_id_;
     } else {
       fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
-      std::cout << "last frame target&origin lane disappear, set current as "
-                   "target&origin lane"
-                << std::endl;
+      ILOG_DEBUG << "last frame target&origin lane disappear, set current as "
+                   "target&origin lane";
       origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
       target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
     }
@@ -50,8 +48,7 @@ class LaneChangeLaneManager {
     if (origin_lane) {
       fix_lane_virtual_id_ = origin_lane_virtual_id_;
     } else {
-      std::cout << "last frame origin lane disappear, set current as fix lane"
-                << std::endl;
+      ILOG_DEBUG << "last frame origin lane disappear, set current as fix lane";
       fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
     }
   }

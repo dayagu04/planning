@@ -70,15 +70,6 @@ target_link_libraries(collision_detection_py PRIVATE
   modules_tasks
   legacy_c_interface)
 
-pybind11_add_module(slant_planning_py MODULE src/slant_planning_pybind.cc)
-target_link_libraries(slant_planning_py PRIVATE
-  autoplt
-  modules
-  modules_common
-  modules_context
-  modules_tasks
-  legacy_c_interface)
-
 pybind11_add_module(perpendicular_parking_out_py MODULE src/perpendicular_park_out_pybind.cc)
 target_link_libraries(perpendicular_parking_out_py PRIVATE
   autoplt
@@ -267,14 +258,6 @@ target_link_libraries(astar_parallel_py PRIVATE
   occupancy_grid_map
   ${OpenCV_LIBRARIES}
 )
-
-pybind11_add_module(headin_planning_py MODULE src/headin_planning_pybind.cc)
-target_link_libraries(headin_planning_py PRIVATE
-  autoplt
-  modules
-  modules_common
-  modules_context
-  modules_tasks)
 
 pybind11_add_module(perpendicular_slant_tail_in_py MODULE src/perpendicular_slant_tail_in_pybind.cc)
   target_link_libraries(perpendicular_slant_tail_in_py PRIVATE

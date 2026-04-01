@@ -234,7 +234,7 @@ const std::string GetRePlanReasonString(const uint8_t type);
 
 const int CalProjIndexFromPlanningTraj(
     const iflyauto::TrajectoryPoint *trajectory_points, const int n,
-    const int x, const int y);
+    const double x, const double y);
 
 }  // namespace apa_planner
 }  // namespace planning

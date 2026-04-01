@@ -55,7 +55,6 @@ message LongitudinalPlanningInput {
   repeated double sv_bound_v_3 = 36;
   repeated double sv_bound_v_4 = 37;
   repeated double sv_bound_v_5 = 38;
-
   repeated double s_weights = 39;
   repeated double v_weights = 40;
 
@@ -71,6 +70,8 @@ message LongitudinalPlanningInput {
   optional bool is_lon_cipv_emergency_stop = 50;
   optional bool is_joint_danger_emergency_stop = 51;
   optional bool is_follow_cipv = 52;
+  repeated double ref_acc_vec = 53;
+  repeated double a_weights = 54;
 }
 
 

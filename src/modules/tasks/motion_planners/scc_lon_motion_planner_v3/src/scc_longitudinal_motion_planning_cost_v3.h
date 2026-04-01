@@ -9,6 +9,7 @@ namespace scc_longitudinal_planning_v3 {
 enum iLqrCostconfigId {
   REF_POS,
   REF_VEL,
+  REF_ACC,
   SOFT_POS_MAX,
   SOFT_POS_MIN,
   HARD_POS_MAX,
@@ -22,6 +23,7 @@ enum iLqrCostconfigId {
   S_STOP,
   W_REF_POS,
   W_REF_VEL,
+  W_REF_ACC,
   W_ACC,
   W_JERK,
   W_SNAP,

@@ -16,13 +16,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   ParallelParkOutScenario() = default;
   ParallelParkOutScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
-    if (apa_param.GetParam().parallel_enable_hybrid_astar) {
-      VehicleParam vehicle_param;
-      UpdateVehicleParam(vehicle_param);
-      thread_.Init(vehicle_param);
-      thread_.Start();
-      response_.Clear();
-    }
+    ParallelParkInScenario::Init();
   }
 
   virtual void Reset() override;
@@ -38,24 +32,28 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
 
   void GenTBoundaryObstacles();
 
-  const PathPlannerResult PathPlanOnceGeometry();
+  virtual const PathPlannerResult PathPlanOnceGeometry() override;
 
   void SetReleaseDirection(iflyauto::APAHMIData& apa_hmi_data,
-                           const AstarRequest& cur_request);
-  void SetRequestForScenarioTry(AstarRequest& cur_request,
-                                const EgoInfoUnderSlot& ego_info);
+                           const AstarRequest& cur_request,
+                           const HybridAStarResult& result);
+  virtual void SetRequestForScenarioTry(
+      AstarRequest& cur_request, const EgoInfoUnderSlot& ego_info) override;
 
-  void SetTargetGroup(AstarRequest& cur_request);
-  void UpdateStartPosByInSlot(Pose2f& start_pos,
-                              pnc::geometry_lib::PathSegGear& last_path_gear);
-  void UpdatePathByGeometry();
-  const bool SetAstarRequest(AstarRequest& astar_request);
-  const PathPlannerResult PubResponseForScenarioTry(
-      const EgoInfoUnderSlot& ego_info, const ParkObstacleList& obs);
-  const PathPlannerResult PubResponseForScenarioRunning(
-      const EgoInfoUnderSlot& ego_info, const ParkObstacleList& obs);
-  const PathPlannerResult PathPlanOnceHybridAStar();
-  void UpdatePostProcessStatus(PathPlannerResult pathplan_result);
+  virtual void SetTargetGroup(AstarRequest& cur_request) override;
+  virtual void UpdateStartPosByInSlot(
+      Pose2f& start_pos,
+      pnc::geometry_lib::PathSegGear& last_path_gear) override;
+  virtual void UpdatePathByGeometry(const AstarResponse& response) override;
+  virtual const bool SetAstarRequest(AstarRequest& astar_request,
+                                     ParkObstacleList& obs_hastar) override;
+  virtual const PathPlannerResult PubResponseForScenarioTry(
+      const EgoInfoUnderSlot& ego_info) override;
+  virtual const PathPlannerResult PubResponseForScenarioRunning(
+      const EgoInfoUnderSlot& ego_info) override;
+  virtual const PathPlannerResult PathPlanOnceHybridAStar() override;
+  virtual void UpdatePostProcessStatus(
+      PathPlannerResult pathplan_result) override;
 
   const double CalcSlotOccupiedRatio(
       const pnc::geometry_lib::PathPoint start_pose) const;
@@ -73,6 +71,8 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
 
   void CheckEgoPoseWhenParkOutFaild(ParkingFailReason reason);
 
+  void SelectParkOutDirByCurb();
+
  private:
   void Log() const override;
   virtual const bool GenObstacles() override;
@@ -83,6 +83,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
                                    double& dynamic_lon_buffer) const;
   const bool PostProcessPathPara();  void JudgeArcSlot();
+  const bool IsNearPathEnd();
  private:
   Tlane t_lane_;
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
@@ -107,6 +108,13 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool path_end_heading_is_met_= false;
   ParallelOutPathGenerator previous_parallel_out_path_planner_;
   double strict_channel_y = 6.5;
+  ApaParkOutDirection pre_selected_direction_ = ApaParkOutDirection::INVALID;
+  std::unordered_map<ApaParkOutDirection,
+                     std::vector<pnc::geometry_lib::PathSegment>>
+      path_by_direction_for_request_;
+  std::unordered_map<ApaParkOutDirection,
+                     std::vector<pnc::geometry_lib::PathSegment>>
+      path_by_direction_for_with_path_;
 };
 }  // namespace apa_planner
 }  // namespace planning

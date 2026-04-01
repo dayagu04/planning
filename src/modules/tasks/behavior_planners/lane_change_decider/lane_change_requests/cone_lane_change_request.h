@@ -33,7 +33,7 @@ class ConeRequest : public LaneChangeRequest {
   void setLaneChangeRequestByCone();
 
   void GetTargetLaneWidthByCone(
-      const std::vector<std::pair<double, double>> lane_s_width,
+      const std::vector<std::pair<double, double>>& lane_s_width,
       const std::shared_ptr<VirtualLane> target_lane, const double cone_s,
       const double cone_l, bool is_left, double* dist);
 
@@ -63,9 +63,9 @@ class ConeRequest : public LaneChangeRequest {
   bool CheckTargetLaneAvailable(bool is_left,
                                 const std::shared_ptr<VirtualLane> lane);
 
-  double ConeSpearmanRankCorrelation(const std::vector<ConePoint> points);
+  double ConeSpearmanRankCorrelation(const std::vector<ConePoint>& points);
 
-  double ConeComputeSlope(std::vector<ConePoint> points);
+  double ConeComputeSlope(std::vector<ConePoint>& points);
 
   std::vector<double> ConeRankify(std::vector<double>& arr);
 
@@ -77,6 +77,8 @@ class ConeRequest : public LaneChangeRequest {
 
   bool ConeStandardize(std::vector<ConePoint>& points);
 
+  bool IfFeasibleLaneDistanceEnough(
+    const std::shared_ptr<VirtualLane>& target_lane);
   // double QueryLaneWidth(
   //     const double s0,
   //     const std::vector<std::pair<double, double>>& lane_s_width);
@@ -88,6 +90,8 @@ class ConeRequest : public LaneChangeRequest {
 
   bool EnableTargetLane(bool is_left,
                         const std::shared_ptr<VirtualLane> seach_lane);
+
+  void ComputeConeClusterLongitDistribution();
 
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
@@ -110,6 +114,8 @@ class ConeRequest : public LaneChangeRequest {
   std::vector<std::pair<double, double>> origin_lane_s_width_;
   int right_lane_nums_ = 0;
   int left_lane_nums_ = 0;
+  double cone_longit_distribution_dis_ = 0.0;
+  std::vector<int> cluster_index_set_;
   // bool use_query_lane_width_ = false;
 };
 

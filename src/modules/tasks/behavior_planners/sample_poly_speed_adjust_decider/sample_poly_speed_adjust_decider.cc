@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
+#include "st_graph/st_point_with_lateral.h"
 #include "config/basic_type.h"
 #include "dynamic_world/dynamic_agent_node.h"
 #include "lateral_obstacle.h"
@@ -102,10 +103,9 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   ok = ProcessEnvInfos();
-
   if (ok) {
-    planning::speed::STPoint current_matched_upper_st_point;
-    planning::speed::STPoint current_matched_lower_st_point;
+    planning::speed::STPointWithLateral current_matched_upper_st_point;
+    planning::speed::STPointWithLateral current_matched_lower_st_point;
     st_sample_space_base_.GetBorderByAvailable(ego_s_, 0.0,
                                                &current_matched_lower_st_point,
                                                &current_matched_upper_st_point);
@@ -150,6 +150,8 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     }
   }
 
+  JSON_DEBUG_VALUE("is_emergency_scene",
+                   is_emergency_scene_);
   std::chrono::time_point<std::chrono::high_resolution_clock>
       evaluate_end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> evaluate_cost_time =
@@ -251,7 +253,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   }
   double speed_differ_gain = 1.0;
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
-  if (traffic_density_status_ == Congested || is_not_use_gap_select) {
+  if (traffic_density_status_ == Congested) {
     count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
   }
   size_t start_index = traffic_density_status_ == Congested ? 1 : 3;
@@ -264,7 +266,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                              v_suggestted_, merge_stop_line_distance_,
                              leading_veh_, is_not_use_gap_select,
                              speed_differ_gain, distance_to_stop_point_,
-                             lc_safety_distance_config_, 3.0, is_merge_change_);
+                             lc_safety_distance_config_, 3.0, is_merge_change_,
+                             is_emergency_scene_);
       }
     }
   } else {
@@ -282,7 +285,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                                  leading_veh_, is_not_use_gap_select,
                                  speed_differ_gain, distance_to_stop_point_,
                                  lc_safety_distance_config_,
-                                 i * kEvaluationStep, is_merge_change_);
+                                 i * kEvaluationStep, is_merge_change_,
+                                 is_emergency_scene_);
           }
         }
       }
@@ -307,8 +311,8 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
   double rear_speed_differ_gain = 1;
   double front_speed_differ_gain = 1;
   double speed_differ_gain = 1;
-  speed::STPoint prediction_matched_upper_st_point;
-  speed::STPoint prediction_matched_lower_st_point;
+  speed::STPointWithLateral prediction_matched_upper_st_point;
+  speed::STPointWithLateral prediction_matched_lower_st_point;
   st_sample_space_base_.GetBorderByAvailable(
       ego_s_, 0.0, &prediction_matched_lower_st_point,
       &prediction_matched_upper_st_point);
@@ -456,11 +460,13 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       ->Clear();
   agent_info_.clear();
   astar_traj_ptr_.reset(nullptr);
+  target_lane_coord_.reset();
   leading_veh_ = LeadingAgentInfo();
   leading_veh_.prediction_path.clear();
   leading_veh_.prediction_path_valid = false;
   sample_status_ = OK;
   distance_to_stop_point_ = kMaxDistanceToStopPoint;
+  is_emergency_scene_ = false;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()
@@ -655,7 +661,17 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   //   }
   // }
   // init sample space
-  st_sample_space_base_.Init(target_lane_nodes, ego_s);
+  const auto& target_lane_reference_path =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(target_lane_virtual_id);
+  if (target_lane_reference_path) {
+    target_lane_coord_ = target_lane_reference_path->get_frenet_coord();
+  }
+  int change_direction = lane_change_request_ == 1 ? 1 : -1;
+  st_sample_space_base_.Init(target_lane_nodes, ego_s, target_lane_coord_,
+                             change_direction,
+                             config_.sample_st_limit_lat_offset);
 
   // calc flow vel
   StitchLastBestPoly();
@@ -667,6 +683,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
 
   RunSampleSceneStateMachine();
 
+  is_emergency_scene_ = session_->planning_context()
+            .lane_change_decider_output().is_aggressive_scence;
   // sample v upper and lower
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
@@ -876,7 +894,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             rear_edge_to_rear_axle_,config_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
-    planning::speed::STPoint stitched_poly_checked_lower_st_point,
+    planning::speed::STPointWithLateral stitched_poly_checked_lower_st_point,
         stitched_poly_checked_upper_st_point;
     st_sample_space_base_.GetBorderByAvailable(
         stitched_poly_checked_s, evaulation_t_,
@@ -1082,8 +1100,8 @@ bool SamplePolySpeedAdjustDecider::CheckInitVelTraj() {
     }
   }
   if (init_vel_is_ok) {
-    planning::speed::STPoint lower_st_point;
-    planning::speed::STPoint upper_st_point;
+    planning::speed::STPointWithLateral lower_st_point;
+    planning::speed::STPointWithLateral upper_st_point;
 
     st_sample_space_base_.GetBorderByAvailable(
         ego_init_vel_pred_end_s, kPlanningDuration, &lower_st_point,

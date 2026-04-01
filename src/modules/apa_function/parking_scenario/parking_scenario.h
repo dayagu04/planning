@@ -71,102 +71,6 @@ class ParkingScenario {
     ~CheckReplanParams() = default;
   };
 
-  // will be retired
-  struct EgoSlotInfo {
-    common::SlotInfo target_managed_slot;
-    std::pair<Eigen::Vector2d, Eigen::Vector2d> limiter;
-    Eigen::Vector2d target_ego_pos_slot = Eigen::Vector2d::Zero();
-    double target_ego_heading_slot = 0.0;
-
-    std::vector<Eigen::Vector2d> slot_corner;
-    double last_move_slot_dist = 0.0;
-    double move_slot_dist = 0.0;
-    std::vector<Eigen::Vector2d> limiter_corner;
-
-    Eigen::Vector2d slot_center = Eigen::Vector2d::Zero();
-
-    size_t selected_slot_id = 0;
-    size_t slot_type = 0;
-
-    Eigen::Vector2d slot_origin_pos = Eigen::Vector2d::Zero();
-    double slot_origin_heading = 0.0;
-    Eigen::Vector2d slot_origin_heading_vec = Eigen::Vector2d::Zero();
-
-    Eigen::Vector2d ego_pos_slot = Eigen::Vector2d::Zero();
-    Eigen::Vector2d ego_heading_slot_vec = Eigen::Vector2d::Zero();
-    double ego_heading_slot = 0.0;
-
-    double slot_width = 3.0;
-    double slot_length = 5.2;
-
-    pnc::geometry_lib::PathPoint terminal_err;
-    pnc::geometry_lib::PathPoint initial_err;
-    double slot_occupied_ratio = 0.0;
-
-    pnc::geometry_lib::GlobalToLocalTf g2l_tf;
-    pnc::geometry_lib::LocalToGlobalTf l2g_tf;
-
-    bool fix_limiter = false;
-
-    std::vector<Eigen::Vector2d> obs_pt_vec_slot;
-
-    double origin_pt_0_heading = 0.0;
-    double sin_angle = 1.0;
-    Eigen::Vector2d pt_0;
-    Eigen::Vector2d pt_1;
-
-    double channel_width;
-
-    bool fus_obj_valid_flag = false;
-
-    void Reset() {
-      target_managed_slot.Clear();
-      selected_slot_id = 0;
-      slot_type = 0;
-      target_ego_pos_slot = Eigen::Vector2d::Zero();
-      target_ego_heading_slot = 0.0;
-
-      slot_corner.clear();
-      limiter_corner.clear();
-      move_slot_dist = 0.0;
-      last_move_slot_dist = 0.0;
-
-      slot_center.setZero();
-
-      limiter.first.setZero();
-      limiter.second.setZero();
-
-      slot_origin_pos.setZero();
-
-      slot_origin_heading = 0.0;
-      slot_origin_heading_vec.setZero();
-
-      ego_heading_slot_vec.setZero();
-      ego_heading_slot = 0.0;
-
-      ego_pos_slot.setZero();
-
-      slot_width = 3.0;
-      slot_length = 4.8;
-
-      terminal_err.Set(Eigen::Vector2d(1.0, 1.0), 0.5);
-      slot_occupied_ratio = 0.0;
-
-      fix_limiter = false;
-
-      obs_pt_vec_slot.clear();
-
-      origin_pt_0_heading = 0.0;
-      sin_angle = 1.0;
-      pt_0.setZero();
-      pt_1.setZero();
-
-      channel_width = apa_param.GetParam().channel_width;
-
-      fus_obj_valid_flag = false;
-    }
-  };
-
   struct PlannerStateMachine {  // planner states
     bool path_plan_success = false;
     uint8_t planning_status = ParkingStatus::PARKING_IDLE;
@@ -200,14 +104,13 @@ class ParkingScenario {
       remain_dist_obs = 15.01;
       remain_dist_col_det = 15.01;
       remain_dist_slot_jump = 15.0;
-      remain_dist_by_od = 15.0;
+      remain_dist_by_od = 168.0;
       car_already_move_dist = 0.0;
       current_path_last_point_heading = 0.0;
       spline_success = false;
       current_path_length = 0.0;
       headin_current_path_length = 0.0;
       path_extended_dist = 1.0;
-      ego_slot_info.Reset();
       plan_stm.Reset();
       pathplan_result = 0;
       current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
@@ -305,11 +208,13 @@ class ParkingScenario {
     double remain_dist_path_last = 15.01;
     // remain dist for obs
     double remain_dist_obs = 15.01;
+    double remain_dist_dynamic_obs = 15.01;
+    double remain_dist_static_obs = 15.01;
     // path remain dist by fusion dynamic occ check.
     double remain_dist_col_det = 15.01;
     double remain_dist_slot_jump = 15.0;
     // moving od human, moving od vehicle
-    double remain_dist_by_od = 15.0;
+    double remain_dist_by_od = 168.0;
     double car_already_move_dist = 0.0;
     double current_path_last_point_heading = 0.0;
     pnc::mathlib::spline x_s_spline;
@@ -318,8 +223,6 @@ class ParkingScenario {
     pnc::mathlib::spline headin_y_s_spline;
 
     PlannerStateMachine plan_stm;
-    // will be retired
-    EgoSlotInfo ego_slot_info;
 
     // cur traj gear
     uint8_t current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
@@ -629,6 +532,18 @@ class ParkingScenario {
       const bool only_check_mirror = false,
       const UseObsHeightMethod use_obs_height_method =
           UseObsHeightMethod::HIGH) const;
+
+  const void RecordDebug();
+
+  const void RecordDebugRemainDist();
+
+  const void RecordDebugStuckTimeInfo();
+
+  const void RecordDebugTerminalErr();
+
+  const void RecordDebugPlanningSlotInfo();
+
+  void DecideExpandMirrorCommand();
 
  protected:
   // TODO:

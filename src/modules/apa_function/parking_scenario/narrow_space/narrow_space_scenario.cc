@@ -230,6 +230,8 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   // prepare simulation
   InitSimulation();
 
+  DecideExpandMirrorCommand();
+
   // check planning status
   if (CheckPlanSkip()) {
     return;
@@ -362,7 +364,7 @@ const double NarrowSpaceScenario::CalRealTimeBrakeDist() {
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
       ego_info_under_slot.slot_occupied_ratio > 0.5) {
-    params.use_obs_height_method = UseObsHeightMethod::HIGH_MID_LOW;
+    params.use_obs_height_method = UseObsHeightMethod::HIGH_LOW;
     return CalRemainDistFromObs(params);
   }
   return CalRemainDistFromObs(params);
@@ -601,6 +603,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   cur_request.fold_mirror =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag();
+
+  cur_request.limiter_x = ego_info.virtual_limiter.first.x();
   SetRequestForScenarioTry(cur_request, ego_info);
 
   FillPlanningReason(cur_request);
@@ -1081,6 +1085,21 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
       ego_info_under_slot.g2l_tf.GetHeading(measures_ptr->GetHeading());
   ego_info_under_slot.cur_pose.heading_vec =
       geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
+
+  double virtual_tar_x = 0.0;
+  if (ego_info_under_slot.slot.limiter_.valid) {
+    Eigen::Vector2d pt1 = ego_info_under_slot.g2l_tf.GetPos(
+        ego_info_under_slot.slot.limiter_.start_pt);
+    Eigen::Vector2d pt2 = ego_info_under_slot.g2l_tf.GetPos(
+        ego_info_under_slot.slot.limiter_.end_pt);
+
+    virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
+  } else {
+    virtual_tar_x = GeneTargetForNoLimiterSlot(ego_info_under_slot);
+  }
+
+  ego_info_under_slot.virtual_limiter.first.x() = virtual_tar_x;
+  ego_info_under_slot.virtual_limiter.second.x() = virtual_tar_x;
 
   if (frame_.is_replan_first) {
     if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection() ==
@@ -2314,7 +2333,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   // publish astar path in cruise state.
   Transform2d response_tf;
   response_tf.SetBasePose(response_.request.base_pose);
-  apa_hmi_ = PubDirectionForScenarioTry(cur_request);
+  apa_hmi_ = PubDirectionForScenarioTry(cur_request, apa_hmi_);
 
   const HybridAStarResult& pre_traj = GetPrePlanningParkingTraj(cur_request);
   PublishHybridAstarDebugInfo(pre_traj, &response_tf);
@@ -2381,8 +2400,7 @@ const bool NarrowSpaceScenario::IsNeedClipping(const HybridAStarResult& result,
 }
 
 iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
-    const AstarRequest& cur_request) {
-  iflyauto::APAHMIData apa_hmi_data;
+    const AstarRequest& cur_request, iflyauto::APAHMIData& apa_hmi_data) {
   ApaDirectionGenerator generator;
   generator.ClearReleaseDirectionFlag(apa_hmi_data);
   generator.ClearRecommendationDirectionFlag(apa_hmi_data);
@@ -2429,7 +2447,7 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
                                 ego_info.slot.GetOriginCornerCoordLocal().pt_2)
                                    .norm();
 
-    double kInitialTargetX = slot_length + 2.0; //todo : temp fix;
+    double kInitialTargetX = slot_length + 2.0;  // todo : temp fix;
     constexpr double kSlantInitialTargetX = 7.0;
     constexpr double kInitialTargetY = 5.0;
     constexpr double kSlantInitialTargetY = 3.0;
@@ -2605,7 +2623,7 @@ const float NarrowSpaceScenario::SetPassageHeight(
           ? true
           : false;
 
-  const float real_passage_height = is_slant_slot ? 10.0f : passage_height;
+  const float real_passage_height = is_slant_slot ? 15.0f : passage_height;
   return real_passage_height;
 }
 

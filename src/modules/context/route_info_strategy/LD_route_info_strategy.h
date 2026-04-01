@@ -92,8 +92,8 @@ protected:
 
  bool IsInvalidLane(const iflymapdata::sdpro::Lane* lane_info) const;
 
- bool CalculateFeasibleLaneInRampScene(TopoLinkGraph& feasible_lane_graph);
- bool CalculateFeasibleLaneInMergeScene(TopoLinkGraph& feasible_lane_graph);
+ bool CalculateFeasibleLaneInRampScene(TopoLinkGraph& feasible_lane_graph, TopoLinkGraph& feasible_lane_graph_after_topo_change_vec);
+ bool CalculateFeasibleLaneInMergeScene(TopoLinkGraph& feasible_lane_graph, TopoLinkGraph& feasible_lane_graph_after_topo_change_vec);
  bool CalculateFeasibleLaneInNormalScene(TopoLinkGraph& feasible_lane_graph);
  void ProcessLaneDistance(
     const std::shared_ptr<VirtualLane>& relative_id_lane,
@@ -156,6 +156,17 @@ void ProcessLaneMapMergePoint(
       const iflymapdata::sdpro::LinkInfo_Link* out_link,
       std::vector<iflymapdata::sdpro::Lane>& exit_lane_vec) const;
   bool IsNeedFilterSplit(const iflymapdata::sdpro::Lane* lane) const;
+  void IsPreLaneOnOtherLink(TopoLinkGraph& before_split_feasible_lane_graph,
+                            std::unordered_map<int, int>& order_diff);
+  bool IsTheLaneOnSide(const iflymapdata::sdpro::Lane* lane,
+                       bool& is_leftest, bool& is_rightest) const;
+  bool CalculateDistanceToCertainLink(
+      const iflymapdata::sdpro::LinkInfo_Link* target_link,
+      const iflymapdata::sdpro::LinkInfo_Link* current_link,
+      double& link_distance);
+  void CalculateFeasibleLaneByMergePoint(TopoLinkGraph& feasible_lane_graph);
+  bool CalculateLinkLaneNum(const iflymapdata::sdpro::LinkInfo_Link* link,
+                            int& lane_num);
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;

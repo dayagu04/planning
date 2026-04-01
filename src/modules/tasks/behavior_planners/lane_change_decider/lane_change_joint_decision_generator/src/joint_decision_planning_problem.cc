@@ -99,13 +99,18 @@ uint8_t JointDecisionPlanningProblem::Update(
       cost_config_vec.at(i)[GetObsRefStateIdx(j, obs_num_, OBS_ACC)] =
           planning_input.obs_ref_trajectory(j).ref_acc_vec(i);
     }
-
+    // 读取对应时刻的s， 120 m 以外衰减位置
+    double s = planning_input.ref_s_vec(i);
     cost_config_vec.at(i)[W_EGO_REF_X] = planning_input.q_ego_ref_x();
     cost_config_vec.at(i)[W_EGO_REF_Y] = planning_input.q_ego_ref_y();
     cost_config_vec.at(i)[W_EGO_REF_THETA] = planning_input.q_ego_ref_theta();
     cost_config_vec.at(i)[W_EGO_REF_DELTA] = planning_input.q_ego_ref_delta();
     cost_config_vec.at(i)[W_EGO_REF_VEL] = planning_input.q_ego_ref_vel();
     cost_config_vec.at(i)[W_EGO_REF_ACC] = planning_input.q_ego_ref_acc();
+    if (s > 120.0) {
+      cost_config_vec.at(i)[W_EGO_REF_X] = 0.0;
+      cost_config_vec.at(i)[W_EGO_REF_Y] = 0.0;
+    }
 
     // 障碍物参考轨迹权重调整
     // obs_reaction_decay_time: 反应时间窗口（秒），在此时间内强化跟随ref
@@ -207,8 +212,19 @@ uint8_t JointDecisionPlanningProblem::Update(
         planning_input.q_hard_halfplane_weight() * hard_halfplane_bound_decay;
     cost_config_vec.at(i)[HARD_HALFPLANE_DIST] =
         planning_input.hard_halfplane_dist();
-    cost_config_vec.at(i)[HALFPLANE_COST_ALLOCATION_RATIO] =
-        planning_input.halfplane_cost_allocation_ratio();
+    // 硬半平面代价分配：
+    //   [0, 1s)   -> 1.0（全给自车，不区分标签）
+    //   [1s, end) -> halfplane_cost_allocation_ratio（配置值，EGO_OVERTAKE 在 cost 层覆盖为 1.0）
+    const int reaction_steps = (reaction_time > 1e-6)
+                                   ? static_cast<int>(reaction_time / dt)
+                                   : static_cast<int>(1.0 / dt);
+    double hard_halfplane_allocation;
+    if (i < reaction_steps) {
+      hard_halfplane_allocation = 1.0;
+    } else {
+      hard_halfplane_allocation = planning_input.halfplane_cost_allocation_ratio();
+    }
+    cost_config_vec.at(i)[HALFPLANE_COST_ALLOCATION_RATIO] = hard_halfplane_allocation;
 
     double soft_halfplane_bound_decay = 0.0;
     if (i >= 3) {
@@ -226,14 +242,15 @@ uint8_t JointDecisionPlanningProblem::Update(
     cost_config_vec.at(i)[SOFT_HALFPLANE_TAU] =
         planning_input.soft_halfplane_tau();
 
-    // 软半平面代价分配：反应时间内全部给自车，之后按配置分配
-    double soft_halfplane_allocation =
-        planning_input.soft_halfplane_cost_allocation_ratio();
-    if (reaction_time > 1e-6) {
-      const int reaction_steps = static_cast<int>(reaction_time / dt);
-      if (i < reaction_steps) {
-        soft_halfplane_allocation = 1.0;  // 反应时间内：自车承担100%
-      }
+    // 软半平面代价分配：
+    //   [0, 1s)   -> 1.0（全给自车，不区分标签）
+    //   [1s, end) -> soft_halfplane_cost_allocation_ratio（配置值，EGO_OVERTAKE 在 cost 层覆盖为 1.0）
+    double soft_halfplane_allocation;
+    if (i < reaction_steps) {
+      soft_halfplane_allocation = 1.0;
+    } else {
+      soft_halfplane_allocation =
+          planning_input.soft_halfplane_cost_allocation_ratio();
     }
     cost_config_vec.at(i)[SOFT_HALFPLANE_COST_ALLOCATION_RATIO] =
         soft_halfplane_allocation;

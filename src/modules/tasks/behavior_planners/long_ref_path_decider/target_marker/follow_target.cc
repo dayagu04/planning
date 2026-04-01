@@ -17,7 +17,7 @@ namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
 constexpr double min_follow_distance_gap_cut_in = 0.8;
-constexpr double kVirtualFrontS = 250.0;
+constexpr double kVirtualFrontS = 200.0;
 constexpr double kVirtualFrontV = 33.5;
 }  // namespace
 
@@ -70,12 +70,13 @@ void FollowTarget::GenerateUpperBoundInfo() {
           cipv_info_.is_lane_borrow_obs = agent->is_lane_borrow_virtual_obs();
         }
       }
-      const double confidence =
-          LongRefPathDecider::CalcUpperBoundConfidence(upper_bound.s());
+      const double confidence = LongRefPathDecider::CalcUpperBoundConfidence(
+          upper_bound.agent_id(), upper_bound.s());
       upper_bound_infos_[i].s =
           confidence * upper_bound.s() + (1.0 - confidence) * kVirtualFrontS;
       upper_bound_infos_[i].t = t;
-      upper_bound_infos_[i].v = upper_bound.velocity();
+      upper_bound_infos_[i].v = confidence * upper_bound.velocity() +
+                                (1.0 - confidence) * kVirtualFrontV;
       upper_bound_infos_[i].target_type = TargetType::kFollow;
       upper_bound_infos_[i].agent_id = upper_bound.agent_id();
       upper_bound_infos_[i].st_boundary_id = upper_bound.boundary_id();
@@ -131,7 +132,7 @@ void FollowTarget::MakeMinFollowDistance() {
 
 void FollowTarget::GenerateFollowTarget() {
   auto default_target_value =
-      TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet);
+      TargetValue(0.0, false, 0.0, 0.0, 0.0, TargetType::kNotSet);
   target_values_ =
       std::vector<TargetValue>(plan_points_num_, default_target_value);
 
@@ -143,7 +144,8 @@ void FollowTarget::GenerateFollowTarget() {
 
   for (int32_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
-    const double vel = virtual_zero_acc_curve_->Evaluate(1, i * dt_);
+    const double vel = virtual_zero_acc_curve_->Evaluate(1, t);
+    const double acc = virtual_zero_acc_curve_->Evaluate(2, t);
     const int32_t agent_id = upper_bound_infos_[i].agent_id;
     double upper_bound_s = kVirtualFrontS;
     double follow_time_gap = min_follow_distance_gap_cut_in;
@@ -161,7 +163,7 @@ void FollowTarget::GenerateFollowTarget() {
     double target_s = std::max(upper_bound_s - target_s_distance, 0.0);
 
     target_values_[i] =
-        TargetValue(t, true, target_s, vel, TargetType::kFollow);
+        TargetValue(t, true, target_s, vel, acc, TargetType::kFollow);
 
     const auto* agent = agent_mgr->GetAgent(agent_id);
     if (agent && agent->is_lane_borrow_virtual_obs()) {
@@ -176,10 +178,11 @@ void FollowTarget::GenerateRadsFollowTarget() {
   const bool default_has_target = false;
   const double default_s_target = 0.0;
   const double default_v_target = 0.0;
+  const double default_a_target = 0.0;
   const TargetType default_target_type = TargetType::kNotSet;
   auto default_target_value =
       TargetValue(default_t, default_has_target, default_s_target,
-                  default_v_target, default_target_type);
+                  default_v_target, default_a_target, default_target_type);
   target_values_ =
       std::vector<TargetValue>(plan_points_num_, default_target_value);
 
@@ -209,6 +212,7 @@ void FollowTarget::GenerateRadsFollowTarget() {
     }
     target_value.set_has_target(true);
     const double vel = virtual_zero_acc_curve_->Evaluate(1, t);
+    const double acc = virtual_zero_acc_curve_->Evaluate(2, t);
     const auto& agent_id = upper_bound_infos_[i].agent_id;
     double follow_time_gap = min_follow_distance_gap_cut_in;
     auto iter = agents_headway_map.find(agent_id);
@@ -241,6 +245,7 @@ void FollowTarget::GenerateRadsFollowTarget() {
 
     target_value.set_s_target_val(s_target_value);
     target_value.set_v_target_val(vel);
+    target_value.set_a_target_val(acc);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
   }
 }

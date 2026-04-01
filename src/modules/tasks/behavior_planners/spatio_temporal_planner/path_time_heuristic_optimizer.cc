@@ -147,7 +147,7 @@ void PathTimeHeuristicOptimizer::FallbackFunction(
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
-          ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
+          ILOG_INFO << "ERROR! Frenet Point -> Cart Point Failed!!!";
         }
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;
@@ -175,7 +175,7 @@ void PathTimeHeuristicOptimizer::FallbackFunction(
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
-          ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
+          ILOG_INFO << "ERROR! Frenet Point -> Cart Point Failed!!!";
         }
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;
@@ -198,14 +198,13 @@ void PathTimeHeuristicOptimizer::FallbackFunction(
 void PathTimeHeuristicOptimizer::GenerateEgoBoxSet(
     TrajectoryPoints &traj_points) {
   if (!traj_points.empty()) {
-    TrajectoryPoint traj_point;
     std::vector<planning_math::Vec2d> vertices;
     for (int i = 0; i < traj_points.size(); i++) {
       vertices.clear();
-      traj_point = traj_points[i];
+      const TrajectoryPoint& traj_point = traj_points[i];
       GetVehicleVertices(traj_point, vertices);
       AABox2d ego_box(vertices);
-      ego_box_set_[i] = ego_box;
+      ego_box_set_[i] = std::move(ego_box);
     }
   }
 }
@@ -230,8 +229,9 @@ void PathTimeHeuristicOptimizer::GetVehicleVertices(
   ego_points[2] = Point2D(c_x + d_wx - d_lx, c_y - d_wy - d_ly);
   ego_points[3] = Point2D(c_x + d_wx + d_lx, c_y + d_ly - d_wy);
 
-  Vec2d ego_vertice_frenet(traj_point.x, traj_point.y);
-  Point2D ego_point_frenet(traj_point.s, traj_point.l);
+  Vec2d ego_vertice_frenet;
+  Point2D ego_point_frenet;
+  vertices.reserve(ego_points.size());
   for (int i = 0; i < ego_points.size(); ++i) {
     if (base_frenet_coord_->XYToSL(ego_points[i], ego_point_frenet)) {
       ego_vertice_frenet.set_x(ego_point_frenet.x);
@@ -258,7 +258,8 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
   if (!st_dp_is_sucess_) {
     return;
   }
-  const int k_ego_traj_points_nums = 16;
+  constexpr int k_dynamic_ego_traj_points_nums = 16;
+  constexpr int k_static_ego_traj_points_nums = 26;
   auto &lateral_obstacle_decision =
       session_->mutable_planning_context()
           ->mutable_lateral_obstacle_decider_output()
@@ -270,6 +271,8 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
   const double longit_overlap_Threshold = 0.1;
   double longit_dis = 100.0;
   AABox2d agent_box;
+  LatObstacleDecisionType decision_at_t0 = LatObstacleDecisionType::IGNORE;
+  LatObstacleDecisionType decision = LatObstacleDecisionType::IGNORE;
   for (const auto &agent : agent_trajs) {
     auto iter = lateral_obstacle_decision.find(agent.agent_id);
     // auto iter_history = lateral_obstacle_history_info.find(agent.agent_id);
@@ -277,22 +280,33 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
     //     iter_history->second.cut_in_or_cross) {
     //   continue;
     // }
+    auto ego_traj_points_nums = agent.is_static ? k_static_ego_traj_points_nums : k_dynamic_ego_traj_points_nums;
     if (iter != lateral_obstacle_decision.end()) {
-      for (int i = 0; i < k_ego_traj_points_nums; i++) {
+      for (int i = 0; i < ego_traj_points_nums; i++) {
         auto it = agent.agent_boxs_set.find(i);
         if (it != agent.agent_boxs_set.end()) {
           agent_box = it->second;
           longit_dis = agent_box.LongitDistanceTo(ego_box_set_[i]);
+          if (i == 0) {
+            // 计算第0时刻的决策
+            if (ego_box_set_[i].center_y() < agent_box.min_y()) {
+              decision_at_t0 = LatObstacleDecisionType::RIGHT;
+            } else if (ego_box_set_[i].center_y() > agent_box.max_y()) {
+              decision_at_t0 = LatObstacleDecisionType::LEFT;
+            } else {
+              decision_at_t0 = LatObstacleDecisionType::IGNORE;
+            }
+          }
           if (longit_dis < longit_overlap_Threshold) {
             if (ego_box_set_[i].center_y() < agent_box.min_y()) {
-              lateral_obstacle_decision[agent.agent_id] =
-                  LatObstacleDecisionType::RIGHT;
+              decision = LatObstacleDecisionType::RIGHT;
             } else if (ego_box_set_[i].center_y() > agent_box.max_y()) {
-              lateral_obstacle_decision[agent.agent_id] =
-                  LatObstacleDecisionType::LEFT;
+              decision = LatObstacleDecisionType::LEFT;
             } else {
-              lateral_obstacle_decision[agent.agent_id] =
-                  LatObstacleDecisionType::IGNORE;
+              decision = LatObstacleDecisionType::IGNORE;
+            }
+            if (decision_at_t0 == decision) {
+              lateral_obstacle_decision[agent.agent_id] = decision;
             }
             break;
           } else {

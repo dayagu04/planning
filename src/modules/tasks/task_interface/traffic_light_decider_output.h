@@ -4,4 +4,5 @@ struct TrafficLightDeciderOutput {
   bool can_pass = true;
   bool is_small_front_intersection = false;
   bool is_tfl_match_intersection = true;
+  bool is_in_straight_lane = true;
 };

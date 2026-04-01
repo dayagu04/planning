@@ -310,10 +310,9 @@ void IntRequest::finish_and_clear() {
 }
 
 void IntRequest::PrintForbidGeneratingReason(
-    const std::vector<std::string> forbid_generating_reason) {
+    const std::vector<std::string>& forbid_generating_reason) {
   for (const auto& reason : forbid_generating_reason) {
-    std::cout << "[IntRequest], Disable Reason: " << reason.c_str()
-              << std::endl;
+    ILOG_DEBUG << "[IntRequest], Disable Reason: " << reason.c_str();
   }
 }
 

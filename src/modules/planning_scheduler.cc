@@ -751,14 +751,7 @@ void PlanningScheduler::FillPlanningTrajectory(
         iflyauto::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         iflyauto::REQUEST_REASON_BORROW_FAILED;
-  } else {
-    planning_output->planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
-    planning_output->planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
-  }
-
-  if (speed_limit_decider_output.is_function_fading_away() &&
+  } else if (speed_limit_decider_output.is_function_fading_away() &&
       config_.left_right_turn_func_fading_away_switch) {
     planning_output->planning_request.take_over_req_level =
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
@@ -769,11 +762,6 @@ void PlanningScheduler::FillPlanningTrajectory(
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         iflyauto::RequestReason::REQUEST_REASON_ON_ROUNDABOUT;
-  } else {
-    planning_output->planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
-    planning_output->planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
   }
   JSON_DEBUG_VALUE(
       "take_over_request",
@@ -1391,11 +1379,21 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().dbw_status = dbw_status;
   GENERAL_PLANNING_CONTEXT.MutableStatemachine().scene_type = function_type;
 
+#ifdef PlanTimeBenchmark
+  double start_time, end_time;
+  start_time = IflyTime::Now_ms();
+#endif
   // update environment model
   if (!environmental_model_manager_.Run()) {
     session_.mutable_planning_context()->Clear();
     return false;
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - start_time);
+  start_time = IflyTime::Now_ms();
+#endif
 
   bool planning_success;
   if (function_type == planning::common::SceneType::HIGHWAY) {
@@ -1409,6 +1407,11 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   } else {
     planning_success = scc_function_->Plan();
   }
+
+#ifdef PlanTimeBenchmark
+  end_time = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("TaskFunctionCost", end_time - start_time);
+#endif
 
   JSON_DEBUG_VALUE("current planning_success", planning_success);
   session_.mutable_planning_context()->mutable_last_planning_success() =

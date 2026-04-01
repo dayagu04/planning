@@ -19,6 +19,14 @@ class BaseCostTerm {
   virtual std::string GetCostString() = 0;
   virtual uint8_t GetCostId() = 0;
 
+  void ResetCostValue() { cost_value_ = 0.0; }
+
+  void SetCostValue(double cost_value) {
+    cost_value_ = cost_value;
+  }
+
+  const double GetCostValue() const { return cost_value_; }
+
   void SetConfig(IlqrCostConfig *cost_config_ptr) {
     cost_config_ptr_ = cost_config_ptr;
   }
@@ -34,6 +42,9 @@ class BaseCostTerm {
   std::shared_ptr<std::vector<AliLqrConfig>> alilqr_config_vec_ptr_;
 
   std::shared_ptr<iLqrSolverConfig> solver_config_ptr_;
+
+ protected:
+  double cost_value_ = 0.0;
 };
 }  // namespace ilqr_solver
 
