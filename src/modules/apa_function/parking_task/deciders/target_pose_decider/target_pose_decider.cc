@@ -223,9 +223,14 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
 
   if (!is_searching_stage_ && base_on_slot_) {
     if ((slot_.IsPointInCustomSlot(
-             ego_pose_local_.pos, param.believe_obs_ego_area,
-             param.believe_obs_ego_area, 0.2, 0.2, true) &&
-         std::fabs(ego_pose_local_.heading) * kRad2Deg < 60.0)) {
+             ego_pose_local_.pos + (heading_in ? param.wheel_base : 0.0) *
+                                       ego_pose_local_.heading_vec,
+             param.believe_obs_ego_area, param.believe_obs_ego_area, 0.2, 0.2,
+             true) &&
+         std::fabs(geometry_lib::AngleSubtraction(ego_pose_local_.heading,
+                                                  target_heading)) *
+                 kRad2Deg <
+             60.0)) {
       front_exceed_line_dx += 0.168;
     } else {
       front_exceed_line_dx += 0.68;

@@ -278,9 +278,17 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 }
 
 const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
-  return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-         !CheckEgoPoseInBelieveObsArea(
-             0.2, apa_param.GetParam().believe_obs_ego_area);
+  const auto& param = apa_param.GetParam();
+  const auto measure_data_mgr = apa_world_ptr_->GetMeasureDataManagerPtr();
+
+  const bool is_head_in =
+      (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN);
+  const double lon_expand =
+      param.believe_obs_ego_area + (is_head_in ? param.wheel_base : 0.0);
+  const double lat_expand = 0.2 + (is_head_in ? 0.0 : param.wheel_base);
+
+  return measure_data_mgr->GetStaticFlag() &&
+         !CheckEgoPoseInBelieveObsArea(lat_expand, lon_expand);
 }
 
 const bool PerpendicularTailInScenario::CalcPtInside() {
