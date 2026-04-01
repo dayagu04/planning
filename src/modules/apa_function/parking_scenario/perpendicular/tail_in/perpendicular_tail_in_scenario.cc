@@ -285,7 +285,7 @@ const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
       (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN);
   const double lon_expand =
       param.believe_obs_ego_area + (is_head_in ? param.wheel_base : 0.0);
-  const double lat_expand = 0.2 + (is_head_in ? 0.0 : param.wheel_base);
+  const double lat_expand = 0.2 + (is_head_in ? param.wheel_base : 0.0);
 
   return measure_data_mgr->GetStaticFlag() &&
          !CheckEgoPoseInBelieveObsArea(lat_expand, lon_expand);
