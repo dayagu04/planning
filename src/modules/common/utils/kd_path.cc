@@ -316,7 +316,10 @@ bool KDPath::XYToSLInRange(const Point2D& cart_point,
             &frenet_point.x, &frenet_point.y);
 
     // 第四步：确保最终 S 落在范围内
-    frenet_point.x = std::max(s_low, std::min(s_high, frenet_point.x));
+    if (frenet_point.x < s_low || frenet_point.x > s_high) {
+      ILOG_DEBUG << "s is not within the valid range";
+      return false;
+    }
     return true;
 }
 
