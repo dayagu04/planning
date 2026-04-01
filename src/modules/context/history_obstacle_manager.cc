@@ -243,7 +243,8 @@ void HistoryObstacleManager::AddNewDeductionObstacles(
   for (const Obstacle &obstacle : new_obstacles_) {
     std::shared_ptr<FrenetObstacle> new_frenet_obstacle;
     new_frenet_obstacle = std::make_shared<FrenetObstacle>(
-        &obstacle, *reference_path, session_,
+        &obstacle, *reference_path,
+        session_->environmental_model().get_ego_state_manager(),
         session_->environmental_model().location_valid());
     current_obstacles.emplace_back(new_frenet_obstacle);
   }

@@ -16,8 +16,8 @@ class FrenetObstacle {
  public:
   FrenetObstacle(const Obstacle* obstacle_ptr,
                  const ReferencePath& reference_path,
-                 const planning::framework::Session *session,
-                 bool is_location_valid);
+                 const std::shared_ptr<EgoStateManager> ego_state_info,
+                 bool is_location_valid,bool is_hpp_scene = false);
 
   int id() const { return id_; }
   iflyauto::ObjectType type() const { return obstacle_ptr_->type(); }
@@ -95,7 +95,7 @@ class FrenetObstacle {
  private:
   void compute_frenet_obstacle(const ReferencePath& reference_path);
 
-  void compute_frenet_obstacle_boundary(const ReferencePath& reference_path);
+   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
 
@@ -142,7 +142,6 @@ class FrenetObstacle {
   double length_;
   std::vector<planning_math::Vec2d> corner_points_;
   SourceType source_type_;
-  const planning::framework::Session *session_;
 };
 
 using FrenetObstaclePtr = std::shared_ptr<FrenetObstacle>;
