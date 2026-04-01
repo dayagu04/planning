@@ -223,6 +223,8 @@ class ReferencePath {
   const ReferencePathPoint &get_nearest_point(const double s) const;
   const std::pair<double, double> get_interpolated_point_width(
       const double s, const bool is_raw_width = true) const;
+  const double get_max_kappa_for_range(const double s_start,
+                                       const double s_end) const;
 
   bool get_reference_point_by_lon(
       double s, ReferencePathPoint &reference_path_point) const;
