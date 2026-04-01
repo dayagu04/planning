@@ -1603,7 +1603,7 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
             config_);
     const double road_type_dis =
         hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
-            ref_traj_points_[i].s, static_storage, ego_v_for_road, false);
+            ref_traj_points_[i].s, static_storage, ego_v_for_road, obstacle);
     lat_buf_dis += road_type_dis;
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1881,7 +1881,7 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
     for (auto index : indexes) {
       road_type_dis +=
           hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
-              ref_traj_points_[index].s, static_storage, ego_v_for_road, true);
+              ref_traj_points_[index].s, static_storage, ego_v_for_road, obstacle);
     }
     if (indexes.size() > 0) {
       road_type_dis = road_type_dis / ((double)indexes.size());
@@ -2868,48 +2868,7 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
     hard_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
         tmp_hard_lower_point, tmp_hard_upper_point));
   }
-  // const auto check_point =
-  //     [](const auto& refer_path_point,
-  //        auto &prev_point, auto &curr_point, auto &next_point) {
-  //       const auto prev_2_curr = planning_math::Vec2d(curr_point.x - prev_point.x,
-  //                                               curr_point.y - prev_point.y);
-  //       const auto curr_2_next = planning_math::Vec2d(next_point.x - curr_point.x,
-  //                                               next_point.y - curr_point.y);
-  //       const auto prev_2_curr_heading = prev_2_curr.Angle();
-  //       const auto curr_2_next_heading = curr_2_next.Angle();
-  //       const auto mid_heading = planning_math::NormalizeAngle(
-  //           (prev_2_curr_heading + curr_2_next_heading) / 2.0);
-  //       const auto refer_path_heading = refer_path_point.theta();
 
-  //       const auto heading_diff1 =
-  //           planning_math::AngleDiff(prev_2_curr_heading, curr_2_next_heading);
-  //       const auto heading_diff2 =
-  //           planning_math::AngleDiff(refer_path_heading, mid_heading);
-  //       if (std::fabs(heading_diff1) > 3.0 * M_PI / 4.0 &&
-  //           (std::fabs(heading_diff2) > M_PI / 3.0 &&
-  //            std::fabs(heading_diff2) < 2.0 * M_PI / 3.0)) {
-  //         const auto temp = curr_point;
-  //         curr_point = next_point;
-  //         next_point = temp;
-  //       }
-  //     };
-
-  // // 临时 hack（taolu10）：避免折返约束
-  // for(size_t idx = 1; idx < hard_bounds_output.size() - 1; ++idx) {
-  //   const auto refer_path_point = frenet_coord->GetPathPointByS(ref_traj_points_[idx].s);
-  //   size_t prev_idx = idx - 1;
-  //   size_t next_idx = idx + 1;
-  //   auto& curr_point_lower = hard_bounds_output[idx].first;
-  //   auto& prev_point_lower = hard_bounds_output[prev_idx].first;
-  //   auto& next_point_lower = hard_bounds_output[next_idx].first;
-  //   check_point(refer_path_point, prev_point_lower, curr_point_lower, next_point_lower);
-
-  //   auto& curr_point_upper = hard_bounds_output[idx].second;
-  //   auto& prev_point_upper = hard_bounds_output[prev_idx].second;
-  //   auto& next_point_upper = hard_bounds_output[next_idx].second;
-  //   check_point(refer_path_point, prev_point_upper, curr_point_upper,
-  //   next_point_upper);
-  // }
   // 临时 hack（flli9）：避免折返约束
   static constexpr double kReverseTurnDegThreshold = 90.0;
   static constexpr double kMinNormProd = 1e-6;
@@ -2964,8 +2923,20 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
     }
   };
 
+  const ConstStaticAnalysisStoragePtr static_storage =
+      reference_path_ptr_->get_static_analysis_storage();
   for (size_t idx = 1; idx < hard_bounds_output.size() - 1; ++idx) {
     const int current_index = static_cast<int>(idx);
+    // only smooth curve type
+    ResultTypeInfo type_info;
+    if (static_storage) {
+      type_info =
+          static_storage->GetTypeInfo(ref_traj_points_[current_index].s);
+    }
+    if (type_info.road_type == CRoadType::NormalStraight ||
+        type_info.road_type == CRoadType::SharpTurn) {
+      continue;
+    }
     smooth_reverse_points(current_index, true);
     smooth_reverse_points(current_index, false);
   }

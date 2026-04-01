@@ -229,11 +229,11 @@ bool DetermineTurnTypeAndRange(
     double d = get_delta_heading(info);
     return d > 100.0 * kDegToRad && d < 160.0 * kDegToRad;
   };
-  // 直角：70° < 转角 < 100°
+  // 直角：80° < 转角 < 100°
   auto is_normal_turn = [&get_delta_heading,
                          kDegToRad](const LatTypeRangeInfo& info) {
     double d = get_delta_heading(info);
-    return d > 70.0 * kDegToRad && d < 100.0 * kDegToRad;
+    return d > 80.0 * kDegToRad && d < 100.0 * kDegToRad;
   };
   // 锐角弯：20° < 转角 < 70°
   auto is_sharp_turn = [&get_delta_heading,
@@ -249,8 +249,8 @@ bool DetermineTurnTypeAndRange(
   // S弯：弧长长且曲率正负异号
   auto is_s_turn = [&refer_path_points](
                        const LatTypeRangeInfo& turn_range_info) {
-    constexpr double kPeakKappaThr = 0.1;
-    constexpr double kSCurveMinLength = 16.0;
+    constexpr double kPeakKappaThr = 0.05;
+    constexpr double kSCurveMinLength = 8.0;
     double kappa_min = 10.0;
     double kappa_max = -10.0;
     for (int j = turn_range_info.s_idx; j <= turn_range_info.e_idx; ++j) {
@@ -260,7 +260,7 @@ bool DetermineTurnTypeAndRange(
     }
     double seg_len = refer_path_points[turn_range_info.e_idx].path_point.s() -
                      refer_path_points[turn_range_info.s_idx].path_point.s();
-    return seg_len > kSCurveMinLength && kappa_max * kappa_min < -0.001 &&
+    return seg_len > kSCurveMinLength && kappa_max * kappa_min < -0.01 &&
            kappa_max > kPeakKappaThr && kappa_min < -kPeakKappaThr;
   };
 

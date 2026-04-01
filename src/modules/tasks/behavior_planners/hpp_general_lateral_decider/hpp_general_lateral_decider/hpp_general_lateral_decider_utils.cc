@@ -365,10 +365,12 @@ double RoadTypeExtraBufferAtS(const double s,
   if (storage) {
     type_info = storage->GetTypeInfo(s);
   }
-  double KRoadTypeSoftBuffer = 0.1;
-  if (!is_hard_bound) {
-    max_extra_buffer += KRoadTypeSoftBuffer;
+  double road_type_gain = 1.0;
+  if (is_hard_bound) {
+    road_type_gain = 0.5;
   }
+  double road_type_buffer_max = 0.1 * road_type_gain;
+  double road_type_buffer_min = 0.05 * road_type_gain;
   // step1: road type extra buffer
   switch (type_info.road_type) {
     case CRoadType::UTurn:
@@ -376,11 +378,11 @@ double RoadTypeExtraBufferAtS(const double s,
     case CRoadType::NormalTurn:
     case CRoadType::WideTurn:
     case CRoadType::SCurveStaight:
-      max_extra_buffer += 0.2;
+      max_extra_buffer += road_type_buffer_max;
       break;
     case CRoadType::NudgeStraight:
     case CRoadType::SharpTurn:
-      max_extra_buffer += 0.1;
+      max_extra_buffer += road_type_buffer_min;
       break;
     case CRoadType::Unknown:
     case CRoadType::NormalStraight:
@@ -393,12 +395,12 @@ double RoadTypeExtraBufferAtS(const double s,
   for (const auto elem : type_info.elem_types) {
     switch (elem) {
       case CElemType::IntersectionRoad:
-        max_extra_buffer += 0.2;
+        max_extra_buffer += road_type_buffer_max;
         break;
       case CElemType::UpRampRoad:
       case CElemType::DownRampRoad:
       case CElemType::UnknownRampRoad:
-        max_extra_buffer += 0.1;
+        max_extra_buffer += road_type_buffer_min;
         break;
       case CElemType::TurnStileRoad:
       case CElemType::SpeedBumpRoad:
@@ -421,20 +423,45 @@ double RoadTypeExtraBufferAtS(const double s,
 
   return lateral_extra_buffer;
 }
+
 double RoadTypeExtraBufferAtSForObs(
     const double s, const ConstStaticAnalysisStoragePtr &storage,
-    const double ego_v, bool is_static) {
+    const double ego_v, const std::shared_ptr<FrenetObstacle> obstacle) {
   double max_extra_buffer = 0.0;
 
   ResultTypeInfo type_info;
   if (storage) {
     type_info = storage->GetTypeInfo(s);
+  } else {
+    return 0.0;
   }
 
-  double KDynamicObsBuffer = 0.1;
-  if (!is_static) {
-    max_extra_buffer += KDynamicObsBuffer;
+  double KObsBufferDefault = 0.05;
+  double KLatVThrd = 2.0;
+  double KLonVThrd = 5.0;
+  double buffer_bas_obs_vel = 0.0;
+  // step1:obs vel factor
+  if (obstacle->is_static()) {
+    // buffer_bas_obs_vel += 0.5 * KObsBufferDefault;
+  } else {
+    buffer_bas_obs_vel +=
+        KObsBufferDefault *
+        std::min(std::fabs(obstacle->frenet_velocity_s()) / KLonVThrd, 1.0);
+    if (obstacle->frenet_l() * obstacle->frenet_velocity_l() > 0.1) {
+      // away
+    } else if (obstacle->frenet_l() * obstacle->frenet_velocity_l() < -0.1) {
+      // approach
+      buffer_bas_obs_vel +=
+          KObsBufferDefault *
+          std::min(std::fabs(obstacle->frenet_velocity_l()) / KLatVThrd, 1.0);
+    }
   }
+  max_extra_buffer += buffer_bas_obs_vel;
+
+  double roadtype_gain_base_obs_vel =
+      std::min(std::fabs(obstacle->velocity()) / KLonVThrd, 1.0);
+  double road_type_buffer_max = 0.1 * roadtype_gain_base_obs_vel;
+  double road_type_buffer_min = 0.05 * roadtype_gain_base_obs_vel;
   // step1: road type extra buffer
   switch (type_info.road_type) {
     case CRoadType::UTurn:
@@ -442,11 +469,11 @@ double RoadTypeExtraBufferAtSForObs(
     case CRoadType::NormalTurn:
     case CRoadType::WideTurn:
     case CRoadType::SCurveStaight:
-      max_extra_buffer += 0.2;
+      max_extra_buffer += road_type_buffer_max;
       break;
     case CRoadType::NudgeStraight:
     case CRoadType::SharpTurn:
-      max_extra_buffer += 0.1;
+      max_extra_buffer += road_type_buffer_min;
       break;
     case CRoadType::Unknown:
     case CRoadType::NormalStraight:
@@ -459,12 +486,12 @@ double RoadTypeExtraBufferAtSForObs(
   for (const auto elem : type_info.elem_types) {
     switch (elem) {
       case CElemType::IntersectionRoad:
-        max_extra_buffer += 0.2;
+        max_extra_buffer += road_type_buffer_max;
         break;
       case CElemType::UpRampRoad:
       case CElemType::DownRampRoad:
       case CElemType::UnknownRampRoad:
-        max_extra_buffer += 0.1;
+        max_extra_buffer += road_type_buffer_min;
         break;
       case CElemType::TurnStileRoad:
       case CElemType::SpeedBumpRoad:
