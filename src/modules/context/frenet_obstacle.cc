@@ -20,7 +20,6 @@ FrenetObstacle::FrenetObstacle(
       source_type_(obstacle_ptr->source_type()),
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid),
-      session_(session),
       is_static_(obstacle_ptr->is_static()) {
   compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
@@ -282,7 +281,7 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
   double obs_start_l(std::numeric_limits<double>::max());
   double obs_end_l(std::numeric_limits<double>::lowest());
   std::vector<planning_math::Vec2d> obstacle_points;
-  if (session_->is_hpp_scene()) {
+  if (is_hpp_scene) {
     obstacle_points = obstacle_ptr_->perception_polygon().points();
   } else {
     auto perception_bounding_box = obstacle_ptr_->perception_bounding_box();

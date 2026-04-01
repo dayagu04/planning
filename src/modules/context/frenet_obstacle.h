@@ -142,7 +142,6 @@ class FrenetObstacle {
   double length_;
   std::vector<planning_math::Vec2d> corner_points_;
   SourceType source_type_;
-  const planning::framework::Session *session_;
 };
 
 using FrenetObstaclePtr = std::shared_ptr<FrenetObstacle>;
