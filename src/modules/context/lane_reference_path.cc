@@ -350,7 +350,7 @@ void LaneReferencePath::generate_frenet_obstacles(
     std::shared_ptr<FrenetObstacle> frenet_obstacle =
         std::make_shared<FrenetObstacle>(
             obstacle_ptr, *this,
-            session_->environmental_model().get_ego_state_manager(), true);
+            session_->environmental_model().get_ego_state_manager(), true, session_->is_hpp_scene());
     frenet_obstacles.emplace_back(frenet_obstacle);
     frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
   }
