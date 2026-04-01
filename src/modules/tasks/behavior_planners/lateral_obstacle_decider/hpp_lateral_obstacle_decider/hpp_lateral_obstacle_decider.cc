@@ -544,7 +544,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
     }
   } else if (cluster_center_l < ego_state.l()) {
     const double dis_right =
-        ego_state.boundary().l_start - ego_state.boundary().l_end;
+        ego_state.boundary().l_start - cluster_l_end;
     if (dis_right > hpp_general_lateral_decider_config_.ego_detour_safe_dis) {
       decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
       decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
@@ -649,6 +649,7 @@ void HppLateralObstacleDecider::AnalyzeNudgeLevelBaseCurve(
         cluster.frenet_boundary.l_start -
         hpp_general_lateral_decider_config_.ego_detour_safe_dis -
         vehicle_param.max_width * 0.5;
+    //TODO:是否在这里加l保护，防止l超过道路边界。
     cal_kappa(reference_path_ptr_, vehicle_param, ideal_target_point_frenet,
               ego_point_frenet, false, decision_info);
   } else {

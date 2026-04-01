@@ -1245,7 +1245,7 @@ std::shared_ptr<planning::FrenetObstacle> HybridARAStar::MergeAgents(
   auto obstacle = std::make_shared<Obstacle>(id, merged_points);
   obstacle_pool_.push_back(obstacle);
   return std::make_shared<planning::FrenetObstacle>(
-      obstacle.get(), *reference_path_ptr_, ego_state_manager, true);
+      obstacle.get(), *reference_path_ptr_, session_, true);
 }
 
 void HybridARAStar::FindClosestUncoveredInterval() {

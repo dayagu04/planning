@@ -16,7 +16,7 @@ class FrenetObstacle {
  public:
   FrenetObstacle(const Obstacle* obstacle_ptr,
                  const ReferencePath& reference_path,
-                 const std::shared_ptr<EgoStateManager> ego_state_info,
+                 const planning::framework::Session *session,
                  bool is_location_valid);
 
   int id() const { return id_; }
@@ -142,6 +142,7 @@ class FrenetObstacle {
   double length_;
   std::vector<planning_math::Vec2d> corner_points_;
   SourceType source_type_;
+  const planning::framework::Session *session_;
 };
 
 using FrenetObstaclePtr = std::shared_ptr<FrenetObstacle>;
