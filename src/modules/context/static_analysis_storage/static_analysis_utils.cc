@@ -776,6 +776,11 @@ bool StaticAnalysisUtils::ElemTypeAnalysis(
         last_ramp_idx_range.second = i;
       }
     } else {
+      if (last_ramp_type == CElemType::UpRampRoad ||
+          last_ramp_type == CElemType::DownRampRoad) {
+        ramp_idx_range_list[last_ramp_type].push_back(last_ramp_idx_range);
+        ramp_s_range_list[last_ramp_type].push_back(last_ramp_s_range);
+      }
       last_ramp_type = CElemType::Unknown;
     }
   }
