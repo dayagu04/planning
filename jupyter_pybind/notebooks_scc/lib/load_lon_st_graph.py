@@ -1255,9 +1255,19 @@ def load_lon_global_figure(bag_loader):
     cipv_vel_vec.append(cipv_vel)
     cipv_vel_fusion_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_vel_fusion'], 2))
     curve_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_limit_in_turns'], 2))
-    speed_decider_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target_decider'], 2))
-    #road_boundary_regular_v_limit_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['road_boundary_regular_v_limit'], 2))
-    #road_boundary_strictest_v_limit_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['road_boundary_strictest_v_limit'], 2))
+
+    # 新字段：优先读 proto/hpp debug
+    speed_limit_val = None
+    plan_dbg_proto = bag_loader.plan_debug_msg['data'][ind]
+    if hasattr(plan_dbg_proto, 'hpp_speed_limit_decider_debug') and \
+       plan_dbg_proto.HasField('hpp_speed_limit_decider_debug'):
+        hpp_dbg = plan_dbg_proto.hpp_speed_limit_decider_debug
+        if hpp_dbg.HasField('final_v_target'):
+            speed_limit_val = hpp_dbg.final_v_target
+    # 兼容旧包：proto 里没写时回退旧 JSON 键
+    if speed_limit_val is None:
+        speed_limit_val = bag_loader.plan_debug_msg['json'][ind].get('v_target_decider', -0.01)
+    speed_decider_limit_velocity_vec.append(round(speed_limit_val, 2))
 
   velocity_fig.line(t_plan_vec, cipv_vel_vec, line_width=1,
                               legend_label='cipv_vel', color="green")
