@@ -1458,10 +1458,22 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
     }
   }
 
+  // Find current frame lane closest to previous frame's ego lane
+  int closest_lane_index = -1;
+  ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
+                                    order_ids, closest_lane_index);
+
+  // Use closest lane if found, otherwise fallback to last_track_ego_lane_
+  std::shared_ptr<VirtualLane> collision_check_lane = last_track_ego_lane_;
+  if (closest_lane_index >= 0 && closest_lane_index < order_ids.size() &&
+      order_ids[closest_lane_index] < relative_id_lanes.size()) {
+    collision_check_lane = relative_id_lanes[order_ids[closest_lane_index]];
+  }
+
   TrajectoryPoints ego_future_trajs;
   if (first_split_dir_dis_info_.first == ON_RIGHT) {
     GenerateEgoFutureTrajectory(relative_id_lanes[order_ids[1]], 0.0, ego_future_trajs);
-    if (!IsPathCollisionWithRoadEdge(last_track_ego_lane_, relative_id_lanes[order_ids[1]], ego_future_trajs)) {
+    if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[order_ids[1]], ego_future_trajs)) {
       is_exist_ramp_on_road_ = true;
       relative_id_lanes[order_ids[1]]->set_relative_id(0);
       origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
@@ -1470,7 +1482,7 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
     }
   } else if (first_split_dir_dis_info_.first == ON_LEFT) {
     GenerateEgoFutureTrajectory(relative_id_lanes[order_ids[0]], 0.0, ego_future_trajs);
-    if (!IsPathCollisionWithRoadEdge(last_track_ego_lane_, relative_id_lanes[order_ids[0]], ego_future_trajs)) {
+    if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[order_ids[0]], ego_future_trajs)) {
       is_exist_ramp_on_road_ = true;
       relative_id_lanes[order_ids[0]]->set_relative_id(0);
       origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
@@ -1853,6 +1865,19 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   // 这里识别需要判断的split，此处直接用first不太合理。
   double road_merge_and_split_distance_thld_surpress_lane_select =
       std::max(60.0, ego_state->ego_v() * 4.0);
+
+  // Find current frame lane closest to previous frame's ego lane
+  int closest_lane_index = -1;
+  ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
+                                    order_ids, closest_lane_index);
+
+  // Use closest lane if found, otherwise fallback to last_track_ego_lane_
+  std::shared_ptr<VirtualLane> collision_check_lane = last_track_ego_lane_;
+  if (closest_lane_index >= 0 && closest_lane_index < order_ids.size() &&
+      order_ids[closest_lane_index] < relative_id_lanes.size()) {
+    collision_check_lane = relative_id_lanes[order_ids[closest_lane_index]];
+  }
+
   TrajectoryPoints ego_future_trajs;
   if (distance_to_first_road_merge_ > distance_to_first_road_split_ ||
       (std::fabs(distance_to_first_road_merge_ - distance_to_first_road_split_) < road_merge_and_split_distance_thld_surpress_lane_select)) {
@@ -1863,7 +1888,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
 
     if (split_dir_dis.first == ON_RIGHT) {
       GenerateEgoFutureTrajectory(relative_id_lanes[order_ids[1]], 0.0, ego_future_trajs);
-      if (!IsPathCollisionWithRoadEdge(last_track_ego_lane_, relative_id_lanes[order_ids[1]], ego_future_trajs)) {
+      if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[order_ids[1]], ego_future_trajs)) {
         relative_id_lanes[order_ids[1]]->set_relative_id(0);
         origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
         last_zero_relative_id_order_id_index_ = 1;
@@ -1872,7 +1897,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
       }
     } else if (split_dir_dis.first == ON_LEFT) {
       GenerateEgoFutureTrajectory(relative_id_lanes[order_ids[0]], 0.0, ego_future_trajs);
-      if (!IsPathCollisionWithRoadEdge(last_track_ego_lane_, relative_id_lanes[order_ids[0]], ego_future_trajs)) {
+      if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[order_ids[0]], ego_future_trajs)) {
         relative_id_lanes[order_ids[0]]->set_relative_id(0);
         origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
         last_zero_relative_id_order_id_index_ = 0;
@@ -2444,6 +2469,18 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
                               relative_theta_diff_cost_weight,
                               kappa_cost_weight);
 
+  // Find current frame lane closest to previous frame's ego lane
+  int closest_lane_index = -1;
+  ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_, relative_id_lanes,
+                                    order_ids, closest_lane_index);
+
+  // Use closest lane if found, otherwise fallback to last_track_ego_lane_
+  std::shared_ptr<VirtualLane> collision_check_lane = last_track_ego_lane_;
+  if (closest_lane_index >= 0 && closest_lane_index < order_ids.size() &&
+      order_ids[closest_lane_index] < relative_id_lanes.size()) {
+    collision_check_lane = relative_id_lanes[order_ids[closest_lane_index]];
+  }
+
   TrajectoryPoints ego_future_trajs;
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
@@ -2455,7 +2492,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
         GenerateEgoFutureTrajectory(relative_id_lane, 0.0, ego_future_trajs);
         if (IsPathCollisionWithRoadEdge(
-            last_track_ego_lane_, relative_id_lane, ego_future_trajs)) {
+            collision_check_lane, relative_id_lane, ego_future_trajs)) {
           continue;
         }
         double total_cost = 0.0;
@@ -4379,7 +4416,16 @@ void EgoLaneTrackManger::GenerateEgoFutureTrajectory(
   const PlanningInitPoint planning_init_point =
       ego_state->planning_init_point();
   const auto& ref_frenet_coord = target_lane->get_lane_frenet_coord();
+
+  // 获取速度限制
+  const auto& speed_limit_decider_output = session_->planning_context().speed_limit_decider_output();
+  double speed_limit_ref = std::numeric_limits<double>::max();
+  auto speed_limit_type_ref = SpeedLimitType::NONE;
+  speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref, &speed_limit_type_ref);
+
+  // 初始化速度和减速度
   double current_v = planning_init_point.v;
+  const double comfortable_decel = -2.0;  // 舒适减速度 -2m/s²
   const double wheel_base = car_param.wheel_base;
 
   // 纯追踪模型初始化
@@ -4409,6 +4455,14 @@ void EgoLaneTrackManger::GenerateEgoFutureTrajectory(
   const double min_s_inc = 0.01;
 
   for (int step = 0; step < max_sim_steps; ++step) {
+    // 根据速度限制更新当前速度（舒适减速）
+    if (current_v > speed_limit_ref) {
+      // 计算减速后的速度: v = v0 + a*t
+      double new_v = current_v + comfortable_decel * dt;
+      // 确保不低于限速
+      current_v = std::max(new_v, speed_limit_ref);
+    }
+
     double ld = current_v * 1.2 + 1.0;  // 预瞄距离
     BasicPurePursuitModel::ModelParam pp_param(ld, wheel_base);
     pp_model_.set_model_state(pp_model_state);
@@ -4434,13 +4488,19 @@ void EgoLaneTrackManger::GenerateEgoFutureTrajectory(
     if (s <= last_s) s = last_s + min_s_inc;
     last_s = s;
 
+    // 计算实际加速度（用于记录）
+    double actual_accel = 0.0;
+    if (current_v > speed_limit_ref) {
+      actual_accel = comfortable_decel;
+    }
+
     // 构造轨迹点
     TrajectoryPoint pt;
     pt.x = new_state.x_;
     pt.y = new_state.y_;
     pt.heading_angle = new_state.phi_;
     pt.v = current_v;
-    pt.a = 0.0;
+    pt.a = actual_accel;
     pt.s = s;
     pt.l = l;
     pt.t = (step + 1) * dt;
