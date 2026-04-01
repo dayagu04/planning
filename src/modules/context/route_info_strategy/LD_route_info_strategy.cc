@@ -2049,7 +2049,75 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
     }
 
     if (!is_filter_split) {
-      ramp_info_vec_.emplace_back(split_info);
+      bool should_skip = false;
+
+      // 找到当前split在split_info_vec_中的索引
+      size_t current_split_idx = 0;
+      for (size_t i = 0; i < split_info_vec_.size(); ++i) {
+        if (split_info_vec_[i].first == split_link) {
+          current_split_idx = i;
+          break;
+        }
+      }
+
+      // 如果存在下一个split，检查距离限制
+      if (current_split_idx + 1 < split_info_vec_.size()) {
+        const auto& next_split_info = split_info_vec_[current_split_idx + 1];
+        const double distance_to_next_split = next_split_info.second - split_info.second;
+
+        // 计算当前split到下一个split之间的实线长度
+        double total_lsl_length = 0.0;
+        const auto* iter_link = ld_map_.GetNextLinkOnRoute(split_info.first->id());
+        double accumulated_distance = 0.0;
+
+        while (iter_link && accumulated_distance < distance_to_next_split) {
+          for (const auto& lane_id : iter_link->lane_ids()) {
+            const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+            if (lane == nullptr || IsEmergencyLane(lane) || IsDiversionLane(lane)) {
+              continue;
+            }
+          }
+
+          double current_link_lsl_distance = 0.0;
+          for (const auto& lane_id : iter_link->lane_ids()) {
+            const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+            if (lane == nullptr || IsEmergencyLane(lane) || IsDiversionLane(lane)) {
+              continue;
+            }
+
+            // 跳过最左侧车道
+            if (lane->sequence() == iter_link->lane_num()) {
+              continue;
+            }
+
+            double lane_lsl_length = 0.0;
+            for (const auto& boundary : lane->left_boundaries()) {
+              if (boundary.divider_marking_type() ==
+                      iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                          LaneBoundary_DivederMarkingType_DMT_MARKING_SINGLE_SOLID_LINE ||
+                  boundary.divider_marking_type() ==
+                      iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                          LaneBoundary_DivederMarkingType_DMT_MARKING_DOUBLE_SOLID_LINE) {
+                lane_lsl_length += boundary.length() * 0.01;
+              }
+            }
+            current_link_lsl_distance = std::max(current_link_lsl_distance, lane_lsl_length);
+          }
+
+          total_lsl_length += current_link_lsl_distance;
+          accumulated_distance += iter_link->length() * 0.01;
+          iter_link = ld_map_.GetNextLinkOnRoute(iter_link->id());
+        }
+
+        // 如果距离减去实线长度小于200米，则忽略这个split
+        if (distance_to_next_split - total_lsl_length < 200.0) {
+          should_skip = true;
+        }
+      }
+
+      if (!should_skip) {
+        ramp_info_vec_.emplace_back(split_info);
+      }
     }
 
   }
