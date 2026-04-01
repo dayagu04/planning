@@ -281,10 +281,6 @@ const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
   return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
          !CheckEgoPoseInBelieveObsArea(
              0.2, apa_param.GetParam().believe_obs_ego_area);
-  // return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-  //        ((frame_.current_gear != geometry_lib::SEG_GEAR_REVERSE) ||
-  //         !CheckEgoPoseInBelieveObsArea(
-  //             0.2, apa_param.GetParam().believe_obs_ego_area));
 }
 
 const bool PerpendicularTailInScenario::CalcPtInside() {
@@ -1454,8 +1450,7 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
     }
 
     // static plan fail
-    if (!success && last_request.replan_reason != DYNAMIC &&
-        last_request.replan_reason != PATH_DANGEROUS) {
+    if (!success && !IsReplanReasonDynamic(last_request.replan_reason)) {
       ILOG_ERROR << "static replan fail";
       frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
       frame_.plan_fail_reason = PATH_PLAN_FAILED;
@@ -1897,7 +1892,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
     double move_back_dist = 0.168;
     if (lon_err < 0.368) {
       // if only can move 0.1m, no move, finish
-      move_back_dist = param.safe_uss_remain_dist_in_slot + 0.1;
+      move_back_dist = param.lat_lon_speed_buffer.lon_buffer + 0.1;
     }
 
     const geometry_lib::PathPoint uss_pose{
