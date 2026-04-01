@@ -288,9 +288,9 @@ void MebCore::UpdateMebSuppCode(void) {
     /*do nothing*/
   }
 
-  // if (meb_input.esp_active_time > 0.2) {
-  //   enable_code += uint16_bit[5];
-  // }
+  if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
+    supp_code += uint16_bit[5];
+  }
   meb_state_info_.supp_code = supp_code;
 }
 
@@ -526,7 +526,7 @@ void MebCore::Log(void) {
   auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto &MebInputInstacne = adas_function::MebPreprocess::GetInstance();
-  JSON_DEBUG_VALUE("meb_version", (float32)260330);
+  JSON_DEBUG_VALUE("meb_version", (double)260401);
   JSON_DEBUG_VALUE("meb_first_state", (int)meb_state_info_.first_state);
   JSON_DEBUG_VALUE("meb_second_state", (int)meb_state_info_.second_state);
   JSON_DEBUG_VALUE("meb_enable_code", meb_state_info_.enable_code);
@@ -744,6 +744,11 @@ void MebCore::Log(void) {
               .get_local_view()
               .vehicle_service_output_info.steering_wheel_angle_speed *
           57.3);
+  JSON_DEBUG_VALUE("function_state_machine",
+                   (int)GetContext.get_session()
+                       ->environmental_model()
+                       .get_local_view()
+                       .function_state_machine_info.current_state);
 }
 
 void MebCore::RunOnce(void) {

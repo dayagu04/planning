@@ -40,7 +40,7 @@ int OdCrossingScenario::SceneCode(void) {
 
   /*bit_2*/
   // 本车运动速度过高
-  if (fabs(vehicle_service.vehicle_speed) > (30.0 / 3.6)) {
+  if (fabs(vehicle_service.vehicle_speed) > (20.0 / 3.6)) {
     temp_scene_code += uint16_bit[2];
   } else {
     /*do nothing*/
@@ -177,9 +177,15 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
       sqrt((obj.rel_vx + signed_ego_v) * (obj.rel_vx + signed_ego_v) +
            obj.rel_vy * obj.rel_vy);
 
+  auto rear_key_obj_info = meb_pre.GetRearKeyObjInfo();
+
   /*bit_0*/
   // 处于大转弯状态
-  if (fabs(vehicle_service.steering_wheel_angle) > (45.0 / 57.3)) {
+  if ((fabs(vehicle_service.steering_wheel_angle) > (45.0 / 57.3)) ||
+      (vehicle_service.vehicle_speed_display <=
+       (meb_pre.GetMebParam().disable_vehspd_display_kph_min - 1.0)) ||
+      (vehicle_service.vehicle_speed_display >=
+       (meb_pre.GetMebParam().disable_vehspd_display_kph_max + 1.0))) {
     suppe_code += uint32_bit[0];
   }
 
@@ -296,10 +302,37 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
   }
 
   /*bit_10*/
-  // 处于泊车感知下
+  // 处于泊车感知下，暂时不做
 
   /*bit_11*/
-  // 本车前进时,正前方近距离范围内有运动的CIPV
+  // 本车前进时,正后方近距离范围内有运动的CIPV
+  if ((vehicle_service.shift_lever_state == iflyauto::ShiftLeverState_D) &&
+      (rear_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
+    // 存在较近范围内有后方运动车辆,则认为是交通拥堵场景,抑制横穿场景
+    if ((rear_key_obj_info.key_obj_relative_x > -10.0) &&
+        (fabs(rear_key_obj_info.obj_absolute_v_x) > 0.5)) {
+      suppe_code += uint32_bit[11];
+    }
+  }
+
+  /*bit_12*/
+  // ttc过小
+  double obj_min_dist =
+      obj.rel_x - 0.5 * obj.width - param.origin_2_front_bumper;
+  double ttc;
+  if (vehicle_service.shift_lever_state ==
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
+    // Todo:未考虑障碍物航向角，这样简化计算有点问题
+    if ((obj.rel_vx < -0.1) && (obj_min_dist > 0.0)) {
+      ttc = fabs(obj_min_dist / obj.rel_vx);
+      if (ttc < 0.3) {
+        suppe_code += uint32_bit[12];
+      }
+    } else if (obj_min_dist <= 0.0) {
+      suppe_code += uint32_bit[12];
+    } else {
+    }
+  }
 
   // 如果误触发策略关闭，则suppe_code清零
   if (param.meb_false_trigger_switch == false) {
@@ -329,6 +362,8 @@ void OdCrossingScenario::Process(void) {
   auto &meb_pre = adas_function::MebPreprocess::GetInstance();
 
   double signed_ego_v = meb_pre.GetInstance().GetMebInput().signed_ego_vel_mps;
+
+  auto rear_key_obj_info = meb_pre.GetRearKeyObjInfo();
 
   // 初始化所有成员变量默认值
   Init();
@@ -477,6 +512,16 @@ void OdCrossingScenario::Process(void) {
     collision_obj_info_.interest_obj_vec_.clear();
     collision_obj_info_.interest_obj_vec_.reserve(interest_obj_info_.valid_num);
     double stop_distance_buffer_reduction = 0.0;
+    // if ((vehicle_service.shift_lever_state == iflyauto::ShiftLeverState_D)
+    // &&
+    //     (rear_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
+    //   // 存在较近范围内有后方车辆,则认为是交通拥堵场景,适当降低剩余安全距离
+    //   if (rear_key_obj_info.key_obj_relative_x > -10.0) {
+    //     stop_distance_buffer_reduction = 0.3;
+    //   } else {
+    //     stop_distance_buffer_reduction = 0.0;
+    //   }
+    // }
     CollisionCalculate(stop_distance_buffer_reduction);
   }
 
@@ -507,6 +552,18 @@ void OdCrossingScenario::Process(void) {
   } else {
     brake_alert_ = false;
   }
+
+  if (last_collsion_num_ == 0 && collision_obj_info_.valid_num > 0 &&
+      final_collision_obj_info_.valid_num != collision_obj_info_.valid_num) {
+    std::vector<double> suppe_code_vector;
+    for (auto &collision_obs : final_collision_obj_info_.interest_obj_vec_) {
+      suppe_code_vector.push_back(
+          static_cast<double>(collision_obs.suppe_code));
+    }
+    JSON_DEBUG_VALUE("od_crossing_scenario_is_suppressed", (int)1);
+    JSON_DEBUG_VECTOR("od_crossing_scenario_supp_code", suppe_code_vector, 2);
+  }
+  last_collsion_num_ = collision_obj_info_.valid_num;
 }
 
 }  // namespace adas_function

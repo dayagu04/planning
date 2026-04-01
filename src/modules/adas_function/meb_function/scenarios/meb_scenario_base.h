@@ -30,6 +30,7 @@ class MebScenarioBase {
   InterestObjInfo interest_obj_info_;
   InterestObjInfo collision_obj_info_;
   InterestObjInfo final_collision_obj_info_;
+  int last_collsion_num_ = 0;
   bool brake_alert_ = false;
   int scene_code_ = -1;
 
