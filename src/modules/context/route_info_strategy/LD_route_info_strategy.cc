@@ -130,7 +130,8 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
           iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
       current_link_->link_class() ==
           iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
-      (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+      (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+      (current_link_->link_type() & iflymapdata::sdpro::LT_JCT) != 0) {
 
     route_info_output_.is_ego_on_expressway = true;
     if (current_link_->link_class() ==
@@ -1232,6 +1233,16 @@ bool LDRouteInfoStrategy::CalculateFrontTargetLinkBaseFixDis(
   while (sum_dis < front_search_dis) {
     const auto& temp_next_link = ld_map_.GetNextLinkOnRoute(temp_link->id());
     if (temp_next_link == nullptr) {
+      break;
+    }
+
+    // 只在ODD范围内找target_link
+    if (!(temp_next_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+          temp_next_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+          (temp_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+          (temp_next_link->link_type() & iflymapdata::sdpro::LT_JCT) != 0)) {
       break;
     }
 
