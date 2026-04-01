@@ -12,10 +12,10 @@
 
 namespace planning {
 
-FrenetObstacle::FrenetObstacle(const Obstacle *obstacle_ptr,
-                               const ReferencePath &reference_path,
-                               const std::shared_ptr<EgoStateManager> ego_state_info,
-                               bool is_location_valid,bool is_hpp_scene)
+FrenetObstacle::FrenetObstacle(
+    const Obstacle *obstacle_ptr, const ReferencePath &reference_path,
+    const std::shared_ptr<EgoStateManager> ego_state_info,
+    bool is_location_valid, bool is_hpp_scene)
     : id_(obstacle_ptr->id()),
       source_type_(obstacle_ptr->source_type()),
       obstacle_ptr_(obstacle_ptr),
@@ -273,7 +273,7 @@ void FrenetObstacle::compute_frenet_obstacle(
   rel_v_ = frenet_velocity_s_ - frenet_ego_state.velocity();
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(
-    const ReferencePath &reference_path) {
+    const ReferencePath &reference_path, bool is_hpp_scene = false) {
   const auto &frenet_coord = reference_path.get_frenet_coord();
 
   double obs_start_s(std::numeric_limits<double>::max());
