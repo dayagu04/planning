@@ -2379,7 +2379,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     return;
   }
 
-  constexpr size_t kBlendRadius = 4;
+  constexpr size_t kBlendRadius = 5;
   const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
   if (frenet_coord == nullptr) {
     ref_traj_points_ = raw_ref_traj_points;
@@ -2406,9 +2406,21 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
 
   TrajectoryPoints merged = raw_ref_traj_points;
   size_t recover_idx = break_start;
-  while (recover_idx < n && is_break_hard_bound(recover_idx)) {
+  size_t last_recover_idx = 0;
+  size_t consecutive_in_bound = 0;
+  while (recover_idx < n) {
+    if (!is_break_hard_bound(recover_idx)) {
+      ++consecutive_in_bound;
+      if (consecutive_in_bound >= kBlendRadius) {
+        last_recover_idx = recover_idx;
+      }
+    } else {
+      last_recover_idx = n;
+      consecutive_in_bound = 0;
+    }
     ++recover_idx;
   }
+  recover_idx = (last_recover_idx == n) ? (n - 1) : last_recover_idx;
 
   if (recover_idx > n - 1 - kBlendRadius) {
     recover_idx = n - 1;
