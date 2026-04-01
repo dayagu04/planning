@@ -93,6 +93,9 @@ class StGraphInput {
 
   const double GetSuitableLateralBuffer(const agent::Agent& agent) const;
 
+  double hpp_reverse_vehicle_extra_lat_buffer() const;
+  double hpp_large_agent_extra_lat_buffer() const;
+
   const double GetSuitableLonBuffer(const agent::Agent& agent) const;
 
   const double start_absolute_time() const;
@@ -210,6 +213,8 @@ class StGraphInput {
   double tricycle_lat_buffer_ = 0.0;
   double tricycle_lon_buffer_ = 0.0;
   double reverse_vehicle_lat_buffer_m_ = 0.0;
+  double hpp_reverse_vehicle_extra_lat_buffer_ = 0.1;
+  double hpp_large_agent_extra_lat_buffer_ = 0.1;
 
   bool enable_backward_extend_st_boundary_ = false;
   double backward_extend_time_s_ = 0.0;

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "agent/agent.h"
+#include "context/hpp_parameter_util.h"
 #include "math/box2d.h"
 #include "math/line_segment2d.h"
 #include "st_boundary.h"
@@ -218,6 +219,12 @@ class StGraphUtils {
   static planning_math::Box2d MakeEgoBox(
       const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
       const double s);
+
+  static BufferType GetHppBufferTypeForAgent(const agent::Agent& agent);
+
+  static double GetHppLateralBuffer(const agent::Agent& agent, double ego_v,
+                                    double hpp_reverse_extra,
+                                    double hpp_large_agent_extra);
 };
 
 }  // namespace speed

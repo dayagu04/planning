@@ -203,14 +203,22 @@ void STGraph::MakeStaticAgentStBoundary(
 
   double lon_buffer = st_graph_input_->GetSuitableLonBuffer(agent);
 
-  double lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
   int32_t prev_st_count = 0;
   bool is_in_st_graph = false;
-  lat_buffer = StGraphUtils::RecalculateLateralBufferForLargeAgent(
-      init_point, *mutable_agent_manager, agent, expand_buffer,
-      small_expand_buffer, lat_buffer, &prev_st_count);
+  double lat_buffer;
+  if (is_hpp_scene && agent.type() != agent::AgentType::VIRTUAL) {
+    lat_buffer = StGraphUtils::GetHppLateralBuffer(
+        agent, init_point.vel(),
+        st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
+        st_graph_input_->hpp_large_agent_extra_lat_buffer());
+  } else {
+    lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
+    lat_buffer = StGraphUtils::RecalculateLateralBufferForLargeAgent(
+        init_point, *mutable_agent_manager, agent, expand_buffer,
+        small_expand_buffer, lat_buffer, &prev_st_count);
+  }
 
-  if (agent.type() == agent::AgentType::PEDESTRIAN && nullptr != ptr_obj_lane) {
+  if (!is_hpp_scene && agent.type() == agent::AgentType::PEDESTRIAN && nullptr != ptr_obj_lane) {
     const auto& follow_agent_ids = st_graph_input_->GetFollowAgentIds();
     if (follow_agent_ids.find(agent.agent_id()) != follow_agent_ids.end()) {
       double nearest_s_vru = 0.0;
@@ -597,12 +605,20 @@ void STGraph::MakeDynamicAgentStBoundary(
 
   double lon_buffer = st_graph_input_->GetSuitableLonBuffer(agent);
 
-  double lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
   int32_t prev_st_count = 0;
   bool is_in_st_graph = false;
-  lat_buffer = StGraphUtils::RecalculateLateralBufferForLargeAgent(
-      init_point, *mutable_agent_manager, agent, expand_buffer,
-      small_expand_buffer, lat_buffer, &prev_st_count);
+  double lat_buffer;
+  if (is_hpp_scene && agent.type() != agent::AgentType::VIRTUAL) {
+    lat_buffer = StGraphUtils::GetHppLateralBuffer(
+        agent, init_point.vel(),
+        st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
+        st_graph_input_->hpp_large_agent_extra_lat_buffer());
+  } else {
+    lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
+    lat_buffer = StGraphUtils::RecalculateLateralBufferForLargeAgent(
+        init_point, *mutable_agent_manager, agent, expand_buffer,
+        small_expand_buffer, lat_buffer, &prev_st_count);
+  }
 
   bool need_adjust_buffer_by_t = false;
   bool is_parallel = false;
@@ -614,7 +630,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       {agent.x(), agent.y()}, &nearest_s, &nearest_l);
   const double half_ego_lane_width = 0.5 * ptr_ego_lane->width_by_s(nearest_s);
 
-  if (agent.type() == agent::AgentType::PEDESTRIAN && nullptr != ptr_obj_lane) {
+  if (!is_hpp_scene && agent.type() == agent::AgentType::PEDESTRIAN && nullptr != ptr_obj_lane) {
     const auto& follow_agent_ids = st_graph_input_->GetFollowAgentIds();
     if (follow_agent_ids.find(agent.agent_id()) != follow_agent_ids.end()) {
       double half_lane_width = 0.5 * ptr_ego_lane->width_by_s(nearest_s);
@@ -995,7 +1011,15 @@ void STGraph::BackwardExtendSingleStBoundary(
   }
   const double agent_pred_end_time = trajectory.back().absolute_time();
   double lon_buffer = st_graph_input_->GetSuitableLonBuffer(agent);
-  double lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
+  double lat_buffer;
+  if (is_hpp_scene && agent.type() != agent::AgentType::VIRTUAL) {
+    lat_buffer = StGraphUtils::GetHppLateralBuffer(
+        agent, init_point.vel(),
+        st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
+        st_graph_input_->hpp_large_agent_extra_lat_buffer());
+  } else {
+    lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
+  }
 
   // check whether need adjust buffer by t
   bool need_adjust_buffer_by_t = false;

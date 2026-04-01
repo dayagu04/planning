@@ -6,6 +6,7 @@
 #include "tasks/task.h"
 #include "ego_planning_config.h"
 #include "session.h"
+#include "common/agent/agent.h"
 
 namespace planning {
 
@@ -15,10 +16,6 @@ struct TrajectoryPoint;
 namespace planning_math {
 class Vec2d;
 }  // namespace planning_math
-
-namespace agent {
-class Agent;
-}  // namespace agent
 
 class HppLonObstaclePreprocessDecider : public Task {
  public:
@@ -34,7 +31,8 @@ class HppLonObstaclePreprocessDecider : public Task {
 
   void CreateVirtualAgentFromGroundLine(
       const std::vector<planning_math::Vec2d> &hit_points,
-      const TrajectoryPoint &anchor_traj_point, int id);
+      const TrajectoryPoint &anchor_traj_point, int id,
+      agent::AgentType agent_type);
   void GenerateCurrentPoseTrajectory(agent::Agent *agent);
 
   const double kGroundLineVirtualAgentLength = 0.5;

@@ -706,6 +706,10 @@ void StGraphInput::MakeBuffer(const bool is_lane_keeping,
   const double tricycle_lon_buffer_m = config.tricycle_lon_buffer_m;
   const double reverse_vehicle_lat_buffer_m =
       config.reverse_vehicle_lat_buffer_m;
+  const double hpp_reverse_vehicle_extra_lat_buffer =
+      config.hpp_reverse_vehicle_extra_lat_buffer;
+  const double hpp_large_agent_extra_lat_buffer =
+      config.hpp_large_agent_extra_lat_buffer;
 
   // 1. normal lane keeping and lane change
   lat_buffer_ =
@@ -745,9 +749,19 @@ void StGraphInput::MakeBuffer(const bool is_lane_keeping,
   tricycle_lat_buffer_ = tricycle_lat_buffer_m;
   tricycle_lon_buffer_ = tricycle_lon_buffer_m;
   reverse_vehicle_lat_buffer_m_ = reverse_vehicle_lat_buffer_m;
+  hpp_reverse_vehicle_extra_lat_buffer_ = hpp_reverse_vehicle_extra_lat_buffer;
+  hpp_large_agent_extra_lat_buffer_ = hpp_large_agent_extra_lat_buffer;
 }
 
 const double StGraphInput::lat_buffer() const { return lat_buffer_; }
+
+double StGraphInput::hpp_reverse_vehicle_extra_lat_buffer() const {
+  return hpp_reverse_vehicle_extra_lat_buffer_;
+}
+
+double StGraphInput::hpp_large_agent_extra_lat_buffer() const {
+  return hpp_large_agent_extra_lat_buffer_;
+}
 
 const double StGraphInput::GetSuitableLateralBuffer(
     const agent::Agent& agent) const {
