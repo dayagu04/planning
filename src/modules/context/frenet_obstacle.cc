@@ -15,7 +15,7 @@ namespace planning {
 FrenetObstacle::FrenetObstacle(
     const Obstacle *obstacle_ptr, const ReferencePath &reference_path,
     const std::shared_ptr<EgoStateManager> ego_state_info,
-    bool is_location_valid)
+    bool is_location_valid, bool is_hpp_scene)
     : id_(obstacle_ptr->id()),
       source_type_(obstacle_ptr->source_type()),
       obstacle_ptr_(obstacle_ptr),
@@ -23,7 +23,7 @@ FrenetObstacle::FrenetObstacle(
       is_static_(obstacle_ptr->is_static()) {
   compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
-    compute_frenet_obstacle_boundary(reference_path);
+    compute_frenet_obstacle_boundary(reference_path, is_hpp_scene);
     // compute_frenet_polygon_sequence(reference_path);
   } else {
     b_frenet_polygon_sequence_invalid_ = true;
@@ -273,7 +273,7 @@ void FrenetObstacle::compute_frenet_obstacle(
   rel_v_ = frenet_velocity_s_ - frenet_ego_state.velocity();
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(
-    const ReferencePath &reference_path) {
+    const ReferencePath &reference_path, bool is_hpp_scene) {
   const auto &frenet_coord = reference_path.get_frenet_coord();
 
   double obs_start_s(std::numeric_limits<double>::max());
@@ -289,11 +289,22 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     Point2D frenet_point, carte_point;
     carte_point.x = obs_point.x();
     carte_point.y = obs_point.y();
-    if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
-        std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
-      b_frenet_valid_ = false;
-      return;
+    if(is_hpp_scene){
+      const double obs_max_edge = std::fmax(length_, width_);
+      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- 2.0 * obs_max_edge), (frenet_s_ + 2.0 * obs_max_edge), frenet_point) ||
+          std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+        b_frenet_valid_ = false;
+        return;
+      }
+    } else {
+      if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
+          std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+        b_frenet_valid_ = false;
+        return;
+      }
     }
+
+
     obs_start_s = std::min(obs_start_s, frenet_point.x);
     obs_end_s = std::max(obs_end_s, frenet_point.x);
     obs_start_l = std::min(obs_start_l, frenet_point.y);
