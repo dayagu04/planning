@@ -1875,6 +1875,13 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_obs_condition =
       frame_.remain_dist_obs < finish_params.max_remain_obs_dist;
 
+  const bool has_fold_mirror =
+      apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag();
+
+  if (!has_fold_mirror) {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+  }
+
   GJKColDetRequest gjk_col_det_request(true, param.uss_config.use_uss_pt_cloud);
   const auto has_obstacle_at_pose = [&](const geometry_lib::PathPoint& pose) {
     return apa_world_ptr_->GetColDetInterfacePtr()
@@ -1903,6 +1910,10 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
     ILOG_INFO << "after_move_back_target_pose_blocked = " << target_pose_blocked
               << "  move_back_dist = " << move_back_dist;
+  }
+
+  if (!has_fold_mirror) {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
   }
 
   // If there are indeed obstacles near the target pose, finishing is allowed
