@@ -1827,5 +1827,39 @@ planning_math::Box2d StGraphUtils::MakeEgoBox(
   return ego_box;
 }
 
+BufferType StGraphUtils::GetHppBufferTypeForAgent(const agent::Agent& agent) {
+  using AT = agent::AgentType;
+  if (agent.is_vru()) return BUFFER_TYPE_VRU;
+  if (agent.is_vehicle_type()) return BUFFER_TYPE_VEHICLE;
+  const auto t = agent.type();
+  // 常规车辆（is_vehicle_type 未覆盖的子类型）
+  if (t == AT::SUV || t == AT::MPV || t == AT::PICKUP ||
+      t == AT::ENGINEERING_VEHICLE || t == AT::SPECIAL_VEHICLE ||
+      t == AT::UNKNOWN_MOVABLE) {
+    return BUFFER_TYPE_VEHICLE;
+  }
+  // 其余类型（OCC、静态障碍物等）统一归为不可移动物体
+  return BUFFER_TYPE_UNMOVABLE_OBJ;
+}
+
+double StGraphUtils::GetHppLateralBuffer(const agent::Agent& agent,
+                                         double ego_v, double hpp_reverse_extra,
+                                         double hpp_large_agent_extra) {
+  const BufferType type = GetHppBufferTypeForAgent(agent);
+  // TODO: 接入 RAMP/TURN 检测后，向 env_types 中填充对应场景类型
+  const std::vector<EnvType> env_types{};
+  double lat_buffer = HPPParameterUtil::CalculateLatBuffer(
+      type, ego_v, agent.speed(), env_types);
+  // 对向来车额外增加安全距离
+  if (agent.is_reverse() && agent.is_vehicle_type()) {
+    lat_buffer += hpp_reverse_extra;
+  }
+  // 大车额外增加安全距离（与对向来车条件独立，大型对向来车两者均叠加）
+  if (StGraphUtils::IsLargeAgent(agent)) {
+    lat_buffer += hpp_large_agent_extra;
+  }
+  return lat_buffer;
+}
+
 }  // namespace speed
 }  // namespace planning

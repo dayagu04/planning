@@ -284,10 +284,14 @@ void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
     }
 
     // 5. 基于碰撞点生成 virtual agent，直接复用对应 groundline 的 obstacle id。
+    const auto *groundline_obstacle =
+        groundline_obstacle_map.at(ground_line_agent_candidate.obstacle_id);
+    const auto agent_type =
+        static_cast<agent::AgentType>(groundline_obstacle->type());
     CreateVirtualAgentFromGroundLine(
         ground_line_agent_candidate.collision.collision_points,
         traj_points[ground_line_agent_candidate.collision.traj_point_index],
-        ground_line_agent_candidate.obstacle_id);
+        ground_line_agent_candidate.obstacle_id, agent_type);
     generated_virtual_agent_s.push_back(
         ground_line_agent_candidate.collision.collision_s_on_traj);
   }
@@ -296,14 +300,15 @@ void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
 
 void HppLonObstaclePreprocessDecider::CreateVirtualAgentFromGroundLine(
     const std::vector<planning_math::Vec2d> &hit_points,
-    const TrajectoryPoint &anchor_traj_point, int id) {
+    const TrajectoryPoint &anchor_traj_point, int id,
+    agent::AgentType agent_type) {
   if (hit_points.empty()) {
     return;
   }
 
   agent::Agent virtual_agent;
   virtual_agent.set_agent_id(id);
-  virtual_agent.set_type(agent::AgentType::VIRTUAL);
+  virtual_agent.set_type(agent_type);
   virtual_agent.set_is_static(true);
   virtual_agent.set_x(anchor_traj_point.x);
   virtual_agent.set_y(anchor_traj_point.y);

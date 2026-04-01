@@ -737,6 +737,10 @@
       "thw_target_low_value_lane_change": 0.8,
       "thw_scale_up_factor": 1.2
     },
+    "st_graph": {
+      "hpp_reverse_vehicle_extra_lat_buffer": 0.1,
+      "hpp_large_agent_extra_lat_buffer": 0.1
+    },
     "st_graph_searcher": {
       "enable_only_s_t_hash": true,
       "upper_collision_dist": 1.0,
