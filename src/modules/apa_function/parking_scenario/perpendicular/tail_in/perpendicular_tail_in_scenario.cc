@@ -1462,22 +1462,6 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
             << "dynamic replan success and path is superior, use this path";
         break;
       }
-
-      // restore target pose and terminal err
-      // now not restore, use real-time target pose
-      // ego_info_under_slot.target_pose =
-      // ego_info_under_slot.origin_target_pose;
-      // ego_info_under_slot.target_pose.pos.y() +=
-      //     last_ego_info_under_slot.lat_move_dist_replan_success;
-      // ego_info_under_slot.target_pose.pos.x() +=
-      //     last_ego_info_under_slot.lon_move_dist_replan_success;
-      // ego_info_under_slot.terminal_err.Set(
-      //     ego_info_under_slot.cur_pose.pos -
-      //         ego_info_under_slot.target_pose.pos,
-      //     geometry_lib::NormalizeAngle(
-      //         ego_info_under_slot.cur_pose.heading -
-      //         ego_info_under_slot.target_pose.heading));
-
       break;
     }
 
@@ -2217,19 +2201,34 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
 const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const double start_time = IflyTime::Now_ms();
-  apa_world_ptr_->GetColDetInterfacePtr()->Init(
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag());
+  const auto measure_data_manager_ptr =
+      apa_world_ptr_->GetMeasureDataManagerPtr();
+  const auto col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+  const auto predict_path_manager_ptr =
+      apa_world_ptr_->GetPredictPathManagerPtr();
+  col_det_interface_ptr->Init(measure_data_manager_ptr->GetFoldMirrorFlag());
 
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-
   const geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+
+  const double termial_err_y = ego_info_under_slot.terminal_err.GetY();
+  const double termial_err_heading =
+      ego_info_under_slot.terminal_err.GetTheta() * kRad2Deg;
 
   const ApaParameters& param = apa_param.GetParam();
   const ParkingLatLonSpeedBuffer& speed_buffer = param.lat_lon_speed_buffer;
+  const bool need_extra_reverse_lon_buffer =
+      frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+      (!frame_.is_last_path || frame_.slot_jump_big_flag ||
+       std::fabs(termial_err_y) > 0.08 ||
+       std::fabs(termial_err_heading) > 2.068);
+
+  const bool use_geometry_plan_method =
+      param.park_path_plan_type == ParkPathPlanType::GEOMETRY;
 
   double lon_buffer;
-  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+  if (use_geometry_plan_method) {
     lon_buffer = (ego_info_under_slot.slot_occupied_ratio < 0.05)
                      ? param.safe_uss_remain_dist_out_slot
                      : param.safe_uss_remain_dist_in_slot;
@@ -2257,81 +2256,49 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       }
     }
 
-    if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
-      if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
-          std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
-        lon_buffer += 0.05;  // extra lon buffer when ref gear in special case
-      }
+    if (need_extra_reverse_lon_buffer) {
+      lon_buffer += 0.05;
     }
-  }
-
-  else {
+  } else {
     // use hybrid a star
     lon_buffer = speed_buffer.lon_buffer;
     const HybridAStarResult& res = hybrid_astar_response_.result;
-    if (res.length_vec.size() > 1) {
-      if (res.length_vec[0] < 0.68 && res.length_vec[1] < 0.68) {
-        lon_buffer = speed_buffer.extreme_case_lon_buffer;
-        ILOG_INFO << "cur gear length and next gear length are both short, so "
-                     "cur gear path need be more radical";
-      }
+    if (res.length_vec.size() > 1 && res.length_vec[0] < 0.68 &&
+        res.length_vec[1] < 0.68) {
+      lon_buffer = speed_buffer.extreme_case_lon_buffer;
+      ILOG_INFO << "cur gear length and next gear length are both short, so "
+                   "cur gear path need be more radical";
     }
 
-    if (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) {
-      if (!frame_.is_last_path || std::fabs(cur_pose.pos.y()) > 0.08 ||
-          std::fabs(cur_pose.heading) * kRad2Deg > 2.068) {
-        lon_buffer += speed_buffer.extra_reverse_gear_lon_buffer;
-      }
+    if (need_extra_reverse_lon_buffer) {
+      lon_buffer += speed_buffer.extra_reverse_gear_lon_buffer;
     }
   }
 
   bool increase_lat_err_flag = false;
-  do {
-    if (frame_.mirror_command != MirrorCommand::NONE) {
-      break;
-    }
-
-    uint8_t ref_gear =
-        scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN
-            ? geometry_lib::SEG_GEAR_REVERSE
-            : geometry_lib::SEG_GEAR_DRIVE;
-
-    if (frame_.gear_command == ref_gear &&
+  if (frame_.mirror_command == MirrorCommand::NONE) {
+    const bool control_err_big = predict_path_manager_ptr->GetControlErrBig();
+    const bool in_slot_jump_big =
         ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-        frame_.slot_jump_big_flag) {
+        frame_.slot_jump_big_flag;
+
+    const bool geometry_need_increase =
+        frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
+        ego_info_under_slot.cur_pose.GetX() >
+            ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
+                2.168;
+
+    const bool hybrid_need_increase =
+        ego_info_under_slot.slot_occupied_ratio < 1e-4;
+
+    if (control_err_big || in_slot_jump_big) {
       increase_lat_err_flag = true;
-      break;
+    } else if (use_geometry_plan_method) {
+      increase_lat_err_flag = geometry_need_increase;
+    } else {
+      increase_lat_err_flag = hybrid_need_increase;
     }
-
-    if (frame_.gear_command == ref_gear &&
-        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
-      increase_lat_err_flag = true;
-      break;
-    }
-
-    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-      if (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
-          ego_info_under_slot.cur_pose.pos.x() >
-              ego_info_under_slot.slot.GetOriginCornerCoordLocal()
-                      .pt_01_mid.x() +
-                  2.168) {
-        increase_lat_err_flag = true;
-        break;
-      }
-    }
-
-    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-      if (ego_info_under_slot.slot_occupied_ratio < 1e-4) {
-        increase_lat_err_flag = true;
-        break;
-      }
-    }
-
-  } while (false);
-
-  // adopting a graded lat buffer real-time braking
-  std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
-  real_time_brake_info_vec.resize(4);
+  }
 
   double stop_body_lat_inflation = param.stop_lat_inflation;
   double stop_mirror_lat_inflation = param.stop_lat_inflation;
@@ -2350,7 +2317,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   double slight_brake_mirror_lat_inflation = param.slight_brake_lat_inflation;
   double slight_brake_lon_dist = param.slight_brake_lon_dist;
 
-  if (param.park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+  if (!use_geometry_plan_method) {
     stop_body_lat_inflation = speed_buffer.stop_body_lat_buffer;
     stop_mirror_lat_inflation = speed_buffer.stop_mirror_lat_buffer;
     stop_lon_dist = speed_buffer.stop_min_lon_dist;
@@ -2370,48 +2337,47 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     slight_brake_lon_dist = speed_buffer.high_speed_min_lon_dist;
   }
 
-  real_time_brake_info_vec[0].Set(
-      RealTimeBrakeType::STOP, stop_body_lat_inflation,
-      stop_mirror_lat_inflation, stop_lon_dist, lon_buffer,
-      speed_buffer.dynamic_stop_body_lat_buffer,
-      speed_buffer.dynamic_stop_mirror_lat_buffer,
-      speed_buffer.dynamic_lon_buffer);
-  real_time_brake_info_vec[1].Set(
-      RealTimeBrakeType::HEAVY_BRAKE, heavy_brake_body_lat_inflation,
-      heavy_brake_mirror_lat_inflation, heavy_brake_lon_dist, lon_buffer,
-      speed_buffer.dynamic_low_speed_body_lat_buffer,
-      speed_buffer.dynamic_low_speed_mirror_lat_buffer,
-      speed_buffer.dynamic_lon_buffer);
-  real_time_brake_info_vec[2].Set(
-      RealTimeBrakeType::MODERATE_BRAKE, moderate_brake_body_lat_inflation,
-      moderate_brake_mirror_lat_inflation, moderate_brake_lon_dist, lon_buffer,
-      speed_buffer.dynamic_mid_speed_body_lat_buffer,
-      speed_buffer.dynamic_mid_speed_mirror_lat_buffer,
-      speed_buffer.dynamic_lon_buffer);
-  real_time_brake_info_vec[3].Set(
-      RealTimeBrakeType::SLIGHT_BRAKE, slight_brake_body_lat_inflation,
-      slight_brake_mirror_lat_inflation, slight_brake_lon_dist, lon_buffer,
-      speed_buffer.dynamic_high_speed_body_lat_buffer,
-      speed_buffer.dynamic_high_speed_mirror_lat_buffer,
-      speed_buffer.dynamic_lon_buffer);
+  // adopting a graded lat buffer real-time braking
+  std::vector<RealTimeBrakeInfo> real_time_brake_info_vec = {
+      RealTimeBrakeInfo(RealTimeBrakeType::STOP, stop_body_lat_inflation,
+                        stop_mirror_lat_inflation, stop_lon_dist, lon_buffer,
+                        speed_buffer.dynamic_stop_body_lat_buffer,
+                        speed_buffer.dynamic_stop_mirror_lat_buffer,
+                        speed_buffer.dynamic_lon_buffer),
+      RealTimeBrakeInfo(
+          RealTimeBrakeType::HEAVY_BRAKE, heavy_brake_body_lat_inflation,
+          heavy_brake_mirror_lat_inflation, heavy_brake_lon_dist, lon_buffer,
+          speed_buffer.dynamic_low_speed_body_lat_buffer,
+          speed_buffer.dynamic_low_speed_mirror_lat_buffer,
+          speed_buffer.dynamic_lon_buffer),
+      RealTimeBrakeInfo(
+          RealTimeBrakeType::MODERATE_BRAKE, moderate_brake_body_lat_inflation,
+          moderate_brake_mirror_lat_inflation, moderate_brake_lon_dist,
+          lon_buffer, speed_buffer.dynamic_mid_speed_body_lat_buffer,
+          speed_buffer.dynamic_mid_speed_mirror_lat_buffer,
+          speed_buffer.dynamic_lon_buffer),
+      RealTimeBrakeInfo(
+          RealTimeBrakeType::SLIGHT_BRAKE, slight_brake_body_lat_inflation,
+          slight_brake_mirror_lat_inflation, slight_brake_lon_dist, lon_buffer,
+          speed_buffer.dynamic_high_speed_body_lat_buffer,
+          speed_buffer.dynamic_high_speed_mirror_lat_buffer,
+          speed_buffer.dynamic_lon_buffer)};
 
-  bool special_stop_flag = false;
+  bool special_stop_flag = increase_lat_err_flag;
   double special_stop_body_lat_buffer =
       speed_buffer.special_stop_body_lat_buffer;
   double special_stop_mirror_lat_buffer =
       speed_buffer.special_stop_mirror_lat_buffer;
   double special_stop_lon_dist = speed_buffer.special_stop_min_lon_dist;
   double special_stop_lon_buffer = lon_buffer;
-  if (increase_lat_err_flag) {
-    special_stop_flag = true;
-  } else if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
-    const bool new_plan_path =
-        (frame_.current_path_length - frame_.remain_dist_path < 0.168);
+  if (!special_stop_flag && measure_data_manager_ptr->GetStaticFlag()) {
+    const double traveled_dist =
+        frame_.current_path_length - frame_.remain_dist_path;
+    const bool new_plan_path = traveled_dist < 0.168;
     if (new_plan_path) {
       // leave inital place logic to let car move
       if (speed_buffer.enable_leave_initial_place &&
-          frame_.current_path_length - frame_.remain_dist_path <
-              speed_buffer.leave_initial_place_dist) {
+          traveled_dist < speed_buffer.leave_initial_place_dist) {
         special_stop_flag = true;
         special_stop_body_lat_buffer =
             speed_buffer.leave_initial_place_body_lat_buffer;
@@ -2423,9 +2389,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     } else {
       // keep stuck place logic to let cat stuck and replan reverse path
       if (speed_buffer.enable_keep_stuck_place &&
-          !frame_.stuck_by_dynamic_obs &&
-          (frame_.stuck_obs_time > 0.0 ||
-           frame_.stuck_dynamic_obs_time > 0.0)) {
+          !frame_.stuck_by_dynamic_obs && frame_.stuck_obs_time > 0.0) {
         special_stop_flag = true;
         special_stop_body_lat_buffer =
             speed_buffer.keep_stuck_place_body_lat_buffer;
@@ -2438,7 +2402,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   }
 
   if (special_stop_flag) {
-    real_time_brake_info_vec[0].Set(
+    real_time_brake_info_vec[0] = RealTimeBrakeInfo(
         RealTimeBrakeType::STOP, special_stop_body_lat_buffer,
         special_stop_mirror_lat_buffer, special_stop_lon_dist,
         special_stop_lon_buffer, speed_buffer.dynamic_stop_body_lat_buffer,
