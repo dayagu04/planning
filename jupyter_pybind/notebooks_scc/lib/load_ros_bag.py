@@ -653,6 +653,7 @@ class LoadRosbag:
       self.around_prediction_msg['t'] = [tmp - t0  for tmp in self.around_prediction_msg['t']]
       self.around_prediction_msg['enable'] = True
       max_time = max(max_time, self.around_prediction_msg['t'][-1])
+      print('around_preiction_msg time:',self.around_prediction_msg['t'][-1])
       if len(self.around_prediction_msg['t']) > 0:
         self.around_prediction_msg['enable'] = True
       else:

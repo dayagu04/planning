@@ -2528,8 +2528,8 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
 
     obs_info_all[source]['obstacles_x'].append(obs_x)
     obs_info_all[source]['obstacles_y'].append(obs_y)
-    obs_info_all[source]['pos_x'].append(long_pos_rel)
-    obs_info_all[source]['pos_y'].append(lat_pos_rel)
+    obs_info_all[source]['pos_x'].append(long_pos)
+    obs_info_all[source]['pos_y'].append(lat_pos)
 
   return obs_info_all
 

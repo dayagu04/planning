@@ -3137,20 +3137,6 @@ def load_local_view_figure():
     fig1.patches('obstacles_y', 'obstacles_x', source = data_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'prediction_obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_prediction_obj, text_color='text_color', text_align="center", text_font_size="10pt", legend_label = 'prediction_info')
 
-  if is_vis_around_prediction:
-    fig1.patches('obstacles_y', 'obstacles_x', source = data_around_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'around_prediction_traj')
-    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_around_prediction_obj, text_color='text_color', text_align="center", text_font_size="10pt", legend_label = 'around_prediction_traj')
-    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
-    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
-    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
-    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
-    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_obs')
-    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_0, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'around_prediction_obs')
-    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_1, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'blue', line_alpha = 1, legend_label = 'around_prediction_obs')
-    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_2, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'orange', line_alpha = 1, legend_label = 'around_prediction_obs')
-    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_3, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'black', line_alpha = 1, legend_label = 'around_prediction_obs')
-    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_4, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'purple', line_alpha = 1, legend_label = 'around_prediction_obs')
-
   if is_vis_rdg_obj:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'rdg_obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_rdg_obj, text_color="orange", text_align="center", text_font_size="10pt", legend_label = 'rdg_info',visible = False)
@@ -3233,11 +3219,25 @@ def load_local_view_figure():
     fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 2,color='red', fill_alpha = 0.15, legend_label = 'fus_occ_obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_occ_obj_info', visible = False)
   if is_vis_fus_obj:
-    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'fus_obj',visible = False)
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'fus_obj',visible = True)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info',visible = False)
+  if is_vis_around_prediction:
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_around_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'around_prediction_obj')
+    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_around_prediction_obj, text_color='text_color', text_align="center", text_font_size="10pt", legend_label = 'around_prediction_obj_info')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_0, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_1, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'blue', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_2, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'orange', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_3, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'black', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_4, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'purple', line_alpha = 1, legend_label = 'around_prediction_traj')
+
   if is_vis_speed_bump:
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'fus_speed_bump')
-    # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
+    fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
   if is_vis_ground_line:
     fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
     fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_ground_line_info', visible = False)
