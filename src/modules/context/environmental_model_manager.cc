@@ -998,6 +998,14 @@ void EnvironmentalModelManager::truncate_prediction_info(
       // 非相机融合成功的不用
       continue;
     }
+    if(session_->is_hpp_scene()){
+      if (prediction_object.fusion_obstacle.common_info.type ==
+              iflyauto::ObjectType::OBJECT_TYPE_SOLT ||
+          prediction_object.fusion_obstacle.common_info.type ==
+              iflyauto::ObjectType::OBJECT_TYPE_LIMITER) {
+        continue;
+      }
+    }
 
     PredictionObject cur_predicion_obj;
     cur_predicion_obj.id =
