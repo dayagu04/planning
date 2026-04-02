@@ -294,7 +294,7 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     carte_point.y = obs_point.y();
     if(is_hpp_scene){
       const double min_s_range = std::fmax(3.0, std::fmax(2.0 * length_, 2.0 * width_));
-      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- 2.0 * min_s_range), (frenet_s_ + 2.0 * min_s_range), frenet_point) ||
+      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- min_s_range), (frenet_s_ + min_s_range), frenet_point) ||
           std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
         b_frenet_valid_ = false;
         return;
