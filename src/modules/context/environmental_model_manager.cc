@@ -676,8 +676,13 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   }
 
   last_feed_time_[FEED_FUSION_INFO] = local_view.fusion_objects_info_recv_time;
-  last_feed_time_[FEED_PREDICTION_INFO] =
-      local_view.prediction_result_recv_time;
+  if (session_->is_hpp_scene()) {
+    last_feed_time_[FEED_PREDICTION_INFO] =
+        local_view.parking_prediction_result_recv_time;
+  } else {
+    last_feed_time_[FEED_PREDICTION_INFO] =
+        local_view.prediction_result_recv_time;
+  }
   return true;
 }
 

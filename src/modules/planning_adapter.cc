@@ -783,9 +783,10 @@ void PlanningAdapter::Log() {
   input_topic_timestamp->set_degraded_driving_function(
       local_view_ptr_->degraded_driving_function_info.msg_header.stamp);
   // #ifdef ENABLE_PROTO_LOG
-  auto input_topic_latency = planning_debug_data->mutable_input_topic_latency();
   input_topic_timestamp->set_prediction(
       local_view_ptr_->prediction_result.msg_header.stamp);
+  input_topic_timestamp->set_around_prediction(
+      local_view_ptr_->parking_prediction_result.msg_header.stamp);
 
   planning_debug_data->mutable_input_topic_latency()->CopyFrom(
       input_topic_latency_);
