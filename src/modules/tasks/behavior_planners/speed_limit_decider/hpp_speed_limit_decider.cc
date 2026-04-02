@@ -183,7 +183,7 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
   v_limit_speed_narrow_passage = GetSpeedLimitInObjectiveZone(
       zone_info,
-      hpp_speed_limit_config_.speed_narrow_passage_approach_distance);
+      hpp_speed_limit_config_.target_speed_narrow_passage_area);
 
   if (v_limit_speed_narrow_passage < v_target_) {
     v_target_ = v_limit_speed_narrow_passage;
@@ -560,7 +560,7 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
   }
 
   v_limit_speed_intersection = GetSpeedLimitInObjectiveZone(
-      zone_info, hpp_speed_limit_config_.speed_intersection_approach_distance);
+      zone_info, hpp_speed_limit_config_.target_speed_intersection_road_area);
 
   if (v_limit_speed_intersection < v_target_) {
     v_target_ = v_limit_speed_intersection;
