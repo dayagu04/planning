@@ -61,7 +61,9 @@ class HppObstacleLateralPreprocessDecider : public Task{
       const ObstacleItemMap& obs_item_map,
       const std::vector<ObstacleClusterCandicate>& cluster_candidates,
       ObstacleClusterGraph& cluster_graph);
-
+  bool IsObstacleTypeMergeable(
+      const iflyauto::ObjectType& type_a,
+       const iflyauto::ObjectType& type_b);
   bool DFSGenerateObstacleClusters(
       const std::vector<ObstacleClusterCandicate>& cluster_candidates,
       const ObstacleClusterGraph& cluster_graph, const int curr_idx,
