@@ -324,43 +324,85 @@ bool LDRouteInfoStrategy::CheckEgoPositionRelativeTwoLinks(
 }
 
 bool LDRouteInfoStrategy::IsMissedNaviRoute() const {
-  // 1、 判断自车是否刚经过split_link,如果是的话，则需要判断在自车是否走错路了
+  // 判断自车是否在split点后50m内，且走错了路
   if (current_link_ == nullptr) {
     return true;
   }
 
-  if (current_link_->predecessor_link_ids_size() != 1) {
+  // 从current_link_往回找，寻找最近的split点（有2个后继的link）
+  const double kCheckRangeAfterSplit = 50.0;
+  double accumulated_distance = 0.0;
+
+  const iflymapdata::sdpro::LinkInfo_Link* iter_link = current_link_;
+  const iflymapdata::sdpro::LinkInfo_Link* split_link = nullptr;
+
+  // 往回遍历，累加距离，直到找到split点或超出50m
+  while (iter_link != nullptr) {
+    // 检查当前link是否是split点
+    if ((iter_link->successor_link_ids_size()) == 2 &&
+        (iter_link->id() != current_link_->id())) {
+      split_link = iter_link;
+      break;
+    }
+
+    if (iter_link->id() == current_link_->id()) {
+      accumulated_distance = accumulated_distance + ego_on_cur_link_s_;
+    } else {
+      accumulated_distance = accumulated_distance + iter_link->length() * 0.01;
+    }
+
+    if (accumulated_distance > kCheckRangeAfterSplit) {
+      break;
+    }
+
+    // 往回走一个link
+    const auto& prev_link = ld_map_.GetPreviousLinkOnRoute(iter_link->id());
+    if (prev_link == nullptr) {
+      break;
+    }
+
+    // 防止找到link_merge往后了
+    if (prev_link->predecessor_link_ids_size() != 1) {
+      break;
+    }
+
+    iter_link = prev_link;
+  }
+
+  // 没找到split点，或者距离超过50m
+  if (split_link == nullptr) {
     return false;
   }
 
-  const auto& last_link = ld_map_.GetPreviousLinkOnRoute(current_link_->id());
-  if (last_link == nullptr) {
+  // 找到了split点，且在50m范围内
+  // 确定哪条分支能到达current_link_（route分支），另一条就是out分支
+  if (split_link->successor_link_ids_size() != 2) {
     return false;
   }
 
-  if (last_link->successor_link_ids_size() != 2) {
+  const auto& split_next_link = ld_map_.GetNextLinkOnRoute(split_link->id());
+  if (split_next_link == nullptr) {
     return false;
   }
 
-  // 目前先实现判断1分2link的版本，后续再继续迭代1分3的版本;
   const auto& out_link_id =
-      last_link->successor_link_ids()[0] == current_link_->id()
-          ? last_link->successor_link_ids()[1]
-          : last_link->successor_link_ids()[0];
+      split_link->successor_link_ids()[0] == split_next_link->id()
+          ? split_link->successor_link_ids()[1]
+          : split_link->successor_link_ids()[0];
 
   const auto& out_link = ld_map_.GetLinkOnRoute(out_link_id);
-
-  if (out_link == nullptr) {
+  if (out_link == nullptr)   {
     return false;
   }
 
+  // 使用current_link_和out_branch判断位置关系
   EgoPositionResult ego_pos_result;
   if (!CheckEgoPositionRelativeTwoLinks(current_link_, out_link,
                                         ego_pos_result)) {
     return false;
   }
 
-  const auto& split_dir = CalculateSplitDirection(*last_link, ld_map_);
+  const auto& split_dir = CalculateSplitDirection(*split_link, ld_map_);
 
   if (split_dir == RAMP_ON_LEFT) {
     if (ego_pos_result.is_right_of_link2) {
