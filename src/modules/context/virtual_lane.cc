@@ -332,6 +332,87 @@ bool VirtualLane::get_point_by_distance(double distance,
   return false;
 }
 
+bool VirtualLane::get_point_by_s(double s, iflyauto::ReferencePoint &point) {
+  if (virtual_lane_refline_points_.empty()) {
+    return false;
+  }
+
+  const auto &points = virtual_lane_refline_points_;
+
+  // 使用 lower_bound 二分查找
+  auto comp = [](const iflyauto::ReferencePoint &p, double s_val) {
+    return p.s < s_val;
+  };
+  auto it = std::lower_bound(points.begin(), points.end(), s, comp);
+
+  if (it == points.begin()) {
+    // 弧长小于等于第一个点
+    point = points.front();
+    return true;
+  } else if (it == points.end()) {
+    // 弧长大于最后一个点
+    point = points.back();
+    return true;
+  } else {
+    // 在两个点之间，进行线性插值
+    const auto &p1 = *(it - 1);
+    const auto &p2 = *it;
+
+    double ds = p2.s - p1.s;
+    if (std::abs(ds) < 1e-6) {
+      // 两点弧长相同，直接返回前一个点
+      point = p1;
+      return true;
+    }
+
+    double t = (s - p1.s) / ds;  // 插值系数 [0, 1]
+
+    // 插值各项属性
+    point.s = s;
+    point.car_point.x = planning_math::lerp(p1.car_point.x, p1.s, p2.car_point.x, p2.s, s);
+    point.car_point.y = planning_math::lerp(p1.car_point.y, p1.s, p2.car_point.y, p2.s, s);
+    point.enu_point.x = planning_math::lerp(p1.enu_point.x, p1.s, p2.enu_point.x, p2.s, s);
+    point.enu_point.y = planning_math::lerp(p1.enu_point.y, p1.s, p2.enu_point.y, p2.s, s);
+    point.enu_point.z = planning_math::lerp(p1.enu_point.z, p1.s, p2.enu_point.z, p2.s, s);
+    point.local_point.x = planning_math::lerp(p1.local_point.x, p1.s, p2.local_point.x, p2.s, s);
+    point.local_point.y = planning_math::lerp(p1.local_point.y, p1.s, p2.local_point.y, p2.s, s);
+    point.local_point.z = planning_math::lerp(p1.local_point.z, p1.s, p2.local_point.z, p2.s, s);
+    point.curvature = p1.curvature + t * (p2.curvature - p1.curvature);
+    point.car_heading = p1.car_heading + t * (p2.car_heading - p1.car_heading);
+    point.enu_heading = p1.enu_heading + t * (p2.enu_heading - p1.enu_heading);
+    point.local_heading = p1.local_heading + t * (p2.local_heading - p1.local_heading);
+    point.distance_to_left_road_border =
+        p1.distance_to_left_road_border +
+        t * (p2.distance_to_left_road_border - p1.distance_to_left_road_border);
+    point.distance_to_right_road_border =
+        p1.distance_to_right_road_border +
+        t * (p2.distance_to_right_road_border - p1.distance_to_right_road_border);
+    point.distance_to_left_lane_border =
+        p1.distance_to_left_lane_border +
+        t * (p2.distance_to_left_lane_border - p1.distance_to_left_lane_border);
+    point.distance_to_right_lane_border =
+        p1.distance_to_right_lane_border +
+        t * (p2.distance_to_right_lane_border - p1.distance_to_right_lane_border);
+    point.lane_width = p1.lane_width + t * (p2.lane_width - p1.lane_width);
+    point.speed_limit_max =
+        p1.speed_limit_max + t * (p2.speed_limit_max - p1.speed_limit_max);
+    point.speed_limit_min =
+        p1.speed_limit_min + t * (p2.speed_limit_min - p1.speed_limit_min);
+    point.confidence = p1.confidence + t * (p2.confidence - p1.confidence);
+
+    // 枚举类型和布尔类型直接取前一个点的值
+    point.left_road_border_type = p1.left_road_border_type;
+    point.right_road_border_type = p1.right_road_border_type;
+    point.left_lane_border_type = p1.left_lane_border_type;
+    point.right_lane_border_type = p1.right_lane_border_type;
+    point.is_in_intersection = p1.is_in_intersection;
+    point.lane_type = p1.lane_type;
+    point.track_id = p1.track_id;
+
+    return true;
+  }
+}
+
 double VirtualLane::max_width() const {
   if (lane_types_.size() > 0) {
     switch (lane_types_[0].type) {
