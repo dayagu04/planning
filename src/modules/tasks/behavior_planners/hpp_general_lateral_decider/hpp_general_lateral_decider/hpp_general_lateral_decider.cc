@@ -2870,35 +2870,44 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
   }
 
   // 临时 hack（flli9）：避免折返约束
-  static constexpr double kReverseTurnDegThreshold = 90.0;
-  static constexpr double kMinNormProd = 1e-6;
+  static constexpr double kReverseTurnDegThreshold = 95.0 * M_PI / 180.0;
+  static constexpr double kMinSegmentLength = 0.1;
   const auto smooth_reverse_points = [&](const int current_index,
                                          const bool use_lower) {
+    if (current_index <= 0 ||
+        current_index >= static_cast<int>(hard_bounds_output.size()) ||
+        current_index >= static_cast<int>(ref_traj_points_.size())) {
+      return;
+    }
     int move_step_num = 0;
     int probe_index = current_index;
-    while (probe_index >= 2) {
+    while (probe_index >= 1) {
       const int pre_index = probe_index - 1;
-      const int pre_pre_index = probe_index - 2;
+      if (pre_index + 1 >= static_cast<int>(ref_traj_points_.size())) {
+        break;
+      }
       const auto &curr_point = use_lower
                                    ? hard_bounds_output[current_index].first
                                    : hard_bounds_output[current_index].second;
       const auto &pre_point = use_lower ? hard_bounds_output[pre_index].first
                                         : hard_bounds_output[pre_index].second;
-      const auto &pre_pre_point =
-          use_lower ? hard_bounds_output[pre_pre_index].first
-                    : hard_bounds_output[pre_pre_index].second;
+
       const auto prev_2_curr = planning_math::Vec2d(curr_point.x - pre_point.x,
                                                     curr_point.y - pre_point.y);
-      const auto prepre_2_pre = planning_math::Vec2d(
-          pre_point.x - pre_pre_point.x, pre_point.y - pre_pre_point.y);
-      const double norm_prod = prev_2_curr.Length() * prepre_2_pre.Length();
-      if (norm_prod <= kMinNormProd) {
+
+      const auto prev_2_curr_heading = prev_2_curr.Angle();
+
+      if (prev_2_curr.Length() <= kMinSegmentLength) {
         break;
       }
-      const double dot = prev_2_curr.InnerProd(prepre_2_pre);
-      const double cos_angle = std::max(-1.0, std::min(1.0, dot / norm_prod));
-      const double angle_thrd_deg = std::acos(cos_angle) * 180.0 / M_PI;
-      if (angle_thrd_deg <= kReverseTurnDegThreshold) {
+
+      double ref_point_heading =
+          frenet_coord->GetPathPointByS(ref_traj_points_[pre_index + 1].s)
+              .theta();
+      const auto heading_diff =
+          planning_math::AngleDiff(prev_2_curr_heading, ref_point_heading);
+
+      if (std::fabs(heading_diff) < kReverseTurnDegThreshold) {
         break;
       }
       ++move_step_num;
@@ -2925,8 +2934,10 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
 
   const ConstStaticAnalysisStoragePtr static_storage =
       reference_path_ptr_->get_static_analysis_storage();
-  for (size_t idx = 1; idx < hard_bounds_output.size() - 1; ++idx) {
-    const int current_index = static_cast<int>(idx);
+  const int max_process_index =
+      static_cast<int>(std::min(hard_bounds_output.size(), ref_traj_points_.size())) - 1;
+  for (int current_index = max_process_index; current_index >= 1;
+       --current_index) {
     // only smooth curve type
     ResultTypeInfo type_info;
     if (static_storage) {
@@ -2935,7 +2946,7 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
     }
     if (type_info.road_type == CRoadType::NormalStraight ||
         type_info.road_type == CRoadType::SharpTurn) {
-      continue;
+      // continue;
     }
     smooth_reverse_points(current_index, true);
     smooth_reverse_points(current_index, false);
