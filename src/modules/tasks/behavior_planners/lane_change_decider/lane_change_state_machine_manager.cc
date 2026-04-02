@@ -6257,21 +6257,31 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
     }
 
     const bool is_solid_type =
-        boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
-        boundary_type == iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-        boundary_type ==
-            iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
-        boundary_type ==
-            iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+        lc_request_type == LEFT_CHANGE
+            ? boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                  boundary_type ==
+                      iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                  boundary_type ==
+                      iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID
+            : boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                  boundary_type ==
+                      iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                  boundary_type ==
+                      iflyauto::
+                          LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
 
     if (lc_request_type == LEFT_CHANGE && is_solid_type &&
-        left_vehicle_edge >
-            ref_pt.distance_to_left_lane_border - road_line_buffer) {
+        (left_vehicle_edge >
+         ref_pt.distance_to_left_lane_border - road_line_buffer) &&
+        (right_vehicle_edge <
+         ref_pt.distance_to_left_lane_border + road_line_buffer)) {
       return true;
     }
     if (lc_request_type == RIGHT_CHANGE && is_solid_type &&
-        right_vehicle_edge <
-            -ref_pt.distance_to_right_lane_border + road_line_buffer) {
+        (left_vehicle_edge >
+         -ref_pt.distance_to_left_lane_border - road_line_buffer) &&
+        (right_vehicle_edge <
+         -ref_pt.distance_to_right_lane_border + road_line_buffer)) {
       return true;
     }
   }
