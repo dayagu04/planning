@@ -68,6 +68,7 @@ message TopicTimeList {
   optional uint64 sdpro_map = 21;
   optional uint64 perception_scene = 22;
   optional uint64 degraded_driving_function = 23;
+  optional uint64 around_prediction = 24;
 }
 
 message FrameInfo {

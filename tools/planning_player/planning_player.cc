@@ -409,6 +409,8 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
           msg, new_bag, is_close_loop);
     } else if (msg.getTopic() == TOPIC_PREDICTION_RESULT) {
       cache_with_ros_msg_and_header_time<struct_msgs::PredictionResult>(msg);
+    } else if(msg.getTopic() == TOPIC_AROUND_PREDICTION_RESULT) {
+      cache_with_ros_msg_and_header_time<struct_msgs::PredictionResult>(msg);
     } else if (msg.getTopic() == TOPIC_VEHICLE_SERVICE) {
       cache_with_ros_msg_and_header_time<struct_msgs::VehicleServiceOutputInfo>(
           msg);
@@ -545,6 +547,9 @@ void PlanningPlayer::StoreRosBag() {
       } else if (it_msg.first == TOPIC_PREDICTION_RESULT) {
         write_ros_msg<struct_msgs::PredictionResult::Ptr>(
             it_msg.second, TOPIC_PREDICTION_RESULT, bag);
+      } else if (it_msg.first == TOPIC_AROUND_PREDICTION_RESULT) {
+        write_ros_msg<struct_msgs::PredictionResult::Ptr>(
+            it_msg.second, TOPIC_AROUND_PREDICTION_RESULT, bag);
       } else if (it_msg.first == TOPIC_VEHICLE_SERVICE) {
         write_ros_msg<struct_msgs::VehicleServiceOutputInfo::Ptr>(
             it_msg.second, TOPIC_VEHICLE_SERVICE, bag);
@@ -747,6 +752,19 @@ void PlanningPlayer::PlayOneFrame(
   } else {
     // std::cerr << "frame_num " << frame_num_
     //           << " missing /iflytek/prediction/prediction_result" <<
+    //           std::endl;
+  }
+
+  auto around_prediction_ros_msg =
+      find_ros_msg_with_header_time<struct_msgs::PredictionResult>(
+          TOPIC_AROUND_PREDICTION_RESULT, input_time_list.around_prediction());
+  if (around_prediction_ros_msg) {
+    iflyauto::PredictionResult around_prediction_msg{};
+    convert(around_prediction_msg, *around_prediction_ros_msg, ConvertTypeInfo::TO_STRUCT);
+    planning_adapter_->Feed_IflytekPredictionAroundPredictionResult(around_prediction_msg);
+  } else {
+    // std::cerr << "frame_num " << frame_num_
+    //           << " missing /iflytek/prediction/around_prediction_result" <<
     //           std::endl;
   }
 
@@ -2033,6 +2051,18 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       iflyauto::PredictionResult prediction_msg{};
       convert(prediction_msg, *prediction_ros_msg, ConvertTypeInfo::TO_STRUCT);
       planning_adapter_->Feed_IflytekPredictionPredictionResult(prediction_msg);
+    } else {
+      // std::cerr << "frame_num " << frame_num_
+      //           << " missing /iflytek/prediction/prediction_result" <<
+      //           std::endl;
+    }
+
+    auto around_prediction_ros_msg = find_ros_msg_with_header_time_upper_bound<
+        struct_msgs::PredictionResult>(TOPIC_AROUND_PREDICTION_RESULT, start_time);
+    if (around_prediction_ros_msg) {
+      iflyauto::PredictionResult around_prediction_msg{};
+      convert(around_prediction_msg, *around_prediction_ros_msg, ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->Feed_IflytekPredictionAroundPredictionResult(around_prediction_msg);
     } else {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing /iflytek/prediction/prediction_result" <<
