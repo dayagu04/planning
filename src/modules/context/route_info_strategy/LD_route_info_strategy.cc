@@ -484,7 +484,7 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   CalculateFrontMergePointInfo(search_distance);
 
   CalculateFeasibleLaneByMergePoint(feasible_lane_graph);
-  
+
   // 把拓扑变化点后面的拓扑信息加入到feasible lane中，供UpdateLCNumTask使用
   if (!feasible_lane_graph_after_topo_change_vec.lane_topo_groups.empty()) {
       // 插入到最前面
@@ -525,7 +525,8 @@ bool LDRouteInfoStrategy::IsNearingRamp() {
     return false;
   }
   const auto& [target_link, dis_to_target_link] = ramp_info_vec_[target_ramp_idx];
-  if (target_link == nullptr) {
+  const auto& [front_first_link, dis_to_front_first_link] = ramp_info_vec_[0];
+  if (target_link == nullptr || front_first_link == nullptr) {
     return false;
   }
 
@@ -537,7 +538,7 @@ bool LDRouteInfoStrategy::IsNearingRamp() {
 
   // 步骤3：无合流信息时，直接标记匝道场景并返回
   if (merge_info_vec_.empty()) {
-    UpdateSceneInfo(*target_link, dis_to_target_link);
+    UpdateSceneInfo(*front_first_link, dis_to_front_first_link, *target_link);
     return true;
   }
 
@@ -548,7 +549,7 @@ bool LDRouteInfoStrategy::IsNearingRamp() {
   }
 
   // 步骤5：匝道优先，更新决策信息并返回
-  UpdateSceneInfo(*target_link, dis_to_target_link);
+  UpdateSceneInfo(*front_first_link, dis_to_front_first_link, *target_link);
   return true;
 }
 
@@ -623,13 +624,13 @@ bool LDRouteInfoStrategy::IsMergePriorToRamp(const double dis_to_ramp) {
   return false;
 }
 
-void LDRouteInfoStrategy::UpdateSceneInfo(const iflymapdata::sdpro::LinkInfo_Link& target_link,
-                                               const double dis_to_target_link) {
+void LDRouteInfoStrategy::UpdateSceneInfo(
+    const iflymapdata::sdpro::LinkInfo_Link& front_first_link,
+    const double dis_to_front_first_link,
+    const iflymapdata::sdpro::LinkInfo_Link& target_link) {
   mlc_decider_scene_type_info_.set_value(
-      SPLIT_SCENE,
-      CalculateSplitDirection(target_link, ld_map_),
-      dis_to_target_link,
-      target_link.id());
+      SPLIT_SCENE, CalculateSplitDirection(front_first_link, ld_map_),
+      dis_to_front_first_link, front_first_link.id(), target_link.id());
 }
 
 bool LDRouteInfoStrategy::IsNearingMerge() {
@@ -645,7 +646,7 @@ bool LDRouteInfoStrategy::IsNearingMerge() {
     if (!is_ignore_merge) {
       mlc_decider_scene_type_info_.set_value(
           MERGE_SCENE, CalculateMergeDirection(*merge_info.first, ld_map_),
-          merge_info.second, merge_info.first->id());
+          merge_info.second, merge_info.first->id(), merge_info.first->id());
       return true;
     }
   }
@@ -2447,7 +2448,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
     return false;
   }
   const iflymapdata::sdpro::LinkInfo_Link* split_link =
-      ld_map_.GetLinkOnRoute(mlc_decider_scene_type_info_.topo_change_link_id);
+      ld_map_.GetLinkOnRoute(mlc_decider_scene_type_info_.target_link_id);
   if (split_link == nullptr) {
     return false;
   }
@@ -2558,7 +2559,11 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInMergeScene(
   if (merge_info_vec_.empty()) {
     return false;
   }
-  const auto& first_merge_link_info = merge_info_vec_[0].first;
+  const auto& first_merge_link_info = ld_map_.GetLinkOnRoute(
+      route_info_output_.mlc_decider_scene_type_info.target_link_id);
+  if (first_merge_link_info == nullptr) {
+    return false;
+  }
   const auto& merge_pre_link =
       ld_map_.GetPreviousLinkOnRoute(first_merge_link_info->id());
   if (merge_pre_link == nullptr) {

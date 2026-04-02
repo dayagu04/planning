@@ -159,8 +159,9 @@ void ProcessLaneMapMergePoint(
   bool IsDistanceToRampWithinThreshold(const double dis_to_ramp);
   bool IsMergePriorToRamp(const double dis_to_ramp);
   void UpdateSceneInfo(
-      const iflymapdata::sdpro::LinkInfo_Link& target_link,
-      const double dis_to_target_link);
+      const iflymapdata::sdpro::LinkInfo_Link& front_first_link,
+      const double dis_to_front_first_link,
+      const iflymapdata::sdpro::LinkInfo_Link& target_link);
 
   void EraseFeasibleLaneIfNeeded(
       uint64_t lane_id, const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
