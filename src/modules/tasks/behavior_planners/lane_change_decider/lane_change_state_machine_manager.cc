@@ -440,9 +440,9 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
           lc_lane_mgr_->origin_lane_virtual_id(),
           lc_lane_mgr_->target_lane_virtual_id(), lane_change_direction);
 
-  // 当前box的一半宽超过车道边界线，认为变道进入complete状态 并且
-  // 持续时间超过1.5s
-  if (ego_press_line_ratio > 0.5 && execution_state_frame_nums_ > 15) {
+  // 当前box的一半宽超过车道边界线，认为变道进入complete状态
+  if (ego_press_line_ratio > 0.5 && is_side_clear_ &&
+  (execution_state_frame_nums_ > 5 || hold_state_frame_nums_ > 5)) {
     return true;
   }
 
@@ -2321,6 +2321,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
   const auto& obstacles_map = ref_path->get_obstacles_map();
+  const auto& ego_boundary = ref_path->get_ego_frenet_boundary();
   for (const auto* target_lane_node : target_lane_nodes) {
     if(target_lane_node == nullptr) {
       continue;
@@ -2400,7 +2401,8 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     // 横向距离变小，预测是保守的，这里用或  ; 能绑定说明预测轨迹进来了。
     bool is_lat_closing = (std::fabs(l_end) - std::fabs(l_mid) < -0.5 ||
                            std::fabs(l_mid) - std::fabs(l_start) < -0.5);
-
+    bool is_side = !(agent_start_bd.s_start > ego_boundary.s_end ||
+                        agent_start_bd.s_end < ego_boundary.s_start);
     const double target_lane_width = target_lane->width_by_s(agent_s);
     double safety_buff = 0.8;
     if(is_reverse){
@@ -2411,18 +2413,18 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
         continue;
       }
     } else if (target_lane_node->is_static_type()) {  // 静止
-      safety_buff = 0.7;
+      safety_buff = 0.3;
       bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd,
                                      car_width, safety_buff, direction);
       if (pass_in_lane) {
         continue;
       }
-    } else if (!is_lat_closing) {  // 正常直行
+    } else if (!is_lat_closing) {  // 正常直行, 不在侧边
       safety_buff = 1.0;
       bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd,
                                      car_width, safety_buff, direction);
-      if (pass_in_lane && !target_lane_node->is_agent_most_within_lane()) {
-        continue;  // 前者针对大型车压线，后者针对小vru靠边
+      if (pass_in_lane && !target_lane_node->is_agent_most_within_lane() && !is_side) {
+        continue;  // 前者针对大型车压线，后者针对小vru靠边， 不是侧方车才可以过滤
       }
     } else {  // cutin 趋势
       if (!target_lane_node->is_agent_within_lane()) { // 当前不在，短时间内也不会在，过滤。
@@ -4340,6 +4342,9 @@ bool LaneChangeStateMachineManager::
       } 
       if (ego_press_line_ratio > 0.01 && is_side_clear_  && is_executing && !front_risk) {//对侧方车保持返回能力
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
+      }
+      if(ego_press_line_ratio > 0.5 && is_side_clear_){
+        break;  // 已经压线过多，侧方无车不返回
       }
       if (is_executing) {
         box_longitudinal_buff = lc_safety_check_config_.exe_ttc_ratio * box_longitudinal_buff;
