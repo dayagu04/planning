@@ -4540,8 +4540,9 @@ bool EgoLaneTrackManger::IsPathCollisionWithRoadEdge(
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_vehicle_width = vehicle_param.width * 0.5;
-
-  for (size_t i = 0; i < path_points.size(); ++i) {
+  const int max_check_num = 16;
+  int check_points_num = std::min(max_check_num, static_cast<int>(path_points.size()));
+  for (size_t i = 0; i < check_points_num; ++i) {
     const double pt_x = path_points[i].x;
     const double pt_y = path_points[i].y;
 
