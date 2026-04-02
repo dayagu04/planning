@@ -231,6 +231,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   pnc::mathlib::spline lbuffer_s_spline_;
   pnc::mathlib::spline rbuffer_s_spline_;
 
+  bool is_point_in_turning_{false};
+
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;

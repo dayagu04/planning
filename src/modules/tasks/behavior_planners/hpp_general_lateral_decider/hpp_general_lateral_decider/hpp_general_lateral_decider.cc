@@ -483,6 +483,69 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
   double ego_v = planning_init_point.v;
   double s_ref = frenet_init_pt.x;
 
+  const auto static_analysis_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+
+  is_point_in_turning_ = false;
+  
+  if (static_analysis_storage) {
+    const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
+                                    CElemType::Ignore);
+    const auto front_turn_range =
+        static_analysis_storage->GetFrontSRange(turn_query, s_ref);
+    const auto back_turn_range =
+        static_analysis_storage->GetBackSRange(turn_query, s_ref);
+
+    constexpr double kExitRecoverDist = 5.0;
+    constexpr double kPreviewBeforeTurn = 5.0;
+    const double origin_cruise_v = cruise_v;
+    const double kMinCruiseV = 3.0;
+
+    double factor = 1.0;
+
+    if (front_turn_range.second > front_turn_range.first) {
+      const double turn_start = front_turn_range.first;
+      const double turn_end = front_turn_range.second;
+
+      if (s_ref < turn_start) {
+        const double dist_to_turn = std::max(turn_start - s_ref, 0.0);
+        if (dist_to_turn <= kPreviewBeforeTurn) {
+          const double ratio = std::clamp(
+              1.0 - dist_to_turn / kPreviewBeforeTurn, 0.0, 1.0);
+          factor = 1.0 - 0.5 * ratio;
+          is_point_in_turning_ = true;
+        }
+      } else if (s_ref <= turn_end) {
+        factor = 0.5;
+        is_point_in_turning_ = true;
+      } else {
+        const double dist_since_turn_end =
+            std::max(s_ref - turn_end, 0.0);
+        if (dist_since_turn_end <= kExitRecoverDist) {
+          const double ratio = std::clamp(
+              dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
+          factor = 0.5 + 0.5 * ratio;
+          is_point_in_turning_ = true;
+        }
+      }
+    } else if (back_turn_range.second > back_turn_range.first &&
+                back_turn_range.second <= s_ref) {
+      const double dist_since_turn_end =
+          std::max(s_ref - back_turn_range.second, 0.0);
+      if (dist_since_turn_end <= kExitRecoverDist) {
+        const double ratio = std::clamp(
+            dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
+        factor = 0.5 + 0.5 * ratio;
+        is_point_in_turning_ = true;
+      }
+    }
+
+    factor = std::clamp(factor, 0.5, 1.0);
+    const double adjusted =
+        std::clamp(origin_cruise_v * factor, kMinCruiseV, origin_cruise_v);
+    cruise_v = adjusted;
+  }
+
   double ref_len_based_on_speed = 0.0;
   double span_t = config_.delta_t * config_.num_step;
   if (ego_v < cruise_v) {
@@ -506,7 +569,6 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
   const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
   constexpr double kStraightCheckLength = 20.0;
   double ref_len_based_on_straight = 20.0;
-
   if (!cart_ref_info.s_vec.empty() && cart_ref_info.s_vec.back() > s_ref) {
     const double s_max =
         std::min(cart_ref_info.s_vec.back(), frenet_coord->Length());
@@ -514,7 +576,6 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
     if (s_end > s_ref + 1e-3) {
       ref_len_based_on_straight = std::max(s_end - s_ref, 0.0);
 
-      const auto static_analysis_storage = reference_path_ptr_->get_static_analysis_storage();
       if (static_analysis_storage) {
         const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
                                        CElemType::Ignore);
@@ -522,7 +583,7 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
             static_analysis_storage->GetFrontSRange(turn_query, s_ref);
 
         constexpr double kTurnInnerPreview = 12.0;
-        constexpr double kExitRecoverDist = 5.0;
+        constexpr double kExitRecoverDist = 10.0;
 
         const double min_len_base_straight = 12.0;
 
@@ -532,12 +593,15 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
         }
 
         if (in_turn_front) {  // 当前位于弯道内
-          const double turn_span = front_turn_range.second - front_turn_range.first;
+          const double turn_span =
+              front_turn_range.second - front_turn_range.first;
           const double t = std::clamp(
               (s_ref - front_turn_range.first) / (turn_span / 2.0), 0.0, 1.0);
           const double ref_len_in_turn =
-              kTurnInnerPreview + (1.0 - t) * (kStraightCheckLength - kTurnInnerPreview);
-          ref_len_based_on_straight = std::max(min_len_base_straight, ref_len_in_turn);
+              kTurnInnerPreview +
+              (1.0 - t) * (kStraightCheckLength - kTurnInnerPreview);
+          ref_len_based_on_straight =
+              std::max(min_len_base_straight, ref_len_in_turn);
         } else {
           const auto back_turn_range =
               static_analysis_storage->GetBackSRange(turn_query, s_ref);
@@ -545,13 +609,15 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
               back_turn_range.second <= s_ref) {
             const double dist_since_turn_end =
                 std::max(s_ref - back_turn_range.second, 0.0);
-            const double recover_ratio =
-                std::clamp(dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-            const double ref_len_recover =
-                kTurnInnerPreview +
-                recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
-            ref_len_based_on_straight =
-                std::max(min_len_base_straight, ref_len_recover);
+            if (dist_since_turn_end <= kExitRecoverDist) {
+              const double recover_ratio = std::clamp(
+                  dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
+              const double ref_len_recover =
+                  kTurnInnerPreview +
+                  recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
+              ref_len_based_on_straight =
+                  std::max(min_len_base_straight, ref_len_recover);
+            }
           }
         }
       }
@@ -596,10 +662,53 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
   }
   double s_ref = frenet_init_pt.x;
 
-  double span_t = config_.delta_t * config_.num_step;
+  const auto &cruise_v = session_->planning_context().v_ref_cruise();
 
-  double delta_s = std::max(lon_sample_length_ / span_t, 0.0) * config_.delta_t;
+  const double ego_v = planning_init_point.v;
 
+  const double kMaxAcc = cruise_v > ego_v ? 0.8 : -5.5;
+
+  const double avg_dis = lon_sample_length_ / config_.num_step;
+
+  const double avg_vel = lon_sample_length_ / (config_.delta_t * config_.num_step);
+
+  std::vector<double> ref_sample_vel_vec(config_.num_step + 1, avg_vel);
+  std::vector<double> delta_s_vec(config_.num_step + 1, avg_dis);
+
+  if (!is_point_in_turning_) {
+    ref_sample_vel_vec[0] = ego_v;
+    double total_s = 0.0;
+
+    double t_reach = (cruise_v - ego_v) / kMaxAcc;
+
+    for (size_t i = 0; i < config_.num_step; ++i) {
+      const double t_next = static_cast<double>(i + 1) * config_.delta_t;
+
+      auto &v_curr = ref_sample_vel_vec[i];
+      auto &v_next = ref_sample_vel_vec[i + 1];
+      
+      if (t_reach > t_next) {
+        v_next = v_curr + kMaxAcc * config_.delta_t;
+      } else {
+        v_next = cruise_v;
+      }
+
+      if (t_reach < t_next && t_reach > t_next - config_.delta_t) {
+        delta_s_vec[i] =
+            0.5 * (v_curr + v_next) * (t_reach - t_next + config_.delta_t)
+            + v_next * (t_next - t_reach);
+      } else {
+        delta_s_vec[i] = 0.5 * (v_curr + v_next) * config_.delta_t;
+      }
+      total_s += delta_s_vec[i];
+    }
+
+    const double scale = lon_sample_length_ / std::max(total_s, 1e-6);
+    for (size_t i = 0; i < config_.num_step; ++i) {
+      delta_s_vec[i] *= scale;
+      ref_sample_vel_vec[i] *= scale;
+    }
+  }
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_ego_width = vehicle_param.max_width * 0.5;
@@ -635,7 +744,11 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
     point.l = frenet_pt.y;
     point.t = static_cast<double>(i) * config_.delta_t;
 
-    s_ref += delta_s;
+    point.v = ref_sample_vel_vec[i];
+
+    if (i < config_.num_step) {
+      s_ref += delta_s_vec[i];
+    }
     ref_traj_points_.emplace_back(point);
 
     if (i == 0) {
@@ -2436,7 +2549,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
 
   TrajectoryPoints merged = raw_ref_traj_points;
   size_t recover_idx = break_start;
-  size_t last_recover_idx = 0;
+  size_t last_recover_idx = n;
   size_t consecutive_in_bound = 0;
   while (recover_idx < n) {
     if (!is_break_hard_bound(recover_idx)) {
