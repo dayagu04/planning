@@ -1045,102 +1045,93 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   const ApaParameters& param = apa_param.GetParam();
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const auto measure_data_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  const auto col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+  const auto& simu_param = apa_world_ptr_->GetSimuParam();
+  const bool is_tail_in =
+      scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
 
   // gen config
   config.InitConfig();
   // targeted customization parameters
   config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
   config.exceed_interseting_area_penalty = 1.2f * config.gear_switch_penalty;
-  config.exceed_cul_de_sac_limit_pos_penalty =
-      0.68f * config.gear_switch_penalty;
   config.borrow_slot_penalty = 3.68f;
   config.expect_steer_penalty = 1.68f;
+  config.exceed_cul_de_sac_limit_pos_penalty =
+      0.68f * config.gear_switch_penalty;
 
   // gen request
-  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
-    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
-    request.mirror_has_folded_flag = true;
-  } else {
-    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
-    if (ego_info_under_slot.tar_pose_result.target_pose_type ==
-        TargetPoseType::FOLD_MIRROR) {
-      ILOG_INFO << "try path plan with fold mirror";
-      request.enable_smart_fold_mirror = true;
-    }
+  const bool mirror_has_folded = measure_data_ptr->GetFoldMirrorFlag();
+  const bool should_try_fold_mirror =
+      !mirror_has_folded &&
+      ego_info_under_slot.tar_pose_result.target_pose_type ==
+          TargetPoseType::FOLD_MIRROR;
+  col_det_interface_ptr->Init(mirror_has_folded);
+  if (should_try_fold_mirror) {
+    ILOG_INFO << "try planning path with fold mirror";
   }
+  request.mirror_has_folded_flag = mirror_has_folded;
+  request.enable_smart_fold_mirror = should_try_fold_mirror;
+  request.pre_search_mode = param.pre_search_mode;
+  request.decide_cul_de_sac = param.enable_decide_cul_de_sac;
+  request.enable_interesting_search_area = param.enable_interesting_search_area;
   request.process_obs_method = frame_.process_obs_method;
   request.sample_ds = config.node_path_dist_resolution;
   request.replan_reason = frame_.replan_reason;
-  request.every_gear_length = 0.3;
+  request.every_gear_length = 0.3f;
   request.swap_start_goal = false;
   request.scenario_type = scenario_type_;
   request.analytic_expansion_type = param.analytic_expansion_type;
   request.ego_info_under_slot = ego_info_under_slot;
-  request.inital_action_request.ref_length = config.node_step + 0.01;
-  request.inital_action_request.ref_gear =
-      GetAstarGearFromSegGear(frame_.current_gear);
-  request.inital_action_request.ref_steer =
+  request.ref_solve_number = simu_param.ref_solve_number;
+  request.max_scurve_number = 2;
+
+  AstarPathGear ref_gear = GetAstarGearFromSegGear(frame_.current_gear);
+  AstarPathSteer ref_steer =
       GetAstarSteerFromSegSteer(frame_.current_arc_steer);
-  if (apa_world_ptr_->GetSimuParam().ref_gear != 0) {
-    request.inital_action_request.ref_gear =
-        GetAstarGearFromSegGear(apa_world_ptr_->GetSimuParam().ref_gear);
+  if (simu_param.ref_gear != 0) {
+    ref_gear = GetAstarGearFromSegGear(simu_param.ref_gear);
   }
-  if (apa_world_ptr_->GetSimuParam().ref_steer != 0) {
-    request.inital_action_request.ref_steer =
-        GetAstarSteerFromSegSteer(apa_world_ptr_->GetSimuParam().ref_steer);
+  if (simu_param.ref_steer != 0) {
+    ref_steer = GetAstarSteerFromSegSteer(simu_param.ref_steer);
   }
 
-  request.pre_search_mode = param.pre_search_mode;
-  request.decide_cul_de_sac = param.enable_decide_cul_de_sac;
-  request.enable_interesting_search_area = param.enable_interesting_search_area;
-
+  int max_gear_shift_number = 0;
   if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
-    // searching_stage
     request.max_gear_shift_number =
         param.gear_change_decide_params.all_max_gear_change_count_searching;
+  } else if (request.replan_reason == ReplanReason::DYNAMIC) {
+    request.max_gear_shift_number = 0;
+    ref_gear = is_tail_in ? AstarPathGear::REVERSE : AstarPathGear::DRIVE;
   } else {
     request.max_gear_shift_number =
         param.gear_change_decide_params.all_max_gear_change_count_parking;
   }
 
-  request.max_scurve_number = 2;
-
-  // now, when dynamic plan, the path should not shift gear, and the gear must
-  // be reverse
-  if (frame_.replan_reason == DYNAMIC) {
-    request.inital_action_request.ref_gear = AstarPathGear::REVERSE;
-    request.max_gear_shift_number = 0;
-  }
-
-  request.ref_solve_number = apa_world_ptr_->GetSimuParam().ref_solve_number;
-
-  if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-    if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
-      if (ego_info_under_slot.slot.IsPointInCustomSlot(
-              ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.4, -0.4, true) &&
-          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
-              20.0) {
-        request.adjust_pose = true;
-      }
-    }
-  } else if (scenario_type_ ==
-             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-    if (request.inital_action_request.ref_gear == AstarPathGear::REVERSE) {
-      if (ego_info_under_slot.slot.IsPointInCustomSlot(
-              ego_info_under_slot.cur_pose.pos, 7.0, -3.0, -0.4, -0.4, true) &&
-          std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
-              20.0) {
-        request.adjust_pose = true;
-      }
-    }
-  }
-
-  InitalActionDecider inital_action_decider(
-      apa_world_ptr_->GetColDetInterfacePtr());
+  request.inital_action_request.ref_length = config.node_step + 0.01f;
+  request.inital_action_request.ref_gear = ref_gear;
+  request.inital_action_request.ref_steer = ref_steer;
+  request.max_gear_shift_number = max_gear_shift_number;
+  InitalActionDecider inital_action_decider(col_det_interface_ptr);
   inital_action_decider.Process(request.inital_action_request,
                                 ego_info_under_slot.cur_pose,
                                 ego_info_under_slot.tar_line, config.node_step,
                                 config.node_path_dist_resolution, 3.0);
+
+  const AstarPathGear adjust_pose_ref_gear =
+      is_tail_in ? AstarPathGear::DRIVE : AstarPathGear::REVERSE;
+  const double adjust_pose_front_offset =
+      is_tail_in ? 2.0 : 2.0 + param.wheel_base;
+  const double adjust_pose_rear_offset =
+      is_tail_in ? 1.0 : 1.0 - param.wheel_base;
+  request.adjust_pose =
+      adjust_pose_ref_gear == ref_gear &&
+      std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
+          20.0 &&
+      ego_info_under_slot.slot.IsPointInCustomSlot(
+          ego_info_under_slot.cur_pose.pos, adjust_pose_front_offset,
+          adjust_pose_rear_offset, -0.4, -0.4, true);
 
   ILOG_INFO << "hybrid_ref_gear = "
             << PathGearDebugString(request.inital_action_request.ref_gear)
@@ -3004,8 +2995,9 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal(
   if (new_path_has_sturn) {
     const double old_max_lat_err =
         std::max(std::fabs(old_err.lat_err), std::fabs(old_err.front_lat_err));
-    const double min_sturn_final_line_length = mathlib::Interp1(
-        sturn_lat_err_breakpoints, sturn_min_line_length_table, old_max_lat_err);
+    const double min_sturn_final_line_length =
+        mathlib::Interp1(sturn_lat_err_breakpoints, sturn_min_line_length_table,
+                         old_max_lat_err);
     if (new_path_final_line_length < min_sturn_final_line_length) {
       ILOG_INFO
           << "old path lat err is larger while new path final line length "
