@@ -1368,9 +1368,8 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
     frame_.replan_reason = NOT_REPLAN;
   }
 
-  const bool has_thread_response =
-      frame_.path_gen_request_response_state ==
-      PathGenRequestResponseState::HAS_RESPONSE;
+  const bool has_thread_response = frame_.path_gen_request_response_state ==
+                                   PathGenRequestResponseState::HAS_RESPONSE;
   const bool should_mark_parking_failed =
       frame_.replan_fail_time > param.max_replan_failed_time;
   if (has_thread_response) {
@@ -1717,7 +1716,8 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
                   s_vec.size(), type_vec.size()});
     for (size_t j = 0; j < pt_size; ++j) {
       geometry_lib::PathPoint global_path_point;
-      global_path_point.pos = l2g_tf.GetPos(Eigen::Vector2d(x_vec[j], y_vec[j]));
+      global_path_point.pos =
+          l2g_tf.GetPos(Eigen::Vector2d(x_vec[j], y_vec[j]));
       global_path_point.heading = l2g_tf.GetHeading(phi_vec[j]);
       global_path_point.type = static_cast<int>(type_vec[j]);
       global_path_point.kappa = kappa_vec[j];
@@ -2877,26 +2877,38 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByHybridAstarPath(
     return true;
   }
 
-  if (!res.path_plan_success || res.gear_change_num > 0 ||
-      res.kappa_vec_vec.empty() || res.kappa_vec_vec.back().empty() ||
-      res.cur_gear != AstarPathGear::REVERSE) {
+  const AstarPathGear expected_gear =
+      (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN)
+          ? AstarPathGear::REVERSE
+          : AstarPathGear::DRIVE;
+  const bool has_valid_plan = res.path_plan_success;
+  const bool has_no_gear_change = res.gear_change_num == 0;
+  const bool has_valid_path =
+      !res.kappa_vec_vec.empty() && !res.kappa_vec_vec.back().empty();
+  const bool gear_matches = res.cur_gear == expected_gear;
+  if (!has_valid_plan || !has_no_gear_change || !has_valid_path ||
+      !gear_matches) {
     return false;
   }
 
-  const double first_pt_kappa = res.kappa_vec_vec.back().front();
+  const auto& x_vec = res.x_vec_vec.back();
+  const auto& y_vec = res.y_vec_vec.back();
+  const auto& phi_vec = res.phi_vec_vec.back();
+  const auto& kappa_vec = res.kappa_vec_vec.back();
+
+  const double first_pt_kappa = kappa_vec.front();
 
   std::vector<pnc::geometry_lib::PathPoint> s_turn_path;
   float final_line_length = 0.0;
-  const bool has_sturn_flag = ExtractSTurnAndStraight(
-      res.x_vec_vec.back(), res.y_vec_vec.back(), res.phi_vec_vec.back(),
-      res.kappa_vec_vec.back(), req.sample_ds, s_turn_path, final_line_length);
+  ExtractSTurnAndStraight(x_vec, y_vec, phi_vec, kappa_vec, req.sample_ds,
+                          s_turn_path, final_line_length);
+
+  geometry_lib::PathPoint new_tar_pose;
+  new_tar_pose.pos << x_vec.back(), y_vec.back();
+  new_tar_pose.heading = phi_vec.back();
 
   geometry_lib::PathPoint old_tar_pose = complete_path_point_global_vec_.back();
   old_tar_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
-
-  geometry_lib::PathPoint new_tar_pose;
-  new_tar_pose.pos << res.x_vec_vec.back().back(), res.y_vec_vec.back().back();
-  new_tar_pose.heading = res.phi_vec_vec.back().back();
 
   return CheckDynamicPlanPathOptimal(
       hybrid_astar_response_.result.gear_change_num, res.gear_change_num,
