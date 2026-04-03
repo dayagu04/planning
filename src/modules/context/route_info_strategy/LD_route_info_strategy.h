@@ -351,6 +351,7 @@ void ProcessLaneMapMergePoint(
       const iflymapdata::sdpro::LinkInfo_Link* current_link,
       double& link_distance);
   void CalculateFeasibleLaneByMergePoint(TopoLinkGraph& feasible_lane_graph);
+  void ProcessEraseFeasibleLaneForSplitScene(TopoLinkGraph& feasible_lane_graph);
   bool CalculateLinkLaneNum(const iflymapdata::sdpro::LinkInfo_Link* link,
                             int& lane_num);
 

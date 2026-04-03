@@ -86,7 +86,7 @@ bool LDRouteInfoStrategy::UpdateFeasibleLaneGraph() {
 
   // 增加处理在接近匝道时，feasible lane至少有2条车道可达ramp，其中一条是1分2的lane，则从feasible lane中移除这条lane
   if (mlc_scene_type == SPLIT_SCENE) {
-    Erase1Split2FeasibleLane(feasible_lane_graph_);
+    ProcessEraseFeasibleLaneForSplitScene(feasible_lane_graph_);
   }
   // 计算车道减少信息
   double search_distance = 500.0;
@@ -5018,5 +5018,48 @@ LDRouteInfoStrategy::GetCloserSuccessorLinkByLateralDistance(
 
   // 返回横向距离更小的后继link
   return (lateral_dist1 < lateral_dist2) ? successor_link1 : successor_link2;
+}
+
+void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
+    TopoLinkGraph& feasible_lane_graph) {
+  // 判断是否为需要移除的那种场景
+  // -------------------
+  //
+  //              -
+  //               -
+  //                 -
+  // 如上，如果是直行则不需要移除，如果是右，则需要移除
+  uint64 front_first_topo_change_link_id =
+      mlc_decider_scene_type_info_.topo_change_link_id;
+  const auto& front_first_topo_change_link =
+      ld_map_.GetLinkOnRoute(front_first_topo_change_link_id);
+
+  if (front_first_topo_change_link == nullptr) {
+    return;
+  }
+
+  const auto& split_next_link =
+      ld_map_.GetNextLinkOnRoute(front_first_topo_change_link->id());
+  if (split_next_link == nullptr) {
+    return;
+  }
+
+  uint64 out_link_id =
+      front_first_topo_change_link->successor_link_ids()[0] ==
+              split_next_link->id()
+          ? front_first_topo_change_link->successor_link_ids()[1]
+          : front_first_topo_change_link->successor_link_ids()[0];
+  const auto& out_link = ld_map_.GetLinkOnRoute((out_link_id));
+  if (out_link == nullptr) {
+    return;
+  }
+
+  const auto& closer_suc_link = GetCloserSuccessorLinkByLateralDistance(
+      front_first_topo_change_link, split_next_link, out_link);
+  if (closer_suc_link->id() == split_next_link->id()) {
+    return;
+  }
+
+  Erase1Split2FeasibleLane(feasible_lane_graph);
 }
 }  // namespace planning
