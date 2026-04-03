@@ -969,7 +969,7 @@ void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
   double current_timestamp = IflyTime::Now_ms();
 
   for (auto iter = obs_consistency_map.begin();
-       iter != obs_consistency_map.end();++iter) {
+       iter != obs_consistency_map.end();) {
     auto obs_id = iter->first;
     auto &consistency_info = iter->second;
     if (lat_obstacle_decision.find(obs_id) != lat_obstacle_decision.end()) {
@@ -982,6 +982,7 @@ void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
         consistency_info.count = 1;
         consistency_info.last_decision = curr_decision;
       }
+      ++iter;
     } else {
       double idle_time =
           current_timestamp - consistency_info.last_seen_timestamp;
