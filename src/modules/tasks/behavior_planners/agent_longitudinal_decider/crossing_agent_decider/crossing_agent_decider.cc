@@ -372,7 +372,7 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
       return true;
     }
     double vehicle_corner_min_l = std::numeric_limits<double>::max();
-    double vehicle_corner_max_l = std::numeric_limits<double>::min();
+    double vehicle_corner_max_l = -1000.0;
     for (const auto &point : vehicle_agent->box().GetAllCorners()) {
       double s = 0.0;
       double l = 0.0;
