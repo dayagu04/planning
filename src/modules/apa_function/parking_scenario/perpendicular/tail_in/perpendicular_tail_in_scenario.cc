@@ -1541,8 +1541,14 @@ void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
 
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-
   const ApaParameters& param = apa_param.GetParam();
+  const auto measure_data_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+  const auto predict_path_manager_ptr =
+      apa_world_ptr_->GetPredictPathManagerPtr();
+
+  constexpr double kRemainDistBuffer = 0.68;
+  constexpr double kMinProjPointCountFactor = 2.0;
+  const std::vector<double> proj_dist_breakpoints{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
 
   proj_pt = ego_info_under_slot.cur_pose;
 
@@ -1556,84 +1562,91 @@ void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
     return;
   }
 
-  ILOG_INFO << "decide ego pose or proj pt for dynamic path plan";
+  ILOG_INFO << "decide projection point for dynamic path plan";
 
-  if (apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
-    ILOG_INFO << "control err is big, directly use ego pose to dynamic plan";
+  if (predict_path_manager_ptr->GetControlErrBig()) {
+    ILOG_INFO << "control err is big, use ego pose for dynamic path plan";
     return;
   }
 
   const double remain_dist =
       std::min({frame_.remain_dist_path, frame_.remain_dist_obs,
-                frame_.remain_dist_slot_jump});
-
-  std::vector<double> dist_vec{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
+                frame_.remain_dist_slot_jump, frame_.remain_dist_by_od,
+                frame_.remain_dist_col_det});
   const double delta_t =
       (param.max_dynamic_plan_proj_dt - param.min_dynamic_plan_proj_dt) /
-      (dist_vec.size() - 1);
-  std::vector<double> dt_vec{};
-  dt_vec.resize(dist_vec.size());
-  for (size_t i = 0; i < dist_vec.size(); ++i) {
-    dt_vec[i] = param.min_dynamic_plan_proj_dt + delta_t * i;
+      (proj_dist_breakpoints.size() - 1);
+  std::vector<double> proj_dt_table(proj_dist_breakpoints.size(),
+                                    param.min_dynamic_plan_proj_dt);
+  for (size_t i = 0; i < proj_dt_table.size(); ++i) {
+    proj_dt_table[i] += delta_t * i;
   }
-  const double dt = mathlib::Interp1(dist_vec, dt_vec, remain_dist);
-  const double s =
-      std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) * dt;
+  const double dt =
+      mathlib::Interp1(proj_dist_breakpoints, proj_dt_table, remain_dist);
+  const double proj_dist = std::fabs(measure_data_ptr->GetVel()) * dt;
 
-  ILOG_INFO << "s = " << s << "  dt = " << dt << "  delta_t = " << delta_t
-            << "  remain_dist = " << remain_dist;
+  ILOG_INFO << "dynamic plan projection: proj_dist = " << proj_dist
+            << " dt = " << dt << " delta_t = " << delta_t
+            << " remain_dist = " << remain_dist;
 
   JSON_DEBUG_VALUE("dynamic_plan_predict_dt", dt)
-  JSON_DEBUG_VALUE("dynamic_plan_predict_ds", s)
+  JSON_DEBUG_VALUE("dynamic_plan_predict_ds", proj_dist)
 
-  if (s > remain_dist - 0.68) {
+  if (proj_dist > remain_dist - kRemainDistBuffer) {
     return;
   }
 
-  const size_t pt_number = current_path_point_global_vec_.size();
-
+  const auto& path_point_global_vec = current_path_point_global_vec_;
+  const size_t pt_number = path_point_global_vec.size();
   if (pt_number < 2) {
     return;
   }
 
-  const double ds = current_path_point_global_vec_[pt_number - 1].s -
-                    current_path_point_global_vec_[pt_number - 2].s;
-
-  if (s < ds * 2) {
+  const double ds = path_point_global_vec[pt_number - 1].s -
+                    path_point_global_vec[pt_number - 2].s;
+  if (proj_dist < ds * kMinProjPointCountFactor) {
     return;
   }
 
   const double ego_s_proj =
       frame_.current_path_length - frame_.remain_dist_path;
-  const double fur_s_proj = ego_s_proj + s;
-  geometry_lib::PathPoint ego_proj_pt, fur_proj_pt;
-  size_t ego_proj_index = 0, fur_proj_index = 0;
-  bool find_ego_proj_pt = false, find_fur_proj_pt = false;
-  for (size_t i = 0; i < current_path_point_global_vec_.size(); ++i) {
-    const geometry_lib::PathPoint& pt = current_path_point_global_vec_[i];
-    if (!find_ego_proj_pt && pt.s > ego_s_proj) {
-      find_ego_proj_pt = true;
+  const double fur_s_proj = ego_s_proj + proj_dist;
+
+  geometry_lib::PathPoint fur_proj_pt;
+  size_t ego_proj_index = 0;
+  size_t fur_proj_index = 0;
+  bool ego_proj_found = false;
+  bool fur_proj_found = false;
+  for (size_t i = 0; i < pt_number; ++i) {
+    const geometry_lib::PathPoint& pt = path_point_global_vec[i];
+    if (!ego_proj_found && pt.s > ego_s_proj) {
+      ego_proj_found = true;
       ego_proj_index = i;
-      ego_proj_pt = pt;
     }
-    if (!find_fur_proj_pt && pt.s > fur_s_proj) {
-      find_fur_proj_pt = true;
+    if (!fur_proj_found && pt.s > fur_s_proj) {
+      fur_proj_found = true;
       fur_proj_index = i;
       fur_proj_pt = pt;
     }
+    if (ego_proj_found && fur_proj_found) {
+      break;
+    }
+  }
+
+  if (!ego_proj_found || !fur_proj_found || fur_proj_index <= ego_proj_index) {
+    ILOG_INFO << "failed to find valid projection points on current path";
+    return;
   }
 
   proj_pt.pos = ego_info_under_slot.g2l_tf.GetPos(fur_proj_pt.pos);
   proj_pt.heading = ego_info_under_slot.g2l_tf.GetHeading(fur_proj_pt.heading);
 
-  splicing_pt_vec.reserve(fur_proj_index - ego_proj_index + 1);
+  splicing_pt_vec.reserve(fur_proj_index - ego_proj_index);
   for (size_t i = ego_proj_index + 1; i < fur_proj_index; ++i) {
-    splicing_pt_vec.emplace_back(current_path_point_global_vec_[i]);
+    splicing_pt_vec.emplace_back(path_point_global_vec[i]);
   }
 
   fur_proj_pt.PrintInfo();
-
-  return;
 }
 
 void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
