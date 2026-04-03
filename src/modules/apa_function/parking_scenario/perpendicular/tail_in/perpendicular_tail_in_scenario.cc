@@ -3836,26 +3836,6 @@ void PerpendicularTailInScenario::Log() const {
 
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
 
-  std::vector<double> obstaclesX;
-  obstaclesX.reserve(100);
-  std::vector<double> obstaclesY;
-  obstaclesY.reserve(100);
-
-  for (const auto& pair :
-       apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
-    if (pair.second.GetObsAttributeType() !=
-        ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
-      continue;
-    }
-    for (const Eigen::Vector2d& pt : pair.second.GetPtClout2dLocal()) {
-      const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(pt);
-      obstaclesX.emplace_back(tmp_obstacle.x());
-      obstaclesY.emplace_back(tmp_obstacle.y());
-    }
-  }
-
-  RecordDebugObstacle(obstaclesX, obstaclesY);
-
   std::vector<double> slot_corner_X;
   slot_corner_X.clear();
   slot_corner_X.reserve(16);

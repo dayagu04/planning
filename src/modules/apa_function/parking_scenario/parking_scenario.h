@@ -543,6 +543,10 @@ class ParkingScenario {
 
   const void RecordDebugPlanningSlotInfo();
 
+  const void RecordDebugPlanningStatus();
+
+  void RecordDebugObstacleInSlot() const;
+
   void DecideExpandMirrorCommand();
 
  protected:
