@@ -1659,11 +1659,13 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
 
   frame_.cur_path_gear_change_count = result.gear_change_num;
 
-  frame_.gear_command = GetSegGearFromAstarGear(result.cur_gear);
-  frame_.current_gear = geometry_lib::ReverseGear(frame_.gear_command);
-  frame_.current_arc_steer = GetSegSteerFromAstarSteer(result.cur_steer);
-  frame_.current_arc_steer =
-      geometry_lib::ReverseSteer(frame_.current_arc_steer);
+  const auto gear_command = GetSegGearFromAstarGear(result.cur_gear);
+  const auto current_gear = geometry_lib::ReverseGear(gear_command);
+  const auto current_arc_steer =
+      geometry_lib::ReverseSteer(GetSegSteerFromAstarSteer(result.cur_steer));
+  frame_.gear_command = gear_command;
+  frame_.current_gear = current_gear;
+  frame_.current_arc_steer = current_arc_steer;
 
   ILOG_INFO << "path gear change count = " << result.gear_change_num
             << " path cur gear = " << PathGearDebugString(result.cur_gear);
@@ -1672,16 +1674,27 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
   complete_path_point_global_vec_.clear();
 
   if (result.x_vec_vec.empty()) {
-    ILOG_INFO << "no path can fill path pt global";
+    ILOG_INFO << "hybrid path is empty, skip filling global path points";
     return;
+  }
+
+  const size_t gear_size = std::min(
+      {result.gear_vec.size(), result.x_vec_vec.size(), result.y_vec_vec.size(),
+       result.phi_vec_vec.size(), result.kappa_vec_vec.size(),
+       result.type_vec_vec.size(), result.accumulated_s_vec_vec.size()});
+
+  size_t complete_path_point_count = splicing_pt_vec.size();
+  for (size_t i = 0; i < gear_size; ++i) {
+    complete_path_point_count +=
+        std::min({result.x_vec_vec[i].size(), result.y_vec_vec[i].size(),
+                  result.phi_vec_vec[i].size(), result.kappa_vec_vec[i].size(),
+                  result.accumulated_s_vec_vec[i].size(),
+                  result.type_vec_vec[i].size()});
   }
 
   current_path_point_global_vec_.reserve(result.x_vec_vec[0].size() +
                                          splicing_pt_vec.size() + 18);
-
-  complete_path_point_global_vec_.reserve(result.x_vec_vec.size() *
-                                              result.x_vec_vec[0].size() +
-                                          splicing_pt_vec.size() + 18);
+  complete_path_point_global_vec_.reserve(complete_path_point_count + 18);
 
   for (const geometry_lib::PathPoint& pt : splicing_pt_vec) {
     current_path_point_global_vec_.emplace_back(pt);
@@ -1691,13 +1704,6 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
   const geometry_lib::LocalToGlobalTf& l2g_tf =
       request.ego_info_under_slot.l2g_tf;
 
-  geometry_lib::PathPoint global_path_point;
-
-  const size_t gear_size = std::min(
-      {result.gear_vec.size(), result.x_vec_vec.size(), result.y_vec_vec.size(),
-       result.phi_vec_vec.size(), result.kappa_vec_vec.size(),
-       result.type_vec_vec.size(), result.accumulated_s_vec_vec.size()});
-
   for (size_t i = 0; i < gear_size; ++i) {
     const std::vector<float>& x_vec = result.x_vec_vec[i];
     const std::vector<float>& y_vec = result.y_vec_vec[i];
@@ -1705,17 +1711,18 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
     const std::vector<float>& kappa_vec = result.kappa_vec_vec[i];
     const std::vector<float>& s_vec = result.accumulated_s_vec_vec[i];
     const std::vector<AstarPathType>& type_vec = result.type_vec_vec[i];
+    const auto seg_gear = GetSegGearFromAstarGear(result.gear_vec[i]);
     const size_t pt_size =
         std::min({x_vec.size(), y_vec.size(), phi_vec.size(), kappa_vec.size(),
                   s_vec.size(), type_vec.size()});
     for (size_t j = 0; j < pt_size; ++j) {
-      global_path_point.pos =
-          l2g_tf.GetPos(Eigen::Vector2d(x_vec[j], y_vec[j]));
+      geometry_lib::PathPoint global_path_point;
+      global_path_point.pos = l2g_tf.GetPos(Eigen::Vector2d(x_vec[j], y_vec[j]));
       global_path_point.heading = l2g_tf.GetHeading(phi_vec[j]);
       global_path_point.type = static_cast<int>(type_vec[j]);
       global_path_point.kappa = kappa_vec[j];
       global_path_point.s = s_vec[j];
-      global_path_point.gear = GetSegGearFromAstarGear(result.gear_vec[i]);
+      global_path_point.gear = seg_gear;
       if (i == 0) {
         current_path_point_global_vec_.emplace_back(global_path_point);
       }
@@ -1723,30 +1730,27 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
     }
   }
 
-  // correct target pose
   if (!complete_path_point_global_vec_.empty()) {
     EgoInfoUnderSlot& mutable_ego_info_under_slot =
         apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+    const geometry_lib::PathPoint& origin_target_pose =
+        mutable_ego_info_under_slot.origin_target_pose;
+
     geometry_lib::PathPoint real_target_pose =
         complete_path_point_global_vec_.back();
     real_target_pose.GlobalToLocal(mutable_ego_info_under_slot.g2l_tf);
-    const geometry_lib::PathPoint& origin_target_pose =
-        mutable_ego_info_under_slot.origin_target_pose;
-    geometry_lib::PathPoint& target_pose =
-        mutable_ego_info_under_slot.target_pose;
+
     mutable_ego_info_under_slot.lat_move_dist_replan_success =
         real_target_pose.GetY() - origin_target_pose.GetY();
     mutable_ego_info_under_slot.lon_move_dist_replan_success =
         real_target_pose.GetX() - origin_target_pose.GetX();
-    target_pose = real_target_pose;
+    mutable_ego_info_under_slot.target_pose = real_target_pose;
   }
 
   ILOG_INFO << "current_path_point_global_vec_.size() = "
             << current_path_point_global_vec_.size()
             << "  complete_path_point_global_vec_.size() = "
             << complete_path_point_global_vec_.size();
-
-  return;
 }
 
 void PerpendicularTailInScenario::SwitchProcessObsMethod() {
