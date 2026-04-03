@@ -12,6 +12,7 @@
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "utils/kd_path.h"
 #include "hpp_lateral_obstacle_decider_result.pb.h"
+#include "hpp_parameter_util.h"
 
 namespace planning {
 struct ObstacleConsistencyInfo {
@@ -66,7 +67,9 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   void MakeDecisionBasedPassageWidth(const ObstacleCluster& cluster,
                                      LatObstacleDecisionInfo& decision_info);
-
+  LatObstacleDecisionType GetLastDecisionInfo(
+      const ObstacleCluster& cluster,
+      const ObstacleConsistencyMap& obstacle_consistency_map);
   void MakeDecisionBasedRelativePos(
       const ObstacleCluster& cluster,
       const LatObstacleDecisionInfo& previous_decision_info,
