@@ -802,19 +802,36 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
   ref_traj_points_.resize(config_.num_step + 1);
   bound_center_line_.resize(config_.num_step + 1);
 
-  auto &last_traj_points = session_->mutable_planning_context()
-                               ->mutable_last_planning_result()
-                               .raw_traj_points;
   TrajectoryPoints plan_history_traj_tmp;
-  for (size_t i = 0; i < last_traj_points.size(); ++i) {
-    Point2D frenet_pt{0.0, 0.0};
-    Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
-    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      last_traj_points[i].s = frenet_pt.x;
-      last_traj_points[i].l = frenet_pt.y;
-      plan_history_traj_tmp.emplace_back(last_traj_points[i]);
-    } else {
-      LOG_DEBUG("plan_history_traj frenet error");
+  const TrajectoryPoints &last_hpp_lateral_motion_traj =
+      session_->planning_context().last_hpp_lateral_motion_traj();
+  if (!last_hpp_lateral_motion_traj.empty()) {
+    for (size_t i = 0; i < last_hpp_lateral_motion_traj.size(); ++i) {
+      TrajectoryPoint pt = last_hpp_lateral_motion_traj[i];
+      Point2D frenet_pt{0.0, 0.0};
+      Point2D cart_pt(pt.x, pt.y);
+      if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+        pt.s = frenet_pt.x;
+        pt.l = frenet_pt.y;
+        plan_history_traj_tmp.emplace_back(std::move(pt));
+      } else {
+        LOG_DEBUG("plan_history_traj frenet error");
+      }
+    }
+  } else {
+    auto &last_traj_points = session_->mutable_planning_context()
+                                 ->mutable_last_planning_result()
+                                 .raw_traj_points;
+    for (size_t i = 0; i < last_traj_points.size(); ++i) {
+      Point2D frenet_pt{0.0, 0.0};
+      Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
+      if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+        last_traj_points[i].s = frenet_pt.x;
+        last_traj_points[i].l = frenet_pt.y;
+        plan_history_traj_tmp.emplace_back(last_traj_points[i]);
+      } else {
+        LOG_DEBUG("plan_history_traj frenet error");
+      }
     }
   }
   if (plan_history_traj_tmp.empty()) {
@@ -885,6 +902,18 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
         pt.t += config_.delta_t;
         plan_history_traj_.emplace_back(std::move(pt));
       }
+    }
+  }
+
+  for (auto &traj : plan_history_traj_) {
+    Point2D cart_pt(traj.x, traj.y);
+    Point2D frenet_pt{0.0, 0.0};
+    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+      traj.l = frenet_pt.y;
+      traj.frenet_valid = true;
+    } else {
+      traj.frenet_valid = false;
+      LOG_DEBUG("plan_history_traj point XYToSL failed");
     }
   }
 
@@ -2394,6 +2423,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   size_t break_start = n;
   for (size_t i = 0; i < n; ++i) {
     if (is_break_hard_bound(i)) {
+      break_start -= kBlendRadius;
       break_start = i < kBlendRadius ? 0 : i;
       break;
     }
@@ -2437,17 +2467,6 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   }
 
   merged = iterativeSmoothWithBounds(merged);
-
-  for (size_t i = 0; i < n; ++i) {
-    // merged[i].heading_angle = raw_ref_traj_points[i].heading_angle;
-    if (i + 1 < n) {
-      const double dx = merged[i + 1].x - merged[i].x;
-      const double dy = merged[i + 1].y - merged[i].y;
-      merged[i].heading_angle = std::atan2(dy, dx);
-    } else {
-      merged[i].heading_angle = merged[i - 1].heading_angle;
-    }
-  }
 
   ref_traj_points_ = merged;
 }
@@ -3153,6 +3172,15 @@ void HppGeneralLateralDecider::GenerateEnuReferenceTraj(
 void HppGeneralLateralDecider::GenerateEnuReferenceTheta(
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
+  for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+    if (i + 1 < ref_traj_points_.size()) {
+      const double dx = ref_traj_points_[i + 1].x - ref_traj_points_[i].x;
+      const double dy = ref_traj_points_[i + 1].y - ref_traj_points_[i].y;
+      ref_traj_points_[i].heading_angle = std::atan2(dy, dx);
+    } else {
+      ref_traj_points_[i].heading_angle = ref_traj_points_[i - 1].heading_angle;
+    }
+  }
 
   for (size_t i = 0; i < ref_path_points_.size(); i++) {
     enu_ref_theta.emplace_back(ref_traj_points_[i].heading_angle);

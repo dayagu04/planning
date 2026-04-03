@@ -366,6 +366,13 @@ class PlanningContext {
     return last_planning_result_;
   }
 
+  const TrajectoryPoints &last_hpp_lateral_motion_traj() const {
+    return last_hpp_lateral_motion_traj_;
+  }
+  TrajectoryPoints &mutable_last_hpp_lateral_motion_traj() {
+    return last_hpp_lateral_motion_traj_;
+  }
+
   const iflyauto::PlanningOutput &planning_output() const {
     return planning_output_;
   }
@@ -570,6 +577,7 @@ class PlanningContext {
     nsa_planning_completed_ = false;
     planning_result_ = PlanningResult();
     last_planning_result_ = PlanningResult();
+    last_hpp_lateral_motion_traj_.clear();
     // planning_output_.Clear();
     memset(&planning_output_, 0, sizeof(planning_output_));
     adaptive_cruise_control_result_ = AdaptiveCruiseControlInfo();
@@ -589,6 +597,7 @@ class PlanningContext {
   PlanningResult planning_result_;
   // std::shared_ptr<PlanningResult> last_planning_result_;
   PlanningResult last_planning_result_;
+  TrajectoryPoints last_hpp_lateral_motion_traj_;
   iflyauto::PlanningOutput planning_output_;
   StatusInfo status_info_;
   LateralObstacleDeciderOutput lateral_obstacle_decider_output_;
