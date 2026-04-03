@@ -3979,12 +3979,24 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
 
     const auto& optimized_path_vec =
         apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputPathVec();
-
+    double end_pt_dist =
+        std::sqrt(std::pow(optimized_path_vec.back().pos.x() -
+                               planner_output.path_point_vec.back().pos.x(),
+                           2) +
+                  std::pow(optimized_path_vec.back().pos.y() -
+                               planner_output.path_point_vec.back().pos.y(),
+                           2));
+    const bool is_use_optimized_path = end_pt_dist < 0.08;
+    ILOG_INFO << "is_use_optimized_path:" << is_use_optimized_path
+              << ",end_pt_dist:" << end_pt_dist;
+    const auto selected_path = is_use_optimized_path
+                                   ? optimized_path_vec
+                                   : planner_output.path_point_vec;
     current_path_point_global_vec_.clear();
-    current_path_point_global_vec_.reserve(optimized_path_vec.size());
+    current_path_point_global_vec_.reserve(selected_path.size() );
 
     pnc::geometry_lib::PathPoint global_point;
-    for (const auto& path_point : optimized_path_vec) {
+    for (const auto& path_point : selected_path ) {
       global_point.Set(
           update_ego_info.l2g_tf.GetPos(path_point.pos),
           update_ego_info.l2g_tf.GetHeading(path_point.heading));
