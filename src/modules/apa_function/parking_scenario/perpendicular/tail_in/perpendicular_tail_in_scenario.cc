@@ -2925,126 +2925,135 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal(
     const geometry_lib::PathPoint& new_tar_pose,
     const geometry_lib::PathPoint& real_tar_pose) {
   const ApaParameters& param = apa_param.GetParam();
+  const CheckFinishParams& finish_params = param.check_finish_params;
 
-  if (new_path_final_line_length < 0.268) {
+  constexpr double kMinFinalLineLength = 0.268;
+  constexpr double kExtraSteerAllowanceDeg = 1.68;
+  constexpr double kSTurnColDetStep = 0.2;
+  constexpr double kReachTargetLonBuffer = 0.068;
+  constexpr double kLatAllowErr = 0.04;
+  constexpr double kFrontLatAllowErr = 0.06;
+  constexpr double kHalfGain = 0.5;
+  const std::vector<double> lat_err_breakpoints{0.01, 0.03, 0.05,
+                                                0.07, 0.09, 0.10};
+  const std::vector<double> min_line_length_table{1.3, 1.1, 0.9,
+                                                  0.7, 0.5, 0.368};
+
+  if (new_path_final_line_length < kMinFinalLineLength) {
     ILOG_INFO << "new path final line length is too small";
     return false;
   }
 
-  const bool new_path_has_sturn_flag = (s_turn_path.size() > 0);
+  const std::vector<double> sturn_lat_err_breakpoints{0.05, 0.10, 0.15, 0.20};
+  const std::vector<double> sturn_min_line_length_table{0.3, 0.7, 1.1, 1.5};
 
-  if (old_path_gear_change_count > 0 && !new_path_has_sturn_flag) {
-    ILOG_INFO << "old path has gear change and new path has no s turn";
+  const bool new_path_has_sturn = !s_turn_path.empty();
+  if (old_path_gear_change_count > 0 && !new_path_has_sturn) {
+    ILOG_INFO << "old path has gear change while new path has no s turn";
     return true;
   }
 
-  if (new_path_has_sturn_flag) {
+  if (new_path_has_sturn) {
     const double cur_steer =
         apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
         kRad2Deg;
     const double new_steer = std::atan(param.wheel_base * first_pt_kappa) *
                              param.steer_ratio * kRad2Deg;
-    if (std::fabs(cur_steer - new_steer) > param.max_steer_angle_deg + 1.68) {
+    const double steer_diff = std::fabs(cur_steer - new_steer);
+    const double max_allowed_steer_diff =
+        param.max_steer_angle_deg + kExtraSteerAllowanceDeg;
+    if (steer_diff > max_allowed_steer_diff) {
+      ILOG_INFO << "new path steer diff is too large for s turn";
       return false;
     }
   }
 
-  const geometry_lib::PathPoint old_front_pose =
-      GetCarFrontPoseFromCarPose(old_tar_pose);
+  struct PathPoseError {
+    double lat_err = 0.0;
+    double front_lat_err = 0.0;
+    double lon_err = 0.0;
+    double theta_err = 0.0;
+  };
 
-  const geometry_lib::PathPoint new_front_pose =
-      GetCarFrontPoseFromCarPose(new_tar_pose);
+  const auto calc_path_pose_error =
+      [&](const geometry_lib::PathPoint& tar_pose) -> PathPoseError {
+    const geometry_lib::PathPoint front_pose =
+        GetCarFrontPoseFromCarPose(tar_pose);
 
-  const geometry_lib::PathPoint real_front_pose =
-      GetCarFrontPoseFromCarPose(real_tar_pose);
+    PathPoseError path_pose_error;
+    path_pose_error.lat_err = tar_pose.GetY() - real_tar_pose.GetY();
+    path_pose_error.front_lat_err = front_pose.GetY() - real_tar_pose.GetY();
+    path_pose_error.lon_err = tar_pose.GetX() - real_tar_pose.GetX();
+    path_pose_error.theta_err =
+        (tar_pose.GetTheta() - real_tar_pose.GetTheta()) * kRad2Deg;
+    return path_pose_error;
+  };
 
-  const double old_lat_err = old_tar_pose.GetY() - real_tar_pose.GetY();
-  const double old_front_lat_err = old_front_pose.GetY() - real_tar_pose.GetY();
-  const double old_lon_err = old_tar_pose.GetX() - real_tar_pose.GetX();
-  const double old_theta_err =
-      (old_tar_pose.GetTheta() - real_tar_pose.GetTheta()) * kRad2Deg;
+  const PathPoseError old_err = calc_path_pose_error(old_tar_pose);
+  const PathPoseError new_err = calc_path_pose_error(new_tar_pose);
 
-  const double new_lat_err = new_tar_pose.GetY() - real_tar_pose.GetY();
-  const double new_front_lat_err = new_front_pose.GetY() - real_tar_pose.GetY();
-  const double new_lon_err = new_tar_pose.GetX() - real_tar_pose.GetX();
-  const double new_theta_err =
-      (new_tar_pose.GetTheta() - real_tar_pose.GetTheta()) * kRad2Deg;
+  ILOG_INFO << "old_lat_err = " << old_err.lat_err
+            << "  old_front_lat_err = " << old_err.front_lat_err
+            << "  old_lon_err = " << old_err.lon_err
+            << "  old_theta_err = " << old_err.theta_err
+            << "  new_lat_err = " << new_err.lat_err
+            << "  new_front_lat_err = " << new_err.front_lat_err
+            << "  new_lon_err = " << new_err.lon_err
+            << "  new_theta_err = " << new_err.theta_err;
 
-  ILOG_INFO << "old_lat_err = " << old_lat_err
-            << "  old_front_lat_err = " << old_front_lat_err
-            << "  old_lon_err = " << old_lon_err
-            << "  old_theta_err = " << old_theta_err
-            << "  new_lat_err = " << new_lat_err
-            << "  new_front_lat_err = " << new_front_lat_err
-            << "  new_lon_err = " << new_lon_err
-            << "  new_theta_err = " << new_theta_err;
-
-  // check s turn path tracking and security
-  if (new_path_has_sturn_flag) {
-    if (new_path_final_line_length <
-        mathlib::Interp1(
-            std::vector<double>{0.05, 0.10, 0.15, 0.20},
-            std::vector<double>{0.3, 0.7, 1.1, 1.5},
-            std::max(std::fabs(old_lat_err), std::fabs(old_front_lat_err)))) {
-      ILOG_INFO << "the old path err is bigger and new path final line length "
-                   "is relatively small";
+  if (new_path_has_sturn) {
+    const double old_max_lat_err =
+        std::max(std::fabs(old_err.lat_err), std::fabs(old_err.front_lat_err));
+    const double min_sturn_final_line_length = mathlib::Interp1(
+        sturn_lat_err_breakpoints, sturn_min_line_length_table, old_max_lat_err);
+    if (new_path_final_line_length < min_sturn_final_line_length) {
+      ILOG_INFO
+          << "old path lat err is larger while new path final line length "
+             "is relatively small";
       return false;
     }
 
     const auto& gjk_col_det_ptr =
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
-
     GJKColDetRequest gjk_col_det_req(
         true, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
         ApaObsMovementType::ALL, param.use_obs_height_method, true);
-
-    if (gjk_col_det_ptr->Update(s_turn_path, 0.2, 0.0, gjk_col_det_req)
+    if (gjk_col_det_ptr
+            ->Update(s_turn_path, kSTurnColDetStep, 0.0, gjk_col_det_req)
             .col_flag) {
-      ILOG_INFO << "the s turn path is not safe enough";
+      ILOG_INFO << "s turn path is not safe enough";
       return false;
     }
   }
 
-  if (old_lon_err > param.car_to_limiter_dis - 0.068 &&
-      geometry_lib::IsTwoNumerEqual(new_lon_err, 0.0)) {
-    ILOG_INFO << "old path not to target and new path reach it";
+  if (old_err.lon_err > param.car_to_limiter_dis - kReachTargetLonBuffer &&
+      geometry_lib::IsTwoNumerEqual(new_err.lon_err, 0.0)) {
+    ILOG_INFO << "old path does not reach target while new path reaches target";
     return true;
   }
 
-  const CheckFinishParams& finish_params = param.check_finish_params;
-  bool old_path_meet_finish = false;
+  const auto check_path_meet_finish = [&](const CarSlotRelationship ship,
+                                          const PathPoseError& path_err) {
+    if (ship == CarSlotRelationship::TOUCHING) {
+      return false;
+    }
+    const double finish_lat_err =
+        (ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
+                                            : finish_params.lat_err_strict);
+    const double finish_heading_err =
+        (ship == CarSlotRelationship::IDEAL ? finish_params.heading_err
+                                            : finish_params.heading_err_strict);
+    return std::fabs(path_err.lat_err) < finish_lat_err &&
+           std::fabs(path_err.front_lat_err) < finish_lat_err &&
+           std::fabs(path_err.theta_err) < finish_heading_err;
+  };
+
   const CarSlotRelationship old_ship = CalCarSlotRelationship(old_tar_pose);
-  if (old_ship != CarSlotRelationship::TOUCHING) {
-    const double finish_lat_err =
-        (old_ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
-                                                : finish_params.lat_err_strict);
-
-    const double finish_heading_err = (old_ship == CarSlotRelationship::IDEAL
-                                           ? finish_params.heading_err
-                                           : finish_params.heading_err_strict);
-
-    old_path_meet_finish = std::fabs(old_lat_err) < finish_lat_err &&
-                           std::fabs(old_front_lat_err) < finish_lat_err &&
-                           std::fabs(old_theta_err) < finish_heading_err;
-  }
-
   const CarSlotRelationship new_ship = CalCarSlotRelationship(new_tar_pose);
-  bool new_path_meet_finish = false;
-  if (new_ship != CarSlotRelationship::TOUCHING) {
-    const double finish_lat_err =
-        (new_ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
-                                                : finish_params.lat_err_strict);
+  const bool old_path_meet_finish = check_path_meet_finish(old_ship, old_err);
+  const bool new_path_meet_finish = check_path_meet_finish(new_ship, new_err);
 
-    const double finish_heading_err = (new_ship == CarSlotRelationship::IDEAL
-                                           ? finish_params.heading_err
-                                           : finish_params.heading_err_strict);
-
-    new_path_meet_finish = std::fabs(new_lat_err) < finish_lat_err &&
-                           std::fabs(new_front_lat_err) < finish_lat_err &&
-                           std::fabs(new_theta_err) < finish_heading_err;
-  }
-
-  ILOG_INFO << "check dynamic path optimal, bef_ship = "
+  ILOG_INFO << "check dynamic path optimal, old_ship = "
             << static_cast<int>(old_ship)
             << "  new_ship = " << static_cast<int>(new_ship)
             << "  old_path_meet_finish = " << old_path_meet_finish
@@ -3058,45 +3067,54 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal(
     return false;
   }
 
-  const std::vector<double> lat_err_tab{0.01, 0.03, 0.05, 0.07, 0.09, 0.10};
-  const std::vector<double> line_length_tab{1.3, 1.1, 0.9, 0.7, 0.5, 0.368};
+  const double old_max_lat_err =
+      std::max(std::fabs(old_err.lat_err), std::fabs(old_err.front_lat_err));
   const double min_line_length = mathlib::Interp1(
-      lat_err_tab, line_length_tab,
-      std::max(std::fabs(old_lat_err), std::fabs(old_front_lat_err)));
-
+      lat_err_breakpoints, min_line_length_table, old_max_lat_err);
   if (new_path_final_line_length < min_line_length) {
-    ILOG_INFO << "compared to this error, the new_path_final_line_length is "
-                 "too short";
+    ILOG_INFO << "new path final line length is too short for current error";
     return false;
   }
 
-  const double allow_err = 0.04;
-  const double front_allow_err = 0.06;
-
-  if (std::fabs(new_lat_err) > std::fabs(old_lat_err) &&
-      std::fabs(new_front_lat_err) > std::fabs(old_front_lat_err)) {
+  const double old_lat_err_abs = std::fabs(old_err.lat_err);
+  const double old_front_lat_err_abs = std::fabs(old_err.front_lat_err);
+  const double new_lat_err_abs = std::fabs(new_err.lat_err);
+  const double new_front_lat_err_abs = std::fabs(new_err.front_lat_err);
+  const bool new_path_worse_on_both_lat_metrics =
+      new_lat_err_abs > old_lat_err_abs &&
+      new_front_lat_err_abs > old_front_lat_err_abs;
+  if (new_path_worse_on_both_lat_metrics) {
+    ILOG_INFO << "new path is worse on both lat metrics";
     return false;
   }
 
-  if (std::fabs(old_lat_err) > std::fabs(new_lat_err) + allow_err ||
-      std::fabs(old_front_lat_err) >
-          std::fabs(new_front_lat_err) + front_allow_err) {
+  const bool new_path_clearly_better =
+      old_lat_err_abs > new_lat_err_abs + kLatAllowErr ||
+      old_front_lat_err_abs > new_front_lat_err_abs + kFrontLatAllowErr;
+  if (new_path_clearly_better) {
+    ILOG_INFO << "new path is clearly better on lat metrics";
     return true;
   }
 
-  if (std::fabs(old_lat_err) < std::fabs(new_lat_err) + allow_err &&
-      std::fabs(old_front_lat_err) <
-          std::fabs(new_front_lat_err) + front_allow_err) {
-    if (new_path_has_sturn_flag) {
-      return false;
-    } else {
-      if (std::fabs(old_lat_err) > std::fabs(new_lat_err) + allow_err * 0.5 ||
-          std::fabs(old_front_lat_err) >
-              std::fabs(new_front_lat_err) + front_allow_err * 0.5) {
-        return true;
-      }
+  const bool lat_err_is_close =
+      old_lat_err_abs < new_lat_err_abs + kLatAllowErr;
+  const bool front_lat_err_is_close =
+      old_front_lat_err_abs < new_front_lat_err_abs + kFrontLatAllowErr;
+  if (lat_err_is_close && front_lat_err_is_close) {
+    if (new_path_has_sturn) {
+      ILOG_INFO
+          << "lat metrics are close, prefer old path without extra s turn";
       return false;
     }
+
+    const bool new_path_slightly_better_without_sturn =
+        old_lat_err_abs > new_lat_err_abs + kLatAllowErr * kHalfGain ||
+        old_front_lat_err_abs >
+            new_front_lat_err_abs + kFrontLatAllowErr * kHalfGain;
+    if (new_path_slightly_better_without_sturn) {
+      ILOG_INFO << "lat metrics are close and new path is slightly better";
+    }
+    return new_path_slightly_better_without_sturn;
   }
 
   return false;
