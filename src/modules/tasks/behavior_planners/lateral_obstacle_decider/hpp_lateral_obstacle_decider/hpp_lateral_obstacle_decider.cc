@@ -161,16 +161,22 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       }
     }
   }
+
   for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
+    int64_t obs_id = obstacle->id();
     LatObstacleDecisionType decision;
     if (!obstacle->b_frenet_valid()) {
+      lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
       continue;
     }
-    int64_t obs_id = obstacle->id();
+
     if (obs_classification_result.id_to_rel_pos_type.find(obs_id)->second ==
-        ObstacleRelPosType::FAR_AWAY)
-      continue;
-    if (lat_obstacle_decision.find(obs_id) == lat_obstacle_decision.end()) {
+        ObstacleRelPosType::FAR_AWAY) {
+        lat_obstacle_decision[obs_id] = LatObstacleDecisionType::IGNORE;
+        continue;
+      }
+
+    if (lat_obstacle_decision.find(obs_id) == lat_obstacle_decision.end() && !obstacle->is_static()) {
       MakeDecisionForSingleDynamicObs(reference_path_ptr, obstacle, decision);
       lat_obstacle_decision[obs_id] = decision;
     }
@@ -217,109 +223,678 @@ void HppLateralObstacleDecider::MakeDecisionForTurnstile(
   }
 }
 
+ObstacleRelPosType HppLateralObstacleDecider::ClassifyObstaclesByRelPos(
+    const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr,
+    const ObstacleRelPosFilterParam &obs_rel_pos_filter_param) {
+  const double kFarAwayLonFrontThr = obs_rel_pos_filter_param.kFarAwayLonFrontThr;  // 判断障碍物在自车前方远处
+  const double kFarAwayLonBackThr = obs_rel_pos_filter_param.kFarAwayLonBackThr;  // 判断障碍物在自车后方远处
+  const double kFarAwayLatRelThr = obs_rel_pos_filter_param.kFarAwayLatRelThr;  // 判断障碍物在自车侧向远处
+  const double kSideObsFrontThr = obs_rel_pos_filter_param.kSideObsFrontThr;  // 判断障碍物是否和自车并排的前方阈值
+  const double kSideObsBackThr = obs_rel_pos_filter_param.kSideObsBackThr;  // 判断障碍物是否和自车并排的后方阈值
+  const double kMidObsAbsThr = obs_rel_pos_filter_param.kMidObsAbsThr;
+  const double kMidObsRelThr = obs_rel_pos_filter_param.kMidObsRelThr;
+
+  const double ego_start_s = ego_state.boundary().s_start;
+  const double ego_end_s = ego_state.boundary().s_end;
+  const double ego_start_l = ego_state.boundary().l_start;
+  const double ego_end_l = ego_state.boundary().l_end;
+  const double ego_l = ego_state.l();
+  const auto& obs_boundary = obs_ptr->frenet_obstacle_boundary();
+  const double obs_start_s = obs_boundary.s_start;
+  const double obs_end_s = obs_boundary.s_end;
+  const double obs_start_l = obs_boundary.l_start;
+  const double obs_end_l = obs_boundary.l_end;
+  const double obs_l = obs_ptr->frenet_l();
+
+  ObstacleRelPosType type = ObstacleRelPosType::FAR_AWAY;
+  bool is_lon_far_away = (obs_start_s > ego_end_s + kFarAwayLonFrontThr ||
+                          obs_end_s < ego_start_s - kFarAwayLonBackThr);
+
+  if (is_lon_far_away) {
+    type = ObstacleRelPosType::FAR_AWAY;
+  } else if (obs_start_s > ego_end_s + kSideObsFrontThr) {
+    if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
+      type = ObstacleRelPosType::LEFT_FRONT;
+    } else if (obs_end_l <
+               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
+      type = ObstacleRelPosType::RIGHT_FRONT;
+    } else {
+      type = ObstacleRelPosType::MID_FRONT;
+    }
+  } else if (obs_end_s < ego_start_s - kSideObsBackThr) {
+    if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
+      type = ObstacleRelPosType::LEFT_BACK;
+    } else if (obs_end_l <
+               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
+      type = ObstacleRelPosType::RIGHT_BACK;
+    } else {
+      type = ObstacleRelPosType::MID_BACK;
+    }
+  } else {
+    if (obs_l > ego_l) {
+      type = ObstacleRelPosType::LEFT_SIDE;
+    } else {
+      type = ObstacleRelPosType::RIGHT_SIDE;
+    }
+  }
+  return type;
+}
+
+/**
+ * @brief 判断剩余道路宽度，是否满足自车通过
+ * @param
+ * @return void
+ * @note
+ */
+void HppLateralObstacleDecider::JudgePassageWidthForSingleDynamicObs(
+    const FrenetObstacleBoundary &obstacle_frenet_boundary, LatObstacleDecisionInfo &decision_info,
+    const double LeftkPositionJumpThreshold = 0.0, const double RightkPositionJumpThreshold = 0.0) {
+  const VehicleParam &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  // left decision
+  if (obstacle_frenet_boundary.obs_2left_road_boundary_mindis <
+      vehicle_param.width +
+          hpp_general_lateral_decider_config_.dynamic_obs_relative_nudge_buffer +
+          LeftkPositionJumpThreshold) {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  } else if (obstacle_frenet_boundary.obs_2left_road_boundary_mindis <
+             vehicle_param.width +
+                 hpp_general_lateral_decider_config_.dynamic_obs_absolute_nudge_buffer +
+                 LeftkPositionJumpThreshold) {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+  } else {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+  }
+  // right decision
+  if (obstacle_frenet_boundary.obs_2right_road_boundary_mindis <=
+      vehicle_param.width +
+          hpp_general_lateral_decider_config_.dynamic_obs_relative_nudge_buffer +
+          RightkPositionJumpThreshold) {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  } else if (obstacle_frenet_boundary.obs_2right_road_boundary_mindis <
+             vehicle_param.width +
+                 hpp_general_lateral_decider_config_.dynamic_obs_absolute_nudge_buffer +
+                 RightkPositionJumpThreshold) {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+  } else {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+  }
+
+  // make final decision
+  if (decision_info.right_nudge_level ==
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      decision_info.decision = LatObstacleDecisionType::LEFT;
+    } else {
+      decision_info.decision = LatObstacleDecisionType::IGNORE;
+    }
+  } else if (decision_info.right_nudge_level ==
+                 LatObstacleNudgeLevel::RELATIVE_NUDGE ||
+             decision_info.right_nudge_level ==
+                 LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+    if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      if (obstacle_frenet_boundary.obs_2left_road_boundary_mindis >
+          obstacle_frenet_boundary.obs_2right_road_boundary_mindis) {
+        decision_info.decision = LatObstacleDecisionType::LEFT;
+      } else {
+        decision_info.decision = LatObstacleDecisionType::RIGHT;
+      }
+    } else {
+      decision_info.decision = LatObstacleDecisionType::RIGHT;
+    }
+  }
+
+}
+
+bool HppLateralObstacleDecider::JudgeObsAndEgoInSameStraightLane(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr,
+    const std::shared_ptr<FrenetObstacle> &obstacle) {
+  //判断障碍物和自车是否在同一段直行车道上,仅都在一个直道再考虑相对位置决策
+  const auto &ego_state = reference_path_ptr->get_frenet_ego_state();
+  const double obstacle_s_start = obstacle->frenet_obstacle_boundary().s_start;
+  const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
+  const double obstacle_center_s = (obstacle_s_start + obstacle_s_end) * 0.5;
+  const QueryTypeInfo type_info = {CRoadType::NormalStraight,
+                                   CPassageType::Ignore, CElemType::Ignore};
+  const std::pair<double, double> ego_locate_straight_lane =
+      reference_path_ptr->get_static_analysis_storage()->GetFrontSRange(
+          type_info, ego_state.s());
+  if (ego_locate_straight_lane.first > ego_locate_straight_lane.second) {
+    return false;
+  }
+  const bool is_ego_locate_straight_lane =
+      ego_locate_straight_lane.first < ego_state.s();
+  const bool is_obstacle_locate_straight_lane =
+      obstacle_center_s > ego_locate_straight_lane.first &&
+      obstacle_center_s < ego_locate_straight_lane.second;
+  if (is_ego_locate_straight_lane && is_obstacle_locate_straight_lane) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void HppLateralObstacleDecider::AnalyzeNudgeLevelBaseCurve(
+    const FrenetObstacleBoundary &obstacle_frenet_boundary,
+    const LatObstacleDecisionInfo &previous_decision_info,
+    LatObstacleDecisionInfo &decision_info) {
+  const VehicleParam &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  Point2D ideal_target_point_frenet;
+  Point2D ego_point_frenet;
+
+  ideal_target_point_frenet.x =
+      obstacle_frenet_boundary.s_start - vehicle_param.front_edge_to_rear_axle;
+  ego_point_frenet.x = reference_path_ptr_->get_frenet_ego_state().s();
+  ego_point_frenet.y = reference_path_ptr_->get_frenet_ego_state().l();
+  auto cal_kappa = [](const std::shared_ptr<ReferencePath> reference_path_ptr_,
+                      const VehicleParam &vehicle_param,
+                      const Point2D &ideal_target_point_frenet,
+                      const Point2D &ego_point_frenet, const bool is_left,
+                      LatObstacleDecisionInfo &decision_info) {
+    const double min_radius = vehicle_param.min_turn_radius;
+    const double kAbsoluteSafeKappa = 1 / (2.5 * min_radius);
+    const double kRelativeSafeKappa = 1 / (1.8 * min_radius);
+    double length_AH = 0.0;
+    if (is_left) {
+      length_AH = (ideal_target_point_frenet.y - ego_point_frenet.y) * 0.5;
+    } else {
+      length_AH = -(ideal_target_point_frenet.y - ego_point_frenet.y) * 0.5;
+    }
+    const double squared_AH = std::pow(length_AH, 2);
+    const double squared_PH =
+        std::pow((ideal_target_point_frenet.x - ego_point_frenet.x * 0.5), 2);
+    const double kappa = std::fabs(2 * length_AH) / (squared_AH + squared_PH);
+    if (is_left) {
+      if (kappa <= kAbsoluteSafeKappa) {
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+      } else if (kappa <= kRelativeSafeKappa) {
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+      } else {
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+      }
+    } else {
+      if (kappa <= kAbsoluteSafeKappa) {
+        decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+      } else if (kappa <= kRelativeSafeKappa) {
+        decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+      } else {
+        decision_info.right_nudge_level =
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+      }
+    }
+  };
+  // left curve path
+  if (previous_decision_info.left_nudge_level !=
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    ideal_target_point_frenet.y =
+        obstacle_frenet_boundary.l_end +
+        hpp_general_lateral_decider_config_.ego_detour_safe_dis +
+        vehicle_param.max_width * 0.5;
+    cal_kappa(reference_path_ptr_, vehicle_param, ideal_target_point_frenet,
+              ego_point_frenet, true, decision_info);
+  } else {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  }
+  // right curve path
+  if (previous_decision_info.right_nudge_level !=
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    ideal_target_point_frenet.y =
+        obstacle_frenet_boundary.l_start -
+        hpp_general_lateral_decider_config_.ego_detour_safe_dis -
+        vehicle_param.max_width * 0.5;
+    cal_kappa(reference_path_ptr_, vehicle_param, ideal_target_point_frenet,
+              ego_point_frenet, false, decision_info);
+  } else {
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  }
+}
+
+void HppLateralObstacleDecider::MakeDecisionBasedLastTrajRelativePos(
+    const FrenetObstacleBoundary &obstacle_frenet_boundary,
+    const FrenetBoundary &ego_frenet_boundary,
+    const LatObstacleDecisionInfo &previous_decision_info,
+    LatObstacleDecisionInfo decision_info) {
+
+  if (previous_decision_info.left_nudge_level ==
+          LatObstacleNudgeLevel::FORBIDDEN_NUDGE &&
+      previous_decision_info.right_nudge_level ==
+          LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    decision_info.decision = LatObstacleDecisionType::IGNORE;
+    return;
+  }
+
+  const double obstacle_s_start  = obstacle_frenet_boundary.s_start;
+  const double obstacle_s_end    = obstacle_frenet_boundary.s_end;
+  const double obstacle_l_start  = obstacle_frenet_boundary.l_start;
+  const double obstacle_l_end    = obstacle_frenet_boundary.l_end;
+  const double obstacle_center_l = (obstacle_l_start + obstacle_l_end) * 0.5;
+  const auto &ego_state = reference_path_ptr_->get_frenet_ego_state();
+
+  //直行轨迹
+  if (obstacle_center_l > ego_state.l()) {
+    const double dis_left = obstacle_l_start - ego_frenet_boundary.l_end;
+    if (dis_left > hpp_general_lateral_decider_config_.ego_detour_safe_dis) {
+      decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    } else {
+      //曲线轨迹
+      AnalyzeNudgeLevelBaseCurve(obstacle_frenet_boundary, previous_decision_info,
+                                 decision_info);
+    }
+  } else {
+    const double dis_right = ego_frenet_boundary.l_start - obstacle_l_end;
+    if (dis_right > hpp_general_lateral_decider_config_.ego_detour_safe_dis) {
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+      decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    } else {
+      //曲线轨迹
+      AnalyzeNudgeLevelBaseCurve(obstacle_frenet_boundary, previous_decision_info,
+                                 decision_info);
+    }
+  }
+
+  // make final decision
+  if (decision_info.right_nudge_level ==
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      decision_info.decision = LatObstacleDecisionType::LEFT;
+    } else {
+      decision_info.decision = LatObstacleDecisionType::IGNORE;
+    }
+  } else if (decision_info.right_nudge_level ==
+                 LatObstacleNudgeLevel::RELATIVE_NUDGE ||
+             decision_info.right_nudge_level ==
+                 LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+    if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      decision_info.decision = LatObstacleDecisionType::LEFT;
+    } else {
+      decision_info.decision = LatObstacleDecisionType::RIGHT;
+    }
+  }
+}
+
+void HppLateralObstacleDecider::CalObstacleFrenetBoundary(FrenetObstacleBoundary &frenet_boundary) {
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const VehicleParam& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double s_start = frenet_boundary.s_start;
+  const double s_end   = frenet_boundary.s_end;
+  const double l_start = frenet_boundary.l_start;
+  const double l_end   = frenet_boundary.l_end;
+  const double center_l = (l_start + l_end) * 0.5;
+
+  ReferencePathPoint refpath_pt;
+  reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt);
+  const double obs_start2left_road_boundary_dis =
+      refpath_pt.left_drivable_width - l_end;
+  const double obs_start2right_road_boundary_dis =
+      refpath_pt.right_drivable_width + l_start;
+
+  reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt);
+  const double obs_end2left_road_boundary_dis =
+      refpath_pt.left_drivable_width - l_end;
+  const double obs_end2right_road_boundary_dis =
+      refpath_pt.right_drivable_width + l_start;
+
+  const double obs_2left_road_boundary_mindis =
+      std::max(obs_start2left_road_boundary_dis,
+               obs_end2left_road_boundary_dis);  //距离带正负
+  const double obs_2right_road_boundary_mindis = std::min(
+      obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
+  ILOG_INFO << "obs_2left_road_boundary_mindis = "
+            << obs_2left_road_boundary_mindis
+            << ", obs_2right_road_boundary_mindis = "
+            << obs_2right_road_boundary_mindis;
+  frenet_boundary.obs_2left_road_boundary_mindis =
+      obs_2left_road_boundary_mindis;
+  frenet_boundary.obs_2right_road_boundary_mindis =
+      obs_2right_road_boundary_mindis;
+}
+
+bool HppLateralObstacleDecider::MakeDecisionBasedTrajSLForDynamicObs(
+      const std::vector<LatObstacleDecisionInfo> &passage_width_info_vec,
+      const double min_obs_2left_road_boundary_mindis,
+      const double min_obs_2right_road_boundary_mindis,
+      LatObstacleDecisionInfo &relative_pos_result) {
+  if(passage_width_info_vec.empty()) {
+    relative_pos_result.decision = LatObstacleDecisionType::IGNORE;
+    return false;
+  }
+
+  bool has_left_forbidden_nudge = false;
+  bool has_right_forbidden_nudge = false;
+  bool has_left_relative_nudge = false;
+  bool has_right_relative_nudge = false;
+
+  bool has_ignore = false;
+
+  for (const auto &decision_info : passage_width_info_vec) {
+    if (decision_info.left_nudge_level ==
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+        has_left_forbidden_nudge = true;
+    }
+
+    if (decision_info.right_nudge_level ==
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+        has_right_forbidden_nudge = true;
+    }
+
+    if (decision_info.left_nudge_level == LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      has_left_relative_nudge = true;
+    }
+
+    if (decision_info.right_nudge_level == LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      has_right_relative_nudge = true;
+    }
+
+    if (decision_info.decision == LatObstacleDecisionType::IGNORE) {
+      has_ignore = true;
+    }
+  }
+
+  if (has_ignore) {
+    relative_pos_result.decision = LatObstacleDecisionType::IGNORE;
+  }
+
+  if (has_left_forbidden_nudge) {
+    relative_pos_result.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  }else if (has_left_relative_nudge) {
+    relative_pos_result.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+  } else {
+    relative_pos_result.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+  }
+
+  if (has_right_forbidden_nudge) {
+    relative_pos_result.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+  }else if (has_right_relative_nudge) {
+    relative_pos_result.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
+  } else {
+    relative_pos_result.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+  }
+
+  // make current frame decision
+  if (relative_pos_result.right_nudge_level ==
+      LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    if (relative_pos_result.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        relative_pos_result.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      relative_pos_result.decision = LatObstacleDecisionType::LEFT;
+    } else {
+      relative_pos_result.decision = LatObstacleDecisionType::IGNORE;
+    }
+  } else if (relative_pos_result.right_nudge_level ==
+                 LatObstacleNudgeLevel::RELATIVE_NUDGE ||
+             relative_pos_result.right_nudge_level ==
+                 LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+    if (relative_pos_result.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
+        relative_pos_result.left_nudge_level ==
+            LatObstacleNudgeLevel::RELATIVE_NUDGE) {
+      if (min_obs_2left_road_boundary_mindis > min_obs_2right_road_boundary_mindis) {
+        relative_pos_result.decision = LatObstacleDecisionType::LEFT;
+      } else {
+        relative_pos_result.decision = LatObstacleDecisionType::RIGHT;
+      }
+    } else {
+      relative_pos_result.decision = LatObstacleDecisionType::RIGHT;
+    }
+  }
+  return true;
+}
+
+void HppLateralObstacleDecider::MakeDecisionBasedReferPath(
+    const std::shared_ptr<FrenetObstacle> &obstacle,
+    LatObstacleDecisionInfo &decision_info) {
+
+  decision_info.decision = LatObstacleDecisionType::IGNORE;
+  auto it = obstacle_consistency_map_.find(obstacle->id());
+  if (it != obstacle_consistency_map_.end()) {
+    decision_info.decision = it->second.last_decision;
+  }
+}
+
+
+void HppLateralObstacleDecider::MakeFrameFinalDecision(
+    LatObstacleDecisionInfo &passage_width_info,
+    LatObstacleDecisionInfo &relative_pos_info,
+    LatObstacleDecisionInfo &last_path_info,
+    LatObstacleDecisionInfo &decision_info) {
+  ILOG_INFO << "FrameFinalDecision passage_width_info.decision = "
+            << static_cast<int>(passage_width_info.decision)
+            << "  passage_width_info.left_nudge_level = "
+            << static_cast<int>(passage_width_info.left_nudge_level)
+            << "  passage_width_info.right_nudge_level = "
+            << static_cast<int>(passage_width_info.right_nudge_level);
+  ILOG_INFO << "FrameFinalDecision relative_pos_info.decision = "
+            << static_cast<int>(passage_width_info.decision)
+            << "  relative_pos_info.left_nudge_level = "
+            << static_cast<int>(passage_width_info.left_nudge_level)
+            << "  relative_pos_info.right_nudge_level = "
+            << static_cast<int>(passage_width_info.right_nudge_level);
+  if (passage_width_info.decision == LatObstacleDecisionType::IGNORE ||
+      relative_pos_info.decision == LatObstacleDecisionType::IGNORE) {
+    decision_info.decision = LatObstacleDecisionType::IGNORE;
+    return;
+  }
+  if (passage_width_info.left_nudge_level ==
+          LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+      passage_width_info.right_nudge_level ==
+          LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+      relative_pos_info.left_nudge_level ==
+          LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+      relative_pos_info.right_nudge_level ==
+          LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+    if (passage_width_info.left_nudge_level ==
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+        relative_pos_info.left_nudge_level ==
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+      if (passage_width_info.left_nudge_level !=
+          relative_pos_info.left_nudge_level) {
+        decision_info.decision = LatObstacleDecisionType::IGNORE;
+      } else {
+        decision_info.decision = LatObstacleDecisionType::RIGHT;
+      }
+    }
+    if (passage_width_info.right_nudge_level ==
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+        relative_pos_info.right_nudge_level ==
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+      if (passage_width_info.right_nudge_level !=
+          relative_pos_info.right_nudge_level) {
+        decision_info.decision = LatObstacleDecisionType::IGNORE;
+      } else {
+        decision_info.decision = LatObstacleDecisionType::LEFT;
+      }
+    }
+  } else {
+    if (passage_width_info.decision == relative_pos_info.decision) {
+      decision_info.decision = passage_width_info.decision;
+    } else {
+      if (passage_width_info.decision == LatObstacleDecisionType::LEFT) {
+        if (passage_width_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+          if (relative_pos_info.right_nudge_level !=
+              LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+            decision_info.decision = passage_width_info.decision;
+          } else {
+            decision_info.decision = last_path_info.decision;
+          }
+        } else {
+          if (relative_pos_info.right_nudge_level ==
+              LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+            decision_info.decision = relative_pos_info.decision;
+          } else {
+            decision_info.decision = last_path_info.decision;
+          }
+        }
+      } else {
+        if (passage_width_info.right_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+          if (relative_pos_info.left_nudge_level !=
+              LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+            decision_info.decision = passage_width_info.decision;
+          } else {
+            decision_info.decision = last_path_info.decision;
+          }
+        } else {
+          if (relative_pos_info.left_nudge_level ==
+              LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+            decision_info.decision = relative_pos_info.decision;
+          } else {
+            decision_info.decision = last_path_info.decision;
+          }
+        }
+      }
+    }
+  }
+  ILOG_INFO << "FrameFinalDecision final decision = " << static_cast<int>(decision_info.decision);
+}
+
+void HppLateralObstacleDecider::MakeDecisionBaseLastTrajLonSingleDynamicObs(
+    const std::shared_ptr<FrenetObstacle> &obstacle, LatObstacleDecisionType &decision) {
+    // 获取自车轨迹点
+    const auto &last_traj_points = session_->mutable_planning_context()
+                               ->mutable_last_planning_result()
+                               .raw_traj_points;
+    const VehicleParam& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+    const auto &frenet_polygon_sequence = obstacle->frenet_polygon_sequence();
+    std::vector<LatObstacleDecisionInfo> passage_width_info_vec;
+    int min_size = std::min(last_traj_points.size(), frenet_polygon_sequence.size());
+
+    LatObstacleDecisionInfo last_path_info;
+    last_path_info.decision = LatObstacleDecisionType::IGNORE;
+    MakeDecisionBasedReferPath(obstacle, last_path_info);
+
+    // 判断未来5s 目标与自车不重叠
+    // 判断左右绕障空间
+    double min_obs_2left_road_boundary_mindis = std::numeric_limits<double>::max();
+    double min_obs_2right_road_boundary_mindis = std::numeric_limits<double>::max();
+    for(int i = 0; i < min_size; i++) {
+      LatObstacleDecisionInfo cur_frame_passage_width_info;
+      LatObstacleDecisionInfo cur_frame_relative_pos_info;
+      LatObstacleDecisionInfo cur_frame_decision_info;
+      auto ego_frenet_point = last_traj_points[i];
+      const double dynamic_scene_ego_traj_expand_s = vehicle_param.length + 2 * hpp_general_lateral_decider_config_.dynamic_scene_ego_traj_expand_s;
+      const Vec2d center(ego_frenet_point.s, ego_frenet_point.l);
+      Box2d ego_box(center, 0.0, dynamic_scene_ego_traj_expand_s, vehicle_param.width);
+      Polygon2d ego_ploygon2d(ego_box);
+
+      auto obj_frenet_point = frenet_polygon_sequence[i];
+
+      FrenetObstacleBoundary obstacle_frenet_boundary;
+      obstacle_frenet_boundary.l_end   = obj_frenet_point.second.max_y();
+      obstacle_frenet_boundary.l_start = obj_frenet_point.second.min_y();
+      obstacle_frenet_boundary.s_start = obj_frenet_point.second.min_x() + hpp_general_lateral_decider_config_.dynamic_scene_obs_traj_expand_s;
+      obstacle_frenet_boundary.s_end   = obj_frenet_point.second.max_x() + hpp_general_lateral_decider_config_.dynamic_scene_obs_traj_expand_s;
+      CalObstacleFrenetBoundary(obstacle_frenet_boundary);
+
+      FrenetBoundary ego_frenet_boundary;
+      ego_frenet_boundary.l_end   = ego_frenet_point.l + vehicle_param.width / 2.0;
+      ego_frenet_boundary.l_start = ego_frenet_point.l - vehicle_param.width / 2.0;
+      ego_frenet_boundary.s_start = ego_frenet_point.s - vehicle_param.length / 2.0;
+      ego_frenet_boundary.s_end   = ego_frenet_point.s + vehicle_param.length / 2.0;
+
+      Polygon2d expand_obj_ploygon2d = obj_frenet_point.second.ExpandByDistance(1.0);
+      // bool has_overlap = expand_obj_ploygon2d.HasOverlap(ego_ploygon2d);
+
+
+      if (obstacle_frenet_boundary.obs_2left_road_boundary_mindis < min_obs_2left_road_boundary_mindis) {
+        min_obs_2left_road_boundary_mindis = obstacle_frenet_boundary.obs_2left_road_boundary_mindis;
+      }
+
+      if (obstacle_frenet_boundary.obs_2right_road_boundary_mindis < min_obs_2right_road_boundary_mindis) {
+        min_obs_2right_road_boundary_mindis = obstacle_frenet_boundary.obs_2right_road_boundary_mindis;
+      }
+
+      JudgePassageWidthForSingleDynamicObs(obstacle_frenet_boundary, cur_frame_passage_width_info);
+
+      MakeDecisionBasedLastTrajRelativePos(obstacle_frenet_boundary, ego_frenet_boundary, cur_frame_passage_width_info, cur_frame_relative_pos_info);
+
+      MakeFrameFinalDecision(cur_frame_passage_width_info, cur_frame_relative_pos_info, last_path_info, cur_frame_decision_info);
+      passage_width_info_vec.push_back(cur_frame_decision_info);
+    }
+    LatObstacleDecisionInfo passage_width_info;
+    bool res = MakeDecisionBasedTrajSLForDynamicObs(passage_width_info_vec, min_obs_2left_road_boundary_mindis,
+                                                    min_obs_2right_road_boundary_mindis, passage_width_info);
+
+    decision = passage_width_info.decision;
+}
+
 // TODO:动态障碍物暂时先使用旧版基于规则的决策，后续方案确定再更改
 void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
     const std::shared_ptr<FrenetObstacle> &obstacle,
     LatObstacleDecisionType &decision) {
-  const auto &reference_path = session_->planning_context()
-                                   .lane_change_decider_output()
-                                   .coarse_planning_info.reference_path;
-  auto ego_l_max = reference_path->get_frenet_ego_state().boundary().l_end;
-  auto ego_l_min = reference_path->get_frenet_ego_state().boundary().l_start;
-  auto ego_head_l = reference_path_ptr->get_frenet_ego_state().head_l();
-  auto ego_head_s_ = reference_path_ptr->get_frenet_ego_state().head_s();
-  const auto &vehicle_param =
+  const VehicleParam &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto ego_width = vehicle_param.width;
-  const auto half_ego_width = vehicle_param.width * 0.5;
-  auto &lat_obstacle_decision = session_->mutable_planning_context()
-                                    ->mutable_lateral_obstacle_decider_output()
-                                    .lat_obstacle_decision;
-  constexpr double kNearFrontThreshold = 7;
-  constexpr double kHeadLBuffer = 0.5;
-  if (obstacle->b_frenet_valid()) {
-    const double obstacle_l_start =
-        obstacle->frenet_obstacle_boundary().l_start;
-    const double obstacle_l_end = obstacle->frenet_obstacle_boundary().l_end;
-    const double obstacle_s_start =
-        obstacle->frenet_obstacle_boundary().s_start;
-    const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
-    if (EdtManager::FilterObstacleForAra(*obstacle)) {
-      double l_buffer = config_.left_l_buffer_for_lat_decision;
-      const double ego_head_l_start = ego_head_l - half_ego_width;
-      const double ego_head_l_end = ego_head_l + half_ego_width;
-      const double ego_s_start =
-          reference_path_ptr->get_frenet_ego_state().boundary().s_start;
-      const double ego_s_end =
-          reference_path_ptr->get_frenet_ego_state().boundary().s_end;
-      double start_s = std::max(ego_s_start, obstacle_s_start);
-      double end_s = std::min(ego_s_end, obstacle_s_end);
-      bool lon_overlap = start_s < end_s;
 
-      // 平行车辆
-      if (lon_overlap) {
-        ego_head_l = reference_path_ptr->get_frenet_ego_state().head_l();
-        double ego_l = reference_path_ptr->get_frenet_ego_state().l();
-        const double ego_l_start = ego_l - half_ego_width;
-        const double ego_l_end = ego_l + half_ego_width;
-        double start_l = std::max(ego_l_start, obstacle_l_start);
-        double end_l = std::min(ego_l_end, obstacle_l_end);
-        double start_head_l = std::max(ego_head_l_start, obstacle_l_start);
-        double end_head_l = std::min(ego_head_l_end, obstacle_l_end);
-        constexpr double kLatOverlapBuffer = 0.25;
-        bool lat_overlap = (start_l < end_l - kLatOverlapBuffer) &&
-                           (start_head_l < end_head_l - kLatOverlapBuffer);
 
-        if (ego_s_end > obstacle_s_end) {
-          if (ego_l < obstacle->frenet_l()) {
-            decision = LatObstacleDecisionType::RIGHT;
-          } else {
-            decision = LatObstacleDecisionType::LEFT;
-          }
-        } else {
-          if (ego_head_l < obstacle->frenet_l()) {
-            decision = LatObstacleDecisionType::RIGHT;
-          } else {
-            decision = LatObstacleDecisionType::LEFT;
-          }
-        }
-        // 防止感知误检，同时有横向和纵向overlap
-        if (lat_overlap) {
-          decision = LatObstacleDecisionType::IGNORE;
-        }
-      } else {
-        if (obstacle->frenet_l() > 0) {
-          if (obstacle_l_start > -l_buffer) {
-            decision = LatObstacleDecisionType::RIGHT;
-          } else {
-            decision = LatObstacleDecisionType::IGNORE;
-          }
-        } else {
-          if (obstacle_l_end < l_buffer) {
-            decision = LatObstacleDecisionType::LEFT;
-          } else {
-            decision = LatObstacleDecisionType::IGNORE;
-          }
-        }
-        if (obstacle_s_start > ego_head_s_ &&
-            obstacle_s_start < ego_head_s_ + kNearFrontThreshold) {
-          if (ego_head_l_start > obstacle_l_end - kHeadLBuffer) {
-            decision = LatObstacleDecisionType::LEFT;
-          } else if (ego_head_l_end < obstacle_l_start + kHeadLBuffer) {
-            decision = LatObstacleDecisionType::RIGHT;
-          }
-        }
-      }
-    } else {
-      decision = LatObstacleDecisionType::IGNORE;
-    }
-  } else {
+  // Step 1. 判断障碍物位置
+  const auto &ego_state = reference_path_ptr->get_frenet_ego_state();
+
+  ObstacleRelPosFilterParam rel_pos_filter_param_base = {50.0,5.0,5.0,0.0,0.0,2.0,1.0};
+
+  const auto rel_pos_type_base = ClassifyObstaclesByRelPos(ego_state, obstacle, rel_pos_filter_param_base);
+
+  const bool obj_is_front_base = (rel_pos_type_base == ObstacleRelPosType::MID_FRONT) ||
+                            (rel_pos_type_base == ObstacleRelPosType::LEFT_FRONT)||
+                            (rel_pos_type_base == ObstacleRelPosType::RIGHT_FRONT);
+  const bool obj_is_side_base = (rel_pos_type_base == ObstacleRelPosType::LEFT_SIDE) ||
+                            (rel_pos_type_base == ObstacleRelPosType::RIGHT_SIDE);
+
+  if(!obj_is_front_base && !obj_is_side_base) {
     decision = LatObstacleDecisionType::IGNORE;
   }
-  SerializeDynamicObsDecideResultToDebugInfo(obstacle, decision);
-}
 
+  // 1.1 判断自车和障碍物是否在同一个直道  是否要区分判断
+  const bool use_relativepos_decision =
+      JudgeObsAndEgoInSameStraightLane(reference_path_ptr_, obstacle);
+
+  // Step 2. 自车掌握路权，判断是否可优先通过
+  if(obj_is_side_base) {
+    MakeDecisionBaseLastTrajLonSingleDynamicObs(obstacle, decision);
+  } else {
+    if(obstacle->obstacle()->is_VRU()) {
+      // Step 3. 目标是VRU
+      // 区分横穿/纵向
+      // Step 3.1 纵向
+      if (obstacle->frenet_velocity_l() < 0.56) {
+        MakeDecisionBaseLastTrajLonSingleDynamicObs(obstacle, decision);
+      } else {
+        // Step 3.2 横穿
+        // TTY：目标到达自车运行轨迹边界的时间
+        // TTE: 自车运行到目标纵向距离的时间
+        const double tty = std::fmin(100.0, obstacle->frenet_l() / (obstacle->frenet_velocity_l() + 1e-6));
+        const double tte = std::fmin(100.0, obstacle->frenet_s() / (ego_state.velocity_s() + 1e-6));
+        if(tty <= (tte + 8.0)) {
+          decision = LatObstacleDecisionType::IGNORE;
+          // 停止线 长度
+        } else {
+          MakeDecisionBaseLastTrajLonSingleDynamicObs(obstacle, decision);
+        }
+      }
+    }
+  }
+}
 void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
     const ObstacleCluster &cluster,
     const ObstacleConsistencyMap &obstacle_consistency_map,
@@ -666,10 +1241,12 @@ void HppLateralObstacleDecider::SerializeStaticObsDecideResultToDebugInfo(
       DebugInfoManager::GetInstance()
           .GetDebugInfoPb()
           ->mutable_hpp_lateral_obstacle_decider_result();
+
   auto *static_cluster_obstacle_info =
       hpp_lateral_obstacle_decider_result->add_static_obstacle_clusters();
   static_cluster_obstacle_info->set_final_decison_result(
       static_cast<common::LatObstacleDecisionType>(decision));
+
   for (size_t i = 0; i < cluster.original_ids.size(); i++) {
     auto *original_obs = static_cluster_obstacle_info->add_original_obstacle();
     original_obs->set_original_id(cluster.original_ids.at(i));
