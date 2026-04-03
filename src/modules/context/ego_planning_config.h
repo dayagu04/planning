@@ -318,7 +318,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_fusion_intersection_objects = false;
   bool enable_fusion_parking_slot = false;
   bool enable_fusion_ground_line = true;
-  bool enable_parking_prediction = false;
+  bool enable_parking_prediction = true;
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
   bool enable_uss = false;

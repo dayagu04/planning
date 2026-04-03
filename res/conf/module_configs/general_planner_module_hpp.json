@@ -2,6 +2,7 @@
   "trajectory_time_length": 5.0,
   "planning_dt": 0.2,
   "enable_raw_ego_prediction": false,
+  "enable_parking_prediction": true,
   "planner_type": 3,
   "failure_counter_thrshld": 5,
   "enable_dagger": false,
