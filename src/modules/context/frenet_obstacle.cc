@@ -293,7 +293,15 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     carte_point.x = obs_point.x();
     carte_point.y = obs_point.y();
     if(is_hpp_scene){
-      const double min_s_range = std::fmax(3.0, std::fmax(2.0 * length_, 2.0 * width_));
+      double kappa;
+      double min_s_range = std::fmax(2.0 * length_, 2.0 * width_);
+      //弯道放大投影范围
+      if(frenet_coord->GetKappaByS(frenet_s_, &kappa) && std::fabs(kappa) > 0.1){
+        min_s_range = std::fmax(3.0 * length_, 3.0 * width_);
+      }
+      //投影范围做3m的最小值
+      min_s_range = std::fmax(3.0 , min_s_range);
+
       if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- min_s_range), (frenet_s_ + min_s_range), frenet_point) ||
           std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
         b_frenet_valid_ = false;
