@@ -4947,4 +4947,76 @@ int LDRouteInfoStrategy::SeqToOrder(
   return -1;
 }
 
+const iflymapdata::sdpro::LinkInfo_Link*
+LDRouteInfoStrategy::GetCloserSuccessorLinkByLateralDistance(
+    const iflymapdata::sdpro::LinkInfo_Link* input_link,
+    const iflymapdata::sdpro::LinkInfo_Link* successor_link1,
+    const iflymapdata::sdpro::LinkInfo_Link* successor_link2) const {
+  // 参数校验
+  if (input_link == nullptr || successor_link1 == nullptr ||
+      successor_link2 == nullptr) {
+    return nullptr;
+  }
+
+  // 检查输入link是否有形点
+  if (input_link->points().boot().points_size() < 2) {
+    return nullptr;
+  }
+
+  // 检查后继link是否有形点
+  if (successor_link1->points().boot().points_size() < 1 ||
+      successor_link2->points().boot().points_size() < 1) {
+    return nullptr;
+  }
+
+  // 获取输入link的末端点和末端方向
+  const auto& input_points = input_link->points().boot();
+  const int last_idx = input_points.points_size() - 1;
+  const int second_last_idx = last_idx - 1;
+
+  // 输入link的末端点
+  const double end_x = input_points.points(last_idx).x();
+  const double end_y = input_points.points(last_idx).y();
+
+  // 输入link的末端方向（从倒数第二个点到最后一个点）
+  const double dx = end_x - input_points.points(second_last_idx).x();
+  const double dy = end_y - input_points.points(second_last_idx).y();
+  const double length = std::sqrt(dx * dx + dy * dy);
+
+  if (length < kEpsilon) {
+    return nullptr;
+  }
+
+  // 单位方向向量
+  const double unit_dx = dx / length;
+  const double unit_dy = dy / length;
+
+  // 获取后继link1的起点
+  const auto& successor1_points = successor_link1->points().boot();
+  const double succ1_start_x = successor1_points.points(0).x();
+  const double succ1_start_y = successor1_points.points(0).y();
+
+  // 计算从输入link末端点到后继link1起点的向量
+  const double vec1_x = succ1_start_x - end_x;
+  const double vec1_y = succ1_start_y - end_y;
+
+  // 计算横向距离（叉积的绝对值）
+  // 横向距离 = |vec1 × unit_direction|
+  const double lateral_dist1 = std::abs(vec1_x * unit_dy - vec1_y * unit_dx);
+
+  // 获取后继link2的起点
+  const auto& successor2_points = successor_link2->points().boot();
+  const double succ2_start_x = successor2_points.points(0).x();
+  const double succ2_start_y = successor2_points.points(0).y();
+
+  // 计算从输入link末端点到后继link2起点的向量
+  const double vec2_x = succ2_start_x - end_x;
+  const double vec2_y = succ2_start_y - end_y;
+
+  // 计算横向距离
+  const double lateral_dist2 = std::abs(vec2_x * unit_dy - vec2_y * unit_dx);
+
+  // 返回横向距离更小的后继link
+  return (lateral_dist1 < lateral_dist2) ? successor_link1 : successor_link2;
+}
 }  // namespace planning

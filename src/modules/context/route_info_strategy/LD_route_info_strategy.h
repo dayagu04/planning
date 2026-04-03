@@ -364,6 +364,12 @@ void ProcessLaneMapMergePoint(
   // 在已排序的 seq_lane_ids 中查找 sequence 对应的从左向右序号（1=最左），未找到返回 -1
   static int SeqToOrder(
       const std::vector<std::pair<int, uint64_t>>& seq_lane_ids, int sequence);
+  // 根据link的形点判断，两个后继link中哪个与输入link的横向距离更小
+  // 返回横向距离更小的后继link，如果输入无效则返回nullptr
+  const iflymapdata::sdpro::LinkInfo_Link* GetCloserSuccessorLinkByLateralDistance(
+      const iflymapdata::sdpro::LinkInfo_Link* input_link,
+      const iflymapdata::sdpro::LinkInfo_Link* successor_link1,
+      const iflymapdata::sdpro::LinkInfo_Link* successor_link2) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
