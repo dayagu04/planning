@@ -3564,6 +3564,10 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double speed_narrow_passage_approach_distance = 20.0;      // m
   double speed_intersection_approach_distance = 20.0;      // m
   double speed_bump_zone_speed_limit = 2.22;    // 8kph
+  double target_speed_speed_bump_area = 2.22;            // 8kph
+  double target_speed_narrow_passage_area = 2.22;        // 8kph
+  double target_speed_intersection_road_area = 2.5;      // 9kph
+  double target_speed_ramp_area = 2.78;                  // 10kph
   double speed_bump_deceleration = -1.0;           // m/s^2
   double speed_bump_collision_buffer = 0.0;        // m
 };

@@ -159,7 +159,7 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
 }
 
 void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
-  double v_limit_speed_narrow_passage_road =
+  double v_limit_speed_narrow_passage =
       hpp_speed_limit_config_.velocity_upper_bound;
   if (!session_->is_hpp_scene()) {
     return;
@@ -172,27 +172,33 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
   if (!BuildSpeedObjectiveZoneInfo(
           zone_info, CRoadType::Ignore, CPassageType::NarrowPassage,
           CElemType::Ignore, approach_distance_threshold)) {
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(
+        MutableHppSpeedLimitDeciderDebug()->mutable_narrow_passage(),
+        SpeedLimitType::NARROW_PASSAGE, v_limit_speed_narrow_passage,
+        zone_info);
+#endif
     return;
   }
 
-  constexpr double kIntersectionRoadTargetV = 2.22;
-  v_limit_speed_narrow_passage_road =
-      GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
+  v_limit_speed_narrow_passage = GetSpeedLimitInObjectiveZone(
+      zone_info,
+      hpp_speed_limit_config_.target_speed_narrow_passage_area);
 
-  if (v_limit_speed_narrow_passage_road < v_target_) {
-    v_target_ = v_limit_speed_narrow_passage_road;
+  if (v_limit_speed_narrow_passage < v_target_) {
+    v_target_ = v_limit_speed_narrow_passage;
     v_target_type_ = SpeedLimitType::NARROW_PASSAGE;
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_narrow_passage_road, zone_info.in_speed_limit_zone,
+      v_limit_speed_narrow_passage, zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_narrow_passage(),
-                   SpeedLimitType::NARROW_PASSAGE,
-                   v_limit_speed_narrow_passage_road, zone_info);
+                   SpeedLimitType::NARROW_PASSAGE, v_limit_speed_narrow_passage,
+                   zone_info);
 #endif
   return;
 }
@@ -206,6 +212,10 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
   const auto& hpp_general_lateral_decider_output =
       session_->planning_context().hpp_general_lateral_decider_output();
   if (hpp_general_lateral_decider_output.avoid_ids.empty()) {
+#ifdef ENABLE_PROTO_LOG
+    FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_avoid(),
+                       SpeedLimitType::AVOID, v_limit_avoid);
+#endif
     return;
   }
 
@@ -375,6 +385,10 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
     auto& planning_result =
         session_->mutable_planning_context()->mutable_planning_result();
     planning_result.speed_bump_path_segments.clear();
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_bump(),
+                     SpeedLimitType::BUMP_ROAD, v_limit_speed_bump, zone_info);
+#endif
     return;
   }
 
@@ -387,7 +401,7 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
   }
 
   v_limit_speed_bump = GetSpeedLimitInObjectiveZone(
-      zone_info, hpp_speed_limit_config_.speed_bump_zone_speed_limit);
+      zone_info, hpp_speed_limit_config_.target_speed_speed_bump_area);
 
   if (v_limit_speed_bump < v_target_) {
     v_target_ = v_limit_speed_bump;
@@ -495,11 +509,15 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
   if (!BuildSpeedObjectiveZoneInfo(zone_info, CRoadType::Ignore,
                                    CPassageType::Ignore, CElemType::RampRoad,
                                    approach_distance_threshold)) {
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_ramp(),
+                     SpeedLimitType::RAMP_ROAD, v_limit_speed_ramp, zone_info);
+#endif
     return;
   }
 
-  constexpr double kRampTargetV = 2.78;
-  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(zone_info, kRampTargetV);
+  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(
+      zone_info, hpp_speed_limit_config_.target_speed_ramp_area);
 
   if (v_limit_speed_ramp < v_target_) {
     v_target_ = v_limit_speed_ramp;
@@ -520,7 +538,7 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
 }
 
 void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
-  double v_limit_speed_intersection_road =
+  double v_limit_speed_intersection =
       hpp_speed_limit_config_.velocity_upper_bound;
   if (!session_->is_hpp_scene()) {
     return;
@@ -533,27 +551,31 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
   if (!BuildSpeedObjectiveZoneInfo(
           zone_info, CRoadType::Ignore, CPassageType::Ignore,
           CElemType::IntersectionRoad, approach_distance_threshold)) {
+#ifdef ENABLE_PROTO_LOG
+    FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_intersection(),
+                     SpeedLimitType::INTERSECTION_ROAD,
+                     v_limit_speed_intersection, zone_info);
+#endif
     return;
   }
 
-  constexpr double kIntersectionRoadTargetV = 2.22;
-  v_limit_speed_intersection_road =
-      GetSpeedLimitInObjectiveZone(zone_info, kIntersectionRoadTargetV);
+  v_limit_speed_intersection = GetSpeedLimitInObjectiveZone(
+      zone_info, hpp_speed_limit_config_.target_speed_intersection_road_area);
 
-  if (v_limit_speed_intersection_road < v_target_) {
-    v_target_ = v_limit_speed_intersection_road;
+  if (v_limit_speed_intersection < v_target_) {
+    v_target_ = v_limit_speed_intersection;
     v_target_type_ = SpeedLimitType::INTERSECTION_ROAD;
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_intersection_road, zone_info.in_speed_limit_zone,
+      v_limit_speed_intersection, zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_intersection(),
                    SpeedLimitType::INTERSECTION_ROAD,
-                   v_limit_speed_intersection_road, zone_info);
+                   v_limit_speed_intersection, zone_info);
 #endif
 
   return;
