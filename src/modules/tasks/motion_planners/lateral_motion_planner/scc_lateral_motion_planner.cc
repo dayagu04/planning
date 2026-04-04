@@ -219,6 +219,7 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   bool is_merge_lc =
       lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
       lane_change_decider_output.lc_request_source == MAP_REQUEST;
+  // need to keep
   NudgeDirection drive_away_direction = CalculateDrivingDirectionForLeavingLane();
   bool is_check_left_line = drive_away_direction == NudgeDirection::LEFT;
   bool is_check_right_line = drive_away_direction == NudgeDirection::RIGHT;
@@ -232,14 +233,10 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   if (target_state == kLaneChangeExecution) {
     if (lc_request_direction == LEFT_CHANGE) {
       is_check_left_line = true;
-      if (!is_merge_lc) {
-        is_check_right_line = false;
-      }
+      is_check_right_line = is_merge_lc ? true : false;
     } else if (lc_request_direction == RIGHT_CHANGE) {
       is_check_right_line = true;
-      if (!is_merge_lc) {
-        is_check_left_line = false;
-      }
+      is_check_left_line = is_merge_lc ? true : false;
     }
   }
   double remain_nonsolid_line_time = CalculateRemainingDrivingTimeToSolidLine(is_check_left_line, is_check_right_line);
