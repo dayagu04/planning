@@ -43,11 +43,8 @@ class HPPSpeedLimitDecider : public Task {
                                    const CElemType& elem_type,
                                    const double approach_distance_threshold);
   const double ComputeMaxLatAcceleration();
-  const double ComputeCurvatureSpeedLimit(const TrajectoryPoints& traj_points,
-                                          double max_lat_acceleration,
-                                          double& vlimit_jerk,
-                                          double& time_to_brake,
-                                          double& out_max_curvature);
+  const double ComputeCurvatureSpeedLimit(
+      const TrajectoryPoints& traj_points);
 
   void CheckSpeedBumpZone(const TrajectoryPoints& traj_points, double ego_s);
   double GetSpeedLimitInObjectiveZone(const HPPSpeedLimitZoneInfo& zone_info,
