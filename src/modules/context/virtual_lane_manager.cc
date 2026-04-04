@@ -1018,7 +1018,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   }
   const auto& location_valid = session_->environmental_model().location_valid();
   auto time_start = IflyTime::Now_ms();
-  if (location_valid) {
+  if (location_valid && session_->is_hpp_scene() == false) {
     ego_lane_track_manager_.TrackEgoLane(relative_id_lanes_,
                                          order_ids_of_same_zero_relative_id_,
                                          virtual_id_mapped_lane_);
