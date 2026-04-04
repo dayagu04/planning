@@ -3,6 +3,7 @@
 #include "agent/agent_decision.h"
 #include "agent/agent_manager.h"
 #include "lateral_obstacle.h"
+#include "context/function_switch_config_context.h"
 
 namespace planning {
 namespace {
@@ -195,8 +196,12 @@ bool TrafficLightDecider::Execute() {
   } else {
     can_pass_ = true;
   }
-
-  if (config_.enable_tfl_decider && !in_acc_func &&
+  const auto& disable_tlf_function_from_product =
+      FunctionSwitchConfigContext::Instance()
+          ->get_function_switch_config()
+          .disable_tlf_function;
+  if ((config_.enable_tfl_decider && !disable_tlf_function_from_product) &&
+      !in_acc_func &&
       ((is_in_straight_lane_ && !can_pass_) || !is_in_straight_lane_)) {
     AddVirtualObstacle();
   }
