@@ -316,7 +316,8 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
              lc_back_reason == "side view back" ||
              lc_back_reason == "front view back" ||
              lc_back_reason == "but back cnt below threshold") {
-    if (curr_state == kLaneChangePropose || curr_state == kLaneChangeHold) {
+    if (curr_state == kLaneChangePropose || curr_state == kLaneChangeHold ||
+        curr_state == kLaneChangeCancel) {
       ad_info.status_update_reason =
           iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
     }
