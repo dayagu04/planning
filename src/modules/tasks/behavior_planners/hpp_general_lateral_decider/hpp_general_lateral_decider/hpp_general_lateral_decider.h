@@ -44,11 +44,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   bool CalCruiseVelByCurvature(const double ego_v,
                                const std::vector<double> &d_poly,
                                double &cruise_v);
-
-  void ConstructTrajPoints(TrajectoryPoints &traj_points);
-
-  // // 1. construct the trajectory of reference and bind the obstacle info on
-  bool ConstructReferencePathPoints(const TrajectoryPoints &traj_points);
+  void CalculateLonSampleLength();
+  void ConstructReferencePathPoints();
 
   // 2. construct the lane and boundary bound
   void GenerateRoadAndLaneBoundary();
@@ -99,6 +96,22 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
+  void GenerateSoftBoundCenterLine(
+      const std::vector<std::pair<double, double>> &soft_bounds,
+      const std::vector<std::pair<double, double>> &hard_bounds,
+      const int window);
+  void MergeReferenceTrajectories(
+      const std::vector<std::pair<double, double>> &hard_bounds,
+      const std::vector<std::pair<double, double>> &soft_bounds);
+  std::vector<Point2D> SmoothPointsIteratively(
+      const std::vector<Point2D> &input,
+      const int effective_radius,
+      const size_t iters);
+  TrajectoryPoints iterativeSmoothWithBounds(const TrajectoryPoints& trajectory);
+  void PreprocessSoftBounds(
+      std::vector<std::pair<double, double>> *soft_bounds,
+      const TrajectoryPoints &ref_traj,
+      const std::vector<std::pair<double, double>> &hard_bounds);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
@@ -187,9 +200,11 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
  private:
   bool is_ego_reverse_;
   double min_road_radius_;
+  double lon_sample_length_ = 0.0;
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
+  TrajectoryPoints bound_center_line_;
   TrajectoryPoints plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
 
@@ -215,6 +230,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       vehicle_dynamic_buffer_;  // <left, right>
   pnc::mathlib::spline lbuffer_s_spline_;
   pnc::mathlib::spline rbuffer_s_spline_;
+
+  bool is_point_in_turning_{false};
 
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;

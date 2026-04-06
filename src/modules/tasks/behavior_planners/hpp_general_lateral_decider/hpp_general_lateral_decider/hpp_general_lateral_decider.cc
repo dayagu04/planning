@@ -119,9 +119,7 @@ bool HppGeneralLateralDecider::Execute() {
                           ->mutable_planning_result()
                           .traj_points;
 
-  ConstructTrajPoints(traj_points);
-  ConstructReferencePathPoints(traj_points);
-
+  ConstructReferencePathPoints();
   GenerateRoadAndLaneBoundary();
 
   GenerateObstaclesBoundary();
@@ -142,10 +140,15 @@ bool HppGeneralLateralDecider::Execute() {
   PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                                       general_lateral_decider_output);
 
+  GenerateSoftBoundCenterLine(second_frenet_soft_bounds_, frenet_hard_bounds_, 2.0);
+  MergeReferenceTrajectories(frenet_hard_bounds_, second_frenet_soft_bounds_);
+
   GenerateLateralDeciderOutput(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                                frenet_hard_bounds_, second_soft_bounds_info_,
                                first_soft_bounds_info_, hard_bounds_info_,
                                general_lateral_decider_output);
+
+  traj_points = ref_traj_points_;
 
   CalcLateralBehaviorOutput();
 
@@ -457,15 +460,10 @@ bool HppGeneralLateralDecider::CalCruiseVelByCurvature(
   return false;
 }
 
-void HppGeneralLateralDecider::ConstructTrajPoints(
-    TrajectoryPoints &traj_points) {
+void HppGeneralLateralDecider::CalculateLonSampleLength() {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto flane =
-      session_->environmental_model()
-          .get_virtual_lane_manager()
-          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
   const auto &parking_slot_manager =
       session_->environmental_model().get_parking_slot_manager();
   const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
@@ -479,13 +477,74 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
   frenet_coord->XYToSL(cart_init_pt, frenet_init_pt);
 
-  bool limit_ref_vel_on_ramp_valid = false;
-  // generate traj_points based on kMaxAcc or kMinAcc
   const double kMaxAcc = 0.2;
   const double kMinAcc = -5.5;
   double cruise_v = session_->planning_context().v_ref_cruise();
   double ego_v = planning_init_point.v;
   double s_ref = frenet_init_pt.x;
+
+  const auto static_analysis_storage =
+      reference_path_ptr_->get_static_analysis_storage();
+
+  is_point_in_turning_ = false;
+  
+  if (static_analysis_storage) {
+    const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
+                                    CElemType::Ignore);
+    const auto front_turn_range =
+        static_analysis_storage->GetFrontSRange(turn_query, s_ref);
+    const auto back_turn_range =
+        static_analysis_storage->GetBackSRange(turn_query, s_ref);
+
+    constexpr double kExitRecoverDist = 5.0;
+    constexpr double kPreviewBeforeTurn = 5.0;
+    const double origin_cruise_v = cruise_v;
+    const double kMinCruiseV = 3.0;
+
+    double factor = 1.0;
+
+    if (front_turn_range.second > front_turn_range.first) {
+      const double turn_start = front_turn_range.first;
+      const double turn_end = front_turn_range.second;
+
+      if (s_ref < turn_start) {
+        const double dist_to_turn = std::max(turn_start - s_ref, 0.0);
+        if (dist_to_turn <= kPreviewBeforeTurn) {
+          const double ratio = std::clamp(
+              1.0 - dist_to_turn / kPreviewBeforeTurn, 0.0, 1.0);
+          factor = 1.0 - 0.5 * ratio;
+          is_point_in_turning_ = true;
+        }
+      } else if (s_ref <= turn_end) {
+        factor = 0.5;
+        is_point_in_turning_ = true;
+      } else {
+        const double dist_since_turn_end =
+            std::max(s_ref - turn_end, 0.0);
+        if (dist_since_turn_end <= kExitRecoverDist) {
+          const double ratio = std::clamp(
+              dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
+          factor = 0.5 + 0.5 * ratio;
+          is_point_in_turning_ = true;
+        }
+      }
+    } else if (back_turn_range.second > back_turn_range.first &&
+                back_turn_range.second <= s_ref) {
+      const double dist_since_turn_end =
+          std::max(s_ref - back_turn_range.second, 0.0);
+      if (dist_since_turn_end <= kExitRecoverDist) {
+        const double ratio = std::clamp(
+            dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
+        factor = 0.5 + 0.5 * ratio;
+        is_point_in_turning_ = true;
+      }
+    }
+
+    factor = std::clamp(factor, 0.5, 1.0);
+    const double adjusted =
+        std::clamp(origin_cruise_v * factor, kMinCruiseV, origin_cruise_v);
+    cruise_v = adjusted;
+  }
 
   double ref_len_based_on_speed = 0.0;
   double span_t = config_.delta_t * config_.num_step;
@@ -510,7 +569,6 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
   constexpr double kStraightCheckLength = 20.0;
   double ref_len_based_on_straight = 20.0;
-
   if (!cart_ref_info.s_vec.empty() && cart_ref_info.s_vec.back() > s_ref) {
     const double s_max =
         std::min(cart_ref_info.s_vec.back(), frenet_coord->Length());
@@ -518,16 +576,16 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
     if (s_end > s_ref + 1e-3) {
       ref_len_based_on_straight = std::max(s_end - s_ref, 0.0);
 
-      const auto static_analysis_storage = reference_path_ptr_->get_static_analysis_storage();
       if (static_analysis_storage) {
         const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
                                        CElemType::Ignore);
         const auto front_turn_range =
             static_analysis_storage->GetFrontSRange(turn_query, s_ref);
 
-        constexpr double kTurnInnerPreview = 15.0;
-        constexpr double kExitRecoverDist = 5.0;
-        const double min_len_base_straight = 10.0;
+        constexpr double kTurnInnerPreview = 12.0;
+        constexpr double kExitRecoverDist = 10.0;
+
+        const double min_len_base_straight = 12.0;
 
         bool in_turn_front = false;
         if (front_turn_range.second > front_turn_range.first) {
@@ -535,12 +593,15 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
         }
 
         if (in_turn_front) {  // 当前位于弯道内
-          const double turn_span = front_turn_range.second - front_turn_range.first;
+          const double turn_span =
+              front_turn_range.second - front_turn_range.first;
           const double t = std::clamp(
               (s_ref - front_turn_range.first) / (turn_span / 2.0), 0.0, 1.0);
           const double ref_len_in_turn =
-              kTurnInnerPreview + (1.0 - t) * (kStraightCheckLength - kTurnInnerPreview);
-          ref_len_based_on_straight = std::max(min_len_base_straight, ref_len_in_turn);
+              kTurnInnerPreview +
+              (1.0 - t) * (kStraightCheckLength - kTurnInnerPreview);
+          ref_len_based_on_straight =
+              std::max(min_len_base_straight, ref_len_in_turn);
         } else {
           const auto back_turn_range =
               static_analysis_storage->GetBackSRange(turn_query, s_ref);
@@ -548,13 +609,15 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
               back_turn_range.second <= s_ref) {
             const double dist_since_turn_end =
                 std::max(s_ref - back_turn_range.second, 0.0);
-            const double recover_ratio =
-                std::clamp(dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-            const double ref_len_recover =
-                kTurnInnerPreview +
-                recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
-            ref_len_based_on_straight =
+            if (dist_since_turn_end <= kExitRecoverDist) {
+              const double recover_ratio = std::clamp(
+                  dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
+              const double ref_len_recover =
+                  kTurnInnerPreview +
+                  recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
+              ref_len_based_on_straight =
                   std::max(min_len_base_straight, ref_len_recover);
+            }
           }
         }
       }
@@ -576,12 +639,92 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   const double ref_len_based_on_guide_or_slot =
       std::min(ref_len_based_on_target_slot, ref_len_based_on_ref_info);
 
-  const double ref_s_len =
+  lon_sample_length_ =
       std::min(ref_len_based_on_guide_or_slot,
                std::max(ref_len_based_on_speed, ref_len_based_on_straight));
-  double delta_s = std::max(ref_s_len / span_t, 0.0) * config_.delta_t;
+}
 
-  traj_points.clear();
+void HppGeneralLateralDecider::ConstructReferencePathPoints() {
+  CalculateLonSampleLength();
+
+  const auto &coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
+  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const auto &planning_init_point = ego_cart_state_manager_->planning_init_point();
+  Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
+                                  planning_init_point.lat_init_state.y());
+  Point2D frenet_init_pt{planning_init_point.frenet_state.s, 0.0};
+  Point2D cart_init_pt(cart_init_point.x(), cart_init_point.y());
+  if (!frenet_coord->XYToSL(cart_init_pt, frenet_init_pt)) {
+    frenet_init_pt.x = planning_init_point.frenet_state.s;
+  }
+  double s_ref = frenet_init_pt.x;
+
+  const auto &cruise_v = session_->planning_context().v_ref_cruise();
+
+  const double ego_v = planning_init_point.v;
+
+  const double kMaxAcc = cruise_v > ego_v ? 0.8 : -5.5;
+
+  const double avg_dis = lon_sample_length_ / config_.num_step;
+
+  const double avg_vel = lon_sample_length_ / (config_.delta_t * config_.num_step);
+
+  std::vector<double> ref_sample_vel_vec(config_.num_step + 1, avg_vel);
+  std::vector<double> delta_s_vec(config_.num_step + 1, avg_dis);
+
+  if (!is_point_in_turning_) {
+    ref_sample_vel_vec[0] = ego_v;
+    double total_s = 0.0;
+
+    double t_reach = (cruise_v - ego_v) / kMaxAcc;
+
+    for (size_t i = 0; i < config_.num_step; ++i) {
+      const double t_next = static_cast<double>(i + 1) * config_.delta_t;
+
+      auto &v_curr = ref_sample_vel_vec[i];
+      auto &v_next = ref_sample_vel_vec[i + 1];
+      
+      if (t_reach > t_next) {
+        v_next = v_curr + kMaxAcc * config_.delta_t;
+      } else {
+        v_next = cruise_v;
+      }
+
+      if (t_reach < t_next && t_reach > t_next - config_.delta_t) {
+        delta_s_vec[i] =
+            0.5 * (v_curr + v_next) * (t_reach - t_next + config_.delta_t)
+            + v_next * (t_next - t_reach);
+      } else {
+        delta_s_vec[i] = 0.5 * (v_curr + v_next) * config_.delta_t;
+      }
+      total_s += delta_s_vec[i];
+    }
+
+    const double scale = lon_sample_length_ / std::max(total_s, 1e-6);
+    for (size_t i = 0; i < config_.num_step; ++i) {
+      delta_s_vec[i] *= scale;
+      ref_sample_vel_vec[i] *= scale;
+    }
+  }
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double half_ego_width = vehicle_param.max_width * 0.5;
+  const auto &motion_planner_output =
+      session_->planning_context().motion_planner_output();
+
+  std::vector<double> left_outline_s;
+  std::vector<double> left_outline_l;
+  std::vector<double> right_outline_s;
+  std::vector<double> right_outline_l;
+  left_outline_s.reserve(config_.num_step + 4);
+  left_outline_l.reserve(config_.num_step + 4);
+  right_outline_s.reserve(config_.num_step + 4);
+  right_outline_l.reserve(config_.num_step + 4);
+
+  ref_traj_points_.clear();
   TrajectoryPoint point;
   constexpr double kEps = 1e-4;
   for (size_t i = 0; i < config_.num_step + 1; ++i) {
@@ -594,7 +737,6 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
                      cart_ref_info.x_s_spline.deriv(1, s_ref));
     }
 
-    // frenet info
     Point2D frenet_pt{0.0, 0.0};
     Point2D cart_pt(point.x, point.y);
     frenet_coord->XYToSL(cart_pt, frenet_pt);
@@ -602,26 +744,299 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
     point.l = frenet_pt.y;
     point.t = static_cast<double>(i) * config_.delta_t;
 
-    s_ref += delta_s;
-    traj_points.emplace_back(point);
+    point.v = ref_sample_vel_vec[i];
+
+    if (i < config_.num_step) {
+      s_ref += delta_s_vec[i];
+    }
+    ref_traj_points_.emplace_back(point);
+
+    if (i == 0) {
+      for (size_t j = 3; j > 0; --j) {
+        left_outline_s.emplace_back(point.s - 0.3 * j);
+        left_outline_l.emplace_back(half_ego_width);
+        right_outline_s.emplace_back(point.s - 0.3 * j);
+        right_outline_l.emplace_back(-half_ego_width);
+      }
+    }
+
+    if (config_.enable_last_lat_path && !motion_planner_output.s_lat_vec.empty()) {
+      const double tmp_t = std::fmin(0.1 + i * 0.2, 5.0);
+      const double last_lat_path_x = motion_planner_output.lateral_x_t_spline(tmp_t);
+      const double last_lat_path_y = motion_planner_output.lateral_y_t_spline(tmp_t);
+      double last_lat_path_s = point.s;
+      double last_lat_path_l = 0.0;
+      if (!frenet_coord->XYToSL(last_lat_path_x, last_lat_path_y, &last_lat_path_s,
+                                &last_lat_path_l)) {
+        last_lat_path_l = 0.0;
+      }
+
+      double last_path_theta = motion_planner_output.lateral_theta_t_spline(tmp_t);
+      const double theta_err = point.heading_angle - last_path_theta;
+      if (theta_err > M_PI) {
+        last_path_theta += 2.0 * M_PI;
+      } else if (theta_err < -M_PI) {
+        last_path_theta -= 2.0 * M_PI;
+      }
+
+      const double ego_center_x =
+          last_lat_path_x + std::cos(last_path_theta) * vehicle_param.rear_axle_to_center;
+      const double ego_center_y =
+          last_lat_path_y + std::sin(last_path_theta) * vehicle_param.rear_axle_to_center;
+      const Box2d ego_box({ego_center_x, ego_center_y}, last_path_theta,
+                          vehicle_param.length, vehicle_param.max_width);
+
+      std::pair<double, double> ego_lbuffer{last_lat_path_s, 0.0};
+      std::pair<double, double> ego_rbuffer{last_lat_path_s, 0.0};
+      for (auto &pt : ego_box.GetAllCorners()) {
+        Point2D frenet_corner, cart_corner;
+        cart_corner.x = pt.x();
+        cart_corner.y = pt.y();
+        if (frenet_coord->XYToSL(cart_corner, frenet_corner) &&
+            frenet_corner.x > last_lat_path_s) {
+          const double rel_corner_l = frenet_corner.y - last_lat_path_l;
+          if (ego_lbuffer.second < rel_corner_l) {
+            ego_lbuffer.first = frenet_corner.x;
+            ego_lbuffer.second = rel_corner_l;
+          }
+          if (ego_rbuffer.second > rel_corner_l) {
+            ego_rbuffer.first = frenet_corner.x;
+            ego_rbuffer.second = rel_corner_l;
+          }
+        }
+      }
+      ego_lbuffer.second = std::max(ego_lbuffer.second, half_ego_width);
+      ego_rbuffer.second = std::min(ego_rbuffer.second, -half_ego_width);
+
+      if ((ego_lbuffer.first > left_outline_s.back()) &&
+          (ego_rbuffer.first > right_outline_s.back())) {
+        left_outline_s.emplace_back(ego_lbuffer.first);
+        left_outline_l.emplace_back(ego_lbuffer.second);
+        right_outline_s.emplace_back(ego_rbuffer.first);
+        right_outline_l.emplace_back(ego_rbuffer.second);
+      }
+    } else {
+      const double ego_yaw = point.heading_angle;
+      const double ego_center_x =
+          point.x + std::cos(ego_yaw) * vehicle_param.rear_axle_to_center;
+      const double ego_center_y =
+          point.y + std::sin(ego_yaw) * vehicle_param.rear_axle_to_center;
+      const Box2d ego_box({ego_center_x, ego_center_y}, ego_yaw, vehicle_param.length,
+                          vehicle_param.max_width);
+
+      std::pair<double, double> ego_lbuffer{point.s, half_ego_width};
+      std::pair<double, double> ego_rbuffer{point.s, -half_ego_width};
+      for (auto &pt : ego_box.GetAllCorners()) {
+        Point2D frenet_corner, cart_corner;
+        cart_corner.x = pt.x();
+        cart_corner.y = pt.y();
+        if (frenet_coord->XYToSL(cart_corner, frenet_corner) &&
+            frenet_corner.x > point.s) {
+          if (frenet_corner.y > ego_lbuffer.second) {
+            ego_lbuffer.first = frenet_corner.x;
+            ego_lbuffer.second = frenet_corner.y;
+          }
+          if (frenet_corner.y < ego_rbuffer.second) {
+            ego_rbuffer.first = frenet_corner.x;
+            ego_rbuffer.second = frenet_corner.y;
+          }
+        }
+      }
+
+      if ((ego_lbuffer.first > left_outline_s.back()) &&
+          (ego_rbuffer.first > right_outline_s.back())) {
+        left_outline_s.emplace_back(ego_lbuffer.first);
+        left_outline_l.emplace_back(ego_lbuffer.second);
+        right_outline_s.emplace_back(ego_rbuffer.first);
+        right_outline_l.emplace_back(ego_rbuffer.second);
+      }
+    }
   }
+
+  if (left_outline_s.empty() || right_outline_s.empty()) {
+    ILOG_ERROR << "no ref_traj_points!";
+    return;
+  }
+  left_outline_s.emplace_back(left_outline_s.back() + 5.0);
+  left_outline_l.emplace_back(half_ego_width);
+  right_outline_s.emplace_back(right_outline_s.back() + 5.0);
+  right_outline_l.emplace_back(-half_ego_width);
+  lbuffer_s_spline_.set_points(left_outline_s, left_outline_l,
+                               pnc::mathlib::spline::linear);
+  rbuffer_s_spline_.set_points(right_outline_s, right_outline_l,
+                               pnc::mathlib::spline::linear);
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  if (limit_ref_vel_on_ramp_valid) {
-    general_lateral_decider_output.ramp_scene = true;
-  } else {
-    general_lateral_decider_output.ramp_scene = false;
-  }
 
-  // fusion is unsteady, lane keep weight need decay in end of ref
+  general_lateral_decider_output.ramp_scene = false;
   general_lateral_decider_output.complete_follow = false;
   general_lateral_decider_output.lane_change_scene = false;
   if (config_.enable_ara_ref) {
-    general_lateral_decider_output.enable_ara_ref = HandleAraPath(traj_points);
+    general_lateral_decider_output.enable_ara_ref = HandleAraPath(ref_traj_points_);
   } else {
     general_lateral_decider_output.enable_ara_ref = false;
+  }
+
+  ref_path_points_.clear();
+
+  const double reference_end_s = reference_path_ptr_->get_points().back().path_point.s();
+  ref_path_points_.reserve(ref_traj_points_.size());
+  for (const auto &traj_point : ref_traj_points_) {
+    ReferencePathPoint refpath_pt{};
+    const double point_s = std::min(traj_point.s, reference_end_s);
+    if (!reference_path_ptr_->get_reference_point_by_lon(point_s,
+                                                          refpath_pt)) {
+      ILOG_ERROR
+          << "ConstructReferencePathPointsFromTrajPoints: Get reference point by lon failed!";
+    }
+    const double road_radius =
+        1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
+    min_road_radius_ = std::max(
+        std::min(road_radius - 1.0, min_road_radius_), 0.2);
+    ref_path_points_.emplace_back(refpath_pt);
+  }
+
+  if (!ref_traj_points_.empty()) {
+    ReferencePathPoint refpath_front_pt{};
+    const double front_point_s_1 = std::min(ref_traj_points_.back().s + 1.0,
+                                             reference_end_s);
+    if (reference_path_ptr_->get_reference_point_by_lon(front_point_s_1,
+                                                         refpath_front_pt)) {
+      const double road_radius =
+          1 / std::max(std::fabs(refpath_front_pt.path_point.kappa()),
+                       1e-6);
+      min_road_radius_ = std::max(
+          std::min(road_radius - 1.0, min_road_radius_), 0.2);
+    }
+  }
+
+  ref_traj_points_.resize(config_.num_step + 1);
+  bound_center_line_.resize(config_.num_step + 1);
+
+  TrajectoryPoints plan_history_traj_tmp;
+  const TrajectoryPoints &last_hpp_lateral_motion_traj =
+      session_->planning_context().last_hpp_lateral_motion_traj();
+  if (!last_hpp_lateral_motion_traj.empty()) {
+    for (size_t i = 0; i < last_hpp_lateral_motion_traj.size(); ++i) {
+      TrajectoryPoint pt = last_hpp_lateral_motion_traj[i];
+      Point2D frenet_pt{0.0, 0.0};
+      Point2D cart_pt(pt.x, pt.y);
+      if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+        pt.s = frenet_pt.x;
+        pt.l = frenet_pt.y;
+        plan_history_traj_tmp.emplace_back(std::move(pt));
+      } else {
+        LOG_DEBUG("plan_history_traj frenet error");
+      }
+    }
+  } else {
+    auto &last_traj_points = session_->mutable_planning_context()
+                                 ->mutable_last_planning_result()
+                                 .raw_traj_points;
+    for (size_t i = 0; i < last_traj_points.size(); ++i) {
+      Point2D frenet_pt{0.0, 0.0};
+      Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
+      if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+        last_traj_points[i].s = frenet_pt.x;
+        last_traj_points[i].l = frenet_pt.y;
+        plan_history_traj_tmp.emplace_back(last_traj_points[i]);
+      } else {
+        LOG_DEBUG("plan_history_traj frenet error");
+      }
+    }
+  }
+  if (plan_history_traj_tmp.empty()) {
+    LOG_DEBUG("plan_history_traj_tmp is empty");
+    return;
+  }
+
+  auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
+  if (ego_s <= plan_history_traj_tmp.front().s) {
+    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+      TrajectoryPoint pt =
+          hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+              plan_history_traj_tmp, ref_traj_points_[i].s);
+      pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
+      plan_history_traj_.emplace_back(std::move(pt));
+    }
+  } else if (ego_s >= plan_history_traj_tmp.back().s) {
+    // occur replan
+  } else {
+    int index = 1;
+    while (index < plan_history_traj_tmp.size()) {
+      if (plan_history_traj_tmp[index].s >= ego_s) {
+        break;
+      }
+      index++;
+    }
+    const auto &traj_1 = plan_history_traj_tmp[index - 1];
+    const auto &traj_2 = plan_history_traj_tmp[index];
+
+    const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
+    const double weight1 = 1.0 - weight0;
+    const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
+    const double base_s = weight1 * traj_1.s + weight0 * traj_2.s;
+
+    TrajectoryPoint pt =
+        hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+            plan_history_traj_tmp, base_s);
+    plan_history_traj_.emplace_back(std::move(pt));
+
+    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+      if (ref_traj_points_[i].s <= base_s) {
+        continue;
+      }
+      TrajectoryPoint pt =
+          hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+              plan_history_traj_tmp, ref_traj_points_[i].s);
+      plan_history_traj_.emplace_back(std::move(pt));
+    }
+
+    for (auto &traj : plan_history_traj_) {
+      traj.t -= base_t;
+    }
+
+    if (plan_history_traj_.size() != 0) {
+      double fallback_ref_ds =
+          std::max(ref_traj_points_.back().s - ref_traj_points_[ref_traj_points_.size() - 2].s, 1e-3);
+
+      for (int point_num = plan_history_traj_.size();
+           point_num < config_.num_step + 1; point_num++) {
+        TrajectoryPoint pt = plan_history_traj_.back();
+
+        auto& ref_ds = fallback_ref_ds;
+        if (point_num > 0 &&
+            point_num < static_cast<int>(ref_traj_points_.size())) {
+          ref_ds = std::max(ref_traj_points_[point_num].s - ref_traj_points_[point_num - 1].s, 1e-3);
+        }
+        pt.s += ref_ds;
+        pt.t += config_.delta_t;
+        plan_history_traj_.emplace_back(std::move(pt));
+      }
+    }
+  }
+
+  for (auto &traj : plan_history_traj_) {
+    Point2D cart_pt(traj.x, traj.y);
+    Point2D frenet_pt{0.0, 0.0};
+    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+      traj.l = frenet_pt.y;
+      traj.frenet_valid = true;
+    } else {
+      traj.frenet_valid = false;
+      LOG_DEBUG("plan_history_traj point XYToSL failed");
+    }
+  }
+
+  for (int i = 0; i < plan_history_traj_.size(); i++) {
+    const auto &history_traj_point = plan_history_traj_[i];
+    double plan_history_traj_point_s = history_traj_point.s;
+    std::vector<int> match_indexes =
+        hpp_general_lateral_decider_utils::MatchRefTrajPoints(
+            plan_history_traj_point_s, ref_traj_points_);
+    match_index_map_[i] = std::move(match_indexes);
   }
 }
 
@@ -646,7 +1061,8 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
   double ego_l = 0.0;
   if (!frenet_coord->XYToSL(planning_init_point.x, planning_init_point.y,
                             &ego_s, &ego_l)) {
-    ILOG_DEBUG << "General Lateral Decider: planning_init_point frenet failed!!!";
+    std::cout << "General Lateral Decider: planning_init_point frenet failed!!!"
+              << std::endl;
     return false;
   }
 
@@ -704,7 +1120,7 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
     if (!frenet_coord->SLToXY(hybrid_ara_result.s[i], hybrid_ara_result.l[i],
                               &hybrid_ara_result.x[i],
                               &hybrid_ara_result.y[i])) {
-      ILOG_DEBUG << "General Lateral Decider: SLToXY failed!!!";
+      std::cout << "General Lateral Decider: SLToXY failed!!!" << std::endl;
       return false;
     }
 
@@ -772,309 +1188,9 @@ void HppGeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
         traj_point.l += lateral_offset;
       }
     } else {
-      ILOG_DEBUG << "HandleAvoidScene frenet error!";
+      std::cout << "HandleAvoidScene frenet error!" << std::endl;
     }
   }
-}
-
-bool HppGeneralLateralDecider::ConstructReferencePathPoints(
-    const TrajectoryPoints &traj_points) {
-  ref_path_points_.reserve(traj_points.size());
-  for (const auto &traj_point : traj_points) {
-    ReferencePathPoint refpath_pt{};
-    double point_s = std::min(traj_point.s, reference_path_ptr_->get_points().back().path_point.s());
-    if (!reference_path_ptr_->get_reference_point_by_lon(point_s, refpath_pt)) {
-      // add logs
-      ILOG_INFO
-          << "ConstructReferencePathPoints: Get reference point by lon failed!";
-    }
-    double road_radius =
-        1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
-    min_road_radius_ = std::max(std::min(road_radius - 1.0, min_road_radius_), 0.2);
-    ref_path_points_.emplace_back(refpath_pt);
-  }
-  if (traj_points.size() > 0) {
-    ReferencePathPoint refpath_front_pt{};
-    double front_point_s_1 = std::min(traj_points.back().s + 1.0, reference_path_ptr_->get_points().back().path_point.s());
-    if (reference_path_ptr_->get_reference_point_by_lon(front_point_s_1, refpath_front_pt)) {
-      double road_radius =
-          1 / std::max(std::fabs(refpath_front_pt.path_point.kappa()), 1e-6);
-      min_road_radius_ = std::max(std::min(road_radius - 1.0, min_road_radius_), 0.2);
-    }
-  }
-  ref_traj_points_.resize(traj_points.size());
-  std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
-
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double half_ego_width = vehicle_param.max_width * 0.5;
-  std::vector<double> left_outline_s;
-  std::vector<double> left_outline_l;
-  std::vector<double> right_outline_s;
-  std::vector<double> right_outline_l;
-  left_outline_s.reserve(ref_traj_points_.size() + 3);
-  left_outline_l.reserve(ref_traj_points_.size() + 3);
-  right_outline_s.reserve(ref_traj_points_.size() + 3);
-  right_outline_l.reserve(ref_traj_points_.size() + 3);
-  double end_s = frenet_coord->Length();
-  if (ref_traj_points_.size() > 0) {
-    for (size_t j = 3; j > 0; --j) {
-      left_outline_s.emplace_back(ref_traj_points_[0].s - 0.3 * j);
-      left_outline_l.emplace_back(half_ego_width);
-      right_outline_s.emplace_back(ref_traj_points_[0].s - 0.3 * j);
-      right_outline_l.emplace_back(-half_ego_width);
-    }
-    if (config_.enable_last_lat_path) {
-      const auto &motion_planner_output =
-          session_->planning_context().motion_planner_output();
-      double final_t = 5.0;
-      double tmp_t = 0.0;
-      for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
-        if (motion_planner_output.s_lat_vec.size() > 0) {
-          tmp_t = std::fmin(0.1 + i * 0.2, final_t);
-          double last_lat_path_x =
-              motion_planner_output.lateral_x_t_spline(tmp_t);
-          double last_lat_path_y =
-              motion_planner_output.lateral_y_t_spline(tmp_t);
-          double last_lat_path_s = ref_traj_points_[i].s;
-          double last_lat_path_l = 0.0;
-          if (!frenet_coord->XYToSL(last_lat_path_x, last_lat_path_y,
-                                    &last_lat_path_s, &last_lat_path_l)) {
-            last_lat_path_l = 0.0;
-          }
-          ILOG_DEBUG << "last_lat_path_s" << last_lat_path_s;
-          double ref_traj_theta = ref_traj_points_[i].heading_angle;
-          double last_path_theta =
-              motion_planner_output.lateral_theta_t_spline(tmp_t);
-          double theta_err = ref_traj_theta - last_path_theta;
-          const double pi2 = 2.0 * M_PI;
-          if (theta_err > M_PI) {
-            last_path_theta += pi2;
-          } else if (theta_err < -M_PI) {
-            last_path_theta -= pi2;
-          }
-          const double ego_yaw = last_path_theta;
-          const double ego_center_x =
-              last_lat_path_x +
-              std::cos(ego_yaw) * vehicle_param.rear_axle_to_center;
-          const double ego_center_y =
-              last_lat_path_y +
-              std::sin(ego_yaw) * vehicle_param.rear_axle_to_center;
-          const Box2d ego_box({ego_center_x, ego_center_y}, ego_yaw,
-                              vehicle_param.length, vehicle_param.max_width);
-          std::pair<double, double> ego_lbuffer{last_lat_path_s, 0};
-          std::pair<double, double> ego_rbuffer{last_lat_path_s, 0};
-          std::vector<planning_math::Vec2d> frenet_corners;
-          for (auto &pt : ego_box.GetAllCorners()) {
-            Point2D frenet_corner, cart_corner;
-            cart_corner.x = pt.x();
-            cart_corner.y = pt.y();
-            if (frenet_coord->XYToSL(cart_corner, frenet_corner)) {
-              double rel_corner_l = frenet_corner.y - last_lat_path_l;
-              if (frenet_corner.x > last_lat_path_s) {
-                if (ego_lbuffer.second < rel_corner_l) {
-                  ego_lbuffer.first = frenet_corner.x;
-                  ego_lbuffer.second = rel_corner_l;
-                }
-                if (ego_rbuffer.second > rel_corner_l) {
-                  ego_rbuffer.first = frenet_corner.x;
-                  ego_rbuffer.second = rel_corner_l;
-                }
-              }
-            }
-          }
-          ego_lbuffer.second = std::max(ego_lbuffer.second, half_ego_width);
-          ego_rbuffer.second = std::min(ego_rbuffer.second, -half_ego_width);
-          if ((ego_lbuffer.first <= left_outline_s.back()) ||
-              (ego_rbuffer.first <= right_outline_s.back())) {
-            continue;
-            // LOG_DEBUG("corner s not in valid range!");
-            // if (left_outline_s[i + 2] < end_s) {
-            //   left_outline_s.emplace_back(left_outline_s[i + 2] + 0.01);
-            //   left_outline_l.emplace_back(left_outline_l[i + 2]);
-            // }
-            // if (right_outline_s[i + 2] < end_s) {
-            //   right_outline_s.emplace_back(right_outline_s[i + 2] + 0.01);
-            //   right_outline_l.emplace_back(right_outline_l[i + 2]);
-            // }
-            // break;
-          }
-          left_outline_s.emplace_back(ego_lbuffer.first);
-          left_outline_l.emplace_back(ego_lbuffer.second);
-          right_outline_s.emplace_back(ego_rbuffer.first);
-          right_outline_l.emplace_back(ego_rbuffer.second);
-        } else {
-          if ((ref_traj_points_[i].s <= left_outline_s.back()) ||
-              (ref_traj_points_[i].s <= right_outline_s.back())) {
-            continue;
-            // LOG_DEBUG("corner s not in valid range!");
-            // if (left_outline_s[i + 2] < end_s) {
-            //   left_outline_s.emplace_back(left_outline_s[i + 2] + 0.01);
-            //   left_outline_l.emplace_back(left_outline_l[i + 2]);
-            // }
-            // if (right_outline_s[i + 2] < end_s) {
-            //   right_outline_s.emplace_back(right_outline_s[i + 2] + 0.01);
-            //   right_outline_l.emplace_back(right_outline_l[i + 2]);
-            // }
-            // break;
-          }
-          left_outline_s.emplace_back(ref_traj_points_[i].s);
-          left_outline_l.emplace_back(half_ego_width);
-          right_outline_s.emplace_back(ref_traj_points_[i].s);
-          right_outline_l.emplace_back(-half_ego_width);
-        }
-      }
-    } else {
-      for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-        const auto &traj_point = ref_traj_points_[i];
-        const double ego_yaw = traj_point.heading_angle;
-        const double ego_center_x =
-            traj_point.x +
-            std::cos(ego_yaw) * vehicle_param.rear_axle_to_center;
-        const double ego_center_y =
-            traj_point.y +
-            std::sin(ego_yaw) * vehicle_param.rear_axle_to_center;
-        const Box2d ego_box({ego_center_x, ego_center_y}, ego_yaw,
-                            vehicle_param.length, vehicle_param.max_width);
-        std::pair<double, double> ego_lbuffer{traj_point.s, half_ego_width};
-        std::pair<double, double> ego_rbuffer{traj_point.s, -half_ego_width};
-        std::vector<planning_math::Vec2d> frenet_corners;
-        bool is_ = false;
-        for (auto &pt : ego_box.GetAllCorners()) {
-          Point2D frenet_corner, cart_corner;
-          cart_corner.x = pt.x();
-          cart_corner.y = pt.y();
-          if (frenet_coord->XYToSL(cart_corner, frenet_corner)) {
-            if (frenet_corner.x > traj_point.s) {
-              if (frenet_corner.y > ego_lbuffer.second) {
-                ego_lbuffer.first = frenet_corner.x;
-                ego_lbuffer.second = frenet_corner.y;
-              }
-              if (frenet_corner.y < ego_rbuffer.second) {
-                ego_rbuffer.first = frenet_corner.x;
-                ego_rbuffer.second = frenet_corner.y;
-              }
-            }
-          }
-        }
-        if ((ego_lbuffer.first <= left_outline_s.back()) ||
-            (ego_rbuffer.first <= right_outline_s.back())) {
-          continue;
-          // LOG_DEBUG("corner s not in valid range!");
-          // if (left_outline_s[i + 2] < end_s) {
-          //   left_outline_s.emplace_back(left_outline_s[i + 2] + 0.01);
-          //   left_outline_l.emplace_back(left_outline_l[i + 2]);
-          // }
-          // if (right_outline_s[i + 2] < end_s) {
-          //   right_outline_s.emplace_back(right_outline_s[i + 2] + 0.01);
-          //   right_outline_l.emplace_back(right_outline_l[i + 2]);
-          // }
-          // break;
-        }
-        left_outline_s.emplace_back(ego_lbuffer.first);
-        left_outline_l.emplace_back(ego_lbuffer.second);
-        right_outline_s.emplace_back(ego_rbuffer.first);
-        right_outline_l.emplace_back(ego_rbuffer.second);
-      }
-    }
-  } else {
-    ILOG_INFO << "no ref_traj_points!";
-    return false;
-  }
-  // extend s
-  left_outline_s.emplace_back(left_outline_s.back() + 5.0);
-  left_outline_l.emplace_back(half_ego_width);
-  right_outline_s.emplace_back(right_outline_s.back() + 5.0);
-  right_outline_l.emplace_back(-half_ego_width);
-  // result buffer
-  lbuffer_s_spline_.set_points(left_outline_s, left_outline_l,
-                               pnc::mathlib::spline::linear);
-  rbuffer_s_spline_.set_points(right_outline_s, right_outline_l,
-                               pnc::mathlib::spline::linear);
-
-  auto &last_traj_points = session_->mutable_planning_context()
-                               ->mutable_last_planning_result()
-                               .raw_traj_points;
-  TrajectoryPoints plan_history_traj_tmp;
-  for (size_t i = 0; i < last_traj_points.size(); ++i) {
-    // frenet info
-    Point2D frenet_pt{0.0, 0.0};
-    Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
-    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      last_traj_points[i].s = frenet_pt.x;
-      last_traj_points[i].l = frenet_pt.y;
-      plan_history_traj_tmp.emplace_back(last_traj_points[i]);
-    } else {
-      LOG_DEBUG("plan_history_traj frenet error");
-    }
-  }
-  if (plan_history_traj_tmp.empty()) {
-    return false;
-  }
-  auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
-  // auto ego_s = ego_frenet_state_.s();
-  if (ego_s <= plan_history_traj_tmp.front().s) {
-    for (double t = 0; t <= plan_history_traj_tmp.back().t;
-         t += config_.delta_t) {
-      TrajectoryPoint pt =
-          hpp_general_lateral_decider_utils::GetTrajectoryPointAtTime(
-              plan_history_traj_tmp, t);
-      pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
-      plan_history_traj_.emplace_back(std::move(pt));
-    }
-  } else if (ego_s >= plan_history_traj_tmp.back().s) {  // occur replan
-    // assert(false);
-  } else {
-    int index = 1;
-    while (index < plan_history_traj_tmp.size()) {
-      if (plan_history_traj_tmp[index].s >= ego_s) {
-        break;
-      }
-      index++;
-    }
-    const auto &traj_1 = plan_history_traj_tmp[index - 1];
-    const auto &traj_2 = plan_history_traj_tmp[index];
-
-    const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
-    const double weight1 = 1.0 - weight0;
-    const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
-    for (double t = base_t; t <= plan_history_traj_tmp.back().t;
-         t += config_.delta_t) {
-      TrajectoryPoint pt =
-          hpp_general_lateral_decider_utils::GetTrajectoryPointAtTime(
-              plan_history_traj_tmp, t);
-      plan_history_traj_.emplace_back(std::move(pt));
-    }
-
-    for (auto &traj : plan_history_traj_) {
-      traj.t -= base_t;
-    }
-
-    if (plan_history_traj_.size() == 0) {
-    } else {
-      for (int point_num = plan_history_traj_.size();
-           point_num < config_.num_step + 1; point_num++) {
-        TrajectoryPoint pt = plan_history_traj_.back();
-        // For now, only s and t are modified
-        pt.s += pt.v * config_.delta_t;
-        pt.t += config_.delta_t;
-        plan_history_traj_.emplace_back(std::move(pt));
-      }
-    }
-  }
-
-  // vehicle_dynamic_buffer_.clear();
-  // vehicle_dynamic_buffer_.reserve(plan_history_traj_.size());
-  for (int i = 0; i < plan_history_traj_.size(); i++) {
-    const auto &history_traj_point = plan_history_traj_[i];
-    double plan_history_traj_point_s = history_traj_point.s;
-    std::vector<int> match_indexes =
-        hpp_general_lateral_decider_utils::MatchRefTrajPoints(
-            plan_history_traj_point_s, ref_traj_points_);
-    match_index_map_[i] = std::move(match_indexes);
-  }
-  return true;
 }
 
 void HppGeneralLateralDecider::UpdateDistanceToRoadBorder() {
@@ -2245,6 +2361,272 @@ void HppGeneralLateralDecider::PostProcessBoundary() {
   LimitFrenetLateralSlope(frenet_hard_bounds_);
 }
 
+std::vector<Point2D> HppGeneralLateralDecider::SmoothPointsIteratively(
+  const std::vector<Point2D> &input,
+  const int effective_radius,
+  const size_t iters) {
+  const size_t n = input.size();
+  if (n < 3 || effective_radius <= 0 || iters == 0) {
+    return input;
+  }
+
+  std::vector<Point2D> curr = input;
+  std::vector<Point2D> next(n);
+
+  std::vector<double> t(n, 0.0);
+  if (n == 1) {
+    return curr;
+  }
+  for (size_t i = 0; i < n; ++i) {
+    t[i] = static_cast<double>(i) / static_cast<double>(n - 1);
+  }
+
+  int base_stride = std::max(1, effective_radius);
+  base_stride = std::min<int>(base_stride, static_cast<int>(n - 1));
+
+  for (size_t iter = 0; iter < iters; ++iter) {
+    const int stride = std::max(1, base_stride - static_cast<int>(iter));
+
+    std::vector<size_t> ctrl_idx;
+    ctrl_idx.reserve(n / static_cast<size_t>(stride) + 4);
+
+    ctrl_idx.push_back(0);
+    ctrl_idx.push_back(n - 1);
+    for (size_t i = 0; i < n; i += static_cast<size_t>(stride)) {
+      ctrl_idx.push_back(i);
+    }
+
+    std::sort(ctrl_idx.begin(), ctrl_idx.end());
+    ctrl_idx.erase(std::unique(ctrl_idx.begin(), ctrl_idx.end()),
+                  ctrl_idx.end());
+
+    if (ctrl_idx.size() < 2) {
+      next = curr;
+      break;
+    }
+
+    std::vector<double> t_ctrl;
+    std::vector<double> x_ctrl;
+    std::vector<double> y_ctrl;
+    t_ctrl.reserve(ctrl_idx.size());
+    x_ctrl.reserve(ctrl_idx.size());
+    y_ctrl.reserve(ctrl_idx.size());
+
+    for (size_t idx : ctrl_idx) {
+      t_ctrl.push_back(t[idx]);
+      x_ctrl.push_back(curr[idx].x);
+      y_ctrl.push_back(curr[idx].y);
+    }
+
+    pnc::mathlib::spline sx;
+    pnc::mathlib::spline sy;
+
+    const pnc::mathlib::spline::spline_type type =
+        (ctrl_idx.size() >= 4) ? pnc::mathlib::spline::cspline
+                              : pnc::mathlib::spline::linear;
+
+    sx.set_points(t_ctrl, x_ctrl, type);
+    sy.set_points(t_ctrl, y_ctrl, type);
+
+    for (size_t i = 0; i < n; ++i) {
+      next[i] = Point2D(sx(t[i]), sy(t[i]));
+    }
+
+    curr.swap(next);
+  }
+
+  return curr;
+}
+
+void HppGeneralLateralDecider::GenerateSoftBoundCenterLine(
+    const std::vector<std::pair<double, double>> &soft_bounds,
+    const std::vector<std::pair<double, double>> &hard_bounds,
+    const int window) {
+  const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
+
+  const size_t n = ref_traj_points_.size();
+  if (n == 0 || soft_bounds.size() != n || hard_bounds.size() != n) {
+    return;
+  }
+
+  std::vector<std::pair<double, double>> soft_bounds_used = soft_bounds;
+
+  const int radius = std::max(0, window);
+  const int effective_radius =
+      std::min<int>(static_cast<int>(n - 1), radius * 2);
+
+  std::vector<Point2D> lower_xy(n), upper_xy(n);
+  for (size_t i = 0; i < n; ++i) {
+    const double s = ref_traj_points_[i].s;
+    double lower_l = soft_bounds_used[i].first;
+    double upper_l = soft_bounds_used[i].second;
+
+    const Point2D lower_sl(s, lower_l);
+    const Point2D upper_sl(s, upper_l);
+
+    Point2D lower_xy_tmp;
+    Point2D upper_xy_tmp;
+    const bool ok_lower = frenet_coord->SLToXY(lower_sl, lower_xy_tmp);
+    const bool ok_upper = frenet_coord->SLToXY(upper_sl, upper_xy_tmp);
+
+    if (!ok_upper || !ok_lower) {
+      upper_xy[i] = Point2D(ref_traj_points_[i].x, ref_traj_points_[i].y);
+      lower_xy[i] = Point2D(ref_traj_points_[i].x, ref_traj_points_[i].y);
+      LOG_DEBUG(" SLToXY Failed in bound center line generation ! \n");
+    } else {
+      upper_xy[i] = upper_xy_tmp;
+      lower_xy[i] = lower_xy_tmp;
+    }
+  }
+
+  std::vector<Point2D> center_xy_candidate(n);
+  for (size_t i = 0; i < n; ++i) {
+    Point2D center_xy(0.5 * (lower_xy[i].x + upper_xy[i].x),
+                      0.5 * (lower_xy[i].y + upper_xy[i].y));
+    center_xy_candidate[i] = center_xy;
+  }
+
+  std::vector<Point2D> center_xy_smoothed = center_xy_candidate;
+  if (effective_radius > 0) {
+    constexpr size_t kSmoothIters = 1;
+    center_xy_smoothed = SmoothPointsIteratively(
+        center_xy_candidate, effective_radius, kSmoothIters);
+  }
+
+  for (size_t i = 0; i < n; ++i) {
+    Point2D center_xy = center_xy_smoothed[i];
+    Point2D center_sl;
+    if (!frenet_coord->XYToSL(center_xy, center_sl)) {
+      continue;
+    }
+
+    if (center_sl.y > hard_bounds[i].second ||
+        center_sl.y < hard_bounds[i].first) {
+      center_sl.y = std::min(std::max(center_sl.y, hard_bounds[i].first),
+                             hard_bounds[i].second);
+    }
+
+    bound_center_line_[i].s = center_sl.x;
+    bound_center_line_[i].l = center_sl.y;
+    Point2D center_xy_new;
+    if (frenet_coord->SLToXY(center_sl, center_xy_new)) {
+      bound_center_line_[i].x = center_xy_new.x;
+      bound_center_line_[i].y = center_xy_new.y;
+    } else {
+      bound_center_line_[i].x = ref_traj_points_[i].x;
+      bound_center_line_[i].y = ref_traj_points_[i].y;
+    }
+  }
+  // ref_traj_points_ = bound_center_line_;
+}
+
+TrajectoryPoints HppGeneralLateralDecider::iterativeSmoothWithBounds(
+    const TrajectoryPoints& trajectory) {
+  const int iterations = 10;
+  const double smooth_factor = 0.8;
+  const size_t n = trajectory.size();
+
+  TrajectoryPoints result = trajectory;
+  std::vector<double> current_l(n), new_l(n);
+
+  for (int iter = 0; iter < iterations; ++iter) {
+    for (size_t i = 0; i < n; ++i) {
+      current_l[i] = result[i].l;
+      new_l[i] = current_l[i];
+    }
+
+    for (size_t i = 1; i < n - 1; ++i) {
+      const double smoothed =
+          (current_l[i - 1] + current_l[i] + current_l[i + 1]) / 3.0;
+      new_l[i] =
+          (1.0 - smooth_factor) * current_l[i] + smooth_factor * smoothed;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+      new_l[i] = std::max(frenet_hard_bounds_[i].first,
+                          std::min(frenet_hard_bounds_[i].second, new_l[i]));
+      result[i].l = new_l[i];
+    }
+  }
+  return result;
+}
+
+void HppGeneralLateralDecider::MergeReferenceTrajectories(
+    const std::vector<std::pair<double, double>> &hard_bounds,
+    const std::vector<std::pair<double, double>> &soft_bounds) {
+  const TrajectoryPoints raw_ref_traj_points = ref_traj_points_;
+  const size_t n = raw_ref_traj_points.size();
+  if (n == 0 || bound_center_line_.size() != n || hard_bounds.size() != n ||
+      soft_bounds.size() != n) {
+    return;
+  }
+
+  constexpr size_t kBlendRadius = 5;
+  const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    ref_traj_points_ = raw_ref_traj_points;
+    return;
+  }
+
+  auto is_break_hard_bound = [&](size_t idx) {
+    return raw_ref_traj_points[idx].l < hard_bounds[idx].first ||
+           raw_ref_traj_points[idx].l > hard_bounds[idx].second;
+  };
+
+  size_t break_start = n;
+  for (size_t i = 0; i < n; ++i) {
+    if (is_break_hard_bound(i)) {
+      break_start -= kBlendRadius;
+      break_start = i < kBlendRadius ? 0 : i;
+      break;
+    }
+  }
+
+  if (break_start == n) {
+    ref_traj_points_ = raw_ref_traj_points;
+    return;
+  }
+
+  TrajectoryPoints merged = raw_ref_traj_points;
+  size_t recover_idx = break_start;
+  size_t last_recover_idx = n;
+  size_t consecutive_in_bound = 0;
+  while (recover_idx < n) {
+    if (!is_break_hard_bound(recover_idx)) {
+      ++consecutive_in_bound;
+      if (consecutive_in_bound >= kBlendRadius) {
+        last_recover_idx = recover_idx;
+      }
+    } else {
+      last_recover_idx = n;
+      consecutive_in_bound = 0;
+    }
+    ++recover_idx;
+  }
+  recover_idx = (last_recover_idx == n) ? (n - 1) : last_recover_idx;
+
+  if (recover_idx > n - 1 - kBlendRadius) {
+    recover_idx = n - 1;
+  }
+
+  for (size_t i = 0; i < n; ++i) {
+    if (i < break_start) {
+      merged[i] = plan_history_traj_[i];
+    } else if (i > recover_idx) {
+      merged[i] = raw_ref_traj_points[i];
+    } else {
+      merged[i] = bound_center_line_[i];
+    }
+  }
+
+  merged = iterativeSmoothWithBounds(merged);
+
+  ref_traj_points_ = merged;
+}
+
 void HppGeneralLateralDecider::LimitFrenetLateralSlope(
     std::vector<std::pair<double, double>> &frenet_bounds) {
   // 避免dl ds 差值过大
@@ -2987,6 +3369,15 @@ void HppGeneralLateralDecider::GenerateEnuReferenceTraj(
 void HppGeneralLateralDecider::GenerateEnuReferenceTheta(
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
+  for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+    if (i + 1 < ref_traj_points_.size()) {
+      const double dx = ref_traj_points_[i + 1].x - ref_traj_points_[i].x;
+      const double dy = ref_traj_points_[i + 1].y - ref_traj_points_[i].y;
+      ref_traj_points_[i].heading_angle = std::atan2(dy, dx);
+    } else {
+      ref_traj_points_[i].heading_angle = ref_traj_points_[i - 1].heading_angle;
+    }
+  }
 
   for (size_t i = 0; i < ref_path_points_.size(); i++) {
     enu_ref_theta.emplace_back(ref_traj_points_[i].heading_angle);
