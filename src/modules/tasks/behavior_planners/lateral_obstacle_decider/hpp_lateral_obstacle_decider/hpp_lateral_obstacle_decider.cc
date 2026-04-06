@@ -922,6 +922,7 @@ void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
         consistency_info.count = 1;
         consistency_info.last_decision = curr_decision;
       }
+      ++iter;
     } else {
       double idle_time =
           current_timestamp - consistency_info.last_seen_timestamp;
