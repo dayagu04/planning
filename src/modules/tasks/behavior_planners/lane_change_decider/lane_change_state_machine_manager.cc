@@ -3908,28 +3908,27 @@ TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const planning_data::DynamicAgentNode* temp_agent_node = agent_node;
+  // while (IsFilterAgent(temp_agent_node, target_lane_coor,
+  //                      &agent_prediction_trajs, is_ego_lane_agent,
+  //                      is_front_agent)) {
+  //   if (!agent_prediction_trajs.empty()) {
+  //     agent_prediction_trajs.clear();
+  //   }
 
-  while (IsFilterAgent(temp_agent_node, target_lane_coor,
-                       &agent_prediction_trajs, is_ego_lane_agent,
-                       is_front_agent)) {
-    if (!agent_prediction_trajs.empty()) {
-      agent_prediction_trajs.clear();
-    }
+  //   int64_t target_node_id = is_front_agent ? temp_agent_node->front_node_id()
+  //                                           : temp_agent_node->rear_node_id();
+  //   temp_agent_node = dynamic_world->GetNode(target_node_id);
 
-    int64_t target_node_id = is_front_agent ? temp_agent_node->front_node_id()
-                                            : temp_agent_node->rear_node_id();
-    temp_agent_node = dynamic_world->GetNode(target_node_id);
+  //   *after_filter_agent = temp_agent_node;
 
-    *after_filter_agent = temp_agent_node;
-
-    if (!temp_agent_node) {
-      return agent_prediction_trajs;
-    }
-  }
-
-  StoreObjDebugPredictionInfo(temp_agent_node, &agent_prediction_trajs,
+  //   if (!temp_agent_node) {
+  //     return agent_prediction_trajs;
+  //   }
+  // }
+  // 不在内部沿while过滤障碍物，造成id不一致
+  BuildAgentPredictionTrajsInTargetLane(agent_node, target_lane_coor, is_front_agent, &agent_prediction_trajs);
+  StoreObjDebugPredictionInfo(agent_node, &agent_prediction_trajs,
                               is_front_agent, is_ego_lane_agent);
-
   return agent_prediction_trajs;
 }
 
@@ -4838,6 +4837,55 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
     }
   }
   return false;
+}
+void LaneChangeStateMachineManager::BuildAgentPredictionTrajsInTargetLane(
+  const planning_data::DynamicAgentNode* agent_node,
+  const std::shared_ptr<planning_math::KDPath> target_lane_coor,
+  const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs) {
+agent_prediction_trajs->clear();
+if (agent_node == nullptr || target_lane_coor == nullptr) {
+  return;
+}
+const auto& virtual_lane_manager =
+    session_->environmental_model().get_virtual_lane_manager();
+const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+const auto& tar_lane =
+    virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+if (tar_lane == nullptr) {
+  return;
+}
+
+const auto& trajectory_optimized = agent_node->node_trajectory_optimized();
+const auto& agent_trajs = agent_node->node_trajectories_used_by_st_graph();
+if (agent_trajs.size() < 1) {
+  return;
+}
+const auto& agent_traj_st = agent_trajs[0];
+const trajectory::Trajectory& agent_traj =
+    (joint_decision_success_ && trajectory_optimized.size() > 1)
+        ? trajectory_optimized
+        : agent_traj_st;
+for (int i = 0; i < agent_traj.size(); i++) {
+  const auto& agent_traj_point = agent_traj[i];
+  TrajectoryPoint agent_prediction_traj;
+  agent_prediction_traj.x = agent_traj_point.x();
+  agent_prediction_traj.y = agent_traj_point.y();
+  double s = 0.0;
+  double l = 0.0;
+  if (!target_lane_coor->XYToSL(agent_traj_point.x(), agent_traj_point.y(),
+                                &s, &l)) {
+    continue;
+  }
+  Point2D frenet_point(s, l);
+  agent_prediction_traj.s = frenet_point.x;
+  agent_prediction_traj.l = frenet_point.y;
+  agent_prediction_traj.t = agent_traj_point.absolute_time();
+  agent_prediction_traj.v = agent_traj_point.vel();
+  agent_prediction_traj.a = agent_traj_point.acc();
+  agent_prediction_traj.jerk = agent_traj_point.jerk();
+  agent_prediction_traj.heading_angle = agent_traj_point.theta();
+  agent_prediction_trajs->emplace_back(agent_prediction_traj);
+}
 }
 void LaneChangeStateMachineManager::StoreObjDebugPredictionInfo(
     const planning_data::DynamicAgentNode* agent_node,
