@@ -3926,9 +3926,12 @@ TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
   //   }
   // }
   // 不在内部沿while过滤障碍物，造成id不一致
+  if (after_filter_agent) {
+    *after_filter_agent = agent_node;
+  }
   BuildAgentPredictionTrajsInTargetLane(agent_node, target_lane_coor, is_front_agent, &agent_prediction_trajs);
-  StoreObjDebugPredictionInfo(agent_node, &agent_prediction_trajs,
-                              is_front_agent, is_ego_lane_agent);
+  // StoreObjDebugPredictionInfo(agent_node, &agent_prediction_trajs,
+  //                             is_front_agent, is_ego_lane_agent);
   return agent_prediction_trajs;
 }
 
@@ -4891,6 +4894,9 @@ void LaneChangeStateMachineManager::StoreObjDebugPredictionInfo(
     const planning_data::DynamicAgentNode* agent_node,
     const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
     const bool is_ego_lane_agent) {
+  if(agent_node == nullptr || agent_prediction_trajs == nullptr) {
+    return;
+  }
   const double agent_length = agent_node->node_length();
 
   const auto& vehicle_param =
