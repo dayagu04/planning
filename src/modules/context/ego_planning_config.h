@@ -2218,7 +2218,7 @@ struct HppLateralObstacleDeciderConfig : public EgoPlanningConfig {
     absolute_nudge_buffer = read_json_keys<double>(
         json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
                                        "absolute_nudge_buffer"});
-    absolute_nudge_buffer = read_json_keys<double>(
+    ego_detour_safe_dis = read_json_keys<double>(
         json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
                                        "ego_detour_safe_dis"});
   }
