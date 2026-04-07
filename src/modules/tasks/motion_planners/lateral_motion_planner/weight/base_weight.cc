@@ -1884,7 +1884,7 @@ void BaseWeight::SetWeightProtectionForLargePosDiff(
     // planning_input.set_q_ref_theta(q_ref_theta * q_ref_theta_ratio);
     end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
     planning_input.set_q_acc(0.0);
-    planning_input.set_jerk_bound(config_.jerk_bound_inactivated_limit);
+    // planning_input.set_jerk_bound(config_.jerk_bound_inactivated_limit);
     double q_soft_bound = planning_input.q_soft_corridor();
     planning_input.set_q_soft_corridor(q_soft_bound * q_soft_bound_ratio);
     planning_input.set_q_continuity(q_continuity);
