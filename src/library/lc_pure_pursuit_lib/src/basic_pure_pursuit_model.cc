@@ -40,6 +40,34 @@ ErrorType BasicPurePursuitModel::ProcessReferencePath(
   return ErrorType::kSuccess;
 }
 
+ErrorType BasicPurePursuitModel::ProcessReferencePath(
+    const std::shared_ptr<VirtualLane> &virtual_lane) {
+  if (virtual_lane == nullptr) {
+    LOG_ERROR(
+        "BasicPurePursuitModel::ProcessReferencePath: virtual_lane is null");
+    return ErrorType::kIllegalInput;
+  }
+  // reference_path_ = reference_path;
+  base_lane_ = virtual_lane;
+  const auto& ref_points = virtual_lane->lane_points();
+  ref_s_vec_.resize(ref_points.size(), 0.0);
+  ref_x_vec_.resize(ref_points.size(), 0.0);
+  ref_y_vec_.resize(ref_points.size(), 0.0);
+  ref_theta_vec_.resize(ref_points.size(), 0.0);
+  for (size_t i = 0; i < ref_points.size(); ++i) {
+    ref_s_vec_[i] = ref_points[i].s;
+    ref_x_vec_[i] = ref_points[i].enu_point.x;
+    ref_y_vec_[i] = ref_points[i].enu_point.y;
+    ref_theta_vec_[i] = ref_points[i].enu_heading;
+  }
+  ref_x_s_spline_.set_points(ref_s_vec_, ref_x_vec_);
+  ref_y_s_spline_.set_points(ref_s_vec_, ref_y_vec_);
+  ref_theta_s_spline_.set_points(ref_s_vec_, ref_theta_vec_);
+  ref_points_size_ = ref_points.size();
+  is_input_set_ = true;
+  return ErrorType::kSuccess;
+}
+
 ErrorType BasicPurePursuitModel::CalculateAlpha(const double lat_offset) {
   if (!is_input_set_) {
     LOG_ERROR("pure pursuit model input not set!!! \n");
@@ -101,7 +129,18 @@ ErrorType BasicPurePursuitModel::CalculateAlpha(const double lat_offset) {
   }
 
   //更新横向偏移值
-  const auto& ref_coor = reference_path_->get_frenet_coord();
+
+  std::shared_ptr<planning_math::KDPath> ref_coor;
+  if (reference_path_ != nullptr) {
+    ref_coor = reference_path_->get_frenet_coord();
+  } else if (base_lane_ != nullptr) {
+    ref_coor = base_lane_->get_lane_frenet_coord();
+  }
+
+  if (ref_coor == nullptr) {
+    LOG_ERROR("ref_coor is nullptr!!!");
+    return ErrorType::kWrongStatus;
+  }
 
   Point2D xy_point(goal_point_.x(), goal_point_.y());
   Point2D sl_point;
@@ -177,6 +216,7 @@ void BasicPurePursuitModel::Reset() {
   mdoel_state_ = ModelState();
   is_current_state_set_ = false;
   is_model_param_set_ = false;
+  base_lane_ = nullptr;
 }
 
 }  // namespace planning
