@@ -33,7 +33,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   modules
   # cyber
   # fastrtps
-  # autoplt
+  # # autoplt
   legacy_c_interface
 )
 
