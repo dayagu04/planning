@@ -492,6 +492,7 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
+    lane_change_stage_info_.lc_invalid_reason = "no target lane";
     return true;
   }
   // check if gap is dangerous
@@ -540,6 +541,7 @@ bool LaneChangeStateMachineManager::CheckIfHoldToCancel(
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
+    lane_change_stage_info_.lc_invalid_reason = "no target lane";
     return true;
   }
   return false;
@@ -750,7 +752,11 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     lane_change_stage_info_.gap_insertable = false;
     lc_valid_cnt_ = 0;
     if (!is_dash_enough) {
-      lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+      if (!is_roadedge_safe) {
+        lane_change_stage_info_.lc_invalid_reason = "no target lane";
+      } else {
+        lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+      }
     }
   }
 }
@@ -1445,8 +1451,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
         transition_info_.lane_change_direction);
   lane_change_decider_output.ego_press_line_ratio = ego_press_line_ratio;
   JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 更新压线率
-  // bool is_warning_collision_risk = 
-  // transition_info_.lane_change_status == kLaneChangeHold || 
+  // bool is_warning_collision_risk =
+  // transition_info_.lane_change_status == kLaneChangeHold ||
   // transition_info_.lane_change_status == kLaneChangeCancel||
   // (transition_info_.lane_change_status == kLaneChangeExecution && lc_back_cnt_ > 0);
   // if(is_warning_collision_risk) {
@@ -4330,7 +4336,7 @@ bool LaneChangeStateMachineManager::
   bool front_risk = false;
   double ego_v = ego_trajs_future_[0].v;
   double front_v = agent_traj[0].v;
-  double front_gap = agent_traj[0].s - ego_trajs_future_[0].s 
+  double front_gap = agent_traj[0].s - ego_trajs_future_[0].s
                     - 0.5 * agent_node->node_length() - kEgoFrontEdgeToRearAxleDistance;
   // gap小于0 则不安全，gap大于0，有差速，ttc小于2 也不安全
   if(front_gap < 1.0){
@@ -4338,7 +4344,7 @@ bool LaneChangeStateMachineManager::
   }else{
     //自车相对前车慢速返回安全，自车相对前车快速则计算ttc
     double rel_vel0 = ego_v - front_v;
-    if(rel_vel0 < 0.0){//前车快速 无ttc 
+    if(rel_vel0 < 0.0){//前车快速 无ttc
       front_risk = false;
     }else{
       double front_ttc = front_gap / (rel_vel0 + 1e-6);
@@ -4368,7 +4374,7 @@ bool LaneChangeStateMachineManager::
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
-      } 
+      }
       if (ego_press_line_ratio > 0.01 && is_side_clear_  && is_executing && !front_risk) {//对侧方车保持返回能力
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
@@ -4423,7 +4429,7 @@ bool LaneChangeStateMachineManager::
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
       const double press_ratio = std::clamp(ego_press_line_ratio, 0.0, 1.0);
       const double exe_ratio = rear_agent_overtaking_? 1.0 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
-      box_longitudinal_buff = is_executing ? 
+      box_longitudinal_buff = is_executing ?
                             box_longitudinal_buff * exe_ratio * (1.0 - press_ratio)
                             : box_longitudinal_buff * (1.0 - press_ratio);
       // 最小值
@@ -4537,7 +4543,7 @@ bool LaneChangeStateMachineManager::
                                    agent_length + box_longitudinal_buff,
                                    agent_width + lat_buff);
     double distance_i = ego_box.DistanceTo(agent_box);
-    
+
     box_longitudinal_buff_vec.push_back(box_longitudinal_buff);
     distance_vec.push_back(distance_i);
     ego_vel_vec.push_back(ego_trajs_future_[i].v);
