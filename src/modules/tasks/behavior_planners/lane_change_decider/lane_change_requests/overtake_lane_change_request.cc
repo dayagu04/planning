@@ -1983,6 +1983,12 @@ double OvertakeRequest::getDrivingDistance(const double v, const double a,
 bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
   const auto& tracks_map = lateral_obstacle_->tracks_map();
   auto leading_vehicle_iter = tracks_map.find(overtake_vehicle_id_);
+  double press_target_line_ratio = 
+      CalculatePressLineRatioByTarget(target_lane_virtual_id_, request_type_);
+  if (press_target_line_ratio > 0.1) {
+    return false;
+  }
+  
   if (leading_vehicle_iter != tracks_map.end()) {
     const double overtake_lane_change_vehicle_speed =
         leading_vehicle_iter->second->velocity();
