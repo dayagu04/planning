@@ -208,8 +208,17 @@ void LongRefPathDecider::UpdateLonRefPath() {
 
     // 6.update a bounds
     Bound lon_a_bound;
-    lon_a_bound.lower = bound_maker_->a_lower_bound(t);
-    lon_a_bound.upper = bound_maker_->a_upper_bound(t);
+    if (lane_change_info.s_search_status &&
+        speed_planning_config_.enable_speed_adjust &&
+        lane_change_info.is_emergency_scene &&
+        start_stop_decider_output.ego_start_stop_info().state() !=
+            common::StartStopInfo::STOP) {
+      lon_a_bound.lower = -3.0;
+      lon_a_bound.upper = 1.3;
+    } else {
+      lon_a_bound.lower = bound_maker_->a_lower_bound(t);
+      lon_a_bound.upper = bound_maker_->a_upper_bound(t);
+    }
     lon_behavior_output_.lon_bound_a[i] = lon_a_bound;
 
     // 7.update jerk bounds
