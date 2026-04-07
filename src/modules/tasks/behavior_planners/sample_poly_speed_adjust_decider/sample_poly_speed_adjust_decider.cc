@@ -241,8 +241,8 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
           weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
           weight_speed_change_, weight_leading_veh_follow_s_,
-          weight_jerk_limit_, front_edge_to_rear_axle_, rear_edge_to_rear_axle_,
-          config_);
+          weight_jerk_limit_, weight_stop_point_, front_edge_to_rear_axle_,
+          rear_edge_to_rear_axle_, config_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -874,7 +874,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
             weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
             weight_speed_change_, weight_leading_veh_follow_s_,
-            weight_jerk_limit_, front_edge_to_rear_axle_,
+            weight_jerk_limit_, weight_stop_point_, front_edge_to_rear_axle_,
             rear_edge_to_rear_axle_, config_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
@@ -968,6 +968,7 @@ void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
   weight_leading_veh_follow_s_ =
       config_.normal_scene_weight_leading_veh_follow_s;
   weight_jerk_limit_ = config_.normal_scene_weight_jerk_limit;
+  weight_stop_point_ = config_.normal_scene_weight_stop_point;
 }
 
 void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
@@ -985,6 +986,7 @@ void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
   weight_leading_veh_follow_s_ =
       config_.purse_flow_vel_scene_weight_leading_veh_follow_s;
   weight_jerk_limit_ = config_.purse_flow_vel_scene_weight_jerk_limit;
+  weight_stop_point_ = config_.purse_flow_vel_scene_weight_stop_point;
 }
 
 void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
@@ -1002,6 +1004,7 @@ void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
   weight_leading_veh_follow_s_ =
       config_.decleration_scene_weight_leading_veh_follow_s;
   weight_jerk_limit_ = config_.decleration_scene_weight_jerk_limit;
+  weight_stop_point_ = config_.decleration_scene_weight_stop_point;
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(

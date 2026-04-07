@@ -21,7 +21,8 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_gap_avaliable, const double weight_acc_limit,
     const double weight_stop_penalty, const double weight_speed_change,
     const double weight_leading_veh_follow_s, const double weight_jerk_limit,
-    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle,
+    const double weight_stop_point, const double front_edge_to_rear_axle,
+    const double back_edge_to_rear_axle,
     const SamplePolySpeedAdjustDeciderConfig& config) {
   poly_ = poly;
   arrived_t_ = arrived_t;
@@ -63,6 +64,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   leading_veh_follow_s_cost_.SetWeight(weight_leading_veh_follow_s);
   leading_veh_follow_s_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
   jerk_limit_cost_.SetWeight(weight_jerk_limit);
+  stop_point_cost_.SetWeight(weight_stop_point);
 };
 
 void SampleQuarticPolynomialCurve::CostInit() {
@@ -76,6 +78,7 @@ void SampleQuarticPolynomialCurve::CostInit() {
   speed_change_cost_.Init();
   anchor_points_match_gap_cost_.Init();
   jerk_limit_cost_.Init();
+  stop_point_cost_.Init();
   cost_sum_ = 0.0;
 }
 double SampleQuarticPolynomialCurve::CalcS(const double t) const {
@@ -282,7 +285,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     is_left_distance_enough_ =
         is_merge_change
             ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
-            : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
+            : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 3.0;
     if (is_left_distance_enough_) {
       speed_differ_gain = 0.0;
       distance_to_stop_point = kMaxDistanceToStopPoint;

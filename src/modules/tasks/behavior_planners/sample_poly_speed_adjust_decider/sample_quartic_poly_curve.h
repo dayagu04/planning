@@ -20,7 +20,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
       const double weight_acc_limit, const double weight_stop_penalty,
       const double weight_speed_change,
       const double weight_leading_veh_follow_s, const double weight_jerk_limit,
-      const double front_edge_to_rear_axle,
+      const double weight_stop_point, const double front_edge_to_rear_axle,
       const double back_edge_to_rear_axle,
       const SamplePolySpeedAdjustDeciderConfig& config);
 

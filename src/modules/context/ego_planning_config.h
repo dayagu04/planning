@@ -982,6 +982,10 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     normal_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "normal_scene_weight_jerk_limit"});
+    normal_scene_weight_stop_point = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_stop_point"});
+
     purse_flow_vel_scene_weight_match_gap_vel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "purse_flow_vel_scene_weight_match_gap_vel"});
@@ -1021,6 +1025,10 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     purse_flow_vel_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "purse_flow_vel_scene_weight_jerk_limit"});
+    purse_flow_vel_scene_weight_stop_point = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_stop_point"});
+
     decleration_scene_weight_match_gap_vel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_match_gap_vel"});
@@ -1060,6 +1068,10 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     decleration_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_jerk_limit"});
+    decleration_scene_weight_stop_point = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_stop_point"});
+                                        
     leading_safe_distance_gain = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "leading_safe_distance_gain"});
@@ -1106,6 +1118,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double normal_scene_weight_speed_change = 10.0;
   double normal_scene_weight_leading_veh_follow_s = 1.0;
   double normal_scene_weight_jerk_limit = 2.0;
+  double normal_scene_weight_stop_point = 0.0;
 
   double purse_flow_vel_scene_weight_match_gap_vel = 0.2;
   double purse_flow_vel_scene_weight_match_gap_s = 0.2;
@@ -1120,6 +1133,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double purse_flow_vel_scene_weight_speed_change = 0.0;
   double purse_flow_vel_scene_weight_leading_veh_follow_s = 0.0;
   double purse_flow_vel_scene_weight_jerk_limit = 2.0;
+  double purse_flow_vel_scene_weight_stop_point = 0.0;
 
   double decleration_scene_weight_match_gap_vel = 4.5;
   double decleration_scene_weight_match_gap_s = 2.5;
@@ -1134,6 +1148,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double decleration_scene_weight_speed_change = 0.0;
   double decleration_scene_weight_leading_veh_follow_s = 1.0;
   double decleration_scene_weight_jerk_limit = 2.0;
+  double decleration_scene_weight_stop_point = 5.0;
 
   double leading_safe_distance_gain = 1.3;
   double leading_safe_delay_time = 0.5;
@@ -2487,7 +2502,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                      "max_care_time_for_roadborder");
     ReadItem<double>(json, decrease_time_for_roadborder,
                      "general_lateral_decider",
-                     "decrease_time_for_roadborder");                 
+                     "decrease_time_for_roadborder");
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",

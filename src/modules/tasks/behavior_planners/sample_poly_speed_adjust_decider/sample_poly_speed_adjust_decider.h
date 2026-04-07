@@ -96,6 +96,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double weight_speed_change_;
   double weight_leading_veh_follow_s_;
   double weight_jerk_limit_;
+  double weight_stop_point_;
 
   std::pair<double, double> speed_adjust_range_;  // first: upper, second: lower
 
