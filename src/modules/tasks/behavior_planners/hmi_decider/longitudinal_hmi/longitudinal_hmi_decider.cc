@@ -3,6 +3,7 @@
 #include "modules/context/environmental_model_manager.h"
 #include "modules/context/planning_context.h"
 #include "modules/context/traffic_light_decision_manager.h"
+#include "context/function_switch_config_context.h"
 
 namespace planning {
 namespace {
@@ -167,7 +168,10 @@ bool LongitudinalHmiDecider::Execute() {
         iflyauto::REQUEST_REASON_LON_COLLISION_RISK;
   }
   // intersection left/right takeover request
-  if (!tfl_decider.is_in_straight_lane) {
+  bool disable_tlf_from_product = static_cast<bool>(FunctionSwitchConfigContext::Instance()
+                                      ->get_function_switch_config()
+                                      .disable_tlf_function);
+  if (!tfl_decider.is_in_straight_lane && !disable_tlf_from_product) {
     IntersectionLeftRightLaneTakeOverProc();
   }
   return true;
