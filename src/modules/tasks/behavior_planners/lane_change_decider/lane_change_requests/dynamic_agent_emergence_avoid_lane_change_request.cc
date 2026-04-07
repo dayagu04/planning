@@ -59,7 +59,7 @@ constexpr int kBrakeFailureHysteresisCount = 2;  // 刹停失败滞回帧数
 constexpr double kCrossingHeadingMinThreshold = 45 / 57.3;
 constexpr double kCrossingHeadingMaxThreshold = 135 / 57.3;
 
-constexpr double kBreakDeceleration = 1.0;  
+constexpr double kBreakDeceleration = 1.0;
 constexpr double kOvertakeSimTimeStep = 0.2;
 constexpr double kOvertakeSimTotalTime = 5.0;
 constexpr double kOvertakeQuickPassTime = 0.8;
@@ -89,12 +89,12 @@ void DynamicAgentEmergenceAvoidRequest::Update(int lc_status) {
   }
 
   // intersection surpression
-  if (EgoInIntersection()) {
-    // 路口抑制变道
-    Reset();
-    Finish();
-    return;
-  }
+  // if (EgoInIntersection()) {
+  //   // 路口抑制变道
+  //   Reset();
+  //   Finish();
+  //   return;
+  // }
 
   Init();
 
@@ -1206,7 +1206,7 @@ bool DynamicAgentEmergenceAvoidRequest::CheckTargetLaneSafety(
         continue;
       }
     }
-    
+
     // 检查是否在自车前方
     if (obs_boundary.s_start <= ego_frenet_boundary.s_end) {
       continue;
