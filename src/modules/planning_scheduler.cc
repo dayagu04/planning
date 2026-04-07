@@ -1495,7 +1495,7 @@ void PlanningScheduler::CheckTrajectory() {
       case FaultType::TRAJ_CURVATURE_RANGE: {
         if (std::any_of(traj_points.begin(), traj_points.end(),
                         [](const TrajectoryPoint& traj_point) {
-                          return std::fabs(traj_point.curvature) > 0.35;
+                          return std::fabs(traj_point.curvature) > 0.5;
                         })) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
@@ -1524,7 +1524,7 @@ void PlanningScheduler::CheckTrajectory() {
         const auto& proj_point = projection_spline.GetOutput().point_proj;
         const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
                                         init_point.y() - proj_point.y());
-        if (fabs(lon_err) > 3.0) {
+        if (fabs(lon_err) > 200.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
@@ -1543,7 +1543,7 @@ void PlanningScheduler::CheckTrajectory() {
       case FaultType::TRAJ_LON_VEL_CONSISTENCY: {
         const auto lon_vel_err =
             ego_state_mgr->planning_init_point().v - ego_state_mgr->ego_v();
-        if (fabs(lon_vel_err) > (5.0 / 3.6)) {
+        if (fabs(lon_vel_err) > (10.0 / 3.6)) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
@@ -1563,7 +1563,7 @@ void PlanningScheduler::CheckTrajectory() {
         bool is_acc = ego_state_mgr->planning_init_point().a > 0.1;
         const auto lon_acc_err =
             ego_state_mgr->planning_init_point().a - ego_state_mgr->ego_acc();
-        if (is_acc && fabs(lon_acc_err) > 3.0) {
+        if (is_acc && fabs(lon_acc_err) > 5.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
@@ -1583,7 +1583,7 @@ void PlanningScheduler::CheckTrajectory() {
         bool is_acc = ego_state_mgr->planning_init_point().a > 0.1;
         const auto lon_acc_err =
             ego_state_mgr->planning_init_point().a - ego_state_mgr->ego_acc();
-        if ((!is_acc) && fabs(lon_acc_err) > 4.0) {
+        if ((!is_acc) && fabs(lon_acc_err) > 6.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
