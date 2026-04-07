@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include "ego_state_manager.h"
 #include "ifly_time.h"
 #include "math/math_utils.h"
@@ -221,6 +222,42 @@ const std::pair<double, double> ReferencePath::get_interpolated_point_width(
                                   nearest_point, s, is_raw_width);
     }
   }
+}
+
+const double ReferencePath::get_max_kappa_for_range(const double s_start,
+                                                    const double s_end) const {
+  auto it_start = std::lower_bound(refined_ref_path_points_.begin(),
+                                   refined_ref_path_points_.end(), s_start,
+                                   [](const ReferencePathPoint &a, double s) {
+                                     return a.path_point.s() < s;
+                                   });
+  size_t idx_start = 0;
+  if (it_start == refined_ref_path_points_.end()) {
+    idx_start = refined_ref_path_points_.size() - 1;
+  } else {
+    idx_start = it_start - refined_ref_path_points_.begin();
+  }
+  auto it_end = std::lower_bound(refined_ref_path_points_.begin(),
+                                 refined_ref_path_points_.end(), s_end,
+                                 [](const ReferencePathPoint &a, double s) {
+                                   return a.path_point.s() <= s;
+                                 });
+  size_t idx_end = 0;
+  if (it_end == refined_ref_path_points_.end()) {
+    idx_end = refined_ref_path_points_.size() - 1;
+  } else if(it_end == refined_ref_path_points_.begin()) {
+    idx_end = 0;
+  } else {
+    idx_end = it_end - refined_ref_path_points_.begin() - 1;
+  }
+  double res_kappa = std::numeric_limits<double>::min();
+  for (size_t i = idx_start; i <= idx_end; ++i) {
+    if (std::fabs(refined_ref_path_points_[i].path_point.kappa()) >
+        std::fabs(res_kappa)) {
+      res_kappa = refined_ref_path_points_[i].path_point.kappa();
+    }
+  }
+  return res_kappa;
 }
 void ReferencePath::update_refpath_points_in_hpp(
     const double ego_projection_length_in_reference_path,

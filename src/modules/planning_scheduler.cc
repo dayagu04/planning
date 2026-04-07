@@ -1058,6 +1058,8 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
 
   const double kEgoIsInTurnThr = 3.0;
   const double kEgoIsOutTurnThr = 1.0;
+  const double kTurnKappaThr = 0.2;
+  const double kTurnRangeThr = 10.0;
   QueryTypeInfo turn_type_info = {CRoadType::Turn, CPassageType::Ignore,
                                   CElemType::Ignore};
   const auto front_turn_range =
@@ -1065,14 +1067,21 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
   if (front_turn_range.first < front_turn_range.second &&
       ego_head_s > front_turn_range.first - kEgoIsInTurnThr &&
       ego_s < front_turn_range.second + kEgoIsOutTurnThr) {
-    hpp_info->is_approaching_turn = true;
     const auto mid_s = (front_turn_range.first + front_turn_range.second) / 2.0;
-    ReferencePathPoint mid_ref_point;
-    if (current_reference_path->get_reference_point_by_lon(mid_s,
-                                                           mid_ref_point)) {
-      hpp_info->is_left_turn = mid_ref_point.path_point.kappa() > 0.0;
+    const double max_kappa = current_reference_path->get_max_kappa_for_range(front_turn_range.first,
+                                                                           front_turn_range.second);
+    if (std::fabs(max_kappa) > kTurnKappaThr && front_turn_range.second - front_turn_range.first > kTurnRangeThr) {
+      hpp_info->is_approaching_turn = true;
+      ReferencePathPoint mid_ref_point;
+      if (current_reference_path->get_reference_point_by_lon(mid_s,
+                                                             mid_ref_point)) {
+        hpp_info->is_left_turn = mid_ref_point.path_point.kappa() > 0.0;
+      } else {
+        ILOG_ERROR
+            << "LaneReferencePath::get turn range mid refer point failed";
+      }
     } else {
-      ILOG_ERROR << "LaneReferencePath::get turn range mid refer point failed";
+      hpp_info->is_approaching_turn = false;
     }
   } else {
     hpp_info->is_approaching_turn = false;

@@ -350,7 +350,7 @@ void LaneReferencePath::generate_frenet_obstacles(
     std::shared_ptr<FrenetObstacle> frenet_obstacle =
         std::make_shared<FrenetObstacle>(
             obstacle_ptr, *this,
-            session_->environmental_model().get_ego_state_manager(), true);
+            session_->environmental_model().get_ego_state_manager(), true, session_->is_hpp_scene());
     frenet_obstacles.emplace_back(frenet_obstacle);
     frenet_obstacles_map[obstacle_ptr->id()] = frenet_obstacle;
   }
@@ -953,6 +953,9 @@ ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
   extend_point.min_velocity = last_point.min_velocity;
   extend_point.type = ReferencePathPointType::MAP;
   extend_point.is_in_intersection = last_point.is_in_intersection;
+  extend_point.is_ramp = last_point.is_ramp;
+  extend_point.ramp_slope = last_point.ramp_slope;
+  extend_point.floor_id = last_point.floor_id;
 
   return extend_point;
 }

@@ -838,15 +838,11 @@ class LoadRosbag:
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
                          "ResultTrajectoryGeneratorTime","ParkingSwitchDeciderTime","ARAStarTime",'HPP turn signal','hpp_lon_collision_check_time_cost', \
                          "dist_to_target_slot", "dist_to_target_dest", "is_exist_target_slot", "is_target_slot_allowed_to_park",\
-                         "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime",\
-                        #  "v_limit_curv", "v_limit_avoid",\
-                        #  "ego_head_s", "ego_s",
-                        #  "v_limit_speed_bump", "in_speed_bump_zone", "approaching_speed_bump", "distance_to_bump_zone",
-                        #  "speed_bump_near_ignore_range_first", "speed_bump_near_ignore_range_second", "update_speed_bump_near_ignore_range",\
-                        #  "v_limit_speed_ramp", "in_speed_limit_ramp", "approaching_speed_limit_zone_ramp", "distance_to_zone_ramp", \
-                        #  "v_limit_speed_intersection_road", "in_speed_limit_intersection", "approaching_speed_limit_zone_intersection", "distance_to_zone_intersection"]
+                         "is_standstill_near_target_slot", "is_timeout_for_target_slot_allowed_to_park", "current planning_success", "pass_interval_first", "pass_interval_second", "edt_manager_cost","GeneralLateralDeciderCostTime"]
+
       json_vector_list += ["lon_collision_object_position_x_vec",
-                           "lon_collision_object_position_y_vec",'expand_num_vec']
+                           "lon_collision_object_position_y_vec",
+                           "expand_num_vec"]
       # nsa
       json_value_list += ["narrow_space_state", "narrow_space_left_rear_x","narrow_space_left_rear_y","narrow_space_right_rear_x", "narrow_space_right_rear_y", \
                           "narrow_space_left_front_x","narrow_space_left_front_y","narrow_space_right_front_x", "narrow_space_right_front_y", "narrow_space_end_point_x", "narrow_space_end_point_y"]
