@@ -1297,6 +1297,99 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
     }
   }
 
+  // 后处理：防止横向超调
+  // 条件：自车当前在参考线左侧(l0>0)，未来某点超调到右侧(l<0)，且该点左侧无障碍物cost
+  // 处理：将超调点的l修正到参考线上(l=0)
+  const double ego_init_l = cost_table_[0][0][0].point().l();
+  if (ego_init_l > 0.0) {
+    for (size_t i = 1; i < dp_speed_profile_.size(); ++i) {
+      if (dp_speed_profile_[i].l >= 0.0) {
+        continue;
+      }
+      // 找到超调点，检查对应时刻cost_table_中l>=0的采样点是否有障碍物cost
+      // 用时间反查cost_table_的t维度索引
+      const double point_t = dp_speed_profile_[i].t;
+      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
+      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
+        continue;
+      }
+      // 找到s维度最近的索引
+      const double point_s = dp_speed_profile_[i].s;
+      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
+                                          spatial_distance_by_index_.end(), point_s);
+      const int s_idx = static_cast<int>(
+          std::distance(spatial_distance_by_index_.begin(), s_itr));
+      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
+        continue;
+      }
+      // 找到lateral_distance_by_index_中第一个l>=0的索引（参考线右侧第一个采样点）
+      // 检查该点是否有障碍物cost
+      bool left_has_obstacle = false;
+      const auto& cost_row = cost_table_[t_idx][s_idx];
+      const auto ref_l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
+                                              lateral_distance_by_index_.end(), 0.0);
+      if (ref_l_itr != lateral_distance_by_index_.end()) {
+        const int ref_l_idx = static_cast<int>(
+            std::distance(lateral_distance_by_index_.begin(), ref_l_itr));
+        if (ref_l_idx < static_cast<int>(cost_row.size()) &&
+            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
+          left_has_obstacle = true;
+        }
+      }
+      if (!left_has_obstacle) {
+        ILOG_DEBUG << "[PostProcess] Overshoot correction at t=" << point_t
+                   << " l=" << dp_speed_profile_[i].l << " -> 0.0";
+        dp_speed_profile_[i].l = 0.0;
+      }
+    }
+  }
+
+  // 后处理：防止横向超调（右侧情况）
+  // 条件：自车当前在参考线右侧(l0<0)，未来某点超调到左侧(l>0)，且该点右侧无障碍物cost
+  // 处理：将超调点的l修正到参考线上(l=0)
+  if (ego_init_l < 0.0) {
+    for (size_t i = 1; i < dp_speed_profile_.size(); ++i) {
+      if (dp_speed_profile_[i].l <= 0.0) {
+        continue;
+      }
+      // 找到超调点，检查对应时刻cost_table_中l<=0的采样点是否有障碍物cost
+      // 用时间反查cost_table_的t维度索引
+      const double point_t = dp_speed_profile_[i].t;
+      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
+      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
+        continue;
+      }
+      // 找到s维度最近的索引
+      const double point_s = dp_speed_profile_[i].s;
+      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
+                                          spatial_distance_by_index_.end(), point_s);
+      const int s_idx = static_cast<int>(
+          std::distance(spatial_distance_by_index_.begin(), s_itr));
+      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
+        continue;
+      }
+      // 找到lateral_distance_by_index_中最后一个l<=0的索引（参考线左侧第一个采样点）
+      // 检查该点是否有障碍物cost
+      bool right_has_obstacle = false;
+      const auto& cost_row = cost_table_[t_idx][s_idx];
+      const auto ref_l_itr = std::upper_bound(lateral_distance_by_index_.begin(),
+                                              lateral_distance_by_index_.end(), 0.0);
+      if (ref_l_itr != lateral_distance_by_index_.begin()) {
+        const int ref_l_idx = static_cast<int>(
+            std::distance(lateral_distance_by_index_.begin(), ref_l_itr)) - 1;
+        if (ref_l_idx >= 0 && ref_l_idx < static_cast<int>(cost_row.size()) &&
+            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
+          right_has_obstacle = true;
+        }
+      }
+      if (!right_has_obstacle) {
+        ILOG_DEBUG << "[PostProcess] Overshoot correction (right) at t=" << point_t
+                   << " l=" << dp_speed_profile_[i].l << " -> 0.0";
+        dp_speed_profile_[i].l = 0.0;
+      }
+    }
+  }
+
   std::vector<planning_math::PathPoint> path_points;
   path_points.reserve(traj_points.size());
   TrajectoryPoint pre_trajectory_point;
