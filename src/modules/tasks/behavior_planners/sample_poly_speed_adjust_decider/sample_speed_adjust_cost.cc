@@ -403,24 +403,24 @@ void SpeedVariableCost::GetCost(const double vel_integral) {
       weight_ * std::exp(std::fabs(vel_integral * kMaxVelVariableValueInverse));
 }
 
-void GapAvaliableCost::GetCost(const double future_gap_length,
-                               const double gap_length) {
-  double future_gap_cost =
-      weight_ *
-      (future_gap_length > 2 * kBasicSafeDistance
-           ? 0.0
-           : future_gap_length > kBasicSafeDistance
-                 ? std::exp(1 - (future_gap_length - kBasicSafeDistance) /
-                                    kBasicSafeDistance)
-                 : std::exp(1));
-  double gap_cost =
-      weight_ * (gap_length > 2 * kBasicSafeDistance
-                     ? 0.0
-                     : gap_length > kBasicSafeDistance
-                           ? std::exp(1 - (gap_length - kBasicSafeDistance) /
-                                              kBasicSafeDistance)
-                           : std::exp(1));
-  cost_ = std::fmax(future_gap_cost, gap_cost);
+void GapAvaliableCost::GetCost(const STPointWithLateral& upper_st_point,
+                               const STPointWithLateral& lower_st_point,
+                               const double safe_gap_front_obj,
+                               const double safe_gap_back_obj,
+                               const double ego_s) {
+  double gap_length = upper_st_point.s() - lower_st_point.s();
+  double total_safe_distance = safe_gap_front_obj + safe_gap_back_obj;
+  double left_distance = gap_length - total_safe_distance;
+  if(left_distance < 0.0) {
+    cost_ = weight_ * std::exp(1.0);
+  }else{
+    double gap_center = ((upper_st_point.s() - safe_gap_front_obj) +
+                         (lower_st_point.s() + safe_gap_back_obj)) /
+                        2.0;
+    cost_ = weight_ * std::exp(std::min(std::abs(ego_s - gap_center) /
+                                        std::max(left_distance, kZeroEpsilon),
+                               1.0));
+  }
 }
 
 void StopPenaltyCost::GetCost(const double end_v) {

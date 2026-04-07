@@ -352,22 +352,10 @@ void SampleQuarticPolynomialCurve::CalcCost(
   const double vel_integral = CalcVelIntegral(arrived_t_);
   speed_variable_cost_.GetCost(vel_integral);
 
-  const auto& agent_map = sample_space_base.agent_id_veh_info();
-  const auto& front_agent =
-      agent_map.find(anchor_matched_upper_st_point.agent_id());
-  const auto& rear_agent =
-      agent_map.find(anchor_matched_lower_st_point.agent_id());
-  if (anchor_matched_upper_st_point.agent_id() != kNoAgentId &&
-      anchor_matched_lower_st_point.agent_id() != kNoAgentId) {
-    if (front_agent != agent_map.end() && rear_agent != agent_map.end()) {
-      const double future_gap_length =
-          anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s();
-      const double gap_length =
-          front_agent->second->center_s - front_agent->second->half_length -
-          (rear_agent->second->center_s + rear_agent->second->half_length);
-      gap_avaliable_cost_.GetCost(future_gap_length, gap_length);
-    }
-  }
+  gap_avaliable_cost_.GetCost(anchor_matched_upper_st_point, anchor_matched_lower_st_point,
+                              anchor_points_match_gap_cost_.safe_gap_front_obj(),
+                              anchor_points_match_gap_cost_.safe_gap_back_obj(),
+                              arrived_s_);
 
   stop_penalty_cost_.GetCost(arrived_v_);
 
