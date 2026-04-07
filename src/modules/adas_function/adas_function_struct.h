@@ -91,7 +91,7 @@ struct Parameters {
   // double elk_roadedge_offset = 0.15;
   double lon_distance_buffer0 = 3.0;
   double lon_distance_buffer1 = 60.0;
-  double lat_buffer_to_line = 4.0;
+  double lat_buffer_to_line = 3.5;
   double tsr_reset_path_length = 10000.0;
   double tsr_speed_limit_offset = 1.0;
   double tsr_out_flag_need_last_time =

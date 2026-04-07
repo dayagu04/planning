@@ -379,6 +379,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   } else {
     /*do nothing*/
   }
+  
   return enable_code & GetContext.get_param()->ldp_enable_code_maskcode;
 }
 
@@ -1049,16 +1050,6 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
   // bit 14
   // 判断横摆角速度是否超限,12deg/s对应0.2094rad/s
   // :横摆角速度绝对值<12deg/s，持续1s
-  if (fabs(vehicle_service_output_info_ptr->yaw_rate) < 12.0 / 57.3) {
-    yaw_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (yaw_rate_supp_recover_duration_ > 60.0) {
-      yaw_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    yaw_rate_supp_recover_duration_ = 0.0;
-  }
   if (yaw_rate_supp_recover_duration_ < 1.0) {
     ldp_left_suppression_code += uint32_bit[13];
   } else {
@@ -1069,24 +1060,6 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
   // 方向盘转速(deg/s)和车速(km/h)满足如下公式,持续1s:方向盘转速≥145-0.5*v，0<v≤100
   // 方向盘转速≥95，v＞100.
   // PS1:1.8：mps转换为kph   PS2:使用实际车速
-  if ((vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) &&
-      (fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
-       (145.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    };
-  } else if ((vehicle_service_output_info_ptr->vehicle_speed > 100.0 / 3.6) &&
-             (fabs(
-                  vehicle_service_output_info_ptr->steering_wheel_angle_speed) >
-              95.0 / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    }
-  } else {
-    str_wheel_ang_speed_recover_duration_ = 0.0;
-  }
   if (str_wheel_ang_speed_recover_duration_ > 1.0) {
     ldp_left_suppression_code += uint32_bit[14];
   } else {
@@ -1095,16 +1068,6 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
 
   // bit 15
   // 驾驶员未踩下制动踏板:制动力<3bar，持续2s.后续再讨论
-  if (vehicle_service_output_info_ptr->esp_pressure < 3.0) {
-    brake_pedal_pressed_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (brake_pedal_pressed_supp_recover_duration_ > 60.0) {
-      brake_pedal_pressed_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    brake_pedal_pressed_supp_recover_duration_ = 0.0;
-  }
   if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
     ldp_left_suppression_code += uint32_bit[15];
   } else {
@@ -1113,17 +1076,6 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
 
   // bit 16
   // 油门踏板变化率<30%/s，持续1s，未完成
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
-      GetContext.get_param()->ldp_enable_accel_pedal_pos_rate) {
-    acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
-      acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
-  }
   if (acc_pedal_pos_rate_supp_recover_duration_ <
       GetContext.get_param()->ldp_enable_accel_pedal_pos_rate_dur) {
     ldp_left_suppression_code += uint32_bit[16];
@@ -1142,6 +1094,14 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
   // bit 18 双闪抑制
   if (vehicle_service_output_info_ptr->hazard_light_state == true) {
     ldp_left_suppression_code += uint32_bit[18];
+  } else {
+    /*do nothing*/
+  }
+  // ABS/TCS/VDC激活
+  if ((vehicle_service_output_info_ptr->abs_active == true) ||
+      (vehicle_service_output_info_ptr->tcs_active == true) ||
+      (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
+      ldp_left_suppression_code += uint32_bit[19];
   } else {
     /*do nothing*/
   }
@@ -1696,16 +1656,6 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
   // bit 14
   // 判断横摆角速度是否超限,12deg/s对应0.2094rad/s
   // :横摆角速度绝对值<12deg/s，持续1s
-  if (fabs(vehicle_service_output_info_ptr->yaw_rate) < 12.0 / 57.3) {
-    yaw_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (yaw_rate_supp_recover_duration_ > 60.0) {
-      yaw_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    yaw_rate_supp_recover_duration_ = 0.0;
-  }
   if (yaw_rate_supp_recover_duration_ < 1.0) {
     ldp_right_suppression_code += uint32_bit[13];
   } else {
@@ -1716,24 +1666,6 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
   // 方向盘转速(deg/s)和车速(km/h)满足如下公式,持续1s:方向盘转速≥145-0.5*v，0<v≤100
   // 方向盘转速≥95，v＞100.
   // PS1:1.8：mps转换为kph   PS2:使用实际车速
-  if ((vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) &&
-      (fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
-       (145.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    };
-  } else if ((vehicle_service_output_info_ptr->vehicle_speed > 100.0 / 3.6) &&
-             (fabs(
-                  vehicle_service_output_info_ptr->steering_wheel_angle_speed) >
-              95.0 / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    }
-  } else {
-    str_wheel_ang_speed_recover_duration_ = 0.0;
-  }
   if (str_wheel_ang_speed_recover_duration_ > 1.0) {
     ldp_right_suppression_code += uint32_bit[14];
   } else {
@@ -1742,16 +1674,6 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
 
   // bit 15
   // 驾驶员未踩下制动踏板:制动力<3bar，持续2s.后续再讨论
-  if (vehicle_service_output_info_ptr->esp_pressure < 3.0) {
-    brake_pedal_pressed_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (brake_pedal_pressed_supp_recover_duration_ > 60.0) {
-      brake_pedal_pressed_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    brake_pedal_pressed_supp_recover_duration_ = 0.0;
-  }
   if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
     ldp_right_suppression_code += uint32_bit[15];
   } else {
@@ -1760,17 +1682,6 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
 
   // bit 16
   // 油门踏板变化率<30%/s，持续1s，未完成
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
-      GetContext.get_param()->ldp_enable_accel_pedal_pos_rate) {
-    acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
-      acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
-  }
   if (acc_pedal_pos_rate_supp_recover_duration_ <
       GetContext.get_param()->ldp_enable_accel_pedal_pos_rate_dur) {
     ldp_right_suppression_code += uint32_bit[16];
@@ -1789,6 +1700,14 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
   // bit 18 双闪抑制
   if (vehicle_service_output_info_ptr->hazard_light_state == true) {
     ldp_right_suppression_code += uint32_bit[18];
+  } else {
+    /*do nothing*/
+  }
+  // ABS/TCS/VDC激活
+  if ((vehicle_service_output_info_ptr->abs_active == true) ||
+    (vehicle_service_output_info_ptr->tcs_active == true) ||
+    (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
+    ldp_right_suppression_code += uint32_bit[19];
   } else {
     /*do nothing*/
   }
