@@ -95,7 +95,7 @@ class FrenetObstacle {
  private:
   void compute_frenet_obstacle(const ReferencePath& reference_path);
 
-   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path, bool is_hpp_scene = false);
+  void compute_frenet_obstacle_boundary(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
 

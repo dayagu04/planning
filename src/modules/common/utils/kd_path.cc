@@ -266,6 +266,71 @@ bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
   return true;
 }
 
+bool KDPath::XYToSLInRange(const Point2D& cart_point,
+                           double s_low,
+                           double s_high,
+                           Point2D& frenet_point)
+{
+    if (path_points_.empty() || s_low >= s_high) {
+        return false;
+    }
+
+    // 第一步：只保留范围内的路径点
+    std::vector<PathPoint> range_points;
+    auto it_low = std::lower_bound(path_points_.begin(), path_points_.end(), s_low - 1e-3,
+        [](const PathPoint& p, double s) { return p.s() < s; });
+
+    auto it_high = std::lower_bound(path_points_.begin(), path_points_.end(), s_high + 1e-3,
+        [](const PathPoint& p, double s) { return p.s() < s; });
+
+    if (it_low != path_points_.begin()) {
+        --it_low;
+    }
+    if (it_high != path_points_.end()) {
+        ++it_high;
+    }
+    range_points.assign(it_low, it_high);
+
+    if (range_points.size() < 2) {
+        return false;
+    }
+
+    // 第二步：在范围内找最近线段
+    double min_dist = 1e12;
+    const PathPoint* best_pt = nullptr;
+    int best_idx = -1;
+
+    for (int i = 0; i < (int)range_points.size() - 1; ++i) {
+        const auto& p0 = range_points[i];
+        const auto& p1 = range_points[i+1];
+        const auto current_line = LineSegment2d(p0, p1);
+        double dist = current_line.DistanceTo(Vec2d(cart_point.x,cart_point.y));
+        if (dist < min_dist) {
+            min_dist = dist;
+            best_idx = i;
+        }
+    }
+
+    if (best_idx < 0) {
+        return false;
+    }
+
+    // 第三步：投影到最优线段
+    const auto& p0 = range_points[best_idx];
+    const auto& p1 = range_points[best_idx + 1];
+    LineSegment2d nearest_line(p0, p1);
+
+    Project(nearest_line, cart_point.x, cart_point.y, p0.s(),
+            &frenet_point.x, &frenet_point.y);
+
+    // 第四步：确保最终 S 落在范围内
+    if (frenet_point.x < 0 || frenet_point.x > length_) {
+      ILOG_DEBUG << "s is not within the valid range";
+      return false;
+    }
+    return true;
+}
+
 KDPathStatus KDPath::XYPointToSLPoint(const Point2D& cart_point,
                                       Point2D& frenet_point) {
   if (path_points_.empty()) {
