@@ -1069,5 +1069,10 @@
     "lateral_extend": 0.35,
     "search_once": true,
     "use_occ_s_dist": 7
+  },
+  "hpp_lateral_obstacle_decider": {
+    "relative_nudge_buffer": 0.8,
+    "absolute_nudge_buffer": 2.0,
+    "ego_detour_safe_dis": 0.5
   }
 }
