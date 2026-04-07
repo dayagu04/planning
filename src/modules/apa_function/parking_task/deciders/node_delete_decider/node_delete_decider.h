@@ -32,6 +32,7 @@ enum NodeDeleteReason : uint8_t {
   ZIGZAG_PATH = 11,
   BACKTRACK_PATH = 12,
   EXCEED_SCURVE_NUMBER = 13,
+  OUT_OF_POSE_STANDARD = 14,
 };
 
 const std::string GetNodeDeleteReasonString(const NodeDeleteReason reason);
@@ -114,13 +115,13 @@ class NodeDeleteDecider final : public ParkingTask {
       std::vector<GradeBufferPathPts>& grade_buffer_pts_vec);
 
   const GradeColDetBufferType GetGradeBufferType(
-      const common_math::PathPt<float>& pt
-  );
-
+      const common_math::PathPt<float>& pt);
 
   const bool CheckCollision();
 
   const bool CheckOutOfPoseBound();
+
+  const bool CheckOutOfPoseStandard();
 
   const bool CheckOutOfGridBound();
 
@@ -152,6 +153,13 @@ class NodeDeleteDecider final : public ParkingTask {
   cdl::AABB2f slot_entrance_box_;
 
   NodePoseBound pose_bound_;
+
+  // using member variables to reduce construction costs
+  // it can allow capacity reuse
+  std::vector<common_math::PathPt<float>> search_pts_;
+  std::vector<std::vector<common_math::PathPt<float>>> curve_ptss_;
+  std::vector<AstarPathGear> curve_gears_;
+  std::vector<common_math::PathPt<float>> grade_segment_pts_;
 };
 }  // namespace apa_planner
 }  // namespace planning
