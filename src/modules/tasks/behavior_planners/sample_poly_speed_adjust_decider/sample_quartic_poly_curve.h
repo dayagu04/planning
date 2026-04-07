@@ -30,6 +30,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   double CalcJerk(const double t) const override;
   double CalcRef(const double t, const double decay_coffi) const;
   double CalcVelRef(const double t, const double decay_coffi) const;
+  double CalcAccRef(const double t, const double decay_coffi) const;
 
   void CalcCost(STSampleSpaceBase& sample_space_base, const double ego_v,
                 const double ego_a, const double suggested_v,

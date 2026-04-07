@@ -133,6 +133,21 @@ double SampleQuarticPolynomialCurve::CalcVelRef(
   return s;
 }
 
+double SampleQuarticPolynomialCurve::CalcAccRef(
+    const double t, const double decay_coffi) const {
+  double a = 0.0;
+  if (arrived_t_ < poly_.T()) {
+    double acc =
+        std::max(arrived_a_, -arrived_v_ / std::fmax(5.0 - arrived_t_, 0.1));
+    double left_t = t - arrived_t_;
+    a = left_t > 0.1 ? acc * std::exp(decay_coffi * left_t)
+                     : poly_.CalculateSecondDerivative(t);
+  } else {
+    a = t - poly_.T() > 0 ? 0.0 : poly_.CalculateSecondDerivative(t);
+  }
+  return a;
+}
+
 double SampleQuarticPolynomialCurve::CalcVelIntegral(
     const double evaluate_t) const {
   const double t = evaluate_t > poly_.T() ? poly_.T() : evaluate_t;

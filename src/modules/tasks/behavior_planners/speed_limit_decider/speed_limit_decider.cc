@@ -148,6 +148,7 @@ constexpr double kTriggerDistanceMildDecelThreshold = -0.3;  // Acceleration thr
 constexpr double kTriggerDistanceModerateDecelThreshold = -0.6;  // Acceleration threshold for moderate deceleration (m/s²)
 constexpr double kTriggerDistanceBaseOffsetMin = 6.0;  // Minimum base position offset for trigger distance optimization (m)
 constexpr double kTriggerDistanceBaseOffsetTimeRatio = 0.5;  // Time ratio for base position offset calculation (s)
+static constexpr double kCurvaturePreviewHighSpeedThreshold = 40.0;   // 40 km/h
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -998,23 +999,83 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double ego_start_s = frenet_ego_state.s();
   const pnc::mathlib::spline &raw_spline =
       reference_path_ptr->GetRawCurveSpline();
-  // bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
   bool is_ref_path_smoothed = false;
+
   std::vector<CurvInfo> preview_curv_info_vec;
-  for (int idx = 0; idx * 2.0 < preview_x; idx++) {
-    CurvInfo one_curv_info;
-    if (is_ref_path_smoothed) {
+  double v_ego_kph = v_ego * 3.6;
+
+  if (v_ego_kph > kCurvaturePreviewHighSpeedThreshold) {
+    static double last_valid_curv = 0.0001;
+    static int abnormal_count = 0;
+    static double prev_curv = 0.0001;
+    static std::deque<double> curv_history;
+
+    for (int idx = 0; idx * 2.0 < preview_x; idx++) {
+      double s = ego_start_s + 2.0 + idx * 2.0;
+      if (s < 0) continue;
+
+      CurvInfo one_curv_info;
       ReferencePathPoint refpath_pt;
-      if (reference_path_ptr->get_reference_point_by_lon(
-              ego_start_s + idx * 2.0, refpath_pt)) {
-        one_curv_info.curv = std::fabs(refpath_pt.path_point.kappa());
+
+      if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
+        double raw_curv = std::fabs(refpath_pt.path_point.kappa());
+
+        std::vector<double> smooth_window;
+        std::vector<double> weights;
+        for (int j = -2; j <= 2; j++) {
+          double sample_s = s + j * 2.0;
+          if (sample_s < ego_start_s) continue;
+
+          ReferencePathPoint sample_pt;
+          if (reference_path_ptr->get_reference_point_by_lon(sample_s,
+                                                             sample_pt)) {
+            double sample_curv = std::fabs(sample_pt.path_point.kappa());
+            smooth_window.push_back(sample_curv);
+            double weight = std::exp(-0.5 * std::pow(j / 2.0, 2));
+            weights.push_back(weight);
+          }
+        }
+
+        double smoothed_curv = raw_curv;
+        if (!smooth_window.empty()) {
+          double weighted_sum = 0.0;
+          double weight_sum = 0.0;
+          for (size_t k = 0; k < smooth_window.size(); ++k) {
+            weighted_sum += smooth_window[k] * weights[k];
+            weight_sum += weights[k];
+          }
+          smoothed_curv = weighted_sum / weight_sum;
+        }
+
+        double curv_jerk = std::abs(smoothed_curv - prev_curv);
+
+        if (curv_jerk > 0.12 && idx < 3) {
+          abnormal_count++;
+          if (abnormal_count > 2) {
+            one_curv_info.curv = last_valid_curv;
+          } else {
+            one_curv_info.curv = smoothed_curv;
+          }
+        } else {
+          abnormal_count = 0;
+          one_curv_info.curv = smoothed_curv;
+          last_valid_curv = smoothed_curv;
+        }
+
+        prev_curv = smoothed_curv;
         one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
       } else {
         one_curv_info.curv = 0.0001;
         one_curv_info.curv_sign = 0;
       }
-    } else {
-      // Calculate average curvature in window
+
+      one_curv_info.s = idx * 2.0;
+      preview_curv_info_vec.emplace_back(one_curv_info);
+    }
+  } else {
+    for (int idx = 0; idx * 2.0 < preview_x; idx++) {
+      CurvInfo one_curv_info;
+
       std::vector<double> curv_window_vec;
       int curv_sign = 0;
       for (int j = -6; j <= 6; j++) {
@@ -1030,16 +1091,18 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         curv_window_vec.emplace_back(curv);
       }
       double curv_sum = 0.0;
-      for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
-        curv_sum = curv_sum + curv_window_vec[ind];
+      for (size_t ind = 0; ind < curv_window_vec.size(); ++ind) {
+        curv_sum += curv_window_vec[ind];
       }
       double avg_curv = curv_sum / curv_window_vec.size();
       one_curv_info.curv = avg_curv;
       one_curv_info.curv_sign = curv_sign;
+
+      one_curv_info.s = idx * 2.0;
+      preview_curv_info_vec.emplace_back(one_curv_info);
     }
-    one_curv_info.s = idx * 2.0;
-    preview_curv_info_vec.emplace_back(one_curv_info);
   }
+
   /* double curv_sum = 0.0;
   for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
     curv_sum = curv_sum + curv_window_vec[ind];
