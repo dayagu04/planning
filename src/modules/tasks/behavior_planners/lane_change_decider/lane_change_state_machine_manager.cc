@@ -2413,7 +2413,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
         continue;
       }
     } else if (target_lane_node->is_static_type()) {  // 静止
-      safety_buff = 0.3;
+      safety_buff = 0.7;
       bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd,
                                      car_width, safety_buff, direction);
       if (pass_in_lane) {
