@@ -129,12 +129,18 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     ok = Evaluate();
   }
   int astar_iteration_count = 0;
+  session_->mutable_planning_context()
+    ->mutable_lane_change_decider_output()
+    .is_emergency_scene = false;
   if (ok) {
     if (min_cost_traj_ptr_ == nullptr ||
         !min_cost_traj_ptr_->anchor_points_match_gap_cost()
              .is_gap_changeable() ||
         !min_cost_traj_ptr_->is_left_distance_enough()) {
       if (IsForcedMergeScenario()) {
+        session_->mutable_planning_context()
+            ->mutable_lane_change_decider_output()
+            .is_emergency_scene = true;
         if (GenerateAStarTraj()) {
           astar_iteration_count = astar_traj_ptr_->count_;
         } else {
@@ -143,6 +149,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
       }
     }
   }
+
 
   if (ok) {
     if (min_cost_traj_ptr_ != nullptr) {
@@ -213,7 +220,7 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
              (config_.sample_t_nums - 1);
   delta_v_ = (speed_adjust_range_.first - speed_adjust_range_.second) /
              (config_.sample_v_nums - 1);
-
+  adjust_speed_min_acc_ = is_merge_change_ ? -3.0 : -2.0;
   for (int i = 0; i < config_.sample_v_nums; i++) {
     const double v = speed_adjust_range_.second + i * delta_v_;
     std::vector<SampleQuarticPolynomialCurve> sample_traj_at_t;
@@ -473,6 +480,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   sample_status_ = OK;
   distance_to_stop_point_ = kMaxDistanceToStopPoint;
   is_emergency_scene_ = false;
+  session_->mutable_planning_context()
+      ->mutable_lane_change_decider_output()
+      .is_emergency_scene = false;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()
@@ -729,6 +739,9 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   boundary_merge_point_valid_ = session_->planning_context()
                                     .ego_lane_road_right_decider_output()
                                     .boundary_merge_point_valid;
+  bool is_lane_continuous = session_->planning_context()
+                                    .ego_lane_road_right_decider_output()
+                                    .cur_lane_is_continue;
 
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
@@ -743,22 +756,20 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
           ? virtual_lane_mgr->get_current_lane()->get_map_merge_point_info()
           : route_info_output.map_merge_points_info.front();
   const auto& function_info = session_->environmental_model().function_info();
-  distance_to_merge_point_ = NL_NMAX;
   distance_to_road_split_ = NL_NMAX;
   distance_to_road_merge_ = NL_NMAX;
   const auto& llane = virtual_lane_mgr->get_left_lane();
   const auto& rlane = virtual_lane_mgr->get_right_lane();
   bool is_left_edge_side_lane = llane == nullptr;
   bool is_right_edge_side_lane = rlane == nullptr;
+  auto mlc_scene_type = route_info_output.mlc_decider_scene_type_info.mlc_scene_type;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-        SPLIT_SCENE) {
-      distance_to_road_split_ = route_info_output.mlc_decider_scene_type_info
-                                    .dis_to_link_topo_change_point;
-    } else if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-               MERGE_SCENE) {
+    if (mlc_scene_type == SPLIT_SCENE) {
+      distance_to_road_split_ =
+          route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point;
+    } else if (mlc_scene_type == MERGE_SCENE) {
       if (merge_point_info.merge_type != NONE_MERGE) {
-        distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
+        distance_to_road_merge_ = merge_point_info.dis_to_merge_fp;
       }
     }
   }
@@ -766,84 +777,49 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   if (is_nearing_ramp_ && distance_to_ramp_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_ramp_;
     return true;
-  } else if (virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task() &&
+  }
+
+  if (virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task() &&
              distance_to_ramp_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_ramp_;
     return true;
-  } else if (virtual_lane_mgr->get_current_lane()
+  }
+
+  if (virtual_lane_mgr->get_current_lane()
                  ->is_nearing_split_mlc_task() &&
              distance_to_road_split_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_road_split_;
     return true;
-  } else if (lane_change_source_ == MERGE_REQUEST) {
-    if (boundary_merge_point_valid_) {
-      const auto& boundary_merge_point =
-          session_->planning_context()
+  }
+  //汇流任务判断
+  if(lane_change_source_ == MERGE_REQUEST){
+    if (boundary_merge_point_valid_ && !is_lane_continuous) {
+      merge_stop_line_distance_ = session_->planning_context()
               .ego_lane_road_right_decider_output()
-              .boundary_merge_point;
-      merge_stop_line_distance_ =
-          std::hypot(boundary_merge_point.x - ego_cart_point_.first,
-                     boundary_merge_point.y - ego_cart_point_.second);
+              .merge_point_distance;
+      is_merge_change_ = true;
       return true;
     } else {
-      if (distance_to_merge_point_ < kDistanceToMapRequestPoint &&
-          ((is_left_edge_side_lane &&
-            merge_point_info.merge_type == MERGE_TO_RIGHT) ||
-           (is_right_edge_side_lane &&
-            merge_point_info.merge_type == MERGE_TO_LEFT))) {
-        merge_stop_line_distance_ = distance_to_merge_point_;
-        return true;
-      } else if (distance_to_road_split_ < kDistanceToMapRequestPoint ||
-                 distance_to_merge_point_ < kDistanceToMapRequestPoint ||
-                 is_in_merge_region_) {
-        merge_stop_line_distance_ =
-            std::fmin(distance_to_merge_point_, distance_to_road_split_);
-        return true;
-      }
-    }
-  } else if (lane_change_source_ == MAP_REQUEST &&
-             (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-                  MERGE_SCENE ||
-              route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-                  SPLIT_SCENE)) {
-    bool is_ramp_to_main =
-        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-        MERGE_SCENE;
-    if (boundary_merge_point_valid_) {
-      const auto& boundary_merge_point =
-          session_->planning_context()
-              .ego_lane_road_right_decider_output()
-              .boundary_merge_point;
-      auto current_merge_stop_line_distance =
-          std::hypot(boundary_merge_point.x - ego_cart_point_.first,
-                     boundary_merge_point.y - ego_cart_point_.second);
-      merge_stop_line_distance_ =
-          is_ramp_to_main
-              ? current_merge_stop_line_distance
-              : current_merge_stop_line_distance - route_info_output.lsl_length;
+      merge_stop_line_distance_ = distance_to_road_merge_;
+      is_merge_change_ = true;
       return true;
-    } else {
-      if (is_ramp_to_main) {
-        bool is_nearing_merge_point =
-            distance_to_merge_point_ < kDistanceToMapRequestPoint &&
-            ((is_left_edge_side_lane &&
-              merge_point_info.merge_type == MERGE_TO_RIGHT) ||
-             (is_right_edge_side_lane &&
-              merge_point_info.merge_type == MERGE_TO_LEFT));
-        if (is_nearing_merge_point) {
-          merge_stop_line_distance_ = distance_to_merge_point_;
-          return true;
-        } else if (distance_to_merge_point_ < kDistanceToMapRequestPoint ||
-                   is_in_merge_region_) {
-          merge_stop_line_distance_ = distance_to_merge_point_;
-          return true;
-        }
-      } else {
-        merge_stop_line_distance_ =
-            distance_to_road_split_ - route_info_output.lsl_length;
-        return true;
-      }
     }
+  } else if(mlc_scene_type == MERGE_SCENE){  //地图
+    merge_stop_line_distance_ = distance_to_road_merge_;
+    is_merge_change_ = true;
+    return true;
+  } else if(boundary_merge_point_valid_ && !is_lane_continuous){  //感知
+    merge_stop_line_distance_ = session_->planning_context()
+            .ego_lane_road_right_decider_output()
+            .merge_point_distance;
+    is_merge_change_ = true;
+    return true;
+  }
+  //分流任务判断
+  if (mlc_scene_type == SPLIT_SCENE && lane_change_source_ == MAP_REQUEST) {
+    merge_stop_line_distance_ =
+        distance_to_road_split_ - route_info_output.lsl_length;
+    return true;
   }
   return false;
 }
@@ -1288,6 +1264,7 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
   if ((lane_change_source_ == MERGE_REQUEST) ||
+      is_merge_change_ == true ||
       ((lane_change_source_ == MAP_REQUEST) &&
        ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
          MERGE_SCENE) ||
@@ -1306,12 +1283,9 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
   if (press_line_ratio > 0.2) {
     return true;
   }
-  state_limit_lower_ = {
-      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
-      -2.0, 1.2, -2.5, 2.5};
   StateLimit state_limit_lower = {
-      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
-      -1.5, 1.2, -1.5, 2.5};
+  0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+  -1.0, 1.0, -1.0, 1.5};
   UniformJerkCurve jerk_curve(state_limit_lower, lon_state_, false);
   auto arrived_s = jerk_curve.arrived_s();
   if (arrived_s > distance_to_stop_point_) {
@@ -1364,11 +1338,14 @@ double SamplePolySpeedAdjustDecider::CalcPressLineRatio() {
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);
   STNode start_node(0.0, 0.0, ego_v_, ego_a_);
+  state_limit_lower_ = {
+      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
+      -2.5, 1.2, -2.0, 2.0};
   state_limit_upper_ = {
       0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
       0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
-      -2.0, 1.2,
-      -2.5, 2.5};
+      -2.5, 1.2,
+      -2.0, 2.0};
   double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_
                              ? distance_to_stop_point_
                              : 0.0;

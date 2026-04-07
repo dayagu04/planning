@@ -167,10 +167,15 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
     } else if (frenet_node_s > interval.second.s()) {
       // double s_buffer = 3.5 + 0.3 * interval.second.velocity();
       double s_buffer = 3.5;
+      s_buffer = node.s > merge_point_s_
+                     ? s_buffer * std::exp((merge_point_s_ - node.s) / 10)
+                     : s_buffer;
+      s_buffer = std::fmax(2.0,s_buffer);
       double gap = frenet_node_s - interval.second.s() - s_buffer -
                     rear_edge_to_rear_axle_;
       if (gap < 0.0 && node.s > merge_point_s_) {
-        // std::cout << "Gap后车碰撞风险: " << node.getKey() << std::endl;
+        std::cout << "Gap后车碰撞风险: " << node.getKey()  << node.getKey() <<" 剩余距离 :  "<< gap <<
+        "  buffer:  "<<s_buffer<< std::endl;
         return false;
       } else {
         double s_buffer_extra = 0.7 * interval.second.velocity();
@@ -181,11 +186,15 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
                       std::exp(2 * (1- gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
       }
     } else {
-      double s_buffer = 3.5 + 0.3 * node.v;
+      double follow_distance =
+        node.v * (node.v - interval.first.velocity()) / (2.0 * 2.0);
+      double thw = 0.3 * node.v;
+      double s_buffer = std::fmax(thw + follow_distance + 3.0, 3.0);
       double gap = interval.first.s() - frenet_node_s - s_buffer -
                     front_edge_to_rear_axle_;
       if (gap < 0.0 && node.s > merge_point_s_) {
-        // std::cout << "Gap前车碰撞风险: " << node.getKey() << std::endl;
+        std::cout << "Gap前车碰撞风险: " << node.getKey() <<" 剩余距离 :  "<< gap <<
+        "  buffer:  "<<s_buffer<< std::endl;
         return false;
       } else {
         double s_buffer_extra = 0.7 * node.v;
@@ -224,7 +233,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
     double gap =
         leading_agent_s + leading_agent_info_.center_s - node.s - safe_distance;
     if (gap < 0.0) {
-      // std::cout << "前车碰撞风险: " << node.getKey() << std::endl;
+      std::cout << "前车碰撞风险: " << node.getKey() << std::endl;
       return false;
     }
   }

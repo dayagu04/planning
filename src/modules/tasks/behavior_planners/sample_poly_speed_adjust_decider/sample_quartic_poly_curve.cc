@@ -209,7 +209,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     const LeadingAgentInfo& leading_veh, bool is_not_use_gap_select,
     double speed_differ_gain, double distance_to_stop_point,
     const LanChangeSafetyCheckConfig& lc_safety_distance_config,
-    const double cur_time, bool is_mergr_change, bool is_emergency_scene) {
+    const double cur_time, bool is_merge_change, bool is_emergency_scene) {
   // anchor points cost
   double last_cost = cost_sum_;
   double last_arrived_s = arrived_s_;
@@ -280,7 +280,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
   if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
     is_left_distance_enough_ =
-        is_mergr_change
+        is_merge_change
             ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
             : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
     if (is_left_distance_enough_) {
@@ -337,7 +337,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   // follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
-  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_, true);
+  stop_line_cost_.GetCost(std::min(stop_line_s, distance_to_stop_point),
+                          arrived_s_ - CalcS(0), arrived_v_, is_merge_change);
 
   if (leading_veh.id != kNoAgentId && leading_veh.id != -1) {
     leading_veh_safe_cost_.GetCost(arrived_s_ - CalcS(0), arrived_v_,
