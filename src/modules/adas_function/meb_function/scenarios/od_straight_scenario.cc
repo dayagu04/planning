@@ -157,7 +157,7 @@ int OdStraightScenario::SelcetInterestObject(MebTempObj &temp_obj) {
   return temp_interest_code;
 };
 
-uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
+uint64_t OdStraightScenario::FalseTriggerStratege(MebTempObj &obj) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   const auto param = *GetContext.get_param();
   auto &meb_pre = adas_function::MebPreprocess::GetInstance();
@@ -720,6 +720,8 @@ void OdStraightScenario::Process(void) {
     } else {
     }
     temp_obj.ay_avoid_by_accelerating = key_obj_ay_avoid_by_accelerating;
+
+    temp_obj.collision_point_y = 0.0;  // 直行不使用该变量
 
     // hack 若为大卡车，则认为距离偏远0.3m，晚点触发
     if (temp_obj.type == iflyauto::OBJECT_TYPE_TRUCK) {

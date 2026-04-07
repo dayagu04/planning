@@ -10,7 +10,7 @@ class OdStraightScenario : public MebScenarioBase {
   OdStraightScenario(){};
   ~OdStraightScenario() = default;
   void Process(void) override;
-  uint64_t FalseTriggerStratege(const MebTempObj obj) override;
+  uint64_t FalseTriggerStratege(MebTempObj &obj) override;
   int SceneCode(void) override;
   int SelcetInterestObject(MebTempObj &temp_obj) override;
   int obj_num_;
