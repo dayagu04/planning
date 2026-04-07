@@ -27,15 +27,36 @@ const iflymapdata::sdpro::LinkInfo_Link* get_current_link() override;
 
 //todo(ldh): 其他virutal函数。
 protected:
- bool UpdateLDMap();
+  bool UpdateLDMap();
 
- bool CalculateRouteInfo();
+  bool CalculateRouteInfo();
 
- bool CalculateCurrentLink();
+  bool CalculateCurrentLink();
 
- bool IsInExpressWay();
+  bool IsInExpressWay();
 
- bool IsNearingSplit();
+  struct EgoPositionResult {
+    bool is_between_links;          // 横向在两条link之间
+    bool is_left_of_link1;           // 在link1左侧
+    bool is_right_of_link1;          // 在link1右侧
+    bool is_left_of_link2;           // 在link2左侧
+    bool is_right_of_link2;          // 在link2右侧
+    double dist_to_link1;            // 到link1的距离（线段距离）
+    double dist_to_link2;            // 到link2的距离（线段距离）
+    double min_dist_to_link1;        // 到link1所有形点的最小距离
+    double min_dist_to_link2;        // 到link2所有形点的最小距离
+    int min_dist_idx_link1;          // link1上最近形点的索引
+    int min_dist_idx_link2;          // link2上最近形点的索引
+    double proj_ratio_link1;         // 自车在link1上的投影比例
+    double proj_ratio_link2;         // 自车在link2上的投影比例
+  };
+
+  bool CheckEgoPositionRelativeTwoLinks(
+      const iflymapdata::sdpro::LinkInfo_Link* link1,
+      const iflymapdata::sdpro::LinkInfo_Link* link2,
+      EgoPositionResult& result) const;
+
+  bool IsNearingSplit();
 
  bool IsNearingRamp();
 
@@ -138,8 +159,9 @@ void ProcessLaneMapMergePoint(
   bool IsDistanceToRampWithinThreshold(const double dis_to_ramp);
   bool IsMergePriorToRamp(const double dis_to_ramp);
   void UpdateSceneInfo(
-      const iflymapdata::sdpro::LinkInfo_Link& target_link,
-      const double dis_to_target_link);
+      const iflymapdata::sdpro::LinkInfo_Link& front_first_link,
+      const double dis_to_front_first_link,
+      const iflymapdata::sdpro::LinkInfo_Link& target_link);
 
   void EraseFeasibleLaneIfNeeded(
       uint64_t lane_id, const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
@@ -170,6 +192,8 @@ void ProcessLaneMapMergePoint(
   double CalculateLSLLengthBetweenLanes(
       const iflymapdata::sdpro::LinkInfo_Link* link, uint32_t from_seq,
       uint32_t to_seq);
+
+  bool IsMissedNaviRoute() const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
