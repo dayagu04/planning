@@ -12,10 +12,10 @@
 
 namespace planning {
 
-FrenetObstacle::FrenetObstacle(
-    const Obstacle *obstacle_ptr, const ReferencePath &reference_path,
-    const std::shared_ptr<EgoStateManager> ego_state_info,
-    bool is_location_valid)
+FrenetObstacle::FrenetObstacle(const Obstacle *obstacle_ptr,
+                               const ReferencePath &reference_path,
+                               const std::shared_ptr<EgoStateManager> ego_state_info,
+                               bool is_location_valid,bool is_hpp_scene)
     : id_(obstacle_ptr->id()),
       source_type_(obstacle_ptr->source_type()),
       obstacle_ptr_(obstacle_ptr),
@@ -23,7 +23,7 @@ FrenetObstacle::FrenetObstacle(
       is_static_(obstacle_ptr->is_static()) {
   compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
-    compute_frenet_obstacle_boundary(reference_path);
+    compute_frenet_obstacle_boundary(reference_path, is_hpp_scene);
     // compute_frenet_polygon_sequence(reference_path);
   } else {
     b_frenet_polygon_sequence_invalid_ = true;
@@ -273,17 +273,20 @@ void FrenetObstacle::compute_frenet_obstacle(
   rel_v_ = frenet_velocity_s_ - frenet_ego_state.velocity();
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(
-    const ReferencePath &reference_path) {
+    const ReferencePath &reference_path, bool is_hpp_scene) {
   const auto &frenet_coord = reference_path.get_frenet_coord();
 
   double obs_start_s(std::numeric_limits<double>::max());
   double obs_end_s(std::numeric_limits<double>::lowest());
   double obs_start_l(std::numeric_limits<double>::max());
   double obs_end_l(std::numeric_limits<double>::lowest());
-
   std::vector<planning_math::Vec2d> obstacle_points;
-  auto perception_bounding_box = obstacle_ptr_->perception_bounding_box();
-  perception_bounding_box.GetAllCorners(&obstacle_points);
+  if (is_hpp_scene) {
+    obstacle_points = obstacle_ptr_->perception_polygon().points();
+  } else {
+    auto perception_bounding_box = obstacle_ptr_->perception_bounding_box();
+    perception_bounding_box.GetAllCorners(&obstacle_points);
+  }
 
   for (const planning_math::Vec2d &obs_point : obstacle_points) {
     Point2D frenet_point, carte_point;

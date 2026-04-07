@@ -465,26 +465,23 @@ bool EnvironmentalModelManager::Run() {
 #endif
 
   if (session_->is_hpp_scene()) {
-    // time_start = IflyTime::Now_ms();
-    // if (ego_config_.enable_fusion_parking_slot) {  // fusion parking slot
-    //   parking_slot_manager_ptr_->Update(local_view.parking_fusion_info);
-    // } else {  // ehr parking space
-    //   parking_slot_manager_ptr_->Update(local_view.static_map_info);
-    // }
-    // // time_end = IflyTime::Now_ms();
-    // // ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
-    // // JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
-    // if(parking_slot_manager_ptr_->IsExistTargetSlot()) {
-    //   const auto& target_slot_center = parking_slot_manager_ptr_->GetTargetSlotCenter();
-    //   route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(target_slot_center.x(), target_slot_center.y()));
-    // }
+    if (ego_config_.enable_fusion_parking_slot) {  // fusion parking slot
+      parking_slot_manager_ptr_->Update(local_view.parking_fusion_info);
+    } else {  // ehr parking space
+      parking_slot_manager_ptr_->Update(local_view.static_map_info);
+    }
+    if(parking_slot_manager_ptr_->IsExistTargetSlot()) {
+      const auto& target_slot_center = parking_slot_manager_ptr_->GetTargetSlotCenter();
+      route_info_ptr_->UpdateTargetSlotInfo(ad_common::math::Vec2d(target_slot_center.x(), target_slot_center.y()));
+    }
   }
 
-// #ifdef PlanTimeBenchmark
-//   end_time = IflyTime::Now_ms();
-//   JSON_DEBUG_VALUE("virtual_lane_manager cost", end_time - start_time);
-//   start_time = IflyTime::Now_ms();
-// #endif
+ #ifdef PlanTimeBenchmark
+   end_time = IflyTime::Now_ms();
+   JSON_DEBUG_VALUE("parking_slot_manager cost", end_time - start_time);
+   start_time = IflyTime::Now_ms();
+ #endif
+
   // time_start = IflyTime::Now_ms();
   obstacle_manager_ptr_->update();
   // time_end = IflyTime::Now_ms();
@@ -1000,6 +997,14 @@ void EnvironmentalModelManager::truncate_prediction_info(
     if (!(fusion_source & OBSTACLE_SOURCE_CAMERA)) {
       // 非相机融合成功的不用
       continue;
+    }
+    if(session_->is_hpp_scene()){
+      if (prediction_object.fusion_obstacle.common_info.type ==
+              iflyauto::ObjectType::OBJECT_TYPE_SOLT ||
+          prediction_object.fusion_obstacle.common_info.type ==
+              iflyauto::ObjectType::OBJECT_TYPE_LIMITER) {
+        continue;
+      }
     }
 
     PredictionObject cur_predicion_obj;

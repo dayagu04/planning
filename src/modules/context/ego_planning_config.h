@@ -2023,6 +2023,25 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                            cross_lane_side_2_front_count_thr);
     ReadItem<double>(json, extra_ratio_for_cut_out, "potential_follow_obstacle",
                      "extra_ratio_for_cut_out");
+    /******************* for hpp *******************/
+    ReadItem<double>(json, lat_buffer_for_road_line, "lat_buffer_for_road_line",
+                     "lat_buffer_for_road_line");
+    ReadItem<double>(json, lat_buffer_for_slot_line, "lat_buffer_for_slot_line",
+                     "lat_buffer_for_slot_line");
+    ReadItem<double>(json, lat_buffer_for_curb, "lat_buffer_for_curb",
+                     "lat_buffer_for_curb");
+    ReadItem<double>(json, lat_buffer_for_unmovable_obj,
+                     "lat_buffer_for_unmovable_obj",
+                     "lat_buffer_for_unmovable_obj");
+    ReadItem<double>(json, lat_buffer_for_vru, "lat_buffer_for_vru",
+                     "lat_buffer_for_vru");
+    ReadItem<double>(json, lat_buffer_for_vehicle, "lat_buffer_for_vehicle",
+                     "lat_buffer_for_vehicle");
+    ReadItem<double>(json, extra_lat_buffer_for_ramp, "extra_lat_buffer_for_ramp",
+                     "extra_lat_buffer_for_ramp");
+    ReadItem<double>(json, extra_lat_buffer_for_turn, "extra_lat_buffer_for_turn",
+                     "extra_lat_buffer_for_turn");
+    /******************* for hpp *******************/
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -2086,6 +2105,16 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
   std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
   double extra_ratio_for_cut_out = 0.6;
+  /******************* for hpp *******************/
+  double lat_buffer_for_road_line = 0.2;
+  double lat_buffer_for_slot_line = 0.2;
+  double lat_buffer_for_curb = 0.3;
+  double lat_buffer_for_unmovable_obj = 0.3;
+  double lat_buffer_for_vru = 0.4;
+  double lat_buffer_for_vehicle = 0.4;
+  double extra_lat_buffer_for_ramp = 0.1;
+  double extra_lat_buffer_for_turn = 0.1;
+  /******************* for hpp *******************/
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -2178,6 +2207,25 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
   double lateral_extend = 0.1;
   bool search_once = true;
   double use_occ_s_dist = 7;
+};
+
+struct HppLateralObstacleDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    relative_nudge_buffer = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "relative_nudge_buffer"});
+    absolute_nudge_buffer = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "absolute_nudge_buffer"});
+    ego_detour_safe_dis = read_json_keys<double>(
+        json, std::vector<std::string>{"hpp_lateral_obstacle_decider",
+                                       "ego_detour_safe_dis"});
+  }
+
+  double relative_nudge_buffer = 0.8;
+  double absolute_nudge_buffer = 2.0;
+  double ego_detour_safe_dis = 0.5;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
@@ -2511,7 +2559,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
                      "max_care_time_for_roadborder");
     ReadItem<double>(json, decrease_time_for_roadborder,
                      "general_lateral_decider",
-                     "decrease_time_for_roadborder");                 
+                     "decrease_time_for_roadborder");
     read_json_vec<double>(
         json,
         std::vector<std::string>{"general_lateral_decider",
@@ -3535,6 +3583,10 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double speed_narrow_passage_approach_distance = 20.0;      // m
   double speed_intersection_approach_distance = 20.0;      // m
   double speed_bump_zone_speed_limit = 2.22;    // 8kph
+  double target_speed_speed_bump_area = 2.22;            // 8kph
+  double target_speed_narrow_passage_area = 2.22;        // 8kph
+  double target_speed_intersection_road_area = 2.5;      // 9kph
+  double target_speed_ramp_area = 2.78;                  // 10kph
   double speed_bump_deceleration = -1.0;           // m/s^2
   double speed_bump_collision_buffer = 0.0;        // m
 };

@@ -1811,6 +1811,8 @@ def load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_en
         lat_decision = "RIGHT"
       elif (2 == obstacle.lat_decision):
         lat_decision = "IGNORE"
+      else:
+        lat_decision = "NotSet"
       obstacles_lat_decision_vec.append([lat_decision])
       if obstacle.is_static:
         is_static = "Static"
@@ -2986,129 +2988,46 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
   polygon_id_vec = []
   polygon_obstacle_id = 8000000
   try:
-    parking_assist_info = ehr_static_map_msg.parking_assist_info
-    # print("parking_assist_info:", parking_assist_info)
-    parking_spaces = parking_assist_info.parking_spaces
-    target_parking_space = parking_assist_info.target_parking_space
-    # print("ehr tar space: ", target_parking_space)
-    road_obstacles = parking_assist_info.road_obstacles
-    polygon_obstacles = []
-    try:
-      polygon_obstacles = parking_assist_info.polygon_obstacles
-    except:
-      pass
-    # 车道级
-    lanes = ehr_static_map_msg.road_map.lanes
-    # print("lanes: ", lanes)
-    # 道路级
-    lane_groups = ehr_static_map_msg.road_map.lane_groups
-    # print("lane_groups: ", lane_groups)
+    common_parking_info = ehr_static_map_msg.common_parking_info
+    target_parking_space = common_parking_info.target_parking_space
     if g_is_display_enu:
-      for parking_space in parking_spaces:
-        parking_space_box_x = []
-        parking_space_box_y = []
-        for shape in parking_space.shape:
-          x = shape.x
-          y = shape.y
-          parking_space_box_x.append(x)
-          parking_space_box_y.append(y)
-        parking_space_boxes_x.append(parking_space_box_x)
-        parking_space_boxes_y.append(parking_space_box_y)
-
-      for shape in target_parking_space.shape:
+      for shape in target_parking_space.parking_space.shape:
         x = shape.x
         y = shape.y
         target_parking_space_box_x.append(x)
         target_parking_space_box_y.append(y)
-
-      for lane in lane_groups:
-        for road_mark in lane.road_marks:
-          road_mark_box_x = []
-          road_mark_box_y = []
-          for shape in road_mark.shape:
-            x = shape.x
-            y = shape.y
-            road_mark_box_x.append(x)
-            road_mark_box_y.append(y)
-          road_mark_boxes_x.append(road_mark_box_x)
-          road_mark_boxes_y.append(road_mark_box_y)
-
-      for road_obstacle in road_obstacles:
-        road_obstacle_x = []
-        road_obstacle_y = []
-        for shape in road_obstacle.shape:
-          x = shape.x
-          y = shape.y
-          road_obstacle_x.append(x)
-          road_obstacle_y.append(y)
-        road_obstacle_x_vec.append(road_obstacle_x)
-        road_obstacle_y_vec.append(road_obstacle_y)
-
-      for polygon_obstacle in polygon_obstacles:
-        polygon_obstacle_id += 1
-        polygon_id_vec.append(polygon_obstacle_id)
-        polygon_obstacle_x = []
-        polygon_obstacle_y = []
-        for shape in polygon_obstacle.shape:
-          x = shape.x
-          y = shape.y
-          polygon_obstacle_x.append(x)
-          polygon_obstacle_y.append(y)
-        polygon_obstacle_x_vec.append(polygon_obstacle_x)
-        polygon_obstacle_y_vec.append(polygon_obstacle_y)
-        polygon_x = []
-        polygon_y = []
-        lat_decision = "None"
-        is_static = ""
-        try:
-          obs_polygon = []
-          for obstacle in environment_model_info.obstacle:
-            if obstacle.id == polygon_obstacle_id:
-              obs_polygon = obstacle.polygon_points
-              if (0 == obstacle.lat_decision):
-                lat_decision = "LEFT"
-              elif (1 == obstacle.lat_decision):
-                lat_decision = "RIGHT"
-              elif (2 == obstacle.lat_decision):
-                lat_decision = "IGNORE"
-              if obstacle.is_static:
-                is_static = "Static"
-              break
-          for point in obs_polygon:
-            polygon_x.append(point.x)
-            polygon_y.append(point.y)
-        except:
-          pass
-        polygon_x_vec.append(polygon_x)
-        polygon_y_vec.append(polygon_y)
-        polygon_obstacle_label_vec.append('(id)='\
-            + str(polygon_obstacle_id) + '\n' \
-            + lat_decision + '\n' + is_static)
     else:
-      coord_tf = coord_transformer()
-      if loc_msg != None: # 长时轨迹
-        cur_pos_xn = loc_msg.position.position_boot.x
-        cur_pos_yn = loc_msg.position.position_boot.y
-        cur_yaw = loc_msg.orientation.euler_boot.yaw
-        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+      for shape in target_parking_space.parking_space.shape:
+        x = shape.x
+        y = shape.y
+        local_x, local_y = coord_tf.global_to_local([x], [y])
+        target_parking_space_box_x.append(local_x)
+        target_parking_space_box_y.append(local_y)
+
+    for parking_floor_info in ehr_static_map_msg.parking_floor_infos:
+      parking_assist_info = parking_floor_info.parking_assist_info
+      parking_spaces = []
+      road_obstacle = []
+      polygon_obstacles = []
+      lane_groups = []
+      try:
+        parking_spaces = parking_assist_info.parking_spaces
+        road_obstacles = parking_assist_info.road_obstacles
+        polygon_obstacles = parking_assist_info.polygon_obstacles
+        lane_groups = ehr_static_map_msg.road_map.lane_groups
+      except:
+        pass
+      if g_is_display_enu:
         for parking_space in parking_spaces:
           parking_space_box_x = []
           parking_space_box_y = []
           for shape in parking_space.shape:
             x = shape.x
             y = shape.y
-            local_x, local_y = coord_tf.global_to_local([x], [y])
-            parking_space_box_x.append(local_x)
-            parking_space_box_y.append(local_y)
+            parking_space_box_x.append(x)
+            parking_space_box_y.append(y)
           parking_space_boxes_x.append(parking_space_box_x)
           parking_space_boxes_y.append(parking_space_box_y)
-
-        for shape in target_parking_space.shape:
-          x = shape.x
-          y = shape.y
-          local_x, local_y = coord_tf.global_to_local([x], [y])
-          target_parking_space_box_x.append(local_x)
-          target_parking_space_box_y.append(local_y)
 
         for lane in lane_groups:
           for road_mark in lane.road_marks:
@@ -3117,9 +3036,8 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
             for shape in road_mark.shape:
               x = shape.x
               y = shape.y
-              local_x, local_y = coord_tf.global_to_local([x], [y])
-              road_mark_box_x.append(local_x)
-              road_mark_box_y.append(local_y)
+              road_mark_box_x.append(x)
+              road_mark_box_y.append(y)
             road_mark_boxes_x.append(road_mark_box_x)
             road_mark_boxes_y.append(road_mark_box_y)
 
@@ -3129,9 +3047,8 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
           for shape in road_obstacle.shape:
             x = shape.x
             y = shape.y
-            local_x, local_y = coord_tf.global_to_local([x], [y])
-            road_obstacle_x.append(local_x)
-            road_obstacle_y.append(local_y)
+            road_obstacle_x.append(x)
+            road_obstacle_y.append(y)
           road_obstacle_x_vec.append(road_obstacle_x)
           road_obstacle_y_vec.append(road_obstacle_y)
 
@@ -3143,9 +3060,8 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
           for shape in polygon_obstacle.shape:
             x = shape.x
             y = shape.y
-            local_x, local_y = coord_tf.global_to_local([x], [y])
-            polygon_obstacle_x.append(local_x)
-            polygon_obstacle_y.append(local_y)
+            polygon_obstacle_x.append(x)
+            polygon_obstacle_y.append(y)
           polygon_obstacle_x_vec.append(polygon_obstacle_x)
           polygon_obstacle_y_vec.append(polygon_obstacle_y)
           polygon_x = []
@@ -3167,18 +3083,103 @@ def generate_ehr_static_map(ehr_static_map_msg, loc_msg = None, environment_mode
                   is_static = "Static"
                 break
             for point in obs_polygon:
-              local_x, local_y = coord_tf.global_to_local([point.x], [point.y])
-              polygon_x.append(local_x)
-              polygon_y.append(local_y)
+              polygon_x.append(point.x)
+              polygon_y.append(point.y)
           except:
             pass
+          polygon_x_vec.append(polygon_x)
+          polygon_y_vec.append(polygon_y)
           polygon_obstacle_label_vec.append('(id)='\
               + str(polygon_obstacle_id) + '\n' \
               + lat_decision + '\n' + is_static)
-          polygon_x_vec.append(polygon_x)
-          polygon_y_vec.append(polygon_y)
-  except:
-    print('generate_ehr_static_map error')
+      else:
+        coord_tf = coord_transformer()
+        if loc_msg != None: # 长时轨迹
+          cur_pos_xn = loc_msg.position.position_boot.x
+          cur_pos_yn = loc_msg.position.position_boot.y
+          cur_yaw = loc_msg.orientation.euler_boot.yaw
+          coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+          for parking_space in parking_spaces:
+            parking_space_box_x = []
+            parking_space_box_y = []
+            for shape in parking_space.shape:
+              x = shape.x
+              y = shape.y
+              local_x, local_y = coord_tf.global_to_local([x], [y])
+              parking_space_box_x.append(local_x)
+              parking_space_box_y.append(local_y)
+            parking_space_boxes_x.append(parking_space_box_x)
+            parking_space_boxes_y.append(parking_space_box_y)
+
+          for lane in lane_groups:
+            for road_mark in lane.road_marks:
+              road_mark_box_x = []
+              road_mark_box_y = []
+              for shape in road_mark.shape:
+                x = shape.x
+                y = shape.y
+                local_x, local_y = coord_tf.global_to_local([x], [y])
+                road_mark_box_x.append(local_x)
+                road_mark_box_y.append(local_y)
+              road_mark_boxes_x.append(road_mark_box_x)
+              road_mark_boxes_y.append(road_mark_box_y)
+
+          for road_obstacle in road_obstacles:
+            road_obstacle_x = []
+            road_obstacle_y = []
+            for shape in road_obstacle.shape:
+              x = shape.x
+              y = shape.y
+              local_x, local_y = coord_tf.global_to_local([x], [y])
+              road_obstacle_x.append(local_x)
+              road_obstacle_y.append(local_y)
+            road_obstacle_x_vec.append(road_obstacle_x)
+            road_obstacle_y_vec.append(road_obstacle_y)
+
+          for polygon_obstacle in polygon_obstacles:
+            polygon_obstacle_id += 1
+            polygon_id_vec.append(polygon_obstacle_id)
+            polygon_obstacle_x = []
+            polygon_obstacle_y = []
+            for shape in polygon_obstacle.shape:
+              x = shape.x
+              y = shape.y
+              local_x, local_y = coord_tf.global_to_local([x], [y])
+              polygon_obstacle_x.append(local_x)
+              polygon_obstacle_y.append(local_y)
+            polygon_obstacle_x_vec.append(polygon_obstacle_x)
+            polygon_obstacle_y_vec.append(polygon_obstacle_y)
+            polygon_x = []
+            polygon_y = []
+            lat_decision = "None"
+            is_static = ""
+            try:
+              obs_polygon = []
+              for obstacle in environment_model_info.obstacle:
+                if obstacle.id == polygon_obstacle_id:
+                  obs_polygon = obstacle.polygon_points
+                  if (0 == obstacle.lat_decision):
+                    lat_decision = "LEFT"
+                  elif (1 == obstacle.lat_decision):
+                    lat_decision = "RIGHT"
+                  elif (2 == obstacle.lat_decision):
+                    lat_decision = "IGNORE"
+                  if obstacle.is_static:
+                    is_static = "Static"
+                  break
+              for point in obs_polygon:
+                local_x, local_y = coord_tf.global_to_local([point.x], [point.y])
+                polygon_x.append(local_x)
+                polygon_y.append(local_y)
+            except:
+              pass
+            polygon_obstacle_label_vec.append('(id)='\
+                + str(polygon_obstacle_id) + '\n' \
+                + lat_decision + '\n' + is_static)
+            polygon_x_vec.append(polygon_x)
+            polygon_y_vec.append(polygon_y)
+  except Exception as e:
+    print('generate_ehr_static_map error = {}'.format(e))
   road_obstacle_x_vec = list(itertools.chain.from_iterable(road_obstacle_x_vec))
   road_obstacle_y_vec = list(itertools.chain.from_iterable(road_obstacle_y_vec))
   return parking_space_boxes_x, parking_space_boxes_y, \
