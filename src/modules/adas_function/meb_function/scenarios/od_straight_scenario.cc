@@ -279,10 +279,13 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
   double ttc;
   if ((vehicle_service.shift_lever_state ==
        iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) &&
-      (obj.rel_vx < -0.1) && (obj_min_dist > 0.0)) {
+      (obj.rel_vx < -0.1)) {
     // Todo:未考虑障碍物航向角，这样简化计算有点问题
-
-    ttc = fabs(obj_min_dist / obj.rel_vx);
+    if (obj_min_dist > 0.0) {
+      ttc = fabs(obj_min_dist / obj.rel_vx);
+    } else {
+      ttc = 0.0;
+    }
     if (ttc < 0.3) {
       suppe_code += uint32_bit[9];
     }
@@ -338,6 +341,16 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
       if (fabs(front_radar_key_obj_info.key_obj_relative_y) > 0.75) {
         suppe_code += uint32_bit[15];
       }
+    }
+  }
+
+  /*bit_16*/
+  // 防止出地库在坡道上时,因感知误识别导致误触发
+  if (vehicle_service.shift_lever_state ==
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
+    if ((vehicle_service.vehicle_speed > 2.5) &&
+        (vehicle_service.long_acceleration > 0.45)) {
+      suppe_code += uint32_bit[16];
     }
   }
 
