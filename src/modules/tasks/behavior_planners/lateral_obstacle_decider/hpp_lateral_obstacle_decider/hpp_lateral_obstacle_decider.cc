@@ -199,7 +199,6 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
-  lat_obstacle_decision.clear();
   constexpr double kNearFrontThreshold = 7;
   constexpr double kHeadLBuffer = 0.5;
   if (obstacle->b_frenet_valid()) {
@@ -983,7 +982,7 @@ void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
   double current_timestamp = IflyTime::Now_ms();
 
   for (auto iter = obs_consistency_map.begin();
-       iter != obs_consistency_map.end();++iter) {
+       iter != obs_consistency_map.end();) {
     auto obs_id = iter->first;
     auto &consistency_info = iter->second;
     if (lat_obstacle_decision.find(obs_id) != lat_obstacle_decision.end()) {
