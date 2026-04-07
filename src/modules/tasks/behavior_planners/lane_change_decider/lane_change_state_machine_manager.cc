@@ -772,17 +772,17 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   // 判断与各障碍物之间的gap是否安全
-  if (target_lane_middle_node_) {
-    lc_invalid_track_.set_value(
-        target_lane_middle_node_->node_agent_id(),
-        target_lane_middle_node_->node_back_edge_to_ego_front_edge_distance(),
-        target_lane_middle_node_->node_speed());
-    lc_state_info.gap_insertable = false;
-    lc_state_info.lc_invalid_reason = "front view invalid";
-    lc_state_info.lc_gap_info.front_node_id =
-        target_lane_middle_node_->node_id();
-    return lc_state_info;
-  }
+  // if (target_lane_middle_node_) {
+  //   lc_invalid_track_.set_value(
+  //       target_lane_middle_node_->node_agent_id(),
+  //       target_lane_middle_node_->node_back_edge_to_ego_front_edge_distance(),
+  //       target_lane_middle_node_->node_speed());
+  //   lc_state_info.gap_insertable = false;
+  //   lc_state_info.lc_invalid_reason = "front view invalid";
+  //   lc_state_info.lc_gap_info.front_node_id =
+  //       target_lane_middle_node_->node_id();
+  //   return lc_state_info;
+  // }
 
   if (target_lane_front_node_) {
     if (FacilityTypes.count(target_lane_front_node_->type()) > 0) {
@@ -1054,15 +1054,15 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
 
   // 判断与各障碍物之间的gap是否安全
-  if (target_lane_middle_node_) {
-    lc_state_info.lc_should_back = true;
-    lc_state_info.lc_back_reason = "front view back";
-    lc_back_track_.set_value(
-        target_lane_middle_node_->node_agent_id(),
-        target_lane_middle_node_->node_back_edge_to_ego_front_edge_distance(),
-        target_lane_middle_node_->node_speed());
-    return lc_state_info;
-  }
+  // if (target_lane_middle_node_) {
+  //   lc_state_info.lc_should_back = true;
+  //   lc_state_info.lc_back_reason = "front view back";
+  //   lc_back_track_.set_value(
+  //       target_lane_middle_node_->node_agent_id(),
+  //       target_lane_middle_node_->node_back_edge_to_ego_front_edge_distance(),
+  //       target_lane_middle_node_->node_speed());
+  //   return lc_state_info;
+  // }
 
   if (target_lane_front_node_) {
     CalculateLCGapFeasibleWithPredictionInfo(
