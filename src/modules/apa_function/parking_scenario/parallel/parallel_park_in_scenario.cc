@@ -3655,7 +3655,16 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
 
   if (enable_pa_park_) {
     if (frame_.is_replan_first) {
-      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      if (t_lane_.obs_pt_inside.x() > ego_info_under_slot.slot.GetLength() +
+                                          kFrontDetaXMagWhenFrontVacant -
+                                          kEps) {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      } else if (t_lane_.obs_pt_inside.x() <
+                 -kRearDetaXMagWhenFrontOccupiedRearVacant + kEps) {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      } else {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      }
 
       frame_.current_arc_steer =
           t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT
