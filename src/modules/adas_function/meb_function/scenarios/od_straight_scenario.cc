@@ -330,8 +330,16 @@ uint64_t OdStraightScenario::FalseTriggerStratege(MebTempObj &obj) {
        vehicle_service.shift_lever_state ==
            iflyauto::ShiftLeverStateEnum::ShiftLeverState_M) &&
       (!meb_pre.GetMebInput().park_mode) && (obj.fusion_source == 1)) {
-    if (collision_result_for_front_radar_obj_ == false) {
-      suppe_code += uint32_bit[14];
+    if (obj.type_for_meb == OdObjGroup::kPeople) {
+      if (obj.age < 10000) {
+        if (collision_result_for_front_radar_obj_ == false) {
+          suppe_code += uint32_bit[14];
+        }
+      }
+    } else {
+      if (collision_result_for_front_radar_obj_ == false) {
+        suppe_code += uint32_bit[14];
+      }
     }
 
     /*bit_15*/
