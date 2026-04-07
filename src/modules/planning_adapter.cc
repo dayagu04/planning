@@ -43,7 +43,7 @@ bool PlanningAdapter::Init() {
         params_[vehicle_json_file_path] + "/vehicle_cfg/vehicle.json";
     FunctionSwitchConfigContext::Instance()->load_function_switch_config(
         vehicle_json_path);
-    ILOG_FATAL << "load function switch config! TLC: "
+    ILOG_INFO << "load function switch config! TLC: "
                << FunctionSwitchConfigContext::Instance()
                       ->get_function_switch_config()
                       .disable_tlf_function

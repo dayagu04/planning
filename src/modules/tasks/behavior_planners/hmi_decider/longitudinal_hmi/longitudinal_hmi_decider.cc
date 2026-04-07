@@ -168,9 +168,9 @@ bool LongitudinalHmiDecider::Execute() {
         iflyauto::REQUEST_REASON_LON_COLLISION_RISK;
   }
   // intersection left/right takeover request
-  bool disable_tlf_from_product = FunctionSwitchConfigContext::Instance()
+  bool disable_tlf_from_product = static_cast<bool>(FunctionSwitchConfigContext::Instance()
                                       ->get_function_switch_config()
-                                      .disable_tlf_function;
+                                      .disable_tlf_function);
   if (!tfl_decider.is_in_straight_lane && !disable_tlf_from_product) {
     IntersectionLeftRightLaneTakeOverProc();
   }

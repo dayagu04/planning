@@ -212,9 +212,9 @@ bool LongTimeTaskPipelineV3::Run() {
   //     return false;
   //   }
   // }
-  const auto& disable_lb_from_product = FunctionSwitchConfigContext::Instance()
+  const auto& disable_lb_from_product = static_cast<bool>(FunctionSwitchConfigContext::Instance()
                                             ->get_function_switch_config()
-                                            .disable_lane_borrow;
+                                            .disable_lane_borrow);
   if (enable_lane_borrow_deciderV2_ && !disable_lb_from_product) {
     ok = lane_borrow_deciderV2_->Execute();
     if (!ok) {
