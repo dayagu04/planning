@@ -57,6 +57,7 @@ class SpatioTemporalPlanner : public Task {
   bool ego_in_intersection_state_ = false;
   int intersection_count_ = 0;
   bool last_enable_using_st_plan_ = false;
+  int virtual_area_count_ = 0;
 
   planning::common::SpatioTemporalUnionPlan spatio_temporal_union_plan_;
   planning::common::SpationTemporalUnionDpInput

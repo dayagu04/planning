@@ -85,7 +85,7 @@ void ParallelParkInScenario::Reset() {
   obs_id_pt_map_.clear();
   parallel_path_planner_.Reset();
   previous_parallel_path_planner_.Reset();
-  parallel_replan_again_ = 0;
+  parallel_replan_again_bit_ = 0;
   previous_remain_dist_obs.clear();
   enable_pa_park_ = false;
   first_plan_slot.Reset();
@@ -120,6 +120,67 @@ void ParallelParkInScenario::Init() {
   return;
 }
 
+bool ParallelParkInScenario::CheckFirstReverseReplan(
+    const pnc::geometry_lib::PathPoint& cur_pose,
+    const pnc::geometry_lib::PathSegGear gear, const double slot_length) {
+  if (GetReplanAgainBit(DR_FIRST_REVERSE)) {
+    return false;
+  }
+  ILOG_INFO << "cur_pose pos: " << cur_pose.GetPos().x() << " "
+            << cur_pose.GetPos().y() << " slot length: " << slot_length
+            << " cur_pose.gear: " << static_cast<int>(gear);
+  const double step_dist = 0.2;
+  if (cur_pose.GetX() <
+          slot_length + apa_param.GetParam().parallel_replan_dist + step_dist &&
+      cur_pose.GetX() >
+          slot_length + apa_param.GetParam().parallel_replan_dist &&
+      gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    ILOG_INFO << "replan once when car is coming slot";
+    frame_.replan_reason = ReplanReason::DYNAMIC;
+    SetReplanAgainBit(DR_FIRST_REVERSE, DR_REPLAN);
+    return true;
+  }
+  return false;
+}
+
+bool ParallelParkInScenario::CheckFirstDriveReplanParallel(
+    const Eigen::Vector2d& cur_pose, const pnc::geometry_lib::PathSegGear gear,
+    Eigen::Vector2d slot_01_mid) {
+  if (GetReplanAgainBit(DR_FIRST_DRIVE)) {
+    return false;
+  }
+  if (gear != pnc::geometry_lib::SEG_GEAR_DRIVE) {
+    return false;
+  }
+  if (current_path_point_global_vec_.empty()) {
+    return false;
+  }
+  const double cur_path_s = current_path_point_global_vec_.back().s;
+  if (cur_path_s < 7.0) {
+    return false;
+  }
+  double ref_angle = relative_loc_observer_manager_.CalCameraOberserveAngel(
+      apa_world_ptr_->GetMeasureDataManagerPtr(), slot_01_mid);
+  bool angle_condition =
+      false;  // (ref_angle < 90.0 && ref_angle > 89.0) ? true : false;
+
+  int cur_path_size = current_path_point_global_vec_.size();
+  int middle_index = std::clamp((cur_path_size / 2 - 1), 0, cur_path_size - 1);
+  const double distance_diff =
+      (cur_pose - current_path_point_global_vec_[middle_index].pos).norm();
+  bool distance_condition = (distance_diff < 0.1) ? true : false;
+  ILOG_INFO << "ref_angle: " << ref_angle
+            << " distance_diff: " << distance_diff;
+  if (angle_condition || distance_condition) {
+    ILOG_INFO << "first drive replan distance diff: " << distance_diff;
+    frame_.replan_reason = ReplanReason::DYNAMIC;
+    SetReplanAgainBit(DR_FIRST_DRIVE, DR_REPLAN);
+    return true;
+  }
+
+  return false;
+}
+
 bool ParallelParkInScenario::CheckReplanParallel() {
   ILOG_INFO << "Enter CheckReplanParallel";
   if (enable_pa_park_) {
@@ -129,30 +190,27 @@ bool ParallelParkInScenario::CheckReplanParallel() {
   if (astar_state_ != AstarSearchState::NONE) {
     return false;
   }
-  if (parallel_replan_again_ != 0) {
-    return false;
-  }
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
   pnc::geometry_lib::PathSegGear cur_gear =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetGear();
   pnc::geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+  Eigen::Vector2d slot_01_mid =
+      ego_info_under_slot.slot.origin_corner_coord_global_.pt_23_mid;
 
-  ILOG_INFO << "cur_pose pos: " << cur_pose.GetPos().x() << " "
-            << cur_pose.GetPos().y()
-            << " slot length: " << ego_info_under_slot.slot.GetLength()
-            << " cur_pose.gear: " << static_cast<int>(cur_gear);
-  const double step_dist = 0.2;
-  if (cur_pose.GetX() < ego_info_under_slot.slot.GetLength() +
-                            apa_param.GetParam().parallel_replan_dist +
-                            step_dist &&
-      cur_pose.GetX() > ego_info_under_slot.slot.GetLength() +
-                            apa_param.GetParam().parallel_replan_dist &&
-      cur_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
-    ILOG_INFO << "replan once when car is coming slot";
-    frame_.replan_reason = ReplanReason::DYNAMIC;
-    parallel_replan_again_ = 1;
+  bool res_dr = CheckFirstReverseReplan(cur_pose, cur_gear,
+                                        ego_info_under_slot.slot.GetLength());
+  if (res_dr) {
+    ILOG_INFO << "first reverse replan";
+    return true;
+  }
+  const Eigen::Vector2d& global_cur_pos =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos();
+  res_dr =
+      CheckFirstDriveReplanParallel(global_cur_pos, cur_gear, slot_01_mid);
+  if (res_dr) {
+    ILOG_INFO << "first drive replan";
     return true;
   }
   return false;
@@ -3496,7 +3554,7 @@ const ParallelPathGenerator& ParallelParkInScenario::UseOrNotUseLastPath() {
 }
 
 const ParallelPathGenerator& ParallelParkInScenario::SuitablePathReplan() {
-  if (parallel_replan_again_ != 1) {
+  if (!GetReplanAgainBit(DR_REPLAN)) {
     return UseOrNotUseLastPath();
   }
   uint8_t cur_replan_gear =
@@ -3506,12 +3564,39 @@ const ParallelPathGenerator& ParallelParkInScenario::SuitablePathReplan() {
   int cur_gear_size = parallel_path_planner_.GetOutput().gear_change_count;
   int pre_gear_size =
       previous_parallel_path_planner_.GetOutput().gear_change_count;
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const auto& pre_path_points =
+      previous_parallel_path_planner_.GetOutput().path_point_vec;
+  double pre_kappa = 0.0;
+  ego_info_under_slot.cur_pose.PrintInfo();
+  for (size_t i = 0; i < pre_path_points.size(); i++) {
+    if ((ego_info_under_slot.cur_pose.pos - pre_path_points[i].GetPos())
+            .norm() < 0.2) {
+      pre_kappa = pre_path_points[i].GetKappa();
+      break;
+    }
+  }
+  double cur_kappa =
+      parallel_path_planner_.GetOutput().path_point_vec.front().GetKappa();
+  const bool kappa_condition =
+      std::abs(cur_kappa - pre_kappa) <
+      apa_param.GetParam().parallel_dynamic_plan_kappa_var;
   ILOG_INFO << "cur_car_gear: " << int(cur_car_gear)
             << " cur_replan_gear: " << int(cur_replan_gear)
             << " cur_gear_size : " << cur_gear_size
-            << " pre_gear_size : " << pre_gear_size;
-  parallel_replan_again_ = 2;
-  if (cur_car_gear != cur_replan_gear || cur_gear_size > pre_gear_size) {
+            << " pre_gear_size : " << pre_gear_size
+            << " cur_kappa: " << cur_kappa << " pre_kappa: " << pre_kappa;
+  // parallel_replan_again_ = DR_HAS_REPLAN;
+  ClearReplanAgainBit(DR_REPLAN);
+  if (GetReplanAgainBit(DR_FIRST_REVERSE) && !GetReplanAgainBit(DR_HAS_FR)) {
+    SetReplanAgainBit(DR_HAS_FR);
+  } else if (GetReplanAgainBit(DR_FIRST_DRIVE) &&
+             !GetReplanAgainBit(DR_HAS_FD)) {
+    SetReplanAgainBit(DR_HAS_FD);
+  }
+  if (cur_car_gear != cur_replan_gear || cur_gear_size > pre_gear_size || !kappa_condition) {
     ILOG_INFO << "use previous path";
     parallel_path_planner_ = previous_parallel_path_planner_;
     frame_.pathplan_result = PathPlannerResult::PLAN_HOLD;
@@ -3584,7 +3669,15 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
   ILOG_INFO << "ref steer to path planner input ="
             << static_cast<int>(path_planner_input.ref_arc_steer);
 
-  path_planner_input.parallel_replan_again_ = parallel_replan_again_;
+  if (GetReplanAgainBit(DR_FIRST_DRIVE) && !GetReplanAgainBit(DR_HAS_FD)) {
+    path_planner_input.parallel_replan_again_ = DR_FIRST_DRIVE;
+  } else if (GetReplanAgainBit(DR_FIRST_REVERSE) &&
+             !GetReplanAgainBit(DR_HAS_FR)) {
+    path_planner_input.parallel_replan_again_ = DR_FIRST_REVERSE;
+  } else {
+    path_planner_input.parallel_replan_again_ = DR_NOT_REPLAN;
+  }
+  parallel_path_planner_.DisablePAPark();
   if (enable_pa_park_) {
     parallel_path_planner_.EnablePAPark();
     ILOG_INFO << "total_plan_count = " << int(frame_.total_plan_count)
@@ -3610,9 +3703,9 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
             << IflyTime::Now_ms() - path_plan_start_time;
   // const auto& path_planner_output = parallel_path_planner_.GetOutput();
 
-  if (parallel_replan_again_ == 1 && !path_plan_success) {
+  if (GetReplanAgainBit(DR_REPLAN) && !path_plan_success) {
     ILOG_INFO << "path planner replan failed, using last path";
-    parallel_replan_again_ = 2;
+    ClearReplanAgainBit(DR_REPLAN);
     parallel_path_planner_ = previous_parallel_path_planner_;
     const auto& planner_output = parallel_path_planner_.GetOutput();
     frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
@@ -3886,12 +3979,24 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
 
     const auto& optimized_path_vec =
         apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputPathVec();
-
+    double end_pt_dist =
+        std::sqrt(std::pow(optimized_path_vec.back().pos.x() -
+                               planner_output.path_point_vec.back().pos.x(),
+                           2) +
+                  std::pow(optimized_path_vec.back().pos.y() -
+                               planner_output.path_point_vec.back().pos.y(),
+                           2));
+    const bool is_use_optimized_path = end_pt_dist < 0.08;
+    ILOG_INFO << "is_use_optimized_path:" << is_use_optimized_path
+              << ",end_pt_dist:" << end_pt_dist;
+    const auto selected_path = is_use_optimized_path
+                                   ? optimized_path_vec
+                                   : planner_output.path_point_vec;
     current_path_point_global_vec_.clear();
-    current_path_point_global_vec_.reserve(optimized_path_vec.size());
+    current_path_point_global_vec_.reserve(selected_path.size() );
 
     pnc::geometry_lib::PathPoint global_point;
-    for (const auto& path_point : optimized_path_vec) {
+    for (const auto& path_point : selected_path ) {
       global_point.Set(
           update_ego_info.l2g_tf.GetPos(path_point.pos),
           update_ego_info.l2g_tf.GetHeading(path_point.heading));

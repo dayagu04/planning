@@ -3287,7 +3287,7 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
     # 3. update nsa info
     try:
       nsa_info = local_view_data['data_msg']['planning_hmi_msg'].nsa_info
-      vars = ['is_avaliable', 'nsa_disable_reason', 'is_complete', 'nsa_complete_reason']
+      vars = ['is_avaliable', 'nsa_disable_reason', 'is_complete', 'nsa_complete_reason', 'nsa_pause_reason']
       for name in vars:
         try:
           nsa_info_datas.append(getattr(nsa_info, name))

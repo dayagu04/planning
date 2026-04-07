@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <vector>
+#include <utility>
 
 #include "aabb2d.h"
 #include "apa_context.h"
@@ -28,6 +28,11 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
   input_ = input;
   const EgoInfoUnderSlot& ego_info_under_slot = input.ego_info_under_slot;
   const ApaSlot& slot = ego_info_under_slot.slot;
+  search_pts_.reserve(7);
+  curve_ptss_.reserve(MAX_CURVE_PATH_SEG_NUM);
+  curve_gears_.reserve(MAX_CURVE_PATH_SEG_NUM);
+  grade_segment_pts_.reserve(100);
+
   if (input.scenario_type ==
           ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
       input.scenario_type ==
@@ -216,6 +221,11 @@ const bool NodeDeleteDecider::CheckShouldBeDeletedForPerpendicularIn() {
       return true;
     }
 
+    if (CheckOutOfPoseStandard()) {
+      reason_ = NodeDeleteReason::OUT_OF_POSE_STANDARD;
+      return true;
+    }
+
     if (CheckCollision()) {
       reason_ = NodeDeleteReason::COLLISION;
       return true;
@@ -242,32 +252,31 @@ const bool NodeDeleteDecider::CheckCollision() {
     return false;
   }
 
+  search_pts_.clear();
+  curve_ptss_.clear();
+  curve_gears_.clear();
+
+  const float ds = input_.sample_ds;
+
   if (request_.current_node != nullptr) {
     Node3d* current_node = request_.current_node;
 
     // do col det for every pt in node
-    NodePath path = current_node->GetNodePath();
+    const NodePath& path = current_node->GetNodePath();
 
     // The first {x, y, phi} is collision free unless they are start and end
     // configuration of search problem
-    size_t check_start_index = 0;
-    if (path.point_size == 1) {
-      check_start_index = 0;
-    } else {
-      check_start_index = 1;
-    }
+    const size_t check_start_index = path.point_size == 1 ? 0 : 1;
+    float s = check_start_index * ds;
 
-    std::vector<common_math::PathPt<float>> pt_vec;
     common_math::PathPt<float> pt;
-
-    pt_vec.reserve(path.point_size - check_start_index + 2);
-
+    pt.kappa = current_node->GetKappa();
     for (size_t i = check_start_index; i < path.point_size; ++i) {
       pt.SetPos(path.points[i].x, path.points[i].y);
       pt.SetTheta(path.points[i].theta);
-      pt.kappa = current_node->GetKappa();
-      pt.s = i * input_.sample_ds;
-      pt_vec.emplace_back(pt);
+      pt.s = s;
+      s += ds;
+      search_pts_.emplace_back(pt);
     }
 
     double safe_remain_dist = 0.0;
@@ -284,13 +293,13 @@ const bool NodeDeleteDecider::CheckCollision() {
          current_node->GetPathType() == AstarPathType::END_NODE);
 
     const bool col_flag =
-        CheckPtsCollision(pt_vec, current_node->GetGearType(), is_special_node,
-                          &obs_dist, &safe_remain_dist);
+        CheckPtsCollision(search_pts_, current_node->GetGearType(),
+                          is_special_node, &obs_dist, &safe_remain_dist);
 
     if (input_.need_cal_obs_dist) {
       current_node->SetObsDistRelativeSlot(obs_dist);
     }
-    size_t min_save_pt_number = 2;
+    const size_t min_save_pt_number = 2;
     if (col_flag && safe_remain_dist > min_save_pt_number * input_.sample_ds &&
         safe_remain_dist < path.path_dist) {
       // i must be bigger than 1
@@ -300,10 +309,11 @@ const bool NodeDeleteDecider::CheckCollision() {
           break;
         }
       }
-      path.point_size = i;
+      NodePath trimmed_path = path;
+      trimmed_path.point_size = i;
 
-      current_node->UpdatePath(path, input_.map_bound, input_.config,
-                               (i - 1) * input_.sample_ds);
+      current_node->UpdatePath(trimmed_path, input_.map_bound, input_.config,
+                               (i - 1) * ds);
 
       return false;
     }
@@ -313,85 +323,73 @@ const bool NodeDeleteDecider::CheckCollision() {
 
   else {
     CurveNode* curve_node = request_.curve_node;
-
     // do col det for every pt in curve
     const CurvePath& path = curve_node->GetCurvePath();
-// The first {x, y, phi} is collision free unless they are start and end
-    std::vector<std::vector<common_math::PathPt<float>>> pt_vec_vec;
-    std::vector<common_math::PathPt<float>> pt_vec;
-
-    std::vector<AstarPathGear> gear_vec;
-    AstarPathGear cur_gear, next_gear;
-    bool gear_change_flag = false;
-    pt_vec_vec.reserve(path.gear_change_number + 2);
-    gear_vec.reserve(path.gear_change_number + 2);
-    for (int i = 0; i < path.segment_size; ++i) {
-      for (int j = 1; j < path.ptss[i].size(); ++j) {
-        pt_vec.emplace_back(path.ptss[i][j]);
+    // The first {x, y, phi} is collision free unless they are start and end
+    float s = 0.0f;
+    for (size_t i = 0; i < path.segment_size; ++i) {
+      const auto& src_pts = path.ptss[i];
+      if (src_pts.size() <= 1) {
+        continue;
       }
-      cur_gear = path.gears[i];
-      if (i < path.segment_size - 1) {
-        next_gear = path.gears[i + 1];
-        gear_change_flag = IsGearDifferent(cur_gear, next_gear);
+
+      if (curve_ptss_.empty() ||
+          IsGearDifferent(curve_gears_.back(), path.gears[i])) {
+        curve_ptss_.emplace_back();
+        curve_gears_.emplace_back(path.gears[i]);
+        curve_ptss_.back().reserve(src_pts.size() - 1);
       } else {
-        gear_change_flag = true;
+        curve_ptss_.back().reserve(curve_ptss_.back().size() + src_pts.size() -
+                                   1);
       }
-      if (gear_change_flag) {
-        pt_vec_vec.emplace_back(pt_vec);
-        gear_vec.emplace_back(cur_gear);
-        pt_vec.clear();
-      }
-    }
 
-    double s = 0.0;
-    for (size_t i = 0; i < pt_vec_vec.size(); ++i) {
-      for (size_t j = 0; j < pt_vec_vec[i].size(); ++j) {
-        s += input_.sample_ds;
-        pt_vec_vec[i][j].s = s;
+      auto& dst_pts = curve_ptss_.back();
+      for (size_t j = 1; j < src_pts.size(); ++j) {
+        common_math::PathPt<float> pt = src_pts[j];
+        s += ds;
+        pt.s = s;
+        dst_pts.emplace_back(pt);
       }
     }
 
     bool enable_smart_fold_mirror = false;
-    while ((input_.scenario_type ==
+    while (input_.enable_smart_fold_mirror &&
+           (input_.scenario_type ==
                 ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
             input_.scenario_type ==
-                ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) &&
-           input_.enable_smart_fold_mirror) {
-      if (pt_vec_vec.empty()) {
+                ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN)) {
+      if (curve_ptss_.empty() || curve_ptss_.back().empty()) {
         break;
       }
-      const AstarPathGear last_gear = gear_vec.back();
-      const auto& pts = pt_vec_vec.back();
-      std::vector<common_math::PathPt<float>> pt_line, pt_arc;
+      const AstarPathGear last_gear = curve_gears_.back();
+      const auto& pts = curve_ptss_.back();
 
-      int i = pts.size() - 1;
-      for (; i >= 0; --i) {
-        if (std::fabs(pts[i].kappa) > 1e-3) {
+      const int last_path_pt_count = static_cast<int>(pts.size());
+
+      int last_line_pt_index = last_path_pt_count;
+      for (int i = last_path_pt_count - 1; i >= 0; --i) {
+        if (std::fabs(pts[i].kappa) > 1e-3f) {
           break;
         }
-        pt_line.emplace_back(pts[i]);
+        last_line_pt_index = i;
       }
 
-      if (pt_line.empty()) {
+      if (last_line_pt_index == last_path_pt_count) {
+        // no lint pt found, no need to fold mirror
         break;
       }
 
-      if (pt_line.size() < pts.size()) {
-        for (int j = i; j >= 0; --j) {
-          pt_arc.emplace_back(pts[j]);
-        }
-      }
+      const float last_lint_pt_x = pts[last_line_pt_index].GetX();
 
       const ApaParameters& param = apa_param.GetParam();
       const float slot_x = input_.ego_info_under_slot.slot
                                .processed_corner_coord_local_.pt_01_mid.x();
 
-      float mirror_x =
-          pt_line.back().GetX() + param.lon_dist_mirror_to_rear_axle;
+      float mirror_x = last_lint_pt_x + param.lon_dist_mirror_to_rear_axle;
 
       if (input_.scenario_type ==
           ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-        mirror_x = pt_line.back().GetX() - param.lon_dist_mirror_to_rear_axle;
+        mirror_x = last_lint_pt_x - param.lon_dist_mirror_to_rear_axle;
       }
 
       const float lower_x =
@@ -405,38 +403,38 @@ const bool NodeDeleteDecider::CheckCollision() {
         break;
       }
 
-      pt_vec_vec.pop_back();
-      gear_vec.pop_back();
+      // No need to insert in reverse, just insert directly, saving subsequent
+      // reversals
+      // lath_path_line_pts_.insert(lath_path_line_pts_.end(),
+      //     std::make_reverse_iterator(pts.begin() + last_path_pt_count),
+      //     std::make_reverse_iterator(pts.begin() + last_lint_pt_index));
+      const bool exist_arc_pts = last_line_pt_index > 0;
+      std::vector<common_math::PathPt<float>> last_pts =
+          std::move(curve_ptss_.back());
+      curve_ptss_.pop_back();
+      curve_gears_.pop_back();
 
-      if (pt_arc.size() > 0) {
-        std::reverse(pt_arc.begin(), pt_arc.end());
-        pt_vec_vec.emplace_back(pt_arc);
-        gear_vec.emplace_back(last_gear);
+      const auto line_begin_it = last_pts.begin() + last_line_pt_index;
+      const auto line_end_it = last_pts.end();
+
+      if (exist_arc_pts) {
+        curve_ptss_.emplace_back(last_pts.begin(), line_begin_it);
+        curve_gears_.emplace_back(last_gear);
       }
 
       if (mirror_x < upper_x) {
-        std::reverse(pt_line.begin(), pt_line.end());
-        pt_vec_vec.emplace_back(pt_line);
-        gear_vec.emplace_back(last_gear);
+        curve_ptss_.emplace_back(line_begin_it, line_end_it);
+        curve_gears_.emplace_back(last_gear);
       } else {
-        std::vector<common_math::PathPt<float>> pt_line_up, pt_line_down;
-        i = 0;
-        for (; i < pt_line.size(); ++i) {
-          if (pt_line[i].GetX() > upper_x - redundant_x) {
-            break;
-          }
-          pt_line_down.emplace_back(pt_line[i]);
-        }
-        for (int j = i; j < pt_line.size(); ++j) {
-          pt_line_up.emplace_back(pt_line[j]);
-        }
-
-        std::reverse(pt_line_down.begin(), pt_line_down.end());
-        std::reverse(pt_line_up.begin(), pt_line_up.end());
-        pt_vec_vec.emplace_back(pt_line_up);
-        pt_vec_vec.emplace_back(pt_line_down);
-        gear_vec.emplace_back(last_gear);
-        gear_vec.emplace_back(last_gear);
+        const float surplus_x = mirror_x - upper_x + redundant_x;
+        const auto split_it =
+            line_begin_it +
+            std::clamp(static_cast<int>(surplus_x / ds), 0,
+                       static_cast<int>(line_end_it - line_begin_it));
+        curve_ptss_.emplace_back(line_begin_it, split_it);
+        curve_ptss_.emplace_back(split_it, line_end_it);
+        curve_gears_.emplace_back(last_gear);
+        curve_gears_.emplace_back(last_gear);
       }
 
       enable_smart_fold_mirror = true;
@@ -445,29 +443,35 @@ const bool NodeDeleteDecider::CheckCollision() {
 
     ObsToPathDistRelativeSlot small_obs_dist;
     double safe_remain_dist = 0.0;
-    for (size_t i = 0; i < pt_vec_vec.size(); ++i) {
+    for (size_t i = 0; i < curve_ptss_.size(); ++i) {
       ObsToPathDistRelativeSlot obs_dist;
-      if (enable_smart_fold_mirror && i == pt_vec_vec.size() - 1) {
+      const bool use_fold_mirror_col_det =
+          enable_smart_fold_mirror && i == curve_ptss_.size() - 1;
+      if (use_fold_mirror_col_det) {
         col_det_interface_ptr_->Init(true);
       }
-      const bool col_flag = CheckPtsCollision(pt_vec_vec[i], gear_vec[i], false,
-                                              &obs_dist, &safe_remain_dist);
-      if (enable_smart_fold_mirror) {
+      const bool col_flag = CheckPtsCollision(
+          curve_ptss_[i], curve_gears_[i], false, &obs_dist, &safe_remain_dist);
+      if (use_fold_mirror_col_det) {
         col_det_interface_ptr_->Init(false);
       }
       if (input_.need_cal_obs_dist) {
         small_obs_dist.SetSmallerDist(obs_dist);
-        curve_node->SetObsDistRelativeSlot(small_obs_dist);
       }
 
       if (col_flag) {
-        if (i == pt_vec_vec.size() - 1 && pt_vec_vec.back().size() > 0 &&
-            safe_remain_dist >
-                pt_vec_vec.back().back().s - input_.sample_ds - 0.001) {
+        if (input_.need_cal_obs_dist) {
+          curve_node->SetObsDistRelativeSlot(small_obs_dist);
+        }
+        if (i == curve_ptss_.size() - 1 && curve_ptss_.back().size() > 0 &&
+            safe_remain_dist > curve_ptss_.back().back().s - ds - 0.001f) {
           return false;
         }
         return true;
       }
+    }
+    if (input_.need_cal_obs_dist) {
+      curve_node->SetObsDistRelativeSlot(small_obs_dist);
     }
     return false;
   }
@@ -515,6 +519,38 @@ const bool NodeDeleteDecider::CheckOutOfPoseBound() {
     }
   }
 
+  return false;
+}
+
+const bool NodeDeleteDecider::CheckOutOfPoseStandard() {
+  if (request_.current_node == nullptr) {
+    return false;
+  }
+  if (input_.swap_start_goal) {
+    return false;
+  }
+  if (input_.scenario_type !=
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN &&
+      input_.scenario_type !=
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+    return false;
+  }
+  const NodePath& path = request_.current_node->GetNodePath();
+  const float target_heading =
+      input_.ego_info_under_slot.target_pose.GetTheta();
+  const float x_err = 0.36f;
+  const float heading_err = 30.0f * common_math::kDeg2RadF;
+  const float y_err = 3.68f;
+  const float target_y = input_.ego_info_under_slot.target_pose.GetY();
+  for (size_t i = 0; i < path.point_size; ++i) {
+    const Pose2f& pose = path.points[i];
+    if (pose.GetX() - pose_bound_.x_down_bound < x_err &&
+        std::fabs(pose.GetY() - target_y) < y_err &&
+        std::fabs(common_math::UnifyAngleDiff(pose.GetPhi(), target_heading)) >
+            heading_err) {
+      return true;
+    }
+  }
   return false;
 }
 
@@ -682,69 +718,61 @@ void NodeDeleteDecider::SplitPathPtsUsingGradeBuffer(
     const std::vector<common_math::PathPt<float>>& origin_pts,
     std::vector<GradeBufferPathPts>& grade_buffer_pts_vec) {
   grade_buffer_pts_vec.clear();
-  if (origin_pts.size() < 1) {
+  if (origin_pts.empty()) {
     return;
   }
-  GradeBufferPathPts grade_buffer_pts;
+
   GradeColDetBufferType last_type = GetGradeBufferType(origin_pts[0]);
-  GradeColDetBufferType now_type;
   std::vector<common_math::PathPt<float>> pts;
 
   for (size_t i = 0; i < origin_pts.size(); ++i) {
     const auto& pt = origin_pts[i];
-    now_type = GetGradeBufferType(pt);
+    const GradeColDetBufferType now_type = GetGradeBufferType(pt);
 
     if (now_type != last_type) {
-      grade_buffer_pts.type = last_type;
-      grade_buffer_pts.pts = pts;
-      grade_buffer_pts_vec.emplace_back(grade_buffer_pts);
+      grade_buffer_pts_vec.emplace_back();
+      grade_buffer_pts_vec.back().type = last_type;
+      grade_buffer_pts_vec.back().pts = std::move(pts);
       pts.clear();
     }
 
+    pts.emplace_back(pt);
+
     if (i == origin_pts.size() - 1) {
-      pts.emplace_back(pt);
-      grade_buffer_pts.type = now_type;
-      grade_buffer_pts.pts = pts;
-      grade_buffer_pts_vec.emplace_back(grade_buffer_pts);
+      grade_buffer_pts_vec.emplace_back();
+      grade_buffer_pts_vec.back().type = now_type;
+      grade_buffer_pts_vec.back().pts = std::move(pts);
     } else {
-      pts.emplace_back(pt);
       last_type = now_type;
     }
   }
 }
 
 const GradeColDetBufferType NodeDeleteDecider::GetGradeBufferType(
-    const common_math::PathPt<float>& pt
-) {
-  bool is_turn = true;
-  if (std::fabs(pt.kappa) < 1e-3f) {
-    is_turn = false;
-  }
+    const common_math::PathPt<float>& pt) {
+  const bool is_turn = std::fabs(pt.kappa) >= 1e-3f;
+  const float abs_theta_deg = std::fabs(pt.GetTheta()) * common_math::kRad2DegF;
+  constexpr float kSlotHeadingThresholdDeg = 23.86f;
+  constexpr float kHeadInSlotHeadingThresholdDeg =
+      180.0f - kSlotHeadingThresholdDeg;
+
   // 0->out_slot  1->entrance_slot 2->in_slot
   int slot_type = 0;
   if (input_.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     if (slot_entrance_box_.IsContain(pt.pos) &&
-        std::fabs(pt.GetTheta()) * common_math::kRad2DegF > 23.86f) {
+        abs_theta_deg > kSlotHeadingThresholdDeg) {
       slot_type = 1;
     } else if (slot_box_.IsContain(pt.pos)) {
-      if (std::fabs(pt.GetTheta()) * common_math::kRad2DegF < 23.86f) {
-        slot_type = 2;
-      } else {
-        slot_type = 1;
-      }
+      slot_type = abs_theta_deg < kSlotHeadingThresholdDeg ? 2 : 1;
     }
   } else if (input_.scenario_type ==
              ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     if (slot_entrance_box_.IsContain(pt.pos) &&
-        std::fabs(pt.GetTheta()) * common_math::kRad2DegF < 180.0f - 23.86f) {
+        abs_theta_deg < kHeadInSlotHeadingThresholdDeg) {
       slot_type = 1;
     } else if (slot_box_.IsContain(pt.pos)) {
-      if (std::fabs(pt.GetTheta()) * common_math::kRad2DegF > 180.0f - 23.86f) {
-        slot_type = 2;
-      } else {
-        slot_type = 1;
-      }
+      slot_type = abs_theta_deg > kHeadInSlotHeadingThresholdDeg ? 2 : 1;
     }
   }
 
@@ -759,160 +787,197 @@ const GradeColDetBufferType NodeDeleteDecider::GetGradeBufferType(
       default:
         return GradeColDetBufferType::TURN_PATH_OUT_SLOT_BUFFER;
     }
-  } else {
-    switch (slot_type) {
-      case 0:
-        return GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER;
-      case 1:
-        return GradeColDetBufferType::STRAIGHT_PATH_ENTRANCE_SLOT_BUFFER;
-      case 2:
-        return GradeColDetBufferType::STRAIGHT_PATH_IN_SLOT_BUFFER;
-      default:
-        return GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER;
-    }
   }
 
-  return GradeColDetBufferType::TURN_PATH_OUT_SLOT_BUFFER;
+  switch (slot_type) {
+    case 0:
+      return GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER;
+    case 1:
+      return GradeColDetBufferType::STRAIGHT_PATH_ENTRANCE_SLOT_BUFFER;
+    case 2:
+      return GradeColDetBufferType::STRAIGHT_PATH_IN_SLOT_BUFFER;
+    default:
+      return GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER;
+  }
 }
 
 const bool NodeDeleteDecider::CheckPtsCollision(
-    const std::vector<common_math::PathPt<float>>& pts,
-    AstarPathGear gear, bool is_special_node,
-    ObsToPathDistRelativeSlot* obs_dist, double* safe_remain_dist) {
-  const std::shared_ptr<EDTCollisionDetector>& edt_col_det_ptr =
-      col_det_interface_ptr_->GetEDTColDetPtr();
-
+    const std::vector<common_math::PathPt<float>>& pts, AstarPathGear gear,
+    bool is_special_node, ObsToPathDistRelativeSlot* obs_dist,
+    double* safe_remain_dist) {
   if (pts.empty()) {
     return false;
   }
 
+  const std::shared_ptr<EDTCollisionDetector>& edt_col_det_ptr =
+      col_det_interface_ptr_->GetEDTColDetPtr();
   const bool need_cal_obs_dist = input_.need_cal_obs_dist;
-
+  const PathColDetBuffer& path_col_det_buffer = input_.path_col_det_buffer;
   const ParkingLatLonSpeedBuffer& speed_buffer =
       apa_param.GetParam().lat_lon_speed_buffer;
 
-  if (!input_.path_col_det_buffer.need_distinguish_outinslot) {
-    float body_lat_buffer = input_.path_col_det_buffer.body_lat_buffer;
-    float mirror_lat_buffer = input_.path_col_det_buffer.mirror_lat_buffer;
-    float lon_buffer = input_.path_col_det_buffer.lon_buffer;
-    float min_obs_dist = 26.8f;
+  const auto set_special_buffers = [&](float* lon_buffer,
+                                       float* body_lat_buffer,
+                                       float* mirror_lat_buffer) {
+    *body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2f;
+    *mirror_lat_buffer =
+        speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2f;
+    *lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
+  };
+
+  const auto set_buffers_by_type = [&](GradeColDetBufferType type,
+                                       float* lon_buffer,
+                                       float* body_lat_buffer,
+                                       float* mirror_lat_buffer) {
+    *lon_buffer = path_col_det_buffer.lon_buffer;
+    *body_lat_buffer = path_col_det_buffer.body_lat_buffer;
+    *mirror_lat_buffer = path_col_det_buffer.mirror_lat_buffer;
+    switch (type) {
+      case GradeColDetBufferType::STRAIGHT_PATH_IN_SLOT_BUFFER:
+        *body_lat_buffer = path_col_det_buffer.in_slot_body_lat_buffer;
+        *mirror_lat_buffer = path_col_det_buffer.in_slot_mirror_lat_buffer;
+        break;
+      case GradeColDetBufferType::STRAIGHT_PATH_ENTRANCE_SLOT_BUFFER:
+        *body_lat_buffer = path_col_det_buffer.entrance_slot_body_lat_buffer;
+        *mirror_lat_buffer =
+            path_col_det_buffer.entrance_slot_mirror_lat_buffer;
+        break;
+      case GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER:
+        *body_lat_buffer = path_col_det_buffer.out_slot_body_lat_buffer;
+        *mirror_lat_buffer = path_col_det_buffer.out_slot_mirror_lat_buffer;
+        break;
+      case GradeColDetBufferType::TURN_PATH_IN_SLOT_BUFFER:
+        *body_lat_buffer = path_col_det_buffer.in_slot_body_lat_buffer +
+                           path_col_det_buffer.in_slot_extra_turn_lat_buffer;
+        *mirror_lat_buffer = path_col_det_buffer.in_slot_mirror_lat_buffer +
+                             path_col_det_buffer.in_slot_extra_turn_lat_buffer;
+        break;
+      case GradeColDetBufferType::TURN_PATH_ENTRANCE_SLOT_BUFFER:
+        *body_lat_buffer =
+            path_col_det_buffer.entrance_slot_body_lat_buffer +
+            path_col_det_buffer.entrance_slot_extra_turn_lat_buffer;
+        *mirror_lat_buffer =
+            path_col_det_buffer.entrance_slot_mirror_lat_buffer +
+            path_col_det_buffer.entrance_slot_extra_turn_lat_buffer;
+        break;
+      case GradeColDetBufferType::TURN_PATH_OUT_SLOT_BUFFER:
+        *body_lat_buffer = path_col_det_buffer.out_slot_body_lat_buffer +
+                           path_col_det_buffer.out_slot_extra_turn_lat_buffer;
+        *mirror_lat_buffer = path_col_det_buffer.out_slot_mirror_lat_buffer +
+                             path_col_det_buffer.out_slot_extra_turn_lat_buffer;
+        break;
+      default:
+        break;
+    }
+  };
+
+  const auto set_obs_dist = [&](GradeColDetBufferType type,
+                                float min_obs_dist) {
+    switch (type) {
+      case GradeColDetBufferType::STRAIGHT_PATH_IN_SLOT_BUFFER:
+        obs_dist->obs_dist_in_slot_straight = min_obs_dist;
+        break;
+      case GradeColDetBufferType::STRAIGHT_PATH_ENTRANCE_SLOT_BUFFER:
+        obs_dist->obs_dist_entrance_slot_straight = min_obs_dist;
+        break;
+      case GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER:
+        obs_dist->obs_dist_out_slot_straight = min_obs_dist;
+        break;
+      case GradeColDetBufferType::TURN_PATH_IN_SLOT_BUFFER:
+        obs_dist->obs_dist_in_slot_turn = min_obs_dist;
+        break;
+      case GradeColDetBufferType::TURN_PATH_ENTRANCE_SLOT_BUFFER:
+        obs_dist->obs_dist_entrance_slot_turn = min_obs_dist;
+        break;
+      case GradeColDetBufferType::TURN_PATH_OUT_SLOT_BUFFER:
+        obs_dist->obs_dist_out_slot_turn = min_obs_dist;
+        break;
+      default:
+        break;
+    }
+  };
+
+  float body_lat_buffer = path_col_det_buffer.body_lat_buffer;
+  float mirror_lat_buffer = path_col_det_buffer.mirror_lat_buffer;
+  float lon_buffer = path_col_det_buffer.lon_buffer;
+
+  if (!path_col_det_buffer.need_distinguish_outinslot) {
     if (is_special_node) {
-      // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
-      mirror_lat_buffer =
-          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
-      lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
+      set_special_buffers(&lon_buffer, &body_lat_buffer, &mirror_lat_buffer);
     }
 
-    const auto res =
+    const auto& res =
         edt_col_det_ptr->Update(pts, lon_buffer, body_lat_buffer,
                                 mirror_lat_buffer, gear, need_cal_obs_dist);
-    min_obs_dist = res.min_obs_dist;
 
     if (need_cal_obs_dist) {
-      obs_dist->SetDist(min_obs_dist);
+      obs_dist->SetDist(res.min_obs_dist);
     }
 
     *safe_remain_dist = res.remain_dist;
     return res.col_flag;
   }
 
-  std::vector<GradeBufferPathPts> grade_buffer_pts_vec;
-  SplitPathPtsUsingGradeBuffer(pts, grade_buffer_pts_vec);
-  for (GradeBufferPathPts& grade_buffer_pts : grade_buffer_pts_vec) {
-    GradeColDetBufferType temp_type = grade_buffer_pts.type;
-    const auto& temp_pts = grade_buffer_pts.pts;
-    float lon_buffer = input_.path_col_det_buffer.lon_buffer;
-    float body_lat_buffer = input_.path_col_det_buffer.body_lat_buffer;
-    float mirror_lat_buffer = input_.path_col_det_buffer.mirror_lat_buffer;
-    switch (temp_type) {
-      case GradeColDetBufferType::STRAIGHT_PATH_IN_SLOT_BUFFER:
-        body_lat_buffer = input_.path_col_det_buffer.in_slot_body_lat_buffer;
-        mirror_lat_buffer =
-            input_.path_col_det_buffer.in_slot_mirror_lat_buffer;
-        break;
-      case GradeColDetBufferType::STRAIGHT_PATH_ENTRANCE_SLOT_BUFFER:
-        body_lat_buffer =
-            input_.path_col_det_buffer.entrance_slot_body_lat_buffer;
-        mirror_lat_buffer =
-            input_.path_col_det_buffer.entrance_slot_mirror_lat_buffer;
-        break;
-      case GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER:
-        body_lat_buffer = input_.path_col_det_buffer.out_slot_body_lat_buffer;
-        mirror_lat_buffer =
-            input_.path_col_det_buffer.out_slot_mirror_lat_buffer;
-        break;
-      case GradeColDetBufferType::TURN_PATH_IN_SLOT_BUFFER:
-        body_lat_buffer =
-            input_.path_col_det_buffer.in_slot_body_lat_buffer +
-            input_.path_col_det_buffer.in_slot_extra_turn_lat_buffer;
-        mirror_lat_buffer =
-            input_.path_col_det_buffer.in_slot_mirror_lat_buffer +
-            input_.path_col_det_buffer.in_slot_extra_turn_lat_buffer;
-        break;
-      case GradeColDetBufferType::TURN_PATH_ENTRANCE_SLOT_BUFFER:
-        body_lat_buffer =
-            input_.path_col_det_buffer.entrance_slot_body_lat_buffer +
-            input_.path_col_det_buffer.entrance_slot_extra_turn_lat_buffer;
-        mirror_lat_buffer =
-            input_.path_col_det_buffer.entrance_slot_mirror_lat_buffer +
-            input_.path_col_det_buffer.entrance_slot_extra_turn_lat_buffer;
-      case GradeColDetBufferType::TURN_PATH_OUT_SLOT_BUFFER:
-        body_lat_buffer =
-            input_.path_col_det_buffer.out_slot_body_lat_buffer +
-            input_.path_col_det_buffer.out_slot_extra_turn_lat_buffer;
-        mirror_lat_buffer =
-            input_.path_col_det_buffer.out_slot_mirror_lat_buffer +
-            input_.path_col_det_buffer.out_slot_extra_turn_lat_buffer;
-        break;
-      default:
-        break;
+  const auto update_collision =
+      [&](const std::vector<common_math::PathPt<float>>& check_pts,
+          GradeColDetBufferType type) {
+        if (is_special_node) {
+          set_special_buffers(&lon_buffer, &body_lat_buffer,
+                              &mirror_lat_buffer);
+        } else {
+          set_buffers_by_type(type, &lon_buffer, &body_lat_buffer,
+                              &mirror_lat_buffer);
+        }
+
+        const auto& res =
+            edt_col_det_ptr->Update(check_pts, lon_buffer, body_lat_buffer,
+                                    mirror_lat_buffer, gear, need_cal_obs_dist);
+
+        if (need_cal_obs_dist) {
+          set_obs_dist(type, res.min_obs_dist);
+        }
+
+        *safe_remain_dist = res.remain_dist;
+        return res.col_flag;
+      };
+
+  grade_segment_pts_.clear();
+  grade_segment_pts_.reserve(pts.size());
+
+  GradeColDetBufferType segment_type = GetGradeBufferType(pts.front());
+  size_t segment_begin_index = 0;
+
+  for (size_t i = 1; i <= pts.size(); ++i) {
+    const bool reach_segment_end = i == pts.size();
+    GradeColDetBufferType next_type = segment_type;
+    if (!reach_segment_end) {
+      next_type = GetGradeBufferType(pts[i]);
     }
 
-    if (is_special_node) {
-      // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
-      mirror_lat_buffer =
-          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
-      lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
+    if (!reach_segment_end && next_type == segment_type) {
+      continue;
     }
 
-    float min_obs_dist = 26.8f;
-    const auto res =
-        edt_col_det_ptr->Update(temp_pts, lon_buffer, body_lat_buffer,
-                                mirror_lat_buffer, gear, need_cal_obs_dist);
-    min_obs_dist = res.min_obs_dist;
-
-    if (input_.need_cal_obs_dist) {
-      switch (temp_type) {
-        case GradeColDetBufferType::STRAIGHT_PATH_IN_SLOT_BUFFER:
-          obs_dist->obs_dist_in_slot_straight = min_obs_dist;
-          break;
-        case GradeColDetBufferType::STRAIGHT_PATH_ENTRANCE_SLOT_BUFFER:
-          obs_dist->obs_dist_entrance_slot_straight = min_obs_dist;
-          break;
-        case GradeColDetBufferType::STRAIGHT_PATH_OUT_SLOT_BUFFER:
-          obs_dist->obs_dist_out_slot_straight = min_obs_dist;
-          break;
-        case GradeColDetBufferType::TURN_PATH_IN_SLOT_BUFFER:
-          obs_dist->obs_dist_in_slot_turn = min_obs_dist;
-          break;
-        case GradeColDetBufferType::TURN_PATH_ENTRANCE_SLOT_BUFFER:
-          obs_dist->obs_dist_entrance_slot_turn = min_obs_dist;
-          break;
-        case GradeColDetBufferType::TURN_PATH_OUT_SLOT_BUFFER:
-          obs_dist->obs_dist_out_slot_turn = min_obs_dist;
-          break;
-        default:
-          break;
-      }
+    const bool is_same_grade_path =
+        segment_begin_index == 0 && reach_segment_end;
+    if (is_same_grade_path) {
+      return update_collision(pts, segment_type);
     }
 
-    *safe_remain_dist = res.remain_dist;
-    if (res.col_flag) {
+    grade_segment_pts_.clear();
+    grade_segment_pts_.insert(grade_segment_pts_.end(),
+                              pts.begin() + segment_begin_index,
+                              pts.begin() + i);
+    if (update_collision(grade_segment_pts_, segment_type)) {
       return true;
     }
+
+    if (!reach_segment_end) {
+      segment_begin_index = i;
+      segment_type = next_type;
+    }
   }
+
   return false;
 }
 

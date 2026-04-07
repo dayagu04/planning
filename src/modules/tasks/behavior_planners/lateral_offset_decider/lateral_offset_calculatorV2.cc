@@ -60,7 +60,6 @@ bool LateralOffsetCalculatorV2::Process(
     const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle, LaneInfo lane_info,
     double dist_rblane, bool flag_avd) {
   // NTRACE_CALL(7);
-  auto current_time = IflyTime::Now_ms();
   session_ = session;
 
   auto& planning_context = session_->planning_context();
@@ -109,8 +108,6 @@ bool LateralOffsetCalculatorV2::Process(
   if (!b_success) {
     // TBD : add logs
   }
-  auto end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("LateralOffsetCalculatorCost", end_time - current_time);
   return b_success;
 }
 

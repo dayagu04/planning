@@ -303,6 +303,8 @@ uint8_t JointDecisionPlanningProblem::Update(
 
   const uint8_t solver_condition =
       ilqr_core_ptr_->GetSolverInfoPtr()->solver_condition;
+  const bool use_ref_as_output =
+      (solver_condition == iLqr::INIT_TERMINATE);
   if (solver_condition >= iLqr::BACKWARD_PASS_FAIL) {
     u_vec_.clear();
     u_vec_.resize(N);
@@ -318,64 +320,103 @@ uint8_t JointDecisionPlanningProblem::Update(
   const auto &control_result = ilqr_core_ptr_->GetControlResultPtr();
   const auto &dt = ilqr_core_ptr_->GetSolverConfigPtr()->model_dt;
   double t = 0.0;
-  double s = 0.0;
-  for (size_t i = 0; i < N; ++i) {
-    planning_output_.mutable_time_vec()->Set(i, t);
-    t += dt;
-    planning_output_.mutable_x_vec()->Set(i, state_result->at(i)[EGO_X]);
-    planning_output_.mutable_y_vec()->Set(i, state_result->at(i)[EGO_Y]);
-    planning_output_.mutable_theta_vec()->Set(i,
-                                              state_result->at(i)[EGO_THETA]);
-    planning_output_.mutable_vel_vec()->Set(i, state_result->at(i)[EGO_VEL]);
-    planning_output_.mutable_acc_vec()->Set(i, state_result->at(i)[EGO_ACC]);
-    planning_output_.mutable_delta_vec()->Set(i,
-                                              state_result->at(i)[EGO_DELTA]);
-    planning_output_.mutable_omega_vec()->Set(i,
-                                              control_result->at(i)[EGO_OMEGA]);
-    planning_output_.mutable_jerk_vec()->Set(i,
-                                             control_result->at(i)[EGO_JERK]);
-
-    if (i > 0) {
-      const double dx =
-          state_result->at(i)[EGO_X] - state_result->at(i - 1)[EGO_X];
-      const double dy =
-          state_result->at(i)[EGO_Y] - state_result->at(i - 1)[EGO_Y];
-      s += std::max(1e-3, std::sqrt(dx * dx + dy * dy));
+  if (use_ref_as_output) {
+    const double s0 = (planning_input.ref_s_vec_size() > 0)
+                          ? planning_input.ref_s_vec(0)
+                          : 0.0;
+    for (size_t i = 0; i < N; ++i) {
+      planning_output_.mutable_time_vec()->Set(i, t);
+      t += dt;
+      planning_output_.mutable_x_vec()->Set(i, planning_input.ref_x_vec(i));
+      planning_output_.mutable_y_vec()->Set(i, planning_input.ref_y_vec(i));
+      planning_output_.mutable_theta_vec()->Set(i,
+                                                planning_input.ref_theta_vec(i));
+      planning_output_.mutable_vel_vec()->Set(i, planning_input.ref_vel_vec(i));
+      planning_output_.mutable_acc_vec()->Set(i, planning_input.ref_acc_vec(i));
+      planning_output_.mutable_delta_vec()->Set(i,
+                                                planning_input.ref_delta_vec(i));
+      planning_output_.mutable_omega_vec()->Set(i, 0.0);
+      planning_output_.mutable_jerk_vec()->Set(i, 0.0);
+      // 保持与正常输出一致：s 从 0 开始的相对距离（外部再 + planning_init_s）
+      planning_output_.mutable_s_vec()->Set(
+          i, planning_input.ref_s_vec(i) - s0);
     }
-    planning_output_.mutable_s_vec()->Set(i, s);
+  } else {
+    double s = 0.0;
+    for (size_t i = 0; i < N; ++i) {
+      planning_output_.mutable_time_vec()->Set(i, t);
+      t += dt;
+      planning_output_.mutable_x_vec()->Set(i, state_result->at(i)[EGO_X]);
+      planning_output_.mutable_y_vec()->Set(i, state_result->at(i)[EGO_Y]);
+      planning_output_.mutable_theta_vec()->Set(i,
+                                                state_result->at(i)[EGO_THETA]);
+      planning_output_.mutable_vel_vec()->Set(i, state_result->at(i)[EGO_VEL]);
+      planning_output_.mutable_acc_vec()->Set(i, state_result->at(i)[EGO_ACC]);
+      planning_output_.mutable_delta_vec()->Set(i,
+                                                state_result->at(i)[EGO_DELTA]);
+      planning_output_.mutable_omega_vec()->Set(
+          i, control_result->at(i)[EGO_OMEGA]);
+      planning_output_.mutable_jerk_vec()->Set(i,
+                                               control_result->at(i)[EGO_JERK]);
+
+      if (i > 0) {
+        const double dx =
+            state_result->at(i)[EGO_X] - state_result->at(i - 1)[EGO_X];
+        const double dy =
+            state_result->at(i)[EGO_Y] - state_result->at(i - 1)[EGO_Y];
+        s += std::max(1e-3, std::sqrt(dx * dx + dy * dy));
+      }
+      planning_output_.mutable_s_vec()->Set(i, s);
+    }
   }
 
   planning_output_.clear_obs_opt_trajectory();
   for (size_t j = 0; j < obs_num_; ++j) {
     auto *obs_traj = planning_output_.add_obs_opt_trajectory();
-
-    // Get initial s for this obstacle from ref trajectory
-    double obs_init_s = planning_input.obs_ref_trajectory(j).init_s();
-    double obs_s = obs_init_s;
-
-    for (size_t i = 0; i < N; ++i) {
-      const size_t obs_state_offset = EGO_STATE_SIZE + OBS_STATE_SIZE * j;
-      const size_t obs_control_offset = EGO_CONTROL_SIZE + OBS_CONTROL_SIZE * j;
-      obs_traj->add_x_vec(state_result->at(i)[obs_state_offset + OBS_X]);
-      obs_traj->add_y_vec(state_result->at(i)[obs_state_offset + OBS_Y]);
-      obs_traj->add_theta_vec(
-          state_result->at(i)[obs_state_offset + OBS_THETA]);
-      obs_traj->add_vel_vec(state_result->at(i)[obs_state_offset + OBS_VEL]);
-      obs_traj->add_acc_vec(state_result->at(i)[obs_state_offset + OBS_ACC]);
-      obs_traj->add_delta_vec(
-          state_result->at(i)[obs_state_offset + OBS_DELTA]);
-      obs_traj->add_omega_vec(control_result->at(i)[obs_control_offset + 0]);
-      obs_traj->add_jerk_vec(control_result->at(i)[obs_control_offset + 1]);
-
-      // Calculate s for this obstacle (similar to ego vehicle)
-      if (i > 0) {
-        const double dx = state_result->at(i)[obs_state_offset + OBS_X] -
-                          state_result->at(i - 1)[obs_state_offset + OBS_X];
-        const double dy = state_result->at(i)[obs_state_offset + OBS_Y] -
-                          state_result->at(i - 1)[obs_state_offset + OBS_Y];
-        obs_s += std::max(1e-3, std::sqrt(dx * dx + dy * dy));
+    if (use_ref_as_output) {
+      const auto &ref_obs = planning_input.obs_ref_trajectory(j);
+      for (size_t i = 0; i < N; ++i) {
+        obs_traj->add_x_vec(ref_obs.ref_x_vec(i));
+        obs_traj->add_y_vec(ref_obs.ref_y_vec(i));
+        obs_traj->add_theta_vec(ref_obs.ref_theta_vec(i));
+        obs_traj->add_vel_vec(ref_obs.ref_vel_vec(i));
+        obs_traj->add_acc_vec(ref_obs.ref_acc_vec(i));
+        obs_traj->add_delta_vec(ref_obs.ref_delta_vec(i));
+        obs_traj->add_omega_vec(0.0);
+        obs_traj->add_jerk_vec(0.0);
+        // 保持与原实现一致：障碍物 s 输出绝对值（下游直接使用）
+        obs_traj->add_s_vec(ref_obs.ref_s_vec(i));
       }
-      obs_traj->add_s_vec(obs_s);
+    } else {
+      // Get initial s for this obstacle from ref trajectory
+      double obs_init_s = planning_input.obs_ref_trajectory(j).init_s();
+      double obs_s = obs_init_s;
+
+      for (size_t i = 0; i < N; ++i) {
+        const size_t obs_state_offset = EGO_STATE_SIZE + OBS_STATE_SIZE * j;
+        const size_t obs_control_offset =
+            EGO_CONTROL_SIZE + OBS_CONTROL_SIZE * j;
+        obs_traj->add_x_vec(state_result->at(i)[obs_state_offset + OBS_X]);
+        obs_traj->add_y_vec(state_result->at(i)[obs_state_offset + OBS_Y]);
+        obs_traj->add_theta_vec(
+            state_result->at(i)[obs_state_offset + OBS_THETA]);
+        obs_traj->add_vel_vec(state_result->at(i)[obs_state_offset + OBS_VEL]);
+        obs_traj->add_acc_vec(state_result->at(i)[obs_state_offset + OBS_ACC]);
+        obs_traj->add_delta_vec(
+            state_result->at(i)[obs_state_offset + OBS_DELTA]);
+        obs_traj->add_omega_vec(control_result->at(i)[obs_control_offset + 0]);
+        obs_traj->add_jerk_vec(control_result->at(i)[obs_control_offset + 1]);
+
+        // Calculate s for this obstacle (similar to ego vehicle)
+        if (i > 0) {
+          const double dx = state_result->at(i)[obs_state_offset + OBS_X] -
+                            state_result->at(i - 1)[obs_state_offset + OBS_X];
+          const double dy = state_result->at(i)[obs_state_offset + OBS_Y] -
+                            state_result->at(i - 1)[obs_state_offset + OBS_Y];
+          obs_s += std::max(1e-3, std::sqrt(dx * dx + dy * dy));
+        }
+        obs_traj->add_s_vec(obs_s);
+      }
     }
   }
   planning_output_.clear_solver_info();

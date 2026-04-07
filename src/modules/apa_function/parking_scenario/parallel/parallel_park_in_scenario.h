@@ -219,6 +219,12 @@ class ParallelParkInScenario : public ParkingScenario {
                                    double& dynamic_lon_buffer) const;
 
   const bool CheckOneReverseToSlot();
+  bool CheckFirstReverseReplan(const pnc::geometry_lib::PathPoint& cur_pose,
+                               const pnc::geometry_lib::PathSegGear gear,
+                               const double slot_length);
+  bool CheckFirstDriveReplanParallel(const Eigen::Vector2d& cur_pose,
+                                     const pnc::geometry_lib::PathSegGear gear,
+                                     Eigen::Vector2d slot_01_mid);
   bool CheckReplanParallel();
   const ParallelPathGenerator& SuitablePathReplan();
   const bool CheckLastPathCollided();
@@ -237,12 +243,34 @@ class ParallelParkInScenario : public ParkingScenario {
   void UpdatePADirection();
 
   const bool PostProcessToZigZagPath();
+  void SetReplanAgainBit(const DynamicReplanStatus status) {
+    parallel_replan_again_bit_ |= 1U << uint16_t(status);
+    return;
+  }
+  template <typename... Rest>
+  void SetReplanAgainBit(DynamicReplanStatus first, Rest... rest) {
+    SetReplanAgainBit(first);
+    SetReplanAgainBit(rest...);
+  }
+  bool GetReplanAgainBit(DynamicReplanStatus status) const {
+    return (parallel_replan_again_bit_ &
+            (1U << static_cast<uint16_t>(status))) != 0;
+  }
+
+  template <typename... Rest>
+  bool GetReplanAgainBit(DynamicReplanStatus first, Rest... rest) const {
+    return GetReplanAgainBit(first) || GetReplanAgainBit(rest...);
+  }
+
+  void ClearReplanAgainBit(DynamicReplanStatus status) {
+    parallel_replan_again_bit_ &= ~(1U << static_cast<uint16_t>(status));
+  }
 
   Tlane t_lane_;
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
   ParallelPathGenerator previous_parallel_path_planner_;
-  int parallel_replan_again_ = 0;
+  uint16_t parallel_replan_again_bit_ = 0;
   std::vector<pnc::geometry_lib::PathPoint>
       previous_current_path_point_global_vec_;
   std::deque<double> previous_remain_dist_obs;

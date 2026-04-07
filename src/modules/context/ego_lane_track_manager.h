@@ -11,6 +11,8 @@
 #include "local_view.h"
 #include "session.h"
 #include "virtual_lane.h"
+#include "src/library/lc_pure_pursuit_lib/include/basic_pure_pursuit_model.h"
+
 
 namespace planning {
 struct LaneCurvInfo {
@@ -256,8 +258,17 @@ class EgoLaneTrackManger {
       const LaneCurvInfo &lane_curv_info, double &road_boundary_collision_cost,
       const std::shared_ptr<VirtualLane> &relative_id_lane);
 
-  double EWMAFilter(double current_value, double alpha,
-                    double &filtered_history);
+  double EWMAFilter(double current_value, double alpha, double& filtered_history);
+
+  void GenerateEgoFutureTrajectory(
+    const std::shared_ptr<VirtualLane>& target_lane,
+    const double lat_offset,
+    std::vector<TrajectoryPoint>& ego_future_trajectory);
+
+  bool IsPathCollisionWithRoadEdge(
+    const std::shared_ptr<VirtualLane>& last_lane,
+    const std::shared_ptr<VirtualLane>& cur_lane,
+    const TrajectoryPoints& path_points);
 
  private:
   planning::framework::Session *session_ = nullptr;
