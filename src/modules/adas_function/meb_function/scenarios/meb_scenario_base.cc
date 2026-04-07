@@ -105,8 +105,8 @@ const std::vector<double> MebScenarioBase::GetOdBufferTable(
   }
 }
 
-void MebScenarioBase::CollisionCalculate(
-    double stop_distance_buffer_reduction) {
+void MebScenarioBase::CollisionCalculate(double stop_distance_buffer_reduction,
+                                         bool is_obs_straight) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   const auto &param = *GetContext.get_param();
   auto &meb_pre = adas_function::MebPreprocess::GetInstance();
@@ -183,8 +183,15 @@ void MebScenarioBase::CollisionCalculate(
     box_collision_.boxs_info_.obj_a_y = 0.0;  // obs.relative_acceleration.y;
     box_collision_.boxs_info_.obj_heading_angle = obs.rel_heading_angle;
     box_collision_.boxs_info_.obj_length = obs.length;
-    box_collision_.boxs_info_.obj_v_x =
-        obs.rel_vx + vel_speed_preprocess;  // 需要考虑自车前进及后退
+
+    if ((obs.abs_vx * vel_speed_preprocess < 0.0) && (is_obs_straight)) {
+      // 当你直行，且障碍物靠近车辆的速度，则认为障碍物是静止的。
+      box_collision_.boxs_info_.obj_v_x = 0.0;
+    } else {
+      box_collision_.boxs_info_.obj_v_x =
+          obs.rel_vx + vel_speed_preprocess;  // 需要考虑自车前进及后退
+    }
+
     box_collision_.boxs_info_.obj_v_y = obs.rel_vy;
     box_collision_.boxs_info_.obj_width = obs.width;
     box_collision_.boxs_info_.obj_x = obs.rel_x;

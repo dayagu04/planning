@@ -179,13 +179,11 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
 
   auto rear_key_obj_info = meb_pre.GetRearKeyObjInfo();
 
+  auto front_cipv_key_obj_info = meb_pre.GetFrontCipvKeyObjInfo();
+
   /*bit_0*/
   // 处于大转弯状态
-  if ((fabs(vehicle_service.steering_wheel_angle) > (45.0 / 57.3)) ||
-      (vehicle_service.vehicle_speed_display <=
-       (meb_pre.GetMebParam().disable_vehspd_display_kph_min - 1.0)) ||
-      (vehicle_service.vehicle_speed_display >=
-       (meb_pre.GetMebParam().disable_vehspd_display_kph_max + 1.0))) {
+  if (fabs(vehicle_service.steering_wheel_angle) > (45.0 / 57.3)) {
     suppe_code += uint32_bit[0];
   }
 
@@ -302,7 +300,13 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
   }
 
   /*bit_10*/
-  // 处于泊车感知下，暂时不做
+  // 本车车速范围校验
+  if (((vehicle_service.vehicle_speed_display * 3.6) <=
+       (meb_pre.GetMebParam().disable_vehspd_display_kph_min - 1.0)) ||
+      ((vehicle_service.vehicle_speed_display * 3.6) >=
+       (meb_pre.GetMebParam().disable_vehspd_display_kph_max + 1.0))) {
+    suppe_code += uint32_bit[10];
+  }
 
   /*bit_11*/
   // 本车前进时,正后方近距离范围内有运动的CIPV
@@ -331,6 +335,26 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
     } else if (obj_min_dist <= 0.0) {
       suppe_code += uint32_bit[12];
     } else {
+    }
+  }
+
+  /*bit_13*/
+  // 判断二轮车的航向角
+  float32 horizontal_angle_diff_motor_thres_deg = 30.0;
+  if ((vehicle_service.shift_lever_state == iflyauto::ShiftLeverState_D) &&
+      (obj.type_for_meb == OdObjGroup::kMotor)) {
+    if (fabs(fabs(obj.rel_heading_angle * 57.3) - 90.0) >
+        horizontal_angle_diff_motor_thres_deg) {
+      suppe_code += uint32_bit[13];
+    }
+  }
+
+  /*bit_14*/
+  // 本车前进时,正前方近距离范围内有CIPV,抑制横穿场景触发
+  if ((vehicle_service.shift_lever_state == iflyauto::ShiftLeverState_D) &&
+      (front_cipv_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
+    if (front_cipv_key_obj_info.key_obj_relative_x < 15.0) {
+      suppe_code += uint32_bit[14];
     }
   }
 
@@ -370,14 +394,27 @@ void OdCrossingScenario::Process(void) {
 
   // 本车处于直行状态的持续时长 单位:s
   bool ego_in_straight_state_flag = true;
-  if ((vehicle_service.vehicle_speed > (1.0 / 3.6)) &&
-      (fabs(vehicle_service.steering_wheel_angle) > (45.0 / 57.3))) {
-    ego_in_straight_state_flag = false;
+  if (vehicle_service.shift_lever_state == iflyauto::ShiftLeverState_D ||
+      vehicle_service.shift_lever_state == iflyauto::ShiftLeverState_M) {
+    if ((vehicle_service.vehicle_speed > (1.0 / 3.6)) &&
+        (fabs(vehicle_service.steering_wheel_angle) > (45.0 / 57.3))) {
+      ego_in_straight_state_flag = false;
+    }
+    if ((vehicle_service.vehicle_speed > (1.0 / 3.6)) &&
+        (fabs(vehicle_service.steering_wheel_angle_speed) > (60.0 / 57.3))) {
+      ego_in_straight_state_flag = false;
+    }
+  } else if (vehicle_service.shift_lever_state == iflyauto::ShiftLeverState_R) {
+    if ((vehicle_service.vehicle_speed > (1.0 / 3.6)) &&
+        (fabs(vehicle_service.steering_wheel_angle) > (45.0 / 57.3))) {
+      ego_in_straight_state_flag = false;
+    }
+    if ((vehicle_service.vehicle_speed > (1.0 / 3.6)) &&
+        (fabs(vehicle_service.steering_wheel_angle_speed) > (170.0 / 57.3))) {
+      ego_in_straight_state_flag = false;
+    }
   }
-  if ((vehicle_service.vehicle_speed > (1.0 / 3.6)) &&
-      (fabs(vehicle_service.steering_wheel_angle_speed) > (45.0 / 57.3))) {
-    ego_in_straight_state_flag = false;
-  }
+
   if (ego_in_straight_state_flag) {
     ego_in_straight_state_duration_ += GetContext.get_param()->dt;
   } else {
@@ -522,7 +559,7 @@ void OdCrossingScenario::Process(void) {
     //     stop_distance_buffer_reduction = 0.0;
     //   }
     // }
-    CollisionCalculate(stop_distance_buffer_reduction);
+    CollisionCalculate(stop_distance_buffer_reduction, false);
   }
 
   // 针对有碰撞风险的障碍物,配合误触发策略,决策是否需要产生制动

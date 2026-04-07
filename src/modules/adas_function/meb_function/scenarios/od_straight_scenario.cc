@@ -168,6 +168,8 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
                              .get_local_view()
                              .vehicle_service_output_info;
 
+  auto front_radar_key_obj_info = meb_pre.GetFrontRadarKeyObjInfo();
+
   // suppe_code初始化
   uint64_t suppe_code = 0;
 
@@ -317,12 +319,28 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
 
   // *bit_14*/
   // 通过判断与雷达障碍物是否有碰撞风险,进行双重校验
-  // 当前仅针对行人做此校验
+  // 当前仅针对行人做此校验,泊车感知下无前雷达
   // if ((obj.type_for_meb == OdObjGroup::kPeople) ||
   //     (obj.type_for_meb == OdObjGroup::kMotor)) {
-  if (collision_result_for_front_radar_obj_ == false) {
-    suppe_code += uint32_bit[14];
+  if ((vehicle_service.shift_lever_state ==
+           iflyauto::ShiftLeverStateEnum::ShiftLeverState_D ||
+       vehicle_service.shift_lever_state ==
+           iflyauto::ShiftLeverStateEnum::ShiftLeverState_M) &&
+      (!meb_pre.GetMebInput().park_mode) && (obj.fusion_source == 1)) {
+    if (collision_result_for_front_radar_obj_ == false) {
+      suppe_code += uint32_bit[14];
+    }
+
+    /*bit_15*/
+    // 障碍物与本车当前重叠率较低 通过雷达障碍物进行双重校验
+    // 注:这样判断有缺陷,不适用于转弯场景
+    if ((obj.type_for_meb == OdObjGroup::kPeople) && (obj.fusion_source == 1)) {
+      if (fabs(front_radar_key_obj_info.key_obj_relative_y) > 0.75) {
+        suppe_code += uint32_bit[15];
+      }
+    }
   }
+
   // }
 
   // 如果误触发策略关闭，则suppe_code清零
@@ -391,7 +409,7 @@ bool OdStraightScenario::CollisionCalculateForFrontRadarObj(void) {
   }
 
   // 设置的刹停安全距离 单位:m
-  double stop_distance_buffer = 1.0;
+  double stop_distance_buffer = 1.3;
 
   box_collision_.time_dealy =
       GetContext.get_param()->meb_actuator_act_time +
@@ -722,7 +740,7 @@ void OdStraightScenario::Process(void) {
         stop_distance_buffer_reduction = 0.0;
       }
     }
-    CollisionCalculate(stop_distance_buffer_reduction);
+    CollisionCalculate(stop_distance_buffer_reduction, true);
   }
 
   collision_result_for_front_radar_obj_ = CollisionCalculateForFrontRadarObj();

@@ -15,7 +15,8 @@ class MebScenarioBase {
   // 方法时，把需要的数据作为参数传进去。
   virtual void Process(void) = 0;
 
-  virtual void CollisionCalculate(double stop_distance_buffer_reduction);
+  virtual void CollisionCalculate(double stop_distance_buffer_reduction,
+                                  bool is_obs_straight);
 
   virtual uint64_t FalseTriggerStratege(const MebTempObj obj) = 0;
 

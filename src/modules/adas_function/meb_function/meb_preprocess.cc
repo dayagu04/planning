@@ -84,7 +84,7 @@ void MebPreprocess::UpdateSingleFrameVehicleService(void) {
   if ((function_state_machine_info_ptr->current_state >=
            iflyauto::FunctionalState_PARK_STANDBY &&
        function_state_machine_info_ptr->current_state <=
-           iflyauto::FunctionalState_PARK_COMPLETED) ||
+           iflyauto::FunctionalState_PARK_PRE_ACTIVE) ||
       (function_state_machine_info_ptr->current_state >=
            iflyauto::FunctionalState_HPP_STANDBY &&
        function_state_machine_info_ptr->current_state <=
@@ -828,6 +828,185 @@ void MebPreprocess::UpdateFrontRadarKeyObjInfo(void) {
   }
 }
 
+uint8 MebPreprocess::GetFrontCipvKeyObjSelectIntersetCode(
+    iflyauto::FusionObject &obj) {
+  uint8 interest_code = 0;
+
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+
+  /*bit_0*/
+  if (!(obj.additional_info.fusion_source & 0x1u)) {
+    interest_code += uint16_bit[0];
+    return interest_code;
+  } else {
+    // nothing
+  }
+
+  /*bit_1*/
+  if ((obj.common_info.relative_center_position.x > 200.0) ||
+      (obj.common_info.relative_center_position.x <
+       (obj.common_info.shape.length / 2.0F +
+        GetContext.get_param()->origin_2_front_bumper + 0.0F))) {
+    interest_code += uint16_bit[1];
+    return interest_code;
+  } else {
+    // nothing
+  }
+
+  /*bit_2*/
+  double ego_curvature = meb_input_.ego_curvature;
+  double left_boundary_c0 = 1.8;
+  double left_boundary_c1 = 0.0;
+  double left_boundary_c2 = 0.5 * ego_curvature;
+  double left_boundary_c3 = 0.0;
+  double right_boundary_c0 = -1.8;
+  double right_boundary_c1 = 0.0;
+  double right_boundary_c2 = 0.5 * ego_curvature;
+  double right_boundary_c3 = 0.0;
+  double left_line_y =
+      left_boundary_c0 +
+      left_boundary_c1 * obj.common_info.relative_center_position.x +
+      left_boundary_c2 * obj.common_info.relative_center_position.x *
+          obj.common_info.relative_center_position.x +
+      left_boundary_c3 * obj.common_info.relative_center_position.x *
+          obj.common_info.relative_center_position.x *
+          obj.common_info.relative_center_position.x;
+
+  double right_line_y =
+      right_boundary_c0 +
+      right_boundary_c1 * obj.common_info.relative_center_position.x +
+      right_boundary_c2 * obj.common_info.relative_center_position.x *
+          obj.common_info.relative_center_position.x +
+      right_boundary_c3 * obj.common_info.relative_center_position.x *
+          obj.common_info.relative_center_position.x *
+          obj.common_info.relative_center_position.x;
+  if ((obj.common_info.relative_center_position.y > left_line_y) ||
+      (obj.common_info.relative_center_position.y < right_line_y)) {
+    interest_code += uint16_bit[2];
+    return interest_code;
+  } else {
+    // nothing
+  }
+
+  /*bit_3*/
+  if ((obj.common_info.type != iflyauto::ObjectType::OBJECT_TYPE_COUPE) &&
+      (obj.common_info.type != iflyauto::ObjectType::OBJECT_TYPE_MINIBUS) &&
+      (obj.common_info.type != iflyauto::ObjectType::OBJECT_TYPE_VAN) &&
+      (obj.common_info.type != iflyauto::ObjectType::OBJECT_TYPE_BUS) &&
+      (obj.common_info.type != iflyauto::ObjectType::OBJECT_TYPE_TRUCK)) {
+    interest_code += uint16_bit[3];
+    return interest_code;
+  } else {
+    // nothing
+  }
+
+  return interest_code;
+}
+
+void MebPreprocess::UpdateFrontCipvKeyObjInfo(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+
+  auto fusion_objects_info = GetContext.get_session()
+                                 ->environmental_model()
+                                 .get_local_view()
+                                 .fusion_objects_info;
+
+  auto &meb_pre = adas_function::MebPreprocess::GetInstance();
+
+  double vel_speed_preprocess =
+      meb_pre.GetInstance().GetMebInput().signed_ego_vel_mps;
+
+  front_cipv_key_obj_info_ = {};
+
+  // 目标筛选
+  uint8 cipv_1nd_index = 255;
+  uint8 cipv_2nd_index = 255;
+  uint8 interest_code;
+  for (uint8 i = 0; i < fusion_objects_info.fusion_object_size; i++) {
+    interest_code = GetFrontCipvKeyObjSelectIntersetCode(
+        fusion_objects_info.fusion_object[i]);
+
+    if (interest_code == 0) {
+      if (cipv_1nd_index >= FUSION_OBJECT_MAX_NUM) {
+        cipv_1nd_index = i;
+      } else {
+        if (fusion_objects_info.fusion_object[i]
+                .common_info.relative_center_position.x <
+            fusion_objects_info.fusion_object[cipv_1nd_index]
+                .common_info.relative_center_position.x) {
+          cipv_2nd_index = cipv_1nd_index;
+          cipv_1nd_index = i;
+        } else if ((cipv_2nd_index < FUSION_OBJECT_MAX_NUM) &&
+                   (fusion_objects_info.fusion_object[i]
+                        .common_info.relative_center_position.x <
+                    fusion_objects_info.fusion_object[cipv_2nd_index]
+                        .common_info.relative_center_position.x)) {
+          cipv_2nd_index = i;
+        } else if (cipv_2nd_index >= FUSION_OBJECT_MAX_NUM) {
+          cipv_2nd_index = i;
+        } else {
+        }
+      }
+    }
+  }
+
+  front_cipv_key_obj_info_.key_obj_index = cipv_1nd_index;
+
+  if (front_cipv_key_obj_info_.key_obj_index >= FUSION_OBJECT_MAX_NUM) {
+    return;
+  } else {
+    front_cipv_key_obj_info_.key_obj_id =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .additional_info.track_id;
+    front_cipv_key_obj_info_.key_obj_relative_x =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_center_position.x;
+    front_cipv_key_obj_info_.key_obj_relative_y =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_center_position.y;
+    front_cipv_key_obj_info_.key_obj_relative_heading_angle =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_heading_angle;
+    front_cipv_key_obj_info_.key_obj_relative_v_x =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_velocity.x;
+    front_cipv_key_obj_info_.key_obj_relative_v_y =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_velocity.y;
+    front_cipv_key_obj_info_.key_obj_relative_lon_acc =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_acceleration.x;
+    front_cipv_key_obj_info_.key_obj_relative_lat_acc =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_acceleration.y;
+    front_cipv_key_obj_info_.key_obj_length =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.shape.length;
+    front_cipv_key_obj_info_.key_obj_width =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.shape.width;
+    front_cipv_key_obj_info_.obj_absolute_v_x =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_velocity.x +
+        vel_speed_preprocess;
+    front_cipv_key_obj_info_.obj_absolute_v_y =
+        fusion_objects_info
+            .fusion_object[front_cipv_key_obj_info_.key_obj_index]
+            .common_info.relative_velocity.y;
+  }
+}
+
 void MebPreprocess::Log(void) {
   JSON_DEBUG_VALUE("meb_main_switch", meb_input_.meb_main_switch);
   JSON_DEBUG_VALUE("meb_input_.ego_radius", meb_input_.ego_radius);
@@ -899,6 +1078,9 @@ void MebPreprocess::UpdateMebInput(void) {
 
   // 记录前向关键雷达障碍物信息
   UpdateFrontRadarKeyObjInfo();
+
+  // 记录前向关键CIPV障碍物信息
+  UpdateFrontCipvKeyObjInfo();
 
   Log();
 }

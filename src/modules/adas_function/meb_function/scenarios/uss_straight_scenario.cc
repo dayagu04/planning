@@ -77,7 +77,7 @@ void UssStraightScenario::Process(void) {
     collision_obj_info_.valid_num = 0;
     collision_obj_info_.interest_obj_vec_.clear();
     collision_obj_info_.interest_obj_vec_.reserve(interest_obj_info_.valid_num);
-    CollisionCalculate(0.0);
+    CollisionCalculate(0.0, false);
   }
 
   // 计算得到一组碰撞的数据点
