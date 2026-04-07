@@ -66,25 +66,30 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot,
       fusion_slot.corner_points[2].y;
   origin_corner_coord_global_.pt_3 << fusion_slot.corner_points[3].x,
       fusion_slot.corner_points[3].y;
-  origin_corner_coord_global_.CalExtraCoord();
 
   CorrectSlotPointOrder();
+
   if (is_redefine_slot_type) {
     slot_type_ = SlotType::PARALLEL;
-    SlotCoord origin_corner_coord_global_tmp = origin_corner_coord_global_;
+    std::swap(origin_corner_coord_global_.pt_1,
+              origin_corner_coord_global_.pt_2);
     if (ego2slot_side == -1) {
-      origin_corner_coord_global_.pt_0 = origin_corner_coord_global_tmp.pt_1;
-      origin_corner_coord_global_.pt_1 = origin_corner_coord_global_tmp.pt_3;
-      origin_corner_coord_global_.pt_2 = origin_corner_coord_global_tmp.pt_0;
-      origin_corner_coord_global_.pt_3 = origin_corner_coord_global_tmp.pt_2;
+      //  -1：car on left side of slot
+      std::swap(origin_corner_coord_global_.pt_0,
+                origin_corner_coord_global_.pt_2);
+      std::swap(origin_corner_coord_global_.pt_1,
+                origin_corner_coord_global_.pt_3);
     } else if (ego2slot_side == 1) {
-      origin_corner_coord_global_.pt_0 = origin_corner_coord_global_tmp.pt_2;
-      origin_corner_coord_global_.pt_1 = origin_corner_coord_global_tmp.pt_0;
-      origin_corner_coord_global_.pt_2 = origin_corner_coord_global_tmp.pt_3;
-      origin_corner_coord_global_.pt_3 = origin_corner_coord_global_tmp.pt_1;
+      // 1: car on right side of slot
+      std::swap(origin_corner_coord_global_.pt_0,
+                origin_corner_coord_global_.pt_1);
+      std::swap(origin_corner_coord_global_.pt_2,
+                origin_corner_coord_global_.pt_3);
     }
-    origin_corner_coord_global_.CalExtraCoord();
   }
+
+  origin_corner_coord_global_.CalExtraCoord();
+
   PostProcessSlotPoint();
 
   if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
@@ -121,7 +126,7 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot,
       limiter_.end_pt << fusion_slot.limiters[0].end_points[1].x,
           fusion_slot.limiters[0].end_points[1].y;
     } else if (fusion_slot.limiters_size == 2) {
-      if (fusion_slot.type == iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+      if (slot_type_ == SlotType::PARALLEL) {
         Eigen::Vector2d a0b0 =
             Eigen::Vector2d(fusion_slot.limiters[0].end_points[0].x -
                                 fusion_slot.limiters[1].end_points[0].x,
@@ -171,20 +176,42 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot,
     limiter_.valid = false;
   }
 
-  if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
-    const Eigen::Vector2d heading_vec =
-        processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
-
-    const double origin_heading = std::atan2(heading_vec.y(), heading_vec.x());
-    const Eigen::Vector2d origin_pos =
-        processed_corner_coord_global_.pt_01_mid - slot_length_ * heading_vec;
-
-    g2l_tf_ = geometry_lib::GlobalToLocalTf(origin_pos, origin_heading);
-    l2g_tf_ = geometry_lib::LocalToGlobalTf(origin_pos, origin_heading);
-  }
+  CalcOriginPoseAndTf();
 
   mid_line_.SetPoints(origin_corner_coord_global_.pt_01_mid,
                       origin_corner_coord_global_.pt_23_mid);
+}
+
+void ApaSlot::CalcOriginPoseAndTf() {
+  if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
+    origin_pose_global_.heading_vec =
+        processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
+    origin_pose_global_.heading =
+        std::atan2(origin_pose_global_.heading_vec.y(),
+                   origin_pose_global_.heading_vec.x());
+    origin_pose_global_.pos = processed_corner_coord_global_.pt_01_mid -
+                              slot_length_ * origin_pose_global_.heading_vec;
+  } else if (slot_type_ == SlotType::PARALLEL) {
+    origin_pose_global_.heading_vec =
+        processed_corner_coord_global_.pt_01_vec.normalized();
+    origin_pose_global_.heading =
+        std::atan2(origin_pose_global_.heading_vec.y(),
+                   origin_pose_global_.heading_vec.x());
+    origin_pose_global_.pos = processed_corner_coord_global_.pt_02_mid -
+                              slot_length_ * origin_pose_global_.heading_vec;
+  } else {
+    ILOG_ERROR << "the slot type is err";
+    return;
+  }
+
+  g2l_tf_ = geometry_lib::GlobalToLocalTf(origin_pose_global_.pos,
+                                          origin_pose_global_.heading);
+  l2g_tf_ = geometry_lib::LocalToGlobalTf(origin_pose_global_.pos,
+                                          origin_pose_global_.heading);
+
+  origin_pose_local_.heading = 0.0;
+  origin_pose_local_.heading_vec << 1.0, 0.0;
+  origin_pose_local_.pos << 0.0, 0.0;
 }
 
 void ApaSlot::TransformCoordFromGlobalToLocal(

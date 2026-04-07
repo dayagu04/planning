@@ -41,6 +41,7 @@ bool LateralOffsetDecider::Execute() {
         .ResetOffsetHysteresisMaps();  // 变道和非自动的时候，HysteresisType
                                        // 四个Map都清空
     Reset();
+    side_nudge_lateral_offset_decider_.Reset();
   }
 
   CalLaneInfo();
@@ -57,7 +58,7 @@ bool LateralOffsetDecider::Execute() {
       avoid_obstacle_maintainer5v_.dist_rblane(),
       avoid_obstacle_maintainer5v_.flag_avd());
 
-  side_nudge_lateral_offset_decider_.Process(lane_info_);
+  side_nudge_lateral_offset_decider_.Process(lane_info_, avoid_obstacle_maintainer5v_.avd_obstacles());
 
   // lat_offset = lateral_offset_calculatorv2_.lat_offset();
 

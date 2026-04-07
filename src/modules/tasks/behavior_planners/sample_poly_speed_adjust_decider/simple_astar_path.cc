@@ -310,6 +310,19 @@ double LongitudinalAStar::CalcV(const double t) const {
   return astar_traj_.back().v;
 }
 
+double LongitudinalAStar::CalcA(const double t) const {
+  if (t < kZeroEpsilon) {
+    return astar_traj_[0].a;
+  }
+  for (int i = 0; i < astar_traj_.size(); ++i) {
+    if (t < astar_traj_[i].t) {
+      double delta_t = t - astar_traj_[i - 1].t;
+      return astar_traj_[i - 1].a + astar_traj_[i].jerk * delta_t;
+    }
+  }
+  return astar_traj_.back().a;
+}
+
 double LongitudinalAStar::CalcVelSafeDistance(const double ego_v,
                                               const double obj_v,
                                               const double ego_a,

@@ -902,6 +902,59 @@ bool ReferencePath::CalculateRoadCurvature(
   return true;
 }
 
+bool ReferencePath::IsExistValidVirtualLaneAheadEgo(
+    double preview_range, double min_virtual_length,
+    double& virtual_length, double& dist_to_virtual_start) {
+  static const double kScanVirtualStep = 5.0;  // 虚拟区域向前扫描步长(m)
+  const auto& planning_init_point =
+      session_->environmental_model().get_ego_state_manager()->planning_init_point();
+  Point2D init_frenet_pt;
+  bool is_in_virtual_area = false;
+  virtual_length = 0.;
+  dist_to_virtual_start = 100.;
+  if (frenet_coord_->XYToSL(planning_init_point.x, planning_init_point.y,
+                            &init_frenet_pt.x, &init_frenet_pt.y)) {
+    bool is_find_valid_virtual_area = false;
+    double virtual_area_start_s = 100.;
+    double virtual_area_end_s = 0.;
+    for (double ref_pt_s = init_frenet_pt.x; ref_pt_s < init_frenet_pt.x + preview_range; ref_pt_s += kScanVirtualStep) {
+      ReferencePathPoint ego_ahead_ref_pt;
+      if (get_reference_point_by_lon(ref_pt_s, ego_ahead_ref_pt)) {
+        if (ego_ahead_ref_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL &&
+            ego_ahead_ref_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+          if (!is_find_valid_virtual_area) {
+            virtual_area_start_s = ref_pt_s;
+            is_find_valid_virtual_area = true;
+          }
+        } else {
+          if (is_find_valid_virtual_area) {
+            virtual_area_end_s = ref_pt_s;
+            virtual_length = virtual_area_end_s - virtual_area_start_s;
+            if (virtual_length >= min_virtual_length) {
+              is_in_virtual_area = true;
+              dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
+              break;
+            } else {
+              is_find_valid_virtual_area = false;
+            }
+          }
+        }
+      }
+    }
+    if (is_find_valid_virtual_area && !is_in_virtual_area) {
+      virtual_area_end_s = init_frenet_pt.x + preview_range;
+      virtual_length = virtual_area_end_s - virtual_area_start_s;
+      if (virtual_length >= min_virtual_length) {
+        is_in_virtual_area = true;
+        dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
+      } else {
+        is_find_valid_virtual_area = false;
+      }
+    }
+  }
+  return is_in_virtual_area;
+}
+
 bool ReferencePath::HandleRoadCurvature(
     const double init_s) {
   // 1. 曲率半径阈值
@@ -962,50 +1015,9 @@ bool ReferencePath::HandleRoadCurvature(
   //     current_lane->get_max_virtual_seg_ahead_x();
   // double max_virtual_seg_ahead_length =
   //     current_lane->get_max_virtual_seg_ahead_length();
-  Point2D init_frenet_pt;
-  bool is_in_virtual_area = false;
   double virtual_length = 0.;
   double dist_to_virtual_start = 100.;
-  if (frenet_coord_->XYToSL(planning_init_point.x, planning_init_point.y,
-                            &init_frenet_pt.x, &init_frenet_pt.y)) {
-    bool is_find_valid_virtual_area = false;
-    double virtual_area_start_s = 100.;
-    double virtual_area_end_s = 0.;
-    for (double ref_pt_s = init_frenet_pt.x; ref_pt_s < init_frenet_pt.x + kScanVirtualRange; ref_pt_s += kScanVirtualStep) {
-      ReferencePathPoint ego_ahead_ref_pt;
-      if (get_reference_point_by_lon(ref_pt_s, ego_ahead_ref_pt)) {
-        if (ego_ahead_ref_pt.left_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL &&
-            ego_ahead_ref_pt.right_lane_border_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-          if (!is_find_valid_virtual_area) {
-            virtual_area_start_s = ref_pt_s;
-            is_find_valid_virtual_area = true;
-          }
-        } else {
-          if (is_find_valid_virtual_area) {
-            virtual_area_end_s = ref_pt_s;
-            virtual_length = virtual_area_end_s - virtual_area_start_s;
-            if (virtual_length >= kMinIntersectionVirtualLength) {
-              is_in_virtual_area = true;
-              dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
-              break;
-            } else {
-              is_find_valid_virtual_area = false;
-            }
-          }
-        }
-      }
-    }
-    if (is_find_valid_virtual_area && !is_in_virtual_area) {
-      virtual_area_end_s = init_frenet_pt.x + kScanVirtualRange;
-      virtual_length = virtual_area_end_s - virtual_area_start_s;
-      if (virtual_length >= kMinIntersectionVirtualLength) {
-        is_in_virtual_area = true;
-        dist_to_virtual_start = virtual_area_start_s - init_frenet_pt.x;
-      } else {
-        is_find_valid_virtual_area = false;
-      }
-    }
-  }
+  bool is_in_virtual_area = IsExistValidVirtualLaneAheadEgo(kScanVirtualRange, kMinIntersectionVirtualLength, virtual_length, dist_to_virtual_start);
   // 1.average curvature filter. sliding window
   std::vector<double> xp_vel{4.167, 8.333, 10.0};          // 20.0
   std::vector<double> fp_radius_thr{200.0, 400.0, 600.0};  // 1000.0

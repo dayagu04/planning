@@ -1309,10 +1309,8 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
 
       s_current = dx * ego_normal_x + dy * ego_normal_y;
 
-      // 目标距离基于自车速度
-      double v_rel = ego_vel - obs_vel;
-      s_target = s0 + std::max(0.0, ego_vel * tau + ego_vel * v_rel /
-                                                        (2 * std::sqrt(a * b)));
+      // 目标距离基于自车速度 取消差速项，避免对原车道前车减速过重
+      s_target = s0 + std::max(0.0, ego_vel * tau);
       s_target = std::fmax(s_target - 2.0, 0.0);
     }
 
@@ -1545,18 +1543,27 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
       const double ego_vel = x[EGO_VEL];
       const double obs_vel = x[obs_state_idx + OBS_VEL];
       const double v_rel = ego_vel - obs_vel;
-      const double s_target_term = ego_vel * tau + ego_vel * v_rel * k;
+      // HALF_YIELD: 只使用 v*tau，避免对原车道前车“差速项”过重
+      const bool is_half_yield =
+          (label_type == planning::lane_change_joint_decision::HALF_YIELD);
+      const double s_target_expr =
+          is_half_yield ? (ego_vel * tau) : (ego_vel * tau + ego_vel * v_rel * k);
+      const double s_target_term = std::max(0.0, s_target_expr);
 
       // [DISABLED] skip ego x,y gradients to prevent lateral distortion
       // const double ddist_dego_x = -normal_x;
       // const double ddist_dego_y = -normal_y;
-      const double ddist_dego_vel =
-          (s_target_term > 0.0) ? -(tau + 2.0 * k * ego_vel - k * obs_vel)
-                                : 0.0;
+      const double ddist_dego_vel = [&]() {
+        if (s_target_expr <= 0.0) {
+          return 0.0;
+        }
+        return is_half_yield ? (-tau) : (-(tau + 2.0 * k * ego_vel - k * obs_vel));
+      }();
 
       const double ddist_dobs_x = normal_x;
       const double ddist_dobs_y = normal_y;
-      const double ddist_dobs_vel = (s_target_term > 0.0) ? ego_vel * k : 0.0;
+      const double ddist_dobs_vel =
+          (!is_half_yield && s_target_expr > 0.0) ? (ego_vel * k) : 0.0;
 
       // 自车: only vel gradient
       ego_weight = 1.0;

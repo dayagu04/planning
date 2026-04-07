@@ -142,7 +142,8 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
           iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
       current_link_->link_class() ==
           iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
-      (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+      (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+      (current_link_->link_type() & iflymapdata::sdpro::LT_JCT) != 0) {
 
     route_info_output_.is_ego_on_expressway = true;
     if (current_link_->link_class() ==
@@ -1279,8 +1280,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    if (0 > ego_seq) {
-      ego_seq = 0;
+    if (1 > ego_seq) {
+      ego_seq = 1;
       route_info_output_.ego_seq = ego_seq;
     }
     // 当自车位于消亡车道上时，当前处理的场景修改成merge_sence
@@ -1577,6 +1578,16 @@ bool LDRouteInfoStrategy::CalculateFrontTargetLinkBaseFixDis(
   while (sum_dis < front_search_dis) {
     const auto& temp_next_link = ld_map_.GetNextLinkOnRoute(temp_link->id());
     if (temp_next_link == nullptr) {
+      break;
+    }
+
+    // 只在ODD范围内找target_link
+    if (!(temp_next_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+          temp_next_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+          (temp_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+          (temp_next_link->link_type() & iflymapdata::sdpro::LT_JCT) != 0)) {
       break;
     }
 
@@ -2295,7 +2306,7 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
       continue;
     }
 
-    bool is_filter_split = true;
+    bool is_filter_split = false;
     for (const auto& suc_link_id: split_link->successor_link_ids()) {
       if (suc_link_id == split_next_link->id()) {
         continue;
@@ -2308,20 +2319,16 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
 
       std::vector<iflymapdata::sdpro::Lane> exit_lane_vec;
       if (!CalculateSplitLinkExitLane(split_link, out_link, exit_lane_vec)) {
-        continue;
-      }
-
-      for (const auto& lane: exit_lane_vec) {
-        if (!IsNeedFilterSplit(&lane)) {
-          is_filter_split = false;
-          break;
-        }
-      }
-
-      if (!is_filter_split) {
         break;
       }
 
+      for (const auto& lane: exit_lane_vec) {
+        if (IsNeedFilterSplit(&lane)) {
+          is_filter_split = true;
+        } else {
+          is_filter_split = false;
+        }
+      }
     }
 
     if (!is_filter_split) {

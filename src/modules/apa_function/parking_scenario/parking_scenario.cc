@@ -1345,6 +1345,7 @@ void ParkingScenario::ScenarioSuspend() {
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
   // todo : update speed data
   ExcuteSpeedPlanningTask();
+  GenPlanningHmiOutput();
 
   return;
 }
