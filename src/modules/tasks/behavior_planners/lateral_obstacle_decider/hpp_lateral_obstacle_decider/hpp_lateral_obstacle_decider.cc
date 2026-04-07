@@ -269,7 +269,6 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
   auto &lat_obstacle_decision = session_->mutable_planning_context()
                                     ->mutable_lateral_obstacle_decider_output()
                                     .lat_obstacle_decision;
-  lat_obstacle_decision.clear();
   constexpr double kNearFrontThreshold = 7;
   constexpr double kHeadLBuffer = 0.5;
   if (obstacle->b_frenet_valid()) {
