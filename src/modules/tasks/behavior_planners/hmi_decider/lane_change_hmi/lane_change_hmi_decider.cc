@@ -633,8 +633,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
                  iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH ||
              ad_info.status_update_reason ==
                  iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE);
-        if ((curr_state == kLaneChangeHold ||
-             is_triggle_warning_on_propose ||
+        if ((is_triggle_warning_on_propose ||
              curr_state == kLaneChangeCancel)) {
           planning_output.planning_request.take_over_req_level =
               iflyauto::REQUEST_LEVEL_WARRING;
