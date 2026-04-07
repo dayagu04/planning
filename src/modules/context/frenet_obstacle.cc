@@ -273,7 +273,7 @@ void FrenetObstacle::compute_frenet_obstacle(
   rel_v_ = frenet_velocity_s_ - frenet_ego_state.velocity();
 }
 void FrenetObstacle::compute_frenet_obstacle_boundary(
-    const ReferencePath &reference_path, bool is_hpp_scene = false) {
+    const ReferencePath &reference_path, bool is_hpp_scene) {
   const auto &frenet_coord = reference_path.get_frenet_coord();
 
   double obs_start_s(std::numeric_limits<double>::max());
