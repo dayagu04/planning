@@ -18,6 +18,8 @@
 #include "planning_debug_info.pb.h"
 #include "time_benchmark.h"
 #include "version.h"
+
+#include "iflyauto_rate.h"
 #include "context/function_switch_config_context.h"
 
 namespace planning {
@@ -90,6 +92,10 @@ bool PlanningAdapter::Init() {
   local_view_ptr_ = std::make_shared<LocalView>();
   planning_scheduler_ = std::make_unique<PlanningScheduler>(
       local_view_ptr_.get(), &engine_config);
+
+  timer_thread_.reset(new std::thread(&PlanningAdapter::TimerProcess, this));
+  pthread_setname_np(timer_thread_->native_handle(), "planning_timer");
+
   StartLogThread();
   return true;
 }
@@ -870,4 +876,35 @@ void PlanningAdapter::SendHeartBeatToPhm(
     phm_report_writer_(*ifly_phm_report);
   }
 }
+
+#define IS_PREDICTION_RESULT_MSG_CONTINUOUS_TIMEOUT_MS 150
+
+void PlanningAdapter::TimerProcess() {
+  iflyauto::Rate rate(static_cast<double>(10.0));
+  std::atomic<bool> is_prediction_result_msg_continuous{false};
+  while (is_timer_enabled_) {
+    if (is_prediction_result_msg_updated_) {
+        is_prediction_result_msg_continuous.store(true);
+    }
+
+    if (is_prediction_result_msg_continuous) {
+      if (is_prediction_result_msg_updated_) {
+        this->Proc();
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2U));
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
+        if (IflyTime::Now_ms()-prediction_result_msg_recv_time_ > IS_PREDICTION_RESULT_MSG_CONTINUOUS_TIMEOUT_MS) {
+          is_prediction_result_msg_continuous.store(false);
+        }
+      }
+    } else {
+      this->Proc();
+      rate.Sleep();
+    }
+  }
+}
+
 }  // namespace planning
