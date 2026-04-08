@@ -148,7 +148,7 @@ void TurnstileLongitudinalDecider::UpdateTargetTurnstile() {
     return;
   }
 
-  frame_ctx_.target_turnstile_frenet_obs = target_turnstile_iter->second.get();
+  frame_ctx_.target_turnstile_frenet_obs = target_turnstile_iter->second;
   frame_ctx_.target_turnstile_obs = frame_ctx_.target_turnstile_frenet_obs->obstacle();
   if (frame_ctx_.target_turnstile_obs == nullptr) {
     mark_target_lost();
@@ -260,13 +260,13 @@ void TurnstileLongitudinalDecider::UpdateFrontVehicle() {
     }
 
     if (has_preferred_front_vehicle && obs_id == preferred_front_vehicle_id) {
-      frame_ctx_.front_vehicle_frenet_obs = obs_ptr.get();
+      frame_ctx_.front_vehicle_frenet_obs = obs_ptr;
       break;
     }
 
     if (boundary.s_start < nearest_front_vehicle_s) {
       nearest_front_vehicle_s = boundary.s_start;
-      frame_ctx_.front_vehicle_frenet_obs = obs_ptr.get();
+      frame_ctx_.front_vehicle_frenet_obs = obs_ptr;
     }
   }
 
