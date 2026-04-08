@@ -1171,6 +1171,57 @@ const bool HybridAStarPathGenerator::PrepareCurrentNodeForExpansion(
   return true;
 }
 
+void HybridAStarPathGenerator::ConfigureSearchBudget() {
+  const ApaParameters& param = apa_param.GetParam();
+
+  if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+    search_budget_.find_success_curve_min_count = 0;
+    search_budget_.find_success_curve_max_time = 10;
+    config_.max_search_time_ms = 26;
+  } else if (request_.search_mode == SearchMode::PRE_SEARCH) {
+    search_budget_.find_success_curve_min_count = 0;
+    search_budget_.find_success_curve_max_time = 68;
+    config_.max_search_time_ms = 86;
+  } else {
+    if (request_.replan_reason == ReplanReason::SLOT_CRUISING) {
+      search_budget_.find_success_curve_min_count = 0;
+      search_budget_.find_success_curve_max_time = 68;
+      config_.max_search_time_ms = 9800;
+    } else if (request_.replan_reason == ReplanReason::DYNAMIC) {
+      search_budget_.find_success_curve_min_count = 18;
+      search_budget_.find_success_curve_max_time = 68;
+      config_.max_search_time_ms = 100;
+    } else if (request_.replan_reason == ReplanReason::PATH_DANGEROUS) {
+      search_budget_.find_success_curve_min_count = 68;
+      search_budget_.find_success_curve_max_time =
+          param.max_dynamic_plan_proj_dt * 1000 * 0.8;
+      config_.max_search_time_ms = param.max_dynamic_plan_proj_dt * 1000;
+    } else if (request_.replan_reason == ReplanReason::DYNAMIC_GEAR_SWITCH) {
+      const DynamicGearSwitchConfig& gear_switch_param =
+          param.gear_switch_config;
+      search_budget_.find_success_curve_min_count =
+          std::min(request_.ref_solve_number, 1080);
+      search_budget_.find_success_curve_max_time =
+          (gear_switch_param.dist_thresh_for_gear_switch_point /
+           gear_switch_param.vel_thresh_for_gear_switch_point) *
+          1000;
+      config_.max_search_time_ms =
+          search_budget_.find_success_curve_max_time + 100;
+    } else {
+      search_budget_.find_success_curve_min_count =
+          std::min(request_.ref_solve_number, 1080);
+      search_budget_.find_success_curve_max_time = 1800;
+      config_.max_search_time_ms = 10000;
+    }
+  }
+
+  ILOG_INFO << "find_success_curve_min_count = "
+            << search_budget_.find_success_curve_min_count
+            << " find_success_curve_max_time = "
+            << search_budget_.find_success_curve_max_time
+            << " config_.max_search_time_ms = " << config_.max_search_time_ms;
+}
+
 void HybridAStarPathGenerator::ConfigureBaseAnalyticExpansionRequest(
     AnalyticExpansionRequest& analytic_expansion_request,
     link_pt_line::LinkPtLineInput<float>* lpl_input, RSInput* rs_input) const {

@@ -50,7 +50,6 @@ class HybridAStarPerpendicularTailInPathGenerator
 
   virtual void PrepareFormalSearch(
       const SearchConfigSnapshot& snapshot) override;
-  virtual void ConfigureSearchBudget() override;
   virtual void CalcNodeGCost(Node3d* current_node, Node3d* next_node) override;
   virtual CurveNodeScoreParam BuildCurveNodeScoreParam() const override;
   virtual void FillCurveNodeBaseCost(const CurveNode& curve_node,

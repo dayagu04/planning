@@ -222,7 +222,7 @@ class HybridAStarPathGenerator : public ParkingTask {
                            CurveNode& best_curve_node_to_goal);
 
   virtual void UpdatePoseBoundary() = 0;
-  virtual void ConfigureSearchBudget() = 0;
+  virtual void ConfigureSearchBudget();
 
   virtual void ConfigureBaseAnalyticExpansionRequest(
       AnalyticExpansionRequest& analytic_expansion_request,
