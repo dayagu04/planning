@@ -246,6 +246,7 @@ void ApaSlotManager::UpdatePrePlanFailSlotIds(
     const SlotReleaseState last_astar_release) {
   const bool should_clear =
       !measure_data_ptr_->GetStaticFlag() ||
+      state_machine_ptr_->IsHppCruise() ||
       (running_mode == ApaRunningMode::RUNNING_SAPA &&
        sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) ||
       running_mode == ApaRunningMode::RUNNING_PA;
