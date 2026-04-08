@@ -440,45 +440,71 @@ double RoadTypeExtraBufferAtS(const double s, double ref_s_length,
   }
   double road_type_buffer_max = 0.1 * road_type_gain;
   double road_type_buffer_min = 0.05 * road_type_gain;
-  // step1: road type extra buffer
-  switch (type_info.road_type) {
-    case CRoadType::UTurn:
-    case CRoadType::CurveTurn:
-    case CRoadType::NormalTurn:
-    case CRoadType::WideTurn:
-    case CRoadType::SCurveStaight:
-      max_extra_buffer += road_type_buffer_max;
-      break;
-    case CRoadType::NudgeStraight:
-    case CRoadType::SharpTurn:
-      max_extra_buffer += road_type_buffer_min;
-      break;
-    case CRoadType::Unknown:
-    case CRoadType::NormalStraight:
-      break;
-    default:
-      break;
+  const auto is_road_type_max = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::UTurn:
+      case CRoadType::CurveTurn:
+      case CRoadType::NormalTurn:
+      case CRoadType::WideTurn:
+      case CRoadType::SCurveStaight:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto is_road_type_min = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::NudgeStraight:
+      case CRoadType::SharpTurn:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto has_elem_type = [](const ResultTypeInfo &info,
+                                const CElemType target_type) {
+    for (const auto elem : info.elem_types) {
+      if (elem == target_type) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // step1: road type extra buffer (any of pre/current/next matches, add once)
+  const bool has_road_type_max =
+      is_road_type_max(type_info_pre.road_type) ||
+      is_road_type_max(type_info.road_type) ||
+      is_road_type_max(type_info_next.road_type);
+  const bool has_road_type_min =
+      is_road_type_min(type_info_pre.road_type) ||
+      is_road_type_min(type_info.road_type) ||
+      is_road_type_min(type_info_next.road_type);
+  if (has_road_type_max) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_road_type_min) {
+    max_extra_buffer += road_type_buffer_min;
   }
 
-  // step2: element extra buffer
-  for (const auto elem : type_info.elem_types) {
-    switch (elem) {
-      case CElemType::IntersectionRoad:
-        max_extra_buffer += road_type_buffer_max;
-        break;
-      case CElemType::UpRampRoad:
-      case CElemType::DownRampRoad:
-      case CElemType::UnknownRampRoad:
-        max_extra_buffer += road_type_buffer_min;
-        break;
-      case CElemType::TurnStileRoad:
-      case CElemType::SpeedBumpRoad:
-      case CElemType::Unknown:
-      case CElemType::NormalRoad:
-        break;
-      default:
-        break;
-    }
+  // step2: element extra buffer (any of pre/current/next matches, add once)
+  const bool has_intersection_elem =
+      has_elem_type(type_info_pre, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info_next, CElemType::IntersectionRoad);
+  const bool has_ramp_elem =
+      has_elem_type(type_info_pre, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info, CElemType::UpRampRoad) ||
+      has_elem_type(type_info, CElemType::DownRampRoad) ||
+      has_elem_type(type_info, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_next, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UnknownRampRoad);
+  if (has_intersection_elem) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_ramp_elem) {
+    max_extra_buffer += road_type_buffer_min;
   }
 
   // step3: speed extra buffer (capped)
@@ -498,9 +524,15 @@ double RoadTypeExtraBufferAtSForObs(
     const double ego_v, const std::shared_ptr<FrenetObstacle> obstacle) {
   double max_extra_buffer = 0.0;
 
+  double KLonDisBuffer = 3.0;
+  ResultTypeInfo type_info_pre;
   ResultTypeInfo type_info;
+  ResultTypeInfo type_info_next;
   if (storage) {
+    type_info_pre = storage->GetTypeInfo(std::max(s - KLonDisBuffer, 0.0));
     type_info = storage->GetTypeInfo(s);
+    type_info_next =
+        storage->GetTypeInfo(std::min(s + KLonDisBuffer, ref_s_length));
   } else {
     return 0.0;
   }
@@ -531,45 +563,71 @@ double RoadTypeExtraBufferAtSForObs(
       std::min(std::fabs(obstacle->velocity()) / KLonVThrd, 1.0);
   double road_type_buffer_max = 0.1 * roadtype_gain_base_obs_vel;
   double road_type_buffer_min = 0.05 * roadtype_gain_base_obs_vel;
-  // step1: road type extra buffer
-  switch (type_info.road_type) {
-    case CRoadType::UTurn:
-    case CRoadType::CurveTurn:
-    case CRoadType::NormalTurn:
-    case CRoadType::WideTurn:
-    case CRoadType::SCurveStaight:
-      max_extra_buffer += road_type_buffer_max;
-      break;
-    case CRoadType::NudgeStraight:
-    case CRoadType::SharpTurn:
-      max_extra_buffer += road_type_buffer_min;
-      break;
-    case CRoadType::Unknown:
-    case CRoadType::NormalStraight:
-      break;
-    default:
-      break;
+  const auto is_road_type_max = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::UTurn:
+      case CRoadType::CurveTurn:
+      case CRoadType::NormalTurn:
+      case CRoadType::WideTurn:
+      case CRoadType::SCurveStaight:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto is_road_type_min = [](const CRoadType road_type) {
+    switch (road_type) {
+      case CRoadType::NudgeStraight:
+      case CRoadType::SharpTurn:
+        return true;
+      default:
+        return false;
+    }
+  };
+  const auto has_elem_type = [](const ResultTypeInfo &info,
+                                const CElemType target_type) {
+    for (const auto elem : info.elem_types) {
+      if (elem == target_type) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // step1: road type extra buffer (any of pre/current/next matches, add once)
+  const bool has_road_type_max =
+      is_road_type_max(type_info_pre.road_type) ||
+      is_road_type_max(type_info.road_type) ||
+      is_road_type_max(type_info_next.road_type);
+  const bool has_road_type_min =
+      is_road_type_min(type_info_pre.road_type) ||
+      is_road_type_min(type_info.road_type) ||
+      is_road_type_min(type_info_next.road_type);
+  if (has_road_type_max) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_road_type_min) {
+    max_extra_buffer += road_type_buffer_min;
   }
 
-  // step2: element extra buffer
-  for (const auto elem : type_info.elem_types) {
-    switch (elem) {
-      case CElemType::IntersectionRoad:
-        max_extra_buffer += road_type_buffer_max;
-        break;
-      case CElemType::UpRampRoad:
-      case CElemType::DownRampRoad:
-      case CElemType::UnknownRampRoad:
-        max_extra_buffer += road_type_buffer_min;
-        break;
-      case CElemType::TurnStileRoad:
-      case CElemType::SpeedBumpRoad:
-      case CElemType::Unknown:
-      case CElemType::NormalRoad:
-        break;
-      default:
-        break;
-    }
+  // step2: element extra buffer (any of pre/current/next matches, add once)
+  const bool has_intersection_elem =
+      has_elem_type(type_info_pre, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info, CElemType::IntersectionRoad) ||
+      has_elem_type(type_info_next, CElemType::IntersectionRoad);
+  const bool has_ramp_elem =
+      has_elem_type(type_info_pre, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_pre, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info, CElemType::UpRampRoad) ||
+      has_elem_type(type_info, CElemType::DownRampRoad) ||
+      has_elem_type(type_info, CElemType::UnknownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UpRampRoad) ||
+      has_elem_type(type_info_next, CElemType::DownRampRoad) ||
+      has_elem_type(type_info_next, CElemType::UnknownRampRoad);
+  if (has_intersection_elem) {
+    max_extra_buffer += road_type_buffer_max;
+  } else if (has_ramp_elem) {
+    max_extra_buffer += road_type_buffer_min;
   }
 
   // step3: speed extra buffer (capped)
