@@ -188,7 +188,6 @@ HybridAStarPerpendicularTailInPathGenerator::HandlePreSearchPhase() {
 
 void HybridAStarPerpendicularTailInPathGenerator::RestoreFormalSearchConfig(
     const SearchConfigSnapshot& snapshot) {
-  request_.search_mode = SearchMode::FORMAL;
   request_.analytic_expansion_type = snapshot.analytic_expansion_type;
   request_.swap_start_goal = snapshot.swap_start_goal;
   config_.traj_kappa_change_penalty = snapshot.traj_kappa_change_penalty;

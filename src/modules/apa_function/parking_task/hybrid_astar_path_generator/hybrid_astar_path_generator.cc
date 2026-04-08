@@ -976,6 +976,7 @@ void HybridAStarPathGenerator::LogUpdateSummary() const {
 
 const bool HybridAStarPathGenerator::RunFormalSearch() {
   const double formal_search_start_time = IflyTime::Now_ms();
+  request_.search_mode = SearchMode::FORMAL;
   const bool formal_search_success =
       UpdateOnce(BuildFormalSearchPathColDetBuffer());
   search_phase_time_cost_.formal_search_consume_time_ms =
