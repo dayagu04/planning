@@ -258,7 +258,8 @@ class HybridAStarPathGenerator : public ParkingTask {
       const CurveNode& curve_node, const CurveNodeScoreParam& score_param,
       PathCompareCost& cost);
 
-  virtual const bool RunFormalSearch(const SearchConfigSnapshot& snapshot);
+  virtual const bool RunFormalSearch();
+  virtual void PrepareFormalSearch(const SearchConfigSnapshot& snapshot) {}
 
  protected:
   PlannerOpenSpaceConfig config_;

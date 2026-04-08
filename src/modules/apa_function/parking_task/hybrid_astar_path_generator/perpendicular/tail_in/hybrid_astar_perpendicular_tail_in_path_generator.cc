@@ -194,13 +194,12 @@ void HybridAStarPerpendicularTailInPathGenerator::RestoreFormalSearchConfig(
   config_.traj_kappa_change_penalty = snapshot.traj_kappa_change_penalty;
 }
 
-const bool HybridAStarPerpendicularTailInPathGenerator::RunFormalSearch(
+void HybridAStarPerpendicularTailInPathGenerator::PrepareFormalSearch(
     const SearchConfigSnapshot& snapshot) {
+  request_.recaluclate_obs_dist = false;
   RestoreFormalSearchConfig(snapshot);
   ILOG_INFO << "interseting_area";
   interesting_area_.DebugString();
-
-  return HybridAStarPathGenerator::RunFormalSearch(snapshot);
 }
 
 void HybridAStarPerpendicularTailInPathGenerator::InitInterestingArea() {
@@ -461,8 +460,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     case PreSearchPhaseOutcome::RETURN_FAILURE:
       return FinalizeUpdate(false);
     case PreSearchPhaseOutcome::CONTINUE_FORMAL_SEARCH:
-      request_.recaluclate_obs_dist = false;
-      return FinalizeUpdate(RunFormalSearch(search_config_snapshot));
+      PrepareFormalSearch(search_config_snapshot);
+      return FinalizeUpdate(RunFormalSearch());
     default:
       return false;
   };

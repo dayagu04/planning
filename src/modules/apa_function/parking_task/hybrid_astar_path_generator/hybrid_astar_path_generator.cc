@@ -974,8 +974,7 @@ void HybridAStarPathGenerator::LogUpdateSummary() const {
             << ", solve number: " << result_.solve_number;
 }
 
-const bool HybridAStarPathGenerator::RunFormalSearch(
-    const SearchConfigSnapshot& snapshot) {
+const bool HybridAStarPathGenerator::RunFormalSearch() {
   const double formal_search_start_time = IflyTime::Now_ms();
   const bool formal_search_success =
       UpdateOnce(BuildFormalSearchPathColDetBuffer());

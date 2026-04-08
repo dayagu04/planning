@@ -48,7 +48,7 @@ class HybridAStarPerpendicularTailInPathGenerator
       const common_math::PathPt<float>& gear_switch_pose, AstarPathGear gear,
       const float gear_switch_penalty) const;
 
-  virtual const bool RunFormalSearch(
+  virtual void PrepareFormalSearch(
       const SearchConfigSnapshot& snapshot) override;
   virtual void ConfigureSearchBudget() override;
   virtual void CalcNodeGCost(Node3d* current_node, Node3d* next_node) override;
