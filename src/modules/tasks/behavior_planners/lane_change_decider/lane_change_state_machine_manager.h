@@ -187,11 +187,13 @@ class LaneChangeStateMachineManager {
   void CalculateLCGapFeasibleWithPredictionInfo(
       LaneChangeStageInfo* const lc_state_info,
       const planning_data::DynamicAgentNode* agent_node,
-      const bool is_front_car, const bool is_ego_lane_car);
+      const bool is_front_car, const bool is_ego_lane_car,
+      const bool is_side_obs = false);
   TrajectoryPoints CalculateAgentPredictionTrajs(
       const planning_data::DynamicAgentNode* agent_node,
       const bool is_front_agent, const bool is_ego_lane_agent,
-      const planning_data::DynamicAgentNode** after_filter_agent);
+      const planning_data::DynamicAgentNode** after_filter_agent,
+      const bool is_side_obs = false);
   TrajectoryPoints CalculateEgoFutureTrajs() const;
   TrajectoryPoints CalculateEgoPPIDMTrajs();
   TrajectoryPoints CalculateEgoPPIDMTrajs(
@@ -212,7 +214,8 @@ class LaneChangeStateMachineManager {
  void BuildAgentPredictionTrajsInTargetLane(
     const planning_data::DynamicAgentNode* agent_node,
     const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-    const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs);
+    const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs,
+    const bool is_side_obs = false);
   void StoreObjDebugPredictionInfo(
       const planning_data::DynamicAgentNode* agent_node,
       const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,

@@ -821,7 +821,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
       bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
-      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false);
+      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (!lc_state_info.gap_insertable) {
         return lc_state_info;
       }
@@ -1086,7 +1086,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
       bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
-      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false);
+      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (lc_state_info.lc_should_back) {
         return lc_state_info;
       }
@@ -3704,12 +3704,14 @@ RequestType LaneChangeStateMachineManager::CalculaTurnSignalForHPP() {
 void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
     LaneChangeStageInfo* const lc_state_info,
     const planning_data::DynamicAgentNode* agent_node,
-    const bool is_front_agent, const bool is_ego_lane_agent) {
+    const bool is_front_agent, const bool is_ego_lane_agent,
+    const bool is_side_obs) {
   // get agent prediction trajs
   bool is_invalid_fiter_agent = false;
   const planning_data::DynamicAgentNode* after_filter_agent = agent_node;
   const auto agent_prediction_trajs = CalculateAgentPredictionTrajs(
-      agent_node, is_front_agent, is_ego_lane_agent, &after_filter_agent);
+      agent_node, is_front_agent, is_ego_lane_agent, &after_filter_agent,
+      is_side_obs);
 
   // 过滤掉旁车道障碍物后，没有车的case，则是安全的，直接退出
   if (after_filter_agent == nullptr && agent_prediction_trajs.empty()) {
@@ -3877,7 +3879,8 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
 TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
     const planning_data::DynamicAgentNode* agent_node,
     const bool is_front_agent, const bool is_ego_lane_agent,
-    const planning_data::DynamicAgentNode** after_filter_agent) {
+    const planning_data::DynamicAgentNode** after_filter_agent,
+    const bool is_side_obs) {
   TrajectoryPoints agent_prediction_trajs;
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -3928,7 +3931,7 @@ TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
   if (after_filter_agent) {
     *after_filter_agent = agent_node;
   }
-  BuildAgentPredictionTrajsInTargetLane(agent_node, target_lane_coor, is_front_agent, &agent_prediction_trajs);
+  BuildAgentPredictionTrajsInTargetLane(agent_node, target_lane_coor, is_front_agent, &agent_prediction_trajs, is_side_obs);
   // StoreObjDebugPredictionInfo(agent_node, &agent_prediction_trajs,
   //                             is_front_agent, is_ego_lane_agent);
   return agent_prediction_trajs;
@@ -4844,7 +4847,8 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
 void LaneChangeStateMachineManager::BuildAgentPredictionTrajsInTargetLane(
   const planning_data::DynamicAgentNode* agent_node,
   const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-  const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs) {
+  const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs,
+  const bool is_side_obs) {
 agent_prediction_trajs->clear();
 if (agent_node == nullptr || target_lane_coor == nullptr) {
   return;
@@ -4865,7 +4869,7 @@ if (agent_trajs.size() < 1) {
 }
 const auto& agent_traj_st = agent_trajs[0];
 const trajectory::Trajectory& agent_traj =
-    (joint_decision_success_ && trajectory_optimized.size() > 1)
+    (!is_side_obs && joint_decision_success_ && trajectory_optimized.size() > 1)
         ? trajectory_optimized
         : agent_traj_st;
 for (int i = 0; i < agent_traj.size(); i++) {
