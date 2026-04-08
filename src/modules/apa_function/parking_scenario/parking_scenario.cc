@@ -93,10 +93,9 @@ void ParkingScenario::ScenarioRunning() {
 
   // record data to debuginfo
   RecordDebug();
-  
+
   // log json debug
   Log();
-
 
   return;
 }
@@ -1486,7 +1485,7 @@ void ParkingScenario::DecideExpandMirrorCommand() {
   return;
 }
 
-const void ParkingScenario::RecordDebug() {
+void ParkingScenario::RecordDebug() const {
   RecordDebugRemainDist();
   RecordDebugStuckTimeInfo();
   RecordDebugTerminalErr();
@@ -1495,7 +1494,7 @@ const void ParkingScenario::RecordDebug() {
   RecordDebugObstacleInSlot();
 }
 
-const void ParkingScenario::RecordDebugRemainDist() {
+void ParkingScenario::RecordDebugRemainDist() const {
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaRemainDist* debug_apa_remain_dist =
       debug_info->mutable_apa_path_debug()->mutable_remain_dist();
@@ -1513,7 +1512,7 @@ const void ParkingScenario::RecordDebugRemainDist() {
   debug_apa_remain_dist->set_current_path_length(frame_.current_path_length);
 }
 
-const void ParkingScenario::RecordDebugStuckTimeInfo() {
+void ParkingScenario::RecordDebugStuckTimeInfo() const {
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaStuckTimeInfo* debug_stuck_time_info =
       debug_info->mutable_apa_path_debug()->mutable_stuck_time_info();
@@ -1527,7 +1526,7 @@ const void ParkingScenario::RecordDebugStuckTimeInfo() {
   debug_stuck_time->set_stuck_dynamic_obs_time(frame_.stuck_dynamic_obs_time);
 }
 
-const void ParkingScenario::RecordDebugTerminalErr() {
+void ParkingScenario::RecordDebugTerminalErr() const {
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaTerminalErr* debug_terminal_err =
       debug_info->mutable_apa_path_debug()->mutable_terminal_err();
@@ -1545,7 +1544,7 @@ const void ParkingScenario::RecordDebugTerminalErr() {
       ego_info_under_slot.terminal_err.GetTheta());
 }
 
-const void ParkingScenario::RecordDebugPlanningSlotInfo() {
+void ParkingScenario::RecordDebugPlanningSlotInfo() const {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
@@ -1658,8 +1657,7 @@ const void ParkingScenario::RecordDebugPlanningSlotInfo() {
       l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).y());
 }
 
-
-const void ParkingScenario::RecordDebugPlanningStatus() {
+void ParkingScenario::RecordDebugPlanningStatus() const {
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaPlanningStatus* debug_planning_status =
       debug_info->mutable_apa_path_debug()->mutable_planning_status();
@@ -1667,15 +1665,17 @@ const void ParkingScenario::RecordDebugPlanningStatus() {
   debug_planning_status->set_pathplan_result(frame_.pathplan_result);
   debug_planning_status->set_replan_flag(frame_.replan_flag);
   debug_planning_status->set_is_replan_first(frame_.is_replan_first);
-  debug_planning_status->set_path_plan_success(frame_.plan_stm.path_plan_success);
+  debug_planning_status->set_path_plan_success(
+      frame_.plan_stm.path_plan_success);
   debug_planning_status->set_planning_status(frame_.plan_stm.planning_status);
   debug_planning_status->set_spline_success(frame_.spline_success);
   debug_planning_status->set_replan_reason(frame_.replan_reason);
   debug_planning_status->set_plan_fail_reason(frame_.plan_fail_reason);
-  debug_planning_status->set_ego_should_stop_by_slot_jump(frame_.ego_should_stop_by_slot_jump);
-  debug_planning_status->set_correct_path_for_limiter(frame_.correct_path_for_limiter);
+  debug_planning_status->set_ego_should_stop_by_slot_jump(
+      frame_.ego_should_stop_by_slot_jump);
+  debug_planning_status->set_correct_path_for_limiter(
+      frame_.correct_path_for_limiter);
 }
-
 
 void ParkingScenario::RecordDebugObstacleInSlot() const {
   const EgoInfoUnderSlot& ego_info_under_slot =
