@@ -1020,11 +1020,11 @@ void BaseWeight::SetAccJerkBoundAndWeight(
   }
   // tiny speed
   double init_delta = planning_input.init_state().delta();
-  if (ego_vel_ < 0.2 && ref_vel_ - 2.0 < 1e-6 &&
+  if (ego_vel_ < 0.2 && ref_vel_ < 2.0 &&
       std::fabs(init_ref_theta_error_) < 2.0 &&
       std::fabs(init_delta) * 57.3 < 2.0 &&
       lateral_motion_scene_ == LateralMotionScene::LANE_KEEP &&
-      std::fabs(avoid_dist_) < 0.1) {
+      std::fabs(avoid_dist_) < 0.1 && std::fabs(lat_offset_) < 0.1) {
     jerk_bound = max_jerk_low_speed_;
   }
   jerk_bound = std::min(jerk_bound, max_jerk);
@@ -1354,11 +1354,11 @@ void BaseWeight::CalculateJerkBoundByLastJerk(
   jerk_bound = std::max(last_omega_to_jerk, jerk_bound);
   // tiny speed
   double init_delta = planning_input.init_state().delta();
-  if (ego_vel_ < 0.2 && ref_vel_ - 2.0 < 1e-6 &&
+  if (ego_vel_ < 0.2 && ref_vel_ < 2.0 &&
       std::fabs(init_ref_theta_error_) < 2.0 &&
       std::fabs(init_delta) * 57.3 < 2.0 &&
       lateral_motion_scene_ == LateralMotionScene::LANE_KEEP &&
-      std::fabs(avoid_dist_) < 0.1) {
+      std::fabs(avoid_dist_) < 0.1 && std::fabs(lat_offset_) < 0.1) {
     jerk_bound = max_jerk_low_speed_;
   }
   jerk_bound = std::min(std::min(emergency_jerk_bound, jerk_bound), max_jerk);
