@@ -206,13 +206,14 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
 void HPPSpeedLimitDecider::CalculateAvoidLimit() {
   double v_limit_avoid = hpp_speed_limit_config_.velocity_upper_bound;
+
   if (!session_->is_hpp_scene()) {
     return;
   }
 
-  const auto& hpp_general_lateral_decider_output =
+  const auto& hpp_lateral_output =
       session_->planning_context().hpp_general_lateral_decider_output();
-  if (hpp_general_lateral_decider_output.avoid_ids.empty()) {
+  if (hpp_lateral_output.avoid_ids.empty()) {
 #ifdef ENABLE_PROTO_LOG
     FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_avoid(),
                        SpeedLimitType::AVOID, v_limit_avoid);
@@ -220,11 +221,97 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
     return;
   }
 
-  // 触发避让限速，使用可配置的 config.hpp_avoid_velocity_limit_kph
-  v_limit_avoid =
-      hpp_speed_limit_config_.hpp_avoid_velocity_limit_kph / 3.6;  // 转换为 m/s
-  LOG_DEBUG("[get_velocity_limit] HPP avoid speed limit triggered: %f kph",
-            hpp_speed_limit_config_.hpp_avoid_velocity_limit_kph);
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  if (!reference_path_ptr) {
+    return;
+  }
+
+  constexpr double kAvoidAgentMinSpeed = 2.0;
+
+  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  const double ego_s = frenet_ego_state.s();
+  const double ego_head_s = frenet_ego_state.head_s();
+
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (!agent_manager) {
+    return;
+  }
+
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+
+  // --- 遍历绕避 Agent ---
+  for (const auto avoid_id : hpp_lateral_output.avoid_ids) {
+    const auto* agent = agent_manager->GetAgent(avoid_id);
+    if (!agent) {
+      continue;
+    }
+
+    // 1. 纵向过滤：障碍物需在自车前方
+    double agent_s = 0.0, agent_l = 0.0;
+    const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
+    if (!frenet_coord) {
+      continue;
+    }
+    if (!frenet_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
+
+    // 障碍物后沿到自车头部的距离
+    const double longitudinal_dist =
+        agent_s - 0.5 * agent->length() - ego_head_s;
+    if (longitudinal_dist < 0.0) {
+      continue;
+    }
+
+    // 2. 横向距离（用中心点近似）
+    const double lateral_dist = std::abs(agent_l);
+
+    // 3. 横向阈值：HPP 车道较窄，用固定阈值而非车道宽比例
+    const double lateral_threshold =
+        hpp_speed_limit_config_.hpp_avoid_lateral_threshold;
+    if (lateral_dist > lateral_threshold) {
+      continue;
+    }
+
+    // 4. 纵向距离平滑：复用现有 GetSpeedLimitInObjectiveZone 思路
+    const double target_v =
+        agent->is_static()
+            ? hpp_speed_limit_config_.hpp_avoid_velocity_limit
+            : std::max(agent->speed() + kAvoidAgentMinSpeed,
+                       hpp_speed_limit_config_.velocity_lower_bound);
+
+    const double approach_dist =
+        hpp_speed_limit_config_.hpp_avoid_approach_distance;
+
+    double v_limit_this_agent;
+    if (longitudinal_dist < 1e-3) {
+      // 在障碍物正旁边
+      v_limit_this_agent = target_v;
+    } else if (longitudinal_dist < approach_dist) {
+      // 接近中：v² = target_v² - 2*a*s → 反推当前允许速度
+      const double a =
+          hpp_speed_limit_config_.approaching_zone_deceleration;
+      const double v2 = target_v * target_v - 2.0 * a * longitudinal_dist;
+      v_limit_this_agent = (v2 > 0.0)
+                               ? std::sqrt(v2)
+                               : hpp_speed_limit_config_.velocity_lower_bound;
+    } else {
+      continue;  // 还太远，不触发
+    }
+
+    v_limit_this_agent = std::max(v_limit_this_agent,
+                                  hpp_speed_limit_config_.velocity_lower_bound);
+
+    if (v_limit_this_agent < v_limit_avoid) {
+      v_limit_avoid = v_limit_this_agent;
+    }
+  }
 
 #ifdef ENABLE_PROTO_LOG
   FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_avoid(),
@@ -469,7 +556,7 @@ double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
   const double kSpeedObjectiveZoneLimit = target_v;
   // 减速度
   const double kDecelerationRate =
-      hpp_speed_limit_config_.speed_bump_deceleration;
+      hpp_speed_limit_config_.approaching_zone_deceleration;
 
   if (zone_info.in_speed_limit_zone) {
     return kSpeedObjectiveZoneLimit;

@@ -85,10 +85,10 @@ double compute_hpp_avoid_velocity_limit(
     return v_limit_avoid;
   }
 
-  // 触发避让限速，使用可配置的 config.hpp_avoid_velocity_limit_kph
-  v_limit_avoid = config.hpp_avoid_velocity_limit_kph / 3.6;  // 转换为 m/s
+  // 触发避让限速，使用可配置的 config.hpp_avoid_velocity_limit
+  v_limit_avoid = config.hpp_avoid_velocity_limit;
   LOG_DEBUG("[get_velocity_limit] HPP avoid speed limit triggered: %f kph",
-            config.hpp_avoid_velocity_limit_kph);
+            config.hpp_avoid_velocity_limit);
   return v_limit_avoid;
 }
 }  // namespace
@@ -2726,37 +2726,37 @@ SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
   const double kSpeedBumpRearBuffer = config_.speed_bump_rear_buffer;
   const double kApproachingDistance = config_.speed_bump_approach_distance;
   const double kCollisionBuffer = config_.speed_bump_collision_buffer;
-  
+
   // 获取减速带障碍物
   const auto &obstacle_manager =
       session_->environmental_model().get_obstacle_manager();
   const auto &speed_bump_obstacles = obstacle_manager->get_speed_bump_obstacles();
-  
+
   if (speed_bump_obstacles.Items().empty() || reference_path_ptr_ == nullptr) {
     return zone_info;
   }
-  
+
   const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
   if (frenet_coord == nullptr) {
     return zone_info;
   }
-  
+
   // 使用纵向重叠路径（SL坐标）进行碰撞检测
   std::vector<planning_math::Polygon2d> overlap_path;
   make_longitudinal_overlap_path(traj_points, overlap_path);
-  
+
   double min_distance = std::numeric_limits<double>::max();
   bool has_collision = false;
   double nearest_bump_s = 0.0;
   double nearest_bump_s_min = 0.0;
   double nearest_bump_s_max = 0.0;
-  
+
   // 遍历所有减速带，检查是否与路径有碰撞
   for (const Obstacle *speed_bump : speed_bump_obstacles.Items()) {
     if (speed_bump == nullptr) {
       continue;
     }
-    
+
     // 将减速带多边形投影到SL坐标
     const auto &bump_polygon = speed_bump->perception_polygon();
     std::vector<planning_math::Vec2d> bump_sl_points;
@@ -2797,7 +2797,7 @@ SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
         break;
       }
     }
-    
+
     if (collision_detected) {
       has_collision = true;
       zone_info.collision_s_segments.emplace_back(bump_s_min, bump_s_max);
@@ -2814,12 +2814,12 @@ SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
       }
     }
   }
-  
+
   if (has_collision && min_distance < std::numeric_limits<double>::max()) {
     // 定义减速带区域：前10m到后5m（基于减速带边界）
     double zone_start_s = nearest_bump_s_min - kSpeedBumpFrontBuffer;
     double zone_end_s = nearest_bump_s_max + kSpeedBumpRearBuffer;
-    
+
     // 判断自车是否在减速带区域内
     if (ego_s >= zone_start_s && ego_s <= zone_end_s) {
       zone_info.in_speed_bump_zone = true;
@@ -2828,13 +2828,13 @@ SpeedBumpZoneInfo GeneralLongitudinalDecider::CheckSpeedBumpZone(
       // 自车在减速带区域之前
       double distance_to_zone_start = zone_start_s - ego_s;
       zone_info.distance_to_zone = distance_to_zone_start;
-      
+
       if (distance_to_zone_start < kApproachingDistance) {
         zone_info.approaching_speed_bump = true;
       }
     }
   }
-  
+
   return zone_info;
 }
 
@@ -2844,8 +2844,8 @@ double GeneralLongitudinalDecider::GetSpeedLimitInObjectiveZone(
   const double kSpeedBumpZoneVelocityLimit =
       config_.target_speed_speed_bump_area;
   // 减速度
-  const double kDecelerationRate = config_.speed_bump_deceleration;
-  
+  const double kDecelerationRate = config_.approaching_zone_deceleration;
+
   if (zone_info.in_speed_bump_zone) {
     // 在减速带区域内，限速8 km/h
     return kSpeedBumpZoneVelocityLimit;
@@ -2859,17 +2859,17 @@ double GeneralLongitudinalDecider::GetSpeedLimitInObjectiveZone(
     double velocity_squared_at_distance =
         target_velocity_squared -
         2.0 * kDecelerationRate * zone_info.distance_to_zone;
-    
+
     if (velocity_squared_at_distance < 0) {
       // 如果计算结果为负，说明距离太近，使用最小限速
       return kSpeedBumpZoneVelocityLimit;
     }
-    
+
     double calculated_limit = std::sqrt(velocity_squared_at_distance);
     // 返回计算的限速和当前速度的较小值
     return std::max(calculated_limit, kSpeedBumpZoneVelocityLimit);
   }
-  
+
   // 不在减速带相关区域，返回一个很大的值，表示不限速
   return std::numeric_limits<double>::max();
 }
