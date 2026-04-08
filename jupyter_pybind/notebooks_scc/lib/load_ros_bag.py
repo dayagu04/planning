@@ -860,9 +860,6 @@ class LoadRosbag:
       # 安全检查相关的标量数据
       json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time"]
 
-      #路权相关
-      json_value_list += ["cur_road_right_level", "is_merge_region"]
-
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         #print(asizeof.asizeof(msg)/1024)

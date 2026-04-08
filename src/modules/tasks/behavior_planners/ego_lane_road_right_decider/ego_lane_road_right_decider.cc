@@ -124,8 +124,6 @@ bool EgoLaneRoadRightDecider::Execute() {
   road_right_decider.boundary_merge_point.y = boundary_merge_point_.y;
   road_right_decider.merge_point_distance = merge_point_distance_;
 
-  JSON_DEBUG_VALUE("cur_road_right_level", static_cast<int>(road_right_decider.road_right_level));
-
   return true;
 }
 
