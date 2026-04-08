@@ -4551,6 +4551,10 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
                      "obs_reaction_decay_time");
     ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
                      "obs_keep_ref_factor");
+    ReadVector<double>(json, max_acc_bound_vel_table, "lane_change_joint_decision",
+                       "max_acc_bound_table", "vel_table");
+    ReadVector<double>(json, max_acc_bound_acc_table, "lane_change_joint_decision",
+                       "max_acc_bound_table", "acc_table");
   }
 
   double q_ego_ref_x = 5.0;
@@ -4601,6 +4605,9 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;
+
+  std::vector<double> max_acc_bound_vel_table;
+  std::vector<double> max_acc_bound_acc_table;
 };
 
 struct JointMotionPlannerConfig : public EgoPlanningConfig {

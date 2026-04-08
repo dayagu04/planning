@@ -4392,7 +4392,8 @@ bool LaneChangeStateMachineManager::
       double safety_buff = std::max(dist_ttc_interp, dis_diff_vel);
       box_ttc_vec.push_back(pred_ttc);
       // 3) 时间衰减：对合并后的 buff 沿预测时域衰减
-      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+      const double ttc_decay_factor = (rear_agent_overtaking_ && !is_aggressive_scence_)? 
+                                      0.99: lc_safety_check_config_.ttc_decay_factor;
       const double ttc_decay = std::pow(ttc_decay_factor, i);
       box_longitudinal_buff = safety_buff * ttc_decay;
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
@@ -4559,8 +4560,8 @@ bool LaneChangeStateMachineManager::
   // distance_vec[j] == 0 表示扩展 box 重叠（DistanceTo 最小返回 0）
   // 根据 0 值在时间轴上的分布分三类处理：
   //   尾部集中（先安全后碰撞）→ 未来恶化，直接不安全
-  //   头部集中（先碰撞后安全）→ 当前裕度不足但未来改善，需 1/4 为 0 才不安全
-  //   其他（散布/全程）→ 需 1/3 为 0 才不安全
+  //   头部集中（先碰撞后安全）→ 当前裕度不足但未来改善，需 1/6 为 0 才不安全
+  //   其他（散布/全程）→ 需 1/4 为 0 才不安全
   const int vec_size = static_cast<int>(distance_vec.size());
   if (vec_size > 0) {
     int zero_count = 0;
@@ -4584,13 +4585,13 @@ bool LaneChangeStateMachineManager::
         return false;
       } else if (head_heavy) {
         // 前碰撞后安全：当前空间是为未来预留的裕度，未来在改善
-        // 需要四分之一及以上步为 0 才判定不安全
-        if (zero_count * 4 >= vec_size) {
+        // 需要六分之一及以上步为 0 才判定不安全
+        if (zero_count * 6 >= vec_size) {
           return false;
         }
       } else {
-        // 散布或全程碰撞：需要三分之一及以上步为 0 才判定不安全
-        if (zero_count * 3 >= vec_size) {
+        // 散布或全程碰撞：需要四分之一及以上步为 0 才判定不安全
+        if (zero_count * 4 >= vec_size) {
           return false;
         }
       }
