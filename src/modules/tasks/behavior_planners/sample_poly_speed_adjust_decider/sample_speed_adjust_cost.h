@@ -77,6 +77,8 @@ class StopLineCost : public CurveCost {
  private:
   double mid_stop_dis_penalty_coef_ = 3.0;
   double near_stop_dis_penalty_coef_ = 4.0;
+  double over_stop_dis_penalty_coef_ = 3.0;
+  double behind_stop_dis_penalty_coef_ = 1.0;
 };
 
 class LeadingVehSafeCost : public CurveCost {

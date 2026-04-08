@@ -1238,7 +1238,8 @@ void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
         double lane_width = ref_distance - target_lane_to_border;
         if (lane_width < (ego_width_ / 2.0 + config_.stop_point_buffer)) {
           distance_to_stop_point_ =
-              current_reference_points[current_point].path_point.s() - ego_s_;
+              current_reference_points[current_point].path_point.s() - ego_s_ -
+              front_edge_to_rear_axle_;
           return;
         }
       }

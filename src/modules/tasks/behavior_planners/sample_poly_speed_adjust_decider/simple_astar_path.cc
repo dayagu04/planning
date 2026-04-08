@@ -180,10 +180,13 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       } else {
         double s_buffer_extra = 0.7 * interval.second.velocity();
         node.dis_to_gap_rear_cost =
-            gap > s_buffer_extra
-                ? 0.0
-                : config_->weight_back_ttc *
-                      std::exp(2 * (1- gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
+            gap > s_buffer_extra ? 0.0
+            : gap < 0.0          ? config_->weight_back_ttc * 2.0 *
+                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                         kZeroEpsilon)))
+                                 : config_->weight_back_ttc *
+                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                         kZeroEpsilon)));
       }
     } else {
       double follow_distance =
@@ -199,10 +202,13 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       } else {
         double s_buffer_extra = 0.7 * node.v;
         node.dis_to_gap_front_cost =
-            gap > s_buffer_extra
-                ? 0.0
-                : config_->weight_front_ttc *
-                      std::exp(2 * (1 - gap / std::fmax(s_buffer_extra, kZeroEpsilon)));
+            gap > s_buffer_extra ? 0.0
+            : gap < 0.0          ? config_->weight_front_ttc * 2.0 *
+                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                         kZeroEpsilon)))
+                                 : config_->weight_front_ttc *
+                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                         kZeroEpsilon)));
       }
     }
   }

@@ -321,12 +321,21 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
                            const bool is_merge_request) {
   const double half_lane_chnage_duration = 3.0;
   const double half_lane_change_length =
-      half_lane_chnage_duration * v_curve_final;
-  const double map_dis_info_error =
-      15.0;  // @TODO: adapte perception output later
+      is_merge_request ? 0.0 : half_lane_chnage_duration * v_curve_final;
   double poly_end_dis_to_virtual_stop_line =
-      stop_line_dis_to_ego - map_dis_info_error - half_lane_change_length -
-      poly_end_s_dis_to_ego;
+      stop_line_dis_to_ego - half_lane_change_length - poly_end_s_dis_to_ego;
+
+  // 以舒适减速度从v_final减速到0所需距离
+  // merge场景容许稍大减速（紧迫性更高），non-merge更保守
+  const double a_dec = 0.5;  // m/s²
+  const double d_stop_needed =
+      is_merge_request ? (v_curve_final * v_curve_final) / (2.0 * a_dec) : 0.0;
+
+  // 安全裕量：>0 来得及减速，<0 减速不及
+  // 额外预留安全缓冲（地图误差补偿）
+  const double safety_buffer = is_merge_request ? 5.0 : 10.0;  // m
+  const double safety_margin =
+      poly_end_dis_to_virtual_stop_line - d_stop_needed - safety_buffer;
 
   double adaptive_penalty = std::log(kStopLineBasicPenaltyDis);
   double distance_penalty_factor =
@@ -335,7 +344,7 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
   distance_penalty_factor = std::max(distance_penalty_factor, eps_floor);
   //   constexpr double eps_floor = 1e-15;
   //   distance_penalty_factor = std::max(distance_penalty_factor, eps_floor);
-  if (is_merge_request) {
+  if (!is_merge_request) {
     if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis_merge) {
       cost_ = 0.0;
     } else if (poly_end_dis_to_virtual_stop_line >
@@ -356,17 +365,11 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
                                  500);
     }
   } else {
-    if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
-      cost_ = 0.0;
-    } else if (poly_end_dis_to_virtual_stop_line > kStopLineNormalPenaltyDis) {
-      cost_ = weight_ * (1 + mid_stop_dis_penalty_coef_ *
-                                 pow(distance_penalty_factor, 2.5));
-    } else if (poly_end_dis_to_virtual_stop_line > 0) {
-      cost_ = weight_ * (1 + near_stop_dis_penalty_coef_ *
-                                 pow(distance_penalty_factor, 2.5));
-    } else {
-      cost_ = weight_ * std::exp(-poly_end_dis_to_virtual_stop_line /
-                                 kStopLineNormalPenaltyDis);
+    if (safety_margin > 0.0) {
+      cost_ = behind_stop_dis_penalty_coef_ * pow(safety_margin / 10.0, 2.0);
+    } else if(safety_margin < -safety_buffer){
+      cost_ = weight_ * over_stop_dis_penalty_coef_ *
+              pow(safety_margin / 10.0, 2.0);
     }
   }
 }
@@ -442,7 +445,7 @@ void SpeedChangeCost::GetCost(const double end_v, const double ego_v,
 void StopPointCost::GetCost(const double distance_to_stop_point) {
   cost_ = distance_to_stop_point > 0.0
               ? 0.0
-              : std::pow((-distance_to_stop_point + 10.0), 2.0);
+              : weight_ * std::pow((-distance_to_stop_point + 10.0), 2.0);
 }
 
 void LeadingVehFollowCost::GetCost(const double leading_veh_pred_s,
