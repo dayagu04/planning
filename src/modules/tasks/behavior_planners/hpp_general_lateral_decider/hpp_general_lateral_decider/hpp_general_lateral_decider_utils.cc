@@ -421,14 +421,18 @@ void MakePolygon(
   }
 }
 
-double RoadTypeExtraBufferAtS(const double s,
+double RoadTypeExtraBufferAtS(const double s, double ref_s_length,
                               const ConstStaticAnalysisStoragePtr &storage,
                               const double ego_v, bool is_hard_bound) {
   double max_extra_buffer = 0.0;
-
+  double KLonDisBuffer = 3.0;
+  ResultTypeInfo type_info_pre;
   ResultTypeInfo type_info;
+  ResultTypeInfo type_info_next;
   if (storage) {
+    type_info_pre = storage->GetTypeInfo(std::max(s-KLonDisBuffer,0.0));
     type_info = storage->GetTypeInfo(s);
+    type_info_next = storage->GetTypeInfo(std::min(s+KLonDisBuffer,ref_s_length));
   }
   double road_type_gain = 1.0;
   if (is_hard_bound) {
@@ -490,7 +494,7 @@ double RoadTypeExtraBufferAtS(const double s,
 }
 
 double RoadTypeExtraBufferAtSForObs(
-    const double s, const ConstStaticAnalysisStoragePtr &storage,
+    const double s, double ref_s_length, const ConstStaticAnalysisStoragePtr &storage,
     const double ego_v, const std::shared_ptr<FrenetObstacle> obstacle) {
   double max_extra_buffer = 0.0;
 

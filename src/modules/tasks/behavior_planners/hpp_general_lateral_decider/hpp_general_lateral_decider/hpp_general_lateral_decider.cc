@@ -1275,6 +1275,7 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   const double ego_v_for_road = ego_cart_state_manager_ != nullptr
                                     ? ego_cart_state_manager_->ego_v()
                                     : 0.0;
+  double ref_s_length = ref_traj_points_.back().s;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-min_road_radius_, min_road_radius_};
     Bound hard_bound_road{-min_road_radius_, min_road_radius_};
@@ -1288,7 +1289,7 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
         config_.care_lon_area_road_border) {
       const double road_type_hard_extra =
           hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtS(
-              ref_traj_points_[i].s, static_storage, ego_v_for_road, true);
+              ref_traj_points_[i].s, ref_s_length, static_storage, ego_v_for_road, true);
       const double effective_hard_buffer2road =
           config_.hard_buffer2road + road_type_hard_extra;
       hard_bound_road.upper =
@@ -1306,7 +1307,7 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
 
       const double road_type_soft_extra =
           hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtS(
-              ref_traj_points_[i].s, static_storage, ego_v_for_road, false);
+              ref_traj_points_[i].s, ref_s_length, static_storage, ego_v_for_road, false);
       soft_bound_road.upper =
           std::fmin(std::max(config_.soft_min_distance_road2center,
                              hard_bound_road.upper - left_road_extra_buffer -
@@ -1611,6 +1612,7 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
   const double ego_v_for_road = ego_cart_state_manager_ != nullptr
                                     ? ego_cart_state_manager_->ego_v()
                                     : 0.0;
+  double ref_s_length = ref_traj_points_.back().s;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     auto &traj_point = ref_traj_points_[i];
     const auto &t = traj_point.t;
@@ -1660,7 +1662,7 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
             config_);
     const double road_type_dis =
         hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
-            ref_traj_points_[i].s, static_storage, ego_v_for_road, obstacle);
+            ref_traj_points_[i].s, ref_s_length, static_storage, ego_v_for_road, obstacle);
     lat_buf_dis += road_type_dis;
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1870,6 +1872,7 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
   const double ego_v_for_road = ego_cart_state_manager_ != nullptr
                                     ? ego_cart_state_manager_->ego_v()
                                     : 0.0;
+  double ref_s_length = ref_traj_points_.back().s;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -1938,7 +1941,7 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
     for (auto index : indexes) {
       road_type_dis +=
           hpp_general_lateral_decider_utils::RoadTypeExtraBufferAtSForObs(
-              ref_traj_points_[index].s, static_storage, ego_v_for_road, obstacle);
+              ref_traj_points_[index].s, ref_s_length, static_storage, ego_v_for_road, obstacle);
     }
     if (indexes.size() > 0) {
       road_type_dis = road_type_dis / ((double)indexes.size());
