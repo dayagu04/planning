@@ -291,44 +291,74 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   }
 
   //计算两条车道终点的lat_diff
-  //将车道线末位点投影到自车道
-  //将车道线末位点投影到自车道，获取中心线对应点
-  Point2D cur_lane_boundary_end_points_sl;
-  Point2D cur_ref_path_end_point_xy;
-  if (cur_lane_coord->XYToSL(cur_lane_boundary_end_points_xy, cur_lane_boundary_end_points_sl)) {
+  //从末位点向前遍历，找到合适的点
+  const double kMinValidS = cur_ego_s + 10.0;  // 点必须在自车前方10m以外
+  bool found_valid_point = false;
+
+  for (int i = cur_lane_boundary.enu_points_size - 1; i >= 0; i--) {
+    const iflyauto::Point3f& cur_lane_boundary_enu_end_points =
+        cur_lane_boundary.enu_points[i];
+    Point2D cur_lane_boundary_end_points_xy = {
+        cur_lane_boundary_enu_end_points.x,
+        cur_lane_boundary_enu_end_points.y};
+
+    //将车道线点投影到自车道，获取中心线对应点
+    Point2D cur_lane_boundary_end_points_sl;
+    if (!cur_lane_coord->XYToSL(cur_lane_boundary_end_points_xy,
+                                cur_lane_boundary_end_points_sl)) {
+      continue;  // 转换失败，继续向前找
+    }
+
+    if (cur_lane_boundary_end_points_sl.x < kMinValidS) {
+      break;  // 后续点s更小，不可能满足条件
+    }
+
+    Point2D cur_ref_path_end_point_xy;
     iflyauto::ReferencePoint cur_ref_point{};
-    if (current_lane->get_point_by_s(cur_lane_boundary_end_points_sl.x, cur_ref_point)) {
-      cur_ref_path_end_point_xy = {cur_ref_point.enu_point.x,
-                                    cur_ref_point.enu_point.y};
+    if (!current_lane->get_point_by_s(cur_lane_boundary_end_points_sl.x,
+                                      cur_ref_point)) {
+      continue;
     }
-  }
+    cur_ref_path_end_point_xy = {cur_ref_point.enu_point.x,
+                                  cur_ref_point.enu_point.y};
 
-  //将车道线末位点投影到目标车道，获取中心线对应点
-  Point2D ref_lane_boundary_end_points_sl;
-  Point2D ref_path_end_point_xy;
-  if (ref_lane_coord->XYToSL(cur_lane_boundary_end_points_xy, ref_lane_boundary_end_points_sl)) {
+    //将车道线点投影到目标车道，获取中心线对应点
+    Point2D ref_lane_boundary_end_points_sl;
+    Point2D ref_path_end_point_xy;
+    if (!ref_lane_coord->XYToSL(cur_lane_boundary_end_points_xy,
+                                ref_lane_boundary_end_points_sl)) {
+      continue;
+    }
+
     iflyauto::ReferencePoint ref_ref_point{};
-    if (ref_lane && ref_lane->get_point_by_s(ref_lane_boundary_end_points_sl.x, ref_ref_point)) {
-      ref_path_end_point_xy = {ref_ref_point.enu_point.x,
-                                ref_ref_point.enu_point.y};
+    if (!(ref_lane && ref_lane->get_point_by_s(ref_lane_boundary_end_points_sl.x,
+                                               ref_ref_point))) {
+      continue;
     }
-  }
+    ref_path_end_point_xy = {ref_ref_point.enu_point.x,
+                              ref_ref_point.enu_point.y};
 
-  Point2D frenet_point;
-  if (ref_lane_coord->XYToSL(cur_ref_path_end_point_xy, frenet_point)) {
-    cur_to_other_lane_end_lat_diff = frenet_point.y;
-    if (std::abs(cur_to_other_lane_end_lat_diff) <
-        end_lane_lat_diff_threshold) {
-      lane_end_satisfied_merge_condition = true;
-    }
-  } else {
-    if (cur_lane_coord->XYToSL(ref_path_end_point_xy, frenet_point)) {
+    Point2D frenet_point;
+    if (ref_lane_coord->XYToSL(cur_ref_path_end_point_xy, frenet_point)) {
+      cur_to_other_lane_end_lat_diff = frenet_point.y;
+      if (std::abs(cur_to_other_lane_end_lat_diff) <
+          end_lane_lat_diff_threshold) {
+        lane_end_satisfied_merge_condition = true;
+      }
+    } else if (cur_lane_coord->XYToSL(ref_path_end_point_xy, frenet_point)) {
       cur_to_other_lane_end_lat_diff = frenet_point.y;
       if (std::abs(cur_to_other_lane_end_lat_diff) <
           end_lane_lat_diff_threshold) {
         lane_end_satisfied_merge_condition = true;
       }
     }
+
+    found_valid_point = true;
+    break;
+  }
+
+  if (!found_valid_point) {
+    return false;
   }
   if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
        start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
