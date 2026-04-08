@@ -193,7 +193,7 @@ void MebCore::UpdateMebFaultCode(void) {
        iflyauto::ERROR_SAFE_STOP) ||
       (degraded_driving_function_info_ptr->meb.degraded ==
        iflyauto::MCU_COMM_SHUTDOWN)) {
-        fault_code += uint16_bit[0];
+    fault_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }
@@ -544,7 +544,7 @@ void MebCore::Log(void) {
   auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto &MebInputInstacne = adas_function::MebPreprocess::GetInstance();
-  JSON_DEBUG_VALUE("meb_version", (double)260407);
+  JSON_DEBUG_VALUE("meb_version", (double)260409);
   JSON_DEBUG_VALUE("meb_first_state", (int)meb_state_info_.first_state);
   JSON_DEBUG_VALUE("meb_second_state", (int)meb_state_info_.second_state);
   JSON_DEBUG_VALUE("meb_enable_code", meb_state_info_.enable_code);
