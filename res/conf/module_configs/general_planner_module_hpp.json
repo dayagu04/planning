@@ -712,6 +712,17 @@
       "lat_distance_close_enough_to_planned_path_thrd": 0.61,
       "mute_invade_neighbor_decision": true
     },
+    "agent_longitudinal_decider": {
+      "hpp_reverse_near_s_threshold_m": 40.0,
+      "hpp_reverse_mid_s_threshold_m": 55.0,
+      "hpp_reverse_near_lat_gap_ignore_m": 2.5,
+      "hpp_reverse_mid_lat_gap_ignore_m": 1.5,
+      "hpp_reverse_far_keep_lat_gap_m": 1.0,
+      "hpp_reverse_min_filter_distance_m": 30.0,
+      "hpp_reverse_longitudinal_ttc_s": 6.0,
+      "hpp_reverse_hysteresis_frames_to_ignore": 3,
+      "hpp_reverse_hysteresis_frames_to_keep": 3
+    },
     "agent_headway_decider": {
       "ego_vel_table": [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0],
       "ego_normal_thw_table_level_1": [0.6, 0.7, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0],

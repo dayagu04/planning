@@ -5701,6 +5701,67 @@ struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
   bool mute_invade_neighbor_decision = false;
 };
 
+struct AgentLongitudinalDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    hpp_reverse_near_s_threshold_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_near_s_threshold_m"},
+        hpp_reverse_near_s_threshold_m);
+    hpp_reverse_mid_s_threshold_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_mid_s_threshold_m"},
+        hpp_reverse_mid_s_threshold_m);
+    hpp_reverse_near_lat_gap_ignore_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_near_lat_gap_ignore_m"},
+        hpp_reverse_near_lat_gap_ignore_m);
+    hpp_reverse_mid_lat_gap_ignore_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_mid_lat_gap_ignore_m"},
+        hpp_reverse_mid_lat_gap_ignore_m);
+    hpp_reverse_far_keep_lat_gap_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_far_keep_lat_gap_m"},
+        hpp_reverse_far_keep_lat_gap_m);
+    hpp_reverse_min_filter_distance_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_min_filter_distance_m"},
+        hpp_reverse_min_filter_distance_m);
+    hpp_reverse_longitudinal_ttc_s = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_longitudinal_ttc_s"},
+        hpp_reverse_longitudinal_ttc_s);
+    hpp_reverse_hysteresis_frames_to_ignore = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_hysteresis_frames_to_ignore"},
+        hpp_reverse_hysteresis_frames_to_ignore);
+    hpp_reverse_hysteresis_frames_to_keep = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_hysteresis_frames_to_keep"},
+        hpp_reverse_hysteresis_frames_to_keep);
+  }
+
+  double hpp_reverse_near_s_threshold_m = 40.0;
+  double hpp_reverse_mid_s_threshold_m = 55.0;
+  double hpp_reverse_near_lat_gap_ignore_m = 2.5;
+  double hpp_reverse_mid_lat_gap_ignore_m = 1.5;
+  double hpp_reverse_far_keep_lat_gap_m = 1.0;
+  double hpp_reverse_min_filter_distance_m = 60.0;
+  double hpp_reverse_longitudinal_ttc_s = 10.0;
+  int hpp_reverse_hysteresis_frames_to_ignore = 3;
+  int hpp_reverse_hysteresis_frames_to_keep = 3;
+};
+
 struct AgentHeadwayConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
