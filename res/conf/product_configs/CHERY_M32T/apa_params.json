@@ -622,6 +622,7 @@
   "parallel_col_buffer_in_slot": 0.25,
   "parallel_col_small_buffer_in_slot": 0.16,
   "parallel_enable_hybrid_astar": true,
+  "parallel_dynamic_plan_kappa_var": 0.2,
 
   "comment_31": "gear change decider params",
   "all_max_gear_change_count_searching": 20,

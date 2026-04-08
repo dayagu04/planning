@@ -281,6 +281,11 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     return;
   }
 
+  void DisablePAPark() {
+    enable_pa_park_ = false;
+    return;
+  }
+
   const PaPlanMethod CheckPaParkCondition();
 
   const DebugInfo &GetDebugInfo() const { return debug_info_; };

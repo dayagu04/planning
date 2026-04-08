@@ -1923,6 +1923,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           mlc_scene_type_info.set_value(
               SPLIT_SCENE, RAMP_ON_LEFT,
               tencent_split_region_info_list_[0].distance_to_split_point,
+              tencent_split_region_info_list_[0].split_link_id,
               tencent_split_region_info_list_[0].split_link_id);
         } else if (tencent_split_region_info_list_[0].split_direction ==
                    SPLIT_RIGHT) {
@@ -1930,6 +1931,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           mlc_scene_type_info.set_value(
               SPLIT_SCENE, RAMP_ON_RIGHT,
               tencent_split_region_info_list_[0].distance_to_split_point,
+              tencent_split_region_info_list_[0].split_link_id,
               tencent_split_region_info_list_[0].split_link_id);
         }
         if (!task_num.empty()) {
@@ -2427,6 +2429,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               MERGE_SCENE, RAMP_ON_RIGHT,
               route_info_output_.map_merge_points_info.front().dis_to_merge_fp,
               route_info_output_.map_merge_points_info.front()
+                  .merge_lane_link_id, route_info_output_.map_merge_points_info.front()
                   .merge_lane_link_id);
         } else if (!lc_num_task.empty() && lc_num_task[0] == 1 &&
                    !route_info_output_.map_merge_points_info.empty()) {
@@ -2434,6 +2437,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               MERGE_SCENE, RAMP_ON_LEFT,
               route_info_output_.map_merge_points_info.front().dis_to_merge_fp,
               route_info_output_.map_merge_points_info.front()
+                  .merge_lane_link_id, route_info_output_.map_merge_points_info.front()
                   .merge_lane_link_id);
         }
       }
@@ -2518,11 +2522,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         mlc_scene_type_info.set_value(
             MERGE_SCENE, RAMP_ON_RIGHT,
             first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id,
             first_exchange_region_info.split_link_id);
       } else {
         mlc_scene_type_info.set_value(
             MERGE_SCENE, RAMP_ON_LEFT,
             first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id,
             first_exchange_region_info.split_link_id);
       }
     } else {
@@ -2535,11 +2541,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         mlc_scene_type_info.set_value(
             MERGE_SCENE, RAMP_ON_RIGHT,
             first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id,
             first_exchange_region_info.split_link_id);
       } else {
         mlc_scene_type_info.set_value(
             MERGE_SCENE, RAMP_ON_LEFT,
             first_exchange_region_info.distance_to_split_point,
+            first_exchange_region_info.split_link_id,
             first_exchange_region_info.split_link_id);
       }
     }
@@ -2553,12 +2561,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       mlc_scene_type_info.set_value(
           SPLIT_SCENE, RAMP_ON_LEFT,
           first_exchange_region_info.distance_to_split_point,
-          first_exchange_region_info.split_link_id);
+          first_exchange_region_info.split_link_id,
+            first_exchange_region_info.split_link_id);
     } else {
       mlc_scene_type_info.set_value(
           SPLIT_SCENE, RAMP_ON_RIGHT,
           first_exchange_region_info.distance_to_split_point,
-          first_exchange_region_info.split_link_id);
+          first_exchange_region_info.split_link_id,
+            first_exchange_region_info.split_link_id);
     }
   }
     // 为了与E541中Scene对齐，先在这把这个值更新一次，后面有新的情况再次更新
@@ -3073,34 +3083,34 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     if (mlc_type == RAMP_TO_MAIN) {
       if (mlc_split_direction == SPLIT_LEFT) {
         mlc_scene_type_info.set_value(MERGE_SCENE, RAMP_ON_RIGHT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       } else {
         mlc_scene_type_info.set_value(MERGE_SCENE, RAMP_ON_LEFT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       }
     } else if (mlc_type == MAIN_TO_RAMP || mlc_type == KEEP_LEFT) {
       if (mlc_split_direction == SPLIT_LEFT) {
         mlc_scene_type_info.set_value(SPLIT_SCENE, RAMP_ON_LEFT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       } else {
         mlc_scene_type_info.set_value(SPLIT_SCENE, RAMP_ON_RIGHT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       }
     } else if (mlc_type == AVOIDE_DIVERGE) {
       if (mlc_split_direction == SPLIT_LEFT) {
         mlc_scene_type_info.set_value(AVOID_SPLIT, RAMP_ON_RIGHT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       } else {
         mlc_scene_type_info.set_value(AVOID_SPLIT, RAMP_ON_LEFT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       }
     } else if (mlc_type == AVOIDE_MERGE) {
       if (mlc_split_direction == SPLIT_LEFT) {
         mlc_scene_type_info.set_value(AVOID_MERGE, RAMP_ON_RIGHT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       } else {
         mlc_scene_type_info.set_value(AVOID_MERGE, RAMP_ON_LEFT,
-                                      distance_to_lc_exchange_region, link_id);
+                                      distance_to_lc_exchange_region, link_id, link_id);
       }
     }
     route_info_output_.mlc_decider_scene_type_info = mlc_scene_type_info;

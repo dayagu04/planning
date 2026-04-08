@@ -77,13 +77,45 @@ struct RearKeyObjStr {
   double obj_absolute_v_y;
 };
 
+struct FrontRadarKeyObjStr {
+  int key_obj_index;
+  int key_obj_id;
+  double key_obj_relative_x;
+  double key_obj_relative_y;
+  double key_obj_relative_heading_angle;
+  double key_obj_relative_v_x;
+  double key_obj_relative_v_y;
+  double key_obj_relative_lon_acc;
+  double key_obj_relative_lat_acc;
+  double key_obj_length;
+  double key_obj_width;
+  double obj_absolute_v_x;
+  double obj_absolute_v_y;
+};
+
+struct FrontCipvKeyObjStr {
+  int key_obj_index;
+  int key_obj_id;
+  double key_obj_relative_x;
+  double key_obj_relative_y;
+  double key_obj_relative_heading_angle;
+  double key_obj_relative_v_x;
+  double key_obj_relative_v_y;
+  double key_obj_relative_lon_acc;
+  double key_obj_relative_lat_acc;
+  double key_obj_length;
+  double key_obj_width;
+  double obj_absolute_v_x;
+  double obj_absolute_v_y;
+};
+
 struct MebParameters {
   // meb 内置参数
 
   uint8 enable_vehspd_display_kph_min = 4.0;    // 激活的最小仪表车速
   uint8 enable_vehspd_display_kph_max = 10.0;   // 激活的最大仪表车速
   uint8 disable_vehspd_display_kph_min = 4.0;   // 退出的最小仪表车速
-  uint8 disable_vehspd_display_kph_max = 12.0;  // 退出的最大仪表车速
+  uint8 disable_vehspd_display_kph_max = 10.0;  // 退出的最大仪表车速
   double predict_t = 5.0;
   // double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   // double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
@@ -163,6 +195,18 @@ class MebPreprocess {
   uint8 GetRearKeyObjSelectIntersetCode(iflyauto::FusionObject& obj);
   const RearKeyObjStr* GetRearKeyObjInfo(void) const;
 
+  void UpdateFrontRadarKeyObjInfo(void);
+  uint8 GetFrontRadarKeyObjSelectIntersetCode(iflyauto::FusionObject& obj);
+  FrontRadarKeyObjStr GetFrontRadarKeyObjInfo() {
+    return front_radar_key_obj_info_;
+  };
+
+  void UpdateFrontCipvKeyObjInfo(void);
+  uint8 GetFrontCipvKeyObjSelectIntersetCode(iflyauto::FusionObject& obj);
+  FrontCipvKeyObjStr GetFrontCipvKeyObjInfo() {
+    return front_cipv_key_obj_info_;
+  };
+
   void Log(void);
 
  private:
@@ -175,6 +219,10 @@ class MebPreprocess {
   MebParameters meb_param_;
 
   RearKeyObjStr rear_key_obj_info_;
+
+  FrontRadarKeyObjStr front_radar_key_obj_info_;
+
+  FrontCipvKeyObjStr front_cipv_key_obj_info_;
 };
 }  // namespace adas_function
 #endif

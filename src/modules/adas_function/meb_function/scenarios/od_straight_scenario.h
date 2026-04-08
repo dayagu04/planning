@@ -15,6 +15,7 @@ class OdStraightScenario : public MebScenarioBase {
   int SelcetInterestObject(MebTempObj &temp_obj) override;
   int obj_num_;
   void Init(void) override;
+  bool CollisionCalculateForFrontRadarObj(void);
 
  private:
   //本车处于直行状态的持续时长 单位:s
@@ -25,6 +26,9 @@ class OdStraightScenario : public MebScenarioBase {
 
   //本车处于运动状态的持续时长 单位:s
   double ego_in_motion_state_duration_ = 0.0;
+
+  // 是否会与前雷达障碍物发生碰撞风险
+  bool collision_result_for_front_radar_obj_ = false;
 };
 }  // namespace adas_function
 #endif  // STRAIGHT_SCENARIO_H_

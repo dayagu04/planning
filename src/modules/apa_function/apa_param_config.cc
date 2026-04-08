@@ -1503,6 +1503,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "moving_veh_speed_thresh");
   JSON_READ_VALUE(param.parallel_enable_hybrid_astar, bool,
                   "parallel_enable_hybrid_astar");
+  JSON_READ_VALUE(param.parallel_dynamic_plan_kappa_var, double,
+                  "parallel_dynamic_plan_kappa_var");
 
   JSON_READ_VALUE(
       param.gear_change_decide_params.all_max_gear_change_count_searching, int,

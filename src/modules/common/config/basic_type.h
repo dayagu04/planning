@@ -330,8 +330,9 @@ enum MLCSceneType {
 struct MLCDeciderSceneTypeInfo {
   MLCSceneType mlc_scene_type = NONE_SCENE;
   RampDirection route_lane_direction = RAMP_NONE;
-  double dis_to_link_topo_change_point = 0.0;
-  uint64 topo_change_link_id = 0;
+  double dis_to_link_topo_change_point = 0.0;// 自车前进方向上，第一个需要处理的变化点的距离
+  uint64 topo_change_link_id = 0; // 自车前进方向上，第一个需要处理的变化点
+  uint64 target_link_id = 0; // 场景判断时计算的target_link。target_link可能是前方第一个处理点，或者第二个，或者第三个等等
   bool is_scene_info_valid = false;
 
   MLCDeciderSceneTypeInfo() = default;
@@ -349,11 +350,12 @@ struct MLCDeciderSceneTypeInfo {
   }
 
   void set_value(MLCSceneType scene_type, RampDirection lane_direction,
-                 double dis, uint64 link_id) {
+                 double dis, uint64 link_id, uint64 tar_link_id) {
     mlc_scene_type = scene_type;
     route_lane_direction = lane_direction;
     dis_to_link_topo_change_point = dis;
     topo_change_link_id = link_id;
+    target_link_id = tar_link_id;
     is_scene_info_valid = info_valid(scene_type, lane_direction, dis);
   }
 
@@ -436,6 +438,7 @@ struct GaodeRouteInfoOutput {
   }
 };
 struct RouteInfoOutput {
+  bool is_missed_navi_route = false;
   double lsl_length = 0.0;// 公供里面optional，注意汉杰调用的地方需要放在merge point里面输出给他使用
   std::vector<int> feasible_lane_sequence;
   MLCDeciderSceneTypeInfo mlc_decider_scene_type_info;
@@ -540,6 +543,7 @@ struct RouteInfoOutput {
   GaodeRouteInfoOutput gaode_route_info_output;
 
   void reset() {
+    is_missed_navi_route = false;
     is_update_segment_success = false;
     is_on_ramp = false;
     dis_to_ramp = NL_NMAX;

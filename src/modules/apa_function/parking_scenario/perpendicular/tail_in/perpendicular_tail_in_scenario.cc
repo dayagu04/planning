@@ -2383,7 +2383,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   bool increase_lat_err_flag = false;
   do {
-    if (frame_.mirror_command == MirrorCommand::NONE) {
+    if (frame_.mirror_command != MirrorCommand::NONE) {
       break;
     }
 
@@ -2392,8 +2392,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             ? geometry_lib::SEG_GEAR_REVERSE
             : geometry_lib::SEG_GEAR_DRIVE;
 
-    if (frame_.gear_command == ref_gear &
-            ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+    if (frame_.gear_command == ref_gear &&
+        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
         frame_.slot_jump_big_flag) {
       increase_lat_err_flag = true;
       break;
@@ -2753,12 +2753,24 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
   if (!frame_.ego_should_stop_by_slot_jump) {
     double lon_stop_dist = 0.0, heading_stop_dist = 0.0;
-    for (const auto& path_point : current_path_point_global_vec_) {
-      if (path_point.pos.x() > ego_info_under_slot.target_pose.pos.x() + 1.68) {
-        lon_stop_dist = path_point.s;
+    const double x_err = 1.68, heading_err = 12.68 * kDeg2Rad;
+    const double target_x = ego_info_under_slot.target_pose.GetX();
+    const double target_heading = ego_info_under_slot.target_pose.heading;
+    geometry_lib::PathPoint path_point_local;
+    for (const auto& path_point_global : current_path_point_global_vec_) {
+      path_point_local.pos =
+          ego_info_under_slot.g2l_tf.GetPos(path_point_global.pos);
+
+      path_point_local.heading =
+          ego_info_under_slot.g2l_tf.GetHeading(path_point_global.heading);
+
+      if (path_point_local.GetX() - target_x > x_err) {
+        lon_stop_dist = path_point_global.s;
       }
-      if (std::fabs(path_point.heading) * kRad2Deg > 12.68) {
-        heading_stop_dist = path_point.s;
+
+      if (std::fabs(geometry_lib::AngleSubtraction(
+              path_point_local.heading, target_heading)) > heading_err) {
+        heading_stop_dist = path_point_global.s;
       }
     }
 

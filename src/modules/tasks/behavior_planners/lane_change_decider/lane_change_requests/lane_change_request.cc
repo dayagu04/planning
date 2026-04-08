@@ -644,39 +644,9 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   const auto &cur_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->get_current_lane();
-
-  bool is_process_split =
-      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-      SPLIT_SCENE;
-
-  bool is_mlc_avoidance =
-      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-          AVOID_SPLIT ||
-      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-          AVOID_MERGE;
-
-  int minVal_seq = 1000;
-  int maxVal_seq = -1000;
-  for (const auto& seq: route_info_output.feasible_lane_sequence) {
-    if (seq < minVal_seq) {
-      minVal_seq = seq;
-    }
-
-    if (seq > maxVal_seq) {
-      maxVal_seq = seq;
-    }
-  }
-  bool is_one_lane_gap =
-      lc_request == RIGHT_CHANGE
-          ? (minVal_seq - route_info_output.ego_seq) == 1
-          : (route_info_output.ego_seq - maxVal_seq) == 1;
-
-  const bool is_satisfy_dis_condition =
-      route_info_output.mlc_decider_scene_type_info
-              .dis_to_link_topo_change_point < 100.0;
-
-  if (is_process_split && lc_request_source == MAP_REQUEST &&
-      !is_mlc_avoidance && is_satisfy_dis_condition) {
+  bool is_mlc_ignore_solid_lane_check =
+      IsMLCIgnoreSolidLaneCheck(lc_request, lc_request_source);
+  if (is_mlc_ignore_solid_lane_check) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
@@ -1734,8 +1704,137 @@ bool LaneChangeRequest::IsCurveSurpressLaneChange(int target_lane_virtual_id) co
   if (count < kMinValidPointCount) {
     return true;
   }
-  double average_curve = curv_sum / count;  // 计算平均曲率 
+  double average_curve = curv_sum / count;  // 计算平均曲率
   const double curve_condition = 1.0 / kCurveRadiusThreshold;
   return average_curve > curve_condition;
 }
+bool LaneChangeRequest::IsMLCIgnoreSolidLaneCheck(
+    const RequestType& lc_request,
+    const RequestSource& lc_request_source) const {
+  if (lc_request_source != RequestSource::MAP_REQUEST) {
+    return false;
+  }
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  bool is_process_split =
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+      SPLIT_SCENE;
+
+  bool is_mlc_avoidance =
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_SPLIT ||
+      route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
+          AVOID_MERGE;
+
+  int minVal_seq = 1000;
+  int maxVal_seq = -1000;
+  for (const auto& seq : route_info_output.feasible_lane_sequence) {
+    if (seq < minVal_seq) {
+      minVal_seq = seq;
+    }
+
+    if (seq > maxVal_seq) {
+      maxVal_seq = seq;
+    }
+  }
+  // bool is_one_lane_gap = lc_request == RIGHT_CHANGE
+  //                            ? (minVal_seq - route_info_output.ego_seq) == 1
+  //                            : (route_info_output.ego_seq - maxVal_seq) == 1;
+
+  const bool is_satisfy_dis_condition =
+      route_info_output.mlc_decider_scene_type_info
+          .dis_to_link_topo_change_point < 100.0;
+  if (is_process_split && !is_mlc_avoidance && is_satisfy_dis_condition) {
+    return true;
+  }
+  return false;
+}
+
+bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
+    int origin_lane_id, int target_lane_id,
+    const TrajectoryPoints& path_points) {
+  const double road_edge_buffer = 0.1;
+  std::shared_ptr<ReferencePathManager> reference_path_mgr =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+
+  std::shared_ptr<ReferencePath> origin_reference_path =
+      reference_path_mgr->get_reference_path_by_lane(origin_lane_id, false);
+  if (!origin_reference_path) {
+    return true;
+  }
+  const auto origin_frenet_coord = origin_reference_path->get_frenet_coord();
+  if (origin_frenet_coord == nullptr || !origin_frenet_coord->KdtreeValid()) {
+    return true;
+  }
+
+  // 获取目标车道参考线
+  std::shared_ptr<ReferencePath> target_reference_path =
+      reference_path_mgr->get_reference_path_by_lane(target_lane_id, false);
+  const bool has_target_path =
+      target_reference_path != nullptr &&
+      target_reference_path->get_frenet_coord() != nullptr &&
+      target_reference_path->get_frenet_coord()->KdtreeValid();
+
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double half_vehicle_width = vehicle_param.width * 0.5;
+
+  for (size_t i = 0; i < path_points.size(); ++i) {
+    const double pt_x = path_points[i].x;
+    const double pt_y = path_points[i].y;
+
+    // 分别在 origin lane 和 target lane 上投影，选距离更近的参考线做路沿检查
+    double origin_s = 0.0, origin_l = 0.0;
+    bool origin_valid =
+        origin_frenet_coord->XYToSL(pt_x, pt_y, &origin_s, &origin_l);
+
+    double target_s = 0.0, target_l = 0.0;
+    bool target_valid =
+        has_target_path && target_reference_path->get_frenet_coord()->XYToSL(
+                               pt_x, pt_y, &target_s, &target_l);
+
+    // 选横向偏移绝对值更小的参考线
+    bool use_target = target_valid && (!origin_valid ||
+                                       std::abs(target_l) < std::abs(origin_l));
+
+    if (use_target) {
+      ReferencePathPoint ref_pt{};
+      if (!target_reference_path->get_reference_point_by_lon(target_s,
+                                                             ref_pt)) {
+        continue;
+      }
+      const double left_vehicle_edge = target_l + half_vehicle_width;
+      const double right_vehicle_edge = target_l - half_vehicle_width;
+      if (left_vehicle_edge >
+          ref_pt.distance_to_left_road_border - road_edge_buffer) {
+        return true;
+      }
+      if (right_vehicle_edge <
+          -ref_pt.distance_to_right_road_border + road_edge_buffer) {
+        return true;
+      }
+    } else {
+      if (!origin_valid) {
+        continue;
+      }
+      ReferencePathPoint ref_pt{};
+      if (!origin_reference_path->get_reference_point_by_lon(origin_s,
+                                                             ref_pt)) {
+        continue;
+      }
+      const double left_vehicle_edge = origin_l + half_vehicle_width;
+      const double right_vehicle_edge = origin_l - half_vehicle_width;
+      if (left_vehicle_edge >
+          ref_pt.distance_to_left_road_border - road_edge_buffer) {
+        return true;
+      }
+      if (right_vehicle_edge <
+          -ref_pt.distance_to_right_road_border + road_edge_buffer) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 }  // namespace planning

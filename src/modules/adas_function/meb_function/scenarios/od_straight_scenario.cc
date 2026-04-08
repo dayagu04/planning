@@ -10,6 +10,7 @@ void OdStraightScenario::Init() {
   collision_obj_info_ = {};
   final_collision_obj_info_ = {};
   brake_alert_ = false;
+  last_collsion_num_ = 0;
 };
 
 int OdStraightScenario::SceneCode(void) {
@@ -167,6 +168,8 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
                              .get_local_view()
                              .vehicle_service_output_info;
 
+  auto front_radar_key_obj_info = meb_pre.GetFrontRadarKeyObjInfo();
+
   // suppe_code初始化
   uint64_t suppe_code = 0;
 
@@ -313,12 +316,207 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
       suppe_code += uint32_bit[13];
     }
   }
+
+  // *bit_14*/
+  // 通过判断与雷达障碍物是否有碰撞风险,进行双重校验
+  // 当前仅针对行人做此校验,泊车感知下无前雷达
+  // if ((obj.type_for_meb == OdObjGroup::kPeople) ||
+  //     (obj.type_for_meb == OdObjGroup::kMotor)) {
+  if ((vehicle_service.shift_lever_state ==
+           iflyauto::ShiftLeverStateEnum::ShiftLeverState_D ||
+       vehicle_service.shift_lever_state ==
+           iflyauto::ShiftLeverStateEnum::ShiftLeverState_M) &&
+      (!meb_pre.GetMebInput().park_mode) && (obj.fusion_source == 1)) {
+    if (collision_result_for_front_radar_obj_ == false) {
+      suppe_code += uint32_bit[14];
+    }
+
+    /*bit_15*/
+    // 障碍物与本车当前重叠率较低 通过雷达障碍物进行双重校验
+    // 注:这样判断有缺陷,不适用于转弯场景
+    if ((obj.type_for_meb == OdObjGroup::kPeople) && (obj.fusion_source == 1)) {
+      if (fabs(front_radar_key_obj_info.key_obj_relative_y) > 0.75) {
+        suppe_code += uint32_bit[15];
+      }
+    }
+  }
+
+  // }
+
   // 如果误触发策略关闭，则suppe_code清零
   if (param.meb_false_trigger_switch == false) {
     suppe_code = 0;
   }
 
   return suppe_code;
+}
+
+bool OdStraightScenario::CollisionCalculateForFrontRadarObj(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+
+  const auto &param = *GetContext.get_param();
+
+  auto &meb_pre = adas_function::MebPreprocess::GetInstance();
+
+  auto front_radar_key_obj_info = meb_pre.GetFrontRadarKeyObjInfo();
+
+  float32 radius = meb_pre.GetInstance().GetMebInput().ego_radius;
+  float32 meb_acc_collision_thrd = param.meb_acc_collision_thrd;
+  float32 ego_backshaft_2_fbumper = param.origin_2_front_bumper;
+  float32 ego_length = param.ego_length;
+  float32 ego_width = param.ego_width;
+  float32 ego_acc = GetContext.get_state_info()->vel_acc;
+
+  double shift_direction_index =
+      meb_pre.GetInstance().GetMebInput().shift_direction_index;
+  double vel_speed_preprocess =
+      meb_pre.GetInstance().GetMebInput().signed_ego_vel_mps;
+
+  //修正本车的加速度,只考虑本车减速工况,不考虑本车加速工况
+  if (vel_speed_preprocess > 0.0) {
+    // 本车处于前进状态
+    if (ego_acc > 0.0) {
+      ego_acc = 0.0;
+    }
+  } else {
+    // 本车处于倒车状态
+    if (ego_acc < 0.0) {
+      ego_acc = 0.0;
+    }
+  }
+
+  // 1.标定信息
+  box_collision_.t_start = 0.0;
+  box_collision_.t_end = 2.0;
+  box_collision_.time_step = 0.1;
+  box_collision_.dec_request = meb_acc_collision_thrd * shift_direction_index;
+
+  // 2.车辆信息
+  box_collision_.boxs_info_.ego_a_x = ego_acc;
+  box_collision_.boxs_info_.ego_backshaft_2_fbumper = ego_backshaft_2_fbumper;
+  box_collision_.boxs_info_.ego_length = ego_length;
+  box_collision_.boxs_info_.ego_radius = radius;
+  box_collision_.boxs_info_.ego_v_x = vel_speed_preprocess;
+  box_collision_.boxs_info_.ego_width = ego_width;
+
+  if (GetContext.get_state_info()->shift_lever_state ==
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_R) {
+    return false;
+  }
+
+  if (front_radar_key_obj_info.key_obj_index >= FUSION_OBJECT_MAX_NUM) {
+    return false;
+  }
+
+  // 设置的刹停安全距离 单位:m
+  double stop_distance_buffer = 1.3;
+
+  box_collision_.time_dealy =
+      GetContext.get_param()->meb_actuator_act_time +
+      stop_distance_buffer /
+          std::max(0.5, GetContext.get_state_info()->vehicle_speed);
+
+  box_collision_.boxs_info_.obj_a_x = 0.0;  // obs.relative_acceleration.x;
+  box_collision_.boxs_info_.obj_a_y = 0.0;  // obs.relative_acceleration.y;
+  box_collision_.boxs_info_.obj_heading_angle =
+      front_radar_key_obj_info.key_obj_relative_heading_angle;
+  box_collision_.boxs_info_.obj_length =
+      front_radar_key_obj_info.key_obj_length;
+  // 需要考虑自车前进及后退
+  box_collision_.boxs_info_.obj_v_x =
+      front_radar_key_obj_info.key_obj_relative_v_x + vel_speed_preprocess;
+  box_collision_.boxs_info_.obj_v_y =
+      front_radar_key_obj_info.key_obj_relative_v_y;
+  box_collision_.boxs_info_.obj_width = front_radar_key_obj_info.key_obj_width;
+  box_collision_.boxs_info_.obj_x = front_radar_key_obj_info.key_obj_relative_x;
+  box_collision_.boxs_info_.obj_y = front_radar_key_obj_info.key_obj_relative_y;
+
+  bool is_collision_result = box_collision_.GetCollisionResultBySimEgoDec(
+      box_collision_.boxs_info_, box_collision_.t_start, box_collision_.t_end,
+      box_collision_.time_step, box_collision_.time_dealy,
+      box_collision_.dec_request);
+
+  //==========================================debug_code======================================================================//
+  // if (is_collision_result) {
+  //   std::cout << "跟雷达障碍物有碰撞风险" << std::endl;
+  // } else {
+  //   std::cout << "跟雷达障碍物无碰撞风险" << std::endl;
+  // }
+  // if (is_collision_result) {
+  //   // 已有碰撞风险,安全距离设置为多少时,会认为没有碰撞风险
+  //   for (int i = 0; i < 30; i++) {
+  //     std::cout << "正在查找:" << std::endl;
+  //     // 1.标定信息
+  //     box_collision_.t_start = 0.0;
+  //     box_collision_.t_end = 2.0;
+  //     box_collision_.time_step = 0.1;
+  //     box_collision_.dec_request =
+  //         meb_acc_collision_thrd * shift_direction_index;
+
+  //     // 2.车辆信息
+  //     box_collision_.boxs_info_.ego_a_x = ego_acc;
+  //     box_collision_.boxs_info_.ego_backshaft_2_fbumper =
+  //         ego_backshaft_2_fbumper;
+  //     box_collision_.boxs_info_.ego_length = ego_length;
+  //     box_collision_.boxs_info_.ego_radius = radius;
+  //     box_collision_.boxs_info_.ego_v_x = vel_speed_preprocess;
+  //     box_collision_.boxs_info_.ego_width = ego_width;
+
+  //     double safe_dist = 2.0 - i * 0.1;
+  //     if (safe_dist < 0.1) {
+  //       safe_dist = 0.1;
+  //     }
+  //     box_collision_.time_dealy =
+  //         GetContext.get_param()->meb_actuator_act_time +
+  //         safe_dist / std::max(0.5,
+  //         GetContext.get_state_info()->vehicle_speed);
+
+  //     box_collision_.boxs_info_.obj_a_x = 0.0;  //
+  //     obs.relative_acceleration.x; box_collision_.boxs_info_.obj_a_y = 0.0;
+  //     // obs.relative_acceleration.y;
+  //     box_collision_.boxs_info_.obj_heading_angle =
+  //         front_radar_key_obj_info.key_obj_relative_heading_angle;
+  //     box_collision_.boxs_info_.obj_length =
+  //         front_radar_key_obj_info.key_obj_length;
+  //     // 需要考虑自车前进及后退
+  //     box_collision_.boxs_info_.obj_v_x =
+  //         front_radar_key_obj_info.key_obj_relative_v_x +
+  //         vel_speed_preprocess;
+  //     box_collision_.boxs_info_.obj_v_y =
+  //         front_radar_key_obj_info.key_obj_relative_v_y;
+  //     box_collision_.boxs_info_.obj_width =
+  //         front_radar_key_obj_info.key_obj_width;
+  //     box_collision_.boxs_info_.obj_x =
+  //         front_radar_key_obj_info.key_obj_relative_x;
+  //     box_collision_.boxs_info_.obj_y =
+  //         front_radar_key_obj_info.key_obj_relative_y;
+
+  //     double current_dist = box_collision_.boxs_info_.obj_x -
+  //                           box_collision_.boxs_info_.ego_backshaft_2_fbumper
+  //                           - 0.5 * box_collision_.boxs_info_.obj_length;
+  //     std::cout << "与障碍物当前的剩余距离为:" << current_dist << std::endl;
+
+  //     bool is_collision_result_temp =
+  //         box_collision_.GetCollisionResultBySimEgoDec(
+  //             box_collision_.boxs_info_, box_collision_.t_start,
+  //             box_collision_.t_end, box_collision_.time_step,
+  //             box_collision_.time_dealy, box_collision_.dec_request);
+  //     std::cout << "safe_dist = " << safe_dist << std::endl;
+  //     std::cout << "box_collision_.time_dealy = " <<
+  //     box_collision_.time_dealy
+  //               << std::endl;
+
+  //     if (is_collision_result_temp == false) {
+  //       std::cout << "最小允许设置的安全距离为:" << safe_dist << std::endl;
+  //       break;
+  //     } else {
+  //       std::cout << "仍然会发生碰撞:" << safe_dist << std::endl;
+  //     }
+  //   }
+  // }
+  //==========================================debug_code======================================================================//
+
+  return is_collision_result;
 }
 
 // straight_scenario.cc
@@ -343,6 +541,8 @@ void OdStraightScenario::Process(void) {
   double signed_ego_v = meb_pre.GetInstance().GetMebInput().signed_ego_vel_mps;
 
   auto rear_key_obj_info = meb_pre.GetRearKeyObjInfo();
+
+  auto front_radar_key_obj_info = meb_pre.GetFrontRadarKeyObjInfo();
 
   // 初始化所有成员变量默认值
   Init();
@@ -540,8 +740,10 @@ void OdStraightScenario::Process(void) {
         stop_distance_buffer_reduction = 0.0;
       }
     }
-    CollisionCalculate(stop_distance_buffer_reduction);
+    CollisionCalculate(stop_distance_buffer_reduction, true);
   }
+
+  collision_result_for_front_radar_obj_ = CollisionCalculateForFrontRadarObj();
 
   // 针对有碰撞风险的障碍物,配合误触发策略,决策是否需要产生制动
   if (collision_obj_info_.valid_num <= 0) {
@@ -571,6 +773,18 @@ void OdStraightScenario::Process(void) {
   } else {
     brake_alert_ = false;
   }
+
+  if (last_collsion_num_ == 0 && collision_obj_info_.valid_num > 0 &&
+      final_collision_obj_info_.valid_num != collision_obj_info_.valid_num) {
+    std::vector<double> suppe_code_vector;
+    for (auto &collision_obs : final_collision_obj_info_.interest_obj_vec_) {
+      suppe_code_vector.push_back(
+          static_cast<double>(collision_obs.suppe_code));
+    }
+    JSON_DEBUG_VALUE("od_straight_scenario_is_suppressed", (int)1);
+    JSON_DEBUG_VECTOR("od_straight_scenario_supp_code", suppe_code_vector, 2);
+  }
+  last_collsion_num_ = collision_obj_info_.valid_num;
 }
 
 }  // namespace adas_function
