@@ -87,6 +87,7 @@ class Target {
     bool is_large_vehicle = false;
     agent::AgentType type = agent::AgentType::UNKNOWN;
     bool is_tfl_virtual_obs = false;
+    bool is_turnstile_virtual_obs = false;
     bool is_lane_borrow_obs = false;
   };
 

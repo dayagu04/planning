@@ -66,4 +66,13 @@ bool ClosestInPathVehicleDeciderOutput::is_virtual() const {
 void ClosestInPathVehicleDeciderOutput::set_is_virtual(const bool is_virtual) {
   is_virtual_ = is_virtual;
 }
+
+bool ClosestInPathVehicleDeciderOutput::is_turnstile_virtual_obs() const {
+  return is_turnstile_virtual_obs_;
+}
+
+void ClosestInPathVehicleDeciderOutput::set_is_turnstile_virtual_obs(
+    const bool is_turnstile_virtual_obs) {
+  is_turnstile_virtual_obs_ = is_turnstile_virtual_obs;
+}
 }  // namespace planning

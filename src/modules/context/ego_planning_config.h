@@ -3535,6 +3535,48 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "speed_bump_deceleration");
     speed_bump_collision_buffer =
         read_json_key<double>(json, "speed_bump_collision_buffer");
+    turnstile_stop_buffer =
+        read_json_key<double>(json, "turnstile_stop_buffer", 3.5);
+    turnstile_min_forward_stop_buffer =
+        read_json_key<double>(json, "turnstile_min_forward_stop_buffer", 1.0);
+    enable_turnstile_longitudinal_decider =
+        read_json_key<bool>(json, "enable_turnstile_longitudinal_decider", true);
+    turnstile_open_status_threshold =
+        read_json_key<double>(json, "turnstile_open_status_threshold", 0.8);
+    turnstile_closed_status_threshold =
+        read_json_key<double>(json, "turnstile_closed_status_threshold", 0.2);
+    turnstile_passable_status_threshold =
+        read_json_key<double>(json, "turnstile_passable_status_threshold", 0.8);
+    turnstile_passable_status_stable_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_passable_status_stable_frame_threshold", 3);
+    turnstile_target_lost_tolerance_frames = read_json_key<int32_t>(
+        json, "turnstile_target_lost_tolerance_frames", 4);
+    turnstile_front_vehicle_max_distance =
+        read_json_key<double>(json, "turnstile_front_vehicle_max_distance", 45.0);
+    turnstile_near_margin =
+        read_json_key<double>(json, "turnstile_near_margin", 4.0);
+    turnstile_ego_in_gate_margin =
+        read_json_key<double>(json, "turnstile_ego_in_gate_margin", 0.5);
+    turnstile_passing_window =
+        read_json_key<double>(json, "turnstile_passing_window", 1.0);
+    turnstile_passed_clear_distance =
+        read_json_key<double>(json, "turnstile_passed_clear_distance", 1.0);
+    enable_turnstile_open_timeout_release =
+        read_json_key<bool>(json, "enable_turnstile_open_timeout_release", true);
+    turnstile_reopen_timeout_opened_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_reopen_timeout_opened_frame_threshold", 200);
+    enable_turnstile_closing_status_drop_emergency_stop = read_json_key<bool>(
+        json, "enable_turnstile_closing_status_drop_emergency_stop", true);
+    turnstile_closing_status_drop_ratio_threshold = read_json_key<double>(
+        json, "turnstile_closing_status_drop_ratio_threshold", 0.5);
+    turnstile_closing_status_drop_consecutive_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_closing_status_drop_consecutive_frame_threshold", 3);
+    turnstile_emergency_opening_status_stable_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_emergency_opening_status_stable_frame_threshold", 3);
+    turnstile_emergency_stop_velocity_threshold = read_json_key<double>(
+        json, "turnstile_emergency_stop_velocity_threshold", 0.1);
+    turnstile_emergency_stop_stable_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_emergency_stop_stable_frame_threshold", 3);
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3589,6 +3631,26 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double target_speed_ramp_area = 2.78;                  // 10kph
   double speed_bump_deceleration = -1.0;           // m/s^2
   double speed_bump_collision_buffer = 0.0;        // m
+  double turnstile_stop_buffer = 3.5;
+  double turnstile_min_forward_stop_buffer = 1.0;
+  bool enable_turnstile_longitudinal_decider = true;
+  double turnstile_open_status_threshold = 0.8;
+  double turnstile_closed_status_threshold = 0.2;
+  double turnstile_passable_status_threshold = 0.8;
+  int32_t turnstile_passable_status_stable_frame_threshold = 5;
+  int32_t turnstile_target_lost_tolerance_frames = 4;
+  double turnstile_front_vehicle_max_distance = 45.0;
+  double turnstile_near_margin = 4.0;
+  double turnstile_ego_in_gate_margin = 0.5;
+  double turnstile_passing_window = 1.0;
+  double turnstile_passed_clear_distance = 1.0;
+  bool enable_turnstile_open_timeout_release = true;
+  int32_t turnstile_reopen_timeout_opened_frame_threshold = 200;  bool enable_turnstile_closing_status_drop_emergency_stop = true;
+  double turnstile_closing_status_drop_ratio_threshold = 0.5;
+  int32_t turnstile_closing_status_drop_consecutive_frame_threshold = 3;
+  int32_t turnstile_emergency_opening_status_stable_frame_threshold = 3;
+  double turnstile_emergency_stop_velocity_threshold = 0.1;
+  int32_t turnstile_emergency_stop_stable_frame_threshold = 3;
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {
