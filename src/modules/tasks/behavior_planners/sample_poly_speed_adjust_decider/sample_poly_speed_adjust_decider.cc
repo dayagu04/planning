@@ -472,6 +472,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       ->mutable_sample_poly_speed_info()
       ->Clear();
   agent_info_.clear();
+  agent_lateral_offset_map_.clear();
   astar_traj_ptr_.reset(nullptr);
   target_lane_coord_.reset();
   leading_veh_ = LeadingAgentInfo();
@@ -1284,7 +1285,8 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
     return false;
   }
   double press_line_ratio = CalcPressLineRatio();
-  if (press_line_ratio > 0.2) {
+  CalcAgentLateralOffsetMap();
+  if(press_line_ratio > 0.2){
     return true;
   }
   StateLimit state_limit_lower = {
@@ -1339,6 +1341,49 @@ double SamplePolySpeedAdjustDecider::CalcPressLineRatio() {
   return 0.0;
 }
 
+void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  const auto& virtual_target_lane = lane_change_request_ == 1
+                                        ? virtual_lane_mgr->get_left_lane()
+                                        : virtual_lane_mgr->get_right_lane();
+  if (!current_lane || !virtual_target_lane) {
+    return;
+  }
+  const auto& current_reference_points =
+      current_lane->get_reference_path()->get_points();
+  const auto& target_reference_points =
+      virtual_target_lane->get_reference_path()->get_points();
+  if (!current_reference_points.empty() && !target_reference_points.empty()) {
+    size_t count = std::min(current_reference_points.size(),
+                            target_reference_points.size());
+    int lateral_offset = 0;
+    for (size_t current_point = 0; current_point < count; current_point++) {
+      double ref_y = current_reference_points[current_point].path_point.y() -
+                     target_reference_points[current_point].path_point.y();
+      double ref_x = current_reference_points[current_point].path_point.x() -
+                     target_reference_points[current_point].path_point.x();
+      double target_heading =
+          target_reference_points[current_point].path_point.theta();
+      double ref_distance =
+          std::abs(ref_x * sin(target_heading) - ref_y * cos(target_heading));
+      double target_lane_to_border =
+          lane_change_request_ == 1 ? target_reference_points[current_point]
+                                          .distance_to_right_lane_border
+                                    : target_reference_points[current_point]
+                                          .distance_to_left_lane_border;
+      double lane_width = ref_distance - target_lane_to_border;
+      double over_lateral = ego_width_ / 2.0 - lane_width;
+      if (10 * over_lateral > lateral_offset) {
+        agent_lateral_offset_map_[lateral_offset] =
+            current_reference_points[current_point].path_point.s() - ego_s_ -
+            front_edge_to_rear_axle_;
+        lateral_offset++;
+      }
+    }
+  }
+}
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);
   STNode start_node(0.0, 0.0, ego_v_, ego_a_);
@@ -1356,8 +1401,8 @@ bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
       start_node, goal_state, &st_sample_space_base_, merge_point_s,
       leading_veh_, state_limit_upper_, state_limit_lower_,
-      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_,
-      &astar_config_);
+      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_,
+      agent_lateral_offset_map_);
   return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,

@@ -6,7 +6,8 @@ LongitudinalAStar::LongitudinalAStar(
     const LeadingAgentInfo& leading_agent_info,
     const StateLimit& state_limit_upper, const StateLimit& state_limit_lower,
     double front_edge_to_rear_axle, double rear_edge_to_rear_axle, double ego_s,
-    SampleAstarTrajConfig* config)
+    SampleAstarTrajConfig* config,
+    std::unordered_map<int32_t, double>& agent_lateral_offset_map)
     : start_node_(start_node),
       goal_state_(goal),
       sample_space_ptr_(sample_space_ptr),
@@ -17,7 +18,8 @@ LongitudinalAStar::LongitudinalAStar(
       front_edge_to_rear_axle_(front_edge_to_rear_axle),
       rear_edge_to_rear_axle_(rear_edge_to_rear_axle),
       ego_s_(ego_s),
-      config_(config) {
+      config_(config),
+      agent_lateral_offset_map_(agent_lateral_offset_map) {
   max_velocity_ = state_limit_upper_.v_max;
   min_velocity_ = state_limit_upper_.v_min;
   max_accel_ = state_limit_upper_.a_max;
@@ -173,7 +175,19 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       s_buffer = std::fmax(2.0,s_buffer);
       double gap = frenet_node_s - interval.second.s() - s_buffer -
                     rear_edge_to_rear_axle_;
-      if (gap < 0.0 && node.s > merge_point_s_) {
+      int object_lateral_offset = static_cast<int>(10 * interval.second.l());
+      double collsion_s = 0.0;
+      if (object_lateral_offset < 0) {
+        collsion_s = merge_point_s_;
+      } else {
+        auto it = agent_lateral_offset_map_.find(object_lateral_offset);
+        if (it != agent_lateral_offset_map_.end()) {
+          collsion_s = it->second;
+        } else {
+          collsion_s = 100.0;
+        }
+      }
+      if (gap < 0.0 && node.s > collsion_s) {
         std::cout << "Gap后车碰撞风险: " << node.getKey()  << node.getKey() <<" 剩余距离 :  "<< gap <<
         "  buffer:  "<<s_buffer<< std::endl;
         return false;

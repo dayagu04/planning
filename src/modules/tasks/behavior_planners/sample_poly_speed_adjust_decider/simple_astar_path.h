@@ -70,7 +70,8 @@ class LongitudinalAStar {
                     const StateLimit& state_limit_lower,
                     double front_edge_to_rear_axle,
                     double rear_edge_to_rear_axle, double ego_s,
-                    SampleAstarTrajConfig* config);
+                    SampleAstarTrajConfig* config,
+                    std::unordered_map<int32_t, double>& agent_lateral_offset_map);
 
   void PlanTrajectory();
   std::vector<STNode> GetAStarTraj() const { return astar_traj_; }
@@ -133,5 +134,7 @@ class LongitudinalAStar {
   double min_accel_;      // 最大减速度（负表示减速）(m/s²)
   double max_jerk_;      // 最大jerk (m/s³)
   double min_jerk_;     // 最小jerk (m/s³)
+
+  std::unordered_map<int32_t, double>& agent_lateral_offset_map_;
 };
 }  // namespace planning

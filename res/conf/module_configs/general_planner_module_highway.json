@@ -1971,7 +1971,7 @@
     "maximum_speed_adjustment": 4.0,
     "sample_t_upper": 5.0,
     "sample_t_lower": 1.0,
-    "stop_point_buffer": 0.4,
+    "stop_point_buffer": 0.2,
     "decay_coffi":-0.2,
     "normal_scene_weight_match_gap_vel": 6.5,
     "normal_scene_weight_match_gap_s": 4.5,

@@ -273,13 +273,15 @@ void STSampleSpaceBase::ConstructStPointsTable(const double sample_st_limit_lat_
                           st_point_paris[i].first.agent_id(), -1,
                           st_point_paris[i].first.velocity(),
                           st_point_paris[i].first.acceleration(),
-                          st_point_paris[i].first.vehicle_length());
+                          st_point_paris[i].first.vehicle_length(),
+                          st_point_paris[i].first.l()* change_direction_);
       STPointWithLateral upper_point(st_point_paris[i].second.s(),
                           st_point_paris[i].second.t(),
                           st_point_paris[i].second.agent_id(), -1,
                           st_point_paris[i].second.velocity(),
                           st_point_paris[i].second.acceleration(),
-                          st_point_paris[i].first.vehicle_length());
+                          st_point_paris[i].first.vehicle_length(),
+                          st_point_paris[i].second.l()* change_direction_);
       std::pair<STPointWithLateral, STPointWithLateral> points_pair(std::move(lower_point),
                                               std::move(upper_point));
       st_points_table_[index].emplace_back(std::move(points_pair));
