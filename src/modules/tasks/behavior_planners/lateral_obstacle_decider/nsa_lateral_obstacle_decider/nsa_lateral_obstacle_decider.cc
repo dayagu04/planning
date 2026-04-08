@@ -237,7 +237,8 @@ void NSALateralObstacleDecider::UpdateLatDecision(
   constexpr double kHeadLBuffer = 0.5;
   constexpr double kMaxHysteresisBuffer = 0.6; // 最大迟滞缓冲 (米)
   constexpr double kMaxSideLockDist = 0.6;     // 最大侧向锁定距离 (米)
-
+  constexpr double kLatOverlapBuffer = 0.25;
+  constexpr double kPosChangeBuffer = 0.15;
   // 主循环：进行决策计算
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
@@ -255,11 +256,12 @@ void NSALateralObstacleDecider::UpdateLatDecision(
         } else {
           l_base = config_.l_buffer_for_lat_decision;
         }
-
+        double lat_overlap_buffer = kLatOverlapBuffer;
         double growth_factor = 0.0;
         if (info.last_decision == LatObstacleDecisionType::LEFT ||
             info.last_decision == LatObstacleDecisionType::RIGHT) {
-            growth_factor = (info.count <= 1) ? 0.0 : (info.count >= 3) ? 1.0 : 0.5;
+          growth_factor = (info.count <= 1) ? 0.0 : (info.count >= 3) ? 1.0 : 0.5;
+          lat_overlap_buffer += kPosChangeBuffer;
         }
 
         double l_bonus = growth_factor * kMaxHysteresisBuffer;
@@ -269,15 +271,15 @@ void NSALateralObstacleDecider::UpdateLatDecision(
         bool treat_as_left_obstacle = (obstacle->frenet_l() > 0);
 
         if (info.count >= 2) {
-            if (info.last_decision == LatObstacleDecisionType::RIGHT) {
-                if (obstacle->frenet_l() > -current_side_lock_threshold) {
-                    treat_as_left_obstacle = true;
-                }
-            } else if (info.last_decision == LatObstacleDecisionType::LEFT) {
-                if (obstacle->frenet_l() < current_side_lock_threshold) {
-                    treat_as_left_obstacle = false;
-                }
+          if (info.last_decision == LatObstacleDecisionType::RIGHT) {
+            if (obstacle->frenet_l() > -current_side_lock_threshold) {
+              treat_as_left_obstacle = true;
             }
+          } else if (info.last_decision == LatObstacleDecisionType::LEFT) {
+            if (obstacle->frenet_l() < current_side_lock_threshold) {
+              treat_as_left_obstacle = false;
+            }
+          }
         }
         const double obstacle_l_start = obstacle->frenet_obstacle_boundary().l_start;
         const double obstacle_l_end = obstacle->frenet_obstacle_boundary().l_end;
@@ -303,9 +305,8 @@ void NSALateralObstacleDecider::UpdateLatDecision(
           double end_l = std::min(ego_l_end, obstacle_l_end);
           double start_head_l = std::max(ego_head_l_start, obstacle_l_start);
           double end_head_l = std::min(ego_head_l_end, obstacle_l_end);
-          constexpr double kLatOverlapBuffer = 0.25;
-          bool lat_overlap = (start_l < end_l - kLatOverlapBuffer) &&
-                             (start_head_l < end_head_l - kLatOverlapBuffer);
+          bool lat_overlap = (end_l - start_l > lat_overlap_buffer) &&
+                             (end_head_l - start_head_l > lat_overlap_buffer);
           if (ego_s_end > obstacle_s_end) {
             if (ego_l < obstacle->frenet_l()) {
               lat_obstacle_decision[obstacle->id()] =
@@ -324,8 +325,39 @@ void NSALateralObstacleDecider::UpdateLatDecision(
             }
           }
           if (lat_overlap) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::IGNORE;
+            planning_math::Polygon2d frenet_obs_polygon;
+            if (obstacle->get_polygon_at_time(0, reference_path, frenet_obs_polygon)) {
+              double min_s = frenet_obs_polygon.points().front().x();
+              double l_for_min_s = frenet_obs_polygon.points().front().y();
+              for (const auto& frenet_point : frenet_obs_polygon.points()) {
+                if (frenet_point.x() < min_s) {
+                  l_for_min_s = frenet_point.y();
+                }
+              }
+              if (l_for_min_s < ego_l) {
+                lat_obstacle_decision[obstacle->id()] =
+                    LatObstacleDecisionType::LEFT;
+              } else if (l_for_min_s > ego_l) {
+                lat_obstacle_decision[obstacle->id()] =
+                    LatObstacleDecisionType::RIGHT;
+              } else {
+                lat_obstacle_decision[obstacle->id()] =
+                    LatObstacleDecisionType::IGNORE;
+              }
+            } else {
+              if (obstacle_l_end <= ego_l_end &&
+                  obstacle_l_end <= ego_head_l_end) {
+                lat_obstacle_decision[obstacle->id()] =
+                    LatObstacleDecisionType::LEFT;
+              } else if (obstacle_l_start >= ego_l_start &&
+                         obstacle_l_start >= ego_head_l_start) {
+                lat_obstacle_decision[obstacle->id()] =
+                    LatObstacleDecisionType::RIGHT;
+              } else {
+                lat_obstacle_decision[obstacle->id()] =
+                    LatObstacleDecisionType::IGNORE;
+              }
+            }
           }
         } else {
           if (treat_as_left_obstacle) {
@@ -364,14 +396,13 @@ void NSALateralObstacleDecider::UpdateLatDecision(
       // 更新历史一致性状态
       LatObstacleDecisionType current_decision = lat_obstacle_decision[obstacle->id()];
       if (current_decision == info.last_decision) {
-          if (info.count < 100) { // 防止溢出
-              info.count++;
-          }
+        if (info.count < 100) { // 防止溢出
+          info.count++;
+        }
       } else {
-          info.count = 1;
-          info.last_decision = current_decision;
+        info.count = 1;
+        info.last_decision = current_decision;
       }
-
     } else {
       lat_obstacle_decision[static_cast<uint32_t>(obstacle->id())] = LatObstacleDecisionType::IGNORE;
     }
