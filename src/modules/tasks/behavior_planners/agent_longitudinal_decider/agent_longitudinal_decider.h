@@ -1,10 +1,15 @@
 #pragma once
 
+#include <deque>
+#include <limits>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "crossing_agent_decider/crossing_agent_decider.h"
 #include "dynamic_world/dynamic_world.h"
 #include "ego_state_manager.h"
+#include "ego_planning_config.h"
 #include "session.h"
 #include "tasks/task.h"
 #include "utils/kd_path.h"
@@ -125,6 +130,7 @@ class AgentLongitudinalDecider : public Task {
   void FilterUltradistantObs();
 
   void FilterReverseAgents();
+  void FilterReverseAgentsHpp();
 
   bool IsConsiderBackObs(
       const std::shared_ptr<planning_math::KDPath> planned_path,
@@ -143,7 +149,9 @@ class AgentLongitudinalDecider : public Task {
 
   bool IsReverseAgent(const agent::Agent* agent,
                       const std::shared_ptr<VirtualLane> ego_lane,
-                      const double consider_distance) const;
+                      const double consider_distance,
+                      bool* is_perception_reverse = nullptr,
+                      bool* is_prediction_reverse = nullptr) const;
 
   bool IsIgnoredLowSpeedReverseAgent(const agent::Agent& agent,
                                      const double init_point_s,
@@ -169,11 +177,33 @@ class AgentLongitudinalDecider : public Task {
       double window_duration) const;
 
  private:
+  // HPP对向来车证据结果
+  struct ReverseEvidenceResult {
+    bool is_perception_reverse = false;        // 感知层对向判断（航向角差>阈值）
+    bool is_prediction_reverse = false;        // 预测层对向判断（轨迹终点s<当前s）
+    bool is_reverse_current = false;           // 当前帧对向判定（近距离需感知&&预测，远距离感知||预测）
+    bool has_valid_lane_projection = false;    // 车道投影是否有效（失败时fail-safe保留障碍物）
+    double agent_s_center = 0.0;               // 障碍物相对自车的纵向距离（用于近/中/远分区）
+    double agent_min_l = 0.0;                  // 障碍物Frenet坐标系横向最小值
+    double agent_max_l = 0.0;                  // 障碍物Frenet坐标系横向最大值
+    double lat_gap_to_ego_lane = std::numeric_limits<double>::infinity();  // 障碍物与自车道的最小横向间隙
+  };
+
+  ReverseEvidenceResult ComputeHppReverseAgentInfo(
+      const agent::Agent& agent, const std::shared_ptr<VirtualLane>& ego_lane,
+      double consider_distance, double ego_s) const;
+  double CalculateLatGapToEgoLane(double agent_min_l, double agent_max_l,
+                                  double half_lane_width) const;
+  bool ShouldIgnoreReverseAgentInHpp(
+      const ReverseEvidenceResult& reverse_evidence) const;
+  void CleanupHppReverseHysteresis(
+      const std::unordered_set<int32_t>& active_agent_ids);
   // framework::Session *session_ = nullptr;
   FrenetBoundary ego_frenet_boundary_;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
   std::shared_ptr<EgoStateManager> ego_state_manager_;
+  AgentLongitudinalDeciderConfig reverse_filter_config_;
 
   // cut-in data
   std::unordered_map<int32_t, int32_t> cut_in_agent_count_;
@@ -185,5 +215,10 @@ class AgentLongitudinalDecider : public Task {
 
   std::shared_ptr<CrossingAgentDecider> crossing_agent_decider_;
   std::unordered_map<int32_t, std::deque<AgentHistoryState>> agent_history_map_;
+
+  // HPP reverse ignore hysteresis data
+  std::unordered_map<int32_t, int32_t> hpp_reverse_want_ignore_count_;
+  std::unordered_map<int32_t, int32_t> hpp_reverse_want_keep_count_;
+  std::unordered_map<int32_t, bool> hpp_reverse_ignore_state_;
 };
 }  // namespace planning

@@ -1,3 +1,4 @@
+
 #include "agent_longitudinal_decider.h"
 
 #include <array>
@@ -126,6 +127,9 @@ AgentLongitudinalDecider::AgentLongitudinalDecider(
     crossing_agent_decider_ =
         std::make_shared<CrossingAgentDecider>(config_builder, session);
   }
+  if (config_builder != nullptr) {
+    reverse_filter_config_ = config_builder->cast<AgentLongitudinalDeciderConfig>();
+  }
 }
 
 bool AgentLongitudinalDecider::Reset() {
@@ -171,7 +175,19 @@ bool AgentLongitudinalDecider::Update() {
 
   FilterUltradistantObs();
 
-  FilterReverseAgents();
+  // Scene-based reverse agent filtering
+  if (session_->is_hpp_scene()) {
+    FilterReverseAgentsHpp();
+  } else {
+    // Clear HPP hysteresis state on scene switch to prevent stale entries from
+    // polluting a future HPP session (e.g. via agent-id reuse).
+    if (!hpp_reverse_ignore_state_.empty()) {
+      hpp_reverse_want_ignore_count_.clear();
+      hpp_reverse_want_keep_count_.clear();
+      hpp_reverse_ignore_state_.clear();
+    }
+    FilterReverseAgents();
+  }
 
   // Check cut in/out agent.
   DeciderCutInAndOutAgents();
@@ -1981,7 +1997,8 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
 
 bool AgentLongitudinalDecider::IsReverseAgent(
     const agent::Agent* agent, const std::shared_ptr<VirtualLane> ego_lane,
-    const double consider_distance) const {
+    const double consider_distance, bool* is_perception_reverse_out,
+    bool* is_prediction_reverse_out) const {
   double agent_s = 0.0;
   double agent_l = 0.0;
   const auto agent_box_center = agent->box().center();
@@ -2006,6 +2023,14 @@ bool AgentLongitudinalDecider::IsReverseAgent(
     is_prediction_reverse = end_s < agent_s;
   }
 
+  // Output intermediate results if requested
+  if (is_perception_reverse_out != nullptr) {
+    *is_perception_reverse_out = is_perception_reverse;
+  }
+  if (is_prediction_reverse_out != nullptr) {
+    *is_prediction_reverse_out = is_prediction_reverse;
+  }
+
   bool is_reverse = false;
   if (agent_s < consider_distance) {
     is_reverse = is_perception_reverse && is_prediction_reverse;
@@ -2013,6 +2038,232 @@ bool AgentLongitudinalDecider::IsReverseAgent(
     is_reverse = is_perception_reverse || is_prediction_reverse;
   }
   return is_reverse && !agent->is_static();
+}
+
+void AgentLongitudinalDecider::FilterReverseAgentsHpp() {
+  const auto& agent_manager =
+      session_->environmental_model().get_agent_manager();
+  auto mutable_agent_manager =
+      session_->mutable_environmental_model()->mutable_agent_manager();
+  if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
+    ILOG_ERROR << "[FilterReverseAgentsHpp] agent manager is empty";
+    return;
+  }
+
+  const auto& agents = agent_manager->GetAllCurrentAgents();
+  if (agents.empty()) {
+    return;
+  }
+
+  const auto& current_lane = session_->environmental_model()
+                                 .get_virtual_lane_manager()
+                                 ->get_current_lane();
+  if (current_lane == nullptr) {
+    return;
+  }
+  const auto& current_lane_coord = current_lane->get_lane_frenet_coord();
+  if (current_lane_coord == nullptr) {
+    return;
+  }
+
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  if (ego_state_manager == nullptr) {
+    return;
+  }
+  const auto planning_init_point = ego_state_manager->planning_init_point();
+  const double v_ego = ego_state_manager->ego_v();
+
+  double planning_init_point_s = 0.0;
+  {
+    double unused_l = 0.0;
+    if (!current_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
+                                    &planning_init_point_s, &unused_l)) {
+      CleanupHppReverseHysteresis({});
+      return;
+    }
+  }
+
+  const double consider_distance =
+      std::fmax(planning_init_point_s + reverse_filter_config_.hpp_reverse_min_filter_distance_m,
+                std::fmin(planning_init_point_s + v_ego * reverse_filter_config_.hpp_reverse_longitudinal_ttc_s,
+                          current_lane_coord->Length()));
+
+  std::unordered_set<int32_t> active_agent_ids;
+  for (const auto agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    if (agent->type() == agent::AgentType::VIRTUAL) {
+      continue;
+    }
+
+    auto* mutable_agent =
+        mutable_agent_manager->mutable_agent(agent->agent_id());
+    if (mutable_agent == nullptr ||
+        mutable_agent->agent_decision().agent_decision_type() ==
+            agent::AgentDecisionType::IGNORE) {
+      continue;
+    }
+
+    // Track all valid agents for stale-entry cleanup of hysteresis maps
+    active_agent_ids.insert(agent->agent_id());
+
+    // Evaluate reverse agent geometry and classification for this agent
+    const ReverseEvidenceResult reverse_info =
+        ComputeHppReverseAgentInfo(*agent, current_lane, consider_distance,
+                                   planning_init_point_s);
+
+    // If lane projection is invalid, keep the agent (fail-safe)
+    if (!reverse_info.has_valid_lane_projection) {
+      continue;
+    }
+
+    // Only process reverse agents
+    if (!reverse_info.is_reverse_current) {
+      continue;
+    }
+    mutable_agent->set_is_reverse(true);
+
+    // Frame-count hysteresis wrapping the stateless geometry check
+    const int32_t agent_id = agent->agent_id();
+    const bool want_ignore = ShouldIgnoreReverseAgentInHpp(reverse_info);
+
+    hpp_reverse_want_ignore_count_[agent_id] =
+        want_ignore ? ++hpp_reverse_want_ignore_count_[agent_id] : 0;
+    hpp_reverse_want_keep_count_[agent_id] =
+        !want_ignore ? ++hpp_reverse_want_keep_count_[agent_id] : 0;
+
+    const int kFramesToIgnore =
+        reverse_filter_config_.hpp_reverse_hysteresis_frames_to_ignore;
+    const int kFramesToKeep =
+        reverse_filter_config_.hpp_reverse_hysteresis_frames_to_keep;
+
+    if (hpp_reverse_want_ignore_count_[agent_id] >= kFramesToIgnore) {
+      hpp_reverse_ignore_state_[agent_id] = true;
+    } else if (hpp_reverse_want_keep_count_[agent_id] >= kFramesToKeep) {
+      hpp_reverse_ignore_state_[agent_id] = false;
+    }
+
+    if (hpp_reverse_ignore_state_[agent_id]) {
+      mutable_agent->mutable_agent_decision()->set_agent_decision_type(
+          agent::AgentDecisionType::IGNORE);
+    }
+  }
+
+  // Clean up stale entries for agents no longer in perception
+  CleanupHppReverseHysteresis(active_agent_ids);
+}
+
+AgentLongitudinalDecider::ReverseEvidenceResult
+AgentLongitudinalDecider::ComputeHppReverseAgentInfo(
+    const agent::Agent& agent, const std::shared_ptr<VirtualLane>& ego_lane,
+    double consider_distance, double ego_s) const {
+  ReverseEvidenceResult result;
+
+  const auto& ego_lane_coord = ego_lane->get_lane_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return result;
+  }
+
+  // Project agent center to ego lane
+  const auto agent_box_center = agent.box().center();
+  double agent_s = 0.0;
+  double agent_l = 0.0;
+  if (!ego_lane_coord->XYToSL(agent_box_center.x(), agent_box_center.y(),
+                              &agent_s, &agent_l)) {
+    return result;
+  }
+  result.has_valid_lane_projection = true;
+  // Store distance from ego to agent (used for zone classification)
+  result.agent_s_center = agent_s - ego_s;
+
+  // Compute per-corner SL boundary
+  // 若任意角点投影失败，残缺的 l 边界会导致 lat_gap 被误算为极大值，
+  // 进而在近/中/远分层中将目标误判为可过滤，违背 fail-safe 原则，
+  // 因此整体降级为 has_valid_lane_projection=false，保留障碍物。
+  double agent_max_l = std::numeric_limits<double>::lowest();
+  double agent_min_l = std::numeric_limits<double>::max();
+  const auto& corners = agent.box().GetAllCorners();
+  bool all_corners_valid = true;
+  for (const auto& corner : corners) {
+    double corner_l = 0.0;
+    double unused_s = 0.0;
+    if (!ego_lane_coord->XYToSL(corner.x(), corner.y(), &unused_s, &corner_l)) {
+      all_corners_valid = false;
+      break;
+    }
+    agent_max_l = std::fmax(agent_max_l, corner_l);
+    agent_min_l = std::fmin(agent_min_l, corner_l);
+  }
+
+  // If any corner projection failed, invalidate the entire lane projection
+  if (!all_corners_valid) {
+    result.has_valid_lane_projection = false;
+    return result;
+  }
+
+  result.agent_min_l = agent_min_l;
+  result.agent_max_l = agent_max_l;
+
+  // Compute lateral gap to ego lane
+  const double half_lane_width = kHalf * ego_lane->width_by_s(agent_s);
+  result.lat_gap_to_ego_lane =
+      CalculateLatGapToEgoLane(agent_min_l, agent_max_l, half_lane_width);
+
+  // Reuse IsReverseAgent to compute perception/prediction reverse and is_reverse_current
+  result.is_reverse_current = IsReverseAgent(
+      &agent, ego_lane, consider_distance, &result.is_perception_reverse,
+      &result.is_prediction_reverse);
+
+  return result;
+}
+
+double AgentLongitudinalDecider::CalculateLatGapToEgoLane(
+    double agent_min_l, double agent_max_l, double half_lane_width) const {
+  // Lateral gap = minimum gap between [agent_min_l, agent_max_l]
+  // and the ego lane interval [-half_lane_width, +half_lane_width]
+  if (agent_max_l < -half_lane_width) {
+    // Agent is entirely to the right of ego lane
+    return -half_lane_width - agent_max_l;
+  } else if (agent_min_l > half_lane_width) {
+    // Agent is entirely to the left of ego lane
+    return agent_min_l - half_lane_width;
+  } else {
+    // Agent overlaps with ego lane
+    return 0.0;
+  }
+}
+
+bool AgentLongitudinalDecider::ShouldIgnoreReverseAgentInHpp(
+    const ReverseEvidenceResult& reverse_evidence) const {
+  // Fail-safe: if lane projection is invalid, do not ignore the agent
+  if (!reverse_evidence.has_valid_lane_projection) {
+    return false;
+  }
+
+  const double agent_rel_s = reverse_evidence.agent_s_center;
+  const double lat_gap = reverse_evidence.lat_gap_to_ego_lane;
+
+  const double near_s_thr = reverse_filter_config_.hpp_reverse_near_s_threshold_m;
+  const double mid_s_thr = reverse_filter_config_.hpp_reverse_mid_s_threshold_m;
+  const double near_lat_gap_ignore =
+      reverse_filter_config_.hpp_reverse_near_lat_gap_ignore_m;
+  const double mid_lat_gap_ignore =
+      reverse_filter_config_.hpp_reverse_mid_lat_gap_ignore_m;
+  const double far_keep_lat_gap =
+      reverse_filter_config_.hpp_reverse_far_keep_lat_gap_m;
+
+  if (agent_rel_s < near_s_thr) {
+    // 近区：横向间隙足够大时忽略（不影响自车道）
+    return lat_gap > near_lat_gap_ignore;
+  } else if (agent_rel_s < mid_s_thr) {
+    // 中区：横向间隙足够大时忽略
+    return lat_gap > mid_lat_gap_ignore;
+  } else {
+    // 远区：横向间隙超过阈值时忽略
+    return lat_gap > far_keep_lat_gap;
+  }
 }
 
 bool AgentLongitudinalDecider::IsIgnoredLowSpeedReverseAgent(
@@ -2092,6 +2343,25 @@ double AgentLongitudinalDecider::CalculateIntersectionLength(
   double lower = std::max(a1, a2);
   double upper = std::min(b1, b2);
   return upper - lower;
+}
+
+void AgentLongitudinalDecider::CleanupHppReverseHysteresis(
+    const std::unordered_set<int32_t>& active_agent_ids) {
+  for (auto it = hpp_reverse_want_ignore_count_.begin();
+       it != hpp_reverse_want_ignore_count_.end();) {
+    it = active_agent_ids.count(it->first) ? ++it
+                                           : hpp_reverse_want_ignore_count_.erase(it);
+  }
+  for (auto it = hpp_reverse_want_keep_count_.begin();
+       it != hpp_reverse_want_keep_count_.end();) {
+    it = active_agent_ids.count(it->first) ? ++it
+                                           : hpp_reverse_want_keep_count_.erase(it);
+  }
+  for (auto it = hpp_reverse_ignore_state_.begin();
+       it != hpp_reverse_ignore_state_.end();) {
+    it = active_agent_ids.count(it->first) ? ++it
+                                           : hpp_reverse_ignore_state_.erase(it);
+  }
 }
 
 }  // namespace planning
