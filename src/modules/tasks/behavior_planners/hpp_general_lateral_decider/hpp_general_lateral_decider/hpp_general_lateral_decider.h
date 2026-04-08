@@ -174,9 +174,6 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   void GenerateEnuReferenceTraj(
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void GenerateEnuReferenceTheta(
-      GeneralLateralDeciderOutput &general_lateral_decider_output);
-
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
   void HandleAvoidScene(TrajectoryPoints &traj_points,
                         double dynamic_ref_buffer);
@@ -225,6 +222,8 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info_;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info_;
 
+  std::vector<std::pair<Point2D, Point2D>> enu_soft_bounds_;
+  std::vector<std::pair<Point2D, Point2D>> enu_hard_bounds_;
 
   std::vector<std::pair<double, double>>
       vehicle_dynamic_buffer_;  // <left, right>
