@@ -6447,6 +6447,18 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
       ReadItem<double>(json, rads_comfort_param_dynamic_s0,
                 "speed_planning", "comfort_target",
                 "rads_comfort_param_dynamic_s0");
+      ReadItem<double>(json, rads_comfort_param_virtual_s0,
+            "speed_planning", "comfort_target",
+            "rads_comfort_param_virtual_s0");
+      ReadItem<double>(json, hpp_comfort_param_static_s0,
+            "speed_planning", "comfort_target",
+            "hpp_comfort_param_static_s0");
+      ReadItem<double>(json, hpp_comfort_param_dynamic_s0,
+                "speed_planning", "comfort_target",
+                "hpp_comfort_param_dynamic_s0");
+      ReadItem<double>(json, hpp_comfort_param_virtual_s0,
+            "speed_planning", "comfort_target",
+            "hpp_comfort_param_virtual_s0");
     }
   }
 
@@ -6505,6 +6517,10 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   // comfort target
   double rads_comfort_param_static_s0 = 0.2;
   double rads_comfort_param_dynamic_s0 = 0.8;
+  double rads_comfort_param_virtual_s0 = 0.0;
+  double hpp_comfort_param_static_s0 = 0.2;
+  double hpp_comfort_param_dynamic_s0 = 0.8;
+  double hpp_comfort_param_virtual_s0 = 0.0;
   struct KinematicParam {
     double acc_positive_upper = 1.35;
     double acc_positive_speed_lower = 4.2;

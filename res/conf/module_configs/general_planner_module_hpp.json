@@ -1041,6 +1041,11 @@
       "large_vehicle_min_follow_distance_gap": 5.0,
       "cone_min_follow_distance_gap": 5.0,
       "traffic_light_min_follow_distance_gap": 2.0
+    },
+    "comfort_target": {
+      "hpp_comfort_param_static_s0": 3,
+      "hpp_comfort_param_dynamic_s0": 3,
+      "hpp_comfort_param_virtual_s0": 0.5
     }
   },
   "hybrid_ara_star": {
