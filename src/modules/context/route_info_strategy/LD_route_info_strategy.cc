@@ -4393,12 +4393,29 @@ double LDRouteInfoStrategy::CalculateLSLLengthBetweenLanes(
     if (!lane) continue;
 
     for (const auto& boundary : lane->left_boundaries()) {
-      if (boundary.divider_marking_type() ==
+      const auto type = boundary.divider_marking_type();
+      bool is_solid = false;
+      if (type ==
               iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
                   LaneBoundary_DivederMarkingType_DMT_MARKING_SINGLE_SOLID_LINE ||
-          boundary.divider_marking_type() ==
+          type ==
               iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
                   LaneBoundary_DivederMarkingType_DMT_MARKING_DOUBLE_SOLID_LINE) {
+        is_solid = true;
+      } else if (from_seq < to_seq) {
+        // 向左变道，穿越左边界右侧，右实左虚算实线
+        is_solid =
+            (type ==
+             iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                 LaneBoundary_DivederMarkingType_DMT_MARKING_RIGHT_SOLID_LINE_LEFT_DASHED_LINE);
+      } else {
+        // 向右变道，穿越左边界左侧，左实右虚算实线
+        is_solid =
+            (type ==
+             iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+                 LaneBoundary_DivederMarkingType_DMT_MARKING_LEFT_SOLID_LINE_RIGHT_DASHED_LINE);
+      }
+      if (is_solid) {
         current_lane_lsl += boundary.length() * 0.01;
       }
     }
