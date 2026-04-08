@@ -143,7 +143,7 @@ bool HppObstacleLateralPreprocessDecider::ClusterObstacles(
       obstacle_clusters.push_back(std::move(obstacle_cluster));
     }
   }
-git  for (auto& obstacle_cluster : obstacle_clusters) {
+ for (auto& obstacle_cluster : obstacle_clusters) {
     if (!BuildObstacleClusterConvexHull(obs_item_map, obstacle_cluster)) {
       continue;
     }
