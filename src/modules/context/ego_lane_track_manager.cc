@@ -1196,8 +1196,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
                   k_lane_change_order_id_diff);
     total_cost = lateral_distance_cost_weight * cumu_lat_dis_cost +
                  kCrossLaneCostWeight * crosslane_cost +
-                 k_init_pos_cost_weight * init_pose_cost +
-                 k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
+                 k_init_pos_cost_weight * init_pose_cost;
     std::vector<double> cost_list{cumu_lat_dis_cost, crosslane_cost,
                                   init_pose_cost, order_id_diff_cost,
                                   total_cost};
@@ -2904,8 +2903,6 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
     const bool& is_fix) {
   const double default_lane_mapping_cost = 10.0;
   double order_id_diff_cost = 0.0;
-  double k_lane_change_order_id_diff_wegiht =
-      is_fix ? kLaneChangeOrderidDiffWeight : 0.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -3015,8 +3012,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
         lane_mapping_cost = default_lane_mapping_cost;
       } else {
         lane_mapping_cost =
-            std::fabs(total_lateral_offset / point_nums) +
-            k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
+            std::fabs(total_lateral_offset / point_nums);
       }
       return lane_mapping_cost;
     } else {
