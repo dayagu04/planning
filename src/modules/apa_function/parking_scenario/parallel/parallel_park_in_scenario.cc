@@ -3332,6 +3332,10 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 }
 
 const bool ParallelParkInScenario::CheckLastPathCollided() {
+  if (enable_pa_park_) {
+    ILOG_INFO << " pa model close check last path";
+    return false;
+  }
   const EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
