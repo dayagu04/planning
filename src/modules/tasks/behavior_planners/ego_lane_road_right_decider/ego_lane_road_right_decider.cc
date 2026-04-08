@@ -314,30 +314,6 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
     }
   }
 
-  // Point2D cur_ref_path_end_point_temp;
-  // ReferencePathPoint cur_ref_path_point_temp{};
-  // double target_s = cur_ego_s + ego_front_length - default_lane_buffer;
-  // if (cur_reference_path->get_reference_point_by_lon(target_s,
-  //                                                    cur_ref_path_point_temp)) {
-  //   cur_ref_path_end_point_temp = {cur_ref_path_point_temp.path_point.x(),
-  //                                  cur_ref_path_point_temp.path_point.y()};
-  // } else {
-  //   cur_ref_path_end_point_temp = {cur_ref_path_end_point.path_point.x(),
-  //                                  cur_ref_path_end_point.path_point.y()};
-  // }
-  // Point2D ref_path_end_point_temp;
-  // ReferencePathPoint ref_path_point_temp{};
-  // target_s = std::min(target_s, reference_path->get_frenet_coord()->Length());
-  // if (reference_path->get_reference_point_by_lon(target_s,
-  //                                                ref_path_point_temp)) {
-  //   ref_path_end_point_temp = {ref_path_point_temp.path_point.x(),
-  //                              ref_path_point_temp.path_point.y()};
-  // } else {
-  //   ref_path_end_point_temp = {
-  //       reference_path->get_points().back().path_point.x(),
-  //       reference_path->get_points().back().path_point.y()};
-  // }
-
   Point2D frenet_point;
   if (ref_lane_coord->XYToSL(cur_ref_path_end_point_xy, frenet_point)) {
     cur_to_other_lane_end_lat_diff = frenet_point.y;
@@ -361,34 +337,6 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
     return true;
   }
 
-  // 遍历自车向前的点，是否有overlap情况
-  // const double step_length = 5.0;
-  // const double buffer = 1.0;
-  // const int calculate_nums = (int)(ego_front_length / step_length - buffer);
-  // for (int i = 1; i <= calculate_nums; i++) {
-  //   ReferencePathPoint cur_ref_path_point_temp{};
-  //   Point2D frenet_point_temp;
-  //   if (!cur_reference_path->get_reference_point_by_lon(
-  //           cur_ego_s + i * 5, cur_ref_path_point_temp)) {
-  //     continue;
-  //   }
-  //   Point2D cur_point_temp = {cur_ref_path_point_temp.path_point.x(),
-  //                             cur_ref_path_point_temp.path_point.y()};
-  //   if (ref_lane_coord->XYToSL(cur_point_temp, frenet_point_temp)) {
-  //     double cur_point_to_other_lane_lat_diff = frenet_point_temp.y;
-  //     if (std::abs(cur_point_to_other_lane_lat_diff) <
-  //         end_lane_lat_diff_threshold) {
-  //       lane_end_satisfied_merge_condition = true;
-  //       break;
-  //     }
-  //   }
-  // }
-  // if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
-  //      start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
-  //     lane_end_satisfied_merge_condition) {
-  //   ILOG_DEBUG << "is merge region!!!";
-  //   return true;
-  // }
   return false;
 }
 
