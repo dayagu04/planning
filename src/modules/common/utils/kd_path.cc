@@ -325,12 +325,8 @@ bool KDPath::XYToSLInRange(const Point2D& cart_point,
             &frenet_point.x, &frenet_point.y);
 
     // 第四步：确保最终 S 落在范围内
-<<<<<<< Updated upstream
-    if (frenet_point.x < 0 || frenet_point.x > length_) {
-=======
     const double end_extension_length = is_hpp_scene ? kExtensionLength : 0.0;
     if (frenet_point.x < 0 || frenet_point.x > (length_ + end_extension_length)) {
->>>>>>> Stashed changes
       ILOG_DEBUG << "s is not within the valid range";
       return false;
     }
