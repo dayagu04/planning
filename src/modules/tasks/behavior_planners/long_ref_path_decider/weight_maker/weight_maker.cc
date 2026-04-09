@@ -124,7 +124,7 @@ void WeightMaker::MakeVWeight(const TargetMaker& target_maker) {
   start_stop_decider_output.ego_start_stop_info().state() !=
       common::StartStopInfo::STOP){
   for (size_t i = 0; i < plan_points_num_; ++i) {
-    v_weight_[i] = 5.0;
+    v_weight_[i] = 50.0;
   }
 }
 }

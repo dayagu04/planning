@@ -252,12 +252,12 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_safe_distance(0.0);
   }
 
-  if (lane_change_info.is_emergency_scene) {
-    planning_input_.set_q_acc(1.0);
-    planning_input_.set_q_acc_start(0.0);
-    planning_input_.set_q_jerk(10.0);
-    planning_input_.set_q_jerk_start(0.0);
-  }
+  // if (lane_change_info.is_emergency_scene) {
+  //   planning_input_.set_q_acc(1.0);
+  //   planning_input_.set_q_acc_start(0.0);
+  //   planning_input_.set_q_jerk(10.0);
+  //   planning_input_.set_q_jerk_start(0.0);
+  // }
 
   // what is s_stop?
   planning_input_.set_s_stop(1.0e4);  // TBD: hack for input;
