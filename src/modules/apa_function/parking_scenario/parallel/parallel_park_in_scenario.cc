@@ -1328,6 +1328,23 @@ const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction)
       all_pa_curb_obs.insert(all_pa_curb_obs.end(), cur_obs.second.begin(),
                              cur_obs.second.end());
     }
+    size_t maximum_obs_parent_id = 0;
+    for (const auto& pair : apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
+      if (pair.first == maximum_obs_id) {
+        maximum_obs_parent_id = pair.second.GetParentId();
+        break;
+      }
+    }
+    std::vector<Eigen::Vector2d> merge_pa_curb_obs;// = pa_curb_obs_map[maximum_obs_id];
+    for (const auto& pair : apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
+      if (pair.second.GetParentId() == maximum_obs_parent_id &&
+          pa_curb_obs_map.find(pair.first) != pa_curb_obs_map.end()) {
+        merge_pa_curb_obs.insert(merge_pa_curb_obs.end(),
+                                 pa_curb_obs_map[pair.first].begin(),
+                                 pa_curb_obs_map[pair.first].end());
+      }
+    }
+    ILOG_INFO << "merge_pa_curb_obs.size() = " << merge_pa_curb_obs.size();
     std::vector<Eigen::Vector2d> pa_curb_obs;
     Eigen::Vector2d ego_pose = measures_ptr->GetPos();
     const double eps = 0.01;
@@ -1343,7 +1360,9 @@ const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction)
         c2s_dis > eps;
     t_lane_.use_sturn_plan = false;
     t_lane_.car_to_curb_dis = 1.0;
-    if (pa_curb_obs_map[maximum_obs_id].size() < 3) {
+    ILOG_INFO << "maximum_obs_id: " << maximum_obs_id
+              << " size: " << merge_pa_curb_obs.size();
+    if (merge_pa_curb_obs.size() < 3) {
       t_lane_.use_sturn_plan = true;
       ILOG_INFO << "pa curb obs size too very little";
       slot2curb_dist_ = retain_distance_by_other;
@@ -1382,7 +1401,15 @@ const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction)
         auto apa_obs_map =
             apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
         if (apa_obs_map.find(maximum_obs_id) != apa_obs_map.end()) {
-          ExtractLongestLineSegmentPointsPCA(pa_curb_obs_map[maximum_obs_id],
+          std::vector<Eigen::Vector2d> first_filter_obs, pca_filter_obs;
+          first_filter_obs = FilterByLightVisibilityDualAxle(
+              measures_ptr->GetPos(), measures_ptr->GetHeading(),
+              merge_pa_curb_obs, 3.5, 3);
+          ExtractLongestLineSegmentPointsPCA(first_filter_obs, pca_filter_obs,
+                                             line_coeffs, 0.15);
+          ILOG_INFO << "first_filter_obs size = " << first_filter_obs.size()
+                    << " pca_filter_obs size = " << pca_filter_obs.size();
+          ExtractLongestLineSegmentPointsPCA(pca_filter_obs,
                                              pa_curb_obs, line_coeffs);
         }
         if (pa_curb_obs.size() < 3) {
@@ -2745,7 +2772,8 @@ ParallelParkInScenario::FilterByLightVisibilityMultiPoints(
     // Basic filtering: exclude points near origin, beyond max range, or outside
     // the angle range of interest
     const double dist = std::sqrt(x_veh * x_veh + y_veh * y_veh);
-    if (dist < 0.9 || dist > max_range) continue;
+    const double min_range = enable_pa_park_ ? 0.1 : 0.9;
+    if (dist < min_range || dist > max_range) continue;
 
     double angle = std::atan2(y_veh, x_veh);
     if (angle < start_angle_rad || angle > end_angle_rad) continue;
@@ -2837,18 +2865,15 @@ bool ParallelParkInScenario::IsPointDuplicate(
  */
 std::vector<Eigen::Vector2d>
 ParallelParkInScenario::FilterByLightVisibilityDualAxle(
+    const Eigen::Vector2d& rear_axle_pos, const double yaw,
     const std::vector<Eigen::Vector2d>& filtered_channel_obs_vec,
-    double angle_resolution, double start_angle, double end_angle,
-    double max_range, double duplicate_tolerance) {
+    double angle_resolution, int max_points_per_bin, double start_angle,
+    double end_angle, double max_range, double duplicate_tolerance) {
   const int min_obs_nums = 200;
-  if (filtered_channel_obs_vec.size() < min_obs_nums) {
+  if (filtered_channel_obs_vec.size() < min_obs_nums && !enable_pa_park_) {
     ILOG_INFO << "obs nums < min_obs_nums, return all";
     return filtered_channel_obs_vec;
   }
-  const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-  double yaw = ego_info_under_slot.cur_pose.GetTheta();
-  const auto& rear_axle_pos = ego_info_under_slot.cur_pose.GetPos();
 
   // ====================== Step 1: Calculate world coordinates of the front
   // axle center ======================
@@ -3028,7 +3053,10 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   std::vector<Eigen::Vector2d> filtered_channel_obs_vec;
 
   // const double filtered_obs_start = IflyTime::Now_ms();
-  filtered_channel_obs_vec = FilterByLightVisibilityDualAxle(origin_channel_obs_vec, 3.5);
+  const auto& rear_axle_pos = ego_info_under_slot.cur_pose.GetPos();
+  double cur_yaw = ego_info_under_slot.cur_pose.GetTheta();
+  filtered_channel_obs_vec = FilterByLightVisibilityDualAxle(
+      rear_axle_pos, cur_yaw, origin_channel_obs_vec, 3.5);
   // ILOG_INFO << "filtered obs cost time(ms) = "
   //           << IflyTime::Now_ms() - filtered_obs_start;
 
@@ -3304,6 +3332,10 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 }
 
 const bool ParallelParkInScenario::CheckLastPathCollided() {
+  if (enable_pa_park_) {
+    ILOG_INFO << " pa model close check last path";
+    return false;
+  }
   const EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
@@ -3627,7 +3659,16 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
 
   if (enable_pa_park_) {
     if (frame_.is_replan_first) {
-      frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      if (t_lane_.obs_pt_inside.x() > ego_info_under_slot.slot.GetLength() +
+                                          kFrontDetaXMagWhenFrontVacant -
+                                          kEps) {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      } else if (t_lane_.obs_pt_inside.x() <
+                 -kRearDetaXMagWhenFrontOccupiedRearVacant + kEps) {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      } else {
+        frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      }
 
       frame_.current_arc_steer =
           t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT
@@ -4249,9 +4290,11 @@ void ParallelParkInScenario::UpdatePathByGeometry(
       path_in_slot[i][0].arc_seg.pA = cur_pt;
       path_in_slot[i][0].arc_seg.headingA =
           cur_request.parallel_target_group[path_idx].theta;
+      double heading_diff =
+          NormalizeAngle(cur_request.parallel_target_group[path_idx].theta -
+                         path_in_slot[i][0].arc_seg.headingB);
       path_in_slot[i][0].arc_seg.length =
-          std::fabs((cur_request.parallel_target_group[path_idx].theta -
-                     path_in_slot[i][0].arc_seg.headingB)) *
+          std::fabs(heading_diff) *
           path_in_slot[i][0].arc_seg.circle_info.radius;
       break;
     }
