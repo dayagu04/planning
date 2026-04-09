@@ -149,7 +149,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
         })
 
     # Extract planning info from JSON
-    planning_json_value_list = ["joint_lead_one_id", "joint_key_agent_ids", "joint_limit_speed"]
+    planning_json_value_list = ["joint_lead_one_id", "joint_key_agent_ids", "joint_decision_limit_speed"]
     vision_lon_attr_vec = []
     for attr in planning_json_value_list:
         if attr == "joint_key_agent_ids":
@@ -188,7 +188,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     # Extract obstacle information for display
     joint_lead_one_id = planner_json.get("joint_lead_one_id", 0)
     joint_key_agent_ids = planner_json.get("joint_key_agent_ids", [])
-    joint_limit_speed = planner_json.get("joint_limit_speed", 0)
+    joint_decision_limit_speed = planner_json.get("joint_decision_limit_speed", 0)
     obs_num = jp_in.obs_num
 
     ego_length = jp_in.ego_length if jp_in.HasField('ego_length') else 4.95
@@ -209,7 +209,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     time_vec = list(jp_out.time_vec)
     
     # Create velocity bounds vectors
-    vel_max_bound_vec = [joint_limit_speed] * len(time_vec)
+    vel_max_bound_vec = [joint_decision_limit_speed] * len(time_vec)
     vel_min_bound_vec = [0.0] * len(time_vec)
     x_vec = list(jp_out.x_vec)
     y_vec = list(jp_out.y_vec)

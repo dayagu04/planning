@@ -211,6 +211,7 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
                                            &speed_limit_type_ref);
   const double v0 = std::fmin(speed_limit_normal, speed_limit_ref);
+  JSON_DEBUG_VALUE("joint_decision_limit_speed", v0);
   comfort_params_.v0 = v0;
 
   // const auto& lane_change_decider_output =
@@ -457,6 +458,12 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     planning_input.add_ego_jerk_max(lc_decision_config_.ego_jerk_max);
     planning_input.add_ego_jerk_min(lc_decision_config_.ego_jerk_min);
+  }
+
+  planning_input.set_q_ego_vel_bound_weight(lc_decision_config_.q_ego_vel_bound_weight);
+  planning_input.clear_ego_vel_max();
+  for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
+    planning_input.add_ego_vel_max(comfort_params_.v0);
   }
 
   planning_input.set_q_hard_halfplane_weight(

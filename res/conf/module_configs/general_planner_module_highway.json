@@ -858,6 +858,7 @@
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 2.0,
     "ego_jerk_min": -2.5,
+    "q_ego_vel_bound_weight": 1000.0,
     "q_hard_halfplane_weight": 100.0,
     "hard_halfplane_dist": 3.5,
     "halfplane_cost_allocation_ratio": 0.6,
