@@ -257,8 +257,14 @@ void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
     return;
   }
 
+  double distance_to_split = 100;
+  for (const auto& split_info: split_info_vec_) {
+    if (split_info.first->id() == split_link->id()) {
+      distance_to_split = split_info.second;
+    }
+  }
+
   double on_route_ratio = on_route_weighted / total_weighted;
-  double distance_to_split = front_split_info.second;
   const double kFarDist = 120.0, kNearDist = 60.0;
   const double kFarThreshold = 0.5, kNearThreshold = 0.7;
   double threshold = 0.6;
