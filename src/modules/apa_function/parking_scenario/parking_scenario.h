@@ -87,9 +87,6 @@ class ParkingScenario {
       is_replan_first = true;
       is_replan_second = false;
       is_last_path = false;
-      dynamic_replan_count = 0;
-      dynamic_replan_fail_count = 0;
-      ego_stop_when_slot_jumps_much = false;
       total_plan_count = 0;
       in_slot_plan_count = 0;
       is_fix_slot = false;
@@ -179,9 +176,6 @@ class ParkingScenario {
     bool is_replan_first = true;
     bool is_replan_second = false;
     bool is_last_path = false;
-    uint8_t dynamic_replan_count = 0;
-    uint8_t dynamic_replan_fail_count = 0;
-    bool ego_stop_when_slot_jumps_much = false;
     uint8_t replan_reason = ReplanReason::NOT_REPLAN;
     // record fail reason
     uint8_t plan_fail_reason = ParkingFailReason::NOT_FAILED;

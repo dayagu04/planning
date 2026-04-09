@@ -467,7 +467,6 @@ void NarrowSpaceScenario::Log() const {
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
-  JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
   JSON_DEBUG_VALUE("total_plan_count", frame_.total_plan_count)
   JSON_DEBUG_VALUE("ego_heading_slot", ego_info_under_slot.cur_pose.heading)
 

@@ -904,68 +904,54 @@ void PerpendicularTailInScenario::PathPlan() {
   frame_.replan_flag = CheckReplan(replan_params);
   frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
   frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
+
   const ApaParameters& param = apa_param.GetParam();
   if (!CheckCanDelObsInSlot()) {
     frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
   }
 
-  if (apa_world_ptr_->GetSimuParam().is_simulation &&
-      apa_world_ptr_->GetSimuParam().process_obs_method != -1) {
-    frame_.process_obs_method = static_cast<ProcessObsMethod>(
-        apa_world_ptr_->GetSimuParam().process_obs_method);
+  const auto& simu_param = apa_world_ptr_->GetSimuParam();
+
+  if (simu_param.is_simulation && simu_param.process_obs_method != -1) {
+    frame_.process_obs_method =
+        static_cast<ProcessObsMethod>(simu_param.process_obs_method);
   }
 
-  const bool exist_target_pose = GenTlane();
   if (!frame_.replan_flag) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(ParkingStatus::PARKING_RUNNING);
     return;
   }
+
   SetParkingStatus(ParkingStatus::PARKING_PLANNING);
 
+  const bool should_mark_parking_failed =
+      frame_.replan_fail_time > param.max_replan_failed_time;
+
+  const bool exist_target_pose = GenTlane();
   if (!exist_target_pose) {
     frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
     frame_.plan_fail_reason = ParkingFailReason::NO_TARGET_POSE;
-    if (frame_.replan_fail_time > apa_param.GetParam().max_replan_failed_time) {
+    if (should_mark_parking_failed) {
       SetParkingStatus(ParkingStatus::PARKING_FAILED);
     }
-    SwitchProcessObsMethod();
     return;
   }
 
-  // if exist target pose, try to plan path
   ILOG_INFO << "target pose exists and replan is required!";
   const double start_time = IflyTime::Now_ms();
-
-  if (frame_.replan_reason != ReplanReason::FORCE_PLAN &&
-      frame_.replan_reason != ReplanReason::DYNAMIC) {
-    frame_.total_plan_count++;
-  }
-
-  if (frame_.total_plan_count > param.max_replan_count) {
-    ILOG_INFO << "replan count is exceed max count, fail, directly quit apa";
-    frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
-    frame_.plan_fail_reason = ParkingFailReason::PLAN_COUNT_EXCEED_LIMIT;
-    SetParkingStatus(ParkingStatus::PARKING_FAILED);
-    return;
-  }
-
-  // when dynamic plan, the pathplan_result is always PLAN_UPDATE
-  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY) {
-    frame_.pathplan_result = PathPlanOnce();
-  } else {
-    frame_.pathplan_result = PathPlanOnceHybridAstar();
-  }
+  frame_.pathplan_result =
+      param.park_path_plan_type == ParkPathPlanType::GEOMETRY
+          ? PathPlanOnce()
+          : PathPlanOnceHybridAstar();
+  const double replan_consume_time = IflyTime::Now_ms() - start_time;
 
   ILOG_INFO << "try generate path, and replan_consume_time = "
-            << IflyTime::Now_ms() - start_time << " ms, replan count = "
-            << static_cast<int>(frame_.total_plan_count)
+            << replan_consume_time << " ms, "
             << "  dynamic_plan_fail_flag = " << frame_.dynamic_plan_fail_flag
             << "  dynamic_plan_path_superior = "
             << frame_.dynamic_plan_path_superior;
 
-  JSON_DEBUG_VALUE("replan_count", frame_.total_plan_count)
-  JSON_DEBUG_VALUE("replan_consume_time", IflyTime::Now_ms() - start_time)
   JSON_DEBUG_VALUE("dynamic_plan_fail_flag", frame_.dynamic_plan_fail_flag)
   JSON_DEBUG_VALUE("dynamic_plan_path_superior",
                    frame_.dynamic_plan_path_superior)
@@ -973,27 +959,24 @@ void PerpendicularTailInScenario::PathPlan() {
                    static_cast<int>(frame_.process_obs_method))
 
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_PATH_PLAN_TIME,
-                                    IflyTime::Now_ms() - start_time);
+                                    replan_consume_time);
 
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
-  // dynamic plan fail
-  if (frame_.replan_reason == ReplanReason::DYNAMIC &&
+  const bool dynamic_plan_failed =
+      frame_.replan_reason == ReplanReason::DYNAMIC &&
       (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED ||
-       frame_.dynamic_plan_fail_flag || !frame_.dynamic_plan_path_superior)) {
+       frame_.dynamic_plan_fail_flag || !frame_.dynamic_plan_path_superior);
+
+  if (dynamic_plan_failed) {
     ILOG_INFO << "dynamic replan failed or path is not superior, use last path";
-    frame_.dynamic_replan_fail_count++;
     return;
   }
 
-  // static plan fail
   if (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED) {
     ILOG_INFO << "static replan fail";
-    if (frame_.total_plan_count > 0) {
-      frame_.total_plan_count--;
-    }
-    if (frame_.replan_fail_time > param.max_replan_failed_time) {
+    if (should_mark_parking_failed) {
       SetParkingStatus(PARKING_FAILED);
     }
     SwitchProcessObsMethod();
@@ -1001,40 +984,38 @@ void PerpendicularTailInScenario::PathPlan() {
     return;
   }
 
-  // static or dynamic plan success
-  if (frame_.pathplan_result == PathPlannerResult::PLAN_UPDATE) {
-    // update slot move dist replan success
-    ego_info_under_slot.lat_move_dist_replan_success =
-        ego_info_under_slot.lat_move_dist_every_replan;
+  if (frame_.pathplan_result != PathPlannerResult::PLAN_UPDATE) {
+    return;
+  }
 
-    ego_info_under_slot.lon_move_dist_replan_success =
-        ego_info_under_slot.lon_move_dist_every_replan;
+  // path plan success
+  ILOG_INFO << "path plan success, update path, record success info";
+  ego_info_under_slot.lat_move_dist_replan_success =
+      ego_info_under_slot.lat_move_dist_every_replan;
+  ego_info_under_slot.lon_move_dist_replan_success =
+      ego_info_under_slot.lon_move_dist_every_replan;
+  ego_info_under_slot.replan_success_origin_target_pose =
+      ego_info_under_slot.origin_target_pose;
+  ego_info_under_slot.replan_success_origin_target_pose.LocalToGlobal(
+      ego_info_under_slot.l2g_tf);
 
-    ego_info_under_slot.replan_success_origin_target_pose =
-        ego_info_under_slot.origin_target_pose;
-    ego_info_under_slot.replan_success_origin_target_pose.LocalToGlobal(
-        ego_info_under_slot.l2g_tf);
+  frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
 
-    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    ILOG_INFO << "dynamic replan success and path is superior, update path";
+  } else {
+    ILOG_INFO << "static replan success, update path";
+    ego_info_under_slot.fix_limiter = false;
+  }
 
-    if (frame_.replan_reason == ReplanReason::DYNAMIC) {
-      ILOG_INFO << "dynamic replan success and path is superior, update path";
-      frame_.dynamic_replan_fail_count = 0;
-    } else {
-      ILOG_INFO << "static replan success, update path";
-      ego_info_under_slot.fix_limiter = false;
-    }
-
-    if (PostProcessPath()) {
-      ILOG_INFO << "postprocess path success!";
-    } else {
-      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
-      if (frame_.replan_fail_time > param.max_replan_failed_time) {
-        SetParkingStatus(PARKING_FAILED);
-      }
-      ILOG_INFO << "postprocess path failed!";
-    }
+  if (PostProcessPath()) {
+    ILOG_INFO << "postprocess path success!";
+    return;
+  }
+  ILOG_INFO << "postprocess path failed!";
+  frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+  if (should_mark_parking_failed) {
+    SetParkingStatus(PARKING_FAILED);
   }
 
   return;
@@ -1479,7 +1460,6 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
 
     if (is_dynamic_replan) {
       ILOG_INFO << "dynamic replan success, update path";
-      frame_.dynamic_replan_fail_count = 0;
     } else {
       ILOG_INFO << "static replan success, update path";
       ego_info_under_slot.fix_limiter = false;
@@ -2446,104 +2426,6 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             << (IflyTime::Now_ms() - start_time);
 
   return safe_remain_dist;
-}
-
-const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-
-  const double ego_stop_dist = 1.0;
-
-  if (frame_.ego_stop_when_slot_jumps_much ||
-      frame_.replan_reason != ReplanReason::DYNAMIC || !frame_.is_last_path ||
-      ego_info_under_slot.slot_occupied_ratio < 1e-3 ||
-      ego_info_under_slot.slot_occupied_ratio > 0.708 ||
-      ego_info_under_slot.fix_slot ||
-      frame_.remain_dist_path < ego_stop_dist + 0.168 ||
-      (frame_.remain_dist_obs < ego_stop_dist + 0.168 && false)) {
-    ILOG_INFO << "should not stop when slot jumps much 1";
-    return false;
-  }
-
-  if (!frame_.dynamic_plan_fail_flag && frame_.dynamic_plan_path_superior) {
-    ILOG_INFO << "should not stop when slot jumps much 2";
-    frame_.dynamic_replan_fail_count = 0;
-    return false;
-  }
-
-  if (frame_.dynamic_replan_fail_count < 3) {
-    ILOG_INFO << "should not stop when slot jumps much 3";
-    return false;
-  }
-
-  geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
-  geometry_path_bef.GlobalToLocal(
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf);
-  const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
-  const geometry_lib::PathPoint front_tar_pose_bef =
-      GetCarFrontPoseFromCarPose(tar_pose_bef);
-
-  geometry_lib::PathPoint tar_pose_now = ego_info_under_slot.origin_target_pose;
-  tar_pose_now.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
-  tar_pose_now.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
-  const geometry_lib::PathPoint front_tar_pose_now =
-      GetCarFrontPoseFromCarPose(tar_pose_now);
-
-  const auto& param = apa_param.GetParam();
-
-  std::vector<double> fail_count_tab{3.0, 4.0, 5.0, 6.0, 7.0};
-  const double dlat = (param.should_stop_lat_err -
-                       (param.check_finish_params.lat_err_strict - 1e-3)) /
-                      (fail_count_tab.size() - 1);
-  const double dheading =
-      (param.should_stop_heading_err -
-       (param.check_finish_params.heading_err_strict - 1e-3)) /
-      (fail_count_tab.size() - 1);
-  std::vector<double> lat_err_tab{};
-  std::vector<double> heading_err_tab{};
-  lat_err_tab.reserve(fail_count_tab.size());
-  heading_err_tab.reserve(fail_count_tab.size());
-  for (size_t i = 0; i < fail_count_tab.size(); ++i) {
-    lat_err_tab.emplace_back(param.should_stop_lat_err - i * dlat);
-    heading_err_tab.emplace_back(param.should_stop_heading_err - i * dheading);
-  }
-
-  const double lat_err_threshold =
-      mathlib::Interp1(fail_count_tab, lat_err_tab,
-                       static_cast<double>(frame_.dynamic_replan_fail_count));
-
-  const double heading_err_threshold =
-      mathlib::Interp1(fail_count_tab, heading_err_tab,
-                       static_cast<double>(frame_.dynamic_replan_fail_count));
-
-  const double lat_err = std::max(
-      std::fabs(tar_pose_now.pos.y() - tar_pose_bef.pos.y()),
-      std::fabs(front_tar_pose_now.pos.y() - front_tar_pose_bef.pos.y()));
-
-  const double heading_err =
-      std::fabs(tar_pose_now.heading - tar_pose_bef.heading) * kRad2Deg;
-
-  ILOG_INFO << "lat_err = " << lat_err << "  heading_err = " << heading_err
-            << "  lat_err_threshold = " << lat_err_threshold
-            << "  heading_err_threshold = " << heading_err_threshold;
-
-  if (std::fabs(lat_err) < lat_err_threshold &&
-      std::fabs(heading_err) < heading_err_threshold) {
-    ILOG_INFO << "should not stop when slot jumps much 4";
-    return false;
-  }
-
-  frame_.ego_stop_when_slot_jumps_much = true;
-
-  ego_info_under_slot.fix_limiter = true;
-
-  ILOG_INFO << "the slot jumps too much, ego should stop, trim path, and then "
-               "plan reverse path";
-
-  PostProcessPathAccordingRemainDist(frame_.current_path_length -
-                                     frame_.remain_dist_path + ego_stop_dist);
-
-  return true;
 }
 
 void PerpendicularTailInScenario::CalSlotJumpErr() {
