@@ -109,6 +109,13 @@ void WeightMaker::MakeVWeight(const TargetMaker& target_maker) {
       v_weight_[i] = cruise_v_weight + KDefaultVWeightIncrement;
     }
   }
+  const auto &lane_change_info =
+    session_->planning_context().lane_change_decider_output();
+  if (lane_change_info.curr_state ==  kLaneChangeExecution){
+    for (size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = 50.0;
+    }
+  }
 }
 
 bool WeightMaker::IsNeedAWeight(const TargetMaker& target_maker) {
