@@ -651,8 +651,7 @@ class LoadRosbag:
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", "avg_radius_0_80m","use_avg_radius_for_ewma",\
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
-                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                         'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\
+                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", "CIPV_id",\
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
@@ -713,10 +712,10 @@ class LoadRosbag:
                           "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
-                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
+                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
-                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
+                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop", "rule_base_cut_in_agent_ids", "prediction_cut_in_agent_ids", "upper_bound_agent_ids",
                           "joint_target_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_cruise_speed", "is_confluence_area",
                           "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
                           "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',

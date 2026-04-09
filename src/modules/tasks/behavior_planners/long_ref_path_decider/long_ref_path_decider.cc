@@ -141,6 +141,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
   lon_behavior_output_.dds_refs.resize(plan_points_num_);
   lon_behavior_output_.hard_bounds_v3.resize(plan_points_num_);
   lon_behavior_output_.soft_bounds_v3.resize(plan_points_num_);
+  lon_behavior_output_.extend_bounds_v3.resize(plan_points_num_);
   lon_behavior_output_.lead_bounds.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_v.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_a.resize(plan_points_num_);
@@ -190,8 +191,16 @@ void LongRefPathDecider::UpdateLonRefPath() {
     s_soft_bound.bound_info.type = BoundType::DEFAULT;
     lon_behavior_output_.soft_bounds_v3[i] = s_soft_bound;
 
+    WeightedBound s_extend_bound;
+    s_extend_bound.lower = 0.0;
+    s_extend_bound.upper = bound_maker_->s_extend_bound(t);
+    s_extend_bound.weight = 10;
+    s_extend_bound.bound_info.id =
+        st_corridor_upper_bound.agent_id();  // hack: 后续在bound_maker_中查询
+    s_extend_bound.bound_info.type = BoundType::DEFAULT;
+    lon_behavior_output_.extend_bounds_v3[i] = s_extend_bound;
+
     // 5.update v bounds
-    // TBD: 缺少一个s-v bound，用于实现精准限速
     Bound lon_v_bound;
     lon_v_bound.lower = bound_maker_->v_lower_bound(t);
     lon_v_bound.upper = bound_maker_->v_upper_bound(t);
@@ -340,9 +349,23 @@ void LongRefPathDecider::SaveToDebugInfo() {
           BoundType2String(lon_soft_bound.bound_info.type));
     }
   }
-  // 6. TBD: update lon_sv_boundary
+  // 6. update lon_extend_bounds
+  lon_behavior_output_pb_.mutable_extend_bounds()->Reserve(
+      lon_behavior_output_.extend_bounds_v3.size());
+  auto lon_extend_bounds_pb = lon_behavior_output_pb_.add_extend_bounds();
+  for (const auto &lon_extend_bound : lon_behavior_output_.extend_bounds_v3) {
+    auto lon_extend_bound_pb = lon_extend_bounds_pb->add_bound();
+    lon_extend_bound_pb->set_lower(lon_extend_bound.lower);
+    lon_extend_bound_pb->set_upper(lon_extend_bound.upper);
+    lon_extend_bound_pb->set_weight(lon_extend_bound.weight);
+    lon_extend_bound_pb->mutable_bound_info()->set_id(
+        lon_extend_bound.bound_info.id);
+    lon_extend_bound_pb->mutable_bound_info()->set_type(
+        BoundType2String(lon_extend_bound.bound_info.type));
+  }
+  // 7. TBD: update lon_sv_boundary
 
-  // 7.update lon_bound_v
+  // 8.update lon_bound_v
   auto lon_bounds_v_pb = lon_behavior_output_pb_.mutable_lon_bound_v();
   lon_bounds_v_pb->mutable_bound()->Reserve(
       lon_behavior_output_.lon_bound_v.size());
@@ -408,6 +431,7 @@ void LongRefPathDecider::ClearOutput() {
   lon_behavior_output_.lon_bound_jerk.clear();
   lon_behavior_output_.s_speed_adjust_target.clear();
   lon_behavior_output_.s_lane_change_target.clear();
+  lon_behavior_output_.extend_bounds_v3.clear();
 }
 
 }  // namespace planning

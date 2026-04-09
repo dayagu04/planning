@@ -27,13 +27,12 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.delta = 4.0;
   comfort_params_.max_accel_jerk = 5.0;
   comfort_params_.min_decel_jerk = 1.0;
-  comfort_params_.max_decel_jerk = 1.5;
+  comfort_params_.max_decel_jerk = 1.35;
   comfort_params_.emergency_decel_jerk = 5.0;
   comfort_params_.virtual_front_s = 200.0;
   comfort_params_.cool_factor = 0.99;
   comfort_params_.delay_time_buffer = 0.3;
   comfort_params_.eps = 1e-3;
-  comfort_params_.static_speed_threshold = 0.2;
   comfort_params_.emergency_ttc_threshold = 1.5;
   comfort_params_.confluence_headway = 10.0;
   comfort_params_.cipv_decel_threshold = -3.0;
@@ -53,7 +52,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
-  const bool is_in_lane_change_execution =
+  is_in_lane_change_execution_ =
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangeExecution ||
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangeComplete ||
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangeHold;
@@ -62,7 +61,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   const auto& speed_limit_decider_output =
       session_->planning_context().speed_limit_decider_output();
   double speed_limit_normal = cruise_speed;
-  if (is_in_lane_change_execution) {
+  if (is_in_lane_change_execution_) {
     speed_limit_normal = std::fmin(
         speed_limit_normal, config_.lane_change_upper_speed_limit_kph / 3.6);
   }
@@ -115,6 +114,9 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   upper_bound_infos_.resize(plan_points_num_);
   acc_values_.resize(plan_points_num_, 0.0);
 
+  prediction_cutin_agent_ids_.clear();
+  rule_base_cutin_agent_ids_.clear();
+
   GenerateUpperBoundInfo();
 
   JSON_DEBUG_VECTOR("upper_bound_agent_ids",
@@ -125,11 +127,12 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
       "comfort_follow_agent_ids",
       std::vector<double>(follow_agent_ids_.begin(), follow_agent_ids_.end()),
       0);
-  JSON_DEBUG_VECTOR("joint_danger_agent_ids",
-                    std::vector<double>(joint_danger_agent_ids_.begin(),
-                                        joint_danger_agent_ids_.end()),
+
+  JSON_DEBUG_VECTOR("prediction_cut_in_agent_ids",
+                    std::vector<double>(prediction_cutin_agent_ids_.begin(),
+                                        prediction_cutin_agent_ids_.end()),
                     0);
-  JSON_DEBUG_VECTOR("rule_base_cutin_agent_ids",
+  JSON_DEBUG_VECTOR("rule_base_cut_in_agent_ids",
                     std::vector<double>(rule_base_cutin_agent_ids_.begin(),
                                         rule_base_cutin_agent_ids_.end()),
                     0);
@@ -147,14 +150,12 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   mutable_lon_ref_path_decider_output->is_follow_cipv = is_follow_cipv_;
   mutable_lon_ref_path_decider_output->is_lat_follow = is_lat_follow_;
   mutable_lon_ref_path_decider_output->is_lon_cutin = is_lon_cut_in_;
-  mutable_lon_ref_path_decider_output->is_joint_danger = is_joint_danger_;
   mutable_lon_ref_path_decider_output->is_lon_cipv_emergency_stop =
       is_lon_cipv_emergency_stop_;
-  mutable_lon_ref_path_decider_output->is_joint_danger_emergency_stop =
-      is_joint_danger_emergency_stop_;
+  mutable_lon_ref_path_decider_output->is_lon_cutin_emergency_stop =
+      is_lon_cutin_emergency_stop_;
   JSON_DEBUG_VALUE("lon_cipv_emergency_stop", is_lon_cipv_emergency_stop_);
-  JSON_DEBUG_VALUE("joint_danger_emergency_stop",
-                   is_joint_danger_emergency_stop_);
+  JSON_DEBUG_VALUE("lon_cutin_emergency_stop", is_lon_cutin_emergency_stop_);
 
   mutable_lon_ref_path_decider_output->parallel_overtake_agent_id =
       parallel_overtake_agent_id_;
@@ -216,19 +217,22 @@ bool ComfortTarget::CheckCipvEmergencyBraking(double ego_v) {
                                  cipv_info.acceleration_fusion());
 }
 
-bool ComfortTarget::CheckJointDangerEmergencyBraking(double ego_v,
-                                                     int32_t agent_id) {
+bool ComfortTarget::CheckCutinEmergencyBraking(double ego_v, int32_t agent_id) {
   if (agent_id == speed::kNoAgentId ||
       agent_id == comfort_params_.virtual_front_agent_id) {
     return false;
   }
 
-  bool is_agent_in_joint_and_upper =
-      std::find(joint_danger_agent_ids_.begin(), joint_danger_agent_ids_.end(),
-                agent_id) != joint_danger_agent_ids_.end() &&
+  bool is_agent_in_cut_in =
+      std::find(rule_base_cutin_agent_ids_.begin(),
+                rule_base_cutin_agent_ids_.end(),
+                agent_id) != rule_base_cutin_agent_ids_.end() &&
+      std::find(prediction_cutin_agent_ids_.begin(),
+                prediction_cutin_agent_ids_.end(),
+                agent_id) != prediction_cutin_agent_ids_.end() &&
       upper_bound_agent_ids_.find(agent_id) != upper_bound_agent_ids_.end();
 
-  if (!is_agent_in_joint_and_upper || upper_bound_infos_.empty() ||
+  if (!is_agent_in_cut_in || upper_bound_infos_.empty() ||
       upper_bound_infos_[0].s <= comfort_params_.eps) {
     return false;
   }
@@ -240,8 +244,8 @@ bool ComfortTarget::CheckJointDangerEmergencyBraking(double ego_v,
     return false;
   }
 
-  return CheckEmergencyCondition(ego_v, upper_bound_infos_[0].s,
-                                 agent->speed(), agent->accel_fusion());
+  return CheckEmergencyCondition(ego_v, upper_bound_infos_[0].s, agent->speed(),
+                                 agent->accel_fusion());
 }
 
 void ComfortTarget::GenerateUpperBoundInfo() {
@@ -257,6 +261,8 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double front_edge_to_rear_axle =
       ego_vehicle_param.front_edge_to_rear_axle;
+  const double rear_axle_to_center =
+      ego_vehicle_param.rear_axle_to_center;
 
   const auto& ego_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
@@ -323,17 +329,63 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   const auto& agent_longitudinal_decider_output =
       session_->planning_context().agent_longitudinal_decider_output();
   const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
-  rule_base_cutin_agent_ids_.assign(cutin_ids.begin(), cutin_ids.end());
 
-  const auto& lat_lon_joint_planner_output =
-      session_->planning_context().lat_lon_joint_planner_decider_output();
-  const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
-  joint_danger_agent_ids_.assign(danger_ids.begin(), danger_ids.end());
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  int32_t gap_rear_agent_id = -1;
 
-  ProcessCutinAgents(danger_ids, FollowAgentSource::kJointDangerAgentIds,
-                     forbidden_ids, added_agent_ids, follow_agents);
-  ProcessCutinAgents(cutin_ids, FollowAgentSource::kLonCutinAgentIds,
-                     forbidden_ids, added_agent_ids, follow_agents);
+  if (is_in_lane_change_execution_) {
+    const auto dynamic_world =
+        session_->environmental_model().get_dynamic_world();
+    if (dynamic_world) {
+      const auto node_ptr = dynamic_world->GetNode(
+          lane_change_decider_output.lc_gap_info.rear_node_id);
+      if (node_ptr) gap_rear_agent_id = node_ptr->node_agent_id();
+    }
+  }
+
+  for (const int32_t agent_id : cutin_ids) {
+    auto agent = agent_manager->GetAgent(agent_id);
+    if (!agent) continue;
+
+    if (agent->is_prediction_cutin()) {
+      prediction_cutin_agent_ids_.push_back(agent_id);
+    }
+
+    if (agent->is_rule_base_cutin()) {
+      rule_base_cutin_agent_ids_.push_back(agent_id);
+    }
+
+    if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
+        added_agent_ids.find(agent_id) != added_agent_ids.end() ||
+        agent_id == gap_rear_agent_id ||
+        (parallel_overtake_agent_id_ != -1 &&
+         agent_id == parallel_overtake_agent_id_)) {
+      continue;
+    }
+
+    if (agent->is_static()) {
+      const bool is_traffic_control_obstacle =
+          agent->type() == agent::AgentType::TRAFFIC_CONE ||
+          agent->type() == agent::AgentType::CTASH_BARREL ||
+          agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
+      const auto it = lat_obstacle_decision.find(agent_id);
+      if (!is_traffic_control_obstacle && it != lat_obstacle_decision.end() &&
+          (it->second == LatObstacleDecisionType::LEFT ||
+           it->second == LatObstacleDecisionType::RIGHT)) {
+        continue;
+      }
+    }
+
+    double agent_s = 0.0, agent_l = 0.0;
+    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l) ||
+        (agent_s < ego_s + rear_axle_to_center && !is_confluence_area_)) {
+      continue;
+    }
+
+    follow_agents.push_back({agent, FollowAgentSource::kLonCutinAgentIds});
+    added_agent_ids.insert(agent_id);
+  }
 
   for (const auto& [agent_id, decision] : lat_obstacle_decision) {
     if (decision == LatObstacleDecisionType::FOLLOW &&
@@ -341,8 +393,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
         added_agent_ids.find(agent_id) == added_agent_ids.end() &&
         agent_id != parallel_overtake_agent_id_) {
       if (auto agent = agent_manager->GetAgent(agent_id)) {
-        follow_agents.push_back(
-            {agent, FollowAgentSource::kLatObstacleDecision});
+        follow_agents.push_back({agent, FollowAgentSource::kLatFollowAgentIds});
         added_agent_ids.insert(agent_id);
       }
     }
@@ -365,15 +416,14 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           comfort_params_.v0,
           0.0,
           comfort_params_.default_follow_st_boundary_id,
-          FollowAgentSource::kLatObstacleDecision};
+          FollowAgentSource::kLatFollowAgentIds};
       bool found_valid_agent = false;
 
       for (const auto& agent_with_source : follow_agents) {
         const auto& agent = agent_with_source.agent;
         const int32_t agent_id = agent->agent_id();
 
-        if (agent_with_source.source ==
-            FollowAgentSource::kLatObstacleDecision) {
+        if (agent_with_source.source == FollowAgentSource::kLatFollowAgentIds) {
           auto it =
               spatio_temporal_follow_info.find(static_cast<uint32_t>(agent_id));
           if (it == spatio_temporal_follow_info.end()) continue;
@@ -434,7 +484,6 @@ void ComfortTarget::GenerateUpperBoundInfo() {
                              virtual_front_agent_id,
                              virtual_front_st_boundary_id,
                              false,
-                             false,
                              false};
 
     if (st_graph) {
@@ -458,7 +507,6 @@ void ComfortTarget::GenerateUpperBoundInfo() {
                                    upper_bound.agent_id(),
                                    upper_bound.boundary_id(),
                                    false,
-                                   false,
                                    false};
         }
       }
@@ -473,10 +521,8 @@ void ComfortTarget::GenerateUpperBoundInfo() {
 
         if (effective_s <= upper_bound_infos_[i].s) {
           const auto source = follow_agent_infos[i].source;
-          is_lat_follow_ |= (source == FollowAgentSource::kLatObstacleDecision);
+          is_lat_follow_ |= (source == FollowAgentSource::kLatFollowAgentIds);
           is_lon_cut_in_ |= (source == FollowAgentSource::kLonCutinAgentIds);
-          is_joint_danger_ |=
-              (source == FollowAgentSource::kJointDangerAgentIds);
 
           upper_bound_infos_[i] = {
               effective_s,
@@ -486,16 +532,15 @@ void ComfortTarget::GenerateUpperBoundInfo() {
               TargetType::kComfort,
               follow_agent_infos[i].agent_id,
               follow_agent_infos[i].st_boundary_id,
-              source == FollowAgentSource::kLatObstacleDecision,
-              source == FollowAgentSource::kLonCutinAgentIds,
-              source == FollowAgentSource::kJointDangerAgentIds};
+              source == FollowAgentSource::kLatFollowAgentIds,
+              source == FollowAgentSource::kLonCutinAgentIds};
         }
       }
 
       if (i == 0) {
         is_lon_cipv_emergency_stop_ = CheckCipvEmergencyBraking(ego_v);
-        is_joint_danger_emergency_stop_ = CheckJointDangerEmergencyBraking(
-            ego_v, upper_bound_infos_[i].agent_id);
+        is_lon_cutin_emergency_stop_ =
+            CheckCutinEmergencyBraking(ego_v, upper_bound_infos_[i].agent_id);
       }
     }
   }
@@ -504,100 +549,9 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   std::sort(follow_agent_ids_.begin(), follow_agent_ids_.end());
 }
 
-void ComfortTarget::ProcessCutinAgents(
-    const std::vector<int32_t>& agent_ids, FollowAgentSource source,
-    const std::unordered_set<int32_t>& forbidden_ids,
-    std::unordered_set<int32_t>& added_agent_ids,
-    std::vector<FollowAgentWithSource>& follow_agents) {
-  const auto& ego_vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto& lat_obstacle_decision = session_->planning_context()
-                                          .lateral_obstacle_decider_output()
-                                          .lat_obstacle_decision;
-  const auto& ego_lane = session_->environmental_model()
-                             .get_virtual_lane_manager()
-                             ->get_current_lane();
-  if (!ego_lane || !ego_lane->get_lane_frenet_coord()) return;
-
-  const auto& ego_lane_coord = ego_lane->get_lane_frenet_coord();
-  double ego_s = 0.0, ego_l = 0.0;
-  const auto& ego_init_point = session_->environmental_model()
-                                   .get_ego_state_manager()
-                                   ->planning_init_point();
-  if (!ego_lane_coord->XYToSL(ego_init_point.x, ego_init_point.y, &ego_s,
-                              &ego_l)) {
-    return;
-  }
-
-  const auto agent_manager =
-      session_->environmental_model().get_agent_manager();
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
-  const auto curr_state = lane_change_decider_output.curr_state;
-  int32_t gap_rear_agent_id = -1;
-
-  if (curr_state == StateMachineLaneChangeStatus::kLaneChangeExecution ||
-      curr_state == StateMachineLaneChangeStatus::kLaneChangeHold ||
-      curr_state == StateMachineLaneChangeStatus::kLaneChangeComplete ||
-      curr_state == StateMachineLaneChangeStatus::kLaneChangePropose) {
-    const auto dynamic_world =
-        session_->environmental_model().get_dynamic_world();
-    if (dynamic_world) {
-      const auto node_ptr = dynamic_world->GetNode(
-          lane_change_decider_output.lc_gap_info.rear_node_id);
-      if (node_ptr) gap_rear_agent_id = node_ptr->node_agent_id();
-    }
-  }
-
-  for (const int32_t agent_id : agent_ids) {
-    if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
-        added_agent_ids.find(agent_id) != added_agent_ids.end() ||
-        agent_id == gap_rear_agent_id ||
-        (parallel_overtake_agent_id_ != -1 &&
-         agent_id == parallel_overtake_agent_id_ &&
-         source != FollowAgentSource::kLonCutinAgentIds)) {
-      continue;
-    }
-
-    auto agent = agent_manager->GetAgent(agent_id);
-    if (!agent) continue;
-
-    double agent_s = 0.0, agent_l = 0.0;
-    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l) ||
-        (agent_s < ego_s &&
-         !(is_confluence_area_ && upper_bound_agent_ids_.find(agent_id) !=
-                                      upper_bound_agent_ids_.end()))) {
-      continue;
-    }
-
-    const bool is_traffic_control_obstacle =
-        agent->type() == agent::AgentType::TRAFFIC_CONE ||
-        agent->type() == agent::AgentType::CTASH_BARREL ||
-        agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
-
-    bool is_lateral_left_or_right = false;
-    auto lat_decision_iter =
-        lat_obstacle_decision.find(static_cast<uint32_t>(agent_id));
-    if (lat_decision_iter != lat_obstacle_decision.end()) {
-      is_lateral_left_or_right =
-          (lat_decision_iter->second == LatObstacleDecisionType::LEFT ||
-           lat_decision_iter->second == LatObstacleDecisionType::RIGHT);
-    }
-
-    if ((agent->is_static() ||
-         std::fabs(agent->speed()) < comfort_params_.static_speed_threshold) &&
-        !is_traffic_control_obstacle && is_lateral_left_or_right) {
-      continue;
-    }
-
-    follow_agents.push_back({agent, source});
-    added_agent_ids.insert(agent_id);
-  }
-}
-
 void ComfortTarget::GenerateComfortTarget() {
-  target_values_.resize(plan_points_num_,
-                        TargetValue(0.0, false, 0.0, 0.0, 0.0,TargetType::kNotSet));
+  target_values_.resize(plan_points_num_, TargetValue(0.0, false, 0.0, 0.0, 0.0,
+                                                      TargetType::kNotSet));
   comfort_jerk_min_vec_.resize(plan_points_num_,
                                comfort_params_.min_decel_jerk);
   comfort_v_target_vec_.resize(plan_points_num_, comfort_params_.v0);
@@ -606,8 +560,8 @@ void ComfortTarget::GenerateComfortTarget() {
   double current_v = init_lon_state_[1];
   double current_a = init_lon_state_[2];
 
-  target_values_[0] =
-      TargetValue(0.0, true, current_s, current_v, current_a, TargetType::kComfort);
+  target_values_[0] = TargetValue(0.0, true, current_s, current_v, current_a,
+                                  TargetType::kComfort);
   acc_values_[0] = current_a;
 
   const auto* st_graph = session_->planning_context().st_graph_helper();
@@ -621,7 +575,6 @@ void ComfortTarget::GenerateComfortTarget() {
     const double front_vel = upper_bound_infos_[i - 1].v;
     const bool is_lat_follow = upper_bound_infos_[i - 1].is_lat_follow;
     const bool is_lon_cut_in = upper_bound_infos_[i - 1].is_lon_cut_in;
-    const bool is_joint_danger = upper_bound_infos_[i - 1].is_joint_danger;
 
     double tau = comfort_params_.T;
     if (st_graph) {
@@ -634,29 +587,11 @@ void ComfortTarget::GenerateComfortTarget() {
       }
     }
 
-    double min_follow_distance =
-        comfort_params_.s0 + current_v * comfort_params_.delay_time_buffer;
-    double max_follow_distance = comfort_params_.s0 + current_v * tau;
-    double max_decel_jerk = (is_lon_cut_in || is_lat_follow || is_joint_danger)
+    double decel_jerk = (is_lon_cut_in || is_lat_follow)
                                 ? comfort_params_.max_decel_jerk
                                 : comfort_params_.min_decel_jerk;
 
-    double decel_jerk = comfort_params_.min_decel_jerk;
-    if (front_s <= min_follow_distance) {
-      decel_jerk = max_decel_jerk;
-    } else if (front_s < max_follow_distance) {
-      double distance_diff = max_follow_distance - min_follow_distance;
-      if (distance_diff >= comfort_params_.eps) {
-        double ratio = (front_s - min_follow_distance) / distance_diff;
-        ratio = std::clamp(ratio, 0.0, 1.0);
-        double smooth_ratio = 3.0 * ratio * ratio - 2.0 * ratio * ratio * ratio;
-        decel_jerk =
-            max_decel_jerk +
-            smooth_ratio * (comfort_params_.min_decel_jerk - max_decel_jerk);
-      }
-    }
-
-    if (is_lon_cipv_emergency_stop_ || is_joint_danger_emergency_stop_) {
+    if (is_lon_cipv_emergency_stop_ || is_lon_cutin_emergency_stop_) {
       decel_jerk = comfort_params_.emergency_decel_jerk;
     }
 
@@ -665,6 +600,7 @@ void ComfortTarget::GenerateComfortTarget() {
     double comfort_acc = CalculateComfortAcceleration(
         current_a, current_v, current_s, front_vel, front_s, tau, decel_jerk,
         comfort_v_target_vec_[i]);
+
     acc_values_[i] = comfort_acc;
 
     double ds = std::max(
@@ -676,7 +612,7 @@ void ComfortTarget::GenerateComfortTarget() {
     next_v = std::max(0.0, next_v);
 
     target_values_[i] =
-        TargetValue(t, true, next_s, next_v, next_a,TargetType::kComfort);
+        TargetValue(t, true, next_s, next_v, next_a, TargetType::kComfort);
 
     current_s = next_s;
     current_v = next_v;

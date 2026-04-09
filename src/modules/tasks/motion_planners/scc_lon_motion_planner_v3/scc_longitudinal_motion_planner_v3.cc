@@ -40,6 +40,8 @@ void SccLongitudinalMotionPlannerV3::Init() {
   planning_input_.mutable_a_weights()->Resize(N, 0.0);
   planning_input_.mutable_soft_pos_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_soft_pos_min_vec()->Resize(N, 0.0);
+  planning_input_.mutable_extend_pos_max_vec()->Resize(N, 0.0);
+  planning_input_.mutable_extend_pos_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_hard_pos_max_vec()->Resize(N, 0.0);
   planning_input_.mutable_hard_pos_min_vec()->Resize(N, 0.0);
   planning_input_.mutable_vel_max_vec()->Resize(N, 0.0);
@@ -97,6 +99,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   const auto &a_refs = longitudinal_decider_output.dds_refs;
   const auto &s_bounds = longitudinal_decider_output.hard_bounds_v3;
   const auto &s_soft_bounds = longitudinal_decider_output.soft_bounds_v3;
+  const auto &s_extend_bounds = longitudinal_decider_output.extend_bounds_v3;
   // const auto &s_lead_bounds = longitudinal_decider_output.lon_lead_bounds;
   const auto &v_bounds = longitudinal_decider_output.lon_bound_v;
   const auto &a_bounds = longitudinal_decider_output.lon_bound_a;
@@ -143,6 +146,13 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     auto s_soft_bound = s_soft_bounds[i];
     planning_input_.mutable_soft_pos_max_vec()->Set(i, s_soft_bound.upper);
     planning_input_.mutable_soft_pos_min_vec()->Set(i, s_soft_bound.lower);
+  }
+
+  // 2.3. set extend bound in V3
+  for (size_t i = 0; i < s_extend_bounds.size(); ++i) {
+    auto s_extend_bound = s_extend_bounds[i];
+    planning_input_.mutable_extend_pos_max_vec()->Set(i, s_extend_bound.upper);
+    planning_input_.mutable_extend_pos_min_vec()->Set(i, s_extend_bound.lower);
   }
 
   // 2.4. set vel bounds
@@ -193,7 +203,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
 
     planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
     planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
-    // planning_input_.set_q_sv_bound(config_.q_sv_bound);
+    planning_input_.set_q_extend_pos_bound(config_.q_extend_pos_bound);
     planning_input_.set_q_vel_bound(config_.q_vel_bound);
     planning_input_.set_q_acc_bound(config_.q_acc_bound);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
@@ -211,7 +221,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
 
     planning_input_.set_q_soft_pos_bound(config_.q_soft_pos_bound);
     planning_input_.set_q_hard_pos_bound(config_.q_hard_pos_bound);
-    // planning_input_.set_q_sv_bound(0.0);
+    planning_input_.set_q_extend_pos_bound(config_.q_extend_pos_bound);
     planning_input_.set_q_vel_bound(config_.q_vel_bound);
     planning_input_.set_q_acc_bound(config_.q_acc_bound);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
@@ -221,22 +231,23 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_safe_distance(config_.safe_distance);
     planning_input_.set_q_emergency_stop(0.0);
     planning_input_.set_is_lon_cipv_emergency_stop(false);
-    planning_input_.set_is_joint_danger_emergency_stop(false);
+    planning_input_.set_is_lon_cutin_emergency_stop(false);
   }
 
   const auto &lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
   if (lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
-      lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
+      lon_ref_path_decider_output.is_lon_cutin_emergency_stop) {
     planning_input_.set_q_acc(1.0);
     planning_input_.set_q_acc_start(0.0);
     planning_input_.set_q_emergency_stop(config_.q_emergency_stop);
     planning_input_.set_is_lon_cipv_emergency_stop(
         lon_ref_path_decider_output.is_lon_cipv_emergency_stop);
-    planning_input_.set_is_joint_danger_emergency_stop(
-        lon_ref_path_decider_output.is_joint_danger_emergency_stop);
+    planning_input_.set_is_lon_cutin_emergency_stop(
+        lon_ref_path_decider_output.is_lon_cutin_emergency_stop);
   }
-  planning_input_.set_is_follow_cipv(lon_ref_path_decider_output.is_follow_cipv);
+  planning_input_.set_is_follow_cipv(
+      lon_ref_path_decider_output.is_follow_cipv);
   if (session_->is_rads_scene()) {
     planning_input_.set_safe_distance(0.0);
   }
