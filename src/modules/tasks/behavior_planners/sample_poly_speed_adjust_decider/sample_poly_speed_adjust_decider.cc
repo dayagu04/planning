@@ -133,7 +133,13 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     ->mutable_lane_change_decider_output()
     .is_emergency_scene = false;
   if (ok) {
-    if (min_cost_traj_ptr_ == nullptr ||
+    bool is_near_stop_point =
+        min_cost_traj_ptr_ == nullptr
+            ? true
+            : (distance_to_merge_point_ > 4.0 * ego_v_) &&
+                  (min_cost_traj_ptr_->anchor_points_match_gap_cost().cost() >
+                   0.0);
+    if (is_near_stop_point ||
         !min_cost_traj_ptr_->anchor_points_match_gap_cost()
              .is_gap_changeable() ||
         !min_cost_traj_ptr_->is_left_distance_enough()) {
@@ -220,7 +226,7 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
              (config_.sample_t_nums - 1);
   delta_v_ = (speed_adjust_range_.first - speed_adjust_range_.second) /
              (config_.sample_v_nums - 1);
-  adjust_speed_min_acc_ = is_merge_change_ ? -3.0 : -2.0;
+  adjust_speed_min_acc_ = is_merge_change_ ? -2.5 : -2.0;
   for (int i = 0; i < config_.sample_v_nums; i++) {
     const double v = speed_adjust_range_.second + i * delta_v_;
     std::vector<SampleQuarticPolynomialCurve> sample_traj_at_t;

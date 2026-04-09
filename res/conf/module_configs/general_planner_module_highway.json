@@ -2004,7 +2004,7 @@
     "decleration_scene_weight_match_gap_vel": 4.5,
     "decleration_scene_weight_match_gap_s": 2.5,
     "decleration_scene_weight_follow_vel": 0.0,
-    "decleration_scene_weight_stop_line": 50.0,
+    "decleration_scene_weight_stop_line": 5.0,
     "decleration_scene_weight_leading_safe_s": 13.5,
     "decleration_scene_weight_leading_safe_v": 0.0,
     "decleration_scene_weight_vel_variable": 0.5,

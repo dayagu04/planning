@@ -211,7 +211,19 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
     double s_buffer = std::fmax(thw + follow_distance + 3.0, 3.0);
     double gap = anchor_matched_upper_st_point.s() - frenet_node_s - s_buffer -
                  front_edge_to_rear_axle_;
-    if (gap < 0.0 && node.s > merge_point_s_) {
+    int object_lateral_offset = static_cast<int>(10 * anchor_matched_lower_st_point.l());
+    double collsion_s = 0.0;
+    if (object_lateral_offset < 0) {
+      collsion_s = merge_point_s_;
+    } else {
+      auto it = agent_lateral_offset_map_.find(object_lateral_offset);
+      if (it != agent_lateral_offset_map_.end()) {
+        collsion_s = it->second;
+      } else {
+        collsion_s = 100.0;
+      }
+    }
+    if (gap < 0.0 && node.s > (collsion_s - s_buffer)) {
       std::cout << "Gap前车碰撞风险: " << node.getKey()
                 << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
                 << std::endl;
