@@ -870,9 +870,13 @@ void EgoStateManager::RealtimeUpdatePlanningInitState() {
 
     // longitudinal motion replans due to large lon_pos_err
     if (fabs(planning_init_point_.lon_pos_err) > 1.5) {
-      planning_init_point_.lon_pos_err = 0.0;
-
-      vel_stitch = vel_ego;
+        planning_init_point_.lon_pos_err = 0.0;
+        // 限制单帧最大速度修正量，避免跳变
+        constexpr double kMaxVelCorrectionPerFrame = 0.5;
+        const double vel_diff = vel_ego - vel_stitch;
+        vel_stitch += std::clamp(vel_diff,
+                                -kMaxVelCorrectionPerFrame,
+                                  kMaxVelCorrectionPerFrame);
     }
 
     lon_init_state.set_s(0.0);

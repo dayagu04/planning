@@ -684,6 +684,7 @@ void ComfortTarget::GenerateComfortTarget() {
                                    comfort_acc * dt_ * dt_);
     double next_s = current_s + ds;
     double next_v = std::max(0.0, current_v + comfort_acc * dt_);
+    next_v = std::min(next_v, comfort_params_.v0);
     double next_a = comfort_acc;
     next_v = std::max(0.0, next_v);
 
