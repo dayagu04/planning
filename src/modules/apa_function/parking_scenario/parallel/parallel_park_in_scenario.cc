@@ -4290,9 +4290,11 @@ void ParallelParkInScenario::UpdatePathByGeometry(
       path_in_slot[i][0].arc_seg.pA = cur_pt;
       path_in_slot[i][0].arc_seg.headingA =
           cur_request.parallel_target_group[path_idx].theta;
+      double heading_diff =
+          NormalizeAngle(cur_request.parallel_target_group[path_idx].theta -
+                         path_in_slot[i][0].arc_seg.headingB);
       path_in_slot[i][0].arc_seg.length =
-          std::fabs((cur_request.parallel_target_group[path_idx].theta -
-                     path_in_slot[i][0].arc_seg.headingB)) *
+          std::fabs(heading_diff) *
           path_in_slot[i][0].arc_seg.circle_info.radius;
       break;
     }
