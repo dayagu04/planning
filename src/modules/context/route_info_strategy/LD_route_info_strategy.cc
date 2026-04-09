@@ -183,19 +183,13 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
 }
 
 void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
-    const std::shared_ptr<VirtualLane>& lane) {
+    const std::shared_ptr<VirtualLane>& lane,
+    const iflymapdata::sdpro::LinkInfo_Link* split_link) {
   if (lane == nullptr) {
     return;
   }
 
   // 场景前置条件检查
-  if (split_info_vec_.empty()) {
-    lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
-    return;
-  }
-
-  const auto& front_split_info = split_info_vec_.front();
-  const auto& split_link = ld_map_.GetLinkOnRoute(front_split_info.first->id());
   if (split_link == nullptr || split_link->successor_link_ids_size() != 2) {
     lane->set_route_on_link_status(RouteOnLinkStatus::UNKNOWN);
     return;
@@ -285,13 +279,9 @@ void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
 void LDRouteInfoStrategy::UpdateLanesOrderOnSplitNextLink(
     const std::shared_ptr<VirtualLane>& cur_lane,
     const std::shared_ptr<VirtualLane>& left_lane,
-    const std::shared_ptr<VirtualLane>& right_lane) {
+    const std::shared_ptr<VirtualLane>& right_lane,
+    const iflymapdata::sdpro::LinkInfo_Link* split_link) {
   // 前置条件：split_info_vec_非空，且存在有效的split_next_link
-  if (split_info_vec_.empty()) {
-    return;
-  }
-  const auto& front_split_info = split_info_vec_.front();
-  const auto& split_link = ld_map_.GetLinkOnRoute(front_split_info.first->id());
   if (split_link == nullptr || split_link->successor_link_ids_size() != 2) {
     return;
   }
@@ -1472,10 +1462,14 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     const auto& cur_lane = virtual_lane_manager->get_current_lane();
     const auto& left_lane = virtual_lane_manager->get_left_lane();
     const auto& right_lane = virtual_lane_manager->get_right_lane();
-    UpdateLaneIsOnRouteLinkStatus(cur_lane);
-    UpdateLaneIsOnRouteLinkStatus(left_lane);
-    UpdateLaneIsOnRouteLinkStatus(right_lane);
-    UpdateLanesOrderOnSplitNextLink(cur_lane, left_lane, right_lane);
+    const iflymapdata::sdpro::LinkInfo_Link* split_link = nullptr;
+    if (!split_info_vec_.empty()) {
+      split_link = ld_map_.GetLinkOnRoute(split_info_vec_.front().first->id());
+    }
+    UpdateLaneIsOnRouteLinkStatus(cur_lane, split_link);
+    UpdateLaneIsOnRouteLinkStatus(left_lane, split_link);
+    UpdateLaneIsOnRouteLinkStatus(right_lane, split_link);
+    UpdateLanesOrderOnSplitNextLink(cur_lane, left_lane, right_lane, split_link);
 
     bool cur_lane_on_route_link_base_map_link =
         cur_lane->get_route_on_link_status() == RouteOnLinkStatus::ON_ROUTE;
