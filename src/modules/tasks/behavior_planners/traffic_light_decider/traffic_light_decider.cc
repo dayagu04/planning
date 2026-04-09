@@ -196,7 +196,10 @@ bool TrafficLightDecider::Execute() {
     can_pass_ = true;
   }
 
+  const auto& route_info_output = session_->environmental_model().get_route_info()
+                                                           ->get_route_info_output();
   if (config_.enable_tfl_decider && !in_acc_func &&
+      (!route_info_output.is_ego_on_expressway) &&
       ((is_in_straight_lane_ && !can_pass_) || !is_in_straight_lane_)) {
     AddVirtualObstacle();
   }
