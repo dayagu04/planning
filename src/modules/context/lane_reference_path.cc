@@ -978,6 +978,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   double min_distance_square_to_ego_point = dx * dx + dy * dy;
   // find nearest point
   for (int i = 1; i < point_nums; i++) {
+    const auto &cur_floor = ref_path_points[i].floor_id;
+    if(ego_state_mgr->ego_floor_id() != cur_floor) continue;
     const auto &cur_point = ref_path_points[i].path_point;
     const auto &pre_point = ref_path_points[i - 1].path_point;
     accumulate_distance_reference_path += std::hypotf(
