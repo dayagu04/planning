@@ -184,7 +184,7 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
 
 void LDRouteInfoStrategy::UpdateLaneIsOnRouteLinkStatus(
     const std::shared_ptr<VirtualLane>& lane,
-    const iflymapdata::sdpro::LinkInfo_Link* split_link) {
+    const iflymapdata::sdpro::LinkInfo_Link* split_link) const{
   if (lane == nullptr) {
     return;
   }
@@ -280,7 +280,7 @@ void LDRouteInfoStrategy::UpdateLanesOrderOnSplitNextLink(
     const std::shared_ptr<VirtualLane>& cur_lane,
     const std::shared_ptr<VirtualLane>& left_lane,
     const std::shared_ptr<VirtualLane>& right_lane,
-    const iflymapdata::sdpro::LinkInfo_Link* split_link) {
+    const iflymapdata::sdpro::LinkInfo_Link* split_link) const{
   // 前置条件：split_info_vec_非空，且存在有效的split_next_link
   if (split_link == nullptr || split_link->successor_link_ids_size() != 2) {
     return;
@@ -298,8 +298,7 @@ void LDRouteInfoStrategy::UpdateLanesOrderOnSplitNextLink(
     if (map_lane == nullptr) {
       continue;
     }
-    if (IsEmergencyLane(map_lane) || IsDiversionLane(map_lane) ||
-        IsExitLane(map_lane)) {
+    if (IsEmergencyLane(map_lane) || IsDiversionLane(map_lane)) {
       continue;
     }
     seq_lane_ids.emplace_back(map_lane->sequence(), lane_id);
@@ -1458,21 +1457,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
-    const auto& cur_lane = virtual_lane_manager->get_current_lane();
-    const auto& left_lane = virtual_lane_manager->get_left_lane();
-    const auto& right_lane = virtual_lane_manager->get_right_lane();
-    const iflymapdata::sdpro::LinkInfo_Link* split_link = nullptr;
-    if (!split_info_vec_.empty()) {
-      split_link = ld_map_.GetLinkOnRoute(split_info_vec_.front().first->id());
-    }
-    UpdateLaneIsOnRouteLinkStatus(cur_lane, split_link);
-    UpdateLaneIsOnRouteLinkStatus(left_lane, split_link);
-    UpdateLaneIsOnRouteLinkStatus(right_lane, split_link);
-    UpdateLanesOrderOnSplitNextLink(cur_lane, left_lane, right_lane, split_link);
-
     bool cur_lane_on_route_link_base_map_link =
-        cur_lane->get_route_on_link_status() == RouteOnLinkStatus::ON_ROUTE;
+        IsCurrentLaneOnRouteLink(feasible_lane_graph);
 
     // const bool lane_type_condition =
     //     !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
@@ -1538,6 +1524,86 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
   }
 
   return;
+}
+
+bool LDRouteInfoStrategy::IsCurrentLaneOnRouteLink(
+    const TopoLinkGraph& feasible_lane_graph) const {
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& cur_lane = virtual_lane_manager->get_current_lane();
+  const auto& left_lane = virtual_lane_manager->get_left_lane();
+  const auto& right_lane = virtual_lane_manager->get_right_lane();
+  const iflymapdata::sdpro::LinkInfo_Link* split_link = nullptr;
+  const iflymapdata::sdpro::LinkInfo_Link* split_next_link = nullptr;
+  if (split_info_vec_.empty() || cur_lane == nullptr) {
+    return false;
+  }
+
+  if (split_info_vec_.front().second > 150.0) {
+    return false;
+  }
+
+  split_link = ld_map_.GetLinkOnRoute(split_info_vec_.front().first->id());
+
+  split_next_link = ld_map_.GetNextLinkOnRoute(split_link->id());
+  if (split_next_link == nullptr) {
+    return false;
+  }
+
+  UpdateLaneIsOnRouteLinkStatus(cur_lane, split_link);
+  UpdateLaneIsOnRouteLinkStatus(left_lane, split_link);
+  UpdateLaneIsOnRouteLinkStatus(right_lane, split_link);
+  UpdateLanesOrderOnSplitNextLink(cur_lane, left_lane, right_lane, split_link);
+
+  // 与 UpdateLanesOrderOnSplitNextLink 保持一致：只统计正常车道，建立
+  // sequence → 从左向右序号（1=最左）的映射
+  std::vector<std::pair<int, uint64_t>> seq_lane_ids;
+  for (auto lane_id : split_next_link->lane_ids()) {
+    const auto* map_lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (map_lane == nullptr) {
+      continue;
+    }
+    if (IsEmergencyLane(map_lane) || IsDiversionLane(map_lane)) {
+      continue;
+    }
+    seq_lane_ids.emplace_back(map_lane->sequence(), lane_id);
+  }
+  // sequence 从大到小排序（大=靠左），排序后下标+1即为从左向右序号
+  std::sort(seq_lane_ids.begin(), seq_lane_ids.end(),
+            [](const auto& a, const auto& b) { return a.first > b.first; });
+  const int total_normal_lanes = static_cast<int>(seq_lane_ids.size());
+
+  auto seq_to_order = [&](int sequence) -> int {
+    for (int i = 0; i < total_normal_lanes; ++i) {
+      if (seq_lane_ids[i].first == sequence) {
+        return i + 1;
+      }
+    }
+    return -1;
+  };
+
+  bool cur_lane_on_split_next_link_feasible_lane = false;
+  const int cur_lane_order = cur_lane->get_lane_order_on_split_next_link();
+  if (cur_lane_order > 0 && !seq_lane_ids.empty()) {
+    for (const auto& lane_topo_group : feasible_lane_graph.lane_topo_groups) {
+      if (lane_topo_group.link_id != split_next_link->id()) {
+        continue;
+      }
+      for (const auto& topo_lane : lane_topo_group.topo_lanes) {
+        // 用与 UpdateLanesOrderOnSplitNextLink 相同的 sequence→序号 映射转换
+        const int left_to_right_order =
+            seq_to_order(static_cast<int>(topo_lane.order_id));
+        if (left_to_right_order == cur_lane_order) {
+          cur_lane_on_split_next_link_feasible_lane = true;
+          break;
+        }
+      }
+      break;
+    }
+  }
+
+  return cur_lane_on_split_next_link_feasible_lane &&
+         cur_lane->get_route_on_link_status() == RouteOnLinkStatus::ON_ROUTE;
 }
 
 bool LDRouteInfoStrategy::CalculateFrontTargetLinkBaseFixDis(
