@@ -295,8 +295,7 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
       v_limit_this_agent = target_v;
     } else if (longitudinal_dist < approach_dist) {
       // 接近中：v² = target_v² - 2*a*s → 反推当前允许速度
-      const double a =
-          hpp_speed_limit_config_.approaching_zone_deceleration;
+      const double a = hpp_speed_limit_config_.approaching_zone_deceleration;
       const double v2 = target_v * target_v - 2.0 * a * longitudinal_dist;
       v_limit_this_agent = (v2 > 0.0)
                                ? std::sqrt(v2)
@@ -558,9 +557,7 @@ double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
   const double kDecelerationRate =
       hpp_speed_limit_config_.approaching_zone_deceleration;
 
-  if (zone_info.in_speed_limit_zone) {
-    return kSpeedObjectiveZoneLimit;
-  } else if (zone_info.approaching_speed_limit_zone) {
+  if (zone_info.in_speed_limit_zone || zone_info.approaching_speed_limit_zone) {
     // 接近区域，根据距离和减速度计算限速
     // 使用运动学公式: v² = v0² + 2*a*s
     // 其中 v = kSpeedObjectiveZoneLimit, a = kDecelerationRate, s =
