@@ -225,10 +225,11 @@ void LongRefPathDecider::UpdateLonRefPath() {
     Bound lon_j_bound;
     if (lane_change_info.s_search_status &&
         speed_planning_config_.enable_speed_adjust &&
+        lane_change_info.is_emergency_scene &&
         start_stop_decider_output.ego_start_stop_info().state() !=
             common::StartStopInfo::STOP) {
-      lon_j_bound.lower = -2.5;
-      lon_j_bound.upper = 3.0;
+      lon_j_bound.lower = -2.0;
+      lon_j_bound.upper = 2.0;
     } else {
       lon_j_bound.lower = bound_maker_->jerk_lower_bound(t);
       lon_j_bound.upper = bound_maker_->jerk_upper_bound(t);
