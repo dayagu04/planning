@@ -130,7 +130,8 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
           iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
       current_link_->link_class() ==
           iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
-      (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+      (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+      (current_link_->link_type() & iflymapdata::sdpro::LT_JCT) != 0) {
 
     route_info_output_.is_ego_on_expressway = true;
     if (current_link_->link_class() ==
@@ -1235,6 +1236,16 @@ bool LDRouteInfoStrategy::CalculateFrontTargetLinkBaseFixDis(
       break;
     }
 
+    // 只在ODD范围内找target_link
+    if (!(temp_next_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+          temp_next_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+          (temp_next_link->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+          (temp_next_link->link_type() & iflymapdata::sdpro::LT_JCT) != 0)) {
+      break;
+    }
+
     temp_link = temp_next_link;
     sum_dis = sum_dis + temp_next_link->length() * 0.01;
   }
@@ -1950,7 +1961,7 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
       continue;
     }
 
-    bool is_filter_split = true;
+    bool is_filter_split = false;
     for (const auto& suc_link_id: split_link->successor_link_ids()) {
       if (suc_link_id == split_next_link->id()) {
         continue;
@@ -1963,20 +1974,16 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
 
       std::vector<iflymapdata::sdpro::Lane> exit_lane_vec;
       if (!CalculateSplitLinkExitLane(split_link, out_link, exit_lane_vec)) {
-        continue;
-      }
-
-      for (const auto& lane: exit_lane_vec) {
-        if (!IsNeedFilterSplit(&lane)) {
-          is_filter_split = false;
-          break;
-        }
-      }
-
-      if (!is_filter_split) {
         break;
       }
 
+      for (const auto& lane: exit_lane_vec) {
+        if (IsNeedFilterSplit(&lane)) {
+          is_filter_split = true;
+        } else {
+          is_filter_split = false;
+        }
+      }
     }
 
     if (!is_filter_split) {

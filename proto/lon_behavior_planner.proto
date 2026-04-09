@@ -82,4 +82,5 @@ message LonRefPath {
   repeated double s_speed_adjust_target = 11;
   repeated double s_lane_change_target = 12;
   repeated DoublePair dds_refs = 13;
+  repeated WeightedBounds extend_bounds = 14;
 }

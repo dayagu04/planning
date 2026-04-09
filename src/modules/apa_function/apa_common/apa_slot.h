@@ -183,7 +183,8 @@ class ApaSlot final {
   ~ApaSlot() = default;
   ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot);
 
-  void Update(const iflyauto::ParkingFusionSlot& fusion_slot, bool is_redefine_slot_type = false, int ego2slot_side = 0);
+  void Update(const iflyauto::ParkingFusionSlot& fusion_slot,
+              bool is_redefine_slot_type = false, int ego2slot_side = 0);
 
   void Reset() {
     id_ = 0;
@@ -209,6 +210,11 @@ class ApaSlot final {
 
     is_narrow_slot_ = false;
     is_selected_ = false;
+
+    g2l_tf_.Reset();
+    l2g_tf_.Reset();
+    origin_pose_global_.Reset();
+    origin_pose_local_.Reset();
   }
 
   const std::vector<Eigen::Vector2d> GetCustomSlotPolygonByCenter(
@@ -276,7 +282,10 @@ class ApaSlot final {
 
   const geometry_lib::LineSegment& GetMidLine() const { return mid_line_; }
 
-  void ResetAsParallel(const iflyauto::ParkingFusionSlot& fusion_slot, const int ego_side_to_slot);
+  void ResetAsParallel(const iflyauto::ParkingFusionSlot& fusion_slot,
+                       const int ego_side_to_slot);
+
+  void CalcOriginPoseAndTf();
 
  private:
   void CorrectSlotPointOrder();
@@ -317,6 +326,8 @@ class ApaSlot final {
 
   geometry_lib::GlobalToLocalTf g2l_tf_;
   geometry_lib::LocalToGlobalTf l2g_tf_;
+  geometry_lib::PathPoint origin_pose_global_;
+  geometry_lib::PathPoint origin_pose_local_;
 
   bool is_narrow_slot_ = false;
 

@@ -32,9 +32,8 @@ struct LonRefPathDeciderOutput {
   bool is_cross_vru_pre_handle = false;
   bool is_lat_follow = false;
   bool is_lon_cutin = false;
-  bool is_joint_danger = false;
   bool is_lon_cipv_emergency_stop = false;
-  bool is_joint_danger_emergency_stop = false;
+  bool is_lon_cutin_emergency_stop = false;
   std::vector<int32_t> st_overtake_agent_ids;
   int32_t parallel_overtake_agent_id;
   std::vector<ComfortTargetUpperBoundInfo> comfort_target_upper_bound_infos;

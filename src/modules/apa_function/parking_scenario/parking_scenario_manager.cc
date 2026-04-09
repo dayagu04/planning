@@ -174,7 +174,9 @@ void ParkingScenarioManager::UpdateScenarioType() {
     scenario_status_ = ParkingScenarioStatus::STATUS_MANUAL;
   }
 
-  current_scenario_ = GetScenarioByType(scenario_type_);
+  if (cur_state != ApaStateMachine::SUSPEND) {
+    current_scenario_ = GetScenarioByType(scenario_type_);
+  }
 
   PrintApaScenarioType(scenario_type_);
   PrintApaScenarioStatus(scenario_status_);
@@ -249,7 +251,7 @@ bool ParkingScenarioManager::ScenarioRunning() {
     JSON_DEBUG_VALUE("geometry_path_release", true);
   }
 
-  const auto& parking_frame = current_scenario_->GetFrame();
+  const auto &parking_frame = current_scenario_->GetFrame();
   ILOG_INFO << "scenario running";
   return parking_frame.plan_stm.path_plan_success;
 }

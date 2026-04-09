@@ -28,7 +28,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
   modules_context
   fastrtps
   cyber
-  autoplt
+  # autoplt
   gtest)
 
 add_executable(test_cyber_talker src/modules/utils/test_cyber_talker.cc)

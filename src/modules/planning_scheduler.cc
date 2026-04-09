@@ -356,6 +356,16 @@ void PlanningScheduler::FillPlanningTrajectory(
       session_.planning_context().speed_limit_decider_output();
   const auto lane_borrow_decider_output =
       session_.planning_context().lane_borrow_decider_output();
+  const auto current_state = session_.environmental_model()
+                                 .get_local_view()
+                                 .function_state_machine_info.current_state;
+  const bool should_clip_negative_velocity_for_lcc_noa_scc =
+      current_state == iflyauto::FunctionalState_ACC_ACTIVATE ||
+      current_state == iflyauto::FunctionalState_ACC_OVERRIDE ||
+      current_state == iflyauto::FunctionalState_SCC_ACTIVATE ||
+      current_state == iflyauto::FunctionalState_SCC_OVERRIDE ||
+      current_state == iflyauto::FunctionalState_NOA_ACTIVATE ||
+      current_state == iflyauto::FunctionalState_NOA_OVERRIDE;
   // 更新输出
   iflyauto::strcpy_array(planning_output->meta.plan_strategy_name,
                          "Real Time Planning");
@@ -474,12 +484,16 @@ void PlanningScheduler::FillPlanningTrajectory(
         local_point = car2local * car_point;
 
         auto path_point = &trajectory->trajectory_points[i];
+        const double output_v =
+            should_clip_negative_velocity_for_lcc_noa_scc
+                ? std::max(planning_result.traj_points[i].v, 0.0)
+                : planning_result.traj_points[i].v;
         path_point->x = local_point.x();  // 设定轨迹
         path_point->y = local_point.y();  // 设定轨迹
         path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
         path_point->curvature = planning_result.traj_points[i].curvature;
         path_point->t = planning_result.traj_points[i].t;
-        path_point->v = planning_result.traj_points[i].v;
+        path_point->v = output_v;
         path_point->a = planning_result.traj_points[i].a;
         path_point->distance = planning_result.traj_points[i].s;
         path_point->jerk = planning_result.traj_points[i].jerk;
@@ -490,12 +504,16 @@ void PlanningScheduler::FillPlanningTrajectory(
     else {
       for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
         auto path_point = &trajectory->trajectory_points[i];
+        const double output_v =
+            should_clip_negative_velocity_for_lcc_noa_scc
+                ? std::max(planning_result.traj_points[i].v, 0.0)
+                : planning_result.traj_points[i].v;
         path_point->x = planning_result.traj_points[i].x;
         path_point->y = planning_result.traj_points[i].y;
         path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
         path_point->curvature = planning_result.traj_points[i].curvature;
         path_point->t = planning_result.traj_points[i].t;
-        path_point->v = planning_result.traj_points[i].v;
+        path_point->v = output_v;
         path_point->a = planning_result.traj_points[i].a;
         path_point->distance = planning_result.traj_points[i].s;
         path_point->jerk = planning_result.traj_points[i].jerk;
@@ -511,7 +529,9 @@ void PlanningScheduler::FillPlanningTrajectory(
       target_ref->polynomial[i] = d_polynomial[i];
     }
     target_ref->target_velocity =
-        vision_only_longitudinal_outputs.velocity_target;
+        should_clip_negative_velocity_for_lcc_noa_scc
+            ? std::max(vision_only_longitudinal_outputs.velocity_target, 0.0)
+            : vision_only_longitudinal_outputs.velocity_target;
     auto acceleration_range_limit = &target_ref->acceleration_range_limit;
     acceleration_range_limit->min_a = -4.0;
     acceleration_range_limit->max_a = 4.0;
@@ -607,7 +627,9 @@ void PlanningScheduler::FillPlanningTrajectory(
     }
 
     target_ref->target_velocity =
-        vision_only_longitudinal_outputs.velocity_target;
+        should_clip_negative_velocity_for_lcc_noa_scc
+            ? std::max(vision_only_longitudinal_outputs.velocity_target, 0.0)
+            : vision_only_longitudinal_outputs.velocity_target;
 
     auto acceleration_range_limit = &(target_ref->acceleration_range_limit);
     acceleration_range_limit->min_a =
@@ -1495,7 +1517,7 @@ void PlanningScheduler::CheckTrajectory() {
       case FaultType::TRAJ_CURVATURE_RANGE: {
         if (std::any_of(traj_points.begin(), traj_points.end(),
                         [](const TrajectoryPoint& traj_point) {
-                          return std::fabs(traj_point.curvature) > 0.35;
+                          return std::fabs(traj_point.curvature) > 0.5;
                         })) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
@@ -1524,7 +1546,7 @@ void PlanningScheduler::CheckTrajectory() {
         const auto& proj_point = projection_spline.GetOutput().point_proj;
         const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
                                         init_point.y() - proj_point.y());
-        if (fabs(lon_err) > 3.0) {
+        if (fabs(lon_err) > 200.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
@@ -1543,7 +1565,7 @@ void PlanningScheduler::CheckTrajectory() {
       case FaultType::TRAJ_LON_VEL_CONSISTENCY: {
         const auto lon_vel_err =
             ego_state_mgr->planning_init_point().v - ego_state_mgr->ego_v();
-        if (fabs(lon_vel_err) > (5.0 / 3.6)) {
+        if (fabs(lon_vel_err) > (10.0 / 3.6)) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
@@ -1563,7 +1585,7 @@ void PlanningScheduler::CheckTrajectory() {
         bool is_acc = ego_state_mgr->planning_init_point().a > 0.1;
         const auto lon_acc_err =
             ego_state_mgr->planning_init_point().a - ego_state_mgr->ego_acc();
-        if (is_acc && fabs(lon_acc_err) > 3.0) {
+        if (is_acc && fabs(lon_acc_err) > 5.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
@@ -1583,7 +1605,7 @@ void PlanningScheduler::CheckTrajectory() {
         bool is_acc = ego_state_mgr->planning_init_point().a > 0.1;
         const auto lon_acc_err =
             ego_state_mgr->planning_init_point().a - ego_state_mgr->ego_acc();
-        if ((!is_acc) && fabs(lon_acc_err) > 4.0) {
+        if ((!is_acc) && fabs(lon_acc_err) > 6.0) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;
           if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&

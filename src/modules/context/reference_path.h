@@ -206,6 +206,10 @@ class ReferencePath {
     return ref_path_source_;
   }
 
+  bool IsExistValidVirtualLaneAheadEgo(
+      double preview_range, double min_virtual_length,
+      double& virtual_length, double& dist_to_virtual_start);
+
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
   inline static bool compare_obstacle_s_descend(

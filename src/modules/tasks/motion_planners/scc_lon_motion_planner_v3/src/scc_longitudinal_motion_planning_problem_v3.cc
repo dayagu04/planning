@@ -24,7 +24,7 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
   solver_config.input_size = INPUT_SIZE;
   solver_config.model_dt = 0.2;
   solver_config.warm_start_enable = false;
-  solver_config.du_tol = 0.001;
+  solver_config.du_tol = 1e-5;
   solver_config.max_iter = 15;
   solver_config.lambda_min = 1e-5;
   init_state_.resize(STATE_SIZE);
@@ -46,6 +46,9 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonHardPosBoundCostTerm>());  // longitudinal hard pos
                                                      // bound cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LonExtendPosBoundCostTerm>());  // longitudinal extend
+                                                       // pos bound cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonVelBoundCostTerm>());  // longitudinal vel bound cost
   ilqr_core_ptr_->AddCost(
@@ -100,6 +103,10 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     // bounds
     cost_config_vec.at(i)[SOFT_POS_MAX] = planning_input.soft_pos_max_vec(i);
     cost_config_vec.at(i)[SOFT_POS_MIN] = planning_input.soft_pos_min_vec(i);
+    cost_config_vec.at(i)[EXTEND_POS_MAX] =
+        planning_input.extend_pos_max_vec(i);
+    cost_config_vec.at(i)[EXTEND_POS_MIN] =
+        planning_input.extend_pos_min_vec(i);
     cost_config_vec.at(i)[HARD_POS_MAX] = planning_input.hard_pos_max_vec(i);
     cost_config_vec.at(i)[HARD_POS_MIN] = planning_input.hard_pos_min_vec(i);
     cost_config_vec.at(i)[VEL_MAX] = planning_input.vel_max_vec(i);
@@ -135,6 +142,9 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     double boundary_decay_factor = std::exp(-boundary_decay_rate * i);
     cost_config_vec.at(i)[W_POS_BOUND] =
         planning_input.q_soft_pos_bound() * boundary_decay_factor;
+
+    cost_config_vec.at(i)[W_EXTEND_POS_BOUND] =
+        planning_input.q_extend_pos_bound();
 
     cost_config_vec.at(i)[W_VEL_BOUND] = planning_input.q_vel_bound();
     cost_config_vec.at(i)[W_ACC_BOUND] = planning_input.q_acc_bound();

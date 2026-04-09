@@ -709,7 +709,7 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
 
   for (size_t i = 1; i < traj_size; ++i) {
     double current_vel = pp_state.vel;
-    double ld = std::max(3.0, current_vel * 1.2);
+    double ld = std::max(4.5, current_vel * 1.5);
     planning::BasicPurePursuitModel::ModelParam pp_param(ld, obs_wheelbase);
 
     pp_model.set_model_state(pp_state);

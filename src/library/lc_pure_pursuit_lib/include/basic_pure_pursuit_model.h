@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "reference_path.h"
+#include "virtual_lane.h"
 #include "spline.h"
 #include "spline_projection.h"
 #include "src/modules/common/config/basic_type.h"
@@ -72,6 +73,8 @@ class BasicPurePursuitModel {
 
   ErrorType ProcessReferencePath(std::shared_ptr<ReferencePath> reference_path);
 
+  ErrorType ProcessReferencePath(const std::shared_ptr<VirtualLane> &virtual_lane);
+
   ErrorType CalculateDesiredDelta(const double lat_offset);
 
  private:
@@ -105,6 +108,7 @@ class BasicPurePursuitModel {
   size_t ref_points_size_{0};
 
   double delta_;
-  std::shared_ptr<ReferencePath> reference_path_;
+  std::shared_ptr<ReferencePath> reference_path_ = nullptr;
+  std::shared_ptr<VirtualLane> base_lane_ = nullptr;
 };
 }  // namespace planning

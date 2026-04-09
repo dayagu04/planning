@@ -148,6 +148,9 @@ constexpr double kTriggerDistanceMildDecelThreshold = -0.3;  // Acceleration thr
 constexpr double kTriggerDistanceModerateDecelThreshold = -0.6;  // Acceleration threshold for moderate deceleration (m/s²)
 constexpr double kTriggerDistanceBaseOffsetMin = 6.0;  // Minimum base position offset for trigger distance optimization (m)
 constexpr double kTriggerDistanceBaseOffsetTimeRatio = 0.5;  // Time ratio for base position offset calculation (s)
+static constexpr double kCurvaturePreviewHighSpeedThreshold = 40.0;   // 40 km/h
+constexpr double KMinThreshold = 1.75;
+constexpr double KSpeedMax = 120.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -1001,20 +1004,80 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   // bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
   bool is_ref_path_smoothed = false;
   std::vector<CurvInfo> preview_curv_info_vec;
-  for (int idx = 0; idx * 2.0 < preview_x; idx++) {
-    CurvInfo one_curv_info;
-    if (is_ref_path_smoothed) {
+  double v_ego_kph = v_ego * 3.6;
+
+  if (v_ego_kph > kCurvaturePreviewHighSpeedThreshold) {
+    static double last_valid_curv = 0.0001;
+    static int abnormal_count = 0;
+    static double prev_curv = 0.0001;
+    static std::deque<double> curv_history;
+
+    for (int idx = 0; idx * 2.0 < preview_x; idx++) {
+      double s = ego_start_s + 2.0 + idx * 2.0;
+      if (s < 0) continue;
+
+      CurvInfo one_curv_info;
       ReferencePathPoint refpath_pt;
-      if (reference_path_ptr->get_reference_point_by_lon(
-              ego_start_s + idx * 2.0, refpath_pt)) {
-        one_curv_info.curv = std::fabs(refpath_pt.path_point.kappa());
+
+      if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
+        double raw_curv = std::fabs(refpath_pt.path_point.kappa());
+
+        std::vector<double> smooth_window;
+        std::vector<double> weights;
+        for (int j = -2; j <= 2; j++) {
+          double sample_s = s + j * 2.0;
+          if (sample_s < ego_start_s) continue;
+
+          ReferencePathPoint sample_pt;
+          if (reference_path_ptr->get_reference_point_by_lon(sample_s,
+                                                             sample_pt)) {
+            double sample_curv = std::fabs(sample_pt.path_point.kappa());
+            smooth_window.push_back(sample_curv);
+            double weight = std::exp(-0.5 * std::pow(j / 2.0, 2));
+            weights.push_back(weight);
+          }
+        }
+
+        double smoothed_curv = raw_curv;
+        if (!smooth_window.empty()) {
+          double weighted_sum = 0.0;
+          double weight_sum = 0.0;
+          for (size_t k = 0; k < smooth_window.size(); ++k) {
+            weighted_sum += smooth_window[k] * weights[k];
+            weight_sum += weights[k];
+          }
+          smoothed_curv = weighted_sum / weight_sum;
+        }
+
+        double curv_jerk = std::abs(smoothed_curv - prev_curv);
+
+        if (curv_jerk > 0.12 && idx < 3) {
+          abnormal_count++;
+          if (abnormal_count > 2) {
+            one_curv_info.curv = last_valid_curv;
+          } else {
+            one_curv_info.curv = smoothed_curv;
+          }
+        } else {
+          abnormal_count = 0;
+          one_curv_info.curv = smoothed_curv;
+          last_valid_curv = smoothed_curv;
+        }
+
+        prev_curv = smoothed_curv;
         one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
       } else {
         one_curv_info.curv = 0.0001;
         one_curv_info.curv_sign = 0;
       }
-    } else {
-      // Calculate average curvature in window
+
+      one_curv_info.s = idx * 2.0;
+      preview_curv_info_vec.emplace_back(one_curv_info);
+    }
+  } else {
+    for (int idx = 0; idx * 2.0 < preview_x; idx++) {
+      CurvInfo one_curv_info;
+
       std::vector<double> curv_window_vec;
       int curv_sign = 0;
       for (int j = -6; j <= 6; j++) {
@@ -1030,16 +1093,18 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         curv_window_vec.emplace_back(curv);
       }
       double curv_sum = 0.0;
-      for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
-        curv_sum = curv_sum + curv_window_vec[ind];
+      for (size_t ind = 0; ind < curv_window_vec.size(); ++ind) {
+        curv_sum += curv_window_vec[ind];
       }
       double avg_curv = curv_sum / curv_window_vec.size();
       one_curv_info.curv = avg_curv;
       one_curv_info.curv_sign = curv_sign;
+
+      one_curv_info.s = idx * 2.0;
+      preview_curv_info_vec.emplace_back(one_curv_info);
     }
-    one_curv_info.s = idx * 2.0;
-    preview_curv_info_vec.emplace_back(one_curv_info);
   }
+
   /* double curv_sum = 0.0;
   for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
     curv_sum = curv_sum + curv_window_vec[ind];
@@ -4410,69 +4475,113 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
   if (config.enable_lateral_acceleration_limit) {
     // Step 1: Calculate minimum speed limit from v_limit_regular and v_target_
     double min_v_limit = std::min(v_limit_regular, v_target_);
-
-    // Step 2: Check lateral acceleration in [search_distance_min, search_distance_max]
     int exceed_count = 0;
-    double first_exceed_distance =
-        -1.0;  // First point where lat_acc exceeds threshold
-    double first_exceed_kappa =
-        0.0;  // Kappa of first point where lat_acc exceeds threshold
+    double first_exceed_distance = -1.0;
+    double first_exceed_kappa = 0.0;
+    // ========== 获取有效路径信息 ==========
+    const auto &motion_planner_output =
+        session_->planning_context().motion_planner_output();
+    double valid_path_end_s = std::numeric_limits<double>::max();
+    size_t valid_points_count = planned_kd_path->path_points().size();
 
+    if (!motion_planner_output.s_lat_vec.empty() &&
+        motion_planner_output.lat_valid_end_idx <
+            motion_planner_output.s_lat_vec.size()) {
+      valid_path_end_s =
+          motion_planner_output
+              .s_lat_vec[motion_planner_output.lat_valid_end_idx];
+      valid_points_count = motion_planner_output.lat_valid_end_idx + 1;
+    }
+
+    double predict_time = 3.0;
+    double predict_distance = v_ego * predict_time;
+    size_t predict_points_count = 0;
+    for (const auto &path_point : planned_kd_path->path_points()) {
+      double relative_s = path_point.s() - ego_s;
+      if (relative_s <= predict_distance) {
+        predict_points_count++;
+      } else {
+        break;
+      }
+    }
+
+    size_t max_points_to_use =
+        std::min(valid_points_count, predict_points_count);
+    max_points_to_use = std::max(max_points_to_use, (size_t)5);
+
+    JSON_DEBUG_VALUE("lateral_acc_valid_points",
+                     static_cast<double>(valid_points_count));
+    JSON_DEBUG_VALUE("lateral_acc_predict_points",
+                     static_cast<double>(predict_points_count));
+    JSON_DEBUG_VALUE("lateral_acc_max_points",
+                     static_cast<double>(max_points_to_use));
+    JSON_DEBUG_VALUE("lateral_acc_predict_distance", predict_distance);
+
+    size_t point_index = 0;
     for (const auto &path_point : planned_kd_path->path_points()) {
       double relative_s = path_point.s() - ego_s;
       if (relative_s < search_distance_min ||
           relative_s > search_distance_max) {
+        point_index++;
         continue;
       }
 
-      // Calculate predicted speed at this point based on ego speed, acceleration, and distance
+      // 只使用有效范围内的点
+      if (point_index >= max_points_to_use) {
+        break;
+      }
+
+      // Calculate predicted speed at this point based on ego speed,
+      // acceleration, and distance
       double predicted_v = 0.0;
 
       if (min_v_limit >= v_ego) {
         // Case 1: min_v_limit >= v_ego
-        // First kLateralAccPredictionAccelTime seconds: uniform acceleration with acc_ego
-        // After kLateralAccPredictionAccelTime seconds: uniform speed, not exceeding min_v_limit
-        double s_acc = v_ego * kLateralAccPredictionAccelTime + 0.5 * acc_ego * kLateralAccPredictionAccelTime * kLateralAccPredictionAccelTime;
+        double s_acc = v_ego * kLateralAccPredictionAccelTime +
+                       0.5 * acc_ego * kLateralAccPredictionAccelTime *
+                           kLateralAccPredictionAccelTime;
         double v_after_acc = v_ego + acc_ego * kLateralAccPredictionAccelTime;
-        v_after_acc = std::min(v_after_acc, min_v_limit);  // Limit to min_v_limit
+        v_after_acc = std::min(v_after_acc, min_v_limit);
 
         if (relative_s <= s_acc) {
-          // Within acceleration phase: v^2 = v0^2 + 2*a*s
-          double predicted_v_squared = v_ego * v_ego + 2.0 * acc_ego * relative_s;
-          predicted_v = (predicted_v_squared > 0.0) ? std::sqrt(predicted_v_squared) : 0.0;
-          predicted_v = std::min(predicted_v, min_v_limit);  // Limit to min_v_limit
+          double predicted_v_squared =
+              v_ego * v_ego + 2.0 * acc_ego * relative_s;
+          predicted_v = (predicted_v_squared > 0.0)
+                            ? std::sqrt(predicted_v_squared)
+                            : 0.0;
+          predicted_v = std::min(predicted_v, min_v_limit);
         } else {
-          // After acceleration phase: uniform speed
           predicted_v = v_after_acc;
         }
       } else {
         // Case 2: min_v_limit < v_ego
-        // First kLateralAccPredictionDecelTime second: uniform acceleration with acc_ego
-        // After kLateralAccPredictionDecelTime second: uniform deceleration with kLateralAccPredictionDecelRate until reaching min_v_limit
-        // After reaching min_v_limit: uniform speed at min_v_limit
-        double s_acc = v_ego * kLateralAccPredictionDecelTime + 0.5 * acc_ego * kLateralAccPredictionDecelTime * kLateralAccPredictionDecelTime;
+        double s_acc = v_ego * kLateralAccPredictionDecelTime +
+                       0.5 * acc_ego * kLateralAccPredictionDecelTime *
+                           kLateralAccPredictionDecelTime;
         double v_after_acc = v_ego + acc_ego * kLateralAccPredictionDecelTime;
 
-        // Calculate distance needed to decelerate from v_after_acc to min_v_limit
         double s_decel = 0.0;
         if (v_after_acc > min_v_limit) {
-          s_decel = (v_after_acc * v_after_acc - min_v_limit * min_v_limit) / (2.0 * (-kLateralAccPredictionDecelRate));
+          s_decel = (v_after_acc * v_after_acc - min_v_limit * min_v_limit) /
+                    (2.0 * (-kLateralAccPredictionDecelRate));
         }
 
         if (relative_s <= s_acc) {
-          // Within first acceleration phase: v^2 = v0^2 + 2*a*s
-          double predicted_v_squared = v_ego * v_ego + 2.0 * acc_ego * relative_s;
-          predicted_v = (predicted_v_squared > 0.0) ? std::sqrt(predicted_v_squared) : 0.0;
+          double predicted_v_squared =
+              v_ego * v_ego + 2.0 * acc_ego * relative_s;
+          predicted_v = (predicted_v_squared > 0.0)
+                            ? std::sqrt(predicted_v_squared)
+                            : 0.0;
         } else if (relative_s <= s_acc + s_decel) {
-          // Within deceleration phase: v^2 = v1^2 + 2*a*(s - s1)
           double s_decel_phase = relative_s - s_acc;
-          double predicted_v_squared = v_after_acc * v_after_acc + 2.0 * kLateralAccPredictionDecelRate * s_decel_phase;
+          double predicted_v_squared =
+              v_after_acc * v_after_acc +
+              2.0 * kLateralAccPredictionDecelRate * s_decel_phase;
           predicted_v = (predicted_v_squared > min_v_limit * min_v_limit)
                             ? std::sqrt(predicted_v_squared)
                             : min_v_limit;
-          predicted_v = std::max(predicted_v, min_v_limit);  // Ensure not below min_v_limit
+          predicted_v = std::max(predicted_v, min_v_limit);
         } else {
-          // After deceleration phase: uniform speed at min_v_limit
           predicted_v = min_v_limit;
         }
       }
@@ -4481,13 +4590,25 @@ void SpeedLimitDecider::CalculateRoadBoundarySpeedLimit() {
       double kappa = path_point.kappa();
       double lat_acc = predicted_v * predicted_v * std::fabs(kappa);
 
-      if (lat_acc > config.lateral_acceleration_threshold) {
+      // 动态阈值
+      double speed_kph = predicted_v * 3.6;
+      double base_threshold = config.lateral_acceleration_threshold;
+
+      double dynamic_threshold =
+          base_threshold -
+          (base_threshold - KMinThreshold) * (speed_kph / KSpeedMax);
+      dynamic_threshold =
+          std::max(KMinThreshold, std::min(base_threshold, dynamic_threshold));
+
+      if (lat_acc > dynamic_threshold) {
         exceed_count++;
         if (first_exceed_distance < 0.0) {
           first_exceed_distance = relative_s;
           first_exceed_kappa = std::fabs(kappa);
         }
       }
+
+      point_index++;
     }
 
     // Step 3: Check if exceed_count >= min_points

@@ -360,9 +360,13 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 
 const double NarrowSpaceScenario::CalRealTimeBrakeDist() {
   CalObsRemainDistParams params;
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const auto state_machine_ptr = apa_world_ptr_->GetStateMachineManagerPtr();
+
+  if ((state_machine_ptr->IsParkOutStatus() ||
+       state_machine_ptr->GetStateMachine() ==
+           ApaStateMachine::ACTIVE_IN_CAR_FRONT) &&
       ego_info_under_slot.slot_occupied_ratio > 0.5) {
     params.use_obs_height_method = UseObsHeightMethod::HIGH_LOW;
     return CalRemainDistFromObs(params);
@@ -2449,70 +2453,68 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
 
     double kInitialTargetX = slot_length + 2.0;  // todo : temp fix;
     constexpr double kSlantInitialTargetX = 7.0;
-    constexpr double kInitialTargetY = 5.0;
-    constexpr double kSlantInitialTargetY = 3.0;
-    constexpr double kTailOutOffsetY = 3.0;
+    constexpr double kLongOffsetY = 5.0;
+    constexpr double kShortOffsetY = 3.0;
 
-    const double head_out_offset_y = ego_info.slot_type == SlotType::SLANT
-                                         ? kSlantInitialTargetY
-                                         : kInitialTargetY;
-    const double base_x = kInitialTargetX;
+    double slant_right_offset_y = kLongOffsetY;
+    double slant_left_offset_y = kLongOffsetY;
+
+    if (ego_info.slot_type == SlotType::SLANT) {
+      const bool tilt_to_the_left =
+          direction_origin_corner_23_normalized_.x() > 0.0;
+      const bool head_out =
+          ego_info.relative_direction_between_ego_and_slot > 0.0;
+
+      // 当两个符号一致时，右侧取 long；否则右侧取 short
+      const bool right_use_long = (tilt_to_the_left == head_out);
+
+      slant_right_offset_y = right_use_long ? kLongOffsetY : kShortOffsetY;
+      slant_left_offset_y = right_use_long ? kShortOffsetY : kLongOffsetY;
+    }
 
     cur_request.x_axis_direction_coordinate_slant =
         direction_origin_corner_23_normalized_;
+    cur_request.direction_request_size = 3;
 
-    cur_request.direction_request_size = 6;
-    cur_request.direction_request_stack[0] =
-        ParkingVehDirection::HEAD_OUT_TO_LEFT;
-    cur_request.direction_request_stack[1] =
-        ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
-    cur_request.direction_request_stack[2] =
-        ParkingVehDirection::HEAD_OUT_TO_RIGHT;
-    cur_request.direction_request_stack[3] =
-        ParkingVehDirection::TAIL_OUT_TO_LEFT;
-    cur_request.direction_request_stack[4] =
-        ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
-    cur_request.direction_request_stack[5] =
-        ParkingVehDirection::TAIL_OUT_TO_RIGHT;
-
-    const Eigen::Vector2d temp_head_pos(base_x, 0.0);
+    const Eigen::Vector2d temp_head_pos(kInitialTargetX, 0.0);
+    const Eigen::Vector2d dir = direction_origin_corner_23_normalized_;
     const Eigen::Vector2d target_pos_head_left =
-        temp_head_pos +
-        direction_origin_corner_23_normalized_ * head_out_offset_y;
+        temp_head_pos + dir * slant_left_offset_y;
     const Eigen::Vector2d target_pos_head_right =
-        temp_head_pos -
-        direction_origin_corner_23_normalized_ * head_out_offset_y;
+        temp_head_pos - dir * slant_right_offset_y;
     const Eigen::Vector2d target_pos_tail_left =
-        temp_head_pos -
-        direction_origin_corner_23_normalized_ * kTailOutOffsetY;
+        temp_head_pos - dir * slant_left_offset_y;
     const Eigen::Vector2d target_pos_tail_right =
-        temp_head_pos +
-        direction_origin_corner_23_normalized_ * kTailOutOffsetY;
+        temp_head_pos + dir * slant_right_offset_y;
+    const bool head_out =
+        ego_info.relative_direction_between_ego_and_slot > 0.0;
+    constexpr double kHeadMiddleXOffset = -0.5;  // slot_length - 0.5
+    constexpr double kTailMiddleXOffset = 2.0;   // slot_length + 2.0
 
-    if (ego_info.relative_direction_between_ego_and_slot > 0.0) {
-      cur_request.real_goal_stack[0] =
+    if (head_out) {
+      cur_request.direction_request_stack = {
+          ParkingVehDirection::HEAD_OUT_TO_LEFT,
+          ParkingVehDirection::HEAD_OUT_TO_MIDDLE,
+          ParkingVehDirection::HEAD_OUT_TO_RIGHT};
+      cur_request.real_goal_stack = {
           Pose2f(target_pos_head_left.x(), target_pos_head_left.y(),
-                 target_heading_rad);
-      cur_request.real_goal_stack[1] = Pose2f(slot_length - 0.5, 0.0, 0.0);
-      cur_request.real_goal_stack[2] =
+                 target_heading_rad),
+          Pose2f(slot_length + kHeadMiddleXOffset, 0.0, 0.0),
           Pose2f(target_pos_head_right.x(), target_pos_head_right.y(),
-                 opposite_target_heading_rad);
-      cur_request.real_goal_stack[3] =
-          Pose2f(-3.0, -5.0, opposite_target_heading_rad);
-      cur_request.real_goal_stack[4] = Pose2f(-4.0, 0.0, M_PI);
-      cur_request.real_goal_stack[5] = Pose2f(-3.0, 5.0, target_heading_rad);
+                 opposite_target_heading_rad),
+      };
     } else {
-      cur_request.real_goal_stack[0] =
-          Pose2f(-3.0, -11.0, opposite_target_heading_rad);
-      cur_request.real_goal_stack[1] = Pose2f(-4.0, 0.0, 0.0);
-      cur_request.real_goal_stack[2] = Pose2f(-3.0, 11.0, target_heading_rad);
-      cur_request.real_goal_stack[3] =
+      cur_request.direction_request_stack = {
+          ParkingVehDirection::TAIL_OUT_TO_LEFT,
+          ParkingVehDirection::TAIL_OUT_TO_MIDDLE,
+          ParkingVehDirection::TAIL_OUT_TO_RIGHT};
+      cur_request.real_goal_stack = {
           Pose2f(target_pos_tail_left.x(), target_pos_tail_left.y(),
-                 opposite_target_heading_rad);
-      cur_request.real_goal_stack[4] = Pose2f(slot_length + 2.0, 0.0, M_PI);
-      cur_request.real_goal_stack[5] =
+                 opposite_target_heading_rad),
+          Pose2f(slot_length + kTailMiddleXOffset, 0.0, M_PI),
           Pose2f(target_pos_tail_right.x(), target_pos_tail_right.y(),
-                 target_heading_rad);
+                 target_heading_rad),
+      };
     }
 
   } else {
@@ -2611,11 +2613,7 @@ void NarrowSpaceScenario::RecordSearchTrajectoryInfo(
 const float NarrowSpaceScenario::SetPassageHeight(
     const EgoInfoUnderSlot& ego_info) {
   const float passage_height =
-      ego_info.slot_occupied_ratio >
-              apa_param.GetParam().pose_slot_occupied_ratio_2
-          ? 7.0f
-          : apa_param.GetParam()
-                .astar_config.vertical_slot_passage_height_bound;
+      apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
 
   const bool is_slant_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot_type ==
@@ -2640,26 +2638,38 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
 
   double kInitialTargetX = slot_length + 1.5;
   constexpr double kSlantInitialTargetX = 7.0;
-  constexpr double kInitialTargetY = 5.0;
-  constexpr double kSlantInitialTargetY = 3.0;
-  constexpr double kTailOutOffsetY = 3.0;
+  constexpr double kLongOffsetY = 5.0;
+  constexpr double kShortOffsetY = 3.0;
 
-  const double head_out_offset_y = ego_info.slot_type == SlotType::SLANT
-                                       ? kSlantInitialTargetY
-                                       : kInitialTargetY;
-  const double base_x = kInitialTargetX;
-  const Eigen::Vector2d temp_head_pos(base_x, 0.0);
+  double slant_right_offset_y = kLongOffsetY;
+  double slant_left_offset_y = kLongOffsetY;
 
+  if (ego_info.slot_type == SlotType::SLANT) {
+    const bool tilt_to_the_left =
+        direction_origin_corner_23_normalized_.x() > 0.0;
+    const bool head_out =
+        ego_info.relative_direction_between_ego_and_slot > 0.0;
+
+    // 当两个符号一致时，右侧取 long；否则右侧取 short
+    const bool right_use_long = (tilt_to_the_left == head_out);
+
+    slant_right_offset_y = right_use_long ? kLongOffsetY : kShortOffsetY;
+    slant_left_offset_y = right_use_long ? kShortOffsetY : kLongOffsetY;
+  }
+
+  const Eigen::Vector2d temp_head_pos(kInitialTargetX, 0.0);
   const Eigen::Vector2d target_pos_head_left =
       temp_head_pos +
-      direction_origin_corner_23_normalized_ * head_out_offset_y;
+      direction_origin_corner_23_normalized_ * slant_left_offset_y;
   const Eigen::Vector2d target_pos_head_right =
       temp_head_pos -
-      direction_origin_corner_23_normalized_ * head_out_offset_y;
+      direction_origin_corner_23_normalized_ * slant_right_offset_y;
   const Eigen::Vector2d target_pos_tail_left =
-      temp_head_pos - direction_origin_corner_23_normalized_ * kTailOutOffsetY;
+      temp_head_pos -
+      direction_origin_corner_23_normalized_ * slant_left_offset_y;
   const Eigen::Vector2d target_pos_tail_right =
-      temp_head_pos + direction_origin_corner_23_normalized_ * kTailOutOffsetY;
+      temp_head_pos +
+      direction_origin_corner_23_normalized_ * slant_right_offset_y;
   const double target_heading_rad_head_out = geometry_lib::GetAngleFromTwoVec(
       ego_info.slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_vec,
       ego_info.slot.GetOriginCornerCoordGlobal().pt_01_vec);

@@ -862,7 +862,7 @@
     "hard_halfplane_dist": 3.5,
     "halfplane_cost_allocation_ratio": 0.6,
     "q_soft_halfplane_weight": 0.5,
-    "soft_halfplane_s0": 5.5,
+    "soft_halfplane_s0": 3.5,
     "soft_halfplane_tau": 0.5,
     "lc_thw": 0.5,
     "soft_halfplane_cost_allocation_ratio": 0.8,
@@ -1174,7 +1174,8 @@
     "q_jerk_speed_adjust": 50.0,
     "q_pos_safe": 200.0,
     "safe_distance": 2.5,
-    "q_emergency_stop": 5.0
+    "q_emergency_stop": 5.0,
+    "q_extend_pos_bound": 20.0
   },
   "real_time_long_behavior_planner": {
     "preview_x": 80.0,

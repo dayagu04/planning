@@ -126,6 +126,35 @@ void LonHardPosBoundCostTerm::GetGradientHessian(
   }
 }
 
+// longitudinal pos extend bound cost
+double LonExtendPosBoundCostTerm::GetCost(const ilqr_solver::State &x,
+                                          const ilqr_solver::Control &) {
+  double cost = 0.0;
+  if (x[POS] > cost_config_ptr_->at(EXTEND_POS_MAX)) {
+    cost = 0.5 * cost_config_ptr_->at(W_EXTEND_POS_BOUND) *
+           Square(x[POS] - cost_config_ptr_->at(EXTEND_POS_MAX));
+  } else if (x[POS] < cost_config_ptr_->at(EXTEND_POS_MIN)) {
+    cost = 0.5 * cost_config_ptr_->at(W_EXTEND_POS_BOUND) *
+           Square(x[POS] - cost_config_ptr_->at(EXTEND_POS_MIN));
+  }
+  return cost;
+}
+
+void LonExtendPosBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+  if (x[POS] > cost_config_ptr_->at(EXTEND_POS_MAX)) {
+    lx(POS) += cost_config_ptr_->at(W_EXTEND_POS_BOUND) *
+               (x[POS] - cost_config_ptr_->at(EXTEND_POS_MAX));
+    lxx(POS, POS) += cost_config_ptr_->at(W_EXTEND_POS_BOUND);
+  } else if (x[POS] < cost_config_ptr_->at(EXTEND_POS_MIN)) {
+    lx(POS) += cost_config_ptr_->at(W_EXTEND_POS_BOUND) *
+               (x[POS] - cost_config_ptr_->at(EXTEND_POS_MIN));
+    lxx(POS, POS) += cost_config_ptr_->at(W_EXTEND_POS_BOUND);
+  }
+}
+
 // longitudinal vel bound cost
 double LonVelBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                     const ilqr_solver::Control &) {
