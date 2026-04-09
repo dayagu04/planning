@@ -1988,7 +1988,24 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
   if (press_target_line_ratio > 0.1) {
     return false;
   }
-  
+
+  auto origin_reference_path =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(origin_lane_virtual_id_, false);
+
+  if (origin_reference_path != nullptr) {
+    const auto &ego_frenent_boundary =
+        origin_reference_path->get_ego_frenet_boundary();
+    const double ego_center_l =
+        ego_frenent_boundary.l_start +
+        (ego_frenent_boundary.l_end - ego_frenent_boundary.l_start) / 2.0;
+    if (std::fabs(ego_center_l) > 0.8) {
+      return false;
+    }
+  }
+
+
   if (leading_vehicle_iter != tracks_map.end()) {
     const double overtake_lane_change_vehicle_speed =
         leading_vehicle_iter->second->velocity();
