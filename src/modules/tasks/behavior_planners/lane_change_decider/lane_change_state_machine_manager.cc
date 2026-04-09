@@ -5024,13 +5024,13 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
 
   // 由于在propose阶段考虑的是未来4s的安全性
   // 在execution过程中，其实有双方的交互博弈，所以这里安全性判断的时间可以比4s短一些
-  const double lc_gap_valid_check_time_execution = kEgoReachBoundaryTime - 1;
+  // const double lc_gap_valid_check_time_execution = kEgoReachBoundaryTime - 1;
 
-  double base_time =
-      (transition_info_.lane_change_status == kLaneChangeExecution)
-          ? lc_gap_valid_check_time_execution
-          : kEgoReachBoundaryTime;
-
+  // double base_time =
+  //     (transition_info_.lane_change_status == kLaneChangeExecution)
+  //         ? lc_gap_valid_check_time_execution
+  //         : kEgoReachBoundaryTime;
+  double base_time = kEgoReachBoundaryTime;
   reach_line_time = (ego_dis_to_line / standard_half_lane_width) * base_time;
   // 注：自车在接近车道线的时候ego_dis_to_line的值很小，后轴中心越过车道线时ego_dis_to_line为负的，
   // 因此，需要保证自车在每个时刻对未来至少要判断一定时间是安全的才合理，
