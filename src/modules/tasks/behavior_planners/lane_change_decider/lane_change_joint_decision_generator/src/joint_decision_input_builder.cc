@@ -437,14 +437,14 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
       session_->environmental_model().get_ego_state_manager();
   const double current_vel = ego_state_manager->planning_init_point().v;
   double ego_acc_max = lc_decision_config_.ego_acc_max;
-  if (!lc_decision_config_.max_acc_bound_vel_table.empty() &&
-      !lc_decision_config_.max_acc_bound_acc_table.empty() &&
-      lc_decision_config_.max_acc_bound_vel_table.size() ==
-          lc_decision_config_.max_acc_bound_acc_table.size()) {
-    const auto& vel_table = lc_decision_config_.max_acc_bound_vel_table;
-    const auto& acc_table = lc_decision_config_.max_acc_bound_acc_table;
-    ego_acc_max = interp(current_vel, vel_table, acc_table);
-  }
+  // if (!lc_decision_config_.max_acc_bound_vel_table.empty() &&
+  //     !lc_decision_config_.max_acc_bound_acc_table.empty() &&
+  //     lc_decision_config_.max_acc_bound_vel_table.size() ==
+  //         lc_decision_config_.max_acc_bound_acc_table.size()) {
+  //   const auto& vel_table = lc_decision_config_.max_acc_bound_vel_table;
+  //   const auto& acc_table = lc_decision_config_.max_acc_bound_acc_table;
+  //   ego_acc_max = interp(current_vel, vel_table, acc_table);
+  // }
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     planning_input.add_ego_acc_max(ego_acc_max);
     planning_input.add_ego_acc_min(lc_decision_config_.ego_acc_min);
