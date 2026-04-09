@@ -496,6 +496,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
           iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT && has_perception_speed_limit_ == false) {
         end_of_speed_limit_set_.insert(single_sign.speed_limit);
         end_of_speed_limit_ever_appeared_ = true;
+        has_perception_end_of_speed_limit_ = true;
       }
     }
   }

@@ -157,7 +157,7 @@ int OdStraightScenario::SelcetInterestObject(MebTempObj &temp_obj) {
   return temp_interest_code;
 };
 
-uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
+uint64_t OdStraightScenario::FalseTriggerStratege(MebTempObj &obj) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   const auto param = *GetContext.get_param();
   auto &meb_pre = adas_function::MebPreprocess::GetInstance();
@@ -279,10 +279,13 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
   double ttc;
   if ((vehicle_service.shift_lever_state ==
        iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) &&
-      (obj.rel_vx < -0.1) && (obj_min_dist > 0.0)) {
+      (obj.rel_vx < -0.1)) {
     // Todo:未考虑障碍物航向角，这样简化计算有点问题
-
-    ttc = fabs(obj_min_dist / obj.rel_vx);
+    if (obj_min_dist > 0.0) {
+      ttc = fabs(obj_min_dist / obj.rel_vx);
+    } else {
+      ttc = 0.0;
+    }
     if (ttc < 0.3) {
       suppe_code += uint32_bit[9];
     }
@@ -322,22 +325,66 @@ uint64_t OdStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
   // 当前仅针对行人做此校验,泊车感知下无前雷达
   // if ((obj.type_for_meb == OdObjGroup::kPeople) ||
   //     (obj.type_for_meb == OdObjGroup::kMotor)) {
+
+  // if (挡位 == D) {
+  //   if ((存在雷达障碍物) && (雷达障碍物与融合障碍物欧式距离 < 3.0)) {
+  //     if (雷达碰撞_alert == false) {
+  //       抑制功能
+  //     }
+  //   } else {
+  //     if (障碍物存活时间 < 10s) &&(障碍物类型为行人) {
+  //         抑制功能
+  //       }
+  //   }
+  // }
+
   if ((vehicle_service.shift_lever_state ==
-           iflyauto::ShiftLeverStateEnum::ShiftLeverState_D ||
-       vehicle_service.shift_lever_state ==
-           iflyauto::ShiftLeverStateEnum::ShiftLeverState_M) &&
-      (!meb_pre.GetMebInput().park_mode) && (obj.fusion_source == 1)) {
-    if (collision_result_for_front_radar_obj_ == false) {
-      suppe_code += uint32_bit[14];
+       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) ||
+      (vehicle_service.shift_lever_state ==
+       iflyauto::ShiftLeverStateEnum::ShiftLeverState_M)) {
+    double obj_exist_time_thrd = 0.0;
+    if (meb_pre.GetMebInput().park_mode) {
+      obj_exist_time_thrd = 6000.0;
+    } else {
+      obj_exist_time_thrd = 10000.0;
+    }
+    double distance =
+        sqrt((obj.rel_x - front_radar_key_obj_info.key_obj_relative_x) *
+                 (obj.rel_x - front_radar_key_obj_info.key_obj_relative_x) +
+             (obj.rel_y - front_radar_key_obj_info.key_obj_relative_y) *
+                 (obj.rel_y - front_radar_key_obj_info.key_obj_relative_y));
+    if ((front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM) &&
+        (distance < 2.0)) {
+      if (collision_result_for_front_radar_obj_ == false) {
+        suppe_code += uint32_bit[14];
+      }
+    } else {
+      if ((obj.age < obj_exist_time_thrd) &&
+          (obj.type_for_meb == OdObjGroup::kPeople)) {
+        if (collision_result_for_front_radar_obj_ == false) {
+          suppe_code += uint32_bit[14];
+        }
+      }
     }
 
     /*bit_15*/
-    // 障碍物与本车当前重叠率较低 通过雷达障碍物进行双重校验
+    // 障碍物与本车当前重叠率较低 通过雷达障碍物进行双重校验, R 档无需判断
     // 注:这样判断有缺陷,不适用于转弯场景
-    if ((obj.type_for_meb == OdObjGroup::kPeople) && (obj.fusion_source == 1)) {
+    if ((obj.type_for_meb == OdObjGroup::kPeople) && (distance < 2.0) &&
+        (front_radar_key_obj_info.key_obj_index < FUSION_OBJECT_MAX_NUM)) {
       if (fabs(front_radar_key_obj_info.key_obj_relative_y) > 0.75) {
         suppe_code += uint32_bit[15];
       }
+    }
+  }
+
+  /*bit_16*/
+  // 防止出地库在坡道上时,因感知误识别导致误触发
+  if (vehicle_service.shift_lever_state ==
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
+    if ((vehicle_service.vehicle_speed > 2.5) &&
+        (vehicle_service.long_acceleration > 0.45)) {
+      suppe_code += uint32_bit[16];
     }
   }
 
@@ -707,6 +754,8 @@ void OdStraightScenario::Process(void) {
     } else {
     }
     temp_obj.ay_avoid_by_accelerating = key_obj_ay_avoid_by_accelerating;
+
+    temp_obj.collision_point_y = 0.0;  // 直行不使用该变量
 
     // hack 若为大卡车，则认为距离偏远0.3m，晚点触发
     if (temp_obj.type == iflyauto::OBJECT_TYPE_TRUCK) {

@@ -187,14 +187,14 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
   }
 
   // bit 11
-  // ABS/TCS/VDC未激活
-  if ((vehicle_service_output_info_ptr->abs_active == true) ||
-      (vehicle_service_output_info_ptr->tcs_active == true) ||
-      (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
-    enable_code += uint32_bit[11];
-  } else {
-    /*do nothing*/
-  }
+  // // ABS/TCS/VDC未激活
+  // if ((vehicle_service_output_info_ptr->abs_active == true) ||
+  //     (vehicle_service_output_info_ptr->tcs_active == true) ||
+  //     (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
+  //   enable_code += uint32_bit[11];
+  // } else {
+  //   /*do nothing*/
+  // }
 
   // bit 12
   // 弯道半径>=220m，持续2s
@@ -240,113 +240,113 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
     /*do nothing*/
   }
 
-  // bit 0
-  // 实际车速信号无效
-  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    enable_code += uint32_bit[15];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 0
+  // // 实际车速信号无效
+  // if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
+  //   enable_code += uint32_bit[15];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 1
-  // 仪表车速信号无效
-  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
-       false)) {
-    enable_code += uint32_bit[16];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 1
+  // // 仪表车速信号无效
+  // if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+  //      false)) {
+  //   enable_code += uint32_bit[16];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 2
-  // 横摆角速度信号无效
-  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    enable_code += uint32_bit[17];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 2
+  // // 横摆角速度信号无效
+  // if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
+  //   enable_code += uint32_bit[17];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 3
-  // 方向盘转角速度信号无效
-  if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
-       false)) {
-    enable_code += uint32_bit[18];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 3
+  // // 方向盘转角速度信号无效
+  // if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
+  //      false)) {
+  //   enable_code += uint32_bit[18];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 4
-  // 方向盘转速信号无效
-  if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
-       false)) {
-    enable_code += uint32_bit[19];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 4
+  // // 方向盘转速信号无效
+  // if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
+  //      false)) {
+  //   enable_code += uint32_bit[19];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 5
-  // 油门踏板信号无效
-  if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
-       false)) {
-    enable_code += uint32_bit[19];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 5
+  // // 油门踏板信号无效
+  // if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
+  //      false)) {
+  //   enable_code += uint32_bit[19];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 6
-  // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
-  if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
-    enable_code += uint32_bit[20];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 6
+  // // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
+  // if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
+  //   enable_code += uint32_bit[20];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 7
-  // 转向灯信号无效
-  if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
-    enable_code += uint32_bit[21];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 7
+  // // 转向灯信号无效
+  // if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
+  //   enable_code += uint32_bit[21];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 8
-  // 车道线融合模块节点通讯丢失
-  if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
-    enable_code += uint32_bit[22];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 8
+  // // 车道线融合模块节点通讯丢失
+  // if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
+  //   enable_code += uint32_bit[22];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 9
-  // vehicle_service模块节点通讯丢失
-  if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
-    enable_code += uint32_bit[23];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 9
+  // // vehicle_service模块节点通讯丢失
+  // if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
+  //   enable_code += uint32_bit[23];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 10
-  // 定位模块节点通讯丢失
-  if ((GetContext.mutable_state_info()->localization_info_node_valid ==
-       false)) {
-    enable_code += uint32_bit[24];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 10
+  // // 定位模块节点通讯丢失
+  // if ((GetContext.mutable_state_info()->localization_info_node_valid ==
+  //      false)) {
+  //   enable_code += uint32_bit[24];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-      // bit 16
-  // ESP系统处于开启状态
-  if ((vehicle_service_output_info_ptr->esp_active == true)) {
-    enable_code += uint32_bit[25];
-  } else {
-    /*do nothing*/
-  }
+  //     // bit 16
+  // // ESP系统处于开启状态
+  // if ((vehicle_service_output_info_ptr->esp_active == true)) {
+  //   enable_code += uint32_bit[25];
+  // } else {
+  //   /*do nothing*/
+  // }
   // ESP系统处于软开关关闭状态
-  if ((vehicle_service_output_info_ptr->esp_switch_state_available == true) &&
-      (vehicle_service_output_info_ptr->esp_switch_state == false)) {
-    enable_code += uint32_bit[26];
-  } else {
-    /*do nothing*/
-  }
+  // if ((vehicle_service_output_info_ptr->esp_switch_state_available == true) &&
+  //     (vehicle_service_output_info_ptr->esp_switch_state == false)) {
+  //   enable_code += uint32_bit[26];
+  // } else {
+  //   /*do nothing*/
+  // }
   return enable_code & GetContext.get_param()->ldw_enable_code_maskcode;
 }
 
@@ -505,13 +505,13 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
 
   // bit 11
   // ABS/TCS/VDC未激活
-  if ((vehicle_service_output_info_ptr->abs_active == true) ||
-      (vehicle_service_output_info_ptr->tcs_active == true) ||
-      (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
-    disable_code += uint32_bit[11];
-  } else {
-    /*do nothing*/
-  }
+  // if ((vehicle_service_output_info_ptr->abs_active == true) ||
+  //     (vehicle_service_output_info_ptr->tcs_active == true) ||
+  //     (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
+  //   disable_code += uint32_bit[11];
+  // } else {
+  //   /*do nothing*/
+  // }
 
   // bit 12
   // 弯道半径>200m
@@ -568,111 +568,111 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
 
   // bit 0
   // 实际车速信号无效
-  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    disable_code += uint32_bit[15];
-  } else {
-    /*do nothing*/
-  }
+  // if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
+  //   disable_code += uint32_bit[15];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 1
-  // 仪表车速信号无效
-  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
-       false)) {
-    disable_code += uint32_bit[16];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 1
+  // // 仪表车速信号无效
+  // if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+  //      false)) {
+  //   disable_code += uint32_bit[16];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 2
-  // 横摆角速度信号无效
-  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    disable_code += uint32_bit[17];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 2
+  // // 横摆角速度信号无效
+  // if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
+  //   disable_code += uint32_bit[17];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 3
-  // 方向盘转角速度信号无效
-  if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
-       false)) {
-    disable_code += uint32_bit[18];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 3
+  // // 方向盘转角速度信号无效
+  // if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
+  //      false)) {
+  //   disable_code += uint32_bit[18];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 4
-  // 方向盘转速信号无效
-  if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
-       false)) {
-    disable_code += uint32_bit[19];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 4
+  // // 方向盘转速信号无效
+  // if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
+  //      false)) {
+  //   disable_code += uint32_bit[19];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 5
-  // 油门踏板信号无效
-  if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
-       false)) {
-    disable_code += uint32_bit[19];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 5
+  // // 油门踏板信号无效
+  // if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
+  //      false)) {
+  //   disable_code += uint32_bit[19];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 6
-  // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
-  if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
-    disable_code += uint32_bit[20];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 6
+  // // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
+  // if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
+  //   disable_code += uint32_bit[20];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 7
-  // 转向灯信号无效
-  if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
-    disable_code += uint32_bit[21];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 7
+  // // 转向灯信号无效
+  // if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
+  //   disable_code += uint32_bit[21];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 8
-  // 车道线融合模块节点通讯丢失
-  if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
-    disable_code += uint32_bit[22];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 8
+  // // 车道线融合模块节点通讯丢失
+  // if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
+  //   disable_code += uint32_bit[22];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 9
-  // vehicle_service模块节点通讯丢失
-  if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
-    disable_code += uint32_bit[23];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 9
+  // // vehicle_service模块节点通讯丢失
+  // if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
+  //   disable_code += uint32_bit[23];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-  // bit 10
-  // 定位模块节点通讯丢失
-  if ((GetContext.mutable_state_info()->localization_info_node_valid ==
-       false)) {
-    disable_code += uint32_bit[24];
-  } else {
-    /*do nothing*/
-  }
+  // // bit 10
+  // // 定位模块节点通讯丢失
+  // if ((GetContext.mutable_state_info()->localization_info_node_valid ==
+  //      false)) {
+  //   disable_code += uint32_bit[24];
+  // } else {
+  //   /*do nothing*/
+  // }
 
-    // bit 16
-  // ESP系统处于开启状态
-  if ((vehicle_service_output_info_ptr->esp_active == true)) {
-    disable_code += uint32_bit[25];
-  } else {
-    /*do nothing*/
-  }
+  //   // bit 16
+  // // ESP系统处于开启状态
+  // if ((vehicle_service_output_info_ptr->esp_active == true)) {
+  //   disable_code += uint32_bit[25];
+  // } else {
+  //   /*do nothing*/
+  // }
   // ESP系统处于软开关关闭状态
-  if ((vehicle_service_output_info_ptr->esp_switch_state_available == true) &&
-      (vehicle_service_output_info_ptr->esp_switch_state == false)) {
-    disable_code += uint32_bit[26];
-  } else {
-    /*do nothing*/
-  }
+  // if ((vehicle_service_output_info_ptr->esp_switch_state_available == true) &&
+  //     (vehicle_service_output_info_ptr->esp_switch_state == false)) {
+  //   disable_code += uint32_bit[26];
+  // } else {
+  //   /*do nothing*/
+  // }
   return disable_code & GetContext.get_param()->ldw_disable_code_maskcode;
 }
 
@@ -871,16 +871,6 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
   }
   // bit 6
   // 判断横摆角速度是否超限,12deg/s对应0.2094rad/s.横摆角速度绝对值<12deg/s，持续1s
-  if (fabs(vehicle_service_output_info_ptr->yaw_rate) < 12.0 / 57.3) {
-    yaw_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (yaw_rate_supp_recover_duration_ > 60.0) {
-      yaw_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    yaw_rate_supp_recover_duration_ = 0.0;
-  }
   if (yaw_rate_supp_recover_duration_ < 1.0) {
     ldw_left_suppression_code += uint32_bit[10];
   } else {
@@ -891,24 +881,6 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
   // 方向盘转速(deg/s)和车速(km/h)满足如下公式,持续1s:方向盘转速≥145-0.5*v，0<v≤100
   // 方向盘转速≥95，v＞100.
   // PS1:1.8：mps转换为kph   PS2:使用实际车速.持续1秒的算法未完成
-  if ((vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) &&
-      (fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
-       (145.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    };
-  } else if ((vehicle_service_output_info_ptr->vehicle_speed > 100.0 / 3.6) &&
-             (fabs(
-                  vehicle_service_output_info_ptr->steering_wheel_angle_speed) >
-              95.0 / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    }
-  } else {
-    str_wheel_ang_speed_recover_duration_ = 0.0;
-  }
   if (str_wheel_ang_speed_recover_duration_ > 1.0) {
     ldw_left_suppression_code += uint32_bit[11];
   } else {
@@ -917,16 +889,6 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
 
   // bit 8
   // 驾驶员未踩下制动踏板:制动力<3bar，持续2s.后续再讨论
-  if (vehicle_service_output_info_ptr->esp_pressure < 3.0) {
-    brake_pedal_pressed_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (brake_pedal_pressed_supp_recover_duration_ > 60.0) {
-      brake_pedal_pressed_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    brake_pedal_pressed_supp_recover_duration_ = 0.0;
-  }
   if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
     ldw_left_suppression_code += uint32_bit[12];
   } else {
@@ -935,17 +897,6 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
 
   // bit 9
   // 油门踏板变化率<30%/s，持续1s，未完成
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
-      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate) {
-    acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
-      acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
-  }
   if (acc_pedal_pos_rate_supp_recover_duration_ <
       GetContext.get_param()->ldw_enable_accel_pedal_pos_rate_dur) {
     ldw_left_suppression_code += uint32_bit[13];
@@ -964,6 +915,13 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
     ldw_left_suppression_code += uint32_bit[15];
   } else {
     /*do nothing*/
+  }
+  if ((vehicle_service_output_info_ptr->abs_active == true) ||
+  (vehicle_service_output_info_ptr->tcs_active == true) ||
+  (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
+    ldw_left_suppression_code += uint32_bit[16];
+  } else {
+  /*do nothing*/
   }
   return ldw_left_suppression_code &
          GetContext.get_param()->ldw_left_suppression_code_maskcode;
@@ -1315,16 +1273,6 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
   }
   // bit 6
   // 判断横摆角速度是否超限,12deg/s对应0.2094rad/s.横摆角速度绝对值<12deg/s，持续1s
-  if (fabs(vehicle_service_output_info_ptr->yaw_rate) < 12.0 / 57.3) {
-    yaw_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (yaw_rate_supp_recover_duration_ > 60.0) {
-      yaw_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    yaw_rate_supp_recover_duration_ = 0.0;
-  }
   if (yaw_rate_supp_recover_duration_ < 1.0) {
     ldw_right_suppression_code += uint32_bit[10];
   } else {
@@ -1335,24 +1283,6 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
   // 方向盘转速(deg/s)和车速(km/h)满足如下公式,持续1s:方向盘转速≥145-0.5*v，0<v≤100
   // 方向盘转速≥95，v＞100.
   // PS1:1.8：mps转换为kph   PS2:使用实际车速.持续1秒的算法未完成
-  if ((vehicle_service_output_info_ptr->vehicle_speed <= 100.0 / 3.6) &&
-      (fabs(vehicle_service_output_info_ptr->steering_wheel_angle_speed) >=
-       (145.0 - 1.8 * vehicle_service_output_info_ptr->vehicle_speed) / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    };
-  } else if ((vehicle_service_output_info_ptr->vehicle_speed > 100.0 / 3.6) &&
-             (fabs(
-                  vehicle_service_output_info_ptr->steering_wheel_angle_speed) >
-              95.0 / 57.3)) {
-    str_wheel_ang_speed_recover_duration_ += GetContext.get_param()->dt;
-    if (str_wheel_ang_speed_recover_duration_ > 60.0) {
-      str_wheel_ang_speed_recover_duration_ = 60.0;
-    }
-  } else {
-    str_wheel_ang_speed_recover_duration_ = 0.0;
-  }
   if (str_wheel_ang_speed_recover_duration_ > 1.0) {
     ldw_right_suppression_code += uint32_bit[11];
   } else {
@@ -1361,16 +1291,6 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
 
   // bit 8
   // 驾驶员未踩下制动踏板:制动力<3bar，持续2s.后续再讨论
-  if (vehicle_service_output_info_ptr->esp_pressure < 3.0) {
-    brake_pedal_pressed_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (brake_pedal_pressed_supp_recover_duration_ > 60.0) {
-      brake_pedal_pressed_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    brake_pedal_pressed_supp_recover_duration_ = 0.0;
-  }
   if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
     ldw_right_suppression_code += uint32_bit[12];
   } else {
@@ -1379,17 +1299,6 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
 
   // bit 9
   // 油门踏板变化率<30%/s，持续1s，未完成
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
-      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate) {
-    acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
-    if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
-      acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
-  }
   if (acc_pedal_pos_rate_supp_recover_duration_ <
       GetContext.get_param()->ldw_enable_accel_pedal_pos_rate_dur) {
     ldw_right_suppression_code += uint32_bit[13];
@@ -1408,6 +1317,13 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
     ldw_right_suppression_code += uint32_bit[15];
   } else {
     /*do nothing*/
+  }
+  if ((vehicle_service_output_info_ptr->abs_active == true) ||
+  (vehicle_service_output_info_ptr->tcs_active == true) ||
+  (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
+    ldw_right_suppression_code += uint32_bit[16];
+  } else {
+  /*do nothing*/
   }
   return ldw_right_suppression_code &
          GetContext.get_param()->ldw_right_suppression_code_maskcode;
