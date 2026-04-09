@@ -18,7 +18,7 @@ from jupyter_pybind import spatio_temporal_union_planning_py
 # +
 # bag path and frame dt
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250624/20250624-14-34-41/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-24-14-34-41_no_camera.bag.1751002868.close-loop.scc.plan"
-bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_88446/trigger/20260328/20260328-15-00-38/data_collection_BESTUNE_E541_88446_EVENT_FUNEXIT_2026-03-28-15-00-38_no_camera.bag.1775013525.open-loop.scc.plan"
+bag_path = "/share/data/clren/code/planning8/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-06-21-10-18-12.bag_1750472282000_1750472297000_no_camera_9d5895e02c392aa16833026421de46234675a22c.bag.1775617069.open-loop.scc.plan"
 
 # bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_18047/trigger/20250120/20250120-16-05-39/data_collection_CHERY_E0Y_18047_EVENT_MANUAL_2025-01-20-16-05-39_no_camera.bag.22-35.split.1742284603.close-loop.noa.plan"
 frame_dt = 0.1 # sec
@@ -38,7 +38,7 @@ fig1.height = 1550
 # 默认隐藏 ctrl_traj 和 lane_mark_point
 for item in fig1.legend[0].items:
     label = item.label.get('value', '')
-    if label in ('ctrl_traj', 'lane_mark_point'):
+    if label in ('ctrl_traj', 'lane_mark_point','prediction', 'lat plan', 'plan', 'plan_point', 'lane_mark', 'traffic_light', 'traffic_light_type'):
         for r in item.renderers:
             r.visible = False
 # init pybind

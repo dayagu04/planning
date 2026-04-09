@@ -142,10 +142,8 @@ def update_spatio_temporal_union_plan_data(bag_loader, bag_time, local_view_data
 
   if bag_loader.plan_debug_msg['enable'] == True:
     spatio_temporal_union_plan = plan_debug_msg.spatio_temporal_union_plan
-    origin_refline_points = spatio_temporal_union_plan.origin_refline_points
     trajectory_points = spatio_temporal_union_plan.trajectory_points
     # print("spatio_temporal_union_plan:", spatio_temporal_union_plan)
-    refline_x, refline_y = [], []
     traj_x, traj_y = [], []
     s_vec, l_vec, t_vec, v_vec = [], [], [], []
     for trajectory_point in trajectory_points:
@@ -157,26 +155,14 @@ def update_spatio_temporal_union_plan_data(bag_loader, bag_time, local_view_data
       for trajectory_point in trajectory_points:
         traj_x.append(trajectory_point.x)
         traj_y.append(trajectory_point.y)
-      for origin_refline_point in origin_refline_points:
-        refline_x.append(origin_refline_point.x)
-        refline_y.append(origin_refline_point.y)
     else:
       for trajectory_point in trajectory_points:
         traj_x_local, traj_y_local = coord_tf.global_to_local([trajectory_point.x], [trajectory_point.y])
         traj_x.append(traj_x_local[0])
         traj_y.append(traj_y_local[0])
-      for origin_refline_point in origin_refline_points:
-        refline_x_local, refline_y_local = coord_tf.global_to_local([origin_refline_point.x], [origin_refline_point.y])
-        refline_x.append(refline_x_local)
-        refline_y.append(refline_y_local)
+
     print("traj_x:", traj_x)
     print("traj_y:", traj_y)
-    print("refline_x:", refline_x)
-    print("refline_y:", refline_y)
-    spatio_temporal_union_plan_data['data_spatio_temporal'].data.update({
-      'refline_x': refline_x,
-      'refline_y': refline_y,
-    })
 
     spatio_temporal_union_plan_data['data_spatio_temporal_trajs'].data.update({
       'traj_x': traj_x,
@@ -609,8 +595,6 @@ def load_spatio_temporal_union_plan_figure(fig1):
   data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[]})
   data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[]})
 
-  data_spatio_temporal = ColumnDataSource(data = {'refline_x':[],
-                                         'refline_y':[],})
 
   data_spatio_temporal_back = ColumnDataSource(data = {'refline_x':[],
                                          'refline_y':[],})
@@ -650,7 +634,6 @@ def load_spatio_temporal_union_plan_figure(fig1):
                    'data_center_line_2':data_center_line_2, \
                    'data_center_line_3':data_center_line_3, \
                    'data_center_line_4':data_center_line_4, \
-                   'data_spatio_temporal':data_spatio_temporal, \
                    'data_spatio_temporal_trajs':data_spatio_temporal_trajs, \
                    'data_spatio_temporal_back':data_spatio_temporal_back, \
                    'data_spatio_temporal_trajs_back':data_spatio_temporal_trajs_back, \
@@ -659,7 +642,6 @@ def load_spatio_temporal_union_plan_figure(fig1):
 
 
   # motion planning
-  fig1.line('refline_y', 'refline_x', source = data_spatio_temporal, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'origin ref', visible=True)
   fig1.line('refline_y', 'refline_x', source = data_spatio_temporal_back, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'origin ref back', visible=True)
   fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
   fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs_back, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.5, legend_label = 'ref path back', visible=True)

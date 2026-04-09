@@ -82,13 +82,22 @@ void SpatioTemporalUnionDp::Reset() {
   last_planning_result_coord_ = nullptr;
 }
 
+const google::protobuf::RepeatedPtrField<planning::common::DebugPoint>&
+SpatioTemporalUnionDp::GetDebugPoints() const {
+  static const google::protobuf::RepeatedPtrField<planning::common::DebugPoint> kEmpty;
+  if (plan_output_ == nullptr) return kEmpty;
+  return plan_output_->debug_points();
+}
+
 bool SpatioTemporalUnionDp::Update(
     TrajectoryPoints& traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
     const planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
     const double target_s, planning_math::KDPath& current_lane_coord,
-    const int half_lateral_sample_nums, const bool last_enable_using_st_plan) {
+    const int half_lateral_sample_nums, const bool last_enable_using_st_plan,
+    planning::common::SpatioTemporalUnionPlan* plan_output) {
+  plan_output_ = plan_output;
   dp_st_cost_.Init(spatio_temporal_union_plan_input.long_weight_params());
   enable_use_ego_cart_point_ = true;
   current_lane_coord_ = current_lane_coord;
@@ -118,20 +127,13 @@ bool SpatioTemporalUnionDp::Update(
   // auto time_end = IflyTime::Now_ms();
   // ILOG_DEBUG << "SpatioTemporalUnionDp::Update() CalculateTotalCost cost:"
   //            << time_end - time_start;
-  debug_points_.clear();
-  if (!RetrieveSpeedProfile(traj_points, spatio_temporal_union_plan_input, &debug_points_)) {
+  plan_output->clear_debug_points();
+  if (!RetrieveSpeedProfile(traj_points, spatio_temporal_union_plan_input,
+                            *plan_output->mutable_debug_points())) {
     ILOG_DEBUG << "Retrieve best speed profile failed";
     FallbackFunction(spatio_temporal_union_plan_input, traj_points,
                      last_enable_using_st_plan);
     return false;
-  }
-
-  auto* debug_plan = DebugInfoManager::GetInstance()
-      .GetDebugInfoPb()
-      ->mutable_spatio_temporal_union_plan();
-  std::cout << "debug_points size:" << debug_points_.size() <<std::endl;
-  for (const auto& point : debug_points_) {
-    debug_plan->add_debug_points()->CopyFrom(point);
   }
 
   return true;
@@ -1058,7 +1060,7 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
     TrajectoryPoints &traj_points,
     const planning::common::SpationTemporalUnionDpInput
         &spatio_temporal_union_plan_input,
-    std::vector<planning::common::DebugPoint>* debug_points) {
+    google::protobuf::RepeatedPtrField<planning::common::DebugPoint>& debug_points) {
   double min_cost = std::numeric_limits<double>::infinity();
   const SLTGraphPoint *best_end_point = nullptr;
   int c = dimension_t_ - 1;
@@ -1099,14 +1101,28 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   std::vector<double> s_vec;
   std::vector<double> t_vec;
   std::vector<double> l_vec;
-  // TODO, N的数值需要优化
-  const int N = 50;
+
+  constexpr int N = 6;
   s_vec.reserve(N);
   t_vec.reserve(N);
   l_vec.reserve(N);
   speed_profile.reserve(N);
 
   while (cur_point != nullptr) {
+    planning::common::DebugPoint debug_point;
+    debug_point.set_t_index(cur_point->index_t());
+    debug_point.set_s_index(cur_point->index_s());
+    debug_point.set_l_index(cur_point->index_l());
+    debug_point.set_obstacle_cost(cur_point->obstacle_cost());
+    debug_point.set_path_cost(cur_point->path_cost());
+    debug_point.set_path_l_cost(cur_point->path_l_cost());
+    debug_point.set_path_dl_cost(cur_point->path_dl_cost());
+    debug_point.set_path_ddl_cost(cur_point->path_ddl_cost());
+    debug_point.set_stitching_cost(cur_point->stitching_cost());
+    debug_point.set_long_cost(cur_point->longitinal_cost());
+    debug_point.set_obstacle_min_distance(cur_point->min_obs_distance());
+    debug_point.set_obstacle_id(cur_point->min_distance_agent_id());
+    debug_point.set_total_cost(cur_point->total_cost());
     ILOG_DEBUG << "[RetrieveSpeedProfile] s:" << cur_point->point().s()
                << ", l:" << cur_point->point().l()
                << ", t:" << cur_point->point().t()
@@ -1124,36 +1140,21 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
               << "  obstacle_min_distance = " << cur_point->min_obs_distance()
               << "  obstacle_id = " << cur_point->min_distance_agent_id()
               << "  total_cost = " << cur_point->total_cost() << " \n";
-#endif
-    if (debug_points != nullptr) {
-      planning::common::DebugPoint debug_point;
-      debug_point.set_s(cur_point->point().s());
-      debug_point.set_l(cur_point->point().l());
-      debug_point.set_t(cur_point->point().t());
-      debug_point.set_v(cur_point->GetOptimalSpeed());
-      debug_point.set_t_index(cur_point->index_t());
-      debug_point.set_s_index(cur_point->index_s());
-      debug_point.set_l_index(cur_point->index_l());
-      debug_point.set_obstacle_cost(cur_point->obstacle_cost());
-      debug_point.set_path_cost(cur_point->path_cost());
-      debug_point.set_path_l_cost(cur_point->path_l_cost());
-      debug_point.set_path_dl_cost(cur_point->path_dl_cost());
-      debug_point.set_path_ddl_cost(cur_point->path_ddl_cost());
-      debug_point.set_stitching_cost(cur_point->stitching_cost());
-      debug_point.set_long_cost(cur_point->longitinal_cost());
-      debug_point.set_obstacle_min_distance(cur_point->min_obs_distance());
-      debug_point.set_obstacle_id(cur_point->min_distance_agent_id());
-      debug_point.set_total_cost(cur_point->total_cost());
 
-      // Add predecessor node indices
-      if (cur_point->pre_point() != nullptr) {
-        debug_point.set_pre_t_index(cur_point->pre_point()->index_t());
-        debug_point.set_pre_s_index(cur_point->pre_point()->index_s());
-        debug_point.set_pre_l_index(cur_point->pre_point()->index_l());
-      }
 
-      debug_points->push_back(debug_point);
+    debug_point.set_s(cur_point->point().s());
+    debug_point.set_l(cur_point->point().l());
+    debug_point.set_t(cur_point->point().t());
+    debug_point.set_v(cur_point->GetOptimalSpeed());
+    // Add predecessor node indices
+    if (cur_point->pre_point() != nullptr) {
+      debug_point.set_pre_t_index(cur_point->pre_point()->index_t());
+      debug_point.set_pre_s_index(cur_point->pre_point()->index_s());
+      debug_point.set_pre_l_index(cur_point->pre_point()->index_l());
     }
+#endif
+    *debug_points.Add() = std::move(debug_point);
+
     SpeedInfo speed_point;
     speed_point.s = cur_point->point().s();
     speed_point.l = cur_point->point().l();

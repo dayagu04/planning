@@ -59,13 +59,14 @@ class SpatioTemporalUnionDp {
                   spatio_temporal_union_plan_input,
               const double target_s, planning_math::KDPath& current_lane_coord,
               const int half_lateral_sample_nums,
-              const bool last_enable_using_st_plan);
+              const bool last_enable_using_st_plan,
+              planning::common::SpatioTemporalUnionPlan* plan_output);
 
   planning::common::TrajectoryPoints &GetOutput() { return trajectory_points_; }
 
-  const std::vector<planning::common::DebugPoint>& GetDebugPoints() const {
-   std::cout <<  "debug_points_:" << debug_points_.size()<< std::endl;
-    return debug_points_; }
+  const google::protobuf::RepeatedPtrField<planning::common::DebugPoint>& GetDebugPoints() const;
+
+  // Set last frame trajectory from external source (e.g., bag data)
 
   const std::vector<std::vector<std::vector<SLTGraphPoint>>>& GetCostTable() const {
     return cost_table_;
@@ -90,7 +91,7 @@ class SpatioTemporalUnionDp {
   bool RetrieveSpeedProfile(TrajectoryPoints &traj_points,
                             const planning::common::SpationTemporalUnionDpInput
                                 &spatio_temporal_union_plan_input,
-                            std::vector<planning::common::DebugPoint>* debug_points = nullptr);
+                            google::protobuf::RepeatedPtrField<planning::common::DebugPoint>& debug_points);
 
   bool CalculateTotalCost(
       const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
@@ -221,6 +222,9 @@ class SpatioTemporalUnionDp {
   // 预构建上一帧→当前帧的s-l spline（仅执行一次）
   bool PrebuildLastFrameToCurrentSpline();
 
+  // last plan_output passed into Update(), used by GetDebugPoints()
+  planning::common::SpatioTemporalUnionPlan* plan_output_ = nullptr;
+
   // 新增：预构建的s-l spline及边界
   pnc::mathlib::spline last2cur_stitching_spline_;
   double spline_s_min_ = 0.0;  // spline的s最小值（当前帧Frenet系）
@@ -229,7 +233,6 @@ class SpatioTemporalUnionDp {
   bool enable_use_last_planning_result_compute_stitching_ = false;
 
   planning::common::TrajectoryPoints trajectory_points_;
-  std::vector<planning::common::DebugPoint> debug_points_;
   std::vector<double> speed_limit_by_index_;
   std::vector<double> inv_speed_limit_table_;
 

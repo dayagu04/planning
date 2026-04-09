@@ -22,6 +22,7 @@
 #include "src/common/vec2d.h"
 #include "src/modules/common/config/basic_type.h"
 #include "src/modules/tasks/behavior_planners/spatio_temporal_planner/spatio_temporal_union_dp.h"
+#include "spatio_temporal_union_plan.pb.h"
 #include "src/modules/tasks/behavior_planners/spatio_temporal_planner/grid_map.h"
 #include "trajectory1d/trajectory1d.h"
 #include "utils/frenet_coordinate_system.h"
@@ -36,6 +37,7 @@ using namespace planning;
 using namespace planning::planning_math;
 static SpatioTemporalUnionDp *pBase = nullptr;
 static planning_math::KDPath *pTargetLaneCoord = nullptr;
+static planning::common::SpatioTemporalUnionPlan g_plan_output;
 
 int Init() {
   FilePath::SetName("spatio_temporal_union_planning_py");
@@ -215,7 +217,7 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
   //           << " target_lane_coord.max_x " << target_lane_coord.max_x()
   //           << " target_lane_coord.max_y" << target_lane_coord.max_y();
   pBase->Update(
-      traj_points, surround_agents_trajs, spatio_temporal_union_input, target_s, target_lane_coord, half_lateral_sample_nums, last_enable_using_st_plan);
+      traj_points, surround_agents_trajs, spatio_temporal_union_input, target_s, target_lane_coord, half_lateral_sample_nums, last_enable_using_st_plan, &g_plan_output);
   return 0;
 }
 
