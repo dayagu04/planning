@@ -2273,32 +2273,53 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
         ego_trajs_future_[i].t = ego_opt_traj[i].t;
       }
     }
-    // 记录更新后的后车标签，未命中则保持默认值。
-    // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配
-    // const auto rear_it =
-    //     joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
-    // if (rear_it != joint_decision_obstacle_labels_.end()) {
-    //   if(rear_it->second == lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
-    //     // 计算自车与后车ttc，判断与 lc_safety_check_time 的大小关系，大于则表示安全，在变道过程不会超越
-    //     if (target_lane_rear_node_ != nullptr && !ego_trajs_future_.empty()) {
-    //       double rear_gap =
-    //           target_lane_rear_node_->node_front_edge_to_ego_back_edge_distance();
-    //       double rear_rel_vel =
-    //           target_lane_rear_node_->node_speed() - ego_trajs_future_[0].v;
-    //       if (rear_rel_vel <= 0.0 || rear_gap < 0.0) {
-    //         rear_agent_overtaking_ = false;
-    //       } else {
-    //         double rear_ttc = rear_gap / rear_rel_vel;
-    //         rear_agent_overtaking_ = (rear_ttc <= lc_safety_check_time_);
-    //       }
-    //     } else {
-    //       rear_agent_overtaking_ = true;
-    //     }
-    //   } else {
-    //     rear_agent_overtaking_ = false;
-    //   }
-    // }
   }
+    // 记录更新后的后车标签，未命中则保持默认值。
+    // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配，进一步确定是否会在短时间内超越自车
+    rear_agent_overtaking_ = false;
+    const auto rear_it =
+        joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
+    if (rear_it != joint_decision_obstacle_labels_.end()) {
+      if(rear_it->second == lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
+        const auto& dynamic_world = session_->environmental_model().get_dynamic_world();
+        const auto& agent_mgr = dynamic_world->agent_manager();
+        const auto rear_agent = agent_mgr->GetAgent(lc_info.gap_rear_agent_id);
+        if (rear_agent != nullptr && !ego_trajs_future_.empty()) {
+          const auto& agent_trajs = rear_agent->trajectories_used_by_st_graph();
+          if (!agent_trajs.empty() && !agent_trajs[0].empty()) {
+            const auto& traj = agent_trajs[0];
+            const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+            const auto& ref_path = session_->environmental_model()
+                                       .get_reference_path_manager()
+                                       ->get_reference_path_by_lane(target_lane_virtual_id);
+            if (ref_path != nullptr) {
+              const auto& target_lane_coord = ref_path->get_frenet_coord();
+              const auto& vehicle_param =
+                  VehicleConfigurationContext::Instance()->get_vehicle_param();
+              const double two_car_length =
+                  vehicle_param.rear_edge_to_rear_axle + rear_agent->length() * 0.5;
+              double agent_s0 = 0.0, agent_l0 = 0.0;
+              if (target_lane_coord != nullptr &&
+                  target_lane_coord->XYToSL(traj[0].x(), traj[0].y(), &agent_s0, &agent_l0)) {
+                double rel_vel = std::max(0.0, traj[0].vel() - ego_trajs_future_[0].v);
+                double dis_diff_vel = 0.0;
+                double predict_t = lc_safety_check_time_ + 1.5;
+                double rear_acc = rear_agent->accel_fusion();
+                if (rear_acc > 0.3) {
+                  dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
+                } else if (rear_acc < -0.3) {
+                  dis_diff_vel = rel_vel * rel_vel / (2.0 * (-rear_acc));
+                } else {
+                  dis_diff_vel = rel_vel * predict_t;
+                }
+                double rear_gap = ego_trajs_future_[0].s - agent_s0 - two_car_length;
+                rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0);
+              }
+            }
+          }
+        }
+      }
+    }
   return;
 }
 void LaneChangeStateMachineManager::CheckTargetFrontNode(
@@ -4343,29 +4364,11 @@ bool LaneChangeStateMachineManager::
     } else {
       two_car_length = kEgoBackEdgeToRearAxleDistance + 0.5 * agent_length;
     }
-    if(!is_front_agent){
-      double rel_vel = std::max(0.0, agent_traj[0].v - ego_trajs_future_[0].v);
-      double dis_diff_vel = 0.0;
-      double predict_t = lc_safety_check_time_ + 1.5;
-      double rear_acc = agent_traj[0].a;
-      if (rear_acc > 0.3) {
-          // rear accelerating
-          dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
-      } else if (rear_acc < -0.3) {
-        // rear braking
-        dis_diff_vel = rel_vel * rel_vel / (2.0 * (- rear_acc));
-      } else {
-        // rear constant speed
-        dis_diff_vel = rel_vel * predict_t;
-      }
-      double rear_gap = ego_trajs_future_[0].s - agent_traj[0].s - two_car_length;
-      if(rear_gap > dis_diff_vel && rear_gap > 0.0){
-        rear_agent_overtaking_ = false;
-      }else{
-        rear_agent_overtaking_ = true;
-      }
+    bool is_checking_rear_overtaking = false;
+    if(target_lane_rear_node_){
+      is_checking_rear_overtaking = target_lane_rear_node_->node_agent_id() == agent_node->node_agent_id()
+                                 && rear_agent_overtaking_ && !is_front_agent;
     }
-
   for (int i = 0; i < iter_count; i++) {
     // //执行后缩短预测轨迹检查
     // if(is_executing && i > 10){
@@ -4436,13 +4439,13 @@ bool LaneChangeStateMachineManager::
       double safety_buff = std::max(dist_ttc_interp, dis_diff_vel);
       box_ttc_vec.push_back(pred_ttc);
       // 3) 时间衰减：对合并后的 buff 沿预测时域衰减
-      const double ttc_decay_factor = (rear_agent_overtaking_ && !is_aggressive_scence_)? 
+      const double ttc_decay_factor = (is_checking_rear_overtaking && !is_aggressive_scence_)? 
                                       0.99: lc_safety_check_config_.ttc_decay_factor;
       const double ttc_decay = std::pow(ttc_decay_factor, i);
       box_longitudinal_buff = safety_buff * ttc_decay;
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
       const double press_ratio = std::clamp(ego_press_line_ratio, 0.0, 1.0);
-      const double exe_ratio = rear_agent_overtaking_? 0.9 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
+      const double exe_ratio = is_checking_rear_overtaking ? 0.9 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
       box_longitudinal_buff = is_executing ? 
                             box_longitudinal_buff * exe_ratio * (1.0 - press_ratio)
                             : box_longitudinal_buff * (1.0 - press_ratio);
