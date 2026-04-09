@@ -858,7 +858,7 @@ class LoadRosbag:
       # 自车速度（前后车共用）
       json_vector_list += ["ego_vel_vec"]
       # 安全检查相关的标量数据
-      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time"]
+      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time", "rear_agent_overtaking"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

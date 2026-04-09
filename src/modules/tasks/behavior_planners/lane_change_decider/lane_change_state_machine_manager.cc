@@ -2274,15 +2274,30 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
       }
     }
     // 记录更新后的后车标签，未命中则保持默认值。
-    const auto rear_it =
-        joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
-    if (rear_it != joint_decision_obstacle_labels_.end()) {
-      if(rear_it->second == lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
-        rear_agent_overtaking_ = true;
-      } else {
-        rear_agent_overtaking_ = false;
-      }
-    }
+    // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配
+    // const auto rear_it =
+    //     joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
+    // if (rear_it != joint_decision_obstacle_labels_.end()) {
+    //   if(rear_it->second == lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
+    //     // 计算自车与后车ttc，判断与 lc_safety_check_time 的大小关系，大于则表示安全，在变道过程不会超越
+    //     if (target_lane_rear_node_ != nullptr && !ego_trajs_future_.empty()) {
+    //       double rear_gap =
+    //           target_lane_rear_node_->node_front_edge_to_ego_back_edge_distance();
+    //       double rear_rel_vel =
+    //           target_lane_rear_node_->node_speed() - ego_trajs_future_[0].v;
+    //       if (rear_rel_vel <= 0.0 || rear_gap < 0.0) {
+    //         rear_agent_overtaking_ = false;
+    //       } else {
+    //         double rear_ttc = rear_gap / rear_rel_vel;
+    //         rear_agent_overtaking_ = (rear_ttc <= lc_safety_check_time_);
+    //       }
+    //     } else {
+    //       rear_agent_overtaking_ = true;
+    //     }
+    //   } else {
+    //     rear_agent_overtaking_ = false;
+    //   }
+    // }
   }
   return;
 }
@@ -2991,9 +3006,6 @@ bool LaneChangeStateMachineManager::CheckFrontRiskAgentTrajs(
     //    ILOG_DEBUG << "not safety !!!" << std::endl;
     //    return false;
     //  }
-    double two_car_length = 0;
-    // 目前障碍物的前、后边到后轴的距离等于车身长一半
-    two_car_length = kEgoFrontEdgeToRearAxleDistance + 0.5 * agent_length;
     const double focus_v = ego_trajs_future_[i].v;
     // 考虑目前自车的执行器响应时间为0.5s，在换道时纵向的稳态跟车距离为1*v；
     // 为了提高变道变道成功率，纵向又不至于减速太猛，因此设自车前方的最小安全距离为0.7*v。
@@ -4324,6 +4336,35 @@ bool LaneChangeStateMachineManager::
       }
     }
   }
+    double two_car_length = 0;
+    // 目前障碍物的前、后边到后轴的距离等于车身长一半
+    if (is_front_agent) {
+      two_car_length = kEgoFrontEdgeToRearAxleDistance + 0.5 * agent_length;
+    } else {
+      two_car_length = kEgoBackEdgeToRearAxleDistance + 0.5 * agent_length;
+    }
+    if(!is_front_agent){
+      double rel_vel = std::max(0.0, agent_traj[0].v - ego_trajs_future_[0].v);
+      double dis_diff_vel = 0.0;
+      double predict_t = lc_safety_check_time_ + 1.5;
+      double rear_acc = agent_traj[0].a;
+      if (rear_acc > 0.3) {
+          // rear accelerating
+          dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
+      } else if (rear_acc < -0.3) {
+        // rear braking
+        dis_diff_vel = rel_vel * rel_vel / (2.0 * (- rear_acc));
+      } else {
+        // rear constant speed
+        dis_diff_vel = rel_vel * predict_t;
+      }
+      double rear_gap = ego_trajs_future_[0].s - agent_traj[0].s - two_car_length;
+      if(rear_gap > dis_diff_vel && rear_gap > 0.0){
+        rear_agent_overtaking_ = false;
+      }else{
+        rear_agent_overtaking_ = true;
+      }
+    }
 
   for (int i = 0; i < iter_count; i++) {
     // //执行后缩短预测轨迹检查
@@ -4401,7 +4442,7 @@ bool LaneChangeStateMachineManager::
       box_longitudinal_buff = safety_buff * ttc_decay;
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
       const double press_ratio = std::clamp(ego_press_line_ratio, 0.0, 1.0);
-      const double exe_ratio = rear_agent_overtaking_? 1.0 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
+      const double exe_ratio = rear_agent_overtaking_? 0.9 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
       box_longitudinal_buff = is_executing ? 
                             box_longitudinal_buff * exe_ratio * (1.0 - press_ratio)
                             : box_longitudinal_buff * (1.0 - press_ratio);
@@ -4418,14 +4459,6 @@ bool LaneChangeStateMachineManager::
       if(ego_press_line_ratio > 0.5 && is_side_clear_){
         break;  // 已经压线过多，侧方无车不返回
       }
-    }
-    // check lon s safety
-    double two_car_length = 0;
-    // 目前障碍物的前、后边到后轴的距离等于车身长一半
-    if (is_front_agent) {
-      two_car_length = kEgoFrontEdgeToRearAxleDistance + 0.5 * agent_length;
-    } else {
-      two_car_length = kEgoBackEdgeToRearAxleDistance + 0.5 * agent_length;
     }
 
     const double focus_v =
@@ -4547,6 +4580,7 @@ bool LaneChangeStateMachineManager::
   }
   // 循环结束后统一输出 JSON debug 数据
   JSON_DEBUG_VECTOR("ego_vel_vec", ego_vel_vec, 2);
+  JSON_DEBUG_VALUE("rear_agent_overtaking", rear_agent_overtaking_);
   if (!is_front_agent) {
     JSON_DEBUG_VECTOR("rear_box_longitudinal_buff_vec", box_longitudinal_buff_vec, 2);
     JSON_DEBUG_VECTOR("rear_box_ttc_vec", box_ttc_vec, 2);

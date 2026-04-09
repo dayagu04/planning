@@ -204,11 +204,13 @@ def update_safety_check_data(plan_debug_json_msg):
     # ---- 右下角汇总表 ----
     lc_ego_press = plan_debug_json_msg.get('lc_ego_press_line_ratio', None)
     lc_safety_check_time = plan_debug_json_msg.get('lc_safety_check_time', None)
+    rear_agent_overtaking = plan_debug_json_msg.get('rear_agent_overtaking', None)
     safety_summary_data.data = {
-        'name': ['压线率', '安全检查时长(s)'],
+        'name': ['压线率', '安全检查时长(s)', '后车超越'],
         'data': [
             f"{lc_ego_press:.3f}" if lc_ego_press is not None else 'N/A',
             f"{lc_safety_check_time:.2f}" if lc_safety_check_time is not None else 'N/A',
+            f"{int(rear_agent_overtaking)}" if rear_agent_overtaking is not None else 'N/A',
         ]
     }
 
@@ -264,8 +266,8 @@ front_safety_data = ColumnDataSource(data={
     'distance': [], 'agent_vel': [], 'ego_vel': [], 'actual_gap': []
 })
 safety_summary_data = ColumnDataSource(data={
-    'name': ['压线率', '安全检查时长(s)'],
-    'data': ['N/A', 'N/A']
+    'name': ['压线率', '安全检查时长(s)', '后车超越'],
+    'data': ['N/A', 'N/A', 'N/A']
 })
 
 # 图1: 距离和缓冲区
