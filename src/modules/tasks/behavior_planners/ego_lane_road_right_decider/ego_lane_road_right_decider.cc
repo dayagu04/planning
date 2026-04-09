@@ -291,11 +291,10 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
   }
 
   //计算两条车道终点的lat_diff
-  //从末位点向前遍历，找到合适的点
+  //从起始点向后遍历，找到合适的点
   const double kMinValidS = cur_ego_s + 10.0;  // 点必须在自车前方10m以外
-  bool found_valid_point = false;
 
-  for (int i = cur_lane_boundary.enu_points_size - 1; i >= 0; i--) {
+  for (int i = 0; i < cur_lane_boundary.enu_points_size; i++) {
     const iflyauto::Point3f& cur_lane_boundary_enu_end_points =
         cur_lane_boundary.enu_points[i];
     Point2D cur_lane_boundary_end_points_xy = {
@@ -306,11 +305,11 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
     Point2D cur_lane_boundary_end_points_sl;
     if (!cur_lane_coord->XYToSL(cur_lane_boundary_end_points_xy,
                                 cur_lane_boundary_end_points_sl)) {
-      continue;  // 转换失败，继续向前找
+      continue;  // 转换失败，继续向后找
     }
 
     if (cur_lane_boundary_end_points_sl.x < kMinValidS) {
-      break;  // 后续点s更小，不可能满足条件
+      continue;  // 向后遍历时s越来越大，跳过不满足条件的点
     }
 
     Point2D cur_ref_path_end_point_xy;
@@ -353,13 +352,11 @@ bool EgoLaneRoadRightDecider::IsOverlapWithOtherLaneOnEndRegion(
       }
     }
 
-    found_valid_point = true;
-    break;
+    if (lane_end_satisfied_merge_condition) {
+      break;  // 只有满足汇流条件才停止
+    }
   }
 
-  if (!found_valid_point) {
-    return false;
-  }
   if ((abs_lat_diff > cur_lane_lat_diff_threshold ||
        start_abs_lat_diff > cur_lane_lat_diff_threshold) &&
       lane_end_satisfied_merge_condition) {
