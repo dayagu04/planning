@@ -119,14 +119,21 @@ void WeightMaker::MakeVWeight(const TargetMaker& target_maker) {
       session_->planning_context().lane_change_decider_output();
   const auto &start_stop_decider_output =
       session_->planning_context().start_stop_decider_output();
-  if (lane_change_info.s_search_status &&
-  speed_planning_config_.enable_speed_adjust &&
-  start_stop_decider_output.ego_start_stop_info().state() !=
-      common::StartStopInfo::STOP){
-  for (size_t i = 0; i < plan_points_num_; ++i) {
-    v_weight_[i] = 50.0;
+  if (lane_change_info.s_search_status && lane_change_info.is_emergency_scene &&
+      speed_planning_config_.enable_speed_adjust &&
+      start_stop_decider_output.ego_start_stop_info().state() !=
+          common::StartStopInfo::STOP) {
+    for (size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = 50.0;
+    }
+  } else if (lane_change_info.s_search_status &&
+             speed_planning_config_.enable_speed_adjust &&
+             start_stop_decider_output.ego_start_stop_info().state() !=
+                 common::StartStopInfo::STOP) {
+    for (size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = 20.0;
+    }
   }
-}
 }
 
 bool WeightMaker::IsNeedAWeight(const TargetMaker& target_maker) {

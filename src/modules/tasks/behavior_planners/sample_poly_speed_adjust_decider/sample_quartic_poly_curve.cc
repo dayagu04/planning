@@ -281,12 +281,13 @@ void SampleQuarticPolynomialCurve::CalcCost(
   arrived_a_ = anchor_arrived_a;
   arrived_t_ = anchor_arrived_t;
   arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
+  bool is_left_distance_enough =
+    is_merge_change
+        ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
+        : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
+
   if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
-    is_left_distance_enough_ =
-        is_merge_change
-            ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
-            : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 3.0;
-    if (is_left_distance_enough_) {
+    if (is_left_distance_enough) {
       speed_differ_gain = 0.0;
       distance_to_stop_point = kMaxDistanceToStopPoint;
       time_cost = 3.0 * std::exp(arrived_t_ / 2.5);
@@ -399,6 +400,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     rest_changeable_distance_ = rest_changeable_distance;
     end_point_matched_gap_back_id_ = anchor_matched_lower_st_point.agent_id();
     end_point_matched_gap_front_id_ = anchor_matched_upper_st_point.agent_id();
+    is_left_distance_enough_ = is_left_distance_enough;
   }
 }
 }  // namespace planning
