@@ -40,9 +40,10 @@ class STSampleSpaceBase {
   void LinearExtendAgentStBoundary(
       const planning_data::DynamicAgentNode* agent_node);
   void ConstructStPointsTable(const double sample_st_limit_lat_offset);
-  bool GetBorderByAvailable(double s, double t,
-                            planning::speed::STPointWithLateral* const lower_st_point,
-                            planning::speed::STPointWithLateral* const upper_st_point);
+  bool GetBorderByAvailable(
+      double s, double t,
+      planning::speed::STPointWithLateral* const lower_st_point,
+      planning::speed::STPointWithLateral* const upper_st_point) const;
   void Init(
       const std::vector<const planning_data::DynamicAgentNode*>&
           target_lane_nodes,

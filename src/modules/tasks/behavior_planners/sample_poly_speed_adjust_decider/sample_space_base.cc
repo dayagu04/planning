@@ -403,9 +403,9 @@ bool find_boundary_pair(
   return false;
 }
 
-bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
-                                             STPointWithLateral* const lower_st_point,
-                                             STPointWithLateral* const upper_st_point) {
+bool STSampleSpaceBase::GetBorderByAvailable(
+    double s, double t, STPointWithLateral* const lower_st_point,
+    STPointWithLateral* const upper_st_point) const {
   const int index = int((t / kTimeResolution) + 0.51);
   if (index < 0 || index >= st_points_table_.size()) {
     lower_st_point->set_info(-kMaxPathLength, t, 0.0, kNoAgentId, -1);

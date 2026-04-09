@@ -160,101 +160,105 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
   if (index >= sample_space_ptr_->st_points_table().size()) {
     return false;
   }
-  auto& state = sample_space_ptr_->st_points_table()[index];
   double frenet_node_s = node.s + ego_s_;
-  for (auto& interval : state) {
-    if (frenet_node_s < interval.second.s() &&
-        frenet_node_s > interval.first.s()) {
-      return false;
-    } else if (frenet_node_s > interval.second.s()) {
-      // double s_buffer = 3.5 + 0.3 * interval.second.velocity();
-      double s_buffer = 3.5;
-      s_buffer = node.s > merge_point_s_
-                     ? s_buffer * std::exp((merge_point_s_ - node.s) / 10)
-                     : s_buffer;
-      s_buffer = std::fmax(2.0,s_buffer);
-      double gap = frenet_node_s - interval.second.s() - s_buffer -
-                    rear_edge_to_rear_axle_;
-      int object_lateral_offset = static_cast<int>(10 * interval.second.l());
-      double collsion_s = 0.0;
-      if (object_lateral_offset < 0) {
-        collsion_s = merge_point_s_;
-      } else {
-        auto it = agent_lateral_offset_map_.find(object_lateral_offset);
-        if (it != agent_lateral_offset_map_.end()) {
-          collsion_s = it->second;
-        } else {
-          collsion_s = 100.0;
-        }
-      }
-      if (gap < 0.0 && node.s > collsion_s) {
-        std::cout << "Gap后车碰撞风险: " << node.getKey()  << node.getKey() <<" 剩余距离 :  "<< gap <<
-        "  buffer:  "<<s_buffer<< std::endl;
-        return false;
-      } else {
-        double s_buffer_extra = 0.7 * interval.second.velocity();
-        node.dis_to_gap_rear_cost =
-            gap > s_buffer_extra ? 0.0
-            : gap < 0.0          ? config_->weight_back_ttc * 2.0 *
-                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
-                                                                         kZeroEpsilon)))
-                                 : config_->weight_back_ttc *
-                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
-                                                                         kZeroEpsilon)));
-      }
+  planning::speed::STPointWithLateral anchor_matched_upper_st_point;
+  planning::speed::STPointWithLateral anchor_matched_lower_st_point;
+  sample_space_ptr_->GetBorderByAvailable(frenet_node_s, node.t,
+                                        &anchor_matched_lower_st_point,
+                                        &anchor_matched_upper_st_point);
+//校验gap后车碰撞风险
+  {
+    double s_buffer = 2.0;
+    s_buffer = node.s > merge_point_s_
+                   ? s_buffer * std::exp((merge_point_s_ - node.s) / 10)
+                   : s_buffer;
+    double gap = frenet_node_s - anchor_matched_lower_st_point.s() - s_buffer -
+                 rear_edge_to_rear_axle_;
+    int object_lateral_offset = static_cast<int>(10 * anchor_matched_lower_st_point.l());
+    double collsion_s = 0.0;
+    if (object_lateral_offset < 0) {
+      collsion_s = merge_point_s_;
     } else {
-      double follow_distance =
-        node.v * (node.v - interval.first.velocity()) / (2.0 * 2.0);
-      double thw = 0.3 * node.v;
-      double s_buffer = std::fmax(thw + follow_distance + 3.0, 3.0);
-      double gap = interval.first.s() - frenet_node_s - s_buffer -
-                    front_edge_to_rear_axle_;
-      if (gap < 0.0 && node.s > merge_point_s_) {
-        std::cout << "Gap前车碰撞风险: " << node.getKey() <<" 剩余距离 :  "<< gap <<
-        "  buffer:  "<<s_buffer<< std::endl;
-        return false;
+      auto it = agent_lateral_offset_map_.find(object_lateral_offset);
+      if (it != agent_lateral_offset_map_.end()) {
+        collsion_s = it->second;
       } else {
-        double s_buffer_extra = 0.7 * node.v;
-        node.dis_to_gap_front_cost =
-            gap > s_buffer_extra ? 0.0
-            : gap < 0.0          ? config_->weight_front_ttc * 2.0 *
-                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
-                                                                         kZeroEpsilon)))
-                                 : config_->weight_front_ttc *
-                                       std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
-                                                                         kZeroEpsilon)));
+        collsion_s = 100.0;
       }
+    }
+    if (gap < 0.0 && node.s > collsion_s) {
+      std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
+                << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+                << std::endl;
+      return false;
+    } else {
+      double s_buffer_extra = 0.7 * anchor_matched_lower_st_point.velocity();
+      node.dis_to_gap_rear_cost =
+          gap > s_buffer_extra ? 0.0
+          : gap < 0.0          ? config_->weight_back_ttc * 2.0 *
+                                     std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                       kZeroEpsilon)))
+                               : config_->weight_back_ttc *
+                                     std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                       kZeroEpsilon)));
+    }
+  }
+//校验gap前车碰撞风险
+  {
+    double follow_distance =
+        node.v * (node.v - anchor_matched_upper_st_point.velocity()) / (2.0 * 2.0);
+    double thw = 0.3 * node.v;
+    double s_buffer = std::fmax(thw + follow_distance + 3.0, 3.0);
+    double gap = anchor_matched_upper_st_point.s() - frenet_node_s - s_buffer -
+                 front_edge_to_rear_axle_;
+    if (gap < 0.0 && node.s > merge_point_s_) {
+      std::cout << "Gap前车碰撞风险: " << node.getKey()
+                << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+                << std::endl;
+      return false;
+    } else {
+      double s_buffer_extra = 0.7 * node.v;
+      node.dis_to_gap_front_cost =
+          gap > s_buffer_extra ? 0.0
+          : gap < 0.0          ? config_->weight_front_ttc * 2.0 *
+                                     std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                       kZeroEpsilon)))
+                               : config_->weight_front_ttc *
+                                     std::exp(3 * (1 - gap / std::fmax(s_buffer_extra,
+                                                                       kZeroEpsilon)));
     }
   }
   // 检查是否与前车碰撞
-  if (leading_agent_info_.id != kNoAgentId && leading_agent_info_.id != -1) {
-    double leading_agent_v = 0.0;
-    double leading_agent_s = 0.0;
-    if (index < leading_agent_info_.prediction_path.size()) {
-      leading_agent_s = leading_agent_info_.prediction_path[index].first;
-      leading_agent_v = leading_agent_info_.prediction_path[index].second;
-    } else {
-      if (leading_agent_info_.prediction_path_valid) {
-        leading_agent_v = leading_agent_info_.prediction_path.back().second;
-        leading_agent_s =
-            leading_agent_info_.prediction_path.back().first +
-            leading_agent_v *
-                (index - leading_agent_info_.prediction_path.size()) *
-                kTimeResolution;
+  {
+    if (leading_agent_info_.id != kNoAgentId && leading_agent_info_.id != -1) {
+      double leading_agent_v = 0.0;
+      double leading_agent_s = 0.0;
+      if (index < leading_agent_info_.prediction_path.size()) {
+        leading_agent_s = leading_agent_info_.prediction_path[index].first;
+        leading_agent_v = leading_agent_info_.prediction_path[index].second;
       } else {
-        leading_agent_v = leading_agent_info_.v;
-        leading_agent_s = leading_agent_info_.v * node.t;
+        if (leading_agent_info_.prediction_path_valid) {
+          leading_agent_v = leading_agent_info_.prediction_path.back().second;
+          leading_agent_s =
+              leading_agent_info_.prediction_path.back().first +
+              leading_agent_v *
+                  (index - leading_agent_info_.prediction_path.size()) *
+                  kTimeResolution;
+        } else {
+          leading_agent_v = leading_agent_info_.v;
+          leading_agent_s = leading_agent_info_.v * node.t;
+        }
       }
-    }
-    double follow_distance =
-        node.v * (node.v - leading_agent_v) / (2.0 * 2.0);
-    double thw = 0.5 * node.v;
-    double safe_distance = std::fmax(thw + follow_distance + 3.0, 3.0);
-    double gap =
-        leading_agent_s + leading_agent_info_.center_s - node.s - safe_distance;
-    if (gap < 0.0) {
-      std::cout << "前车碰撞风险: " << node.getKey() << std::endl;
-      return false;
+      double follow_distance =
+          node.v * (node.v - leading_agent_v) / (2.0 * 2.0);
+      double thw = 0.5 * node.v;
+      double safe_distance = std::fmax(thw + follow_distance + 3.0, 3.0);
+      double gap = leading_agent_s + leading_agent_info_.center_s - node.s -
+                   safe_distance;
+      if (gap < 0.0) {
+        std::cout << "前车碰撞风险: " << node.getKey() << std::endl;
+        return false;
+      }
     }
   }
   return true;
