@@ -144,6 +144,9 @@ class VirtualLane {
 
   bool get_point_by_distance(double distance, iflyauto::ReferencePoint &point);
 
+  ///根据弧长s获取车道中心线上的参考点（二分查找+线性插值）
+  bool get_point_by_s(double s, iflyauto::ReferencePoint &point);
+
   const std::vector<std::string> &center_line_points_track_id() const {
     return center_line_points_track_id_;
   }
