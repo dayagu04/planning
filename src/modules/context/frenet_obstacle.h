@@ -93,7 +93,7 @@ class FrenetObstacle {
       planning_math::Polygon2d& obstacle_polygon) const;
 
  private:
-  void compute_frenet_obstacle(const ReferencePath& reference_path);
+  void compute_frenet_obstacle(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
