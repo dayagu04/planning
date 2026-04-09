@@ -339,7 +339,7 @@ void LaneReferencePath::generate_frenet_obstacles(
     cart_point.x = obstacle_ptr->x_center();
     cart_point.y = obstacle_ptr->y_center();
 
-    if (!frenet_coord_->XYToSL(cart_point, frenet_point) ||
+    if (!frenet_coord_->XYToSL(cart_point, frenet_point, session_->is_hpp_scene()) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
       ILOG_DEBUG << "cart_point to frenet_point failed, obstacle_id: "
                  << obstacle_ptr->id();
