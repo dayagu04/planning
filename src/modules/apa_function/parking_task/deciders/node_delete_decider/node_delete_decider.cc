@@ -246,6 +246,14 @@ const bool NodeDeleteDecider::CheckShouldBeDeletedForPerpendicularIn() {
   return false;
 }
 
+
+const bool NodeDeleteDecider::UpdateObsDistRelativeSlot(
+    NodeDeleteRequest request) {
+  request_ = request;
+  input_.need_cal_obs_dist = true;
+  return !CheckCollision();
+}
+
 const bool NodeDeleteDecider::CheckCollision() {
   if (col_det_interface_ptr_->GetObsManagerPtr()->GetObstacles().empty()) {
     // ILOG_INFO << "OBS IS EMPTY";
