@@ -5198,6 +5198,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
     hpp_max_replan_dist_err = read_json_key<double>(
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+    hpp_max_vel_correction_per_frame = read_json_key<double>(
+        json, "hpp_max_vel_correction_per_frame", hpp_max_vel_correction_per_frame);
 
     rads_max_replan_lon_err = read_json_key<double>(
         json, "rads_max_replan_lon_err", rads_max_replan_lon_err);
@@ -5244,6 +5246,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;
   double hpp_max_replan_dist_err = 0.8;
+  double hpp_max_vel_correction_per_frame = 0.5;
 
   double rads_max_replan_lon_err = 0.50;
 

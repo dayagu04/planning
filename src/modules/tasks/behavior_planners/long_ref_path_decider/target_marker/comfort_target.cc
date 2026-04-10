@@ -690,6 +690,14 @@ void ComfortTarget::GenerateComfortTarget() {
                                    comfort_acc * dt_ * dt_);
     double next_s = current_s + ds;
     double next_v = std::max(0.0, current_v + comfort_acc * dt_);
+
+    if(session_->is_hpp_scene()){
+      // a_free = a × (1 - (v/v0)^δ)
+      // v 趋近 v0 时加速度趋近 0，v 永远不会越过 v0
+      // jerk 的限制使得 acc 无法及时的响应，无法保证 next_v <= comfort_params_.v0
+      next_v = std::min(next_v, comfort_params_.v0);
+    }
+
     double next_a = comfort_acc;
     next_v = std::max(0.0, next_v);
 

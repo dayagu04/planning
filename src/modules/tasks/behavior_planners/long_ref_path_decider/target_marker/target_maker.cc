@@ -211,10 +211,13 @@ void TargetMaker::RefineStarget() {
   s_ref_target_types.reserve(target_size);
   s_ref_target_types.emplace_back(target_values_.back().target_type());
   for (int i = target_size - 2; i >= 0; i--) {
-    const auto s_target_tmp = std::fmin(target_values_[i].s_target_val(),
-                                        target_values_[i + 1].s_target_val());
-    target_values_[i].set_s_target_val(s_target_tmp);
-    s_ref_target_types.emplace_back(target_values_[i].target_type());
+    const auto s_next = target_values_[i + 1].s_target_val();
+    const auto v_next = target_values_[i + 1].v_target_val();
+
+    if (target_values_[i].s_target_val() > s_next) {
+      target_values_[i].set_s_target_val(s_next);
+      target_values_[i].set_v_target_val(v_next);
+    }
   }
   std::reverse(s_ref_target_types.begin(), s_ref_target_types.end());
 }
