@@ -235,6 +235,18 @@ class Polygon2d {
   bool HasOverlap(const Polygon2d &polygon) const;
 
   /**
+   * @brief Check if the distance from this polygon to another polygon is within
+   *        a given threshold. Equivalent to DistanceTo(other) <= threshold,
+   *        but more expressive for collision detection with safety margins.
+   * @param other The target polygon.
+   * @param threshold The distance threshold.
+   * @return Whether the two polygons are within the given distance.
+   */
+  bool IsWithinDistance(const Polygon2d &other, double threshold) const {
+    return DistanceTo(other) <= threshold;
+  }
+
+  /**
    * @brief Check if this polygon has overlap with a box.
    * @param box The target box. To check if it has overlap
    *        with this polygon.

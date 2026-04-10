@@ -7,6 +7,7 @@
 
 #include "common/agent/agent.h"
 #include "common/agent/agent_manager.h"
+#include "common/utils/geometry_utils.h"
 #include "common/config/basic_type.h"
 #include "common/math/polygon2d.h"
 #include "common/tracked_object.h"
@@ -88,19 +89,6 @@ bool CompareGroundLineAgentCandidateByCollisionS(
   return lhs.collision.collision_s_on_traj < rhs.collision.collision_s_on_traj;
 }
 
-// 计算轨迹点处自车4个角点（世界坐标），half_w 含横向膨胀量
-std::vector<planning_math::Vec2d> GetEgoCorners(const TrajectoryPoint &pt,
-                                                double half_w, double front,
-                                                double rear) {
-  const double cos_h = std::cos(pt.heading_angle);
-  const double sin_h = std::sin(pt.heading_angle);
-  auto to_world = [&](double lx, double ly) {
-    return planning_math::Vec2d(pt.x + lx * cos_h - ly * sin_h,
-                                pt.y + lx * sin_h + ly * cos_h);
-  };
-  return {to_world(front, half_w), to_world(front, -half_w),
-          to_world(-rear, -half_w), to_world(-rear, half_w)};
-}
 
 GroundLineFirstCollision FindEarliestGroundLineCollisionOnTrajectory(
     const Obstacle &groundline_obstacle, const TrajectoryPoints &traj_points,
@@ -127,8 +115,10 @@ GroundLineFirstCollision FindEarliestGroundLineCollisionOnTrajectory(
     }
 
     // 构造相邻两帧的扫略凸包（8角点）
-    auto corners = GetEgoCorners(traj_pt, half_w, front, rear);
-    const auto corners_next = GetEgoCorners(traj_pt_next, half_w, front, rear);
+    auto corners = planning::GetEgoCorners(
+        traj_pt.x, traj_pt.y, traj_pt.heading_angle, half_w, front, rear);
+    const auto corners_next = planning::GetEgoCorners(
+        traj_pt_next.x, traj_pt_next.y, traj_pt_next.heading_angle, half_w, front, rear);
     corners.insert(corners.end(), corners_next.begin(), corners_next.end());
 
     planning_math::Polygon2d swept;

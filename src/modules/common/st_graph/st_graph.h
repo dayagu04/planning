@@ -13,6 +13,7 @@
 #include "math/box2d.h"
 #include "math/geometry_object.h"
 #include "math/line_segment2d.h"
+#include "math/polygon2d.h"
 #include "math/vec2d.h"
 #include "planning_debug_info.pb.h"
 #include "speed/st_point.h"
@@ -26,6 +27,9 @@ namespace speed {
 
 class STGraph {
  public:
+  using SweptSegments = std::vector<std::pair<planning_math::Polygon2d,
+                                               std::pair<double, double>>>;
+
   struct NeighborCorridorYieldInfo {
     int32_t first_yield_index = std::numeric_limits<int32_t>::max();
     int32_t first_yield_agent_id = agent::AgentDefaultInfo::kNoAgentId;
@@ -131,6 +135,28 @@ class STGraph {
       const agent::Agent& agent, const StBoundaryType type,
       const bool reuse_for_close_pass = false,
       const double extra_lateral_buffer_for_close_pass = 0.0);
+
+  void MakeHppStaticAgentStBoundary(
+      const agent::Agent& agent, const StBoundaryType type,
+      const bool reuse_for_close_pass = false,
+      const double extra_lateral_buffer_for_close_pass = 0.0);
+
+  void MakeHppDynamicAgentStBoundary(
+      const agent::Agent& agent, const StBoundaryType type,
+      const bool reuse_for_close_pass = false,
+      const double extra_lateral_buffer_for_close_pass = 0.0);
+
+  // Unified HPP s-range computation: handles stop_destination, NEIGHBOR,
+  // EXPAND, and NORMAL (swept polygon) branches. Returns false if no valid
+  // range is found.
+  bool HppComputeSRange(
+      const agent::Agent& agent, const StBoundaryType type,
+      const std::vector<double>& agent_sl_boundary,
+      const std::pair<double, double>& path_range,
+      const double collision_threshold,
+      const planning_math::Polygon2d& obs_polygon,
+      const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
+      double* lower_s, double* upper_s);
 
   void RecalculateTrajectoryForLcRearAgent(const agent::Agent* rear_agent);
 
