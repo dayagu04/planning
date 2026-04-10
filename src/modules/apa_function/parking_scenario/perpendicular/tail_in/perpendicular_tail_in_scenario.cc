@@ -1614,6 +1614,111 @@ void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
   fur_proj_pt.PrintInfo();
 }
 
+size_t PerpendicularTailInScenario::GetHybridSegmentPointSize(
+    const HybridAStarResult& result, size_t index) const {
+  return std::min(
+      {result.x_vec_vec[index].size(), result.y_vec_vec[index].size(),
+       result.phi_vec_vec[index].size(), result.kappa_vec_vec[index].size(),
+       result.accumulated_s_vec_vec[index].size(),
+       result.type_vec_vec[index].size()});
+}
+
+void PerpendicularTailInScenario::WriteHybridSegmentFromPathPoints(
+    const std::vector<geometry_lib::PathPoint>& path_points,
+    HybridAStarResult* result, size_t index) const {
+  if (result == nullptr) {
+    return;
+  }
+
+  result->x_vec_vec[index].resize(path_points.size());
+  result->y_vec_vec[index].resize(path_points.size());
+  result->phi_vec_vec[index].resize(path_points.size());
+  result->kappa_vec_vec[index].resize(path_points.size());
+  result->accumulated_s_vec_vec[index].resize(path_points.size());
+  result->type_vec_vec[index].resize(path_points.size());
+  for (size_t i = 0; i < path_points.size(); ++i) {
+    const auto& pt = path_points[i];
+    result->x_vec_vec[index][i] = pt.pos.x();
+    result->y_vec_vec[index][i] = pt.pos.y();
+    result->phi_vec_vec[index][i] = pt.heading;
+    result->kappa_vec_vec[index][i] = pt.kappa;
+    result->accumulated_s_vec_vec[index][i] = pt.s;
+    result->type_vec_vec[index][i] = static_cast<AstarPathType>(pt.type);
+  }
+}
+
+std::vector<geometry_lib::PathPoint>
+PerpendicularTailInScenario::BuildHybridSegmentPathPoints(
+    const HybridAStarResult& result, size_t index) const {
+  const auto& x_vec = result.x_vec_vec[index];
+  const auto& y_vec = result.y_vec_vec[index];
+  const auto& phi_vec = result.phi_vec_vec[index];
+  const auto& kappa_vec = result.kappa_vec_vec[index];
+  const auto& s_vec = result.accumulated_s_vec_vec[index];
+  const auto& type_vec = result.type_vec_vec[index];
+  const auto seg_gear = GetSegGearFromAstarGear(result.gear_vec[index]);
+  const size_t pt_size = GetHybridSegmentPointSize(result, index);
+
+  std::vector<geometry_lib::PathPoint> path_points;
+  path_points.reserve(pt_size);
+  for (size_t i = 0; i < pt_size; ++i) {
+    geometry_lib::PathPoint pt;
+    pt.pos << x_vec[i], y_vec[i];
+    pt.heading = phi_vec[i];
+    pt.kappa = kappa_vec[i];
+    pt.s = s_vec[i];
+    pt.type = static_cast<int>(type_vec[i]);
+    pt.gear = seg_gear;
+    path_points.emplace_back(pt);
+  }
+  return path_points;
+}
+
+void PerpendicularTailInScenario::AppendHybridSegmentGlobalPathPoints(
+    const HybridAStarResult& result, size_t index,
+    const geometry_lib::LocalToGlobalTf& l2g_tf,
+    std::vector<geometry_lib::PathPoint>* current_path_points,
+    std::vector<geometry_lib::PathPoint>* complete_path_points) const {
+  if (current_path_points == nullptr || complete_path_points == nullptr) {
+    return;
+  }
+
+  const auto path_points = BuildHybridSegmentPathPoints(result, index);
+  for (const auto& path_point : path_points) {
+    geometry_lib::PathPoint global_path_point = path_point;
+    global_path_point.pos = l2g_tf.GetPos(path_point.pos);
+    global_path_point.heading = l2g_tf.GetHeading(path_point.heading);
+    if (index == 0) {
+      current_path_points->emplace_back(global_path_point);
+    }
+    complete_path_points->emplace_back(global_path_point);
+  }
+}
+
+void PerpendicularTailInScenario::OptimizeHybridFirstSegment(
+    HybridAStarResult* result) {
+  // if (result == nullptr || result->gear_vec.empty()) {
+  //   return;
+  // }
+
+  // std::vector<geometry_lib::PathPoint> raw_pts_vec =
+  //     BuildHybridSegmentPathPoints(*result, 0);
+
+  // std::vector<geometry_lib::PathPoint> optimized_pts_vec;
+  // PathOptimizeParams optimize_params;
+  // optimize_params.enable_optimize =
+  //     apa_param.GetParam().perpendicular_lat_opt_enable;
+  // optimize_params.use_obs_height_method =
+  //     apa_param.GetParam().use_obs_height_method;
+  // optimize_params.base_on_slot = true;
+  // if (!PathOptimize(raw_pts_vec, optimized_pts_vec, optimize_params)) {
+  //   return;
+  // }
+
+  // WriteHybridSegmentFromPathPoints(optimized_pts_vec, result, 0);
+  return;
+}
+
 void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
     const HybridAstarResponse& response) {
   const HybridAStarResult& result = response.result;
@@ -1627,13 +1732,10 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
 
   frame_.cur_path_gear_change_count = result.gear_change_num;
 
-  const auto gear_command = GetSegGearFromAstarGear(result.cur_gear);
-  const auto current_gear = geometry_lib::ReverseGear(gear_command);
-  const auto current_arc_steer =
+  frame_.gear_command = GetSegGearFromAstarGear(result.cur_gear);
+  frame_.current_gear = geometry_lib::ReverseGear(frame_.gear_command);
+  frame_.current_arc_steer =
       geometry_lib::ReverseSteer(GetSegSteerFromAstarSteer(result.cur_steer));
-  frame_.gear_command = gear_command;
-  frame_.current_gear = current_gear;
-  frame_.current_arc_steer = current_arc_steer;
 
   ILOG_INFO << "path gear change count = " << result.gear_change_num
             << " path cur gear = " << PathGearDebugString(result.cur_gear);
@@ -1650,53 +1752,37 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
       {result.gear_vec.size(), result.x_vec_vec.size(), result.y_vec_vec.size(),
        result.phi_vec_vec.size(), result.kappa_vec_vec.size(),
        result.type_vec_vec.size(), result.accumulated_s_vec_vec.size()});
+  if (gear_size == 0) {
+    ILOG_INFO << "hybrid path is empty, skip filling global path points";
+    return;
+  }
 
   size_t complete_path_point_count = splicing_pt_vec.size();
   for (size_t i = 0; i < gear_size; ++i) {
-    complete_path_point_count +=
-        std::min({result.x_vec_vec[i].size(), result.y_vec_vec[i].size(),
-                  result.phi_vec_vec[i].size(), result.kappa_vec_vec[i].size(),
-                  result.accumulated_s_vec_vec[i].size(),
-                  result.type_vec_vec[i].size()});
+    complete_path_point_count += GetHybridSegmentPointSize(result, i);
   }
 
-  current_path_point_global_vec_.reserve(result.x_vec_vec[0].size() +
+  // OptimizeHybridFirstSegment(&result);
+
+  const size_t first_seg_size = GetHybridSegmentPointSize(result, 0);
+
+  current_path_point_global_vec_.reserve(first_seg_size +
                                          splicing_pt_vec.size() + 18);
   complete_path_point_global_vec_.reserve(complete_path_point_count + 18);
 
-  for (const geometry_lib::PathPoint& pt : splicing_pt_vec) {
-    current_path_point_global_vec_.emplace_back(pt);
-    complete_path_point_global_vec_.emplace_back(pt);
-  }
+  current_path_point_global_vec_.insert(current_path_point_global_vec_.end(),
+                                        splicing_pt_vec.begin(),
+                                        splicing_pt_vec.end());
+  complete_path_point_global_vec_.insert(complete_path_point_global_vec_.end(),
+                                         splicing_pt_vec.begin(),
+                                         splicing_pt_vec.end());
 
   const geometry_lib::LocalToGlobalTf& l2g_tf =
       request.ego_info_under_slot.l2g_tf;
-
   for (size_t i = 0; i < gear_size; ++i) {
-    const std::vector<float>& x_vec = result.x_vec_vec[i];
-    const std::vector<float>& y_vec = result.y_vec_vec[i];
-    const std::vector<float>& phi_vec = result.phi_vec_vec[i];
-    const std::vector<float>& kappa_vec = result.kappa_vec_vec[i];
-    const std::vector<float>& s_vec = result.accumulated_s_vec_vec[i];
-    const std::vector<AstarPathType>& type_vec = result.type_vec_vec[i];
-    const auto seg_gear = GetSegGearFromAstarGear(result.gear_vec[i]);
-    const size_t pt_size =
-        std::min({x_vec.size(), y_vec.size(), phi_vec.size(), kappa_vec.size(),
-                  s_vec.size(), type_vec.size()});
-    for (size_t j = 0; j < pt_size; ++j) {
-      geometry_lib::PathPoint global_path_point;
-      global_path_point.pos =
-          l2g_tf.GetPos(Eigen::Vector2d(x_vec[j], y_vec[j]));
-      global_path_point.heading = l2g_tf.GetHeading(phi_vec[j]);
-      global_path_point.type = static_cast<int>(type_vec[j]);
-      global_path_point.kappa = kappa_vec[j];
-      global_path_point.s = s_vec[j];
-      global_path_point.gear = seg_gear;
-      if (i == 0) {
-        current_path_point_global_vec_.emplace_back(global_path_point);
-      }
-      complete_path_point_global_vec_.emplace_back(global_path_point);
-    }
+    AppendHybridSegmentGlobalPathPoints(result, i, l2g_tf,
+                                        &current_path_point_global_vec_,
+                                        &complete_path_point_global_vec_);
   }
 
   if (!complete_path_point_global_vec_.empty()) {
