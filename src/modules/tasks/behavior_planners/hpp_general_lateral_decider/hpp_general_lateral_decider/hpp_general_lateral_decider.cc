@@ -500,7 +500,7 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
         static_analysis_storage->GetBackSRange(turn_query, s_ref);
 
     const double origin_cruise_v = cruise_v;
-    const double kMinCruiseV = 3.0;
+    const double kMinCruiseV = 2.0;
 
     double factor = 1.0;
 
@@ -660,23 +660,21 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
 
   const auto &cruise_v = session_->planning_context().v_ref_cruise();
 
-  const double ego_v = planning_init_point.v;
-
-  const double kMaxAcc = cruise_v > ego_v ? 0.8 : -5.5;
-
   const double avg_dis = lon_sample_length_ / config_.num_step;
 
   const double avg_vel = lon_sample_length_ / (config_.delta_t * config_.num_step);
 
+  const double kMaxAcc = cruise_v > avg_vel ? 0.8 : -5.5;
+
   std::vector<double> ref_sample_vel_vec(config_.num_step + 1, avg_vel);
   std::vector<double> delta_s_vec(config_.num_step + 1, avg_dis);
 
-  // if (!is_point_in_turning_) {
-  if (0) {
-    ref_sample_vel_vec[0] = ego_v;
+  if (!is_point_in_turning_ && avg_vel > 2.0) {
+  // if (0) {
+    ref_sample_vel_vec[0] = avg_vel;
     double total_s = 0.0;
 
-    double t_reach = (cruise_v - ego_v) / kMaxAcc;
+    double t_reach = (cruise_v - avg_vel) / kMaxAcc;
 
     for (size_t i = 0; i < config_.num_step; ++i) {
       const double t_next = static_cast<double>(i + 1) * config_.delta_t;
@@ -949,87 +947,29 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
     return;
   }
 
-  auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
-  if (ego_s <= plan_history_traj_tmp.front().s) {
-    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
-      TrajectoryPoint pt;
-      if (!hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
-              plan_history_traj_tmp, ref_traj_points_[i].s, pt)) {
-        continue;
-      }
-      pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
-      plan_history_traj_.emplace_back(std::move(pt));
-    }
-  } else if (ego_s >= plan_history_traj_tmp.back().s) {
-    // occur replan
-  } else {
-    int index = 1;
-    while (index < plan_history_traj_tmp.size()) {
-      if (plan_history_traj_tmp[index].s >= ego_s) {
-        break;
-      }
-      index++;
-    }
-    const auto &traj_1 = plan_history_traj_tmp[index - 1];
-    const auto &traj_2 = plan_history_traj_tmp[index];
-
-    const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
-    const double weight1 = 1.0 - weight0;
-    const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
-    const double base_s = weight1 * traj_1.s + weight0 * traj_2.s;
-
+  for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     TrajectoryPoint pt;
-    if (hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
-            plan_history_traj_tmp, base_s, pt)) {
-      plan_history_traj_.emplace_back(std::move(pt));
+    if (!hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
+            plan_history_traj_tmp, ref_traj_points_[i].s, pt)) {
+      // continue;
     }
+    // pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
+    plan_history_traj_.emplace_back(std::move(pt));
+  }
 
+  auto t_delay = plan_history_traj_.front().t;
+
+  if (t_delay < -1e-2) {
     for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
-      if (ref_traj_points_[i].s <= base_s) {
-        continue;
-      }
-      if (!hpp_general_lateral_decider_utils::GetTrajectoryPointAtS(
-              plan_history_traj_tmp, ref_traj_points_[i].s, pt)) {
-        continue;
-      }
-      plan_history_traj_.emplace_back(std::move(pt));
+      plan_history_traj_[i].t -= t_delay;
     }
-
-    for (auto &traj : plan_history_traj_) {
-      traj.t -= base_t;
-    }
-
-    if (plan_history_traj_.size() != 0) {
-      double fallback_ref_ds =
-          std::max(ref_traj_points_.back().s - ref_traj_points_[ref_traj_points_.size() - 2].s, 1e-3);
-
-      for (int point_num = plan_history_traj_.size();
-           point_num < config_.num_step + 1; point_num++) {
-        TrajectoryPoint pt = plan_history_traj_.back();
-
-        auto& ref_ds = fallback_ref_ds;
-        if (point_num > 0 &&
-            point_num < static_cast<int>(ref_traj_points_.size())) {
-          ref_ds = std::max(ref_traj_points_[point_num].s - ref_traj_points_[point_num - 1].s, 1e-3);
-        }
-        pt.s += ref_ds;
-        pt.t += config_.delta_t;
-        plan_history_traj_.emplace_back(std::move(pt));
-      }
-    }
+  } else if (t_delay > 1e-2) {
+    for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+      plan_history_traj_[i].t -= t_delay;
+    }  
   }
 
-  for (auto &traj : plan_history_traj_) {
-    Point2D cart_pt(traj.x, traj.y);
-    Point2D frenet_pt{0.0, 0.0};
-    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      traj.l = frenet_pt.y;
-      traj.frenet_valid = true;
-    } else {
-      traj.frenet_valid = false;
-      LOG_DEBUG("plan_history_traj point XYToSL failed");
-    }
-  }
+
 
   for (int i = 0; i < plan_history_traj_.size(); i++) {
     const auto &history_traj_point = plan_history_traj_[i];
@@ -2584,7 +2524,8 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   size_t break_start = n;
   for (size_t i = 0; i < n; ++i) {
     if (is_break_hard_bound(i)) {
-      break_start = i < kBlendRadius ? 0 : i - kBlendRadius;
+      // break_start = i < kBlendRadius ? 0 : i;
+      break_start = i;
       break;
     }
   }
@@ -2593,38 +2534,38 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     return;
   }
 
-  constexpr size_t kRecoverConfirmPoints = 10;
+  constexpr double kRecoverConfirmDist = 3.0;
   std::vector<std::pair<size_t, size_t>> break_recover_ranges;
   break_recover_ranges.reserve(4);
 
   bool in_break = false;
   size_t cur_break_start = n;
-  size_t consecutive_in_bound = 0;
+  size_t recover_window_start = n;
   for (size_t i = 0; i < n; ++i) {
     const bool is_break = is_break_hard_bound(i);
     if (!in_break) {
       if (is_break) {
-        cur_break_start = i < kBlendRadius ? 0 : i - kBlendRadius;
+        cur_break_start = i;
         in_break = true;
-        consecutive_in_bound = 0;
+        recover_window_start = n;
       }
       continue;
     }
 
     if (!is_break) {
-      ++consecutive_in_bound;
-      if (consecutive_in_bound >= kRecoverConfirmPoints) {
-        size_t recover_idx = i;
-        if (recover_idx > n - 1 - kBlendRadius) {
-          recover_idx = n - 1;
-        }
-        break_recover_ranges.emplace_back(cur_break_start, recover_idx);
+      if (recover_window_start == n) {
+        recover_window_start = i;
+      }
+      const double recover_dist =
+          ref_traj_points_[i].s - ref_traj_points_[recover_window_start].s;
+      if (recover_dist >= kRecoverConfirmDist) {
+        break_recover_ranges.emplace_back(cur_break_start, recover_window_start);
         in_break = false;
         cur_break_start = n;
-        consecutive_in_bound = 0;
+        recover_window_start = n;
       }
     } else {
-      consecutive_in_bound = 0;
+      recover_window_start = n;
     }
   }
 
@@ -2638,9 +2579,22 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
 
   TrajectoryPoints merged = ref_traj_points_;
   const size_t first_break_start = break_recover_ranges.front().first;
-  for (size_t i = 0; i < first_break_start; ++i) {
-    merged[i] = plan_history_traj_[i];
+  const double s_ref = ref_traj_points_.front().s;
+
+  if (first_break_start < plan_history_traj_.size() &&
+      (plan_history_traj_[first_break_start].s - s_ref > 1.0)) {
+    for (size_t i = 0; i < first_break_start; ++i) {
+      merged[i] = plan_history_traj_[i];
+    }
+  } else {
+    for (size_t i = 0; i < n; ++i) {
+      if (plan_history_traj_[i].s - s_ref > 1.0) {
+        break;
+      }
+      merged[i] = plan_history_traj_[i];
+    }
   }
+
   for (const auto &range : break_recover_ranges) {
     const size_t &s = range.first;
     const size_t &e = range.second;

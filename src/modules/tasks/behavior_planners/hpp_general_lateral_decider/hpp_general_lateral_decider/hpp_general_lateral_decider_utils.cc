@@ -180,17 +180,37 @@ bool GetTrajectoryPointAtS(const TrajectoryPoints &trajectory_points,
     return p.s < s;
   };
 
+  if (query_s < points.front().s) {
+    const TrajectoryPoint &first_point = points.front();
+    point.s = query_s;
+    point.l = first_point.l;
+    point.x = first_point.x;
+    point.y = first_point.y;
+    point.heading_angle = first_point.heading_angle;
+    point.curvature = first_point.curvature;
+    point.v = first_point.v;
+    point.a = first_point.a;
+    point.jerk = first_point.jerk;
+    point.t = first_point.t - (first_point.s - query_s) / first_point.v;
+    return true;
+  } else if (query_s > points.back().s) {
+    const TrajectoryPoint &last_point = points.back();
+    point.s = query_s;
+    point.l = last_point.l;
+    point.x = last_point.x;
+    point.y = last_point.y;
+    point.heading_angle = last_point.heading_angle;
+    point.curvature = last_point.curvature;
+    point.v = last_point.v;
+    point.a = last_point.a;
+    point.jerk = last_point.jerk;
+    point.t = last_point.t + (query_s - last_point.s) / last_point.v;
+    return true;
+  }
+
   auto it_lower =
       std::lower_bound(points.begin(), points.end(), query_s, comp);
 
-  if (it_lower == points.begin()) {
-    point = *points.begin();
-    return true;
-  }
-  if (it_lower == points.end()) {
-    point = *points.rbegin();
-    return true;
-  }
   const TrajectoryPoint &p0 = *(it_lower - 1);
   const TrajectoryPoint &p1 = *it_lower;
   if (std::fabs(p0.s - p1.s) < 1e-6) {
@@ -209,6 +229,7 @@ bool GetTrajectoryPointAtS(const TrajectoryPoints &trajectory_points,
   point.v = weight1 * p0.v + weight0 * p1.v;
   point.a = weight1 * p0.a + weight0 * p1.a;
   point.s = weight1 * p0.s + weight0 * p1.s;
+  point.l = weight1 * p0.l + weight0 * p1.l;
   point.jerk = weight1 * p0.jerk + weight0 * p1.jerk;
   return true;
 }
