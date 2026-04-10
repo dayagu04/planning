@@ -83,6 +83,7 @@ bool SpatioTemporalPlanner::Execute() {
       session_->mutable_planning_context()
           ->mutable_spatio_temporal_union_plan_output();
   const auto lc_state = coarse_planning_info.target_state;
+  bool is_dynamic_agent_emergence_lc = coarse_planning_info.lane_change_request_source == RequestSource::DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST;
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto &intersection_state = virtual_lane_manager->GetIntersectionState();
@@ -109,8 +110,9 @@ bool SpatioTemporalPlanner::Execute() {
   // if (intersection_state != planning::common::IN_INTERSECTION) {
   //   return true;
   // }
-
-  if (lc_state != kLaneKeeping) {
+  if (is_dynamic_agent_emergence_lc && (lc_state == kLaneChangePropose || lc_state == kLaneChangeComplete)) {
+    // pass
+  } else if (lc_state != kLaneKeeping) {
     ILOG_DEBUG << "SpatioTemporalPlanner::ego not in kLaneKeeping!";
     last_enable_using_st_plan_ = false;
     LogDebugInfo();
