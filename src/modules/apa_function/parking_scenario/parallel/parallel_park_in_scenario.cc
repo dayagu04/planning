@@ -4671,10 +4671,27 @@ const bool ParallelParkInScenario::SetAstarRequest(
   return true;
 }
 
+bool ParallelParkInScenario::IsReplayRequest() {
+  const EgoInfoUnderSlot& ego_info =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  if (ego_info.slot_type == SlotType::PARALLEL &&
+      ego_info.history_slot_type != SlotType::PARALLEL) {
+    return true;
+  }
+  if (ego_info.id != ego_info.history_id) {
+    return true;
+  }
+  return false;
+}
+
 const PathPlannerResult ParallelParkInScenario::PubResponseForScenarioTry(
     const EgoInfoUnderSlot& ego_info) {
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
 
+  if (IsReplayRequest()) {
+    ThreadClearState();
+  }
   UpdateThreadPath();
   // check result
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
