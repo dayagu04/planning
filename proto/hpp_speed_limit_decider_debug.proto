@@ -49,6 +49,7 @@ message HppSpeedLimitDeciderDebug {
   optional HppSpeedLimitZoneSnapshot bump = 21;
   optional HppSpeedLimitZoneSnapshot ramp = 22;
   optional HppSpeedLimitZoneSnapshot intersection = 23;
+  optional HppSpeedLimitZoneSnapshot turn = 24;
 }
 
 
