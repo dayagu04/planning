@@ -681,7 +681,7 @@ std::shared_ptr<planning_math::KDPath> BaseLateralMotionPlanner::ConstructLatera
     const std::vector<double> &x_vec, const std::vector<double> &y_vec) {
   std::vector<planning_math::PathPoint> lat_path_points;
   lat_path_points.reserve(x_vec.size());
-  for (int i = 1; i <= 26; ++i) {
+  for (int i = 1; i <= config_.horizon + 1; ++i) {
     if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
       ILOG_ERROR << "skip NaN point";
       continue;
