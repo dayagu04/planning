@@ -9,7 +9,6 @@
 
 namespace planning {
 namespace planning_math {
-
 // KDPath::KDPath(std::vector<double>& x_vec, std::vector<double>& y_vec)
 //     : x_vec_(x_vec), y_vec_(y_vec) {
 //   const bool need_reset_s = true;
@@ -240,7 +239,7 @@ bool KDPath::SLToXY(const double s, const double l, double* const x,
   return true;
 }
 
-bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
+bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point, double end_extension_length) {
   if (path_points_.empty()) {
     ILOG_DEBUG << "path_points_ is empty";
     return false;
@@ -257,8 +256,7 @@ bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
   double base_s = path_points_.at(nearest_object->index()).s();
   Project(*line_object, cart_point.x, cart_point.y, base_s, &frenet_point.x,
           &frenet_point.y);
-
-  if (frenet_point.x < 0 || frenet_point.x > length_) {
+  if (frenet_point.x < 0 || frenet_point.x > (length_ + end_extension_length)) {
     ILOG_DEBUG << "s is not within the valid range";
     return false;
   }
@@ -269,7 +267,8 @@ bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
 bool KDPath::XYToSLInRange(const Point2D& cart_point,
                            double s_low,
                            double s_high,
-                           Point2D& frenet_point)
+                           Point2D& frenet_point,
+                           double end_extension_length)
 {
     if (path_points_.empty() || s_low >= s_high) {
         return false;
@@ -324,7 +323,7 @@ bool KDPath::XYToSLInRange(const Point2D& cart_point,
             &frenet_point.x, &frenet_point.y);
 
     // 第四步：确保最终 S 落在范围内
-    if (frenet_point.x < 0 || frenet_point.x > length_) {
+    if (frenet_point.x < 0 || frenet_point.x > (length_ + end_extension_length)) {
       ILOG_DEBUG << "s is not within the valid range";
       return false;
     }
