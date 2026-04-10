@@ -11,7 +11,6 @@
 #include "utils/pose2d_utils.h"
 
 namespace planning {
-
 FrenetObstacle::FrenetObstacle(
     const Obstacle *obstacle_ptr, const ReferencePath &reference_path,
     const std::shared_ptr<EgoStateManager> ego_state_info,
@@ -50,7 +49,8 @@ void FrenetObstacle::compute_frenet_obstacle(
     carte_point.x = obstacle_ptr_->x_relative_center();
     carte_point.y = obstacle_ptr_->y_relative_center();
   }
-  if (!frenet_coord->XYToSL(carte_point, frenet_point, is_hpp_scene) ||
+  const double end_extension_length = is_hpp_scene ? kHPPExtensionLength : 0.0;
+  if (!frenet_coord->XYToSL(carte_point, frenet_point, end_extension_length) ||
       std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
     // frenet_s_ = obs_end_s;
     // frenet_l_ = obs_end_l;
@@ -300,8 +300,8 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
       }
       //投影范围做3m的最小值
       min_s_range = std::fmax(3.0 , min_s_range);
-
-      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- min_s_range), (frenet_s_ + min_s_range), frenet_point, is_hpp_scene) ||
+      const double end_extension_length = is_hpp_scene ? kHPPExtensionLength : 0.0;
+      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- min_s_range), (frenet_s_ + min_s_range), frenet_point, end_extension_length) ||
           std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
         b_frenet_valid_ = false;
         return;

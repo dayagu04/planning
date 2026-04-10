@@ -52,9 +52,9 @@ class KDPath {
 
   KDPathStatus XYPointToSLPoint(const Point2D& cart_point,
                                 Point2D& frenet_point);
-  bool XYToSL(const Point2D& cart_point, Point2D& frenet_point, bool is_hpp_scene = false);
+  bool XYToSL(const Point2D& cart_point, Point2D& frenet_point, double end_extension_length = 0.0);
   bool XYToSLInRange(const Point2D& cart_point, double s_low,
-                           double s_high, Point2D& frenet_point, bool is_hpp_scene = false);
+                           double s_high, Point2D& frenet_point, double end_extension_length = 0.0);
   bool SLToXY(const Point2D& frenet_point, Point2D& cart_point);
 
   bool CartStateToFrenetState(const CartesianState& cart_state,
