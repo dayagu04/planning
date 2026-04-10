@@ -162,6 +162,7 @@ void HppLateralObstacleDecider::UpdateLatDecision(
     }
   }
   for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
+    LatObstacleDecisionType decision;
     if (!obstacle->b_frenet_valid()) {
       continue;
     }
@@ -170,21 +171,16 @@ void HppLateralObstacleDecider::UpdateLatDecision(
         ObstacleRelPosType::FAR_AWAY)
       continue;
     if (lat_obstacle_decision.find(obs_id) == lat_obstacle_decision.end()) {
-      MakeDecisionForSingleDynamicObs(reference_path_ptr, obstacle);
-      if (obstacle_consistency_map_.find(obs_id) ==
-          obstacle_consistency_map_.end()) {
-        obstacle_consistency_map_[obs_id].last_decision = lat_obstacle_decision.at(obs_id);
-      }
+      MakeDecisionForSingleDynamicObs(reference_path_ptr, obstacle, decision);
+      lat_obstacle_decision[obs_id] = decision;
     }
   }
-
-  UpdateObstacleConsistencyMap(lat_obstacle_decision,
-                               obstacle_consistency_map_);
 }
 // TODO:动态障碍物暂时先使用旧版基于规则的决策，后续方案确定再更改
 void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
-    const std::shared_ptr<FrenetObstacle> &obstacle) {
+    const std::shared_ptr<FrenetObstacle> &obstacle,
+    LatObstacleDecisionType &decision) {
   const auto &reference_path = session_->planning_context()
                                    .lane_change_decider_output()
                                    .coarse_planning_info.reference_path;
@@ -236,159 +232,51 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
 
         if (ego_s_end > obstacle_s_end) {
           if (ego_l < obstacle->frenet_l()) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::RIGHT;
+            decision = LatObstacleDecisionType::RIGHT;
           } else {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::LEFT;
+            decision = LatObstacleDecisionType::LEFT;
           }
         } else {
           if (ego_head_l < obstacle->frenet_l()) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::RIGHT;
+            decision = LatObstacleDecisionType::RIGHT;
           } else {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::LEFT;
+            decision = LatObstacleDecisionType::LEFT;
           }
         }
         // 防止感知误检，同时有横向和纵向overlap
         if (lat_overlap) {
-          lat_obstacle_decision[obstacle->id()] =
-              LatObstacleDecisionType::IGNORE;
+          decision = LatObstacleDecisionType::IGNORE;
         }
       } else {
         if (obstacle->frenet_l() > 0) {
           if (obstacle_l_start > -l_buffer) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::RIGHT;
+            decision = LatObstacleDecisionType::RIGHT;
           } else {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::IGNORE;
+            decision = LatObstacleDecisionType::IGNORE;
           }
         } else {
           if (obstacle_l_end < l_buffer) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::LEFT;
+            decision = LatObstacleDecisionType::LEFT;
           } else {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::IGNORE;
+            decision = LatObstacleDecisionType::IGNORE;
           }
         }
         if (obstacle_s_start > ego_head_s_ &&
             obstacle_s_start < ego_head_s_ + kNearFrontThreshold) {
           if (ego_head_l_start > obstacle_l_end - kHeadLBuffer) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::LEFT;
+            decision = LatObstacleDecisionType::LEFT;
           } else if (ego_head_l_end < obstacle_l_start + kHeadLBuffer) {
-            lat_obstacle_decision[obstacle->id()] =
-                LatObstacleDecisionType::RIGHT;
+            decision = LatObstacleDecisionType::RIGHT;
           }
         }
       }
     } else {
-      lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+      decision = LatObstacleDecisionType::IGNORE;
     }
   } else {
-    lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
+    decision = LatObstacleDecisionType::IGNORE;
   }
-  SerializeDynamicObsDecideResultToDebugInfo(obstacle,lat_obstacle_decision[obstacle->id()]);
-}
-
-LatObstacleDecisionType HppLateralObstacleDecider::MakeDecisionForSingleCluster(
-    const ObstacleCluster &cluster) {
-  LatObstacleDecisionType decision = LatObstacleDecisionType::IGNORE;
-
-  // 迟滞参数配置
-  const double kBaseSideLock = 0.6;
-  const double kMaxHysteresisBuffer = 0.6;
-  const double kMaxCenterBuffer = 0.6;
-
-  bool is_static = cluster.motion_types.count(ObstacleMotionType::STATIC) > 0;
-  bool is_opposite_moving =
-      cluster.motion_types.count(ObstacleMotionType::OPPOSITE_DIR_MOVING) > 0;
-  bool is_same_moving =
-      cluster.motion_types.count(ObstacleMotionType::SAME_DIR_MOVING) > 0;
-
-  bool is_front =
-      cluster.rel_pos_types.count(ObstacleRelPosType::MID_FRONT) > 0 ||
-      cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_FRONT) > 0 ||
-      cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_FRONT) > 0;
-
-  bool is_side_rear =
-      cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_SIDE) > 0 ||
-      cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_SIDE) > 0 ||
-      cluster.rel_pos_types.count(ObstacleRelPosType::MID_BACK) > 0 ||
-      cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_BACK) > 0 ||
-      cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_BACK) > 0;
-
-  double current_l =
-      (cluster.frenet_boundary.l_start + cluster.frenet_boundary.l_end) / 2.0;
-  double right_side = cluster.frenet_boundary.l_start;
-  double left_side = cluster.frenet_boundary.l_end;
-
-  if (is_static && is_front) {
-    ObstacleConsistencyInfo best_history;
-    int max_count = -1;
-    for (int obs_id : cluster.original_ids) {
-      auto it = obstacle_consistency_map_.find(obs_id);
-      if (it != obstacle_consistency_map_.end()) {
-        if (it->second.count > max_count) {
-          max_count = it->second.count;
-          best_history = it->second;
-        }
-      }
-    }
-
-    double growth_factor = 0.0;
-    if (best_history.last_decision == LatObstacleDecisionType::LEFT ||
-        best_history.last_decision == LatObstacleDecisionType::RIGHT) {
-      growth_factor = planning_math::ClampInterpolate(
-          1.0, 3.0, 0.0, 1.0, static_cast<double>(best_history.count));
-    }
-
-    double dyn_side_threshold =
-        kBaseSideLock + growth_factor * kMaxHysteresisBuffer;
-    double dyn_center_buffer = kMaxCenterBuffer * growth_factor;
-
-    bool treat_as_left = (current_l > 0.0);
-
-    if (best_history.count >= 2) {
-      if (best_history.last_decision == LatObstacleDecisionType::RIGHT) {
-        if (current_l > -dyn_center_buffer) treat_as_left = true;
-      } else if (best_history.last_decision == LatObstacleDecisionType::LEFT) {
-        if (current_l < dyn_center_buffer) treat_as_left = false;
-      }
-    }
-
-    if (treat_as_left) {
-      if (right_side > -dyn_side_threshold)
-        decision = LatObstacleDecisionType::RIGHT;
-      else
-        decision = LatObstacleDecisionType::IGNORE;
-    } else {
-      if (left_side < dyn_side_threshold)
-        decision = LatObstacleDecisionType::LEFT;
-      else
-        decision = LatObstacleDecisionType::IGNORE;
-    }
-  } else if (is_static && is_side_rear) {
-    if (current_l > 0)
-      decision = LatObstacleDecisionType::RIGHT;
-    else
-      decision = LatObstacleDecisionType::LEFT;
-  } else if (is_opposite_moving) {
-    if (current_l > 0)
-      decision = LatObstacleDecisionType::RIGHT;
-    else
-      decision = LatObstacleDecisionType::LEFT;
-  } else if (is_same_moving) {
-    if (current_l > 0)
-      decision = LatObstacleDecisionType::RIGHT;
-    else
-      decision = LatObstacleDecisionType::LEFT;
-  }
-
-  return decision;
+  SerializeDynamicObsDecideResultToDebugInfo(obstacle, decision);
 }
 
 void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
@@ -452,13 +340,6 @@ void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
   SerializeStaticObsDecideResultToDebugInfo(
       cluster, passage_width_info, relative_pos_info, last_path_info, obs_classification_result,decision
       );
-}
-
-void HppLateralObstacleDecider::MakeDecisionForDynamicCluster(
-    const ObstacleCluster &cluster,
-    const ObstacleConsistencyMap &obstacle_consistency_map,
-    LatObstacleDecisionType &decision) {
-  // MakeDecisionForStaticCluster(cluster, obstacle_consistency_map, decision);
 }
 
 void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
@@ -1004,6 +885,16 @@ void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(
       } else {
         ++iter;
       }
+    }
+  }
+  for(const auto& elem : lat_obstacle_decision) {
+    auto obs_id = elem.first;
+    if (obs_consistency_map.find(obs_id) == obs_consistency_map.end()) {
+      ObstacleConsistencyInfo consistency_info;
+      consistency_info.last_seen_timestamp = current_timestamp;
+      consistency_info.last_decision = elem.second;
+      consistency_info.count = 1;
+      obs_consistency_map[obs_id] = consistency_info;
     }
   }
 }

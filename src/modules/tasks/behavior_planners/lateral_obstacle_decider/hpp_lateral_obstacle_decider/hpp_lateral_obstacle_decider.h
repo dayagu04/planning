@@ -49,20 +49,14 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   //辅助函数1：处理单个 Cluster 的决策逻辑
   // 该函数被下面的函数替代
-  LatObstacleDecisionType MakeDecisionForSingleCluster(
-      const ObstacleCluster& cluster);
   void MakeDecisionForSingleDynamicObs(
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
-      const std::shared_ptr<FrenetObstacle>& obstacle);
+      const std::shared_ptr<FrenetObstacle>& obstacle,
+      LatObstacleDecisionType& decision);
   void MakeDecisionForStaticCluster(
       const ObstacleCluster& cluster,
       const ObstacleConsistencyMap& obstacle_consistency_map,
       const ObstacleClassificationResult& obs_classification_result,
-      LatObstacleDecisionType& decision);
-
-  void MakeDecisionForDynamicCluster(
-      const ObstacleCluster& cluster,
-      const ObstacleConsistencyMap& obstacle_consistency_map,
       LatObstacleDecisionType& decision);
 
   void MakeDecisionBasedPassageWidth(const ObstacleCluster& cluster,
