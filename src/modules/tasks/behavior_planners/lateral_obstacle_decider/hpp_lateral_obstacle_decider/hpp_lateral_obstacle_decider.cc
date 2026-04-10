@@ -344,74 +344,55 @@ void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
 
 void HppLateralObstacleDecider::MakeDecisionBasedPassageWidth(
     const ObstacleCluster &cluster, LatObstacleDecisionInfo &decision_info) {
-  std::vector<EnvType> env_type;
-  double left_scenario_obs_position_jump_threshold = 0.f,
-         right_scenario_obs_position_jump_threshold = 0.f;
   const VehicleParam &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto last_decision =
       GetLastDecisionInfo(cluster, obstacle_consistency_map_);
 
-  if (last_decision != LatObstacleDecisionType::IGNORE) {
-    const double ego_v = reference_path_ptr_->get_frenet_ego_state().velocity();
-    const double cluster_center_s =
-        (cluster.frenet_boundary.s_start + cluster.frenet_boundary.s_end) * 0.5;
-    QueryTypeInfo type_info = {CRoadType::Turn, CPassageType::Ignore,
-                               CElemType::Ignore};
-    std::pair<double, double> obs_locate_turn_lane =
-        reference_path_ptr_->get_static_analysis_storage()->GetFrontSRange(
-            type_info, cluster_center_s);
-    if (obs_locate_turn_lane.first < obs_locate_turn_lane.second) {
-      env_type.emplace_back(EnvType::TURN);
-    }
-    type_info = {CRoadType::Ignore, CPassageType::Ignore, CElemType::RampRoad};
-    std::pair<double, double> obs_locate_ramp_lane =
-        reference_path_ptr_->get_static_analysis_storage()->GetFrontSRange(
-            type_info, cluster_center_s);
-    if (obs_locate_ramp_lane.first < obs_locate_ramp_lane.second) {
-      env_type.emplace_back(EnvType::RAMP);
-    }
-    if (last_decision == LatObstacleDecisionType::LEFT) {
-      left_scenario_obs_position_jump_threshold =
-          HPPParameterUtil::CalculateLatBuffer(
-              BufferType::BUFFER_TYPE_UNMOVABLE_OBJ, ego_v, 0.f, env_type);
-      right_scenario_obs_position_jump_threshold = 0.f;
-    } else if (last_decision == LatObstacleDecisionType::RIGHT) {
-      right_scenario_obs_position_jump_threshold =
-          HPPParameterUtil::CalculateLatBuffer(
-              BufferType::BUFFER_TYPE_UNMOVABLE_OBJ, ego_v, 0.f, env_type);
-      left_scenario_obs_position_jump_threshold = 0.f;
-    }
+  //S1.1：基于上一帧决策确定 buffer
+  double left_extra_buffer_based_last_decision = 0.0f;
+  double right_extra_buffer_based_last_decision = 0.0f;
+  if (last_decision == LatObstacleDecisionType::LEFT) {
+    left_extra_buffer_based_last_decision = -0.1f;
+    right_extra_buffer_based_last_decision = 0.1f;
+  } else if(last_decision == LatObstacleDecisionType::RIGHT) {
+    left_extra_buffer_based_last_decision = 0.1f;
+    right_extra_buffer_based_last_decision = -0.1f;
   } else {
-    left_scenario_obs_position_jump_threshold = 0.f;
-    right_scenario_obs_position_jump_threshold = 0.f;
+    //do nothing
   }
-  const double ego_extend_width_relative =
+
+  //S1.2：基于环境因素确定 buffer
+  double extra_buffer_based_on_env =
+      CalcBufferBasedOnEnv(cluster, reference_path_ptr_);
+
+  //S1.3：可通行通道宽度阈值
+  const double min_drivable_relative_width =
       vehicle_param.width +
-      hpp_general_lateral_decider_config_.relative_nudge_buffer;
-  const double ego_extend_width_absolute =
+      hpp_general_lateral_decider_config_.relative_nudge_buffer +
+      2 * extra_buffer_based_on_env;
+  const double min_drivable_absolute_width =
       vehicle_param.width +
-      hpp_general_lateral_decider_config_.absolute_nudge_buffer;
+      hpp_general_lateral_decider_config_.absolute_nudge_buffer +
+      2 * extra_buffer_based_on_env;
   // left decision
-  if (cluster.frenet_boundary.obs_2left_road_boundary_mindis +
-          left_scenario_obs_position_jump_threshold <
-      ego_extend_width_relative) {
+  if (cluster.frenet_boundary.obs_2left_road_boundary_mindis <
+      min_drivable_relative_width + left_extra_buffer_based_last_decision) {
     decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-  } else if (cluster.frenet_boundary.obs_2left_road_boundary_mindis +
-                 left_scenario_obs_position_jump_threshold <
-             ego_extend_width_absolute) {
+  } else if (cluster.frenet_boundary.obs_2left_road_boundary_mindis <
+             min_drivable_absolute_width +
+                 left_extra_buffer_based_last_decision) {
     decision_info.left_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
   } else {
     decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
   }
   // right decision
-  if (cluster.frenet_boundary.obs_2right_road_boundary_mindis +
-          right_scenario_obs_position_jump_threshold <
-      ego_extend_width_relative) {
+  if (cluster.frenet_boundary.obs_2right_road_boundary_mindis <
+      min_drivable_relative_width + right_extra_buffer_based_last_decision) {
     decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
-  } else if (cluster.frenet_boundary.obs_2right_road_boundary_mindis +
-                 right_scenario_obs_position_jump_threshold <
-             ego_extend_width_absolute) {
+  } else if (cluster.frenet_boundary.obs_2right_road_boundary_mindis <
+             min_drivable_absolute_width +
+                 right_extra_buffer_based_last_decision) {
     decision_info.right_nudge_level = LatObstacleNudgeLevel::RELATIVE_NUDGE;
   } else {
     decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
@@ -854,6 +835,54 @@ void HppLateralObstacleDecider::MakeFinalDecision(
     }
   }
   ILOG_INFO << "final decision = " << static_cast<int>(decision);
+}
+
+double HppLateralObstacleDecider::CalcBufferBasedOnEnv(
+    const ObstacleCluster &cluster, ConstReferencePathPtr reference_path_ptr) {
+  const auto& static_analysis_storage = reference_path_ptr->get_static_analysis_storage();
+  const double ego_v = reference_path_ptr->get_frenet_ego_state().velocity();
+  const double obs_start_s = cluster.frenet_boundary.s_start;
+
+  std::vector<EnvType> env_type;
+  QueryTypeInfo type_info = {CRoadType::Turn, CPassageType::Ignore,
+                             CElemType::Ignore};
+  std::pair<double, double> obs_front_turn_range =
+      static_analysis_storage->GetFrontSRange(type_info, obs_start_s);
+  if (obs_front_turn_range.first < obs_front_turn_range.second &&
+      obs_front_turn_range.first > cluster.frenet_boundary.s_end) {
+    env_type.emplace_back(EnvType::TURN);
+  }
+
+  type_info = {CRoadType::Ignore, CPassageType::Ignore, CElemType::RampRoad};
+  std::pair<double, double> obs_front_ramp_range =
+      static_analysis_storage->GetFrontSRange(type_info, obs_start_s);
+  if (obs_front_ramp_range.first < obs_front_ramp_range.second &&
+      obs_front_ramp_range.first > cluster.frenet_boundary.s_end) {
+    env_type.emplace_back(EnvType::RAMP);
+  }
+
+  BufferType buffer_type = BufferType::BUFFER_TYPE_NONE;
+  double obs_relative_v = 0.0;
+  const auto &obs_map = reference_path_ptr->get_obstacles_map();
+  for(const auto& id : cluster.original_ids) {
+    if( obs_map.find(id) != obs_map.end()) {
+      const auto& obs = obs_map.at(id)->obstacle();
+      if(obs->is_car()) {
+        buffer_type = BufferType::BUFFER_TYPE_VEHICLE;
+        break;
+      } else if(obs->is_VRU()) {
+        buffer_type = BufferType::BUFFER_TYPE_VRU;
+        break;
+      } else {
+        buffer_type = BufferType::BUFFER_TYPE_UNMOVABLE_OBJ;
+      }
+      obs_relative_v = std::fmax(obs_relative_v, obs->x_relative_velocity());
+    }
+  }
+
+  double extra_buffer_based_on_env = HPPParameterUtil::CalculateLatBuffer(
+      buffer_type, ego_v, obs_relative_v, env_type);
+  return extra_buffer_based_on_env;
 }
 
 void HppLateralObstacleDecider::UpdateObstacleConsistencyMap(

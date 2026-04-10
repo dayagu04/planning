@@ -82,6 +82,10 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
                          LatObstacleDecisionInfo& relative_pos_info,
                          LatObstacleDecisionInfo& last_path_info,
                          LatObstacleDecisionType& decision);
+
+  // 基于环境计算 cluster 横向绕障 buffer 的函数
+  double CalcBufferBasedOnEnv(const ObstacleCluster& cluster,
+                              ConstReferencePathPtr reference_path_ptr);
   void AnalyzeNudgeLevelBaseCurve(
       const ObstacleCluster& cluster,
       const LatObstacleDecisionInfo& previous_decision_info,
