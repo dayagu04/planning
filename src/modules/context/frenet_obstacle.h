@@ -9,7 +9,7 @@
 #include "speed/sl_polygon_seq.h"
 #include "utils/kd_path.h"
 namespace planning {
-
+const double kHPPExtensionLength = 10.0;
 class ReferencePath;
 
 class FrenetObstacle {
