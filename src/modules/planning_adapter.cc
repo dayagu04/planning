@@ -19,7 +19,6 @@
 #include "time_benchmark.h"
 #include "version.h"
 
-#include "iflyauto_rate.h"
 #include "context/function_switch_config_context.h"
 
 namespace planning {
@@ -877,6 +876,7 @@ void PlanningAdapter::SendHeartBeatToPhm(
   }
 }
 
+#if !defined(X86) && !defined(X86_SIMULATION)
 #define IS_PREDICTION_RESULT_MSG_CONTINUOUS_TIMEOUT_MS 150
 
 void PlanningAdapter::TimerProcess() {
@@ -906,5 +906,5 @@ void PlanningAdapter::TimerProcess() {
     }
   }
 }
-
+#endif
 }  // namespace planning

@@ -19,6 +19,11 @@
 #include "ifly_phm_c.h"
 #include "planning_scheduler.h"
 
+#if !defined(X86) && !defined(X86_SIMULATION)
+#include "iflyauto_rate.h"
+#define GET_NOW_TIME iflyauto::Time::Now().ToNanosecond() / 1000
+#endif
+
 namespace planning {
 
 enum INPUT_TOPIC {
