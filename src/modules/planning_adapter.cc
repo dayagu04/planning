@@ -906,5 +906,9 @@ void PlanningAdapter::TimerProcess() {
     }
   }
 }
+#else
+void PlanningAdapter::TimerProcess() {
+  return;
+}
 #endif
 }  // namespace planning
