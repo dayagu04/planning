@@ -484,9 +484,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const double reference_speed = ego_state->ego_v_cruise();
   const bool is_rain_mode =
       false;  // hack：当前planning中没有区分下雨天、不下雨场景
+  double speed_press_ratio = 0.0;
   const bool is_satisfy_update_condition =
       isSatisfyOvertakeCountUpdateCondition(agent, ego_speed, reference_speed,
-                                            long_diff, is_rain_mode);
+                                            long_diff, is_rain_mode, speed_press_ratio);
   const bool is_satisfy_maintain_condition =
       isSatisfyOvertakeCountMaintainCondition(agent, reference_speed, long_diff,
                                               is_rain_mode);
@@ -503,7 +504,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     right_count_thres += kExtraOvertakeCountForRainMode;
   }
   if (is_satisfy_update_condition) {
-    updateOvertakeCount(agent, ego_speed, reference_speed, right_count_thres);
+    updateOvertakeCount(agent, ego_speed, reference_speed, right_count_thres, speed_press_ratio);
   } else if (!is_satisfy_maintain_condition) {
     overtake_count_ = 0;
   }
@@ -795,7 +796,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
     const agent::Agent* leading_agent, const double ego_speed,
     const double reference_speed, const double leading_vehicle_dist,
-    const bool rain_mode) {
+    const bool rain_mode, double &speed_ratio) {
   if (leading_agent->agent_id() == -1) {
     return false;
   }
@@ -810,6 +811,8 @@ bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
 
   const double speed_diff = std::max(reference_speed - leading_agent->speed(),
                                      kOvertakeMinSpeedDiffThreshold);
+  speed_ratio =
+      (0.0 != reference_speed) ? (speed_diff / reference_speed) : 0.0;
   const double front_ttc = (speed_diff > 0.0)
                                ? (leading_vehicle_dist / speed_diff)
                                : std::numeric_limits<double>::max();
@@ -817,22 +820,21 @@ bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
             << "ego_speed: " << ego_speed << "speed_diff: " << speed_diff
             << "long_distance: " << leading_vehicle_dist
             << "front_ttc: " << front_ttc;
-  const int high_speed_diff_thres =
+  const double high_speed_diff_thres =
       rain_mode ? kOvertakeHighSpeedDiffThresholdRainMode
                 : kOvertakeUpdateSpeedDiffThreshold;
   if (ego_speed >= kOvertakeEgoHighSpeedThreshold &&
       speed_diff > high_speed_diff_thres * speed_threshold_percentage) {
     return true;
   }
-  const int low_speed_diff_thres = rain_mode
+  const double low_speed_diff_thres = rain_mode
                                        ? kOvertakeLowSpeedDiffThresholdRainMode
                                        : kOvertakeUpdateSpeedDiffThreshold;
   if (ego_speed < kOvertakeEgoHighSpeedThreshold &&
       speed_diff > low_speed_diff_thres * speed_threshold_percentage) {
     return true;
   }
-  const double speed_ratio =
-      (0.0 != reference_speed) ? (speed_diff / reference_speed) : 0.0;
+
   const double update_count_ratio_thres =
       rain_mode ? kOvertakeUpdateCountRatioThresholdRainMode
                 : kOvertakeUpdateCountRatioThreshold;
@@ -883,7 +885,8 @@ bool OvertakeRequest::isSatisfyOvertakeCountMaintainCondition(
 void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
                                           const double ego_speed,
                                           const double reference_speed,
-                                          const int max_count_thres) {
+                                          const int max_count_thres,
+                                          const double speed_ratio) {
   int type_value = kOvertakeUpdateCountCarTypeThreshold;
   if (leading_agent->is_truck()) {
     type_value = kOvertakeUpdateCountTruckTypeThreshold;
@@ -891,8 +894,10 @@ void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
   if (exist_cross_line_large_agent_ahead_) {
     type_value *= 2.0;
   }
+  double overtake_update_count_speed_ratio_thrd =
+      interp(speed_ratio, _speed_press_ratio_bp_, _speed_press_ratio_count_);
   const int curr_count = round((reference_speed - leading_agent->speed()) *
-                               kOvertakeUpdateCountSpeedRatioThreshold) +
+                               overtake_update_count_speed_ratio_thrd) +
                          type_value;
   overtake_count_ += curr_count;
   overtake_count_ = std::min(overtake_count_, max_count_thres);
