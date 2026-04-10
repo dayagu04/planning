@@ -1510,7 +1510,7 @@ double SpatioTemporalUnionDp::CalculatePathCost(
   double current_t = start_t;
 
   bool is_enable_stitch_cost = true;
-  constexpr double disable_stitch_cost_t = 4.0;
+  constexpr double disable_stitch_cost_t = 6.0; // 一致性cost全部打开
   if (fabs(current_t - disable_stitch_cost_t) < 1e-6) {
     is_enable_stitch_cost = false;
   }
