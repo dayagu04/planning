@@ -103,15 +103,15 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   ok = ProcessEnvInfos();
-  if (ok) {
-    planning::speed::STPointWithLateral current_matched_upper_st_point;
-    planning::speed::STPointWithLateral current_matched_lower_st_point;
-    st_sample_space_base_.GetBorderByAvailable(ego_s_, 0.0,
-                                               &current_matched_lower_st_point,
-                                               &current_matched_upper_st_point);
-    ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
-          current_matched_lower_st_point.agent_id() != kNoAgentId);
-  }
+  // if (ok) {
+  //   planning::speed::STPointWithLateral current_matched_upper_st_point;
+  //   planning::speed::STPointWithLateral current_matched_lower_st_point;
+  //   st_sample_space_base_.GetBorderByAvailable(ego_s_, 0.0,
+  //                                              &current_matched_lower_st_point,
+  //                                              &current_matched_upper_st_point);
+  //   ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
+  //         current_matched_lower_st_point.agent_id() != kNoAgentId);
+  // }
 
   if (ok) {
     ok = CheckLanelineChangeable();
@@ -333,7 +333,7 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
   speed::STPointWithLateral prediction_matched_upper_st_point;
   speed::STPointWithLateral prediction_matched_lower_st_point;
   st_sample_space_base_.GetBorderByAvailable(
-      ego_s_, 0.0, &prediction_matched_lower_st_point,
+      ego_s_, ego_v_,  0.0, &prediction_matched_lower_st_point,
       &prediction_matched_upper_st_point);
   const double vel_diff_to_gap_rear_car =
       (ego_v_ - prediction_matched_lower_st_point.velocity()) > -kZeroEpsilon
@@ -885,10 +885,12 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             rear_edge_to_rear_axle_, config_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
+    const double stitched_poly_checked_v =
+        stitched_last_best_quartic_poly_ptr_->CalcV(evaulation_t_);
     planning::speed::STPointWithLateral stitched_poly_checked_lower_st_point,
         stitched_poly_checked_upper_st_point;
     st_sample_space_base_.GetBorderByAvailable(
-        stitched_poly_checked_s, evaulation_t_,
+        stitched_poly_checked_s, stitched_poly_checked_v, evaulation_t_,
         &stitched_poly_checked_lower_st_point,
         &stitched_poly_checked_upper_st_point);
     stitched_last_best_quartic_poly_ptr_->set_end_point_matched_gap_front_id(
@@ -1100,7 +1102,7 @@ bool SamplePolySpeedAdjustDecider::CheckInitVelTraj() {
     planning::speed::STPointWithLateral upper_st_point;
 
     st_sample_space_base_.GetBorderByAvailable(
-        ego_init_vel_pred_end_s, kPlanningDuration, &lower_st_point,
+        ego_init_vel_pred_end_s,ego_v_, kPlanningDuration, &lower_st_point,
         &upper_st_point);
     if (lower_st_point.agent_id() != kNoAgentId) {
       if (ego_init_vel_pred_end_s < lower_st_point.s() + kBasicSafeDistance ||

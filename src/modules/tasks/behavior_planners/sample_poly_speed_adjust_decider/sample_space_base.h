@@ -41,7 +41,7 @@ class STSampleSpaceBase {
       const planning_data::DynamicAgentNode* agent_node);
   void ConstructStPointsTable(const double sample_st_limit_lat_offset);
   bool GetBorderByAvailable(
-      double s, double t,
+      double s, double v, double t,
       planning::speed::STPointWithLateral* const lower_st_point,
       planning::speed::STPointWithLateral* const upper_st_point) const;
   void Init(
@@ -103,6 +103,7 @@ class STSampleSpaceBase {
   get_gap_array() {
     return gap_array_;
   }
+
 
  private:
   std::vector<std::vector<

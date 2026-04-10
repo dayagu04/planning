@@ -235,9 +235,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_arrived_t - poly_.T() > 0.0
           ? 0.0
           : poly_.CalculateSecondDerivative(anchor_arrived_t);
-  sample_space_base.GetBorderByAvailable(anchor_arrived_s, anchor_arrived_t,
-                                         &anchor_matched_lower_st_point,
-                                         &anchor_matched_upper_st_point);
+  sample_space_base.GetBorderByAvailable(
+      anchor_arrived_s, anchor_arrived_v, anchor_arrived_t,
+      &anchor_matched_lower_st_point, &anchor_matched_upper_st_point);
   double extreme_time_front = 0.0;
   double extreme_time_back = 0.0;
   const double safe_distance_to_gap_front_obj = CalcGapVelSafeDistance(

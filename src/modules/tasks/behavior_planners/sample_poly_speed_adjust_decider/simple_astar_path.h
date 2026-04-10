@@ -117,6 +117,8 @@ class LongitudinalAStar {
   void BacktrackTrajectory(std::shared_ptr<STNode> goal_node);
   bool CalcChildParam(const std::shared_ptr<STNode>& parent,
                       std::shared_ptr<STNode>& node) const;
+  double CalcSafetyCollisionCost(double rear_speed, double front_speed,
+                                 double init_distance) const;
   bool valid_ = false;
   double merge_point_s_ = 0.0;
   LeadingAgentInfo leading_agent_info_;
