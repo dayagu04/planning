@@ -2775,8 +2775,15 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
           iter_link = ld_map_.GetNextLinkOnRoute(iter_link->id());
         }
 
-        // 如果距离减去实线长度小于200米，则忽略这个split
-        if (distance_to_next_split - total_lsl_length < 200.0) {
+        // 阈值：下一个 split 前继 link 的 lane_num × 200m（无前继时沿用 200m）
+        const auto* next_split_pre_link =
+            ld_map_.GetPreviousLinkOnRoute(next_split_info.first->id());
+        const double min_gap_after_lsl_m =
+            next_split_pre_link != nullptr
+                ? static_cast<double>(next_split_pre_link->lane_num()) * 300.0
+                : 200.0;
+
+        if (distance_to_next_split - total_lsl_length < min_gap_after_lsl_m) {
           should_skip = true;
         }
       }
