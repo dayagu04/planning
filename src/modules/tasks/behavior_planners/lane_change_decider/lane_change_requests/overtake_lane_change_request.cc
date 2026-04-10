@@ -353,6 +353,47 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   // const agent::Agent* agent = agent_manager->GetAgent(cipv_id);
   const auto& tracks_map = lateral_obstacle_->tracks_map();
   agent::Agent* agent = agent_manager->mutable_agent(cipv_id);
+  std::shared_ptr<ReferencePath> origin_refline =
+      session_->mutable_environmental_model()
+          ->get_reference_path_manager()
+          ->get_reference_path_by_lane(origin_lane_virtual_id_, false);
+  double lead_agent_longit_distance = 180.0;
+  int lead_agent_id = -1;
+  if (agent == nullptr) {
+    if (origin_refline != nullptr) {
+      const auto& obstacles_map = origin_refline->get_obstacles_map();
+      const auto& ego_frenet_boundary = origin_refline->get_ego_frenet_boundary();
+      for (const auto& current_agent : current_agents) {
+        const auto obstacle_id = current_agent->agent_id();
+        auto obstacle_iter = obstacles_map.find(obstacle_id);
+        if (obstacle_iter == obstacles_map.end()) {
+          continue;
+        }
+  
+        // 过滤自车道之外的障碍物
+        bool is_out_current_lane =
+            obstacle_iter->second->frenet_obstacle_boundary().l_start > 1.0 ||
+            obstacle_iter->second->frenet_obstacle_boundary().l_end < -1.0;
+        if (is_out_current_lane) {
+          continue;
+        }
+        if (obstacle_iter->second->frenet_obstacle_boundary().s_start < ego_frenet_boundary.s_end) {
+          continue;
+        }
+        if (obstacle_iter->second->frenet_obstacle_boundary().s_start < lead_agent_longit_distance) {
+          lead_agent_longit_distance = obstacle_iter->second->frenet_obstacle_boundary().s_start;
+          lead_agent_id = obstacle_id;
+        }
+      }
+ 
+      if (lead_agent_id != -1) {
+        agent = agent_manager->mutable_agent(lead_agent_id);
+      }
+    }
+  } else {
+    lead_agent_id = cipv_id;
+  }
+
   exist_cross_line_large_agent_ahead_ = false;
   left_lane_exist_cross_line_truck_ = false;
   right_lane_exist_cross_line_truck_ = false;
@@ -421,7 +462,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         continue;
       }
       if (track_iter->second->d_s_rel() <= leading_relative_dis &&
-          current_agent->agent_id() != cipv_id) {
+          current_agent->agent_id() != lead_agent_id) {
         agent = agent_manager->mutable_agent(current_agent->agent_id());
         leading_relative_dis = track_iter->second->d_s_rel();
         exist_cross_line_large_agent_ahead_ = true;
@@ -460,11 +501,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     return;
   }
 
-  std::shared_ptr<ReferencePath> origin_refline =
-      session_->mutable_environmental_model()
-          ->get_reference_path_manager()
-          ->get_reference_path_by_lane(base_lane_virtual_id, false);
-
+  if (origin_refline == nullptr) {
+    return;
+  }
   base_frenet_coord_ = origin_refline->get_frenet_coord();
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
