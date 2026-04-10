@@ -3357,6 +3357,10 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
   int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
   const auto& current_lane = virtual_lane_mgr->get_current_lane();
   const auto& target_lane = virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
+  //紧急变道类型不premove
+  if(transition_info_.lane_change_type ==  DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST){
+    return;
+  }
   if (!target_lane) {
     return;
   }
