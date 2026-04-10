@@ -219,6 +219,10 @@ class SpatioTemporalUnionDp {
                         TrajectoryPoints& traj_points,
                         const bool last_enable_using_st_plan);
 
+  // 后处理：对稀疏DP点做横向超调修正和凸点平滑
+  void PostProcessLateralProfile(std::vector<SpeedInfo>& speed_profile,
+                                 std::vector<double>& l_vec);
+
   // 预构建上一帧→当前帧的s-l spline（仅执行一次）
   bool PrebuildLastFrameToCurrentSpline();
 

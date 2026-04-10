@@ -1176,151 +1176,8 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   std::reverse(l_vec.begin(), l_vec.end());
   std::reverse(t_vec.begin(), t_vec.end());
 
-  // 后处理：防止横向超调（在插值前对稀疏DP点修正，使插值结果更平滑）
-  // 条件：自车当前在参考线左侧(l0>0)，未来某点超调到右侧(l<0)，且该点左侧无障碍物cost
-  const double ego_init_l = cost_table_[0][0][0].point().l();
-  if (ego_init_l > 0.0) {
-    for (size_t i = 1; i < speed_profile.size(); ++i) {
-      if (speed_profile[i].l >= 0.0) {
-        continue;
-      }
-      const double point_t = speed_profile[i].t;
-      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
-      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
-        continue;
-      }
-      const double point_s = speed_profile[i].s;
-      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
-                                          spatial_distance_by_index_.end(), point_s);
-      const int s_idx = static_cast<int>(
-          std::distance(spatial_distance_by_index_.begin(), s_itr));
-      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
-        continue;
-      }
-      bool left_has_obstacle = false;
-      const auto& cost_row = cost_table_[t_idx][s_idx];
-      const auto ref_l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
-                                              lateral_distance_by_index_.end(), 0.0);
-      if (ref_l_itr != lateral_distance_by_index_.end()) {
-        const int ref_l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), ref_l_itr));
-        if (ref_l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
-          left_has_obstacle = true;
-        }
-      }
-      if (!left_has_obstacle) {
-        ILOG_DEBUG << "[PostProcess] Overshoot correction at t=" << point_t
-                   << " l=" << speed_profile[i].l << " -> 0.0";
-        speed_profile[i].l = 0.0;
-        l_vec[i] = 0.0;
-      }
-    }
-  }
-  // 条件：自车当前在参考线右侧(l0<0)，未来某点超调到左侧(l>0)，且该点右侧无障碍物cost
-  if (ego_init_l < 0.0) {
-    for (size_t i = 1; i < speed_profile.size(); ++i) {
-      if (speed_profile[i].l <= 0.0) {
-        continue;
-      }
-      const double point_t = speed_profile[i].t;
-      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
-      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
-        continue;
-      }
-      const double point_s = speed_profile[i].s;
-      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
-                                          spatial_distance_by_index_.end(), point_s);
-      const int s_idx = static_cast<int>(
-          std::distance(spatial_distance_by_index_.begin(), s_itr));
-      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
-        continue;
-      }
-      bool right_has_obstacle = false;
-      const auto& cost_row = cost_table_[t_idx][s_idx];
-      const auto ref_l_itr = std::upper_bound(lateral_distance_by_index_.begin(),
-                                              lateral_distance_by_index_.end(), 0.0);
-      if (ref_l_itr != lateral_distance_by_index_.begin()) {
-        const int ref_l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), ref_l_itr)) - 1;
-        if (ref_l_idx >= 0 && ref_l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
-          right_has_obstacle = true;
-        }
-      }
-      if (!right_has_obstacle) {
-        ILOG_DEBUG << "[PostProcess] Overshoot correction (right) at t=" << point_t
-                   << " l=" << speed_profile[i].l << " -> 0.0";
-        speed_profile[i].l = 0.0;
-        l_vec[i] = 0.0;
-      }
-    }
-  }
-
-  // 后处理：对l方向凸点进行平滑
-  // 条件：中间点是l方向的局部极值点（凸点），且平滑目标方向无障碍物cost
-  // 处理：将中间点的l修正为前后点按时间比例的线性插值
-  for (size_t i = 1; i + 1 < speed_profile.size(); ++i) {
-    const double l_prev = speed_profile[i - 1].l;
-    const double l_curr = speed_profile[i].l;
-    const double l_next = speed_profile[i + 1].l;
-    // 判断是否为凸点：中间点比前后两点都偏大或都偏小
-    if ((l_curr - l_prev) * (l_curr - l_next) <= 0.0) {
-      continue;
-    }
-    // 按时间比例线性插值得到平滑目标l
-    const double t_prev = speed_profile[i - 1].t;
-    const double t_curr = speed_profile[i].t;
-    const double t_next = speed_profile[i + 1].t;
-    const double ratio = (t_curr - t_prev) / (t_next - t_prev + 1e-6);
-    const double l_smooth = l_prev + ratio * (l_next - l_prev);
-    // 检查平滑方向上的障碍物cost（往哪边平滑就检查哪边，与超调后处理原理相同）
-    const int t_idx = static_cast<int>(std::round(t_curr / unit_t_));
-    if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
-      continue;
-    }
-    const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
-                                        spatial_distance_by_index_.end(), speed_profile[i].s);
-    const int s_idx = static_cast<int>(
-        std::distance(spatial_distance_by_index_.begin(), s_itr));
-    if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
-      continue;
-    }
-    const auto& cost_row = cost_table_[t_idx][s_idx];
-    bool target_has_obstacle = false;
-    if (l_curr > l_smooth) {
-      // 向负l方向平滑，检查l_smooth侧（负l方向）的采样点
-      const auto l_itr = std::upper_bound(lateral_distance_by_index_.begin(),
-                                          lateral_distance_by_index_.end(), l_smooth);
-      if (l_itr != lateral_distance_by_index_.begin()) {
-        const int l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), l_itr)) - 1;
-        if (l_idx >= 0 && l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[l_idx].obstacle_cost() > 0.0) {
-          target_has_obstacle = true;
-        }
-      }
-    } else {
-      // 向正l方向平滑，检查l_smooth侧（正l方向）的采样点
-      const auto l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
-                                          lateral_distance_by_index_.end(), l_smooth);
-      if (l_itr != lateral_distance_by_index_.end()) {
-        const int l_idx = static_cast<int>(
-            std::distance(lateral_distance_by_index_.begin(), l_itr));
-        if (l_idx < static_cast<int>(cost_row.size()) &&
-            cost_row[l_idx].obstacle_cost() > 0.0) {
-          target_has_obstacle = true;
-        }
-      }
-    }
-    if (target_has_obstacle) {
-      continue;
-    }
-    ILOG_DEBUG << "[PostProcess] Convex smoothing at t=" << t_curr
-               << " l=" << l_curr << " -> " << l_smooth;
-    speed_profile[i].l = l_smooth;
-    l_vec[i] = l_smooth;
-  }
+  // 后处理：防止横向超调 + 凸点平滑
+  PostProcessLateralProfile(speed_profile, l_vec);
 
   s_t_spline_.set_points(t_vec, s_vec);
   // s_t_spline_.set_boundary(pnc::mathlib::spline::first_deriv,
@@ -2616,6 +2473,155 @@ bool SpatioTemporalUnionDp::PrebuildLastFrameToCurrentSpline() {
   spline_s_min_ = last2cur_stitching_spline_.get_x_min();
   spline_s_max_ = last2cur_stitching_spline_.get_x_max();
   return true;
+}
+
+void SpatioTemporalUnionDp::PostProcessLateralProfile(
+    std::vector<SpeedInfo>& speed_profile, std::vector<double>& l_vec) {
+  // 后处理：防止横向超调（在插值前对稀疏DP点修正，使插值结果更平滑）
+  // 条件：自车当前在参考线左侧(l0>0)，未来某点超调到右侧(l<0)，且该点左侧无障碍物cost
+  const double ego_init_l = cost_table_[0][0][0].point().l();
+  if (ego_init_l > 0.0) {
+    for (size_t i = 1; i < speed_profile.size(); ++i) {
+      if (speed_profile[i].l >= 0.0) {
+        continue;
+      }
+      const double point_t = speed_profile[i].t;
+      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
+      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
+        continue;
+      }
+      const double point_s = speed_profile[i].s;
+      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
+                                          spatial_distance_by_index_.end(), point_s);
+      const int s_idx = static_cast<int>(
+          std::distance(spatial_distance_by_index_.begin(), s_itr));
+      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
+        continue;
+      }
+      bool left_has_obstacle = false;
+      const auto& cost_row = cost_table_[t_idx][s_idx];
+      const auto ref_l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
+                                              lateral_distance_by_index_.end(), 0.0);
+      if (ref_l_itr != lateral_distance_by_index_.end()) {
+        const int ref_l_idx = static_cast<int>(
+            std::distance(lateral_distance_by_index_.begin(), ref_l_itr));
+        if (ref_l_idx < static_cast<int>(cost_row.size()) &&
+            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
+          left_has_obstacle = true;
+        }
+      }
+      if (!left_has_obstacle) {
+        ILOG_DEBUG << "[PostProcess] Overshoot correction at t=" << point_t
+                   << " l=" << speed_profile[i].l << " -> 0.0";
+        speed_profile[i].l = 0.0;
+        l_vec[i] = 0.0;
+      }
+    }
+  }
+  // 条件：自车当前在参考线右侧(l0<0)，未来某点超调到左侧(l>0)，且该点右侧无障碍物cost
+  if (ego_init_l < 0.0) {
+    for (size_t i = 1; i < speed_profile.size(); ++i) {
+      if (speed_profile[i].l <= 0.0) {
+        continue;
+      }
+      const double point_t = speed_profile[i].t;
+      const int t_idx = static_cast<int>(std::round(point_t / unit_t_));
+      if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
+        continue;
+      }
+      const double point_s = speed_profile[i].s;
+      const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
+                                          spatial_distance_by_index_.end(), point_s);
+      const int s_idx = static_cast<int>(
+          std::distance(spatial_distance_by_index_.begin(), s_itr));
+      if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
+        continue;
+      }
+      bool right_has_obstacle = false;
+      const auto& cost_row = cost_table_[t_idx][s_idx];
+      const auto ref_l_itr = std::upper_bound(lateral_distance_by_index_.begin(),
+                                              lateral_distance_by_index_.end(), 0.0);
+      if (ref_l_itr != lateral_distance_by_index_.begin()) {
+        const int ref_l_idx = static_cast<int>(
+            std::distance(lateral_distance_by_index_.begin(), ref_l_itr)) - 1;
+        if (ref_l_idx >= 0 && ref_l_idx < static_cast<int>(cost_row.size()) &&
+            cost_row[ref_l_idx].obstacle_cost() > 0.0) {
+          right_has_obstacle = true;
+        }
+      }
+      if (!right_has_obstacle) {
+        ILOG_DEBUG << "[PostProcess] Overshoot correction (right) at t=" << point_t
+                   << " l=" << speed_profile[i].l << " -> 0.0";
+        speed_profile[i].l = 0.0;
+        l_vec[i] = 0.0;
+      }
+    }
+  }
+
+  // 后处理：对l方向凸点进行平滑
+  // 条件：中间点是l方向的局部极值点（凸点），且平滑目标方向无障碍物cost
+  // 处理：将中间点的l修正为前后点按时间比例的线性插值
+  for (size_t i = 1; i + 1 < speed_profile.size(); ++i) {
+    const double l_prev = speed_profile[i - 1].l;
+    const double l_curr = speed_profile[i].l;
+    const double l_next = speed_profile[i + 1].l;
+    // 判断是否为凸点：中间点比前后两点都偏大或都偏小
+    if ((l_curr - l_prev) * (l_curr - l_next) <= 0.0) {
+      continue;
+    }
+    // 按时间比例线性插值得到平滑目标l
+    const double t_prev = speed_profile[i - 1].t;
+    const double t_curr = speed_profile[i].t;
+    const double t_next = speed_profile[i + 1].t;
+    const double ratio = (t_curr - t_prev) / (t_next - t_prev + 1e-6);
+    const double l_smooth = l_prev + ratio * (l_next - l_prev);
+    // 检查平滑方向上的障碍物cost（往哪边平滑就检查哪边，与超调后处理原理相同）
+    const int t_idx = static_cast<int>(std::round(t_curr / unit_t_));
+    if (t_idx <= 0 || t_idx >= static_cast<int>(cost_table_.size())) {
+      continue;
+    }
+    const auto s_itr = std::lower_bound(spatial_distance_by_index_.begin(),
+                                        spatial_distance_by_index_.end(), speed_profile[i].s);
+    const int s_idx = static_cast<int>(
+        std::distance(spatial_distance_by_index_.begin(), s_itr));
+    if (s_idx < 0 || s_idx >= static_cast<int>(cost_table_[t_idx].size())) {
+      continue;
+    }
+    const auto& cost_row = cost_table_[t_idx][s_idx];
+    bool target_has_obstacle = false;
+    if (l_curr > l_smooth) {
+      // 向负l方向平滑，检查l_smooth侧（负l方向）的采样点
+      const auto l_itr = std::upper_bound(lateral_distance_by_index_.begin(),
+                                          lateral_distance_by_index_.end(), l_smooth);
+      if (l_itr != lateral_distance_by_index_.begin()) {
+        const int l_idx = static_cast<int>(
+            std::distance(lateral_distance_by_index_.begin(), l_itr)) - 1;
+        if (l_idx >= 0 && l_idx < static_cast<int>(cost_row.size()) &&
+            cost_row[l_idx].obstacle_cost() > 0.0) {
+          target_has_obstacle = true;
+        }
+      }
+    } else {
+      // 向正l方向平滑，检查l_smooth侧（正l方向）的采样点
+      const auto l_itr = std::lower_bound(lateral_distance_by_index_.begin(),
+                                          lateral_distance_by_index_.end(), l_smooth);
+      if (l_itr != lateral_distance_by_index_.end()) {
+        const int l_idx = static_cast<int>(
+            std::distance(lateral_distance_by_index_.begin(), l_itr));
+        if (l_idx < static_cast<int>(cost_row.size()) &&
+            cost_row[l_idx].obstacle_cost() > 0.0) {
+          target_has_obstacle = true;
+        }
+      }
+    }
+    if (target_has_obstacle) {
+      continue;
+    }
+    ILOG_DEBUG << "[PostProcess] Convex smoothing at t=" << t_curr
+               << " l=" << l_curr << " -> " << l_smooth;
+    speed_profile[i].l = l_smooth;
+    l_vec[i] = l_smooth;
+  }
 }
 
 }  // namespace planning
