@@ -3515,8 +3515,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
                   curv_radius_breakpoints);
     read_json_vec(json, std::vector<std::string>{"hpp_curv_speed_limits_ms"},
                   curv_speed_limits_ms);
-    hpp_avoid_velocity_limit_kph =
-        read_json_key<double>(json, "hpp_avoid_velocity_limit_kph");
+    hpp_avoid_velocity_limit =
+        read_json_key<double>(json, "hpp_avoid_velocity_limit");
+    hpp_avoid_approach_distance =
+        read_json_key<double>(json, "hpp_avoid_approach_distance");
+    hpp_avoid_lateral_threshold =
+        read_json_key<double>(json, "hpp_avoid_lateral_threshold");
     speed_bump_front_buffer =
         read_json_key<double>(json, "speed_bump_front_buffer");
     speed_bump_rear_buffer =
@@ -3529,10 +3533,16 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "speed_narrow_passage_approach_distance");
     speed_intersection_approach_distance =
         read_json_key<double>(json, "speed_intersection_approach_distance");
-    speed_bump_zone_speed_limit =
-        read_json_key<double>(json, "speed_bump_zone_speed_limit");
-    speed_bump_deceleration =
-        read_json_key<double>(json, "speed_bump_deceleration");
+    target_speed_speed_bump_area =
+        read_json_key<double>(json, "target_speed_speed_bump_area");
+    target_speed_narrow_passage_area =
+        read_json_key<double>(json, "target_speed_narrow_passage_area");
+    target_speed_intersection_road_area =
+        read_json_key<double>(json, "target_speed_intersection_road_area");
+    target_speed_ramp_area =
+        read_json_key<double>(json, "target_speed_ramp_area");
+    approaching_zone_deceleration =
+        read_json_key<double>(json, "approaching_zone_deceleration");
     speed_bump_collision_buffer =
         read_json_key<double>(json, "speed_bump_collision_buffer");
     turnstile_stop_buffer =
@@ -3616,21 +3626,22 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   std::vector<double> curv_trigger_distances = {0.0, 10.0, 15.0, 25.0, 40.0};
   std::vector<double> curv_radius_breakpoints = {5.0, 10.0, 15.0, 20.0, 50.0};
   std::vector<double> curv_speed_limits_ms = {5.0 / 3.6, 6.0 / 3.6, 8.0 / 3.6,
-                                         10.0 / 3.6, 20.0 / 3.6};
-  double hpp_avoid_velocity_limit_kph = 10.0;
-  double speed_bump_front_buffer = 10.0;           // m
-  double speed_bump_rear_buffer = 5.0;             // m
-  double speed_bump_approach_distance = 20.0;      // m
-  double speed_ramp_approach_distance = 20.0;      // m
-  double speed_narrow_passage_approach_distance = 20.0;      // m
-  double speed_intersection_approach_distance = 20.0;      // m
-  double speed_bump_zone_speed_limit = 2.22;    // 8kph
+                                              10.0 / 3.6, 20.0 / 3.6};
+  double hpp_avoid_velocity_limit = 2.78;
+  double hpp_avoid_approach_distance = 8.0;
+  double hpp_avoid_lateral_threshold = 2.5;
+  double speed_bump_front_buffer = 10.0;                 // m
+  double speed_bump_rear_buffer = 5.0;                   // m
+  double speed_bump_approach_distance = 20.0;            // m
+  double speed_ramp_approach_distance = 20.0;            // m
+  double speed_narrow_passage_approach_distance = 20.0;  // m
+  double speed_intersection_approach_distance = 20.0;    // m
   double target_speed_speed_bump_area = 2.22;            // 8kph
   double target_speed_narrow_passage_area = 2.22;        // 8kph
   double target_speed_intersection_road_area = 2.5;      // 9kph
   double target_speed_ramp_area = 2.78;                  // 10kph
-  double speed_bump_deceleration = -1.0;           // m/s^2
-  double speed_bump_collision_buffer = 0.0;        // m
+  double approaching_zone_deceleration = -1.0;                 // m/s^2
+  double speed_bump_collision_buffer = 0.0;              // m
   double turnstile_stop_buffer = 3.5;
   double turnstile_min_forward_stop_buffer = 1.0;
   bool enable_turnstile_longitudinal_decider = true;
@@ -5187,6 +5198,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
     hpp_max_replan_dist_err = read_json_key<double>(
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+    hpp_max_vel_correction_per_frame = read_json_key<double>(
+        json, "hpp_max_vel_correction_per_frame", hpp_max_vel_correction_per_frame);
 
     rads_max_replan_lon_err = read_json_key<double>(
         json, "rads_max_replan_lon_err", rads_max_replan_lon_err);
@@ -5233,6 +5246,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;
   double hpp_max_replan_dist_err = 0.8;
+  double hpp_max_vel_correction_per_frame = 0.5;
 
   double rads_max_replan_lon_err = 0.50;
 
