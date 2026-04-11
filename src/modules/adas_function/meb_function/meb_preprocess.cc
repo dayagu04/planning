@@ -108,6 +108,10 @@ void MebPreprocess::UpdateSingleFrameVehicleService(void) {
   single_frame_vehicle_service.yaw_rate = vehicle_service.yaw_rate;
   single_frame_vehicle_service.yaw_rate_available = TRUE;
   single_frame_vehicle_service.vehicle_speed = vehicle_service.vehicle_speed;
+  single_frame_vehicle_service.vehicle_speed_display_kph =
+      vehicle_service.vehicle_speed_display * 3.6 + 0.5;
+  // 判断车速是否处于工作车速范围内
+
   single_frame_vehicle_service.accelerator_pedal_pos =
       vehicle_service.accelerator_pedal_pos;
   single_frame_vehicle_service.brake_pedal_pressed =
@@ -429,6 +433,11 @@ double MebPreprocess::FindClosestVehicleSpeed(uint64 target_timestamp,
 bool MebPreprocess::ObjectLoggerCheckVelocityStability(
     int track_id, int check_frames, double velocity_x_threshold,
     double velocity_y_threshold, double speed_angle_thres) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto vehicle_service = GetContext.get_session()
+                             ->environmental_model()
+                             .get_local_view()
+                             .vehicle_service_output_info;
   if (!meb_input_.obj_logger_.is_full || check_frames <= 0 ||
       !meb_input_.history_full_) {
     return false;
@@ -450,8 +459,12 @@ bool MebPreprocess::ObjectLoggerCheckVelocityStability(
       continue;
     }
 
-    const float ego_speed = FindClosestVehicleSpeed(
-        frame->msg_header.stamp, MEB_VEHICLE_SERVICE_FRAME_SIZE);
+    float ego_speed = FindClosestVehicleSpeed(frame->msg_header.stamp,
+                                              MEB_VEHICLE_SERVICE_FRAME_SIZE);
+    if (vehicle_service.shift_lever_state ==
+        iflyauto::ShiftLeverStateEnum::ShiftLeverState_R) {
+      ego_speed = -1.0 * ego_speed;
+    }
 
     for (int obj_idx = 0; obj_idx < frame->fusion_object_size; obj_idx++) {
       if (frame->fusion_object[obj_idx].additional_info.track_id == track_id) {
@@ -489,6 +502,50 @@ bool MebPreprocess::ObjectLoggerCheckVelocityStability(
   }
 
   return true;
+}
+
+bool MebPreprocess::ObjectLoggerCheckHistoryWithinEgoWidth(
+    int track_id, int check_frames, double half_ego_width) {
+  if (!meb_input_.obj_logger_.is_full || check_frames <= 0) {
+    return false;
+  }
+
+  const double width_limit = half_ego_width;
+
+  const int max_frames =
+      std::min(static_cast<int>(OBJECT_LOGGER_MAX_RECORDS), check_frames);
+  int found_count = 0;
+
+  for (int frame_idx = 0; frame_idx < max_frames; frame_idx++) {
+    const auto *frame = GetHistoryObjectLogger(frame_idx);
+    if (frame == nullptr) {
+      return false;
+    }
+
+    bool found_track = false;
+    for (int obj_idx = 0; obj_idx < frame->fusion_object_size; obj_idx++) {
+      const auto &obj = frame->fusion_object[obj_idx];
+      if (obj.additional_info.track_id != track_id) {
+        continue;
+      }
+
+      found_track = true;
+      const double center_y = obj.common_info.relative_center_position.y;
+
+      if (center_y > width_limit || center_y < -width_limit) {
+        return false;
+      }
+      found_count++;
+      break;
+    }
+
+    // 任何一帧找不到目标 track，直接判定失败
+    if (!found_track) {
+      return false;
+    }
+  }
+
+  return found_count >= check_frames;
 }
 
 uint8 MebPreprocess::GetRearKeyObjSelectIntersetCode(

@@ -6,7 +6,7 @@
 
 #define MEB_VEHICLE_SERVICE_FRAME_SIZE 50
 #define MEB_CYCLE_TIME_SEC 0.1
-#define OBJECT_LOGGER_MAX_RECORDS 10
+#define OBJECT_LOGGER_MAX_RECORDS 50
 
 using namespace planning;
 namespace adas_function {
@@ -21,6 +21,7 @@ struct ObjectLoggerStr {
 struct SelfVehicleServiceFrameInfo {
   uint64 stamp;          // 消息发送时刻 (微秒)
   double vehicle_speed;  // m/s
+  uint8 vehicle_speed_display_kph;
   double ego_acceleration;
   double steering_angle;  // rad
   double steering_angle_speed;
@@ -184,10 +185,25 @@ class MebPreprocess {
   bool CheckSpeedReduction(double speed_reduction_threshold,
                            int32 check_length_nums);
 
+  //  * @brief 检查指定障碍物历史帧中的横向和纵向速度是否稳定（基于趋势检测）
+  //  * @param object_logger 记录器结构体指针
+  //  * @param self_vehicle_service_frames 自车历史服务信息帧数组
+  //  * @param track_id 目标障碍物的track_id
+  //  * @param check_frames 检查的历史帧数
+  //  * @param velocity_x_threshold
+  //  纵向速度变化阈值（米/秒），相邻帧速度变化超过该值才计入趋势判断
+  //  * @param velocity_y_threshold
+  //  横向速度变化阈值（米/秒），相邻帧速度变化超过该值才计入趋势判断
+  //  * @return TRUE:速度稳定（无明显持续增大或减小趋势）,
+  //  FALSE:速度不稳定（有持续变化趋势）或数据不足
   bool ObjectLoggerCheckVelocityStability(int track_id, int check_frames,
                                           double velocity_x_threshold,
                                           double velocity_y_threshold,
                                           double speed_angle_thres);
+
+  // 判断障碍物在历史帧中是否一直处于车宽边缘
+  bool ObjectLoggerCheckHistoryWithinEgoWidth(int track_id, int check_frames,
+                                              double half_ego_width);
   double FindClosestVehicleSpeed(uint64 target_timestamp,
                                  uint16 max_search_frames);
 

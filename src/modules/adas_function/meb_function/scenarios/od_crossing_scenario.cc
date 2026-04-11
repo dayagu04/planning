@@ -153,6 +153,20 @@ int OdCrossingScenario::SelcetInterestObject(MebTempObj &temp_obj) {
     // do nothing
   }
 
+  /*bit_7*/
+  // 判断自车三秒前是表显速度比当前大于等于3kph,且当前表显速度为 5kph及以下
+
+  int display_speed_kph_error =
+      abs(meb_pre.GetInstance().GetHistoryFrame(0)->vehicle_speed_display_kph -
+          meb_pre.GetInstance().GetHistoryFrame(3)->vehicle_speed_display_kph);
+  if (meb_pre.GetInstance().GetHistoryFrame(0)->vehicle_speed_display_kph <=
+          5 &&
+      display_speed_kph_error >= 3) {
+    temp_interest_code += uint16_bit[7];
+  } else {
+    // do nothing
+  }
+
   return temp_interest_code;
 };
 
@@ -252,10 +266,21 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(MebTempObj &obj) {
       fabs(atan2(obj.rel_vy + 1e-3, (obj.rel_vx + signed_ego_v) + 1e-3)) * 57.3;
   float32 horizontal_angle_thres_deg = 90.0;
   float32 horizontal_angle_diff_thres_deg = 15.5;
+
+  // 航向角范围为-180deg~180deg
+  float32 obj_heading_angle_abs;
+  if (fabs(obj.rel_heading_angle) <= (90.0 / 57.3)) {
+    obj_heading_angle_abs = fabs(obj.rel_heading_angle);
+  } else {
+    obj_heading_angle_abs = (180.0 / 57.3) - fabs(obj.rel_heading_angle);
+  }
   if (fabs(speed_direction_deg - horizontal_angle_thres_deg) >
       horizontal_angle_diff_thres_deg) {
     suppe_code += uint32_bit[7];
-  } else {
+  } else if (obj.type_for_meb == OdObjGroup::kCar) {
+    if (obj_heading_angle_abs < (30.0 / 57.3)) {
+      suppe_code += uint32_bit[7];
+    }
     /*do nothing*/
   }
 
@@ -373,6 +398,15 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(MebTempObj &obj) {
         suppe_code += uint32_bit[15];
       }
     }
+  }
+
+  /*bit_16*/
+  // 障碍物历史帧中的横向和纵向速度是否稳定
+  int check_frames = 5;
+  if ((!meb_pre.ObjectLoggerCheckVelocityStability(obj.track_id, check_frames,
+                                                   0.5, 0.5, 0.5)) &&
+      (obj.age > check_frames * MEB_CYCLE_TIME_SEC * 1000)) {
+    suppe_code += uint32_bit[16];
   }
 
   // 如果误触发策略关闭，则suppe_code清零
