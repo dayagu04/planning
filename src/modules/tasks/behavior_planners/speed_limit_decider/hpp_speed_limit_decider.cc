@@ -530,7 +530,7 @@ bool HPPSpeedLimitDecider::BuildSpeedObjectiveZoneInfo(
   }
 
   const std::pair<double, double> object_near_range =
-      static_analysis_storage->GetFrontSRange(query_info, ego_head_s);
+      static_analysis_storage->GetFrontSRange(query_info, ego_s);
 
   if (object_near_range.first > object_near_range.second) {
     return false;
