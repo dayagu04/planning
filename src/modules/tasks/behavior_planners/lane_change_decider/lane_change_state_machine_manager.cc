@@ -4384,7 +4384,6 @@ bool LaneChangeStateMachineManager::
       //保护高速恐慌感
       box_longitudinal_buff = std::max(ego_faster_buff,
                 ego_trajs_future_[i].v * lc_safety_check_config_.faster_rear_delay_time);
-      box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
       } 
@@ -4394,9 +4393,14 @@ bool LaneChangeStateMachineManager::
       if(ego_press_line_ratio > 0.5 && is_side_clear_){
         break;  // 已经压线过多，侧方无车不返回
       }
-      if (is_executing) {
-        box_longitudinal_buff = lc_safety_check_config_.exe_ttc_ratio * box_longitudinal_buff;
-      }
+      //未来衰减
+      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+      const double ttc_decay = std::pow(ttc_decay_factor, i);
+      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
+      //状态折扣
+      box_longitudinal_buff = is_executing ? 
+                            box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio * (1.0 - ego_press_line_ratio)
+                            : box_longitudinal_buff * (1.0 - ego_press_line_ratio);
       if(is_front_reverse){
         double reverse_check_time = 4.0; //默认基准变道时间
         // double reverse_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.front();
