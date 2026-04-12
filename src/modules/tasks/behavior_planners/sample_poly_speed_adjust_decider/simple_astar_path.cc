@@ -43,8 +43,7 @@ void LongitudinalAStar::PlanTrajectory() {
 
   std::shared_ptr<STNode> goal_node = nullptr;
   bool found_goal = false;
-// count_ <= MAX_ITERATION
-  while (!open_list_.empty()) {
+  while (!open_list_.empty() && count_ <= MAX_ITERATION) {
     count_++;
     STNode current_node = *open_list_.begin();
     auto current_node_ptr = std::make_shared<STNode>(current_node);
