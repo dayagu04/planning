@@ -31,6 +31,8 @@ bool SplitSelectHmiDecider::Execute() {
       virtual_lane_manager->get_enable_output_split_select_classical_chinese();
   const SplitSelectDirection split_select_direction =
       virtual_lane_manager->get_split_select_direction();
+  const bool is_split_go_straight =
+      virtual_lane_manager->get_split_is_straight();
   const auto curr_state = lane_change_decider_output.curr_state;
   ad_info.split_select_direction =
       iflyauto::SplitSelectDirection::NO_SPLIT_SPLIT;
@@ -49,10 +51,12 @@ bool SplitSelectHmiDecider::Execute() {
   }
 
   if (curr_state == kLaneKeeping || curr_state == kLaneChangePropose) {
-    if (split_select_direction == SPLIT_SELECT_LEFT_LANE) {
+    if (split_select_direction == SPLIT_SELECT_LEFT_LANE &&
+        !is_split_go_straight) {
       ad_info.split_select_direction =
           iflyauto::SplitSelectDirection::SPLIT_SELECT_TO_LEFT;
-    } else if (split_select_direction == SPLIT_SELECT_RIGHT_LANE) {
+    } else if (split_select_direction == SPLIT_SELECT_RIGHT_LANE &&
+               !is_split_go_straight) {
       ad_info.split_select_direction =
           iflyauto::SplitSelectDirection::SPLIT_SELECT_TO_RIGHT;
     } else {
