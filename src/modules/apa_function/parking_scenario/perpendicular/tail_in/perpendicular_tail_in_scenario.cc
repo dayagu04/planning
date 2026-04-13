@@ -437,62 +437,59 @@ const bool PerpendicularTailInScenario::GenTlane() {
   const auto parking_task_interface_ptr =
       apa_world_ptr_->GetParkingTaskInterfacePtr();
   const auto col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+  const auto target_pose_decider_ptr =
+      parking_task_interface_ptr->GetTargetPoseDeciderPtr();
+  const auto generate_obstacle_decider_ptr =
+      parking_task_interface_ptr->GetGenerateObstacleDeciderPtr();
 
-  const GenerateObstacleRequest gen_obs_request(scenario_type_,
-                                                frame_.process_obs_method);
-
-  parking_task_interface_ptr->GetGenerateObstacleDeciderPtr()->GenObs(
-      ego_info_under_slot, gen_obs_request);
+  generate_obstacle_decider_ptr->GenObs(
+      ego_info_under_slot,
+      GenerateObstacleRequest(scenario_type_, frame_.process_obs_method));
 
   if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
     CalcPtInside();
   }
 
+  const bool is_dynamic_replan_with_high_occupied_ratio =
+      frame_.replan_reason == ReplanReason::DYNAMIC &&
+      ego_info_under_slot.slot_occupied_ratio > 0.6;
   const bool update_slot_move_dist =
       frame_.replan_reason != ReplanReason::NOT_REPLAN &&
-      !(frame_.replan_reason == ReplanReason::DYNAMIC &&
-        ego_info_under_slot.slot_occupied_ratio > 0.6);
+      !is_dynamic_replan_with_high_occupied_ratio;
 
   ILOG_INFO << "  update_slot_move_dist = " << update_slot_move_dist
             << "  process_obs_method = "
             << static_cast<int>(frame_.process_obs_method);
 
   if (update_slot_move_dist) {
-    std::vector<bool> fold_mirror_flag_vec;
-    fold_mirror_flag_vec.reserve(2);
-    const bool is_fold_mirror = measure_data_manager_ptr->GetFoldMirrorFlag();
+    const bool has_fold_mirror = measure_data_manager_ptr->GetFoldMirrorFlag();
     const bool has_smart_fold_mirror =
         param.smart_fold_mirror_params.has_smart_fold_mirror;
     const bool is_searching = state_machine_manager_ptr->IsSeachingStatus();
+    const bool is_parking_status = state_machine_manager_ptr->IsParkingStatus();
+    const bool need_try_fold_mirror_only =
+        has_fold_mirror || (has_smart_fold_mirror && is_searching);
+    const bool need_try_unfold_then_fold =
+        !need_try_fold_mirror_only && has_smart_fold_mirror;
 
-    if (is_fold_mirror || (has_smart_fold_mirror && is_searching)) {
-      fold_mirror_flag_vec.emplace_back(true);
-    } else if (has_smart_fold_mirror) {
-      fold_mirror_flag_vec.emplace_back(false);
-      fold_mirror_flag_vec.emplace_back(true);
-    } else {
-      fold_mirror_flag_vec.emplace_back(false);
-    }
-    bool find_target_pose = false;
-    const double start_time = IflyTime::Now_ms();
     const ParkingLatLonTargetPoseBuffer& target_pose_buffer =
         param.lat_lon_target_pose_buffer;
-    for (const bool fold_mirror_flag : fold_mirror_flag_vec) {
+    const double min_lat_body_buf = target_pose_buffer.min_lat_body_buffer;
+    const double min_lat_mirror_buf = target_pose_buffer.min_lat_mirror_buffer;
+    const int buf_size = std::max(target_pose_buffer.buf_size, 1);
+    const double lon_buffer = target_pose_buffer.lon_buffer;
+    const auto slot_lat_pos_preference =
+        state_machine_manager_ptr->GetSlotLatPosPreference();
+
+    bool find_target_pose = false;
+    const double start_time = IflyTime::Now_ms();
+
+    const auto try_find_target_pose = [&](const bool fold_mirror_flag) {
       col_det_interface_ptr->Init(fold_mirror_flag);
+
       double max_lat_body_buf = target_pose_buffer.max_lat_body_buffer;
       double max_lat_mirror_buf = target_pose_buffer.max_lat_mirror_buffer;
-      const double min_lat_body_buf = target_pose_buffer.min_lat_body_buffer;
-      const double min_lat_mirror_buf =
-          target_pose_buffer.min_lat_mirror_buffer;
-      const int buf_size = std::max(target_pose_buffer.buf_size, 1);
-      const double lon_buffer = target_pose_buffer.lon_buffer;
-
-      const double body_buf_step =
-          std::max((max_lat_body_buf - min_lat_body_buf) / buf_size, 5e-3);
-      const double mirror_buf_step =
-          std::max((max_lat_mirror_buf - min_lat_mirror_buf) / buf_size, 5e-3);
-
-      if (state_machine_manager_ptr->IsParkingStatus() &&
+      if (is_parking_status &&
           frame_.replan_reason != ReplanReason::FIRST_PLAN &&
           frame_.replan_reason != ReplanReason::FORCE_PLAN) {
         max_lat_body_buf = std::min(max_lat_body_buf,
@@ -500,6 +497,11 @@ const bool PerpendicularTailInScenario::GenTlane() {
         max_lat_mirror_buf = std::min(
             max_lat_mirror_buf, ego_info_under_slot.safe_lat_mirror_buffer);
       }
+
+      const double body_buf_step =
+          std::max((max_lat_body_buf - min_lat_body_buf) / buf_size, 5e-3);
+      const double mirror_buf_step =
+          std::max((max_lat_mirror_buf - min_lat_mirror_buf) / buf_size, 5e-3);
 
       max_lat_body_buf =
           std::max(max_lat_body_buf, min_lat_body_buf + body_buf_step + 1e-3);
@@ -524,37 +526,35 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
       const TargetPoseDeciderRequest tar_pose_decider_request(
           lat_body_buffer_vec, lat_mirror_buffer_vec, lon_buffer,
-          scenario_type_, true, true,
-          state_machine_manager_ptr->GetSlotLatPosPreference(), false,
+          scenario_type_, true, true, slot_lat_pos_preference, false,
           ego_info_under_slot.cur_pose);
 
       const TargetPoseDeciderResult res =
-          parking_task_interface_ptr->GetTargetPoseDeciderPtr()->CalcTargetPose(
-              ego_info_under_slot.slot, tar_pose_decider_request);
-
+          target_pose_decider_ptr->CalcTargetPose(ego_info_under_slot.slot,
+                                                  tar_pose_decider_request);
       if (res.target_pose_type == TargetPoseType::FAIL) {
-        if (fold_mirror_flag) {
-          break;
-        } else {
-          continue;
-        }
+        return false;
       }
 
-      find_target_pose = true;
-
       ego_info_under_slot.target_pose = res.target_pose_local;
-
       if (frame_.replan_reason != ReplanReason::DYNAMIC) {
         ego_info_under_slot.safe_lat_body_buffer = res.safe_lat_body_buffer;
         ego_info_under_slot.safe_lat_mirror_buffer = res.safe_lat_mirror_buffer;
       }
 
       ego_info_under_slot.tar_pose_result = res;
-
       ego_info_under_slot.lon_move_dist_every_replan = res.safe_lon_move_dist;
       ego_info_under_slot.lat_move_dist_every_replan = res.safe_lat_move_dist;
+      return true;
+    };
 
-      break;
+    if (need_try_fold_mirror_only) {
+      find_target_pose = try_find_target_pose(true);
+    } else {
+      find_target_pose = try_find_target_pose(false);
+      if (!find_target_pose && need_try_unfold_then_fold) {
+        find_target_pose = try_find_target_pose(true);
+      }
     }
 
     ILOG_INFO << "find target pose time cost = "
@@ -576,39 +576,31 @@ const bool PerpendicularTailInScenario::GenTlane() {
       geometry_lib::BuildLineSegByPose(ego_info_under_slot.target_pose.pos,
                                        ego_info_under_slot.target_pose.heading);
 
-  apa_world_ptr_->GetColDetInterfacePtr()
-      ->GetEDTColDetPtr()
-      ->UpdateObsClearZone(
-          std::vector<Eigen::Vector2d>{ego_info_under_slot.cur_pose.pos,
-                                       ego_info_under_slot.target_pose.pos});
+  col_det_interface_ptr->GetEDTColDetPtr()->UpdateObsClearZone(
+      std::vector<Eigen::Vector2d>{ego_info_under_slot.cur_pose.pos,
+                                   ego_info_under_slot.target_pose.pos});
 
-  ILOG_INFO << "cur pose = " << ego_info_under_slot.cur_pose.pos.x() << " "
-            << ego_info_under_slot.cur_pose.pos.y() << "  "
-            << ego_info_under_slot.cur_pose.heading * kRad2Deg
-            << "  origin_tar_pose = "
-            << ego_info_under_slot.origin_target_pose.pos.x() << " "
-            << ego_info_under_slot.origin_target_pose.pos.y() << "  "
-            << ego_info_under_slot.origin_target_pose.heading * kRad2Deg
-            << "  tar_pose = " << ego_info_under_slot.target_pose.pos.x() << " "
-            << ego_info_under_slot.target_pose.pos.y() << "  "
-            << ego_info_under_slot.target_pose.heading * kRad2Deg
-            << "  terminal_err = " << ego_info_under_slot.terminal_err.pos.x()
-            << " " << ego_info_under_slot.terminal_err.pos.y() << "  "
-            << ego_info_under_slot.terminal_err.heading * kRad2Deg
-            << "  terminal_y_front_err = "
-            << ego_info_under_slot.terminal_y_front_err
-            << "  slot_occupied_ratio_postprocess = "
-            << ego_info_under_slot.slot_occupied_ratio_postprocess
-            << "  slot occupied ratio = "
-            << ego_info_under_slot.slot_occupied_ratio
-            << "  pt_inside = " << ego_info_under_slot.pt_inside.x() << " "
-            << ego_info_under_slot.pt_inside.y()
-            << "  stuck time(s) = " << frame_.stuck_time
-            << "  stuck_obs_time(s) = " << frame_.stuck_obs_time
-            << "  stuck_dynamic_obs_time(s) = " << frame_.stuck_dynamic_obs_time
-            << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs
-            << "  " << "  slot side = "
-            << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
+  ILOG_INFO
+      << "cur pose = " << ego_info_under_slot.cur_pose.pos.transpose() << "  "
+      << ego_info_under_slot.cur_pose.heading * kRad2Deg
+      << "  origin_tar_pose = "
+      << ego_info_under_slot.origin_target_pose.pos.transpose() << "  "
+      << ego_info_under_slot.origin_target_pose.heading * kRad2Deg
+      << "  tar_pose = " << ego_info_under_slot.target_pose.pos.transpose()
+      << "  " << ego_info_under_slot.target_pose.heading * kRad2Deg
+      << "  terminal_err = " << ego_info_under_slot.terminal_err.pos.transpose()
+      << "  " << ego_info_under_slot.terminal_err.heading * kRad2Deg
+      << "  terminal_y_front_err = " << ego_info_under_slot.terminal_y_front_err
+      << "  slot_occupied_ratio_postprocess = "
+      << ego_info_under_slot.slot_occupied_ratio_postprocess
+      << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
+      << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
+      << "  stuck time(s) = " << frame_.stuck_time
+      << "  stuck_obs_time(s) = " << frame_.stuck_obs_time
+      << "  stuck_dynamic_obs_time(s) = " << frame_.stuck_dynamic_obs_time
+      << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs << "  "
+      << "  slot side = "
+      << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
 }
