@@ -5247,7 +5247,7 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     const std::vector<std::pair<double, double>>& first_frenet_soft_bounds,
     GeneralLateralDeciderOutput& general_lateral_decider_output) {
   // bool bound_avoid = false;
-  constexpr int kExtendLonSize = 2;
+  constexpr int kExtendLonSize = 1;
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     // if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
