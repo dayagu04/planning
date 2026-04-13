@@ -2,13 +2,15 @@
 #include "curve_cost.h"
 #include "ego_planning_config.h"
 #include "st_graph/st_point.h"
+#include "st_graph/st_point_with_lateral.h"
 using planning::speed::STPoint;
+using planning::speed::STPointWithLateral;
 namespace planning {
 
 class MatchGapCost : public CurveCost {
  public:
   MatchGapCost() = default;
-  void GetCost(const STPoint& upper_st_point, const STPoint& lower_st_point,
+  void GetCost(const STPointWithLateral& upper_st_point, const STPointWithLateral& lower_st_point,
                const double poly_end_s, const double poly_end_t,
                const double poly_end_v, const double poly_end_a,
                const double reliable_safe_distance_to_gap_front_obj,

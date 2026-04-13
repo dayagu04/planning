@@ -2,6 +2,8 @@
 
 #include <cmath>
 #include <cstdint>
+#include <limits>
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -13,14 +15,20 @@
 #include "ifly_time.h"
 #include "obstacle_manager.h"
 #include "session.h"
+#include "trajectory/trajectory.h"
 
 namespace planning {
 namespace agent {
 
+static constexpr int kPlanPoints = 26;
+static constexpr double kTimeStep = 0.2;
+static constexpr double kAlpha = 0.4;
+static constexpr int kMinHistoryFrameCount = 3;
+static constexpr double kTruckLengthThreshold = 8.0;
+
 AgentManager::AgentManager(const EgoPlanningConfigBuilder* config_builder,
                            planning::framework::Session* session)
     : session_(session) {
-  // TODO: 添加AgentManager的config
   SetConfig(config_builder);
 }
 
@@ -68,9 +76,6 @@ void AgentManager::Update(const double start_timestamp_s) {
   for (int i = 0;
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto& prediction_object = prediction_objects[i];
-    // TBD:后续前移至EnvironmentalModelManager::obstacle_prediction_update中
-    // Ignore the agent which is within the FOV and is fail to fusion with the
-    // camera，or too small, or unknown
     if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
       ILOG_DEBUG << "[AgentManager Update] ignore unknown obstacle :["
                  << prediction_object.id << "]";
@@ -109,17 +114,12 @@ void AgentManager::Update(const double start_timestamp_s) {
 
     const double kMaxStaticPredictionLength =
         config_.max_speed_static_obstacle * prediction_duration;
-    bool is_static =
-        prediction_object.speed < 0.1 ||
-        prediction_object.trajectory_array.size() == 0 ||
-        prediction_trajectory_length < kMaxStaticPredictionLength ||
-        prediction_object.motion_pattern_current ==
-            iflyauto::OBJECT_MOTION_TYPE_STATIC;
+    bool is_static = prediction_object.is_static;
     bool is_truck =
-        (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_BUS &&
-         prediction_object.length > 6.0) ||
-        (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
-         prediction_object.length > 6.0);
+        (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+         prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+         prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) &&
+        prediction_object.length > kTruckLengthThreshold;
 
     double prediction_relative_time = prediction_object.delay_time - init_time;
     std::unordered_map<int32_t, Agent> agent_table;
@@ -139,7 +139,6 @@ void AgentManager::Update(const double start_timestamp_s) {
     }
   }
 
-  // add occ obs from obstacle_mgr
   const auto& obs_mgr = session_->environmental_model().get_obstacle_manager();
   const auto& occ_obs = obs_mgr->get_occupancy_obstacles().Items();
   std::unordered_map<int32_t, Agent> occ_agent_table;
@@ -147,7 +146,7 @@ void AgentManager::Update(const double start_timestamp_s) {
     planning::agent::Agent occ_agent;
     occ_agent.set_agent_id(occ_obs[i]->id());
     occ_agent.set_type(agent::AgentType(occ_obs[i]->type()));
-    occ_agent.set_x(occ_obs[i]->x_center());  // 几何中心
+    occ_agent.set_x(occ_obs[i]->x_center());
     occ_agent.set_y(occ_obs[i]->y_center());
     occ_agent.set_length(occ_obs[i]->length());
     occ_agent.set_width(occ_obs[i]->width());
@@ -166,37 +165,36 @@ void AgentManager::Update(const double start_timestamp_s) {
     occ_agent_table.insert({occ_agent.agent_id(), occ_agent});
     Append(occ_agent_table);
   }
+
+  //add uss obstacles
+  const auto& uss_obs = obs_mgr->get_uss_obstacles().Items();
+  std::unordered_map<int32_t, Agent> uss_agent_table;
+  for (int i = 0; i < uss_obs.size(); i++) {
+    planning::agent::Agent uss_agent;
+    uss_agent.set_agent_id(uss_obs[i]->id());
+    uss_agent.set_type(agent::AgentType(uss_obs[i]->type()));
+    uss_agent.set_x(uss_obs[i]->x_center());  // 几何中心
+    uss_agent.set_y(uss_obs[i]->y_center());
+    uss_agent.set_length(uss_obs[i]->length());
+    uss_agent.set_width(uss_obs[i]->width());
+    uss_agent.set_fusion_source(1);
+    uss_agent.set_is_static(uss_obs[i]->is_static());
+
+    uss_agent.set_speed(uss_obs[i]->velocity());
+    uss_agent.set_theta(0.0);
+    uss_agent.set_accel(0.0);
+    uss_agent.set_time_range({0.0, 5.0});
+
+    uss_agent.set_box(uss_obs[i]->perception_bounding_box());
+    uss_agent.set_polygon(uss_obs[i]->perception_polygon());
+    uss_agent.set_timestamp_s(0.0);
+    uss_agent.set_timestamp_us(0.0);
+    uss_agent_table.insert({uss_agent.agent_id(), uss_agent});
+    Append(uss_agent_table);
+  }
   DeleteOlderAgent();
   DeleteOlderAgentInfo();
 }
-
-// void AgentManager::Update(
-//     const double start_timestamp_s,
-//     const std::unordered_map<int32_t, Agent>& agent_table) {
-//   current_agents_.clear();
-//   current_agents_ids_.clear();
-//   constexpr double kTooOldThreshold = 2.0;
-//   for (auto iter = historical_agents_.begin();
-//        iter != historical_agents_.end();) {
-//     bool is_too_old = start_timestamp_s - iter->second.back()->timestamp_s()
-//     >
-//                       kTooOldThreshold;
-//     bool is_del = is_too_old;
-//     if (is_del) {
-//       historical_agents_.erase(iter++);
-//     } else {
-//       ++iter;
-//     }
-//   }
-
-//   for (const auto& data : agent_table) {
-//     auto agent = std::make_unique<Agent>(data.second);
-//     current_agents_.emplace_back(agent.get());
-//     current_agents_ids_.insert(agent->agent_id());
-//     historical_agents_[agent->agent_id()].emplace_back(std::move(agent));
-//   }
-//   DeleteOlderAgent();
-// }
 
 void AgentManager::Append(
     const std::unordered_map<int32_t, Agent>& agent_table) {
@@ -208,12 +206,10 @@ void AgentManager::Append(
     if (nullptr == agent) {
       continue;
     }
-    // 从历史数据中恢复 trajectory_optimized_
     if (historical_agents_info_.find(agent->agent_id()) !=
         historical_agents_info_.end()) {
       const auto& history_list = historical_agents_info_[agent->agent_id()];
       if (!history_list.empty()) {
-        // 从最新的历史 agent 中恢复 trajectory_optimized_
         const auto& latest_history_agent = history_list.back();
         if (!latest_history_agent->trajectory_optimized().empty()) {
           agent->set_trajectory_optimized(
@@ -223,6 +219,8 @@ void AgentManager::Append(
     }
     current_agents_.emplace_back(agent);
     current_agents_ids_.insert(agent->agent_id());
+
+    ProcessPredictionTrajectory(agent);
 
     if (historical_agents_info_.find(agent->agent_id()) ==
         historical_agents_info_.end()) {
@@ -234,7 +232,6 @@ void AgentManager::Append(
 }
 
 void AgentManager::DeleteOlderAgent() {
-  // pop the oldest obstacle while duration > obstacle_max_duration
   constexpr double kMaxDurationS = 0.3;
   constexpr int32_t kMaxNum = 3;
   for (auto& agent : historical_agents_) {
@@ -316,6 +313,176 @@ const Agent* AgentManager::GetHistoryAgentByIndex(
     counter++;
   }
   return nullptr;
+}
+
+void AgentManager::ProcessPredictionTrajectory(std::shared_ptr<Agent>& agent) {
+  const auto agent_type = agent->type();
+  if (agent_type != AgentType::COUPE && agent_type != AgentType::MINIBUS &&
+      agent_type != AgentType::VAN && agent_type != AgentType::BUS &&
+      agent_type != AgentType::TRUCK && agent_type != AgentType::TRAILER &&
+      agent_type != AgentType::MOTORCYCLE &&
+      agent_type != AgentType::MOTORCYCLE_RIDING &&
+      agent_type != AgentType::TRICYCLE &&
+      agent_type != AgentType::TRICYCLE_RIDING) {
+    return;
+  }
+
+  if (agent->trajectories().empty() || agent->trajectories()[0].empty()) {
+    return;
+  }
+
+  auto hist_iter = historical_agents_info_.find(agent->agent_id());
+  if (hist_iter == historical_agents_info_.end() ||
+      hist_iter->second.size() < static_cast<size_t>(kMinHistoryFrameCount)) {
+    return;
+  }
+
+  const auto& ego_state =
+      *session_->mutable_environmental_model()->get_ego_state_manager();
+  double heading_diff = std::abs(agent->theta_fusion() -
+                                 ego_state.planning_init_point().heading_angle);
+  if (heading_diff > M_PI) {
+    heading_diff = 2 * M_PI - heading_diff;
+  }
+  if (heading_diff * 180.0 / M_PI > 60.0) {
+    return;
+  }
+
+  const auto& hist_list = hist_iter->second;
+
+  const auto& original_trajectory = agent->trajectories()[0];
+  const double init_speed =
+      (agent->speed() > 0.0) ? agent->speed() : 0.0;
+  const double init_accel = agent->accel_fusion();
+
+  std::map<double, TmpPathPoint> path_cache;
+  if (!original_trajectory.empty()) {
+    path_cache[0.0] = {original_trajectory[0].x(), original_trajectory[0].y(),
+                       original_trajectory[0].theta()};
+    double cumulative_s = 0.0;
+    for (size_t i = 1; i < original_trajectory.size(); ++i) {
+      const auto& prev = original_trajectory[i - 1];
+      const auto& curr = original_trajectory[i];
+      double dx = curr.x() - prev.x();
+      double dy = curr.y() - prev.y();
+      cumulative_s += std::sqrt(dx * dx + dy * dy);
+      path_cache[cumulative_s] = {curr.x(), curr.y(), curr.theta()};
+    }
+  }
+
+  auto interpolate_point = [&path_cache](double s) -> TmpPathPoint {
+    auto it_upper = path_cache.upper_bound(s);
+    if (it_upper == path_cache.begin()) {
+      return path_cache.begin()->second;
+    } else if (it_upper == path_cache.end()) {
+      return path_cache.rbegin()->second;
+    } else {
+      auto it_lower = std::prev(it_upper);
+      double s0 = it_lower->first;
+      double s1 = it_upper->first;
+      double ratio = (s1 - s0 > 1e-9) ? (s - s0) / (s1 - s0) : 0.0;
+      const auto& p0 = it_lower->second;
+      const auto& p1 = it_upper->second;
+      double theta_diff = p1.theta - p0.theta;
+      if (theta_diff > M_PI) {
+        theta_diff -= 2.0 * M_PI;
+      } else if (theta_diff < -M_PI) {
+        theta_diff += 2.0 * M_PI;
+      }
+      return {p0.x + ratio * (p1.x - p0.x), p0.y + ratio * (p1.y - p0.y),
+              p0.theta + ratio * theta_diff};
+    }
+  };
+
+  std::vector<double> kin_s(kPlanPoints), kin_speeds(kPlanPoints),
+      kin_accels(kPlanPoints), kin_x(kPlanPoints), kin_y(kPlanPoints),
+      kin_theta(kPlanPoints);
+
+  kin_s[0] = 0.0;
+  kin_speeds[0] = init_speed;
+  kin_accels[0] = init_accel;
+
+  const double stop_s =
+      (init_accel < 0.0 && init_speed > 0.0)
+          ? (init_speed * init_speed) / (2.0 * std::fabs(init_accel))
+          : std::numeric_limits<double>::max();
+
+  for (size_t i = 1; i < kPlanPoints; ++i) {
+    double t = i * kTimeStep;
+    double predicted_speed = init_speed + init_accel * t;
+
+    if (predicted_speed <= 0.0) {
+      kin_s[i] = stop_s;
+      kin_speeds[i] = 0.0;
+      kin_accels[i] = 0.0;
+    } else {
+      kin_s[i] = init_speed * t + 0.5 * init_accel * t * t;
+      kin_speeds[i] = predicted_speed;
+      kin_accels[i] = init_accel;
+    }
+  }
+
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    auto pt = interpolate_point(kin_s[i]);
+    kin_x[i] = pt.x;
+    kin_y[i] = pt.y;
+    kin_theta[i] = pt.theta;
+  }
+
+  const auto& last_hist_obj = hist_list.back();
+
+  std::vector<double> last_s(kPlanPoints), last_speeds(kPlanPoints),
+      last_accels(kPlanPoints), last_x(kPlanPoints), last_y(kPlanPoints),
+      last_theta(kPlanPoints);
+
+  if (!last_hist_obj->trajectories().empty() &&
+      !last_hist_obj->trajectories()[0].empty()) {
+    const auto& last_trajectory =
+        last_hist_obj->trajectories_used_by_st_graph()[0];
+    for (size_t i = 0; i < kPlanPoints && i < last_trajectory.size(); ++i) {
+      last_x[i] = last_trajectory[i].x();
+      last_y[i] = last_trajectory[i].y();
+      last_theta[i] = last_trajectory[i].theta();
+      last_speeds[i] = last_trajectory[i].vel();
+      last_accels[i] = last_trajectory[i].acc();
+    }
+  }
+
+  std::vector<double> fused_x(kPlanPoints), fused_y(kPlanPoints),
+      fused_theta(kPlanPoints), fused_speeds(kPlanPoints),
+      fused_acc(kPlanPoints);
+
+  for (size_t i = 0; i < kPlanPoints; ++i) {
+    fused_x[i] = kAlpha * last_x[i] + (1 - kAlpha) * kin_x[i];
+    fused_y[i] = kAlpha * last_y[i] + (1 - kAlpha) * kin_y[i];
+
+    double theta_diff = kin_theta[i] - last_theta[i];
+    if (theta_diff > M_PI) {
+      theta_diff -= 2.0 * M_PI;
+    } else if (theta_diff < -M_PI) {
+      theta_diff += 2.0 * M_PI;
+    }
+
+    fused_theta[i] = last_theta[i] + (1 - kAlpha) * theta_diff;
+    fused_speeds[i] = kAlpha * last_speeds[i] + (1 - kAlpha) * kin_speeds[i];
+    fused_acc[i] = kAlpha * last_accels[i] + (1 - kAlpha) * kin_accels[i];
+  }
+
+  trajectory::Trajectory processed_trajectory(original_trajectory);
+
+  for (size_t i = 0; i < kPlanPoints && i < processed_trajectory.size(); ++i) {
+    double absolute_time = static_cast<double>(i) * kTimeStep;
+    processed_trajectory[i].set_x(fused_x[i]);
+    processed_trajectory[i].set_y(fused_y[i]);
+    processed_trajectory[i].set_theta(fused_theta[i]);
+    processed_trajectory[i].set_vel(fused_speeds[i]);
+    processed_trajectory[i].set_acc(fused_acc[i]);
+    processed_trajectory[i].set_absolute_time(absolute_time);
+  }
+
+  std::vector<trajectory::Trajectory> processed_trajectories;
+  processed_trajectories.emplace_back(processed_trajectory);
+  agent->set_trajectories_used_by_st_graph(processed_trajectories);
 }
 
 }  // namespace agent

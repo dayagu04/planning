@@ -95,8 +95,6 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
 
   void DecideFoldMirrorCommand();
 
-  void DecideExpandMirrorCommand();
-
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
   std::vector<pnc::geometry_lib::PathSegment> all_plan_path_vec_;
 };

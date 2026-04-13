@@ -8,8 +8,10 @@
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_speed_adjust_cost.h"
 #include "st_graph/st_point.h"
+#include "st_graph/st_point_with_lateral.h"
 #include "task_interface/lane_change_utils.h"
 namespace planning {
+using planning::speed::STPointWithLateral;
 
 SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     QuarticPolynomial& poly, double arrived_t, double mid_t,
@@ -131,6 +133,21 @@ double SampleQuarticPolynomialCurve::CalcVelRef(
   return s;
 }
 
+double SampleQuarticPolynomialCurve::CalcAccRef(
+    const double t, const double decay_coffi) const {
+  double a = 0.0;
+  if (arrived_t_ < poly_.T()) {
+    double acc =
+        std::max(arrived_a_, -arrived_v_ / std::fmax(5.0 - arrived_t_, 0.1));
+    double left_t = t - arrived_t_;
+    a = left_t > 0.1 ? acc * std::exp(decay_coffi * left_t)
+                     : poly_.CalculateSecondDerivative(t);
+  } else {
+    a = t - poly_.T() > 0 ? 0.0 : poly_.CalculateSecondDerivative(t);
+  }
+  return a;
+}
+
 double SampleQuarticPolynomialCurve::CalcVelIntegral(
     const double evaluate_t) const {
   const double t = evaluate_t > poly_.T() ? poly_.T() : evaluate_t;
@@ -199,8 +216,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   double last_arrived_v = arrived_v_;
   double last_arrived_a = arrived_a_;
   double last_arrived_t = arrived_t_;
-  STPoint anchor_matched_upper_st_point;
-  STPoint anchor_matched_lower_st_point;
+  STPointWithLateral anchor_matched_upper_st_point;
+  STPointWithLateral anchor_matched_lower_st_point;
   const double anchor_arrived_t = cur_time;
   const double anchor_arrived_v =
       anchor_arrived_t - poly_.T() > 0
@@ -261,13 +278,13 @@ void SampleQuarticPolynomialCurve::CalcCost(
   arrived_a_ = anchor_arrived_a;
   arrived_t_ = anchor_arrived_t;
   arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
-  is_left_distance_enough_ =
+  bool is_left_distance_enough =
     is_mergr_change
         ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
         : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
 
   if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
-    if (is_left_distance_enough_) {
+    if (is_left_distance_enough) {
       speed_differ_gain = 0.0;
       distance_to_stop_point = kMaxDistanceToStopPoint;
       time_cost = 3.0 * std::exp(arrived_t_ / 2.5);
@@ -391,6 +408,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     rest_changeable_distance_ = rest_changeable_distance;
     end_point_matched_gap_back_id_ = anchor_matched_lower_st_point.agent_id();
     end_point_matched_gap_front_id_ = anchor_matched_upper_st_point.agent_id();
+    is_left_distance_enough_ = is_left_distance_enough;
   }
 }
 }  // namespace planning

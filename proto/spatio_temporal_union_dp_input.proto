@@ -110,4 +110,5 @@ message SpationTemporalUnionDpInput {
   optional LongitudinalWeightParams long_weight_params = 7;
   optional SpeedLimitParams speed_limit_params = 8;
   optional StitchingCostParams stitching_cost_params = 9;
+  optional double target_s = 10;
 }

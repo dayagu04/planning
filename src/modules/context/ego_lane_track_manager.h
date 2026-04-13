@@ -11,6 +11,8 @@
 #include "local_view.h"
 #include "session.h"
 #include "virtual_lane.h"
+#include "src/library/lc_pure_pursuit_lib/include/basic_pure_pursuit_model.h"
+
 
 namespace planning {
 struct LaneCurvInfo {
@@ -88,19 +90,19 @@ class EgoLaneTrackManger {
       bool &is_manual_lane_change);
 
   bool CheckIfInRampSelectSplit(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRampSelectSplitForSdpro(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRamp(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   bool CheckIfInRoadSelectRampForSdpro(
-      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
   double ComputeTargetLaneSpecifiedRangeCurvature(
@@ -244,6 +246,7 @@ class EgoLaneTrackManger {
       const std::shared_ptr<planning_math::KDPath> &lane_frenet_coord,
       std::vector<std::pair<int, double>> &lane_curv_info_set,
       LaneCurvInfo &lane_curv_info, double &max_road_radius,
+      double &min_road_radius,
       const std::shared_ptr<VirtualLane> &relative_id_lane);
 
   void CalculateDynamicCostWeights(double curv_degree,
@@ -254,6 +257,18 @@ class EgoLaneTrackManger {
   void CalculateRoadBoundaryCollisionCost(
       const LaneCurvInfo &lane_curv_info, double &road_boundary_collision_cost,
       const std::shared_ptr<VirtualLane> &relative_id_lane);
+
+  double EWMAFilter(double current_value, double alpha, double& filtered_history);
+
+  void GenerateEgoFutureTrajectory(
+    const std::shared_ptr<VirtualLane>& target_lane,
+    const double lat_offset,
+    std::vector<TrajectoryPoint>& ego_future_trajectory);
+
+  bool IsPathCollisionWithRoadEdge(
+    const std::shared_ptr<VirtualLane>& last_lane,
+    const std::shared_ptr<VirtualLane>& cur_lane,
+    const TrajectoryPoints& path_points);
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -306,6 +321,8 @@ class EgoLaneTrackManger {
   const std::vector<double> road_curv_radius_{200.0, 400.0, 1000.0};
   int acc_predict_left_change_count_ = 0;
   int acc_predict_right_change_count_ = 0;
+  double raw_min_road_radius_ = 2000.0;
+  double raw_max_road_radius_ = 2000.0;
 };
 
 }  // namespace planning

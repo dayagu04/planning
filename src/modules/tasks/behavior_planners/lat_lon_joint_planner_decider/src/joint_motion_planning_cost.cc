@@ -64,12 +64,14 @@ EgoThreeDiscSafeCostTerm::CalculateThreeDiscDistances(
                                bool is_ego = true) {
     double L = length / 6;
     double backcenter = is_ego ? L : 3 * L;
+    double cos_theta = std::cos(theta);
+    double sin_theta = std::sin(theta);
     std::array<double, 3> offsets = {L - backcenter, 3 * L - backcenter,
                                      5 * L - backcenter};
     std::array<std::pair<double, double>, 3> centers;
     for (int i = 0; i < 3; ++i) {
-      centers[i] = {x + offsets[i] * std::cos(theta),
-                    y + offsets[i] * std::sin(theta)};
+      centers[i] = {x + offsets[i] * cos_theta,
+                    y + offsets[i] * sin_theta};
     }
     return centers;
   };
@@ -745,6 +747,8 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
     return results;
   }
 
+  results.reserve(obs_num);
+
   const double ego_x = x[EGO_X];
   const double ego_y = x[EGO_Y];
   const double ego_theta = x[EGO_THETA];
@@ -757,6 +761,9 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
 
   const double s0 = cost_config_ptr_->at(SOFT_HALFPLANE_S0);
   const double tau = cost_config_ptr_->at(SOFT_HALFPLANE_TAU);
+  
+  const double ego_cos_theta = std::cos(ego_theta);
+  const double ego_sin_theta = std::sin(ego_theta);
 
   for (int i = 0; i < obs_num; ++i) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
@@ -783,8 +790,6 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
 
     const double obs_normal_x = std::cos(obs_theta);
     const double obs_normal_y = std::sin(obs_theta);
-    const double ego_normal_x = std::cos(ego_theta);
-    const double ego_normal_y = std::sin(ego_theta);
 
     double s_current = 0.0;
     double s_target = 0.0;
@@ -793,9 +798,9 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
       // OVERTAKE: 自车超越障碍物
       // s_current = 障碍物前端 → 自车后端 的距离
       const double ego_rear_x =
-          ego_x - ego_rear_edge_to_rear_axle * std::cos(ego_theta);
+          ego_x - ego_rear_edge_to_rear_axle * ego_cos_theta;
       const double ego_rear_y =
-          ego_y - ego_rear_edge_to_rear_axle * std::sin(ego_theta);
+          ego_y - ego_rear_edge_to_rear_axle * ego_sin_theta;
 
       const double obs_front_x = obs_x + (obs_length / 2.0) * obs_normal_x;
       const double obs_front_y = obs_y + (obs_length / 2.0) * obs_normal_y;
@@ -803,7 +808,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
       const double dx = ego_rear_x - obs_front_x;
       const double dy = ego_rear_y - obs_front_y;
 
-      s_current = dx * ego_normal_x + dy * ego_normal_y;
+      s_current = dx * ego_cos_theta + dy * ego_sin_theta;
 
       if (s_current < 0) {
         continue;
@@ -816,9 +821,9 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
       // YIELD: 自车让行障碍物
       // s_current = 障碍物后端 → 自车前端 的距离
       const double ego_front_x =
-          ego_x + ego_front_edge_to_rear_axle * std::cos(ego_theta);
+          ego_x + ego_front_edge_to_rear_axle * ego_cos_theta;
       const double ego_front_y =
-          ego_y + ego_front_edge_to_rear_axle * std::sin(ego_theta);
+          ego_y + ego_front_edge_to_rear_axle * ego_sin_theta;
 
       const double obs_rear_x = obs_x - (obs_length / 2.0) * obs_normal_x;
       const double obs_rear_y = obs_y - (obs_length / 2.0) * obs_normal_y;
@@ -826,7 +831,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
       const double dx = obs_rear_x - ego_front_x;
       const double dy = obs_rear_y - ego_front_y;
 
-      s_current = dx * ego_normal_x + dy * ego_normal_y;
+      s_current = dx * ego_cos_theta + dy * ego_sin_theta;
 
       if (s_current <= 0) {
         continue;
@@ -840,8 +845,8 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
     result.label_type = label_value;
     result.s_current = s_current;
     result.s_target = s_target;
-    result.normal_x = std::cos(ego_theta);
-    result.normal_y = std::sin(ego_theta);
+    result.normal_x = ego_cos_theta;
+    result.normal_y = ego_sin_theta;
 
     results.push_back(result);
   }
@@ -967,6 +972,8 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
     return results;
   }
 
+  results.reserve(obs_num);
+
   const double ego_x = x[EGO_X];
   const double ego_y = x[EGO_Y];
   const double ego_theta = x[EGO_THETA];
@@ -975,6 +982,9 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
       cost_config_ptr_->at(EGO_FRONT_EDGE_TO_REAR_AXLE);
   const double ego_rear_edge_to_rear_axle =
       cost_config_ptr_->at(EGO_LENGTH) - ego_front_edge_to_rear_axle;
+  const double hard_dist = cost_config_ptr_->at(HARD_HALFPLANE_DIST);
+  const double ego_cos_theta = std::cos(ego_theta);
+  const double ego_sin_theta = std::sin(ego_theta);
 
   for (int i = 0; i < obs_num; ++i) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
@@ -995,17 +1005,15 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
 
     const double obs_normal_x = std::cos(obs_theta);
     const double obs_normal_y = std::sin(obs_theta);
-    const double ego_normal_x = std::cos(ego_theta);
-    const double ego_normal_y = std::sin(ego_theta);
     const double hard_dist = cost_config_ptr_->at(HARD_HALFPLANE_DIST);
 
     double plane_dist = 0.0;
 
     if (label_value == 1) {
       const double ego_rear_x =
-          ego_x - ego_rear_edge_to_rear_axle * std::cos(ego_theta);
+          ego_x - ego_rear_edge_to_rear_axle * ego_cos_theta;
       const double ego_rear_y =
-          ego_y - ego_rear_edge_to_rear_axle * std::sin(ego_theta);
+          ego_y - ego_rear_edge_to_rear_axle * ego_sin_theta;
 
       const double obs_front_x = obs_x + (obs_length / 2.0) * obs_normal_x;
       const double obs_front_y = obs_y + (obs_length / 2.0) * obs_normal_y;
@@ -1013,10 +1021,8 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
       const double dx = ego_rear_x - obs_front_x;
       const double dy = ego_rear_y - obs_front_y;
 
-      const double ego_normal_x = std::cos(ego_theta);
-      const double ego_normal_y = std::sin(ego_theta);
       const double dist_along_ego_heading =
-          dx * ego_normal_x + dy * ego_normal_y;
+          dx * ego_cos_theta + dy * ego_sin_theta;
 
       if (dist_along_ego_heading < 0) {
         continue;
@@ -1026,9 +1032,9 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
 
     } else if (label_value == 2) {
       const double ego_front_x =
-          ego_x + ego_front_edge_to_rear_axle * std::cos(ego_theta);
+          ego_x + ego_front_edge_to_rear_axle * ego_cos_theta;
       const double ego_front_y =
-          ego_y + ego_front_edge_to_rear_axle * std::sin(ego_theta);
+          ego_y + ego_front_edge_to_rear_axle * ego_sin_theta;
 
       const double obs_rear_x = obs_x - (obs_length / 2.0) * obs_normal_x;
       const double obs_rear_y = obs_y - (obs_length / 2.0) * obs_normal_y;
@@ -1037,7 +1043,7 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
       const double dy = obs_rear_y - ego_front_y;
 
       const double dist_along_ego_heading =
-          dx * ego_normal_x + dy * ego_normal_y;
+          dx * ego_cos_theta + dy * ego_sin_theta;
 
       if (dist_along_ego_heading <= 0) {
         continue;
@@ -1050,8 +1056,8 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
     result.obs_index = i;
     result.label_type = label_value;
     result.plane_dist = plane_dist;
-    result.normal_x = ego_normal_x;
-    result.normal_y = ego_normal_y;
+    result.normal_x = ego_cos_theta;
+    result.normal_y = ego_sin_theta;
 
     results.push_back(result);
   }

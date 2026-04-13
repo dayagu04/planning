@@ -496,6 +496,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
           iflyauto::SuppSignType::SUPP_SIGN_TYPE_END_OF_SPEED_LIMIT && has_perception_speed_limit_ == false) {
         end_of_speed_limit_set_.insert(single_sign.speed_limit);
         end_of_speed_limit_ever_appeared_ = true;
+        has_perception_end_of_speed_limit_ = true;
       }
     }
   }
@@ -932,8 +933,7 @@ void TsrCore::RunOnce(void) {
   if (function_state_machine_info_ptr->current_state ==
           iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE ||
       function_state_machine_info_ptr->current_state ==
-          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE ||
-      tsr_navi_flag_) {
+          iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE) {
     UpdateTsrSpeedLimitOnlyByMap();
   } else {
     // 非NOA模式下，使用感知+地图的综合限速信息

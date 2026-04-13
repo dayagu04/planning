@@ -85,7 +85,8 @@ bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
 
   const Pose2f& start_pose = current_node->GetPose();
   Pose2f end_pose_opt;
-  if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT ||
+      request_.space_type == ParkSpaceType::PARALLEL_IN) {
     end_pose_opt = end_pose_parallel;
   } else {
     end_pose_opt = rs_expansion_decider_.GetRSEndPose();
@@ -124,7 +125,8 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
       vehicle_param_.min_turn_radius + config_.rs_radius_buffer;
 
   RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
-  if (request_.space_type == ParkSpaceType::PARALLEL_OUT) {
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT ||
+      request_.space_type == ParkSpaceType::PARALLEL_IN) {
     if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius,
                           end_pose_parallel)) {
       // ILOG_INFO << " generate rs fail";
@@ -1850,9 +1852,13 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     // configuration to the end configuration without collision. if so,
     // search ends.
     bool expand_rs_success = false;
-    if (request_.space_type == ParkSpaceType::PARALLEL_OUT &&
+    int success_target_index = -1;
+    if ((request_.space_type == ParkSpaceType::PARALLEL_OUT ||
+         request_.space_type == ParkSpaceType::PARALLEL_IN) &&
         !request_.parallel_target_group.empty()) {
+
       for (auto parallel_end_pose : request_.parallel_target_group) {
+        success_target_index ++;
         if (AnalyticExpansionByRS(current_node, full_path_gear_request,
                                   &rs_node_to_goal, parallel_end_pose)) {
           rs_path_success_num++;
@@ -1871,6 +1877,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
       if (path_comparator.Compare(&request_, &best_rs_node, &rs_node_to_goal)) {
         best_rs_node = rs_node_to_goal;
         best_rs_path = rs_path_;
+        result->success_target_index = success_target_index;
       }
 
 #if PLOT_CHILD_NODE

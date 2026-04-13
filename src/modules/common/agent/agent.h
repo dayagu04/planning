@@ -66,6 +66,8 @@ enum class AgentType {
   OCC_VEGETATION = 61,        // 植被
   OCC_DRIVEABLE_AREA = 62,    // 可行驶区域
   OCC_NON_DRIVEABLE_AREA = 63, // 不可行驶区域
+  CYLINDER_BARRIER = 64,       // 立柱
+  CONSTRUCTION_SIGNS = 65,     // 施工牌
 };
 
 struct AgentStInfo {
@@ -276,9 +278,6 @@ class Agent {
   ~Agent() = default;
 
  private:
-  void RecalculateLowSpeedTrajectories();
-
- private:
   int32_t agent_id_ = -1;
 
   AgentType type_ = AgentType::UNKNOWN;
@@ -310,14 +309,12 @@ class Agent {
 
   bool b_backup_freemove_ = false;
 
-  // prediction cut in of current frame
   bool is_prediction_cutin_ = false;
 
-  // rule base cut in of current frame
   bool is_rule_base_cutin_ = false;
 
-  // steady cut in flag(count for 3 frames)
   bool is_cutin_ = false;
+
   double prediction_cutin_score_ = 0.0;
 
   bool is_cutout_ = false;
@@ -330,15 +327,13 @@ class Agent {
   double timestamp_s_ = 0.0;
   uint64_t timestamp_us_ = 0;
   AgentDecision agent_decision_;
-  // AgentLightStateInfo agent_light_state_info_;
 
-  // speed limit for cone bucket
   bool need_speed_limit_ = false;
 
   bool is_cone_bucket_cipv_ = false;
   bool is_static_ = false;
   bool is_truck_ = false;
-  // info for st graph
+
   std::pair<double, double> time_range_ = {-1.0, -1.0};
 
   AgentStInfo agent_st_info_;

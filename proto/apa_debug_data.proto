@@ -126,10 +126,11 @@ message PathTimeBenchmark {
 
 message ApaRemainDist {
   optional double remain_path_dist = 1;
-  optional double remain_static_obs_dist = 2;
-  optional double remain_dynamic_obs_dist = 3;
-  optional double remain_slot_jump_dist = 4;
-  optional double remain_dist_by_od = 5;
+  optional double remain_obs_dist = 2;
+  optional double remain_static_obs_dist = 3;
+  optional double remain_dynamic_obs_dist = 4;
+  optional double remain_slot_jump_dist = 5;
+  optional double remain_dist_by_od = 6;
 }
 
 message ApaStuckTime {
@@ -139,6 +140,11 @@ message ApaStuckTime {
   optional double stuck_dynamic_obs_time = 4;
 }
 
+message ApaStuckTimeInfo {
+  optional ApaStuckTime stuck_time = 1;
+  optional bool stuck_by_dynamic_obs = 2;
+}
+
 message ApaTerminalErr {
   optional double terminal_x_err = 1;
   optional double terminal_y_err = 2;
@@ -146,7 +152,7 @@ message ApaTerminalErr {
   optional double terminal_heading_err = 3;
 }
 
-message ApaPlanningSLotInfo {
+message ApaPlanningSlotInfo {
   optional double every_replan_lat_move_slot_dist = 1;
   optional double success_replan_lat_move_slot_dist = 2;
   optional double every_replan_lon_move_slot_dist = 3;
@@ -198,8 +204,8 @@ message ApaPathDebug {
   optional HistoryApaStatus history_apa_status = 6;
   optional SearchTrajectoryInfo search_traj_info = 7;
   optional ApaRemainDist remain_dist = 8;
-  optional ApaStuckTime stuck_time = 9;
+  optional ApaStuckTimeInfo stuck_time_info = 9;
   optional ApaTerminalErr terminal_err = 10;
-  optional ApaPlanningSLotInfo slot_info = 11;
+  optional ApaPlanningSlotInfo slot_info = 11;
   repeated PaObject pa_objects = 12;
 }

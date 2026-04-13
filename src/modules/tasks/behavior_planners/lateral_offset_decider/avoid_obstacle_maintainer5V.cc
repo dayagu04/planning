@@ -368,7 +368,8 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
           .lateral_obstacle_history_info;
   if (lateral_obstacle->front_tracks_copy().size() > 0) {
     for (auto& tr : lateral_obstacle->front_tracks_copy()) {
-      if (tr->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+      if (tr->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
+          tr->type() == iflyauto::OBJECT_TYPE_CYLINDER_BARRIER) {
         continue;
       }
       bool is_avd_car = false;
@@ -387,7 +388,8 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
               tr->type() == iflyauto::OBJECT_TYPE_TRAILER ||
               tr->type() == iflyauto::OBJECT_TYPE_TRICYCLE)) {
           if (tr->d_min_cpath() > 0) {
-            if (tr->type() != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+            if (tr->type() != iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
+                tr->type() != iflyauto::OBJECT_TYPE_CYLINDER_BARRIER) {
               // length 后续调整
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
                   AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(),
@@ -408,7 +410,8 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
                   false));
             }
           } else {
-            if (tr->type() != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+            if (tr->type() != iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
+                tr->type() != iflyauto::OBJECT_TYPE_CYLINDER_BARRIER) {
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
                   AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(),
                   vs_lon_relative, vs_lon_relative, tr->d_s_rel() - 3,

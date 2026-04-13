@@ -238,6 +238,10 @@ void LatLonJointDecision::Update() {
     obstacle_ids.push_back(static_cast<int32_t>(id));
   }
   lat_lon_decision_output_.SetSelectedObstacleIds(obstacle_ids);
+  if (obstacles_selector_ != nullptr) {
+    lat_lon_decision_output_.SetSelectedObstacleLabels(
+        obstacles_selector_->GetKeyObstacleLabels());
+  }
   if (!motion_failed) {
     auto& ego_trajectory =
         lat_lon_decision_output_.GetLaneChangeEgoTrajectory();

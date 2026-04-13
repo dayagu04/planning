@@ -5,6 +5,7 @@
 #include "debug_info_log.h"
 #include "planning_context.h"
 #include "tasks/task.h"
+#include "environmental_model.h"
 #include "traffic_light_decision_manager.h"
 
 namespace planning {
@@ -32,6 +33,15 @@ class TrafficLightDecider : public Task {
 
   // small intersection is matchable with tfl or not
   bool IsIntersectionMatchTFL();
+
+  // intersection and tfl match decision by tfl dis and lane virtual dis ratio
+  
+  bool IsIntersectionMatchTFLByDisRatio();
+
+  // calc virtual lane dis to stopline
+
+  double CalcVirtualLaneDisToStopline(double ego_pos, double dis_to_stopline, 
+                                      const iflyauto::LaneBoundary& l_boundry);
 
   // have a risk of running a red light or not when human drive
   bool IsRunningRedTFL();

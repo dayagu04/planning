@@ -49,6 +49,7 @@ constexpr double kDistanceThresholdApproachToStopline = 10.0;
 constexpr double kDistanceThresholdApproachToCrosswalk = 12.0;
 constexpr int kEgoInIntersectionCount = 3;
 constexpr int kDefaultDistanceAwayFromIntersection = 500.0;
+constexpr int kVirtualAreaContinuousThreshold = 5;
 
 }  // namespace
 
@@ -281,20 +282,34 @@ void SpatioTemporalPlanner::LogDebugInfo() {
 }
 
 void SpatioTemporalPlanner::UpdateIntersection() {
-  const auto &tfl_decider = session_->mutable_planning_context()
-                                ->mutable_traffic_light_decider_output();
-  const auto intersection_state = session_->environmental_model()
-                                      .get_virtual_lane_manager()
-                                      ->GetIntersectionState();
-  const double distance_to_stopline = session_->environmental_model()
-                                          .get_virtual_lane_manager()
-                                          ->GetEgoDistanceToStopline();
-  const double distance_to_crosswalk = session_->environmental_model()
-                                           .get_virtual_lane_manager()
-                                           ->GetEgoDistanceToCrosswalk();
+  const auto& tfl_decider = session_->mutable_planning_context()
+                                    ->mutable_traffic_light_decider_output();
+  const auto& reference_path = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  double init_vel = reference_path->get_frenet_ego_state().planning_init_point().v;
+  std::vector<double> xp_vel{4.167, 16.667};
+  std::vector<double> fp_length{15.0, 25.0};
+  double min_virtual_length = interp(init_vel, xp_vel, fp_length);
+  double preview_length = std::max(std::min(init_vel * 5.0, 90.0), 20.0);
+  double virtual_length = 0.;
+  double dist_to_virtual_start = 100.;
+  bool is_in_virtual_area = reference_path->IsExistValidVirtualLaneAheadEgo(preview_length, min_virtual_length, virtual_length, dist_to_virtual_start);
+  if (is_in_virtual_area) {
+    virtual_area_count_ = 1;
+  } else if (virtual_area_count_ > 0 && virtual_area_count_ < kVirtualAreaContinuousThreshold) {
+    ++virtual_area_count_;
+  } else {
+    virtual_area_count_ = 0;
+  }
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto intersection_state = virtual_lane_manager->GetIntersectionState();
+  const double distance_to_stopline = virtual_lane_manager->GetEgoDistanceToStopline();
+  const double distance_to_crosswalk = virtual_lane_manager->GetEgoDistanceToCrosswalk();
   bool current_intersection_state =
-      intersection_state == common::IntersectionState::IN_INTERSECTION ||
-      distance_to_stopline <= kDistanceThresholdApproachToStopline;
+      (intersection_state == common::IntersectionState::IN_INTERSECTION ||
+       distance_to_stopline <= kDistanceThresholdApproachToStopline) && (virtual_area_count_ > 0);
   bool is_small_intersection = false;
   // bool is_small_intersection = tfl_decider.is_small_front_intersection;
   // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;

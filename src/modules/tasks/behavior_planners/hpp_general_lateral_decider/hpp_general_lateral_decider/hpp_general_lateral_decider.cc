@@ -487,7 +487,7 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
       reference_path_ptr_->get_static_analysis_storage();
 
   is_point_in_turning_ = false;
-  
+
   constexpr double kPreviewBeforeTurn = 5.0;
   constexpr double kExitRecoverDist = 5.0;
 
@@ -594,10 +594,10 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
             auto t = std::clamp((s_ref - back_turn_range.second) /
                                   kExitRecoverDist, 0.0, 1.0);
             ref_len_in_turn = kTurnInnerPreview + t *
-                (kStraightCheckLength - kTurnInnerPreview);                      
+                (kStraightCheckLength - kTurnInnerPreview);
           }
           ref_len_based_on_straight =
-              std::max(min_len_base_straight, ref_len_in_turn);     
+              std::max(min_len_base_straight, ref_len_in_turn);
         } else {
           const auto back_turn_range =
               static_analysis_storage->GetBackSRange(turn_query, s_ref);
@@ -683,7 +683,7 @@ void HppGeneralLateralDecider::ConstructReferencePathPoints() {
 
       auto &v_curr = ref_sample_vel_vec[i];
       auto &v_next = ref_sample_vel_vec[i + 1];
-      
+
       if (t_reach > t_next) {
         v_next = v_curr + kMaxAcc * config_.delta_t;
       } else {

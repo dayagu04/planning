@@ -1642,6 +1642,59 @@ def load_rdg_parking_lane_line(rdg_parking_lane_line_msg, loc_msg):
     print("rdg_parking_lane_line_msg error")
   return ground_mark_info
 
+def load_traffic_lights(rdg_traffic_sign_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
+  tfl_list = []
+  traffic_lights_size = rdg_traffic_sign_msg.traffic_lights_size
+  print("traffic_lights_size:")
+  print(traffic_lights_size)
+  traffic_lights_data = rdg_traffic_sign_msg.traffic_lights
+  for i in range(10):
+    tfl_info = {'tfl_loc_x':[], 'tfl_loc_y':[], 'tfl_color':[], 'tfl_type':[]}
+    if i < traffic_lights_size:
+      tfl = traffic_lights_data[i]
+      tfl_info['tfl_loc_x'] = [tfl.traffic_light_x]
+      tfl_info['tfl_loc_y'] = [tfl.traffic_light_y]
+      tfl_color = ["lightgray"]
+      if tfl.traffic_light_color == 1:
+        tfl_color = ["red"]
+      elif tfl.traffic_light_color == 2:
+        tfl_color = ["yellow"]
+      elif tfl.traffic_light_color == 3:
+        tfl_color = ["limegreen"]
+      elif tfl.traffic_light_color == 5:
+        tfl_color = ["darkred"]
+      elif tfl.traffic_light_color == 6:
+        tfl_color = ["goldenrod"]
+      elif tfl.traffic_light_color == 7:
+        tfl_color = ["darkgreen"]
+      tfl_info['tfl_color'] = tfl_color
+
+      tfl_type = ["unknown"]
+      if tfl.traffic_light_type == 5:
+        tfl_type = ["left"]
+      elif tfl.traffic_light_type == 6:
+        tfl_type = ["straight"]
+      elif tfl.traffic_light_type == 7:
+        tfl_type = ["right"]
+      elif tfl.traffic_light_type == 8:
+        tfl_type = ["uturn"]
+
+      if tfl_color[0] == "limegreen":
+        tfl_type = [tfl_type[0] + '_green']
+      elif tfl_color[0] == "darkred":
+        tfl_type = [tfl_type[0] + '_redblink']
+      elif tfl_color[0] == "goldenrod":
+        tfl_type = [tfl_type[0] + '_yellowblink']
+      elif tfl_color[0] == "darkgreen":
+        tfl_type = [tfl_type[0] + '_greenblink']
+      elif tfl_color[0] == "lightgray":
+        tfl_type = [tfl_type[0] + '_unknown']
+      else:
+        tfl_type = [tfl_type[0] + '_' + tfl_color[0]]
+      tfl_info['tfl_type'] = tfl_type
+    tfl_list.append(tfl_info)
+  return tfl_list
+
 def load_stop_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
   stop_line_info_list = []
   stop_line_msg = rdg_lane_lines_msg.stop_line

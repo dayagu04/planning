@@ -6,8 +6,8 @@
 
 namespace planning {
 
-constexpr double kMaxNarrowSpaceWidth = 1.0;
-constexpr double kMinNarrowSpaceWidth = 0.5;
+constexpr double kMaxNarrowSpaceWidth = 1.6;
+constexpr double kMinNarrowSpaceWidth = 0.4;
 constexpr double kBlockedNarrowSpaceWidth = 0.2;
 constexpr double kMinNarrowSpaceLength = 1.0;
 constexpr double kPreviewFrontNarrowSpaceDistance = 6.0;
@@ -174,6 +174,13 @@ bool NarrowSpaceDecider::ExtractNarrowSpaceOutline(
     const auto& frenet_obs_boundary = obs->frenet_obstacle_boundary();
     if (frenet_obs_boundary.s_end < care_area_s_start ||
         frenet_obs_boundary.s_start > care_area_s_end) {
+      continue;
+    }
+    // cross ref
+    if (frenet_obs_boundary.l_start < -0.2 && frenet_obs_boundary.l_end > 0.2 &&
+        (frenet_obs_boundary.s_start > frenet_ego_state.head_s() + kNarrowSpacesLonGap ||
+         (is_out_of_narrow_space_ &&
+          frenet_obs_boundary.s_start > frenet_ego_state.s() + distance_to_end_))) {
       continue;
     }
     if (lat_obstacle_decision.find(obs->id()) == lat_obstacle_decision.end()) {
@@ -410,10 +417,17 @@ bool NarrowSpaceDecider::DenseBoundary(
 bool NarrowSpaceDecider::CalculateNarrowSpaceInfo(
     const std::vector<double>& left_s_vec, const std::vector<double>& left_l_vec,
     const std::vector<double>& right_s_vec, const std::vector<double>& right_l_vec) {
+  const auto& reference_path = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  const auto& frenet_ego_state = reference_path->get_frenet_ego_state();
   // 1.calculate narrow space shape
   // extract boundary range
   double boundary_start = std::max(left_s_vec.front(), right_s_vec.front());
   double boundary_end = std::min(left_s_vec.back(), right_s_vec.back());
+  if (is_out_of_narrow_space_) {
+    boundary_end = std::min(frenet_ego_state.s() + distance_to_end_, boundary_end);
+  }
   double boundary_length_ = std::max((boundary_end - boundary_start), 0.0);
   if (boundary_length_ <= 1e-3 || vehicle_s_range_.first > boundary_end) {
     // boundary length exception
@@ -514,10 +528,6 @@ bool NarrowSpaceDecider::CalculateNarrowSpaceInfo(
   is_exist_narrow_space_ = true;
   is_passable_ = true;
   // 2.calculate narrow space direction angle
-  const auto& reference_path = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-  const auto& frenet_ego_state = reference_path->get_frenet_ego_state();
   double mid_narrow_space_start_s = narrow_space_s_range_.first;
   double mid_narrow_space_start_l = 0.5 * (left_boundary_spline_(narrow_space_s_range_.first) + right_boundary_spline_(narrow_space_s_range_.first));
   double mid_narrow_space_end_s = narrow_space_s_range_.second;
@@ -868,8 +878,11 @@ bool NarrowSpaceDecider::UpdateLateralObstacleDeicision() {
   for (const auto& obstacle : obs_vec) {
     if (obstacle->b_frenet_valid()) {
       const auto& frenet_obs_boundary = obstacle->frenet_obstacle_boundary();
-      if (frenet_obs_boundary.s_start > narrow_space_s_range_.second ||
-          frenet_obs_boundary.s_start > (ego_s + distance_to_end_)) {
+      // cross ref
+      if ((frenet_obs_boundary.s_start > narrow_space_s_range_.second ||
+           (is_out_of_narrow_space_ &&
+            frenet_obs_boundary.s_start > (ego_s + distance_to_end_))) &&
+          (frenet_obs_boundary.l_start < 0.2 && frenet_obs_boundary.l_end > -0.2)) {
         lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::IGNORE;
       }
     }

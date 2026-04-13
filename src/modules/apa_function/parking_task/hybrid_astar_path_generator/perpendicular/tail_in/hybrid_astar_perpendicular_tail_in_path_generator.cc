@@ -685,6 +685,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   size_t memory_usage = 0.0;
 
   std::vector<CurveNode> curve_node_to_goal_vec;
+  curve_node_to_goal_vec.reserve(find_success_curve_min_count + 1);
 
   const int yield_interval =
       apa_param.GetParam().yield_interval_explored_node_num;

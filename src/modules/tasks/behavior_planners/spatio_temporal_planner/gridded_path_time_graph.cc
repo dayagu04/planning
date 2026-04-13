@@ -87,7 +87,6 @@ bool GriddedPathTimeGraph::Search(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
   const auto& current_lane = virtual_lane_mgr->get_current_lane();
-  const auto& origin_lane_points = current_lane->lane_points();
   planning_init_point_ = ego_state_manager->planning_init_point();
   std::shared_ptr<ReferencePath> current_refline_ =
       session_->mutable_environmental_model()
@@ -122,6 +121,9 @@ bool GriddedPathTimeGraph::Search(
         (ego_state_manager->ego_v() - lead_agent->speed()) * kDefaultTtc;
     if (lead_agent->is_static()) {
       for (const auto& agent : agent_trajs) {
+        if (!agent.is_consider_spatio) {
+          continue;
+        }
         if (agent.agent_id == lead_agent->agent_id() &&
             (agent.max_agent_box.min_y() < kDefaultStaticObstacleLateralDis &&
              agent.max_agent_box.max_y() > -kDefaultStaticObstacleLateralDis)) {
@@ -323,11 +325,14 @@ bool GriddedPathTimeGraph::Search(
   auto ref_points_vec =
       spatio_temporal_union_plan_input.mutable_ref_points_vec();
   ref_points_vec->Clear();
-  for (const auto& point : origin_lane_points) {
+
+  for (const auto& point : current_lane_coord_->path_points()) {
     planning::common::Point2d* Point = ref_points_vec->Add();
-    Point->set_x(point.local_point.x);
-    Point->set_y(point.local_point.y);
+    Point->set_x(point.x());
+    Point->set_y(point.y());
   }
+
+  spatio_temporal_union_plan_input.set_target_s(target_s);
 
   if (!spatio_temporal_union_plan_dp_.Update(
           traj_points, agent_trajs, spatio_temporal_union_plan_input, target_s,

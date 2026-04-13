@@ -231,14 +231,8 @@ void LongRefPathDecider::UpdateLonRefPath() {
             lane_change_info.st_search_vec[i];
         lon_behavior_output_.ds_refs[i].first =
             lane_change_info.v_search_vec[i];
-        if (i > 0) {
-            double dv = lane_change_info.v_search_vec[i] -
-                       lane_change_info.v_search_vec[i-1];
-            lon_behavior_output_.dds_refs[i].first = dv / dt_;
-        } else {
-            lon_behavior_output_.dds_refs[i].first = 0.0;
-        }
-
+        lon_behavior_output_.dds_refs[i].first =
+            lane_change_info.a_search_vec[i];
       }
       ILOG_DEBUG << "use search path in lc wait!";
     } else {
@@ -263,12 +257,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
       lon_behavior_output_.s_refs[i].first =
           ego_trajs_future[i].s - ego_trajs_future_init_point_s;
       lon_behavior_output_.ds_refs[i].first = ego_trajs_future[i].v;
-      if (i > 0) {
-            double dv = ego_trajs_future[i].v - ego_trajs_future[i-1].v;
-            lon_behavior_output_.dds_refs[i].first = dv / dt_;
-        } else {
-            lon_behavior_output_.dds_refs[i].first = 0.0;
-        }
+      lon_behavior_output_.dds_refs[i].first = ego_trajs_future[i].a;
     }
   }
 }

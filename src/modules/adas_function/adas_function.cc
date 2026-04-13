@@ -24,7 +24,7 @@ bool AdasFunction::Reset() {
 void AdasFunction::Init(void) {
   // Preprocess
   preprocess_ptr_ = std::make_shared<adas_function::preprocess::Preprocess>();
-  
+
 #if defined(X86) && !defined(X86_SIMULATION)
   // X86 平台：仿真模式
   preprocess_ptr_->Init(true);
@@ -126,18 +126,7 @@ bool AdasFunction::Plan() {
   ihc_core_ptr_->RunOnce();
 
   // MebCore
-  if (GetContext.get_param()->meb_call_switch == true) {
-    meb_core_ptr_->RunOnce();
-  } else {
-    // meb
-    GetContext.mutable_output_info()->meb_output_info_.meb_state =
-        iflyauto::MEB_FUNCTION_FSM_WORK_STATE_OFF;
-    GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
-        GetContext.get_param()->meb_request_status_const;
-    GetContext.mutable_output_info()->meb_output_info_.meb_request_value = 0;
-    GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
-        iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
-  }
+  meb_core_ptr_->RunOnce();
 
   // run lkas_function
   double start_time_lkas = IflyTime::Now_ms();
@@ -229,6 +218,30 @@ void AdasFunction::SetLkaTrajectory() {
   } else {
     s_proj = 0.0;
   }
+  if(GetContext.get_output_info()->ldp_output_info_.ldp_left_intervention_flag_ ||
+      GetContext.get_output_info()->elk_output_info_.elk_left_intervention_flag_ || 
+      GetContext.get_output_info()->ldp_output_info_.ldp_right_intervention_flag_ ||
+      GetContext.get_output_info()->elk_output_info_.elk_right_intervention_flag_){
+        ldp_intervention_duration_for_offset_ += GetContext.get_param()->dt;
+  }else{
+    ldp_intervention_duration_for_offset_ = 0.0;
+  }
+  if(ldp_intervention_duration_for_offset_ > 10.0) {
+    ldp_intervention_duration_for_offset_ = 10.0;
+  }
+
+  double ldp_center_line_offset_initial = GetContext.get_param()->ldp_center_line_offset;
+  double ldp_center_line_offset_final = GetContext.get_param()->ldp_center_line_offset_final;
+  int ldp_center_line_offset_nums = GetContext.get_param()->ldp_center_line_offset_nums;
+  double ldp_center_line_offset_step = 0;
+  if(ldp_center_line_offset_nums > 1 && ldp_center_line_offset_final > ldp_center_line_offset_initial) {
+      ldp_center_line_offset_step = 10 * (ldp_center_line_offset_final - ldp_center_line_offset_initial) / ldp_center_line_offset_nums;
+  }
+  double ldp_center_line_offset = ldp_intervention_duration_for_offset_ * ldp_center_line_offset_step + 
+                                   GetContext.get_param()->ldp_center_line_offset;
+
+  ldp_center_line_offset = std::min(ldp_center_line_offset, ldp_center_line_offset_final);
+  ldp_center_line_offset = std::max(ldp_center_line_offset, GetContext.get_param()->ldp_center_line_offset);
 
   auto &car2local =
       session_->environmental_model().get_ego_state_manager()->get_car2enu();
@@ -242,6 +255,8 @@ void AdasFunction::SetLkaTrajectory() {
                        plan_traj_dt * i +
                    s_proj;
     Eigen::Vector3d car_point, local_point;
+    
+
     if (GetContext.get_output_info()
             ->ldp_output_info_.ldp_left_intervention_flag_ ||
         GetContext.get_output_info()
@@ -254,7 +269,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.left_line.dy_s_spline_(
                 s_ref) -
-            GetContext.get_param()->ldp_center_line_offset -
+                ldp_center_line_offset -
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else if (GetContext.mutable_road_info()
@@ -265,7 +280,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.left_roadedge.dy_s_spline_(
                 s_ref) -
-            GetContext.get_param()->ldp_center_roadedge_offset -
+            ldp_center_line_offset -
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else {
@@ -286,7 +301,7 @@ void AdasFunction::SetLkaTrajectory() {
         car_point.y() =
             GetContext.get_road_info()->current_lane.right_line.dy_s_spline_(
                 s_ref) +
-            GetContext.get_param()->ldp_center_line_offset +
+              ldp_center_line_offset +
             0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else if (GetContext.get_road_info()
@@ -295,7 +310,7 @@ void AdasFunction::SetLkaTrajectory() {
                             ->current_lane.right_roadedge.dx_s_spline_(s_ref);
         car_point.y() = GetContext.get_road_info()
                             ->current_lane.right_roadedge.dy_s_spline_(s_ref) +
-                        GetContext.get_param()->ldp_center_roadedge_offset +
+                        ldp_center_line_offset +
                         0.5 * GetContext.get_param()->ego_width;
         car_point.z() = 0.0;
       } else {
@@ -334,6 +349,21 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
                                               ->get_local_view()
                                               .vehicle_service_output_info;
 
+  if(vehicle_service_output_info_ptr->driver_hands_off_state == true &&
+     vehicle_service_output_info_ptr->driver_hands_off_state_available == true) {
+    lkas_handsoff_duration += GetContext.get_param()->dt;
+  } else {
+    lkas_handsoff_duration = 0.0;
+  }
+  if(lkas_handsoff_duration > 10.0) {
+    lkas_handsoff_duration = 10.0;
+  }
+  if(lkas_handsoff_duration > 0.1) {
+    lkas_handsoff_state = true;
+  } else {
+    lkas_handsoff_state = false;
+  }
+
   lkas_intervention =
       ((GetContext.get_output_info()
             ->ldp_output_info_.ldp_left_intervention_flag_ == true) ||
@@ -360,14 +390,19 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
       );
 
   // 计数逻辑
-  if (lkas_intervention_rising_edge_ == true) {
+  if (lkas_intervention_rising_edge_ == true && lkas_handsoff_state == true ) {
     ldp_intervention_count += 1;
     // ldp_intervention_duration_ = 0.0;  // 重置180秒计时器
   }
 
-  if (fabs(vehicle_service_output_info_ptr->driver_hand_torque > 0.50) &&
-      vehicle_service_output_info_ptr->driver_hand_torque_available ==
-          true && GetContext.get_param()->car_type == "bestune_e541") {
+  if (fabs(vehicle_service_output_info_ptr->driver_hand_torque) > 0.50 &&
+      vehicle_service_output_info_ptr->driver_hand_torque_available == true && 
+      GetContext.get_param()->car_type == "bestune_e541") {
+    lkas_handsoff_trq_duration += GetContext.get_param()->dt;
+  } else {
+    lkas_handsoff_trq_duration = 0.0;
+  }
+  if(lkas_handsoff_trq_duration > 0.2) {
     lkas_handsoff_trq_flag = true;
   } else {
     lkas_handsoff_trq_flag = false;
@@ -376,9 +411,9 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
   if (ldp_intervention_count > 0) {
     ldp_intervention_duration_ += GetContext.get_param()->dt;
     if (ldp_intervention_duration_ > 180.0 ||
-        ((ldp_warning_audio_flag_ == true &&
-          ((vehicle_service_output_info_ptr->driver_hands_off_state == false) || lkas_handsoff_trq_flag == true)&&
-          GetContext.get_param()->ldp_handoff_state_switch_test_ == true)  )
+        (((ldp_warning_audio_flag_ == true || lkas_intervention == true) &&
+          ((lkas_handsoff_state == false) || lkas_handsoff_trq_flag == true) &&
+          GetContext.get_param()->ldp_handoff_state_switch_test_ == true))
 
     ) {
       ldp_intervention_duration_ = 0.0;
@@ -687,8 +722,8 @@ void AdasFunction::TestLkasForHmi(void) {
     GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ =
         iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
   } else {
-    GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ = iflyauto::
-        TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
+    GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ =
+        iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
   }
   GetContext.mutable_output_info()->tsr_output_info_.tsr_warning_ = false;
   GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = 0;
@@ -758,8 +793,10 @@ void AdasFunction::Log(void) {
                    GetContext.get_state_info()->yaw_rate_observer);
   JSON_DEBUG_VALUE("state_brake_pedal_pressed",
                    GetContext.get_state_info()->brake_pedal_pressed);
-  //   JSON_DEBUG_VALUE("state_yaw_rate_loc",
-  //                    GetContext.get_state_info()->yaw_rate_loc);
+  JSON_DEBUG_VALUE("state_brake_pedal_pos",
+                   GetContext.get_state_info()->brake_pedal_pos);
+  JSON_DEBUG_VALUE("state_accelerator_pedal_pos",
+                   GetContext.get_state_info()->accelerator_pedal_pos);
   JSON_DEBUG_VALUE("state_left_departure_speed",
                    GetContext.get_state_info()->veh_left_departure_speed);
   JSON_DEBUG_VALUE("state_right_departure_speed",

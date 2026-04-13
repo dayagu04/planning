@@ -218,7 +218,8 @@ void LateralObstacle::update_lead_info() {
                                 .lane_change_decider_output()
                                 .lc_request_source;
     if (lc_request == CONE_REQUEST &&
-        item->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+        (item->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
+         item->type() == iflyauto::OBJECT_TYPE_CYLINDER_BARRIER)) {
       lead_confidence_thrshld = 1.0;
     }
     // LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);

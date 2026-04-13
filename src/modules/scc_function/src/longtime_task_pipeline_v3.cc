@@ -6,6 +6,7 @@
 #include "behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
 #include "ego_planning_config.h"
 #include "speed/st_graph_input.h"
+#include "context/function_switch_config_context.h"
 
 namespace planning {
 LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
@@ -211,8 +212,10 @@ bool LongTimeTaskPipelineV3::Run() {
   //     return false;
   //   }
   // }
-
-  if (enable_lane_borrow_deciderV2_) {
+  const auto& disable_lb_from_product = static_cast<bool>(FunctionSwitchConfigContext::Instance()
+                                            ->get_function_switch_config()
+                                            .disable_lane_borrow);
+  if (enable_lane_borrow_deciderV2_ && !disable_lb_from_product) {
     ok = lane_borrow_deciderV2_->Execute();
     if (!ok) {
       AddErrorInfo(lane_borrow_deciderV2_->Name());

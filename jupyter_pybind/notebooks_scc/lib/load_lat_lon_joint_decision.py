@@ -480,15 +480,19 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
         3: "EGO_OVERTAKE"
     }
     rear_agent_label_name = label_dict.get(rear_agent_label, f"UNKNOWN_{rear_agent_label}")
+    rear_agent_confidence = planner_json.get("rear_agent_confidence", None)
+    rear_agent_confidence_str = (
+        f"{rear_agent_confidence:.3f}" if isinstance(rear_agent_confidence, (int, float)) else "N/A"
+    )
     
     # Update planning info data for display - 仅优化器相关信息
     planning_info_data = {
         'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition', 'Rear Agent Label'],
+                   'Solver Condition', 'Planning Condition', 'Rear Agent Label', 'Rear Agent Confidence'],
         'values': [f"{round(lat_lon_joint_planner_time, 2)}ms", 
                    f"{round(obstacle_selection_time, 2)}ms", f"{round(optimization_time, 2)}ms",
                    solver_condition_name, "SUCCESS" if planning_success else "FAILED",
-                   rear_agent_label_name]
+                   rear_agent_label_name, rear_agent_confidence_str]
     }
     joint_plan_data['data_planning_info'].data.update(planning_info_data)
 
@@ -778,8 +782,8 @@ def load_joint_plan_figure(fig1, bag_loader):
     # Add planning info data source - vertical layout with labels and values (仅优化器相关)
     data_planning_info = ColumnDataSource(data={
         'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition', 'Rear Agent Label'],
-        'values': ['', '', '', '', '', '']
+                   'Solver Condition', 'Planning Condition', 'Rear Agent Label', 'Rear Agent Confidence'],
+        'values': ['', '', '', '', '', '', '']
     })
     joint_plan_data['data_planning_info'] = data_planning_info
 

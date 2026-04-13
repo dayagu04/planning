@@ -136,7 +136,7 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
 void VirtualWallDecider::SamplingInVerticalBoundary(
     const VirtualWallBoundary& slot_boundary,
     const VirtualWallBoundary& passage_boundary,
-    std::vector<Position2D>& points) {
+    const bool only_use_slot_boundary, std::vector<Position2D>& points) {
   // sampling point
   // slot right bound
   SampleInLineSegment(
@@ -147,6 +147,15 @@ void VirtualWallDecider::SamplingInVerticalBoundary(
   SampleInLineSegment(
       Eigen::Vector2d(slot_boundary.x_upper, slot_boundary.y_upper),
       Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper), &points);
+
+  // slot lower bound
+  SampleInLineSegment(
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper),
+      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), &points);
+
+  if (only_use_slot_boundary) {
+    return;
+  }
 
   // passage lower right boundary
   SampleInLineSegment(
@@ -177,11 +186,6 @@ void VirtualWallDecider::SamplingInVerticalBoundary(
       Eigen::Vector2d(passage_boundary.x_upper, passage_boundary.y_upper),
       Eigen::Vector2d(passage_boundary.x_lower, passage_boundary.y_upper),
       &points);
-
-  // slot lower bound
-  SampleInLineSegment(
-      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_upper),
-      Eigen::Vector2d(slot_boundary.x_lower, slot_boundary.y_lower), &points);
 
   return;
 }
@@ -279,11 +283,12 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   slot_boundary_.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
   slot_boundary_.x_upper = slot_length - virtual_wall_x_offset;
   slot_boundary_.y_upper = slot_width / 2.0 + virtual_wall_y_offset;
-  double lower_bound_x = -1.0;
+  slot_boundary_.x_lower = -1.0;
   if (slot_type == SlotType::SLANT) {
-    lower_bound_x = -2.0;
+    slot_boundary_.x_lower = -2.0;
+    SamplingInVerticalBoundary(slot_boundary_, passage_bound_, true, points);
+    return;
   }
-  slot_boundary_.x_lower = lower_bound_x;
 
   // passage virtual wall
   // lower
@@ -304,7 +309,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   passage_bound_.Combine(tmp_passage_boundary);
 
   // sampling point
-  SamplingInVerticalBoundary(slot_boundary_, passage_bound_, points);
+  SamplingInVerticalBoundary(slot_boundary_, passage_bound_, false, points);
 
   return;
 }

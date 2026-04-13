@@ -27,8 +27,17 @@ enum class SourceType {
   MAP,
   SpeedBump,
   RoadFusion,
+  USS,
 };
-
+namespace {
+static constexpr int kEHRColumnIdOffset = 8000000;
+static constexpr int kOccupancyObjectIdOffset = 7000000;
+static constexpr int kParkingSlotIdOffset = 6000000;
+static constexpr int kGroundLineIdOffset = 5000000;
+static constexpr int kSpeedBumpIdOffset = 9000000;
+static constexpr int kIntersectionIdOffset = 10000000;
+static constexpr int kUssObjectIdOffset = 11000000;
+}  // namespace
 class Obstacle {
  public:
   // explicit Obstacle(int id,

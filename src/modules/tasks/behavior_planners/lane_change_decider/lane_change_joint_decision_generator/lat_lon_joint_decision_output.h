@@ -69,12 +69,23 @@ class LatLonJointDecisionOutput {
     selected_obstacle_ids_ = obstacle_ids;
   }
 
+  const std::vector<int32_t>& GetSelectedObstacleLabels() const {
+    return selected_obstacle_labels_;
+  }
+  std::vector<int32_t>& GetSelectedObstacleLabels() {
+    return selected_obstacle_labels_;
+  }
+  void SetSelectedObstacleLabels(const std::vector<int32_t>& obstacle_labels) {
+    selected_obstacle_labels_ = obstacle_labels;
+  }
+
   void SetPlanningSuccess(bool success) { planning_success_ = success; }
   bool IsPlanningSuccess() const { return planning_success_; }
 
   void Clear() {
     ego_trajectory_.clear();
     selected_obstacle_ids_.clear();
+    selected_obstacle_labels_.clear();
     planning_success_ = false;
   }
 
@@ -199,6 +210,7 @@ class LatLonJointDecisionOutput {
  private:
   LaneChangeEgoTrajectory ego_trajectory_;
   std::vector<int32_t> selected_obstacle_ids_;
+  std::vector<int32_t> selected_obstacle_labels_;
   bool planning_success_ = false;
 };
 }  // namespace lane_change_joint_decision

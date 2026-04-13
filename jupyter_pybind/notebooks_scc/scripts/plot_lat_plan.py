@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_00136/trigger/20260129/20260129-18-28-48/data_collection_BESTUNE_E541_00136_EVENT_DOWNGRADE_2026-01-29-18-28-48_no_camera.bag.28-35.split.1772248110.close-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_88446/trigger/20260328/20260328-15-00-38/data_collection_BESTUNE_E541_88446_EVENT_FUNEXIT_2026-03-28-15-00-38_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/trigger/20260328/20260328-18-15-24/data_collection_BESTUNE_E541_36718_EVENT_KEY_2026-03-28-18-15-24_no_camera.bag"
 

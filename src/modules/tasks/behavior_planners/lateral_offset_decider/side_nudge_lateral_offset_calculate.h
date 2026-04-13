@@ -53,7 +53,7 @@ class SideNudgeLateralOffsetDecider {
   SideNudgeLateralOffsetDecider(framework::Session* session,
                                 const EgoPlanningConfigBuilder* config_builder);
   ~SideNudgeLateralOffsetDecider() = default;
-  bool Process(const LaneInfo& lane_info);
+  bool Process(const LaneInfo& lane_info, const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
   double lat_offset() const { return lateral_offset_; }
   const NudgeInfo& nudge_info() const { return nudge_info_; }
   void Reset();
@@ -68,7 +68,7 @@ class SideNudgeLateralOffsetDecider {
   bool IsStopNudgeDirectly();
   void UpdateCurrentState();
   void ResetIdleState();
-  bool Init(const LaneInfo& lane_info);
+  bool Init(const LaneInfo& lane_info, const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
   double DesireLateralOffsetSideWay(double base_distance);
   void Log();
   framework::Session* session_;
@@ -83,6 +83,8 @@ class SideNudgeLateralOffsetDecider {
   SideNudgeState current_state_ = SideNudgeState::IDLE;
   NudgeInfo nudge_info_;
   double lateral_offset_ = 0.0;
+  std::unordered_map<int, int> count_map_;
   LaneInfo lane_info_;
+  std::array<AvoidObstacleInfo, 2> avd_obstacle_;
 };
 }  // namespace planning

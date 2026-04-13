@@ -1105,7 +1105,8 @@ void HppLateralObstacleDecider::UpdateLatDecisionWithARAStar(
           l_ara = l_s_spline(obstacle->frenet_s());
         }
         if (obstacle->frenet_l() > l_ara) {
-          lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::RIGHT;
+          lat_obstacle_decision[obstacle->id()] =
+              LatObstacleDecisionType::RIGHT;
         } else {
           lat_obstacle_decision[obstacle->id()] = LatObstacleDecisionType::LEFT;
         }

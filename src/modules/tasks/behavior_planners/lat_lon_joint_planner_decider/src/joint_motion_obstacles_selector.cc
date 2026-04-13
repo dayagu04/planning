@@ -37,6 +37,7 @@ constexpr double kRearAgentLonBuffer = 2.0;
 constexpr double kEgoSpeedBuffer = 2.0;
 constexpr int kMaxFrontObstacles = 1;
 constexpr int kMaxSideObstacles = 3;
+constexpr double kConfluenceAreaHeadway = 10.0;
 }  // namespace
 
 JointMotionObstaclesSelector::JointMotionObstaclesSelector(
@@ -99,18 +100,18 @@ void JointMotionObstaclesSelector::SelectObstacles(
     const auto& ego_state =
         session_->environmental_model().get_ego_state_manager();
     const double ego_v = ego_state->ego_v();
-    const double dis_threshold = ego_v * 10.0;
+    const double dis_threshold = ego_v * kConfluenceAreaHeadway;
     const auto& route_info_output = route_info->get_route_info_output();
     bool is_closing_split =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             SPLIT_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
     bool is_closing_merge =
         route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
             MERGE_SCENE &&
-        route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point <
-            dis_threshold;
+        route_info_output.mlc_decider_scene_type_info
+                .dis_to_link_topo_change_point < dis_threshold;
     if (is_closing_merge || is_closing_split) {
       is_confluence_area = true;
     }
@@ -157,7 +158,7 @@ void JointMotionObstaclesSelector::SelectObstacles(
     }
   }
 
-  std::unordered_map<int32_t, KeyObstacle> agent_obstacles_map;
+  std::unordered_map<int32_t, std::shared_ptr<KeyObstacle>> agent_obstacles_map;
   const double lon_front = kConsiderFrontLonDistance;
   const double lon_rear = kConsiderRearLonDistance;
   const double lat_left = kConsiderLeftLatDistance;
@@ -187,17 +188,23 @@ void JointMotionObstaclesSelector::SelectObstacles(
     int32_t agent_id = agent->agent_id();
     auto it = neighbor_agents_map.find(agent_id);
     if (it != neighbor_agents_map.end()) {
-      KeyObstacle obstacle = CreateKeyObstacle(agent, ego_lane_coord, IGNORE);
+      auto obstacle = std::shared_ptr<KeyObstacle>(
+          CreateKeyObstacle(agent, ego_lane_coord, ego_s, ego_l, IGNORE));
       CorrectTrajectoryInConfluenceArea(obstacle, it->second);
       agent_obstacles_map[agent_id] = obstacle;
     } else {
-      agent_obstacles_map[agent_id] =
-          CreateKeyObstacle(agent, ego_lane_coord, IGNORE);
+      agent_obstacles_map[agent_id] = std::shared_ptr<KeyObstacle>(
+          CreateKeyObstacle(agent, ego_lane_coord, ego_s, ego_l, IGNORE));
     }
   }
 
   std::vector<int32_t> front_agent_ids;
   std::vector<int32_t> side_agent_ids;
+  front_agent_ids.reserve(kMaxFrontObstacles + kMaxSideObstacles);
+  side_agent_ids.reserve(kMaxSideObstacles);
+
+  EgoTrajectoryFramet ego_frenet_data =
+      PrecomputeEgoTrajectoryFrenet(prior_trajectory, ego_lane_coord);
 
   for (const auto& agent : surrounding_agents_) {
     if (agent == nullptr) {
@@ -214,9 +221,9 @@ void JointMotionObstaclesSelector::SelectObstacles(
     ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l);
 
     bool is_in_front = false;
-    if (JudgeOverlapWithPriorTrajectory(it->second, agent_l,
-                                        planning_init_point, ego_lane_coord,
-                                        prior_trajectory, &is_in_front)) {
+    if (JudgeOverlapWithPriorTrajectory(
+            *it->second, agent_l, planning_init_point, ego_lane_coord,
+            prior_trajectory, ego_frenet_data, &is_in_front)) {
       if (is_in_front) {
         front_agent_ids.push_back(agent_id);
       } else {
@@ -235,8 +242,8 @@ void JointMotionObstaclesSelector::SelectObstacles(
     if (!already_in_list) {
       for (const auto& agent : agents) {
         if (agent != nullptr && agent->agent_id() == lead_one_id) {
-          key_obstacles_.emplace_back(
-              CreateKeyObstacle(agent, ego_lane_coord, IGNORE));
+          key_obstacles_.emplace_back(std::shared_ptr<KeyObstacle>(
+              CreateKeyObstacle(agent, ego_lane_coord, ego_s, ego_l, IGNORE)));
           break;
         }
       }
@@ -249,14 +256,14 @@ void JointMotionObstaclesSelector::SelectObstacles(
 
   std::sort(front_agent_ids.begin(), front_agent_ids.end(),
             [&agent_obstacles_map](int32_t a_id, int32_t b_id) {
-              return agent_obstacles_map[a_id].init_s <
-                     agent_obstacles_map[b_id].init_s;
+              return agent_obstacles_map[a_id]->init_s <
+                     agent_obstacles_map[b_id]->init_s;
             });
 
   std::sort(side_agent_ids.begin(), side_agent_ids.end(),
             [&agent_obstacles_map, ego_l](int32_t a_id, int32_t b_id) {
-              double a_l = agent_obstacles_map[a_id].init_l;
-              double b_l = agent_obstacles_map[b_id].init_l;
+              double a_l = agent_obstacles_map[a_id]->init_l;
+              double b_l = agent_obstacles_map[b_id]->init_l;
               return std::abs(a_l - ego_l) < std::abs(b_l - ego_l);
             });
 
@@ -267,7 +274,7 @@ void JointMotionObstaclesSelector::SelectObstacles(
     }
     bool already_exists = false;
     for (const auto& obs : key_obstacles_) {
-      if (obs.agent_id == agent_id) {
+      if (obs->agent_id == agent_id) {
         already_exists = true;
         break;
       }
@@ -285,7 +292,7 @@ void JointMotionObstaclesSelector::SelectObstacles(
     }
     bool already_exists = false;
     for (const auto& obs : key_obstacles_) {
-      if (obs.agent_id == agent_id) {
+      if (obs->agent_id == agent_id) {
         already_exists = true;
         break;
       }
@@ -302,8 +309,8 @@ void JointMotionObstaclesSelector::SelectObstacles(
 
   key_obstacles_.erase(
       std::remove_if(key_obstacles_.begin(), key_obstacles_.end(),
-                     [](const KeyObstacle& obs) {
-                       return obs.init_s == std::numeric_limits<double>::max();
+                     [](const std::shared_ptr<KeyObstacle>& obs) {
+                       return obs->init_s == std::numeric_limits<double>::max();
                      }),
       key_obstacles_.end());
 }
@@ -330,17 +337,60 @@ void JointMotionObstaclesSelector::CalculateAgentSLBoundary(
   }
 }
 
-bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
-    const KeyObstacle& key_obstacle, const double agent_l,
-    const PlanningInitPoint init_point,
-    const std::shared_ptr<planning_math::KDPath>& planned_path,
+JointMotionObstaclesSelector::EgoTrajectoryFramet
+JointMotionObstaclesSelector::PrecomputeEgoTrajectoryFrenet(
     const std::vector<JointPlannerTrajectoryPoint>& prior_trajectory,
-    bool* is_in_front) {
+    const std::shared_ptr<planning_math::KDPath>& planned_path) {
+  EgoTrajectoryFramet result;
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_length = vehicle_param.length;
   const double ego_width = vehicle_param.width;
   const double rear_axle_to_center = vehicle_param.rear_axle_to_center;
+
+  result.min_s_vec.reserve(prior_trajectory.size());
+  result.max_s_vec.reserve(prior_trajectory.size());
+  result.min_l_vec.reserve(prior_trajectory.size());
+  result.max_l_vec.reserve(prior_trajectory.size());
+  result.vel_vec.reserve(prior_trajectory.size());
+
+  for (size_t index = 0; index < prior_trajectory.size(); ++index) {
+    const auto& ego_point = prior_trajectory[index];
+    double ego_theta = ego_point.theta;
+    double ego_cos_theta = std::cos(ego_theta);
+    double ego_sin_theta = std::sin(ego_theta);
+    double center_x = ego_point.x + ego_cos_theta * rear_axle_to_center;
+    double center_y = ego_point.y + ego_sin_theta * rear_axle_to_center;
+
+    planning_math::Box2d ego_box(planning_math::Vec2d(center_x, center_y),
+                                 ego_theta, ego_length, ego_width);
+
+    double ego_min_s = std::numeric_limits<double>::max();
+    double ego_max_s = std::numeric_limits<double>::lowest();
+    double ego_min_l = std::numeric_limits<double>::max();
+    double ego_max_l = std::numeric_limits<double>::lowest();
+    CalculateAgentSLBoundary(planned_path, ego_box, &ego_min_s, &ego_max_s,
+                             &ego_min_l, &ego_max_l);
+
+    result.min_s_vec.push_back(ego_min_s);
+    result.max_s_vec.push_back(ego_max_s);
+    result.min_l_vec.push_back(ego_min_l);
+    result.max_l_vec.push_back(ego_max_l);
+    result.vel_vec.push_back(ego_point.vel);
+  }
+
+  return result;
+}
+
+bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
+    const KeyObstacle& key_obstacle, const double agent_l,
+    const PlanningInitPoint init_point,
+    const std::shared_ptr<planning_math::KDPath>& planned_path,
+    const std::vector<JointPlannerTrajectoryPoint>& prior_trajectory,
+    const EgoTrajectoryFramet& ego_frenet_data, bool* is_in_front) {
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_width = vehicle_param.width;
 
   if (key_obstacle.ref_x_vec.empty()) {
     return false;
@@ -353,6 +403,7 @@ bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
 
   constexpr double kLatConflictThreshold = 0.3;
   constexpr double kLargeVehicleLatConflictThreshold = 0.4;
+  constexpr double kBaseLongitudinalThreshold = 3.5;
   const double lateral_threshold = is_large_vehicle
                                        ? kLargeVehicleLatConflictThreshold
                                        : kLatConflictThreshold;
@@ -360,44 +411,20 @@ bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
   bool is_directly_in_front = false;
   const double ego_half_width = ego_width * 0.5;
 
-  constexpr double kTimeStep = 0.2;
+  const size_t traj_size = prior_trajectory.size();
+  const size_t obs_traj_size = key_obstacle.ref_x_vec.size();
 
-  for (size_t index = 0; index < prior_trajectory.size(); ++index) {
-    double relative_time = index * kTimeStep;
+  for (size_t index = 0; index < traj_size; ++index) {
+    double ego_min_s = ego_frenet_data.min_s_vec[index];
+    double ego_max_s = ego_frenet_data.max_s_vec[index];
+    double ego_min_l = ego_frenet_data.min_l_vec[index];
+    double ego_max_l = ego_frenet_data.max_l_vec[index];
+    double ego_vel = ego_frenet_data.vel_vec[index];
 
-    size_t ego_index = index;
-    if (ego_index >= prior_trajectory.size() - 1) {
-      ego_index = prior_trajectory.size() - 1;
-    }
-
-    const auto& ego_point = prior_trajectory[ego_index];
-    double ego_x = ego_point.x;
-    double ego_y = ego_point.y;
-    double ego_theta = ego_point.theta;
-    double ego_vel = ego_point.vel;
-
-    const double center_x = ego_x + std::cos(ego_theta) * rear_axle_to_center;
-    const double center_y = ego_y + std::sin(ego_theta) * rear_axle_to_center;
-
-    planning_math::Box2d ego_box(planning_math::Vec2d(center_x, center_y),
-                                 ego_theta, ego_length, ego_width);
-
-    double ego_min_s = std::numeric_limits<double>::max();
-    double ego_max_s = std::numeric_limits<double>::lowest();
-    double ego_min_l = std::numeric_limits<double>::max();
-    double ego_max_l = std::numeric_limits<double>::lowest();
-    CalculateAgentSLBoundary(planned_path, ego_box, &ego_min_s, &ego_max_s,
-                             &ego_min_l, &ego_max_l);
-
-    size_t obs_index = index;
-    if (obs_index >= key_obstacle.ref_x_vec.size()) {
-      obs_index = key_obstacle.ref_x_vec.size() - 1;
-    }
-
+    size_t obs_index = std::min(index, obs_traj_size - 1);
     double obs_x = key_obstacle.ref_x_vec[obs_index];
     double obs_y = key_obstacle.ref_y_vec[obs_index];
     double obs_theta = key_obstacle.ref_theta_vec[obs_index];
-    double obs_vel = key_obstacle.ref_vel_vec[obs_index];
 
     planning_math::Box2d obs_box(planning_math::Vec2d(obs_x, obs_y), obs_theta,
                                  key_obstacle.length, key_obstacle.width);
@@ -414,8 +441,6 @@ bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
       lateral_distance = obs_min_l - ego_max_l;
     } else if (obs_max_l <= ego_min_l) {
       lateral_distance = ego_min_l - obs_max_l;
-    } else {
-      lateral_distance = 0.0;
     }
 
     double longitudinal_distance = obs_min_s - ego_max_s;
@@ -436,7 +461,6 @@ bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
       }
     }
 
-    constexpr double kBaseLongitudinalThreshold = 3.5;
     double dynamic_longitudinal_threshold =
         kBaseLongitudinalThreshold + ego_vel * 0.3;
 
@@ -451,31 +475,31 @@ bool JointMotionObstaclesSelector::JudgeOverlapWithPriorTrajectory(
   return false;
 }
 
-KeyObstacle JointMotionObstaclesSelector::CreateKeyObstacle(
+KeyObstacle* JointMotionObstaclesSelector::CreateKeyObstacle(
     const std::shared_ptr<agent::Agent>& agent,
-    const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
-    LongitudinalLabel longitudinal_label) {
-  KeyObstacle key_obstacle;
+    const std::shared_ptr<planning_math::KDPath>& ego_lane_coord, double ego_s,
+    double ego_l, LongitudinalLabel longitudinal_label) {
+  auto key_obstacle = std::make_unique<KeyObstacle>();
 
-  key_obstacle.agent_id = agent->agent_id();
-  key_obstacle.longitudinal_label = longitudinal_label;
-  key_obstacle.length = agent->length();
-  key_obstacle.width = agent->width();
-  key_obstacle.type = agent->type();
+  key_obstacle->agent_id = agent->agent_id();
+  key_obstacle->longitudinal_label = longitudinal_label;
+  key_obstacle->length = agent->length();
+  key_obstacle->width = agent->width();
+  key_obstacle->type = agent->type();
 
-  key_obstacle.init_x = agent->x();
-  key_obstacle.init_y = agent->y();
-  key_obstacle.init_theta = agent->theta();
-  key_obstacle.init_vel = agent->speed();
-  key_obstacle.init_acc = agent->accel_fusion();
+  key_obstacle->init_x = agent->x();
+  key_obstacle->init_y = agent->y();
+  key_obstacle->init_theta = agent->theta();
+  key_obstacle->init_vel = agent->speed();
+  key_obstacle->init_acc = agent->accel_fusion();
 
-  key_obstacle.init_s = 0.0;
-  key_obstacle.init_l = 0.0;
+  key_obstacle->init_s = 0.0;
+  key_obstacle->init_l = 0.0;
   if (ego_lane_coord == nullptr ||
-      !ego_lane_coord->XYToSL(key_obstacle.init_x, key_obstacle.init_y,
-                              &key_obstacle.init_s, &key_obstacle.init_l)) {
-    key_obstacle.init_s = std::numeric_limits<double>::max();
-    key_obstacle.init_l = std::numeric_limits<double>::max();
+      !ego_lane_coord->XYToSL(key_obstacle->init_x, key_obstacle->init_y,
+                              &key_obstacle->init_s, &key_obstacle->init_l)) {
+    key_obstacle->init_s = std::numeric_limits<double>::max();
+    key_obstacle->init_l = std::numeric_limits<double>::max();
   }
 
   const auto& primary_trajectories = agent->trajectories_used_by_st_graph();
@@ -486,43 +510,34 @@ KeyObstacle JointMotionObstaclesSelector::CreateKeyObstacle(
                                  : primary_trajectories;
 
   if (trajectories.empty()) {
-    key_obstacle.init_delta = 0.0;
-    return key_obstacle;
+    key_obstacle->init_delta = 0.0;
+    return key_obstacle.release();
   }
   const auto& trajectory = trajectories.front();
-
-  const auto& ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
-  const auto& planning_init_point = ego_state_manager->planning_init_point();
-
-  double ego_s = 0.0;
-  double ego_l = 0.0;
-  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
-                              &ego_s, &ego_l)) {
-    return key_obstacle;
-  }
 
   double init_s = 0.0;
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  init_s = key_obstacle.init_s - ego_s - key_obstacle.length * 0.5 -
+  init_s = key_obstacle->init_s - ego_s - key_obstacle->length * 0.5 -
            vehicle_param.front_edge_to_rear_axle;
 
-  key_obstacle.init_s = init_s;
+  key_obstacle->init_s = init_s;
   const double kPlanningTimeStep = 0.2;
 
   for (size_t i = 0; i < trajectory.size(); ++i) {
     const double relative_time = i * kPlanningTimeStep;
     const auto point = trajectory.Evaluate(relative_time);
-    key_obstacle.ref_x_vec.emplace_back(point.x());
-    key_obstacle.ref_y_vec.emplace_back(point.y());
-    key_obstacle.ref_vel_vec.emplace_back(point.vel());
-    key_obstacle.ref_acc_vec.emplace_back(point.acc());
-    key_obstacle.ref_s_vec.emplace_back(key_obstacle.init_s + point.s());
+    key_obstacle->ref_x_vec.emplace_back(point.x());
+    key_obstacle->ref_y_vec.emplace_back(point.y());
+    key_obstacle->ref_vel_vec.emplace_back(point.vel());
+    key_obstacle->ref_acc_vec.emplace_back(point.acc());
+    key_obstacle->ref_s_vec.emplace_back(key_obstacle->init_s + point.s());
   }
 
-  const double obs_wheel_base = key_obstacle.length * 0.75;
+  const double obs_wheel_base = key_obstacle->length * 0.75;
   const double max_steer_angle = 360 / 57.3 / 13.0;
+  const double cos_max_steer = std::cos(max_steer_angle);
+  const double sin_max_steer = std::sin(max_steer_angle);
 
   double theta_accumulated = 0.0;
   for (size_t i = 0; i < trajectory.size(); ++i) {
@@ -536,20 +551,21 @@ KeyObstacle JointMotionObstaclesSelector::CreateKeyObstacle(
       if (std::hypot(dx, dy) > 1e-6) {
         theta_raw = std::atan2(dy, dx);
       } else {
-        theta_raw = key_obstacle.init_theta;
+        theta_raw = key_obstacle->init_theta;
       }
       theta_accumulated = theta_raw;
     } else {
       const auto prev = trajectory.Evaluate((i - 1) * kPlanningTimeStep);
       double dx = point.x() - prev.x();
       double dy = point.y() - prev.y();
-      if (std::hypot(dx, dy) > 1e-6) {
+      double dist = std::hypot(dx, dy);
+      if (dist > 1e-6) {
         theta_raw = std::atan2(dy, dx);
-        double theta_prev = key_obstacle.ref_theta_vec.back();
+        double theta_prev = key_obstacle->ref_theta_vec.back();
         double dtheta = planning_math::NormalizeAngle(theta_raw - theta_prev);
         theta_accumulated = theta_prev + dtheta;
       } else {
-        theta_accumulated = key_obstacle.ref_theta_vec.back();
+        theta_accumulated = key_obstacle->ref_theta_vec.back();
       }
     }
 
@@ -563,39 +579,40 @@ KeyObstacle JointMotionObstaclesSelector::CreateKeyObstacle(
       double dy1 = point.y() - prev.y();
       double dx2 = next.x() - point.x();
       double dy2 = next.y() - point.y();
-      double ds1 = std::hypot(dx1, dy1);
-      double ds2 = std::hypot(dx2, dy2);
-      if (ds1 > 1e-6 && ds2 > 1e-6) {
+      double ds1_sq = dx1 * dx1 + dy1 * dy1;
+      double ds2_sq = dx2 * dx2 + dy2 * dy2;
+      if (ds1_sq > 1e-12 && ds2_sq > 1e-12) {
         double theta1 = std::atan2(dy1, dx1);
         double theta2 = std::atan2(dy2, dx2);
         double dtheta = planning_math::NormalizeAngle(theta2 - theta1);
-        curvature = dtheta / ((ds1 + ds2) * 0.5);
+        double ds_avg = (std::sqrt(ds1_sq) + std::sqrt(ds2_sq)) * 0.5;
+        curvature = dtheta / ds_avg;
       }
     }
 
     double delta = std::atan(obs_wheel_base * curvature);
     delta = std::clamp(delta, -max_steer_angle, max_steer_angle);
 
-    key_obstacle.ref_theta_vec.emplace_back(theta);
-    key_obstacle.ref_delta_vec.emplace_back(delta);
+    key_obstacle->ref_theta_vec.emplace_back(theta);
+    key_obstacle->ref_delta_vec.emplace_back(delta);
   }
 
-  if (!key_obstacle.ref_delta_vec.empty()) {
-    key_obstacle.init_delta = key_obstacle.ref_delta_vec[0];
+  if (!key_obstacle->ref_delta_vec.empty()) {
+    key_obstacle->init_delta = key_obstacle->ref_delta_vec[0];
   } else {
-    key_obstacle.init_delta = 0.0;
+    key_obstacle->init_delta = 0.0;
   }
 
-  if (!key_obstacle.ref_theta_vec.empty()) {
-    key_obstacle.init_theta = key_obstacle.ref_theta_vec[0];
+  if (!key_obstacle->ref_theta_vec.empty()) {
+    key_obstacle->init_theta = key_obstacle->ref_theta_vec[0];
   }
 
-  return key_obstacle;
+  return key_obstacle.release();
 }
 
 void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
-    KeyObstacle& key_obstacle, bool is_left_side) {
-  if (key_obstacle.ref_x_vec.empty()) {
+    std::shared_ptr<KeyObstacle>& key_obstacle, bool is_left_side) {
+  if (key_obstacle->ref_x_vec.empty()) {
     return;
   }
 
@@ -636,12 +653,12 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
   const size_t target_time_index =
       static_cast<size_t>(kTargetTime / kPlanningTimeStep);
 
-  if (target_time_index >= key_obstacle.ref_x_vec.size()) {
+  if (target_time_index >= key_obstacle->ref_x_vec.size()) {
     return;
   }
 
-  const double check_x = key_obstacle.ref_x_vec[target_time_index];
-  const double check_y = key_obstacle.ref_y_vec[target_time_index];
+  const double check_x = key_obstacle->ref_x_vec[target_time_index];
+  const double check_y = key_obstacle->ref_y_vec[target_time_index];
 
   double check_s_current = 0.0, check_l_current = 0.0;
 
@@ -672,9 +689,9 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
     return;
   }
 
-  const double obs_wheelbase = key_obstacle.length * 0.75;
+  const double obs_wheelbase = key_obstacle->length * 0.75;
 
-  const size_t traj_size = key_obstacle.ref_x_vec.size();
+  const size_t traj_size = key_obstacle->ref_x_vec.size();
 
   if (traj_size < 2) {
     return;
@@ -687,8 +704,8 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
   }
 
   planning::BasicPurePursuitModel::ModelState pp_state(
-      key_obstacle.init_x, key_obstacle.init_y, key_obstacle.init_theta,
-      key_obstacle.init_vel);
+      key_obstacle->init_x, key_obstacle->init_y, key_obstacle->init_theta,
+      key_obstacle->init_vel);
 
   for (size_t i = 1; i < traj_size; ++i) {
     double current_vel = pp_state.vel;
@@ -719,26 +736,27 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
     vehicle_simulate.Update(vehicle_control, vehicle_param);
     const auto new_state = vehicle_simulate.GetState();
 
-    key_obstacle.ref_x_vec[i] = new_state.x_;
-    key_obstacle.ref_y_vec[i] = new_state.y_;
+    key_obstacle->ref_x_vec[i] = new_state.x_;
+    key_obstacle->ref_y_vec[i] = new_state.y_;
 
     double theta_value = new_state.phi_;
     if (i > 0) {
-      double last_theta = key_obstacle.ref_theta_vec[i - 1];
+      double last_theta = key_obstacle->ref_theta_vec[i - 1];
       double dtheta = planning_math::NormalizeAngle(theta_value - last_theta);
       theta_value = last_theta + dtheta;
     }
-    key_obstacle.ref_theta_vec[i] = theta_value;
-    key_obstacle.ref_delta_vec[i] = desired_delta;
+    key_obstacle->ref_theta_vec[i] = theta_value;
+    key_obstacle->ref_delta_vec[i] = desired_delta;
 
     pp_state.x = new_state.x_;
     pp_state.y = new_state.y_;
     pp_state.theta = theta_value;
-    pp_state.vel = key_obstacle.ref_vel_vec[i];
+    pp_state.vel = key_obstacle->ref_vel_vec[i];
   }
 }
 
-std::vector<KeyObstacle> JointMotionObstaclesSelector::GetKeyObstacles() const {
+std::vector<std::shared_ptr<KeyObstacle>>
+JointMotionObstaclesSelector::GetKeyObstacles() const {
   return key_obstacles_;
 }
 

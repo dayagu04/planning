@@ -155,7 +155,7 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool IsNeedClipping(const HybridAStarResult& result, const size_t i);
   iflyauto::APAHMIData PubDirectionForScenarioTry(
-      const AstarRequest& cur_request);
+      const AstarRequest& cur_request, iflyauto::APAHMIData& apa_hmi_data);
 
   void SetRequestForScenarioTry(AstarRequest& cur_request,
                                 const EgoInfoUnderSlot& ego_info);

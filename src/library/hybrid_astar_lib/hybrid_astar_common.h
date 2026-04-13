@@ -360,6 +360,8 @@ struct HybridAStarResult {
 
   int search_node_num = 0;
 
+  int success_target_index = -1;
+
   void Clear() {
     x.clear();
     y.clear();
@@ -391,6 +393,7 @@ struct HybridAStarResult {
 
     cur_gear = AstarPathGear::NONE;
     cur_steer = AstarPathSteer::NONE;
+    success_target_index = -1;
 
     return;
   }

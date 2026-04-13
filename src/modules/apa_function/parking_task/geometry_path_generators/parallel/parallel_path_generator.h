@@ -271,8 +271,18 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const PlannerParams &GetPlannerParams() const { return calc_params_; }
 
+  const std::vector<std::vector<pnc::geometry_lib::PathSegment>>&
+  GetPathInSlotToAstar() const {
+    return path_in_slot_to_astar_;
+  }
+
   void EnablePAPark() {
     enable_pa_park_ = true;
+    return;
+  }
+
+  void DisablePAPark() {
+    enable_pa_park_ = false;
     return;
   }
 
@@ -327,6 +337,14 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const double buffer = 0.2) const;
 
   const bool InsertLineSegToEgo2Path(const pnc::geometry_lib::PathPoint &ego_pose);
+
+  const bool CheckGearChangeProjection(
+      const std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
+      size_t& third_gear_change_idx);
+
+  const bool OptZigZagPathByDubins(
+      std::vector<pnc::geometry_lib::PathPoint>& complete_path_point_vec,
+      std::vector<pnc::geometry_lib::PathPoint>& current_path_point_vec);
 
   const bool CheckSecondGearChangeArc(
       const std::vector<pnc::geometry_lib::PathPoint>& path_point_vec,
@@ -715,7 +733,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   PaPlanMethod last_pa_plan_method_;
   bool had_park_out = false;
   bool better_out_path_again_lastframe_ =false;
-
+  std::vector<std::vector<pnc::geometry_lib::PathSegment>>
+      path_in_slot_to_astar_;
 };
 
 }  // namespace apa_planner

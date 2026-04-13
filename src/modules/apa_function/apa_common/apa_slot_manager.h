@@ -86,6 +86,7 @@ struct EgoInfoUnderSlot {
   geometry_lib::PathPoint origin_target_pose;
   geometry_lib::PathPoint target_pose;
   geometry_lib::PathPoint terminal_err;
+  double terminal_y_front_err = 0.0;
 
   // base on global
   geometry_lib::PathPoint replan_success_origin_target_pose;
@@ -146,6 +147,7 @@ struct EgoInfoUnderSlot {
     cur_pose.Reset();
     target_pose.Reset();
     terminal_err.Reset();
+    terminal_y_front_err = 0.0;
 
     origin_target_pose.Reset();
 
@@ -191,6 +193,16 @@ struct EgoInfoUnderSlot {
 
     relative_direction_between_ego_and_slot = 1.0;
   }
+
+  void CalcOriginPoseAndTf() {
+    if (slot.slot_type_ == SlotType::PERPENDICULAR ||
+        slot.slot_type_ == SlotType::SLANT) {
+      origin_pose_global = slot.origin_pose_global_;
+      origin_pose_local = slot.origin_pose_local_;
+      g2l_tf = slot.g2l_tf_;
+      l2g_tf = slot.l2g_tf_;
+    }
+  }
 };
 
 enum class SlotReleaseVoterType : uint8_t {
@@ -230,6 +242,8 @@ class ApaSlotManager final {
     parallel_slot_not_release_count_map_.clear();
     pre_plan_fail_slot_id_uset_.clear();
   }
+
+  void SingleFrameClear();
 
   void GenerateReleaseSlotIdVec();
 
@@ -296,6 +310,13 @@ class ApaSlotManager final {
                                     const ApaSlot& slot) const;
   const bool LateralConditions(double& dot_product, const ApaSlot& slot) const;
   bool IsSideParkingPerpendicularSlot(const ApaSlot& slot);
+
+  void UpdatePrePlanFailSlotIds(ApaRunningMode running_mode,
+                                ApaSAPAStatus sapa_status,
+                                SlotReleaseState last_geometry_release,
+                                SlotReleaseState last_astar_release);
+
+  void SpecialTreatmentForParallerSlot(const LocalView* local_view);
 
  private:
   std::map<double, size_t> dist_id_map_;

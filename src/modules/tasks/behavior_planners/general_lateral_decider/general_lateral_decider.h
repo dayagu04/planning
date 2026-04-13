@@ -47,7 +47,6 @@ class GeneralLateralDecider : public Task {
 
   // 2. construct the lane and boundary bound
   void GenerateRoadAndLaneBoundary();
-  void UpdateDistanceToRoadBorder();
   void GenerateRoadHardSoftBoundary();
   void GenerateLaneSoftBoundary();
 
@@ -159,8 +158,8 @@ class GeneralLateralDecider : public Task {
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void SampleRoadDistanceInfo(const double s_target,
-                              ReferencePathPoint& sample_path_point);
+  void ConvertRoadBoundariesToFrenet(
+      std::vector<std::pair<LineSegment2d, bool>>& road_segments_frenet);
 
   void GenerateEnuReferenceTraj(
       GeneralLateralDeciderOutput &general_lateral_decider_output);
@@ -320,6 +319,7 @@ class GeneralLateralDecider : public Task {
   bool is_use_recurrence_ = false;
   ReferencePathCurveInfo ref_curve_info_;
   double last_compensation_buffer_ = 0.0;
+  double last_uncertain_decrease_slope_ = 0.00;
   std::unordered_map<uint32_t, double> current_desire_final_nudge_l_map_;
   std::unordered_map<uint32_t, double> last_desire_final_nudge_l_map_;
   double trust_prediction_t_threshold_ = 2.5;

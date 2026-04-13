@@ -359,6 +359,7 @@ bool IsVRU(const AvoidObstacleInfo& avoid_obstacle) {
 
 bool IsCone(const AvoidObstacleInfo& avoid_obstacle) {
   return (avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
+          avoid_obstacle.type == iflyauto::OBJECT_TYPE_CYLINDER_BARRIER ||
           avoid_obstacle.type == iflyauto::OBJECT_TYPE_CTASH_BARREL);
 }
 

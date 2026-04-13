@@ -110,6 +110,14 @@ class ObstacleManager {
     return occupancy_obstacles_;
   }
 
+  Obstacle *add_uss_obstacle(const Obstacle &obstacle) {
+    return uss_obstacles_.Add(obstacle.id(), obstacle);
+  }
+
+  const IndexedList<int, Obstacle> &get_uss_obstacles() const {
+    return uss_obstacles_;
+  }
+
   double GetUssRemainDistance() {
     double remain_dist_uss = 5.01;
     const double kSafeUssRemainDist = 0.35;
@@ -145,6 +153,7 @@ class ObstacleManager {
   void UpdateSemanticSignObstacle();
   /******************* for hpp end   *********************/
 
+  void UpdateUssObstacle();
   bool IsOnBend(const std::shared_ptr<ReferencePath> &reference_path,
                 double ego_s);
 
@@ -199,6 +208,8 @@ class ObstacleManager {
   IndexedList<int, Obstacle> turnstile_obstacles_;        // 闸机障碍物：需要走闸机通行逻辑
   IndexedList<int, Obstacle> semantic_sign_obstacles_;    // 语义标识障碍物：不需要停障或绕障，只是表明该处的语义环境，具体处理逻辑右下游决定
   /*********************** for hpp end   *************************/
+  IndexedList<int, Obstacle> uss_obstacles_;
+
   EgoPlanningObstacleManagerConfig config_;
   // std::unordered_map<int, std::vector<int>> lanes_obstacles_;
   UssObstacle uss_obstacle_;

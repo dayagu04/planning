@@ -1894,7 +1894,7 @@ void BaseWeight::SetWeightProtectionForLargePosDiff(
     // planning_input.set_q_ref_theta(q_ref_theta * q_ref_theta_ratio);
     end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
     planning_input.set_q_acc(0.0);
-    planning_input.set_jerk_bound(config_.jerk_bound_inactivated_limit);
+    // planning_input.set_jerk_bound(config_.jerk_bound_inactivated_limit);
     double q_soft_bound = planning_input.q_soft_corridor();
     planning_input.set_q_soft_corridor(q_soft_bound * q_soft_bound_ratio);
     planning_input.set_q_continuity(q_continuity);
@@ -1916,6 +1916,10 @@ void BaseWeight::SetMotionPlanConcernedEndIndex(
     std::vector<double> xp_road_radius{50.0, 150.0, 400.0, 1000.0, 2000.0};
     valid_perception_range = planning::interp(
         target_road_radius_, xp_road_radius, config_.valid_perception_range);
+    std::vector<double> xp_v{15.0, 25.0};
+    std::vector<double> fp_ratio{1.0, 1.5};
+    double vel_ratio = planning::interp(ref_vel_, xp_v, fp_ratio);
+    valid_perception_range *= vel_ratio;
   }
   for (size_t i = weight_.proximal_index + 1; i < weight_.remotely_index; ++i) {
     planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),

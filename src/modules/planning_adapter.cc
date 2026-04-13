@@ -18,6 +18,7 @@
 #include "planning_debug_info.pb.h"
 #include "time_benchmark.h"
 #include "version.h"
+#include "context/function_switch_config_context.h"
 
 namespace planning {
 
@@ -36,6 +37,21 @@ bool PlanningAdapter::Init() {
       "/res/conf/engine_configs/planning_engine_config_ap.json";
   common::ConfigurationContext::Instance()->load_engine_config_from_json(
       params_["res_path"], engine_config_path);
+  std::string vehicle_json_file_path = "car_res_path";
+  if (params_.find(vehicle_json_file_path) != params_.end()) {
+    const std::string vehicle_json_path =
+        params_[vehicle_json_file_path] + "/vehicle_cfg/vehicle.json";
+    FunctionSwitchConfigContext::Instance()->load_function_switch_config(
+        vehicle_json_path);
+    ILOG_INFO << "load function switch config! TLC: "
+               << FunctionSwitchConfigContext::Instance()
+                      ->get_function_switch_config()
+                      .disable_tlf_function
+               << ", LB: "
+               << FunctionSwitchConfigContext::Instance()
+                      ->get_function_switch_config()
+                      .disable_lane_borrow;
+  }
 #if defined(X86) && !defined(X86_SIMULATION)
   engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
   common::ConfigurationContext::Instance()->load_engine_config_from_json(

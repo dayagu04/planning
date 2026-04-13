@@ -108,8 +108,8 @@ int ProcessInput(py::bytes& sample_poly_input_bytes) {
   pSamplePolySpeedAdjustDecider->set_v_suggestted(
       sample_poly_input.sample_print_table_info().v_suggestted());
 
-  pSamplePolySpeedAdjustDecider->mutable_st_sample_space_base().Init(
-      dynamic_agent_infos, sample_poly_input.sample_print_table_info().ego_s());
+//   pSamplePolySpeedAdjustDecider->mutable_st_sample_space_base().Init(
+//       dynamic_agent_infos, sample_poly_input.sample_print_table_info().ego_s());
 
   pSamplePolySpeedAdjustDecider->set_delta_t(
       sample_poly_input.sample_param().sample_delta_t());

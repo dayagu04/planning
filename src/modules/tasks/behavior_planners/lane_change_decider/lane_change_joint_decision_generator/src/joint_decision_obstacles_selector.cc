@@ -45,6 +45,19 @@ constexpr double kStaticAgentLaterBuffer = 0.8;
 constexpr double kRearAgentLonBuffer = 2.0;
 // ego speed buffer
 constexpr double kEgoSpeedBuffer = 2.0;
+constexpr double kAccelerationThreshold = 0.30;  // m/s^2
+constexpr double kRearConfidenceStep = 0.13;
+constexpr double kRearConfidenceMin = 0.0;
+constexpr double kRearConfidenceMax = 1.0;
+constexpr double kRearConfidenceEnterIgnore = 0.35;
+constexpr double kRearConfidenceExitIgnore = 0.45;
+constexpr double kRearStrongAccelMultiplier = 2.0;
+constexpr double kRearNearMinDistance = 5.0;      // m
+constexpr double kRearNearTimeHeadway = 0.5;      // s
+constexpr double kRearFarTimeHeadway = 2.2;       // s
+constexpr double kRearVelDiffThreshold = 1.0;     // m/s
+constexpr double kRearSlowRecoverStep = 0.01;
+constexpr size_t kRearTrajectoryCheckIndex = 15;
 }  // namespace
 JointDecisionObstaclesSelector::JointDecisionObstaclesSelector(
     framework::Session* session)
@@ -87,7 +100,7 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
                                  agent::AgentType::TRUCK == agent->type() ||
                                  agent::AgentType::TRAILER == agent->type() ||
                                  agent->length() > 8.0);
-          UpdateRearAgentConfidence(agent);  // 检查意图，更新置信度
+          UpdateRearAgentConfidence(agent, ego_reference_path);  // 检查意图，更新置信度
           bool should_ignore_rear =
               ShouldIgnoreRearAgent(agent, ego_reference_path);
           lane_change_joint_decision::LongitudinalLabel label =
@@ -96,9 +109,10 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
                   : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
           key_obstacles_.emplace_back(
               CreateKeyObstacle(agent, ego_lane_coord, label));
-          // 输出 label 到 JSON 用于可视化
+          // 输出后车标签和置信度到 JSON 用于可视化
           JSON_DEBUG_VALUE("rear_agent_longitudinal_label",
-                           static_cast<int>(label))
+                           static_cast<int>(label));
+          JSON_DEBUG_VALUE("rear_agent_confidence", rear_agent_confidence_);
           rear_agent_id_ = lc_info.gap_rear_agent_id;  // 更新后车历史记录
           break;
         }
@@ -106,6 +120,8 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
     }
   } else {
     rear_agent_confidence_ = 1.0;  // 无后车，置信度恢复
+    rear_should_ignore_ = false;
+    rear_agent_id_ = -1;
   }
   if (lc_info.gap_front_agent_id != -1) {
     const auto* front_agent =
@@ -772,45 +788,49 @@ JointDecisionObstaclesSelector::GetKeyObstacles() const {
   return key_obstacles_;
 }
 
+std::vector<int32_t> JointDecisionObstaclesSelector::GetKeyObstacleLabels()
+    const {
+  std::vector<int32_t> obstacle_labels;
+  obstacle_labels.reserve(key_obstacles_.size());
+  for (const auto& obstacle : key_obstacles_) {
+    obstacle_labels.push_back(static_cast<int32_t>(obstacle.longitudinal_label));
+  }
+  return obstacle_labels;
+}
+
 bool JointDecisionObstaclesSelector::
     ShouldIgnoreRearAgent(  // 忽略是意图修饰忽略，更保守的考虑
         const std::shared_ptr<agent::Agent>& agent,
         const std::shared_ptr<ReferencePath>& ego_reference_path) {
-  // 判断是否在加速
-  constexpr double kAccelerationThreshold = 0.30;  // m/s^2
   if (agent == nullptr || ego_reference_path == nullptr) {
     return false;
   }
-  bool is_accelerating =
-      agent->accel_fusion() > kAccelerationThreshold * 3.0;  //明显加速 不论阈值
-  if (is_accelerating) {
-    return true;
-  }
-  double s = 0;
-  double l = 0;
-  const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
-  if (ego_lane_coord->XYToSL(agent->x(), agent->y(), &s, &l)) {
-    constexpr double kCloseRearDistanceThreshold = 7.0;  // m
-    double rear_distance =
-        ego_reference_path->get_ego_frenet_boundary().s_start - s -
-        agent->length() * 0.5;
-    if (rear_agent_confidence_ < 0.2) {
-      return true;
+  // 状态只由当前置信度和滞回阈值决定，避免和置信度更新逻辑耦合。
+  if (rear_should_ignore_) {
+    if (rear_agent_confidence_ > kRearConfidenceExitIgnore) {
+      rear_should_ignore_ = false;
     }
-    if (rear_distance < kCloseRearDistanceThreshold &&
-        agent->accel_fusion() > kAccelerationThreshold) {
-      return true;  // 近距离轻微加速
+  } else {
+    if (rear_agent_confidence_ < kRearConfidenceEnterIgnore) {
+      rear_should_ignore_ = true;
     }
   }
-  return false;
+  return rear_should_ignore_;
 }
 
 void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(
-    const std::shared_ptr<agent::Agent>& agent) {
-  if (rear_agent_id_ != agent->agent_id()) {  // 后车更换
-    rear_agent_confidence_ = 1.0;
+    const std::shared_ptr<agent::Agent>& agent,
+    const std::shared_ptr<ReferencePath>& ego_reference_path) {
+  if (agent == nullptr || ego_reference_path == nullptr) {
     return;
-  }// 如果是同一个障碍物则保持以前的信任度
+  }
+  if (rear_agent_id_ != agent->agent_id()) {  // 后车更换
+    rear_agent_id_ = agent->agent_id();
+    rear_agent_confidence_ = kRearConfidenceMax;
+    rear_should_ignore_ = false;
+    return;
+  } // 如果是同一个障碍物则保持以前的信任度
+  //有限根据优化结果和预测结果的匹配更新
   const auto& last_trajectory = agent->trajectory_optimized();
   const auto& current_trajectories = agent->trajectories_used_by_st_graph();
   if (current_trajectories.empty() || last_trajectory.empty()) {
@@ -820,21 +840,78 @@ void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(
   if (current_trajectory.empty()) {
     return;
   }
-  size_t end_index = 15;
-  if(current_trajectory.size() < end_index + 1 || last_trajectory.size() < end_index + 1){
+  if (current_trajectory.size() < kRearTrajectoryCheckIndex + 1 ||
+      last_trajectory.size() < kRearTrajectoryCheckIndex + 1) {
     return;
   }
-  for (size_t i = end_index; i > 0; --i) {  // checke 3s
+  for (size_t i = kRearTrajectoryCheckIndex; i > 0; --i) {  // check 3s
     const auto& current_point = current_trajectory[i];
     const auto& last_point = last_trajectory[i];
-    double vel_diff = current_point.vel() - last_point.vel();
-    if (vel_diff > 1.0) {  //实际运动趋势快, 越快越容易失信
-      rear_agent_confidence_ = std::max(rear_agent_confidence_ - 0.2 * vel_diff, 0.0);
-      break;
+    const double vel_diff = current_point.vel() - last_point.vel();
+    if (vel_diff > kRearVelDiffThreshold) {  // 实际运动趋势快, 越快越容易失信
+      rear_agent_confidence_ = std::clamp(
+          rear_agent_confidence_ - kRearConfidenceStep * vel_diff,
+          kRearConfidenceMin, kRearConfidenceMax);
+      return;
+    }
+  }
+  //如果匹配程度较好[后车不让行，已经是ego overtake][后车让行]根据当前状态更新置信度
+  double s = 0.0;
+  double l = 0.0;
+  const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
+  if (ego_lane_coord != nullptr &&
+      ego_lane_coord->XYToSL(agent->x(), agent->y(), &s, &l)) {
+      // 当前速度与自车差不多，有明显减速度，置信度增加。
+    const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+    const auto& planning_init_point = ego_state_manager->planning_init_point();
+    const double ego_speed = planning_init_point.v;
+    const double opening_speed = ego_speed - agent->speed();
+    const double rear_distance =
+        ego_reference_path->get_ego_frenet_boundary().s_start - s -
+        agent->length() * 0.5;
+    const double rear_speed = std::max(agent->speed(), 0.1);
+    const double close_rear_threshold =
+        std::max(kRearNearMinDistance, std::max(0.0, agent->speed()) *
+                                           kRearNearTimeHeadway);
+    if (rear_distance > kRearFarTimeHeadway * rear_speed) {  // 距离较远
+      rear_agent_confidence_ =
+      std::clamp(rear_agent_confidence_ + kRearConfidenceStep,
+                 kRearConfidenceMin, kRearConfidenceMax);
+      return;
+    }// 明显加速
+    if (agent->accel_fusion() >
+        kAccelerationThreshold * kRearStrongAccelMultiplier) {
+      rear_agent_confidence_ = kRearConfidenceMin;
+      return;
+    }// 近距离轻微加速 或者距离过近 纵向干涉 
+    if (rear_distance < 1.0 || (rear_distance < close_rear_threshold &&
+        agent->accel_fusion() > kAccelerationThreshold)) {
+      rear_agent_confidence_ = kRearConfidenceMin;
+      return; 
+    }
+    // 交互距离内 一般跟随
+    if (opening_speed > 0.9) {  // 后车明显低速
+      rear_agent_confidence_ = std::clamp(
+          rear_agent_confidence_ + kRearConfidenceStep * opening_speed,
+          kRearConfidenceMin, kRearConfidenceMax);
+    } else if (opening_speed > -0.9) {  // 后车与自车速度接近
+      if (agent->accel_fusion() < -kAccelerationThreshold) {
+        rear_agent_confidence_ = std::clamp(
+            rear_agent_confidence_ + kRearConfidenceStep, kRearConfidenceMin,
+            kRearConfidenceMax);
+      } else {  // 无明显减速同速，缓慢累加
+        rear_agent_confidence_ =
+            std::clamp(rear_agent_confidence_ + kRearSlowRecoverStep,
+                       kRearConfidenceMin, kRearConfidenceMax);
+      }
+    } else {  // 后车明显高速
+      rear_agent_confidence_ = std::clamp(
+          rear_agent_confidence_ - kRearConfidenceStep, kRearConfidenceMin,
+          kRearConfidenceMax);
     }
   }
   return;
 }
-
 }  // namespace lane_change_joint_decision
 }  // namespace planning

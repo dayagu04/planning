@@ -2071,10 +2071,17 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         kCancelOverTakeLnChgTargetLaneVehDftSpd;
     double ego_right_front_leading_vehivle_long_distance =
         kDefaultFrontObstacleDistance;
-    const auto& ego_left_front_vehicle_array =
+    auto ego_left_front_vehicle_array =
         lane_tracks_manager_->front_tracks_l();
-    const auto& ego_right_front_vehicle_array =
+    auto ego_right_front_vehicle_array =
         lane_tracks_manager_->front_tracks_r();
+    if (lc_state != kLaneChangePropose && lc_state != kLaneKeeping && lc_state != kLaneChangeHold) {
+      if (request_type_ == LEFT_CHANGE) {
+          ego_left_front_vehicle_array = lane_tracks_manager_->front_tracks_c();
+      } else if (request_type_ == RIGHT_CHANGE) {
+          ego_right_front_vehicle_array = lane_tracks_manager_->front_tracks_c();
+      }
+    }
     if (ego_left_front_vehicle_array.size() >= 1) {
       int ego_left_front_vehicle_id = ego_left_front_vehicle_array.at(0)->id();
       auto left_front_leading_vehicle_iter =

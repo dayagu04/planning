@@ -909,6 +909,9 @@ const bool GetIntersectionFromTwoLines(Eigen::Vector2d &intersection,
 const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
                                const Eigen::Vector2d &pC);
 
+const bool CheckPointLiesOnArcV2(const Arc& arc, const Eigen::Vector2d& pC,
+                                 double eps = 1e-3);
+
 const bool CalTangentLineFromHeadingAndArc(
     const double line_heading, const pnc::geometry_lib::Arc &arc,
     std::vector<Eigen::Vector2d> &tangent_points);

@@ -61,8 +61,12 @@ class JointDecisionObstaclesSelector {
       bool* is_in_front = nullptr);
 
   std::vector<LaneChangeKeyObstacle> GetKeyObstacles() const;
-  // 检查后车行为
-  void UpdateRearAgentConfidence(const std::shared_ptr<agent::Agent>& agent);
+  std::vector<int32_t> GetKeyObstacleLabels() const;
+  // 更新后车交互置信度，包含强制场景和常规增减。
+  void UpdateRearAgentConfidence(
+      const std::shared_ptr<agent::Agent>& agent,
+      const std::shared_ptr<ReferencePath>& ego_reference_path);
+  // 仅根据当前置信度和滞回阈值更新 ignore 状态。
   bool ShouldIgnoreRearAgent(
       const std::shared_ptr<agent::Agent>& agent,
       const std::shared_ptr<ReferencePath>& ego_reference_path);
@@ -82,9 +86,11 @@ class JointDecisionObstaclesSelector {
   std::vector<LaneChangeKeyObstacle> key_obstacles_;
   std::vector<std::shared_ptr<agent::Agent>> surrounding_agents_;
   // 记录后车id
-  int rear_agent_id_;
+  int rear_agent_id_{-1};
   // 记录后车运动趋势 置信度
   double rear_agent_confidence_{1.0};
+  // 后车忽略状态（用于滞回，避免标签抖动）
+  bool rear_should_ignore_{false};
 };
 
 }  // namespace lane_change_joint_decision

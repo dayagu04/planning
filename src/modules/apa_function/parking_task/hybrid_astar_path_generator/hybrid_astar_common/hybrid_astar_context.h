@@ -137,9 +137,8 @@ struct GradeBufferPathPts {
 
   GradeBufferPathPts() = default;
   GradeBufferPathPts(GradeColDetBufferType _type,
-                     std::vector<common_math::PathPt<float>> _pts)
-      : type(_type), pts(_pts) {
-  }
+                     const std::vector<common_math::PathPt<float>>& _pts)
+      : type(_type), pts(_pts) {}
   ~GradeBufferPathPts() = default;
 };
 

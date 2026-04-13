@@ -26,7 +26,7 @@ void iLQRSolver::SimInit() {
   solver_config.model_dt = 0.2;
   solver_config.warm_start_enable = false;
   solver_config.du_tol = 0.01 / 57.3 / 13.0;
-  solver_config.max_iter = 15;
+  solver_config.max_iter = 20;
   init_state_.resize(StateID::STATE_SIZE);
   // STEP 1: init core with solver config
   ilqr_core_ptr_ = std::make_shared<iLqr>();

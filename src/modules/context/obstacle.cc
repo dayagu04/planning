@@ -478,19 +478,26 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   accel_fusion_ = 0.0;
   fusion_source_ = 1;
 
-  if (id_ > 7000000) {  // occupancy object
+  if (id > kUssObjectIdOffset) {  // uss object
+    type_ = type;
+    source_type_ = SourceType::USS;
+  } else if (id_ > 7000000) {  // occupancy object
     type_ = type;
     source_type_ = SourceType::OCC;
-    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
-                                                &perception_polygon_);
   }
+
+  planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                              &perception_polygon_);
   if (perception_polygon_.is_convex() &&
       perception_polygon_.points().size() >= 3) {
     perception_bounding_box_ = perception_polygon_.MinAreaBoundingBox();
     if (perception_polygon_.area() < 0.01 &&
         type_ != iflyauto::OBJECT_TYPE_OCC_COLUMN &&
-        type_ != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
+        type_ != iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
+        type_ != iflyauto::OBJECT_TYPE_CYLINDER_BARRIER) {
       valid_ = false;
+    } else {
+      valid_ = true;
     }
   } else {
     valid_ = false;
@@ -626,7 +633,7 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
     ILOG_INFO << "polygon_debug : get position" << point.path_point.x() << ", "
-               << point.path_point.y() << " failed";
+              << point.path_point.y() << " failed";
     if (!planning_math::Polygon2d::ComputeConvexHull(
             get_bounding_box(point).GetAllCorners(), &polygon)) {
       ILOG_INFO << "polygon_debug : invalid box polygon";

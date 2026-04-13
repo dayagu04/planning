@@ -1,4 +1,4 @@
-#include <cyber/binary.h>
+// #include <cyber/binary.h>
 #include "cyber/cyber.h"
 #include "cyber/proto/parameter.pb.h"
 #include "log_glog.h"
