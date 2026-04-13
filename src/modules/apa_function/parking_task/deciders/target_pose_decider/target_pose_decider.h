@@ -41,6 +41,23 @@ struct TargetPoseDeciderRequest {
         slot_lat_pos_preference(_slot_lat_pos_preference),
         is_searching_stage(_is_searching_stage),
         ego_pose_local(_ego_pose_local) {}
+
+  TargetPoseDeciderRequest(
+      const ParkingScenarioType _scenario_type,
+      const ApaSlotLatPosPreference _slot_lat_pos_preference =
+          ApaSlotLatPosPreference::MID) {
+    lat_body_buffer_vec = {0.0};
+    lat_mirror_buffer_vec = {0.0};
+    lon_buffer = 0.0;
+    scenario_type = _scenario_type;
+    consider_obs = false;
+    base_on_slot = true;
+    slot_lat_pos_preference = _slot_lat_pos_preference;
+    is_searching_stage = false;
+    ego_pose_local =
+        geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0);
+  }
+
   ~TargetPoseDeciderRequest() = default;
 };
 enum class TargetPoseType {

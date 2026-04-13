@@ -170,7 +170,6 @@ void PerpendicularTailInScenario::RunPathPlanningByConfig() {
 }
 
 const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
-  static const std::vector<double> kDefaultLatBuffer = {0.15};
   static const std::vector<double> kOccupiedRatioTab = {1.0, 0.0};
 
   const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
@@ -224,7 +223,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   // no consider obs target pose, real-time update
   TargetPoseDeciderRequest tar_pose_decider_request(
-      kDefaultLatBuffer, kDefaultLatBuffer, 0.3, scenario_type_, false, false,
+      scenario_type_,
       apa_world_ptr_->GetStateMachineManagerPtr()->GetSlotLatPosPreference());
 
   TargetPoseDeciderResult res =
