@@ -1187,8 +1187,32 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
         json,std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
     weight_lead_safe_distance = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "weight_lead_safe_distance"});
-    safe_collsion_decel = read_json_keys<double>(
-        json,std::vector<std::string>{"sample_astar_traj", "safe_collsion_decel"});
+    safe_collision_decel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "safe_collision_decel"});
+    gap_rear_buffer_base = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_rear_buffer_base"});
+    gap_rear_buffer_decay_factor = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_rear_buffer_decay_factor"});
+    gap_rear_buffer_extra_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_rear_buffer_extra_coef"});
+    gap_front_follow_decel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_follow_decel"});
+    gap_front_thw_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_thw_coef"});
+    gap_front_min_buffer = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_min_buffer"});
+    gap_front_buffer_extra_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_buffer_extra_coef"});
+    leading_follow_decel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "leading_follow_decel"});
+    leading_thw_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "leading_thw_coef"});
+    leading_min_safe_distance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "leading_min_safe_distance"});
+    lateral_offset_scale_factor = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "lateral_offset_scale_factor"});
+    default_collision_distance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "default_collision_distance"});
   }
   double time_step_near = 1.0;
   double time_step_far = 1.0;
@@ -1202,7 +1226,19 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double weight_front_ttc = 1.0;
   double weight_back_ttc = 1.0;
   double weight_lead_safe_distance = 1.0;
-  double safe_collsion_decel = 1.0;
+  double safe_collision_decel = 1.0;
+  double gap_rear_buffer_base = 2.0;
+  double gap_rear_buffer_decay_factor = 10.0;
+  double gap_rear_buffer_extra_coef = 0.7;
+  double gap_front_follow_decel = 2.0;
+  double gap_front_thw_coef = 0.3;
+  double gap_front_min_buffer = 3.0;
+  double gap_front_buffer_extra_coef = 0.7;
+  double leading_follow_decel = 2.0;
+  double leading_thw_coef = 0.5;
+  double leading_min_safe_distance = 3.0;
+  double lateral_offset_scale_factor = 10.0;
+  double default_collision_distance = 100.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {

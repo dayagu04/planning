@@ -2036,7 +2036,19 @@
     "weight_front_ttc": 1.0,
     "weight_back_ttc": 1.0,
     "weight_lead_safe_distance": 1.0,
-    "safe_collsion_decel": 1.0
+    "safe_collision_decel": 1.0,
+    "gap_rear_buffer_base": 2.0,
+    "gap_rear_buffer_decay_factor": 10.0,
+    "gap_rear_buffer_extra_coef": 0.7,
+    "gap_front_follow_decel": 2.0,
+    "gap_front_thw_coef": 0.3,
+    "gap_front_min_buffer": 3.0,
+    "gap_front_buffer_extra_coef": 0.7,
+    "leading_follow_decel": 2.0,
+    "leading_thw_coef": 0.5,
+    "leading_min_safe_distance": 3.0,
+    "lateral_offset_scale_factor": 10.0,
+    "default_collision_distance": 100.0
   },
   "dp_path_decider": {
     "coeff_l_cost": 10.0,

@@ -103,15 +103,15 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   ok = ProcessEnvInfos();
-  // if (ok) {
-  //   planning::speed::STPointWithLateral current_matched_upper_st_point;
-  //   planning::speed::STPointWithLateral current_matched_lower_st_point;
-  //   st_sample_space_base_.GetBorderByAvailable(ego_s_, 0.0,
-  //                                              &current_matched_lower_st_point,
-  //                                              &current_matched_upper_st_point);
-  //   ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
-  //         current_matched_lower_st_point.agent_id() != kNoAgentId);
-  // }
+  if (ok) {
+    planning::speed::STPointWithLateral current_matched_upper_st_point;
+    planning::speed::STPointWithLateral current_matched_lower_st_point;
+    st_sample_space_base_.GetBorderByAvailable(ego_s_, ego_v_, 0.0,
+                                               &current_matched_lower_st_point,
+                                               &current_matched_upper_st_point);
+    ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
+          current_matched_lower_st_point.agent_id() != kNoAgentId);
+  }
 
   if (ok) {
     ok = CheckLanelineChangeable();
@@ -133,10 +133,11 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     ->mutable_lane_change_decider_output()
     .is_emergency_scene = false;
   if (ok) {
+    const double left_merge_dist_coef = 4.0;
     bool is_near_stop_point =
         min_cost_traj_ptr_ == nullptr
             ? true
-            : (distance_to_merge_point_ > 4.0 * ego_v_) &&
+            : (distance_to_merge_point_ > left_merge_dist_coef * ego_v_) &&
                   (min_cost_traj_ptr_->anchor_points_match_gap_cost().cost() >
                    0.0);
     if (is_near_stop_point ||
@@ -1382,7 +1383,7 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
                                           .distance_to_left_lane_border;
       double lane_width = ref_distance - target_lane_to_border;
       double over_lateral = ego_width_ / 2.0 - lane_width;
-      if (10 * over_lateral > lateral_offset) {
+      if (astar_config_.lateral_offset_scale_factor * over_lateral > lateral_offset) {
         agent_lateral_offset_map_[lateral_offset] =
             current_reference_points[current_point].path_point.s() - ego_s_ -
             front_edge_to_rear_axle_;
