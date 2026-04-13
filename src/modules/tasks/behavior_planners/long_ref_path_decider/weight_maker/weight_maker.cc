@@ -116,7 +116,6 @@ void WeightMaker::MakeVWeight(const TargetMaker& target_maker) {
       v_weight_[i] = 50.0;
     }
   }
-      session_->planning_context().lane_change_decider_output();
   const auto &start_stop_decider_output =
       session_->planning_context().start_stop_decider_output();
   if (lane_change_info.s_search_status && lane_change_info.is_emergency_scene &&
