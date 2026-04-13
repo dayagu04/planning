@@ -1426,7 +1426,8 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       continue;
     }
     if (agent->is_tfl_virtual_obs() ||
-        agent->is_stop_destination_virtual_obs()) {
+        agent->is_stop_destination_virtual_obs() ||
+        agent->is_turnstile_virtual_obs()) {
       continue;
     }
     double agent_s = 0.0;

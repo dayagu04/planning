@@ -132,18 +132,22 @@ void HPPSpeedLimitDecider::CalculateUserSpeedLimit() {
 void HPPSpeedLimitDecider::CalculateMapSpeedLimit() { return; }
 
 void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
+  double v_limit_curv = hpp_speed_limit_config_.velocity_upper_bound;
+  if (!session_->is_hpp_scene()) {
+    return;
+  }
+
   const auto& traj_points = session_->mutable_planning_context()
                                 ->mutable_planning_result()
                                 .traj_points;
 
-  const double max_lat_acceleration = ComputeMaxLatAcceleration();
-  double vlimit_jerk = 0.0;
-  double time_to_brake = 1e-2;
-  double out_max_curvature = 0.0;
+  if (traj_points.empty()) {
+    return;
+  }
 
-  double v_limit_curv =
-      ComputeCurvatureSpeedLimit(traj_points, max_lat_acceleration, vlimit_jerk,
-                                 time_to_brake, out_max_curvature);
+  const double max_lat_acceleration = ComputeMaxLatAcceleration();
+
+  v_limit_curv = ComputeCurvatureSpeedLimit(traj_points);
 
 #ifdef ENABLE_PROTO_LOG
   FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_curvature(),
@@ -154,8 +158,6 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
     v_target_ = v_limit_curv;
     v_target_type_ = SpeedLimitType::CURVATURE;
   }
-
-  max_curvature_ = out_max_curvature;
 }
 
 void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
@@ -182,8 +184,7 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
   }
 
   v_limit_speed_narrow_passage = GetSpeedLimitInObjectiveZone(
-      zone_info,
-      hpp_speed_limit_config_.target_speed_narrow_passage_area);
+      zone_info, hpp_speed_limit_config_.target_speed_narrow_passage_area);
 
   if (v_limit_speed_narrow_passage < v_target_) {
     v_target_ = v_limit_speed_narrow_passage;
@@ -205,13 +206,14 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
 
 void HPPSpeedLimitDecider::CalculateAvoidLimit() {
   double v_limit_avoid = hpp_speed_limit_config_.velocity_upper_bound;
+
   if (!session_->is_hpp_scene()) {
     return;
   }
 
-  const auto& hpp_general_lateral_decider_output =
+  const auto& hpp_lateral_output =
       session_->planning_context().hpp_general_lateral_decider_output();
-  if (hpp_general_lateral_decider_output.avoid_ids.empty()) {
+  if (hpp_lateral_output.avoid_ids.empty()) {
 #ifdef ENABLE_PROTO_LOG
     FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_avoid(),
                        SpeedLimitType::AVOID, v_limit_avoid);
@@ -219,11 +221,96 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
     return;
   }
 
-  // 触发避让限速，使用可配置的 config.hpp_avoid_velocity_limit_kph
-  v_limit_avoid =
-      hpp_speed_limit_config_.hpp_avoid_velocity_limit_kph / 3.6;  // 转换为 m/s
-  LOG_DEBUG("[get_velocity_limit] HPP avoid speed limit triggered: %f kph",
-            hpp_speed_limit_config_.hpp_avoid_velocity_limit_kph);
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  if (!reference_path_ptr) {
+    return;
+  }
+
+  constexpr double kAvoidAgentMinSpeed = 2.0;
+
+  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  const double ego_s = frenet_ego_state.s();
+  const double ego_head_s = frenet_ego_state.head_s();
+
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (!agent_manager) {
+    return;
+  }
+
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+
+  // --- 遍历绕避 Agent ---
+  for (const auto avoid_id : hpp_lateral_output.avoid_ids) {
+    const auto* agent = agent_manager->GetAgent(avoid_id);
+    if (!agent) {
+      continue;
+    }
+
+    // 1. 纵向过滤：障碍物需在自车前方
+    double agent_s = 0.0, agent_l = 0.0;
+    const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
+    if (!frenet_coord) {
+      continue;
+    }
+    if (!frenet_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
+
+    // 障碍物后沿到自车头部的距离
+    const double longitudinal_dist =
+        agent_s - 0.5 * agent->length() - ego_head_s;
+    if (longitudinal_dist < 0.0) {
+      continue;
+    }
+
+    // 2. 横向距离（用中心点近似）
+    const double lateral_dist = std::abs(agent_l);
+
+    // 3. 横向阈值：HPP 车道较窄，用固定阈值而非车道宽比例
+    const double lateral_threshold =
+        hpp_speed_limit_config_.hpp_avoid_lateral_threshold;
+    if (lateral_dist > lateral_threshold) {
+      continue;
+    }
+
+    // 4. 纵向距离平滑：复用现有 GetSpeedLimitInObjectiveZone 思路
+    const double target_v =
+        agent->is_static()
+            ? hpp_speed_limit_config_.hpp_avoid_velocity_limit
+            : std::max(agent->speed() + kAvoidAgentMinSpeed,
+                       hpp_speed_limit_config_.velocity_lower_bound);
+
+    const double approach_dist =
+        hpp_speed_limit_config_.hpp_avoid_approach_distance;
+
+    double v_limit_this_agent;
+    if (longitudinal_dist < 1e-3) {
+      // 在障碍物正旁边
+      v_limit_this_agent = target_v;
+    } else if (longitudinal_dist < approach_dist) {
+      // 接近中：v² = target_v² - 2*a*s → 反推当前允许速度
+      const double a = hpp_speed_limit_config_.approaching_zone_deceleration;
+      const double v2 = target_v * target_v - 2.0 * a * longitudinal_dist;
+      v_limit_this_agent = (v2 > 0.0)
+                               ? std::sqrt(v2)
+                               : hpp_speed_limit_config_.velocity_lower_bound;
+    } else {
+      continue;  // 还太远，不触发
+    }
+
+    v_limit_this_agent = std::max(v_limit_this_agent,
+                                  hpp_speed_limit_config_.velocity_lower_bound);
+
+    if (v_limit_this_agent < v_limit_avoid) {
+      v_limit_avoid = v_limit_this_agent;
+    }
+  }
 
 #ifdef ENABLE_PROTO_LOG
   FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_avoid(),
@@ -278,95 +365,88 @@ const double HPPSpeedLimitDecider::ComputeMaxLatAcceleration() {
 }
 
 const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
-    const TrajectoryPoints& traj_points, double max_lat_acceleration,
-    double& vlimit_jerk, double& time_to_brake, double& out_max_curvature) {
+    const TrajectoryPoints& traj_points) {
   const double ego_velocity = session_->environmental_model()
                                   .get_ego_state_manager()
                                   ->planning_init_point()
                                   .v;
-  const double trigger_distance = interp(
+
+  // 1. 根据当前车速，插值得到"向前扫描的触发距离"
+  //    速度越高，需要向更远处预判曲率
+  const double scan_distance = interp(
       ego_velocity, hpp_speed_limit_config_.curv_trigger_velocity_breakpoints,
       hpp_speed_limit_config_.curv_trigger_distances);
 
-  // a. 计算轨迹上的最大曲率及其距离
-  double max_curvature = 1e-4;
-  double max_curv_s = -1.0;
-  double s_accumulate = 0.0;
-
-  for (size_t i = 0; i < traj_points.size(); ++i) {
-    if (std::fabs(traj_points[i].curvature) > max_curvature) {
-      max_curvature = std::fabs(traj_points[i].curvature);
-      max_curv_s = s_accumulate;
-    }
-    if (i > 0) {
-      s_accumulate +=
-          planning_math::fast_hypot(traj_points[i].x - traj_points[i - 1].x,
-                                    traj_points[i].y - traj_points[i - 1].y);
-    }
-  }
-
-  // 考虑方向盘转角对应的曲率
+  // 2. 考虑方向盘转角对应的即时曲率（车辆当前已经在转弯）
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  double steer_angle = ego_state->ego_steer_angle();
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double steer_curvature = std::tan(steer_angle / vehicle_param.steer_ratio) /
-                           vehicle_param.wheel_base;
-  max_curvature = std::max(max_curvature, std::fabs(steer_curvature));
+  double steer_curvature =
+      std::tan(ego_state->ego_steer_angle() / vehicle_param.steer_ratio) /
+      vehicle_param.wheel_base;
 
-  // 输出最大曲率
-  out_max_curvature = max_curvature;
+  // 3. 在 [0, scan_distance] 范围内，找前方最大曲率及其位置
+  //    不再扫描全局，只扫描触发范围内的点
+  constexpr double kCurvatureThreshold = 1e-4;        // 忽略近似直道的曲率
+  double max_curvature = std::fabs(steer_curvature);  // 先用方向盘曲率初始化
+  double max_curv_s = 0.0;  // 方向盘对应的曲率就在当前位置（s=0）
+  double s_accumulate = 0.0;
 
-  // b. 计算弯道限速
-  double v_limit_curv;
+  for (size_t i = 1; i < traj_points.size(); ++i) {
+    s_accumulate +=
+        planning_math::fast_hypot(traj_points[i].x - traj_points[i - 1].x,
+                                  traj_points[i].y - traj_points[i - 1].y);
 
-  // HPP模式下使用查表方式计算限速
-  if (session_->is_hpp_scene()) {
-    // 将曲率转换为半径 (半径 = 1/曲率)
-    double radius = 1.0 / max_curvature;
-    // 查表：半径(m) -> 限速(m/s). 5m→5kph, 10m→6kph, 15m→8kph, 20m→10kph,
-
-    v_limit_curv =
-        interp(radius, hpp_speed_limit_config_.curv_radius_breakpoints,
-               hpp_speed_limit_config_.curv_speed_limits_ms);
-
-  } else {
-    // 非HPP模式下使用原有的基于横向加速度的计算方式
-    // v = sqrt(a_lat / kappa)
-    v_limit_curv = std::sqrt(max_lat_acceleration / max_curvature);
-  }
-
-  v_limit_curv =
-      std::max(v_limit_curv, hpp_speed_limit_config_.velocity_lower_bound);
-  v_limit_curv =
-      std::min(v_limit_curv, hpp_speed_limit_config_.velocity_upper_bound);
-
-  // c. 判断是否触发限速
-  // 条件：曲率限速低于当前速度 && 最大曲率距离满足触发条件
-  vlimit_jerk = 0.0;
-  time_to_brake = 1e-2;
-
-  if (max_curv_s < trigger_distance + max_curvature_slow_down_triger_buffer_) {
-    // 需要减速以满足弯道限速
-    const double ego_a = -2.0;  // 假设减速加速度 -2 m/s²
-    const double b_square_minus_4ac =
-        std::pow((2 * ego_velocity + v_limit_curv), 2) + 6 * ego_a * max_curv_s;
-
-    if (b_square_minus_4ac > 0.0) {
-      double time_to_brake =
-          (-(2 * ego_velocity + v_limit_curv) + std::sqrt(b_square_minus_4ac)) /
-          ego_a;
-      time_to_brake = std::max(time_to_brake, 0.01);
-      vlimit_jerk = 2 * (v_limit_curv - ego_velocity - ego_a * time_to_brake) /
-                    std::pow(time_to_brake, 2);
+    if (s_accumulate > scan_distance) {
+      break;  // 超出扫描范围，停止
     }
 
-    max_curvature_slow_down_triger_buffer_ = 1.0;
-    return v_limit_curv;
+    double curv = std::fabs(traj_points[i].curvature);
+    if (curv > max_curvature) {
+      max_curvature = curv;
+      max_curv_s = s_accumulate;
+    }
   }
-  max_curvature_slow_down_triger_buffer_ = -1.0;
-  return hpp_speed_limit_config_.velocity_upper_bound;
+
+  // 4. 曲率不足以触发限速，直接退出
+  if (max_curvature <= kCurvatureThreshold) {
+    max_curvature_ = max_curvature;
+#ifdef ENABLE_PROTO_LOG
+    FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_curvature(),
+                       SpeedLimitType::CURVATURE,
+                       hpp_speed_limit_config_.velocity_upper_bound);
+#endif
+    return hpp_speed_limit_config_.velocity_upper_bound;
+  }
+
+  max_curvature_ = max_curvature;
+
+  // 5. 根据曲率计算目标限速
+  double v_limit_curv;
+
+  // HPP 场景：查表（半径 → 限速）
+  double radius = 1.0 / max_curvature;
+  v_limit_curv = interp(radius, hpp_speed_limit_config_.curv_radius_breakpoints,
+                        hpp_speed_limit_config_.curv_speed_limits_ms);
+
+  v_limit_curv =
+      std::clamp(v_limit_curv, hpp_speed_limit_config_.velocity_lower_bound,
+                 hpp_speed_limit_config_.velocity_upper_bound);
+
+  // 6. 运动学预减速：如果前方有弯，提前计算"现在应该限到多少速"
+  //    使用 v² = v_target² - 2 * |a| * s，反推当前允许速度
+  //    只有当目标限速低于当前速度时才需要这个逻辑
+  constexpr double kDeceleration = 2.0;  // m/s²，舒适减速度
+  if (v_limit_curv < ego_velocity && max_curv_s > 0.0) {
+    double v_now_limit_squared =
+        v_limit_curv * v_limit_curv + 2.0 * kDeceleration * max_curv_s;
+    double v_now_limit = std::sqrt(std::max(0.0, v_now_limit_squared));
+    // 取两者中更严格的限速
+    v_limit_curv = std::min(v_limit_curv, v_now_limit);
+  }
+
+  return v_limit_curv;
 }
 
 void HPPSpeedLimitDecider::CalculateBumpLimit() {
@@ -475,12 +555,9 @@ double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
   const double kSpeedObjectiveZoneLimit = target_v;
   // 减速度
   const double kDecelerationRate =
-      hpp_speed_limit_config_.speed_bump_deceleration;
+      hpp_speed_limit_config_.approaching_zone_deceleration;
 
-  if (zone_info.in_speed_limit_zone) {
-    // 在区域内，限速8 km/h
-    return kSpeedObjectiveZoneLimit;
-  } else if (zone_info.approaching_speed_limit_zone) {
+  if (zone_info.in_speed_limit_zone || zone_info.approaching_speed_limit_zone) {
     // 接近区域，根据距离和减速度计算限速
     // 使用运动学公式: v² = v0² + 2*a*s
     // 其中 v = kSpeedObjectiveZoneLimit, a = kDecelerationRate, s =

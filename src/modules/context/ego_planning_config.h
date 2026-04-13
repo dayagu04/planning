@@ -3515,8 +3515,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
                   curv_radius_breakpoints);
     read_json_vec(json, std::vector<std::string>{"hpp_curv_speed_limits_ms"},
                   curv_speed_limits_ms);
-    hpp_avoid_velocity_limit_kph =
-        read_json_key<double>(json, "hpp_avoid_velocity_limit_kph");
+    hpp_avoid_velocity_limit =
+        read_json_key<double>(json, "hpp_avoid_velocity_limit");
+    hpp_avoid_approach_distance =
+        read_json_key<double>(json, "hpp_avoid_approach_distance");
+    hpp_avoid_lateral_threshold =
+        read_json_key<double>(json, "hpp_avoid_lateral_threshold");
     speed_bump_front_buffer =
         read_json_key<double>(json, "speed_bump_front_buffer");
     speed_bump_rear_buffer =
@@ -3529,12 +3533,60 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "speed_narrow_passage_approach_distance");
     speed_intersection_approach_distance =
         read_json_key<double>(json, "speed_intersection_approach_distance");
-    speed_bump_zone_speed_limit =
-        read_json_key<double>(json, "speed_bump_zone_speed_limit");
-    speed_bump_deceleration =
-        read_json_key<double>(json, "speed_bump_deceleration");
+    target_speed_speed_bump_area =
+        read_json_key<double>(json, "target_speed_speed_bump_area");
+    target_speed_narrow_passage_area =
+        read_json_key<double>(json, "target_speed_narrow_passage_area");
+    target_speed_intersection_road_area =
+        read_json_key<double>(json, "target_speed_intersection_road_area");
+    target_speed_ramp_area =
+        read_json_key<double>(json, "target_speed_ramp_area");
+    approaching_zone_deceleration =
+        read_json_key<double>(json, "approaching_zone_deceleration");
     speed_bump_collision_buffer =
         read_json_key<double>(json, "speed_bump_collision_buffer");
+    turnstile_stop_buffer =
+        read_json_key<double>(json, "turnstile_stop_buffer", 3.5);
+    turnstile_min_forward_stop_buffer =
+        read_json_key<double>(json, "turnstile_min_forward_stop_buffer", 1.0);
+    enable_turnstile_longitudinal_decider =
+        read_json_key<bool>(json, "enable_turnstile_longitudinal_decider", true);
+    turnstile_open_status_threshold =
+        read_json_key<double>(json, "turnstile_open_status_threshold", 0.8);
+    turnstile_closed_status_threshold =
+        read_json_key<double>(json, "turnstile_closed_status_threshold", 0.2);
+    turnstile_passable_status_threshold =
+        read_json_key<double>(json, "turnstile_passable_status_threshold", 0.8);
+    turnstile_passable_status_stable_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_passable_status_stable_frame_threshold", 3);
+    turnstile_target_lost_tolerance_frames = read_json_key<int32_t>(
+        json, "turnstile_target_lost_tolerance_frames", 4);
+    turnstile_front_vehicle_max_distance =
+        read_json_key<double>(json, "turnstile_front_vehicle_max_distance", 45.0);
+    turnstile_near_margin =
+        read_json_key<double>(json, "turnstile_near_margin", 4.0);
+    turnstile_ego_in_gate_margin =
+        read_json_key<double>(json, "turnstile_ego_in_gate_margin", 0.5);
+    turnstile_passing_window =
+        read_json_key<double>(json, "turnstile_passing_window", 1.0);
+    turnstile_passed_clear_distance =
+        read_json_key<double>(json, "turnstile_passed_clear_distance", 1.0);
+    enable_turnstile_open_timeout_release =
+        read_json_key<bool>(json, "enable_turnstile_open_timeout_release", true);
+    turnstile_reopen_timeout_opened_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_reopen_timeout_opened_frame_threshold", 200);
+    enable_turnstile_closing_status_drop_emergency_stop = read_json_key<bool>(
+        json, "enable_turnstile_closing_status_drop_emergency_stop", true);
+    turnstile_closing_status_drop_ratio_threshold = read_json_key<double>(
+        json, "turnstile_closing_status_drop_ratio_threshold", 0.5);
+    turnstile_closing_status_drop_consecutive_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_closing_status_drop_consecutive_frame_threshold", 3);
+    turnstile_emergency_opening_status_stable_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_emergency_opening_status_stable_frame_threshold", 3);
+    turnstile_emergency_stop_velocity_threshold = read_json_key<double>(
+        json, "turnstile_emergency_stop_velocity_threshold", 0.1);
+    turnstile_emergency_stop_stable_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_emergency_stop_stable_frame_threshold", 3);
   }
   int lon_num_step = 25;
   double delta_time = 0.2;
@@ -3574,21 +3626,42 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   std::vector<double> curv_trigger_distances = {0.0, 10.0, 15.0, 25.0, 40.0};
   std::vector<double> curv_radius_breakpoints = {5.0, 10.0, 15.0, 20.0, 50.0};
   std::vector<double> curv_speed_limits_ms = {5.0 / 3.6, 6.0 / 3.6, 8.0 / 3.6,
-                                         10.0 / 3.6, 20.0 / 3.6};
-  double hpp_avoid_velocity_limit_kph = 10.0;
-  double speed_bump_front_buffer = 10.0;           // m
-  double speed_bump_rear_buffer = 5.0;             // m
-  double speed_bump_approach_distance = 20.0;      // m
-  double speed_ramp_approach_distance = 20.0;      // m
-  double speed_narrow_passage_approach_distance = 20.0;      // m
-  double speed_intersection_approach_distance = 20.0;      // m
-  double speed_bump_zone_speed_limit = 2.22;    // 8kph
+                                              10.0 / 3.6, 20.0 / 3.6};
+  double hpp_avoid_velocity_limit = 2.78;
+  double hpp_avoid_approach_distance = 8.0;
+  double hpp_avoid_lateral_threshold = 2.5;
+  double speed_bump_front_buffer = 10.0;                 // m
+  double speed_bump_rear_buffer = 5.0;                   // m
+  double speed_bump_approach_distance = 20.0;            // m
+  double speed_ramp_approach_distance = 20.0;            // m
+  double speed_narrow_passage_approach_distance = 20.0;  // m
+  double speed_intersection_approach_distance = 20.0;    // m
   double target_speed_speed_bump_area = 2.22;            // 8kph
   double target_speed_narrow_passage_area = 2.22;        // 8kph
   double target_speed_intersection_road_area = 2.5;      // 9kph
   double target_speed_ramp_area = 2.78;                  // 10kph
-  double speed_bump_deceleration = -1.0;           // m/s^2
-  double speed_bump_collision_buffer = 0.0;        // m
+  double approaching_zone_deceleration = -1.0;                 // m/s^2
+  double speed_bump_collision_buffer = 0.0;              // m
+  double turnstile_stop_buffer = 3.5;
+  double turnstile_min_forward_stop_buffer = 1.0;
+  bool enable_turnstile_longitudinal_decider = true;
+  double turnstile_open_status_threshold = 0.8;
+  double turnstile_closed_status_threshold = 0.2;
+  double turnstile_passable_status_threshold = 0.8;
+  int32_t turnstile_passable_status_stable_frame_threshold = 5;
+  int32_t turnstile_target_lost_tolerance_frames = 4;
+  double turnstile_front_vehicle_max_distance = 45.0;
+  double turnstile_near_margin = 4.0;
+  double turnstile_ego_in_gate_margin = 0.5;
+  double turnstile_passing_window = 1.0;
+  double turnstile_passed_clear_distance = 1.0;
+  bool enable_turnstile_open_timeout_release = true;
+  int32_t turnstile_reopen_timeout_opened_frame_threshold = 200;  bool enable_turnstile_closing_status_drop_emergency_stop = true;
+  double turnstile_closing_status_drop_ratio_threshold = 0.5;
+  int32_t turnstile_closing_status_drop_consecutive_frame_threshold = 3;
+  int32_t turnstile_emergency_opening_status_stable_frame_threshold = 3;
+  double turnstile_emergency_stop_velocity_threshold = 0.1;
+  int32_t turnstile_emergency_stop_stable_frame_threshold = 3;
 };
 
 struct AdaptiveCruiseControlConfig : public EgoPlanningConfig {
@@ -5125,6 +5198,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
     hpp_max_replan_dist_err = read_json_key<double>(
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+    hpp_max_vel_correction_per_frame = read_json_key<double>(
+        json, "hpp_max_vel_correction_per_frame", hpp_max_vel_correction_per_frame);
 
     rads_max_replan_lon_err = read_json_key<double>(
         json, "rads_max_replan_lon_err", rads_max_replan_lon_err);
@@ -5171,6 +5246,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;
   double hpp_max_replan_dist_err = 0.8;
+  double hpp_max_vel_correction_per_frame = 0.5;
 
   double rads_max_replan_lon_err = 0.50;
 
@@ -6447,6 +6523,18 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
       ReadItem<double>(json, rads_comfort_param_dynamic_s0,
                 "speed_planning", "comfort_target",
                 "rads_comfort_param_dynamic_s0");
+      ReadItem<double>(json, rads_comfort_param_virtual_s0,
+            "speed_planning", "comfort_target",
+            "rads_comfort_param_virtual_s0");
+      ReadItem<double>(json, hpp_comfort_param_static_s0,
+            "speed_planning", "comfort_target",
+            "hpp_comfort_param_static_s0");
+      ReadItem<double>(json, hpp_comfort_param_dynamic_s0,
+                "speed_planning", "comfort_target",
+                "hpp_comfort_param_dynamic_s0");
+      ReadItem<double>(json, hpp_comfort_param_virtual_s0,
+            "speed_planning", "comfort_target",
+            "hpp_comfort_param_virtual_s0");
     }
   }
 
@@ -6505,6 +6593,10 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   // comfort target
   double rads_comfort_param_static_s0 = 0.2;
   double rads_comfort_param_dynamic_s0 = 0.8;
+  double rads_comfort_param_virtual_s0 = 0.0;
+  double hpp_comfort_param_static_s0 = 0.2;
+  double hpp_comfort_param_dynamic_s0 = 0.8;
+  double hpp_comfort_param_virtual_s0 = 0.0;
   struct KinematicParam {
     double acc_positive_upper = 1.35;
     double acc_positive_speed_lower = 4.2;

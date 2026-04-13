@@ -575,9 +575,14 @@ void ObstacleManager::split_points_by_s(
 }
 
 void ObstacleManager::UpdateGroundLineObstacle() {
-  const double kMinFrontDistance = 6;
-  const double kMinFrontDistanceForMap = 7;
-  const double kMaxSideDistance = 5;
+  double min_front_dis = 6.0;
+  double min_front_dis_for_map = 7.0;
+  double max_side_dis = 5.0;
+  if(session_->is_hpp_scene()) {
+    min_front_dis = 2.0;
+    min_front_dis_for_map = 3.0;
+    max_side_dis = 5.0;
+  }
   int index_offset = 900000;
   const auto &local_view = session_->environmental_model().get_local_view();
   if (local_view.ground_line_perception.groundline_size > 0) {
@@ -675,8 +680,8 @@ void ObstacleManager::UpdateGroundLineObstacle() {
                                     sl_point) ||
               std::isnan(sl_point.x) || std::isnan(sl_point.y) ||
               groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
-              sl_point.x < ego_point.x + kMinFrontDistance ||
-              ((sl_point.x < ego_point.x + kMinFrontDistanceForMap) &&
+              sl_point.x < ego_point.x + min_front_dis ||
+              ((sl_point.x < ego_point.x + min_front_dis_for_map) &&
                groundline.resource_type ==
                    iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP)) {
             in_range = false;
@@ -691,7 +696,7 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         }
         if (!in_range) {
           continue;
-        } else if (is_lat_valid && min_dist_to_ref > kMaxSideDistance) {
+        } else if (is_lat_valid && min_dist_to_ref > max_side_dis) {
           continue;
         }
         if (points.size() >= 3) {

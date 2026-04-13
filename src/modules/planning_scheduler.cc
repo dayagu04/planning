@@ -1108,6 +1108,9 @@ void PlanningScheduler::FillHPPPlanningHmiInfo(
   if (hpp_cruise_routing_completed && timeout_for_target_slot_allowed_to_park) {
     hpp_info->hpp_planning_failed_reason = iflyauto::HPPPlanningFailedReason::
         HPP_PLANNING_FAILED_REASON_TARGET_PARKING_SPACE_OCCUPIED;
+  } else {
+    hpp_info->hpp_planning_failed_reason =
+        iflyauto::HPPPlanningFailedReason::HPP_PLANNING_FAILED_REASON_NONE;
   }
 
   hpp_info->is_new_parking_space_found = parking_switch_info.has_parking_slot_in_hpp_searching;
