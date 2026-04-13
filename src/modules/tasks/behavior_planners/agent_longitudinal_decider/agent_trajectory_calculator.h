@@ -76,6 +76,8 @@ class AgentTrajectoryCalculator {
       const std::shared_ptr<agent::Agent>& ptr_agent,
       const std::vector<QuinticPolylinePointInfo>& quintic_poly_path) const;
 
+  bool GeneratePurePursuitTrajectory(agent::Agent* ptr_agent);
+
   bool MakeTargetLWithOriginTrajectory(
       const std::shared_ptr<VirtualLane> target_lane,
       const std::shared_ptr<planning_math::KDPath>& current_lane_coord,

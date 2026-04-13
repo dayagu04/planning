@@ -211,6 +211,7 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
                                            &speed_limit_type_ref);
   const double v0 = std::fmin(speed_limit_normal, speed_limit_ref);
+  JSON_DEBUG_VALUE("joint_decision_limit_speed", v0);
   comfort_params_.v0 = v0;
 
   // const auto& lane_change_decider_output =
@@ -432,8 +433,21 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
       lc_decision_config_.q_ego_acc_bound_weight);
   planning_input.clear_ego_acc_max();
   planning_input.clear_ego_acc_min();
+
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const double current_vel = ego_state_manager->planning_init_point().v;
+  double ego_acc_max = lc_decision_config_.ego_acc_max;
+  // if (!lc_decision_config_.max_acc_bound_vel_table.empty() &&
+  //     !lc_decision_config_.max_acc_bound_acc_table.empty() &&
+  //     lc_decision_config_.max_acc_bound_vel_table.size() ==
+  //         lc_decision_config_.max_acc_bound_acc_table.size()) {
+  //   const auto& vel_table = lc_decision_config_.max_acc_bound_vel_table;
+  //   const auto& acc_table = lc_decision_config_.max_acc_bound_acc_table;
+  //   ego_acc_max = interp(current_vel, vel_table, acc_table);
+  // }
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
-    planning_input.add_ego_acc_max(lc_decision_config_.ego_acc_max);
+    planning_input.add_ego_acc_max(ego_acc_max);
     planning_input.add_ego_acc_min(lc_decision_config_.ego_acc_min);
   }
 
@@ -444,6 +458,12 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     planning_input.add_ego_jerk_max(lc_decision_config_.ego_jerk_max);
     planning_input.add_ego_jerk_min(lc_decision_config_.ego_jerk_min);
+  }
+
+  planning_input.set_q_ego_vel_bound_weight(lc_decision_config_.q_ego_vel_bound_weight);
+  planning_input.clear_ego_vel_max();
+  for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
+    planning_input.add_ego_vel_max(comfort_params_.v0);
   }
 
   planning_input.set_q_hard_halfplane_weight(

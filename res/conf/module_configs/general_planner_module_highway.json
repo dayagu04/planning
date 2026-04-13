@@ -861,6 +861,7 @@
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 2.0,
     "ego_jerk_min": -2.5,
+    "q_ego_vel_bound_weight": 1000.0,
     "q_hard_halfplane_weight": 100.0,
     "hard_halfplane_dist": 3.5,
     "halfplane_cost_allocation_ratio": 0.6,
@@ -869,7 +870,21 @@
     "soft_halfplane_tau": 0.5,
     "lc_thw": 0.5,
     "soft_halfplane_cost_allocation_ratio": 0.8,
-    "halfplane_cost_allocation_ratio_later": 0.5
+    "halfplane_cost_allocation_ratio_later": 0.5,
+    "max_acc_bound_table": {
+      "vel_table": [
+        0.0,
+        5.56,
+        11.11,
+        16.67,
+        22.22,
+        27.78,
+        36.11
+      ],
+      "acc_table": [
+        1.5, 1.35, 1.15, 0.95, 0.65, 0.45, 0.35
+      ]
+    }
   },
   "lat_lon_joint_planner": {
     "q_ego_ref_x": 3.0,
@@ -1177,7 +1192,8 @@
     "q_jerk_speed_adjust": 50.0,
     "q_pos_safe": 200.0,
     "safe_distance": 2.5,
-    "q_emergency_stop": 5.0
+    "q_emergency_stop": 5.0,
+    "q_extend_pos_bound": 20.0
   },
   "real_time_long_behavior_planner": {
     "preview_x": 80.0,
@@ -1974,6 +1990,7 @@
     "normal_scene_weight_speed_change": 10.0,
     "normal_scene_weight_leading_veh_follow_s": 1.0,
     "normal_scene_weight_jerk_limit": 10.0,
+    "normal_scene_weight_stop_point":0.0,
     "purse_flow_vel_scene_weight_match_gap_vel": 0.2,
     "purse_flow_vel_scene_weight_match_gap_s": 0.2,
     "purse_flow_vel_scene_weight_follow_vel": 6.25,
@@ -1987,10 +2004,11 @@
     "purse_flow_vel_scene_weight_speed_change": 0.0,
     "purse_flow_vel_scene_weight_leading_veh_follow_s": 0.0,
     "purse_flow_vel_scene_weight_jerk_limit": 10.0,
+    "purse_flow_vel_scene_weight_stop_point":0.0,
     "decleration_scene_weight_match_gap_vel": 4.5,
     "decleration_scene_weight_match_gap_s": 2.5,
     "decleration_scene_weight_follow_vel": 0.0,
-    "decleration_scene_weight_stop_line": 50.0,
+    "decleration_scene_weight_stop_line": 5.0,
     "decleration_scene_weight_leading_safe_s": 13.5,
     "decleration_scene_weight_leading_safe_v": 0.0,
     "decleration_scene_weight_vel_variable": 0.5,
@@ -2000,6 +2018,7 @@
     "decleration_scene_weight_speed_change": 0.0,
     "decleration_scene_weight_leading_veh_follow_s": 1.0,
     "decleration_scene_weight_jerk_limit": 10.0,
+    "decleration_scene_weight_stop_point":2.5,
     "leading_safe_distance_gain":1.3,
     "leading_safe_delay_time":0.5,
     "leading_safe_max_dec":2.0,
@@ -2020,7 +2039,20 @@
     "weight_jerk": 0.2,
     "weight_front_ttc": 1.0,
     "weight_back_ttc": 1.0,
-    "weight_lead_safe_distance": 1.0
+    "weight_lead_safe_distance": 1.0,
+    "safe_collision_decel": 1.0,
+    "gap_rear_buffer_base": 2.0,
+    "gap_rear_buffer_decay_factor": 10.0,
+    "gap_rear_buffer_extra_coef": 0.7,
+    "gap_front_follow_decel": 2.0,
+    "gap_front_thw_coef": 0.3,
+    "gap_front_min_buffer": 3.0,
+    "gap_front_buffer_extra_coef": 0.7,
+    "leading_follow_decel": 2.0,
+    "leading_thw_coef": 0.5,
+    "leading_min_safe_distance": 3.0,
+    "lateral_offset_scale_factor": 10.0,
+    "default_collision_distance": 100.0
   },
   "dp_path_decider": {
     "coeff_l_cost": 10.0,
@@ -2192,7 +2224,7 @@
   },
   "lane_change_safety_check": {
     "exe_ttc_ratio": 0.7,
-    "ttc_decay_factor": 0.92,
+    "ttc_decay_factor": 0.97,
     "press_line_ratio_threshold": 0.1,
     "rear_close_distance_threshold": 6.0,
     "rear_close_speed_diff_threshold": 1.5,
@@ -2241,7 +2273,7 @@
     },
     "rear_vehicle_speed_min_space_map": {
       "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
-      "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  7.0,   8.5]
+      "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  9.0,   12.5]
     },
     "hold_state_vel_jerk_map": {
       "vel_table":  [4.167, 8.333, 16.667, 25.0],

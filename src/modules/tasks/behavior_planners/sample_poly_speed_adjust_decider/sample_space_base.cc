@@ -273,13 +273,15 @@ void STSampleSpaceBase::ConstructStPointsTable(const double sample_st_limit_lat_
                           st_point_paris[i].first.agent_id(), -1,
                           st_point_paris[i].first.velocity(),
                           st_point_paris[i].first.acceleration(),
-                          st_point_paris[i].first.vehicle_length());
+                          st_point_paris[i].first.vehicle_length(),
+                          st_point_paris[i].first.l()* change_direction_);
       STPointWithLateral upper_point(st_point_paris[i].second.s(),
                           st_point_paris[i].second.t(),
                           st_point_paris[i].second.agent_id(), -1,
                           st_point_paris[i].second.velocity(),
                           st_point_paris[i].second.acceleration(),
-                          st_point_paris[i].first.vehicle_length());
+                          st_point_paris[i].first.vehicle_length(),
+                          st_point_paris[i].second.l()* change_direction_);
       std::pair<STPointWithLateral, STPointWithLateral> points_pair(std::move(lower_point),
                                               std::move(upper_point));
       st_points_table_[index].emplace_back(std::move(points_pair));
@@ -320,7 +322,9 @@ void STSampleSpaceBase::ConstructStPointsTable(const double sample_st_limit_lat_
 }
 
 bool find_boundary_pair(
-    const std::vector<std::pair<STPointWithLateral, STPointWithLateral>>& st_pairs, double s,
+    const std::vector<std::pair<STPointWithLateral, STPointWithLateral>>&
+        st_pairs,
+    double s, double v,
     std::pair<STPointWithLateral, STPointWithLateral>& result_pair1,
     std::pair<STPointWithLateral, STPointWithLateral>& result_pair2) {
   if (st_pairs.empty()) {
@@ -357,16 +361,34 @@ bool find_boundary_pair(
       // Find the closest neighbor (either the previous or next pair)
       if (mid - 1 >= 0 && mid + 1 < st_pairs.size()) {
         // Compare distance to the previous and next pair and choose the closest
-        double dist_to_prev = std::fabs(s - st_pairs[mid - 1].second.s());
-        double dist_to_next = std::fabs(s - st_pairs[mid + 1].first.s());
+        double prev_gap_dist =
+            std::fabs(st_pairs[mid].first.s() - st_pairs[mid - 1].second.s());
+        double next_gap_dist =
+            std::fabs(st_pairs[mid + 1].first.s() - st_pairs[mid].second.s());
 
-        if (dist_to_prev < dist_to_next) {
+        double speed_match_dist = v * (v - st_pairs[mid].first.velocity()) / 2 * 1.0;
+        if((speed_match_dist + s) > st_pairs[mid].second.s()){
+          result_pair1 = current_pair;
+          result_pair2 = st_pairs[mid + 1];
+        } else if((speed_match_dist + s) < st_pairs[mid].first.s()){
           result_pair1 = st_pairs[mid - 1];
           result_pair2 = current_pair;
         } else {
-          result_pair1 = current_pair;
-          result_pair2 = st_pairs[mid + 1];
+          if(prev_gap_dist < next_gap_dist){
+            result_pair1 = current_pair;
+            result_pair2 = st_pairs[mid + 1];
+          } else {
+            result_pair1 = st_pairs[mid - 1];
+            result_pair2 = current_pair;
+          }
         }
+        // if (dist_to_prev < dist_to_next) {
+        //   result_pair1 = st_pairs[mid - 1];
+        //   result_pair2 = current_pair;
+        // } else {
+        //   result_pair1 = current_pair;
+        //   result_pair2 = st_pairs[mid + 1];
+        // }
       } else if (mid - 1 >= 0) {
         result_pair2 = current_pair;  // Only check the previous pair
         result_pair1 = st_pairs[mid - 1];
@@ -401,9 +423,9 @@ bool find_boundary_pair(
   return false;
 }
 
-bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
-                                             STPointWithLateral* const lower_st_point,
-                                             STPointWithLateral* const upper_st_point) {
+bool STSampleSpaceBase::GetBorderByAvailable(
+    double s, double v, double t, STPointWithLateral* const lower_st_point,
+    STPointWithLateral* const upper_st_point) const {
   const int index = int((t / kTimeResolution) + 0.51);
   if (index < 0 || index >= st_points_table_.size()) {
     lower_st_point->set_info(-kMaxPathLength, t, 0.0, kNoAgentId, -1);
@@ -486,7 +508,7 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
     }
   } else {
     std::pair<STPointWithLateral, STPointWithLateral> front_interval, back_interval;
-    if (find_boundary_pair(intervals, s, front_interval, back_interval)) {
+    if (find_boundary_pair(intervals, s, v, front_interval, back_interval)) {
       upper_st_point->set_info(back_interval.first.s(), t,
                                back_interval.first.velocity(),
                                back_interval.first.agent_id(), -1);

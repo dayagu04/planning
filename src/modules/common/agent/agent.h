@@ -186,6 +186,10 @@ class Agent {
       const trajectory::Trajectory& trajectory);
   const trajectory::Trajectory& trajectory_optimized() const;
   void set_trajectory_optimized(const trajectory::Trajectory& trajectory);
+  
+  const trajectory::Trajectory& trajectory_cutin_postprocessed() const;
+  void set_trajectory_cutin_postprocessed(const trajectory::Trajectory& trajectory);
+  
   const AgentDecision& agent_decision() const;
   AgentDecision* const mutable_agent_decision();
 
@@ -203,6 +207,9 @@ class Agent {
 
   const bool is_rule_base_cutin() const;
   void set_is_rule_base_cutin(const bool is_rule_base_cutin);
+
+  const double rule_base_cutin_score() const;
+  void set_rule_base_cutin_score(const double rule_base_cutin_score);
 
   const double prediction_cutin_score() const;
   void set_prediction_cutin_score(const double prediction_cutin_score);
@@ -303,6 +310,7 @@ class Agent {
   std::vector<trajectory::Trajectory> trajectories_;
   std::vector<trajectory::Trajectory> trajectories_used_by_st_graph_;
   trajectory::Trajectory trajectory_optimized_;
+  trajectory::Trajectory trajectory_cutin_postprocessed_;
 
   int32_t top_probability_index_ = 0;
   double top_probability_ = 0.0;
@@ -316,6 +324,8 @@ class Agent {
   bool is_cutin_ = false;
 
   double prediction_cutin_score_ = 0.0;
+
+  double rule_base_cutin_score_ = 0.0;
 
   bool is_cutout_ = false;
 

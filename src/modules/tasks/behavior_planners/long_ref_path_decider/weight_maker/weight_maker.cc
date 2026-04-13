@@ -47,7 +47,7 @@ void WeightMaker::MakeSWeight(const TargetMaker& target_maker,
   const bool is_emergency_scenario =
       lon_ref_path_decider_output.is_cross_vru_pre_handle ||
       lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
-      lon_ref_path_decider_output.is_joint_danger_emergency_stop;
+      lon_ref_path_decider_output.is_lon_cutin_emergency_stop;
 
   s_weight_ = std::vector<double>(plan_points_num_, kDefaultSWeight);
 
@@ -107,6 +107,30 @@ void WeightMaker::MakeVWeight(const TargetMaker& target_maker) {
   if (kCruiseSpeedCount == plan_points_num_) {
     for (size_t i = 0; i < plan_points_num_; ++i) {
       v_weight_[i] = cruise_v_weight + KDefaultVWeightIncrement;
+    }
+  }
+  const auto &lane_change_info =
+    session_->planning_context().lane_change_decider_output();
+  if (lane_change_info.curr_state ==  kLaneChangeExecution){
+    for (size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = 50.0;
+    }
+  }
+  const auto &start_stop_decider_output =
+      session_->planning_context().start_stop_decider_output();
+  if (lane_change_info.s_search_status && lane_change_info.is_emergency_scene &&
+      speed_planning_config_.enable_speed_adjust &&
+      start_stop_decider_output.ego_start_stop_info().state() !=
+          common::StartStopInfo::STOP) {
+    for (size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = 50.0;
+    }
+  } else if (lane_change_info.s_search_status &&
+             speed_planning_config_.enable_speed_adjust &&
+             start_stop_decider_output.ego_start_stop_info().state() !=
+                 common::StartStopInfo::STOP) {
+    for (size_t i = 0; i < plan_points_num_; ++i) {
+      v_weight_[i] = 20.0;
     }
   }
 }

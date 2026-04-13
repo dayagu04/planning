@@ -703,17 +703,18 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
   }
 
   target_regulator_goal_ = target_pose.pose;
-  if (request_.space_type == ParkSpaceType::PARALLEL_OUT ||
-      request_.space_type == ParkSpaceType::PARALLEL_IN) {
-    target_regulator_goal_ = request_.real_goal;
-  }
   ILOG_INFO << "dist to obs = " << target_pose.dist_to_obs
             << ", lat buffer inside = " << advised_lat_buffer_inside;
-
-  // If target slot is not wide enough, return.
-  if (target_pose.dist_to_obs < advised_lat_buffer_inside) {
-    search_state_ = AstarSearchState::FAILURE;
-    return;
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT ||
+      request_.space_type == ParkSpaceType::PARALLEL_IN) {
+    // only parallel slot.
+    target_regulator_goal_ = request_.real_goal;
+  } else {
+    // If target slot is not wide enough, return.
+    if (target_pose.dist_to_obs < advised_lat_buffer_inside) {
+      search_state_ = AstarSearchState::FAILURE;
+      return;
+    }
   }
 
   double search_time = 0.0;

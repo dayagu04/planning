@@ -1,6 +1,11 @@
 #pragma once
 
+#include <cstdint>
+#include <deque>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include "crossing_agent_decider/crossing_agent_decider.h"
 #include "dynamic_world/dynamic_world.h"
@@ -16,19 +21,19 @@ struct AgentHistoryState {
   double timestamp;
   double x;
   double y;
-  double vx;
-  double vy;
-  double speed;
-  double theta;
-  double s = 0.0;
   double l = 0.0;
-  double s_start = 0.0;
-  double s_end = 0.0;
-  double l_start = 0.0;
-  double l_end = 0.0;
-  double s_dot = 0.0;
   double l_dot = 0.0;
 };
+
+
+struct BayesFeatures {
+  std::vector<double> norm_l_dot;
+  std::vector<double> hist_lateral_dist;
+  std::vector<double> pred_norm_vy;
+  std::vector<double> pred_lateral_dist;
+  bool valid = false;
+};
+
 class AgentLongitudinalDecider : public Task {
  public:
   explicit AgentLongitudinalDecider(
@@ -46,50 +51,15 @@ class AgentLongitudinalDecider : public Task {
 
   void DeciderCutInAndOutAgents();
 
-  void AddCutInForLaneChange();
-
-  /** Rule base cut in check condition:
-   * 1.ego car is not stopped
-   * 2.obj is getting closer in lat
-   * 3.obj is ahead of ego
-   * 4.obj is not too far(far obj doesn't need quick cut-in detection)
-   * 5.lat ttc is small & obj vy is obvious & lat dist is short
-   * 6.low speed large yaw obj **/
-  void DeciderCutInAgent(const bool is_lane_change, const agent::Agent& agent,
-                         const double ego_speed_mps, const double ego_theta,
-                         const double ego_half_length,
-                         const double ego_half_width,
-                         const PlanningInitPoint init_point,
-                         const double road_curvature_radius,
-                         const double cut_in_distance_range_m,
-                         const double cut_in_lateral_threshold_m,
-                         agent::AgentManager* const mutable_agent_manager,
-                         AgentLongitudinalDeciderOutput* output = nullptr);
-
-  void DeciderCutOutAgent(agent::AgentManager* const mutable_agent_manager);
-
-  bool CheckCutOutAgent(const agent::Agent& agent);
-
-  bool HaveCutOutIntention(
-      const agent::Agent& agent,
-      const std::shared_ptr<planning_math::KDPath>& current_lane_coord,
-      const planning_math::PathPoint& agent_matched_point_in_lane,
-      const double agent_trajetory_end_point_l_in_lane);
-
-  bool IsLargeAgentCutIn(
-      const std::shared_ptr<VirtualLane> ego_lane,
-      const std::shared_ptr<planning_math::KDPath>& planned_path,
-      const agent::Agent& agent, const double agent_max_s,
-      const double cut_in_distance_range_m,
-      const double large_agent_lower_small_heading_diff,
-      const double ego_half_length, const double ego_s, const double ego_theta,
-      const double ego_speed_mps);
-
-  bool CheckSlowLargeAgentCutIn(
-      const agent::Agent& agent, const double ego_speed_mps,
-      const AgentHistoryState& current_state,
-      const std::shared_ptr<planning_math::KDPath>& planned_path,
-      const std::shared_ptr<VirtualLane>& ego_lane);
+  void ProcessCutInCutOutAgent(const bool is_in_lane_change,
+                               const agent::Agent& agent,
+                               const double ego_speed_mps,
+                               const double ego_half_length,
+                               const double ego_half_width,
+                               const PlanningInitPoint init_point,
+                               const double lateral_distance_range,
+                               agent::AgentManager* const mutable_agent_manager,
+                               AgentLongitudinalDeciderOutput* output = nullptr);
 
   void CalculateAgentLateralDistance(
       const double object_l_speed_mps, const double min_l, const double max_l,
@@ -98,28 +68,13 @@ class AgentLongitudinalDecider : public Task {
       double* const ptr_small_lateral_distance_with_ego_l,
       double* const ptr_large_lateral_distance);
 
-  bool IsLargeAgent(const agent::Agent& agent);
-  double GetDynamicBoundaryBuffer(double ego_speed_mps, double agent_speed_mps);
-
-  bool IsVruCutIn(const agent::Agent& agent, const double object_l_speed_mps,
-                  const double small_lateral_distance, const double max_s,
-                  const double ego_s, const double ego_half_length,
-                  const std::shared_ptr<planning_math::KDPath>& planned_path);
-  bool IsVruCutInWithHistory(
-      const agent::Agent& agent,
-      const std::shared_ptr<planning_math::KDPath>& planned_path);
   void UpdateAndGetAgentState(
       const agent::Agent& agent, const PlanningInitPoint& init_point,
       const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
       AgentHistoryState& current_state);
 
-  void UpdateCutInAgentTable();
+  void UpdateAgentTable();
 
-  // filter agent for st graph
-  // 1.rear agent (lane keep)
-  // 2.rear agent except target lane rear agent (lane change)
-  // 3.ultradistant agent
-  // 4.reverse agent
   void FilterRearAgents();
 
   void FilterUltradistantObs();
@@ -153,37 +108,38 @@ class AgentLongitudinalDecider : public Task {
                                      const double agent_max_l,
                                      const double agent_min_l) const;
 
-  double CalculateRoadCurvature(const double v_ego);
-  double CalculateRoadCurvatureByKDpath(const double ego_s, const double v_ego);
-
   double CalculateIntersectionLength(const double start_1, const double end_1,
                                      const double start_2,
                                      const double end_2) const;
-  double CalculateMean(const std::vector<double>& values) const;
 
-  double CalculateVariance(const std::vector<double>& values,
-                           double mean) const;
+  BayesFeatures ExtractBayesFeatures(
+      int32_t agent_id, const agent::Agent& agent,
+      const std::shared_ptr<planning_math::KDPath>& ego_lane_coord) const;
 
-  std::deque<AgentHistoryState> GetHistoryInWindow(
-      const std::deque<AgentHistoryState>& history,
-      double window_duration) const;
+  void UpdateBayesianPosteriors(int32_t agent_id, double log_L_hist_cutin,
+                                double log_L_hist_cutout,
+                                double log_L_hist_normal,
+                                double log_L_pred_cutin,
+                                double log_L_pred_cutout,
+                                double log_L_pred_normal,
+                                double* cutin_posterior,
+                                double* cutout_posterior);
 
  private:
-  // framework::Session *session_ = nullptr;
   FrenetBoundary ego_frenet_boundary_;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
   std::shared_ptr<EgoStateManager> ego_state_manager_;
 
-  // cut-in data
   std::unordered_map<int32_t, int32_t> cut_in_agent_count_;
-  std::unordered_map<int32_t, int32_t> rule_based_cut_in_agent_count_;
-  std::unordered_set<int32_t> current_agent_ids_;
-  // cut-out data
-  std::unordered_map<int32_t, int32_t> steady_cut_out_agent_count_;
   std::unordered_map<int32_t, int32_t> cut_out_agent_count_;
+  std::unordered_set<int32_t> current_agent_ids_;
+  std::unordered_set<int32_t> processed_cut_in_agent_ids_;
+  std::unordered_set<int32_t> processed_cut_out_agent_ids_;
 
   std::shared_ptr<CrossingAgentDecider> crossing_agent_decider_;
   std::unordered_map<int32_t, std::deque<AgentHistoryState>> agent_history_map_;
+  std::unordered_map<int32_t, double> bayes_cutin_posterior_;
+  std::unordered_map<int32_t, double> bayes_cutout_posterior_;
 };
 }  // namespace planning

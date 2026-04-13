@@ -59,11 +59,25 @@ class SpatioTemporalUnionDp {
                   spatio_temporal_union_plan_input,
               const double target_s, planning_math::KDPath& current_lane_coord,
               const int half_lateral_sample_nums,
-              const bool last_enable_using_st_plan);
+              const bool last_enable_using_st_plan,
+              planning::common::SpatioTemporalUnionPlan* plan_output);
 
   planning::common::TrajectoryPoints &GetOutput() { return trajectory_points_; }
 
+  const google::protobuf::RepeatedPtrField<planning::common::DebugPoint>& GetDebugPoints() const;
+
+  // Set last frame trajectory from external source (e.g., bag data)
+
+  const std::vector<std::vector<std::vector<SLTGraphPoint>>>& GetCostTable() const {
+    return cost_table_;
+  }
+
   void Reset();
+
+  // Set last frame trajectory from external source (e.g., bag data)
+  void SetLastFrameTrajectory(std::shared_ptr<planning_math::KDPath> last_traj_coord) {
+    last_planning_result_coord_ = last_traj_coord;
+  }
 
  private:
 
@@ -76,7 +90,8 @@ class SpatioTemporalUnionDp {
 
   bool RetrieveSpeedProfile(TrajectoryPoints &traj_points,
                             const planning::common::SpationTemporalUnionDpInput
-                                &spatio_temporal_union_plan_input);
+                                &spatio_temporal_union_plan_input,
+                            google::protobuf::RepeatedPtrField<planning::common::DebugPoint>& debug_points);
 
   bool CalculateTotalCost(
       const std::vector<AgentFrenetSpatioTemporalInFo>& agent_trajs,
@@ -99,6 +114,7 @@ class SpatioTemporalUnionDp {
                            const SLTGraphPoint& third,
                            const SLTGraphPoint& forth, const double speed_limit,
                            const double cruise_speed);
+
   double CalculateEdgeCostForSecondCol(
       const uint32_t row, const uint32_t col, const double speed_limit,
       const double cruise_speed,
@@ -113,7 +129,11 @@ class SpatioTemporalUnionDp {
                            const CubicPolynomialCurve1d& lateral_curve,
                            const double acc,
                            const planning::common::SpationTemporalUnionDpInput&
-                               spatio_temporal_union_plan_input);
+                               spatio_temporal_union_plan_input,
+                           double* path_l_cost_out = nullptr,
+                           double* path_dl_cost_out = nullptr,
+                           double* path_ddl_cost_out = nullptr,
+                           double* stitching_cost_out = nullptr);
 
   double CalculateStitchingCost(
       const Point2D& current, const double current_time,
@@ -199,8 +219,15 @@ class SpatioTemporalUnionDp {
                         TrajectoryPoints& traj_points,
                         const bool last_enable_using_st_plan);
 
+  // 后处理：对稀疏DP点做横向超调修正和凸点平滑
+  void PostProcessLateralProfile(std::vector<SpeedInfo>& speed_profile,
+                                 std::vector<double>& l_vec);
+
   // 预构建上一帧→当前帧的s-l spline（仅执行一次）
   bool PrebuildLastFrameToCurrentSpline();
+
+  // last plan_output passed into Update(), used by GetDebugPoints()
+  planning::common::SpatioTemporalUnionPlan* plan_output_ = nullptr;
 
   // 新增：预构建的s-l spline及边界
   pnc::mathlib::spline last2cur_stitching_spline_;

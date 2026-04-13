@@ -95,6 +95,8 @@ class NodeDeleteDecider final : public ParkingTask {
 
   const NodeDeleteReason GetNodeDeleteReason() { return reason_; }
 
+  const bool UpdateObsDistRelativeSlot(NodeDeleteRequest request);
+
   static const float CalcObsDistCost(const float obs_dist,
                                      const float gear_change_penalty,
                                      const float length_cost,
