@@ -1331,7 +1331,7 @@ void BaseWeight::CalculateJerkBoundByLastJerk(
   if (last_omega_to_jerk >= P1_emergency_jerk_bound) {
     emergency_jerk_bound = P0_emergency_jerk_bound;
   } else if (last_omega_to_jerk >= P2_emergency_jerk_bound) {
-    emergency_jerk_bound = P1_emergency_jerk_bound;
+    emergency_jerk_bound = std::max(P1_emergency_jerk_bound, emergency_jerk_bound);
   }
   if (!is_in_function) {
     emergency_jerk_bound = config_.jerk_bound_inactivated_limit;
