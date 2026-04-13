@@ -503,7 +503,7 @@ bool LDRouteInfoStrategy::CheckCenterlineRelativeTwoLinks(
   std::vector<planning_math::PathPoint> path_points;
   path_points.reserve(lane_points.size());
 
-
+  // point.local_point是boot系
   for (const auto& point : lane_points) {
     if (std::isnan(point.local_point.x) ||
         std::isnan(point.local_point.y)) {
@@ -524,13 +524,14 @@ bool LDRouteInfoStrategy::CheckCenterlineRelativeTwoLinks(
 
   if (path_points.size() <
       planning_math::KDPath::kKDPathMinPathPointSize + 1) {
-    return false;;
+    return false;
   }
 
   frenet_coord =
       std::make_shared<planning_math::KDPath>(std::move(path_points));
 
   // 获取自车当前位置
+  // ego_state->ego_pose()是boot系
   const auto& ego_state = session_->environmental_model().get_ego_state_manager();
   double ego_x = ego_state->ego_pose().x;
   double ego_y = ego_state->ego_pose().y;
@@ -1549,7 +1550,15 @@ bool LDRouteInfoStrategy::IsCurrentLaneOnRouteLink(
     return false;
   }
 
+  if (split_info_vec_.front().first == nullptr) {
+    return false;
+  }
+
   split_link = ld_map_.GetLinkOnRoute(split_info_vec_.front().first->id());
+
+  if (split_link == nullptr) {
+    return false;
+  }
 
   split_next_link = ld_map_.GetNextLinkOnRoute(split_link->id());
   if (split_next_link == nullptr) {

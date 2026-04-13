@@ -374,13 +374,9 @@ void ProcessLaneMapMergePoint(
   std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
   TopoLinkGraph feasible_lane_graph_;
-  
+
   // 中心线与Link关系分析器
   context::CenterlineLinkAnalyzer centerline_link_analyzer_;
-
-  // 车道不在导航路线上的连续帧计数
-  int lane_off_route_frame_count_ = 0;
-
 };
 }
 

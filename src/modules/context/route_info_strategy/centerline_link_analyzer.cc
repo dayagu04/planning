@@ -67,11 +67,11 @@ bool CenterlineLinkAnalyzer::CheckCenterlineRelativeTwoLinks(
   for (size_t i = 0; i < lane_points.size(); ++i) {
     const auto& ref_point = lane_points[i];
 
-    // 将enu_point转换为Frenet坐标系的s值
+    // 将local_point(为boot坐标系)转换为Frenet坐标系的s值
     double s_frenet = 0.0;
     double l_frenet = 0.0;
-    if (!frenet_coord->XYToSL(ref_point.enu_point.x,
-                               ref_point.enu_point.y,
+    if (!frenet_coord->XYToSL(ref_point.local_point.x,
+                               ref_point.local_point.y,
                                &s_frenet, &l_frenet)) {
       continue;
     }
@@ -231,41 +231,28 @@ PositionRelation CenterlineLinkAnalyzer::DeterminePositionRelation(
     return PositionRelation::UNKNOWN;
   }
 
-  if (link1_valid && link2_valid) {
-    double diff1 = l_query - link1_l;  // 正值：查询点在link1左侧
-    double diff2 = l_query - link2_l;  // 正值：查询点在link2左侧
+  double diff1 = l_query - link1_l;  // 正值：查询点在link1左侧
+  double diff2 = l_query - link2_l;  // 正值：查询点在link2左侧
 
-    // 在两条link之间（l值夹在两者之间）
-    if (diff1 * diff2 < 0.0) {
-      return PositionRelation::BETWEEN_LINKS;
-    }
+  // 在两条link之间（l值夹在两者之间）
+  if (diff1 * diff2 < 0.0) {
+    return PositionRelation::BETWEEN_LINKS;
+  }
 
-    // 在某条link横向容忍范围内，视为BETWEEN_LINKS
-    if (std::abs(diff1) <= lateral_tolerance || std::abs(diff2) <= lateral_tolerance) {
-      return PositionRelation::BETWEEN_LINKS;
-    }
+  // 在某条link横向容忍范围内，视为BETWEEN_LINKS
+  if (std::abs(diff1) <= lateral_tolerance || std::abs(diff2) <= lateral_tolerance) {
+    return PositionRelation::BETWEEN_LINKS;
+  }
 
-    // 明确在两条link同侧，返回距离更近的
-    if (diff1 > 0.0 && diff2 > 0.0) {
-      return diff1 < diff2 ? PositionRelation::LEFT_OF_LINK1 : PositionRelation::LEFT_OF_LINK2;
-    } else {
-      return std::abs(diff1) < std::abs(diff2) ? PositionRelation::RIGHT_OF_LINK1
-                                               : PositionRelation::RIGHT_OF_LINK2;
-    }
+  // 明确在两条link同侧，返回距离更近的
+  if (diff1 > 0.0 && diff2 > 0.0) {
+    return diff1 < diff2 ? PositionRelation::LEFT_OF_LINK1 : PositionRelation::LEFT_OF_LINK2;
+  } else {
+    return std::abs(diff1) < std::abs(diff2) ? PositionRelation::RIGHT_OF_LINK1
+                                              : PositionRelation::RIGHT_OF_LINK2;
   }
 
   return PositionRelation::UNKNOWN;
-
-  // // 只有一条link覆盖该s
-  // if (link1_valid) {
-  //   double diff1 = l_query - link1_l;
-  //   if (std::abs(diff1) <= lateral_tolerance) return PositionRelation::BETWEEN_LINKS;
-  //   return diff1 > 0.0 ? PositionRelation::LEFT_OF_LINK1 : PositionRelation::RIGHT_OF_LINK1;
-  // }
-
-  // double diff2 = l_query - link2_l;
-  // if (std::abs(diff2) <= lateral_tolerance) return PositionRelation::BETWEEN_LINKS;
-  // return diff2 > 0.0 ? PositionRelation::LEFT_OF_LINK2 : PositionRelation::RIGHT_OF_LINK2;
 }
 
 std::vector<CenterlineSegment> CenterlineLinkAnalyzer::AggregateSegments(
