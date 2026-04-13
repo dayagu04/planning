@@ -34,6 +34,12 @@ class MatchGapCost : public CurveCost {
   const double match_v_cost() const { return match_v_cost_; }
   const double match_gap_center_cost() const { return match_gap_center_cost_; }
   const bool is_gap_changeable() const { return is_gap_changeable_; }
+  const double safe_gap_front_obj() const {
+    return safe_border_distance_to_gap_front_obj_;
+  }
+  const double safe_gap_back_obj() const {
+    return safe_border_distance_to_gap_back_obj_;
+  }
 
  private:
   double front_edge_to_rear_axle_;
@@ -77,6 +83,8 @@ class StopLineCost : public CurveCost {
  private:
   double mid_stop_dis_penalty_coef_ = 3.0;
   double near_stop_dis_penalty_coef_ = 4.0;
+  double over_stop_dis_penalty_coef_ = 3.0;
+  double behind_stop_dis_penalty_coef_ = 1.0;
 };
 
 class LeadingVehSafeCost : public CurveCost {
@@ -116,7 +124,10 @@ class SpeedVariableCost : public CurveCost {
 class GapAvaliableCost : public CurveCost {
  public:
   GapAvaliableCost() = default;
-  void GetCost(const double future_gap_length, const double gap_length);
+  void GetCost(const STPointWithLateral& upper_st_point,
+               const STPointWithLateral& lower_st_point,
+               const double safe_gap_front_obj, const double safe_gap_back_obj,
+               const double ego_s);
 };
 
 class StopPenaltyCost : public CurveCost {
