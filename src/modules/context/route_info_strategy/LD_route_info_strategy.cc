@@ -5044,6 +5044,10 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
     return;
   }
 
+  if (front_first_topo_change_link->successor_link_ids().size() != 2) {
+    return;
+  }
+  
   uint64 out_link_id =
       front_first_topo_change_link->successor_link_ids()[0] ==
               split_next_link->id()
@@ -5056,6 +5060,11 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
 
   const auto& closer_suc_link = GetCloserSuccessorLinkByLateralDistance(
       front_first_topo_change_link, split_next_link, out_link);
+
+  if (closer_suc_link == nullptr) {
+    return;
+  }
+
   if (closer_suc_link->id() == split_next_link->id()) {
     return;
   }
