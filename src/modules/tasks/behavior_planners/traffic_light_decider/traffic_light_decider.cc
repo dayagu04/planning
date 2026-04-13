@@ -11,6 +11,8 @@ constexpr double kEgoStaticVelThred = 0.1;
 constexpr double kGreenReminderStartTime = 1.5;
 constexpr double kGreenReminderEndTime = 4.6;
 constexpr double kGreenReminderLeadoneDis = 10.0;
+constexpr double kGreenBlinkIgnoreVelThred = 4.72;
+constexpr double kStoplineTFLDisValidThred = 200.0;
 }
 TrafficLightDecider::TrafficLightDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -138,9 +140,9 @@ bool TrafficLightDecider::Execute() {
         if ((is_small_front_intersection_ && !is_tfl_match_intersection_) ||
             (!is_small_front_intersection_ && !IsIntersectionMatchTFLByDisRatio())) {
           can_pass_ = true;
-        } else if (can_pass_ && (std::max(v_ego - 1.0, 0.0) *
+        } else if (can_pass_ && ((std::max(v_ego - 1.0, 0.0) *
                               std::max(4.0 - green_blink_timer_, 0.0) >
-                          dis_to_stopline)) {
+                          dis_to_stopline) || v_ego < kGreenBlinkIgnoreVelThred)) {
           can_pass_ = true;
         } else {
           can_pass_ = false;
@@ -196,7 +198,10 @@ bool TrafficLightDecider::Execute() {
     can_pass_ = true;
   }
 
+  const auto& route_info_output = session_->environmental_model().get_route_info()
+                                                           ->get_route_info_output();
   if (config_.enable_tfl_decider && !in_acc_func &&
+      (!route_info_output.is_ego_on_expressway) &&
       ((is_in_straight_lane_ && !can_pass_) || !is_in_straight_lane_)) {
     AddVirtualObstacle();
   }
@@ -422,7 +427,7 @@ bool TrafficLightDecider::IsIntersectionMatchTFLByDisRatio() {
     }
   }
   double dis_tfl_to_stopline = std::abs(dis_to_tfl - dis_to_stopline);
-  if (min_virtual_dis > config_.min_virtual_dis_thred &&
+  if (min_virtual_dis > config_.min_virtual_dis_thred && dis_tfl_to_stopline < kStoplineTFLDisValidThred &&
       (dis_tfl_to_stopline / std::max(max_virtual_dis, kEpsilon)) > config_.dis_ratio_can_pass) {
     return false;
   } else {
