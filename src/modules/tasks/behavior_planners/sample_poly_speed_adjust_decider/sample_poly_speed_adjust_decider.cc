@@ -182,13 +182,13 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   if (is_merge_change_ && ok) {
     if (min_cost_traj_ptr_ != nullptr &&
         !min_cost_traj_ptr_->is_left_distance_enough() &&
-        astar_merge_count_ < 2) {
+        astar_merge_count_ == 2) {
       if (distance_to_stop_point_ < 5.0) {
         merge_fail = true;
       } else {
         merge_hard = true;
       }
-    } else if (min_cost_traj_ptr_ == nullptr && astar_merge_count_ < 2) {
+    } else if (min_cost_traj_ptr_ == nullptr && astar_merge_count_ == 2) {
       if (distance_to_stop_point_ < 5.0) {
         merge_fail = true;
       } else if (distance_to_stop_point_ < ego_v_ * 1.5) {
