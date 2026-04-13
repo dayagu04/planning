@@ -669,6 +669,8 @@ void PlanningScheduler::FillPlanningTrajectory(
   horn_signal_command->horn_signal_value = iflyauto::HORN_SIGNAL_TYPE_NONE;
 
   // 6.Gear signal
+  auto& gear_command_in_context = session_.mutable_planning_context()
+      ->mutable_gear_command();
   auto gear_command = &(planning_output->gear_command);
   gear_command->available = true;
   // 需要获取目标挡位值
@@ -681,10 +683,14 @@ void PlanningScheduler::FillPlanningTrajectory(
     if (state_machine.current_state == iflyauto::FunctionalState_RADS_TRACING &&
         !rads_scene_is_completed) {
       gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
+      gear_command_in_context.gear_command_value = gear_command->gear_command_value;
     } else if (state_machine.current_state ==
                    iflyauto::FunctionalState_RADS_TRACING &&
                rads_scene_is_completed) {
       gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_PARKING;
+      gear_command_in_context.gear_command_value = gear_command->gear_command_value;
+    } else if (state_machine.current_state == iflyauto::FunctionalState_RADS_SUSPEND) {
+      gear_command->gear_command_value = gear_command_in_context.gear_command_value;
     } else {
       gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_NONE;
     }
