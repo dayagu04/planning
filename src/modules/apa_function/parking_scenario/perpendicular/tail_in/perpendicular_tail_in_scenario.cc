@@ -47,33 +47,26 @@ void PerpendicularTailInScenario::ScenarioTry() {
   }
 
   Reset();
-
   frame_.replan_reason = ReplanReason::SLOT_CRUISING;
 
   SlotReleaseInfo& release_info = apa_world_ptr_->GetSlotManagerPtr()
                                       ->GetMutableEgoInfoUnderSlot()
                                       .slot.release_info_;
+  auto& geometry_release_state =
+      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE];
 
-  if (!UpdateEgoSlotInfo()) {
-    release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
+  if (!UpdateEgoSlotInfo() || !GenTlane()) {
+    geometry_release_state = SlotReleaseState::NOT_RELEASE;
     return;
   }
 
-  if (!GenTlane()) {
-    release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
-    return;
-  }
-
+  const auto park_path_plan_type = apa_param.GetParam().park_path_plan_type;
   uint8_t path_plan_res = PathPlannerResult::PLAN_FAILED;
-  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+  if (park_path_plan_type == ParkPathPlanType::GEOMETRY) {
     path_plan_res = PathPlanOnce();
-  } else if (apa_param.GetParam().park_path_plan_type ==
-             ParkPathPlanType::HYBRID_ASTAR) {
+  } else if (park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR) {
     path_plan_res = PathPlanOnceHybridAstar();
-  } else if (apa_param.GetParam().park_path_plan_type ==
-             ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+  } else if (park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
     path_plan_res = PathPlanOnceHybridAstarThread();
   }
 
@@ -82,31 +75,25 @@ void PerpendicularTailInScenario::ScenarioTry() {
 
   switch (path_plan_res) {
     case PathPlannerResult::PLAN_UPDATE:
-      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
+      geometry_release_state = SlotReleaseState::RELEASE;
       break;
     case PathPlannerResult::WAIT_PATH:
-      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-          SlotReleaseState::COMPUTING;
+      geometry_release_state = SlotReleaseState::COMPUTING;
       break;
     case PathPlannerResult::PLAN_FAILED:
     default:
-      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-          SlotReleaseState::NOT_RELEASE;
+      geometry_release_state = SlotReleaseState::NOT_RELEASE;
       break;
   }
 
-  if (apa_param.GetParam().park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+  if (park_path_plan_type != ParkPathPlanType::GEOMETRY) {
     release_info.release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-        release_info
-            .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE];
+        geometry_release_state;
   }
 
   // fill head/tail in parking action.
   // TODO: actions need computing by algorithm.
   SetParkInFeasibleDirection();
-
-  return;
 }
 
 void PerpendicularTailInScenario::ExcutePathPlanningTask() {
