@@ -2035,7 +2035,8 @@
     "weight_jerk": 0.2,
     "weight_front_ttc": 1.0,
     "weight_back_ttc": 1.0,
-    "weight_lead_safe_distance": 1.0
+    "weight_lead_safe_distance": 1.0,
+    "safe_collsion_decel": 1.0
   },
   "dp_path_decider": {
     "coeff_l_cost": 10.0,

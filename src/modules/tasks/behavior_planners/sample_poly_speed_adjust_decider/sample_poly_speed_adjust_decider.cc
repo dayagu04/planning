@@ -1276,8 +1276,7 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
   const auto& function_info = session_->environmental_model().function_info();
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  if ((lane_change_source_ == MERGE_REQUEST) ||
-      is_merge_change_ == true ||
+  if ((lane_change_source_ == MERGE_REQUEST) || is_merge_change_ ||
       ((lane_change_source_ == MAP_REQUEST) &&
        ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
          MERGE_SCENE) ||

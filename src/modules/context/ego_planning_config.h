@@ -1071,7 +1071,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     decleration_scene_weight_stop_point = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_stop_point"});
-                                        
+
     leading_safe_distance_gain = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "leading_safe_distance_gain"});
@@ -1187,6 +1187,8 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
         json,std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
     weight_lead_safe_distance = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "weight_lead_safe_distance"});
+    safe_collsion_decel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "safe_collsion_decel"});
   }
   double time_step_near = 1.0;
   double time_step_far = 1.0;
@@ -1200,6 +1202,7 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double weight_front_ttc = 1.0;
   double weight_back_ttc = 1.0;
   double weight_lead_safe_distance = 1.0;
+  double safe_collsion_decel = 1.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
