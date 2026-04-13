@@ -106,6 +106,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
   void MakeDecisionForSingleDynamicObs(
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
       const std::shared_ptr<FrenetObstacle>& obstacle,
+      const ObstacleClassificationResult& obs_classification_result,
       LatObstacleDecisionType& decision);
 
   void MakeDecisionForTurnstile(
