@@ -858,6 +858,7 @@
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 2.0,
     "ego_jerk_min": -2.5,
+    "q_ego_vel_bound_weight": 1000.0,
     "q_hard_halfplane_weight": 100.0,
     "hard_halfplane_dist": 3.5,
     "halfplane_cost_allocation_ratio": 0.6,
@@ -866,7 +867,21 @@
     "soft_halfplane_tau": 0.5,
     "lc_thw": 0.5,
     "soft_halfplane_cost_allocation_ratio": 0.8,
-    "halfplane_cost_allocation_ratio_later": 0.5
+    "halfplane_cost_allocation_ratio_later": 0.5,
+    "max_acc_bound_table": {
+      "vel_table": [
+        0.0,
+        5.56,
+        11.11,
+        16.67,
+        22.22,
+        27.78,
+        36.11
+      ],
+      "acc_table": [
+        1.5, 1.35, 1.15, 0.95, 0.65, 0.45, 0.35
+      ]
+    }
   },
   "lat_lon_joint_planner": {
     "q_ego_ref_x": 3.0,
@@ -2189,7 +2204,7 @@
   },
   "lane_change_safety_check": {
     "exe_ttc_ratio": 0.7,
-    "ttc_decay_factor": 0.92,
+    "ttc_decay_factor": 0.97,
     "press_line_ratio_threshold": 0.1,
     "rear_close_distance_threshold": 6.0,
     "rear_close_speed_diff_threshold": 1.5,
@@ -2238,7 +2253,7 @@
     },
     "rear_vehicle_speed_min_space_map": {
       "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
-      "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  7.0,   8.5]
+      "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  9.0,   12.5]
     },
     "hold_state_vel_jerk_map": {
       "vel_table":  [4.167, 8.333, 16.667, 25.0],

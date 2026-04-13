@@ -4546,11 +4546,17 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
                      "soft_halfplane_cost_allocation_ratio");
     ReadItem<double>(json, halfplane_cost_allocation_ratio_later, "lane_change_joint_decision",
                      "halfplane_cost_allocation_ratio_later");
+    ReadItem<double>(json, q_ego_vel_bound_weight, "lane_change_joint_decision",
+                     "q_ego_vel_bound_weight");
     ReadItem<double>(json, lc_thw, "lane_change_joint_decision", "lc_thw");
     ReadItem<double>(json, obs_reaction_decay_time, "lane_change_joint_decision",
                      "obs_reaction_decay_time");
     ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
                      "obs_keep_ref_factor");
+    ReadVector<double>(json, max_acc_bound_vel_table, "lane_change_joint_decision",
+                       "max_acc_bound_table", "vel_table");
+    ReadVector<double>(json, max_acc_bound_acc_table, "lane_change_joint_decision",
+                       "max_acc_bound_table", "acc_table");
   }
 
   double q_ego_ref_x = 5.0;
@@ -4601,6 +4607,11 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;
+
+  double q_ego_vel_bound_weight = 50.0;
+
+  std::vector<double> max_acc_bound_vel_table;
+  std::vector<double> max_acc_bound_acc_table;
 };
 
 struct JointMotionPlannerConfig : public EgoPlanningConfig {

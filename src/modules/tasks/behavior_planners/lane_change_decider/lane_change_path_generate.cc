@@ -364,7 +364,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   double tau =
       planning::interp(planning_init_vel, ego_vel_table, ego_thw_fused_table);
 
-  JSON_DEBUG_VALUE("joint_limit_speed", v_cruise);
+  // JSON_DEBUG_VALUE("joint_limit_speed", v_cruise);
 
   // 递推自车轨迹
   while (!iter_terminate) {
