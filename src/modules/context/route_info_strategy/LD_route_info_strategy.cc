@@ -298,34 +298,11 @@ void LDRouteInfoStrategy::UpdateLanesOrderOnSplitNextLink(
 
   // 收集split_next_link上有效的（正常行驶）lane，按sequence从大到小排列（左大右小）
   // 同时构��� sequence -> 从左向右序号 的映射
-  std::vector<std::pair<int, uint64_t>> seq_lane_ids;  // (sequence, lane_id)
-  for (auto lane_id : split_next_link->lane_ids()) {
-    const auto* map_lane = ld_map_.GetLaneInfoByID(lane_id);
-    if (map_lane == nullptr) {
-      continue;
-    }
-    if (IsEmergencyLane(map_lane) || IsDiversionLane(map_lane)) {
-      continue;
-    }
-    seq_lane_ids.emplace_back(map_lane->sequence(), lane_id);
-  }
+  const auto seq_lane_ids = BuildSeqLaneIds(split_next_link);
   if (seq_lane_ids.empty()) {
     return;
   }
-  // 按sequence从大到小排序（sequence大=靠左）
-  std::sort(seq_lane_ids.begin(), seq_lane_ids.end(),
-            [](const auto& a, const auto& b) { return a.first > b.first; });
   const int total_normal_lanes = static_cast<int>(seq_lane_ids.size());
-
-  // sequence -> 从左向右序号（1=最左）
-  auto seq_to_order = [&](int sequence) -> int {
-    for (int i = 0; i < total_normal_lanes; ++i) {
-      if (seq_lane_ids[i].first == sequence) {
-        return i + 1;
-      }
-    }
-    return -1;
-  };
 
   // 检查split_next_link的boot点是否可用
   if (!split_next_link->has_points() || !split_next_link->points().has_boot() ||
@@ -1572,30 +1549,7 @@ bool LDRouteInfoStrategy::IsCurrentLaneOnRouteLink(
 
   // 与 UpdateLanesOrderOnSplitNextLink 保持一致：只统计正常车道，建立
   // sequence → 从左向右序号（1=最左）的映射
-  std::vector<std::pair<int, uint64_t>> seq_lane_ids;
-  for (auto lane_id : split_next_link->lane_ids()) {
-    const auto* map_lane = ld_map_.GetLaneInfoByID(lane_id);
-    if (map_lane == nullptr) {
-      continue;
-    }
-    if (IsEmergencyLane(map_lane) || IsDiversionLane(map_lane)) {
-      continue;
-    }
-    seq_lane_ids.emplace_back(map_lane->sequence(), lane_id);
-  }
-  // sequence 从大到小排序（大=靠左），排序后下标+1即为从左向右序号
-  std::sort(seq_lane_ids.begin(), seq_lane_ids.end(),
-            [](const auto& a, const auto& b) { return a.first > b.first; });
-  const int total_normal_lanes = static_cast<int>(seq_lane_ids.size());
-
-  auto seq_to_order = [&](int sequence) -> int {
-    for (int i = 0; i < total_normal_lanes; ++i) {
-      if (seq_lane_ids[i].first == sequence) {
-        return i + 1;
-      }
-    }
-    return -1;
-  };
+  const auto seq_lane_ids = BuildSeqLaneIds(split_next_link);
 
   bool cur_lane_on_split_next_link_feasible_lane = false;
   const int cur_lane_order = cur_lane->get_lane_order_on_split_next_link();
@@ -1607,7 +1561,7 @@ bool LDRouteInfoStrategy::IsCurrentLaneOnRouteLink(
       for (const auto& topo_lane : lane_topo_group.topo_lanes) {
         // 用与 UpdateLanesOrderOnSplitNextLink 相同的 sequence→序号 映射转换
         const int left_to_right_order =
-            seq_to_order(static_cast<int>(topo_lane.order_id));
+            SeqToOrder(seq_lane_ids, static_cast<int>(topo_lane.order_id));
         if (left_to_right_order == cur_lane_order) {
           cur_lane_on_split_next_link_feasible_lane = true;
           break;
@@ -4960,6 +4914,37 @@ double LDRouteInfoStrategy::CalculateMatchScore(
     final_score = total_score / total_weight;
   }
   return final_score;
+}
+std::vector<std::pair<int, uint64_t>> LDRouteInfoStrategy::BuildSeqLaneIds(
+    const iflymapdata::sdpro::LinkInfo_Link* link) const {
+  std::vector<std::pair<int, uint64_t>> seq_lane_ids;
+  if (link == nullptr) {
+    return seq_lane_ids;
+  }
+  for (auto lane_id : link->lane_ids()) {
+    const auto* map_lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (map_lane == nullptr) {
+      continue;
+    }
+    if (IsEmergencyLane(map_lane) || IsDiversionLane(map_lane)) {
+      continue;
+    }
+    seq_lane_ids.emplace_back(map_lane->sequence(), lane_id);
+  }
+  // sequence 从大到小排序（大=靠左），下标+1即为从左向右序号
+  std::sort(seq_lane_ids.begin(), seq_lane_ids.end(),
+            [](const auto& a, const auto& b) { return a.first > b.first; });
+  return seq_lane_ids;
+}
+
+int LDRouteInfoStrategy::SeqToOrder(
+    const std::vector<std::pair<int, uint64_t>>& seq_lane_ids, int sequence) {
+  for (int i = 0; i < static_cast<int>(seq_lane_ids.size()); ++i) {
+    if (seq_lane_ids[i].first == sequence) {
+      return i + 1;
+    }
+  }
+  return -1;
 }
 
 }  // namespace planning

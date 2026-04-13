@@ -356,6 +356,15 @@ void ProcessLaneMapMergePoint(
 
   bool IsCurrentLaneOnRouteLink(const TopoLinkGraph& feasible_lane_graph) const;
 
+  // 收集 link 上有效（非 emergency/diversion）车道，按 sequence 从大到小排序
+  // 返回 vector<pair<sequence, lane_id>>，下标+1即为从左向右序号
+  std::vector<std::pair<int, uint64_t>> BuildSeqLaneIds(
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
+
+  // 在已排序的 seq_lane_ids 中查找 sequence 对应的从左向右序号（1=最左），未找到返回 -1
+  static int SeqToOrder(
+      const std::vector<std::pair<int, uint64_t>>& seq_lane_ids, int sequence);
+
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
   bool ldmap_valid_{false};
