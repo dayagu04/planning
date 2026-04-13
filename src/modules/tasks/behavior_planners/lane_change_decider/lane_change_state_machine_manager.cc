@@ -4233,7 +4233,7 @@ bool LaneChangeStateMachineManager::
     }
   }
 
-    double max_lat_buff = 3.5;
+    double max_lat_buff = 4.0;
     double lat_buff = 3.5;
   // 确认初始横向buff 与横向速度相关
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
