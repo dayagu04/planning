@@ -91,6 +91,64 @@ def load_st_label(st_graph_data):
 
   return st_label
 
+def load_cut_in_st_boundaries(st_graph_data):
+  cut_in_st_info = []
+  cut_in_boundaries_list = st_graph_data.cut_in_st_boundaries
+  cut_in_boundaries_size = len(cut_in_boundaries_list)
+  
+  for i in range(20):
+    cut_in_st_boundary_info = {
+        'agent_id': -1,
+        'polygen_lower_points_s_vec': [],
+        'polygen_lower_points_t_vec': [],
+        'polygen_upper_points_s_vec': [],
+        'polygen_upper_points_t_vec': [],
+        'left_point_s': [],
+        'left_point_t': [],
+        'right_point_s': [],
+        'right_point_t': [],
+        'center_point_s': [],
+        'center_point_t': [],
+    }
+    
+    if i < cut_in_boundaries_size:
+      agent_st_boundary = cut_in_boundaries_list[i]
+      cut_in_st_boundary_info['agent_id'] = agent_st_boundary.agent_id
+      
+      if len(agent_st_boundary.st_boundary) > 0:
+        st_boundary = agent_st_boundary.st_boundary[0]
+        
+        lower_point_s_vec = [point.s for point in st_boundary.lower_points]
+        lower_point_t_vec = [point.t for point in st_boundary.lower_points]
+        upper_point_s_vec = [point.s for point in st_boundary.upper_points]
+        upper_point_t_vec = [point.t for point in st_boundary.upper_points]
+        
+        cut_in_st_boundary_info['polygen_lower_points_s_vec'] = lower_point_s_vec
+        cut_in_st_boundary_info['polygen_lower_points_t_vec'] = lower_point_t_vec
+        cut_in_st_boundary_info['polygen_upper_points_s_vec'] = upper_point_s_vec
+        cut_in_st_boundary_info['polygen_upper_points_t_vec'] = upper_point_t_vec
+        
+        if len(lower_point_s_vec) > 0 and len(upper_point_s_vec) > 0:
+          left_point_s = [lower_point_s_vec[0], upper_point_s_vec[0]]
+          left_point_t = [lower_point_t_vec[0], upper_point_t_vec[0]]
+          right_point_s = [lower_point_s_vec[-1], upper_point_s_vec[-1]]
+          right_point_t = [lower_point_t_vec[-1], upper_point_t_vec[-1]]
+          
+          cut_in_st_boundary_info['left_point_s'] = left_point_s
+          cut_in_st_boundary_info['left_point_t'] = left_point_t
+          cut_in_st_boundary_info['right_point_s'] = right_point_s
+          cut_in_st_boundary_info['right_point_t'] = right_point_t
+          
+          # Calculate center point consistent with st_label
+          center_s = [((lower_point_s_vec[0]+lower_point_s_vec[-1])/2 + (upper_point_s_vec[0]+upper_point_s_vec[-1])/2)/2]
+          center_t = [((lower_point_t_vec[0]+lower_point_t_vec[-1])/2 + (upper_point_t_vec[0]+upper_point_t_vec[-1])/2)/2]
+          cut_in_st_boundary_info['center_point_s'] = center_s
+          cut_in_st_boundary_info['center_point_t'] = center_t
+    
+    cut_in_st_info.append(cut_in_st_boundary_info)
+  
+  return cut_in_st_info
+
 def load_st_polygen_points(st_graph_data):
   st_info = []
   st_boundary_list = st_graph_data.st_boundaries
@@ -205,22 +263,34 @@ def load_processed_trajectory(st_graph_data):
       agent_trajectories_obj = agents_trajectories_list[i]
       x_vec = []
       y_vec = []
+      cutin_x_vec = []
+      cutin_y_vec = []
 
-      for trajectory in agent_trajectories_obj.agent_trajectories:
-          for point in trajectory.agent_trajectory:
-              x_vec.append(point.x)
-              y_vec.append(point.y)
+      trajectory_count = len(agent_trajectories_obj.agent_trajectories)
+      for traj_idx, trajectory in enumerate(agent_trajectories_obj.agent_trajectories):
+          if traj_idx == trajectory_count - 1 and trajectory_count > 1:
+              for point in trajectory.agent_trajectory:
+                  cutin_x_vec.append(point.x)
+                  cutin_y_vec.append(point.y)
+          else:
+              for point in trajectory.agent_trajectory:
+                  x_vec.append(point.x)
+                  y_vec.append(point.y)
 
       agent_trajectory_info = {
           'x_vec': x_vec,
-          'y_vec': y_vec
+          'y_vec': y_vec,
+          'cutin_x_vec': cutin_x_vec,
+          'cutin_y_vec': cutin_y_vec
       }
 
       agents_trajectories_info.append(agent_trajectory_info)
     else:
       agent_trajectory_info = {
           'x_vec': default_x_vec.copy(),
-          'y_vec': default_y_vec.copy()
+          'y_vec': default_y_vec.copy(),
+          'cutin_x_vec': default_x_vec.copy(),
+          'cutin_y_vec': default_y_vec.copy()
       }
       agents_trajectories_info.append(agent_trajectory_info)
   return agents_trajectories_info
@@ -245,8 +315,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", "is_small_front_intersection", "dis_to_tfl", \
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
                               'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "tla_reminder_state", "obstacle_brake_hmi_sts",\
-                              'new_cutin_id', 'new_cutin_id_count', \
-                              "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \
                               "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
                               "lon_danger_agent_ids", "v_cruise_limit","v_target_decider","v_target_type_code", "construction_manual_intervention_detected",\
@@ -270,7 +338,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "road_boundary_collision_v_limit", "road_boundary_collision_trigger_distance", "road_boundary_collision_valid", "road_boundary_collision_distance",\
                               "s_curve_road_boundary_triggered", "s_curve_road_boundary_v_limit", "s_curve_road_boundary_trigger_distance", "s_curve_min_radius", "s_curve_first_direction", \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ["joint_danger_agent_ids", "rule_base_cutin_agent_ids", "upper_bound_agent_ids", "comfort_follow_agent_ids", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "is_confluence_area", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
+  st_search_value_list = ["comfort_follow_agent_ids", "prediction_cut_in_agent_ids", "rule_base_cut_in_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores", "upper_bound_agent_ids", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop", "is_confluence_area", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet",
                           "soft_bound_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'gear_command','cipv_id_st', 'cipv_id_hmi', 'time_headway_level','THW', "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
@@ -326,7 +394,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           # "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path']
 
-  new_cutin_list = ['new_cutin_id', 'new_cutin_id_count']
 
   plan_debug_info = local_view_data['data_msg']['plan_debug_msg']
   plan_debug_json_info = local_view_data['data_msg']['plan_debug_json_msg']
@@ -409,18 +476,25 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   st_point_all = load_st_polygen_lower_upper_point(plan_debug_info.st_graph_data)
   st_label_all = load_st_label(plan_debug_info.st_graph_data)
   processed_trajectory_all = load_processed_trajectory(plan_debug_info.st_graph_data)
+  cut_in_st_info_all = load_cut_in_st_boundaries(plan_debug_info.st_graph_data)
 
   data_st_boundaries = {i: lon_plan_data[f'st_boundary_{i}'] for i in range(20)}
   data_st_points = {i: lon_plan_data[f'st_point_{i}'] for i in range(20)}
   data_st_labels = {i: lon_plan_data[f'st_label_{i}'] for i in range(20)}
   data_processed_trajectories = {i: lon_plan_data[f'processed_trajectory_{i}'] for i in range(20)}
+  data_cut_in_st_boundaries = {i: lon_plan_data[f'cut_in_st_boundary_{i}'] for i in range(20)}
+  data_cut_in_st_points = {i: lon_plan_data[f'cut_in_st_point_{i}'] for i in range(20)}
+  data_cut_in_st_labels = {i: lon_plan_data[f'cut_in_st_label_{i}'] for i in range(20)}
 
   for i in range(20):
     data_processed_trajectory = data_processed_trajectories[i]
     x_vec, y_vec = coord_tf.global_to_local(processed_trajectory_all[i]['x_vec'], processed_trajectory_all[i]['y_vec'])
+    cutin_x_vec, cutin_y_vec = coord_tf.global_to_local(processed_trajectory_all[i]['cutin_x_vec'], processed_trajectory_all[i]['cutin_y_vec'])
     data_processed_trajectory.data.update({
       'x_vec_{}'.format(i): x_vec,
       'y_vec_{}'.format(i): y_vec,
+      'cutin_x_vec_{}'.format(i): cutin_x_vec,
+      'cutin_y_vec_{}'.format(i): cutin_y_vec,
     })
 
   for i in range(20):
@@ -448,6 +522,35 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'center_point_{}_s'.format(i): st_label_all[i]['center_point_s'],
       'center_point_{}_t'.format(i): st_label_all[i]['center_point_t'],
       'agent_{}_id'.format(i): st_label_all[i]['agent_id'],
+    })
+
+  # Update cut-in ST boundary data (split into three data sources)
+  for i in range(20):
+    # Boundary data (upper/lower points)
+    data_cut_in_st_boundary = data_cut_in_st_boundaries[i]
+    cut_in_boundary_info = cut_in_st_info_all[i]
+    data_cut_in_st_boundary.data.update({
+      f'cut_in_lower_points_{i}_s_vec': cut_in_boundary_info['polygen_lower_points_s_vec'],
+      f'cut_in_lower_points_{i}_t_vec': cut_in_boundary_info['polygen_lower_points_t_vec'],
+      f'cut_in_upper_points_{i}_s_vec': cut_in_boundary_info['polygen_upper_points_s_vec'],
+      f'cut_in_upper_points_{i}_t_vec': cut_in_boundary_info['polygen_upper_points_t_vec'],
+    })
+    
+    # Closure point data (left/right edges)
+    data_cut_in_st_point = data_cut_in_st_points[i]
+    data_cut_in_st_point.data.update({
+      f'cut_in_left_point_{i}_s': cut_in_boundary_info['left_point_s'],
+      f'cut_in_left_point_{i}_t': cut_in_boundary_info['left_point_t'],
+      f'cut_in_right_point_{i}_s': cut_in_boundary_info['right_point_s'],
+      f'cut_in_right_point_{i}_t': cut_in_boundary_info['right_point_t'],
+    })
+    
+    # Label data (agent ID)
+    data_cut_in_st_label = data_cut_in_st_labels[i]
+    data_cut_in_st_label.data.update({
+      f'cut_in_center_point_{i}_s': cut_in_boundary_info['center_point_s'],
+      f'cut_in_center_point_{i}_t': cut_in_boundary_info['center_point_t'],
+      f'cut_in_agent_{i}_id': [cut_in_boundary_info['agent_id']],
     })
 
   t_search_vec = []
@@ -810,9 +913,36 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       val = start_stop_status_dict.get(val, str(val))
     st_search_attr_vec.append(val)
 
-  cutin_attr_vec = []
-  for ind in range(len(new_cutin_list)):
-     cutin_attr_vec.append(plan_debug_json_info[new_cutin_list[ind]])
+  # HPP debug attribute / value vectors
+  hpp_debug_attr_vec = []
+  hpp_debug_val_vec = []
+  for ind in range(len(hpp_debug_value_list)):
+     key = hpp_debug_value_list[ind]
+     val = plan_debug_json_info.get(key, None)
+     hpp_debug_attr_vec.append(key)
+     hpp_debug_val_vec.append(val)
+
+  # # #region agent log
+  # try:
+  #   import json as _json, time as _time
+  #   _log_entry = {
+  #       "sessionId": "c7627a",
+  #       "runId": "initial",
+  #       "hypothesisId": "H1",
+  #       "location": "load_lon_st_graph.update_lon_plan_data",
+  #       "message": "HPP debug snapshot",
+  #       "data": {
+  #           "v_cruise_limit": plan_debug_json_info.get("v_cruise_limit", None),
+  #           "v_target_decider": plan_debug_json_info.get("v_target_decider", None),
+  #           "v_target_type_code": plan_debug_json_info.get("v_target_type_code", None),
+  #       },
+  #       "timestamp": int(_time.time() * 1000),
+  #   }
+  #   with open("/root/code/planning/.cursor/debug-c7627a.log", "a") as _f:
+  #     _f.write(_json.dumps(_log_entry) + "\n")
+  # except Exception:
+  #   pass
+  # # #endregion
 
   # HPP debug attribute / value vectors
   hpp_debug_attr_vec = []
@@ -1000,11 +1130,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'StSearchVal': st_search_attr_vec,
   })
 
-  lon_plan_data['data_cutin'].data.update({
-    'cutinAttr': new_cutin_list,
-    'cutinVal': cutin_attr_vec
-  })
-
   try:
     # print("obstacle st info: ",plan_debug_info.st_search_decider_info.obstacle_st_infos)
     for idx in range(len(plan_debug_info.st_search_decider_info.obstacle_st_infos)):
@@ -1035,6 +1160,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   hard_pos_min_vec = lon_motion_plan_input.hard_pos_min_vec
   soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
   soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
+  extend_pos_max_vec = lon_motion_plan_input.extend_pos_max_vec
+  extend_pos_min_vec = lon_motion_plan_input.extend_pos_min_vec
   vel_max_vec = lon_motion_plan_input.vel_max_vec
   vel_min_vec = lon_motion_plan_input.vel_min_vec
   acc_max_vec = lon_motion_plan_input.acc_max_vec
@@ -1078,7 +1205,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   cost_vec = motion_solver_info.cost_vec
   lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
   cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", \
-               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonPosSafeCost", "LonEmergencyStopCost"]
+               "LonExtendPosBoundCost", "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonPosSafeCost", "LonEmergencyStopCost"]
   print(cost_list)
   for i, sub_list in enumerate(lists):
     if i == 0:
@@ -1097,6 +1224,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'hard_pos_min_vec': hard_pos_min_vec,
     'soft_pos_max_vec': soft_pos_max_vec,
     'soft_pos_min_vec': soft_pos_min_vec,
+    'extend_pos_max_vec': extend_pos_max_vec,
+    'extend_pos_min_vec': extend_pos_min_vec,
     'vel_max_vec': vel_max_vec,
     'vel_min_vec': vel_min_vec,
     'acc_max_vec': acc_max_vec,
@@ -1227,6 +1356,31 @@ def update_lon_ref_path(lon_ref_path, lon_plan_data):
         print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
   except:
         print("there is no lon_ref_path.soft_bounds")
+
+  s_extend_upper_bound_vec = []
+  s_extend_lower_bound_vec = []
+  try:
+    # 检查是否存在 extend_bounds 属性
+    if hasattr(lon_ref_path, 'extend_bounds') and lon_ref_path.extend_bounds:
+      for idx in range(len(lon_ref_path.extend_bounds)):
+        high_bound = lon_ref_path.extend_bounds[idx].bound[0].upper
+        low_bound = lon_ref_path.extend_bounds[idx].bound[0].lower
+        try:
+          for one_extend_bound in lon_ref_path.extend_bounds[idx].bound:
+             high_bound = min(high_bound, one_extend_bound.upper)
+             low_bound = max(low_bound, one_extend_bound.lower)
+          s_extend_upper_bound_vec.append(high_bound)
+          s_extend_lower_bound_vec.append(low_bound)
+        except:
+          print("the s_extend_upper_bound_vec size: ",len(s_extend_upper_bound_vec))
+    else:
+      # 如果没有 extend_bounds，使用默认值
+      s_extend_upper_bound_vec = s_soft_upper_bound_vec.copy()
+      s_extend_lower_bound_vec = s_soft_lower_bound_vec.copy()
+  except:
+        print("there is no lon_ref_path.extend_bounds")
+        s_extend_upper_bound_vec = s_soft_upper_bound_vec.copy()
+        s_extend_lower_bound_vec = s_soft_lower_bound_vec.copy()
 
   obs_low_vec = []
   obs_high_vec = []
@@ -1877,7 +2031,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   data_hpp_debug = ColumnDataSource(data = {'HPPDebugAttr':[], 'HPPDebugVal':[]})
   data_turnstile_debug = ColumnDataSource(data = {'TurnstileDebugAttr':[], 'TurnstileDebugVal':[]})
   data_st_search_text = ColumnDataSource(data = {'StSearchAttr':[], 'StSearchVal': []})
-  data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
   data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[], 'vel_search':[], 'acc_search':[], 'jerk_search':[]})
   data_st_search_nodes = ColumnDataSource(data = {'expanded_nodes_t':[], 'expanded_nodes_s':[]})
   data_st_search_history_cur_nodes = ColumnDataSource(data = {'history_cur_nodes_t':[], 'history_cur_nodes_s':[]})
@@ -1918,6 +2071,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                                                   'hard_pos_min_vec': [],
                                                   'soft_pos_max_vec':[],
                                                   'soft_pos_min_vec':[],
+                                                  'extend_pos_max_vec':[],
+                                                  'extend_pos_min_vec':[],
                                                   'vel_max_vec':[],
                                                   'vel_min_vec':[],
                                                   'acc_max_vec':[],
@@ -1957,8 +2112,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
                    'data_hpp_debug':data_hpp_debug, \
-                   'data_turnstile_debug':data_turnstile_debug, \
-                   'data_cutin':data_cutin, \
                    'data_sv':data_sv, \
                    'data_sa': data_sa,\
                    'data_tv':data_tv, \
@@ -2009,17 +2162,42 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
     data4 = {
       f'x_vec_{i}': [],
       f'y_vec_{i}': [],
+      f'cutin_x_vec_{i}': [],
+      f'cutin_y_vec_{i}': [],
+    }
+    data5 = {
+      f'cut_in_lower_points_{i}_s_vec': [],
+      f'cut_in_lower_points_{i}_t_vec': [],
+      f'cut_in_upper_points_{i}_s_vec': [],
+      f'cut_in_upper_points_{i}_t_vec': [],
+    }
+    data6 = {
+      f'cut_in_left_point_{i}_s': [],
+      f'cut_in_left_point_{i}_t': [],
+      f'cut_in_right_point_{i}_s': [],
+      f'cut_in_right_point_{i}_t': [],
+    }
+    data7 = {
+      f'cut_in_center_point_{i}_s': [],
+      f'cut_in_center_point_{i}_t': [],
+      f'cut_in_agent_{i}_id': [],
     }
     lon_plan_data[f'st_boundary_{i}'] = ColumnDataSource(data=data1)
     lon_plan_data[f'st_point_{i}'] = ColumnDataSource(data=data2)
     lon_plan_data[f'st_label_{i}'] = ColumnDataSource(data=data3)
     lon_plan_data[f'processed_trajectory_{i}'] = ColumnDataSource(data=data4)
+    lon_plan_data[f'cut_in_st_boundary_{i}'] = ColumnDataSource(data=data5)
+    lon_plan_data[f'cut_in_st_point_{i}'] = ColumnDataSource(data=data6)
+    lon_plan_data[f'cut_in_st_label_{i}'] = ColumnDataSource(data=data7)
 
 
   boundaries = [lon_plan_data[f'st_boundary_{i}'] for i in range(0, 20)]
   st_points = [lon_plan_data[f'st_point_{i}'] for i in range(0, 20)]
   st_labels = [lon_plan_data[f'st_label_{i}'] for i in range(0, 20)]
   processed_trajectories = [lon_plan_data[f'processed_trajectory_{i}'] for i in range(0, 20)]
+  cut_in_st_boundaries = [lon_plan_data[f'cut_in_st_boundary_{i}'] for i in range(0, 20)]
+  cut_in_st_points = [lon_plan_data[f'cut_in_st_point_{i}'] for i in range(0, 20)]
+  cut_in_st_labels = [lon_plan_data[f'cut_in_st_label_{i}'] for i in range(0, 20)]
 
   columns = [
         TableColumn(field="VisionLonAttr", title="VisionLonAttr", width=300, formatter=HTMLTemplateFormatter(template='<div style="font-size: 14px;"><%= value %></div>')),
@@ -2058,8 +2236,15 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
     x_vec = f'x_vec_{i}'
     y_vec = f'y_vec_{i}'
 
-    fig1.line(y_vec, x_vec, source = source, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.6, legend_label = 'processed agent traj', visible=False)
-    fig1.circle(y_vec, x_vec, source=source, size=3, color='yellow', legend_label='processed agent traj', visible=False)
+    fig1.line(y_vec, x_vec, source = source, line_width = 5, line_color = 'cyan', line_dash = 'solid', line_alpha = 0.6, legend_label = 'processed agent traj', visible=False)
+    fig1.circle(y_vec, x_vec, source=source, size=3, color='deepskyblue', legend_label='processed agent traj', visible=False)
+
+  for i, source in enumerate(processed_trajectories):
+    cutin_x_vec = f'cutin_x_vec_{i}'
+    cutin_y_vec = f'cutin_y_vec_{i}'
+
+    fig1.line(cutin_y_vec, cutin_x_vec, source = source, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.8, legend_label = 'cutin postprocessed traj', visible=False)
+    fig1.circle(cutin_y_vec, cutin_x_vec, source=source, size=3, color='yellow', legend_label='cutin postprocessed traj', visible=False)
 
   # obs_ref_trajectory in fig1: one legend label, different colors per obstacle
   obs_ref_traj_colors = [
@@ -2090,16 +2275,19 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   # Plot joint motion planner s on fig2
-  fig2.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt', visible=False)
-  fig2.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_lb', visible=False)
+  fig2.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_lb')
   fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_ub')
-  fig2.triangle('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.7, legend_label = 's_soft_lb_point', visible=False)
-  fig2.triangle('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.5, legend_label = 's_soft_ub_point')
+  fig2.triangle('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.7, legend_label = 's_soft_lb')
+  fig2.triangle('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.5, legend_label = 's_soft_ub')
+  fig2.line('time_vec', 'extend_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkviolet', line_dash = 'solid', legend_label = 's_extend_lb')
+  fig2.line('time_vec', 'extend_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkviolet', line_dash = 'solid', legend_label = 's_extend_ub')
+  fig2.triangle('time_vec', 'extend_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='darkviolet', line_color='darkviolet', alpha = 0.7, legend_label = 's_extend_lb')
+  fig2.triangle('time_vec', 'extend_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='darkviolet', line_color='darkviolet', alpha = 0.5, legend_label = 's_extend_ub')
 
   fig2.line('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_lb')
   fig2.line('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
-  fig2.triangle('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
-  fig2.inverted_triangle ('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
+  fig2.triangle('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb')
+  fig2.inverted_triangle ('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub')
 
   # 添加障碍物s-t bound
   for obs_id in data_obs_st.keys():
@@ -2153,14 +2341,44 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
 
     fig3.text(center_point_t, center_point_s, text = agent_id ,source = source, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'st_boundary')
 
+  # Draw cut-in ST boundaries (consistent with st_boundary style)
+  for i, source in enumerate(cut_in_st_boundaries):
+    cut_in_lower_t = f'cut_in_lower_points_{i}_t_vec'
+    cut_in_lower_s = f'cut_in_lower_points_{i}_s_vec'
+    cut_in_upper_t = f'cut_in_upper_points_{i}_t_vec'
+    cut_in_upper_s = f'cut_in_upper_points_{i}_s_vec'
+
+    fig3.line(cut_in_lower_t, cut_in_lower_s, source=source, line_width=2, line_color='black', line_dash='solid', legend_label='post_st_boundary')
+    fig3.circle(cut_in_lower_t, cut_in_lower_s, source=source, size=3, color='black', legend_label='post_st_boundary')
+    fig3.line(cut_in_upper_t, cut_in_upper_s, source=source, line_width=2, line_color='black', line_dash='solid', legend_label='post_st_boundary')
+    fig3.circle(cut_in_upper_t, cut_in_upper_s, source=source, size=3, color='black', legend_label='post_st_boundary')
+
+  # Draw cut-in ST boundary closure lines
+  for i, source in enumerate(cut_in_st_points):
+    cut_in_left_t = f'cut_in_left_point_{i}_t'
+    cut_in_left_s = f'cut_in_left_point_{i}_s'
+    cut_in_right_t = f'cut_in_right_point_{i}_t'
+    cut_in_right_s = f'cut_in_right_point_{i}_s'
+
+    fig3.line(cut_in_left_t, cut_in_left_s, source=source, line_width=2, line_color='black', line_dash='solid', legend_label='post_st_boundary')
+    fig3.line(cut_in_right_t, cut_in_right_s, source=source, line_width=2, line_color='black', line_dash='solid', legend_label='post_st_boundary')
+
+  # Draw cut-in ST boundary agent ID labels
+  for i, source in enumerate(cut_in_st_labels):
+    cut_in_center_point_s = f'cut_in_center_point_{i}_s'
+    cut_in_center_point_t = f'cut_in_center_point_{i}_t'
+    cut_in_agent_id = f'cut_in_agent_{i}_id'
+
+    fig3.text(cut_in_center_point_t, cut_in_center_point_s, text=cut_in_agent_id, source=source, text_color="blue", text_align="center", text_font_size="10pt", legend_label='post_st_boundary')
+
   f3 = fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path', visible=False)
   # Plot joint motion planner s on fig3
   fig3.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt', visible=False)
-  fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='expanded_nodes', visible=False)
-  fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='history_cur_nodes', visible=False)
+  fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='s_search_path', visible=False)
+  fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='s_search_path', visible=False)
   fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3, line_color = 'blue', alpha = 1, line_dash = 'solid', legend_label = 's_final_target')
   fig3.circle('t_final_target', 's_final_target', source=data_target, size=6, color='brown', legend_label='s_final_target')
-  fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
+  fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target', visible=False)
   fig3.line('t_cruise_target', 's_cruise_target', source = data_target, line_width = 3.0, line_color = 'grey', line_dash = 'solid', legend_label = 's_cruise_target')
   fig3.line('t_overtake_target', 's_overtake_target', source = data_target_s_overtake, line_width = 3.0, line_color = 'black', line_dash = 'solid', legend_label = 's_overtake_target', visible=False)
   fig3.line('t_caution_target', 's_caution_target', source = data_target_s_caution, line_width = 3.0, line_color = 'yellow', line_dash = 'solid', legend_label = 's_caution_target', visible=False)

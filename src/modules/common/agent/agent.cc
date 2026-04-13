@@ -228,6 +228,15 @@ void Agent::set_trajectory_optimized(const trajectory::Trajectory& trajectory) {
   trajectory_optimized_ = trajectory;
 }
 
+const trajectory::Trajectory& Agent::trajectory_cutin_postprocessed() const {
+  return trajectory_cutin_postprocessed_;
+}
+
+void Agent::set_trajectory_cutin_postprocessed(
+    const trajectory::Trajectory& trajectory) {
+  trajectory_cutin_postprocessed_ = trajectory;
+}
+
 const AgentDecision& Agent::agent_decision() const { return agent_decision_; }
 AgentDecision* const Agent::mutable_agent_decision() {
   return &agent_decision_;
@@ -263,6 +272,11 @@ void Agent::set_is_cutin(const bool is_cutin) { is_cutin_ = is_cutin; }
 
 const bool Agent::is_cutout() const { return is_cutout_; }
 void Agent::set_is_cutout(const bool is_cutout) { is_cutout_ = is_cutout; }
+
+const double Agent::rule_base_cutin_score() const { return rule_base_cutin_score_; }
+void Agent::set_rule_base_cutin_score(const double rule_base_cutin_score) {
+  rule_base_cutin_score_ = rule_base_cutin_score;
+}
 
 const bool Agent::is_rule_base_cutin() const { return is_rule_base_cutin_; }
 void Agent::set_is_rule_base_cutin(const bool is_rule_base_cutin) {

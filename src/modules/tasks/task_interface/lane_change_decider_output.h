@@ -70,6 +70,7 @@ struct LaneChangeDeciderOutput {
   bool is_aggressive_scence = false;
   int gap_front_id;
   int gap_back_id;
+  bool is_emergency_scene = false;
 };
 
 }  // namespace planning

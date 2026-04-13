@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "aabb2d.h"
+#include "log_glog.h"
 #include "pose2d.h"
 
 namespace planning {
@@ -253,6 +254,13 @@ struct MapBound {
 
     return;
   }
+
+  void PrintInfo(const bool enable_log = true) {
+    ILOG_INFO_IF(enable_log)
+        << "x_min = " << x_min << "  x_max = " << x_max << "y_min = " << y_min
+        << "  y_max = " << y_max << "phi_min = " << phi_min * 57.3
+        << "  phi_max = " << phi_max * 57.3;
+  }
 };
 
 struct AStarPathPoint {
@@ -355,6 +363,9 @@ struct HybridAStarResult {
   AstarFailType fail_type = AstarFailType::NONE;
 
   double search_consume_time_ms = 0;
+  double decide_cul_de_sac_consume_time_ms = 0;
+  double pre_search_consume_time_ms = 0;
+  double formal_search_consume_time_ms = 0;
 
   int solve_number = 0;
 
@@ -386,6 +397,9 @@ struct HybridAStarResult {
     gear_vec.clear();
 
     search_consume_time_ms = 0;
+    decide_cul_de_sac_consume_time_ms = 0;
+    pre_search_consume_time_ms = 0;
+    formal_search_consume_time_ms = 0;
 
     solve_number = 0;
 
@@ -618,5 +632,4 @@ const std::string GetAstarNodeVisitedTypeDebugString(const AstarNodeVisitedType 
 bool GenerateStraightLinePath(std::vector<AStarPathPoint>&path,
                               const Pose2f& start, const Pose2f& end,
                               const AstarPathGear gear);
-
 }  // namespace planning

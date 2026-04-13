@@ -89,7 +89,7 @@ void FollowTarget::GenerateUpperBoundInfo() {
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
   if (lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
-      lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
+      lon_ref_path_decider_output.is_lon_cutin_emergency_stop) {
     for (size_t i = 0; i < plan_points_num_ &&
                        i < lon_ref_path_decider_output
                                .comfort_target_upper_bound_infos.size();

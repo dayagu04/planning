@@ -39,6 +39,8 @@ class BoundMaker {
 
   double s_soft_bound(const double t) const;
 
+  double s_extend_bound(const double t) const;
+
   struct UpperBoundInfo {
     double s = 0.0;
     double t = 0.0;
@@ -61,6 +63,8 @@ class BoundMaker {
   void MakeJerkBound();
 
   void MakeSoftBound();
+
+  void MakeExtendBound();
 
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string& lc_request);
@@ -106,6 +110,7 @@ class BoundMaker {
   std::vector<double> jerk_upper_bound_;
   std::vector<double> jerk_lower_bound_;
   std::vector<double> s_soft_bound_;
+  std::vector<double> s_extend_bound_;
 
   double acc_upper_bound_with_speed_ = 0.0;
 

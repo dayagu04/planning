@@ -479,8 +479,8 @@ const bool CheckPointLiesOnArcV2(const Arc& arc, const Eigen::Vector2d& pC,
   const Eigen::Vector2d& center = arc.circle_info.center;
   double radius = std::abs(arc.circle_info.radius);
 
-  double dist_to_center = (pC - center).norm();
-  if (std::abs(dist_to_center - radius) > eps) {
+  double dist_to_center = CalTwoPointDistSquare(pC, center);
+  if (std::abs(dist_to_center - radius * radius) > eps) {
     return false;
   }
 

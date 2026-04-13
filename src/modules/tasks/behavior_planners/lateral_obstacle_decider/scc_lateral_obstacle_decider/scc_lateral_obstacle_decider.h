@@ -104,6 +104,10 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   bool HasEnoughNudgeSpace(const FrenetObstacle &frenet_obstacle,
                            double lat_safety_buffer, bool is_in_lane_change_execution_scene,
                            bool is_filter = false);
+  void UpdateStaticNudgeDecision(const FrenetObstacle &frenet_obstacle,
+                                 double lat_safety_buffer,
+                                 bool is_in_lane_change_execution_scene);
+  double CalStaticNudgeHysteresis(const FrenetObstacle &frenet_obstacle) const;
   double GetAvoidCountThre(const FrenetObstacle &frenet_obstacle);
   bool UpdateObstacleAvoidCount(const FrenetObstacle &frenet_obstacle,
                                 bool is_avoidable, bool is_in_range,
@@ -180,6 +184,20 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
       const FrenetObstacle& frenet_obstacle);
   double CalDesireStaticLateralDistance(
       const FrenetObstacle& frenet_obstacle);
+  bool IsDynamicPotentialAvoidingCar(const FrenetObstacle& frenet_obstacle,
+                                     double lat_safety_buffer, bool is_in_range,
+                                     bool is_about_to_enter_range,
+                                     double farthest_distance,
+                                     bool rightest_lane,
+                                     bool is_in_lane_change_execution_scene,
+                                     bool is_lane_change);
+  bool IsStaticPotentialAvoidingCar(const FrenetObstacle& frenet_obstacle,
+                                     double lat_safety_buffer, bool is_in_range,
+                                     bool is_about_to_enter_range,
+                                     double farthest_distance,
+                                     bool rightest_lane,
+                                     bool is_in_lane_change_execution_scene,
+                                     bool is_lane_change);
 
  private:
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>

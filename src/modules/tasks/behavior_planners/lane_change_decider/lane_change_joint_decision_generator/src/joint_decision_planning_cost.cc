@@ -885,6 +885,37 @@ void EgoJerkBoundCostTerm::GetGradientHessian(
   }
 }
 
+double EgoVelBoundCostTerm::GetCost(const ilqr_solver::State& x,
+                                    const ilqr_solver::Control&) {
+  double ego_vel = x[EGO_VEL];
+  double weight = cost_config_ptr_->at(W_EGO_VEL_BOUND);
+  double vel_max = cost_config_ptr_->at(EGO_VEL_MAX);
+
+  double cost = 0.0;
+
+  if (ego_vel > vel_max) {
+    double violation = ego_vel - vel_max;
+    cost += weight * violation * violation;
+  }
+
+  return cost;
+}
+
+void EgoVelBoundCostTerm::GetGradientHessian(
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
+  double ego_vel = x[EGO_VEL];
+  double weight = cost_config_ptr_->at(W_EGO_VEL_BOUND);
+  double vel_max = cost_config_ptr_->at(EGO_VEL_MAX);
+
+  if (ego_vel > vel_max) {
+    double violation = ego_vel - vel_max;
+    lx(EGO_VEL) += 2.0 * weight * violation;
+    lxx(EGO_VEL, EGO_VEL) += 2.0 * weight;
+  }
+}
+
 std::vector<HardHalfplaneCostTerm::HardHalfplaneResult>
 HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
   std::vector<HardHalfplaneResult> results;

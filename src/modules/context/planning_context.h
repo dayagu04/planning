@@ -374,6 +374,14 @@ class PlanningContext {
     return planning_output_;
   }
 
+  const iflyauto::GearCommand &gear_command() const {
+    return gear_command_info_;
+  }
+
+  iflyauto::GearCommand &mutable_gear_command() {
+    return gear_command_info_;
+  }
+
   const common::LonDecisionInfo &lon_decision_result() const {
     return lon_decision_result_;
   }
@@ -591,6 +599,8 @@ class PlanningContext {
       lateral_behavior_planner_output_;  // TODO: 拆分到独立的Task里面
 
   iflyauto::PlanningHMIOutputInfoStr *planning_hmi_info_;
+
+  iflyauto::GearCommand gear_command_info_;
 
   // ConstructionSceneDeciderOutput construction_scene_decider_output_;
 

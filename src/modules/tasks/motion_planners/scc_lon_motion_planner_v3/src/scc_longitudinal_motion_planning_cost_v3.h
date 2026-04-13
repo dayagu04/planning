@@ -38,6 +38,9 @@ enum iLqrCostconfigId {
   W_POS_SAFE,
   SAFE_DISTANCE,
   W_EMERGENCY_STOP,
+  EXTEND_POS_MAX,
+  EXTEND_POS_MIN,
+  W_EXTEND_POS_BOUND,
   COST_CONFIG_SIZE,
 };
 
@@ -47,6 +50,7 @@ enum iLqrCostId {
   LON_JERK_COST,
   LON_POS_SOFT_BOUND_COST,
   LON_POS_HARD_BOUND_COST,
+  LON_POS_EXTEND_BOUND_COST,
   LON_VEL_BOUND_COST,
   LON_ACC_BOUND_COST,
   LON_JERK_BOUND_COST,
@@ -134,6 +138,21 @@ class LonHardPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_POS_HARD_BOUND_COST; }
+};
+
+class LonExtendPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  LonExtendPosBoundCostTerm() = default;
+
+  double GetCost(const ilqr_solver::State &x,
+                 const ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const ilqr_solver::State &x,
+                          const ilqr_solver::Control & /*u*/,
+                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
+                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT & /*luu*/) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return LON_POS_EXTEND_BOUND_COST; }
 };
 
 // longitudinal vel bound cost

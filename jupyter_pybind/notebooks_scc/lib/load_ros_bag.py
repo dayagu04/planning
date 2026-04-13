@@ -651,8 +651,7 @@ class LoadRosbag:
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", "avg_radius_0_80m","use_avg_radius_for_ewma",\
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
-                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                         'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\
+                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", "CIPV_id",\
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
@@ -713,10 +712,10 @@ class LoadRosbag:
                           "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
-                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
+                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
-                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
+                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_decision_limit_speed","joint_limit_speed", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
                           "joint_target_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_cruise_speed", "is_confluence_area",
                           "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
                           "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
@@ -733,7 +732,8 @@ class LoadRosbag:
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
                           'UpdateObstacleInteractionInfoCostTime','is_emergency_scene',
                           'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
-                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence']
+                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence',
+                          'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link']
 
       json_value_list += ["planning_cost_time", 'EnvironmentalModelManagerCost', 'TaskFunctionCost', "ego_state_update cost",
                           "update route_info cost", "virtual_lane_manager cost", "traffic_light_decision cost", "obstacle_prediction cost", "obstacle_manager cost", "agent_manager cost", "construction_scene_manager cost",
@@ -868,7 +868,7 @@ class LoadRosbag:
       # 自车速度（前后车共用）
       json_vector_list += ["ego_vel_vec"]
       # 安全检查相关的标量数据
-      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time"]
+      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time", "rear_agent_overtaking"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

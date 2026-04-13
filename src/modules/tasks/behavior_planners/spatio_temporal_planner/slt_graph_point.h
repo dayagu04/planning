@@ -16,6 +16,10 @@ class SLTGraphPoint {
   const SLTGraphPoint* pre_point() const;
 
   double path_cost() const;
+  double path_l_cost() const;
+  double path_dl_cost() const;
+  double path_ddl_cost() const;
+  double stitching_cost() const;
   double obstacle_cost() const;
   double longitinal_cost() const;
   double min_obs_distance() const;
@@ -31,6 +35,11 @@ class SLTGraphPoint {
 
   // 规划路径引起的cost
   void SetPathCost(const double path_cost);
+
+  void SetPathLCost(const double path_l_cost);
+  void SetPathDlCost(const double path_dl_cost);
+  void SetPathDdlCost(const double path_ddl_cost);
+  void SetStitchingCost(const double stitching_cost);
 
   // 节点与静态障碍物产生的cost
   void SetStaticObstacleCost(const double StaticObstacleCost);
@@ -78,6 +87,10 @@ class SLTGraphPoint {
   double a_ = 0.0;
   double reference_cost_ = 0.0;
   double path_cost_ = 0.0;
+  double path_l_cost_ = 0.0;
+  double path_dl_cost_ = 0.0;
+  double path_ddl_cost_ = 0.0;
+  double stitching_cost_ = 0.0;
   double static_obstacle_cost_ = 0.0;
   double dynamic_obstacle_cost_ = 0.0;
   double spatial_potential_cost_ = 0.0;

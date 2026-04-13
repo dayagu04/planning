@@ -15,7 +15,7 @@ const double TIME_STEP_FAR = 1;   // 时间步长（分层步长）(s)
 const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）(m)
 const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
 const int MAX_ITERATION = 100;    // 最大迭代次数
-const double ACC_STEP = 0.4;
+const double ACC_STEP = 0.37;
 const double LIMIT_TIME = 3.5;    // 最小规划时域
 
 struct STNode {
@@ -70,7 +70,8 @@ class LongitudinalAStar {
                     const StateLimit& state_limit_lower,
                     double front_edge_to_rear_axle,
                     double rear_edge_to_rear_axle, double ego_s,
-                    SampleAstarTrajConfig* config);
+                    SampleAstarTrajConfig* config,
+                    std::unordered_map<int32_t, double>& agent_lateral_offset_map);
 
   void PlanTrajectory();
   std::vector<STNode> GetAStarTraj() const { return astar_traj_; }
@@ -116,6 +117,8 @@ class LongitudinalAStar {
   void BacktrackTrajectory(std::shared_ptr<STNode> goal_node);
   bool CalcChildParam(const std::shared_ptr<STNode>& parent,
                       std::shared_ptr<STNode>& node) const;
+  double CalcSafetyCollisionCost(double rear_speed, double front_speed,
+                                 double init_distance) const;
   bool valid_ = false;
   double merge_point_s_ = 0.0;
   LeadingAgentInfo leading_agent_info_;
@@ -133,5 +136,7 @@ class LongitudinalAStar {
   double min_accel_;      // 最大减速度（负表示减速）(m/s²)
   double max_jerk_;      // 最大jerk (m/s³)
   double min_jerk_;     // 最小jerk (m/s³)
+
+  std::unordered_map<int32_t, double>& agent_lateral_offset_map_;
 };
 }  // namespace planning

@@ -56,7 +56,7 @@
   "parking_space_release_dis_max": 2.0,
   "cruise_routing_speed": 1.5,
   "cruise_searching_speed": 1.5,
-  "rads_cruise_speed": 1.0,
+  "rads_cruise_speed": 1.15,
   "kEpsilon_v": 0.1,
   "kEpsilon_vel_stop": 0.01,
   "kEpsilon_a": 0.4,
