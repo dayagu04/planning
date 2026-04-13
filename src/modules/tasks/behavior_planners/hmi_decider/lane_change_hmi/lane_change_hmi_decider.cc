@@ -558,21 +558,35 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_WARRING;
     planning_output.planning_request.request_reason = iflyauto::REQUEST_REASON_LANE_CHANGE_RISK;
   }
+
+  const int merge_hard_cnt_threshold = 5;
+  const int merge_fail_cnt_threshold = 3;
+  static int merge_hard_cnt = 0;
+  static int merge_fail_cnt = 0;
   if (lane_change_decider_output.is_hard_to_merge &&
-     (curr_state == kLaneChangeHold ||
-      curr_state == kLaneChangePropose)) {
-    planning_output.planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
-    planning_output.planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_UNABLE;
+      (curr_state == kLaneChangeHold || curr_state == kLaneChangePropose)) {
+    merge_hard_cnt++;
+    if (merge_hard_cnt >= merge_hard_cnt_threshold) {
+      planning_output.planning_request.take_over_req_level =
+          iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
+      planning_output.planning_request.request_reason =
+          iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_UNABLE;
+    }
+  } else {
+    merge_hard_cnt = 0;
   }
+  
   if (lane_change_decider_output.is_fail_to_merge &&
-     (curr_state == kLaneChangeHold ||
-      curr_state == kLaneChangePropose)) {
-    planning_output.planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
-    planning_output.planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_FAILED;
+      (curr_state == kLaneChangeHold || curr_state == kLaneChangePropose)) {
+    merge_fail_cnt++;
+    if (merge_fail_cnt >= merge_fail_cnt_threshold) {
+      planning_output.planning_request.take_over_req_level =
+          iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
+      planning_output.planning_request.request_reason =
+          iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_FAILED;
+    }
+  } else {
+    merge_fail_cnt = 0;
   }
 
   // 判断是否在接近匝道时因为旁边有车导致下不去匝道
