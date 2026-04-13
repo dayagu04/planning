@@ -118,7 +118,6 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
 
   if (!UpdateEgoSlotInfo()) {
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
     return;
   }
 
@@ -171,77 +170,45 @@ void PerpendicularTailInScenario::RunPathPlanningByConfig() {
 }
 
 const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
+  static const std::vector<double> kDefaultLatBuffer = {0.15};
+  static const std::vector<double> kOccupiedRatioTab = {1.0, 0.0};
+
   const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
       apa_world_ptr_->GetMeasureDataManagerPtr();
-
   const ApaParameters& param = apa_param.GetParam();
-
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+  auto& slot = ego_info_under_slot.slot;
+  const auto& ego_pos = measures_ptr->GetPos();
+  const auto ego_heading = measures_ptr->GetHeading();
+  const auto& ego_heading_vec = measures_ptr->GetHeadingVec();
+  const auto& g2l_tf = ego_info_under_slot.g2l_tf;
 
-  if (ego_info_under_slot.slot.slot_type_ != SlotType::SLANT &&
-      ego_info_under_slot.slot.slot_type_ != SlotType::PERPENDICULAR) {
+  const bool is_supported_slot = slot.slot_type_ == SlotType::SLANT ||
+                                 slot.slot_type_ == SlotType::PERPENDICULAR;
+  if (!is_supported_slot) {
+    ILOG_INFO << "slot type is not supported, return false";
+    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
     return false;
   }
 
-  ego_info_under_slot.origin_pose_global.heading_vec =
-      ego_info_under_slot.slot.processed_corner_coord_global_
-          .pt_23mid_01mid_unit_vec;
+  auto& cur_pose = ego_info_under_slot.cur_pose;
+  cur_pose.pos = g2l_tf.GetPos(ego_pos);
+  cur_pose.heading = g2l_tf.GetHeading(ego_heading);
+  cur_pose.heading_vec = geometry_lib::GenHeadingVec(cur_pose.heading);
 
-  ego_info_under_slot.origin_pose_global.heading =
-      std::atan2(ego_info_under_slot.origin_pose_global.heading_vec.y(),
-                 ego_info_under_slot.origin_pose_global.heading_vec.x());
-
-  ego_info_under_slot.origin_pose_global.pos =
-      ego_info_under_slot.slot.processed_corner_coord_global_.pt_01_mid -
-      ego_info_under_slot.slot.slot_length_ *
-          ego_info_under_slot.origin_pose_global.heading_vec;
-
-  ego_info_under_slot.g2l_tf = geometry_lib::GlobalToLocalTf(
-      ego_info_under_slot.origin_pose_global.pos,
-      ego_info_under_slot.origin_pose_global.heading);
-
-  ego_info_under_slot.l2g_tf = geometry_lib::LocalToGlobalTf(
-      ego_info_under_slot.origin_pose_global.pos,
-      ego_info_under_slot.origin_pose_global.heading);
-
-  ego_info_under_slot.origin_pose_local.pos = ego_info_under_slot.g2l_tf.GetPos(
-      ego_info_under_slot.origin_pose_global.pos);
-
-  ego_info_under_slot.origin_pose_local.heading =
-      ego_info_under_slot.g2l_tf.GetHeading(
-          ego_info_under_slot.origin_pose_global.heading);
-
-  ego_info_under_slot.origin_pose_local.heading_vec =
-      geometry_lib::GenHeadingVec(
-          ego_info_under_slot.origin_pose_local.heading);
-
-  ego_info_under_slot.cur_pose.pos =
-      ego_info_under_slot.g2l_tf.GetPos(measures_ptr->GetPos());
-  ego_info_under_slot.cur_pose.heading =
-      ego_info_under_slot.g2l_tf.GetHeading(measures_ptr->GetHeading());
-  ego_info_under_slot.cur_pose.heading_vec =
-      geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
-
-  // transform slot and obs from global to slot
-  ego_info_under_slot.slot.TransformCoordFromGlobalToLocal(
-      ego_info_under_slot.g2l_tf);
-
-  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
-      ego_info_under_slot.g2l_tf);
-
+  // only use for geometry path planner
   if (frame_.is_replan_first) {
     const Eigen::Vector2d ego_to_slot_center_vec =
-        ego_info_under_slot.slot.origin_corner_coord_global_.pt_center -
-        measures_ptr->GetPos();
+        slot.origin_corner_coord_global_.pt_center - ego_pos;
 
     const double cross_ego_to_slot_center =
-        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
+        pnc::geometry_lib::GetCrossFromTwoVec2d(ego_heading_vec,
                                                 ego_to_slot_center_vec);
 
     const double cross_ego_to_slot_heading =
         pnc::geometry_lib::GetCrossFromTwoVec2d(
-            measures_ptr->GetHeadingVec(),
+            ego_heading_vec,
             ego_info_under_slot.origin_pose_global.heading_vec);
 
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
@@ -256,53 +223,42 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   }
 
   // no consider obs target pose, real-time update
-  TargetPoseDecider target_pose_decider(
-      apa_world_ptr_->GetColDetInterfacePtr());
-
   TargetPoseDeciderRequest tar_pose_decider_request(
-      std::vector<double>{0.15}, std::vector<double>{0.15}, 0.3, scenario_type_,
-      false, false,
+      kDefaultLatBuffer, kDefaultLatBuffer, 0.3, scenario_type_, false, false,
       apa_world_ptr_->GetStateMachineManagerPtr()->GetSlotLatPosPreference());
 
-  TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
-      ego_info_under_slot.slot, tar_pose_decider_request);
+  TargetPoseDeciderResult res =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()
+          ->GetTargetPoseDeciderPtr()
+          ->CalcTargetPose(slot, tar_pose_decider_request);
 
   ego_info_under_slot.origin_target_pose = res.target_pose_local;
 
-  ego_info_under_slot.virtual_limiter.first
-      << ego_info_under_slot.origin_target_pose.pos.x(),
-      0.5 * ego_info_under_slot.slot.slot_width_;
-
-  ego_info_under_slot.virtual_limiter.second
-      << ego_info_under_slot.origin_target_pose.pos.x(),
-      -0.5 * ego_info_under_slot.slot.slot_width_;
+  const double origin_target_x = ego_info_under_slot.origin_target_pose.pos.x();
+  const double half_slot_width = 0.5 * slot.slot_width_;
+  ego_info_under_slot.virtual_limiter.first << origin_target_x, half_slot_width;
+  ego_info_under_slot.virtual_limiter.second << origin_target_x,
+      -half_slot_width;
 
   if (std::fabs(ego_info_under_slot.terminal_err.GetY()) <
           param.slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_info_under_slot.terminal_err.GetTheta()) <
           param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    std::vector<double> x_tab = {
-        ego_info_under_slot.origin_target_pose.pos.x(),
-        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
-
-    std::vector<double> x_postprocess_tab = {
-        ego_info_under_slot.target_pose.pos.x(),
-        ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
-
+    double end_x = slot.slot_length_ + param.rear_overhanging;
     if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-      x_tab[1] = ego_info_under_slot.slot.slot_length_ +
-                 param.front_overhanging + param.wheel_base;
-      x_postprocess_tab[1] = x_tab[1];
+      end_x = slot.slot_length_ + param.front_overhanging + param.wheel_base;
     }
 
-    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+    const double cur_x = cur_pose.GetX();
+    const std::vector<double> x_tab = {origin_target_x, end_x};
+    const std::vector<double> x_postprocess_tab = {
+        ego_info_under_slot.target_pose.pos.x(), end_x};
 
-    ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
-        x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+    ego_info_under_slot.slot_occupied_ratio =
+        mathlib::Interp1(x_tab, kOccupiedRatioTab, cur_x);
 
     ego_info_under_slot.slot_occupied_ratio_postprocess =
-        mathlib::Interp1(x_postprocess_tab, occupied_ratio_tab,
-                         ego_info_under_slot.cur_pose.pos.x());
+        mathlib::Interp1(x_postprocess_tab, kOccupiedRatioTab, cur_x);
 
   } else {
     ego_info_under_slot.slot_occupied_ratio = 0.0;
