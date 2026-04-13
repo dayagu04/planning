@@ -72,7 +72,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
     const FrenetObstacleBoundary &obstacle_frenet_boundary,
     const FrenetBoundary &ego_frenet_boundary,
     const LatObstacleDecisionInfo &previous_decision_info,
-    LatObstacleDecisionInfo decision_info);
+    LatObstacleDecisionInfo& decision_info);
 
   bool MakeDecisionBasedTrajSLForDynamicObs(
       const std::vector<LatObstacleDecisionInfo> &passage_width_info_vec,

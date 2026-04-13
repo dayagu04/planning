@@ -23,7 +23,7 @@ FrenetObstacle::FrenetObstacle(
   compute_frenet_obstacle(reference_path, is_hpp_scene);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path, is_hpp_scene);
-    // compute_frenet_polygon_sequence(reference_path);
+    compute_frenet_polygon_sequence(reference_path);
   } else {
     b_frenet_polygon_sequence_invalid_ = true;
   }

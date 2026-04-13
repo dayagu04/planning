@@ -460,7 +460,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedLastTrajRelativePos(
     const FrenetObstacleBoundary &obstacle_frenet_boundary,
     const FrenetBoundary &ego_frenet_boundary,
     const LatObstacleDecisionInfo &previous_decision_info,
-    LatObstacleDecisionInfo decision_info) {
+    LatObstacleDecisionInfo& decision_info) {
 
   if (previous_decision_info.left_nudge_level ==
           LatObstacleNudgeLevel::FORBIDDEN_NUDGE &&
@@ -547,7 +547,7 @@ void HppLateralObstacleDecider::CalObstacleFrenetBoundary(FrenetObstacleBoundary
   const double obs_start2right_road_boundary_dis =
       refpath_pt.right_drivable_width + l_start;
 
-  reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt);
+  reference_path_ptr->get_reference_point_by_lon(s_end, refpath_pt);
   const double obs_end2left_road_boundary_dis =
       refpath_pt.left_drivable_width - l_end;
   const double obs_end2right_road_boundary_dis =
@@ -575,6 +575,8 @@ bool HppLateralObstacleDecider::MakeDecisionBasedTrajSLForDynamicObs(
       LatObstacleDecisionInfo &relative_pos_result) {
   if(passage_width_info_vec.empty()) {
     relative_pos_result.decision = LatObstacleDecisionType::IGNORE;
+    relative_pos_result.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    relative_pos_result.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
     return false;
   }
 
@@ -668,6 +670,19 @@ void HppLateralObstacleDecider::MakeDecisionBasedReferPath(
   auto it = obstacle_consistency_map_.find(obstacle->id());
   if (it != obstacle_consistency_map_.end()) {
     decision_info.decision = it->second.last_decision;
+    if (decision_info.decision == LatObstacleDecisionType::LEFT)
+    {
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+      decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    }else if (decision_info.decision == LatObstacleDecisionType::RIGHT)
+    {
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+      decision_info.right_nudge_level = LatObstacleNudgeLevel::ABSOLUTE_NUDGE;
+    }else{
+      decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+      decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+    }
+
   }
 }
 
@@ -709,8 +724,12 @@ void HppLateralObstacleDecider::MakeFrameFinalDecision(
       if (passage_width_info.left_nudge_level !=
           relative_pos_info.left_nudge_level) {
         decision_info.decision = LatObstacleDecisionType::IGNORE;
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+        decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
       } else {
         decision_info.decision = LatObstacleDecisionType::RIGHT;
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+        decision_info.right_nudge_level = passage_width_info.right_nudge_level;
       }
     }
     if (passage_width_info.right_nudge_level ==
@@ -720,29 +739,36 @@ void HppLateralObstacleDecider::MakeFrameFinalDecision(
       if (passage_width_info.right_nudge_level !=
           relative_pos_info.right_nudge_level) {
         decision_info.decision = LatObstacleDecisionType::IGNORE;
+        decision_info.left_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
+        decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
       } else {
         decision_info.decision = LatObstacleDecisionType::LEFT;
+        decision_info.left_nudge_level = passage_width_info.left_nudge_level;
+        decision_info.right_nudge_level = LatObstacleNudgeLevel::FORBIDDEN_NUDGE;
       }
     }
   } else {
     if (passage_width_info.decision == relative_pos_info.decision) {
-      decision_info.decision = passage_width_info.decision;
+      decision_info = passage_width_info;
+      // decision_info.decision = passage_width_info.decision;
+      // decision_info.left_nudge_level = passage_width_info.left_nudge_level;
+      // decision_info.right_nudge_level = passage_width_info.right_nudge_level;
     } else {
       if (passage_width_info.decision == LatObstacleDecisionType::LEFT) {
         if (passage_width_info.left_nudge_level ==
             LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
           if (relative_pos_info.right_nudge_level !=
               LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
-            decision_info.decision = passage_width_info.decision;
+            decision_info = passage_width_info;
           } else {
-            decision_info.decision = last_path_info.decision;
+            decision_info = last_path_info;
           }
         } else {
           if (relative_pos_info.right_nudge_level ==
               LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
-            decision_info.decision = relative_pos_info.decision;
+            decision_info = relative_pos_info;
           } else {
-            decision_info.decision = last_path_info.decision;
+            decision_info = last_path_info;
           }
         }
       } else {
@@ -750,16 +776,16 @@ void HppLateralObstacleDecider::MakeFrameFinalDecision(
             LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
           if (relative_pos_info.left_nudge_level !=
               LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
-            decision_info.decision = passage_width_info.decision;
+            decision_info = passage_width_info;
           } else {
-            decision_info.decision = last_path_info.decision;
+            decision_info = last_path_info;
           }
         } else {
           if (relative_pos_info.left_nudge_level ==
               LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
-            decision_info.decision = relative_pos_info.decision;
+            decision_info = relative_pos_info;
           } else {
-            decision_info.decision = last_path_info.decision;
+            decision_info = last_path_info;
           }
         }
       }
@@ -776,6 +802,7 @@ void HppLateralObstacleDecider::MakeDecisionBaseLastTrajLonSingleDynamicObs(
                                .raw_traj_points;
     const VehicleParam& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
+    //这里是0-4秒的障碍物轨迹
     const auto &frenet_polygon_sequence = obstacle->frenet_polygon_sequence();
     std::vector<LatObstacleDecisionInfo> passage_width_info_vec;
     int min_size = std::min(last_traj_points.size(), frenet_polygon_sequence.size());
