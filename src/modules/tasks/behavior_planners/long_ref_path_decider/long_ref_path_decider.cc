@@ -13,67 +13,77 @@ std::unordered_map<int32_t, int32_t>
 
 double LongRefPathDecider::CalcUpperBoundConfidence(const int32_t agent_id,
                                                     const double distance_s) {
+  double dist_conf = 1.0;
   const double abs_s = std::fabs(distance_s);
-  double distance_confidence = 1.0;
   if (abs_s > kUpperBoundConfidenceFullDistance) {
-    if (abs_s >= kUpperBoundConfidenceZeroDistance) {
-      distance_confidence = 0.0;
+    if (abs_s < kUpperBoundConfidenceZeroDistance) {
+      dist_conf = (kUpperBoundConfidenceZeroDistance - abs_s) /
+                  (kUpperBoundConfidenceZeroDistance - kUpperBoundConfidenceFullDistance);
+      dist_conf = std::fmax(0.0, std::fmin(1.0, dist_conf));
     } else {
-      const double denom =
-          kUpperBoundConfidenceZeroDistance - kUpperBoundConfidenceFullDistance;
-      const double ratio = (kUpperBoundConfidenceZeroDistance - abs_s) / denom;
-      distance_confidence = std::fmax(0.0, std::fmin(1.0, ratio));
+      dist_conf = 0.0;
     }
   }
 
   auto iter = upper_bound_agent_observation_count_.find(agent_id);
-  if (iter == upper_bound_agent_observation_count_.end()) {
-    return distance_confidence;
+  if (iter == upper_bound_agent_observation_count_.end() ||
+      iter->second < kUpperBoundAgentObservationCountThresholdMin) {
+    return dist_conf;
   }
 
-  const int32_t obs_count = iter->second;
-  if (obs_count < kUpperBoundAgentObservationCountThresholdMin) {
-    return distance_confidence;
+  if (iter->second >= kUpperBoundAgentObservationCountThresholdMax) {
+    return 1.0;
   }
 
-  if (obs_count < kUpperBoundAgentObservationCountThresholdMax) {
-    const double blend_ratio =
-        (obs_count - kUpperBoundAgentObservationCountThresholdMin) /
-        (kUpperBoundAgentObservationCountThresholdMax -
-         kUpperBoundAgentObservationCountThresholdMin);
-    return distance_confidence + blend_ratio * (1.0 - distance_confidence);
-  }
-  return 1.0;
+  const double blend = (iter->second - kUpperBoundAgentObservationCountThresholdMin) /
+                       (kUpperBoundAgentObservationCountThresholdMax -
+                        kUpperBoundAgentObservationCountThresholdMin);
+  return dist_conf + blend * (1.0 - dist_conf);
 }
 
 void LongRefPathDecider::UpdateUpperBoundAgentObservation(
     framework::Session *session, double dt, int32_t plan_points_num) {
-  std::unordered_set<int32_t> current_upper_bound_agents;
+  const auto st_graph = session->planning_context().st_graph_helper();
+  if (!st_graph) return;
 
-  const auto st_graph_helper = session->planning_context().st_graph_helper();
-  if (!st_graph_helper) {
-    return;
+  std::unordered_set<int32_t> upper_bound_agents;
+  for (int32_t i = 0; i < plan_points_num; ++i) {
+    const auto &bound = st_graph->GetPassCorridorUpperBound(i * dt);
+    if (bound.agent_id() != -1) {
+      upper_bound_agents.insert(bound.agent_id());
+    }
   }
 
-  for (int32_t i = 0; i < plan_points_num; ++i) {
-    const auto &upper_bound =
-        st_graph_helper->GetPassCorridorUpperBound(i * dt);
-    if (upper_bound.agent_id() != -1) {
-      current_upper_bound_agents.insert(upper_bound.agent_id());
+  const auto agent_manager = session->environmental_model().get_agent_manager();
+  const auto ego_lane = session->environmental_model()
+      .get_virtual_lane_manager()->get_current_lane();
+  const auto ego_coord = ego_lane ? ego_lane->get_lane_frenet_coord() : nullptr;
+  if (!agent_manager || !ego_coord) return;
+
+  const double half_ego_width =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().width / 2.0;
+
+  std::unordered_set<int32_t> ego_lane_agents;
+  for (const auto &agent_id : upper_bound_agents) {
+    auto agent = agent_manager->GetAgent(agent_id);
+    if (!agent) continue;
+
+    double agent_s = 0.0, agent_l = 0.0;
+    if (!ego_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) continue;
+
+    if (std::abs(agent_l) < half_ego_width) {
+      ego_lane_agents.insert(agent_id);
     }
   }
 
   for (auto it = upper_bound_agent_observation_count_.begin();
        it != upper_bound_agent_observation_count_.end();) {
-    if (current_upper_bound_agents.find(it->first) ==
-        current_upper_bound_agents.end()) {
-      it = upper_bound_agent_observation_count_.erase(it);
-    } else {
-      ++it;
-    }
+    it = upper_bound_agents.find(it->first) == upper_bound_agents.end()
+        ? upper_bound_agent_observation_count_.erase(it)
+        : std::next(it);
   }
 
-  for (const auto &agent_id : current_upper_bound_agents) {
+  for (const auto &agent_id : ego_lane_agents) {
     upper_bound_agent_observation_count_[agent_id]++;
   }
 }
