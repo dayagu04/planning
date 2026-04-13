@@ -2235,92 +2235,103 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   is_side_clear_ = IsSideClear(gap_front_agent_id, gap_rear_agent_id);
   joint_decision_obstacle_labels_.clear();
   rear_agent_overtaking_ = false;
-  if (transition_info_.lane_change_status !=
-          StateMachineLaneChangeStatus::kLaneKeeping) {
-    lc_joint_decision_generator_->SetLaneChangeDecisionInfo(lc_info);
-    lc_joint_decision_generator_
-        ->Execute();  // 生成联合优化轨迹(内部修饰障碍物轨迹)
-    JSON_DEBUG_VALUE("target_lane_virtual_id", lc_info.target_lane_virtual_id);
-    JSON_DEBUG_VALUE("origin_lane_virtual_id", lc_info.origin_lane_virtual_id);
-    JSON_DEBUG_VALUE("lc_gap_front_agent_id", lc_info.gap_front_agent_id);
-    JSON_DEBUG_VALUE("lc_gap_rear_agent_id", lc_info.gap_rear_agent_id);
-
-    // 输出检查
-    const auto joint_decision_output =
-        session_->planning_context().lat_lon_joint_decision_output();
-    joint_decision_success_ = joint_decision_output.IsPlanningSuccess();
-    const auto& obstacle_ids = joint_decision_output.GetSelectedObstacleIds();
-    const auto& obstacle_labels =
-        joint_decision_output.GetSelectedObstacleLabels();
-    const size_t obstacle_num = std::min(obstacle_ids.size(), obstacle_labels.size());
-    for (size_t i = 0; i < obstacle_num; ++i) {
-      joint_decision_obstacle_labels_[obstacle_ids[i]] = obstacle_labels[i];
-    }
-    if (joint_decision_success_) {
-      const auto& ego_opt_traj =
-          joint_decision_output.GetLaneChangeEgoTrajectory();
-      ego_trajs_future_.clear();
-      ego_trajs_future_.resize(ego_opt_traj.size());
-      for (size_t i = 0; i < ego_opt_traj.size(); i++) {
-        ego_trajs_future_[i].x = ego_opt_traj[i].x;
-        ego_trajs_future_[i].y = ego_opt_traj[i].y;
-        ego_trajs_future_[i].heading_angle = ego_opt_traj[i].theta;
-        ego_trajs_future_[i].delta = ego_opt_traj[i].delta;
-        ego_trajs_future_[i].v = ego_opt_traj[i].vel;
-        ego_trajs_future_[i].a = ego_opt_traj[i].acc;
-        ego_trajs_future_[i].jerk = ego_opt_traj[i].jerk;
-        ego_trajs_future_[i].s = ego_opt_traj[i].s;
-        ego_trajs_future_[i].t = ego_opt_traj[i].t;
-      }
-    }
+  if (transition_info_.lane_change_status ==
+    StateMachineLaneChangeStatus::kLaneKeeping) {
+      return;
   }
-    // 记录更新后的后车标签，未命中则保持默认值。
-    // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配，进一步确定是否会在短时间内超越自车
-    rear_agent_overtaking_ = false;
-    const auto rear_it =
-        joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
-    if (rear_it != joint_decision_obstacle_labels_.end()) {
-      if(rear_it->second == lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
-        const auto& dynamic_world = session_->environmental_model().get_dynamic_world();
-        const auto& agent_mgr = dynamic_world->agent_manager();
-        const auto rear_agent = agent_mgr->GetAgent(lc_info.gap_rear_agent_id);
-        if (rear_agent != nullptr && !ego_trajs_future_.empty()) {
-          const auto& agent_trajs = rear_agent->trajectories_used_by_st_graph();
-          if (!agent_trajs.empty() && !agent_trajs[0].empty()) {
-            const auto& traj = agent_trajs[0];
-            const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
-            const auto& ref_path = session_->environmental_model()
-                                       .get_reference_path_manager()
-                                       ->get_reference_path_by_lane(target_lane_virtual_id);
-            if (ref_path != nullptr) {
-              const auto& target_lane_coord = ref_path->get_frenet_coord();
-              const auto& vehicle_param =
-                  VehicleConfigurationContext::Instance()->get_vehicle_param();
-              const double two_car_length =
-                  vehicle_param.rear_edge_to_rear_axle + rear_agent->length() * 0.5;
-              double agent_s0 = 0.0, agent_l0 = 0.0;
-              if (target_lane_coord != nullptr &&
-                  target_lane_coord->XYToSL(traj[0].x(), traj[0].y(), &agent_s0, &agent_l0)) {
-                double rel_vel = std::max(0.0, traj[0].vel() - ego_trajs_future_[0].v);
-                double dis_diff_vel = 0.0;
-                double predict_t = lc_safety_check_time_ + 1.5;
-                double rear_acc = rear_agent->accel_fusion();
-                if (rear_acc > 0.3) {
-                  dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
-                } else if (rear_acc < -0.3) {
-                  dis_diff_vel = rel_vel * rel_vel / (2.0 * (-rear_acc));
-                } else {
-                  dis_diff_vel = rel_vel * predict_t;
-                }
-                double rear_gap = ego_trajs_future_[0].s - agent_s0 - two_car_length;
-                rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0);
-              }
-            }
-          }
-        }
-      }
-    }
-  return;
+  lc_joint_decision_generator_->SetLaneChangeDecisionInfo(lc_info);
+  lc_joint_decision_generator_
+      ->Execute();  // 生成联合优化轨迹(内部修饰障碍物轨迹)
+  JSON_DEBUG_VALUE("target_lane_virtual_id", lc_info.target_lane_virtual_id);
+  JSON_DEBUG_VALUE("origin_lane_virtual_id", lc_info.origin_lane_virtual_id);
+  JSON_DEBUG_VALUE("lc_gap_front_agent_id", lc_info.gap_front_agent_id);
+  JSON_DEBUG_VALUE("lc_gap_rear_agent_id", lc_info.gap_rear_agent_id);
+
+  // 输出检查
+  const auto joint_decision_output =
+      session_->planning_context().lat_lon_joint_decision_output();
+  joint_decision_success_ = joint_decision_output.IsPlanningSuccess();
+  const auto& obstacle_ids = joint_decision_output.GetSelectedObstacleIds();
+  const auto& obstacle_labels =
+      joint_decision_output.GetSelectedObstacleLabels();
+  const size_t obstacle_num = std::min(obstacle_ids.size(), obstacle_labels.size());
+  for (size_t i = 0; i < obstacle_num; ++i) {
+    joint_decision_obstacle_labels_[obstacle_ids[i]] = obstacle_labels[i];
+  }
+  if (!joint_decision_success_) {
+    ego_trajs_future_.clear();
+    return;
+  }
+  const auto& ego_opt_traj =
+      joint_decision_output.GetLaneChangeEgoTrajectory();
+  ego_trajs_future_.clear();
+  ego_trajs_future_.resize(ego_opt_traj.size());
+  for (size_t i = 0; i < ego_opt_traj.size(); i++) {
+    ego_trajs_future_[i].x = ego_opt_traj[i].x;
+    ego_trajs_future_[i].y = ego_opt_traj[i].y;
+    ego_trajs_future_[i].heading_angle = ego_opt_traj[i].theta;
+    ego_trajs_future_[i].delta = ego_opt_traj[i].delta;
+    ego_trajs_future_[i].v = ego_opt_traj[i].vel;
+    ego_trajs_future_[i].a = ego_opt_traj[i].acc;
+    ego_trajs_future_[i].jerk = ego_opt_traj[i].jerk;
+    ego_trajs_future_[i].s = ego_opt_traj[i].s;
+    ego_trajs_future_[i].t = ego_opt_traj[i].t;
+  }
+  // 记录更新后的后车标签，未命中则保持默认值。
+  // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配，进一步确定是否会在短时间内超越自车
+  rear_agent_overtaking_ = false;
+  const auto rear_it =
+      joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
+  if (rear_it == joint_decision_obstacle_labels_.end()) {
+    return;
+  }
+  if (rear_it->second != lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
+    return;
+  }
+  if (ego_trajs_future_.empty()) {
+    return;
+  }
+  const auto& dynamic_world = session_->environmental_model().get_dynamic_world();
+  const auto rear_agent = dynamic_world->agent_manager()->GetAgent(lc_info.gap_rear_agent_id);
+  if (rear_agent == nullptr) {
+    return;
+  }
+  const auto& agent_trajs = rear_agent->trajectories_used_by_st_graph();
+  if (agent_trajs.empty() || agent_trajs[0].empty()) {
+    return;
+  }
+  const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+  const auto& target_ref_path = session_->environmental_model()
+                                    .get_reference_path_manager()
+                                    ->get_reference_path_by_lane(target_lane_virtual_id);
+  if (target_ref_path == nullptr) {
+    return;
+  }
+  const auto& target_lane_coord = target_ref_path->get_frenet_coord();
+  if (target_lane_coord == nullptr) {
+    return;
+  }
+  const auto& traj = agent_trajs[0];
+  const auto& vehicle_param = VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double two_car_length =
+      vehicle_param.rear_edge_to_rear_axle + rear_agent->length() * 0.5;
+  double agent_s0 = 0.0, agent_l0 = 0.0;
+  if (!target_lane_coord->XYToSL(traj[0].x(), traj[0].y(), &agent_s0, &agent_l0)) {
+    return;
+  }
+  const double rel_vel = std::max(0.0, traj[0].vel() - ego_trajs_future_[0].v);
+  const double predict_t = lc_safety_check_time_ + 1.5;
+  const double rear_acc = rear_agent->accel_fusion();
+  double dis_diff_vel = 0.0;
+  if (rear_acc > 0.3) {
+    dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
+  } else if (rear_acc < -0.3) {
+    dis_diff_vel = rel_vel * rel_vel / (2.0 * (-rear_acc));
+  } else {
+    dis_diff_vel = rel_vel * predict_t;
+  }
+  const double rear_gap = ego_trajs_future_[0].s - agent_s0 - two_car_length;
+  rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0);
 }
 void LaneChangeStateMachineManager::CheckTargetFrontNode(
     int64_t target_lane_front_node_id) {
