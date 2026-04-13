@@ -16,7 +16,7 @@
 
 // class ObstacleManager;
 namespace planning {
-
+const double kHPPLonExtensionLength = 5.0;
 enum class ReferencePathSource {
   FUSION_ROAD,
   FUNCTIONAL_STATE_MACHINE,
