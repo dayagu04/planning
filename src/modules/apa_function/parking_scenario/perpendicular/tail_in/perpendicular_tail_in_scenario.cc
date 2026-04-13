@@ -159,13 +159,12 @@ void PerpendicularTailInScenario::RunPathPlanningByConfig() {
 
 const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
   static const std::vector<double> kOccupiedRatioTab = {1.0, 0.0};
-
+  const ApaParameters& param = apa_param.GetParam();
   const std::shared_ptr<ApaMeasureDataManager> measures_ptr =
       apa_world_ptr_->GetMeasureDataManagerPtr();
-  const ApaParameters& param = apa_param.GetParam();
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-  auto& slot = ego_info_under_slot.slot;
+  const auto& slot = ego_info_under_slot.slot;
   const auto& ego_pos = measures_ptr->GetPos();
   const auto ego_heading = measures_ptr->GetHeading();
   const auto& ego_heading_vec = measures_ptr->GetHeadingVec();
