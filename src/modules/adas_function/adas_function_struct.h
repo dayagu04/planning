@@ -97,7 +97,7 @@ struct Parameters {
   double tsr_out_flag_need_last_time =
       1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
   double tsr_warning_max_duration = 5.0;  // 声音报警最大时长，单位：s
-  bool sd_map_speed_sw=false;
+  bool sd_map_speed_sw = false;
   double lane_boundary_vaild_length_set = 15.0;
   double sideway_exist_gap_thrd = 0.5;
   double lane_line_width = 0.15;
@@ -210,6 +210,7 @@ struct Parameters {
 
   // meb json 参数
   int meb_request_status_const = 0;
+  bool meb_request_status_const_switch = false;
   bool meb_od_obs_switch = false;
   bool meb_occ_obs_switch = false;
   bool meb_uss_obs_switch = true;
@@ -267,11 +268,11 @@ struct Parameters {
 struct StateInfo {
   double current_time_us = 0.0;  // 当前时间
 
-  double vehicle_speed = 0.0;          // 本车实际车速 单位:m/s
-  double display_vehicle_speed = 0.0;  // 本车实际车速 单位:m/s
-  uint8 vehicle_speed_display_kph = 0; // 自车仪表车速 单位:kph
-  double yaw_rate = 0.0;               // 本车横摆角速度 单位:rad/s
-  double yaw_rate_observer = 0.0;      // 本车横摆角速度 单位:rad/s
+  double vehicle_speed = 0.0;           // 本车实际车速 单位:m/s
+  double display_vehicle_speed = 0.0;   // 本车实际车速 单位:m/s
+  uint8 vehicle_speed_display_kph = 0;  // 自车仪表车速 单位:kph
+  double yaw_rate = 0.0;                // 本车横摆角速度 单位:rad/s
+  double yaw_rate_observer = 0.0;       // 本车横摆角速度 单位:rad/s
   double yaw_rate_loc = 0.0;
   // 根据本车yaw_rate和方向盘转角,计算得到的本车当前行驶曲率
   double ego_curvature = 0.0;

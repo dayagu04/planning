@@ -417,6 +417,9 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "meb_call_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_status_const,
                        int, "meb_request_status_const");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->meb_request_status_const_switch, bool,
+      "meb_request_status_const_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer, double,
                        "meb_odbox_dis_buffer");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_odbox_dis_buffer_r,

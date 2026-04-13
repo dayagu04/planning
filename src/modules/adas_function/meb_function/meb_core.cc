@@ -535,6 +535,11 @@ void MebCore::SetMebOutputInfo(void) {
     } else {
       GetContext.mutable_output_info()->meb_output_info_.meb_request_status = 0;
     }
+
+    if (GetContext.get_param()->meb_request_status_const_switch == true) {
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
+          GetContext.get_param()->meb_request_status_const;
+    }
 #endif
   }
 }  // namespace meb_core
