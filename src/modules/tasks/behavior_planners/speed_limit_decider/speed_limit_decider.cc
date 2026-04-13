@@ -2814,9 +2814,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
       }
     }
 
-    double min_agent_l = std::min(std::fabs(agent_min_l), std::fabs(agent_max_l));
-
-    if (min_agent_l >= lane_half_width) {
+    if (agent_min_l > lane_half_width || agent_max_l < -lane_half_width) {
       continue;
     }
 
