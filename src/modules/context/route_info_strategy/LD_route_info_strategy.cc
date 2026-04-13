@@ -94,12 +94,9 @@ bool LDRouteInfoStrategy::UpdateFeasibleLaneGraph() {
   }
   // 计算车道减少信息
   double search_distance = 500.0;
-  if (!merge_info_vec_.empty()) {
-    search_distance = std::min(search_distance, merge_info_vec_[0].second);
-  }
-  if (!split_info_vec_.empty()) {
-    search_distance = std::min(search_distance, split_info_vec_[0].second);
-  }
+  search_distance =
+      std::min(search_distance, route_info_output_.mlc_decider_scene_type_info
+                                    .dis_to_link_topo_change_point);
   CalculateFrontMergePointInfo(search_distance);
 
   CalculateFeasibleLaneByMergePoint(feasible_lane_graph_);
