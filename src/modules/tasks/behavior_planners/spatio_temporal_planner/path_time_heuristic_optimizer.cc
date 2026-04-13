@@ -34,11 +34,12 @@ bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
     const bool last_enable_using_st_plan,
     planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
-    bool& ego_in_intersection_state) {
+    bool& ego_in_intersection_state,
+    planning::common::SpatioTemporalUnionPlan* plan_output) {
   if (!slt_graph_.Search(traj_points, agent_trajs, virtual_agents_info,
                          last_enable_using_st_plan,
                          spatio_temporal_union_plan_input,
-                         ego_in_intersection_state)) {
+                         ego_in_intersection_state, plan_output)) {
     ILOG_DEBUG << "failed to search graph with dynamic programming";
     return false;
   }
@@ -52,7 +53,8 @@ bool PathTimeHeuristicOptimizer::Process(
     const bool last_enable_using_st_plan,
     planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
-    bool& ego_in_intersection_state) {
+    bool& ego_in_intersection_state,
+    planning::common::SpatioTemporalUnionPlan* plan_output) {
   const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto &virtual_lane_mgr =
@@ -71,7 +73,7 @@ bool PathTimeHeuristicOptimizer::Process(
   if (!SearchPathTimeGraph(traj_points, agent_trajs, virtual_agents_info,
                            last_enable_using_st_plan,
                            spatio_temporal_union_plan_input,
-                           ego_in_intersection_state)) {
+                           ego_in_intersection_state, plan_output)) {
     ILOG_DEBUG
         << "PathTimeHeuristicOptimizer::Process() SearchPathTimeGraph failed!!";
     st_dp_is_sucess_ = false;
