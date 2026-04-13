@@ -2508,47 +2508,63 @@ std::pair<FPPoint, FPPoint> LDRouteInfoStrategy::CalculateSplitExchangeAreaFP(
 
   const iflymapdata::sdpro::LinkInfo_Link* iter_link = split_link;
   double start_fp_to_split = std::numeric_limits<double>::max();
-  // double sum_dis = 0.0;
-  // const double kMaxSearchLength = 500.0;
   uint64 start_fp_link_id = 0;
   std::vector<uint64> start_fp_lane_ids;
   iflymapdata::sdpro::FeaturePoint end_FP;
 
-  // while (iter_link) {
-  //   const auto& pre_link = ld_map_.GetPreviousLinkOnRoute(iter_link->id());
-  //   if (pre_link == nullptr) {
-  //     break;
-  //   }
-  //   if (pre_link->predecessor_link_ids_size() > 1 ||
-  //       pre_link->successor_link_ids_size() > 1) {
-  //     // link级别的拓扑已经发生变化，还没找到就认为没有fp
-  //     break;
-  //   }
-  //   sum_dis = sum_dis + iter_link->length() * 0.01;
+  const bool is_highway =
+      split_link->link_class() == iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY;
+  const double kMaxSearchLength = is_highway ? 500.0 : 300.0;
+  double sum_dis = split_link->length() * 0.01;
+  iter_link = ld_map_.GetPreviousLinkOnRoute(split_link->id());
+  while (iter_link) {
+    if (sum_dis > kMaxSearchLength) {
+      break;
+    }
 
-  //   if (sum_dis > kMaxSearchLength) {
-  //     break;
-  //   }
+    bool is_widen_link = false;
+    for (const auto lane_id : iter_link->lane_ids()) {
+      const auto* lane_info = ld_map_.GetLaneInfoByID(lane_id);
+      if (lane_info == nullptr) {
+        continue;
+      }
+      if (lane_info->successor_lane_ids_size() > 1) {
+        bool is_leftest = false;
+        bool is_rightest = false;
+        if (!IsTheLaneOnSide(lane_info, is_leftest, is_rightest)) {
+          continue;
+        }
 
-  //   if (pre_link->lane_ids_size() < iter_link->lane_ids_size()) {
-  //     start_fp_to_split = sum_dis;
-  //     start_fp_link_id = iter_link->id();
-  //     start_fp_lane_ids.reserve(iter_link->lane_ids_size());
-  //     for (auto lane_id : iter_link->lane_ids()) {
-  //       start_fp_lane_ids.emplace_back(lane_id);
-  //     }
-  //     break;
-  //   }
+        const bool direction_match = (split_dir == SPLIT_LEFT && is_leftest) ||
+                                     (split_dir == SPLIT_RIGHT && is_rightest);
+        if (direction_match) {
+          is_widen_link = true;
+          break;
+        }
+      }
+    }
+    if (is_widen_link) {
+      start_fp_to_split = sum_dis;
+      start_fp_link_id = iter_link->id();
+      start_fp_lane_ids.clear();
+      start_fp_lane_ids.reserve(iter_link->lane_ids_size());
+      for (auto lane_id : iter_link->lane_ids()) {
+        start_fp_lane_ids.emplace_back(lane_id);
+      }
+    }
 
-  //   iter_link = pre_link;
-  // }
+    sum_dis += iter_link->length() * 0.01;
+    iter_link = ld_map_.GetPreviousLinkOnRoute(iter_link->id());
+  }
 
   const double dis_to_last_split = CalculateDisToLastLinkSplitPoint(split_link);
   const double dis_to_last_merge = CalculateDisToLastLinkMergePoint(split_link);
   const double default_dis = 300.0;
 
-  start_fp_to_split =
-      std::min(std::min(dis_to_last_split, dis_to_last_merge), default_dis);
+  if (start_fp_to_split == std::numeric_limits<double>::max()) {
+    start_fp_to_split =
+        std::min(std::min(dis_to_last_split, dis_to_last_merge), default_dis);
+  }
 
   FPPoint start_fp(start_fp_link_id, -start_fp_to_split,
                    std::move(start_fp_lane_ids), end_FP);
