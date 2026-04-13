@@ -3414,52 +3414,60 @@ PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 
 const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
   const ApaParameters& param = apa_param.GetParam();
-
-  if (frame_.mirror_command == MirrorCommand::FOLD) {
-    return false;
-  }
-
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
-  const bool gear_case =
-      (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE);
+  const bool is_tail_in =
+      scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
 
-  const bool car_motion_case =
-      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+  const uint8_t expected_gear = is_tail_in ? geometry_lib::SEG_GEAR_REVERSE
+                                           : geometry_lib::SEG_GEAR_DRIVE;
 
-  const bool slot_confidence_case = (ego_info_under_slot.confidence == 1);
-
-  const bool car_pos_case =
-      ego_info_under_slot.cur_pose.pos.x() <
-          (ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
-           2.68) &&
-      std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 60;
-
-  const bool occupied_ratio_case = (ego_info_under_slot.slot_occupied_ratio <
-                                    param.pose_slot_occupied_ratio_3);
-
-  const bool remain_dist_case =
-      frame_.remain_dist_path >
-          param.gear_switch_config.dist_thresh_for_gear_switch_point &&
-      frame_.remain_dist_obs > 2.5 * param.min_drive_dist;
-
-  const bool dynamic_update_flag = gear_case && car_motion_case &&
-                                   slot_confidence_case && car_pos_case &&
-                                   occupied_ratio_case && remain_dist_case;
-
-  if (dynamic_update_flag) {
-    frame_.dynamic_plan_time += param.plan_time;
-  } else {
+  if (frame_.mirror_command == MirrorCommand::FOLD ||
+      frame_.gear_command != expected_gear ||
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() ||
+      ego_info_under_slot.confidence != 1) {
     frame_.dynamic_plan_time = 0.0;
+    return false;
   }
 
-  if (frame_.dynamic_plan_time > param.dynamic_plan_interval_time) {
+  constexpr double kTailInMaxEgoXOffset = 2.68;
+  constexpr double kMaxHeadingErrDeg = 60.0;
+  constexpr double kObsRemainDistFactor = 2.5;
+
+  const double max_ego_x_offset = is_tail_in
+                                      ? kTailInMaxEgoXOffset
+                                      : kTailInMaxEgoXOffset + param.wheel_base;
+  const double ego_x = ego_info_under_slot.cur_pose.GetX();
+  const double slot_mid_x =
+      ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x();
+  const double heading_err_deg =
+      std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg;
+  const bool ego_pose_out_of_range = ego_x >= slot_mid_x + max_ego_x_offset ||
+                                     heading_err_deg >= kMaxHeadingErrDeg;
+  if (ego_pose_out_of_range || ego_info_under_slot.slot_occupied_ratio >=
+                                   param.pose_slot_occupied_ratio_3) {
     frame_.dynamic_plan_time = 0.0;
-    return true;
+    return false;
   }
 
-  return false;
+  const bool path_remain_dist_too_short =
+      frame_.remain_dist_path <=
+      param.gear_switch_config.dist_thresh_for_gear_switch_point;
+  const bool obs_remain_dist_too_short =
+      frame_.remain_dist_obs <= kObsRemainDistFactor * param.min_drive_dist;
+  if (path_remain_dist_too_short || obs_remain_dist_too_short) {
+    frame_.dynamic_plan_time = 0.0;
+    return false;
+  }
+
+  frame_.dynamic_plan_time += param.plan_time;
+  if (frame_.dynamic_plan_time <= param.dynamic_plan_interval_time) {
+    return false;
+  }
+
+  frame_.dynamic_plan_time = 0.0;
+  return true;
 }
 
 const bool PerpendicularTailInScenario::CheckPathDangerous() {
