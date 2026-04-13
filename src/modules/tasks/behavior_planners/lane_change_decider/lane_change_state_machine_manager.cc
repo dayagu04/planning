@@ -2279,7 +2279,6 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   }
   // 记录更新后的后车标签，未命中则保持默认值。
   // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配，进一步确定是否会在短时间内超越自车
-  rear_agent_overtaking_ = false;
   const auto rear_it =
       joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
   if (rear_it == joint_decision_obstacle_labels_.end()) {
