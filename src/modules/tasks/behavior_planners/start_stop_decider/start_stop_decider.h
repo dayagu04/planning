@@ -63,6 +63,7 @@ class StartStopDecider : public Task {
   double cipv_relative_s_prev_ = 0.0;
   int32_t cipv_id_ = -1;
   bool cipv_is_large_ = false;
+  bool cipv_is_turnstile_virtual_obs_ = false;
 
   // calculated stop distance
   double stop_distance_ = 3.5;

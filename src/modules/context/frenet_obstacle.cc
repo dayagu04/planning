@@ -12,10 +12,10 @@
 
 namespace planning {
 
-FrenetObstacle::FrenetObstacle(const Obstacle *obstacle_ptr,
-                               const ReferencePath &reference_path,
-                               const std::shared_ptr<EgoStateManager> ego_state_info,
-                               bool is_location_valid,bool is_hpp_scene)
+FrenetObstacle::FrenetObstacle(
+    const Obstacle *obstacle_ptr, const ReferencePath &reference_path,
+    const std::shared_ptr<EgoStateManager> ego_state_info,
+    bool is_location_valid, bool is_hpp_scene)
     : id_(obstacle_ptr->id()),
       source_type_(obstacle_ptr->source_type()),
       obstacle_ptr_(obstacle_ptr),
@@ -292,11 +292,30 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     Point2D frenet_point, carte_point;
     carte_point.x = obs_point.x();
     carte_point.y = obs_point.y();
-    if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
-        std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
-      b_frenet_valid_ = false;
-      return;
+    if(is_hpp_scene){
+      double kappa;
+      double min_s_range = std::fmax(2.0 * length_, 2.0 * width_);
+      //弯道放大投影范围
+      if(frenet_coord->GetKappaByS(frenet_s_, &kappa) && std::fabs(kappa) > 0.1){
+        min_s_range = std::fmax(3.0 * length_, 3.0 * width_);
+      }
+      //投影范围做3m的最小值
+      min_s_range = std::fmax(3.0 , min_s_range);
+
+      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- min_s_range), (frenet_s_ + min_s_range), frenet_point) ||
+          std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+        b_frenet_valid_ = false;
+        return;
+      }
+    } else {
+      if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
+          std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+        b_frenet_valid_ = false;
+        return;
+      }
     }
+
+
     obs_start_s = std::min(obs_start_s, frenet_point.x);
     obs_end_s = std::max(obs_end_s, frenet_point.x);
     obs_start_l = std::min(obs_start_l, frenet_point.y);

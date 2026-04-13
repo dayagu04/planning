@@ -458,6 +458,14 @@ bool HppObstacleLateralPreprocessDecider::CalculateCandidateClusterGraph(
     for (int j = i + 1; j < cluster_candidates.size(); ++j) {
       const auto& obs_j_id = cluster_candidates[j].origin_id;
       const auto& obs_j = obs_item_map.at(obs_j_id);
+      auto& cluster_map_j = cluster_graph[j];
+      //调用类型判断函数，不符合规定类型的不进行合并
+      if (!IsObstacleTypeMergeable(obs_i->type(), obs_j->type())) {
+        cluster_map_i[j] = ObstacleClusterType::NO_MERGE;
+        cluster_map_j[i] = ObstacleClusterType::NO_MERGE;
+        continue;
+      }
+
       const auto& obs_j_boundary = obs_j->frenet_obstacle_boundary();
       const double obs_j_start_s = obs_j_boundary.s_start;
       const double obs_j_end_s = obs_j_boundary.s_end;
@@ -474,7 +482,6 @@ bool HppObstacleLateralPreprocessDecider::CalculateCandidateClusterGraph(
       bool lat_meet_cond1 = l_gap < kMergeLatLargeThr;
       bool lat_meet_cond2 = l_gap < kMergeLatSmallThr;
 
-      auto& cluster_map_j = cluster_graph[j];
       if (lon_meet_cond1 && lat_meet_cond1) {
         double dist = obs_i->obstacle()->perception_polygon().DistanceTo(
             obs_j->obstacle()->perception_polygon());
@@ -499,6 +506,43 @@ bool HppObstacleLateralPreprocessDecider::CalculateCandidateClusterGraph(
     }
   }
   return true;
+}
+
+bool HppObstacleLateralPreprocessDecider::IsObstacleTypeMergeable(
+    const iflyauto::ObjectType& type_a,
+    const iflyauto::ObjectType& type_b) {
+  // 规则1：车辆只能和车辆合并
+  bool is_a_vehicle = (type_a == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_TRAILER ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_PICKUP ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_SUV ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_MPV ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_ENGINEERING_VEHICLE ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_OCC_CAR);
+  bool is_b_vehicle = (type_b == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_TRAILER ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_PICKUP ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_SUV ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_MPV ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_ENGINEERING_VEHICLE ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_OCC_CAR);
+
+  // 如果一个是车，一个不是 → 不允许合并
+  if (is_a_vehicle != is_b_vehicle) {
+    return false;
+  }
+  // ===================== 新的类型扩展=====================
+  // 例：规则2：接地线不和其他类型合并
+
+  return true; // 类型匹配 → 允许继续判断距离
 }
 
 bool HppObstacleLateralPreprocessDecider::DFSGenerateObstacleClusters(

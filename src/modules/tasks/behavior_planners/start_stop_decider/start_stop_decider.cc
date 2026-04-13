@@ -90,6 +90,8 @@ void StartStopDecider::UpdateInput() {
   cipv_relative_s_ = cipv_decider_output.relative_s();
   cipv_vel_frenet_ = cipv_decider_output.v_frenet();
   cipv_is_large_ = cipv_decider_output.is_large();
+  cipv_is_turnstile_virtual_obs_ =
+      cipv_decider_output.is_turnstile_virtual_obs();
 
   // ego state info
   planning_init_state_vel_ = environmental_model.get_ego_state_manager()
@@ -167,7 +169,8 @@ double StartStopDecider::CalculateStopDistance() {
     high_speed_min_follow_distance_gap = config_.cone_min_follow_distance_gap;
   }
 
-  if (agent->is_tfl_virtual_obs()) {
+  if (agent->is_tfl_virtual_obs() ||
+      cipv_is_turnstile_virtual_obs_) {
     high_speed_min_follow_distance_gap =
         config_.traffic_light_min_follow_distance_gap;
   }
@@ -184,6 +187,13 @@ double StartStopDecider::CalculateStopDistance() {
 }
 
 bool StartStopDecider::CanTransitionFromStopToStart() {
+  // HPP 终点停车后不允许误起步：当 CIPV 为 HPP 终点虚拟障碍物时保持 STOP。
+  if (session_->is_hpp_scene() &&
+      IsCipvVirtualDestination(
+          agent::AgentDefaultInfo::kHppStopDestinationVirtualAgentId)) {
+    return false;
+  }
+
   const double cipv_movement_distance =
       cipv_relative_s_ - cipv_relative_s_prev_;
   const double distance_start_between_ego_and_cipv_threshold =
@@ -241,6 +251,11 @@ bool StartStopDecider::IsCipvVirtualDestination(int expected_agent_id) const {
 }
 
 bool StartStopDecider::CanTransitionToStop() {
+  // HPP 场景下仅使用 HPP 终点停车条件，屏蔽普通 CIPV 停车条件
+  if (session_->is_hpp_scene()) {
+    return hpp_stop_condition_met_this_frame_;
+  }
+
   bool ego_stop_condition =
       planning_init_state_vel_ < config_.ego_vel_begin_stop_threshold;
   const bool cipv_static_condition =

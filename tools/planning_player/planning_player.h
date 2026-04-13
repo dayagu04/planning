@@ -33,6 +33,8 @@ static constexpr auto TOPIC_LOCALIZATION_ESTIMATE =
 static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/egomotion";
 static constexpr auto TOPIC_PREDICTION_RESULT =
     "/iflytek/prediction/prediction_result";
+static constexpr auto TOPIC_AROUND_PREDICTION_RESULT =
+    "/iflytek/prediction/around_prediction_result";
 static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
 static constexpr auto TOPIC_CONTROL_COMMAN = "/iflytek/control/control_command";
 static constexpr auto TOPIC_HMI_MCU_INNER = "/iflytek/hmi/mcu_inner";
@@ -67,11 +69,11 @@ static constexpr auto TOPIC_VISION_PARKING_SLOT =
     "/iflytek/camera_perception/parking_slot_list";
 static constexpr auto TOPIC_CONTROL_DEBUG_INFO = "/iflytek/control/debug_info";
 
-static const double KMaxCurvature = 1.0 / 5.6;  
+static const double KMaxCurvature = 1.0 / 5.6;
 static const double KConstPi = 3.141592654;
 static const double KApaVelSimulation = 0.3;
 
-static std::set<std::string> kKeyTopicSet{TOPIC_PLANNING_DEBUG_INFO, TOPIC_FUSION_OBJECTS, TOPIC_ROAD_FUSION, TOPIC_VEHICLE_SERVICE, 
+static std::set<std::string> kKeyTopicSet{TOPIC_PLANNING_DEBUG_INFO, TOPIC_FUSION_OBJECTS, TOPIC_ROAD_FUSION, TOPIC_VEHICLE_SERVICE,
                                        TOPIC_LOCALIZATION};
 
 using TopicMsgTimeCache =
@@ -292,7 +294,7 @@ void PlanningPlayer::cache_with_ros_msg_time(
       std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
                 << "msg instantiate error, msg name: " << msg.getTopic()
                 << std::endl;
-      instant_error_map_[msg.getTopic()] = false; 
+      instant_error_map_[msg.getTopic()] = false;
     }
   } else {
     // auto time = msg.getTime();
@@ -315,7 +317,7 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
       std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
                 << "msg instantiate error, msg name: " << msg.getTopic()
                 << std::endl;
-      instant_error_map_[msg.getTopic()] = false; 
+      instant_error_map_[msg.getTopic()] = false;
     }
   } else {
     // auto time = msg.getTime();
@@ -339,7 +341,7 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time_old(
       std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
                 << "msg instantiate error, msg name: " << msg.getTopic()
                 << std::endl;
-      instant_error_map_[msg.getTopic()] = false; 
+      instant_error_map_[msg.getTopic()] = false;
     }
   } else {
     // auto time = msg.getTime();

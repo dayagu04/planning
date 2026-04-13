@@ -83,6 +83,7 @@
   "hpp_max_replan_theta_err": 10,
   "hpp_max_replan_lon_err": 0.5,
   "hpp_max_replan_dist_err": 0.75,
+  "hpp_max_vel_correction_per_frame": 0.5,
   "hpp_replan_threshold_speed": [
     1.0,
     4.167,
