@@ -68,7 +68,7 @@ void LongRefPathDecider::UpdateUpperBoundAgentObservation(
     auto agent = agent_manager->GetAgent(agent_id);
     if (!agent) continue;
 
-    double agent_s, agent_l = 0.0;
+    double agent_s = 0.0, agent_l = 0.0;
     if (!ego_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) continue;
 
     if (std::abs(agent_l) < half_ego_width) {

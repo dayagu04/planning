@@ -151,7 +151,7 @@ constexpr double kTriggerDistanceBaseOffsetTimeRatio = 0.5;  // Time ratio for b
 static constexpr double kCurvaturePreviewHighSpeedThreshold = 40.0;   // 40 km/h
 constexpr double KMinThreshold = 1.75;
 constexpr double KSpeedMax = 120.0;
-constexpr double kMinLateralSpeedThreshold = 0.05;
+constexpr double kMinLateralSpeedThreshold = 0.1;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
