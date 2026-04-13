@@ -732,7 +732,8 @@ class LoadRosbag:
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
                           'UpdateObstacleInteractionInfoCostTime','is_emergency_scene',
                           'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
-                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence']
+                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence',
+                          'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link']
 
       json_value_list += ["planning_cost_time", 'EnvironmentalModelManagerCost', 'TaskFunctionCost', "ego_state_update cost",
                           "update route_info cost", "virtual_lane_manager cost", "traffic_light_decision cost", "obstacle_prediction cost", "obstacle_manager cost", "agent_manager cost", "construction_scene_manager cost",

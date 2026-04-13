@@ -9,6 +9,7 @@
 // #include "sdmap/sdmap.h"
 // #include "sdpromap/sdpromap.h"
 #include "lane_topo_graph.h"
+#include "modules/context/route_info_strategy/centerline_link_analyzer.h"
 
 namespace planning{
 
@@ -105,6 +106,18 @@ bool get_sdpromap_valid() override;
 const ad_common::sdpromap::SDProMap& get_sdpro_map() override;
 const iflymapdata::sdpro::LinkInfo_Link* get_current_link() override;
 
+// 包装函数：判断传入lane是否在route link上，结果写入lane的route_on_link_status属性
+void UpdateLaneIsOnRouteLinkStatus(const std::shared_ptr<VirtualLane>& lane,
+                                   const iflymapdata::sdpro::LinkInfo_Link* split_link) const;
+
+// 对已判断为ON_ROUTE的lane，计算其在split_next_link上从左向右的序号
+// 若多条lane序号冲突，利用车道线点横向位置结合relative_id消歧
+void UpdateLanesOrderOnSplitNextLink(
+    const std::shared_ptr<VirtualLane>& cur_lane,
+    const std::shared_ptr<VirtualLane>& left_lane,
+    const std::shared_ptr<VirtualLane>& right_lane,
+    const iflymapdata::sdpro::LinkInfo_Link* split_link) const;
+
 //todo(ldh): 其他virutal函数。
 protected:
  bool UpdateLDMap();
@@ -129,7 +142,14 @@ protected:
 
  bool IsInExpressWay();
 
- bool IsNearingSplit();
+  // 检查中心线与两条link的位置关系
+  bool CheckCenterlineRelativeTwoLinks(
+      const std::shared_ptr<VirtualLane>& current_lane,
+      const iflymapdata::sdpro::LinkInfo_Link* link1,
+      const iflymapdata::sdpro::LinkInfo_Link* link2,
+      context::CenterlineCheckResult& result) const;
+
+  bool IsNearingSplit();
 
  bool IsNearingRamp();
 
@@ -334,6 +354,17 @@ void ProcessLaneMapMergePoint(
   bool CalculateLinkLaneNum(const iflymapdata::sdpro::LinkInfo_Link* link,
                             int& lane_num);
 
+  bool IsCurrentLaneOnRouteLink(const TopoLinkGraph& feasible_lane_graph) const;
+
+  // 收集 link 上有效（非 emergency/diversion）车道，按 sequence 从大到小排序
+  // 返回 vector<pair<sequence, lane_id>>，下标+1即为从左向右序号
+  std::vector<std::pair<int, uint64_t>> BuildSeqLaneIds(
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
+
+  // 在已排序的 seq_lane_ids 中查找 sequence 对应的从左向右序号（1=最左），未找到返回 -1
+  static int SeqToOrder(
+      const std::vector<std::pair<int, uint64_t>>& seq_lane_ids, int sequence);
+
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
   bool ldmap_valid_{false};
@@ -352,6 +383,9 @@ void ProcessLaneMapMergePoint(
   std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
   TopoLinkGraph feasible_lane_graph_;
+
+  // 中心线与Link关系分析器
+  context::CenterlineLinkAnalyzer centerline_link_analyzer_;
 };
 }
 

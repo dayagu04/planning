@@ -19,6 +19,13 @@
 
 namespace planning {
 
+// 车道是否在导航route link上的判断状态
+enum class RouteOnLinkStatus {
+  UNKNOWN,    // 未判断（场景不满足或数据无效）
+  ON_ROUTE,   // 在导航route link上
+  OFF_ROUTE,  // 不在导航route link上
+};
+
 struct SpeedChangePoint {
   double x;
   double y;
@@ -160,6 +167,21 @@ class VirtualLane {
   double max_width() const;
   bool hack() const { return hack_; }
 
+  void set_route_on_link_status(RouteOnLinkStatus status) {
+    route_on_link_status_ = status;
+  }
+  RouteOnLinkStatus get_route_on_link_status() const {
+    return route_on_link_status_;
+  }
+
+  // 该lane在split_next_link上从左向右的序号（1=最左），-1表示未计算
+  void set_lane_order_on_split_next_link(int order) {
+    lane_order_on_split_next_link_ = order;
+  }
+  int get_lane_order_on_split_next_link() const {
+    return lane_order_on_split_next_link_;
+  }
+
   void update_lane_tasks(const RouteInfoOutput &route_info_output);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; }
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
@@ -238,6 +260,8 @@ class VirtualLane {
 
   std::vector<int> current_tasks_;
   bool hack_ = false;
+  RouteOnLinkStatus route_on_link_status_ = RouteOnLinkStatus::UNKNOWN;
+  int lane_order_on_split_next_link_ = -1;  // 在split_next_link上从左向右的序号，-1表示未计算
 
   SpeedChangePoint speed_change_point_{};
   double v_cruise_ = 0.0;

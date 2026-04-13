@@ -116,7 +116,8 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_split_region', 'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split',
             'current_segment_passed_distance', 'forward_lane_num', 'is_ego_on_split_region',
             'ego_status_on_route','bd_mlc_scene', 'left_lane_num', 'minVal_seq',
-            'maxVal_seq', 'right_lane_num', 'emergency_lane_num', 'average_curve','lsl_length', 'lat_offset_lc_hold',
+            'maxVal_seq', 'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link',
+            'right_lane_num', 'emergency_lane_num', 'average_curve','lsl_length', 'lat_offset_lc_hold',
             'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose','is_emergency_scene',
             'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id','merging_rear_id', 'is_aggressive_scence', 'is_default_aggressive_scence']
 
