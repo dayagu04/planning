@@ -137,8 +137,11 @@ bool SamplePolySpeedAdjustDecider::Execute() {
       if (IsForcedMergeScenario()) {
         if (GenerateAStarTraj()) {
           astar_iteration_count = astar_traj_ptr_->count_;
+          astar_merge_count_ = 0;
         } else {
           astar_traj_ptr_.reset();
+          astar_merge_count_ =
+              std::min(astar_merge_count_ + 1, 2);
         }
       }
     }
@@ -176,7 +179,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
                          .is_fail_to_merge;
   merge_hard = false;
   merge_fail = false;
-  if (is_merge_change_ && ok) {
+  if (is_merge_change_ && ok && !astar_traj_ptr_) {
     if (min_cost_traj_ptr_ != nullptr &&
         !min_cost_traj_ptr_->is_left_distance_enough()) {
       if (distance_to_stop_point_ < 5.0) {

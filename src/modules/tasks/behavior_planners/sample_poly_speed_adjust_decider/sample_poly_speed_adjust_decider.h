@@ -126,6 +126,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   int count_hover_to_normal_state_{0};
   int lane_change_request_ = 0;
   int lane_change_source_ = 0;
+  int astar_merge_count_ = 0;
   const std::vector<double> t_gap_ego_v_bp_{5.0, 15.0, 30.0};
   const std::vector<double> t_gap_ego_v_{1.35, 1.55, 2.0};
 

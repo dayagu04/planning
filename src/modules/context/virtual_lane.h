@@ -220,6 +220,12 @@ class VirtualLane {
   const std::vector<int>& get_refline_point_floor_ids() const {
     return refline_point_floor_ids_;
   };
+  void set_average_diff_heading_angle(const double average_diff_heading_angle) {
+    average_diff_heading_angle_ = average_diff_heading_angle;
+  };
+  const double get_average_diff_heading_angle() const {
+    return average_diff_heading_angle_;
+  };
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -263,6 +269,7 @@ class VirtualLane {
 
   double max_virtual_seg_ahead_x_ = 0.0;
   double max_virtual_seg_ahead_length_ = 0.0;
+  double average_diff_heading_angle_ = 0.0;
 
   std::pair<bool, double> feasible_lane_distance_ = {true, 1000.0};
   MapMergePointInfo map_merge_point_info_;

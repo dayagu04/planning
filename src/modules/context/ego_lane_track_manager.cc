@@ -706,6 +706,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
   for (auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane != nullptr) {
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
+        relative_id_lane->set_average_diff_heading_angle(0.0);
         double average_heading_angle_cost = 0.0;
         double heading_angle_cost = 0.0;
         double pos_lateral_offset_cost = 0.0;
@@ -739,6 +740,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
         pos_lateral_offset_cost = std::fabs(ego_l);
         iter_count = std::max(1, iter_count);
         average_heading_angle_cost = heading_angle_cost / iter_count;
+        relative_id_lane->set_average_diff_heading_angle(
+            average_heading_angle_cost);
         total_lane_cost =
             average_heading_angle_cost * heading_angle_diff_weight +
             pos_lateral_offset_cost * init_pos_lateral_offset_weight;
@@ -2288,8 +2291,12 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         if (zero_relative_id_order_id_index < order_ids.size() &&
             relative_id_lanes.size() >
                 order_ids[zero_relative_id_order_id_index]) {
+          double average_diff_heading_angle =
+              last_track_ego_lane_->get_average_diff_heading_angle();
           last_track_ego_lane_ =
               relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+          last_track_ego_lane_->set_average_diff_heading_angle(
+              average_diff_heading_angle);
           last_zero_relative_id_order_id_index_ =
               zero_relative_id_order_id_index;
           for (auto& lane : relative_id_lanes) {
@@ -2495,6 +2502,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
             collision_check_lane, relative_id_lane, ego_future_trajs)) {
           continue;
         }
+        relative_id_lane->set_average_diff_heading_angle(0.0);
         double total_cost = 0.0;
         double average_heading_angle = 0.0;
         double average_heading_angle_cost = 0.0;
@@ -2556,7 +2564,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         double cos_theta = ego_to_split_point.InnerProd(split_point_to_rear);
         double theta_diff = 1.0 - cos_theta;
         average_heading_angle_cost = std::fabs(theta_diff);
-
+        relative_id_lane->set_average_diff_heading_angle(average_heading_angle_cost);
         if (iter != lane_curv_info_set.end()) {
           average_kappa_cost = Normalize(iter->second, kMaxKappa);
         }

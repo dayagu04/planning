@@ -210,6 +210,10 @@ class VirtualLaneManager {
     return split_lane_on_right_side_before_interactive_;
   }
 
+  bool get_split_is_straight() const{
+    return is_split_go_straight_;
+  }
+
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
   double get_distance_to_final_dash_line(const RequestType direction,
@@ -350,6 +354,7 @@ class VirtualLaneManager {
   const double dis_threshold_to_last_merge_point_ = 600.0;
   const double dis_threshold_to_is_merged_point_ = 800.0;
   bool is_select_split_nearing_ramp_ = true;
+  bool is_split_go_straight_ = false;
 
   int origin_relative_id_zero_nums_ = 0;
   std::vector<int> order_ids_of_same_zero_relative_id_;

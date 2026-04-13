@@ -53,6 +53,7 @@ const double PI = 3.1415926;
 
 namespace {
 constexpr double kEpsilon = 1.0e-4;
+constexpr double kLimitAverageHeadingDiff = 0.001;
 }  // namespace
 
 VirtualLaneManager::VirtualLaneManager(
@@ -1122,11 +1123,23 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   }
 
   split_select_direction_ = NO_SPLIT_SELECT;
-  if (enable_output_split_select_classical_chinese_ && order_ids_of_same_zero_relative_id_.size() > 1) {
+  is_split_go_straight_ = false;
+  if (enable_output_split_select_classical_chinese_ &&
+      order_ids_of_same_zero_relative_id_.size() > 1) {
+    double relative_id_lane_average_heading_diff_ =
+        ego_lane_track_manager_.get_track_lane_average_diff_heading_angle();
     if (current_lane_order_id == order_ids_of_same_zero_relative_id_[0]) {
       split_select_direction_ = SPLIT_SELECT_LEFT_LANE;
-    } else if (current_lane_order_id == order_ids_of_same_zero_relative_id_.back()) {
+      if (relative_id_lane_average_heading_diff_ < kLimitAverageHeadingDiff) {
+        is_split_go_straight_ = true;
+      }
+    } else if (current_lane_order_id ==
+               order_ids_of_same_zero_relative_id_.back()) {
       split_select_direction_ = SPLIT_SELECT_RIGHT_LANE;
+      if (relative_id_lane_average_heading_diff_ <
+          kLimitAverageHeadingDiff) {
+        is_split_go_straight_ = true;
+      }
     }
   }
 
