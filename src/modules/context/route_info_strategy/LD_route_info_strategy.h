@@ -1,5 +1,8 @@
 #pragma once
 # include <iostream>
+#include <unordered_set>
+#include <unordered_map>
+#include <queue>
 #include "local_view.h"
 #include "route_info_strategy.h"
 // #include "hdmap/hdmap.h"
@@ -8,6 +11,83 @@
 #include "lane_topo_graph.h"
 
 namespace planning{
+
+// Single link node in the virtual lane topology graph.
+// Covers begin_dist..end_dist meters ahead of ego (negative = behind).
+// Lanes in this link are split into:
+//   - recommended_orders: upstream-computed optimal path (from feasible_lane_graph)
+//   - on_route_orders: lane successor leads to route (may include non-recommended)
+//   - off_route_orders: lane successor leaves the route
+// Orders are 1-based from right, with DiversionLane excluded.
+struct LaneTopoNode {
+  uint64_t link_id = 0;
+  double begin_dist = 0.0;  // relative to ego longitudinal position
+  double end_dist = 0.0;
+  int lane_num = 0;                        // effective lanes (no DiversionLane)
+  std::vector<int> recommended_orders;     // upstream recommended path (FeasibleOrder)
+  std::vector<int> on_route_orders;        // orders whose successor stays on route
+  std::vector<int> off_route_orders;       // orders whose successor leaves route
+
+  std::vector<int> successor_indices;     // indices into VirtualLaneTopoGraph::nodes
+  std::vector<int> predecessor_indices;
+};
+
+// Complete lane topology graph covering -50m to +150m around ego.
+struct VirtualLaneTopoGraph {
+  std::vector<LaneTopoNode> nodes;
+  int ego_node_index = -1;  // index of the node containing ego's current link
+
+  // Return all node indices that cover the given longitudinal distance.
+  // Multiple nodes may cover the same distance at a split/merge point.
+  std::vector<size_t> GetNodeIndicesAtDistance(double dist) const {
+    std::vector<size_t> result;
+    for (size_t i = 0; i < nodes.size(); ++i) {
+      const auto& node = nodes[i];
+      if (dist >= node.begin_dist && dist < node.end_dist) {
+        result.push_back(i);
+      }
+    }
+    return result;
+  }
+
+  // Return ego node index, or -1 if invalid
+  int GetEgoNodeIndex() const {
+    return ego_node_index;
+  }
+
+  const std::shared_ptr<LaneTopoNode> GetEgoNode() const {
+    if (ego_node_index >= 0 &&
+        ego_node_index < static_cast<int>(nodes.size())) {
+      return std::make_shared<LaneTopoNode>(nodes[ego_node_index]);
+    }
+    return nullptr;
+  }
+};
+
+// Topological path representing a possible route from ego position forward.
+struct TopoPath {
+  // Nodes along this path (shared_ptr into VirtualLaneTopoGraph::nodes)
+  std::vector<std::shared_ptr<LaneTopoNode>> nodes_ptr;
+
+  // At each transition between nodes[i] and nodes[i+1], which lane orders
+  // in nodes[i] connect to nodes[i+1]?
+  // Size = nodes_ptr.size() - 1.
+  // Example: Link1 has 4 lanes, lanes 1-2 go to Link2, lanes 3-4 go to Link3.
+  //   Path(Link1→Link2): exit_orders[0] = {1, 2}
+  //   Path(Link1→Link3): exit_orders[0] = {3, 4}
+  // This tells us exactly which orders in the parent link feed into this path.
+  std::vector<std::vector<int>> exit_orders;
+
+  const std::shared_ptr<LaneTopoNode> GetNodeAtDistance(double dist) const {
+    for (std::shared_ptr<LaneTopoNode> const node : nodes_ptr) {
+      if (dist >= node->begin_dist && dist < node->end_dist) {
+        return node;
+      }
+    }
+    return nullptr;
+  }
+};
+
 class LDRouteInfoStrategy : public RouteInfoStrategy{
 public:
 
@@ -30,6 +110,20 @@ protected:
  bool UpdateLDMap();
 
  bool CalculateRouteInfo();
+
+ /**
+  * @brief Update feasible lane graph from MLCSceneTypeDecider results.
+  * @return false if feasible lane graph computation fails.
+  */
+ bool UpdateFeasibleLaneGraph();
+
+ /**
+  * @brief Calculate route cost for each VirtualLane.
+  * @param relative_id_lanes VirtualLanes sorted by order_id.
+  * @return Per-lane cost vector (lower cost = more likely on route).
+  */
+ VirtualLanesRouteCost GetVirtualLaneCostOnRoute(
+     std::vector<std::shared_ptr<VirtualLane>> const& relative_id_lanes) override;
 
  bool CalculateCurrentLink();
 
@@ -68,6 +162,78 @@ protected:
  void UpdateLCNumTask(
      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
      const TopoLinkGraph& feasible_lane_graph);
+
+ /**
+  * @brief Compute per-VirtualLane route cost using topo graph matching.
+  *
+  * Builds VirtualLaneTopoGraph, extracts topological paths, and scores
+  * each VirtualLane against every path to determine on/off-route probability.
+  * @param relative_id_lanes VirtualLanes sorted by order_id.
+  * @param feasible_lane_graph Upstream feasible lane graph.
+  * @return Per-lane cost vector (lower cost = more likely on route).
+  */
+ std::vector<VirtualLaneRouteCost> CalculateVirtualLaneRouteCost(
+     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+     const TopoLinkGraph& feasible_lane_graph);
+
+ /**
+  * @brief Build lane topology graph covering [-50m, +150m] around ego.
+  *
+  * Forward BFS through successor links and backward BFS through predecessors.
+  * Each node classifies lanes as on_route/off_route and stores recommended
+  * orders.
+  * @param feasible_lane_graph Source of route link IDs and feasible orders.
+  * @param[out] topo_graph Output topology graph.
+  * @return false if ego is off-route (wrong_route scenario).
+  */
+ bool BuildVirtualLaneTopoGraph(const TopoLinkGraph& feasible_lane_graph,
+                                VirtualLaneTopoGraph& topo_graph);
+
+ /**
+  * @brief Create a LaneTopoNode for a single link.
+  *
+  * Classifies each lane as on_route or off_route based on successor link
+  * membership. DiversionLanes are excluded; remaining lane orders are adjusted
+  * accordingly.
+  * @param link Map link pointer.
+  * @param begin_dist Longitudinal start distance relative to ego.
+  * @param end_dist Longitudinal end distance relative to ego.
+  * @param route_link_ids Set of link IDs on the navigation route.
+  * @param feasible_orders_by_link Recommended orders per link from upstream.
+  * @return Populated LaneTopoNode.
+  */
+ LaneTopoNode CreateNodeFromLink(
+     const iflymapdata::sdpro::LinkInfo_Link* link, double begin_dist,
+     double end_dist, const std::unordered_set<uint64_t>& route_link_ids,
+     const std::unordered_map<uint64_t, std::vector<int>>&
+         feasible_orders_by_link);
+
+ /**
+  * @brief Extract all possible topological paths via DFS from ego node.
+  *
+  * For each node transition, computes exit_orders (which lane orders in the
+  * parent node connect to the child node via lane-level successor).
+  * @param topo_graph Input topology graph.
+  * @param max_distance Maximum forward distance to traverse (meters).
+  * @return Vector of TopoPath, one per reachable route branch.
+  */
+ std::vector<TopoPath> ExtractTopoPaths(const VirtualLaneTopoGraph& topo_graph,
+                                        double max_distance = 100.0);
+
+ /**
+  * @brief Score how well a VirtualLane matches a topological path.
+  *
+  * Combines three signals: lane-count matching, fork boundary detection
+  * (left/right drop to 0), and exit-order matching at split points.
+  * @param virtual_lane Perception VirtualLane to evaluate.
+  * @param topo_path Candidate topological path.
+  * @param sample_step Longitudinal sampling interval (meters).
+  * @param max_distance Maximum forward distance to sample (meters).
+  * @return Weighted average match score in roughly [-1, 1].
+  */
+ double CalculateMatchScore(const std::shared_ptr<VirtualLane>& virtual_lane,
+                            const TopoPath& topo_path, double sample_step = 5.0,
+                            double max_distance = 100.0);
 
  bool CalculateFrontTargetLinkBaseFixDis(
      iflymapdata::sdpro::LinkInfo_Link* target_link,
@@ -185,5 +351,7 @@ void ProcessLaneMapMergePoint(
   MLCDeciderSceneTypeInfo mlc_decider_scene_type_info_;
   std::vector<TopoLane> avoid_link_merge_lane_id_vec_;
 
+  TopoLinkGraph feasible_lane_graph_;
 };
 }
+

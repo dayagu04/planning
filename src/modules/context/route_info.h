@@ -88,6 +88,15 @@ class RouteInfo {
   void UpdateMLCInfoDeciderBaseTencent(
       const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes);
 
+  VirtualLanesRouteCost GetVirtualLaneCostOnRoute(
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
+    if (route_info_strategy_ == nullptr) {
+      return VirtualLanesRouteCost();
+    }
+
+    return route_info_strategy_->GetVirtualLaneCostOnRoute(relative_id_lanes);
+  }
+
   void UpdateTargetSlotInfo(const ad_common::math::Vec2d& center);
 
   void UpdateTargetInfo(const double dist_to_target_slot,

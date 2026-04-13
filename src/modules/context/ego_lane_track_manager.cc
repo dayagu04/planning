@@ -1794,15 +1794,36 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     }
   }
 
-  // 尝试这里识别第一个分流已经不用考虑，可以考虑第二个分流场景了。
-  // 仅针对连续分流、且方向相反的场景进行判断。
+  // Get Virtual Lane Cost on Route
+  const auto& route_info = session_->environmental_model().get_route_info();
+  VirtualLanesRouteCost const& lane_cost = route_info->GetVirtualLaneCostOnRoute(relative_id_lanes);
+
+  // find best lane in order_id_idx
+  int best_order_id_idx = -1;
+  double min_total_cost = 10000;
+  for (int const o_idx : order_ids) {
+    uint const order_id = relative_id_lanes[o_idx]->get_order_id();
+
+    auto find_it = std::find_if(lane_cost.begin(), lane_cost.end(),
+                                [order_id](VirtualLaneRouteCost const& cost) {
+                                  return cost.order_id == order_id;
+                                });
+    if (lane_cost.end() == find_it || !find_it->is_on_route || find_it->total_cost > 0.3) {
+      continue;
+    }
+
+    if (best_order_id_idx == -1 || find_it->total_cost < min_total_cost) {
+      best_order_id_idx = o_idx;
+      min_total_cost = find_it->total_cost;
+    }
+  }
 
   // Check whether to consider the second split. That is: the current lane the
   // ego vehicle is in will definitely not miss the first split.
   bool need_consider_second_split = false;
   CheckIfConsiderSecondSplit(relative_id_lanes, need_consider_second_split);
 
-  if ((!need_consider_second_split && last_zero_relative_id_nums_ > 1 &&
+  if ((!need_consider_second_split && best_order_id_idx < 0 && last_zero_relative_id_nums_ > 1 &&
        (ramp_split_select_is_finish_ || road_split_select_is_finish_) &&
        ego_distance_to_lane_merge_split_point <
            surpress_select_lane_dis_to_split) ||
@@ -1861,7 +1882,6 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   //   }
   // } else {
 
-  // 这里识别需要判断的split，此处直接用first不太合理。
   double road_merge_and_split_distance_thld_surpress_lane_select =
       std::max(60.0, ego_state->ego_v() * 4.0);
 
@@ -1885,7 +1905,38 @@ void EgoLaneTrackManger::PreprocessRampSplit(
         need_consider_second_split ? split_direction_dis_info_list_[1]
                                    : first_split_dir_dis_info_;
 
-    if (split_dir_dis.first == ON_RIGHT) {
+    // Compare new cost-based logic vs old direction-based logic
+    {
+      int old_code_logic_idx = -1;
+      if (split_dir_dis.first == ON_RIGHT) {
+        old_code_logic_idx = order_ids[1];
+      } else if (split_dir_dis.first == ON_LEFT) {
+        old_code_logic_idx = order_ids[0];
+      }
+
+      if (old_code_logic_idx >= 0 && best_order_id_idx >= 0 &&
+          best_order_id_idx != old_code_logic_idx) {
+        ILOG_WARN << "[SplitSelectDiff]"
+                  << " old="
+                  << relative_id_lanes[old_code_logic_idx]->get_order_id()
+                  << " new="
+                  << relative_id_lanes[best_order_id_idx]->get_order_id()
+                  << " cost=" << min_total_cost
+                  << " dist=" << split_dir_dis.second;
+      }
+    }
+
+    if (best_order_id_idx >= 0){
+      GenerateEgoFutureTrajectory(relative_id_lanes[best_order_id_idx], 0.0, ego_future_trajs);
+      if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[best_order_id_idx], ego_future_trajs)) {
+        relative_id_lanes[best_order_id_idx]->set_relative_id(0);
+        origin_order_id = relative_id_lanes[best_order_id_idx]->get_order_id();
+        last_zero_relative_id_order_id_index_ = best_order_id_idx;
+        last_track_ego_lane_ = relative_id_lanes[best_order_id_idx];
+        is_exist_split_on_ramp_ = true;
+      }
+    }
+    else if (split_dir_dis.first == ON_RIGHT) {
       GenerateEgoFutureTrajectory(relative_id_lanes[order_ids[1]], 0.0, ego_future_trajs);
       if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[order_ids[1]], ego_future_trajs)) {
         relative_id_lanes[order_ids[1]]->set_relative_id(0);
