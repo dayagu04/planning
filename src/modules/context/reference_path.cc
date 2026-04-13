@@ -406,11 +406,16 @@ bool ReferencePath::is_obstacle_ignorable(
 
 bool ReferencePath::get_reference_point_by_lon(
     double s, ReferencePathPoint &reference_path_point) const {
+  const double end_extension_length = (session_->is_hpp_scene()) ? kHPPLonExtensionLength : 0.0;
   if (std::isnan(s) || s < refined_ref_path_points_.front().path_point.s() ||
-      s > refined_ref_path_points_.back().path_point.s()) {
+      s > (refined_ref_path_points_.back().path_point.s() + end_extension_length)) {
     return false;
   }
 
+  if(s >= refined_ref_path_points_.back().path_point.s()){
+    reference_path_point = refined_ref_path_points_.back();
+    return true;
+  }
   /*@cailiu: use binary search*/
   size_t low = 0;
   size_t high = refined_ref_path_points_.size() - 1;
