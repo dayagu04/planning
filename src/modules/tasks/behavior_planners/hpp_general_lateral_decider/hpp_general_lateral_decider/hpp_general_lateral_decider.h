@@ -103,8 +103,9 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   void MergeReferenceTrajectories(
       const std::vector<std::pair<double, double>> &hard_bounds,
       const std::vector<std::pair<double, double>> &soft_bounds);
-  std::vector<Point2D> SmoothPointsIteratively(
+  bool SmoothPointsIteratively(
       const std::vector<Point2D> &input,
+      TrajectoryPoints &output,
       const int effective_radius,
       const size_t iters);
   TrajectoryPoints iterativeSmoothWithBounds(const TrajectoryPoints& trajectory);
