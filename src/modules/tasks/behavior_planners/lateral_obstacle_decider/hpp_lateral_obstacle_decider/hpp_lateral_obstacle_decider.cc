@@ -155,10 +155,6 @@ void HppLateralObstacleDecider::UpdateLatDecision(
                                  obs_classification_result, decision);
     for (const auto &obs_id : cluster.original_ids) {
       lat_obstacle_decision[obs_id] = decision;
-      if (obstacle_consistency_map_.find(obs_id) ==
-          obstacle_consistency_map_.end()) {
-        obstacle_consistency_map_[obs_id].last_decision = decision;
-      }
     }
   }
   for (const auto &obstacle : reference_path_ptr->get_obstacles()) {
