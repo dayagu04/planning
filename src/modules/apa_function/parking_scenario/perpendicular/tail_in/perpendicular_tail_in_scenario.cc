@@ -611,15 +611,32 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     ILOG_INFO << "PathPlanOnce not support perpendicular head in";
     frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
-    return PathPlannerResult::PLAN_UPDATE;
+    return PathPlannerResult::PLAN_FAILED;
   }
+
+  // --- cache pointers and common references ---
+  const auto slot_manager_ptr = apa_world_ptr_->GetSlotManagerPtr();
+  const auto col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+  const auto measure_data_manager_ptr =
+      apa_world_ptr_->GetMeasureDataManagerPtr();
+  const auto parking_task_interface_ptr =
+      apa_world_ptr_->GetParkingTaskInterfacePtr();
+  const auto& per_path_planner_ptr =
+      parking_task_interface_ptr->GetPerpendicularTailInPathGeneratorPtr();
 
   const ApaParameters& param = apa_param.GetParam();
   const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-
+      slot_manager_ptr->GetEgoInfoUnderSlot();
   const SimulationParam& simu_param = apa_world_ptr_->GetSimuParam();
 
+  // --- named booleans for readability ---
+  const bool is_dynamic_replan =
+      (frame_.replan_reason == ReplanReason::DYNAMIC);
+  const bool is_searching_stage =
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
+  const bool has_fold_mirror = measure_data_manager_ptr->GetFoldMirrorFlag();
+
+  // --- build input ---
   GeometryPathInput input;
   input.ego_info_under_slot = ego_info_under_slot;
   input.is_complete_path = simu_param.is_complete_path;
@@ -628,24 +645,23 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   input.ref_arc_steer = frame_.current_arc_steer;
   input.is_replan_first = frame_.is_replan_first;
   input.is_replan_second = frame_.is_replan_second;
-  input.is_replan_dynamic = (frame_.replan_reason == ReplanReason::DYNAMIC);
-  input.is_searching_stage =
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
-
+  input.is_replan_dynamic = is_dynamic_replan;
+  input.is_searching_stage = is_searching_stage;
   input.force_mid_process_plan = simu_param.force_mid_process_plan;
-
   input.can_first_plan_again = frame_.can_first_plan_again;
-
   input.is_simulation = simu_param.is_simulation;
+  input.is_left_empty = frame_.is_left_empty;
+  input.is_right_empty = frame_.is_right_empty;
 
   if (simu_param.is_simulation && simu_param.ref_gear != 0) {
     input.ref_gear = simu_param.ref_gear;
   }
 
-  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
-    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+  // collision detection init & smart fold mirror
+  if (has_fold_mirror) {
+    col_det_interface_ptr->Init(true);
   } else {
-    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+    col_det_interface_ptr->Init(false);
     if (ego_info_under_slot.tar_pose_result.target_pose_type ==
         TargetPoseType::FOLD_MIRROR) {
       ILOG_INFO << "try path plan with fold mirror";
@@ -654,41 +670,30 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   }
 
   if (input.is_simulation) {
-    apa_param.SetParam().use_average_obs_dist =
-        apa_world_ptr_->GetSimuParam().use_average_obs_dist;
+    apa_param.SetParam().use_average_obs_dist = simu_param.use_average_obs_dist;
   }
 
-  input.is_left_empty = frame_.is_left_empty;
-  input.is_right_empty = frame_.is_right_empty;
-
-  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+  if (is_dynamic_replan) {
     ILOG_INFO << "dynamic replan, gear should be reverse";
     input.ref_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
 
+  // --- splicing points for dynamic plan ---
   std::vector<geometry_lib::PathPoint> splicing_point_global_vec;
   CalcProjPtForDynamicPlan(input.ego_info_under_slot.cur_pose,
                            splicing_point_global_vec);
 
-  const std::shared_ptr<PerpendicularTailInPathGenerator>&
-      per_path_planner_ptr = apa_world_ptr_->GetParkingTaskInterfacePtr()
-                                 ->GetPerpendicularTailInPathGeneratorPtr();
-
+  // --- first path plan attempt ---
   per_path_planner_ptr->SetInput(input);
-
   const bool path_plan_success = per_path_planner_ptr->Update();
 
-  if (input.is_searching_stage) {
-    if (!path_plan_success) {
-      return PathPlannerResult::PLAN_FAILED;
-    }
-    // if (path_plan_success) {
-    //   return PathPlannerResult::PLAN_UPDATE;
-    // }
+  // searching stage: fail immediately if plan fails
+  if (is_searching_stage && !path_plan_success) {
+    return PathPlannerResult::PLAN_FAILED;
   }
 
-  // dynamic replan
-  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+  // --- handle plan result by replan type ---
+  if (is_dynamic_replan) {
     if (!path_plan_success) {
       frame_.dynamic_plan_fail_flag = true;
       ILOG_INFO << "path dynamic plan fail";
@@ -706,63 +711,60 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     }
     ILOG_INFO << "path dynamic plan is superior, should replace last path";
     frame_.dynamic_plan_path_superior = true;
-  }
-  // static replan
-  else {
-    if (path_plan_success) {
-      ILOG_INFO << "path plan success";
-      if (frame_.process_obs_method == ProcessObsMethod::DO_NOTHING &&
-          !frame_.is_replan_first &&
-          per_path_planner_ptr->GetOutput().current_gear !=
-              frame_.current_gear &&
-          CheckCanDelObsInSlot()) {
-        ILOG_INFO << "when process_obs_method is do nothing and no first "
-                     "replan and can del obs in slot, plan gear should be same "
-                     "with ref gear, otherwise fail";
-        frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
-        return PathPlannerResult::PLAN_FAILED;
-      }
-    } else {
-      ILOG_INFO << "path plan fail";
-      const bool direct_fail_flag =
-          frame_.process_obs_method == ProcessObsMethod::DO_NOTHING ||
-          frame_.process_obs_method == ProcessObsMethod::MOVE_OBS_OUT_SLOT ||
-          !frame_.can_first_plan_again || frame_.is_replan_first;
-
-      if (direct_fail_flag) {
-        ILOG_INFO << "no try first path plan, directly fail";
-        frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
-        return PathPlannerResult::PLAN_FAILED;
-      }
-
-      ILOG_INFO << "try first path plan again";
-      frame_.is_replan_first = true;
-      frame_.is_replan_second = false;
-      frame_.can_first_plan_again = false;
-      input.is_replan_first = frame_.is_replan_first;
-      input.is_replan_second = frame_.is_replan_second;
-      input.can_first_plan_again = frame_.can_first_plan_again;
-      per_path_planner_ptr->SetInput(input);
-      if (!per_path_planner_ptr->Update()) {
-        ILOG_INFO << "try first path plan again also fail";
-        frame_.plan_fail_reason = PATH_PLAN_FAILED;
-        return PathPlannerResult::PLAN_FAILED;
-      }
-      // it can limit gear, but now not limit, try success possible
-      if (per_path_planner_ptr->GetOutput().current_gear !=
-          frame_.current_gear) {
-        // return PathPlannerResult::PLAN_FAILED;
-      }
-      ILOG_INFO << "try first path plan again success";
+  } else if (path_plan_success) {
+    // static replan success
+    ILOG_INFO << "path plan success";
+    const bool should_reject_gear_change =
+        frame_.process_obs_method == ProcessObsMethod::DO_NOTHING &&
+        !frame_.is_replan_first &&
+        per_path_planner_ptr->GetOutput().current_gear != frame_.current_gear &&
+        CheckCanDelObsInSlot();
+    if (should_reject_gear_change) {
+      ILOG_INFO << "when process_obs_method is do nothing and no first "
+                   "replan and can del obs in slot, plan gear should be same "
+                   "with ref gear, otherwise fail";
+      frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_FAILED;
     }
+  } else {
+    // static replan fail — try first plan again if allowed
+    ILOG_INFO << "path plan fail";
+    const bool cannot_retry =
+        frame_.process_obs_method == ProcessObsMethod::DO_NOTHING ||
+        frame_.process_obs_method == ProcessObsMethod::MOVE_OBS_OUT_SLOT ||
+        !frame_.can_first_plan_again || frame_.is_replan_first;
+    if (cannot_retry) {
+      ILOG_INFO << "no try first path plan, directly fail";
+      frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_FAILED;
+    }
+
+    ILOG_INFO << "try first path plan again";
+    frame_.is_replan_first = true;
+    frame_.is_replan_second = false;
+    frame_.can_first_plan_again = false;
+    input.is_replan_first = true;
+    input.is_replan_second = false;
+    input.can_first_plan_again = false;
+    per_path_planner_ptr->SetInput(input);
+    if (!per_path_planner_ptr->Update()) {
+      ILOG_INFO << "try first path plan again also fail";
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_FAILED;
+    }
+    // it can limit gear, but now not limit, try success possible
+    if (per_path_planner_ptr->GetOutput().current_gear != frame_.current_gear) {
+      // return PathPlannerResult::PLAN_FAILED;
+    }
+    ILOG_INFO << "try first path plan again success";
   }
 
+  // --- post-plan validation ---
   if (!per_path_planner_ptr->SetCurrentPathSegIndex()) {
     ILOG_INFO << "path plan fail";
     frame_.plan_fail_reason = ParkingFailReason::SET_SEG_INDEX;
     return PathPlannerResult::PLAN_FAILED;
   }
-
   if (!per_path_planner_ptr->CheckCurrentGearLength()) {
     ILOG_INFO << "path plan fail";
     frame_.plan_fail_reason = ParkingFailReason::CHECK_GEAR_LENGTH;
@@ -770,21 +772,20 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   }
 
   per_path_planner_ptr->SampleCurrentPathSeg();
-
   per_path_planner_ptr->PrintOutputSegmentsInfo();
 
+  // --- build output path segments ---
   const GeometryPathOutput& planner_output = per_path_planner_ptr->GetOutput();
   current_plan_path_vec_.clear();
   current_plan_path_vec_.reserve(5);
   all_plan_path_vec_.clear();
   all_plan_path_vec_.reserve(8);
-
   frame_.is_last_path = planner_output.is_last_path;
 
-  geometry_lib::PathSegment path_seg_global;
   for (size_t i = planner_output.path_seg_index.first;
        i < planner_output.path_segment_vec.size(); ++i) {
-    path_seg_global = planner_output.path_segment_vec[i];
+    geometry_lib::PathSegment path_seg_global =
+        planner_output.path_segment_vec[i];
     path_seg_global.LocalToGlobal(ego_info_under_slot.l2g_tf);
     all_plan_path_vec_.emplace_back(path_seg_global);
     if (i <= planner_output.path_seg_index.second) {
@@ -792,24 +793,32 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     }
   }
 
+  // --- update frame state ---
   frame_.current_gear = geometry_lib::ReverseGear(planner_output.current_gear);
-
   if (frame_.is_replan_first) {
     frame_.is_replan_first = false;
     frame_.is_replan_second = true;
-  } else {
-    if (frame_.is_replan_second) {
-      frame_.is_replan_second = false;
-    }
+  } else if (frame_.is_replan_second) {
+    frame_.is_replan_second = false;
   }
-
   frame_.gear_command = planner_output.current_gear;
   frame_.cur_path_gear_change_count = planner_output.gear_change_count;
+
+  // --- build output path points (local -> global) ---
+  const auto& l2g_tf = ego_info_under_slot.l2g_tf;
+
+  // helper: convert local path point to global
+  const auto to_global = [&l2g_tf](const geometry_lib::PathPoint& local_pt,
+                                   geometry_lib::PathPoint& out) {
+    out.Set(l2g_tf.GetPos(local_pt.pos), l2g_tf.GetHeading(local_pt.heading));
+    out.lat_buffer = local_pt.lat_buffer;
+    out.s = local_pt.s;
+    out.kappa = local_pt.kappa;
+  };
 
   current_path_point_global_vec_.clear();
   current_path_point_global_vec_.reserve(planner_output.path_point_vec.size() +
                                          splicing_point_global_vec.size() + 18);
-
   complete_path_point_global_vec_.clear();
   complete_path_point_global_vec_.reserve(
       planner_output.all_gear_path_point_vec.size() +
@@ -823,46 +832,40 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     JSON_DEBUG_VALUE("is_path_lateral_optimized", false);
   }
 
+  // splicing points (already in global frame)
   for (const geometry_lib::PathPoint& pt : splicing_point_global_vec) {
     current_path_point_global_vec_.emplace_back(pt);
     complete_path_point_global_vec_.emplace_back(pt);
   }
 
+  // current path points: local -> global
   geometry_lib::PathPoint global_point;
   for (const geometry_lib::PathPoint& path_point : path_pt_vec) {
-    global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-                     ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
-    global_point.lat_buffer = path_point.lat_buffer;
-    global_point.s = path_point.s;
-    global_point.kappa = path_point.kappa;
+    to_global(path_point, global_point);
     current_path_point_global_vec_.emplace_back(global_point);
   }
+
+  // complete path points: local -> global (includes gear)
   for (const auto& path_point : planner_output.all_gear_path_point_vec) {
-    global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-                     ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
-    global_point.lat_buffer = path_point.lat_buffer;
-    global_point.s = path_point.s;
-    global_point.kappa = path_point.kappa;
+    to_global(path_point, global_point);
     global_point.gear = path_point.gear;
     complete_path_point_global_vec_.emplace_back(global_point);
   }
 
-  // correct target pose
+  // --- correct target pose ---
   if (!complete_path_point_global_vec_.empty()) {
     EgoInfoUnderSlot& mutable_ego_info_under_slot =
-        apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+        slot_manager_ptr->GetMutableEgoInfoUnderSlot();
     geometry_lib::PathPoint real_target_pose =
         complete_path_point_global_vec_.back();
     real_target_pose.GlobalToLocal(mutable_ego_info_under_slot.g2l_tf);
     const geometry_lib::PathPoint& origin_target_pose =
         mutable_ego_info_under_slot.origin_target_pose;
-    geometry_lib::PathPoint& target_pose =
-        mutable_ego_info_under_slot.target_pose;
     mutable_ego_info_under_slot.lat_move_dist_replan_success =
         real_target_pose.GetY() - origin_target_pose.GetY();
     mutable_ego_info_under_slot.lon_move_dist_replan_success =
         real_target_pose.GetX() - origin_target_pose.GetX();
-    target_pose = real_target_pose;
+    mutable_ego_info_under_slot.target_pose = real_target_pose;
   }
 
   perferred_geometry_path_vec_ = planner_output.perferred_geometry_path_vec;
