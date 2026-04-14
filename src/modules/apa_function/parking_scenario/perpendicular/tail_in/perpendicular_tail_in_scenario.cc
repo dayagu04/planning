@@ -1117,14 +1117,12 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
   PlannerOpenSpaceConfig config;
   GenHybridAstarConfigAndRequest(config, request);
 
-  const ApaParameters& param = apa_param.GetParam();
   CalcProjPtForDynamicPlan(request.ego_info_under_slot.cur_pose,
                            request.splicing_pt_vec);
 
-  const std::shared_ptr<HybridAstarPathGeneratorInterface>&
-      hybrid_astar_path_generator_ptr =
-          apa_world_ptr_->GetParkingTaskInterfacePtr()
-              ->GetHybridAstarPathGeneratorInterfacePtr();
+  const auto hybrid_astar_path_generator_ptr =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()
+          ->GetHybridAstarPathGeneratorInterfacePtr();
 
   HybridAStarResult hybrid_astar_result;
   hybrid_astar_path_generator_ptr->SetRequest(request);
