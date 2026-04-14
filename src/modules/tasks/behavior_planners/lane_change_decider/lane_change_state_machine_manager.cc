@@ -488,14 +488,19 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
     is_high_priority_back_ = true;
     return true;
   }
-  // 增加路沿检查
+  // 增加路沿检查,连续3帧才触发cancel
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
-    lane_change_stage_info_.lc_invalid_reason = "no target lane";
-    return true;
+    road_edge_collision_cnt_++;
+    if (road_edge_collision_cnt_ >= 3) {
+      road_edge_collision_cnt_ = 0;
+      lane_change_stage_info_.lc_invalid_reason = "no target lane";
+      return true;
+    }
+  } else {
+    road_edge_collision_cnt_ = 0;
   }
-  // check if gap is dangerous
   CheckLaneChangeBackValid(lane_change_direction);
 
   // check if driver cancel
@@ -537,12 +542,18 @@ bool LaneChangeStateMachineManager::CheckIfHoldToCancel(
   if (hold_time_out) {
     return true;
   }
-  // 增加路沿检查
+  // 增加路沿检查，连续3帧才触发cancel
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
-    lane_change_stage_info_.lc_invalid_reason = "no target lane";
-    return true;
+    road_edge_collision_cnt_++;
+    if (road_edge_collision_cnt_ >= 3) {
+      road_edge_collision_cnt_ = 0;
+      lane_change_stage_info_.lc_invalid_reason = "no target lane";
+      return true;
+    }
+  } else {
+    road_edge_collision_cnt_ = 0;
   }
   return false;
 }
@@ -1637,6 +1648,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   is_dash_not_enough_for_lc_ = false;
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
+  road_edge_collision_cnt_ = 0;
   overtake_lane_change_confirmed_ = false;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
@@ -1667,6 +1679,7 @@ void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   is_dash_not_enough_for_lc_ = false;
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
+  road_edge_collision_cnt_ = 0;
 }
 
 bool LaneChangeStateMachineManager::TimeOut(const bool trigger,
@@ -4445,7 +4458,7 @@ bool LaneChangeStateMachineManager::
       const double ttc_decay = std::pow(ttc_decay_factor, i);
       box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
       //状态折扣
-      box_longitudinal_buff = is_executing ? 
+      box_longitudinal_buff = is_executing ?
                             box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio * (1.0 - ego_press_line_ratio)
                             : box_longitudinal_buff * (1.0 - ego_press_line_ratio);
       if(is_front_reverse){
@@ -4490,14 +4503,14 @@ bool LaneChangeStateMachineManager::
       double safety_buff = std::max(dist_ttc_interp, dis_diff_vel);
       box_ttc_vec.push_back(pred_ttc);
       // 3) 时间衰减：对合并后的 buff 沿预测时域衰减
-      const double ttc_decay_factor = (is_checking_rear_overtaking && !is_aggressive_scence_)? 
+      const double ttc_decay_factor = (is_checking_rear_overtaking && !is_aggressive_scence_)?
                                       0.99: lc_safety_check_config_.ttc_decay_factor;
       const double ttc_decay = std::pow(ttc_decay_factor, i);
       box_longitudinal_buff = safety_buff * ttc_decay;
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
       const double press_ratio = std::clamp(ego_press_line_ratio, 0.0, 1.0);
       const double exe_ratio = is_checking_rear_overtaking ? 0.9 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
-      box_longitudinal_buff = is_executing ? 
+      box_longitudinal_buff = is_executing ?
                             box_longitudinal_buff * exe_ratio * (1.0 - press_ratio)
                             : box_longitudinal_buff * (1.0 - press_ratio);
       // 最小值
