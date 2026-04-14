@@ -506,30 +506,19 @@ const bool ParkingScenario::CheckGearChangeCountTooMuch(
   return true;
 }
 
-const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
-    const double lat_expand, const double lon_expand,
-    const double heading_err) {
+const bool ParkingScenario::CheckEgoPoseInBelieveSlotArea(
+    const double lat_expand, const double lon_expand, const double heading_err,
+    const bool is_front_pose) {
   const auto& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const auto check_pose =
+      is_front_pose
+          ? GetCarFrontAxlePoseFromCarPose(ego_info_under_slot.cur_pose)
+          : ego_info_under_slot.cur_pose;
 
-  if ((ego_info_under_slot.slot.IsPointInCustomSlot(
-           ego_info_under_slot.cur_pose.pos, lon_expand, lon_expand, lat_expand,
-           lat_expand, true) &&
-       std::fabs(ego_info_under_slot.terminal_err.GetTheta()) * kRad2Deg <
-           heading_err)) {
-    return true;
-  }
-
-  return false;
-}
-
-const geometry_lib::PathPoint ParkingScenario::GetCarFrontPoseFromCarPose(
-    const geometry_lib::PathPoint& pose) {
-  geometry_lib::PathPoint front_pose = pose;
-  front_pose.pos = pose.pos + (apa_param.GetParam().front_overhanging +
-                               apa_param.GetParam().wheel_base) *
-                                  geometry_lib::GenHeadingVec(pose.heading);
-  return front_pose;
+  return CheckPoseInSlotBelieveArea(check_pose, ego_info_under_slot.slot,
+                                    ego_info_under_slot.target_pose.GetTheta(),
+                                    lat_expand, lon_expand, heading_err);
 }
 
 const double ParkingScenario::CalRemainDistFromPath() {

@@ -481,12 +481,9 @@ class ParkingScenario {
   virtual const bool CheckGearChangeCountTooMuch(
       const GearChangeDecideParams &gear_change_decide_params);
 
-  virtual const bool CheckEgoPoseInBelieveObsArea(
+  virtual const bool CheckEgoPoseInBelieveSlotArea(
       const double lat_expand, const double lon_expand,
-      const double heading_err = 60.0);
-
-  const geometry_lib::PathPoint GetCarFrontPoseFromCarPose(
-      const geometry_lib::PathPoint &pose);
+      const double heading_err = 60.0, const bool is_front_pose = false);
 
   void CreateTasks();
 

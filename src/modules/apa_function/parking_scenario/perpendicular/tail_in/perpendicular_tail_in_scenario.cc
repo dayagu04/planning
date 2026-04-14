@@ -271,17 +271,11 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 }
 
 const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
-  const auto& param = apa_param.GetParam();
-  const auto measure_data_mgr = apa_world_ptr_->GetMeasureDataManagerPtr();
-
-  const bool is_head_in =
-      (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN);
-  const double lon_expand =
-      param.believe_obs_ego_area + (is_head_in ? param.wheel_base : 0.0);
-  const double lat_expand = 0.2 + (is_head_in ? param.wheel_base : 0.0);
-
-  return measure_data_mgr->GetStaticFlag() &&
-         !CheckEgoPoseInBelieveObsArea(lat_expand, lon_expand);
+  return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+         !CheckEgoPoseInBelieveSlotArea(
+             0.2, apa_param.GetParam().believe_obs_ego_area, 60.0,
+             scenario_type_ ==
+                 ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN);
 }
 
 const bool PerpendicularTailInScenario::CalcPtInside() {
@@ -531,10 +525,18 @@ const bool PerpendicularTailInScenario::GenTlane() {
         lat_mirror_buffer_vec.emplace_back(lat_mirror_buf);
       }
 
+      CheckEgoPoseInBelieveSlotArea(
+          0.2, param.believe_obs_ego_area, 60.0,
+          scenario_type_ ==
+              ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN);
+
       const TargetPoseDeciderRequest tar_pose_decider_request(
           lat_body_buffer_vec, lat_mirror_buffer_vec, lon_buffer,
           scenario_type_, true, true, slot_lat_pos_preference, false,
-          ego_info_under_slot.cur_pose);
+          CheckEgoPoseInBelieveSlotArea(
+              0.2, param.believe_obs_ego_area, 60.0,
+              scenario_type_ ==
+                  ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN));
 
       const TargetPoseDeciderResult res =
           target_pose_decider_ptr->CalcTargetPose(ego_info_under_slot.slot,
