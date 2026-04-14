@@ -171,6 +171,46 @@ void HppLateralObstacleDecider::UpdateLatDecision(
       lat_obstacle_decision[obs_id] = decision;
     }
   }
+
+  // 新增：HPP闸机横向决策逻辑
+  const auto& turnstile_scene_info = reference_path_ptr->get_turnstile_scene_info();
+  if (session_->is_hpp_scene() && reference_path_ptr != nullptr &&
+      turnstile_scene_info.type != TurnstileSceneType::TURNSTILE_SCENE_NONE) {
+    std::unordered_map<int, TurnstileInfo> id_2_turnstile_info;
+    for (const auto &turnstile_info : turnstile_scene_info.turnstile_infos) {
+      id_2_turnstile_info[turnstile_info.turnstile_id] = turnstile_info;
+    }
+
+    const auto &turnstile_obstacles =
+        reference_path_ptr->get_turnstile_obstacles();
+    for (const auto &obstacle : turnstile_obstacles) {
+      LatObstacleDecisionType decision;
+      MakeDecisionForTurnstile(reference_path_ptr, obstacle, id_2_turnstile_info, decision);
+      lat_obstacle_decision[obstacle->id()] = decision;
+      lat_obstacle_decision[obstacle->id() + 100000] = decision;
+    }
+  }
+}
+
+void HppLateralObstacleDecider::MakeDecisionForTurnstile(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr,
+    const std::shared_ptr<FrenetObstacle> &obstacle,
+    const std::unordered_map<int, TurnstileInfo> &id_2_turnstile_info,
+    LatObstacleDecisionType &decision) {
+  const auto &obs_id = obstacle->id();
+  if (id_2_turnstile_info.find(obs_id) != id_2_turnstile_info.end()) {
+    const auto &turnstile_info = id_2_turnstile_info.at(obs_id);
+    if (turnstile_info.position == TurnstilePosition::TURNSTILE_POSITION_CURR) {
+      decision = LatObstacleDecisionType::IGNORE;
+    } else if (turnstile_info.position ==
+               TurnstilePosition::TURNSTILE_POSITION_LEFT) {
+      decision = LatObstacleDecisionType::RIGHT;
+    } else {
+      decision = LatObstacleDecisionType::LEFT;
+    }
+  } else {
+    decision = LatObstacleDecisionType::IGNORE;
+  }
 }
 // TODO:动态障碍物暂时先使用旧版基于规则的决策，后续方案确定再更改
 void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(

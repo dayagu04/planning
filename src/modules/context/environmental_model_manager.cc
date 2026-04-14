@@ -1075,6 +1075,13 @@ void EnvironmentalModelManager::truncate_prediction_info(
         prediction_object.fusion_obstacle.common_info.center_position.x;
     cur_predicion_obj.position_y =
         prediction_object.fusion_obstacle.common_info.center_position.y;
+    //TODO(taolu10): 临时 hack，目前环视预测输出的障碍物 center_position 异常，暂用 position 代替以跑通
+    if (session_->is_hpp_scene()) {
+      cur_predicion_obj.position_x =
+          prediction_object.fusion_obstacle.common_info.position.x;
+      cur_predicion_obj.position_y =
+          prediction_object.fusion_obstacle.common_info.position.y;
+    }
     cur_predicion_obj.length =
         prediction_object.fusion_obstacle.common_info.shape.length;
     cur_predicion_obj.width =
@@ -1253,6 +1260,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
         fusion_objects_gate_barrier_status_map.end()) {
       cur_predicion_obj.turnstile_status =
           fusion_objects_gate_barrier_status_map[cur_predicion_obj.id];
+    } else {
+      cur_predicion_obj.turnstile_status =
+          iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN;
     }
     prediction_info.emplace_back(std::move(cur_predicion_obj));
   }

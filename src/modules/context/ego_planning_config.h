@@ -259,7 +259,7 @@ struct EgoPlanningConfig : public Config {
     enable_fusion_speed_bump_objects =
         read_json_key<bool>(json, "enable_fusion_speed_bump_objects");
     enable_fusion_turnstile_objects =
-        read_json_key<bool>(json, "enable_fusion_turn_stile_objects");
+        read_json_key<bool>(json, "enable_fusion_turnstile_objects");
     enable_fusion_intersection_objects =
         read_json_key<bool>(json, "enable_fusion_intersection_objects");
     enable_fusion_parking_slot =
