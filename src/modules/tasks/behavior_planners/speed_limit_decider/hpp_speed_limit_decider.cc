@@ -636,8 +636,12 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
     return;
   }
 
-  v_limit_speed_intersection = GetSpeedLimitInObjectiveZone(
-      zone_info, hpp_speed_limit_config_.target_speed_intersection_road_area);
+  if (zone_info.in_speed_limit_zone) {
+    v_limit_speed_intersection = 3.33;
+  } else {
+    v_limit_speed_intersection = GetSpeedLimitInObjectiveZone(
+        zone_info, hpp_speed_limit_config_.target_speed_intersection_road_area);
+  }
 
   if (v_limit_speed_intersection < v_target_) {
     v_target_ = v_limit_speed_intersection;
