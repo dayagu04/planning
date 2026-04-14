@@ -162,6 +162,8 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   route_info_output_.current_segment_passed_distance = ego_on_cur_link_s_;
   route_info_output_.is_update_segment_success = true;
   route_info_output_.is_in_tunnel = ld_map_.isTunnel(current_link_->link_type());
+  route_info_output_.sum_dis_to_last_link_split_point =
+      CalculateDisToLastLinkSplitPoint(current_link_);
 
   const auto& sdpro_map_info = local_view_->sdpro_map_info;
   route_info_output_.map_vendor = sdpro_map_info.data_source();
