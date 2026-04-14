@@ -1434,6 +1434,7 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 更新压线率
 
   lane_change_decider_output.split_selecting_status = split_selecting_info_.split_selecting_status;
+  lane_change_decider_output.split_select_direction = split_selecting_info_.split_select_direction;
   JSON_DEBUG_VALUE("split_selecting_status", static_cast<int>(split_selecting_info_.split_selecting_status));
   JSON_DEBUG_VALUE("selecting_origin_order_id", split_selecting_info_.origin_lane_order_id);
   JSON_DEBUG_VALUE("selecting_selected_order_id", split_selecting_info_.selected_lane_order_id);
@@ -6243,11 +6244,13 @@ void LaneChangeStateMachineManager::SplitSelectingStateMachine() {
         split_selecting_info_.split_selecting_status = kSelectingExecuting;
         split_selecting_info_.selected_lane_order_id = current_lane->get_order_id();
         split_selecting_info_.selected_lane_virtual_id = current_lane->get_virtual_id();
+        SetSelectingDirection(split_selecting_info_);
       } else {
         // 上游没有拨杆选道的时候记录orderid
         split_selecting_info_.origin_lane_order_id = current_lane->get_order_id();
         split_selecting_info_.origin_lane_virtual_id = current_lane->get_virtual_id();
         split_selecting_info_.split_selecting_status = kNonSelecting;
+        split_selecting_info_.split_select_direction = SplitSelectingNone;
       }
       break;
     }
@@ -6255,7 +6258,6 @@ void LaneChangeStateMachineManager::SplitSelectingStateMachine() {
       bool update_fix_sucess = UpdateSelectingFixlane();  // 设置fix lane id
       bool is_selecting_to_cancel = !update_fix_sucess;   // 如果没有当前车道非法则取消
       bool is_selecting_to_complete = IsSelectingToComplete();
-      // SetSelectingDirection(split_selecting_info_);// 实时更新方向
       if (is_selecting_to_cancel) {
         split_selecting_info_.split_selecting_status = kSelectingCancel;
         split_selecting_info_.split_select_direction = SplitSelectingNone;
@@ -6308,17 +6310,13 @@ bool LaneChangeStateMachineManager::IsStartSplitSelecting() {
   }
 }
 void LaneChangeStateMachineManager::SetSelectingDirection(SplitSelectingInfo& split_selecting_info){
-  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
-  const auto& direction = virtual_lane_manager->get_split_select_direction();
-  if(direction == SplitSelectDirection::SPLIT_SELECT_LEFT_LANE){
+  int int_lane_change_cmd = lc_req_mgr_->get_int_lane_change_cmd();
+  if(int_lane_change_cmd == 1){
     split_selecting_info.split_select_direction = SplitSelectingLeft;
-    return;
-  }else if(direction == SplitSelectDirection::SPLIT_SELECT_RIGHT_LANE){
+  }else if(int_lane_change_cmd == 2){
     split_selecting_info.split_select_direction = SplitSelectingRight;
-    return;
   }else{
     split_selecting_info.split_select_direction = SplitSelectingNone;
-    return;
   }
 }
 bool LaneChangeStateMachineManager::UpdateSelectingFixlane(){
