@@ -11,7 +11,6 @@
 #include "utils/pose2d_utils.h"
 
 namespace planning {
-
 FrenetObstacle::FrenetObstacle(
     const Obstacle *obstacle_ptr, const ReferencePath &reference_path,
     const std::shared_ptr<EgoStateManager> ego_state_info,
@@ -21,7 +20,7 @@ FrenetObstacle::FrenetObstacle(
       obstacle_ptr_(obstacle_ptr),
       is_location_valid_(is_location_valid),
       is_static_(obstacle_ptr->is_static()) {
-  compute_frenet_obstacle(reference_path);
+  compute_frenet_obstacle(reference_path, is_hpp_scene);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path, is_hpp_scene);
     // compute_frenet_polygon_sequence(reference_path);
@@ -31,7 +30,7 @@ FrenetObstacle::FrenetObstacle(
 }
 
 void FrenetObstacle::compute_frenet_obstacle(
-    const ReferencePath &reference_path) {
+    const ReferencePath &reference_path, bool is_hpp_scene) {
   const FrenetEgoState &frenet_ego_state =
       reference_path.get_frenet_ego_state();
   double ego_s = frenet_ego_state.s();
@@ -50,8 +49,8 @@ void FrenetObstacle::compute_frenet_obstacle(
     carte_point.x = obstacle_ptr_->x_relative_center();
     carte_point.y = obstacle_ptr_->y_relative_center();
   }
-
-  if (!frenet_coord->XYToSL(carte_point, frenet_point) ||
+  const double end_extension_length = is_hpp_scene ? kHPPExtensionLength : 0.0;
+  if (!frenet_coord->XYToSL(carte_point, frenet_point, end_extension_length) ||
       std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
     // frenet_s_ = obs_end_s;
     // frenet_l_ = obs_end_l;
@@ -301,8 +300,8 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
       }
       //投影范围做3m的最小值
       min_s_range = std::fmax(3.0 , min_s_range);
-
-      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- min_s_range), (frenet_s_ + min_s_range), frenet_point) ||
+      const double end_extension_length = is_hpp_scene ? kHPPExtensionLength : 0.0;
+      if (!frenet_coord->XYToSLInRange(carte_point, (frenet_s_- min_s_range), (frenet_s_ + min_s_range), frenet_point, end_extension_length) ||
           std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
         b_frenet_valid_ = false;
         return;

@@ -141,8 +141,7 @@ bool HppObstacleLateralPreprocessDecider::ClusterObstacles(
       obstacle_clusters.push_back(std::move(obstacle_cluster));
     }
   }
-
-  for (auto& obstacle_cluster : obstacle_clusters) {
+ for (auto& obstacle_cluster : obstacle_clusters) {
     if (!BuildObstacleClusterConvexHull(obs_item_map, obstacle_cluster)) {
       continue;
     }
@@ -539,8 +538,14 @@ bool HppObstacleLateralPreprocessDecider::IsObstacleTypeMergeable(
   if (is_a_vehicle != is_b_vehicle) {
     return false;
   }
+  // 规则2：动态大类障碍物 -> 不允许合并
+  if ((type_a == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC) ||
+     (type_b == iflyauto::ObjectType::OBJECT_TYPE_OCC_GENERAL_DYNAMIC)) {
+    return false;
+  }
+
   // ===================== 新的类型扩展=====================
-  // 例：规则2：接地线不和其他类型合并
+
 
   return true; // 类型匹配 → 允许继续判断距离
 }

@@ -395,6 +395,18 @@ void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
   LatObstacleDecisionInfo relative_pos_info;
   LatObstacleDecisionInfo last_path_info;
   std::vector<PathPoint> refer_path;
+
+  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const VehicleParam &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  constexpr double kReferEndFrontIgnoreThr = 0.5;
+  if (cluster.frenet_boundary.s_start >
+      frenet_coord->Length() + vehicle_param.front_edge_to_rear_axle -
+          kReferEndFrontIgnoreThr) {
+    decision = LatObstacleDecisionType::IGNORE;
+    return;
+  }
+
   const bool cluster_is_front =
       cluster.rel_pos_types.count(ObstacleRelPosType::MID_FRONT) > 0 ||
       cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_FRONT) > 0 ||
@@ -402,7 +414,6 @@ void HppLateralObstacleDecider::MakeDecisionForStaticCluster(
   const bool cluster_is_side =
       cluster.rel_pos_types.count(ObstacleRelPosType::LEFT_SIDE) > 0 ||
       cluster.rel_pos_types.count(ObstacleRelPosType::RIGHT_SIDE) > 0;
-
   if (!cluster_is_front && !cluster_is_side) {
     decision = LatObstacleDecisionType::IGNORE;
     return;
