@@ -62,15 +62,22 @@ void PerpendicularTailInScenario::ScenarioTry() {
 
   const auto park_path_plan_type = apa_param.GetParam().park_path_plan_type;
   uint8_t path_plan_res = PathPlannerResult::PLAN_FAILED;
-  if (park_path_plan_type == ParkPathPlanType::GEOMETRY) {
-    path_plan_res = PathPlanOnce();
-  } else if (park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR) {
-    path_plan_res = PathPlanOnceHybridAstar();
-  } else if (park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
-    path_plan_res = PathPlanOnceHybridAstarThread();
+  switch (park_path_plan_type) {
+    case ParkPathPlanType::GEOMETRY:
+      path_plan_res = PathPlanOnce();
+      break;
+    case ParkPathPlanType::HYBRID_ASTAR:
+      path_plan_res = PathPlanOnceHybridAstar();
+      break;
+    case ParkPathPlanType::HYBRID_ASTAR_THREAD:
+      path_plan_res = PathPlanOnceHybridAstarThread();
+      break;
+    default:
+      break;
   }
 
   TansformPreparePlanningTraj();
+  // a redundant operation aimed at preparing for the first formal plan state
   Clear();
 
   switch (path_plan_res) {
