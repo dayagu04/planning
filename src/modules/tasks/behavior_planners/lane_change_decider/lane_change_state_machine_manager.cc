@@ -6395,13 +6395,18 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
                   boundary_type ==
                       iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
                   boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID
+                      iflyauto::
+                          LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+                  boundary_type ==
+                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID
             : boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
                   boundary_type ==
                       iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
                   boundary_type ==
                       iflyauto::
-                          LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+                          LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+                  boundary_type ==
+                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
 
     if (lc_request_type == LEFT_CHANGE && is_solid_type &&
         (left_vehicle_edge >
