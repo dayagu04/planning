@@ -1195,11 +1195,8 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
 }
 
 const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
-  const std::shared_ptr<PathGeneratorThread>& path_generator_thread_ptr =
+  const auto path_generator_thread_ptr =
       apa_world_ptr_->GetParkingTaskInterfacePtr()->GetPathGeneratorThreadPtr();
-
-  const EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
   frame_.has_response = UpdateThreadPath();
 
@@ -1208,24 +1205,23 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
   request.col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
   GenHybridAstarConfigAndRequest(request.config, request.hybrid_astar_request);
 
-  HybridAstarResponse response;
   if (frame_.has_response) {
-    ILOG_INFO << "path gen thread has response, update responsse";
+    ILOG_INFO << "path gen thread has response, update response";
     path_generator_thread_ptr->PublishResponseData(hybrid_astar_response_);
     TimeBenchmark::Instance().SetTime(
         TimeBenchmarkType::TB_APA_ASTAR,
         hybrid_astar_response_.result.search_consume_time_ms);
   }
-  response = hybrid_astar_response_;
 
   if (!CheckResponseReasonable(request.hybrid_astar_request,
                                hybrid_astar_response_)) {
     ILOG_INFO << "response not reasonable";
     hybrid_astar_response_.Clear();
-    response.Clear();
   }
 
-  FillPathPointGlobalFromHybridPath(response);
+  // Once there is no result in the current frame, reuse the response from the
+  // previous frame to fill the path
+  FillPathPointGlobalFromHybridPath(hybrid_astar_response_);
 
   if (frame_.path_gen_request_response_state ==
       PathGenRequestResponseState::HAS_RESPONSE) {
@@ -1248,18 +1244,21 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
           .slot.release_info_
           .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE];
 
-  if (last_release_state == SlotReleaseState::RELEASE) {
-    ILOG_INFO << "last result is release, the frame set release";
-    return PathPlannerResult::PLAN_UPDATE;
-  } else if (last_release_state == SlotReleaseState::NOT_RELEASE) {
-    ILOG_INFO << "last result is not release, the frame set not release";
-    return PathPlannerResult::PLAN_FAILED;
-  } else if (last_release_state == SlotReleaseState::UNKNOWN) {
-    ILOG_INFO << "last result is unkown, the frame set computing";
-    return PathPlannerResult::WAIT_PATH;
-  } else if (last_release_state == SlotReleaseState::COMPUTING) {
-    ILOG_INFO << "last result is computing, the frame set computing";
-    return PathPlannerResult::WAIT_PATH;
+  switch (last_release_state) {
+    case SlotReleaseState::RELEASE:
+      ILOG_INFO << "last result is release, the frame set release";
+      return PathPlannerResult::PLAN_UPDATE;
+    case SlotReleaseState::UNKNOWN:
+    case SlotReleaseState::COMPUTING:
+      ILOG_INFO << "last result is "
+                << (last_release_state == SlotReleaseState::UNKNOWN
+                        ? "unknown"
+                        : "computing")
+                << ", the frame set computing";
+      return PathPlannerResult::WAIT_PATH;
+    default:
+      ILOG_INFO << "last result is not release, the frame set not release";
+      return PathPlannerResult::PLAN_FAILED;
   }
 
   return PathPlannerResult::PLAN_FAILED;
