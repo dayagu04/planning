@@ -198,7 +198,7 @@ class OvertakeRequest : public LaneChangeRequest {
   double left_lane_exist_cross_line_truck_speed_ = 33.33;
   double right_lane_exist_cross_line_truck_speed_ = 33.33;
   double speed_threshold_for_cancel_ = 15.0;
-  const std::vector<double> _speed_press_ratio_bp_{0.12, 0.2, 0.3};
+  const std::vector<double> _speed_press_ratio_bp_{0.12, 0.2, 0.5};
   const std::vector<double> _speed_press_ratio_count_{0.3, 1.0, 3.0};
 };
 
