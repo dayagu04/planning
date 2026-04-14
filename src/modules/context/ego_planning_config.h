@@ -3697,7 +3697,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double approaching_zone_deceleration = -1.0;                 // m/s^2
   double speed_bump_collision_buffer = 0.0;              // m
   double turnstile_stop_buffer = 3.5;
-  double turnstile_min_forward_stop_buffer = 1.0;
+  double turnstile_min_forward_stop_buffer = 0.5;
   bool enable_turnstile_longitudinal_decider = true;
   double turnstile_open_status_threshold = 0.8;
   double turnstile_closed_status_threshold = 0.2;

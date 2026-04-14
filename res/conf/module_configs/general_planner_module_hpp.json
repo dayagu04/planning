@@ -203,7 +203,7 @@
   "turnstile_target_lost_tolerance_frames": 4,
   "turnstile_front_vehicle_max_distance": 45.0,
   "turnstile_near_margin": 4.0,
-  "turnstile_ego_in_gate_margin": 0.5,
+  "turnstile_ego_in_gate_margin": 2.5,
   "turnstile_passing_window": 1.0,
   "turnstile_passed_clear_distance": 1.0,
   "enable_turnstile_open_timeout_release": true,

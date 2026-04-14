@@ -484,7 +484,7 @@ TurnstileLongitudinalDecider::BuildTurnstileEventFlags(
     const auto& ego_boundary = reference_path->get_ego_frenet_boundary();
     const double turnstile_s = frame_ctx.turnstile_s;
     flags.ego_in_gate =
-        ego_boundary.s_end >= turnstile_s - lon_config_.turnstile_ego_in_gate_margin;
+        ego_boundary.s_end >= turnstile_s + lon_config_.turnstile_ego_in_gate_margin;
     flags.ego_passed =
         ego_boundary.s_start > turnstile_s + lon_config_.turnstile_passed_clear_distance;
   }
