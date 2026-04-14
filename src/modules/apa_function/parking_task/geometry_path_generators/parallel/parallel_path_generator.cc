@@ -4605,13 +4605,13 @@ const bool ParallelPathGenerator::AdjustPlan() {
 const bool ParallelPathGenerator::OneLinePlanToPA(
     pnc::geometry_lib::PathSegment& out_path_line,
     pnc::geometry_lib::PathPoint& current_pose, const double max_line_length,
-    const double min_line_length, const uint8_t gear, const double lon_buffer) {
+    const double min_line_length, const uint8_t gear, const double lon_buffer,
+    const double by_step) {
   if (max_line_length < 0.01 || !gear) {
     ILOG_INFO << "max_line_length or gear error len:" << max_line_length
               << " gear:" << gear;
     return false;
   }
-  const double by_step = 0.05;
   for (double i = max_line_length; i > min_line_length; i -= by_step) {
     pnc::geometry_lib::LineSegment a_line;
     a_line.pA = current_pose.pos;
@@ -4848,9 +4848,22 @@ const bool ParallelPathGenerator::PAParallelAdjustPlan() {
         }
       }
       if (!s_turn_success) {
-        loop_success = false;
-        ILOG_INFO << "shift plan fail with current gear";
-        break;
+        bool line_success = false;
+        if (i == 0) {
+          pnc::geometry_lib::PathSegment add_path_line;
+          current_gear = pnc::geometry_lib::ReverseGear(current_gear);
+          line_success = OneLinePlanToPA(add_path_line, current_pose, 2.3, 0.8,
+                                         current_gear, 0.3, 0.3);
+          if (line_success) {
+            parallel_shift_path_vec.insert(parallel_shift_path_vec.end(),
+                                           add_path_line);
+          }
+        }
+        if (!line_success) {
+          loop_success = false;
+          ILOG_INFO << "shift plan fail with current gear";
+          break;
+        }
       }
     }
 
@@ -4873,8 +4886,9 @@ const bool ParallelPathGenerator::PAParallelAdjustPlan() {
     }
     // ratio is less than 1.0
     current_gear = pnc::geometry_lib::ReverseGear(current_gear);
-    current_pose.Set(s_turn_vec.back().GetEndPos(),
-                     s_turn_vec.back().GetEndHeading());
+    // current_pose.Set(s_turn_vec.back().GetEndPos(),
+    //                  s_turn_vec.back().GetEndHeading());
+    current_pose = parallel_shift_path_vec.back().GetEndPose();
   }
 
   pnc::geometry_lib::PathPoint loop_end_pose;

@@ -660,7 +660,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
                              pnc::geometry_lib::PathPoint& current_pose,
                              const double max_line_length,
                              const double min_line_length, const uint8_t gear,
-                             const double lon_buffer);
+                             const double lon_buffer,
+                             const double by_step = 0.05);
 
   const bool OneLinePlan(
       pnc::geometry_lib::LineSegment &line,

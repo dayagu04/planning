@@ -1988,9 +1988,10 @@ const bool ParallelParkInScenario::GenTlane() {
   bool is_car_in_curb = false;
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
+  const double delete_obs_dist =
+      enable_pa_park_ ? 0.1 : kDeletedObsDistOutSlot;
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
-      CollisionDetector::Paramters(kDeletedObsDistOutSlot, true));
-
+      CollisionDetector::Paramters(delete_obs_dist, true));
 
   for (const auto& pair :
        apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
@@ -2995,10 +2996,13 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   // apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
   //     filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 
-  const double slot_side_y =
+  double slot_side_y =
       slot_side_sgn > 0.0
           ? std::max(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y())
           : std::min(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y());
+  if (enable_pa_park_) {
+    slot_side_y = t_lane_.corner_inside_slot.y();
+  }
   ILOG_INFO << "1 channel_y =" << t_lane_.channel_y;
   std::vector<Eigen::Vector2d> origin_channel_obs_vec;
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
