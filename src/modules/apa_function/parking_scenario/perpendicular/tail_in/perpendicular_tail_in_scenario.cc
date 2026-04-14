@@ -76,7 +76,7 @@ void PerpendicularTailInScenario::ScenarioTry() {
       break;
   }
 
-  TansformPreparePlanningTraj();
+  TransformPreparePlanningTraj();
   // a redundant operation aimed at preparing for the first formal plan state
   Clear();
 
@@ -1150,9 +1150,6 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
     if (!path_plan_success) {
       return PathPlannerResult::PLAN_FAILED;
     }
-    // if (path_plan_success) {
-    //   return PathPlannerResult::PLAN_UPDATE;
-    // }
   }
 
   HybridAstarResponse response;

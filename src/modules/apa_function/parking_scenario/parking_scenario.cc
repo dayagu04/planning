@@ -232,7 +232,7 @@ void ParkingScenario::PublishPlanningTraj() {
   return;
 }
 
-void ParkingScenario::TansformPreparePlanningTraj() {
+void ParkingScenario::TransformPreparePlanningTraj() {
   if (complete_path_point_global_vec_.empty()) {
     ILOG_INFO << "path is null";
     return;

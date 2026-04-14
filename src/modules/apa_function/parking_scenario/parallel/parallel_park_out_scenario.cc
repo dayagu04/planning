@@ -432,7 +432,7 @@ void ParallelParkOutScenario::ScenarioTry() {
     ParkOutDirectionTryHybridAStar();
   }
 
-  TansformPreparePlanningTraj();
+  TransformPreparePlanningTraj();
   ILOG_INFO << "relaese direction = " << apa_hmi_.planning_park_dir
             << ", recommendation direction = "
             << apa_hmi_.planning_recommend_park_dir;

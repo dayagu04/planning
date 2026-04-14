@@ -1717,7 +1717,7 @@ void NarrowSpaceScenario::ScenarioTry() {
     }
   }
 
-  TansformPreparePlanningTraj();
+  TransformPreparePlanningTraj();
 
   return;
 }

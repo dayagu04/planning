@@ -493,7 +493,7 @@ class ParkingScenario {
   void RecordDebugObstacle(const std::vector<double> &obs_x,
                            const std::vector<double> &obs_y) const;
 
-  void TansformPreparePlanningTraj();
+  void TransformPreparePlanningTraj();
 
   virtual const CarSlotRelationship CalCarSlotRelationship(
       const geometry_lib::PathPoint &cur_pose);

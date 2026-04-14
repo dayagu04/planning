@@ -761,7 +761,7 @@ void ParallelParkInScenario::ScenarioTry() {
       }
     }
   }
-  TansformPreparePlanningTraj();
+  TransformPreparePlanningTraj();
   return;
 }
 
