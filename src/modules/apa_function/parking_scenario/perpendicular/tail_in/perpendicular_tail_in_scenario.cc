@@ -886,14 +886,13 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 }
 
 void PerpendicularTailInScenario::PathPlan() {
+  const ApaParameters& param = apa_param.GetParam();
   CheckReplanParams replan_params;
-  replan_params.use_obs_height_method =
-      apa_param.GetParam().use_obs_height_method;
+  replan_params.use_obs_height_method = param.use_obs_height_method;
   frame_.replan_flag = CheckReplan(replan_params);
   frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
   frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
 
-  const ApaParameters& param = apa_param.GetParam();
   if (!CheckCanDelObsInSlot()) {
     frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
   }
@@ -949,13 +948,9 @@ void PerpendicularTailInScenario::PathPlan() {
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_PATH_PLAN_TIME,
                                     replan_consume_time);
 
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-
   const bool dynamic_plan_failed =
       frame_.replan_reason == ReplanReason::DYNAMIC &&
-      (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED ||
-       frame_.dynamic_plan_fail_flag || !frame_.dynamic_plan_path_superior);
+      (frame_.dynamic_plan_fail_flag || !frame_.dynamic_plan_path_superior);
 
   if (dynamic_plan_failed) {
     ILOG_INFO << "dynamic replan failed or path is not superior, use last path";
@@ -975,6 +970,9 @@ void PerpendicularTailInScenario::PathPlan() {
   if (frame_.pathplan_result != PathPlannerResult::PLAN_UPDATE) {
     return;
   }
+
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
   // path plan success
   ILOG_INFO << "path plan success, update path, record success info";
