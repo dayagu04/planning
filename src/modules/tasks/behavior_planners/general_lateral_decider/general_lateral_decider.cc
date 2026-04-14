@@ -5247,7 +5247,7 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     const std::vector<std::pair<double, double>>& first_frenet_soft_bounds,
     GeneralLateralDeciderOutput& general_lateral_decider_output) {
   // bool bound_avoid = false;
-  constexpr int kExtendLonSize = 1;
+  // constexpr int kExtendLonSize = 1;
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     // if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
@@ -5262,15 +5262,15 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
         std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
         first_frenet_soft_bounds[i].second);
 
-    // 纵向往后扩展
-    for (int j = i + 1; j < std::min(i + 1 + kExtendLonSize, ref_traj_points_.size()); j++) {
-      ref_traj_points_[j].l = std::min(
-        std::max(ref_traj_points_[j].l, second_frenet_soft_bounds[i].first),
-        second_frenet_soft_bounds[i].second);
-      ref_traj_points_[j].l = std::min(
-        std::max(ref_traj_points_[j].l, first_frenet_soft_bounds[i].first),
-        first_frenet_soft_bounds[i].second);
-    }
+    // // 纵向往后扩展
+    // for (int j = i + 1; j < std::min(i + 1 + kExtendLonSize, ref_traj_points_.size()); j++) {
+    //   ref_traj_points_[j].l = std::min(
+    //     std::max(ref_traj_points_[j].l, second_frenet_soft_bounds[i].first),
+    //     second_frenet_soft_bounds[i].second);
+    //   ref_traj_points_[j].l = std::min(
+    //     std::max(ref_traj_points_[j].l, first_frenet_soft_bounds[i].first),
+    //     first_frenet_soft_bounds[i].second);
+    // }
   }
 
   constexpr double kExp = 1e-6;
