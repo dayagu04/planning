@@ -343,17 +343,15 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   }
 
   if (exist_target_pose) {
-    if (heading_in) {
-      dx = result_.target_pose_local.GetX() + param.rear_overhanging -
-           origin_pt_local.pt_01_mid.x();
-    } else {
-      dx = result_.target_pose_local.GetX() + param.wheel_base +
-           param.front_overhanging - origin_pt_local.pt_01_mid.x();
-    }
-    result_.exceed_allow_max_dx = dx - front_exceed_line_dx;
+    const double target_ego_front_x =
+        heading_in ? (result_.target_pose_local.GetX() + param.rear_overhanging)
+                   : (result_.target_pose_local.GetX() + param.wheel_base +
+                      param.front_overhanging);
+    const double target_dx = target_ego_front_x - origin_pt_local.pt_01_mid.x();
+    result_.exceed_allow_max_dx = target_dx - front_exceed_line_dx;
     ILOG_INFO << "exceed_allow_max_dx = " << result_.exceed_allow_max_dx
               << "  front_exceed_line_dx = " << front_exceed_line_dx
-              << "  dx = " << dx;
+              << "  target_dx = " << target_dx;
     if (result_.exceed_allow_max_dx > 0.1) {
       exist_target_pose = false;
     }
