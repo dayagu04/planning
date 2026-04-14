@@ -1411,11 +1411,9 @@ bool HybridARAStar::Init(const SearchResult search_result) {
       session_->planning_context().last_planning_result().traj_points;
 
   // 预构建上一帧→当前帧的s-l样条（用于缝合代价）
-  if (hybrid_ara_star_conf_.stitching_cost_weight > 1e-6) {
-    PrebuildLastFrameToCurrentSpline(last_traj_points);
-  } else {
-    enable_stitching_cost_ = false;
-  }
+  // TODO:后续该函数可以放在外层调用
+  PrebuildLastFrameToCurrentSpline(last_traj_points);
+
 
   // 最小是1，速度越大，这个值越大，则允许的前轮转角越小，魔数
   std::array<double, 6> xp{0.0, 3, 10.0, 20.0, 30.0, 40.0};
@@ -1606,6 +1604,7 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
   }
   last_result_s_.clear();
   last_result_l_.clear();
+  // last_result_l_变量应该未使用
   if (result.s.size() > 5) {
     for (size_t i = 0; i < 5; ++i) {
       last_result_s_.push_back(result.s[i]);
@@ -1624,12 +1623,18 @@ bool HybridARAStar::Plan(ara_star::HybridARAStarResult& result,
   return true;
 }
 
+
 bool HybridARAStar::PrebuildLastFrameToCurrentSpline(
     const std::vector<TrajectoryPoint>& last_traj_points) {
   const double last_frame_sample_interval = 2.0;
   const int last_frame_max_sample_num = 50;
   spline_s_min_ = 0.0;
   spline_s_max_ = 0.0;
+
+  if (hybrid_ara_star_conf_.stitching_cost_weight < 1e-6) {
+    enable_stitching_cost_ = false;
+    return false;
+  }
 
   // 轨迹点数检查
   if (last_traj_points.size() < 2) {
@@ -1641,6 +1646,7 @@ bool HybridARAStar::PrebuildLastFrameToCurrentSpline(
   std::vector<double> cur_l_list;
 
   double total_length = 0.0;
+  // TODO:上一帧轨迹点的长度s应该可以直接保存在TrajectoryPoint里面了
   for (size_t i = 1; i < last_traj_points.size(); ++i) {
     double dx = last_traj_points[i].x - last_traj_points[i - 1].x;
     double dy = last_traj_points[i].y - last_traj_points[i - 1].y;
