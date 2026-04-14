@@ -33,8 +33,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<PotentialDangerousAgentDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
-  gap_selector_decider_ =
-      std::make_unique<GapSelectorDecider>(config_builder, session);
+  // gap_selector_decider_ =
+  //     std::make_unique<GapSelectorDecider>(config_builder, session);
   general_lateral_decider_ =
       std::make_unique<GeneralLateralDecider>(config_builder, session);
   traffic_light_decider_ =
@@ -239,11 +239,11 @@ bool LongTimeTaskPipelineV3::Run() {
 #endif
 
   // cailiu2 的gap selector将来可以挪至下方
-  ok = gap_selector_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(gap_selector_decider_->Name());
-    return false;
-  }
+  // ok = gap_selector_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(gap_selector_decider_->Name());
+  //   return false;
+  // }
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();

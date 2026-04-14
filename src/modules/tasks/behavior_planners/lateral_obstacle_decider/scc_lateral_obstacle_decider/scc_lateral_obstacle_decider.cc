@@ -2140,16 +2140,13 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto &gap_selector_decider_output =
-      session_->planning_context().gap_selector_decider_output();
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_HOLD = coarse_planning_info.target_state == kLaneChangeHold;
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   bool lane_change_scene = false;
-  if ((is_LC_CHANGE || is_LC_BACK || is_LC_HOLD) &&
-      (gap_selector_decider_output.gap_selector_trustworthy)) {
+  if ((is_LC_CHANGE || is_LC_BACK || is_LC_HOLD)) {
     lane_change_scene = true;
   }
   // calculate info of obstacle
