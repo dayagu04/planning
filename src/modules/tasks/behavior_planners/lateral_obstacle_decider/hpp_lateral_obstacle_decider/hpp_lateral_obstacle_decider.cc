@@ -177,71 +177,43 @@ void HppLateralObstacleDecider::UpdateLatDecision(
   }
 
   // 新增：HPP闸机横向决策逻辑
-  if (session_->is_hpp_scene() && reference_path_ptr != nullptr) {
-    const auto& turnstile_obstacles = reference_path_ptr->get_turnstile_obstacles();
-    const auto& turnstile_map = reference_path_ptr->get_turnstile_obstacles_map();
-    const auto& turnstile_scene_info = reference_path_ptr->get_turnstile_scene_info();
-
-    constexpr int TURNSTILE_SCENE_NONE = 0;
-    constexpr int TURNSTILE_SCENE_LEFT_SINGLE = 1;
-    constexpr int TURNSTILE_SCENE_RIGHT_SINGLE = 2;
-    constexpr int TURNSTILE_SCENE_MID_DOUBLE = 3;
-    constexpr int TURNSTILE_SCENE_SIDE_DOUBLE = 4;
-
-    int current_scene = static_cast<int>(turnstile_scene_info.type);
-    int target_id = turnstile_scene_info.target_id;
-    int side_id = turnstile_scene_info.side_id;
-
-    bool valid_scene = (current_scene != TURNSTILE_SCENE_NONE && !turnstile_obstacles.empty());
-    bool main_gate_ok = false;
-
-    if (valid_scene && turnstile_map.find(target_id) != turnstile_map.end()) {
-      const auto& frenet_gate = turnstile_map.at(target_id);
-      if (frenet_gate) {
-        const Obstacle* gate = frenet_gate->obstacle();
-        if (gate) {
-          auto gate_status = gate->turnstile_status();
-          double open_ratio = gate->turnstile_open_ratio();
-          bool is_open_state =
-              (gate_status == iflyauto::GateBarrierStatus::MOTION_DIR_STATIC ||
-               gate_status == iflyauto::GateBarrierStatus::MOTION_DIR_OPEN);
-          bool is_open_enough = (open_ratio >= 0.9);
-          main_gate_ok = is_open_state && is_open_enough;
-        }
-      }
+  const auto& turnstile_scene_info = reference_path_ptr->get_turnstile_scene_info();
+  if (session_->is_hpp_scene() && reference_path_ptr != nullptr &&
+      turnstile_scene_info.type != TurnstileSceneType::TURNSTILE_SCENE_NONE) {
+    std::unordered_map<int, TurnstileInfo> id_2_turnstile_info;
+    for (const auto &turnstile_info : turnstile_scene_info.turnstile_infos) {
+      id_2_turnstile_info[turnstile_info.turnstile_id] = turnstile_info;
     }
 
-    if (valid_scene && main_gate_ok) {
-      switch (current_scene) {
-        case TURNSTILE_SCENE_LEFT_SINGLE:
-          lat_obstacle_decision[target_id] = LatObstacleDecisionType::RIGHT;
-          lat_obstacle_decision[target_id + 100000] = LatObstacleDecisionType::RIGHT;
-          break;
-        case TURNSTILE_SCENE_RIGHT_SINGLE:
-          lat_obstacle_decision[target_id] = LatObstacleDecisionType::LEFT;
-          lat_obstacle_decision[target_id + 100000] = LatObstacleDecisionType::LEFT;
-          break;
-        case TURNSTILE_SCENE_MID_DOUBLE:
-          lat_obstacle_decision[target_id] = LatObstacleDecisionType::RIGHT;
-          lat_obstacle_decision[target_id + 100000] = LatObstacleDecisionType::RIGHT;
-          if (side_id != 0 && turnstile_map.count(side_id)) {
-            lat_obstacle_decision[side_id] = LatObstacleDecisionType::RIGHT;
-            lat_obstacle_decision[side_id + 100000] = LatObstacleDecisionType::RIGHT;
-          }
-          break;
-        case TURNSTILE_SCENE_SIDE_DOUBLE:
-          // 双侧双闸机统一右避障
-          lat_obstacle_decision[target_id] = LatObstacleDecisionType::RIGHT;
-          lat_obstacle_decision[target_id + 100000] = LatObstacleDecisionType::RIGHT;
-          if (side_id != 0 && turnstile_map.count(side_id)) {
-            lat_obstacle_decision[side_id] = LatObstacleDecisionType::RIGHT;
-            lat_obstacle_decision[side_id + 100000] = LatObstacleDecisionType::RIGHT;
-          }
-          break;
-        default:
-          break;
-      }
+    const auto &turnstile_obstacles =
+        reference_path_ptr->get_turnstile_obstacles();
+    for (const auto &obstacle : turnstile_obstacles) {
+      LatObstacleDecisionType decision;
+      MakeDecisionForTurnstile(reference_path_ptr, obstacle, id_2_turnstile_info, decision);
+      lat_obstacle_decision[obstacle->id()] = decision;
+      lat_obstacle_decision[obstacle->id() + 100000] = decision;
     }
+  }
+}
+
+void HppLateralObstacleDecider::MakeDecisionForTurnstile(
+    const std::shared_ptr<ReferencePath> &reference_path_ptr,
+    const std::shared_ptr<FrenetObstacle> &obstacle,
+    const std::unordered_map<int, TurnstileInfo> &id_2_turnstile_info,
+    LatObstacleDecisionType &decision) {
+  const auto &obs_id = obstacle->id();
+  if (id_2_turnstile_info.find(obs_id) != id_2_turnstile_info.end()) {
+    const auto &turnstile_info = id_2_turnstile_info.at(obs_id);
+    if (turnstile_info.position == TurnstilePosition::TURNSTILE_POSITION_CURR) {
+      decision = LatObstacleDecisionType::IGNORE;
+    } else if (turnstile_info.position ==
+               TurnstilePosition::TURNSTILE_POSITION_LEFT) {
+      decision = LatObstacleDecisionType::RIGHT;
+    } else {
+      decision = LatObstacleDecisionType::LEFT;
+    }
+  } else {
+    decision = LatObstacleDecisionType::IGNORE;
   }
 }
 
