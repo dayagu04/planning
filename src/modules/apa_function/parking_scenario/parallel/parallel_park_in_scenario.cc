@@ -1302,7 +1302,9 @@ const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction)
       }
       const auto obs_scement = pair.second.GetObsScemanticType();
       if (obs_scement == ApaObsScemanticType::UNKNOWN ||
-          obs_scement == ApaObsScemanticType::WALL) {
+          obs_scement == ApaObsScemanticType::WALL ||
+          obs_scement == ApaObsScemanticType::COLUMN ||
+          obs_scement == ApaObsScemanticType::CAR) {
         for (const auto& obs_pt_local : pair.second.GetPtClout2dGlobal()) {
           if (IsPointInOrientedRectangle(obs_pt_local, rect_center,
                                          rect_heading, rect_length,
@@ -1332,6 +1334,10 @@ const bool ParallelParkInScenario::GeneralPASlot(const ApaPADirection direction)
     for (const auto& pair : apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
       if (pair.first == maximum_obs_id) {
         maximum_obs_parent_id = pair.second.GetParentId();
+        if (pair.second.GetObsScemanticType() == ApaObsScemanticType::CAR) {
+          ILOG_INFO << "pa obs is car, stop pa path";
+          return false;
+        }
         break;
       }
     }
