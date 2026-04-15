@@ -1684,11 +1684,16 @@ bool LaneChangeRequest::IsCurveSurpressLaneChange(int target_lane_virtual_id) co
     return true;
   }
   const double ego_s = target_ref->get_frenet_ego_state().s();
-  // 遍历自车前方 80m 参考点平均曲率
+  const double ego_vel = session_->environmental_model().get_ego_state_manager()->ego_v();
+  // 动态预览距离 = 车速 × 3.5s 
+  double preview_length = ego_vel * 3.5;
+  // 最小预览距离保护（防止车速为0时，没有采样点）
+  constexpr double kMinPreviewLength = 10.0;
+  preview_length = std::max(preview_length, kMinPreviewLength);
   double curv_sum = 0.0;
   int count = 0;
   constexpr int kMinValidPointCount = 5;
-  for (int idx = 0; idx * 2.0 < 80.0; idx++) {
+  for (int idx = 0; idx * 2.0 < preview_length; idx++) {
     ReferencePathPoint refpath_pt;
     if (target_ref->get_reference_point_by_lon(ego_s + idx * 2.0, refpath_pt)) {
       double kappa = refpath_pt.path_point.kappa();

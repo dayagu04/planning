@@ -3480,6 +3480,10 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
   if(propose_state_frame_nums_ < 5){
     return;
   }
+  // 大曲率抑制premove
+  if(lane_change_stage_info_.lc_invalid_reason == "target lane too large curve") {
+    return;
+  }
   //目标车道附近平均速度
   const auto& target_lane_nodes =
   session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
