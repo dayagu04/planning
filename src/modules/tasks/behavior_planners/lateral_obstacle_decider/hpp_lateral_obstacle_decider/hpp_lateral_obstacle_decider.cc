@@ -943,7 +943,7 @@ bool HppLateralObstacleDecider::CheckEgoAndObjPolygonHaveOverlap(
                        })
           ->second.min_x();
   const double obs_half_length = (obstacle->frenet_obstacle_boundary().s_end -
-                           obstacle->frenet_obstacle_boundary().s_end) *
+                           obstacle->frenet_obstacle_boundary().s_start) *
                           0.5;
   const VehicleParam &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1000,10 +1000,12 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
 
   if(!obj_is_front_base && !obj_is_side_base) {
     decision = LatObstacleDecisionType::IGNORE;
+    return;
   }
   if (rel_pos_type_base == ObstacleRelPosType::MID_FRONT && obstacle->velocity() > 0)
   {
     decision = LatObstacleDecisionType::FOLLOW;
+    return;
   }
   // Step 2. 自车掌握路权，判断是否可优先通过
   if (obj_is_side_base) {
