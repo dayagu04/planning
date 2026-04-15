@@ -19,6 +19,11 @@
 #include "ifly_phm_c.h"
 #include "planning_scheduler.h"
 
+#if !defined(X86) && !defined(X86_SIMULATION)
+#include "iflyauto_rate.h"
+#define GET_NOW_TIME iflyauto::Time::Now().ToNanosecond() / 1000
+#endif
+
 namespace planning {
 
 enum INPUT_TOPIC {
@@ -46,8 +51,15 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
  public:
   PlanningAdapter() = default;
   ~PlanningAdapter() {
+    is_timer_enabled_.store(false);
+    if (timer_thread_ && timer_thread_->joinable()) {
+      timer_thread_->join();
+    }
+
+   
     StopLogThread();
     StopGlog();
+ 
   };
 
   bool Init() override;
@@ -291,6 +303,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void Log();
   void LogTopicLatency();
   void SendHeartBeatToPhm(iflyauto::MainFlowDotpoint reportPoint);
+  void TimerProcess();
   void StartLogThread();
   void StopLogThread();
  private:
@@ -440,6 +453,9 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   uint64_t frame_num_ = 0;
   uint64_t start_time_;
   uint64_t output_time_us_;
+
+  std::atomic<bool> is_timer_enabled_{true};
+  std::shared_ptr<std::thread> timer_thread_ = nullptr;
 };
 
 }  // namespace planning
