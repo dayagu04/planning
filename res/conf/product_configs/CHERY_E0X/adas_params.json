@@ -126,6 +126,7 @@
   "tsr_fault_code_maskcode": 65535,
   "tsr_reset_path_length": 2000.0,
   "tsr_speed_limit_offset": 1.0,
+  "tsr_end_of_speed_limit_alert_map_time" : 40,
   "tsr_out_flag_need_last_time": 1.0,
   "tsr_warning_max_duration": 5.0,
   "tsr_function_test_switch": 0,

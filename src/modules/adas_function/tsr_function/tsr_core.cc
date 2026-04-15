@@ -449,6 +449,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     speed_limit_ever_appeared_ = false;  // 重置曾经出现标志
     end_of_speed_limit_ever_appeared_ = false;  // 重置曾经出现标志
     new_road_flag_ = false;
+    tsr_end_of_speed_limit_alert_map_time_ = 0;
   }
 
   if (speed_limit_suppression_flag_ == true) {
@@ -561,13 +562,23 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
           speed_limit_out_flag_ = false;
           speed_limit_renew_flag_ = true;
           speed_limit_set_.clear();
+          tsr_end_of_speed_limit_alert_map_time_ = GetContext.get_param()->tsr_end_of_speed_limit_alert_map_time;
         }
         end_of_speed_limit_set_.clear();
       }
     }
 
   }
-
+  
+  // 发出限速后，抑制一段时间的地图限速使用
+  if (tsr_end_of_speed_limit_alert_map_time_ > 0) {
+    tsr_end_of_speed_limit_alert_map_time_ -= GetContext.get_param()->dt;
+    if (tsr_end_of_speed_limit_alert_map_time_ <= 0) {
+      tsr_end_of_speed_limit_alert_map_time_ = 0;
+    }
+  }else{
+    tsr_end_of_speed_limit_alert_map_time_ = 0;
+  }
   // 根据当前感知限速速度，更改tsr_reset_path_length（每帧都按当前限速设阈值）
 if (tsr_speed_limit_ == 0) {
   tsr_reset_path_length_ = GetContext.get_param()->tsr_reset_path_length;
@@ -622,7 +633,7 @@ if (tsr_speed_limit_ == 0) {
   } else if (speed_limit_out_flag_ == false &&
              end_of_speed_limit_out_flag_ == false) {
     // 没有视觉限速有效值且不需要显示解除限速牌, 采用地图限速信息
-    if (current_map_speed_limit_valid_ == true) {
+    if (current_map_speed_limit_valid_ == true && tsr_end_of_speed_limit_alert_map_time_ == 0) {
       tsr_speed_limit_ = current_map_speed_limit_;
     } else {
       // 地图限速无效时，清空限速
