@@ -430,6 +430,18 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
       const iflymapdata::sdpro::LinkInfo_Link* input_link,
       const iflymapdata::sdpro::LinkInfo_Link* successor_link1,
       const iflymapdata::sdpro::LinkInfo_Link* successor_link2) const;
+  // 根据link的形点判断，两个前继link中哪个与输入link起点的横向距离更小
+  const iflymapdata::sdpro::LinkInfo_Link*
+  GetCloserPredecessorLinkByLateralDistance(
+      const iflymapdata::sdpro::LinkInfo_Link* input_link,
+      const iflymapdata::sdpro::LinkInfo_Link* predecessor_link1,
+      const iflymapdata::sdpro::LinkInfo_Link* predecessor_link2) const;
+
+  // 判断 predecessor_link2 相对于 predecessor_link1 的左右关系
+  MergeLaneType GetPredecessorLink2LateralSide(
+      const iflymapdata::sdpro::LinkInfo_Link* input_link,
+      const iflymapdata::sdpro::LinkInfo_Link* predecessor_link1,
+      const iflymapdata::sdpro::LinkInfo_Link* predecessor_link2) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   ad_common::sdpromap::SDProMap pending_ld_map_;  // 后台加载的缓冲地图
