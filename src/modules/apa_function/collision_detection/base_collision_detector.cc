@@ -386,6 +386,11 @@ void BaseCollisionDetector::UpdateSafeBuffer(
     mirror_to_front_overhanging_polygon_vertex_with_buffer_.emplace_back(
         vertex);
   }
+
+  // todo: 根据轮胎具体角度来加上横向buffer，但是这样会导致每次重复计算sin
+  // cos值, 且收益意义不大，可以直接赋值
+  left_mirror_rectangle_vertex_with_buffer_ = left_tyre_rectangle_vertex_;
+  right_mirror_rectangle_vertex_with_buffer_ = right_tyre_rectangle_vertex_;
 }
 
 void BaseCollisionDetector::UpdateObsClearZone(
@@ -460,6 +465,34 @@ BaseCollisionDetector::GetCarBigBoxWithBuffer(
     pt = l2g_tf.GetPos(pt);
   }
   return car_box;
+}
+
+void BaseCollisionDetector::GenRealTimeTyrePolygonAccordingToFrontWheelAngle(
+    const double front_wheel_angle) {
+  const auto& param = apa_param.GetParam();
+  const double half_car_width = param.car_width * 0.5;
+  const double half_tyre_width = 0.25 * 0.5;
+  const double half_tyre_length = 0.75 * 0.5;
+
+  // front_wheel_angle is rads, Positive values indicate rotation to the left,
+  // while negative values indicate rotation to the right
+  const Eigen::Rotation2Dd rot(front_wheel_angle);
+  const Eigen::Vector2d r0 =
+      rot * Eigen::Vector2d(half_tyre_length, half_tyre_width);
+  const Eigen::Vector2d r1 =
+      rot * Eigen::Vector2d(-half_tyre_length, half_tyre_width);
+  const Eigen::Vector2d r2 =
+      rot * Eigen::Vector2d(-half_tyre_length, -half_tyre_width);
+  const Eigen::Vector2d r3 =
+      rot * Eigen::Vector2d(half_tyre_length, -half_tyre_width);
+
+  const Eigen::Vector2d left_center(param.wheel_base, half_car_width);
+  const Eigen::Vector2d right_center(param.wheel_base, -half_car_width);
+
+  left_tyre_rectangle_vertex_ = {left_center + r0, left_center + r1,
+                                 left_center + r2, left_center + r3};
+  right_tyre_rectangle_vertex_ = {right_center + r0, right_center + r3,
+                                  right_center + r2, right_center + r1};
 }
 
 }  // namespace apa_planner

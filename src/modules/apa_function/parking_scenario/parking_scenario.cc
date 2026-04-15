@@ -602,7 +602,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   GJKColDetRequest gjl_col_det_request(
       false, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
       ApaObsMovementType::STATIC, params.use_obs_height_method,
-      params.use_limiter);
+      params.use_limiter, true);
 
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),

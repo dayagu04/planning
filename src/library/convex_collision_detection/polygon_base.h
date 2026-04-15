@@ -144,6 +144,8 @@ struct PolygonFootPrint {
   Polygon2D mirror_left;
   Polygon2D mirror_right;
   Polygon2D body_rectangle;
+  Polygon2D tyre_left;
+  Polygon2D tyre_right;
 
   // 这里引入了分层碰撞检测方案BVH.
   // 二叉/八叉树的方案在游戏领域常用，这里不使用树， 而是最大polygon.

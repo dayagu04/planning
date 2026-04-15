@@ -142,6 +142,15 @@ const ColResult GJKCollisionDetector::Update(
       low_polygon_vec = {&polygon_foot_print_global_.max_polygon,
                          &polygon_foot_print_global_.chassis};
     }
+
+    if (gjk_col_det_request.use_tyre) {
+      high_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_left);
+      high_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_right);
+      mid_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_left);
+      mid_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_right);
+      low_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_left);
+      low_polygon_vec.emplace_back(&polygon_foot_print_global_.tyre_right);
+    }
   }
 
   std::vector<Polygon2D*> polygon_vec;
@@ -350,6 +359,12 @@ void GJKCollisionDetector::TransformPolygonFootPrintLocalToGlobal(
 
   ULFLocalPolygonToGlobal(&polygon_foot_print_global_.body_rectangle,
                           &polygon_foot_print_local_.body_rectangle, tf);
+
+  ULFLocalPolygonToGlobal(&polygon_foot_print_global_.tyre_left,
+                          &polygon_foot_print_local_.tyre_left, tf);
+
+  ULFLocalPolygonToGlobal(&polygon_foot_print_global_.tyre_right,
+                          &polygon_foot_print_local_.tyre_right, tf);
 }
 
 void GJKCollisionDetector::GenCarPolygon() {
@@ -384,6 +399,12 @@ void GJKCollisionDetector::GenCarPolygon() {
 
   polygon_foot_print_local_.mirror_to_front_overhang.FillTangentCircleParams(
       mirror_to_front_overhanging_polygon_vertex_with_buffer_);
+
+  polygon_foot_print_local_.tyre_left.FillTangentCircleParams(
+      left_tyre_rectangle_vertex_with_buffer_);
+
+  polygon_foot_print_local_.tyre_right.FillTangentCircleParams(
+      right_tyre_rectangle_vertex_with_buffer_);
 }
 
 void GJKCollisionDetector::Reset() {}

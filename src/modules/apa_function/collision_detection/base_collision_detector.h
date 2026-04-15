@@ -180,6 +180,9 @@ class BaseCollisionDetector {
     return obs_clear_zone_decider_.GetBoxVec();
   }
 
+  void GenRealTimeTyrePolygonAccordingToFrontWheelAngle(
+      const double front_wheel_angle);
+
   static const std::vector<Eigen::Vector2d> GetCarBigBoxWithBuffer(
       const double lat_buf, const double lon_buf,
       const geometry_lib::PathPoint &pose);
@@ -196,6 +199,12 @@ class BaseCollisionDetector {
 
   std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_;
   std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_with_buffer_;
+
+  std::vector<Eigen::Vector2d> left_tyre_rectangle_vertex_;
+  std::vector<Eigen::Vector2d> left_tyre_rectangle_vertex_with_buffer_;
+
+  std::vector<Eigen::Vector2d> right_tyre_rectangle_vertex_;
+  std::vector<Eigen::Vector2d> right_tyre_rectangle_vertex_with_buffer_;
 
   std::vector<Eigen::Vector2d> chassis_vertex_;
   std::vector<Eigen::Vector2d> chassis_vertex_with_buffer_;
