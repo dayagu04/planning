@@ -443,6 +443,9 @@ const bool PerpendicularTailInScenario::GenTlane() {
   const auto generate_obstacle_decider_ptr =
       parking_task_interface_ptr->GetGenerateObstacleDeciderPtr();
 
+  apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
+
   generate_obstacle_decider_ptr->GenObs(
       ego_info_under_slot,
       GenerateObstacleRequest(scenario_type_, frame_.process_obs_method));
@@ -1068,13 +1071,13 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
 
   int max_gear_shift_number = 0;
   if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
-    request.max_gear_shift_number =
+    max_gear_shift_number =
         param.gear_change_decide_params.all_max_gear_change_count_searching;
   } else if (request.replan_reason == ReplanReason::DYNAMIC) {
-    request.max_gear_shift_number = 0;
+    max_gear_shift_number = 0;
     ref_gear = is_tail_in ? AstarPathGear::REVERSE : AstarPathGear::DRIVE;
   } else {
-    request.max_gear_shift_number =
+    max_gear_shift_number =
         param.gear_change_decide_params.all_max_gear_change_count_parking;
   }
 
