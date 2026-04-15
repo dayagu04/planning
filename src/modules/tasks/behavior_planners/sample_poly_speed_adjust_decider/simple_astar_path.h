@@ -28,8 +28,8 @@ struct STNode {
   double h_cost;   // 当前节点到目标节点的预估代价 (h(n))
   double f_cost;   // 总代价 f(n) = g(n) + h(n)
   STNode* parent;  // 父节点指针，用于回溯轨迹
-  double dis_to_gap_front_cost = 0.0;
-  double dis_to_gap_rear_cost = 0.0;
+  double dis_to_gap_front_cost = kMaxPenalty;
+  double dis_to_gap_rear_cost = kMaxPenalty;
 
   STNode() = default;
   STNode(double t_, double s_, double v_, double a_, double jerk_ = 0.0,
@@ -118,7 +118,7 @@ class LongitudinalAStar {
   bool CalcChildParam(const std::shared_ptr<STNode>& parent,
                       std::shared_ptr<STNode>& node) const;
   double CalcSafetyCollisionCost(double rear_speed, double front_speed,
-                                 double init_distance) const;
+                                 double init_distance, double vehicle_length) const;
   bool valid_ = false;
   double merge_point_s_ = 0.0;
   LeadingAgentInfo leading_agent_info_;
