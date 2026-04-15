@@ -6,17 +6,18 @@
 #include <string>
 #include <vector>
 
+#include "behavior_planners/lateral_obstacle_decider/ARAStar/cost/cost_manager.h"
 #include "euler_distance_transform.h"
 #include "hybrid_ara_data.h"
 #include "ifly_time.h"
 #include "modules/tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "node3d.h"
 #include "src/framework/session.h"
-#include "cost/agent_cost.h"
-#include "cost/boundary_cost.h"
-#include "cost/center_cost.h"
-#include "cost/cost_manager.h"
-#include "cost/motion_cost.h"
+#include "behavior_planners/lateral_obstacle_decider/ARAStar/cost/agent_cost.h"
+#include "behavior_planners/lateral_obstacle_decider/ARAStar/cost/boundary_cost.h"
+#include "behavior_planners/lateral_obstacle_decider/ARAStar/cost/center_cost.h"
+#include "behavior_planners/lateral_obstacle_decider/ARAStar/cost/stitching_cost.h"
+#include "behavior_planners/lateral_obstacle_decider/ARAStar/cost/motion_cost.h"
 #include "src/modules/common/utils/index_list.h"
 #include "src/modules/context/lateral_obstacle.h"
 #include "src/modules/context/virtual_lane_manager.h"
@@ -40,7 +41,7 @@ class HybridARAStar {
   void BuildVirturalKDTree(
       const std::vector<planning_math::LineSegment2d>& virtual_lineseg_vec);
   bool SetStartAndEndPose(const PlanningInitPoint& planning_init_point,
-                          const std::shared_ptr<KDPath>& target_lane,
+                          const std::shared_ptr<planning_math::KDPath>& target_lane,
                           const std::vector<TrajectoryPoint>& plan_history_traj,
                           const double target_v);
   bool ValidityCheck(const std::shared_ptr<Node3d> node);
@@ -74,6 +75,7 @@ class HybridARAStar {
   void CalculateSearchBounds(
       const std::vector<TrajectoryPoint>& plan_history_traj);
   double ReferencePathLength();
+  bool PrebuildLastFrameToCurrentSpline(const std::vector<TrajectoryPoint>& last_traj_points);
 
  private:
   framework::Session* session_;
@@ -119,6 +121,11 @@ class HybridARAStar {
   planning::planning_math::Box2d ego_box_;
   double expand_num_ = 0.0;
   std::vector<double> last_result_s_;
+  std::vector<double> last_result_l_;
+  pnc::mathlib::spline last2cur_stitching_spline_;
+  double spline_s_min_ = 0.0;
+  double spline_s_max_ = 0.0;
+  bool enable_stitching_cost_ = false;
   std::shared_ptr<ReferencePath> reference_path_ptr_ = nullptr;
   double ego_s_ = 0.0;
   double ego_l_ = 0.0;
@@ -140,7 +147,7 @@ class HybridARAStar {
   Transform2d ego_base_;
 
   std::vector<double> XYbounds_;
-  std::shared_ptr<KDPath> fix_lane_ = nullptr;
+  std::shared_ptr<planning_math::KDPath> fix_lane_ = nullptr;
   std::shared_ptr<Node3d> start_node_;
   std::shared_ptr<Node3d> end_node_;
   std::shared_ptr<Node3d> final_node_;

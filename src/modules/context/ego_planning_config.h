@@ -2182,6 +2182,10 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
         json, std::vector<std::string>{"hybrid_ara_star", "search_once"});
     use_occ_s_dist = read_json_keys<double>(
         json, std::vector<std::string>{"hybrid_ara_star", "use_occ_s_dist"});
+    stitching_cost_weight = read_json_keys<double>(
+        json, std::vector<std::string>{"hybrid_ara_star", "stitching_cost_weight"});
+    stitching_cost_time_decay_factor = read_json_keys<double>(
+        json, std::vector<std::string>{"hybrid_ara_star", "stitching_cost_time_decay_factor"});
   }
   double x_grid_resolution = 0.3;
   double y_grid_resolution = 0.3;
@@ -2208,6 +2212,8 @@ struct HybridAraStarConfig : public EgoPlanningConfig {
   double lateral_extend = 0.1;
   bool search_once = true;
   double use_occ_s_dist = 7;
+  double stitching_cost_weight = 0;
+  double stitching_cost_time_decay_factor = 0.0;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {

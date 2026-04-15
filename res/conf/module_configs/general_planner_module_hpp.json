@@ -656,6 +656,8 @@
     "longitudinal_extend": 0.3,
     "lateral_extend": 0.35,
     "search_once": true,
-    "use_occ_s_dist": 7
+    "use_occ_s_dist": 7,
+    "stitching_cost_weight": 150.0,
+    "stitching_cost_time_decay_factor": 0.0
   }
 }
