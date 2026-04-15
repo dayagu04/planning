@@ -1,5 +1,6 @@
 #include "LD_route_info_strategy.h"
 
+#include <pthread.h>
 #include <iostream>
 #include <utility>
 
@@ -21,6 +22,48 @@ LDRouteInfoStrategy::LDRouteInfoStrategy(
     const planning::framework::Session* session)
     : RouteInfoStrategy(config_builder, session) {
   local_view_ = &session_->environmental_model().get_local_view();
+  // 启动常驻工作线程
+  worker_thread_ = std::thread(&LDRouteInfoStrategy::MapLoadWorker, this);
+  pthread_setname_np(worker_thread_.native_handle(), "Pln_SPMapLoad_1");
+}
+
+LDRouteInfoStrategy::~LDRouteInfoStrategy() {
+  // 通知工作线程退出
+  {
+    std::lock_guard<std::mutex> lock(map_load_mutex_);
+    worker_stop_ = true;
+  }
+  map_load_cv_.notify_one();
+  if (worker_thread_.joinable()) {
+    worker_thread_.join();
+  }
+}
+
+void LDRouteInfoStrategy::MapLoadWorker() {
+  while (true) {
+    std::unique_lock<std::mutex> lock(map_load_mutex_);
+    // 等待任务或退出信号
+    map_load_cv_.wait(lock, [this] { return has_pending_task_ || worker_stop_; });
+
+    if (worker_stop_) {
+      break;
+    }
+
+    if (has_pending_task_) {
+      // 复制任务数据，释放锁后执行耗时操作
+      iflymapdata::sdpro::MapData map_data = std::move(pending_map_data_);
+      has_pending_task_ = false;
+      lock.unlock();
+
+      // 执行耗时的地图加载
+      int result = pending_ld_map_.LoadMapFromProto(map_data);
+
+      // 更新结果
+      lock.lock();
+      load_result_ = result;
+      load_done_ = true;
+    }
+  }
 }
 
 void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
@@ -125,12 +168,30 @@ VirtualLanesRouteCost LDRouteInfoStrategy::GetVirtualLaneCostOnRoute(
 bool LDRouteInfoStrategy::UpdateLDMap() {
   const auto& ld_map_info = local_view_->sdpro_map_info;
   const auto ld_map_info_current_timestamp = ld_map_info.header().timestamp();
-  if (ld_map_info_current_timestamp != ld_map_info_updated_timestamp_) {
-    int res = ld_map_.LoadMapFromProto(ld_map_info);
-    if (res == 0) {
-      ldmap_valid_ = true;
-      ld_map_info_updated_timestamp_ = ld_map_info_current_timestamp;
+
+  // 检查后台加载是否完成
+  if (is_loading_) {
+    std::lock_guard<std::mutex> lock(map_load_mutex_);
+    if (load_done_) {
+      if (load_result_ == 0) {
+        ld_map_ = std::move(pending_ld_map_);
+        ldmap_valid_ = true;
+        ld_map_info_updated_timestamp_ = pending_timestamp_;
+      }
+      is_loading_ = false;
+      load_done_ = false;
     }
+  }
+
+  // 时间戳变化且当前没有正在进行的加载，则启动新的异步加载
+  if (!is_loading_ && ld_map_info_current_timestamp != ld_map_info_updated_timestamp_) {
+    std::lock_guard<std::mutex> lock(map_load_mutex_);
+    pending_timestamp_ = ld_map_info_current_timestamp;
+    pending_map_data_ = ld_map_info;  // 复制 proto 数据
+    has_pending_task_ = true;
+    load_done_ = false;
+    is_loading_ = true;
+    map_load_cv_.notify_one();  // 唤醒工作线程
   }
 
   if (ld_map_info_current_timestamp - ld_map_info_updated_timestamp_ >
