@@ -139,8 +139,6 @@ class STGraph {
 
   void MakeCutInStBoundary(const agent::Agent& agent);
 
-  void RecalculateTrajectoryForLcRearAgent(const agent::Agent* rear_agent);
-
   void MakeStPointsTable();
 
   void ConstructDefaultStPassCorridor();
