@@ -1619,7 +1619,10 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
           route_info_output_.ego_seq ==
           current_link_->lane_num() - lane->sequence() + 1;
       bool is_accelerate_lane = IsAccelerateLane(lane) || IsEntryLane(lane);
-      if (is_accelerate_lane && is_ego_on_this_lane) {
+      bool is_leftest = false;
+      bool is_rightest = false;
+      if (is_accelerate_lane && is_ego_on_this_lane &&
+          IsTheLaneOnSide(lane, is_leftest, is_rightest)) {
         route_info_output_.is_ego_on_accelerate_lane = true;
         break;
       }
