@@ -6379,7 +6379,7 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
     }
 
     iflyauto::LaneBoundaryType boundary_type =
-        iflyauto::LaneBoundaryType_MARKING_SOLID;
+        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
     double acc_length = 0.0;
     for (int j = 0; j < lane_boundarys.type_segments_size; ++j) {
       acc_length += lane_boundarys.type_segments[j].length;
