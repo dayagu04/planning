@@ -462,10 +462,12 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
 
   planning_input.set_q_ego_vel_bound_weight(lc_decision_config_.q_ego_vel_bound_weight);
   planning_input.clear_ego_vel_max();
+  constexpr double kAbsoluteMaxSpeed = 130.0 / 3.6;
+  const double current_valid_limit = comfort_params_.v0;
+  const double ego_vel_max = std::min(current_valid_limit * 1.05, kAbsoluteMaxSpeed);
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
-    planning_input.add_ego_vel_max(comfort_params_.v0);
+    planning_input.add_ego_vel_max(ego_vel_max);
   }
-
   planning_input.set_q_hard_halfplane_weight(
       lc_decision_config_.q_hard_halfplane_weight);
   planning_input.set_hard_halfplane_dist(
