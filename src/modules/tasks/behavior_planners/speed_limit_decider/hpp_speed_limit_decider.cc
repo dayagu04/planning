@@ -73,6 +73,8 @@ bool HPPSpeedLimitDecider::Execute() {
   v_target_ = v_cruise;
   v_target_type_ = SpeedLimitType::CRUISE;
 
+  speed_limit_segments_.clear();
+
   CalculateUserSpeedLimit();
 
   CalculateMapSpeedLimit();
@@ -88,6 +90,17 @@ bool HPPSpeedLimitDecider::Execute() {
   CalculateRampLimit();
 
   CalculateIntersectionRoadLimit();
+
+  // 构建平滑限速曲线
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  if (reference_path_ptr && !speed_limit_segments_.empty()) {
+    const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+    const double ego_s = frenet_ego_state.s();
+    const double ego_v = frenet_ego_state.planning_init_point().v;
+    BuildSmoothedSpeedProfile(ego_s, ego_v, v_cruise);
+  }
 
   auto hpp_speed_limit_output = session_->mutable_planning_context()
                                     ->mutable_speed_limit_decider_output();
@@ -147,16 +160,26 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
 
   const double max_lat_acceleration = ComputeMaxLatAcceleration();
 
-  v_limit_curv = ComputeCurvatureSpeedLimit(traj_points);
+  double scan_distance = 0.0;
+  v_limit_curv = ComputeCurvatureSpeedLimit(traj_points, &scan_distance);
 
 #ifdef ENABLE_PROTO_LOG
   FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_curvature(),
                      SpeedLimitType::CURVATURE, v_limit_curv);
 #endif
 
-  if (v_limit_curv < v_target_) {
-    v_target_ = v_limit_curv;
-    v_target_type_ = SpeedLimitType::CURVATURE;
+  if (v_limit_curv < hpp_speed_limit_config_.velocity_upper_bound &&
+      scan_distance > 0.0) {
+    const auto& reference_path_ptr = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info.reference_path;
+    if (reference_path_ptr) {
+      const double ego_s =
+          reference_path_ptr->get_frenet_ego_state().s();
+      speed_limit_segments_.push_back(
+          {ego_s, ego_s + scan_distance, v_limit_curv,
+           SpeedLimitType::CURVATURE});
+    }
   }
 }
 
@@ -183,22 +206,23 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
     return;
   }
 
-  v_limit_speed_narrow_passage = GetSpeedLimitInObjectiveZone(
-      zone_info, hpp_speed_limit_config_.target_speed_narrow_passage_area);
-
-  if (v_limit_speed_narrow_passage < v_target_) {
-    v_target_ = v_limit_speed_narrow_passage;
-    v_target_type_ = SpeedLimitType::NARROW_PASSAGE;
+  for (const auto& seg : zone_info.s_segments) {
+    speed_limit_segments_.push_back(
+        {seg.first, seg.second,
+         hpp_speed_limit_config_.target_speed_narrow_passage_area,
+         SpeedLimitType::NARROW_PASSAGE});
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_narrow_passage, zone_info.in_speed_limit_zone,
+      hpp_speed_limit_config_.target_speed_narrow_passage_area,
+      zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_narrow_passage(),
-                   SpeedLimitType::NARROW_PASSAGE, v_limit_speed_narrow_passage,
+                   SpeedLimitType::NARROW_PASSAGE,
+                   hpp_speed_limit_config_.target_speed_narrow_passage_area,
                    zone_info);
 #endif
   return;
@@ -240,11 +264,6 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
     return;
   }
 
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double ego_v =
-      session_->environmental_model().get_ego_state_manager()->ego_v();
-
   // --- 遍历绕避 Agent ---
   for (const auto avoid_id : hpp_lateral_output.avoid_ids) {
     const auto* agent = agent_manager->GetAgent(avoid_id);
@@ -279,7 +298,7 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
       continue;
     }
 
-    // 4. 纵向距离平滑：复用现有 GetSpeedLimitInObjectiveZone 思路
+    // 4. 计算目标限速并推送 segment
     const double target_v =
         agent->is_static()
             ? hpp_speed_limit_config_.hpp_avoid_velocity_limit
@@ -289,38 +308,22 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
     const double approach_dist =
         hpp_speed_limit_config_.hpp_avoid_approach_distance;
 
-    double v_limit_this_agent;
-    if (longitudinal_dist < 1e-3) {
-      // 在障碍物正旁边
-      v_limit_this_agent = target_v;
-    } else if (longitudinal_dist < approach_dist) {
-      // 接近中：v² = target_v² - 2*a*s → 反推当前允许速度
-      const double a = hpp_speed_limit_config_.approaching_zone_deceleration;
-      const double v2 = target_v * target_v - 2.0 * a * longitudinal_dist;
-      v_limit_this_agent = (v2 > 0.0)
-                               ? std::sqrt(v2)
-                               : hpp_speed_limit_config_.velocity_lower_bound;
-    } else {
-      continue;  // 还太远，不触发
+    // 障碍物还太远，不触发
+    if (longitudinal_dist > approach_dist) {
+      continue;
     }
 
-    v_limit_this_agent = std::max(v_limit_this_agent,
-                                  hpp_speed_limit_config_.velocity_lower_bound);
-
-    if (v_limit_this_agent < v_limit_avoid) {
-      v_limit_avoid = v_limit_this_agent;
-    }
+    const double seg_start = agent_s - 0.5 * agent->length();
+    const double seg_end = agent_s + 0.5 * agent->length();
+    speed_limit_segments_.push_back(
+        {seg_start, seg_end, target_v, SpeedLimitType::AVOID});
   }
 
 #ifdef ENABLE_PROTO_LOG
   FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_avoid(),
-                     SpeedLimitType::AVOID, v_limit_avoid);
+                     SpeedLimitType::AVOID,
+                     hpp_speed_limit_config_.velocity_upper_bound);
 #endif
-
-  if (v_limit_avoid < v_target_) {
-    v_target_ = v_limit_avoid;
-    v_target_type_ = SpeedLimitType::AVOID;
-  }
 }
 
 const double HPPSpeedLimitDecider::ComputeMaxLatAcceleration() {
@@ -365,7 +368,7 @@ const double HPPSpeedLimitDecider::ComputeMaxLatAcceleration() {
 }
 
 const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
-    const TrajectoryPoints& traj_points) {
+    const TrajectoryPoints& traj_points, double* scan_dist_out) {
   const double ego_velocity = session_->environmental_model()
                                   .get_ego_state_manager()
                                   ->planning_init_point()
@@ -376,6 +379,10 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
   const double scan_distance = interp(
       ego_velocity, hpp_speed_limit_config_.curv_trigger_velocity_breakpoints,
       hpp_speed_limit_config_.curv_trigger_distances);
+
+  if (scan_dist_out) {
+    *scan_dist_out = scan_distance;
+  }
 
   // 2. 考虑方向盘转角对应的即时曲率（车辆当前已经在转弯）
   const auto& ego_state =
@@ -434,18 +441,6 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
       std::clamp(v_limit_curv, hpp_speed_limit_config_.velocity_lower_bound,
                  hpp_speed_limit_config_.velocity_upper_bound);
 
-  // 6. 运动学预减速：如果前方有弯，提前计算"现在应该限到多少速"
-  //    使用 v² = v_target² - 2 * |a| * s，反推当前允许速度
-  //    只有当目标限速低于当前速度时才需要这个逻辑
-  constexpr double kDeceleration = 2.0;  // m/s²，舒适减速度
-  if (v_limit_curv < ego_velocity && max_curv_s > 0.0) {
-    double v_now_limit_squared =
-        v_limit_curv * v_limit_curv + 2.0 * kDeceleration * max_curv_s;
-    double v_now_limit = std::sqrt(std::max(0.0, v_now_limit_squared));
-    // 取两者中更严格的限速
-    v_limit_curv = std::min(v_limit_curv, v_now_limit);
-  }
-
   return v_limit_curv;
 }
 
@@ -478,24 +473,23 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
 
   for (const auto& seg : zone_info.s_segments) {
     planning_result.speed_bump_path_segments.push_back({seg.first, seg.second});
-  }
-
-  v_limit_speed_bump = GetSpeedLimitInObjectiveZone(
-      zone_info, hpp_speed_limit_config_.target_speed_speed_bump_area);
-
-  if (v_limit_speed_bump < v_target_) {
-    v_target_ = v_limit_speed_bump;
-    v_target_type_ = SpeedLimitType::BUMP_ROAD;
+    speed_limit_segments_.push_back(
+        {seg.first, seg.second,
+         hpp_speed_limit_config_.target_speed_speed_bump_area,
+         SpeedLimitType::BUMP_ROAD});
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_bump, zone_info.in_speed_limit_zone,
+      hpp_speed_limit_config_.target_speed_speed_bump_area,
+      zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_bump(),
-                   SpeedLimitType::BUMP_ROAD, v_limit_speed_bump, zone_info);
+                   SpeedLimitType::BUMP_ROAD,
+                   hpp_speed_limit_config_.target_speed_speed_bump_area,
+                   zone_info);
 #endif
 }
 
@@ -574,6 +568,57 @@ double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
   return std::numeric_limits<double>::max();
 }
 
+void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s,
+                                                     double ego_v,
+                                                     double v_cruise) {
+  const double lookahead = hpp_speed_limit_config_.hpp_profile_lookahead;
+  const double ds = hpp_speed_limit_config_.hpp_profile_ds;
+  const int N = static_cast<int>(lookahead / ds) + 1;
+
+  // (a) 初始化为 v_cruise
+  std::vector<double> v(N, v_cruise);
+  std::vector<SpeedLimitType> binding_type(N, SpeedLimitType::CRUISE);
+
+  // (b) 叠加所有 segments，每个采样点取 min
+  for (const auto& seg : speed_limit_segments_) {
+    int i_start = std::max(0, static_cast<int>((seg.s_start - ego_s) / ds));
+    int i_end = std::min(N - 1, static_cast<int>((seg.s_end - ego_s) / ds));
+    for (int i = i_start; i <= i_end; ++i) {
+      if (seg.v_limit < v[i]) {
+        v[i] = seg.v_limit;
+        binding_type[i] = seg.type;
+      }
+    }
+  }
+
+  // (c) 后向平滑（减速约束）
+  const double a_decel =
+      std::abs(hpp_speed_limit_config_.approaching_zone_deceleration);
+  for (int i = N - 2; i >= 0; --i) {
+    double v_from_next =
+        std::sqrt(v[i + 1] * v[i + 1] + 2.0 * a_decel * ds);
+    if (v_from_next < v[i]) {
+      v[i] = v_from_next;
+    }
+  }
+
+  // (d) 前向平滑（加速约束）— 关键：消除场景间跳变
+  //     起点取 max(v[0], ego_v)：zone 内不压低限速，zone 外防止跳变
+  const double a_accel = hpp_speed_limit_config_.hpp_profile_comfort_accel;
+  double v_prev = std::max(v[0], ego_v);
+  for (int i = 1; i < N; ++i) {
+    double v_from_prev = std::sqrt(v_prev * v_prev + 2.0 * a_accel * ds);
+    if (v_from_prev < v[i]) {
+      v[i] = v_from_prev;
+    }
+    v_prev = v[i];
+  }
+
+  // (e) 输出
+  v_target_ = std::clamp(v[0], hpp_speed_limit_config_.velocity_lower_bound, v_cruise);
+  v_target_type_ = binding_type[0];
+}
+
 void HPPSpeedLimitDecider::CalculateRampLimit() {
   double v_limit_speed_ramp = hpp_speed_limit_config_.velocity_upper_bound;
   if (!session_->is_hpp_scene()) {
@@ -593,22 +638,23 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
     return;
   }
 
-  v_limit_speed_ramp = GetSpeedLimitInObjectiveZone(
-      zone_info, hpp_speed_limit_config_.target_speed_ramp_area);
-
-  if (v_limit_speed_ramp < v_target_) {
-    v_target_ = v_limit_speed_ramp;
-    v_target_type_ = SpeedLimitType::RAMP_ROAD;
+  for (const auto& seg : zone_info.s_segments) {
+    speed_limit_segments_.push_back(
+        {seg.first, seg.second,
+         hpp_speed_limit_config_.target_speed_ramp_area,
+         SpeedLimitType::RAMP_ROAD});
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_ramp, zone_info.in_speed_limit_zone,
+      hpp_speed_limit_config_.target_speed_ramp_area,
+      zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_ramp(),
-                   SpeedLimitType::RAMP_ROAD, v_limit_speed_ramp, zone_info);
+                   SpeedLimitType::RAMP_ROAD,
+                   hpp_speed_limit_config_.target_speed_ramp_area, zone_info);
 #endif
 
   return;
@@ -636,27 +682,24 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
     return;
   }
 
-  if (zone_info.in_speed_limit_zone) {
-    v_limit_speed_intersection = 3.33;
-  } else {
-    v_limit_speed_intersection = GetSpeedLimitInObjectiveZone(
-        zone_info, hpp_speed_limit_config_.target_speed_intersection_road_area);
-  }
-
-  if (v_limit_speed_intersection < v_target_) {
-    v_target_ = v_limit_speed_intersection;
-    v_target_type_ = SpeedLimitType::INTERSECTION_ROAD;
+  for (const auto& seg : zone_info.s_segments) {
+    speed_limit_segments_.push_back(
+        {seg.first, seg.second,
+         hpp_speed_limit_config_.target_speed_intersection_road_area,
+         SpeedLimitType::INTERSECTION_ROAD});
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
-      v_limit_speed_intersection, zone_info.in_speed_limit_zone,
+      hpp_speed_limit_config_.target_speed_intersection_road_area,
+      zone_info.in_speed_limit_zone,
       zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_intersection(),
                    SpeedLimitType::INTERSECTION_ROAD,
-                   v_limit_speed_intersection, zone_info);
+                   hpp_speed_limit_config_.target_speed_intersection_road_area,
+                   zone_info);
 #endif
 
   return;
