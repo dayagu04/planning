@@ -39,6 +39,12 @@ lane_change_status_dict = {
     5: "kLaneChangeHold"
 }
 
+road_right_level_dict = {
+    0: "LOW_RIGHT",
+    1: "HIGH_RIGHT",
+    2: "MID_RIGHT"
+}
+
 start_stop_status_dict = {
     0: "CRUISE",
     1: "STOP",
@@ -792,6 +798,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       val = lane_change_status_dict.get(val, str(val))
     elif st_search_value_list[ind] == 'start_stop_status' and isinstance(val, int):
       val = start_stop_status_dict.get(val, str(val))
+    elif st_search_value_list[ind] == 'road_right_level' and isinstance(val, int):
+      val = road_right_level_dict.get(val, str(val))
     st_search_attr_vec.append(val)
 
   # # #region agent log

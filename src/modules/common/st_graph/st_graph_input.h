@@ -6,6 +6,7 @@
 #include "agent/agent.h"
 #include "agent/agent_manager.h"
 #include "dynamic_world/dynamic_world.h"
+#include "../../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "lat_lon_vehicle_motion_simulator.h"
 #include "st_graph/path_border_querier.h"
 #include "trajectory/trajectory_point.h"
@@ -164,6 +165,8 @@ class StGraphInput {
     return follow_agent_ids_;
   }
 
+  RoadRightLevel road_right_level() const { return road_right_level_; }
+
  private:
   planning::framework::Session* session_ = nullptr;
   STGraphConfig config_;
@@ -212,6 +215,7 @@ class StGraphInput {
   bool enable_backward_extend_st_boundary_ = false;
   double backward_extend_time_s_ = 0.0;
   planning_math::Box2d planning_init_point_box_;
+  RoadRightLevel road_right_level_ = RoadRightLevel::HIGH_RIGHT;
   
   std::unordered_set<int32_t> follow_agent_ids_;
 };

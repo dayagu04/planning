@@ -733,7 +733,7 @@ class LoadRosbag:
                           'UpdateObstacleInteractionInfoCostTime','is_emergency_scene',
                           'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
                           'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence',
-                          'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link']
+                          'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link', 'road_right_level']
 
       json_value_list += ["planning_cost_time", 'EnvironmentalModelManagerCost', 'TaskFunctionCost', "ego_state_update cost",
                           "update route_info cost", "virtual_lane_manager cost", "traffic_light_decision cost", "obstacle_prediction cost", "obstacle_manager cost", "agent_manager cost", "construction_scene_manager cost",
@@ -859,7 +859,10 @@ class LoadRosbag:
       # 自车速度（前后车共用）
       json_vector_list += ["ego_vel_vec"]
       # 安全检查相关的标量数据
-      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time", "rear_agent_overtaking"]
+      json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time"]
+
+      #路权相关
+      json_value_list += ["cur_road_right_level", "is_merge_region"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

@@ -58,6 +58,9 @@ constexpr double kMinLcAgentSpeedBuffer = 1.0;
 bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
   st_graph_input_ = st_graph_input;
   Reset();
+  road_right_level_ = st_graph_input_->road_right_level();
+  JSON_DEBUG_VALUE("road_right_level", static_cast<int>(road_right_level_));
+
   MakeAgentStBoundaries();
 
   const auto& agents = st_graph_input_->filtered_agents();
@@ -554,6 +557,17 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
   }
 
+  if (agent.is_prediction_cutin()) {
+    if (road_right_level_ == RoadRightLevel::LOW_RIGHT ||
+        road_right_level_ == RoadRightLevel::MID_RIGHT) {
+      const auto& trajectory_cutin = agent.trajectory_cutin_postprocessed();
+      if (!trajectory_cutin.empty()) {
+        trajectories.clear();
+        trajectories.push_back(trajectory_cutin);
+      }
+    }
+  }
+
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());
   std::vector<int64_t> st_boundaries_ego;
@@ -613,16 +627,17 @@ void STGraph::MakeDynamicAgentStBoundary(
       const double min_l = agent_sl_boundary[3];
       double lower_s = std::numeric_limits<double>::max();
       double upper_s = std::numeric_limits<double>::lowest();
-      
+
       bool st_project_success = false;
       if (is_target_front_agent) {
         const double max_s = agent_sl_boundary[0];
         const double min_s = agent_sl_boundary[1];
-        const auto& vehicle_param = 
+        const auto& vehicle_param =
             VehicleConfigurationContext::Instance()->get_vehicle_param();
-        const double front_edge_to_center = vehicle_param.front_edge_to_rear_axle;
+        const double front_edge_to_center =
+            vehicle_param.front_edge_to_rear_axle;
         const double back_edge_to_center = vehicle_param.rear_edge_to_rear_axle;
-        
+
         lower_s = min_s - front_edge_to_center;
         upper_s = max_s + back_edge_to_center;
         lower_s = std::fmax(0.0, std::fmin(lower_s, path_range.second));
@@ -634,7 +649,7 @@ void STGraph::MakeDynamicAgentStBoundary(
             path_range, agent_sl_boundary, considered_corners,
             planning_init_point_box, &lower_s, &upper_s, is_rads_scene);
       }
-      
+
       if (st_project_success) {
         min_t = std::fmin(min_t, relative_time);
         st_point_pairs.emplace_back(

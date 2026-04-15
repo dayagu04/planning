@@ -902,6 +902,10 @@ void AgentLongitudinalDecider::FilterRearAgents() {
       continue;
     }
 
+    if (agent->is_prediction_cutin() || agent->is_rule_base_cutin()) {
+      continue;
+    }
+
     auto* mutable_agent =
         mutable_agent_manager->mutable_agent(agent->agent_id());
     if (mutable_agent == nullptr) {
