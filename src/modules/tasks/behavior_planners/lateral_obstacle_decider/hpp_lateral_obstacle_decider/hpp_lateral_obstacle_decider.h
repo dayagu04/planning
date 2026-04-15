@@ -92,7 +92,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
     LatObstacleDecisionInfo &last_path_info,
     LatObstacleDecisionInfo &decision_info);
 
-  void MakeDecisionBaseLastTrajLonSingleDynamicObs(
+  void MakeDecisonForDynamicObsWithoutOverlap(
     const std::shared_ptr<FrenetObstacle> &obstacle, LatObstacleDecisionType &decision);
 
   void UpdateLatDecision(
@@ -103,15 +103,15 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   //辅助函数1：处理单个 Cluster 的决策逻辑
   // 该函数被下面的函数替代
-  void MakeDecisonForDynamicObsWithoutOverlap(const std::shared_ptr<FrenetObstacle> &obstacle, LatObstacleDecisionType &decision);
   void MakeDecisonForDynamicObsWithOverlap(
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
       const std::shared_ptr<FrenetObstacle>& obstacle,
       const std::pair<double, double>& obs_overlap_l_range,
-      const double& ego_overlap_s, LatObstacleDecisionType& decision);
-  bool IsEgoAndObsOverlap(const TrajectoryPoints& last_traj_points,
-                          const std::shared_ptr<FrenetObstacle>& obstacle,
-                          std::pair<double,double>& obs_overlap_l_range,
-                          double& ego_overlap_s);
+      const std::pair<double, double> &ego_overlap_s_range, LatObstacleDecisionType& decision);
+  bool CheckEgoAndObjPolygonHaveOverlap(
+      const TrajectoryPoints& last_traj_points,
+      const std::shared_ptr<FrenetObstacle>& obstacle,
+      std::pair<double, double>& obs_overlap_l_range, std::pair<double, double> &ego_overlap_s_range);
   void MakeDecisionForSingleDynamicObs(
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
       const std::shared_ptr<FrenetObstacle>& obstacle,
