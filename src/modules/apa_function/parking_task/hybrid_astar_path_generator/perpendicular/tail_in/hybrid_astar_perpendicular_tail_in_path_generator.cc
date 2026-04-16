@@ -313,8 +313,9 @@ void HybridAStarPerpendicularTailInPathGenerator::TryDecideCulDeSac(
       end_pose.SetX(x);
       collision_check_path[0] = end_pose;
       if (!col_det_interface_ptr_->GetEDTColDetPtr()
-               ->Update(collision_check_path,
-                        param.lat_lon_path_buffer.body_lat_buffer, 0.0)
+               ->Update(
+                   collision_check_path,
+                   ColDetBuffer(0.0, param.lat_lon_path_buffer.body_lat_buffer))
                .col_flag) {
         find_safe_pos = true;
         break;
@@ -665,7 +666,7 @@ HybridAStarPerpendicularTailInPathGenerator::CalcGearSwitchPoseCollisionCost(
     const float length_penalty) const {
   if (col_det_interface_ptr_->GetEDTColDetPtr()
           ->Update(std::vector<common_math::PathPt<float>>{gear_switch_pose},
-                   0.4f, 0.1f, 0.1f)
+                   ColDetBuffer(0.4f, 0.1f, 0.1f))
           .col_flag) {
     return 0.5f * length_penalty;
   }
