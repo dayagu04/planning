@@ -179,7 +179,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       double dis_to_gap_front_cost = 0.0;
       if (anchor_matched_lower_st_point.agent_id() != kNoAgentId) {
         double s_buffer =
-            interp(anchor_matched_lower_st_point.velocity(),
+            interp(anchor_matched_lower_st_point.velocity() * 3.6,
                    config_->rear_vehicle_min_distance_map.rear_speed_kph_table,
                    config_->rear_vehicle_min_distance_map.min_distance_table);
         s_buffer =
