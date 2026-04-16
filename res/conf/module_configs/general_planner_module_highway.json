@@ -1265,6 +1265,7 @@
     "ramp_curv_radius_small": 350.0,
     "ramp_curv_radius_big": 500.0,
     "v_intersection_min_limit": 16.67,
+    "v_limit_roundabout": 11.11,
     "min_acc_function_fading_away": -0.9,
     "function_fading_away_distance_to_intersection": 50.0,
     "v_reduce_intersection": 0.0,

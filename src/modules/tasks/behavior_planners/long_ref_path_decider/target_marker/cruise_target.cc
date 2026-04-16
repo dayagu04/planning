@@ -133,6 +133,7 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::CONE_BUCKET:
     case SpeedLimitType::CIPV_LOST:
     case SpeedLimitType::ROUNDABOUT:
+      break;
     case SpeedLimitType::NOT_OVERTAKE_FROM_RIGHT:
     case SpeedLimitType::VRU_ROUND:
     case SpeedLimitType::MERGE_ALC:

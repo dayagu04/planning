@@ -4327,6 +4327,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                      "v_intersection_min_limit");
     ReadItem<double>(json, v_reduce_rate_intersection, "speed_limit_decider",
                      "v_reduce_rate_intersection");
+    ReadItem<double>(json, v_limit_roundabout, "speed_limit_decider",
+                        "v_limit_roundabout");
     ReadItem<bool>(json, enable_sdmap_curv_v_adjust, "speed_limit_decider",
                    "enable_sdmap_curv_v_adjust");
     ReadItem<double>(json, search_sdmap_curv_dis, "speed_limit_decider",
@@ -4764,6 +4766,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double sdmap_curv_thred = 1000.0;
   double v_intersection_min_limit = 11.11;
   double v_reduce_rate_intersection = 0.05;
+  double v_limit_roundabout = 11.11;
   double v_limit_one_still_danger_obs = 12.5;
   double v_limit_more_still_danger_obs = 11.11;
   double v_rel_limit_for_dynamic_danger_obs = 4.17;

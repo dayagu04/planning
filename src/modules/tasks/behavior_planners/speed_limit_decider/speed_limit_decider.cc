@@ -129,9 +129,10 @@ constexpr double kAvgRadiusExitSpeedDiff =
 constexpr double kAvgRadiusExitRadius =
     280.0;  // Road radius threshold for exiting avg radius EWMA (m)
 constexpr double map_curv_window_len = 25.0;
-constexpr double kMapModeRoundaboutQuitDis = 50.0;
-constexpr double kNoMapModeRoundaboutQuitDis = 60.0;
+constexpr double kMapModeRoundaboutQuitDis = 70.0;
+constexpr double kNoMapModeRoundaboutQuitDis = 80.0;
 constexpr double kRoundaboutQuitCurvRadiusThr = 300.0;
+constexpr double kRoundaboutQuitCurvRadiusLowThr = 200.0;
 constexpr double kRoundaboutQuitRecoverCounter = 3;
 constexpr double kRoadBoundarySearchDistanceOffset = 25.0;  // Offset distance added to search_distance_min for road boundary search (m)
 constexpr double kLateralRatioThreshold = 0.3;
@@ -2502,6 +2503,8 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
             }
           } else {
             bool function_need_inhibited = false;
+            double v_limit_roundabout = 40.0;
+            double dis_to_roundabout = 10000.0;
             auto speed_limit_output =
                 session_->mutable_planning_context()
                     ->mutable_speed_limit_decider_output();
@@ -2512,7 +2515,14 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
                 roundabout_info.second < kMapModeRoundaboutQuitDis &&
                 road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
               // in map mode, roundabout distance meets the condition
-              function_need_inhibited = true;
+              dis_to_roundabout = roundabout_info.second;
+              if (roundabout_info.second < kMapModeRoundaboutQuitDis / 2.0) {
+                if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
+                  function_need_inhibited = true;
+                }
+              } else {
+                function_need_inhibited = true;
+              }
             } else if (roundabout_info.first == nullptr) {
               auto roundabout_info_list = sdpro_map.GetRoundAboutList(
                   current_segment->id(), nearest_s, 300.0);
@@ -2526,7 +2536,14 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
                     road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
                   // not in map mode, closest roundabout distance meets the
                   // condition
-                  function_need_inhibited = true;
+                  dis_to_roundabout = closest_roundabout.second;
+                  if (closest_roundabout.second < kNoMapModeRoundaboutQuitDis / 2.0) {
+                    if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
+                      function_need_inhibited = true;
+                    }
+                  } else {
+                    function_need_inhibited = true;
+                  }
                 }
               }
             }
@@ -2545,6 +2562,19 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
                 roundabout_quit_flag_ = false;
               }
             }
+            if (roundabout_quit_flag_) {
+              v_limit_roundabout = speed_limit_config_.v_limit_roundabout;
+            }
+            if (v_limit_roundabout < v_target_) {
+              v_target_ = v_limit_roundabout;
+              v_target_type_ = SpeedLimitType::ROUNDABOUT;
+            }
+            JSON_DEBUG_VALUE("dis_to_roundabout", dis_to_roundabout);
+            JSON_DEBUG_VALUE("v_limit_roundabout", v_limit_roundabout);
+            auto speed_limit_decider_output = session_->mutable_planning_context()
+                                          ->mutable_speed_limit_decider_output();
+            speed_limit_decider_output->SetSpeedLimitIntoMap(v_limit_roundabout,
+                                                     SpeedLimitType::ROUNDABOUT);
           }
         }
       }
