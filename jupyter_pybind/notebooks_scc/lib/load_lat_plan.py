@@ -733,11 +733,37 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         # print('delta:',plan_delta)
         # print('v:',plan_v)
         # print('lat_jerk:',plan_omega * plan_v2)
-    lat_plan_data['data_lat_motion_plan_output'].data.update({
-      'final_acc_vec': plan_lat_acc,
-      'final_jerk_vec': plan_lat_jerk,
-    })
 
+    if global_var.get_value("scene_type") == "HPP":
+        target_len = len(time_vec)
+        src_len = len(plan_lat_acc)
+        final_acc_vec = []
+        final_jerk_vec = []
+
+        for j in range(target_len):
+            pos = j * (src_len - 1) / (target_len - 1)
+            i = int(pos)
+            frac = pos - i
+
+            if i + 1 >= src_len:
+                acc = plan_lat_acc[i]
+                jerk = plan_lat_jerk[i]
+            else:
+                acc = plan_lat_acc[i] + frac * (plan_lat_acc[i+1] - plan_lat_acc[i])
+                jerk = plan_lat_jerk[i] + frac * (plan_lat_jerk[i+1] - plan_lat_jerk[i])
+
+            final_acc_vec.append(acc)
+            final_jerk_vec.append(jerk)
+
+        lat_plan_data['data_lat_motion_plan_output'].data.update({
+            'final_acc_vec': final_acc_vec,
+            'final_jerk_vec': final_jerk_vec,
+        })
+    else:
+      lat_plan_data['data_lat_motion_plan_output'].data.update({
+        'final_acc_vec': plan_lat_acc,
+        'final_jerk_vec': plan_lat_jerk,
+      })
 
     if not g_is_display_enu:
       plan_traj_x, plan_traj_y = plan_x, plan_y
@@ -1335,7 +1361,7 @@ def load_lat_plan_figure(fig1, local_view_data):
 
     fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'plan refline', visible=False)
 
-  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=800, height=160)
+  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 8.0], width=800, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)
   fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=800, height=160)
   fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=800, height=160)
