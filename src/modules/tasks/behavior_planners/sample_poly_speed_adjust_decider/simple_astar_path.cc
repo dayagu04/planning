@@ -170,6 +170,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       gap_list;
   if (sample_space_ptr_->GetNearestGapListByAvailable(frenet_node_s, node.v,
                                                          node.t, &gap_list)) {
+    bool is_safe = false;
     for (auto& gap_pair : gap_list) {
       auto& anchor_matched_lower_st_point = gap_pair.first;
       auto& anchor_matched_upper_st_point = gap_pair.second;
@@ -177,7 +178,9 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       double dis_to_gap_rear_cost = 0.0;
       double dis_to_gap_front_cost = 0.0;
       if (anchor_matched_lower_st_point.agent_id() != kNoAgentId) {
-        double s_buffer = config_->gap_rear_buffer_base;
+        double s_buffer = interp(config_->rear_vehicle_min_distance_map.rear_speed_kph_table,
+                                config_->rear_vehicle_min_distance_map.rear_distance_table,
+                                anchor_matched_lower_st_point.velocity());
         s_buffer =
             node.s > merge_point_s_
                 ? s_buffer * std::exp((merge_point_s_ - node.s) /
@@ -200,18 +203,21 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
           }
         }
         if (gap < 0.0 && node.s > collision_s) {
-          // std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
-          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-          //           << std::endl;
-          return false;
+          std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
+                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+                    << std::endl;
+          continue;
         } else {
           double s_buffer_extra = config_->gap_rear_buffer_extra_coef *
                                   anchor_matched_lower_st_point.velocity();
+          double left_time =
+              (node.s - collision_s) / std::fmax(node.v, kZeroEpsilon);
+          left_time = std::fmax(left_time, 0.0);
           dis_to_gap_rear_cost = CalcSafetyCollisionCost(
               anchor_matched_lower_st_point.velocity(), node.v,
               frenet_node_s - anchor_matched_lower_st_point.s() -
                   rear_edge_to_rear_axle_,
-              anchor_matched_lower_st_point.vehicle_length());
+              anchor_matched_lower_st_point.vehicle_length(), left_time);
         }
       }
       // 校验gap前车碰撞风险
@@ -241,24 +247,32 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         }
         if (gap < 0.0 &&
             node.s > (collision_s - std::max(follow_distance, thw))) {
-          // std::cout << "Gap前车碰撞风险: " << node.getKey()
-          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-          //           << std::endl;
-          return false;
+          std::cout << "Gap前车碰撞风险: " << node.getKey()
+                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+                    << std::endl;
+          continue;
         } else {
+          double left_time =
+              (node.s - (collision_s - std::max(follow_distance, thw))) /
+              std::fmax(node.v, kZeroEpsilon);
+          left_time = std::fmax(left_time, 0.0);
           double s_buffer_extra = config_->gap_front_buffer_extra_coef * node.v;
           dis_to_gap_front_cost = CalcSafetyCollisionCost(
               node.v, anchor_matched_upper_st_point.velocity(),
               anchor_matched_upper_st_point.s() - frenet_node_s -
                   front_edge_to_rear_axle_,
-              anchor_matched_upper_st_point.vehicle_length());
+              anchor_matched_upper_st_point.vehicle_length(), left_time);
         }
       }
       if ((dis_to_gap_rear_cost + dis_to_gap_front_cost) <
           (node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost)) {
         node.dis_to_gap_front_cost = dis_to_gap_front_cost;
         node.dis_to_gap_rear_cost = dis_to_gap_rear_cost;
+        is_safe = true;
       }
+    }
+    if (!is_safe) {
+      return false;
     }
   }
   // 检查是否与前车碰撞
@@ -453,32 +467,36 @@ bool LongitudinalAStar::CalcChildParam(const std::shared_ptr<STNode>& parent,
 double LongitudinalAStar::CalcSafetyCollisionCost(double rear_speed,
                                                   double front_speed,
                                                   double init_distance,
-                                                  double vehicle_length) const {
+                                                  double vehicle_length,
+                                                  double left_time) const {
   double thw = 1.5 * rear_speed;
-  double s_buffer = rear_speed * (rear_speed - front_speed) / 2.0 *
-                    config_->safe_collision_decel;
-  double left_safe_distance = init_distance - s_buffer;
+  double s_buffer = (front_speed - rear_speed) * left_time;
+  double left_safe_distance = init_distance + s_buffer;
 
   double cost = 0.0;
   if (left_safe_distance > thw ||
       left_safe_distance < (-2.0 * vehicle_length - thw)) {
     cost = 0.0;
   } else if (left_safe_distance > 0.0) {
-    cost = config_->weight_front_ttc *
-           std::exp(1 - left_safe_distance / std::fmax(thw, kZeroEpsilon));
+    cost = config_->weight_normal_ttc *
+           std::exp((1 - left_safe_distance / std::fmax(thw, kZeroEpsilon)) *
+                    config_->safe_cost_gain);
   } else if (left_safe_distance > -vehicle_length) {
-    cost = config_->weight_front_ttc * 2.0 *
-           std::exp(1 - left_safe_distance / std::fmax(vehicle_length, kZeroEpsilon));
+    cost = config_->weight_overlap_ttc *
+           std::exp((1 - left_safe_distance /
+                             std::fmax(vehicle_length, kZeroEpsilon)) *
+                    config_->safe_cost_gain);
   } else if (left_safe_distance > -2 * vehicle_length) {
-    cost = config_->weight_front_ttc * 2.0 *
-           std::exp(1 - (-vehicle_length - left_safe_distance) /
-                        std::fmax(vehicle_length, kZeroEpsilon));
+    cost = config_->weight_overlap_ttc *
+           std::exp((1 - (-vehicle_length - left_safe_distance) /
+                             std::fmax(vehicle_length, kZeroEpsilon)) *
+                    config_->safe_cost_gain);
   } else {
-    cost = config_->weight_front_ttc *
-           std::exp(1 - (-2 * vehicle_length - left_safe_distance) /
-                        std::fmax(thw, kZeroEpsilon));
+    cost = config_->weight_normal_ttc *
+           std::exp((1 - (-2 * vehicle_length - left_safe_distance) /
+                             std::fmax(thw, kZeroEpsilon)) *
+                    config_->safe_cost_gain);
   }
-
   return cost;
 }
 }  // namespace planning

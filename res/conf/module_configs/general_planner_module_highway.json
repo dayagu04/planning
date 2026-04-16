@@ -2099,12 +2099,12 @@
     "weight_vel": 0.2,
     "weight_accel": 0.2,
     "weight_jerk": 0.2,
-    "weight_front_ttc": 1.0,
-    "weight_back_ttc": 1.0,
+    "weight_normal_ttc": 2.0,
+    "weight_overlap_ttc": 4.0,
     "weight_lead_safe_distance": 1.0,
     "safe_collision_decel": 1.0,
     "gap_rear_buffer_base": 2.0,
-    "gap_rear_buffer_decay_factor": 10.0,
+    "gap_rear_buffer_decay_factor": 20.0,
     "gap_rear_buffer_extra_coef": 0.7,
     "gap_front_follow_decel": 2.0,
     "gap_front_thw_coef": 0.3,
@@ -2114,7 +2114,12 @@
     "leading_thw_coef": 0.5,
     "leading_min_safe_distance": 3.0,
     "lateral_offset_scale_factor": 10.0,
-    "default_collision_distance": 100.0
+    "default_collision_distance": 100.0,
+    "safe_cost_gain": 2.0,
+    "rear_vehicle_min_distance_map": {
+      "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
+      "min_distance_table":   [0.2, 1.5,  3.0,  4.0,  6.0,  8.5,   12.0]
+    }
   },
   "dp_path_decider": {
     "coeff_l_cost": 10.0,
