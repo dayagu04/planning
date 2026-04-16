@@ -1052,7 +1052,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   set_is_exist_intersection_split( ego_lane_track_manager_.is_exist_intersection_split());
   set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
   set_is_exist_split_on_expressway(ego_lane_track_manager_.is_exist_split_on_expressway());
-
+  set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
   EraseOverlappingLanesId(relative_id_lanes_);// 删除 lane reset split
 
   for (const auto& relative_id_lane : relative_id_lanes_) {
@@ -1066,9 +1066,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
   ego_lane_track_manager_.UpdateLaneVirtualId(
       relative_id_lanes_, virtual_id_mapped_lane_, &last_fix_lane_virtual_id_);
-
-  // 对下游输出是否处于主路下匝道、匝道选分叉场景
-  set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
   ILOG_DEBUG << "is_exist_ramp_on_road:" << is_exist_ramp_on_road_;
   JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
@@ -1974,7 +1971,7 @@ void VirtualLaneManager::EraseOverlappingLanesId(
       }
       if (di == 0 || dj == 0) {
           set_is_exist_intersection_split(false);
-          set_is_exist_split_on_expressway(false);
+          set_is_exist_ramp_on_road(false);
           set_is_exist_split_on_ramp(false);
       }
     }
