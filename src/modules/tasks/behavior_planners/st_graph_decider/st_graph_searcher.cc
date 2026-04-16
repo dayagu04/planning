@@ -1,5 +1,7 @@
 #include "st_graph_searcher.h"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -193,22 +195,17 @@ void UpdateHeuristicTargetSInLaneChange(framework::Session* session,
 
 bool HasCollisionRisk(const StSearchNode& current_node,
                       const StSearchNode& succ_node) {
-  // Check if share same current_decision_table.
-  if (current_node.current_decision_table().size() !=
-      succ_node.current_decision_table().size()) {
+  const auto& current_table = current_node.current_decision_table();
+  const auto& succ_table = succ_node.current_decision_table();
+  if (current_table.size() != succ_table.size()) {
     return true;
   }
-  std::vector<int64_t> current_keys;
-  std::vector<int64_t> succ_keys;
-  for (const auto& elem : current_node.current_decision_table()) {
-    current_keys.push_back(elem.first);
+  for (const auto& [key, _] : current_table) {
+    if (succ_table.find(key) == succ_table.end()) {
+      return true;
+    }
   }
-  std::sort(current_keys.begin(), current_keys.end());
-  for (const auto& elem : succ_node.current_decision_table()) {
-    succ_keys.push_back(elem.first);
-  }
-  std::sort(succ_keys.begin(), succ_keys.end());
-  return current_keys != succ_keys;
+  return false;
 }
 
 bool CheckCollisionAfterUpsampling(
@@ -374,6 +371,7 @@ bool StGraphSearcher::SearchStPath(
 
   // record time
   const double start_time = IflyTime::Now_ms();
+  const double max_search_time_ms = search_config_.max_search_time * 1e3;
   int count = 0;
   auto current_node = start_node;
   auto best_node = current_node;
@@ -389,8 +387,6 @@ bool StGraphSearcher::SearchStPath(
   while (!open_set.IsEmpty()) {
     const double current_time = IflyTime::Now_ms();
     const double time_used = current_time - start_time;
-    const double max_search_time_ms = search_config_.max_search_time * 1e3;
-    // max search time < 0.1s
     if (time_used > max_search_time_ms) {
       ILOG_DEBUG << "time out, time used:" << time_used;
       break;
@@ -430,24 +426,22 @@ bool StGraphSearcher::SearchStPath(
       const double child_total_g_cost =
           current_node.g_cost() + child_node.cost();
 
+      expanded_nodes_s_vec.emplace_back(child_node.s());
+      expanded_nodes_t_vec.emplace_back(child_node.t());
+
       if (open_set.IsInHeap(child_node.id())) {
         auto& old_child = nodes.at(child_node.id());
-        const double old_child_total_g_cost = old_child.g_cost();
-        if (child_total_g_cost < old_child_total_g_cost) {
+        if (child_total_g_cost < old_child.g_cost()) {
+          child_node.set_g_cost(child_total_g_cost);
+          child_node.set_parent_id(current_node.id());
           old_child = child_node;
-          old_child.set_g_cost(child_total_g_cost);
-          old_child.set_parent_id(current_node.id());
           open_set.Update(old_child.id(), old_child.TotalCost());
         }
-        expanded_nodes_s_vec.emplace_back(child_node.s());
-        expanded_nodes_t_vec.emplace_back(child_node.t());
       } else {
         child_node.set_g_cost(child_total_g_cost);
         child_node.set_parent_id(current_node.id());
-        open_set.Push(child_node.id(), child_node.TotalCost());
         nodes[child_node.id()] = child_node;
-        expanded_nodes_s_vec.emplace_back(child_node.s());
-        expanded_nodes_t_vec.emplace_back(child_node.t());
+        open_set.Push(child_node.id(), child_node.TotalCost());
       }
     }
   }
@@ -598,16 +592,13 @@ StSearchNode StGraphSearcher::GenerateStartNode(
                           input_info.init_vel(), s_step, t_step, vel_step);
   start_node.set_accel(planning_init_point.acc());
   start_node.set_jerk(planning_init_point.jerk());
+
   // set decision table according to ST graph input
   speed::STPoint upper_bound;
   speed::STPoint lower_bound;
-  if (!session_->planning_context().st_graph_helper()->GetBorderByStPoint(
-          input_info.init_s(), input_info.init_t(), &lower_bound,
-          &upper_bound)) {
-    // collision
-    // std::cout << "start node is collision, failed" << std::endl;
-    start_node.set_is_valid(false);
-  }
+  const bool is_collision_free =
+      session_->planning_context().st_graph_helper()->GetBorderByStPoint(
+          input_info.init_s(), input_info.init_t(), &lower_bound, &upper_bound);
 
   std::unordered_map<int64_t, speed::STBoundary::DecisionType>
       start_decision_table;
@@ -623,9 +614,8 @@ StSearchNode StGraphSearcher::GenerateStartNode(
   start_node.set_upper_bound(upper_bound);
   start_node.set_lower_bound(lower_bound);
   start_node.set_decision_table(start_decision_table);
-  // Same dicision table for start node.
   start_node.set_current_decision_table(start_decision_table);
-  start_node.set_is_valid(true);
+  start_node.set_is_valid(is_collision_free);
   return start_node;
 }
 
@@ -653,6 +643,7 @@ void StGraphSearcher::GenerateSuccessorNodes(
   const double min_lower_collision_dist = config_.min_lower_collision_dist;
   const double max_lower_collision_dist = config_.max_lower_collision_dist;
   const double speed_scale = config_.lower_collision_dist_speed_scale;
+  const auto& st_graph_helper = session_->planning_context().st_graph_helper();
   successor_nodes_.reserve(input_info.accel_step().size());
   for (size_t i = 0; i < input_info.accel_step().size(); ++i) {
     const double accel_succ = input_info.accel_step().at(i);
@@ -675,17 +666,14 @@ void StGraphSearcher::GenerateSuccessorNodes(
         vel_succ < 0.0) {
       continue;
     }
-    // ignore nodes which go back
-    const double s_diff = s_succ - current_node.s();
-    if (s_diff < -kEpsilon) {
+
+    if (s_succ < current_node.s()) {
       continue;
     }
 
     // check collision with ST curve
     speed::STPoint upper_bound;
     speed::STPoint lower_bound;
-    const auto& st_graph_helper =
-        session_->planning_context().st_graph_helper();
     bool is_collision_free_on_st_graph = st_graph_helper->GetBorderByStPoint(
         s_succ, t_succ, &lower_bound, &upper_bound);
     if (!is_collision_free_on_st_graph) {
@@ -717,16 +705,14 @@ void StGraphSearcher::GenerateSuccessorNodes(
       succ_decision_table = parent_decision_table;
     } else {
       for (const auto& entry : parent_decision_table) {
-        auto boundary_id = entry.first;
-        auto parent_decision = entry.second;
+        const auto boundary_id = entry.first;
+        const auto parent_decision = entry.second;
         auto succ_iter = succ_decision_table.find(boundary_id);
         if (succ_iter == succ_decision_table.end()) {
-          // copy parent decision
-          succ_decision_table[boundary_id] = parent_decision;
           continue;
         }
-        is_decision_conflict = (parent_decision != succ_iter->second);
-        if (is_decision_conflict) {
+        if (parent_decision != succ_iter->second) {
+          is_decision_conflict = true;
           break;
         }
       }
@@ -739,6 +725,14 @@ void StGraphSearcher::GenerateSuccessorNodes(
               static_cast<int32_t>(entry.first >> 8) == yield_agent_id) {
             is_decision_conflict = true;
             break;
+          }
+        }
+      }
+
+      if (!is_decision_conflict) {
+        for (const auto& entry : parent_decision_table) {
+          if (succ_decision_table.find(entry.first) == succ_decision_table.end()) {
+            succ_decision_table[entry.first] = entry.second;
           }
         }
       }
@@ -757,17 +751,10 @@ void StGraphSearcher::GenerateSuccessorNodes(
     succ_node.set_parent_id(current_node.id());
     succ_node.set_upper_bound(upper_bound);
     succ_node.set_lower_bound(lower_bound);
-    // succ_decision_table: 更新了父节点中的decision
-    // succ_current_decision_table: 当前node的decision
     succ_node.set_decision_table(succ_decision_table);
     succ_node.set_current_decision_table(succ_current_decision_table);
     succ_node.set_accel(accel_succ);
     succ_node.set_jerk(jerk_succ);
-
-    // Check if there is collisoin between current_node and succ_node.
-    // Check if there is risk: compare current_node and succ_node;
-    // Sample more points on line between current_node and succ_node, check
-    // collison on st_graph, if has collisoin, drop succ_node.
     if (HasCollisionRisk(current_node, succ_node) &&
         CheckCollisionAfterUpsampling(
             st_graph_helper, target_lane_agent_boundaries, lower_collision_dist,
@@ -969,14 +956,6 @@ double StGraphSearcher::ComputeVirtualYieldCost(
 
   const double distance_to_front = cur_limit_s_upper - node.s();
   return 1.0 - distance_to_front / (cur_limit_s_upper - cur_limit_s_lower);
-
-  if (distance_to_front < upper_truncation_distance) {
-    virtual_yield_cost = 1.0 - distance_to_front / upper_truncation_distance;
-  } else {
-    virtual_yield_cost = 0.0;
-  }
-
-  return virtual_yield_cost;
 }
 
 double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
@@ -985,8 +964,6 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
   if (lower_bound.boundary_id() == speed::kNoAgentId) {
     return 0.0;
   }
-  const auto vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double lower_truncation_time_buffer =
       config_.lower_truncation_time_buffer;
   const double min_lower_distance_buffer = config_.min_lower_distance_buffer;
@@ -1007,7 +984,7 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
        cur_lane_change_state !=
            StateMachineLaneChangeStatus::kLaneChangeExecution) &&
       distance_to_rear <
-          vehicle_param.length +
+          vehicle_param_.length +
               config_.distance_ego_rear_edge_to_lower_bound_when_overtake) {
     return config_.cost_ego_overtake_has_collision_with_lower_bound;
   }
@@ -1033,40 +1010,52 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
 
 double StGraphSearcher::ComputeVelocityCost(const StSearchInput& input_info,
                                             const StSearchNode& node) const {
-  const double vel_diff = std::fabs(node.vel() - input_info.cruise_speed());
-  // valid node's vel is always less than speed_limit
-  return vel_diff * input_info.speed_limit_inverse();
+  const double speed = node.vel();
+  const double speed_limit = input_info.speed_limit();
+  const double cruise_speed = input_info.cruise_speed();
+
+  double cost = 0.0;
+  const double det_speed = (speed - speed_limit) / std::max(speed_limit, kEpsilon);
+  if (det_speed > 0.0) {
+    cost += config_.exceed_speed_penalty * det_speed * det_speed;
+  }
+  else if (det_speed < 0.0) {
+    cost += config_.low_speed_penalty * (-det_speed);
+  }
+
+  const double diff_speed =
+      (speed - cruise_speed) / std::max(cruise_speed, kEpsilon);
+  cost += config_.reference_speed_penalty * std::fabs(diff_speed);
+
+  return cost;
 }
 
 double StGraphSearcher::ComputeAccelerationCost(
     const StSearchInput& input_info, const StSearchNode& current_node,
     const StSearchNode& node) const {
-  double desired_accel = 0.0;
-  const auto& upper_bound = node.upper_bound();
-  const bool need_to_yield_rear_bound =
-      upper_bound.boundary_id() != speed::kNoAgentId;
+  const double accel = node.accel();
+  const double max_acc = input_info.max_accel_limit();
+  const double min_acc = input_info.min_accel_limit();
 
-  if (need_to_yield_rear_bound) {
-    desired_accel = (upper_bound.velocity() - current_node.vel()) /
-                    (input_info.planning_time_horizon() - current_node.t());
+  const double accel_sq = accel * accel;
+  double cost = 0.0;
+
+  constexpr double accel_penalty = 0.5;
+  constexpr double decel_penalty = 1.0;
+
+  if (accel > 0.0) {
+    cost = accel_penalty * accel_sq;
   } else {
-    double vel_tolerance = config_.velocity_tolerance;
-    double propoper_accel_value = config_.proper_accel_value;
-    const double node_vel = node.vel();
-    if (node_vel > input_info.cruise_speed() + vel_tolerance) {
-      desired_accel = -propoper_accel_value;
-    } else if (node_vel < input_info.cruise_speed() - vel_tolerance) {
-      desired_accel = propoper_accel_value;
-    }
+    cost = decel_penalty * accel_sq;
   }
 
-  double acc_diff = std::fabs(node.accel() - desired_accel);
-  double acc_normalize_value =
-      std::max(std::fabs(input_info.min_accel_limit() - desired_accel),
-               std::fabs(input_info.max_accel_limit() - desired_accel));
+  cost += accel_sq * decel_penalty * decel_penalty /
+              (1.0 + std::exp(1.0 * (accel - min_acc))) +
+          accel_sq * accel_penalty * accel_penalty /
+              (1.0 + std::exp(-1.0 * (accel - max_acc)));
 
-  const double cost_accel = acc_diff / acc_normalize_value;
-  return cost_accel;
+  const double acc_range = max_acc - min_acc;
+  return cost / acc_range;
 }
 
 double StGraphSearcher::ComputeAccelerationSignCost(
@@ -1082,13 +1071,22 @@ double StGraphSearcher::ComputeAccelerationSignCost(
 
 double StGraphSearcher::ComputeJerkCost(const StSearchInput& input_info,
                                         const StSearchNode& node) const {
-  const double desired_jerk = 0.0;
-  const double jerk_normalize_value =
-      std::max(std::fabs(input_info.min_jerk_limit() - desired_jerk),
-               std::fabs(input_info.max_jerk_limit() - desired_jerk));
-  double jerk_diff = std::fabs(node.jerk() - desired_jerk);
-  double cost_jerk = jerk_diff / jerk_normalize_value;
-  return cost_jerk;
+  const double jerk = node.jerk();
+  const double jerk_sq = jerk * jerk;
+
+  constexpr double positive_jerk_coeff = 1.5;
+  constexpr double negative_jerk_coeff = 1.0;
+
+  double cost = 0.0;
+  if (jerk > 0.0) {
+    cost = positive_jerk_coeff * jerk_sq;
+  } else {
+    cost = negative_jerk_coeff * jerk_sq;
+  }
+
+  const double jerk_range =
+      input_info.max_jerk_limit() - input_info.min_jerk_limit();
+  return cost / jerk_range;
 }
 
 double StGraphSearcher::ComputeLengthCost(const StSearchInput& input_info,
@@ -1124,55 +1122,36 @@ double StGraphSearcher::ComputeLaneChangeHeuristicCost(
     return 0.0;
   }
 
+  const double node_t = node.t();
   double target_s = 0.0;
-  bool found_target = false;
 
-  for (size_t i = 0; i < ego_trajs_future.size(); ++i) {
-    const auto& current_point = ego_trajs_future[i];
+  if (node_t <= ego_trajs_future.front().t) {
+    target_s = ego_trajs_future.front().s;
+  } else if (node_t >= ego_trajs_future.back().t) {
+    target_s = ego_trajs_future.back().s;
+  } else {
+    auto it = std::lower_bound(
+        ego_trajs_future.begin(), ego_trajs_future.end(), node_t,
+        [](const auto& pt, double t) { return pt.t < t; });
 
-    if (std::fabs(current_point.t - node.t()) < 1e-6) {
-      target_s = current_point.s;
-      found_target = true;
-      break;
-    }
-
-    // If node.t is between current and next point, do interpolation
-    if (i < ego_trajs_future.size() - 1) {
-      const auto& next_point = ego_trajs_future[i + 1];
-      if (current_point.t <= node.t() && node.t() <= next_point.t) {
-        // Linear interpolation: s = s1 + (s2-s1) * (t-t1) / (t2-t1)
-        double t1 = current_point.t;
-        double t2 = next_point.t;
-        double s1 = current_point.s;
-        double s2 = next_point.s;
-
-        if (std::fabs(t2 - t1) > 1e-6) {
-          target_s = s1 + (s2 - s1) * (node.t() - t1) / (t2 - t1);
-          found_target = true;
-          break;
-        }
+    if (it == ego_trajs_future.end()) {
+      target_s = ego_trajs_future.back().s;
+    } else if (std::fabs(it->t - node_t) < 1e-6 ||
+               it == ego_trajs_future.begin()) {
+      target_s = it->s;
+    } else {
+      const auto& prev = *std::prev(it);
+      const double dt = it->t - prev.t;
+      if (dt > 1e-6) {
+        target_s = prev.s + (it->s - prev.s) * (node_t - prev.t) / dt;
+      } else {
+        target_s = it->s;
       }
     }
   }
 
-  if (!found_target) {
-    if (node.t() < ego_trajs_future.front().t) {
-      target_s = ego_trajs_future.front().s;
-      found_target = true;
-    } else if (node.t() > ego_trajs_future.back().t) {
-      target_s = ego_trajs_future.back().s;
-      found_target = true;
-    }
-  }
-
-  if (!found_target) {
-    return 0.0;
-  }
-
-  double s_diff = std::fabs(node.s() - target_s);
-  double lane_change_cost = s_diff / std::fmax(target_s, 1.0);
-
-  return lane_change_cost;
+  const double s_diff = std::fabs(node.s() - target_s);
+  return s_diff / std::fmax(target_s, 1.0);
 }
 
 double StGraphSearcher::ComputeHeuristicCost(const StSearchInput& input_info,
@@ -1187,15 +1166,9 @@ double StGraphSearcher::ComputeHeuristicCost(const StSearchInput& input_info,
 
   double cost_h = time_cost * weight_t + s_cost * weight_s;
 
-  // Add lane change specific heuristic cost based on ego_trajs_future
   double lane_change_cost = ComputeLaneChangeHeuristicCost(node);
   const double weight_lane_change = config_.weight_hcost_lane_change;
   cost_h += lane_change_cost * weight_lane_change;
-
-  // std::cout << "\t\t\t\th_time_cost:     " << time_cost << std::endl;
-  // std::cout << "\t\t\t\th_s_cost:        " << s_cost << std::endl;
-  // std::cout << "\t\t\t\th_lane_change_cost: " << lane_change_cost <<
-  // std::endl; std::cout << "\t\t\t\tcost_h:          " << cost_h << std::endl;
 
   return cost_h;
 }

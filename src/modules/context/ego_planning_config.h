@@ -5459,20 +5459,20 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
   double lower_collision_dist = 5.0;
-  double max_accel_limit = 5.0;
-  double min_accel_limit = -6.0;
-  double max_jerk_limit = 10.0;
-  double min_jerk_limit = -10.0;
+  double max_accel_limit = 2.0;
+  double min_accel_limit = -5.0;
+  double max_jerk_limit = 6.0;
+  double min_jerk_limit = -5.0;
   double accel_sample_num = 20;
   double s_step = 0.25;
   double t_step = 0.25;
   double vel_step = 0.4;
 
   // radical search style info
-  double max_accel_limit_radical_style = 5.0;
-  double min_accel_limit_radical_style = -6.0;
-  double max_jerk_limit_radical_style = 10.0;
-  double min_jerk_limit_radical_style = -10.0;
+  double max_accel_limit_radical_style = 2.0;
+  double min_accel_limit_radical_style = -5.0;
+  double max_jerk_limit_radical_style = 6.0;
+  double min_jerk_limit_radical_style = -5.0;
   double accel_sample_num_radical_style = 20;
   double s_step_radical_style = 0.25;
   double t_step_radical_style = 0.25;
@@ -5527,6 +5527,10 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
   double distance_ego_rear_edge_to_lower_bound_when_overtake = 5.0;
   double cost_ego_overtake_has_collision_with_lower_bound = 1.0;
   double cutin_time_st_graph_threshold = 5.5;
+
+  double exceed_speed_penalty = 10.0;
+  double low_speed_penalty = 1.0;
+  double reference_speed_penalty = 5.0;
 };
 
 struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
