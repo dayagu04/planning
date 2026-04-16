@@ -5275,8 +5275,12 @@ void ParallelParkInScenario::CalStaticBufferInDiffSteps(
   ILOG_INFO << "is_end_pose_in_slot = " << is_end_pose_in_slot;
   ILOG_INFO << "is_ego_in_slot = " << is_ego_in_slot;
 
+  bool is_in_slot =
+      enable_pa_park_
+          ? (is_ego_in_slot)
+          : (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot);
   // totally in slot
-  if (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot) {
+  if (is_in_slot) {
     ILOG_INFO << " totally in slot!";
     safe_uss_remain_dist =
         enable_pa_park_
