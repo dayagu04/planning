@@ -468,25 +468,9 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
   if (is_in_lane_change_condition) {
     const auto& dynamic_world =
         session_->environmental_model().get_dynamic_world();
-    const auto lc_request_direction = lane_change_decider_output.lc_request;
 
-    int64_t target_lane_front_node_id = -1;
-
-    if (lc_request_direction == LEFT_CHANGE) {
-      if (lane_change_state == kLaneChangeExecution ||
-          lane_change_state == kLaneChangeComplete) {
-        target_lane_front_node_id = dynamic_world->ego_front_node_id();
-      } else {
-        target_lane_front_node_id = dynamic_world->ego_left_front_node_id();
-      }
-    } else if (lc_request_direction == RIGHT_CHANGE) {
-      if (lane_change_state == kLaneChangeExecution ||
-          lane_change_state == kLaneChangeComplete) {
-        target_lane_front_node_id = dynamic_world->ego_front_node_id();
-      } else {
-        target_lane_front_node_id = dynamic_world->ego_right_front_node_id();
-      }
-    }
+    int64_t target_lane_front_node_id =
+        lane_change_decider_output.lc_gap_info.front_node_id;
 
     if (target_lane_front_node_id != -1) {
       auto* target_lane_front_node =
