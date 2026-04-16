@@ -1941,8 +1941,8 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const auto has_obstacle_at_pose = [&](const geometry_lib::PathPoint& pose) {
     return apa_world_ptr_->GetColDetInterfacePtr()
         ->GetGJKColDetPtr()
-        ->Update(std::vector<geometry_lib::PathPoint>{pose}, 0.0, 0.0,
-                 gjk_col_det_request)
+        ->Update(std::vector<geometry_lib::PathPoint>{pose},
+                 ColDetBuffer(0.0, 0.0), gjk_col_det_request)
         .col_flag;
   };
 
@@ -2176,8 +2176,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
     const ColResult col_res =
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
-            extend_pt_vec, body_lat_buffer, lon_buffer, GJKColDetRequest(false),
-            true, mirror_lat_buffer);
+            extend_pt_vec,
+            ColDetBuffer(lon_buffer, body_lat_buffer, mirror_lat_buffer),
+            GJKColDetRequest(false));
 
     if (col_res.remain_dist < 0.02) {
       ILOG_INFO << "consider obs extend_length is small, not allow extend "
@@ -2401,29 +2402,34 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec = {
-      RealTimeBrakeInfo(RealTimeBrakeType::STOP, stop_body_lat_inflation,
-                        stop_mirror_lat_inflation, stop_lon_dist, lon_buffer,
-                        speed_buffer.dynamic_stop_body_lat_buffer,
-                        speed_buffer.dynamic_stop_mirror_lat_buffer,
-                        speed_buffer.dynamic_lon_buffer),
       RealTimeBrakeInfo(
-          RealTimeBrakeType::HEAVY_BRAKE, heavy_brake_body_lat_inflation,
-          heavy_brake_mirror_lat_inflation, heavy_brake_lon_dist, lon_buffer,
-          speed_buffer.dynamic_low_speed_body_lat_buffer,
-          speed_buffer.dynamic_low_speed_mirror_lat_buffer,
-          speed_buffer.dynamic_lon_buffer),
+          RealTimeBrakeType::STOP, stop_lon_dist,
+          ColDetBuffer(lon_buffer, stop_body_lat_inflation,
+                       stop_mirror_lat_inflation),
+          ColDetBuffer(speed_buffer.dynamic_lon_buffer,
+                       speed_buffer.dynamic_stop_body_lat_buffer,
+                       speed_buffer.dynamic_stop_mirror_lat_buffer)),
       RealTimeBrakeInfo(
-          RealTimeBrakeType::MODERATE_BRAKE, moderate_brake_body_lat_inflation,
-          moderate_brake_mirror_lat_inflation, moderate_brake_lon_dist,
-          lon_buffer, speed_buffer.dynamic_mid_speed_body_lat_buffer,
-          speed_buffer.dynamic_mid_speed_mirror_lat_buffer,
-          speed_buffer.dynamic_lon_buffer),
+          RealTimeBrakeType::HEAVY_BRAKE, heavy_brake_lon_dist,
+          ColDetBuffer(lon_buffer, heavy_brake_body_lat_inflation,
+                       heavy_brake_mirror_lat_inflation),
+          ColDetBuffer(speed_buffer.dynamic_lon_buffer,
+                       speed_buffer.dynamic_low_speed_body_lat_buffer,
+                       speed_buffer.dynamic_low_speed_mirror_lat_buffer)),
       RealTimeBrakeInfo(
-          RealTimeBrakeType::SLIGHT_BRAKE, slight_brake_body_lat_inflation,
-          slight_brake_mirror_lat_inflation, slight_brake_lon_dist, lon_buffer,
-          speed_buffer.dynamic_high_speed_body_lat_buffer,
-          speed_buffer.dynamic_high_speed_mirror_lat_buffer,
-          speed_buffer.dynamic_lon_buffer)};
+          RealTimeBrakeType::MODERATE_BRAKE, moderate_brake_lon_dist,
+          ColDetBuffer(lon_buffer, moderate_brake_body_lat_inflation,
+                       moderate_brake_mirror_lat_inflation),
+          ColDetBuffer(speed_buffer.dynamic_lon_buffer,
+                       speed_buffer.dynamic_mid_speed_body_lat_buffer,
+                       speed_buffer.dynamic_mid_speed_mirror_lat_buffer)),
+      RealTimeBrakeInfo(
+          RealTimeBrakeType::SLIGHT_BRAKE, slight_brake_lon_dist,
+          ColDetBuffer(lon_buffer, slight_brake_body_lat_inflation,
+                       slight_brake_mirror_lat_inflation),
+          ColDetBuffer(speed_buffer.dynamic_lon_buffer,
+                       speed_buffer.dynamic_high_speed_body_lat_buffer,
+                       speed_buffer.dynamic_high_speed_mirror_lat_buffer))};
 
   bool special_stop_flag = increase_lat_err_flag;
   double special_stop_body_lat_buffer =
@@ -2465,32 +2471,31 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   if (special_stop_flag) {
     real_time_brake_info_vec[0] = RealTimeBrakeInfo(
-        RealTimeBrakeType::STOP, special_stop_body_lat_buffer,
-        special_stop_mirror_lat_buffer, special_stop_lon_dist,
-        special_stop_lon_buffer, speed_buffer.dynamic_stop_body_lat_buffer,
-        speed_buffer.dynamic_stop_mirror_lat_buffer,
-        speed_buffer.dynamic_lon_buffer);
+        RealTimeBrakeType::STOP, special_stop_lon_dist,
+        ColDetBuffer(special_stop_lon_buffer, special_stop_body_lat_buffer,
+                     special_stop_mirror_lat_buffer),
+        ColDetBuffer(speed_buffer.dynamic_lon_buffer,
+                     speed_buffer.dynamic_stop_body_lat_buffer,
+                     speed_buffer.dynamic_stop_mirror_lat_buffer));
   }
 
   double safe_remain_dist = std::numeric_limits<double>::infinity();
   for (const auto& real_time_brake_info : real_time_brake_info_vec) {
     double remain_dist = CalRemainDistFromObs(
-        real_time_brake_info.lon_buffer, real_time_brake_info.body_lat_buffer,
-        real_time_brake_info.mirror_lat_buffer,
-        real_time_brake_info.dynamic_lon_buffer,
-        real_time_brake_info.dynamic_body_lat_buffer,
-        real_time_brake_info.dynamic_mirror_lat_buffer, false,
+        real_time_brake_info.static_col_det_buffer,
+        real_time_brake_info.dynamic_col_det_buffer, false,
         param.use_obs_height_method);
     remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
 
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer",
-                   real_time_brake_info_vec[0].body_lat_buffer)
+  JSON_DEBUG_VALUE(
+      "car_real_time_col_lat_buffer",
+      real_time_brake_info_vec[0].static_col_det_buffer.body_lat_buffer)
 
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
-            << "  lon_buffer = " << lon_buffer
-            << "  lat_buffer = " << real_time_brake_info_vec[0].body_lat_buffer
+            << "  lon_buffer = " << lon_buffer << "  lat_buffer = "
+            << real_time_brake_info_vec[0].static_col_det_buffer.body_lat_buffer
             << "  increase_lat_err_flag = " << increase_lat_err_flag;
 
   ILOG_INFO << "real time brake time cost = "
@@ -2977,7 +2982,8 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal(
         true, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
         ApaObsMovementType::ALL, param.use_obs_height_method, true);
     if (gjk_col_det_ptr
-            ->Update(s_turn_path, kSTurnColDetStep, 0.0, gjk_col_det_req)
+            ->Update(s_turn_path, ColDetBuffer(0.0, kSTurnColDetStep),
+                     gjk_col_det_req)
             .col_flag) {
       ILOG_INFO << "s turn path is not safe enough";
       return false;
@@ -3239,7 +3245,8 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
 
   if (apa_world_ptr_->GetColDetInterfacePtr()
           ->GetGJKColDetPtr()
-          ->Update(optimal_path_vec, 0.08, 0.0, GJKColDetRequest())
+          ->Update(optimal_path_vec, ColDetBuffer(0.0, 0.08),
+                   GJKColDetRequest())
           .col_flag) {
     ILOG_INFO << "the optimal path is col";
     return false;
@@ -3643,10 +3650,11 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       kMinConsumeDist);
 
   if (CalRemainDistFromObs(
-          folding_mirror_consume_dist, base_stop_mirror_lat_buffer,
-          base_stop_mirror_lat_buffer, dynamic_lon_buffer,
-          dynamic_stop_body_lat_buffer, dynamic_stop_body_lat_buffer, true,
-          param.use_obs_height_method) < 0.0) {
+          ColDetBuffer(folding_mirror_consume_dist, base_stop_mirror_lat_buffer,
+                       base_stop_mirror_lat_buffer),
+          ColDetBuffer(dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+                       dynamic_stop_body_lat_buffer),
+          true, param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, mirror is not safe when folding mirror, "
                  "should not fold mirror";
     return;
@@ -3664,11 +3672,12 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
                 predict_traj_s - kPredictTrajReserve, remain_x_to_target}),
       kMinConsumeDist);
 
-  if (CalRemainDistFromObs(folded_mirror_consume_dist, folded_mirror_lat_buffer,
-                           folded_mirror_lat_buffer, dynamic_lon_buffer,
-                           dynamic_stop_body_lat_buffer,
-                           dynamic_stop_body_lat_buffer, true,
-                           param.use_obs_height_method) < 0.0) {
+  if (CalRemainDistFromObs(
+          ColDetBuffer(folded_mirror_consume_dist, folded_mirror_lat_buffer,
+                       folded_mirror_lat_buffer),
+          ColDetBuffer(dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+                       dynamic_stop_body_lat_buffer),
+          true, param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
                  "should not fold mirror";
     return;
@@ -3689,21 +3698,23 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       kMinConsumeDist;
 
   if (CalRemainDistFromObs(
-          stop_body_lon_buffer, stop_body_lat_buffer, folded_mirror_lat_buffer,
-          dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
-          dynamic_stop_body_lat_buffer, false,
-          param.use_obs_height_method) < stop_body_safe_dist_threshold) {
+          ColDetBuffer(stop_body_lon_buffer, stop_body_lat_buffer,
+                       folded_mirror_lat_buffer),
+          ColDetBuffer(dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+                       dynamic_stop_body_lat_buffer),
+          false, param.use_obs_height_method) < stop_body_safe_dist_threshold) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
                  "should not fold mirror";
     return;
   }
 
   const double min_safe_obs2mirror_dist = smart_fold_mirror_params.lat_buffer;
-  if (CalRemainDistFromObs(folded_mirror_consume_dist, min_safe_obs2mirror_dist,
-                           min_safe_obs2mirror_dist, dynamic_lon_buffer,
-                           dynamic_stop_body_lat_buffer,
-                           dynamic_stop_body_lat_buffer, true,
-                           param.use_obs_height_method) < 0.0) {
+  if (CalRemainDistFromObs(
+          ColDetBuffer(folded_mirror_consume_dist, min_safe_obs2mirror_dist,
+                       min_safe_obs2mirror_dist),
+          ColDetBuffer(dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+                       dynamic_stop_body_lat_buffer),
+          true, param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, need send fold mirror msg";
     frame_.mirror_command = MirrorCommand::FOLD;
     return;

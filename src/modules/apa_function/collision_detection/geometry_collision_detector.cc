@@ -9,9 +9,7 @@ namespace apa_planner {
 void GeometryCollisionDetector::Reset() {}
 
 const ColResult GeometryCollisionDetector::Update(
-    const geometry_lib::PathSegment &path_seg, const double body_lat_buffer,
-    const double lon_buffer, const bool special_process_mirror,
-    const double mirror_lat_buffer,
+    const geometry_lib::PathSegment &path_seg, const ColDetBuffer& col_det_buffer,
     const UseObsHeightMethod use_obs_height_method) {
   col_res_.Reset();
   if (obs_manager_ptr_ == nullptr || obs_manager_ptr_->GetObstacles().empty()) {
@@ -23,8 +21,7 @@ const ColResult GeometryCollisionDetector::Update(
 
   use_obs_height_method_ = use_obs_height_method;
 
-  UpdateSafeBuffer(body_lat_buffer, lon_buffer, special_process_mirror,
-                   mirror_lat_buffer);
+  UpdateSafeBuffer(col_det_buffer);
 
   CalPathSegBound(path_seg);
 
@@ -157,7 +154,7 @@ void GeometryCollisionDetector::Update(
 
   col_res_.remain_obs_dist = min_obs_move_dist;
 
-  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - lon_buffer_,
+  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - col_det_buffer_.lon_buffer,
                                   col_res_.remain_car_dist);
 
   col_res_.col_flag = (col_res_.remain_dist < col_res_.remain_car_dist);
@@ -321,7 +318,7 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
   col_res_.remain_obs_dist =
       std::fabs(min_obs_rot_limit_angle) * arc_seg.circle_info.radius;
 
-  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - lon_buffer_,
+  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - col_det_buffer_.lon_buffer,
                                   col_res_.remain_car_dist);
 
   col_res_.col_flag = (col_res_.remain_dist < col_res_.remain_car_dist);

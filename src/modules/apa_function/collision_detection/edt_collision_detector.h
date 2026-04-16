@@ -87,10 +87,7 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   const double GetObsDistByIndex(const OGMIndex &id,
                                  const ApaObsHeightType &height_type);
 
-  void UpdateSafeBuffer(const float body_lat_buffer, const float lon_buffer,
-                        const float max_circle_buffer = 0.5,
-                        const bool special_process_mirror = false,
-                        const float mirror_lat_buffer = 0.08);
+  void UpdateSafeBuffer(const ColDetBuffer &col_det_buffer);
 
   void UpdateCarWithMirrorSafeBuffer();
   void UpdateCarWithOutMirrorSafeBuffer();
@@ -118,24 +115,16 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
                                  const float safe_dist = 0.5f);
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
-                         const double body_lat_buffer, const double lon_buffer,
-                         const bool need_cal_obs_dist = false,
-                         const double max_circle_buffer = 0.5,
-                         const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const ColDetBuffer &col_det_buffer,
+                         const bool need_cal_obs_dist = false);
 
   const ColResult Update(const std::vector<geometry_lib::PathPoint> &pt_vec,
-                         const double body_lat_buffer, const double lon_buffer,
-                         const bool need_cal_obs_dist = false,
-                         const double max_circle_buffer = 0.5,
-                         const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const ColDetBuffer &col_det_buffer,
+                         const bool need_cal_obs_dist = false);
 
   const ColResultF Update(const std::vector<common_math::PathPt<float>> &pts,
-                          const float lon_buffer, const float body_lat_buffer,
-                          const float mirror_lat_buffer,
-                          const bool need_cal_obs_dist = false,
-                          const float max_circle_buffer = 0.5);
+                          const ColDetBuffer &col_det_buffer,
+                          const bool need_cal_obs_dist = false);
 
   const geometry_lib::RectangleBound &GetOgmBound() const { return ogm_bound_; }
 
@@ -168,8 +157,6 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   CarFootPrintCircleList car_with_mirror_circles_list_buffer_;
   CarFootPrintCircleList car_without_mirror_circles_list_with_buffer_;
   CarFootPrintCircleList car_chassis_circles_list_with_buffer_;
-
-  float max_circle_buffer_ = 0.5f;
 };
 
 }  // namespace apa_planner

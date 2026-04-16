@@ -78,46 +78,46 @@ enum class RealTimeBrakeType : uint8_t {
   COUNT,
 };
 
+struct ColDetBuffer {
+  float lon_buffer = 0.3f;
+  float body_lat_buffer = 0.1f;
+  float mirror_lat_buffer = 0.08f;
+  float max_circle_buffer = 0.5f;
+
+  ColDetBuffer() = default;
+  ~ColDetBuffer() = default;
+  ColDetBuffer(const float _lon_buffer, const float _body_lat_buffer,
+               const float _mirror_lat_buffer)
+      : lon_buffer(_lon_buffer),
+        body_lat_buffer(_body_lat_buffer),
+        mirror_lat_buffer(_mirror_lat_buffer) {}
+  ColDetBuffer(const float _lon_buffer, const float _body_lat_buffer)
+      : lon_buffer(_lon_buffer),
+        body_lat_buffer(_body_lat_buffer),
+        mirror_lat_buffer(_body_lat_buffer) {}
+  ColDetBuffer(const float _lon_buffer, const float _body_lat_buffer,
+               const float _mirror_lat_buffer, const float _max_circle_buffer)
+      : lon_buffer(_lon_buffer),
+        body_lat_buffer(_body_lat_buffer),
+        mirror_lat_buffer(_mirror_lat_buffer),
+        max_circle_buffer(_max_circle_buffer) {}
+};
+
 struct RealTimeBrakeInfo {
   RealTimeBrakeType brake_type = RealTimeBrakeType::STOP;
-  double body_lat_buffer = 0.0;
-  double mirror_lat_buffer = 0.0;
   double min_lon_dist = 0.0;
-  double lon_buffer = 0.0;
-  double dynamic_body_lat_buffer = 0.0;
-  double dynamic_mirror_lat_buffer = 0.0;
-  double dynamic_lon_buffer = 0.0;
+  ColDetBuffer static_col_det_buffer;
+  ColDetBuffer dynamic_col_det_buffer;
 
   RealTimeBrakeInfo() = default;
   RealTimeBrakeInfo(const RealTimeBrakeType _brake_type,
-                    const double _body_lat_buffer,
-                    const double _mirror_lat_buffer, const double _min_lon_dist,
-                    const double _lon_buffer,
-                    const double _dynamic_body_lat_buffer,
-                    const double _dynamic_mirror_lat_buffer,
-                    const double _dynamic_lon_buffer)
+                    const double _min_lon_dist,
+                    const ColDetBuffer& _static_col_det_buffer,
+                    const ColDetBuffer& _dynamic_col_det_buffer)
       : brake_type(_brake_type),
-        body_lat_buffer(_body_lat_buffer),
-        mirror_lat_buffer(_mirror_lat_buffer),
         min_lon_dist(_min_lon_dist),
-        lon_buffer(_lon_buffer),
-        dynamic_body_lat_buffer(_dynamic_body_lat_buffer),
-        dynamic_mirror_lat_buffer(_dynamic_mirror_lat_buffer),
-        dynamic_lon_buffer(_dynamic_lon_buffer) {}
-  void Set(const RealTimeBrakeType _brake_type, const double _body_lat_buffer,
-           const double _mirror_lat_buffer, const double _min_lon_dist,
-           const double _lon_buffer, const double _dynamic_body_lat_buffer,
-           const double _dynamic_mirror_lat_buffer,
-           const double _dynamic_lon_buffer) {
-    this->brake_type = _brake_type;
-    this->body_lat_buffer = _body_lat_buffer;
-    this->mirror_lat_buffer = _mirror_lat_buffer;
-    this->min_lon_dist = _min_lon_dist;
-    this->lon_buffer = _lon_buffer;
-    this->dynamic_body_lat_buffer = _dynamic_body_lat_buffer;
-    this->dynamic_mirror_lat_buffer = _dynamic_mirror_lat_buffer;
-    this->dynamic_lon_buffer = _dynamic_lon_buffer;
-  }
+        static_col_det_buffer(_static_col_det_buffer),
+        dynamic_col_det_buffer(_dynamic_col_det_buffer) {}
   ~RealTimeBrakeInfo() = default;
 };
 

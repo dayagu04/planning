@@ -14,9 +14,7 @@ class GeometryCollisionDetector final : public BaseCollisionDetector {
   ~GeometryCollisionDetector(){};
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
-                         const double body_lat_buffer, const double lon_buffer,
-                         const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08,
+                         const ColDetBuffer& col_det_buffer,
                          const UseObsHeightMethod use_obs_height_method =
                              UseObsHeightMethod::HIGH);
 

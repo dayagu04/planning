@@ -250,54 +250,24 @@ class ParkingScenario {
   };
 
   struct CalObsRemainDistParams {
-    double static_lon_buffer = 0.3;
-    double static_body_lat_buffer = 0.06;
-    double static_mirror_lat_buffer = 0.06;
-    double dynamic_lon_buffer = 1.168;
-    double dynamic_body_lat_buffer = 1.168;
-    double dynamic_mirror_lat_buffer = 1.168;
+    ColDetBuffer static_col_det_buf = ColDetBuffer(0.3f, 0.06f, 0.06f);
+    ColDetBuffer dynamic_col_det_buf = ColDetBuffer(1.168f, 1.168f, 1.168f);
+
     bool only_check_mirror = false;
     UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
     bool use_limiter = true;
 
     CalObsRemainDistParams() = default;
-    CalObsRemainDistParams(const double _static_lon_buffer,
-                           const double _static_body_lat_buffer,
-                           const double _static_mirror_lat_buffer,
-                           const double _dynamic_lon_buffer,
-                           const double _dynamic_body_lat_buffer,
-                           const double _dynamic_mirror_lat_buffer,
+    CalObsRemainDistParams(const ColDetBuffer& _static_col_det_buf,
+                           const ColDetBuffer& _dynamic_col_det_buf,
                            const bool _only_check_mirror,
                            const UseObsHeightMethod _use_obs_height_method,
                            const bool _use_limiter)
-        : static_lon_buffer(_static_lon_buffer),
-          static_body_lat_buffer(_static_body_lat_buffer),
-          static_mirror_lat_buffer(_static_mirror_lat_buffer),
-          dynamic_lon_buffer(_dynamic_lon_buffer),
-          dynamic_body_lat_buffer(_dynamic_body_lat_buffer),
-          dynamic_mirror_lat_buffer(_dynamic_mirror_lat_buffer),
+        : static_col_det_buf(_static_col_det_buf),
+          dynamic_col_det_buf(_dynamic_col_det_buf),
           only_check_mirror(_only_check_mirror),
           use_obs_height_method(_use_obs_height_method),
           use_limiter(_use_limiter) {}
-    void Set(const double _static_lon_buffer,
-             const double _static_body_lat_buffer,
-             const double _static_mirror_lat_buffer,
-             const double _dynamic_lon_buffer,
-             const double _dynamic_body_lat_buffer,
-             const double _dynamic_mirror_lat_buffer,
-             const bool _only_check_mirror,
-             const UseObsHeightMethod _use_obs_height_method,
-             const bool _use_limiter) {
-      static_lon_buffer = _static_lon_buffer;
-      static_body_lat_buffer = _static_body_lat_buffer;
-      static_mirror_lat_buffer = _static_mirror_lat_buffer;
-      dynamic_lon_buffer = _dynamic_lon_buffer;
-      dynamic_body_lat_buffer = _dynamic_body_lat_buffer;
-      dynamic_mirror_lat_buffer = _dynamic_mirror_lat_buffer;
-      only_check_mirror = _only_check_mirror;
-      use_obs_height_method = _use_obs_height_method;
-      use_limiter = _use_limiter;
-    }
     ~CalObsRemainDistParams() = default;
   };
 
@@ -431,12 +401,8 @@ class ParkingScenario {
   virtual const double CalRemainDistFromPath();
 
   virtual const double CalRemainDistFromObs(
-      const double static_lon_buffer = 0.3,
-      const double static_body_lat_buffer = 0.06,
-      const double static_mirror_lat_buffer = 0.06,
-      const double dynamic_lon_buffer = 1.168,
-      const double dynamic_body_lat_buffer = 1.168,
-      const double dynamic_mirror_lat_buffer = 1.168,
+      const ColDetBuffer& static_col_det_buf = ColDetBuffer(0.3f, 0.06f, 0.06f),
+      const ColDetBuffer& dynamic_col_det_buf = ColDetBuffer(1.168f, 1.168f, 1.168f),
       const bool only_check_mirror = false,
       const UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH,
       const bool use_limiter = true);

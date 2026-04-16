@@ -34,20 +34,6 @@ struct ColResultF {
   }
 };
 
-struct ColDetBuffer {
-  float lon_buffer;
-  float body_lat_buffer;
-  float mirror_lat_buffer;
-
-  ColDetBuffer() {}
-  ~ColDetBuffer() {}
-  ColDetBuffer(const float _lon_buffer, const float _body_lat_buffer,
-               const float _mirror_lat_buffer)
-      : lon_buffer(_lon_buffer),
-        body_lat_buffer(_body_lat_buffer),
-        mirror_lat_buffer(_mirror_lat_buffer) {}
-};
-
 struct ColResult {
   bool col_flag = false;
   double remain_dist = 26.8;
@@ -174,9 +160,7 @@ class BaseCollisionDetector {
     obs_manager_ptr_ = obs_manager_ptr;
   };
   void SetSampleDs(const float sample_ds) { sample_ds_ = sample_ds; }
-  void UpdateSafeBuffer(const double body_lat_buffer, const double lon_buffer,
-                        const bool special_process_mirror = false,
-                        const double mirror_lat_buffer = 0.08);
+  void UpdateSafeBuffer(const ColDetBuffer& col_det_buffer);
 
   void UpdateObsClearZone(const std::vector<Eigen::Vector2d> &pt_vec);
   const bool IsPoseInClearZone(const geometry_lib::PathPoint &pose);
@@ -245,9 +229,7 @@ class BaseCollisionDetector {
   CarFootPrintCircleList car_without_mirror_circles_list_;
   CarFootPrintCircleList car_chassis_circles_list_;
 
-  float body_lat_buffer_{0.0f};
-  float mirror_lat_buffer_{0.0f};
-  float lon_buffer_{0.0f};
+  ColDetBuffer col_det_buffer_;
 
   std::vector<geometry_lib::PathPoint> path_pt_vec_;
   std::vector<common_math::PathPt<float>> pts_;
