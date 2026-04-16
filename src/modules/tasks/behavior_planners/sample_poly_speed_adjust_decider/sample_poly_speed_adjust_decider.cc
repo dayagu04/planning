@@ -775,10 +775,11 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   }
   //汇流任务判断
   if(lane_change_source_ == MERGE_REQUEST){
-    if (boundary_merge_point_valid_ && !is_lane_continuous) {
+    if ((boundary_merge_point_valid_ && !is_lane_continuous) ||
+        (function_info.function_mode() == common::DrivingFunctionInfo::SCC)) {
       merge_stop_line_distance_ = session_->planning_context()
-              .ego_lane_road_right_decider_output()
-              .merge_point_distance;
+                                      .ego_lane_road_right_decider_output()
+                                      .merge_point_distance;
       is_merge_change_ = true;
       return true;
     } else {

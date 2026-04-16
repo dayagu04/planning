@@ -14,7 +14,7 @@ const double TIME_STEP_NEAR = 1;  // 时间步长（分层步长）(s)
 const double TIME_STEP_FAR = 1;   // 时间步长（分层步长）(s)
 const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）(m)
 const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
-const int MAX_ITERATION = 100;    // 最大迭代次数
+const int MAX_ITERATION = 80;    // 最大迭代次数
 const double ACC_STEP = 0.37;
 const double LIMIT_TIME = 4.5;    // 最小规划时域
 

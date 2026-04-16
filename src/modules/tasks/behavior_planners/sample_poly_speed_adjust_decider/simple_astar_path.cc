@@ -178,10 +178,17 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       double dis_to_gap_rear_cost = 0.0;
       double dis_to_gap_front_cost = 0.0;
       if (anchor_matched_lower_st_point.agent_id() != kNoAgentId) {
+        bool is_over_speed_diff =
+            anchor_matched_lower_st_point.velocity() - node.v >
+            kMaxSpeedDiffThreshold;
         double s_buffer =
             interp(anchor_matched_lower_st_point.velocity() * 3.6,
                    config_->rear_vehicle_min_distance_map.rear_speed_kph_table,
                    config_->rear_vehicle_min_distance_map.min_distance_table);
+        s_buffer = is_over_speed_diff
+                       ? s_buffer + config_->gap_rear_buffer_extra_coef *
+                                        anchor_matched_lower_st_point.velocity()
+                       : s_buffer;
         s_buffer =
             node.s > merge_point_s_
                 ? s_buffer * std::exp((merge_point_s_ - node.s) /
@@ -193,7 +200,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             static_cast<int>(config_->lateral_offset_scale_factor *
                              anchor_matched_lower_st_point.l());
         double collision_s = 0.0;
-        if (object_lateral_offset < 0) {
+        if (object_lateral_offset < 0 || is_over_speed_diff) {
           collision_s = merge_point_s_;
         } else {
           auto it = agent_lateral_offset_map_.find(object_lateral_offset);
@@ -209,8 +216,6 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
                     << std::endl;
           continue;
         } else {
-          double s_buffer_extra = config_->gap_rear_buffer_extra_coef *
-                                  anchor_matched_lower_st_point.velocity();
           double left_time =
               (node.s - collision_s) / std::fmax(node.v, kZeroEpsilon);
           left_time = std::fmax(left_time, 0.0);
