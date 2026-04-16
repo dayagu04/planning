@@ -2278,7 +2278,7 @@ struct HppLateralObstacleDeciderConfig : public EgoPlanningConfig {
 
   double relative_nudge_buffer = 0.8;
   double absolute_nudge_buffer = 2.0;
-  double ego_detour_safe_dis = 0.5;
+  double ego_detour_safe_dis = 0.3;
 };
 
 struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
