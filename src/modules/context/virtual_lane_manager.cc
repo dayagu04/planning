@@ -1944,6 +1944,13 @@ void VirtualLaneManager::EraseOverlappingLanesId(
   if (lanes.size() <= 1) {
     return;
   }
+  // 避免影响拨杆选道
+  const auto& lane_change_output = session_->planning_context().lane_change_decider_output();
+  const auto& selecting_status = lane_change_output.split_selecting_status;
+  const bool is_selecting = (selecting_status != kNonSelecting || is_exist_interactive_select_split_);
+  if(is_selecting){
+    return;
+  }
   const double overlap_threshold = config_.overlap_threshold;
   int current_order_id = current_lane_->get_order_id();
   int origin_size = lanes.size();
