@@ -209,6 +209,8 @@ class ParallelParkInScenario : public ParkingScenario {
   void ProcessTruncationPoints(std::vector<Eigen::Vector2d>& curb_points,
                                const double curb_y,
                                pnc::geometry_lib::LineSegment& tlane_line);
+  void AddMultiFrameResult(const PathPlannerResult& result);
+  bool CalcMultiFrameResult();
 
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_id_pt_map_;
 
@@ -315,6 +317,7 @@ class ParallelParkInScenario : public ParkingScenario {
   AstarSearchState astar_state_ = AstarSearchState::NONE;
   ReplanReason last_replan_reason_ = ReplanReason::NOT_REPLAN;
   bool used_last_path_ = false;
+  std::vector<PathPlannerResult> multi_frame_result_;
 };
 
 }  // namespace apa_planner

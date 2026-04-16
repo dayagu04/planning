@@ -6815,5 +6815,26 @@ bool ParallelParkInScenario::UseLastPathForAstar() {
   return true;
 }
 
+void ParallelParkInScenario::AddMultiFrameResult(
+    const PathPlannerResult& result) {
+  multi_frame_result_.emplace_back(result);
+  if (multi_frame_result_.size() > 8) {
+    multi_frame_result_.erase(multi_frame_result_.begin());
+  }
+}
+
+bool ParallelParkInScenario::CalcMultiFrameResult() {
+  if (multi_frame_result_.size() < 8) {
+    return false;
+  }
+  int success_count = 0;
+  for (const auto& res : multi_frame_result_) {
+    if (res != PathPlannerResult::PLAN_FAILED) {
+      ++success_count;
+    }
+  }
+  return (success_count > (multi_frame_result_.size() - 2));
+}
+
 }  // namespace apa_planner
 }  // namespace planning
