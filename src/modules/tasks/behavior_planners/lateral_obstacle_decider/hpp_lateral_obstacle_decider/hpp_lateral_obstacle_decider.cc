@@ -811,23 +811,16 @@ void HppLateralObstacleDecider::MakeFinalDecision(
             LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
         relative_pos_info.left_nudge_level ==
             LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-      if (passage_width_info.left_nudge_level !=
-          relative_pos_info.left_nudge_level) {
+      if (passage_width_info.right_nudge_level ==
+              LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
+          relative_pos_info.right_nudge_level ==
+              LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
         decision = LatObstacleDecisionType::IGNORE;
       } else {
         decision = LatObstacleDecisionType::RIGHT;
       }
-    }
-    if (passage_width_info.right_nudge_level ==
-            LatObstacleNudgeLevel::FORBIDDEN_NUDGE ||
-        relative_pos_info.right_nudge_level ==
-            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
-      if (passage_width_info.right_nudge_level !=
-          relative_pos_info.right_nudge_level) {
-        decision = LatObstacleDecisionType::IGNORE;
-      } else {
-        decision = LatObstacleDecisionType::LEFT;
-      }
+    } else {
+      decision = LatObstacleDecisionType::LEFT;
     }
   } else {
     if (passage_width_info.decision == relative_pos_info.decision) {
