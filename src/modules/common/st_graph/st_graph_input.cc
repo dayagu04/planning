@@ -761,6 +761,10 @@ double StGraphInput::hpp_lat_buffer_min() const {
   return hpp_lat_buffer_min_;
 }
 
+double StGraphInput::hpp_large_agent_extra_lat_buffer() const {
+  return hpp_large_agent_extra_lat_buffer_;
+}
+
 const double StGraphInput::GetSuitableLateralBuffer(
     const agent::Agent& agent) const {
   if (agent.is_vru()) {
