@@ -752,7 +752,6 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       }
       collision_detector_ptr_->SetParam(
           CollisionDetector::Paramters(0.1, set_mirror_expand));
-
       collision_detector_ptr_->SetSkipObstaclesType(CollisionDetector::CURB_OBS);
       collision_detector_ptr_->SetSkipObstaclesType(CollisionDetector::SIDE_CROSS_LIMITER_OBS);
       auto col_res_1 = collision_detector_ptr_->UpdateByObsMap(

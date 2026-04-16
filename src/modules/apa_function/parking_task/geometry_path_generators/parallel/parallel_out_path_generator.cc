@@ -209,9 +209,11 @@ const bool ParallelOutPathGenerator::Update() {
       }
     } else {
       collision_detector_ptr_->SetSkipObstaclesType(CollisionDetector::CURB_OBS);
+      collision_detector_ptr_->SetCallScenario(CollisionDetector::InversedTrialsByGivenGear_SCENE);
       success = InversedTrialsByGivenGear(inversed_path_seg_vec,
                                           input_.ego_info_under_slot.cur_pose,
                                           input_.ref_gear);
+      collision_detector_ptr_->CleanCallScenario();
       if (inversed_path_seg_vec.size() == 1) {
           if (std::abs(inversed_path_seg_vec[0].GetArcSeg().headingA -
                        arc_slot_init_out_heading_) >
