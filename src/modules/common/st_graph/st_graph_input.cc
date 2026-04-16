@@ -206,6 +206,15 @@ void StGraphInput::FilterAgentsByDecisionType(
   if (origin_agents.empty()) {
     return;
   }
+
+  // 获取 HPP 场景下的 turnstile target obs id
+  int32_t turnstile_target_obs_id = -1;
+  if (session_->is_hpp_scene()) {
+    turnstile_target_obs_id = session_->planning_context()
+                                  .hpp_obstacle_lat_preprocess_output()
+                                  .turnstile_scene_info.target_id;
+  }
+
   filtered_agents_.clear();
   filtered_agents_.reserve(origin_agents.size());
   for (const auto agent : origin_agents) {
@@ -221,6 +230,11 @@ void StGraphInput::FilterAgentsByDecisionType(
       continue;
     }
     if (agent->type() == agent::AgentType::DECELER) {
+      continue;
+    }
+    // HPP 场景：跳过 turnstile target 障碍物，由虚拟停止障碍物代替其在 ST 图中的作用
+    if (session_->is_hpp_scene() && id == turnstile_target_obs_id &&
+        turnstile_target_obs_id != -1) {
       continue;
     }
     filtered_agents_.emplace_back(agent);
