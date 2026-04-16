@@ -1076,7 +1076,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.position_y =
         prediction_object.fusion_obstacle.common_info.center_position.y;
     //TODO(taolu10): 临时 hack，目前环视预测输出的障碍物 center_position 异常，暂用 position 代替以跑通
-    if (session_->is_hpp_scene()) {
+    if (session_->is_hpp_scene() &&
+        std::fabs(cur_predicion_obj.position_x) < 0.1 &&
+        std::fabs(cur_predicion_obj.position_y) < 0.1) {
       cur_predicion_obj.position_x =
           prediction_object.fusion_obstacle.common_info.position.x;
       cur_predicion_obj.position_y =
