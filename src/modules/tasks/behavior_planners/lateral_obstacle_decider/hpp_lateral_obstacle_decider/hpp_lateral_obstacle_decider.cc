@@ -1002,8 +1002,10 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
     decision = LatObstacleDecisionType::IGNORE;
     return;
   }
-  if (rel_pos_type_base == ObstacleRelPosType::MID_FRONT && obstacle->velocity() > 0)
-  {
+  if ((rel_pos_type_base == ObstacleRelPosType::MID_FRONT ||
+       rel_pos_type_base == ObstacleRelPosType::RIGHT_FRONT ||
+       rel_pos_type_base == ObstacleRelPosType::RIGHT_SIDE) &&
+      !obstacle->is_static()) {
     decision = LatObstacleDecisionType::FOLLOW;
     return;
   }
