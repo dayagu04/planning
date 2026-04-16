@@ -223,8 +223,9 @@ class StGraphUtils {
   static BufferType GetHppBufferTypeForAgent(const agent::Agent& agent);
 
   static double GetHppLateralBuffer(const agent::Agent& agent, double ego_v,
-                                    double hpp_reverse_extra,
-                                    double hpp_large_agent_extra);
+                                    double hpp_large_agent_extra,
+                                    double hpp_lat_buffer_bias,
+                                    double hpp_lat_buffer_min);
 };
 
 }  // namespace speed

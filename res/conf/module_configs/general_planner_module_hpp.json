@@ -738,8 +738,9 @@
       "thw_scale_up_factor": 1.2
     },
     "st_graph": {
-      "hpp_reverse_vehicle_extra_lat_buffer": 0.1,
-      "hpp_large_agent_extra_lat_buffer": 0.1
+      "hpp_large_agent_extra_lat_buffer": 0.05,
+      "hpp_lat_buffer_bias": 0.2,
+      "hpp_lat_buffer_min": 0.15
     },
     "st_graph_searcher": {
       "enable_only_s_t_hash": true,
