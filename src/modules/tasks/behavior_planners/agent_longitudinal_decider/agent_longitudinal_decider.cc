@@ -64,21 +64,47 @@ constexpr double kLowSpeedThresholdMps = 2.0;
 constexpr double kSuppressionLateralSpeedThresholdMps = 0.1;
 constexpr double kSuppressionLateralPenetrationM = 0.3;
 constexpr size_t kMaxHistorySize = 5;
-constexpr double kCutInLateralDistanceRange = 5.625;
-constexpr double kConfluenceCutInLateralDistanceRange = 9.375;
+constexpr double kCutInLateralDistanceMinRange = 5.625;
+constexpr double kCutInLateralDistanceMaxRange = 9.375;
 constexpr double kMinCutInHeadway = 5.0;
 constexpr double kMinCutInLateralDistance = 1.0;
 constexpr double kLongitudinalTtcLowerThreshold = 1.5;
 constexpr double kLongitudinalTtcUpperThreshold = 3.0;
 
-constexpr std::array<double, 2> kBayesNormalMu = {0.0, 3.75};
+constexpr double kBayesNormalMuLateralVel = 0.0;
 constexpr std::array<double, 2> kBayesNormalSigma = {0.20, 1.0};
 
-constexpr std::array<double, 2> kBayesCutinMu = {-0.35, 2.275};
+constexpr double kBayesCutinMuLateralVel = -0.35;
+constexpr double kBayesCutOutMuLateralVel = 0.35;
 constexpr std::array<double, 2> kBayesCutinSigma = {0.25, 0.4};
-
-constexpr std::array<double, 2> kBayesCutOutMu = {0.35, 2.275};
 constexpr std::array<double, 2> kBayesCutOutSigma = {0.25, 0.4};
+constexpr double kNormalToCutinLateralDistOffset = 1.475;
+constexpr double kLateralDistMuBase = 2.275;
+constexpr double kLateralDistMuSlope = 0.413;
+constexpr double kLateralVelThresholdLow = 0.35;
+constexpr double kLateralVelThresholdHigh = 1.5;
+constexpr double kCutInLateralDistanceRange = 9.375 - 5.625;
+
+inline double GetLateralDistanceMu(double lateral_vel_abs) {
+  const double clamped_vel =
+      std::fmax(kLateralVelThresholdLow,
+                std::fmin(lateral_vel_abs, kLateralVelThresholdHigh));
+  return kLateralDistMuBase +
+         kLateralDistMuSlope * (clamped_vel - kLateralVelThresholdLow);
+}
+
+inline double GetCutInLateralDistanceRange(double lateral_vel_abs,
+                                           bool is_confluence_area) {
+  if (is_confluence_area) {
+    return kCutInLateralDistanceMaxRange;
+  }
+  const double clamped_vel =
+      std::fmax(kLateralVelThresholdLow,
+                std::fmin(lateral_vel_abs, kLateralVelThresholdHigh));
+  return kCutInLateralDistanceMinRange +
+         kCutInLateralDistanceRange * (clamped_vel - kLateralVelThresholdLow) /
+             (kLateralVelThresholdHigh - kLateralVelThresholdLow);
+}
 
 void CalculateAgentSLBoundary(const std::shared_ptr<KDPath>& planned_path,
                               const planning_math::Box2d& agent_box,
@@ -237,10 +263,6 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
     is_confluence_area = true;
   }
 
-  const double cut_in_lateral_distance_range =
-      is_confluence_area ? kConfluenceCutInLateralDistanceRange
-                         : kCutInLateralDistanceRange;
-
   const auto& init_point = ego_state_manager_->planning_init_point();
   const double ego_speed_mps = init_point.v;
 
@@ -264,42 +286,6 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
     mutable_agent->set_is_prediction_cutin(true);
   }
 
-  for (const auto agent : agents) {
-    if (nullptr == agent) {
-      continue;
-    }
-    if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
-      continue;
-    }
-    const int32_t agent_id = agent->agent_id();
-    current_agent_ids_.insert(agent_id);
-
-    ProcessCutInCutOutAgent(
-        is_in_lane_change_execution, *agent, ego_speed_mps, ego_half_length,
-        ego_half_width, init_point, cut_in_lateral_distance_range,
-        mutable_agent_manager, agent_longitudinal_decider_output);
-  }
-
-  for (auto it = agent_history_map_.begin(); it != agent_history_map_.end();) {
-    if (current_agent_ids_.find(it->first) == current_agent_ids_.end()) {
-      it = agent_history_map_.erase(it);
-    } else {
-      ++it;
-    }
-  }
-}
-
-void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
-    const bool is_in_lane_change, const agent::Agent& agent,
-    const double ego_speed_mps, const double ego_half_length,
-    const double ego_half_width, const PlanningInitPoint init_point,
-    const double lateral_distance_range,
-    agent::AgentManager* const mutable_agent_manager,
-    AgentLongitudinalDeciderOutput* output) {
-  if (nullptr == mutable_agent_manager) {
-    return;
-  }
-
   const auto& ego_lane = virtual_lane_manager_->get_current_lane();
   if (ego_lane == nullptr) {
     return;
@@ -319,9 +305,60 @@ void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
     return;
   }
 
-  double agent_s = 0.0;
-  double agent_l = 0.0;
-  if (!ego_lane_coord->XYToSL(agent.x(), agent.y(), &agent_s, &agent_l)) {
+  if (is_in_lane_change_execution) {
+    return;
+  }
+
+  for (const auto agent : agents) {
+    if (nullptr == agent) {
+      continue;
+    }
+    if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
+      continue;
+    }
+
+    if (agent->is_static()) {
+      continue;
+    }
+
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
+
+    if (agent_s <= ego_s ||
+        (agent_s - ego_s) >= ego_speed_mps * kMinCutInHeadway) {
+      continue;
+    }
+
+    const int32_t agent_id = agent->agent_id();
+    current_agent_ids_.insert(agent_id);
+
+    ProcessCutInCutOutAgent(
+        *agent, ego_speed_mps, ego_half_length, ego_half_width, init_point,
+        is_confluence_area, ego_lane_coord, ego_s, ego_l, agent_s, agent_l,
+        mutable_agent_manager, agent_longitudinal_decider_output);
+  }
+
+  for (auto it = agent_history_map_.begin(); it != agent_history_map_.end();) {
+    if (current_agent_ids_.find(it->first) == current_agent_ids_.end()) {
+      it = agent_history_map_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
+    const agent::Agent& agent, const double ego_speed_mps,
+    const double ego_half_length, const double ego_half_width,
+    const PlanningInitPoint init_point, const bool is_confluence_area,
+    const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+    const double ego_s, const double ego_l, const double agent_s,
+    const double agent_l, agent::AgentManager* const mutable_agent_manager,
+    AgentLongitudinalDeciderOutput* output) {
+  if (nullptr == mutable_agent_manager) {
     return;
   }
 
@@ -334,6 +371,10 @@ void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
       agent.speed() * std::cos(agent_relative_theta);
   const double object_l_speed_mps =
       agent.speed() * std::sin(agent_relative_theta);
+
+  const double agent_lateral_vel_abs = std::fabs(object_l_speed_mps);
+  const double lateral_distance_range =
+      GetCutInLateralDistanceRange(agent_lateral_vel_abs, is_confluence_area);
 
   double min_s = std::numeric_limits<double>::max();
   double max_s = std::numeric_limits<double>::lowest();
@@ -357,24 +398,8 @@ void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
     mutable_agent->set_d_rel(std::fmax(min_s - ego_s - ego_half_length, 0.0));
   }
 
-  if (agent.is_static()) {
-    return;
-  }
-
-  if (agent_s <= ego_s ||
-      (agent_s - ego_s) >= ego_speed_mps * kMinCutInHeadway) {
-    return;
-  }
-
-  if (std::fabs(agent_l) < kMinCutInLateralDistance) {
-    return;
-  }
-
-  if (is_in_lane_change) {
-    return;
-  }
-
-  if (std::fabs(agent_l) > lateral_distance_range) {
+  if (std::fabs(agent_l) < kMinCutInLateralDistance ||
+      std::fabs(agent_l) > lateral_distance_range) {
     return;
   }
 
@@ -405,18 +430,26 @@ void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
   for (int i = 0; i < dim; ++i) {
     const std::array<double, 2> x_hist = {features.norm_l_dot[i],
                                           features.hist_lateral_dist[i]};
+    const double lateral_dist_mu = GetLateralDistanceMu(std::fabs(x_hist[0]));
+    const std::array<double, 2> cutin_mu = {kBayesCutinMuLateralVel,
+                                            lateral_dist_mu};
+    const std::array<double, 2> cutout_mu = {kBayesCutOutMuLateralVel,
+                                             lateral_dist_mu};
+    const std::array<double, 2> normal_mu = {
+        kBayesNormalMuLateralVel,
+        lateral_dist_mu + kNormalToCutinLateralDistOffset};
     for (int j = 0; j < 2; ++j) {
-      const double dc_cutin = x_hist[j] - kBayesCutinMu[j];
-      const double dc_cutout = x_hist[j] - kBayesCutOutMu[j];
-      const double dn = x_hist[j] - kBayesNormalMu[j];
-      log_L_hist_cutin +=
-          -0.5 * dc_cutin * dc_cutin / (kBayesCutinSigma[j] * kBayesCutinSigma[j]) -
-          0.5 *
-              std::log(2.0 * M_PI * kBayesCutinSigma[j] * kBayesCutinSigma[j]);
-      log_L_hist_cutout +=
-          -0.5 * dc_cutout * dc_cutout / (kBayesCutOutSigma[j] * kBayesCutOutSigma[j]) -
-          0.5 * std::log(2.0 * M_PI * kBayesCutOutSigma[j] *
-                         kBayesCutOutSigma[j]);
+      const double dc_cutin = x_hist[j] - cutin_mu[j];
+      const double dc_cutout = x_hist[j] - cutout_mu[j];
+      const double dn = x_hist[j] - normal_mu[j];
+      log_L_hist_cutin += -0.5 * dc_cutin * dc_cutin /
+                              (kBayesCutinSigma[j] * kBayesCutinSigma[j]) -
+                          0.5 * std::log(2.0 * M_PI * kBayesCutinSigma[j] *
+                                         kBayesCutinSigma[j]);
+      log_L_hist_cutout += -0.5 * dc_cutout * dc_cutout /
+                               (kBayesCutOutSigma[j] * kBayesCutOutSigma[j]) -
+                           0.5 * std::log(2.0 * M_PI * kBayesCutOutSigma[j] *
+                                          kBayesCutOutSigma[j]);
       log_L_hist_normal +=
           -0.5 * dn * dn / (kBayesNormalSigma[j] * kBayesNormalSigma[j]) -
           0.5 * std::log(2.0 * M_PI * kBayesNormalSigma[j] *
@@ -431,20 +464,26 @@ void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
   for (int i = 0; i < pred_frames_count; ++i) {
     const std::array<double, 2> x_pred = {features.pred_norm_vy[i],
                                           features.pred_lateral_dist[i]};
+    const double lateral_dist_mu = GetLateralDistanceMu(std::fabs(x_pred[0]));
+    const std::array<double, 2> cutin_mu = {kBayesCutinMuLateralVel,
+                                            lateral_dist_mu};
+    const std::array<double, 2> cutout_mu = {kBayesCutOutMuLateralVel,
+                                             lateral_dist_mu};
+    const std::array<double, 2> normal_mu = {
+        kBayesNormalMuLateralVel,
+        lateral_dist_mu + kNormalToCutinLateralDistOffset};
     for (int j = 0; j < 2; ++j) {
-      const double dc_cutin = x_pred[j] - kBayesCutinMu[j];
-      const double dc_cutout = x_pred[j] - kBayesCutOutMu[j];
-      const double dn = x_pred[j] - kBayesNormalMu[j];
-      log_L_pred_cutin +=
-          -0.5 * dc_cutin * dc_cutin /
-              (kBayesCutinSigma[j] * kBayesCutinSigma[j]) -
-          0.5 * std::log(2.0 * M_PI * kBayesCutinSigma[j] *
-                         kBayesCutinSigma[j]);
-      log_L_pred_cutout +=
-          -0.5 * dc_cutout * dc_cutout /
-              (kBayesCutOutSigma[j] * kBayesCutOutSigma[j]) -
-          0.5 * std::log(2.0 * M_PI * kBayesCutOutSigma[j] *
-                         kBayesCutOutSigma[j]);
+      const double dc_cutin = x_pred[j] - cutin_mu[j];
+      const double dc_cutout = x_pred[j] - cutout_mu[j];
+      const double dn = x_pred[j] - normal_mu[j];
+      log_L_pred_cutin += -0.5 * dc_cutin * dc_cutin /
+                              (kBayesCutinSigma[j] * kBayesCutinSigma[j]) -
+                          0.5 * std::log(2.0 * M_PI * kBayesCutinSigma[j] *
+                                         kBayesCutinSigma[j]);
+      log_L_pred_cutout += -0.5 * dc_cutout * dc_cutout /
+                               (kBayesCutOutSigma[j] * kBayesCutOutSigma[j]) -
+                           0.5 * std::log(2.0 * M_PI * kBayesCutOutSigma[j] *
+                                          kBayesCutOutSigma[j]);
       log_L_pred_normal +=
           -0.5 * dn * dn / (kBayesNormalSigma[j] * kBayesNormalSigma[j]) -
           0.5 * std::log(2.0 * M_PI * kBayesNormalSigma[j] *
@@ -598,18 +637,17 @@ BayesFeatures AgentLongitudinalDecider::ExtractBayesFeatures(
 
 void AgentLongitudinalDecider::UpdateBayesianPosteriors(
     int32_t agent_id, double log_L_hist_cutin, double log_L_hist_cutout,
-    double log_L_hist_normal, double log_L_pred_cutin,
-    double log_L_pred_cutout, double log_L_pred_normal,
-    double* cutin_posterior, double* cutout_posterior) {
+    double log_L_hist_normal, double log_L_pred_cutin, double log_L_pred_cutout,
+    double log_L_pred_normal, double* cutin_posterior,
+    double* cutout_posterior) {
   const double log_L_cutin =
       kBayesHistWeight * log_L_hist_cutin + kBayesPredWeight * log_L_pred_cutin;
   const double log_L_cutout = kBayesHistWeight * log_L_hist_cutout +
-                               kBayesPredWeight * log_L_pred_cutout;
+                              kBayesPredWeight * log_L_pred_cutout;
   const double log_L_normal = kBayesHistWeight * log_L_hist_normal +
-                               kBayesPredWeight * log_L_pred_normal;
+                              kBayesPredWeight * log_L_pred_normal;
 
-  const double max_log =
-      std::max({log_L_cutin, log_L_cutout, log_L_normal});
+  const double max_log = std::max({log_L_cutin, log_L_cutout, log_L_normal});
   const double L_cutin = std::exp(log_L_cutin - max_log);
   const double L_cutout = std::exp(log_L_cutout - max_log);
   const double L_normal = std::exp(log_L_normal - max_log);
@@ -624,16 +662,18 @@ void AgentLongitudinalDecider::UpdateBayesianPosteriors(
       (denominator < 1e-10) ? 0.0 : L_cutout * kBayesCutoutPrior / denominator;
 
   auto it_cutin = bayes_cutin_posterior_.find(agent_id);
-  const double prev_cutin =
-      (it_cutin != bayes_cutin_posterior_.end()) ? it_cutin->second
-                                                 : kBayesCutinPrior;
-  p_cutin = kBayesSmoothAlpha * p_cutin + (1.0 - kBayesSmoothAlpha) * prev_cutin;
+  const double prev_cutin = (it_cutin != bayes_cutin_posterior_.end())
+                                ? it_cutin->second
+                                : kBayesCutinPrior;
+  p_cutin =
+      kBayesSmoothAlpha * p_cutin + (1.0 - kBayesSmoothAlpha) * prev_cutin;
 
   auto it_cutout = bayes_cutout_posterior_.find(agent_id);
-  const double prev_cutout =
-      (it_cutout != bayes_cutout_posterior_.end()) ? it_cutout->second
-                                                   : kBayesCutoutPrior;
-  p_cutout = kBayesSmoothAlpha * p_cutout + (1.0 - kBayesSmoothAlpha) * prev_cutout;
+  const double prev_cutout = (it_cutout != bayes_cutout_posterior_.end())
+                                 ? it_cutout->second
+                                 : kBayesCutoutPrior;
+  p_cutout =
+      kBayesSmoothAlpha * p_cutout + (1.0 - kBayesSmoothAlpha) * prev_cutout;
 
   bayes_cutin_posterior_[agent_id] = p_cutin;
   bayes_cutout_posterior_[agent_id] = p_cutout;
