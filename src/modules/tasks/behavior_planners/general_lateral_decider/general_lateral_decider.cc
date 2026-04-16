@@ -5281,6 +5281,13 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
         (first_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp &&
         second_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp)) {
       ref_traj_points_[i].l = clip(ref_traj_points_[i].l, ref_traj_points_[i - 1].l + kChangeRate, ref_traj_points_[i - 1].l - kChangeRate);
+      ref_traj_points_[i].l = std::min(
+        std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
+        second_frenet_soft_bounds[i].second);
+
+      ref_traj_points_[i].l = std::min(
+          std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
+          first_frenet_soft_bounds[i].second);
     }
   }
 
