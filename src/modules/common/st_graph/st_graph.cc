@@ -258,8 +258,9 @@ void STGraph::MakeStaticAgentStBoundary(
   if (is_hpp_scene && agent.type() != agent::AgentType::VIRTUAL) {
     lat_buffer = StGraphUtils::GetHppLateralBuffer(
         agent, init_point.vel(),
-        st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
-        st_graph_input_->hpp_large_agent_extra_lat_buffer());
+        st_graph_input_->hpp_large_agent_extra_lat_buffer(),
+        st_graph_input_->hpp_lat_buffer_bias(),
+        st_graph_input_->hpp_lat_buffer_min());
   } else {
     lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
     lat_buffer = StGraphUtils::RecalculateLateralBufferForLargeAgent(
@@ -660,8 +661,9 @@ void STGraph::MakeDynamicAgentStBoundary(
   if (is_hpp_scene && agent.type() != agent::AgentType::VIRTUAL) {
     lat_buffer = StGraphUtils::GetHppLateralBuffer(
         agent, init_point.vel(),
-        st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
-        st_graph_input_->hpp_large_agent_extra_lat_buffer());
+        st_graph_input_->hpp_large_agent_extra_lat_buffer(),
+        st_graph_input_->hpp_lat_buffer_bias(),
+        st_graph_input_->hpp_lat_buffer_min());
   } else {
     lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
     lat_buffer = StGraphUtils::RecalculateLateralBufferForLargeAgent(
@@ -997,8 +999,9 @@ void STGraph::MakeHppStaticAgentStBoundary(
 
   const double collision_threshold_base = StGraphUtils::GetHppLateralBuffer(
       agent, init_point.vel(),
-      st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
-      st_graph_input_->hpp_large_agent_extra_lat_buffer());
+      st_graph_input_->hpp_large_agent_extra_lat_buffer(),
+      st_graph_input_->hpp_lat_buffer_bias(),
+      st_graph_input_->hpp_lat_buffer_min());
   const double collision_threshold =
       reuse_for_close_pass
           ? collision_threshold_base + extra_lateral_buffer_for_close_pass
@@ -1111,8 +1114,9 @@ void STGraph::MakeHppDynamicAgentStBoundary(
 
   double base_lat_buffer = StGraphUtils::GetHppLateralBuffer(
       agent, init_point.vel(),
-      st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
-      st_graph_input_->hpp_large_agent_extra_lat_buffer());
+      st_graph_input_->hpp_large_agent_extra_lat_buffer(),
+      st_graph_input_->hpp_lat_buffer_bias(),
+      st_graph_input_->hpp_lat_buffer_min());
   if (reuse_for_close_pass) {
     base_lat_buffer += extra_lateral_buffer_for_close_pass;
   }
@@ -1452,8 +1456,9 @@ void STGraph::BackwardExtendSingleStBoundary(
   if (is_hpp_scene && agent.type() != agent::AgentType::VIRTUAL) {
     lat_buffer = StGraphUtils::GetHppLateralBuffer(
         agent, init_point.vel(),
-        st_graph_input_->hpp_reverse_vehicle_extra_lat_buffer(),
-        st_graph_input_->hpp_large_agent_extra_lat_buffer());
+        st_graph_input_->hpp_large_agent_extra_lat_buffer(),
+        st_graph_input_->hpp_lat_buffer_bias(),
+        st_graph_input_->hpp_lat_buffer_min());
   } else {
     lat_buffer = st_graph_input_->GetSuitableLateralBuffer(agent);
   }

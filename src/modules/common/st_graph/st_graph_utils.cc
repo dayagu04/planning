@@ -1843,21 +1843,30 @@ BufferType StGraphUtils::GetHppBufferTypeForAgent(const agent::Agent& agent) {
 }
 
 double StGraphUtils::GetHppLateralBuffer(const agent::Agent& agent,
-                                         double ego_v, double hpp_reverse_extra,
-                                         double hpp_large_agent_extra) {
+                                         double ego_v,
+                                         double hpp_large_agent_extra,
+                                         double hpp_lat_buffer_bias,
+                                         double hpp_lat_buffer_min) {
   const BufferType type = GetHppBufferTypeForAgent(agent);
-  // TODO: 接入 RAMP/TURN 检测后，向 env_types 中填充对应场景类型
   const std::vector<EnvType> env_types{};
+
+  // 对向来车传入agent.speed()，非对向来车传入0
+  const double obs_v = (agent.is_reverse() && agent.is_vehicle_type()) ? agent.speed() : 0.0;
+
   double lat_buffer = HPPParameterUtil::CalculateLatBuffer(
-      type, ego_v, agent.speed(), env_types);
-  // 对向来车额外增加安全距离
-  if (agent.is_reverse() && agent.is_vehicle_type()) {
-    lat_buffer += hpp_reverse_extra;
-  }
-  // 大车额外增加安全距离（与对向来车条件独立，大型对向来车两者均叠加）
+      type, ego_v, obs_v, env_types);
+
+  // 减去固定bias
+  lat_buffer -= hpp_lat_buffer_bias;
+
+  // 大车额外增加安全距离
   if (StGraphUtils::IsLargeAgent(agent)) {
     lat_buffer += hpp_large_agent_extra;
   }
+
+  // 确保不低于最小安全距离
+  lat_buffer = std::fmax(lat_buffer, hpp_lat_buffer_min);
+
   return lat_buffer;
 }
 

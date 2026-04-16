@@ -5392,16 +5392,21 @@ struct STGraphConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
-    hpp_reverse_vehicle_extra_lat_buffer = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"speed_planning", "st_graph",
-                                 "hpp_reverse_vehicle_extra_lat_buffer"},
-        hpp_reverse_vehicle_extra_lat_buffer);
     hpp_large_agent_extra_lat_buffer = read_json_keys<double>(
         json,
         std::vector<std::string>{"speed_planning", "st_graph",
                                  "hpp_large_agent_extra_lat_buffer"},
         hpp_large_agent_extra_lat_buffer);
+    hpp_lat_buffer_bias = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph",
+                                 "hpp_lat_buffer_bias"},
+        hpp_lat_buffer_bias);
+    hpp_lat_buffer_min = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph",
+                                 "hpp_lat_buffer_min"},
+        hpp_lat_buffer_min);
   }
   bool enable_backward_extend_st_boundary = true;
   double backward_extend_length_for_lane_change = 50.0;
@@ -5429,9 +5434,10 @@ struct STGraphConfig : public EgoPlanningConfig {
   double tricycle_lon_buffer_m = 0.4;
   double backward_extend_time_s = 3.0;
   double reverse_vehicle_lat_buffer_m = 0.2;
-  // HPP 专用横向 buffer 额外增量
-  double hpp_reverse_vehicle_extra_lat_buffer = 0.1;
+  // HPP 横向 buffer 调整参数
   double hpp_large_agent_extra_lat_buffer = 0.1;
+  double hpp_lat_buffer_bias = 0.2;  // 固定减少的bias，单位m
+  double hpp_lat_buffer_min = 0.15;  // 最小安全距离，单位m
 };
 
 struct StopDestinationDeciderConfig : public EgoPlanningConfig {
