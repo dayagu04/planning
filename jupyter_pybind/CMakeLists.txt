@@ -146,7 +146,7 @@ target_link_libraries(replay_simulation_hybrid_astar PRIVATE
 pybind11_add_module(parallel_simulation_hybrid_astar MODULE src/apa_parallel_simulation_hybrid_astar.cc)
 target_link_libraries(parallel_simulation_hybrid_astar PRIVATE
   ${catkin_LIBRARIES}
-  autoplt
+  # autoplt
   modules
   modules_common
   modules_context
