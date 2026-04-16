@@ -1202,6 +1202,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // PREDICTION_TRAJ_POINT_NUM
     cur_predicion_obj.trajectory_valid =
         trajectory_point_size < 1 ? false : true;
+    std::vector<double> accumulated_s_list(TRAJ_POINT_NUM_USED, 0.0);
+    double accumulated_s = 0.0;
     for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
       const auto& point = prediction_traj.trajectory_point[j];
       PredictionTrajectoryPoint trajectory_point;
@@ -1239,8 +1241,45 @@ void EnvironmentalModelManager::truncate_prediction_info(
         ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id
                   << "s trajectory is empty!";
       }
+      //TODO(taolu10)：针对目前环视预测存在的问题，临时兜底策略
+      if(session_->is_hpp_scene() && j == TRAJ_POINT_NUM_USED) {
+        trajectory_point = trajectory_points.back();
+        trajectory_point.relative_time += step_time;
+      }
+      if(j == 0) {
+        accumulated_s = 0.0;
+      } else {
+        const auto& prev_point = trajectory_points.back();
+        double dx = trajectory_point.x - prev_point.x;
+        double dy = trajectory_point.y - prev_point.y;
+        accumulated_s += std::hypot(dx, dy);
+      }
+      accumulated_s_list[j] = accumulated_s;
       traj_index++;
       trajectory_points.emplace_back(trajectory_point);
+    }
+    //TODO(taolu10)：针对目前环视预测存在的问题，临时兜底策略
+    if(session_->is_hpp_scene()) {
+        double total_time = trajectory_points.back().relative_time - trajectory_points.front().relative_time;
+        cur_predicion_obj.speed = accumulated_s_list[TRAJ_POINT_NUM_USED] / total_time;
+        for(int i = 0; i < TRAJ_POINT_NUM_USED + 1; i++) {
+          if (i == 0) {
+            trajectory_points[i].speed =
+                (accumulated_s_list[i + 1] - accumulated_s_list[i]) /
+                (trajectory_points[i + 1].relative_time -
+                 trajectory_points[i].relative_time);
+          } else if (i == TRAJ_POINT_NUM_USED) {
+            trajectory_points[i].speed =
+                (accumulated_s_list[i] - accumulated_s_list[i - 1]) /
+                (trajectory_points[i].relative_time -
+                 trajectory_points[i - 1].relative_time);
+          } else {
+            trajectory_points[i].speed =
+                (accumulated_s_list[i + 1] - accumulated_s_list[i - 1]) /
+                (trajectory_points[i + 1].relative_time -
+                 trajectory_points[i - 1].relative_time);
+          }
+        }
     }
     // synchronize time
     for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED + 1; traj_index++) {
