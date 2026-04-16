@@ -1947,7 +1947,8 @@ void VirtualLaneManager::EraseOverlappingLanesId(
   // 避免影响拨杆选道
   const auto& lane_change_output = session_->planning_context().lane_change_decider_output();
   const auto& selecting_status = lane_change_output.split_selecting_status;
-  const bool is_selecting = (selecting_status != kNonSelecting || is_exist_interactive_select_split_);
+  const bool is_selecting = (selecting_status != kNonSelecting 
+                          || ego_lane_track_manager_.is_exist_interactive_select_split());
   if(is_selecting){
     return;
   }
