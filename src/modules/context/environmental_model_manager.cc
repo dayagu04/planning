@@ -1202,7 +1202,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // PREDICTION_TRAJ_POINT_NUM
     cur_predicion_obj.trajectory_valid =
         trajectory_point_size < 1 ? false : true;
-    std::vector<double> accumulated_s_list(TRAJ_POINT_NUM_USED, 0.0);
+    std::vector<double> accumulated_s_list(TRAJ_POINT_NUM_USED + 1, 0.0);
     double accumulated_s = 0.0;
     for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
       const auto& point = prediction_traj.trajectory_point[j];
