@@ -505,10 +505,14 @@ bool LaneReferencePath::get_ref_points_hpp(
     }
     ref_path_pt.path_point.set_kappa(refline_pt.curvature);
     if(has_boundary) {
-      ref_path_pt.distance_to_left_road_border = refline_pt.distance_to_left_road_border;
-      ref_path_pt.distance_to_right_road_border = refline_pt.distance_to_right_road_border;
-      ref_path_pt.distance_to_left_lane_border = refline_pt.distance_to_left_lane_border;
-      ref_path_pt.distance_to_right_lane_border = refline_pt.distance_to_right_lane_border;
+      ref_path_pt.distance_to_left_road_border =
+          refline_pt.distance_to_left_road_border;
+      ref_path_pt.distance_to_right_road_border =
+          refline_pt.distance_to_right_road_border;
+      ref_path_pt.distance_to_left_lane_border =
+          refline_pt.distance_to_left_lane_border;
+      ref_path_pt.distance_to_right_lane_border =
+          refline_pt.distance_to_right_lane_border;
     } else {
       ref_path_pt.distance_to_left_road_border = 5.0;
       ref_path_pt.distance_to_right_road_border = 5.0;
