@@ -369,42 +369,42 @@ void GJKCollisionDetector::TransformPolygonFootPrintLocalToGlobal(
 
 void GJKCollisionDetector::GenCarPolygon() {
   polygon_foot_print_local_.chassis.FillTangentCircleParams(
-      chassis_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.chassis_polygon);
 
   polygon_foot_print_local_.body.FillTangentCircleParams(
-      car_without_mirror_polygon_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.polygon_without_mirror);
 
   polygon_foot_print_local_.mirror_left.FillTangentCircleParams(
-      left_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.left_mirror_rectangle);
 
   polygon_foot_print_local_.mirror_right.FillTangentCircleParams(
-      right_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.right_mirror_rectangle);
 
   polygon_foot_print_local_.max_polygon.FillTangentCircleParams(
-      car_with_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.rectangle_with_mirror);
 
   polygon_foot_print_local_.mirror_to_front_overhang_expand_front
       .FillTangentCircleParams(
-          mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_);
+          car_shape_vertex_with_buffer_.mirror_to_front_overhanging_rectangle_expand_front);
 
   polygon_foot_print_local_.mirror_to_rear_overhang.FillTangentCircleParams(
-      mirror_to_rear_overhanging_polygon_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon);
 
   polygon_foot_print_local_.body_rectangle.FillTangentCircleParams(
-      car_without_mirror_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.rectangle_without_mirror);
 
   polygon_foot_print_local_.mirror_to_rear_overhang_expand_rear
       .FillTangentCircleParams(
-          mirror_to_rear_overhanging_rectangle_vertex_expand_rear_with_buffer_);
+          car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_rectangle_expand_rear);
 
   polygon_foot_print_local_.mirror_to_front_overhang.FillTangentCircleParams(
-      mirror_to_front_overhanging_polygon_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon);
 
   polygon_foot_print_local_.tyre_left.FillTangentCircleParams(
-      left_tyre_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.left_tyre_rectangle);
 
   polygon_foot_print_local_.tyre_right.FillTangentCircleParams(
-      right_tyre_rectangle_vertex_with_buffer_);
+      car_shape_vertex_with_buffer_.right_tyre_rectangle);
 }
 
 void GJKCollisionDetector::Reset() {}

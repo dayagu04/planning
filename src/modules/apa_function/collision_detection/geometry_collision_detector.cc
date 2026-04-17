@@ -9,7 +9,8 @@ namespace apa_planner {
 void GeometryCollisionDetector::Reset() {}
 
 const ColResult GeometryCollisionDetector::Update(
-    const geometry_lib::PathSegment &path_seg, const ColDetBuffer& col_det_buffer,
+    const geometry_lib::PathSegment &path_seg,
+    const ColDetBuffer &col_det_buffer,
     const UseObsHeightMethod use_obs_height_method) {
   col_res_.Reset();
   if (obs_manager_ptr_ == nullptr || obs_manager_ptr_->GetObstacles().empty()) {
@@ -42,19 +43,17 @@ void GeometryCollisionDetector::Update(
   Eigen::Vector2d pA;
   Eigen::Vector2d pB;
 
-  // 根据顶点构建基于车位坐标系的自车多边形
-  // 后续可以根据障碍物属性来选择使用哪种多边形
   std::vector<geometry_lib::LineSegment> car_with_mirror_line_vec;
   car_with_mirror_line_vec.clear();
   car_with_mirror_line_vec.reserve(
-      car_with_mirror_polygon_vertex_with_buffer_.size());
-  for (size_t i = 0; i < car_with_mirror_polygon_vertex_with_buffer_.size();
-       ++i) {
-    pA = car_with_mirror_polygon_vertex_with_buffer_[i];
-    if (i < car_with_mirror_polygon_vertex_with_buffer_.size() - 1) {
-      pB = car_with_mirror_polygon_vertex_with_buffer_[i + 1];
+      car_shape_vertex_with_buffer_.polygon_with_mirror.size());
+  for (size_t i = 0;
+       i < car_shape_vertex_with_buffer_.polygon_with_mirror.size(); ++i) {
+    pA = car_shape_vertex_with_buffer_.polygon_with_mirror[i];
+    if (i < car_shape_vertex_with_buffer_.polygon_with_mirror.size() - 1) {
+      pB = car_shape_vertex_with_buffer_.polygon_with_mirror[i + 1];
     } else {
-      pB = car_with_mirror_polygon_vertex_with_buffer_[0];
+      pB = car_shape_vertex_with_buffer_.polygon_with_mirror[0];
     }
     line.SetPoints(l2g_tf.GetPos(pA), l2g_tf.GetPos(pB));
     car_with_mirror_line_vec.emplace_back(line);
@@ -63,14 +62,14 @@ void GeometryCollisionDetector::Update(
   std::vector<geometry_lib::LineSegment> car_without_mirror_line_vec;
   car_without_mirror_line_vec.clear();
   car_without_mirror_line_vec.reserve(
-      car_without_mirror_polygon_vertex_with_buffer_.size());
-  for (size_t i = 0; i < car_without_mirror_polygon_vertex_with_buffer_.size();
-       ++i) {
-    pA = car_without_mirror_polygon_vertex_with_buffer_[i];
-    if (i < car_without_mirror_polygon_vertex_with_buffer_.size() - 1) {
-      pB = car_without_mirror_polygon_vertex_with_buffer_[i + 1];
+      car_shape_vertex_with_buffer_.polygon_without_mirror.size());
+  for (size_t i = 0;
+       i < car_shape_vertex_with_buffer_.polygon_without_mirror.size(); ++i) {
+    pA = car_shape_vertex_with_buffer_.polygon_without_mirror[i];
+    if (i < car_shape_vertex_with_buffer_.polygon_without_mirror.size() - 1) {
+      pB = car_shape_vertex_with_buffer_.polygon_without_mirror[i + 1];
     } else {
-      pB = car_without_mirror_polygon_vertex_with_buffer_[0];
+      pB = car_shape_vertex_with_buffer_.polygon_without_mirror[0];
     }
     line.SetPoints(l2g_tf.GetPos(pA), l2g_tf.GetPos(pB));
     car_without_mirror_line_vec.emplace_back(line);
@@ -78,13 +77,15 @@ void GeometryCollisionDetector::Update(
 
   std::vector<geometry_lib::LineSegment> chassis_line_vec;
   chassis_line_vec.clear();
-  chassis_line_vec.reserve(chassis_vertex_with_buffer_.size());
-  for (size_t i = 0; i < chassis_vertex_with_buffer_.size(); ++i) {
-    pA = chassis_vertex_with_buffer_[i];
-    if (i < chassis_vertex_with_buffer_.size() - 1) {
-      pB = chassis_vertex_with_buffer_[i + 1];
+  chassis_line_vec.reserve(
+      car_shape_vertex_with_buffer_.chassis_polygon.size());
+  for (size_t i = 0; i < car_shape_vertex_with_buffer_.chassis_polygon.size();
+       ++i) {
+    pA = car_shape_vertex_with_buffer_.chassis_polygon[i];
+    if (i < car_shape_vertex_with_buffer_.chassis_polygon.size() - 1) {
+      pB = car_shape_vertex_with_buffer_.chassis_polygon[i + 1];
     } else {
-      pB = chassis_vertex_with_buffer_[0];
+      pB = car_shape_vertex_with_buffer_.chassis_polygon[0];
     }
     line.SetPoints(l2g_tf.GetPos(pA), l2g_tf.GetPos(pB));
     chassis_line_vec.emplace_back(line);
@@ -154,8 +155,9 @@ void GeometryCollisionDetector::Update(
 
   col_res_.remain_obs_dist = min_obs_move_dist;
 
-  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - col_det_buffer_.lon_buffer,
-                                  col_res_.remain_car_dist);
+  col_res_.remain_dist =
+      std::min(col_res_.remain_obs_dist - col_det_buffer_.lon_buffer,
+               col_res_.remain_car_dist);
 
   col_res_.col_flag = (col_res_.remain_dist < col_res_.remain_car_dist);
 }
@@ -167,19 +169,17 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
   Eigen::Vector2d pA;
   Eigen::Vector2d pB;
 
-  // 根据顶点构建基于车位坐标系的自车多边形
-  // 后续可以根据障碍物属性来选择使用哪种多边形
   std::vector<geometry_lib::LineSegment> car_with_mirror_line_vec;
   car_with_mirror_line_vec.clear();
   car_with_mirror_line_vec.reserve(
-      car_with_mirror_polygon_vertex_with_buffer_.size());
-  for (size_t i = 0; i < car_with_mirror_polygon_vertex_with_buffer_.size();
-       ++i) {
-    pA = car_with_mirror_polygon_vertex_with_buffer_[i];
-    if (i < car_with_mirror_polygon_vertex_with_buffer_.size() - 1) {
-      pB = car_with_mirror_polygon_vertex_with_buffer_[i + 1];
+      car_shape_vertex_with_buffer_.polygon_with_mirror.size());
+  for (size_t i = 0;
+       i < car_shape_vertex_with_buffer_.polygon_with_mirror.size(); ++i) {
+    pA = car_shape_vertex_with_buffer_.polygon_with_mirror[i];
+    if (i < car_shape_vertex_with_buffer_.polygon_with_mirror.size() - 1) {
+      pB = car_shape_vertex_with_buffer_.polygon_with_mirror[i + 1];
     } else {
-      pB = car_with_mirror_polygon_vertex_with_buffer_[0];
+      pB = car_shape_vertex_with_buffer_.polygon_with_mirror[0];
     }
     line.SetPoints(l2g_tf.GetPos(pA), l2g_tf.GetPos(pB));
     car_with_mirror_line_vec.emplace_back(line);
@@ -188,14 +188,14 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
   std::vector<geometry_lib::LineSegment> car_without_mirror_line_vec;
   car_without_mirror_line_vec.clear();
   car_without_mirror_line_vec.reserve(
-      car_without_mirror_polygon_vertex_with_buffer_.size());
-  for (size_t i = 0; i < car_without_mirror_polygon_vertex_with_buffer_.size();
-       ++i) {
-    pA = car_without_mirror_polygon_vertex_with_buffer_[i];
-    if (i < car_without_mirror_polygon_vertex_with_buffer_.size() - 1) {
-      pB = car_without_mirror_polygon_vertex_with_buffer_[i + 1];
+      car_shape_vertex_with_buffer_.polygon_without_mirror.size());
+  for (size_t i = 0;
+       i < car_shape_vertex_with_buffer_.polygon_without_mirror.size(); ++i) {
+    pA = car_shape_vertex_with_buffer_.polygon_without_mirror[i];
+    if (i < car_shape_vertex_with_buffer_.polygon_without_mirror.size() - 1) {
+      pB = car_shape_vertex_with_buffer_.polygon_without_mirror[i + 1];
     } else {
-      pB = car_without_mirror_polygon_vertex_with_buffer_[0];
+      pB = car_shape_vertex_with_buffer_.polygon_without_mirror[0];
     }
     line.SetPoints(l2g_tf.GetPos(pA), l2g_tf.GetPos(pB));
     car_without_mirror_line_vec.emplace_back(line);
@@ -203,13 +203,15 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
 
   std::vector<geometry_lib::LineSegment> chassis_line_vec;
   chassis_line_vec.clear();
-  chassis_line_vec.reserve(chassis_vertex_with_buffer_.size());
-  for (size_t i = 0; i < chassis_vertex_with_buffer_.size(); ++i) {
-    pA = chassis_vertex_with_buffer_[i];
-    if (i < chassis_vertex_with_buffer_.size() - 1) {
-      pB = chassis_vertex_with_buffer_[i + 1];
+  chassis_line_vec.reserve(
+      car_shape_vertex_with_buffer_.chassis_polygon.size());
+  for (size_t i = 0; i < car_shape_vertex_with_buffer_.chassis_polygon.size();
+       ++i) {
+    pA = car_shape_vertex_with_buffer_.chassis_polygon[i];
+    if (i < car_shape_vertex_with_buffer_.chassis_polygon.size() - 1) {
+      pB = car_shape_vertex_with_buffer_.chassis_polygon[i + 1];
     } else {
-      pB = chassis_vertex_with_buffer_[0];
+      pB = car_shape_vertex_with_buffer_.chassis_polygon[0];
     }
     line.SetPoints(l2g_tf.GetPos(pA), l2g_tf.GetPos(pB));
     chassis_line_vec.emplace_back(line);
@@ -318,8 +320,9 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
   col_res_.remain_obs_dist =
       std::fabs(min_obs_rot_limit_angle) * arc_seg.circle_info.radius;
 
-  col_res_.remain_dist = std::min(col_res_.remain_obs_dist - col_det_buffer_.lon_buffer,
-                                  col_res_.remain_car_dist);
+  col_res_.remain_dist =
+      std::min(col_res_.remain_obs_dist - col_det_buffer_.lon_buffer,
+               col_res_.remain_car_dist);
 
   col_res_.col_flag = (col_res_.remain_dist < col_res_.remain_car_dist);
 }
@@ -347,8 +350,9 @@ void GeometryCollisionDetector::CalPathSegBound(
   car_vertex_vec.reserve(pose_vec.size() * 4 + 4);
   for (const geometry_lib::PathPoint &pose : pose_vec) {
     geometry_lib::LocalToGlobalTf l2g_tf(pose.pos, pose.heading);
-    for (size_t i = 0; i < car_with_mirror_rectangle_vertex_.size(); ++i) {
-      car_vertex = l2g_tf.GetPos(car_with_mirror_rectangle_vertex_[i]);
+    for (size_t i = 0; i < car_shape_vertex_.rectangle_with_mirror.size();
+         ++i) {
+      car_vertex = l2g_tf.GetPos(car_shape_vertex_.rectangle_with_mirror[i]);
       car_vertex_vec.emplace_back(car_vertex);
     }
   }

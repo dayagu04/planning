@@ -94,25 +94,20 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   void UpdateCarChassisSafeBuffer();
 
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
-                                 CarFootPrintCircleList *car_circle_list,
-                                 const ApaObsHeightType height_type);
+                                 CarFootPrintCircleList *car_circle_list);
 
   // return min dist between obs and car circle
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
                                  CarFootPrintCircleList *car_circle_list,
                                  float *min_dist, int *circle_id,
-                                 const ApaObsHeightType height_type,
                                  const float safe_dist = 0.5);
 
   const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
-                                 CarFootPrintCircleList *car_circle_list,
-                                 const ApaObsHeightType height_type);
+                                 CarFootPrintCircleList *car_circle_list);
 
   const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
                                  CarFootPrintCircleList *car_circle_list,
-                                 float *min_dist,
-                                 const ApaObsHeightType height_type,
-                                 const float safe_dist = 0.5f);
+                                 float *min_dist, const float safe_dist = 0.5f);
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
                          const ColDetBuffer &col_det_buffer,
@@ -150,13 +145,6 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   OGMObsData car_with_mirror_ogm_obs_data_;
   OGMObsData car_without_mirror_ogm_obs_data_;
   OGMObsData car_chassis_ogm_obs_data_;
-
-  // 存储车包络圆信息
-  // local->veh coord sys
-  // global->slot coord sys
-  CarFootPrintCircleList car_with_mirror_circles_list_buffer_;
-  CarFootPrintCircleList car_without_mirror_circles_list_with_buffer_;
-  CarFootPrintCircleList car_chassis_circles_list_with_buffer_;
 };
 
 }  // namespace apa_planner

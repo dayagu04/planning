@@ -17,6 +17,24 @@ using namespace pnc;
 
 #define MAX_CAR_FOOTPRINT_CIRCLE_NUM (12)
 
+struct CarShapeVertex {
+  std::vector<Eigen::Vector2d> polygon_with_mirror;
+  std::vector<Eigen::Vector2d> polygon_without_mirror;
+  std::vector<Eigen::Vector2d> left_mirror_rectangle;
+  std::vector<Eigen::Vector2d> right_mirror_rectangle;
+  std::vector<Eigen::Vector2d> left_tyre_rectangle;
+  std::vector<Eigen::Vector2d> right_tyre_rectangle;
+  std::vector<Eigen::Vector2d> chassis_polygon;
+  std::vector<Eigen::Vector2d> rectangle_with_mirror;
+  std::vector<Eigen::Vector2f> rectangle_with_mirror_f;
+  std::vector<Eigen::Vector2d> rectangle_without_mirror;
+  std::vector<Eigen::Vector2d>
+      mirror_to_front_overhanging_rectangle_expand_front;
+  std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_polygon;
+  std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_rectangle_expand_rear;
+  std::vector<Eigen::Vector2d> mirror_to_front_overhanging_polygon;
+};
+
 struct ColResultF {
   bool col_flag = false;
   float remain_dist = 26.8f;
@@ -150,6 +168,12 @@ struct CarFootPrintCircleList {
   }
 };
 
+struct MultiCarFootPrintCircleList {
+  CarFootPrintCircleList circles_with_mirror;
+  CarFootPrintCircleList circles_without_mirror;
+  CarFootPrintCircleList chassis_circles;
+};
+
 class BaseCollisionDetector {
  public:
   BaseCollisionDetector() {}
@@ -160,7 +184,7 @@ class BaseCollisionDetector {
     obs_manager_ptr_ = obs_manager_ptr;
   };
   void SetSampleDs(const float sample_ds) { sample_ds_ = sample_ds; }
-  void UpdateSafeBuffer(const ColDetBuffer& col_det_buffer);
+  void UpdateSafeBuffer(const ColDetBuffer &col_det_buffer);
 
   void UpdateObsClearZone(const std::vector<Eigen::Vector2d> &pt_vec);
   const bool IsPoseInClearZone(const geometry_lib::PathPoint &pose);
@@ -188,55 +212,11 @@ class BaseCollisionDetector {
       const geometry_lib::PathPoint &pose);
 
  protected:
-  std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_;
-  std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_with_buffer_;
+  CarShapeVertex car_shape_vertex_;
+  CarShapeVertex car_shape_vertex_with_buffer_;
 
-  std::vector<Eigen::Vector2d> car_without_mirror_polygon_vertex_;
-  std::vector<Eigen::Vector2d> car_without_mirror_polygon_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> left_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> left_mirror_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> left_tyre_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> left_tyre_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> right_tyre_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> right_tyre_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> chassis_vertex_;
-  std::vector<Eigen::Vector2d> chassis_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_with_buffer_;
-  std::vector<common_math::Pos<float>> car_with_mirror_rectangle_vertexf_;
-
-  std::vector<Eigen::Vector2d> car_without_mirror_rectangle_vertex_;
-  std::vector<Eigen::Vector2d> car_without_mirror_rectangle_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d>
-      mirror_to_front_overhanging_rectangle_vertex_expand_front_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_;
-
-  std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_polygon_vertex_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_rear_overhanging_polygon_vertex_with_buffer_;
-
-  std::vector<Eigen::Vector2d>
-      mirror_to_rear_overhanging_rectangle_vertex_expand_rear_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_rear_overhanging_rectangle_vertex_expand_rear_with_buffer_;
-
-  std::vector<Eigen::Vector2d> mirror_to_front_overhanging_polygon_vertex_;
-  std::vector<Eigen::Vector2d>
-      mirror_to_front_overhanging_polygon_vertex_with_buffer_;
-
-  CarFootPrintCircleList car_with_mirror_circles_list_;
-  CarFootPrintCircleList car_without_mirror_circles_list_;
-  CarFootPrintCircleList car_chassis_circles_list_;
+  MultiCarFootPrintCircleList multi_car_shape_circle_;
+  MultiCarFootPrintCircleList multi_car_shape_circle_with_buffer_;
 
   ColDetBuffer col_det_buffer_;
 
