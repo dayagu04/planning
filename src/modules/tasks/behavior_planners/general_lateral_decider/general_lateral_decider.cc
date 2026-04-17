@@ -3729,6 +3729,8 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   constexpr double kOverlapChangeThreshold = 0.01;  // 变化的容忍阈值
+  constexpr double kMinLatSafeDis = 0.4;  // 变化的容忍阈值
+
   // Step 1: 更新 overlap 范围，并判断是否 reset 预测时间
   if (is_nudge_left) {
     updated_overlap_min_y = std::max(overlap_min_y, limit_overlap_min_y);
@@ -3755,7 +3757,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   }
   if (is_care_reverse_ignore_obj) {
     lat_buf_dis =
-        std::fmax(lat_buf_dis - extra_reverse_obj_decrease_buffer, 0.);
+        std::fmax(lat_buf_dis - extra_reverse_obj_decrease_buffer, kMinLatSafeDis);
   }
   // Step 3: 更新历史 overlap 用于下一次比较
   double extra_pred_ts_decrease_buffer =
@@ -4187,7 +4189,10 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
       const auto crossing_map_iter = is_crossing_map.find(obstacle->id());
       bool is_cross_obj = false;
       if (crossing_map_iter != is_crossing_map.end()) {
-        is_cross_obj = crossing_map_iter->second;
+        bool is_over_large_heading_obj =
+            std::fabs(obstacle->obstacle()->relative_heading_angle()) >
+            0.75 * M_PI;
+        is_cross_obj = crossing_map_iter->second && !is_over_large_heading_obj;
       }
       if (obstacle->obstacle()->is_reverse() &&
           (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
