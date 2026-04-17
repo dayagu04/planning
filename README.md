@@ -171,3 +171,26 @@ python html_generator.py plot_ctrl_html /home/xlwang71/Downloads/0713/
 ```
 make pybind_build
 ```
+
+##### 8.提交代码审查（review_commits.sh）：
+
+使用 Claude Code 对指定范围的提交进行代码审查，审查结果保存为 Markdown 文件。
+
+**用法：**
+```
+tools/review_commits.sh <from_commit> <to_commit>
+```
+
+**示例：**
+```
+# 审查单个提交
+tools/review_commits.sh abc1234 abc1234
+
+# 审查一段范围内的提交
+tools/review_commits.sh abc1234 def5678
+
+# 审查从某个提交到当前最新提交
+tools/review_commits.sh abc1234 HEAD
+```
+
+审查报告将保存在当前目录的 `cc_suggestion/` 文件夹下，文件名格式为 `review_<from>_<to>_<时间戳>.md`，包含提交列表及 Claude Code 给出的审查建议。
