@@ -335,6 +335,10 @@ void LaneChangeStateMachineManager::RunStateMachine() {
       // should never enter here, add some debug info here
       break;
   }
+  JSON_DEBUG_VALUE("overtake_lane_change_confirmed", overtake_lane_change_confirmed_)
+  JSON_DEBUG_VALUE("pilot_overtake_comfirm_siginal", pilot_req.is_overtake_lane_change_confirmed)
+  JSON_DEBUG_VALUE("enable_overtake_confirm",
+                   config_.enable_overtake_lane_change_confirmation)
   // update history
   if (target_lane_rear_node_) {
     last_target_rear_agent_id_ = target_lane_rear_node_->node_id();
@@ -1444,10 +1448,6 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   // }
   const int cur_state = transition_info_.lane_change_status;
   JSON_DEBUG_VALUE("cur_state", cur_state)
-  JSON_DEBUG_VALUE("overtake_lane_change_confirmed", overtake_lane_change_confirmed_)
-  JSON_DEBUG_VALUE("pilot_overtake_comfirm_siginal", pilot_req.is_overtake_lane_change_confirmed)
-  JSON_DEBUG_VALUE("enable_overtake_confirm",
-                   config_.enable_overtake_lane_change_confirmation)
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const planning_data::DynamicAgentNode* const agent) {
