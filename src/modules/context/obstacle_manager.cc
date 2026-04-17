@@ -682,15 +682,15 @@ void ObstacleManager::UpdateGroundLineObstacle() {
             in_range = false;
             break;
           }
-
-          // 查该 s 位置参考线的 floor_id，判断 groundline 点是否属于该位置应有的楼层
-          ReferencePathPoint ref_pt_at_s;
-          if (!ref_path_ptr->get_reference_point_by_lon(sl_point.x, ref_pt_at_s) ||
-              groundline.floor_id.id != ref_pt_at_s.floor_id) {
-            in_range = false;
-            break;
+          if(session_->is_hpp_scene()) {
+            // 查该 s 位置参考线的 floor_id，判断 groundline 点是否属于该位置应有的楼层
+            ReferencePathPoint ref_pt_at_s;
+            if (!ref_path_ptr->get_reference_point_by_lon(sl_point.x, ref_pt_at_s) ||
+                groundline.floor_id.id != ref_pt_at_s.floor_id) {
+              in_range = false;
+              break;
+            }
           }
-
           if (groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
               sl_point.x < ego_point.x + min_front_dis ||
               ((sl_point.x < ego_point.x + min_front_dis_for_map) &&
@@ -740,9 +740,14 @@ bool ObstacleManager::FilterGroundLineByDistance(
       const Point2D &ego_point, const int groundline_floor_id,
       const iflyauto::GroundLineType type,
       const iflyauto::StaticFusionResourceType resource_type) {
-  const double kMinFrontDistance = 6;
-  const double kMinFrontDistanceForMap = 7;
-  const double kMaxSideDistance = 5;
+  double min_front_dis = 6.0;
+  double min_front_dis_for_map = 7.0;
+  double max_side_dis = 5.0;
+  if(session_->is_hpp_scene()) {
+    min_front_dis = 2.0;
+    min_front_dis_for_map = 3.0;
+    max_side_dis = 5.0;
+  }
   bool in_range = true;
   bool is_lat_valid = false;
   double min_dist_to_ref = NL_NMAX;
@@ -753,18 +758,18 @@ bool ObstacleManager::FilterGroundLineByDistance(
       in_range = false;
       break;
     } 
-
-    // 查该 s 位置参考线的 floor_id，判断 groundline 点是否属于该位置应有的楼层
-    ReferencePathPoint ref_pt_at_s;
-    if (!ref_path_ptr->get_reference_point_by_lon(sl_point.x, ref_pt_at_s) ||
-        groundline_floor_id != ref_pt_at_s.floor_id) {
-      in_range = false;
-      break;
+    if(session_->is_hpp_scene()) {
+      // 查该 s 位置参考线的 floor_id，判断 groundline 点是否属于该位置应有的楼层
+      ReferencePathPoint ref_pt_at_s;
+      if (!ref_path_ptr->get_reference_point_by_lon(sl_point.x, ref_pt_at_s) ||
+          groundline_floor_id != ref_pt_at_s.floor_id) {
+        in_range = false;
+        break;
+      }
     }
-    
     if (type == iflyauto::GROUND_LINE_TYPE_COLUMN ||
-        sl_point.x < ego_point.x + kMinFrontDistance ||
-        ((sl_point.x < ego_point.x + kMinFrontDistanceForMap) &&
+        sl_point.x < ego_point.x + min_front_dis ||
+        ((sl_point.x < ego_point.x + min_front_dis_for_map) &&
          resource_type ==
              iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP)) {
       in_range = false;
@@ -774,7 +779,7 @@ bool ObstacleManager::FilterGroundLineByDistance(
     min_dist_to_ref = std::min(std::fabs(sl_point.y), min_dist_to_ref);
     is_lat_valid = true;
   }
-  return ((!in_range) || (is_lat_valid && min_dist_to_ref > kMaxSideDistance));
+  return ((!in_range) || (is_lat_valid && min_dist_to_ref > max_side_dis));
 }
 
 void ObstacleManager::UpdateMapStaticObstacle() {
