@@ -261,6 +261,20 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   need_update_buffer_ = true;
 }
 
+static void ApplyLatBuffer(
+    const std::vector<Eigen::Vector2d>& src,
+    std::vector<Eigen::Vector2d>& dst,
+    const double buffer) {
+  dst.clear();
+  dst.reserve(src.size());
+  Eigen::Vector2d v;
+  for (const Eigen::Vector2d& pt : src) {
+    v.x() = pt.x();
+    v.y() = (pt.y() > 0.0) ? pt.y() + buffer : pt.y() - buffer;
+    dst.emplace_back(v);
+  }
+}
+
 void BaseCollisionDetector::UpdateSafeBuffer(
     const ColDetBuffer& col_det_buffer) {
   if (!need_update_buffer_ &&
@@ -274,140 +288,83 @@ void BaseCollisionDetector::UpdateSafeBuffer(
 
   need_update_buffer_ = false;
   col_det_buffer_ = col_det_buffer;
-  Eigen::Vector2d vertex;
 
+  const double body_buf = col_det_buffer_.body_lat_buffer;
+  const double mirror_buf = col_det_buffer_.mirror_lat_buffer;
   const ApaParameters& param = apa_param.GetParam();
 
-  car_shape_vertex_with_buffer_.polygon_with_mirror.clear();
-  car_shape_vertex_with_buffer_.polygon_with_mirror.reserve(
-      car_shape_vertex_.polygon_with_mirror.size());
-  for (const Eigen::Vector2d& pt : car_shape_vertex_.polygon_with_mirror) {
-    vertex.x() = pt.x();
+  // polygon_with_mirror: mirror region uses mirror_buf, others use body_buf
+  {
+    const auto& src = car_shape_vertex_.polygon_with_mirror;
+    auto& dst = car_shape_vertex_with_buffer_.polygon_with_mirror;
+    dst.clear();
+    dst.reserve(src.size());
+    Eigen::Vector2d v;
+    for (const Eigen::Vector2d& pt : src) {
+      v.x() = pt.x();
+      const double buf =
+          (pt.x() > 0.0 && pt.x() < param.lon_dist_mirror_to_rear_axle + 0.68)
+              ? mirror_buf
+              : body_buf;
+      v.y() = (pt.y() > 0.0) ? pt.y() + buf : pt.y() - buf;
+      dst.emplace_back(v);
+    }
+  }
 
-    if (pt.x() > 0.0 && pt.x() < param.lon_dist_mirror_to_rear_axle + 0.68) {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.mirror_lat_buffer
-                                  : pt.y() - col_det_buffer_.mirror_lat_buffer;
-    } else {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.body_lat_buffer
-                                  : pt.y() - col_det_buffer_.body_lat_buffer;
+  // left/right mirror rectangle: only outer edge expands
+  {
+    const double half_car_w = param.car_width * 0.5;
+    auto& dst_l = car_shape_vertex_with_buffer_.left_mirror_rectangle;
+    dst_l.clear();
+    dst_l.reserve(car_shape_vertex_.left_mirror_rectangle.size());
+    for (const Eigen::Vector2d& pt : car_shape_vertex_.left_mirror_rectangle) {
+      Eigen::Vector2d v(pt);
+      if (std::fabs(pt.y()) > half_car_w) {
+        v.y() += mirror_buf;
+      }
+      dst_l.emplace_back(v);
     }
 
-    car_shape_vertex_with_buffer_.polygon_with_mirror.emplace_back(vertex);
-  }
-
-  car_shape_vertex_with_buffer_.polygon_without_mirror.clear();
-  car_shape_vertex_with_buffer_.polygon_without_mirror.reserve(
-      car_shape_vertex_.polygon_without_mirror.size());
-  for (const Eigen::Vector2d& pt : car_shape_vertex_.polygon_without_mirror) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.body_lat_buffer
-                                : pt.y() - col_det_buffer_.body_lat_buffer;
-    car_shape_vertex_with_buffer_.polygon_without_mirror.emplace_back(vertex);
-  }
-
-  car_shape_vertex_with_buffer_.left_mirror_rectangle.clear();
-  car_shape_vertex_with_buffer_.left_mirror_rectangle.reserve(
-      car_shape_vertex_.left_mirror_rectangle.size());
-  for (const Eigen::Vector2d& pt : car_shape_vertex_.left_mirror_rectangle) {
-    vertex << pt.x(), pt.y();
-    if (std::fabs(pt.y()) > param.car_width * 0.5) {
-      vertex.y() += col_det_buffer_.mirror_lat_buffer;
+    auto& dst_r = car_shape_vertex_with_buffer_.right_mirror_rectangle;
+    dst_r.clear();
+    dst_r.reserve(car_shape_vertex_.right_mirror_rectangle.size());
+    for (const Eigen::Vector2d& pt : car_shape_vertex_.right_mirror_rectangle) {
+      Eigen::Vector2d v(pt);
+      if (std::fabs(pt.y()) > half_car_w) {
+        v.y() -= mirror_buf;
+      }
+      dst_r.emplace_back(v);
     }
-    car_shape_vertex_with_buffer_.left_mirror_rectangle.emplace_back(vertex);
   }
 
-  car_shape_vertex_with_buffer_.right_mirror_rectangle.clear();
-  car_shape_vertex_with_buffer_.right_mirror_rectangle.reserve(
-      car_shape_vertex_.right_mirror_rectangle.size());
-  for (const Eigen::Vector2d& pt : car_shape_vertex_.right_mirror_rectangle) {
-    vertex << pt.x(), pt.y();
-    if (std::fabs(pt.y()) > param.car_width * 0.5) {
-      vertex.y() -= col_det_buffer_.mirror_lat_buffer;
-    }
-    car_shape_vertex_with_buffer_.right_mirror_rectangle.emplace_back(vertex);
-  }
+  // body_buf polygons
+  ApplyLatBuffer(car_shape_vertex_.polygon_without_mirror,
+                 car_shape_vertex_with_buffer_.polygon_without_mirror, body_buf);
+  ApplyLatBuffer(car_shape_vertex_.chassis_polygon,
+                 car_shape_vertex_with_buffer_.chassis_polygon, body_buf);
+  ApplyLatBuffer(car_shape_vertex_.rectangle_without_mirror,
+                 car_shape_vertex_with_buffer_.rectangle_without_mirror,
+                 body_buf);
+  ApplyLatBuffer(car_shape_vertex_.mirror_to_rear_overhanging_polygon,
+                 car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon,
+                 body_buf);
+  ApplyLatBuffer(car_shape_vertex_.mirror_to_front_overhanging_polygon,
+                 car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon,
+                 body_buf);
 
-  car_shape_vertex_with_buffer_.chassis_polygon.clear();
-  car_shape_vertex_with_buffer_.chassis_polygon.reserve(
-      car_shape_vertex_.chassis_polygon.size());
-  for (const Eigen::Vector2d& pt : car_shape_vertex_.chassis_polygon) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.body_lat_buffer
-                                : pt.y() - col_det_buffer_.body_lat_buffer;
-    car_shape_vertex_with_buffer_.chassis_polygon.emplace_back(vertex);
-  }
-
-  car_shape_vertex_with_buffer_.rectangle_with_mirror.clear();
-  car_shape_vertex_with_buffer_.rectangle_with_mirror.reserve(
-      car_shape_vertex_.rectangle_with_mirror.size());
-  for (const Eigen::Vector2d& pt : car_shape_vertex_.rectangle_with_mirror) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.mirror_lat_buffer
-                                : pt.y() - col_det_buffer_.mirror_lat_buffer;
-    car_shape_vertex_with_buffer_.rectangle_with_mirror.emplace_back(vertex);
-  }
-
-  car_shape_vertex_with_buffer_.rectangle_without_mirror.clear();
-  car_shape_vertex_with_buffer_.rectangle_without_mirror.reserve(
-      car_shape_vertex_.rectangle_without_mirror.size());
-  for (const Eigen::Vector2d& pt : car_shape_vertex_.rectangle_without_mirror) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.body_lat_buffer
-                                : pt.y() - col_det_buffer_.body_lat_buffer;
-    car_shape_vertex_with_buffer_.rectangle_without_mirror.emplace_back(vertex);
-  }
-
-  car_shape_vertex_with_buffer_
-      .mirror_to_front_overhanging_rectangle_expand_front.clear();
-  car_shape_vertex_with_buffer_
-      .mirror_to_front_overhanging_rectangle_expand_front.reserve(4);
-  for (const Eigen::Vector2d& pt :
-       car_shape_vertex_.mirror_to_front_overhanging_rectangle_expand_front) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.mirror_lat_buffer
-                                : pt.y() - col_det_buffer_.mirror_lat_buffer;
-    car_shape_vertex_with_buffer_
-        .mirror_to_front_overhanging_rectangle_expand_front.emplace_back(
-            vertex);
-  }
-
-  car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon.clear();
-  car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon.reserve(
-      car_shape_vertex_.mirror_to_rear_overhanging_polygon.size());
-  for (const Eigen::Vector2d& pt :
-       car_shape_vertex_.mirror_to_rear_overhanging_polygon) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.body_lat_buffer
-                                : pt.y() - col_det_buffer_.body_lat_buffer;
-    car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_polygon
-        .emplace_back(vertex);
-  }
-
-  car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_rectangle_expand_rear
-      .clear();
-  car_shape_vertex_with_buffer_.mirror_to_rear_overhanging_rectangle_expand_rear
-      .reserve(car_shape_vertex_
-                   .mirror_to_rear_overhanging_rectangle_expand_rear.size());
-  for (const Eigen::Vector2d& pt :
-       car_shape_vertex_.mirror_to_rear_overhanging_rectangle_expand_rear) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.mirror_lat_buffer
-                                : pt.y() - col_det_buffer_.mirror_lat_buffer;
-    car_shape_vertex_with_buffer_
-        .mirror_to_rear_overhanging_rectangle_expand_rear.emplace_back(vertex);
-  }
-
-  car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon.clear();
-  car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon.reserve(
-      car_shape_vertex_.mirror_to_front_overhanging_polygon.size());
-  for (const Eigen::Vector2d& pt :
-       car_shape_vertex_.mirror_to_front_overhanging_polygon) {
-    vertex.x() = pt.x();
-    vertex.y() = (pt.y() > 0.0) ? pt.y() + col_det_buffer_.body_lat_buffer
-                                : pt.y() - col_det_buffer_.body_lat_buffer;
-    car_shape_vertex_with_buffer_.mirror_to_front_overhanging_polygon
-        .emplace_back(vertex);
-  }
+  // mirror_buf polygons
+  ApplyLatBuffer(car_shape_vertex_.rectangle_with_mirror,
+                 car_shape_vertex_with_buffer_.rectangle_with_mirror, mirror_buf);
+  ApplyLatBuffer(
+      car_shape_vertex_.mirror_to_front_overhanging_rectangle_expand_front,
+      car_shape_vertex_with_buffer_
+          .mirror_to_front_overhanging_rectangle_expand_front,
+      mirror_buf);
+  ApplyLatBuffer(
+      car_shape_vertex_.mirror_to_rear_overhanging_rectangle_expand_rear,
+      car_shape_vertex_with_buffer_
+          .mirror_to_rear_overhanging_rectangle_expand_rear,
+      mirror_buf);
 
   // todo: 根据轮胎具体角度来加上横向buffer，但是这样会导致每次重复计算sin
   // cos值, 且收益意义不大，可以直接赋值

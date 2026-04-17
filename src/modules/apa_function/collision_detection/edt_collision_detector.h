@@ -89,9 +89,10 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
 
   void UpdateSafeBuffer(const ColDetBuffer &col_det_buffer);
 
-  void UpdateCarWithMirrorSafeBuffer();
-  void UpdateCarWithOutMirrorSafeBuffer();
-  void UpdateCarChassisSafeBuffer();
+  void UpdateSingleCircleListSafeBuffer(const CarFootPrintCircleList &src,
+                                        CarFootPrintCircleList &dst,
+                                        ApaObsHeightType height_type,
+                                        bool has_mirror);
 
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
                                  CarFootPrintCircleList *car_circle_list);
