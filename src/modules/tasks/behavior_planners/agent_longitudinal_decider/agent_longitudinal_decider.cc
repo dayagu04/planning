@@ -13,9 +13,12 @@
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "interface/src/c/common_c.h"
+#include "library/lc_pure_pursuit_lib/include/basic_pure_pursuit_model.h"
 #include "log.h"
 #include "planning_context.h"
+#include "trajectory/trajectory.h"
 #include "vehicle_config_context.h"
+#include "vehicle_model_simulation.h"
 #include "virtual_lane.h"
 
 namespace planning {
@@ -45,6 +48,13 @@ constexpr int kPredFrames = 6;
 constexpr double kPredFrameInterval = 0.2;
 
 constexpr double kFilterUltraDistanceHighThd = 300.0;
+
+constexpr double kPurePursuitTimeStep = 0.2;
+constexpr int32_t kPurePursuitPlanCounter = 25;
+constexpr double kPurePursuitLookAheadDistance = 4.5;
+constexpr double kPurePursuitMaxSteerAngle = 0.5;
+constexpr double kDecelerationThreshold = -3.0;
+constexpr double kRelativeThetaThreshold = 0.1;
 
 constexpr double kReverseHeadingThreshold = 2.09;
 constexpr double kLowSpeedThreshold = 3.0;
@@ -335,10 +345,28 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
     const int32_t agent_id = agent->agent_id();
     current_agent_ids_.insert(agent_id);
 
+    const auto agent_matched_path_point =
+        ego_lane_coord->GetPathPointByS(agent_s);
+    const double agent_matched_lane_theta = agent_matched_path_point.theta();
+    const double agent_relative_theta = planning_math::NormalizeAngle(
+        agent->theta() - agent_matched_lane_theta);
+    const double object_s_speed_mps =
+        agent->speed() * std::cos(agent_relative_theta);
+    const double object_l_speed_mps =
+        agent->speed() * std::sin(agent_relative_theta);
+
+    ProcessKeyAgentTrajectory(*agent, ego_speed_mps, ego_half_length,
+                              ego_half_width, init_point, ego_lane_coord, ego_s,
+                              ego_l, agent_s, agent_l, agent_matched_lane_theta,
+                              agent_relative_theta, object_s_speed_mps,
+                              object_l_speed_mps, mutable_agent_manager);
+
     ProcessCutInCutOutAgent(
         *agent, ego_speed_mps, ego_half_length, ego_half_width, init_point,
         is_confluence_area, ego_lane_coord, ego_s, ego_l, agent_s, agent_l,
-        mutable_agent_manager, agent_longitudinal_decider_output);
+        agent_matched_lane_theta, agent_relative_theta, object_s_speed_mps,
+        object_l_speed_mps, mutable_agent_manager,
+        agent_longitudinal_decider_output);
   }
 
   for (auto it = agent_history_map_.begin(); it != agent_history_map_.end();) {
@@ -350,27 +378,174 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
   }
 }
 
+void AgentLongitudinalDecider::ProcessKeyAgentTrajectory(
+    const agent::Agent& agent, const double ego_speed_mps,
+    const double ego_half_length, const double ego_half_width,
+    const PlanningInitPoint& init_point,
+    const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+    const double ego_s, const double ego_l, const double agent_s,
+    const double agent_l, const double agent_matched_lane_theta,
+    const double agent_relative_theta, const double object_s_speed_mps,
+    const double object_l_speed_mps,
+    agent::AgentManager* const mutable_agent_manager) {
+  if (nullptr == mutable_agent_manager) {
+    return;
+  }
+
+  const auto& lat_lon_joint_planner_output =
+      session_->planning_context().lat_lon_joint_planner_decider_output();
+  const auto& key_obstacle_ids =
+      lat_lon_joint_planner_output.GetKeyObstacleIds();
+
+  const int32_t agent_id = agent.agent_id();
+
+  bool is_key_obstacle = false;
+  for (const auto& key_id : key_obstacle_ids) {
+    if (key_id == agent_id) {
+      is_key_obstacle = true;
+      break;
+    }
+  }
+  if (!is_key_obstacle) {
+    return;
+  }
+
+  const bool is_approaching_ego_lane =
+      std::fabs(object_l_speed_mps) > 1.0 &&
+      ((agent_l > 0.0 && object_l_speed_mps < 0.0) ||
+       (agent_l < 0.0 && object_l_speed_mps > 0.0));
+  if (!is_approaching_ego_lane) {
+    return;
+  }
+
+  if (std::fabs(agent_relative_theta) <= kRelativeThetaThreshold) {
+    return;
+  }
+
+  const double ego_v = init_point.v;
+  const double agent_v = agent.speed();
+  if (ego_v <= agent_v) {
+    return;
+  }
+
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
+
+  const double distance =
+      agent_s - agent.length() * 0.5 - ego_s - rear_axle_to_front_edge;
+  if (distance <= 0.0) {
+    return;
+  }
+
+  const double vel_diff = ego_v - object_s_speed_mps;
+  const double required_deceleration = (vel_diff * vel_diff) / (2.0 * distance);
+  
+  if (required_deceleration <= kDecelerationThreshold) {
+    return;
+  }
+
+  auto* mutable_agent = mutable_agent_manager->mutable_agent(agent_id);
+  if (mutable_agent == nullptr) {
+    return;
+  }
+
+  const auto& original_trajectories =
+      mutable_agent->trajectories_used_by_st_graph();
+  if (original_trajectories.empty() || original_trajectories.front().empty()) {
+    return;
+  }
+
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& ego_lane = virtual_lane_manager->get_current_lane();
+  if (ego_lane == nullptr) {
+    return;
+  }
+
+  const auto& reference_path_ptr = ego_lane->get_reference_path();
+  if (reference_path_ptr == nullptr) {
+    return;
+  }
+
+  planning::BasicPurePursuitModel pp_model;
+  if (pp_model.ProcessReferencePath(reference_path_ptr) !=
+      ErrorType::kSuccess) {
+    return;
+  }
+
+  const double obs_wheelbase = agent.length() * 0.75;
+  const double ld =
+      std::max(kPurePursuitLookAheadDistance, agent.speed() * 1.5);
+
+  planning::BasicPurePursuitModel::ModelState pp_state(
+      agent.x(), agent.y(), agent.theta(), agent.speed());
+
+  trajectory::Trajectory pure_pursuit_trajectory(original_trajectories.front());
+
+  for (size_t i = 1; i < pure_pursuit_trajectory.size(); ++i) {
+    const double current_vel = pp_state.vel;
+
+    planning::BasicPurePursuitModel::ModelParam pp_param(ld, obs_wheelbase);
+    pp_model.set_model_state(pp_state);
+    pp_model.set_model_param(pp_param);
+
+    if (pp_model.CalculateDesiredDelta(0.0) != ErrorType::kSuccess) {
+      break;
+    }
+
+    double desired_delta = pp_model.get_delta();
+    desired_delta = std::clamp(desired_delta, -kPurePursuitMaxSteerAngle,
+                               kPurePursuitMaxSteerAngle);
+
+    pnc::steerModel::VehicleSimulation vehicle_simulate;
+    pnc::steerModel::VehicleParameter vehicle_param;
+    vehicle_param.c1_ = 1.0 / obs_wheelbase;
+
+    pnc::steerModel::VehicleState vehicle_state{pp_state.x, pp_state.y,
+                                                pp_state.theta};
+    pnc::steerModel::VehicleControl vehicle_control{pp_state.vel,
+                                                    desired_delta};
+
+    vehicle_simulate.Init(vehicle_state);
+    vehicle_simulate.Update(vehicle_control, vehicle_param);
+    const auto new_state = vehicle_simulate.GetState();
+
+    double theta_value = new_state.phi_;
+    if (i > 0) {
+      double last_theta = pure_pursuit_trajectory[i - 1].theta();
+      double dtheta = planning_math::NormalizeAngle(theta_value - last_theta);
+      theta_value = last_theta + dtheta;
+    }
+
+    pure_pursuit_trajectory[i].set_x(new_state.x_);
+    pure_pursuit_trajectory[i].set_y(new_state.y_);
+    pure_pursuit_trajectory[i].set_theta(theta_value);
+
+    pp_state.x = new_state.x_;
+    pp_state.y = new_state.y_;
+    pp_state.theta = theta_value;
+  }
+
+  std::vector<trajectory::Trajectory> pure_pursuit_trajectories;
+  pure_pursuit_trajectories.push_back(pure_pursuit_trajectory);
+  mutable_agent->set_trajectories_used_by_st_graph(pure_pursuit_trajectories);
+}
+
 void AgentLongitudinalDecider::ProcessCutInCutOutAgent(
     const agent::Agent& agent, const double ego_speed_mps,
     const double ego_half_length, const double ego_half_width,
     const PlanningInitPoint init_point, const bool is_confluence_area,
     const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
     const double ego_s, const double ego_l, const double agent_s,
-    const double agent_l, agent::AgentManager* const mutable_agent_manager,
+    const double agent_l, const double agent_matched_lane_theta,
+    const double agent_relative_theta, const double object_s_speed_mps,
+    const double object_l_speed_mps,
+    agent::AgentManager* const mutable_agent_manager,
     AgentLongitudinalDeciderOutput* output) {
   if (nullptr == mutable_agent_manager) {
     return;
   }
-
-  const auto agent_matched_path_point =
-      ego_lane_coord->GetPathPointByS(agent_s);
-  const double agent_matched_lane_theta = agent_matched_path_point.theta();
-  const double agent_relative_theta =
-      planning_math::NormalizeAngle(agent.theta() - agent_matched_lane_theta);
-  const double object_s_speed_mps =
-      agent.speed() * std::cos(agent_relative_theta);
-  const double object_l_speed_mps =
-      agent.speed() * std::sin(agent_relative_theta);
 
   const double agent_lateral_vel_abs = std::fabs(object_l_speed_mps);
   const double lateral_distance_range =

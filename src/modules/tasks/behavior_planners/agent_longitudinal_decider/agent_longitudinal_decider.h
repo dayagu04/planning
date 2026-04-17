@@ -50,13 +50,26 @@ class AgentLongitudinalDecider : public Task {
 
   void DeciderCutInAndOutAgents();
 
+  void ProcessKeyAgentTrajectory(
+      const agent::Agent& agent, const double ego_speed_mps,
+      const double ego_half_length, const double ego_half_width,
+      const PlanningInitPoint& init_point,
+      const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+      const double ego_s, const double ego_l, const double agent_s,
+      const double agent_l, const double agent_matched_lane_theta,
+      const double agent_relative_theta, const double object_s_speed_mps,
+      const double object_l_speed_mps,
+      agent::AgentManager* const mutable_agent_manager);
+
   void ProcessCutInCutOutAgent(
       const agent::Agent& agent, const double ego_speed_mps,
       const double ego_half_length, const double ego_half_width,
       const PlanningInitPoint init_point, const bool is_confluence_area,
       const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
       const double ego_s, const double ego_l, const double agent_s,
-      const double agent_l,
+      const double agent_l, const double agent_matched_lane_theta,
+      const double agent_relative_theta, const double object_s_speed_mps,
+      const double object_l_speed_mps,
       agent::AgentManager* const mutable_agent_manager,
       AgentLongitudinalDeciderOutput* output = nullptr);
 
