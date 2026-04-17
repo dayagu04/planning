@@ -2519,7 +2519,10 @@ std::pair<FPPoint, FPPoint> LDRouteInfoStrategy::CalculateSplitExchangeAreaFP(
 
   const bool is_highway =
       split_link->link_class() == iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY;
-  const double kMaxSearchLength = is_highway ? 500.0 : 300.0;
+  constexpr double kHighwaySearchDistance = 500.0;
+  constexpr double kUrbanSearchDistance = 300.0;
+  const double kMaxSearchLength =
+      is_highway ? kHighwaySearchDistance : kUrbanSearchDistance;
   double sum_dis = split_link->length() * 0.01;
   iter_link = ld_map_.GetPreviousLinkOnRoute(split_link->id());
   while (iter_link) {
@@ -2794,12 +2797,14 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
         }
 
         // 阈值：下一个 split 前继 link 的 lane_num × 200m（无前继时沿用 200m）
+        constexpr double BASE_MIN_GAP_DIS = 200.0;
         const auto* next_split_pre_link =
             ld_map_.GetPreviousLinkOnRoute(next_split_info.first->id());
         const double min_gap_after_lsl_m =
             next_split_pre_link != nullptr
-                ? static_cast<double>(next_split_pre_link->lane_num()) * 300.0
-                : 200.0;
+                ? static_cast<double>(next_split_pre_link->lane_num()) *
+                      BASE_MIN_GAP_DIS
+                : BASE_MIN_GAP_DIS;
 
         if (distance_to_next_split - total_lsl_length < min_gap_after_lsl_m) {
           should_skip = true;
