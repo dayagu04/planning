@@ -215,6 +215,10 @@ bool EdtManager::FilterObstacleForAra(
         (max_l < kVruLThreshold && min_l > -kVruLThreshold)) {
       return false;
     }
+    if (frenet_obstacle.obstacle()->type() == iflyauto::OBJECT_TYPE_SOLT ||
+        frenet_obstacle.obstacle()->type() == iflyauto::OBJECT_TYPE_DECELER) {
+      return false;
+    }
     return true;
   }
   return false;
