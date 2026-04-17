@@ -5,12 +5,14 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "frenet_obstacle.h"
+#include "lane_reference_path.h"
+#include "obstacle_manager.h"
 #include "planning_context.h"
 #include "st_graph_utils.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
-
 namespace planning {
 using namespace planning_math;
 
@@ -157,8 +159,16 @@ void StGraphInput::Update() {
       session_->planning_context().lane_borrow_decider_output();
   const bool is_in_lane_borrow = lane_borrow_output.is_in_lane_borrow_status;
   const auto lane_borrow_kd_path = lane_borrow_output.dp_path_coord;
-  ExtendProcessedPath(is_lane_keeping_, is_in_lane_borrow, lane_borrow_kd_path,
-                      ego_center_line_coord, planned_kd_path);
+  if (session_->is_hpp_scene()) {
+    // HPP directly uses lateral planner path, without forward/backward
+    // extension.
+    processed_path_ = planned_kd_path;
+    path_range_.second = planned_kd_path->Length();
+  } else {
+    ExtendProcessedPath(is_lane_keeping_, is_in_lane_borrow,
+                        lane_borrow_kd_path, ego_center_line_coord,
+                        planned_kd_path);
+  }
   JSON_DEBUG_VALUE("lat_path_length", planned_kd_path->Length());
   JSON_DEBUG_VALUE("extend_path_length", processed_path_->Length());
 
@@ -241,6 +251,18 @@ void StGraphInput::ExtendProcessedPath(
   if (path_points.size() < KDPath::kKDPathMinPathPointSize) {
     return;
   }
+
+  {
+    std::vector<double> ext_x, ext_y, ext_heading;
+    for (const auto& pt : path_points) {
+      ext_x.push_back(pt.x());
+      ext_y.push_back(pt.y());
+      ext_heading.push_back(pt.theta());
+    }
+    JSON_DEBUG_VECTOR("forward_extend_path_x", ext_x, 2);
+    JSON_DEBUG_VECTOR("forward_extend_path_y", ext_y, 2);
+    JSON_DEBUG_VECTOR("forward_extend_path_heading", ext_heading, 2);
+  }
   const bool need_reset_s = false;
   processed_path_ = std::make_shared<planning_math::KDPath>(
       std::move(path_points), need_reset_s);
@@ -314,13 +336,105 @@ void StGraphInput::ForwardExtendPlannedPathWithEgoLane(
     ForwardLinearlyExtendPlannedPath(planned_path, desired_path_length,
                                      ptr_path_points);
   } else {
-    // fusion ego lane
     *ptr_path_points = planned_path->path_points();
+    double extend_start_s = project_s + 1.0;
+
+    const auto obstacle_manager =
+        session_->environmental_model().get_obstacle_manager();
+    auto reference_path_ptr = session_->planning_context()
+                                  .lane_change_decider_output()
+                                  .coarse_planning_info.reference_path;
+
+    if (reference_path_ptr != nullptr) {
+      const auto target_lane_id = session_->planning_context()
+                                      .lane_change_decider_output()
+                                      .coarse_planning_info.target_lane_id;
+      const auto lane_reference_path =
+          session_->environmental_model()
+              .get_virtual_lane_manager()
+              ->get_lane_with_virtual_id(target_lane_id)
+              ->get_reference_path();
+
+      const auto lead_id =
+          lane_reference_path == nullptr
+              ? -1
+              : lane_reference_path->get_lane_leadone_obstacle();
+      const auto& lat_obstacle_decision = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .lat_obstacle_decision;
+      const auto lat_obs_decision_iter = lat_obstacle_decision.find(lead_id);
+      if (lat_obs_decision_iter != lat_obstacle_decision.end() &&
+          (lat_obs_decision_iter->second == LatObstacleDecisionType::LEFT ||
+           lat_obs_decision_iter->second == LatObstacleDecisionType::RIGHT)) {
+        const auto& obstacles_map = reference_path_ptr->get_obstacles_map();
+        if (obstacles_map.find(lead_id) != obstacles_map.end()) {
+          auto frenet_obstacle = obstacles_map.at(lead_id);
+          if (frenet_obstacle->is_static()) {
+            const auto& frenet_obstacle_boundary =
+                frenet_obstacle->frenet_obstacle_boundary();
+            const double s_end = frenet_obstacle_boundary.s_end;
+            if (s_end > project_s) {
+              const auto agent = mutable_agent_manager_->GetAgent(lead_id);
+              if (agent != nullptr) {
+                double lat_buffer = GetSuitableLateralBuffer(*agent);
+                int32_t prev_st_count = 0;
+                bool is_in_st_graph = false;
+                const double safe_lat_buffer =
+                    StGraphUtils::RecalculateLateralBufferForLargeAgent(
+                        planning_init_point(), *mutable_agent_manager_, *agent,
+                        large_agent_expand_param_for_consistency(), large_agent_small_expand_param_for_consistency(), lat_buffer,
+                        &prev_st_count) + 0.02;
+                const double safe_lat_postion =
+                    lat_obs_decision_iter->second ==
+                            LatObstacleDecisionType::LEFT
+                        ? frenet_obstacle_boundary.l_end + safe_lat_buffer
+                        : frenet_obstacle_boundary.l_start - safe_lat_buffer;
+
+                // extend from project_s to s_end with lateral offset clamped to
+                // min(|project_l|, |safe_lat_postion|)
+                const double target_l =
+                    std::fabs(project_l) < std::fabs(safe_lat_postion)
+                        ? project_l
+                        : safe_lat_postion;
+                auto it_nudge = lane_fusion_ego_center_lane->QueryLowerBound(
+                    lane_fusion_ego_center_lane->path_points(), project_s);
+                if (it_nudge ==
+                    lane_fusion_ego_center_lane->path_points().end()) {
+                  --it_nudge;
+                }
+                for (; it_nudge !=
+                       lane_fusion_ego_center_lane->path_points().end();
+                     ++it_nudge) {
+                  if (it_nudge->s() > s_end) {
+                    break;
+                  }
+                  double nx = 0.0, ny = 0.0;
+                  if (!lane_fusion_ego_center_lane->SLToXY(
+                          it_nudge->s(), target_l, &nx, &ny)) {
+                    continue;
+                  }
+                  const double dx = nx - ptr_path_points->back().x();
+                  const double dy = ny - ptr_path_points->back().y();
+                  const double ds = std::sqrt(dx * dx + dy * dy);
+                  planning_math::PathPoint nudge_pt = *it_nudge;
+                  nudge_pt.set_x(nx);
+                  nudge_pt.set_y(ny);
+                  nudge_pt.set_s(ptr_path_points->back().s() + ds);
+                  ptr_path_points->emplace_back(nudge_pt);
+                }
+                extend_start_s = s_end + 1.0;
+              }
+            }
+          }
+        }
+      }
+    }
+
     const std::vector<planning_math::PathPoint>& ego_lane_path_points =
         lane_fusion_ego_center_lane->path_points();
 
     auto it = lane_fusion_ego_center_lane->QueryLowerBound(ego_lane_path_points,
-                                                           project_s + 1.0);
+                                                           extend_start_s);
     if (it == ego_lane_path_points.end()) {
       --it;
     }
