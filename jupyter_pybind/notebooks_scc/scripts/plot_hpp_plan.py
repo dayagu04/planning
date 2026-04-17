@@ -26,6 +26,7 @@ mode = 'both'
 
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/trigger/20260416/20260416-20-52-16/data_collection_BESTUNE_E541_36718_EVENT_KEY_2026-04-16-20-52-16_no_camera.bag"
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/trigger/20260416/20260416-20-53-11/data_collection_BESTUNE_E541_36718_EVENT_KEY_2026-04-16-20-53-11_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_15345/trigger/20260413/20260413-19-54-32/data_collection_BESTUNE_E541_15345_EVENT_MANUAL_2026-04-13-19-54-32_no_camera.bag"
 
 frame_dt = 0.05  # sec
 global_fig_plot = True
@@ -42,19 +43,17 @@ max_time = bag_loader.load_all_data()
 car_type = global_var.get_value('car_type')
 scene_type = global_var.get_value('scene_type')
 
-fig1, local_view_data = load_local_view_figure()
-load_measure_distance_tool(fig1)
+fig_local_view, local_view_data = load_local_view_figure()
+load_measure_distance_tool(fig_local_view)
+init_local_view_figure(fig_local_view, bag_loader)
 
 # ============================================================
 # 横向规划 (Lateral)
 # ============================================================
 if mode in ('lat', 'both'):
   steer_ratio = load_steer_ratio(car_type)
-  fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_plan_figure(fig1, local_view_data)
-  if scene_type == 'HPP':
-    fig1.width = 1200
-    fig1.height = 1300
-  load_measure_distance_tool(fig7)
+  fig_local_view, fig_lat_theta, fig_lat_acc, fig_lat_jerk, fig_lat_steer, fig_lat_steer_rate, fig_lat_frenet, fig_lat_x, fig_lat_y, lat_plan_data = load_lat_plan_figure(fig_local_view, local_view_data)
+  load_measure_distance_tool(fig_lat_frenet)
   fig_lat_offset = load_lateral_offset(bag_loader)
   fig_receive_topic_time = load_receive_topic_time(bag_loader)
   hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table, rads_info_table = load_planning_hmi_info_table()
@@ -123,7 +122,7 @@ if mode in ('lat', 'both'):
 # ============================================================
 if mode in ('lon', 'both'):
   velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status, topic_latency_fig = load_lon_global_figure(bag_loader)
-  lon_pans, lon_plan_data = load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status, topic_latency_fig)
+  lon_pans, lon_plan_data = load_lon_plan_figure(fig_local_view, velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status, topic_latency_fig)
 
 # ============================================================
 # 更新函数
@@ -177,15 +176,15 @@ class LocalViewSlider:
     self.prediction_obstacle_id = ipywidgets.Text(description='predict_id:')
     self.obstacle_polygon_id = ipywidgets.Text(description='polygon_id:')
     ipywidgets.interact(slider_callback, bag_time=self.time_slider,
-                        prediction_obstacle_id=self.prediction_obstacle_id,
-                        obstacle_polygon_id=self.obstacle_polygon_id)
+                        prediction_obstacle_id=ipywidgets.fixed(''),
+                        obstacle_polygon_id=ipywidgets.fixed(''))
 
 def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data)
-  update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
+  update_local_view_data(fig_local_view, bag_loader, bag_time, local_view_data)
 
   if mode in ('lat', 'both'):
-    update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
+    update_lat_plan_data(fig_lat_frenet, bag_loader, bag_time, local_view_data, lat_plan_data)
     if bag_loader.plan_debug_msg['enable'] == True:
       update_lat_behavior_data(local_view_data)
       update_dynamic_agent_emergency_lane_change_behavior_data(local_view_data)
@@ -201,29 +200,32 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
 # 显示布局
 # ============================================================
 if mode == 'lat':
-  pan_curve    = Panel(child=row(column(fig2, fig8, fig9, fig3, fig4, fig5, fig6, fig_steer_angle, fig_steer_angle_rate, fig_curve)), title="CurveFigure")
+  pan_curve    = Panel(child=row(column(fig_lat_theta, fig_lat_x, fig_lat_y, fig_lat_acc, fig_lat_jerk, fig_lat_steer, fig_lat_steer_rate, fig_steer_angle, fig_steer_angle_rate, fig_curve)), title="CurveFigure")
   pan_behavior = Panel(child=row(column(fig_hmi, fig_lat_offset, row(row(behavior_table_common, behavior_table_dynamic_lane_change)))), title="BehaviorInfo")
   pan_hmi      = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table, planning_request_table))))), title="Hmi")
-  pan_lat_path = Panel(child=row(column(fig7)), title="!Figure")
+  pan_lat_path = Panel(child=row(column(fig_lat_frenet)), title="!Figure")
   if scene_type == "HPP":
     pans = Tabs(tabs=[pan_curve, pan_behavior, pan_hmi, pan_lat_path], height=1200)
   else:
     pans = Tabs(tabs=[pan_curve, pan_behavior, pan_hmi, pan_lat_path])
   if global_fig_plot:
-    bkp.show(row(fig1, pans), notebook_handle=True)
+    bkp.show(row(fig_local_view, pans), notebook_handle=True)
   else:
-    bkp.show(row(fig1, column(fig2, fig9, fig3, fig4, fig5, fig6, fig_lat_offset)), notebook_handle=True)
+    bkp.show(row(fig_local_view, column(fig_lat_theta, fig_lat_y, fig_lat_acc, fig_lat_jerk, fig_lat_steer, fig_lat_steer_rate, fig_lat_offset)), notebook_handle=True)
 
 if mode == 'lon':
-  bkp.show(row(fig1, lon_pans), notebook_handle=True)
+  bkp.show(row(fig_local_view, lon_pans), notebook_handle=True)
 
 if mode == 'both':
-  pan_curve    = Panel(child=row(column(fig2, fig8, fig9, fig3, fig4, fig5, fig6, fig_steer_angle, fig_steer_angle_rate, fig_curve)), title="Lat_CurveFigure")
+  pan_curve    = Panel(child=row(column(fig_lat_theta, fig_lat_x, fig_lat_y, fig_lat_acc, fig_lat_jerk, fig_lat_steer, fig_lat_steer_rate, fig_steer_angle, fig_steer_angle_rate, fig_curve)), title="Lat_CurveFigure")
   pan_behavior = Panel(child=row(column(fig_hmi, fig_lat_offset, row(row(behavior_table_common, behavior_table_dynamic_lane_change)))), title="Lat_BehaviorInfo")
   pan_hmi      = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table, planning_request_table))))), title="Lat_Hmi")
-  pan_lat_path = Panel(child=row(column(fig7)), title="Lat_!Figure")
+  pan_lat_path = Panel(child=row(column(fig_lat_frenet)), title="Lat_!Figure")
   combined_tabs = Tabs(tabs=[pan_curve, pan_behavior, pan_hmi, pan_lat_path] + lon_pans.tabs, height=1200 if scene_type == "HPP" else 800)
-  bkp.show(row(fig1, combined_tabs), notebook_handle=True)
+  bkp.show(row(fig_local_view, combined_tabs), notebook_handle=True)
 
 slider_class = LocalViewSlider(slider_callback)
-display(slider_class.prediction_obstacle_id, slider_class.obstacle_polygon_id, slider_class.time_slider)
+display(ipywidgets.VBox([
+  slider_class.time_slider,
+  ipywidgets.HBox([slider_class.prediction_obstacle_id, slider_class.obstacle_polygon_id])
+]))

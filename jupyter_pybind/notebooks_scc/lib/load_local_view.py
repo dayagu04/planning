@@ -3065,6 +3065,7 @@ def load_local_view_figure():
   fig1.xgrid.grid_line_color = None
   fig1.ygrid.grid_line_color = None
 
+
   fig1.x_range.flipped = True
 
   if is_vis_lane_topo:
@@ -3440,8 +3441,30 @@ def load_local_view_figure():
   return fig1, local_view_data
 
 
-def init_basic_figure_plot(fig, local_view_data):
-  return fig
+def init_local_view_figure(fig_local_view, bag_loader):
+  scene_type = global_var.get_value('scene_type')
+  g_is_display_enu = global_var.get_value('g_is_display_enu')
+  if scene_type == 'HPP':
+    fig_local_view.width = 1200
+    fig_local_view.height = 1300
+
+    if bag_loader.loc_msg['enable'] == True and g_is_display_enu:
+      loc_data = bag_loader.loc_msg['data']
+      if len(loc_data) > 0:
+        loc_msg = loc_data[0]
+        car_x = loc_msg.position.position_boot.x
+        car_y = loc_msg.position.position_boot.y
+      else:
+        car_x = 0.0
+        car_y = 0.0
+    else:
+      car_x = 0.0
+      car_y = 0.0
+    view_range = 25
+    fig_local_view.x_range.start = car_y + view_range   # 注意 x 轴已翻转
+    fig_local_view.x_range.end   = car_y - view_range
+    fig_local_view.y_range.start = car_x - view_range
+    fig_local_view.y_range.end   = car_x + view_range
 
 
 def load_planning_hmi_info_table():
