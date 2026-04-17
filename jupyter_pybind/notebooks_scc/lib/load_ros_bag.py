@@ -746,7 +746,7 @@ class LoadRosbag:
                           "closest_in_path_vehicle_decider_cost", "cipv_lost_prohibit_start_decider_cost", "cipv_lost_prohibit_acceleration_decider_cost",
                           "st_graph_searcher_cost", "parallel_longitudinal_avoid_decider_cost", "agent_headway_decider_cost", "longitudinal_decision_decider_cost",
                           "speed_limit_decider_cost", "start_stop_decider_cost", "long_ref_path_decider_cost", "scc_longitudinal_motion_planner_cost",
-                          "result_trajectory_generator_cost", "hmi_decider_cost"]
+                          "result_trajectory_generator_cost", "hmi_decider_cost", 'Log cost', 'Log cost_2', 'UpdateLDMap cost','CalculateRouteInfo cost']
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
                          "ldw_right_suppression_code_","ldw_right_kickdown_code_","ldw_tlc_threshold_","ldw_left_intervention_","ldw_right_intervention_","ldw_state_",
