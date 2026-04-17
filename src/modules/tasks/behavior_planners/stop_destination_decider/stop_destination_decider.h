@@ -35,6 +35,8 @@ class StopDestinationDecider : public Task {
       agent::AgentDefaultInfo::kNoAgentId;
   std::shared_ptr<planning_math::CollisionChecker> lon_collision_checker_;
   std::vector<double> rads_bound_s_by_collision_check_;
+  bool rads_collision_check_sref_set_flag_ = false;
+  int rads_collision_check_sref_recover_counter_ = 0;
 };
 
 }  // namespace planning

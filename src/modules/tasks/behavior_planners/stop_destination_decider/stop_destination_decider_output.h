@@ -35,11 +35,20 @@ class StopDestinationDeciderOutput {
     return rads_bound_s_by_collision_check_;
   };
 
+  const bool rads_collision_check_sref_set_flag() const {
+    return rads_collision_check_sref_set_flag_;
+  };
+
+  bool& mutable_rads_collision_check_sref_set_flag() {
+    return rads_collision_check_sref_set_flag_;
+  };
+
  private:
   int32_t stop_destination_virtual_agent_id_ =
       agent::AgentDefaultInfo::kNoAgentId;
   double stop_destination_virtual_agent_time_headway_ = 1.0;
   std::vector<double> rads_bound_s_by_collision_check_;
+  bool rads_collision_check_sref_set_flag_ = false;
 };
 
 }  // namespace planning

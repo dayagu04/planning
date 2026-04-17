@@ -299,6 +299,12 @@ void LongRefPathDecider::UpdateLonRefPath() {
         lon_behavior_output_.hard_bounds_v3[i].upper = bound_s[i];
       }
     }
+    if (session_->planning_context().stop_destination_decider_output().
+        rads_collision_check_sref_set_flag()) {
+      for (size_t i = 0; i < plan_points_num_; i++) {
+        lon_behavior_output_.s_refs[i].first = 0.0;
+      }
+    }
   }
 }
 

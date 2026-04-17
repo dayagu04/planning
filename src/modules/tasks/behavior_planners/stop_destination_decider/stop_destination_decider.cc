@@ -8,6 +8,12 @@
 #include "task.h"
 
 namespace planning {
+namespace {
+constexpr double kRADSCollisionCheckSrefRecoverCounter = 5;
+constexpr double kRADSCollisionCheckSrefSetLowThred = 0.1;
+constexpr double kRADSCollisionCheckSrefSetHighThred = 0.25;
+
+}  // namespace
 
 StopDestinationDecider::StopDestinationDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -157,6 +163,23 @@ void StopDestinationDecider::StopDestinationProcess() {
     min_s_bound_val = *min_it;
     std::fill(rads_bound_s_by_collision_check_.begin(), rads_bound_s_by_collision_check_.end(),
         min_s_bound_val);
+    bool sref_set = min_s_bound_val < kRADSCollisionCheckSrefSetLowThred;
+    bool sref_recover = min_s_bound_val > kRADSCollisionCheckSrefSetHighThred;
+    if (sref_set) {
+      rads_collision_check_sref_set_flag_ = sref_set;
+      rads_collision_check_sref_recover_counter_ = 0;
+    } else {
+      if (rads_collision_check_sref_set_flag_ &&
+          rads_collision_check_sref_recover_counter_ < kRADSCollisionCheckSrefRecoverCounter) {
+            if (sref_recover) {
+              rads_collision_check_sref_recover_counter_++;
+            } else {
+              rads_collision_check_sref_recover_counter_ = 0;
+            }
+      } else {
+        rads_collision_check_sref_set_flag_ = false;
+      }
+    }
   }
   AddVirtualObstacle();
   SaveToSession();
@@ -233,6 +256,8 @@ void StopDestinationDecider::SaveToSession() {
       stop_destination_virtual_agent_time_headway_;
   mutable_stop_destination_decider_output.update_rads_bound_s_by_collision_check(
                                         rads_bound_s_by_collision_check_);
+  mutable_stop_destination_decider_output.mutable_rads_collision_check_sref_set_flag() =
+      rads_collision_check_sref_set_flag_;
 }
 
 }  // namespace planning
