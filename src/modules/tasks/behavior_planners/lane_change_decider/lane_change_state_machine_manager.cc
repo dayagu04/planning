@@ -102,7 +102,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
       RequestSource lane_change_type = NO_REQUEST;
       bool is_lanekeeping_to_propose =
           CheckIfProposeLaneChange(&lane_change_direction, &lane_change_type);
-
+      is_pre_move_ = false;
+      lat_close_boundary_offset_ = 0.0;
       if (is_lanekeeping_to_propose) {
         transition_info_.lane_change_status =
             StateMachineLaneChangeStatus::kLaneChangePropose;
