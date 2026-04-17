@@ -734,7 +734,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         # print('v:',plan_v)
         # print('lat_jerk:',plan_omega * plan_v2)
 
-    if global_var.get_value("scene_type") == "HPP":
+    if global_var.get_value("scene_type") == "HPP" and False:
         target_len = len(time_vec)
         src_len = len(plan_lat_acc)
         final_acc_vec = []
