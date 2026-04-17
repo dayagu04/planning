@@ -316,7 +316,7 @@ ParallelPathGenerator::CheckPaParkCondition() {
     ILOG_INFO << "disable pa park";
     return res;
   }
-  const double switch_plan_ratio = 1.05;
+  const double switch_plan_ratio = 1.0;
   const double slot_len = std::fabs(input_.tlane.obs_pt_inside.x() -
                                     input_.tlane.obs_pt_outside.x());
   const double car_to_curb_dis = input_.tlane.car_to_curb_dis;

@@ -4155,6 +4155,8 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
 void ParallelParkInScenario::UpdatePostProcessStatus(
     PathPlannerResult pathplan_result) {
   if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
+    parallel_path_planner_.Reset();
+    parallel_path_planner_ = previous_parallel_path_planner_;
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_GEARCHANGE);
       delay_check_finish_ = true;
@@ -5279,9 +5281,12 @@ void ParallelParkInScenario::CalStaticBufferInDiffSteps(
   ILOG_INFO << "is_ego_in_slot = " << is_ego_in_slot;
 
   bool is_in_slot =
-      enable_pa_park_
-          ? (is_ego_in_slot)
-          : (is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot);
+      is_ego_in_slot && is_start_pose_in_slot && is_end_pose_in_slot;
+  if (enable_pa_park_) {
+    if (is_start_pose_in_slot && !is_end_pose_in_slot) {
+      is_in_slot = is_ego_in_slot;
+    }
+  }
   // totally in slot
   if (is_in_slot) {
     ILOG_INFO << " totally in slot!";
