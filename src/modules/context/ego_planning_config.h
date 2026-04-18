@@ -3543,6 +3543,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "target_speed_ramp_area");
     approaching_zone_deceleration =
         read_json_key<double>(json, "approaching_zone_deceleration");
+    hpp_profile_comfort_accel =
+        read_json_key<double>(json, "hpp_profile_comfort_accel");
+    hpp_profile_lookahead =
+        read_json_key<double>(json, "hpp_profile_lookahead");
+    hpp_profile_ds =
+        read_json_key<double>(json, "hpp_profile_ds");
     speed_bump_collision_buffer =
         read_json_key<double>(json, "speed_bump_collision_buffer");
     turnstile_stop_buffer =
@@ -3641,6 +3647,9 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double target_speed_intersection_road_area = 2.5;      // 9kph
   double target_speed_ramp_area = 2.78;                  // 10kph
   double approaching_zone_deceleration = -1.0;                 // m/s^2
+  double hpp_profile_comfort_accel = 1.5;                      // m/s^2
+  double hpp_profile_lookahead = 100.0;                        // m
+  double hpp_profile_ds = 1.0;                                 // m
   double speed_bump_collision_buffer = 0.0;              // m
   double turnstile_stop_buffer = 3.5;
   double turnstile_min_forward_stop_buffer = 1.0;
