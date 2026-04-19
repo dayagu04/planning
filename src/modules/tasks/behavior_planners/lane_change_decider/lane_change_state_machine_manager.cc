@@ -6156,16 +6156,17 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
             .distance_to_split_point +
         route_info_output.map_split_region_info_list.front()
             .start_fp_point.fp_distance_to_split_point;
+    bool is_nearing_exchange =
+        distance_to_exchange < 100.0 && distance_to_exchange > -20.0;
     if (is_rightest_extend_lane &&
         route_info_output.map_split_region_info_list.front().split_direction ==
             SPLIT_RIGHT &&
-        distance_to_exchange < 200.0) {
+        is_nearing_exchange) {
       return RAMP_ON_RIGHT;
     } else if (is_leftest_extend_lane &&
                route_info_output.map_split_region_info_list.front()
                        .split_direction == SPLIT_LEFT &&
-               route_info_output.map_split_region_info_list.front()
-                       .distance_to_split_point < 200.0) {
+               is_nearing_exchange) {
       return RAMP_ON_LEFT;
     }
   }
