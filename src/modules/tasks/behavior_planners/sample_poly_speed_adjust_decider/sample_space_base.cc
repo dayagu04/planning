@@ -600,7 +600,12 @@ bool STSampleSpaceBase::GetNearestGapListByAvailable(
 
   const auto& intervals = st_points_table_.at(index);
   if (intervals.empty()) {
-    return false;
+    STPointWithLateral upper_point(kMaxPathLength, t, kNoAgentId, -1, 0.0, 0.0);
+    STPointWithLateral lower_point(-kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                   0.0);
+    gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+
+    return true;
   }
 
   if (s + front_edge_to_rear_axle_ < intervals.front().first.s()) {
@@ -714,21 +719,36 @@ bool STSampleSpaceBase::GetNearestGapListByAvailable(
     }
     return true;
   } else{
-    STPointWithLateral upper_point(
-        intervals[mid + 1].first.s(), intervals[mid + 1].first.t(),
-        intervals[mid + 1].first.agent_id(), -1,
-        intervals[mid + 1].first.velocity(),
-        intervals[mid + 1].first.acceleration(),
-        intervals[mid + 1].first.vehicle_length(),
-        intervals[mid + 1].first.l() * change_direction_);
-    STPointWithLateral lower_point(
-        intervals[mid].second.s(), intervals[mid].second.t(),
-        intervals[mid].second.agent_id(), -1, intervals[mid].second.velocity(),
-        intervals[mid].second.acceleration(),
-        intervals[mid].second.vehicle_length(),
-        intervals[mid].second.l() * change_direction_);
-    gap_list->emplace_back(std::make_pair(lower_point, upper_point));
-    return true;
+    if(mid == intervals.size() - 1){
+      STPointWithLateral upper_point(kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                     0.0);
+      STPointWithLateral lower_point(
+          intervals[mid].second.s(), intervals[mid].second.t(),
+          intervals[mid].second.agent_id(), -1,
+          intervals[mid].second.velocity(),
+          intervals[mid].second.acceleration(),
+          intervals[mid].second.vehicle_length(),
+          intervals[mid].second.l() * change_direction_);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+      return true;
+    } else {
+      STPointWithLateral upper_point(
+          intervals[mid + 1].first.s(), intervals[mid + 1].first.t(),
+          intervals[mid + 1].first.agent_id(), -1,
+          intervals[mid + 1].first.velocity(),
+          intervals[mid + 1].first.acceleration(),
+          intervals[mid + 1].first.vehicle_length(),
+          intervals[mid + 1].first.l() * change_direction_);
+      STPointWithLateral lower_point(
+          intervals[mid].second.s(), intervals[mid].second.t(),
+          intervals[mid].second.agent_id(), -1,
+          intervals[mid].second.velocity(),
+          intervals[mid].second.acceleration(),
+          intervals[mid].second.vehicle_length(),
+          intervals[mid].second.l() * change_direction_);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+      return true;
+    }
   }
   return false;
 }

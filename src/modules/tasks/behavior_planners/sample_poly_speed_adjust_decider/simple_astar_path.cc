@@ -211,9 +211,9 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
           }
         }
         if (gap < 0.0 && node.s > collision_s) {
-          std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
-                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-                    << std::endl;
+          // std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
+          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+          //           << std::endl;
           continue;
         } else {
           double left_time =
@@ -225,6 +225,8 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
                   rear_edge_to_rear_axle_,
               anchor_matched_lower_st_point.vehicle_length(), left_time);
         }
+      } else {
+        dis_to_gap_rear_cost = 0.0;
       }
       // 校验gap前车碰撞风险
       if (anchor_matched_upper_st_point.agent_id() != kNoAgentId) {
@@ -253,9 +255,9 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         }
         if (gap < 0.0 &&
             node.s > (collision_s - std::max(follow_distance, thw))) {
-          std::cout << "Gap前车碰撞风险: " << node.getKey()
-                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-                    << std::endl;
+          // std::cout << "Gap前车碰撞风险: " << node.getKey()
+          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+          //           << std::endl;
           continue;
         } else {
           double left_time =
@@ -269,7 +271,10 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
                   front_edge_to_rear_axle_,
               anchor_matched_upper_st_point.vehicle_length(), left_time);
         }
+      } else {
+        dis_to_gap_front_cost = 0.0;
       }
+
       if ((dis_to_gap_rear_cost + dis_to_gap_front_cost) <
           (node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost)) {
         node.dis_to_gap_front_cost = dis_to_gap_front_cost;
@@ -281,6 +286,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
       return false;
     }
   }
+  
   // 检查是否与前车碰撞
   if (leading_agent_info_.id != kNoAgentId && leading_agent_info_.id != -1) {
     double leading_agent_v = 0.0;
