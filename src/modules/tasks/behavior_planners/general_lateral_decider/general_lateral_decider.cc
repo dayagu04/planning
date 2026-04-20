@@ -3729,7 +3729,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   constexpr double kOverlapChangeThreshold = 0.01;  // 变化的容忍阈值
-  constexpr double kMinLatSafeDis = 0.4;  // 最小横向安全距离（逆向障碍物场景）
+  constexpr double kMinLatSafeDis = 0.35;  // 最小横向安全距离（逆向障碍物场景）,取hard bound的横向值
 
   // Step 1: 更新 overlap 范围，并判断是否 reset 预测时间
   if (is_nudge_left) {
