@@ -21,7 +21,7 @@ struct TargetPoseDeciderRequest {
   geometry_lib::PathPoint ego_pose_local =
       geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0);
 
-  TargetPoseDeciderRequest() {}
+  TargetPoseDeciderRequest() = default;
   TargetPoseDeciderRequest(
       const std::vector<double>& _lat_body_buffer_vec,
       const std::vector<double>& _lat_mirror_buffer_vec,
@@ -30,7 +30,7 @@ struct TargetPoseDeciderRequest {
       const ApaSlotLatPosPreference _slot_lat_pos_preference =
           ApaSlotLatPosPreference::MID,
       const bool _is_searching_stage = false,
-      const geometry_lib::PathPoint ego_pose_local =
+      const geometry_lib::PathPoint _ego_pose_local =
           geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0))
       : lat_body_buffer_vec(_lat_body_buffer_vec),
         lat_mirror_buffer_vec(_lat_mirror_buffer_vec),
@@ -40,8 +40,8 @@ struct TargetPoseDeciderRequest {
         base_on_slot(_base_on_slot),
         slot_lat_pos_preference(_slot_lat_pos_preference),
         is_searching_stage(_is_searching_stage),
-        ego_pose_local(ego_pose_local) {}
-  ~TargetPoseDeciderRequest() {}
+        ego_pose_local(_ego_pose_local) {}
+  ~TargetPoseDeciderRequest() = default;
 };
 enum class TargetPoseType {
   FAIL,
@@ -75,10 +75,9 @@ class TargetPoseDecider final : public ParkingTask {
  public:
   TargetPoseDecider(
       const std::shared_ptr<apa_planner::CollisionDetectorInterface>&
-          col_det_interface_ptr) {
-    col_det_interface_ptr_ = col_det_interface_ptr;
-  }
-  ~TargetPoseDecider() {}
+          col_det_interface_ptr)
+      : col_det_interface_ptr_(col_det_interface_ptr) {}
+  ~TargetPoseDecider() = default;
 
   const TargetPoseDeciderResult CalcTargetPose(
       const ApaSlot& slot, const TargetPoseDeciderRequest& request);

@@ -521,6 +521,8 @@ class ParkingScenario {
 
   void UpdateGearChangeCount();
 
+  void SetMirrorStatus();
+
   const bool IsPathCollision(
       const std::vector<pnc::geometry_lib::PathPoint> &path,
       const double static_lon_buffer = 0.3,
@@ -533,15 +535,19 @@ class ParkingScenario {
       const UseObsHeightMethod use_obs_height_method =
           UseObsHeightMethod::HIGH) const;
 
-  const void RecordDebug();
+  void RecordDebug() const;
 
-  const void RecordDebugRemainDist();
+  void RecordDebugRemainDist() const;
 
-  const void RecordDebugStuckTimeInfo();
+  void RecordDebugStuckTimeInfo() const;
 
-  const void RecordDebugTerminalErr();
+  void RecordDebugTerminalErr() const;
 
-  const void RecordDebugPlanningSlotInfo();
+  void RecordDebugPlanningSlotInfo() const;
+
+  void RecordDebugPlanningStatus() const;
+
+  void RecordDebugObstacleInSlot() const;
 
   void DecideExpandMirrorCommand();
 

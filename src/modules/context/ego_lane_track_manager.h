@@ -133,6 +133,10 @@ class EgoLaneTrackManger {
         last_zero_relative_id_order_id_index;
   }
 
+  void SetLastSelectChangeCmd(const int last_lane_select_change_cmd) {
+    last_lane_select_change_cmd_ = last_lane_select_change_cmd;
+  }
+
   bool is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; }
 
   bool is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; }
@@ -187,6 +191,11 @@ class EgoLaneTrackManger {
     return other_split_lane_left_side_;
   }
 
+  const double get_track_lane_average_diff_heading_angle() const {
+    return last_track_ego_lane_
+               ? last_track_ego_lane_->get_average_diff_heading_angle()
+               : 0.0;
+  };
  private:
   double ComputeLanesMatchlaterakDisCost(
       int virtual_id,
@@ -323,6 +332,7 @@ class EgoLaneTrackManger {
   int acc_predict_right_change_count_ = 0;
   double raw_min_road_radius_ = 2000.0;
   double raw_max_road_radius_ = 2000.0;
+  int last_lane_select_change_cmd_ = 0;
 };
 
 }  // namespace planning

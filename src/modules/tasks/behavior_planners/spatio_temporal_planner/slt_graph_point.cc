@@ -14,6 +14,14 @@ const SLTGraphPoint* SLTGraphPoint::pre_point() const { return pre_point_; }
 
 double SLTGraphPoint::path_cost() const { return path_cost_; }
 
+double SLTGraphPoint::path_l_cost() const { return path_l_cost_; }
+
+double SLTGraphPoint::path_dl_cost() const { return path_dl_cost_; }
+
+double SLTGraphPoint::path_ddl_cost() const { return path_ddl_cost_; }
+
+double SLTGraphPoint::stitching_cost() const { return stitching_cost_; }
+
 double SLTGraphPoint::obstacle_cost() const { return dynamic_obstacle_cost_; }
 
 double SLTGraphPoint::longitinal_cost() const {
@@ -46,6 +54,22 @@ void SLTGraphPoint::SetPathCost(const double path_cost) {
   path_cost_ = path_cost;
 }
 
+void SLTGraphPoint::SetPathLCost(const double path_l_cost) {
+  path_l_cost_ = path_l_cost;
+}
+
+void SLTGraphPoint::SetPathDlCost(const double path_dl_cost) {
+  path_dl_cost_ = path_dl_cost;
+}
+
+void SLTGraphPoint::SetPathDdlCost(const double path_ddl_cost) {
+  path_ddl_cost_ = path_ddl_cost;
+}
+
+void SLTGraphPoint::SetStitchingCost(const double stitching_cost) {
+  stitching_cost_ = stitching_cost;
+}
+
 void SLTGraphPoint::SetDynamicObstacleCost(const double dynamic_obstacle_cost) {
   dynamic_obstacle_cost_ = dynamic_obstacle_cost;
 }
@@ -74,5 +98,7 @@ void SLTGraphPoint::SetOptimalSpeed(const double optimal_speed) {
 }
 
 void SLTGraphPoint::SetAcc(const double acc) { a_ = acc; }
+
+double SLTGraphPoint::GetAcc() const { return a_; }
 
 }  // namespace planning

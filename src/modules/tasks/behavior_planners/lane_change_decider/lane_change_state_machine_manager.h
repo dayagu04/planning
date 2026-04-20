@@ -91,6 +91,33 @@ struct LaneChangeStageInfo {
     is_cancel_to_hold = false;
   }
 };
+struct SplitSelectingInfo{
+  StateMachineSplitSelectingStatus split_selecting_status = kNonSelecting;
+  SplitSelectingDirection split_select_direction = SplitSelectingNone;
+  int origin_lane_order_id = -1;
+  int selected_lane_order_id = -1;
+  int origin_lane_virtual_id = -100;
+  int selected_lane_virtual_id = -100;
+  enum UnfinishedReason{
+    NONE_REASON = 0,
+    NO_FIX_LANE = 1,
+    STILL_IN_SPLIT_REGION = 2,
+    NO_FIX_LANE_REF = 3,
+    NOT_CLOSE_TO_FIX_LANE = 4,
+    NO_INTERACTIVE_CMD = 5,
+    NO_SPLIT_REGION = 6,
+  };
+  UnfinishedReason unfinished_reason = NONE_REASON;
+  void Reset() {
+    split_selecting_status = kNonSelecting;
+    split_select_direction = SplitSelectingNone;
+    origin_lane_order_id = -1;
+    selected_lane_order_id = -1;
+    origin_lane_virtual_id = -100;
+    selected_lane_virtual_id = -100;
+    unfinished_reason = NONE_REASON;
+  }
+};
 class LaneChangeStateMachineManager {
  public:
   LaneChangeStateMachineManager(
@@ -104,6 +131,7 @@ class LaneChangeStateMachineManager {
   void Update();
   void ResetStateMachine();
   void WeaklyResetStateMachine();
+  void OnlyResetLCStateMachine();
 
  private:
   void PreProcess();
@@ -187,11 +215,13 @@ class LaneChangeStateMachineManager {
   void CalculateLCGapFeasibleWithPredictionInfo(
       LaneChangeStageInfo* const lc_state_info,
       const planning_data::DynamicAgentNode* agent_node,
-      const bool is_front_car, const bool is_ego_lane_car);
+      const bool is_front_car, const bool is_ego_lane_car,
+      const bool is_side_obs = false);
   TrajectoryPoints CalculateAgentPredictionTrajs(
       const planning_data::DynamicAgentNode* agent_node,
       const bool is_front_agent, const bool is_ego_lane_agent,
-      const planning_data::DynamicAgentNode** after_filter_agent);
+      const planning_data::DynamicAgentNode** after_filter_agent,
+      const bool is_side_obs = false);
   TrajectoryPoints CalculateEgoFutureTrajs() const;
   TrajectoryPoints CalculateEgoPPIDMTrajs();
   TrajectoryPoints CalculateEgoPPIDMTrajs(
@@ -212,7 +242,8 @@ class LaneChangeStateMachineManager {
  void BuildAgentPredictionTrajsInTargetLane(
     const planning_data::DynamicAgentNode* agent_node,
     const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-    const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs);
+    const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs,
+    const bool is_side_obs = false);
   void StoreObjDebugPredictionInfo(
       const planning_data::DynamicAgentNode* agent_node,
       const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
@@ -290,6 +321,12 @@ class LaneChangeStateMachineManager {
       int origin_lane_id, const StateMachineLaneChangeStatus& lc_status,
       const RequestSource& lc_request_source,
       const RequestType& lc_request_type) const;
+  void SplitSelectingStateMachine();
+  bool IsStartSplitSelecting();
+  void SetSelectingDirection(SplitSelectingInfo& split_selecting_info);
+  bool UpdateSelectingFixlane();
+  bool IsSelectingToComplete();
+  void ResetSplitSelectingStateMachine();
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
@@ -315,6 +352,7 @@ class LaneChangeStateMachineManager {
   int lc_target_lane_merge_to_origin_lane_cnt_ = 0;
   RequestType map_turn_signal_ = NO_CHANGE;
   bool is_dash_not_enough_for_lc_ = false;
+  int road_edge_collision_cnt_ = 0;
 
   TrackInfo lc_invalid_track_;
   TrackInfo lc_back_track_;
@@ -377,5 +415,6 @@ class LaneChangeStateMachineManager {
   bool is_aggressive_scence_{false}; // 激进场景标志位
   // 用于判断紧急场景
   bool IsEmergencyScene() const;
+  SplitSelectingInfo split_selecting_info_;
 };
 }  // namespace planning

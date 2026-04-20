@@ -81,13 +81,21 @@ void HierarchyEulerDistanceTransform::SetHierarchyEDTSize(const size_t i) {
 
 const bool HierarchyEulerDistanceTransform::DistanceCheckForPoint(
     float *min_dist, Transform2f *tf, const AstarPathGear gear) {
+  float closest_dist = 100.0f;
+
   for (size_t i = 0; i < hierarchy_edt_size_; i++) {
     EulerDistanceTransform &edt = hierarchy_edt_[i];
-    if (edt.DistanceCheckForPoint(min_dist, tf, gear)) {
+    float layer_dist;
+    if (edt.DistanceCheckForPoint(&layer_dist, tf, gear)) {
+      // Collision detected - return immediately with the collision distance
+      *min_dist = layer_dist;
       return true;
     }
+    // No collision - track minimum distance across layers
+    closest_dist = std::min(closest_dist, layer_dist);
   }
 
+  *min_dist = closest_dist;
   return false;
 }
 
@@ -115,7 +123,7 @@ const bool HierarchyEulerDistanceTransform::DistanceCheckForPoint(
 
 const float HierarchyEulerDistanceTransform::DistanceCheckForPoint(
     const Pose2f &pose, const float radius) {
-  float min_dist = 0.0f;
+  float min_dist = 100.0f;
   for (size_t i = 0; i < hierarchy_edt_size_; i++) {
     EulerDistanceTransform &edt = hierarchy_edt_[i];
     min_dist = std::min(min_dist, edt.DistanceCheckForPoint(pose, radius));

@@ -133,6 +133,8 @@ void EgoLaneTrackManger::TrackEgoLane(
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  StateMachineSplitSelectingStatus split_selecting_status = lane_change_decider_output.split_selecting_status;
+
   bool is_process_split_exchange = false;
   const bool is_in_lane_borrow_status = session_->planning_context()
                                             .lane_borrow_decider_output()
@@ -246,7 +248,10 @@ void EgoLaneTrackManger::TrackEgoLane(
             ego_dis_to_split_exchange_area_start <
                 kSplitSelectEgoToExchangeAreaDistanceThd &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
+            (split_selecting_status == StateMachineSplitSelectingStatus::kNonSelecting ||
+            (split_selecting_status == StateMachineSplitSelectingStatus::kSelectingExecuting && lane_change_cmd != 0 &&
+              lane_change_cmd != last_lane_select_change_cmd_))) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
@@ -276,7 +281,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                 } else {
                   interactive_select_split_counter_--;
                   interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
+                      std::max(interactive_select_split_counter_, 0);
                 }
               }
               return;
@@ -310,7 +315,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                 } else {
                   interactive_select_split_counter_--;
                   interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
+                      std::max(interactive_select_split_counter_, 0);
                 }
               }
               return;
@@ -321,7 +326,10 @@ void EgoLaneTrackManger::TrackEgoLane(
         if (ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
                 kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
-            ego_to_last_split_end_point_distance > 20.0 && lane_keep_status) {
+            ego_to_last_split_end_point_distance > 20.0 && lane_keep_status &&
+            (split_selecting_status == StateMachineSplitSelectingStatus::kNonSelecting ||
+            (split_selecting_status == StateMachineSplitSelectingStatus::kSelectingExecuting && lane_change_cmd != 0 &&
+                lane_change_cmd != last_lane_select_change_cmd_))) {
           ProcessIntersectionSplit(relative_id_lanes,
                                    order_ids_of_same_zero_relative_id);
           ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:"
@@ -341,7 +349,7 @@ void EgoLaneTrackManger::TrackEgoLane(
               } else {
                 interactive_select_split_counter_--;
                 interactive_select_split_counter_ =
-                    std::min(interactive_select_split_counter_, 0);
+                    std::max(interactive_select_split_counter_, 0);
               }
             }
             return;
@@ -411,7 +419,10 @@ void EgoLaneTrackManger::TrackEgoLane(
         if (zero_relative_id_nums > 1 && lane_keep_status &&
             ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
+            (split_selecting_status == StateMachineSplitSelectingStatus::kNonSelecting ||
+            (split_selecting_status == StateMachineSplitSelectingStatus::kSelectingExecuting && lane_change_cmd != 0 &&
+              lane_change_cmd != last_lane_select_change_cmd_))) {
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
                                        order_ids_of_same_zero_relative_id);
@@ -432,7 +443,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                 } else {
                   interactive_select_split_counter_--;
                   interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
+                      std::max(interactive_select_split_counter_, 0);
                 }
               }
               return;
@@ -706,6 +717,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
   for (auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane != nullptr) {
       if (relative_id_lane->get_lane_frenet_coord() != nullptr) {
+        relative_id_lane->set_average_diff_heading_angle(0.0);
         double average_heading_angle_cost = 0.0;
         double heading_angle_cost = 0.0;
         double pos_lateral_offset_cost = 0.0;
@@ -739,6 +751,8 @@ void EgoLaneTrackManger::SelectEgoLaneWithoutPlan(
         pos_lateral_offset_cost = std::fabs(ego_l);
         iter_count = std::max(1, iter_count);
         average_heading_angle_cost = heading_angle_cost / iter_count;
+        relative_id_lane->set_average_diff_heading_angle(
+            average_heading_angle_cost);
         total_lane_cost =
             average_heading_angle_cost * heading_angle_diff_weight +
             pos_lateral_offset_cost * init_pos_lateral_offset_weight;
@@ -1196,8 +1210,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
                   k_lane_change_order_id_diff);
     total_cost = lateral_distance_cost_weight * cumu_lat_dis_cost +
                  kCrossLaneCostWeight * crosslane_cost +
-                 k_init_pos_cost_weight * init_pose_cost +
-                 k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
+                 k_init_pos_cost_weight * init_pose_cost;
     std::vector<double> cost_list{cumu_lat_dis_cost, crosslane_cost,
                                   init_pose_cost, order_id_diff_cost,
                                   total_cost};
@@ -1795,15 +1808,36 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     }
   }
 
-  // 尝试这里识别第一个分流已经不用考虑，可以考虑第二个分流场景了。
-  // 仅针对连续分流、且方向相反的场景进行判断。
+  // Get Virtual Lane Cost on Route
+  const auto& route_info = session_->environmental_model().get_route_info();
+  VirtualLanesRouteCost const& lane_cost = route_info->GetVirtualLaneCostOnRoute(relative_id_lanes);
+
+  // find best lane in order_id_idx
+  int best_order_id_idx = -1;
+  double min_total_cost = 10000;
+  for (int const o_idx : order_ids) {
+    uint const order_id = relative_id_lanes[o_idx]->get_order_id();
+
+    auto find_it = std::find_if(lane_cost.begin(), lane_cost.end(),
+                                [order_id](VirtualLaneRouteCost const& cost) {
+                                  return cost.order_id == order_id;
+                                });
+    if (lane_cost.end() == find_it || !find_it->is_on_route || find_it->total_cost > 0.3) {
+      continue;
+    }
+
+    if (best_order_id_idx == -1 || find_it->total_cost < min_total_cost) {
+      best_order_id_idx = o_idx;
+      min_total_cost = find_it->total_cost;
+    }
+  }
 
   // Check whether to consider the second split. That is: the current lane the
   // ego vehicle is in will definitely not miss the first split.
   bool need_consider_second_split = false;
   CheckIfConsiderSecondSplit(relative_id_lanes, need_consider_second_split);
 
-  if ((!need_consider_second_split && last_zero_relative_id_nums_ > 1 &&
+  if ((!need_consider_second_split && best_order_id_idx < 0 && last_zero_relative_id_nums_ > 1 &&
        (ramp_split_select_is_finish_ || road_split_select_is_finish_) &&
        ego_distance_to_lane_merge_split_point <
            surpress_select_lane_dis_to_split) ||
@@ -1862,7 +1896,6 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   //   }
   // } else {
 
-  // 这里识别需要判断的split，此处直接用first不太合理。
   double road_merge_and_split_distance_thld_surpress_lane_select =
       std::max(60.0, ego_state->ego_v() * 4.0);
 
@@ -1886,7 +1919,38 @@ void EgoLaneTrackManger::PreprocessRampSplit(
         need_consider_second_split ? split_direction_dis_info_list_[1]
                                    : first_split_dir_dis_info_;
 
-    if (split_dir_dis.first == ON_RIGHT) {
+    // Compare new cost-based logic vs old direction-based logic
+    {
+      int old_code_logic_idx = -1;
+      if (split_dir_dis.first == ON_RIGHT) {
+        old_code_logic_idx = order_ids[1];
+      } else if (split_dir_dis.first == ON_LEFT) {
+        old_code_logic_idx = order_ids[0];
+      }
+
+      if (old_code_logic_idx >= 0 && best_order_id_idx >= 0 &&
+          best_order_id_idx != old_code_logic_idx) {
+        ILOG_WARN << "[SplitSelectDiff]"
+                  << " old="
+                  << relative_id_lanes[old_code_logic_idx]->get_order_id()
+                  << " new="
+                  << relative_id_lanes[best_order_id_idx]->get_order_id()
+                  << " cost=" << min_total_cost
+                  << " dist=" << split_dir_dis.second;
+      }
+    }
+
+    if (best_order_id_idx >= 0){
+      GenerateEgoFutureTrajectory(relative_id_lanes[best_order_id_idx], 0.0, ego_future_trajs);
+      if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[best_order_id_idx], ego_future_trajs)) {
+        relative_id_lanes[best_order_id_idx]->set_relative_id(0);
+        origin_order_id = relative_id_lanes[best_order_id_idx]->get_order_id();
+        last_zero_relative_id_order_id_index_ = best_order_id_idx;
+        last_track_ego_lane_ = relative_id_lanes[best_order_id_idx];
+        is_exist_split_on_ramp_ = true;
+      }
+    }
+    else if (split_dir_dis.first == ON_RIGHT) {
       GenerateEgoFutureTrajectory(relative_id_lanes[order_ids[1]], 0.0, ego_future_trajs);
       if (!IsPathCollisionWithRoadEdge(collision_check_lane, relative_id_lanes[order_ids[1]], ego_future_trajs)) {
         relative_id_lanes[order_ids[1]]->set_relative_id(0);
@@ -2081,7 +2145,7 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
   double k_surpresss_interactive_split_selector_distance = 50.0;
   k_surpresss_interactive_split_selector_distance =
       std::max(k_surpresss_interactive_split_selector_distance,
-               ego_state->ego_v() * 2.0);
+               ego_state->ego_v() * 2.5);
 
   // Point2D lane_merge_split_point;
   bool find_virtual_lane_split_point = false;
@@ -2141,6 +2205,20 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
           enable_output_split_select_classical_chinese_ = true;
         }
       } else {
+        // ProcessIntersectionSplit already selected the leftmost lane,
+        // which matches the left turn signal direction.
+        // Check that a right neighbor exists to confirm we are in a valid
+        // split with the current lane already on the correct side.
+        int right_order_id = origin_order_id + 1;
+        auto right_iter =
+            std::find(order_ids.begin(), order_ids.end(), right_order_id);
+        if (right_iter != order_ids.end()) {
+          is_exist_interactive_select_split_ = true;
+          other_split_lane_right_side_ = true;
+          if (ego_distance_to_lane_merge_split_point < 20.0) {
+            enable_output_split_select_classical_chinese_ = true;
+          }
+        }
         return;
       }
     } else if (lane_change_cmd == 2) {
@@ -2154,6 +2232,20 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
           enable_output_split_select_classical_chinese_ = true;
         }
       } else {
+        // ProcessIntersectionSplit already selected the rightmost lane,
+        // which matches the right turn signal direction.
+        // Check that a left neighbor exists to confirm we are in a valid
+        // split with the current lane already on the correct side.
+        int left_order_id = origin_order_id - 1;
+        auto left_iter =
+            std::find(order_ids.begin(), order_ids.end(), left_order_id);
+        if (left_iter != order_ids.end()) {
+          is_exist_interactive_select_split_ = true;
+          other_split_lane_left_side_ = true;
+          if (ego_distance_to_lane_merge_split_point < 20.0) {
+            enable_output_split_select_classical_chinese_ = true;
+          }
+        }
         return;
       }
     } else {
@@ -2288,8 +2380,12 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         if (zero_relative_id_order_id_index < order_ids.size() &&
             relative_id_lanes.size() >
                 order_ids[zero_relative_id_order_id_index]) {
+          double average_diff_heading_angle =
+              last_track_ego_lane_->get_average_diff_heading_angle();
           last_track_ego_lane_ =
               relative_id_lanes[order_ids[zero_relative_id_order_id_index]];
+          last_track_ego_lane_->set_average_diff_heading_angle(
+              average_diff_heading_angle);
           last_zero_relative_id_order_id_index_ =
               zero_relative_id_order_id_index;
           for (auto& lane : relative_id_lanes) {
@@ -2495,6 +2591,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
             collision_check_lane, relative_id_lane, ego_future_trajs)) {
           continue;
         }
+        relative_id_lane->set_average_diff_heading_angle(0.0);
         double total_cost = 0.0;
         double average_heading_angle = 0.0;
         double average_heading_angle_cost = 0.0;
@@ -2556,7 +2653,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         double cos_theta = ego_to_split_point.InnerProd(split_point_to_rear);
         double theta_diff = 1.0 - cos_theta;
         average_heading_angle_cost = std::fabs(theta_diff);
-
+        relative_id_lane->set_average_diff_heading_angle(average_heading_angle_cost);
         if (iter != lane_curv_info_set.end()) {
           average_kappa_cost = Normalize(iter->second, kMaxKappa);
         }
@@ -2904,8 +3001,6 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
     const bool& is_fix) {
   const double default_lane_mapping_cost = 10.0;
   double order_id_diff_cost = 0.0;
-  double k_lane_change_order_id_diff_wegiht =
-      is_fix ? kLaneChangeOrderidDiffWeight : 0.0;
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -3015,8 +3110,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
         lane_mapping_cost = default_lane_mapping_cost;
       } else {
         lane_mapping_cost =
-            std::fabs(total_lateral_offset / point_nums) +
-            k_lane_change_order_id_diff_wegiht * order_id_diff_cost;
+            std::fabs(total_lateral_offset / point_nums);
       }
       return lane_mapping_cost;
     } else {

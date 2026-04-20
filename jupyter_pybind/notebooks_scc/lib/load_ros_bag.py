@@ -676,12 +676,13 @@ class LoadRosbag:
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
                          'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", "avg_radius_0_80m","use_avg_radius_for_ewma",\
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
-                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
-                         'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\
+                         'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", "CIPV_id",\
                          'stop_start_state', 'v_target_start_stop', 'STANDSTILL', 'jlt_status_farslow', 'jlt_status_stable', \
                          "dis_to_ramp", "v_target_ramp", "narrow_agent_id","narrow_agent_v_limit",\
                          'virtual_lane_relative_id_switch_flag', "distance_to_end", "nsa_drived_distance", "is_exiting_narrow_space", "is_in_narrow_space", "is_passable_narrow_space",\
-                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', 'current_segment_passed_distance', \
+                         'is_exist_split_on_ramp', 'is_exist_ramp_on_road', 'is_exist_split_on_expressway', 'is_exist_intersection_split', \
+                         'split_selecting_status','selecting_origin_order_id','selecting_selected_order_id','selecting_unfinished_reason', \
+                         'current_segment_passed_distance', \
                          'is_in_ramp_select_split_situation','is_on_road_select_ramp_situation', 'is_exist_interactive_select_split',\
                          'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'origin_relative_id_zero_nums', \
                          'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
@@ -738,10 +739,10 @@ class LoadRosbag:
                           "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
-                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
+                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
-                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed", "lon_cipv_emergency_stop", "joint_danger_emergency_stop", "cipv_emergency_braking", "rule_base_cutin_agent_ids", "upper_bound_agent_ids",
+                          "joint_lead_one_id", "joint_key_agent_ids", "prediction_cut_in_agent_ids", "joint_decision_limit_speed", "joint_limit_speed", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop", "cipv_emergency_braking", "rule_base_cut_in_agent_ids", "upper_bound_agent_ids",
                           "joint_target_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_cruise_speed", "is_confluence_area",
                           "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
                           "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
@@ -758,7 +759,8 @@ class LoadRosbag:
                           'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
                           'UpdateObstacleInteractionInfoCostTime','is_emergency_scene',
                           'side_nudge_info_id', 'side_nudge_info_nudge_direction', 'side_nudge_info_emergency_level', 'side_nudge_current_state','average_curve',
-                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence']
+                          'brake_failure_obstacle_id', 'is_brake_failure_detected', 'brake_failure_situation_timestamp','is_aggressive_scence', 'is_default_aggressive_scence',
+                          'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link', 'road_right_level']
 
       json_value_list += ["planning_cost_time", 'EnvironmentalModelManagerCost', 'TaskFunctionCost', "ego_state_update cost",
                           "update route_info cost", "virtual_lane_manager cost", "traffic_light_decision cost", "obstacle_prediction cost", "obstacle_manager cost", "agent_manager cost", "construction_scene_manager cost",
@@ -771,7 +773,7 @@ class LoadRosbag:
                           "closest_in_path_vehicle_decider_cost", "cipv_lost_prohibit_start_decider_cost", "cipv_lost_prohibit_acceleration_decider_cost",
                           "st_graph_searcher_cost", "parallel_longitudinal_avoid_decider_cost", "agent_headway_decider_cost", "longitudinal_decision_decider_cost",
                           "speed_limit_decider_cost", "start_stop_decider_cost", "long_ref_path_decider_cost", "scc_longitudinal_motion_planner_cost",
-                          "result_trajectory_generator_cost", "hmi_decider_cost"]
+                          "result_trajectory_generator_cost", "hmi_decider_cost", 'Log cost', 'Log cost_2', 'UpdateLDMap cost','CalculateRouteInfo cost']
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
                          "ldw_right_suppression_code_","ldw_right_kickdown_code_","ldw_tlc_threshold_","ldw_left_intervention_","ldw_right_intervention_","ldw_state_",
@@ -894,6 +896,9 @@ class LoadRosbag:
       json_vector_list += ["ego_vel_vec"]
       # 安全检查相关的标量数据
       json_value_list += ["lc_ego_press_line_ratio", "lc_safety_check_time"]
+
+      #路权相关
+      json_value_list += ["cur_road_right_level", "is_merge_region"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):

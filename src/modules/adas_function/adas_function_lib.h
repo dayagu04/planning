@@ -33,14 +33,12 @@ struct MebTempObj {
   OdObjGroup type_for_meb;
   int type;
   int interest_code;
-
-  float min_dis;
-  float ttc;
   bool is_collision;
   uint64_t suppe_code;
   double stop_distance_buffer;
   double an_avoid_by_steering;
   double ay_avoid_by_accelerating;
+  double collision_point_y;  // 障碍物横穿到 自车前or后时，障碍物中心的横向位置
 };
 
 struct InterestObjInfo {

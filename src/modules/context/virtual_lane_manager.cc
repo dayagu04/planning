@@ -53,6 +53,7 @@ const double PI = 3.1415926;
 
 namespace {
 constexpr double kEpsilon = 1.0e-4;
+constexpr double kLimitAverageHeadingDiff = 0.001;
 }  // namespace
 
 VirtualLaneManager::VirtualLaneManager(
@@ -895,6 +896,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   const iflyauto::RoadInfo* roads_ptr = &roads;
   iflyauto::RoadInfo roads_virtual;
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const int lane_change_cmd =
+      lane_change_decider_output.coarse_planning_info.int_lane_change_cmd;
 
   // 1.检查lane的有效性
   if (!CheckLaneValid(roads)) {
@@ -1053,7 +1058,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   set_is_exist_intersection_split( ego_lane_track_manager_.is_exist_intersection_split());
   set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
   set_is_exist_split_on_expressway(ego_lane_track_manager_.is_exist_split_on_expressway());
-
+  set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
   EraseOverlappingLanesId(relative_id_lanes_);// 删除 lane reset split
 
   for (const auto& relative_id_lane : relative_id_lanes_) {
@@ -1067,9 +1072,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 8.更新每条lane的virtual_lane_id,便于对每条lane的持续跟踪
   ego_lane_track_manager_.UpdateLaneVirtualId(
       relative_id_lanes_, virtual_id_mapped_lane_, &last_fix_lane_virtual_id_);
-
-  // 对下游输出是否处于主路下匝道、匝道选分叉场景
-  set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
   ILOG_DEBUG << "is_exist_ramp_on_road:" << is_exist_ramp_on_road_;
   JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
@@ -1122,11 +1124,23 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   }
 
   split_select_direction_ = NO_SPLIT_SELECT;
-  if (enable_output_split_select_classical_chinese_ && order_ids_of_same_zero_relative_id_.size() > 1) {
+  is_split_go_straight_ = false;
+  if (enable_output_split_select_classical_chinese_ &&
+      order_ids_of_same_zero_relative_id_.size() > 1) {
+    double relative_id_lane_average_heading_diff_ =
+        ego_lane_track_manager_.get_track_lane_average_diff_heading_angle();
     if (current_lane_order_id == order_ids_of_same_zero_relative_id_[0]) {
       split_select_direction_ = SPLIT_SELECT_LEFT_LANE;
-    } else if (current_lane_order_id == order_ids_of_same_zero_relative_id_.back()) {
+      if (relative_id_lane_average_heading_diff_ < kLimitAverageHeadingDiff) {
+        is_split_go_straight_ = true;
+      }
+    } else if (current_lane_order_id ==
+               order_ids_of_same_zero_relative_id_.back()) {
       split_select_direction_ = SPLIT_SELECT_RIGHT_LANE;
+      if (relative_id_lane_average_heading_diff_ <
+          kLimitAverageHeadingDiff) {
+        is_split_go_straight_ = true;
+      }
     }
   }
 
@@ -1143,6 +1157,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
              << is_on_road_select_ramp_situation;
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
                    is_on_road_select_ramp_situation);
+  ego_lane_track_manager_.SetLastSelectChangeCmd(lane_change_cmd);
 
   // 9.生成导航变道的任务
   const auto& function_info = session_->environmental_model().function_info();
@@ -2001,6 +2016,14 @@ void VirtualLaneManager::EraseOverlappingLanesId(
   if (lanes.size() <= 1) {
     return;
   }
+  // 避免影响拨杆选道
+  const auto& lane_change_output = session_->planning_context().lane_change_decider_output();
+  const auto& selecting_status = lane_change_output.split_selecting_status;
+  const bool is_selecting = (selecting_status != kNonSelecting 
+                          || ego_lane_track_manager_.is_exist_interactive_select_split());
+  if(is_selecting){
+    return;
+  }
   const double overlap_threshold = config_.overlap_threshold;
   int current_order_id = current_lane_->get_order_id();
   int origin_size = lanes.size();
@@ -2023,7 +2046,7 @@ void VirtualLaneManager::EraseOverlappingLanesId(
       }
       if (di == 0 || dj == 0) {
           set_is_exist_intersection_split(false);
-          set_is_exist_split_on_expressway(false);
+          set_is_exist_ramp_on_road(false);
           set_is_exist_split_on_ramp(false);
       }
     }

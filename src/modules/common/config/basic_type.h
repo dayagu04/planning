@@ -327,6 +327,13 @@ enum MLCSceneType {
   AVOID_MERGE = 4,
   AVOID_SPLIT = 5
 };
+enum NOAExitType {
+  NAVIGATION_END = 0,     // 导航终点
+  TOLL_STATION = 1,       // 收费站
+  SERVICE_AREA = 2,       // 服务区
+  ENTER_CITY = 3,         // 进入城区
+  ENTER_INTERSECTION = 4  // 进入路口
+};
 struct MLCDeciderSceneTypeInfo {
   MLCSceneType mlc_scene_type = NONE_SCENE;
   RampDirection route_lane_direction = RAMP_NONE;
@@ -495,9 +502,13 @@ struct RouteInfoOutput {
   // double accumulate_dis_ego_to_last_split_point = NL_NMAX;
   // double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
   double distance_to_toll_station = NL_NMAX;
+  double distance_to_service_area = NL_NMAX;
   // double distance_to_exchange_area_end_point = -NL_NMAX;
   // double lsl_length = 0.0;
   double current_segment_passed_distance = 0.0;  // for xykuai
+  double distance_to_enter_city = NL_NMAX;
+  double distance_to_exit_noa = NL_NMAX;
+  NOAExitType noa_exit_type = NAVIGATION_END;
 
   // （for wangzhi17）目前只看到这两个对外只用作可视化信息，用virtual lane中的信息去更新，就不对外输出了
   // double left_lane_distance = 0.0; // 这个更新的方式没看懂
@@ -559,6 +570,10 @@ struct RouteInfoOutput {
     sum_dis_to_last_link_split_point = NL_NMAX;
     sum_dis_to_last_split_exchange_area_end_point = NL_NMAX;
     distance_to_toll_station = NL_NMAX;
+    distance_to_service_area = NL_NMAX;
+    distance_to_enter_city = NL_NMAX;
+    distance_to_exit_noa = NL_NMAX;
+    noa_exit_type = NAVIGATION_END;
     is_ego_on_city_expressway_hmi = false;
     is_ego_on_expressway_hmi = false;
     is_exist_toll_station = false;
@@ -892,7 +907,17 @@ enum StateMachineLaneChangeStatus {
   kLaneChangeCancel,
   kLaneChangeHold
 };
-
+enum StateMachineSplitSelectingStatus {
+  kNonSelecting = 0,
+  kSelectingExecuting = 1,
+  kSelectingComplete = 2,
+  kSelectingCancel = 3, // 正常选道触发后应该执行到底。
+};
+enum SplitSelectingDirection{ //维持选道方向, 正常选道触发后应该执行到底。
+  SplitSelectingNone = 0,
+  SplitSelectingLeft = 1,
+  SplitSelectingRight = 2,
+};
 enum MergeDirection {
   NONE_LANE_MERGE = 0,
   CUR_LANE_MERGE_TO_LEFT = 1,

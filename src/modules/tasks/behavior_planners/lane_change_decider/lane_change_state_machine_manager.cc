@@ -86,6 +86,12 @@ void LaneChangeStateMachineManager::Update() {
 }
 
 void LaneChangeStateMachineManager::RunStateMachine() {
+  SplitSelectingStateMachine();
+  //进入到选道状态机跳转状态则重置和跳过变道状态机
+  if(split_selecting_info_.split_selecting_status != kNonSelecting){
+    OnlyResetLCStateMachine();// 只清空变道状态机，不清空拨杆请求
+    return;
+  }
   const auto& pilot_req = session_->environmental_model()
                               .get_local_view()
                               .function_state_machine_info.pilot_req;
@@ -96,13 +102,14 @@ void LaneChangeStateMachineManager::RunStateMachine() {
       RequestSource lane_change_type = NO_REQUEST;
       bool is_lanekeeping_to_propose =
           CheckIfProposeLaneChange(&lane_change_direction, &lane_change_type);
-
       if (is_lanekeeping_to_propose) {
         transition_info_.lane_change_status =
             StateMachineLaneChangeStatus::kLaneChangePropose;
         transition_info_.lane_change_direction = lane_change_direction;
         transition_info_.lane_change_type = lane_change_type;
         lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
+        is_pre_move_ = false;
+        lat_close_boundary_offset_ = 0.0;
       } else {
         // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
         // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
@@ -115,22 +122,22 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           StateMachineLaneChangeStatus::kLaneChangePropose) {
         const auto& virtual_lane_mgr =
             session_->environmental_model().get_virtual_lane_manager();
-        const bool is_exist_interactive_select_split =
-          virtual_lane_mgr->get_is_exist_interactive_select_split();
-        const bool split_lane_on_left_side_before_interactive =
-            virtual_lane_mgr->get_split_lane_on_left_side_before_interactive();
-        const bool split_lane_on_right_side_before_interactive =
-            virtual_lane_mgr->get_split_lane_on_right_side_before_interactive();
-        const bool other_split_lane_left_side = virtual_lane_mgr->get_other_split_lane_left_side();
-        const bool other_split_lane_right_side = virtual_lane_mgr->get_other_split_lane_right_side();
-        bool enable_interactive_select_split = false;
-        if(((other_split_lane_left_side && transition_info_.lane_change_direction == LEFT_CHANGE) ||
-            (other_split_lane_right_side && transition_info_.lane_change_direction == RIGHT_CHANGE) ||
-            (split_lane_on_left_side_before_interactive && transition_info_.lane_change_direction == LEFT_CHANGE) ||
-            (split_lane_on_right_side_before_interactive && transition_info_.lane_change_direction == RIGHT_CHANGE) ||
-            is_exist_interactive_select_split) && transition_info_.lane_change_type == INT_REQUEST) {
-          enable_interactive_select_split = true;
-        }
+        // const bool is_exist_interactive_select_split =
+        //   virtual_lane_mgr->get_is_exist_interactive_select_split();
+        // const bool split_lane_on_left_side_before_interactive =
+        //     virtual_lane_mgr->get_split_lane_on_left_side_before_interactive();
+        // const bool split_lane_on_right_side_before_interactive =
+        //     virtual_lane_mgr->get_split_lane_on_right_side_before_interactive();
+        // const bool other_split_lane_left_side = virtual_lane_mgr->get_other_split_lane_left_side();
+        // const bool other_split_lane_right_side = virtual_lane_mgr->get_other_split_lane_right_side();
+        // bool enable_interactive_select_split = false;
+        // if(((other_split_lane_left_side && transition_info_.lane_change_direction == LEFT_CHANGE) ||
+        //     (other_split_lane_right_side && transition_info_.lane_change_direction == RIGHT_CHANGE) ||
+        //     (split_lane_on_left_side_before_interactive && transition_info_.lane_change_direction == LEFT_CHANGE) ||
+        //     (split_lane_on_right_side_before_interactive && transition_info_.lane_change_direction == RIGHT_CHANGE) ||
+        //     is_exist_interactive_select_split) && transition_info_.lane_change_type == INT_REQUEST) {
+        //   enable_interactive_select_split = true;
+        // }
         propose_state_frame_nums_++;
         if (config_.enable_overtake_lane_change_confirmation){
           if (!overtake_lane_change_confirmed_ &&
@@ -170,9 +177,9 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_propose_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
-          if (enable_interactive_select_split) {
-            last_state_ = kLaneKeeping;
-          }
+          // if (enable_interactive_select_split) {
+          //   last_state_ = kLaneKeeping;
+          // }
           // ResetStateMachine();
           is_pre_move_ = false;
           lat_close_boundary_offset_ = 0.0;
@@ -333,8 +340,6 @@ void LaneChangeStateMachineManager::RunStateMachine() {
       // should never enter here, add some debug info here
       break;
   }
-  const int cur_state = transition_info_.lane_change_status;
-  JSON_DEBUG_VALUE("cur_state", cur_state)
   JSON_DEBUG_VALUE("overtake_lane_change_confirmed", overtake_lane_change_confirmed_)
   JSON_DEBUG_VALUE("pilot_overtake_comfirm_siginal", pilot_req.is_overtake_lane_change_confirmed)
   JSON_DEBUG_VALUE("enable_overtake_confirm",
@@ -488,14 +493,19 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
     is_high_priority_back_ = true;
     return true;
   }
-  // 增加路沿检查
+  // 增加路沿检查,连续3帧才触发cancel
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
-    lane_change_stage_info_.lc_invalid_reason = "no target lane";
-    return true;
+    road_edge_collision_cnt_++;
+    if (road_edge_collision_cnt_ >= 3) {
+      road_edge_collision_cnt_ = 0;
+      lane_change_stage_info_.lc_invalid_reason = "no target lane";
+      return true;
+    }
+  } else {
+    road_edge_collision_cnt_ = 0;
   }
-  // check if gap is dangerous
   CheckLaneChangeBackValid(lane_change_direction);
 
   // check if driver cancel
@@ -537,12 +547,18 @@ bool LaneChangeStateMachineManager::CheckIfHoldToCancel(
   if (hold_time_out) {
     return true;
   }
-  // 增加路沿检查
+  // 增加路沿检查，连续3帧才触发cancel
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
                                     transition_info_.lane_change_status)) {
-    lane_change_stage_info_.lc_invalid_reason = "no target lane";
-    return true;
+    road_edge_collision_cnt_++;
+    if (road_edge_collision_cnt_ >= 3) {
+      road_edge_collision_cnt_ = 0;
+      lane_change_stage_info_.lc_invalid_reason = "no target lane";
+      return true;
+    }
+  } else {
+    road_edge_collision_cnt_ = 0;
   }
   return false;
 }
@@ -845,7 +861,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
       bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
-      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false);
+      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (!lc_state_info.gap_insertable) {
         return lc_state_info;
       }
@@ -1110,7 +1126,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
       }
       // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
       bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
-      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false);
+      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false, true);
       if (lc_state_info.lc_should_back) {
         return lc_state_info;
       }
@@ -1440,7 +1456,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
     lane_change_decider_output.ego_trajs_future.clear();
   }
   if (lane_change_decider_output.curr_state == kLaneKeeping &&
-      last_state_ != kLaneKeeping) {
+      last_state_ != kLaneKeeping &&
+      split_selecting_info_.split_selecting_status == kNonSelecting) {
     ResetStateMachine();
   }
   const double ego_press_line_ratio =
@@ -1450,6 +1467,13 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
         transition_info_.lane_change_direction);
   lane_change_decider_output.ego_press_line_ratio = ego_press_line_ratio;
   JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 更新压线率
+
+  lane_change_decider_output.split_selecting_status = split_selecting_info_.split_selecting_status;
+  lane_change_decider_output.split_select_direction = split_selecting_info_.split_select_direction;
+  JSON_DEBUG_VALUE("split_selecting_status", static_cast<int>(split_selecting_info_.split_selecting_status));
+  JSON_DEBUG_VALUE("selecting_origin_order_id", split_selecting_info_.origin_lane_order_id);
+  JSON_DEBUG_VALUE("selecting_selected_order_id", split_selecting_info_.selected_lane_order_id);
+  JSON_DEBUG_VALUE("selecting_unfinished_reason", static_cast<int>(split_selecting_info_.unfinished_reason));
   // bool is_warning_collision_risk =
   // transition_info_.lane_change_status == kLaneChangeHold ||
   // transition_info_.lane_change_status == kLaneChangeCancel||
@@ -1459,6 +1483,8 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   // } else {
   //   lane_change_decider_output.is_collision_risk = false;
   // }
+  const int cur_state = transition_info_.lane_change_status;
+  JSON_DEBUG_VALUE("cur_state", cur_state)
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
     const planning_data::DynamicAgentNode* const agent) {
@@ -1637,6 +1663,7 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   is_dash_not_enough_for_lc_ = false;
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
+  road_edge_collision_cnt_ = 0;
   overtake_lane_change_confirmed_ = false;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
@@ -1667,8 +1694,37 @@ void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   is_dash_not_enough_for_lc_ = false;
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
+  road_edge_collision_cnt_ = 0;
 }
-
+void LaneChangeStateMachineManager::OnlyResetLCStateMachine() {
+  //重置 变道状态机 变道请求 但是保留lane change cmd
+  if (transition_info_.lane_change_status != kLaneChangePropose &&
+      transition_info_.lane_change_status != kLaneKeeping &&
+      transition_info_.lane_change_status != kLaneChangeHold) {
+    return;
+  }
+  transition_info_.Rest();
+  lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
+  lane_change_stage_info_.Reset();
+  lc_timer_.Reset();
+  pre_ego_l_ = 0;
+  lc_valid_cnt_ = 0;
+  lc_back_cnt_ = 0;
+  lc_target_lane_merge_to_origin_lane_cnt_ = 0;
+  lc_invalid_track_.reset();
+  lc_back_track_.reset();
+  must_change_lane_ = false;
+  propose_state_frame_nums_ = 0;
+  execution_state_frame_nums_ = 0;
+  hold_state_frame_nums_ = 0;
+  complete_state_frame_nums_ = 0;
+  is_high_priority_back_ = false;
+  ego_trajs_future_.clear();
+  lc_path_generate_.reset();
+  is_dash_not_enough_for_lc_ = false;
+  execution_state_dash_cnt = 0;
+  hold_state_dash_cnt = 0;
+}
 bool LaneChangeStateMachineManager::TimeOut(const bool trigger,
                                             bool* is_start_count,
                                             double* time_count,
@@ -2272,56 +2328,102 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   is_side_clear_ = IsSideClear(gap_front_agent_id, gap_rear_agent_id);
   joint_decision_obstacle_labels_.clear();
   rear_agent_overtaking_ = false;
-  if (transition_info_.lane_change_status !=
-          StateMachineLaneChangeStatus::kLaneKeeping) {
-    lc_joint_decision_generator_->SetLaneChangeDecisionInfo(lc_info);
-    lc_joint_decision_generator_
-        ->Execute();  // 生成联合优化轨迹(内部修饰障碍物轨迹)
-    JSON_DEBUG_VALUE("target_lane_virtual_id", lc_info.target_lane_virtual_id);
-    JSON_DEBUG_VALUE("origin_lane_virtual_id", lc_info.origin_lane_virtual_id);
-    JSON_DEBUG_VALUE("lc_gap_front_agent_id", lc_info.gap_front_agent_id);
-    JSON_DEBUG_VALUE("lc_gap_rear_agent_id", lc_info.gap_rear_agent_id);
-
-    // 输出检查
-    const auto joint_decision_output =
-        session_->planning_context().lat_lon_joint_decision_output();
-    joint_decision_success_ = joint_decision_output.IsPlanningSuccess();
-    const auto& obstacle_ids = joint_decision_output.GetSelectedObstacleIds();
-    const auto& obstacle_labels =
-        joint_decision_output.GetSelectedObstacleLabels();
-    const size_t obstacle_num = std::min(obstacle_ids.size(), obstacle_labels.size());
-    for (size_t i = 0; i < obstacle_num; ++i) {
-      joint_decision_obstacle_labels_[obstacle_ids[i]] = obstacle_labels[i];
-    }
-    if (joint_decision_success_) {
-      const auto& ego_opt_traj =
-          joint_decision_output.GetLaneChangeEgoTrajectory();
-      ego_trajs_future_.clear();
-      ego_trajs_future_.resize(ego_opt_traj.size());
-      for (size_t i = 0; i < ego_opt_traj.size(); i++) {
-        ego_trajs_future_[i].x = ego_opt_traj[i].x;
-        ego_trajs_future_[i].y = ego_opt_traj[i].y;
-        ego_trajs_future_[i].heading_angle = ego_opt_traj[i].theta;
-        ego_trajs_future_[i].delta = ego_opt_traj[i].delta;
-        ego_trajs_future_[i].v = ego_opt_traj[i].vel;
-        ego_trajs_future_[i].a = ego_opt_traj[i].acc;
-        ego_trajs_future_[i].jerk = ego_opt_traj[i].jerk;
-        ego_trajs_future_[i].s = ego_opt_traj[i].s;
-        ego_trajs_future_[i].t = ego_opt_traj[i].t;
-      }
-    }
-    // 记录更新后的后车标签，未命中则保持默认值。
-    const auto rear_it =
-        joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
-    if (rear_it != joint_decision_obstacle_labels_.end()) {
-      if(rear_it->second == lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
-        rear_agent_overtaking_ = true;
-      } else {
-        rear_agent_overtaking_ = false;
-      }
-    }
+  if (transition_info_.lane_change_status ==
+    StateMachineLaneChangeStatus::kLaneKeeping) {
+      return;
   }
-  return;
+  lc_joint_decision_generator_->SetLaneChangeDecisionInfo(lc_info);
+  lc_joint_decision_generator_
+      ->Execute();  // 生成联合优化轨迹(内部修饰障碍物轨迹)
+  JSON_DEBUG_VALUE("target_lane_virtual_id", lc_info.target_lane_virtual_id);
+  JSON_DEBUG_VALUE("origin_lane_virtual_id", lc_info.origin_lane_virtual_id);
+  JSON_DEBUG_VALUE("lc_gap_front_agent_id", lc_info.gap_front_agent_id);
+  JSON_DEBUG_VALUE("lc_gap_rear_agent_id", lc_info.gap_rear_agent_id);
+
+  // 输出检查
+  const auto joint_decision_output =
+      session_->planning_context().lat_lon_joint_decision_output();
+  joint_decision_success_ = joint_decision_output.IsPlanningSuccess();
+  const auto& obstacle_ids = joint_decision_output.GetSelectedObstacleIds();
+  const auto& obstacle_labels =
+      joint_decision_output.GetSelectedObstacleLabels();
+  const size_t obstacle_num = std::min(obstacle_ids.size(), obstacle_labels.size());
+  for (size_t i = 0; i < obstacle_num; ++i) {
+    joint_decision_obstacle_labels_[obstacle_ids[i]] = obstacle_labels[i];
+  }
+  if (!joint_decision_success_) {
+    ego_trajs_future_.clear();
+    return;
+  }
+  const auto& ego_opt_traj =
+      joint_decision_output.GetLaneChangeEgoTrajectory();
+  ego_trajs_future_.clear();
+  ego_trajs_future_.resize(ego_opt_traj.size());
+  for (size_t i = 0; i < ego_opt_traj.size(); i++) {
+    ego_trajs_future_[i].x = ego_opt_traj[i].x;
+    ego_trajs_future_[i].y = ego_opt_traj[i].y;
+    ego_trajs_future_[i].heading_angle = ego_opt_traj[i].theta;
+    ego_trajs_future_[i].delta = ego_opt_traj[i].delta;
+    ego_trajs_future_[i].v = ego_opt_traj[i].vel;
+    ego_trajs_future_[i].a = ego_opt_traj[i].acc;
+    ego_trajs_future_[i].jerk = ego_opt_traj[i].jerk;
+    ego_trajs_future_[i].s = ego_opt_traj[i].s;
+    ego_trajs_future_[i].t = ego_opt_traj[i].t;
+  }
+  // 记录更新后的后车标签，未命中则保持默认值。
+  // 优化器 EGO_OVERTAKE 表示实际轨迹与理想减速轨迹不匹配，进一步确定是否会在短时间内超越自车
+  const auto rear_it =
+      joint_decision_obstacle_labels_.find(lc_info.gap_rear_agent_id);
+  if (rear_it == joint_decision_obstacle_labels_.end()) {
+    return;
+  }
+  if (rear_it->second != lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE) {
+    return;
+  }
+  if (ego_trajs_future_.empty()) {
+    return;
+  }
+  const auto& dynamic_world = session_->environmental_model().get_dynamic_world();
+  const auto rear_agent = dynamic_world->agent_manager()->GetAgent(lc_info.gap_rear_agent_id);
+  if (rear_agent == nullptr) {
+    return;
+  }
+  const auto& agent_trajs = rear_agent->trajectories_used_by_st_graph();
+  if (agent_trajs.empty() || agent_trajs[0].empty()) {
+    return;
+  }
+  const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+  const auto& target_ref_path = session_->environmental_model()
+                                    .get_reference_path_manager()
+                                    ->get_reference_path_by_lane(target_lane_virtual_id);
+  if (target_ref_path == nullptr) {
+    return;
+  }
+  const auto& target_lane_coord = target_ref_path->get_frenet_coord();
+  if (target_lane_coord == nullptr) {
+    return;
+  }
+  const auto& traj = agent_trajs[0];
+  const auto& vehicle_param = VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double two_car_length =
+      vehicle_param.rear_edge_to_rear_axle + rear_agent->length() * 0.5;
+  double agent_s0 = 0.0, agent_l0 = 0.0;
+  if (!target_lane_coord->XYToSL(traj[0].x(), traj[0].y(), &agent_s0, &agent_l0)) {
+    return;
+  }
+  const double rel_vel = std::max(0.0, traj[0].vel() - ego_trajs_future_[0].v);
+  const double predict_t = lc_safety_check_time_ + 1.5;
+  const double rear_acc = rear_agent->accel_fusion();
+  double dis_diff_vel = 0.0;
+  if (rear_acc > 0.3) {
+    dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
+  } else if (rear_acc < -0.3) {
+    dis_diff_vel = rel_vel * rel_vel / (2.0 * (-rear_acc));
+  } else {
+    dis_diff_vel = rel_vel * predict_t;
+  }
+  const double rear_gap = ego_trajs_future_[0].s - agent_s0 - two_car_length;
+  rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0);
 }
 void LaneChangeStateMachineManager::CheckTargetFrontNode(
     int64_t target_lane_front_node_id) {
@@ -3028,9 +3130,6 @@ bool LaneChangeStateMachineManager::CheckFrontRiskAgentTrajs(
     //    ILOG_DEBUG << "not safety !!!" << std::endl;
     //    return false;
     //  }
-    double two_car_length = 0;
-    // 目前障碍物的前、后边到后轴的距离等于车身长一半
-    two_car_length = kEgoFrontEdgeToRearAxleDistance + 0.5 * agent_length;
     const double focus_v = ego_trajs_future_[i].v;
     // 考虑目前自车的执行器响应时间为0.5s，在换道时纵向的稳态跟车距离为1*v；
     // 为了提高变道变道成功率，纵向又不至于减速太猛，因此设自车前方的最小安全距离为0.7*v。
@@ -3351,6 +3450,10 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
   int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
   const auto& current_lane = virtual_lane_mgr->get_current_lane();
   const auto& target_lane = virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
+  //紧急变道类型不premove
+  if(transition_info_.lane_change_type ==  DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST){
+    return;
+  }
   if (!target_lane) {
     return;
   }
@@ -3741,12 +3844,14 @@ RequestType LaneChangeStateMachineManager::CalculaTurnSignalForHPP() {
 void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
     LaneChangeStageInfo* const lc_state_info,
     const planning_data::DynamicAgentNode* agent_node,
-    const bool is_front_agent, const bool is_ego_lane_agent) {
+    const bool is_front_agent, const bool is_ego_lane_agent,
+    const bool is_side_obs) {
   // get agent prediction trajs
   bool is_invalid_fiter_agent = false;
   const planning_data::DynamicAgentNode* after_filter_agent = agent_node;
   const auto agent_prediction_trajs = CalculateAgentPredictionTrajs(
-      agent_node, is_front_agent, is_ego_lane_agent, &after_filter_agent);
+      agent_node, is_front_agent, is_ego_lane_agent, &after_filter_agent,
+      is_side_obs);
 
   // 过滤掉旁车道障碍物后，没有车的case，则是安全的，直接退出
   if (after_filter_agent == nullptr && agent_prediction_trajs.empty()) {
@@ -3914,7 +4019,8 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
 TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
     const planning_data::DynamicAgentNode* agent_node,
     const bool is_front_agent, const bool is_ego_lane_agent,
-    const planning_data::DynamicAgentNode** after_filter_agent) {
+    const planning_data::DynamicAgentNode** after_filter_agent,
+    const bool is_side_obs) {
   TrajectoryPoints agent_prediction_trajs;
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -3965,7 +4071,7 @@ TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
   if (after_filter_agent) {
     *after_filter_agent = agent_node;
   }
-  BuildAgentPredictionTrajsInTargetLane(agent_node, target_lane_coor, is_front_agent, &agent_prediction_trajs);
+  BuildAgentPredictionTrajsInTargetLane(agent_node, target_lane_coor, is_front_agent, &agent_prediction_trajs, is_side_obs);
   // StoreObjDebugPredictionInfo(agent_node, &agent_prediction_trajs,
   //                             is_front_agent, is_ego_lane_agent);
   return agent_prediction_trajs;
@@ -4234,7 +4340,7 @@ bool LaneChangeStateMachineManager::
     }
   }
 
-    double max_lat_buff = 3.5;
+    double max_lat_buff = 4.0;
     double lat_buff = 3.5;
   // 确认初始横向buff 与横向速度相关
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
@@ -4358,7 +4464,18 @@ bool LaneChangeStateMachineManager::
       }
     }
   }
-
+    double two_car_length = 0;
+    // 目前障碍物的前、后边到后轴的距离等于车身长一半
+    if (is_front_agent) {
+      two_car_length = kEgoFrontEdgeToRearAxleDistance + 0.5 * agent_length;
+    } else {
+      two_car_length = kEgoBackEdgeToRearAxleDistance + 0.5 * agent_length;
+    }
+    bool is_checking_rear_overtaking = false;
+    if(target_lane_rear_node_){
+      is_checking_rear_overtaking = target_lane_rear_node_->node_agent_id() == agent_node->node_agent_id()
+                                 && rear_agent_overtaking_ && !is_front_agent;
+    }
   for (int i = 0; i < iter_count; i++) {
     // //执行后缩短预测轨迹检查
     // if(is_executing && i > 10){
@@ -4374,7 +4491,6 @@ bool LaneChangeStateMachineManager::
       //保护高速恐慌感
       box_longitudinal_buff = std::max(ego_faster_buff,
                 ego_trajs_future_[i].v * lc_safety_check_config_.faster_rear_delay_time);
-      box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 5.0;  // 大车额外增加5m基础距离
       }
@@ -4384,9 +4500,14 @@ bool LaneChangeStateMachineManager::
       if(ego_press_line_ratio > 0.5 && is_side_clear_){
         break;  // 已经压线过多，侧方无车不返回
       }
-      if (is_executing) {
-        box_longitudinal_buff = lc_safety_check_config_.exe_ttc_ratio * box_longitudinal_buff;
-      }
+      //未来衰减
+      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+      const double ttc_decay = std::pow(ttc_decay_factor, i);
+      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
+      //状态折扣
+      box_longitudinal_buff = is_executing ?
+                            box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio * (1.0 - ego_press_line_ratio)
+                            : box_longitudinal_buff * (1.0 - ego_press_line_ratio);
       if(is_front_reverse){
         double reverse_check_time = 4.0; //默认基准变道时间
         // double reverse_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.front();
@@ -4429,12 +4550,13 @@ bool LaneChangeStateMachineManager::
       double safety_buff = std::max(dist_ttc_interp, dis_diff_vel);
       box_ttc_vec.push_back(pred_ttc);
       // 3) 时间衰减：对合并后的 buff 沿预测时域衰减
-      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+      const double ttc_decay_factor = (is_checking_rear_overtaking && !is_aggressive_scence_)?
+                                      0.99: lc_safety_check_config_.ttc_decay_factor;
       const double ttc_decay = std::pow(ttc_decay_factor, i);
       box_longitudinal_buff = safety_buff * ttc_decay;
       // 4) 状态折扣：执行态下叠乘 exe 折扣[后车不超车]和 (1 - 压线率)
       const double press_ratio = std::clamp(ego_press_line_ratio, 0.0, 1.0);
-      const double exe_ratio = rear_agent_overtaking_? 1.0 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
+      const double exe_ratio = is_checking_rear_overtaking ? 0.9 : std::clamp(lc_safety_check_config_.exe_ttc_ratio, 0.3, 1.0);
       box_longitudinal_buff = is_executing ?
                             box_longitudinal_buff * exe_ratio * (1.0 - press_ratio)
                             : box_longitudinal_buff * (1.0 - press_ratio);
@@ -4451,14 +4573,6 @@ bool LaneChangeStateMachineManager::
       if(ego_press_line_ratio > 0.5 && is_side_clear_){
         break;  // 已经压线过多，侧方无车不返回
       }
-    }
-    // check lon s safety
-    double two_car_length = 0;
-    // 目前障碍物的前、后边到后轴的距离等于车身长一半
-    if (is_front_agent) {
-      two_car_length = kEgoFrontEdgeToRearAxleDistance + 0.5 * agent_length;
-    } else {
-      two_car_length = kEgoBackEdgeToRearAxleDistance + 0.5 * agent_length;
     }
 
     const double focus_v =
@@ -4580,6 +4694,7 @@ bool LaneChangeStateMachineManager::
   }
   // 循环结束后统一输出 JSON debug 数据
   JSON_DEBUG_VECTOR("ego_vel_vec", ego_vel_vec, 2);
+  JSON_DEBUG_VALUE("rear_agent_overtaking", rear_agent_overtaking_);
   if (!is_front_agent) {
     JSON_DEBUG_VECTOR("rear_box_longitudinal_buff_vec", box_longitudinal_buff_vec, 2);
     JSON_DEBUG_VECTOR("rear_box_ttc_vec", box_ttc_vec, 2);
@@ -4596,8 +4711,8 @@ bool LaneChangeStateMachineManager::
   // distance_vec[j] == 0 表示扩展 box 重叠（DistanceTo 最小返回 0）
   // 根据 0 值在时间轴上的分布分三类处理：
   //   尾部集中（先安全后碰撞）→ 未来恶化，直接不安全
-  //   头部集中（先碰撞后安全）→ 当前裕度不足但未来改善，需 1/4 为 0 才不安全
-  //   其他（散布/全程）→ 需 1/3 为 0 才不安全
+  //   头部集中（先碰撞后安全）→ 当前裕度不足但未来改善，需 1/6 为 0 才不安全
+  //   其他（散布/全程）→ 需 1/4 为 0 才不安全
   const int vec_size = static_cast<int>(distance_vec.size());
   if (vec_size > 0) {
     int zero_count = 0;
@@ -4621,13 +4736,13 @@ bool LaneChangeStateMachineManager::
         return false;
       } else if (head_heavy) {
         // 前碰撞后安全：当前空间是为未来预留的裕度，未来在改善
-        // 需要四分之一及以上步为 0 才判定不安全
-        if (zero_count * 4 >= vec_size) {
+        // 需要六分之一及以上步为 0 才判定不安全
+        if (zero_count * 6 >= vec_size) {
           return false;
         }
       } else {
-        // 散布或全程碰撞：需要三分之一及以上步为 0 才判定不安全
-        if (zero_count * 3 >= vec_size) {
+        // 散布或全程碰撞：需要四分之一及以上步为 0 才判定不安全
+        if (zero_count * 4 >= vec_size) {
           return false;
         }
       }
@@ -4880,7 +4995,8 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
 void LaneChangeStateMachineManager::BuildAgentPredictionTrajsInTargetLane(
   const planning_data::DynamicAgentNode* agent_node,
   const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-  const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs) {
+  const bool is_front_agent, TrajectoryPoints* agent_prediction_trajs,
+  const bool is_side_obs) {
 agent_prediction_trajs->clear();
 if (agent_node == nullptr || target_lane_coor == nullptr) {
   return;
@@ -4901,7 +5017,7 @@ if (agent_trajs.size() < 1) {
 }
 const auto& agent_traj_st = agent_trajs[0];
 const trajectory::Trajectory& agent_traj =
-    (joint_decision_success_ && trajectory_optimized.size() > 1)
+    (!is_side_obs && joint_decision_success_ && trajectory_optimized.size() > 1)
         ? trajectory_optimized
         : agent_traj_st;
 for (int i = 0; i < agent_traj.size(); i++) {
@@ -5019,13 +5135,13 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
 
   // 由于在propose阶段考虑的是未来4s的安全性
   // 在execution过程中，其实有双方的交互博弈，所以这里安全性判断的时间可以比4s短一些
-  const double lc_gap_valid_check_time_execution = kEgoReachBoundaryTime - 1;
+  // const double lc_gap_valid_check_time_execution = kEgoReachBoundaryTime - 1;
 
-  double base_time =
-      (transition_info_.lane_change_status == kLaneChangeExecution)
-          ? lc_gap_valid_check_time_execution
-          : kEgoReachBoundaryTime;
-
+  // double base_time =
+  //     (transition_info_.lane_change_status == kLaneChangeExecution)
+  //         ? lc_gap_valid_check_time_execution
+  //         : kEgoReachBoundaryTime;
+  double base_time = kEgoReachBoundaryTime;
   reach_line_time = (ego_dis_to_line / standard_half_lane_width) * base_time;
   // 注：自车在接近车道线的时候ego_dis_to_line的值很小，后轴中心越过车道线时ego_dis_to_line为负的，
   // 因此，需要保证自车在每个时刻对未来至少要判断一定时间是安全的才合理，
@@ -6080,6 +6196,8 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   // 判断前方100m内是否有1分2的extend车道
   bool is_rightest_extend_lane = IsExistExtendLane(rightest_lane, true);
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
+  constexpr double kNearingExchangeUpperThreshold = 100.0;
+  constexpr double kNearingExchangeLowerThreshold = -20.0;
 
   if (!route_info_output.map_split_region_info_list.empty()) {
     double distance_to_exchange =
@@ -6087,16 +6205,18 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
             .distance_to_split_point +
         route_info_output.map_split_region_info_list.front()
             .start_fp_point.fp_distance_to_split_point;
+    bool is_nearing_exchange =
+        distance_to_exchange < kNearingExchangeUpperThreshold &&
+        distance_to_exchange > kNearingExchangeLowerThreshold;
     if (is_rightest_extend_lane &&
         route_info_output.map_split_region_info_list.front().split_direction ==
             SPLIT_RIGHT &&
-        distance_to_exchange < 200.0) {
+        is_nearing_exchange) {
       return RAMP_ON_RIGHT;
     } else if (is_leftest_extend_lane &&
                route_info_output.map_split_region_info_list.front()
                        .split_direction == SPLIT_LEFT &&
-               route_info_output.map_split_region_info_list.front()
-                       .distance_to_split_point < 200.0) {
+               is_nearing_exchange) {
       return RAMP_ON_LEFT;
     }
   }
@@ -6310,7 +6430,7 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
     }
 
     iflyauto::LaneBoundaryType boundary_type =
-        iflyauto::LaneBoundaryType_MARKING_SOLID;
+        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
     double acc_length = 0.0;
     for (int j = 0; j < lane_boundarys.type_segments_size; ++j) {
       acc_length += lane_boundarys.type_segments[j].length;
@@ -6326,13 +6446,18 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
                   boundary_type ==
                       iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
                   boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID
+                      iflyauto::
+                          LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+                  boundary_type ==
+                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID
             : boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
                   boundary_type ==
                       iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
                   boundary_type ==
                       iflyauto::
-                          LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+                          LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+                  boundary_type ==
+                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
 
     if (lc_request_type == LEFT_CHANGE && is_solid_type &&
         (left_vehicle_edge >
@@ -6351,4 +6476,134 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
   }
   return false;
 }
-}  // namespace planning
+
+void LaneChangeStateMachineManager::SplitSelectingStateMachine() {
+  switch (split_selecting_info_.split_selecting_status) {
+    case kNonSelecting: {
+      const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+      const auto& current_lane = virtual_lane_manager->get_current_lane();
+      if(current_lane == nullptr){
+        break;
+      }
+      bool is_none_to_selecting = IsStartSplitSelecting();
+      if (is_none_to_selecting) {
+        split_selecting_info_.split_selecting_status = kSelectingExecuting;
+        split_selecting_info_.selected_lane_order_id = current_lane->get_order_id();
+        split_selecting_info_.selected_lane_virtual_id = current_lane->get_virtual_id();
+        SetSelectingDirection(split_selecting_info_);
+      } else {
+        // 上游没有拨杆选道的时候记录orderid
+        split_selecting_info_.origin_lane_order_id = current_lane->get_order_id();
+        split_selecting_info_.origin_lane_virtual_id = current_lane->get_virtual_id();
+        split_selecting_info_.split_selecting_status = kNonSelecting;
+        split_selecting_info_.split_select_direction = SplitSelectingNone;
+      }
+      break;
+    }
+    case kSelectingExecuting: {
+      bool update_fix_success = UpdateSelectingFixlane();  // 设置fix lane id
+      bool is_selecting_to_cancel = !update_fix_success;   // 如果没有当前车道非法则取消
+      bool is_selecting_to_complete = IsSelectingToComplete();
+      if (is_selecting_to_cancel) {
+        split_selecting_info_.split_selecting_status = kNonSelecting;
+        split_selecting_info_.split_select_direction = SplitSelectingNone;
+      } else if (is_selecting_to_complete) {
+        split_selecting_info_.split_selecting_status = kSelectingComplete;
+      }
+      break;
+    }
+    case kSelectingComplete: {
+      bool is_complete_to_none = true; // complete 下一帧恢复none
+      if (is_complete_to_none) {
+        split_selecting_info_.split_selecting_status = kNonSelecting;
+        split_selecting_info_.split_select_direction = SplitSelectingNone;
+        ResetStateMachine(); // 充值拨杆信号
+        ResetSplitSelectingStateMachine();  // 重置
+      }
+      break;
+    }
+    default:
+      break;
+  }
+}
+bool LaneChangeStateMachineManager::IsStartSplitSelecting() {
+  // 获取上游选道标志位和方向
+  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  //多种选道是否存在
+  bool is_exist_intersection_split = virtual_lane_manager->get_is_exist_intersection_split();
+  bool is_exist_ramp_on_road = virtual_lane_manager->get_is_exist_ramp_on_road();
+  bool is_exist_split_on_ramp = virtual_lane_manager->get_is_exist_split_on_ramp();
+  //是否拨杆
+  bool is_exist_interactive_select_split = virtual_lane_manager->get_is_exist_interactive_select_split();
+  if((is_exist_intersection_split || is_exist_ramp_on_road || is_exist_split_on_ramp) 
+    && is_exist_interactive_select_split){
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::NONE_REASON;
+    return true;
+  }else if(!is_exist_interactive_select_split){
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::NO_INTERACTIVE_CMD;
+    return false;
+  }else{
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::NO_SPLIT_REGION;
+    return false;
+  }
+}
+void LaneChangeStateMachineManager::SetSelectingDirection(SplitSelectingInfo& split_selecting_info){
+  int int_lane_change_cmd = lc_req_mgr_->get_int_lane_change_cmd();
+  if(int_lane_change_cmd == 1){
+    split_selecting_info.split_select_direction = SplitSelectingLeft;
+  }else if(int_lane_change_cmd == 2){
+    split_selecting_info.split_select_direction = SplitSelectingRight;
+  }else{
+    split_selecting_info.split_select_direction = SplitSelectingNone;
+  }
+}
+bool LaneChangeStateMachineManager::UpdateSelectingFixlane(){
+    // 设置fix lane id
+    const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+    const auto& current_lane = virtual_lane_manager->get_current_lane();
+    if(current_lane == nullptr){
+      split_selecting_info_.unfinished_reason = SplitSelectingInfo::NO_FIX_LANE;
+      return false;
+    }else{
+      split_selecting_info_.unfinished_reason = SplitSelectingInfo::NONE_REASON;
+          // 持续更新目标车道id
+      split_selecting_info_.selected_lane_virtual_id = current_lane->get_virtual_id();
+      split_selecting_info_.selected_lane_order_id = current_lane->get_order_id();
+      return true; // 设置fix lane id成功
+    }
+  }
+bool LaneChangeStateMachineManager::IsSelectingToComplete(){
+  //是否完成选道：自车离开分流区域， 距离当前车道足够近
+  bool is_exist_split_region = session_->environmental_model().get_virtual_lane_manager()->get_is_ego_in_split_region();
+  if(is_exist_split_region){
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::STILL_IN_SPLIT_REGION;
+    return false; //仍然在分流区域
+  }
+  const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_manager->get_current_lane();
+  //选道过程fix current lane 
+  if(current_lane == nullptr){
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::NO_FIX_LANE;
+    return false;
+  }
+  const auto& ref_path_manager = session_->environmental_model().get_reference_path_manager();
+  const auto& ref_path = ref_path_manager->get_reference_path_by_current_lane();
+  if(ref_path == nullptr){
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::NO_FIX_LANE_REF;
+    return false;
+  }
+  double distance_to_fix_lane = std::fabs(ref_path->get_frenet_ego_state().l());
+  if(distance_to_fix_lane > 0.5){
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::NOT_CLOSE_TO_FIX_LANE;
+    return false; //距离当前车道足够近
+  }else{
+    split_selecting_info_.unfinished_reason = SplitSelectingInfo::NONE_REASON;
+    return true;
+  }
+}
+void LaneChangeStateMachineManager::ResetSplitSelectingStateMachine(){
+  split_selecting_info_.split_selecting_status = kNonSelecting;
+  split_selecting_info_.split_select_direction = SplitSelectingNone;
+  split_selecting_info_.unfinished_reason = SplitSelectingInfo::NONE_REASON;
+}
+}

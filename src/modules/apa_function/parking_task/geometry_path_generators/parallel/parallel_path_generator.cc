@@ -7854,6 +7854,10 @@ const bool ParallelPathGenerator::OptZigZagPathByDubins(
         << "CheckGearChangeProjection failed, path does not meet criteria.";
     return false;
   }
+  if (!collision_detector_ptr_) {
+    ILOG_INFO << "CollisionDetector is not set, skip optimization.";
+    return false;
+  }
 
   collision_detector_ptr_->SetParam(
       CollisionDetector::Paramters(0.05, false, true));

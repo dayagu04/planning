@@ -18,9 +18,11 @@ STPointWithLateral::STPointWithLateral(const double s, const double t,
                                        const int64_t boundary_id,
                                        const double velocity,
                                        const double acceleration,
-                                       const double vehicle_length)
+                                       const double vehicle_length,
+                                       const double l)
     : STPoint(s, t, agent_id, boundary_id, velocity, acceleration),
-      vehicle_length_(vehicle_length) {}
+      vehicle_length_(vehicle_length),
+      l_(l) {}
 
 }  // namespace speed
 }  // namespace planning

@@ -91,11 +91,11 @@ void ParkingScenario::ScenarioRunning() {
 
   GenPlanningHmiOutput();
 
-  // log json debug
-  Log();
-
   // record data to debuginfo
   RecordDebug();
+
+  // log json debug
+  Log();
 
   return;
 }
@@ -205,9 +205,11 @@ void ParkingScenario::PublishPlanningTraj() {
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
+    SetMirrorStatus();
   } else if (frame_.plan_stm.planning_status == PARKING_FAILED) {
     SetFailedPlanningOutput(planning_output_, current_ego_pose,
                             frame_.plan_fail_reason);
+    SetMirrorStatus();
   } else if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
              frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
              frame_.plan_stm.planning_status == PARKING_RUNNING ||
@@ -327,18 +329,8 @@ void ParkingScenario::SetPlanningPath() {
   }
 
   // set fold and unfold mirror
-  iflyauto::RearViewMirrorCommand* mirror_command =
-      &planning_output_.rear_view_mirror_signal_command;
-  mirror_command->available = true;
-  if (frame_.mirror_command == MirrorCommand::FOLD) {
-    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_FOLD;
-  } else if (frame_.mirror_command == MirrorCommand::EXPAND) {
-    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_UNFOLD;
-  } else {
-    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
-  }
+  SetMirrorStatus();
 
-  ILOG_INFO << "plan mirror = " << static_cast<int>(frame_.mirror_command);
   const ParkingSpeedMode& park_speed_mode =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetParkingSpeedMode();
   const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
@@ -1485,14 +1477,16 @@ void ParkingScenario::DecideExpandMirrorCommand() {
   return;
 }
 
-const void ParkingScenario::RecordDebug() {
+void ParkingScenario::RecordDebug() const {
   RecordDebugRemainDist();
   RecordDebugStuckTimeInfo();
   RecordDebugTerminalErr();
   RecordDebugPlanningSlotInfo();
+  RecordDebugPlanningStatus();
+  RecordDebugObstacleInSlot();
 }
 
-const void ParkingScenario::RecordDebugRemainDist() {
+void ParkingScenario::RecordDebugRemainDist() const {
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaRemainDist* debug_apa_remain_dist =
       debug_info->mutable_apa_path_debug()->mutable_remain_dist();
@@ -1506,9 +1500,11 @@ const void ParkingScenario::RecordDebugRemainDist() {
   debug_apa_remain_dist->set_remain_slot_jump_dist(
       frame_.remain_dist_slot_jump);
   debug_apa_remain_dist->set_remain_dist_by_od(frame_.remain_dist_by_od);
+  debug_apa_remain_dist->set_remain_dist_col_det(frame_.remain_dist_col_det);
+  debug_apa_remain_dist->set_current_path_length(frame_.current_path_length);
 }
 
-const void ParkingScenario::RecordDebugStuckTimeInfo() {
+void ParkingScenario::RecordDebugStuckTimeInfo() const {
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaStuckTimeInfo* debug_stuck_time_info =
       debug_info->mutable_apa_path_debug()->mutable_stuck_time_info();
@@ -1522,7 +1518,7 @@ const void ParkingScenario::RecordDebugStuckTimeInfo() {
   debug_stuck_time->set_stuck_dynamic_obs_time(frame_.stuck_dynamic_obs_time);
 }
 
-const void ParkingScenario::RecordDebugTerminalErr() {
+void ParkingScenario::RecordDebugTerminalErr() const {
   auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
   planning::common::ApaTerminalErr* debug_terminal_err =
       debug_info->mutable_apa_path_debug()->mutable_terminal_err();
@@ -1540,7 +1536,7 @@ const void ParkingScenario::RecordDebugTerminalErr() {
       ego_info_under_slot.terminal_err.GetTheta());
 }
 
-const void ParkingScenario::RecordDebugPlanningSlotInfo() {
+void ParkingScenario::RecordDebugPlanningSlotInfo() const {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
   const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
@@ -1561,6 +1557,8 @@ const void ParkingScenario::RecordDebugPlanningSlotInfo() {
       ego_info_under_slot.slot_occupied_ratio);
   debug_slot_info->set_slot_processed_occupied_ratio(
       ego_info_under_slot.slot_occupied_ratio_postprocess);
+  debug_slot_info->set_target_pose_type(
+      static_cast<int>(ego_info_under_slot.tar_pose_result.target_pose_type));
 
   planning::common::Pose2d* slot_origin_pose =
       debug_slot_info->mutable_slot_origin_pose();
@@ -1649,6 +1647,67 @@ const void ParkingScenario::RecordDebugPlanningSlotInfo() {
       l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).x());
   limiter_pt2->set_y(
       l2g_tf.GetPos(ego_info_under_slot.virtual_limiter.second).y());
+}
+
+void ParkingScenario::RecordDebugPlanningStatus() const {
+  auto& debug_info = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  planning::common::ApaPlanningStatus* debug_planning_status =
+      debug_info->mutable_apa_path_debug()->mutable_planning_status();
+
+  debug_planning_status->set_pathplan_result(frame_.pathplan_result);
+  debug_planning_status->set_replan_flag(frame_.replan_flag);
+  debug_planning_status->set_is_replan_first(frame_.is_replan_first);
+  debug_planning_status->set_path_plan_success(
+      frame_.plan_stm.path_plan_success);
+  debug_planning_status->set_planning_status(frame_.plan_stm.planning_status);
+  debug_planning_status->set_spline_success(frame_.spline_success);
+  debug_planning_status->set_replan_reason(frame_.replan_reason);
+  debug_planning_status->set_plan_fail_reason(frame_.plan_fail_reason);
+  debug_planning_status->set_ego_should_stop_by_slot_jump(
+      frame_.ego_should_stop_by_slot_jump);
+  debug_planning_status->set_correct_path_for_limiter(
+      frame_.correct_path_for_limiter);
+}
+
+void ParkingScenario::RecordDebugObstacleInSlot() const {
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const geometry_lib::LocalToGlobalTf& l2g_tf = ego_info_under_slot.l2g_tf;
+
+  std::vector<double> obstaclesX;
+  obstaclesX.reserve(100);
+  std::vector<double> obstaclesY;
+  obstaclesY.reserve(100);
+
+  for (const auto& pair :
+       apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
+    if (pair.second.GetObsAttributeType() !=
+        ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
+      continue;
+    }
+    for (const Eigen::Vector2d& pt : pair.second.GetPtClout2dLocal()) {
+      const Eigen::Vector2d tmp_obstacle = l2g_tf.GetPos(pt);
+      obstaclesX.emplace_back(tmp_obstacle.x());
+      obstaclesY.emplace_back(tmp_obstacle.y());
+    }
+  }
+
+  RecordDebugObstacle(obstaclesX, obstaclesY);
+}
+
+void ParkingScenario::SetMirrorStatus() {
+  iflyauto::RearViewMirrorCommand* mirror_command =
+      &planning_output_.rear_view_mirror_signal_command;
+  mirror_command->available = true;
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_FOLD;
+  } else if (frame_.mirror_command == MirrorCommand::EXPAND) {
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_UNFOLD;
+  } else {
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
+  }
+
+  ILOG_INFO << "plan mirror = " << static_cast<int>(frame_.mirror_command);
 }
 
 }  // namespace apa_planner

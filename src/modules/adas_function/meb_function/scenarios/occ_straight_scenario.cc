@@ -153,7 +153,7 @@ int OccStraightScenario::SelcetInterestObject(MebTempObj &temp_obj) {
   return temp_interest_code;
 };
 
-uint64_t OccStraightScenario::FalseTriggerStratege(const MebTempObj obj) {
+uint64_t OccStraightScenario::FalseTriggerStratege(MebTempObj &obj) {
   // 1. 筛选直行相关的障碍物
   // 2. 根据障碍物类型(人/车)计算 TTC
   // 3. 返回决策结果

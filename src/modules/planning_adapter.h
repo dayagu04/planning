@@ -1,17 +1,28 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <queue>
+#include <thread>
 
 #include "camera_perception_occupancy_grid_c.h"
+#include "debug_info_log.h"
 #include "fm_info_c.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "map_data.pb.h"
+#include "mjson/mjson.hpp"
 #include "planning_debug_info.pb.h"
 #include "ifly_phm_c.h"
 #include "planning_scheduler.h"
+
+#if !defined(X86) && !defined(X86_SIMULATION)
+#include "iflyauto_rate.h"
+#define GET_NOW_TIME iflyauto::Time::Now().ToNanosecond() / 1000
+#endif
 
 namespace planning {
 
@@ -39,7 +50,17 @@ enum INPUT_TOPIC {
 class PlanningAdapter : public iflyauto::interface::PlanningInterface {
  public:
   PlanningAdapter() = default;
-  ~PlanningAdapter() { StopGlog(); };
+  ~PlanningAdapter() {
+    is_timer_enabled_.store(false);
+    if (timer_thread_ && timer_thread_->joinable()) {
+      timer_thread_->join();
+    }
+
+   
+    StopLogThread();
+    StopGlog();
+ 
+  };
 
   bool Init() override;
   bool Proc() override;
@@ -273,6 +294,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   }
 
  private:
+  void PublishTopic(iflyauto::PlanningOutput planning_output, iflyauto::PlanningHMIOutputInfoStr planning_hmi_info);
   void ReportFmIfno(uint64 alarmId, uint64 alarmObj, bool fault_exist);
 
   void UpdateInputListInfo(iflyauto::MsgMeta& msg_meta);
@@ -281,6 +303,9 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void Log();
   void LogTopicLatency();
   void SendHeartBeatToPhm(iflyauto::MainFlowDotpoint reportPoint);
+  void TimerProcess();
+  void StartLogThread();
+  void StopLogThread();
  private:
   std::mutex fusion_objects_msg_mutex_;
   std::mutex fusion_occupancy_objects_msg_mutex_;
@@ -406,6 +431,17 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::function<void(const iflyauto::FmInfo&)> fm_info_writer_ = nullptr;
   std::function<void(const iflyauto::IflyPhmReport&)> phm_report_writer_ = nullptr;
 
+  struct DebugTask {
+    planning::common::PlanningDebugInfo debug_pb;
+    mjson::Json::object debug_json;
+  };
+
+  std::thread debug_thread_;
+  std::mutex debug_queue_mutex_;
+  std::condition_variable debug_cv_;
+  std::queue<DebugTask> debug_queue_;
+  std::atomic<bool> debug_thread_stop_{false};
+
   std::shared_ptr<LocalView> local_view_ptr_;
 
   std::unique_ptr<PlanningScheduler> planning_scheduler_ = nullptr;
@@ -417,6 +453,9 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   uint64_t frame_num_ = 0;
   uint64_t start_time_;
   uint64_t output_time_us_;
+
+  std::atomic<bool> is_timer_enabled_{true};
+  std::shared_ptr<std::thread> timer_thread_ = nullptr;
 };
 
 }  // namespace planning

@@ -39,6 +39,27 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
           LaneBorrowStatus::kLaneBorrowWaitting;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const bool is_split_select_executing =
+      lane_change_decider_output.split_selecting_status ==
+          StateMachineSplitSelectingStatus::kSelectingExecuting &&
+      lane_change_decider_output.split_select_direction !=
+          SplitSelectingDirection::SplitSelectingNone;
+  const bool is_split_select_complete =
+      lane_change_decider_output.split_selecting_status ==
+          StateMachineSplitSelectingStatus::kSelectingComplete &&
+      lane_change_decider_output.split_select_direction !=
+          SplitSelectingDirection::SplitSelectingNone;
+  if (is_split_select_executing) {
+    planning_result.turn_signal =
+        lane_change_decider_output.split_select_direction ==
+                SplitSelectingDirection::SplitSelectingLeft
+            ? RequestType::LEFT_CHANGE
+            : RequestType::RIGHT_CHANGE;
+    return;
+  }
+  if (is_split_select_complete) {
+    return;
+  }
   bool turn_signal_from_ramp_direction =
       last_frame_dir_turn_signal_road_to_ramp_ !=
       RampDirection::RAMP_NONE;
@@ -405,6 +426,9 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     }
     // ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+  } else if (lc_request_source == CONE_REQUEST) {
+    ad_info.lane_change_reason =
+        iflyauto::LaneChangeReason::LC_REASON_CONE;
   }
 
   // update route info
@@ -447,7 +471,8 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   }
   ad_info.distance_to_toll_station = route_info_output.distance_to_toll_station;
   ad_info.noa_exit_warning_level_distance =
-      route_info_output.distance_to_route_end;
+      route_info_output.distance_to_exit_noa;
+  ad_info.noa_exit_type = route_info_output.noa_exit_type;
   // ad_info.distance_to_tunnel = ;  //
   // ad_info.is_within_hdmap = ;     //
   const int ramp_direction = route_info_output.ramp_direction;
@@ -558,21 +583,35 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     planning_output.planning_request.take_over_req_level = iflyauto::REQUEST_LEVEL_WARRING;
     planning_output.planning_request.request_reason = iflyauto::REQUEST_REASON_LANE_CHANGE_RISK;
   }
+
+  const int merge_hard_cnt_threshold = 5;
+  const int merge_fail_cnt_threshold = 3;
+  static int merge_hard_cnt = 0;
+  static int merge_fail_cnt = 0;
   if (lane_change_decider_output.is_hard_to_merge &&
-     (curr_state == kLaneChangeHold ||
-      curr_state == kLaneChangePropose)) {
-    planning_output.planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
-    planning_output.planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_UNABLE;
+      (curr_state == kLaneChangeHold || curr_state == kLaneChangePropose)) {
+    merge_hard_cnt++;
+    if (merge_hard_cnt >= merge_hard_cnt_threshold) {
+      planning_output.planning_request.take_over_req_level =
+          iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
+      planning_output.planning_request.request_reason =
+          iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_UNABLE;
+    }
+  } else {
+    merge_hard_cnt = 0;
   }
+  
   if (lane_change_decider_output.is_fail_to_merge &&
-     (curr_state == kLaneChangeHold ||
-      curr_state == kLaneChangePropose)) {
-    planning_output.planning_request.take_over_req_level =
-        iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
-    planning_output.planning_request.request_reason =
-        iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_FAILED;
+      (curr_state == kLaneChangeHold || curr_state == kLaneChangePropose)) {
+    merge_fail_cnt++;
+    if (merge_fail_cnt >= merge_fail_cnt_threshold) {
+      planning_output.planning_request.take_over_req_level =
+          iflyauto::RequestLevel::REQUEST_LEVEL_WARRING;
+      planning_output.planning_request.request_reason =
+          iflyauto::RequestReason::REQUEST_REASON_MERGE_ROAD_FAILED;
+    }
+  } else {
+    merge_fail_cnt = 0;
   }
 
   // 判断是否在接近匝道时因为旁边有车导致下不去匝道
@@ -620,7 +659,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
       } else if (route_info_output.is_ego_on_expressway_hmi) {
         signal_lc_dis = 200.0;
       }
-      
+
       const double pre_warning_dis = min_gap * signal_lc_dis;
       const int propose_cnt_threshold = 30;
 

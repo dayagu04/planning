@@ -188,10 +188,11 @@ class ParallelParkInScenario : public ParkingScenario {
       double max_range = 12.0, double max_neighbor_dist = 0.5,
       int max_points_per_bin = 5);
   std::vector<Eigen::Vector2d> FilterByLightVisibilityDualAxle(
+      const Eigen::Vector2d& rear_axle_pos, const double yaw,
       const std::vector<Eigen::Vector2d>& filtered_channel_obs_vec,
-      double angle_resolution = 5.0, double start_angle = -180.0,
-      double end_angle = 180.0, double max_range = 12.0,
-      double duplicate_tolerance = 1e-3);
+      double angle_resolution = 5.0, int max_points_per_bin = 5,
+      double start_angle = -180.0, double end_angle = 180.0,
+      double max_range = 12.0, double duplicate_tolerance = 1e-3);
   std::vector<Eigen::Vector2d> ProcessCurbPointsAndGetNearestAbsY(
       double& nearest_abs_y,
       const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&

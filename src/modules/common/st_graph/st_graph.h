@@ -122,6 +122,11 @@ class STGraph {
   const std::shared_ptr<planning_math::KDPath> processed_path() const {
     return st_graph_input_->processed_path();
   }
+
+  const std::unordered_map<int32_t, std::vector<std::unique_ptr<STBoundary>>>&
+  cut_in_agent_id_st_boundaries_map() const {
+    return cut_in_agent_id_st_boundaries_map_;
+  }
   /*******st_graph_helper* functions(end)*******/
  private:
   void MakeAgentStBoundaries();
@@ -136,6 +141,7 @@ class STGraph {
       const bool reuse_for_close_pass = false,
       const double extra_lateral_buffer_for_close_pass = 0.0);
 
+  void MakeCutInStBoundary(const agent::Agent& agent);
   void MakeHppStaticAgentStBoundary(
       const agent::Agent& agent, const StBoundaryType type,
       const bool reuse_for_close_pass = false,
@@ -157,8 +163,6 @@ class STGraph {
       const planning_math::Polygon2d& obs_polygon,
       const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
       double* lower_s, double* upper_s);
-
-  void RecalculateTrajectoryForLcRearAgent(const agent::Agent* rear_agent);
 
   void MakeStPointsTable();
 
@@ -229,6 +233,12 @@ class STGraph {
       close_pass_boundary_id_st_boundaries_map_;
   std::unordered_map<int32_t, std::vector<int64_t>>
       close_pass_agent_id_st_boundaries_map_;
+
+  // bellow is for cut-in st boundary
+  std::unordered_map<int32_t, std::vector<std::unique_ptr<STBoundary>>>
+      cut_in_agent_id_st_boundaries_map_;
+
+  RoadRightLevel road_right_level_;
 };
 }  // namespace speed
 }  // namespace planning

@@ -1,7 +1,7 @@
 #ifndef __SCC_LONGITUDINAL_MOTION_PLANNING_COST_V3_H__
 #define __SCC_LONGITUDINAL_MOTION_PLANNING_COST_V3_H__
 
-#include "ilqr_cost.h"
+#include "al_ilqr_cost.h"
 
 namespace pnc {
 namespace scc_longitudinal_planning_v3 {
@@ -34,11 +34,22 @@ enum iLqrCostconfigId {
   W_JERK_BOUND,
   W_S_STOP,
   TERMINAL_FLAG,
-  W_NON_NEGATIVE_VEL,
-  W_POS_SAFE,
   SAFE_DISTANCE,
   W_EMERGENCY_STOP,
+  EXTEND_POS_MAX,
+  EXTEND_POS_MIN,
+  W_EXTEND_POS_BOUND,
   COST_CONFIG_SIZE,
+};
+
+enum ConstraintConfigId {
+  MU_HARD_POS_UPPER = 0,
+  RHO_HARD_POS_UPPER = 1,
+  MU_HARD_POS_LOWER = 2,
+  RHO_HARD_POS_LOWER = 3,
+  MU_HARD_VEL_LOWER = 4,
+  RHO_HARD_VEL_LOWER = 5,
+  CONSTRAINT_CONFIG_SIZE,
 };
 
 enum iLqrCostId {
@@ -47,12 +58,11 @@ enum iLqrCostId {
   LON_JERK_COST,
   LON_POS_SOFT_BOUND_COST,
   LON_POS_HARD_BOUND_COST,
-  LON_VEL_BOUND_COST,
+  LON_POS_EXTEND_BOUND_COST,
   LON_ACC_BOUND_COST,
+  LON_VEL_BOUND_COST,
   LON_JERK_BOUND_COST,
-  LON_STOP_POINT_COST,
   LON_NON_NEGATIVE_VEL_COST,
-  LON_POS_SAFE_COST,
   LON_EMERGENCY_STOP_COST,
   COST_SIZE,
 };
@@ -61,181 +71,188 @@ enum StateId { POS = 0, VEL = 1, ACC = 2, STATE_SIZE };
 enum ControlId { JERK = 0, INPUT_SIZE };
 
 // reference cost for s and v
-class ReferenceCostTerm : public ilqr_solver::BaseCostTerm {
+class ReferenceCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   ReferenceCostTerm() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return REFERENCE_COST; }
 };
 
 // longitudinal acc cost
-class LonAccCostTerm : public ilqr_solver::BaseCostTerm {
+class LonAccCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   LonAccCostTerm() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_ACC_COST; }
 };
 
 // longitudinal jerk cost
-class LonJerkCostTerm : public ilqr_solver::BaseCostTerm {
+class LonJerkCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   LonJerkCostTerm() = default;
-  double GetCost(const ilqr_solver::State & /*x*/,
-                 const ilqr_solver::Control &u) override;
-  void GetGradientHessian(const ilqr_solver::State & /*x*/,
-                          const ilqr_solver::Control &u,
-                          ilqr_solver::LxMT & /*lx*/, ilqr_solver::LuMT &lu,
-                          ilqr_solver::LxxMT & /*lxx*/,
-                          ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT &luu) override;
+  double GetCost(const al_ilqr_solver::State & /*x*/,
+                 const al_ilqr_solver::Control &u) override;
+  void GetGradientHessian(const al_ilqr_solver::State & /*x*/,
+                          const al_ilqr_solver::Control &u,
+                          al_ilqr_solver::LxMT & /*lx*/,
+                          al_ilqr_solver::LuMT &lu,
+                          al_ilqr_solver::LxxMT & /*lxx*/,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_JERK_COST; }
 };
 
 // longitudinal pos bound cost
-class LonSoftPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
+class LonSoftPosBoundCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   LonSoftPosBoundCostTerm() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_POS_SOFT_BOUND_COST; }
 };
 
-class LonHardPosBoundCostTerm : public ilqr_solver::BaseCostTerm {
+class LonHardPosBoundCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   LonHardPosBoundCostTerm() = default;
 
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_POS_HARD_BOUND_COST; }
 };
 
+class LonExtendPosBoundCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
+ public:
+  LonExtendPosBoundCostTerm() = default;
+
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return LON_POS_EXTEND_BOUND_COST; }
+};
+
 // longitudinal vel bound cost
-class LonVelBoundCostTerm : public ilqr_solver::BaseCostTerm {
+class LonVelBoundCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   LonVelBoundCostTerm() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_VEL_BOUND_COST; }
 };
 
-// non-negative vel cost
-class NonNegativeVelCost : public ilqr_solver::BaseCostTerm {
+// Non-negative vel hard constraint
+class LonHardNonNegativeVelCostTerm
+    : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
-  NonNegativeVelCost() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  LonHardNonNegativeVelCostTerm() = default;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_NON_NEGATIVE_VEL_COST; }
 };
 
-// longitudinal acc bound cost
-class LonAccBoundCostTerm : public ilqr_solver::BaseCostTerm {
+// Longitudinal acc bound cost
+class LonAccBoundCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   LonAccBoundCostTerm() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_ACC_BOUND_COST; }
 };
 
 // longitudinal jerk bound cost
-class LonJerkBoundCostTerm : public ilqr_solver::BaseCostTerm {
+class LonJerkBoundCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
   LonJerkBoundCostTerm() = default;
-  double GetCost(const ilqr_solver::State & /*x*/,
-                 const ilqr_solver::Control &u) override;
-  void GetGradientHessian(const ilqr_solver::State & /*x*/,
-                          const ilqr_solver::Control &u,
-                          ilqr_solver::LxMT & /*lx*/, ilqr_solver::LuMT &lu,
-                          ilqr_solver::LxxMT & /*lxx*/,
-                          ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT &luu) override;
+  double GetCost(const al_ilqr_solver::State & /*x*/,
+                 const al_ilqr_solver::Control &u) override;
+  void GetGradientHessian(const al_ilqr_solver::State & /*x*/,
+                          const al_ilqr_solver::Control &u,
+                          al_ilqr_solver::LxMT & /*lx*/,
+                          al_ilqr_solver::LuMT &lu,
+                          al_ilqr_solver::LxxMT & /*lxx*/,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_JERK_BOUND_COST; }
 };
 
-// longitudinal stop point cost
-class LonStopPointCost : public ilqr_solver::BaseCostTerm {
+class LonEmergencyStopCostTerm : public al_ilqr_solver::AliLqrBaseCostTerm {
  public:
-  LonStopPointCost() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
-  std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LON_STOP_POINT_COST; }
-};
-
-class LonPosSafeCostTerm : public ilqr_solver::BaseCostTerm {
- public:
-  LonPosSafeCostTerm() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
-  std::string GetCostString() override { return typeid(this).name(); }
-  uint8_t GetCostId() override { return LON_POS_SAFE_COST; }
-};
-
-class LonEmergencyStopCost : public ilqr_solver::BaseCostTerm {
- public:
-  LonEmergencyStopCost() = default;
-  double GetCost(const ilqr_solver::State &x,
-                 const ilqr_solver::Control & /*u*/) override;
-  void GetGradientHessian(const ilqr_solver::State &x,
-                          const ilqr_solver::Control & /*u*/,
-                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
-                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
-                          ilqr_solver::LuuMT & /*luu*/) override;
+  LonEmergencyStopCostTerm() = default;
+  double GetCost(const al_ilqr_solver::State &x,
+                 const al_ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const al_ilqr_solver::State &x,
+                          const al_ilqr_solver::Control & /*u*/,
+                          al_ilqr_solver::LxMT &lx,
+                          al_ilqr_solver::LuMT & /*lu*/,
+                          al_ilqr_solver::LxxMT &lxx,
+                          al_ilqr_solver::LxuMT & /*lxu*/,
+                          al_ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_EMERGENCY_STOP_COST; }
 };

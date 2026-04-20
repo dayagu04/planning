@@ -153,10 +153,24 @@ int OdCrossingScenario::SelcetInterestObject(MebTempObj &temp_obj) {
     // do nothing
   }
 
+  /*bit_7*/
+  // 判断自车三秒前是表显速度比当前大于等于3kph,且当前表显速度为 5kph及以下
+
+  int display_speed_kph_error =
+      abs(meb_pre.GetInstance().GetHistoryFrame(0)->vehicle_speed_display_kph -
+          meb_pre.GetInstance().GetHistoryFrame(3)->vehicle_speed_display_kph);
+  if (meb_pre.GetInstance().GetHistoryFrame(0)->vehicle_speed_display_kph <=
+          5 &&
+      display_speed_kph_error >= 3) {
+    temp_interest_code += uint16_bit[7];
+  } else {
+    // do nothing
+  }
+
   return temp_interest_code;
 };
 
-uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
+uint64_t OdCrossingScenario::FalseTriggerStratege(MebTempObj &obj) {
   // suppe_code初始化
   uint64_t suppe_code = 0;
 
@@ -231,7 +245,8 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
     key_obj_an_avoid_by_steering_thrd = 2.0;
   }
 
-  if (fabs(obj.an_avoid_by_steering) < key_obj_an_avoid_by_steering_thrd) {
+  if ((fabs(obj.an_avoid_by_steering) < key_obj_an_avoid_by_steering_thrd) &&
+      (obj.age < 5000)) {
     suppe_code += uint32_bit[5];
   } else {
     /*do nothing*/
@@ -251,10 +266,21 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
       fabs(atan2(obj.rel_vy + 1e-3, (obj.rel_vx + signed_ego_v) + 1e-3)) * 57.3;
   float32 horizontal_angle_thres_deg = 90.0;
   float32 horizontal_angle_diff_thres_deg = 15.5;
+
+  // 航向角范围为-180deg~180deg
+  float32 obj_heading_angle_abs;
+  if (fabs(obj.rel_heading_angle) <= (90.0 / 57.3)) {
+    obj_heading_angle_abs = fabs(obj.rel_heading_angle);
+  } else {
+    obj_heading_angle_abs = (180.0 / 57.3) - fabs(obj.rel_heading_angle);
+  }
   if (fabs(speed_direction_deg - horizontal_angle_thres_deg) >
       horizontal_angle_diff_thres_deg) {
     suppe_code += uint32_bit[7];
-  } else {
+  } else if (obj.type_for_meb == OdObjGroup::kCar) {
+    if (obj_heading_angle_abs < (30.0 / 57.3)) {
+      suppe_code += uint32_bit[7];
+    }
     /*do nothing*/
   }
 
@@ -356,6 +382,31 @@ uint64_t OdCrossingScenario::FalseTriggerStratege(const MebTempObj obj) {
     if (front_cipv_key_obj_info.key_obj_relative_x < 15.0) {
       suppe_code += uint32_bit[14];
     }
+  }
+
+  /*bit_15*/
+  // 障碍物横穿到 自车前or后时，障碍物中心的横向位置 小于 0.5 *
+  // 本车宽度目前只考虑D挡位
+  if (vehicle_service.shift_lever_state ==
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
+    if ((obj.rel_vx < -0.1) && (obj_min_dist > 0.0)) {
+      ttc = fabs(obj_min_dist / obj.rel_vx);
+      obj.collision_point_y = ttc * obj.rel_vy + obj.rel_y;
+      if (ttc > 0.3 &&
+          (obj.collision_point_y > 0.5 * GetContext.get_param()->ego_width) &&
+          (obj.age < 5000)) {
+        suppe_code += uint32_bit[15];
+      }
+    }
+  }
+
+  /*bit_16*/
+  // 障碍物历史帧中的横向和纵向速度是否稳定
+  int check_frames = 5;
+  if ((!meb_pre.ObjectLoggerCheckVelocityStability(obj.track_id, check_frames,
+                                                   0.5, 0.5, 0.5)) &&
+      (obj.age > check_frames * MEB_CYCLE_TIME_SEC * 1000)) {
+    suppe_code += uint32_bit[16];
   }
 
   // 如果误触发策略关闭，则suppe_code清零
@@ -530,6 +581,8 @@ void OdCrossingScenario::Process(void) {
     } else {
     }
     temp_obj.ay_avoid_by_accelerating = key_obj_ay_avoid_by_accelerating;
+
+    temp_obj.collision_point_y = 0.0;  // 碰撞物体再计算
 
     // 若为感兴趣目标,则添加至interest_obj_info_中
     if (temp_obj.interest_code == 0) {

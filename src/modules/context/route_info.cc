@@ -3382,6 +3382,9 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
   JSON_DEBUG_VALUE("current_lane_distance", route_info_output_.current_lane_distance);
   JSON_DEBUG_VALUE("right_lane_distance", route_info_output_.right_lane_distance);
+  JSON_DEBUG_VALUE("distance_to_enter_city", route_info_output_.distance_to_enter_city);
+  JSON_DEBUG_VALUE("distance_to_exit_noa", route_info_output_.distance_to_exit_noa);
+  JSON_DEBUG_VALUE("noa_exit_type", static_cast<int>(route_info_output_.noa_exit_type));
 
   int minVal_seq = 0;
   int maxVal_seq = 0;
@@ -3408,6 +3411,28 @@ void RouteInfo::UpdateVisionInfo() const {
       static_cast<int>(
           route_info_output_.mlc_decider_scene_type_info.mlc_scene_type));
   JSON_DEBUG_VALUE("ego_seq", route_info_output_.ego_seq);
+
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& cur_lane = virtual_lane_manager->get_current_lane();
+  const auto& left_lane = virtual_lane_manager->get_left_lane();
+  const auto& right_lane = virtual_lane_manager->get_right_lane();
+  JSON_DEBUG_VALUE("cur_lane_order_on_split_next_link",
+                   cur_lane != nullptr
+                       ? cur_lane->get_lane_order_on_split_next_link()
+                       : -1);
+  JSON_DEBUG_VALUE("left_lane_order_on_split_next_link",
+                   left_lane != nullptr
+                       ? left_lane->get_lane_order_on_split_next_link()
+                       : -1);
+  JSON_DEBUG_VALUE("right_lane_order_on_split_next_link",
+                   right_lane != nullptr
+                       ? right_lane->get_lane_order_on_split_next_link()
+                       : -1);
+  JSON_DEBUG_VALUE("curlane_on_route_link",
+                   cur_lane != nullptr
+                       ? (int)cur_lane->get_route_on_link_status()
+                       : -1);
 
   // todo(wangzhi17):用virtual lane中的信息来更新
   // JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
@@ -6847,6 +6872,7 @@ void RouteInfo::GetStrategy() {
       map_updated = true;
     } else if (local_view.sdpro_map_info.data_source() ==
                iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
+      // TODO: change to async          
       route_info_strategy_ = std::make_shared<SDProRouteInfoStrategy>(
           &mlc_decider_config_, session_);
       map_updated = true;

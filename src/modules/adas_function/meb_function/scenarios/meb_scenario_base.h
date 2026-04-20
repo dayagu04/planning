@@ -18,7 +18,7 @@ class MebScenarioBase {
   virtual void CollisionCalculate(double stop_distance_buffer_reduction,
                                   bool is_obs_straight);
 
-  virtual uint64_t FalseTriggerStratege(const MebTempObj obj) = 0;
+  virtual uint64_t FalseTriggerStratege(MebTempObj &obj) = 0;
 
   virtual int SceneCode(void) = 0;
 

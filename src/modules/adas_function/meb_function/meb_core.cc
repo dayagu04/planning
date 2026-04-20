@@ -178,7 +178,25 @@ void MebCore::UpdateMebDisableCode(void) {
 void MebCore::UpdateMebFaultCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   uint32 fault_code = 0;
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
 
+  // bit 13
+  // 故障降级
+  if ((degraded_driving_function_info_ptr->meb.degraded == iflyauto::INHIBIT) ||
+      (degraded_driving_function_info_ptr->meb.degraded ==
+       iflyauto::ERROR_DEGRADED) ||
+      (degraded_driving_function_info_ptr->meb.degraded ==
+       iflyauto::ERROR_SAFE_STOP) ||
+      (degraded_driving_function_info_ptr->meb.degraded ==
+       iflyauto::MCU_COMM_SHUTDOWN)) {
+    fault_code += uint16_bit[0];
+  } else {
+    /*do nothing*/
+  }
   meb_state_info_.fault_code = fault_code;
 }
 
@@ -517,6 +535,11 @@ void MebCore::SetMebOutputInfo(void) {
     } else {
       GetContext.mutable_output_info()->meb_output_info_.meb_request_status = 0;
     }
+
+    if (GetContext.get_param()->meb_request_status_const_switch == true) {
+      GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
+          GetContext.get_param()->meb_request_status_const;
+    }
 #endif
   }
 }  // namespace meb_core
@@ -526,7 +549,7 @@ void MebCore::Log(void) {
   auto meb_input = adas_function::MebPreprocess::GetInstance().GetMebInput();
 
   auto &MebInputInstacne = adas_function::MebPreprocess::GetInstance();
-  JSON_DEBUG_VALUE("meb_version", (double)260407);
+  JSON_DEBUG_VALUE("meb_version", (double)260413);
   JSON_DEBUG_VALUE("meb_first_state", (int)meb_state_info_.first_state);
   JSON_DEBUG_VALUE("meb_second_state", (int)meb_state_info_.second_state);
   JSON_DEBUG_VALUE("meb_enable_code", meb_state_info_.enable_code);
@@ -648,6 +671,7 @@ void MebCore::Log(void) {
   std::vector<double> meb_od_cross_obs_type = {};
   std::vector<double> meb_od_cross_obs_an_avoid_by_steering = {};
   std::vector<double> meb_od_cross_obs_ay_avoid_by_accelerating = {};
+  std::vector<double> meb_od_cross_obs_collision_point_y = {};
   for (auto &obs :
        od_crossing_scenario_ptr_->collision_obj_info_.interest_obj_vec_) {
     meb_od_cross_obs_x_vector.push_back(obs.rel_x);
@@ -662,6 +686,7 @@ void MebCore::Log(void) {
     meb_od_cross_obs_an_avoid_by_steering.push_back(obs.an_avoid_by_steering);
     meb_od_cross_obs_ay_avoid_by_accelerating.push_back(
         obs.ay_avoid_by_accelerating);
+    meb_od_cross_obs_collision_point_y.push_back(obs.collision_point_y);
   }
 
   JSON_DEBUG_VECTOR("meb_od_cross_obs_x_vector", meb_od_cross_obs_x_vector, 2);
@@ -680,6 +705,8 @@ void MebCore::Log(void) {
                     meb_od_cross_obs_an_avoid_by_steering, 2);
   JSON_DEBUG_VECTOR("meb_od_cross_obs_ay_avoid_by_accelerating",
                     meb_od_cross_obs_ay_avoid_by_accelerating, 2);
+  JSON_DEBUG_VECTOR("meb_od_cross_obs_collision_point_y",
+                    meb_od_cross_obs_collision_point_y, 2);
 
   std::vector<double> meb_uss_obs_x_vector = {};
   std::vector<double> meb_uss_obs_y_vector = {};

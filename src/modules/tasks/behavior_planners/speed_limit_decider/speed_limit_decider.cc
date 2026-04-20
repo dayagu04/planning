@@ -135,6 +135,7 @@ constexpr double kRoundaboutQuitCurvRadiusThr = 300.0;
 constexpr double kRoundaboutQuitRecoverCounter = 3;
 constexpr double kRoadBoundarySearchDistanceOffset = 25.0;  // Offset distance added to search_distance_min for road boundary search (m)
 constexpr double kLateralRatioThreshold = 0.3;
+constexpr double kMinLateralRatioThreshold = 0.15;
 constexpr double kAvoidAgentMinSpeed = 2.0;
 constexpr double kLateralCollisionCheckThreshold = 0.5;
 constexpr double kLateralAccPredictionAccelTime = 2.0;  // Acceleration time for lateral acc prediction when min_v_limit >= v_ego (s)
@@ -151,6 +152,7 @@ constexpr double kTriggerDistanceBaseOffsetTimeRatio = 0.5;  // Time ratio for b
 static constexpr double kCurvaturePreviewHighSpeedThreshold = 40.0;   // 40 km/h
 constexpr double KMinThreshold = 1.75;
 constexpr double KSpeedMax = 120.0;
+constexpr double kMinLateralSpeedThreshold = 0.1;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -2802,9 +2804,10 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     double min_s = agent_s - avoid_agent->length() * 0.5 - ego_s -
                    vehicle_param.front_edge_to_rear_axle;
 
-    if (min_s < 0.0) {
+    if (min_s <= 0.0) {
       continue;
     }
+    
     const auto &agent_corners = avoid_agent->box().GetAllCorners();
     double agent_min_l = std::numeric_limits<double>::max();
     double agent_max_l = -std::numeric_limits<double>::max();
@@ -2815,6 +2818,10 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
         agent_min_l = std::min(agent_min_l, agent_corner_l);
         agent_max_l = std::max(agent_max_l, agent_corner_l);
       }
+    }
+
+    if (agent_min_l > lane_half_width || agent_max_l < -lane_half_width) {
+      continue;
     }
 
     double lateral_dist = 0.0;
@@ -2830,6 +2837,20 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
 
     if (lateral_dist > lateral_threshold) {
       continue;
+    }
+
+    if (!avoid_agent->is_truck() && !avoid_agent->is_vru() &&
+        lateral_threshold > kMinLateralRatioThreshold * lane_width) {
+      const auto agent_matched_path_point =
+          current_lane_coord->GetPathPointByS(agent_s);
+      const double agent_matched_lane_theta = agent_matched_path_point.theta();
+      const double agent_relative_theta =
+          planning_math::NormalizeAngle(avoid_agent->theta() - agent_matched_lane_theta);
+      const double object_l_speed_mps =
+          avoid_agent->speed() * std::sin(agent_relative_theta);
+      if (std::abs(object_l_speed_mps) < kMinLateralSpeedThreshold) {
+        continue;
+      }
     }
 
     double v_min_limit = avoid_agent->is_static()

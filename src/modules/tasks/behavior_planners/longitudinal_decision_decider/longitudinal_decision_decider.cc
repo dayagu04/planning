@@ -153,7 +153,7 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
     if (ptr_agent == nullptr) {
       continue;
     }
-    if (ptr_agent->is_cutin()) {
+    if (ptr_agent->is_rule_base_cutin() || ptr_agent->is_prediction_cutin()) {
       can_increase_acc_bound = false;
       break;
     }

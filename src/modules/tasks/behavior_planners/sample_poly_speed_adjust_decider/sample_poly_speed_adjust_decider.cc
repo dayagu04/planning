@@ -20,43 +20,6 @@
 
 using planning::planning_data::DynamicAgentNode;
 using planning::planning_data::DynamicWorld;
-namespace {
-constexpr double kNormalSceneWeightMatchGapVel = 6.5;
-constexpr double kNormalSceneWeightMatchGapS = 4.5;
-constexpr double kNormalSceneWeightFollowVel = 5.0;
-constexpr double kNormalSceneWeightStopLine = 50.0;
-constexpr double kNormalSceneWeightLeadingSafeS = 13.5;
-constexpr double kNormalSceneWeightLeadingSafeV = 0.0;
-constexpr double kNormalSceneWeightVelVariable = 3.5;
-constexpr double kNormalSceneWeightGapAvailable = 2.5;
-constexpr double kNormalSceneWeightAccLimit = 25.0;
-constexpr double kNormalSceneWeightStopPenalty = 2.5;
-constexpr double kNormalSceneWeightSpeedChange = 10.0;
-
-constexpr double kPurseFlowVelSceneWeightMatchGapVel = 0.0;
-constexpr double kPurseFlowVelSceneWeightMatchGapS = 0.0;
-constexpr double kPurseFlowVelSceneWeightFollowVel = 6.25;
-constexpr double kPurseFlowVelSceneWeightStopLine = 50.0;
-constexpr double kPurseFlowVelSceneWeightLeadingSafeS = 13.5;
-constexpr double kPurseFlowVelSceneWeightLeadingSafeV = 0.0;
-constexpr double kPurseFlowVelSceneWeightVelVariable = 2.0;
-constexpr double kPurseFlowVelSceneWeightGapAvailable = 1.25;
-constexpr double kPurseFlowVelSceneWeightAccLimit = 25.0;
-constexpr double kPurseFlowVelSceneWeightStopPenalty = 2.5;
-constexpr double kPurseFlowVelSceneWeightSpeedChange = 0.0;
-
-constexpr double kDeclerationSceneWeightMatchGapVel = 4.5;
-constexpr double kDeclerationSceneWeightMatchGapS = 2.5;
-constexpr double kDeclerationSceneWeightFollowVel = 0.0;
-constexpr double kDeclerationSceneWeightStopLine = 50.0;
-constexpr double kDeclerationSceneWeightLeadingSafeS = 13.5;
-constexpr double kDeclerationSceneWeightLeadingSafeV = 0.0;
-constexpr double kDeclerationSceneWeightVelVariable = 0.5;
-constexpr double kDeclerationSceneWeightGapAvailable = 2.5;
-constexpr double kDeclerationSceneWeightAccLimit = 0.0;
-constexpr double kDeclerationSceneWeightStopPenalty = 0.0;
-constexpr double kDeclerationSceneWeightSpeedChange = 0.0;
-}  // namespace
 namespace planning {
 
 SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider() {  // for pybind
@@ -106,7 +69,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   if (ok) {
     planning::speed::STPointWithLateral current_matched_upper_st_point;
     planning::speed::STPointWithLateral current_matched_lower_st_point;
-    st_sample_space_base_.GetBorderByAvailable(ego_s_, 0.0,
+    st_sample_space_base_.GetBorderByAvailable(ego_s_, ego_v_, 0.0,
                                                &current_matched_lower_st_point,
                                                &current_matched_upper_st_point);
     ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
@@ -129,20 +92,37 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     ok = Evaluate();
   }
   int astar_iteration_count = 0;
+  session_->mutable_planning_context()
+    ->mutable_lane_change_decider_output()
+    .is_emergency_scene = false;
   if (ok) {
-    if (min_cost_traj_ptr_ == nullptr ||
+    const double left_merge_dist_coef = 4.0;
+    bool is_near_stop_point =
+        min_cost_traj_ptr_ == nullptr
+            ? true
+            : (distance_to_merge_point_ > left_merge_dist_coef * ego_v_) &&
+                  (min_cost_traj_ptr_->anchor_points_match_gap_cost().cost() >
+                   0.0);
+    if (is_near_stop_point ||
         !min_cost_traj_ptr_->anchor_points_match_gap_cost()
              .is_gap_changeable() ||
         !min_cost_traj_ptr_->is_left_distance_enough()) {
       if (IsForcedMergeScenario()) {
+        session_->mutable_planning_context()
+            ->mutable_lane_change_decider_output()
+            .is_emergency_scene = true;
         if (GenerateAStarTraj()) {
           astar_iteration_count = astar_traj_ptr_->count_;
+          astar_merge_count_ = 0;
         } else {
           astar_traj_ptr_.reset();
+          astar_merge_count_ =
+              std::min(astar_merge_count_ + 1, 2);
         }
       }
     }
   }
+
 
   if (ok) {
     if (min_cost_traj_ptr_ != nullptr) {
@@ -176,7 +156,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
                          .is_fail_to_merge;
   merge_hard = false;
   merge_fail = false;
-  if (is_merge_change_ && ok) {
+  if (is_merge_change_ && ok && !astar_traj_ptr_) {
     if (min_cost_traj_ptr_ != nullptr &&
         !min_cost_traj_ptr_->is_left_distance_enough()) {
       if (distance_to_stop_point_ < 5.0) {
@@ -242,7 +222,8 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
              (config_.sample_t_nums - 1);
   delta_v_ = (speed_adjust_range_.first - speed_adjust_range_.second) /
              (config_.sample_v_nums - 1);
-
+  adjust_speed_min_acc_ = is_merge_change_ ? config_.adjust_speed_min_acc_merge
+                                             : config_.adjust_speed_min_acc_normal;
   for (int i = 0; i < config_.sample_v_nums; i++) {
     const double v = speed_adjust_range_.second + i * delta_v_;
     std::vector<SampleQuarticPolynomialCurve> sample_traj_at_t;
@@ -263,8 +244,8 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
           weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
           weight_speed_change_, weight_leading_veh_follow_s_,
-          weight_jerk_limit_, front_edge_to_rear_axle_, rear_edge_to_rear_axle_,
-          config_);
+          weight_jerk_limit_, weight_stop_point_, front_edge_to_rear_axle_,
+          rear_edge_to_rear_axle_, config_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -292,7 +273,9 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   if (traffic_density_status_ == Congested) {
     count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
   }
-  size_t start_index = traffic_density_status_ == Congested ? 1 : 3;
+  size_t start_index = traffic_density_status_ == Congested
+                          ? config_.eval_start_index_congested
+                          : config_.eval_start_index_normal;
   if (sample_scene_ == PurseFlowVelScene && is_not_use_gap_select) {
     for (size_t k = 0; k < sample_trajs_.size(); k++) {
       auto& sample_traj_at_v = sample_trajs_[k];
@@ -302,7 +285,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                              v_suggestted_, merge_stop_line_distance_,
                              leading_veh_, is_not_use_gap_select,
                              speed_differ_gain, distance_to_stop_point_,
-                             lc_safety_distance_config_, 3.0, is_merge_change_,
+                             lc_safety_distance_config_, config_.purse_flow_vel_eval_t, is_merge_change_,
                              is_emergency_scene_);
       }
     }
@@ -349,7 +332,7 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
   speed::STPointWithLateral prediction_matched_upper_st_point;
   speed::STPointWithLateral prediction_matched_lower_st_point;
   st_sample_space_base_.GetBorderByAvailable(
-      ego_s_, 0.0, &prediction_matched_lower_st_point,
+      ego_s_, ego_v_,  0.0, &prediction_matched_lower_st_point,
       &prediction_matched_upper_st_point);
   const double vel_diff_to_gap_rear_car =
       (ego_v_ - prediction_matched_lower_st_point.velocity()) > -kZeroEpsilon
@@ -494,6 +477,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       ->mutable_sample_poly_speed_info()
       ->Clear();
   agent_info_.clear();
+  agent_lateral_offset_map_.clear();
   astar_traj_ptr_.reset(nullptr);
   target_lane_coord_.reset();
   leading_veh_ = LeadingAgentInfo();
@@ -502,6 +486,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   sample_status_ = OK;
   distance_to_stop_point_ = kMaxDistanceToStopPoint;
   is_emergency_scene_ = false;
+  session_->mutable_planning_context()
+      ->mutable_lane_change_decider_output()
+      .is_emergency_scene = false;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()
@@ -547,8 +534,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   const bool enable_hold_adjust_speed =
       coarse_planning_info.target_state == kLaneChangeHold;
 
-  if (coarse_planning_info.target_state != kLaneChangePropose &&
-      !enable_hold_adjust_speed) {
+  if ((coarse_planning_info.target_state != kLaneChangePropose &&
+       !enable_hold_adjust_speed) ||
+      lane_change_source_ == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
     count_wait_state_ = 0;
     lane_change_request_ = 0;
     sample_scene_ = SampleScene::NormalSampleScene;
@@ -731,12 +719,14 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
-      v_adjust_speed_limit_ * 1.05 > ego_v_
-          ? std::fmin(v_adjust_speed_limit_ * 1.05, speed_adjust_range_.first)
+      v_adjust_speed_limit_ * config_.speed_limit_scale_factor > ego_v_
+          ? std::fmin(v_adjust_speed_limit_ * config_.speed_limit_scale_factor,
+                      speed_adjust_range_.first)
           : ego_v_;
-  speed_adjust_range_.first = std::fmin(speed_adjust_range_.first, 130.0 / 3.6);
+  speed_adjust_range_.first =
+      std::fmin(speed_adjust_range_.first, kSampleSpeedCapMps);
   speed_adjust_range_.second =
-      is_merge_change_ && merge_stop_line_distance_ <= 20.0
+      is_merge_change_ && merge_stop_line_distance_ <= config_.merge_stop_zero_speed_distance
           ? 0.0
           : std::fmax(config_.sample_v_lower,
                       ego_v_ - config_.maximum_speed_adjustment);
@@ -744,9 +734,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       std::fmin(target_lane_objs_flow_vel_, v_adjust_speed_limit_);
   speed_adjust_range_.second =
       !is_merge_change_
-          ? (suggested_v_lower / 1.8) > ego_v_
+          ? (suggested_v_lower / config_.suggested_v_lower_divisor) > ego_v_
                 ? ego_v_
-                : std::fmax(suggested_v_lower / 1.8,
+                : std::fmax(suggested_v_lower / config_.suggested_v_lower_divisor,
                             ego_v_ - config_.maximum_speed_adjustment)
           : speed_adjust_range_.second;
   return !agent_info_.empty();
@@ -758,6 +748,9 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   boundary_merge_point_valid_ = session_->planning_context()
                                     .ego_lane_road_right_decider_output()
                                     .boundary_merge_point_valid;
+  bool is_lane_continuous = session_->planning_context()
+                                    .ego_lane_road_right_decider_output()
+                                    .cur_lane_is_continue;
 
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
@@ -772,22 +765,20 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
           ? virtual_lane_mgr->get_current_lane()->get_map_merge_point_info()
           : route_info_output.map_merge_points_info.front();
   const auto& function_info = session_->environmental_model().function_info();
-  distance_to_merge_point_ = NL_NMAX;
   distance_to_road_split_ = NL_NMAX;
   distance_to_road_merge_ = NL_NMAX;
   const auto& llane = virtual_lane_mgr->get_left_lane();
   const auto& rlane = virtual_lane_mgr->get_right_lane();
   bool is_left_edge_side_lane = llane == nullptr;
   bool is_right_edge_side_lane = rlane == nullptr;
+  auto mlc_scene_type = route_info_output.mlc_decider_scene_type_info.mlc_scene_type;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-    if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-        SPLIT_SCENE) {
-      distance_to_road_split_ = route_info_output.mlc_decider_scene_type_info
-                                    .dis_to_link_topo_change_point;
-    } else if (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-               MERGE_SCENE) {
+    if (mlc_scene_type == SPLIT_SCENE) {
+      distance_to_road_split_ =
+          route_info_output.mlc_decider_scene_type_info.dis_to_link_topo_change_point;
+    } else if (mlc_scene_type == MERGE_SCENE) {
       if (merge_point_info.merge_type != NONE_MERGE) {
-        distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
+        distance_to_road_merge_ = merge_point_info.dis_to_merge_fp;
       }
     }
   }
@@ -795,84 +786,49 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   if (is_nearing_ramp_ && distance_to_ramp_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_ramp_;
     return true;
-  } else if (virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task() &&
+  }
+
+  if (virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task() &&
              distance_to_ramp_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_ramp_;
     return true;
-  } else if (virtual_lane_mgr->get_current_lane()
+  }
+
+  if (virtual_lane_mgr->get_current_lane()
                  ->is_nearing_split_mlc_task() &&
              distance_to_road_split_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_road_split_;
     return true;
-  } else if (lane_change_source_ == MERGE_REQUEST) {
-    if (boundary_merge_point_valid_) {
-      const auto& boundary_merge_point =
-          session_->planning_context()
+  }
+  //汇流任务判断
+  if(lane_change_source_ == MERGE_REQUEST){
+    if (boundary_merge_point_valid_ && !is_lane_continuous) {
+      merge_stop_line_distance_ = session_->planning_context()
               .ego_lane_road_right_decider_output()
-              .boundary_merge_point;
-      merge_stop_line_distance_ =
-          std::hypot(boundary_merge_point.x - ego_cart_point_.first,
-                     boundary_merge_point.y - ego_cart_point_.second);
+              .merge_point_distance;
+      is_merge_change_ = true;
       return true;
     } else {
-      if (distance_to_merge_point_ < kDistanceToMapRequestPoint &&
-          ((is_left_edge_side_lane &&
-            merge_point_info.merge_type == MERGE_TO_RIGHT) ||
-           (is_right_edge_side_lane &&
-            merge_point_info.merge_type == MERGE_TO_LEFT))) {
-        merge_stop_line_distance_ = distance_to_merge_point_;
-        return true;
-      } else if (distance_to_road_split_ < kDistanceToMapRequestPoint ||
-                 distance_to_merge_point_ < kDistanceToMapRequestPoint ||
-                 is_in_merge_region_) {
-        merge_stop_line_distance_ =
-            std::fmin(distance_to_merge_point_, distance_to_road_split_);
-        return true;
-      }
-    }
-  } else if (lane_change_source_ == MAP_REQUEST &&
-             (route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-                  MERGE_SCENE ||
-              route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-                  SPLIT_SCENE)) {
-    bool is_ramp_to_main =
-        route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
-        MERGE_SCENE;
-    if (boundary_merge_point_valid_) {
-      const auto& boundary_merge_point =
-          session_->planning_context()
-              .ego_lane_road_right_decider_output()
-              .boundary_merge_point;
-      auto current_merge_stop_line_distance =
-          std::hypot(boundary_merge_point.x - ego_cart_point_.first,
-                     boundary_merge_point.y - ego_cart_point_.second);
-      merge_stop_line_distance_ =
-          is_ramp_to_main
-              ? current_merge_stop_line_distance
-              : current_merge_stop_line_distance - route_info_output.lsl_length;
+      merge_stop_line_distance_ = distance_to_road_merge_;
+      is_merge_change_ = true;
       return true;
-    } else {
-      if (is_ramp_to_main) {
-        bool is_nearing_merge_point =
-            distance_to_merge_point_ < kDistanceToMapRequestPoint &&
-            ((is_left_edge_side_lane &&
-              merge_point_info.merge_type == MERGE_TO_RIGHT) ||
-             (is_right_edge_side_lane &&
-              merge_point_info.merge_type == MERGE_TO_LEFT));
-        if (is_nearing_merge_point) {
-          merge_stop_line_distance_ = distance_to_merge_point_;
-          return true;
-        } else if (distance_to_merge_point_ < kDistanceToMapRequestPoint ||
-                   is_in_merge_region_) {
-          merge_stop_line_distance_ = distance_to_merge_point_;
-          return true;
-        }
-      } else {
-        merge_stop_line_distance_ =
-            distance_to_road_split_ - route_info_output.lsl_length;
-        return true;
-      }
     }
+  } else if(mlc_scene_type == MERGE_SCENE){  //地图
+    merge_stop_line_distance_ = distance_to_road_merge_;
+    is_merge_change_ = true;
+    return true;
+  } else if(boundary_merge_point_valid_ && !is_lane_continuous){  //感知
+    merge_stop_line_distance_ = session_->planning_context()
+            .ego_lane_road_right_decider_output()
+            .merge_point_distance;
+    is_merge_change_ = true;
+    return true;
+  }
+  //分流任务判断
+  if (mlc_scene_type == SPLIT_SCENE && lane_change_source_ == MAP_REQUEST) {
+    merge_stop_line_distance_ =
+        distance_to_road_split_ - route_info_output.lsl_length;
+    return true;
   }
   return false;
 }
@@ -927,14 +883,16 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
             weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
             weight_speed_change_, weight_leading_veh_follow_s_,
-            weight_jerk_limit_, front_edge_to_rear_axle_,
+            weight_jerk_limit_, weight_stop_point_, front_edge_to_rear_axle_,
             rear_edge_to_rear_axle_, config_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
+    const double stitched_poly_checked_v =
+        stitched_last_best_quartic_poly_ptr_->CalcV(evaulation_t_);
     planning::speed::STPointWithLateral stitched_poly_checked_lower_st_point,
         stitched_poly_checked_upper_st_point;
     st_sample_space_base_.GetBorderByAvailable(
-        stitched_poly_checked_s, evaulation_t_,
+        stitched_poly_checked_s, stitched_poly_checked_v, evaulation_t_,
         &stitched_poly_checked_lower_st_point,
         &stitched_poly_checked_upper_st_point);
     stitched_last_best_quartic_poly_ptr_->set_end_point_matched_gap_front_id(
@@ -1007,54 +965,57 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
 }
 
 void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
-  weight_match_gap_vel_ = config_.normal_scene_weight_match_gap_vel;
-  weight_match_gap_s_ = config_.normal_scene_weight_match_gap_s;
-  weight_follow_vel_ = config_.normal_scene_weight_follow_vel;
-  weight_stop_line_ = config_.normal_scene_weight_stop_line;
-  weight_leading_safe_s_ = config_.normal_scene_weight_leading_safe_s;
-  weight_leading_safe_v_ = config_.normal_scene_weight_leading_safe_v;
-  weight_vel_variable_ = config_.normal_scene_weight_vel_variable;
-  weight_gap_avaliable_ = config_.normal_scene_weight_gap_available;
-  weight_acc_limit_ = config_.normal_scene_weight_acc_limit;
-  weight_stop_penalty_ = config_.normal_scene_weight_stop_penalty;
-  weight_speed_change_ = config_.normal_scene_weight_speed_change;
+  weight_match_gap_vel_ = config_.normal_scene_weight.match_gap_vel;
+  weight_match_gap_s_ = config_.normal_scene_weight.match_gap_s;
+  weight_follow_vel_ = config_.normal_scene_weight.follow_vel;
+  weight_stop_line_ = config_.normal_scene_weight.stop_line;
+  weight_leading_safe_s_ = config_.normal_scene_weight.leading_safe_s;
+  weight_leading_safe_v_ = config_.normal_scene_weight.leading_safe_v;
+  weight_vel_variable_ = config_.normal_scene_weight.vel_variable;
+  weight_gap_avaliable_ = config_.normal_scene_weight.gap_available;
+  weight_acc_limit_ = config_.normal_scene_weight.acc_limit;
+  weight_stop_penalty_ = config_.normal_scene_weight.stop_penalty;
+  weight_speed_change_ = config_.normal_scene_weight.speed_change;
   weight_leading_veh_follow_s_ =
-      config_.normal_scene_weight_leading_veh_follow_s;
-  weight_jerk_limit_ = config_.normal_scene_weight_jerk_limit;
+      config_.normal_scene_weight.leading_veh_follow_s;
+  weight_jerk_limit_ = config_.normal_scene_weight.jerk_limit;
+  weight_stop_point_ = config_.normal_scene_weight.stop_point;
 }
 
 void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
-  weight_match_gap_vel_ = config_.purse_flow_vel_scene_weight_match_gap_vel;
-  weight_match_gap_s_ = config_.purse_flow_vel_scene_weight_match_gap_s;
-  weight_follow_vel_ = config_.purse_flow_vel_scene_weight_follow_vel;
-  weight_stop_line_ = config_.purse_flow_vel_scene_weight_stop_line;
-  weight_leading_safe_s_ = config_.purse_flow_vel_scene_weight_leading_safe_s;
-  weight_leading_safe_v_ = config_.purse_flow_vel_scene_weight_leading_safe_v;
-  weight_vel_variable_ = config_.purse_flow_vel_scene_weight_vel_variable;
-  weight_gap_avaliable_ = config_.purse_flow_vel_scene_weight_gap_available;
-  weight_acc_limit_ = config_.purse_flow_vel_scene_weight_acc_limit;
-  weight_stop_penalty_ = config_.purse_flow_vel_scene_weight_stop_penalty;
-  weight_speed_change_ = config_.purse_flow_vel_scene_weight_speed_change;
+  weight_match_gap_vel_ = config_.purse_flow_vel_scene.match_gap_vel;
+  weight_match_gap_s_ = config_.purse_flow_vel_scene.match_gap_s;
+  weight_follow_vel_ = config_.purse_flow_vel_scene.follow_vel;
+  weight_stop_line_ = config_.purse_flow_vel_scene.stop_line;
+  weight_leading_safe_s_ = config_.purse_flow_vel_scene.leading_safe_s;
+  weight_leading_safe_v_ = config_.purse_flow_vel_scene.leading_safe_v;
+  weight_vel_variable_ = config_.purse_flow_vel_scene.vel_variable;
+  weight_gap_avaliable_ = config_.purse_flow_vel_scene.gap_available;
+  weight_acc_limit_ = config_.purse_flow_vel_scene.acc_limit;
+  weight_stop_penalty_ = config_.purse_flow_vel_scene.stop_penalty;
+  weight_speed_change_ = config_.purse_flow_vel_scene.speed_change;
   weight_leading_veh_follow_s_ =
-      config_.purse_flow_vel_scene_weight_leading_veh_follow_s;
-  weight_jerk_limit_ = config_.purse_flow_vel_scene_weight_jerk_limit;
+      config_.purse_flow_vel_scene.leading_veh_follow_s;
+  weight_jerk_limit_ = config_.purse_flow_vel_scene.jerk_limit;
+  weight_stop_point_ = config_.purse_flow_vel_scene.stop_point;
 }
 
 void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
-  weight_match_gap_vel_ = config_.decleration_scene_weight_match_gap_vel;
-  weight_match_gap_s_ = config_.decleration_scene_weight_match_gap_s;
-  weight_follow_vel_ = config_.decleration_scene_weight_follow_vel;
-  weight_stop_line_ = config_.decleration_scene_weight_stop_line;
-  weight_leading_safe_s_ = config_.decleration_scene_weight_leading_safe_s;
-  weight_leading_safe_v_ = config_.decleration_scene_weight_leading_safe_v;
-  weight_vel_variable_ = config_.decleration_scene_weight_vel_variable;
-  weight_gap_avaliable_ = config_.decleration_scene_weight_gap_available;
-  weight_acc_limit_ = config_.decleration_scene_weight_acc_limit;
-  weight_stop_penalty_ = config_.decleration_scene_weight_stop_penalty;
-  weight_speed_change_ = config_.decleration_scene_weight_speed_change;
+  weight_match_gap_vel_ = config_.decleration_scene_weight.match_gap_vel;
+  weight_match_gap_s_ = config_.decleration_scene_weight.match_gap_s;
+  weight_follow_vel_ = config_.decleration_scene_weight.follow_vel;
+  weight_stop_line_ = config_.decleration_scene_weight.stop_line;
+  weight_leading_safe_s_ = config_.decleration_scene_weight.leading_safe_s;
+  weight_leading_safe_v_ = config_.decleration_scene_weight.leading_safe_v;
+  weight_vel_variable_ = config_.decleration_scene_weight.vel_variable;
+  weight_gap_avaliable_ = config_.decleration_scene_weight.gap_available;
+  weight_acc_limit_ = config_.decleration_scene_weight.acc_limit;
+  weight_stop_penalty_ = config_.decleration_scene_weight.stop_penalty;
+  weight_speed_change_ = config_.decleration_scene_weight.speed_change;
   weight_leading_veh_follow_s_ =
-      config_.decleration_scene_weight_leading_veh_follow_s;
-  weight_jerk_limit_ = config_.decleration_scene_weight_jerk_limit;
+      config_.decleration_scene_weight.leading_veh_follow_s;
+  weight_jerk_limit_ = config_.decleration_scene_weight.jerk_limit;
+  weight_stop_point_ = config_.decleration_scene_weight.stop_point;
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
@@ -1143,7 +1104,7 @@ bool SamplePolySpeedAdjustDecider::CheckInitVelTraj() {
     planning::speed::STPointWithLateral upper_st_point;
 
     st_sample_space_base_.GetBorderByAvailable(
-        ego_init_vel_pred_end_s, kPlanningDuration, &lower_st_point,
+        ego_init_vel_pred_end_s,ego_v_, kPlanningDuration, &lower_st_point,
         &upper_st_point);
     if (lower_st_point.agent_id() != kNoAgentId) {
       if (ego_init_vel_pred_end_s < lower_st_point.s() + kBasicSafeDistance ||
@@ -1234,7 +1195,7 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
       }
     }
   }
-  if (left_unchangeable_distance < 20)
+  if (left_unchangeable_distance < config_.lane_changeable_distance_threshold)
     return true;
   else
     return false;
@@ -1288,7 +1249,8 @@ void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
         double lane_width = ref_distance - target_lane_to_border;
         if (lane_width < (ego_width_ / 2.0 + config_.stop_point_buffer)) {
           distance_to_stop_point_ =
-              current_reference_points[current_point].path_point.s() - ego_s_;
+              current_reference_points[current_point].path_point.s() - ego_s_ -
+              front_edge_to_rear_axle_;
           return;
         }
       }
@@ -1316,11 +1278,11 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
   const auto& function_info = session_->environmental_model().function_info();
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  if ((lane_change_source_ == MERGE_REQUEST) ||
+  if ((lane_change_source_ == MERGE_REQUEST) || is_merge_change_ ||
       ((lane_change_source_ == MAP_REQUEST) &&
        ((route_info_output.mlc_decider_scene_type_info.mlc_scene_type ==
          MERGE_SCENE) ||
-        (merge_stop_line_distance_ <= 200.0)))) {
+        (merge_stop_line_distance_ <= config_.not_use_gap_select_merge_distance)))) {
     return true;
   }
   return false;
@@ -1328,19 +1290,21 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
 
 bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
   double left_time = distance_to_stop_point_ / std::fmax(ego_v_, kZeroEpsilon);
-  if (!is_merge_change_ || left_time > 6.0) {
+  if (!is_merge_change_ || left_time > config_.forced_merge_param.forced_merge_left_time_threshold) {
     return false;
   }
   double press_line_ratio = CalcPressLineRatio();
-  if (press_line_ratio > 0.2) {
+  CalcAgentLateralOffsetMap();
+  if(press_line_ratio > config_.forced_merge_param.forced_merge_press_line_ratio){
     return true;
   }
-  state_limit_lower_ = {
-      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
-      -2.0, 1.2, -2.5, 2.5};
+  const double forced_merge_speed_cap =
+      std::fmin(v_adjust_speed_limit_ * config_.speed_limit_scale_factor,
+                config_.forced_merge_param.astar_max_speed_mps);
   StateLimit state_limit_lower = {
-      0.0,  0.0, 0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
-      -1.5, 1.2, -1.5, 2.5};
+      0.0, 0.0, 0.0, forced_merge_speed_cap,
+      config_.forced_merge_param.forced_merge_min_acc, config_.forced_merge_param.forced_merge_max_acc,
+      config_.forced_merge_param.forced_merge_min_jerk, config_.forced_merge_param.forced_merge_max_jerk};
   UniformJerkCurve jerk_curve(state_limit_lower, lon_state_, false);
   auto arrived_s = jerk_curve.arrived_s();
   if (arrived_s > distance_to_stop_point_) {
@@ -1390,22 +1354,72 @@ double SamplePolySpeedAdjustDecider::CalcPressLineRatio() {
   return 0.0;
 }
 
+void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  const auto& virtual_target_lane = lane_change_request_ == 1
+                                        ? virtual_lane_mgr->get_left_lane()
+                                        : virtual_lane_mgr->get_right_lane();
+  if (!current_lane || !virtual_target_lane) {
+    return;
+  }
+  const auto& current_reference_points =
+      current_lane->get_reference_path()->get_points();
+  const auto& target_reference_points =
+      virtual_target_lane->get_reference_path()->get_points();
+  if (!current_reference_points.empty() && !target_reference_points.empty()) {
+    size_t count = std::min(current_reference_points.size(),
+                            target_reference_points.size());
+    int lateral_offset = 0;
+    for (size_t current_point = 0; current_point < count; current_point++) {
+      double ref_y = current_reference_points[current_point].path_point.y() -
+                     target_reference_points[current_point].path_point.y();
+      double ref_x = current_reference_points[current_point].path_point.x() -
+                     target_reference_points[current_point].path_point.x();
+      double target_heading =
+          target_reference_points[current_point].path_point.theta();
+      double ref_distance =
+          std::abs(ref_x * sin(target_heading) - ref_y * cos(target_heading));
+      double target_lane_to_border =
+          lane_change_request_ == 1 ? target_reference_points[current_point]
+                                          .distance_to_right_lane_border
+                                    : target_reference_points[current_point]
+                                          .distance_to_left_lane_border;
+      double lane_width = ref_distance - target_lane_to_border;
+      double over_lateral = ego_width_ / 2.0 - lane_width;
+      if (astar_config_.lateral_offset_scale_factor * over_lateral > lateral_offset) {
+        agent_lateral_offset_map_[lateral_offset] =
+            current_reference_points[current_point].path_point.s() - ego_s_ -
+            front_edge_to_rear_axle_;
+        lateral_offset++;
+      }
+    }
+  }
+}
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
-  GoalState goal_state(merge_stop_line_distance_ + 5.0, v_suggestted_, 5.0);
+  GoalState goal_state(merge_stop_line_distance_ + config_.forced_merge_param.astar_goal_offset,
+                       v_suggestted_, config_.forced_merge_param.astar_goal_offset);
   STNode start_node(0.0, 0.0, ego_v_, ego_a_);
+  const double astar_speed_cap =
+      std::fmin(v_adjust_speed_limit_ * config_.speed_limit_scale_factor,
+                config_.forced_merge_param.astar_max_speed_mps);
+  state_limit_lower_ = {
+      0.0, 0.0, 0.0, astar_speed_cap,
+      config_.forced_merge_param.astar_min_acc, config_.forced_merge_param.astar_max_acc,
+      config_.forced_merge_param.astar_min_jerk, config_.forced_merge_param.astar_max_jerk};
   state_limit_upper_ = {
-      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
-      0.0,  std::fmin(v_adjust_speed_limit_ * 1.05, 120.0 / 3.6),
-      -2.0, 1.2,
-      -2.5, 2.5};
+      0.0, astar_speed_cap, 0.0, astar_speed_cap,
+      config_.forced_merge_param.astar_min_acc, config_.forced_merge_param.astar_max_acc,
+      config_.forced_merge_param.astar_min_jerk, config_.forced_merge_param.astar_max_jerk};
   double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_
                              ? distance_to_stop_point_
                              : 0.0;
   astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
       start_node, goal_state, &st_sample_space_base_, merge_point_s,
       leading_veh_, state_limit_upper_, state_limit_lower_,
-      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_,
-      &astar_config_);
+      front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_,
+      agent_lateral_offset_map_);
   return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
