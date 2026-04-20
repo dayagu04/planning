@@ -177,11 +177,11 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   CalculateSplitInfo();
 
   // 根据前方的split信息判断，自车是否走错路了
-  if (IsMissedNaviRoute()) {
-    route_info_output_.reset();
-    route_info_output_.is_missed_navi_route = true;
-    return false;
-  }
+  // if (IsMissedNaviRoute()) {
+  //   route_info_output_.reset();
+  //   route_info_output_.is_missed_navi_route = true;
+  //   return false;
+  // }
 
   // 一定要先计算split info，再计算ramp info
   CalculateRampInfo();
@@ -1793,8 +1793,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    bool cur_lane_on_route_link_base_map_link =
-        IsCurrentLaneOnRouteLink(feasible_lane_graph);
+    // bool cur_lane_on_route_link_base_map_link =
+    //     IsCurrentLaneOnRouteLink(feasible_lane_graph);
 
     // const bool lane_type_condition =
     //     !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
@@ -1804,8 +1804,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
         !forward_in_right_most && is_nearing_ramp && lane_type_condition &&
-        front_ramp_dir == RAMP_ON_RIGHT && !current_on_route &&
-        !cur_lane_on_route_link_base_map_link) {
+        front_ramp_dir == RAMP_ON_RIGHT && !current_on_route) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
         // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
@@ -1815,8 +1814,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
       lc_num_task.emplace_back(1);
     } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp &&
-               !current_on_route && !forward_in_left_most &&
-               !cur_lane_on_route_link_base_map_link) {
+               !current_on_route && !forward_in_left_most) {
       //split场景，目标车道在最左边的情况，一直向左变道
         // 如果是躲避前方merge触发的mlc，则更新mlc_scene_type
       if (ego_seq == avoid_link_merge_lane_seq) {
@@ -1824,7 +1822,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
 
       lc_num_task.emplace_back(-1);
-    } else if (current_on_route || cur_lane_on_route_link_base_map_link) {
+    } else if (current_on_route) {
       continue;
     } else {
       if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
@@ -5555,7 +5553,7 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
   if (front_first_topo_change_link->successor_link_ids().size() != 2) {
     return;
   }
-  
+
   uint64 out_link_id =
       front_first_topo_change_link->successor_link_ids()[0] ==
               split_next_link->id()
