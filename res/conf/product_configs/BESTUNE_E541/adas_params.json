@@ -126,6 +126,7 @@
   "tsr_fault_code_maskcode": 65535,
   "tsr_reset_path_length": 2000.0,
   "tsr_speed_limit_offset": 5.0,
+  "tsr_end_of_speed_limit_alert_map_time" : 40,
   "tsr_out_flag_need_last_time": 0.2,
   "tsr_warning_max_duration": 999.0,
   "tsr_function_test_switch": 0,
@@ -181,6 +182,7 @@
   "ihc_fault_code_maskcode": 65535,
   "ihc_high_beam_switch": false,
   "meb_request_status_const": 0,
+  "meb_request_status_const_switch": false,
   "elk_roadedge_testswitch_temp_": false,
   "ldp_handoff_state_switch_test_": true,
   "elk_soildline_switch": false,
@@ -188,14 +190,14 @@
   "ldw_tlc_medium_": 0.6,
   "ldw_tlc_near_": 0.2,
   "elk_bicycle_motorcycle_sw": false,
-  "meb_call_switch": false,
+  "meb_call_switch": true,
   "meb_main_switch": false,
   "meb_od_obs_switch": true,
   "meb_occ_obs_switch": false,
   "meb_uss_obs_switch": false,
   "meb_od_box_switch": true,
   "meb_function_state_switch": true,
-  "meb_false_trigger_switch": false,
+  "meb_false_trigger_switch": true,
   "meb_odbox_dis_buffer": 0.4,
   "meb_odbox_dis_buffer_r": 0.4,
   "meb_odbox_dis_buffer_r_dynamic_people": [
@@ -259,9 +261,9 @@
     0.8
   ],
   "meb_odbox_dis_buffer_d_static_people": [
-    0.5,
-    0.5,
-    0.5
+    0.6,
+    0.6,
+    0.8
   ],
   "meb_odbox_dis_buffer_d_static_car": [
     0.6,
