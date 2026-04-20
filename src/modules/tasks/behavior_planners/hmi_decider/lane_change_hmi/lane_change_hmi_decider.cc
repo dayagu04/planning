@@ -405,6 +405,9 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     }
     // ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+  } else if (lc_request_source == CONE_REQUEST) {
+    ad_info.lane_change_reason =
+        iflyauto::LaneChangeReason::LC_REASON_CONE;
   }
 
   // update route info
