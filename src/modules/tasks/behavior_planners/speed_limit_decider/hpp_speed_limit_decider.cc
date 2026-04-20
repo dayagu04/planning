@@ -287,33 +287,50 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
       continue;
     }
 
-    // 2. 横向距离（用中心点近似）
-    const double lateral_dist = std::abs(agent_l);
+    // 2. 根据障碍物类型确定参数
+    const agent::AgentType agent_type = agent->type();
+    bool is_vru = (agent_type == agent::AgentType::PEDESTRIAN ||
+                   agent_type == agent::AgentType::ADULT ||
+                   agent_type == agent::AgentType::CHILD ||
+                   agent_type == agent::AgentType::BICYCLE ||
+                   agent_type == agent::AgentType::CYCLE_RIDING ||
+                   agent_type == agent::AgentType::MOTORCYCLE_RIDING ||
+                   agent_type == agent::AgentType::TRICYCLE_RIDING);
 
-    // 3. 横向阈值：HPP 车道较窄，用固定阈值而非车道宽比例
-    const double lateral_threshold =
-        hpp_speed_limit_config_.hpp_avoid_lateral_threshold;
+    // 横向阈值：VRU 使用更宽松的阈值
+    double lateral_threshold = hpp_speed_limit_config_.hpp_avoid_lateral_threshold;
+    if (is_vru) {
+      lateral_threshold *= 1.2;  // VRU 横向阈值放宽 20%
+    }
+
+    const double lateral_dist = std::abs(agent_l);
     if (lateral_dist > lateral_threshold) {
       continue;
     }
 
-    // 4. 计算目标限速并推送 segment
+    // 3. 纵向触发距离：VRU 需要更早触发
+    double approach_dist = hpp_speed_limit_config_.hpp_avoid_approach_distance;
+    if (is_vru) {
+      approach_dist *= 1.5;  // VRU 提前 50% 触发
+    }
+
+    if (longitudinal_dist > approach_dist) {
+      continue;
+    }
+
+    // 4. 计算目标限速
     const double target_v =
         agent->is_static()
             ? hpp_speed_limit_config_.hpp_avoid_velocity_limit
             : std::max(agent->speed() + kAvoidAgentMinSpeed,
                        hpp_speed_limit_config_.velocity_lower_bound);
 
-    const double approach_dist =
-        hpp_speed_limit_config_.hpp_avoid_approach_distance;
+    // 5. segment 扩展：VRU 需要更长的减速区间
+    double extend_forward = is_vru ? 5.0 : 0.0;
+    double extend_backward = is_vru ? 1.0 : 0.0;
 
-    // 障碍物还太远，不触发
-    if (longitudinal_dist > approach_dist) {
-      continue;
-    }
-
-    const double seg_start = agent_s - 0.5 * agent->length();
-    const double seg_end = agent_s + 0.5 * agent->length();
+    const double seg_start = agent_s - 0.5 * agent->length() - extend_forward;
+    const double seg_end = agent_s + 0.5 * agent->length() + extend_backward;
     speed_limit_segments_.push_back(
         {seg_start, seg_end, target_v, SpeedLimitType::AVOID});
   }
