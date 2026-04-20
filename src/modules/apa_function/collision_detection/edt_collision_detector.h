@@ -129,13 +129,11 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
                          const bool need_cal_obs_dist = false,
                          const double max_circle_buffer = 0.5,
                          const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08,
-                         const AstarPathGear gear = AstarPathGear::PARKING);
+                         const double mirror_lat_buffer = 0.08);
 
   const ColResultF Update(const std::vector<common_math::PathPt<float>> &pts,
                           const float lon_buffer, const float body_lat_buffer,
                           const float mirror_lat_buffer,
-                          const AstarPathGear gear = AstarPathGear::PARKING,
                           const bool need_cal_obs_dist = false,
                           const float max_circle_buffer = 0.5);
 

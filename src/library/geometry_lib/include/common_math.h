@@ -137,6 +137,7 @@ struct PathPt {
   T s = T(0.0f);
   int type = 0;
   Pos<T> dir = Pos<T>(0.0f, 0.0f);
+  AstarPathGear gear = AstarPathGear::NONE;
 
   void Reset() {
     pos = Pos<T>(0.0f, 0.0f);
@@ -145,29 +146,40 @@ struct PathPt {
     s = T(0.0f);
     type = 0;
     dir = Pos<T>(0.0f, 0.0f);
+    gear = AstarPathGear::NONE;
   }
 
   void SetPos(const Pos<T>& _pos) { pos = _pos; }
   void SetTheta(const T _theta) { theta = _theta; }
+  void SetPose(const Pos<T>& _pos, const T _theta) {
+    pos = _pos;
+    theta = _theta;
+  }
   void SetX(const T _x) { pos(0) = _x; }
   void SetY(const T _y) { pos(1) = _y; }
   void SetPos(const T _x, const T _y) { pos << _x, _y; }
+  void SetPose(const T _x, const T _y, const T _theta) {
+    pos << _x, _y;
+    theta = _theta;
+  }
   void SetDir(const T _theta) {
     dir << T(std::cos(_theta)), T(std::sin(_theta));
   }
+  void SetGear(const AstarPathGear _gear) { gear = _gear; }
 
   const Pos<T> GetPos() const { return pos; }
   const T GetTheta() const { return theta; }
   const T GetX() const { return pos(0); }
   const T GetY() const { return pos(1); }
   const Pos<T> GetDir() const { return dir; }
+  const AstarPathGear GetGear() const { return gear; }
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
         << "pos = " << pos.x() << ", " << pos.y()
         << ", theta = " << theta * kRad2DegF << " dir = " << dir.x() << ", "
         << dir.y() << ", kappa = " << kappa << ", s = " << s
-        << ", type = " << type;
+        << ", type = " << type << ", gear = " << PathGearDebugString(gear);
   }
 };
 
@@ -523,8 +535,8 @@ const bool CompleteArcSeg(ArcSeg<T>& arc, AstarPathSteer steer);
 
 template <typename T>
 const uint8_t CalIntersectionOfLineAndCircle(const LineSeg<T>& line,
-                                       const ArcSeg<T>& circle,
-                                       std::array<Pos<T>, 2>& pts);
+                                             const ArcSeg<T>& circle,
+                                             std::array<Pos<T>, 2>& pts);
 
 template <typename T>
 const bool CalIntersectionOfTwoLines(Pos<T>& intersection,
@@ -543,9 +555,8 @@ const bool CalOneArcWithLineAndGear(ArcSeg<T>& arc, const LineSeg<T>& line,
 
 template <typename T>
 const uint8_t CalTwoArcWithLine(
-    const PathPt<T>& pose, const LineSeg<T>& line,
-    const T radius1, const T radius2,
-    std::array<std::pair<ArcSeg<T>, ArcSeg<T>>, 8>& arc_pairs);
+    const PathPt<T>& pose, const LineSeg<T>& line, const T radius1,
+    const T radius2, std::array<std::pair<ArcSeg<T>, ArcSeg<T>>, 8>& arc_pairs);
 
 template <typename T>
 const uint8_t CalCommonTangentCircleOfTwoLine(
