@@ -174,11 +174,10 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
                                          .lane_change_decider_output()
                                          .coarse_planning_info.reference_path;
     if (reference_path_ptr) {
-      const double ego_s =
-          reference_path_ptr->get_frenet_ego_state().s();
-      speed_limit_segments_.push_back(
-          {ego_s, ego_s + scan_distance, v_limit_curv,
-           SpeedLimitType::CURVATURE});
+      const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
+      speed_limit_segments_.push_back({ego_s, ego_s + scan_distance,
+                                       v_limit_curv,
+                                       SpeedLimitType::CURVATURE});
     }
   }
 }
@@ -216,8 +215,8 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
       hpp_speed_limit_config_.target_speed_narrow_passage_area,
-      zone_info.in_speed_limit_zone,
-      zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
+      zone_info.in_speed_limit_zone, zone_info.approaching_speed_limit_zone,
+      zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_narrow_passage(),
@@ -482,8 +481,8 @@ void HPPSpeedLimitDecider::CalculateBumpLimit() {
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
       hpp_speed_limit_config_.target_speed_speed_bump_area,
-      zone_info.in_speed_limit_zone,
-      zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
+      zone_info.in_speed_limit_zone, zone_info.approaching_speed_limit_zone,
+      zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_bump(),
@@ -568,8 +567,7 @@ double HPPSpeedLimitDecider::GetSpeedLimitInObjectiveZone(
   return std::numeric_limits<double>::max();
 }
 
-void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s,
-                                                     double ego_v,
+void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
                                                      double v_cruise) {
   const double lookahead = hpp_speed_limit_config_.hpp_profile_lookahead;
   const double ds = hpp_speed_limit_config_.hpp_profile_ds;
@@ -595,8 +593,7 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s,
   const double a_decel =
       std::abs(hpp_speed_limit_config_.approaching_zone_deceleration);
   for (int i = N - 2; i >= 0; --i) {
-    double v_from_next =
-        std::sqrt(v[i + 1] * v[i + 1] + 2.0 * a_decel * ds);
+    double v_from_next = std::sqrt(v[i + 1] * v[i + 1] + 2.0 * a_decel * ds);
     if (v_from_next < v[i]) {
       v[i] = v_from_next;
     }
@@ -615,7 +612,8 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s,
   }
 
   // (e) 输出
-  v_target_ = std::clamp(v[0], hpp_speed_limit_config_.velocity_lower_bound, v_cruise);
+  v_target_ =
+      std::clamp(v[0], hpp_speed_limit_config_.velocity_lower_bound, v_cruise);
   v_target_type_ = binding_type[0];
 }
 
@@ -640,16 +638,15 @@ void HPPSpeedLimitDecider::CalculateRampLimit() {
 
   for (const auto& seg : zone_info.s_segments) {
     speed_limit_segments_.push_back(
-        {seg.first, seg.second,
-         hpp_speed_limit_config_.target_speed_ramp_area,
+        {seg.first, seg.second, hpp_speed_limit_config_.target_speed_ramp_area,
          SpeedLimitType::RAMP_ROAD});
   }
 
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
       hpp_speed_limit_config_.target_speed_ramp_area,
-      zone_info.in_speed_limit_zone,
-      zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
+      zone_info.in_speed_limit_zone, zone_info.approaching_speed_limit_zone,
+      zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_ramp(),
@@ -692,8 +689,8 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
   LOG_DEBUG(
       "Speed bump: v_limit=%f m/s, in_zone=%d, approaching=%d, distance=%f m",
       hpp_speed_limit_config_.target_speed_intersection_road_area,
-      zone_info.in_speed_limit_zone,
-      zone_info.approaching_speed_limit_zone, zone_info.distance_to_zone);
+      zone_info.in_speed_limit_zone, zone_info.approaching_speed_limit_zone,
+      zone_info.distance_to_zone);
 
 #ifdef ENABLE_PROTO_LOG
   FillZoneSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_intersection(),
