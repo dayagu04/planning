@@ -877,7 +877,17 @@ enum StateMachineLaneChangeStatus {
   kLaneChangeCancel,
   kLaneChangeHold
 };
-
+enum StateMachineSplitSelectingStatus {
+  kNonSelecting = 0,
+  kSelectingExecuting = 1,
+  kSelectingComplete = 2,
+  kSelectingCancel = 3, // 正常选道触发后应该执行到底。
+};
+enum SplitSelectingDirection{ //维持选道方向, 正常选道触发后应该执行到底。
+  SplitSelectingNone = 0,
+  SplitSelectingLeft = 1,
+  SplitSelectingRight = 2,
+};
 enum MergeDirection {
   NONE_LANE_MERGE = 0,
   CUR_LANE_MERGE_TO_LEFT = 1,

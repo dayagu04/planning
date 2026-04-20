@@ -10,7 +10,7 @@ from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 from bokeh.resources import INLINE
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_00105/trigger/20251210/20251210-18-10-40/data_collection_BESTUNE_E541_00105_EVENT_KEY_2025-12-10-18-10-40_no_camera.bag.1766045720.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_35401/trigger/20260331/20260331-16-33-35/data_collection_BESTUNE_E541_35401_EVENT_KEY_2026-03-31-16-33-35_no_camera.bag.1775033741.open-loop.scc.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -199,6 +199,16 @@ def update_data(lat_behavior_common, vo_lat_motion_plan):
   })
   push_notebook()
 
+SPLIT_SELECTING_UNFINISHED_REASON_MAP = {
+  0: "NONE_REASON",
+  1: "NO_FIX_LANE",
+  2: "STILL_IN_SPLIT_REGION",
+  3: "NO_FIX_LANE_REF",
+  4: "NOT_CLOSE_TO_FIX_LANE",
+  5: "NO_INTERACTIVE_SPLIT_CMD",
+  6: "NO_SPLIT_REGION",
+}
+
 def update_lc_data (noa_info, plan_debug_json):
   # vars_noa = ['distance_to_ramp','distance_to_split','distance_to_merge']
   names  = []
@@ -218,7 +228,9 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_left_merge_direction', 'is_right_merge_direction',
              'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'virtual_lane_relative_id_switch_flag',
-             'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_split_on_expressway','is_exist_intersection_split', 'is_exist_interactive_select_split',
+             'is_exist_split_on_ramp','is_exist_ramp_on_road','is_exist_split_on_expressway','is_exist_intersection_split',
+             'split_selecting_status','selecting_origin_order_id','selecting_selected_order_id','selecting_unfinished_reason',
+             'is_exist_interactive_select_split',
              'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',
              'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'forward_lane_num',
              'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
@@ -226,7 +238,10 @@ def update_lc_data (noa_info, plan_debug_json):
              'status_update_reason', 'lane_change_status', 'lane_change_direction', 'dbw_status', 'fsm_state']
   for name in vars_lc:
     try:
-      datas.append((plan_debug_json[name]))
+      val = plan_debug_json[name]
+      if name == 'selecting_unfinished_reason':
+        val = SPLIT_SELECTING_UNFINISHED_REASON_MAP.get(int(val), str(val))
+      datas.append(val)
       names.append(name)
     except:
       pass

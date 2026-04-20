@@ -133,6 +133,8 @@ void EgoLaneTrackManger::TrackEgoLane(
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  StateMachineSplitSelectingStatus split_selecting_status = lane_change_decider_output.split_selecting_status;
+
   bool is_process_split_exchange = false;
   const bool is_in_lane_borrow_status = session_->planning_context()
                                             .lane_borrow_decider_output()
@@ -246,7 +248,10 @@ void EgoLaneTrackManger::TrackEgoLane(
             ego_dis_to_split_exchange_area_start <
                 kSplitSelectEgoToExchangeAreaDistanceThd &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
+            (split_selecting_status == StateMachineSplitSelectingStatus::kNonSelecting ||
+            (split_selecting_status == StateMachineSplitSelectingStatus::kSelectingExecuting && lane_change_cmd != 0 &&
+              lane_change_cmd != last_lane_select_change_cmd_))) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
@@ -276,7 +281,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                 } else {
                   interactive_select_split_counter_--;
                   interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
+                      std::max(interactive_select_split_counter_, 0);
                 }
               }
               return;
@@ -310,7 +315,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                 } else {
                   interactive_select_split_counter_--;
                   interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
+                      std::max(interactive_select_split_counter_, 0);
                 }
               }
               return;
@@ -321,7 +326,10 @@ void EgoLaneTrackManger::TrackEgoLane(
         if (ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
                 kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
-            ego_to_last_split_end_point_distance > 20.0 && lane_keep_status) {
+            ego_to_last_split_end_point_distance > 20.0 && lane_keep_status &&
+            (split_selecting_status == StateMachineSplitSelectingStatus::kNonSelecting ||
+            (split_selecting_status == StateMachineSplitSelectingStatus::kSelectingExecuting && lane_change_cmd != 0 &&
+                lane_change_cmd != last_lane_select_change_cmd_))) {
           ProcessIntersectionSplit(relative_id_lanes,
                                    order_ids_of_same_zero_relative_id);
           ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:"
@@ -341,7 +349,7 @@ void EgoLaneTrackManger::TrackEgoLane(
               } else {
                 interactive_select_split_counter_--;
                 interactive_select_split_counter_ =
-                    std::min(interactive_select_split_counter_, 0);
+                    std::max(interactive_select_split_counter_, 0);
               }
             }
             return;
@@ -411,7 +419,10 @@ void EgoLaneTrackManger::TrackEgoLane(
         if (zero_relative_id_nums > 1 && lane_keep_status &&
             ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
+            (split_selecting_status == StateMachineSplitSelectingStatus::kNonSelecting ||
+            (split_selecting_status == StateMachineSplitSelectingStatus::kSelectingExecuting && lane_change_cmd != 0 &&
+              lane_change_cmd != last_lane_select_change_cmd_))) {
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
                                        order_ids_of_same_zero_relative_id);
@@ -432,7 +443,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                 } else {
                   interactive_select_split_counter_--;
                   interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
+                      std::max(interactive_select_split_counter_, 0);
                 }
               }
               return;
@@ -2131,7 +2142,7 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
   double k_surpresss_interactive_split_selector_distance = 50.0;
   k_surpresss_interactive_split_selector_distance =
       std::max(k_surpresss_interactive_split_selector_distance,
-               ego_state->ego_v() * 2.0);
+               ego_state->ego_v() * 2.5);
 
   // Point2D lane_merge_split_point;
   bool find_virtual_lane_split_point = false;
@@ -2191,6 +2202,20 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
           enable_output_split_select_classical_chinese_ = true;
         }
       } else {
+        // ProcessIntersectionSplit already selected the leftmost lane,
+        // which matches the left turn signal direction.
+        // Check that a right neighbor exists to confirm we are in a valid
+        // split with the current lane already on the correct side.
+        int right_order_id = origin_order_id + 1;
+        auto right_iter =
+            std::find(order_ids.begin(), order_ids.end(), right_order_id);
+        if (right_iter != order_ids.end()) {
+          is_exist_interactive_select_split_ = true;
+          other_split_lane_right_side_ = true;
+          if (ego_distance_to_lane_merge_split_point < 20.0) {
+            enable_output_split_select_classical_chinese_ = true;
+          }
+        }
         return;
       }
     } else if (lane_change_cmd == 2) {
@@ -2204,6 +2229,20 @@ void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
           enable_output_split_select_classical_chinese_ = true;
         }
       } else {
+        // ProcessIntersectionSplit already selected the rightmost lane,
+        // which matches the right turn signal direction.
+        // Check that a left neighbor exists to confirm we are in a valid
+        // split with the current lane already on the correct side.
+        int left_order_id = origin_order_id - 1;
+        auto left_iter =
+            std::find(order_ids.begin(), order_ids.end(), left_order_id);
+        if (left_iter != order_ids.end()) {
+          is_exist_interactive_select_split_ = true;
+          other_split_lane_left_side_ = true;
+          if (ego_distance_to_lane_merge_split_point < 20.0) {
+            enable_output_split_select_classical_chinese_ = true;
+          }
+        }
         return;
       }
     } else {
