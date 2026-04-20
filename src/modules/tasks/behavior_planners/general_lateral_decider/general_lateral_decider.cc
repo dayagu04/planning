@@ -3729,7 +3729,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   constexpr double kOverlapChangeThreshold = 0.01;  // 变化的容忍阈值
-  constexpr double kMinLatSafeDis = 0.4;  // 变化的容忍阈值
+  constexpr double kMinLatSafeDis = 0.4;  // 最小横向安全距离（逆向障碍物场景）
 
   // Step 1: 更新 overlap 范围，并判断是否 reset 预测时间
   if (is_nudge_left) {
@@ -4156,6 +4156,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
 
 bool GeneralLateralDecider::CheckObstacleNudgeDecision(
     const std::shared_ptr<FrenetObstacle>& obstacle) {
+  constexpr double kReverseHeadingThreshold =
+      0.75 * M_PI;  // 逆向障碍物航向角阈值
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
@@ -4189,10 +4191,10 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
       const auto crossing_map_iter = is_crossing_map.find(obstacle->id());
       bool is_cross_obj = false;
       if (crossing_map_iter != is_crossing_map.end()) {
-        bool is_over_large_heading_obj =
+        bool is_large_relative_heading =
             std::fabs(obstacle->obstacle()->relative_heading_angle()) >
-            0.75 * M_PI;
-        is_cross_obj = crossing_map_iter->second && !is_over_large_heading_obj;
+            kReverseHeadingThreshold;
+        is_cross_obj = crossing_map_iter->second && !is_large_relative_heading;
       }
       if (obstacle->obstacle()->is_reverse() &&
           (obstacle->d_max_cpath() * obstacle->d_min_cpath() > 0) &&
