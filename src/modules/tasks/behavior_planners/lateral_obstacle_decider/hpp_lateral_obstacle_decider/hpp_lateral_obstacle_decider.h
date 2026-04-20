@@ -12,6 +12,7 @@
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "utils/kd_path.h"
 #include "hpp_lateral_obstacle_decider_result.pb.h"
+#include "hpp_parameter_util.h"
 
 namespace planning {
 struct ObstacleConsistencyInfo {
@@ -48,25 +49,28 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   //辅助函数1：处理单个 Cluster 的决策逻辑
   // 该函数被下面的函数替代
-  LatObstacleDecisionType MakeDecisionForSingleCluster(
-      const ObstacleCluster& cluster);
   void MakeDecisionForSingleDynamicObs(
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
-      const std::shared_ptr<FrenetObstacle>& obstacle);
+      const std::shared_ptr<FrenetObstacle>& obstacle,
+      LatObstacleDecisionType& decision);
+
+  void MakeDecisionForTurnstile(
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      const std::shared_ptr<FrenetObstacle>& obstacle,
+      const std::unordered_map<int, TurnstileInfo>& id_2_turnstile_info,
+      LatObstacleDecisionType& decision);
+
   void MakeDecisionForStaticCluster(
       const ObstacleCluster& cluster,
       const ObstacleConsistencyMap& obstacle_consistency_map,
       const ObstacleClassificationResult& obs_classification_result,
       LatObstacleDecisionType& decision);
 
-  void MakeDecisionForDynamicCluster(
-      const ObstacleCluster& cluster,
-      const ObstacleConsistencyMap& obstacle_consistency_map,
-      LatObstacleDecisionType& decision);
-
   void MakeDecisionBasedPassageWidth(const ObstacleCluster& cluster,
                                      LatObstacleDecisionInfo& decision_info);
-
+  LatObstacleDecisionType GetLastDecisionInfo(
+      const ObstacleCluster& cluster,
+      const ObstacleConsistencyMap& obstacle_consistency_map);
   void MakeDecisionBasedRelativePos(
       const ObstacleCluster& cluster,
       const LatObstacleDecisionInfo& previous_decision_info,
@@ -85,6 +89,10 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
                          LatObstacleDecisionInfo& relative_pos_info,
                          LatObstacleDecisionInfo& last_path_info,
                          LatObstacleDecisionType& decision);
+
+  // 基于环境计算 cluster 横向绕障 buffer 的函数
+  double CalcBufferBasedOnEnv(const ObstacleCluster& cluster,
+                              ConstReferencePathPtr reference_path_ptr);
   void AnalyzeNudgeLevelBaseCurve(
       const ObstacleCluster& cluster,
       const LatObstacleDecisionInfo& previous_decision_info,

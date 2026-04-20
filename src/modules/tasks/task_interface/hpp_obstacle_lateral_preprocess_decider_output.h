@@ -95,10 +95,40 @@ enum class TurnstileSceneType {
   TURNSTILE_SCENE_MID_DOUBLE = 3,         // 中间双闸机
   TURNSTILE_SCENE_SIDE_DOUBLE = 4,        // 两侧双闸机
 };
+
+enum class TurnstileOpenDir {
+  TURNSTILE_OPEN_DIR_LEFT = 0,        // 左抬杆闸机
+  TURNSTILE_OPEN_DIR_RIGHT = 1        // 右抬杆闸机
+};
+enum class TurnstilePosition {
+  TURNSTILE_POSITION_LEFT = 0,    // 左侧车道闸机
+  TURNSTILE_POSITION_CURR = 1,    // 当前车道闸机
+  TURNSTILE_POSITION_RIGHT = 2    // 右侧车道闸机
+};
+
+struct TurnstileInfo {
+  TurnstileInfo() = default;
+  TurnstileInfo(const TurnstileInfo& other) {
+    turnstile_id = other.turnstile_id;
+    open_dir = other.open_dir;
+    position = other.position;
+  }
+  int turnstile_id = -1;
+  TurnstileOpenDir open_dir;
+  TurnstilePosition position;
+};
+
 struct TurnstileSceneInfo {
+  void Clear() {
+    type = TurnstileSceneType::TURNSTILE_SCENE_NONE;
+    target_id = -1;
+    side_id = -1;
+    turnstile_infos.clear();
+  };
   TurnstileSceneType type = TurnstileSceneType::TURNSTILE_SCENE_NONE;
   int target_id = -1;     // 需要通过的闸机障碍物 id
   int side_id = -1;      // 双闸机场景下，另一个闸机障碍物 id
+  std::vector<TurnstileInfo> turnstile_infos;
 };
 
 struct HppObstacleLateralPreprocessDeciderOutput {

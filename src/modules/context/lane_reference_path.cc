@@ -338,8 +338,8 @@ void LaneReferencePath::generate_frenet_obstacles(
     Point2D frenet_point, cart_point;
     cart_point.x = obstacle_ptr->x_center();
     cart_point.y = obstacle_ptr->y_center();
-
-    if (!frenet_coord_->XYToSL(cart_point, frenet_point) ||
+    const double end_extension_length = (session_->is_hpp_scene()) ? kHPPExtensionLength : 0.0;
+    if (!frenet_coord_->XYToSL(cart_point, frenet_point, end_extension_length) ||
         std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
       ILOG_DEBUG << "cart_point to frenet_point failed, obstacle_id: "
                  << obstacle_ptr->id();
@@ -505,10 +505,14 @@ bool LaneReferencePath::get_ref_points_hpp(
     }
     ref_path_pt.path_point.set_kappa(refline_pt.curvature);
     if(has_boundary) {
-      ref_path_pt.distance_to_left_road_border = refline_pt.distance_to_left_road_border;
-      ref_path_pt.distance_to_right_road_border = refline_pt.distance_to_right_road_border;
-      ref_path_pt.distance_to_left_lane_border = refline_pt.distance_to_left_lane_border;
-      ref_path_pt.distance_to_right_lane_border = refline_pt.distance_to_right_lane_border;
+      ref_path_pt.distance_to_left_road_border =
+          refline_pt.distance_to_left_road_border;
+      ref_path_pt.distance_to_right_road_border =
+          refline_pt.distance_to_right_road_border;
+      ref_path_pt.distance_to_left_lane_border =
+          refline_pt.distance_to_left_lane_border;
+      ref_path_pt.distance_to_right_lane_border =
+          refline_pt.distance_to_right_lane_border;
     } else {
       ref_path_pt.distance_to_left_road_border = 5.0;
       ref_path_pt.distance_to_right_road_border = 5.0;
@@ -978,6 +982,8 @@ double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
   double min_distance_square_to_ego_point = dx * dx + dy * dy;
   // find nearest point
   for (int i = 1; i < point_nums; i++) {
+    const auto &cur_floor = ref_path_points[i].floor_id;
+    if(ego_state_mgr->ego_floor_id() != cur_floor) continue;
     const auto &cur_point = ref_path_points[i].path_point;
     const auto &pre_point = ref_path_points[i - 1].path_point;
     accumulate_distance_reference_path += std::hypotf(

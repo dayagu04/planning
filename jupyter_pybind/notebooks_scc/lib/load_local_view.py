@@ -44,17 +44,18 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   is_vis_sdpromap = global_var.get_value('is_vis_sdpromap')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
   is_calc_min_turn_radius = global_var.get_value('is_calc_min_turn_radius')
+  is_enable_absolute_time = global_var.get_value('is_enable_absolute_time')
   car_type = global_var.get_value('car_type')
   car_xb, car_yb = load_car_params_patch(car_type)
   # get msg
   # bag_time = 1.2
   ### step 1: 时间戳对齐
-  soc_state_msg = find_nearest(bag_loader.soc_state_msg, bag_time)
-  loc_msg = find_nearest(bag_loader.loc_msg, bag_time)
+  plan_msg = find_nearest(bag_loader.plan_msg, bag_time)
+  plan_debug_msg = find_nearest(bag_loader.plan_debug_msg, bag_time)
+  plan_debug_json_msg = find_nearest(bag_loader.plan_debug_msg, bag_time, True)
+
   origin_loc_msg = find_nearest(bag_loader.origin_loc_msg, bag_time)
-  road_msg = find_nearest(bag_loader.road_msg, bag_time)
   lane_topo_msg = find_nearest(bag_loader.lane_topo_msg, bag_time)
-  fus_msg = find_nearest(bag_loader.fus_msg, bag_time)
   mobileye_objects_msg = find_nearest(bag_loader.mobileye_objects_msg, bag_time)
   rdg_objects_msg = find_nearest(bag_loader.rdg_objects_msg, bag_time)
 
@@ -68,29 +69,53 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     radar_msg[i] = find_nearest(bag_loader_radar_msg[i],bag_time,False)
 
   vs_msg = find_nearest(bag_loader.vs_msg, bag_time)
-  plan_msg = find_nearest(bag_loader.plan_msg, bag_time)
-  plan_debug_msg = find_nearest(bag_loader.plan_debug_msg, bag_time)
-  plan_debug_json_msg = find_nearest(bag_loader.plan_debug_msg, bag_time, True)
-  prediction_msg = find_nearest(bag_loader.prediction_msg, bag_time)
   ctrl_msg = find_nearest(bag_loader.ctrl_msg, bag_time)
   # ctrl_debug_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time)
   # ctrl_debug_json_msg = find_nearest(bag_loader.ctrl_debug_msg, bag_time,True)
   ctrl_debug_msg, ctrl_debug_json_msg = [], []
-  ehr_static_map_msg = find_nearest(bag_loader.ehr_static_map_msg, bag_time)
   ehr_sd_map_msg = find_nearest(bag_loader.ehr_sd_map_msg, bag_time)
   ehr_sdpro_map_msg = find_nearest(bag_loader.ehr_sdpro_map_msg, bag_time)
-  ground_line_msg = find_nearest(bag_loader.fus_ground_line_msg, bag_time)
   planning_hmi_msg = find_nearest(bag_loader.planning_hmi_msg, bag_time)
   rdg_lane_lines_msg = find_nearest(bag_loader.rdg_lane_lines_msg, bag_time)
-  rdg_traffic_sign_msg = find_nearest(bag_loader.rdg_traffic_sign_msg, bag_time)
-  fus_occ_obj_msg = find_nearest(bag_loader.fus_occ_objects_msg, bag_time)
-  fus_parking_msg = find_nearest(bag_loader.fus_parking_msg, bag_time)
-  fus_speed_bump_msg = find_nearest(bag_loader.fus_speed_bump_msg, bag_time)
   rdg_ground_line_msg = find_nearest(bag_loader.rdg_ground_line_msg, bag_time)
   rdg_parking_slot_msg = find_nearest(bag_loader.rdg_parking_slot_msg, bag_time)
   rdg_general_objects_msg = find_nearest(bag_loader.rdg_general_objects_msg, bag_time)
   rdg_occ_objects_msg = find_nearest(bag_loader.rdg_occ_objects_msg, bag_time)
   rdg_parking_lane_line_msg = find_nearest(bag_loader.rdg_parking_lane_line_msg, bag_time)
+
+  if is_enable_absolute_time:
+    ts = plan_debug_msg.input_topic_timestamp
+    soc_state_msg = find_nearest_with_absolute_ts(bag_loader.soc_state_msg, ts.function_state_machine)
+    if is_new_loc:
+      loc_msg = find_nearest_with_absolute_ts(bag_loader.loc_msg, ts.localization)
+    else:
+      if is_bag_main:
+        loc_msg = find_nearest_with_absolute_ts(bag_loader.loc_msg, ts.localization_estimate)
+      else:
+        loc_msg = find_nearest_with_absolute_ts(bag_loader.loc_msg, ts.localization)
+    road_msg = find_nearest_with_absolute_ts(bag_loader.road_msg, ts.fusion_road)
+    fus_msg = find_nearest_with_absolute_ts(bag_loader.fus_msg, ts.fusion_object)
+    prediction_msg = find_nearest_with_absolute_ts(bag_loader.prediction_msg, ts.prediction)
+    around_prediction_msg = find_nearest_with_absolute_ts(bag_loader.around_prediction_msg, ts.around_prediction)
+    ehr_static_map_msg = find_nearest_with_absolute_ts(bag_loader.ehr_static_map_msg, ts.map)
+    ground_line_msg = find_nearest_with_absolute_ts(bag_loader.fus_ground_line_msg, ts.ground_line)
+    rdg_traffic_sign_msg = find_nearest_with_absolute_ts(bag_loader.rdg_traffic_sign_msg, ts.perception_tsr)
+    fus_occ_obj_msg = find_nearest_with_absolute_ts(bag_loader.fus_occ_objects_msg, ts.fusion_occupancy_object)
+    fus_parking_msg = find_nearest_with_absolute_ts(bag_loader.fus_parking_msg, ts.parking_fusion)
+    fus_speed_bump_msg = find_nearest_with_absolute_ts(bag_loader.fus_speed_bump_msg, ts.fusion_speed_bump)
+  else:
+    soc_state_msg = find_nearest(bag_loader.soc_state_msg, bag_time)
+    loc_msg = find_nearest(bag_loader.loc_msg, bag_time)
+    road_msg = find_nearest(bag_loader.road_msg, bag_time)
+    fus_msg = find_nearest(bag_loader.fus_msg, bag_time)
+    prediction_msg = find_nearest(bag_loader.prediction_msg, bag_time)
+    around_prediction_msg = find_nearest(bag_loader.around_prediction_msg, bag_time)
+    ehr_static_map_msg = find_nearest(bag_loader.ehr_static_map_msg, bag_time)
+    ground_line_msg = find_nearest(bag_loader.fus_ground_line_msg, bag_time)
+    rdg_traffic_sign_msg = find_nearest(bag_loader.rdg_traffic_sign_msg, bag_time)
+    fus_occ_obj_msg = find_nearest(bag_loader.fus_occ_objects_msg, bag_time)
+    fus_parking_msg = find_nearest(bag_loader.fus_parking_msg, bag_time)
+    fus_speed_bump_msg = find_nearest(bag_loader.fus_speed_bump_msg, bag_time)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     input_topic_timestamp = plan_debug_msg.input_topic_timestamp
@@ -1203,6 +1228,16 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'ref_path_y' : [],
             'ref_path_x' : [],
           })
+        if key.find('passage_type_analysis_result') != -1:
+          value.data.update({
+            'ref_path_y' : [],
+            'ref_path_x' : [],
+          })
+        if key.find('elem_type_analysis_result') != -1:
+          value.data.update({
+            'ref_path_y' : [],
+            'ref_path_x' : [],
+          })
       static_analysis_result = plan_debug_msg.static_analysis_result
       road_types = static_analysis_result.road_types
       for road_type in road_types:
@@ -1210,6 +1245,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         x_vec = [elem.x for elem in road_type.points]
         y_vec = [elem.y for elem in road_type.points]
         local_view_data['road_type_analysis_result_' + str(int_type)].data.update({
+          'ref_path_y' : y_vec,
+          'ref_path_x' : x_vec,
+        })
+      passage_types = static_analysis_result.passage_types
+      for passage_type in passage_types:
+        int_type = int(passage_type.type)
+        x_vec = [elem.x for elem in passage_type.points]
+        y_vec = [elem.y for elem in passage_type.points]
+        local_view_data['passage_type_analysis_result_' + str(int_type)].data.update({
+          'ref_path_y' : y_vec,
+          'ref_path_x' : x_vec,
+        })
+      elem_types = static_analysis_result.elem_types
+      for elem_type in elem_types:
+        int_type = int(elem_type.type)
+        x_vec = [elem.x for elem in elem_type.points]
+        y_vec = [elem.y for elem in elem_type.points]
+        local_view_data['elem_type_analysis_result_' + str(int_type)].data.update({
           'ref_path_y' : y_vec,
           'ref_path_x' : x_vec,
         })
@@ -1598,6 +1651,64 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         })
     except Exception as error:
       print("prediction error: ", error)
+      pass
+
+  # 加载around prediction_msg
+  if bag_loader.around_prediction_msg['enable'] == True:
+    prediction_obs_id = local_view_data['data_select_obs_id'].data['prediction_obstacle_id']
+    try:
+      for i in range(5):
+        local_view_data['data_around_prediction_' + str(i)].data.update({
+          'prediction_y' : [],
+          'prediction_x' : [],
+          'prediction_obs_y' : [],
+          'prediction_obs_x' : [],
+        })
+      # 预测轨迹
+      prediction_traj_dict = load_prediction_objects(around_prediction_msg.prediction_obstacle_list, prediction_obs_id, loc_msg, g_is_display_enu)
+      for i in range(5):
+        local_view_data['data_around_prediction_' + str(i)].data.update({
+          'prediction_y' : prediction_traj_dict[i]['y'],
+          'prediction_x' : prediction_traj_dict[i]['x'],
+          'prediction_obs_y' : prediction_traj_dict[i]['obs_y'],
+          'prediction_obs_x' : prediction_traj_dict[i]['obs_x'],
+        })
+      # 预测障碍物
+      prediction_obs_all = load_prediction_obstacle(around_prediction_msg, plan_debug_json_msg, is_enu_to_car, loc_msg, environment_model_info)
+      local_view_data['data_around_prediction_obj'].data.update({
+              'obstacles_x': [],
+              'obstacles_y': [],
+              'pos_x' : [],
+              'pos_y' : [],
+              'obs_label' : [],
+              'color' : [],
+              'text_color' : [],
+            })
+      for key in prediction_obs_all:
+        obstacles_info = prediction_obs_all[key]
+        key_name = 'data_around_prediction_obj'
+        if g_is_display_enu:
+          local_view_data[key_name].data.update({
+            'obstacles_x': obstacles_info['obstacles_x'],
+            'obstacles_y': obstacles_info['obstacles_y'],
+            'pos_x' : obstacles_info['pos_x'],
+            'pos_y' : obstacles_info['pos_y'],
+            'obs_label' : obstacles_info['obs_label'],
+            'color' : obstacles_info['color'],
+            'text_color' : obstacles_info['text_color'],
+          })
+        else:
+          local_view_data[key_name].data.update({
+            'obstacles_x': obstacles_info['obstacles_x_rel'],
+            'obstacles_y': obstacles_info['obstacles_y_rel'],
+            'pos_x' : obstacles_info['pos_x_rel'],
+            'pos_y' : obstacles_info['pos_y_rel'],
+            'obs_label' : obstacles_info['obs_label'],
+            'color' : obstacles_info['color'],
+            'text_color' : obstacles_info['text_color'],
+          })
+    except Exception as error:
+      print("around prediction error: ", error)
       pass
 
   # load control
@@ -2166,12 +2277,13 @@ def load_local_view_figure():
   is_vis_lane_mark = global_var.get_value('is_vis_lane_mark')
   is_vis_merge_point = global_var.get_value('is_vis_merge_point')
   is_vis_prediction = global_var.get_value('is_vis_prediction')
+  is_vis_around_prediction = global_var.get_value('is_vis_around_prediction')
   is_vis_fus_obj = global_var.get_value('is_vis_fus_obj')
   is_vis_ego_motion_sim = global_var.get_value('is_vis_ego_motion_sim')
   is_vis_snrd = global_var.get_value('is_vis_snrd')
   is_vis_lane_topo = global_var.get_value('is_vis_lane_topo')
   is_vis_smooth_refline = global_var.get_value('is_vis_smooth_refline')
-  is_vis_road_type_line = global_var.get_value('is_vis_road_type_line')
+  is_vis_static_analysis = global_var.get_value('is_vis_static_analysis')
   is_vis_tf_light = global_var.get_value('is_vis_tf_light')
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
@@ -2389,6 +2501,45 @@ def load_local_view_figure():
   road_type_analysis_result_14 = ColumnDataSource(data = {'ref_path_x': [],
                                                        'ref_path_y': [],
                                                        })
+  passage_type_analysis_result_0 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  passage_type_analysis_result_1 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  passage_type_analysis_result_2 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  passage_type_analysis_result_3 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  passage_type_analysis_result_4 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_0 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_1 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_2 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_3 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_4 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_5 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_6 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
+  elem_type_analysis_result_7 = ColumnDataSource(data = {'ref_path_x': [],
+                                                       'ref_path_y': [],
+                                                       })
   traffic_light_data_0 = ColumnDataSource(data = {'tfl_loc_x_0':[], 'tfl_loc_y_0': [],  'tfl_color_0': [], 'tfl_type_0': []})
   traffic_light_data_1 = ColumnDataSource(data = {'tfl_loc_x_1':[], 'tfl_loc_y_1': [],  'tfl_color_1': [], 'tfl_type_1': []})
   traffic_light_data_2 = ColumnDataSource(data = {'tfl_loc_x_2':[], 'tfl_loc_y_2': [],  'tfl_color_2': [], 'tfl_type_2': []})
@@ -2424,6 +2575,9 @@ def load_local_view_figure():
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
   data_prediction_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
+                                        'pos_y':[], 'pos_x':[],
+                                        'obs_label':[], 'color':[], 'text_color':[]})
+  data_around_prediction_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[], 'color':[], 'text_color':[]})
   data_radar_fm_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
@@ -2479,6 +2633,26 @@ def load_local_view_figure():
                                                'prediction_obs_y':[],
                                                'prediction_obs_x':[],})
   data_prediction_4 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_0 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_1 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_2 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_3 = ColumnDataSource(data = {'prediction_y':[],
+                                               'prediction_x':[],
+                                               'prediction_obs_y':[],
+                                               'prediction_obs_x':[],})
+  data_around_prediction_4 = ColumnDataSource(data = {'prediction_y':[],
                                                'prediction_x':[],
                                                'prediction_obs_y':[],
                                                'prediction_obs_x':[],})
@@ -2710,6 +2884,11 @@ def load_local_view_figure():
                      'data_prediction_2' : data_prediction_2 ,\
                      'data_prediction_3' : data_prediction_3 ,\
                      'data_prediction_4' : data_prediction_4 ,\
+                     'data_around_prediction_0' : data_around_prediction_0 ,\
+                     'data_around_prediction_1' : data_around_prediction_1 ,\
+                     'data_around_prediction_2' : data_around_prediction_2 ,\
+                     'data_around_prediction_3' : data_around_prediction_3 ,\
+                     'data_around_prediction_4' : data_around_prediction_4 ,\
                      'data_parking_space' : data_parking_space , \
                      'data_target_parking_space' : data_target_parking_space , \
                      'data_parking_space_text' : data_parking_space_text , \
@@ -2737,6 +2916,7 @@ def load_local_view_figure():
                      'data_me_obj':data_me_obj, \
                      'data_rdg_obj':data_rdg_obj, \
                      'data_prediction_obj':data_prediction_obj, \
+                     'data_around_prediction_obj':data_around_prediction_obj, \
                      'data_rdg_general_obj': data_rdg_general_obj, \
                      'data_rdg_occ_obj': data_rdg_occ_obj, \
                      'data_radar_fm_obj':data_radar_fm_obj, \
@@ -2763,6 +2943,19 @@ def load_local_view_figure():
                      'road_type_analysis_result_12' : road_type_analysis_result_12,
                      'road_type_analysis_result_13' : road_type_analysis_result_13,
                      'road_type_analysis_result_14' : road_type_analysis_result_14,
+                     'passage_type_analysis_result_0' : passage_type_analysis_result_0,
+                     'passage_type_analysis_result_1' : passage_type_analysis_result_1,
+                     'passage_type_analysis_result_2' : passage_type_analysis_result_2,
+                     'passage_type_analysis_result_3' : passage_type_analysis_result_3,
+                     'passage_type_analysis_result_4' : passage_type_analysis_result_4,
+                     'elem_type_analysis_result_0' : elem_type_analysis_result_0,
+                     'elem_type_analysis_result_1' : elem_type_analysis_result_1,
+                     'elem_type_analysis_result_2' : elem_type_analysis_result_2,
+                     'elem_type_analysis_result_3' : elem_type_analysis_result_3,
+                     'elem_type_analysis_result_4' : elem_type_analysis_result_4,
+                     'elem_type_analysis_result_5' : elem_type_analysis_result_5,
+                     'elem_type_analysis_result_6' : elem_type_analysis_result_6,
+                     'elem_type_analysis_result_7' : elem_type_analysis_result_7,
                      'data_center_line_topo_0':data_center_line_topo_0, \
                      'data_center_line_topo_1':data_center_line_topo_1, \
                      'data_center_line_topo_2':data_center_line_topo_2, \
@@ -2871,6 +3064,7 @@ def load_local_view_figure():
   fig1.background_fill_color = 'lightgray'
   fig1.xgrid.grid_line_color = None
   fig1.ygrid.grid_line_color = None
+
 
   fig1.x_range.flipped = True
 
@@ -3070,15 +3264,30 @@ def load_local_view_figure():
     fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
     fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
 
-  if is_vis_road_type_line:
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_1,  radius = 0.1, line_width = 2, line_color = 'red'   , fill_color = 'red'   , legend_label = 'road_type_analysis') #正常直道
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_2,  radius = 0.1, line_width = 2, line_color = 'blue'  , fill_color = 'blue'  , legend_label = 'road_type_analysis') #绕障直道
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_3,  radius = 0.1, line_width = 2, line_color = 'orange', fill_color = 'orange', legend_label = 'road_type_analysis') #S 直道
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_10, radius = 0.1, line_width = 2, line_color = 'black' , fill_color = 'black' , legend_label = 'road_type_analysis') #直角弯
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_11, radius = 0.1, line_width = 2, line_color = 'green' , fill_color = 'green' , legend_label = 'road_type_analysis') #锐角弯
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_12, radius = 0.1, line_width = 2, line_color = 'purple', fill_color = 'purple', legend_label = 'road_type_analysis') #钝角弯
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_13, radius = 0.1, line_width = 2, line_color = 'yellow', fill_color = 'yellow', legend_label = 'road_type_analysis') #U 型弯
-    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_14, radius = 0.1, line_width = 2, line_color = 'brown' , fill_color = 'brown' , legend_label = 'road_type_analysis') #环形弯
+  if is_vis_static_analysis:
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_1,  radius = 0.1, line_width = 2, line_color = 'red'   , fill_color = 'red'   , legend_label = 'road_type_analysis') #正常直道 -> 红色
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_2,  radius = 0.1, line_width = 2, line_color = 'blue'  , fill_color = 'blue'  , legend_label = 'road_type_analysis') #绕障直道 -> 蓝色
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_3,  radius = 0.1, line_width = 2, line_color = 'orange', fill_color = 'orange', legend_label = 'road_type_analysis') #S 直道 -> 橙色
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_10, radius = 0.1, line_width = 2, line_color = 'black' , fill_color = 'black' , legend_label = 'road_type_analysis') #直角弯 -> 黑色
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_11, radius = 0.1, line_width = 2, line_color = 'green' , fill_color = 'green' , legend_label = 'road_type_analysis') #锐角弯 -> 绿色
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_12, radius = 0.1, line_width = 2, line_color = 'purple', fill_color = 'purple', legend_label = 'road_type_analysis') #钝角弯 -> 紫色
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_13, radius = 0.1, line_width = 2, line_color = 'yellow', fill_color = 'yellow', legend_label = 'road_type_analysis') #U 型弯 -> 黄色
+    fig1.circle('ref_path_y', 'ref_path_x', source = road_type_analysis_result_14, radius = 0.1, line_width = 2, line_color = 'brown' , fill_color = 'brown' , legend_label = 'road_type_analysis') #环形弯 -> 棕色
+
+    fig1.circle('ref_path_y', 'ref_path_x', source = passage_type_analysis_result_0, radius = 0.1, line_width = 2, line_color = 'gray'   , fill_color = 'gray'   , legend_label = 'passage_type_analysis', visible = False) #不确定类型 -> 灰色
+    fig1.circle('ref_path_y', 'ref_path_x', source = passage_type_analysis_result_1, radius = 0.1, line_width = 2, line_color = 'cyan'   , fill_color = 'cyan'   , legend_label = 'passage_type_analysis', visible = False) #正常宽度 -> 青色
+    fig1.circle('ref_path_y', 'ref_path_x', source = passage_type_analysis_result_2, radius = 0.1, line_width = 2, line_color = 'magenta', fill_color = 'magenta', legend_label = 'passage_type_analysis', visible = False) #狭窄道路 -> 品红色
+    fig1.circle('ref_path_y', 'ref_path_x', source = passage_type_analysis_result_3, radius = 0.1, line_width = 2, line_color = 'lime'   , fill_color = 'lime'   , legend_label = 'passage_type_analysis', visible = False) #宽敞道路 -> 亮绿色
+    fig1.circle('ref_path_y', 'ref_path_x', source = passage_type_analysis_result_4, radius = 0.1, line_width = 2, line_color = 'pink'   , fill_color = 'pink'   , legend_label = 'passage_type_analysis', visible = False) #短暂拓宽道路 -> 粉色
+
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_0, radius = 0.1, line_width = 2, line_color = 'gray'      , fill_color = 'gray'      , legend_label = 'elem_type_analysis', visible = False) #不确定类型 -> 灰色
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_1, radius = 0.1, line_width = 2, line_color = 'red'       , fill_color = 'red'       , legend_label = 'elem_type_analysis', visible = False) #平坦路段 -> 红色
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_2, radius = 0.1, line_width = 2, line_color = 'orange'    , fill_color = 'orange'    , legend_label = 'elem_type_analysis', visible = False) #上坡 -> 橙色
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_3, radius = 0.1, line_width = 2, line_color = 'blue'      , fill_color = 'blue'      , legend_label = 'elem_type_analysis', visible = False) #下坡 -> 蓝色
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_4, radius = 0.1, line_width = 2, line_color = 'purple'    , fill_color = 'purple'    , legend_label = 'elem_type_analysis', visible = False) #不确定的坡道 -> 紫色
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_5, radius = 0.1, line_width = 2, line_color = 'green'     , fill_color = 'green'     , legend_label = 'elem_type_analysis', visible = False) #减速带 -> 绿色
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_6, radius = 0.1, line_width = 2, line_color = 'magenta'   , fill_color = 'magenta'   , legend_label = 'elem_type_analysis', visible = False) #路口 -> 品红色
+    fig1.circle('ref_path_y', 'ref_path_x', source = elem_type_analysis_result_7, radius = 0.1, line_width = 2, line_color = 'brown'     , fill_color = 'brown'     , legend_label = 'elem_type_analysis', visible = False) #闸机 -> 棕色
 
   if is_vis_radar:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_radar_fm_obj, fill_color = "green", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'radar_fm_obj',visible = False)
@@ -3130,11 +3339,25 @@ def load_local_view_figure():
     fig1.scatter('obstacles_y', 'obstacles_x', source = data_fus_occ, size = 2,color='red', fill_alpha = 0.15, legend_label = 'fus_occ_obj')
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_occ_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_occ_obj_info', visible = False)
   if is_vis_fus_obj:
-    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'fus_obj',visible = False)
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_fus_obj, fill_color = "gray", line_color = "black", line_width = 1, fill_alpha = 0.4, legend_label = 'fus_obj',visible = True)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_fus_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fus_obj_info',visible = False)
+  if is_vis_around_prediction:
+    fig1.patches('obstacles_y', 'obstacles_x', source = data_around_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'around_prediction_obj')
+    fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_around_prediction_obj, text_color='text_color', text_align="center", text_font_size="10pt", legend_label = 'around_prediction_obj_info')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_0, radius = 0.3, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_1, radius = 0.3, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_2, radius = 0.3, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_3, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.circle('prediction_y', 'prediction_x', source = data_around_prediction_4, radius = 0.3, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_0, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_1, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'blue', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_2, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'orange', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_3, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'black', line_alpha = 1, legend_label = 'around_prediction_traj')
+    fig1.patches('prediction_obs_y', 'prediction_obs_x', source = data_around_prediction_4, fill_color = "grey", fill_alpha = 0.15, line_width = 1,  line_color = 'purple', line_alpha = 1, legend_label = 'around_prediction_traj')
+
   if is_vis_speed_bump:
     fig1.patches('speed_bump_y', 'speed_bump_x', source = data_speed_bump, fill_color = "yellow", fill_alpha = 0.3, hatch_color = "black", hatch_alpha = 0.5, hatch_scale = 50.0, hatch_weight = 1.0, hatch_pattern = 'vertical_line', line_color = "black", line_width = 1, legend_label = 'fus_speed_bump')
-    # fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
+    fig1.text('pos_y', 'pos_x', text = 'speed_bump_label' ,source = data_speed_bump, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'speed_bump_info', visible = False)
   if is_vis_ground_line:
     fig1.scatter('ground_line_y', 'ground_line_x', source = data_ground_line_point, size = 2, color='green', legend_label = 'fusion_ground_line')
     fig1.text('pos_y', 'pos_x', text = 'ground_line_label' ,source = data_ground_line_label, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'fusion_ground_line_info', visible = False)
@@ -3218,8 +3441,30 @@ def load_local_view_figure():
   return fig1, local_view_data
 
 
-def init_basic_figure_plot(fig, local_view_data):
-  return fig
+def init_local_view_figure(fig_local_view, bag_loader):
+  scene_type = global_var.get_value('scene_type')
+  g_is_display_enu = global_var.get_value('g_is_display_enu')
+  if scene_type == 'HPP':
+    fig_local_view.width = 1200
+    fig_local_view.height = 1300
+
+    if bag_loader.loc_msg['enable'] == True and g_is_display_enu:
+      loc_data = bag_loader.loc_msg['data']
+      if len(loc_data) > 0:
+        loc_msg = loc_data[0]
+        car_x = loc_msg.position.position_boot.x
+        car_y = loc_msg.position.position_boot.y
+      else:
+        car_x = 0.0
+        car_y = 0.0
+    else:
+      car_x = 0.0
+      car_y = 0.0
+    view_range = 25
+    fig_local_view.x_range.start = car_y + view_range   # 注意 x 轴已翻转
+    fig_local_view.x_range.end   = car_y - view_range
+    fig_local_view.y_range.start = car_x - view_range
+    fig_local_view.y_range.end   = car_x + view_range
 
 
 def load_planning_hmi_info_table():

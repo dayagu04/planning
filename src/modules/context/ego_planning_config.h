@@ -259,7 +259,7 @@ struct EgoPlanningConfig : public Config {
     enable_fusion_speed_bump_objects =
         read_json_key<bool>(json, "enable_fusion_speed_bump_objects");
     enable_fusion_turnstile_objects =
-        read_json_key<bool>(json, "enable_fusion_turn_stile_objects");
+        read_json_key<bool>(json, "enable_fusion_turnstile_objects");
     enable_fusion_intersection_objects =
         read_json_key<bool>(json, "enable_fusion_intersection_objects");
     enable_fusion_parking_slot =
@@ -318,7 +318,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_fusion_intersection_objects = false;
   bool enable_fusion_parking_slot = false;
   bool enable_fusion_ground_line = true;
-  bool enable_parking_prediction = false;
+  bool enable_parking_prediction = true;
   bool is_ground_line_cluster = false;
   bool enable_ehr_column_box = false;
   bool enable_uss = false;
@@ -3597,6 +3597,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "target_speed_ramp_area");
     approaching_zone_deceleration =
         read_json_key<double>(json, "approaching_zone_deceleration");
+    hpp_profile_comfort_accel =
+        read_json_key<double>(json, "hpp_profile_comfort_accel");
+    hpp_profile_lookahead =
+        read_json_key<double>(json, "hpp_profile_lookahead");
+    hpp_profile_ds =
+        read_json_key<double>(json, "hpp_profile_ds");
     speed_bump_collision_buffer =
         read_json_key<double>(json, "speed_bump_collision_buffer");
     turnstile_stop_buffer =
@@ -3695,6 +3701,9 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double target_speed_intersection_road_area = 2.5;      // 9kph
   double target_speed_ramp_area = 2.78;                  // 10kph
   double approaching_zone_deceleration = -1.0;                 // m/s^2
+  double hpp_profile_comfort_accel = 1.5;                      // m/s^2
+  double hpp_profile_lookahead = 100.0;                        // m
+  double hpp_profile_ds = 1.0;                                 // m
   double speed_bump_collision_buffer = 0.0;              // m
   double turnstile_stop_buffer = 3.5;
   double turnstile_min_forward_stop_buffer = 1.0;
@@ -5458,6 +5467,21 @@ struct STGraphConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    hpp_large_agent_extra_lat_buffer = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph",
+                                 "hpp_large_agent_extra_lat_buffer"},
+        hpp_large_agent_extra_lat_buffer);
+    hpp_lat_buffer_bias = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph",
+                                 "hpp_lat_buffer_bias"},
+        hpp_lat_buffer_bias);
+    hpp_lat_buffer_min = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "st_graph",
+                                 "hpp_lat_buffer_min"},
+        hpp_lat_buffer_min);
   }
   bool enable_backward_extend_st_boundary = true;
   double backward_extend_length_for_lane_change = 50.0;
@@ -5485,6 +5509,10 @@ struct STGraphConfig : public EgoPlanningConfig {
   double tricycle_lon_buffer_m = 0.4;
   double backward_extend_time_s = 3.0;
   double reverse_vehicle_lat_buffer_m = 0.2;
+  // HPP 横向 buffer 调整参数
+  double hpp_large_agent_extra_lat_buffer = 0.1;
+  double hpp_lat_buffer_bias = 0.2;  // 固定减少的bias，单位m
+  double hpp_lat_buffer_min = 0.15;  // 最小安全距离，单位m
 };
 
 struct StopDestinationDeciderConfig : public EgoPlanningConfig {
@@ -5765,6 +5793,67 @@ struct LongitudinalDecisionDeciderConfig : public EgoPlanningConfig {
   double ego_predeceleration_distance_to_front_agent_threshold = 3.5;
   double close_to_same_velocity_difference_buffer = 1.5;
   bool mute_invade_neighbor_decision = false;
+};
+
+struct AgentLongitudinalDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    hpp_reverse_near_s_threshold_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_near_s_threshold_m"},
+        hpp_reverse_near_s_threshold_m);
+    hpp_reverse_mid_s_threshold_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_mid_s_threshold_m"},
+        hpp_reverse_mid_s_threshold_m);
+    hpp_reverse_near_lat_gap_ignore_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_near_lat_gap_ignore_m"},
+        hpp_reverse_near_lat_gap_ignore_m);
+    hpp_reverse_mid_lat_gap_ignore_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_mid_lat_gap_ignore_m"},
+        hpp_reverse_mid_lat_gap_ignore_m);
+    hpp_reverse_far_keep_lat_gap_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_far_keep_lat_gap_m"},
+        hpp_reverse_far_keep_lat_gap_m);
+    hpp_reverse_min_filter_distance_m = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_min_filter_distance_m"},
+        hpp_reverse_min_filter_distance_m);
+    hpp_reverse_longitudinal_ttc_s = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_longitudinal_ttc_s"},
+        hpp_reverse_longitudinal_ttc_s);
+    hpp_reverse_hysteresis_frames_to_ignore = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_hysteresis_frames_to_ignore"},
+        hpp_reverse_hysteresis_frames_to_ignore);
+    hpp_reverse_hysteresis_frames_to_keep = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"speed_planning", "agent_longitudinal_decider",
+                                 "hpp_reverse_hysteresis_frames_to_keep"},
+        hpp_reverse_hysteresis_frames_to_keep);
+  }
+
+  double hpp_reverse_near_s_threshold_m = 40.0;
+  double hpp_reverse_mid_s_threshold_m = 55.0;
+  double hpp_reverse_near_lat_gap_ignore_m = 2.5;
+  double hpp_reverse_mid_lat_gap_ignore_m = 1.5;
+  double hpp_reverse_far_keep_lat_gap_m = 1.0;
+  double hpp_reverse_min_filter_distance_m = 60.0;
+  double hpp_reverse_longitudinal_ttc_s = 10.0;
+  int hpp_reverse_hysteresis_frames_to_ignore = 3;
+  int hpp_reverse_hysteresis_frames_to_keep = 3;
 };
 
 struct AgentHeadwayConfig : public EgoPlanningConfig {

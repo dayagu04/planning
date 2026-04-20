@@ -20,6 +20,13 @@ struct HPPSpeedLimitZoneInfo {
   std::vector<std::pair<double, double>> s_segments;
 };
 
+struct SpeedLimitSegment {
+  double s_start;
+  double s_end;
+  double v_limit;
+  SpeedLimitType type;
+};
+
 class HPPSpeedLimitDecider : public Task {
  public:
   HPPSpeedLimitDecider(const EgoPlanningConfigBuilder* config_builder,
@@ -44,11 +51,12 @@ class HPPSpeedLimitDecider : public Task {
                                    const double approach_distance_threshold);
   const double ComputeMaxLatAcceleration();
   const double ComputeCurvatureSpeedLimit(
-      const TrajectoryPoints& traj_points);
+      const TrajectoryPoints& traj_points, double& scan_dist_out);
 
   void CheckSpeedBumpZone(const TrajectoryPoints& traj_points, double ego_s);
   double GetSpeedLimitInObjectiveZone(const HPPSpeedLimitZoneInfo& zone_info,
                                       const double target_v);
+  void BuildSmoothedSpeedProfile(double ego_s, double ego_v, double v_cruise);
 
  private:
   LongitudinalDeciderV3Config
@@ -59,5 +67,6 @@ class HPPSpeedLimitDecider : public Task {
 
   double max_curvature_;
   double max_curvature_slow_down_triger_buffer_ = -1.0;
+  std::vector<SpeedLimitSegment> speed_limit_segments_;
 };
 }  // namespace planning
