@@ -187,7 +187,7 @@ bool LDRouteInfoStrategy::UpdateLDMap() {
   if (!is_loading_ && ld_map_info_current_timestamp != ld_map_info_updated_timestamp_) {
     std::lock_guard<std::mutex> lock(map_load_mutex_);
     pending_timestamp_ = ld_map_info_current_timestamp;
-    pending_map_data_ = ld_map_info;  // 复制 proto 数据
+    pending_map_data_ = ld_map_info;  // 复制 proto 数据  // TODO：存在大内存复制，可以考虑优化
     has_pending_task_ = true;
     load_done_ = false;
     is_loading_ = true;

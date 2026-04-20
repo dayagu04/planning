@@ -380,7 +380,7 @@ void ProcessLaneMapMergePoint(
 
   ad_common::sdpromap::SDProMap ld_map_;
   ad_common::sdpromap::SDProMap pending_ld_map_;  // 后台加载的缓冲地图
-  uint64_t pending_timestamp_ = 0;
+  uint64_t pending_timestamp_ = 0; // 只在持锁时访问
   bool is_loading_ = false;
 
   // 常驻工作线程相关
