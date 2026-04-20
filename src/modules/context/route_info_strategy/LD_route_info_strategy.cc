@@ -186,9 +186,15 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   // 一定要先计算split info，再计算ramp info
   CalculateRampInfo();
 
-  CaculateDistanceToRoadEnd(current_link_, ego_on_cur_link_s_);
+  CalculateDistanceToRoadEnd(current_link_, ego_on_cur_link_s_);
 
-  CaculateDistanceToTollStation(current_link_, ego_on_cur_link_s_);
+  CalculateDistanceToTollStation(current_link_, ego_on_cur_link_s_);
+
+  CalculateDistanceToServiceArea(current_link_, ego_on_cur_link_s_);
+
+  CalculateDistanceToNOAEnd(current_link_, ego_on_cur_link_s_);
+
+  UpdateDistanceToNOAExit();
 
   return true;
 }
@@ -460,8 +466,8 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
       current_link_->link_class() ==
           iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
       (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
-      (current_link_->link_type() & iflymapdata::sdpro::LT_JCT) != 0) {
-
+      (current_link_->link_type() & iflymapdata::sdpro::LT_JCT) != 0 ||
+      (current_link_->link_type() & iflymapdata::sdpro::LT_SAPA) != 0) {
     route_info_output_.is_ego_on_expressway = true;
     if (current_link_->link_class() ==
         iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY) {
@@ -3141,7 +3147,7 @@ void LDRouteInfoStrategy::ProcessLaneMapMergePoint(
   relative_id_lane->set_map_merge_point_info(std::move(map_merge_point_info));
 }
 
-void LDRouteInfoStrategy::CaculateDistanceToRoadEnd(
+void LDRouteInfoStrategy::CalculateDistanceToRoadEnd(
     const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
   if (segment == nullptr) {
     return;
@@ -3157,7 +3163,7 @@ void LDRouteInfoStrategy::CaculateDistanceToRoadEnd(
   }
 }
 
-void LDRouteInfoStrategy::CaculateDistanceToTollStation(
+void LDRouteInfoStrategy::CalculateDistanceToTollStation(
     const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
   if (segment == nullptr) {
     return;
@@ -5572,5 +5578,134 @@ void LDRouteInfoStrategy::ProcessEraseFeasibleLaneForSplitScene(
   }
 
   Erase1Split2FeasibleLane(feasible_lane_graph);
+}
+void LDRouteInfoStrategy::CalculateDistanceToNOAEnd(
+    const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
+  if (segment == nullptr) {
+    return;
+  }
+  double distance_to_enter_city = 0.0;
+  constexpr double kMaxNOAEndSearchDistance = 3000.0;
+  // 当前位于NOA状态，计算到地图信息终点/NOA
+  if (route_info_output_.is_ego_on_expressway) {
+    const auto* iter_link = segment;
+    while (iter_link) {
+      if (iter_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+          iter_link->link_class() ==
+              iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
+          (iter_link->link_type() & iflymapdata::sdpro::LT_IC) != 0 ||
+          (iter_link->link_type() & iflymapdata::sdpro::LT_JCT) != 0 ||
+          (iter_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0) {
+        if (iter_link->id() == current_link_->id()) {
+          distance_to_enter_city += iter_link->length() * 0.01 - nearest_s;
+        } else {
+          distance_to_enter_city += iter_link->length() * 0.01;
+        }
+        // 大于3km直接break
+        if (distance_to_enter_city > kMaxNOAEndSearchDistance) {
+          break;
+        }
+        iter_link = ld_map_.GetNextLinkOnRoute(iter_link->id());
+      } else {
+        break;
+      }
+    }
+  } else {
+    distance_to_enter_city = 0.0;
+  }
+  route_info_output_.distance_to_enter_city = distance_to_enter_city;
+}
+
+void LDRouteInfoStrategy::CalculateDistanceToServiceArea(
+    const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
+  if (segment == nullptr) {
+    return;
+  }
+
+  constexpr double kSapaServiceWindowM = 50.0;
+  const auto is_sapa_link =
+      [](const iflymapdata::sdpro::LinkInfo_Link* link) -> bool {
+    return link != nullptr &&
+           (link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0;
+  };
+
+  const auto contiguous_sapa_length_from =
+      [this,
+       is_sapa_link](const iflymapdata::sdpro::LinkInfo_Link* start) -> double {
+    double len = 0.0;
+    const auto* link = start;
+    while (link != nullptr && is_sapa_link(link)) {
+      len += link->length() * 0.01;
+      link = ld_map_.GetNextLinkOnRoute(link->id());
+    }
+    return len;
+  };
+
+  const auto distance_along_route_to_ego_from =
+      [this](const iflymapdata::sdpro::LinkInfo_Link* start_link,
+             const iflymapdata::sdpro::LinkInfo_Link* ego_link,
+             double ego_s_on_link) -> double {
+    double d = 0.0;
+    const auto* link = start_link;
+    while (link != nullptr && link->id() != ego_link->id()) {
+      d += link->length() * 0.01;
+      link = ld_map_.GetNextLinkOnRoute(link->id());
+    }
+    if (link != nullptr && link->id() == ego_link->id()) {
+      d += ego_s_on_link;
+    }
+    return d;
+  };
+
+  if (is_sapa_link(segment)) {
+    const iflymapdata::sdpro::LinkInfo_Link* first_sapa = segment;
+    while (true) {
+      const auto* prev = ld_map_.GetPreviousLinkOnRoute(first_sapa->id());
+      if (prev != nullptr && is_sapa_link(prev)) {
+        first_sapa = prev;
+      } else {
+        break;
+      }
+    }
+    const double l_sapa_total = contiguous_sapa_length_from(first_sapa);
+    const double window_m = std::min(kSapaServiceWindowM, l_sapa_total);
+    const double traveled_on_sapa =
+        distance_along_route_to_ego_from(first_sapa, segment, nearest_s);
+    route_info_output_.distance_to_service_area =
+        std::max(0.0, window_m - traveled_on_sapa);
+    return;
+  }
+
+  const auto& service_area_info =
+      ld_map_.GetSaPaInfo(segment->id(), nearest_s, kMaxSearchLength);
+  if (service_area_info.first == nullptr) {
+    route_info_output_.distance_to_service_area = NL_NMAX;
+    return;
+  }
+
+  const double dist_to_first_sapa = service_area_info.second;
+  const double l_sapa_total =
+      contiguous_sapa_length_from(service_area_info.first);
+  const double add_m = std::min(kSapaServiceWindowM, l_sapa_total);
+  route_info_output_.distance_to_service_area = dist_to_first_sapa + add_m;
+}
+void LDRouteInfoStrategy::UpdateDistanceToNOAExit() {
+  std::array<std::pair<double, NOAExitType>, 4> dist_type_pairs = {
+      {{route_info_output_.distance_to_route_end, NAVIGATION_END},
+       {route_info_output_.distance_to_toll_station, TOLL_STATION},
+       {route_info_output_.distance_to_service_area, SERVICE_AREA},
+       {route_info_output_.distance_to_enter_city, ENTER_CITY}}};
+
+  auto it = std::min_element(
+      dist_type_pairs.begin(), dist_type_pairs.end(),
+      [](const auto& a, const auto& b) { return a.first < b.first; });
+  double distance_to_exit_noa = it->first;
+  NOAExitType exit_type = it->second;
+  route_info_output_.noa_exit_type = exit_type;
+  route_info_output_.distance_to_exit_noa = distance_to_exit_noa;
+  if (distance_to_exit_noa < kEpsilon) {
+    route_info_output_.reset();
+  }
 }
 }  // namespace planning

@@ -317,10 +317,15 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
       const std::shared_ptr<VirtualLane>& relative_id_lane,
       const std::unordered_map<int, MapMergePointInfo>& map_merge_point_info);
 
-  void CaculateDistanceToRoadEnd(
+  void CalculateDistanceToRoadEnd(
       const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
-  void CaculateDistanceToTollStation(
+  void CalculateDistanceToTollStation(
       const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+  void CalculateDistanceToNOAEnd(
+      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+  void CalculateDistanceToServiceArea(
+      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+  void UpdateDistanceToNOAExit();
   bool IsLaneSuccessorInPlannedRoute(const iflymapdata::sdpro::Lane* lane_info);
   bool IsLaneSuccessorIsMergeLane(
       const iflymapdata::sdpro::Lane* lane_info) const;
