@@ -7,8 +7,9 @@
 
 #include "common/agent/agent.h"
 #include "common/agent/agent_manager.h"
+#include "common/utils/geometry_utils.h"
 #include "common/config/basic_type.h"
-#include "common/constraint_check/collision_checker.h"
+#include "common/math/polygon2d.h"
 #include "common/tracked_object.h"
 #include "context/environmental_model.h"
 #include "context/obstacle.h"
@@ -72,62 +73,6 @@ std::unordered_map<int, const Obstacle *> BuildGroundLineObstacleMap(
   return groundline_obstacle_map;
 }
 
-GroundLineFirstCollision FindEarliestGroundLineCollisionOnTrajectory(
-    const Obstacle &groundline_obstacle, const TrajectoryPoints &traj_points,
-    planning_math::CollisionChecker *collision_checker,
-    double collision_threshold) {
-  GroundLineFirstCollision earliest_collision;
-
-  for (size_t i = 0; i < traj_points.size(); ++i) {
-    const auto &traj_pt = traj_points[i];
-    if (!traj_pt.frenet_valid) {
-      continue;
-    }
-    if (traj_pt.s >= earliest_collision.collision_s_on_traj) {
-      break;
-    }
-
-    // 1. 将当前轨迹点设置为碰撞检测时的自车位姿。
-    Pose2D ego_pose;
-    ego_pose.x = traj_pt.x;
-    ego_pose.y = traj_pt.y;
-    ego_pose.theta = traj_pt.heading_angle;
-    collision_checker->set_point(ego_pose);
-
-    // 2. 遍历 groundline 点云，统计当前轨迹点对应的有效碰撞点。
-    int32_t collision_point_count = 0;
-    std::vector<planning_math::Vec2d> collision_points;
-    const auto &groundline_points = groundline_obstacle.perception_points();
-    for (const auto &groundline_point : groundline_points) {
-      if (!IsPointWithinRange(ego_pose, groundline_point,
-                              kCoarseCollisionCheckRange)) {
-        continue;
-      }
-
-      const auto collision_result = collision_checker->collision_check(
-          groundline_point, collision_threshold,
-          planning_math::CollisionCheckStatus::CollisionType::GROUNDLINE_COLLISION);
-      if (!collision_result.is_collision) {
-        continue;
-      }
-
-      ++collision_point_count;
-      collision_points.push_back(groundline_point);
-    }
-
-    // 3. 只保留沿轨迹最早出现的有效碰撞结果。
-    if (collision_point_count <= kCollisionPointThreshold) {
-      continue;
-    }
-
-    earliest_collision.collision_s_on_traj = traj_pt.s;
-    earliest_collision.traj_point_index = static_cast<int>(i);
-    earliest_collision.collision_points = std::move(collision_points);
-  }
-
-  return earliest_collision;
-}
-
 bool HasNearbyGeneratedAgent(const std::vector<double> &generated_agent_s,
                              double target_s) {
   for (const double existing_s : generated_agent_s) {
@@ -144,16 +89,73 @@ bool CompareGroundLineAgentCandidateByCollisionS(
   return lhs.collision.collision_s_on_traj < rhs.collision.collision_s_on_traj;
 }
 
-planning_math::CollisionChecker CreateGroundLineCollisionChecker() {
+
+GroundLineFirstCollision FindEarliestGroundLineCollisionOnTrajectory(
+    const Obstacle &groundline_obstacle, const TrajectoryPoints &traj_points,
+    double collision_threshold) {
+  GroundLineFirstCollision earliest_collision;
+
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double half_w = vehicle_param.width * 0.5;
+  const double front = vehicle_param.front_edge_to_rear_axle;
+  const double rear = vehicle_param.rear_edge_to_rear_axle;
 
-  planning_math::CollisionChecker collision_checker;
-  auto &ego_model = collision_checker.get_ego_model();
-  ego_model->set_model_type(planning_math::EgoModelType::ORIGIN);
-  ego_model->set_expansion(0.0, 0.0);
-  collision_checker.set_params(vehicle_param.rear_axle_to_center);
-  return collision_checker;
+  const auto &groundline_points = groundline_obstacle.perception_points();
+
+  for (size_t i = 0; i + 1 < traj_points.size(); ++i) {
+    const auto &traj_pt = traj_points[i];
+    const auto &traj_pt_next = traj_points[i + 1];
+
+    if (!traj_pt.frenet_valid || !traj_pt_next.frenet_valid) {
+      continue;
+    }
+    if (traj_pt.s >= earliest_collision.collision_s_on_traj) {
+      break;
+    }
+
+    // 构造相邻两帧的扫略凸包（8角点）
+    auto corners = planning::GetEgoCorners(
+        traj_pt.x, traj_pt.y, traj_pt.heading_angle, half_w, front, rear);
+    const auto corners_next = planning::GetEgoCorners(
+        traj_pt_next.x, traj_pt_next.y, traj_pt_next.heading_angle, half_w, front, rear);
+    corners.insert(corners.end(), corners_next.begin(), corners_next.end());
+
+    planning_math::Polygon2d swept;
+    if (!planning_math::Polygon2d::ComputeConvexHull(corners, &swept)) {
+      continue;
+    }
+
+    // 粗筛 + 精检：groundline 点到扫略凸包的距离
+    Pose2D ego_pose;
+    ego_pose.x = traj_pt.x;
+    ego_pose.y = traj_pt.y;
+    ego_pose.theta = traj_pt.heading_angle;
+
+    int32_t collision_point_count = 0;
+    std::vector<planning_math::Vec2d> collision_points;
+    for (const auto &groundline_point : groundline_points) {
+      if (!IsPointWithinRange(ego_pose, groundline_point,
+                              kCoarseCollisionCheckRange)) {
+        continue;
+      }
+      if (swept.DistanceTo(groundline_point) > collision_threshold) {
+        continue;
+      }
+      ++collision_point_count;
+      collision_points.push_back(groundline_point);
+    }
+
+    if (collision_point_count <= kCollisionPointThreshold) {
+      continue;
+    }
+
+    earliest_collision.collision_s_on_traj = traj_pt.s;
+    earliest_collision.traj_point_index = static_cast<int>(i);
+    earliest_collision.collision_points = std::move(collision_points);
+  }
+
+  return earliest_collision;
 }
 
 std::pair<planning_math::Vec2d, planning_math::Vec2d> FindFarthestPoints(
@@ -189,7 +191,7 @@ HppLonObstaclePreprocessDecider::HppLonObstaclePreprocessDecider(
 
 bool HppLonObstaclePreprocessDecider::Execute() {
   ProcessGroundLines();
-  ProcessDynamicObstacles();
+  //ProcessDynamicObstacles();
   return true;
 }
 
@@ -229,7 +231,6 @@ void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
   }
 
   const double collision_threshold = lon_config_.hpp_collision_threshold;
-  auto collision_checker = CreateGroundLineCollisionChecker();
 
   std::vector<GroundLineAgentCandidate> ground_line_agent_candidates;
   ground_line_agent_candidates.reserve(ground_lines.size());
@@ -249,8 +250,7 @@ void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
 
     // 3. 沿规划轨迹搜索该 groundline 的最早有效碰撞位置。
     const auto earliest_collision = FindEarliestGroundLineCollisionOnTrajectory(
-        *obstacle_it->second, traj_points, &collision_checker,
-        collision_threshold);
+        *obstacle_it->second, traj_points, collision_threshold);
     if (!earliest_collision.IsValid()) {
       continue;
     }
@@ -274,10 +274,14 @@ void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
     }
 
     // 5. 基于碰撞点生成 virtual agent，直接复用对应 groundline 的 obstacle id。
+    const auto *groundline_obstacle =
+        groundline_obstacle_map.at(ground_line_agent_candidate.obstacle_id);
+    const auto agent_type =
+        static_cast<agent::AgentType>(groundline_obstacle->type());
     CreateVirtualAgentFromGroundLine(
         ground_line_agent_candidate.collision.collision_points,
         traj_points[ground_line_agent_candidate.collision.traj_point_index],
-        ground_line_agent_candidate.obstacle_id);
+        ground_line_agent_candidate.obstacle_id, agent_type);
     generated_virtual_agent_s.push_back(
         ground_line_agent_candidate.collision.collision_s_on_traj);
   }
@@ -286,14 +290,15 @@ void HppLonObstaclePreprocessDecider::ProcessGroundLines() {
 
 void HppLonObstaclePreprocessDecider::CreateVirtualAgentFromGroundLine(
     const std::vector<planning_math::Vec2d> &hit_points,
-    const TrajectoryPoint &anchor_traj_point, int id) {
+    const TrajectoryPoint &anchor_traj_point, int id,
+    agent::AgentType agent_type) {
   if (hit_points.empty()) {
     return;
   }
 
   agent::Agent virtual_agent;
   virtual_agent.set_agent_id(id);
-  virtual_agent.set_type(agent::AgentType::VIRTUAL);
+  virtual_agent.set_type(agent_type);
   virtual_agent.set_is_static(true);
   virtual_agent.set_x(anchor_traj_point.x);
   virtual_agent.set_y(anchor_traj_point.y);

@@ -16,6 +16,8 @@ def init():  # 初始化
     'is_vis_fus_line': True,
     'is_vis_rdg_line': True,
     'is_vis_rdg_obj': True,
+    'is_vis_rdg_occ': False,
+    'is_vis_rdg_groundline': False,
     'is_vis_rdg_parking_slot': True,
     'is_vis_me_obj': False,
     'is_vis_lane_mark': True,
@@ -30,9 +32,15 @@ def init():  # 初始化
     'is_vis_rads_path': False,
     'is_vis_nsa_line': False,
     'is_vis_prediction': True,
+    'is_vis_around_prediction': False,
     'is_vis_fus_obj': True,
     'is_vis_lane_topo': True,
     'is_vis_tf_light': True,
+    'is_vis_ego_motion_sim': False,
+    'is_vis_snrd': False,
+    'is_vis_smooth_refline': False,
+    'is_vis_static_analysis': False,
+    'is_enable_absolute_time': False,
   }
 
 
@@ -56,13 +64,15 @@ def set_value_by_scene(scene):
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
     global_dict['is_vis_sdpromap'] = False
+    global_dict['is_vis_radar'] = False
     global_dict['is_vis_fus_line'] = True          #融合车道线
     global_dict['is_vis_lane_topo'] = False        #融合可变车道
     global_dict['is_vis_rdg_line'] = False         #感知车道线
     global_dict['is_vis_rdg_obj'] = False          #感知 OD
     global_dict['is_vis_rdg_occ'] = False          #感知 OCC
     global_dict['is_vis_rdg_groundline'] = False   #感知接地线
-    global_dict['is_vis_rdg_parking_slot'] = False   #感知接地线
+    global_dict['is_vis_rdg_parking_slot'] = False #感知车位
+    global_dict['is_vis_me_obj'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
     global_dict['is_vis_hpp_map'] = True
@@ -72,50 +82,81 @@ def set_value_by_scene(scene):
     global_dict['is_vis_parking_slot'] = True     #融合车位
     global_dict['is_vis_speed_bump'] = True       #融合减速带
     global_dict['is_vis_ground_mark'] = False
+    global_dict['is_vis_rads_path'] = False
+    global_dict['is_vis_nsa_line'] = False
     global_dict['is_vis_prediction'] = False      #预测
+    global_dict['is_vis_around_prediction'] = True      #环视预测
+    global_dict['is_vis_tf_light'] = False
     global_dict['is_vis_ego_motion_sim'] = False
     global_dict['is_vis_snrd'] = False
-    global_dict['is_vis_snrd'] = False
     global_dict['is_vis_smooth_refline'] = False
-    global_dict['is_vis_road_type_line'] = True
-    global_dict['is_vis_tf_light'] = False
+    global_dict['is_vis_static_analysis'] = True
+    global_dict['is_enable_absolute_time'] = True
   elif scene == 'NSA':
     global_dict['scene_type'] = 'NSA'
+    global_dict['g_is_display_enu'] = False
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_sdpromap'] = False
+    global_dict['is_vis_radar'] = False
     global_dict['is_vis_fus_line'] = False
     global_dict['is_vis_lane_topo'] = True
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_rdg_occ'] = True
     global_dict['is_vis_rdg_groundline'] = True
+    global_dict['is_vis_rdg_parking_slot'] = False
+    global_dict['is_vis_me_obj'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+    global_dict['is_vis_hpp_map'] = False
     global_dict['is_vis_fus_obj'] = True
     global_dict['is_vis_occ_obj'] = True
+    global_dict['is_vis_ground_line'] = False
+    global_dict['is_vis_parking_slot'] = False
     global_dict['is_vis_speed_bump'] = True
+    global_dict['is_vis_ground_mark'] = False
+    global_dict['is_vis_rads_path'] = False
     global_dict['is_vis_nsa_line'] = True
     global_dict['is_vis_prediction'] = False
+    global_dict['is_vis_around_prediction'] = False
+    global_dict['is_vis_tf_light'] = False
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True
+    global_dict['is_vis_static_analysis'] = False
+    global_dict['is_enable_absolute_time'] = False
   elif scene == 'RADS':
     global_dict['scene_type'] = 'RADS'
+    global_dict['g_is_display_enu'] = False
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_sdpromap'] = False
+    global_dict['is_vis_radar'] = False
     global_dict['is_vis_fus_line'] = False
     global_dict['is_vis_lane_topo'] = True
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_rdg_occ'] = True
     global_dict['is_vis_rdg_groundline'] = True
+    global_dict['is_vis_rdg_parking_slot'] = False
+    global_dict['is_vis_me_obj'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+    global_dict['is_vis_hpp_map'] = False
     global_dict['is_vis_fus_obj'] = True
     global_dict['is_vis_occ_obj'] = True
+    global_dict['is_vis_ground_line'] = False
+    global_dict['is_vis_parking_slot'] = False
     global_dict['is_vis_speed_bump'] = True
+    global_dict['is_vis_ground_mark'] = False
     global_dict['is_vis_rads_path'] = True
+    global_dict['is_vis_nsa_line'] = False
     global_dict['is_vis_prediction'] = False
+    global_dict['is_vis_around_prediction'] = False
+    global_dict['is_vis_tf_light'] = False
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True
+    global_dict['is_vis_static_analysis'] = False
+    global_dict['is_enable_absolute_time'] = False

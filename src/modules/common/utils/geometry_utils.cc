@@ -44,4 +44,18 @@ bool PolylinesIntersect(const std::vector<Point2d>& A,
   return false;
 }
 
+std::vector<planning_math::Vec2d> GetEgoCorners(
+    double x, double y, double theta,
+    double half_w, double front, double rear) {
+  const double cos_h = std::cos(theta);
+  const double sin_h = std::sin(theta);
+  // 左前、右前、右后、左后
+  return {
+      {x + cos_h * front - sin_h * half_w,  y + sin_h * front + cos_h * half_w},
+      {x + cos_h * front + sin_h * half_w,  y + sin_h * front - cos_h * half_w},
+      {x - cos_h * rear  + sin_h * half_w,  y - sin_h * rear  - cos_h * half_w},
+      {x - cos_h * rear  - sin_h * half_w,  y - sin_h * rear  + cos_h * half_w},
+  };
+}
+
 }  // namespace planning

@@ -71,6 +71,22 @@ def find_nearest(msg, bag_time, find_json = False):
     print("find nearest error!")
     return None
 
+def find_nearest_with_absolute_ts(msg, timestamp, find_json = False):
+  try:
+    if msg['enable']  == True:
+      msg_idx = 0
+      while msg['timestamp'][msg_idx] < timestamp and msg_idx < (len(msg['timestamp'])-2):
+        msg_idx = msg_idx + 1
+      if find_json:
+        return msg['json'][msg_idx]
+      else:
+        return msg['data'][msg_idx]
+    else:
+      return None
+  except:
+    print("find nearest error!")
+    return None
+
 def load_car_params_patch(car_type = 'CHERY_E0X'):
   if car_type == 'JAC_S811':
     car_x = [3.187342, 3.424531, 3.593071,  3.593071,  3.424531,  3.187342,   2.177994,  1.916421,  1.96496, -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357, 1.96496, 1.916421, 2.177994]
@@ -2449,6 +2465,17 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
     # 绝对坐标系下的数据
     long_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.x
     lat_pos = obstacle_list[i].fusion_obstacle.common_info.center_position.y
+    if obstacle_list[i].fusion_obstacle.common_info.type == 28:
+      long_pos = obstacle_list[i].fusion_obstacle.common_info.position.x
+      lat_pos = obstacle_list[i].fusion_obstacle.common_info.position.y
+
+    if abs(long_pos) < 0.1 and abs(lat_pos) < 0.1:
+      long_pos = obstacle_list[i].fusion_obstacle.common_info.position.x
+      lat_pos = obstacle_list[i].fusion_obstacle.common_info.position.y
+
+    long_pos = obstacle_list[i].fusion_obstacle.common_info.position.x
+    lat_pos = obstacle_list[i].fusion_obstacle.common_info.position.y
+
     theta = obstacle_list[i].fusion_obstacle.common_info.heading_angle
     cos_heading = math.cos(theta)
     sin_heading = math.sin(theta)
@@ -2528,8 +2555,8 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
 
     obs_info_all[source]['obstacles_x'].append(obs_x)
     obs_info_all[source]['obstacles_y'].append(obs_y)
-    obs_info_all[source]['pos_x'].append(long_pos_rel)
-    obs_info_all[source]['pos_y'].append(lat_pos_rel)
+    obs_info_all[source]['pos_x'].append(long_pos)
+    obs_info_all[source]['pos_y'].append(lat_pos)
 
   return obs_info_all
 

@@ -9,7 +9,7 @@
 #include "speed/sl_polygon_seq.h"
 #include "utils/kd_path.h"
 namespace planning {
-
+const double kHPPExtensionLength = 10.0;
 class ReferencePath;
 
 class FrenetObstacle {
@@ -93,7 +93,7 @@ class FrenetObstacle {
       planning_math::Polygon2d& obstacle_polygon) const;
 
  private:
-  void compute_frenet_obstacle(const ReferencePath& reference_path);
+  void compute_frenet_obstacle(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
