@@ -509,8 +509,9 @@
     "enable_navi_time_distance_control": false
   },
   "lat_motion_ilqr": {
+    "horizon": 35,
     "pass_acc_mode": false,
-    "warm_start_enable": false,
+    "warm_start_enable": true,
     "delta_t": 0.2,
     "min_v_cruise": 0.2,
     "min_ego_vel": 1.0,
