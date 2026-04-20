@@ -28,8 +28,8 @@ TaskPipelineRADS::TaskPipelineRADS(
                                                                  session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
-  gap_selector_decider_ =
-      std::make_unique<GapSelectorDecider>(config_builder, session);
+  // gap_selector_decider_ =
+  //     std::make_unique<GapSelectorDecider>(config_builder, session);
   rads_general_lateral_decider_ =
       std::make_unique<RADSGeneralLateralDecider>(config_builder, session);
   traffic_light_decider_ =
@@ -141,12 +141,12 @@ bool TaskPipelineRADS::Run() {
     return false;
   }
 
-  // cailiu2 的gap selector将来可以挪至下方
-  ok = gap_selector_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(gap_selector_decider_->Name());
-    return false;
-  }
+  // // cailiu2 的gap selector将来可以挪至下方
+  // ok = gap_selector_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(gap_selector_decider_->Name());
+  //   return false;
+  // }
 
   ok = rads_general_lateral_decider_->Execute();
   if (!ok) {
