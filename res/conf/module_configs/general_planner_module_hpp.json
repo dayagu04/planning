@@ -2,6 +2,7 @@
   "trajectory_time_length": 5.0,
   "planning_dt": 0.2,
   "enable_raw_ego_prediction": false,
+  "enable_parking_prediction": true,
   "planner_type": 3,
   "failure_counter_thrshld": 5,
   "enable_dagger": false,
@@ -141,7 +142,7 @@
   "stop_distance_to_destination": 0.5,
   "lateral_optimization_weight_end_point": 500.0,
   "safe_buffer": 0.3,
-  "hpp_collision_threshold": 0.01,
+  "hpp_collision_threshold": 0.3,
   "is_valid_lateral_offset" : true,
   "near_car_thr": 0.25,
   "lat_safety_buffer": 1.0,
@@ -714,6 +715,17 @@
       "lat_distance_close_enough_to_planned_path_thrd": 0.61,
       "mute_invade_neighbor_decision": true
     },
+    "agent_longitudinal_decider": {
+      "hpp_reverse_near_s_threshold_m": 40.0,
+      "hpp_reverse_mid_s_threshold_m": 55.0,
+      "hpp_reverse_near_lat_gap_ignore_m": 2.5,
+      "hpp_reverse_mid_lat_gap_ignore_m": 1.5,
+      "hpp_reverse_far_keep_lat_gap_m": 1.0,
+      "hpp_reverse_min_filter_distance_m": 30.0,
+      "hpp_reverse_longitudinal_ttc_s": 6.0,
+      "hpp_reverse_hysteresis_frames_to_ignore": 3,
+      "hpp_reverse_hysteresis_frames_to_keep": 3
+    },
     "agent_headway_decider": {
       "ego_vel_table": [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0],
       "ego_normal_thw_table_level_1": [0.6, 0.7, 0.8, 0.9, 1.0, 1.0, 1.0, 1.0, 1.0],
@@ -727,6 +739,11 @@
       "thw_low_rate_lane_change_to_lane_keep": 0.15,
       "thw_target_low_value_lane_change": 0.8,
       "thw_scale_up_factor": 1.2
+    },
+    "st_graph": {
+      "hpp_large_agent_extra_lat_buffer": 0.05,
+      "hpp_lat_buffer_bias": 0.2,
+      "hpp_lat_buffer_min": 0.15
     },
     "st_graph_searcher": {
       "enable_only_s_t_hash": true,

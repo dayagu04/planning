@@ -1827,5 +1827,48 @@ planning_math::Box2d StGraphUtils::MakeEgoBox(
   return ego_box;
 }
 
+BufferType StGraphUtils::GetHppBufferTypeForAgent(const agent::Agent& agent) {
+  using AT = agent::AgentType;
+  if (agent.is_vru()) return BUFFER_TYPE_VRU;
+  if (agent.is_vehicle_type()) return BUFFER_TYPE_VEHICLE;
+  const auto t = agent.type();
+  // 常规车辆（is_vehicle_type 未覆盖的子类型）
+  if (t == AT::SUV || t == AT::MPV || t == AT::PICKUP ||
+      t == AT::ENGINEERING_VEHICLE || t == AT::SPECIAL_VEHICLE ||
+      t == AT::UNKNOWN_MOVABLE) {
+    return BUFFER_TYPE_VEHICLE;
+  }
+  // 其余类型（OCC、静态障碍物等）统一归为不可移动物体
+  return BUFFER_TYPE_UNMOVABLE_OBJ;
+}
+
+double StGraphUtils::GetHppLateralBuffer(const agent::Agent& agent,
+                                         double ego_v,
+                                         double hpp_large_agent_extra,
+                                         double hpp_lat_buffer_bias,
+                                         double hpp_lat_buffer_min) {
+  const BufferType type = GetHppBufferTypeForAgent(agent);
+  const std::vector<EnvType> env_types{};
+
+  // 对向来车传入agent.speed()，非对向来车传入0
+  const double obs_v = (agent.is_reverse() && agent.is_vehicle_type()) ? agent.speed() : 0.0;
+
+  double lat_buffer = HPPParameterUtil::CalculateLatBuffer(
+      type, ego_v, obs_v, env_types);
+
+  // 减去固定bias
+  lat_buffer -= hpp_lat_buffer_bias;
+
+  // 大车额外增加安全距离
+  if (StGraphUtils::IsLargeAgent(agent)) {
+    lat_buffer += hpp_large_agent_extra;
+  }
+
+  // 确保不低于最小安全距离
+  lat_buffer = std::fmax(lat_buffer, hpp_lat_buffer_min);
+
+  return lat_buffer;
+}
+
 }  // namespace speed
 }  // namespace planning
