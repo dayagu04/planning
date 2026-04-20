@@ -520,6 +520,40 @@ bool LDRouteInfoStrategy::CalculateCurrentLink() {
   return true;
 }
 
+bool LDRouteInfoStrategy::IsLaneForwardOnRouteLink(
+    uint64_t lane_id, double search_distance) const {
+  const auto* lane = ld_map_.GetLaneInfoByID(lane_id);
+  if (lane == nullptr) {
+    return false;
+  }
+  if (!ld_map_.isOnRouteLinks(lane->link_id())) {
+    return false;
+  }
+
+  double lane_len = lane->length() * 0.01;
+  if (current_link_ != nullptr && lane->link_id() == current_link_->id()) {
+    lane_len -= ego_on_cur_link_s_;
+  }
+
+  if (lane_len >= search_distance) {
+    return true;
+  }
+
+  double remaining = search_distance - lane_len;
+
+  if (lane->successor_lane_ids_size() == 0) {
+    return true;
+  }
+
+  for (int i = 0; i < lane->successor_lane_ids_size(); ++i) {
+    if (IsLaneForwardOnRouteLink(lane->successor_lane_ids(i), remaining)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool LDRouteInfoStrategy::IsInExpressWay() {
   // 判断自车当前是否在高速或者高架上
   if (current_link_->link_class() ==
@@ -1710,6 +1744,24 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       if (is_accelerate_lane && is_ego_on_this_lane &&
           IsTheLaneOnSide(lane, is_leftest, is_rightest)) {
         route_info_output_.is_ego_on_accelerate_lane = true;
+        break;
+      }
+    }
+
+    // 检测自车所在lane前方是否还在route_link上
+    constexpr double kForwardOnRouteLinkCheckDis = 100.0;
+    route_info_output_.is_ego_lane_forward_on_route_link = true;
+    for (const auto& lane_id : current_link_->lane_ids()) {
+      const auto& lane = ld_map_.GetLaneInfoByID(lane_id);
+      if (lane == nullptr) {
+        continue;
+      }
+      bool is_ego_on_this_lane =
+          route_info_output_.ego_seq ==
+          current_link_->lane_num() - lane->sequence() + 1;
+      if (is_ego_on_this_lane) {
+        route_info_output_.is_ego_lane_forward_on_route_link =
+            IsLaneForwardOnRouteLink(lane_id, kForwardOnRouteLinkCheckDis);
         break;
       }
     }

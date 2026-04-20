@@ -151,6 +151,10 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
 
   bool IsInExpressWay();
 
+  // 检测给定lane_id在指定搜索距离前方是否还在route_link上
+  // 如果lane有多个后继，只有当所有后继都不在route_link上时才返回false
+  bool IsLaneForwardOnRouteLink(uint64_t lane_id, double search_distance) const;
+
   struct EgoPositionResult {
     bool is_between_links;     // 横向在两条link之间
     bool is_left_of_link1;     // 在link1左侧
