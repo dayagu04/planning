@@ -1096,6 +1096,8 @@ bool LaneChangeRequest::ConeSituationJudgement(
           front_vehicle_iter->second->type() ==
               iflyauto::OBJECT_TYPE_CTASH_BARREL ||
           front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_TRAFFIC_BARREL ||
+          front_vehicle_iter->second->type() ==
               iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER) {
         if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
             front_vehicle_iter->second->d_s_rel() >
