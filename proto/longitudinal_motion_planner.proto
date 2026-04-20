@@ -92,11 +92,21 @@ message LongitudinalPlanningOutput {
 message LonSolverIterationInfo {
   optional bool linesearch_success = 1;
   optional uint32 backward_pass_count = 2;
-  optional double lambda = 3;
+  optional double lambda_value = 3;
   optional double cost = 4;
   optional double dcost = 5;
   optional double expect = 6;
   optional double du_norm = 7;
+}
+
+message LonAlOuterIterInfo {
+  optional uint32 inner_iter_count = 1;
+  optional double init_cost = 2;
+  optional double final_cost = 3;
+  optional double constraint_violation = 4;
+  optional double dcost_outer = 5;
+  repeated LonSolverIterationInfo inner_iter_info = 6;
+  repeated double cost_vec = 7;
 }
 
 message LonSolverInfo {
@@ -106,4 +116,8 @@ message LonSolverInfo {
   optional double init_cost = 4;
   repeated LonSolverIterationInfo iter_info = 5;
   repeated double cost_vec = 6;
+  optional uint32 outer_iter_count = 7;
+  optional double constraint_violation = 8;
+  optional double dcost_outer = 9; 
+  repeated LonAlOuterIterInfo al_outer_iter_info = 10;
 }

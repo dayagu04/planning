@@ -26,7 +26,7 @@ class JointMotionInputBuilder {
   void SetObstaclesSelector(
       std::shared_ptr<JointMotionObstaclesSelector> obstacles_selector);
 
-  const std::vector<double>& GetKeyAgentIds() const { return key_agent_ids_; }
+  const std::vector<int32_t>& GetKeyAgentIds() const { return key_agent_ids_; }
 
  private:
   void BuildEgoAndWeightInfo(
@@ -85,7 +85,7 @@ class JointMotionInputBuilder {
   static constexpr double kPlanningTimeStep = 0.2;
   static constexpr int kPlanningTimeSteps = 26;
   int32 lead_one_id_ = -1;
-  std::vector<double> key_agent_ids_;
+  std::vector<int32_t> key_agent_ids_;
 };
 
 }  // namespace planning

@@ -6,6 +6,7 @@
 #include "agent/agent.h"
 #include "ego_planning_config.h"
 #include "environmental_model_manager.h"
+#include "common/constraint_check/collision_checker.h"
 #include "memory"
 #include "tasks/task.h"
 #include "virtual_lane.h"
@@ -34,6 +35,10 @@ class StopDestinationDecider : public Task {
       agent::AgentDefaultInfo::kNoAgentId;
   // HPP 场景下终点前停车距离（来自 LongitudinalDeciderV3Config）
   double hpp_stop_distance_to_destination_ = 0.0;
+  std::shared_ptr<planning_math::CollisionChecker> lon_collision_checker_;
+  std::vector<double> rads_bound_s_by_collision_check_;
+  bool rads_collision_check_sref_set_flag_ = false;
+  int rads_collision_check_sref_recover_counter_ = 0;
 };
 
 }  // namespace planning

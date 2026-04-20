@@ -6872,6 +6872,7 @@ void RouteInfo::GetStrategy() {
       map_updated = true;
     } else if (local_view.sdpro_map_info.data_source() ==
                iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
+      // TODO: change to async          
       route_info_strategy_ = std::make_shared<SDProRouteInfoStrategy>(
           &mlc_decider_config_, session_);
       map_updated = true;

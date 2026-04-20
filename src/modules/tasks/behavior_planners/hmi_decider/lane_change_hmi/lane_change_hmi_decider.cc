@@ -39,6 +39,27 @@ void LaneChangeHmiDecider::UpdateTurnSignal() {
           LaneBorrowStatus::kLaneBorrowWaitting;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const bool is_split_select_executing =
+      lane_change_decider_output.split_selecting_status ==
+          StateMachineSplitSelectingStatus::kSelectingExecuting &&
+      lane_change_decider_output.split_select_direction !=
+          SplitSelectingDirection::SplitSelectingNone;
+  const bool is_split_select_complete =
+      lane_change_decider_output.split_selecting_status ==
+          StateMachineSplitSelectingStatus::kSelectingComplete &&
+      lane_change_decider_output.split_select_direction !=
+          SplitSelectingDirection::SplitSelectingNone;
+  if (is_split_select_executing) {
+    planning_result.turn_signal =
+        lane_change_decider_output.split_select_direction ==
+                SplitSelectingDirection::SplitSelectingLeft
+            ? RequestType::LEFT_CHANGE
+            : RequestType::RIGHT_CHANGE;
+    return;
+  }
+  if (is_split_select_complete) {
+    return;
+  }
   bool turn_signal_from_ramp_direction =
       last_frame_dir_turn_signal_road_to_ramp_ !=
       RampDirection::RAMP_NONE;

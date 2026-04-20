@@ -53,7 +53,9 @@ void JointMotionInputBuilder::BuildInput(
   key_agent_ids_.clear();
   BuildObsInfo(planning_input);
 
-  JSON_DEBUG_VECTOR("joint_key_agent_ids", key_agent_ids_, 0);
+  JSON_DEBUG_VECTOR(
+      "joint_key_agent_ids",
+      std::vector<double>(key_agent_ids_.begin(), key_agent_ids_.end()), 0);
 
   BuildRoadInfo(planning_input, planning_problem_ptr);
 }
@@ -468,25 +470,9 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
   if (is_in_lane_change_condition) {
     const auto& dynamic_world =
         session_->environmental_model().get_dynamic_world();
-    const auto lc_request_direction = lane_change_decider_output.lc_request;
 
-    int64_t target_lane_front_node_id = -1;
-
-    if (lc_request_direction == LEFT_CHANGE) {
-      if (lane_change_state == kLaneChangeExecution ||
-          lane_change_state == kLaneChangeComplete) {
-        target_lane_front_node_id = dynamic_world->ego_front_node_id();
-      } else {
-        target_lane_front_node_id = dynamic_world->ego_left_front_node_id();
-      }
-    } else if (lc_request_direction == RIGHT_CHANGE) {
-      if (lane_change_state == kLaneChangeExecution ||
-          lane_change_state == kLaneChangeComplete) {
-        target_lane_front_node_id = dynamic_world->ego_front_node_id();
-      } else {
-        target_lane_front_node_id = dynamic_world->ego_right_front_node_id();
-      }
-    }
+    int64_t target_lane_front_node_id =
+        lane_change_decider_output.lc_gap_info.front_node_id;
 
     if (target_lane_front_node_id != -1) {
       auto* target_lane_front_node =
@@ -550,14 +536,16 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
   double speed_limit_normal = cruise_speed;
   if (is_in_lane_change_condition) {
     speed_limit_normal = std::fmin(
-        speed_limit_normal, speed_planning_config_.lane_change_upper_speed_limit_kph / 3.6);
+        speed_limit_normal,
+        speed_planning_config_.lane_change_upper_speed_limit_kph / 3.6);
   }
 
   double speed_limit_ref = std::numeric_limits<double>::max();
   auto speed_limit_type_ref = SpeedLimitType::NONE;
   speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
                                            &speed_limit_type_ref);
-  const double current_limit_speed = std::fmin(speed_limit_normal, speed_limit_ref);
+  const double current_limit_speed =
+      std::fmin(speed_limit_normal, speed_limit_ref);
   JSON_DEBUG_VALUE("joint_limit_speed", current_limit_speed);
 
   double current_s = 0.0;

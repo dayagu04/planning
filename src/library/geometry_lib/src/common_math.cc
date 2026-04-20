@@ -121,6 +121,7 @@ const bool SamplePathSeg(std::vector<PathPt<T>>& pts, const PathSeg<T>& seg,
   pn.pos = seg.GetStartPos();
   pn.theta = seg.GetStartTheta();
   pn.kappa = kappa;
+  pn.gear = seg.gear;
   pts.emplace_back(pn);
 
   // get mid point

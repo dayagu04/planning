@@ -7,6 +7,7 @@
 #include "reference_path_manager.h"
 #include "session.h"
 #include "tasks/task.h"
+#include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
 
 namespace planning {
 
@@ -49,6 +50,18 @@ class EgoLaneRoadRightDecider : public Task {
   const double CalculateAverageKappa(
       const std::shared_ptr<planning_math::KDPath> cur_kd_path);
 
+  CurvInfo CalculateAverageCurvature(
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      double target_s,
+      int window_half_size = 6,
+      double step_length = 2.0);
+
+  double CalculateLaneDirectionCost(const std::shared_ptr<ReferencePath> path,
+                                    const Point2D& merge_point,
+                                    const double front_distance,
+                                    const double rear_distance,
+                                    double& angle);
+
   void CalculateRoadRight(const int calculate_nums);
 
   bool IsVirtualLaneLine(const int lane_virtual_id);
@@ -68,11 +81,14 @@ class EgoLaneRoadRightDecider : public Task {
   Point2D boundary_merge_point_;
   double merge_point_distance_ = NL_NMAX;
   bool cur_lane_is_continue_;
+  bool is_sharp_curve_ = false;
   bool boundary_merge_point_valid_ = false;
   bool ego_lane_boundary_exist_virtual_line_ = false;
   bool target_lane_boundary_exist_virtual_line_ = true;
   bool is_left_merge_direction_ = false;
   bool is_right_merge_direction_ = false;
+  bool is_overlap_left_ = false;
+  bool is_overlap_right_ = false;
 };
 
 }  // namespace planning

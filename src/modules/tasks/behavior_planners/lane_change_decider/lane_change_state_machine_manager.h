@@ -91,6 +91,33 @@ struct LaneChangeStageInfo {
     is_cancel_to_hold = false;
   }
 };
+struct SplitSelectingInfo{
+  StateMachineSplitSelectingStatus split_selecting_status = kNonSelecting;
+  SplitSelectingDirection split_select_direction = SplitSelectingNone;
+  int origin_lane_order_id = -1;
+  int selected_lane_order_id = -1;
+  int origin_lane_virtual_id = -100;
+  int selected_lane_virtual_id = -100;
+  enum UnfinishedReason{
+    NONE_REASON = 0,
+    NO_FIX_LANE = 1,
+    STILL_IN_SPLIT_REGION = 2,
+    NO_FIX_LANE_REF = 3,
+    NOT_CLOSE_TO_FIX_LANE = 4,
+    NO_INTERACTIVE_CMD = 5,
+    NO_SPLIT_REGION = 6,
+  };
+  UnfinishedReason unfinished_reason = NONE_REASON;
+  void Reset() {
+    split_selecting_status = kNonSelecting;
+    split_select_direction = SplitSelectingNone;
+    origin_lane_order_id = -1;
+    selected_lane_order_id = -1;
+    origin_lane_virtual_id = -100;
+    selected_lane_virtual_id = -100;
+    unfinished_reason = NONE_REASON;
+  }
+};
 class LaneChangeStateMachineManager {
  public:
   LaneChangeStateMachineManager(
@@ -104,6 +131,7 @@ class LaneChangeStateMachineManager {
   void Update();
   void ResetStateMachine();
   void WeaklyResetStateMachine();
+  void OnlyResetLCStateMachine();
 
  private:
   void PreProcess();
@@ -293,6 +321,12 @@ class LaneChangeStateMachineManager {
       int origin_lane_id, const StateMachineLaneChangeStatus& lc_status,
       const RequestSource& lc_request_source,
       const RequestType& lc_request_type) const;
+  void SplitSelectingStateMachine();
+  bool IsStartSplitSelecting();
+  void SetSelectingDirection(SplitSelectingInfo& split_selecting_info);
+  bool UpdateSelectingFixlane();
+  bool IsSelectingToComplete();
+  void ResetSplitSelectingStateMachine();
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
@@ -381,5 +415,6 @@ class LaneChangeStateMachineManager {
   bool is_aggressive_scence_{false}; // 激进场景标志位
   // 用于判断紧急场景
   bool IsEmergencyScene() const;
+  SplitSelectingInfo split_selecting_info_;
 };
 }  // namespace planning

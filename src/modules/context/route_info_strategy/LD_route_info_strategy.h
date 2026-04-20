@@ -3,6 +3,10 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <queue>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <atomic>
 #include "local_view.h"
 #include "route_info_strategy.h"
 // #include "hdmap/hdmap.h"
@@ -97,6 +101,7 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
                       const planning::framework::Session* session);
 
   void Update(RouteInfoOutput& route_info_output) override;
+  ~LDRouteInfoStrategy();
 
   void CalculateMLCDecider(
       const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
@@ -427,6 +432,21 @@ class LDRouteInfoStrategy : public RouteInfoStrategy {
       const iflymapdata::sdpro::LinkInfo_Link* successor_link2) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
+  ad_common::sdpromap::SDProMap pending_ld_map_;  // 后台加载的缓冲地图
+  uint64_t pending_timestamp_ = 0; // 只在持锁时访问
+  bool is_loading_ = false;
+
+  // 常驻工作线程相关
+  std::thread worker_thread_;
+  std::mutex map_load_mutex_;
+  std::condition_variable map_load_cv_;
+  iflymapdata::sdpro::MapData pending_map_data_;  // 待加载的地图数据
+  bool has_pending_task_ = false;                 // 是否有待处理任务
+  bool worker_stop_ = false;                      // 通知工作线程退出
+  bool load_done_ = false;                        // 本次加载是否完成
+  int load_result_ = -1;                          // 加载结果
+
+  void MapLoadWorker();  // 工作线程函数
   const LocalView* local_view_ = nullptr;
   bool ldmap_valid_{false};
   uint64_t ld_map_info_updated_timestamp_ = 0;
