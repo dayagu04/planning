@@ -102,14 +102,14 @@ void LaneChangeStateMachineManager::RunStateMachine() {
       RequestSource lane_change_type = NO_REQUEST;
       bool is_lanekeeping_to_propose =
           CheckIfProposeLaneChange(&lane_change_direction, &lane_change_type);
-      is_pre_move_ = false;
-      lat_close_boundary_offset_ = 0.0;
       if (is_lanekeeping_to_propose) {
         transition_info_.lane_change_status =
             StateMachineLaneChangeStatus::kLaneChangePropose;
         transition_info_.lane_change_direction = lane_change_direction;
         transition_info_.lane_change_type = lane_change_type;
         lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
+        is_pre_move_ = false;
+        lat_close_boundary_offset_ = 0.0;
       } else {
         // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
         // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
@@ -6240,6 +6240,9 @@ void LaneChangeStateMachineManager::SplitSelectingStateMachine() {
     case kNonSelecting: {
       const auto& virtual_lane_manager = session_->environmental_model().get_virtual_lane_manager();
       const auto& current_lane = virtual_lane_manager->get_current_lane();
+      if(current_lane == nullptr){
+        break;
+      }
       bool is_none_to_selecting = IsStartSplitSelecting();
       if (is_none_to_selecting) {
         split_selecting_info_.split_selecting_status = kSelectingExecuting;
@@ -6256,11 +6259,11 @@ void LaneChangeStateMachineManager::SplitSelectingStateMachine() {
       break;
     }
     case kSelectingExecuting: {
-      bool update_fix_sucess = UpdateSelectingFixlane();  // 设置fix lane id
-      bool is_selecting_to_cancel = !update_fix_sucess;   // 如果没有当前车道非法则取消
+      bool update_fix_success = UpdateSelectingFixlane();  // 设置fix lane id
+      bool is_selecting_to_cancel = !update_fix_success;   // 如果没有当前车道非法则取消
       bool is_selecting_to_complete = IsSelectingToComplete();
       if (is_selecting_to_cancel) {
-        split_selecting_info_.split_selecting_status = kSelectingCancel;
+        split_selecting_info_.split_selecting_status = kNonSelecting;
         split_selecting_info_.split_select_direction = SplitSelectingNone;
       } else if (is_selecting_to_complete) {
         split_selecting_info_.split_selecting_status = kSelectingComplete;
@@ -6268,8 +6271,7 @@ void LaneChangeStateMachineManager::SplitSelectingStateMachine() {
       break;
     }
     case kSelectingComplete: {
-      bool update_fix_sucess = UpdateSelectingFixlane();
-      bool is_complete_to_none = true;
+      bool is_complete_to_none = true; // complete 下一帧恢复none
       if (is_complete_to_none) {
         split_selecting_info_.split_selecting_status = kNonSelecting;
         split_selecting_info_.split_select_direction = SplitSelectingNone;
@@ -6278,13 +6280,6 @@ void LaneChangeStateMachineManager::SplitSelectingStateMachine() {
       }
       break;
     }
-    // case kSelectingCancel:
-    // bool is_cancel_to_none = true;
-    // if(is_cancel_to_none){
-    //   split_selecting_info_.split_selecting_status = kNonSelecting;
-    //   split_selecting_info_.split_select_direction = SplitSelectingNone;
-    // }
-    //   break;
     default:
       break;
   }
