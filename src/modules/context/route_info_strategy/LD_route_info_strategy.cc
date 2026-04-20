@@ -5585,6 +5585,7 @@ void LDRouteInfoStrategy::CalculateDistanceToNOAEnd(
     return;
   }
   double distance_to_enter_city = 0.0;
+  constexpr double kMaxNOAEndSearchDistance = 3000.0;
   // 当前位于NOA状态，计算到地图信息终点/NOA
   if (route_info_output_.is_ego_on_expressway) {
     const auto* iter_link = segment;
@@ -5602,7 +5603,7 @@ void LDRouteInfoStrategy::CalculateDistanceToNOAEnd(
           distance_to_enter_city += iter_link->length() * 0.01;
         }
         // 大于3km直接break
-        if (distance_to_enter_city > 3000.0) {
+        if (distance_to_enter_city > kMaxNOAEndSearchDistance) {
           break;
         }
         iter_link = ld_map_.GetNextLinkOnRoute(iter_link->id());
