@@ -65,7 +65,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<SccLateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
-  std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
+//   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>

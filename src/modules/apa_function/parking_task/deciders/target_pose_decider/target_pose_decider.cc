@@ -52,35 +52,38 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
             << col_det_interface_ptr_->GetFoldMirrorFlag()
             << "  heading in = " << heading_in;
   const ApaParameters& param = apa_param.GetParam();
-  const geometry_lib::GlobalToLocalTf g2l_tf = slot_.g2l_tf_;
-  const geometry_lib::LocalToGlobalTf l2g_tf = slot_.l2g_tf_;
+  const geometry_lib::GlobalToLocalTf& g2l_tf = slot_.g2l_tf_;
+  const geometry_lib::LocalToGlobalTf& l2g_tf = slot_.l2g_tf_;
   slot_.TransformCoordFromGlobalToLocal(g2l_tf);
+
+  const SlotCoord& processed_pt_local = slot_.processed_corner_coord_local_;
+  const SlotCoord& origin_pt_local = slot_.origin_corner_coord_local_;
+  const SlotCoord& origin_pt_global = slot_.origin_corner_coord_global_;
 
   double virtual_tar_x = 0.0;
   if (slot_.limiter_.valid) {
-    Eigen::Vector2d pt1 = g2l_tf.GetPos(slot_.limiter_.start_pt);
-    Eigen::Vector2d pt2 = g2l_tf.GetPos(slot_.limiter_.end_pt);
+    const Eigen::Vector2d pt1 = g2l_tf.GetPos(slot_.limiter_.start_pt);
+    const Eigen::Vector2d pt2 = g2l_tf.GetPos(slot_.limiter_.end_pt);
 
     virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
 
+    // avoid limit error
+    double max_tar_x = processed_pt_local.pt_01_mid.x() - 0.68;
+    double min_tar_x = processed_pt_local.pt_23_mid.x() + 0.18;
+
     if (heading_in) {
       virtual_tar_x += param.wheel_base;
+      max_tar_x = processed_pt_local.pt_01_mid.x() + 1.68;
     }
 
-    // avoid limit error
-    double max_tar_x = slot_.processed_corner_coord_local_.pt_01_mid.x() - 0.68;
-    if (heading_in) {
-      max_tar_x = slot_.processed_corner_coord_local_.pt_01_mid.x() + 1.68;
-    }
-    double min_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() + 0.18;
     if (!mathlib::IsInBound(virtual_tar_x, min_tar_x, max_tar_x)) {
       slot_.limiter_.valid = false;
     }
   }
 
   if (!slot_.limiter_.valid) {
-    virtual_tar_x = slot_.origin_corner_coord_local_.pt_23_mid.x() +
-                    param.terminal_target_x_to_line;
+    virtual_tar_x =
+        origin_pt_local.pt_23_mid.x() + param.terminal_target_x_to_line;
 
     if (heading_in) {
       virtual_tar_x += (param.front_overhanging + param.wheel_base);
@@ -89,9 +92,8 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     }
 
     // park in the middle of the slot
-    const double mid_x = (slot_.origin_corner_coord_local_.pt_01_mid.x() +
-                          slot_.origin_corner_coord_local_.pt_23_mid.x()) *
-                         0.5;
+    const double mid_x =
+        (origin_pt_local.pt_01_mid.x() + origin_pt_local.pt_23_mid.x()) * 0.5;
 
     double mid_ego_x =
         mid_x - (0.5 * param.car_length - param.rear_overhanging);
@@ -102,7 +104,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     virtual_tar_x = std::max(virtual_tar_x, mid_ego_x);
   }
 
-  double redundant_y = (slot_.slot_width_ - param.car_width) * 0.5;
+  const double redundant_y = (slot_.slot_width_ - param.car_width) * 0.5;
   double offset_y = 0.0;
   if (redundant_y >
       param.lat_lon_target_pose_buffer.preference_lat_offset + 1e-2f) {
@@ -115,16 +117,19 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     }
   }
 
+  const double terminal_target_heading =
+      param.terminal_target_heading * kDeg2Rad;
+  const double target_heading =
+      heading_in ? (terminal_target_heading + M_PI) : terminal_target_heading;
   geometry_lib::PathPoint tar_pose_local;
   geometry_lib::PathPoint tar_pose_global;
-  tar_pose_local.pos << virtual_tar_x, offset_y;
-  tar_pose_local.heading = param.terminal_target_heading * kDeg2Rad;
-  if (heading_in) {
-    tar_pose_local.heading += M_PI;
-  }
-
-  tar_pose_global =
-      geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
+  auto update_target_pose = [&](const double lat_offset) {
+    tar_pose_local.pos << virtual_tar_x, lat_offset;
+    tar_pose_local.heading = target_heading;
+    tar_pose_global =
+        geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
+  };
+  update_target_pose(offset_y);
 
   ILOG_INFO << "target pose offset_y = " << offset_y;
 
@@ -135,17 +140,12 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     return result_;
   }
 
-  Eigen::Vector2d lon_move_dir =
-      slot_.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
-
-  Eigen::Vector2d lat_move_dir =
-      slot_.origin_corner_coord_global_.pt_01_unit_vec;
-
-  if (base_on_slot_) {
-    lon_move_dir = slot_.origin_corner_coord_local_.pt_23mid_01mid_unit_vec;
-
-    lat_move_dir = slot_.origin_corner_coord_local_.pt_01_unit_vec;
-  }
+  const Eigen::Vector2d lon_move_dir =
+      base_on_slot_ ? origin_pt_local.pt_23mid_01mid_unit_vec
+                    : origin_pt_global.pt_23mid_01mid_unit_vec;
+  const Eigen::Vector2d lat_move_dir = base_on_slot_
+                                           ? origin_pt_local.pt_01_unit_vec
+                                           : origin_pt_global.pt_01_unit_vec;
 
   ApaObsMovementType consider_obs_movement_type;
   bool use_limiter = true;
@@ -173,20 +173,16 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
 
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
       col_det_interface_ptr_->GetGJKColDetPtr();
+  const geometry_lib::PathPoint& base_target_pose =
+      base_on_slot_ ? tar_pose_local : tar_pose_global;
 
   if (std::fabs(offset_y) > 1e-3) {
-    std::vector<geometry_lib::PathPoint> tmp_pose_vec;
-    geometry_lib::PathPoint tmp_pose;
-    std::vector<double> lon_path_vec{
+    std::vector<geometry_lib::PathPoint> tmp_pose_vec(3);
+    const double preference_lon_path_vec[] = {
         -param.lat_lon_target_pose_buffer.preference_lon_buffer, 1.0, 2.0};
-    for (const double dist : lon_path_vec) {
-      if (base_on_slot_) {
-        tmp_pose = tar_pose_local;
-      } else {
-        tmp_pose = tar_pose_global;
-      }
-      tmp_pose.pos = tmp_pose.pos + dist * lon_move_dir;
-      tmp_pose_vec.emplace_back(tmp_pose);
+    for (size_t i = 0; i < tmp_pose_vec.size(); ++i) {
+      tmp_pose_vec[i] = base_target_pose;
+      tmp_pose_vec[i].pos += preference_lon_path_vec[i] * lon_move_dir;
     }
 
     if (gjl_det_ptr
@@ -196,13 +192,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
                      param.lat_lon_target_pose_buffer.max_lat_mirror_buffer)
             .col_flag) {
       offset_y = 0.0;
-      tar_pose_local.pos << virtual_tar_x, offset_y;
-      tar_pose_local.heading = param.terminal_target_heading * kDeg2Rad;
-      if (heading_in) {
-        tar_pose_local.heading += M_PI;
-      }
-      tar_pose_global =
-          geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
+      update_target_pose(offset_y);
 
       ILOG_INFO << "target pose offset_y is invalid, recover to 0.0 = "
                 << offset_y;
@@ -210,8 +200,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   }
 
   // calc max_lat_move_dist and max_lon_move_dist
-  double max_lat_move_dist{0.};
-  max_lat_move_dist = 0.5 * (slot_.slot_width_ - param.car_width);
+  double max_lat_move_dist = 0.5 * (slot_.slot_width_ - param.car_width);
   // The distance between the body and the slot line: positive value indicates
   // the line cannot be crossed, negative value means crossing is allowed
   double car2line_dist_threshold = param.car2line_dist_threshold;
@@ -221,13 +210,13 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   max_lat_move_dist -= param.car2line_dist_threshold;
   max_lat_move_dist = std::max(max_lat_move_dist, 0.0001);
   double max_lon_move_dist{0.};
-  double dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
+  double dx = origin_pt_local.pt_01_mid.x() -
               (virtual_tar_x + param.wheel_base + param.front_overhanging);
   if (heading_in) {
-    dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
+    dx = origin_pt_local.pt_01_mid.x() -
          (virtual_tar_x + param.rear_overhanging);
   }
-  double front_exceed_line_dx = apa_param.GetParam().max_front_exceed_line_dx;
+  double front_exceed_line_dx = param.max_front_exceed_line_dx;
   if (slot_.slot_type_ == SlotType::SLANT) {
     front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
   }
@@ -282,7 +271,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
 
   std::vector<double> small_lon_dist_vec;
   std::vector<double> big_lon_dist_vec;
-  std::vector<std::vector<double>> all_lon_dist_vec;
   for (double lon_move_dist = 0.0;
        lon_move_dist < max_lon_move_dist + lon_move_step * 0.5;
        lon_move_dist += lon_move_step) {
@@ -296,10 +284,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
   if (is_searching_stage_) {
     small_lon_dist_vec.insert(small_lon_dist_vec.end(),
                               big_lon_dist_vec.begin(), big_lon_dist_vec.end());
-    all_lon_dist_vec.emplace_back(small_lon_dist_vec);
-  } else {
-    all_lon_dist_vec.emplace_back(small_lon_dist_vec);
-    all_lon_dist_vec.emplace_back(big_lon_dist_vec);
   }
 
   std::vector<double> lat_dist_vec{0.0};
@@ -314,86 +298,80 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
       (param.lat_lon_path_buffer.in_slot_body_lat_buffer -
        param.lat_lon_path_buffer.in_slot_mirror_lat_buffer);
 
-  std::vector<std::pair<double, double>> lat_body_mirror_buf_vec;
-  lat_body_mirror_buf_vec.resize(lat_body_buffer_vec_.size());
-  for (size_t i = 0; i < lat_body_buffer_vec_.size(); ++i) {
-    lat_body_mirror_buf_vec[i] = {lat_body_buffer_vec_[i],
-                                  lat_mirror_buffer_vec_[i]};
-  }
-
   bool exist_target_pose = false;
-  geometry_lib::PathPoint tmp_pose;
-  for (const std::vector<double>& lon_dist_vec : all_lon_dist_vec) {
-    for (const auto& lat_buffer : lat_body_mirror_buf_vec) {
-      for (const double lat_move_dist : lat_dist_vec) {
-        for (const double lon_move_dist : lon_dist_vec) {
-          std::vector<geometry_lib::PathPoint> tmp_pose_vec;
-          std::vector<double> lon_path_vec{lon_move_dist - lon_buffer_,
-                                           lon_move_dist, lon_move_dist + 1.0,
-                                           lon_move_dist + 2.0};
-          for (const double dist : lon_path_vec) {
-            if (base_on_slot_) {
-              tmp_pose = tar_pose_local;
-            } else {
-              tmp_pose = tar_pose_global;
-            }
-            tmp_pose.pos = tmp_pose.pos + lat_move_dist * lat_move_dir +
-                           dist * lon_move_dir;
-            tmp_pose_vec.emplace_back(tmp_pose);
-          }
+  std::vector<geometry_lib::PathPoint> tmp_pose_vec(4);
+  const auto search_target_pose_in_lon_group =
+      [&](const std::vector<double>& lon_dist_vec) {
+        for (size_t i = 0; i < lat_body_buffer_vec_.size(); ++i) {
+          const double lat_body_buffer = lat_body_buffer_vec_[i];
+          const double lat_mirror_buffer = lat_mirror_buffer_vec_[i];
+          for (const double lat_move_dist : lat_dist_vec) {
+            const Eigen::Vector2d lat_offset = lat_move_dist * lat_move_dir;
+            for (const double lon_move_dist : lon_dist_vec) {
+              const double lon_path_vec[] = {lon_move_dist - lon_buffer_,
+                                             lon_move_dist, lon_move_dist + 1.0,
+                                             lon_move_dist + 2.0};
+              for (size_t pose_idx = 0; pose_idx < tmp_pose_vec.size();
+                   ++pose_idx) {
+                tmp_pose_vec[pose_idx] = base_target_pose;
+                tmp_pose_vec[pose_idx].pos +=
+                    lat_offset + lon_path_vec[pose_idx] * lon_move_dir;
+              }
 
-          const ColResult& res =
-              gjl_det_ptr->Update(tmp_pose_vec, lat_buffer.first, 0.0,
-                                  gjk_col_det_request, true, lat_buffer.second);
-          if (!res.col_flag) {
-            exist_target_pose = true;
-            result_.safe_lon_move_dist = lon_move_dist;
-            result_.safe_lat_move_dist = lat_move_dist;
-            result_.safe_lat_body_buffer = lat_buffer.first;
-            result_.safe_lat_mirror_buffer = lat_buffer.second;
-            if (base_on_slot_) {
-              result_.target_pose_local = tmp_pose_vec[1];
-              result_.target_pose_global =
-                  geometry_lib::TransformPoseFromLocalToGlobal(
-                      result_.target_pose_local, l2g_tf);
-            } else {
-              result_.target_pose_global = tmp_pose_vec[1];
-              result_.target_pose_local =
-                  geometry_lib::TransformPoseFromGlobalToLocal(
-                      result_.target_pose_global, g2l_tf);
-            }
+              const ColResult& res = gjl_det_ptr->Update(
+                  tmp_pose_vec, lat_body_buffer, 0.0, gjk_col_det_request, true,
+                  lat_mirror_buffer);
+              if (res.col_flag) {
+                continue;
+              }
 
-            ILOG_INFO << "exist_target_pose = " << exist_target_pose
-                      << "  safe_lon_move_dist = " << result_.safe_lon_move_dist
-                      << "  safe_lat_move_dist = " << result_.safe_lat_move_dist
-                      << "  safe_lat_body_buffer = "
-                      << result_.safe_lat_body_buffer
-                      << "  safe_lat_mirror_buffer = "
-                      << result_.safe_lat_mirror_buffer;
-            break;
+              exist_target_pose = true;
+              result_.safe_lon_move_dist = lon_move_dist;
+              result_.safe_lat_move_dist = lat_move_dist;
+              result_.safe_lat_body_buffer = lat_body_buffer;
+              result_.safe_lat_mirror_buffer = lat_mirror_buffer;
+              if (base_on_slot_) {
+                result_.target_pose_local = tmp_pose_vec[1];
+                result_.target_pose_global =
+                    geometry_lib::TransformPoseFromLocalToGlobal(
+                        result_.target_pose_local, l2g_tf);
+              } else {
+                result_.target_pose_global = tmp_pose_vec[1];
+                result_.target_pose_local =
+                    geometry_lib::TransformPoseFromGlobalToLocal(
+                        result_.target_pose_global, g2l_tf);
+              }
+
+              ILOG_INFO << "exist_target_pose = " << exist_target_pose
+                        << "  safe_lon_move_dist = "
+                        << result_.safe_lon_move_dist
+                        << "  safe_lat_move_dist = "
+                        << result_.safe_lat_move_dist
+                        << "  safe_lat_body_buffer = "
+                        << result_.safe_lat_body_buffer
+                        << "  safe_lat_mirror_buffer = "
+                        << result_.safe_lat_mirror_buffer;
+              return true;
+            }
           }
         }
-        if (exist_target_pose) {
-          break;
-        }
-      }
-      if (exist_target_pose) {
-        break;
-      }
-    }
-    if (exist_target_pose) {
-      break;
-    }
+        return false;
+      };
+
+  if (is_searching_stage_) {
+    exist_target_pose = search_target_pose_in_lon_group(small_lon_dist_vec);
+  } else {
+    exist_target_pose = search_target_pose_in_lon_group(small_lon_dist_vec) ||
+                        search_target_pose_in_lon_group(big_lon_dist_vec);
   }
 
   if (exist_target_pose) {
     if (heading_in) {
       dx = result_.target_pose_local.GetX() + param.rear_overhanging -
-           slot_.origin_corner_coord_local_.pt_01_mid.x();
+           origin_pt_local.pt_01_mid.x();
     } else {
       dx = result_.target_pose_local.GetX() + param.wheel_base +
-           param.front_overhanging -
-           slot_.origin_corner_coord_local_.pt_01_mid.x();
+           param.front_overhanging - origin_pt_local.pt_01_mid.x();
     }
     result_.exceed_allow_max_dx = dx - front_exceed_line_dx;
     ILOG_INFO << "exceed_allow_max_dx = " << result_.exceed_allow_max_dx

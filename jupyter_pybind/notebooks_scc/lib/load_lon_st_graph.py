@@ -39,6 +39,12 @@ lane_change_status_dict = {
     5: "kLaneChangeHold"
 }
 
+road_right_level_dict = {
+    0: "LOW_RIGHT",
+    1: "HIGH_RIGHT",
+    2: "MID_RIGHT"
+}
+
 start_stop_status_dict = {
     0: "CRUISE",
     1: "STOP",
@@ -338,7 +344,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "road_boundary_collision_v_limit", "road_boundary_collision_trigger_distance", "road_boundary_collision_valid", "road_boundary_collision_distance",\
                               "s_curve_road_boundary_triggered", "s_curve_road_boundary_v_limit", "s_curve_road_boundary_trigger_distance", "s_curve_min_radius", "s_curve_first_direction", \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ["comfort_follow_agent_ids", "prediction_cut_in_agent_ids", "rule_base_cut_in_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores", "upper_bound_agent_ids", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop", "is_confluence_area", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
+  st_search_value_list = ["comfort_follow_agent_ids", "prediction_cut_in_agent_ids", "rule_base_cut_in_agent_ids", "bayes_cutin_agent_ids", "bayes_cutin_scores", "bayes_cutout_agent_ids", "bayes_cutout_scores", "lon_cipv_emergency_stop", "lon_cutin_emergency_stop", 
+                          "is_confluence_area", "road_right_level", "upper_bound_agent_ids", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet",
                           "soft_bound_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'gear_command','cipv_id_st', 'cipv_id_hmi', 'time_headway_level','THW', "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
@@ -845,11 +852,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for item in (plan_debug_info.long_ref_path.ds_refs):
      v_ref_vec.append(item.first)
   a_ref_vec = []
-  if hasattr(plan_debug_info.long_ref_path, 'dds_refs'):
-      for item in (plan_debug_info.long_ref_path.dds_refs):
-          a_ref_vec.append(item.first)
-  else:
-      a_ref_vec = [0.0] * len(v_ref_vec)
+  for item in (plan_debug_info.long_ref_path.dds_refs):
+      a_ref_vec.append(item.first)
 
   v_bound_low_vec = []
   try:
@@ -911,16 +915,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       val = lane_change_status_dict.get(val, str(val))
     elif st_search_value_list[ind] == 'start_stop_status' and isinstance(val, int):
       val = start_stop_status_dict.get(val, str(val))
+    elif st_search_value_list[ind] == 'road_right_level' and isinstance(val, int):
+      val = road_right_level_dict.get(val, str(val))
     st_search_attr_vec.append(val)
-
-  # HPP debug attribute / value vectors
-  hpp_debug_attr_vec = []
-  hpp_debug_val_vec = []
-  for ind in range(len(hpp_debug_value_list)):
-     key = hpp_debug_value_list[ind]
-     val = plan_debug_json_info.get(key, None)
-     hpp_debug_attr_vec.append(key)
-     hpp_debug_val_vec.append(val)
 
   # # #region agent log
   # try:
@@ -1156,6 +1153,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   init_state = lon_motion_plan_input.init_state
   ref_pos_vec = lon_motion_plan_input.ref_pos_vec
   ref_vel_vec = lon_motion_plan_input.ref_vel_vec
+  ref_acc_vec = lon_motion_plan_input.ref_acc_vec
   hard_pos_max_vec = lon_motion_plan_input.hard_pos_max_vec
   hard_pos_min_vec = lon_motion_plan_input.hard_pos_min_vec
   soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
@@ -1205,21 +1203,70 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   cost_vec = motion_solver_info.cost_vec
   lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
   cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", \
-               "LonExtendPosBoundCost", "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonPosSafeCost", "LonEmergencyStopCost"]
-  print(cost_list)
-  for i, sub_list in enumerate(lists):
-    if i == 0:
-      print(f"Cost init: {sub_list}")
-    elif i == len(lists) - 1:
-      print(f"Cost {i}: {sub_list}")
-      break
+               "LonExtendPosBoundCost", "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonEmergencyStopCost"]
+  
+  # Map solver condition codes to names
+  solver_condition_names = {
+    0: "INIT",
+    1: "NORMAL_TERMINATE",
+    2: "CONST_CONTROL_TERMINATE",
+    3: "MAX_ITER_TERMINATE",
+    4: "LINESEARCH_TERMINATE",
+    5: "INIT_TERMINATE",
+    6: "MAX_OUTERITER_TERMINATE",
+    7: "KKT_TERMINATE",
+    8: "BACKWARD_PASS_FAIL",
+    9: "NON_POSITIVE_EXPECT",
+    10: "FAULT_INPUT_SIZE",
+    11: "TIME_LIMIT_TERMINATE",
+  }
+  
+  outer_iter_count = motion_solver_info.outer_iter_count if motion_solver_info.HasField('outer_iter_count') else 0
+  condition_name = solver_condition_names.get(motion_solver_info.solver_condition, "UNKNOWN")
+  print(f"Solver condition: {condition_name}")
+  print(f"Outer iteration count: {outer_iter_count}")
+
+  total_outer_iters = len(motion_solver_info.al_outer_iter_info)
+  for oi, al_info in enumerate(motion_solver_info.al_outer_iter_info):
+    if total_outer_iters > 1 and oi != 0 and oi != total_outer_iters - 1:
+      continue
+
+    init_c = al_info.init_cost if al_info.HasField('init_cost') else 0
+    final_c = al_info.final_cost if al_info.HasField('final_cost') else 0
+    cv = al_info.constraint_violation if al_info.HasField('constraint_violation') else 0
+    dc = al_info.dcost_outer if al_info.HasField('dcost_outer') else 0
+    n_inner = al_info.inner_iter_count if al_info.HasField('inner_iter_count') else 0
+
+    cost_change = init_c - final_c
+    print(f"\n--- Outer Loop #{oi+1} ---")
+    print(f"  Cost: {init_c:.4f} → {final_c:.4f} (reduction: {cost_change:.4f})")
+    print(f"  Constraint violation: {cv:.6e}, Cost change: {dc:.6e}")
+    print(f"  Inner iterations: {n_inner}")
+    print(f"  {'iter':<6} {'cost':<14} {'dcost':<14} {'expect':<14} {'du_norm':<14} {'bp':<3} {'LS':<4}")
+    for ii, inner_info in enumerate(al_info.inner_iter_info):
+      ls_success = "OK" if inner_info.linesearch_success else "FAIL"
+      expect_val = inner_info.expect if hasattr(inner_info, 'expect') else 0.0
+      bp_count = inner_info.backward_pass_count if hasattr(inner_info, 'backward_pass_count') else 0
+      print(f"  {ii:<6} {inner_info.cost:<14.4f} {inner_info.dcost:<14.6f} {expect_val:<14.6f} {inner_info.du_norm:<14.8f} {bp_count:<3} {ls_success:<4}")
+
+    inner_cost_vec = al_info.cost_vec
+    if cost_size > 0 and len(inner_cost_vec) > 0:
+      n_cost_entries = n_inner + 1
+      inner_lists = [inner_cost_vec[k * cost_size : (k + 1) * cost_size] for k in range(n_cost_entries)]
+      if len(inner_lists) > 0:
+        print(f"  cost_terms: {cost_list}")
+        print(f"  init:  {[round(c, 4) for c in inner_lists[0]]}")
+        if len(inner_lists) > 1:
+          print(f"  final: {[round(c, 4) for c in inner_lists[-1]]}")
+        else:
+          print(f"  final: {[round(c, 4) for c in inner_lists[0]]}")
 
   lon_plan_data['data_lon_motion_plan'].data.update({
     'time_vec': time_vec,
     'ref_pos_vec_origin': s_ref_vec,
     'ref_pos_vec': ref_pos_vec,
     'ref_vel_vec': ref_vel_vec,
-    'a_ref': a_ref_vec,
+    'ref_acc_vec': ref_acc_vec,
     'hard_pos_max_vec': hard_pos_max_vec,
     'hard_pos_min_vec': hard_pos_min_vec,
     'soft_pos_max_vec': soft_pos_max_vec,
@@ -1759,7 +1806,7 @@ def load_lon_global_figure(bag_loader):
   })
 
   cost_time_fig = bkp.figure(title='耗时',x_axis_label='time/s',
-                  y_axis_label='time cost/(ms)', x_range = [t_plan_debug[0], t_plan_debug[-1]], width=800,height=1600, output_backend="svg")
+                  y_axis_label='time cost/(ms)', x_range = [t_plan_debug[0], t_plan_debug[-1]], width=600,height=300, output_backend="svg")
   cost_time_fig.line(t_plan_vec, SccLonBehaviorCostTime_vec, line_width=1, legend_label='LonBehaviorCostTime', color="red")
   cost_time_fig.line(t_plan_vec, SccLonMotionCostTime_vec, line_width=1, legend_label='LonMotionCostTime_vec', color="blue")
   cost_time_fig.line(t_plan_vec, SccLateralMotionCostTime_vec, line_width=1, legend_label='LatMotionCostTime_vec', color="orange")
@@ -1771,7 +1818,6 @@ def load_lon_global_figure(bag_loader):
   # cost_time_fig.line(t_plan_vec, LateralObstacleDeciderTime_vec, line_width=1, legend_label='LateralObstacleDeciderTime_vec', color="brown")
   # cost_time_fig.line(t_plan_vec, LaneChangeDeciderTime_vec, line_width=1, legend_label='LaneChangeDeciderTime_vec', color="black")
 
-  # 新增字段绘图逻辑（为避免颜色重复，我用了不同色系，你可根据需要调整）
   # 第一组：环境/模型相关
   # cost_time_fig.line(t_plan_vec, EnvironmentalModelManagerCost_vec, line_width=1, legend_label='EnvironmentalModelManagerCost', color="green")
   # cost_time_fig.line(t_plan_vec, TaskFunctionCost_vec, line_width=1, legend_label='TaskFunctionCost', color="purple")
@@ -2067,6 +2113,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                                                   'ref_pos_vec_origin': [],
                                                   'ref_pos_vec':[],
                                                   'ref_vel_vec':[],
+                                                  'ref_acc_vec': [],
                                                   'hard_pos_max_vec': [],
                                                   'hard_pos_min_vec': [],
                                                   'soft_pos_max_vec':[],
@@ -2083,6 +2130,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                                                   'vel_vec': [],
                                                   'acc_vec': [],
                                                   'jerk_vec': [],
+                                                  'comfort_jerk_min_vec': [],
+                                                  'comfort_v_target_vec': [],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -2111,7 +2160,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
-                   'data_hpp_debug':data_hpp_debug, \
                    'data_sv':data_sv, \
                    'data_sa': data_sa,\
                    'data_tv':data_tv, \
@@ -2289,31 +2337,16 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig2.triangle('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb')
   fig2.inverted_triangle ('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub')
 
-  # 添加障碍物s-t bound
-  for obs_id in data_obs_st.keys():
-     if(obs_id != ''):
-        fig2.line('obs_t', 'obs_s', source = data_obs_st[obs_id], line_width = 2, line_color = 'firebrick', line_dash = 'solid')
-
   # 添加目标轨迹
-  fig2.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3, line_color = 'darkred', line_dash = 'solid', legend_label = 's_follow_target')
-  fig2.line('t_comfort_target', 's_comfort_target', source = data_target_s_comfort, line_width = 3, line_color = 'orange', line_dash = 'solid', legend_label = 's_comfort_target')
+  fig2.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3, line_color = 'darkred', line_dash = 'dashdot', legend_label = 's_follow_target')
+  fig2.line('t_comfort_target', 's_comfort_target', source = data_target_s_comfort, line_width = 3, line_color = 'orange', line_dash = 'dashdot', legend_label = 's_comfort_target')
   fig2.line('t_upper_bound', 's_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'purple', line_dash = 'dotted', legend_label = 's_upper_bound')
   fig2.circle('t_upper_bound', 's_upper_bound', source = data_target_s_comfort, size = 4, color = 'purple', alpha = 0.6, legend_label = 's_upper_bound')
   fig2.line('t', 's_speed_adjust_target', source = data_st, line_width = 3, line_color = 'cyan', line_dash = 'dashdot', legend_label = 's_speed_adjust_target', visible=False)
   fig2.line('t', 's_lane_change_target', source = data_st, line_width = 3, line_color = 'lime', line_dash = 'dashdot', legend_label = 's_lane_change_target', visible=False)
+  fig2.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'dashdot', legend_label = 's_max_decel', visible=False)
+  fig2.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'dashdot', legend_label = 's_joint_opt', visible=False)
 
-  #label_low_id = LabelSet(x='t', y='obs_low', text='obs_low_id', x_offset=2, y_offset=2, source=data_st)
-  #fig2.add_layout(label_low_id)
-  #label_high_id = LabelSet(x='t', y='obs_high', text='obs_high_id', x_offset=2, y_offset=2, source=data_st)
-  #fig2.add_layout(label_high_id)
-
-  # f3 = fig3.line('s_ref', 'v_ref', source = data_sv, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
-  # # fig3.line('sv_bound_s', 'sv_bound_v', source = data_sv, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'sv_bound_v_upper')
-  # fig3.line('pos_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
-  # fig3.line('s_ref', 'v_low', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
-  # fig3.line('s_ref', 'v_high', source = data_sv, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
-  # fig3.triangle('s_ref', 'v_low', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.7, legend_label = 'obs_lb_point')
-  # fig3.inverted_triangle ('s_ref', 'v_high', source = data_sv, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'obs_ub_point')
   for i, source in enumerate(boundaries):
     lower_t = f'lower_points_{i}_t_vec'
     lower_s = f'lower_points_{i}_s_vec'
@@ -2424,31 +2457,31 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
 
 
   # vel
-  f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'green', line_dash = 'solid', legend_label = 'v_ref')
+  f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
   fig5.line('time_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
-  fig5.line('t_follow_target', 'v_follow_target', source = data_target, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_follow_target')
+  fig5.line('t_follow_target', 'v_follow_target', source = data_target, line_width = 2, line_color = 'darkred', line_dash = 'dashed', legend_label = 'v_follow_target')
   fig5.line('t_cruise_target', 'v_cruise_target', source = data_target, line_width = 2, line_color = 'purple', line_dash = 'dashed', legend_label = 'v_cruise_target')
   fig5.line('t_comfort_target', 'v_comfort_target', source = data_target_s_comfort, line_width = 2, line_color = 'orange', line_dash = 'dashed', legend_label = 'v_comfort_target')
   fig5.line('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'v_upper_bound')
   fig5.circle('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'v_upper_bound')
   fig5.line('time_vec', 'comfort_v_target_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkgreen', line_dash = 'dashdot', legend_label = 'v_comfort_target')
-  fig5.line('t_max_decel', 'v_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'solid', legend_label = 'v_max_decel', visible=False)
+  fig5.line('t_max_decel', 'v_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'dashed', legend_label = 'v_max_decel', visible=False)
   # Plot joint motion planner v on fig5
-  fig5.line('time_vec', 'vel_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'solid', legend_label = 'v_joint_opt', visible=False)
+  fig5.line('time_vec', 'vel_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'dashed', legend_label = 'v_joint_opt', visible=False)
 
   # acc
-  f6 = fig6.line('time_vec', 'acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'a_plan')
+  f6 = fig6.line('time_vec', 'ref_acc_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'red', line_dash = 'dashed', legend_label = 'a_ref')
+  fig6.line('time_vec', 'acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'a_plan')
   fig6.line('t_comfort_target', 'a_comfort_target', source = data_target_s_comfort, line_width = 2, line_color = 'orange', line_dash = 'dashed', legend_label = 'a_comfort_target')
   fig6.line('t_upper_bound', 'a_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'a_upper_bound')
   fig6.circle('t_upper_bound', 'a_upper_bound', source = data_target_s_comfort, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'a_upper_bound')
-  fig6.line('time_vec', 'a_ref', source = data_lon_motion_plan, line_width = 3, line_color = 'red', line_dash = 'dashed', legend_label = 'a_ref')
   fig6.line('time_vec', 'acc_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_lb')
   fig6.triangle ('time_vec', 'acc_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_lb')
   fig6.line('time_vec', 'acc_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_ub')
   fig6.inverted_triangle ('time_vec', 'acc_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_ub')
-  fig6.line('t_max_decel', 'a_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'solid', legend_label = 'a_max_decel', visible=False)
+  fig6.line('t_max_decel', 'a_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'dashed', legend_label = 'a_max_decel', visible=False)
   # Plot joint motion planner a on fig6
-  fig6.line('time_vec', 'acc_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkred', line_dash = 'solid', legend_label = 'a_joint_opt', visible=False)
+  fig6.line('time_vec', 'acc_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'dashed', legend_label = 'a_joint_opt', visible=False)
 
   # jerk
   f7 = fig7.line('time_vec', 'jerk_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'j_plan')
@@ -2457,12 +2490,12 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
   fig7.line('time_vec', 'comfort_jerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkblue', line_dash = 'dashdot', legend_label = 'j_comfort_lb')
-  fig7.line('t_max_decel', 'j_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'solid', legend_label = 'j_max_decel', visible=False)
+  fig7.line('t_max_decel', 'j_max_decel', source = data_target_s_max_decel, line_width = 3, line_color = 'magenta', line_dash = 'dashed', legend_label = 'j_max_decel', visible=False)
   # Plot joint motion planner j on fig7
-  fig7.line('time_vec', 'jerk_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkviolet', line_dash = 'solid', legend_label = 'j_joint_opt', visible=False)
+  fig7.line('time_vec', 'jerk_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkviolet', line_dash = 'dashed', legend_label = 'j_joint_opt', visible=False)
 
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
-  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec'),('a_ref', '@a_ref')], mode='vline')
+  hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec'),('a_ref', '@ref_acc_vec')], mode='vline')
   hover7 = HoverTool(renderers=[f7], tooltips=[('time', '@time_vec'), ('j_lb', '@jerk_min_vec'), ('j_plan', '@jerk_vec'), ('j_ub', '@jerk_max_vec')], mode='vline')
 
   fig5.add_tools(hover5)

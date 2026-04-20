@@ -309,6 +309,8 @@ else:
         upload_and_remove_file('.lon_plan.html', result_data, "lon_html_url")
         upload_and_remove_file('.enu_local_view.html', result_data, "local_view_html_url")
         upload_and_remove_file('.vo_lat_behavior.html', result_data, "behavior_html_url")
+        upload_and_remove_file('.spatio_temporal_plan.html', result_data, "spatio_temporal_html_url")
+        upload_and_remove_file('.lc_decider_info.html', result_data, "lc_decider_html_url")
         html_end_time = time.time()
         print(f"Upload html file 耗时：{html_end_time - html_start_time}秒")
     except Exception as e:

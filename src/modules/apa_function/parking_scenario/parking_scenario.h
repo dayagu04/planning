@@ -521,6 +521,8 @@ class ParkingScenario {
 
   void UpdateGearChangeCount();
 
+  void SetMirrorStatus();
+
   const bool IsPathCollision(
       const std::vector<pnc::geometry_lib::PathPoint> &path,
       const double static_lon_buffer = 0.3,

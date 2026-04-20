@@ -114,6 +114,11 @@ void StGraphInput::Update() {
   is_in_lane_borrow_status_ = session_->planning_context()
                                   .lane_borrow_decider_output()
                                   .is_in_lane_borrow_status;
+  
+  road_right_level_ = session_->planning_context()
+                          .ego_lane_road_right_decider_output()
+                          .road_right_level;
+  
   GetAgentOfTargetLane(dynamic_world, is_lane_keeping_);
   const auto& init_point = ego_state_manager->planning_init_point();
   PlanningInitPointToTrajectoryPoint(init_point);
@@ -985,6 +990,7 @@ void StGraphInput::Reset() {
   front_agent_of_target_ = nullptr;
   rear_agent_of_target_ = nullptr;
   front_agent_of_origin_ = nullptr;
+  road_right_level_ = RoadRightLevel::HIGH_RIGHT;
 }
 
 }  // namespace speed

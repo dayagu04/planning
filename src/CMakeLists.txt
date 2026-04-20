@@ -38,6 +38,7 @@ add_subdirectory(framework EXCLUDE_FROM_ALL)
 
 add_subdirectory(library/advanced_ctrl_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/ilqr_lib EXCLUDE_FROM_ALL)
+add_subdirectory(library/al_ilqr_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/geometry_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/jlt_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/idm_lib EXCLUDE_FROM_ALL)

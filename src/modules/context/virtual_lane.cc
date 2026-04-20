@@ -526,9 +526,9 @@ bool VirtualLane::get_point_by_s(double s, iflyauto::ReferencePoint &point) {
     point.local_point.y = planning_math::lerp(p1.local_point.y, p1.s, p2.local_point.y, p2.s, s);
     point.local_point.z = planning_math::lerp(p1.local_point.z, p1.s, p2.local_point.z, p2.s, s);
     point.curvature = p1.curvature + t * (p2.curvature - p1.curvature);
-    point.car_heading = planning_math::slerp(p1.car_heading, p1.s, p2.car_heading, p2.s, s);
-    point.enu_heading = planning_math::slerp(p1.enu_heading, p1.s, p2.enu_heading, p2.s, s);
-    point.local_heading = planning_math::slerp(p1.local_heading, p1.s, p2.local_heading, p2.s, s);
+    point.car_heading = p1.car_heading + t * (p2.car_heading - p1.car_heading);
+    point.enu_heading = p1.enu_heading + t * (p2.enu_heading - p1.enu_heading);
+    point.local_heading = p1.local_heading + t * (p2.local_heading - p1.local_heading);
     point.distance_to_left_road_border =
         p1.distance_to_left_road_border +
         t * (p2.distance_to_left_road_border - p1.distance_to_left_road_border);

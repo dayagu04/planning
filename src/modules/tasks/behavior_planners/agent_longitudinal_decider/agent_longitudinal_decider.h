@@ -27,7 +27,6 @@ struct AgentHistoryState {
   double l_dot = 0.0;
 };
 
-
 struct BayesFeatures {
   std::vector<double> norm_l_dot;
   std::vector<double> hist_lateral_dist;
@@ -53,15 +52,28 @@ class AgentLongitudinalDecider : public Task {
 
   void DeciderCutInAndOutAgents();
 
-  void ProcessCutInCutOutAgent(const bool is_in_lane_change,
-                               const agent::Agent& agent,
-                               const double ego_speed_mps,
-                               const double ego_half_length,
-                               const double ego_half_width,
-                               const PlanningInitPoint init_point,
-                               const double lateral_distance_range,
-                               agent::AgentManager* const mutable_agent_manager,
-                               AgentLongitudinalDeciderOutput* output = nullptr);
+  void ProcessKeyAgentTrajectory(
+      const agent::Agent& agent, const double ego_speed_mps,
+      const double ego_half_length, const double ego_half_width,
+      const PlanningInitPoint& init_point,
+      const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+      const double ego_s, const double ego_l, const double agent_s,
+      const double agent_l, const double agent_matched_lane_theta,
+      const double agent_relative_theta, const double object_s_speed_mps,
+      const double object_l_speed_mps,
+      agent::AgentManager* const mutable_agent_manager);
+
+  void ProcessCutInCutOutAgent(
+      const agent::Agent& agent, const double ego_speed_mps,
+      const double ego_half_length, const double ego_half_width,
+      const PlanningInitPoint init_point, const bool is_confluence_area,
+      const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+      const double ego_s, const double ego_l, const double agent_s,
+      const double agent_l, const double agent_matched_lane_theta,
+      const double agent_relative_theta, const double object_s_speed_mps,
+      const double object_l_speed_mps,
+      agent::AgentManager* const mutable_agent_manager,
+      AgentLongitudinalDeciderOutput* output = nullptr);
 
   void CalculateAgentLateralDistance(
       const double object_l_speed_mps, const double min_l, const double max_l,
@@ -121,14 +133,11 @@ class AgentLongitudinalDecider : public Task {
       int32_t agent_id, const agent::Agent& agent,
       const std::shared_ptr<planning_math::KDPath>& ego_lane_coord) const;
 
-  void UpdateBayesianPosteriors(int32_t agent_id, double log_L_hist_cutin,
-                                double log_L_hist_cutout,
-                                double log_L_hist_normal,
-                                double log_L_pred_cutin,
-                                double log_L_pred_cutout,
-                                double log_L_pred_normal,
-                                double* cutin_posterior,
-                                double* cutout_posterior);
+  void UpdateBayesianPosteriors(
+      int32_t agent_id, double log_L_hist_cutin, double log_L_hist_cutout,
+      double log_L_hist_normal, double log_L_pred_cutin,
+      double log_L_pred_cutout, double log_L_pred_normal,
+      double* cutin_posterior, double* cutout_posterior);
 
  private:
   // HPP对向来车证据结果

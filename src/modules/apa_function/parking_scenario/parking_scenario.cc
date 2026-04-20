@@ -205,9 +205,11 @@ void ParkingScenario::PublishPlanningTraj() {
 
   if (frame_.plan_stm.planning_status == PARKING_FINISHED) {
     SetFinishedPlanningOutput(planning_output_, current_ego_pose);
+    SetMirrorStatus();
   } else if (frame_.plan_stm.planning_status == PARKING_FAILED) {
     SetFailedPlanningOutput(planning_output_, current_ego_pose,
                             frame_.plan_fail_reason);
+    SetMirrorStatus();
   } else if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
              frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
              frame_.plan_stm.planning_status == PARKING_RUNNING ||
@@ -327,18 +329,8 @@ void ParkingScenario::SetPlanningPath() {
   }
 
   // set fold and unfold mirror
-  iflyauto::RearViewMirrorCommand* mirror_command =
-      &planning_output_.rear_view_mirror_signal_command;
-  mirror_command->available = true;
-  if (frame_.mirror_command == MirrorCommand::FOLD) {
-    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_FOLD;
-  } else if (frame_.mirror_command == MirrorCommand::EXPAND) {
-    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_UNFOLD;
-  } else {
-    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
-  }
+  SetMirrorStatus();
 
-  ILOG_INFO << "plan mirror = " << static_cast<int>(frame_.mirror_command);
   const ParkingSpeedMode& park_speed_mode =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetParkingSpeedMode();
   const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
@@ -1702,5 +1694,21 @@ void ParkingScenario::RecordDebugObstacleInSlot() const {
 
   RecordDebugObstacle(obstaclesX, obstaclesY);
 }
+
+void ParkingScenario::SetMirrorStatus() {
+  iflyauto::RearViewMirrorCommand* mirror_command =
+      &planning_output_.rear_view_mirror_signal_command;
+  mirror_command->available = true;
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_FOLD;
+  } else if (frame_.mirror_command == MirrorCommand::EXPAND) {
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_UNFOLD;
+  } else {
+    mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
+  }
+
+  ILOG_INFO << "plan mirror = " << static_cast<int>(frame_.mirror_command);
+}
+
 }  // namespace apa_planner
 }  // namespace planning
