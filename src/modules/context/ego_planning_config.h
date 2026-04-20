@@ -1235,8 +1235,8 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
 };
 
 struct RearVehicleMinDistanceMap {
-std::vector<double> rear_speed_kph_table;
-std::vector<double> min_distance_table;
+  std::vector<double> rear_speed_kph_table;
+  std::vector<double> min_distance_table;
 };
 struct SampleAstarTrajConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -1315,12 +1315,12 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double weight_accel = 0.2;
   double weight_jerk = 0.2;
   double weight_normal_ttc = 2.0;
-  double weight_overlap_ttc = 2.0;
+  double weight_overlap_ttc = 4.0;
   double weight_lead_safe_distance = 1.0;
   double safe_collision_decel = 1.0;
   double gap_rear_buffer_base = 2.0;
   double gap_rear_buffer_decay_factor = 20.0;
-  double gap_rear_buffer_extra_coef = 0.7;
+  double gap_rear_buffer_extra_coef = 0.5;
   double gap_front_follow_decel = 2.0;
   double gap_front_thw_coef = 0.3;
   double gap_front_min_buffer = 3.0;

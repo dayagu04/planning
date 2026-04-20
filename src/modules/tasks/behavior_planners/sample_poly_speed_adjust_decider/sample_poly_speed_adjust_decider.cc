@@ -113,12 +113,12 @@ bool SamplePolySpeedAdjustDecider::Execute() {
             .is_emergency_scene = true;
         if (GenerateAStarTraj()) {
           astar_iteration_count = astar_traj_ptr_->count_;
-          std::cout << "  iteration_count:  " << astar_traj_ptr_->count_
-                    << std::endl;
+          // std::cout << "  iteration_count:  " << astar_traj_ptr_->count_
+          //           << std::endl;
         } else {
-          std::cout << "警告：未找到可行的纵向参考轨迹！"
-                    << "  iteration_count:  " << astar_traj_ptr_->count_
-                    << std::endl;
+          // std::cout << "警告：未找到可行的纵向参考轨迹！"
+          //           << "  iteration_count:  " << astar_traj_ptr_->count_
+          //           << std::endl;
           astar_traj_ptr_.reset();
         }
       }

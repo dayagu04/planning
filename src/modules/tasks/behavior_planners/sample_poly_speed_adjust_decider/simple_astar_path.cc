@@ -481,18 +481,18 @@ double LongitudinalAStar::CalcSafetyCollisionCost(double rear_speed,
                                                   double init_distance,
                                                   double vehicle_length,
                                                   double left_time) const {
-  double thw = 1.5 * rear_speed;
+  const double thw_gain = 1.5;
+  double thw = thw_gain * rear_speed;
   double s_buffer = (front_speed - rear_speed) * left_time;
   double left_safe_distance = init_distance + s_buffer;
-
+  thw = std::fmax(thw, kZeroEpsilon);
   double cost = 0.0;
   if (left_safe_distance > thw ||
       left_safe_distance < (-2.0 * vehicle_length - thw)) {
     cost = 0.0;
   } else if (left_safe_distance > 0.0) {
     cost = config_->weight_normal_ttc *
-           std::exp((1 - left_safe_distance / std::fmax(thw, kZeroEpsilon)) *
-                    config_->safe_cost_gain);
+           std::exp((1 - left_safe_distance / thw) * config_->safe_cost_gain);
   } else if (left_safe_distance > -vehicle_length) {
     cost = config_->weight_overlap_ttc *
            std::exp((1 - left_safe_distance /
@@ -505,8 +505,7 @@ double LongitudinalAStar::CalcSafetyCollisionCost(double rear_speed,
                     config_->safe_cost_gain);
   } else {
     cost = config_->weight_normal_ttc *
-           std::exp((1 - (-2 * vehicle_length - left_safe_distance) /
-                             std::fmax(thw, kZeroEpsilon)) *
+           std::exp((1 - (-2 * vehicle_length - left_safe_distance) / thw) *
                     config_->safe_cost_gain);
   }
   return cost;
