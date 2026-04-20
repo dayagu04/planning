@@ -6149,6 +6149,8 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   // 判断前方100m内是否有1分2的extend车道
   bool is_rightest_extend_lane = IsExistExtendLane(rightest_lane, true);
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
+  constexpr double kNearingExchangeUpperThreshold = 100.0;
+  constexpr double kNearingExchangeLowerThreshold = -20.0;
 
   if (!route_info_output.map_split_region_info_list.empty()) {
     double distance_to_exchange =
@@ -6157,7 +6159,8 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
         route_info_output.map_split_region_info_list.front()
             .start_fp_point.fp_distance_to_split_point;
     bool is_nearing_exchange =
-        distance_to_exchange < 100.0 && distance_to_exchange > -20.0;
+        distance_to_exchange < kNearingExchangeUpperThreshold &&
+        distance_to_exchange > kNearingExchangeLowerThreshold;
     if (is_rightest_extend_lane &&
         route_info_output.map_split_region_info_list.front().split_direction ==
             SPLIT_RIGHT &&
