@@ -65,6 +65,8 @@ struct HybridAStarRequest {
   ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
   InitalActionRequest inital_action_request;
 
+  bool recaluclate_obs_dist = false;
+
   void Clear() {
     splicing_pt_vec.clear();
     last_complete_pt_vec.clear();
@@ -106,16 +108,11 @@ struct CarMotion {
 
 struct AnalyticExpansionRequest {
   AnalyticExpansionType type;
-
   Node3d* current_node;
   CurveNode* curve_node_to_goal;
 
   link_pt_line::LinkPtLineInput<float>* lpl_input;
-
-  float rs_radius;
-  bool need_rs_dense_point = false;
-  bool need_anchor_point = false;
-  RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
+  RSInput* rs_input;
 
   AnalyticExpansionRequest() = default;
   ~AnalyticExpansionRequest() = default;

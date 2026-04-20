@@ -48,6 +48,8 @@ enum iLqrCostconfigId {
   W_EGO_JERK_BOUND,
   EGO_JERK_MAX,
   EGO_JERK_MIN,
+  W_EGO_VEL_BOUND,
+  EGO_VEL_MAX,
   W_HARD_HALFPLANE,
   HARD_HALFPLANE_DIST,
   HALFPLANE_COST_ALLOCATION_RATIO,
@@ -97,6 +99,7 @@ enum iLqrCostId {
   OBS_OMEGA_COST,
   EGO_ACC_BOUND_COST,
   EGO_JERK_BOUND_COST,
+  EGO_VEL_BOUND_COST,
   HARD_HALFPLANE_COST,
   SOFT_HALFPLANE_COST,
   COST_SIZE,
@@ -333,6 +336,19 @@ class EgoJerkBoundCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return W_EGO_JERK_BOUND; }
+};
+
+class EgoVelBoundCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  EgoVelBoundCostTerm() = default;
+  double GetCost(const ilqr_solver::State &x,
+                 const ilqr_solver::Control &) override;
+  void GetGradientHessian(const ilqr_solver::State &x,
+                          const ilqr_solver::Control &, ilqr_solver::LxMT &lx,
+                          ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+                          ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return EGO_VEL_BOUND_COST; }
 };
 
 class SoftHalfplaneCostTerm : public ilqr_solver::BaseCostTerm {

@@ -187,6 +187,11 @@ class EgoLaneTrackManger {
     return other_split_lane_left_side_;
   }
 
+  const double get_track_lane_average_diff_heading_angle() const {
+    return last_track_ego_lane_
+               ? last_track_ego_lane_->get_average_diff_heading_angle()
+               : 0.0;
+  };
  private:
   double ComputeLanesMatchlaterakDisCost(
       int virtual_id,

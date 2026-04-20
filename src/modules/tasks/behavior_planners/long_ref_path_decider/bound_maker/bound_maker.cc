@@ -16,7 +16,7 @@ constexpr double kPerSecondPlanLenth = 40.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
 constexpr double kDecelJeck = -1.2;
-constexpr double kAccLowerComfortableBound = -3.0;
+constexpr double kAccLowerComfortableBound = -2.0;
 constexpr double kAccJeck = 3.0;
 constexpr double kBrakeDelayTimeBuffer = 0.3;
 
@@ -73,6 +73,9 @@ common::Status BoundMaker::Run(const TargetMaker& target_maker) {
 
   // 6. soft bound (IDM + CAH)
   MakeSoftBound();
+
+  // 7. extend bound (cut-in ST boundary)
+  MakeExtendBound();
 
   return common::Status::OK();
 }
@@ -316,7 +319,7 @@ void BoundMaker::MakeSBound() {
       session_->planning_context().lon_ref_path_decider_output();
 
   if ((lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
-       lon_ref_path_decider_output.is_joint_danger_emergency_stop) &&
+       lon_ref_path_decider_output.is_lon_cutin_emergency_stop) &&
       lon_ref_path_decider_output.comfort_target_upper_bound_infos.size() ==
           plan_points_num_) {
     for (int32_t i = 0; i < plan_points_num_; ++i) {
@@ -359,7 +362,7 @@ void BoundMaker::MakeJerkBound() {
       session_->planning_context().lon_ref_path_decider_output();
   if (lon_ref_path_decider_output.is_cross_vru_pre_handle ||
       lon_ref_path_decider_output.is_lon_cipv_emergency_stop ||
-      lon_ref_path_decider_output.is_joint_danger_emergency_stop) {
+      lon_ref_path_decider_output.is_lon_cutin_emergency_stop) {
     return;
   }
 
@@ -448,6 +451,61 @@ void BoundMaker::MakeSoftBound() {
   }
   s_soft_bound_ = s_soft_bound;
   JSON_DEBUG_VALUE("soft_bound_distance", s_upper_bound_[0] - s_soft_bound_[0]);
+}
+
+void BoundMaker::MakeExtendBound() {
+  s_extend_bound_ = s_upper_bound_;
+
+  const auto ptr_st_graph_helper =
+      session_->planning_context().st_graph_helper();
+  if (!ptr_st_graph_helper) {
+    return;
+  }
+
+  const auto& cut_in_agent_id_st_boundaries_map =
+      ptr_st_graph_helper->cut_in_agent_id_st_boundaries_map();
+
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    return;
+  }
+
+  for (int32_t i = 0; i < plan_points_num_; ++i) {
+    const double relative_t = i * dt_;
+    double min_cutin_s = s_extend_bound_[i];
+
+    const auto& upper_bound_info = upper_bound_infos_[i];
+    if (upper_bound_info.agent_id == -1) {
+      continue;
+    }
+
+    const auto* agent = agent_manager->GetAgent(upper_bound_info.agent_id);
+    if (agent == nullptr || !agent->is_prediction_cutin() ||
+        !agent->is_rule_base_cutin()) {
+      continue;
+    }
+
+    auto it = cut_in_agent_id_st_boundaries_map.find(upper_bound_info.agent_id);
+    if (it == cut_in_agent_id_st_boundaries_map.end()) {
+      continue;
+    }
+
+    const auto& st_boundaries = it->second;
+    for (const auto& st_boundary_ptr : st_boundaries) {
+      if (!st_boundary_ptr) {
+        continue;
+      }
+
+      speed::STPoint lower_pt, upper_pt;
+      if (st_boundary_ptr->GetBoundaryBounds(relative_t, &lower_pt,
+                                             &upper_pt)) {
+        min_cutin_s = std::min(min_cutin_s, lower_pt.s());
+      }
+    }
+
+    s_extend_bound_[i] = min_cutin_s;
+  }
 }
 
 SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve()
@@ -571,12 +629,8 @@ void BoundMaker::GenerateUpperBoundInfo() {
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
   if (lon_ref_path_decider_output.is_lat_follow ||
-      lon_ref_path_decider_output.is_lon_cutin ||
-      lon_ref_path_decider_output.is_joint_danger) {
-    for (size_t i = 0; i < plan_points_num_ &&
-                       i < lon_ref_path_decider_output
-                               .comfort_target_upper_bound_infos.size();
-         i++) {
+      lon_ref_path_decider_output.is_lon_cutin) {
+    for (size_t i = 0; i < plan_points_num_; i++) {
       const auto& comfort_upper_bound_info =
           lon_ref_path_decider_output.comfort_target_upper_bound_infos[i];
       upper_bound_infos_[i].s = comfort_upper_bound_info.s;
@@ -823,6 +877,11 @@ double BoundMaker::jerk_upper_bound(const double t) const {
 double BoundMaker::s_soft_bound(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
   return s_soft_bound_[index];
+}
+
+double BoundMaker::s_extend_bound(const double t) const {
+  int32_t index = static_cast<int32_t>(std::round(t / dt_));
+  return s_extend_bound_[index];
 }
 
 }  // namespace planning

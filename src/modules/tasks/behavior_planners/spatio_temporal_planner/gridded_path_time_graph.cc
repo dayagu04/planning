@@ -76,7 +76,8 @@ bool GriddedPathTimeGraph::Search(
     const bool last_enable_using_st_plan,
     planning::common::SpationTemporalUnionDpInput&
         spatio_temporal_union_plan_input,
-    bool& ego_in_intersection_state) {
+    bool& ego_in_intersection_state,
+    planning::common::SpatioTemporalUnionPlan* plan_output) {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& virtual_lane_mgr =
@@ -337,7 +338,7 @@ bool GriddedPathTimeGraph::Search(
   if (!spatio_temporal_union_plan_dp_.Update(
           traj_points, agent_trajs, spatio_temporal_union_plan_input, target_s,
           *current_lane_coord_, half_lateral_sample_nums_,
-          last_enable_using_st_plan)) {
+          last_enable_using_st_plan, plan_output)) {
     return false;
   }
 

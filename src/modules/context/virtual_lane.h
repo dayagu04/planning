@@ -20,6 +20,13 @@
 
 namespace planning {
 
+// 车道是否在导航route link上的判断状态
+enum class RouteOnLinkStatus {
+  UNKNOWN,    // 未判断（场景不满足或数据无效）
+  ON_ROUTE,   // 在导航route link上
+  OFF_ROUTE,  // 不在导航route link上
+};
+
 struct SpeedChangePoint {
   double x;
   double y;
@@ -148,6 +155,9 @@ class VirtualLane {
 
   bool get_point_by_distance(double distance, iflyauto::ReferencePoint &point);
 
+  ///根据弧长s获取车道中心线上的参考点（二分查找+线性插值）
+  bool get_point_by_s(double s, iflyauto::ReferencePoint &point);
+
   const std::vector<std::string> &center_line_points_track_id() const {
     return center_line_points_track_id_;
   }
@@ -160,6 +170,21 @@ class VirtualLane {
   double min_width() const;
   double max_width() const;
   bool hack() const { return hack_; }
+
+  void set_route_on_link_status(RouteOnLinkStatus status) {
+    route_on_link_status_ = status;
+  }
+  RouteOnLinkStatus get_route_on_link_status() const {
+    return route_on_link_status_;
+  }
+
+  // 该lane在split_next_link上从左向右的序号（1=最左），-1表示未计算
+  void set_lane_order_on_split_next_link(int order) {
+    lane_order_on_split_next_link_ = order;
+  }
+  int get_lane_order_on_split_next_link() const {
+    return lane_order_on_split_next_link_;
+  }
 
   void update_lane_tasks(const RouteInfoOutput &route_info_output);
   const std::vector<int> &get_current_tasks() const { return current_tasks_; }
@@ -220,6 +245,12 @@ class VirtualLane {
   const std::vector<int>& get_refline_point_floor_ids() const {
     return refline_point_floor_ids_;
   };
+  void set_average_diff_heading_angle(const double average_diff_heading_angle) {
+    average_diff_heading_angle_ = average_diff_heading_angle;
+  };
+  const double get_average_diff_heading_angle() const {
+    return average_diff_heading_angle_;
+  };
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -252,6 +283,8 @@ class VirtualLane {
 
   std::vector<int> current_tasks_;
   bool hack_ = false;
+  RouteOnLinkStatus route_on_link_status_ = RouteOnLinkStatus::UNKNOWN;
+  int lane_order_on_split_next_link_ = -1;  // 在split_next_link上从左向右的序号，-1表示未计算
 
   SpeedChangePoint speed_change_point_{};
   double v_cruise_ = 0.0;
@@ -263,6 +296,7 @@ class VirtualLane {
 
   double max_virtual_seg_ahead_x_ = 0.0;
   double max_virtual_seg_ahead_length_ = 0.0;
+  double average_diff_heading_angle_ = 0.0;
 
   std::pair<bool, double> feasible_lane_distance_ = {true, 1000.0};
   MapMergePointInfo map_merge_point_info_;

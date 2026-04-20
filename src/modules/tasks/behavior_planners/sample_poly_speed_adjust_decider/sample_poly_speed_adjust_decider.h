@@ -63,6 +63,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool EvaluateForceMergeTraj();
   bool GenerateAStarTraj();
   double CalcPressLineRatio();
+  void CalcAgentLateralOffsetMap();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -96,6 +97,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double weight_speed_change_;
   double weight_leading_veh_follow_s_;
   double weight_jerk_limit_;
+  double weight_stop_point_;
 
   std::pair<double, double> speed_adjust_range_;  // first: upper, second: lower
 
@@ -126,6 +128,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   int count_hover_to_normal_state_{0};
   int lane_change_request_ = 0;
   int lane_change_source_ = 0;
+  int astar_merge_count_ = 0;
   const std::vector<double> t_gap_ego_v_bp_{5.0, 15.0, 30.0};
   const std::vector<double> t_gap_ego_v_{1.35, 1.55, 2.0};
 
@@ -156,6 +159,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   std::shared_ptr<planning::planning_math::KDPath> target_lane_coord_ = nullptr;
 
   std::pair<size_t, size_t> min_cost_traj_index_{0, 0};
+  std::unordered_map<int32_t, double> agent_lateral_offset_map_;
 
  public:  // set private values
   void set_weight_match_gap_vel(const double weight) {

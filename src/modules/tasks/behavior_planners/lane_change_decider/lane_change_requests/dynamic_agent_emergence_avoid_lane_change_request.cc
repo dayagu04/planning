@@ -148,16 +148,6 @@ void DynamicAgentEmergenceAvoidRequest::
     UpdateDynamicAgentEmergencyAvoidanceSituation() {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
-  emergency_lane_change_avoid_speed_ysteresis_.SetIsValidByValue(
-      ego_state->ego_v() * 3.6);
-  const bool enable_emergency_avoid =
-      !emergency_lane_change_avoid_speed_ysteresis_.IsValid();
-  if (!enable_emergency_avoid) {
-      // 是否需要限制功能
-    ILOG_DEBUG << "DynamicAgentEmergenceAvoidRequest:: not "
-                  "enable_emergency_avoid becase of high speed";
-    return;
-  }
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
@@ -314,6 +304,18 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicSideAgentBaseRisk()
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(current_lane_virtual_id, false);
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  emergency_lane_change_avoid_speed_ysteresis_.SetIsValidByValue(
+      ego_state->ego_v() * 3.6);
+  const bool enable_emergency_avoid =
+      !emergency_lane_change_avoid_speed_ysteresis_.IsValid();
+  if (!enable_emergency_avoid) {
+      // 是否需要限制功能
+    ILOG_DEBUG << "DynamicAgentEmergenceAvoidRequest:: not "
+                  "enable_emergency_avoid becase of high speed";
+    return false;
+  }
   if (origin_refline == nullptr) {
     return false;
   }

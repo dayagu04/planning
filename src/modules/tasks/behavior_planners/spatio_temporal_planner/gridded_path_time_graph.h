@@ -46,7 +46,8 @@ class GriddedPathTimeGraph {
       const bool last_enable_using_st_plan,
       planning::common::SpationTemporalUnionDpInput&
           spatio_temporal_union_plan_input,
-      bool& ego_in_intersection_state);
+      bool& ego_in_intersection_state,
+      planning::common::SpatioTemporalUnionPlan* plan_output);
 
  private:
   planning::framework::Session *session_;

@@ -116,9 +116,10 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_split_region', 'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split',
             'current_segment_passed_distance', 'forward_lane_num', 'is_ego_on_split_region',
             'ego_status_on_route','bd_mlc_scene', 'left_lane_num', 'minVal_seq',
-            'maxVal_seq', 'right_lane_num', 'emergency_lane_num', 'average_curve','lsl_length', 'lat_offset_lc_hold',
-            'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose',
-             'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id', 'merging_rear_id', 'merge_fail', 'merge_hard', 'is_aggressive_scence', 'is_default_aggressive_scence']
+            'maxVal_seq', 'cur_lane_order_on_split_next_link','left_lane_order_on_split_next_link','right_lane_order_on_split_next_link','curlane_on_route_link',
+            'right_lane_num', 'emergency_lane_num', 'average_curve','lsl_length', 'lat_offset_lc_hold',
+            'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose','is_emergency_scene',
+            'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id','merging_rear_id',  'merge_fail', 'merge_hard', 'is_aggressive_scence', 'is_default_aggressive_scence']
 
   for name in vars_lc:
     try:
@@ -204,11 +205,13 @@ def update_safety_check_data(plan_debug_json_msg):
     # ---- 右下角汇总表 ----
     lc_ego_press = plan_debug_json_msg.get('lc_ego_press_line_ratio', None)
     lc_safety_check_time = plan_debug_json_msg.get('lc_safety_check_time', None)
+    rear_agent_overtaking = plan_debug_json_msg.get('rear_agent_overtaking', None)
     safety_summary_data.data = {
-        'name': ['压线率', '安全检查时长(s)'],
+        'name': ['压线率', '安全检查时长(s)', '后车超越'],
         'data': [
             f"{lc_ego_press:.3f}" if lc_ego_press is not None else 'N/A',
             f"{lc_safety_check_time:.2f}" if lc_safety_check_time is not None else 'N/A',
+            f"{int(rear_agent_overtaking)}" if rear_agent_overtaking is not None else 'N/A',
         ]
     }
 
@@ -264,8 +267,8 @@ front_safety_data = ColumnDataSource(data={
     'distance': [], 'agent_vel': [], 'ego_vel': [], 'actual_gap': []
 })
 safety_summary_data = ColumnDataSource(data={
-    'name': ['压线率', '安全检查时长(s)'],
-    'data': ['N/A', 'N/A']
+    'name': ['压线率', '安全检查时长(s)', '后车超越'],
+    'data': ['N/A', 'N/A', 'N/A']
 })
 
 # 图1: 距离和缓冲区

@@ -18,6 +18,7 @@
 #include "planning_debug_info.pb.h"
 #include "time_benchmark.h"
 #include "version.h"
+
 #include "context/function_switch_config_context.h"
 
 namespace planning {
@@ -90,7 +91,47 @@ bool PlanningAdapter::Init() {
   local_view_ptr_ = std::make_shared<LocalView>();
   planning_scheduler_ = std::make_unique<PlanningScheduler>(
       local_view_ptr_.get(), &engine_config);
+
+  timer_thread_.reset(new std::thread(&PlanningAdapter::TimerProcess, this));
+  pthread_setname_np(timer_thread_->native_handle(), "planning_timer");
+
+  StartLogThread();
   return true;
+}
+
+void PlanningAdapter::StartLogThread() {
+  debug_thread_ = std::thread([this]() {
+    pthread_setname_np(pthread_self(), "Pln_Log_01");
+    while (!debug_thread_stop_.load()) {
+      std::unique_lock<std::mutex> lock(debug_queue_mutex_);
+      debug_cv_.wait(lock, [this]() {
+        return !debug_queue_.empty() || debug_thread_stop_.load();
+      });
+      while (!debug_queue_.empty()) {
+        auto task = std::move(debug_queue_.front());
+        debug_queue_.pop();
+        lock.unlock();
+        if (planning_debug_writer_) {
+          task.debug_pb.set_data_json(mjson::Json(task.debug_json).dump());
+          iflyauto::StructContainer container;
+          task.debug_pb.SerializeToString(container.mutable_payload());
+          planning_debug_writer_(container);
+        }
+        lock.lock();
+      }
+    }
+  });
+}
+
+void PlanningAdapter::StopLogThread() {
+  {
+    std::lock_guard<std::mutex> lock(debug_queue_mutex_);
+    debug_thread_stop_.store(true);
+  }
+  debug_cv_.notify_one();
+  if (debug_thread_.joinable()) {
+    debug_thread_.join();
+  }
 }
 
 void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
@@ -98,7 +139,7 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
   iflyauto::FmInfo fmInfo{};
   fmInfo.alarmId = alarmId;
   fmInfo.alarmObj = alarmObj;
-  fmInfo.clss = 1;  // 告警类别，0：状态型，1：事件型
+  fmInfo.clss = 1;   // 告警类别，0：状态型，1：事件型
   fmInfo.level = 2;  // 告警级别，0：提示，1：次要，2：重要，3：紧急
   fmInfo.status = fault_exist ? 1 : 0;  // 告警状态，0：告警恢复，1：告警产生
   fmInfo.time = IflyTime::Now_ms();
@@ -112,7 +153,6 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
 bool PlanningAdapter::Proc() {
   ILOG_INFO << "PlanningAdapter::Proc()";
   start_time_ = IflyTime::Now_us();
-
 
   SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_start);
   // 1.1 receive prediction
@@ -355,8 +395,6 @@ bool PlanningAdapter::Proc() {
   // 2.planning run
   iflyauto::PlanningOutput planning_output;
   iflyauto::PlanningHMIOutputInfoStr planning_hmi_info;
-  auto planning_debuginfo_container =
-      std::make_shared<iflyauto::StructContainer>();
 
   ILOG_INFO << "==============The planning enters RunOnce=============";
 
@@ -367,45 +405,45 @@ bool PlanningAdapter::Proc() {
   output_time_us_ = (uint64_t)IflyTime::Now_us();
   frame_num_++;
 
-  if (planning_debug_writer_) {
-    Log();
-    auto &planning_debug_data =
-        DebugInfoManager::GetInstance().GetDebugInfoPb();
-    auto payload = planning_debuginfo_container->mutable_payload();
-    planning_debug_data->SerializeToString(payload);
-    planning_debug_writer_(*planning_debuginfo_container);
-  }
+  PublishTopic(std::move(planning_output), std::move(planning_hmi_info));
+  SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_end);
 
+  double planning_cost_time = (IflyTime::Now_us() - start_time_) / 1000;
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
+                                    planning_cost_time);
+  JSON_DEBUG_VALUE("planning_cost_time", planning_cost_time);
+  return true;
+}
+
+void PlanningAdapter::PublishTopic(iflyauto::PlanningOutput planning_output, iflyauto::PlanningHMIOutputInfoStr planning_hmi_info) {
+  const auto planning_start_time = planning_output.msg_meta.start_time;
   if (planning_writer_) {
-    if (run_success_) {
-      last_planning_output_ = planning_output;
-    } else {
-      // use last succ planning output when planning not succ
-      // if never succeed, output will bi empty
-      //   planning_output = last_planning_output_;
+    if (!run_success_) {
       ILOG_WARN << "planning failed, use last planning output";
     }
     // update msg_header & msg_meta
-    auto &msg_header = planning_output.msg_header;
-    auto &msg_meta = planning_output.msg_meta;
+    auto& msg_header = planning_output.msg_header;
+    auto& msg_meta = planning_output.msg_meta;
     msg_header.stamp = output_time_us_;
     msg_header.seq = frame_num_;
     // msg_meta.start_time = start_time;
     iflyauto::strcpy_array(msg_meta.version, __version_str__);
     UpdateInputListInfo(msg_meta);
     planning_writer_(planning_output);
+    if (run_success_) {
+      last_planning_output_ = std::move(planning_output);
+    }
   }
 
   if (planning_hmi_info_writer_) {
-    auto &hmi_msg_header = planning_hmi_info.msg_header;
-    auto &hmi_msg_meta = planning_hmi_info.msg_meta;
+    auto& hmi_msg_header = planning_hmi_info.msg_header;
+    auto& hmi_msg_meta = planning_hmi_info.msg_meta;
     hmi_msg_header.stamp = output_time_us_;
     hmi_msg_header.seq = frame_num_;
-    hmi_msg_meta.start_time = planning_output.msg_meta.start_time;
+    hmi_msg_meta.start_time = planning_start_time;
     iflyauto::strcpy_array(hmi_msg_meta.version, __version_str__);
     planning_hmi_info_writer_(planning_hmi_info);
   }
-
 
   // Trigger: write fault info where error occured
   if (planning_scheduler_->FaultCode() >= 39000 &&
@@ -418,16 +456,30 @@ bool PlanningAdapter::Proc() {
     }
   }
 
-  SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_end);
-
-  double planning_cost_time = (IflyTime::Now_us() - start_time_) / 1000;
-  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
-                                    planning_cost_time);
-  JSON_DEBUG_VALUE("planning_cost_time", planning_cost_time);
-  return true;
+  if (planning_debug_writer_) {
+#ifdef PlanTimeBenchmark
+    double start_time = IflyTime::Now_ms();
+#endif
+    Log();
+    constexpr int kMaxQueueSize = 3;
+    DebugTask task;
+    task.debug_pb.Swap(DebugInfoManager::GetInstance().GetDebugInfoPb().get());
+    std::swap(task.debug_json, *DebugInfoManager::GetInstance().GetDebugJson());
+    {
+      std::lock_guard<std::mutex> lock(debug_queue_mutex_);
+      if (debug_queue_.size() >= kMaxQueueSize) {
+        debug_queue_.pop();  // 丢弃最旧的
+      }
+      debug_queue_.push(std::move(task));
+    }
+    debug_cv_.notify_one();
+#ifdef PlanTimeBenchmark
+    JSON_DEBUG_VALUE("Log cost", IflyTime::Now_ms() - start_time);
+#endif    
+  }
 }
 
-void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
+void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta& msg_meta) {
   // 更新input_list
   msg_meta.input_list[INPUT_TOPIC::PREDICTION].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION;
@@ -567,9 +619,9 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
 
 void PlanningAdapter::UpdateApaResetFlag() {
   // update general context
-  auto &state_machine_g = GENERAL_PLANNING_CONTEXT.MutableStatemachine();
+  auto& state_machine_g = GENERAL_PLANNING_CONTEXT.MutableStatemachine();
 
-  const auto &current_state =
+  const auto& current_state =
       local_view_ptr_->function_state_machine_info.current_state;
 
   iflyauto::FunctionalState last_state =
@@ -722,7 +774,7 @@ void PlanningAdapter::LogTopicLatency() {
 }
 
 void PlanningAdapter::Log() {
-  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
 
   // 1.update all inputs to local_view
   auto input_topic_timestamp =
@@ -793,8 +845,7 @@ void PlanningAdapter::Log() {
   // #endif
 
   planning_debug_data->mutable_frame_info()->set_version(__version_str__);
-  const auto &debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
-  planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
+  // data_json is now serialized asynchronously in the debug thread
 
 #if defined(PLANNING_GIT_COMMIT_HASH)
   planning_debug_data->mutable_version_commit()->set_planning_commit(
@@ -813,8 +864,8 @@ void PlanningAdapter::Log() {
   frame_info->set_planning_succ(run_success_);
 }
 
-
-void PlanningAdapter::SendHeartBeatToPhm(iflyauto::MainFlowDotpoint reportPoint) {
+void PlanningAdapter::SendHeartBeatToPhm(
+    iflyauto::MainFlowDotpoint reportPoint) {
   if (phm_report_writer_) {
     auto ifly_phm_report = std::make_shared<iflyauto::IflyPhmReport>();
     ifly_phm_report->app_name = iflyauto::AppNameEnum::asw_planning;
@@ -824,4 +875,40 @@ void PlanningAdapter::SendHeartBeatToPhm(iflyauto::MainFlowDotpoint reportPoint)
     phm_report_writer_(*ifly_phm_report);
   }
 }
+
+#if !defined(X86) && !defined(X86_SIMULATION)
+#define IS_PREDICTION_RESULT_MSG_CONTINUOUS_TIMEOUT_MS 150
+
+void PlanningAdapter::TimerProcess() {
+  iflyauto::Rate rate(static_cast<double>(10.0));
+  std::atomic<bool> is_prediction_result_msg_continuous{false};
+  while (is_timer_enabled_) {
+    if (is_prediction_result_msg_updated_) {
+        is_prediction_result_msg_continuous.store(true);
+    }
+
+    if (is_prediction_result_msg_continuous) {
+      if (is_prediction_result_msg_updated_) {
+        this->Proc();
+      } else {
+        std::this_thread::sleep_for(std::chrono::milliseconds(2U));
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
+        if (IflyTime::Now_ms()-prediction_result_msg_recv_time_ > IS_PREDICTION_RESULT_MSG_CONTINUOUS_TIMEOUT_MS) {
+          is_prediction_result_msg_continuous.store(false);
+        }
+      }
+    } else {
+      this->Proc();
+      rate.Sleep();
+    }
+  }
+}
+#else
+void PlanningAdapter::TimerProcess() {
+  return;
+}
+#endif
 }  // namespace planning

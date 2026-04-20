@@ -138,7 +138,7 @@ bool SpatioTemporalPlanner::Execute() {
   path_time_heuristic_optimizer_.Process(
       traj_points, agent_trajs_state, virtual_agents_st_info,
       last_enable_using_st_plan_, spatio_temporal_union_plan_input_,
-      ego_in_intersection_state_);
+      ego_in_intersection_state_, &spatio_temporal_union_plan_);
 
   // 更新障碍物决策
   path_time_heuristic_optimizer_.UpdateLateralObstacleDecision(
@@ -168,61 +168,10 @@ void SpatioTemporalPlanner::PostProcessing(
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::EnvironmentModelInfo *environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
-  // auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
-  //                                .GetDebugInfoPb()
-  //                                ->mutable_spatio_temporal_union_plan();
+
   auto &spatio_temporal_union_plan_output =
       session_->mutable_planning_context()
           ->mutable_spatio_temporal_union_plan_output();
-  const auto &ego_state_mgr =
-      session_->mutable_environmental_model()->get_ego_state_manager();
-
-  const auto &virtual_lane_mgr =
-      // session_->mutable_planning_context()->virtual_lane_manager();
-      session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const auto &current_lane = virtual_lane_mgr->get_current_lane();
-  const double lateral_offset = session_->mutable_planning_context()
-                                    ->lateral_offset_decider_output()
-                                    .lateral_offset;
-  std::shared_ptr<ReferencePath> origin_refline =
-      session_->mutable_environmental_model()
-          ->get_reference_path_manager()
-          ->get_reference_path_by_lane(
-              virtual_lane_mgr->current_lane_virtual_id(), false);
-  if (origin_refline == nullptr) {
-    return;
-  }
-  const auto &base_frenet_coord = origin_refline->get_frenet_coord();
-  if (base_frenet_coord == nullptr) {
-    return;
-  }
-  Point2D ego_cart_point(ego_state_mgr->ego_pose().x,
-                         ego_state_mgr->ego_pose().y);
-  Point2D ego_frenet_point;
-  if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    ILOG_ERROR << "SpatioTemporalPlanner::LogDebugInfo: Cart Point -> Frenet "
-                  "Point Failed!!";
-  }
-
-  auto origin_refline_points =
-      spatio_temporal_union_plan_.mutable_origin_refline_points();
-  origin_refline_points->Clear();
-
-  const auto &origin_lane_points = current_lane->lane_points();
-  for (const auto &point : origin_lane_points) {
-    Point2D ref_frenet_point(point.s, lateral_offset);
-    Point2D origin_point;
-    if (!base_frenet_coord->SLToXY(ref_frenet_point, origin_point)) {
-      continue;
-    }
-    if (origin_point.x < ego_frenet_point.x) {
-      continue;
-    }
-
-    planning::common::Point2d *Point = origin_refline_points->Add();
-    Point->set_x(origin_point.x);
-    Point->set_y(origin_point.y);
-  }
 
   spatio_temporal_union_plan_.set_st_dp_is_sucess(
       path_time_heuristic_optimizer_.GetStDpIsSuccess());

@@ -5,6 +5,7 @@
 
 #include "agent/agent.h"
 #include "ego_planning_config.h"
+#include "frenet_obstacle.h"
 #include "reference_path.h"
 #include "tasks/task.h"
 
@@ -89,9 +90,9 @@ class TurnstileLongitudinalDecider : public Task {
     double turnstile_stop_s = 0.0;  // 用于记录当前帧计算得到的停车 s
     double turnstile_s = 0.0;  // 用于记录当前帧道闸前沿 s
 
-    const FrenetObstacle* target_turnstile_frenet_obs = nullptr;  // 用于缓存主道闸 frenet obstacle
+    ConstFrenetObstaclePtr target_turnstile_frenet_obs;  // 用于缓存主道闸 frenet obstacle
     const Obstacle* target_turnstile_obs = nullptr;  // 用于缓存主道闸 obstacle
-    const FrenetObstacle* front_vehicle_frenet_obs = nullptr;  // 用于缓存当前前车 frenet obstacle
+    ConstFrenetObstaclePtr front_vehicle_frenet_obs;  // 用于缓存当前前车 frenet obstacle
     GateSnapshot target_turnstile_gate_snapshot;
   };
 

@@ -39,6 +39,7 @@ void JointDecisionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(std::make_shared<EgoOmegaCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<EgoAccBoundCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<EgoJerkBoundCostTerm>());
+  ilqr_core_ptr_->AddCost(std::make_shared<EgoVelBoundCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<ObsReferenceCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<ObsJerkCostTerm>());
   ilqr_core_ptr_->AddCost(std::make_shared<ObsOmegaCostTerm>());
@@ -186,6 +187,12 @@ uint8_t JointDecisionPlanningProblem::Update(
     }
     if (i < planning_input.ego_jerk_min_size()) {
       cost_config_vec.at(i)[EGO_JERK_MIN] = planning_input.ego_jerk_min(i);
+    }
+
+    cost_config_vec.at(i)[W_EGO_VEL_BOUND] =
+        planning_input.q_ego_vel_bound_weight();
+    if (i < planning_input.ego_vel_max_size()) {
+      cost_config_vec.at(i)[EGO_VEL_MAX] = planning_input.ego_vel_max(i);
     }
 
     double obs_jerk_decay_rate = 0.05;

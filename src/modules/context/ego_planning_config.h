@@ -997,6 +997,10 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     normal_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "normal_scene_weight_jerk_limit"});
+    normal_scene_weight_stop_point = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_stop_point"});
+
     purse_flow_vel_scene_weight_match_gap_vel = read_json_keys<double>(
         json,
         std::vector<std::string>{"sample_poly_speed_adjust",
@@ -1046,9 +1050,12 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
                   "sample_poly_speed_adjust",
                   "purse_flow_vel_scene_weight_leading_veh_follow_s"});
     purse_flow_vel_scene_weight_jerk_limit = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"sample_poly_speed_adjust",
-                                 "purse_flow_vel_scene_weight_jerk_limit"});
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_jerk_limit"});
+    purse_flow_vel_scene_weight_stop_point = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_stop_point"});
+
     decleration_scene_weight_match_gap_vel = read_json_keys<double>(
         json,
         std::vector<std::string>{"sample_poly_speed_adjust",
@@ -1096,6 +1103,10 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     decleration_scene_weight_jerk_limit = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_jerk_limit"});
+    decleration_scene_weight_stop_point = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_stop_point"});
+
     leading_safe_distance_gain = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "leading_safe_distance_gain"});
@@ -1142,6 +1153,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double normal_scene_weight_speed_change = 10.0;
   double normal_scene_weight_leading_veh_follow_s = 1.0;
   double normal_scene_weight_jerk_limit = 2.0;
+  double normal_scene_weight_stop_point = 0.0;
 
   double purse_flow_vel_scene_weight_match_gap_vel = 0.2;
   double purse_flow_vel_scene_weight_match_gap_s = 0.2;
@@ -1156,6 +1168,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double purse_flow_vel_scene_weight_speed_change = 0.0;
   double purse_flow_vel_scene_weight_leading_veh_follow_s = 0.0;
   double purse_flow_vel_scene_weight_jerk_limit = 2.0;
+  double purse_flow_vel_scene_weight_stop_point = 0.0;
 
   double decleration_scene_weight_match_gap_vel = 4.5;
   double decleration_scene_weight_match_gap_s = 2.5;
@@ -1170,6 +1183,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double decleration_scene_weight_speed_change = 0.0;
   double decleration_scene_weight_leading_veh_follow_s = 1.0;
   double decleration_scene_weight_jerk_limit = 2.0;
+  double decleration_scene_weight_stop_point = 5.0;
 
   double leading_safe_distance_gain = 1.3;
   double leading_safe_delay_time = 0.5;
@@ -1208,8 +1222,33 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
     weight_back_ttc = read_json_keys<double>(
         json, std::vector<std::string>{"sample_astar_traj", "weight_back_ttc"});
     weight_lead_safe_distance = read_json_keys<double>(
-        json, std::vector<std::string>{"sample_astar_traj",
-                                       "weight_lead_safe_distance"});
+        json,std::vector<std::string>{"sample_astar_traj", "weight_lead_safe_distance"});
+    safe_collision_decel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "safe_collision_decel"});
+    gap_rear_buffer_base = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_rear_buffer_base"});
+    gap_rear_buffer_decay_factor = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_rear_buffer_decay_factor"});
+    gap_rear_buffer_extra_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_rear_buffer_extra_coef"});
+    gap_front_follow_decel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_follow_decel"});
+    gap_front_thw_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_thw_coef"});
+    gap_front_min_buffer = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_min_buffer"});
+    gap_front_buffer_extra_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "gap_front_buffer_extra_coef"});
+    leading_follow_decel = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "leading_follow_decel"});
+    leading_thw_coef = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "leading_thw_coef"});
+    leading_min_safe_distance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "leading_min_safe_distance"});
+    lateral_offset_scale_factor = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "lateral_offset_scale_factor"});
+    default_collision_distance = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "default_collision_distance"});
   }
   double time_step_near = 1.0;
   double time_step_far = 1.0;
@@ -1223,6 +1262,19 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double weight_front_ttc = 1.0;
   double weight_back_ttc = 1.0;
   double weight_lead_safe_distance = 1.0;
+  double safe_collision_decel = 1.0;
+  double gap_rear_buffer_base = 2.0;
+  double gap_rear_buffer_decay_factor = 10.0;
+  double gap_rear_buffer_extra_coef = 0.7;
+  double gap_front_follow_decel = 2.0;
+  double gap_front_thw_coef = 0.3;
+  double gap_front_min_buffer = 3.0;
+  double gap_front_buffer_extra_coef = 0.7;
+  double leading_follow_decel = 2.0;
+  double leading_thw_coef = 0.5;
+  double leading_min_safe_distance = 3.0;
+  double lateral_offset_scale_factor = 10.0;
+  double default_collision_distance = 100.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -3605,8 +3657,8 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "turnstile_stop_buffer", 3.5);
     turnstile_min_forward_stop_buffer =
         read_json_key<double>(json, "turnstile_min_forward_stop_buffer", 1.0);
-    enable_turnstile_longitudinal_decider = read_json_key<bool>(
-        json, "enable_turnstile_longitudinal_decider", true);
+    enable_turnstile_longitudinal_decider =
+        read_json_key<bool>(json, "enable_turnstile_longitudinal_decider", true);
     turnstile_open_status_threshold =
         read_json_key<double>(json, "turnstile_open_status_threshold", 0.8);
     turnstile_closed_status_threshold =
@@ -3617,8 +3669,8 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         json, "turnstile_passable_status_stable_frame_threshold", 3);
     turnstile_target_lost_tolerance_frames = read_json_key<int32_t>(
         json, "turnstile_target_lost_tolerance_frames", 4);
-    turnstile_front_vehicle_max_distance = read_json_key<double>(
-        json, "turnstile_front_vehicle_max_distance", 45.0);
+    turnstile_front_vehicle_max_distance =
+        read_json_key<double>(json, "turnstile_front_vehicle_max_distance", 45.0);
     turnstile_near_margin =
         read_json_key<double>(json, "turnstile_near_margin", 4.0);
     turnstile_ego_in_gate_margin =
@@ -3627,22 +3679,18 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "turnstile_passing_window", 1.0);
     turnstile_passed_clear_distance =
         read_json_key<double>(json, "turnstile_passed_clear_distance", 1.0);
-    enable_turnstile_open_timeout_release = read_json_key<bool>(
-        json, "enable_turnstile_open_timeout_release", true);
+    enable_turnstile_open_timeout_release =
+        read_json_key<bool>(json, "enable_turnstile_open_timeout_release", true);
     turnstile_reopen_timeout_opened_frame_threshold = read_json_key<int32_t>(
         json, "turnstile_reopen_timeout_opened_frame_threshold", 200);
     enable_turnstile_closing_status_drop_emergency_stop = read_json_key<bool>(
         json, "enable_turnstile_closing_status_drop_emergency_stop", true);
     turnstile_closing_status_drop_ratio_threshold = read_json_key<double>(
         json, "turnstile_closing_status_drop_ratio_threshold", 0.5);
-    turnstile_closing_status_drop_consecutive_frame_threshold =
-        read_json_key<int32_t>(
-            json, "turnstile_closing_status_drop_consecutive_frame_threshold",
-            3);
-    turnstile_emergency_opening_status_stable_frame_threshold =
-        read_json_key<int32_t>(
-            json, "turnstile_emergency_opening_status_stable_frame_threshold",
-            3);
+    turnstile_closing_status_drop_consecutive_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_closing_status_drop_consecutive_frame_threshold", 3);
+    turnstile_emergency_opening_status_stable_frame_threshold = read_json_key<int32_t>(
+        json, "turnstile_emergency_opening_status_stable_frame_threshold", 3);
     turnstile_emergency_stop_velocity_threshold = read_json_key<double>(
         json, "turnstile_emergency_stop_velocity_threshold", 0.1);
     turnstile_emergency_stop_stable_frame_threshold = read_json_key<int32_t>(
@@ -3706,7 +3754,7 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double hpp_profile_ds = 1.0;                                 // m
   double speed_bump_collision_buffer = 0.0;              // m
   double turnstile_stop_buffer = 3.5;
-  double turnstile_min_forward_stop_buffer = 0.5;
+  double turnstile_min_forward_stop_buffer = 1.0;
   bool enable_turnstile_longitudinal_decider = true;
   double turnstile_open_status_threshold = 0.8;
   double turnstile_closed_status_threshold = 0.2;
@@ -4985,11 +5033,17 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, halfplane_cost_allocation_ratio_later,
                      "lane_change_joint_decision",
                      "halfplane_cost_allocation_ratio_later");
+    ReadItem<double>(json, q_ego_vel_bound_weight, "lane_change_joint_decision",
+                     "q_ego_vel_bound_weight");
     ReadItem<double>(json, lc_thw, "lane_change_joint_decision", "lc_thw");
     ReadItem<double>(json, obs_reaction_decay_time,
                      "lane_change_joint_decision", "obs_reaction_decay_time");
     ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
                      "obs_keep_ref_factor");
+    ReadVector<double>(json, max_acc_bound_vel_table, "lane_change_joint_decision",
+                       "max_acc_bound_table", "vel_table");
+    ReadVector<double>(json, max_acc_bound_acc_table, "lane_change_joint_decision",
+                       "max_acc_bound_table", "acc_table");
   }
 
   double q_ego_ref_x = 5.0;
@@ -5040,6 +5094,11 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;
+
+  double q_ego_vel_bound_weight = 50.0;
+
+  std::vector<double> max_acc_bound_vel_table;
+  std::vector<double> max_acc_bound_acc_table;
 };
 
 struct JointMotionPlannerConfig : public EgoPlanningConfig {
@@ -5227,8 +5286,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_jerk_speed_adjust");
     ReadItem<double>(json, q_pos_safe, "long_motion_ilqr", "q_pos_safe");
     ReadItem<double>(json, safe_distance, "long_motion_ilqr", "safe_distance");
-    ReadItem<double>(json, q_emergency_stop, "long_motion_ilqr",
-                     "q_emergency_stop");
+    ReadItem<double>(json, q_emergency_stop, "long_motion_ilqr", "q_emergency_stop");
+    ReadItem<double>(json, q_extend_pos_bound, "long_motion_ilqr", "q_extend_pos_bound");
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
@@ -5285,6 +5344,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_pos_safe = 100.0;
   double safe_distance = 2.5;
   double q_emergency_stop = 2000.0;
+  double q_extend_pos_bound = 20.0;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
@@ -5437,6 +5497,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
         json, "hpp_max_replan_lon_err", hpp_max_replan_lon_err);
     hpp_max_replan_dist_err = read_json_key<double>(
         json, "hpp_max_replan_dist_err", hpp_max_replan_dist_err);
+    hpp_max_vel_correction_per_frame = read_json_key<double>(
+        json, "hpp_max_vel_correction_per_frame", hpp_max_vel_correction_per_frame);
 
     rads_max_replan_lon_err = read_json_key<double>(
         json, "rads_max_replan_lon_err", rads_max_replan_lon_err);
@@ -5483,6 +5545,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_theta_err = 12.0;
   double hpp_max_replan_lon_err = 0.55;
   double hpp_max_replan_dist_err = 0.8;
+  double hpp_max_vel_correction_per_frame = 0.5;
 
   double rads_max_replan_lon_err = 0.50;
 
@@ -6862,18 +6925,24 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
     // comfort target
     {
-      ReadItem<double>(json, rads_comfort_param_static_s0, "speed_planning",
-                       "comfort_target", "rads_comfort_param_static_s0");
-      ReadItem<double>(json, rads_comfort_param_dynamic_s0, "speed_planning",
-                       "comfort_target", "rads_comfort_param_dynamic_s0");
-      ReadItem<double>(json, rads_comfort_param_virtual_s0, "speed_planning",
-                       "comfort_target", "rads_comfort_param_virtual_s0");
-      ReadItem<double>(json, hpp_comfort_param_static_s0, "speed_planning",
-                       "comfort_target", "hpp_comfort_param_static_s0");
-      ReadItem<double>(json, hpp_comfort_param_dynamic_s0, "speed_planning",
-                       "comfort_target", "hpp_comfort_param_dynamic_s0");
-      ReadItem<double>(json, hpp_comfort_param_virtual_s0, "speed_planning",
-                       "comfort_target", "hpp_comfort_param_virtual_s0");
+      ReadItem<double>(json, rads_comfort_param_static_s0,
+            "speed_planning", "comfort_target",
+            "rads_comfort_param_static_s0");
+      ReadItem<double>(json, rads_comfort_param_dynamic_s0,
+                "speed_planning", "comfort_target",
+                "rads_comfort_param_dynamic_s0");
+      ReadItem<double>(json, rads_comfort_param_virtual_s0,
+            "speed_planning", "comfort_target",
+            "rads_comfort_param_virtual_s0");
+      ReadItem<double>(json, hpp_comfort_param_static_s0,
+            "speed_planning", "comfort_target",
+            "hpp_comfort_param_static_s0");
+      ReadItem<double>(json, hpp_comfort_param_dynamic_s0,
+                "speed_planning", "comfort_target",
+                "hpp_comfort_param_dynamic_s0");
+      ReadItem<double>(json, hpp_comfort_param_virtual_s0,
+            "speed_planning", "comfort_target",
+            "hpp_comfort_param_virtual_s0");
     }
   }
 

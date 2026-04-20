@@ -52,7 +52,7 @@ void RADSLateralObstacleDecider::UpdateLatDecision() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double init_s =
       reference_path_ptr_->get_frenet_ego_state().planning_init_point().frenet_state.s;
-  const double kMinCareLatThr = 0.5 * vehicle_param.max_width - 0.1;
+  const double kMinCareLatThr = 0.5 * vehicle_param.max_width - 0.3;
   // const double kMaxCareLatThr = 0.5 * vehicle_param.max_width + 0.25;
   const double kPosChangeBuffer = 0.05;
   for (auto &obstacle : reference_path_ptr_->get_obstacles()) {

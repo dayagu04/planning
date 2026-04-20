@@ -38,6 +38,13 @@ struct RSPathRequest {
   float min_radius;
 };
 
+struct RSInput {
+  float rs_radius;
+  bool need_rs_dense_point;
+  bool need_anchor_point;
+  RSPathRequestType rs_request;
+};
+
 std::string GetRSRequestType(const RSPathRequestType type);
 
 }  // namespace planning

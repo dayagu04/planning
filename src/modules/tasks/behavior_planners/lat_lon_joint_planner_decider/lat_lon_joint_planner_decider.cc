@@ -51,7 +51,7 @@ void LatLonJointPlannerDecider::Init() {
 }
 
 bool LatLonJointPlannerDecider::Execute() {
-  LOG_DEBUG("=======LatLonJointPlannerDecider======= \n");
+  // LOG_DEBUG("=======LatLonJointPlannerDecider======= \n");
 
   if (!PreCheck()) {
     LOG_DEBUG("PreCheck failed\n");

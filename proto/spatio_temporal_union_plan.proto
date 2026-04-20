@@ -4,9 +4,34 @@ import "basic_types.proto";
 
 message SpatioTemporalUnionPlan {
   optional bool st_dp_is_sucess = 1;
-  repeated Point2d origin_refline_points = 2;
+  repeated Point2d origin_refline_points = 2 [deprecated = true];
   repeated TrajectoryPoint trajectory_points = 3;
   optional double cost_time = 4;
   optional bool enable_using_st_plan = 5;
+  repeated DebugPoint debug_points = 6;
+}
+
+message DebugPoint {
+  optional float s = 1;
+  optional float l = 2;
+  optional float t = 3;
+  optional float v = 4;
+  optional int32 t_index = 5;
+  optional int32 s_index = 6;
+  optional int32 l_index = 7;
+  optional float obstacle_cost = 8;
+  optional float path_cost = 9;
+  optional float long_cost = 10;
+  optional float obstacle_min_distance = 11;
+  optional int32 obstacle_id = 12;
+  optional float total_cost = 13;
+  optional float path_l_cost = 14;
+  optional float path_dl_cost = 15;
+  optional float path_ddl_cost = 16;
+  optional float stitching_cost = 17;
+  // Predecessor node indices for debugging DP path selection
+  optional uint32 pre_t_index = 19;
+  optional uint32 pre_s_index = 20;
+  optional uint32 pre_l_index = 21;
 }
 

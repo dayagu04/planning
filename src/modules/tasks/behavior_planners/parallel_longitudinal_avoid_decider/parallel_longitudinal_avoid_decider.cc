@@ -931,9 +931,13 @@ bool ParallelLongitudinalAvoidDecider::CheckIfNeedYield(
 
   const double longitudinal_distance = std::max(
       agent_s - ego_s - front_edge_to_rear_axle_ - half_agent_length, 0.0);
+  const double ego_longitudinal_distance =
+      ego_s - rear_edge_to_rear_axle_ - agent_s - half_agent_length;
   const double longitudinal_distance_threshold =
       ego_init_point.v * kLongitudinalTTCStartThresholdS;
-  if (longitudinal_distance > longitudinal_distance_threshold) {
+      
+  if (longitudinal_distance > longitudinal_distance_threshold ||
+      ego_longitudinal_distance > 0.0) {
     return false;
   }
 

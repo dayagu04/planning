@@ -3409,6 +3409,28 @@ void RouteInfo::UpdateVisionInfo() const {
           route_info_output_.mlc_decider_scene_type_info.mlc_scene_type));
   JSON_DEBUG_VALUE("ego_seq", route_info_output_.ego_seq);
 
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& cur_lane = virtual_lane_manager->get_current_lane();
+  const auto& left_lane = virtual_lane_manager->get_left_lane();
+  const auto& right_lane = virtual_lane_manager->get_right_lane();
+  JSON_DEBUG_VALUE("cur_lane_order_on_split_next_link",
+                   cur_lane != nullptr
+                       ? cur_lane->get_lane_order_on_split_next_link()
+                       : -1);
+  JSON_DEBUG_VALUE("left_lane_order_on_split_next_link",
+                   left_lane != nullptr
+                       ? left_lane->get_lane_order_on_split_next_link()
+                       : -1);
+  JSON_DEBUG_VALUE("right_lane_order_on_split_next_link",
+                   right_lane != nullptr
+                       ? right_lane->get_lane_order_on_split_next_link()
+                       : -1);
+  JSON_DEBUG_VALUE("curlane_on_route_link",
+                   cur_lane != nullptr
+                       ? (int)cur_lane->get_route_on_link_status()
+                       : -1);
+
   // todo(wangzhi17):用virtual lane中的信息来更新
   // JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
   // JSON_DEBUG_VALUE("right_lane_distance",

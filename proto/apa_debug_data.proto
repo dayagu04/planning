@@ -131,6 +131,8 @@ message ApaRemainDist {
   optional double remain_dynamic_obs_dist = 4;
   optional double remain_slot_jump_dist = 5;
   optional double remain_dist_by_od = 6;
+  optional double remain_dist_col_det = 7;
+  optional double current_path_length = 8;
 }
 
 message ApaStuckTime {
@@ -165,6 +167,7 @@ message ApaPlanningSlotInfo {
   repeated Point2d origin_slot_points = 10;
   repeated Point2d target_slot_points = 11;
   repeated Point2d virtual_limiters = 12;
+  optional int32 target_pose_type = 13;
 }
 
 enum PaCategory {
@@ -196,6 +199,19 @@ message ApaTimeBenchmark {
   optional double gen_obs_time = 14;
 }
 
+message ApaPlanningStatus {
+  optional int32 pathplan_result = 1;
+  optional bool replan_flag = 2;
+  optional bool is_replan_first = 3;
+  optional bool path_plan_success = 4;
+  optional int32 planning_status = 5;
+  optional bool spline_success = 6;
+  optional int32 replan_reason = 7;
+  optional int32 plan_fail_reason = 8;
+  optional bool ego_should_stop_by_slot_jump = 9;
+  optional bool correct_path_for_limiter = 10;
+}
+
 message ApaPathDebug {
   optional AstarNodeList astar_node_list = 1;
   optional ObstacleListDebug obs_list = 2;
@@ -208,4 +224,5 @@ message ApaPathDebug {
   optional ApaTerminalErr terminal_err = 10;
   optional ApaPlanningSlotInfo slot_info = 11;
   repeated PaObject pa_objects = 12;
+  optional ApaPlanningStatus planning_status = 13;
 }

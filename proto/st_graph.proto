@@ -45,4 +45,5 @@ message StGraphData {
   repeated Point2D planned_path = 6;
   repeated StBoundary neighbor_st_boundaries = 7;
   repeated AgentTrajectories agents_trajectories = 8;
+  repeated AgentStBoundary cut_in_st_boundaries = 9;
 }

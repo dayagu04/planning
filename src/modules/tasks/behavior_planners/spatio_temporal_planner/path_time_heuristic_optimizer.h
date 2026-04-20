@@ -49,7 +49,8 @@ class PathTimeHeuristicOptimizer {
       const bool last_enable_using_st_plan,
       planning::common::SpationTemporalUnionDpInput&
           spatio_temporal_union_plan_input,
-      bool& ego_in_intersection_state);
+      bool& ego_in_intersection_state,
+      planning::common::SpatioTemporalUnionPlan* plan_output);
 
   bool GetStDpIsSuccess() const { return st_dp_is_sucess_; }
 
@@ -66,7 +67,8 @@ class PathTimeHeuristicOptimizer {
       const bool last_enable_using_st_plan,
       planning::common::SpationTemporalUnionDpInput&
           spatio_temporal_union_plan_input,
-      bool& ego_in_intersection_state);
+      bool& ego_in_intersection_state,
+      planning::common::SpatioTemporalUnionPlan* plan_output);
 
   void FallbackFunction(TrajectoryPoints &traj_points);
 

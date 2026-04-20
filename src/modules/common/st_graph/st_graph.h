@@ -122,6 +122,11 @@ class STGraph {
   const std::shared_ptr<planning_math::KDPath> processed_path() const {
     return st_graph_input_->processed_path();
   }
+
+  const std::unordered_map<int32_t, std::vector<std::unique_ptr<STBoundary>>>&
+  cut_in_agent_id_st_boundaries_map() const {
+    return cut_in_agent_id_st_boundaries_map_;
+  }
   /*******st_graph_helper* functions(end)*******/
  private:
   void MakeAgentStBoundaries();
@@ -157,6 +162,7 @@ class STGraph {
       const planning_math::Polygon2d& obs_polygon,
       const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
       double* lower_s, double* upper_s);
+  void MakeCutInStBoundary(const agent::Agent& agent);
 
   void RecalculateTrajectoryForLcRearAgent(const agent::Agent* rear_agent);
 
@@ -229,6 +235,10 @@ class STGraph {
       close_pass_boundary_id_st_boundaries_map_;
   std::unordered_map<int32_t, std::vector<int64_t>>
       close_pass_agent_id_st_boundaries_map_;
+
+  // bellow is for cut-in st boundary
+  std::unordered_map<int32_t, std::vector<std::unique_ptr<STBoundary>>>
+      cut_in_agent_id_st_boundaries_map_;
 };
 }  // namespace speed
 }  // namespace planning

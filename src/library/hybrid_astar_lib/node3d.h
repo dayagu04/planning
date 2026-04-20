@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bits/stdint-intn.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -9,9 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "ad_common/math/box2d.h"
-
 #include "./../../modules/common/config/vehicle_param.h"
+#include "ad_common/math/box2d.h"
 #include "cost/g_cost.h"
 #include "cost/h_cost.h"
 #include "hybrid_astar_common.h"
@@ -176,11 +176,15 @@ class Node3d {
 
   void SetGCost(float cost) { traj_cost_ = cost; }
 
+  void AddGCost(float cost) { traj_cost_ += cost; }
+
   void SetFCost() { f_cost_ = traj_cost_ + heuristic_cost_; }
 
   void SetFCost(const float v) { f_cost_ = v; }
 
   void SetHeuCost(float cost) { heuristic_cost_ = cost; }
+
+  void AddHeuCost(float cost) { heuristic_cost_ += cost; }
 
   void SetHeurCostDebug(const NodeHeuristicCost& cost) {
     heuristic_cost_debug_ = cost;
@@ -226,7 +230,9 @@ class Node3d {
 
   const float GetSingleGearLength() const { return single_gear_length_; }
 
-  void SetSingleGearMinLength(const float length) { single_gear_min_length_ = length; }
+  void SetSingleGearMinLength(const float length) {
+    single_gear_min_length_ = length;
+  }
 
   const float GetSingleGearMinLength() const { return single_gear_min_length_; }
 

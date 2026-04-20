@@ -37,6 +37,9 @@ class DpStCost {
   void Init(
       const planning::common::LongitudinalWeightParams& long_weight_params) {
     config_ = long_weight_params;
+    // Clear cached costs since parameters have changed
+    accel_cost_.fill(-1.0);
+    jerk_cost_.fill(-1.0);
     return;
   }
 

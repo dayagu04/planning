@@ -13,67 +13,77 @@ std::unordered_map<int32_t, int32_t>
 
 double LongRefPathDecider::CalcUpperBoundConfidence(const int32_t agent_id,
                                                     const double distance_s) {
+  double dist_conf = 1.0;
   const double abs_s = std::fabs(distance_s);
-  double distance_confidence = 1.0;
   if (abs_s > kUpperBoundConfidenceFullDistance) {
-    if (abs_s >= kUpperBoundConfidenceZeroDistance) {
-      distance_confidence = 0.0;
+    if (abs_s < kUpperBoundConfidenceZeroDistance) {
+      dist_conf = (kUpperBoundConfidenceZeroDistance - abs_s) /
+                  (kUpperBoundConfidenceZeroDistance - kUpperBoundConfidenceFullDistance);
+      dist_conf = std::fmax(0.0, std::fmin(1.0, dist_conf));
     } else {
-      const double denom =
-          kUpperBoundConfidenceZeroDistance - kUpperBoundConfidenceFullDistance;
-      const double ratio = (kUpperBoundConfidenceZeroDistance - abs_s) / denom;
-      distance_confidence = std::fmax(0.0, std::fmin(1.0, ratio));
+      dist_conf = 0.0;
     }
   }
 
   auto iter = upper_bound_agent_observation_count_.find(agent_id);
-  if (iter == upper_bound_agent_observation_count_.end()) {
-    return distance_confidence;
+  if (iter == upper_bound_agent_observation_count_.end() ||
+      iter->second < kUpperBoundAgentObservationCountThresholdMin) {
+    return dist_conf;
   }
 
-  const int32_t obs_count = iter->second;
-  if (obs_count < kUpperBoundAgentObservationCountThresholdMin) {
-    return distance_confidence;
+  if (iter->second >= kUpperBoundAgentObservationCountThresholdMax) {
+    return 1.0;
   }
 
-  if (obs_count < kUpperBoundAgentObservationCountThresholdMax) {
-    const double blend_ratio =
-        (obs_count - kUpperBoundAgentObservationCountThresholdMin) /
-        (kUpperBoundAgentObservationCountThresholdMax -
-         kUpperBoundAgentObservationCountThresholdMin);
-    return distance_confidence + blend_ratio * (1.0 - distance_confidence);
-  }
-  return 1.0;
+  const double blend = (iter->second - kUpperBoundAgentObservationCountThresholdMin) /
+                       (kUpperBoundAgentObservationCountThresholdMax -
+                        kUpperBoundAgentObservationCountThresholdMin);
+  return dist_conf + blend * (1.0 - dist_conf);
 }
 
 void LongRefPathDecider::UpdateUpperBoundAgentObservation(
     framework::Session *session, double dt, int32_t plan_points_num) {
-  std::unordered_set<int32_t> current_upper_bound_agents;
+  const auto st_graph = session->planning_context().st_graph_helper();
+  if (!st_graph) return;
 
-  const auto st_graph_helper = session->planning_context().st_graph_helper();
-  if (!st_graph_helper) {
-    return;
+  std::unordered_set<int32_t> upper_bound_agents;
+  for (int32_t i = 0; i < plan_points_num; ++i) {
+    const auto &bound = st_graph->GetPassCorridorUpperBound(i * dt);
+    if (bound.agent_id() != -1) {
+      upper_bound_agents.insert(bound.agent_id());
+    }
   }
 
-  for (int32_t i = 0; i < plan_points_num; ++i) {
-    const auto &upper_bound =
-        st_graph_helper->GetPassCorridorUpperBound(i * dt);
-    if (upper_bound.agent_id() != -1) {
-      current_upper_bound_agents.insert(upper_bound.agent_id());
+  const auto agent_manager = session->environmental_model().get_agent_manager();
+  const auto ego_lane = session->environmental_model()
+      .get_virtual_lane_manager()->get_current_lane();
+  const auto ego_coord = ego_lane ? ego_lane->get_lane_frenet_coord() : nullptr;
+  if (!agent_manager || !ego_coord) return;
+
+  const double half_ego_width =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().width / 2.0;
+
+  std::unordered_set<int32_t> ego_lane_agents;
+  for (const auto &agent_id : upper_bound_agents) {
+    auto agent = agent_manager->GetAgent(agent_id);
+    if (!agent) continue;
+
+    double agent_s = 0.0, agent_l = 0.0;
+    if (!ego_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) continue;
+
+    if (std::abs(agent_l) < half_ego_width) {
+      ego_lane_agents.insert(agent_id);
     }
   }
 
   for (auto it = upper_bound_agent_observation_count_.begin();
        it != upper_bound_agent_observation_count_.end();) {
-    if (current_upper_bound_agents.find(it->first) ==
-        current_upper_bound_agents.end()) {
-      it = upper_bound_agent_observation_count_.erase(it);
-    } else {
-      ++it;
-    }
+    it = upper_bound_agents.find(it->first) == upper_bound_agents.end()
+        ? upper_bound_agent_observation_count_.erase(it)
+        : std::next(it);
   }
 
-  for (const auto &agent_id : current_upper_bound_agents) {
+  for (const auto &agent_id : ego_lane_agents) {
     upper_bound_agent_observation_count_[agent_id]++;
   }
 }
@@ -141,6 +151,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
   lon_behavior_output_.dds_refs.resize(plan_points_num_);
   lon_behavior_output_.hard_bounds_v3.resize(plan_points_num_);
   lon_behavior_output_.soft_bounds_v3.resize(plan_points_num_);
+  lon_behavior_output_.extend_bounds_v3.resize(plan_points_num_);
   lon_behavior_output_.lead_bounds.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_v.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_a.resize(plan_points_num_);
@@ -190,8 +201,16 @@ void LongRefPathDecider::UpdateLonRefPath() {
     s_soft_bound.bound_info.type = BoundType::DEFAULT;
     lon_behavior_output_.soft_bounds_v3[i] = s_soft_bound;
 
+    WeightedBound s_extend_bound;
+    s_extend_bound.lower = 0.0;
+    s_extend_bound.upper = bound_maker_->s_extend_bound(t);
+    s_extend_bound.weight = 10;
+    s_extend_bound.bound_info.id =
+        st_corridor_upper_bound.agent_id();  // hack: 后续在bound_maker_中查询
+    s_extend_bound.bound_info.type = BoundType::DEFAULT;
+    lon_behavior_output_.extend_bounds_v3[i] = s_extend_bound;
+
     // 5.update v bounds
-    // TBD: 缺少一个s-v bound，用于实现精准限速
     Bound lon_v_bound;
     lon_v_bound.lower = bound_maker_->v_lower_bound(t);
     lon_v_bound.upper = bound_maker_->v_upper_bound(t);
@@ -199,18 +218,28 @@ void LongRefPathDecider::UpdateLonRefPath() {
 
     // 6.update a bounds
     Bound lon_a_bound;
-    lon_a_bound.lower = bound_maker_->a_lower_bound(t);
-    lon_a_bound.upper = bound_maker_->a_upper_bound(t);
+    if (lane_change_info.s_search_status &&
+        speed_planning_config_.enable_speed_adjust &&
+        lane_change_info.is_emergency_scene &&
+        start_stop_decider_output.ego_start_stop_info().state() !=
+            common::StartStopInfo::STOP) {
+      lon_a_bound.lower = -3.0;
+      lon_a_bound.upper = 1.3;
+    } else {
+      lon_a_bound.lower = bound_maker_->a_lower_bound(t);
+      lon_a_bound.upper = bound_maker_->a_upper_bound(t);
+    }
     lon_behavior_output_.lon_bound_a[i] = lon_a_bound;
 
     // 7.update jerk bounds
     Bound lon_j_bound;
     if (lane_change_info.s_search_status &&
         speed_planning_config_.enable_speed_adjust &&
+        lane_change_info.is_emergency_scene &&
         start_stop_decider_output.ego_start_stop_info().state() !=
             common::StartStopInfo::STOP) {
-      lon_j_bound.lower = -2.5;
-      lon_j_bound.upper = 3.0;
+      lon_j_bound.lower = -2.0;
+      lon_j_bound.upper = 2.0;
     } else {
       lon_j_bound.lower = bound_maker_->jerk_lower_bound(t);
       lon_j_bound.upper = bound_maker_->jerk_upper_bound(t);
@@ -340,9 +369,23 @@ void LongRefPathDecider::SaveToDebugInfo() {
           BoundType2String(lon_soft_bound.bound_info.type));
     }
   }
-  // 6. TBD: update lon_sv_boundary
+  // 6. update lon_extend_bounds
+  lon_behavior_output_pb_.mutable_extend_bounds()->Reserve(
+      lon_behavior_output_.extend_bounds_v3.size());
+  auto lon_extend_bounds_pb = lon_behavior_output_pb_.add_extend_bounds();
+  for (const auto &lon_extend_bound : lon_behavior_output_.extend_bounds_v3) {
+    auto lon_extend_bound_pb = lon_extend_bounds_pb->add_bound();
+    lon_extend_bound_pb->set_lower(lon_extend_bound.lower);
+    lon_extend_bound_pb->set_upper(lon_extend_bound.upper);
+    lon_extend_bound_pb->set_weight(lon_extend_bound.weight);
+    lon_extend_bound_pb->mutable_bound_info()->set_id(
+        lon_extend_bound.bound_info.id);
+    lon_extend_bound_pb->mutable_bound_info()->set_type(
+        BoundType2String(lon_extend_bound.bound_info.type));
+  }
+  // 7. TBD: update lon_sv_boundary
 
-  // 7.update lon_bound_v
+  // 8.update lon_bound_v
   auto lon_bounds_v_pb = lon_behavior_output_pb_.mutable_lon_bound_v();
   lon_bounds_v_pb->mutable_bound()->Reserve(
       lon_behavior_output_.lon_bound_v.size());
@@ -408,6 +451,7 @@ void LongRefPathDecider::ClearOutput() {
   lon_behavior_output_.lon_bound_jerk.clear();
   lon_behavior_output_.s_speed_adjust_target.clear();
   lon_behavior_output_.s_lane_change_target.clear();
+  lon_behavior_output_.extend_bounds_v3.clear();
 }
 
 }  // namespace planning

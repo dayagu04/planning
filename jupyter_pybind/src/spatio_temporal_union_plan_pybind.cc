@@ -11,6 +11,9 @@
 #include <utility>
 #include <vector>
 
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+
 #include "basic_types.pb.h"
 #include "build/proto/spatio_temporal_union_dp_input.pb.h"
 #include "environmental_model.h"
@@ -19,6 +22,7 @@
 #include "src/common/vec2d.h"
 #include "src/modules/common/config/basic_type.h"
 #include "src/modules/tasks/behavior_planners/spatio_temporal_planner/spatio_temporal_union_dp.h"
+#include "spatio_temporal_union_plan.pb.h"
 #include "src/modules/tasks/behavior_planners/spatio_temporal_planner/grid_map.h"
 #include "trajectory1d/trajectory1d.h"
 #include "utils/frenet_coordinate_system.h"
@@ -32,6 +36,8 @@ namespace py = pybind11;
 using namespace planning;
 using namespace planning::planning_math;
 static SpatioTemporalUnionDp *pBase = nullptr;
+static planning_math::KDPath *pTargetLaneCoord = nullptr;
+static planning::common::SpatioTemporalUnionPlan g_plan_output;
 
 int Init() {
   FilePath::SetName("spatio_temporal_union_planning_py");
@@ -128,6 +134,11 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
     return 0;
   }
   planning_math::KDPath target_lane_coord(std::move(path_points));
+  // Save for GetSamplePointsXY
+  if (pTargetLaneCoord != nullptr) {
+    delete pTargetLaneCoord;
+  }
+  pTargetLaneCoord = new planning_math::KDPath(target_lane_coord);
   // ILOG_INFO << "\n 333 " ;
 
   double target_s = spatio_temporal_union_input.target_s();
@@ -206,7 +217,7 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
   //           << " target_lane_coord.max_x " << target_lane_coord.max_x()
   //           << " target_lane_coord.max_y" << target_lane_coord.max_y();
   pBase->Update(
-      traj_points, surround_agents_trajs, spatio_temporal_union_input, target_s, target_lane_coord, half_lateral_sample_nums, last_enable_using_st_plan);
+      traj_points, surround_agents_trajs, spatio_temporal_union_input, target_s, target_lane_coord, half_lateral_sample_nums, last_enable_using_st_plan, &g_plan_output);
   return 0;
 }
 
@@ -327,10 +338,209 @@ py::bytes GetOutputBytes() {
   return serialized_message;
 }
 
+py::bytes GetDebugPlanBytes() {
+  const auto& debug_points = pBase->GetDebugPoints();
+  std::cout << "debug_points size:" << debug_points.size() << std::endl;
+  std::string serialized_message;
+  for (const auto& point : debug_points) {
+    std::string msg;
+    point.SerializeToString(&msg);
+    google::protobuf::io::StringOutputStream sos(&serialized_message);
+    google::protobuf::io::CodedOutputStream cos(&sos);
+    cos.WriteVarint32(msg.size());
+    cos.WriteRaw(msg.data(), msg.size());
+  }
+  return serialized_message;
+}
+
+py::dict GetSamplePointsXY() {
+  const auto& cost_table = pBase->GetCostTable();
+  std::vector<double> x_coords, y_coords;
+  std::vector<double> s_vals, l_vals, t_vals, total_costs;
+  std::vector<int> t_indices, s_indices, l_indices;
+
+  if (pTargetLaneCoord == nullptr) {
+    py::dict result;
+    result["x"] = x_coords; result["y"] = y_coords;
+    result["s"] = s_vals; result["l"] = l_vals; result["t"] = t_vals;
+    result["total_cost"] = total_costs;
+    result["t_index"] = t_indices; result["s_index"] = s_indices; result["l_index"] = l_indices;
+    return result;
+  }
+
+  // Only iterate t=0 layer to avoid duplicate spatial positions across time
+  if (!cost_table.empty()) {
+    for (const auto& s_layer : cost_table[0]) {
+      for (const auto& point : s_layer) {
+        const auto& slt_point = point.point();
+        Point2D frenet_point(slt_point.s(), slt_point.l());
+        Point2D cart_point;
+        if (pTargetLaneCoord->SLToXY(frenet_point, cart_point)) {
+          x_coords.push_back(cart_point.x);
+          y_coords.push_back(cart_point.y);
+          s_vals.push_back(slt_point.s());
+          l_vals.push_back(slt_point.l());
+          t_vals.push_back(slt_point.t());
+          total_costs.push_back(point.total_cost());
+          t_indices.push_back(static_cast<int>(point.index_t()));
+          s_indices.push_back(static_cast<int>(point.index_s()));
+          l_indices.push_back(static_cast<int>(point.index_l()));
+        }
+      }
+    }
+  }
+
+  py::dict result;
+  result["x"] = x_coords; result["y"] = y_coords;
+  result["s"] = s_vals; result["l"] = l_vals; result["t"] = t_vals;
+  result["total_cost"] = total_costs;
+  result["t_index"] = t_indices; result["s_index"] = s_indices; result["l_index"] = l_indices;
+  return result;
+}
+
+py::dict GetDebugPathXY() {
+  const auto& debug_points = pBase->GetDebugPoints();
+  std::vector<double> x_coords, y_coords;
+
+  if (pTargetLaneCoord == nullptr) {
+    py::dict result;
+    result["x"] = x_coords;
+    result["y"] = y_coords;
+    return result;
+  }
+
+  for (const auto& point : debug_points) {
+    Point2D frenet_point(point.s(), point.l());
+    Point2D cart_point;
+    if (pTargetLaneCoord->SLToXY(frenet_point, cart_point)) {
+      x_coords.push_back(cart_point.x);
+      y_coords.push_back(cart_point.y);
+    }
+  }
+
+  py::dict result;
+  result["x"] = x_coords;
+  result["y"] = y_coords;
+  return result;
+}
+
+// Return all visited nodes in cost_table_ with costs and predecessor indices.
+// Useful for visualizing the full DP cost landscape (not just the optimal path).
+py::dict GetAllNodesXY() {
+  const auto& cost_table = pBase->GetCostTable();
+  std::vector<double> x_coords, y_coords;
+  std::vector<double> s_vals, l_vals, t_vals;
+  std::vector<double> total_costs, obstacle_costs, path_costs;
+  std::vector<double> path_l_costs, path_dl_costs, path_ddl_costs;
+  std::vector<double> stitching_costs, long_costs;
+  std::vector<double> speeds, accs;
+  std::vector<int> t_indices, s_indices, l_indices;
+  std::vector<int> pre_t_indices, pre_s_indices, pre_l_indices;
+
+  if (pTargetLaneCoord == nullptr) {
+    py::dict result;
+    result["x"] = x_coords; result["y"] = y_coords;
+    result["s"] = s_vals; result["l"] = l_vals; result["t"] = t_vals;
+    result["total_cost"] = total_costs; result["obstacle_cost"] = obstacle_costs;
+    result["path_cost"] = path_costs; result["path_l_cost"] = path_l_costs;
+    result["path_dl_cost"] = path_dl_costs; result["path_ddl_cost"] = path_ddl_costs;
+    result["stitching_cost"] = stitching_costs; result["long_cost"] = long_costs;
+    result["speed"] = speeds; result["acc"] = accs;
+    result["t_index"] = t_indices; result["s_index"] = s_indices; result["l_index"] = l_indices;
+    result["pre_t_index"] = pre_t_indices; result["pre_s_index"] = pre_s_indices;
+    result["pre_l_index"] = pre_l_indices;
+    return result;
+  }
+
+  for (size_t t = 0; t < cost_table.size(); ++t) {
+    for (size_t s = 0; s < cost_table[t].size(); ++s) {
+      for (size_t l = 0; l < cost_table[t][s].size(); ++l) {
+        const auto& point = cost_table[t][s][l];
+        if (std::isinf(point.total_cost())) continue;
+
+        Point2D frenet_point(point.point().s(), point.point().l());
+        Point2D cart_point;
+        if (!pTargetLaneCoord->SLToXY(frenet_point, cart_point)) continue;
+
+        x_coords.push_back(cart_point.x);
+        y_coords.push_back(cart_point.y);
+        s_vals.push_back(point.point().s());
+        l_vals.push_back(point.point().l());
+        t_vals.push_back(point.point().t());
+        total_costs.push_back(point.total_cost());
+        obstacle_costs.push_back(point.obstacle_cost());
+        path_costs.push_back(point.path_cost());
+        path_l_costs.push_back(point.path_l_cost());
+        path_dl_costs.push_back(point.path_dl_cost());
+        path_ddl_costs.push_back(point.path_ddl_cost());
+        stitching_costs.push_back(point.stitching_cost());
+        long_costs.push_back(point.longitinal_cost());
+        speeds.push_back(point.GetOptimalSpeed());
+        accs.push_back(point.GetAcc());
+        t_indices.push_back(static_cast<int>(t));
+        s_indices.push_back(static_cast<int>(s));
+        l_indices.push_back(static_cast<int>(l));
+
+        if (point.pre_point() != nullptr) {
+          pre_t_indices.push_back(static_cast<int>(point.pre_point()->index_t()));
+          pre_s_indices.push_back(static_cast<int>(point.pre_point()->index_s()));
+          pre_l_indices.push_back(static_cast<int>(point.pre_point()->index_l()));
+        } else {
+          pre_t_indices.push_back(-1);
+          pre_s_indices.push_back(-1);
+          pre_l_indices.push_back(-1);
+        }
+      }
+    }
+  }
+
+  py::dict result;
+  result["x"] = x_coords; result["y"] = y_coords;
+  result["s"] = s_vals; result["l"] = l_vals; result["t"] = t_vals;
+  result["total_cost"] = total_costs; result["obstacle_cost"] = obstacle_costs;
+  result["path_cost"] = path_costs; result["path_l_cost"] = path_l_costs;
+  result["path_dl_cost"] = path_dl_costs; result["path_ddl_cost"] = path_ddl_costs;
+  result["stitching_cost"] = stitching_costs; result["long_cost"] = long_costs;
+  result["speed"] = speeds; result["acc"] = accs;
+  result["t_index"] = t_indices; result["s_index"] = s_indices; result["l_index"] = l_indices;
+  result["pre_t_index"] = pre_t_indices; result["pre_s_index"] = pre_s_indices;
+  result["pre_l_index"] = pre_l_indices;
+  return result;
+}
+
+// Set last frame trajectory from bag data so stitching cost uses correct previous frame.
+// Accepts serialized basic_types_pb2.TrajectoryPoints bytes.
+int SetLastFrameTrajectory(py::bytes& traj_bytes) {
+  auto traj_points_proto = BytesToProto<planning::common::TrajectoryPoints>(traj_bytes);
+
+  std::vector<planning::planning_math::PathPoint> path_points;
+  path_points.reserve(traj_points_proto.point_size());
+  for (int i = 0; i < traj_points_proto.point_size(); ++i) {
+    const auto& pt = traj_points_proto.point(i);
+    planning::planning_math::PathPoint path_pt;
+    path_pt.set_x(pt.x());
+    path_pt.set_y(pt.y());
+    path_points.emplace_back(path_pt);
+  }
+
+  if (path_points.size() < planning_math::KDPath::kKDPathMinPathPointSize + 1) {
+    return 0;
+  }
+
+  auto kd_path = std::make_shared<planning_math::KDPath>(std::move(path_points));
+  pBase->SetLastFrameTrajectory(kd_path);
+  return 0;
+}
+
 PYBIND11_MODULE(spatio_temporal_union_planning_py, m) {
   m.doc() = "m";
 
   m.def("Init", &Init)
       .def("UpdateByParams", &UpdateByParams)
-      .def("GetOutputBytes", &GetOutputBytes);
+      .def("GetOutputBytes", &GetOutputBytes)
+      .def("GetDebugPlanBytes", &GetDebugPlanBytes)
+      .def("GetSamplePointsXY", &GetSamplePointsXY)
+      .def("GetDebugPathXY", &GetDebugPathXY)
+      .def("GetAllNodesXY", &GetAllNodesXY)
+      .def("SetLastFrameTrajectory", &SetLastFrameTrajectory);
 }

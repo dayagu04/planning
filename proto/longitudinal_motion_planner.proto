@@ -68,10 +68,13 @@ message LongitudinalPlanningInput {
   optional double safe_distance = 48;
   optional double q_emergency_stop = 49;
   optional bool is_lon_cipv_emergency_stop = 50;
-  optional bool is_joint_danger_emergency_stop = 51;
+  optional bool is_lon_cutin_emergency_stop = 51;
   optional bool is_follow_cipv = 52;
   repeated double ref_acc_vec = 53;
   repeated double a_weights = 54;
+  repeated double extend_pos_max_vec = 55;
+  repeated double extend_pos_min_vec = 56;
+  optional double q_extend_pos_bound = 57;
 }
 
 

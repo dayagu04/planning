@@ -177,12 +177,18 @@ message JointDecisionPlanningInput {
   optional double soft_halfplane_cost_allocation_ratio = 51;
   optional double halfplane_cost_allocation_ratio_later = 56;
 
+  // 自车速度边界权重
+  optional double q_ego_vel_bound_weight = 57;
+
+  // 自车速度边界
+  repeated double ego_vel_max = 58;
+
   // 障碍物反应衰减参数
   optional double obs_reaction_decay_time = 54;
   optional double obs_keep_ref_factor = 55;
 
   // 自车尺寸参数
-  optional double ego_length = 52;
+  optional double ego_length = 52; 
   optional double ego_width = 53;
 }
 
