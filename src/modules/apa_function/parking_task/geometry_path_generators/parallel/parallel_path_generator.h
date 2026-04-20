@@ -233,6 +233,17 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     }
   };
 
+  struct PAParams {
+    PaPlanMethod first_pa_plan_method_;
+    PaPlanMethod last_pa_plan_method_;
+    bool had_park_out = false;
+    void Reset() {
+      first_pa_plan_method_ = PaPlanMethod::PaPlanInvalid;
+      last_pa_plan_method_ = PaPlanMethod::PaPlanInvalid;
+      had_park_out = false;
+    }
+  };
+
  public:
   virtual void Reset() override;
   virtual const bool Update() override;
@@ -352,6 +363,9 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const bool UpdateOutputPointByZigZag();
   const bool UpdateOutputPointByOverlap();
+
+  const PAParams& GetPAParams() const { return pa_params_; }
+  void SetPAParams(const PAParams& pa_params) { pa_params_ = pa_params; }
 
  protected:
   virtual void Preprocess() override;
@@ -730,9 +744,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   PlannerParams calc_params_;
   DebugInfo debug_info_;
   bool enable_pa_park_ = false;
-  PaPlanMethod first_pa_plan_method_;
-  PaPlanMethod last_pa_plan_method_;
-  bool had_park_out = false;
+  PAParams pa_params_;
   bool better_out_path_again_lastframe_ =false;
   std::vector<std::vector<pnc::geometry_lib::PathSegment>>
       path_in_slot_to_astar_;

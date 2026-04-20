@@ -327,30 +327,30 @@ ParallelPathGenerator::CheckPaParkCondition() {
             << " first ratio = " << input_.tlane.first_occupied_ratio
             << " sec ratio = " << sec_ratio;
   if (input_.is_replan_first) {
-    had_park_out = false;
+    pa_params_.had_park_out = false;
   }
   if (sec_ratio < 0.2) {
-    had_park_out = true;
+    pa_params_.had_park_out = true;
   }
   if (input_.is_replan_first) {
     res = GetPaPlanMethodByTableFlexible(
         slot_len, car_to_curb_dis, PaPlanMethod::PaSturnPlan);
-    first_pa_plan_method_ = res;
+    pa_params_.first_pa_plan_method_ = res;
     if (res == PaPlanMethod::PaPlanInvalid) {
       ILOG_INFO << "PaPlanMethod invalid";
       return res;
     }
     ILOG_INFO << "first PaPlanMethod res = " << static_cast<int>(res);
     if (input_.tlane.use_sturn_plan) {
-      first_pa_plan_method_ = PaPlanMethod::PaSturnPlan;
-      last_pa_plan_method_ = PaPlanMethod::PaSturnPlan;
+      pa_params_.first_pa_plan_method_ = PaPlanMethod::PaSturnPlan;
+      pa_params_.last_pa_plan_method_ = PaPlanMethod::PaSturnPlan;
       ILOG_INFO << "pa use sturn plan";
       return PaPlanMethod::PaSturnPlan;
     }
   } else {
-    if (first_pa_plan_method_ == PaPlanMethod::ApaOutSlotPlan) {
-      if (had_park_out) {
-        if (last_pa_plan_method_ == PaPlanMethod::ApaInSlotPlan) {
+    if (pa_params_.first_pa_plan_method_ == PaPlanMethod::ApaOutSlotPlan) {
+      if (pa_params_.had_park_out) {
+        if (pa_params_.last_pa_plan_method_ == PaPlanMethod::ApaInSlotPlan) {
           res = PaPlanMethod::ApaInSlotPlan;
         } else if (sec_ratio > switch_plan_ratio) {
           res = PaPlanMethod::ApaInSlotPlan;
@@ -360,11 +360,11 @@ ParallelPathGenerator::CheckPaParkCondition() {
       } else {
         res = PaPlanMethod::ApaOutSlotPlan;
       }
-    } else if (first_pa_plan_method_ == PaPlanMethod::PaSturnPlan) {
+    } else if (pa_params_.first_pa_plan_method_ == PaPlanMethod::PaSturnPlan) {
       res = PaPlanMethod::PaSturnPlan;
     }
   }
-  last_pa_plan_method_ = res;
+  pa_params_.last_pa_plan_method_ = res;
   ILOG_INFO << "second PaPlanMethod res = " << static_cast<int>(res);
   return res;
 }

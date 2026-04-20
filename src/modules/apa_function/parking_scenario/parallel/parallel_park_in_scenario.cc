@@ -4155,8 +4155,11 @@ const PathPlannerResult ParallelParkInScenario::PathPlanOnceGeometry() {
 void ParallelParkInScenario::UpdatePostProcessStatus(
     PathPlannerResult pathplan_result) {
   if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
-    parallel_path_planner_.Reset();
+    auto pa_param = parallel_path_planner_.GetPAParams();
     parallel_path_planner_ = previous_parallel_path_planner_;
+    if (enable_pa_park_) {
+      parallel_path_planner_.SetPAParams(pa_param);
+    }
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_GEARCHANGE);
       delay_check_finish_ = true;
