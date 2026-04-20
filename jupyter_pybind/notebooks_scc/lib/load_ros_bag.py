@@ -82,6 +82,9 @@ class LoadRosbag:
     # prediction_msg
     self.prediction_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
+    # around prediction_msg
+    self.around_prediction_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
     # planning msg
     self.plan_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
@@ -636,6 +639,28 @@ class LoadRosbag:
     except Exception as e:
       self.prediction_msg['enable'] = False
       print("missing /iflytek/prediction/prediction_result !!!")
+
+    # load around prediction msg
+    try:
+      around_prediction_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/prediction/around_prediction_result"):
+        around_prediction_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      around_prediction_msg_dict = {key: val for key, val in sorted(around_prediction_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in around_prediction_msg_dict.items():
+        self.around_prediction_msg['t'].append(t)
+        self.around_prediction_msg['data'].append(msg)
+        self.around_prediction_msg['timestamp'].append(msg.msg_header.stamp)
+      self.around_prediction_msg['t'] = [tmp - t0  for tmp in self.around_prediction_msg['t']]
+      self.around_prediction_msg['enable'] = True
+      max_time = max(max_time, self.around_prediction_msg['t'][-1])
+      print('around_preiction_msg time:',self.around_prediction_msg['t'][-1])
+      if len(self.around_prediction_msg['t']) > 0:
+        self.around_prediction_msg['enable'] = True
+      else:
+        self.around_prediction_msg['enable'] = False
+    except Exception as e:
+      self.around_prediction_msg['enable'] = False
+      print("missing /iflytek/prediction/around_prediction_result")
 
     # load planning debug msg
     try:

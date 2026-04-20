@@ -53,6 +53,13 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
       const std::shared_ptr<ReferencePath>& reference_path_ptr,
       const std::shared_ptr<FrenetObstacle>& obstacle,
       LatObstacleDecisionType& decision);
+
+  void MakeDecisionForTurnstile(
+      const std::shared_ptr<ReferencePath>& reference_path_ptr,
+      const std::shared_ptr<FrenetObstacle>& obstacle,
+      const std::unordered_map<int, TurnstileInfo>& id_2_turnstile_info,
+      LatObstacleDecisionType& decision);
+
   void MakeDecisionForStaticCluster(
       const ObstacleCluster& cluster,
       const ObstacleConsistencyMap& obstacle_consistency_map,

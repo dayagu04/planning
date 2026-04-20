@@ -3,6 +3,7 @@
 #include "hpp_obstacle_lateral_preprocess_decider.h"
 #include "edt_manager.h"
 #include "planning_context.h"
+#include "math_utils.h"
 #include "utils/cartesian_coordinate_system.h"
 
 namespace planning {
@@ -66,6 +67,7 @@ bool HppObstacleLateralPreprocessDecider::Execute() {
   // 4: 过闸机场景识别、分类和预处理
   auto& turnstile_scene_info =
       hpp_obs_lat_preprocess_output.turnstile_scene_info;
+  turnstile_scene_info.Clear();
   if (!JudgeTurnstileScene(reference_path_ptr, ego_state, turnstile_scene_info)) {
     return false;
   }
@@ -158,7 +160,7 @@ bool HppObstacleLateralPreprocessDecider::JudgeTurnstileScene(
   constexpr double kTurnstileLonThr1 = 15.0;
   constexpr double kTurnstileLonThr2 = 1.0;
   constexpr double kTurnstileLatThr = 5.0;
-  constexpr double kTurnstileLatSafeThr = 0.2;
+  constexpr double kDefaultTurnstileWidth = 3.0;
   if (!reference_path_ptr) {
     return false;
   }
@@ -177,82 +179,117 @@ bool HppObstacleLateralPreprocessDecider::JudgeTurnstileScene(
     return true;
   }
 
-  // S2：获取不同位置的闸机
+  // S2：获取不同朝向的闸机
   const auto& turnstile_osbatcles =
       reference_path_ptr->get_turnstile_obstacles();
-  std::vector<ConstFrenetObstaclePtr> l_turnstiles;
-  std::vector<ConstFrenetObstaclePtr> r_turnstiles;
-  std::vector<ConstFrenetObstaclePtr> m_turnstiles;
+  const auto& turnstile_osbatcles_map =
+      reference_path_ptr->get_turnstile_obstacles_map();
+  bool has_curr_lane_turnstile = false;
+  int curr_lane_nearest_turnstile_id = -1;
+  double curr_lane_nearest_turnstile_s = 0.0;
+  TurnstileOpenDir curr_lane_nearest_turnstile_open_dir;
   for(const auto& turnstile_osbatcle : turnstile_osbatcles) {
     const auto& sl_boundary = turnstile_osbatcle->frenet_obstacle_boundary();
+    //S2.1：位置过滤
     if (std::min(std::fabs(sl_boundary.l_start), std::fabs(sl_boundary.l_end)) >
             kTurnstileLatThr ||
         sl_boundary.s_start > ego_sl_boundary.s_end + kTurnstileLonThr1 ||
         sl_boundary.s_end < ego_sl_boundary.s_start - kTurnstileLonThr2) {
       continue;
     }
-    const auto width = reference_path_ptr->get_interpolated_point_width(
-        turnstile_osbatcle->frenet_s(), true);
-    const double left_border_l = width.first;
-    const double right_border_l = -width.second;
-    const double mid_l = (left_border_l + right_border_l) / 2.0;
-    if (left_border_l - sl_boundary.l_end >
-            vel_max_width + kTurnstileLatSafeThr &&
-        sl_boundary.l_start - right_border_l >
-            vel_max_width + kTurnstileLatSafeThr) {
-      m_turnstiles.push_back(turnstile_osbatcle);
-    } else if (sl_boundary.l_start - right_border_l >
-               vel_max_width + kTurnstileLatSafeThr) {
-      l_turnstiles.push_back(turnstile_osbatcle);
-    } else if (left_border_l - sl_boundary.l_end >
-               vel_max_width + kTurnstileLatSafeThr) {
-      r_turnstiles.push_back(turnstile_osbatcle);
-    } else {
-      ILOG_ERROR << "block turnstile obsatcle id : "
-                 << turnstile_osbatcle->id();
+
+    //S2.2 判断闸机朝向
+    TurnstileOpenDir open_dir;
+    const auto& turnstile_heading =
+        turnstile_osbatcle->obstacle()->heading_angle();
+    const double mid_s = (sl_boundary.s_start + sl_boundary.s_end) / 2.0;
+    ReferencePathPoint refer_path_point;
+    if(reference_path_ptr->get_reference_point_by_lon(mid_s, refer_path_point) == false) {
+      continue;
     }
+    const double heading_diff = planning_math::NormalizeAngle(
+        turnstile_heading - refer_path_point.path_point.theta());
+    if(heading_diff > M_PI * 1.0 / 4.0 && heading_diff < M_PI * 3.0 / 4.0) {
+      open_dir = TurnstileOpenDir::TURNSTILE_OPEN_DIR_LEFT;
+    } else if(heading_diff > -M_PI * 3.0 / 4.0 && heading_diff < -M_PI * 1.0 / 4.0){
+      open_dir = TurnstileOpenDir::TURNSTILE_OPEN_DIR_RIGHT;
+    } else {
+      //打开方向异常的闸机
+      ILOG_ERROR << "turnstile heading abnormal id : " << turnstile_osbatcle->id() << " heading = " << turnstile_heading;
+      continue;
+    }
+
+    //S2.3 判断闸机位置
+    TurnstilePosition position;
+    if(open_dir == TurnstileOpenDir::TURNSTILE_OPEN_DIR_LEFT) {
+      if(sl_boundary.l_start > vel_max_width / 2) {
+        position = TurnstilePosition::TURNSTILE_POSITION_LEFT;
+      } else if(sl_boundary.l_start + kDefaultTurnstileWidth < -vel_max_width / 2) {
+        position = TurnstilePosition::TURNSTILE_POSITION_RIGHT;
+      } else {
+        position = TurnstilePosition::TURNSTILE_POSITION_CURR;
+      }
+    } else {
+      if(sl_boundary.l_end < -vel_max_width / 2) {
+        position = TurnstilePosition::TURNSTILE_POSITION_RIGHT;
+      } else if(sl_boundary.l_end - kDefaultTurnstileWidth > vel_max_width / 2) {
+        position = TurnstilePosition::TURNSTILE_POSITION_LEFT;
+      } else {
+        position = TurnstilePosition::TURNSTILE_POSITION_CURR;
+      }
+    }
+
+    //S2.4 记录最近当前车道闸机
+    if(position == TurnstilePosition::TURNSTILE_POSITION_CURR) {
+      if(has_curr_lane_turnstile == false || sl_boundary.s_start < curr_lane_nearest_turnstile_s) {
+        curr_lane_nearest_turnstile_id = turnstile_osbatcle->id();
+        curr_lane_nearest_turnstile_s = sl_boundary.s_start;
+        curr_lane_nearest_turnstile_open_dir = open_dir;
+        has_curr_lane_turnstile = true;
+      }
+    }
+
+    TurnstileInfo turnstile_info;
+    turnstile_info.open_dir = open_dir;
+    turnstile_info.position = position;
+    turnstile_info.turnstile_id = turnstile_osbatcle->id();
+    turnstile_scene_info.turnstile_infos.push_back(turnstile_info);
   }
-  const auto sort_fun = [](const ConstFrenetObstaclePtr& a,
-                           const ConstFrenetObstaclePtr& b) {
-    return a->frenet_obstacle_boundary().s_start <
-           b->frenet_obstacle_boundary().s_start;
-  };
-  std::sort(l_turnstiles.begin(), l_turnstiles.end(), sort_fun);
-  std::sort(r_turnstiles.begin(), r_turnstiles.end(), sort_fun);
-  std::sort(m_turnstiles.begin(), m_turnstiles.end(), sort_fun);
 
   // S3: 判断闸机场景和目标闸机
-  if(l_turnstiles.empty() && r_turnstiles.empty() && m_turnstiles.empty()) {
+  constexpr double kPairTurnstileLonThr = 5.0;
+  if (has_curr_lane_turnstile == false) {
     turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_NONE;
-  } else if(m_turnstiles.empty() == false) {
-    if (l_turnstiles.empty() && r_turnstiles.empty()) {
-      turnstile_scene_info.type =
-          TurnstileSceneType::TURNSTILE_SCENE_MID_DOUBLE;
-      turnstile_scene_info.target_id = m_turnstiles.front()->id();
-    } else if (r_turnstiles.empty()) {
-      turnstile_scene_info.type =
-          TurnstileSceneType::TURNSTILE_SCENE_LEFT_SINGLE;
-      turnstile_scene_info.target_id = m_turnstiles.front()->id();
-    } else {
-      turnstile_scene_info.type =
-          TurnstileSceneType::TURNSTILE_SCENE_SIDE_DOUBLE;
-      turnstile_scene_info.target_id = r_turnstiles.front()->id();
-      turnstile_scene_info.side_id = m_turnstiles.front()->id();
-    }
   } else {
-    if(l_turnstiles.empty() == false && r_turnstiles.empty() == false) {
-      turnstile_scene_info.type =
-          TurnstileSceneType::TURNSTILE_SCENE_SIDE_DOUBLE;
-      turnstile_scene_info.target_id = r_turnstiles.front()->id();
-      turnstile_scene_info.side_id = l_turnstiles.front()->id();
-    } else if(l_turnstiles.empty() == false) {
-      turnstile_scene_info.type =
-          TurnstileSceneType::TURNSTILE_SCENE_LEFT_SINGLE;
-      turnstile_scene_info.target_id = l_turnstiles.front()->id();
+    turnstile_scene_info.target_id = curr_lane_nearest_turnstile_id;
+    TurnstilePosition side_turnstile_position;
+    for(const auto& turnstile_info : turnstile_scene_info.turnstile_infos) {
+      if(turnstile_info.open_dir == curr_lane_nearest_turnstile_open_dir) {
+        continue;
+      }
+      const auto& sl_boundary = turnstile_osbatcles_map.at(turnstile_info.turnstile_id)->frenet_obstacle_boundary();
+      if(sl_boundary.s_start < curr_lane_nearest_turnstile_s + kPairTurnstileLonThr && sl_boundary.s_end > curr_lane_nearest_turnstile_s - kPairTurnstileLonThr) {
+        turnstile_scene_info.side_id = turnstile_info.turnstile_id;
+        side_turnstile_position = turnstile_info.position;
+        break;
+      }
+    }
+    if(curr_lane_nearest_turnstile_open_dir == TurnstileOpenDir::TURNSTILE_OPEN_DIR_LEFT) {
+      if(turnstile_scene_info.side_id == -1) {
+        turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_RIGHT_SINGLE;
+      } else if(side_turnstile_position == TurnstilePosition::TURNSTILE_POSITION_LEFT) {
+        turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_SIDE_DOUBLE;
+      } else {
+        turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_MID_DOUBLE;
+      }
     } else {
-      turnstile_scene_info.type =
-          TurnstileSceneType::TURNSTILE_SCENE_RIGHT_SINGLE;
-      turnstile_scene_info.target_id = r_turnstiles.front()->id();
+      if(turnstile_scene_info.side_id == -1) {
+        turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_LEFT_SINGLE;
+      } else if(side_turnstile_position == TurnstilePosition::TURNSTILE_POSITION_RIGHT) {
+        turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_SIDE_DOUBLE;
+      } else {
+        turnstile_scene_info.type = TurnstileSceneType::TURNSTILE_SCENE_MID_DOUBLE;
+      }
     }
   }
   return true;

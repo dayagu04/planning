@@ -1193,29 +1193,13 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // Attention:PREDICTION_TRAJ_POINT_NUM whether valid in C struct
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
-    cur_predicion_obj.trajectory_valid =
-        trajectory_point_size < 1 ? false : true;
+    cur_predicion_obj.trajectory_valid = trajectory_point_size >= 1;
     for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
       const auto& point = prediction_traj.trajectory_point[j];
       PredictionTrajectoryPoint trajectory_point;
+      trajectory_point.prob = prediction_traj.confidence;
       double point_relative_time =
           cur_predicion_obj.delay_time + step_time * traj_index;
-      trajectory_point.relative_time = point_relative_time;
-      trajectory_point.x = point.position.x;
-      trajectory_point.y = point.position.y;
-      trajectory_point.yaw = point.yaw;
-      trajectory_point.speed = point.velocity;
-      trajectory_point.theta = point.theta_vel;
-      trajectory_point.prob = prediction_traj.confidence;
-      trajectory_point.std_dev_x = point.gaussian_info.sigma_x;
-      trajectory_point.std_dev_y = point.gaussian_info.sigma_y;
-      // trajectory_point.std_dev_yaw = point.std_dev_yaw();
-      // trajectory_point.std_dev_speed = point.std_dev_speed();
-      trajectory_point.relative_ego_x = point.relative_position.x;
-      trajectory_point.relative_ego_y = point.relative_position.y;
-      trajectory_point.relative_ego_yaw = point.relative_yaw;
-      trajectory_point.relative_ego_speed =
-          std::hypot(point.relative_velocity.x, point.relative_velocity.y);
       if (cur_predicion_obj.trajectory_valid == false) {
         trajectory_point.relative_time = 0.2 * traj_index;
         trajectory_point.x = cur_predicion_obj.position_x;
@@ -1231,9 +1215,93 @@ void EnvironmentalModelManager::truncate_prediction_info(
                        cur_predicion_obj.relative_speed_y);
         ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id
                   << "s trajectory is empty!";
+      } else {
+        trajectory_point.relative_time = point_relative_time;
+        trajectory_point.x = point.position.x;
+        trajectory_point.y = point.position.y;
+        trajectory_point.yaw = point.yaw;
+        trajectory_point.speed = point.velocity;
+        trajectory_point.theta = point.theta_vel;
+        trajectory_point.std_dev_x = point.gaussian_info.sigma_x;
+        trajectory_point.std_dev_y = point.gaussian_info.sigma_y;
+        trajectory_point.relative_ego_x = point.relative_position.x;
+        trajectory_point.relative_ego_y = point.relative_position.y;
+        trajectory_point.relative_ego_yaw = point.relative_yaw;
+        trajectory_point.relative_ego_speed =
+            std::hypot(point.relative_velocity.x, point.relative_velocity.y);
       }
       traj_index++;
       trajectory_points.emplace_back(trajectory_point);
+    }
+    if (session_->is_hpp_scene()) {
+      // Extend trajectory to HPP_MIN_TRAJ_DURATION_S if too short.
+      // Speed decays linearly from the last point's speed to half of it at 5s.
+      constexpr double HPP_MIN_TRAJ_DURATION_S = 5.0;
+      constexpr double HPP_TRAJ_TIME_INTERVAL_S = 0.2;
+
+      if (trajectory_points.empty()) {
+        // No points to extend
+      } else {
+        const double extend_start_time = trajectory_points.back().relative_time;
+        const double target_time =
+            trajectory_points.front().relative_time + HPP_MIN_TRAJ_DURATION_S;
+        const float speed_at_extend_start = trajectory_points.back().speed;
+        const float speed_at_target = speed_at_extend_start * 0.5f;
+        const double extend_duration = target_time - extend_start_time;
+
+        auto extend_one_point = [&](double dt, float dx, float dy,
+                                    float rel_dx, float rel_dy) {
+          const auto& prev = trajectory_points.back();
+          PredictionTrajectoryPoint extended = prev;
+          extended.relative_time = prev.relative_time + dt;
+          extended.x = prev.x + dx;
+          extended.y = prev.y + dy;
+          extended.relative_ego_x = prev.relative_ego_x + rel_dx;
+          extended.relative_ego_y = prev.relative_ego_y + rel_dy;
+          // Linear speed decay: interpolate based on elapsed time from extend_start
+          double elapsed = extended.relative_time - extend_start_time;
+          float ratio = (extend_duration > 0.0)
+                            ? static_cast<float>(elapsed / extend_duration)
+                            : 1.0f;
+          ratio = std::min(ratio, 1.0f);
+          extended.speed = speed_at_extend_start +
+                           ratio * (speed_at_target - speed_at_extend_start);
+          // acc derived from speed change over dt
+          extended.acc = (dt > 0.0) ? (extended.speed - prev.speed) /
+                                           static_cast<float>(dt)
+                                     : 0.0f;
+          // relative_ego_speed decays proportionally with speed
+          extended.relative_ego_speed =
+              (speed_at_extend_start > 0.0f)
+                  ? prev.relative_ego_speed * (extended.speed / speed_at_extend_start)
+                  : prev.relative_ego_speed;
+          // yaw, theta, relative_ego_yaw: direction unchanged, keep from prev
+          trajectory_points.emplace_back(extended);
+        };
+
+        if (trajectory_points.size() == 1) {
+          while (trajectory_points.back().relative_time < target_time) {
+            extend_one_point(HPP_TRAJ_TIME_INTERVAL_S, 0.0f, 0.0f, 0.0f, 0.0f);
+          }
+        } else if (trajectory_points.size() >= 2) {
+          double duration = extend_start_time -
+                            trajectory_points.front().relative_time;
+          if (duration < HPP_MIN_TRAJ_DURATION_S) {
+            const auto& p1 = trajectory_points[trajectory_points.size() - 2];
+            const auto& p2 = trajectory_points.back();
+            double dt = p2.relative_time - p1.relative_time;
+            if (dt > 0.0) {
+              float dx = p2.x - p1.x;
+              float dy = p2.y - p1.y;
+              float rel_dx = p2.relative_ego_x - p1.relative_ego_x;
+              float rel_dy = p2.relative_ego_y - p1.relative_ego_y;
+              while (trajectory_points.back().relative_time < target_time) {
+                extend_one_point(dt, dx, dy, rel_dx, rel_dy);
+              }
+            }
+          }
+        }
+      }
     }
     // synchronize time
     for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED + 1; traj_index++) {
@@ -1253,6 +1321,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
         fusion_objects_gate_barrier_status_map.end()) {
       cur_predicion_obj.turnstile_status =
           fusion_objects_gate_barrier_status_map[cur_predicion_obj.id];
+    } else {
+      cur_predicion_obj.turnstile_status =
+          iflyauto::GateBarrierStatus::MOTION_DIR_UNKNOWN;
     }
     prediction_info.emplace_back(std::move(cur_predicion_obj));
   }
