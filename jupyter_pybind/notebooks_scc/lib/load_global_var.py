@@ -41,6 +41,7 @@ def init():  # 初始化
     'is_vis_smooth_refline': False,
     'is_vis_static_analysis': False,
     'is_enable_absolute_time': False,
+    'is_vis_stitching': True,
   }
 
 
@@ -92,6 +93,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_smooth_refline'] = False
     global_dict['is_vis_static_analysis'] = True
     global_dict['is_enable_absolute_time'] = True
+    global_dict['is_vis_stitching'] = False
   elif scene == 'NSA':
     global_dict['scene_type'] = 'NSA'
     global_dict['g_is_display_enu'] = False
@@ -105,7 +107,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_rdg_occ'] = True
     global_dict['is_vis_rdg_groundline'] = True
-    global_dict['is_vis_rdg_parking_slot'] = False
+    global_dict['is_vis_rdg_parking_slot'] = True
     global_dict['is_vis_me_obj'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
@@ -120,12 +122,13 @@ def set_value_by_scene(scene):
     global_dict['is_vis_nsa_line'] = True
     global_dict['is_vis_prediction'] = False
     global_dict['is_vis_around_prediction'] = False
-    global_dict['is_vis_tf_light'] = False
+    global_dict['is_vis_tf_light'] = True
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True
     global_dict['is_vis_static_analysis'] = False
     global_dict['is_enable_absolute_time'] = False
+    global_dict['is_vis_stitching'] = True
   elif scene == 'RADS':
     global_dict['scene_type'] = 'RADS'
     global_dict['g_is_display_enu'] = False
@@ -139,7 +142,7 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_rdg_occ'] = True
     global_dict['is_vis_rdg_groundline'] = True
-    global_dict['is_vis_rdg_parking_slot'] = False
+    global_dict['is_vis_rdg_parking_slot'] = True
     global_dict['is_vis_me_obj'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
@@ -154,9 +157,10 @@ def set_value_by_scene(scene):
     global_dict['is_vis_nsa_line'] = False
     global_dict['is_vis_prediction'] = False
     global_dict['is_vis_around_prediction'] = False
-    global_dict['is_vis_tf_light'] = False
+    global_dict['is_vis_tf_light'] = True
     global_dict['is_vis_ego_motion_sim'] = True
     global_dict['is_vis_snrd'] = True
     global_dict['is_vis_smooth_refline'] = True
     global_dict['is_vis_static_analysis'] = False
     global_dict['is_enable_absolute_time'] = False
+    global_dict['is_vis_stitching'] = True
