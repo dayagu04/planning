@@ -534,7 +534,6 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
   pnc::mathlib::spline y_s_spline;
   std::vector<double> s_vec(coarse_traj_points.size());
   if (is_use_spatio_planner_result &&
-      (!is_LC_PROPOSE && !is_LC_CHANGE && !is_LC_BACK && !is_LC_HOLD) &&
       !lane_borrow_decider_output.is_in_lane_borrow_status && total_s > 1.0) {
     std::vector<double> x_vec(coarse_traj_points.size());
     std::vector<double> y_vec(coarse_traj_points.size());

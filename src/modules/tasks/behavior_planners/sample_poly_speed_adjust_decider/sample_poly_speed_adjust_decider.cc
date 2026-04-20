@@ -536,8 +536,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   const bool enable_hold_adjust_speed =
       coarse_planning_info.target_state == kLaneChangeHold;
 
-  if (coarse_planning_info.target_state != kLaneChangePropose &&
-      !enable_hold_adjust_speed) {
+  if ((coarse_planning_info.target_state != kLaneChangePropose &&
+       !enable_hold_adjust_speed) ||
+      lane_change_source_ == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
     count_wait_state_ = 0;
     lane_change_request_ = 0;
     sample_scene_ = SampleScene::NormalSampleScene;
