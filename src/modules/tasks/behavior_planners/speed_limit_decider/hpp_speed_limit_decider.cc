@@ -599,16 +599,21 @@ void HPPSpeedLimitDecider::BuildSmoothedSpeedProfile(double ego_s, double ego_v,
     }
   }
 
-  // (d) 前向平滑（加速约束）— 关键：消除场景间跳变
-  //     起点取 max(v[0], ego_v)：zone 内不压低限速，zone 外防止跳变
+  // (d) 前向平滑（加速约束）— 消除场景间跳变
+  //     在无限速场景时，计算到下一个限速场景的距离，
+  //     限速为从 ego_v 以 a_accel 加速该距离后能到的速度
   const double a_accel = hpp_speed_limit_config_.hpp_profile_comfort_accel;
-  double v_prev = std::max(v[0], ego_v);
-  for (int i = 1; i < N; ++i) {
-    double v_from_prev = std::sqrt(v_prev * v_prev + 2.0 * a_accel * ds);
-    if (v_from_prev < v[i]) {
-      v[i] = v_from_prev;
+  if (binding_type[0] == SpeedLimitType::CRUISE && v[0] > ego_v) {
+    double dist_to_next_zone = lookahead;
+    for (int i = 1; i < N; ++i) {
+      if (binding_type[i] != SpeedLimitType::CRUISE) {
+        dist_to_next_zone = i * ds;
+        break;
+      }
     }
-    v_prev = v[i];
+    double v_accel_limit =
+        std::sqrt(ego_v * ego_v + 2.0 * a_accel * dist_to_next_zone);
+    v[0] = std::min(v[0], v_accel_limit);
   }
 
   // (e) 输出
