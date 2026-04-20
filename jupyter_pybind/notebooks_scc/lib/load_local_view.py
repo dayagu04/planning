@@ -2285,6 +2285,7 @@ def load_local_view_figure():
   is_vis_smooth_refline = global_var.get_value('is_vis_smooth_refline')
   is_vis_static_analysis = global_var.get_value('is_vis_static_analysis')
   is_vis_tf_light = global_var.get_value('is_vis_tf_light')
+  is_vis_stitching = global_var.get_value('is_vis_stitching')
   data_car = ColumnDataSource(data = {'car_yb':[], 'car_xb':[]})
   data_car_traj = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
   data_car_traj_raw = ColumnDataSource(data = {'car_yb_traj':[], 'car_xb_traj':[]})
@@ -3133,25 +3134,19 @@ def load_local_view_figure():
     fig1.patch('zebra_crossing_line_11_y', 'zebra_crossing_line_11_x', source = zebra_crossing_line_11, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
 
   #fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
-  if is_vis_fus_line:
+  if is_vis_fus_line and scene_type is not "HPP":
     fig1.line('fix_lane_y', 'fix_lane_x', source = data_fix_lane, line_width = 1, line_color = 'red', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'fix_lane')
 
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_mpc',visible = False)
-  fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
-  fig_init_point = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
-  fig1.circle('ego_pos_compensation_y', 'ego_pos_compensation_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "purple", fill_alpha = 1, legend_label = 'ego_pos_compensation')
-  fig_ego_point = fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
+  if is_vis_stitching:
+    fig_init_point = fig1.circle('init_pos_point_y', 'init_pos_point_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "deepskyblue", fill_alpha = 1, legend_label = 'init_state')
+    fig1.circle('ego_pos_compensation_y', 'ego_pos_compensation_x', source = data_init_pos_point, radius = 0.1, line_width = 2,  line_color = 'black', line_alpha = 1, fill_color = "purple", fill_alpha = 1, legend_label = 'ego_pos_compensation')
+    fig_ego_point = fig1.circle('ego_pos_point_y', 'ego_pos_point_x', source = data_ego_pos_point, radius = 0.1, line_width = 2,  line_color = 'purple', line_alpha = 1, fill_alpha = 1, legend_label = 'ego_pos_point')
+    fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')
+    fig1.line('init_pos_line_y', 'init_pos_line_x', source = data_init_line, line_width = 3, line_color = 'purple', line_dash = 'solid', legend_label = 'init_point_line', visible = False)
   if is_vis_merge_point:
     fig1.circle('merge_point_y', 'merge_point_x', source = data_merge_point, radius = 0.2, line_width = 3,  line_color = 'orange', line_alpha = 1, fill_color = "red", fill_alpha = 1, legend_label = 'merge_point')
     fig1.circle('macroeconomic_decider_merge_point_y', 'macroeconomic_decider_merge_point_x', source = macroeconomic_decider_data_merge_point, radius = 0.2, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "red", fill_alpha = 1, legend_label = 'cent_line_merge_pt')
     fig1.circle('boundary_line_merge_point_y', 'boundary_line_merge_point_x', source = boundary_line_merge_point, radius = 0.2, line_width = 3,  line_color = 'red', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'bound_line_merge_pt')
-  fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_pos')
-  fig1.line('ego_yb', 'ego_xb', source = origin_data_ego, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'origin_ego_pos')
-  fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
-
-  fig1.line('init_pos_line_y', 'init_pos_line_x', source = data_init_line, line_width = 3, line_color = 'purple', line_dash = 'solid', legend_label = 'init_point_line', visible = False)
-
 
   if is_vis_map:
     for i in range (len(ehr_data_lanes)):
@@ -3212,27 +3207,28 @@ def load_local_view_figure():
     fig1.text('lane_mark_loc_y_3', 'lane_mark_loc_x_3', text = 'lane_mark_3' ,source = lane_mark_data_3, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
     fig1.text('lane_mark_loc_y_4', 'lane_mark_loc_x_4', text = 'lane_mark_4' ,source = lane_mark_data_4, text_color="firebrick", text_align="center", text_font_size="20pt", legend_label = 'lane_mark')
 
-  fig1.circle('tfl_loc_y_0', 'tfl_loc_x_0', source = traffic_light_data_0, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = 'tfl_color_0', fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_1', 'tfl_loc_x_1', source = traffic_light_data_1, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_1", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_2', 'tfl_loc_x_2', source = traffic_light_data_2, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_2", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_3', 'tfl_loc_x_3', source = traffic_light_data_3, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_3", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_4', 'tfl_loc_x_4', source = traffic_light_data_4, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_4", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_5', 'tfl_loc_x_5', source = traffic_light_data_5, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_5", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_6', 'tfl_loc_x_6', source = traffic_light_data_6, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_6", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_7', 'tfl_loc_x_7', source = traffic_light_data_7, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_7", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_8', 'tfl_loc_x_8', source = traffic_light_data_8, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_8", fill_alpha = 1, legend_label = 'traffic_light')
-  fig1.circle('tfl_loc_y_9', 'tfl_loc_x_9', source = traffic_light_data_9, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_9", fill_alpha = 1, legend_label = 'traffic_light')
+  if is_vis_tf_light:
+    fig1.circle('tfl_loc_y_0', 'tfl_loc_x_0', source = traffic_light_data_0, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = 'tfl_color_0', fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_1', 'tfl_loc_x_1', source = traffic_light_data_1, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_1", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_2', 'tfl_loc_x_2', source = traffic_light_data_2, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_2", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_3', 'tfl_loc_x_3', source = traffic_light_data_3, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_3", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_4', 'tfl_loc_x_4', source = traffic_light_data_4, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_4", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_5', 'tfl_loc_x_5', source = traffic_light_data_5, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_5", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_6', 'tfl_loc_x_6', source = traffic_light_data_6, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_6", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_7', 'tfl_loc_x_7', source = traffic_light_data_7, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_7", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_8', 'tfl_loc_x_8', source = traffic_light_data_8, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_8", fill_alpha = 1, legend_label = 'traffic_light')
+    fig1.circle('tfl_loc_y_9', 'tfl_loc_x_9', source = traffic_light_data_9, radius = 0.8, line_width = 3,  line_color = 'black', line_alpha = 1, fill_color = "tfl_color_9", fill_alpha = 1, legend_label = 'traffic_light')
 
-  fig1.text('tfl_loc_y_0', 'tfl_loc_x_0', text = 'tfl_type_0', source = traffic_light_data_0, text_color = 'black', text_align = "left", text_font_size = '14pt', legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_1', 'tfl_loc_x_1', text = 'tfl_type_1', source = traffic_light_data_1, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_2', 'tfl_loc_x_2', text = 'tfl_type_2', source = traffic_light_data_2, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_3', 'tfl_loc_x_3', text = 'tfl_type_3', source = traffic_light_data_3, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_4', 'tfl_loc_x_4', text = 'tfl_type_4', source = traffic_light_data_4, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_5', 'tfl_loc_x_5', text = 'tfl_type_5', source = traffic_light_data_5, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_6', 'tfl_loc_x_6', text = 'tfl_type_6', source = traffic_light_data_6, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_7', 'tfl_loc_x_7', text = 'tfl_type_7', source = traffic_light_data_7, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_8', 'tfl_loc_x_8', text = 'tfl_type_8', source = traffic_light_data_8, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
-  fig1.text('tfl_loc_y_9', 'tfl_loc_x_9', text = 'tfl_type_9', source = traffic_light_data_9, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_0', 'tfl_loc_x_0', text = 'tfl_type_0', source = traffic_light_data_0, text_color = 'black', text_align = "left", text_font_size = '14pt', legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_1', 'tfl_loc_x_1', text = 'tfl_type_1', source = traffic_light_data_1, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_2', 'tfl_loc_x_2', text = 'tfl_type_2', source = traffic_light_data_2, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_3', 'tfl_loc_x_3', text = 'tfl_type_3', source = traffic_light_data_3, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_4', 'tfl_loc_x_4', text = 'tfl_type_4', source = traffic_light_data_4, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_5', 'tfl_loc_x_5', text = 'tfl_type_5', source = traffic_light_data_5, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_6', 'tfl_loc_x_6', text = 'tfl_type_6', source = traffic_light_data_6, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_7', 'tfl_loc_x_7', text = 'tfl_type_7', source = traffic_light_data_7, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_8', 'tfl_loc_x_8', text = 'tfl_type_8', source = traffic_light_data_8, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
+    fig1.text('tfl_loc_y_9', 'tfl_loc_x_9', text = 'tfl_type_9', source = traffic_light_data_9, text_color = 'black', text_align = "left", text_font_size = "14pt", legend_label = 'traffic_light_type')
 
   if is_vis_snrd:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd',visible = False)
@@ -3368,22 +3364,28 @@ def load_local_view_figure():
   fig1.triangle_pin('lon_collision_object_position_y', 'lon_collision_object_position_x', source = data_lon_collision_object_position, size = 25, line_width = 4.5, line_alpha = 1,line_color = 'black', fill_color = "orange", fill_alpha = 1, legend_label = 'lon_collision_object_pos')
   fig1.patches('agent_vertices_y', 'agent_vertices_x', source = data_stop_destination_virtual_obj, fill_color = "brown", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'obj_virtual',visible = False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
-  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
-  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_2, radius = 0.03, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_3, radius = 0.03, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
-  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_4, radius = 0.03, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'plan_point')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'lat plan traj', visible = False)
+  fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lon plan')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_0, radius = 0.03, line_width = 1,  line_color = 'red', line_alpha = 1, fill_alpha = 0, legend_label = 'lon plan point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_1, radius = 0.03, line_width = 1,  line_color = 'blue', line_alpha = 1, fill_alpha = 0, legend_label = 'lon plan point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_2, radius = 0.03, line_width = 1,  line_color = 'orange', line_alpha = 1, fill_alpha = 0, legend_label = 'lon plan point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_3, radius = 0.03, line_width = 1,  line_color = 'black', line_alpha = 1, fill_alpha = 0, legend_label = 'lon plan point')
+  fig1.circle('plan_traj_y', 'plan_traj_x', source = data_planning_4, radius = 0.03, line_width = 1,  line_color = 'purple', line_alpha = 1, fill_alpha = 0, legend_label = 'lon plan point')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'lon plan traj',visible = False)
   fig1.line('mpc_dy', 'mpc_dx', source = data_control, line_width = 5, line_color = 'green', line_dash = 'dashed', line_alpha = 0.8, legend_label = 'ctrl_traj')
+  fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_mpc, fill_color = "salmon", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'ctrl_traj_mpc',visible = False)
+  fig1.patch('car_yb', 'car_xb', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'car')
+  fig1.text('text_yn', 'text_xn', text = 'vel_ego_text' ,source = data_text, text_color="firebrick", text_align="center", text_font_size="12pt", legend_label = 'car')
+  fig1.line('ego_yb', 'ego_xb', source = data_ego, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'car_pos')
 
-  hover1_1 = HoverTool(renderers=[fig_init_point], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
-                                                                ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),
-                                                                ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
-                                                                ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
-  hover1_2 = HoverTool(renderers=[fig_ego_point], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  fig1.add_tools(hover1_1)
-  fig1.add_tools(hover1_2)
+  if is_vis_stitching:
+    hover1_1 = HoverTool(renderers=[fig_init_point], tooltips=[('init pos x', '@init_pos_point_x'), ('init pos y', '@init_pos_point_y'), ('init pos theta', '@init_pos_point_theta'),
+                                                                  ('lat init x', '@init_state_x'), ('lat init y', '@init_state_y'), ('lat init theta', '@init_state_theta'),
+                                                                  ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
+                                                                  ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
+    hover1_2 = HoverTool(renderers=[fig_ego_point], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
+    fig1.add_tools(hover1_1)
+    fig1.add_tools(hover1_2)
 
   if is_vis_fus_line:
     hover1_3 = HoverTool(renderers=[fig_cline0], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_0_dist_to_lborder'), ('dist_to_right_border', '@center_line_0_dist_to_rborder')])
@@ -3440,7 +3442,6 @@ def load_local_view_figure():
   fig1.legend.click_policy = 'hide'
   return fig1, local_view_data
 
-
 def init_local_view_figure(fig_local_view, bag_loader):
   scene_type = global_var.get_value('scene_type')
   g_is_display_enu = global_var.get_value('g_is_display_enu')
@@ -3465,7 +3466,6 @@ def init_local_view_figure(fig_local_view, bag_loader):
     fig_local_view.x_range.end   = car_y - view_range
     fig_local_view.y_range.start = car_x - view_range
     fig_local_view.y_range.end   = car_x + view_range
-
 
 def load_planning_hmi_info_table():
   # data
