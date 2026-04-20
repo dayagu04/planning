@@ -20,7 +20,7 @@ bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 # JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
 global_var.set_value('car_type', 'CHERY_E0X')
-global_var.set_value('g_is_display_enu', False)
+global_var.set_value('g_is_display_enu',False)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"
 fig1.height = 950
@@ -279,7 +279,7 @@ def update_merge_request_lc_data (plan_debug_json):
   datas = []
   merge_lc_vars_ = ["both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_",
                     "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type",
-                    "right_boundary_exist_virtual_type"]
+                    "right_boundary_exist_virtual_type","is_merge_region", "cur_road_right_level"]
   for name in merge_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))

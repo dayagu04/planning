@@ -139,8 +139,6 @@ class STGraph {
 
   void MakeCutInStBoundary(const agent::Agent& agent);
 
-  void RecalculateTrajectoryForLcRearAgent(const agent::Agent* rear_agent);
-
   void MakeStPointsTable();
 
   void ConstructDefaultStPassCorridor();
@@ -214,6 +212,8 @@ class STGraph {
   // bellow is for cut-in st boundary
   std::unordered_map<int32_t, std::vector<std::unique_ptr<STBoundary>>>
       cut_in_agent_id_st_boundaries_map_;
+
+  RoadRightLevel road_right_level_;
 };
 }  // namespace speed
 }  // namespace planning
