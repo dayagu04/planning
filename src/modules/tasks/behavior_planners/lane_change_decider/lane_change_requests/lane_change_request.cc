@@ -1778,6 +1778,7 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_vehicle_width = vehicle_param.width * 0.5;
+  const double vehicle_length = vehicle_param.front_edge_to_rear_axle;
 
   for (size_t i = 0; i < path_points.size(); ++i) {
     const double pt_x = path_points[i].x;
@@ -1798,6 +1799,7 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
                                        std::abs(target_l) < std::abs(origin_l));
 
     if (use_target) {
+      // 检查当前点
       ReferencePathPoint ref_pt{};
       if (!target_reference_path->get_reference_point_by_lon(target_s,
                                                              ref_pt)) {
@@ -1813,10 +1815,25 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
           -ref_pt.distance_to_right_road_border + road_edge_buffer) {
         return true;
       }
+
+      // 检查前方一个车长位置
+      ReferencePathPoint ref_pt_ahead{};
+      if (target_reference_path->get_reference_point_by_lon(
+              target_s + vehicle_length, ref_pt_ahead)) {
+        if (left_vehicle_edge >
+            ref_pt_ahead.distance_to_left_road_border - road_edge_buffer) {
+          return true;
+        }
+        if (right_vehicle_edge <
+            -ref_pt_ahead.distance_to_right_road_border + road_edge_buffer) {
+          return true;
+        }
+      }
     } else {
       if (!origin_valid) {
         continue;
       }
+      // 检查当前点
       ReferencePathPoint ref_pt{};
       if (!origin_reference_path->get_reference_point_by_lon(origin_s,
                                                              ref_pt)) {
@@ -1831,6 +1848,20 @@ bool LaneChangeRequest::IsPathCollisionWithRoadEdge(
       if (right_vehicle_edge <
           -ref_pt.distance_to_right_road_border + road_edge_buffer) {
         return true;
+      }
+
+      // 检查前方一个车长位置
+      ReferencePathPoint ref_pt_ahead{};
+      if (origin_reference_path->get_reference_point_by_lon(
+              origin_s + vehicle_length, ref_pt_ahead)) {
+        if (left_vehicle_edge >
+            ref_pt_ahead.distance_to_left_road_border - road_edge_buffer) {
+          return true;
+        }
+        if (right_vehicle_edge <
+            -ref_pt_ahead.distance_to_right_road_border + road_edge_buffer) {
+          return true;
+        }
       }
     }
   }
