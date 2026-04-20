@@ -732,26 +732,34 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     RequestType direction) {
   // check single frame lc gap if feasible
   lane_change_stage_info_ = CheckLCGapFeasible(direction);
-  bool is_dash_enough = !IsLCPathCollisionWithSolidLine(
+  const bool is_dash_line_safe = !IsLCPathCollisionWithSolidLine(
       lc_lane_mgr_->origin_lane_virtual_id(),
       transition_info_.lane_change_status, transition_info_.lane_change_type,
       transition_info_.lane_change_direction);
-  bool is_roadedge_safe =
+  const bool is_roadedge_safe =
       !IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                      lc_lane_mgr_->target_lane_virtual_id(),
                                      transition_info_.lane_change_status);
-  is_dash_enough = is_dash_enough && CheckTargetLaneValid() && is_roadedge_safe;
+  const bool is_targetlane_valid = CheckTargetLaneValid();
+
+  bool is_lc_condition_satisfied = false;
   int lc_valid_thre = 4;
   if (transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST) {
     lc_valid_thre = 1;
-    is_dash_enough = is_roadedge_safe;  // 避让请求和锥桶请求不需要dash足够
+    is_lc_condition_satisfied = is_roadedge_safe;  // 避让请求和锥桶请求不需要dash足够
   } else if (transition_info_.lane_change_type == MERGE_REQUEST ||
     transition_info_.lane_change_type == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
     lc_valid_thre = 1;
+    is_lc_condition_satisfied =
+        is_dash_line_safe && is_targetlane_valid && is_roadedge_safe;
+  } else {
+    is_lc_condition_satisfied =
+        is_dash_line_safe && is_targetlane_valid && is_roadedge_safe;
   }
+
   // can lc if more than continue 4 frame gap_insertable
-  if (lane_change_stage_info_.gap_insertable && is_dash_enough) {
+  if (lane_change_stage_info_.gap_insertable && is_lc_condition_satisfied) {
     lc_valid_cnt_ += 1;
     ILOG_DEBUG << "decide_lc_valid_info lc_valid_cnt :" << lc_valid_cnt_;
     if (lc_valid_cnt_ > lc_valid_thre) {
@@ -766,11 +774,11 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
                << lane_change_stage_info_.lc_invalid_reason.c_str();
     lane_change_stage_info_.gap_insertable = false;
     lc_valid_cnt_ = 0;
-    if (!is_dash_enough) {
-      if (!is_roadedge_safe) {
+    if (!is_lc_condition_satisfied) {
+      if (!is_roadedge_safe || !is_targetlane_valid) {
         lane_change_stage_info_.lc_invalid_reason = "no target lane";
       } else {
-        lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+        lane_change_stage_info_.lc_invalid_reason = "dash line not safe";
       }
     }
   }
