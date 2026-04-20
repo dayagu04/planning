@@ -2871,7 +2871,7 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double min_gain_vel = 1.0;
   double refine_lat_ref_threshold = 0.5;
   double delta_t = 0.2;
-  double num_step = 25;
+  double num_step = 35;
   double sample_step = 1.4;
   double sample_forward_distance = 1.0;
   double lane_change_duration = 6.6;
@@ -5068,9 +5068,12 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                    "result_trajectory_generator", "use_dynamic_lat_jerk_thr");
     ReadItem<bool>(json, enable_lat_traj, "result_trajectory_generator",
                    "enable_lat_traj");
+    ReadItem<double>(json, output_time_length, "result_trajectory_generator",
+                     "output_time_length");
   }
   bool use_dynamic_lat_jerk_thr = false;
   double planning_result_delta_time = 0.025;
+  double output_time_length = 5.0;
   bool is_pwj_planning = false;
   bool enable_lat_traj = false;
 };
