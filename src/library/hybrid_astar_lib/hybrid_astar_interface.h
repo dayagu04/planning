@@ -54,7 +54,7 @@ class HybridAStarInterface {
   const int GetFallBackPath(HybridAStarResult* result);
 
   const std::array<bool, 6> GetFeasibleDirections() {
-    return feasible_directions_;
+    return stable_feasible_directions_;
   };
 
   const ParkObstacleList& GetConstObstacles() const;
@@ -207,7 +207,13 @@ class HybridAStarInterface {
 
   int gear_switch_number_scenario_try_;
 
-  std::array<bool, 6> feasible_directions_;
+  // Stable version of feasible_directions_ exposed to HMI.
+  // Only flips after kFeasibleConfirmThresh consecutive successes or
+  // kInfeasibleConfirmThresh consecutive failures, preventing flickering.
+  std::array<bool, 6> stable_feasible_directions_{};
+  std::array<int8_t, 6> feasible_confirm_count_{};
+  static constexpr int8_t kFeasibleConfirmThresh = 2;
+  static constexpr int8_t kInfeasibleConfirmThresh = -3;
 
   // for debug
   SearchTimeBenchmark time_benchmark_;
