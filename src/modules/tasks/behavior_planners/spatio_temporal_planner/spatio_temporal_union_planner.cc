@@ -110,7 +110,9 @@ bool SpatioTemporalPlanner::Execute() {
   // if (intersection_state != planning::common::IN_INTERSECTION) {
   //   return true;
   // }
+  
   if (is_dynamic_agent_emergence_lc && (lc_state == kLaneChangePropose || lc_state == kLaneChangeComplete)) {
+    // 紧急变道场景允许在 Propose/Complete 状态使用时空搜索
     // pass
   } else if (lc_state != kLaneKeeping) {
     ILOG_DEBUG << "SpatioTemporalPlanner::ego not in kLaneKeeping!";
