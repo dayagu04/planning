@@ -393,11 +393,17 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
       vehicle_param.wheel_base;
 
   // 3. 在 [0, scan_distance] 范围内，找前方最大曲率及其位置
-  //    不再扫描全局，只扫描触发范围内的点
+  //    同时检测S弯（曲率符号反转）
   constexpr double kCurvatureThreshold = 1e-4;        // 忽略近似直道的曲率
   double max_curvature = std::fabs(steer_curvature);  // 先用方向盘曲率初始化
   double max_curv_s = 0.0;  // 方向盘对应的曲率就在当前位置（s=0）
   double s_accumulate = 0.0;
+
+  // S弯检测：记录曲率符号变化（只关注大曲率弯道）
+  bool has_s_curve = false;
+  double prev_significant_curv = 0.0;
+  constexpr double kSCurveCurvThreshold =
+      0.05;  // 曲率 > 0.05 (半径 < 20m) 才算弯道
 
   for (size_t i = 1; i < traj_points.size(); ++i) {
     s_accumulate +=
@@ -405,13 +411,23 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
                                   traj_points[i].y - traj_points[i - 1].y);
 
     if (s_accumulate > scan_distance) {
-      break;  // 超出扫描范围，停止
+      break;
     }
 
-    double curv = std::fabs(traj_points[i].curvature);
-    if (curv > max_curvature) {
-      max_curvature = curv;
+    double curv = traj_points[i].curvature;
+    double curv_abs = std::fabs(curv);
+
+    if (curv_abs > max_curvature) {
+      max_curvature = curv_abs;
       max_curv_s = s_accumulate;
+    }
+
+    // S弯检测：只在曲率足够大时记录，检测两个大弯方向相反
+    if (curv_abs > kSCurveCurvThreshold) {
+      if (prev_significant_curv != 0.0 && curv * prev_significant_curv < 0.0) {
+        has_s_curve = true;
+      }
+      prev_significant_curv = curv;
     }
   }
 
@@ -439,6 +455,15 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
   v_limit_curv =
       std::clamp(v_limit_curv, hpp_speed_limit_config_.velocity_lower_bound,
                  hpp_speed_limit_config_.velocity_upper_bound);
+
+  // 6. S弯额外降速：曲率方向反转时控制容易超调，降低限速给控制留余量
+  if (has_s_curve) {
+    constexpr double kSCurveSpeedFactor = 0.8;
+    v_limit_curv *= kSCurveSpeedFactor;
+    v_limit_curv =
+        std::max(v_limit_curv, hpp_speed_limit_config_.velocity_lower_bound);
+    ILOG_INFO << "S-curve detected, v_limit_curv reduced to " << v_limit_curv;
+  }
 
   return v_limit_curv;
 }
