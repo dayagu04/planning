@@ -113,6 +113,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         // 跳转到propose的同帧立即生成轨迹并执行安全检查，提前累计lc_valid_cnt_，节省100ms
         JointLaneChangeDecisionGeneration();
         CheckIfProposeToExecution(lane_change_direction, lane_change_type);
+        is_pre_move_ = false;
+        lat_close_boundary_offset_ = 0.0;
       } else {
         // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
         // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
