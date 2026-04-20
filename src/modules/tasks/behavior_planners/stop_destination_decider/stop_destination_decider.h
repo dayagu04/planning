@@ -6,6 +6,7 @@
 #include "agent/agent.h"
 #include "ego_planning_config.h"
 #include "environmental_model_manager.h"
+#include "common/constraint_check/collision_checker.h"
 #include "memory"
 #include "tasks/task.h"
 #include "virtual_lane.h"
@@ -32,6 +33,10 @@ class StopDestinationDecider : public Task {
   double stop_destination_virtual_agent_time_headway_ = 1.0;
   int32_t stop_destination_virtual_agent_id_ =
       agent::AgentDefaultInfo::kNoAgentId;
+  std::shared_ptr<planning_math::CollisionChecker> lon_collision_checker_;
+  std::vector<double> rads_bound_s_by_collision_check_;
+  bool rads_collision_check_sref_set_flag_ = false;
+  int rads_collision_check_sref_recover_counter_ = 0;
 };
 
 }  // namespace planning
