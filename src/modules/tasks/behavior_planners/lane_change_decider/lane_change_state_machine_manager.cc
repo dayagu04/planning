@@ -4642,7 +4642,7 @@ bool LaneChangeStateMachineManager::
     }
     distance = std::min(distance, distance_i);
     // 记录box
-    if (distance < 0.01) {
+    if (distance_i < 0.01) {
       ILOG_DEBUG << i << "box-box not safety !!!";
       const auto& agent_corners = agent_box.GetAllCorners();
       for (const auto& corner_point : agent_corners) {
