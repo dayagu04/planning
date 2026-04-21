@@ -373,16 +373,8 @@ StartStopDecider::HppStopConditions StartStopDecider::EvaluateHppStopConditions(
       conditions.dist_to_slot < hpp_stop_config_.dist_to_target_slot_thr;
   conditions.is_reached_target_dest =
       conditions.dist_to_dest < hpp_stop_config_.dist_to_target_dest_thr;
-
-  // 停车到位条件：当前为停车状态且 CIPV 为虚拟终点障碍物（多帧保持）
-  const bool is_in_stop_state =
-      (ego_start_stop_info_.state() == common::StartStopInfo::STOP);
-  const bool cipv_is_hpp_destination =
-      IsCipvVirtualDestination(
-          agent::AgentDefaultInfo::kHppStopDestinationVirtualAgentId);
   conditions.is_stop_condition_met =
-      is_in_stop_state && cipv_is_hpp_destination;
-
+      (ego_start_stop_info_.state() == common::StartStopInfo::STOP);
   return conditions;
 }
 
