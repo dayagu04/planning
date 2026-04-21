@@ -563,12 +563,13 @@ void JointDecisionInputBuilder::BuildRoadInfo(
     std::shared_ptr<
         pnc::lane_change_joint_decision::JointDecisionPlanningProblem>
         planning_problem_ptr) {
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-
+  // const auto& reference_path_ptr = session_->planning_context()
+  //                                      .lane_change_decider_output()
+  //                                      .coarse_planning_info.reference_path;
+  const auto& reference_path_ptr = session_->environmental_model()
+                                  .get_reference_path_manager()
+                                  ->get_reference_path_by_current_lane();
   double ego_s = reference_path_ptr->get_frenet_ego_state().s();
-
   std::vector<planning::planning_math::PathPoint> left_road_points;
   std::vector<planning::planning_math::PathPoint> right_road_points;
   left_road_points.reserve(kPlanningTimeSteps);
