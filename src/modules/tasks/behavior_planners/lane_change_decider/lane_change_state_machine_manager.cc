@@ -778,7 +778,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
       if (!is_roadedge_safe || !is_targetlane_valid) {
         lane_change_stage_info_.lc_invalid_reason = "no target lane";
       } else {
-        lane_change_stage_info_.lc_invalid_reason = "dash line not safe";
+        lane_change_stage_info_.lc_invalid_reason = "dash not enough";
       }
     }
   }
