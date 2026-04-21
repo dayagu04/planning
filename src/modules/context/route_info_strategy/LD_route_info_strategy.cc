@@ -1571,16 +1571,15 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     }
   }
   // 更新躲避link_merge车道的从左向右序列
-  bool is_exist_need_avoid_link_merge_lane =
-      !avoid_link_merge_lane_id_vec_.empty() &&
-      avoid_link_merge_lane_id_vec_.front().link_id ==
-          cur_link_feasible_lane.link_id;
-
+  bool is_exist_need_avoid_link_merge_lane = false;
   int avoid_link_merge_lane_seq = -1;
-  if (is_exist_need_avoid_link_merge_lane) {
-    avoid_link_merge_lane_seq = link_total_lane_num -
-                                avoid_link_merge_lane_id_vec_.front().order_id +
-                                1;
+
+  for (const auto& avoid_lane : avoid_link_merge_lane_id_vec_) {
+    if (avoid_lane.link_id == cur_link_feasible_lane.link_id) {
+      is_exist_need_avoid_link_merge_lane = true;
+      avoid_link_merge_lane_seq = link_total_lane_num - avoid_lane.order_id + 1;
+      break;
+    }
   }
 
   std::unordered_map<int, MapMergePointInfo> map_merge_point_info;
