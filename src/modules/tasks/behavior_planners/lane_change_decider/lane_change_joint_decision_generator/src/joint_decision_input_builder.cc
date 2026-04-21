@@ -210,7 +210,15 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   auto speed_limit_type_ref = SpeedLimitType::NONE;
   speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
                                            &speed_limit_type_ref);
-  const double v0 = std::fmin(speed_limit_normal, speed_limit_ref);
+  double current_lc_limit = speed_limit_ref;
+  //限速设置：不超过130，曲率限速不能超， max(自车速度*1.05，巡航限速*1.05)；
+  if(speed_limit_type_ref == SpeedLimitType::SHARP_CURVATURE){
+    current_lc_limit = speed_limit_ref;
+  }else{
+    current_lc_limit = std::max(planning_init_point.v, speed_limit_ref) * 1.05; //变道时轻微超速
+  }
+  double kAbsoluteMaxSpeed = 130.0 / 3.6;
+  const double v0 = std::min(current_lc_limit, kAbsoluteMaxSpeed);
   JSON_DEBUG_VALUE("joint_decision_limit_speed", v0);
   comfort_params_.v0 = v0;
 
@@ -462,9 +470,7 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
 
   planning_input.set_q_ego_vel_bound_weight(lc_decision_config_.q_ego_vel_bound_weight);
   planning_input.clear_ego_vel_max();
-  constexpr double kAbsoluteMaxSpeed = 130.0 / 3.6;
-  const double current_valid_limit = comfort_params_.v0;
-  const double ego_vel_max = std::min(current_valid_limit * 1.05, kAbsoluteMaxSpeed);
+  const double ego_vel_max = comfort_params_.v0;
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     planning_input.add_ego_vel_max(ego_vel_max);
   }
