@@ -6404,6 +6404,7 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_vehicle_width = vehicle_param.width * 0.5;
+  const double vehicle_length = vehicle_param.length;
 
   // 获取车道边界分段信息，用于精确判断实线/虚线类型
   const auto& lane_boundarys = lc_request_type == LEFT_CHANGE
@@ -6438,35 +6439,43 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
       continue;
     }
 
-    iflyauto::LaneBoundaryType boundary_type =
-        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+    // 检查 [boundary_s, boundary_s + vehicle_length] 范围内是否存在实线段
+    const double boundary_s_end = boundary_s + vehicle_length;
+    bool is_solid_type = false;
     double acc_length = 0.0;
     for (int j = 0; j < lane_boundarys.type_segments_size; ++j) {
+      const double seg_start = acc_length;
       acc_length += lane_boundarys.type_segments[j].length;
-      if (acc_length > boundary_s) {
-        boundary_type = lane_boundarys.type_segments[j].type;
+      if (acc_length <= boundary_s) {
+        continue;
+      }
+      if (seg_start > boundary_s_end) {
+        break;
+      }
+      const auto seg_type = lane_boundarys.type_segments[j].type;
+      const bool seg_is_solid =
+          lc_request_type == LEFT_CHANGE
+              ? seg_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                    seg_type ==
+                        iflyauto::
+                            LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID
+              : seg_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                    seg_type ==
+                        iflyauto::
+                            LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
+      if (seg_is_solid) {
+        is_solid_type = true;
         break;
       }
     }
-
-    const bool is_solid_type =
-        lc_request_type == LEFT_CHANGE
-            ? boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                  boundary_type ==
-                      iflyauto::
-                          LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID
-            : boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                  boundary_type ==
-                      iflyauto::
-                          LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
 
     if (lc_request_type == LEFT_CHANGE && is_solid_type &&
         (left_vehicle_edge >
