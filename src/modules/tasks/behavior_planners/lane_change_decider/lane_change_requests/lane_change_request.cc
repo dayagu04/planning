@@ -1744,7 +1744,8 @@ bool LaneChangeRequest::IsMLCIgnoreSolidLaneCheck(
   const bool is_satisfy_dis_condition =
       route_info_output.mlc_decider_scene_type_info
           .dis_to_link_topo_change_point < 100.0;
-  if (is_process_split && !is_mlc_avoidance && is_satisfy_dis_condition) {
+  if (is_process_split && !is_mlc_avoidance && is_satisfy_dis_condition &&
+      !route_info_output.is_ego_lane_forward_on_route_link) {
     return true;
   }
   return false;
