@@ -4464,19 +4464,19 @@ bool LaneChangeStateMachineManager::
       if(ego_press_line_ratio > 0.5 && is_side_clear_){
         break;  // 已经压线过多，侧方无车不返回
       }
-      //未来衰减
-      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
-      const double ttc_decay = std::pow(ttc_decay_factor, i);
-      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
       //状态折扣
-      box_longitudinal_buff = is_executing ? 
-                            box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio * (1.0 - ego_press_line_ratio)
-                            : box_longitudinal_buff * (1.0 - ego_press_line_ratio);
+      box_longitudinal_buff = is_executing ? box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio;
       if(is_front_reverse){
         double reverse_check_time = 4.0; //默认基准变道时间
         // double reverse_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.front();
         box_longitudinal_buff = reverse_check_time * (agent_traj[i].v  + ego_trajs_future_[i].v);
       }
+      //前车,未来安全检查只对最小距离衰减
+      const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;
+      const double ttc_decay = std::pow(ttc_decay_factor, i);
+      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
+      double min_front_gap = 3.5 * ttc_decay;
+      box_longitudinal_buff = std::max(box_longitudinal_buff, min_front_gap);
     } else {
       // 1. 运动学距离：后车反应时间 + 差速刹停距离
       // double rear_relative_decel =
@@ -4491,6 +4491,9 @@ bool LaneChangeStateMachineManager::
       double rel_vel = std::max(0.0, agent_traj[i].v - ego_trajs_future_[i].v);
       double dis_diff_vel = 0.0;
       double predict_t = lc_safety_check_time_ + 0.5;
+      if(is_large_car){
+        predict_t = predict_t + 2.0; // 对于大车延长变道后的恐慌感检查时间
+      }
       if (rear_acc > 0.3) {
           // rear accelerating
           dis_diff_vel = rel_vel * predict_t + 0.5 * rear_acc * predict_t * predict_t;
@@ -4503,7 +4506,7 @@ bool LaneChangeStateMachineManager::
       }
       dis_diff_vel += lc_safety_check_config_.faster_rear_delay_time * agent_traj[i].v;
       if (is_large_car) {
-        dis_diff_vel += 5.0;
+        dis_diff_vel += 5.0;// 速度无关的大车额外安全距离
       }
       // 2 主观感受 TTC 距离：由预测差速映射 ttc，并与剩余检查时间耦合
       const double diffspeed_kph = 3.6 * rel_vel;
