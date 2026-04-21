@@ -383,10 +383,19 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
               << " multi_parkout_direction = "
               << multi_parkout_direction[direction];
   }
-  if (ego_info_under_slot.slot.release_info_
+  PathPlannerResult path_result = (ego_info_under_slot.slot.release_info_
           .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] !=
-      SlotReleaseState::RELEASE) {
+      SlotReleaseState::RELEASE) ? PLAN_FAILED : PLAN_UPDATE;
+  AddMultiFrameResult(path_result);
+  if (path_result == PLAN_FAILED) {
     ILOG_INFO << "geometry path try fail";
+    return false;
+  }
+  if (!CalcMultiFrameResult()) {
+    ego_info_under_slot.slot.release_info_
+      .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+      SlotReleaseState::NOT_RELEASE;
+    ILOG_INFO << "multi frame path try fail";
     return false;
   }
   complete_path_point_global_vec_.clear();

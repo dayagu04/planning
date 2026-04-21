@@ -638,11 +638,20 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   size_t col_obs_index = 0;
   size_t col_car_line_order = 0;
   double dist_init =100;
+  bool need_check_length = false;
+  // when call scene is set in path genarator ,check the arc length then decide whether skip obs or not
+  if (GetCallScenario() == CallScene::InversedTrialsByGivenGear_SCENE){
+    need_check_length = arc.length > 1.0;
+  }
+
+
   // ILOG_INFO << "param_.side_cross_limiter" << param_.side_cross_limiter ;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
-    if (CheckObstacleInSkipTypes(obs_pt_pair.first)) {
+    if (CheckObstacleInSkipTypes(obs_pt_pair.first) && !need_check_length) {
       continue;
     }
+
+
     if (!param_.side_cross_limiter &&
         static_cast<ObsType>(obs_pt_pair.first) == SIDE_CROSS_LIMITER_OBS) {
       continue;
