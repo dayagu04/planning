@@ -116,11 +116,11 @@ void StGraphInput::Update() {
   is_in_lane_borrow_status_ = session_->planning_context()
                                   .lane_borrow_decider_output()
                                   .is_in_lane_borrow_status;
-  
+
   road_right_level_ = session_->planning_context()
                           .ego_lane_road_right_decider_output()
                           .road_right_level;
-  
+
   GetAgentOfTargetLane(dynamic_world, is_lane_keeping_);
   const auto& init_point = ego_state_manager->planning_init_point();
   PlanningInitPointToTrajectoryPoint(init_point);
@@ -410,10 +410,9 @@ double StGraphInput::ExtendPathWithLateralNudgeForStaticObstacle(
           ->get_lane_with_virtual_id(target_lane_id)
           ->get_reference_path();
 
-  const auto lead_id =
-      lane_reference_path == nullptr
-          ? -1
-          : lane_reference_path->get_lane_leadone_obstacle();
+  const auto lead_id = lane_reference_path == nullptr
+                           ? -1
+                           : lane_reference_path->get_lane_leadone_obstacle();
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
@@ -449,6 +448,9 @@ double StGraphInput::ExtendPathWithLateralNudgeForStaticObstacle(
   // 计算纵向对该障碍物的扩展横向buffer
   int32_t prev_st_count = 0;
   bool is_in_st_graph = false;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_half_width = vehicle_param.width * 0.5;
   constexpr double kExtraLatBuffer = 0.02;
   double lat_buffer = GetSuitableLateralBuffer(*agent);
   const double safe_lat_buffer =
@@ -456,12 +458,13 @@ double StGraphInput::ExtendPathWithLateralNudgeForStaticObstacle(
           planning_init_point(), *mutable_agent_manager_, *agent,
           large_agent_expand_param_for_consistency(),
           large_agent_small_expand_param_for_consistency(), lat_buffer,
-          &prev_st_count) + kExtraLatBuffer;
+          &prev_st_count) +
+      kExtraLatBuffer;
 
   const double safe_lat_postion =
       lat_obs_decision_iter->second == LatObstacleDecisionType::LEFT
-          ? frenet_obstacle_boundary.l_end + safe_lat_buffer
-          : frenet_obstacle_boundary.l_start - safe_lat_buffer;
+          ? frenet_obstacle_boundary.l_end + safe_lat_buffer + ego_half_width
+          : frenet_obstacle_boundary.l_start - safe_lat_buffer - ego_half_width;
 
   double target_l = 0.0;
   if (lat_obs_decision_iter->second == LatObstacleDecisionType::LEFT) {
