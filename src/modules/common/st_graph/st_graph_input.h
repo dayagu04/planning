@@ -78,6 +78,14 @@ class StGraphInput {
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       std::vector<planning_math::PathPoint>* const ptr_path_points);
 
+  // Extend path with lateral nudge for static obstacle avoidance during lane change
+  // Returns the updated extend_start_s after nudge extension
+  double ExtendPathWithLateralNudgeForStaticObstacle(
+      const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
+      const double project_s,
+      const double project_l,
+      std::vector<planning_math::PathPoint>* const ptr_path_points);
+
   void MakePathBorderQuerier(
       const std::shared_ptr<planning_math::KDPath>& planned_path);
 
