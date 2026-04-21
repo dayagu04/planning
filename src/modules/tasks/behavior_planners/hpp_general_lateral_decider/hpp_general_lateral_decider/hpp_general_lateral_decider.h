@@ -96,8 +96,7 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
-  void GenerateSoftBoundCenterLine(
-      const std::vector<std::pair<double, double>> &soft_bounds,
+  void GenerateBoundCenterLine(
       const std::vector<std::pair<double, double>> &hard_bounds,
       const int window);
   void MergeReferenceTrajectories(

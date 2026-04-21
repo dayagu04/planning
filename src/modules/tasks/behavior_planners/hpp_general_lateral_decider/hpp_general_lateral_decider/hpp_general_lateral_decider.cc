@@ -140,7 +140,7 @@ bool HppGeneralLateralDecider::Execute() {
   PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                                       general_lateral_decider_output);
 
-  GenerateSoftBoundCenterLine(second_frenet_soft_bounds_, frenet_hard_bounds_, 2.0);
+  GenerateBoundCenterLine(frenet_hard_bounds_, 2.0);
   MergeReferenceTrajectories(frenet_hard_bounds_, second_frenet_soft_bounds_);
 
   GenerateLateralDeciderOutput(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
@@ -2398,8 +2398,7 @@ bool HppGeneralLateralDecider::SmoothPointsIteratively(
   return true;
 }
 
-void HppGeneralLateralDecider::GenerateSoftBoundCenterLine(
-    const std::vector<std::pair<double, double>> &soft_bounds,
+void HppGeneralLateralDecider::GenerateBoundCenterLine(
     const std::vector<std::pair<double, double>> &hard_bounds,
     const int window) {
   const auto frenet_coord = reference_path_ptr_->get_frenet_coord();
@@ -2408,7 +2407,7 @@ void HppGeneralLateralDecider::GenerateSoftBoundCenterLine(
   }
 
   const size_t n = ref_traj_points_.size();
-  if (n == 0 || soft_bounds.size() != n || hard_bounds.size() != n) {
+  if (n == 0 || hard_bounds.size() != n) {
     return;
   }
 
@@ -2416,7 +2415,7 @@ void HppGeneralLateralDecider::GenerateSoftBoundCenterLine(
   for (size_t i = 0; i < n; ++i) {
     center_sl_candidate[i].x = ref_traj_points_[i].s;
     center_sl_candidate[i].y =
-        0.5 * (soft_bounds[i].first + soft_bounds[i].second);
+        0.5 * (hard_bounds[i].first + hard_bounds[i].second);
   }
 
   if (!SmoothPointsIteratively(center_sl_candidate,
