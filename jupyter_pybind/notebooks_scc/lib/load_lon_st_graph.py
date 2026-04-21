@@ -45,6 +45,35 @@ start_stop_status_dict = {
     2: "START"
 }
 
+turnstile_stage_dict = {
+    0: "IDLE",
+    1: "APPROACHING",
+    2: "FOLLOW_WAIT",
+    3: "FOLLOW_WAIT_GATE_CLOSE",
+    4: "HEAD_WAIT_CLOSED",
+    5: "HEAD_WAIT_REOPEN",
+    6: "HEAD_WAIT_FULLY_OPEN",
+    7: "PASSABLE_RELEASE",
+    8: "PASSING",
+    9: "PASSED",
+    10: "EMERGENCY_BLOCK",
+}
+
+turnstile_scene_type_dict = {
+    0: "TURNSTILE_SCENE_NONE",
+    1: "TURNSTILE_SCENE_LEFT_SINGLE",
+    2: "TURNSTILE_SCENE_RIGHT_SINGLE",
+    3: "TURNSTILE_SCENE_MID_DOUBLE",
+    4: "TURNSTILE_SCENE_SIDE_DOUBLE",
+}
+
+gate_barrier_status_dict = {
+    0: "MOTION_DIR_UNKNOWN",
+    1: "MOTION_DIR_STATIC",
+    2: "MOTION_DIR_OPEN",
+    3: "MOTION_DIR_CLOSE",
+}
+
 def load_st_label(st_graph_data):
   st_label = []
   st_boundary_list = st_graph_data.st_boundaries
@@ -1033,6 +1062,13 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for ind in range(len(turnstile_debug_value_list)):
      key = turnstile_debug_value_list[ind]
      val = turnstile_debug_value_map.get(key, None)
+     # 转换枚举值为可读字符串
+     if key == 'turnstile_stage' and isinstance(val, int):
+       val = turnstile_stage_dict.get(val, str(val))
+     elif key == 'turnstile_scene_type' and isinstance(val, int):
+       val = turnstile_scene_type_dict.get(val, str(val))
+     elif key == 'turnstile_gate_status_raw' and isinstance(val, int):
+       val = gate_barrier_status_dict.get(val, str(val))
      turnstile_debug_attr_vec.append(key)
      turnstile_debug_val_vec.append(val)
 
