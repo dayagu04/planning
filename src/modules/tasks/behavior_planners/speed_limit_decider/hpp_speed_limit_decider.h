@@ -27,6 +27,15 @@ struct SpeedLimitSegment {
   SpeedLimitType type;
 };
 
+// 曲率 profile：一次轨迹扫描的结果，供各弯道限速子函数共享
+struct CurvatureProfile {
+  std::vector<double> s_values;          // 累积弧长
+  std::vector<double> curvature_values;  // 对应的曲率值
+  double scan_distance = 0.0;            // 扫描的总距离
+  double max_curvature = 0.0;            // 最大曲率（绝对值）
+  double max_curvature_s = 0.0;          // 最大曲率对应的 s 位置
+};
+
 class HPPSpeedLimitDecider : public Task {
  public:
   HPPSpeedLimitDecider(const EgoPlanningConfigBuilder* config_builder,
@@ -44,14 +53,17 @@ class HPPSpeedLimitDecider : public Task {
   void CalculateRampLimit();
   void CalculateIntersectionRoadLimit();
 
+  CurvatureProfile ScanTrajectory(const TrajectoryPoints& traj_points);
+  double ComputeCurvatureSpeedLimit(const CurvatureProfile& profile);
+  void CalculateSCurveLimit(double v_limit_curv);
+  void CalculateUTurnLimit(double v_limit_curv);
+
   bool BuildSpeedObjectiveZoneInfo(HPPSpeedLimitZoneInfo& zone_info,
                                    const CRoadType& road_type,
                                    const CPassageType& passage_type,
                                    const CElemType& elem_type,
                                    const double approach_distance_threshold);
   const double ComputeMaxLatAcceleration();
-  const double ComputeCurvatureSpeedLimit(const TrajectoryPoints& traj_points,
-                                          double* scan_dist_out);
 
   void CheckSpeedBumpZone(const TrajectoryPoints& traj_points, double ego_s);
   double GetSpeedLimitInObjectiveZone(const HPPSpeedLimitZoneInfo& zone_info,

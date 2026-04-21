@@ -145,7 +145,6 @@ void HPPSpeedLimitDecider::CalculateUserSpeedLimit() {
 void HPPSpeedLimitDecider::CalculateMapSpeedLimit() { return; }
 
 void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
-  double v_limit_curv = hpp_speed_limit_config_.velocity_upper_bound;
   if (!session_->is_hpp_scene()) {
     return;
   }
@@ -158,28 +157,17 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
     return;
   }
 
-  const double max_lat_acceleration = ComputeMaxLatAcceleration();
+  // 1. 扫描轨迹，生成曲率 profile（一次遍历，供各子函数共享）
+  CurvatureProfile profile = ScanTrajectory(traj_points);
 
-  double scan_distance = 0.0;
-  v_limit_curv = ComputeCurvatureSpeedLimit(traj_points, &scan_distance);
+  // 2. 基础曲率限速
+  double v_limit_curv = ComputeCurvatureSpeedLimit(profile);
 
-#ifdef ENABLE_PROTO_LOG
-  FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_curvature(),
-                     SpeedLimitType::CURVATURE, v_limit_curv);
-#endif
+  // 3. S 弯限速（基于地图区域 + 基础曲率限速值）
+  CalculateSCurveLimit(v_limit_curv);
 
-  if (v_limit_curv < hpp_speed_limit_config_.velocity_upper_bound &&
-      scan_distance > 0.0) {
-    const auto& reference_path_ptr = session_->planning_context()
-                                         .lane_change_decider_output()
-                                         .coarse_planning_info.reference_path;
-    if (reference_path_ptr) {
-      const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
-      speed_limit_segments_.push_back({ego_s, ego_s + scan_distance,
-                                       v_limit_curv,
-                                       SpeedLimitType::CURVATURE});
-    }
-  }
+  // 4. U 型弯限速（掉头弯，曲率极大，需要更严格限速）
+  CalculateUTurnLimit(v_limit_curv);
 }
 
 void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
@@ -383,24 +371,21 @@ const double HPPSpeedLimitDecider::ComputeMaxLatAcceleration() {
   return max_lat_acceleration;
 }
 
-const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
-    const TrajectoryPoints& traj_points, double* scan_dist_out) {
+CurvatureProfile HPPSpeedLimitDecider::ScanTrajectory(
+    const TrajectoryPoints& traj_points) {
+  CurvatureProfile profile;
+
   const double ego_velocity = session_->environmental_model()
                                   .get_ego_state_manager()
                                   ->planning_init_point()
                                   .v;
 
-  // 1. 根据当前车速，插值得到"向前扫描的触发距离"
-  //    速度越高，需要向更远处预判曲率
-  const double scan_distance = interp(
+  // 根据当前车速，插值得到扫描距离
+  profile.scan_distance = interp(
       ego_velocity, hpp_speed_limit_config_.curv_trigger_velocity_breakpoints,
       hpp_speed_limit_config_.curv_trigger_distances);
 
-  if (scan_dist_out) {
-    *scan_dist_out = scan_distance;
-  }
-
-  // 2. 考虑方向盘转角对应的即时曲率（车辆当前已经在转弯）
+  // 考虑方向盘转角对应的即时曲率
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& vehicle_param =
@@ -409,48 +394,43 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
       std::tan(ego_state->ego_steer_angle() / vehicle_param.steer_ratio) /
       vehicle_param.wheel_base;
 
-  // 3. 在 [0, scan_distance] 范围内，找前方最大曲率及其位置
-  //    同时检测S弯（曲率符号反转）
-  constexpr double kCurvatureThreshold = 1e-4;        // 忽略近似直道的曲率
-  double max_curvature = std::fabs(steer_curvature);  // 先用方向盘曲率初始化
-  double max_curv_s = 0.0;  // 方向盘对应的曲率就在当前位置（s=0）
+  // 初始化：方向盘曲率在 s=0 位置
+  profile.s_values.push_back(0.0);
+  profile.curvature_values.push_back(steer_curvature);
+  profile.max_curvature = std::fabs(steer_curvature);
+  profile.max_curvature_s = 0.0;
+
+  // 遍历轨迹点，记录 s 和曲率
   double s_accumulate = 0.0;
-
-  // S弯检测：记录曲率符号变化（只关注大曲率弯道）
-  bool has_s_curve = false;
-  double prev_significant_curv = 0.0;
-  constexpr double kSCurveCurvThreshold =
-      0.05;  // 曲率 > 0.05 (半径 < 20m) 才算弯道
-
   for (size_t i = 1; i < traj_points.size(); ++i) {
     s_accumulate +=
         planning_math::fast_hypot(traj_points[i].x - traj_points[i - 1].x,
                                   traj_points[i].y - traj_points[i - 1].y);
 
-    if (s_accumulate > scan_distance) {
+    if (s_accumulate > profile.scan_distance) {
       break;
     }
 
-    double curv = traj_points[i].curvature;
-    double curv_abs = std::fabs(curv);
+    profile.s_values.push_back(s_accumulate);
+    profile.curvature_values.push_back(traj_points[i].curvature);
 
-    if (curv_abs > max_curvature) {
-      max_curvature = curv_abs;
-      max_curv_s = s_accumulate;
-    }
-
-    // S弯检测：只在曲率足够大时记录，检测两个大弯方向相反
-    if (curv_abs > kSCurveCurvThreshold) {
-      if (prev_significant_curv != 0.0 && curv * prev_significant_curv < 0.0) {
-        has_s_curve = true;
-      }
-      prev_significant_curv = curv;
+    double curv_abs = std::fabs(traj_points[i].curvature);
+    if (curv_abs > profile.max_curvature) {
+      profile.max_curvature = curv_abs;
+      profile.max_curvature_s = s_accumulate;
     }
   }
 
-  // 4. 曲率不足以触发限速，直接退出
-  if (max_curvature <= kCurvatureThreshold) {
-    max_curvature_ = max_curvature;
+  return profile;
+}
+
+double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
+    const CurvatureProfile& profile) {
+  constexpr double kCurvatureThreshold = 1e-4;
+
+  // 曲率不足以触发限速
+  if (profile.max_curvature <= kCurvatureThreshold) {
+    max_curvature_ = profile.max_curvature;
 #ifdef ENABLE_PROTO_LOG
     FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_curvature(),
                        SpeedLimitType::CURVATURE,
@@ -459,27 +439,35 @@ const double HPPSpeedLimitDecider::ComputeCurvatureSpeedLimit(
     return hpp_speed_limit_config_.velocity_upper_bound;
   }
 
-  max_curvature_ = max_curvature;
+  max_curvature_ = profile.max_curvature;
 
-  // 5. 根据曲率计算目标限速
-  double v_limit_curv;
-
-  // HPP 场景：查表（半径 → 限速）
-  double radius = 1.0 / max_curvature;
-  v_limit_curv = interp(radius, hpp_speed_limit_config_.curv_radius_breakpoints,
-                        hpp_speed_limit_config_.curv_speed_limits_ms);
+  // 根据最大曲率计算限速
+  double radius = 1.0 / profile.max_curvature;
+  double v_limit_curv =
+      interp(radius, hpp_speed_limit_config_.curv_radius_breakpoints,
+             hpp_speed_limit_config_.curv_speed_limits_ms);
 
   v_limit_curv =
       std::clamp(v_limit_curv, hpp_speed_limit_config_.velocity_lower_bound,
                  hpp_speed_limit_config_.velocity_upper_bound);
 
-  // 6. S弯额外降速：曲率方向反转时控制容易超调，降低限速给控制留余量
-  if (has_s_curve) {
-    constexpr double kSCurveSpeedFactor = 0.8;
-    v_limit_curv *= kSCurveSpeedFactor;
-    v_limit_curv =
-        std::max(v_limit_curv, hpp_speed_limit_config_.velocity_lower_bound);
-    ILOG_INFO << "S-curve detected, v_limit_curv reduced to " << v_limit_curv;
+#ifdef ENABLE_PROTO_LOG
+  FillSimpleSnapshot(MutableHppSpeedLimitDeciderDebug()->mutable_curvature(),
+                     SpeedLimitType::CURVATURE, v_limit_curv);
+#endif
+
+  // 生成限速 segment
+  if (v_limit_curv < hpp_speed_limit_config_.velocity_upper_bound &&
+      profile.scan_distance > 0.0) {
+    const auto& reference_path_ptr = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info.reference_path;
+    if (reference_path_ptr) {
+      const double ego_s = reference_path_ptr->get_frenet_ego_state().s();
+      speed_limit_segments_.push_back({ego_s, ego_s + profile.scan_distance,
+                                       v_limit_curv,
+                                       SpeedLimitType::CURVATURE});
+    }
   }
 
   return v_limit_curv;
@@ -747,5 +735,109 @@ void HPPSpeedLimitDecider::CalculateIntersectionRoadLimit() {
 #endif
 
   return;
+}
+
+void HPPSpeedLimitDecider::CalculateSCurveLimit(double v_limit_curv) {
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  if (!reference_path_ptr) {
+    return;
+  }
+
+  const ConstStaticAnalysisStoragePtr static_analysis_storage =
+      reference_path_ptr->get_static_analysis_storage();
+  if (!static_analysis_storage) {
+    return;
+  }
+
+  QueryTypeInfo query_info = {CRoadType::SCurveStaight, CPassageType::Ignore,
+                               CElemType::Ignore};
+
+  const SRangeList s_curve_range_list =
+      static_analysis_storage->GetSRangeList(query_info);
+  if (s_curve_range_list.empty()) {
+    return;
+  }
+
+  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  const double ego_s = frenet_ego_state.s();
+
+  constexpr double kSCurveSpeedFactor = 0.8;
+
+  // S 弯限速 = 基础曲率限速 * 0.8
+  double s_curve_v_limit = v_limit_curv * kSCurveSpeedFactor;
+  s_curve_v_limit =
+      std::clamp(s_curve_v_limit, hpp_speed_limit_config_.velocity_lower_bound,
+                 hpp_speed_limit_config_.velocity_upper_bound);
+
+  for (const auto& s_range : s_curve_range_list) {
+    const double s_start = s_range.first;
+    const double s_end = s_range.second;
+
+    if (s_end < ego_s) {
+      continue;
+    }
+
+    // 直接用地图标注的区域，提前减速由 BuildSmoothedSpeedProfile 后向平滑处理
+    speed_limit_segments_.push_back({s_start, s_end,
+                                     s_curve_v_limit,
+                                     SpeedLimitType::CURVATURE});
+
+    ILOG_INFO << "S-curve zone: s=[" << s_start << ", " << s_end
+              << "], v_limit=" << s_curve_v_limit << " m/s";
+  }
+}
+
+void HPPSpeedLimitDecider::CalculateUTurnLimit(double v_limit_curv) {
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  if (!reference_path_ptr) {
+    return;
+  }
+
+  const ConstStaticAnalysisStoragePtr static_analysis_storage =
+      reference_path_ptr->get_static_analysis_storage();
+  if (!static_analysis_storage) {
+    return;
+  }
+
+  QueryTypeInfo query_info = {CRoadType::UTurn, CPassageType::Ignore,
+                               CElemType::Ignore};
+
+  const SRangeList uturn_range_list =
+      static_analysis_storage->GetSRangeList(query_info);
+  if (uturn_range_list.empty()) {
+    return;
+  }
+
+  const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
+  const double ego_s = frenet_ego_state.s();
+
+  // U 型弯限速系数：掉头弯曲率极大，需要更严格的限速
+  constexpr double kUTurnSpeedFactor = 0.8;
+
+  // U 型弯限速 = 基础曲率限速 * 0.8
+  double uturn_v_limit = v_limit_curv * kUTurnSpeedFactor;
+  uturn_v_limit =
+      std::clamp(uturn_v_limit, hpp_speed_limit_config_.velocity_lower_bound,
+                 hpp_speed_limit_config_.velocity_upper_bound);
+
+  for (const auto& s_range : uturn_range_list) {
+    const double s_start = s_range.first;
+    const double s_end = s_range.second;
+
+    if (s_end < ego_s) {
+      continue;
+    }
+
+    speed_limit_segments_.push_back({s_start, s_end,
+                                     uturn_v_limit,
+                                     SpeedLimitType::CURVATURE});
+
+    ILOG_INFO << "U-turn zone: s=[" << s_start << ", " << s_end
+              << "], v_limit=" << uturn_v_limit << " m/s";
+  }
 }
 }  // namespace planning
