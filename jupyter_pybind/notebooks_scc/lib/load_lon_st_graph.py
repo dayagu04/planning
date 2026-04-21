@@ -911,7 +911,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   st_search_attr_vec = []
   for ind in range(len(st_search_value_list)):
-    val = plan_debug_json_info[st_search_value_list[ind]]
+    val = plan_debug_json_info.get(st_search_value_list[ind], None)
     # 转换枚举值为可读的字符串
     if st_search_value_list[ind] == 'lane_change_status' and isinstance(val, int):
       val = lane_change_status_dict.get(val, str(val))
@@ -2120,7 +2120,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_text':data_text, \
                    'data_hpp_debug':data_hpp_debug, \
                    'data_turnstile_debug':data_turnstile_debug, \
-                   'data_cutin':data_cutin, \
                    'data_sv':data_sv, \
                    'data_sa': data_sa,\
                    'data_tv':data_tv, \
