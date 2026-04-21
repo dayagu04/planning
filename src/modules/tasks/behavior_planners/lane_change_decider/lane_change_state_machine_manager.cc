@@ -4465,7 +4465,9 @@ bool LaneChangeStateMachineManager::
         break;  // 已经压线过多，侧方无车不返回
       }
       //状态折扣
-      box_longitudinal_buff = is_executing ? box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio;
+      box_longitudinal_buff = is_executing ? 
+                              box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio
+                              :box_longitudinal_buff * 1.0;
       if(is_front_reverse){
         double reverse_check_time = 4.0; //默认基准变道时间
         // double reverse_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.front();
