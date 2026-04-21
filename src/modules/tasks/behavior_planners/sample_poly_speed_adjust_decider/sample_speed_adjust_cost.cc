@@ -129,8 +129,8 @@ void MatchGapCost::GetCost(
     }
     min_safe_distance_front = std::max(min_safe_distance_front, poly_end_v * 0.3);
     double large_car_buffer = upper_st_point.vehicle_length() > 8.0 ? 3.0 : 0.0;
-    reliable_safe_distance_to_gap_front_obj = std::fmax(
-        reliable_safe_distance_to_gap_front_obj, 0.5);
+    double front_buffer_redundancy =
+        std::fmax(0.5 - reliable_safe_distance_to_gap_front_obj, 0.0);
     safe_border_distance_to_gap_front_obj =
         min_safe_distance_front + reliable_safe_distance_to_gap_front_obj +
         large_car_buffer;
