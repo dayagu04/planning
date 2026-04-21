@@ -2107,7 +2107,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
             << rs_time_ms_ << ",rs interpolate time:" << rs_interpolate_time_ms_
             << " ,collision time " << collision_check_time_ms_
             << ", gear switch num = " << result->gear_change_num;
-
+  result->search_node_num = explored_node_num;
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
   ILOG_INFO << "hybrid astar total time (ms) = " << result->time_ms;

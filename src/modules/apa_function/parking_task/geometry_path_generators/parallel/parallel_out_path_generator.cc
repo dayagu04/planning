@@ -23,7 +23,6 @@ void ParallelOutPathGenerator::Reset() {
   output_.Reset();
   debug_info_.Reset();
   calc_params_.Reset();
-  parkout_path_by_direction_.clear();
 }
 
 void ParallelOutPathGenerator::Preprocess() {
@@ -114,6 +113,9 @@ const bool ParallelOutPathGenerator::Update() {
   bool success = false;
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
   const bool is_in_slot = CheckEgoInSlot();
+  ApaParkOutDirection out_dir = input_.tlane.slot_side_sgn > 0.0
+                                      ? ApaParkOutDirection::LEFT_FRONT
+                                      : ApaParkOutDirection::RIGHT_FRONT;
 
   if (input_.is_before_running_stage) {
     arc_slot_init_out_heading_ =
@@ -242,6 +244,7 @@ const bool ParallelOutPathGenerator::Update() {
 
     if (!success || inversed_path_seg_vec.size() == 0) {
       ILOG_INFO << "inversed search in slot failed!";
+      parkout_path_by_direction_.erase(out_dir);
       return false;
     }
     ILOG_INFO << "inversed search in slot success! --------------------------";
@@ -249,9 +252,6 @@ const bool ParallelOutPathGenerator::Update() {
     ILOG_INFO << "inversed search in slot success! end-----------------------";
     collision_detector_ptr_->ClearSkipObstacles(CollisionDetector::CURB_OBS);
 
-    ApaParkOutDirection out_dir = input_.tlane.slot_side_sgn > 0.0
-                                      ? ApaParkOutDirection::LEFT_FRONT
-                                      : ApaParkOutDirection::RIGHT_FRONT;
     parkout_path_by_direction_[out_dir] = inversed_path_seg_vec;
 
     ILOG_INFO << "out_dir: " << int(out_dir);
