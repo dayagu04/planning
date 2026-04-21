@@ -326,7 +326,7 @@ void HppObstacleLateralPreprocessDecider::CalObstacleClusterInfo(
         refpath_pt.right_drivable_width + cluster_l_start;
 
     const double obs_2left_road_boundary_mindis =
-        std::max(obs_start2left_road_boundary_dis,
+        std::min(obs_start2left_road_boundary_dis,
                  obs_end2left_road_boundary_dis);  //距离带正负
     const double obs_2right_road_boundary_mindis = std::min(
         obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);

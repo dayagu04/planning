@@ -476,7 +476,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   st_point_all = load_st_polygen_lower_upper_point(plan_debug_info.st_graph_data)
   st_label_all = load_st_label(plan_debug_info.st_graph_data)
   processed_trajectory_all = load_processed_trajectory(plan_debug_info.st_graph_data)
-  cut_in_st_info_all = load_cut_in_st_boundaries(plan_debug_info.st_graph_data)
+  try:
+    cut_in_st_info_all = load_cut_in_st_boundaries(plan_debug_info.st_graph_data)
+  except Exception as e:
+    print(f"[load_lon_st_graph] load_cut_in_st_boundaries failed: {e}")
+    cut_in_st_info_all = []
 
   data_st_boundaries = {i: lon_plan_data[f'st_boundary_{i}'] for i in range(20)}
   data_st_points = {i: lon_plan_data[f'st_point_{i}'] for i in range(20)}
@@ -526,6 +530,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   # Update cut-in ST boundary data (split into three data sources)
   for i in range(20):
+    if i >= len(cut_in_st_info_all):
+      break
     # Boundary data (upper/lower points)
     data_cut_in_st_boundary = data_cut_in_st_boundaries[i]
     cut_in_boundary_info = cut_in_st_info_all[i]
@@ -905,7 +911,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   st_search_attr_vec = []
   for ind in range(len(st_search_value_list)):
-    val = plan_debug_json_info[st_search_value_list[ind]]
+    val = plan_debug_json_info.get(st_search_value_list[ind], None)
     # 转换枚举值为可读的字符串
     if st_search_value_list[ind] == 'lane_change_status' and isinstance(val, int):
       val = lane_change_status_dict.get(val, str(val))
@@ -2030,6 +2036,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   data_text = ColumnDataSource(data = {'VisionLonAttr':[], 'VisionLonVal':[]})
   data_hpp_debug = ColumnDataSource(data = {'HPPDebugAttr':[], 'HPPDebugVal':[]})
   data_turnstile_debug = ColumnDataSource(data = {'TurnstileDebugAttr':[], 'TurnstileDebugVal':[]})
+  data_cutin = ColumnDataSource(data = {'cutinAttr':[], 'cutinVal':[]})
   data_st_search_text = ColumnDataSource(data = {'StSearchAttr':[], 'StSearchVal': []})
   data_st_searcher = ColumnDataSource(data = {'t_search':[], 's_search':[], 'vel_search':[], 'acc_search':[], 'jerk_search':[]})
   data_st_search_nodes = ColumnDataSource(data = {'expanded_nodes_t':[], 'expanded_nodes_s':[]})
@@ -2113,7 +2120,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_text':data_text, \
                    'data_hpp_debug':data_hpp_debug, \
                    'data_turnstile_debug':data_turnstile_debug, \
-                   'data_cutin':data_cutin, \
                    'data_sv':data_sv, \
                    'data_sa': data_sa,\
                    'data_tv':data_tv, \
