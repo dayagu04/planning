@@ -532,7 +532,18 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
             LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
         decision_info.left_nudge_level ==
             LatObstacleNudgeLevel::RELATIVE_NUDGE) {
-      decision_info.decision = LatObstacleDecisionType::LEFT;
+      if (decision_info.left_nudge_level == decision_info.right_nudge_level) {
+        decision_info.decision = previous_decision_info.decision;
+      } else {
+        if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+          decision_info.decision = LatObstacleDecisionType::LEFT;
+        }
+        if (decision_info.right_nudge_level ==
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+          decision_info.decision = LatObstacleDecisionType::RIGHT;
+        }
+      }
     } else {
       decision_info.decision = LatObstacleDecisionType::RIGHT;
     }
