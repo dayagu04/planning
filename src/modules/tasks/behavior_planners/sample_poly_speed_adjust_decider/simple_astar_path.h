@@ -14,7 +14,8 @@ const double TIME_STEP_NEAR = 1;  // 时间步长（分层步长）(s)
 const double TIME_STEP_FAR = 1;   // 时间步长（分层步长）(s)
 const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）(m)
 const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
-const int MAX_ITERATION = 80;    // 最大迭代次数
+const int MAX_ITERATION = 90;       // 最大迭代次数
+const std::vector<int> MAX_NODES_PER_LAYER = {8, 25, 25, 20};
 const double ACC_STEP = 0.37;
 const double LIMIT_TIME = 4.5;    // 最小规划时域
 
@@ -24,9 +25,11 @@ struct STNode {
   double v;  // 速度 (m/s)
   double a;  // 加速度 (m/s²)
   double jerk;
+  int depth = 0;
   double g_cost;   // 起点到当前节点的实际代价 (g(n))
   double h_cost;   // 当前节点到目标节点的预估代价 (h(n))
-  double f_cost;   // 总代价 f(n) = g(n) + h(n)
+  double safety_cost;  // 当前节点的安全成本（不累积）
+  double f_cost;   // 总代价 f(n) = g(n) + h(n) + safety_cost
   STNode* parent;  // 父节点指针，用于回溯轨迹
   double dis_to_gap_front_cost = kMaxPenalty;
   double dis_to_gap_rear_cost = kMaxPenalty;
@@ -41,6 +44,7 @@ struct STNode {
         jerk(jerk_),
         g_cost(g_),
         h_cost(h_),
+        safety_cost(0.0),
         f_cost(g_ + h_),
         parent(p_) {}
 
@@ -102,6 +106,7 @@ class LongitudinalAStar {
   std::set<STNode> open_list_;
   std::unordered_map<std::string, STNode> all_list_;
   std::unordered_set<std::shared_ptr<STNode>, PtrHash, PtrEqual> closed_list_;
+  std::unordered_map<int, int> layer_expanded_count_;
 
   STNode start_node_;
   GoalState goal_state_;

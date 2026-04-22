@@ -27,31 +27,56 @@ LongitudinalAStar::LongitudinalAStar(
   min_accel_ = state_limit_upper_.a_min;
   max_jerk_ = state_limit_upper_.j_max;
   min_jerk_ = state_limit_upper_.j_min;
-  CalculateHCost(start_node_);
   PlanTrajectory();
 }
 
 void LongitudinalAStar::PlanTrajectory() {
   goal_state_.target_s =
       std::max(goal_state_.target_s, state_limit_upper_.v_max * 5.0);
-  // goal_state_.target_s = 1000;
-  // merge_point_s_ = 1000;
   astar_traj_.clear();
   open_list_.clear();
   closed_list_.clear();
   all_list_.clear();
+  layer_expanded_count_.clear();
+
+  CalculateHCost(start_node_);
+  start_node_.dis_to_gap_front_cost = 0.0;
+  start_node_.dis_to_gap_rear_cost = 0.0;
+  CalculateFCost(start_node_);
+
   open_list_.insert(start_node_);
   all_list_[start_node_.getKey()] = start_node_;
 
   std::shared_ptr<STNode> goal_node = nullptr;
   bool found_goal = false;
+
   while (!open_list_.empty() && count_ <= MAX_ITERATION) {
     count_++;
-    STNode current_node = *open_list_.begin();
+
+    // 选节点：优先选未超限层的最优节点，全超限则回退到全局最优
+    auto selected_it = open_list_.begin();
+    for (auto it = open_list_.begin(); it != open_list_.end(); ++it) {
+      // depth 0是start node，真正的搜索层从1开始，对应限制数组索引0,1,2,3
+      if (it->depth == 0 || it->depth - 1 == static_cast<int>(MAX_NODES_PER_LAYER.size())) {
+        selected_it = it;
+        break;
+      }
+      int soft_limit = MAX_NODES_PER_LAYER[it->depth - 1];
+      if (layer_expanded_count_[it->depth] < soft_limit) {
+        selected_it = it;
+        break;
+      }
+    }
+
+    STNode current_node = *selected_it;
     auto current_node_ptr = std::make_shared<STNode>(current_node);
-    open_list_.erase(open_list_.begin());
+    open_list_.erase(selected_it);
     closed_list_.insert(current_node_ptr);
     all_list_.erase(current_node_ptr->getKey());
+
+    int current_depth = current_node_ptr->depth;
+    layer_expanded_count_[current_depth]++;
+
     if (IsGoalReached(current_node_ptr)) {
       goal_node = current_node_ptr;
       found_goal = true;
@@ -76,14 +101,11 @@ void LongitudinalAStar::PlanTrajectory() {
     }
   }
 
-  // 回溯轨迹
   if (found_goal && goal_node != nullptr) {
     BacktrackTrajectory(goal_node);
-    // 反转轨迹（从起点到终点）
     reverse(astar_traj_.begin(), astar_traj_.end());
     valid_ = true;
   } else {
-    // std::cout << "警告：未找到可行的纵向参考轨迹！" << std::endl;
     valid_ = false;
   }
 }
@@ -99,7 +121,7 @@ std::vector<STNode> LongitudinalAStar::GenerateChildren(
   std::vector<STNode> children;
   double time_step = parent_node->t < 1.9 ? TIME_STEP_NEAR : TIME_STEP_FAR;
   double child_t = parent_node->t + time_step;
-  if (child_t > goal_state_.max_t) {
+  if (child_t > LIMIT_TIME) {
     return children;
   }
 
@@ -147,6 +169,7 @@ std::vector<STNode> LongitudinalAStar::GenerateChildren(
     CalculateHCost(*node_ptr);
     CalculateFCost(*node_ptr);
     node_ptr->parent = parent_node.get();
+    node_ptr->depth = parent_node->depth + 1;
     children.emplace_back(std::move(*node_ptr));
   }
 
@@ -346,12 +369,12 @@ void LongitudinalAStar::CalculateHCost(STNode& node) {
           : fabs(node.s - goal_state_.target_s - GOAL_TOLERANCE) / 30.0;
   double v_h = config_->weight_vel * fabs(node.v - goal_state_.target_v);
   double acc_h = config_->weight_accel * fabs(node.a);
-  node.h_cost = s_h + 0.5 * v_h + node.dis_to_gap_front_cost +
-                node.dis_to_gap_rear_cost + acc_h;
+  node.h_cost = s_h + 0.5 * v_h + acc_h;
 }
 
 void LongitudinalAStar::CalculateFCost(STNode& node) {
-  node.f_cost = node.g_cost + node.h_cost;
+  node.safety_cost = node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost;
+  node.f_cost = node.g_cost + node.h_cost + node.safety_cost;
 }
 
 void LongitudinalAStar::BacktrackTrajectory(std::shared_ptr<STNode> goal_node) {
