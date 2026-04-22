@@ -17,7 +17,7 @@ namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
 constexpr double min_follow_distance_gap_cut_in = 0.8;
-constexpr double kVirtualFrontS = 200.0;
+constexpr double kVirtualFrontS = 250.0;
 constexpr double kVirtualFrontV = 33.5;
 }  // namespace
 
