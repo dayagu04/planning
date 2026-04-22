@@ -823,7 +823,7 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
         local_view.fusion_occupancy_objects_info.fusion_object_size;
     const auto *occ_objects =
         local_view.fusion_occupancy_objects_info.fusion_object;
-    for (uint8 i = 0; i < occ_size; ++i) {
+    for (size_t i = 0; i < occ_size; ++i) {
       const size_t pt_size =
           occ_objects[i].additional_occupancy_info.polygon_points_size;
       const auto *pts =
@@ -897,6 +897,9 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   }
 
   // Assign fresh IDs to unmatched clusters
+  // ID space: kGroundLineIdOffset + [0, 900000), legacy path uses
+  // kGroundLineIdOffset + groundline.id (perception ID, typically < 10000)
+  // so unified path starts from 0 and wraps at 900000 to avoid collision
   for (size_t i = 0; i < new_clusters.size(); ++i) {
     if (new_to_id[i] == -1) {
       new_to_id[i] = kGroundLineIdOffset + (unified_cluster_next_id_++);

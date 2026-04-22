@@ -74,7 +74,7 @@ std::vector<UnifiedStaticCluster::Cell> UnifiedStaticCluster::BuildGrid(
     int ix = static_cast<int>(std::floor(p.x() * inv_res));
     int iy = static_cast<int>(std::floor(p.y() * inv_res));
     int64_t key = (static_cast<int64_t>(ix + 100000) << 32) |
-                  static_cast<int64_t>(iy + 100000);
+                  static_cast<uint32_t>(iy + 100000);
     if (grid.find(key) == grid.end()) {
       grid[key] = static_cast<int>(all_pts_.size());
       all_pts_.push_back(p);
@@ -117,7 +117,7 @@ std::vector<std::vector<int>> UnifiedStaticCluster::ClusterCells(
   pos_map.reserve(n * 2);
   for (int i = 0; i < n; ++i) {
     int64_t key = (static_cast<int64_t>(cells[i].ix + 100000) << 32) |
-                  static_cast<int64_t>(cells[i].iy + 100000);
+                  static_cast<uint32_t>(cells[i].iy + 100000);
     pos_map[key] = i;
   }
 
@@ -131,7 +131,7 @@ std::vector<std::vector<int>> UnifiedStaticCluster::ClusterCells(
       for (int dy = -range; dy <= range; ++dy) {
         if (dx == 0 && dy == 0) continue;
         int64_t nkey = (static_cast<int64_t>(cells[i].ix + dx + 100000) << 32) |
-                       static_cast<int64_t>(cells[i].iy + dy + 100000);
+                       static_cast<uint32_t>(cells[i].iy + dy + 100000);
         auto it = pos_map.find(nkey);
         if (it != pos_map.end()) DsuUnion(nodes, i, it->second);
       }
