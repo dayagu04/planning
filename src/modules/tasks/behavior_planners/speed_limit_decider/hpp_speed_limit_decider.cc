@@ -11,6 +11,7 @@
 
 #include "debug_info_log.h"
 #include "environmental_model.h"
+#include "math/math_utils.h"
 #include "planning_context.h"
 
 namespace planning {
@@ -171,12 +172,18 @@ void HPPSpeedLimitDecider::CalculateCurveSpeedLimit() {
 }
 
 void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
-  double v_limit_speed_narrow_passage =
-      hpp_speed_limit_config_.velocity_upper_bound;
   if (!session_->is_hpp_scene()) {
     return;
   }
+  // 基于 hard_bounds 的物理窄道检测
+  CalculateNarrowAreaSpeedLimitFromBounds();
+  // 基于地图标注的窄道检测（兜底）
+  CalculateNarrowAreaSpeedLimitFromMap();
+}
 
+void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimitFromMap() {
+  const double v_limit_speed_narrow_passage =
+      hpp_speed_limit_config_.velocity_upper_bound;
   const double approach_distance_threshold =
       hpp_speed_limit_config_.speed_narrow_passage_approach_distance;
   HPPSpeedLimitZoneInfo zone_info;
@@ -212,7 +219,6 @@ void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimit() {
                    hpp_speed_limit_config_.target_speed_narrow_passage_area,
                    zone_info);
 #endif
-  return;
 }
 
 void HPPSpeedLimitDecider::CalculateAvoidLimit() {
@@ -286,7 +292,8 @@ void HPPSpeedLimitDecider::CalculateAvoidLimit() {
                    agent_type == agent::AgentType::TRICYCLE_RIDING);
 
     // 横向阈值：VRU 使用更宽松的阈值
-    double lateral_threshold = hpp_speed_limit_config_.hpp_avoid_lateral_threshold;
+    double lateral_threshold =
+        hpp_speed_limit_config_.hpp_avoid_lateral_threshold;
     if (is_vru) {
       lateral_threshold *= 1.2;  // VRU 横向阈值放宽 20%
     }
@@ -752,7 +759,7 @@ void HPPSpeedLimitDecider::CalculateSCurveLimit(double v_limit_curv) {
   }
 
   QueryTypeInfo query_info = {CRoadType::SCurveStaight, CPassageType::Ignore,
-                               CElemType::Ignore};
+                              CElemType::Ignore};
 
   const SRangeList s_curve_range_list =
       static_analysis_storage->GetSRangeList(query_info);
@@ -780,9 +787,8 @@ void HPPSpeedLimitDecider::CalculateSCurveLimit(double v_limit_curv) {
     }
 
     // 直接用地图标注的区域，提前减速由 BuildSmoothedSpeedProfile 后向平滑处理
-    speed_limit_segments_.push_back({s_start, s_end,
-                                     s_curve_v_limit,
-                                     SpeedLimitType::CURVATURE});
+    speed_limit_segments_.push_back(
+        {s_start, s_end, s_curve_v_limit, SpeedLimitType::CURVATURE});
 
     ILOG_INFO << "S-curve zone: s=[" << s_start << ", " << s_end
               << "], v_limit=" << s_curve_v_limit << " m/s";
@@ -804,7 +810,7 @@ void HPPSpeedLimitDecider::CalculateUTurnLimit(double v_limit_curv) {
   }
 
   QueryTypeInfo query_info = {CRoadType::UTurn, CPassageType::Ignore,
-                               CElemType::Ignore};
+                              CElemType::Ignore};
 
   const SRangeList uturn_range_list =
       static_analysis_storage->GetSRangeList(query_info);
@@ -832,12 +838,191 @@ void HPPSpeedLimitDecider::CalculateUTurnLimit(double v_limit_curv) {
       continue;
     }
 
-    speed_limit_segments_.push_back({s_start, s_end,
-                                     uturn_v_limit,
-                                     SpeedLimitType::CURVATURE});
+    speed_limit_segments_.push_back(
+        {s_start, s_end, uturn_v_limit, SpeedLimitType::CURVATURE});
 
     ILOG_INFO << "U-turn zone: s=[" << s_start << ", " << s_end
               << "], v_limit=" << uturn_v_limit << " m/s";
   }
 }
+void HPPSpeedLimitDecider::CalculateNarrowAreaSpeedLimitFromBounds() {
+  const auto& lateral_output =
+      session_->planning_context().general_lateral_decider_output();
+  const auto& hard_bounds_frenet_point =
+      lateral_output.hard_bounds_frenet_point;
+  const auto& hard_bounds_info = lateral_output.hard_bounds_info;
+
+  const auto& traj_points =
+      session_->planning_context().planning_result().traj_points;
+
+  if (hard_bounds_frenet_point.empty() ||
+      hard_bounds_frenet_point.size() != hard_bounds_info.size() ||
+      hard_bounds_frenet_point.size() != traj_points.size()) {
+    return;
+  }
+
+  const size_t n = traj_points.size();
+
+  // 1. 计算每个点的原始限速
+  std::vector<double> raw_speeds(n,
+                                 hpp_speed_limit_config_.velocity_upper_bound);
+  std::vector<double> s_values(n);
+
+  for (size_t i = 0; i < n; ++i) {
+    s_values[i] = traj_points[i].s;
+    const double width =
+        hard_bounds_frenet_point[i].second - hard_bounds_frenet_point[i].first;
+    raw_speeds[i] = ComputeNarrowSpeedLimit(width, hard_bounds_info[i].first,
+                                            hard_bounds_info[i].second);
+  }
+
+  // 2. 滑动窗口取最小值平滑，消除逐点跳动
+  constexpr size_t kSmoothWindow = 3;
+  std::vector<double> smoothed_speeds(n);
+  for (size_t i = 0; i < n; ++i) {
+    double min_v = raw_speeds[i];
+    for (size_t j = 1; j <= kSmoothWindow && i + j < n; ++j) {
+      min_v = std::min(min_v, raw_speeds[i + j]);
+    }
+    for (size_t j = 1; j <= kSmoothWindow && j <= i; ++j) {
+      min_v = std::min(min_v, raw_speeds[i - j]);
+    }
+    smoothed_speeds[i] = min_v;
+  }
+
+  // 3. 合并相邻限速相近的点为 segment
+  constexpr double kSpeedMergeTolerance = 0.5;  // m/s
+
+  int seg_start_idx = -1;
+  double seg_min_speed = 0.0;
+
+  for (size_t i = 0; i < n; ++i) {
+    const bool need_limit =
+        smoothed_speeds[i] < hpp_speed_limit_config_.velocity_upper_bound;
+
+    if (need_limit && seg_start_idx < 0) {
+      // 开始新 segment
+      seg_start_idx = static_cast<int>(i);
+      seg_min_speed = smoothed_speeds[i];
+    } else if (need_limit && seg_start_idx >= 0) {
+      const double v_diff =
+          std::abs(smoothed_speeds[i] - smoothed_speeds[i - 1]);
+      if (v_diff > kSpeedMergeTolerance) {
+        // 限速变化大，结束当前 segment 并开始新的
+        speed_limit_segments_.push_back({s_values[seg_start_idx],
+                                         s_values[i - 1], seg_min_speed,
+                                         SpeedLimitType::NARROW_PASSAGE});
+        seg_start_idx = static_cast<int>(i);
+        seg_min_speed = smoothed_speeds[i];
+      } else {
+        seg_min_speed = std::min(seg_min_speed, smoothed_speeds[i]);
+      }
+    } else if (!need_limit && seg_start_idx >= 0) {
+      // 当前点不需要限速，结束 segment
+      speed_limit_segments_.push_back({s_values[seg_start_idx], s_values[i - 1],
+                                       seg_min_speed,
+                                       SpeedLimitType::NARROW_PASSAGE});
+      seg_start_idx = -1;
+    }else {
+
+    }
+  }
+
+  // 处理尾部未关闭的 segment
+  if (seg_start_idx >= 0) {
+    speed_limit_segments_.push_back({s_values[seg_start_idx], s_values[n - 1],
+                                     seg_min_speed,
+                                     SpeedLimitType::NARROW_PASSAGE});
+  }
+}
+
+bool HPPSpeedLimitDecider::IsDynamicBound(BoundType type) const {
+  return type == BoundType::AGENT || type == BoundType::DYNAMIC_AGENT ||
+         type == BoundType::ADJACENT_AGENT ||
+         type == BoundType::LOW_PRIORITY_AGENT ||
+         type == BoundType::REVERSE_AGENT;
+}
+
+bool HPPSpeedLimitDecider::IsImmovableObstacle(agent::AgentType type) const {
+  return type == agent::AgentType::UNKNOWN_IMMOVABLE ||
+         type == agent::AgentType::TRAFFIC_CONE ||
+         type == agent::AgentType::TRAFFIC_BARREL ||
+         type == agent::AgentType::FENCE ||
+         type == agent::AgentType::WATER_SAFETY_BARRIER ||
+         type == agent::AgentType::CTASH_BARREL ||
+         type == agent::AgentType::COLUMN ||
+         type == agent::AgentType::CYLINDER_BARRIER ||
+         type == agent::AgentType::CONSTRUCTION_SIGNS;
+}
+
+double HPPSpeedLimitDecider::ComputeObstacleSpeedCompensation(
+    const BoundInfo& bound_info) const {
+  // 非障碍物 bound（道路边界等），id = -100
+  if (bound_info.id == -100) {
+    return 0.0;  // 静止不可移动物体补偿 -0
+  }
+
+  // 获取 agent_manager
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (!agent_manager) {
+    return 0.0;
+  }
+
+  const auto* agent = agent_manager->GetAgent(bound_info.id);
+  if (!agent) {
+    return 0.0;
+  }
+
+  const agent::AgentType agent_type = agent->type();
+
+  // 1. 静止不可移动物体：-0 km/h
+  if (IsImmovableObstacle(agent_type)) {
+    return 0.0;
+  }
+
+  // 2. 静止可移动物体：-2 km/h
+  const double speed = agent->speed();
+  constexpr double kStaticSpeedThreshold = 0.5;  // m/s
+  if (speed < kStaticSpeedThreshold) {
+    return 2.0 / 3.6;  // -2 km/h -> m/s
+  }
+
+  // 3. 运动物体：补偿限速
+  constexpr double kX1 = 5.0 / 3.6;   // m/s (5 km/h)
+  constexpr double kC1 = 0.0;         // m/s (0 km/h)
+  constexpr double kX2 = 15.0 / 3.6;  // m/s (15 km/h)
+  constexpr double kC2 = 5.0 / 3.6;   // m/s (5 km/h)
+
+  return planning_math::ClampInterpolate(kX1, kC1, kX2, kC2, speed);
+}
+
+double HPPSpeedLimitDecider::ComputeNarrowSpeedLimit(
+    double width, const BoundInfo& left_bound_info,
+    const BoundInfo& right_bound_info) const {
+  const double vehicle_width =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().max_width;
+
+  // 计算通道余量 = 实际宽度 - 车宽
+  const double passage_clearance = width - vehicle_width;
+
+  // 基础限速
+  constexpr double kW1 = 1.0;         // m
+  constexpr double kV1 = 10.0 / 3.6;  // m/s (10 km/h)
+  constexpr double kW2 = 1.5;         // m
+  constexpr double kV2 = 15.0 / 3.6;  // m/s (15 km/h)
+
+  const double v_base =
+      planning_math::ClampInterpolate(kW1, kV1, kW2, kV2, passage_clearance);
+
+  // 取左右两侧更严格的补偿
+  const double compensation =
+      std::max(ComputeObstacleSpeedCompensation(left_bound_info),
+               ComputeObstacleSpeedCompensation(right_bound_info));
+
+  return std::clamp(v_base - compensation,
+                    hpp_speed_limit_config_.velocity_lower_bound,
+                    hpp_speed_limit_config_.velocity_upper_bound);
+}
+
 }  // namespace planning

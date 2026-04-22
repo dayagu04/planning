@@ -70,6 +70,14 @@ class HPPSpeedLimitDecider : public Task {
                                       const double target_v);
   void BuildSmoothedSpeedProfile(double ego_s, double ego_v, double v_cruise);
 
+  void CalculateNarrowAreaSpeedLimitFromBounds();
+  void CalculateNarrowAreaSpeedLimitFromMap();
+  bool IsDynamicBound(BoundType type) const;
+  bool IsImmovableObstacle(agent::AgentType type) const;
+  double ComputeObstacleSpeedCompensation(const BoundInfo& bound_info) const;
+  double ComputeNarrowSpeedLimit(double width, const BoundInfo& left_bound_info,
+                                 const BoundInfo& right_bound_info) const;
+
  private:
   LongitudinalDeciderV3Config
       hpp_speed_limit_config_;    // Temporarily use the original
