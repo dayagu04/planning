@@ -548,7 +548,7 @@ bool HppObstacleLateralPreprocessDecider::IsObstacleTypeMergeable(
     const iflyauto::ObjectType& type_a,
     const iflyauto::ObjectType& type_b) {
   // 规则1：车辆只能和车辆合并
-  bool is_a_vehicle = (type_a == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+  bool is_a_vehicle_or_columu = (type_a == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
                       type_a == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
                       type_a == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
                       type_a == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
@@ -558,8 +558,10 @@ bool HppObstacleLateralPreprocessDecider::IsObstacleTypeMergeable(
                       type_a == iflyauto::ObjectType::OBJECT_TYPE_SUV ||
                       type_a == iflyauto::ObjectType::OBJECT_TYPE_MPV ||
                       type_a == iflyauto::ObjectType::OBJECT_TYPE_ENGINEERING_VEHICLE ||
-                      type_a == iflyauto::ObjectType::OBJECT_TYPE_OCC_CAR);
-  bool is_b_vehicle = (type_b == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_OCC_CAR ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_COLUMN ||
+                      type_a == iflyauto::ObjectType::OBJECT_TYPE_OCC_COLUMN);
+  bool is_b_vehicle_or_columu = (type_b == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
                       type_b == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
                       type_b == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
                       type_b == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
@@ -569,10 +571,12 @@ bool HppObstacleLateralPreprocessDecider::IsObstacleTypeMergeable(
                       type_b == iflyauto::ObjectType::OBJECT_TYPE_SUV ||
                       type_b == iflyauto::ObjectType::OBJECT_TYPE_MPV ||
                       type_b == iflyauto::ObjectType::OBJECT_TYPE_ENGINEERING_VEHICLE ||
-                      type_b == iflyauto::ObjectType::OBJECT_TYPE_OCC_CAR);
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_OCC_CAR ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_COLUMN ||
+                      type_b == iflyauto::ObjectType::OBJECT_TYPE_OCC_COLUMN);
 
-  // 如果一个是车，一个不是 → 不允许合并
-  if (is_a_vehicle != is_b_vehicle) {
+  // 如果一个是车/立柱，一个不是 → 不允许合并（车类型仅允许和立柱合并）
+  if (is_a_vehicle_or_columu != is_b_vehicle_or_columu) {
     return false;
   }
   // 规则2：动态大类障碍物 -> 不允许合并
