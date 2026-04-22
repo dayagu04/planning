@@ -1269,7 +1269,8 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 
   Point2D cart_init_pt(init_pos.x(), init_pos.y());
   Point2D frenet_init_pt{0.0, 0.0};
-  if (frenet_coord->XYToSL(cart_init_pt, frenet_init_pt)) {
+  const double end_extension_length = session_->is_hpp_scene() ? 10.0 : 0.0;
+  if (frenet_coord->XYToSL(cart_init_pt, frenet_init_pt, end_extension_length)) {
     s_ref = frenet_init_pt.x;
   } else {
     coarse_planning_info.reference_path.reset();
