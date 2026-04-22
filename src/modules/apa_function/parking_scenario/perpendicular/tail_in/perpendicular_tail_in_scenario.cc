@@ -2489,9 +2489,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
 
-  JSON_DEBUG_VALUE(
-      "car_real_time_col_lat_buffer",
-      real_time_brake_info_vec[0].static_col_det_buffer.body_lat_buffer)
+  const double stop_body_lat_buffer =
+      real_time_brake_info_vec[0].static_col_det_buffer.body_lat_buffer;
+
+  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", stop_body_lat_buffer)
 
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
             << "  lon_buffer = " << lon_buffer << "  lat_buffer = "
