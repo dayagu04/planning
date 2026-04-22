@@ -99,6 +99,12 @@ void TurnstileLongitudinalDecider::ResetStateWhenDeciderInactive() {
   emergency_state_.closing_status_drop_emergency_active = false;
   emergency_state_.emergency_stop_stable = false;
 
+  history_state_.previous_open_ratio = 0.0;
+  history_state_.previous_is_opened = false;
+  history_state_.previous_is_closed = false;
+  history_state_.previous_is_opening = false;
+  history_state_.previous_is_closing = true;  // 初始状态为 closing
+
   stage_ = TurnstileStage::IDLE;
 }
 
@@ -279,37 +285,62 @@ void TurnstileLongitudinalDecider::UpdateFrontVehicle() {
 }
 
 TurnstileLongitudinalDecider::GateSnapshot
-TurnstileLongitudinalDecider::GetGateSnapshot(const Obstacle& turnstile_obs) const {
+TurnstileLongitudinalDecider::GetGateSnapshot(const Obstacle& turnstile_obs) {
   GateSnapshot snapshot;
+  // status 不准确，仅保留 is_static 用于调试
   snapshot.status = turnstile_obs.turnstile_status();
   snapshot.open_ratio = turnstile_obs.turnstile_open_ratio();
   snapshot.is_static =
       snapshot.status == iflyauto::GateBarrierStatus::MOTION_DIR_STATIC;
 
-  const bool motion_dir_open =
-      snapshot.status == iflyauto::GateBarrierStatus::MOTION_DIR_OPEN;
-  const bool motion_dir_close =
-      snapshot.status == iflyauto::GateBarrierStatus::MOTION_DIR_CLOSE;
+  const double current_ratio = snapshot.open_ratio;
+  const double delta = current_ratio - history_state_.previous_open_ratio;
 
-  snapshot.is_closed =
-      snapshot.is_static &&
-      snapshot.open_ratio < lon_config_.turnstile_closed_status_threshold;
-  snapshot.is_opened =
-      snapshot.is_static &&
-      snapshot.open_ratio > lon_config_.turnstile_open_status_threshold;
+  // is_opened（带滞环）
+  if (history_state_.previous_is_opened) {
+    snapshot.is_opened = (current_ratio >= lon_config_.turnstile_opened_exit_threshold);
+  } else {
+    snapshot.is_opened = (current_ratio >= lon_config_.turnstile_opened_enter_threshold);
+  }
 
-  snapshot.is_opening =
-      motion_dir_open ||
-      (snapshot.is_static &&
-       snapshot.open_ratio > lon_config_.turnstile_closed_status_threshold);
-  snapshot.is_closing =
-      motion_dir_close ||
-      (snapshot.is_static &&
-       snapshot.open_ratio < lon_config_.turnstile_open_status_threshold);
+  // is_closed（带滞环）
+  if (history_state_.previous_is_closed) {
+    snapshot.is_closed = (current_ratio <= lon_config_.turnstile_closed_exit_threshold);
+  } else {
+    snapshot.is_closed = (current_ratio <= lon_config_.turnstile_closed_enter_threshold);
+  }
 
-  snapshot.is_passable =
-      snapshot.open_ratio >= lon_config_.turnstile_passable_status_threshold &&
-      (snapshot.is_static || motion_dir_open);
+  if (snapshot.is_opened || snapshot.is_closed) {
+    snapshot.is_opening = false;
+    snapshot.is_closing = false;
+  } else {
+    if (delta > lon_config_.turnstile_delta_threshold) {
+      snapshot.is_opening = true;
+      snapshot.is_closing = false;
+    } else if (delta < -lon_config_.turnstile_delta_threshold) {
+      snapshot.is_closing = true;
+      snapshot.is_opening = false;
+    } else {
+      snapshot.is_opening = history_state_.previous_is_opening;
+      snapshot.is_closing = history_state_.previous_is_closing;
+    }
+  }
+
+  // 兜底：四个状态全 false 时保守认为闸机在关闭，车辆停车等待
+  if (!snapshot.is_opened && !snapshot.is_closed &&
+      !snapshot.is_opening && !snapshot.is_closing) {
+    snapshot.is_closing = true;
+  }
+
+  snapshot.is_passable = snapshot.is_opened;
+
+  // 更新历史状态供下一帧使用
+  history_state_.previous_open_ratio = current_ratio;
+  history_state_.previous_is_opened = snapshot.is_opened;
+  history_state_.previous_is_closed = snapshot.is_closed;
+  history_state_.previous_is_opening = snapshot.is_opening;
+  history_state_.previous_is_closing = snapshot.is_closing;
+
   return snapshot;
 }
 

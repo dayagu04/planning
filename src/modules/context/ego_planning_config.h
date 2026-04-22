@@ -3665,6 +3665,16 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
         read_json_key<double>(json, "turnstile_closed_status_threshold", 0.2);
     turnstile_passable_status_threshold =
         read_json_key<double>(json, "turnstile_passable_status_threshold", 0.8);
+    turnstile_opened_enter_threshold =
+        read_json_key<double>(json, "turnstile_opened_enter_threshold", 0.9);
+    turnstile_opened_exit_threshold =
+        read_json_key<double>(json, "turnstile_opened_exit_threshold", 0.85);
+    turnstile_closed_enter_threshold =
+        read_json_key<double>(json, "turnstile_closed_enter_threshold", 0.2);
+    turnstile_closed_exit_threshold =
+        read_json_key<double>(json, "turnstile_closed_exit_threshold", 0.25);
+    turnstile_delta_threshold =
+        read_json_key<double>(json, "turnstile_delta_threshold", 0.05);
     turnstile_passable_status_stable_frame_threshold = read_json_key<int32_t>(
         json, "turnstile_passable_status_stable_frame_threshold", 3);
     turnstile_target_lost_tolerance_frames = read_json_key<int32_t>(
@@ -3759,6 +3769,12 @@ struct LongitudinalDeciderV3Config : public EgoPlanningConfig {
   double turnstile_open_status_threshold = 0.8;
   double turnstile_closed_status_threshold = 0.2;
   double turnstile_passable_status_threshold = 0.8;
+  // 基于 open_ratio 的闸杆状态判定阈值
+  double turnstile_opened_enter_threshold = 0.9;   // is_opened 进入阈值
+  double turnstile_opened_exit_threshold = 0.85;   // is_opened 退出阈值
+  double turnstile_closed_enter_threshold = 0.2;   // is_closed 进入阈值
+  double turnstile_closed_exit_threshold = 0.25;   // is_closed 退出阈值
+  double turnstile_delta_threshold = 0.05;         // 动态方向判定阈值
   int32_t turnstile_passable_status_stable_frame_threshold = 5;
   int32_t turnstile_target_lost_tolerance_frames = 4;
   double turnstile_front_vehicle_max_distance = 45.0;

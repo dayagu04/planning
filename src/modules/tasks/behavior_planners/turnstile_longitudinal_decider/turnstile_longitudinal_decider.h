@@ -122,6 +122,13 @@ class TurnstileLongitudinalDecider : public Task {
     double previous_front_vehicle_s = 0.0;  // 用于记录上一帧前车尾部 s_end
     bool had_valid_front_vehicle_in_prev_frame = false;  // 用于标记上一帧是否存在有效前车
     bool was_turnstile_passable_status_in_prev_frame = false;  // 用于标记上一帧道闸是否可通行
+
+    // 用于基于 open_ratio 推导闸杆状态的历史信息
+    double previous_open_ratio = 0.0;  // 上一帧 open_ratio
+    bool previous_is_opened = false;   // 上一帧 is_opened 状态
+    bool previous_is_closed = false;   // 上一帧 is_closed 状态
+    bool previous_is_opening = false;  // 上一帧 is_opening 状态
+    bool previous_is_closing = true;   // 上一帧 is_closing 状态（初始为 true）
   };
 
   // 单帧主流程：感知输入更新 + 状态机更新。
@@ -161,8 +168,8 @@ class TurnstileLongitudinalDecider : public Task {
   // 道闸/前车目标检索。
   bool IsFrontVehicleNearTurnstile(const FrenetObstacle& front_vehicle_frenet_obs) const;
 
-  // 道闸状态判定。
-  GateSnapshot GetGateSnapshot(const Obstacle& turnstile_obs) const;
+  // 道闸状态判定（需要读写 history_state_ 以支持跨帧推导）。
+  GateSnapshot GetGateSnapshot(const Obstacle& turnstile_obs);
   bool IsOpenTimeoutReleaseReady(const CycleState& cycle_state) const;
   double ComputeTurnstileStopS(const FrenetObstacle& turnstile_obs) const;
 
