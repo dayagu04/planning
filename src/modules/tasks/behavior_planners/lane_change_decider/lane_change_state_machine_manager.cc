@@ -258,7 +258,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
                               !IsLCPathCollisionWithRoadEdge(
                                   lc_lane_mgr_->origin_lane_virtual_id(),
                                   lc_lane_mgr_->target_lane_virtual_id(),
-                                  transition_info_.lane_change_status);
+                                  transition_info_.lane_change_status,
+                                  transition_info_.lane_change_direction);
         hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
 
         bool is_hold_to_cancel =
@@ -508,7 +509,8 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   // 增加路沿检查,连续3帧才触发cancel
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
-                                    transition_info_.lane_change_status)) {
+                                    transition_info_.lane_change_status,
+                                    transition_info_.lane_change_direction)) {
     road_edge_collision_cnt_++;
     if (road_edge_collision_cnt_ >= 3) {
       road_edge_collision_cnt_ = 0;
@@ -567,7 +569,8 @@ bool LaneChangeStateMachineManager::CheckIfHoldToCancel(
   // 增加路沿检查，连续3帧才触发cancel
   if (IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                     lc_lane_mgr_->target_lane_virtual_id(),
-                                    transition_info_.lane_change_status)) {
+                                    transition_info_.lane_change_status,
+                                    transition_info_.lane_change_direction)) {
     road_edge_collision_cnt_++;
     if (road_edge_collision_cnt_ >= 3) {
       road_edge_collision_cnt_ = 0;
@@ -756,7 +759,8 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
   const bool is_roadedge_safe =
       !IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                      lc_lane_mgr_->target_lane_virtual_id(),
-                                     transition_info_.lane_change_status);
+                                     transition_info_.lane_change_status,
+                                     transition_info_.lane_change_direction);
   const bool is_targetlane_valid = CheckTargetLaneValid();
 
   bool is_lc_condition_satisfied = false;
@@ -6422,13 +6426,14 @@ bool LaneChangeStateMachineManager::IsEmergencyScene() const {
 }
 bool LaneChangeStateMachineManager::IsLCPathCollisionWithRoadEdge(
     int origin_lane_id, int target_lane_id,
-    const StateMachineLaneChangeStatus& lc_status) {
+    const StateMachineLaneChangeStatus& lc_status,
+    const RequestType& lc_request_type) {
   const auto& traj_points =
       session_->mutable_planning_context()->last_planning_result().traj_points;
   const auto& ego_trajs_future_points =
       lc_status == kLaneChangeExecution ? traj_points : ego_trajs_future_copy_;
-  return lc_request_.IsPathCollisionWithRoadEdge(origin_lane_id,
-                                     target_lane_id, ego_trajs_future_points);
+  return lc_request_.IsPathCollisionWithRoadEdge(
+      origin_lane_id, target_lane_id, ego_trajs_future_points, lc_request_type);
 }
 
 bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(

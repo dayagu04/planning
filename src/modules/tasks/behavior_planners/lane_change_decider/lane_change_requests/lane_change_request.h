@@ -159,7 +159,8 @@ class LaneChangeRequest {
   bool IsMLCIgnoreSolidLaneCheck(const RequestType& lc_request,
                                  const RequestSource& lc_request_source) const;
   bool IsPathCollisionWithRoadEdge(int origin_lane_id, int target_lane_id,
-                                   const TrajectoryPoints& path_points);
+                                   const TrajectoryPoints& path_points,
+                                   const RequestType& lc_request_type);
 
  protected:
   TrackInfo lc_invalid_track_;
