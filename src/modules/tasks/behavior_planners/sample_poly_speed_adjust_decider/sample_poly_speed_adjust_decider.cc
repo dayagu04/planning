@@ -100,7 +100,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     bool is_near_stop_point =
         min_cost_traj_ptr_ == nullptr
             ? true
-            : (distance_to_merge_point_ > left_merge_dist_coef * ego_v_) &&
+            : (merge_stop_line_distance_ > left_merge_dist_coef * ego_v_) &&
                   (min_cost_traj_ptr_->anchor_points_match_gap_cost().cost() >
                    0.0);
     if (is_near_stop_point ||
@@ -1372,8 +1372,9 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
   }
 }
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
-  GoalState goal_state(merge_stop_line_distance_ + config_.forced_merge_param.astar_goal_offset,
-                       v_suggestted_, config_.forced_merge_param.astar_goal_offset);
+  GoalState goal_state(
+      merge_stop_line_distance_ + config_.forced_merge_param.astar_goal_offset,
+      v_suggestted_, config_.forced_merge_param.astar_goal_offset);
   STNode start_node(0.0, 0.0, ego_v_, ego_a_);
   const double astar_speed_cap =
       std::fmin(v_adjust_speed_limit_ * config_.speed_limit_scale_factor,
