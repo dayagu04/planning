@@ -866,6 +866,13 @@ class LoadRosbag:
       #路权相关
       json_value_list += ["cur_road_right_level", "is_merge_region"]
 
+      # VirtualLane Cost 可视化
+      json_value_list += ["vl_cost_count"]
+      for i in range(10):
+        prefix = f"vl_cost_{i}_"
+        json_value_list += [prefix + "order", prefix + "rel", prefix + "total",
+                           prefix + "match", prefix + "topo", prefix + "penalty", prefix + "on_route"]
+
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
         #print(asizeof.asizeof(msg)/1024)

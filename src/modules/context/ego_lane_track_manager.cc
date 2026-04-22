@@ -122,6 +122,7 @@ void EgoLaneTrackManger::TrackEgoLane(
     std::vector<int>& order_ids_of_same_zero_relative_id,
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
         virtual_id_mapped_lane) {
+  JSON_DEBUG_VALUE("vl_cost_count", 0);
   const auto& function_info = session_->environmental_model().function_info();
   const auto& planning_context = session_->planning_context();
   const auto& planning_result = planning_context.last_planning_result();
@@ -1808,6 +1809,20 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   // Get Virtual Lane Cost on Route
   const auto& route_info = session_->environmental_model().get_route_info();
   VirtualLanesRouteCost const& lane_cost = route_info->GetVirtualLaneCostOnRoute(relative_id_lanes);
+
+  // Output VirtualLane Cost for visualization
+  JSON_DEBUG_VALUE("vl_cost_count", static_cast<int>(lane_cost.size()));
+  for (size_t i = 0; i < lane_cost.size() && i < 10; ++i) {
+    const auto& vc = lane_cost[i];
+    std::string prefix = "vl_cost_" + std::to_string(i) + "_";
+    JSON_DEBUG_VALUE((prefix + "order").c_str(), vc.order_id);
+    JSON_DEBUG_VALUE((prefix + "rel").c_str(), vc.relative_id);
+    JSON_DEBUG_VALUE((prefix + "total").c_str(), vc.total_cost);
+    JSON_DEBUG_VALUE((prefix + "match").c_str(), vc.lane_match_confidence);
+    JSON_DEBUG_VALUE((prefix + "topo").c_str(), vc.topo_trace_score);
+    JSON_DEBUG_VALUE((prefix + "penalty").c_str(), vc.distance_penalty);
+    JSON_DEBUG_VALUE((prefix + "on_route").c_str(), vc.is_on_route ? 1 : 0);
+  }
 
   // find best lane in order_id_idx
   int best_order_id_idx = -1;
