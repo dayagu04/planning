@@ -7,7 +7,6 @@
 #include "environmental_model.h"
 #include "frenet_obstacle.h"
 #include "lane_reference_path.h"
-#include "obstacle_manager.h"
 #include "planning_context.h"
 #include "st_graph_utils.h"
 #include "utils/kd_path.h"
@@ -252,17 +251,19 @@ void StGraphInput::ExtendProcessedPath(
     return;
   }
 
-  {
-    std::vector<double> ext_x, ext_y, ext_heading;
-    for (const auto& pt : path_points) {
-      ext_x.push_back(pt.x());
-      ext_y.push_back(pt.y());
-      ext_heading.push_back(pt.theta());
-    }
-    JSON_DEBUG_VECTOR("forward_extend_path_x", ext_x, 2);
-    JSON_DEBUG_VECTOR("forward_extend_path_y", ext_y, 2);
-    JSON_DEBUG_VECTOR("forward_extend_path_heading", ext_heading, 2);
+#if defined(X86) && !defined(X86_SIMULATION)
+  // Log
+  std::vector<double> ext_x, ext_y;
+  ext_x.reserve(path_points.size());
+  ext_y.reserve(path_points.size());
+  for (const auto& pt : path_points) {
+    ext_x.push_back(pt.x());
+    ext_y.push_back(pt.y());
   }
+  JSON_DEBUG_VECTOR("forward_extend_path_x", ext_x, 2);
+  JSON_DEBUG_VECTOR("forward_extend_path_y", ext_y, 2);
+#endif
+
   const bool need_reset_s = false;
   processed_path_ = std::make_shared<planning_math::KDPath>(
       std::move(path_points), need_reset_s);
@@ -389,10 +390,13 @@ double StGraphInput::ExtendPathWithLateralNudgeForStaticObstacle(
     const std::shared_ptr<planning_math::KDPath>& lane_fusion_ego_center_lane,
     const double project_s, const double project_l,
     std::vector<planning_math::PathPoint>* const ptr_path_points) {
+  
   double extend_start_s = project_s + 1.0;
 
-  const auto obstacle_manager =
-      session_->environmental_model().get_obstacle_manager();
+  if (ptr_path_points->empty()) {
+    return extend_start_s;
+  }
+
   auto reference_path_ptr = session_->planning_context()
                                 .lane_change_decider_output()
                                 .coarse_planning_info.reference_path;
@@ -401,15 +405,18 @@ double StGraphInput::ExtendPathWithLateralNudgeForStaticObstacle(
     return extend_start_s;
   }
 
+  
+
   const auto target_lane_id = session_->planning_context()
                                   .lane_change_decider_output()
                                   .coarse_planning_info.target_lane_id;
-  const auto lane_reference_path =
-      session_->environmental_model()
+  const auto virtual_lane = session_->environmental_model()
           .get_virtual_lane_manager()
-          ->get_lane_with_virtual_id(target_lane_id)
-          ->get_reference_path();
-
+          ->get_lane_with_virtual_id(target_lane_id);
+  if (virtual_lane == nullptr) {
+    return extend_start_s;
+  }      
+  const auto lane_reference_path = virtual_lane->get_reference_path();        
   const auto lead_id = lane_reference_path == nullptr
                            ? -1
                            : lane_reference_path->get_lane_leadone_obstacle();
@@ -447,7 +454,6 @@ double StGraphInput::ExtendPathWithLateralNudgeForStaticObstacle(
 
   // 计算纵向对该障碍物的扩展横向buffer
   int32_t prev_st_count = 0;
-  bool is_in_st_graph = false;
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_half_width = vehicle_param.width * 0.5;
@@ -474,7 +480,7 @@ double StGraphInput::ExtendPathWithLateralNudgeForStaticObstacle(
   }
 
   auto it_nudge = lane_fusion_ego_center_lane->QueryLowerBound(
-      lane_fusion_ego_center_lane->path_points(), project_s);
+      lane_fusion_ego_center_lane->path_points(), extend_start_s);
   if (it_nudge == lane_fusion_ego_center_lane->path_points().end()) {
     --it_nudge;
   }
