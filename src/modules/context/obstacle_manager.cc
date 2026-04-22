@@ -1,9 +1,11 @@
 #include "obstacle_manager.h"
 
+#include <algorithm>
 #include <climits>
 #include <cmath>
 #include <cstddef>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 #include "ego_planning_config.h"
@@ -27,6 +29,21 @@ void ObstacleManager::SetConfig(
     const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<EgoPlanningObstacleManagerConfig>();
   ground_line_manager_ptr_ = std::make_shared<GroundLineManager>();
+
+  UnifiedClusterConfig ucc;
+  ucc.enable                 = config_.enable_unified_static_cluster;
+  ucc.grid_resolution        = config_.cluster_grid_resolution;
+  ucc.neighbor_range         = config_.cluster_neighbor_range;
+  ucc.aspect_ratio_threshold = config_.cluster_aspect_ratio_threshold;
+  ucc.rdp_tolerance          = config_.cluster_rdp_tolerance;
+  ucc.box_safety_buffer      = config_.cluster_box_safety_buffer;
+  ucc.min_points             = config_.cluster_min_points;
+  ucc.max_segment_length     = config_.cluster_max_segment_length;
+  ucc.compactness_threshold  = config_.cluster_compactness_threshold;
+  ucc.density_threshold      = config_.cluster_density_threshold;
+  ucc.curvature_threshold    = config_.cluster_curvature_threshold;
+  ucc.bisect_stop_ratio      = config_.cluster_bisect_stop_ratio;
+  unified_cluster_ = std::make_unique<UnifiedStaticCluster>(ucc);
 }
 
 void ObstacleManager::update() {
@@ -152,31 +169,42 @@ void ObstacleManager::update() {
   }
 
   if (session_->is_hpp_scene() || session_->is_nsa_scene() || session_->is_rads_scene()) {
-    // ground line
-    double time_start = IflyTime::Now_ms();
-    UpdateGroundLineObstacle();
-    double time_end = IflyTime::Now_ms();
-    ILOG_DEBUG << "UpdateGroundLineObstacle cost:" << time_end - time_start;
-    JSON_DEBUG_VALUE("UpdateGroundLineObstacleCost", time_end - time_start);
+    double time_start;
+    double time_end;
+    if (config_.enable_unified_static_cluster) {
+      // Unified path: dedup + cluster GL and OCC together
+      time_start = IflyTime::Now_ms();
+      UpdateUnifiedStaticObstacle();
+      time_end = IflyTime::Now_ms();
+      ILOG_DEBUG << "UpdateUnifiedStaticObstacle cost:" << time_end - time_start;
+      JSON_DEBUG_VALUE("UpdateUnifiedStaticObstacleCost", time_end - time_start);
+    } else {
+      // Legacy path: process GL and OCC separately
+      // ground line
+      time_start = IflyTime::Now_ms();
+      UpdateGroundLineObstacle();
+      time_end = IflyTime::Now_ms();
+      ILOG_DEBUG << "UpdateGroundLineObstacle cost:" << time_end - time_start;
+      JSON_DEBUG_VALUE("UpdateGroundLineObstacleCost", time_end - time_start);
 
-    // parking space
+      // occupancy objects
+      time_start = IflyTime::Now_ms();
+      if (config_.enable_fusion_occupancy_objects) {
+        UpdateOccObstacle();
+      }
+      time_end = IflyTime::Now_ms();
+      ILOG_DEBUG << "UpdateOccObstacle cost:" << time_end - time_start;
+      JSON_DEBUG_VALUE(" UpdateOccObstacleCost", time_end - time_start);
+    }
+
+    // parking space (always runs regardless of clustering mode)
     time_start = IflyTime::Now_ms();
-    if (config_.enable_fusion_parking_slot) {  // fusion parking slot
+    if (config_.enable_fusion_parking_slot) {
       UpdateParkingSpaceObstacle();
-    } else {  // ehr parking space
     }
     time_end = IflyTime::Now_ms();
     ILOG_DEBUG << "UpdateParkingSpaceObstacle cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("UpdateParkingSpaceObstacleCost", time_end - time_start);
-
-    // occupancy objects
-    time_start = IflyTime::Now_ms();
-    if (config_.enable_fusion_occupancy_objects) {
-      UpdateOccObstacle();
-    }
-    time_end = IflyTime::Now_ms();
-    ILOG_DEBUG << "UpdateOccObstacle cost:" << time_end - time_start;
-    JSON_DEBUG_VALUE(" UpdateOccObstacleCost", time_end - time_start);
 
     // ehr column box
     time_start = IflyTime::Now_ms();
@@ -720,6 +748,175 @@ void ObstacleManager::UpdateGroundLineObstacle() {
       }
     }
   }
+}
+
+void ObstacleManager::UpdateUnifiedStaticObstacle() {
+  if (!unified_cluster_) {
+    return;
+  }
+
+  const auto &local_view = session_->environmental_model().get_local_view();
+  const auto &ref_path_ptr = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .coarse_planning_info.reference_path;
+  if (ref_path_ptr == nullptr) {
+    return;
+  }
+  const auto &frenet_coord = ref_path_ptr->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
+  const auto &ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  Point2D ego_point;
+  if (!frenet_coord->XYToSL(
+          Point2D(ego_state->ego_carte().x, ego_state->ego_carte().y),
+          ego_point) ||
+      std::isnan(ego_point.x) || std::isnan(ego_point.y)) {
+    return;
+  }
+
+  // --- Collect GroundLine raw points ---
+  std::vector<planning_math::Vec2d> gl_points;
+  const double kMinFrontDistance = 6;
+  const double kMinFrontDistanceForMap = 7;
+  const double kMaxSideDistance = 5;
+
+  const size_t groundline_size =
+      local_view.ground_line_perception.groundline_size;
+  for (size_t i = 0; i < groundline_size; ++i) {
+    const auto &groundline = local_view.ground_line_perception.groundline[i];
+    if (groundline.type == iflyauto::GROUND_LINE_TYPE_COLUMN) {
+      continue;  // columns handled separately by UpdateMapStaticObstacle
+    }
+    const size_t pt_size = groundline.groundline_point_size;
+    for (size_t j = 0; j < pt_size; ++j) {
+      const auto &gp = groundline.groundline_point[j];
+      if (gp.x == 0.0f && gp.y == 0.0f) {
+        continue;
+      }
+      Point2D sl_point;
+      if (!frenet_coord->XYToSL(Point2D(gp.x, gp.y), sl_point) ||
+          std::isnan(sl_point.x) || std::isnan(sl_point.y)) {
+        continue;
+      }
+      if (sl_point.x < ego_point.x + kMinFrontDistance) {
+        continue;
+      }
+      if (groundline.resource_type ==
+              iflyauto::StaticFusionResourceType::RESOURCE_TYPE_MAP &&
+          sl_point.x < ego_point.x + kMinFrontDistanceForMap) {
+        continue;
+      }
+      if (std::fabs(sl_point.y) > kMaxSideDistance) {
+        continue;
+      }
+      gl_points.emplace_back(gp.x, gp.y);
+    }
+  }
+
+  // --- Collect OCC raw points (only when enabled) ---
+  std::vector<planning_math::Vec2d> occ_points;
+  if (config_.enable_fusion_occupancy_objects &&
+      local_view.fusion_occupancy_objects_info.local_point_valid) {
+    const size_t occ_size =
+        local_view.fusion_occupancy_objects_info.fusion_object_size;
+    const auto *occ_objects =
+        local_view.fusion_occupancy_objects_info.fusion_object;
+    for (uint8 i = 0; i < occ_size; ++i) {
+      const size_t pt_size =
+          occ_objects[i].additional_occupancy_info.polygon_points_size;
+      const auto *pts =
+          occ_objects[i].additional_occupancy_info.polygon_points;
+      for (size_t j = 0; j < pt_size; ++j) {
+        if (pts[j].x == 0.0f && pts[j].y == 0.0f) {
+          continue;
+        }
+        occ_points.emplace_back(pts[j].x, pts[j].y);
+      }
+    }
+  }
+
+  // --- Run unified clustering ---
+  const auto cluster_results =
+      unified_cluster_->Process(gl_points, occ_points);
+
+  // --- Add results as groundline obstacles with frame-to-frame ID matching ---
+  struct NewCluster {
+    Vec2d center;
+    std::vector<Vec2d> points;
+  };
+  std::vector<NewCluster> new_clusters;
+
+  // Step 1: Collect all valid clusters with their centers
+  for (const auto &obs : cluster_results) {
+    if (obs.points.size() < 3) {
+      continue;
+    }
+    double cx = 0.0, cy = 0.0;
+    for (const auto &p : obs.points) {
+      cx += p.x();
+      cy += p.y();
+    }
+    cx /= obs.points.size();
+    cy /= obs.points.size();
+    new_clusters.push_back({Vec2d(cx, cy), obs.points});
+  }
+
+  // Step 2: Build match candidates (new cluster <-> prev cluster)
+  struct MatchCandidate {
+    int new_idx;
+    int prev_idx;
+    double dist;
+  };
+  std::vector<MatchCandidate> candidates;
+  constexpr double kMatchThreshold = 1.5;  // meters
+
+  for (size_t i = 0; i < new_clusters.size(); ++i) {
+    for (size_t j = 0; j < prev_unified_clusters_.size(); ++j) {
+      double d = new_clusters[i].center.DistanceTo(prev_unified_clusters_[j].center);
+      if (d < kMatchThreshold) {
+        candidates.push_back({static_cast<int>(i), static_cast<int>(j), d});
+      }
+    }
+  }
+
+  // Sort by distance for optimal greedy matching
+  std::sort(candidates.begin(), candidates.end(),
+            [](const auto &a, const auto &b) { return a.dist < b.dist; });
+
+  // Step 3: Greedy assignment
+  std::vector<int> new_to_id(new_clusters.size(), -1);
+  std::vector<bool> prev_used(prev_unified_clusters_.size(), false);
+
+  for (const auto &c : candidates) {
+    if (new_to_id[c.new_idx] != -1) continue;  // Already matched
+    if (prev_used[c.prev_idx]) continue;       // Already used
+    new_to_id[c.new_idx] = prev_unified_clusters_[c.prev_idx].id;
+    prev_used[c.prev_idx] = true;
+  }
+
+  // Assign fresh IDs to unmatched clusters
+  for (size_t i = 0; i < new_clusters.size(); ++i) {
+    if (new_to_id[i] == -1) {
+      new_to_id[i] = kGroundLineIdOffset + (unified_cluster_next_id_++);
+      if (unified_cluster_next_id_ >= 900000) {
+        unified_cluster_next_id_ = 0;
+      }
+    }
+  }
+
+  // Step 4: Create obstacles and update tracking state
+  std::vector<PrevClusterInfo> new_prev_clusters;
+  new_prev_clusters.reserve(new_clusters.size());
+  for (size_t i = 0; i < new_clusters.size(); ++i) {
+    Obstacle obstacle(new_to_id[i], new_clusters[i].points);
+    if (obstacle.is_vaild()) {
+      add_groundline_obstacle(obstacle);
+      new_prev_clusters.push_back({new_clusters[i].center, new_to_id[i]});
+    }
+  }
+  prev_unified_clusters_ = std::move(new_prev_clusters);
 }
 
 bool ObstacleManager::FilterGroundLineByDistance(
