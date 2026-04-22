@@ -2,6 +2,7 @@
 
 #include <memory>
 #include "ego_planning_config.h"
+#include "unified_static_cluster.h"
 #include "environmental_model.h"
 #include "euler_distance_transform.h"
 #include "frenet_obstacle.h"
@@ -138,6 +139,8 @@ class ObstacleManager {
 
   void UpdateGroundLineObstacle();
 
+  void UpdateUnifiedStaticObstacle();
+
   void UpdateParkingSpaceObstacle();
 
   void UpdateMapStaticObstacle();
@@ -218,6 +221,14 @@ class ObstacleManager {
   std::unordered_map<int, std::vector<int>> lanes_virtual_obstacles_;
   std::shared_ptr<planning::GroundLineManager> ground_line_manager_ptr_ =
       nullptr;
+  std::unique_ptr<UnifiedStaticCluster> unified_cluster_;
+
+  struct PrevClusterInfo {
+    planning_math::Vec2d center;
+    int id;
+  };
+  std::vector<PrevClusterInfo> prev_unified_clusters_;
+  int unified_cluster_next_id_ = 0;
 };
 
 using ObstacleManagerPtr = std::shared_ptr<ObstacleManager>;
