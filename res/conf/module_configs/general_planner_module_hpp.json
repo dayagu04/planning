@@ -47,7 +47,6 @@
   "cluster_density_threshold": 7.0,
   "cluster_bisect_stop_ratio": 0.85,
   "cluster_curvature_threshold": 0.05,
-  "cluster_curvature_min_diagonal": 8.0,
   "max_speed_static_obstacle": 0.5,
   "car_body_lat_safe_buffer": 0.1,
   "lon_safe_buffer": 0.1,
