@@ -223,6 +223,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         int object_lateral_offset =
             static_cast<int>(config_->lateral_offset_scale_factor *
                              anchor_matched_lower_st_point.l());
+        object_lateral_offset = std::fmax(object_lateral_offset, 10);
         double collision_s = 0.0;
         if (object_lateral_offset < 0 || is_over_speed_diff) {
           collision_s = merge_point_s_;
@@ -234,6 +235,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             collision_s = config_->default_collision_distance;
           }
         }
+        collision_s = 0.8 * collision_s;
         if (gap < 0.0 && node.s > collision_s) {
           // std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
           //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
@@ -267,6 +269,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         int object_lateral_offset =
             static_cast<int>(config_->lateral_offset_scale_factor *
                              anchor_matched_upper_st_point.l());
+        object_lateral_offset = std::fmax(object_lateral_offset, 10);
         double collision_s = 0.0;
         if (object_lateral_offset < 0) {
           collision_s = merge_point_s_;
@@ -278,8 +281,13 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             collision_s = config_->default_collision_distance;
           }
         }
-        if (gap < 0.0 &&
-            node.s > (collision_s - std::max(follow_distance, thw))) {
+        collision_s = 0.8 * collision_s;
+        double left_time =
+            std::fmax(((collision_s - std::max(follow_distance, thw)) - node.s),
+                      0.0) /
+            std::fmax(node.v, kZeroEpsilon);
+        gap = gap + left_time * (anchor_matched_upper_st_point.velocity() - node.v);
+        if (gap < 0.0 && left_time < 1.5) {
           // std::cout << "Gap前车碰撞风险: " << node.getKey()
           //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
           //           << std::endl;
