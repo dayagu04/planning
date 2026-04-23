@@ -320,7 +320,9 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
                               'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", "is_small_front_intersection", "dis_to_tfl", \
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
-                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "tla_reminder_state", "obstacle_brake_hmi_sts",\
+                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "take_over_request", "request_reason", "tla_reminder_state", "obstacle_brake_hmi_sts",\
+                              'new_cutin_id', 'new_cutin_id_count', \
+                              "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \
                               "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
                               "lon_danger_agent_ids", "v_cruise_limit","v_target_decider","v_target_type_code", "construction_manual_intervention_detected",\
@@ -355,7 +357,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   # HPP debug scalar keys
   hpp_debug_value_list = [
-      "LaneChangeDeciderTime", "LateralObstacleDeciderTime", 
+      "LaneChangeDeciderTime", "LateralObstacleDeciderTime",
       "HppGeneralLateralDeciderTime", "LateralMotionPlannerTime",
       "GeneralLongitudinalDeciderTime", "LongitudinalMotionPlannerTime",
       "ResultTrajectoryGeneratorTime", "ParkingSwitchDeciderTime",
