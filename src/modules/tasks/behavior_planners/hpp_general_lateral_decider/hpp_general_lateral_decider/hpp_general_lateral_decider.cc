@@ -2525,8 +2525,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
   size_t break_start = n;
   for (size_t i = 0; i < n; ++i) {
     if (is_break_hard_bound(i)) {
-      // break_start = i < kBlendRadius ? 0 : i;
-      break_start = i;
+      break_start = std::max(i, kBlendRadius);
       break;
     }
   }
@@ -2546,7 +2545,7 @@ void HppGeneralLateralDecider::MergeReferenceTrajectories(
     const bool is_break = is_break_hard_bound(i);
     if (!in_break) {
       if (is_break) {
-        cur_break_start = i;
+        cur_break_start = std::max(i, kBlendRadius);
         in_break = true;
         recover_window_start = n;
       }
