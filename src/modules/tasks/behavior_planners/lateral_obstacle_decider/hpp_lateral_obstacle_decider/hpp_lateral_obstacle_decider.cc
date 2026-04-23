@@ -521,7 +521,18 @@ void HppLateralObstacleDecider::MakeDecisionBasedLastTrajRelativePos(
             LatObstacleNudgeLevel::ABSOLUTE_NUDGE ||
         decision_info.left_nudge_level ==
             LatObstacleNudgeLevel::RELATIVE_NUDGE) {
-      decision_info.decision = LatObstacleDecisionType::LEFT;
+      if (decision_info.left_nudge_level == decision_info.right_nudge_level) {
+        decision_info.decision = previous_decision_info.decision;
+      }else{
+        if (decision_info.left_nudge_level ==
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
+          decision_info.decision = LatObstacleDecisionType::LEFT;
+        }
+        if (decision_info.right_nudge_level ==
+            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+          decision_info.decision = LatObstacleDecisionType::RIGHT;
+        }
+      }
     } else {
       decision_info.decision = LatObstacleDecisionType::RIGHT;
     }
@@ -542,30 +553,46 @@ void HppLateralObstacleDecider::CalObstacleFrenetBoundary(FrenetObstacleBoundary
 
   ReferencePathPoint refpath_pt;
   reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt);
-  const double obs_start2left_road_boundary_dis =
-      refpath_pt.left_drivable_width - l_end;
-  const double obs_start2right_road_boundary_dis =
-      refpath_pt.right_drivable_width + l_start;
+  if (l_start > -refpath_pt.distance_to_right_road_border &&
+      l_end < refpath_pt.distance_to_left_road_border) {
+    const double obs_start2left_road_boundary_dis =
+        refpath_pt.left_drivable_width - l_end;
+    const double obs_start2right_road_boundary_dis =
+        refpath_pt.right_drivable_width + l_start;
 
-  reference_path_ptr->get_reference_point_by_lon(s_end, refpath_pt);
-  const double obs_end2left_road_boundary_dis =
-      refpath_pt.left_drivable_width - l_end;
-  const double obs_end2right_road_boundary_dis =
-      refpath_pt.right_drivable_width + l_start;
+    reference_path_ptr->get_reference_point_by_lon(s_end, refpath_pt);
+    const double obs_end2left_road_boundary_dis =
+        refpath_pt.left_drivable_width - l_end;
+    const double obs_end2right_road_boundary_dis =
+        refpath_pt.right_drivable_width + l_start;
 
-  const double obs_2left_road_boundary_mindis =
-      std::min(obs_start2left_road_boundary_dis,
-               obs_end2left_road_boundary_dis);  //距离带正负
-  const double obs_2right_road_boundary_mindis = std::min(
-      obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
-  ILOG_INFO << "obs_2left_road_boundary_mindis = "
-            << obs_2left_road_boundary_mindis
-            << ", obs_2right_road_boundary_mindis = "
-            << obs_2right_road_boundary_mindis;
-  frenet_boundary.obs_2left_road_boundary_mindis =
-      obs_2left_road_boundary_mindis;
-  frenet_boundary.obs_2right_road_boundary_mindis =
-      obs_2right_road_boundary_mindis;
+    const double obs_2left_road_boundary_mindis =
+        std::min(obs_start2left_road_boundary_dis,
+                 obs_end2left_road_boundary_dis);  //距离带正负
+    const double obs_2right_road_boundary_mindis = std::min(
+        obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
+    ILOG_INFO << "obs_2left_road_boundary_mindis = "
+              << obs_2left_road_boundary_mindis
+              << ", obs_2right_road_boundary_mindis = "
+              << obs_2right_road_boundary_mindis;
+    frenet_boundary.obs_2left_road_boundary_mindis =
+        obs_2left_road_boundary_mindis;
+    frenet_boundary.obs_2right_road_boundary_mindis =
+        obs_2right_road_boundary_mindis;
+  }else{
+    if (l_end >= refpath_pt.distance_to_left_road_border &&
+        l_start <= refpath_pt.distance_to_left_road_border) {
+      frenet_boundary.obs_2left_road_boundary_mindis = 0.f;
+      frenet_boundary.obs_2right_road_boundary_mindis =
+          l_start + refpath_pt.right_drivable_width;
+    }
+    if (l_start <= -refpath_pt.distance_to_right_road_border &&
+        l_end >= -refpath_pt.distance_to_right_road_border) {
+      frenet_boundary.obs_2left_road_boundary_mindis =
+          refpath_pt.left_drivable_width - l_end;
+      frenet_boundary.obs_2right_road_boundary_mindis = 0.f;
+    }
+  }
 }
 
 bool HppLateralObstacleDecider::MakeDecisionBasedTrajSLForDynamicObs(
