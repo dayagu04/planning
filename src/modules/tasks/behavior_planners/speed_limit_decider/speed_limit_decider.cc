@@ -2354,6 +2354,16 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     poi_v_limit_set_ = false;
     poi_v_limit_set_decision_from_fsm_ = false;
     poi_v_limit_kph_ = 120;
+    if (environmental_model.get_route_info()->get_sdmap_valid()) {
+      const auto &sd_map = environmental_model.get_route_info()
+                               ->get_sd_map();
+      const auto cur_seg = sd_map.GetNearestRoadWithHeading(
+                                current_point, search_distance, ego_heading_angle, max_heading_diff,
+                                nearest_s, nearest_l);
+      if (cur_seg != nullptr) {
+        CalculateRoundaboutFunctionQuitSpeedLimit(false, cur_seg->id(), nearest_s);
+      }
+    }
     return;
   } else {
     poi_v_limit_set_ = false;
@@ -2502,79 +2512,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               poi_v_limit_set_ = true;
             }
           } else {
-            bool function_need_inhibited = false;
-            double v_limit_roundabout = 40.0;
-            double dis_to_roundabout = 10000.0;
-            auto speed_limit_output =
-                session_->mutable_planning_context()
-                    ->mutable_speed_limit_decider_output();
-            speed_limit_output->set_function_inhibited_near_roundabout(false);
-            auto roundabout_info = sdpro_map.GetRoundAboutInfo(
-                current_segment->id(), nearest_s, 300.0);
-            if (roundabout_info.first != nullptr &&
-                roundabout_info.second < kMapModeRoundaboutQuitDis &&
-                road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
-              // in map mode, roundabout distance meets the condition
-              dis_to_roundabout = roundabout_info.second;
-              if (roundabout_info.second < kMapModeRoundaboutQuitDis / 2.0) {
-                if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
-                  function_need_inhibited = true;
-                }
-              } else {
-                function_need_inhibited = true;
-              }
-            } else if (roundabout_info.first == nullptr) {
-              auto roundabout_info_list = sdpro_map.GetRoundAboutList(
-                  current_segment->id(), nearest_s, 300.0);
-              if (roundabout_info_list.size() == 0) {
-                roundabout_quit_flag_ = false;
-                return;
-              } else {
-                auto closest_roundabout = roundabout_info_list[0];
-                if (closest_roundabout.first != nullptr &&
-                    closest_roundabout.second < kNoMapModeRoundaboutQuitDis &&
-                    road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
-                  // not in map mode, closest roundabout distance meets the
-                  // condition
-                  dis_to_roundabout = closest_roundabout.second;
-                  if (closest_roundabout.second < kNoMapModeRoundaboutQuitDis / 2.0) {
-                    if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
-                      function_need_inhibited = true;
-                    }
-                  } else {
-                    function_need_inhibited = true;
-                  }
-                }
-              }
-            }
-            if (function_need_inhibited) {
-              roundabout_quit_flag_ = function_need_inhibited;
-              roundabout_recover_counter_ = 0;
-              speed_limit_output->set_function_inhibited_near_roundabout(
-                  function_need_inhibited);
-            } else {
-              if (roundabout_quit_flag_ &&
-                  roundabout_recover_counter_ < kRoundaboutQuitRecoverCounter) {
-                speed_limit_output->set_function_inhibited_near_roundabout(
-                    roundabout_quit_flag_);
-                roundabout_recover_counter_++;
-              } else {
-                roundabout_quit_flag_ = false;
-              }
-            }
-            if (roundabout_quit_flag_) {
-              v_limit_roundabout = speed_limit_config_.v_limit_roundabout;
-            }
-            if (v_limit_roundabout < v_target_) {
-              v_target_ = v_limit_roundabout;
-              v_target_type_ = SpeedLimitType::ROUNDABOUT;
-            }
-            JSON_DEBUG_VALUE("dis_to_roundabout", dis_to_roundabout);
-            JSON_DEBUG_VALUE("v_limit_roundabout", v_limit_roundabout);
-            auto speed_limit_decider_output = session_->mutable_planning_context()
-                                          ->mutable_speed_limit_decider_output();
-            speed_limit_decider_output->SetSpeedLimitIntoMap(v_limit_roundabout,
-                                                     SpeedLimitType::ROUNDABOUT);
+            CalculateRoundaboutFunctionQuitSpeedLimit(true, current_segment->id(), nearest_s);
           }
         }
       }
@@ -2588,6 +2526,107 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
                                               SpeedLimitType::NEAR_POI);
     }
   }
+}
+
+void SpeedLimitDecider::CalculateRoundaboutFunctionQuitSpeedLimit(bool using_ld_map,
+                                          uint64_t road_seg_id, double accumulated_s) {
+  const auto &environmental_model = session_->environmental_model();
+  bool function_need_inhibited = false;
+  double v_limit_roundabout = 40.0;
+  double dis_to_roundabout = NL_NMAX;
+  auto speed_limit_output =
+      session_->mutable_planning_context()
+          ->mutable_speed_limit_decider_output();
+  speed_limit_output->set_function_inhibited_near_roundabout(false);
+  bool roundabout_info_nullptr = true;
+  double roundabout_info_distance = NL_NMAX;
+  if (using_ld_map) {
+    const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+    auto roundabout_info = sdpro_map.GetRoundAboutInfo(
+                            road_seg_id, accumulated_s, 300.0);
+    roundabout_info_nullptr = roundabout_info.first == nullptr;
+    if (!roundabout_info_nullptr) {
+      roundabout_info_distance = roundabout_info.second;
+    }
+  } else {
+    const auto &sd_map = environmental_model.get_route_info()
+                               ->get_sd_map();
+    auto roundabout_info = sd_map.GetRoundAboutInfo(
+                            road_seg_id, accumulated_s, 300.0);
+    roundabout_info_nullptr = roundabout_info.first == nullptr;
+    if (!roundabout_info_nullptr) {
+      roundabout_info_distance = roundabout_info.second;
+    }
+
+  }
+  if (!roundabout_info_nullptr &&
+      roundabout_info_distance < kMapModeRoundaboutQuitDis &&
+      road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
+    // in map mode, roundabout distance meets the condition
+    dis_to_roundabout = roundabout_info_distance;
+    if (roundabout_info_distance < kMapModeRoundaboutQuitDis / 2.0) {
+      if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
+        function_need_inhibited = true;
+      }
+    } else {
+      function_need_inhibited = true;
+    }
+  } else if (roundabout_info_nullptr) {
+    if (using_ld_map) {
+      const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+      auto roundabout_info_list = sdpro_map.GetRoundAboutList(
+                                    road_seg_id, accumulated_s, 300.0);
+      if (roundabout_info_list.size() == 0) {
+        roundabout_quit_flag_ = false;
+        return;
+      } else {
+        auto closest_roundabout = roundabout_info_list[0];
+        if (closest_roundabout.first != nullptr &&
+            closest_roundabout.second < kNoMapModeRoundaboutQuitDis &&
+            road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
+          // not in map mode, closest roundabout distance meets the
+          // condition
+          dis_to_roundabout = closest_roundabout.second;
+          if (closest_roundabout.second < kNoMapModeRoundaboutQuitDis / 2.0) {
+            if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
+              function_need_inhibited = true;
+            }
+          } else {
+            function_need_inhibited = true;
+          }
+        }
+      }
+    }
+  }
+  if (function_need_inhibited) {
+    roundabout_quit_flag_ = function_need_inhibited;
+    roundabout_recover_counter_ = 0;
+    speed_limit_output->set_function_inhibited_near_roundabout(
+        function_need_inhibited);
+  } else {
+    if (roundabout_quit_flag_ &&
+        roundabout_recover_counter_ < kRoundaboutQuitRecoverCounter) {
+      speed_limit_output->set_function_inhibited_near_roundabout(
+          roundabout_quit_flag_);
+      roundabout_recover_counter_++;
+    } else {
+      roundabout_quit_flag_ = false;
+    }
+  }
+  if (roundabout_quit_flag_) {
+    v_limit_roundabout = speed_limit_config_.v_limit_roundabout;
+  }
+  if (v_limit_roundabout < v_target_) {
+    v_target_ = v_limit_roundabout;
+    v_target_type_ = SpeedLimitType::ROUNDABOUT;
+  }
+  JSON_DEBUG_VALUE("dis_to_roundabout", dis_to_roundabout);
+  JSON_DEBUG_VALUE("v_limit_roundabout", v_limit_roundabout);
+  auto speed_limit_decider_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+  speed_limit_decider_output->SetSpeedLimitIntoMap(v_limit_roundabout,
+                                            SpeedLimitType::ROUNDABOUT);
+
 }
 
 void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
