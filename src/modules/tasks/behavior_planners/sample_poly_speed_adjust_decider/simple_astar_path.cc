@@ -185,6 +185,7 @@ bool LongitudinalAStar::IsValidMotion(double v, double a) const {
 
 bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
   int index = static_cast<int>(node.t / kTimeResolution + 0.51);
+  int traj_index = static_cast<int>(node.t / kPlanningStep + 0.51);
   if (index >= sample_space_ptr_->st_points_table().size()) {
     return false;
   }
@@ -286,7 +287,8 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             std::fmax(((collision_s - std::max(follow_distance, thw)) - node.s),
                       0.0) /
             std::fmax(node.v, kZeroEpsilon);
-        gap = gap + left_time * (anchor_matched_upper_st_point.velocity() - node.v);
+        gap = gap +
+              left_time * (anchor_matched_upper_st_point.velocity() - node.v);
         if (gap < 0.0 && left_time < 1.5) {
           // std::cout << "Gap前车碰撞风险: " << node.getKey()
           //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer

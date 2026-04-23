@@ -1338,6 +1338,10 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
   if (!current_lane || !virtual_target_lane) {
     return;
   }
+  double ego_lateral_offset = current_lane->get_ego_lateral_offset();
+  ego_lateral_offset = lane_change_request_ == 1
+                           ? std::fmax(ego_lateral_offset, 0.0)
+                           : std::fmax(-ego_lateral_offset, 0.0);
   const auto& current_reference_points =
       current_lane->get_reference_path()->get_points();
   const auto& target_reference_points =
@@ -1360,7 +1364,7 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
                                           .distance_to_right_lane_border
                                     : target_reference_points[current_point]
                                           .distance_to_left_lane_border;
-      double lane_width = ref_distance - target_lane_to_border;
+      double lane_width = ref_distance - target_lane_to_border - ego_lateral_offset;
       double over_lateral = ego_width_ / 2.0 - lane_width;
       if (astar_config_.lateral_offset_scale_factor * over_lateral > lateral_offset) {
         agent_lateral_offset_map_[lateral_offset] =
