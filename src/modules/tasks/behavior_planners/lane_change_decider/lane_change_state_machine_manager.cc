@@ -1770,6 +1770,7 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   JSON_DEBUG_VECTOR("ego_future_v_vec", ego_future_v_, 2);
 
   JSON_DEBUG_VALUE("lc_safety_check_time", lc_safety_check_time_);
+  JSON_DEBUG_VALUE("rear_agent_overtaking", rear_agent_overtaking_);
   JSON_DEBUG_VALUE("target_lane_congestion_level",
                    int(fix_lane_congestion_level_.level));
   JSON_DEBUG_VALUE("lat_offset_propose",
@@ -2387,7 +2388,13 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
     dis_diff_vel = rel_vel * predict_t;
   }
   const double rear_gap = ego_trajs_future_[0].s - agent_s0 - two_car_length;
-  rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0);
+  const double kRiskGapTime = 0.5;
+  const double kRearFasterThreshold = 0.5;
+  double risk_min_gap = traj[0].vel() * kRiskGapTime;
+  bool is_rear_faster = rel_vel > kRearFasterThreshold;
+  bool is_gap_tight = rear_gap < risk_min_gap;
+  rear_agent_overtaking_ = !(rear_gap > dis_diff_vel && rear_gap > 0.0)
+                           || (is_rear_faster && is_gap_tight);
 }
 void LaneChangeStateMachineManager::CheckTargetFrontNode(
     int64_t target_lane_front_node_id) {
@@ -4713,6 +4720,26 @@ bool LaneChangeStateMachineManager::
         if (zero_count * 4 >= vec_size) {
           return false;
         }
+      }
+    }
+
+    // 通用距离质量检查：即使碰撞点数量不多，但非碰撞点距离过小也不安全
+    // 计算所有非碰撞点的平均距离和末端距离
+    double non_collision_sum = 0.0;
+    int non_collision_count = 0;
+    for (int j = 0; j < vec_size; ++j) {
+      if (distance_vec[j] >= 0.01) {
+        non_collision_sum += distance_vec[j];
+        ++non_collision_count;
+      }
+    }
+    if (non_collision_count > 0) {
+      const double kMinSafeAvgDist = 0.5;
+      const double kMinTailDist = 1.0;
+      double safe_avg = non_collision_sum / non_collision_count;
+      double tail_dist = distance_vec[vec_size - 1];
+      if (safe_avg < kMinSafeAvgDist && tail_dist < kMinTailDist) {
+        return false;
       }
     }
   }
