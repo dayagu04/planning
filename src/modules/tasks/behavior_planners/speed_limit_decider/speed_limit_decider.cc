@@ -1291,6 +1291,21 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("avg_radius_0_80m", avg_radius_0_80m);
   JSON_DEBUG_VALUE("use_avg_radius_for_ewma", use_avg_radius_for_ewma ? 1 : 0);
 
+  if (session_->is_rads_scene()) {
+    double curv_speed_scale = interp(road_radius, speed_limit_config_.rads_curv_speed_limit_radius_vec,
+                                  speed_limit_config_.rads_curv_speed_limit_scale_vec);
+    double rads_curv_speed_limit = ego_state_mgr->ego_v_cruise() * curv_speed_scale;
+    SpeedLimitType v_limit_type = SpeedLimitType::CURVATURE;
+    if (rads_curv_speed_limit < v_target_) {
+      v_target_ = rads_curv_speed_limit;
+      v_target_type_ = v_limit_type;
+    }
+    auto speed_limit_output = session_->mutable_planning_context()
+                                  ->mutable_speed_limit_decider_output();
+    speed_limit_output->SetSpeedLimitIntoMap(rads_curv_speed_limit, v_limit_type);
+    return;
+  }
+
   // Determine sharp curve with hysteresis
   bool is_sharp_curve = false;
   if (last_is_sharp_curve_) {
