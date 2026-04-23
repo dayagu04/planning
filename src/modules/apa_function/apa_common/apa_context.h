@@ -236,5 +236,11 @@ const int CalProjIndexFromPlanningTraj(
     const iflyauto::TrajectoryPoint *trajectory_points, const int n,
     const double x, const double y);
 
+inline const bool IsReplanReasonDynamic(const uint8_t type) {
+  return type == ReplanReason::DYNAMIC ||
+         type == ReplanReason::DYNAMIC_GEAR_SWITCH ||
+         type == ReplanReason::PATH_DANGEROUS;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

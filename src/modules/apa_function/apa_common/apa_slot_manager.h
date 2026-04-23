@@ -216,6 +216,13 @@ enum class SlotReleaseVoterType : uint8_t {
 const std::string GetSlotReleaseVoterTypeString(
     const SlotReleaseVoterType release_voter_type);
 
+const bool CheckPoseInSlotBelieveArea(const geometry_lib::PathPoint &pose,
+                                      const ApaSlot &slot,
+                                      const double target_theta,
+                                      const double lat_expand,
+                                      const double lon_expand,
+                                      const double heading_err = 60.0);
+
 class ApaSlotManager final {
  public:
   ApaSlotManager() {}

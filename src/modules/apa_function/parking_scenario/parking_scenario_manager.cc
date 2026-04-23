@@ -127,7 +127,8 @@ void ParkingScenarioManager::UpdateScenarioType() {
              cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
     if (slot_type == SlotType::PERPENDICULAR || slot_type == SlotType::SLANT) {
       scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
-      if (param.use_scenario_perpendicular_heading_in) {
+      if (param.use_scenario_perpendicular_heading_in &&
+          param.park_path_plan_type != ParkPathPlanType::GEOMETRY) {
         scenario_type_ =
             (slot_type == SlotType::PERPENDICULAR)
                 ? ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN

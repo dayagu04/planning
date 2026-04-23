@@ -900,6 +900,17 @@ const std::string GetSlotReleaseVoterTypeString(
   return type;
 }
 
+const bool CheckPoseInSlotBelieveArea(const geometry_lib::PathPoint& pose,
+                                      const ApaSlot& slot,
+                                      const double target_theta,
+                                      const double lat_expand,
+                                      const double lon_expand,
+                                      const double heading_err) {
+  return (slot.IsPointInCustomSlot(pose.pos, lon_expand, lon_expand, lat_expand,
+                                   lat_expand, true) &&
+          std::fabs(pose.heading - target_theta) * kRad2Deg < heading_err);
+}
+
 const bool ApaSlotManager::IsTargetSlotReleaseByRule() const {
   if (ego_info_under_slot_.slot.release_info_
           .release_state[RULE_BASED_RELEASE] == SlotReleaseState::RELEASE) {

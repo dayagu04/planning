@@ -4364,7 +4364,7 @@ const bool ExtractSTurnAndStraight(
   std::vector<PathBlock> blocks;
   blocks.reserve(4);
   size_t current_start = 0;
-  uint8_t current_type = GetKappaSign(kappa_vec[0]);
+  uint8_t current_type = GetKappaSign(kappa_vec[0], 1e-2);
 
   for (size_t i = 1; i < pt_size; ++i) {
     uint8_t type = GetKappaSign(kappa_vec[i]);
