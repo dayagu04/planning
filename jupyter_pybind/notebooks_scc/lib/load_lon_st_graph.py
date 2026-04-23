@@ -1166,8 +1166,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   hard_pos_min_vec = lon_motion_plan_input.hard_pos_min_vec
   soft_pos_max_vec = lon_motion_plan_input.soft_pos_max_vec
   soft_pos_min_vec = lon_motion_plan_input.soft_pos_min_vec
-  extend_pos_max_vec = lon_motion_plan_input.extend_pos_max_vec
-  extend_pos_min_vec = lon_motion_plan_input.extend_pos_min_vec
+  extend_pos_max_vec = list(getattr(lon_motion_plan_input, 'extend_pos_max_vec', []))
+  extend_pos_min_vec = list(getattr(lon_motion_plan_input, 'extend_pos_min_vec', []))
   vel_max_vec = lon_motion_plan_input.vel_max_vec
   vel_min_vec = lon_motion_plan_input.vel_min_vec
   acc_max_vec = lon_motion_plan_input.acc_max_vec

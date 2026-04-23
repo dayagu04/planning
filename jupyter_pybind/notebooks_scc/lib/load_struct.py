@@ -3394,16 +3394,26 @@ def generate_control(control_msg, loc_msg = None, g_is_display_enu = False):
     control_result_points = control_msg.control_trajectory.control_result_points
     #print("real control_result_points size: ", control_result_points_size)
     for i in range(control_result_points_size):
-      mpc_dx.append(control_result_points[i].x)
-      mpc_dy.append(control_result_points[i].y)
+      mpc_dx.append(float(control_result_points[i].x))
+      mpc_dy.append(float(control_result_points[i].y))
     if len(mpc_dx) > 0:
-      f1 = interp1d(mpc_dx, mpc_dy, kind='cubic')
-      try:
-        for i in range(len(mpc_dx) - 1):
-          mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[i] + 1e-6, dx = 1e-6)))
-        mpc_dtheta.append(math.atan(derivative(f1, mpc_dx[len(mpc_dx) - 1] - 1e-6, dx = 1e-6)))
-      except:
-        mpc_dtheta = len(mpc_dx) * [0]
+      for i in range(len(mpc_dx)):
+        if len(mpc_dx) == 1:
+          dx = 0.0
+          dy = 0.0
+        elif i == 0:
+          dx = mpc_dx[1] - mpc_dx[0]
+          dy = mpc_dy[1] - mpc_dy[0]
+        elif i == len(mpc_dx) - 1:
+          dx = mpc_dx[-1] - mpc_dx[-2]
+          dy = mpc_dy[-1] - mpc_dy[-2]
+        else:
+          dx = mpc_dx[i + 1] - mpc_dx[i - 1]
+          dy = mpc_dy[i + 1] - mpc_dy[i - 1]
+        if abs(dx) < 1e-9 and abs(dy) < 1e-9:
+          mpc_dtheta.append(mpc_dtheta[-1] if len(mpc_dtheta) > 0 else 0.0)
+        else:
+          mpc_dtheta.append(math.atan2(dy, dx))
     if g_is_display_enu:
       if loc_msg == None:
         mpc_dx = len(mpc_dx) * [0]
