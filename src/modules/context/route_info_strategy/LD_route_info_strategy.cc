@@ -4877,10 +4877,10 @@ double LDRouteInfoStrategy::CalculateMatchScore(
             1.0;  // VirtualLane went right, path is right branch → match
       } else if (vl_went_left && path_is_right_branch) {
         current_split_match =
-            -1.0;  // VirtualLane went left, path is right branch → mismatch
+            0.0;  // mismatch, but don't penalize (avoid false negatives)
       } else if (vl_went_right && path_is_left_branch) {
         current_split_match =
-            -1.0;  // VirtualLane went right, path is left branch → mismatch
+            0.0;  // mismatch, but don't penalize
       } else if (path_spans_middle) {
         // Path spans both sides; use order as secondary signal
         bool pre_order_in_exit =
@@ -4891,7 +4891,7 @@ double LDRouteInfoStrategy::CalculateMatchScore(
             std::find(split.exit_ords.begin(), split.exit_ords.end(),
                       pre_order_from_left) != split.exit_ords.end();
         current_split_match =
-            (pre_order_in_exit || pre_order_left_in_exit) ? 0.5 : -0.5;
+            (pre_order_in_exit || pre_order_left_in_exit) ? 0.5 : 0.0;
       }
     } else {
       // No clear fork boundary (no side dropped to 0).
@@ -4911,7 +4911,7 @@ double LDRouteInfoStrategy::CalculateMatchScore(
         current_split_match = 0.3;
         current_has_signal = true;
       } else if (!split.exit_ords.empty()) {
-        current_split_match = -0.3;
+        current_split_match = 0.0;  // 不匹配时不扣分，只是不加分
         current_has_signal = true;
       }
     }
@@ -4944,6 +4944,19 @@ double LDRouteInfoStrategy::CalculateMatchScore(
   if (accumulated_fork_weight > 1e-6) {
     fork_match = accumulated_fork_score / accumulated_fork_weight;
   }
+
+  // Multi-split bonus: paths explaining more splits should score higher.
+  // If fork_match > 0 and splits >= 2, apply a bonus proportional to split count.
+  // This prevents single-split paths from winning over multi-split paths.
+  if (fork_match > 0.0 && splits.size() >= 2) {
+    double bonus = 0.2 * (splits.size() - 1);  // +0.2 per additional split
+    fork_match = std::min(1.0, fork_match + bonus);
+  }
+  // Even if fork_match <= 0, multi-split paths get a small boost
+  else if (splits.size() >= 2) {
+    fork_match += 0.15 * (splits.size() - 1);
+  }
+
   bool has_fork_signal = has_any_fork_signal;
 
   // Now compute per-sample scores
@@ -4992,11 +5005,11 @@ double LDRouteInfoStrategy::CalculateMatchScore(
         if (right_in && left_in) {
           order_score = (lane_num_score >= 0.5) ? 1.0 : 0.5;
         } else if (!right_in && !left_in) {
-          order_score = -1.0;
+          order_score = 0.0;  // no match, but don't penalize
         } else {
           // Both sides contribute: compute weighted fusion of left/right order
-          double right_score = right_in ? 1.0 : -1.0;
-          double left_score = left_in ? 1.0 : -1.0;
+          double right_score = right_in ? 1.0 : 0.0;
+          double left_score = left_in ? 1.0 : 0.0;
 
           int per_total = sample.left + sample.right + 1;
           if (per_total <= 3) {
