@@ -2103,6 +2103,10 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
   auto fsm_state = local_view.function_state_machine_info.current_state;
   bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
                   (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
+  bool acc_mode = (fsm_state == iflyauto::FunctionalState_ACC_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_ACC_OVERRIDE);
+  const auto& route_info_output = session_->environmental_model().get_route_info()
+                                                           ->get_route_info_output();
 
   double v_limit_tfl_dis = 40.0;
   const auto &environmental_model = session_->environmental_model();
@@ -2110,8 +2114,9 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
       environmental_model.get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
   double dis_tfl = tfl_manager->GetNearestTFLDis();
-  if (speed_limit_config_.enable_tfl_v_limit && dis_tfl < kTFLSpeedLimitDis &&
-      (!noa_mode)) {
+  if (speed_limit_config_.enable_tfl_v_limit &&
+      dis_tfl < kTFLSpeedLimitDis && (!noa_mode) && (!acc_mode) &&
+      (!route_info_output.is_ego_on_expressway)) {
     v_limit_tfl_dis = 55 / 3.6;
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
         traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
@@ -2825,7 +2830,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     if (min_s <= 0.0) {
       continue;
     }
-    
+
     const auto &agent_corners = avoid_agent->box().GetAllCorners();
     double agent_min_l = std::numeric_limits<double>::max();
     double agent_max_l = -std::numeric_limits<double>::max();
