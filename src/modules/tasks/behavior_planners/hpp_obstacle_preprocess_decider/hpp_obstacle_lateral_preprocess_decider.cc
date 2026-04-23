@@ -362,8 +362,8 @@ HppObstacleLateralPreprocessDecider::ClassifyObstaclesByRelPos(
   const double kFarAwayLatRelThr = 5.0;  // 判断障碍物在自车侧向远处
   const double kSideObsFrontThr = 0.0;  // 判断障碍物是否和自车并排的前方阈值
   const double kSideObsBackThr = 0.0;  // 判断障碍物是否和自车并排的后方阈值
-  const double kMidObsAbsThr = 2.0;
-  const double kMidObsRelThr = 1.0;
+  const double kMidObsAbsThr = 1.5;
+  const double kMidObsRelThr = 0.5;
 
   const double ego_start_s = ego_state.boundary().s_start;
   const double ego_end_s = ego_state.boundary().s_end;

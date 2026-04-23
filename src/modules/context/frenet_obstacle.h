@@ -70,6 +70,9 @@ class FrenetObstacle {
   const SLPolygonSeq& frenet_polygon_sequence() const {
     return frenet_polygon_sequence_;
   }
+  const std::vector<planning_math::Polygon2d>& frenet_dynamic_obs_polygones() const {
+    return frenet_dynamic_obs_polygones_;
+  }
 
   const std::vector<planning_math::Vec2d>& corner_points() const {
     return corner_points_;
@@ -98,6 +101,8 @@ class FrenetObstacle {
   void compute_frenet_obstacle_boundary(const ReferencePath& reference_path, bool is_hpp_scene = false);
 
   void compute_frenet_polygon_sequence(const ReferencePath& reference_path);
+
+  void compute_dynamic_obs_frenet_polygon_sequence(const ReferencePath& reference_path);
 
   static void generate_precise_frenet_polygon(
       planning_math::Polygon2d& polygon,
@@ -133,6 +138,7 @@ class FrenetObstacle {
   FrenetObstacleBoundary frenet_obstacle_boundary_;
   FrenetBoundaryCorners frenet_obstacle_corners_;
   SLPolygonSeq frenet_polygon_sequence_;
+  std::vector<planning_math::Polygon2d> frenet_dynamic_obs_polygones_;
 
   bool b_frenet_valid_ = false;
   bool b_frenet_polygon_sequence_invalid_ = false;
