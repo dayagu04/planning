@@ -2116,6 +2116,7 @@
     "lateral_offset_scale_factor": 10.0,
     "default_collision_distance": 100.0,
     "safe_cost_gain": 2.0,
+    "collision_s_attenuation_coeffi": 0.8,
     "rear_vehicle_min_distance_map": {
       "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
       "min_distance_table":   [0.2, 1.0,  2.0,  3.0,  4.2,  7.5,   12.0]

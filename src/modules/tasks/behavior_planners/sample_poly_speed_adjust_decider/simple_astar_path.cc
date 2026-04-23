@@ -8,7 +8,8 @@ LongitudinalAStar::LongitudinalAStar(
     const StateLimit& state_limit_upper, const StateLimit& state_limit_lower,
     double front_edge_to_rear_axle, double rear_edge_to_rear_axle, double ego_s,
     SampleAstarTrajConfig* config,
-    std::unordered_map<int32_t, double>& agent_lateral_offset_map)
+    std::unordered_map<int32_t, double>& agent_lateral_offset_map,
+    bool is_low_speed_congestion_scene)
     : start_node_(start_node),
       goal_state_(goal),
       sample_space_ptr_(sample_space_ptr),
@@ -20,7 +21,8 @@ LongitudinalAStar::LongitudinalAStar(
       rear_edge_to_rear_axle_(rear_edge_to_rear_axle),
       ego_s_(ego_s),
       config_(config),
-      agent_lateral_offset_map_(agent_lateral_offset_map) {
+      agent_lateral_offset_map_(agent_lateral_offset_map),
+      is_low_speed_congestion_scene_(is_low_speed_congestion_scene) {
   max_velocity_ = state_limit_upper_.v_max;
   min_velocity_ = state_limit_upper_.v_min;
   max_accel_ = state_limit_upper_.a_max;
@@ -236,8 +238,13 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             collision_s = config_->default_collision_distance;
           }
         }
-        collision_s = 0.8 * collision_s;
-        if (gap < 0.0 && node.s > collision_s) {
+        collision_s = std::fmax((collision_s - merge_point_s_) *
+                                    config_->collision_s_attenuation_coeffi,
+                                0.0) +
+                      merge_point_s_;
+        collision_s =
+            is_low_speed_congestion_scene_ ? collision_s : merge_point_s_;
+        if (gap < 0.0 && (node.s > collision_s)) {
           // std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
           //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
           //           << std::endl;
@@ -282,7 +289,12 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             collision_s = config_->default_collision_distance;
           }
         }
-        collision_s = 0.8 * collision_s;
+        collision_s = std::fmax((collision_s - merge_point_s_) *
+                                    config_->collision_s_attenuation_coeffi,
+                                0.0) +
+                      merge_point_s_;
+        collision_s =
+            is_low_speed_congestion_scene_ ? collision_s : merge_point_s_;
         double left_time =
             std::fmax(((collision_s - std::max(follow_distance, thw)) - node.s),
                       0.0) /

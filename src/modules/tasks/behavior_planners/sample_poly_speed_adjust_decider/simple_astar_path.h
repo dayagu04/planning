@@ -75,7 +75,8 @@ class LongitudinalAStar {
                     double front_edge_to_rear_axle,
                     double rear_edge_to_rear_axle, double ego_s,
                     SampleAstarTrajConfig* config,
-                    std::unordered_map<int32_t, double>& agent_lateral_offset_map);
+                    std::unordered_map<int32_t, double>& agent_lateral_offset_map,
+                    bool is_low_speed_congestion_scene);
 
   void PlanTrajectory();
   std::vector<STNode> GetAStarTraj() const { return astar_traj_; }
@@ -135,6 +136,7 @@ class LongitudinalAStar {
   double prediction_time_ = 2.0;
   double ego_s_ = 0.0;
   SampleAstarTrajConfig* config_ = nullptr;
+  bool is_low_speed_congestion_scene_ = false;
 
   double max_velocity_;  // 最大速度 (m/s)
   double min_velocity_;   // 最小速度 (m/s)

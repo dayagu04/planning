@@ -1294,6 +1294,8 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
         json,std::vector<std::string>{"sample_astar_traj", "default_collision_distance"});
     safe_cost_gain = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "safe_cost_gain"});
+    collision_s_attenuation_coeffi = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "collision_s_attenuation_coeffi"});
     read_json_vec(
     json,
     std::vector<std::string>{"sample_astar_traj", "rear_vehicle_min_distance_map",
@@ -1331,6 +1333,7 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double lateral_offset_scale_factor = 10.0;
   double default_collision_distance = 100.0;
   double safe_cost_gain = 2.0;
+  double collision_s_attenuation_coeffi = 0.8;
   RearVehicleMinDistanceMap rear_vehicle_min_distance_map;
 };
 

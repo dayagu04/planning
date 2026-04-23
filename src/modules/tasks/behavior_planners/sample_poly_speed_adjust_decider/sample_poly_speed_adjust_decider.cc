@@ -1376,6 +1376,9 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
   }
 }
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
+  is_low_speed_congestion_scene_ =
+      traffic_density_status_ == Congested &&
+      target_lane_objs_flow_vel_ < kCongestedSceneSpeedLimit;
   GoalState goal_state(
       merge_stop_line_distance_ + config_.forced_merge_param.astar_goal_offset,
       v_suggestted_, config_.forced_merge_param.astar_goal_offset);
@@ -1398,7 +1401,7 @@ bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
       start_node, goal_state, &st_sample_space_base_, merge_point_s,
       leading_veh_, state_limit_upper_, state_limit_lower_,
       front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_,
-      agent_lateral_offset_map_);
+      agent_lateral_offset_map_, is_low_speed_congestion_scene_);
   return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,

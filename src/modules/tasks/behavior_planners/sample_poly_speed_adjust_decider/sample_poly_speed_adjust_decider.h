@@ -143,6 +143,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool is_in_deceleartion_scene_ = false;
   bool is_merge_change_ = false;
   bool is_emergency_scene_ = false;
+  bool is_low_speed_congestion_scene_ = false;
 
   double stop_line_distance_ = kMaxVelVariableValueInverse;
   double merge_stop_line_distance_ = kMaxMergeDistance;
