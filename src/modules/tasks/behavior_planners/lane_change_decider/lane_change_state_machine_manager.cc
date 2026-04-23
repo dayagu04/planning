@@ -3941,11 +3941,10 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       ego_future_v_.emplace_back(ego_trajs_future_[i].v);
     }
 
-    const bool is_large_car_in_side =
-        is_front_agent ? false : IsLargeAgent(after_filter_agent);
+    const bool is_large_car =  IsLargeAgent(after_filter_agent);
 
     lc_safety = CheckIfSafetyForPredictionTrajs(  // 安全检查函数 target  node
-        agent_prediction_trajs, after_filter_agent, is_large_car_in_side,
+        agent_prediction_trajs, after_filter_agent, is_large_car,
         is_front_agent);
     // lc_safety = CheckIfSafetyForOptimizedTrajs(agent_prediction_trajs,
     //   after_filter_agent, is_large_car_in_side, is_front_agent);
