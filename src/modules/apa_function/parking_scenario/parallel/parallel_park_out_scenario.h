@@ -107,7 +107,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool is_arc_slot_ = false;
   bool path_end_heading_is_met_= false;
   ParallelOutPathGenerator previous_parallel_out_path_planner_;
-  double strict_channel_y = 6.5;
+  std::unordered_map<ApaParkOutDirection, double> strict_channel_y_map_;
   ApaParkOutDirection pre_selected_direction_ = ApaParkOutDirection::INVALID;
   std::unordered_map<ApaParkOutDirection,
                      std::vector<pnc::geometry_lib::PathSegment>>

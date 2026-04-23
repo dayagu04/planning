@@ -57,7 +57,6 @@ void ParallelParkOutScenario::Reset() {
   obs_hastar_.Clear();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
   astar_state_ = AstarSearchState::NONE;
-  strict_channel_y = 6.5;
   pre_selected_direction_ = ApaParkOutDirection::INVALID;
   last_replan_reason_ = ReplanReason::NOT_REPLAN;
 
@@ -803,7 +802,7 @@ void ParallelParkOutScenario::SelectParkOutDirByCurb() {
 
   int left_num = 0;
   int right_num = 0;
-  const double slot_x_offset = 0.8;
+  const double slot_x_offset = 0.3;
   const double slot_y_left_offset = 0.5;
   const double slot_y_right_offset = 0.8;
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
@@ -813,13 +812,13 @@ void ParallelParkOutScenario::SelectParkOutDirByCurb() {
                                   slot_length - slot_x_offset) &&
           pnc::mathlib::IsInBound(obstacle_point_slot.y(),
                                   half_slot_width - slot_y_left_offset,
-                                  (half_slot_width + slot_y_right_offset));
+                                  (slot_width + slot_y_right_offset));
       const bool is_right_side_obs =
           pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_x_offset,
                                   slot_length - slot_x_offset) &&
           pnc::mathlib::IsInBound(obstacle_point_slot.y(),
                                   -(half_slot_width - slot_y_left_offset),
-                                  -(half_slot_width + slot_y_right_offset));
+                                  -(slot_width + slot_y_right_offset));
       if (is_left_side_obs) {
         left_num++;
       } else if (is_right_side_obs) {
@@ -1334,6 +1333,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
+  double strict_channel_y = 6.5;
   const double kCurbMoveMinDist = 0.3;
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
@@ -1389,6 +1389,10 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
   ILOG_INFO << "strict_channel_y: " << strict_channel_y;
+  ApaParkOutDirection out_dir = slot_side_sgn > 0.0
+                                    ? ApaParkOutDirection::LEFT_FRONT
+                                    : ApaParkOutDirection::RIGHT_FRONT;
+  strict_channel_y_map_[out_dir] = strict_channel_y;
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 
@@ -1913,6 +1917,10 @@ void ParallelParkOutScenario::SetTargetGroup(AstarRequest& cur_request) {
   }
 
   const double min_strict_channel_y = 4.0;
+  ApaParkOutDirection out_dir = frame_.is_park_out_left
+                                    ? ApaParkOutDirection::LEFT_FRONT
+                                    : ApaParkOutDirection::RIGHT_FRONT;
+  double strict_channel_y = strict_channel_y_map_[out_dir];
   ILOG_INFO << "strict_channel_y: " << strict_channel_y;
   if (strict_channel_y < min_strict_channel_y) {
     target_y = strict_channel_y - (apa_param.GetParam().car_width * 0.5) - 0.3;
@@ -2461,8 +2469,7 @@ const PathPlannerResult ParallelParkOutScenario::PathPlanOnceHybridAStar() {
         GetAstarGearFromSegGear(pnc::geometry_lib::SEG_GEAR_INVALID);
   }
 
-  if (ego_info.slot_occupied_ratio < 0.1 ||
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+  if (ego_info.slot_occupied_ratio < 0.1) {
     parallel_out_path_planner_.ClearPathByDirection();
   }
 
