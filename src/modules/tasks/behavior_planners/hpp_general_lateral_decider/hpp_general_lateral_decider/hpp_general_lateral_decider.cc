@@ -488,50 +488,32 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
 
   is_point_in_turning_ = false;
 
-  constexpr double kPreviewBeforeTurn = 5.0;
-  constexpr double kExitRecoverDist = 5.0;
+  constexpr double kPreviewDist = 20.0;
+  constexpr double kMinCruiseV = 2.0;
+  constexpr double kLateralAcc = 0.75;
+  constexpr double kCurveRadiusThreshold = 200.0;
+  constexpr double kPreviewBeforeTurn = 10.0;
+  constexpr double kExitRecoverDist = 10.0;
 
-  if (static_analysis_storage) {
-    const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
-                                    CElemType::Ignore);
-    const auto &front_turn_range =
-        static_analysis_storage->GetFrontSRange(turn_query, s_ref);
-    const auto &back_turn_range =
-        static_analysis_storage->GetBackSRange(turn_query, s_ref);
+  const double reference_end_s =
+      reference_path_ptr_->get_points().back().path_point.s();
 
-    const double origin_cruise_v = cruise_v;
-    const double kMinCruiseV = 2.0;
-
-    double factor = 1.0;
-
-    if (front_turn_range.second > front_turn_range.first) {
-      const double dist_to_turn = std::max(front_turn_range.first - s_ref, 0.0);
-      if (dist_to_turn <= kPreviewBeforeTurn) {
-        const double ratio = std::clamp(
-            1.0 - dist_to_turn / kPreviewBeforeTurn, 0.0, 1.0);
-        factor = 1.0 - 0.5 * ratio;
-        is_point_in_turning_ = true;
-      }
+  double max_kappa = 0.0;
+  for (double ds = 0.0; ds <= kPreviewDist; ds += 1.0) {
+    const double sample_s = std::min(s_ref + ds, reference_end_s);
+    ReferencePathPoint refpath_pt{};
+    if (reference_path_ptr_->get_reference_point_by_lon(sample_s, refpath_pt)) {
+      max_kappa = std::max(max_kappa, std::fabs(refpath_pt.path_point.kappa()));
     }
-
-    if (back_turn_range.second > back_turn_range.first &&
-                back_turn_range.second < s_ref) {
-      const double dist_since_turn_end =
-          std::max(s_ref - back_turn_range.second, 0.0);
-      if (dist_since_turn_end <= kExitRecoverDist) {
-        const double ratio = std::clamp(
-            dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-        factor = std::min(factor, 0.5 + 0.5 * ratio);
-        is_point_in_turning_ = true;
-      }
-    }
-
-    factor = std::clamp(factor, 0.5, 1.0);
-    const double adjusted =
-        std::clamp(origin_cruise_v * factor, kMinCruiseV, origin_cruise_v);
-    cruise_v = adjusted;
   }
 
+  const double min_radius = 1.0 / std::max(max_kappa, 1e-6);
+
+  if (min_radius < kCurveRadiusThreshold) {
+    is_point_in_turning_ = true;
+    const double v_limit = std::sqrt(kLateralAcc * min_radius);
+    cruise_v = std::clamp(v_limit, kMinCruiseV, cruise_v);
+  }
   double ref_len_based_on_speed = 0.0;
   double span_t = config_.delta_t * config_.num_step;
   if (ego_v < cruise_v) {
@@ -551,7 +533,7 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
       ref_len_based_on_speed += (span_t - t) * cruise_v;
     }
   }
-
+  JSON_DEBUG_VALUE("ref_len_based_on_speed", ref_len_based_on_speed)
   const auto &cart_ref_info = coarse_planning_info.cart_ref_info;
   constexpr double kStraightCheckLength = 20.0;
   double ref_len_based_on_straight = 20.0;
@@ -560,66 +542,22 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
         std::min(cart_ref_info.s_vec.back(), frenet_coord->Length());
     const double s_end = std::min(s_ref + kStraightCheckLength, s_max);
     if (s_end > s_ref + 1e-3) {
-      ref_len_based_on_straight = std::max(s_end - s_ref, 0.0);
+      constexpr double kTurnInnerPreview = 12.0;
+      const double min_len_base_straight = 12.0;
 
-      if (static_analysis_storage) {
-        const QueryTypeInfo turn_query(CRoadType::Turn, CPassageType::Ignore,
-                                       CElemType::Ignore);
-        const auto front_turn_range =
-            static_analysis_storage->GetFrontSRange(turn_query, s_ref);
-
-        constexpr double kTurnInnerPreview = 12.0;
-        constexpr double kExitRecoverDist = 10.0;
-
-        const double min_len_base_straight = 12.0;
-
-        if (is_point_in_turning_) {  // 当前位于弯道内
-          double ref_len_in_turn = -1.0;
-
-          bool is_in_turn = s_ref > front_turn_range.first &&
-                            s_ref < front_turn_range.second;
-
-          if (is_in_turn) {
-            ref_len_in_turn = kTurnInnerPreview;
-          } else if (front_turn_range.second > front_turn_range.first &&
-                      s_ref < front_turn_range.first) {
-            auto t = std::clamp(
-                (kPreviewBeforeTurn - front_turn_range.first + s_ref) /
-                    kPreviewBeforeTurn, 0.0, 1.0);
-            ref_len_in_turn = kTurnInnerPreview + (1.0 - t) *
-                (kStraightCheckLength - kTurnInnerPreview);
-          } else {
-            const auto &back_turn_range =
-                static_analysis_storage->GetBackSRange(turn_query, s_ref);
-            auto t = std::clamp((s_ref - back_turn_range.second) /
-                                  kExitRecoverDist, 0.0, 1.0);
-            ref_len_in_turn = kTurnInnerPreview + t *
-                (kStraightCheckLength - kTurnInnerPreview);
-          }
-          ref_len_based_on_straight =
-              std::max(min_len_base_straight, ref_len_in_turn);
-        } else {
-          const auto back_turn_range =
-              static_analysis_storage->GetBackSRange(turn_query, s_ref);
-          if (back_turn_range.second > back_turn_range.first &&
-              back_turn_range.second <= s_ref) {
-            const double dist_since_turn_end =
-                std::max(s_ref - back_turn_range.second, 0.0);
-            if (dist_since_turn_end <= kExitRecoverDist) {
-              const double recover_ratio = std::clamp(
-                  dist_since_turn_end / kExitRecoverDist, 0.0, 1.0);
-              const double ref_len_recover =
-                  kTurnInnerPreview +
-                  recover_ratio * (kStraightCheckLength - kTurnInnerPreview);
-              ref_len_based_on_straight =
-                  std::max(min_len_base_straight, ref_len_recover);
-            }
-          }
-        }
+      double ref_len_in_turn = kStraightCheckLength;
+      if (min_radius < kCurveRadiusThreshold) {
+        const double ratio = std::clamp(
+            (min_radius - 25.0) / (200.0 - 25.0), 0.0, 1.0);
+        ref_len_in_turn = kTurnInnerPreview +
+                          ratio * (kStraightCheckLength - kTurnInnerPreview);
       }
+
+      ref_len_based_on_straight =
+          std::max(min_len_base_straight, ref_len_in_turn);
     }
   }
-
+  JSON_DEBUG_VALUE("ref_len_based_on_straight", ref_len_based_on_straight)
   double ref_len_based_on_target_slot = std::numeric_limits<double>::max();
   if (parking_slot_manager->IsExistTargetSlot()) {
     const auto target_slot_point = parking_slot_manager->GetTargetSlotCenter();
