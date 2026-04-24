@@ -322,7 +322,8 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
     proposal_time_out_cnt++;
-  } else if (lane_change_decider_output.lc_invalid_reason == "no target lane") {
+  } else if (lane_change_decider_output.lc_invalid_reason == "no target lane"||
+    lane_change_decider_output.lc_back_reason == "no target lane") {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_LANE_UNAVAILABLE;
   } else if (lc_back_reason == "dash line length not satisfy" ||

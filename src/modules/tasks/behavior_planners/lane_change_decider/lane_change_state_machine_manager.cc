@@ -1073,7 +1073,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
 
   if (target_lane == nullptr) {
     lc_state_info.lc_should_back = true;
-    lc_state_info.lc_back_reason = "dash not enough";
+    lc_state_info.lc_back_reason = "no target lane";
     return lc_state_info;
   }
 
