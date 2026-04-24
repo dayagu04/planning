@@ -5940,5 +5940,26 @@ void LDRouteInfoStrategy::UpdateDistanceToNOAExit() {
   if (distance_to_exit_noa < kEpsilon) {
     route_info_output_.reset();
   }
+  split_info_vec_.erase(
+      std::remove_if(split_info_vec_.begin(), split_info_vec_.end(),
+                     [&](const auto& split_info) {
+                       return split_info.second + kEpsilon >
+                              route_info_output_.distance_to_exit_noa;
+                     }),
+      split_info_vec_.end());
+  merge_info_vec_.erase(
+      std::remove_if(merge_info_vec_.begin(), merge_info_vec_.end(),
+                     [&](const auto& merge_info) {
+                       return merge_info.second + kEpsilon >
+                              route_info_output_.distance_to_exit_noa;
+                     }),
+      merge_info_vec_.end());
+  ramp_info_vec_.erase(
+      std::remove_if(ramp_info_vec_.begin(), ramp_info_vec_.end(),
+                     [&](const auto& ramp_info) {
+                       return ramp_info.second + kEpsilon >
+                              route_info_output_.distance_to_exit_noa;
+                     }),
+      ramp_info_vec_.end());
 }
 }  // namespace planning
