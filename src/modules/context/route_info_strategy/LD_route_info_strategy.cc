@@ -4895,24 +4895,83 @@ double LDRouteInfoStrategy::CalculateMatchScore(
       }
     } else {
       // No clear fork boundary (no side dropped to 0).
-      // Fall back to order-based matching with lower confidence.
-      bool pre_order_in_exit =
-          std::find(split.exit_ords.begin(), split.exit_ords.end(),
-                    pre_sample->order_from_right) != split.exit_ords.end();
-      int pre_order_from_left = split.pre_lane_num - pre_sample->left;
-      bool pre_order_left_in_exit =
-          std::find(split.exit_ords.begin(), split.exit_ords.end(),
-                    pre_order_from_left) != split.exit_ords.end();
+      // Use order sequence matching: check if VL's order sequence
+      // is consistent with this path's exit_orders across multiple samples.
 
-      if (pre_order_in_exit && pre_order_left_in_exit) {
-        current_split_match = 0.5;
-        current_has_signal = true;
-      } else if (pre_order_in_exit || pre_order_left_in_exit) {
-        current_split_match = 0.3;
-        current_has_signal = true;
-      } else if (!split.exit_ords.empty()) {
-        current_split_match = 0.0;  // 不匹配时不扣分，只是不加分
-        current_has_signal = true;
+      // Extract samples in split region (split-15m to split+30m for longer observation)
+      std::vector<const PerceptionSample*> split_samples;
+      for (const auto& sample : samples) {
+        if (sample.dist >= split.dist - 15.0 && sample.dist <= split.dist + 30.0) {
+          split_samples.push_back(&sample);
+        }
+      }
+
+      if (!split_samples.empty()) {
+        int strong_match_count = 0;  // both ord_R and ord_L in exit_orders
+        int weak_match_count = 0;    // only one in exit_orders
+        int no_match_count = 0;      // neither in exit_orders
+
+        // Total trend matching: count samples where VL's total matches
+        // the expected post-split lane count (exit_orders.size())
+        int total_trend_match = 0;
+        int total_trend_samples = 0;
+        const int expected_post_total = static_cast<int>(split.exit_ords.size());
+
+        for (const auto* sample_ptr : split_samples) {
+          bool ord_R_in = std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                                    sample_ptr->order_from_right) != split.exit_ords.end();
+          int ord_L = split.pre_lane_num - sample_ptr->left;
+          bool ord_L_in = std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                                    ord_L) != split.exit_ords.end();
+
+          if (ord_R_in && ord_L_in) {
+            strong_match_count++;
+          } else if (ord_R_in || ord_L_in) {
+            weak_match_count++;
+          } else {
+            no_match_count++;
+          }
+
+          // Check total trend: only count post-split samples
+          if (sample_ptr->dist >= split.dist) {
+            total_trend_samples++;
+            // Allow ±1 tolerance
+            if (std::abs(sample_ptr->total - expected_post_total) <= 1) {
+              total_trend_match++;
+            }
+          }
+        }
+
+        int total_samples = split_samples.size();
+        double sequence_match_score =
+            (strong_match_count * 1.2 + weak_match_count * 0.4) / total_samples;
+
+        // Bonus from total trend matching
+        double total_trend_bonus = 0.0;
+        if (total_trend_samples > 0) {
+          double trend_ratio = static_cast<double>(total_trend_match) / total_trend_samples;
+          total_trend_bonus = trend_ratio * 0.2;  // Up to +0.2 bonus
+        }
+        sequence_match_score = std::min(1.0, sequence_match_score + total_trend_bonus);
+
+        // Convert sequence score to split match score with continuous mapping
+        // High sequence match (>0.8) should get close to 1.0 like drop signals
+        if (sequence_match_score >= 0.8) {
+          current_split_match = 0.8;  // Very high confidence, close to drop signal
+          current_has_signal = true;
+        } else if (sequence_match_score >= 0.6) {
+          current_split_match = 0.5;  // High confidence
+          current_has_signal = true;
+        } else if (sequence_match_score >= 0.4) {
+          current_split_match = 0.3;  // Medium confidence
+          current_has_signal = true;
+        } else if (sequence_match_score >= 0.2) {
+          current_split_match = 0.1;  // Low confidence
+          current_has_signal = true;
+        } else {
+          current_split_match = 0.0;  // No match
+          current_has_signal = true;
+        }
       }
     }
 
