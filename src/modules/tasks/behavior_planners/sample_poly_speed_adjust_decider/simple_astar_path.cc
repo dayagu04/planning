@@ -117,7 +117,9 @@ void LongitudinalAStar::PlanTrajectory() {
 bool LongitudinalAStar::IsGoalReached(
     const std::shared_ptr<STNode>& node) const {
   double s_diff = node->s - merge_point_s_;
-  return (s_diff > 0) && (node->t > LIMIT_TIME);
+  double limit_search_time =
+      node->s > fartheset_merge_s_ ? Limit_TIME_MERGE : LIMIT_TIME;
+  return (s_diff > 0) && (node->t > limit_search_time);
 }
 
 std::vector<STNode> LongitudinalAStar::GenerateChildren(

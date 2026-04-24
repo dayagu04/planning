@@ -18,6 +18,7 @@ const int MAX_ITERATION = 90;       // 最大迭代次数
 const std::vector<int> MAX_NODES_PER_LAYER = {8, 25, 25, 20};
 const double ACC_STEP = 0.37;
 const double LIMIT_TIME = 4.5;    // 最小规划时域
+const double Limit_TIME_MERGE = 3.5;    // 汇入后最小规划时域（s)
 
 struct STNode { 
   double t;  // 时间 (s)
