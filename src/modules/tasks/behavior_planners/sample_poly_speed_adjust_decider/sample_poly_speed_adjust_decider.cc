@@ -100,7 +100,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     bool is_near_stop_point =
         min_cost_traj_ptr_ == nullptr
             ? true
-            : (merge_stop_line_distance_ > left_merge_dist_coef * ego_v_) &&
+            : (distance_to_stop_point_ < left_merge_dist_coef * ego_v_) &&
                   (min_cost_traj_ptr_->anchor_points_match_gap_cost().cost() >
                    0.0);
     if (is_near_stop_point ||
@@ -775,8 +775,7 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   }
   //汇流任务判断
   if(lane_change_source_ == MERGE_REQUEST){
-    if ((boundary_merge_point_valid_ && !is_lane_continuous) ||
-        (function_info.function_mode() == common::DrivingFunctionInfo::SCC)) {
+    if (boundary_merge_point_valid_) {
       merge_stop_line_distance_ = session_->planning_context()
                                       .ego_lane_road_right_decider_output()
                                       .merge_point_distance;
@@ -1397,11 +1396,18 @@ bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   double merge_point_s = merge_stop_line_distance_ > distance_to_stop_point_
                              ? distance_to_stop_point_
                              : 0.0;
+  double fartheset_merge_s = kMaxMergeDistance;
+  auto it = agent_lateral_offset_map_.find(
+      static_cast<int>((ego_width_ * 5.0) + 0.51));
+  if(it != agent_lateral_offset_map_.end()){
+    fartheset_merge_s = it->second;
+  }
   astar_traj_ptr_ = std::make_unique<LongitudinalAStar>(
       start_node, goal_state, &st_sample_space_base_, merge_point_s,
       leading_veh_, state_limit_upper_, state_limit_lower_,
       front_edge_to_rear_axle_, rear_edge_to_rear_axle_, ego_s_, &astar_config_,
-      agent_lateral_offset_map_, is_low_speed_congestion_scene_);
+      agent_lateral_offset_map_, is_low_speed_congestion_scene_,
+      fartheset_merge_s);
   return astar_traj_ptr_->IsValid();
 }
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,

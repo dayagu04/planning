@@ -264,7 +264,8 @@ void STSampleSpaceBase::ConstructStPointsTable(const double sample_st_limit_lat_
   for (const std::vector<std::pair<STPointWithLateral, STPointWithLateral>>& st_point_paris :
        agents_st_point_paris_) {
     for (size_t i = 0; i < st_point_paris.size(); ++i) {
-      int index = (st_point_paris[i].first.t()) / kTimeResolution;
+      int index = static_cast<int>(
+          (st_point_paris[i].first.t()) / kTimeResolution + 0.51);
       if (st_point_paris[i].first.l() * change_direction_ > sample_st_limit_lat_offset) {
         continue;
       }
