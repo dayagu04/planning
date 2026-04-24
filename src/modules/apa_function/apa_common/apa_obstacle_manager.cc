@@ -449,13 +449,16 @@ void ApaObstacleManager::GenerateObsByOD(
   for (uint8 i = 0; i < fusion_obs_size; ++i) {
     const iflyauto::Obstacle& obs =
         local_view->fusion_objects_info.fusion_object[i].common_info;
+    const iflyauto::FusionObjectsAdditional& fusion_obj_additional_info =
+        local_view->fusion_objects_info.fusion_object[i].additional_info;
     if (IsOccType(obs.type)) {
       continue;
     }
 
     double speed = std::sqrt(obs.velocity.x * obs.velocity.x +
                              obs.velocity.y * obs.velocity.y);
-    if (IsDynamicODVeh(speed, obs.type)) {
+    if (IsDynamicODVeh(fusion_obj_additional_info.motion_pattern_current,
+                       obs.type)) {
       if (!od_config.use_dynamic_od_car) {
         continue;
       }
@@ -532,7 +535,10 @@ void ApaObstacleManager::GenerateObsByOD(
     apa_obs.SetPose(pose);
     apa_obs.SetSpeed(speed);
 
-    if (IsDynamicODVeh(speed, obs.type) || IsDynamicLivingThings(obs.type)) {
+    if (IsDynamicODVeh(fusion_obj_additional_info.motion_pattern_current,
+                       obs.type) ||
+        IsDynamicLivingThings(fusion_obj_additional_info.motion_pattern_current,
+                              obs.type)) {
       Eigen::Vector2d speed_dir(obs.velocity.x, obs.velocity.y);
       apa_obs.SetSpeedHeading(speed_dir.normalized());
       apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
@@ -564,13 +570,16 @@ void ApaObstacleManager::GenerateObsByODTracking(
   for (uint8 i = 0; i < fusion_obs_size; ++i) {
     const iflyauto::Obstacle& obs =
         local_view->fusion_objects_info.fusion_object[i].common_info;
+    const iflyauto::FusionObjectsAdditional& fusion_obj_additional_info =
+        local_view->fusion_objects_info.fusion_object[i].additional_info;
     if (!NeedTrackingObjectType(obs.type)) {
       continue;
     }
 
     double speed = std::sqrt(obs.velocity.x * obs.velocity.x +
                              obs.velocity.y * obs.velocity.y);
-    if (IsDynamicODVeh(speed, obs.type)) {
+    if (IsDynamicODVeh(fusion_obj_additional_info.motion_pattern_current,
+                       obs.type)) {
       if (!od_config.use_dynamic_od_car) {
         continue;
       }
@@ -665,7 +674,10 @@ void ApaObstacleManager::GenerateObsByODTracking(
     apa_obs.SetPose(pose);
     apa_obs.SetSpeed(speed);
 
-    if (IsDynamicODVeh(speed, obs.type) || IsDynamicLivingThings(obs.type)) {
+    if (IsDynamicODVeh(fusion_obj_additional_info.motion_pattern_current,
+                       obs.type) ||
+        IsDynamicLivingThings(fusion_obj_additional_info.motion_pattern_current,
+                              obs.type)) {
       Eigen::Vector2d speed_dir(obs.velocity.x, obs.velocity.y);
       apa_obs.SetSpeedHeading(speed_dir.normalized());
       apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
@@ -884,9 +896,9 @@ std::pair<int, float> ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
       translateQuadrilateral = [](const std::array<Eigen::Vector2d, 4>& pts,
                                   const std::array<double, 4>& d_per_edge) {
         Eigen::Vector2d M;
-        M = (pts[0] + pts[1] + pts[2] +pts[3]);
-        M.x() = M.x() / 4; //
-        M.y() = M.y() / 4; //
+        M = (pts[0] + pts[1] + pts[2] + pts[3]);
+        M.x() = M.x() / 4;  //
+        M.y() = M.y() / 4;  //
         Eigen::Vector2d MA = pts[0] - M;
         Eigen::Vector2d MB = pts[1] - M;
         Eigen::Vector2d MC = pts[2] - M;
