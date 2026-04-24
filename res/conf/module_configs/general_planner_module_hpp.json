@@ -178,7 +178,7 @@
   "hpp_curv_trigger_velocity_breakpoints": [0.0, 1.39, 2.78, 4.17, 5.56, 6.94],
   "hpp_curv_trigger_distances": [5.0, 5.0, 12.0, 18.0, 25.0, 40.0],
   "hpp_curv_radius_breakpoints": [5.0, 10.0, 15.0, 20.0, 50.0],
-  "hpp_curv_speed_limits_ms": [2.5, 2.78, 3.33, 4.17, 5.55],
+  "hpp_curv_speed_limits_ms": [1.95, 2.5, 2.78, 3.33, 4.17],
   "hpp_avoid_velocity_limit": 2.78,
   "hpp_avoid_approach_distance": 8.0,
   "hpp_avoid_lateral_threshold": 2.5,
@@ -802,17 +802,17 @@
       "low_speed_follow_speed_thred_mps": 1.0,
       "low_speed_follow_accel_release_traj_len": 5.0,
       "comfort_kinematic_param": {
-        "acc_positive_upper": 0.8,
+        "acc_positive_upper": 0.6,
         "acc_positive_speed_lower": 1.0,
-        "acc_positive_lower": 0.5,
+        "acc_positive_lower": 0.4,
         "acc_positive_speed_upper": 6.0,
         "acc_negative_lower": -0.6,
         "acc_negative_speed_lower": 1.0,
         "acc_negative_upper": -0.4,
         "acc_negative_speed_upper": 6.0,
-        "jerk_positive_upper": 3.0,
+        "jerk_positive_upper": 2.5,
         "jerk_positive_speed_lower": 1.0,
-        "jerk_positive_lower": 1.5,
+        "jerk_positive_lower": 1.2,
         "jerk_positive_speed_upper": 6.0,
         "jerk_negative_lower": -1.0,
         "jerk_negative_speed_lower": 1.0,
@@ -820,17 +820,17 @@
         "jerk_negative_speed_upper": 6.0
       },
       "kappa_kinematic_param": {
-        "acc_positive_upper": 0.7,
+        "acc_positive_upper": 0.5,
         "acc_positive_speed_lower": 1.0,
-        "acc_positive_lower": 0.4,
+        "acc_positive_lower": 0.3,
         "acc_positive_speed_upper": 6.0,
         "acc_negative_lower": -0.8,
         "acc_negative_speed_lower": 1.0,
         "acc_negative_upper": -0.6,
         "acc_negative_speed_upper": 6.0,
-        "jerk_positive_upper": 2.5,
+        "jerk_positive_upper": 2.0,
         "jerk_positive_speed_lower": 1.0,
-        "jerk_positive_lower": 1.5,
+        "jerk_positive_lower": 1.2,
         "jerk_positive_speed_upper": 6.0,
         "jerk_negative_lower": -1.2,
         "jerk_negative_speed_lower": 1.0,
@@ -1020,13 +1020,13 @@
       "neighbor_target_neighbor_limit_velocity": 5.0
     },
     "bound_maker": {
-      "lane_keeping_non_cipv_start_acc_bound": 0.7,
+      "lane_keeping_non_cipv_start_acc_bound": 0.6,
       "cruise_acc_bound_table": {
         "vel_table": [
           0.0, 2.0, 4.0, 6.0, 10.0
         ],
         "acc_table": [
-          0.8, 0.7, 0.6, 0.5, 0.4
+          0.6, 0.55, 0.5, 0.45, 0.4
         ]
       },
       "cruise_dec_bound_table": {
