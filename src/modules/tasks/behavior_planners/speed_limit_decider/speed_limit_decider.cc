@@ -2533,7 +2533,6 @@ void SpeedLimitDecider::CalculateRoundaboutFunctionQuitSpeedLimit(bool using_ld_
   const auto &environmental_model = session_->environmental_model();
   bool function_need_inhibited = false;
   double v_limit_roundabout = 40.0;
-  double dis_to_roundabout = NL_NMAX;
   auto speed_limit_output =
       session_->mutable_planning_context()
           ->mutable_speed_limit_decider_output();
@@ -2563,7 +2562,6 @@ void SpeedLimitDecider::CalculateRoundaboutFunctionQuitSpeedLimit(bool using_ld_
       roundabout_info_distance < kMapModeRoundaboutQuitDis &&
       road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
     // in map mode, roundabout distance meets the condition
-    dis_to_roundabout = roundabout_info_distance;
     if (roundabout_info_distance < kMapModeRoundaboutQuitDis / 2.0) {
       if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
         function_need_inhibited = true;
@@ -2578,15 +2576,20 @@ void SpeedLimitDecider::CalculateRoundaboutFunctionQuitSpeedLimit(bool using_ld_
                                     road_seg_id, accumulated_s, 300.0);
       if (roundabout_info_list.size() == 0) {
         roundabout_quit_flag_ = false;
+        speed_limit_output->set_dis_to_roundabout(roundabout_info_distance);
+        JSON_DEBUG_VALUE("dis_to_roundabout", roundabout_info_distance);
+        JSON_DEBUG_VALUE("v_limit_roundabout", v_limit_roundabout);
         return;
       } else {
         auto closest_roundabout = roundabout_info_list[0];
+        if (closest_roundabout.first != nullptr) {
+          roundabout_info_distance = closest_roundabout.second;
+        }
         if (closest_roundabout.first != nullptr &&
             closest_roundabout.second < kNoMapModeRoundaboutQuitDis &&
             road_radius_origin_ < kRoundaboutQuitCurvRadiusThr) {
           // not in map mode, closest roundabout distance meets the
           // condition
-          dis_to_roundabout = closest_roundabout.second;
           if (closest_roundabout.second < kNoMapModeRoundaboutQuitDis / 2.0) {
             if (road_radius_origin_ < kRoundaboutQuitCurvRadiusLowThr) {
               function_need_inhibited = true;
@@ -2620,11 +2623,10 @@ void SpeedLimitDecider::CalculateRoundaboutFunctionQuitSpeedLimit(bool using_ld_
     v_target_ = v_limit_roundabout;
     v_target_type_ = SpeedLimitType::ROUNDABOUT;
   }
-  JSON_DEBUG_VALUE("dis_to_roundabout", dis_to_roundabout);
+  JSON_DEBUG_VALUE("dis_to_roundabout", roundabout_info_distance);
   JSON_DEBUG_VALUE("v_limit_roundabout", v_limit_roundabout);
-  auto speed_limit_decider_output = session_->mutable_planning_context()
-                                ->mutable_speed_limit_decider_output();
-  speed_limit_decider_output->SetSpeedLimitIntoMap(v_limit_roundabout,
+  speed_limit_output->set_dis_to_roundabout(roundabout_info_distance);
+  speed_limit_output->SetSpeedLimitIntoMap(v_limit_roundabout,
                                             SpeedLimitType::ROUNDABOUT);
 
 }

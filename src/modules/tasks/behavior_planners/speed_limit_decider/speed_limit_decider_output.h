@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <climits>
 
 #include "planning_plan_c.h"
 namespace planning {
@@ -126,6 +127,13 @@ class SpeedLimitDeciderOutput {
     function_inhibited_near_roundabout_ = function_inhibited_near_roundabout;
   }
 
+  double dis_to_roundabout() const {
+    return dis_to_roundabout_;
+  }
+  void set_dis_to_roundabout(const double dis_to_roundabout) {
+    dis_to_roundabout_ = dis_to_roundabout;
+  }
+
  private:
   std::map<SpeedLimitType, double>
       speed_limit_map_;  //(type, speedlimit) for all scenes one by one
@@ -181,6 +189,7 @@ class SpeedLimitDeciderOutput {
   SpeedLimitAgent v_limit_avoid_agent_info_;
 
   bool function_inhibited_near_roundabout_ = false;
+  double dis_to_roundabout_ = NL_NMAX;
 };
 
 }  // namespace planning

@@ -9,6 +9,7 @@ namespace planning {
 namespace {
 constexpr int32_t kLonCollisionCountThred = 3;
 constexpr double kEgoStaticVelThred = 0.1;
+constexpr double kRoundaboutDisThred = 120.0;
 }
 
 LongitudinalHmiDecider::LongitudinalHmiDecider(framework::Session* session,
@@ -16,6 +17,11 @@ LongitudinalHmiDecider::LongitudinalHmiDecider(framework::Session* session,
     : session_(session), config_(config) {}
 
 void LongitudinalHmiDecider::IntersectionLeftRightLaneTakeOverProc() {
+  const auto& speed_limit_decider_output =
+                    session_->planning_context().speed_limit_decider_output();
+  if (speed_limit_decider_output.dis_to_roundabout() < kRoundaboutDisThred) {
+    return;
+  }
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto current_ego_lane_mark =
