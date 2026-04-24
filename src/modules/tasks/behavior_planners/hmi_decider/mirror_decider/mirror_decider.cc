@@ -16,9 +16,7 @@ MirrorDecider::MirrorDecider(const EgoPlanningConfigBuilder *config_builder,
 }
 
 bool MirrorDecider::Execute() {
-  // ==========================================================
-  // 1. 获取基础状态和数据源
-  // ==========================================================
+
   // 设置阈值  后视镜折叠条件的阈值、后视镜展开条件的阈值，车停止时的阈值
   const double fold_threshold = 0.20;
   const double unfold_threshold = 0.40;
@@ -38,7 +36,7 @@ bool MirrorDecider::Execute() {
   const bool nsa_completed = session_->planning_context().nsa_planning_completed();
   const auto nsa_func_state = session_->environmental_model().get_local_view().function_state_machine_info.current_state;
 
-  // 获取导师输出的窄路信息
+  // 获取输出的窄路信息
   const auto& narrow_output = session_->planning_context().narrow_space_decider_output();
   if (!narrow_output.is_exist_narrow_space) {
     return true;
@@ -74,7 +72,7 @@ bool MirrorDecider::Execute() {
   double ego_velocity = frenet_ego.velocity();//当前车速
   //获取当前车辆的四个角点的frenet坐标信息
   const auto& ego_corners = frenet_ego.corners();
-  // 仿照frenet_ego.corners()来写加上后视镜后车宽的角点(我只需要前头2个角点)
+  // 仿照frenet_ego.corners()来写加上后视镜后车宽的角点(只需要前头2个角点)
 
   double s_front_left_ego =
       ego_s + vehicle_param.front_edge_to_rear_axle * std::cos(heading_angle) -
@@ -95,9 +93,6 @@ bool MirrorDecider::Execute() {
   double front_right_l1_ego = narrow_output.left_boundary_spline(s_front_right_ego)  - l_front_right_ego;  // 角点：右前 左侧障碍物距离（正）
   double front_right_l2_ego = narrow_output.right_boundary_spline(s_front_right_ego) - l_front_right_ego;  // 角点：右前 右侧障碍物距离（负）
 
-  // ==========================================================
-  // 2. 核心算法：基于未来 4 秒原始轨迹的时空预测 (Spatio-Temporal Prediction)
-  // ==========================================================
   // 定义最高优先级标志位：当前，或未来4秒内，是否需要折叠？
   bool condition_to_fold = false;
 
@@ -159,9 +154,6 @@ bool MirrorDecider::Execute() {
       }
   }
 
-  // ==========================================================
-  // 3.有限状态机
-  // ==========================================================
   switch (current_mirror_state_) {
     case iflyauto::REAR_VIEW_MIRROR_NONE:{
       // 【状态 0：初始/宽路状态】
@@ -244,9 +236,6 @@ bool MirrorDecider::Execute() {
       break;
   }
 
-  // ==========================================================
-  // 4. 根据上面流转完的最终状态，给发货单赋值
-  // ==========================================================
   auto& rear_mirror_cmd = session_->mutable_planning_context()->mutable_planning_output().rear_view_mirror_signal_command;
   if (current_mirror_state_ == iflyauto::REAR_VIEW_MIRROR_NONE) {
     rear_mirror_cmd.available = false;

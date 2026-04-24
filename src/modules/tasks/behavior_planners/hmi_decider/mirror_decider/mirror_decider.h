@@ -7,7 +7,6 @@
 #include "tasks/task.h"
 #include "session.h"
 #include "planning_plan_c.h"
-// 引入 TrajectoryPoint 定义
 #include "config/basic_type.h"
 
 namespace planning {

@@ -690,37 +690,20 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         narrow_space_line_x.append([narrow_space_left_front_x, narrow_space_right_front_x])
         narrow_space_line_y.append([narrow_space_left_front_y, narrow_space_right_front_y])
       print("narrow_space_state: ", planning_json['narrow_space_state'])
-      #####################################
-      print("NSAPlanningStatus: ", plan_msg.planning_status.nsa_planning_status)
-      # ========== 新增：打印后视镜状态 ==========
-      print("="*30 + " 后视镜状态 " + "="*30)
+      print(" mirror status ")
       try:
-        # 1. 获取后视镜命令结构体（先尝试直接访问，若报错则尝试子字段）
-        # 情况1：直接在plan_msg下（优先试这个）
         mirror_cmd = plan_msg.rear_view_mirror_signal_command
-        # 情况2：如果上面报错，尝试vehicle_command子字段（注释掉，备用）
-        # mirror_cmd = plan_msg.vehicle_command.rear_view_mirror_command
-
-        # 2. 打印请求有效性（available：true=有效，false=无效）
         print("后视镜请求有效性（available）：", mirror_cmd.available)
-
-        # 3. 打印折叠请求值（数字）+ 映射为文字（对应common_c.h的枚举）
         mirror_value = mirror_cmd.rear_view_mirror_value
         print("后视镜折叠请求值（数字）：", mirror_value)
-        # 映射枚举值为易理解的文字
         mirror_value_map = {
-            0: "REAR_VIEW_MIRROR_NONE（无指令）",
-            1: "REAR_VIEW_MIRROR_FOLD（折叠后视镜）",
-            2: "REAR_VIEW_MIRROR_UNFOLD（展开后视镜）"
+            0: "REAR_VIEW_MIRROR_NONE（No instructions）",
+            1: "REAR_VIEW_MIRROR_FOLD（fold mirror）",
+            2: "REAR_VIEW_MIRROR_UNFOLD（unfold mirror）"
         }
-        # 若数字不在枚举中，显示“未知”
         print("后视镜折叠请求（文字）：", mirror_value_map.get(mirror_value, "未知状态（数字：{}）".format(mirror_value)))
-
       except AttributeError as e:
-        # 若字段不存在，打印错误提示（不崩溃）
         print("未找到后视镜命令字段，错误原因：", e)
-        print("提示：可能需要调整字段层级，比如尝试plan_msg.vehicle_command.rear_view_mirror_command")
-      ######################################
     except:
       print("no narrow space")
     lat_plan_data['data_narrow_space_corners'].data.update({
