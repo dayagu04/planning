@@ -37,6 +37,7 @@ static constexpr int kGroundLineIdOffset = 5000000;
 static constexpr int kSpeedBumpIdOffset = 9000000;
 static constexpr int kIntersectionIdOffset = 10000000;
 static constexpr int kUssObjectIdOffset = 11000000;
+static constexpr int kUnifiedStaticIdOffset = 12000000;  // Unified OCC+GroundLine cluster
 }  // namespace
 class Obstacle {
  public:
