@@ -142,7 +142,7 @@ void AgentManager::Update(const double start_timestamp_s) {
   const auto& obs_mgr = session_->environmental_model().get_obstacle_manager();
   const auto& occ_obs = obs_mgr->get_occupancy_obstacles().Items();
   std::unordered_map<int32_t, Agent> occ_agent_table;
-  for (int i = 0; i < occ_obs.size(); i++) {
+  for (size_t i = 0; i < occ_obs.size(); i++) {
     planning::agent::Agent occ_agent;
     occ_agent.set_agent_id(occ_obs[i]->id());
     occ_agent.set_type(agent::AgentType(occ_obs[i]->type()));
@@ -163,13 +163,13 @@ void AgentManager::Update(const double start_timestamp_s) {
     occ_agent.set_timestamp_s(0.0);
     occ_agent.set_timestamp_us(0.0);
     occ_agent_table.insert({occ_agent.agent_id(), occ_agent});
-    Append(occ_agent_table);
   }
+  Append(occ_agent_table);
 
   // Add unified static obstacles (OCC + GroundLine cluster)
   const auto& unified_obs = obs_mgr->get_unified_static_obstacles().Items();
   std::unordered_map<int32_t, Agent> unified_agent_table;
-  for (int i = 0; i < unified_obs.size(); i++) {
+  for (size_t i = 0; i < unified_obs.size(); i++) {
     planning::agent::Agent unified_agent;
     unified_agent.set_agent_id(unified_obs[i]->id());
     unified_agent.set_type(agent::AgentType(unified_obs[i]->type()));
@@ -190,8 +190,8 @@ void AgentManager::Update(const double start_timestamp_s) {
     unified_agent.set_timestamp_s(0.0);
     unified_agent.set_timestamp_us(0.0);
     unified_agent_table.insert({unified_agent.agent_id(), unified_agent});
-    Append(unified_agent_table);
   }
+  Append(unified_agent_table);
 
   //add uss obstacles
   const auto& uss_obs = obs_mgr->get_uss_obstacles().Items();
