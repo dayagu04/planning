@@ -391,7 +391,7 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   // check lc gap if feasible
   if (!has_target_lane) {
-    lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+    lane_change_stage_info_.lc_invalid_reason = "no target lane";
   }
   CheckLaneChangeValid(lane_change_direction);
   const bool is_suppress_LC_short_dis = IsSuppressLCShortDis();
@@ -497,6 +497,11 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
   const bool is_no_lc_request = (lc_req_mgr_->request() == NO_CHANGE);
   if (is_no_lc_request) {
     lane_change_stage_info_.lc_back_reason = "no lc request";
+    return true;
+  }
+  // 目标车道id等于原车道时取消
+  if(lc_lane_mgr_->origin_lane_virtual_id() == lc_lane_mgr_->target_lane_virtual_id()){
+    lane_change_stage_info_.lc_back_reason = "no target lane";
     return true;
   }
 
@@ -1035,7 +1040,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
 
   if (target_lane == nullptr) {
     lc_state_info.lc_should_back = true;
-    lc_state_info.lc_back_reason = "dash not enough";
+    lc_state_info.lc_back_reason = "no target lane";
     return lc_state_info;
   }
 
