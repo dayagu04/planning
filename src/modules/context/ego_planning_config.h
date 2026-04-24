@@ -1260,6 +1260,8 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
         json,std::vector<std::string>{"sample_astar_traj", "weight_accel"});
     weight_jerk = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "weight_jerk"});
+    jerk_gain = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "jerk_gain"});
     weight_normal_ttc = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "weight_normal_ttc"});
     weight_overlap_ttc = read_json_keys<double>(
@@ -1296,6 +1298,8 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
         json,std::vector<std::string>{"sample_astar_traj", "safe_cost_gain"});
     collision_s_attenuation_coeffi = read_json_keys<double>(
         json,std::vector<std::string>{"sample_astar_traj", "collision_s_attenuation_coeffi"});
+    collision_cost_attenuation_coeffi = read_json_keys<double>(
+        json,std::vector<std::string>{"sample_astar_traj", "collision_cost_attenuation_coeffi"});
     read_json_vec(
     json,
     std::vector<std::string>{"sample_astar_traj", "rear_vehicle_min_distance_map",
@@ -1313,9 +1317,10 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double goal_tolerance = 5.0;
   double weight_dist = 1.0;
   double weight_time = 1.0;
-  double weight_vel = 0.2;
-  double weight_accel = 0.2;
-  double weight_jerk = 0.2;
+  double weight_vel = 1.0;
+  double weight_accel = 1.0;
+  double weight_jerk = 0.5;
+  double jerk_gain = 0.5;
   double weight_normal_ttc = 2.0;
   double weight_overlap_ttc = 4.0;
   double weight_lead_safe_distance = 1.0;
@@ -1334,6 +1339,7 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double default_collision_distance = 100.0;
   double safe_cost_gain = 2.0;
   double collision_s_attenuation_coeffi = 0.8;
+  double collision_cost_attenuation_coeffi = 0.1;
   RearVehicleMinDistanceMap rear_vehicle_min_distance_map;
 };
 

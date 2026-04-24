@@ -374,12 +374,19 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
 void LongitudinalAStar::CalculateGCost(const std::shared_ptr<STNode>& parent,
                                        STNode& child) {
   // double dist_cost = WEIGHT_DIST * fabs(child.s - goal_state_.target_s);
-  double time_cost = start_node_.v * fabs(child.t - parent->t) / 10.0;
-  double vel_cost = config_->weight_vel * fabs(child.v - parent->v);
-  double accel_cost = config_->weight_accel * fabs(child.a - parent->a);
   // double time_step = parent->t < 1.9 ? TIME_STEP_NEAR : TIME_STEP_FAR;
-  double jerk_cost = config_->weight_jerk * fabs(child.jerk);
-  child.g_cost = parent->g_cost + vel_cost + accel_cost + jerk_cost + time_cost;
+  double time_cost = start_node_.v * fabs(child.t - parent->t) / 10.0;
+  double vel_change_cost =
+      config_->weight_vel * std::exp(fabs(child.v - parent->v) / TIME_STEP_FAR);
+  double accel_change_cost =
+      config_->weight_accel *
+      std::exp(fabs(child.a - parent->a) / TIME_STEP_FAR);
+  double jerk_change_cost =
+      config_->weight_jerk *
+      std::exp(fabs(config_->jerk_gain * (child.jerk - parent->jerk) /
+                    TIME_STEP_FAR));
+  child.g_cost = parent->g_cost + vel_change_cost + accel_change_cost +
+                 jerk_change_cost + time_cost;
 }
 
 void LongitudinalAStar::CalculateHCost(STNode& node) {
@@ -398,6 +405,9 @@ void LongitudinalAStar::CalculateHCost(STNode& node) {
 
 void LongitudinalAStar::CalculateFCost(STNode& node) {
   node.safety_cost = node.dis_to_gap_front_cost + node.dis_to_gap_rear_cost;
+  node.safety_cost = node.s > merge_point_s_
+                         ? node.safety_cost * config_->safe_cost_gain
+                         : node.safety_cost;
   node.f_cost = node.g_cost + node.h_cost + node.safety_cost;
 }
 
