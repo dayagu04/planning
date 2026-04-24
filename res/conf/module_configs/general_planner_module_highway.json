@@ -2112,7 +2112,7 @@
     "gap_front_min_buffer": 3.0,
     "gap_front_buffer_extra_coef": 0.7,
     "leading_follow_decel": 2.0,
-    "leading_thw_coef": 0.5,
+    "leading_thw_coef": 0.3,
     "leading_min_safe_distance": 3.0,
     "lateral_offset_scale_factor": 10.0,
     "default_collision_distance": 100.0,

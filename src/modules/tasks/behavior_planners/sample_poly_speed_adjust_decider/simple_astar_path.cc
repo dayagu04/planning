@@ -250,9 +250,10 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             is_low_speed_congestion_scene_ ? collision_s : merge_point_s_;
         if (gap < 0.0 && ((node.s - front_edge_to_rear_axle_ -
                            rear_edge_to_rear_axle_) > collision_s)) {
-          // std::cout << "Gap后车碰撞风险: " << node.getKey() << node.getKey()
-          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-          //           << std::endl;
+          std::cout << "Gap后车碰撞风险: " << node.getKey()
+                    << " 后车id :" << anchor_matched_lower_st_point.agent_id()
+                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+                    << std::endl;
           continue;
         } else {
           double left_time =
@@ -275,8 +276,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
             (2.0 * config_->gap_front_follow_decel);
         double thw = config_->gap_front_thw_coef * node.v;
         double s_buffer =
-            std::fmax(thw + follow_distance + config_->gap_front_min_buffer,
-                      config_->gap_front_min_buffer);
+            std::fmax(thw + follow_distance, config_->gap_front_min_buffer);
         double gap = anchor_matched_upper_st_point.s() - frenet_node_s -
                      s_buffer - front_edge_to_rear_axle_;
         int object_lateral_offset =
@@ -307,9 +307,10 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
         gap = gap +
               left_time * (anchor_matched_upper_st_point.velocity() - node.v);
         if (gap < 0.0 && left_time < 1.0 && node.s > merge_point_s_) {
-          // std::cout << "Gap前车碰撞风险: " << node.getKey()
-          //           << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
-          //           << std::endl;
+          std::cout << "Gap前车碰撞风险: " << node.getKey()
+                    << " 前车id : " << anchor_matched_upper_st_point.agent_id()
+                    << " 剩余距离 :  " << gap << "  buffer:  " << s_buffer
+                    << std::endl;
           continue;
         } else {
           double left_time =
@@ -363,8 +364,7 @@ bool LongitudinalAStar::CollisionSafetyCheck(STNode& node) const {
                              (2.0 * config_->leading_follow_decel);
     double thw = config_->leading_thw_coef * node.v;
     double safe_distance =
-        std::fmax(thw + follow_distance + config_->leading_min_safe_distance,
-                  config_->leading_min_safe_distance);
+        std::fmax(thw + follow_distance, config_->leading_min_safe_distance);
     double gap =
         leading_agent_s + leading_agent_info_.center_s - node.s - safe_distance;
     if (gap < 0.0) {

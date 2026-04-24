@@ -1333,7 +1333,7 @@ struct SampleAstarTrajConfig : public EgoPlanningConfig {
   double gap_front_min_buffer = 3.0;
   double gap_front_buffer_extra_coef = 0.7;
   double leading_follow_decel = 2.0;
-  double leading_thw_coef = 0.5;
+  double leading_thw_coef = 0.3;
   double leading_min_safe_distance = 3.0;
   double lateral_offset_scale_factor = 10.0;
   double default_collision_distance = 100.0;
