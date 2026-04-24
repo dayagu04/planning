@@ -23,6 +23,8 @@ NsaTaskPipeline::NsaTaskPipeline(const EgoPlanningConfigBuilder *config_builder,
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
   hmi_decider_=
       std::make_unique<NSAHMIDecider>(config_builder, session);
+  mirror_decider_ =
+      std::make_unique<MirrorDecider>(config_builder, session);
 }
 
 bool NsaTaskPipeline::Run() {
@@ -98,6 +100,14 @@ bool NsaTaskPipeline::Run() {
   }
   auto time10 = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("HMIDeciderTime", time10 - time9);
+  // 新增：执行mirror_decider（放在hmi_decider之后，逻辑上窄路状态已确定）
+  ok = mirror_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(mirror_decider_->Name());  // 错误信息（仿其他decider）
+    return false;
+  }
+  auto time11 = IflyTime::Now_ms();
+  JSON_DEBUG_VALUE("MirrorDeciderTime", time11 - time10);
 
   return true;
 }

@@ -35,8 +35,10 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/bestune_e541_00105/common_frame/20251018/20251018-11-37-03/data_collection_BESTUNE_E541_00105_ALL_MANUAL_2025-10-18-11-37-03_no_camera.bag",
-                "--close-loop"
+                "/data_cold/abu_zone/autoparse/bestune_e541_00155/trigger/20260327/20260327-16-59-48/data_collection_BESTUNE_E541_00155_EVENT_FILTER_2026-03-27-16-59-48_no_camera.bag",
+               "--close-loop",
+               "--scene-type=nsa"
+              //"--auto-time=16.00"
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

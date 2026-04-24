@@ -819,6 +819,10 @@ void NarrowSpaceDecider::GenerateNarrowSpaceOutput() {
   output.is_relative_angle_too_large = narrow_space_status_ == NarrowSpaceStatus::OBLIQUE;
   output.is_exiting_narrow_space = narrow_space_state_ == NarrowSpaceState::EXITING_NARROW_SPACE || is_out_of_narrow_space_;
   output.distance_to_end = distance_to_end_;
+  output.end_point = end_point_;
+  output.narrow_space_s_range = narrow_space_s_range_;
+  output.left_boundary_spline = left_boundary_spline_;
+  output.right_boundary_spline = right_boundary_spline_;
 }
 
 void NarrowSpaceDecider::LogNarrowSpaceCorners() {

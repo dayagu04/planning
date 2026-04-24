@@ -12,7 +12,8 @@ sys.path.append('../../../')
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_88446/trigger/20260328/20260328-15-00-38/data_collection_BESTUNE_E541_88446_EVENT_FUNEXIT_2026-03-28-15-00-38_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
-bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_00136/trigger/20260327/20260327-14-41-44/data_collection_BESTUNE_E541_00136_EVENT_FUNEXIT_2026-03-27-14-41-44_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_00160/trigger/20260401/20260401-14-35-59/data_collection_BESTUNE_E541_00160_EVENT_FILTER_2026-04-01-14-35-59_no_camera.bag.1776997431.close-loop.nsa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_00155/trigger/20260327/20260327-16-59-48/data_collection_BESTUNE_E541_00155_EVENT_FILTER_2026-03-27-16-59-48_no_camera.bag.1777011396.close-loop.nsa.plan"
 
 # frame dt
 frame_dt = 0.05 # sec

@@ -703,7 +703,19 @@ void PlanningScheduler::FillPlanningTrajectory(
   open_loop_steering_command->jerk_factor = 70.0;  // hack
   open_loop_steering_command->need_steering_wheel_stationary = false;
   open_loop_steering_command->steering_wheel_rad_limit = 0.1;
+  // ==========================================================
+  // 【新增：搬运 MirrorDecider 的计算结果】
+  // ==========================================================
+  auto rear_mirror_cmd_output = &(planning_output->rear_view_mirror_signal_command);
 
+  // 从内部记事本 (PlanningContext) 获取 MirrorDecider 刚才算好并存下来的结果
+  const auto& internal_mirror_result =
+      session_.planning_context().planning_output().rear_view_mirror_signal_command;
+
+  // 搬运到最终的发货单上
+  rear_mirror_cmd_output->available = internal_mirror_result.available;
+  rear_mirror_cmd_output->rear_view_mirror_value = internal_mirror_result.rear_view_mirror_value;
+  // ==========================================================
   // 8.Planning status
   auto planning_status = &(planning_output->planning_status);
   planning_status->standstill = false;

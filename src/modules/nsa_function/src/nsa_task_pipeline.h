@@ -12,6 +12,7 @@
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/nsa_lateral_obstacle_decider/nsa_lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/narrow_space_decider/narrow_space_decider.h"
+#include "tasks/behavior_planners/hmi_decider/mirror_decider/mirror_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/nsa_lateral_motion_planner.h"
 #include "tasks/motion_planners/longitudinal_motion_planner/longitudinal_motion_planner.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -37,6 +38,7 @@ class NsaTaskPipeline : public BaseTaskPipeline {
   std::unique_ptr<LongitudinalMotionPlanner> longitudinal_motion_planner_;
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
   std::unique_ptr<NSAHMIDecider> hmi_decider_;
+  std::unique_ptr<MirrorDecider> mirror_decider_;
 };
 
 }  // namespace planning
