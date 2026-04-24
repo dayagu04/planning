@@ -168,7 +168,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
 
         // 在propose阶段计算靠近车道线的横向偏移量
         // CalculateLatCloseValue();
-        CalculateCongestionLatOffsetValue();
+        // CalculateCongestionLatOffsetValue();
         // lat_close_boundary_offset_ = 0.0;
 
         if (is_propose_to_execution && !is_propose_to_cancel) {
