@@ -837,6 +837,9 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   }
 
   // --- Collect OCC raw points (only when enabled) ---
+  // TODO: Some OCC types (e.g., dynamic objects, specific motion attributes)
+  //       should bypass clustering and be processed directly as obstacles.
+  //       Add type/motion filtering here when requirements are clarified.
   std::vector<planning_math::Vec2d> occ_points;
   if (config_.enable_fusion_occupancy_objects &&
       local_view.fusion_occupancy_objects_info.local_point_valid) {
@@ -902,12 +905,11 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   }
 
   // Assign fresh IDs to unmatched clusters
-  // ID space: kGroundLineIdOffset + [0, 900000), legacy path uses
-  // kGroundLineIdOffset + groundline.id (perception ID, typically < 10000)
-  // so unified path starts from 0 and wraps at 900000 to avoid collision
+  // Unified path uses kUnifiedStaticIdOffset + [0, 900000), separate from
+  // legacy groundline path which uses kGroundLineIdOffset + perception_id
   for (size_t i = 0; i < cluster_results.size(); ++i) {
     if (new_to_id[i] == -1) {
-      new_to_id[i] = kGroundLineIdOffset + (unified_cluster_next_id_++);
+      new_to_id[i] = kUnifiedStaticIdOffset + (unified_cluster_next_id_++);
       if (unified_cluster_next_id_ >= 900000) {
         unified_cluster_next_id_ = 0;
       }
@@ -920,15 +922,15 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   for (size_t i = 0; i < cluster_results.size(); ++i) {
     Obstacle obstacle(new_to_id[i], cluster_results[i].points);
     if (obstacle.is_vaild()) {
-      add_groundline_obstacle(obstacle);
+      add_unified_static_obstacle(obstacle);
       new_prev_clusters.push_back({cluster_results[i].center, new_to_id[i]});
     }
   }
   prev_unified_clusters_ = std::move(new_prev_clusters);
 
   if (session_->is_hpp_scene()) {
-    for (const auto *c_obstacle : groundline_obstacles_.Items()) {
-      auto *obstacle = groundline_obstacles_.Find(c_obstacle->id());
+    for (const auto *c_obstacle : unified_static_obstacles_.Items()) {
+      auto *obstacle = unified_static_obstacles_.Find(c_obstacle->id());
       if (obstacle) {
         obstacle->set_floor_id(ego_state->ego_floor_id());
       }
@@ -1144,6 +1146,7 @@ void ObstacleManager::UpdateSemanticSignObstacle() {
 void ObstacleManager::clear() {
   obstacles_ = IndexedList<int, Obstacle>();
   groundline_obstacles_ = IndexedList<int, Obstacle>();
+  unified_static_obstacles_ = IndexedList<int, Obstacle>();
   map_static_obstacles_ = IndexedList<int, Obstacle>();
   parking_space_obstacles_ = IndexedList<int, Obstacle>();
   road_edge_obstacles_ = IndexedList<int, Obstacle>();

@@ -62,6 +62,14 @@ class ObstacleManager {
     return groundline_obstacles_;
   }
 
+  Obstacle *add_unified_static_obstacle(const Obstacle &obstacle) {
+    return unified_static_obstacles_.Add(obstacle.id(), obstacle);
+  }
+
+  const IndexedList<int, Obstacle> &get_unified_static_obstacles() const {
+    return unified_static_obstacles_;
+  }
+
   Obstacle *add_speed_bump_obstacle(const Obstacle &obstacle) {
     return speed_bump_obstacles_.Add(obstacle.id(), obstacle);
   }
@@ -203,6 +211,7 @@ class ObstacleManager {
   planning::framework::Session *session_ = nullptr;
   IndexedList<int, Obstacle> obstacles_;
   IndexedList<int, Obstacle> groundline_obstacles_;
+  IndexedList<int, Obstacle> unified_static_obstacles_;  // Unified OCC+GroundLine cluster results
   IndexedList<int, Obstacle> gs_care_obstacles_;
   IndexedList<int, Obstacle> map_static_obstacles_;
   IndexedList<int, Obstacle> parking_space_obstacles_;
