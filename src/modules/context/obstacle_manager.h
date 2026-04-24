@@ -223,11 +223,11 @@ class ObstacleManager {
       nullptr;
   std::unique_ptr<UnifiedStaticCluster> unified_cluster_;
 
-  struct PrevClusterInfo {
+  struct PointsClusterInfo {
     planning_math::Vec2d center;
     int id;
   };
-  std::vector<PrevClusterInfo> prev_unified_clusters_;
+  std::vector<PointsClusterInfo> prev_unified_clusters_;
   int unified_cluster_next_id_ = 0;
 };
 

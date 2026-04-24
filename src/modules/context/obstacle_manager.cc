@@ -789,9 +789,14 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
 
   // --- Collect GroundLine raw points ---
   std::vector<planning_math::Vec2d> gl_points;
-  const double kMinFrontDistance = 6;
-  const double kMinFrontDistanceForMap = 7;
-  const double kMaxSideDistance = 5;
+  double kMinFrontDistance = 6.0;
+  double kMinFrontDistanceForMap = 7.0;
+  double kMaxSideDistance = 5.0;
+  if (session_->is_hpp_scene()) {
+    kMinFrontDistance = 2.0;
+    kMinFrontDistanceForMap = 3.0;
+    kMaxSideDistance = 5.0;
+  }
 
   const size_t groundline_size =
       local_view.ground_line_perception.groundline_size;
@@ -809,6 +814,11 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
       Point2D sl_point;
       if (!frenet_coord->XYToSL(Point2D(gp.x, gp.y), sl_point) ||
           std::isnan(sl_point.x) || std::isnan(sl_point.y)) {
+        continue;
+      }
+      ReferencePathPoint ref_pt_at_s;
+      if (!ref_path_ptr->get_reference_point_by_lon(sl_point.x, ref_pt_at_s) ||
+          groundline.floor_id.id != ref_pt_at_s.floor_id) {
         continue;
       }
       if (sl_point.x < ego_point.x + kMinFrontDistance) {
@@ -849,30 +859,14 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   }
 
   // --- Run unified clustering ---
-  const auto cluster_results =
-      unified_cluster_->Process(gl_points, occ_points);
+  auto cluster_results = unified_cluster_->Process(gl_points, occ_points);
 
   // --- Add results as groundline obstacles with frame-to-frame ID matching ---
-  struct NewCluster {
-    Vec2d center;
-    std::vector<Vec2d> points;
-  };
-  std::vector<NewCluster> new_clusters;
-
-  // Step 1: Collect all valid clusters with their centers
-  for (const auto &obs : cluster_results) {
-    if (obs.points.size() < 3) {
-      continue;
-    }
-    double cx = 0.0, cy = 0.0;
-    for (const auto &p : obs.points) {
-      cx += p.x();
-      cy += p.y();
-    }
-    cx /= obs.points.size();
-    cy /= obs.points.size();
-    new_clusters.push_back({Vec2d(cx, cy), obs.points});
-  }
+  // Step 1: Filter valid clusters (>= 3 points)
+  cluster_results.erase(
+      std::remove_if(cluster_results.begin(), cluster_results.end(),
+                     [](const auto &obs) { return obs.points.size() < 3; }),
+      cluster_results.end());
 
   // Step 2: Build match candidates (new cluster <-> prev cluster)
   struct MatchCandidate {
@@ -883,9 +877,9 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   std::vector<MatchCandidate> candidates;
   constexpr double kMatchThreshold = 1.5;  // meters
 
-  for (size_t i = 0; i < new_clusters.size(); ++i) {
+  for (size_t i = 0; i < cluster_results.size(); ++i) {
     for (size_t j = 0; j < prev_unified_clusters_.size(); ++j) {
-      double d = new_clusters[i].center.DistanceTo(prev_unified_clusters_[j].center);
+      double d = cluster_results[i].center.DistanceTo(prev_unified_clusters_[j].center);
       if (d < kMatchThreshold) {
         candidates.push_back({static_cast<int>(i), static_cast<int>(j), d});
       }
@@ -897,7 +891,7 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
             [](const auto &a, const auto &b) { return a.dist < b.dist; });
 
   // Step 3: Greedy assignment
-  std::vector<int> new_to_id(new_clusters.size(), -1);
+  std::vector<int> new_to_id(cluster_results.size(), -1);
   std::vector<bool> prev_used(prev_unified_clusters_.size(), false);
 
   for (const auto &c : candidates) {
@@ -911,7 +905,7 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   // ID space: kGroundLineIdOffset + [0, 900000), legacy path uses
   // kGroundLineIdOffset + groundline.id (perception ID, typically < 10000)
   // so unified path starts from 0 and wraps at 900000 to avoid collision
-  for (size_t i = 0; i < new_clusters.size(); ++i) {
+  for (size_t i = 0; i < cluster_results.size(); ++i) {
     if (new_to_id[i] == -1) {
       new_to_id[i] = kGroundLineIdOffset + (unified_cluster_next_id_++);
       if (unified_cluster_next_id_ >= 900000) {
@@ -921,16 +915,25 @@ void ObstacleManager::UpdateUnifiedStaticObstacle() {
   }
 
   // Step 4: Create obstacles and update tracking state
-  std::vector<PrevClusterInfo> new_prev_clusters;
-  new_prev_clusters.reserve(new_clusters.size());
-  for (size_t i = 0; i < new_clusters.size(); ++i) {
-    Obstacle obstacle(new_to_id[i], new_clusters[i].points);
+  std::vector<PointsClusterInfo> new_prev_clusters;
+  new_prev_clusters.reserve(cluster_results.size());
+  for (size_t i = 0; i < cluster_results.size(); ++i) {
+    Obstacle obstacle(new_to_id[i], cluster_results[i].points);
     if (obstacle.is_vaild()) {
       add_groundline_obstacle(obstacle);
-      new_prev_clusters.push_back({new_clusters[i].center, new_to_id[i]});
+      new_prev_clusters.push_back({cluster_results[i].center, new_to_id[i]});
     }
   }
   prev_unified_clusters_ = std::move(new_prev_clusters);
+
+  if (session_->is_hpp_scene()) {
+    for (const auto *c_obstacle : groundline_obstacles_.Items()) {
+      auto *obstacle = groundline_obstacles_.Find(c_obstacle->id());
+      if (obstacle) {
+        obstacle->set_floor_id(ego_state->ego_floor_id());
+      }
+    }
+  }
 }
 
 bool ObstacleManager::FilterGroundLineByDistance(

@@ -30,7 +30,8 @@ std::vector<ClusterObstacle> UnifiedStaticCluster::Process(
   if (!cfg_.enable) return result;
 
   // Step 1: grid-hash dedup
-  const std::vector<Cell> cells = BuildGrid(gl_points, occ_points);
+  std::vector<Vec2d> all_pts;
+  const std::vector<Cell> cells = BuildGrid(gl_points, occ_points, all_pts);
   if (cells.empty()) return result;
 
   // Step 2: 8-connected Union-Find clustering
@@ -42,13 +43,20 @@ std::vector<ClusterObstacle> UnifiedStaticCluster::Process(
 
     std::vector<Vec2d> pts;
     pts.reserve(member_indices.size());
-    for (int idx : member_indices) pts.push_back(all_pts_[idx]);
+    for (int idx : member_indices) pts.push_back(all_pts[idx]);
 
     // Recursive bisection: splits large clusters into convex-hull pieces
     // Small clusters (diagonal < max_segment_length) become a single convex hull
     auto pieces = RecursiveBisect(pts, 0);
     for (auto &obs : pieces) {
       if (static_cast<int>(obs.points.size()) >= cfg_.min_points) {
+        // Calculate center for frame-to-frame tracking
+        double cx = 0.0, cy = 0.0;
+        for (const auto &p : obs.points) {
+          cx += p.x();
+          cy += p.y();
+        }
+        obs.center = Vec2d(cx / obs.points.size(), cy / obs.points.size());
         result.push_back(std::move(obs));
       }
     }
@@ -61,8 +69,9 @@ std::vector<ClusterObstacle> UnifiedStaticCluster::Process(
 // ===========================================================================
 std::vector<UnifiedStaticCluster::Cell> UnifiedStaticCluster::BuildGrid(
     const std::vector<Vec2d> &gl_points,
-    const std::vector<Vec2d> &occ_points) {
-  all_pts_.clear();
+    const std::vector<Vec2d> &occ_points,
+    std::vector<Vec2d> &all_pts) {
+  all_pts.clear();
   const double inv_res = 1.0 / cfg_.grid_resolution;
   std::unordered_map<int64_t, int> grid;
   grid.reserve((gl_points.size() + occ_points.size()) * 2);
@@ -76,8 +85,8 @@ std::vector<UnifiedStaticCluster::Cell> UnifiedStaticCluster::BuildGrid(
     int64_t key = (static_cast<int64_t>(ix + 100000) << 32) |
                   static_cast<uint32_t>(iy + 100000);
     if (grid.find(key) == grid.end()) {
-      grid[key] = static_cast<int>(all_pts_.size());
-      all_pts_.push_back(p);
+      grid[key] = static_cast<int>(all_pts.size());
+      all_pts.push_back(p);
       cells.push_back({ix, iy});
     }
   };

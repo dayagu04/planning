@@ -25,6 +25,7 @@ struct UnifiedClusterConfig {
 
 struct ClusterObstacle {
   std::vector<planning_math::Vec2d> points;  // convex hull vertices, >= 3 pts
+  planning_math::Vec2d center;               // geometric center for tracking
 };
 
 // ---------------------------------------------------------------------------
@@ -51,7 +52,8 @@ class UnifiedStaticCluster {
 
   std::vector<Cell> BuildGrid(
       const std::vector<planning_math::Vec2d> &gl_points,
-      const std::vector<planning_math::Vec2d> &occ_points);
+      const std::vector<planning_math::Vec2d> &occ_points,
+      std::vector<planning_math::Vec2d> &all_pts);
 
   std::vector<std::vector<int>> ClusterCells(const std::vector<Cell> &cells);
 
@@ -70,7 +72,6 @@ class UnifiedStaticCluster {
   double AabbArea(const std::vector<planning_math::Vec2d> &pts) const;
 
   UnifiedClusterConfig cfg_;
-  std::vector<planning_math::Vec2d> all_pts_;
 };
 
 }  // namespace planning
