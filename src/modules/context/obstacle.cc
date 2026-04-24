@@ -407,7 +407,12 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   acc_ = 0.0;
   accel_fusion_ = 0.0;
   fusion_source_ = 1;
-  if (id_ >= 10000000) {  // intersection
+  if (id_ >= 12000000) {  // unified static cluster (OCC + GroundLine)
+    type_ = iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE;
+    source_type_ = SourceType::GroundLine;
+    planning_math::Polygon2d::ComputeConvexHull(perception_points_,
+                                                &perception_polygon_);
+  } else if (id_ >= 10000000) {  // intersection
     type_ = iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN;
     source_type_ = SourceType::RoadFusion;
     planning_math::Polygon2d::ComputeConvexHull(perception_points_,

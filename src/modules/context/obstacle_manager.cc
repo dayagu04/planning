@@ -1191,15 +1191,14 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
       session_->is_nsa_scene() || session_->is_rads_scene() ) {
     frenet_obstacles.reserve(obstacles_.Items().size() +
                              groundline_obstacles_.Items().size() +
+                             unified_static_obstacles_.Items().size() +
                              occupancy_obstacles_.Items().size() +
                              map_static_obstacles_.Items().size());
-    // obstacles_ids_in_lane_map.reserve(obstacles_.Items().size() +
-    //                                   groundline_obstacles_.Items().size() +
-    //                                   occupancy_obstacles_.Items().size() +
-    //                                   map_static_obstacles_.Items().size());
     add_frenet_obstacle(obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
     add_frenet_obstacle(groundline_obstacles_, reference_path, frenet_obstacles,
+                        frenet_obstacles_map);
+    add_frenet_obstacle(unified_static_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
     add_frenet_obstacle(occupancy_obstacles_, reference_path, frenet_obstacles,
                         frenet_obstacles_map);
