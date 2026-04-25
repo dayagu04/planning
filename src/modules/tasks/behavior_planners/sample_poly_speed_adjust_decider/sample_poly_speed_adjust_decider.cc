@@ -1006,7 +1006,7 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double fix_safe_distance =
       v_rel * ego_v / (2.0 * config_.leading_safe_max_dec);
   double extra_buffer = is_forced_merge_check ? 0.0 : min_follow_distance;
-  return std::max(min_follow_distance + fix_safe_distance + distance_hysteresis + extra_buffer,
+  return std::max(fix_safe_distance + distance_hysteresis + extra_buffer,
                   min_follow_distance);
 }
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
