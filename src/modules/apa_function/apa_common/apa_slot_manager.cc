@@ -1201,12 +1201,13 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
     }
     if (front_area_is_empty) {
       // no obs on front of slot
-      if (left_mirror2pt2_vec_dot <= pt02_vec.norm() &&
-          (ego_heading_deg > 4.0 || ego_heading_deg <= -80.0)) {
+      if (left_mirror2pt2_vec_dot > pt02_vec.norm())
+      {
         return false;
-      }
-      if (left_mirror2pt2_vec_dot > pt02_vec.norm() && ego_heading_deg > 2.0) {
-        return false;
+      }else{
+        if(ego_heading_deg > 4.0 || ego_heading_deg <= -80.0){
+          return false;
+        }
       }
     }
   } else if (ego2pt3_vec_dot > 0.0) {
@@ -1218,13 +1219,14 @@ bool ApaSlotManager::IsSideParkingPerpendicularSlot(const ApaSlot& slot) {
     }
     if (front_area_is_empty) {
       // no obs on front of slot
-      if (right_mirror2pt3_vec_dot <= pt13_vec.norm() &&
-          (ego_heading_deg < -4.0 || ego_heading_deg >= 80.0)) {
+      if (right_mirror2pt3_vec_dot > pt13_vec.norm())
+      {
         return false;
-      }
-      if (right_mirror2pt3_vec_dot > pt13_vec.norm() &&
-          ego_heading_deg < -2.0) {
-        return false;
+      }else{
+        if (ego_heading_deg < -4.0 || ego_heading_deg >= 80.0)
+        {
+          return false;
+        }
       }
     }
   } else {
