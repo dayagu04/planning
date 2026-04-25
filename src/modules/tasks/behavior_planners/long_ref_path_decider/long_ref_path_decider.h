@@ -45,8 +45,8 @@ class LongRefPathDecider : public Task {
   int32_t plan_points_num_ = 0.0;
   static constexpr double kUpperBoundConfidenceFullDistance = 120.0;
   static constexpr double kUpperBoundConfidenceZeroDistance = 150.0;
-  static constexpr int32_t kUpperBoundAgentObservationCountThresholdMin = 3;
-  static constexpr int32_t kUpperBoundAgentObservationCountThresholdMax = 10;
+  static constexpr int32_t kUpperBoundAgentObservationCountThresholdMin = 10;
+  static constexpr int32_t kUpperBoundAgentObservationCountThresholdMax = 30;
 
   // Track upper bound agent observation count (static for global access)
   static std::unordered_map<int32_t, int32_t>
