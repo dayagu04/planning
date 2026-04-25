@@ -59,9 +59,11 @@ class LaneReferencePath
       std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
           &frenet_obstacles_map);
 
-  ReferencePathPoint CalculateExtendedReferencePathPoint(
-      const ReferencePathPoint &p1, const ReferencePathPoint &p2,
-      const double length) const;
+  void CalculateExtendedReferencePathPoint(
+      ReferencePathPoints &ref_path_points,
+      const double extend_length,
+      const double interval,
+      const bool forward) const;
   double CalculateEgoProjectionDistanceInReferencePath(
       const ReferencePathPoints &ref_path_points) const;
 
