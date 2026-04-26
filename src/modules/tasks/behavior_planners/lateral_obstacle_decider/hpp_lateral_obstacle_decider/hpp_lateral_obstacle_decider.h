@@ -21,15 +21,6 @@ struct ObstacleConsistencyInfo {
   double last_seen_timestamp = 0.0;
 };
 
-struct ObstacleRelPosFilterParam {
-  const double kFarAwayLonFrontThr;  // 判断障碍物在自车前方远处
-  const double kFarAwayLonBackThr;  // 判断障碍物在自车后方远处
-  const double kFarAwayLatRelThr;  // 判断障碍物在自车侧向远处
-  const double kSideObsFrontThr;  // 判断障碍物是否和自车并排的前方阈值
-  const double kSideObsBackThr;  // 判断障碍物是否和自车并排的后方阈值
-  const double kMidObsAbsThr;
-  const double kMidObsRelThr;
-};
 using ObstacleConsistencyMap =
     std::unordered_map<uint32_t, ObstacleConsistencyInfo>;
 using ObstacleLateralDecisionMap =
@@ -50,10 +41,6 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
       SearchResult search_result);
   bool ARAStar();
   bool CheckARAStarPath(const ara_star::HybridARAStarResult& result);
-
-  ObstacleRelPosType ClassifyObstaclesByRelPos(
-    const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr,
-    const ObstacleRelPosFilterParam &obs_rel_pos_filter_param);
 
   void JudgePassageWidthForSingleDynamicObs(
     const FrenetObstacleBoundary &obstacle_frenet_boundary, LatObstacleDecisionInfo &decision_info,
@@ -80,7 +67,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
       const double min_obs_2right_road_boundary_mindis,
       LatObstacleDecisionInfo &relative_pos_result);
 
-  void CalObstacleFrenetBoundary(FrenetObstacleBoundary &frenet_boundary);
+
 
   void MakeDecisionBasedReferPath(
     const std::shared_ptr<FrenetObstacle> &obstacle,

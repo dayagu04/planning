@@ -31,6 +31,7 @@
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
 #include "math/math_utils.h"
+#include "behavior_planners/hpp_obstacle_preprocess_decider/hpp_obstacle_lateral_preprocess_decider.h"
 
 namespace planning {
 
@@ -223,69 +224,13 @@ void HppLateralObstacleDecider::MakeDecisionForTurnstile(
   }
 }
 
-ObstacleRelPosType HppLateralObstacleDecider::ClassifyObstaclesByRelPos(
-    const FrenetEgoState& ego_state, const FrenetObstaclePtr& obs_ptr,
-    const ObstacleRelPosFilterParam &obs_rel_pos_filter_param) {
-  const double kFarAwayLonFrontThr = obs_rel_pos_filter_param.kFarAwayLonFrontThr;  // 判断障碍物在自车前方远处
-  const double kFarAwayLonBackThr = obs_rel_pos_filter_param.kFarAwayLonBackThr;  // 判断障碍物在自车后方远处
-  const double kFarAwayLatRelThr = obs_rel_pos_filter_param.kFarAwayLatRelThr;  // 判断障碍物在自车侧向远处
-  const double kSideObsFrontThr = obs_rel_pos_filter_param.kSideObsFrontThr;  // 判断障碍物是否和自车并排的前方阈值
-  const double kSideObsBackThr = obs_rel_pos_filter_param.kSideObsBackThr;  // 判断障碍物是否和自车并排的后方阈值
-  const double kMidObsAbsThr = obs_rel_pos_filter_param.kMidObsAbsThr;
-  const double kMidObsRelThr = obs_rel_pos_filter_param.kMidObsRelThr;
-
-  const double ego_start_s = ego_state.boundary().s_start;
-  const double ego_end_s = ego_state.boundary().s_end;
-  const double ego_start_l = ego_state.boundary().l_start;
-  const double ego_end_l = ego_state.boundary().l_end;
-  const double ego_l = ego_state.l();
-  const auto& obs_boundary = obs_ptr->frenet_obstacle_boundary();
-  const double obs_start_s = obs_boundary.s_start;
-  const double obs_end_s = obs_boundary.s_end;
-  const double obs_start_l = obs_boundary.l_start;
-  const double obs_end_l = obs_boundary.l_end;
-  const double obs_l = obs_ptr->frenet_l();
-
-  ObstacleRelPosType type = ObstacleRelPosType::FAR_AWAY;
-  bool is_lon_far_away = (obs_start_s > ego_end_s + kFarAwayLonFrontThr ||
-                          obs_end_s < ego_start_s - kFarAwayLonBackThr);
-
-  if (is_lon_far_away) {
-    type = ObstacleRelPosType::FAR_AWAY;
-  } else if (obs_start_s > ego_end_s + kSideObsFrontThr) {
-    if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
-      type = ObstacleRelPosType::LEFT_FRONT;
-    } else if (obs_end_l <
-               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
-      type = ObstacleRelPosType::RIGHT_FRONT;
-    } else {
-      type = ObstacleRelPosType::MID_FRONT;
-    }
-  } else if (obs_end_s < ego_start_s - kSideObsBackThr) {
-    if (obs_start_l > std::fmax(ego_end_l + kMidObsRelThr, kMidObsAbsThr)) {
-      type = ObstacleRelPosType::LEFT_BACK;
-    } else if (obs_end_l <
-               std::fmin(ego_start_l - kMidObsRelThr, -kMidObsAbsThr)) {
-      type = ObstacleRelPosType::RIGHT_BACK;
-    } else {
-      type = ObstacleRelPosType::MID_BACK;
-    }
-  } else {
-    if (obs_l > ego_l) {
-      type = ObstacleRelPosType::LEFT_SIDE;
-    } else {
-      type = ObstacleRelPosType::RIGHT_SIDE;
-    }
-  }
-  return type;
-}
-
 /**
  * @brief 判断剩余道路宽度，是否满足自车通过
  * @param
  * @return void
  * @note
  */
+//TODO:这个函数和静态障碍物函数合并一个
 void HppLateralObstacleDecider::JudgePassageWidthForSingleDynamicObs(
     const FrenetObstacleBoundary &obstacle_frenet_boundary, LatObstacleDecisionInfo &decision_info,
     const double LeftkPositionJumpThreshold = 0.0, const double RightkPositionJumpThreshold = 0.0) {
@@ -539,61 +484,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedLastTrajRelativePos(
   }
 }
 
-void HppLateralObstacleDecider::CalObstacleFrenetBoundary(FrenetObstacleBoundary &frenet_boundary) {
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-  const VehicleParam& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double s_start = frenet_boundary.s_start;
-  const double s_end   = frenet_boundary.s_end;
-  const double l_start = frenet_boundary.l_start;
-  const double l_end   = frenet_boundary.l_end;
-  const double center_l = (l_start + l_end) * 0.5;
 
-  ReferencePathPoint refpath_pt;
-  reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt);
-  if (l_start > -refpath_pt.distance_to_right_road_border &&
-      l_end < refpath_pt.distance_to_left_road_border) {
-    const double obs_start2left_road_boundary_dis =
-        refpath_pt.left_drivable_width - l_end;
-    const double obs_start2right_road_boundary_dis =
-        refpath_pt.right_drivable_width + l_start;
-
-    reference_path_ptr->get_reference_point_by_lon(s_end, refpath_pt);
-    const double obs_end2left_road_boundary_dis =
-        refpath_pt.left_drivable_width - l_end;
-    const double obs_end2right_road_boundary_dis =
-        refpath_pt.right_drivable_width + l_start;
-
-    const double obs_2left_road_boundary_mindis =
-        std::min(obs_start2left_road_boundary_dis,
-                 obs_end2left_road_boundary_dis);  //距离带正负
-    const double obs_2right_road_boundary_mindis = std::min(
-        obs_start2right_road_boundary_dis, obs_end2right_road_boundary_dis);
-    ILOG_INFO << "obs_2left_road_boundary_mindis = "
-              << obs_2left_road_boundary_mindis
-              << ", obs_2right_road_boundary_mindis = "
-              << obs_2right_road_boundary_mindis;
-    frenet_boundary.obs_2left_road_boundary_mindis =
-        obs_2left_road_boundary_mindis;
-    frenet_boundary.obs_2right_road_boundary_mindis =
-        obs_2right_road_boundary_mindis;
-  }else{
-    if (l_end >= refpath_pt.distance_to_left_road_border &&
-        l_start <= refpath_pt.distance_to_left_road_border) {
-      frenet_boundary.obs_2left_road_boundary_mindis = 0.f;
-      frenet_boundary.obs_2right_road_boundary_mindis =
-          l_start + refpath_pt.right_drivable_width;
-    }
-    if (l_start <= -refpath_pt.distance_to_right_road_border &&
-        l_end >= -refpath_pt.distance_to_right_road_border) {
-      frenet_boundary.obs_2left_road_boundary_mindis =
-          refpath_pt.left_drivable_width - l_end;
-      frenet_boundary.obs_2right_road_boundary_mindis = 0.f;
-    }
-  }
-}
 
 bool HppLateralObstacleDecider::MakeDecisionBasedTrajSLForDynamicObs(
       const std::vector<LatObstacleDecisionInfo> &passage_width_info_vec,
@@ -726,11 +617,11 @@ void HppLateralObstacleDecider::MakeFrameFinalDecision(
             << "  passage_width_info.right_nudge_level = "
             << static_cast<int>(passage_width_info.right_nudge_level);
   ILOG_INFO << "FrameFinalDecision relative_pos_info.decision = "
-            << static_cast<int>(passage_width_info.decision)
+            << static_cast<int>(relative_pos_info.decision)
             << "  relative_pos_info.left_nudge_level = "
-            << static_cast<int>(passage_width_info.left_nudge_level)
+            << static_cast<int>(relative_pos_info.left_nudge_level)
             << "  relative_pos_info.right_nudge_level = "
-            << static_cast<int>(passage_width_info.right_nudge_level);
+            << static_cast<int>(relative_pos_info.right_nudge_level);
   if (passage_width_info.decision == LatObstacleDecisionType::IGNORE ||
       relative_pos_info.decision == LatObstacleDecisionType::IGNORE) {
     decision_info.decision = LatObstacleDecisionType::IGNORE;
@@ -824,6 +715,9 @@ void HppLateralObstacleDecider::MakeFrameFinalDecision(
 void HppLateralObstacleDecider::MakeDecisonForDynamicObsWithoutOverlap(
     const std::shared_ptr<FrenetObstacle> &obstacle,
     LatObstacleDecisionType &decision) {
+  const auto& reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
   // 获取自车轨迹点
   const auto &last_traj_points = session_->mutable_planning_context()
                                      ->mutable_last_planning_result()
@@ -855,14 +749,7 @@ void HppLateralObstacleDecider::MakeDecisonForDynamicObsWithoutOverlap(
     const double dynamic_scene_ego_traj_expand_s =
         vehicle_param.length +
         2 * hpp_general_lateral_decider_config_.dynamic_scene_ego_traj_expand_s;
-    // const Vec2d center(ego_frenet_point.s, ego_frenet_point.l);
-    //TODO:需要引入速度环境信息计算Buffer
-    // Box2d ego_box(center, 0.0, dynamic_scene_ego_traj_expand_s,
-    //               vehicle_param.width);
-    // Polygon2d ego_ploygon2d(ego_box);
-
     auto obj_frenet_point = frenet_polygon_sequence[i];
-
     FrenetObstacleBoundary obstacle_frenet_boundary;
     obstacle_frenet_boundary.l_end = obj_frenet_point.second.max_y();
     obstacle_frenet_boundary.l_start = obj_frenet_point.second.min_y();
@@ -872,12 +759,8 @@ void HppLateralObstacleDecider::MakeDecisonForDynamicObsWithoutOverlap(
     obstacle_frenet_boundary.s_end =
         obj_frenet_point.second.max_x() +
         hpp_general_lateral_decider_config_.dynamic_scene_obs_traj_expand_s;
-    //TODO:这里计算边界距离有问题
-    CalObstacleFrenetBoundary(obstacle_frenet_boundary);
-
-    // Polygon2d expand_obj_ploygon2d =
-    //     obj_frenet_point.second.ExpandByDistance(1.0);
-    // bool has_overlap = expand_obj_ploygon2d.HasOverlap(ego_ploygon2d);
+    HppObstacleLateralPreprocessDecider::CalObstacleDistance2RoadBound(
+        obstacle_frenet_boundary, reference_path_ptr);
 
     if (obstacle_frenet_boundary.obs_2left_road_boundary_mindis <
         min_obs_2left_road_boundary_mindis) {
@@ -957,7 +840,8 @@ void HppLateralObstacleDecider::MakeDecisonForDynamicObsWithOverlap(
 bool HppLateralObstacleDecider::CheckEgoAndObjPolygonHaveOverlap(
     const TrajectoryPoints& last_traj_points,
     const std::shared_ptr<FrenetObstacle>& obstacle,
-    std::pair<double, double>& obs_overlap_l_range, std::pair<double, double> &ego_overlap_s_range) {
+    std::pair<double, double>& obs_overlap_l_range,
+    std::pair<double, double>& ego_overlap_s_range) {
   if (obstacle->frenet_dynamic_obs_polygones().empty()) {
     return false;
   }
@@ -966,25 +850,34 @@ bool HppLateralObstacleDecider::CheckEgoAndObjPolygonHaveOverlap(
   const uint32 last_traj_points_size = last_traj_points.size();
   const auto min_obs_s =
       std::min_element(obs_polygon_sequence.begin(), obs_polygon_sequence.end(),
-                       [](const planning_math::Polygon2d &a, const planning_math::Polygon2d &b) {
+                       [](const planning_math::Polygon2d& a,
+                          const planning_math::Polygon2d& b) {
                          return a.min_x() < b.min_x();
                        })
-          -> min_x();
-  const double obs_half_length = (obstacle->frenet_obstacle_boundary().s_end -
-                           obstacle->frenet_obstacle_boundary().s_start) *
-                          0.5;
-  const VehicleParam &vehicle_param =
+          ->min_x();
+  const auto max_obs_s =
+      std::max_element(obs_polygon_sequence.begin(), obs_polygon_sequence.end(),
+                       [](const planning_math::Polygon2d& a,
+                          const planning_math::Polygon2d& b) {
+                         return a.max_x() < b.max_x();
+                       })
+          ->max_x();
+  const VehicleParam& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  bool has_overlap = false, first_overlap_flag_front = false,first_overlap_flag_back = false;
+  bool has_overlap = false, first_overlap_flag_front = false,
+       first_overlap_flag_back = false;
   for (uint32 i = 0; i < last_traj_points_size; i++) {
     const double ego_s = last_traj_points[i].s;
     const double ego_l = last_traj_points[i].l;
-    if (ego_s + vehicle_param.front_edge_to_rear_axle <
-        min_obs_s - obs_half_length - 3) {
+    if (ego_s + vehicle_param.front_edge_to_rear_axle < min_obs_s - 3) {
       continue;
     }
+    if (ego_s - vehicle_param.rear_axle_to_center > max_obs_s + 3) {
+      break;
+    }
     const Vec2d center_front(ego_s, ego_l);
-    const Vec2d center_back(last_traj_points[last_traj_points_size - i - 1].s, last_traj_points[last_traj_points_size - i - 1].l);
+    const Vec2d center_back(last_traj_points[last_traj_points_size - i - 1].s,
+                            last_traj_points[last_traj_points_size - i - 1].l);
     // TODO:需要引入速度环境信息计算Buffer
     Box2d ego_box_front(
         center_front, 0.0,
@@ -1001,19 +894,26 @@ bool HppLateralObstacleDecider::CheckEgoAndObjPolygonHaveOverlap(
       Polygon2d expand_obj_ploygon2d_front =
           obs_polygon_sequence[j].ExpandByDistance(1.0);
       Polygon2d expand_obj_ploygon2d_back =
-          obs_polygon_sequence[obs_polygon_sequence_size - j - 1].ExpandByDistance(1.0);
-      const auto ret_front = expand_obj_ploygon2d_front.HasOverlap(ego_ploygon2d_front);
-      const auto ret_back = expand_obj_ploygon2d_back.HasOverlap(ego_ploygon2d_front);
+          obs_polygon_sequence[obs_polygon_sequence_size - j - 1]
+              .ExpandByDistance(1.0);
+      const auto ret_front =
+          expand_obj_ploygon2d_front.HasOverlap(ego_ploygon2d_front);
+      const auto ret_back =
+          expand_obj_ploygon2d_back.HasOverlap(ego_ploygon2d_front);
       if (ret_front && !first_overlap_flag_front) {
         first_overlap_flag_front = true;
         ego_overlap_s_range.first = last_traj_points[i].s;
-        ego_overlap_s_range.second = last_traj_points[i].s + vehicle_param.length;
+        ego_overlap_s_range.second =
+            last_traj_points[i].s + vehicle_param.length;
         obs_overlap_l_range.first = obs_polygon_sequence[j].center_point().y();
         has_overlap = true;
       }
       if (ret_back && !first_overlap_flag_back) {
         first_overlap_flag_back = true;
-        obs_overlap_l_range.second = obs_polygon_sequence[obs_polygon_sequence_size - j - 1].center_point().y();
+        obs_overlap_l_range.second =
+            obs_polygon_sequence[obs_polygon_sequence_size - j - 1]
+                .center_point()
+                .y();
       }
     }
   }
@@ -1029,7 +929,16 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
   const VehicleParam &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   // Step 1. 判断障碍物位置
+  if (obs_classification_result.id_to_rel_pos_type.find(obstacle->id()) ==
+          obs_classification_result.id_to_rel_pos_type.end() ||
+      obs_classification_result.id_to_motion_type.find(obstacle->id()) ==
+          obs_classification_result.id_to_motion_type.end()) {
+    decision = LatObstacleDecisionType::IGNORE;
+    return;
+  }
+
   const auto rel_pos_type_base = obs_classification_result.id_to_rel_pos_type.at(obstacle->id());
+  const auto rel_motion_type = obs_classification_result.id_to_motion_type.at(obstacle->id());
 
   const bool obj_is_front_base = (rel_pos_type_base == ObstacleRelPosType::MID_FRONT) ||
                             (rel_pos_type_base == ObstacleRelPosType::LEFT_FRONT)||
@@ -1065,7 +974,7 @@ void HppLateralObstacleDecider::MakeDecisionForSingleDynamicObs(
     //纵向
     if ((rel_pos_type_base == ObstacleRelPosType::MID_FRONT ||
          rel_pos_type_base == ObstacleRelPosType::RIGHT_FRONT) &&
-        !obstacle->is_static()) {
+        !obstacle->is_static() && rel_motion_type == ObstacleMotionType::SAME_DIR_MOVING) {
       decision = LatObstacleDecisionType::FOLLOW;
       return;
     } else {

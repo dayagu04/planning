@@ -59,6 +59,9 @@ class FrenetObstacle {
   }
   const bool is_static() const { return is_static_; }
   SourceType source_type() const { return source_type_; }
+  FrenetObstacleBoundary& mutable_frenet_obstacle_boundary() {
+    return frenet_obstacle_boundary_;
+  }
   const FrenetObstacleBoundary& frenet_obstacle_boundary() const {
     return frenet_obstacle_boundary_;
   }

@@ -552,6 +552,7 @@ void FrenetObstacle::compute_dynamic_obs_frenet_polygon_sequence(
         cart_point.y = cart_vertex.y();
         if (!frenet_coord->XYToSL(cart_point, frenet_point) ||
             std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+          frenet_dynamic_obs_polygones_.clear(); 
           return;
         }
         planning_math::Vec2d frenet_vertex(frenet_point.x, frenet_point.y);

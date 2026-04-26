@@ -55,8 +55,20 @@ bool HppObstacleLateralPreprocessDecider::Execute() {
 
   // 3: 聚类 (动静分离 + 规则聚类 + 凸包生成)
   if (!ClusterObstacles(obs_item_map, obs_classification_result,
-                        obs_cluster_container)) {
+                        obs_cluster_container,reference_path_ptr)) {
     return false;
+  }
+  // 动态障碍物边界距离计算
+  for (const auto& p : obs_classification_result.id_to_motion_type) {
+    if (p.second == ObstacleMotionType::STATIC) {
+      continue;
+    } else {
+      auto& obs_frenet_boundary =
+          reference_path_ptr->get_obstacles_map()
+              .find(p.first)
+              ->second->mutable_frenet_obstacle_boundary();
+      CalObstacleDistance2RoadBound(obs_frenet_boundary,reference_path_ptr);
+    }
   }
 
   // 对聚类结果进行排序
@@ -117,7 +129,8 @@ bool HppObstacleLateralPreprocessDecider::ClassifyObstacles(
 bool HppObstacleLateralPreprocessDecider::ClusterObstacles(
     const ObstacleItemMap& obs_item_map,
     const ObstacleClassificationResult& classification_result,
-    ObstacleClusterContainer& obstacle_cluster_container) {
+    ObstacleClusterContainer& obstacle_cluster_container,
+    ConstReferencePathPtr reference_path_ptr) {
   obstacle_cluster_container.obs_id_to_cluster_id.clear();
   obstacle_cluster_container.obstacle_clusters.clear();
 
@@ -149,7 +162,7 @@ bool HppObstacleLateralPreprocessDecider::ClusterObstacles(
     if (!BuildObstacleClusterConvexHull(obs_item_map, obstacle_cluster)) {
       continue;
     }
-    CalObstacleClusterInfo(obstacle_cluster);
+    CalObstacleDistance2RoadBound(obstacle_cluster.frenet_boundary,reference_path_ptr);
     obstacle_cluster_container.obstacle_clusters.push_back(obstacle_cluster);
   }
 
@@ -297,33 +310,31 @@ bool HppObstacleLateralPreprocessDecider::JudgeTurnstileScene(
   return true;
 }
 
-void HppObstacleLateralPreprocessDecider::CalObstacleClusterInfo(
-    ObstacleCluster& obstacle_cluster) {
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
+void HppObstacleLateralPreprocessDecider::CalObstacleDistance2RoadBound(
+    FrenetObstacleBoundary& frenet_boundary,
+    ConstReferencePathPtr reference_path_ptr) {
   const VehicleParam& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double cluster_s_start = obstacle_cluster.frenet_boundary.s_start;
-  const double cluster_s_end = obstacle_cluster.frenet_boundary.s_end;
-  const double cluster_l_start = obstacle_cluster.frenet_boundary.l_start;
-  const double cluster_l_end = obstacle_cluster.frenet_boundary.l_end;
-  const double cluster_center_l = (cluster_l_start + cluster_l_end) * 0.5;
+   const double s_start = frenet_boundary.s_start;
+  const double s_end   = frenet_boundary.s_end;
+  const double l_start = frenet_boundary.l_start;
+  const double l_end   = frenet_boundary.l_end;
+  const double center_l = (l_start + l_end) * 0.5;
 
   ReferencePathPoint refpath_pt;
-  reference_path_ptr->get_reference_point_by_lon(cluster_s_start, refpath_pt);
-  if (cluster_l_start > -refpath_pt.distance_to_right_road_border &&
-      cluster_l_end < refpath_pt.distance_to_left_road_border) {
+  reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt);
+  if (l_start > -refpath_pt.distance_to_right_road_border &&
+      l_end < refpath_pt.distance_to_left_road_border) {
     const double obs_start2left_road_boundary_dis =
-        refpath_pt.left_drivable_width - cluster_l_end;
+        refpath_pt.left_drivable_width - l_end;
     const double obs_start2right_road_boundary_dis =
-        refpath_pt.right_drivable_width + cluster_l_start;
+        refpath_pt.right_drivable_width + l_start;
 
-    reference_path_ptr->get_reference_point_by_lon(cluster_s_end, refpath_pt);
+    reference_path_ptr->get_reference_point_by_lon(s_end, refpath_pt);
     const double obs_end2left_road_boundary_dis =
-        refpath_pt.left_drivable_width - cluster_l_end;
+        refpath_pt.left_drivable_width - l_end;
     const double obs_end2right_road_boundary_dis =
-        refpath_pt.right_drivable_width + cluster_l_start;
+        refpath_pt.right_drivable_width + l_start;
 
     const double obs_2left_road_boundary_mindis =
         std::min(obs_start2left_road_boundary_dis,
@@ -334,22 +345,37 @@ void HppObstacleLateralPreprocessDecider::CalObstacleClusterInfo(
               << obs_2left_road_boundary_mindis
               << ", obs_2right_road_boundary_mindis = "
               << obs_2right_road_boundary_mindis;
-    obstacle_cluster.frenet_boundary.obs_2left_road_boundary_mindis =
+    frenet_boundary.obs_2left_road_boundary_mindis =
         obs_2left_road_boundary_mindis;
-    obstacle_cluster.frenet_boundary.obs_2right_road_boundary_mindis =
+    frenet_boundary.obs_2right_road_boundary_mindis =
         obs_2right_road_boundary_mindis;
-  } else {
-    if (cluster_l_end >= refpath_pt.distance_to_left_road_border &&
-        cluster_l_start <= refpath_pt.distance_to_left_road_border) {
-      obstacle_cluster.frenet_boundary.obs_2left_road_boundary_mindis = 0.f;
-      obstacle_cluster.frenet_boundary.obs_2right_road_boundary_mindis =
-          cluster_l_start + refpath_pt.right_drivable_width;
+  }else{
+    //TODO:这里少考虑了障碍物在道路边界外侧的情况，静态障碍物也有这个问题
+    if (l_end >= refpath_pt.distance_to_left_road_border &&
+        l_start <= refpath_pt.distance_to_left_road_border) {
+      frenet_boundary.obs_2left_road_boundary_mindis = 0.f;
+      frenet_boundary.obs_2right_road_boundary_mindis =
+          l_start + refpath_pt.right_drivable_width;
     }
-    if (cluster_l_start <= -refpath_pt.distance_to_right_road_border &&
-        cluster_l_end >= -refpath_pt.distance_to_right_road_border) {
-      obstacle_cluster.frenet_boundary.obs_2left_road_boundary_mindis =
-          refpath_pt.left_drivable_width - cluster_l_end;
-      obstacle_cluster.frenet_boundary.obs_2right_road_boundary_mindis = 0.f;
+    if (l_start <= -refpath_pt.distance_to_right_road_border &&
+        l_end >= -refpath_pt.distance_to_right_road_border) {
+      frenet_boundary.obs_2left_road_boundary_mindis =
+          refpath_pt.left_drivable_width - l_end;
+      frenet_boundary.obs_2right_road_boundary_mindis = 0.f;
+    }
+    if (l_end < -refpath_pt.distance_to_right_road_border &&
+        l_start < -refpath_pt.distance_to_right_road_border) {
+      frenet_boundary.obs_2left_road_boundary_mindis =
+          refpath_pt.distance_to_left_road_border - l_end;
+      frenet_boundary.obs_2right_road_boundary_mindis =
+          l_end + refpath_pt.distance_to_right_road_border;
+    }
+    if (l_start > refpath_pt.distance_to_left_road_border &&
+        l_end > refpath_pt.distance_to_left_road_border) {
+      frenet_boundary.obs_2left_road_boundary_mindis =
+          l_start - refpath_pt.distance_to_left_road_border;
+      frenet_boundary.obs_2right_road_boundary_mindis =
+          l_start + refpath_pt.distance_to_right_road_border;
     }
   }
 }
