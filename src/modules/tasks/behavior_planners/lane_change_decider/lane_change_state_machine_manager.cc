@@ -6260,7 +6260,6 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   bool is_rightest_extend_lane = IsExistExtendLane(rightest_lane, true);
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
   constexpr double kNearingExchangeUpperThreshold = 100.0;
-  constexpr double kNearingExchangeLowerThreshold = -20.0;
 
   // 判断自车是否在最左或最右车道（排除应急车道和导流区车道）
   const int ego_seq = route_info_output.ego_seq;
@@ -6280,8 +6279,7 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
         route_info_output.map_split_region_info_list.front()
             .start_fp_point.fp_distance_to_split_point;
     bool is_nearing_exchange =
-        distance_to_exchange < kNearingExchangeUpperThreshold &&
-        distance_to_exchange > kNearingExchangeLowerThreshold;
+        distance_to_exchange < kNearingExchangeUpperThreshold;
     if (is_rightest_extend_lane &&
         route_info_output.map_split_region_info_list.front().split_direction ==
             SPLIT_RIGHT &&
