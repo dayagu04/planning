@@ -306,12 +306,12 @@ void HppObstacleLateralPreprocessDecider::CalObstacleDistance2RoadBound(
   const double s_end = frenet_boundary.s_end;
   const double l_start = frenet_boundary.l_start;
   const double l_end = frenet_boundary.l_end;
-  double obs_start2left_road_boundary_dis = 0.f,
-         obs_start2right_road_boundary_dis = 0.f,
-         obs_end2left_road_boundary_dis = 0.f,
-         obs_end2right_road_boundary_dis = 0.f;
-  double obs_2left_road_boundary_mindis = 0.f,
-         obs_2right_road_boundary_mindis = 0.f;
+  double obs_start2left_road_boundary_dis = 0.0,
+         obs_start2right_road_boundary_dis = 0.0,
+         obs_end2left_road_boundary_dis = 0.0,
+         obs_end2right_road_boundary_dis = 0.0;
+  double obs_2left_road_boundary_mindis = 0.0,
+         obs_2right_road_boundary_mindis = 0.0;
 
   ReferencePathPoint refpath_pt_start;
   reference_path_ptr->get_reference_point_by_lon(s_start, refpath_pt_start);
@@ -371,7 +371,7 @@ void HppObstacleLateralPreprocessDecider::CalObstacleDistance2RoadBound(
              l_end > kRoadBoundary) {  // 障碍物在左边界左侧
     obs_start2left_road_boundary_dis =
         l_start - refpath_pt_start.left_drivable_width;
-    obs_end2left_road_boundary_dis = l_end - refpath_pt_end.left_drivable_width;
+    obs_end2left_road_boundary_dis = l_start - refpath_pt_end.left_drivable_width;
     obs_2left_road_boundary_mindis = std::min(obs_start2left_road_boundary_dis,
                                               obs_end2left_road_boundary_dis);
     obs_2right_road_boundary_mindis = std::min(

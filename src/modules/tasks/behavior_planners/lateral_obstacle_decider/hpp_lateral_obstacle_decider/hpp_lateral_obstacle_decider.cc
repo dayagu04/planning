@@ -17,20 +17,6 @@
 #include "obstacle_manager.h"
 #include "planning_context.h"
 #include "task_interface/lateral_obstacle_decider_output.h"
-
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <cstddef>
-#include <memory>
-#include <vector>
-
-#include "../../common/planning_gflags.h"
-#include "debug_info_log.h"
-#include "edt_manager.h"
-#include "environment_model_debug_info.pb.h"
-#include "environmental_model.h"
-#include "math/math_utils.h"
 #include "behavior_planners/hpp_obstacle_preprocess_decider/hpp_obstacle_lateral_preprocess_decider.h"
 
 namespace planning {
