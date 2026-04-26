@@ -61,5 +61,5 @@ constexpr double kExtraExpandDisMin = 1.0;
 constexpr double kCongestedSceneSpeedLimit = 40.0 / 3.6;
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double kSampleSpeedCapMps = 130.0 / 3.6;
-constexpr double kMaxSpeedDiffThreshold = 8.0;
+constexpr double kMaxSpeedDiffThreshold = 15.0 / 3.6;
 }  // namespace planning

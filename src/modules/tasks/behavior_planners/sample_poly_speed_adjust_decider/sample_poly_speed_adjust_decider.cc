@@ -1381,7 +1381,8 @@ void SamplePolySpeedAdjustDecider::CalcAgentLateralOffsetMap() {
 bool SamplePolySpeedAdjustDecider::GenerateAStarTraj() {
   is_low_speed_congestion_scene_ =
       traffic_density_status_ == Congested &&
-      target_lane_objs_flow_vel_ < kCongestedSceneSpeedLimit;
+      target_lane_objs_flow_vel_ < kCongestedSceneSpeedLimit && 
+      (target_lane_objs_flow_vel_ - ego_v_) < kMaxSpeedDiffThreshold;
   GoalState goal_state(
       merge_stop_line_distance_ + config_.forced_merge_param.astar_goal_offset,
       v_suggestted_, config_.forced_merge_param.astar_goal_offset);
