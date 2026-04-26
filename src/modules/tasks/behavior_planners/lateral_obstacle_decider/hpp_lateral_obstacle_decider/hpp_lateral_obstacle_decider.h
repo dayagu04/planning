@@ -44,7 +44,7 @@ class HppLateralObstacleDecider : public BaseLateralObstacleDecider {
 
   void JudgePassageWidthForSingleDynamicObs(
     const FrenetObstacleBoundary &obstacle_frenet_boundary, LatObstacleDecisionInfo &decision_info,
-    const double LeftkPositionJumpThreshold, const double RightkPositionJumpThreshold);
+    const double LeftkPositionJumpThreshold = 0.0, const double RightkPositionJumpThreshold = 0.0);
 
   void AnalyzeNudgeLevelBaseCurve(
     const FrenetObstacleBoundary &obstacle_frenet_boundary,

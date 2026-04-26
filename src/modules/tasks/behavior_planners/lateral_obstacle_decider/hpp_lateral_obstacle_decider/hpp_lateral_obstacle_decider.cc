@@ -233,7 +233,7 @@ void HppLateralObstacleDecider::MakeDecisionForTurnstile(
 //TODO:这个函数和静态障碍物函数合并一个
 void HppLateralObstacleDecider::JudgePassageWidthForSingleDynamicObs(
     const FrenetObstacleBoundary &obstacle_frenet_boundary, LatObstacleDecisionInfo &decision_info,
-    const double LeftkPositionJumpThreshold = 0.0, const double RightkPositionJumpThreshold = 0.0) {
+    const double LeftkPositionJumpThreshold, const double RightkPositionJumpThreshold) {
   const VehicleParam &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   // left decision
