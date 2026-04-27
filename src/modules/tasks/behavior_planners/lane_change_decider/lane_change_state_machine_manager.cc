@@ -732,26 +732,34 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     RequestType direction) {
   // check single frame lc gap if feasible
   lane_change_stage_info_ = CheckLCGapFeasible(direction);
-  bool is_dash_enough = !IsLCPathCollisionWithSolidLine(
+  const bool is_dash_line_safe = !IsLCPathCollisionWithSolidLine(
       lc_lane_mgr_->origin_lane_virtual_id(),
       transition_info_.lane_change_status, transition_info_.lane_change_type,
       transition_info_.lane_change_direction);
-  bool is_roadedge_safe =
+  const bool is_roadedge_safe =
       !IsLCPathCollisionWithRoadEdge(lc_lane_mgr_->origin_lane_virtual_id(),
                                      lc_lane_mgr_->target_lane_virtual_id(),
                                      transition_info_.lane_change_status);
-  is_dash_enough = is_dash_enough && CheckTargetLaneValid() && is_roadedge_safe;
+  const bool is_targetlane_valid = CheckTargetLaneValid();
+
+  bool is_lc_condition_satisfied = false;
   int lc_valid_thre = 4;
   if (transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST) {
     lc_valid_thre = 1;
-    is_dash_enough = is_roadedge_safe;  // 避让请求和锥桶请求不需要dash足够
+    is_lc_condition_satisfied = is_roadedge_safe;  // 避让请求和锥桶请求不需要dash足够
   } else if (transition_info_.lane_change_type == MERGE_REQUEST ||
     transition_info_.lane_change_type == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
     lc_valid_thre = 1;
+    is_lc_condition_satisfied =
+        is_dash_line_safe && is_targetlane_valid && is_roadedge_safe;
+  } else {
+    is_lc_condition_satisfied =
+        is_dash_line_safe && is_targetlane_valid && is_roadedge_safe;
   }
+
   // can lc if more than continue 4 frame gap_insertable
-  if (lane_change_stage_info_.gap_insertable && is_dash_enough) {
+  if (lane_change_stage_info_.gap_insertable && is_lc_condition_satisfied) {
     lc_valid_cnt_ += 1;
     ILOG_DEBUG << "decide_lc_valid_info lc_valid_cnt :" << lc_valid_cnt_;
     if (lc_valid_cnt_ > lc_valid_thre) {
@@ -766,8 +774,8 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
                << lane_change_stage_info_.lc_invalid_reason.c_str();
     lane_change_stage_info_.gap_insertable = false;
     lc_valid_cnt_ = 0;
-    if (!is_dash_enough) {
-      if (!is_roadedge_safe) {
+    if (!is_lc_condition_satisfied) {
+      if (!is_roadedge_safe || !is_targetlane_valid) {
         lane_change_stage_info_.lc_invalid_reason = "no target lane";
       } else {
         lane_change_stage_info_.lc_invalid_reason = "dash not enough";
@@ -6396,6 +6404,7 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_vehicle_width = vehicle_param.width * 0.5;
+  const double vehicle_length = vehicle_param.length;
 
   // 获取车道边界分段信息，用于精确判断实线/虚线类型
   const auto& lane_boundarys = lc_request_type == LEFT_CHANGE
@@ -6430,35 +6439,43 @@ bool LaneChangeStateMachineManager::IsLCPathCollisionWithSolidLine(
       continue;
     }
 
-    iflyauto::LaneBoundaryType boundary_type =
-        iflyauto::LaneBoundaryType_MARKING_UNKNOWN;
+    // 检查 [boundary_s, boundary_s + vehicle_length] 范围内是否存在实线段
+    const double boundary_s_end = boundary_s + vehicle_length;
+    bool is_solid_type = false;
     double acc_length = 0.0;
     for (int j = 0; j < lane_boundarys.type_segments_size; ++j) {
+      const double seg_start = acc_length;
       acc_length += lane_boundarys.type_segments[j].length;
-      if (acc_length > boundary_s) {
-        boundary_type = lane_boundarys.type_segments[j].type;
+      if (acc_length <= boundary_s) {
+        continue;
+      }
+      if (seg_start > boundary_s_end) {
+        break;
+      }
+      const auto seg_type = lane_boundarys.type_segments[j].type;
+      const bool seg_is_solid =
+          lc_request_type == LEFT_CHANGE
+              ? seg_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                    seg_type ==
+                        iflyauto::
+                            LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID
+              : seg_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
+                    seg_type ==
+                        iflyauto::
+                            LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+                    seg_type ==
+                        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
+      if (seg_is_solid) {
+        is_solid_type = true;
         break;
       }
     }
-
-    const bool is_solid_type =
-        lc_request_type == LEFT_CHANGE
-            ? boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                  boundary_type ==
-                      iflyauto::
-                          LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID
-            : boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DOUBLE_SOLID ||
-                  boundary_type ==
-                      iflyauto::
-                          LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
-                  boundary_type ==
-                      iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
 
     if (lc_request_type == LEFT_CHANGE && is_solid_type &&
         (left_vehicle_edge >
