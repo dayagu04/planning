@@ -5818,7 +5818,7 @@ void LDRouteInfoStrategy::CalculateDistanceToNOAEnd(
     return;
   }
   double distance_to_enter_city = 0.0;
-  constexpr double kMaxNOAEndSearchDistance = 3000.0;
+  constexpr double kMaxNOAEndSearchDistance = 7000.0;
   // 当前位于NOA状态，计算到地图信息终点/NOA
   if (route_info_output_.is_ego_on_expressway) {
     const auto* iter_link = segment;
