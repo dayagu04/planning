@@ -146,6 +146,9 @@ void StopDestinationDecider::StopDestinationProcess() {
           if (nullptr == obstacle) {
             continue;
           }
+          if (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_DECELER) {
+            continue;
+          }
           CollisionCheckStatus result_tmp;
           result_tmp.is_collision = false;
           //double obstacle_pos_time_on_ego_side = 100.0;
