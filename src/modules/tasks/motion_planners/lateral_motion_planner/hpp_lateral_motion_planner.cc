@@ -106,6 +106,11 @@ bool HPPLateralMotionPlanner::Execute() {
     return false;
   }
 
+  const auto &lat_traj =
+      session_->planning_context().planning_result().traj_points;
+  session_->mutable_planning_context()->mutable_last_hpp_lateral_motion_traj().assign(
+      lat_traj.begin(), lat_traj.end());
+
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LateralMotionCostTime", end_time - start_time);
   SaveDebugInfo();

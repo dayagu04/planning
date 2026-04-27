@@ -392,6 +392,7 @@ class BaseWeight {
   double lc_remain_time_;
   size_t last_remotely_index_;
   size_t avoid_end_index_;
+  bool hpp_initialized_ = false;
   bool is_lane_change_hold_;
   bool is_lane_change_back_;
   bool is_in_intersection_;

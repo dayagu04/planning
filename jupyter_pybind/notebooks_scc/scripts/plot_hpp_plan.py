@@ -27,6 +27,7 @@ mode = 'both'
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/trigger/20260416/20260416-20-52-16/data_collection_BESTUNE_E541_36718_EVENT_KEY_2026-04-16-20-52-16_no_camera.bag"
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/trigger/20260416/20260416-20-53-11/data_collection_BESTUNE_E541_36718_EVENT_KEY_2026-04-16-20-53-11_no_camera.bag"
 bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_15345/trigger/20260413/20260413-19-54-32/data_collection_BESTUNE_E541_15345_EVENT_MANUAL_2026-04-13-19-54-32_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_36718/trigger/20260417/20260417-12-14-52/data_collection_BESTUNE_E541_36718_EVENT_KEY_2026-04-17-12-14-52_no_camera.bag"
 
 frame_dt = 0.05  # sec
 global_fig_plot = True

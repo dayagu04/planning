@@ -37,12 +37,12 @@ ResultTrajectoryGenerator::ResultTrajectoryGenerator(
 
 void ResultTrajectoryGenerator::Init() {
   const int N = config_.trajectory_time_length / config_.planning_dt;
-  t_vec_.resize(N + 1);
-  s_vec_.resize(N + 1);
-  l_vec_.resize(N + 1);
-  curvature_vec_.resize(N + 1);
-  dkappa_vec_.resize(N + 1);
-  ddkappa_vec_.resize(N + 1);
+  t_vec_.reserve(static_cast<size_t>(N + 1));
+  s_vec_.reserve(static_cast<size_t>(N + 1));
+  l_vec_.reserve(static_cast<size_t>(N + 1));
+  curvature_vec_.reserve(static_cast<size_t>(N + 1));
+  dkappa_vec_.reserve(static_cast<size_t>(N + 1));
+  ddkappa_vec_.reserve(static_cast<size_t>(N + 1));
 }
 
 bool ResultTrajectoryGenerator::Execute() {
@@ -93,6 +93,18 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   pnc::mathlib::spline ddkappa_t_spline;
 
   auto const N = traj_points.size();
+  if (N == 0) {
+    ILOG_ERROR << "ResultTrajectoryGenerator::TrajectoryGenerator traj_points is empty";
+    return false;
+  }
+  if (t_vec_.size() != N) {
+    t_vec_.resize(N);
+    s_vec_.resize(N);
+    l_vec_.resize(N);
+    curvature_vec_.resize(N);
+    dkappa_vec_.resize(N);
+    ddkappa_vec_.resize(N);
+  }
 
   const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
@@ -159,8 +171,10 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   }
 
   std::vector<TrajectoryPoint> dense_traj_points;
+  const double output_end_t =
+      std::min(traj_points.back().t, config_.output_time_length);
   int dense_num_points =
-      int(traj_points.back().t / config_.planning_result_delta_time) + 1;
+      int(output_end_t / config_.planning_result_delta_time) + 1;
 
   auto is_in_speed_bump_range = [&speed_bump_expanded_segments](double s) {
     for (const auto &range : speed_bump_expanded_segments) {
@@ -287,8 +301,10 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
 
   // Step 2) get dense trajectory points
   std::vector<TrajectoryPoint> dense_traj_points;
+  const double output_end_t =
+      std::min(traj_points.back().t, config_.output_time_length);
   size_t dense_num_points =
-      int(traj_points.back().t / config_.planning_result_delta_time) + 1;
+      int(output_end_t / config_.planning_result_delta_time) + 1;
   dense_traj_points.reserve(dense_num_points);
 
   for (int j = 0; j < dense_num_points; ++j) {
