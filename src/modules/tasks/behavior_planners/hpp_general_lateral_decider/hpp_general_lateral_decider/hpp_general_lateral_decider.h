@@ -96,6 +96,22 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
+  void GenerateBoundCenterLine(
+      const std::vector<std::pair<double, double>> &hard_bounds,
+      const int window);
+  void MergeReferenceTrajectories(
+      const std::vector<std::pair<double, double>> &hard_bounds,
+      const std::vector<std::pair<double, double>> &soft_bounds);
+  bool SmoothPointsIteratively(
+      const std::vector<Point2D> &input,
+      TrajectoryPoints &output,
+      const int effective_radius,
+      const size_t iters);
+  TrajectoryPoints iterativeSmoothWithBounds(const TrajectoryPoints& trajectory);
+  void PreprocessSoftBounds(
+      std::vector<std::pair<double, double>> *soft_bounds,
+      const TrajectoryPoints &ref_traj,
+      const std::vector<std::pair<double, double>> &hard_bounds);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
@@ -158,9 +174,6 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   void GenerateEnuReferenceTraj(
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
-  void GenerateEnuReferenceTheta(
-      GeneralLateralDeciderOutput &general_lateral_decider_output);
-
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
   void HandleAvoidScene(TrajectoryPoints &traj_points,
                         double dynamic_ref_buffer);
@@ -188,6 +201,7 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
+  TrajectoryPoints bound_center_line_;
   TrajectoryPoints plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
 
@@ -208,11 +222,15 @@ class HppGeneralLateralDecider : public BaseGeneralLateralDecider {
   std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info_;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info_;
 
+  std::vector<std::pair<Point2D, Point2D>> enu_soft_bounds_;
+  std::vector<std::pair<Point2D, Point2D>> enu_hard_bounds_;
 
   std::vector<std::pair<double, double>>
       vehicle_dynamic_buffer_;  // <left, right>
   pnc::mathlib::spline lbuffer_s_spline_;
   pnc::mathlib::spline rbuffer_s_spline_;
+
+  bool is_point_in_turning_{false};
 
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;

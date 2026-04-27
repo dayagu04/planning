@@ -271,7 +271,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_planning_request_data(bag_loader, local_view_data, planning_request_data)
 
   push_notebook()
-pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_curve)), title="CurveFigure")
+pan1 = Panel(child=row(column(fig2, fig8, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_curve)), title="CurveFigure")
 pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(row(data_behavior_table_1, data_behavior_table_dynamic_lane_change)))), title="BehaviorInfo")
 pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(ad_info_table, column(hpp_info_table, nsa_info_table, rads_info_table, planning_request_table))))), title="Hmi")
 pan4 = Panel(child=row(column(fig7)), title="!Figure")
