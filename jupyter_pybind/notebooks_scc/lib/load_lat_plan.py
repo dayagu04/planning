@@ -741,6 +741,9 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         final_acc_vec = []
         final_jerk_vec = []
 
+        if target_len <= 1 or src_len == 0:
+          raise ValueError(f"插值长度无效: target_len={target_len}, src_len={src_len}")
+
         for j in range(target_len):
           pos = j * (src_len - 1) / (target_len - 1)
           i = int(pos)
@@ -760,7 +763,8 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
           'final_acc_vec': final_acc_vec,
           'final_jerk_vec': final_jerk_vec,
         })
-      except:
+      except Exception as e:
+        print(f"[update_lat_plan_data] HPP 插值失败，回退到原始数据: {e}")
         lat_plan_data['data_lat_motion_plan_output'].data.update({
           'final_acc_vec': plan_lat_acc,
           'final_jerk_vec': plan_lat_jerk,

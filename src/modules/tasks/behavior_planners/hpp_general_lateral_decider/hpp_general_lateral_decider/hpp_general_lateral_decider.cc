@@ -528,7 +528,7 @@ void HppGeneralLateralDecider::CalculateLonSampleLength() {
 
     factor = std::clamp(factor, 0.5, 1.0);
     const double adjusted =
-        std::clamp(origin_cruise_v * factor, kMinCruiseV, origin_cruise_v);
+        std::clamp(origin_cruise_v * factor, kMinCruiseV, std::max(kMinCruiseV, origin_cruise_v));
     cruise_v = adjusted;
   }
 
@@ -3259,6 +3259,7 @@ void HppGeneralLateralDecider::GenerateEnuReferenceTraj(
   auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
   enu_ref_path.clear();
+  enu_ref_theta.clear();
   enu_ref_path.resize(ref_traj_points_.size());
 
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {

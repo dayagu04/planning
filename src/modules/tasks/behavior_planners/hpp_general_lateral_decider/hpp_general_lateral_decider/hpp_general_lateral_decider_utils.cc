@@ -180,7 +180,7 @@ bool GetTrajectoryPointAtS(const TrajectoryPoints &trajectory_points,
     return p.s < s;
   };
 
-  if (query_s < points.front().s) {
+  if (query_s <= points.front().s) {
     const TrajectoryPoint &first_point = points.front();
     point.s = query_s;
     point.l = first_point.l;
@@ -191,7 +191,7 @@ bool GetTrajectoryPointAtS(const TrajectoryPoints &trajectory_points,
     point.v = first_point.v;
     point.a = first_point.a;
     point.jerk = first_point.jerk;
-    point.t = first_point.t - (first_point.s - query_s) / first_point.v;
+    point.t = first_point.t - (first_point.s - query_s) / std::max(first_point.v, 1e-3);
     return true;
   } else if (query_s > points.back().s) {
     const TrajectoryPoint &last_point = points.back();
@@ -204,7 +204,7 @@ bool GetTrajectoryPointAtS(const TrajectoryPoints &trajectory_points,
     point.v = last_point.v;
     point.a = last_point.a;
     point.jerk = last_point.jerk;
-    point.t = last_point.t + (query_s - last_point.s) / last_point.v;
+    point.t = last_point.t + (query_s - last_point.s) / std::max(last_point.v, 1e-3);
     return true;
   }
 
