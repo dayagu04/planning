@@ -1669,50 +1669,50 @@ void LaneBorrowDeciderV3Utils::AddLaneBorrowVirtualObstacle(
   // 判断是否需要添加虚拟障碍物，如果当前路径已经能够保证无恐慌的通过借道障碍物，即横向较远
   // 就不需要添加虚拟障碍物
   const double target_l = obs_inner_l;
-  bool no_need_virtual_obs = true;
-  std::unordered_map<int, bool> curr_need_virtual_obs_map;
-  for (const int obs_id : static_blocked_obj_id_vec_) {
-    double lat_buffer_to_obstacle = kStaticOtherMaxExtraLateralBuffer;
-    const auto obs_it =
-        std::find_if(obstacles.begin(), obstacles.end(),
-                     [obs_id](const std::shared_ptr<FrenetObstacle>& o) {
-                       return o != nullptr && o->obstacle() != nullptr &&
-                              o->obstacle()->id() == obs_id;
-                     });
-    if (obs_it == obstacles.end() || !(*obs_it)->b_frenet_valid()) {
-      continue;
-    }
-    if ((*obs_it)->obstacle()->is_VRU() ||
-        (*obs_it)->obstacle()->is_oversize_vehicle() ||
-        !((*obs_it)->obstacle()->is_static())) {
-      lat_buffer_to_obstacle += 0.3;
-    }
-    const auto& obs_sl = (*obs_it)->frenet_obstacle_boundary();
-    const double l_min = std::min(obs_sl.l_start, obs_sl.l_end);
-    const double l_max = std::max(obs_sl.l_start, obs_sl.l_end);
-    const double clearance =
-        (target_l < l_min) ? (l_min - target_l)
-                           : (target_l > l_max) ? (target_l - l_max) : 0.0;
-    const double min_no_panic_clearance =
-        vehicle_width_ * 0.5 + lat_buffer_to_obstacle;
-    // 上一帧该障碍物是否被判定为需要虚拟障碍物
-    const auto hist_it = need_virtual_obs_hysteresis_map_.find(obs_id);
-    const bool last_need = (hist_it != need_virtual_obs_hysteresis_map_.end())
-                               ? hist_it->second
-                               : false;
-    // 有滞回的阈值：上一帧 need=false 时，
-    // clearance 需要比阈值小 kClearanceHysteresis 才切换为 need=true。
-    const double effective_threshold =
-        last_need ? min_no_panic_clearance
-                  : (min_no_panic_clearance - kClearanceHysteresis);
-    const bool curr_need = (clearance < effective_threshold);
-    curr_need_virtual_obs_map[obs_id] = curr_need;
-    if (curr_need) {
-      no_need_virtual_obs = false;
-    }
-  }
-  // 更新滞回状态：仅保留本帧仍在 static_blocked_obj_id_vec_ 中的条目，避免膨胀
-  need_virtual_obs_hysteresis_map_ = std::move(curr_need_virtual_obs_map);
+  bool no_need_virtual_obs = false;
+  // std::unordered_map<int, bool> curr_need_virtual_obs_map;
+  // for (const int obs_id : static_blocked_obj_id_vec_) {
+  //   double lat_buffer_to_obstacle = kStaticOtherMaxExtraLateralBuffer;
+  //   const auto obs_it =
+  //       std::find_if(obstacles.begin(), obstacles.end(),
+  //                    [obs_id](const std::shared_ptr<FrenetObstacle>& o) {
+  //                      return o != nullptr && o->obstacle() != nullptr &&
+  //                             o->obstacle()->id() == obs_id;
+  //                    });
+  //   if (obs_it == obstacles.end() || !(*obs_it)->b_frenet_valid()) {
+  //     continue;
+  //   }
+  //   if ((*obs_it)->obstacle()->is_VRU() ||
+  //       (*obs_it)->obstacle()->is_oversize_vehicle() ||
+  //       !((*obs_it)->obstacle()->is_static())) {
+  //     lat_buffer_to_obstacle += 0.3;
+  //   }
+  //   const auto& obs_sl = (*obs_it)->frenet_obstacle_boundary();
+  //   const double l_min = std::min(obs_sl.l_start, obs_sl.l_end);
+  //   const double l_max = std::max(obs_sl.l_start, obs_sl.l_end);
+  //   const double clearance =
+  //       (target_l < l_min) ? (l_min - target_l)
+  //                          : (target_l > l_max) ? (target_l - l_max) : 0.0;
+  //   const double min_no_panic_clearance =
+  //       vehicle_width_ * 0.5 + lat_buffer_to_obstacle;
+  //   // 上一帧该障碍物是否被判定为需要虚拟障碍物
+  //   const auto hist_it = need_virtual_obs_hysteresis_map_.find(obs_id);
+  //   const bool last_need = (hist_it != need_virtual_obs_hysteresis_map_.end())
+  //                              ? hist_it->second
+  //                              : false;
+  //   // 有滞回的阈值：上一帧 need=false 时，
+  //   // clearance 需要比阈值小 kClearanceHysteresis 才切换为 need=true。
+  //   const double effective_threshold =
+  //       last_need ? min_no_panic_clearance
+  //                 : (min_no_panic_clearance - kClearanceHysteresis);
+  //   const bool curr_need = (clearance < effective_threshold);
+  //   curr_need_virtual_obs_map[obs_id] = curr_need;
+  //   if (curr_need) {
+  //     no_need_virtual_obs = false;
+  //   }
+  // }
+  // // 更新滞回状态：仅保留本帧仍在 static_blocked_obj_id_vec_ 中的条目，避免膨胀
+  // need_virtual_obs_hysteresis_map_ = std::move(curr_need_virtual_obs_map);
   if (no_need_virtual_obs) {
     return;
   }
