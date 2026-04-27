@@ -3151,8 +3151,8 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
   hard_bounds_output = enu_hard_bounds_;
 
   // 临时 hack（flli9）：避免折返约束
-  static constexpr double kReverseTurnDegThreshold = 95.0 * M_PI / 180.0;
-  static constexpr double kMinSegmentLength = 0.1;
+  static constexpr double kReverseTurnDegThreshold = 90.0 * M_PI / 180.0;
+  static constexpr double kMinSegmentLength = 1e-4;
   const auto smooth_reverse_points = [&](const int current_index,
                                          const bool use_lower) {
     if (current_index <= 0 ||
