@@ -170,46 +170,68 @@ TrajectoryPoint GetTrajectoryPointAtTime(
   }
 }
 
-TrajectoryPoint GetTrajectoryPointAtS(
-    const TrajectoryPoints trajectory_points, const double query_s) {
+bool GetTrajectoryPointAtS(const TrajectoryPoints &trajectory_points,
+                           const double query_s, TrajectoryPoint &point) {
   const auto &points = trajectory_points;
   if (trajectory_points.size() < 2) {
-    TrajectoryPoint point;
-    return point;
+    return false;
   }
   auto comp = [](const TrajectoryPoint &p, const double s) {
     return p.s < s;
   };
 
+  if (query_s <= points.front().s) {
+    const TrajectoryPoint &first_point = points.front();
+    point.s = query_s;
+    point.l = first_point.l;
+    point.x = first_point.x;
+    point.y = first_point.y;
+    point.heading_angle = first_point.heading_angle;
+    point.curvature = first_point.curvature;
+    point.v = first_point.v;
+    point.a = first_point.a;
+    point.jerk = first_point.jerk;
+    point.t = first_point.t - (first_point.s - query_s) / std::max(first_point.v, 1e-3);
+    return true;
+  } else if (query_s > points.back().s) {
+    const TrajectoryPoint &last_point = points.back();
+    point.s = query_s;
+    point.l = last_point.l;
+    point.x = last_point.x;
+    point.y = last_point.y;
+    point.heading_angle = last_point.heading_angle;
+    point.curvature = last_point.curvature;
+    point.v = last_point.v;
+    point.a = last_point.a;
+    point.jerk = last_point.jerk;
+    point.t = last_point.t + (query_s - last_point.s) / std::max(last_point.v, 1e-3);
+    return true;
+  }
+
   auto it_lower =
       std::lower_bound(points.begin(), points.end(), query_s, comp);
 
-  if (it_lower == points.begin()) {
-    return *points.begin();
-  }
-  if (it_lower == points.end()) {
-    return *points.rbegin();
-  }
   const TrajectoryPoint &p0 = *(it_lower - 1);
   const TrajectoryPoint &p1 = *it_lower;
   if (std::fabs(p0.s - p1.s) < 1e-6) {
-    return p0;
+    point = p0;
+    return true;
   }
   const double weight0 = (query_s - p0.s) / (p1.s - p0.s);
   const double weight1 = 1.0 - weight0;
-  TrajectoryPoint trajectory_point;
-  trajectory_point.x = weight1 * p0.x + weight0 * p1.x;
-  trajectory_point.y = weight1 * p0.y + weight0 * p1.y;
-  trajectory_point.heading_angle = planning_math::slerp(
+  point.x = weight1 * p0.x + weight0 * p1.x;
+  point.y = weight1 * p0.y + weight0 * p1.y;
+  point.heading_angle = planning_math::slerp(
       p0.heading_angle, p0.s, p1.heading_angle, p1.s, query_s);
-  trajectory_point.curvature =
+  point.curvature =
       weight1 * p0.curvature + weight0 * p1.curvature;
-  trajectory_point.t = weight1 * p0.t + weight0 * p1.t;
-  trajectory_point.v = weight1 * p0.v + weight0 * p1.v;
-  trajectory_point.a = weight1 * p0.a + weight0 * p1.a;
-  trajectory_point.s = weight1 * p0.s + weight0 * p1.s;
-  trajectory_point.jerk = weight1 * p0.jerk + weight0 * p1.jerk;
-  return trajectory_point;
+  point.t = weight1 * p0.t + weight0 * p1.t;
+  point.v = weight1 * p0.v + weight0 * p1.v;
+  point.a = weight1 * p0.a + weight0 * p1.a;
+  point.s = weight1 * p0.s + weight0 * p1.s;
+  point.l = weight1 * p0.l + weight0 * p1.l;
+  point.jerk = weight1 * p0.jerk + weight0 * p1.jerk;
+  return true;
 }
 
 bool IsVRU(iflyauto::ObjectType type) {
