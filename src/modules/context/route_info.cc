@@ -3166,7 +3166,7 @@ bool RouteInfo::CalculateCurrentPoseInfo(const Map::StaticMap& static_map_info) 
         nearest_lane = lane_ptr;
         sum_s = nearest_s;
         if (!nearest_lane->lane().predecessor_lane_id().empty()) {
-          sum_s = CalculatePointAccumulateS(
+          sum_s += CalculatePointAccumulateS(
               nearest_lane->lane().predecessor_lane_id(0));
         }
         break;
