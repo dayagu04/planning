@@ -221,7 +221,7 @@ bool LongTimeTaskPipelineV3::Run() {
                                             ->get_function_switch_config()
                                             .disable_lane_borrow);
   if (enable_lane_borrow_deciderV3_ && !disable_lb_from_product) {
-    ok = lane_borrow_deciderV2_->Execute();
+    ok = lane_borrow_deciderV3_->Execute();
     if (!ok) {
       AddErrorInfo(lane_borrow_deciderV3_->Name());
       return false;
