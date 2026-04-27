@@ -174,6 +174,8 @@ void RouteInfo::UpdateRouteInfoForNOA(
   const iflymapdata::sdpro::LinkInfo_Link& current_link = *link;
   const auto& sdpro_map_info = local_view.sdpro_map_info;
   route_info_output_.map_vendor = sdpro_map_info.data_source();
+  // 腾讯地图无法判断lane前方是否在route_link上，不影响跨实现变道逻辑，默认false
+  route_info_output_.is_ego_lane_forward_on_route_link = false;
 
   // 计算ramp信息
   CaculateRampInfo(sdpro_map, current_link, nearest_s, max_search_length);
