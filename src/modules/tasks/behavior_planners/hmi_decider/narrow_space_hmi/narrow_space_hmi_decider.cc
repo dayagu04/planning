@@ -7,6 +7,7 @@ namespace planning {
 namespace {
   constexpr double kEps = 1e-6;
   constexpr double kEgoStopVelThd = 0.1;
+  constexpr double kEgoStopDistThd = 1.0;
   constexpr double kNsaLonDisThred = 50.0;
 }
 NarrowSpaceHMIDecider::NarrowSpaceHMIDecider(framework::Session* session) {
@@ -37,7 +38,12 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
   const auto& narrow_space_decider_output =
       session_->planning_context().narrow_space_decider_output();
   const auto &ego_state = session_->environmental_model().get_ego_state_manager();
-
+  const auto& raw_traj_points =
+      session_->planning_context().planning_result().raw_traj_points;
+  double traj_length = 0.0;
+  if (!raw_traj_points.empty()) {
+    traj_length = std::max(raw_traj_points.back().s - raw_traj_points.front().s, traj_length);
+  }
   bool is_block_by_obstacle = false;
   bool is_passable_condition = narrow_space_decider_output.is_in_narrow_space;
   if (!narrow_space_decider_output.is_in_narrow_space) {
@@ -83,7 +89,7 @@ bool NarrowSpaceHMIDecider::GenerateHMIInfo() {
       // hmi_info->nsa_info.is_complete = true;
       hmi_info->nsa_info.nsa_complete_reason = iflyauto::NSACompleteReason::NSA_COMPLETE_REASON_DISTANCE_SATISFY;
       mutable_nsa_planning_completed = true;
-    } else if (ego_state->ego_v() < kEgoStopVelThd) {
+    } else if (ego_state->ego_v() < kEgoStopVelThd && traj_length < kEgoStopDistThd) {
       hmi_info->nsa_info.nsa_pause_reason = iflyauto::NSA_PAUSE_REASON_BLOCK;
     } else {
       // hmi_info->nsa_info.is_complete = false;

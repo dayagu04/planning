@@ -328,8 +328,8 @@ bool PlanningAdapter::Proc() {
   UpdateApaResetFlag();
 
   // 2.planning run
-  iflyauto::PlanningOutput planning_output;
-  iflyauto::PlanningHMIOutputInfoStr planning_hmi_info;
+  iflyauto::PlanningOutput planning_output{};
+  iflyauto::PlanningHMIOutputInfoStr planning_hmi_info{};
   auto planning_debuginfo_container =
       std::make_shared<iflyauto::StructContainer>();
 

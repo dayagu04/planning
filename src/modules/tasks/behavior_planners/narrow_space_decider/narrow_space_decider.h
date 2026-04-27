@@ -73,6 +73,7 @@ class NarrowSpaceDecider : public Task {
   bool is_exist_narrow_space_;
   bool is_passable_;
   bool is_in_function_;
+  bool is_prepare_function_;
   bool is_out_of_narrow_space_;
   double distance_to_end_;
   double distance_to_narrow_space_;
