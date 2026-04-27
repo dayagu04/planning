@@ -276,6 +276,13 @@ class SpeedLimitDecider : public Task {
       0;  // Frame counter for S-curve confirmation
   double s_curve_road_boundary_v_limit_ =
       100.0;  // Speed limit when S-curve is detected
+
+  // Construction intrusion speed limit state
+  bool construction_intrusion_active_ = false;
+  int construction_intrusion_exit_frame_count_ = 0;
+  int construction_intrusion_last_level_ = 0;
+  double construction_intrusion_last_abs_l_ = 0.0;
+  double construction_intrusion_last_distance_ = 0.0;
 };
 
 }  // namespace planning
