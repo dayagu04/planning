@@ -66,6 +66,9 @@ class SpeedLimitDecider : public Task {
 
   void CalculatePOISpeedLimit();
 
+  void CalculateRoundaboutFunctionQuitSpeedLimit(bool using_ld_map,
+                        uint64_t road_seg_id, double accumulated_s);
+
   void CalculateLaneBorrowSpeedLimit();
 
   void CalculateSpeedLimitFromTFLDis();
