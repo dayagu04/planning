@@ -535,7 +535,7 @@ void HppLateralObstacleDecider::MakeDecisionBasedRelativePos(
           decision_info.decision = LatObstacleDecisionType::LEFT;
         }
         if (decision_info.right_nudge_level ==
-            LatObstacleNudgeLevel::FORBIDDEN_NUDGE) {
+            LatObstacleNudgeLevel::ABSOLUTE_NUDGE) {
           decision_info.decision = LatObstacleDecisionType::RIGHT;
         }
       }
