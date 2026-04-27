@@ -789,8 +789,14 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
 
   std::shared_ptr<ReferencePath> reference_path_ptr =
       reference_path_mgr->get_reference_path_by_lane(origin_lane_id, false);
+  if (reference_path_ptr == nullptr) {
+    return true;
+  }
   const std::shared_ptr<VirtualLane> target_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
+  if (target_lane == nullptr) {
+    return true;
+  }
   const double ego_lateral_offset_in_target_lane =
       std::fabs(target_lane->get_ego_lateral_offset());
 
@@ -803,7 +809,8 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
                          planning_init_point.lat_init_state.y()};
-  if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
+  if (base_frenet_coord == nullptr ||
+      !base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
     ILOG_DEBUG << "IsRoadBorderSurpressLaneChange::fail to get ego position on "
                   "base lane";
     return true;
