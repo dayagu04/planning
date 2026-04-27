@@ -95,5 +95,9 @@
   "clangd.path": ".ci/clangd_16.0.2/bin/clangd",
   "clangd.arguments": [
       "--compile-commands-dir=${workspaceFolder}/build/"
+  ],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/jupyter_pybind/notebooks_scc",
+    "${workspaceFolder}/jupyter_pybind/notebooks_scc/lib"
   ]
 }

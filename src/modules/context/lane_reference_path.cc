@@ -443,12 +443,7 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       const double extend_length =
           preview_dis + ego_projection_length_in_reference_path -
           origin_reference_path_total_length + extend_buff;
-      ReferencePathPoint extend_point;
-      const int point_nums = ref_path_points.size();
-      extend_point = CalculateExtendedReferencePathPoint(
-          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
-          extend_length);
-      ref_path_points.emplace_back(std::move(extend_point));
+      CalculateExtendedReferencePathPoint(ref_path_points, extend_length, 1.0, true);
     }
   }
   return ref_path_points.size() >= 3;
@@ -594,12 +589,7 @@ bool LaneReferencePath::get_ref_points_hpp(
     if (extended_ref_path_length > origin_reference_path_total_length) {
       const double extended_length =
           extended_ref_path_length - origin_reference_path_total_length;
-      ReferencePathPoint extend_point;
-      const int point_nums = ref_path_points.size();
-      extend_point = CalculateExtendedReferencePathPoint(
-          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
-          extended_length);
-      ref_path_points.emplace_back(std::move(extend_point));
+      CalculateExtendedReferencePathPoint(ref_path_points, extended_length, 1.0, true);
       extended_reference_path_length_ = extended_ref_path_length;
     } else {
       extended_reference_path_length_ = origin_reference_path_total_length;
@@ -707,27 +697,14 @@ bool LaneReferencePath::get_ref_points_rads(
         0.0, backward_extend_buff -
                  (cur_path_point_s - ref_path_points.front().path_point.s()));
     if (backward_extend_length > 1e-2) {
-      ReferencePathPoint backward_extend_point;
-      backward_extend_point = CalculateExtendedReferencePathPoint(
-          ref_path_points[1], ref_path_points[0], backward_extend_length);
-      backward_extend_point.path_point.set_s(
-          ref_path_points.front().path_point.s() - backward_extend_length);
-      ref_path_points.emplace(ref_path_points.begin(),
-                              std::move(backward_extend_point));
+      CalculateExtendedReferencePathPoint(ref_path_points, backward_extend_length, 1.0, false);
     }
     // forward
     double forward_extend_length = std::max(
         0.0, forward_extend_buff -
                  (ref_path_points.back().path_point.s() - cur_path_point_s));
     if (forward_extend_length > 1e-2) {
-      ReferencePathPoint forward_extend_point;
-      const int point_nums = ref_path_points.size();
-      forward_extend_point = CalculateExtendedReferencePathPoint(
-          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
-          forward_extend_length);
-      forward_extend_point.path_point.set_s(
-          ref_path_points.back().path_point.s() + forward_extend_length);
-      ref_path_points.emplace_back(std::move(forward_extend_point));
+      CalculateExtendedReferencePathPoint(ref_path_points, forward_extend_length, 1.0, true);
     }
   }
   return ref_path_points.size() >= 3;
@@ -762,12 +739,7 @@ bool LaneReferencePath::ExtendConstructionRefPathPoints(
       const double extend_length =
           preview_dis + ego_projection_length_in_reference_path -
           origin_reference_path_total_length + extend_buff;
-      ReferencePathPoint extend_point;
-      const int point_nums = ref_path_points.size();
-      extend_point = CalculateExtendedReferencePathPoint(
-          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
-          extend_length);
-      ref_path_points.emplace_back(std::move(extend_point));
+      CalculateExtendedReferencePathPoint(ref_path_points, extend_length, 1.0, true);
     }
   }
   return ref_path_points.size() >= 3;
@@ -918,50 +890,57 @@ bool LaneReferencePath::is_potential_current_leadone_leadtwo_to_ego(
     return false;
   }
 }
-ReferencePathPoint LaneReferencePath::CalculateExtendedReferencePathPoint(
-    const ReferencePathPoint &p1, const ReferencePathPoint &p2,
-    const double length) const {
-  // 计算直线方向向量
-  double dx = p2.path_point.x() - p1.path_point.x();
-  double dy = p2.path_point.y() - p1.path_point.y();
-  // 计算直线长度
-  double line_length = sqrt(dx * dx + dy * dy);
-  // 将方向向量归一化
-  dx /= line_length;
-  dy /= line_length;
-  // 计算延长后的点坐标
-  ReferencePathPoint extend_point;
-  extend_point.path_point.set_x(p2.path_point.x() + dx * length);
-  extend_point.path_point.set_y(p2.path_point.y() + dy * length);
+void LaneReferencePath::CalculateExtendedReferencePathPoint(
+    ReferencePathPoints &ref_path_points,
+    const double extend_length,
+    const double interval,
+    const bool forward) const {
+  double remaining_length = extend_length;
+  while (remaining_length > 1e-3) {
+    const double segment_length = std::min(remaining_length, interval);
+    const int point_nums = ref_path_points.size();
+    const ReferencePathPoint &p1 = forward ? ref_path_points[point_nums - 2] : ref_path_points[1];
+    const ReferencePathPoint &p2 = forward ? ref_path_points[point_nums - 1] : ref_path_points[0];
 
-  const auto &last_point = p2;
-  extend_point.path_point.set_z(last_point.path_point.z());
-  extend_point.path_point.set_theta(last_point.path_point.theta());
-  extend_point.path_point.set_kappa(1e-6);
+    double dx = p2.path_point.x() - p1.path_point.x();
+    double dy = p2.path_point.y() - p1.path_point.y();
+    double line_length = sqrt(dx * dx + dy * dy);
+    if (line_length < 1e-6) break;
+    dx /= line_length;
+    dy /= line_length;
 
-  extend_point.distance_to_left_lane_border =
-      last_point.distance_to_left_lane_border;
-  extend_point.distance_to_left_road_border =
-      last_point.distance_to_left_road_border;
-  extend_point.distance_to_right_lane_border =
-      last_point.distance_to_right_lane_border;
-  extend_point.distance_to_right_road_border =
-      last_point.distance_to_right_road_border;
+    ReferencePathPoint extend_point;
+    extend_point.path_point.set_x(p2.path_point.x() + dx * segment_length);
+    extend_point.path_point.set_y(p2.path_point.y() + dy * segment_length);
+    extend_point.path_point.set_z(p2.path_point.z());
+    extend_point.path_point.set_theta(p2.path_point.theta());
+    extend_point.path_point.set_kappa(1e-6);
+    extend_point.path_point.set_s(forward ? p2.path_point.s() + segment_length : p2.path_point.s() - segment_length);
 
-  extend_point.left_road_border_type = last_point.left_road_border_type;
-  extend_point.right_road_border_type = last_point.right_road_border_type;
-  extend_point.left_lane_border_type = last_point.left_lane_border_type;
-  extend_point.right_lane_border_type = last_point.right_lane_border_type;
-  extend_point.lane_width = last_point.lane_width;
-  extend_point.max_velocity = last_point.max_velocity;
-  extend_point.min_velocity = last_point.min_velocity;
-  extend_point.type = ReferencePathPointType::MAP;
-  extend_point.is_in_intersection = last_point.is_in_intersection;
-  extend_point.is_ramp = last_point.is_ramp;
-  extend_point.ramp_slope = last_point.ramp_slope;
-  extend_point.floor_id = last_point.floor_id;
+    extend_point.distance_to_left_lane_border = p2.distance_to_left_lane_border;
+    extend_point.distance_to_left_road_border = p2.distance_to_left_road_border;
+    extend_point.distance_to_right_lane_border = p2.distance_to_right_lane_border;
+    extend_point.distance_to_right_road_border = p2.distance_to_right_road_border;
+    extend_point.left_road_border_type = p2.left_road_border_type;
+    extend_point.right_road_border_type = p2.right_road_border_type;
+    extend_point.left_lane_border_type = p2.left_lane_border_type;
+    extend_point.right_lane_border_type = p2.right_lane_border_type;
+    extend_point.lane_width = p2.lane_width;
+    extend_point.max_velocity = p2.max_velocity;
+    extend_point.min_velocity = p2.min_velocity;
+    extend_point.type = ReferencePathPointType::MAP;
+    extend_point.is_in_intersection = p2.is_in_intersection;
+    extend_point.is_ramp = p2.is_ramp;
+    extend_point.ramp_slope = p2.ramp_slope;
+    extend_point.floor_id = p2.floor_id;
 
-  return extend_point;
+    if (forward) {
+      ref_path_points.emplace_back(std::move(extend_point));
+    } else {
+      ref_path_points.emplace(ref_path_points.begin(), std::move(extend_point));
+    }
+    remaining_length -= segment_length;
+  }
 }
 
 double LaneReferencePath::CalculateEgoProjectionDistanceInReferencePath(
