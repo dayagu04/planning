@@ -49,8 +49,8 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
   //     std::make_unique<SamplePolySpeedAdjustDecider>(config_builder,
   //     session);
   // auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
-  // enable_lane_borrow_deciderV2_ =
-  //     lane_borrow_config.enable_lane_borrow_deciderV2;
+  // enable_lane_borrow_deciderV3_ =
+  //     lane_borrow_config.enable_lane_borrow_deciderV3;
 }
 
 bool LongTimeTaskPipelineV2::Run() {
@@ -88,7 +88,7 @@ bool LongTimeTaskPipelineV2::Run() {
   //   return false;
   // }
 
-  // if (enable_lane_borrow_deciderV2_) {
+  // if (enable_lane_borrow_deciderV3_) {
   //   ok = lane_borrow_deciderV2_->Execute();
   //   if (!ok) {
   //     AddErrorInfo(lane_borrow_deciderV2_->Name());
@@ -101,7 +101,7 @@ bool LongTimeTaskPipelineV2::Run() {
   //     return false;
   //   }
   // }
-  // if (enable_lane_borrow_deciderV2_) {
+  // if (enable_lane_borrow_deciderV3_) {
   //   ok = lane_borrow_deciderV2_->Execute();
   //   if (!ok) {
   //     AddErrorInfo(lane_borrow_deciderV2_->Name());

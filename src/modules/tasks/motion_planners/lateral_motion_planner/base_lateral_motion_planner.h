@@ -72,6 +72,10 @@ class BaseLateralMotionPlanner : public Task {
   bool is_ref_consistent_;
   size_t valid_continuity_idx_;
   double curv_factor_;
+  double max_wheel_angle_;
+  double max_wheel_angle_rate_;
+  double max_wheel_angle_rate_lc_;
+  double lane_rel_theta_error_;
   std::vector<double> ref_theta_vec_;
   std::vector<double> virtual_ref_x_;
   std::vector<double> virtual_ref_y_;

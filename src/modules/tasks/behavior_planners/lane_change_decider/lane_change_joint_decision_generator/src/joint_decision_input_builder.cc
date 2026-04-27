@@ -210,7 +210,15 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   auto speed_limit_type_ref = SpeedLimitType::NONE;
   speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
                                            &speed_limit_type_ref);
-  const double v0 = std::fmin(speed_limit_normal, speed_limit_ref);
+  double current_lc_limit = speed_limit_ref;
+  //限速设置：不超过130，曲率限速不能超， max(自车速度*1.05，巡航限速*1.05)；
+  if(speed_limit_type_ref == SpeedLimitType::SHARP_CURVATURE){
+    current_lc_limit = speed_limit_ref;
+  }else{
+    current_lc_limit = std::max(planning_init_point.v, speed_limit_ref) * 1.05; //变道时轻微超速
+  }
+  double kAbsoluteMaxSpeed = 130.0 / 3.6;
+  const double v0 = std::min(current_lc_limit, kAbsoluteMaxSpeed);
   JSON_DEBUG_VALUE("joint_decision_limit_speed", v0);
   comfort_params_.v0 = v0;
 
@@ -462,10 +470,10 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
 
   planning_input.set_q_ego_vel_bound_weight(lc_decision_config_.q_ego_vel_bound_weight);
   planning_input.clear_ego_vel_max();
+  const double ego_vel_max = comfort_params_.v0;
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
-    planning_input.add_ego_vel_max(comfort_params_.v0);
+    planning_input.add_ego_vel_max(ego_vel_max);
   }
-
   planning_input.set_q_hard_halfplane_weight(
       lc_decision_config_.q_hard_halfplane_weight);
   planning_input.set_hard_halfplane_dist(
@@ -555,12 +563,13 @@ void JointDecisionInputBuilder::BuildRoadInfo(
     std::shared_ptr<
         pnc::lane_change_joint_decision::JointDecisionPlanningProblem>
         planning_problem_ptr) {
-  const auto& reference_path_ptr = session_->planning_context()
-                                       .lane_change_decider_output()
-                                       .coarse_planning_info.reference_path;
-
+  // const auto& reference_path_ptr = session_->planning_context()
+  //                                      .lane_change_decider_output()
+  //                                      .coarse_planning_info.reference_path;
+  const auto& reference_path_ptr = session_->environmental_model()
+                                  .get_reference_path_manager()
+                                  ->get_reference_path_by_current_lane();
   double ego_s = reference_path_ptr->get_frenet_ego_state().s();
-
   std::vector<planning::planning_math::PathPoint> left_road_points;
   std::vector<planning::planning_math::PathPoint> right_road_points;
   left_road_points.reserve(kPlanningTimeSteps);

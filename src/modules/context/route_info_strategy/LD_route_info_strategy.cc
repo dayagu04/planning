@@ -5102,6 +5102,9 @@ LDRouteInfoStrategy::CalculateVirtualLaneRouteCost(
         } else {
           cost.lane_match_confidence = 0.0;
         }
+
+        // Weight by topological match score: low score = uncertain path matching
+        cost.lane_match_confidence *= std::max(0.3, best_match_score);
       }
     } else {
       // Ambiguous — no clear on/off signal
@@ -5321,39 +5324,98 @@ double LDRouteInfoStrategy::CalculateMatchScore(
       continue;
     }
 
-    // Find samples at split.dist [-5.0, +10.0] m
+    // Sliding window drop detection: scan range around split to detect drop
+    // Dynamic range: adjust based on next split distance to avoid confusion
+    double search_range = 30.0;
+    // If there is a next split, reduce range to avoid crossing splits
+    size_t next_split_idx = &split - &splits[0] + 1;
+    if (next_split_idx < splits.size()) {
+      double dist_to_next = splits[next_split_idx].dist - split.dist;
+      if (dist_to_next < 60.0) {
+        search_range = std::max(15.0, dist_to_next / 2.0);
+      }
+    }
+
+    bool right_dropped = false;
+    bool left_dropped = false;
     const PerceptionSample* pre_sample = nullptr;
     const PerceptionSample* post_sample = nullptr;
 
-    const double target_pre_dist = split.dist - 5.0;
-    const double target_post_dist = split.dist + 10.0;
+    // Sliding window detection: iterate through adjacent sample pairs
+    for (size_t i = 0; i + 1 < samples.size(); ++i) {
+      const PerceptionSample& pre = samples[i];
+      const PerceptionSample& post = samples[i + 1];
 
-    double min_pre_dist = std::numeric_limits<double>::max();
-    double min_post_dist = std::numeric_limits<double>::max();
-
-    for (const auto& sample : samples) {
-      double dist_to_pre = std::abs(sample.dist - target_pre_dist);
-      double dist_to_post = std::abs(sample.dist - target_post_dist);
-
-      if (dist_to_pre <= min_pre_dist) {
-        min_pre_dist = dist_to_pre;
-        pre_sample = &sample;
+      // Only check samples within search_range around split
+      if (pre.dist < split.dist - search_range ||
+          pre.dist > split.dist + search_range) {
+        continue;
       }
-      if (dist_to_post <= min_post_dist) {
-        min_post_dist = dist_to_post;
-        post_sample = &sample;
+      if (post.dist < split.dist - search_range ||
+          post.dist > split.dist + search_range) {
+        continue;
+      }
+
+      // Strict drop detection: check persistence
+      if (pre.right > 0 && post.right == 0) {
+        // Check if drop persists (next 2-3 samples are also 0)
+        bool is_persistent = true;
+        for (size_t j = i + 1; j < std::min(i + 4, samples.size()); ++j) {
+          if (samples[j].right > 0) {
+            is_persistent = false;
+            break;
+          }
+        }
+        if (is_persistent) {
+          right_dropped = true;
+          pre_sample = &pre;
+          post_sample = &post;
+          break;
+        }
+      }
+
+      if (pre.left > 0 && post.left == 0) {
+        bool is_persistent = true;
+        for (size_t j = i + 1; j < std::min(i + 4, samples.size()); ++j) {
+          if (samples[j].left > 0) {
+            is_persistent = false;
+            break;
+          }
+        }
+        if (is_persistent) {
+          left_dropped = true;
+          pre_sample = &pre;
+          post_sample = &post;
+          break;
+        }
       }
     }
+
+    // Fallback: if no drop detected, use fixed offset sampling for compatibility
+    if (!right_dropped && !left_dropped) {
+      const double target_pre_dist = split.dist - 5.0;
+      const double target_post_dist = split.dist + 10.0;
+      double min_pre_dist = std::numeric_limits<double>::max();
+      double min_post_dist = std::numeric_limits<double>::max();
+
+      for (const PerceptionSample& sample : samples) {
+        double dist_to_pre = std::abs(sample.dist - target_pre_dist);
+        double dist_to_post = std::abs(sample.dist - target_post_dist);
+
+        if (dist_to_pre <= min_pre_dist) {
+          min_pre_dist = dist_to_pre;
+          pre_sample = &sample;
+        }
+        if (dist_to_post <= min_post_dist) {
+          min_post_dist = dist_to_post;
+          post_sample = &sample;
+        }
+      }
+    }
+
     if (pre_sample == nullptr || post_sample == nullptr) {
       continue;
     }
-
-    // Detect fork boundary: one side DROPS from >0 to 0.
-    // This distinguishes fork signals from edge-lane signals:
-    //   - Fork: pre_right=2, post_right=0 → right dropped → went left branch
-    //   - Edge: pre_right=0, post_right=0 → always 0 → just the rightmost lane
-    bool right_dropped = (pre_sample->right > 0 && post_sample->right == 0);
-    bool left_dropped = (pre_sample->left > 0 && post_sample->left == 0);
 
     // Determine which side this path's exit_orders are on.
     // Low orders = right side of road, high orders = left side of road.
@@ -5391,10 +5453,10 @@ double LDRouteInfoStrategy::CalculateMatchScore(
             1.0;  // VirtualLane went right, path is right branch → match
       } else if (vl_went_left && path_is_right_branch) {
         current_split_match =
-            -1.0;  // VirtualLane went left, path is right branch → mismatch
+            0.0;  // mismatch, but don't penalize (avoid false negatives)
       } else if (vl_went_right && path_is_left_branch) {
         current_split_match =
-            -1.0;  // VirtualLane went right, path is left branch → mismatch
+            0.0;  // mismatch, but don't penalize
       } else if (path_spans_middle) {
         // Path spans both sides; use order as secondary signal
         bool pre_order_in_exit =
@@ -5405,28 +5467,87 @@ double LDRouteInfoStrategy::CalculateMatchScore(
             std::find(split.exit_ords.begin(), split.exit_ords.end(),
                       pre_order_from_left) != split.exit_ords.end();
         current_split_match =
-            (pre_order_in_exit || pre_order_left_in_exit) ? 0.5 : -0.5;
+            (pre_order_in_exit || pre_order_left_in_exit) ? 0.5 : 0.0;
       }
     } else {
       // No clear fork boundary (no side dropped to 0).
-      // Fall back to order-based matching with lower confidence.
-      bool pre_order_in_exit =
-          std::find(split.exit_ords.begin(), split.exit_ords.end(),
-                    pre_sample->order_from_right) != split.exit_ords.end();
-      int pre_order_from_left = split.pre_lane_num - pre_sample->left;
-      bool pre_order_left_in_exit =
-          std::find(split.exit_ords.begin(), split.exit_ords.end(),
-                    pre_order_from_left) != split.exit_ords.end();
+      // Use order sequence matching: check if VL's order sequence
+      // is consistent with this path's exit_orders across multiple samples.
 
-      if (pre_order_in_exit && pre_order_left_in_exit) {
-        current_split_match = 0.5;
-        current_has_signal = true;
-      } else if (pre_order_in_exit || pre_order_left_in_exit) {
-        current_split_match = 0.3;
-        current_has_signal = true;
-      } else if (!split.exit_ords.empty()) {
-        current_split_match = -0.3;
-        current_has_signal = true;
+      // Extract samples in split region (split-15m to split+30m for longer observation)
+      std::vector<const PerceptionSample*> split_samples;
+      for (const auto& sample : samples) {
+        if (sample.dist >= split.dist - 15.0 && sample.dist <= split.dist + 30.0) {
+          split_samples.push_back(&sample);
+        }
+      }
+
+      if (!split_samples.empty()) {
+        int strong_match_count = 0;  // both ord_R and ord_L in exit_orders
+        int weak_match_count = 0;    // only one in exit_orders
+        int no_match_count = 0;      // neither in exit_orders
+
+        // Total trend matching: count samples where VL's total matches
+        // the expected post-split lane count (exit_orders.size())
+        int total_trend_match = 0;
+        int total_trend_samples = 0;
+        const int expected_post_total = static_cast<int>(split.exit_ords.size());
+
+        for (const auto* sample_ptr : split_samples) {
+          bool ord_R_in = std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                                    sample_ptr->order_from_right) != split.exit_ords.end();
+          int ord_L = split.pre_lane_num - sample_ptr->left;
+          bool ord_L_in = std::find(split.exit_ords.begin(), split.exit_ords.end(),
+                                    ord_L) != split.exit_ords.end();
+
+          if (ord_R_in && ord_L_in) {
+            strong_match_count++;
+          } else if (ord_R_in || ord_L_in) {
+            weak_match_count++;
+          } else {
+            no_match_count++;
+          }
+
+          // Check total trend: only count post-split samples
+          if (sample_ptr->dist >= split.dist) {
+            total_trend_samples++;
+            // Allow ±1 tolerance
+            if (std::abs(sample_ptr->total - expected_post_total) <= 1) {
+              total_trend_match++;
+            }
+          }
+        }
+
+        int total_samples = split_samples.size();
+        double sequence_match_score =
+            (strong_match_count * 1.2 + weak_match_count * 0.4) / total_samples;
+
+        // Bonus from total trend matching
+        double total_trend_bonus = 0.0;
+        if (total_trend_samples > 0) {
+          double trend_ratio = static_cast<double>(total_trend_match) / total_trend_samples;
+          total_trend_bonus = trend_ratio * 0.2;  // Up to +0.2 bonus
+        }
+        sequence_match_score = std::min(1.0, sequence_match_score + total_trend_bonus);
+
+        // Convert sequence score to split match score with continuous mapping
+        // High sequence match (>0.8) should get close to 1.0 like drop signals
+        if (sequence_match_score >= 0.8) {
+          current_split_match = 0.8;  // Very high confidence, close to drop signal
+          current_has_signal = true;
+        } else if (sequence_match_score >= 0.6) {
+          current_split_match = 0.5;  // High confidence
+          current_has_signal = true;
+        } else if (sequence_match_score >= 0.4) {
+          current_split_match = 0.3;  // Medium confidence
+          current_has_signal = true;
+        } else if (sequence_match_score >= 0.2) {
+          current_split_match = 0.1;  // Low confidence
+          current_has_signal = true;
+        } else {
+          current_split_match = 0.0;  // No match
+          current_has_signal = true;
+        }
       }
     }
 
@@ -5458,6 +5579,19 @@ double LDRouteInfoStrategy::CalculateMatchScore(
   if (accumulated_fork_weight > 1e-6) {
     fork_match = accumulated_fork_score / accumulated_fork_weight;
   }
+
+  // Multi-split bonus: paths explaining more splits should score higher.
+  // If fork_match > 0 and splits >= 2, apply a bonus proportional to split count.
+  // This prevents single-split paths from winning over multi-split paths.
+  if (fork_match > 0.0 && splits.size() >= 2) {
+    double bonus = 0.2 * (splits.size() - 1);  // +0.2 per additional split
+    fork_match = std::min(1.0, fork_match + bonus);
+  }
+  // Even if fork_match <= 0, multi-split paths get a small boost
+  else if (splits.size() >= 2) {
+    fork_match += 0.15 * (splits.size() - 1);
+  }
+
   bool has_fork_signal = has_any_fork_signal;
 
   // Now compute per-sample scores
@@ -5506,13 +5640,22 @@ double LDRouteInfoStrategy::CalculateMatchScore(
         if (right_in && left_in) {
           order_score = (lane_num_score >= 0.5) ? 1.0 : 0.5;
         } else if (!right_in && !left_in) {
-          order_score = -1.0;
+          order_score = 0.0;  // no match, but don't penalize
         } else {
-          // Disagreement: trust the side with smaller observation value
-          if (sample.right <= sample.left) {
-            order_score = right_in ? 0.5 : -0.5;
+          // Both sides contribute: compute weighted fusion of left/right order
+          double right_score = right_in ? 1.0 : 0.0;
+          double left_score = left_in ? 1.0 : 0.0;
+
+          int per_total = sample.left + sample.right + 1;
+          if (per_total <= 3) {
+            // Small lane count: both sides equally reliable
+            order_score = (right_score + left_score) / 2.0;
           } else {
-            order_score = left_in ? 0.5 : -0.5;
+            // Larger lane count: weight by observation value
+            double w_right = 1.0 + sample.right * 0.3;
+            double w_left = 1.0 + sample.left * 0.3;
+            order_score = (w_right * right_score + w_left * left_score) /
+                          (w_right + w_left);
           }
         }
       }
@@ -5540,6 +5683,14 @@ double LDRouteInfoStrategy::CalculateMatchScore(
     double weight = 1.0;
     if (sample.dist > 20.0) {
       weight = std::max(0.3, 1.0 - (sample.dist - 20.0) / 80.0);
+    }
+
+    // Lane count confidence: total vs map lane_num difference
+    int lane_num_diff = std::abs(sample.total - path_node->lane_num);
+    if (lane_num_diff >= 2) {
+      weight *= 0.3;
+    } else if (lane_num_diff == 1) {
+      weight *= 0.7;
     }
 
     total_score += weight * point_score;

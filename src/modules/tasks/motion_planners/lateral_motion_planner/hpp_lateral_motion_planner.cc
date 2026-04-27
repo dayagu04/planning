@@ -152,6 +152,8 @@ bool HPPLateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetIsSearchSuccess(false);
   }
   planning_weight_ptr_->SetLateralMotionWeightForHPP(planning_input_);
+  planning_weight_ptr_->LimitAccBoundAndJerkBound(
+      max_wheel_angle_, max_wheel_angle_rate_, planning_input_);
   return true;
 }
 

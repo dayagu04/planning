@@ -49,7 +49,7 @@ double iLqrModel::GetCost(const State &x, const Control &u,
     result = each_cost->GetCost(x, u);
     cost += result;
 
-    each_cost->SetCostValue(each_cost->GetCostValue() + result);
+    // each_cost->SetCostValue(each_cost->GetCostValue() + result);
     // update cost map
 #ifdef __ILQR_DEBUG__
     cost_map_ptr_->at(each_cost->GetCostId())[step] = result;
@@ -71,7 +71,7 @@ double iLqrModel::GetTerminalCost(const State &x) {
     result = each_cost->GetCost(x, u);
     cost += result;
 
-    each_cost->SetCostValue(each_cost->GetCostValue() + result);
+    // each_cost->SetCostValue(each_cost->GetCostValue() + result);
     // update cost map
 #ifdef __ILQR_DEBUG__
     cost_map_ptr_->at(each_cost->GetCostId())[solver_config_ptr_->horizon] =

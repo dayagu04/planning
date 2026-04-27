@@ -23,6 +23,8 @@ constexpr double kVirtualVRUObstacleLength = 5.0;
 constexpr double kVirtualVRUObstacleWidth = 2.0;
 constexpr double kVRUDangerWidthToReference = 1.5;
 constexpr double kVRUReversePredMinLThred = 1.9;
+constexpr double kVRUThetaJudgeTime = 2.0;
+constexpr double kVRUThetaJudgePrevTime = 0.5;
 constexpr double kEgoPassVRUSafeLength = 3.0;
 const int32_t kNumNots = 25;
 const double kStepTime = 0.2;
@@ -243,6 +245,20 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(agent::Agent* agent) {
        v_ego * vru_danger_zone_pred_point_rel_time + ego_s >
            vru_danger_zone_pred_point_s + kEgoPassVRUSafeLength)) {
     return false;
+  }
+
+  if (is_vru_entering_danger_zone && vru_danger_zone_pred_point_rel_time > kVRUThetaJudgeTime) {
+    auto danger_pred_point = agent->trajectories().front().Evaluate(
+                                   trajectory_start_time + vru_danger_zone_pred_point_rel_time);
+    auto danger_prev_pred_point = agent->trajectories().front().Evaluate(
+                                        trajectory_start_time + vru_danger_zone_pred_point_rel_time - kVRUThetaJudgePrevTime);
+    planning_math::LineSegment2d segment(danger_prev_pred_point, danger_pred_point);
+    double theta_diff = std::fabs(planning_math::NormalizeAngle(segment.heading() -
+                         vru_matched_point.theta()));
+    if (theta_diff < kVirtualizationVRUHeadingMinThreshold ||
+        theta_diff > kVirtualizationVRUHeadingMaxThreshold) {
+          is_heading_diff_satisfied_for_virtual = false;
+    }
   }
 
   bool is_vru_crossing = false;

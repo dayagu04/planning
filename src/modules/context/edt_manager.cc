@@ -215,20 +215,24 @@ bool EdtManager::FilterObstacleForAra(
         (max_l < kVruLThreshold && min_l > -kVruLThreshold)) {
       return false;
     }
+    if (frenet_obstacle.obstacle()->type() == iflyauto::OBJECT_TYPE_SOLT ||
+        frenet_obstacle.obstacle()->type() == iflyauto::OBJECT_TYPE_DECELER) {
+      return false;
+    }
     return true;
   }
   return false;
 }
 
 void EdtManager::update() {
-  if (!(session_->is_hpp_scene() || session_->is_rads_scene()) ||
-      !session_->planning_context().last_planning_success()) {
-    return;
-  }
-  // if (!session_->is_hpp_scene() ||
+  // if (!(session_->is_hpp_scene() || session_->is_nsa_scene()) ||
   //     !session_->planning_context().last_planning_success()) {
   //   return;
   // }
+  if (!session_->is_hpp_scene() ||
+      !session_->planning_context().last_planning_success()) {
+    return;
+  }
   is_edt_valid_ = false;
   const auto &ego_state =
       *session_->mutable_environmental_model()->get_ego_state_manager();
@@ -265,4 +269,85 @@ void EdtManager::update() {
   ILOG_INFO << "EulerDistanceTransform cost:", time_end - time_start;
   JSON_DEBUG_VALUE("UpdateEulerDistanceTransformCost", time_end - time_start);
 }
+
+bool EdtManager::FilterObstacleByLatDecision(
+    const planning::FrenetObstacle& frenet_obstacle,
+    const LatObstacleDecisionType& lat_decision) {
+  constexpr double kLVelocity = 0.4;
+  constexpr double kVruLThreshold = 1.1;
+  double min_l = frenet_obstacle.frenet_obstacle_boundary().l_start;
+  double max_l = frenet_obstacle.frenet_obstacle_boundary().l_end;
+  if (frenet_obstacle.is_static() ||
+      (frenet_obstacle.obstacle()->is_VRU() &&
+       std::fabs(frenet_obstacle.frenet_velocity_l()) < kLVelocity) ||
+      (frenet_obstacle.obstacle()->is_car() &&
+       (std::fabs(frenet_obstacle.frenet_velocity_l()) < kLVelocity &&
+        frenet_obstacle.frenet_velocity_s() < 0.25))) {
+    if ((frenet_obstacle.obstacle()->is_VRU() ||
+         frenet_obstacle.obstacle()->type() ==
+             iflyauto::OBJECT_TYPE_OCC_PEOPLE) &&
+        (max_l < kVruLThreshold && min_l > -kVruLThreshold)) {
+      return false;
+    }
+    if (frenet_obstacle.obstacle()->type() == iflyauto::OBJECT_TYPE_SOLT ||
+        frenet_obstacle.obstacle()->type() == iflyauto::OBJECT_TYPE_DECELER) {
+      return false;
+    }
+    if (lat_decision != LatObstacleDecisionType::LEFT &&
+        lat_decision != LatObstacleDecisionType::RIGHT &&
+        frenet_obstacle.d_s_rel() > 1e-3) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
+
+bool EdtManager::UpdateByLatDecision() {
+  is_edt_valid_ = false;
+  if (!session_->is_rads_scene() ||
+      !session_->planning_context().last_planning_success()) {
+    return false;
+  }
+  const auto& ego_state =
+      session_->mutable_environmental_model()->get_ego_state_manager();
+  OccupancyGridBound grid_bound =
+      GenerateOGM(Pose2D(ego_state->ego_pose().x, ego_state->ego_pose().y,
+                         ego_state->ego_pose().theta));
+  const auto& lat_obstacle_decision =
+      session_->planning_context()
+              .lateral_obstacle_decider_output()
+              .lat_obstacle_decision;
+  const auto& reference_path_ptr =
+      session_->environmental_model()
+              .get_reference_path_manager()
+              ->get_reference_path_by_current_lane();
+  if (reference_path_ptr != nullptr) {
+    for (auto& frenet_obstacle : reference_path_ptr->get_obstacles()) {
+      if (!frenet_obstacle->b_frenet_valid()) {
+        continue;
+      }
+      auto lat_decision_itr = lat_obstacle_decision.find(frenet_obstacle->id());
+      if (lat_decision_itr == lat_obstacle_decision.end()) {
+        continue;
+      }
+      if (frenet_obstacle->source_type() == SourceType::OD) {
+        if (FilterObstacleByLatDecision(*frenet_obstacle, lat_decision_itr->second)) {
+          AddODPoint(*frenet_obstacle->obstacle());
+        }
+      } else if (frenet_obstacle->source_type() == SourceType::OCC) {
+        if (FilterObstacleByLatDecision(*frenet_obstacle, lat_decision_itr->second)) {
+          AddPointClouds(frenet_obstacle->obstacle()->perception_points());
+        }
+      }
+    }
+  }
+  double time_start = IflyTime::Now_ms();
+  is_edt_valid_ = UpdateEDT(grid_bound);
+  double time_end = IflyTime::Now_ms();
+  ILOG_INFO << "EulerDistanceTransform cost:", time_end - time_start;
+  JSON_DEBUG_VALUE("UpdateEulerDistanceTransformCost", time_end - time_start);
+  return true;
+}
+
 }  // namespace planning

@@ -1392,7 +1392,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   reference_line_msg_size = road_msg.reference_line_msg_size
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
-    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
+    lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[], 'order_id':[], 'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
                  'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[], 'dist_to_lborder':[], 'dist_to_rborder':[]}
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
@@ -1451,6 +1451,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['line_x_vec'] = line_x
       lane_info['line_y_vec'] = line_y
       lane_info['relative_id'] = [lane.relative_id for j in range(virtual_lane_refline_points_size)]
+      lane_info['order_id'] = [lane.order_id for j in range(virtual_lane_refline_points_size)]
       lane_info['type'] = [0]
       lane_info['line_s_vec'] = line_s
       lane_info['confidence_vec'] = line_confidence
@@ -4098,3 +4099,42 @@ class ObjText:
   def __init__(self,  obj_callback):
     self.id = ipywidgets.IntText(layout=ipywidgets.Layout(width='10%'), description= "obj_id",min=0.0, max=10000)
     ipywidgets.interact(obj_callback, id = self.id)
+def parse_virtual_lane_costs(plan_debug_json):
+  """从 plan_debug_json 中解析 VirtualLane Cost 数据
+
+  C++ 输出格式：vl_cost_count, vl_cost_0_order, vl_cost_0_rel, ...
+
+  Returns:
+    list of dict: [
+      {
+        'order_id': int,
+        'relative_id': int,
+        'total_cost': float,
+        'lane_match_confidence': float,
+        'topo_trace_score': float,
+        'distance_penalty': float,
+        'is_on_route': bool,
+        'center_line': []  # 暂时为空，后续从 VirtualLane 获取
+      },
+      ...
+    ]
+  """
+  vl_count = plan_debug_json.get('vl_cost_count', 0)
+  if vl_count == 0:
+    return []
+
+  vl_costs = []
+  for i in range(vl_count):
+    prefix = f'vl_cost_{i}_'
+    vl_cost = {
+      'order_id': plan_debug_json.get(prefix + 'order', 0),
+      'relative_id': plan_debug_json.get(prefix + 'rel', 0),
+      'total_cost': plan_debug_json.get(prefix + 'total', 1000.0),
+      'lane_match_confidence': plan_debug_json.get(prefix + 'match', 0.0),
+      'topo_trace_score': plan_debug_json.get(prefix + 'topo', 0.0),
+      'distance_penalty': plan_debug_json.get(prefix + 'penalty', 0.0),
+      'is_on_route': plan_debug_json.get(prefix + 'on_route', 0) == 1,
+      'center_line': []  # 暂时为空
+    }
+    vl_costs.append(vl_cost)
+  return vl_costs

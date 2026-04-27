@@ -92,6 +92,8 @@ message LateralPlanningInput {
   repeated double second_soft_lower_bound_y1_vec = 59;
 
   repeated double ref_vel_vec = 60;
+
+  optional double q_edt_distance = 61;
 }
 
 message CostInfo {

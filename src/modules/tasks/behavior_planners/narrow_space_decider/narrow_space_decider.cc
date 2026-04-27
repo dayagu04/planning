@@ -11,7 +11,7 @@ constexpr double kMinNarrowSpaceWidth = 0.4;
 constexpr double kBlockedNarrowSpaceWidth = 0.2;
 constexpr double kMinNarrowSpaceLength = 1.0;
 constexpr double kPreviewFrontNarrowSpaceDistance = 6.0;
-constexpr double kPreviewBackNarrowSpaceDistance = 0.0;
+constexpr double kPreviewBackNarrowSpaceDistance = 0.3;
 constexpr double kMaxCareNarrowSpaceWidth = 5.0;
 constexpr double kMaxNarrowSpaceRelativeAngle = 15.0;
 constexpr double kMaxNarrowSpaceDrivingDistance = 50.0;
@@ -21,6 +21,7 @@ constexpr double kSamplingNarrowSpaceLonGap = 0.5;
 constexpr double kSamplingNarrowSpaceLonStep = 0.1;
 constexpr double kNarrowSpaceWidthBuffer = 0.2;
 constexpr double kNarrowSpacesLonGap = 2.0;
+constexpr double kCompleteLonBuffer = 0.1;
 
 NarrowSpaceDecider::NarrowSpaceDecider(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
@@ -86,13 +87,19 @@ void NarrowSpaceDecider::InitInfo() {
   const auto& current_state = local_view.function_state_machine_info.current_state;
   is_exist_narrow_space_ = false;
   is_passable_ = false;
+  is_prepare_function_ = current_state >= iflyauto::FunctionalState_NRA_PASSIVE &&
+                         current_state <= iflyauto::FunctionalState_NRA_PRE_ACTIVE;
   is_in_function_ = current_state == iflyauto::FunctionalState_NRA_GUIDANCE ||
                     current_state == iflyauto::FunctionalState_NRA_SUSPEND;
-  if (!is_in_function_ &&
-      current_state != iflyauto::FunctionalState_NRA_COMPLETED) {
+  // nsa scene
+  if (current_state == iflyauto::FunctionalState_NRA_ERROR ||
+      (is_prepare_function_ &&
+       narrow_space_state_ <= NarrowSpaceState::APPROACH_NARROW_SPACE)) {
     narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
     is_out_of_narrow_space_ = false;
     distance_to_end_ = 100.0;
+  } else if (current_state == iflyauto::FunctionalState_NRA_COMPLETED) {
+    is_out_of_narrow_space_ = true;
   }
   distance_to_narrow_space_ = 100.0;
   rotate_narrow_space_width_ = 0.0;
@@ -648,88 +655,97 @@ void NarrowSpaceDecider::UpdateNarrowSpaceState() {
                                        .reference_path;
   const auto& frenet_coord = reference_path->get_frenet_coord();
   const auto& frenet_ego_state = reference_path->get_frenet_ego_state();
-  // update state
-  if (!is_exist_narrow_space_) {
-    narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
-  } else {
-    if (!is_out_of_narrow_space_) {
-      if (narrow_space_state_ >= NarrowSpaceState::EXITING_NARROW_SPACE) {
-        if (vehicle_s_range_.first > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
-          is_out_of_narrow_space_ = true;
-        }
-      } else if (narrow_space_state_ >= NarrowSpaceState::IN_NARROW_SPACE) {
-        if (vehicle_s_range_.first > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
-          is_out_of_narrow_space_ = true;
-        } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
-        }
-      } else if (narrow_space_state_ >= NarrowSpaceState::ENTERING_NARROW_SPACE) {
-        if (vehicle_s_range_.first > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
-          is_out_of_narrow_space_ = true;
-        } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
-        } else if (vehicle_s_range_.first >= narrow_space_s_range_.first) {
-          distance_to_narrow_space_ = 0.0;
-          narrow_space_state_ = NarrowSpaceState::IN_NARROW_SPACE;
-        }
-      } else if (narrow_space_state_ >= NarrowSpaceState::APPROACH_NARROW_SPACE) {
-        if (vehicle_s_range_.first > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
-          is_out_of_narrow_space_ = true;
-        } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
-        } else if (vehicle_s_range_.first >= narrow_space_s_range_.first) {
-          distance_to_narrow_space_ = 0.0;
-          narrow_space_state_ = NarrowSpaceState::IN_NARROW_SPACE;
-        } else if (vehicle_s_range_.second >= narrow_space_s_range_.first) {
-          distance_to_narrow_space_ = 0.0;
-          narrow_space_state_ = NarrowSpaceState::ENTERING_NARROW_SPACE;
-        }
-      } else if (narrow_space_state_ >= NarrowSpaceState::NO_NARROW_SPACE) {
-        if (vehicle_s_range_.first > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
-          is_out_of_narrow_space_ = true;
-        } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
-          distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
-        } else if (vehicle_s_range_.first >= narrow_space_s_range_.first) {
-          distance_to_narrow_space_ = 0.0;
-          narrow_space_state_ = NarrowSpaceState::IN_NARROW_SPACE;
-        } else if (vehicle_s_range_.second >= narrow_space_s_range_.first) {
-          distance_to_narrow_space_ = 0.0;
-          narrow_space_state_ = NarrowSpaceState::ENTERING_NARROW_SPACE;
-        } else {
-          distance_to_narrow_space_ = narrow_space_s_range_.first - vehicle_s_range_.second;
-          narrow_space_state_ = NarrowSpaceState::APPROACH_NARROW_SPACE;
-        }
-      }
-    }
-  }
-  if (is_in_function_) {
-    Point2D frenet_space_end_pt{0.0, 0.0};
-    if (frenet_coord->XYToSL(end_point_, frenet_space_end_pt)) {
+  // calculate remain dist
+  Point2D frenet_space_end_pt{0.0, 0.0};
+  if (frenet_coord->XYToSL(end_point_, frenet_space_end_pt)) {
+    double rear_dist_to_end = frenet_space_end_pt.x - frenet_ego_state.s();
+    if (is_prepare_function_) {
+      distance_to_end_ = rear_dist_to_end;
+    } else if (is_in_function_) {
       if (narrow_space_state_ >= NarrowSpaceState::APPROACH_NARROW_SPACE &&
           narrow_space_state_ <= NarrowSpaceState::IN_NARROW_SPACE) {
         distance_to_end_ = frenet_space_end_pt.x - frenet_ego_state.s();
       } else {
-        distance_to_end_ = std::min(distance_to_end_,
-                                    frenet_space_end_pt.x - frenet_ego_state.s());
+        distance_to_end_ = std::min(distance_to_end_, rear_dist_to_end);
       }
     }
-    if (distance_to_end_ <= 1e-6) {
+  }
+  // is out of channel
+  if (is_prepare_function_) {
+    if (distance_to_end_ < 1e-6) {
       narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
       is_out_of_narrow_space_ = true;
+    }
+  } else if (is_in_function_) {
+    if (distance_to_end_ <= (vehicle_s_range_.first - frenet_ego_state.s() - kCompleteLonBuffer)) {
+      narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
+      is_out_of_narrow_space_ = true;
+    }
+  }
+  // update state
+  if (!is_exist_narrow_space_) {
+    narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
+  } else if (!is_out_of_narrow_space_) {
+    if (narrow_space_state_ >= NarrowSpaceState::EXITING_NARROW_SPACE) {
+      if (vehicle_s_range_.first > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
+        is_out_of_narrow_space_ = true;
+      }
+    } else if (narrow_space_state_ >= NarrowSpaceState::IN_NARROW_SPACE) {
+      if (vehicle_s_range_.first > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
+        is_out_of_narrow_space_ = true;
+      } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
+      }
+    } else if (narrow_space_state_ >= NarrowSpaceState::ENTERING_NARROW_SPACE) {
+      if (vehicle_s_range_.first > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
+        is_out_of_narrow_space_ = true;
+      } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
+      } else if (vehicle_s_range_.first >= narrow_space_s_range_.first) {
+        distance_to_narrow_space_ = 0.0;
+        narrow_space_state_ = NarrowSpaceState::IN_NARROW_SPACE;
+      }
+    } else if (narrow_space_state_ >= NarrowSpaceState::APPROACH_NARROW_SPACE) {
+      if (vehicle_s_range_.first > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
+        is_out_of_narrow_space_ = true;
+      } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
+      } else if (vehicle_s_range_.first >= narrow_space_s_range_.first) {
+        distance_to_narrow_space_ = 0.0;
+        narrow_space_state_ = NarrowSpaceState::IN_NARROW_SPACE;
+      } else if (vehicle_s_range_.second >= narrow_space_s_range_.first) {
+        distance_to_narrow_space_ = 0.0;
+        narrow_space_state_ = NarrowSpaceState::ENTERING_NARROW_SPACE;
+      }
+    } else if (narrow_space_state_ >= NarrowSpaceState::NO_NARROW_SPACE) {
+      if (vehicle_s_range_.first > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::NO_NARROW_SPACE;
+        is_out_of_narrow_space_ = true;
+      } else if (vehicle_s_range_.second > narrow_space_s_range_.second) {
+        distance_to_narrow_space_ = narrow_space_s_range_.second - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::EXITING_NARROW_SPACE;
+      } else if (vehicle_s_range_.first >= narrow_space_s_range_.first) {
+        distance_to_narrow_space_ = 0.0;
+        narrow_space_state_ = NarrowSpaceState::IN_NARROW_SPACE;
+      } else if (vehicle_s_range_.second >= narrow_space_s_range_.first) {
+        distance_to_narrow_space_ = 0.0;
+        narrow_space_state_ = NarrowSpaceState::ENTERING_NARROW_SPACE;
+      } else {
+        distance_to_narrow_space_ = narrow_space_s_range_.first - vehicle_s_range_.second;
+        narrow_space_state_ = NarrowSpaceState::APPROACH_NARROW_SPACE;
+      }
     }
   }
   JSON_DEBUG_VALUE("narrow_space_state", static_cast<int>(narrow_space_state_));
@@ -813,6 +829,10 @@ void NarrowSpaceDecider::GenerateNarrowSpaceOutput() {
   output.is_relative_angle_too_large = narrow_space_status_ == NarrowSpaceStatus::OBLIQUE;
   output.is_exiting_narrow_space = narrow_space_state_ == NarrowSpaceState::EXITING_NARROW_SPACE || is_out_of_narrow_space_;
   output.distance_to_end = distance_to_end_;
+  output.end_point = end_point_;
+  output.narrow_space_s_range = narrow_space_s_range_;
+  output.left_boundary_spline = left_boundary_spline_;
+  output.right_boundary_spline = right_boundary_spline_;
 }
 
 void NarrowSpaceDecider::LogNarrowSpaceCorners() {

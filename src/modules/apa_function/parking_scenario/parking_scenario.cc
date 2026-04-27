@@ -232,7 +232,7 @@ void ParkingScenario::PublishPlanningTraj() {
   return;
 }
 
-void ParkingScenario::TansformPreparePlanningTraj() {
+void ParkingScenario::TransformPreparePlanningTraj() {
   if (complete_path_point_global_vec_.empty()) {
     ILOG_INFO << "path is null";
     return;
@@ -424,12 +424,41 @@ void ParkingScenario::SetPlanningPath() {
 
 const bool ParkingScenario::CheckStuckFailed() {
   const ApaParameters& param = apa_param.GetParam();
-  if (frame_.stuck_dynamic_obs_time > 1e-3) {
-    return std::max(frame_.stuck_time, frame_.stuck_dynamic_obs_time) >
-           param.stuck_failed_by_dynamic_obs_time;
-  } else {
-    return frame_.stuck_time > param.stuck_failed_time;
+  constexpr double kDynamicObsTimeEps = 1e-3;
+
+  const bool has_dynamic_obs =
+      frame_.stuck_dynamic_obs_time > kDynamicObsTimeEps;
+
+  const double stuck_ref_time =
+      has_dynamic_obs
+          ? std::max(frame_.stuck_time, frame_.stuck_dynamic_obs_time)
+          : frame_.stuck_time;
+
+  const double threshold = has_dynamic_obs
+                               ? param.stuck_failed_by_dynamic_obs_time
+                               : param.stuck_failed_time;
+
+  if (stuck_ref_time <= threshold) {
+    return false;
   }
+
+  ILOG_INFO << "check stuck failed!";
+  frame_.plan_fail_reason = STUCK_FAILED_TIME;
+  return true;
+}
+
+const bool ParkingScenario::CheckFoldMirrorFailed() {
+  const bool fold_mirror_failed =
+      frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      frame_.stuck_time >
+          apa_param.GetParam().smart_fold_mirror_params.max_stuck_wait_time;
+  if (fold_mirror_failed) {
+    ILOG_INFO << "check fold mirror failed!";
+    frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
+    return true;
+  }
+  return false;
 }
 
 const bool ParkingScenario::CheckGearChangeCountTooMuch(
@@ -444,24 +473,20 @@ const bool ParkingScenario::CheckGearChangeCountTooMuch(
 
   UpdateGearChangeCount();
 
-  if (frame_.cur_path_gear_change_count >
-      gear_change_decide_params.all_max_gear_change_count_parking) {
-    return true;
-  }
+  const uint8_t all_max_gear_change_count =
+      gear_change_decide_params.all_max_gear_change_count_parking;
+  const bool exceed_all_max_gear_change_count =
+      frame_.cur_path_gear_change_count > all_max_gear_change_count ||
+      frame_.actual_gear_change_count > all_max_gear_change_count;
 
-  if (frame_.actual_gear_change_count >
-      gear_change_decide_params.all_max_gear_change_count_parking) {
-    return true;
-  }
+  bool gear_change_count_too_much = exceed_all_max_gear_change_count;
+  if (!gear_change_count_too_much &&
+      frame_.actual_gear_change_count > frame_.ref_max_gear_change_count) {
+    gear_change_count_too_much =
+        frame_.ref_max_gear_change_count_already_update ||
+        frame_.cur_path_gear_change_count >
+            gear_change_decide_params.extra_gear_change_count;
 
-  if (frame_.actual_gear_change_count > frame_.ref_max_gear_change_count) {
-    if (frame_.ref_max_gear_change_count_already_update) {
-      return true;
-    }
-    if (frame_.cur_path_gear_change_count >
-        gear_change_decide_params.extra_gear_change_count) {
-      return true;
-    }
     frame_.ref_max_gear_change_count =
         frame_.actual_gear_change_count + frame_.cur_path_gear_change_count +
         gear_change_decide_params.redunant_gear_change_count;
@@ -472,34 +497,28 @@ const bool ParkingScenario::CheckGearChangeCountTooMuch(
                    frame_.ref_max_gear_change_count)
   JSON_DEBUG_VALUE("actual_gear_change_count", frame_.actual_gear_change_count)
 
-  return false;
-}
-
-const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
-    const double lat_expand, const double lon_expand,
-    const double heading_err) {
-  const geometry_lib::PathPoint& ego_pose =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().cur_pose;
-
-  const ApaSlot& slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot;
-
-  if ((slot.IsPointInCustomSlot(ego_pose.pos, lon_expand, lon_expand,
-                                lat_expand, lat_expand, true) &&
-       std::fabs(ego_pose.heading) * kRad2Deg < heading_err)) {
-    return true;
+  if (!gear_change_count_too_much) {
+    return false;
   }
 
-  return false;
+  ILOG_INFO << "check gear change count too much!";
+  frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+  return true;
 }
 
-const geometry_lib::PathPoint ParkingScenario::GetCarFrontPoseFromCarPose(
-    const geometry_lib::PathPoint& pose) {
-  geometry_lib::PathPoint front_pose = pose;
-  front_pose.pos = pose.pos + (apa_param.GetParam().front_overhanging +
-                               apa_param.GetParam().wheel_base) *
-                                  geometry_lib::GenHeadingVec(pose.heading);
-  return front_pose;
+const bool ParkingScenario::CheckEgoPoseInBelieveSlotArea(
+    const double lat_expand, const double lon_expand, const double heading_err,
+    const bool is_front_pose) {
+  const auto& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+  const auto check_pose =
+      is_front_pose
+          ? GetCarFrontAxlePoseFromCarPose(ego_info_under_slot.cur_pose)
+          : ego_info_under_slot.cur_pose;
+
+  return CheckPoseInSlotBelieveArea(check_pose, ego_info_under_slot.slot,
+                                    ego_info_under_slot.target_pose.GetTheta(),
+                                    lat_expand, lon_expand, heading_err);
 }
 
 const double ParkingScenario::CalRemainDistFromPath() {

@@ -35,7 +35,7 @@
   "enable_fusion_ground_line": true,
   "enable_uss":true,
   "enable_parking_prediction": false,
-  "enable_lane_borrow_deciderV2": false,
+  "enable_lane_borrow_deciderV3": true,
   "is_ground_line_cluster": false,
   "enable_ehr_column_box": false,
   "enable_bbox_mode": true,
@@ -63,7 +63,7 @@
   "kEpsilon_a": 0.4,
   "steer_angle_thr": 5.0,
   "max_replan_lat_err": 0.6,
-  "max_replan_theta_err": 5.0,
+  "max_replan_theta_err": 10.0,
   "max_replan_lon_err": 1.0,
   "enable_delta_stitch_in_replan": true,
   "enable_ego_state_compensation": true,
@@ -731,6 +731,8 @@
     "non_express_vel_limit_kph": 60.0,
     "tunnel_vel_limit_kph": 80.0,
     "function_off_dis_before_toll_station": 250.0,
+    "rads_curv_speed_limit_scale_vec": [0.4, 0.7, 1.0],
+    "rads_curv_speed_limit_radius_vec": [20.0, 25.0, 30.0],
     "vehicle_lat_dis_rel_vel_table": {
       "lat_dis_table": [
         0.7, 1.0, 1.5

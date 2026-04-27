@@ -377,6 +377,9 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   double max_wheel_angle_rate_low_speed_lc = max_steer_angle_rate_low_speed_lc / vehicle_param.steer_ratio;
   double limit_jerk_low_speed_lc =
       max_wheel_angle_rate_low_speed_lc * curv_factor_ * planning_input_.ref_vel() * planning_input_.ref_vel();
+  std::vector<double> xp_v_lc{4.167, 5.556};
+  std::vector<double> fp_max_wheel_angle_rate{max_wheel_angle_rate_low_speed_lc, max_wheel_angle_rate_};
+  double limit_wheel_angle_rate_low_speed_lc = planning::interp(planning_input_.ref_vel(), xp_v_lc, fp_max_wheel_angle_rate);
   double max_steer_angle_rate_low_speed_lc_without_obstacle =
       std::min(vehicle_param.max_steer_angle_rate,
                config_.max_steer_angle_dot_low_speed_lc_without_obstacle / 57.3);
@@ -386,6 +389,7 @@ bool SCCLateralMotionPlanner::AssembleInput() {
       max_wheel_angle_rate_low_speed_lc_without_obstacle *
       curv_factor_ * planning_input_.ref_vel() * planning_input_.ref_vel();
   if (is_low_speed_lane_change) {
+    max_wheel_angle_rate_ = limit_wheel_angle_rate_low_speed_lc;
     planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc);
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE);
@@ -394,6 +398,7 @@ bool SCCLateralMotionPlanner::AssembleInput() {
         config_.recommend_low_speed_lc_lon_acc;
   } else if (is_low_speed_lane_change_without_obstacle && !lane_change_back &&
              !lane_change_hold) {
+    max_wheel_angle_rate_ = max_wheel_angle_rate_low_speed_lc_without_obstacle;
     planning_weight_ptr_->SetMaxJerkLC(
         limit_jerk_low_speed_lc_without_obstacle);
     mutable_motion_planner_output.is_limit_lon_acc_bound = false;
@@ -415,6 +420,7 @@ bool SCCLateralMotionPlanner::AssembleInput() {
                                             low_speed_lane_change_cd_timer_thr &&
                                             low_speed_lane_change_cd_timer_ > 0;
   if (is_enter_low_speed_lane_change_cooldown) {
+    max_wheel_angle_rate_ = limit_wheel_angle_rate_low_speed_lc;
     planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc);
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE);
@@ -447,6 +453,30 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
   bool lane_borrow_scene = lane_borrow_decider_output.is_in_lane_borrow_status;
+  const auto& lane_borrow_state = lane_borrow_decider_output.lane_borrow_state;
+  if (lane_borrow_state == kLaneBorrowDriving ||
+      lane_borrow_state == kLaneBorrowCrossing) {
+    std::vector<double> xp_v_lb{1.0, 4.167};
+    std::vector<double> fp_lon_acc{config_.recommend_low_speed_lc_lon_acc, config_.recommend_low_speed_lc_lon_acc + 0.2};
+    double recommended_lb_acc_bound = planning::interp(planning_init_point.v, xp_v_lb, fp_lon_acc);
+    std::vector<double> xp_steer_lb{20.0, 40.0};
+    std::vector<double> fp_lon_acc_ratio1{1.5, 1.0};
+    double init_steer_angle = planning_init_point.delta * vehicle_param.steer_ratio * 57.3;
+    std::vector<double> xp_theta_lb{2.0, 5.0};
+    std::vector<double> fp_lon_acc_ratio2{1.5, 1.0};
+    double lb_lon_acc_ratio = 1.0;
+    if (lane_borrow_state == kLaneBorrowCrossing) {
+      double steer_ratio = planning::interp(init_steer_angle, xp_steer_lb, fp_lon_acc_ratio1);
+      double theta_ratio = planning::interp(std::fabs(lane_rel_theta_error_) * 57.3, xp_theta_lb, fp_lon_acc_ratio2);
+      lb_lon_acc_ratio = std::min(steer_ratio, theta_ratio);
+    }
+    mutable_motion_planner_output.is_limit_lon_acc_bound = true;
+    mutable_motion_planner_output.recommended_acc_bound = recommended_lb_acc_bound * lb_lon_acc_ratio;
+  }
+  if (lane_borrow_state == kLaneBorrowCrossing ||
+      lane_borrow_state == kLaneBorrowBackOriginLane) {
+    max_wheel_angle_rate_ = std::max(max_wheel_angle_rate_, limit_wheel_angle_rate_low_speed_lc);
+  }
   // search
   planning_weight_ptr_->SetIsSearchSuccess(false);
   // set weight
@@ -455,7 +485,7 @@ bool SCCLateralMotionPlanner::AssembleInput() {
         pnc::lateral_planning::LateralMotionScene::LANE_CHANGE,
         planning_input_);
   } else if (lane_borrow_scene) {
-    complete_follow = true;
+    // complete_follow = true;
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::LANE_BORROW, planning_input_);
   } else if (split_scene) {
@@ -510,6 +540,8 @@ bool SCCLateralMotionPlanner::AssembleInput() {
   if (is_use_spatio_planner_result) {
     planning_input_.set_complete_follow(complete_follow);
   }
+  planning_weight_ptr_->LimitAccBoundAndJerkBound(
+      max_wheel_angle_, max_wheel_angle_rate_, planning_input_);
   // get emergency level
   const auto lateral_emergency_level =
       planning_weight_ptr_->GetEmergencyLevel();

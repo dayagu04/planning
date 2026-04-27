@@ -508,6 +508,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
   double cruise_v =
       std::max(config_.min_v_cruise, ego_state_manager->ego_v_cruise());
   double ego_v = std::max(planning_init_point.v, config_.min_v_cruise);
+  if (lane_borrow_decider_output.lane_borrow_state > kNoLaneBorrow) {
+    ego_v = std::max(planning_init_point.v, 1.0);
+  }
   // get curve info
   ref_curve_info_ = reference_path_ptr_->GetReferencePathCurveInfo();
   if (ref_curve_info_.s_vec.size() > 2) {
@@ -627,13 +630,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints& traj_points) {
     double kMinAccTmp = -0.2;
     // 存在跳动问题，需优化
     if (last_traj_speed_limit < cruise_v) {
-      cruise_v = last_traj_speed_limit;
+      cruise_v = std::max(config_.min_v_cruise, last_traj_speed_limit);
       kMinAcc = std::min(kMinAcc, kMinAccTmp);
     }
   }
 
   if (lane_borrow_decider_output.is_in_lane_borrow_status) {
-    kMaxAcc = 0.4;
+    kMaxAcc = 0.6;
   }
   if (is_LC_CHANGE) {
     ego_v = std::max(ego_v, config_.lc_min_v_cruise);
@@ -4431,7 +4434,19 @@ void GeneralLateralDecider::LimitFrenetLateralSlope(
     std::vector<std::pair<double, double>>& frenet_bounds) {
   // 避免dl ds 差值过大
   const int boundsize = frenet_bounds.size();
-  const int dl_ds_ratio = 3;
+  std::vector<double> xp_avoid_dist{0.4, 0.6, 1.0, 1.5};
+  std::vector<double> fp_ratio{3.0, 1.0, 0.5, 0.0};
+  double avoid_dist = 0.0;
+  double init_l = ego_frenet_state_.planning_init_point().frenet_state.r;
+  for (int i = 0; i < boundsize; ++i) {
+    if (frenet_bounds[i].first > init_l) {
+      avoid_dist = std::max(frenet_bounds[i].first - init_l, avoid_dist);
+    }
+    if (frenet_bounds[i].second < init_l) {
+      avoid_dist = std::max(init_l - frenet_bounds[i].second, avoid_dist);
+    }
+  }
+  double dl_ds_ratio = planning::interp(std::fabs(avoid_dist), xp_avoid_dist, fp_ratio);
   double ds = 0;
   double dl = 0;
   if (boundsize > 1) {
@@ -4442,20 +4457,20 @@ void GeneralLateralDecider::LimitFrenetLateralSlope(
         if (dl > 0) {
           frenet_bounds[i].second =
               frenet_bounds[i - 1].second + dl_ds_ratio * ds;
-        } else {
-          frenet_bounds[i - 1].second =
-              frenet_bounds[i].second + dl_ds_ratio * ds;
-        }
+        } //else {
+          // frenet_bounds[i - 1].second =
+          //     frenet_bounds[i].second + dl_ds_ratio * ds;
+        //}
       }
       dl = frenet_bounds[i].first - frenet_bounds[i - 1].first;
       if (std::fabs(dl) > std::fabs(dl_ds_ratio * ds)) {
-        if (dl > 0) {
-          frenet_bounds[i - 1].first =
-              frenet_bounds[i].first - dl_ds_ratio * ds;
-        } else {
+        if (dl < 0) {
           frenet_bounds[i].first =
               frenet_bounds[i - 1].first - dl_ds_ratio * ds;
-        }
+        } //else {
+          // frenet_bounds[i - 1].first =
+          //     frenet_bounds[i].first - dl_ds_ratio * ds;
+        //}
       }
     }
   }
@@ -5295,25 +5310,27 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     //     first_frenet_soft_bounds[i].second);
     // }
   }
-
+  const auto& lane_borrow_decider_output =
+      session_->planning_context().lane_borrow_decider_output();
   constexpr double kExp = 1e-6;
   constexpr double kChangeRate = 0.1;
-  for (size_t i = 1; i < ref_traj_points_.size(); i++) {
-    if ((ref_traj_points_[i].l - first_frenet_soft_bounds[i].first > kExp &&
-        ref_traj_points_[i].l - second_frenet_soft_bounds[i].first > kExp) &&
-        (first_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp &&
-        second_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp)) {
-      ref_traj_points_[i].l = clip(ref_traj_points_[i].l, ref_traj_points_[i - 1].l + kChangeRate, ref_traj_points_[i - 1].l - kChangeRate);
-      ref_traj_points_[i].l = std::min(
-        std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
-        second_frenet_soft_bounds[i].second);
+  if (lane_borrow_decider_output.lane_borrow_state == LaneBorrowStatus::kNoLaneBorrow) {
+    for (size_t i = 1; i < ref_traj_points_.size(); i++) {
+      if ((ref_traj_points_[i].l - first_frenet_soft_bounds[i].first > kExp &&
+          ref_traj_points_[i].l - second_frenet_soft_bounds[i].first > kExp) &&
+          (first_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp &&
+          second_frenet_soft_bounds[i].second - ref_traj_points_[i].l > kExp)) {
+        ref_traj_points_[i].l = clip(ref_traj_points_[i].l, ref_traj_points_[i - 1].l + kChangeRate, ref_traj_points_[i - 1].l - kChangeRate);
+        ref_traj_points_[i].l = std::min(
+          std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
+          second_frenet_soft_bounds[i].second);
 
-      ref_traj_points_[i].l = std::min(
-          std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
-          first_frenet_soft_bounds[i].second);
+        ref_traj_points_[i].l = std::min(
+            std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
+            first_frenet_soft_bounds[i].second);
+      }
     }
   }
-
 
   // general_lateral_decider_output.bound_avoid = bound_avoid;
 }

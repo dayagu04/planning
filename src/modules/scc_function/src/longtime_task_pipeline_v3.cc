@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
+#include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv3.h"
 #include "behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
 #include "ego_planning_config.h"
 #include "speed/st_graph_input.h"
@@ -24,11 +24,14 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
   lateral_obstacle_decider_ =
       std::make_unique<SccLateralObstacleDecider>(config_builder, session);
-  lane_borrow_deciderV1_ =
-      std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
-                                                                 session);
-  lane_borrow_deciderV2_ =
-      std::make_unique<lane_borrow_deciderV2::LaneBorrowDecider>(config_builder,
+  // lane_borrow_deciderV1_ =
+  //     std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
+  //                                                                session);
+  // lane_borrow_deciderV2_ =
+  //     std::make_unique<lane_borrow_deciderV2::LaneBorrowDecider>(config_builder,
+  //                                                                session);
+  lane_borrow_deciderV3_ =
+      std::make_unique<lane_borrow_deciderV3::LaneBorrowDecider>(config_builder,
                                                                  session);
   potential_dangerous_agent_decider_ =
       std::make_unique<PotentialDangerousAgentDecider>(config_builder, session);
@@ -85,8 +88,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   result_trajectory_generator_ =
       std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
   auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
-  enable_lane_borrow_deciderV2_ =
-      lane_borrow_config.enable_lane_borrow_deciderV2;
+  enable_lane_borrow_deciderV3_ =
+      lane_borrow_config.enable_lane_borrow_deciderV3;
 
   hmi_decider_ = std::make_unique<SCCHMIDecider>(config_builder, session);
 
@@ -132,7 +135,8 @@ bool LongTimeTaskPipelineV3::Run() {
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("potential_dangerous_agent_decider_cost", end_time - start_time);
+  JSON_DEBUG_VALUE("potential_dangerous_agent_decider_cost",
+                   end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 
@@ -184,7 +188,8 @@ bool LongTimeTaskPipelineV3::Run() {
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("sample_poly_speed_adjust_decider_cost", end_time - start_time);
+  JSON_DEBUG_VALUE("sample_poly_speed_adjust_decider_cost",
+                   end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 
@@ -199,7 +204,7 @@ bool LongTimeTaskPipelineV3::Run() {
   JSON_DEBUG_VALUE("lateral_obstacle_decider_cost", end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
-  // if (enable_lane_borrow_deciderV2_) {
+  // if (enable_lane_borrow_deciderV3_) {
   //   ok = lane_borrow_deciderV2_->Execute();
   //   if (!ok) {
   //     AddErrorInfo(lane_borrow_deciderV2_->Name());
@@ -215,10 +220,10 @@ bool LongTimeTaskPipelineV3::Run() {
   const auto& disable_lb_from_product = static_cast<bool>(FunctionSwitchConfigContext::Instance()
                                             ->get_function_switch_config()
                                             .disable_lane_borrow);
-  if (enable_lane_borrow_deciderV2_ && !disable_lb_from_product) {
+  if (enable_lane_borrow_deciderV3_ && !disable_lb_from_product) {
     ok = lane_borrow_deciderV2_->Execute();
     if (!ok) {
-      AddErrorInfo(lane_borrow_deciderV2_->Name());
+      AddErrorInfo(lane_borrow_deciderV3_->Name());
       return false;
     }
   }
@@ -384,7 +389,8 @@ bool LongTimeTaskPipelineV3::Run() {
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("closest_in_path_vehicle_decider_cost", end_time - start_time);
+  JSON_DEBUG_VALUE("closest_in_path_vehicle_decider_cost",
+                   end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 
@@ -395,7 +401,8 @@ bool LongTimeTaskPipelineV3::Run() {
   }
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("cipv_lost_prohibit_start_decider_cost", end_time - start_time);
+  JSON_DEBUG_VALUE("cipv_lost_prohibit_start_decider_cost",
+                   end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 
@@ -407,7 +414,8 @@ bool LongTimeTaskPipelineV3::Run() {
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("cipv_lost_prohibit_acceleration_decider_cost", end_time - start_time);
+  JSON_DEBUG_VALUE("cipv_lost_prohibit_acceleration_decider_cost",
+                   end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 
@@ -432,7 +440,8 @@ bool LongTimeTaskPipelineV3::Run() {
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("parallel_longitudinal_avoid_decider_cost", end_time - start_time);
+  JSON_DEBUG_VALUE("parallel_longitudinal_avoid_decider_cost",
+                   end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 
@@ -510,7 +519,8 @@ bool LongTimeTaskPipelineV3::Run() {
 
 #ifdef PlanTimeBenchmark
   end_time = IflyTime::Now_ms();
-  JSON_DEBUG_VALUE("scc_longitudinal_motion_planner_cost", end_time - start_time);
+  JSON_DEBUG_VALUE("scc_longitudinal_motion_planner_cost",
+                   end_time - start_time);
   start_time = IflyTime::Now_ms();
 #endif
 

@@ -115,5 +115,12 @@ class ApaMeasureDataManager final {
   double mirror_state_transition_time_ = 0.0;
   bool mirror_state_in_transition_ = false;
 };
+
+const pnc::geometry_lib::PathPoint GetCarFrontPoseFromCarPose(
+    const pnc::geometry_lib::PathPoint &pose);
+
+const pnc::geometry_lib::PathPoint GetCarFrontAxlePoseFromCarPose(
+  const pnc::geometry_lib::PathPoint &pose);
+
 }  // namespace apa_planner
 }  // namespace planning

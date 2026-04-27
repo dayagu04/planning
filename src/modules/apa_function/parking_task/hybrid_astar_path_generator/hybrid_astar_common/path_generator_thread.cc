@@ -125,11 +125,7 @@ void PathGeneratorThread::SetRequest(const PathGenThreadRequest& request) {
 
   col_det_interface_ptr_->SetObsManagerPtr(obs_manager_ptr_);
 
-  if (hybrid_astar_request_.mirror_has_folded_flag) {
-    col_det_interface_ptr_->Init(true);
-  } else {
-    col_det_interface_ptr_->Init(false);
-  }
+  col_det_interface_ptr_->Init(hybrid_astar_request_.mirror_has_folded_flag);
 
   col_det_interface_ptr_->GetEDTColDetPtr()->PreProcess(
       par_col_det_interface_ptr->GetEDTColDetPtr()->GetOgmBound(),

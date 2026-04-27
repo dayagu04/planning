@@ -36,6 +36,8 @@ constexpr double kMaxCheckTime = 3.0;
 constexpr double kKphToMps = 1.0 / 3.6;
 constexpr double kReleaseBrakeMaxJerk = 6.0;
 constexpr double kReleaseAccelMinJerk = -5.0;
+constexpr double kRadsJerkNegative = -1.0;
+constexpr double kRadsJerkPositive = 2.0;
 }  // namespace
 
 CruiseTarget::CruiseTarget(const SpeedPlannerConfig& config,
@@ -164,10 +166,13 @@ bool CruiseTarget::MakeKinematicsBound(
       kinematic_param = config_.near_poi_kinematic_param;
       break;
     case SpeedLimitType::NEAR_CONSTRUCTION:
-      kinematic_param = config_.construction_kinematic_param;
+      kinematic_param = config_.construction_near_kinematic_param;
       break;
     case SpeedLimitType::ON_CONSTRUCTION:
       kinematic_param = config_.construction_kinematic_param;
+      break;
+    case SpeedLimitType::CONSTRUCTION_DEEP_INTRUSION:
+      kinematic_param = config_.construction_deep_intrusion_kinematic_param;
       break;
     default:
       break;
@@ -213,6 +218,11 @@ bool CruiseTarget::MakeKinematicsBound(
       kinematic_param.jerk_negative_speed_lower,
       kinematic_param.jerk_negative_upper,
       kinematic_param.jerk_negative_speed_upper, ego_speed);
+
+  if (session_->is_rads_scene()) {
+    kinematic_bound->jerk_positive_mps3 = kRadsJerkPositive;
+    kinematic_bound->jerk_negative_mps3 = kRadsJerkNegative;
+  }
 
   return true;
 }

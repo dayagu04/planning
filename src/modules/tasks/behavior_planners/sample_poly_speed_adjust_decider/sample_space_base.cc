@@ -264,7 +264,8 @@ void STSampleSpaceBase::ConstructStPointsTable(const double sample_st_limit_lat_
   for (const std::vector<std::pair<STPointWithLateral, STPointWithLateral>>& st_point_paris :
        agents_st_point_paris_) {
     for (size_t i = 0; i < st_point_paris.size(); ++i) {
-      int index = (st_point_paris[i].first.t()) / kTimeResolution;
+      int index = static_cast<int>(
+          (st_point_paris[i].first.t()) / kTimeResolution + 0.51);
       if (st_point_paris[i].first.l() * change_direction_ > sample_st_limit_lat_offset) {
         continue;
       }
@@ -587,5 +588,169 @@ void STSampleSpaceBase::GetAvailableGap(const int index, double ego_s) {
       }
     }
   }
+}
+
+bool STSampleSpaceBase::GetNearestGapListByAvailable(
+    double s, double v, double t,
+    std::vector<std::pair<STPointWithLateral, STPointWithLateral>>* gap_list)
+    const {
+  const int index = int((t / kTimeResolution) + 0.51);
+  if (index < 0 || index >= st_points_table_.size()) {
+    return false;
+  }
+
+  const auto& intervals = st_points_table_.at(index);
+  if (intervals.empty()) {
+    STPointWithLateral upper_point(kMaxPathLength, t, kNoAgentId, -1, 0.0, 0.0);
+    STPointWithLateral lower_point(-kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                   0.0);
+    gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+
+    return true;
+  }
+
+  if (s + front_edge_to_rear_axle_ < intervals.front().first.s()) {
+    STPointWithLateral upper_point(
+        intervals.front().first.s(), intervals.front().first.t(),
+        intervals.front().first.agent_id(), -1,
+        intervals.front().first.velocity(),
+        intervals.front().first.acceleration(),
+        intervals.front().first.vehicle_length(),
+        intervals.front().first.l() * change_direction_);
+    STPointWithLateral lower_point(-kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                   0.0);
+    gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+    return true;
+  }
+
+  if (s - rear_edge_to_rear_axle_ > intervals.back().second.s()) {
+    STPointWithLateral lower_point(
+        intervals.back().second.s(), intervals.back().second.t(),
+        intervals.back().second.agent_id(), -1,
+        intervals.back().second.velocity(),
+        intervals.back().second.acceleration(),
+        intervals.back().second.vehicle_length(),
+        intervals.back().second.l() * change_direction_);
+    STPointWithLateral upper_point(kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                   0.0);
+    gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+    return true;
+  }
+  int left = 0;
+  int right = intervals.size() - 1;
+  int mid = 0;
+  while (left <= right) {
+    if(left == right){
+      mid = left;
+      break;
+    }
+    mid = left + (right - left) / 2;
+    const auto& current_pair = intervals[mid];
+    if (s >= current_pair.first.s() && s <= current_pair.second.s()) {
+       break;
+    }
+    if (mid + 1 < intervals.size() && s > current_pair.second.s() &&
+        s < intervals[mid + 1].first.s()) {
+      break;
+    }
+    if (s < current_pair.first.s()) {
+      right = mid - 1;
+    } else {
+      left = mid + 1;
+    }
+  }
+  double ego_front_s = s + front_edge_to_rear_axle_;
+  double ego_back_s = s - rear_edge_to_rear_axle_;
+  if (std::max(intervals[mid].first.s(), ego_back_s) <
+      std::min(intervals[mid].second.s(), ego_front_s)) {
+    if (mid == 0) {
+      STPointWithLateral upper_point(
+          intervals[mid].first.s(), intervals[mid].first.t(),
+          intervals[mid].first.agent_id(), -1,
+          intervals[mid].first.velocity(),
+          intervals[mid].first.acceleration(),
+          intervals[mid].first.vehicle_length(),
+          intervals[mid].first.l() * change_direction_);
+      STPointWithLateral lower_point(-kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                     0.0);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+    } else {
+      STPointWithLateral upper_point(
+          intervals[mid].first.s(), intervals[mid].first.t(),
+          intervals[mid].first.agent_id(), -1, intervals[mid].first.velocity(),
+          intervals[mid].first.acceleration(),
+          intervals[mid].first.vehicle_length(),
+          intervals[mid].first.l() * change_direction_);
+      STPointWithLateral lower_point(
+          intervals[mid - 1].second.s(), intervals[mid - 1].second.t(),
+          intervals[mid - 1].second.agent_id(), -1,
+          intervals[mid - 1].second.velocity(),
+          intervals[mid - 1].second.acceleration(),
+          intervals[mid - 1].second.vehicle_length(),
+          intervals[mid - 1].second.l() * change_direction_);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+    }
+
+    if(mid == intervals.size() - 1){
+      STPointWithLateral lower_point(
+          intervals.back().second.s(), intervals.back().second.t(),
+          intervals.back().second.agent_id(), -1,
+          intervals.back().second.velocity(),
+          intervals.back().second.acceleration(),
+          intervals.back().second.vehicle_length(),
+          intervals.back().second.l() * change_direction_);
+      STPointWithLateral upper_point(kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                     0.0);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+    }else{
+      STPointWithLateral upper_point(
+          intervals[mid + 1].first.s(), intervals[mid + 1].first.t(),
+          intervals[mid + 1].first.agent_id(), -1,
+          intervals[mid + 1].first.velocity(),
+          intervals[mid + 1].first.acceleration(),
+          intervals[mid + 1].first.vehicle_length(),
+          intervals[mid + 1].first.l() * change_direction_);
+      STPointWithLateral lower_point(
+          intervals[mid].second.s(), intervals[mid].second.t(),
+          intervals[mid].second.agent_id(), -1, intervals[mid].second.velocity(),
+          intervals[mid].second.acceleration(),
+          intervals[mid].second.vehicle_length(),
+          intervals[mid].second.l() * change_direction_);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+    }
+    return true;
+  } else{
+    if(mid == intervals.size() - 1){
+      STPointWithLateral upper_point(kMaxPathLength, t, kNoAgentId, -1, 0.0,
+                                     0.0);
+      STPointWithLateral lower_point(
+          intervals[mid].second.s(), intervals[mid].second.t(),
+          intervals[mid].second.agent_id(), -1,
+          intervals[mid].second.velocity(),
+          intervals[mid].second.acceleration(),
+          intervals[mid].second.vehicle_length(),
+          intervals[mid].second.l() * change_direction_);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+      return true;
+    } else {
+      STPointWithLateral upper_point(
+          intervals[mid + 1].first.s(), intervals[mid + 1].first.t(),
+          intervals[mid + 1].first.agent_id(), -1,
+          intervals[mid + 1].first.velocity(),
+          intervals[mid + 1].first.acceleration(),
+          intervals[mid + 1].first.vehicle_length(),
+          intervals[mid + 1].first.l() * change_direction_);
+      STPointWithLateral lower_point(
+          intervals[mid].second.s(), intervals[mid].second.t(),
+          intervals[mid].second.agent_id(), -1,
+          intervals[mid].second.velocity(),
+          intervals[mid].second.acceleration(),
+          intervals[mid].second.vehicle_length(),
+          intervals[mid].second.l() * change_direction_);
+      gap_list->emplace_back(std::make_pair(lower_point, upper_point));
+      return true;
+    }
+  }
+  return false;
 }
 }  // namespace planning

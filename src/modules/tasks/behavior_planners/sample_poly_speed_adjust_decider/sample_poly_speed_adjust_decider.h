@@ -43,7 +43,8 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool CheckLanelineChangeable();
   double CalcHeadwayDistance(const double headway_v, const double ego_v,
                              const std::vector<double>& t_gap_ego_v_bp,
-                             const std::vector<double>& t_gap_ego_v);
+                             const std::vector<double>& t_gap_ego_v,
+                             bool is_forced_merge_check);
   void StitchLastBestPoly();
 
   void RunSampleSceneStateMachine();
@@ -144,6 +145,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool is_in_deceleartion_scene_ = false;
   bool is_merge_change_ = false;
   bool is_emergency_scene_ = false;
+  bool is_low_speed_congestion_scene_ = false;
 
   double stop_line_distance_ = kMaxVelVariableValueInverse;
   double merge_stop_line_distance_ = kMaxMergeDistance;

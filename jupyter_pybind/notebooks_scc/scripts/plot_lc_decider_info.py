@@ -7,6 +7,7 @@ from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_lc_st_graph import *
 from lib.load_lat_lon_joint_decision import *  # 新增：导入联合规划可视化
+from lib.load_struct import parse_virtual_lane_costs  # VirtualLane Cost 解析
 sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
@@ -15,7 +16,7 @@ from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/home/ros/code/bags/data_collection_BESTUNE_E541_20404_EVENT_MANUAL_2026-03-24-11-12-56_1774321956000.bag"
+bag_path = "/docker_share/data/converted_bags/bug6/data_collection_BESTUNE_E541_20406_EVENT_KEY_2026-04-20-13-11-01_no_camera.bag.1776838350.close-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -37,6 +38,11 @@ ego_box_data_vec = ColumnDataSource(data = {'corners_y':[],
                                                'corners_x':[]})
 fig1.patches('corners_y', 'corners_x', source = agent_box_data_vec, fill_color = "grey", fill_alpha = 0.1, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'agent')
 fig1.patches('corners_y', 'corners_x', source = ego_box_data_vec, fill_color = "green", fill_alpha = 0.1, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'ego')
+
+# VirtualLane Cost visualization (底层半透明宽线)
+vl_cost_data = ColumnDataSource(data={'xs':[], 'ys':[], 'colors':[], 'widths':[], 'alphas':[]})
+vl_cost_renderer = fig1.multi_line('ys', 'xs', source=vl_cost_data, line_color='colors', line_width='widths', line_alpha='alphas', legend_label='VL Cost')
+vl_cost_renderer.level = 'underlay'
 
 # 新增：加载联合规划轨迹图
 pans, joint_plan_data = load_joint_plan_figure(fig1, bag_loader)
@@ -249,6 +255,84 @@ def slider_callback(bag_time):
       # 更新安全检查数据
       update_safety_check_data(plan_debug_json_msg)
 
+    # Update VirtualLane Cost visualization
+    try:
+      plan_debug_json_msg = local_view_data['data_msg'].get('plan_debug_json_msg', None)
+      vl_costs = []
+
+      if plan_debug_json_msg is not None:
+        import json
+        plan_json = json.loads(plan_debug_json_msg.json_str) if hasattr(plan_debug_json_msg, 'json_str') else plan_debug_json_msg
+        vl_costs = parse_virtual_lane_costs(plan_json)
+
+      # Update VL Cost debug table (always, clear when empty)
+      if vl_costs:
+        vl_cost_table_data.data = {
+          'order_id': [vl['order_id'] for vl in vl_costs],
+          'relative_id': [vl['relative_id'] for vl in vl_costs],
+          'total_cost': [round(vl['total_cost'], 3) for vl in vl_costs],
+          'match_conf': [round(vl['lane_match_confidence'], 3) for vl in vl_costs],
+          'topo_score': [round(vl['topo_trace_score'], 3) for vl in vl_costs],
+          'penalty': [round(vl['distance_penalty'], 3) for vl in vl_costs],
+          'on_route': [str(vl['is_on_route']) for vl in vl_costs],
+        }
+      else:
+        vl_cost_table_data.data = {
+          'order_id': [], 'relative_id': [], 'total_cost': [],
+          'match_conf': [], 'topo_score': [], 'penalty': [], 'on_route': []
+        }
+
+      # Update VL Cost lines (always, clear when empty)
+      if vl_costs:
+          xs_list, ys_list, colors_list, widths_list, alphas_list = [], [], [], [], []
+
+          cost_values = [vl['total_cost'] for vl in vl_costs if vl['total_cost'] < 100]
+          min_cost = min(cost_values) if cost_values else 0
+          max_cost = max(cost_values) if cost_values else 1
+          cost_range = max_cost - min_cost if max_cost > min_cost else 1.0
+
+          # 从 local_view_data 的 center line 数据源取坐标，用 order_id 匹配（完美同步）
+          vl_center_lines = {}
+          for i in range(10):
+            key = f'data_center_line_{i}'
+            if key not in local_view_data:
+              continue
+            src = local_view_data[key].data
+            cx = src.get(f'center_line_{i}_x', [])
+            cy = src.get(f'center_line_{i}_y', [])
+            order_ids = src.get(f'center_line_{i}_order_id', [])
+            if len(cx) > 1 and len(order_ids) > 0:
+              vl_center_lines[order_ids[0]] = (list(cx), list(cy))
+
+          for vl in vl_costs:
+            order_id = vl['order_id']
+            if order_id not in vl_center_lines:
+              continue
+            xs, ys = vl_center_lines[order_id]
+            xs_list.append(list(xs))
+            ys_list.append(list(ys))
+            cost = vl['total_cost']
+            if cost >= 100:
+              colors_list.append('#cccccc')
+              widths_list.append(6.0)
+              alphas_list.append(0.15)
+            else:
+              normalized = (cost - min_cost) / cost_range
+              r = int(255 * normalized)
+              g = int(255 * (1 - normalized))
+              colors_list.append(f'#{r:02x}{g:02x}00')
+              widths_list.append(12.0)
+              alphas_list.append(0.35)
+
+          vl_cost_data.data = {
+            'xs': xs_list, 'ys': ys_list,
+            'colors': colors_list, 'widths': widths_list, 'alphas': alphas_list
+          }
+      else:
+          vl_cost_data.data = {'xs':[], 'ys':[], 'colors':[], 'widths':[], 'alphas':[]}
+    except Exception as e:
+      print(f"Update VirtualLane Cost error: {e}")
+
   push_notebook()
 
 # +
@@ -342,8 +426,28 @@ safety_check_layout = column(row(fig_safety_dist, fig_safety_ttc),
                              row(fig_safety_vel, safety_summary_table))
 tab_safety_check = Panel(child=safety_check_layout, title="安全检查")
 
-# 创建可切换的 Tabs
-right_tabs = Tabs(tabs=[tab_longtime, tab_safety_check])
+# VL Cost Debug Table
+vl_cost_table_data = ColumnDataSource(data={
+    'order_id': [], 'relative_id': [], 'total_cost': [],
+    'match_conf': [], 'topo_score': [], 'penalty': [], 'on_route': []
+})
+vl_cost_columns = [
+    TableColumn(field='order_id', title='Order ID'),
+    TableColumn(field='relative_id', title='Rel ID'),
+    TableColumn(field='total_cost', title='Total Cost'),
+    TableColumn(field='match_conf', title='Match Conf'),
+    TableColumn(field='topo_score', title='Topo Score'),
+    TableColumn(field='penalty', title='Penalty'),
+    TableColumn(field='on_route', title='On Route')
+]
+vl_cost_table = DataTable(source=vl_cost_table_data, columns=vl_cost_columns,
+                          width=600, height=200, index_position=None)
+
+# 创建 VL Cost Tab
+tab_vl_cost = Panel(child=vl_cost_table, title="VL Cost")
+
+# 创建可切换的 Tabs（包含 VL Cost）
+right_tabs = Tabs(tabs=[tab_longtime, tab_safety_check, tab_vl_cost])
 
 # 先创建并显示时间滑块（在图表上方）
 slider_class = LatBehaviorSlider(slider_callback)

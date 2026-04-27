@@ -212,6 +212,8 @@ void ApaSlot::CalcOriginPoseAndTf() {
   origin_pose_local_.heading = 0.0;
   origin_pose_local_.heading_vec << 1.0, 0.0;
   origin_pose_local_.pos << 0.0, 0.0;
+
+  TransformCoordFromGlobalToLocal(g2l_tf_);
 }
 
 void ApaSlot::TransformCoordFromGlobalToLocal(

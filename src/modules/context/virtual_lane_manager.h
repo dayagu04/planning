@@ -376,6 +376,8 @@ class VirtualLaneManager {
       iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_UNKNOWN;
 
   bool ego_currrent_pos_lane_has_straight_attributes_ = true;
+  bool stopline_dis_lock_mark_flag_ = false;
+  int stopline_dis_unlock_mark_counter_ = 0;
 
   std::vector<std::vector<std::pair<Point2d, Point2d>>> road_boundray_; // 自车系/全局系
   // rads relevance

@@ -54,7 +54,8 @@ void RADSLateralObstacleDecider::UpdateLatDecision() {
       reference_path_ptr_->get_frenet_ego_state().planning_init_point().frenet_state.s;
   const double kMinCareLatThr = 0.5 * vehicle_param.max_width - 0.3;
   // const double kMaxCareLatThr = 0.5 * vehicle_param.max_width + 0.25;
-  const double kPosChangeBuffer = 0.05;
+  const double kPosChangeBufferIgnore = 0.05;
+  const double kPosChangeBufferDecision = 0.15;
   for (auto &obstacle : reference_path_ptr_->get_obstacles()) {
     if (obstacle->b_frenet_valid()) {
       const double obstacle_l_start =
@@ -72,9 +73,9 @@ void RADSLateralObstacleDecider::UpdateLatDecision() {
         double pos_change_buffer = 0.0;
         if (last_decision == LatObstacleDecisionType::LEFT ||
             last_decision == LatObstacleDecisionType::RIGHT) {
-          pos_change_buffer = kPosChangeBuffer;
-        } else if (last_decision == LatObstacleDecisionType::IGNORE) {
-          pos_change_buffer = -kPosChangeBuffer;
+          pos_change_buffer = kPosChangeBufferDecision;
+        } else {
+          pos_change_buffer = -kPosChangeBufferIgnore;
         }
         if (obstacle_s_end > init_s) {
           if (obstacle->frenet_l() > 0) {
@@ -87,8 +88,8 @@ void RADSLateralObstacleDecider::UpdateLatDecision() {
             }
           } else {
             // 右侧
-            if (obstacle_l_end <= (-kMinCareLatThr + kPosChangeBuffer)) {
-                // && obstacle_l_end >= (-kMaxCareLatThr - kPosChangeBuffer)) {
+            if (obstacle_l_end <= (-kMinCareLatThr + pos_change_buffer)) {
+                // && obstacle_l_end >= (-kMaxCareLatThr - kPosChangeBufferIgnore)) {
               output_[obstacle->id()] =
                   LatObstacleDecisionType::LEFT;
             } else {

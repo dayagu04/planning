@@ -757,23 +757,12 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
       // todo: init pointer in init function, do not transport every pointer
       // address into internal.
 
-      if (request_.direction_request_size > 0) {
-        for (size_t idx = 0; idx < request_.direction_request_size; idx++) {
-          hybrid_astar_->AstarSearch(GetStartPoint(),
-                                     request_.real_goal_stack[idx], map_bounds_,
-                                     &traj_candidates_[idx]);
-          if (traj_candidates_[idx].x.size() > 5) {
-            stable_feasible_directions_[idx] = true;
-          }
-        }
-      } else {
-        hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                                   &traj_candidates_[i]);
-        if (request_.space_type != ParkSpaceType::PARALLEL_OUT &&
-            request_.space_type != ParkSpaceType::PARALLEL_IN) {
-          ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
-                                         request_.real_goal);
-        }
+      hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
+                                 &traj_candidates_[i]);
+      if (request_.space_type != ParkSpaceType::PARALLEL_OUT &&
+          request_.space_type != ParkSpaceType::PARALLEL_IN) {
+        ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
+                                       request_.real_goal);
       }
     }
 
@@ -786,12 +775,8 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
     }
   }
 
-  if (request_.direction_request_size > 0) {
-    best_traj_ = &traj_candidates_[0];
-  } else {
-    constexpr int kGearNum = 2;
-    PathCandidateCompare(kGearNum);
-  }
+  constexpr int kGearNum = 2;
+  PathCandidateCompare(kGearNum);
 
   return;
 }
@@ -1266,6 +1251,14 @@ const bool HybridAStarInterface::ShouldStopSearchEarly(
       traj_candidates_[path_index].x.size() > 2) {
     ILOG_INFO << "path gear is nice";
     return true;
+  }
+  if (request_.space_type == ParkSpaceType::PARALLEL_OUT ||
+      request_.space_type == ParkSpaceType::PARALLEL_IN) {
+    // check node num
+    if (traj_candidates_[path_index].search_node_num > 200000) {
+      ILOG_INFO << "search node time out";
+      return true;
+    }
   }
   return false;
 }

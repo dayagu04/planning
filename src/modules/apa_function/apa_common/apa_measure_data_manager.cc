@@ -160,8 +160,7 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
   ILOG_INFO << "pos = " << pos_.x() << " " << pos_.y()
             << "  heading = " << heading_ * kRad2Deg << "  vel = " << vel_
-            << " m/s"
-            << ", acc = " << acceleration_;
+            << " m/s" << ", acc = " << acceleration_;
   ILOG_INFO << "car_static_timer_by_pos_strict = "
             << car_static_timer_by_pos_strict_ << " s";
   ILOG_INFO << "car_static_timer_by_pos_normal = "
@@ -190,6 +189,25 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
   JSON_DEBUG_VALUE(
       "force_fold_mirror",
       apa_param.GetParam().smart_fold_mirror_params.force_fold_mirror)
+}
+
+const pnc::geometry_lib::PathPoint GetCarFrontPoseFromCarPose(
+    const pnc::geometry_lib::PathPoint& pose) {
+  pnc::geometry_lib::PathPoint front_pose = pose;
+  front_pose.pos =
+      pose.pos + (apa_param.GetParam().front_overhanging +
+                  apa_param.GetParam().wheel_base) *
+                     pnc::geometry_lib::GenHeadingVec(pose.heading);
+  return front_pose;
+}
+
+const pnc::geometry_lib::PathPoint GetCarFrontAxlePoseFromCarPose(
+    const pnc::geometry_lib::PathPoint& pose) {
+  pnc::geometry_lib::PathPoint front_pose = pose;
+  front_pose.pos =
+      pose.pos + apa_param.GetParam().wheel_base *
+                     pnc::geometry_lib::GenHeadingVec(pose.heading);
+  return front_pose;
 }
 
 }  // namespace apa_planner

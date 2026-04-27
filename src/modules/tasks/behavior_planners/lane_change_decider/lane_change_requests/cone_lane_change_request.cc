@@ -170,12 +170,17 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(origin_lane_virtual_id_, false);
 
+  if (origin_refline == nullptr) {
+    is_cone_lane_change_situation_ = false;
+    return;
+  }
   const auto& frenet_obstacles_map = origin_refline->get_obstacles_map();
   base_frenet_coord_ = origin_refline->get_frenet_coord();
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
-  if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
+  if (base_frenet_coord_ == nullptr ||
+      !base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
     ILOG_DEBUG << "fail to get ego position on base lane";
     is_cone_lane_change_situation_ = false;
     return;
@@ -834,6 +839,10 @@ bool ConeRequest::CheckTargetLaneAvailable(
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(seach_lane->get_virtual_id(), false);
 
+  if (target_refline == nullptr) {
+    return false;
+  }
+
   std::shared_ptr<planning_math::KDPath> target_lane_frenet_coord =
       target_refline->get_frenet_coord();
 
@@ -889,6 +898,10 @@ bool ConeRequest::EnableTargetLane(
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(seach_lane->get_virtual_id(), false);
 
+  if (target_refline == nullptr) {
+    return false;
+  }
+  
   std::shared_ptr<planning_math::KDPath> target_lane_frenet_coord =
       target_refline->get_frenet_coord();
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {

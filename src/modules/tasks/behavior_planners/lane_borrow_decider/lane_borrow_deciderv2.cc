@@ -75,6 +75,8 @@ bool LaneBorrowDecider::Execute() {
                                   .get_local_view()
                                   .function_state_machine_info;
   if (state_machine.current_state == iflyauto::FunctionalState_MRC) {
+    spatio_temporal_planner_intersection_count_ = 0;
+    virtual_area_count_ = 0;
     return true;
   }
   UpdateToDP();
@@ -122,6 +124,13 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
                                  ->mutable_lane_borrow_decider_info();
+
+  if (CheckSpatioTemporalPlanner()){
+    // 后续上游统一替代
+    lane_borrow_decider_output_.lane_borrow_failed_reason = IN_SP;
+    return false;
+  }
+
   if (current_lane_ptr_ == nullptr || current_reference_path_ptr_ == nullptr) {
     ILOG_ERROR << "No current_lane_ptr_ or current_reference_path_ptr!";
     return false;
@@ -1009,7 +1018,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
         OBSERVE_TIME_CHECK_FAILED;
     return false;  // after 8 11 22
   }
-  
+
   if (lane_borrow_status_ == kNoLaneBorrow) {
     if (!CheckLeadObs()) {
       return false;
@@ -1227,6 +1236,9 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
+  const auto& lat_obstacle_position = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lateral_obstacle_history_info;
   for (const auto& obstacle : obstacles) {
     int idx = obstacle->obstacle()->id();
     const auto& id = obstacle->obstacle()->id();
@@ -1257,6 +1269,11 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     // if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end ||
     //     frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
     if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end + 2.0) {
+      const auto history_iter = lat_obstacle_position.find(id);
+      if (history_iter != lat_obstacle_position.end() &&
+          !history_iter->second.has_enough_space) {
+        continue;
+      }
       const auto lat_obs_iter = lat_obstacle_decision.find(id);
       if (lat_obs_iter != lat_obstacle_decision.end() &&
           (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
@@ -2086,12 +2103,15 @@ bool LaneBorrowDecider::CheckBackWardObs() {
       double TTC = dist / (0.01 + relative_speed);
       if (TTC >= MaxConcernCollisionTime) {
         continue;
-      } else {
-        lane_borrow_decider_output_.lane_borrow_failed_reason =
-            BACKWARD_OBSTACLE_TOO_CLOSE;
-        lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
-        return false;
       }
+      // 比较后方车和自车到达第一个借道障碍物的时间
+      if (IsRearObsSafeByArrivalTime(id, frenet_obstacle_sl, obstacle_v)) {
+        continue;
+      }
+      lane_borrow_decider_output_.lane_borrow_failed_reason =
+          BACKWARD_OBSTACLE_TOO_CLOSE;
+      lane_borrow_decider_output_.failed_obs_id = obstacle->obstacle()->id();
+      return false;
     } else {  // 当前位置在侧方的 动态的 都关注
       lane_borrow_decider_output_.lane_borrow_failed_reason =
           NEARBY_OBSTACLE_TOO_CLOSE;
@@ -2148,6 +2168,71 @@ bool LaneBorrowDecider::CheckBackWardObs() {
   }
   return true;
 }
+
+bool LaneBorrowDecider::IsRearObsSafeByArrivalTime(
+    int32_t rear_obs_id, const FrenetObstacleBoundary& rear_obs_sl,
+    double rear_obs_v) {
+  if (static_blocked_obstacles_.empty()) {
+    return true;
+  }
+  constexpr double kEgoAcceleration = 0.4;
+  constexpr double kSafetyMargin = 0.8;
+
+  const double first_obs_s =
+      static_blocked_obstacles_[0]->frenet_obstacle_boundary().s_start;
+
+  // 自车到达第一个借道障碍物的时间：匀加速 s = v0*t + 0.5*a*t^2
+  const double ego_dist_to_obs = first_obs_s - ego_frenet_boundary_.s_end;
+  double ego_time_to_obs = std::numeric_limits<double>::max();
+  if (ego_dist_to_obs > 0.0) {
+    const double a = 0.5 * kEgoAcceleration;
+    const double b = ego_speed_;
+    const double c = -ego_dist_to_obs;
+    const double delta = b * b - 4.0 * a * c;
+    if (delta >= 0.0) {
+      ego_time_to_obs = (-b + std::sqrt(delta)) / (2.0 * a);
+    } else {
+      ego_time_to_obs = ego_dist_to_obs / (ego_speed_ + 0.01);
+    }
+  } else {
+    ego_time_to_obs = 0.0;
+  }
+
+  // 后方车到达第一个借道障碍物的时间：优先使用预测轨迹
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  const auto& rear_agent = agent_mgr->GetAgent(rear_obs_id);
+  double rear_time_to_obs = std::numeric_limits<double>::max();
+
+  if (rear_agent != nullptr) {
+    const auto& pred_trajectories = rear_agent->trajectories_used_by_st_graph();
+    if (!pred_trajectories.empty() && !pred_trajectories[0].empty()) {
+      const auto& traj = pred_trajectories[0];
+      const auto& frenet_coord =
+          current_reference_path_ptr_->get_frenet_coord();
+      const double base_time = traj.front().absolute_time();
+      for (size_t i = 0; i < traj.size(); ++i) {
+        double pred_s = 0.0, pred_l = 0.0;
+        frenet_coord->XYToSL(traj[i].x(), traj[i].y(), &pred_s, &pred_l);
+        if (pred_s + 0.5 * rear_agent->length() >= first_obs_s) {
+          rear_time_to_obs = traj[i].absolute_time() - base_time;
+          break;
+        }
+      }
+    }
+    // fallback: 预测轨迹无效时使用恒速模型
+    if (rear_time_to_obs == std::numeric_limits<double>::max()) {
+      const double rear_dist = first_obs_s - rear_obs_sl.s_end;
+      rear_time_to_obs = rear_dist / (rear_obs_v + 0.01);
+    }
+  }
+  double time_buffer = kSafetyMargin;
+  if (lane_borrow_decider_output_.lane_borrow_failed_reason !=
+      BACKWARD_OBSTACLE_TOO_CLOSE) {
+    time_buffer = 0.4;
+  }
+  return rear_time_to_obs - ego_time_to_obs > time_buffer;
+}
+
 bool LaneBorrowDecider::IfChangeTargetLane() {
   // 左侧借道 左车道存在 并且是同向车道(暂时用边界判断，边界不可以是黄色的线)
   //借道障碍物较多  当前自车后轴靠近左车道  切换
@@ -2356,6 +2441,84 @@ void LaneBorrowDecider::SendObserveToLatFlag() {
   lane_borrow_decider_output_.lat_flag_map = lat_flag_map_;
   return;
 }
+
+bool LaneBorrowDecider::CheckSpatioTemporalPlanner() {
+  constexpr double kDistanceThresholdApproachToStopline = 10.0;
+  constexpr int kEgoInIntersectionCount = 3;
+  constexpr int kVirtualAreaContinuousThreshold = 5;
+
+  const auto& reference_path = session_->planning_context()
+                                   .lane_change_decider_output()
+                                   .coarse_planning_info.reference_path;
+  double init_vel =
+      reference_path->get_frenet_ego_state().planning_init_point().v;
+  std::vector<double> xp_vel{4.167, 16.667};
+  std::vector<double> fp_length{15.0, 25.0};
+  double min_virtual_length = interp(init_vel, xp_vel, fp_length);
+  double preview_length = std::max(std::min(init_vel * 5.0, 90.0), 20.0);
+  double virtual_length = 0.0;
+  double dist_to_virtual_start = 100.0;
+  bool is_in_virtual_area = reference_path->IsExistValidVirtualLaneAheadEgo(
+      preview_length, min_virtual_length, virtual_length,
+      dist_to_virtual_start);
+  if (is_in_virtual_area) {
+    virtual_area_count_ = 1;
+  } else if (virtual_area_count_ > 0 &&
+             virtual_area_count_ < kVirtualAreaContinuousThreshold) {
+    ++virtual_area_count_;
+  } else {
+    virtual_area_count_ = 0;
+  }
+
+  const auto lc_state = session_->planning_context()
+                            .lane_change_decider_output()
+                            .coarse_planning_info.target_state;
+  const auto& construction_scene_output = session_->environmental_model()
+                                              .get_construction_scene_manager()
+                                              ->get_construction_scene_output();
+  const auto& tfl_decider =
+      session_->planning_context().traffic_light_decider_output();
+  const auto intersection_state = session_->environmental_model()
+                                      .get_virtual_lane_manager()
+                                      ->GetIntersectionState();
+  const double distance_to_stopline = session_->environmental_model()
+                                          .get_virtual_lane_manager()
+                                          ->GetEgoDistanceToStopline();
+  const double distance_to_crosswalk = session_->environmental_model()
+                                           .get_virtual_lane_manager()
+                                           ->GetEgoDistanceToCrosswalk();
+  bool current_intersection_state =
+      (intersection_state == common::IntersectionState::IN_INTERSECTION ||
+       distance_to_stopline <= kDistanceThresholdApproachToStopline) &&
+      (virtual_area_count_ > 0);
+
+  bool is_small_intersection = false;
+  // bool is_small_intersection = tfl_decider.is_small_front_intersection &&
+  //     distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
+  if (current_intersection_state) {
+    spatio_temporal_planner_intersection_count_ = kEgoInIntersectionCount;
+  } else {
+    spatio_temporal_planner_intersection_count_ =
+        std::max(spatio_temporal_planner_intersection_count_ - 1, 0);
+  }
+
+  if (!config_.enable_use_spatio_temporal_planning) {
+    return false;
+  }
+
+  if (lc_state != kLaneKeeping) {
+    return false;
+  }
+
+  if (!(spatio_temporal_planner_intersection_count_ > 0 &&
+        !is_small_intersection) &&
+      !construction_scene_output.enable_construction_passage) {
+    return false;
+  }
+
+  return true;
+}
+
 void LaneBorrowDecider::LogDebugInfo() {
   auto lane_borrow_pb_info = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
@@ -2476,9 +2639,14 @@ bool LaneBorrowDecider::CheckVirtualLaneSuppressBorrow() {
 }
 
 void LaneBorrowDecider::SendHMIData() {
+  lane_borrow_hmi_speed_hysteresis_.SetIsValidByValue(ego_speed_);
+  bool is_high_speed = lane_borrow_hmi_speed_hysteresis_.IsValid();
+  if (!is_high_speed){
+    return;
+  }
   auto ad_info = &(session_->mutable_planning_context()
-                       ->mutable_planning_hmi_info()
-                       ->ad_info);
+                         ->mutable_planning_hmi_info()
+                         ->ad_info);
   lane_borrow_decider_output_.takeover_prompt = false;
   // 开始绕行信号
   // 连续帧判断开始绕行

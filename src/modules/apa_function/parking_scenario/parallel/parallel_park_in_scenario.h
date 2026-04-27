@@ -193,6 +193,7 @@ class ParallelParkInScenario : public ParkingScenario {
       double angle_resolution = 5.0, int max_points_per_bin = 5,
       double start_angle = -180.0, double end_angle = 180.0,
       double max_range = 12.0, double duplicate_tolerance = 1e-3);
+  bool IsReplayRequest();
   std::vector<Eigen::Vector2d> ProcessCurbPointsAndGetNearestAbsY(
       double& nearest_abs_y,
       const std::unordered_map<size_t, std::vector<Eigen::Vector2d>>&
@@ -208,6 +209,8 @@ class ParallelParkInScenario : public ParkingScenario {
   void ProcessTruncationPoints(std::vector<Eigen::Vector2d>& curb_points,
                                const double curb_y,
                                pnc::geometry_lib::LineSegment& tlane_line);
+  void AddMultiFrameResult(const PathPlannerResult& result);
+  bool CalcMultiFrameResult();
 
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_id_pt_map_;
 
@@ -314,6 +317,7 @@ class ParallelParkInScenario : public ParkingScenario {
   AstarSearchState astar_state_ = AstarSearchState::NONE;
   ReplanReason last_replan_reason_ = ReplanReason::NOT_REPLAN;
   bool used_last_path_ = false;
+  std::vector<PathPlannerResult> multi_frame_result_;
 };
 
 }  // namespace apa_planner

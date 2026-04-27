@@ -12,6 +12,10 @@ struct NarrowSpaceDeciderOutput {
   bool is_relative_angle_too_large = false;
   bool is_exiting_narrow_space = false;
   double distance_to_end = 100.0;
+  Point2D end_point;
+  std::pair<double, double> narrow_space_s_range;
+  pnc::mathlib::spline left_boundary_spline;   // s, l
+  pnc::mathlib::spline right_boundary_spline;  // s, l
 
   void Clear() {
     is_exist_narrow_space = false;

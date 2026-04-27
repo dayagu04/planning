@@ -14,22 +14,26 @@ const double TIME_STEP_NEAR = 1;  // 时间步长（分层步长）(s)
 const double TIME_STEP_FAR = 1;   // 时间步长（分层步长）(s)
 const double DISTANCE_STEP = 0.1;  // 距离步长（每层节点采样间隔）(m)
 const double GOAL_TOLERANCE = 5.0;  // 目标距离容忍误差 (m)
-const int MAX_ITERATION = 100;    // 最大迭代次数
+const int MAX_ITERATION = 90;       // 最大迭代次数
+const std::vector<int> MAX_NODES_PER_LAYER = {8, 25, 25, 20};
 const double ACC_STEP = 0.37;
-const double LIMIT_TIME = 3.5;    // 最小规划时域
+const double LIMIT_TIME = 4.5;    // 最小规划时域
+const double Limit_TIME_MERGE = 3.5;    // 压线最小规划时域（s)
 
-struct STNode {
+struct STNode { 
   double t;  // 时间 (s)
   double s;  // 纵向距离 (m)
   double v;  // 速度 (m/s)
   double a;  // 加速度 (m/s²)
   double jerk;
+  int depth = 0;
   double g_cost;   // 起点到当前节点的实际代价 (g(n))
   double h_cost;   // 当前节点到目标节点的预估代价 (h(n))
-  double f_cost;   // 总代价 f(n) = g(n) + h(n)
+  double safety_cost;  // 当前节点的安全成本（不累积）
+  double f_cost;   // 总代价 f(n) = g(n) + h(n) + safety_cost
   STNode* parent;  // 父节点指针，用于回溯轨迹
-  double dis_to_gap_front_cost = 0.0;
-  double dis_to_gap_rear_cost = 0.0;
+  double dis_to_gap_front_cost = kMaxPenalty;
+  double dis_to_gap_rear_cost = kMaxPenalty;
 
   STNode() = default;
   STNode(double t_, double s_, double v_, double a_, double jerk_ = 0.0,
@@ -41,6 +45,7 @@ struct STNode {
         jerk(jerk_),
         g_cost(g_),
         h_cost(h_),
+        safety_cost(0.0),
         f_cost(g_ + h_),
         parent(p_) {}
 
@@ -62,16 +67,15 @@ struct GoalState {
 
 class LongitudinalAStar {
  public:
-  LongitudinalAStar(const STNode& start_node, const GoalState& goal,
-                    const STSampleSpaceBase* sample_space_ptr,
-                    double merge_point_s,
-                    const LeadingAgentInfo& leading_agent_info,
-                    const StateLimit& state_limit_upper,
-                    const StateLimit& state_limit_lower,
-                    double front_edge_to_rear_axle,
-                    double rear_edge_to_rear_axle, double ego_s,
-                    SampleAstarTrajConfig* config,
-                    std::unordered_map<int32_t, double>& agent_lateral_offset_map);
+  LongitudinalAStar(
+      const STNode& start_node, const GoalState& goal,
+      const STSampleSpaceBase* sample_space_ptr, double merge_point_s,
+      const LeadingAgentInfo& leading_agent_info,
+      const StateLimit& state_limit_upper, const StateLimit& state_limit_lower,
+      double front_edge_to_rear_axle, double rear_edge_to_rear_axle,
+      double ego_s, SampleAstarTrajConfig* config,
+      std::unordered_map<int32_t, double>& agent_lateral_offset_map,
+      bool is_low_speed_congestion_scene, double fartheset_merge_s);
 
   void PlanTrajectory();
   std::vector<STNode> GetAStarTraj() const { return astar_traj_; }
@@ -102,6 +106,7 @@ class LongitudinalAStar {
   std::set<STNode> open_list_;
   std::unordered_map<std::string, STNode> all_list_;
   std::unordered_set<std::shared_ptr<STNode>, PtrHash, PtrEqual> closed_list_;
+  std::unordered_map<int, int> layer_expanded_count_;
 
   STNode start_node_;
   GoalState goal_state_;
@@ -117,8 +122,9 @@ class LongitudinalAStar {
   void BacktrackTrajectory(std::shared_ptr<STNode> goal_node);
   bool CalcChildParam(const std::shared_ptr<STNode>& parent,
                       std::shared_ptr<STNode>& node) const;
-  double CalcSafetyCollisionCost(double rear_speed, double front_speed,
-                                 double init_distance) const;
+  double CalcSafetyCollisionCost(double ego_speed, double object_speed,
+                                 double init_distance, double vehicle_length,
+                                 double left_time) const;
   bool valid_ = false;
   double merge_point_s_ = 0.0;
   LeadingAgentInfo leading_agent_info_;
@@ -129,6 +135,8 @@ class LongitudinalAStar {
   double prediction_time_ = 2.0;
   double ego_s_ = 0.0;
   SampleAstarTrajConfig* config_ = nullptr;
+  bool is_low_speed_congestion_scene_ = false;
+  double fartheset_merge_s_ = 0.0;
 
   double max_velocity_;  // 最大速度 (m/s)
   double min_velocity_;   // 最小速度 (m/s)

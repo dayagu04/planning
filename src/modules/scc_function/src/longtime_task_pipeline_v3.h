@@ -18,14 +18,16 @@
 #include "tasks/behavior_planners/cipv_lost_prohibit_acceleration_decider/cipv_lost_prohibit_acceleration_decider.h"
 #include "tasks/behavior_planners/cipv_lost_prohibit_start_decider/cipv_lost_prohibit_start_decider.h"
 #include "tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider.h"
-// #include "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
+// #include
+// "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
 #include "tasks/behavior_planners/ego_lane_road_right_decider/ego_lane_road_right_decider.h"
 #include "tasks/behavior_planners/expand_st_boundaries_decider/expand_st_boundaries_decider.h"
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/hmi_decider/scc_hmi_decider.h"
-#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
-#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
+// #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
+// #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
+#include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv3.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lat_lon_joint_planner_decider/lat_lon_joint_planner_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/scc_lateral_obstacle_decider/scc_lateral_obstacle_decider.h"
@@ -60,18 +62,20 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
  private:
   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
   // 施工场景
-//   std::unique_ptr<ConstructionSceneDecider> construction_scene_decider_;
+  //   std::unique_ptr<ConstructionSceneDecider> construction_scene_decider_;
   std::unique_ptr<SpatioTemporalPlanner> spatio_temporal_planner_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<SccLateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
-//   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
+  //   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
-  std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>
-      lane_borrow_deciderV2_;
-  std::unique_ptr<lane_borrow_deciderV1::LaneBorrowDecider>
-      lane_borrow_deciderV1_;
+//   std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>
+//       lane_borrow_deciderV2_;
+  std::unique_ptr<lane_borrow_deciderV3::LaneBorrowDecider>
+      lane_borrow_deciderV3_;
+//   std::unique_ptr<lane_borrow_deciderV1::LaneBorrowDecider>
+//       lane_borrow_deciderV1_;
   std::unique_ptr<SamplePolySpeedAdjustDecider>
       sample_poly_speed_adjust_decider_;
   std::unique_ptr<PotentialDangerousAgentDecider>
@@ -113,7 +117,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::shared_ptr<speed::StGraphInput> st_graph_input_;
   std::shared_ptr<speed::STGraph> st_graph_;
   std::shared_ptr<speed::StGraphHelper> st_graph_helper_;
-  bool enable_lane_borrow_deciderV2_ = false;
+  bool enable_lane_borrow_deciderV3_ = false;
 };
 
 }  // namespace planning

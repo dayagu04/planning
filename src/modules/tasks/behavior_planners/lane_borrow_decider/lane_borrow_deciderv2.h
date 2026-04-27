@@ -19,6 +19,8 @@
 #include "tasks/behavior_planners/dp_path_decider/dp_road_graph.h"
 #include "tasks/task.h"
 #include "virtual_lane.h"
+#include "common/utils/hysteresis_decision.h"
+
 namespace planning {
 namespace lane_borrow_deciderV2 {
 
@@ -75,6 +77,9 @@ class LaneBorrowDecider : public Task {
 
   void ClearLaneBorrowStatus();
   bool CheckBackWardObs();
+  bool IsRearObsSafeByArrivalTime(int32_t rear_obs_id,
+                                  const FrenetObstacleBoundary& rear_obs_sl,
+                                  double rear_obs_v);
   bool IsNeedResetObserve(LaneBorrowFailedReason reason);
   void CheckBlockingObstaclesIntention(int32 obs_id, bool& is_borrow);
   Box2d PredictBoxPosition(const agent::Agent* agent, double delta_t);
@@ -84,6 +89,7 @@ class LaneBorrowDecider : public Task {
   void SendHMIData();
   bool CheckBlockedBorrowObstaclesByTrajectory();
   void UpdateBorrowDirectionMap();
+  bool CheckSpatioTemporalPlanner();
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
@@ -133,12 +139,15 @@ class LaneBorrowDecider : public Task {
   std::shared_ptr<VirtualLane> right_lane_ptr_ = nullptr;
   LaneBorrowDeciderConfig config_;
   std::unique_ptr<DPRoadGraph> dp_path_decider_;
+  int spatio_temporal_planner_intersection_count_ = 0;
+  int virtual_area_count_ = 0;
   iflyauto::LaneBoundaryType left_lane_boundary_type_;
   iflyauto::LaneBoundaryType right_lane_boundary_type_;
   // hmi cnt
   int start_frame_{0};
   bool nudging_prompt_{false};
   bool takeover_prompt_{false};
+  HysteresisDecision lane_borrow_hmi_speed_hysteresis_{0.5, 0.3};
 };
 }  // namespace lane_borrow_deciderV2
 }  // namespace planning

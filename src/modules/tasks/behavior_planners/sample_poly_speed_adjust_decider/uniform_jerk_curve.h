@@ -4,7 +4,7 @@
 #include "sample_poly_curve.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
 #include "vector"
-
+#include <cstddef>
 namespace planning {
 struct UniformJerkCurveCoffi {
   std::vector<std::array<double, 4>> cofficients;
