@@ -11,11 +11,13 @@
 #include "constraint_terms/lateral_jerk_constraint.h"
 #include "constraint_terms/path_corridor_constraint.h"
 #include "cost_terms/continuity_cost.h"
+#include "cost_terms/edt_distance_cost.h"
 #include "cost_terms/lateral_acc_cost.h"
 #include "cost_terms/lateral_jerk_cost.h"
 #include "cost_terms/reference_path_cost.h"
 #include "debug_info_log.h"
 #include "dynamic_model/dynamic_model.h"
+#include "edt_manager.h"
 #include "ilqr_define.h"
 #include "lateral_motion_planner.pb.h"
 #include "lateral_obstacle.h"
@@ -67,6 +69,10 @@ void RADSLateralMotionPlanner::Init() {
   dynamic_model_->AddCost(std::make_shared<pnc::lateral_planning::PathSecondSoftCorridorCostTerm>());
   // 2.9: path hard corridor cost
   dynamic_model_->AddCost(std::make_shared<pnc::lateral_planning::PathHardCorridorCostTerm>());
+  // 2.10: edt distance cost
+  auto edt_ptr =
+      session_->environmental_model().get_edt_manager()->GetEulerDistanceTransform();
+  dynamic_model_->AddCost(std::make_shared<pnc::lateral_planning::EdtDistanceCostTerm>(&ego_base_, edt_ptr));
   // 3.init solver
   ilqr_solver_ptr_ =
       std::make_shared<pnc::lateral_planning::iLQRSolver>();
@@ -141,6 +147,13 @@ bool RADSLateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
   //
   planning_weight_ptr_->SetLateralMotionWeightForRADS(planning_input_);
+  //
+  ego_base_.SetBasePose(Pose2f(planning_input_.init_state().x(),
+                               planning_input_.init_state().y(),
+                               planning_input_.init_state().theta()));
+  auto& edt_manager =
+      session_->environmental_model().get_edt_manager();
+  edt_manager->UpdateByLatDecision();
   return true;
 }
 

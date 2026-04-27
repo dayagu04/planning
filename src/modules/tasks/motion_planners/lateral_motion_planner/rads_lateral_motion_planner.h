@@ -44,6 +44,7 @@ class RADSLateralMotionPlanner : public BaseLateralMotionPlanner {
 
  private:
   std::shared_ptr<pnc::lateral_planning::iLQRSolver> ilqr_solver_ptr_;
+  Transform2f ego_base_;
 };
 
 }  // namespace planning

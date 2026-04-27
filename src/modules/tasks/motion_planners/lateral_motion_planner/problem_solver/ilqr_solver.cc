@@ -4,6 +4,7 @@
 #include "../constraint_terms/lateral_jerk_constraint.h"
 #include "../constraint_terms/path_corridor_constraint.h"
 #include "../cost_terms/continuity_cost.h"
+#include "../cost_terms/edt_distance_cost.h"
 #include "../cost_terms/lateral_acc_cost.h"
 #include "../cost_terms/lateral_jerk_cost.h"
 #include "../cost_terms/reference_path_cost.h"
@@ -55,6 +56,8 @@ void iLQRSolver::SimInit() {
   ilqr_core_ptr_->AddCost(std::make_shared<PathSecondSoftCorridorCostTerm>());
   // 2-11: path hard corridor cost
   ilqr_core_ptr_->AddCost(std::make_shared<PathHardCorridorCostTerm>());
+  // 2.12: edt distance cost
+  ilqr_core_ptr_->AddCost(std::make_shared<EdtDistanceCostTerm>());
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
@@ -221,6 +224,8 @@ uint8_t iLQRSolver::Update(
     cost_config_vec.at(i)[W_SOFT_CORRIDOR] = path_weights.q_pos_soft_bound[i];
     cost_config_vec.at(i)[W_HARD_CORRIDOR] = path_weights.q_pos_hard_bound[i];
 
+    cost_config_vec.at(i)[W_EDT_DISTANCE] = planning_input.q_edt_distance();
+
     if (!planning_input.complete_follow()) {
       if (i < path_weights.proximal_index) {
         double start_step =
@@ -253,6 +258,7 @@ uint8_t iLQRSolver::Update(
             end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_FRONT_REF_X];
         cost_config_vec.at(i)[W_FRONT_REF_Y] =
             end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_FRONT_REF_Y];
+        // cost_config_vec.at(i)[W_EDT_DISTANCE] = 2.0 * planning_input.q_edt_distance();
       }
     }
 
@@ -448,6 +454,8 @@ uint8_t iLQRSolver::SimUpdate(
     cost_config_vec.at(i)[W_FIRST_SOFT_CORRIDOR] = 0.5 * planning_input.q_soft_corridor();
     cost_config_vec.at(i)[W_SOFT_CORRIDOR] = planning_input.q_soft_corridor();
     cost_config_vec.at(i)[W_HARD_CORRIDOR] = planning_input.q_hard_corridor();
+
+    cost_config_vec.at(i)[W_EDT_DISTANCE] = planning_input.q_edt_distance();
 
     if (!planning_input.complete_follow()) {
       if (i < motion_plan_concerned_start_index) {
