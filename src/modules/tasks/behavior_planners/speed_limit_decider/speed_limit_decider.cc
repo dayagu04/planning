@@ -156,7 +156,6 @@ static constexpr double kCurvaturePreviewOffsetLow = 2.0;            // 40 km/h 
 static constexpr double kCurvaturePreviewOffsetHigh = 16.0;          // 100 km/h 时前视起点偏移 (m)
 constexpr double KMinThreshold = 1.75;
 constexpr double KSpeedMax = 120.0;
-constexpr double kMinLateralSpeedThreshold = 0.1;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -2856,20 +2855,6 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
 
     if (lateral_dist > lateral_threshold) {
       continue;
-    }
-
-    if (!avoid_agent->is_truck() && !avoid_agent->is_vru() &&
-        lateral_threshold > kMinLateralRatioThreshold * lane_width) {
-      const auto agent_matched_path_point =
-          current_lane_coord->GetPathPointByS(agent_s);
-      const double agent_matched_lane_theta = agent_matched_path_point.theta();
-      const double agent_relative_theta =
-          planning_math::NormalizeAngle(avoid_agent->theta() - agent_matched_lane_theta);
-      const double object_l_speed_mps =
-          avoid_agent->speed() * std::sin(agent_relative_theta);
-      if (std::abs(object_l_speed_mps) < kMinLateralSpeedThreshold) {
-        continue;
-      }
     }
 
     double v_min_limit = avoid_agent->is_static()

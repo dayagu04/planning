@@ -557,7 +557,8 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
   }
 
-  if (agent.is_prediction_cutin()) {
+  if (agent.is_prediction_cutin() &&
+      agent.speed() < init_point.vel() + kMinLcAgentSpeedBuffer) {
     if (road_right_level_ == RoadRightLevel::LOW_RIGHT ||
         road_right_level_ == RoadRightLevel::MID_RIGHT) {
       const auto& trajectory_cutin = agent.trajectory_cutin_postprocessed();
